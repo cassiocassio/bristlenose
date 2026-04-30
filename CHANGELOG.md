@@ -2,11 +2,15 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
-## Unreleased
+**0.15.1** — _1 May 2026_
 
 - **Desktop alpha-readiness landed (Sprint 2 Track C C2–C5)** — sandbox-safe API-key injection (Swift Keychain → env vars; Python no longer execs `/usr/bin/security`), libproc-based zombie cleanup (`proc_listpids` + `proc_pidfdinfo` + `proc_pidpath` — replaces `lsof` and `/bin/ps`, both blocked by App Sandbox), `os.Logger` with privacy redaction throughout `ServeManager`, key-shape stdout redactor (Anthropic / OpenAI / Google formats) as defence-in-depth against accidental key leakage in subprocess output, `SidecarMode.resolve` + three Xcode schemes for the dev escape hatch, privacy manifests for host + sidecar (TestFlight unblock), per-binary signing infrastructure, supply-chain provenance (`THIRD-PARTY-BINARIES.md` + auto-regen script). Desktop-only — no PyPI surface change
+- **Desktop first-run experience (Sprint 2 Track B Branch 1)** — `BootView` unified boot/loading/failed surface, `WelcomeView` two-variant pattern (`.firstRun` + `.noSelection`), Beat 3 round-trip API key validation in `LLMSettingsView`, Beat 3b `OllamaSetupSheet` state machine (idle / installingOllama / waitingForDaemon / downloadingModel / finishing / failed) for local AI install, `I18n.findLocalesDirectory()` worktree-aware `#filePath` derivation, `boot.*` and `welcome.*` translation blocks added to all 6 desktop locale files (English drafts; native review owed for es/fr/de/ko/ja). Desktop-only
+- **`bristlenose serve` fall-back to bundled theme CSS** — projects that have never run the pipeline have no per-project rendered CSS at `<output_dir>/assets/`. The SPA's stylesheet link would 404 and the entire UI rendered as raw HTML inside the WKWebView. Server now registers a typed CSS route that prefers per-project CSS if it exists and falls back to the bundled theme otherwise
 - **`bristlenose doctor --self-test`** — new flag that verifies sidecar bundle integrity (spec → bundle file presence). Catches the "data files declared in `.spec` but missing from the built bundle" class of bug. Runs in `desktop/scripts/build-all.sh` step 2a
 - **`bristlenose serve` fail-loud on missing React bundle** — returns a "Build incomplete" 500 page instead of silently falling back to the static render. The static render is officially vestigial scaffolding now, not a fallback
+- **Japanese (`ja`) locale completion** — bulk-translated ~614 stub strings across 8 namespace files in `bristlenose/locales/ja/`, seeded `glossary.csv` with 83 `ja` rows. Alpha gate cleared
+- **i18n: tag sidebar** — extracted hardcoded strings, added 11 keys across all 6 locales
 
 **0.15.0** — _26 Apr 2026_
 

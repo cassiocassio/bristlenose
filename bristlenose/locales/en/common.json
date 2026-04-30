@@ -107,7 +107,18 @@
     "selectAll": "Select all",
     "clear": "Clear",
     "searchPlaceholder": "Search tags\u2026",
-    "noTagsLabel": "(No tags)"
+    "noTagsLabel": "(No tags)",
+    "used": "Used",
+    "all": "All",
+    "total": "Total",
+    "close": "Close",
+    "closeAriaLabel": "Close tag sidebar",
+    "userTags": "User Tags",
+    "other": "Other",
+    "summary": "{{count}} tags across {{frameworks}} frameworks",
+    "showFramework": "Show {{framework}}",
+    "hideFramework": "Hide {{framework}}",
+    "frameworkSentiment": "Sentiment"
   },
   "footer": {
     "builtWith": "Built with Bristlenose",

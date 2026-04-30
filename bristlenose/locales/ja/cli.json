@@ -1,27 +1,27 @@
 {
-  "version": "",
-  "help": "",
+  "version": "bristlenose {version}",
+  "help": "ユーザーリサーチの文字起こしと発言抽出エンジン。",
   "stage": {
-    "ingest": "",
-    "extractAudio": "",
-    "transcribe": "",
-    "identifySpeakers": "",
-    "mergeTranscript": "",
-    "piiRemoval": "",
-    "topicSegmentation": "",
-    "quoteExtraction": "",
-    "quoteClustering": "",
-    "thematicGrouping": "",
-    "render": ""
+    "ingest": "取り込み",
+    "extractAudio": "音声抽出",
+    "transcribe": "文字起こし",
+    "identifySpeakers": "話者識別",
+    "mergeTranscript": "トランスクリプト統合",
+    "piiRemoval": "個人情報の削除",
+    "topicSegmentation": "トピック分割",
+    "quoteExtraction": "発言抽出",
+    "quoteClustering": "発言クラスタリング",
+    "thematicGrouping": "テーマ分類",
+    "render": "レンダリング"
   },
   "error": {
-    "noInput": "",
-    "notFound": "",
-    "noFiles": ""
+    "noInput": "入力ディレクトリが指定されていません。",
+    "notFound": "ディレクトリが見つかりません: {path}",
+    "noFiles": "{path} に音声・動画・トランスクリプトファイルが見つかりません"
   },
   "progress": {
-    "complete": "",
-    "failed": "",
-    "skipped": ""
+    "complete": "完了",
+    "failed": "失敗",
+    "skipped": "スキップ"
   }
 }

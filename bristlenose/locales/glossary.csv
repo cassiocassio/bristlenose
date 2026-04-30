@@ -83,3 +83,87 @@ Quotes,인용문,ko,QDA term
 Sessions,세션,ko,QDA term
 Signals,시그널,ko,QDA term
 Codes,코드,ko,QDA term
+Save,保存,ja,Apple HIG
+Cancel,キャンセル,ja,Apple HIG
+Close,閉じる,ja,Apple HIG
+Copy,コピー,ja,Apple HIG
+Delete,削除,ja,Apple HIG
+Undo,取り消す,ja,Apple HIG (macOS Edit menu)
+Redo,やり直す,ja,Apple HIG (macOS Edit menu)
+Search,検索,ja,Apple HIG
+Print,プリント,ja,Apple HIG
+Export,書き出す,ja,Apple HIG (verb form); エクスポート in noun contexts
+Import,読み込む,ja,Apple HIG (verb form); インポート in noun contexts
+Settings,設定,ja,Apple HIG (post-Ventura — replaced 環境設定)
+Open,開く,ja,Apple HIG
+Hide,非表示,ja,Apple HIG
+Show,表示,ja,Apple HIG
+Accept,承認,ja,Apple HIG / MS
+Apply,適用,ja,Apple HIG
+Reset,リセット,ja,Apple HIG
+Edit,編集,ja,Apple HIG
+Done,完了,ja,Apple HIG
+Confirm,確認,ja,Apple HIG / MS
+Continue,続ける,ja,Apple HIG
+Back,戻る,ja,Apple HIG
+Next,次へ,ja,Apple HIG
+Skip,スキップ,ja,Apple HIG
+Add,追加,ja,Apple HIG
+Refresh,更新,ja,Apple HIG
+Window,ウインドウ,ja,Apple JA (no small ィ — Apple convention)
+Tab,タブ,ja,Apple HIG
+Sidebar,サイドバー,ja,Apple HIG
+Toolbar,ツールバー,ja,Apple HIG
+Menu,メニュー,ja,Apple HIG
+Help,ヘルプ,ja,Apple HIG
+Quit,終了,ja,Apple HIG (app menu pattern)
+Folder,フォルダ,ja,Apple JA (no long mark; MS uses フォルダー)
+Project,プロジェクト,ja,Universal SaaS loanword
+Filter,フィルタ,ja,Apple JA (no long mark; matches Photos.app)
+Sort,並び替え,ja,Apple HIG
+Share,共有,ja,Apple HIG
+Sync,同期,ja,Apple HIG
+Sign in,サインイン,ja,Apple HIG / MS
+Codes,コード,ja,QDA / design-i18n.md table
+Codebook,コードブック,ja,QDA / design-i18n.md table
+Tags,タグ,ja,Universal loanword (design-i18n.md table)
+Quotes,発言,ja,design-i18n.md anchored — hatsugen (utterance) — not 引用
+Sessions,セッション,ja,design-i18n.md table
+Signals,シグナル,ja,design-i18n.md anchored — Bristlenose-specific concept
+Theme,テーマ,ja,UX TIMES / design-i18n.md
+Topic,トピック,ja,Apple HIG
+Cluster,クラスタ,ja,Apple JA (no long mark)
+Section,セクション,ja,Apple HIG
+Interview,インタビュー,ja,HCD-Net / UX register
+Participant,参加者,ja,HCD-Net standard
+Researcher,研究者,ja,HCD-Net / formal register
+Observer,観察者,ja,Native reads natural here
+Transcript,トランスクリプト,ja,QDA-product register; 文字起こし for descriptive text
+Speaker,話者,ja,Linguistics/transcription standard (not スピーカー = audio device)
+User,ユーザー,ja,Apple HIG (long mark kept)
+Usability,ユーザビリティ,ja,HCD-Net
+Journey,ジャーニー,ja,UX register (e.g. カスタマージャーニー)
+Friction,フリクション,ja,UX TIMES; # review for native nuance
+Sentiment,感情,ja,HCD-Net / native reads natural
+Insight,インサイト,ja,UX TIMES
+Finding,発見,ja,Native reads natural
+Affordance,アフォーダンス,ja,design-i18n.md anchored — Don Norman katakana
+Signifier,シグニファイア,ja,design-i18n.md anchored — Don Norman katakana
+Mapping,マッピング,ja,design-i18n.md anchored — Don Norman katakana
+Feedback,フィードバック,ja,Universal
+Frustration,フラストレーション,ja,UX register
+Confusion,混乱,ja,Native reads natural
+Doubt,疑念,ja,Native reads natural
+Surprise,驚き,ja,Native reads natural
+Satisfaction,満足,ja,Native reads natural
+Delight,喜び,ja,Native reads natural
+Confidence,自信,ja,Native reads natural
+Coding,コーディング,ja,QDA standard
+Affinity diagram,親和図,ja,KJ法 lineage — native Japanese reads natural
+Memo,メモ,ja,MAXQDA JA
+Anonymisation,匿名化,ja,Standard ja legal/data register
+PII,個人情報,ja,Standard ja legal term
+Pipeline,パイプライン,ja,Engineering loanword
+Stage,ステージ,ja,Apple HIG (tech context)
+Render,レンダリング,ja,Tech standard
+Heatmap,ヒートマップ,ja,Universal

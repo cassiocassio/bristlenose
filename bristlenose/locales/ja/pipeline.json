@@ -1,6 +1,6 @@
 {
-  "start": "",
-  "stageStart": "",
-  "stageComplete": "",
-  "done": ""
+  "start": "{path} のパイプラインを開始しています",
+  "stageStart": "{stage} を実行中…",
+  "stageComplete": "{stage} 完了 ({duration})",
+  "done": "パイプラインが完了しました。出力先: {output}"
 }

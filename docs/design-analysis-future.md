@@ -19,6 +19,8 @@ The analysis page is a standalone `analysis.html` opened from the toolbar. It sh
 
 No filters, no sort controls, no interactivity beyond expansion and cell-click. This is intentional — explore the experience first.
 
+> **The Section × Sentiment + Theme × Sentiment dual heatmap is the user-facing surface of the two-axis quotes-page model** validated in `experiments/thematic-spike/FINDINGS.md` (*"Two-axis quotes page"*). Sections answer "what's happening on this surface my team owns?"; themes answer "what's the cross-cutting concern that demultiplexes across teams?". Both needed; neither subsumes the other. The signal-cards architecture is the *deductive* (codebook-driven, action-oriented) complement to s11's *inductive* (Braun & Clarke, orientation-focused) themes — see FINDINGS *"Two methodological traditions, one product"*.
+
 ---
 
 ## Next step: explore before building
@@ -172,8 +174,8 @@ _Status: needed once any interactive controls exist._
 ## Open questions
 
 1. Does the composite signal formula feel right on real data? Or does it over-weight concentration vs agreement?
-2. Is 12 the right default for top_n? Should it be configurable?
+2. Is 12 the right default for top_n? Should it be configurable? *(Partial answer from `experiments/thematic-spike/FINDINGS.md`: 9–12 is a multi-constraint optimum where psychology, screen scannability, and 1-hour-meeting attention budget converge. But the count is a navigation bound, not a quality bound — data overrules. Configurable would be the principled choice.)*
 3. Do researchers actually look at the heatmap, or just the signal cards?
-4. Would a "surprising findings" section (high residual but low composite) catch things the ranked list misses?
+4. Would a "surprising findings" section (high residual but low composite) catch things the ranked list misses? *(Partial answer from FINDINGS: substantial single-participant clusters — one participant, ≥3 coherent quotes — are often deviant-case insights worth surfacing as first-class output, not folded into "Uncategorised". This is one shape "surprising findings" could take.)*
 5. Should signal cards link back to specific quotes in the report, not just the section heading?
-6. Is the current card expansion (show/hide quotes) enough, or do researchers want quote-level actions (star, annotate, copy)?
+6. Is the current card expansion (show/hide quotes) enough, or do researchers want quote-level actions (star, annotate, copy)? *(FINDINGS *"Display quote vs evidence quote"* distinguishes one slide-ready quote per cluster from the surrounding evidence — relevant if quote-level actions get added.)*

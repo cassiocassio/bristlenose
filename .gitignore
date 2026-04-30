@@ -69,3 +69,7 @@ desktop/testtest/
 **/xcuserdata/
 **/*.xcuserstate
 .playwright-mcp/
+
+# Thematic-analysis spike output (private corpus data derived from gitignored trial-runs)
+experiments/thematic-spike/output/
+experiments/thematic-spike/**/__pycache__/

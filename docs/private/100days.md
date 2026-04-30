@@ -213,6 +213,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - **Re-run pipeline from serve mode** — `POST /api/projects/{id}/rerun`, background task with progress streaming
 - **~~User research panel opt-in~~** — optional email field in feedback modal
 - **Pass transcript data to renderer** — avoid redundant disk I/O
+- **Thematic analysis — wider survey & options** — post-alpha question worth carrying. s11 is one big inductive Claude call over the whole `GENERAL_CONTEXT` pool (47k tokens / 284 quotes on fossda); hits a context-window cliff around 1.5–2k quotes, no stability check, no separation between grouping and naming. Survey of academia + QDA-tool practice (Braun & Clarke iteratively, NVivo / ATLAS.ti / Marvin / Looppanel converge on code-first, BERTopic-style embed+cluster+name as local-first option) parked in `~/.claude/plans/doing-trial-runs-of-replicated-dolphin.md`. Cheapest first move: a 1-day **stability spike** — run s11 5× on fossda, embed theme labels, measure pairwise overlap. Surface at first non-fossda corpus / alpha-cohort retrospective. Apr 2026 spike-within-spike: added Option M (pure-math BERTopic — sentence-transformers + UMAP + HDBSCAN + c-TF-IDF, no LLM) to `experiments/thematic-spike/`. On fossda (n=100) it produced 16 clusters with 14% honest noise (vs 100% padding from LLM prototypes), concrete labels (sendmail, crochet/yarn, audacity), and zero cost; on the smaller ikea corpus (n=67) it under-segmented (3 clusters, 100% coverage). Suggestive — not conclusive — that the LLM may not be contributing distinguishable thematic value over BERTopic on richer corpora
 
 ---
 
@@ -224,6 +225,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - ~~**Error messaging**~~ — pipeline failures show actionable messages ("check API credits or logs", "run bristlenose doctor"), red ✗ / yellow ⚠ per stage. Shipped 0.13.3
 - [S4] **`bristlenose doctor` in GUI** — dependency health checks visible in app, not just CLI
 - ~~**Homebrew formula: spaCy model** — post_install step (#42). Without it, first run fails~~
+- **Cohort baselines for all three frontier providers** — Phase 1 cost-forecast shipped (98df507) with empty `cohort-baselines.json`; populate from FOSSDA dogfood against Claude Sonnet 4 + GPT-4o + Gemini 2.5 Pro so non-Claude users get a pre-run cost estimate too. One run per provider into separate output dirs, merge medians into a single baseline file with `source: "FOSSDA n=3 vendors"`
 
 ### Should
 - **Time estimate warning** — warn before long transcription jobs (#39)

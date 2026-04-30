@@ -2,6 +2,8 @@
 
 _Feb 2026. Captures the design thinking behind the UXR codebook v2 rewrite and the broader codebook layering vision._
 
+> **Methodological frame (added 30 Apr 2026).** This codebook ecosystem is the **deductive / template-analysis** arm of Bristlenose's analytic split — codebook-defined patterns applied to corpus to surface ranked, action-oriented signals. The complementary **inductive / Braun & Clarke** arm is the s11 thematic-grouping stage, which lets themes emerge from the corpus to give the researcher a first-orientation landscape map. **Both are needed; neither subsumes the other.** A thematic-analysis spike (`experiments/thematic-spike/FINDINGS.md`, *"Two methodological traditions, one product"*) explicitly validated this split: trying to use codebook-defined themes to seed s11 is on the *don't-progress* list, but using codebook patterns to drive signal-cards work is the right home for everything in this doc. The five layers below are layers in the deductive stack.
+
 ---
 
 ## The five layers of tags

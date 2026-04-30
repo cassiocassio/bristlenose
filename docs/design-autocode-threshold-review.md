@@ -4,6 +4,8 @@
 
 The Plato stress test (280 philosophical quotes tagged with a 26-tag scholarly codebook) revealed a key UX problem with AutoCode: the system always proposes a tag for every quote, even when the content is irrelevant. "What is your suit, Euthyphro?" gets tagged "myth and analogy" at 0.10 confidence. Without threshold controls, researchers see weak matches and lose trust — the same problem Dovetail's auto-tagging has.
 
+> **Same disease, different cure.** This is the AutoCode-side analogue of the noise-bucket failure mode the thematic-analysis spike found in s11 (see `experiments/thematic-spike/FINDINGS.md` *"Universal failures"* — 100% coverage = padding). In s11 the cure is a prompt-level permission to leave quotes unassigned; in AutoCode the cure is a UI-level confidence threshold. Both are honesty mechanisms — the system saying "I'm not sure" instead of forcing every quote into a bucket.
+
 The current `AutoCodeReportModal` shows a flat triage table of all proposals above a hardcoded 0.5 confidence threshold. The researcher can accept all or deny individual rows. There's no way to see the confidence distribution, set thresholds, or distinguish strong matches from weak ones.
 
 **Goal:** Replace the flat triage table with a confidence-aware review dialog that lets the researcher set two thresholds (accept above / exclude below), see the distribution, and review proposals in three zones.

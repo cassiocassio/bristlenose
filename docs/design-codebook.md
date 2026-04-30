@@ -119,6 +119,23 @@ ungrouped:
 
 ### Phase 5: LLM prompt integration
 
+> **⚠ Partially superseded — needs reframing before implementation (30 Apr 2026)**
+>
+> The thematic-analysis spike (`experiments/thematic-spike/FINDINGS.md`) landed on a **two methodological traditions** framing that conflicts with parts of Phase 5 as currently drafted:
+>
+> - **Themes (s11) are inductive** (Braun & Clarke): they emerge from the corpus to give the researcher a first-orientation landscape map. Seeding s11 with codebook-defined themes risks brief-restating output and pre-empting the researcher's interpretive work.
+> - **Signal cards are deductive** (template analysis): they apply the researcher's codebook priors to the corpus and surface ranked, action-oriented findings (the "stupid green button in the cart" pattern). This is where codebook-driven LLM prompting genuinely belongs.
+>
+> See FINDINGS *"Two methodological traditions, one product"* and the explicit *"Don't-progress list for future-Claude"* (which calls out "codebook-only themes for s11" and "replacing s10/s11 with code-first per-quote approach" as paths not to take).
+>
+> **Implications for Phase 5 below:**
+>
+> - The **Stage 11 codebook-seeded themes** proposal (line 140 onwards) should be reframed as a signal-cards / AutoCode feature, not as s11 prompt injection. Signal cards are the right home.
+> - The **Stage 10 codebook-seeded screen labels** proposal is more compatible with the spike findings — sections are largely artefact-anchored, not interpretive — but the s10 prompt change queued from the spike (navigational-vocabulary cue) should land first; codebook seeding is additive.
+> - The **Stage 9 sentiment customisation** is unchanged by the spike (orthogonal concern).
+>
+> The original Phase 5 text below is preserved for design-history continuity. Do not implement s11 codebook seeding without first re-reading FINDINGS and considering whether the work belongs in signal cards instead.
+
 **Goal:** Let the researcher's codebook influence what the LLM produces.
 
 This is the feature that closes the qualitative-research loop: define codes → apply to data → review → refine → re-apply.

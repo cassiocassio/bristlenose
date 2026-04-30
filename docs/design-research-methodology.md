@@ -4,6 +4,13 @@ How Bristlenose processes interview data into a structured research report. This
 
 Future goal: a user-facing "How it works" page in the report itself, drawn from this document.
 
+> **Empirical refinements (30 Apr 2026).** A side-by-side spike comparing 12 thematic-analysis approaches (single LLM call, map-reduce, code-first, BERTopic math-only, self-consistency, three permission-test variants, plus production s10/s11 reference) produced concrete empirical findings that refine — but do not replace — the methodology described below. Findings doc: [experiments/thematic-spike/FINDINGS.md](../experiments/thematic-spike/FINDINGS.md). Highlights:
+>
+> - The s10/s11 + signal-cards architecture **survived scrutiny**. The improvements landed are inside the existing shape (prompt-level honesty), not architectural replacement.
+> - **Three drop-in alternatives ruled out** as dead ends: BERTopic math-only (unreadable c-TF-IDF labels, density collapse on small corpora), two-pass review/refine (actively worse on specific themes), 5×-self-consistency (6× cost for similar quality).
+> - **Two prompt-level improvements queued for s10 and s11** (alpha-iteration chips): explicit navigational-vocabulary cue for s10; brief-restating ban + labelling-honesty rule for s11.
+> - **Universal failure modes** measured across all six original LLM prototypes: 100% coverage = padding (healthy 60–85%), brief-restating themes at 17–67%, single-participant noise. The methodology principles below should be read with these failure modes in mind.
+
 ---
 
 ## Pipeline overview
@@ -145,6 +152,19 @@ Stage 9 classifies every quote as one of two types:
 
 The classification is made by the LLM during extraction based on the topic segmentation from Stage 8. Segments tagged `general_context` by the topic segmenter produce `GENERAL_CONTEXT` quotes; everything else produces `SCREEN_SPECIFIC` quotes.
 
+> **The two-pool binary is a deliberate methodological bet about source material.** It is calibrated for UX-centric work (the centre of mass for Bristlenose's users) and **degrades gracefully on non-UX corpora**:
+>
+> | Source material | Distribution | Output shape |
+> |---|---|---|
+> | UX think-aloud (e.g. ikea: 53 SS / 14 GC) | mostly section-bound | many sections, few themes |
+> | Mixed UX + life context | balanced | balanced |
+> | Oral histories (e.g. fossda: 11 SS / 273 GC) | mostly contextual | few sections, many themes |
+> | Pure phenomenology / Socratic dialogue | no sections | zero sections, all themes — valid output |
+>
+> A future maintainer might be tempted to "fix" the asymmetry on oral-history corpora — **don't**. The asymmetry is the architecture working as designed. Cross-reference: empirical comparison in `experiments/thematic-spike/FINDINGS.md` (*"The SS/GC binary is a deliberate bet about source material"*).
+>
+> **Naming-debt notice.** "Screen" is the historical term and remains the code constant (`SCREEN_SPECIFIC`). The spike landed on **"Sections, not screens"** as the generalising term — the unit can be a page, a component, a flow, a hardware feature, or a service moment. The user-facing UI already uses "Sections". Rename of the code constant is queued (see FINDINGS *"Smallest possible product touches"* item 3).
+
 ---
 
 ## Screen clustering (Stage 10)
@@ -170,6 +190,17 @@ Takes all `GENERAL_CONTEXT` quotes and identifies emergent themes.
 **Exactly one theme per quote.** Even when a quote could fit multiple themes, the LLM picks the strongest fit. This matches researcher expectations: each quote appears once in the report. When further processing the output (Miro boards, affinity diagrams, spreadsheets), duplicates would cause confusion. The researcher can reassign quotes using inline editing.
 
 **Minimum evidence threshold:** A theme must have at least 2 quotes. Themes with fewer are folded into an "Uncategorised observations" bucket. A single quote doesn't constitute a pattern — it's an individual observation. The threshold of 2 is the minimum for "more than one person said this", which is the basic requirement for calling something a theme rather than an anecdote. A higher threshold (3+) would hide emergent patterns in small studies (3–5 participants).
+
+> **Refinement (30 Apr 2026 spike).** The "≥2 quotes" rule conflates two distinct value-classes of single-participant themes:
+>
+> - **Thin single-participant** (1 participant, ≤2 quotes) — almost always noise; the LLM grasping at straws on a tangent. Today's "fold into Uncategorised" rule handles these correctly.
+> - **Substantial single-participant** (1 participant, ≥3 quotes on a coherent topic) — often a genuine **deviant-case insight** (Patton; Eisenhardt). One participant articulated something coherent the others didn't engage with. Powerful findings live here.
+>
+> The current rule may bin both classes together. A future refinement could surface substantial-single-participant clusters as first-class output flagged "individual perspective worth reading". Empirical context: `experiments/thematic-spike/FINDINGS.md` *"Single-participant themes split into two value-classes"*.
+
+> **Refinement: theme-count as a navigation bound, not a quality bound.** The s11 prompt today asks for 5–12 themes. The spike found this is a useful *anchor* (matches working memory + screen scannability + 1-hour-meeting attention budget — all converge around 9–12) but **data overrules**. Richer corpora (10×1-hour interviews, 200–500 quotes) honestly produce 15–25 distinct themes; narrower ones (3 think-alouds, 60 quotes) honestly produce 5–7. Authority order: data > researcher judgement > heuristic > algorithmic constraint. Production count (what the LLM finds honestly) and navigation count (what the UI surfaces as labels) can be separated via UI grouping. See FINDINGS *"Heuristics anchor; data overrules"*.
+
+> **Refinement: the labelling principle.** The spike surfaced a subtle failure mode — LLM-generated theme labels can be *brief-restating* ("Brand", "Navigation", "Performance" — useless because the researcher already knows the brief), *mechanism-describing* (hides evidence behind UI vocabulary, routes the cluster to the wrong audience), or *pretending-to-insight* (sounds analytical but the LLM lacks the context to back it up). The honest sweet spot is **evidence-describing**: "Swedish product names" not "Brand strategy through nomenclature". Boring is correct. The label routes the cluster to the right human; the insight is the researcher's contribution. Two-line addition queued for the s11 prompt — see FINDINGS *"The labelling principle"* and *"Implication for the alpha"*.
 
 **Fallback:** If the LLM call fails, quotes are grouped by their raw `topic_label`. Functional but loses the cross-participant synthesis.
 

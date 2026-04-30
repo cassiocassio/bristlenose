@@ -122,9 +122,13 @@ Search-as-you-type filtering for report quotes. Collapsed by default to a magnif
 
 The ToC row (`.toc-row` flexbox) shows up to three navigation columns:
 
-- **Sections** — screen-specific findings (editable titles with pencil icons)
-- **Themes** — thematic clusters (editable titles with pencil icons)
+- **Sections** — section-bound findings (editable titles with pencil icons). Sections are units of the artefact a single team owns: a page, a component, a multi-page flow, a hardware feature, a service moment.
+- **Themes** — cross-cutting thematic clusters (editable titles with pencil icons). Themes are recurring concerns that demultiplex across teams (performance, brand, comparison-anchoring).
 - **Analysis** — Sentiment, Tags, Friction points, User journeys (not editable, plain links)
+
+> **The two-axis model.** Sections and Themes are not redundant — they organise the same quote pool along complementary axes for different stakeholder needs. The Figma owner of a page reads Sections; the brand strategist or performance engineer reads Themes. Empirical validation in `experiments/thematic-spike/FINDINGS.md` (*"Two-axis quotes page"*).
+>
+> **Naming-debt notice.** Older copy uses "screen-specific" (still the code constant `SCREEN_SPECIFIC` and some legacy template language). The user-facing label is *"Sections"* — generalises beyond software UX (covers physical products, services, multi-page flows). The constant rename is queued — see FINDINGS *"Smallest possible product touches"* item 3.
 
 ## Page footer
 
@@ -205,6 +209,8 @@ Each session gets a dedicated HTML page (`transcript_s1.html`, etc.) showing the
 ## Transcript coverage section
 
 Collapsible section at the end of the research report showing what proportion of the transcript made it into quotes. Helps researchers verify nothing important was missed.
+
+> **Healthy coverage band.** The thematic-analysis spike (`experiments/thematic-spike/FINDINGS.md`) found that **100% coverage indicates padding, not quality** — researchers cull 15–25% of utterances as filler instinctively (Boyatzis 1998; grounded theory). Healthy thematic-analysis coverage is **60–85%**. The transcript-coverage section here already reflects this honesty principle at the transcript level; the same framing extends to cluster-level coverage as a future enhancement.
 
 - **Summary line**: `Transcript coverage: 78% in report · 14% moderator · 8% omitted` — collapsed by default (`<details>` element)
 - **Percentages**: word-count based, whole numbers. "In report" = participant words in extracted quote timecode ranges. "Moderator" = moderator + observer speech (counted but never shown in review). "Omitted" = participant words not covered by any quote

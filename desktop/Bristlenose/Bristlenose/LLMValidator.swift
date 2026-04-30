@@ -430,4 +430,103 @@ enum LLMValidator {
         let digest = SHA256.hash(data: Data(key.utf8))
         return digest.prefix(8).map { String(format: "%02x", $0) }.joined()
     }
+
+    // MARK: - Model download
+
+    /// Aggregate progress across pull layers. Ollama's `/api/pull` emits
+    /// per-layer totals; the caller sees a single 0…1 ratio so the
+    /// progress bar doesn't reset between layers.
+    struct PullProgress {
+        let completedBytes: Int64
+        let totalBytes: Int64
+        let statusLine: String
+
+        var ratio: Double {
+            guard totalBytes > 0 else { return 0 }
+            return min(1, Double(completedBytes) / Double(totalBytes))
+        }
+    }
+
+    /// Stream `POST /api/pull` and report aggregated progress.
+    /// Layers download serially in Ollama; we sum their totals and
+    /// emit (sumCompleted, sumOfSeenTotals, currentStatusLine) per
+    /// JSON line received. Cancellation propagates via task cancel.
+    /// Throws on HTTP error or stream failure.
+    static func pullModel(
+        tag: String,
+        baseURL: URL,
+        onProgress: @escaping @MainActor (PullProgress) -> Void
+    ) async throws {
+        // Strip trailing /v1 if user pasted the OpenAI-compat URL.
+        let trimmed = baseURL.absoluteString
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let base = trimmed.hasSuffix("/v1") ? String(trimmed.dropLast(3)) : trimmed
+        guard let pullURL = URL(string: "\(base)/api/pull") else {
+            throw URLError(.badURL)
+        }
+        var req = URLRequest(url: pullURL)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["model": tag, "stream": true]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        // No timeout for the resource — model pulls take minutes.
+        let session = URLSession(configuration: .ephemeral)
+        defer { session.finishTasksAndInvalidate() }
+
+        let (bytes, response) = try await session.bytes(for: req)
+        guard let http = response as? HTTPURLResponse,
+              (200..<300).contains(http.statusCode)
+        else {
+            throw URLError(.badServerResponse)
+        }
+
+        // Per-digest layer accumulation: layers come in serially with
+        // their own `total`/`completed` fields. Track the maximum
+        // `completed` we've seen for each digest, then sum across.
+        var seen: [String: (completed: Int64, total: Int64)] = [:]
+        var lastStatus = "Starting download…"
+        var lineBuffer = ""
+        for try await byte in bytes {
+            try Task.checkCancellation()
+            if byte == 0x0A {  // newline
+                if !lineBuffer.isEmpty {
+                    if let event = try? JSONDecoder().decode(
+                        PullEvent.self,
+                        from: Data(lineBuffer.utf8))
+                    {
+                        if let status = event.status {
+                            lastStatus = status
+                        }
+                        if let digest = event.digest, let total = event.total {
+                            let completed = event.completed ?? 0
+                            seen[digest] = (completed, total)
+                        }
+                        let sumCompleted = seen.values.reduce(0) { $0 + $1.completed }
+                        let sumTotal = seen.values.reduce(0) { $0 + $1.total }
+                        let snapshot = PullProgress(
+                            completedBytes: sumCompleted,
+                            totalBytes: sumTotal,
+                            statusLine: lastStatus)
+                        await MainActor.run { onProgress(snapshot) }
+                    }
+                    lineBuffer.removeAll(keepingCapacity: true)
+                }
+            } else {
+                lineBuffer.unicodeScalars.append(Unicode.Scalar(byte))
+            }
+            // Defensive cap — abort on absurdly long lines.
+            if lineBuffer.utf8.count > 65_536 {
+                throw URLError(.cannotParseResponse)
+            }
+        }
+    }
+
+    /// Subset of fields we read from each /api/pull stream line.
+    private struct PullEvent: Decodable {
+        let status: String?
+        let digest: String?
+        let total: Int64?
+        let completed: Int64?
+    }
 }

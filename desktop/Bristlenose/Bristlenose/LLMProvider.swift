@@ -56,25 +56,27 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         needsAPIKey ? rawValue : nil
     }
 
-    /// Default model for this provider.
+    /// Default model for this provider. Ollama default is RAM-aware via
+    /// `OllamaCatalog.recommendedTag()` — see end of file.
     var defaultModel: String {
         switch self {
         case .claude: "claude-sonnet-4-20250514"
         case .chatGPT: "gpt-4o"
         case .gemini: "gemini-2.0-flash"
         case .azure: "gpt-4o"
-        case .ollama: "llama3.2:3b"
+        case .ollama: OllamaCatalog.recommendedTag()
         }
     }
 
     /// Known models for the picker. "Custom…" is appended by the UI.
+    /// Ollama's list comes from the curated catalog (RAM tiers + sizes).
     var availableModels: [String] {
         switch self {
         case .claude: ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001", "claude-opus-4-20250514"]
         case .chatGPT: ["gpt-4o", "gpt-4o-mini"]
         case .gemini: ["gemini-2.0-flash", "gemini-2.5-pro"]
         case .azure: ["gpt-4o", "gpt-4o-mini"]
-        case .ollama: ["llama3.2:3b", "mistral"]
+        case .ollama: OllamaCatalog.curated.map(\.tag)
         }
     }
 
@@ -242,4 +244,61 @@ extension Notification.Name {
     static let bristlenosePrefsChanged = Notification.Name("bristlenosePrefsChanged")
     /// Posted by the app menu to re-show the AI data disclosure sheet.
     static let showAIConsentSheet = Notification.Name("showAIConsentSheet")
+}
+
+// MARK: - Ollama catalog
+
+/// Curated Ollama models with sizes + RAM tiers. The list is local
+/// (we know what models exist + their costs without needing Ollama
+/// installed or running). Mirrors `docs/design-gemma4-local-models.md`
+/// LOCAL_MODEL_RAM but trimmed to four — one per RAM tier — to keep
+/// the picker tight.
+struct OllamaModel: Identifiable, Hashable {
+    var id: String { tag }
+    let tag: String
+    let displayName: String
+    let weightsGB: Double
+    let minRAMGB: Double
+}
+
+enum OllamaCatalog {
+    static let curated: [OllamaModel] = [
+        // Order: small → large. The greyed unfit rows still appear so
+        // the user can see what's possible at higher tiers.
+        OllamaModel(tag: "llama3.2:3b",  displayName: "Llama 3.2 3B", weightsGB: 2,  minRAMGB: 4),
+        OllamaModel(tag: "gemma4:e4b",   displayName: "Gemma 4 E4B",  weightsGB: 3,  minRAMGB: 8),
+        OllamaModel(tag: "gemma4:26b",   displayName: "Gemma 4 26B",  weightsGB: 16, minRAMGB: 24),
+        OllamaModel(tag: "gemma4:31b",   displayName: "Gemma 4 31B",  weightsGB: 20, minRAMGB: 32),
+    ]
+
+    /// System RAM in GB. Reads `ProcessInfo.processInfo.physicalMemory`
+    /// (sandbox-safe, no entitlement required).
+    static var systemRAMGB: Double {
+        Double(ProcessInfo.processInfo.physicalMemory) / 1_000_000_000
+    }
+
+    /// Best-fit recommendation for the user's hardware. Threshold of
+    /// `>= 15` rather than `>= 16` — `physicalMemory` reports slightly
+    /// less than the advertised RAM tier (e.g. ~15.5 GB for a "16 GB"
+    /// Mac), and we don't want a 16 GB machine to fall back to the
+    /// floor model. Mirrors the waterfall in
+    /// `docs/design-gemma4-local-models.md`.
+    static func recommendedTag(forRAMGB ramGB: Double = systemRAMGB) -> String {
+        if ramGB >= 47 { return "gemma4:31b" }
+        if ramGB >= 35 { return "gemma4:26b" }
+        if ramGB >= 15 { return "gemma4:e4b" }
+        return "llama3.2:3b"
+    }
+
+    /// True if this model fits in the given RAM tier. Drives grey-out
+    /// in the Set up sheet's picker.
+    static func fits(_ model: OllamaModel, ramGB: Double = systemRAMGB) -> Bool {
+        ramGB >= model.minRAMGB
+    }
+
+    /// Look up a model by tag. Returns nil for tags not in the curated
+    /// list (e.g. user-typed Custom… values).
+    static func model(for tag: String) -> OllamaModel? {
+        curated.first { $0.tag == tag }
+    }
 }

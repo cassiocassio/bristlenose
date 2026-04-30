@@ -28,6 +28,8 @@ struct AIConsentView: View {
     @EnvironmentObject var i18n: I18n
     @AppStorage("aiConsentVersion") private var consentVersion: Int = 0
     @AppStorage("activeProvider") private var activeProvider: String = "anthropic"
+    @AppStorage("llmModel_local") private var ollamaModel: String = ""
+    @State private var showingOllamaSetup = false
 
     /// When true, shows "Done" instead of "Continue" (re-access mode).
     var isReviewMode: Bool = false
@@ -52,6 +54,22 @@ struct AIConsentView: View {
         .padding(24)
         .frame(width: 520)
         .fixedSize(horizontal: false, vertical: true)
+        .sheet(isPresented: $showingOllamaSetup) {
+            OllamaSetupSheet(
+                onComplete: { chosenTag in
+                    ollamaModel = chosenTag
+                    activeProvider = LLMProvider.ollama.rawValue
+                    NotificationCenter.default.post(
+                        name: .bristlenosePrefsChanged, object: nil)
+                    recordConsent(action: "ollama")
+                    showingOllamaSetup = false
+                    onDismiss()
+                },
+                onCancel: {
+                    showingOllamaSetup = false
+                }
+            )
+        }
     }
 
     // MARK: - Header
@@ -154,12 +172,12 @@ struct AIConsentView: View {
 
     private var buttonBar: some View {
         HStack {
+            // Beat 3b: replaces the old direct activeProvider write with
+            // a guided sheet that picks a model + downloads it. Consent
+            // recording moves into the sheet's onComplete success path so
+            // a mid-setup cancel leaves the user unconsented.
             Button(i18n.t("desktop.aiConsent.useOllama")) {
-                activeProvider = LLMProvider.ollama.rawValue
-                NotificationCenter.default.post(
-                    name: .bristlenosePrefsChanged, object: nil)
-                recordConsent(action: "ollama")
-                onDismiss()
+                showingOllamaSetup = true
             }
             .buttonStyle(.borderless)
 

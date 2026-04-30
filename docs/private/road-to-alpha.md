@@ -4,7 +4,7 @@ Single source of truth for getting Bristlenose into friends' hands via **interna
 
 Alpha = sharing a signed sandboxed build with ~5 UXR friends via TestFlight internal testers (no Beta App Review). This doc doesn't cover external TestFlight or full App Store submission — those are S6+ and captured in `100days.md`.
 
-_Written 17 Apr 2026 as part of Sprint 2 planning. Last updated 18 Apr 2026 (Status banner, Track C C0 note in §3/§5, Track C C2 parallel-signing + tag-only CI note in §4, modularity cross-refs). 18 Apr 2026 (evening): C0 spike completed — §5 reduced to one load-bearing entitlement. Update when facts change._
+_Written 17 Apr 2026 as part of Sprint 2 planning. Last updated 29 Apr 2026 (truing pass — Track C C2–C5 closed 28 Apr; Tracks A + B in flight on `sandbox-debug` and `first-run` worktrees from 29 Apr; Sprint 2 homework items 2/4/5/6/8/9 are ✅, only #3 sandbox + #11 CI remain S2; domain typo `bristlenose.research/privacy` → `bristlenose.app/privacy`). Earlier: 18 Apr 2026 (evening) — C0 spike completed, §5 reduced to one load-bearing entitlement. Update when facts change._
 
 ## Status (18 Apr 2026)
 
@@ -217,7 +217,7 @@ Detail: `docs/private/testflight-alpha-path.md`.
 ### 14. External TestFlight → full App Store submission (S6 and beyond)
 
 Not part of the alpha path. Requires:
-- Hosted privacy policy URL (`bristlenose.research/privacy`)
+- Hosted privacy policy URL (`bristlenose.app/privacy`)
 - Terms of service
 - EULA (standard Apple or custom)
 - Age rating questionnaire
@@ -249,7 +249,7 @@ Captured across `100days.md` S6 items.
 | 13 | Internal TestFlight rollout | ⬜ S6 |
 | 14 | External / full submission | ⬜ Post-100-days |
 
-**Sprint 2 does the homework items (2–6, 11) in parallel with Mac app MVP work. The upload itself (12–13) waits until MVP flow is share-ready — no point uploading an embarrassing build.**
+**Sprint 2 status (29 Apr 2026):** items 2 (App Store Connect record), 4 (signing), 5 (sandbox plumbing in CI), 6 (Privacy Manifest), 8 (sidecar codesigning), 9 (supply chain) are ✅ shipped. Only #3 (sandbox runtime triage — Track A on `sandbox-debug`) + #11 (CI upload job) remain in S2. The upload itself (12–13) waits until first-run polish is share-ready — no point uploading an embarrassing build.
 
 ## What to do first when S2 signing time arrives
 

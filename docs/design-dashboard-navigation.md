@@ -2,6 +2,10 @@
 
 The Project tab dashboard is fully interactive — stat cards, featured quotes, session table rows, and section/theme lists all navigate to other tabs. Working context lives in `bristlenose/theme/CLAUDE.md` and `bristlenose/stages/CLAUDE.md`.
 
+> **The two-axis quotes model.** The dashboard surfaces both *Sections* and *Themes* as parallel navigation entries because they organise the same quote pool along two complementary axes — sections are units of the artefact a single team owns (a page, a component, a flow, a hardware feature), themes are cross-cutting concerns that demultiplex across many teams (performance, brand, comparison-anchoring). Both are required; neither subsumes the other. Empirical validation in `experiments/thematic-spike/FINDINGS.md` (*"Two-axis quotes page"* and *"What the spike validated about the existing architecture"*).
+>
+> **Naming-debt notice (Sections vs Screens).** The spike landed on *"Sections, not screens"* as the generalising term — the unit can be a page, a component, a multi-page flow, a hardware feature, or a service moment. The user-facing label is already "Sections" (this doc, the dashboard, the report nav). The code constant `SCREEN_SPECIFIC` is on the rename list (FINDINGS *"Smallest possible product touches"* item 3) but no rename has shipped yet. When the rename does ship, this doc and `design-html-report.md` should be checked for cascade.
+
 > **Serve mode (React Router):** Navigation is handled by React Router. The `data-stat-link` convention, `switchToTab()`, `scrollToAnchor()`, and `navigateToSession()` still work via backward-compat shims installed by `frontend/src/shims/navigation.ts`. The shims delegate to React Router's `navigate()`. The conventions below apply to both paths — shims bridge the gap in serve mode.
 
 ## `data-stat-link` convention

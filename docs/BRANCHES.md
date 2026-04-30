@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 1 May 2026 (japanese-translation merged + closed)
+**Updated:** 1 May 2026 (first-run merged + closed)
 
 ---
 
@@ -21,7 +21,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
 | `bristlenose_branch sandbox-debug/` | `sandbox-debug` | S2 Track A — macOS app sandbox violation triage (A1 spike onward) |
-| `bristlenose_branch first-run/` | `first-run` | S2 Track B Branch 1 — first-run experience (cold open → AI consent → API key → empty-state narrative) |
 | `bristlenose_branch track-c-c1-bundled-sidecar/` | `track-c-c1-bundled-sidecar` | S2 Track C C1 — PyInstaller bundling pipeline + Xcode Copy Sidecar Resources phase + SidecarMode bundled-path resolve |
 
 
@@ -110,7 +109,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `drag-push` | `bristlenose_branch drag-push/` | local only |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `sandbox-debug` | `bristlenose_branch sandbox-debug/` | local only |
-| `first-run` | `bristlenose_branch first-run/` | local only |
 | `track-c-c1-bundled-sidecar` | `bristlenose_branch track-c-c1-bundled-sidecar/` | local only |
 
 
@@ -140,31 +138,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - `sandbox-debug` (Track A) — both touch `desktop/`. Sequencing is C1 → A1c rebase, not parallel; coordinate before merging either to main
-- `first-run` (Track B Branch 1) — touches `desktop/Bristlenose/Bristlenose/` Swift files (ContentView, AIConsentView). C1 only edits `SidecarMode.swift` and the pbxproj — low overlap, but pbxproj edits often conflict mechanically; merge order matters
 - Frontend/theme branches (`symbology`, `highlighter`, `living-fish`, `drag-push`, `responsive-signal-cards`) — no overlap
-
----
-
-### `first-run`
-
-**Status:** Just started
-**Started:** 29 Apr 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch first-run/`
-**Remote:** local only (push when ready)
-
-**What it does:** S2 Track B Branch 1 — first-run experience for the macOS app. Covers the cold-open → AI disclosure → API key → empty-state path that gates everything else for alpha cohort. Scope: §1a beats 1–3 plus the connective tissue (welcoming empty state, narrative onboarding, "what do I do first" affordances). Both Claude and Ollama paths. Adds Ollama detection / model-picker / install-hint as a real beat-3b. Cold-start splash so post-C1 sidecar boot doesn't feel hung. Plan: `~/.claude/plans/there-was-work-on-piped-lark.md` (Branch 1 section).
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/ContentView.swift`, `AIConsentView.swift`, sidebar views — empty state, sidebar width truncation
-- `frontend/src/components/SettingsModal.tsx` — Claude key paste + validation UX
-- `bristlenose/server/routes/settings.py` — key validation endpoint
-- `desktop/Bristlenose/Bristlenose/Keychain*.swift` — sandboxed Keychain (post-C3)
-- `bristlenose/llm/providers/ollama.py` (or sibling) — Ollama detection probe
-- Possibly `frontend/src/pages/` for empty-state narrative if main pane gets a "what is Bristlenose" intro
-
-**Potential conflicts with other branches:**
-- `sandbox-debug` (Track A) — both touch `desktop/`. Sandbox triage runs in parallel; coordinate before merging either to main if both alter entitlements
-- `symbology`, `highlighter`, `living-fish`, `drag-push`, `responsive-signal-cards` — no overlap (those are frontend/theme; this is desktop chrome + Settings + LLM provider detection)
 
 ---
 
@@ -287,6 +261,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `first-run` — merged 1 May 2026
+
+S2 Track B Branch 1 — first-run experience for the macOS app (cold-open → AI disclosure → API key → empty-state). Beat 1 (`BootView.swift` + `WelcomeView.swift` two-variant pattern, worktree-aware locale loading), Beat 3 (round-trip API key validation in `LLMSettingsView`), Beat 3b (`OllamaSetupSheet` state machine for local AI install), CSS fall-back fix for projects with no rendered assets (`_mount_prod_report`), plus design-doc truing pass and 5 HIGH review fixes. 14 commits. Merge commit `b4cc95c`.
 
 ### `japanese-translation` — merged 1 May 2026
 

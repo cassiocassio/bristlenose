@@ -197,7 +197,7 @@
     "providersIntro": "데이터를 처리할 수 있는 클라우드 제공업체:",
     "ollamaCallout": "Ollama는 기기에서 완전히 실행됩니다. 데이터가 기기를 벗어나지 않습니다.",
     "researcherResponsibility": "연구 윤리 승인에 따라 참여자에게 인터뷰 데이터가 제3자 AI 서비스에 의해 처리될 수 있음을 알렸는지 확인하세요.",
-    "continue": "이해했습니다",
+    "continue": "계속",
     "useOllama": "Ollama 사용 (클라우드 없음)",
     "done": "완료"
   }

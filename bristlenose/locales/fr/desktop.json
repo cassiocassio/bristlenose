@@ -197,7 +197,7 @@
     "providersIntro": "Fournisseurs cloud susceptibles de traiter vos données :",
     "ollamaCallout": "Ollama s'exécute entièrement sur votre appareil. Aucune donnée ne quitte votre machine.",
     "researcherResponsibility": "Assurez-vous que les participants ont été informés que leurs données d'entretien peuvent être traitées par des services d'IA tiers, conformément à l'approbation de votre comité d'éthique.",
-    "continue": "J'ai compris",
+    "continue": "Continuer",
     "useOllama": "Utiliser Ollama (sans cloud)",
     "done": "Terminé"
   }

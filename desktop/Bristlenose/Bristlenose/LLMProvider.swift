@@ -290,10 +290,17 @@ enum OllamaCatalog {
         return "llama3.2:3b"
     }
 
-    /// True if this model fits in the given RAM tier. Drives grey-out
-    /// in the Set up sheet's picker.
+    /// Headroom reserved for macOS + foreground apps + Bristlenose itself
+    /// before deciding whether a model fits. A reasonable guess — the
+    /// actual ceiling depends on what the user has open. If we're wrong
+    /// the consequence is "machine goes very slow," which is acceptable
+    /// for alpha.
+    static let osHeadroomGB: Double = 8
+
+    /// True if this model fits in the given RAM tier after subtracting
+    /// `osHeadroomGB`. Drives grey-out in the Set up sheet's picker.
     static func fits(_ model: OllamaModel, ramGB: Double = systemRAMGB) -> Bool {
-        ramGB >= model.minRAMGB
+        ramGB - osHeadroomGB >= model.minRAMGB
     }
 
     /// Look up a model by tag. Returns nil for tags not in the curated

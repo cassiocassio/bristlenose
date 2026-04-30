@@ -119,8 +119,11 @@ enum BristlenoseShared {
         if let apiVersion = defaults.string(forKey: "azureAPIVersion"), !apiVersion.isEmpty {
             env["BRISTLENOSE_AZURE_API_VERSION"] = apiVersion
         }
-        if let localURL = defaults.string(forKey: "localURL"), !localURL.isEmpty {
-            env["BRISTLENOSE_LOCAL_URL"] = localURL
+        // Ollama — hardwired to localhost in the desktop GUI. Parent-env
+        // override only (CLI / CI). See LLMSettingsView.hardwiredOllamaURL.
+        if let envURL = ProcessInfo.processInfo.environment["BRISTLENOSE_LOCAL_URL"],
+           !envURL.isEmpty {
+            env["BRISTLENOSE_LOCAL_URL"] = envURL
         }
     }
 }

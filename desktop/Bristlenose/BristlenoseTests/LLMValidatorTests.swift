@@ -29,7 +29,7 @@ struct LLMValidatorTests {
         #expect(s401 == .invalid)
         #expect(e401?.contains("rejected") == true)
 
-        let (s403, _) = LLMValidator.classify(provider: .openai, status: 403)
+        let (s403, _) = LLMValidator.classify(provider: .chatGPT, status: 403)
         #expect(s403 == .invalid)
     }
 
@@ -73,7 +73,7 @@ struct LLMValidatorTests {
         // The forward-compat is Anthropic-only because Anthropic has no
         // free auth-check endpoint. OpenAI uses GET /v1/models which
         // doesn't have the model-deprecation risk.
-        let (status, _) = LLMValidator.classify(provider: .openai, status: 400)
+        let (status, _) = LLMValidator.classify(provider: .chatGPT, status: 400)
         #expect(status == .unavailable)
     }
 
@@ -194,9 +194,9 @@ struct LLMValidatorTests {
         withIsolatedStore {
             let key = "shared-string"
             LLMValidator.recordVerdict(provider: .claude, key: key, status: .online)
-            LLMValidator.recordVerdict(provider: .openai, key: key, status: .invalid)
+            LLMValidator.recordVerdict(provider: .chatGPT, key: key, status: .invalid)
             #expect(LLMValidator.cachedVerdict(provider: .claude, key: key) == .ok)
-            #expect(LLMValidator.cachedVerdict(provider: .openai, key: key) == .invalid)
+            #expect(LLMValidator.cachedVerdict(provider: .chatGPT, key: key) == .invalid)
         }
     }
 }

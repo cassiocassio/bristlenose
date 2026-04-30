@@ -57,11 +57,16 @@ struct AIConsentView: View {
         .sheet(isPresented: $showingOllamaSetup) {
             OllamaSetupSheet(
                 onComplete: { chosenTag in
+                    // Record consent BEFORE posting the prefs change.
+                    // The prefs notification can drive ServeManager to
+                    // start; consent must be on disk first so the
+                    // gate at ContentView.handleSelectionChange sees
+                    // the new version.
+                    recordConsent(action: "ollama")
                     ollamaModel = chosenTag
                     activeProvider = LLMProvider.ollama.rawValue
                     NotificationCenter.default.post(
                         name: .bristlenosePrefsChanged, object: nil)
-                    recordConsent(action: "ollama")
                     showingOllamaSetup = false
                     onDismiss()
                 },

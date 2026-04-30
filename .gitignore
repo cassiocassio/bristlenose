@@ -73,3 +73,9 @@ desktop/testtest/
 # Thematic-analysis spike output (private corpus data derived from gitignored trial-runs)
 experiments/thematic-spike/output/
 experiments/thematic-spike/**/__pycache__/
+
+# Stray worktree dirs from spawned background sessions
+.claude/worktrees/
+
+# Stray frontend trial-run output (should never live here)
+frontend/trial-runs/

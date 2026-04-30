@@ -140,8 +140,9 @@ final class I18n: ObservableObject {
     ///
     /// Priority:
     /// 1. Dev mode — repo source tree (fastest iteration)
-    /// 2. Bundled .app — PyInstaller sidecar
-    /// 3. Homebrew / pipx — site-packages
+    /// 2. Bundled .app — host target's Copy Sidecar Resources phase
+    /// 3. Bundled .app — PyInstaller sidecar (legacy fallback)
+    /// 4. Homebrew / pipx — site-packages
     static func findLocalesDirectory() -> URL? {
         let fm = FileManager.default
 
@@ -153,10 +154,22 @@ final class I18n: ObservableObject {
             return devURL
         }
 
-        // 2. App bundle: PyInstaller sidecar
+        // 2. App bundle: host-target Resources/locales (copied by the
+        // "Copy Sidecar Resources" build phase). This is the canonical
+        // location for shipped builds — independent of the sidecar's
+        // PyInstaller layout.
         if let resourcePath = Bundle.main.resourcePath {
+            let bundledPath = URL(fileURLWithPath: resourcePath)
+                .appendingPathComponent("locales")
+            if fm.fileExists(atPath: bundledPath.appendingPathComponent("en/common.json").path) {
+                return bundledPath
+            }
+
+            // 3. Legacy fallback: PyInstaller sidecar's _internal dir.
+            // Kept for older builds where locales weren't copied to the
+            // host bundle directly.
             let sidecarPath = URL(fileURLWithPath: resourcePath)
-                .appendingPathComponent("sidecar/_internal/bristlenose/locales")
+                .appendingPathComponent("bristlenose-sidecar/_internal/bristlenose/locales")
             if fm.fileExists(atPath: sidecarPath.appendingPathComponent("en/common.json").path) {
                 return sidecarPath
             }

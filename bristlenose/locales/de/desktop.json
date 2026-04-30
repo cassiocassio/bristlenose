@@ -197,7 +197,7 @@
     "providersIntro": "Cloud-Anbieter, die Ihre Daten verarbeiten können:",
     "ollamaCallout": "Ollama läuft vollständig auf Ihrem Gerät. Keine Daten verlassen Ihren Computer.",
     "researcherResponsibility": "Stellen Sie sicher, dass die Teilnehmer darüber informiert wurden, dass ihre Interviewdaten von KI-Diensten Dritter verarbeitet werden können, wie von Ihrer Ethikkommission gefordert.",
-    "continue": "Ich verstehe",
+    "continue": "Fortfahren",
     "useOllama": "Ollama verwenden (ohne Cloud)",
     "done": "Fertig"
   }

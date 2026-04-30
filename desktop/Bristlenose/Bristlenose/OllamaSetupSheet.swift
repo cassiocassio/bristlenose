@@ -38,7 +38,11 @@ struct OllamaSetupSheet: View {
         .frame(width: 460)
         .onChange(of: model.phase) { _, phase in
             if case .finishing = phase {
-                onComplete(selectedTag)
+                // Source of truth for the chosen tag is the model — the
+                // view's `selectedTag` is `@State` and could in principle
+                // drift between dispatch and completion. The model
+                // captures the tag passed to `run(tag:)`.
+                onComplete(model.currentTag ?? selectedTag)
             }
         }
     }
@@ -85,6 +89,7 @@ struct OllamaSetupSheet: View {
                     ForEach(OllamaCatalog.curated) { m in
                         Text(label(for: m))
                             .tag(m.tag)
+                            .disabled(!OllamaCatalog.fits(m))
                     }
                 }
                 .labelsHidden()
@@ -201,6 +206,10 @@ final class OllamaSetupModel: ObservableObject {
     @Published var statusLine: String = ""
     @Published var completedBytes: Int64 = 0
     @Published var totalBytes: Int64 = 0
+    /// The tag currently being processed by `run(tag:)`. Source of truth
+    /// for the view's onComplete callback so the chosen model can't drift
+    /// between dispatch and completion.
+    @Published private(set) var currentTag: String?
 
     var downloadRatio: Double {
         guard totalBytes > 0 else { return 0 }
@@ -208,13 +217,13 @@ final class OllamaSetupModel: ObservableObject {
     }
 
     private static let logger = Logger(subsystem: "app.bristlenose", category: "ollama-setup")
-    private static let ollamaAppPath = "/Applications/Ollama.app"
     private static let defaultBaseURL = URL(string: "http://127.0.0.1:11434")!
 
     private var task: Task<Void, Never>?
 
     func run(tag: String) async {
         task?.cancel()
+        currentTag = tag
         let work = Task { @MainActor in
             do {
                 // Reachability first: if the daemon answers, we don't
@@ -222,16 +231,17 @@ final class OllamaSetupModel: ObservableObject {
                 // user-launched binary). Skip install entirely.
                 let alreadyReachable = await isDaemonReachable()
                 if !alreadyReachable {
-                    if !FileManager.default.fileExists(atPath: Self.ollamaAppPath) {
-                        phase = .installingOllama
-                        statusLine = "Installing local runtime…"
-                        Self.logger.info("Ollama.app not found; opening installer page")
-                        NSWorkspace.shared.open(URL(string: "https://ollama.com/download")!)
-                        try await waitForOllamaApp()
-                    }
+                    phase = .installingOllama
+                    statusLine = "Installing local runtime…"
+                    Self.logger.info("Daemon unreachable; opening installer page")
+                    NSWorkspace.shared.open(URL(string: "https://ollama.com/download")!)
+                    // No /Applications/Ollama.app filesystem probe — sandbox-incompatible
+                    // and misses Homebrew (/opt/homebrew/bin/ollama). Daemon reachability
+                    // is the real contract; 120s gives time for the user to download +
+                    // install + auto-launch, and surfaces a clear failure if not.
                     phase = .waitingForDaemon
                     statusLine = "Starting local runtime…"
-                    try await waitForDaemon()
+                    try await waitForDaemon(timeout: 120)
                 }
 
                 phase = .downloadingModel
@@ -252,7 +262,7 @@ final class OllamaSetupModel: ObservableObject {
                 phase = .idle
             } catch {
                 Self.logger.error("Ollama setup failed: \(error.localizedDescription, privacy: .public)")
-                phase = .failed("Setup failed: \(error.localizedDescription)")
+                phase = .failed(failureMessage(for: error))
             }
         }
         task = work
@@ -261,34 +271,16 @@ final class OllamaSetupModel: ObservableObject {
 
     func cancel() {
         task?.cancel()
+        // Don't clobber a `.failed(...)` message produced in the same
+        // tick — the user should still see why setup didn't complete.
+        if case .failed = phase { return }
         phase = .idle
     }
 
-    /// Poll the filesystem for `/Applications/Ollama.app`. Apple's
-    /// installer drops it there. Times out after ~5 min.
-    private func waitForOllamaApp() async throws {
-        let deadline = Date().addingTimeInterval(300)
-        while !FileManager.default.fileExists(atPath: Self.ollamaAppPath) {
-            try Task.checkCancellation()
-            if Date() > deadline {
-                throw NSError(
-                    domain: "OllamaSetup", code: 1,
-                    userInfo: [NSLocalizedDescriptionKey:
-                        "Ollama wasn't installed. Try downloading from ollama.com."])
-            }
-            try await Task.sleep(for: .seconds(2))
-        }
-        // Once the app appears, give Ollama a moment to launch its daemon.
-        // The Ollama installer auto-launches the app. Otherwise our
-        // daemon-wait loop will trigger it via NSWorkspace below.
-    }
-
-    /// Poll `/api/tags` until the daemon answers. Times out after 60 s.
-    /// If the app exists but isn't running, attempt to launch it via
-    /// NSWorkspace.
-    private func waitForDaemon() async throws {
-        let deadline = Date().addingTimeInterval(60)
-        var didLaunch = false
+    /// Poll `/api/tags` until the daemon answers. The caller sets the
+    /// timeout (60s for already-installed, 120s for the install path).
+    private func waitForDaemon(timeout: TimeInterval) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
         while true {
             try Task.checkCancellation()
             if await isDaemonReachable() { return }
@@ -296,13 +288,7 @@ final class OllamaSetupModel: ObservableObject {
                 throw NSError(
                     domain: "OllamaSetup", code: 2,
                     userInfo: [NSLocalizedDescriptionKey:
-                        "Local runtime didn't start in time. Try launching Ollama from Applications."])
-            }
-            if !didLaunch,
-               FileManager.default.fileExists(atPath: Self.ollamaAppPath)
-            {
-                NSWorkspace.shared.open(URL(fileURLWithPath: Self.ollamaAppPath))
-                didLaunch = true
+                        "Local runtime didn't start. After installing Ollama, launch it from Applications and try again."])
             }
             try await Task.sleep(for: .seconds(1))
         }
@@ -313,7 +299,7 @@ final class OllamaSetupModel: ObservableObject {
         req.httpMethod = "GET"
         req.timeoutInterval = 2
         do {
-            let (_, response) = try await URLSession(configuration: .ephemeral).data(for: req)
+            let (_, response) = try await Self.urlSession.data(for: req)
             if let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
                 return true
             }
@@ -321,6 +307,29 @@ final class OllamaSetupModel: ObservableObject {
         } catch {
             return false
         }
+    }
+
+    /// Shared session for daemon reachability polling. Avoids leaking
+    /// a fresh ephemeral session per poll.
+    private static let urlSession: URLSession = URLSession(configuration: .ephemeral)
+
+    /// Translate an underlying error into a user-facing setup-failure
+    /// message. Catalogues the obvious failure modes; everything else
+    /// falls through to the generic message.
+    private func failureMessage(for error: Error) -> String {
+        if let urlErr = error as? URLError {
+            switch urlErr.code {
+            case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed:
+                return "No internet connection. Connect and try again — Ollama needs to download the model."
+            case .timedOut:
+                return "The connection timed out. Ollama's servers may be slow right now; try again in a moment."
+            case .cannotConnectToHost, .cannotFindHost:
+                return "Can't reach Ollama. After installing, launch it from Applications and try again."
+            default:
+                break
+            }
+        }
+        return "Setup failed: \(error.localizedDescription)"
     }
 
     private func displayName(for tag: String) -> String {

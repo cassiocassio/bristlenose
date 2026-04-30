@@ -322,39 +322,31 @@ struct LLMSettingsView: View {
 
     // MARK: - Ollama section
 
-    @AppStorage("localURL") private var ollamaURL: String = "http://localhost:11434/v1"
-    @FocusState private var ollamaURLFocused: Bool
+    /// Ollama server URL is hardwired in the desktop GUI. This is the
+    /// trust boundary: a user social-engineered into pasting an attacker
+    /// URL here would silently exfiltrate transcripts over plain HTTP,
+    /// contradicting the "transcripts stay on your Mac" claim. CLI users
+    /// keep the override path via the `BRISTLENOSE_LOCAL_URL` env var; in
+    /// the desktop app, only localhost is reachable.
+    private static let hardwiredOllamaURL = "http://localhost:11434/v1"
+    private var ollamaURL: String { Self.hardwiredOllamaURL }
 
     private var ollamaSection: some View {
-        Section("Server URL") {
-            // Helper text up here, above the field — Mac System Settings
-            // convention (Network → VPN, Apple ID) puts explanatory copy
-            // right under the section header so it sets context before the
-            // input.
+        Section("Server") {
             if let helper = selectedProvider.helperText {
                 Text(helper)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            TextField("URL", text: $ollamaURL)
-                .textFieldStyle(.roundedBorder)
-                .focused($ollamaURLFocused)
-                .onSubmit {
-                    NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
-                    kickOffOllamaValidation()
-                }
-                .onChange(of: ollamaURLFocused) { _, focused in
-                    if !focused {
-                        NotificationCenter.default.post(
-                            name: .bristlenosePrefsChanged, object: nil)
-                        kickOffOllamaValidation()
-                    }
-                }
+            HStack {
+                Text("URL")
+                Spacer()
+                Text("localhost:11434")
+                    .monospaced()
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
         }
-    }
-
-    private func kickOffOllamaValidation() {
-        kickOffValidation(provider: .ollama, key: "")
     }
 
     // MARK: - Model section

@@ -197,7 +197,7 @@
     "providersIntro": "Proveedores en la nube que pueden procesar sus datos:",
     "ollamaCallout": "Ollama se ejecuta completamente en su dispositivo. Ningún dato sale de su máquina.",
     "researcherResponsibility": "Asegúrese de que los participantes hayan sido informados de que sus datos de entrevista pueden ser procesados por servicios de IA de terceros, según lo requiera la aprobación de su comité de ética.",
-    "continue": "Entiendo",
+    "continue": "Continuar",
     "useOllama": "Usar Ollama (sin nube)",
     "done": "Listo"
   }

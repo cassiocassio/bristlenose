@@ -197,7 +197,7 @@
     "providersIntro": "Cloud providers that may process your data:",
     "ollamaCallout": "Ollama runs entirely on your device. No data leaves your machine.",
     "researcherResponsibility": "Ensure participants have been informed that their interview data may be processed by third-party AI services, as required by your research ethics approval.",
-    "continue": "I understand",
+    "continue": "Continue",
     "useOllama": "Use Ollama Instead (No Cloud)",
     "done": "Done"
   }

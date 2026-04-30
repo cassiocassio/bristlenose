@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 26 Apr 2026
+Last updated: 30 Apr 2026 (first-run branch in flight — Beats 3, 3b, home view + pre-merge review fixes + topic truing landed on branch; not yet merged to main)
 
 **Most recent ship: v0.15.0 (26 Apr 2026)** — Phase 1f / 4a-pre. Pipeline-resilience event log (`pipeline-events.jsonl`) + structured `Cause` (10 categories) + honest `cost_usd_estimate` + desktop `EventLogReader`. Replaces the manifest-inference path that mis-classified interrupted runs as `.ready`. See `CHANGELOG.md` for full features, `docs/design-pipeline-resilience.md` for the design, and `docs/private/desktop-ux-iteration.md` for the deferred desktop UX work (Resume / Retry / Re-analyse… verb wiring + 9 other themed sections).
 

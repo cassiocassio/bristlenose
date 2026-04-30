@@ -14,6 +14,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getCodebook, getHiddenTagGroups } from "../utils/api";
 import { getGroupBg } from "../utils/colours";
 import type {
@@ -49,7 +50,8 @@ const FRAMEWORK_META: Record<string, { title: string; author: string }> = {
   uxr:       { title: "Bristlenose UXR Codebook", author: "" },
 };
 
-function frameworkTitle(id: string): string {
+function frameworkTitle(id: string, t: (k: string) => string): string {
+  if (id === "sentiment") return t("tags.frameworkSentiment");
   return FRAMEWORK_META[id]?.title ?? id.charAt(0).toUpperCase() + id.slice(1);
 }
 
@@ -67,7 +69,7 @@ interface FrameworkGroup {
 }
 
 /** Group codebook groups by framework_id. Ungrouped → "User Tags". */
-function groupByFramework(codebook: CodebookResponse): FrameworkGroup[] {
+function groupByFramework(codebook: CodebookResponse, t: (k: string) => string): FrameworkGroup[] {
   const map = new Map<string, FrameworkGroup>();
 
   for (const g of codebook.groups) {
@@ -75,7 +77,7 @@ function groupByFramework(codebook: CodebookResponse): FrameworkGroup[] {
     if (!map.has(fwId)) {
       map.set(fwId, {
         id: fwId,
-        title: fwId === "_user" ? "User Tags" : frameworkTitle(fwId),
+        title: fwId === "_user" ? t("tags.userTags") : frameworkTitle(fwId, t),
         author: fwId === "_user" ? "" : frameworkAuthor(fwId),
         groups: [],
       });
@@ -87,12 +89,12 @@ function groupByFramework(codebook: CodebookResponse): FrameworkGroup[] {
   if (codebook.ungrouped.length > 0) {
     const syntheticGroup: CodebookGroupResponse = {
       id: -1,
-      name: "Other",
+      name: t("tags.other"),
       subtitle: "",
       colour_set: "",
       order: 9999,
       tags: codebook.ungrouped,
-      total_quotes: codebook.ungrouped.reduce((s, t) => s + t.count, 0),
+      total_quotes: codebook.ungrouped.reduce((s, tag) => s + tag.count, 0),
       is_default: false,
       framework_id: null,
     };
@@ -101,7 +103,7 @@ function groupByFramework(codebook: CodebookResponse): FrameworkGroup[] {
     } else {
       map.set("_ungrouped", {
         id: "_ungrouped",
-        title: "User Tags",
+        title: t("tags.userTags"),
         author: "",
         groups: [syntheticGroup],
       });
@@ -160,6 +162,7 @@ function findTagInCodebook(
 // ── Component ─────────────────────────────────────────────────────────────
 
 export function TagSidebar() {
+  const { t } = useTranslation();
   const [codebook, setCodebook] = useState<CodebookResponse | null>(null);
   const [search, setSearch] = useState("");
   const [showUsedOnly, setShowUsedOnly] = useState(false);
@@ -199,8 +202,8 @@ export function TagSidebar() {
   // ── Derived data ────────────────────────────────────────────────────
 
   const frameworks = useMemo(
-    () => (codebook ? groupByFramework(codebook) : []),
-    [codebook],
+    () => (codebook ? groupByFramework(codebook, t) : []),
+    [codebook, t],
   );
 
   // Derive framework-level hidden from group-level hidden:
@@ -405,18 +408,17 @@ export function TagSidebar() {
     <div className={soloTag ? "tag-solo-active" : ""}>
       {/* Subtitle */}
       <div className="tag-sidebar-subtitle">
-        {visibleStats.tags} tag{visibleStats.tags !== 1 ? "s" : ""} across{" "}
-        {visibleStats.frameworks} framework{visibleStats.frameworks !== 1 ? "s" : ""}
+        {t("tags.summary", { count: visibleStats.tags, frameworks: visibleStats.frameworks })}
       </div>
 
       {/* Actions bar */}
       <div className="tag-sidebar-actions">
         <button type="button" className="tag-filter-action" onClick={handleSelectAll}>
-          Select all
+          {t("tags.selectAll")}
         </button>
         <span className="tag-filter-separator">|</span>
         <button type="button" className="tag-filter-action" onClick={handleClear}>
-          Clear
+          {t("tags.clear")}
         </button>
         <span className="tag-filter-separator">|</span>
         <button
@@ -424,7 +426,7 @@ export function TagSidebar() {
           className={`tag-filter-action${showUsedOnly ? " tag-filter-action-active" : ""}`}
           onClick={() => setShowUsedOnly((v) => !v)}
         >
-          {showUsedOnly ? "All" : "Used"}
+          {showUsedOnly ? t("tags.all") : t("tags.used")}
         </button>
       </div>
 
@@ -434,7 +436,7 @@ export function TagSidebar() {
           <input
             type="text"
             className="tag-search-input"
-            placeholder="Search tags\u2026"
+            placeholder={t("tags.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             autoComplete="off"
@@ -467,7 +469,7 @@ export function TagSidebar() {
                   open={!isFrameworkHidden}
                   onClick={(e) => handleToggleFrameworkEye(fw, e)}
                   className="codebook-eye"
-                  aria-label={isFrameworkHidden ? `Show ${fw.title}` : `Hide ${fw.title}`}
+                  aria-label={isFrameworkHidden ? t("tags.showFramework", { framework: fw.title }) : t("tags.hideFramework", { framework: fw.title })}
                 />
               </summary>
               {!isFrameworkHidden && (

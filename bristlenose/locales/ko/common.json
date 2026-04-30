@@ -92,7 +92,18 @@
     "selectAll": "모두 선택",
     "clear": "지우기",
     "searchPlaceholder": "태그 검색\u2026",
-    "noTagsLabel": "(태그 없음)"
+    "noTagsLabel": "(태그 없음)",
+    "used": "사용됨",
+    "all": "모두",
+    "total": "합계",
+    "close": "닫기",
+    "closeAriaLabel": "태그 사이드바 닫기",
+    "userTags": "사용자 태그",
+    "other": "기타",
+    "summary": "{{frameworks}}개 프레임워크의 {{count}}개 태그",
+    "showFramework": "{{framework}} 표시",
+    "hideFramework": "{{framework}} 숨기기",
+    "frameworkSentiment": "감정"
   },
   "header": {
     "logoAlt": "Bristlenose 로고",

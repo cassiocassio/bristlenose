@@ -107,7 +107,18 @@
     "selectAll": "すべて選択",
     "clear": "クリア",
     "searchPlaceholder": "タグを検索…",
-    "noTagsLabel": "(タグなし)"
+    "noTagsLabel": "(タグなし)",
+    "used": "使用中",
+    "all": "すべて",
+    "total": "合計",
+    "close": "閉じる",
+    "closeAriaLabel": "タグサイドバーを閉じる",
+    "userTags": "ユーザータグ",
+    "other": "その他",
+    "summary": "{{frameworks}} フレームワーク中 {{count}} タグ",
+    "showFramework": "{{framework}} を表示",
+    "hideFramework": "{{framework}} を非表示",
+    "frameworkSentiment": "感情"
   },
   "footer": {
     "builtWith": "Bristlenose で作成",

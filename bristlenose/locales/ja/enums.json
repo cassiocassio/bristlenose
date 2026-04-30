@@ -1,17 +1,17 @@
 {
   "sentiment": {
-    "frustration": "",
-    "confusion": "",
-    "doubt": "",
-    "surprise": "",
-    "satisfaction": "",
-    "delight": "",
-    "confidence": ""
+    "frustration": "フラストレーション",
+    "confusion": "混乱",
+    "doubt": "疑念",
+    "surprise": "驚き",
+    "satisfaction": "満足",
+    "delight": "喜び",
+    "confidence": "自信"
   },
   "speakerRole": {
-    "researcher": "",
-    "participant": "",
-    "observer": "",
-    "unknown": ""
+    "researcher": "研究者",
+    "participant": "参加者",
+    "observer": "観察者",
+    "unknown": "不明"
   }
 }

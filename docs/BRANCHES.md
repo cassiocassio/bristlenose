@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 1 May 2026 (track-a-a2-network-server + track-c-c1-bundled-sidecar merged + closed; A6 sandbox-native sidecar lifecycle landed alongside; c1 fresh-worktree-retest doc edits recovered to main)
+**Updated:** 1 May 2026 (parked symbology / highlighter / living-fish / drag-push as historical experiments — nice ideas, not on the 100-day path; worktrees kept on disk)
 
 ---
 
@@ -15,12 +15,13 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | Directory | Branch | Purpose |
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
-| `bristlenose_branch symbology/` | `symbology` | § ¶ ❋ Unicode prefix symbols for sections, quotes, themes |
-| `bristlenose_branch highlighter/` | `highlighter` | Highlighter feature |
-| `bristlenose_branch living-fish/` | `living-fish` | Animated "living portrait" logo for serve mode |
-| `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
-| `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
 | `bristlenose_branch sandbox-debug/` | `sandbox-debug` | S2 Track A — macOS app sandbox violation triage (A1 spike onward) |
+| `bristlenose_branch pipeline-runner-sidecar-mode/` | `pipeline-runner-sidecar-mode` | Beat-6 warm-up: migrate stale `findBristlenoseBinary()` call in `PipelineRunner.swift` to `SidecarMode.resolve(...)` |
+| `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
+| `bristlenose_branch symbology/` | `symbology` | _Parked experiment_ — § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
+| `bristlenose_branch highlighter/` | `highlighter` | _Parked experiment_ — highlighter feature (see Historical experiments) |
+| `bristlenose_branch living-fish/` | `living-fish` | _Parked experiment_ — animated logo (see Historical experiments) |
+| `bristlenose_branch drag-push/` | `drag-push` | _Parked experiment_ — sidebar push-mode drag (see Historical experiments) |
 
 
 
@@ -102,12 +103,13 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | Branch | Local worktree | GitHub remote |
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
-| `symbology` | `bristlenose_branch symbology/` | `origin/symbology` |
-| `highlighter` | `bristlenose_branch highlighter/` | `origin/highlighter` |
-| `living-fish` | `bristlenose_branch living-fish/` | `origin/living-fish` |
-| `drag-push` | `bristlenose_branch drag-push/` | local only |
-| `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `sandbox-debug` | `bristlenose_branch sandbox-debug/` | local only |
+| `pipeline-runner-sidecar-mode` | `bristlenose_branch pipeline-runner-sidecar-mode/` | local only |
+| `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
+| `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
+| `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
+| `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
+| `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 
 
 
@@ -115,6 +117,25 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+### `pipeline-runner-sidecar-mode`
+
+**Status:** Just started
+**Started:** 1 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-runner-sidecar-mode/`
+**Remote:** local only (push when ready)
+
+**What it does:** Beat-6 warm-up slice. Replace the stale `BristlenoseShared.findBristlenoseBinary()` call in `PipelineRunner.swift:888` with `SidecarMode.resolve(...)` (same call shape `ServeManager` already uses), delete `findBristlenoseBinary()` from `BristlenoseShared.swift:19` if it has no other callers, and verify Beat 6 (project run from GUI) actually fires under bundled mode. Single-file Swift change, ~10 lines, unblocks testing for both A4 and A6.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/PipelineRunner.swift` — swap call site
+- `desktop/Bristlenose/BristlenoseShared.swift` — delete `findBristlenoseBinary()` if unused
+
+**Potential conflicts with other branches:**
+- `sandbox-debug` — both touch `desktop/`; coordinate if A4/A6 land in parallel. No file overlap expected (this branch is `PipelineRunner.swift` + `BristlenoseShared.swift`; sandbox-debug is entitlements/scheme).
+- Frontend/theme branches (`responsive-signal-cards`, parked experiments) — no overlap.
+
+---
 
 ### `sandbox-debug`
 
@@ -134,76 +155,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
-### `highlighter` — started 13 Feb 2026
-
-**Worktree:** `/Users/cassio/Code/bristlenose_branch highlighter`
-
-**Goal:** Highlighter feature (TBD — to be detailed when scope is defined).
-
-**Files likely to touch:**
-- TBD
-
----
-
-### `symbology` — started 12 Feb 2026
-
-**Worktree:** `/Users/cassio/Code/bristlenose_branch symbology`
-
-**Goal:** Add consistent Unicode prefix symbols (§ Section, ¶ Quote, ❋ Theme) across all user-facing surfaces — navigation, headings, dashboards, analysis, tooltips, and text output.
-
-**Files likely to touch:**
-- `bristlenose/stages/render_html.py` — dashboard stats, pane headings, template params
-- `bristlenose/stages/s12_render_output.py` — markdown heading call sites
-- `bristlenose/theme/templates/toc.html` — TOC headings
-- `bristlenose/theme/templates/global_nav.html` — tab labels
-- `bristlenose/theme/templates/analysis.html` — analysis page headings
-- `bristlenose/theme/js/analysis.js` — signal cards, heatmap headers
-- `bristlenose/theme/js/transcript-annotations.js` — margin label tooltips
-- `bristlenose/theme/js/codebook.js` — quote count tooltips
-
----
-
-### `living-fish` — started 26 Feb 2026
-
-**Status:** Icebox — one day maybe. Not on the critical path to alpha; parked until after TestFlight.
-**Worktree:** `/Users/cassio/Code/bristlenose_branch living-fish/`
-**Remote:** `origin/living-fish`
-
-**What it does:** Animated "living portrait" bristlenose logo for serve mode. AI-generated video loop (WebM VP9 alpha + MOV HEVC alpha) with subtle breathing, gill pulsing, and fin movement — replacing the static PNG in serve mode only. Also fixes dark-mode logo by switching to a transparent-background PNG (eliminates `mix-blend-mode: lighten` hack and `<picture>` source-swapping).
-
-**Files this branch will touch:**
-- `bristlenose/server/app.py` — serve video assets as static files
-- `bristlenose/theme/report_header.html` — `<video>` element in serve-mode branch
-- `bristlenose/theme/atoms/logo.css` — video element styling, remove `mix-blend-mode` hack
-- `bristlenose/theme/images/` — new assets (`.webm`, `.mov`, transparent `.png`)
-- `frontend/src/` — React header component if logo is already a React island
-
-**Potential conflicts with other branches:**
-- `symbology` touches `render_html.py` and template headings — low risk (logo is separate from section symbols)
-- `highlighter` — unknown scope, likely no overlap
-
----
-
-### `drag-push`
-
-**Status:** Just started
-**Started:** 14 Mar 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch drag-push/`
-**Remote:** local only (push when ready)
-
-**What it does:** Changes sidebar rail drag-to-open from overlay (position: fixed, floats over content) to push mode (grid column resize). Both left TOC and right tag sidebars affected. Mouseover overlay on left rail unchanged. Design rationale: dragging is a sizing commitment — user needs to preview layout impact on center content during drag.
-
-**Files this branch will touch:**
-- `bristlenose/theme/organisms/sidebar.css` — grid rules for `*-rail-dragging` classes
-- `frontend/src/hooks/useDragResize.ts` — animating class on rail drag commit/abort
-
-**Potential conflicts with other branches:**
-- `symbology` — no overlap (touches render/template files, not sidebar CSS/hooks)
-- `highlighter` — unknown scope, likely no overlap
-- `living-fish` — no overlap (logo assets, not sidebar)
-
----
-
 ### `responsive-signal-cards`
 
 **Status:** Just started
@@ -219,6 +170,42 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Potential conflicts with other branches:**
 - `symbology` — low risk (touches render/template files, not signal card layout)
 - `drag-push` — low risk (sidebar CSS, not signal cards)
+
+---
+
+## Historical experiments (parked — unlikely inside 100 days)
+
+These branches/worktrees are kept on disk as a record of nice ideas that aren't on the critical path to alpha. Don't treat them as active; don't propose work on them unless explicitly asked. Some may resurface post-TestFlight.
+
+Marked parked: 1 May 2026.
+
+### `symbology` — started 12 Feb 2026
+
+**Worktree:** `/Users/cassio/Code/bristlenose_branch symbology`
+**Remote:** `origin/symbology`
+
+**Idea:** Consistent Unicode prefix symbols (§ Section, ¶ Quote, ❋ Theme) across all user-facing surfaces — navigation, headings, dashboards, analysis, tooltips, text output. Likely touches `render_html.py`, `s12_render_output.py`, `theme/templates/*`, `theme/js/{analysis,transcript-annotations,codebook}.js`.
+
+### `highlighter` — started 13 Feb 2026
+
+**Worktree:** `/Users/cassio/Code/bristlenose_branch highlighter`
+**Remote:** `origin/highlighter`
+
+**Idea:** Highlighter feature (scope was never fully defined).
+
+### `living-fish` — started 26 Feb 2026
+
+**Worktree:** `/Users/cassio/Code/bristlenose_branch living-fish/`
+**Remote:** `origin/living-fish`
+
+**Idea:** Animated "living portrait" bristlenose logo for serve mode — AI-generated video loop (WebM VP9 alpha + MOV HEVC alpha) with subtle breathing/gill/fin movement, plus a dark-mode logo fix that drops the `mix-blend-mode: lighten` hack via a transparent-background PNG. Touches `bristlenose/server/app.py`, `theme/report_header.html`, `theme/atoms/logo.css`, `theme/images/`, possibly a React header component.
+
+### `drag-push` — started 14 Mar 2026
+
+**Worktree:** `/Users/cassio/Code/bristlenose_branch drag-push/`
+**Remote:** local only
+
+**Idea:** Sidebar rail drag-to-open uses push mode (grid column resize) instead of overlay (position: fixed). Mouseover overlay on left rail unchanged — dragging treated as a sizing commitment so the user can preview layout impact on center content. Touches `theme/organisms/sidebar.css` and `frontend/src/hooks/useDragResize.ts`.
 
 ---
 

@@ -1,16 +1,19 @@
 ---
 name: what-would-william-of-ockham-say
 description: >
-  Parsimony filter — runs after other review agents have produced a
-  consolidated finding list, and triages it. Marks each finding as
-  real / edge / speculative; where multiple fixes have been proposed for
-  the same problem, picks the parsimonious one. Also catches scope
-  creep, premature abstraction, "while I'm here" patterns, and
-  bike-shedding when invoked standalone on a session, plan, or diff.
-  Sibling to other review agents (correctness, taste, security,
-  performance); this one is scope, proportion, and choice. Use after
-  /usual-suspects has consolidated findings, or when a session/branch
-  feels bigger than the task that started it.
+  Parsimony filter and Occam's-razor adjudicator. Triggers on natural
+  summons: "what would william of ockham say?", "what would william
+  say about this?", "apply Occam's razor", "is this the simplest
+  thing?", or any ask to filter review noise / pick the parsimonious
+  fix / catch over-engineering / call out bike-shedding. Mode A:
+  triages a consolidated finding list (e.g. from /usual-suspects),
+  marking each as real / edge / speculative and picking the simplest
+  fix when multiple have been proposed. Mode B: standalone review of
+  a session, plan, branch, or diff for scope creep, premature
+  abstraction, "while I'm here" patterns, and edge-case coverage that
+  hasn't earned its keep. Sibling to other review agents (correctness,
+  taste, security, performance); this one is scope, proportion, and
+  choice.
 tools: Read, Glob, Grep, Bash
 model: opus
 ---

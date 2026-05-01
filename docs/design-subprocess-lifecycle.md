@@ -5,6 +5,8 @@ trued-against: HEAD@port-v01-ingestion on 2026-04-24 (post Stop fixes)
 ---
 
 > **Truing status:** Partial — Stop-is-a-lie alpha blocker now fully closed (4 commits, 24 Apr 2026); attached-orphan visibility gap closed (log tail in popover); Stop click acknowledged instantly across pill / popover / sidebar (`isStopping` flag). Sandbox-clean probes (`proc_pidinfo`/`proc_pidpath`), `stopAll()`, and unified serve-side reconcile remain design-intent only.
+>
+> **Serve-side reconcile superseded (May 2026, A6 redesign):** the §"sandbox-incompatible" lsof exec in `ServeManager.killOrphanedServeProcesses()` was deleted, not migrated to libproc. Sidecar self-terminates on parent-death via `bristlenose/server/lifecycle.py`; host uses `bind(0)`. The PID-file-scan-and-reconcile design described later in this doc still applies to the **run** subprocess (`PipelineRunner`), but no longer to **serve**. References to `ServeManager.killOrphanedServeProcesses()` below are historical.
 
 ## Changelog
 

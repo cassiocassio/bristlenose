@@ -42,6 +42,8 @@ Code-archaeology and Swift/Python wiring. Driven by sandbox violation logs from 
 
 **A1 first move:** sandbox on in Debug, walk §1a, log every `deny(1) …`. Output: a ranked violation list in this directory (e.g. `sandbox-violations-A1.md`).
 
+**Iteration helper:** `desktop/scripts/reset-sandbox-state.sh` (added 1 May 2026 during A2 verification). Stale Container/UserDefaults state across re-launches manifests as `EXC_BREAKPOINT` in `_libsecinit_appsandbox.cold.*` even when the entitlements themselves are correct — the script wipes the stale-state path so each Cmd+R starts clean. Verbose by default, has `--dry-run`. Run between every Xcode launch when chasing sandbox issues. See `desktop/CLAUDE.md` "Sandbox iteration" gotcha for the full diagnostic context.
+
 ### Track B — MVP UX flow
 
 > **Status (29 Apr 2026):** Track B happy path **shipped 26 Apr** via `port-v01-ingestion` (commit `e781ebe` → v0.15.0) — broader scope than predicted: ingestion + multi-project core + lifecycle. End-to-end new project → drop folder → ingestion → processing → display works. Branch 1 = `first-run` worktree (started 29 Apr) for the remaining first-run polish (beat 3 API-key validation, beat 3b Ollama wiring in `AIConsentView`, cold-start splash, empty-state narrative). Polish backlog at `desktop-ux-iteration.md`. The "narrow branch per broken beat" framing below is preserved as the original 18 Apr planning context.

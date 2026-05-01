@@ -163,6 +163,30 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
+### `track-a-a2-network-server`
+
+**Status:** Just started
+**Started:** 1 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch track-a-a2-network-server/`
+**Remote:** local only (push when ready)
+
+**What it does:** S2 Track A A2 — grant `com.apple.security.network.server` so the bundled sidecar can `bind()` 127.0.0.1:9131 under App Sandbox. Single-violation per-deny branch off the A1c inventory; the only kernel deny that survived after files-readwrite landed in A1. Bind-host hardening already in place (`uvicorn.run(host="127.0.0.1", …)` in `bristlenose/cli.py:1341`/`:1493`); this is purely an entitlement flip.
+
+**Files this branch touches:**
+- `desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj` — `ENABLE_INCOMING_NETWORK_CONNECTIONS = YES` in Debug only (Release sandbox stays off per Track A scope)
+
+**Why no `.entitlements` file:** the host uses Xcode's build-setting-driven entitlements (see `desktop/CLAUDE.md` "Xcode now uses build-setting-driven entitlements" gotcha). The Capabilities pane writes `ENABLE_*` flags directly into pbxproj; introducing a separate plist would desync the moment anyone touches that pane. Sidecar inherits via `com.apple.security.inherit` already in `desktop/bristlenose-sidecar.entitlements`.
+
+**Depends on:**
+- `track-c-c1-bundled-sidecar` (merged) — A2's deny was masked until C1's bundled sidecar could spawn
+- `sandbox-debug` (merged into this branch 1 May 2026) — A1 baseline (sandbox-on flag, files-readwrite, sidecar inherit key)
+
+**Potential conflicts with other branches:**
+- `sandbox-debug` — already merged in
+- Future Track A branches (A3+ for credentials, Ollama HTTP, etc.) — all likely to touch pbxproj `ENABLE_*` flags. Land A2 first, rebase the others on its merge
+
+---
+
 ### `sandbox-debug`
 
 **Status:** Just started

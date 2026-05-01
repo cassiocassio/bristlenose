@@ -43,6 +43,7 @@ Shaped with design notes but not the current priority. Open an issue if one of t
 - **Batch processing** — queue multiple projects (#27)
 - **Miro bridge** — CSV export works today; full API integration designed but parked ([design-miro-bridge.md](design-miro-bridge.md))
 - **Published reports** — hosted sharing with embedded video clips
+- **iPad companion** — read-mostly thin client. Mac is the workbench (ingest, transcribe, analyse, edit); iPad is the reading chair (skim quotes, star, hide, tag). Syncs small JSON deltas (quotes, stars, tags, hidden state) from a per-subscriber cloud workspace; video originals optional. Post-alpha
 
 ## Dependency risk register
 

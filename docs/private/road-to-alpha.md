@@ -55,19 +55,41 @@ Different certificates. Different entitlements. Different review paths. Not inte
 - `ExportOptions.plist` declares both certs (`signingCertificate` + `installerSigningCertificate`); see `desktop/Bristlenose/ExportOptions.plist` for the canonical config
 - Both certs need `.p12` USB backup per cert-rotation reminder
 
-### 3. App sandbox + entitlements ⬜ HARDEST PART
+### 3. App sandbox + entitlements 🟡 IN PROGRESS
 
 Required for App Store Connect upload (TestFlight or App Store). Not required for `.dmg`.
 
-**C0 spike completed 18 Apr 2026 (`7d121fa`, `8bd6883`).** The minimum entitlement set was empirically determined — one key only (`com.apple.security.cs.disable-library-validation`). The pre-spike guess below was mostly wrong: `allow-unsigned-executable-memory` and `allow-jit` are not required. See `design-desktop-python-runtime.md` §"Entitlement table" for the empirical truth and §"How this was determined" for the test rig. The list below is preserved as the pre-spike baseline only — do not treat it as current.
+**C0 spike completed 18 Apr 2026 (`7d121fa`, `8bd6883`).** The minimum entitlement set for **Hardened Runtime** was empirically determined — one key only (`com.apple.security.cs.disable-library-validation`). The pre-spike guess below was mostly wrong: `allow-unsigned-executable-memory` and `allow-jit` are not required. See `design-desktop-python-runtime.md` §"Entitlement table" for the empirical truth and §"How this was determined" for the test rig.
 
-**Entitlements needed (best guess, pending audit):**
-- `com.apple.security.app-sandbox` (true)
-- `com.apple.security.files.user-selected.read-write` — folder picker + dropped interview folders
-- `com.apple.security.files.bookmarks.app-scope` — remember user-picked folders across launches
-- `com.apple.security.network.client` — LLM API calls
-- `com.apple.security.network.server` — localhost FastAPI server (:8150)
-- `com.apple.security.inherit` on the Python sidecar child process (inherits parent's sandbox)
+**Track A progress (1 May 2026):** Debug-only sandbox-on landed empirically across three narrow branches —
+- **A1** (29 Apr, `cd4a5c6` on `sandbox-debug`): `app-sandbox` + `network.client` + `files.user-selected.read-write` (host); `inherit` (sidecar). SSB bookmark XPC deny cleared.
+- **A1c** (30 Apr, `3f82ede`): bundled-sidecar spawn under inherited sandbox verified. `network-bind 9131` deny surfaced as next blocker.
+- **A2** (1 May, `49cb600` on `track-a-a2-network-server`): `network.server` granted via `ENABLE_INCOMING_NETWORK_CONNECTIONS = YES`. Bind succeeds; app reaches welcome view.
+- **Helper:** `desktop/scripts/reset-sandbox-state.sh` (`ff96766` / `ff57801` / `730367d`) — wipes Container + UserDefaults between iterations to recover from `EXC_BREAKPOINT` in `_libsecinit_appsandbox`. Documented in `desktop/CLAUDE.md` "Sandbox iteration".
+
+**Empirical entitlement set (post-A2):**
+- Host (Debug only, build-setting-driven in `Bristlenose.xcodeproj/project.pbxproj` — no separate `.entitlements` file):
+  - `com.apple.security.app-sandbox` (`ENABLE_APP_SANDBOX = YES`)
+  - `com.apple.security.network.client` (`ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES`)
+  - `com.apple.security.network.server` (`ENABLE_INCOMING_NETWORK_CONNECTIONS = YES`)
+  - `com.apple.security.files.user-selected.read-write` (`ENABLE_USER_SELECTED_FILES = readwrite`)
+- Sidecar (always, in `desktop/bristlenose-sidecar.entitlements`):
+  - `com.apple.security.cs.disable-library-validation`
+  - `com.apple.security.inherit`
+- **Not needed** (pre-spike guess overruled): `files.bookmarks.app-scope` — `files.user-selected.read-write` alone covers the SSB XPC bootstrap.
+
+**Still pending under sandbox-on:**
+- A4/A6 — beats 6+ (pipeline run, FFmpeg subprocess, Whisper download, doctor probes). Beat 6 is also blocked by an unrelated stale code path: `PipelineRunner.findBristlenoseBinary()` was not migrated to `SidecarMode.resolve()` when C1 landed (TODO comment in source).
+- Release config sandbox flip (`ENABLE_APP_SANDBOX = NO` in Release).
+- `proc_listpids` returns EPERM under sandbox — zombie-cleanup-on-launch is silently a no-op. Fine for normal flow, breaks crash recovery. Defer until post-alpha.
+
+**Pre-spike entitlement guess (preserved as historical baseline — DO NOT treat as current):**
+- ~~`com.apple.security.app-sandbox` (true)~~ → ✅ confirmed required (above)
+- ~~`com.apple.security.files.user-selected.read-write`~~ → ✅ confirmed required
+- ~~`com.apple.security.files.bookmarks.app-scope`~~ → ❌ not needed (subsumed by user-selected.read-write)
+- ~~`com.apple.security.network.client`~~ → ✅ confirmed required
+- ~~`com.apple.security.network.server`~~ → ✅ confirmed required (A2 verified bind on 9131; comment said `:8150` but actual port is computed per project, default range `8150-9149`)
+- ~~`com.apple.security.inherit` on the Python sidecar~~ → ✅ confirmed required (sidecar-side entitlement file)
 
 **Hard parts for this app specifically:**
 - **Python sidecar subprocess** must inherit sandbox. `ServeManager.swift` is the current spawn point (old `ProcessRunner.swift` lives in `desktop/v0.1-archive/`). Breakdown:
@@ -89,7 +111,7 @@ Required for App Store Connect upload (TestFlight or App Store). Not required fo
   - **Stdio piping** — `Process.standardOutput` / `standardError` use pipes, work fine across sandbox boundary. Existing CLI output streaming via FastAPI SSE should survive unchanged
   - **Kill / signal handling** — parent sends `SIGTERM` to sidecar on app quit. Sandbox allows signalling own children. No change needed, but zombie cleanup (the port-scan orphan killer) may need adjustment — `kill(pid, 0)` to check process existence may fail for processes started by a previous (crashed) instance of our app, since those aren't our children
 - **FFmpeg + ffprobe** inside the sidecar bundle need the same treatment for alpha — individually codesigned with `--options=runtime`, their own minimal `inherit` entitlement. **Post-100-days direction: use AVFoundation to build Mac-native video features competitors can't match.** Skate to where the puck is going — frame-accurate clip in/out, hardware-decoded scrubbing, colour-accurate thumbnails, ProRes, GPU transforms. Bristlenose is text-first and video is supporting, so this is bounded in scope, but the framing is forward-leaning product vision, not defensive bug fixes. CLI feature-parity is an explicit anti-goal — being Mac-first-class is the point. `ClipBackend` Protocol is scaffolded for this. Alpha plan unchanged: sign FFmpeg, ship it
-- **Keychain access** — already migrated to Security framework (done, see `project_sprint2_rescope.md` ref to Keychain work); Python side (`credentials_macos.py`) still uses `/usr/bin/security` CLI and must migrate before sandbox
+- **Keychain access** — solved differently than originally planned. Swift host fetches keys via Security.framework and injects them as `BRISTLENOSE_*_API_KEY` env vars at sidecar launch (Track C C3, Apr 2026). Python's `credentials_macos.py` is unchanged for CLI Mac users; the sandboxed sidecar never reaches it because env vars satisfy the credential lookup chain earlier. No Python-side Keychain migration needed.
 - **Temp files** — sandbox redirects `$TMPDIR` to a container-specific path. PyInstaller, ffmpeg temp usage, whisper caches all need to respect it
 - **User-picked folders** — sandboxed app cannot traverse arbitrary paths. Need security-scoped bookmarks for every user-chosen folder persisted across launches
 

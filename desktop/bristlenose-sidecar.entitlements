@@ -35,5 +35,11 @@ at that point so the parent sandbox applies.
 <dict>
     <key>com.apple.security.cs.disable-library-validation</key>
     <true/>
+    <!-- Track A (sandbox-debug branch only): inherit parent sandbox so
+         the sidecar's denials show up in the violation log alongside
+         the host app's. Revert if merging to a non-sandbox-debug branch
+         until Track A's per-violation branches land properly. -->
+    <key>com.apple.security.inherit</key>
+    <true/>
 </dict>
 </plist>

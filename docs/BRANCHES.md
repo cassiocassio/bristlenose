@@ -22,6 +22,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
 | `bristlenose_branch sandbox-debug/` | `sandbox-debug` | S2 Track A — macOS app sandbox violation triage (A1 spike onward) |
 | `bristlenose_branch track-c-c1-bundled-sidecar/` | `track-c-c1-bundled-sidecar` | S2 Track C C1 — PyInstaller bundling pipeline + Xcode Copy Sidecar Resources phase + SidecarMode bundled-path resolve |
+| `bristlenose_branch track-a-a2-network-server/` | `track-a-a2-network-server` | S2 Track A A2 — sandbox `com.apple.security.network.server` entitlement for `bristlenose serve` localhost binding |
 
 
 
@@ -110,6 +111,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `sandbox-debug` | `bristlenose_branch sandbox-debug/` | local only |
 | `track-c-c1-bundled-sidecar` | `bristlenose_branch track-c-c1-bundled-sidecar/` | local only |
+| `track-a-a2-network-server` | `bristlenose_branch track-a-a2-network-server/` | local only |
 
 
 
@@ -117,6 +119,25 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+### `track-a-a2-network-server`
+
+**Status:** Just started
+**Started:** 1 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch track-a-a2-network-server/`
+**Remote:** local only (push when ready)
+
+**What it does:** S2 Track A A2 — narrow per-violation branch from the A1 sandbox-debug inventory. Adds the `com.apple.security.network.server` entitlement (and related plumbing) so the bundled `bristlenose serve` sidecar can bind to localhost under the App Sandbox. One of the A2/A4/A6 narrow branches that was unblocked by Track C C1 (bundled sidecar).
+
+**Files this branch will touch:**
+- TBD — will be filled in as work progresses. Likely: `desktop/Bristlenose/Bristlenose/Bristlenose.entitlements` (and any Debug/Release variants), possibly `bristlenose/server/app.py` for bind-host hardening, possibly `desktop/Bristlenose/Bristlenose/ServeManager.swift` for port selection / loopback verification.
+
+**Potential conflicts with other branches:**
+- `sandbox-debug` (Track A1) — both touch `desktop/` entitlements; A2 should rebase on/after A1c lands
+- `track-c-c1-bundled-sidecar` (Track C1) — sequencing dependency: C1 must land first so A2 can test against the bundled `.app`
+- Frontend/theme branches (`symbology`, `highlighter`, `living-fish`, `drag-push`, `responsive-signal-cards`) — no overlap
+
+---
 
 ### `track-c-c1-bundled-sidecar`
 

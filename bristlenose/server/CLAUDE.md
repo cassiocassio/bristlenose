@@ -225,6 +225,18 @@ Three middleware layers in `create_app()`, added in this order (Starlette proces
 2. **CORSMiddleware** — blocks all cross-origin requests
 3. **GZipMiddleware** (`minimum_size=500`) — compresses text responses (JSON, HTML, CSS, JS). ~83% reduction on the quotes endpoint. Media files opt out via `Content-Encoding: identity` on the `FileResponse` to avoid wasting CPU on incompressible codecs and breaking byte-range video seeking. BREACH is not a concern — no user input is reflected in token-bearing responses
 
+## Sidecar lifecycle (parent-death detection + structured exit logging)
+
+`lifecycle.py` exposes two install functions, both safe to call once at server startup; both already wired into `cli._start_server`:
+
+- **`install_exit_logger()`** — registers signal/excepthook/atexit handlers that capture *why* the sidecar exited and emit one structured INFO line on shutdown: `sidecar_exit reason=<r> uptime_sec=<u> original_ppid=<o> current_ppid=<c> [exc=<e>]`. Reasons are `parent_death` (orphaned to launchd), `sigterm`, `sigint`, `uncaught_exception` (with exc type), or `normal_shutdown`. **Always installed** — useful for both CLI and desktop. Greppable from `<output_dir>/.bristlenose/bristlenose.log` — first stop when investigating "why did the sidecar die?"
+
+- **`install_parent_death_watcher()`** — daemon thread polls `os.getppid()` every 2s; if reparented (PID changed), records `parent_death` reason and SIGTERMs self for uvicorn's graceful-shutdown path. Sandbox-friendly (own-state observation only). **Only installed when `_BRISTLENOSE_HOSTED_BY_DESKTOP=1`** is set by the caller. The macOS desktop host (`ServeManager.swift`) sets this when spawning the bundled sidecar; CLI users don't get it (they may legitimately `nohup`).
+
+The watcher thread is a separate kernel thread (not an asyncio task) so a busy event loop or long-running LLM call doesn't delay parent-death detection.
+
+Tests: `tests/test_server_lifecycle.py` (unit + 1 SIGTERM-delivery smoke test).
+
 ## Localhost access control
 
 `middleware.py` — `BearerTokenMiddleware` validates `Authorization: Bearer <token>` on `/api/*` and `/media/*` routes. Token generated per server instance in `create_app()` via `secrets.token_urlsafe(32)`, stored on `app.state.auth_token`. Injected into SPA HTML via `json.dumps()`, printed to stdout for desktop app. Exempt: `/api/health`, `/api/docs`, `/report/*`, `/static/*`. Tests use `AuthTestClient` (from `tests/conftest.py`) which auto-injects the auth header. Design doc: `docs/design-localhost-auth.md`.

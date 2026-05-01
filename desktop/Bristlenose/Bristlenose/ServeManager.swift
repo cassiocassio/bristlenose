@@ -15,16 +15,21 @@ enum ServeState: Equatable {
 /// Manages the `bristlenose serve` subprocess lifecycle.
 ///
 /// Starts the Python serve process for a given project path, monitors stdout
-/// for the "Uvicorn running on" readiness signal, and exposes the serve URL
-/// as a published property for the WKWebView to load.
+/// for the "Report: http://..." readiness signal, parses the kernel-assigned
+/// port from that URL, and exposes the serve URL as a published property for
+/// the WKWebView to load.
 ///
 /// Sidecar resolution happens once at `init()` via `SidecarMode.resolve`:
 /// the resolved `mode` is stored and every downstream call site switches on
 /// it. See `SidecarMode.swift` for the three modes + the Debug-only dev
 /// env vars, and `desktop/CLAUDE.md` "Dev workflow" for the scheme table.
 ///
-/// Port allocation: `8150 + djb2(projectPath) % 1000` — deterministic
-/// per project path, range 8150–9149.
+/// Port allocation: the host passes `--port 0` and the sidecar binds via
+/// `bind(0)` (kernel-assigned). The actual port is read from the
+/// "Report: http://127.0.0.1:NNNN/" stdout line. This means every host
+/// launch gets a fresh port — orphan-sidecar cleanup is delegated to the
+/// sidecar itself (parent-death watcher, see lifecycle.py), so the host
+/// never has to enumerate processes (impossible under sandbox anyway).
 @MainActor
 final class ServeManager: ObservableObject {
 
@@ -45,10 +50,8 @@ final class ServeManager: ObservableObject {
     /// `.failed` — every downstream call becomes a no-op.
     let mode: SidecarMode?
 
-    /// On init, resolve the sidecar mode and kill any orphaned serve
-    /// processes from previous app crashes. Bristlenose owns the 8150–9149
-    /// port range — anything there is a zombie unless we're in
-    /// external-server mode (the dev terminal server is intentional).
+    /// On init, resolve the sidecar mode. Orphan cleanup is delegated to
+    /// the sidecar — see `desktop/CLAUDE.md` "Zombie process cleanup".
     init() {
         // The env-var string literals for the dev escape hatch live only
         // inside `#if DEBUG`-guarded code so the Release Mach-O has no
@@ -57,11 +60,9 @@ final class ServeManager: ObservableObject {
         #if DEBUG
         let externalPortRaw = ProcessInfo.processInfo.environment["BRISTLENOSE_DEV_EXTERNAL_PORT"]
         let sidecarPathRaw = ProcessInfo.processInfo.environment["BRISTLENOSE_DEV_SIDECAR_PATH"]
-        let userIntendedExternal = externalPortRaw != nil
         #else
         let externalPortRaw: String? = nil
         let sidecarPathRaw: String? = nil
-        let userIntendedExternal = false
         #endif
 
         let resolved = SidecarMode.resolve(
@@ -84,25 +85,6 @@ final class ServeManager: ObservableObject {
             self.mode = nil
             log.error("sidecar mode resolution failed: \(error.description, privacy: .public)")
             self.state = .failed(error: error.localizedDescription)
-        }
-
-        // Skip the 8150–9149 kill-sweep when the user pointed us at an
-        // externally-running server — we don't own that process. Also skip
-        // when resolution failed but the user *intended* external mode
-        // (e.g. invalid port value); killing what they were trying to
-        // reach would compound the error.
-        //
-        // Asymmetric on purpose: dev-sidecar mode spawns a subprocess on
-        // 8150–9149 that *we* own, so any zombie there is still our
-        // responsibility to reap even if a later resolve failed.
-        let skipCleanup: Bool
-        switch self.mode {
-        case .external: skipCleanup = true
-        case .bundled, .devSidecar: skipCleanup = false
-        case .none: skipCleanup = userIntendedExternal
-        }
-        if !skipCleanup {
-            Self.killOrphanedServeProcesses()
         }
 
         prefsObserver = NotificationCenter.default.addObserver(
@@ -168,18 +150,12 @@ final class ServeManager: ObservableObject {
             return  // handled above
         }
 
-        let basePort = Self.stablePort(for: projectPath)
-        var port = basePort
-        for offset in 0..<10 {
-            port = basePort + offset
-            if !Self.isPortOpen(port) { break }
-            log.debug("port \(port, privacy: .public) already in use, trying next")
-        }
-
         let proc = Process()
         self.process = proc
         proc.executableURL = executableURL
-        proc.arguments = Self.arguments(for: mode, port: port, projectPath: projectPath)
+        // --port 0 → sidecar binds via bind(0); we read the actual port
+        // from the "Report:" stdout line in handleLine(_:).
+        proc.arguments = Self.arguments(for: mode, projectPath: projectPath)
 
         // Minimal environment — only what the sidecar needs. Avoids leaking
         // DYLD_* vars, Xcode debug vars, etc. to the subprocess.
@@ -193,6 +169,11 @@ final class ServeManager: ObservableObject {
                      "LANG", "LC_ALL", "LC_CTYPE", "VIRTUAL_ENV"] {
             if let val = parentEnv[key] { env[key] = val }
         }
+        // Tells the sidecar to install the parent-death watcher (so it
+        // self-terminates if this host process dies abnormally, instead
+        // of leaving an orphan holding a port). CLI users don't get this
+        // — they may legitimately nohup the server.
+        env["_BRISTLENOSE_HOSTED_BY_DESKTOP"] = "1"
         Self.overlayPreferences(into: &env)
         Self.overlayAPIKeys(into: &env, using: KeychainHelper.liveStore)
         proc.environment = env
@@ -213,7 +194,7 @@ final class ServeManager: ObservableObject {
                 if let chunk = String(data: data, encoding: .utf8) {
                     let lines = chunk.components(separatedBy: "\n")
                     for line in lines where !line.isEmpty {
-                        await self?.handleLine(line, port: port)
+                        await self?.handleLine(line)
                     }
                 }
             }
@@ -256,8 +237,11 @@ final class ServeManager: ObservableObject {
     /// - Bundled: `sidecar_entry.py` auto-injects "serve", so pass flags only.
     /// - Dev sidecar: user's venv-installed `bristlenose`, needs "serve"
     ///   prepended.
-    private static func arguments(for mode: SidecarMode, port: Int, projectPath: String) -> [String] {
-        let flags = ["--no-open", "--port", "\(port)", projectPath]
+    ///
+    /// `--port 0` triggers the sidecar's `bind(0)` path; the kernel-assigned
+    /// port is read from the "Report:" stdout line by `handleLine(_:)`.
+    private static func arguments(for mode: SidecarMode, projectPath: String) -> [String] {
+        let flags = ["--no-open", "--port", "0", projectPath]
         switch mode {
         case .bundled:
             return flags
@@ -448,7 +432,19 @@ final class ServeManager: ObservableObject {
         )
     }
 
-    private func handleLine(_ line: String, port: Int) {
+    /// Regex captures the kernel-assigned port from a "Report: http://..."
+    /// stdout line (e.g. `  Report: http://127.0.0.1:54321/report/`). The
+    /// port is whatever the OS handed the sidecar via `bind(0)`, and it
+    /// changes every launch — never cache it across runs.
+    private static let reportPortRegex = try! NSRegularExpression(
+        // Anchored to start of line — a Python traceback containing
+        // the literal substring `Report: http://...` shouldn't be
+        // mistaken for the canonical readiness print.
+        pattern: #"^\s*Report:\s*http://127\.0\.0\.1:(\d+)/"#,
+        options: [.anchorsMatchLines]
+    )
+
+    private func handleLine(_ line: String) {
         let clean = Self.ansiRegex.stringByReplacingMatches(
             in: line,
             range: NSRange(line.startIndex..., in: line),
@@ -476,25 +472,29 @@ final class ServeManager: ObservableObject {
         // termination failure reporting).
         outputLines.append(Self.redactKeys(in: clean))
 
-        // Detect readiness: bristlenose serve prints "Report: http://..."
-        // when the server is ready and the report has been rendered.
-        // However, the HTTP port may not be accepting connections yet —
-        // poll until it is before transitioning to .running.
-        if case .starting = state, clean.contains("Report:") && clean.contains("http://") {
-            timeoutTask?.cancel()
-            // Belt-and-braces: the state check alone catches most stop/start
-            // races, but a rapid stop() + start() between "Report:" arrival
-            // and port-poll completion could have state back at .starting
-            // for the *next* run. The generation guard distinguishes them.
-            let readyGeneration = self.generation
-            Task { [weak self] in
-                await self?.waitForPort(port, timeout: 10)
-                await MainActor.run {
-                    guard let self, self.generation == readyGeneration,
-                          case .starting = self.state else { return }
-                    self.state = .running(port: port)
-                    Task { await self.fetchServerVersion(port: port) }
-                }
+        // Detect readiness AND extract the port: bristlenose serve prints
+        // "  Report: http://127.0.0.1:NNNN/report/" *after* the socket is
+        // bound (when --port 0 is in use), so the port is guaranteed open
+        // by the time we see this line. Poll briefly anyway as belt-and-
+        // braces against any future ordering changes.
+        guard case .starting = state else { return }
+        let range = NSRange(clean.startIndex..., in: clean)
+        guard let match = Self.reportPortRegex.firstMatch(in: clean, range: range),
+              match.numberOfRanges >= 2,
+              let portRange = Range(match.range(at: 1), in: clean),
+              let parsedPort = Int(clean[portRange]) else {
+            return
+        }
+
+        timeoutTask?.cancel()
+        let readyGeneration = self.generation
+        Task { [weak self] in
+            await self?.waitForPort(parsedPort, timeout: 10)
+            await MainActor.run {
+                guard let self, self.generation == readyGeneration,
+                      case .starting = self.state else { return }
+                self.state = .running(port: parsedPort)
+                Task { await self.fetchServerVersion(port: parsedPort) }
             }
         }
     }
@@ -530,138 +530,7 @@ final class ServeManager: ObservableObject {
         return result == 0
     }
 
-    /// Stable port derived from project path. Uses a simple djb2-style hash
-    /// so the same path always maps to the same port across app launches.
-    /// (Swift's `String.hashValue` is randomized per process since Swift 4.2.)
-    static func stablePort(for path: String) -> Int {
-        var hash: UInt64 = 5381
-        for byte in path.utf8 {
-            hash = hash &* 33 &+ UInt64(byte)
-        }
-        return 8150 + Int(hash % 1000)
-    }
-
-    /// Kill orphaned `bristlenose serve` processes left behind by previous
-    /// app crashes (SIGKILL from Xcode stop button, force-quit, etc.).
-    ///
-    /// Two-stage filter via libproc syscalls (no fork/exec, sandbox-friendly):
-    ///   1. `proc_listpids` enumerates every PID, filtered to those whose
-    ///      executable basename starts with `bristlenose` via `proc_pidpath`.
-    ///   2. For each survivor, `proc_pidfdinfo(PROC_PIDFDSOCKETINFO)` walks
-    ///      the socket FDs looking for a TCP-LISTEN socket whose local port
-    ///      falls inside the Bristlenose range (8150–9149). Matches get SIGINT
-    ///      for graceful Uvicorn shutdown.
-    ///
-    /// Why two stages: stage 1 alone would kill any `bristlenose run` CLI
-    /// the user happens to be running in another terminal (which doesn't
-    /// listen on a port). Stage 2 narrows to genuine `serve` processes.
-    ///
-    /// Replaces the legacy `lsof -ti :8150-9149` exec which is blocked under
-    /// App Sandbox (parallel to SECURITY #5's `proc_pidpath` swap for `ps`).
-    /// All libproc calls work under sandbox without an exception — the same
-    /// APIs Activity Monitor uses.
-    ///
-    /// Vite zombies are still not caught: the process basename is `node`,
-    /// indistinguishable from the user's other node servers. Vite zombies
-    /// must be killed manually after a SIGKILL of `serve --dev`. Acceptable:
-    /// rare, dev-only, no security exposure.
-    private nonisolated static func killOrphanedServeProcesses() {
-        for pid in listeningBristlenosePIDs(portRange: 8150...9149) {
-            log.info("killing orphaned serve process (PID \(pid, privacy: .public))")
-            kill(pid, SIGINT)
-        }
-    }
-
-    /// Enumerate every PID, keep those whose executable basename starts with
-    /// `bristlenose` AND have a TCP-LISTEN socket in `portRange`.
-    private nonisolated static func listeningBristlenosePIDs(portRange: ClosedRange<UInt16>) -> [Int32] {
-        // Probe required buffer size, then over-allocate by 25% to absorb
-        // process churn between probe and read.
-        let probeSize = proc_listpids(UInt32(PROC_ALL_PIDS), 0, nil, 0)
-        guard probeSize > 0 else {
-            log.debug("proc_listpids probe returned \(probeSize, privacy: .public) (errno=\(errno, privacy: .public))")
-            return []
-        }
-        let probedCount = Int(probeSize) / MemoryLayout<Int32>.size
-        let capacity = probedCount + (probedCount / 4) + 16
-        var pids = [Int32](repeating: 0, count: capacity)
-        let actual = pids.withUnsafeMutableBufferPointer { buf -> Int32 in
-            proc_listpids(UInt32(PROC_ALL_PIDS), 0, buf.baseAddress, Int32(capacity * MemoryLayout<Int32>.size))
-        }
-        guard actual > 0 else { return [] }
-        let count = Int(actual) / MemoryLayout<Int32>.size
-
-        var result: [Int32] = []
-        for i in 0..<count where pids[i] > 0 {
-            let pid = pids[i]
-            guard isBristlenoseSidecar(pid: pid) else { continue }
-            if hasListeningPortInRange(pid: pid, range: portRange) {
-                result.append(pid)
-            }
-        }
-        return result
-    }
-
-    /// True if `pid` has any TCP socket in LISTEN state with a local port
-    /// inside `range`. Returns false on any libproc error — fail-closed,
-    /// same posture as `isBristlenoseSidecar`.
-    private nonisolated static func hasListeningPortInRange(pid: Int32, range: ClosedRange<UInt16>) -> Bool {
-        let probe = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, nil, 0)
-        guard probe > 0 else { return false }
-        let entrySize = MemoryLayout<proc_fdinfo>.stride
-        let capacity = Int(probe) / entrySize + 8
-        var fds = [proc_fdinfo](repeating: proc_fdinfo(), count: capacity)
-        let actual = fds.withUnsafeMutableBufferPointer { buf -> Int32 in
-            proc_pidinfo(pid, PROC_PIDLISTFDS, 0, buf.baseAddress, Int32(capacity * entrySize))
-        }
-        guard actual > 0 else { return false }
-        let fdCount = Int(actual) / entrySize
-
-        for i in 0..<fdCount {
-            let fd = fds[i]
-            guard fd.proc_fdtype == UInt32(PROX_FDTYPE_SOCKET) else { continue }
-            var info = socket_fdinfo()
-            let infoSize = MemoryLayout<socket_fdinfo>.stride
-            let got = withUnsafeMutablePointer(to: &info) { ptr -> Int32 in
-                proc_pidfdinfo(pid, fd.proc_fd, PROC_PIDFDSOCKETINFO, ptr, Int32(infoSize))
-            }
-            guard got >= Int32(infoSize) else { continue }
-            guard Int32(info.psi.soi_kind) == SOCKINFO_TCP else { continue }
-            guard info.psi.soi_proto.pri_tcp.tcpsi_state == TSI_S_LISTEN else { continue }
-            // insi_lport is in network byte order.
-            let lportNetwork = UInt16(truncatingIfNeeded: info.psi.soi_proto.pri_tcp.tcpsi_ini.insi_lport)
-            let lport = UInt16(bigEndian: lportNetwork)
-            if range.contains(lport) {
-                return true
-            }
-        }
-        return false
-    }
-
-    /// Verify that a PID belongs to a bristlenose sidecar before killing it.
-    ///
-    /// Resolves the PID's executable path via `proc_pidpath` (libproc) and
-    /// prefix-matches the basename against `bristlenose`. Covers both
-    /// shipping (`bristlenose-sidecar`, PyInstaller onedir) and dev-sidecar
-    /// mode (`bristlenose`, the user's venv CLI). Fail-closed: if proc_pidpath
-    /// returns 0 (PID gone, permission denied) or the path is empty, return
-    /// false — don't kill what we can't identify.
-    ///
-    /// `proc_pidpath` is a single libproc syscall (~µs) — no fork/exec, no
-    /// pipe wrangling, and works under App Sandbox without an exception
-    /// (Activity Monitor uses the same call). Combined with `proc_listpids`
-    /// + `proc_pidfdinfo` above, the entire zombie-cleanup path is now
-    /// libproc-only and survives sandbox flip with no further changes.
-    private nonisolated static func isBristlenoseSidecar(pid: Int32) -> Bool {
-        var buf = [CChar](repeating: 0, count: Int(MAXPATHLEN))
-        let len = proc_pidpath(pid, &buf, UInt32(MAXPATHLEN))
-        guard len > 0 else {
-            log.debug("proc_pidpath failed for PID \(pid, privacy: .public) (errno=\(errno, privacy: .public))")
-            return false
-        }
-        let path = String(cString: buf)
-        guard !path.isEmpty else { return false }
-        let basename = URL(fileURLWithPath: path).lastPathComponent
-        return basename.hasPrefix("bristlenose")
-    }
+    // Zombie cleanup + djb2 port allocation moved out of this file
+    // (Apr 2026, A6 redesign). See `bristlenose/server/lifecycle.py` and
+    // `desktop/CLAUDE.md` "Zombie process cleanup".
 }

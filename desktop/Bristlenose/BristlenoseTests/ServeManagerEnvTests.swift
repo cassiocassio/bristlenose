@@ -8,6 +8,7 @@ import Testing
 /// These tests are aspirational reference code. Compile-standalone when
 /// referenced via @testable import once the target lands.
 @Suite("ServeManager.overlayAPIKeys")
+@MainActor
 struct ServeManagerEnvTests {
 
     @Test func populated_providers_become_env_vars() {

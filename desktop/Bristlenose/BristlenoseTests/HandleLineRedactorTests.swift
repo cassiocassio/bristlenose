@@ -1,12 +1,12 @@
+import Foundation
 import Testing
 @testable import Bristlenose
 
 /// Tests for ServeManager.redactKeys — the key-shape redactor.
 /// Uses pattern-valid FAKE keys (all-same-char, obviously not real) so the
 /// test source is safe to commit and can't leak credentials if grepped.
-///
-/// NOTE: BristlenoseTests target is not wired into Xcode yet (qa-backlog).
 @Suite("ServeManager.redactKeys")
+@MainActor
 struct HandleLineRedactorTests {
 
     // Pattern-valid fakes — never real keys.

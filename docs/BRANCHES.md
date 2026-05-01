@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 1 May 2026 (track-a-a2-network-server merged + closed; A6 sandbox-native sidecar lifecycle landed alongside)
+**Updated:** 1 May 2026 (track-a-a2-network-server + track-c-c1-bundled-sidecar merged + closed; A6 sandbox-native sidecar lifecycle landed alongside; c1 fresh-worktree-retest doc edits recovered to main)
 
 ---
 
@@ -21,7 +21,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | Sidebar drag-to-open uses push mode (not overlay) |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
 | `bristlenose_branch sandbox-debug/` | `sandbox-debug` | S2 Track A — macOS app sandbox violation triage (A1 spike onward) |
-| `bristlenose_branch track-c-c1-bundled-sidecar/` | `track-c-c1-bundled-sidecar` | S2 Track C C1 — PyInstaller bundling pipeline + Xcode Copy Sidecar Resources phase + SidecarMode bundled-path resolve |
 
 
 
@@ -109,7 +108,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `drag-push` | `bristlenose_branch drag-push/` | local only |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `sandbox-debug` | `bristlenose_branch sandbox-debug/` | local only |
-| `track-c-c1-bundled-sidecar` | `bristlenose_branch track-c-c1-bundled-sidecar/` | local only |
 
 
 
@@ -117,30 +115,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
-### `track-c-c1-bundled-sidecar`
-
-**Status:** Just started
-**Started:** 29 Apr 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch track-c-c1-bundled-sidecar/`
-**Remote:** local only (push when ready)
-
-**What it does:** S2 Track C C1 — PyInstaller bundling pipeline for the macOS app sidecar. Restore `desktop/scripts/fetch-ffmpeg.sh` and `build-sidecar.sh` (adapted from `desktop/v0.1-archive/` — v0.1 was a `bristlenose run` wizard, v0.2/alpha is `bristlenose serve`, lifecycle differs). Verify `desktop/bristlenose-sidecar.spec` ships all required `datas` (React `static/`, codebook YAMLs, LLM prompts, locales). Wire `check-bundle-manifest.sh` into `build-all.sh` step 1b. Add Xcode "Copy Sidecar Resources" Build Phase that copies `_build/bristlenose-sidecar/` into `Bristlenose.app/Contents/Resources/bristlenose-sidecar/` at archive. Update `SidecarMode.resolve` default branch to return `.bundled(bundleResourceURL/...)` with fail-loud SwiftUI error card if missing. Out of scope: codesigning (C2), Hardened Runtime (C2), privacy manifest (C4), provenance (C5), Whisper bundling (deferred-download). Unblocks Track A1c (sandbox-on smoke against bundled `.app`).
-
-**Files this branch will touch:**
-- `desktop/scripts/build-sidecar.sh` (new — copy/adapt from v0.1-archive)
-- `desktop/scripts/fetch-ffmpeg.sh` (new — copy/adapt from v0.1-archive)
-- `desktop/bristlenose-sidecar.spec` (existing — verify/extend `datas`)
-- `desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj` (Copy Sidecar Resources Build Phase; v0.2 uses `PBXFileSystemSynchronizedRootGroup` so explicit input/output paths needed)
-- `desktop/Bristlenose/Bristlenose/SidecarMode.swift` (resolve() default branch)
-- `desktop/scripts/build-all.sh` (orchestration — fetch → build → sign → archive)
-- `desktop/scripts/check-bundle-manifest.sh` (existing — wire into step 1b)
-
-**Potential conflicts with other branches:**
-- `sandbox-debug` (Track A) — both touch `desktop/`. Sequencing is C1 → A1c rebase, not parallel; coordinate before merging either to main
-- Frontend/theme branches (`symbology`, `highlighter`, `living-fish`, `drag-push`, `responsive-signal-cards`) — no overlap
-
----
 
 ### `sandbox-debug`
 
@@ -261,6 +235,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `track-c-c1-bundled-sidecar` — merged 18 Apr 2026 (initial), retest 29 Apr, closed 1 May 2026
+
+S2 Track C C1 — PyInstaller bundling pipeline for the macOS app sidecar. Restored `fetch-ffmpeg.sh` and `build-sidecar.sh` (adapted from `desktop/v0.1-archive/`), verified `bristlenose-sidecar.spec` datas, wired `check-bundle-manifest.sh` into `build-all.sh`, added Xcode "Copy Sidecar Resources" Build Phase, updated `SidecarMode.resolve` default branch to return `.bundled(...)` with fail-loud error card. Fresh-worktree retest 29 Apr (commit `f0d1ee2`) confirmed end-to-end green and closed two ergonomic gaps: declared `pyinstaller` as a `[desktop]` extra, quietened the Xcode "no-outputs" warning. Three doc edits from the retest recovered to main on close (commit `b40b178`).
 
 ### `track-a-a2-network-server` — merged 1 May 2026
 

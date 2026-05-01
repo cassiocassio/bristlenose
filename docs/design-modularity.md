@@ -10,7 +10,7 @@ trued-against: HEAD@first-run on 2026-04-30
 
 # Modular Packaging and Optional Components (CLI + macOS)
 
-_Written 18 Apr 2026. Update when components are added, extras are restructured, or a platform mechanism changes._
+_Written 18 Apr 2026. Updated 29 Apr 2026 (added `[desktop]` extra during Track C C1 retest). Update when components are added, extras are restructured, or a platform mechanism changes._
 
 ## Purpose
 
@@ -138,6 +138,13 @@ The **env-var injection** pattern for the desktop sidecar is the key insight: it
 
 `[dev]` extras (`pytest`, `ruff`, `mypy`). Never bundled. Installed by contributors only.
 
+### Build-time tooling
+
+Two channel-specific build extras:
+
+- `[release]` — release-machine tooling (`pip-licenses` for `THIRD-PARTY-BINARIES.md` auto-gen). Run on the machine cutting a version. Not a runtime dep, not in any bundle.
+- `[desktop]` — macOS sidecar build tooling (`pyinstaller`). Run on the Mac where the `.app` is being built. Produces the PyInstaller `--onedir` bundle that ships inside `Bristlenose.app/Contents/Resources/bristlenose-sidecar/`. Not a runtime dep, not in the bundle (the bundle IS its output). Linux/Windows contributors and CLI-only users skip this. PyInstaller version is pinned-floor (`>=6.10`) because the spec is empirically validated against bundle layout — see [`design-desktop-python-runtime.md`](./design-desktop-python-runtime.md) §"How this was determined" for why DLV is empirically required, which depends on how PyInstaller assembles `Python.framework`.
+
 ## Acquisition mechanisms by channel
 
 > **Distribution decision (28 Apr 2026).** The macOS `.app` ships **App Store only** (alpha, beta, and early commercial). Direct download via Developer ID + notarytool + Sparkle is **not** maintained as a parallel channel — it's deferred until the App Store cut becomes material relative to the cost of running a parallel direct-distribution channel (memo trigger: ~10k paying users, or first enterprise MDM ask). Today's `desktop/scripts/build-all.sh` produces a `.pkg` for App Store Connect upload via Transporter / `xcrun altool --upload-app`. No `.dmg`. No Sparkle. Pricing via Apple In-App Purchase, not Stripe — App Store handles payments, tax, refunds, chargebacks, IAP infrastructure, and a chunk of trust signal that an indie can't manufacture cheaply.
@@ -168,7 +175,7 @@ Snap base install. FFmpeg via `snap install ffmpeg` or strict-confinement `slots
 
 ### pip (any platform)
 
-`pip install bristlenose` base + extras: `[serve]`, `[apple]` (Mac Apple Silicon), `[pii]`, `[dev]`. Users compose what they need. Whisper via `huggingface_hub` on first use.
+`pip install bristlenose` base + extras: `[serve]`, `[apple]` (Mac Apple Silicon), `[pii]`, `[dev]`, plus build-time-only extras `[release]` and `[desktop]` (Mac contributors building the `.app` sidecar). Users compose what they need. Whisper via `huggingface_hub` on first use.
 
 ## Decision matrix: which mechanism for which component
 
@@ -197,13 +204,15 @@ Snap base install. FFmpeg via `snap install ffmpeg` or strict-confinement `slots
 5. **Prefer `huggingface_hub` cache paths on Linux/Windows, Background Assets on Mac.** The lookup function checks Application Support → HuggingFace cache → download in that order. CLI never touches Application Support (empty); Mac finds it there first.
 6. **No new Mac-only Python dependency without reviewing this doc first.** If you're tempted to add `pyobjc-framework-Security` or similar, first ask whether Swift can do the work and hand the result to Python.
 
-## Migration from current state (18 Apr 2026)
+## Migration from current state (29 Apr 2026)
 
 `pyproject.toml` today:
 - `dependencies` includes `faster-whisper`, `presidio-analyzer`, `presidio-anonymizer` as base
 - `[apple]`: mlx, mlx-whisper
 - `[serve]`: FastAPI + SQLAlchemy stack
 - `[dev]`: testing + mlx (conditional on platform)
+- `[release]`: pip-licenses (added for `THIRD-PARTY-BINARIES.md` auto-gen)
+- `[desktop]`: pyinstaller (added 29 Apr 2026 during C1 retest — Mac sidecar build tooling)
 
 Proposed:
 - Move `presidio-analyzer`, `presidio-anonymizer` out of base into new `[pii]` extra

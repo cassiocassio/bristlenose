@@ -21,22 +21,6 @@
 		DFF545042F466A4A00A539C4 /* Bristlenose.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Bristlenose.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		DFA8ED0C2F9E7745004CF8AA /* BristlenoseTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				DFA8ED202F9E7745004CF8AA /* Exceptions for "BristlenoseTests" folder in "BristlenoseTests" target */,
-			);
-			path = BristlenoseTests;
-			sourceTree = "<group>";
-		};
-		DFF545062F466A4A00A539C4 /* Bristlenose */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Bristlenose;
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
-
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
 		DFA8ED202F9E7745004CF8AA /* Exceptions for "BristlenoseTests" folder in "BristlenoseTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -53,6 +37,22 @@
 			target = DFA8ED0A2F9E7745004CF8AA /* BristlenoseTests */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		DFA8ED0C2F9E7745004CF8AA /* BristlenoseTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DFA8ED202F9E7745004CF8AA /* Exceptions for "BristlenoseTests" folder in "BristlenoseTests" target */,
+			);
+			path = BristlenoseTests;
+			sourceTree = "<group>";
+		};
+		DFF545062F466A4A00A539C4 /* Bristlenose */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Bristlenose;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		DFA8ED082F9E7745004CF8AA /* Frameworks */ = {
@@ -434,11 +434,22 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1024;
-				ENABLE_APP_SANDBOX = NO;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
+				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Martin Storey. All rights reserved.";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Martin Storey. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -467,8 +478,8 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Martin Storey. All rights reserved.";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Martin Storey. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

@@ -151,12 +151,23 @@ Keyboard shortcuts: Cmd+1-5 (tabs) and Cmd+Opt+S (sidebar) live in the View menu
 
 ### Zombie process cleanup
 
-Two layers, **both serve-only** — `bristlenose run` subprocesses (the pipeline) have their own PID-file scan/attach lifecycle managed by `PipelineRunner`. See `docs/design-subprocess-lifecycle.md` for the run-side mechanics; the `lsof` cleanup below is port-scoped to serve and does not cascade to run.
+**The host doesn't enumerate orphans — it can't, by sandbox design.** App Sandbox blocks `proc_listpids`, `lsof`, `ps`, and friends. Instead, the orphan cleans itself: the sidecar (Python) installs a parent-death watcher that polls `os.getppid()` every 2s; on detecting reparenting (PID changes — typically to launchd/PID 1), it SIGTERMs itself for uvicorn's graceful-shutdown path. See `bristlenose/server/lifecycle.py`.
 
-1. **Clean quit**: `.onReceive(NSApplication.willTerminateNotification)` on the root View calls `serveManager.stop()` (SIGINT).
-2. **Crash recovery**: `ServeManager.init()` runs `killOrphanedServeProcesses()` — a nonisolated static method that calls `lsof -ti :8150-9149` to find PIDs, then `kill(pid, SIGINT)` each one. Runs synchronously (~10ms), safe at startup.
+The host signals "I am the parent that owns this lifecycle" by setting the `_BRISTLENOSE_HOSTED_BY_DESKTOP=1` env var when spawning the sidecar. CLI users don't get the watcher — they may legitimately `nohup` and outlive their starting shell.
 
-Gap: Xcode's stop button sends SIGKILL which bypasses `willTerminate`. The startup cleanup catches these on next launch.
+Two layers in total:
+
+1. **Clean quit**: `.onReceive(NSApplication.willTerminateNotification)` on the root View calls `serveManager.stop()` (SIGINT). Sidecar shuts down within milliseconds.
+2. **Crash recovery (host SIGKILLed by Xcode stop button, force-quit, OOM)**: sidecar's parent-death watcher detects reparenting within 2s and SIGTERMs itself. The next host launch uses `bind(0)`, so even if the orphan is mid-shutdown, the new sidecar gets a different kernel-assigned port. Result: silent recovery, no UI surface.
+
+**Why bind(0) instead of a deterministic per-project port:** the desktop host doesn't need port stability across launches (WKWebView gets injected with whatever URL the sidecar reports, every time). CLI users keep the deterministic 8150 default for bookmark-and-reload. Decoupling the two contracts removed ~150 lines of djb2-port-walker + libproc-cleanup scaffolding (Apr 2026, A6 redesign).
+
+**Side effects of the redesign:**
+- Sidecar prints `Report: http://127.0.0.1:NNNN/report/` *after* socket bind (kernel-assigned port). `ServeManager.handleLine(_:)` parses the port from this URL via `reportPortRegex`.
+- Every sidecar exit emits one structured INFO line: `sidecar_exit reason=<r> uptime_sec=<u> original_ppid=<o> current_ppid=<c> [exc=<e>]`. Reasons: `parent_death`, `sigterm`, `sigint`, `uncaught_exception`, `normal_shutdown`. Greppable from `<output_dir>/.bristlenose/bristlenose.log` — first stop when investigating "why did the sidecar die?".
+- The sidecar's watcher works on **its own state only** (own getppid, own SIGTERM). No process enumeration. Sandbox-clean.
+
+`bristlenose run` subprocesses (the pipeline) have a separate PID-file scan/attach lifecycle managed by `PipelineRunner`; see `docs/design-subprocess-lifecycle.md`. The serve sidecar's watcher does not cascade to run subprocesses.
 
 **Cancelling a `bristlenose run` subprocess needs signal escalation, not just SIGINT.** Whisper / torch / ctranslate2 hold the GIL during long C calls (model load can take 30–60s). Python signal handlers only run between bytecodes — SIGINT and SIGTERM both sit queued during the wedge, so a Stop click sees no effect for tens of seconds. `PipelineRunner.scheduleOrphanCancelEscalation` does SIGINT → SIGTERM at +5s → SIGKILL at +8s; bails at any step if the PID is dead or `attachedOrphanPIDs[id]` no longer matches. SIGKILL bypasses Python entirely so it always wins. Owned-process cancel still uses `proc.interrupt()` (SIGINT only) — same wedge risk, escalation TODO.
 
@@ -207,7 +218,13 @@ Process pool sharing is optional — separate pools do not break BroadcastChanne
 
 ## Port allocation
 
-`8150 + djb2(projectPath) % 1000` — deterministic per project path, range 8150–9149. If the computed port is busy, tries up to 10 consecutive ports. Swift's `String.hashValue` is randomized per process (since Swift 4.2), so we use a stable djb2 hash instead.
+**Desktop:** the host passes `--port 0` to the sidecar; the kernel assigns a free port via `bind(0)`. `ServeManager.handleLine(_:)` parses the port from the sidecar's `Report: http://127.0.0.1:NNNN/report/` stdout line (printed *after* socket bind). Every host launch gets a fresh port — no contention with slow-dying orphans, no port-walking retry loop, no need for a deterministic-port table.
+
+**CLI:** `bristlenose serve` defaults to port 8150 for backwards compatibility (CLI users bookmark `http://127.0.0.1:8150/report/` and reload after re-running the pipeline). Pass `--port 0` to opt into kernel assignment if you need it.
+
+The deterministic djb2-per-project allocation was removed in Apr 2026 (A6 redesign) — it only mattered for orphan-cleanup, which the sidecar now handles itself.
+
+**WKWebView right-click → Copy Link** yields a single-session URL (the port changes next launch). Fine — Bristlenose is not a browser; users don't bookmark internal URLs.
 
 ## Patterns inherited from v0.1 (battle-tested)
 
@@ -298,12 +315,12 @@ See `docs/design-modularity.md` "External dev server" glossary entry and `docs/p
 - **`import Security` does NOT re-export Foundation on macOS 15 SDK** — `KeychainHelper.swift` needs both `import Foundation` and `import Security`. Without Foundation, `Data` and `ProcessInfo` are undefined. The code review suggested `import Security` alone would suffice — it doesn't
 - **WKWebView `createWebViewWith` requires the provided configuration** — you MUST use the `configuration` parameter passed to `webView(_:createWebViewWith:for:windowFeatures:)`. Creating a fresh `WKWebViewConfiguration` and returning a WKWebView built with it crashes with `NSInternalInconsistencyException: "Returned WKWebView was not created with the given configuration."`. This means the popout inherits the parent's `userContentController` (including the bridge message handler). The bridge is accessible but player.html never calls it
 - **WKWebView `window.open()` is blocked without `WKUIDelegate`** — `window.open()` silently returns `null` unless the Coordinator implements `WKUIDelegate` and `webView(_:createWebViewWith:for:windowFeatures:)`. No error in the console — the call just fails. This is why the video player didn't work in the desktop app before the WKUIDelegate was added
-- **Zombie cleanup kills the dev server** — `ServeManager.killOrphanedServeProcesses()` runs on `init()` and kills everything on ports 8150–9149. When `BRISTLENOSE_DEV_EXTERNAL_PORT` is set (external-server scheme), cleanup is skipped — we don't own that process. When `BRISTLENOSE_DEV_SIDECAR_PATH` is set (dev-sidecar scheme), cleanup still runs because we own the spawned subprocess. Always start the terminal server **after** Xcode launches if using the external-server scheme.
+- **Zombie cleanup is delegated to the sidecar (Apr 2026, A6 redesign).** The host no longer enumerates orphans — sandbox blocks `proc_listpids` anyway. The sidecar's parent-death watcher (`bristlenose/server/lifecycle.py`) self-terminates within ~2s of a host crash. The host uses `bind(0)` so a slow-dying orphan can't collide. External-server scheme is unaffected (`BRISTLENOSE_DEV_EXTERNAL_PORT` set → host doesn't spawn anything, doesn't set the watcher env var).
 - **`window.blur`/`window.focus` don't fire in WKWebView** — the web view's `window` is always considered focused from the web content's perspective. macOS window activation must be pushed from the native side via `NSWindow.didBecomeKeyNotification`/`didResignKeyNotification` → `BridgeHandler.setWindowActive()`. The browser `blur`/`focus` listener in `AppLayout.tsx` only works in browser-based serve mode
 - **Safari Web Inspector for WKWebView debugging** — enable `webView.isInspectable = true` (already set in `#if DEBUG`). Open Safari → Develop → Bristlenose → pick the localhost page. The inspector opens in a Safari window, so the Bristlenose app window stays inactive — perfect for debugging inactive-window behaviour
 - **Xcode stale indexer** — sometimes shows "no member" errors that `xcodebuild` doesn't. Fix: `Cmd+Shift+K` (Clean Build Folder) then `Cmd+R`
-- **Zombie serve processes** — if the app crashes without calling `stop()`, the Python serve process keeps running on the port. Check with `lsof -i :8150-9150 -P -n | grep LISTEN` from a terminal. Next app launch cleans these up automatically via libproc-based startup sweep in `ServeManager.init`
-- **App Sandbox blocks `Process()` exec of system binaries — use libproc syscalls instead.** `Process` exec of `/bin/ps`, `/usr/sbin/lsof`, `/usr/bin/security` etc. is blocked at sandbox-launch regardless of the binary's own permissions. The "ps is allowed" intuition is wrong — sandbox enforces at the *exec* boundary, not the destination binary. Mac-canonical replacements (all in `<libproc.h>`, one-line `import Darwin` from Swift): `proc_pidpath(pid, &buf, MAXPATHLEN)` (PID → executable path, what Activity Monitor uses), `proc_listpids(PROC_ALL_PIDS, ...)` (process enumeration), `proc_pidfdinfo(pid, fd, PROC_PIDFDSOCKETINFO, ...)` (listening sockets, replaces lsof). The full zombie-cleanup path is now libproc-only on `sidecar-signing` (SECURITY #5 swap of `/bin/ps`, then 27 Apr 2026 swap of `lsof`) — survives sandbox flip with no further changes
+- **Zombie serve processes** — if the app crashes without calling `stop()`, the sidecar self-terminates within ~2s via the parent-death watcher in `bristlenose/server/lifecycle.py`. To inspect manually: `lsof -i tcp -P -n | grep -i bristlenose-sidecar`. Next host launch uses `bind(0)`, so a slow-dying orphan never blocks startup. See "Zombie process cleanup" section above for the full design.
+- **App Sandbox blocks `Process()` exec of system binaries — and also blocks `proc_listpids` enumeration entirely.** `Process` exec of `/bin/ps`, `/usr/sbin/lsof`, `/usr/bin/security` etc. is blocked at sandbox-launch regardless of the binary's own permissions. The "ps is allowed" intuition is wrong — sandbox enforces at the *exec* boundary, not the destination binary. Mac-canonical narrow-PID syscalls work fine (`proc_pidpath(pid, ...)`, `proc_pidfdinfo(pid, ...)` — these read state for a *known* PID), but the broader `proc_listpids(PROC_ALL_PIDS, ...)` enumeration call returns 0 (errno=EPERM) under sandbox. **Lesson learned A1c**: don't try to find orphan subprocesses at all — design so the orphan finds itself (sidecar's parent-death watcher in `bristlenose/server/lifecycle.py`).
 - **`Report:` readiness signal** — `bristlenose serve` prints this BEFORE Uvicorn accepts connections. The port-polling step in ServeManager handles the race. The sidecar will keep this log line and parser — it's the alpha readiness contract
 - **Bridge code on main vs feature branch** — the `macos-app` branch has the bridge shims in `frontend/src/shims/bridge.ts`. The main branch build served by `bristlenose serve` won't post `ready` messages. The `didFinish` fallback in WebView handles this (shows content after 2s timeout)
 - **Segmented Picker requires non-optional selection** — `Binding<Tab?>` doesn't work with `.pickerStyle(.segmented)`. The `tabBinding` in ContentView maps nil to `.project`

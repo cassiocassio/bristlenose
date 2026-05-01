@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
 from pathlib import Path
 from typing import Annotated
@@ -1316,24 +1317,47 @@ def _start_server(
     dev: bool = False,
     verbose: bool = False,
 ) -> None:
-    """Start the FastAPI server (blocking).  Used by both serve() and run()."""
-    import threading
-    import webbrowser
+    """Start the FastAPI server (blocking).  Used by both serve() and run().
 
+    Two paths:
+
+    - ``port != 0``: classic ``uvicorn.run(app, port=port)``. Caller knows the
+      port up-front (CLI's djb2-derived choice, or an explicit ``--port``).
+    - ``port == 0``: kernel-assigned port via ``bind(0)`` — needed when the
+      desktop host spawns the sidecar and reads the chosen port from
+      stdout. Uses the programmatic ``uvicorn.Config`` + ``Server`` API so
+      we can read the bound port from the socket and emit the ``Report:``
+      line *after* the bind succeeds (the host parses that URL for both
+      readiness and the actual port).
+
+    Independent of port path:
+
+    - ``install_exit_logger`` is always called — one structured INFO line
+      on every exit makes "why did it die?" a single-grep question.
+    - ``install_parent_death_watcher`` runs only when
+      ``_BRISTLENOSE_HOSTED_BY_DESKTOP=1`` is set by the caller. CLI users
+      may ``nohup`` and outlive their starting shell; desktop users
+      shouldn't have an orphan sidecar after a host crash.
+    """
     import uvicorn
 
     from bristlenose.server.app import create_app
+    from bristlenose.server.lifecycle import (
+        install_exit_logger,
+        install_parent_death_watcher,
+    )
+
+    install_exit_logger()
+    if os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":
+        install_parent_death_watcher()
+
+    if port == 0:
+        _serve_dynamic_port(project_dir, dev=dev, verbose=verbose)
+        return
 
     report_url = f"http://127.0.0.1:{port}/report/"
-
     if open_browser:
-        def _open() -> None:
-            import time
-
-            time.sleep(1.0)
-            webbrowser.open(report_url)
-
-        threading.Thread(target=_open, daemon=True).start()
+        _schedule_browser_open(report_url)
 
     app_instance = create_app(project_dir=project_dir, dev=dev, verbose=verbose)
     uvicorn.run(
@@ -1342,6 +1366,70 @@ def _start_server(
         port=port,
         log_level="info" if verbose else "warning",
     )
+
+
+def _schedule_browser_open(report_url: str, *, delay_sec: float = 1.0) -> None:
+    """Open the report URL in the default browser after a short delay."""
+    import threading
+    import time
+    import webbrowser
+
+    def _open() -> None:
+        time.sleep(delay_sec)
+        webbrowser.open(report_url)
+
+    threading.Thread(target=_open, daemon=True).start()
+
+
+def _serve_dynamic_port(
+    project_dir: Path,
+    *,
+    dev: bool,
+    verbose: bool,
+) -> None:
+    """Bind to a kernel-assigned port and print it after the socket is ready.
+
+    Used when the caller passed ``--port 0`` (the desktop host does this
+    so it can never collide with a slow-dying orphan sidecar — every
+    launch gets a fresh port). Prints the ``Report:`` line *after* bind
+    so the URL the host reads is the one actually accepting connections.
+    """
+    import asyncio
+
+    import uvicorn
+
+    from bristlenose.server.app import create_app
+
+    app_instance = create_app(project_dir=project_dir, dev=dev, verbose=verbose)
+    config = uvicorn.Config(
+        app_instance,
+        host="127.0.0.1",
+        port=0,
+        log_level="info" if verbose else "warning",
+    )
+    server = uvicorn.Server(config)
+
+    async def _run() -> None:
+        # Run uvicorn in the background so we can read the assigned port
+        # as soon as the socket is bound. ``server.started`` flips True
+        # after the lifespan startup completes, by which point
+        # ``server.servers[0].sockets`` is populated.
+        serve_task = asyncio.create_task(server.serve())
+        # Bounded wait — kernel bind on loopback is instant; if we don't
+        # see a started server in 10s, something else is wrong (e.g.
+        # lifespan failed). Surface by letting serve_task raise.
+        for _ in range(200):  # 200 * 50ms = 10s
+            if server.started and server.servers and server.servers[0].sockets:
+                break
+            await asyncio.sleep(0.05)
+        if server.started and server.servers and server.servers[0].sockets:
+            actual_port = server.servers[0].sockets[0].getsockname()[1]
+            console.print(
+                f"\n  Report: [bold cyan]http://127.0.0.1:{actual_port}/report/[/bold cyan]\n"
+            )
+        await serve_task
+
+    asyncio.run(_run())
 
 
 def _auto_render(project_dir: Path) -> None:
@@ -1424,11 +1512,21 @@ def serve(
     if project_dir is not None:
         _auto_render(project_dir)
 
-    report_url = f"http://127.0.0.1:{port}/report/"
-    console.print(f"\n  Report: [bold cyan]{report_url}[/bold cyan]")
-    if dev:
-        console.print("  [dim]Dev mode: responsive playground enabled[/dim]")
-    console.print()
+    # ``--port 0`` defers the Report: line to ``_serve_dynamic_port`` because
+    # the actual port isn't known until uvicorn binds the socket. Used by the
+    # macOS desktop host to avoid orphan-port collisions.
+    if port == 0 and dev:
+        console.print(
+            "[red]--port 0 is not supported with --dev[/red] — "
+            "uvicorn reload spawns workers that need a fixed port."
+        )
+        raise typer.Exit(1)
+    if port != 0:
+        report_url = f"http://127.0.0.1:{port}/report/"
+        console.print(f"\n  Report: [bold cyan]{report_url}[/bold cyan]")
+        if dev:
+            console.print("  [dim]Dev mode: responsive playground enabled[/dim]")
+        console.print()
 
     if dev:
         import atexit

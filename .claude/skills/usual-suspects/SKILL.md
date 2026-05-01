@@ -216,6 +216,44 @@ yourself — those are the user's call, applied in Step 5.
 
 If the file does not yet exist, create it with the header from the schema below.
 
+## Step 4.6: William's parsimony pass
+
+Before showing the report to the user, run the consolidated finding list
+through the **what-would-william-of-ockham-say** agent in adjudicator mode
+(Mode A). Spawn it via `Agent` with `subagent_type:
+"what-would-william-of-ockham-say"` and pass the consolidated report as
+input.
+
+William's job at this stage is to:
+
+1. **Filter every finding** as `real` / `edge` / `speculative` —
+   shrinking the user's triage list from "everything every agent
+   raised" to "the things actually worth deciding on."
+2. **Pick the parsimonious fix** when multiple fixes have been
+   proposed for the same problem, citing the heuristic (Rule of Three,
+   simple-vs-easy, Hoare's test, Metz's wrong abstraction, etc.).
+3. **Cluster duplicates** — agreement across agents is signal worth
+   surfacing.
+4. **Flag bikeshed crowding** — if the report devotes disproportionate
+   weight to trivial findings while a hard one is under-discussed,
+   William names *Parkinson's Law of Triviality* and points at what's
+   been crowded out.
+
+William returns an **annotated version** of the consolidated list
+(per-finding annotation + a short summary). Show the annotated version
+to the user in Step 5, not the raw consolidated list — one report, not
+two.
+
+**Skip William** when: only one agent ran (nothing to adjudicate), the
+consolidated list has fewer than 3 findings (no signal worth filtering),
+or the user explicitly invoked `--no-william`. Note the skip in the
+report header so future passes know whether William's absence was
+deliberate.
+
+William is a signal, not a gate. The user still decides what to act on,
+park, or ignore — William's annotations are pre-triage advice, not
+verdicts.
+
 ## Step 5: Triage and update log
 
 After showing the report, the user triages by finding number ("act on 1, 3,

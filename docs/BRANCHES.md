@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 1 May 2026 (first-run merged + closed)
+**Updated:** 1 May 2026 (track-a-a2-network-server merged + closed; A6 sandbox-native sidecar lifecycle landed alongside)
 
 ---
 
@@ -22,7 +22,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
 | `bristlenose_branch sandbox-debug/` | `sandbox-debug` | S2 Track A — macOS app sandbox violation triage (A1 spike onward) |
 | `bristlenose_branch track-c-c1-bundled-sidecar/` | `track-c-c1-bundled-sidecar` | S2 Track C C1 — PyInstaller bundling pipeline + Xcode Copy Sidecar Resources phase + SidecarMode bundled-path resolve |
-| `bristlenose_branch track-a-a2-network-server/` | `track-a-a2-network-server` | S2 Track A A2 — sandbox `com.apple.security.network.server` entitlement for `bristlenose serve` localhost binding |
 
 
 
@@ -111,7 +110,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `sandbox-debug` | `bristlenose_branch sandbox-debug/` | local only |
 | `track-c-c1-bundled-sidecar` | `bristlenose_branch track-c-c1-bundled-sidecar/` | local only |
-| `track-a-a2-network-server` | `bristlenose_branch track-a-a2-network-server/` | local only |
 
 
 
@@ -119,25 +117,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
-### `track-a-a2-network-server`
-
-**Status:** Just started
-**Started:** 1 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch track-a-a2-network-server/`
-**Remote:** local only (push when ready)
-
-**What it does:** S2 Track A A2 — narrow per-violation branch from the A1 sandbox-debug inventory. Adds the `com.apple.security.network.server` entitlement (and related plumbing) so the bundled `bristlenose serve` sidecar can bind to localhost under the App Sandbox. One of the A2/A4/A6 narrow branches that was unblocked by Track C C1 (bundled sidecar).
-
-**Files this branch will touch:**
-- TBD — will be filled in as work progresses. Likely: `desktop/Bristlenose/Bristlenose/Bristlenose.entitlements` (and any Debug/Release variants), possibly `bristlenose/server/app.py` for bind-host hardening, possibly `desktop/Bristlenose/Bristlenose/ServeManager.swift` for port selection / loopback verification.
-
-**Potential conflicts with other branches:**
-- `sandbox-debug` (Track A1) — both touch `desktop/` entitlements; A2 should rebase on/after A1c lands
-- `track-c-c1-bundled-sidecar` (Track C1) — sequencing dependency: C1 must land first so A2 can test against the bundled `.app`
-- Frontend/theme branches (`symbology`, `highlighter`, `living-fish`, `drag-push`, `responsive-signal-cards`) — no overlap
-
----
 
 ### `track-c-c1-bundled-sidecar`
 
@@ -160,30 +139,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Potential conflicts with other branches:**
 - `sandbox-debug` (Track A) — both touch `desktop/`. Sequencing is C1 → A1c rebase, not parallel; coordinate before merging either to main
 - Frontend/theme branches (`symbology`, `highlighter`, `living-fish`, `drag-push`, `responsive-signal-cards`) — no overlap
-
----
-
-### `track-a-a2-network-server`
-
-**Status:** Just started
-**Started:** 1 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch track-a-a2-network-server/`
-**Remote:** local only (push when ready)
-
-**What it does:** S2 Track A A2 — grant `com.apple.security.network.server` so the bundled sidecar can `bind()` 127.0.0.1:9131 under App Sandbox. Single-violation per-deny branch off the A1c inventory; the only kernel deny that survived after files-readwrite landed in A1. Bind-host hardening already in place (`uvicorn.run(host="127.0.0.1", …)` in `bristlenose/cli.py:1341`/`:1493`); this is purely an entitlement flip.
-
-**Files this branch touches:**
-- `desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj` — `ENABLE_INCOMING_NETWORK_CONNECTIONS = YES` in Debug only (Release sandbox stays off per Track A scope)
-
-**Why no `.entitlements` file:** the host uses Xcode's build-setting-driven entitlements (see `desktop/CLAUDE.md` "Xcode now uses build-setting-driven entitlements" gotcha). The Capabilities pane writes `ENABLE_*` flags directly into pbxproj; introducing a separate plist would desync the moment anyone touches that pane. Sidecar inherits via `com.apple.security.inherit` already in `desktop/bristlenose-sidecar.entitlements`.
-
-**Depends on:**
-- `track-c-c1-bundled-sidecar` (merged) — A2's deny was masked until C1's bundled sidecar could spawn
-- `sandbox-debug` (merged into this branch 1 May 2026) — A1 baseline (sandbox-on flag, files-readwrite, sidecar inherit key)
-
-**Potential conflicts with other branches:**
-- `sandbox-debug` — already merged in
-- Future Track A branches (A3+ for credentials, Ollama HTTP, etc.) — all likely to touch pbxproj `ENABLE_*` flags. Land A2 first, rebase the others on its merge
 
 ---
 
@@ -306,6 +261,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `track-a-a2-network-server` — merged 1 May 2026
+
+S2 Track A A2 — granted `com.apple.security.network.server` (via `ENABLE_INCOMING_NETWORK_CONNECTIONS = YES` in Debug pbxproj) so the bundled sandboxed sidecar can `bind()` 127.0.0.1. Side-effect: `desktop/scripts/reset-sandbox-state.sh` dev helper for libsecinit/secinitd EXC_BREAKPOINT recovery. Three design docs trued. Merged via PR #94 (commit `63fbf0a`) alongside A6 (sandbox-native sidecar lifecycle, commit `39f39c0`).
 
 ### `first-run` — merged 1 May 2026
 

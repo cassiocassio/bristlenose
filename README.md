@@ -18,7 +18,7 @@ Filter your quotes, and export via CSV to your boards in Miro, Figjam, Mural or 
 
 Bristlenose transcribes locally, and can do the thematic analysis on a (built in) local LLM — but for speedy results you'll want an API key from Claude, ChatGPT, Gemini, or Azure OpenAI. For commercial work, check your org's policies on public LLM use.
 
-For a typical study, e.g. 5–8 participant-hours, you'd be looking at roughly $1.50–$2.50 total cost from your LLM provider.
+A study costs about $0.40 per hour of interview audio, with Claude — LLM provider costs vary.
 
 Pre-release software, without warranty. All feedback welcome.  
 <!-- TODO: screenshot of an HTML report here -->
@@ -150,7 +150,7 @@ To use Gemini instead of the default, add `--llm gemini` to your commands:
 bristlenose run interviews -o results/ --llm gemini
 ```
 
-**Budget option:** Gemini is 5–7× cheaper than Claude or ChatGPT — roughly $0.20 per study instead of $1–3.
+**Budget option:** Gemini is 5–7× cheaper than Claude or ChatGPT — roughly $0.06 per hour of interview audio instead of $0.40.
 
 ### Option E: Local AI (via Ollama) — free, no signup
 
@@ -301,7 +301,7 @@ Priorities may shift. If something is missing that matters to you, [open an issu
 **Developers** -- Python 3.10+, fully typed, Pydantic models. See [CONTRIBUTING.md](CONTRIBUTING.md) for the CLA, project layout, and design system docs.
 
 **Help us test** -- we'd love feedback from people using bristlenose with:
-- **Gemini** -- newly added; budget option at ~$0.20/study
+- **Gemini** -- newly added; budget option at ~$0.06 per hour of interview audio
 - **Azure OpenAI** -- enterprise deployments
 - **Windows** -- the pipeline works but hasn't been widely tested
 - **Linux** -- pipx works today; snap is deferred (CI build is currently broken)

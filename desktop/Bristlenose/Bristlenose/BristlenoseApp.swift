@@ -39,6 +39,7 @@ struct BristlenoseApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .frame(minWidth: 700, minHeight: 500)
                 .environmentObject(serveManager)
                 .environmentObject(bridgeHandler)
                 .environmentObject(projectIndex)
@@ -59,6 +60,7 @@ struct BristlenoseApp: App {
                 }
         }
         .defaultSize(width: 1000, height: 700)
+        .windowResizability(.contentMinSize)
         .commands {
             MenuCommands(bridgeHandler: bridgeHandler, serveManager: serveManager, projectIndex: projectIndex, i18n: i18n)
         }

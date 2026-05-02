@@ -62,6 +62,18 @@ Two audiences, done in parallel where possible.
 
     **Skip if nothing new was learned.** Don't write memory for the sake of writing memory.
 
+### Branch handoffs (only if this session identified follow-up branches)
+
+If this session was a diagnostic / sandpit / planning walk that identified one or more follow-up branches the next session should pick up — **write a handoff prompt for each** before closing out. Do not assume the next session will reverse-engineer it from your logs.
+
+Path: `~/Code/bristlenose/docs/private/handoffs/<branch>.md` (gitignored, lives in main repo, picked up automatically by `/new-feature <branch>`).
+
+Required shape: see `docs/private/handoffs/README.md` in that directory. Sections — Purpose / Context (cold-read) / Spec / Call sites / Acceptance / Out of scope / Open questions. Self-contained — readable cold by a fresh session.
+
+**The test:** "If a future Claude session opened the new branch and read only this file, would they know exactly what to do?" If no, expand the handoff before closing the session. The cost of writing it now is a few minutes; the cost of skipping it is the next session re-doing the diagnostic walk to figure out its own purpose.
+
+If this session did **not** identify follow-up branches, skip this step.
+
 ### What NOT to update
 
 - Don't update CLAUDE.md with things that are already obvious from the code

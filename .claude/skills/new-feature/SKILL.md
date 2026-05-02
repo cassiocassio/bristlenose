@@ -59,6 +59,24 @@ date -u +"setup started at %Y-%m-%dT%H:%M:%SZ" \
 
 The file's presence tells future Claude sessions (and the user) that the worktree environment isn't fully prepped yet. It gets removed in Step 8 only after the smoke test confirms the environment works. If setup aborts halfway, the flag survives and the next attempt knows.
 
+## Step 4b: Seed handoff plan from prior diagnostic session (non-critical)
+
+Diagnostic / sandpit / planning sessions write per-branch handoff prompts into `~/Code/bristlenose/docs/private/handoffs/` (the gitignored docs area in the main repo). If one exists for this branch, copy it into the new worktree's `.claude/plans/<branch>.md` so the next session lands with its purpose already in scope — no synthesis required.
+
+```bash
+HANDOFF="/Users/cassio/Code/bristlenose/docs/private/handoffs/$0.md"
+PLAN_DIR="/Users/cassio/Code/bristlenose_branch $0/.claude/plans"
+if [ -f "$HANDOFF" ]; then
+  mkdir -p "$PLAN_DIR"
+  cp "$HANDOFF" "$PLAN_DIR/$0.md"
+  echo "✓ Seeded plan from handoff: $PLAN_DIR/$0.md"
+else
+  echo "ℹ No prior handoff at $HANDOFF — new session will need a brief from the user."
+fi
+```
+
+If absent, that's fine — the branch may have been hand-typed by the user with no prior session. The new session will ask the user for a brief.
+
 ## Step 5: Tag folder purple in Finder (non-critical)
 
 Set the worktree folder to purple (= active branch) in Finder:
@@ -232,5 +250,6 @@ Print a summary:
 - Remote: local only (push with `git push -u origin $0` when ready)
 - Venv: ready (or note if it failed)
 - BRANCHES.md: updated and committed
+- Handoff plan: copied from prior diagnostic to `.claude/plans/$0.md` (or note "no prior handoff — next session will need a brief from you")
 
 Then: "To start working, open a new Claude session in the worktree directory, or tell me to switch."

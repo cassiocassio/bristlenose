@@ -44,7 +44,7 @@ Bristlenose uses an LLM for the analysis pass (speaker identification, quote ext
 
 ### Claude (recommended)
 
-Best quality. Roughly $1.50–$2.50 per study.
+Best quality. Roughly $0.40 per hour of interview audio.
 
 1. Sign up at [console.anthropic.com](https://console.anthropic.com/settings/keys)
 2. Create a key, copy it
@@ -52,7 +52,7 @@ Best quality. Roughly $1.50–$2.50 per study.
 
 ### ChatGPT
 
-Similar quality. Roughly $1–$3 per study.
+Similar quality, similar price.
 
 1. Sign up at [platform.openai.com](https://platform.openai.com/api-keys)
 2. Create a key, copy it
@@ -62,7 +62,7 @@ Add `--llm chatgpt` to your commands to use ChatGPT instead of the default.
 
 ### Gemini
 
-Budget option. ~$0.20 per study.
+Budget option. Roughly $0.06 per hour of interview audio (5–7× cheaper than Claude or ChatGPT).
 
 ```
 bristlenose configure gemini

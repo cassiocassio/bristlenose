@@ -6,7 +6,7 @@ Vite 8 (Rolldown) + React + TypeScript 6 + React Router SPA. 37 components in `s
 
 ## Build & type-checking
 
-- **Bundle size gate** — `npm run size` (after `npm run build`) checks total JS gzip stays under 305 KB. CI enforces this. Current ~300 KB. Aspirational target is 100 KB (requires route-level code splitting). Ratchet the limit down as optimisations land
+- **Bundle size gate** — `npm run size` (after `npm run build`) measures gzip size of the **live SPA in English** and checks it stays under 210 kB. Current ~204 kB. CI enforces this. The glob explicitly excludes lazy locale chunks (5 non-en locales × 8 namespaces = ~40 chunks that never load on first paint), the dev-only `visual-diff` entry, and `ResponsivePlayground` + `Playground*` dev chunks. Add new exclusions when introducing new dev-only or lazy-loaded chunks; if in doubt, leave it in the budget. Ratchet the limit down as optimisations land. The earlier 320 kB sum-of-everything metric overcounted by ~110 kB by including chunks that never load — see [docs/private/bundle-size-analysis-2026-05-02.md](../docs/private/bundle-size-analysis-2026-05-02.md) for the full breakdown
 - **`npm run build` runs `tsc -b` which type-checks test files** — `tsconfig.json` includes `src/` which contains `*.test.tsx` files alongside source. Vitest has its own type context (looser), so tests may pass while `tsc -b` reports errors. Always run `npm run build` before committing frontend changes, not just `npm test`. Common culprits: `globalThis.fetch` (not `global.fetch`), window casts need `(window as unknown as Record<string, unknown>)` (double cast via `unknown`), and mock data must include all required type properties
 
 ## Tooling & dependency gotchas

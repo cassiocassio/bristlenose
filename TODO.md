@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 2 May 2026 (Track A A2 + A6 ✅ on main; PipelineRunner migration in flight as PR #96 — final blocker for beats 7–13 under sandbox; Snap CI deferred to autumn)
+Last updated: 2 May 2026 (`bundled-binary-helper` ✅ merged — sandbox-safe FFmpeg/ffprobe discovery via env-var injection, mirrors `bundled-tls-config`; design docs trued; branch-handoff convention added — diagnostic walks now deposit per-branch handoffs at `docs/private/handoffs/<branch>.md`, `/new-feature` auto-seeds them as `HANDOFF.md` symlinks at worktree root)
 
 **Most recent ship: v0.15.0 (26 Apr 2026)** — Phase 1f / 4a-pre. Pipeline-resilience event log (`pipeline-events.jsonl`) + structured `Cause` (10 categories) + honest `cost_usd_estimate` + desktop `EventLogReader`. Replaces the manifest-inference path that mis-classified interrupted runs as `.ready`. See `CHANGELOG.md` for full features, `docs/design-pipeline-resilience.md` for the design, and `docs/private/desktop-ux-iteration.md` for the deferred desktop UX work (Resume / Retry / Re-analyse… verb wiring + 9 other themed sections).
 
@@ -126,6 +126,8 @@ Bigger question: same calibration likely applies to other adversarial-by-design 
 
 ## Ideas (captured, not triaged)
 
+- **Doctor "(bundled)" annotation on FFmpeg path** (2 May 2026, parked from `bundled-binary-helper` review) — `bristlenose doctor` reports the resolved ffmpeg path even when it's bundle-relative inside the .app. Honest diagnostic vs add a `(bundled)` suffix so TestFlight users aren't surprised by absolute paths inside their `.app`. Product call. Park until alpha tester feedback says it's confusing. Reference: `bristlenose/doctor.py:check_ffmpeg`
+- **Merge `bundled*Environment(for:)` Swift helpers when a third lands** (2 May 2026, parked from `bundled-binary-helper` review) — `BristlenoseShared.sslEnvironment(for:)` and `bundledBinaryEnvironment(for:)` are called back-to-back at every spawn site (`PipelineRunner.swift`, `ServeManager.swift`). At three helpers the two for-loops become real boilerplate; consolidate into a single `bundledSidecarEnvironment(for:)` then. Rule of Three — wait for it
 - **Feedback pipeline → Bristlenose (internal dogfooding)** (17 Apr 2026) — IMAP fetch from feedback@bristlenose.app (DreamHost) → deterministic PII/header strip (Presidio + salted anon IDs for sender stability) → redacted `.md` archive in gitignored dir → monthly batch ingest into a private Bristlenose project to cluster themes for roadmap input. Read-only, never used as demo data, never shipped. Consent-safe because it stays internal. Caveats: emails are many short sessions (not few long ones) — may need a batch mode or synthetic "session per month"; no moderator questions so question-pill logic doesn't apply.
 
 ---

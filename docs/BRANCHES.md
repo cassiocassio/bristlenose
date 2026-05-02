@@ -2,9 +2,23 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 2 May 2026 (added `bundled-binary-helper`)
+**Updated:** 2 May 2026 (added Kind column; closed `sandbox-debug` as diagnostic-discard)
 
 ---
+
+## Branch Kinds (merge intent)
+
+Every branch declares a **Kind** that encodes what it's *for* and what should happen to it at end of life:
+
+| Kind | What it produces | End-of-life |
+|------|------------------|-------------|
+| **feature** | Code intended for main | Merge / PR-and-squash |
+| **diagnostic** | Inventory, reports, reproductions — fixes happen in *other* branches | **Discard** when narrow-fix children land. The branch itself never merges; its useful output already left via siblings |
+| **spike** | Exploratory throwaway — proves or disproves an approach | Discard. Cherry-pick selectively if a commit's worth keeping |
+| **chore** | Small ephemeral work (release tooling, doc reconciliation, dep bumps) | Merge or discard, low ceremony |
+| **parked** | On hold; may resume later | Stays on disk + remote until revived or formally retired |
+
+When opening a new branch, declare its Kind in the table below. When closing one, the Kind tells you whether to merge or just `/close-branch`.
 
 ## Worktree Convention
 
@@ -12,17 +26,16 @@ Each active feature branch gets its own **git worktree** — a full working copy
 
 **Directory pattern:** `/Users/cassio/Code/bristlenose_branch <name>`
 
-| Directory | Branch | Purpose |
-|-----------|--------|---------|
-| `bristlenose/` | `main` | Main repo, releases, hotfixes |
-| `bristlenose_branch sandbox-debug/` | `sandbox-debug` | S2 Track A — macOS app sandbox violation triage (A1 spike onward) |
-| `bristlenose_branch bundled-binary-helper/` | `bundled-binary-helper` | S2 Track A narrow — ffprobe/ffmpeg PATH-stripped sandbox blocker (surfaced in fossda pipeline log) |
-| `bristlenose_branch pipeline-runner-sidecar-mode/` | `pipeline-runner-sidecar-mode` | Beat-6 warm-up: migrate stale `findBristlenoseBinary()` call in `PipelineRunner.swift` to `SidecarMode.resolve(...)` |
-| `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
-| `bristlenose_branch symbology/` | `symbology` | _Parked experiment_ — § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
-| `bristlenose_branch highlighter/` | `highlighter` | _Parked experiment_ — highlighter feature (see Historical experiments) |
-| `bristlenose_branch living-fish/` | `living-fish` | _Parked experiment_ — animated logo (see Historical experiments) |
-| `bristlenose_branch drag-push/` | `drag-push` | _Parked experiment_ — sidebar push-mode drag (see Historical experiments) |
+| Directory | Branch | Kind | Purpose |
+|-----------|--------|------|---------|
+| `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
+| `bristlenose_branch bundled-binary-helper/` | `bundled-binary-helper` | feature | S2 Track A narrow — ffprobe/ffmpeg PATH-stripped sandbox blocker (surfaced in fossda pipeline log). Code already on main as `670a002`; worktree pending close |
+| `bristlenose_branch pipeline-runner-sidecar-mode/` | `pipeline-runner-sidecar-mode` | feature _(merged)_ | Beat-6 warm-up: migrate stale `findBristlenoseBinary()` call in `PipelineRunner.swift` to `SidecarMode.resolve(...)`. Merged via PR #96; worktree pending close |
+| `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards |
+| `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
+| `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
+| `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
+| `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 
 
 
@@ -104,7 +117,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | Branch | Local worktree | GitHub remote |
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
-| `sandbox-debug` | `bristlenose_branch sandbox-debug/` | local only |
+| `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
 | `bundled-binary-helper` | `bristlenose_branch bundled-binary-helper/` | local only |
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `pipeline-runner-sidecar-mode` _(merged)_ | `bristlenose_branch pipeline-runner-sidecar-mode/` | merged via PR #96 (`0e0157e`) on 2 May 2026 |
@@ -123,6 +136,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ### `pipeline-runner-sidecar-mode` (merged)
 
+**Kind:** feature _(merged)_
 **Status:** Merged 2 May 2026 via PR #96 (`0e0157e`)
 **Started:** 1 May 2026
 **Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-runner-sidecar-mode/` (still on disk for backup; close via `/close-branch` when ready)
@@ -136,6 +150,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ### `bundled-binary-helper`
 
+**Kind:** feature — code already on main as `670a002` (and review-park `677755a`); worktree pending close
 **Status:** Just started
 **Started:** 2 May 2026
 **Worktree:** `/Users/cassio/Code/bristlenose_branch bundled-binary-helper/`
@@ -155,26 +170,21 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
-### `sandbox-debug`
+### `sandbox-debug` (closed — diagnostic, discarded)
 
-**Status:** Just started
+**Kind:** diagnostic — never intended to merge; produced inventory that fanned out into narrow children
+**Status:** Closed 2 May 2026. Children all landed: credentials (Track C v0.15.1), TLS (`bundled-tls-config`), `network.server` (A2), sandbox-native lifecycle (A6), FFmpeg/ffprobe paths (`bundled-binary-helper` → `670a002` on main). `git diff main...sandbox-debug` was empty at close time — nothing to rescue.
 **Started:** 29 Apr 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch sandbox-debug/`
-**Remote:** local only (push when ready)
 
-**What it does:** S2 Track A — macOS app sandbox violation triage. A1 spike: turn the sandbox on in Debug, walk the §1a flow, capture every `deny(1)` line, output a violation inventory. No fixes in this branch — it's the inventory pass before A2–A6 narrow per-violation branches (credentials / Ollama / FFmpeg paths / clip backend / doctor + security-scoped bookmarks).
+**What it did:** S2 Track A — macOS app sandbox violation triage. A1 spike: turn sandbox on in Debug, walk §1a flow, capture every `deny(1)` line, output a violation inventory. By design produced **no fixes itself** — fixes happened in narrow per-violation branches and merged to main directly.
 
-**Files this branch will touch:**
-- `desktop/` — entitlements files, sandbox toggle in Debug scheme
-- TBD — likely `bristlenose/llm/`, `bristlenose/utils/video.py`, `bristlenose/doctor.py` once A2+ branches start
-
-**Potential conflicts with other branches:**
-- `symbology`, `highlighter`, `living-fish`, `drag-push`, `responsive-signal-cards` — no overlap (those touch frontend/theme; this is desktop sandbox + Python paths)
+**Lesson:** This is the canonical example of a `diagnostic` Kind branch. Its useful output (the inventory) flowed out via siblings; the branch itself was always destined for `/close-branch`, not merge.
 
 ---
 
 ### `responsive-signal-cards`
 
+**Kind:** feature
 **Status:** Just started
 **Started:** 15 Mar 2026
 **Worktree:** `/Users/cassio/Code/bristlenose_branch responsive-signal-cards/`

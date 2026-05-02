@@ -1,14 +1,16 @@
 ---
 name: new-feature
-description: Create a new feature branch with git worktree, venv, remote tracking, and BRANCHES.md entry
+description: Create a new branch (feature, diagnostic, spike, chore, or parked) with git worktree, venv, remote tracking, and BRANCHES.md entry. Despite the skill name, not every branch is a feature — Kind is captured in Step 3.5.
 disable-model-invocation: true
 user-invocable: true
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion
 ---
 
-Create a new feature branch called `$0` for the bristlenose project.
+Create a new branch called `$0` for the bristlenose project.
 
 If no branch name was provided (`$0` is empty), ask the user for one before proceeding.
+
+**Branch Kind is mandatory.** Not every branch is a feature. The Kind controls merge intent and end-of-life behaviour — see `docs/BRANCHES.md` "Branch Kinds" section. Step 3.5 captures it before the worktree is created so it can be recorded in BRANCHES.md correctly.
 
 **Failure policy:** Steps 1–4 are critical — stop on failure. Steps 5–8 are setup — warn on failure but continue (the worktree is usable without them).
 
@@ -29,6 +31,18 @@ If either fails, stop with: "Run /new-feature from the main bristlenose repo on 
 ## Step 3: Check for uncommitted changes
 
 Run `git status --porcelain`. If there are changes, warn the user and ask whether to proceed. Do NOT stash — the changes stay on main.
+
+## Step 3.5: Determine Branch Kind (mandatory)
+
+Ask the user which **Kind** this branch is — this controls how it ends, not just what it does. Use `AskUserQuestion` with these choices:
+
+- **feature** — code intended for main; ends in merge or PR-and-squash
+- **diagnostic** — produces inventory/reports/reproductions; fixes happen in *other* branches; the branch itself is **discarded** (not merged) when narrow children land. Example: `sandbox-debug`
+- **spike** — exploratory throwaway; usually discarded; cherry-pick selectively if a commit is worth keeping
+- **chore** — small ephemeral work (release tooling, doc reconciliation, dep bumps); merge or discard, low ceremony
+- **parked** — opened now but on hold; may resume later. Pushed to origin as backup
+
+Record the answer; it gets written into BRANCHES.md in Step 11. **Don't default to feature.** If the user can't articulate why this is a feature, it's probably a diagnostic or spike.
 
 ## Step 4: Create branch and worktree
 
@@ -207,9 +221,9 @@ Read `docs/BRANCHES.md` to understand the current format. Check if `$0` already 
 
 Then:
 
-1. Add a row to the **Worktree Convention** table:
+1. Add a row to the **Worktree Convention** table (Kind column is mandatory):
    ```
-   | `bristlenose_branch $0/` | `$0` | <ask user for purpose> |
+   | `bristlenose_branch $0/` | `$0` | <kind from Step 3.5> | <ask user for purpose> |
    ```
 
 2. Add a row to the **Backup Strategy** table:
@@ -217,11 +231,12 @@ Then:
    | `$0` | `bristlenose_branch $0/` | local only |
    ```
 
-3. Add a new section under **Active Branches** following the exact format of existing entries:
+3. Add a new section under **Active Branches** following the exact format of existing entries. Note the **Kind** field comes first — it sets reading expectations:
 
    ```markdown
    ### `$0`
 
+   **Kind:** <feature | diagnostic | spike | chore | parked> — <one-line on merge intent: "code lands on main", "discard when children land", "throwaway exploration", etc.>
    **Status:** Just started
    **Started:** <today's date, format: D Mon YYYY, no leading zero on day>
    **Worktree:** `/Users/cassio/Code/bristlenose_branch $0/`

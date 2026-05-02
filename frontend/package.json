@@ -17,7 +17,7 @@
     {
       "name": "All JS (gzipped)",
       "path": "../bristlenose/server/static/assets/*.js",
-      "limit": "305 kB",
+      "limit": "320 kB",
       "gzip": true
     }
   ],

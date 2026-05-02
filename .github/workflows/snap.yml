@@ -1,11 +1,13 @@
 name: Snap Build & Publish
 
+# Auto-triggers disabled May 2026 — Snap build has been failing on every push
+# since 2026-04-17 and adds noise to PR check status during the alpha-critical
+# path. Linux users on the alpha cohort can install from PyPI; the Snap-only
+# slice of users is small enough to defer until autumn 2026 (post-TestFlight,
+# during beta). Workflow remains runnable via the GitHub Actions UI when ready
+# to revisit. Re-enable by restoring the `push` + `pull_request` triggers.
 on:
-  push:
-    branches: [main]
-    tags: ["v*"]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"

@@ -7,10 +7,11 @@ future AVFoundation (macOS desktop) backends implement.
 from __future__ import annotations
 
 import logging
-import shutil
 import subprocess
 from pathlib import Path
 from typing import Protocol, runtime_checkable
+
+from bristlenose.utils.bundled_binary import bundled_binary_path
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +35,9 @@ class FFmpegBackend:
     """FFmpeg stream-copy backend for clip extraction."""
 
     def check_available(self) -> tuple[bool, str]:
-        """Check if ffmpeg is on PATH."""
-        if shutil.which("ffmpeg") is None:
-            return (False, "FFmpeg not found on PATH")
+        """Check if ffmpeg is reachable (PATH, env var, or bundled)."""
+        if bundled_binary_path("ffmpeg") is None:
+            return (False, "FFmpeg not found")
         return (True, "")
 
     def extract_clip(
@@ -49,10 +50,11 @@ class FFmpegBackend:
         """
         output.parent.mkdir(parents=True, exist_ok=True)
 
+        ffmpeg = bundled_binary_path("ffmpeg") or "ffmpeg"
         try:
             result = subprocess.run(
                 [
-                    "ffmpeg",
+                    ffmpeg,
                     "-ss", f"{start:.3f}",
                     "-to", f"{end:.3f}",
                     "-i", str(source),

@@ -8,6 +8,8 @@ import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from bristlenose.utils.bundled_binary import bundled_binary_path
+
 if TYPE_CHECKING:
     from bristlenose.models import FullTranscript, InputSession
 
@@ -86,10 +88,11 @@ def extract_thumbnail(
 
     hwaccel = ["-hwaccel", "videotoolbox"] if platform.system() == "Darwin" else []
 
+    ffmpeg = bundled_binary_path("ffmpeg") or "ffmpeg"
     try:
         result = subprocess.run(
             [
-                "ffmpeg",
+                ffmpeg,
                 *hwaccel,
                 "-ss", str(timestamp),
                 "-i", str(video_path),

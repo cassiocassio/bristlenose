@@ -8,6 +8,8 @@ import platform
 import subprocess
 from pathlib import Path
 
+from bristlenose.utils.bundled_binary import bundled_binary_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -16,10 +18,11 @@ def probe_duration(file_path: Path) -> float | None:
 
     Returns duration in seconds, or None if probing fails.
     """
+    ffprobe = bundled_binary_path("ffprobe") or "ffprobe"
     try:
         result = subprocess.run(
             [
-                "ffprobe",
+                ffprobe,
                 "-v", "quiet",
                 "-print_format", "json",
                 "-show_format",
@@ -65,9 +68,10 @@ def extract_audio_from_video(
     # Harmless no-op for audio-only inputs; ignored if unsupported.
     hwaccel = ["-hwaccel", "videotoolbox"] if platform.system() == "Darwin" else []
 
+    ffmpeg = bundled_binary_path("ffmpeg") or "ffmpeg"
     result = subprocess.run(
         [
-            "ffmpeg",
+            ffmpeg,
             *hwaccel,
             "-i", str(video_path),
             "-vn",                    # no video
@@ -93,10 +97,11 @@ def extract_audio_from_video(
 
 def has_audio_stream(file_path: Path) -> bool:
     """Check if a video file contains an audio stream."""
+    ffprobe = bundled_binary_path("ffprobe") or "ffprobe"
     try:
         result = subprocess.run(
             [
-                "ffprobe",
+                ffprobe,
                 "-v", "quiet",
                 "-select_streams", "a",
                 "-show_entries", "stream=codec_type",

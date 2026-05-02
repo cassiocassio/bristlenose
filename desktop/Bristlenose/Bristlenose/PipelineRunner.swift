@@ -966,6 +966,11 @@ final class PipelineRunner: ObservableObject {
         for (key, value) in BristlenoseShared.sslEnvironment(for: resolvedMode) {
             env[key] = value
         }
+        // Bundled-sidecar FFmpeg/ffprobe — sandbox-stripped PATH can't find
+        // Homebrew binaries; point Python at the bundled siblings.
+        for (key, value) in BristlenoseShared.bundledBinaryEnvironment(for: resolvedMode) {
+            env[key] = value
+        }
         proc.environment = env
 
         let pipe = Pipe()

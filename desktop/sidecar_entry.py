@@ -28,8 +28,7 @@ surface area.
 
 # TODO(shape-b): remove "run" passthrough when PipelineRunner moves to the
 # serve HTTP API. Single process per project, no second subprocess to gate.
-# See docs/private/plan-pipeline-runner-sidecar-mode.md "Architectural
-# decision — Shape B" for the rationale.
+# See the gitignored sidecar-mode plan note for the architectural rationale.
 
 from __future__ import annotations
 

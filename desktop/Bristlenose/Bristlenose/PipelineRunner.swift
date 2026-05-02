@@ -898,20 +898,36 @@ final class PipelineRunner: ObservableObject {
         let externalPortRaw: String? = nil
         let sidecarPathRaw: String? = nil
         #endif
-        switch SidecarMode.resolve(
+        // TODO: `.unknown` is the wrong category for both branches below — the
+        // external-scheme path is a developer config error, the resolver-failure
+        // path is bundle/environment. No fitting case in `PipelineFailureCategory`
+        // today; revisit when the enum next grows (or a third miscategorised
+        // call site appears).
+        let resolved = SidecarMode.resolve(
             externalPortRaw: externalPortRaw,
             sidecarPathRaw: sidecarPathRaw,
             bundleResourceURL: Bundle.main.resourceURL
-        ) {
-        case .success(.bundled(let path)), .success(.devSidecar(let path)):
-            binary = path
-        case .success(.external):
-            state[project.id] = .failed(
-                "Pipeline runs need the bundled or dev-sidecar scheme; the external-server scheme has no binary to spawn.",
-                category: .unknown
-            )
-            return
+        )
+        switch resolved {
+        case .success(let mode):
+            switch mode {
+            case .bundled(let path), .devSidecar(let path):
+                binary = path
+                Self.logger.info(
+                    "spawn binary resolved: \(mode.logDescription, privacy: .public) project=\(project.id.uuidString, privacy: .public)"
+                )
+            case .external:
+                let message = "Pipeline runs can't use the external-server dev mode. Unset BRISTLENOSE_DEV_EXTERNAL_PORT (or use BRISTLENOSE_DEV_SIDECAR_PATH instead) and try again."
+                Self.logger.error(
+                    "spawn refused: external-server scheme has no binary project=\(project.id.uuidString, privacy: .public)"
+                )
+                state[project.id] = .failed(message, category: .unknown)
+                return
+            }
         case .failure(let err):
+            Self.logger.error(
+                "spawn binary resolve failed: \(err.localizedDescription, privacy: .public) project=\(project.id.uuidString, privacy: .public)"
+            )
             state[project.id] = .failed(err.localizedDescription, category: .unknown)
             return
         }

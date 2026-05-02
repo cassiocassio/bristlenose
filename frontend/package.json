@@ -15,9 +15,25 @@
   },
   "size-limit": [
     {
-      "name": "All JS (gzipped)",
-      "path": "../bristlenose/server/static/assets/*.js",
-      "limit": "320 kB",
+      "name": "Live SPA, English (gzipped)",
+      "path": [
+        "../bristlenose/server/static/assets/*.js",
+        "!../bristlenose/server/static/assets/visual-diff-*.js",
+        "!../bristlenose/server/static/assets/ResponsivePlayground-*.js",
+        "!../bristlenose/server/static/assets/PlaygroundStore-*.js",
+        "!../bristlenose/server/static/assets/PlaygroundHUD-*.js",
+        "!../bristlenose/server/static/assets/devicePresets-*.js",
+        "!../bristlenose/server/static/assets/HelloIsland-*.js",
+        "!../bristlenose/server/static/assets/common-*.js",
+        "!../bristlenose/server/static/assets/settings-*.js",
+        "!../bristlenose/server/static/assets/desktop-*.js",
+        "!../bristlenose/server/static/assets/enums-*.js",
+        "!../bristlenose/server/static/assets/cli-*.js",
+        "!../bristlenose/server/static/assets/doctor-*.js",
+        "!../bristlenose/server/static/assets/pipeline-*.js",
+        "!../bristlenose/server/static/assets/server-*.js"
+      ],
+      "limit": "210 kB",
       "gzip": true
     }
   ],

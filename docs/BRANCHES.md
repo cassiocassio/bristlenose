@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 1 May 2026 (parked symbology / highlighter / living-fish / drag-push as historical experiments — nice ideas, not on the 100-day path; worktrees kept on disk)
+**Updated:** 2 May 2026 (closed `bundled-tls-config` — merged to main)
 
 ---
 
@@ -16,7 +16,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
 | `bristlenose_branch sandbox-debug/` | `sandbox-debug` | S2 Track A — macOS app sandbox violation triage (A1 spike onward) |
-| `bristlenose_branch bundled-tls-config/` | `bundled-tls-config` | S2 Track A narrow branch — bundled TLS configuration for the sidecar (follow-up to A1c sandbox findings) |
 | `bristlenose_branch pipeline-runner-sidecar-mode/` | `pipeline-runner-sidecar-mode` | Beat-6 warm-up: migrate stale `findBristlenoseBinary()` call in `PipelineRunner.swift` to `SidecarMode.resolve(...)` |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
 | `bristlenose_branch symbology/` | `symbology` | _Parked experiment_ — § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
@@ -105,7 +104,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `sandbox-debug` | `bristlenose_branch sandbox-debug/` | local only |
-| `bundled-tls-config` | `bristlenose_branch bundled-tls-config/` | local only |
+| `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `pipeline-runner-sidecar-mode` _(merged)_ | `bristlenose_branch pipeline-runner-sidecar-mode/` | merged via PR #96 (`0e0157e`) on 2 May 2026 |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
@@ -130,24 +129,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **What shipped:** `PipelineRunner.spawn()` migrated to `SidecarMode.resolve(...)` (same path as `ServeManager`); `findBristlenoseBinary()` deleted from `BristlenoseShared.swift` (zero remaining callers); bundled sidecar (`desktop/sidecar_entry.py`) accepts `run` as a third subcommand alongside `serve` and `doctor`, gated on env var `_BRISTLENOSE_HOSTED_BY_DESKTOP=1` (confused-deputy mitigation, belt-and-braces post-A2). 5 new pytest cases in `tests/test_sidecar_entry.py`.
 
 **Why it mattered:** Cleared the last engineering blocker for the sandbox-triage checkpoint. Beats 6→13 now reachable under sandbox-on Debug for the first time. Next session picks up from the gitignored handoff prompt in the sandbox-debug worktree.
-
----
-
-### `bundled-tls-config`
-
-**Status:** Just started
-**Started:** 2 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch bundled-tls-config/`
-**Remote:** local only (push when ready)
-
-**What it does:** S2 Track A narrow branch — bundled TLS configuration for the sidecar. Follow-up to the A1c sandbox-violation findings; pickup notes live in the gitignored A1c sandbox-violations write-up. Live-env state from the A1c run (Xcode running, sidecar PIDs, log-stream tab) is no longer needed — everything's captured in the write-up.
-
-**Files this branch will touch:**
-- TBD — will be filled in as work progresses (likely `desktop/` sidecar entry, possibly `bristlenose/server/` TLS plumbing)
-
-**Potential conflicts with other branches:**
-- `sandbox-debug` — adjacent (both Track A); coordinate via the A1c write-up's ordering
-- `responsive-signal-cards`, parked experiments — no overlap
 
 ---
 
@@ -236,6 +217,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `bundled-tls-config` — merged 2 May 2026
+
+S2 Track A narrow branch — redirected the bundled sidecar's TLS to certifi under sandbox, addressing an A1c sandbox-violation finding. Single commit (`aa6111f`) touching `BristlenoseShared.swift`, `PipelineRunner.swift`, `ServeManager.swift`, plus `SslEnvironmentTests.swift`. Merge commit `7240675`.
 
 ### `track-c-c1-bundled-sidecar` — merged 18 Apr 2026 (initial), retest 29 Apr, closed 1 May 2026
 

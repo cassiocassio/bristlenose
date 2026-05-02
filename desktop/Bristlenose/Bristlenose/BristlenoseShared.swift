@@ -32,6 +32,37 @@ enum BristlenoseShared {
         )
     }
 
+    /// SSL/TLS environment overrides for the bundled sidecar's Python OpenSSL.
+    ///
+    /// PyInstaller's bundled Python has compile-time OpenSSL defaults pointing
+    /// at the build machine's Homebrew paths (`/opt/homebrew/etc/openssl@3/
+    /// openssl.cnf` + `/opt/homebrew/etc/ca-certificates/cert.pem`). Under
+    /// macOS App Sandbox those paths are blocked → silent TLS init failure →
+    /// every outbound HTTPS call (Anthropic, HuggingFace, OpenAI) errors out
+    /// before stage 5 even reads its cache. See
+    /// `docs/private/sandbox-violations-A1c.md` row 4.
+    ///
+    /// Fix: point Python at certifi's CA bundle (shipped by PyInstaller at
+    /// `_internal/certifi/cacert.pem` next to the binary) and at `/dev/null`
+    /// for `OPENSSL_CONF` so OpenSSL doesn't probe the missing system config.
+    ///
+    /// Returns an empty dict for non-bundled modes — dev sidecar / external
+    /// both run outside the app bundle, against whatever OpenSSL their host
+    /// Python was linked against.
+    static func sslEnvironment(for mode: SidecarMode) -> [String: String] {
+        guard case let .bundled(binaryURL) = mode else { return [:] }
+        let certifiDir = binaryURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("_internal/certifi")
+        let cacert = certifiDir.appendingPathComponent("cacert.pem").path
+        return [
+            "SSL_CERT_FILE": cacert,
+            "SSL_CERT_DIR": certifiDir.path,
+            "REQUESTS_CA_BUNDLE": cacert,
+            "OPENSSL_CONF": "/dev/null"
+        ]
+    }
+
     /// Build the minimal environment for a `bristlenose` subprocess.
     /// Inherits only the handful of vars the CLI needs; avoids leaking
     /// credentials, DYLD_* vars, Xcode debug vars, etc. API keys are read

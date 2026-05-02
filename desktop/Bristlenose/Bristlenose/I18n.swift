@@ -138,21 +138,49 @@ final class I18n: ObservableObject {
 
     /// Find the bristlenose locales directory based on common install locations.
     ///
-    /// Priority:
-    /// 1. Dev mode — this source file's enclosing worktree (so each git worktree
-    ///    reads its own locales, not the main repo's)
-    /// 2. Dev mode — `~/Code/bristlenose/bristlenose/locales` legacy fallback
-    /// 3. Bundled .app — host target's Copy Sidecar Resources phase
-    /// 4. Bundled .app — PyInstaller sidecar `_internal` (legacy fallback)
+    /// Priority (bundle first — canonical for any built app, works under sandbox):
+    /// 1. Bundled .app — host target's Copy Sidecar Resources phase
+    /// 2. Bundled .app — PyInstaller sidecar `_internal` (legacy fallback)
+    /// 3. Dev mode — this source file's enclosing worktree (only reached when
+    ///    the bundle has no locales, e.g. iterating on the build phase itself)
+    /// 4. Dev mode — `~/Code/bristlenose/bristlenose/locales` legacy fallback
     /// 5. Homebrew / pipx — site-packages
+    ///
+    /// The bundle path comes first because under App Sandbox the dev paths
+    /// (`#filePath` worktree, `~/Code/...`) are technically still resolvable
+    /// via stat() in some configurations (debugger-attached, prior bookmark
+    /// grants), so checking them first risks returning a path the app can
+    /// stat but not read. Bundle.main.resourcePath is always reachable.
     static func findLocalesDirectory() -> URL? {
         let fm = FileManager.default
 
-        // 1. Dev mode: locales relative to this source file. `#filePath` is
+        // 1. App bundle: host-target Resources/locales (copied by the
+        // "Copy Sidecar Resources" build phase). This is the canonical
+        // location for shipped builds and works under App Sandbox.
+        if let resourcePath = Bundle.main.resourcePath {
+            let bundledPath = URL(fileURLWithPath: resourcePath)
+                .appendingPathComponent("locales")
+            if fm.fileExists(atPath: bundledPath.appendingPathComponent("en/common.json").path) {
+                return bundledPath
+            }
+
+            // 2. Legacy fallback: PyInstaller sidecar's _internal dir.
+            // Kept for older builds where locales weren't copied to the
+            // host bundle directly.
+            let sidecarPath = URL(fileURLWithPath: resourcePath)
+                .appendingPathComponent("bristlenose-sidecar/_internal/bristlenose/locales")
+            if fm.fileExists(atPath: sidecarPath.appendingPathComponent("en/common.json").path) {
+                return sidecarPath
+            }
+        }
+
+        // 3. Dev mode: locales relative to this source file. `#filePath` is
         // resolved at compile time, so each worktree's build points at its
         // own `bristlenose/locales/`. Path layout from this file:
         //   <worktree>/desktop/Bristlenose/Bristlenose/I18n.swift
         // → strip 4 components to reach <worktree>, then append the locales path.
+        // Only reached when the bundle has no locales — e.g. iterating on
+        // the Copy Sidecar Resources phase itself before it's wired up.
         let sourceFile = URL(fileURLWithPath: #filePath)
         let worktreeURL = sourceFile
             .deletingLastPathComponent()  // Bristlenose/
@@ -164,34 +192,13 @@ final class I18n: ObservableObject {
             return worktreeLocales
         }
 
-        // 2. Dev mode: main-repo fallback (covers builds where #filePath
+        // 4. Dev mode: main-repo fallback (covers builds where #filePath
         // resolution doesn't reach a checkout — e.g. archived debug builds).
         let devPath = NSString("~/Code/bristlenose/bristlenose/locales")
             .expandingTildeInPath
         let devURL = URL(fileURLWithPath: devPath)
         if fm.fileExists(atPath: devURL.appendingPathComponent("en/common.json").path) {
             return devURL
-        }
-
-        // 3. App bundle: host-target Resources/locales (copied by the
-        // "Copy Sidecar Resources" build phase). This is the canonical
-        // location for shipped builds — independent of the sidecar's
-        // PyInstaller layout.
-        if let resourcePath = Bundle.main.resourcePath {
-            let bundledPath = URL(fileURLWithPath: resourcePath)
-                .appendingPathComponent("locales")
-            if fm.fileExists(atPath: bundledPath.appendingPathComponent("en/common.json").path) {
-                return bundledPath
-            }
-
-            // 4. Legacy fallback: PyInstaller sidecar's _internal dir.
-            // Kept for older builds where locales weren't copied to the
-            // host bundle directly.
-            let sidecarPath = URL(fileURLWithPath: resourcePath)
-                .appendingPathComponent("bristlenose-sidecar/_internal/bristlenose/locales")
-            if fm.fileExists(atPath: sidecarPath.appendingPathComponent("en/common.json").path) {
-                return sidecarPath
-            }
         }
 
         // 5. Homebrew / pipx: find site-packages via known binary locations

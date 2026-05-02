@@ -44,6 +44,7 @@ def bundled_binary_path(name: str) -> str | None:
         Absolute path string, or ``None`` if not found by any resolution
         branch. Caller decides how to surface the missing-binary case.
     """
+    # Empty string is treated as unset — falls through to the next branch.
     env_key = _ENV_VAR_PREFIX + name.upper()
     env_value = os.environ.get(env_key)
     if env_value:

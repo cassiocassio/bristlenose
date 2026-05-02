@@ -2,6 +2,15 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.15.2** — _2 May 2026_
+
+- **Bundled FFmpeg/ffprobe discovery for sandboxed sidecar** — new `bristlenose/utils/bundled_binary.py` resolves FFmpeg and ffprobe from a bundle-relative path before falling back to `$PATH`. Lets the sandboxed desktop sidecar find ship-with-app binaries that aren't on the user's shell `PATH`. `audio.py`, `video.py`, and `clip_backend.py` route through the helper; `bristlenose doctor` reports the resolved path. CLI/PyPI users see no behaviour change — `$PATH` lookup is still tried
+- **`bristlenose/server/lifecycle.py`** — new module factoring out serve-mode lifecycle handling (parent-death detection, sandbox-friendly bind(0), graceful shutdown). Used by Track A A6 sandbox-native sidecar work; CLI `serve` callers get the same lifecycle path
+- **PipelineRunner: `SidecarMode.resolve` migration** (PR #96) — desktop sidecar invocation goes through the resolved-mode path, with logged mode + clearer error copy when the resolution fails
+- **TLS sidecar redirect to certifi under sandbox** (PR #97) — bundled sidecar uses `certifi` for TLS root certs when the system trust store isn't reachable from inside the App Sandbox. Desktop-only impact
+- **Frontend size budget**: re-baselined to live-SPA gzipped (lazy locales excluded from the budget figure since they're loaded on demand). Budget remains 320 kB
+- **Docs**: manual + README reconciled with shipped bundled-binary-helper; pricing reframed per hour of audio rather than per study; HANDOFF.md branch-handoff convention surfaced at worktree root via gitignored symlink
+
 **0.15.1** — _1 May 2026_
 
 - **Desktop alpha-readiness landed (Sprint 2 Track C C2–C5)** — sandbox-safe API-key injection (Swift Keychain → env vars; Python no longer execs `/usr/bin/security`), libproc-based zombie cleanup (`proc_listpids` + `proc_pidfdinfo` + `proc_pidpath` — replaces `lsof` and `/bin/ps`, both blocked by App Sandbox), `os.Logger` with privacy redaction throughout `ServeManager`, key-shape stdout redactor (Anthropic / OpenAI / Google formats) as defence-in-depth against accidental key leakage in subprocess output, `SidecarMode.resolve` + three Xcode schemes for the dev escape hatch, privacy manifests for host + sidecar (TestFlight unblock), per-binary signing infrastructure, supply-chain provenance (`THIRD-PARTY-BINARIES.md` + auto-regen script). Desktop-only — no PyPI surface change

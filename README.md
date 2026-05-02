@@ -362,6 +362,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.2** — _2 May 2026_
+
+- **Bundled FFmpeg/ffprobe discovery for sandboxed sidecar** — new `bristlenose/utils/bundled_binary.py` resolves FFmpeg/ffprobe from a bundle-relative path before falling back to `$PATH`, so the sandboxed desktop sidecar can find ship-with-app binaries. CLI users see no behaviour change
+- **`bristlenose/server/lifecycle.py`** — serve-mode lifecycle factored out (parent-death detection, sandbox-friendly bind(0), graceful shutdown)
+- **PipelineRunner `SidecarMode.resolve` migration** (PR #96) and **TLS→certifi redirect under sandbox** (PR #97). Desktop-only impact
+- **Frontend size budget** re-baselined to live-SPA gzipped (lazy locales excluded). Budget remains 320 kB
+- **Docs**: manual + README reconciled with shipped bundled-binary-helper; pricing reframed per hour of audio
+
 **0.15.1** — _1 May 2026_
 
 - **Desktop alpha-readiness (Sprint 2 Track C C2–C5)** — sandbox-safe API-key injection via Swift Keychain → env vars (no more `/usr/bin/security` exec from Python), libproc-based zombie cleanup, `os.Logger` with privacy redaction, key-shape stdout redactor, `SidecarMode.resolve` + three Xcode schemes, privacy manifests for host + sidecar, per-binary signing, supply-chain provenance. Desktop-only

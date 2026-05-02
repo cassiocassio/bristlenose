@@ -70,7 +70,7 @@ Each check returns one of three states: **ok**, **warn** (works but suboptimal),
 
 | # | Check | What it tests |
 |---|---|---|
-| 1 | FFmpeg | `shutil.which("ffmpeg")` — is it in PATH? |
+| 1 | FFmpeg | `bundled_binary_path("ffmpeg")` — env var (Mac sidecar) → bundle-relative → PATH |
 | 2 | Transcription backend | `import faster_whisper` succeeds, ctranslate2 version |
 | 3 | Whisper model | Is the configured model already cached? (uses `huggingface_hub.scan_cache_dir()` or `WhisperModel(..., local_files_only=True)`) |
 | 4 | API key | Is an API key configured for the selected LLM provider? Also validates the key with a cheap API call (e.g. Anthropic's count_tokens or model list endpoint) to catch expired/revoked keys |
@@ -136,7 +136,7 @@ render: no pre-flight at all — it reads JSON, writes HTML, needs nothing exter
 
 | Check | Pre-flightable? | How |
 |---|---|---|
-| FFmpeg installed | Yes | `shutil.which("ffmpeg")` |
+| FFmpeg installed | Yes | `bundled_binary_path("ffmpeg")` |
 | faster-whisper importable | Yes | try/except import |
 | ctranslate2 loads | Yes | try/except import, version check |
 | API key present | Yes | `settings.anthropic_api_key != ""` |

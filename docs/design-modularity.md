@@ -103,10 +103,10 @@ Awkwardness: Background Assets natively targets data files, not Python packages.
 
 | Component | Size | Acquisition (Mac) | Acquisition (CLI) |
 |---|---|---|---|
-| FFmpeg + ffprobe (trimmed: h264/aac/opus/prores) | ~25 MB | **Bundled in `.app`** at `Contents/Resources/bin/` | User installs via Homebrew/apt/dnf |
+| FFmpeg + ffprobe (trimmed: h264/aac/opus/prores) | ~25 MB | **Bundled in `.app`** at `Contents/Resources/{ffmpeg,ffprobe}` (siblings of the sidecar dir) | User installs via Homebrew/apt/dnf |
 | FFmpeg + ffprobe (kitchen-sink, all codecs) | ~70 MB | Not used — trimmed build is enough | System install on CLI |
 
-**Path lookup function** (single-source): env var `BRISTLENOSE_FFMPEG_PATH` → Mac `Bundle.main.resourceURL/bin/ffmpeg` (Swift passes this via env) → `shutil.which("ffmpeg")`. CLI falls through to `shutil.which`; desktop sidecar gets the bundle path via env var from Swift. No platform branching in the call sites.
+**Path lookup function** (single-source): `bristlenose.utils.bundled_binary.bundled_binary_path(name)` resolves in three branches — env var `BRISTLENOSE_<NAME>` (e.g. `BRISTLENOSE_FFMPEG`, `BRISTLENOSE_FFPROBE`) → bundle-relative `Contents/Resources/<name>` when `_BRISTLENOSE_HOSTED_BY_DESKTOP=1` → `shutil.which(name)`. Swift's `BristlenoseShared.bundledBinaryEnvironment(for:)` injects the env vars at sidecar spawn time (mirrors the certifi/SSL pattern). CLI falls through to `shutil.which`; desktop sidecar takes the env-var branch under sandbox. No platform branching in the call sites. Shipped `bundled-binary-helper` merge `670a002`.
 
 ### Local LLM (optional, both platforms)
 
@@ -197,7 +197,7 @@ Snap base install. FFmpeg via `snap install ffmpeg` or strict-confinement `slots
 
 ## Implementation rules
 
-1. **Single lookup function per resource.** `find_whisper_model()`, `find_binary("ffmpeg")`, `get_credential("anthropic")`. Platform branching lives inside these functions, not at call sites.
+1. **Single lookup function per resource.** `find_whisper_model()`, `bundled_binary_path("ffmpeg")`, `get_credential("anthropic")`. Platform branching lives inside these functions, not at call sites.
 2. **Env-var injection first.** If Swift can fetch / resolve / locate something and pass it via env var, let Swift do it. Python reads env. No Mac-specific Python code.
 3. **PyInstaller spec decides what's bundled.** Drop deps the desktop doesn't need from the `hiddenimports` list. Don't add a Mac-specific import-branch in Python.
 4. **Extras are the CLI equivalent of "optional bundle components".** Every feature that's Non-Essential on Mac should be an extra on CLI (`[pii]`, `[whisper-fat]` for larger models if we end up needing one, etc.).

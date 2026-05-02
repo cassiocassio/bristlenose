@@ -27,6 +27,12 @@
       "runtimeArgs": ["-c", "cd '/Users/cassio/Code/bristlenose_branch settings-modal/frontend' && npx vite --port 5173"],
       "autoPort": false,
       "port": 5173
+    },
+    {
+      "name": "website-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "5174", "--directory", "/Users/cassio/Code/bristlenose-website"],
+      "port": 5174
     }
   ]
 }

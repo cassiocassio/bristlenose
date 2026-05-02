@@ -174,6 +174,12 @@ final class ServeManager: ObservableObject {
         // of leaving an orphan holding a port). CLI users don't get this
         // — they may legitimately nohup the server.
         env["_BRISTLENOSE_HOSTED_BY_DESKTOP"] = "1"
+        // Bundled-sidecar TLS fix — see BristlenoseShared.sslEnvironment(for:).
+        // Without this, PyInstaller's OpenSSL probes Homebrew paths blocked
+        // by App Sandbox → all HTTPS-out fails (A1c row 4).
+        for (key, value) in BristlenoseShared.sslEnvironment(for: mode) {
+            env[key] = value
+        }
         Self.overlayPreferences(into: &env)
         Self.overlayAPIKeys(into: &env, using: KeychainHelper.liveStore)
         proc.environment = env

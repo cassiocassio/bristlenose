@@ -891,6 +891,7 @@ final class PipelineRunner: ObservableObject {
         // both surface as `.failed` state on the project so the GUI shows
         // something actionable.
         let binary: URL
+        let resolvedMode: SidecarMode
         #if DEBUG
         let externalPortRaw = ProcessInfo.processInfo.environment["BRISTLENOSE_DEV_EXTERNAL_PORT"]
         let sidecarPathRaw = ProcessInfo.processInfo.environment["BRISTLENOSE_DEV_SIDECAR_PATH"]
@@ -913,6 +914,7 @@ final class PipelineRunner: ObservableObject {
             switch mode {
             case .bundled(let path), .devSidecar(let path):
                 binary = path
+                resolvedMode = mode
                 Self.logger.info(
                     "spawn binary resolved: \(mode.logDescription, privacy: .public) project=\(project.id.uuidString, privacy: .public)"
                 )
@@ -958,6 +960,12 @@ final class PipelineRunner: ObservableObject {
         // it's the only access control pre-A1c.
         var env = BristlenoseShared.buildChildEnvironment()
         env["_BRISTLENOSE_HOSTED_BY_DESKTOP"] = "1"
+        // Bundled-sidecar TLS fix — see BristlenoseShared.sslEnvironment(for:).
+        // Without this, PyInstaller's OpenSSL probes Homebrew paths blocked
+        // by App Sandbox → all HTTPS-out fails (A1c row 4).
+        for (key, value) in BristlenoseShared.sslEnvironment(for: resolvedMode) {
+            env[key] = value
+        }
         proc.environment = env
 
         let pipe = Pipe()

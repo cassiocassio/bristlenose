@@ -67,11 +67,15 @@ section { max-width: var(--max-width); margin: 0 auto; padding: 3rem 1rem; }
 .feature-text p { color: var(--color-muted); }
 
 /* Story */
+.story { text-align: center; }
 .story h2 { font-size: 1.8rem; margin-bottom: 1rem; }
-.story p { margin-bottom: 1rem; max-width: 640px; }
+.story p { margin-bottom: 1rem; max-width: 640px; margin-left: auto; margin-right: auto; }
 .story p:last-child { margin-bottom: 0; }
 
 /* How it works */
+.how-it-works { text-align: center; }
+.how-it-works pre, .how-it-works .install-block { display: inline-block; text-align: left; margin-left: auto; margin-right: auto; }
+.how-it-works .install-note { max-width: 640px; margin-left: auto; margin-right: auto; }
 .how-it-works h2 { font-size: 1.8rem; margin-bottom: 1.5rem; }
 .steps { list-style: none; counter-reset: step; }
 .steps li { counter-increment: step; margin-bottom: 1.5rem; padding-left: 2.5rem; position: relative; }
@@ -80,8 +84,9 @@ section { max-width: var(--max-width); margin: 0 auto; padding: 3rem 1rem; }
 .steps li span { color: var(--color-muted); }
 
 /* Privacy */
+.privacy { text-align: center; }
 .privacy h2 { font-size: 1.8rem; margin-bottom: 1rem; }
-.privacy p { max-width: 640px; }
+.privacy p { max-width: 640px; margin-left: auto; margin-right: auto; }
 
 /* Providers */
 .providers h2 { font-size: 1.8rem; margin-bottom: 1rem; }

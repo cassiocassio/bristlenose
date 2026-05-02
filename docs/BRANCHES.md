@@ -104,7 +104,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `sandbox-debug` | `bristlenose_branch sandbox-debug/` | local only |
-| `pipeline-runner-sidecar-mode` | `bristlenose_branch pipeline-runner-sidecar-mode/` | local only |
+| `pipeline-runner-sidecar-mode` _(merged)_ | `bristlenose_branch pipeline-runner-sidecar-mode/` | merged via PR #96 (`0e0157e`) on 2 May 2026 |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
@@ -118,22 +118,16 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ## Active Branches
 
-### `pipeline-runner-sidecar-mode`
+### `pipeline-runner-sidecar-mode` (merged)
 
-**Status:** Just started
+**Status:** Merged 2 May 2026 via PR #96 (`0e0157e`)
 **Started:** 1 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-runner-sidecar-mode/`
-**Remote:** local only (push when ready)
+**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-runner-sidecar-mode/` (still on disk for backup; close via `/close-branch` when ready)
+**Remote:** branch deleted by GitHub on merge
 
-**What it does:** Beat-6 warm-up slice. Replace the stale `BristlenoseShared.findBristlenoseBinary()` call in `PipelineRunner.swift:888` with `SidecarMode.resolve(...)` (same call shape `ServeManager` already uses), delete `findBristlenoseBinary()` from `BristlenoseShared.swift:19` if it has no other callers, and verify Beat 6 (project run from GUI) actually fires under bundled mode. Single-file Swift change, ~10 lines, unblocks testing for both A4 and A6.
+**What shipped:** `PipelineRunner.spawn()` migrated to `SidecarMode.resolve(...)` (same path as `ServeManager`); `findBristlenoseBinary()` deleted from `BristlenoseShared.swift` (zero remaining callers); bundled sidecar (`desktop/sidecar_entry.py`) accepts `run` as a third subcommand alongside `serve` and `doctor`, gated on env var `_BRISTLENOSE_HOSTED_BY_DESKTOP=1` (confused-deputy mitigation, belt-and-braces post-A2). 5 new pytest cases in `tests/test_sidecar_entry.py`.
 
-**Files this branch will touch:**
-- `desktop/Bristlenose/PipelineRunner.swift` — swap call site
-- `desktop/Bristlenose/BristlenoseShared.swift` — delete `findBristlenoseBinary()` if unused
-
-**Potential conflicts with other branches:**
-- `sandbox-debug` — both touch `desktop/`; coordinate if A4/A6 land in parallel. No file overlap expected (this branch is `PipelineRunner.swift` + `BristlenoseShared.swift`; sandbox-debug is entitlements/scheme).
-- Frontend/theme branches (`responsive-signal-cards`, parked experiments) — no overlap.
+**Why it mattered:** Cleared the last engineering blocker for the sandbox-triage checkpoint. Beats 6→13 now reachable under sandbox-on Debug for the first time. Next session picks up from the gitignored handoff prompt in the sandbox-debug worktree.
 
 ---
 

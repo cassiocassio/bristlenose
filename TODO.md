@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 1 May 2026 (Track A A2 ✅ landed on branch `track-a-a2-network-server`, plus A6 sandbox-native sidecar lifecycle landed on main `39f39c0`; A2 awaiting push + merge)
+Last updated: 2 May 2026 (Track A A2 + A6 ✅ on main; PipelineRunner migration in flight as PR #96 — final blocker for beats 7–13 under sandbox; Snap CI deferred to autumn)
 
 **Most recent ship: v0.15.0 (26 Apr 2026)** — Phase 1f / 4a-pre. Pipeline-resilience event log (`pipeline-events.jsonl`) + structured `Cause` (10 categories) + honest `cost_usd_estimate` + desktop `EventLogReader`. Replaces the manifest-inference path that mis-classified interrupted runs as `.ready`. See `CHANGELOG.md` for full features, `docs/design-pipeline-resilience.md` for the design, and `docs/private/desktop-ux-iteration.md` for the deferred desktop UX work (Resume / Retry / Re-analyse… verb wiring + 9 other themed sections).
 
@@ -10,21 +10,20 @@ Last updated: 1 May 2026 (Track A A2 ✅ landed on branch `track-a-a2-network-se
 
 ## Next session focus
 
-**Track A — PipelineRunner → SidecarMode.resolve migration (no plan yet — needs one).**
+**Track A — A1c re-walk under sandbox-on Debug, beats 6→13 (after PR #96 merges).**
 
-Why this is the next thing: A2 (network.server) and A6 (sandbox-native sidecar lifecycle) have shipped, but the desktop app still can't run a pipeline under sandbox-on Debug because `PipelineRunner.spawn()` calls a stale binary-discovery helper that only works for the unsandboxed launcher pattern. Mechanically small, blocking for beats 6+ verification.
+Why this is the next thing: PR #96 (`pipeline-runner-sidecar-mode`, opened 2 May 2026) migrates `PipelineRunner.spawn()` to `SidecarMode.resolve(...)` and gates a new `run` passthrough on `_BRISTLENOSE_HOSTED_BY_DESKTOP=1`. That clears A1c row 3 — the last engineering blocker for #3 sandbox triage. Once it lands, beats 6–13 become reachable under sandbox-on Debug for the first time. Expected new violation surface (per A1c "Special-attention items"): Ollama discovery (HTTP probe path), FFmpeg subprocess from bundled sidecar, App Support writes, Whisper model download, doctor probes via sidecar IPC.
 
-Anchors:
-- `desktop/Bristlenose/Bristlenose/BristlenoseShared.swift:16` — literal `TODO(track-c-c1): replace with SidecarMode.resolve(env:bundle:fileManager:)` comment
-- `desktop/Bristlenose/Bristlenose/BristlenoseShared.swift:19` — `findBristlenoseBinary()` definition (still in use)
-- `desktop/Bristlenose/Bristlenose/PipelineRunner.swift:888` — only caller
-- `desktop/Bristlenose/Bristlenose/SidecarMode.swift` — the migration target (already wired into `ServeManager`; pattern to copy)
-- `desktop/Bristlenose/BristlenoseTests/SidecarModeTests.swift` — existing unit-test surface
-- A1c violation row 3 noted this as a non-sandbox bug exposed by the sandbox flip (see `docs/design-desktop-python-runtime.md` §"What wasn't tested" and `docs/design-desktop-security-audit.md` Distribution Blocker #2 for cross-references)
+Sequence:
+1. Merge PR #96 (Saturday push timing fine; CI pending at session close).
+2. From `bristlenose_branch sandbox-debug/`: `git pull --ff-only` → fresh `desktop/scripts/build-all.sh` → human-driven Xcode walkthrough of beats 6→13 with `log stream --predicate '(Sandbox) AND eventMessage CONTAINS "bristlenose"'` running in parallel (the corrected predicate from A1c calibration finding — the original missed denies attributed to `process == "kernel"`).
+3. Append findings to `docs/private/sandbox-violations-A1c.md` (Phase 3 / next-narrow-branch section, currently a stub).
+4. Cut narrow branches per category — `ollama-http`, `bundled-binary-helper`, `doctor-sandbox-aware`, plus any NEW.
 
-**On a fresh "what's next?" or new-feature start, the first move is a short implementation plan** before cutting the branch — what gets passed to `SidecarMode.resolve(...)` for the `bristlenose run --static` invocation (different code path from `serve`), how to handle the dev escape hatches, what the unit test covers, expected file footprint. The `Plan` agent (software architect) is the right tool for that — keeps the planning step out of the main context. Once the plan is agreed, `/new-feature track-a-pipelinerunner-migrate` (or similar narrow name) cuts the branch.
-
-Sequencing: this branch can cut clean off main once `track-a-a2-network-server` merges; until then either base off A2 or stub out sandbox-on testing and rely on the Swift unit test + code review.
+Open follow-ups (not blocking sandbox triage, surface separately):
+- **i18n locales not reaching host bundle under sandbox** (A1c row 2 / A2 verification observation #2). Commit `ea21bb1` was meant to fix this but the chrome keys still leak verbatim in welcome view + AIConsent modal under sandbox-on. Pre-existing build-system bug; cosmetic but visible.
+- **`proc_listpids` EPERM** (A1c row 1b/1d) — zombie cleanup non-functional under sandbox. Defer post-alpha (already triaged).
+- **IOKit AppleNVMeEANUC deny** (A1c row 1c) — silent, single occurrence per launch. Investigate if it ever surfaces user-visibly.
 
 ---
 

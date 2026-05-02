@@ -76,6 +76,7 @@ section { max-width: var(--max-width); margin: 0 auto; padding: 3rem 1rem; }
 .how-it-works { text-align: center; }
 .how-it-works pre, .how-it-works .install-block { display: inline-block; text-align: left; margin-left: auto; margin-right: auto; }
 .how-it-works .install-note { max-width: 640px; margin-left: auto; margin-right: auto; }
+.how-it-works .pricing-card { display: inline-block; width: auto; max-width: none; text-align: center; }
 .how-it-works h2 { font-size: 1.8rem; margin-bottom: 1.5rem; }
 .steps { list-style: none; counter-reset: step; }
 .steps li { counter-increment: step; margin-bottom: 1.5rem; padding-left: 2.5rem; position: relative; }

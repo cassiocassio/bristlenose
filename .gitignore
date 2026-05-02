@@ -79,3 +79,6 @@ experiments/thematic-spike/**/__pycache__/
 
 # Stray frontend trial-run output (should never live here)
 frontend/trial-runs/
+
+# Per-worktree branch handoff symlink (points into .claude/plans/<branch>.md)
+HANDOFF.md

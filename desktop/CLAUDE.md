@@ -155,6 +155,8 @@ Keyboard shortcuts: Cmd+1-5 (tabs) and Cmd+Opt+S (sidebar) live in the View menu
 
 The host signals "I am the parent that owns this lifecycle" by setting the `_BRISTLENOSE_HOSTED_BY_DESKTOP=1` env var when spawning the sidecar. CLI users don't get the watcher — they may legitimately `nohup` and outlive their starting shell.
 
+**TLS env injection — call `BristlenoseShared.sslEnvironment(for: mode)` at every Python spawn site.** PyInstaller's bundled Python has compile-time OpenSSL defaults pointing at Homebrew paths blocked by App Sandbox (`/opt/homebrew/etc/openssl@3/*`). The helper returns 4 SSL env vars (`SSL_CERT_FILE`, `SSL_CERT_DIR`, `REQUESTS_CA_BUNDLE`, `OPENSSL_CONF`) when mode is `.bundled`, redirecting Python to the certifi cacert.pem inside the `.app`. Empty for dev-sidecar / external. Currently used in `PipelineRunner.spawn()` and `ServeManager.start()`; any third spawn site must call it too or HTTPS will silently fail under sandbox.
+
 Two layers in total:
 
 1. **Clean quit**: `.onReceive(NSApplication.willTerminateNotification)` on the root View calls `serveManager.stop()` (SIGINT). Sidecar shuts down within milliseconds.

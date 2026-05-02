@@ -63,6 +63,30 @@ enum BristlenoseShared {
         ]
     }
 
+    /// Bundled FFmpeg/ffprobe paths for the sandboxed sidecar.
+    ///
+    /// Under App Sandbox the sidecar inherits a stripped PATH
+    /// (`/usr/bin:/bin:/usr/sbin:/sbin`), so Python's `shutil.which("ffmpeg")`
+    /// can't find the bundled binaries even though they live next to the
+    /// sidecar dir at `Contents/Resources/{ffmpeg,ffprobe}`. Set explicit
+    /// env vars and let `bristlenose.utils.bundled_binary.bundled_binary_path`
+    /// pick them up.
+    ///
+    /// Returns empty for non-bundled modes — CLI/dev-sidecar paths use
+    /// the user's installed FFmpeg via PATH.
+    static func bundledBinaryEnvironment(for mode: SidecarMode) -> [String: String] {
+        guard case let .bundled(binaryURL) = mode else { return [:] }
+        // binaryURL = .../Contents/Resources/bristlenose-sidecar/bristlenose-sidecar
+        // ffmpeg/ffprobe live one level up at .../Contents/Resources/{ffmpeg,ffprobe}
+        let resourcesDir = binaryURL
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        return [
+            "BRISTLENOSE_FFMPEG": resourcesDir.appendingPathComponent("ffmpeg").path,
+            "BRISTLENOSE_FFPROBE": resourcesDir.appendingPathComponent("ffprobe").path
+        ]
+    }
+
     /// Build the minimal environment for a `bristlenose` subprocess.
     /// Inherits only the handful of vars the CLI needs; avoids leaking
     /// credentials, DYLD_* vars, Xcode debug vars, etc. API keys are read

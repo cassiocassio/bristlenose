@@ -17,13 +17,19 @@ class TestFFmpegBackendProtocol:
 
 class TestCheckAvailable:
     def test_available(self) -> None:
-        with patch("bristlenose.server.clip_backend.shutil.which", return_value="/usr/bin/ffmpeg"):
+        with patch(
+            "bristlenose.server.clip_backend.bundled_binary_path",
+            return_value="/usr/bin/ffmpeg",
+        ):
             ok, msg = FFmpegBackend().check_available()
             assert ok is True
             assert msg == ""
 
     def test_not_available(self) -> None:
-        with patch("bristlenose.server.clip_backend.shutil.which", return_value=None):
+        with patch(
+            "bristlenose.server.clip_backend.bundled_binary_path",
+            return_value=None,
+        ):
             ok, msg = FFmpegBackend().check_available()
             assert ok is False
             assert "not found" in msg.lower()
@@ -55,7 +61,7 @@ class TestExtractClip:
             FFmpegBackend().extract_clip(source, output, 10.5, 25.3)
 
             args = mock_run.call_args[0][0]
-            assert args[0] == "ffmpeg"
+            assert args[0].endswith("ffmpeg")
             assert "-ss" in args
             assert "-to" in args
             assert "-c" in args

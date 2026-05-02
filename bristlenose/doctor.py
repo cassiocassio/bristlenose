@@ -14,6 +14,8 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from bristlenose.utils.bundled_binary import bundled_binary_path
+
 if TYPE_CHECKING:
     from bristlenose.config import BristlenoseSettings
 
@@ -70,8 +72,8 @@ class DoctorReport:
 
 
 def check_ffmpeg() -> CheckResult:
-    """Check whether FFmpeg is installed and in PATH."""
-    path = shutil.which("ffmpeg")
+    """Check whether FFmpeg is reachable (PATH, env var, or bundled)."""
+    path = bundled_binary_path("ffmpeg")
     if path is None:
         return CheckResult(
             status=CheckStatus.FAIL,
@@ -84,7 +86,7 @@ def check_ffmpeg() -> CheckResult:
     version = ""
     try:
         result = subprocess.run(
-            ["ffmpeg", "-version"],
+            [path, "-version"],
             capture_output=True,
             text=True,
             timeout=5,

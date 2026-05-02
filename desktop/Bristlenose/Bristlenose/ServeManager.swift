@@ -180,6 +180,11 @@ final class ServeManager: ObservableObject {
         for (key, value) in BristlenoseShared.sslEnvironment(for: mode) {
             env[key] = value
         }
+        // Bundled-sidecar FFmpeg/ffprobe — sandbox-stripped PATH can't find
+        // Homebrew binaries; point Python at the bundled siblings.
+        for (key, value) in BristlenoseShared.bundledBinaryEnvironment(for: mode) {
+            env[key] = value
+        }
         Self.overlayPreferences(into: &env)
         Self.overlayAPIKeys(into: &env, using: KeychainHelper.liveStore)
         proc.environment = env

@@ -49,6 +49,13 @@ The report includes:
 - **Editable participant names** -- click the pencil icon to name participants in-browser; export edits as YAML
 - Filter and **export as CSV** into **Miro** and more
 - **Keyboard shortcuts** -- j/k navigation, s to star, t to tag, / to search, ? for help; multi-select with Cmd+click or Shift+j/k for bulk actions
+- **Codebook frameworks** -- import Nielsen's 10 Heuristics, Yablonski's Laws, Don Norman, Jesse James Garrett, or the Morville honeycomb, or build your own
+- **AutoCode** -- LLM proposes tags from your codebook; review with a confidence threshold
+- **Inspector panel** -- DevTools-style heatmaps and signal cards with Win/Problem/Niggle/Surprise flags
+- **Word-level transcript highlighting** -- karaoke-style sync with video playback
+- **Video clip extraction** -- export starred quotes as video clips (FFmpeg stream-copy)
+- **Self-contained HTML export** -- one-click bundle for stakeholders, optional anonymisation
+- **Six languages** -- en, es, fr, de, ko, ja (`--lang` flag)
 
 
 ## Install
@@ -68,12 +75,6 @@ Requires macOS 15 Sequoia, Apple Silicon (M1+).
 ```bash
 # macOS (Homebrew) -- handles ffmpeg + Python for you
 brew install cassiocassio/bristlenose/bristlenose
-
-# Windows (pipx) -- requires Python, see install guide for details
-pipx install bristlenose
-
-# Linux (snap) -- coming soon
-# sudo snap install bristlenose --classic
 
 # Linux / macOS / Windows (pipx or uv)
 pipx install bristlenose
@@ -114,10 +115,10 @@ bristlenose configure claude    # validates the key and stores it in your system
 bristlenose configure chatgpt    # validates the key and stores it in your system credential store
 ```
 
-To use ChatGPT instead of the default, add `--llm openai` to your commands:
+To use ChatGPT instead of the default, add `--llm chatgpt` to your commands:
 
 ```bash
-bristlenose run interviews -o results/ --llm openai
+bristlenose run interviews -o results/ --llm chatgpt
 ```
 
 ### Option C: Azure OpenAI (enterprise)
@@ -280,15 +281,14 @@ Transcription hardware is auto-detected. Apple Silicon uses MLX on Metal GPU. NV
 
 ### Sharing
 
-- **Save curated report** -- export your starred, tagged, edited report as a standalone file you can share with stakeholders
 - **.docx export** -- download the report as a Word document
 - **Edit writeback** -- save your in-browser corrections back to the transcript files on disk
 
 ### Platform
 
-- **Snap Store** -- publish to the Snap Store for one-command install on Ubuntu and other Linux distros
 - **Windows installer** -- native setup wizard so you don't need Python or the command line
 - **Cross-session moderator linking** -- recognise the same moderator across sessions (currently each session tracks moderators independently)
+- **Snap Store** -- deferred. CI build is currently broken; will revisit after the macOS desktop alpha
 
 Priorities may shift. If something is missing that matters to you, [open an issue](https://github.com/cassiocassio/bristlenose/issues).
 
@@ -304,7 +304,7 @@ Priorities may shift. If something is missing that matters to you, [open an issu
 - **Gemini** -- newly added; budget option at ~$0.20/study
 - **Azure OpenAI** -- enterprise deployments
 - **Windows** -- the pipeline works but hasn't been widely tested
-- **Linux** -- snap package coming soon, looking for testers on various distros
+- **Linux** -- pipx works today; snap is deferred (CI build is currently broken)
 
 ---
 
@@ -321,7 +321,7 @@ git clone https://github.com/cassiocassio/bristlenose.git
 cd bristlenose
 python3.12 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev,apple]"                 # apple extra installs MLX for Apple Silicon GPU acceleration; omit on other platforms
+pip install -e ".[dev,serve,apple]"            # serve extra adds FastAPI/SQLAlchemy/uvicorn; apple adds MLX for Apple Silicon GPU acceleration (omit on other platforms)
 cp .env.example .env                          # add your API key
 ```
 
@@ -330,7 +330,7 @@ On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows
 ### Verify everything works
 
 ```bash
-.venv/bin/python -m pytest tests/    # ~3200 tests (Python + Vitest), should pass in <10s
+.venv/bin/python -m pytest tests/    # ~2300 Python tests; frontend has ~1300 Vitest tests (`npm test` in frontend/)
 .venv/bin/ruff check .               # lint
 .venv/bin/mypy bristlenose/          # type check (some third-party SDK errors are expected)
 ```
@@ -340,41 +340,19 @@ On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows
 > `find . -name __pycache__ -exec rm -rf {} +` then
 > `.venv/bin/python -m pip install -e ".[dev]"`
 
-### Try the snap (pre-release)
-
-The snap isn't in the Store yet, but you can grab the CI-built `.snap` from GitHub Actions and test it on any amd64 Linux box:
-
-```bash
-# 1. Download the snap artifact from the latest CI run
-#    Go to https://github.com/cassiocassio/bristlenose/actions/workflows/snap.yml
-#    Click the latest successful run → Artifacts → snap-amd64 → download and unzip
-
-# 2. Install it (--dangerous bypasses Store signature, --classic gives filesystem access)
-sudo snap install --dangerous --classic ./bristlenose_*.snap
-
-# 3. Verify
-bristlenose --version
-bristlenose doctor
-
-# 4. Run it for real (store whichever API key you have)
-bristlenose configure claude      # validates and saves to system credential store
-# or: bristlenose configure chatgpt
-bristlenose run interviews -o results/
-```
-
-FFmpeg, Python, faster-whisper, and spaCy are all bundled — no system dependencies needed. Feedback welcome via [issues](https://github.com/cassiocassio/bristlenose/issues).
-
 ### Architecture
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full project layout, but the short version:
 
-- `bristlenose/stages/` -- the 12-stage pipeline (ingest through render), one module per stage
-- `bristlenose/stages/s12_render/` -- HTML report renderer package, loads CSS + JS from theme/
-- `bristlenose/theme/` -- atomic CSS design system (tokens, atoms, molecules, organisms, templates)
-- `bristlenose/theme/js/` -- report JavaScript (17 modules, concatenated at render time)
-- `bristlenose/llm/prompts/` -- LLM prompt templates (Markdown files)
+- `frontend/` -- Vite + React + TypeScript SPA (the product UI in serve mode)
+- `bristlenose/server/` -- FastAPI + SQLite + SQLAlchemy data layer behind serve mode
+- `bristlenose/stages/` -- 12-stage pipeline (ingest through render), one module per stage
+- `bristlenose/llm/` -- multi-provider client + prompt templates (Markdown)
+- `bristlenose/locales/` -- six UI locales (en, es, fr, de, ko, ja)
+- `desktop/` -- SwiftUI macOS shell that bundles a signed PyInstaller sidecar
 - `bristlenose/pipeline.py` -- orchestrator that wires the stages together
 - `bristlenose/cli.py` -- Typer CLI entry point
+- `bristlenose/stages/s12_render/` and `bristlenose/theme/js/` -- legacy static-render scaffolding from the React migration; deprecated, on the deletion path
 
 ### Releasing
 

@@ -44,7 +44,7 @@ Bristlenose uses an LLM for the analysis pass (speaker identification, quote ext
 
 ### Claude (recommended)
 
-Best quality. ~$1.50 per study.
+Best quality. Roughly $1.50–$2.50 per study.
 
 1. Sign up at [console.anthropic.com](https://console.anthropic.com/settings/keys)
 2. Create a key, copy it
@@ -52,13 +52,13 @@ Best quality. ~$1.50 per study.
 
 ### ChatGPT
 
-Similar quality. ~$1.00 per study.
+Similar quality. Roughly $1–$3 per study.
 
 1. Sign up at [platform.openai.com](https://platform.openai.com/api-keys)
 2. Create a key, copy it
 3. Run: `bristlenose configure chatgpt`
 
-Add `--llm openai` to your commands to use ChatGPT instead of the default.
+Add `--llm chatgpt` to your commands to use ChatGPT instead of the default.
 
 ### Gemini
 
@@ -93,6 +93,12 @@ Bristlenose will offer to set up Ollama automatically. Trade-off: ~10 minutes vs
 
 Keys live in your operating system's secure credential store — never in plaintext. macOS: Keychain. Linux: Secret Service (GNOME Keyring / KDE Wallet). Fallback: `.env` file or environment variables.
 
+## Languages {#languages}
+
+The UI ships in six languages: English (`en`), Spanish (`es`), French (`fr`), German (`de`), Korean (`ko`), and Japanese (`ja`). The browser's preferred language is auto-detected; override with `--lang <code>` on the CLI or in Settings in the desktop app.
+
+Translations live on [Hosted Weblate](https://hosted.weblate.org/projects/bristlenose/) — contributions welcome.
+
 ## Your first run {#first-run}
 
 ```
@@ -108,7 +114,7 @@ bristlenose interviews
 # Windows: start interviews\bristlenose-output\bristlenose-interviews-report.html
 ```
 
-Bristlenose accepts any mix of audio (.wav, .mp3, .m4a, .flac, .ogg, .aac), video (.mp4, .mov, .avi, .mkv, .webm), subtitles (.srt, .vtt), and transcripts (.docx from Zoom, Teams, or Google Meet).
+Bristlenose accepts any mix of audio (.wav, .mp3, .m4a, .flac, .ogg, .wma, .aac), video (.mp4, .mov, .avi, .mkv, .webm), subtitles (.srt, .vtt), and transcripts (.docx from Zoom, Teams, or Google Meet).
 
 Files sharing a name stem (e.g. `p1.mp4` and `p1.srt`) are treated as one session. Existing subtitles skip transcription.
 
@@ -151,9 +157,9 @@ Tags are your own codes, applied to quotes as you review them. A **codebook** or
 
 ### The pipeline
 
-Bristlenose runs a 12-stage pipeline: ingest → extract audio → parse subtitles → parse transcripts → transcribe → identify speakers → merge transcript → PII removal → topic segmentation → quote extraction → quote clustering → thematic grouping → render.
+Bristlenose runs a 12-stage pipeline: ingest → extract audio → parse subtitles → parse `.docx` transcripts → transcribe (with speaker identification) → merge transcript → PII removal → topic segmentation → quote extraction → quote clustering → thematic grouping → render.
 
-If a run is interrupted, re-running the same command resumes where it left off. Completed sessions are loaded from cache in milliseconds.
+If a run is interrupted, re-running the same command resumes where it left off. Completed sessions are loaded from cache in milliseconds. From v0.15.0, every run writes an append-only `pipeline-events.jsonl` with structured cause-of-end metadata; if a previous run died mid-flight, the next one notices and reconciles it. Per-run cost is shown as an honest estimate (e.g. `~$0.46 (est.)`).
 
 ## Serve mode {#serve-mode}
 
@@ -161,21 +167,21 @@ If a run is interrupted, re-running the same command resumes where it left off. 
 bristlenose serve interviews
 ```
 
-Opens an interactive version of your report in the browser. Everything you do is saved to a local database — star quotes, tag, hide noise, edit names, reorganise your codebook. Changes persist between sessions.
+Opens an interactive version of your report in the browser at `http://127.0.0.1:8150/report/`. Everything you do is saved to a local SQLite database — star quotes, tag, hide noise, edit names, edit transcripts, reorganise your codebook. Changes persist between sessions.
 
-Serve mode is the primary way to work with Bristlenose. The static HTML render (`bristlenose render`) still works for offline sharing, but serve mode is where the active development happens.
+Serve mode is the product. To share offline, click **Export HTML** in the toolbar — it produces a self-contained file with the full React report and all your edits embedded (optionally anonymised). The legacy `bristlenose render` static HTML still exists but is deprecated.
 
 ### What you can do in serve mode
 
-- **Star quotes** — mark the ones that belong in your presentation
-- **Hide quotes** — dismiss noise without deleting it
-- **Tag quotes** — apply your own codes, with autocomplete from your codebook
-- **Edit names** — add display names for participants and moderators
+- **Star, hide, and tag quotes** with autocomplete from your codebook
+- **Inspector panel** (`m`) — DevTools-style heatmaps and signal cards with Win/Problem/Niggle/Surprise direction flags
+- **Sidebars** — left TOC with scroll-spy, right tag filter with codebook tree (`[`, `]`, `\`)
 - **Edit codebook** — drag-and-drop tags between groups, rename, recolour
-- **AutoCode** — let the LLM propose tags, then review with a confidence threshold
-- **Search** — find any quote across all interviews
-- **Filter by tag** — focus on one code at a time
-- **Export** — CSV for Miro/FigJam, or self-contained HTML for stakeholders
+- **AutoCode** — press the ✦ button to let the LLM propose tags from your codebook, then review them in a confidence histogram (set a threshold for auto-acceptance, review borderline cases, reject the rest)
+- **Edit transcripts and participant names** in place
+- **Word-level transcript highlighting** — karaoke-style sync with video playback
+- **Search** across all interviews; **filter by tag**
+- **Export** — CSV for Miro/FigJam/Mural, video clips of starred quotes (FFmpeg stream-copy), or self-contained HTML for stakeholders
 
 ## Codebooks {#codebooks}
 
@@ -225,15 +231,15 @@ Press the ✦ button on a codebook section to let the LLM propose tags for your 
 | `bristlenose analyze <folder>` | Skip transcription, run LLM analysis on existing transcripts. |
 | `bristlenose render <folder>` | Re-render HTML from existing JSON — no LLM calls. For tweaking names or formatting. |
 | `bristlenose status <folder>` | Read-only project status — which stages completed, how many sessions. |
-| `bristlenose doctor` | Check dependencies, API keys, and runtime environment. |
-| `bristlenose configure <provider>` | Store an API key securely. Providers: `claude`, `chatgpt`, `gemini`, `azure`. |
+| `bristlenose doctor` | Check dependencies, API keys, and runtime environment. Add `--self-test` to verify a bundled sidecar's data files (used by the desktop app). |
+| `bristlenose configure <provider>` | Store an API key securely. Providers: `claude`, `chatgpt`, `gemini`, `azure`, `miro`. |
 
 ### Common options
 
 | Flag | Effect |
 |------|--------|
 | `-p "Project Name"` | Name your project (appears in reports) |
-| `--llm openai` | Use ChatGPT instead of Claude |
+| `--llm chatgpt` | Use ChatGPT instead of Claude |
 | `--llm gemini` | Use Gemini |
 | `--llm local` | Use Ollama (free) |
 | `--llm azure` | Use Azure OpenAI |
@@ -241,12 +247,19 @@ Press the ✦ button on a codebook section to let the LLM propose tags for your 
 | `--output <dir>` | Override default output location |
 | `-y` | Skip confirmation prompts |
 | `-v` | Verbose terminal output (DEBUG level) |
+| `--lang <code>` | UI language: `en`, `es`, `fr`, `de`, `ko`, or `ja` |
 
 ## Privacy & security {#privacy}
 
 ### Local-first
 
-No Bristlenose server. No accounts. No telemetry. Audio is transcribed locally using Whisper on your machine. The analysis pass sends transcript text to your chosen LLM provider — or stays entirely offline with Ollama.
+No Bristlenose server. No accounts. No remote telemetry. Audio is transcribed locally using Whisper on your machine. The analysis pass sends transcript text to your chosen LLM provider — or stays entirely offline with Ollama.
+
+Bristlenose does keep a **local** record of LLM calls at `<output>/.bristlenose/llm-calls.jsonl` (timing, token counts, cost estimate, prompt SHA — no transcript content). This file is treated as a re-identification key: it stays in `.bristlenose/`, is mode `0o600`, and is excluded from any export. Disable it entirely with `BRISTLENOSE_LLM_TELEMETRY=0`.
+
+### Serve-mode access control
+
+`bristlenose serve` listens on `127.0.0.1` only and protects its API with a localhost bearer token. Other processes on the same machine can't read your project state without the token.
 
 ### Credential storage
 
@@ -266,7 +279,39 @@ Email [security@bristlenose.app](mailto:security@bristlenose.app). Do not open p
 
 ## Changelog {#changelog}
 
-Recent releases. Full history on [GitHub](https://github.com/cassiocassio/bristlenose/blob/main/CHANGELOG.md).
+Recent releases. Full history on [GitHub](https://github.com/cassiocassio/bristlenose/blob/main/CHANGELOG.md) or in the [README](https://github.com/cassiocassio/bristlenose/blob/main/README.md#changelog).
+
+### 0.15.1 — 1 May 2026
+
+- **Desktop alpha-readiness** — sandbox-safe API-key injection via Swift Keychain, libproc zombie cleanup, privacy manifests, per-binary signing, supply-chain provenance
+- **Desktop first-run experience** — unified boot/loading view, two-variant welcome state, round-trip API-key validation, Ollama setup sheet
+- Serve mode falls back to bundled theme CSS for brand-new projects, and fails loudly with a "Build incomplete" 500 page if the React bundle is missing
+- `bristlenose doctor --self-test` for verifying sidecar bundle integrity
+- Japanese (`ja`) locale completion — six languages now ship complete
+
+### 0.15.0 — 26 Apr 2026
+
+- **Pipeline resilience** — append-only `pipeline-events.jsonl` with structured cause-of-end (10 categories); stranded runs reconciled on next start
+- **Honest cost estimates** — every terminus event stamped with `cost_usd_estimate`, token counts, and `price_table_version`; surfaced as `~$0.46 (est.)`
+- Desktop `EventLogReader` with new `partial` and `stopped` pipeline states
+
+### 0.14.6 — 18 Apr 2026
+
+- E2E gate re-enabled as a blocking CI check; allowlist register for tracked test suppressions
+- `bristlenose doctor` warns if `_BRISTLENOSE_AUTH_TOKEN` is set in the shell
+
+### 0.14.3 — 27 Mar 2026
+
+- **Video clip extraction** — export starred and featured quotes as video clips (FFmpeg stream-copy)
+
+### 0.14.2 — 24 Mar 2026
+
+- **Localhost bearer token** for serve-mode API access control
+
+### 0.14.1 — 24 Mar 2026
+
+- French, German, Korean locales — machine-translated, cross-checked against Apple and ATLAS.ti glossaries
+- Tags sidebar shortcut (`⌘⌥T`)
 
 ### 0.14.0 — 20 Mar 2026
 

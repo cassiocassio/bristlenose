@@ -35,9 +35,11 @@ Deploy the static website from `website/` to bristlenose.app on DreamHost.
 Show what will be synced:
 
 ```bash
-rsync -avz --dry-run --delete \
+rsync -avz --dry-run --delete --delete-excluded \
   --exclude='draft text for*' \
   --exclude='weeknotes/' \
+  --exclude='.DS_Store' \
+  --exclude='server-endpoints.md' \
   website/ \
   dreamhost:/home/cassiocassio/bristlenose.app/
 ```
@@ -51,9 +53,11 @@ Ask the user to confirm (AskUserQuestion): "Deploy these files to bristlenose.ap
 If confirmed, run the real deploy:
 
 ```bash
-rsync -avz --delete \
+rsync -avz --delete --delete-excluded \
   --exclude='draft text for*' \
   --exclude='weeknotes/' \
+  --exclude='.DS_Store' \
+  --exclude='server-endpoints.md' \
   website/ \
   dreamhost:/home/cassiocassio/bristlenose.app/
 ```

@@ -140,11 +140,11 @@ Static JSON file served from `https://bristlenose.app/pricing.json`. Same DreamH
 **Update workflow:**
 
 1. Maintainer notices a price change (vendor email, blog post, monthly check).
-2. Edit `website/pricing.json` in the bristlenose repo, bump `price_table_version` to today's date.
-3. `deploy-website` skill rsyncs the entire `website/` tree to DreamHost. Same mechanism as a website copy change. No special workflow.
-4. Optionally bump the in-tree `bristlenose/llm/pricing.json` (the bundled copy) at the same time so the next release ships fresh defaults too. This is not required — the network fetch will pick up the change for users on older versions.
+2. Edit `bristlenose/llm/pricing.json` in the public repo (canonical home), bump `price_table_version` to today's date.
+3. `deploy-website` rsyncs to DreamHost. The deploy script copies `bristlenose/llm/pricing.json` from the public repo into the deploy staging dir at deploy time, so the live `bristlenose.app/pricing.json` is always the public-repo version (no second source of truth).
+4. The same edit ships in the next release as the bundled fallback.
 
-The two files (`website/pricing.json` and `bristlenose/llm/pricing.json`) are kept in sync by a tiny CI check: a diff between them must exit 0 on `main`. Drift is a release blocker; it would mean fresh installs see different rates than upgraders.
+Single source of truth: `bristlenose/llm/pricing.json` in the public repo. The deploy step is a copy, not a separate file. No CI sync gate needed (was an open question — closed by collapsing to one canonical file).
 
 ## Update cadence
 
@@ -177,7 +177,7 @@ Not all of this is on the TestFlight critical path. Split:
 
 **Ship for public-beta GM (wider audience, App Store distribution, builds in the wild for months):**
 
-- The DreamHost endpoint, the cache file, the 24h TTL, the `BRISTLENOSE_PRICE_FETCH` kill switch, the SECURITY.md and App Review Notes lines, the CI sync check between `website/pricing.json` and `bristlenose/llm/pricing.json`.
+- The DreamHost endpoint, the cache file, the 24h TTL, the `BRISTLENOSE_PRICE_FETCH` kill switch, the SECURITY.md and App Review Notes lines. Deploy step copies `bristlenose/llm/pricing.json` from the public repo to the deploy staging dir — single source of truth, no sync gate needed.
 - This is where the feature actually earns its keep. A beta user on a six-month-old build is exactly who stale prices hurt.
 
 This phasing also defers the only piece that touches App Review (the network-disclosure line) until the submission that actually needs it — alpha TestFlight builds don't ship the fetch, so there's nothing to disclose yet.
@@ -196,7 +196,7 @@ This phasing also defers the only piece that touches App Review (the network-dis
 1. **Sign the payload?** A half-day HMAC pass (public key in wheel, sign on deploy, verify on fetch, fall back to bundled on mismatch) kills the "DreamHost compromise → garbage prices stamped into telemetry forever" concern dead. Without it, payload validation (above) caps the blast radius at "rates within sane bounds" but a hostile maintainer-impersonator could still nudge every install's forecasts ±20%. Worth the half day or accept the risk?
 2. **24h TTL or longer?** Underlying signal changes every 5–13 weeks. 24h is ~30–90× more frequent than necessary. 7 days would cut DreamHost requests 7× with essentially zero accuracy loss. 24h chosen for reach-users-fast on a price cut; longer chosen for politeness to the host. Pick.
 3. **`model_aliases` field at v1?** Anthropic ships `claude-sonnet-4-5` then renames to date-pinned `claude-sonnet-4-20250514`-style. Adding `aliases: {alias: canonical}` at v1 is free now and avoids a `schema_version` bump later. Or YAGNI.
-4. **CI sync gate between `website/pricing.json` and `bristlenose/llm/pricing.json`** — a release blocker for drift, but the network fetch *exists* precisely to let bundled JSON age out. The gate enforces a moment-of-cut consistency the design then immediately abandons. Keep, drop, or downgrade to a warning?
+4. ~~CI sync gate between `website/pricing.json` and `bristlenose/llm/pricing.json`~~ — **closed 2 May 2026.** Resolved by collapsing to a single source of truth: `bristlenose/llm/pricing.json` is canonical, the deploy step in the website repo copies it into the deploy staging dir. No second file to drift from.
 5. **Background thread vs `asyncio` task.** Pipeline is asyncio. Thread works from sync callers (CLI `doctor`, `status`) and avoids event-loop coupling. Asyncio stays inside the prevailing concurrency model. Defensible either way; pick one and stop relitigating.
 6. **First-fetch trigger for desktop app.** Background-on-cost-calc means a user who only ever runs `transcribe-only` never refreshes. Hooking into `doctor` or app launch widens the trigger but adds latency to commands that have nothing to do with pricing. Status quo (cost-calc only) is the path of least surprise; raise if alpha feedback suggests otherwise.
 7. **Doctor check for old `schema_version`.** When v2 ships, users on v1 clients silently keep using stale-but-valid v1 cache forever. A doctor warning ("pricing schema older than your client supports — upgrade Bristlenose for new pricing fields") is the obvious mitigation but adds a doctor surface. Future problem; flag now so it's not forgotten.
@@ -215,5 +215,5 @@ When the network-fetch slice ships for public-beta GM:
 - Current pricing module: [bristlenose/llm/pricing.py](../bristlenose/llm/pricing.py)
 - Slice B telemetry stamping: [design-cost-forecast-phase1.md §schema](design-cost-forecast-phase1.md)
 - Local-first promises this must not undermine: [SECURITY.md](../SECURITY.md)
-- Static-site deploy mechanism: maintainer-only deploy notes (deploy-website skill)
-- `website/` deploy target: `bristlenose.app`
+- Static-site deploy mechanism: deploy script in the separate `bristlenose-website` private repo (reads `bristlenose/llm/pricing.json` from this public repo at deploy time)
+- Deploy target: `bristlenose.app` (DreamHost shared hosting)

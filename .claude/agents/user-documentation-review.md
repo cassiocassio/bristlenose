@@ -39,6 +39,7 @@ When asked to audit docs (with or without a specific scope):
    - `SECURITY.md` — PII redaction section
    - `README.md` — quick-start, feature list
    - `INSTALL.md` — setup instructions
+   - `docs/manual.md` — user manual (rendered to bristlenose.app/manual.html at deploy time)
    - `bristlenose/data/bristlenose.1` — man page
    - `bristlenose/cli.py` — `--help` flag descriptions
 

@@ -6,41 +6,6 @@ import Foundation
 /// in one place so the two runners stay in lockstep.
 enum BristlenoseShared {
 
-    /// Find the bristlenose binary for development use.
-    /// Checks common locations in priority order.
-    ///
-    /// NOTE (alpha): this is launcher-style discovery. The shipping architecture
-    /// is a bundled, signed PyInstaller sidecar — see `desktop/CLAUDE.md`
-    /// "Shipping architecture" and `docs/private/sprint2-tracks.md` Track C.
-    ///
-    /// TODO(track-c-c1): replace with `SidecarMode.resolve(env:bundle:fileManager:)`
-    /// once C1 lands. The hardcoded worktree paths below should die at the
-    /// same time as the launcher pattern.
-    static func findBristlenoseBinary() -> URL? {
-        let candidates = [
-            // Main repo venv — active development happens here
-            NSString("~/Code/bristlenose/.venv/bin/bristlenose").expandingTildeInPath,
-            // Worktree venv (fallback)
-            NSString("~/Code/bristlenose_branch macos-app/.venv/bin/bristlenose")
-                .expandingTildeInPath,
-            NSString("~/Code/bristlenose_branch port-v01-ingestion/.venv/bin/bristlenose")
-                .expandingTildeInPath,
-            // Homebrew
-            "/opt/homebrew/bin/bristlenose",
-            "/usr/local/bin/bristlenose",
-            // pipx / user install
-            NSString("~/.local/bin/bristlenose").expandingTildeInPath,
-        ]
-
-        for path in candidates {
-            let url = URL(fileURLWithPath: path)
-            if FileManager.default.isExecutableFile(atPath: url.path) {
-                return url
-            }
-        }
-        return nil
-    }
-
     /// Strip ANSI escape sequences, OSC sequences (BEL- and ST-terminated),
     /// 2-byte ESC sequences, and C0 control characters (except `\t`, `\n`,
     /// `\r`). Intentionally broad so "Copy error details" cannot ferry a

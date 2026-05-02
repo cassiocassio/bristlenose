@@ -885,10 +885,50 @@ final class PipelineRunner: ObservableObject {
     // MARK: - Spawn
 
     private func spawn(project: Project) {
-        guard let binary = BristlenoseShared.findBristlenoseBinary() else {
-            state[project.id] = .failed(
-                "Couldn't find the bristlenose binary.", category: .unknown
+        // Resolve the sidecar binary the same way ServeManager does. Three
+        // shapes of failure: external-server scheme has no binary to spawn,
+        // resolver itself can fail (bundle missing, dev path invalid), and
+        // both surface as `.failed` state on the project so the GUI shows
+        // something actionable.
+        let binary: URL
+        #if DEBUG
+        let externalPortRaw = ProcessInfo.processInfo.environment["BRISTLENOSE_DEV_EXTERNAL_PORT"]
+        let sidecarPathRaw = ProcessInfo.processInfo.environment["BRISTLENOSE_DEV_SIDECAR_PATH"]
+        #else
+        let externalPortRaw: String? = nil
+        let sidecarPathRaw: String? = nil
+        #endif
+        // TODO: `.unknown` is the wrong category for both branches below — the
+        // external-scheme path is a developer config error, the resolver-failure
+        // path is bundle/environment. No fitting case in `PipelineFailureCategory`
+        // today; revisit when the enum next grows (or a third miscategorised
+        // call site appears).
+        let resolved = SidecarMode.resolve(
+            externalPortRaw: externalPortRaw,
+            sidecarPathRaw: sidecarPathRaw,
+            bundleResourceURL: Bundle.main.resourceURL
+        )
+        switch resolved {
+        case .success(let mode):
+            switch mode {
+            case .bundled(let path), .devSidecar(let path):
+                binary = path
+                Self.logger.info(
+                    "spawn binary resolved: \(mode.logDescription, privacy: .public) project=\(project.id.uuidString, privacy: .public)"
+                )
+            case .external:
+                let message = "Pipeline runs can't use the external-server dev mode. Unset BRISTLENOSE_DEV_EXTERNAL_PORT (or use BRISTLENOSE_DEV_SIDECAR_PATH instead) and try again."
+                Self.logger.error(
+                    "spawn refused: external-server scheme has no binary project=\(project.id.uuidString, privacy: .public)"
+                )
+                state[project.id] = .failed(message, category: .unknown)
+                return
+            }
+        case .failure(let err):
+            Self.logger.error(
+                "spawn binary resolve failed: \(err.localizedDescription, privacy: .public) project=\(project.id.uuidString, privacy: .public)"
             )
+            state[project.id] = .failed(err.localizedDescription, category: .unknown)
             return
         }
 
@@ -911,7 +951,14 @@ final class PipelineRunner: ObservableObject {
         // ServeManager.start() starts the serve on the Mac side after pipeline
         // success per the plan's "pipeline first, then serve" policy.
         proc.arguments = ["run", project.path, "--static"]
-        proc.environment = BristlenoseShared.buildChildEnvironment()
+        // Host-gate handshake for the bundled sidecar's `run` passthrough —
+        // see desktop/sidecar_entry.py. Third-party callers of the bundled
+        // binary don't set this env var; we do. Belt-and-braces post-A1c
+        // (sandbox enforces caller-inherits-sandbox semantics anyway), but
+        // it's the only access control pre-A1c.
+        var env = BristlenoseShared.buildChildEnvironment()
+        env["_BRISTLENOSE_HOSTED_BY_DESKTOP"] = "1"
+        proc.environment = env
 
         let pipe = Pipe()
         proc.standardOutput = pipe

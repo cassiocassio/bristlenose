@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 2 May 2026 (closed `bundled-tls-config` — merged to main)
+**Updated:** 2 May 2026 (added `bundled-binary-helper`)
 
 ---
 
@@ -16,6 +16,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|---------|
 | `bristlenose/` | `main` | Main repo, releases, hotfixes |
 | `bristlenose_branch sandbox-debug/` | `sandbox-debug` | S2 Track A — macOS app sandbox violation triage (A1 spike onward) |
+| `bristlenose_branch bundled-binary-helper/` | `bundled-binary-helper` | S2 Track A narrow — ffprobe/ffmpeg PATH-stripped sandbox blocker (surfaced in fossda pipeline log) |
 | `bristlenose_branch pipeline-runner-sidecar-mode/` | `pipeline-runner-sidecar-mode` | Beat-6 warm-up: migrate stale `findBristlenoseBinary()` call in `PipelineRunner.swift` to `SidecarMode.resolve(...)` |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | Responsive signal cards |
 | `bristlenose_branch symbology/` | `symbology` | _Parked experiment_ — § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
@@ -104,6 +105,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `sandbox-debug` | `bristlenose_branch sandbox-debug/` | local only |
+| `bundled-binary-helper` | `bristlenose_branch bundled-binary-helper/` | local only |
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `pipeline-runner-sidecar-mode` _(merged)_ | `bristlenose_branch pipeline-runner-sidecar-mode/` | merged via PR #96 (`0e0157e`) on 2 May 2026 |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
@@ -129,6 +131,27 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **What shipped:** `PipelineRunner.spawn()` migrated to `SidecarMode.resolve(...)` (same path as `ServeManager`); `findBristlenoseBinary()` deleted from `BristlenoseShared.swift` (zero remaining callers); bundled sidecar (`desktop/sidecar_entry.py`) accepts `run` as a third subcommand alongside `serve` and `doctor`, gated on env var `_BRISTLENOSE_HOSTED_BY_DESKTOP=1` (confused-deputy mitigation, belt-and-braces post-A2). 5 new pytest cases in `tests/test_sidecar_entry.py`.
 
 **Why it mattered:** Cleared the last engineering blocker for the sandbox-triage checkpoint. Beats 6→13 now reachable under sandbox-on Debug for the first time. Next session picks up from the gitignored handoff prompt in the sandbox-debug worktree.
+
+---
+
+### `bundled-binary-helper`
+
+**Status:** Just started
+**Started:** 2 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch bundled-binary-helper/`
+**Remote:** local only (push when ready)
+
+**What it does:** S2 Track A narrow branch — fix the ffprobe/ffmpeg PATH-stripped sandbox blocker that surfaced in the fossda pipeline log. Under the macOS sandbox, the bundled sidecar can't find Homebrew binaries on the inherited PATH; needs a bundled-binary helper / explicit resolution path so video probing and audio extraction work end-to-end.
+
+**Files this branch will touch:**
+- `bristlenose/utils/video.py` (likely — ffmpeg/ffprobe invocation site)
+- Possibly `desktop/bristlenose-sidecar.spec` (bundled binary datas)
+- Possibly `bristlenose/doctor.py` (PATH/binary discovery checks)
+- TBD as work progresses
+
+**Potential conflicts with other branches:**
+- `sandbox-debug` — adjacent territory (sandbox triage); likely complementary, not conflicting
+- Other active branches (`responsive-signal-cards`, parked experiments) — no overlap
 
 ---
 

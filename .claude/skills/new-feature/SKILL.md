@@ -65,11 +65,16 @@ Diagnostic / sandpit / planning sessions write per-branch handoff prompts into `
 
 ```bash
 HANDOFF="/Users/cassio/Code/bristlenose/docs/private/handoffs/$0.md"
-PLAN_DIR="/Users/cassio/Code/bristlenose_branch $0/.claude/plans"
+WORKTREE="/Users/cassio/Code/bristlenose_branch $0"
+PLAN_DIR="$WORKTREE/.claude/plans"
 if [ -f "$HANDOFF" ]; then
   mkdir -p "$PLAN_DIR"
   cp "$HANDOFF" "$PLAN_DIR/$0.md"
-  echo "✓ Seeded plan from handoff: $PLAN_DIR/$0.md"
+  # Visible alias at worktree root — .claude/ is hidden, so users miss the
+  # plan unless we surface it. Symlink shows up in Finder, IDE file trees,
+  # and `ls`. HANDOFF.md is gitignored.
+  ln -sf ".claude/plans/$0.md" "$WORKTREE/HANDOFF.md"
+  echo "✓ Seeded plan: $PLAN_DIR/$0.md (visible at $WORKTREE/HANDOFF.md)"
 else
   echo "ℹ No prior handoff at $HANDOFF — new session will need a brief from the user."
 fi

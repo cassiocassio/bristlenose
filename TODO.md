@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 2 May 2026 (`bundled-binary-helper` ✅ merged — sandbox-safe FFmpeg/ffprobe discovery via env-var injection, mirrors `bundled-tls-config`; design docs trued; branch-handoff convention added — diagnostic walks now deposit per-branch handoffs at `docs/private/handoffs/<branch>.md`, `/new-feature` auto-seeds them as `HANDOFF.md` symlinks at worktree root)
+Last updated: 3 May 2026 (sandbox walk beats 6→13 done — resume path passes sandbox-on cleanly, no `deny(1)` blocked any pipeline beat. Two non-sandbox blockers identified: host-side `run failed` misreporting (PipelineRunner.swift:1068) and faster-whisper missing from PyInstaller bundle. Both direct-on-main fixes; handoff at `docs/private/handoffs/sandbox-walk-followup-fixes.md`. Mission Sandbox closes once both land.)
 
 **Most recent ship: v0.15.0 (26 Apr 2026)** — Phase 1f / 4a-pre. Pipeline-resilience event log (`pipeline-events.jsonl`) + structured `Cause` (10 categories) + honest `cost_usd_estimate` + desktop `EventLogReader`. Replaces the manifest-inference path that mis-classified interrupted runs as `.ready`. See `CHANGELOG.md` for full features, `docs/design-pipeline-resilience.md` for the design, and `docs/private/desktop-ux-iteration.md` for the deferred desktop UX work (Resume / Retry / Re-analyse… verb wiring + 9 other themed sections).
 
@@ -10,15 +10,15 @@ Last updated: 2 May 2026 (`bundled-binary-helper` ✅ merged — sandbox-safe FF
 
 ## Next session focus
 
-**Track A — A1c re-walk under sandbox-on Debug, beats 6→13 (after PR #96 merges).**
+**Mission Sandbox close — land #14 + #15 from the 3 May walk.**
 
-Why this is the next thing: PR #96 (`pipeline-runner-sidecar-mode`, opened 2 May 2026) migrates `PipelineRunner.spawn()` to `SidecarMode.resolve(...)` and gates a new `run` passthrough on `_BRISTLENOSE_HOSTED_BY_DESKTOP=1`. That clears A1c row 3 — the last engineering blocker for #3 sandbox triage. Once it lands, beats 6–13 become reachable under sandbox-on Debug for the first time. Expected new violation surface (per A1c "Special-attention items"): Ollama discovery (HTTP probe path), FFmpeg subprocess from bundled sidecar, App Support writes, Whisper model download, doctor probes via sidecar IPC.
+Walk done 3 May 2026. The sandbox itself isn't the wall — resume path runs end-to-end clean sandbox-on (ikea: 4 sessions, 67 quotes, 8 clusters, 5 themes imported, no `deny(1)` blocked any beat). Two narrow non-sandbox bugs hide the success:
 
-Sequence:
-1. Merge PR #96 (Saturday push timing fine; CI pending at session close).
-2. From `bristlenose_branch sandbox-debug/`: `git pull --ff-only` → fresh `desktop/scripts/build-all.sh` → human-driven Xcode walkthrough of beats 6→13 with `log stream --predicate '(Sandbox) AND eventMessage CONTAINS "bristlenose"'` running in parallel (the corrected predicate from A1c calibration finding — the original missed denies attributed to `process == "kernel"`).
-3. Append findings to `docs/private/sandbox-violations-A1c.md` (Phase 3 / next-narrow-branch section, currently a stub).
-4. Cut narrow branches per category — `ollama-http`, `bundled-binary-helper`, `doctor-sandbox-aware`, plus any NEW.
+- **#15 — `run failed` misreporting.** [PipelineRunner.swift:1068](desktop/Bristlenose/Bristlenose/PipelineRunner.swift:1068) treats SIGINT-induced exit code 1 as failure even when the pipeline imported successfully. Direct-on-main fix: heuristic on log tail (look for `Imported project …` line) → treat exit as success. ~30 min.
+- **#14 — faster-whisper + ctranslate2 missing from `desktop/bristlenose-sidecar.spec`.** Doctor reports `Transcription backend failed to load`. Blocks fresh-transcribe path. Spec edit + rebuild + sign + test. ~1-2h. Don't bundle the 1.5 GB Whisper model; first-run download per design.
+- **#16** rolls into the existing `local-ai-provider-actually-switches` branch (#7).
+
+Full handoff: `docs/private/handoffs/sandbox-walk-followup-fixes.md`. Inventory with all 16 findings + Mission Sandbox status block: `docs/private/sandbox-inventory-beats-6-13.md`.
 
 Open follow-ups (not blocking sandbox triage, surface separately):
 - **i18n locales not reaching host bundle under sandbox** (A1c row 2 / A2 verification observation #2). Commit `ea21bb1` was meant to fix this but the chrome keys still leak verbatim in welcome view + AIConsent modal under sandbox-on. Pre-existing build-system bug; cosmetic but visible.
@@ -121,6 +121,13 @@ Agent-side fixes to evaluate:
 Caller-side discipline already captured in `feedback_proportionate_security.md` and the index entry in `MEMORY.md` — don't pipe agent output verbatim, mediate.
 
 Bigger question: same calibration likely applies to other adversarial-by-design agents (a11y-review, perf-review). Worth tuning the suite prompts together.
+
+---
+
+## Local AI (Ollama) — set expectations on quality + perf (3 May 2026)
+
+- [ ] **Ollama setup sheet doesn't tell users what they're trading for privacy.** The "Use local AI" sheet (Beat 3b) presents Gemma 4 E4B as a peer of Claude/ChatGPT/Gemini/Azure with no copy about quality or speed. Reality: a 3 GB local model on entry-tier Apple Silicon will produce noticeably weaker theme clustering and quote extraction than frontier cloud models, and analysis runs that take ~10 min in cloud may take an hour or more locally. Researchers who pick local thinking it's "the same but private" will be surprised on both axes. **Add an honest expectations line** — something like "Slower and less precise than cloud — your data never leaves your Mac" on the sheet itself, plus pointer to docs explaining the trade-off. Affects `OllamaSetupSheet` copy + `desktop.json` keys. See `feedback_local_ai_entry_tier_macs.md` memory: keep `fits()` permissive but don't oversell what fits.
+- [ ] **Collab with [`llmfit`](https://github.com/AlexsJones/llmfit)** for "what local model should this hardware run?" — currently `OllamaCatalog.fits()` is a hand-rolled approximation: bundled curated list + memory thresholds + "recommended for this Mac" hint. `llmfit`'s whole job is that question. Two scopes: (a) reuse llmfit as a dependency to power the model picker (replace the curated list + hint logic), (b) closer collab — contribute Bristlenose's actual analysis-task profiles (long-context theme clustering, structured quote extraction) so llmfit's "fit" metric incorporates analysis quality, not just "will it load." Reach out to AlexsJones once we have a story to tell (post-alpha, when we have real user-machine data on what actually works for analysis runs vs just chat). Captured 3 May 2026 during sandbox-debug walk.
 
 ---
 

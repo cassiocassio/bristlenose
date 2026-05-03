@@ -105,7 +105,62 @@ def check_ffmpeg() -> CheckResult:
 
 
 def check_backend() -> CheckResult:
-    """Check whether faster-whisper and ctranslate2 are importable."""
+    """Check whether a transcription backend is importable.
+
+    Apple Silicon ships with mlx-whisper (native, Metal/ANE, smaller
+    bundle); other platforms ship with faster-whisper + ctranslate2.
+    Either is a complete backend — s05_transcribe.py auto-selects MLX
+    on Apple Silicon and falls back to faster-whisper elsewhere.
+    """
+    import platform as _platform
+
+    is_apple_silicon = (
+        _platform.system() == "Darwin" and _platform.machine() == "arm64"
+    )
+
+    # Apple Silicon: MLX alone is sufficient. The sandboxed sidecar bundle
+    # excludes faster-whisper / ctranslate2 by design (see
+    # docs/design-modularity.md), so probing them here would falsely fail.
+    if is_apple_silicon:
+        try:
+            import mlx_whisper  # noqa: F401
+        except ImportError:
+            # If faster-whisper isn't there either (sandboxed sidecar),
+            # surface MLX as the missing dep so the fix-key points at
+            # the right install path.
+            try:
+                import faster_whisper  # noqa: F401
+            except ImportError:
+                return CheckResult(
+                    status=CheckStatus.FAIL,
+                    label="Transcription",
+                    detail="mlx-whisper not installed",
+                    fix_key="mlx_not_installed",
+                )
+        except Exception as exc:
+            return CheckResult(
+                status=CheckStatus.FAIL,
+                label="Transcription",
+                detail=f"mlx-whisper failed to load: {exc}",
+                fix_key="backend_import_fail",
+            )
+        else:
+            mlx_version = ""
+            try:
+                import mlx_whisper as _mlx
+
+                mlx_version = getattr(_mlx, "__version__", "")
+            except Exception:
+                pass
+            detail = (
+                f"mlx-whisper {mlx_version} (MLX)"
+                if mlx_version
+                else "mlx-whisper (MLX)"
+            )
+            return CheckResult(
+                status=CheckStatus.OK, label="Transcription", detail=detail
+            )
+
     try:
         import faster_whisper  # noqa: F401
     except ImportError:

@@ -206,9 +206,14 @@ class TestCheckBackend:
         assert result.label == "Transcription"
 
     def test_backend_missing_faster_whisper(self) -> None:
+        # Pin to Linux so MLX-on-Apple-Silicon doesn't satisfy the check.
         saved = sys.modules.pop("faster_whisper", None)
         try:
-            with patch("builtins.__import__", side_effect=_import_blocker("faster_whisper")):
+            with (
+                patch("platform.system", return_value="Linux"),
+                patch("platform.machine", return_value="x86_64"),
+                patch("builtins.__import__", side_effect=_import_blocker("faster_whisper")),
+            ):
                 result = check_backend()
         finally:
             if saved is not None:
@@ -389,6 +394,8 @@ class TestCheckBackend:
         try:
             with (
                 patch.dict(sys.modules, {"faster_whisper": mock_fw}),
+                patch("platform.system", return_value="Linux"),
+                patch("platform.machine", return_value="x86_64"),
                 patch("builtins.__import__", side_effect=_import_blocker("ctranslate2")),
             ):
                 result = check_backend()

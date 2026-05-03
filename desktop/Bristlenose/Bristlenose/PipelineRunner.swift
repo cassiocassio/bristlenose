@@ -1078,6 +1078,24 @@ final class PipelineRunner: ObservableObject {
             )
         } else {
             let lines = liveData.snapshotOutput(for: projectID)
+            // Sidecar exits with code 1 after SIGINT (uvicorn graceful
+            // shutdown via Python signal handling) even when the run
+            // itself succeeded. Trust the log tail: `bristlenose run`
+            // prints "Done" + "Report:" on success and "Finished with
+            // errors" on failure. If the success markers are present and
+            // the failure marker isn't, the pipeline succeeded — treat
+            // the non-zero exit as a shutdown artefact.
+            if Self.looksLikeSuccess(lines: lines) {
+                state[projectID] = .ready(Date())
+                Self.logger.info(
+                    """
+                    run succeeded project=\(projectID.uuidString, privacy: .public) \
+                    status=\(status) (overridden by log-tail heuristic)
+                    """
+                )
+                startNextQueued()
+                return
+            }
             let projectName = projectIndex?.projects
                 .first(where: { $0.id == projectID })?.name
             let category = Self.categoriseFailure(
@@ -1147,6 +1165,21 @@ final class PipelineRunner: ObservableObject {
         if matches(tail, #"no space|enospc|disk full"#) { return .disk }
         if matches(tail, #"whisper|faster_whisper|(speech )?model"#) { return .whisper }
         return .unknown
+    }
+
+    /// Detect a successful `bristlenose run` from its stdout tail.
+    ///
+    /// On success the CLI prints a `Done` line followed by `Report:` with
+    /// the report URL/path. On failure it prints `Finished with errors`.
+    /// We require both success markers and the absence of the failure
+    /// marker — a partial match (e.g. `Report:` from a stale earlier run)
+    /// shouldn't be enough to override a non-zero exit.
+    static func looksLikeSuccess(lines: [String]) -> Bool {
+        let tail = lines.suffix(50).joined(separator: "\n")
+        if tail.contains("Finished with errors") { return false }
+        let hasDone = tail.range(of: #"\bDone\b"#, options: .regularExpression) != nil
+        let hasReport = tail.contains("Report:")
+        return hasDone && hasReport
     }
 
     static func humanSummary(for category: PipelineFailureCategory) -> String {

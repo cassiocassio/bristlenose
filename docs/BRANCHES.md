@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 2 May 2026 (added Kind column; closed `sandbox-debug` as diagnostic-discard)
+**Updated:** 4 May 2026 (closed `bundle-trim-s3`)
 
 ---
 
@@ -31,7 +31,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch bundle-trim-s1-s2/` | `bundle-trim-s1-s2` | feature | Trim s1/s2 stages from sidecar PyInstaller bundle (S1+S2 from bundle audit) |
-| `bristlenose_branch bundle-trim-s3/` | `bundle-trim-s3` _(merged)_ | feature | Trim torch + onnxruntime from sidecar bundle (S3 of bundle audit) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
@@ -123,7 +122,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `pipeline-runner-sidecar-mode` _(merged)_ | `bristlenose_branch pipeline-runner-sidecar-mode/` _(detached, on disk)_ | merged via PR #96 (`0e0157e`) on 2 May 2026 |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `bundle-trim-s1-s2` _(merged)_ | `bristlenose_branch bundle-trim-s1-s2/` _(still on disk)_ | merged to main 4 May 2026 (`801065b`) |
-| `bundle-trim-s3` _(merged)_ | `bristlenose_branch bundle-trim-s3/` _(still on disk)_ | merged to main 4 May 2026 (`5fbc6aa`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
@@ -135,28 +133,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
-### `bundle-trim-s3` (merged)
-
-**Kind:** feature _(merged)_
-**Status:** Merged to main 4 May 2026 (`5fbc6aa`)
-**Started:** 4 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch bundle-trim-s3/` (still on disk; close via `/close-branch` when ready)
-**Remote:** pushed to `origin/main` 4 May 2026
-
-**What shipped:** S3 — added `huggingface_hub.serialization._torch`, `huggingface_hub.hub_mixin`, `scipy._lib.array_api_compat.torch`, `onnxruntime`, `torch`, `torchgen`, `torchvision`, `functorch` to PyInstaller `excludes`. Five iterative passes, each measured against `xref-bristlenose-sidecar.html`. Bundle 645 → 427 MB (−218 MB).
-
-While verifying, surfaced two pre-existing packaging bugs masked by the torch failure: (1) mlx's libjaccl.dylib + mlx.metallib weren't bundled (PyInstaller's modulegraph misses non-py data files), (2) mlx_whisper/assets/ (mel_filters.npz, gpt2.tiktoken, multilingual.tiktoken) wasn't bundled. Both fixed via `collect_all("mlx")` and `collect_all("mlx_whisper")` in the spec. End-to-end transcription smoke now green inside the bundled sidecar.
-
-Lesson: `excludes` removed torch from the modulegraph, which exposed the genuine mlx failure path that had been masked. Smoke-testing the bundled binary catches what `bristlenose doctor` against `pip install -e .` cannot.
-
-**Files touched:**
-- `desktop/bristlenose-sidecar.spec` (8 new excludes + collect_all for mlx + mlx_whisper)
-- `desktop/scripts/check-bundle-manifest.sh` (skip `ast.Starred` for splatted lists)
-- `desktop/CLAUDE.md` (two new gotchas)
-- `docs/design-desktop-python-runtime.md` (S3 measurement table + MLX packaging subsection)
-
----
 
 ### `bundle-trim-s1-s2` (merged)
 
@@ -297,6 +273,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `bundle-trim-s3` — merged 4 May 2026
+
+S3 of the sidecar PyInstaller bundle audit — evicted torch + onnxruntime + transitive helpers (`huggingface_hub.serialization._torch`, `huggingface_hub.hub_mixin`, `scipy._lib.array_api_compat.torch`, `torchgen`, `torchvision`, `functorch`) via PyInstaller `excludes`. Bundle 645 → 427 MB (−218 MB). Surfaced and fixed two pre-existing mlx packaging bugs (libjaccl.dylib + mlx.metallib, mlx_whisper/assets/) via `collect_all("mlx")` and `collect_all("mlx_whisper")`. End-to-end transcription smoke green in the bundled sidecar. Merge commit `5fbc6aa`.
 
 ### `bundled-tls-config` — merged 2 May 2026
 

@@ -32,7 +32,7 @@ It is **not** the implementation plan — per-checkpoint work was tracked in `do
 - ✅ **SECURITY #5 + #8 unblocked** (26 Apr 2026, commits `823f9be` `fdf90dc` `92a1d36` `38808fe`). Both `SecurityChecklist.swift` `#error` directives gone; Release archives compile.
 - ✅ **Zombie cleanup is libproc-only** (`5471b35`, 28 Apr 2026). `proc_listpids` + `proc_pidfdinfo(PROC_PIDFDSOCKETINFO)` replace the `lsof` exec; combined with the earlier `proc_pidpath` replacement for `/bin/ps` (`38808fe`), the entire supervisor path survives the Track A sandbox flip with no further changes.
 - 🟡 **C3 smoke test (manual, Step 6)** parked for human — Xcode Cmd+R with a throwaway Anthropic key; procedure in `~/.claude/plans/c3-closeout.md`.
-- ⏸️ Bundle size 645 MB (held at C0 baseline by S1+S2 surgical pass, 4 May 2026). Deeper trims deferred to Background Assets. See §"Bundle-size findings".
+- ✅ Bundle size 425 MB (S3 torch eviction landed 4 May 2026 — torch + onnxruntime + the four upstream torch importers excluded; mlx packaging fixed via `collect_all`). See §"Bundle-size findings".
 - ✅ **`com.apple.security.inherit`** verified end-to-end through Track A — A1 added the key (`cd4a5c6` on `sandbox-debug`), A1c confirmed the bundled sidecar spawns under inherited sandbox, A2 (`49cb600` on `track-a-a2-network-server`) confirmed FastAPI `bind()` on 127.0.0.1:9131 succeeds with the parent's `network.server` reaching the child via `inherit`. Sidecar requests no sandbox keys of its own.
 - ✅ **Host App Sandbox set (Debug-only)** — empirical floor as of A2: `app-sandbox` + `network.client` (LLM HTTPS + Ollama localhost) + `network.server` (sidecar `bind()`) + `files.user-selected.read-write` (folder picker + bookmark XPC bootstrap). All four are build-setting-driven in `Bristlenose.xcodeproj/project.pbxproj` (`ENABLE_APP_SANDBOX`, `ENABLE_OUTGOING_NETWORK_CONNECTIONS`, `ENABLE_INCOMING_NETWORK_CONNECTIONS`, `ENABLE_USER_SELECTED_FILES`); no host `.entitlements` file. Release config keeps sandbox off pending the rest of Track A.
 - 🟢 **Sandbox iteration helper** — `desktop/scripts/reset-sandbox-state.sh` (`ff96766` / `ff57801` / `730367d`). Wipes `~/Library/Containers/app.bristlenose/Data/*`, drops UserDefaults, kills zombies, frees ports. Required because stale Container state reproducibly trips `EXC_BREAKPOINT` in `_libsecinit_appsandbox.cold.*` between launches even when entitlements are correct. Documented in `desktop/CLAUDE.md` "Sandbox iteration" gotcha.
@@ -130,7 +130,7 @@ C0 baseline (18 Apr 2026): **644 MB**. By 4 May the bundle had drifted to **771 
 
 Result: 771 → **645 MB** (≈ −126 MB, matching the C0 baseline). BERTopic-spike packages and `coverage` are gone. Torch is **still** bundled — see corrected import paths below.
 
-Transitive deps PyInstaller still pulls despite the `excludes`:
+Transitive deps PyInstaller still pulls despite the `excludes` (pre-S3):
 
 | Package | Size | Actual import path (verified via PyInstaller xref, 4 May 2026) |
 |---|---|---|
@@ -139,9 +139,36 @@ Transitive deps PyInstaller still pulls despite the `excludes`:
 | `onnxruntime` | 58 MB | Via `faster-whisper`'s `vad.py` — `faster_whisper` is in `excludes` but PyInstaller's modulegraph still walks `onnxruntime` because it's also reached from `torch.onnx._internal.*` |
 | `scipy` | 37 MB | Via `numba` (`scipy._lib.array_api_compat`) |
 
-**C1 decision (18 Apr 2026): size optimisation deferred to Background Assets.** Per `design-modularity.md` §"Acquisition strategy: trickle to full capability", the alpha story is Apple Background Assets — Whisper models and large optional deps trickle in post-install (Wi-Fi-opportunistic, Apple-hosted, OS-scheduled) rather than bloating the initial `.app` download. The S1 + S2 surgical pass keeps the bundle at the C0 baseline so contributor-venv drift can't push it higher; deeper trims (S3+) remain deferred.
+**Surgical pass S3 (4 May 2026, branch `bundle-trim-s3`):** kill all four torch incoming edges and let the package fall out:
 
-What we ship in the alpha: whatever the trimmed-by-explicit-excludes-only spec produces. Size is a soft constraint when the user's install flow is "tap install in TestFlight, app opens, heavy bits download in the background while they pick their first project." Track C C5 (post-alpha) may revisit excludes if TestFlight reports cite bundle size as a friction point; more likely the work moves straight to Background Assets integration.
+| Step | Exclude added to spec | Bundle size after | Remaining torch incoming edges |
+|---|---|---|---|
+| baseline (S1+S2) | — | 645 MB | huggingface_hub.serialization._torch, huggingface_hub.hub_mixin, scipy._lib.array_api_compat.torch.*, onnxruntime.transformers.machine_info, functorch.* |
+| S3.1 | `huggingface_hub.serialization._torch` | 645 MB | hub_mixin still hits torch; surgical step had to chase it next |
+| S3.2 | `huggingface_hub.hub_mixin`, `scipy._lib.array_api_compat.torch` | 645 MB | onnxruntime, functorch (no surface drop yet — torch + onnxruntime still bundled) |
+| S3.3 | `onnxruntime` (whole package) | 586 MB | functorch only |
+| S3.4 | `torch`, `torchgen`, `torchvision`, `functorch` | **269 MB** | scipy._lib.array_api_compat.common._helpers (xref-only — torch is gone from disk) |
+| S3.fix | `collect_all("mlx")` for libjaccl + metallib + missing pure-python submodules | **425 MB** | same — mlx packaging fix, see "MLX packaging" below |
+
+Result post-S3: 645 → **425 MB** (≈ **−220 MB**). Torch (288 MB) and onnxruntime (58 MB) gone. The +156 MB rebound from `collect_all("mlx")` is `mlx.metallib` (157 MB of compiled Metal shaders) which the prior bundle had been silently dropping — see next subsection.
+
+### MLX packaging (S3 sidequest)
+
+PyInstaller's default modulegraph analysis copies `mlx/core.cpython-312-darwin.so` and `mlx/lib/libmlx.dylib` but misses three bits the source venv layout assumes:
+
+1. `mlx/lib/libjaccl.dylib` — sibling dylib that `libmlx.dylib` references via `@rpath/libjaccl.dylib`. Missing → `import mlx_whisper` raises `dlopen … Library not loaded: @rpath/libjaccl.dylib`.
+2. `mlx/lib/mlx.metallib` — ~157 MB compiled Metal shader library that libmlx loads at first kernel dispatch. Distributed via the separate `mlx-metal` wheel, which installs into the same `mlx/` directory (its `top_level.txt` is `mlx`). Missing → opaque `nanobind: Encountered an error while initializing the extension.`
+3. Pure-python submodules like `mlx.nn`, `mlx.optimizers`, `mlx.utils`, `mlx._distributed_utils` that mlx's native init probes via Py_ImportModule.
+
+The fix is a single `collect_all("mlx")` call in the spec, mirroring the `pip install` view of the package. We bundle as binaries / datas / hiddenimports the three lists `collect_all` returns and pass them through to `Analysis()`.
+
+**Why this didn't surface before S3:** torch was the first thing to fail in the import chain inside the bundle (`mlx_whisper.torch_whisper` → torch dylib trail, even though `torch_whisper` was in excludes the `from .audio import …` etc. paths still traverse). `bristlenose doctor` returned "mlx-whisper not installed" because of the torch failure, masking the libjaccl/metallib problem. Once torch was excluded the metallib failure became the surface error — which is when S3 caught it.
+
+**One spec-gate adjustment:** `desktop/scripts/check-bundle-manifest.sh` AST-parses the `datas=[…]` list and was strict about every element being a 2-tuple literal. `collect_all` returns a list of tuples that we splat in via `*_MLX_DATAS`, which is `ast.Starred`. The gate now skips Starred elements (they don't represent bristlenose source dirs, so they aren't relevant to its source→spec coverage check).
+
+**C1 decision (18 Apr 2026): size optimisation deferred to Background Assets.** Still applies for everything below 425 MB. Per `design-modularity.md` §"Acquisition strategy: trickle to full capability", the alpha story is Apple Background Assets — Whisper models and large optional deps trickle in post-install (Wi-Fi-opportunistic, Apple-hosted, OS-scheduled) rather than bloating the initial `.app` download. S3 was a one-shot opportunity to get the bundle into a healthier shape without touching the dep graph; deeper trims (S4+ — splitting `faster-whisper` to a non-core extra, or moving `mlx.metallib` to a Background Asset) remain deferred.
+
+What we ship in the alpha: whatever the post-S3 spec produces (425 MB). Track C C5 (post-alpha) may revisit if TestFlight reports cite bundle size as a friction point; more likely the work moves to Background Assets integration.
 
 ### Lesson — `excludes` doesn't kill a package, only one named import path
 

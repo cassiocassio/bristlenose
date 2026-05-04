@@ -58,8 +58,20 @@ struct LLMSettingsView: View {
             if let active = LLMProvider(rawValue: activeProvider) {
                 selectedProvider = active
             }
-            refreshStatuses()
-            revalidateAll()
+            // Lazy load: only touch Keychain for the provider the user is
+            // actually looking at. Other providers' rows show .notSetUp until
+            // the user clicks into them — sandbox walk #7 traced the 3×
+            // Keychain prompt cascade to eager all-providers fetches here.
+            applyPresenceAndCache(provider: selectedProvider)
+            revalidateSelectedIfNeeded()
+        }
+        // Lazy load: when the user clicks a different provider in the
+        // sidebar, that's the moment we touch Keychain for it. This is the
+        // entry point for the per-row "open the account" prompt — Mail
+        // Accounts pattern.
+        .onChange(of: selectedProvider) { _, _ in
+            applyPresenceAndCache(provider: selectedProvider)
+            revalidateSelectedIfNeeded()
         }
         // Refresh "Last verified" relative-time labels every 30s so they
         // don't go stale (e.g. "1 minute ago" forever).
@@ -605,15 +617,22 @@ struct LLMSettingsView: View {
         .frame(width: slot, height: slot)
     }
 
-    /// Refresh the UI status for every provider from Keychain + verdict
-    /// cache. Pure presence-and-cache read — never makes a network call.
-    /// Called on every prefs change (radio toggles, active flips) so that
-    /// switching the active provider doesn't quietly hammer four LLM APIs.
-    /// Use `revalidateAll()` (onAppear) or per-provider `kickOffValidation`
-    /// (after Save / Azure-config edit) when fresh truth is wanted.
+    /// Refresh the UI status for the visible providers (selected + active)
+    /// from Keychain + verdict cache. Pure presence-and-cache read — never
+    /// makes a network call.
+    ///
+    /// Lazy-load contract (sandbox walk #7): we only touch Keychain for
+    /// the provider the user is currently viewing (`selectedProvider`) and
+    /// the one analysis will use (`activeProvider`). Other providers' rows
+    /// in the sidebar keep whatever default they have — typically
+    /// `.notSetUp` until the user clicks into them, at which point the
+    /// `onChange(of: selectedProvider)` path runs presence-and-cache
+    /// against the newly-selected row's key.
     private func refreshStatuses() {
-        for provider in LLMProvider.allCases {
-            applyPresenceAndCache(provider: provider)
+        applyPresenceAndCache(provider: selectedProvider)
+        if let active = LLMProvider(rawValue: activeProvider),
+           active != selectedProvider {
+            applyPresenceAndCache(provider: active)
         }
     }
 
@@ -667,32 +686,42 @@ struct LLMSettingsView: View {
         }
     }
 
-    /// Kick off background validation for every provider with a credential.
-    /// Skips cloud providers whose verdict cache is fresher than `cacheTTL`
-    /// — opening Settings 20×/day to tweak temperature shouldn't ping four
-    /// LLM APIs every time. Ollama is always probed (localhost is cheap).
-    private func revalidateAll() {
-        for provider in LLMProvider.allCases {
-            if provider == .ollama {
-                let urlStr = ollamaURL.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !urlStr.isEmpty {
-                    kickOffValidation(provider: .ollama, key: "")
-                }
-                continue
+    /// Kick off background validation for the currently selected provider
+    /// (and Ollama if it's the active provider, since the sidecar will
+    /// route to it on the next pipeline run). Skips cloud providers whose
+    /// verdict cache is fresher than `cacheTTL`.
+    ///
+    /// Per-provider scoping (sandbox walk #7 + #16): the previous
+    /// `revalidateAll()` hit Keychain for every cloud provider on every
+    /// Settings open, producing the 3× password prompt cascade. Ollama
+    /// also fired its localhost probe regardless of active selection,
+    /// generating "Socket SO_ERROR ::1.11434" console noise even when
+    /// the user picked Claude.
+    private func revalidateSelectedIfNeeded() {
+        let provider = selectedProvider
+        if provider == .ollama {
+            // Probe localhost only when the user actually cares — looking
+            // at the Ollama row, or it's the active provider.
+            let active = LLMProvider(rawValue: activeProvider) == .ollama
+            guard provider == selectedProvider || active else { return }
+            let urlStr = ollamaURL.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !urlStr.isEmpty {
+                kickOffValidation(provider: .ollama, key: "")
             }
-            guard let keychainKey = provider.keychainProvider,
-                  let stored = KeychainHelper.get(provider: keychainKey),
-                  !stored.isEmpty
-            else { continue }
-            if LLMValidator.cacheIsFresh(
-                provider: provider, key: stored, ttl: Self.cacheTTL)
-            {
-                Self.logger.debug(
-                    "skip revalidate \(provider.rawValue, privacy: .public) — cache fresh")
-                continue
-            }
-            kickOffValidation(provider: provider, key: stored)
+            return
         }
+        guard let keychainKey = provider.keychainProvider,
+              let stored = KeychainHelper.get(provider: keychainKey),
+              !stored.isEmpty
+        else { return }
+        if LLMValidator.cacheIsFresh(
+            provider: provider, key: stored, ttl: Self.cacheTTL)
+        {
+            Self.logger.debug(
+                "skip revalidate \(provider.rawValue, privacy: .public) — cache fresh")
+            return
+        }
+        kickOffValidation(provider: provider, key: stored)
     }
 
     /// Validate `key` for `provider` in the background and write the

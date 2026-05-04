@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.models import SpeakerRole, TranscriptSegment
 
 
@@ -250,7 +251,7 @@ async def split_single_speaker_llm(
         result = await client.analyze(
             system_prompt=_tmpl.system,
             user_prompt=_tmpl.user.format(
-                transcript_sample=sample_text,
+                transcript_sample=wrap_untrusted("transcript", sample_text),
                 segment_count=len(sample_lines),
             ),
             response_model=SpeakerSplitAssignment,
@@ -364,7 +365,7 @@ async def identify_speaker_roles_llm(
         result = await client.analyze(
             system_prompt=_tmpl.system,
             user_prompt=_tmpl.user.format(
-                transcript_sample=sample_text,
+                transcript_sample=wrap_untrusted("transcript", sample_text),
                 speaker_list=", ".join(unique_speakers),
             ),
             response_model=SpeakerRoleAssignment,

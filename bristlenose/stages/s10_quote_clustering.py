@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 
+from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.llm.client import LLMClient
 from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import ScreenClusteringResult
@@ -58,7 +59,7 @@ async def cluster_by_screen(
     try:
         result = await llm_client.analyze(
             system_prompt=_tmpl.system,
-            user_prompt=_tmpl.user.format(quotes_json=quotes_json),
+            user_prompt=_tmpl.user.format(quotes_json=wrap_untrusted("quotes", quotes_json)),
             response_model=ScreenClusteringResult,
             prompt_template=_tmpl,
         )

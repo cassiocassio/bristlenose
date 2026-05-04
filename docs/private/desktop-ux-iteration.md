@@ -16,6 +16,16 @@
 
 **Severity: blocker.** The pill's whole purpose is to surface failure/progress at-a-glance. Today it's invisible at default window widths — collapsed into the `>>` toolbar overflow menu. Only appears when the window is dragged "ridiculously wide". Confirmed 20 Apr 2026 QA.
 
+**Decision (4 May 2026):** ALPHA scope:
+- ✅ `.principal` placement move (the headline fix). Constraint validated: pill self-hides when idle (`PipelineActivityItem.isVisible` returns false for non-running/queued/failed states).
+- ✅ Drop the double-shrink spinners on pill + ProjectRow — `.controlSize(.mini)`.
+- ✅ Gate the 1-second ticker on `showPopover` (cheap, normal pattern).
+- ✅ VoiceOver label `"Pipeline running, stage 3 of 12, transcribing"` (accessibility-first principle).
+- ✅ Stop button: plain (not `.destructive`/red). HIG-correct — Stop preserves committed-stage work, isn't unrecoverable.
+- ✅ Failure-pill secondary glyph (`arrow.clockwise` next to "Network error", `key` next to "API key problem") — at-a-glance signal that clicking offers an action.
+
+**§1 fully locked for alpha.** All seven items in.
+
 **Fix direction (single coordinated change):**
 - Move pill from `.primaryAction` (rightmost, after Search) to `ToolbarItem(placement: .principal)` immediately after the segmented Picker. That's where Xcode's actual activity area lives.
 - Drop the custom `Color.secondary.opacity(0.08)` capsule background entirely (Xcode-faithful) or use `.background(.thinMaterial, in: Capsule())` for vibrancy. Current chrome reads as a custom widget grouped with Search.
@@ -33,6 +43,8 @@
 ---
 
 ## 2. Failure surfaces — drop redundancy, trust the content area
+
+**Decision (4 May 2026):** ALPHA scope — fix **2a only** (the spinner-forever bug). Defer 2b (sidebar/pill redundancy), 2c ("Loading report…" overpromise), 2d (single-CTA popover), 2e (copy polish), 2f (popover overflow + multi-fault doctor) to post-alpha. Rationale: 2a is a real bug that breaks the "without apology" bar — a friend whose pipeline fails would see a spinner forever. The rest are polish + UX-coherence improvements that can land between alpha and public beta.
 
 **Two red exclamations for the same failure.** Sidebar row glyph + toolbar pill glyph, both `exclamationmark.circle.fill`, both red. Confirmed 20 Apr 2026 — user triage: *"if we show the error state in the left hand side under the project that's being ingested do we also need to show it top right?"*
 
@@ -72,6 +84,8 @@
 
 ## 3. Run-trigger UX — Resume / Retry / Re-analyse… verbs
 
+**Decision (4 May 2026):** ALPHA — ship the whole §3 verb set. Without Resume/Retry/Continue, `.stopped` is a dead-end (friend hits Stop, then has no way to resume except drop-to-empty creating a duplicate). Re-analyse… is included too because the destructive-confirm modal is a small piece of additional work and avoids a second iteration to re-touch this surface. Both context menu (project row) and Project menu (MenuCommands.swift:317–415) wire the same state-guarded verb set.
+
 **Carried over explicitly from Phase 1f Slice 4.** The data layer landed (`PipelineState` cases `.partial(kind, stagesComplete)` and `.stopped(stagesComplete)`; `is_retryable(category)` rule; `EventLogReader` deriving honest state from the events log). UI wiring deferred for HIG attention.
 
 **State × trigger matrix today** (from 23 Apr 2026 inventory):
@@ -104,6 +118,8 @@
 
 ## 4. Stop affordance — local + truthful
 
+**Decision (4 May 2026):** ALPHA — ship all three sub-items. 4b is explicitly the alpha-blocker (silent-skip Stop = friend's API still burning); 4a (right-click Stop + row × button) makes Stop discoverable where attention is; 4c (owned-process signal escalation) hardens Stop against whisper-GIL wedges. All small, all alpha-relevant.
+
 **Today: only way to stop a running pipeline is pill → popover → Stop.** Three interactions, requires hunting away from the sidebar row where the user's attention is. From 23 Apr 2026:
 
 **Add (low effort, high value):**
@@ -121,6 +137,8 @@
 ---
 
 ## 5. Pipeline progress — surface what the CLI already knows
+
+**Decision (4 May 2026):** ALPHA — Path 1 (manifest polling for live runs). No CLI change; consume per-stage status / sessions dict / events log already on disk. Lifts pill copy from "Stage 5 of 12, transcribing" to "Speakers: 7/10 sessions, ~3 min remaining" — removes the friend's "is it stuck?" question without adding CLI surface area. Path 2 (`--json-progress`) parked for post-alpha if Path 1 turns out to be insufficient.
 
 **Today the Mac app surfaces `"Stage N · stage_name"` in the pill, elapsed in the popover. The CLI has way more:**
 

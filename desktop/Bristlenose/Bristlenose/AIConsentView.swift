@@ -57,14 +57,20 @@ struct AIConsentView: View {
         .sheet(isPresented: $showingOllamaSetup) {
             OllamaSetupSheet(
                 onComplete: { chosenTag in
-                    // Record consent BEFORE posting the prefs change.
-                    // The prefs notification can drive ServeManager to
-                    // start; consent must be on disk first so the
-                    // gate at ContentView.handleSelectionChange sees
-                    // the new version.
-                    recordConsent(action: "ollama")
-                    ollamaModel = chosenTag
+                    // Order: provider write FIRST, then consent log, then
+                    // prefs notification, then dismiss. recordConsent reads
+                    // `activeProvider` for the audit trail, so it must see
+                    // "local" not the default "anthropic". Belt-and-braces:
+                    // mirror the @AppStorage write through UserDefaults so
+                    // any same-tick observer sees a coherent value before
+                    // the sheet tears down.
                     activeProvider = LLMProvider.ollama.rawValue
+                    ollamaModel = chosenTag
+                    UserDefaults.standard.set(
+                        LLMProvider.ollama.rawValue, forKey: "activeProvider")
+                    UserDefaults.standard.set(
+                        chosenTag, forKey: "llmModel_local")
+                    recordConsent(action: "ollama")
                     NotificationCenter.default.post(
                         name: .bristlenosePrefsChanged, object: nil)
                     showingOllamaSetup = false

@@ -171,6 +171,14 @@
 
 ## 6. Settings / dev-mode rough edges
 
+**Decision (4 May 2026):** ALPHA scope = **6b only** (real auth-validating call for status check). Per-item:
+- **6a** Toggle desaturation: stick with SwiftUI defaults for now.
+- **6b** ✅ Status check does a real auth call (e.g. `POST /v1/messages` with `max_tokens: 1`), debounced on key change.
+- **6c** Keychain re-prompts: shipped (Track C C3, `a8dc3cb..ab1b2a1`). Behaviour confirmed asks once now; entry can be deleted post-alpha QA.
+- **6d** Dev-only silent spin: defer (dev surface, not user-facing).
+- **6e** Xcode-launched PATH: keep the `BristlenoseShared.buildChildEnvironment()` workaround for non-bundled venv users; bundled-sidecar path retired by C1.
+- **6f** Ollama Swift surfacing: handled in `first-run` worktree (beat 3b), not §6 work.
+
 **SwiftUI Toggle reads as OFF when window not key.** Toggle in Settings → LLM rendered grey/desaturated when Settings window wasn't frontmost. Misled both user and AI into diagnosing pipeline failure as toggle-off (it was actually the API key). AppKit `NSSwitch` doesn't have this — uses `controlAccentColor` regardless. Fix: wrap binding to read window key state and explicitly tint when inactive, OR replace with a custom button unambiguous in both states.
 
 **Settings status check is misleading.** LLM Settings → Claude shows "Status: Online" with green dot. Pipeline immediately fails 401 Unauthorized. Status check probably tests (a) key non-empty, (b) `api.anthropic.com` reachable — does NOT test that the key authenticates. Fix: real auth-validating call (e.g. `POST /v1/messages` with `max_tokens: 1`), debounced on key change, OR surface the doctor `✗ API key` line directly in the Settings status row.
@@ -187,6 +195,11 @@
 
 ## 7. UnsupportedSubsetView — empty state needs work
 
+**Decision (4 May 2026):** ALPHA scope — all three sub-items, with the lighter recovery action:
+- ✅ **7a** Headline rewrite (copy only).
+- ✅ **7b** Centre on wide windows (drop the flush-left maxWidth).
+- ✅ **7c** Show Containing Folder button — implement for the **single-shared-parent-dir** case (`inputFiles` all share one parent). Multiple-containing-folders is treated as a future edge-case tidy-up (post-alpha). Skip 7c(a) — needs project-surgery semantics that don't exist yet.
+
 - **Headline declarative not problem-stating.** Restructure to `"This project can't be analysed"` (title) + `"Bristlenose analyses folders, but this project was created from individual files."` (body).
 - **Left-stranded on wide windows.** `maxWidth: 640 .top` flush-left looks wrong on big monitors. Centre or wrap in HStack with Spacers.
 - **No recovery action.** Photos / Mail empty states always offer a button. Options:
@@ -196,6 +209,13 @@
 ---
 
 ## 8. Mac-native polish (gruber findings — review #2)
+
+**Decision (4 May 2026):** ALPHA scope:
+- ✅ **8a** Replace `showSettingsWindow:` selector with `@Environment(\.openSettings)` — future-proofs against Apple rotating the selector.
+- ✅ **8b** `"Show technical details"` → `"Show Details"` + Copy button on the log ScrollView (helps friends paste errors back).
+- ✅ **8c** Elapsed time formatting — fix the past-1h breakage (whisper on a 2-hour Zoom is realistic).
+- ⏸ **8d** 250 ms scan-indicator wave — minor polish, defer.
+- ⏸ **8e** Failure-card row glyph — defer; pairs with §2 carry-over.
 
 These are the items from the post-Slice 7 review that user explicitly deferred ("all UX decisions for later"). Most are 1–2 line fixes.
 

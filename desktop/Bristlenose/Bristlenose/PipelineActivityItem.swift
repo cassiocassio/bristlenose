@@ -241,9 +241,21 @@ struct PipelineActivityItem: View {
                     Spacer()
                     // Deeplink to Settings — opens the native Settings scene.
                     // The LLM tab is the default tab so we don't need a sub-route.
+                    // Activate the app first so the Settings window can become
+                    // key after the popover dismisses (the popover chain steals
+                    // first-responder otherwise, swallowing the action).
                     Button("Change provider") {
-                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
                         showPopover = false
+                        NSApp.activate(ignoringOtherApps: true)
+                        // macOS 14+ uses showSettingsWindow:; pre-14 used
+                        // showPreferencesWindow:. Try the modern selector
+                        // first and fall back so a missed responder-chain
+                        // resolution can't silently no-op.
+                        let modern = Selector(("showSettingsWindow:"))
+                        let legacy = Selector(("showPreferencesWindow:"))
+                        if !NSApp.sendAction(modern, to: nil, from: nil) {
+                            NSApp.sendAction(legacy, to: nil, from: nil)
+                        }
                     }
                 }
             }

@@ -1,5 +1,17 @@
 # LLM / Provider Context
 
+## Prompt-template versioning and archive
+
+Prompt templates in `bristlenose/llm/prompts/*.md` carry a `version:` field in their frontmatter. **Archive prior versions to `bristlenose/llm/prompts-archive/` before bumping the minor or major version** — the archive is the audit trail for prompt evolution and how we trace cohort-baseline regressions to specific wording changes.
+
+**Patch-bump exception**: a patch-version bump (e.g. `0.1.0` → `0.1.1`) for a one-line addition that doesn't change the prompt's semantic contract — boundary-tag prefaces, typo fixes, formatting — does **not** require an archive copy. The git history of the `.md` file is sufficient for these. Archive when bumping the minor (`0.1.x` → `0.2.0`) or major version, or when the change list is substantive (multiple rule changes, framing shift, output-shape change). The 8-prompt M1 sentinel-tagging round (May 2026) was a patch bump under this exception.
+
+If unsure, archive — disk is cheap, missed audit trails are not.
+
+## Untrusted-input boundary (prompt injection)
+
+Every render call site that interpolates participant-derived content into an LLM prompt **must** wrap it via `bristlenose.llm.boundary.wrap_untrusted(name, content)`. The helper produces a per-call random-nonce sentinel envelope and escapes closing-tag-shaped substrings as defence-in-depth. The covered variables are `transcript_text`, `quotes_json`, `transcript_sample`, `signals_text`, `formatted_quotes`. A unit test in `tests/test_prompt_boundary.py` reads each call site's source and fails closed if a future edit drops the wrapper. When adding a new prompt template that interpolates untrusted text: (1) add the system-prompt preface naming the `<untrusted_*>` envelope, (2) wrap the variable at the render call site, (3) add the new (file, variable) pair to `CALL_SITES` in the test. See `docs/design-prompt-injection-defence.md` for the threat model and the Phase B roadmap (label allowlist, red-team corpus).
+
 ## Lazy-import discipline
 
 Provider SDKs (`anthropic`, `openai`, `google-genai`) and transcription backends (`ctranslate2`, `mlx_whisper`) **must be imported inside the functions that use them, not at module top**. Heavy imports at module-level pay their cost on every `bristlenose serve` boot regardless of which provider the user picks — typically 3–6 s of dead time on cold start, much of which is spent loading SDKs the user will never call.

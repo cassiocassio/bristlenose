@@ -326,12 +326,14 @@ async def run_autocode_job(
                 finally:
                     cancel_db.close()
 
+                from bristlenose.llm.boundary import wrap_untrusted
+
                 quote_text = build_quote_batch(batch)
                 user_prompt = prompt_tmpl.user.format(
                     codebook_title=template.title,
                     codebook_preamble=template.preamble,
                     formatted_tag_taxonomy=taxonomy_text,
-                    formatted_quotes=quote_text,
+                    formatted_quotes=wrap_untrusted("quotes", quote_text),
                 )
                 with telemetry.stage("serve_autocode"):
                     result = await llm_client.analyze(

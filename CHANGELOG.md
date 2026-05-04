@@ -2,6 +2,17 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.15.3** — _4 May 2026_
+
+- **Desktop: provider-switching hardening end-to-end** — the "Change provider" flow now actually activates the new provider across Keychain, sidecar env injection, and UI. Four fixes landed together: Ollama choice persists to `UserDefaults` *before* the consent log writes (defeats a race where a crash between the two left the app in an inconsistent state); the Change-provider button activates the row first then falls back to a selector if activation didn't take; sidecar API-key injection is scoped to the active provider only (was leaking other providers' keys into the child env); LLM Settings lazy-loads Keychain reads to the selected row only (was prompting on every row render). Desktop-only — no PyPI surface change
+- **Prompt-injection sentinel-tag boundary (Phase A)** — adds a defence-in-depth boundary against prompt-injection attempts hidden in interview transcripts. Sentinel tags wrap the user-supplied content so the LLM can structurally distinguish data from instructions. Phase A is the boundary itself; later phases will tighten the prompt contract around it
+- **Sidecar bundle trim (S1 + S2 + S3)** — three rounds of PyInstaller bundle slimming: S1 excluded `mlx_whisper.torch_whisper` from the bundle (PyTorch was being pulled in transitively); S2 introduced a dedicated build venv so the bundle no longer carries the contributor's full `.venv` graph; S3 evicted `torch` and `onnxruntime` and switched mlx-whisper packaging to `collect_all` so its `assets/` ship correctly. Net: significantly smaller sidecar, faster TestFlight uploads
+- **Doctor: `mlx-whisper` recognised as a complete backend on Apple Silicon** — `bristlenose doctor` no longer reports a missing whisper backend on Apple Silicon when only `mlx-whisper` is installed (the bundled-sidecar configuration). Other platforms unchanged
+- **Desktop: log-tail trust on sidecar exit-1-after-success** — when the sidecar exits with code 1 after a successful pipeline run (rare but observed during sandbox shutdown), the desktop app now trusts the log tail rather than misclassifying the run as failed
+- **Desktop: sandbox-on Debug i18n + resizable window** — Debug builds with the App Sandbox entitlement enabled now load locales correctly and the window resizes properly on macOS Tahoe (was locking vertical resize)
+- **Frontend dependency**: `react-i18next` 16.6.6 → 17.0.6
+- **Tooling**: `/new-feature` skill grew optional flags for self-contained branch handoff (handoff doc + invocation in one paste-able command)
+
 **0.15.2** — _2 May 2026_
 
 - **Bundled FFmpeg/ffprobe discovery for sandboxed sidecar** — new `bristlenose/utils/bundled_binary.py` resolves FFmpeg and ffprobe from a bundle-relative path before falling back to `$PATH`. Lets the sandboxed desktop sidecar find ship-with-app binaries that aren't on the user's shell `PATH`. `audio.py`, `video.py`, and `clip_backend.py` route through the helper; `bristlenose doctor` reports the resolved path. CLI/PyPI users see no behaviour change — `$PATH` lookup is still tried

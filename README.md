@@ -362,6 +362,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.3** — _4 May 2026_
+
+- **Desktop: provider-switching hardened end-to-end** — Change-provider flow now activates the new provider across Keychain, sidecar env, and UI; Ollama choice persists before consent log; sidecar key injection scoped to the active provider only; LLM Settings lazy-loads Keychain per row
+- **Prompt-injection sentinel-tag boundary (Phase A)** — defence-in-depth boundary that lets the LLM structurally distinguish transcript content from prompt instructions
+- **Sidecar bundle trim (S1+S2+S3)** — `mlx_whisper.torch_whisper` excluded, dedicated build venv, `torch` + `onnxruntime` evicted, mlx-whisper assets shipped via `collect_all`. Significantly smaller sidecar
+- **Doctor**: recognises `mlx-whisper` as a complete backend on Apple Silicon
+- **Desktop**: trusts log tail on sidecar exit-1-after-success; sandbox-on Debug builds load locales + resize correctly on macOS Tahoe
+
 **0.15.2** — _2 May 2026_
 
 - **Bundled FFmpeg/ffprobe discovery for sandboxed sidecar** — new `bristlenose/utils/bundled_binary.py` resolves FFmpeg/ffprobe from a bundle-relative path before falling back to `$PATH`, so the sandboxed desktop sidecar can find ship-with-app binaries. CLI users see no behaviour change

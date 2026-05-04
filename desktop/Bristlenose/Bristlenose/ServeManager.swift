@@ -370,16 +370,24 @@ final class ServeManager: ObservableObject {
     /// - Parameter store: Keychain-abstracted store (`KeychainHelper.liveStore` in
     ///   production, `InMemoryKeychain` in tests)
     static func overlayAPIKeys(into env: inout [String: String], using store: any KeychainStore) {
-        // Iterate LLM providers only. Miro descoped from alpha (see c3 plan).
-        let providers = ["anthropic", "openai", "azure", "google"]
-        for provider in providers {
-            guard let value = store.get(provider: provider), !value.isEmpty else {
-                continue
-            }
-            let envKey = "BRISTLENOSE_\(provider.uppercased())_API_KEY"
-            env[envKey] = value
-            log.info("injected API key for provider=\(provider, privacy: .public)")
+        // Scope to the active provider only. Eager fetch of all four cloud
+        // keys (sandbox walk #7) caused 3× Keychain prompts the moment a
+        // local-only user dropped a project — the loudest possible "I chose
+        // local-only" failure. Ollama is keyless: nothing to inject; bail.
+        // Miro descoped from alpha (see c3 plan).
+        let active = UserDefaults.standard.string(forKey: "activeProvider") ?? "anthropic"
+        let cloudProviders: Set<String> = ["anthropic", "openai", "azure", "google"]
+        guard cloudProviders.contains(active) else {
+            log.info("active provider=\(active, privacy: .public) is keyless — no API key injection")
+            return
         }
+        guard let value = store.get(provider: active), !value.isEmpty else {
+            log.info("no API key in Keychain for active provider=\(active, privacy: .public)")
+            return
+        }
+        let envKey = "BRISTLENOSE_\(active.uppercased())_API_KEY"
+        env[envKey] = value
+        log.info("injected API key for active provider=\(active, privacy: .public)")
     }
 
     // MARK: - Private

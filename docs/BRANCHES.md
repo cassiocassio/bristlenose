@@ -30,6 +30,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
+| `bristlenose_branch i18n-llm-settings/` | `i18n-llm-settings` | feature | Extract hardcoded English from LLMSettingsView + OllamaSetupSheet; fill 6 locales |
 | `bristlenose_branch bundle-trim-s1-s2/` | `bundle-trim-s1-s2` | feature | Trim s1/s2 stages from sidecar PyInstaller bundle (S1+S2 from bundle audit) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -121,6 +122,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `pipeline-runner-sidecar-mode` _(merged)_ | `bristlenose_branch pipeline-runner-sidecar-mode/` _(detached, on disk)_ | merged via PR #96 (`0e0157e`) on 2 May 2026 |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
+| `i18n-llm-settings` | `bristlenose_branch i18n-llm-settings/` | local only |
 | `bundle-trim-s1-s2` _(merged)_ | `bristlenose_branch bundle-trim-s1-s2/` _(still on disk)_ | merged to main 4 May 2026 (`801065b`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
@@ -133,6 +135,31 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+### `i18n-llm-settings`
+
+**Kind:** feature — code lands on main
+**Status:** Just started
+**Started:** 5 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch i18n-llm-settings/`
+**Remote:** local only (push when ready)
+
+**What it does:** Extract hardcoded English from LLMSettingsView + OllamaSetupSheet; fill 6 locales (en/es/fr/de/ko/ja `desktop.json`).
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/LLMSettingsView.swift`
+- `desktop/Bristlenose/Bristlenose/OllamaSetupSheet.swift`
+- `bristlenose/locales/en/desktop.json`
+- `bristlenose/locales/es/desktop.json`
+- `bristlenose/locales/fr/desktop.json`
+- `bristlenose/locales/de/desktop.json`
+- `bristlenose/locales/ko/desktop.json`
+- `bristlenose/locales/ja/desktop.json`
+
+**Potential conflicts with other branches:**
+- No active branches touching desktop SwiftUI views or locale files; conflict risk low.
+
+---
 
 ### `bundle-trim-s1-s2` (merged)
 

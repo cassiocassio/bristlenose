@@ -39,6 +39,20 @@ A complete inventory of every third-party binary and Python wheel that ships in 
 
 Bristlenose itself has zero sub-processors. There is no cloud database, no analytics service, no error-tracking vendor, no auth provider, and no telemetry endpoint.
 
+## Prompt injection via transcripts
+
+Bristlenose feeds participant speech into a third-party LLM (Claude, ChatGPT, Azure OpenAI, Gemini, or local Ollama) for quote extraction, theme clustering, and elaboration. A participant who knows their words will be analysed by an LLM — or a third party who hands the researcher a doctored `.docx` / `.srt` transcript — could craft text designed to override the system prompt and produce off-topic, misleading, or embarrassing content in the rendered report. This is a known property of any system that places untrusted text into LLM context.
+
+**Mitigation shipped (alpha):** every prompt template that interpolates transcript text or quote data wraps the untrusted content in a per-call random-nonce sentinel envelope (`<untrusted_transcript_a8f3>…</untrusted_transcript_a8f3>`), with a system-prompt directive to treat content inside the envelope as data rather than instructions. Closing-tag-shaped substrings inside the content are escaped as defence-in-depth. Implementation: [`bristlenose/llm/boundary.py`](bristlenose/llm/boundary.py); enforcement test: [`tests/test_prompt_boundary.py`](tests/test_prompt_boundary.py).
+
+**Residual risk (alpha — explicitly accepted):** sentinel-tagging reduces but does not eliminate the surface. The highest-impact failure mode — a fabricated quote attributed to a real participant — is bounded by structured output schemas but not eliminated. Bristlenose does not currently apply allowlist validation to free-form theme or cluster labels in the rendered report; an attack that survives the sentinel could produce off-topic headings that the researcher must scrub manually before sharing.
+
+**Local LLM (Ollama) caveat:** users selecting `--llm local` get materially weaker protection. Local models adhere less consistently to role separation, and there is no provider-side safety filter. Picking Local in the picker is an informed trade-off.
+
+**What to do if you see suspicious output in your report:** re-run the affected stage (`bristlenose run --resume`), and if the issue recurs raise an issue on GitHub with the offending transcript (redacted as needed). Do not share the report until the affected sections are reviewed.
+
+Threat model and roadmap for stronger mitigations (label allowlist, red-team fixture corpus, span-grounded quotes): [`docs/design-prompt-injection-defence.md`](docs/design-prompt-injection-defence.md).
+
 ## PII redaction
 
 PII redaction is **opt-in** — enable it with `--redact-pii` from the command line. **In the desktop app,** PII redaction settings will be available in a future Settings update. When enabled, Bristlenose uses Microsoft Presidio (spaCy NLP) to detect and replace personally identifiable information in transcripts before LLM analysis. It is off by default because false positives (redacting research-relevant text) damage data accuracy.

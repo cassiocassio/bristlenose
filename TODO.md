@@ -131,6 +131,17 @@ Bigger question: same calibration likely applies to other adversarial-by-design 
 
 ---
 
+## OllamaSetupSheet — confirmation when daemon + model already present (4 May 2026)
+
+When `OllamaSetupModel.run()` finds the daemon already reachable AND the chosen model already pulled (common on a re-test, or a user who already had Ollama installed), the sheet flips straight from `.idle` → `.finishing` in a few hundred ms. AIConsentView dismisses, user lands on WelcomeView, and there's **no signal that anything actually happened**. The user has to trust that "Set up" did its job.
+
+Options to consider (don't bikeshed in this entry — pick one when it surfaces):
+- Brief success state (`.completed` phase before `.finishing`) showing "Ollama is set up — using Gemma 4 E4B" for 1.5–2s before auto-dismiss
+- A toolbar pill / toast on the WelcomeView confirming the active provider after consent flow completes ("Local AI ready — Gemma 4 E4B")
+- A persistent indicator in the toolbar/footer showing active provider + model whenever the active provider changes (broader, more useful long-term)
+
+Found during sandbox walk verification of `local-ai-provider-actually-switches` branch (4 May 2026). Not blocking alpha — fixes there are correct, the persistence works, but the speed of the happy-path tells the user nothing.
+
 ## Ideas (captured, not triaged)
 
 - **Doctor "(bundled)" annotation on FFmpeg path** (2 May 2026, parked from `bundled-binary-helper` review) — `bristlenose doctor` reports the resolved ffmpeg path even when it's bundle-relative inside the .app. Honest diagnostic vs add a `(bundled)` suffix so TestFlight users aren't surprised by absolute paths inside their `.app`. Product call. Park until alpha tester feedback says it's confusing. Reference: `bristlenose/doctor.py:check_ffmpeg`

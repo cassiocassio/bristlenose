@@ -6,6 +6,7 @@ import asyncio
 import logging
 
 from bristlenose.llm import telemetry
+from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.llm.client import LLMClient
 from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import TopicSegmentationResult
@@ -103,7 +104,7 @@ async def _segment_single(
 
     result = await llm_client.analyze(
         system_prompt=_tmpl.system,
-        user_prompt=_tmpl.user.format(transcript_text=transcript_text),
+        user_prompt=_tmpl.user.format(transcript_text=wrap_untrusted("transcript", transcript_text)),
         response_model=TopicSegmentationResult,
         prompt_template=_tmpl,
     )

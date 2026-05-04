@@ -6,6 +6,7 @@ import asyncio
 import logging
 
 from bristlenose.llm import telemetry
+from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.llm.client import LLMClient
 from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import QuoteExtractionResult
@@ -180,7 +181,7 @@ async def _extract_single(
         system_prompt=_tmpl.system,
         user_prompt=_tmpl.user.format(
             topic_boundaries=boundaries_text,
-            transcript_text=transcript_text,
+            transcript_text=wrap_untrusted("transcript", transcript_text),
         ),
         response_model=QuoteExtractionResult,
         prompt_template=_tmpl,

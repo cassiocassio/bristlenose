@@ -16,16 +16,33 @@
 
 import os
 
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 PROJECT_ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))
+
+# PyInstaller's default analysis walks `import mlx.core` and copies
+# core.cpython-312-darwin.so + libmlx.dylib, but misses libjaccl.dylib
+# (linked by libmlx via @rpath), mlx.metallib (the compiled Metal shader
+# library libmlx loads at first kernel dispatch), and a handful of small
+# pure-python submodules that mlx's native init probes (`mlx.nn`,
+# `mlx.optimizers`, `mlx.utils`, `mlx._distributed_utils`, etc.). Without
+# all of them `import mlx_whisper` fails inside the bundled sidecar with
+# either `Library not loaded: @rpath/libjaccl.dylib` or the more
+# inscrutable nanobind `Encountered an error while initializing the
+# extension.` Discovered during S3 bundle-trim (4 May 2026): pre-existing
+# latent bug exposed by trimming torch, which had been masking the
+# breakage by being the first thing to fail in the import chain.
+# `collect_all` mirrors `pip install`'s view of the package, which is
+# what mlx_metal's wheel layout assumes at runtime.
+_MLX_DATAS, _MLX_BINARIES, _MLX_HIDDEN = collect_all("mlx")
 
 a = Analysis(
     # Entry point: run `bristlenose serve` directly.
     [os.path.join(SPECPATH, "sidecar_entry.py")],
     pathex=[PROJECT_ROOT],
-    binaries=[],
+    binaries=_MLX_BINARIES,
     datas=[
+        *_MLX_DATAS,
         (
             os.path.join(PROJECT_ROOT, "bristlenose", "theme"),
             os.path.join("bristlenose", "theme"),
@@ -92,6 +109,7 @@ a = Analysis(
         ),
     ],
     hiddenimports=[
+        *_MLX_HIDDEN,
         *collect_submodules("rich"),
         # LLM providers (dynamically imported in llm/client.py)
         "anthropic",
@@ -160,7 +178,40 @@ a = Analysis(
         # MLX format. Excluding it sheds torch entirely. Verified orphan via
         # `grep -rn torch_whisper site-packages/mlx_whisper/` (4 May 2026).
         "mlx_whisper.torch_whisper",
-        # Dev-only
+        # S3 step 1: huggingface_hub.serialization._torch does `import torch`
+        # at top level. mlx_whisper only uses huggingface_hub.snapshot_download
+        # for model HTTP fetches — verified in load_models.py — so the torch-
+        # serialisation submodule is dead weight. Removing it kills one of the
+        # four torch-import edges PyInstaller's modulegraph follows.
+        "huggingface_hub.serialization._torch",
+        # huggingface_hub.hub_mixin defines a PyTorchModelHubMixin that does
+        # `import torch` at top level. mlx_whisper doesn't use the mixin
+        # (only snapshot_download), so it's another dead torch caller.
+        "huggingface_hub.hub_mixin",
+        # S3 step 2: scipy probes torch on import via the array-API-compat
+        # shim. mlx_whisper doesn't ask scipy to operate on torch tensors
+        # (it uses MLX arrays exclusively), so the whole .torch subpackage
+        # is dead under our usage. Keeps the rest of scipy intact.
+        "scipy._lib.array_api_compat.torch",
+        # S3 step 3: onnxruntime is reached via faster_whisper.vad and via
+        # torch.onnx._internal.exporter. Both upstreams are excluded /
+        # unused on Mac (faster_whisper already in excludes; torch is MLX-
+        # alternative-path, not us). Dropping the whole package sheds 58 MB
+        # AND removes onnxruntime.transformers.machine_info from torch's
+        # incoming-edge list.
+        "onnxruntime",
+        # S3 step 4: torch (288 MB) — the headline trim. After steps 1–3
+        # the only remaining torch importers in the modulegraph are
+        # functorch.* (torch's own internal cycle, gone with torch) and
+        # scipy._lib.array_api_compat.common._helpers (a generic helper
+        # that probes torch via try/except — safe under MLX-only). Mac
+        # transcription path is MLX (mlx_whisper); torch has no load-
+        # bearing role at runtime per design-modularity.md "Mac is
+        # MLX-only".
+        "torch",
+        "torchgen",
+        "torchvision",
+        "functorch",
         "pytest",
         "pytest_cov",
         "pytest_asyncio",

@@ -30,6 +30,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
+| `bristlenose_branch bundle-trim-s1-s2/` | `bundle-trim-s1-s2` | feature | Trim s1/s2 stages from sidecar PyInstaller bundle (S1+S2 from bundle audit) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
@@ -120,6 +121,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `pipeline-runner-sidecar-mode` _(merged)_ | `bristlenose_branch pipeline-runner-sidecar-mode/` _(detached, on disk)_ | merged via PR #96 (`0e0157e`) on 2 May 2026 |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
+| `bundle-trim-s1-s2` | `bristlenose_branch bundle-trim-s1-s2/` | local only |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
@@ -131,6 +133,27 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+### `bundle-trim-s1-s2`
+
+**Kind:** feature — code lands on main; merge once S1+S2 produce a measurable bundle-size reduction
+**Status:** Just started
+**Started:** 4 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch bundle-trim-s1-s2/`
+**Remote:** local only (push when ready)
+
+**What it does:** Surgical pass at the Mac sidecar PyInstaller bundle (currently 771 MB; target <200 MB). Two interventions only — S1: add `mlx_whisper.torch_whisper` to `excludes=[]` in `desktop/bristlenose-sidecar.spec` (kills 284 MB of torch pulled by an orphan checkpoint-conversion file). S2: switch `desktop/scripts/build-sidecar.sh` to a dedicated, recreated-from-scratch `.venv-sidecar/` installing only `.[serve,apple,desktop]` (no `dev`, no contributor-added packages — keeps BERTopic-spike deps and pytest-cov out of the bundle). S3/S4/S5 deliberately deferred. See `.claude/plans/bundle-trim-s1-s2.md`.
+
+**Files this branch will touch:**
+- `desktop/bristlenose-sidecar.spec` (one new excludes entry)
+- `desktop/scripts/build-sidecar.sh` (venv path + recreate-from-scratch)
+- `.gitignore` (add `.venv-sidecar/`)
+
+**Potential conflicts with other branches:**
+- `bundled-binary-helper` — also touches sidecar bundling territory; no expected file overlap (it touches `video.py` / spec datas, not excludes or build script)
+- Other active branches: no overlap
+
+---
 
 ### `pipeline-runner-sidecar-mode` (merged)
 

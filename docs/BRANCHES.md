@@ -121,7 +121,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `pipeline-runner-sidecar-mode` _(merged)_ | `bristlenose_branch pipeline-runner-sidecar-mode/` _(detached, on disk)_ | merged via PR #96 (`0e0157e`) on 2 May 2026 |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
-| `bundle-trim-s1-s2` | `bristlenose_branch bundle-trim-s1-s2/` | local only |
+| `bundle-trim-s1-s2` _(merged)_ | `bristlenose_branch bundle-trim-s1-s2/` _(still on disk)_ | merged to main 4 May 2026 (`801065b`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
@@ -134,15 +134,17 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ## Active Branches
 
-### `bundle-trim-s1-s2`
+### `bundle-trim-s1-s2` (merged)
 
-**Kind:** feature — code lands on main; merge once S1+S2 produce a measurable bundle-size reduction
-**Status:** Just started
+**Kind:** feature _(merged)_
+**Status:** Merged to main 4 May 2026 (`801065b`)
 **Started:** 4 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch bundle-trim-s1-s2/`
-**Remote:** local only (push when ready)
+**Worktree:** `/Users/cassio/Code/bristlenose_branch bundle-trim-s1-s2/` (still on disk; close via `/close-branch` when ready)
+**Remote:** pushed to `origin/main` 4 May 2026
 
-**What it does:** Surgical pass at the Mac sidecar PyInstaller bundle (currently 771 MB; target <200 MB). Two interventions only — S1: add `mlx_whisper.torch_whisper` to `excludes=[]` in `desktop/bristlenose-sidecar.spec` (kills 284 MB of torch pulled by an orphan checkpoint-conversion file). S2: switch `desktop/scripts/build-sidecar.sh` to a dedicated, recreated-from-scratch `.venv-sidecar/` installing only `.[serve,apple,desktop]` (no `dev`, no contributor-added packages — keeps BERTopic-spike deps and pytest-cov out of the bundle). S3/S4/S5 deliberately deferred. See `.claude/plans/bundle-trim-s1-s2.md`.
+**What shipped:** S1 — added `mlx_whisper.torch_whisper` to PyInstaller spec `excludes=[]` (orphan checkpoint-conversion utility verified via grep). S2 — `desktop/scripts/build-sidecar.sh` now recreates a dedicated `.venv-sidecar/` from scratch on every run installing only `.[serve,apple,desktop]`, keeping contributor-venv drift (BERTopic spike packages, dev-only tools, ad-hoc installs) out of the bundle. Plus doc updates capturing the corrected torch-import-path map (`huggingface_hub`, `scipy`, `onnxruntime`, `functorch` — not just `torch_whisper`) and the read-the-xref-don't-grep lesson.
+
+**Result:** 771 MB → 645 MB. C0 baseline restored. Headline trim (deeper torch eviction) is S3 territory and deferred. See `docs/design-desktop-python-runtime.md` §"Bundle-size findings" for the full post-mortem.
 
 **Files this branch will touch:**
 - `desktop/bristlenose-sidecar.spec` (one new excludes entry)

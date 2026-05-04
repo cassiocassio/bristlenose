@@ -102,8 +102,13 @@ if not isinstance(datas_node, ast.List):
     sys.exit(1)
 
 # Each element should be a 2-tuple of os.path.join(PROJECT_ROOT, "bristlenose", ...), "bristlenose/...".
-# We care about the source side only.
+# We care about the source side only. Starred entries (`*FOO`) splice in
+# externally-collected lists (e.g. PyInstaller's `collect_all("mlx")` for
+# the Apple Silicon Metal libs) — those aren't bristlenose source dirs so
+# they don't participate in this gate's source→spec coverage check.
 for i, elt in enumerate(datas_node.elts):
+    if isinstance(elt, ast.Starred):
+        continue
     if not isinstance(elt, ast.Tuple) or len(elt.elts) != 2:
         print(f"FATAL: datas[{i}] is not a 2-tuple literal (unparseable)", file=sys.stderr)
         sys.exit(1)

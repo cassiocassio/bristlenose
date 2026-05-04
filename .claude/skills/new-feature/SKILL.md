@@ -10,15 +10,41 @@ Create a new branch called `$0` for the bristlenose project.
 
 If no branch name was provided (`$0` is empty), ask the user for one before proceeding.
 
+**`$0` may also include optional flags after the branch name** — see Step 0. Bare `/new-feature foo` (no flags) is the default path: the human is just starting a branch and will be asked the usual questions interactively. Flags exist for the case where a parent Claude session is proposing the branch and has already made the decisions.
+
 **Branch Kind is mandatory.** Not every branch is a feature. The Kind controls merge intent and end-of-life behaviour — see `docs/BRANCHES.md` "Branch Kinds" section. Step 3.5 captures it before the worktree is created so it can be recorded in BRANCHES.md correctly.
 
 **Failure policy:** Steps 1–4 are critical — stop on failure. Steps 5–8 are setup — warn on failure but continue (the worktree is usable without them).
 
 **Idempotency:** If the branch or worktree already exists from a partial previous run, detect that and skip to the first incomplete step rather than failing.
 
+## Step 0: Parse optional flags
+
+`$0` may contain a branch name optionally followed by any subset of these flags:
+
+| Flag | Purpose | Skips |
+|---|---|---|
+| `--kind=<feature\|spike\|diagnostic\|chore\|parked>` | Pre-declares Branch Kind | Step 3.5 question |
+| `--plan=<path>` | Path (absolute or `~/`-style) to a Markdown file with the self-contained prompt for the new session | Nothing — feeds Step 4b |
+| `--purpose="<one line>"` | "What it does" line for BRANCHES.md | Step 11 question |
+| `--files="<comma,separated,paths>"` | Files this branch will touch | Step 11 question |
+
+**All flags are optional.** Bare `/new-feature my-branch` works exactly as before — interactive prompts for Kind, purpose, files. Flags exist so a parent Claude session that already knows these answers can pass them in and avoid re-asking.
+
+Parse the args as: first token is the branch name, remaining tokens are flags. If a flag's value contains spaces it must be quoted (`--purpose="trim bundle: stage 1 + stage 2"`).
+
+Validation:
+- `--kind` value must be one of the five enum entries; reject anything else with a clear message (don't silently fall back).
+- `--plan` path must exist and be a `.md` file; if not, stop with the bad path quoted back.
+- `--purpose` and `--files` are free text; no validation.
+
+If a `--plan` path is provided, copy it now (before any branch creation) to `~/Code/bristlenose/docs/private/handoffs/<name>.md`. If a handoff file already exists at that target, **stop and ask the user** before overwriting — handoffs from prior sessions are precious. The existing Step 4b will pick the file up automatically once the worktree exists.
+
 ## Step 1: Validate branch name
 
-The branch name must be lowercase letters, numbers, and hyphens only. No spaces, no leading hyphens, no underscores. If invalid, tell the user and stop.
+After Step 0 has parsed flags out of `$0`, the remaining first token is the branch name. It must be lowercase letters, numbers, and hyphens only. No spaces, no leading hyphens, no underscores. If invalid, tell the user and stop.
+
+Throughout the rest of this skill, `$0` refers to **just the branch name** (flags already extracted in Step 0).
 
 ## Step 2: Verify location
 
@@ -34,7 +60,7 @@ Run `git status --porcelain`. If there are changes, warn the user and ask whethe
 
 ## Step 3.5: Determine Branch Kind (mandatory)
 
-Ask the user which **Kind** this branch is — this controls how it ends, not just what it does. Use `AskUserQuestion` with these choices:
+**If `--kind=<value>` was passed in Step 0, use that value and skip the question.** Otherwise, ask the user which **Kind** this branch is — this controls how it ends, not just what it does. Use `AskUserQuestion` with these choices:
 
 - **feature** — code intended for main; ends in merge or PR-and-squash
 - **diagnostic** — produces inventory/reports/reproductions; fixes happen in *other* branches; the branch itself is **discarded** (not merged) when narrow children land. Example: `sandbox-debug`
@@ -242,16 +268,16 @@ Then:
    **Worktree:** `/Users/cassio/Code/bristlenose_branch $0/`
    **Remote:** local only (push when ready)
 
-   **What it does:** <ask user for a brief description>
+   **What it does:** <`--purpose` value if provided in Step 0, else ask user for a brief description>
 
    **Files this branch will touch:**
-   - <ask user, or write "TBD — will be filled in as work progresses">
+   - <`--files` value split on commas into bullet list if provided in Step 0, else ask user, else write "TBD — will be filled in as work progresses">
 
    **Potential conflicts with other branches:**
    - <check existing active branches in BRANCHES.md and note likely overlaps, especially render/ package, main.js, cli.py>
    ```
 
-Ask the user for the description and files before writing.
+If `--purpose` and `--files` were both provided in Step 0, do not ask the user — write directly. If either is missing, ask only for the missing one.
 
 ## Step 12: Commit BRANCHES.md on main
 

@@ -31,6 +31,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch bundle-trim-s1-s2/` | `bundle-trim-s1-s2` | feature | Trim s1/s2 stages from sidecar PyInstaller bundle (S1+S2 from bundle audit) |
+| `bristlenose_branch bundle-trim-s3/` | `bundle-trim-s3` | feature | Continue PyInstaller bundle trim — stage 3 (torch eviction proper) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
@@ -122,6 +123,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `pipeline-runner-sidecar-mode` _(merged)_ | `bristlenose_branch pipeline-runner-sidecar-mode/` _(detached, on disk)_ | merged via PR #96 (`0e0157e`) on 2 May 2026 |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `bundle-trim-s1-s2` _(merged)_ | `bristlenose_branch bundle-trim-s1-s2/` _(still on disk)_ | merged to main 4 May 2026 (`801065b`) |
+| `bundle-trim-s3` | `bristlenose_branch bundle-trim-s3/` | local only |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
@@ -133,6 +135,27 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+### `bundle-trim-s3`
+
+**Kind:** feature — code intended for main; ends in merge or PR-and-squash
+**Status:** Just started
+**Started:** 4 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch bundle-trim-s3/`
+**Remote:** local only (push when ready)
+
+**What it does:** Continue PyInstaller bundle trim — stage 3 (torch eviction proper). Sequel to `bundle-trim-s1-s2`. Goal: evict torch (288 MB), `onnxruntime` (58 MB), and the scipy/huggingface_hub torch-pulling submodules from the Mac sidecar. Iterative excludes guided by `xref-bristlenose-sidecar.html`. See handoff at `.claude/plans/bundle-trim-s3.md` (visible as `HANDOFF.md` in the worktree root).
+
+**Files this branch will touch:**
+- `desktop/bristlenose-sidecar.spec` (add to `excludes=[…]`)
+- `docs/design-desktop-python-runtime.md` (post-mortem update)
+- Possibly `desktop/scripts/build-sidecar.sh` if measurement workflow needs tweaks
+
+**Potential conflicts with other branches:**
+- `bundled-binary-helper` — also touches sidecar territory but operates on `bristlenose-sidecar.spec` `datas=[…]`, not `excludes=[…]`; low risk
+- Other active branches (`responsive-signal-cards`, parked experiments): no overlap
+
+---
 
 ### `bundle-trim-s1-s2` (merged)
 

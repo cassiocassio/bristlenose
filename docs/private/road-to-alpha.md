@@ -55,7 +55,20 @@ Different certificates. Different entitlements. Different review paths. Not inte
 - `ExportOptions.plist` declares both certs (`signingCertificate` + `installerSigningCertificate`); see `desktop/Bristlenose/ExportOptions.plist` for the canonical config
 - Both certs need `.p12` USB backup per cert-rotation reminder
 
-### 3. App sandbox + entitlements 🟡 IN PROGRESS
+### 3. App sandbox + entitlements ✅ DONE (4 May 2026)
+
+**Mission Sandbox PASSED 4 May 2026.** End-to-end under the `Bristlenose` (sandbox-on Debug) scheme on Apple Silicon:
+- ikea drop → resume → re-render → SQLite import → report opens (sidebar green, no red pill)
+- `bristlenose doctor` → `✓ Transcription mlx-whisper (MLX)`
+- Fresh small project drop → s05 transcribe reached under sandbox
+
+Closed by two non-sandbox bugs that had been hiding successful runs, both fixed direct-on-main 3 May:
+- **#14** (`bf2533a`) — doctor treats mlx-whisper as a complete backend on Apple Silicon
+- **#15** (`f2162a9`) — host log-tail success heuristic in `PipelineRunner.handleTermination`
+
+Inventory archived at `docs/private/sandbox-inventory-beats-6-13-2026-05-03.md`. Open follow-ups (not blockers): #7/#16 local-AI provider switch, #8 WKWebView font access, #12 popover handler, #13 run-failure visibility.
+
+The historical Track A walkthrough below is preserved as the route by which entitlements were determined.
 
 Required for App Store Connect upload (TestFlight or App Store). Not required for `.dmg`.
 
@@ -78,9 +91,14 @@ Required for App Store Connect upload (TestFlight or App Store). Not required fo
   - `com.apple.security.inherit`
 - **Not needed** (pre-spike guess overruled): `files.bookmarks.app-scope` — `files.user-selected.read-write` alone covers the SSB XPC bootstrap.
 
-**Still pending under sandbox-on:**
-- A4/A6 — beats 6+ (pipeline run, FFmpeg subprocess, Whisper download, doctor probes). Beat 6 is also blocked by an unrelated stale code path: `PipelineRunner.findBristlenoseBinary()` was not migrated to `SidecarMode.resolve()` when C1 landed (TODO comment in source).
-- Release config sandbox flip (`ENABLE_APP_SANDBOX = NO` in Release).
+**Resolved since A2 (now all green):**
+- A4/A6 — beats 6+ (pipeline run, FFmpeg subprocess, Whisper download, doctor probes) ✅ confirmed working under sandbox-on 4 May 2026 via Mission Sandbox walk.
+- `PipelineRunner.findBristlenoseBinary()` stale path ✅ migrated to `SidecarMode.resolve()` via `pipeline-runner-sidecar-mode` (PR #96, `0e0157e`, 2 May 2026).
+- FFmpeg/ffprobe sandbox PATH-stripping ✅ resolved via `bundled-binary-helper` (`670a002`, 2 May 2026).
+- TLS under sandbox ✅ redirected to certifi via `bundled-tls-config` (`7240675`, 2 May 2026).
+
+**Still pending (not sandbox blockers):**
+- Release config sandbox flip (`ENABLE_APP_SANDBOX = NO` in Release) — flip when ready to archive for upload.
 - `proc_listpids` returns EPERM under sandbox — zombie-cleanup-on-launch is silently a no-op. Fine for normal flow, breaks crash recovery. Defer until post-alpha.
 
 **Pre-spike entitlement guess (preserved as historical baseline — DO NOT treat as current):**
@@ -105,7 +123,7 @@ Required for App Store Connect upload (TestFlight or App Store). Not required fo
     - `bristlenose/doctor.py` + `doctor_fixes.py` — runtime health checks spawn `which`, maybe `ffprobe --version`. Audit whether doctor is even meaningful in a sandboxed context; may need a desktop-specific code path
     - `bristlenose/utils/hardware.py` — reads hardware info (probably `sysctl` or similar). Some paths allowed, some not
     - `bristlenose/cli.py` — CLI entry point, may fork for pipeline stages. Audit
-  - **Bundled binary paths** — current code may use `shutil.which("ffmpeg")` which resolves against `$PATH`. In the `.app`, FFmpeg lives at `Contents/Resources/bin/ffmpeg` (or similar). Sidecar needs a `bundled_binary_path()` helper that prefers bundle-relative paths when running inside the `.app`, falls back to `shutil.which()` for CLI users. One source of truth, not sprinkled
+  - **Bundled binary paths** ✅ shipped 2 May 2026 (`bundled-binary-helper` merge `670a002`). `bristlenose.utils.bundled_binary.bundled_binary_path(name)` resolves env var → bundle-relative `Contents/Resources/<name>` → `shutil.which`. Swift's `BristlenoseShared.bundledBinaryEnvironment(for:)` injects `BRISTLENOSE_FFMPEG` / `BRISTLENOSE_FFPROBE` at sidecar spawn (mirrors the certifi/SSL pattern). One source of truth, not sprinkled. Surfaces in `utils/audio.py`, `utils/video.py`, `server/clip_backend.py`, `doctor.py`
   - **Grandchild entitlements** — FFmpeg launched by Python launched by Swift is a grandchild. Each hop needs `inherit` set at its own signing time. Signing script must cover: Python binary, FFmpeg, ffprobe, any other bundled executables
   - **File descriptor passing** — if Swift pre-opens a file and hands its fd to the sidecar, the sidecar can read it even without direct filesystem access. Useful for user-picked folders where we'd rather hand over access than ask the sidecar to consume a bookmark. Worth considering for drag-and-drop flow
   - **Stdio piping** — `Process.standardOutput` / `standardError` use pipes, work fine across sandbox boundary. Existing CLI output streaming via FastAPI SSE should survive unchanged

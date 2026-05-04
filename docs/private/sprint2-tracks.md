@@ -159,10 +159,14 @@ Also out of scope and parked elsewhere:
 - Reference this doc in commit messages when scope is non-obvious: "track A: sandbox-aware ServeManager spawn (see sprint2-tracks.md)".
 - When a track's branch lands, update its row in the convergence checklist below.
 
+## Alpha-scope review (4 May 2026)
+
+S2–S4 Musts (and four S5 visual-design Musts) reviewed row-by-row against the lever "**alpha cohort is ≤20 testers on 1:1 video calls**." Net effect on Sprint 2 specifically: TestFlight upload pipeline (#3) scoped to manual-only for the first iteration (M→S); App Store Connect setup (#4) is mostly form-filling now that cert + profile + bundle ID are in (S→XS); performance regression gate demoted out of S2 to Should/post-alpha. No change to the convergence checklist below — A, B, C tracks all stand. Canonical record + per-row rationale: `docs/private/musts-review.md`. Top-of-doc summary in `100days.md`.
+
 ## Convergence checklist
 
-- [ ] Track A: sandbox enabled in Debug, MVP flow runs without violations, entitlements file finalised
-- [ ] Track A: Apple Distribution cert + provisioning profile in place (#2)
+- [x] Track A: sandbox enabled in Debug, MVP flow runs without violations, entitlements file finalised — **Mission Sandbox PASSED 4 May 2026**. End-to-end under `Bristlenose` (sandbox-on Debug) scheme: ikea drop → resume → re-render → SQLite import → report opens; `bristlenose doctor` green for mlx-whisper; fresh small-project drop reaches s05 transcribe. Closed by `bf2533a` (doctor treats mlx-whisper as complete on Apple Silicon, #14) + `f2162a9` (host log-tail success heuristic in `PipelineRunner.handleTermination`, #15), both direct-on-main 3 May. Archived inventory: `docs/private/sandbox-inventory-beats-6-13-2026-05-03.md`. Entitlements in `project.pbxproj` are sufficient for alpha pipeline. Open follow-ups (not blockers): #7/#16 local-ai provider switch, #8 WKWebView font access, #12 popover handler, #13 run-failure visibility.
+- [x] Track A: Apple Distribution cert + provisioning profile in place (#2) — landed via `track-c-c1-bundled-sidecar` + C2 `1ee30eb` (28 Apr 2026); pbxproj Release flipped to Manual signing against Apple Distribution cert + Bristlenose Mac App Store profile. End-to-end archive clean.
 - [x] Track C: `sign-sidecar.sh` produces a runnable ad-hoc-signed bundle (C2 code done, `fc95b99..cd04ee9`)
 - [x] Track C: same script swapped to Apple Distribution, produces uploadable `.pkg` (C2 code done; ~~end-to-end `xcodebuild archive` blocked by SECURITY #5+#8~~ — unblocked 26 Apr 2026; end-to-end run clean 28 Apr 2026 via `1ee30eb` — adds Mac Installer Distribution cert + `installerSigningCertificate` + skips notarytool/spctl on the App-Store path)
 - [x] Track C: Keychain credential injection wired, sandbox-compatible (C3, `a8dc3cb..ab1b2a1`; smoke test Step 6 pending human)

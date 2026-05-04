@@ -36,13 +36,28 @@ PROJECT_ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))
 # what mlx_metal's wheel layout assumes at runtime.
 _MLX_DATAS, _MLX_BINARIES, _MLX_HIDDEN = collect_all("mlx")
 
+# `mlx_whisper/assets/` ships three data files that PyInstaller's
+# modulegraph (which only walks `import` statements) doesn't see:
+# `mel_filters.npz` (loaded by `mlx_whisper/audio.py::mel_filters` via
+# `mx.load(... "assets/mel_filters.npz")`) and the GPT-2 / multilingual
+# tiktoken vocabularies. Without these the bundle imports `mlx_whisper`
+# fine but the first transcribe call dies with `[load_npz] Input must
+# be a zip file …` because `os.path.dirname(__file__) + "/assets/…"`
+# resolves to a path that doesn't exist in the bundle. Found via
+# end-to-end smoke test post-S3 (4 May 2026) — same class of bug as
+# the mlx-metal artefacts that were missing pre-S3.
+_MLX_WHISPER_DATAS, _MLX_WHISPER_BINARIES, _MLX_WHISPER_HIDDEN = collect_all(
+    "mlx_whisper"
+)
+
 a = Analysis(
     # Entry point: run `bristlenose serve` directly.
     [os.path.join(SPECPATH, "sidecar_entry.py")],
     pathex=[PROJECT_ROOT],
-    binaries=_MLX_BINARIES,
+    binaries=[*_MLX_BINARIES, *_MLX_WHISPER_BINARIES],
     datas=[
         *_MLX_DATAS,
+        *_MLX_WHISPER_DATAS,
         (
             os.path.join(PROJECT_ROOT, "bristlenose", "theme"),
             os.path.join("bristlenose", "theme"),
@@ -110,6 +125,7 @@ a = Analysis(
     ],
     hiddenimports=[
         *_MLX_HIDDEN,
+        *_MLX_WHISPER_HIDDEN,
         *collect_submodules("rich"),
         # LLM providers (dynamically imported in llm/client.py)
         "anthropic",

@@ -427,7 +427,7 @@ describe("AnalysisPage", () => {
     const card = screen.getAllByTestId("bn-signal-card")[0];
     const expansion = card.querySelector(".signal-card-expansion") as HTMLElement;
     expect(expansion).toBeTruthy();
-    expect(expansion.style.maxHeight).toBe("0");
+    expect(expansion.style.maxHeight).toMatch(/^0(px)?$/);
 
     const toggle = screen.getAllByTestId("bn-signal-toggle")[0];
     fireEvent.click(toggle);

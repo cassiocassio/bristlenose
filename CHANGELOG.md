@@ -2,6 +2,11 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.15.3** — _4 May 2026_
+
+- **Frontend dependency updates** — minor/patch bumps to `i18next`, `react-router-dom`, `eslint`, `eslint-plugin-react-hooks`, `typescript`, `typescript-eslint`, `vite`, `vitest` (#91); `react-i18next` 16 → 17 (#90). The v17 breaking change in `transKeepBasicHtmlNodesFor` doesn't apply — no usage in this codebase
+- **Test: relax `maxHeight` assertion in `AnalysisPage.test.tsx`** — jsdom 29 normalises `style.maxHeight = "0"` to `"0px"` on read-back (matching real browsers); the previous `toBe("0")` assertion was leaning on jsdom 27's non-spec echo-the-input behaviour. Switched to `toMatch(/^0(px)?$/)` so the assertion passes on both versions, unblocking the upcoming jsdom 27 → 29 dependabot bump (#89, pending)
+
 **0.15.2** — _2 May 2026_
 
 - **Bundled FFmpeg/ffprobe discovery for sandboxed sidecar** — new `bristlenose/utils/bundled_binary.py` resolves FFmpeg and ffprobe from a bundle-relative path before falling back to `$PATH`. Lets the sandboxed desktop sidecar find ship-with-app binaries that aren't on the user's shell `PATH`. `audio.py`, `video.py`, and `clip_backend.py` route through the helper; `bristlenose doctor` reports the resolved path. CLI/PyPI users see no behaviour change — `$PATH` lookup is still tried

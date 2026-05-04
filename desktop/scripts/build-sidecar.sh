@@ -12,32 +12,42 @@
 # the Resources directory at archive time.
 #
 # Prerequisites:
-#   - Python 3.12 venv with bristlenose[dev,serve,desktop] installed (.venv
-#     at repo root). The `desktop` extra carries pyinstaller — see
-#     pyproject.toml's `[project.optional-dependencies]` for what each
-#     extra means and when to use it.
+#   - python3.12 on PATH. The script builds its own dedicated venv at
+#     $ROOT/.venv-sidecar, recreated from scratch on every run, with only
+#     `.[serve,apple,desktop]` extras — keeping contributor-installed
+#     packages (BERTopic spike deps, dev-only tools) out of the bundle.
+#     The contributor's `.venv` (with `dev` extras) is left alone.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DESKTOP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ROOT="$(cd "$DESKTOP_DIR/.." && pwd)"
-PYTHON="$ROOT/.venv/bin/python"
+SIDECAR_VENV="$ROOT/.venv-sidecar"
+PYTHON="$SIDECAR_VENV/bin/python"
 SPEC="$DESKTOP_DIR/bristlenose-sidecar.spec"
 DIST="$DESKTOP_DIR/Bristlenose/Resources"
 WORK="$DESKTOP_DIR/build/pyinstaller"
 BUNDLE="$DIST/bristlenose-sidecar"
 
-if [ ! -x "$PYTHON" ]; then
-    echo "error: venv python not found at $PYTHON" >&2
-    echo "run: cd $ROOT && python3.12 -m venv .venv && .venv/bin/pip install -e '.[dev,serve]' pyinstaller" >&2
+if ! command -v python3.12 >/dev/null; then
+    echo "error: python3.12 not found on PATH" >&2
+    echo "run: brew install python@3.12" >&2
     exit 1
 fi
 
+# Recreate the sidecar venv from scratch every build. The whole point is a
+# bundle whose contents are deterministic — keep the contributor's `.venv`
+# (with dev extras and any spike packages) out of PyInstaller's analysis.
+echo "==> Recreating sidecar venv at $SIDECAR_VENV"
+rm -rf "$SIDECAR_VENV"
+python3.12 -m venv "$SIDECAR_VENV"
+"$SIDECAR_VENV/bin/pip" install --no-cache-dir --quiet --upgrade pip
+"$SIDECAR_VENV/bin/pip" install --no-cache-dir -e "$ROOT[serve,apple,desktop]"
+
 if ! "$PYTHON" -m PyInstaller --version >/dev/null 2>&1; then
-    echo "error: PyInstaller not installed." >&2
-    echo "run: $PYTHON -m pip install -e '.[dev,serve,desktop]'" >&2
-    echo "(the 'desktop' extra carries pyinstaller — see pyproject.toml)" >&2
+    echo "error: PyInstaller not installed in fresh sidecar venv." >&2
+    echo "(the 'desktop' extra in pyproject.toml should carry pyinstaller — check it.)" >&2
     exit 1
 fi
 

@@ -153,6 +153,13 @@ a = Analysis(
         "presidio_anonymizer",
         "spacy",
         "en_core_web_lg",
+        # Orphan checkpoint-conversion tool inside mlx_whisper. Top-level
+        # `import torch` pulls ~284 MB of torch into the bundle, but nothing
+        # in mlx_whisper (or anywhere else) actually imports torch_whisper —
+        # it's a dev utility for converting OpenAI Whisper checkpoints to
+        # MLX format. Excluding it sheds torch entirely. Verified orphan via
+        # `grep -rn torch_whisper site-packages/mlx_whisper/` (4 May 2026).
+        "mlx_whisper.torch_whisper",
         # Dev-only
         "pytest",
         "pytest_cov",

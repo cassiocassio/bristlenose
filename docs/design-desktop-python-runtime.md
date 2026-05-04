@@ -32,7 +32,7 @@ It is **not** the implementation plan — per-checkpoint work was tracked in `do
 - ✅ **SECURITY #5 + #8 unblocked** (26 Apr 2026, commits `823f9be` `fdf90dc` `92a1d36` `38808fe`). Both `SecurityChecklist.swift` `#error` directives gone; Release archives compile.
 - ✅ **Zombie cleanup is libproc-only** (`5471b35`, 28 Apr 2026). `proc_listpids` + `proc_pidfdinfo(PROC_PIDFDSOCKETINFO)` replace the `lsof` exec; combined with the earlier `proc_pidpath` replacement for `/bin/ps` (`38808fe`), the entire supervisor path survives the Track A sandbox flip with no further changes.
 - 🟡 **C3 smoke test (manual, Step 6)** parked for human — Xcode Cmd+R with a throwaway Anthropic key; procedure in `~/.claude/plans/c3-closeout.md`.
-- ⏸️ Bundle size 644 MB. Deferred to Background Assets. See §"Bundle-size findings".
+- ⏸️ Bundle size 645 MB (held at C0 baseline by S1+S2 surgical pass, 4 May 2026). Deeper trims deferred to Background Assets. See §"Bundle-size findings".
 - ✅ **`com.apple.security.inherit`** verified end-to-end through Track A — A1 added the key (`cd4a5c6` on `sandbox-debug`), A1c confirmed the bundled sidecar spawns under inherited sandbox, A2 (`49cb600` on `track-a-a2-network-server`) confirmed FastAPI `bind()` on 127.0.0.1:9131 succeeds with the parent's `network.server` reaching the child via `inherit`. Sidecar requests no sandbox keys of its own.
 - ✅ **Host App Sandbox set (Debug-only)** — empirical floor as of A2: `app-sandbox` + `network.client` (LLM HTTPS + Ollama localhost) + `network.server` (sidecar `bind()`) + `files.user-selected.read-write` (folder picker + bookmark XPC bootstrap). All four are build-setting-driven in `Bristlenose.xcodeproj/project.pbxproj` (`ENABLE_APP_SANDBOX`, `ENABLE_OUTGOING_NETWORK_CONNECTIONS`, `ENABLE_INCOMING_NETWORK_CONNECTIONS`, `ENABLE_USER_SELECTED_FILES`); no host `.entitlements` file. Release config keeps sandbox off pending the rest of Track A.
 - 🟢 **Sandbox iteration helper** — `desktop/scripts/reset-sandbox-state.sh` (`ff96766` / `ff57801` / `730367d`). Wipes `~/Library/Containers/app.bristlenose/Data/*`, drops UserDefaults, kills zombies, frees ports. Required because stale Container state reproducibly trips `EXC_BREAKPOINT` in `_libsecinit_appsandbox.cold.*` between launches even when entitlements are correct. Documented in `desktop/CLAUDE.md` "Sandbox iteration" gotcha.
@@ -121,18 +121,33 @@ The flat `_internal/` layout is PyInstaller `--onedir`. Swift finds the outer bi
 
 ## Bundle-size findings (deferred to Background Assets)
 
-C0 bundle: **644 MB**. Transitive deps PyInstaller pulled despite the `excludes`:
+C0 baseline (18 Apr 2026): **644 MB**. By 4 May the bundle had drifted to **771 MB** because the build script (`build-sidecar.sh`) ran PyInstaller against the contributor's `.venv` — and BERTopic-spike packages (`sentence-transformers`, `transformers`, `bertopic`, `umap-learn`, `hdbscan`, `pynndescent`) plus `pytest-cov`'s `coverage` module had been pip-installed manually for the April spike. PyInstaller's analysis sees all of them.
 
-| Package | Size | Likely hop |
+**Surgical pass S1 + S2 (4 May 2026, branch `bundle-trim-s1-s2`):**
+
+- **S1** — added `mlx_whisper.torch_whisper` to `excludes=[]`. It's an orphan checkpoint-conversion utility that does `import torch` at module top level; nothing else in `mlx_whisper` imports it. Verified via grep over the installed package.
+- **S2** — `desktop/scripts/build-sidecar.sh` now creates a dedicated `.venv-sidecar/` from scratch on every run, installing only `.[serve,apple,desktop]`. The contributor's `.venv` (with `dev` extras) is left alone for tests/lint, but its drift no longer leaks into the bundle. Rebuild cost: ~30 s of pip install per build.
+
+Result: 771 → **645 MB** (≈ −126 MB, matching the C0 baseline). BERTopic-spike packages and `coverage` are gone. Torch is **still** bundled — see corrected import paths below.
+
+Transitive deps PyInstaller still pulls despite the `excludes`:
+
+| Package | Size | Actual import path (verified via PyInstaller xref, 4 May 2026) |
 |---|---|---|
-| `torch` | 288 MB | Via `tiktoken` → `transformers` legacy tokenizers |
-| `llvmlite` | 110 MB | Via `numba` → audio preprocessing dep |
-| `onnxruntime` | 58 MB | Via `tokenizers` / `huggingface_hub` optional paths |
-| `scipy` | 37 MB | Via librosa / audio feature extraction |
+| `torch` | 288 MB | Reached via four paths simultaneously: `huggingface_hub.serialization._torch` (mlx-whisper → huggingface_hub), `scipy._lib.array_api_compat.torch.*` (scipy probes torch on import), `onnxruntime.transformers.machine_info` (faster-whisper → onnxruntime, even though faster_whisper itself is in `excludes`), and `functorch.*` (torch's own internal subpackage). The S1 `mlx_whisper.torch_whisper` exclude was a contributor but not the sole cause — the doc previously claimed `tiktoken → transformers`, which is wrong; `transformers` was a contributor-venv leak now fixed by S2. |
+| `llvmlite` | 110 MB | Via `numba`, which `mlx-whisper` requires as a runtime dep |
+| `onnxruntime` | 58 MB | Via `faster-whisper`'s `vad.py` — `faster_whisper` is in `excludes` but PyInstaller's modulegraph still walks `onnxruntime` because it's also reached from `torch.onnx._internal.*` |
+| `scipy` | 37 MB | Via `numba` (`scipy._lib.array_api_compat`) |
 
-**C1 decision (18 Apr 2026): size optimisation deferred.** Per `design-modularity.md` §"Acquisition strategy: trickle to full capability", the alpha story is Apple Background Assets — Whisper models and large optional deps trickle in post-install (Wi-Fi-opportunistic, Apple-hosted, OS-scheduled) rather than bloating the initial `.app` download. Build-time trimming before that story lands would be premature optimisation.
+**C1 decision (18 Apr 2026): size optimisation deferred to Background Assets.** Per `design-modularity.md` §"Acquisition strategy: trickle to full capability", the alpha story is Apple Background Assets — Whisper models and large optional deps trickle in post-install (Wi-Fi-opportunistic, Apple-hosted, OS-scheduled) rather than bloating the initial `.app` download. The S1 + S2 surgical pass keeps the bundle at the C0 baseline so contributor-venv drift can't push it higher; deeper trims (S3+) remain deferred.
 
 What we ship in the alpha: whatever the trimmed-by-explicit-excludes-only spec produces. Size is a soft constraint when the user's install flow is "tap install in TestFlight, app opens, heavy bits download in the background while they pick their first project." Track C C5 (post-alpha) may revisit excludes if TestFlight reports cite bundle size as a friction point; more likely the work moves straight to Background Assets integration.
+
+### Lesson — `excludes` doesn't kill a package, only one named import path
+
+The 4 May surgical pass exposed a flawed mental model: "exclude `mlx_whisper.torch_whisper` and torch goes away." PyInstaller's `excludes=[…]` removes the named module from the bundle, and modulegraph won't *follow* imports from inside the excluded module — but if any **other** reachable module imports `torch` directly, torch is still pulled. Diagnosing requires reading `desktop/build/pyinstaller/bristlenose-sidecar/xref-bristlenose-sidecar.html` for the actual incoming-edge list, not assuming a single canonical hop. Future trim attempts must start with the xref, not with grep over `import torch`.
+
+The dedicated `.venv-sidecar/` is the orthogonal lesson: any time the build inputs include a venv that humans can write to, the bundle drifts. CI-style builds run against a recreated-from-scratch venv so the bundle is a function of `pyproject.toml` + the spec, nothing else.
 
 ## Bundle data requirements
 

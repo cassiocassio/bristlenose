@@ -74,9 +74,19 @@ class TestStaticServingHappyPath:
         assert resp.status_code == 200
         assert resp.text == "export default 1;\n"
 
-    def test_cache_control_immutable(self, client: AuthTestClient) -> None:
+    def test_cache_control_immutable_for_hashed_chunks(
+        self, client: AuthTestClient
+    ) -> None:
         resp = client.get("/static/assets/main-abc.js")
         assert resp.headers.get("cache-control") == "public, max-age=31536000, immutable"
+
+    def test_cache_control_no_cache_for_index_html(
+        self, client: AuthTestClient
+    ) -> None:
+        # index.html is not content-hashed — must NOT be served immutable, or
+        # bundle updates would be invisible to the WKWebView for up to a year.
+        resp = client.get("/static/index.html")
+        assert resp.headers.get("cache-control") == "no-cache"
 
 
 class TestStaticServingMissing:
@@ -107,7 +117,31 @@ class TestStaticServingPathTraversal:
 
 
 class TestDebug500Envelope:
-    def test_debug_envvar_returns_traceback(
+    """Tracebacks surface in the response body only when BOTH dev=True AND
+    BRISTLENOSE_DEBUG_500=1.  Either gate alone keeps the generic message —
+    so a stale env var in a shipping (non-dev) sidecar can't leak traces."""
+
+    def test_dev_plus_envvar_returns_traceback(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from fastapi import FastAPI
+
+        from bristlenose.server.app import create_app
+
+        monkeypatch.setenv("BRISTLENOSE_DEBUG_500", "1")
+        app: FastAPI = create_app(dev=True, db_url="sqlite://")
+
+        @app.get("/_boom")
+        async def _boom() -> None:
+            raise RuntimeError("kaboom")
+
+        client = AuthTestClient(app, raise_server_exceptions=False)
+        resp = client.get("/_boom")
+        assert resp.status_code == 500
+        assert "RuntimeError" in resp.text
+        assert "kaboom" in resp.text
+
+    def test_envvar_without_dev_returns_generic_message(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         from fastapi import FastAPI
@@ -124,10 +158,10 @@ class TestDebug500Envelope:
         client = AuthTestClient(app, raise_server_exceptions=False)
         resp = client.get("/_boom")
         assert resp.status_code == 500
-        assert "RuntimeError" in resp.text
-        assert "kaboom" in resp.text
+        assert "kaboom" not in resp.text
+        assert "Internal Server Error" in resp.text
 
-    def test_no_debug_envvar_returns_generic_message(
+    def test_no_envvar_returns_generic_message(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         from fastapi import FastAPI
@@ -135,7 +169,7 @@ class TestDebug500Envelope:
         from bristlenose.server.app import create_app
 
         monkeypatch.delenv("BRISTLENOSE_DEBUG_500", raising=False)
-        app: FastAPI = create_app(dev=False, db_url="sqlite://")
+        app: FastAPI = create_app(dev=True, db_url="sqlite://")
 
         @app.get("/_boom")
         async def _boom() -> None:

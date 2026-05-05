@@ -143,6 +143,7 @@ Moderator and observer names (m1, m2, o1) are not stripped — they are part of 
 - **Media allowlist:** `/media/` route only serves known media file extensions (`.mp4`, `.mov`, `.wav`, `.mp3`, etc.) with path-traversal guard
 - **Desktop environment scrubbing:** The macOS app passes only essential environment variables (`PATH`, `HOME`, `LANG`, etc.) to the Python subprocess — no cloud tokens, database passwords, or Xcode debug variables
 - **Auditable CI suppressions:** every suppression in the Playwright e2e gate is source-controlled, justified inline with a register ID, and indexed in `e2e/ALLOWLIST.md` with a category and tracker — so the distinction between "CI lubricant we learned to live with" and "real product debt" stays visible over time
+- **Debug verbosity is opt-in and double-gated:** unhandled server exceptions always log a traceback to `bristlenose.log`, but the response body returns the generic `Internal Server Error` message by default. Setting `BRISTLENOSE_DEBUG_500=1` returns the traceback in the response body only when the server is also started with `dev=True` (i.e. `bristlenose serve --dev` or a development sidecar build). A shipped sidecar bound to a researcher's laptop ignores the env var. Useful for diagnosing sandbox / packaging issues; not intended to be set in production. See `docs/design-desktop-asset-serving.md`.
 
 ## Output files
 

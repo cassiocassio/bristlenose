@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import mimetypes
@@ -94,15 +95,19 @@ def create_app(
 
     # Surface tracebacks for unhandled exceptions — FastAPI's default 500
     # handler swallows them.  Always logs to bristlenose.log; returns the
-    # traceback in the response body when BRISTLENOSE_DEBUG_500=1 (debugging
-    # sandbox / packaging issues).  See docs/design-desktop-asset-serving.md.
+    # traceback in the response body only when BOTH dev=True AND
+    # BRISTLENOSE_DEBUG_500=1 (debugging sandbox / packaging issues).  The
+    # double gate stops a stale env var in a shipping sidecar from leaking
+    # tracebacks.  See docs/design-desktop-asset-serving.md and SECURITY.md.
+    _debug_500 = dev and os.environ.get("BRISTLENOSE_DEBUG_500") == "1"
+
     @app.exception_handler(Exception)
     async def _log_unhandled(request: Request, exc: Exception) -> PlainTextResponse:
         tb = traceback.format_exc()
         logger.error(
             "unhandled %s on %s\n%s", type(exc).__name__, request.url.path, tb
         )
-        if os.environ.get("BRISTLENOSE_DEBUG_500") == "1":
+        if _debug_500:
             return PlainTextResponse(tb, status_code=500)
         return PlainTextResponse("Internal Server Error", status_code=500)
 
@@ -236,7 +241,7 @@ def _register_static_routes(app: FastAPI, static_dir: Path) -> None:
 
     @app.get("/static/{path:path}")
     async def _serve_static(path: str) -> Response:
-        return _read_bundle_file(resolved_root, path)
+        return await _read_bundle_file(resolved_root, path)
 
     assets_dir = static_dir / "assets"
     if assets_dir.is_dir():
@@ -244,21 +249,34 @@ def _register_static_routes(app: FastAPI, static_dir: Path) -> None:
 
         @app.get("/assets/{path:path}")
         async def _serve_assets(path: str) -> Response:
-            return _read_bundle_file(resolved_assets, path)
+            return await _read_bundle_file(resolved_assets, path)
 
 
-def _read_bundle_file(root: Path, path: str) -> Response:
-    """Resolve ``path`` under ``root`` and return its bytes, with guards."""
+async def _read_bundle_file(root: Path, path: str) -> Response:
+    """Resolve ``path`` under ``root`` and return its bytes, with guards.
+
+    Uses ``asyncio.to_thread`` to keep the event loop responsive while
+    reading from disk.  Vite-hashed chunks get a one-year ``immutable``
+    cache header; ``index.html`` (not content-hashed) gets ``no-cache`` so
+    bundle updates take effect immediately.
+    """
+
     target = (root / path).resolve()
     if not target.is_relative_to(root):
         raise HTTPException(status_code=403)
     if not target.is_file():
         raise HTTPException(status_code=404)
     media_type, _ = mimetypes.guess_type(target.name)
+    cache_control = (
+        "no-cache"
+        if target.name == "index.html"
+        else "public, max-age=31536000, immutable"
+    )
+    content = await asyncio.to_thread(target.read_bytes)
     return Response(
-        content=target.read_bytes(),
+        content=content,
         media_type=media_type or "application/octet-stream",
-        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+        headers={"Cache-Control": cache_control},
     )
 
 

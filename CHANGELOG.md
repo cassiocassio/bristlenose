@@ -2,6 +2,10 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**Unreleased**
+
+- **Sidecar: avoid `/bin/ps` exec under macOS App Sandbox** — `run_lifecycle._ps_start_time()` now reads process start time via libproc `proc_pidinfo(PROC_PIDTBSDINFO)` on Darwin (same call Activity Monitor uses) instead of subprocessing `/bin/ps -o lstart=`. The exec was blocked by the sandbox and crashed the bundled sidecar at startup before serving a single byte. Linux unchanged (no sandbox blocker; keeps the `/bin/ps` fallback). Third libproc swap in the family (`proc_pidpath`, `proc_listpids`+`proc_pidfdinfo`, now `proc_pidinfo`)
+
 **0.15.3** — _4 May 2026_
 
 - **Desktop: provider-switching hardening end-to-end** — the "Change provider" flow now actually activates the new provider across Keychain, sidecar env injection, and UI. Four fixes landed together: Ollama choice persists to `UserDefaults` *before* the consent log writes (defeats a race where a crash between the two left the app in an inconsistent state); the Change-provider button activates the row first then falls back to a selector if activation didn't take; sidecar API-key injection is scoped to the active provider only (was leaking other providers' keys into the child env); LLM Settings lazy-loads Keychain reads to the selected row only (was prompting on every row render). Desktop-only — no PyPI surface change
@@ -10,7 +14,6 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 - **Doctor: `mlx-whisper` recognised as a complete backend on Apple Silicon** — `bristlenose doctor` no longer reports a missing whisper backend on Apple Silicon when only `mlx-whisper` is installed (the bundled-sidecar configuration). Other platforms unchanged
 - **Desktop: log-tail trust on sidecar exit-1-after-success** — when the sidecar exits with code 1 after a successful pipeline run (rare but observed during sandbox shutdown), the desktop app now trusts the log tail rather than misclassifying the run as failed
 - **Desktop: sandbox-on Debug i18n + resizable window** — Debug builds with the App Sandbox entitlement enabled now load locales correctly and the window resizes properly on macOS Tahoe (was locking vertical resize)
-- **Sidecar: avoid `/bin/ps` exec under macOS App Sandbox** — `run_lifecycle._ps_start_time()` now reads process start time via libproc `proc_pidinfo(PROC_PIDTBSDINFO)` on Darwin (same call Activity Monitor uses) instead of subprocessing `/bin/ps -o lstart=`. The exec was blocked by the sandbox and crashed the bundled sidecar at startup before serving a single byte. Linux unchanged (no sandbox blocker; keeps the `/bin/ps` fallback). Third libproc swap in the family (`proc_pidpath`, `proc_listpids`+`proc_pidfdinfo`, now `proc_pidinfo`)
 - **Frontend dependency updates** — minor/patch bumps to `i18next`, `react-router-dom`, `eslint`, `eslint-plugin-react-hooks`, `typescript`, `typescript-eslint`, `vite`, `vitest` (#91); `react-i18next` 16.6.6 → 17.0.6 (#90). The v17 breaking change in `transKeepBasicHtmlNodesFor` doesn't apply — no usage in this codebase
 - **Test: relax `maxHeight` assertion for jsdom 29 compatibility** — jsdom 29 normalises `style.maxHeight = "0"` to `"0px"` on read-back (matching real browsers); the previous `toBe("0")` assertion in `AnalysisPage.test.tsx` was leaning on jsdom 27's non-spec echo-the-input behaviour. Switched to `toMatch(/^0(px)?$/)` so the assertion passes on both versions, unblocking the upcoming jsdom 27 → 29 dependabot bump (#89, pending)
 - **Tooling**: `/new-feature` skill grew optional flags for self-contained branch handoff (handoff doc + invocation in one paste-able command)

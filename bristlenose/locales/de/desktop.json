@@ -51,8 +51,8 @@
       "noFolder": "Kein Ordner",
       "reAnalyse": "Erneut analysieren…",
       "archive": "Archivieren…",
-      "delete": "L\u00f6schen\u2026",
-      "chooseIcon": "Symbol ausw\u00e4hlen\u2026"
+      "delete": "Löschen…",
+      "chooseIcon": "Symbol auswählen…"
     },
     "folder": {
       "rename": "Ordner umbenennen",
@@ -122,24 +122,25 @@
     "projects": "Projekte",
     "reportContent": "Berichtsinhalt",
     "newFolder": "Neuer Ordner",
+    "newProject": "Neues Projekt",
     "dragInterviews": "Interviews hierher ziehen",
     "dragInterviewsDescription": "Fügen Sie Interviewaufnahmen oder Transkripte hinzu, um zu beginnen.",
     "projectUnavailable": "Projekt nicht verfügbar",
     "projectUnavailableHint": "Verbinden Sie das Laufwerk, um auf dieses Projekt zuzugreifen.",
     "projectMoved": "Projekt verschoben oder gelöscht",
     "projectMovedDescription": "Der Projektordner konnte nicht gefunden werden. Er wurde möglicherweise verschoben oder gelöscht.",
-    "locate": "Suchen\u2026",
-    "locateMessage": "Neuen Speicherort für \u201e%@\u201c suchen",
+    "locate": "Suchen…",
+    "locateMessage": "Neuen Speicherort für „%@“ suchen",
     "onThisMac": "Auf diesem Mac",
     "projectIcon": "Projektsymbol",
     "duplicateProject": "Projekt existiert bereits",
-    "duplicateProjectMessage": "F\u00fcr diesen Ordner existiert bereits ein Projekt: \u201e%@\u201c. Sie k\u00f6nnen das vorhandene Projekt \u00f6ffnen oder ein neues erstellen.",
-    "openExisting": "Vorhandenes \u00f6ffnen",
+    "duplicateProjectMessage": "Für diesen Ordner existiert bereits ein Projekt: „%@“. Sie können das vorhandene Projekt öffnen oder ein neues erstellen.",
+    "openExisting": "Vorhandenes öffnen",
     "createAnyway": "Trotzdem erstellen",
-    "emptyStateHint": "Ordner hierher ziehen oder \u2318N dr\u00fccken",
-    "addedInterviews": "%d Interviews zu %@ hinzugef\u00fcgt",
-    "multipleSelected": "%d Elemente ausgew\u00e4hlt",
-    "multipleSelectedHint": "W\u00e4hlen Sie ein einzelnes Projekt aus, um den Bericht anzuzeigen.",
+    "emptyStateHint": "Ordner hierher ziehen oder ⌘N drücken",
+    "addedInterviews": "%d Interviews zu %@ hinzugefügt",
+    "multipleSelected": "%d Elemente ausgewählt",
+    "multipleSelectedHint": "Wählen Sie ein einzelnes Projekt aus, um den Bericht anzuzeigen.",
     "welcomeTitle": "Willkommen bei Bristlenose",
     "welcomeBody": "Ziehen Sie einen Ordner mit Interview-Aufnahmen in die Seitenleiste, oder klicken Sie auf + Neues Projekt, um zu starten."
   },
@@ -203,7 +204,7 @@
     }
   },
   "configReference": {
-    "intro": "Die meisten Einstellungen befinden sich im Fenster \u201eEinstellungen\u201c (\u2318,). Umgebungsvariablennamen werden unten f\u00fcr die erweiterte Konfiguration angezeigt."
+    "intro": "Die meisten Einstellungen befinden sich im Fenster „Einstellungen“ (⌘,). Umgebungsvariablennamen werden unten für die erweiterte Konfiguration angezeigt."
   },
   "aiConsent": {
     "title": "KI-gestützte Analyse",
@@ -228,49 +229,78 @@
   },
   "llmSettings": {
     "statusSection": "Status",
-    "apiKeySection": "API-Schl\u00fcssel",
-    "apiKeyPlaceholder": "API-Schl\u00fcssel",
-    "showApiKey": "API-Schl\u00fcssel anzeigen",
-    "hideApiKey": "API-Schl\u00fcssel ausblenden",
-    "clearApiKey": "API-Schl\u00fcssel l\u00f6schen",
+    "apiKeySection": "API-Schlüssel",
+    "apiKeyPlaceholder": "API-Schlüssel",
+    "showApiKey": "API-Schlüssel anzeigen",
+    "hideApiKey": "API-Schlüssel ausblenden",
+    "clearApiKey": "API-Schlüssel löschen",
     "serverSection": "Server",
     "serverURL": "URL",
     "modelSection": "Modell",
-    "customModelOption": "Benutzerdefiniert\u2026",
+    "customModelOption": "Benutzerdefiniert…",
     "customModelPlaceholder": "Name des benutzerdefinierten Modells",
     "temperatureLabel": "Temperatur",
-    "temperatureHint": "Niedrig = pr\u00e4zise, hoch = kreativ",
-    "concurrencyLabel": "Parallelit\u00e4t",
+    "temperatureHint": "Niedrig = präzise, hoch = kreativ",
+    "concurrencyLabel": "Parallelität",
     "concurrencyHint": "Parallele LLM-Aufrufe",
     "azureSection": "Azure-Einstellungen",
     "azureEndpoint": "Endpunkt-URL",
     "azureDeployment": "Bereitstellungsname",
     "azureAPIVersion": "API-Version",
     "pricingLink": "Preise",
-    "lastVerified": "Zuletzt \u00fcberpr\u00fcft %@",
-    "revalidating": "Letzte \u00dcberpr\u00fcfung wurde abgelehnt \u2013 wird erneut gepr\u00fcft\u2026"
+    "lastVerified": "Zuletzt überprüft %@",
+    "revalidating": "Letzte Überprüfung wurde abgelehnt – wird erneut geprüft…",
+    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
+    "activate": {
+      "generic": "Diesen Anbieter verwenden",
+      "ollama": "Lokales Ollama-Modell verwenden"
+    },
+    "status": {
+      "online": "Online",
+      "notSetUp": "Nicht eingerichtet",
+      "invalid": "Ungültiger Schlüssel",
+      "unavailable": "Nicht verfügbar",
+      "checking": "Wird geprüft…",
+      "local": "Lokal"
+    },
+    "console": {
+      "keys": "Schlüssel",
+      "portal": "Portal"
+    },
+    "providers": {
+      "ollama": {
+        "description": "Kostenlos, läuft lokal. Kein API-Schlüssel erforderlich."
+      }
+    }
+  },
+  "transcriptionSettings": {
+    "backendLabel": "Backend",
+    "modelLabel": "Modell",
+    "backendAuto": "Auto",
+    "backendHint": "Auto erkennt die beste Engine für deinen Mac.",
+    "modelRecommended": "{{model}} (empfohlen)"
   },
   "ollamaSetup": {
     "title": "Lokale KI verwenden",
-    "subtitle": "F\u00fchre die Analyse auf deinem Mac aus. Deine Transkripte bleiben auf deinem Mac.",
+    "subtitle": "Führe die Analyse auf deinem Mac aus. Deine Transkripte bleiben auf deinem Mac.",
     "modelLabel": "Modell",
-    "recommendedSuffix": " \u00b7 ideal f\u00fcr diesen Mac",
+    "recommendedSuffix": " · ideal für diesen Mac",
     "sizeFormat": "~%@ GB",
     "recommendedTag": "(empfohlen)",
-    "needsRAMTag": "(ben\u00f6tigt %d GB RAM)",
+    "needsRAMTag": "(benötigt %d GB RAM)",
     "cancel": "Abbrechen",
     "setUp": "Einrichten",
     "usesPrefix": "Verwendet",
     "openSourceSuffix": "(Open Source)",
-    "runningTitle": "Lokale KI wird eingerichtet\u2026",
+    "runningTitle": "Lokale KI wird eingerichtet…",
     "bytesProgress": "%@ von %@",
-    "installingRuntime": "Lokale Laufzeitumgebung wird installiert\u2026",
-    "startingRuntime": "Lokale Laufzeitumgebung wird gestartet\u2026",
-    "downloadingModel": "%@ wird heruntergeladen\u2026",
-    "runtimeDidNotStart": "Die lokale Laufzeitumgebung wurde nicht gestartet. Starte Ollama nach der Installation aus \u201eProgramme\u201c und versuche es erneut.",
-    "errorNoInternet": "Keine Internetverbindung. Stelle eine Verbindung her und versuche es erneut \u2013 Ollama muss das Modell herunterladen.",
-    "errorTimedOut": "Zeit\u00fcberschreitung der Verbindung. Die Server von Ollama sind m\u00f6glicherweise gerade langsam; versuche es gleich noch einmal.",
-    "errorCantReach": "Ollama ist nicht erreichbar. Starte es nach der Installation aus \u201eProgramme\u201c und versuche es erneut.",
+    "installingRuntime": "Lokale Laufzeitumgebung wird installiert…",
+    "startingRuntime": "Lokale Laufzeitumgebung wird gestartet…",
+    "downloadingModel": "%@ wird heruntergeladen…",
+    "runtimeDidNotStart": "Die lokale Laufzeitumgebung wurde nicht gestartet. Starte Ollama nach der Installation aus „Programme“ und versuche es erneut.",
+    "errorNoInternet": "Keine Internetverbindung. Stelle eine Verbindung her und versuche es erneut – Ollama muss das Modell herunterladen.",
+    "errorTimedOut": "Zeitüberschreitung der Verbindung. Die Server von Ollama sind möglicherweise gerade langsam; versuche es gleich noch einmal.",
+    "errorCantReach": "Ollama ist nicht erreichbar. Starte es nach der Installation aus „Programme“ und versuche es erneut.",
     "errorGeneric": "Einrichtung fehlgeschlagen: %@"
   }
 }

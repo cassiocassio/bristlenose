@@ -393,7 +393,7 @@ struct ContentView: View {
 
     /// Create a new project and put it in inline rename mode.
     private func createNewProject() {
-        let project = projectIndex.addProject(name: "New Project", path: "")
+        let project = projectIndex.addProject(name: i18n.t("desktop.chrome.newProject"), path: "")
         selection = [.project(project.id)]
         renamingProjectID = project.id
     }

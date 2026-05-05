@@ -8,6 +8,8 @@ import SwiftUI
 /// just the About panel rather than the main window with the diagnostic
 /// footer in the corner.
 struct BuildInfoSheet: View {
+    @EnvironmentObject var i18n: I18n
+
     let sidecar: String
     let onDismiss: () -> Void
 
@@ -41,7 +43,7 @@ struct BuildInfoSheet: View {
 
             HStack {
                 Spacer()
-                Button("Close", action: onDismiss)
+                Button(i18n.t("common.buttons.close"), action: onDismiss)
                     .keyboardShortcut(.defaultAction)
             }
         }

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 5 May 2026 (closed `bundle-trim-s1-s2`)
+**Updated:** 5 May 2026 (closed `sandbox-ps-libproc-swap`)
 
 ---
 
@@ -33,7 +33,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch i18n-text-sweep/` | `i18n-text-sweep` | feature | Sweep up English literals missed by i18n-llm-settings (LLMProvider helpers, TranscriptionSettingsView, BuildInfoSheet, default project name) |
 | `bristlenose_branch locale-system-delegation/` | `locale-system-delegation` | feature | Delete in-app language picker on desktop; delegate locale to System Settings → Apps → Bristlenose (Bundle.preferredLocalizations + UIPrefersShowingLanguageSettings) |
 | `bristlenose_branch sandbox-staticfiles-fix/` | `sandbox-staticfiles-fix` | feature | Unblock desktop alpha — fix StaticFiles 500 under sandbox |
-| `bristlenose_branch sandbox-ps-libproc-swap/` | `sandbox-ps-libproc-swap` | feature | Unblock desktop alpha — replace /bin/ps subprocess with libproc proc_pidinfo (2nd of 2 sandbox blockers) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
@@ -128,7 +127,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `i18n-text-sweep` | `bristlenose_branch i18n-text-sweep/` | `origin/i18n-text-sweep` |
 | `locale-system-delegation` | `bristlenose_branch locale-system-delegation/` | local only |
 | `sandbox-staticfiles-fix` | `bristlenose_branch sandbox-staticfiles-fix/` | local only |
-| `sandbox-ps-libproc-swap` | `bristlenose_branch sandbox-ps-libproc-swap/` | local only |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
@@ -140,25 +138,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
-### `sandbox-ps-libproc-swap`
-
-**Kind:** feature — code lands on main; sandbox-blocker fix unblocking desktop alpha
-**Status:** Just started
-**Started:** 5 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch sandbox-ps-libproc-swap/`
-**Remote:** local only (push when ready)
-
-**What it does:** Unblock desktop alpha — replace `/bin/ps` subprocess in `bristlenose/run_lifecycle.py` with libproc `proc_pidinfo` (2nd of 2 sandbox blockers). See `.claude/plans/sandbox-ps-libproc-swap.md` (handoff) for the diagnostic and intended fix.
-
-**Files this branch will touch:**
-- `bristlenose/run_lifecycle.py`
-- `tests/test_run_lifecycle.py`
-
-**Potential conflicts with other branches:**
-- No active branch currently touches `bristlenose/run_lifecycle.py` or `tests/test_run_lifecycle.py`. Low conflict risk. Sibling to `sandbox-staticfiles-fix` (different file scope).
-
----
 
 ### `sandbox-staticfiles-fix`
 
@@ -348,6 +327,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `sandbox-ps-libproc-swap` — merged 5 May 2026
+
+Unblock desktop alpha — replaced `/bin/ps` subprocess in `bristlenose/run_lifecycle.py` with libproc `proc_pidinfo` (2nd of 2 sandbox blockers).
 
 ### `bundle-trim-s1-s2` — merged 4 May 2026
 

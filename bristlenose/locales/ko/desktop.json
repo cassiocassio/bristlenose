@@ -51,8 +51,8 @@
       "noFolder": "폴더 없음",
       "reAnalyse": "재분석…",
       "archive": "보관…",
-      "delete": "\uc0ad\uc81c\u2026",
-      "chooseIcon": "\uc544\uc774\ucf58 \uc120\ud0dd\u2026"
+      "delete": "삭제…",
+      "chooseIcon": "아이콘 선택…"
     },
     "folder": {
       "rename": "폴더 이름 변경",
@@ -108,7 +108,7 @@
       "keyboardShortcuts": "키보드 단축키",
       "releaseNotes": "릴리스 노트",
       "sendFeedback": "피드백 보내기…",
-      "blog": "Substack\uc758 Bristlenose",
+      "blog": "Substack의 Bristlenose",
       "acknowledgements": "감사의 글"
     }
   },
@@ -122,50 +122,51 @@
     "projects": "프로젝트",
     "reportContent": "보고서 내용",
     "newFolder": "새 폴더",
+    "newProject": "새 프로젝트",
     "dragInterviews": "여기에 인터뷰를 드래그하세요",
     "dragInterviewsDescription": "인터뷰 녹음 또는 대본을 추가하여 시작하세요.",
     "projectUnavailable": "프로젝트를 사용할 수 없음",
     "projectUnavailableHint": "이 프로젝트에 접근하려면 드라이브를 연결하세요.",
     "projectMoved": "프로젝트가 이동 또는 삭제됨",
     "projectMovedDescription": "프로젝트 폴더를 찾을 수 없습니다. 이동되었거나 삭제되었을 수 있습니다.",
-    "locate": "찾기\u2026",
-    "locateMessage": "\u201c%@\u201d의 새 위치 찾기",
-    "onThisMac": "\uc774 Mac\uc5d0\uc11c",
-    "projectIcon": "\ud504\ub85c\uc81d\ud2b8 \uc544\uc774\ucf58",
-    "duplicateProject": "\ud504\ub85c\uc81d\ud2b8\uac00 \uc774\ubbf8 \uc874\uc7ac\ud569\ub2c8\ub2e4",
-    "duplicateProjectMessage": "\uc774 \ud3f4\ub354\uc5d0 \ub300\ud55c \ud504\ub85c\uc81d\ud2b8\uac00 \uc774\ubbf8 \uc874\uc7ac\ud569\ub2c8\ub2e4: \u201c%@\u201d. \uae30\uc874 \ud504\ub85c\uc81d\ud2b8\ub97c \uc5f4\uac70\ub098 \uc0c8\ub85c \ub9cc\ub4e4 \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
-    "openExisting": "\uae30\uc874 \ud504\ub85c\uc81d\ud2b8 \uc5f4\uae30",
-    "createAnyway": "\uadf8\ub798\ub3c4 \ub9cc\ub4e4\uae30",
-    "emptyStateHint": "\ud3f4\ub354\ub97c \uc5ec\uae30\ub85c \ub4dc\ub798\uadf8\ud558\uac70\ub098 \u2318N\uc744 \ub204\ub974\uc138\uc694",
-    "addedInterviews": "%@\uc5d0 %d\uac1c \uc778\ud130\ubdf0 \ucd94\uac00\ub428",
-    "multipleSelected": "%d\uac1c \ud56d\ubaa9 \uc120\ud0dd\ub428",
-    "multipleSelectedHint": "\ubcf4\uace0\uc11c\ub97c \ubcf4\ub824\uba74 \ud504\ub85c\uc81d\ud2b8\ub97c \ud558\ub098\ub9cc \uc120\ud0dd\ud558\uc138\uc694.",
-    "welcomeTitle": "Bristlenose\uc5d0 \uc624\uc2e0 \uac83\uc744 \ud658\uc601\ud569\ub2c8\ub2e4",
-    "welcomeBody": "\uc778\ud130\ubdf0 \ub179\uc74c \ud3f4\ub354\ub97c \uc0ac\uc774\ub4dc\ubc14\ub85c \ub4dc\ub798\uadf8\ud558\uac70\ub098, + \uc0c8 \ud504\ub85c\uc81d\ud2b8\ub97c \ud074\ub9ad\ud558\uc5ec \uc2dc\uc791\ud558\uc138\uc694."
+    "locate": "찾기…",
+    "locateMessage": "“%@”의 새 위치 찾기",
+    "onThisMac": "이 Mac에서",
+    "projectIcon": "프로젝트 아이콘",
+    "duplicateProject": "프로젝트가 이미 존재합니다",
+    "duplicateProjectMessage": "이 폴더에 대한 프로젝트가 이미 존재합니다: “%@”. 기존 프로젝트를 열거나 새로 만들 수 있습니다.",
+    "openExisting": "기존 프로젝트 열기",
+    "createAnyway": "그래도 만들기",
+    "emptyStateHint": "폴더를 여기로 드래그하거나 ⌘N을 누르세요",
+    "addedInterviews": "%@에 %d개 인터뷰 추가됨",
+    "multipleSelected": "%d개 항목 선택됨",
+    "multipleSelectedHint": "보고서를 보려면 프로젝트를 하나만 선택하세요.",
+    "welcomeTitle": "Bristlenose에 오신 것을 환영합니다",
+    "welcomeBody": "인터뷰 녹음 폴더를 사이드바로 드래그하거나, + 새 프로젝트를 클릭하여 시작하세요."
   },
   "boot": {
-    "tagline": "\uc0ac\uc6a9\uc790 \uc870\uc0ac \ubd84\uc11d",
-    "startingSidecar": "Bristlenose \uc2dc\uc791 \uc911\u2026",
-    "loadingReport": "\ubcf4\uace0\uc11c \ubd88\ub7ec\uc624\ub294 \uc911\u2026",
-    "failedTitle": "Bristlenose\ub97c \uc2dc\uc791\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4",
-    "retry": "\ub2e4\uc2dc \uc2dc\ub3c4",
-    "showDetails": "\uc138\ubd80 \uc815\ubcf4 \ubcf4\uae30",
-    "hideDetails": "\uc138\ubd80 \uc815\ubcf4 \uc228\uae30\uae30"
+    "tagline": "사용자 조사 분석",
+    "startingSidecar": "Bristlenose 시작 중…",
+    "loadingReport": "보고서 불러오는 중…",
+    "failedTitle": "Bristlenose를 시작할 수 없습니다",
+    "retry": "다시 시도",
+    "showDetails": "세부 정보 보기",
+    "hideDetails": "세부 정보 숨기기"
   },
   "welcome": {
-    "subtitle": "\uc778\ud130\ubdf0 \ud3f4\ub354\ub97c \uacf5\uc720 \uac00\ub2a5\ud55c \ubcf4\uace0\uc11c\ub85c \u2014 \ub178\ud2b8\ubd81\uc5d0\uc11c, \uc544\ubb34\uac83\ub3c4 \uc5c5\ub85c\ub4dc\ud558\uc9c0 \uc54a\uace0.",
-    "newProject": "\uc0c8 \ud504\ub85c\uc81d\ud2b8",
-    "newProjectHint": "\ub179\uc74c \ub610\ub294 \uc804\uc0ac\ubcf8 \ud3f4\ub354\ub97c \uace8\ub77c \uc0c8\ub85c \uc2dc\uc791\ud558\uc138\uc694.",
-    "dropFolderTitle": "\ud3f4\ub354 \ub193\uae30",
-    "dropFolderHint": "\ub179\uc74c \ub610\ub294 \uc804\uc0ac\ubcf8 \ud3f4\ub354\ub97c \uc5ec\uae30\uc5d0 \ub04c\uc5b4\ub2e4 \ub193\uc544 \ud504\ub85c\uc81d\ud2b8\ub85c \ucd94\uac00\ud558\uc138\uc694.",
-    "aiPrivacyLink": "AI \ubc0f \uac1c\uc778\uc815\ubcf4 \uc124\uc815 \ud655\uc778\u2026",
+    "subtitle": "인터뷰 폴더를 공유 가능한 보고서로 — 노트북에서, 아무것도 업로드하지 않고.",
+    "newProject": "새 프로젝트",
+    "newProjectHint": "녹음 또는 전사본 폴더를 골라 새로 시작하세요.",
+    "dropFolderTitle": "폴더 놓기",
+    "dropFolderHint": "녹음 또는 전사본 폴더를 여기에 끌어다 놓아 프로젝트로 추가하세요.",
+    "aiPrivacyLink": "AI 및 개인정보 설정 확인…",
     "steps": {
-      "ingestTitle": "\uc778\ud130\ubdf0 \ucd94\uac00",
-      "ingestDetail": "\uc624\ub514\uc624, \ube44\ub514\uc624 \ub610\ub294 \uae30\uc874 \uc804\uc0ac\ubcf8.",
-      "processTitle": "Bristlenose \ubd84\uc11d",
-      "processDetail": "\uc804\uc0ac\ud558\uace0, \uc778\uc6a9\uc744 \ucc3e\uace0, \uc8fc\uc81c\ub97c \ubb36\uc2b5\ub2c8\ub2e4.",
-      "exportTitle": "\ub458\ub7ec\ubcf4\uace0 \ub0b4\ubcf4\ub0b4\uae30",
-      "exportDetail": "\uacb0\uacfc\ub97c \uc77d\uace0 HTML \ub610\ub294 CSV\ub85c \ub0b4\ubcf4\ub0b4\uc138\uc694."
+      "ingestTitle": "인터뷰 추가",
+      "ingestDetail": "오디오, 비디오 또는 기존 전사본.",
+      "processTitle": "Bristlenose 분석",
+      "processDetail": "전사하고, 인용을 찾고, 주제를 묶습니다.",
+      "exportTitle": "둘러보고 내보내기",
+      "exportDetail": "결과를 읽고 HTML 또는 CSV로 내보내세요."
     }
   },
   "toolbar": {
@@ -203,7 +204,7 @@
     }
   },
   "configReference": {
-    "intro": "대부분의 설정은 설정 창(\u2318,)에 있습니다. 고급 구성을 위해 환경 변수 이름이 아래에 표시됩니다."
+    "intro": "대부분의 설정은 설정 창(⌘,)에 있습니다. 고급 구성을 위해 환경 변수 이름이 아래에 표시됩니다."
   },
   "aiConsent": {
     "title": "AI 기반 분석",
@@ -227,50 +228,79 @@
     "done": "완료"
   },
   "llmSettings": {
-    "statusSection": "\uc0c1\ud0dc",
-    "apiKeySection": "API \ud0a4",
-    "apiKeyPlaceholder": "API \ud0a4",
-    "showApiKey": "API \ud0a4 \ud45c\uc2dc",
-    "hideApiKey": "API \ud0a4 \uc228\uae30\uae30",
-    "clearApiKey": "API \ud0a4 \uc9c0\uc6b0\uae30",
-    "serverSection": "\uc11c\ubc84",
+    "statusSection": "상태",
+    "apiKeySection": "API 키",
+    "apiKeyPlaceholder": "API 키",
+    "showApiKey": "API 키 표시",
+    "hideApiKey": "API 키 숨기기",
+    "clearApiKey": "API 키 지우기",
+    "serverSection": "서버",
     "serverURL": "URL",
-    "modelSection": "\ubaa8\ub378",
-    "customModelOption": "\uc0ac\uc6a9\uc790 \uc815\uc758\u2026",
-    "customModelPlaceholder": "\uc0ac\uc6a9\uc790 \uc815\uc758 \ubaa8\ub378 \uc774\ub984",
+    "modelSection": "모델",
+    "customModelOption": "사용자 정의…",
+    "customModelPlaceholder": "사용자 정의 모델 이름",
     "temperatureLabel": "Temperature",
-    "temperatureHint": "\ub0ae\uc74c = \uc815\ud655\ud568, \ub192\uc74c = \ucc3d\uc758\uc801",
-    "concurrencyLabel": "\ub3d9\uc2dc\uc131",
-    "concurrencyHint": "\ubcd1\ub82c LLM \ud638\ucd9c \uc218",
-    "azureSection": "Azure \uc124\uc815",
-    "azureEndpoint": "\uc5d4\ub4dc\ud3ec\uc778\ud2b8 URL",
-    "azureDeployment": "\ubc30\ud3ec \uc774\ub984",
-    "azureAPIVersion": "API \ubc84\uc804",
-    "pricingLink": "\uc694\uae08\uc81c",
-    "lastVerified": "\ub9c8\uc9c0\ub9c9 \ud655\uc778 %@",
-    "revalidating": "\ub9c8\uc9c0\ub9c9 \uac80\uc99d\uc774 \uac70\ubd80\ub428 \u2014 \ub2e4\uc2dc \ud655\uc778 \uc911\u2026"
+    "temperatureHint": "낮음 = 정확함, 높음 = 창의적",
+    "concurrencyLabel": "동시성",
+    "concurrencyHint": "병렬 LLM 호출 수",
+    "azureSection": "Azure 설정",
+    "azureEndpoint": "엔드포인트 URL",
+    "azureDeployment": "배포 이름",
+    "azureAPIVersion": "API 버전",
+    "pricingLink": "요금제",
+    "lastVerified": "마지막 확인 %@",
+    "revalidating": "마지막 검증이 거부됨 — 다시 확인 중…",
+    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
+    "activate": {
+      "generic": "이 제공자 사용",
+      "ollama": "로컬 Ollama 모델 사용"
+    },
+    "status": {
+      "online": "온라인",
+      "notSetUp": "설정되지 않음",
+      "invalid": "유효하지 않은 키",
+      "unavailable": "사용 불가",
+      "checking": "확인 중…",
+      "local": "로컬"
+    },
+    "console": {
+      "keys": "키",
+      "portal": "포털"
+    },
+    "providers": {
+      "ollama": {
+        "description": "무료로 로컬에서 실행됩니다. API 키가 필요하지 않습니다."
+      }
+    }
+  },
+  "transcriptionSettings": {
+    "backendLabel": "백엔드",
+    "modelLabel": "모델",
+    "backendAuto": "자동",
+    "backendHint": "Mac에 가장 적합한 엔진을 자동으로 감지합니다.",
+    "modelRecommended": "{{model}} (권장)"
   },
   "ollamaSetup": {
-    "title": "\ub85c\uceec AI \uc0ac\uc6a9",
-    "subtitle": "Mac\uc5d0\uc11c \ubd84\uc11d\uc744 \uc2e4\ud589\ud569\ub2c8\ub2e4. \ud2b8\ub79c\uc2a4\ud06c\ub9bd\ud2b8\ub294 Mac\uc5d0\uc11c \ubc97\uc5b4\ub098\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
-    "modelLabel": "\ubaa8\ub378",
-    "recommendedSuffix": " \u00b7 \uc774 Mac\uc5d0 \uac00\uc7a5 \uc801\ud569",
+    "title": "로컬 AI 사용",
+    "subtitle": "Mac에서 분석을 실행합니다. 트랜스크립트는 Mac에서 벗어나지 않습니다.",
+    "modelLabel": "모델",
+    "recommendedSuffix": " · 이 Mac에 가장 적합",
     "sizeFormat": "~%@ GB",
-    "recommendedTag": "(\uad8c\uc7a5)",
-    "needsRAMTag": "(RAM %d GB \ud544\uc694)",
-    "cancel": "\ucde8\uc18c",
-    "setUp": "\uc124\uc815",
-    "usesPrefix": "\uc0ac\uc6a9",
-    "openSourceSuffix": "(\uc624\ud508 \uc18c\uc2a4)",
-    "runningTitle": "\ub85c\uceec AI \uc124\uc815 \uc911\u2026",
+    "recommendedTag": "(권장)",
+    "needsRAMTag": "(RAM %d GB 필요)",
+    "cancel": "취소",
+    "setUp": "설정",
+    "usesPrefix": "사용",
+    "openSourceSuffix": "(오픈 소스)",
+    "runningTitle": "로컬 AI 설정 중…",
     "bytesProgress": "%@ / %@",
-    "installingRuntime": "\ub85c\uceec \ub7f0\ud0c0\uc784 \uc124\uce58 \uc911\u2026",
-    "startingRuntime": "\ub85c\uceec \ub7f0\ud0c0\uc784 \uc2dc\uc791 \uc911\u2026",
-    "downloadingModel": "%@ \ub2e4\uc6b4\ub85c\ub4dc \uc911\u2026",
-    "runtimeDidNotStart": "\ub85c\uceec \ub7f0\ud0c0\uc784\uc774 \uc2dc\uc791\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4. Ollama\ub97c \uc124\uce58\ud55c \ud6c4 \uc751\uc6a9 \ud504\ub85c\uadf8\ub7a8\uc5d0\uc11c \uc2e4\ud589\ud558\uace0 \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694.",
-    "errorNoInternet": "\uc778\ud130\ub137 \uc5f0\uacb0\uc774 \uc5c6\uc2b5\ub2c8\ub2e4. \uc5f0\uacb0\ud55c \ud6c4 \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694 \u2014 Ollama\uac00 \ubaa8\ub378\uc744 \ub2e4\uc6b4\ub85c\ub4dc\ud574\uc57c \ud569\ub2c8\ub2e4.",
-    "errorTimedOut": "\uc5f0\uacb0 \uc2dc\uac04\uc774 \ucd08\uacfc\ub418\uc5c8\uc2b5\ub2c8\ub2e4. Ollama \uc11c\ubc84\uac00 \ub290\ub9b4 \uc218 \uc788\uc73c\ub2c8 \uc7a0\uc2dc \ud6c4 \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694.",
-    "errorCantReach": "Ollama\uc5d0 \uc5f0\uacb0\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4. \uc124\uce58 \ud6c4 \uc751\uc6a9 \ud504\ub85c\uadf8\ub7a8\uc5d0\uc11c \uc2e4\ud589\ud558\uace0 \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694.",
-    "errorGeneric": "\uc124\uc815 \uc2e4\ud328: %@"
+    "installingRuntime": "로컬 런타임 설치 중…",
+    "startingRuntime": "로컬 런타임 시작 중…",
+    "downloadingModel": "%@ 다운로드 중…",
+    "runtimeDidNotStart": "로컬 런타임이 시작되지 않았습니다. Ollama를 설치한 후 응용 프로그램에서 실행하고 다시 시도하세요.",
+    "errorNoInternet": "인터넷 연결이 없습니다. 연결한 후 다시 시도하세요 — Ollama가 모델을 다운로드해야 합니다.",
+    "errorTimedOut": "연결 시간이 초과되었습니다. Ollama 서버가 느릴 수 있으니 잠시 후 다시 시도하세요.",
+    "errorCantReach": "Ollama에 연결할 수 없습니다. 설치 후 응용 프로그램에서 실행하고 다시 시도하세요.",
+    "errorGeneric": "설정 실패: %@"
   }
 }

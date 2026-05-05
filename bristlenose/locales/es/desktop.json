@@ -52,7 +52,7 @@
       "reAnalyse": "Reanalizar…",
       "archive": "Archivar…",
       "delete": "Eliminar…",
-      "chooseIcon": "Elegir icono\u2026"
+      "chooseIcon": "Elegir icono…"
     },
     "folder": {
       "rename": "Renombrar carpeta",
@@ -122,22 +122,23 @@
     "projects": "Proyectos",
     "reportContent": "Contenido del informe",
     "newFolder": "Nueva carpeta",
+    "newProject": "Nuevo proyecto",
     "dragInterviews": "Arrastra entrevistas aquí",
     "dragInterviewsDescription": "Añade grabaciones de entrevistas o transcripciones para comenzar.",
     "projectUnavailable": "Proyecto no disponible",
     "projectUnavailableHint": "Conecta la unidad para acceder a este proyecto.",
     "projectMoved": "Proyecto movido o eliminado",
     "projectMovedDescription": "No se pudo encontrar la carpeta del proyecto. Es posible que se haya movido o eliminado.",
-    "locate": "Localizar\u2026",
-    "locateMessage": "Busca la nueva ubicación de \u201c%@\u201d",
+    "locate": "Localizar…",
+    "locateMessage": "Busca la nueva ubicación de “%@”",
     "onThisMac": "En este Mac",
     "projectIcon": "Icono del proyecto",
     "duplicateProject": "El proyecto ya existe",
-    "duplicateProjectMessage": "Ya existe un proyecto para esta carpeta: \u201c%@\u201d. Puedes abrir el proyecto existente o crear uno nuevo.",
+    "duplicateProjectMessage": "Ya existe un proyecto para esta carpeta: “%@”. Puedes abrir el proyecto existente o crear uno nuevo.",
     "openExisting": "Abrir existente",
     "createAnyway": "Crear de todos modos",
-    "emptyStateHint": "Arrastra una carpeta aqu\u00ed o pulsa \u2318N",
-    "addedInterviews": "%d entrevistas a\u00f1adidas a %@",
+    "emptyStateHint": "Arrastra una carpeta aquí o pulsa ⌘N",
+    "addedInterviews": "%d entrevistas añadidas a %@",
     "multipleSelected": "%d elementos seleccionados",
     "multipleSelectedHint": "Selecciona un solo proyecto para ver su informe.",
     "welcomeTitle": "Te damos la bienvenida a Bristlenose",
@@ -203,7 +204,7 @@
     }
   },
   "configReference": {
-    "intro": "La mayoría de los ajustes están en la ventana de Configuración (\u2318,). Los nombres de variables de entorno se muestran abajo para configuración avanzada."
+    "intro": "La mayoría de los ajustes están en la ventana de Configuración (⌘,). Los nombres de variables de entorno se muestran abajo para configuración avanzada."
   },
   "aiConsent": {
     "title": "Análisis con IA",
@@ -236,41 +237,70 @@
     "serverSection": "Servidor",
     "serverURL": "URL",
     "modelSection": "Modelo",
-    "customModelOption": "Personalizado\u2026",
+    "customModelOption": "Personalizado…",
     "customModelPlaceholder": "Nombre de modelo personalizado",
     "temperatureLabel": "Temperatura",
     "temperatureHint": "Bajo = preciso, alto = creativo",
     "concurrencyLabel": "Concurrencia",
     "concurrencyHint": "Llamadas LLM en paralelo",
-    "azureSection": "Configuraci\u00f3n de Azure",
+    "azureSection": "Configuración de Azure",
     "azureEndpoint": "URL del endpoint",
     "azureDeployment": "Nombre del despliegue",
-    "azureAPIVersion": "Versi\u00f3n de API",
+    "azureAPIVersion": "Versión de API",
     "pricingLink": "Precios",
-    "lastVerified": "\u00daltima verificaci\u00f3n %@",
-    "revalidating": "La \u00faltima validaci\u00f3n fall\u00f3: volviendo a comprobar\u2026"
+    "lastVerified": "Última verificación %@",
+    "revalidating": "La última validación falló: volviendo a comprobar…",
+    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
+    "activate": {
+      "generic": "Usar este proveedor",
+      "ollama": "Usar el modelo local de Ollama"
+    },
+    "status": {
+      "online": "En línea",
+      "notSetUp": "Sin configurar",
+      "invalid": "Clave no válida",
+      "unavailable": "No disponible",
+      "checking": "Comprobando…",
+      "local": "Local"
+    },
+    "console": {
+      "keys": "Claves",
+      "portal": "Portal"
+    },
+    "providers": {
+      "ollama": {
+        "description": "Gratis, se ejecuta localmente. No necesita clave de API."
+      }
+    }
+  },
+  "transcriptionSettings": {
+    "backendLabel": "Motor",
+    "modelLabel": "Modelo",
+    "backendAuto": "Auto",
+    "backendHint": "Auto detecta el mejor motor para tu Mac.",
+    "modelRecommended": "{{model}} (recomendado)"
   },
   "ollamaSetup": {
     "title": "Usar IA local",
-    "subtitle": "Ejecuta el an\u00e1lisis en tu Mac. Tus transcripciones se quedan en tu Mac.",
+    "subtitle": "Ejecuta el análisis en tu Mac. Tus transcripciones se quedan en tu Mac.",
     "modelLabel": "Modelo",
-    "recommendedSuffix": " \u00b7 mejor para este Mac",
+    "recommendedSuffix": " · mejor para este Mac",
     "sizeFormat": "~%@ GB",
     "recommendedTag": "(recomendado)",
     "needsRAMTag": "(necesita %d GB de RAM)",
     "cancel": "Cancelar",
     "setUp": "Configurar",
     "usesPrefix": "Usa",
-    "openSourceSuffix": "(c\u00f3digo abierto)",
-    "runningTitle": "Configurando IA local\u2026",
+    "openSourceSuffix": "(código abierto)",
+    "runningTitle": "Configurando IA local…",
     "bytesProgress": "%@ de %@",
-    "installingRuntime": "Instalando entorno local\u2026",
-    "startingRuntime": "Iniciando entorno local\u2026",
-    "downloadingModel": "Descargando %@\u2026",
-    "runtimeDidNotStart": "El entorno local no se inici\u00f3. Despu\u00e9s de instalar Ollama, \u00e1brelo desde Aplicaciones e int\u00e9ntalo de nuevo.",
-    "errorNoInternet": "Sin conexi\u00f3n a Internet. Con\u00e9ctate e int\u00e9ntalo de nuevo: Ollama necesita descargar el modelo.",
-    "errorTimedOut": "La conexi\u00f3n ha caducado. Los servidores de Ollama pueden estar lentos; int\u00e9ntalo de nuevo en un momento.",
-    "errorCantReach": "No se puede conectar con Ollama. Despu\u00e9s de instalarlo, \u00e1brelo desde Aplicaciones e int\u00e9ntalo de nuevo.",
-    "errorGeneric": "Error de configuraci\u00f3n: %@"
+    "installingRuntime": "Instalando entorno local…",
+    "startingRuntime": "Iniciando entorno local…",
+    "downloadingModel": "Descargando %@…",
+    "runtimeDidNotStart": "El entorno local no se inició. Después de instalar Ollama, ábrelo desde Aplicaciones e inténtalo de nuevo.",
+    "errorNoInternet": "Sin conexión a Internet. Conéctate e inténtalo de nuevo: Ollama necesita descargar el modelo.",
+    "errorTimedOut": "La conexión ha caducado. Los servidores de Ollama pueden estar lentos; inténtalo de nuevo en un momento.",
+    "errorCantReach": "No se puede conectar con Ollama. Después de instalarlo, ábrelo desde Aplicaciones e inténtalo de nuevo.",
+    "errorGeneric": "Error de configuración: %@"
   }
 }

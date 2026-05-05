@@ -122,6 +122,7 @@
     "projects": "Projects",
     "reportContent": "Report content",
     "newFolder": "New Folder",
+    "newProject": "New Project",
     "dragInterviews": "Drag Interviews Here",
     "dragInterviewsDescription": "Add interview recordings or transcripts to get started.",
     "projectUnavailable": "Project Unavailable",
@@ -248,7 +249,36 @@
     "azureAPIVersion": "API version",
     "pricingLink": "Pricing",
     "lastVerified": "Last verified %@",
-    "revalidating": "Last validation was rejected — re-checking…"
+    "revalidating": "Last validation was rejected — re-checking…",
+    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
+    "activate": {
+      "generic": "Use this provider",
+      "ollama": "Use the local Ollama model"
+    },
+    "status": {
+      "online": "Online",
+      "notSetUp": "Not set up",
+      "invalid": "Invalid key",
+      "unavailable": "Unavailable",
+      "checking": "Checking…",
+      "local": "Local"
+    },
+    "console": {
+      "keys": "Keys",
+      "portal": "Portal"
+    },
+    "providers": {
+      "ollama": {
+        "description": "Free, runs locally. No API key needed."
+      }
+    }
+  },
+  "transcriptionSettings": {
+    "backendLabel": "Backend",
+    "modelLabel": "Model",
+    "backendAuto": "Auto",
+    "backendHint": "Auto detects the best engine for your Mac.",
+    "modelRecommended": "{{model}} (recommended)"
   },
   "ollamaSetup": {
     "title": "Use local AI",

@@ -52,7 +52,7 @@
       "reAnalyse": "Réanalyser…",
       "archive": "Archiver…",
       "delete": "Supprimer…",
-      "chooseIcon": "Choisir une ic\u00f4ne\u2026"
+      "chooseIcon": "Choisir une icône…"
     },
     "folder": {
       "rename": "Renommer le dossier",
@@ -122,46 +122,47 @@
     "projects": "Projets",
     "reportContent": "Contenu du rapport",
     "newFolder": "Nouveau dossier",
+    "newProject": "Nouveau projet",
     "dragInterviews": "Glissez les entretiens ici",
-    "dragInterviewsDescription": "Ajoutez des enregistrements ou des transcriptions d\u2019entretiens pour commencer.",
+    "dragInterviewsDescription": "Ajoutez des enregistrements ou des transcriptions d’entretiens pour commencer.",
     "projectUnavailable": "Projet non disponible",
     "projectUnavailableHint": "Connectez le disque pour accéder à ce projet.",
     "projectMoved": "Projet déplacé ou supprimé",
     "projectMovedDescription": "Le dossier du projet est introuvable. Il a peut-être été déplacé ou supprimé.",
-    "locate": "Localiser\u2026",
-    "locateMessage": "Recherchez le nouvel emplacement de \u00ab\u00a0%@\u00a0\u00bb",
+    "locate": "Localiser…",
+    "locateMessage": "Recherchez le nouvel emplacement de « %@ »",
     "onThisMac": "Sur ce Mac",
-    "projectIcon": "Ic\u00f4ne du projet",
-    "duplicateProject": "Le projet existe d\u00e9j\u00e0",
-    "duplicateProjectMessage": "Un projet pour ce dossier existe d\u00e9j\u00e0\u00a0: \u00ab\u00a0%@\u00a0\u00bb. Vous pouvez ouvrir le projet existant ou en cr\u00e9er un nouveau.",
-    "openExisting": "Ouvrir l\u2019existant",
-    "createAnyway": "Cr\u00e9er quand m\u00eame",
-    "emptyStateHint": "Glissez un dossier ici ou appuyez sur \u2318N",
-    "addedInterviews": "%d entretiens ajout\u00e9s \u00e0 %@",
-    "multipleSelected": "%d \u00e9l\u00e9ments s\u00e9lectionn\u00e9s",
-    "multipleSelectedHint": "S\u00e9lectionnez un seul projet pour afficher son rapport.",
+    "projectIcon": "Icône du projet",
+    "duplicateProject": "Le projet existe déjà",
+    "duplicateProjectMessage": "Un projet pour ce dossier existe déjà : « %@ ». Vous pouvez ouvrir le projet existant ou en créer un nouveau.",
+    "openExisting": "Ouvrir l’existant",
+    "createAnyway": "Créer quand même",
+    "emptyStateHint": "Glissez un dossier ici ou appuyez sur ⌘N",
+    "addedInterviews": "%d entretiens ajoutés à %@",
+    "multipleSelected": "%d éléments sélectionnés",
+    "multipleSelectedHint": "Sélectionnez un seul projet pour afficher son rapport.",
     "welcomeTitle": "Bienvenue dans Bristlenose",
-    "welcomeBody": "Glissez un dossier d\u2019enregistrements d\u2019entretiens dans la barre lat\u00e9rale, ou cliquez sur + Nouveau projet pour commencer."
+    "welcomeBody": "Glissez un dossier d’enregistrements d’entretiens dans la barre latérale, ou cliquez sur + Nouveau projet pour commencer."
   },
   "boot": {
     "tagline": "Analyse pour la recherche utilisateur",
-    "startingSidecar": "D\u00e9marrage de Bristlenose\u2026",
-    "loadingReport": "Chargement du rapport\u2026",
-    "failedTitle": "Impossible de d\u00e9marrer Bristlenose",
-    "retry": "R\u00e9essayer",
-    "showDetails": "Afficher les d\u00e9tails",
-    "hideDetails": "Masquer les d\u00e9tails"
+    "startingSidecar": "Démarrage de Bristlenose…",
+    "loadingReport": "Chargement du rapport…",
+    "failedTitle": "Impossible de démarrer Bristlenose",
+    "retry": "Réessayer",
+    "showDetails": "Afficher les détails",
+    "hideDetails": "Masquer les détails"
   },
   "welcome": {
-    "subtitle": "Transformez un dossier d\u2019entretiens en un rapport partageable \u2014 sur votre Mac, sans rien envoyer.",
+    "subtitle": "Transformez un dossier d’entretiens en un rapport partageable — sur votre Mac, sans rien envoyer.",
     "newProject": "Nouveau projet",
-    "newProjectHint": "Choisissez un dossier d\u2019enregistrements ou de transcriptions pour d\u00e9marrer.",
-    "dropFolderTitle": "D\u00e9posez un dossier",
-    "dropFolderHint": "Glissez ici un dossier d\u2019enregistrements ou de transcriptions pour l\u2019ajouter comme projet.",
-    "aiPrivacyLink": "V\u00e9rifier les r\u00e9glages IA et confidentialit\u00e9\u2026",
+    "newProjectHint": "Choisissez un dossier d’enregistrements ou de transcriptions pour démarrer.",
+    "dropFolderTitle": "Déposez un dossier",
+    "dropFolderHint": "Glissez ici un dossier d’enregistrements ou de transcriptions pour l’ajouter comme projet.",
+    "aiPrivacyLink": "Vérifier les réglages IA et confidentialité…",
     "steps": {
       "ingestTitle": "Ajoutez les entretiens",
-      "ingestDetail": "Audio, vid\u00e9o ou transcriptions existantes.",
+      "ingestDetail": "Audio, vidéo ou transcriptions existantes.",
       "processTitle": "Bristlenose analyse",
       "processDetail": "Transcription, extraction de citations, regroupement.",
       "exportTitle": "Parcourez et exportez",
@@ -203,7 +204,7 @@
     }
   },
   "configReference": {
-    "intro": "La plupart des paramètres sont dans la fenêtre Réglages (\u2318,). Les noms de variables d\u2019environnement sont affichés ci-dessous pour la configuration avancée."
+    "intro": "La plupart des paramètres sont dans la fenêtre Réglages (⌘,). Les noms de variables d’environnement sont affichés ci-dessous pour la configuration avancée."
   },
   "aiConsent": {
     "title": "Analyse par IA",
@@ -227,50 +228,79 @@
     "done": "Terminé"
   },
   "llmSettings": {
-    "statusSection": "\u00c9tat",
-    "apiKeySection": "Cl\u00e9 API",
-    "apiKeyPlaceholder": "Cl\u00e9 API",
-    "showApiKey": "Afficher la cl\u00e9 API",
-    "hideApiKey": "Masquer la cl\u00e9 API",
-    "clearApiKey": "Effacer la cl\u00e9 API",
+    "statusSection": "État",
+    "apiKeySection": "Clé API",
+    "apiKeyPlaceholder": "Clé API",
+    "showApiKey": "Afficher la clé API",
+    "hideApiKey": "Masquer la clé API",
+    "clearApiKey": "Effacer la clé API",
     "serverSection": "Serveur",
     "serverURL": "URL",
-    "modelSection": "Mod\u00e8le",
-    "customModelOption": "Personnalis\u00e9\u2026",
-    "customModelPlaceholder": "Nom de mod\u00e8le personnalis\u00e9",
-    "temperatureLabel": "Temp\u00e9rature",
-    "temperatureHint": "Bas = pr\u00e9cis, haut = cr\u00e9atif",
+    "modelSection": "Modèle",
+    "customModelOption": "Personnalisé…",
+    "customModelPlaceholder": "Nom de modèle personnalisé",
+    "temperatureLabel": "Température",
+    "temperatureHint": "Bas = précis, haut = créatif",
     "concurrencyLabel": "Concurrence",
-    "concurrencyHint": "Appels LLM en parall\u00e8le",
-    "azureSection": "Param\u00e8tres Azure",
+    "concurrencyHint": "Appels LLM en parallèle",
+    "azureSection": "Paramètres Azure",
     "azureEndpoint": "URL du point de terminaison",
-    "azureDeployment": "Nom du d\u00e9ploiement",
-    "azureAPIVersion": "Version d\u2019API",
+    "azureDeployment": "Nom du déploiement",
+    "azureAPIVersion": "Version d’API",
     "pricingLink": "Tarifs",
-    "lastVerified": "Derni\u00e8re v\u00e9rification %@",
-    "revalidating": "La derni\u00e8re validation a \u00e9t\u00e9 rejet\u00e9e \u2014 nouvelle v\u00e9rification\u2026"
+    "lastVerified": "Dernière vérification %@",
+    "revalidating": "La dernière validation a été rejetée — nouvelle vérification…",
+    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
+    "activate": {
+      "generic": "Utiliser ce fournisseur",
+      "ollama": "Utiliser le modèle Ollama local"
+    },
+    "status": {
+      "online": "En ligne",
+      "notSetUp": "Non configuré",
+      "invalid": "Clé non valide",
+      "unavailable": "Indisponible",
+      "checking": "Vérification…",
+      "local": "Local"
+    },
+    "console": {
+      "keys": "Clés",
+      "portal": "Portail"
+    },
+    "providers": {
+      "ollama": {
+        "description": "Gratuit, fonctionne localement. Aucune clé API requise."
+      }
+    }
+  },
+  "transcriptionSettings": {
+    "backendLabel": "Moteur",
+    "modelLabel": "Modèle",
+    "backendAuto": "Auto",
+    "backendHint": "Auto détecte le meilleur moteur pour votre Mac.",
+    "modelRecommended": "{{model}} (recommandé)"
   },
   "ollamaSetup": {
-    "title": "Utiliser l\u2019IA locale",
-    "subtitle": "Ex\u00e9cutez l\u2019analyse sur votre Mac. Vos transcriptions restent sur votre Mac.",
-    "modelLabel": "Mod\u00e8le",
-    "recommendedSuffix": " \u00b7 meilleur pour ce Mac",
+    "title": "Utiliser l’IA locale",
+    "subtitle": "Exécutez l’analyse sur votre Mac. Vos transcriptions restent sur votre Mac.",
+    "modelLabel": "Modèle",
+    "recommendedSuffix": " · meilleur pour ce Mac",
     "sizeFormat": "~%@ Go",
-    "recommendedTag": "(recommand\u00e9)",
-    "needsRAMTag": "(n\u00e9cessite %d Go de RAM)",
+    "recommendedTag": "(recommandé)",
+    "needsRAMTag": "(nécessite %d Go de RAM)",
     "cancel": "Annuler",
     "setUp": "Configurer",
     "usesPrefix": "Utilise",
     "openSourceSuffix": "(open source)",
-    "runningTitle": "Configuration de l\u2019IA locale\u2026",
+    "runningTitle": "Configuration de l’IA locale…",
     "bytesProgress": "%@ sur %@",
-    "installingRuntime": "Installation de l\u2019environnement local\u2026",
-    "startingRuntime": "D\u00e9marrage de l\u2019environnement local\u2026",
-    "downloadingModel": "T\u00e9l\u00e9chargement de %@\u2026",
-    "runtimeDidNotStart": "L\u2019environnement local n\u2019a pas d\u00e9marr\u00e9. Apr\u00e8s avoir install\u00e9 Ollama, lancez-le depuis Applications et r\u00e9essayez.",
-    "errorNoInternet": "Aucune connexion Internet. Connectez-vous et r\u00e9essayez \u2014 Ollama doit t\u00e9l\u00e9charger le mod\u00e8le.",
-    "errorTimedOut": "La connexion a expir\u00e9. Les serveurs d\u2019Ollama sont peut-\u00eatre lents en ce moment\u00a0; r\u00e9essayez dans un instant.",
-    "errorCantReach": "Impossible de joindre Ollama. Apr\u00e8s l\u2019installation, lancez-le depuis Applications et r\u00e9essayez.",
-    "errorGeneric": "\u00c9chec de la configuration\u00a0: %@"
+    "installingRuntime": "Installation de l’environnement local…",
+    "startingRuntime": "Démarrage de l’environnement local…",
+    "downloadingModel": "Téléchargement de %@…",
+    "runtimeDidNotStart": "L’environnement local n’a pas démarré. Après avoir installé Ollama, lancez-le depuis Applications et réessayez.",
+    "errorNoInternet": "Aucune connexion Internet. Connectez-vous et réessayez — Ollama doit télécharger le modèle.",
+    "errorTimedOut": "La connexion a expiré. Les serveurs d’Ollama sont peut-être lents en ce moment ; réessayez dans un instant.",
+    "errorCantReach": "Impossible de joindre Ollama. Après l’installation, lancez-le depuis Applications et réessayez.",
+    "errorGeneric": "Échec de la configuration : %@"
   }
 }

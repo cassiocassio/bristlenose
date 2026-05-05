@@ -37,20 +37,6 @@ from bristlenose.server.routes.transcript import router as transcript_router
 
 logger = logging.getLogger(__name__)
 
-# Pre-init mimetypes with no system files. Python's mimetypes module lazy-reads
-# /etc/mime.types and friends on first guess_type() call; under macOS App Sandbox
-# those reads raise PermissionError, which CPython's init() doesn't catch, leaving
-# mimetypes._db permanently poisoned and every /static/*.js response a 500.
-# init([]) skips the system walk entirely; we then register the extensions the
-# Vite bundle actually serves so we never depend on platform defaults.
-mimetypes.init([])
-mimetypes.add_type("application/javascript", ".js")
-mimetypes.add_type("text/css", ".css")
-mimetypes.add_type("text/html", ".html")
-mimetypes.add_type("application/json", ".json")
-mimetypes.add_type("image/svg+xml", ".svg")
-mimetypes.add_type("font/woff2", ".woff2")
-
 _STATIC_DIR = Path(__file__).parent / "static"
 # Repo root — two levels up from bristlenose/server/app.py
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent

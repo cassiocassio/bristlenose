@@ -182,17 +182,21 @@ class TestDebug500Envelope:
         assert "Internal Server Error" in resp.text
 
 
-class TestMimetypesPreInit:
-    """Importing app.py must call mimetypes.init([]) so guess_type never reads
-    /etc/mime.types — those reads raise PermissionError under macOS App Sandbox
-    and poison mimetypes._db for every subsequent caller."""
+class TestMimetypesKnownfilesEmptied:
+    """Importing the `bristlenose` package must drop ``mimetypes.knownfiles``
+    so any lazy ``mimetypes.init()`` walks an empty list. Reads of
+    ``/etc/mime.types`` and friends raise PermissionError under macOS App
+    Sandbox and poison ``mimetypes._db`` for every subsequent caller.
 
-    def test_mimetypes_inited_with_empty_knownfiles(self) -> None:
+    Note: ``mimetypes.init([])`` does NOT do this — Python 3.12+ does
+    ``files = knownfiles + list(files)``, so passing an empty list still
+    walks knownfiles. Emptying knownfiles itself is the only reliable fix.
+    """
+
+    def test_knownfiles_is_empty(self) -> None:
         import mimetypes
 
-        # Importing bristlenose.server.app (already done at module scope)
-        # must have triggered mimetypes.init([]).
-        assert mimetypes.inited is True
+        assert mimetypes.knownfiles == []
 
     def test_explicit_registrations_present(self) -> None:
         import mimetypes

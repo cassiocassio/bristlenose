@@ -14,6 +14,8 @@ import SwiftUI
 /// without making it feel like a separate decision.
 struct OllamaSetupSheet: View {
 
+    @EnvironmentObject var i18n: I18n
+
     /// Called on success (model downloaded + ready). Caller writes
     /// `activeProvider`, records consent, and dismisses both the sheet
     /// and AIConsent.
@@ -51,10 +53,10 @@ struct OllamaSetupSheet: View {
 
     private var idleView: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Use local AI")
+            Text(i18n.t("desktop.ollamaSetup.title"))
                 .font(.headline)
 
-            Text("Run analysis on your Mac. Your transcripts stay on your Mac.")
+            Text(i18n.t("desktop.ollamaSetup.subtitle"))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -69,9 +71,9 @@ struct OllamaSetupSheet: View {
 
             HStack {
                 Spacer()
-                Button("Cancel") { onCancel() }
+                Button(i18n.t("desktop.ollamaSetup.cancel")) { onCancel() }
                     .keyboardShortcut(.cancelAction)
-                Button("Set up") { startSetup() }
+                Button(i18n.t("desktop.ollamaSetup.setUp")) { startSetup() }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
             }
@@ -83,7 +85,7 @@ struct OllamaSetupSheet: View {
     private var modelPicker: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("Model")
+                Text(i18n.t("desktop.ollamaSetup.modelLabel"))
                 Spacer()
                 Picker("", selection: $selectedTag) {
                     ForEach(OllamaCatalog.curated) { m in
@@ -97,35 +99,38 @@ struct OllamaSetupSheet: View {
             }
             if let m = OllamaCatalog.model(for: selectedTag) {
                 let recommended = (m.tag == OllamaCatalog.recommendedTag())
-                let suffix = recommended ? " · best for this Mac" : ""
-                Text("~\(m.weightsGB, specifier: "%.0f") GB\(suffix)")
+                let gb = String(format: "%.0f", m.weightsGB)
+                let sizeLabel = String(format: i18n.t("desktop.ollamaSetup.sizeFormat"), gb)
+                let suffix = recommended ? i18n.t("desktop.ollamaSetup.recommendedSuffix") : ""
+                Text("\(sizeLabel)\(suffix)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
     }
 
-    /// Picker row label. Untranslated product names + dynamic suffixes.
+    /// Picker row label. Untranslated product names + translated suffixes.
     private func label(for m: OllamaModel) -> String {
         let recommendedTag = OllamaCatalog.recommendedTag()
         let fits = OllamaCatalog.fits(m)
         if !fits {
-            return "\(m.displayName) (needs \(Int(m.minRAMGB)) GB RAM)"
+            let suffix = String(format: i18n.t("desktop.ollamaSetup.needsRAMTag"), Int(m.minRAMGB))
+            return "\(m.displayName) \(suffix)"
         }
         if m.tag == recommendedTag {
-            return "\(m.displayName) (recommended)"
+            return "\(m.displayName) \(i18n.t("desktop.ollamaSetup.recommendedTag"))"
         }
         return m.displayName
     }
 
     private var ollamaCredit: some View {
         HStack(spacing: 4) {
-            Text("Uses")
+            Text(i18n.t("desktop.ollamaSetup.usesPrefix"))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
             Link("Ollama", destination: URL(string: "https://ollama.com")!)
                 .font(.caption)
-            Text("(open source)")
+            Text(i18n.t("desktop.ollamaSetup.openSourceSuffix"))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
@@ -135,7 +140,7 @@ struct OllamaSetupSheet: View {
 
     private var progressView: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Setting up local AI…")
+            Text(i18n.t("desktop.ollamaSetup.runningTitle"))
                 .font(.headline)
 
             // Single progress bar across both phases. Indeterminate while
@@ -162,7 +167,7 @@ struct OllamaSetupSheet: View {
 
             HStack {
                 Spacer()
-                Button("Cancel") { cancelSetup() }
+                Button(i18n.t("desktop.ollamaSetup.cancel")) { cancelSetup() }
                     .keyboardShortcut(.cancelAction)
             }
         }
@@ -173,13 +178,23 @@ struct OllamaSetupSheet: View {
         formatter.countStyle = .file
         let done = formatter.string(fromByteCount: model.completedBytes)
         let total = formatter.string(fromByteCount: model.totalBytes)
-        return "\(done) of \(total)"
+        return String(format: i18n.t("desktop.ollamaSetup.bytesProgress"), done, total)
     }
 
     // MARK: - Actions
 
     private func startSetup() {
-        Task { await model.run(tag: selectedTag) }
+        let strings = OllamaSetupStrings(
+            installingRuntime: i18n.t("desktop.ollamaSetup.installingRuntime"),
+            startingRuntime: i18n.t("desktop.ollamaSetup.startingRuntime"),
+            downloadingModelFormat: i18n.t("desktop.ollamaSetup.downloadingModel"),
+            runtimeDidNotStart: i18n.t("desktop.ollamaSetup.runtimeDidNotStart"),
+            errorNoInternet: i18n.t("desktop.ollamaSetup.errorNoInternet"),
+            errorTimedOut: i18n.t("desktop.ollamaSetup.errorTimedOut"),
+            errorCantReach: i18n.t("desktop.ollamaSetup.errorCantReach"),
+            errorGenericFormat: i18n.t("desktop.ollamaSetup.errorGeneric")
+        )
+        Task { await model.run(tag: selectedTag, strings: strings) }
     }
 
     private func cancelSetup() {
@@ -189,6 +204,32 @@ struct OllamaSetupSheet: View {
 }
 
 // MARK: - State machine
+
+/// Localized strings the setup model uses. View resolves these via i18n
+/// and hands them to `run(tag:strings:)` so the model stays View-agnostic.
+struct OllamaSetupStrings {
+    let installingRuntime: String
+    let startingRuntime: String
+    /// `String(format:)` template with one `%@` for the model display name.
+    let downloadingModelFormat: String
+    let runtimeDidNotStart: String
+    let errorNoInternet: String
+    let errorTimedOut: String
+    let errorCantReach: String
+    /// `String(format:)` template with one `%@` for the underlying error.
+    let errorGenericFormat: String
+
+    static let englishFallback = OllamaSetupStrings(
+        installingRuntime: "Installing local runtime…",
+        startingRuntime: "Starting local runtime…",
+        downloadingModelFormat: "Downloading %@…",
+        runtimeDidNotStart: "Local runtime didn’t start. After installing Ollama, launch it from Applications and try again.",
+        errorNoInternet: "No internet connection. Connect and try again — Ollama needs to download the model.",
+        errorTimedOut: "The connection timed out. Ollama’s servers may be slow right now; try again in a moment.",
+        errorCantReach: "Can’t reach Ollama. After installing, launch it from Applications and try again.",
+        errorGenericFormat: "Setup failed: %@"
+    )
+}
 
 @MainActor
 final class OllamaSetupModel: ObservableObject {
@@ -220,10 +261,12 @@ final class OllamaSetupModel: ObservableObject {
     private static let defaultBaseURL = URL(string: "http://127.0.0.1:11434")!
 
     private var task: Task<Void, Never>?
+    private var strings: OllamaSetupStrings = .englishFallback
 
-    func run(tag: String) async {
+    func run(tag: String, strings: OllamaSetupStrings = .englishFallback) async {
         task?.cancel()
         currentTag = tag
+        self.strings = strings
         let work = Task { @MainActor in
             do {
                 // Reachability first: if the daemon answers, we don't
@@ -232,7 +275,7 @@ final class OllamaSetupModel: ObservableObject {
                 let alreadyReachable = await isDaemonReachable()
                 if !alreadyReachable {
                     phase = .installingOllama
-                    statusLine = "Installing local runtime…"
+                    statusLine = strings.installingRuntime
                     Self.logger.info("Daemon unreachable; opening installer page")
                     NSWorkspace.shared.open(URL(string: "https://ollama.com/download")!)
                     // No /Applications/Ollama.app filesystem probe — sandbox-incompatible
@@ -240,12 +283,12 @@ final class OllamaSetupModel: ObservableObject {
                     // is the real contract; 120s gives time for the user to download +
                     // install + auto-launch, and surfaces a clear failure if not.
                     phase = .waitingForDaemon
-                    statusLine = "Starting local runtime…"
+                    statusLine = strings.startingRuntime
                     try await waitForDaemon(timeout: 120)
                 }
 
                 phase = .downloadingModel
-                statusLine = "Downloading \(displayName(for: tag))…"
+                statusLine = String(format: strings.downloadingModelFormat, displayName(for: tag))
                 try await LLMValidator.pullModel(
                     tag: tag, baseURL: Self.defaultBaseURL
                 ) { [weak self] progress in
@@ -287,8 +330,7 @@ final class OllamaSetupModel: ObservableObject {
             if Date() > deadline {
                 throw NSError(
                     domain: "OllamaSetup", code: 2,
-                    userInfo: [NSLocalizedDescriptionKey:
-                        "Local runtime didn't start. After installing Ollama, launch it from Applications and try again."])
+                    userInfo: [NSLocalizedDescriptionKey: strings.runtimeDidNotStart])
             }
             try await Task.sleep(for: .seconds(1))
         }
@@ -320,16 +362,16 @@ final class OllamaSetupModel: ObservableObject {
         if let urlErr = error as? URLError {
             switch urlErr.code {
             case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed:
-                return "No internet connection. Connect and try again — Ollama needs to download the model."
+                return strings.errorNoInternet
             case .timedOut:
-                return "The connection timed out. Ollama's servers may be slow right now; try again in a moment."
+                return strings.errorTimedOut
             case .cannotConnectToHost, .cannotFindHost:
-                return "Can't reach Ollama. After installing, launch it from Applications and try again."
+                return strings.errorCantReach
             default:
                 break
             }
         }
-        return "Setup failed: \(error.localizedDescription)"
+        return String(format: strings.errorGenericFormat, error.localizedDescription)
     }
 
     private func displayName(for tag: String) -> String {

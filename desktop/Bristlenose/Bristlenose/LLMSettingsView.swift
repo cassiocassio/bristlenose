@@ -14,6 +14,8 @@ import os
 /// which prompts the user to enter a key.
 struct LLMSettingsView: View {
 
+    @EnvironmentObject var i18n: I18n
+
     private static let logger = Logger(
         subsystem: "app.bristlenose", category: "llm-settings")
 
@@ -150,7 +152,7 @@ struct LLMSettingsView: View {
 
     private var providerDetail: some View {
         Form {
-            Section("Status") {
+            Section(i18n.t("desktop.llmSettings.statusSection")) {
                 Toggle(selectedProvider.activationToggleLabel, isOn: activeBinding)
                     .disabled(!statusFor(selectedProvider).isConfigured
                               && activeProvider != selectedProvider.rawValue)
@@ -234,7 +236,7 @@ struct LLMSettingsView: View {
     @FocusState private var apiKeyFocused: Bool
 
     private var apiKeySection: some View {
-        Section("API Key") {
+        Section(i18n.t("desktop.llmSettings.apiKeySection")) {
             HStack {
                 // `.labelsHidden()` stops SwiftUI's `.formStyle(.grouped)`
                 // from injecting an inline "API Key" label that reflows the
@@ -243,13 +245,13 @@ struct LLMSettingsView: View {
                 // source of the height jump on eye-toggle.
                 let revealed = apiKeyRevealed[selectedProvider, default: false]
                 if revealed {
-                    TextField("API Key", text: apiKeyBinding)
+                    TextField(i18n.t("desktop.llmSettings.apiKeyPlaceholder"), text: apiKeyBinding)
                         .textFieldStyle(.roundedBorder)
                         .focused($apiKeyFocused)
                         .labelsHidden()
                         .lineLimit(1)
                 } else {
-                    SecureField("API Key", text: apiKeyBinding)
+                    SecureField(i18n.t("desktop.llmSettings.apiKeyPlaceholder"), text: apiKeyBinding)
                         .textFieldStyle(.roundedBorder)
                         .focused($apiKeyFocused)
                         .labelsHidden()
@@ -263,7 +265,8 @@ struct LLMSettingsView: View {
                 }
                 .buttonStyle(.borderless)
                 .help(apiKeyRevealed[selectedProvider, default: false]
-                      ? "Hide API key" : "Show API key")
+                      ? i18n.t("desktop.llmSettings.hideApiKey")
+                      : i18n.t("desktop.llmSettings.showApiKey"))
 
                 if apiKeyInputs[selectedProvider]?.isEmpty == false {
                     // macOS inline-clear convention: xmark.circle.fill
@@ -276,7 +279,7 @@ struct LLMSettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.borderless)
-                    .help("Clear API key")
+                    .help(i18n.t("desktop.llmSettings.clearApiKey"))
                 }
             }
             .onAppear { loadAPIKey() }
@@ -344,14 +347,14 @@ struct LLMSettingsView: View {
     private var ollamaURL: String { Self.hardwiredOllamaURL }
 
     private var ollamaSection: some View {
-        Section("Server") {
+        Section(i18n.t("desktop.llmSettings.serverSection")) {
             if let helper = selectedProvider.helperText {
                 Text(helper)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             HStack {
-                Text("URL")
+                Text(i18n.t("desktop.llmSettings.serverURL"))
                 Spacer()
                 Text("localhost:11434")
                     .monospaced()
@@ -373,17 +376,17 @@ struct LLMSettingsView: View {
         let currentModel = modelForProvider(selectedProvider)
         let isKnown = models.contains(currentModel)
 
-        return Section("Model") {
-            Picker("Model", selection: modelBinding) {
+        return Section(i18n.t("desktop.llmSettings.modelSection")) {
+            Picker(i18n.t("desktop.llmSettings.modelSection"), selection: modelBinding) {
                 ForEach(models, id: \.self) { model in
                     Text(model).tag(model)
                 }
                 Divider()
-                Text("Custom…").tag("__custom__")
+                Text(i18n.t("desktop.llmSettings.customModelOption")).tag("__custom__")
             }
 
             if !isKnown || useCustomModel {
-                TextField("Custom model name", text: $customModelText)
+                TextField(i18n.t("desktop.llmSettings.customModelPlaceholder"), text: $customModelText)
                     .textFieldStyle(.roundedBorder)
                     .focused($customModelFocused)
                     .onSubmit {
@@ -457,14 +460,14 @@ struct LLMSettingsView: View {
     private var temperatureSlider: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("Temperature")
+                Text(i18n.t("desktop.llmSettings.temperatureLabel"))
                 Spacer()
                 Text(temperature.formatted(.number.precision(.fractionLength(1))))
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
             Slider(value: $temperature, in: 0...1, step: 0.1)
-            Text("Low = focused, high = creative")
+            Text(i18n.t("desktop.llmSettings.temperatureHint"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -476,14 +479,14 @@ struct LLMSettingsView: View {
     private var concurrencySlider: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("Concurrency")
+                Text(i18n.t("desktop.llmSettings.concurrencyLabel"))
                 Spacer()
                 Text("\(Int(concurrency))")
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
             Slider(value: $concurrency, in: 1...10, step: 1)
-            Text("Parallel LLM calls")
+            Text(i18n.t("desktop.llmSettings.concurrencyHint"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -501,14 +504,14 @@ struct LLMSettingsView: View {
     @FocusState private var azureAPIVersionFocused: Bool
 
     private var azureSection: some View {
-        Section("Azure Settings") {
-            TextField("Endpoint URL", text: $azureEndpoint)
+        Section(i18n.t("desktop.llmSettings.azureSection")) {
+            TextField(i18n.t("desktop.llmSettings.azureEndpoint"), text: $azureEndpoint)
                 .textFieldStyle(.roundedBorder)
                 .focused($azureEndpointFocused)
                 .onSubmit { revalidateAzure() }
-            TextField("Deployment name", text: $azureDeployment)
+            TextField(i18n.t("desktop.llmSettings.azureDeployment"), text: $azureDeployment)
                 .textFieldStyle(.roundedBorder)
-            TextField("API version", text: $azureAPIVersion)
+            TextField(i18n.t("desktop.llmSettings.azureAPIVersion"), text: $azureAPIVersion)
                 .textFieldStyle(.roundedBorder)
                 .focused($azureAPIVersionFocused)
                 .onSubmit { revalidateAzure() }
@@ -564,7 +567,7 @@ struct LLMSettingsView: View {
         HStack(spacing: 20) {
             Link(links.homepageLabel, destination: links.homepage)
             if let pricing = links.pricing {
-                Link("Pricing", destination: pricing)
+                Link(i18n.t("desktop.llmSettings.pricingLink"), destination: pricing)
             }
             if let console = links.console {
                 Link(links.consoleLabel, destination: console)
@@ -586,7 +589,7 @@ struct LLMSettingsView: View {
         else { return nil }
         let relative = Self.relativeFormatter.localizedString(
             for: entry.lastCheckedAt, relativeTo: Date())
-        return "Last verified \(relative)"
+        return String(format: i18n.t("desktop.llmSettings.lastVerified"), relative)
     }
 
     /// Status indicator that swaps a `ProgressView` in for the dot when
@@ -676,7 +679,7 @@ struct LLMSettingsView: View {
             statuses[provider] = cached.status
             statusErrors[provider] =
                 (cached == .invalid)
-                ? "Last validation was rejected — re-checking…"
+                ? i18n.t("desktop.llmSettings.revalidating")
                 : nil
         } else {
             // Key present but no cached verdict — let the existing status
@@ -767,7 +770,7 @@ struct LLMSettingsView: View {
                 statuses[provider] = cached.status
                 statusErrors[provider] =
                     (cached == .invalid)
-                    ? "Last validation was rejected — re-checking…"
+                    ? i18n.t("desktop.llmSettings.revalidating")
                     : error  // typically "No network connection" / "rate-limited"
                 Self.logger.info(
                     "validate \(provider.rawValue, privacy: .public) → \(cached.rawValue, privacy: .public) (cache fallback, network said unavailable)"

@@ -121,17 +121,35 @@ Once per quarter, batch the deferred majors into a coordinated release. This is 
 
 A tooling sprint is roughly 1–2 days for a maintainer with a tidy testing surface. Skip it if there's nothing to do; don't ritualise for its own sake.
 
+## Quarterly tooling review
+
+Run alongside [`docs/methodology/framework-arc-quarterly-review.md`](methodology/framework-arc-quarterly-review.md) — same cadence, separate ~15-minute checklist. The methodology review is for the ten-year arc; this is for the platform underneath. They share a slot in the calendar, not a document.
+
+The review answers, in order:
+
+1. **Are we on the current Node LTS?** If not — what's the date by which we will be?
+2. **Are we on a Python version not yet at "release candidate"?** Are any supported Python versions reaching EOL within two quarters? (3.10 EOL Oct 2026 is the live one.)
+3. **macOS deployment target review.** Should the floor move? Is the dual-target setup (prod 15.0 + AI-features-only 26.1) still right?
+4. **Beta-window check** — was the most recent beta window honoured? (Q3 has WWDC + developer beta install; Q4 has GA + Xcode bump.)
+5. **Pinning register sweep** — any pin past its re-check date? Re-validate or remove.
+6. **Tooling-sprint trigger** — have enough deferred majors piled up to justify a 1–2 day batch release? (Three is usually the trigger; one or two is below the per-PR cost.)
+7. **Security advisories** — any open more than 2 weeks? Note exceptions and reasons.
+
+Output is a single bullet list in the quarterly review note ("Tooling: …") — not a separate document. The discipline is honesty: "nothing changed" is a valid answer if it's true.
+
 ## WWDC ritual (annual)
 
 Calendar events, not vibes. Quarterly review absorbs the post-mortem.
 
 | Date | Event | Action |
 |---|---|---|
-| WWDC week (early June) | Keynote + developer beta | Install developer beta on a non-primary machine. Build the desktop app. File breakage. |
+| WWDC week (early June) | Keynote + developer beta | Install developer beta to the **external Samsung T7**. Boot from it via Startup Disk when needed. Build the desktop app. File breakage. Internal SSD remains the trusted dev environment. |
 | Mid-July | Public beta | Ship TestFlight build on the new SDK to ≥1 beta tester running public beta. |
 | Late September / early October | macOS GA | Bump Xcode + `MACOSX_DEPLOYMENT_TARGET` if needed. Sign, notarise, push within 30 days. |
 
-WWDC 2026: ~5 weeks out at time of writing. Action item: check before WWDC week whether we have a non-primary machine available for the developer beta install.
+**Why external SSD over VirtualBuddy.** External-boot gives real hardware: Apple Intelligence / Foundation Models, Neural Engine perf, camera/sensor APIs all work — important for the Apple FM provider work in `design-pluggable-llm-routing.md`. Risk of a beta bricking the machine is low; if it crashes hard, restart on internal. (VirtualBuddy is a viable fallback for anyone without spare external storage — same compatibility table for sandbox / signing / WKWebView / AVFoundation, minus the Apple-Intelligence-specific gates.)
+
+WWDC 2026: ~5 weeks out at time of writing. Action item: install macOS 27 developer beta to the T7 within a week of the keynote; build the desktop app on it before public beta.
 
 ## Cross-references to existing thinking
 

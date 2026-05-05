@@ -174,11 +174,14 @@ Low-frequency content. Researchers see it once.
 
 ### Desktop locale flow
 
-1. User picks language in native Settings (Cmd+,) → `@AppStorage("language")`
-2. `I18n.setLocale()` reloads JSON from disk → `@Published` triggers SwiftUI re-render
-3. `BridgeHandler.syncLocale()` pushes locale to web via `callAsyncJavaScript`
-4. Startup flash prevention: locale injected as `?locale=es` URL query param on WKWebView load → `LocaleStore.ts` detects synchronously before first render
-5. In embedded mode, the web language picker is hidden — native Settings is the single control point
+**Canonical design:** `docs/design-locale-negotiation.md` — covers desktop-vs-web split, why we delegate to System Settings → Apps, and the `UIPrefersShowingLanguageSettings` Info.plist key.
+
+1. **macOS picks the locale.** `I18n.swift` reads `Bundle.preferredLocalizations(from: supportedLocales, forPreferences: nil).first ?? "en"` on every launch. Apple's BCP 47 lookup matcher reads `AppleLanguages` (set globally by System Settings → General → Language & Region, or per-app by System Settings → Apps → Bristlenose → Language).
+2. `I18n.setLocale()` reloads JSON from disk → `@Published` triggers SwiftUI re-render. The setter is now used only for runtime locale propagation, not user choice.
+3. `BridgeHandler.syncLocale()` pushes locale to web via `callAsyncJavaScript`.
+4. Startup flash prevention: locale injected as `?locale=es` URL query param on WKWebView load → `LocaleStore.ts` detects synchronously before first render.
+5. In embedded mode, the web language picker is hidden — System Settings is the single control point. The web picker remains visible and usable in real-browser CLI serve mode (no per-site language override exists in browsers, so the in-app picker is the only escape hatch there).
+6. **No in-app language picker on desktop.** Settings → Appearance contains a hint paragraph pointing users to System Settings → Apps → Bristlenose. `INFOPLIST_KEY_UIPrefersShowingLanguageSettings = YES` (in `project.pbxproj`) forces that section to appear in System Settings even for users with only one preferred language configured globally.
 
 ### `CommandMenu` titles stay in English
 

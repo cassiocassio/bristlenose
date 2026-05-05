@@ -55,6 +55,26 @@ Remaining security items tracked in `docs/private/100days.md` §6 Risk.
 - [x] **i18n: extract ~200 hardcoded frontend strings** — done (24 Mar 2026). ~30 components wired with `useTranslation()`. Sentiment badges translate via `enums.json`. `format.ts` uses `Intl.DateTimeFormat`. `<html lang>` tracks locale. Screen reader `announce()` calls use `i18n.t()`. Keys in all 5 locale files (en/es/fr/de/ko)
 - [x] **i18n: help prose + shortcuts (Batch 11)** — HelpSection and ShortcutsSection wired to `t()` with `help.guide.*` and `help.shortcuts.*` keys (24 Mar 2026). SignalsSection, CodebookSection, ContributingSection also wired (24 Mar). AboutSection, DeveloperSection, DesignSection remain hardcoded English — deferred as "Could" in 100days.md
 - [x] **i18n: Weblate setup** — connect `hosted.weblate.org` to repo for community translation. Free Libre plan. See `docs/design-i18n.md`
+- [ ] **i18n: Settings → LLM detail pane has untranslated English in ja + ko (and likely all non-en)** — captured 5 May 2026 from screenshots (ja Claude row, ko Ollama row). Sources are hardcoded English in `desktop/Bristlenose/Bristlenose/LLMProvider.swift`, not missing locale entries:
+    - `activationToggleLabel` (line 106): `"Use this provider"` / `"Use the local Ollama model"` — switch returns string literal, no `i18n.t()`
+    - `ProviderStatus.label` (line 222): `"Online"` / `"Not set up"` / `"Invalid key"` / `"Unavailable"` / `"Checking…"` — all literals
+    - `statusLabel(for:)` Ollama branch (line 96): `"Local"` literal
+    - `description` (line 86): Ollama's `"Free, runs locally. No API key needed."` literal
+    - `ProviderLinks.consoleLabel` (lines 137, 145, 153, 167): `"Keys"` / `"Portal"` literals — third inline link under the toggle, visible alongside translated `료금`/`料金` in ko/ja screenshots
+    - `ProviderLinks.homepageLabel` is intentionally a bare domain (`anthropic.com`, `openai.com`) — leave untranslated
+    - Plus `temperatureLabel` in `bristlenose/locales/{ja,ko}/desktop.json` is literally `"Temperature"` (loanword — user flagged as bug; ja could be `温度`, ko `온도` or similar — confirm with native reviewer per `project_translation_production_process` playbook)
+    - Fix: introduce `desktop.llmSettings.activate.{generic,ollama}`, `desktop.llmSettings.status.{online,notSetUp,invalid,unavailable,checking,local}`, `desktop.providers.ollama.description` keys; thread `i18n` into LLMProvider helpers (currently pure value type — may need to take `I18n` arg or call `I18n.shared.t()` directly). Audit all 6 locales while there.
+- [ ] **i18n: Settings → Transcription pane is fully hardcoded English** — captured 5 May 2026 from ko screenshot. Every string in `desktop/Bristlenose/Bristlenose/TranscriptionSettingsView.swift` is a literal:
+    - `"Backend"`, `"Model"` Picker labels (lines 12, 23)
+    - `"Auto"`, `"MLX"`, `"faster-whisper"` backend options (lines 13–15) — backend names are proper nouns; safe to leave but `"Auto"` is a translatable adjective, should be localised (e.g. ja `自動`, ko `자동`)
+    - `"Auto detects the best engine for your Mac."` hint (line 17) — fully translatable prose
+    - `"large-v3-turbo (recommended)"` (line 24) — model name is proper noun, but `(recommended)` parenthetical is translatable
+    - Other model options (`large-v3`, `medium`, `small`, `tiny`, lines 25–28) — proper nouns, leave as-is
+    - Fix: add `desktop.transcriptionSettings.{backendLabel,modelLabel,backendAuto,backendHint,modelRecommendedSuffix}` keys; wire via `i18n.t()`. Same playbook as the LLM pane bug above — bundle both into one i18n sweep across LLMSettings + TranscriptionSettings + LLMProvider helpers.
+- [ ] **i18n: menu-bar audit, ours vs OS** — captured 5 May 2026 from ko File / Edit / Help screenshots. Need to discriminate before filing each as a bug:
+    - **Likely OS-defaults (NOT our bugs; localise from system language, not app language)**: Edit menu's `Cut` / `Copy` / `Paste` / `Delete` / `Select All` / `Writing Tools` / `AutoFill` / `Start Dictation` / `Emoji & Symbols`; File menu's `Close` (Cmd+W), `Page Setup…`, `Print…`. Per `desktop/CLAUDE.md` we deliberately don't replace `.pasteboard`. Fix path is for the user to switch their macOS system language to Korean — verify these flip before filing
+    - **Our bugs (literals in our Swift)**: `BuildInfoSheet.swift:44` — `Button("Close", action: onDismiss)` is hardcoded; same in any other `Button("...")` not wrapped in `i18n.t()`. Sweep `desktop/Bristlenose/Bristlenose/*.swift` for `Text("...")` / `Button("...")` / `Picker("...")` / `Section("...")` / `Label("...")` with English literals. Many will be in `LLMSettingsView`, `TranscriptionSettingsView`, `BuildInfoSheet`, `OllamaSetupSheet`, `AIConsentView`, `WelcomeView`, `BootView` (some already wired post `4b316e9`)
+    - **System-menu-title gotcha (already documented)**: `CommandMenu` titles can't use runtime strings — those stay English by design. Items inside translate fine.
 
 Remaining desktop bugs and i18n items tracked in `docs/private/100days.md` §2, §7, §8.
 

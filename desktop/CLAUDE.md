@@ -57,7 +57,7 @@ KeychainHelper.swift          Credential storage via native Security.framework (
 LLMProvider.swift             Provider enum + ProviderStatus enum + notification names
 AIConsentView.swift           First-run AI data disclosure (Apple 5.1.2(i)) + audit log
 SettingsView.swift            TabView wrapper (3 icon tabs)
-AppearanceSettingsView.swift  Theme radio + language dropdown
+AppearanceSettingsView.swift  Theme radio + System Settings link for language (no in-app picker — see docs/design-locale-negotiation.md)
 LLMSettingsView.swift         Mail Accounts pattern — provider list + detail pane
 TranscriptionSettingsView.swift  Whisper backend + model pickers
 ToastView.swift               ToastStore (@Published message) + ToastOverlay (bottom fade, 3s auto-dismiss)

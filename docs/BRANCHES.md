@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 5 May 2026 (closed `sandbox-ps-libproc-swap`)
+**Updated:** 5 May 2026 (closed `sandbox-staticfiles-fix`)
 
 ---
 
@@ -32,7 +32,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch i18n-text-sweep/` | `i18n-text-sweep` | feature | Sweep up English literals missed by i18n-llm-settings (LLMProvider helpers, TranscriptionSettingsView, BuildInfoSheet, default project name) |
 | `bristlenose_branch locale-system-delegation/` | `locale-system-delegation` | feature | Delete in-app language picker on desktop; delegate locale to System Settings → Apps → Bristlenose (Bundle.preferredLocalizations + UIPrefersShowingLanguageSettings) |
-| `bristlenose_branch sandbox-staticfiles-fix/` | `sandbox-staticfiles-fix` | feature | Unblock desktop alpha — fix StaticFiles 500 under sandbox |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
@@ -126,7 +125,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `i18n-text-sweep` | `bristlenose_branch i18n-text-sweep/` | `origin/i18n-text-sweep` |
 | `locale-system-delegation` | `bristlenose_branch locale-system-delegation/` | local only |
-| `sandbox-staticfiles-fix` | `bristlenose_branch sandbox-staticfiles-fix/` | local only |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
@@ -138,25 +136,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
-### `sandbox-staticfiles-fix`
-
-**Kind:** feature — code lands on main; bug fix unblocking desktop alpha
-**Status:** Just started
-**Started:** 5 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch sandbox-staticfiles-fix/`
-**Remote:** local only (push when ready)
-
-**What it does:** Unblock desktop alpha — fix StaticFiles 500 under sandbox. See `.claude/plans/sandbox-staticfiles-fix.md` (handoff) for the diagnostic and intended fix.
-
-**Files this branch will touch:**
-- `bristlenose/server/app.py`
-- `tests/server/test_static_serving.py`
-
-**Potential conflicts with other branches:**
-- No active branch currently touches `bristlenose/server/app.py` or `tests/server/`. Low conflict risk.
-
----
 
 ### `locale-system-delegation`
 
@@ -327,6 +306,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `sandbox-staticfiles-fix` — merged 5 May 2026
+
+Unblock desktop alpha — fixed StaticFiles 500 under sandbox by serving the React bundle via in-memory `read_bytes` instead of mmap.
 
 ### `sandbox-ps-libproc-swap` — merged 5 May 2026
 

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 5 May 2026 (closed `locale-system-delegation`)
+**Updated:** 6 May 2026 (closed `sandbox-mimetypes-init`)
 
 ---
 
@@ -29,7 +29,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | Directory | Branch | Kind | Purpose |
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
-| `bristlenose_branch sandbox-mimetypes-init/` | `sandbox-mimetypes-init` | feature | Pre-init mimetypes to skip /etc/mime.types reads — the real root cause of sandbox /static/*.js 500 |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -120,7 +119,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `bundled-binary-helper` _(closed)_ | `bristlenose_branch bundled-binary-helper/` _(detached, on disk)_ | local only — code on main as `670a002` |
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `pipeline-runner-sidecar-mode` _(merged)_ | `bristlenose_branch pipeline-runner-sidecar-mode/` _(detached, on disk)_ | merged via PR #96 (`0e0157e`) on 2 May 2026 |
-| `sandbox-mimetypes-init` | `bristlenose_branch sandbox-mimetypes-init/` | local only |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
@@ -134,25 +132,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `sandbox-mimetypes-init`
-
-**Kind:** feature — code lands on main; fixes the actual sandbox `/static/*.js` 500 that `sandbox-staticfiles-fix` missed.
-**Status:** Just started
-**Started:** 5 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch sandbox-mimetypes-init/`
-**Remote:** local only (push when ready)
-
-**What it does:** Pre-init mimetypes to skip `/etc/mime.types` reads — the real root cause of the sandbox `/static/*.js` 500 (the prior `sandbox-staticfiles-fix` branch addressed an adjacent symptom, not this one). See `.claude/plans/sandbox-mimetypes-init.md` for the diagnostic that identified this.
-
-**Files this branch will touch:**
-- `bristlenose/server/app.py`
-- `tests/test_static_serving.py`
-
-**Potential conflicts with other branches:**
-- None active in `bristlenose/server/app.py` right now; `sandbox-staticfiles-fix` already merged 5 May 2026.
 
 ---
 
@@ -280,6 +259,10 @@ Delete in-app language picker on desktop; delegate locale to System Settings →
 ### `i18n-text-sweep` — merged 5 May 2026
 
 Sweep up English literals missed by `i18n-llm-settings`: LLMProvider helpers, TranscriptionSettingsView, BuildInfoSheet Close, default New Project name.
+
+### `sandbox-mimetypes-init` — merged 6 May 2026
+
+Empty `mimetypes.knownfiles` in `bristlenose/__init__.py` so CPython's lazy `mimetypes.init()` skips `/etc/apache2/mime.types` and friends under the macOS App Sandbox. Real fix for the `/static/*.js` 500 the earlier `sandbox-staticfiles-fix` addressed at the wrong layer. Python 3.12.13's `init()` does `files = knownfiles + list(files)` when `files` is non-None, so `init([])` doesn't help — emptying `knownfiles` itself is the only escape hatch. Verified end-to-end under sandbox-on Debug.
 
 ### `sandbox-staticfiles-fix` — merged 5 May 2026
 

@@ -17,7 +17,9 @@ Apple canonical `Settings` scene with 3 icon tabs. Constant width (660pt) across
 
 ## Tab 1: Appearance (paintbrush)
 
-Theme radio group (auto/light/dark) + language dropdown (6 locales). `@AppStorage("appearance")` drives `.preferredColorScheme` on both the main window and Settings window. Appearance is also synced to the web layer via `BridgeHandler.syncAppearance()` on `ready` — native wins, web Settings modal hides its appearance picker in embedded mode.
+Theme radio group (auto/light/dark) + a hint paragraph pointing users to System Settings → Apps → Bristlenose for language. `@AppStorage("appearance")` drives `.preferredColorScheme` on both the main window and Settings window. Appearance is also synced to the web layer via `BridgeHandler.syncAppearance()` on `ready` — native wins, web Settings modal hides its appearance picker in embedded mode.
+
+**No in-app language picker.** macOS already provides per-app language switching at System Settings → General → Language & Region → Apps → Bristlenose, so we delegate. `INFOPLIST_KEY_UIPrefersShowingLanguageSettings = YES` (in `project.pbxproj`) forces that section to appear even for users with only one preferred language configured globally. `I18n.swift` reads `Bundle.preferredLocalizations(from:forPreferences:)` on every launch to honour the user's choice. Canonical design: `docs/design-locale-negotiation.md`. The web Settings modal in CLI serve mode keeps its language picker — browsers have no per-site override, so the in-app control is the only escape hatch there.
 
 ## Tab 2: LLM (brain) — Mail Accounts pattern
 

@@ -131,7 +131,7 @@ struct LLMSettingsView: View {
                                     ? .secondary : .primary)
                         HStack(spacing: 6) {
                             statusIndicator(for: provider, dotSize: 10)
-                            Text(provider.statusLabel(for: statusFor(provider)))
+                            Text(provider.statusLabel(for: statusFor(provider), i18n: i18n))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -153,7 +153,7 @@ struct LLMSettingsView: View {
     private var providerDetail: some View {
         Form {
             Section(i18n.t("desktop.llmSettings.statusSection")) {
-                Toggle(selectedProvider.activationToggleLabel, isOn: activeBinding)
+                Toggle(selectedProvider.activationToggleLabel(i18n), isOn: activeBinding)
                     .disabled(!statusFor(selectedProvider).isConfigured
                               && activeProvider != selectedProvider.rawValue)
 
@@ -162,7 +162,7 @@ struct LLMSettingsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         statusIndicator(for: selectedProvider, dotSize: 12)
-                        Text(selectedProvider.statusLabel(for: statusFor(selectedProvider)))
+                        Text(selectedProvider.statusLabel(for: statusFor(selectedProvider), i18n: i18n))
                             .foregroundStyle(.secondary)
                     }
                     .animation(
@@ -348,7 +348,7 @@ struct LLMSettingsView: View {
 
     private var ollamaSection: some View {
         Section(i18n.t("desktop.llmSettings.serverSection")) {
-            if let helper = selectedProvider.helperText {
+            if let helper = selectedProvider.helperText(i18n) {
                 Text(helper)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -570,7 +570,7 @@ struct LLMSettingsView: View {
                 Link(i18n.t("desktop.llmSettings.pricingLink"), destination: pricing)
             }
             if let console = links.console {
-                Link(links.consoleLabel, destination: console)
+                Link(i18n.t(links.consoleLabel), destination: console)
             }
         }
         .font(.caption)

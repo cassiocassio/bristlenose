@@ -81,9 +81,12 @@ enum LLMProvider: String, CaseIterable, Identifiable {
     }
 
     /// Helper text shown below the provider detail pane.
-    var helperText: String? {
+    /// Takes `i18n` because the Ollama description is user-facing copy.
+    /// `@MainActor` because `I18n` is main-actor-isolated.
+    @MainActor
+    func helperText(_ i18n: I18n) -> String? {
         switch self {
-        case .ollama: "Free, runs locally. No API key needed."
+        case .ollama: i18n.t("desktop.llmSettings.providers.ollama.description")
         default: nil
         }
     }
@@ -91,11 +94,12 @@ enum LLMProvider: String, CaseIterable, Identifiable {
     /// User-facing label for a status, with provider-specific overrides.
     /// Ollama swaps "Online" for "Local" — both healthy, but "Local"
     /// names the actual privacy property the user picked Ollama for.
-    func statusLabel(for status: ProviderStatus) -> String {
+    @MainActor
+    func statusLabel(for status: ProviderStatus, i18n: I18n) -> String {
         if self == .ollama && status == .online {
-            return "Local"
+            return i18n.t("desktop.llmSettings.status.local")
         }
-        return status.label
+        return status.label(i18n)
     }
 
     /// Label for the "Use this provider" activation toggle.
@@ -103,10 +107,11 @@ enum LLMProvider: String, CaseIterable, Identifiable {
     /// in the sidebar row above. Ollama gets a custom label that names
     /// the local-only property, since "Use this provider" undersells the
     /// reason a user would pick it.
-    var activationToggleLabel: String {
+    @MainActor
+    func activationToggleLabel(_ i18n: I18n) -> String {
         switch self {
-        case .ollama: "Use the local Ollama model"
-        default: "Use this provider"
+        case .ollama: i18n.t("desktop.llmSettings.activate.ollama")
+        default: i18n.t("desktop.llmSettings.activate.generic")
         }
     }
 
@@ -123,7 +128,9 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         let homepageLabel: String
         let pricing: URL?
         let console: URL?
-        let consoleLabel: String  // "Keys" for cloud APIs; "Portal" for Azure
+        /// i18n key for the console label — "Keys" for cloud APIs, "Portal" for
+        /// Azure. Resolve via `i18n.t(links.consoleLabel)` at the call site.
+        let consoleLabel: String
     }
 
     var links: ProviderLinks {
@@ -134,7 +141,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
                 homepageLabel: "anthropic.com",
                 pricing: URL(string: "https://anthropic.com/pricing"),
                 console: URL(string: "https://console.anthropic.com"),
-                consoleLabel: "Keys"
+                consoleLabel: "desktop.llmSettings.console.keys"
             )
         case .chatGPT:
             return ProviderLinks(
@@ -142,7 +149,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
                 homepageLabel: "openai.com",
                 pricing: URL(string: "https://openai.com/api/pricing"),
                 console: URL(string: "https://platform.openai.com/api-keys"),
-                consoleLabel: "Keys"
+                consoleLabel: "desktop.llmSettings.console.keys"
             )
         case .gemini:
             return ProviderLinks(
@@ -150,7 +157,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
                 homepageLabel: "ai.google.dev",
                 pricing: URL(string: "https://ai.google.dev/pricing"),
                 console: URL(string: "https://aistudio.google.com/app/apikey"),
-                consoleLabel: "Keys"
+                consoleLabel: "desktop.llmSettings.console.keys"
             )
         case .azure:
             // Azure customers manage keys inside their org's portal under
@@ -164,7 +171,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
                         "https://azure.microsoft.com/en-us/pricing/details/cognitive-services/openai-service/"
                 ),
                 console: URL(string: "https://portal.azure.com"),
-                consoleLabel: "Portal"
+                consoleLabel: "desktop.llmSettings.console.portal"
             )
         case .ollama:
             return ProviderLinks(
@@ -219,13 +226,14 @@ enum ProviderStatus: Equatable {
         }
     }
 
-    var label: String {
+    @MainActor
+    func label(_ i18n: I18n) -> String {
         switch self {
-        case .online: "Online"
-        case .notSetUp: "Not set up"
-        case .invalid: "Invalid key"
-        case .unavailable: "Unavailable"
-        case .checking: "Checking…"
+        case .online: i18n.t("desktop.llmSettings.status.online")
+        case .notSetUp: i18n.t("desktop.llmSettings.status.notSetUp")
+        case .invalid: i18n.t("desktop.llmSettings.status.invalid")
+        case .unavailable: i18n.t("desktop.llmSettings.status.unavailable")
+        case .checking: i18n.t("desktop.llmSettings.status.checking")
         }
     }
 

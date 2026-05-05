@@ -23,13 +23,13 @@ It is also the policy layer that makes Dependabot useful instead of noisy. Depen
 | Pillar | Annual cadence | What we pin to | Where the detail lives |
 |---|---|---|---|
 | **Node** | LTS cut (April + October) | Active LTS; skip 21/23/25 | This doc + `frontend/CLAUDE.md` "Node 24 LTS required" |
-| **Python** | Release (October) | `requires-python = ">=3.10"`; floor + ceiling tested | [`docs/design-ci.md`](design-ci.md) §"Why 3.10–3.13?" + §"Python EOL dates" |
-| **macOS** | WWDC (June) → GA (Sept) | Deployment target = current LTS-1 | [`docs/design-decisions.md`](design-decisions.md) (Sequoia rationale); current `pbxproj` |
+| **Python** | Release (October) | `requires-python = ">=3.10"`; floor + ceiling tested | [`docs/design-ci.md`](design-ci.md) (matrix rationale at line 89; EOL note at line 236) |
+| **macOS** | WWDC (June) → GA (Sept) | Deployment target = current LTS-1 | [`docs/design-decisions.md`](design-decisions.md) §"Desktop app: SwiftUI + sidecar" (Sequoia/n-1 rationale at line 65); current `pbxproj` |
 | **Xcode/Swift** | September (WWDC year + 3mo) | Latest stable; bump within 30 days of GA | This doc + [`docs/design-desktop-python-runtime.md`](design-desktop-python-runtime.md) (sidecar Python.framework constraint) |
 
 ### Pillar 1 — Node
 
-Current state: CI on Node 20 (4× `node-version: "20"` in `.github/workflows/{ci,release}.yml`); local-dev target Node 24 LTS per `frontend/CLAUDE.md`. The mismatch is flagged as known in [`docs/design-ci.md`](design-ci.md) §"Risks accepted".
+Current state: CI on Node 20 (4× `node-version: "20"` in `.github/workflows/{ci,release}.yml`); local-dev target Node 24 LTS per `frontend/CLAUDE.md`. The mismatch is flagged as known in [`docs/design-ci.md`](design-ci.md) §"Known gaps" (line 156).
 
 **Policy:**
 
@@ -62,9 +62,9 @@ Current deployment target: dual — **macOS 15.0 (Sequoia)** for the production 
 
 The Tahoe-specific issues already encountered:
 
-- **Custom URL schemes + `.nonPersistent()` crash on macOS 26** — see [`docs/design-wkwebview-messaging.md`](design-wkwebview-messaging.md) §143. Workaround: HTTP loopback.
+- **Custom URL schemes + `.nonPersistent()` crash on macOS 26** — see [`docs/design-wkwebview-messaging.md:143`](design-wkwebview-messaging.md). Workaround: HTTP loopback.
 - **Sandbox-on Debug locale loading + resizable window** — fixed in v0.15.3 (today's CHANGELOG).
-- **Apple Foundation Models / Apple Intelligence** — gated to macOS 26+ + compatible Mac, see [`docs/design-pluggable-llm-routing.md`](design-pluggable-llm-routing.md) §"Apple FM provider".
+- **Apple Foundation Models / Apple Intelligence** — gated to macOS 26+ + compatible Mac, see [`docs/design-pluggable-llm-routing.md`](design-pluggable-llm-routing.md) §"2. Apple Foundation Models — Swift-side, not Python" (line 43) and §"Sequencing" item 3 (line 88).
 
 **Policy:**
 
@@ -88,7 +88,7 @@ Things we know we're pinned at, with re-check dates. When a re-check date comes 
 | Pin | Reason | Re-check |
 |---|---|---|
 | **CI Node 20** | Inertia from initial CI setup; Node 24 lands in runner images. Bumping is selective-major decision. | June 2026 (post-WWDC, alongside any Node news) |
-| **jsdom 27.x → 29.x batched with `claude/review-dependabot-updates-CF7in`** | jsdom 29 dropped Web Storage polyfill; was unsafe with Node 25 (see CHANGELOG v0.14.5). #89 + test fix lands the bump. | Resolved — once #89 merges |
+| **jsdom pinned to 27.x in `frontend/package.json`** | jsdom 29 dropped Web Storage polyfill; was unsafe with Node 25 (see CHANGELOG v0.14.5). Test fix landed in v0.15.3 (#99) clears the assertion blocker; `#89` (jsdom → 29) is open and will land next. | Re-check once `#89` merges |
 | **lighthouse 12.x** | Lighthouse 13 requires Node ≥22.19; CI is on 20. Bump alongside Node. | Same as Node bump |
 | **Python 3.14** | macOS `ensurepip` broken for `python -m venv` (CLAUDE.md gotcha). Watch upstream. | October 2026 (post 3.14.1) |
 | **Python 3.10 floor** | EOL October 2026. Decision point. | Quarterly review preceding the EOL |
@@ -96,19 +96,15 @@ Things we know we're pinned at, with re-check dates. When a re-check date comes 
 | **macOS deployment target 26.1 (Apple Intelligence schemes)** | Foundation Models requires macOS 26+. | When/if the gate moves |
 | **Sidecar CPython 3.12** | Bundled in `Python.framework`; bumping is a signing/entitlement event. | Coordinated with macOS major bump |
 
-## Auto-merge boundary
+## Triage boundary
 
-**Minor and patch bumps auto-merge** when:
+**Manual review for everything, with a selective major-ignore.** Auto-merge is deferred — see "Open questions" below. In the meantime:
 
-1. They land in a `minor-and-patch` Dependabot group (the `groups` block in `.github/dependabot.yml` is the gate);
-2. Full CI is green (lint + frontend-lint-type-test + 8-cell Python matrix + e2e + perf-gate);
-3. The PR has no manual `do-not-merge` label.
+- **Minor and patch bumps**: arrive grouped (`minor-and-patch` block in `.github/dependabot.yml`). One PR per ecosystem per Monday. Glance at the diff, confirm CI is green (lint + frontend-lint-type-test + 8-cell Python matrix + e2e + perf-gate), squash-merge.
+- **Major bumps**: hand-reviewed. The `ignore` block in `.github/dependabot.yml` suppresses majors for the deps that empirically cause rework (jsdom, vite, vitest, eslint family, lighthouse, etc.); the rest still flow as PRs. Selective rather than blanket — react-i18next 17, for example, was painless (#90) and worth taking quickly.
+- **Security advisories**: Dependabot's `security-update` PRs bypass `ignore` rules entirely (per Dependabot's documented behaviour — `ignore` filters apply only to `version-update` PRs). Review and merge within 7 days, regardless of release-window timing. *Caveat*: the bypass works only for advisories already in GitHub's Advisory Database (GHSA). For deeper coverage, defence-in-depth via `pip-audit` and `npm audit` running in CI is the right next step (currently neither runs as a gate — see Open questions).
 
-The risk of auto-merge is "a flaky test once a year that lets a regression through." The CI surface is broad enough (~2328 Python tests + ~1265 Vitest + e2e on Chromium and WebKit + perf gate) that the credible regression vector is narrow. The mitigation is the existing release window: pushes to `main` after 9pm London → if a regression slips through, it's caught before the next morning's release.
-
-**Major bumps are hand-reviewed**, with a selective ignore list for deps that empirically cause rework. See `.github/dependabot.yml` for the maintained list. Selective rather than blanket ignore — react-i18next 17, for example, was painless and worth taking quickly.
-
-**Security advisories** bypass everything. A security PR opens regardless of `ignore` rules; review and merge within 7 days, regardless of release-window timing. Quarterly is too slow for security.
+**Why pip's ignore list is shorter than npm's.** The Python wheel ecosystem has fewer "Node major drags everything with it" cascades. The pip ignores are just the deps where a major bump genuinely rewrites Bristlenose (pydantic 1→2 was the canonical event; fastapi major would be similar). The npm side carries the scar tissue of CHANGELOG v0.14.5 and today's session — more pillars coupled to Node majors, more deps that move with them.
 
 ## Tooling-sprint cadence
 
@@ -155,17 +151,20 @@ WWDC 2026: ~5 weeks out at time of writing. Action item: install macOS 27 develo
 
 This doc is the index. The detail lives elsewhere — don't duplicate.
 
-- **Python policy:** [`docs/design-ci.md`](design-ci.md) §"Test" + §"Risks accepted" + §"Future work".
+- **Python policy:** [`docs/design-ci.md`](design-ci.md) — `### test` (line 59); `## Matrix strategy` floor/ceiling rationale (line 89); `### Known gaps` (line 156); `## Maintenance` Python EOL note (line 236).
 - **Sidecar Python:** [`docs/design-desktop-python-runtime.md`](design-desktop-python-runtime.md).
-- **macOS deployment-target rationale:** [`docs/design-decisions.md`](design-decisions.md) §"Apple Silicon + macOS Sequoia" (or wherever — search for the relevant block).
-- **Tahoe-specific gotchas:** [`docs/design-wkwebview-messaging.md`](design-wkwebview-messaging.md) §143; [`docs/design-native-inspector.md`](design-native-inspector.md) §"Spike run".
-- **Apple Intelligence / Foundation Models gate:** [`docs/design-pluggable-llm-routing.md`](design-pluggable-llm-routing.md) §"Apple FM provider".
+- **macOS deployment-target rationale:** [`docs/design-decisions.md`](design-decisions.md) §"Desktop app: SwiftUI + sidecar" (lines 61–65; the n-1 / Sequoia logic is line 65).
+- **Tahoe-specific gotchas:** [`docs/design-wkwebview-messaging.md:143`](design-wkwebview-messaging.md) (custom-scheme `.nonPersistent()` crash); [`docs/design-native-inspector.md:85,99`](design-native-inspector.md) (spike notes on the same crash, scheme-specific not general).
+- **Apple Intelligence / Foundation Models gate:** [`docs/design-pluggable-llm-routing.md`](design-pluggable-llm-routing.md) §"2. Apple Foundation Models — Swift-side, not Python" (line 43) and §"Sequencing" item 3 (line 88).
 - **Node 24 LTS local-dev requirement:** [`frontend/CLAUDE.md`](../frontend/CLAUDE.md) "Node 24 LTS required".
-- **Quarterly review template:** [`docs/methodology/framework-arc-quarterly-review.md`](methodology/framework-arc-quarterly-review.md) — Section 6 added to track platform/tooling state.
+- **Quarterly review template:** [`docs/methodology/framework-arc-quarterly-review.md`](methodology/framework-arc-quarterly-review.md) — companion pointer added at end of Section 7.
 
 ## Open questions / known gaps
 
-- `scripts/primary-python-version.sh` is referenced in `release.yml:28` but doesn't exist. The first CI Python bump should ship the helper alongside (per `docs/private/100days.md`).
-- macOS Python `continue-on-error: true` may need promoting to blocking once desktop integration tests land.
-- Auto-merge workflow (proposed in `.github/workflows/dependabot-automerge.yml`) is the operational implementation of this doc's auto-merge boundary; review it as you would any new CI workflow before enabling.
-- "How quickly do we react to a Tier 1 CVE?" (npm advisory rated critical) is not in this doc. Defaulting to "same-day acknowledge, 7-day patch ship". Worth a separate hardening pass before alpha.
+- **Auto-merge for minor/patch.** Deferred. The current model is manual squash-merge after a CI-green check. Promoting to true auto-merge needs (a) a `.github/workflows/dependabot-automerge.yml` workflow, (b) `pip-audit` and `npm audit --audit-level=high` running as required gates, and (c) `npm config set ignore-scripts true` in the verification step to close the install-script attack surface. Worth landing as a discrete hardening PR; not bundled into this policy.
+- **Tiered security SLA matrix** — current "7 days" line is defensible for High/Medium severity but weak for npm `severity: critical` (RCE in a runtime dep, prototype pollution in a parser). Industry norm is 72-hour patch for criticals. Worth a Tier 1 (72h) / Tier 2 (7d) / Tier 3 (next quarterly) matrix before alpha.
+- **`scripts/primary-python-version.sh`** is referenced in `release.yml:28` but doesn't exist. The first CI Python bump should ship the helper alongside (per `docs/private/100days.md`).
+- **macOS Python `continue-on-error: true`** may need promoting to blocking once desktop integration tests land.
+- **ESLint stack — `groups` vs `ignore`?** Currently four separate ignores (eslint, eslint-plugin-react-hooks, typescript-eslint, typescript). Bumping them as a wave argues for a single `groups: lint-stack` block instead — one PR, dropped from the ignore list. Defer until the next coordinated bump exposes the friction in practice.
+- **WWDC ritual durability.** Currently a prose commitment with no calendar hook. Cost of "I forgot" is a year of accumulated breakage; a recurring auto-filed GitHub issue (June 1 each year) is the obvious mitigation. Add when the rest of the desktop machinery has settled.
+- **`pbxproj` dual-target comment.** The doc identifies the risk (line 72); the comment in the project file itself is a follow-up.

@@ -26,6 +26,8 @@ and §"Open decisions".
 
 from __future__ import annotations
 
+import ctypes
+import ctypes.util
 import json
 import logging
 import os
@@ -114,17 +116,93 @@ def pid_file_path(output_dir: Path) -> Path:
     return output_dir / ".bristlenose" / PID_FILENAME
 
 
-def _ps_start_time(pid: int) -> str | None:
-    """Return the OS-reported process start time for `pid`, or None.
+# struct proc_bsdinfo from <sys/proc_info.h>. Only the start_t* fields at the
+# tail are read, but the layout up to that point must match exactly.
+class _ProcBsdInfo(ctypes.Structure):
+    _fields_ = [
+        ("pbi_flags", ctypes.c_uint32),
+        ("pbi_status", ctypes.c_uint32),
+        ("pbi_xstatus", ctypes.c_uint32),
+        ("pbi_pid", ctypes.c_uint32),
+        ("pbi_ppid", ctypes.c_uint32),
+        ("pbi_uid", ctypes.c_uint32),
+        ("pbi_gid", ctypes.c_uint32),
+        ("pbi_ruid", ctypes.c_uint32),
+        ("pbi_rgid", ctypes.c_uint32),
+        ("pbi_svuid", ctypes.c_uint32),
+        ("pbi_svgid", ctypes.c_uint32),
+        ("rfu_1", ctypes.c_uint32),
+        ("pbi_comm", ctypes.c_char * 16),
+        ("pbi_name", ctypes.c_char * 32),
+        ("pbi_nfiles", ctypes.c_uint32),
+        ("pbi_pgid", ctypes.c_uint32),
+        ("pbi_pjobc", ctypes.c_uint32),
+        ("e_tdev", ctypes.c_uint32),
+        ("e_tpgid", ctypes.c_uint32),
+        ("pbi_nice", ctypes.c_int32),
+        ("pbi_start_tvsec", ctypes.c_uint64),
+        ("pbi_start_tvusec", ctypes.c_uint64),
+    ]
 
-    Uses ``ps -o lstart=`` which works on macOS BSD and Linux GNU. The
-    output format is human-readable (e.g. ``Fri Apr 25 09:00:00 2026``).
-    We treat the string as opaque — equality comparison only.
+
+_PROC_PIDTBSDINFO = 3  # from <sys/proc_info.h>
+_libproc: ctypes.CDLL | None = None
+
+
+def _load_libproc() -> ctypes.CDLL | None:
+    global _libproc
+    if _libproc is not None:
+        return _libproc
+    path = ctypes.util.find_library("proc")
+    if path is None:
+        return None
+    lib = ctypes.CDLL(path, use_errno=True)
+    lib.proc_pidinfo.argtypes = [
+        ctypes.c_int, ctypes.c_int, ctypes.c_uint64,
+        ctypes.c_void_p, ctypes.c_int,
+    ]
+    lib.proc_pidinfo.restype = ctypes.c_int
+    _libproc = lib
+    return lib
+
+
+def _ps_start_time(pid: int) -> str | None:
+    """Return an opaque, stable-per-PID start-time token, or None.
+
+    On macOS, queries libproc ``proc_pidinfo(PROC_PIDTBSDINFO)`` for
+    ``pbi_start_tvsec.pbi_start_tvusec`` — the same value Activity
+    Monitor reads. Avoids ``/bin/ps``, which is blocked under macOS
+    App Sandbox at exec time (the bundled desktop sidecar runs sandboxed).
+
+    On Linux, falls back to ``ps -o lstart=`` — POSIX-portable, no
+    sandbox concerns there.
+
+    Caller contract: the string is opaque and only ever compared for
+    equality across two reads of the same PID. Format is **not** stable
+    across platforms; callers must never parse it.
+
+    Returns None if the PID is dead, libproc isn't loadable, or the
+    syscall fails.
     """
+    if sys.platform == "darwin":
+        lib = _load_libproc()
+        if lib is None:
+            return None
+        info = _ProcBsdInfo()
+        n = lib.proc_pidinfo(
+            pid, _PROC_PIDTBSDINFO, 0,
+            ctypes.byref(info), ctypes.sizeof(info),
+        )
+        if n != ctypes.sizeof(info):
+            return None
+        return f"{info.pbi_start_tvsec}.{info.pbi_start_tvusec}"
+
+    # Non-Darwin (Linux, etc.) — keep the legacy /bin/ps subprocess. No
+    # sandbox blocker on these platforms, and parsing /proc/<pid>/stat
+    # field 22 is a separate code path that's only worth its weight if
+    # we ever ship a sandboxed Linux build.
     try:
         out = subprocess.run(
-            # Absolute path: matches Swift `psLstart` and refuses any hostile
-            # `$PATH` shadowing of `ps`. POSIX-portable on macOS + Linux.
             ["/bin/ps", "-o", "lstart=", "-p", str(pid)],
             capture_output=True,
             text=True,

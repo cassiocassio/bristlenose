@@ -2,6 +2,10 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**Unreleased**
+
+- **Sidecar: avoid `/bin/ps` exec under macOS App Sandbox** — `run_lifecycle._ps_start_time()` now reads process start time via libproc `proc_pidinfo(PROC_PIDTBSDINFO)` on Darwin (same call Activity Monitor uses) instead of subprocessing `/bin/ps -o lstart=`. The exec was blocked by the sandbox and crashed the bundled sidecar at startup before serving a single byte. Linux unchanged (no sandbox blocker; keeps the `/bin/ps` fallback). Third libproc swap in the family (`proc_pidpath`, `proc_listpids`+`proc_pidfdinfo`, now `proc_pidinfo`)
+
 **0.15.3** — _4 May 2026_
 
 - **Desktop: provider-switching hardening end-to-end** — the "Change provider" flow now actually activates the new provider across Keychain, sidecar env injection, and UI. Four fixes landed together: Ollama choice persists to `UserDefaults` *before* the consent log writes (defeats a race where a crash between the two left the app in an inconsistent state); the Change-provider button activates the row first then falls back to a selector if activation didn't take; sidecar API-key injection is scoped to the active provider only (was leaking other providers' keys into the child env); LLM Settings lazy-loads Keychain reads to the selected row only (was prompting on every row render). Desktop-only — no PyPI surface change

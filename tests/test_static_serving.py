@@ -180,3 +180,26 @@ class TestDebug500Envelope:
         assert resp.status_code == 500
         assert "kaboom" not in resp.text
         assert "Internal Server Error" in resp.text
+
+
+class TestMimetypesPreInit:
+    """Importing app.py must call mimetypes.init([]) so guess_type never reads
+    /etc/mime.types — those reads raise PermissionError under macOS App Sandbox
+    and poison mimetypes._db for every subsequent caller."""
+
+    def test_mimetypes_inited_with_empty_knownfiles(self) -> None:
+        import mimetypes
+
+        # Importing bristlenose.server.app (already done at module scope)
+        # must have triggered mimetypes.init([]).
+        assert mimetypes.inited is True
+
+    def test_explicit_registrations_present(self) -> None:
+        import mimetypes
+
+        assert mimetypes.guess_type("foo.js") == ("application/javascript", None)
+        assert mimetypes.guess_type("foo.css") == ("text/css", None)
+        assert mimetypes.guess_type("foo.html") == ("text/html", None)
+        assert mimetypes.guess_type("foo.json") == ("application/json", None)
+        assert mimetypes.guess_type("foo.svg") == ("image/svg+xml", None)
+        assert mimetypes.guess_type("foo.woff2") == ("font/woff2", None)

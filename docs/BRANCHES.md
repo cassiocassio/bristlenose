@@ -124,7 +124,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `pipeline-runner-sidecar-mode` _(merged)_ | `bristlenose_branch pipeline-runner-sidecar-mode/` _(detached, on disk)_ | merged via PR #96 (`0e0157e`) on 2 May 2026 |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
-| `i18n-text-sweep` | `bristlenose_branch i18n-text-sweep/` | local only |
+| `i18n-text-sweep` | `bristlenose_branch i18n-text-sweep/` | `origin/i18n-text-sweep` |
 | `locale-system-delegation` | `bristlenose_branch locale-system-delegation/` | local only |
 | `sandbox-staticfiles-fix` | `bristlenose_branch sandbox-staticfiles-fix/` | local only |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
@@ -187,10 +187,10 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ### `i18n-text-sweep`
 
 **Kind:** feature — code lands on main; ships translation updates
-**Status:** Just started
+**Status:** In review (commit `3c9b7d0` pushed)
 **Started:** 5 May 2026
 **Worktree:** `/Users/cassio/Code/bristlenose_branch i18n-text-sweep/`
-**Remote:** local only (push when ready)
+**Remote:** `origin/i18n-text-sweep`
 
 **What it does:** Sweep up English literals missed by `i18n-llm-settings`: LLMProvider helpers (activation toggle, status labels, console link labels, Ollama description), TranscriptionSettingsView (Backend, Model, Auto, hint, model-recommended interpolated label), BuildInfoSheet Close, default New Project name.
 

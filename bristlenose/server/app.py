@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+import mimetypes
 import os
 import secrets
+import traceback
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -13,7 +15,8 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
-from starlette.responses import Response
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse, Response
 
 from bristlenose.server.db import create_session_factory, db_url_for_project, get_engine, init_db
 from bristlenose.server.middleware import BearerTokenMiddleware
@@ -88,6 +91,20 @@ def create_app(
             setup_logging(output_dir=_output_dir, verbose=verbose)
 
     app = FastAPI(title="Bristlenose", docs_url="/api/docs", redoc_url=None)
+
+    # Surface tracebacks for unhandled exceptions — FastAPI's default 500
+    # handler swallows them.  Always logs to bristlenose.log; returns the
+    # traceback in the response body when BRISTLENOSE_DEBUG_500=1 (debugging
+    # sandbox / packaging issues).  See docs/design-desktop-asset-serving.md.
+    @app.exception_handler(Exception)
+    async def _log_unhandled(request: Request, exc: Exception) -> PlainTextResponse:
+        tb = traceback.format_exc()
+        logger.error(
+            "unhandled %s on %s\n%s", type(exc).__name__, request.url.path, tb
+        )
+        if os.environ.get("BRISTLENOSE_DEBUG_500") == "1":
+            return PlainTextResponse(tb, status_code=500)
+        return PlainTextResponse("Internal Server Error", status_code=500)
 
     # --- Localhost access control token ---
     # Defence-in-depth: stops opportunistic local-process API scraping.
@@ -166,14 +183,15 @@ def create_app(
 
     # Serve the React islands bundle (built by Vite).
     # In HMR mode the Vite dev server handles these.
+    #
+    # Custom byte-reading routes instead of StaticFiles: under macOS App
+    # Sandbox the bundled sidecar's StaticFiles mount returns 500 for every
+    # existing file (Starlette streams via aiofiles/sendfile, the syscall is
+    # blocked by the sandbox).  Plain bytes-in-memory `read_bytes()` works.
+    # Bundle chunks are <1 MB each so memory cost is negligible.
+    # See docs/design-desktop-asset-serving.md (Plan A).
     if not hmr and _STATIC_DIR.is_dir():
-        app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
-        # Vite's lazy-load runtime resolves chunk paths relative to base ("/"),
-        # producing requests like /assets/Foo.css.  Mount /assets/ as an alias
-        # so these resolve without needing to rewrite paths inside JS bundles.
-        assets_dir = _STATIC_DIR / "assets"
-        if assets_dir.is_dir():
-            app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+        _register_static_routes(app, _STATIC_DIR)
 
     # Serve media files (video/audio) from the project input directory so the
     # popout player can load them over HTTP instead of file:// URIs.
@@ -198,6 +216,50 @@ def create_app(
         _print_dev_urls()
 
     return app
+
+
+def _register_static_routes(app: FastAPI, static_dir: Path) -> None:
+    """Serve the React bundle from ``static_dir`` via in-memory ``read_bytes``.
+
+    Replaces ``StaticFiles`` because Starlette's streaming path (sendfile /
+    aiofiles) returns 500 under macOS App Sandbox.  Mounts:
+
+    - ``GET /static/{path}`` — the bundle root (index.html, chunks under
+      ``assets/``, plus any non-asset siblings)
+    - ``GET /assets/{path}`` — alias for ``static/assets/`` so Vite's lazy-load
+      runtime, which resolves chunks against base ``/``, finds them without
+      requiring HTML rewrites inside the JS
+
+    Both routes apply a path-traversal guard.
+    """
+    resolved_root = static_dir.resolve()
+
+    @app.get("/static/{path:path}")
+    async def _serve_static(path: str) -> Response:
+        return _read_bundle_file(resolved_root, path)
+
+    assets_dir = static_dir / "assets"
+    if assets_dir.is_dir():
+        resolved_assets = assets_dir.resolve()
+
+        @app.get("/assets/{path:path}")
+        async def _serve_assets(path: str) -> Response:
+            return _read_bundle_file(resolved_assets, path)
+
+
+def _read_bundle_file(root: Path, path: str) -> Response:
+    """Resolve ``path`` under ``root`` and return its bytes, with guards."""
+    target = (root / path).resolve()
+    if not target.is_relative_to(root):
+        raise HTTPException(status_code=403)
+    if not target.is_file():
+        raise HTTPException(status_code=404)
+    media_type, _ = mimetypes.guess_type(target.name)
+    return Response(
+        content=target.read_bytes(),
+        media_type=media_type or "application/octet-stream",
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
 
 
 _MEDIA_EXTENSIONS = frozenset({

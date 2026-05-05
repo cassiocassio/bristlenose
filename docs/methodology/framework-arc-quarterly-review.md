@@ -96,6 +96,10 @@ Three questions answered honestly:
 
 Three to five concrete things. Not a backlog — a commitment. Each item should be either specific enough to verify next quarter ("ship Level 1 structured reasons") or explicit that it's a continuing commitment ("keep PII scrubbing false-positive rate below 2%"). Vague aspirations get rewritten as either specifics or dropped.
 
+### Companion: tooling review (~15 min)
+
+Run alongside, not inside, this review. Platform pillars (Node, Python, macOS, Xcode), Dependabot policy, beta-window adherence, pinning register sweep — checklist in [`docs/design-platform-policy.md`](../design-platform-policy.md) §"Quarterly tooling review". The methodology review and the tooling review share a calendar slot; their outputs are kept distinct so neither dilutes the other.
+
 ## Signs the arc is quietly going wrong
 
 Written here so they're catchable.

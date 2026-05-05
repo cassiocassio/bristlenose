@@ -31,6 +31,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch bundle-trim-s1-s2/` | `bundle-trim-s1-s2` | feature | Trim s1/s2 stages from sidecar PyInstaller bundle (S1+S2 from bundle audit) |
+| `bristlenose_branch i18n-text-sweep/` | `i18n-text-sweep` | feature | Sweep up English literals missed by i18n-llm-settings (LLMProvider helpers, TranscriptionSettingsView, BuildInfoSheet, default project name) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
@@ -122,6 +123,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `pipeline-runner-sidecar-mode` _(merged)_ | `bristlenose_branch pipeline-runner-sidecar-mode/` _(detached, on disk)_ | merged via PR #96 (`0e0157e`) on 2 May 2026 |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
+| `i18n-text-sweep` | `bristlenose_branch i18n-text-sweep/` | local only |
 | `bundle-trim-s1-s2` _(merged)_ | `bristlenose_branch bundle-trim-s1-s2/` _(still on disk)_ | merged to main 4 May 2026 (`801065b`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
@@ -134,6 +136,33 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+### `i18n-text-sweep`
+
+**Kind:** feature — code lands on main; ships translation updates
+**Status:** Just started
+**Started:** 5 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch i18n-text-sweep/`
+**Remote:** local only (push when ready)
+
+**What it does:** Sweep up English literals missed by `i18n-llm-settings`: LLMProvider helpers (activation toggle, status labels, console link labels, Ollama description), TranscriptionSettingsView (Backend, Model, Auto, hint, model-recommended interpolated label), BuildInfoSheet Close, default New Project name.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/LLMProvider.swift`
+- `desktop/Bristlenose/Bristlenose/TranscriptionSettingsView.swift`
+- `desktop/Bristlenose/Bristlenose/BuildInfoSheet.swift`
+- `desktop/Bristlenose/Bristlenose/ContentView.swift`
+- `bristlenose/locales/en/desktop.json`
+- `bristlenose/locales/es/desktop.json`
+- `bristlenose/locales/fr/desktop.json`
+- `bristlenose/locales/de/desktop.json`
+- `bristlenose/locales/ko/desktop.json`
+- `bristlenose/locales/ja/desktop.json`
+
+**Potential conflicts with other branches:**
+- No active branch touches `desktop/Bristlenose/Bristlenose/` or `bristlenose/locales/`. Low conflict risk.
+
+---
 
 ### `bundle-trim-s1-s2` (merged)
 

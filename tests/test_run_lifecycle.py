@@ -130,6 +130,25 @@ def test_ps_start_time_for_dead_pid_returns_none():
     assert val is None
 
 
+def test_ps_start_time_stable_across_reads():
+    """Two reads of the same live PID return the same opaque token.
+
+    This is the load-bearing contract — `_is_alive_owned` compares
+    a recorded token against a fresh read, so flapping = false negatives
+    on the concurrent-run check.
+    """
+    a = _ps_start_time(os.getpid())
+    b = _ps_start_time(os.getpid())
+    assert a is not None
+    assert a == b
+
+
+def test_ps_start_time_returns_str():
+    """Format is opaque; callers must not parse it. Just assert type."""
+    val = _ps_start_time(os.getpid())
+    assert isinstance(val, str)
+
+
 def test_is_alive_owned_self_pid_matches(tmp_path: Path):
     start = _ps_start_time(os.getpid())
     assert _is_alive_owned({"pid": os.getpid(), "start_time": start}) is True

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 5 May 2026 (closed `i18n-llm-settings`)
+**Updated:** 5 May 2026 (closed `bundle-trim-s1-s2`)
 
 ---
 
@@ -30,7 +30,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
-| `bristlenose_branch bundle-trim-s1-s2/` | `bundle-trim-s1-s2` | feature | Trim s1/s2 stages from sidecar PyInstaller bundle (S1+S2 from bundle audit) |
 | `bristlenose_branch i18n-text-sweep/` | `i18n-text-sweep` | feature | Sweep up English literals missed by i18n-llm-settings (LLMProvider helpers, TranscriptionSettingsView, BuildInfoSheet, default project name) |
 | `bristlenose_branch locale-system-delegation/` | `locale-system-delegation` | feature | Delete in-app language picker on desktop; delegate locale to System Settings → Apps → Bristlenose (Bundle.preferredLocalizations + UIPrefersShowingLanguageSettings) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
@@ -126,7 +125,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `i18n-text-sweep` | `bristlenose_branch i18n-text-sweep/` | local only |
 | `locale-system-delegation` | `bristlenose_branch locale-system-delegation/` | local only |
-| `bundle-trim-s1-s2` _(merged)_ | `bristlenose_branch bundle-trim-s1-s2/` _(still on disk)_ | merged to main 4 May 2026 (`801065b`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
@@ -189,29 +187,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - No active branch touches `desktop/Bristlenose/Bristlenose/` or `bristlenose/locales/`. Low conflict risk.
-
----
-
-### `bundle-trim-s1-s2` (merged)
-
-**Kind:** feature _(merged)_
-**Status:** Merged to main 4 May 2026 (`801065b`)
-**Started:** 4 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch bundle-trim-s1-s2/` (still on disk; close via `/close-branch` when ready)
-**Remote:** pushed to `origin/main` 4 May 2026
-
-**What shipped:** S1 — added `mlx_whisper.torch_whisper` to PyInstaller spec `excludes=[]` (orphan checkpoint-conversion utility verified via grep). S2 — `desktop/scripts/build-sidecar.sh` now recreates a dedicated `.venv-sidecar/` from scratch on every run installing only `.[serve,apple,desktop]`, keeping contributor-venv drift (BERTopic spike packages, dev-only tools, ad-hoc installs) out of the bundle. Plus doc updates capturing the corrected torch-import-path map (`huggingface_hub`, `scipy`, `onnxruntime`, `functorch` — not just `torch_whisper`) and the read-the-xref-don't-grep lesson.
-
-**Result:** 771 MB → 645 MB. C0 baseline restored. Headline trim (deeper torch eviction) is S3 territory and deferred. See `docs/design-desktop-python-runtime.md` §"Bundle-size findings" for the full post-mortem.
-
-**Files this branch will touch:**
-- `desktop/bristlenose-sidecar.spec` (one new excludes entry)
-- `desktop/scripts/build-sidecar.sh` (venv path + recreate-from-scratch)
-- `.gitignore` (add `.venv-sidecar/`)
-
-**Potential conflicts with other branches:**
-- `bundled-binary-helper` — also touches sidecar bundling territory; no expected file overlap (it touches `video.py` / spec datas, not excludes or build script)
-- Other active branches: no overlap
 
 ---
 
@@ -331,6 +306,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `bundle-trim-s1-s2` — merged 4 May 2026
+
+S1 + S2 of the sidecar bundle audit: excluded `mlx_whisper.torch_whisper` from the PyInstaller spec and rebuilt with a dedicated `.venv-sidecar/` on every build, keeping contributor-venv drift out of the bundle. 771 MB → 645 MB; C0 baseline restored. Deeper torch eviction deferred to S3. Merge commit `801065b`.
 
 ### `i18n-llm-settings` — merged 5 May 2026
 

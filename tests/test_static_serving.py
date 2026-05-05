@@ -180,3 +180,30 @@ class TestDebug500Envelope:
         assert resp.status_code == 500
         assert "kaboom" not in resp.text
         assert "Internal Server Error" in resp.text
+
+
+class TestMimetypesKnownfilesEmptied:
+    """Importing the `bristlenose` package must drop ``mimetypes.knownfiles``
+    so any lazy ``mimetypes.init()`` walks an empty list. Reads of
+    ``/etc/mime.types`` and friends raise PermissionError under macOS App
+    Sandbox and poison ``mimetypes._db`` for every subsequent caller.
+
+    Note: ``mimetypes.init([])`` does NOT do this — Python 3.12+ does
+    ``files = knownfiles + list(files)``, so passing an empty list still
+    walks knownfiles. Emptying knownfiles itself is the only reliable fix.
+    """
+
+    def test_knownfiles_is_empty(self) -> None:
+        import mimetypes
+
+        assert mimetypes.knownfiles == []
+
+    def test_explicit_registrations_present(self) -> None:
+        import mimetypes
+
+        assert mimetypes.guess_type("foo.js") == ("application/javascript", None)
+        assert mimetypes.guess_type("foo.css") == ("text/css", None)
+        assert mimetypes.guess_type("foo.html") == ("text/html", None)
+        assert mimetypes.guess_type("foo.json") == ("application/json", None)
+        assert mimetypes.guess_type("foo.svg") == ("image/svg+xml", None)
+        assert mimetypes.guess_type("foo.woff2") == ("font/woff2", None)

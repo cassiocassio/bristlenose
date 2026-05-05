@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 5 May 2026 (closed `i18n-text-sweep`)
+**Updated:** 5 May 2026 (closed `locale-system-delegation`)
 
 ---
 
@@ -30,7 +30,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
-| `bristlenose_branch locale-system-delegation/` | `locale-system-delegation` | feature | Delete in-app language picker on desktop; delegate locale to System Settings → Apps → Bristlenose (Bundle.preferredLocalizations + UIPrefersShowingLanguageSettings) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
@@ -122,7 +121,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `pipeline-runner-sidecar-mode` _(merged)_ | `bristlenose_branch pipeline-runner-sidecar-mode/` _(detached, on disk)_ | merged via PR #96 (`0e0157e`) on 2 May 2026 |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
-| `locale-system-delegation` | `bristlenose_branch locale-system-delegation/` | local only |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
@@ -134,32 +132,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
-### `locale-system-delegation`
-
-**Kind:** feature — code lands on main; ships desktop locale-handling change
-**Status:** Just started
-**Started:** 5 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch locale-system-delegation/`
-**Remote:** local only (push when ready)
-
-**What it does:** Delete the in-app language picker on desktop and delegate locale selection to System Settings → Apps → Bristlenose. `I18n.swift` reads `Bundle.preferredLocalizations` on every launch (Apple's BCP 47 matcher). Adds `INFOPLIST_KEY_UIPrefersShowingLanguageSettings=YES` so the per-app language section is visible even for users with only one preferred language. Web/CLI serve picker stays. See `docs/design-locale-negotiation.md`.
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/I18n.swift`
-- `desktop/Bristlenose/Bristlenose/AppearanceSettingsView.swift`
-- `desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj`
-- `bristlenose/locales/en/desktop.json`
-- `bristlenose/locales/es/desktop.json`
-- `bristlenose/locales/fr/desktop.json`
-- `bristlenose/locales/de/desktop.json`
-- `bristlenose/locales/ko/desktop.json`
-- `bristlenose/locales/ja/desktop.json`
-
-**Potential conflicts with other branches:**
-- `i18n-text-sweep` also touches `desktop/Bristlenose/Bristlenose/` and all six `bristlenose/locales/*/desktop.json`. Coordinate ordering — likely safe to merge sequentially since this branch removes the picker and that branch sweeps unrelated literals, but the locale JSON files will need conflict resolution if both edit the same keys.
-
----
 
 ---
 
@@ -279,6 +251,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `locale-system-delegation` — merged 5 May 2026
+
+Delete in-app language picker on desktop; delegate locale to System Settings → Apps → Bristlenose (`Bundle.preferredLocalizations` + `UIPrefersShowingLanguageSettings`). Web/CLI serve picker unchanged.
 
 ### `i18n-text-sweep` — merged 5 May 2026
 

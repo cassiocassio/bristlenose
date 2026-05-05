@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 3 May 2026 (sandbox walk beats 6→13 done — resume path passes sandbox-on cleanly, no `deny(1)` blocked any pipeline beat. Two non-sandbox blockers identified: host-side `run failed` misreporting (PipelineRunner.swift:1068) and faster-whisper missing from PyInstaller bundle. Both direct-on-main fixes; handoff at `docs/private/handoffs/sandbox-walk-followup-fixes.md`. Mission Sandbox closes once both land.)
+Last updated: 5 May 2026 (sandbox-ps-libproc-swap merged — third libproc swap in the family, replaces `/bin/ps` exec in `run_lifecycle._ps_start_time` with `proc_pidinfo(PROC_PIDTBSDINFO)` ctypes call on Darwin. Sibling branch `sandbox-staticfiles-fix` still open; both narrow blockers must land before the bundled sidecar starts cleanly under App Sandbox. Rule of Three now met for `bristlenose/utils/libproc.py` extraction — deferred to next libproc call site per `desktop/CLAUDE.md` convention.)
 
 **Most recent ship: v0.15.0 (26 Apr 2026)** — Phase 1f / 4a-pre. Pipeline-resilience event log (`pipeline-events.jsonl`) + structured `Cause` (10 categories) + honest `cost_usd_estimate` + desktop `EventLogReader`. Replaces the manifest-inference path that mis-classified interrupted runs as `.ready`. See `CHANGELOG.md` for full features, `docs/design-pipeline-resilience.md` for the design, and `docs/private/desktop-ux-iteration.md` for the deferred desktop UX work (Resume / Retry / Re-analyse… verb wiring + 9 other themed sections).
 

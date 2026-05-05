@@ -1,3 +1,13 @@
+# Bristlenose Dependabot config.
+#
+# Policy lives in docs/design-platform-policy.md.
+# Selective major-ignore: only deps that empirically caused rework when
+# auto-bumped. New entries land in the register with a reason and a
+# re-check date in the policy doc.
+#
+# Security advisories bypass `ignore` rules. Dependabot still opens a PR
+# for any CVE-flagged version regardless of the version-update filter.
+
 version: 2
 
 updates:
@@ -8,9 +18,20 @@ updates:
       day: "monday"
     assignees:
       - "cassiocassio"
+    labels:
+      - "dependencies"
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # Major bumps for runtime/foundation packages that drag the
+      # ecosystem with them. Bump in coordinated tooling sprints, not
+      # one-off PRs. Leave most pip majors flowing — Python wheel
+      # ecosystem is more stable major-to-major than npm.
+      - dependency-name: "pydantic"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "fastapi"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"
@@ -19,9 +40,35 @@ updates:
       day: "monday"
     assignees:
       - "cassiocassio"
+    labels:
+      - "dependencies"
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # Tied to Node major: bumping these uncoordinated has caused
+      # rework historically. See CHANGELOG v0.14.5 for jsdom + Node 25.
+      - dependency-name: "jsdom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
+      # ESLint / typescript-eslint move with Node and TypeScript;
+      # cap-mismatches caused npm-ci failures in v0.14.5. Take majors
+      # deliberately, alongside the Node bump.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint-plugin-react-hooks"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript-eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # Notable allow-list: react / react-dom / react-router /
+      # react-router-dom / i18next / react-i18next majors continue to
+      # flow as PRs. Most have been painless (react-i18next 17 was a
+      # one-line peer-dep tightening). Hand-review each one.
 
   - package-ecosystem: "npm"
     directory: "/e2e"
@@ -30,6 +77,17 @@ updates:
       day: "monday"
     assignees:
       - "cassiocassio"
+    labels:
+      - "dependencies"
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # Lighthouse 13 requires Node ≥22.19; CI is on 20. Coordinate
+      # with the CI Node bump.
+      - dependency-name: "lighthouse"
+        update-types: ["version-update:semver-major"]
+      # Playwright majors occasionally rotate the bundled Chromium /
+      # WebKit channel and break the e2e fixtures; coordinate.
+      - dependency-name: "@playwright/test"
+        update-types: ["version-update:semver-major"]

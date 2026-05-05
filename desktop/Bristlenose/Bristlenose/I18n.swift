@@ -95,6 +95,25 @@ final class I18n: ObservableObject {
         return key
     }
 
+    /// Translate with `{{name}}` substitution.
+    ///
+    /// Used for whole-string interpolation where the locale-specific text
+    /// surrounding the variable differs (leading space, full-width vs
+    /// half-width parens, suffix vs prefix word order). Suffix-concat
+    /// breaks across locales — use this instead.
+    ///
+    ///   i18n.t("desktop.transcriptionSettings.modelRecommended",
+    ///          ["model": "large-v3-turbo"])
+    ///   → en: "large-v3-turbo (recommended)"
+    ///   → ja: "large-v3-turbo（推奨）"
+    func t(_ key: String, _ vars: [String: String]) -> String {
+        var s = t(key)
+        for (k, v) in vars {
+            s = s.replacingOccurrences(of: "{{\(k)}}", with: v)
+        }
+        return s
+    }
+
     // MARK: - Private
 
     private static func sanitized(_ code: String) -> String {

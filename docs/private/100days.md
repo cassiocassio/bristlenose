@@ -731,6 +731,7 @@ Safari's performance team made WebKit fast by never allowing it to become slower
 ## Dependency maintenance due in window
 
 - **Quarterly review: May 2026** — `pip list --outdated`, bump for security/features
+- **~15 May 2026 — revisit platform-policy Open Questions** — `docs/design-platform-policy.md` "Open questions / known gaps". Triage: auto-merge workflow + `pip-audit`/`npm audit`/`ignore-scripts` gates, tiered security SLA matrix (Tier 1 72h / Tier 2 7d / Tier 3 quarterly), ESLint stack `groups` vs four `ignore`s, WWDC ritual calendar hook (annual auto-filed issue), `pbxproj` dual-target comment. Decide: do now / defer to next quarterly tooling review / fold into WWDC-2026 prep window (early June).
 - **Python 3.10 EOL: Oct 2026** — decide minimum version before launch
 - **faster-whisper/ctranslate2 health check** — HIGH risk dependency, monitor
 

@@ -34,6 +34,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
+| `bristlenose_branch trytrytry/` | `trytrytry` | diagnostic | Throwaway / test-the-skill run |
 
 
 
@@ -125,6 +126,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
+| `trytrytry` | `bristlenose_branch trytrytry/` | local only |
 
 
 
@@ -132,6 +134,24 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `trytrytry`
+
+**Kind:** diagnostic — discard when done; not intended to merge
+**Status:** Just started
+**Started:** 6 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch trytrytry/`
+**Remote:** local only (push when ready)
+
+**What it does:** Throwaway / test-the-skill run — exercising `/new-feature` end-to-end. Will be discarded shortly.
+
+**Files this branch will touch:**
+- TBD — none expected (throwaway)
+
+**Potential conflicts with other branches:**
+- None expected — no real edits planned
 
 ---
 

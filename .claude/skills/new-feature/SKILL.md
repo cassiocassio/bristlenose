@@ -18,6 +18,14 @@ If no branch name was provided (`$0` is empty), ask the user for one before proc
 
 **Idempotency:** If the branch or worktree already exists from a partial previous run, detect that and skip to the first incomplete step rather than failing.
 
+**Shell environment:** Every Bash invocation in this skill must start with:
+
+```bash
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:$PATH"
+```
+
+The Claude Code Bash tool inherits PATH from the harness, which has occasionally been observed without `/usr/bin` and `/bin` — bare `mkdir` / `ln` / `rm` / `date` then fail with `command not found` mid-step. Prepending the standard system paths is cheap and makes every block robust regardless of harness state. `/opt/homebrew/bin` is included so `python3.12`, `npm`, etc. resolve. Apply this to every bash block in this skill — including the inline ones below.
+
 ## Step 0: Parse optional flags
 
 `$0` may contain a branch name optionally followed by any subset of these flags:
@@ -244,13 +252,23 @@ If any check failed, leave the sentinel in place — the next Claude session ent
 
 ## Step 9: Symlink trial-runs (non-critical)
 
-Skip if the symlink already exists.
+Skip if the symlink already exists, **or if the worktree already has a real `trial-runs/` directory** (the path is partially tracked — `trial-runs/fossda-opensource/perf-baselines/...` is in git, so every worktree starts with a real `trial-runs/` dir, and naively running `ln -s …` produces a broken nested layout: `trial-runs/trial-runs -> /…/main/trial-runs`).
 
 ```bash
-ln -s /Users/cassio/Code/bristlenose/trial-runs "/Users/cassio/Code/bristlenose_branch $0/trial-runs"
+WORKTREE="/Users/cassio/Code/bristlenose_branch $0"
+TRIAL="$WORKTREE/trial-runs"
+if [ -L "$TRIAL" ]; then
+  echo "✓ trial-runs symlink already present"
+elif [ -d "$TRIAL" ]; then
+  echo "ℹ trial-runs/ already exists in worktree (tracked content) — skipping symlink. Worktree keeps its own copy of any tracked baselines; gitignored data in main isn't reachable from here."
+else
+  ln -s /Users/cassio/Code/bristlenose/trial-runs "$TRIAL" \
+    && echo "✓ symlinked trial-runs/ to main" \
+    || echo "ℹ trial-runs/ symlink failed — main may not have trial data"
+fi
 ```
 
-This symlinks the main repo's `trial-runs/` directory (gitignored, contains large video files and rendered reports) so that `./scripts/dev.sh` works in the worktree. Don't copy — the directory contains video files. If the symlink fails (target doesn't exist), warn but continue — the user may not have trial data.
+This symlinks the main repo's `trial-runs/` directory (mostly gitignored — contains large video files and rendered reports) so that `./scripts/dev.sh` works in the worktree. Don't copy — the directory contains video files. The "directory already exists" branch is the common case for fresh worktrees due to the partially tracked subtree; we accept the slight loss (gitignored trial data in main isn't reachable from a fresh worktree) rather than the silent broken-nested layout that the naive `ln` produced.
 
 Then symlink the gitignored desktop binaries from main, so Xcode's Copy Resources phase finds them when the user opens the worktree's `Bristlenose.xcodeproj` and Cmd+R's. Without these, the .app builds without ffmpeg/ffprobe and the pipeline can't probe video files. Each link is gated on existence, so worktrees on machines that have never run `desktop/scripts/fetch-ffmpeg.sh` in main don't error.
 

@@ -143,9 +143,11 @@ The skill *shrinks* by maybe a third. Drift detection is automatic — `mise ins
 
 Each phase is independently shippable. Don't land all at once.
 
-### Phase 0 — narrow patch (in-flight)
+### Phase 0 — narrow patch (landed 6 May 2026)
 
-Land the `new-feature-binary-symlinks` branch: extend skill Step 9 to symlink ffmpeg/ffprobe/models from main, add Step 8 probe via `bundled_binary.resolve_bundled_binary`. ~25 lines. Patches today's hole. Doesn't depend on any off-the-shelf tool.
+Skill Step 9 now symlinks ffmpeg/ffprobe/models from main when present, and Step 8 has a probe that calls `bundled_binary_path` and reports `✓ desktop binaries resolvable`. Verified end-to-end via a throwaway test worktree: Xcode Debug build of `Bristlenose.app` ships real-byte ffmpeg/ffprobe in `Contents/Resources/`. ~25 lines in [.claude/skills/new-feature/SKILL.md](.claude/skills/new-feature/SKILL.md), no off-the-shelf tooling adopted.
+
+A follow-up patch on the same skill added a top-of-file `export PATH=…` so every Bash block in the skill survives a harness without `/usr/bin` on PATH (observed during the test run), and made Step 9's pre-existing test-data symlink idempotent against partially tracked subtrees (the naive `ln -s` produced a broken nested layout).
 
 ### Bootstrap (per-developer, one-time)
 
@@ -180,7 +182,7 @@ Add `justfile` at repo root with the tasks shown above. Existing `desktop/script
 - *CLI* — `bristlenose --version` exits clean
 - *Doctor* — `bristlenose doctor` passes
 - *Frontend bundle* — `bristlenose/server/static/index.html` + `assets/` present
-- *Desktop binaries* — `bundled_binary.resolve_bundled_binary("ffmpeg"/"ffprobe")` returns a path (Phase 0 ships this one)
+- *Desktop binaries* — `bundled_binary.bundled_binary_path("ffmpeg"/"ffprobe")` returns a path (Phase 0 ships this one)
 - *Bundle manifest parity* — codebook YAML + LLM prompt MDs present (mirrors `desktop/scripts/check-bundle-manifest.sh`)
 - *Port uniqueness* — `.claude/launch.json` port doesn't collide with another worktree (existing E2E gotcha)
 - *Migrations* — `alembic check` if Bristlenose adopts Alembic; today migrations are hand-rolled in `db.py` so this probe is dormant
@@ -226,7 +228,7 @@ No fingerprint file. No drift detector. The toolchain *is* the drift detector.
 - **`mise` learning curve.** Low — single-file declaration, brew-installable. But every new tool is friction during the alpha sprint. Defer Phase 1+ until post-TestFlight if it competes for attention.
 - **`uv` ecosystem maturity.** It's stable; FastAPI itself uses it. Lockfile format isn't yet standardised across tools (PEP 751 in flight). Migration is reversible.
 - **`just` requires another tool.** Adopters need `brew install just`. `mise` can install it (`mise.toml`: `just = "1.x"`), so once Phase 1 lands this is one line.
-- **Codesigning vs symlinks.** Resolved at Phase 0 verification — Xcode's Copy Resources phase resolves symlinks before signing, so the signed .app contains real bytes. If verification fails, Phase 0 falls back to copy and downstream phases inherit that choice.
+- **Codesigning vs symlinks.** Partly resolved at Phase 0 verification — the actual copy is done by the `Copy Sidecar Resources` shell-script build phase in `desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj`, not by Xcode's standard Copy Resources phase. That script uses `cp -p` for `ffmpeg`/`ffprobe` (which dereferences file symlinks by default → real bytes in the signed .app ✅) but `rsync -a --delete` for `models/` (which preserves symlinks via the `-l` in `-a` → directory symlink survives into the .app ⚠️). Caught during `trytrytry` verification: the built `.app` had `ffmpeg`/`ffprobe` as 62 MB binaries but `models` as a dangling absolute-path symlink. **Open chip:** change `rsync -a --delete` → `rsync -aL --delete` in the script (one-character fix; `-L` / `--copy-links` dereferences). Not blocking alpha because the production `models/` shipping path may go via the PyInstaller sidecar rather than the worktree symlink — verify before applying. **Lesson generalised:** every copy site that touches a symlink needs an explicit dereference choice; don't assume tools agree (`cp` and `rsync` disagree on every Unix, not just macOS).
 - **Cloud Code VMs (Ubuntu, ephemeral).** `mise` and `uv` work on Linux. `just` works on Linux. No regressions.
 
 ## Cross-references

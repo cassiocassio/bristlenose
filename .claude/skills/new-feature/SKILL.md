@@ -213,11 +213,28 @@ fi
 
 # 4. Doctor (canonical 'does this thing work' check; doesn't fail on missing API key)
 .venv/bin/bristlenose doctor 2>&1 | head -20
+
+# 5. Desktop binaries (only meaningful if Resources/ exists in this worktree).
+#    Probes the resolution path the app actually uses (bundled_binary_path)
+#    rather than just `test -f`, so a broken symlink or wrong layout is caught.
+if [ -d desktop/Bristlenose/Resources ]; then
+  if .venv/bin/python -c "
+from bristlenose.utils.bundled_binary import bundled_binary_path
+import sys
+missing = [n for n in ('ffmpeg', 'ffprobe') if bundled_binary_path(n) is None]
+if missing:
+    print('missing:', ' '.join(missing)); sys.exit(1)
+" 2>/dev/null; then
+    echo "✓ desktop binaries resolvable"
+  else
+    echo "✗ desktop binaries not resolvable — Cmd+R from this worktree's Xcode project will produce an .app without them. Either: re-run /new-feature setup (Step 9 should have symlinked them), or run desktop/scripts/fetch-ffmpeg.sh from main."
+  fi
+fi
 ```
 
-Print a one-line summary at the end: "Smoke test: N/4 checks passed". If any failed, list the specific remediation lines for the user.
+Print a one-line summary at the end: "Smoke test: N/5 checks passed" (or "N/4" if probe 5 was skipped because `desktop/Bristlenose/Resources` doesn't exist). If any failed, list the specific remediation lines for the user.
 
-**If all 4 checks passed, remove the setup-incomplete sentinel:**
+**If all checks passed, remove the setup-incomplete sentinel:**
 
 ```bash
 rm -f "/Users/cassio/Code/bristlenose_branch $0/.claude/setup-incomplete"
@@ -234,6 +251,25 @@ ln -s /Users/cassio/Code/bristlenose/trial-runs "/Users/cassio/Code/bristlenose_
 ```
 
 This symlinks the main repo's `trial-runs/` directory (gitignored, contains large video files and rendered reports) so that `./scripts/dev.sh` works in the worktree. Don't copy — the directory contains video files. If the symlink fails (target doesn't exist), warn but continue — the user may not have trial data.
+
+Then symlink the gitignored desktop binaries from main, so Xcode's Copy Resources phase finds them when the user opens the worktree's `Bristlenose.xcodeproj` and Cmd+R's. Without these, the .app builds without ffmpeg/ffprobe and the pipeline can't probe video files. Each link is gated on existence, so worktrees on machines that have never run `desktop/scripts/fetch-ffmpeg.sh` in main don't error.
+
+```bash
+WORKTREE="/Users/cassio/Code/bristlenose_branch $0"
+for path in ffmpeg ffprobe models; do
+  src="/Users/cassio/Code/bristlenose/desktop/Bristlenose/Resources/$path"
+  dst="$WORKTREE/desktop/Bristlenose/Resources/$path"
+  if [ -e "$src" ] && [ ! -e "$dst" ]; then
+    mkdir -p "$WORKTREE/desktop/Bristlenose/Resources"
+    ln -s "$src" "$dst"
+    echo "✓ symlinked $path from main"
+  elif [ -e "$dst" ]; then
+    echo "✓ $path already present in worktree"
+  else
+    echo "ℹ $path not in main — run desktop/scripts/fetch-ffmpeg.sh in main first if you'll build the desktop .app"
+  fi
+done
+```
 
 ## Step 10: Stay local (do NOT push)
 

@@ -1,10 +1,10 @@
 ---
 status: current
-last-trued: 2026-04-26
-trued-against: HEAD@port-v01-ingestion on 2026-04-26 (commit 9585bcb)
+last-trued: 2026-05-07
+trued-against: HEAD@main on 2026-05-07 (commit 913a480)
 ---
 
-> **Truing status:** Current — Phase 1f / 4a-pre shipped on `port-v01-ingestion` in 4 slices + a review-fix pass; doc reconciled against shipped code on 2026-04-26. Phase 0–2c CLI-side claims remain accurate. The Swift consumer side now exists (`desktop/Bristlenose/Bristlenose/EventLogReader.swift`); see updated §"Desktop consumer mapping" and §"Cross-boundary naming". Phase 3+ remain design-only. See round-3 changelog below.
+> **Truing status:** Current — Phase 1f / 4a-pre shipped on `port-v01-ingestion`; the failure-taxonomy Phase A shipped via `pipeline-summary-events` merged into main on 2026-05-07 (commits `3ccc0c1` / `8158add` / `a4ce131` / `efe4064`). Phase 0–2c CLI-side claims remain accurate. The Swift consumer side exists for run-state derivation (`desktop/Bristlenose/Bristlenose/EventLogReader.swift`); the Branch 2 `pipeline-diagnostic-pill` popover that consumes the new `summary` field is design-only — see [design-pipeline-diagnostic-popover.md](design-pipeline-diagnostic-popover.md) for that spec, the message-kind taxonomy, and the truncation-marker contract. Phase 3+ remain design-only.
 
 ## Changelog
 

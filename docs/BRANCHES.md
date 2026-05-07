@@ -35,6 +35,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch trytrytry/` | `trytrytry` | diagnostic | Throwaway / test-the-skill run |
+| `bristlenose_branch serve-importer-reimport-on-completion/` | `serve-importer-reimport-on-completion` | feature | serve-mode importer never re-fires after pipeline completes — UI shows 0/0 despite full data on disk |
 
 
 
@@ -127,6 +128,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `trytrytry` | `bristlenose_branch trytrytry/` | local only |
+| `serve-importer-reimport-on-completion` | `bristlenose_branch serve-importer-reimport-on-completion/` | local only |
 
 
 
@@ -134,6 +136,29 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `serve-importer-reimport-on-completion`
+
+**Kind:** feature — code lands on main
+**Status:** Just started
+**Started:** 7 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch serve-importer-reimport-on-completion/`
+**Remote:** local only (push when ready)
+
+**What it does:** serve-mode importer never re-fires after pipeline completes — UI shows 0/0 despite full data on disk. Handoff plan at `.claude/plans/serve-importer-reimport-on-completion.md`.
+
+**Files this branch will touch:**
+- `bristlenose/server/importer.py`
+- `bristlenose/server/lifecycle.py`
+- `bristlenose/server/app.py`
+- `frontend/src/components/ProjectRow.tsx`
+- `tests/test_server_importer.py`
+
+**Potential conflicts with other branches:**
+- `responsive-signal-cards` — no overlap (frontend signal card layout)
+- Parked experiments — no overlap
 
 ---
 

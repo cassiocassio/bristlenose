@@ -1,6 +1,6 @@
 {
-  "_doc": "Cross-language schema contract between Python (bristlenose/events.py) and Swift (desktop/Bristlenose/Bristlenose/PipelineSummary.swift). Both sides round-trip these scenarios in tests. If you change this file, both sides' tests must continue to pass. Established 7 May 2026 for branches pipeline-summary-events (Python) and pipeline-diagnostic-pill (Swift). Schema version 2 (7 May 2026): added duration_ms on StageOutcome so the Swift popover can render Xcode-build-log-style per-stage timings. Schema version 3 (7 May 2026): added run_completed_partial_truncated scenario locking the STAGE_FAILED_MAX=10 overflow marker shape (session_id=null, cause.category=unknown, cause.message='... and N more failures truncated') — Python writer truncates at write time so terminus event lines stay under Swift's 64 KB read window; Swift popover must render the marker as a single muted summary row, not as an extra session.",
-  "version": 3,
+  "_doc": "Cross-language schema contract between Python (bristlenose/events.py) and Swift (desktop/Bristlenose/Bristlenose/PipelineSummary.swift). Both sides round-trip these scenarios in tests. If you change this file, both sides' tests must continue to pass. Established 7 May 2026 for branches pipeline-summary-events (Python) and pipeline-diagnostic-pill (Swift). Schema version 2: added duration_ms on StageOutcome. Schema version 3: added run_completed_partial_truncated scenario locking STAGE_FAILED_MAX=10 overflow marker shape. Schema version 4: realigned session_id values to ordinal format (s1, s2, ...) matching what bristlenose actually emits at runtime — earlier versions used illustrative descriptive ids that didn't reflect production shape.",
+  "version": 4,
   "scenarios": {
     "run_completed_partial": {
       "_doc": "Partial run: 3 of 5 transcripts succeeded; pipeline continued and produced a (low-value, dev-feedback) report. Diagnostic pill state .completedPartial on Swift side.",
@@ -24,28 +24,28 @@
           "duration_ms": 723000,
           "failed": [
             {
-              "session_id": "session-002-show-and-tell-40",
+              "session_id": "s2",
               "cause": {
                 "category": "whisper",
                 "code": null,
                 "message": "Whisper transcription timed out after 600s",
                 "provider": null,
                 "stage": "s05_transcribe",
-                "session_id": "session-002-show-and-tell-40",
+                "session_id": "s2",
                 "exit_code": null,
                 "signal": null,
                 "signal_name": null
               }
             },
             {
-              "session_id": "session-005-deep-dive",
+              "session_id": "s5",
               "cause": {
                 "category": "missing_binary",
                 "code": null,
                 "message": "[Errno 2] No such file or directory: 'ffmpeg'",
                 "provider": null,
                 "stage": "s05_transcribe",
-                "session_id": "session-005-deep-dive",
+                "session_id": "s5",
                 "exit_code": null,
                 "signal": null,
                 "signal_name": null
@@ -100,42 +100,42 @@
           "duration_ms": 18000,
           "failed": [
             {
-              "session_id": "session-001",
+              "session_id": "s1",
               "cause": {
                 "category": "auth",
                 "code": "401",
                 "message": "Anthropic API authentication failed: invalid API key",
                 "provider": "anthropic",
                 "stage": "s09_quote_extraction",
-                "session_id": "session-001",
+                "session_id": "s1",
                 "exit_code": null,
                 "signal": null,
                 "signal_name": null
               }
             },
             {
-              "session_id": "session-002",
+              "session_id": "s2",
               "cause": {
                 "category": "auth",
                 "code": "401",
                 "message": "Anthropic API authentication failed: invalid API key",
                 "provider": "anthropic",
                 "stage": "s09_quote_extraction",
-                "session_id": "session-002",
+                "session_id": "s2",
                 "exit_code": null,
                 "signal": null,
                 "signal_name": null
               }
             },
             {
-              "session_id": "session-003",
+              "session_id": "s3",
               "cause": {
                 "category": "auth",
                 "code": "401",
                 "message": "Anthropic API authentication failed: invalid API key",
                 "provider": "anthropic",
                 "stage": "s09_quote_extraction",
-                "session_id": "session-003",
+                "session_id": "s3",
                 "exit_code": null,
                 "signal": null,
                 "signal_name": null
@@ -167,15 +167,15 @@
           "succeeded": 4,
           "duration_ms": 1842000,
           "failed": [
-            {"session_id": "s01", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s01", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s02", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s02", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s03", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s03", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s04", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s04", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s05", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s05", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s06", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s06", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s07", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s07", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s08", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s08", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s09", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s09", "exit_code": null, "signal": null, "signal_name": null}},
+            {"session_id": "s1", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s1", "exit_code": null, "signal": null, "signal_name": null}},
+            {"session_id": "s2", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s2", "exit_code": null, "signal": null, "signal_name": null}},
+            {"session_id": "s3", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s3", "exit_code": null, "signal": null, "signal_name": null}},
+            {"session_id": "s4", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s4", "exit_code": null, "signal": null, "signal_name": null}},
+            {"session_id": "s5", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s5", "exit_code": null, "signal": null, "signal_name": null}},
+            {"session_id": "s6", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s6", "exit_code": null, "signal": null, "signal_name": null}},
+            {"session_id": "s7", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s7", "exit_code": null, "signal": null, "signal_name": null}},
+            {"session_id": "s8", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s8", "exit_code": null, "signal": null, "signal_name": null}},
+            {"session_id": "s9", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s9", "exit_code": null, "signal": null, "signal_name": null}},
             {"session_id": "s10", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s10", "exit_code": null, "signal": null, "signal_name": null}},
             {"session_id": null,  "cause": {"category": "unknown", "code": null, "message": "... and 4 more failures truncated", "provider": null, "stage": null, "session_id": null, "exit_code": null, "signal": null, "signal_name": null}}
           ]

@@ -1,3 +1,31 @@
+---
+status: partial
+last-trued: 2026-05-07
+trued-against: HEAD@main on 2026-05-07 (commit 913a480)
+---
+
+> **Truing status:** Partial — schema, IA, message-kind taxonomy, fixture
+> contract, and CLI vocabulary all shipped on main via `bristlenose/ui_kinds.py`
+> (1ab06bf), Branch 1's `pipeline-summary-events` merge (efe4064), and fixture v4
+> (913a480). Swift popover rendering rules are **pending**: Branch 2
+> (`pipeline-diagnostic-pill`) hasn't implemented the SwiftUI view code yet, so
+> the per-row layout, hierarchy heuristics, and Copy/Email plaintext format are
+> design-only. Read this doc as authoritative spec when picking up Branch 2;
+> read it as accurate-and-shipped for the rest.
+
+## Changelog
+
+- _2026-05-07_ — **Initial draft**, established alongside the
+  `pipeline-summary-events` (Python emitter, merged) and
+  `pipeline-diagnostic-pill` (Swift consumer, in flight) branches.
+  Single source of truth for the five-kind `MessageKind` taxonomy
+  (`bristlenose/ui_kinds.py`), the popover information-architecture,
+  length budgets, and the anti-patterns checklist for new error /
+  status / message authors. Incorporates the reframe that the popover
+  is a dev-feedback artefact (not a result viewer), the Xcode-build-log
+  visual reference, and the truncation-marker contract
+  (`STAGE_FAILED_MAX = 10` placeholder shape locked in fixture v4).
+
 # Pipeline-diagnostic popover & message-kind vocabulary
 
 The pill in the toolbar surfaces pipeline run state. When a run finishes

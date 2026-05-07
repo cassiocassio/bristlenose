@@ -8,6 +8,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from bristlenose.events import PipelineSummary
+
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -343,6 +345,9 @@ class PipelineResult(BaseModel):
     pipeline_error_link: str = ""
     # Warning reason when pipeline partially succeeds (some sessions failed)
     pipeline_warning: str = ""
+    # Per-stage outcome rollup. Populated by run / analyze / transcribe-only;
+    # None for render. Carried through to the terminus event by the CLI.
+    summary: PipelineSummary | None = None
 
 
 # ---------------------------------------------------------------------------

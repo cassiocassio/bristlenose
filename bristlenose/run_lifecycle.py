@@ -47,6 +47,8 @@ from bristlenose.events import (
     Cause,
     CauseCategoryEnum,
     KindEnum,
+    PipelineAbandonedError,
+    PipelineSummary,
     Process,
     RunCancelledEvent,
     RunCompletedEvent,
@@ -307,6 +309,15 @@ def categorise_exception(exc: BaseException) -> Cause:
     if isinstance(exc, (ImportError, ModuleNotFoundError)):
         return Cause(category=CauseCategoryEnum.MISSING_DEP, message=msg)
 
+    # Missing binary — bare-name shellout failure. Filename without a path
+    # separator means the caller passed a bare name and PATH resolution
+    # failed (today's ffmpeg-under-sandbox bug). Slash-containing filenames
+    # are different (file genuinely missing on disk) and fall through.
+    if isinstance(exc, FileNotFoundError):
+        fn = exc.filename
+        if isinstance(fn, str) and fn and "/" not in fn:
+            return Cause(category=CauseCategoryEnum.MISSING_BINARY, message=msg)
+
     if _AUTH_RE.search(haystack):
         return Cause(category=CauseCategoryEnum.AUTH, message=msg)
 
@@ -342,10 +353,15 @@ class RunHandle:
     def __init__(self, run_id: str) -> None:
         self.run_id = run_id
         self.cost: RunCost | None = None
+        self.summary: PipelineSummary | None = None
 
     def set_cost(self, cost: RunCost | None) -> None:
         """Attach the cost totals; stamped onto the terminus event."""
         self.cost = cost
+
+    def set_summary(self, summary: PipelineSummary | None) -> None:
+        """Attach the per-stage outcome rollup; stamped onto the terminus event."""
+        self.summary = summary
 
 
 def _process_envelope(start_time: str) -> Process:
@@ -459,16 +475,17 @@ def run_lifecycle(
 
     handle = RunHandle(run_id)
 
-    def _cost_kwargs() -> dict[str, object]:
-        """Render the handle's cost (if any) as terminus-event kwargs."""
-        if handle.cost is None:
-            return {}
-        return {
-            "input_tokens": handle.cost.input_tokens,
-            "output_tokens": handle.cost.output_tokens,
-            "cost_usd_estimate": handle.cost.cost_usd_estimate,
-            "price_table_version": handle.cost.price_table_version,
-        }
+    def _terminus_kwargs() -> dict[str, object]:
+        """Render handle-attached cost + summary as terminus-event kwargs."""
+        out: dict[str, object] = {}
+        if handle.cost is not None:
+            out["input_tokens"] = handle.cost.input_tokens
+            out["output_tokens"] = handle.cost.output_tokens
+            out["cost_usd_estimate"] = handle.cost.cost_usd_estimate
+            out["price_table_version"] = handle.cost.price_table_version
+        if handle.summary is not None:
+            out["summary"] = handle.summary
+        return out
 
     telemetry_tokens = telemetry.set_run_context(run_id, output_dir / ".bristlenose")
 
@@ -486,7 +503,7 @@ def run_lifecycle(
             )
             append_event(events_file, RunCancelledEvent(
                 ts=ended, run_id=run_id, kind=kind, started_at=started_at,
-                ended_at=ended, cause=cancel_cause, **_cost_kwargs(),
+                ended_at=ended, cause=cancel_cause, **_terminus_kwargs(),
             ))
             log.info("run_cancelled run_id=%s signal=%s", run_id, cancel_cause.signal_name)
             telemetry.trim_run_terminus()
@@ -498,7 +515,7 @@ def run_lifecycle(
             if code == 0:
                 append_event(events_file, RunCompletedEvent(
                     ts=ended, run_id=run_id, kind=kind, started_at=started_at,
-                    ended_at=ended, **_cost_kwargs(),
+                    ended_at=ended, **_terminus_kwargs(),
                 ))
                 log.info("run_completed run_id=%s exit_code=0", run_id)
             else:
@@ -510,9 +527,27 @@ def run_lifecycle(
                         message=f"CLI exited with code {code}",
                         exit_code=code,
                     ),
-                    **_cost_kwargs(),
+                    **_terminus_kwargs(),
                 ))
                 log.info("run_failed run_id=%s exit_code=%s", run_id, code)
+            telemetry.trim_run_terminus()
+            _remove_pid_file(output_dir)
+            raise
+        except PipelineAbandonedError as exc:
+            # Abandon path: stage produced no usable data. The exception
+            # carries its own cause + accumulated summary; prefer those over
+            # the handle's (the handle may not have been populated yet).
+            ended = _now_iso()
+            kw = _terminus_kwargs()
+            kw["summary"] = exc.summary
+            append_event(events_file, RunFailedEvent(
+                ts=ended, run_id=run_id, kind=kind, started_at=started_at,
+                ended_at=ended, cause=exc.cause, **kw,
+            ))
+            log.error(
+                "run_abandoned run_id=%s category=%s",
+                run_id, exc.cause.category.value,
+            )
             telemetry.trim_run_terminus()
             _remove_pid_file(output_dir)
             raise
@@ -521,7 +556,7 @@ def run_lifecycle(
             cause = categorise_exception(exc)
             append_event(events_file, RunFailedEvent(
                 ts=ended, run_id=run_id, kind=kind, started_at=started_at,
-                ended_at=ended, cause=cause, **_cost_kwargs(),
+                ended_at=ended, cause=cause, **_terminus_kwargs(),
             ))
             log.info("run_failed run_id=%s category=%s", run_id, cause.category.value)
             telemetry.trim_run_terminus()
@@ -531,7 +566,7 @@ def run_lifecycle(
             ended = _now_iso()
             append_event(events_file, RunCompletedEvent(
                 ts=ended, run_id=run_id, kind=kind, started_at=started_at,
-                ended_at=ended, **_cost_kwargs(),
+                ended_at=ended, **_terminus_kwargs(),
             ))
             log.info("run_completed run_id=%s", run_id)
             telemetry.trim_run_terminus()

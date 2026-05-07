@@ -943,6 +943,7 @@ def run(
                 result.llm_input_tokens,
                 result.llm_output_tokens,
             ))
+            _run_handle.set_summary(result.summary)
     except ConcurrentRunError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
@@ -1043,8 +1044,9 @@ def transcribe(
 
     pipeline = Pipeline(settings, verbose=verbose, skip_confirm=yes)
     try:
-        with run_lifecycle(output_dir, KindEnum.TRANSCRIBE_ONLY):
+        with run_lifecycle(output_dir, KindEnum.TRANSCRIBE_ONLY) as _run_handle:
             result = asyncio.run(pipeline.run_transcription_only(input_dir, output_dir))
+            _run_handle.set_summary(result.summary)
     except ConcurrentRunError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
@@ -1129,6 +1131,7 @@ def analyze(
                 result.llm_input_tokens,
                 result.llm_output_tokens,
             ))
+            _run_handle.set_summary(result.summary)
     except ConcurrentRunError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc

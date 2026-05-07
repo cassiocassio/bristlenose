@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 import logging
 
+from bristlenose.events import StageFailure, StageOutcome
 from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.llm.client import LLMClient
 from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import ThematicGroupingResult
 from bristlenose.models import ExtractedQuote, QuoteType, ThemeGroup
+from bristlenose.run_lifecycle import categorise_exception
 from bristlenose.utils.timecodes import format_timecode
 
 logger = logging.getLogger(__name__)
@@ -18,7 +20,7 @@ logger = logging.getLogger(__name__)
 async def group_by_theme(
     quotes: list[ExtractedQuote],
     llm_client: LLMClient,
-) -> list[ThemeGroup]:
+) -> tuple[list[ThemeGroup], StageOutcome]:
     """Group general/contextual quotes into emergent themes.
 
     Takes all general_context quotes across all participants and identifies
@@ -29,15 +31,19 @@ async def group_by_theme(
         llm_client: LLM client for analysis.
 
     Returns:
-        List of ThemeGroup objects.
+        Tuple of (themes, outcome). Failure here is soft: even when the LLM
+        call raises, we return a fallback grouping by topic label so quotes
+        remain organised — the orchestrator never abandons a run for an s11
+        failure. ``outcome.failed`` carries one stage-wide entry in that case.
     """
     context_quotes = [q for q in quotes if q.quote_type == QuoteType.GENERAL_CONTEXT]
 
     if not context_quotes:
         logger.info("No contextual quotes to group into themes.")
-        return []
+        return [], StageOutcome()
 
     logger.info("Grouping %d contextual quotes into themes", len(context_quotes))
+    outcome = StageOutcome(attempted=1)
 
     # Prepare quotes for the LLM
     quotes_for_llm = [
@@ -64,7 +70,11 @@ async def group_by_theme(
         )
     except Exception as exc:
         logger.error("Thematic grouping failed: %s", exc)
-        return _fallback_grouping(context_quotes)
+        cause = categorise_exception(exc).model_copy(update={
+            "stage": "s11_thematic_grouping",
+        })
+        outcome.failed.append(StageFailure(session_id=None, cause=cause))
+        return _fallback_grouping(context_quotes), outcome
 
     # Convert LLM output to domain models
     themes: list[ThemeGroup] = []
@@ -120,7 +130,8 @@ async def group_by_theme(
         )
 
     logger.info("Created %d theme groups", len(strong_themes))
-    return strong_themes
+    outcome.succeeded = 1
+    return strong_themes, outcome
 
 
 def _fallback_grouping(quotes: list[ExtractedQuote]) -> list[ThemeGroup]:

@@ -14,7 +14,14 @@ import logging
 from pathlib import Path
 
 from bristlenose.config import BristlenoseSettings
+from bristlenose.events import (
+    Cause,
+    CauseCategoryEnum,
+    StageFailure,
+    StageOutcome,
+)
 from bristlenose.models import InputSession, TranscriptSegment, Word
+from bristlenose.run_lifecycle import categorise_exception
 from bristlenose.utils.hardware import AcceleratorType, HardwareInfo, detect_hardware
 
 logger = logging.getLogger(__name__)
@@ -28,7 +35,7 @@ def transcribe_sessions(
     settings: BristlenoseSettings,
     *,
     on_progress: ProgressCallback | None = None,
-) -> dict[str, list[TranscriptSegment]]:
+) -> tuple[dict[str, list[TranscriptSegment]], StageOutcome]:
     """Transcribe audio for sessions that need it.
 
     Detects hardware and selects the optimal backend automatically.
@@ -43,7 +50,10 @@ def transcribe_sessions(
         on_progress: Optional callback(current, total) called after each file completes.
 
     Returns:
-        Dict mapping session_id to list of TranscriptSegments.
+        Tuple of (results, outcome). ``results`` maps session_id to
+        TranscriptSegments (empty list when that session failed). ``outcome``
+        records per-session attempts/successes/failures so the orchestrator
+        can decide whether to abandon the run.
     """
     needs_transcription = [
         s for s in sessions
@@ -52,7 +62,7 @@ def transcribe_sessions(
 
     if not needs_transcription:
         logger.info("No sessions need transcription.")
-        return {}
+        return {}, StageOutcome()
 
     # Detect hardware and choose backend
     hw = detect_hardware()
@@ -73,6 +83,7 @@ def transcribe_sessions(
         transcribe_fn = _init_faster_whisper_backend(settings, hw)
 
     results: dict[str, list[TranscriptSegment]] = {}
+    outcome = StageOutcome(attempted=len(needs_transcription))
     total = len(needs_transcription)
 
     for i, session in enumerate(needs_transcription, start=1):
@@ -86,6 +97,7 @@ def transcribe_sessions(
         try:
             segments = transcribe_fn(session.audio_path, settings)
             results[session.session_id] = segments
+            outcome.succeeded += 1
             logger.info(
                 "%s: Transcribed %d segments",
                 session.session_id,
@@ -98,11 +110,29 @@ def transcribe_sessions(
                 exc,
             )
             results[session.session_id] = []
+            # Categorise the exception. Default-category fallback is WHISPER
+            # (more useful than UNKNOWN for transcription-stage failures).
+            cause = categorise_exception(exc)
+            if cause.category == CauseCategoryEnum.UNKNOWN:
+                cause = Cause(
+                    category=CauseCategoryEnum.WHISPER,
+                    message=cause.message,
+                    stage="s05_transcribe",
+                    session_id=session.session_id,
+                )
+            else:
+                cause = cause.model_copy(update={
+                    "stage": "s05_transcribe",
+                    "session_id": session.session_id,
+                })
+            outcome.failed.append(StageFailure(
+                session_id=session.session_id, cause=cause,
+            ))
 
         if on_progress:
             on_progress(i, total)
 
-    return results
+    return results, outcome
 
 
 # ---------------------------------------------------------------------------

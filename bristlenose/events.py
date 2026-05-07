@@ -73,6 +73,8 @@ class CauseCategoryEnum(str, Enum):
     NETWORK = "network"
     WHISPER = "whisper"
     MISSING_DEP = "missing_dep"
+    MISSING_INPUT = "missing_input"
+    MISSING_BINARY = "missing_binary"
     DISK = "disk"
     UNKNOWN = "unknown"
 
@@ -94,6 +96,8 @@ _RETRYABLE: dict[CauseCategoryEnum, bool] = {
     CauseCategoryEnum.NETWORK: True,
     CauseCategoryEnum.WHISPER: True,  # depends on `code`; default true
     CauseCategoryEnum.MISSING_DEP: False,
+    CauseCategoryEnum.MISSING_INPUT: False,
+    CauseCategoryEnum.MISSING_BINARY: False,
     CauseCategoryEnum.DISK: False,
     CauseCategoryEnum.UNKNOWN: True,
 }
@@ -137,6 +141,54 @@ class Cause(BaseModel):
         return v
 
 
+class StageFailure(BaseModel):
+    """One per-session (or stage-wide) failure caught inside a stage.
+
+    ``session_id`` is None for stage-wide failures that aren't session-scoped
+    (e.g. a single LLM call across all quotes in s11). The Cause carries the
+    same shape used at run-level so the desktop can reuse its rendering.
+    """
+
+    session_id: str | None = None
+    cause: Cause
+
+
+class StageOutcome(BaseModel):
+    """Per-stage rollup: how many were attempted, how many succeeded, what failed."""
+
+    attempted: int = 0
+    succeeded: int = 0
+    failed: list[StageFailure] = Field(default_factory=list)
+
+
+class PipelineSummary(BaseModel):
+    """Per-pipeline-stage outcome rollup attached to terminus events.
+
+    Each field is None when the corresponding stage didn't run (e.g.
+    transcripts is None for ``analyze``; quotes / themes are None for
+    ``transcribe-only``). Empty ``failed`` list means full success.
+    """
+
+    transcripts: StageOutcome | None = None
+    quotes: StageOutcome | None = None
+    themes: StageOutcome | None = None
+
+
+class PipelineAbandonedError(Exception):
+    """Pipeline produced no usable data; report MUST NOT be written.
+
+    Raised when an entire stage's attempts all failed (e.g. every session's
+    transcription raised, or every quote-extraction LLM call raised). The
+    ``summary`` carries whatever partial outcome data was accumulated up to
+    the abandon point so the terminus event can render a useful diagnostic.
+    """
+
+    def __init__(self, cause: Cause, summary: PipelineSummary) -> None:
+        super().__init__(cause.message or "Pipeline abandoned")
+        self.cause = cause
+        self.summary = summary
+
+
 class Process(BaseModel):
     """Diagnostics envelope captured once on run_started."""
 
@@ -171,6 +223,10 @@ class _TerminusEvent(_EventBase):
     output_tokens: int | None = None
     cost_usd_estimate: float | None = None
     price_table_version: str | None = None
+    # Per-stage outcome rollup. None when the run didn't reach a stage that
+    # would have populated it (e.g. crashed in ingest); also None on legacy
+    # event lines emitted before this field existed (decode-compatible).
+    summary: PipelineSummary | None = None
 
 
 class RunCompletedEvent(_TerminusEvent):

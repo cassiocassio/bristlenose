@@ -138,7 +138,8 @@ def test_cause_category_matches_swift_enum():
     """
     expected = {
         "user_signal", "auth", "quota", "api_request", "api_server",
-        "network", "whisper", "missing_dep", "disk", "unknown",
+        "network", "whisper", "missing_dep", "missing_input",
+        "missing_binary", "disk", "unknown",
     }
     actual = {c.value for c in CauseCategoryEnum}
     assert actual == expected
@@ -155,10 +156,95 @@ def test_is_retryable_rule():
     assert is_retryable(CauseCategoryEnum.USER_SIGNAL) is True
     assert is_retryable(CauseCategoryEnum.AUTH) is False
     assert is_retryable(CauseCategoryEnum.MISSING_DEP) is False
+    assert is_retryable(CauseCategoryEnum.MISSING_INPUT) is False
+    assert is_retryable(CauseCategoryEnum.MISSING_BINARY) is False
     assert is_retryable(CauseCategoryEnum.DISK) is False
     assert is_retryable(CauseCategoryEnum.QUOTA) is True
     assert is_retryable(CauseCategoryEnum.NETWORK) is True
     assert is_retryable(CauseCategoryEnum.UNKNOWN) is True
+
+
+# ---------------------------------------------------------------------------
+# PipelineSummary on terminus events
+# ---------------------------------------------------------------------------
+
+
+def test_run_completed_event_decodes_without_summary_field():
+    """Backward compat: an old line missing `summary` decodes to None.
+
+    The desktop side has to handle this too. Don't break older event logs.
+    """
+    import json
+
+    from bristlenose.events import RunCompletedEvent
+
+    # Construct a JSON line without the new `summary` field, mimicking
+    # an older sidecar's output.
+    legacy = {
+        "schema_version": 1,
+        "ts": "2026-05-07T10:00:00Z",
+        "event": "run_completed",
+        "run_id": "01J0000000000000000000000A",
+        "kind": "run",
+        "started_at": "2026-05-07T09:00:00Z",
+        "ended_at": "2026-05-07T10:00:00Z",
+        "outcome": "completed",
+    }
+    parsed = RunCompletedEvent.model_validate_json(json.dumps(legacy))
+    assert parsed.summary is None
+
+
+def test_run_failed_event_round_trips_summary():
+    """summary serialises and parses back identically."""
+    import json
+
+    from bristlenose.events import (
+        Cause,
+        PipelineSummary,
+        RunFailedEvent,
+        StageFailure,
+        StageOutcome,
+    )
+
+    summary = PipelineSummary(
+        transcripts=StageOutcome(
+            attempted=2,
+            succeeded=1,
+            failed=[
+                StageFailure(
+                    session_id="s2",
+                    cause=Cause(
+                        category=CauseCategoryEnum.WHISPER,
+                        message="Whisper crashed",
+                        stage="s05_transcribe",
+                        session_id="s2",
+                    ),
+                ),
+            ],
+        ),
+    )
+    ev = RunFailedEvent(
+        ts="2026-05-07T10:00:00Z",
+        run_id="01J0000000000000000000000A",
+        kind="run",
+        started_at="2026-05-07T09:00:00Z",
+        ended_at="2026-05-07T10:00:00Z",
+        cause=Cause(
+            category=CauseCategoryEnum.WHISPER,
+            message="All sessions failed to transcribe.",
+        ),
+        summary=summary,
+    )
+    parsed = RunFailedEvent.model_validate_json(ev.model_dump_json())
+    assert parsed.summary is not None
+    assert parsed.summary.transcripts is not None
+    assert parsed.summary.transcripts.succeeded == 1
+    assert len(parsed.summary.transcripts.failed) == 1
+    assert parsed.summary.transcripts.failed[0].session_id == "s2"
+    # Serialised payload contains the new field.
+    payload = json.loads(ev.model_dump_json())
+    assert "summary" in payload
+    assert payload["summary"]["transcripts"]["succeeded"] == 1
 
 
 # ---------------------------------------------------------------------------

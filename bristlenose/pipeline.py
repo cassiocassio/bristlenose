@@ -580,9 +580,12 @@ class Pipeline:
             _ss_path = intermediate / "session_segments.json"
             _source_paths = [f.path for s in sessions for f in s.files]
             _tx_input_hashes = {"source_files": hash_file_metadata(_source_paths)}
-            # Outer-scope default so the abandon check below has a value
-            # even when the full-cache-hit branch runs.
+            # Outer-scope defaults — both branches below populate these.
+            # ``_transcribe_elapsed`` stays None on full-cache-hit (stage
+            # didn't run this invocation; ``duration_ms`` reflects only
+            # work this run actually did, per the contract).
             _fresh_transcript_outcome = StageOutcome()
+            _transcribe_elapsed: float | None = None
             if _is_stage_verified(
                 _prev_manifest, _M_STAGE_TRANSCRIBE, [_ss_path],
                 current_input_hashes=_tx_input_hashes,
@@ -734,6 +737,10 @@ class Pipeline:
                 attempted=len(sessions),
                 succeeded=len(_succeeded_sids),
                 failed=list(_fresh_transcript_outcome.failed),
+                duration_ms=(
+                    int(_transcribe_elapsed * 1000)
+                    if _transcribe_elapsed is not None else None
+                ),
             )
             if (
                 self._summary.transcripts.attempted > 0
@@ -1163,6 +1170,7 @@ class Pipeline:
             # successes so cache-hit runs report attempted == succeeded.
             _fresh_quote_outcome = StageOutcome()
             _cached_q_count = 0
+            _quotes_elapsed: float | None = None
             if _is_stage_verified(
                 _prev_manifest, STAGE_QUOTE_EXTRACTION, [_eq_path],
                 current_input_hashes=_qe_input_hashes,
@@ -1296,6 +1304,10 @@ class Pipeline:
                 attempted=_cached_q_count + _fresh_quote_outcome.attempted,
                 succeeded=_cached_q_count + _fresh_quote_outcome.succeeded,
                 failed=list(_fresh_quote_outcome.failed),
+                duration_ms=(
+                    int(_quotes_elapsed * 1000)
+                    if _quotes_elapsed is not None else None
+                ),
             )
             if (
                 self._summary.quotes.attempted > 0
@@ -1353,7 +1365,12 @@ class Pipeline:
                 )
                 theme_groups, _theme_outcome = _grouping
                 # Soft stage: failure here doesn't abandon — record and move on.
-                self._summary.themes = _theme_outcome
+                # Stamp duration_ms from the gather wall-clock (stage 10 + 11
+                # ran together; same duration covers both — Swift renders it
+                # against the s11 row which is the user-facing stage label).
+                self._summary.themes = _theme_outcome.model_copy(update={
+                    "duration_ms": int((time.perf_counter() - t0) * 1000),
+                })
                 if self.settings.write_intermediate:
                     write_intermediate_json(
                         screen_clusters, "screen_clusters.json", output_dir,
@@ -1593,6 +1610,7 @@ class Pipeline:
                     1 for s in sessions if session_segments.get(s.session_id)
                 ),
                 failed=list(_transcript_outcome_t.failed),
+                duration_ms=int((time.perf_counter() - t0) * 1000),
             )
             if (
                 self._summary.transcripts.attempted > 0
@@ -1773,7 +1791,11 @@ class Pipeline:
                     concurrency=concurrency,
                     errors=_quote_errors_a,
                 )
-            self._summary.quotes = _quote_outcome_a
+            # Stamp duration_ms before the abandon check so the partial
+            # summary on the abandoned terminus event carries timing too.
+            self._summary.quotes = _quote_outcome_a.model_copy(update={
+                "duration_ms": int((time.perf_counter() - t0) * 1000),
+            })
             if (
                 _quote_outcome_a.attempted > 0
                 and _quote_outcome_a.succeeded == 0
@@ -1818,7 +1840,9 @@ class Pipeline:
                 _run_grouping_a(),
             )
             theme_groups, _theme_outcome_a = _grouping_a
-            self._summary.themes = _theme_outcome_a
+            self._summary.themes = _theme_outcome_a.model_copy(update={
+                "duration_ms": int((time.perf_counter() - t0) * 1000),
+            })
             if self.settings.write_intermediate:
                 write_intermediate_json(
                     screen_clusters, "screen_clusters.json", output_dir,

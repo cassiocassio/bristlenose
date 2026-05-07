@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 7 May 2026 (closed `sandbox-mlx-whisper-ffmpeg-path`)
+**Updated:** 7 May 2026 (closed `serve-importer-reimport-on-completion`)
 
 ---
 
@@ -35,7 +35,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch trytrytry/` | `trytrytry` | diagnostic | Throwaway / test-the-skill run |
-| `bristlenose_branch serve-importer-reimport-on-completion/` | `serve-importer-reimport-on-completion` | feature | serve-mode importer never re-fires after pipeline completes — UI shows 0/0 despite full data on disk |
 
 
 
@@ -128,7 +127,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `trytrytry` | `bristlenose_branch trytrytry/` | local only |
-| `serve-importer-reimport-on-completion` | `bristlenose_branch serve-importer-reimport-on-completion/` | local only |
 
 
 
@@ -136,29 +134,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `serve-importer-reimport-on-completion`
-
-**Kind:** feature — code lands on main
-**Status:** Just started
-**Started:** 7 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch serve-importer-reimport-on-completion/`
-**Remote:** local only (push when ready)
-
-**What it does:** serve-mode importer never re-fires after pipeline completes — UI shows 0/0 despite full data on disk. Handoff plan at `.claude/plans/serve-importer-reimport-on-completion.md`.
-
-**Files this branch will touch:**
-- `bristlenose/server/importer.py`
-- `bristlenose/server/lifecycle.py`
-- `bristlenose/server/app.py`
-- `frontend/src/components/ProjectRow.tsx`
-- `tests/test_server_importer.py`
-
-**Potential conflicts with other branches:**
-- `responsive-signal-cards` — no overlap (frontend signal card layout)
-- Parked experiments — no overlap
 
 ---
 
@@ -296,6 +271,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `serve-importer-reimport-on-completion` — merged 7 May 2026
+
+Re-import on pipeline `run_completed` event in serve mode so the UI updates from 0/0 once the pipeline finishes. Single commit `02daeee`; merge commit `7eae1c0`.
 
 ### `sandbox-mlx-whisper-ffmpeg-path` — merged 7 May 2026
 

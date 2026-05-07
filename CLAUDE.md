@@ -186,6 +186,7 @@ See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check
 
 **Pipeline / backend:**
 - `docs/design-pipeline-resilience.md` — manifest, event sourcing, resume, provenance
+- `docs/design-pipeline-diagnostic-popover.md` — **read before adding any new error / status / message that surfaces in the popover, the pill, the sidebar glyph, or any toast.** Five-kind `MessageKind` taxonomy (`bristlenose/ui_kinds.py`), length budgets, anti-patterns, flowchart for fitting new messages into the existing vocabulary instead of inventing new glyphs/colours
 - `docs/design-platform-transcripts.md`, `docs/design-transcript-coverage.md`
 - `docs/design-speaker-splitting.md`, `docs/design-speaker-role-detection.md`
 - `docs/design-speaker-editing.md`, `docs/design-transcript-editing.md`, `docs/design-transcript-speaker-editing-roadmap.md`

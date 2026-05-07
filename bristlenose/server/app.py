@@ -185,6 +185,7 @@ def create_app(
     # Import project data into SQLite on startup
     if project_dir is not None:
         _import_on_startup(session_factory, project_dir)
+        _install_event_watcher(app, session_factory, project_dir)
 
     # Serve the React islands bundle (built by Vite).
     # In HMR mode the Vite dev server handles these.
@@ -649,3 +650,59 @@ def _import_on_startup(
         logger.exception("Failed to import project from %s", project_dir)
     finally:
         db.close()
+
+
+def _install_event_watcher(
+    app: FastAPI,
+    session_factory: object,
+    project_dir: Path,
+) -> None:
+    """Tail ``pipeline-events.jsonl`` and re-import on ``run_completed``.
+
+    Without this, a pipeline run that completes *while* serve is running
+    leaves SQLite empty until the next serve restart — the React UI shows
+    "0 sessions / 0 quotes" despite full data on disk. Wired via
+    FastAPI's lifespan so the polling task is started at app startup and
+    cancelled cleanly on shutdown.
+    """
+    from contextlib import asynccontextmanager
+
+    from bristlenose.events import events_path
+    from bristlenose.server.event_watcher import run_event_watcher
+    from bristlenose.server.importer import import_project
+
+    output_dir = project_dir / "bristlenose-output"
+    if not output_dir.is_dir():
+        output_dir = project_dir
+    events_file = events_path(output_dir)
+
+    def _reimport_sync() -> None:
+        db = session_factory()  # type: ignore[operator]
+        try:
+            import_project(db, project_dir)
+        except Exception:
+            logger.exception(
+                "Re-import after run_completed failed for %s", project_dir,
+            )
+        finally:
+            db.close()
+
+    async def _on_run_completed() -> None:
+        await asyncio.to_thread(_reimport_sync)
+
+    @asynccontextmanager
+    async def _lifespan(_: FastAPI):
+        task = asyncio.create_task(
+            run_event_watcher(events_file, _on_run_completed),
+            name="bristlenose-event-watcher",
+        )
+        try:
+            yield
+        finally:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+    app.router.lifespan_context = _lifespan

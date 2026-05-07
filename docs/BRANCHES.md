@@ -36,6 +36,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch trytrytry/` | `trytrytry` | diagnostic | Throwaway / test-the-skill run |
 | `bristlenose_branch pipeline-summary-events/` | `pipeline-summary-events` | feature | Structured per-stage failure summaries; abandon path for empty-data runs; new Cause categories |
+| `bristlenose_branch pipeline-diagnostic-pill/` | `pipeline-diagnostic-pill` | feature | Two new pill states (.completed_partial, .failed_with_diagnostic) with rich popover bodies showing per-session failure causes; consumes the structured PipelineSummary from Branch 1 |
 
 
 
@@ -129,6 +130,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `trytrytry` | `bristlenose_branch trytrytry/` | local only |
 | `pipeline-summary-events` | `bristlenose_branch pipeline-summary-events/` | local only |
+| `pipeline-diagnostic-pill` | `bristlenose_branch pipeline-diagnostic-pill/` | local only |
 
 
 
@@ -136,6 +138,30 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `pipeline-diagnostic-pill`
+
+**Kind:** feature — code lands on main; consumes structured PipelineSummary from `pipeline-summary-events`
+**Status:** Just started
+**Started:** 7 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-diagnostic-pill/`
+**Remote:** local only (push when ready)
+
+**What it does:** Two new pill states (`.completed_partial`, `.failed_with_diagnostic`) with rich popover bodies showing per-session failure causes; consumes the structured `PipelineSummary` from Branch 1 (`pipeline-summary-events`).
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/PipelineSummary.swift`
+- `desktop/Bristlenose/Bristlenose/PipelineRunner.swift`
+- `desktop/Bristlenose/Bristlenose/EventLogReader.swift`
+- `desktop/Bristlenose/Bristlenose/PipelineActivityItem.swift`
+- `desktop/Bristlenose/Bristlenose/ProjectRow.swift`
+- `desktop/Bristlenose/BristlenoseTests/EventLogReaderTests.swift`
+
+**Potential conflicts with other branches:**
+- `pipeline-summary-events` — direct upstream dependency. This branch consumes the `PipelineSummary` type that branch produces; coordinate merge order (Branch 1 first) and expect overlap on `PipelineSummary.swift` / `EventLogReader.swift`.
+- Other active branches — no overlap (desktop Swift surface only).
 
 ---
 

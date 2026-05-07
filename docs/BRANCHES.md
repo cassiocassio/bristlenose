@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 6 May 2026 (closed `sandbox-mimetypes-init`)
+**Updated:** 7 May 2026 (closed `sandbox-mlx-whisper-ffmpeg-path`)
 
 ---
 
@@ -35,7 +35,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch trytrytry/` | `trytrytry` | diagnostic | Throwaway / test-the-skill run |
-| `bristlenose_branch sandbox-mlx-whisper-ffmpeg-path/` | `sandbox-mlx-whisper-ffmpeg-path` | feature | Prepend bundled FFmpeg dir to PATH so mlx_whisper's internal subprocess resolves under sandbox |
 
 
 
@@ -128,7 +127,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `trytrytry` | `bristlenose_branch trytrytry/` | local only |
-| `sandbox-mlx-whisper-ffmpeg-path` | `bristlenose_branch sandbox-mlx-whisper-ffmpeg-path/` | local only |
 
 
 
@@ -136,27 +134,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `sandbox-mlx-whisper-ffmpeg-path`
-
-**Kind:** feature — code lands on main
-**Status:** Just started
-**Started:** 7 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch sandbox-mlx-whisper-ffmpeg-path/`
-**Remote:** local only (push when ready)
-
-**What it does:** Prepend bundled FFmpeg dir to `PATH` so `mlx_whisper`'s internal subprocess resolves under sandbox. Handoff prompt at `.claude/plans/sandbox-mlx-whisper-ffmpeg-path.md` (also visible at `HANDOFF.md`).
-
-**Files this branch will touch:**
-- `bristlenose/__init__.py`
-- `bristlenose/utils/bundled_binary.py`
-- `tests/test_bundled_binary.py`
-
-**Potential conflicts with other branches:**
-- `bundled-binary-helper` — same area (bundled binary resolution under sandbox); but that branch's code already landed on main as `670a002`, so the live conflict surface is just whatever evolves there before this lands. Coordinate if both edit `utils/bundled_binary.py` simultaneously.
-- Other active branches (`responsive-signal-cards`, parked experiments) — no overlap.
 
 ---
 
@@ -294,6 +271,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `sandbox-mlx-whisper-ffmpeg-path` — merged 7 May 2026
+
+Prepend bundled FFmpeg dir to `PATH` in `bristlenose/__init__.py` so `mlx_whisper`'s internal subprocess shell-out resolves `ffmpeg`/`ffprobe` under the macOS App Sandbox.
 
 ### `locale-system-delegation` — merged 5 May 2026
 

@@ -58,6 +58,7 @@ from bristlenose.models import (
     ThemeGroup,
     TranscriptSegment,
 )
+from bristlenose.ui_kinds import MessageKind, cli_prefix
 
 logger = logging.getLogger(__name__)
 console = Console(width=min(80, Console().width))
@@ -127,31 +128,47 @@ def _format_duration(seconds: float) -> str:
     return f"{seconds:.1f}s"
 
 
-def _print_step(message: str, elapsed: float) -> None:
-    """Print a completed pipeline step with green ✓ and right-aligned timing."""
-    time_str = _format_duration(elapsed)
+def _print_stage(
+    message: str,
+    kind: MessageKind,
+    elapsed: float | None = None,
+    *,
+    suffix: str = "",
+) -> None:
+    """Single-source-of-truth CLI step printer.
+
+    Glyph and colour come from :data:`bristlenose.ui_kinds.cli_prefix`. Time
+    string trails right-aligned; ``suffix`` (e.g. ``"(cached)"``) replaces
+    the time string when ``elapsed`` is ``None``.
+    """
+    if suffix:
+        trailing = f"[dim]{suffix}[/dim]"
+    elif elapsed is not None:
+        trailing = f"[dim]{_format_duration(elapsed)}[/dim]"
+    else:
+        trailing = ""
     padding = max(1, 58 - len(message))
-    console.print(f" [green]✓[/green] {message}{' ' * padding}[dim]{time_str}[/dim]")
+    console.print(f" {cli_prefix(kind)} {message}{' ' * padding}{trailing}")
+
+
+def _print_step(message: str, elapsed: float) -> None:
+    """Completed pipeline step (SUCCESS)."""
+    _print_stage(message, MessageKind.SUCCESS, elapsed)
 
 
 def _print_error_step(message: str, elapsed: float) -> None:
-    """Print a failed pipeline step with red ✗ and right-aligned timing."""
-    time_str = _format_duration(elapsed)
-    padding = max(1, 58 - len(message))
-    console.print(f" [red]✗[/red] {message}{' ' * padding}[dim]{time_str}[/dim]")
+    """Failed pipeline step (ERROR)."""
+    _print_stage(message, MessageKind.ERROR, elapsed)
 
 
 def _print_warn_step(message: str, elapsed: float) -> None:
-    """Print a partially-succeeded step with yellow ⚠ and right-aligned timing."""
-    time_str = _format_duration(elapsed)
-    padding = max(1, 58 - len(message))
-    console.print(f" [yellow]⚠[/yellow] {message}{' ' * padding}[dim]{time_str}[/dim]")
+    """Partially-succeeded pipeline step (WARNING)."""
+    _print_stage(message, MessageKind.WARNING, elapsed)
 
 
 def _print_cached_step(message: str) -> None:
-    """Print a cached pipeline step with green ✓ and right-aligned '(cached)'."""
-    padding = max(1, 58 - len(message))
-    console.print(f" [green]✓[/green] {message}{' ' * padding}[dim](cached)[/dim]")
+    """Cached pipeline step — SUCCESS with ``(cached)`` suffix."""
+    _print_stage(message, MessageKind.SUCCESS, suffix="(cached)")
 
 
 # Sentinel for missing upstream hash — won't match any real SHA-256 digest,
@@ -288,7 +305,7 @@ def _print_warn(message: str, link: str = "") -> None:
     if message in _printed_warnings:
         return
     _printed_warnings.add(message)
-    console.print(f"   [yellow]⚠[/yellow] [dim yellow]{message}[/dim yellow]")
+    console.print(f"   {cli_prefix(MessageKind.WARNING)} [dim yellow]{message}[/dim yellow]")
     if link:
         console.print(f"   [dim yellow][link={link}]{link}[/link][/dim yellow]")
 

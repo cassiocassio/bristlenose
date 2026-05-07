@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 7 May 2026 (closed `pipeline-summary-events` worktree)
+**Updated:** 7 May 2026 (closed `pipeline-summary-events` and `pipeline-diagnostic-pill` worktrees)
 
 ---
 
@@ -34,7 +34,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
-| `bristlenose_branch pipeline-diagnostic-pill/` | `pipeline-diagnostic-pill` | feature | Two new pill states (.completed_partial, .failed_with_diagnostic) with rich popover bodies showing per-session failure causes; consumes the structured PipelineSummary from Branch 1 |
 
 
 
@@ -126,7 +125,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
-| `pipeline-diagnostic-pill` | `bristlenose_branch pipeline-diagnostic-pill/` | local only |
 
 
 
@@ -134,30 +132,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `pipeline-diagnostic-pill`
-
-**Kind:** feature — code lands on main; consumes structured PipelineSummary from `pipeline-summary-events`
-**Status:** Just started
-**Started:** 7 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-diagnostic-pill/`
-**Remote:** local only (push when ready)
-
-**What it does:** Two new pill states (`.completed_partial`, `.failed_with_diagnostic`) with rich popover bodies showing per-session failure causes; consumes the structured `PipelineSummary` from Branch 1 (`pipeline-summary-events`).
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/PipelineSummary.swift`
-- `desktop/Bristlenose/Bristlenose/PipelineRunner.swift`
-- `desktop/Bristlenose/Bristlenose/EventLogReader.swift`
-- `desktop/Bristlenose/Bristlenose/PipelineActivityItem.swift`
-- `desktop/Bristlenose/Bristlenose/ProjectRow.swift`
-- `desktop/Bristlenose/BristlenoseTests/EventLogReaderTests.swift`
-
-**Potential conflicts with other branches:**
-- `pipeline-summary-events` — direct upstream dependency. This branch consumes the `PipelineSummary` type that branch produces; coordinate merge order (Branch 1 first) and expect overlap on `PipelineSummary.swift` / `EventLogReader.swift`.
-- Other active branches — no overlap (desktop Swift surface only).
 
 ---
 
@@ -277,6 +251,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `pipeline-diagnostic-pill` — closed 7 May 2026
+
+Started for the Swift side of the diagnostic-pill feature (two new pill states + popover bodies consuming `PipelineSummary`). What actually shipped via this branch: preparatory contract work — `MessageKind` taxonomy, `design-pipeline-diagnostic-popover.md`, fixture-v3 truncation-marker lock, fixture-v4 session_id realignment. Tip `913a480` reachable on main; the Swift pill states themselves were not implemented on this branch (deferred / moved on).
 
 ### `pipeline-summary-events` — merged 7 May 2026
 

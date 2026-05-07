@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 7 May 2026 (closed `serve-importer-reimport-on-completion`)
+**Updated:** 7 May 2026 (added `pipeline-summary-events`)
 
 ---
 
@@ -35,6 +35,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch trytrytry/` | `trytrytry` | diagnostic | Throwaway / test-the-skill run |
+| `bristlenose_branch pipeline-summary-events/` | `pipeline-summary-events` | feature | Structured per-stage failure summaries; abandon path for empty-data runs; new Cause categories |
 
 
 
@@ -127,6 +128,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `trytrytry` | `bristlenose_branch trytrytry/` | local only |
+| `pipeline-summary-events` | `bristlenose_branch pipeline-summary-events/` | local only |
 
 
 
@@ -134,6 +136,34 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `pipeline-summary-events`
+
+**Kind:** feature — code intended for main
+**Status:** Just started
+**Started:** 7 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-summary-events/`
+**Remote:** local only (push when ready)
+
+**What it does:** Add structured per-stage failure summaries to pipeline events; abandon path for empty-data runs (no fake-empty report); wire WHISPER + new MISSING_INPUT/MISSING_BINARY Cause categories.
+
+**Files this branch will touch:**
+- `bristlenose/events.py`
+- `bristlenose/run_lifecycle.py`
+- `bristlenose/pipeline.py`
+- `bristlenose/stages/s05_transcribe.py`
+- `bristlenose/stages/s09_quote_extraction.py`
+- `bristlenose/stages/s11_thematic_grouping.py`
+- `tests/test_pipeline_abandon.py`
+- `tests/test_run_lifecycle.py`
+- `tests/test_events.py`
+- `docs/design-pipeline-resilience.md`
+
+**Potential conflicts with other branches:**
+- No active branches currently touch `events.py`, `run_lifecycle.py`, or pipeline stages — clean territory.
+- `bundled-binary-helper` (already merged via `670a002`) is conceptually adjacent (binary discovery) but file-disjoint.
 
 ---
 

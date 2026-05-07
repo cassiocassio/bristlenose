@@ -1156,8 +1156,13 @@ class Pipeline:
             _quote_errors: list[str] = []
             _eq_path = intermediate / "extracted_quotes.json"
             _qe_input_hashes = {"upstream": _tb_hash or _MISSING_HASH}
-            # Outer-scope default — see transcript section for rationale.
+            # Outer-scope defaults — both branches below populate these.
+            # `_cached_q_count` carries the number of quotes that came from
+            # cache (full-cache-hit branch loads all; per-session branch
+            # may load some). The rollup below treats cached items as
+            # successes so cache-hit runs report attempted == succeeded.
             _fresh_quote_outcome = StageOutcome()
+            _cached_q_count = 0
             if _is_stage_verified(
                 _prev_manifest, STAGE_QUOTE_EXTRACTION, [_eq_path],
                 current_input_hashes=_qe_input_hashes,
@@ -1168,6 +1173,10 @@ class Pipeline:
                     ExtractedQuote.model_validate(obj)
                     for obj in _json.loads(_eq_path.read_text(encoding="utf-8"))
                 ]
+                # Full cache hit: every quote was loaded from disk. Count
+                # them as both attempted and succeeded so the rollup tells
+                # the truth ("all cached, all good") instead of "0/0".
+                _cached_q_count = len(all_quotes)
                 _print_cached_step(f"Extracted {len(all_quotes)} quotes")
             else:
                 # Per-session resume: load cached quotes for completed
@@ -1177,6 +1186,7 @@ class Pipeline:
                 _cached_quote_sids = get_completed_session_ids(
                     _prev_manifest, STAGE_QUOTE_EXTRACTION,
                 )
+                _cached_q_count = len(_cached_quote_sids)
                 _cached_quotes: list[ExtractedQuote] = []
                 if _cached_quote_sids and _eq_path.exists():
                     _cached_quotes = [
@@ -1282,9 +1292,6 @@ class Pipeline:
             # quotes from prior runs count as successes. If every quote
             # extraction call failed, abandon: a report with no quotes is
             # the symptom we're guarding against.
-            _cached_q_count = (
-                len(_cached_quote_sids) if "_cached_quote_sids" in dir() else 0
-            )
             self._summary.quotes = StageOutcome(
                 attempted=_cached_q_count + _fresh_quote_outcome.attempted,
                 succeeded=_cached_q_count + _fresh_quote_outcome.succeeded,

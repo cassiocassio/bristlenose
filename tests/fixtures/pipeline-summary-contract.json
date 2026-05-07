@@ -1,6 +1,6 @@
 {
-  "_doc": "Cross-language schema contract between Python (bristlenose/events.py) and Swift (desktop/Bristlenose/Bristlenose/PipelineSummary.swift). Both sides round-trip these scenarios in tests. If you change this file, both sides' tests must continue to pass. Established 7 May 2026 for branches pipeline-summary-events (Python) and pipeline-diagnostic-pill (Swift).",
-  "version": 1,
+  "_doc": "Cross-language schema contract between Python (bristlenose/events.py) and Swift (desktop/Bristlenose/Bristlenose/PipelineSummary.swift). Both sides round-trip these scenarios in tests. If you change this file, both sides' tests must continue to pass. Established 7 May 2026 for branches pipeline-summary-events (Python) and pipeline-diagnostic-pill (Swift). Schema version 2 (7 May 2026): added duration_ms on StageOutcome so the Swift popover can render Xcode-build-log-style per-stage timings.",
+  "version": 2,
   "scenarios": {
     "run_completed_partial": {
       "_doc": "Partial run: 3 of 5 transcripts succeeded; pipeline continued and produced a (low-value, dev-feedback) report. Diagnostic pill state .completedPartial on Swift side.",
@@ -21,6 +21,7 @@
         "transcripts": {
           "attempted": 5,
           "succeeded": 3,
+          "duration_ms": 723000,
           "failed": [
             {
               "session_id": "session-002-show-and-tell-40",
@@ -55,6 +56,7 @@
         "quotes": {
           "attempted": 3,
           "succeeded": 3,
+          "duration_ms": 82000,
           "failed": []
         },
         "themes": null
@@ -89,11 +91,13 @@
         "transcripts": {
           "attempted": 3,
           "succeeded": 3,
+          "duration_ms": 412000,
           "failed": []
         },
         "quotes": {
           "attempted": 3,
           "succeeded": 0,
+          "duration_ms": 18000,
           "failed": [
             {
               "session_id": "session-001",
@@ -158,9 +162,9 @@
       "cost_usd_estimate": 0.14,
       "price_table_version": "2026-04-01",
       "summary": {
-        "transcripts": {"attempted": 3, "succeeded": 3, "failed": []},
-        "quotes":      {"attempted": 3, "succeeded": 3, "failed": []},
-        "themes":      {"attempted": 1, "succeeded": 1, "failed": []}
+        "transcripts": {"attempted": 3, "succeeded": 3, "duration_ms": 412000, "failed": []},
+        "quotes":      {"attempted": 3, "succeeded": 3, "duration_ms": 82000,  "failed": []},
+        "themes":      {"attempted": 1, "succeeded": 1, "duration_ms": 14000,  "failed": []}
       }
     }
   }

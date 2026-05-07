@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 5 May 2026 (sandbox-ps-libproc-swap merged — third libproc swap in the family, replaces `/bin/ps` exec in `run_lifecycle._ps_start_time` with `proc_pidinfo(PROC_PIDTBSDINFO)` ctypes call on Darwin. Sibling branch `sandbox-staticfiles-fix` still open; both narrow blockers must land before the bundled sidecar starts cleanly under App Sandbox. Rule of Three now met for `bristlenose/utils/libproc.py` extraction — deferred to next libproc call site per `desktop/CLAUDE.md` convention.)
+Last updated: 6 May 2026 (Mission Sandbox PASSED 4 May — alpha-checkpoint #3 cleared; #14 + #15 landed direct-on-main. TestFlight now gated only on Track B + S6. Earlier 5 May: sandbox-ps-libproc-swap merged — third libproc swap in the family, `proc_pidinfo(PROC_PIDTBSDINFO)` ctypes call on Darwin in `run_lifecycle._ps_start_time`. Rule of Three met for `bristlenose/utils/libproc.py` extraction; deferred to next libproc call site per `desktop/CLAUDE.md` convention.)
 
 **Most recent ship: v0.15.0 (26 Apr 2026)** — Phase 1f / 4a-pre. Pipeline-resilience event log (`pipeline-events.jsonl`) + structured `Cause` (10 categories) + honest `cost_usd_estimate` + desktop `EventLogReader`. Replaces the manifest-inference path that mis-classified interrupted runs as `.ready`. See `CHANGELOG.md` for full features, `docs/design-pipeline-resilience.md` for the design, and `docs/private/desktop-ux-iteration.md` for the deferred desktop UX work (Resume / Retry / Re-analyse… verb wiring + 9 other themed sections).
 
@@ -10,20 +10,16 @@ Last updated: 5 May 2026 (sandbox-ps-libproc-swap merged — third libproc swap 
 
 ## Next session focus
 
-**Mission Sandbox close — land #14 + #15 from the 3 May walk.**
+**Mission Sandbox PASSED 4 May 2026.** Alpha-checkpoint #3 cleared end-to-end; #14 (bf2533a) + #15 (f2162a9) landed direct-on-main. TestFlight is now gated only on **Track B + S6**.
 
-Walk done 3 May 2026. The sandbox itself isn't the wall — resume path runs end-to-end clean sandbox-on (ikea: 4 sessions, 67 quotes, 8 clusters, 5 themes imported, no `deny(1)` blocked any beat). Two narrow non-sandbox bugs hide the success:
+Pick up from `docs/private/100days.md` and `docs/private/sprint2-tracks.md` — Track B (MVP UX) and S6 are the remaining alpha gates. No active sandbox triage.
 
-- **#15 — `run failed` misreporting.** [PipelineRunner.swift:1068](desktop/Bristlenose/Bristlenose/PipelineRunner.swift:1068) treats SIGINT-induced exit code 1 as failure even when the pipeline imported successfully. Direct-on-main fix: heuristic on log tail (look for `Imported project …` line) → treat exit as success. ~30 min.
-- **#14 — faster-whisper + ctranslate2 missing from `desktop/bristlenose-sidecar.spec`.** Doctor reports `Transcription backend failed to load`. Blocks fresh-transcribe path. Spec edit + rebuild + sign + test. ~1-2h. Don't bundle the 1.5 GB Whisper model; first-run download per design.
-- **#16** rolls into the existing `local-ai-provider-actually-switches` branch (#7).
+Open follow-ups not in any active branch (surface separately, not alpha blockers):
+- **i18n locales not reaching host bundle under sandbox** — chrome keys leak verbatim in welcome view + AIConsent modal under sandbox-on, despite commit `ea21bb1`. Pre-existing build-system bug; cosmetic but visible.
+- **`proc_listpids` EPERM** — zombie cleanup non-functional under sandbox. Deferred post-alpha (triaged).
+- **IOKit AppleNVMeEANUC deny** — silent, single occurrence per launch. Investigate only if it surfaces user-visibly.
 
-Full handoff: `docs/private/handoffs/sandbox-walk-followup-fixes.md`. Inventory with all 16 findings + Mission Sandbox status block: `docs/private/sandbox-inventory-beats-6-13.md`.
-
-Open follow-ups (not blocking sandbox triage, surface separately):
-- **i18n locales not reaching host bundle under sandbox** (A1c row 2 / A2 verification observation #2). Commit `ea21bb1` was meant to fix this but the chrome keys still leak verbatim in welcome view + AIConsent modal under sandbox-on. Pre-existing build-system bug; cosmetic but visible.
-- **`proc_listpids` EPERM** (A1c row 1b/1d) — zombie cleanup non-functional under sandbox. Defer post-alpha (already triaged).
-- **IOKit AppleNVMeEANUC deny** (A1c row 1c) — silent, single occurrence per launch. Investigate if it ever surfaces user-visibly.
+Reference: `docs/private/handoffs/sandbox-walk-followup-fixes.md` (closeout), `docs/private/sandbox-inventory-beats-6-13.md` (16-finding inventory + status block).
 
 ---
 

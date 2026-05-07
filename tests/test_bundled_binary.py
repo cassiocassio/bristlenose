@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import os
 import stat
 from unittest.mock import patch
 
-from bristlenose.utils.bundled_binary import bundled_binary_path
+from bristlenose.utils.bundled_binary import (
+    bundled_binaries_dir,
+    bundled_binary_path,
+    prepend_bundled_to_path,
+)
 
 
 class TestEnvVarBranch:
@@ -125,3 +130,73 @@ class TestPriorityOrdering:
         with patch("bristlenose.utils.bundled_binary.sys.executable", str(sidecar)):
             # Env var wins over bundle
             assert bundled_binary_path("ffmpeg") == "/explicit/ffmpeg"
+
+
+class TestBundledBinariesDir:
+    """bundled_binaries_dir resolves the directory holding bundled ffmpeg/ffprobe."""
+
+    def test_returns_none_outside_bundle(self, monkeypatch):
+        monkeypatch.delenv("BRISTLENOSE_FFMPEG", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_FFPROBE", raising=False)
+        monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
+        assert bundled_binaries_dir() is None
+
+    def test_resolves_from_env_var_parent(self, monkeypatch, tmp_path):
+        monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
+        ffmpeg = tmp_path / "ffmpeg"
+        ffmpeg.write_text("")
+        monkeypatch.setenv("BRISTLENOSE_FFMPEG", str(ffmpeg))
+        assert bundled_binaries_dir() == tmp_path
+
+    def test_resolves_from_bundle_layout(self, monkeypatch, tmp_path):
+        monkeypatch.delenv("BRISTLENOSE_FFMPEG", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_FFPROBE", raising=False)
+        monkeypatch.setenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1")
+        resources = tmp_path / "Resources"
+        sidecar_dir = resources / "bristlenose-sidecar"
+        sidecar_dir.mkdir(parents=True)
+        sidecar = sidecar_dir / "bristlenose-sidecar"
+        sidecar.write_text("")
+        with patch("bristlenose.utils.bundled_binary.sys.executable", str(sidecar)):
+            assert bundled_binaries_dir() == resources.resolve()
+
+
+class TestPrependBundledToPath:
+    """prepend_bundled_to_path makes bundled ffmpeg reachable to bare-name shellouts."""
+
+    def test_noop_outside_bundle(self, monkeypatch):
+        monkeypatch.delenv("BRISTLENOSE_FFMPEG", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_FFPROBE", raising=False)
+        monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
+        monkeypatch.setenv("PATH", "/usr/bin:/bin")
+        prepend_bundled_to_path()
+        assert os.environ["PATH"] == "/usr/bin:/bin"
+
+    def test_prepends_when_bundle_dir_resolved(self, monkeypatch, tmp_path):
+        monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
+        ffmpeg = tmp_path / "ffmpeg"
+        ffmpeg.write_text("")
+        monkeypatch.setenv("BRISTLENOSE_FFMPEG", str(ffmpeg))
+        monkeypatch.setenv("PATH", "/usr/bin")
+        prepend_bundled_to_path()
+        assert os.environ["PATH"] == f"{tmp_path}{os.pathsep}/usr/bin"
+
+    def test_idempotent(self, monkeypatch, tmp_path):
+        monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
+        ffmpeg = tmp_path / "ffmpeg"
+        ffmpeg.write_text("")
+        monkeypatch.setenv("BRISTLENOSE_FFMPEG", str(ffmpeg))
+        monkeypatch.setenv("PATH", "/usr/bin")
+        prepend_bundled_to_path()
+        prepend_bundled_to_path()
+        # Single prepend, not doubled
+        assert os.environ["PATH"] == f"{tmp_path}{os.pathsep}/usr/bin"
+
+    def test_handles_empty_path(self, monkeypatch, tmp_path):
+        monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
+        ffmpeg = tmp_path / "ffmpeg"
+        ffmpeg.write_text("")
+        monkeypatch.setenv("BRISTLENOSE_FFMPEG", str(ffmpeg))
+        monkeypatch.setenv("PATH", "")
+        prepend_bundled_to_path()
+        assert os.environ["PATH"] == str(tmp_path)

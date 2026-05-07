@@ -18,6 +18,7 @@ from bristlenose.events import KindEnum
 from bristlenose.i18n import SUPPORTED_LOCALES as _I18N_LOCALES
 from bristlenose.i18n import set_locale as _set_locale
 from bristlenose.run_lifecycle import ConcurrentRunError, run_lifecycle
+from bristlenose.ui_kinds import MessageKind, cli_prefix
 
 # Known commands — used by _maybe_inject_run() to detect bare directory arguments
 _COMMANDS = {
@@ -54,6 +55,16 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console(width=min(80, Console().width))
+
+
+def _say(kind: MessageKind, message: str, *, indent: str = "") -> None:
+    """Print a status line prefixed with the canonical glyph for ``kind``.
+
+    Glyph and colour come from :mod:`bristlenose.ui_kinds`. Use for any
+    line that communicates state ("X happened" / "Y failed"); decorative
+    ``[dim]…[/dim]`` annotations stay as plain ``console.print``.
+    """
+    console.print(f"{indent}{cli_prefix(kind)} {message}")
 
 
 def _version_callback(value: bool) -> None:
@@ -175,13 +186,13 @@ def _format_doctor_table(report: object) -> None:
 
     for result in report.results:
         if result.status == CheckStatus.OK:
-            icon = "[green]✓[/green]"
+            icon = cli_prefix(MessageKind.SUCCESS)
         elif result.status == CheckStatus.WARN:
-            icon = "[bold yellow]⚠[/bold yellow]"
+            icon = cli_prefix(MessageKind.WARNING)
         elif result.status == CheckStatus.FAIL:
-            icon = "[red]✗[/red]"
+            icon = cli_prefix(MessageKind.ERROR)
         else:
-            icon = "[dim]—[/dim]"
+            icon = cli_prefix(MessageKind.SKIPPED)
 
         label = f"{result.label:<16}"
         detail = f"[dim]{result.detail}[/dim]" if result.detail else ""
@@ -274,10 +285,10 @@ def _maybe_offer_mlx_install(report: object) -> bool:
 
     if install_mlx() and verify_mlx_installed():
         console.print()
-        console.print("[green]  MLX installed. GPU transcription is now available.[/green]")
+        _say(MessageKind.SUCCESS, "MLX installed. GPU transcription is now available.", indent="  ")
     else:
         console.print()
-        console.print("[yellow]  Installation failed. Try manually:[/yellow]")
+        _say(MessageKind.ERROR, "Installation failed. Try manually:", indent="  ")
         console.print(f"  {display}")
 
     return True
@@ -460,13 +471,13 @@ def _setup_local_provider() -> str | None:
 
     if not status.is_running:
         console.print()
-        console.print("[yellow]Ollama is not running.[/yellow]")
+        _say(MessageKind.INFO, "Ollama is not running.")
 
         if is_ollama_installed():
             console.print()
             console.print("Starting Ollama...")
             if start_ollama_serve():
-                console.print("[green]Ollama started.[/green]")
+                _say(MessageKind.SUCCESS, "Ollama started.")
                 status = check_ollama()  # Re-check status
             else:
                 console.print()
@@ -499,10 +510,10 @@ def _setup_local_provider() -> str | None:
                     console.print()
                     if install_ollama(method):
                         console.print()
-                        console.print("[green]Ollama installed.[/green]")
+                        _say(MessageKind.SUCCESS, "Ollama installed.")
                         console.print("Starting Ollama...")
                         if start_ollama_serve():
-                            console.print("[green]Ollama started.[/green]")
+                            _say(MessageKind.SUCCESS, "Ollama started.")
                             status = check_ollama()
                         else:
                             console.print()
@@ -515,7 +526,7 @@ def _setup_local_provider() -> str | None:
                     else:
                         # Installation failed — fall back to download page
                         console.print()
-                        console.print("[red]Installation failed.[/red]")
+                        _say(MessageKind.ERROR, "Installation failed.")
                         console.print("Install manually from: [link]https://ollama.ai[/link]")
                         if Confirm.ask("Open the download page?", default=True):
                             webbrowser.open("https://ollama.ai")
@@ -540,25 +551,25 @@ def _setup_local_provider() -> str | None:
 
     if not status.has_suitable_model:
         console.print()
-        console.print("[yellow]Ollama is running but no suitable model found.[/yellow]")
+        _say(MessageKind.WARNING, "Ollama is running but no suitable model found.")
         console.print()
 
         if Confirm.ask(f"Download {DEFAULT_MODEL} (2 GB)?", default=True):
             console.print()
             if pull_model(DEFAULT_MODEL):
                 console.print()
-                console.print(f"[green]Downloaded {DEFAULT_MODEL}[/green]")
+                _say(MessageKind.SUCCESS, f"Downloaded {DEFAULT_MODEL}")
                 return "local"
             else:
                 console.print()
-                console.print("[red]Download failed.[/red]")
+                _say(MessageKind.ERROR, "Download failed.")
                 console.print("Try manually: [bold]ollama pull llama3.2[/bold]")
                 return None
         return None
 
     # Ready to go
     console.print()
-    console.print(f"[green]Using local AI ({status.recommended_model})[/green]")
+    _say(MessageKind.SUCCESS, f"Using local AI ({status.recommended_model})")
     console.print("[dim]This is slower than cloud APIs but completely free and private.[/dim]")
     console.print("[dim]For production quality: export BRISTLENOSE_ANTHROPIC_API_KEY=...[/dim]")
     console.print()
@@ -709,29 +720,31 @@ def _print_pipeline_summary(result: object, *, serve_url: str | None = None) -> 
         p_error = getattr(result, "pipeline_error", "")
         p_error_link = getattr(result, "pipeline_error_link", "")
         if p_error:
-            console.print(
-                f"\n  [red]Finished with errors[/red]{time_str} — {p_error}"
-            )
+            console.print()
+            _say(MessageKind.ERROR, f"Finished with errors{time_str} — {p_error}", indent="  ")
             if p_error_link:
                 console.print(
                     f"  [dim]Billing → [link={p_error_link}]{p_error_link}[/link][/dim]"
                 )
         else:
-            console.print(
-                f"\n  [red]Finished with errors[/red]{time_str}"
-                " — 0 quotes extracted (check API credits or logs)"
+            console.print()
+            _say(
+                MessageKind.ERROR,
+                f"Finished with errors{time_str} — 0 quotes extracted (check API credits or logs)",
+                indent="  ",
             )
         console.print("  [dim]Run [bold]bristlenose doctor[/bold] to diagnose[/dim]")
     elif getattr(result, "pipeline_warning", ""):
         p_warning = getattr(result, "pipeline_warning", "")
         time_str = f" in {_format_duration(elapsed)}" if elapsed else ""
-        console.print(
-            f"\n  [yellow]Done with warnings[/yellow]{time_str} — {p_warning}"
-        )
+        console.print()
+        _say(MessageKind.WARNING, f"Done with warnings{time_str} — {p_warning}", indent="  ")
     elif elapsed:
-        console.print(f"\n  [green]Done[/green] in {_format_duration(elapsed)}")
+        console.print()
+        _say(MessageKind.SUCCESS, f"Done in {_format_duration(elapsed)}", indent="  ")
     else:
-        console.print("\n  [green]Done.[/green]")
+        console.print()
+        _say(MessageKind.SUCCESS, "Done.", indent="  ")
 
     # Report line — serve URL or file path
     if serve_url:
@@ -889,7 +902,7 @@ def run(
             console.print("[dim]Resuming from previous run...[/dim]")
 
     if redact_pii and retain_pii:
-        console.print("[red]Cannot use both --redact-pii and --retain-pii.[/red]")
+        _say(MessageKind.ERROR, "Cannot use both --redact-pii and --retain-pii.")
         raise typer.Exit(1)
 
     if project_name is None:
@@ -945,7 +958,7 @@ def run(
             ))
             _run_handle.set_summary(result.summary)
     except ConcurrentRunError as exc:
-        console.print(f"[red]{exc}[/red]")
+        _say(MessageKind.ERROR, str(exc))
         raise typer.Exit(1) from exc
 
     # Detect pipeline errors (LLM ran but 0 quotes)
@@ -968,7 +981,7 @@ def run(
         port = _find_open_port()
     except RuntimeError:
         _print_pipeline_summary(result)
-        console.print("  [yellow]⚠[/yellow] No available port (8150–8159)")
+        _say(MessageKind.WARNING, "No available port (8150–8159)", indent="  ")
         return
 
     serve_url = f"http://127.0.0.1:{port}/report/"
@@ -982,7 +995,8 @@ def run(
     try:
         _start_server(input_dir, port=port, open_browser=False, dev=dev, verbose=verbose)
     except Exception as exc:
-        console.print(f"\n  [yellow]⚠[/yellow] Could not start server: {exc}")
+        console.print()
+        _say(MessageKind.WARNING, f"Could not start server: {exc}", indent="  ")
         # Show file link as fallback
         report_path = getattr(result, "report_path", None)
         if report_path and report_path.exists():
@@ -1048,7 +1062,7 @@ def transcribe(
             result = asyncio.run(pipeline.run_transcription_only(input_dir, output_dir))
             _run_handle.set_summary(result.summary)
     except ConcurrentRunError as exc:
-        console.print(f"[red]{exc}[/red]")
+        _say(MessageKind.ERROR, str(exc))
         raise typer.Exit(1) from exc
 
     _print_pipeline_summary(result)
@@ -1133,7 +1147,7 @@ def analyze(
             ))
             _run_handle.set_summary(result.summary)
     except ConcurrentRunError as exc:
-        console.print(f"[red]{exc}[/red]")
+        _say(MessageKind.ERROR, str(exc))
         raise typer.Exit(1) from exc
 
     _print_pipeline_summary(result)
@@ -1189,7 +1203,7 @@ def render(
         elif (Path.cwd() / "intermediate").exists():
             output_dir = Path.cwd()
         else:
-            console.print("[red]No intermediate data found.[/red]")
+            _say(MessageKind.ERROR, "No intermediate data found.")
             console.print(
                 "Run from a directory containing bristlenose-output/, "
                 "or specify the output path as an argument."
@@ -1198,7 +1212,7 @@ def render(
 
     # Check that the directory actually exists first
     if not output_dir.exists():
-        console.print(f"[red]Directory {output_dir} not found.[/red]")
+        _say(MessageKind.ERROR, f"Directory {output_dir} not found.")
         raise typer.Exit(1)
 
     # Validate that intermediate exists (try new layout first, then legacy)
@@ -1213,7 +1227,7 @@ def render(
             output_dir = nested_output
             intermediate_dir = nested_output / ".bristlenose" / "intermediate"
         else:
-            console.print(f"[red]No intermediate data in {output_dir}[/red]")
+            _say(MessageKind.ERROR, f"No intermediate data in {output_dir}")
             console.print("Run 'bristlenose run' first to generate intermediate data.")
             raise typer.Exit(1)
 
@@ -1473,7 +1487,7 @@ def _auto_render(project_dir: Path) -> None:
 
     pipeline = Pipeline(settings, verbose=False)
     result = pipeline.run_render_only(output_dir, input_dir)
-    console.print(f" [dim]✓ Rendered report[/dim]  {result.total_quotes} quotes")
+    console.print(f" {cli_prefix(MessageKind.SUCCESS)} [dim]Rendered report[/dim]  {result.total_quotes} quotes")
 
 
 @app.command()
@@ -1505,7 +1519,7 @@ def serve(
     try:
         import uvicorn  # noqa: F401 — test that serve deps are installed
     except ImportError:
-        console.print("[red]Server dependencies not installed.[/red]")
+        _say(MessageKind.ERROR, "Server dependencies not installed.")
         console.print(f"Install with: [bold]{_install_hint()}[/bold]")
         raise typer.Exit(1)
 
@@ -1694,9 +1708,9 @@ def _print_project_status(
     # Stages
     for info in project_status.stages:
         if info.status == StageStatus.COMPLETE:
-            icon = "[green]✓[/green]"
+            icon = cli_prefix(MessageKind.SUCCESS)
         elif info.status in (StageStatus.PARTIAL, StageStatus.RUNNING):
-            icon = "[yellow]⚠[/yellow]"
+            icon = cli_prefix(MessageKind.WARNING)
         else:
             icon = "[dim]✗[/dim]"
 
@@ -1717,7 +1731,7 @@ def _print_project_status(
                 if record and record.sessions:
                     for sid, sr in sorted(record.sessions.items()):
                         s_icon = (
-                            "[green]✓[/green]"
+                            cli_prefix(MessageKind.SUCCESS)
                             if sr.status == StageStatus.COMPLETE
                             else "[dim]✗[/dim]"
                         )
@@ -1776,7 +1790,7 @@ def configure(
     }
     canonical = provider_map.get(provider)
     if canonical is None:
-        console.print(f"[red]Unknown provider: {provider}[/red]")
+        _say(MessageKind.ERROR, f"Unknown provider: {provider}")
         console.print("Available: claude, chatgpt, gemini, azure, miro")
         raise typer.Exit(1)
 
@@ -1800,7 +1814,7 @@ def configure(
         key = typer.prompt(prompt_label, hide_input=True)
 
     if not key.strip():
-        console.print("[red]No key entered[/red]")
+        _say(MessageKind.ERROR, "No key entered")
         raise typer.Exit(1)
 
     key = key.strip()
@@ -1824,13 +1838,13 @@ def configure(
         is_valid, error = None, "needs endpoint and deployment to validate"
 
     if is_valid is False:
-        console.print(f"[red]Invalid — {error}[/red]")
+        _say(MessageKind.ERROR, f"Invalid — {error}")
         raise typer.Exit(1)
     elif is_valid is None:
-        console.print(f"[yellow]Could not validate: {error}[/yellow]")
+        _say(MessageKind.WARNING, f"Could not validate: {error}")
         console.print("Storing anyway...")
     else:
-        console.print("[green]Valid[/green]")
+        _say(MessageKind.SUCCESS, "Valid")
 
     # Store in keychain
     store = get_credential_store()
@@ -1849,11 +1863,11 @@ def configure(
                 if canonical == "miro"
                 else f"Bristlenose {display_name} API Key"
             )
-            console.print(f'[green]Stored in {store_label} as "{service_name}"[/green]')
+            _say(MessageKind.SUCCESS, f'Stored in {store_label} as "{service_name}"')
     except NotImplementedError:
         # EnvCredentialStore — can't persist
         console.print()
-        console.print("[yellow]No system credential store available.[/yellow]")
+        _say(MessageKind.WARNING, "No system credential store available.")
         console.print("Add this to your .env file or shell profile:")
         console.print()
         env_vars = {
@@ -1963,7 +1977,7 @@ def help_cmd(
 
         subprocess.run([sys.argv[0], topic, "--help"])
     else:
-        console.print(f"[red]Unknown topic:[/red] {topic}")
+        _say(MessageKind.ERROR, f"Unknown topic: {topic}")
         console.print("Try: bristlenose help commands | config | workflows")
         raise typer.Exit(1)
 

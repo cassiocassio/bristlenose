@@ -96,7 +96,7 @@ agreement.
 
 | Surface | Renders as |
 |---|---|
-| CLI line | `[colour]glyph[/colour] message <padding> [dim]suffix[/dim]` (see `_print_step` family in `bristlenose/pipeline.py:74–98`) |
+| CLI line | `[colour]glyph[/colour] message <padding> [dim]suffix[/dim]` (see `_print_step` family in `bristlenose/pipeline.py:131–171`) |
 | Popover row | `HStack { Text(glyph).foregroundStyle(tint); Text(label); Spacer(); Text(suffix).foregroundStyle(.secondary).monospacedDigit() }` |
 | Toast (desktop) | `ToastStore.show(_, kind:)` — leading SF Symbol counterpart `.fill` variants in body type; fade after 3s |
 | Sidebar glyph | `Text(glyph).foregroundStyle(tint)` at `.imageScale(.small)` trailing the row |
@@ -224,7 +224,7 @@ When you find yourself wanting to surface a new error, status, or note,
 |---|---|
 | Kind enum + glyph/colour tables (Python) | `bristlenose/ui_kinds.py` |
 | Kind enum + glyph/tint properties (Swift) | `desktop/Bristlenose/Bristlenose/MessageKind.swift` |
-| CLI status helpers | `bristlenose/pipeline.py:74–98` (`_print_step` family) |
+| CLI status helpers | `bristlenose/pipeline.py:131–171` (`_print_step` family) |
 | Cross-language schema fixture | `tests/fixtures/pipeline-summary-contract.json` |
 | Pipeline summary Pydantic model | `bristlenose/events.py` (`PipelineSummary`, `StageOutcome`, `StageFailure`) |
 | Failure-category enum (single source) | `bristlenose/events.py:CauseCategoryEnum` |

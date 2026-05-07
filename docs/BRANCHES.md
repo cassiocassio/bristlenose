@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 7 May 2026 (closed `pipeline-summary-events` and `pipeline-diagnostic-pill` worktrees)
+**Updated:** 7 May 2026 (started `cli-message-kinds` branch; closed `pipeline-summary-events` and `pipeline-diagnostic-pill` worktrees)
 
 ---
 
@@ -34,6 +34,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
+| `bristlenose_branch cli-message-kinds/` | `cli-message-kinds` | feature | Refactor `_print_step` family in `pipeline.py` + ad-hoc tinted `console.print()` calls in `cli.py` to consume `MessageKind` from `bristlenose/ui_kinds.py` |
 
 
 
@@ -125,6 +126,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
+| `cli-message-kinds` | `bristlenose_branch cli-message-kinds/` | local only |
 
 
 
@@ -132,6 +134,27 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `cli-message-kinds`
+
+**Kind:** feature — code lands on main; alignment / hygiene refactor of CLI print helpers
+**Status:** Just started
+**Started:** 7 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch cli-message-kinds/`
+**Remote:** local only (push when ready)
+
+**What it does:** Refactor `_print_step` / `_print_error_step` / `_print_warn_step` family in `bristlenose/pipeline.py` to consume `MessageKind` from `bristlenose/ui_kinds.py` (added on main as `1ab06bf`); audit ad-hoc tinted `console.print()` calls in `bristlenose/cli.py` so glyph + colour come from the canonical 5-kind table (`SUCCESS / INFO / WARNING / ERROR / SKIPPED`) rather than being hardcoded per-call site. Aligns CLI with the popover and toast vocabulary; no user-visible behaviour change.
+
+**Files this branch will touch:**
+- `bristlenose/pipeline.py`
+- `bristlenose/cli.py`
+- `bristlenose/ui_kinds.py`
+
+**Potential conflicts with other branches:**
+- No active branches currently touch `pipeline.py` or `cli.py` — clean territory.
+- `responsive-signal-cards` is frontend-only — no overlap.
 
 ---
 

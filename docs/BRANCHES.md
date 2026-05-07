@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 7 May 2026 (added `pipeline-summary-events`)
+**Updated:** 7 May 2026 (merged `pipeline-summary-events` into main as `efe4064`)
 
 ---
 
@@ -34,7 +34,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
-| `bristlenose_branch pipeline-summary-events/` | `pipeline-summary-events` | feature | Structured per-stage failure summaries; abandon path for empty-data runs; new Cause categories |
+| `bristlenose_branch pipeline-summary-events/` _(merged)_ | `pipeline-summary-events` | feature | Structured per-stage failure summaries; abandon path for empty-data runs; new Cause categories — merged 7 May 2026 (`efe4064`) |
 | `bristlenose_branch pipeline-diagnostic-pill/` | `pipeline-diagnostic-pill` | feature | Two new pill states (.completed_partial, .failed_with_diagnostic) with rich popover bodies showing per-session failure causes; consumes the structured PipelineSummary from Branch 1 |
 
 
@@ -127,7 +127,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
-| `pipeline-summary-events` | `bristlenose_branch pipeline-summary-events/` | local only |
+| `pipeline-summary-events` _(merged)_ | `bristlenose_branch pipeline-summary-events/` _(detached, on disk)_ | merged to main 7 May 2026 (`efe4064`) |
 | `pipeline-diagnostic-pill` | `bristlenose_branch pipeline-diagnostic-pill/` | local only |
 
 
@@ -163,31 +163,38 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
-### `pipeline-summary-events`
+### `pipeline-summary-events` (merged)
 
-**Kind:** feature — code intended for main
-**Status:** Just started
+**Kind:** feature _(merged)_
+**Status:** Merged 7 May 2026 as `efe4064` (4 commits FF onto main)
 **Started:** 7 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-summary-events/`
-**Remote:** local only (push when ready)
+**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-summary-events/` _(still on disk for backup; close via `/close-branch` when ready)_
+**Remote:** local only — never pushed
 
-**What it does:** Add structured per-stage failure summaries to pipeline events; abandon path for empty-data runs (no fake-empty report); wire WHISPER + new MISSING_INPUT/MISSING_BINARY Cause categories.
+**What shipped:** Python half of the failure-taxonomy / diagnostic-pill effort. New `Cause` categories (`MISSING_INPUT`, `MISSING_BINARY`); `StageFailure` / `StageOutcome` / `PipelineSummary` Pydantic models on terminus events with backward-compatible decode; `PipelineAbandonedError` so empty-data runs no longer write a fake-empty report; `RunHandle.set_summary()` mirroring `set_cost()`; `_dominant_cause` helper picks the most common failure category with non-retryable tie-breakers; abandon checkpoints after s05 (every transcription failed) and s09 (every quote-extraction LLM call failed); soft-stage at s11 (themes failure recorded but never abandons); `MISSING_BINARY` categorisation rule for bare-name `FileNotFoundError`. Plus three review-fix commits: explicit cache-hit `_cached_q_count` (drops a brittle `dir()` reflection), path sanitiser in `categorise_exception` so audio filenames don't leak to `pipeline-events.jsonl`, and `STAGE_FAILED_MAX = 10` truncation at write time keeping terminus lines under Swift's 64 KB read window. After a /usual-suspects review and a fixture-v3 reconciliation pass, `duration_ms` populated on every `StageOutcome`; eight new contract round-trip tests in `test_events.py` covering all four scenarios in `tests/fixtures/pipeline-summary-contract.json`.
 
-**Files this branch will touch:**
-- `bristlenose/events.py`
-- `bristlenose/run_lifecycle.py`
-- `bristlenose/pipeline.py`
-- `bristlenose/stages/s05_transcribe.py`
-- `bristlenose/stages/s09_quote_extraction.py`
-- `bristlenose/stages/s11_thematic_grouping.py`
-- `tests/test_pipeline_abandon.py`
-- `tests/test_run_lifecycle.py`
-- `tests/test_events.py`
-- `docs/design-pipeline-resilience.md`
+**Why it mattered:** Cleared the silent-empty-report failure mode that surfaced during the 7 May desktop sandbox walk; locked the Python emitter side of the schema contract that the Swift `pipeline-diagnostic-pill` branch consumes.
+
+**Files touched:**
+- `bristlenose/events.py` (+131) — models + truncation writer
+- `bristlenose/run_lifecycle.py` (+97) — abandon catch + path sanitiser + categoriser extension
+- `bristlenose/pipeline.py` (+255) — abandon checks + `_summary` accumulator + `_dominant_cause` + `duration_ms` plumbing
+- `bristlenose/models.py` (+5) — `PipelineResult.summary`
+- `bristlenose/cli.py` (+5) — `set_summary` plumbing in run / analyze / transcribe-only
+- `bristlenose/stages/s05_transcribe.py` (+38), `s09_quote_extraction.py` (+38), `s11_thematic_grouping.py` (+21) — `(results, StageOutcome)` tuple returns
+- `tests/test_pipeline_abandon.py` (NEW, 225 lines, 6 cases)
+- `tests/test_events.py` (+322, 50 cases incl. 8 contract round-trip)
+- `tests/test_run_lifecycle.py` (+70)
+- `tests/test_llm_concurrency.py` (+6) — tuple-unpack updates for refactored callers
+- `docs/design-pipeline-resilience.md` (+15) — 2026-05-07 changelog entry
+- `CHANGELOG.md` (+1) — Unreleased bullet
 
 **Potential conflicts with other branches:**
 - No active branches currently touch `events.py`, `run_lifecycle.py`, or pipeline stages — clean territory.
 - `bundled-binary-helper` (already merged via `670a002`) is conceptually adjacent (binary discovery) but file-disjoint.
+
+**Follow-up branches** (Session 1 hand-off):
+- `cli-message-kinds` (planned, ~30 min) — refactor `_print_step` family in `bristlenose/pipeline.py` to consume `MessageKind` from `bristlenose/ui_kinds.py` (added on main as `1ab06bf`); audit ad-hoc tinted `console.print()` calls in `bristlenose/cli.py`. Originally Session 2's §0 ask for this branch; punted to its own branch to keep this one's narrative tight. Doesn't block any other work — CLI keeps emitting `[green]✓[/green]` regardless. Handoff prompt in the gitignored handoffs area.
 
 ---
 

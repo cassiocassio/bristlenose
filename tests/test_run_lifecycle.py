@@ -100,6 +100,43 @@ def test_categorise_filenotfound_no_filename_falls_through():
     assert cause.category == CauseCategoryEnum.UNKNOWN
 
 
+def test_categorise_strips_paths_from_message():
+    """Cause.message must not carry filesystem paths — events log is a
+    re-identification key (CLAUDE.md). Audio paths often embed participant
+    names; the categoriser sanitises them at the boundary."""
+    exc = FileNotFoundError(
+        2, "No such file or directory",
+        "/Users/martin/interviews/interview-jane-doe.wav",
+    )
+    cause = categorise_exception(exc)
+    assert "<path>" in cause.message
+    assert "jane" not in cause.message
+    assert "martin" not in cause.message
+
+
+def test_categorise_strips_inline_paths():
+    """Quoted paths in arbitrary error text get sanitised too."""
+    exc = RuntimeError(
+        "failed to decode '/Users/martin/audio/jane.wav' at offset 12345",
+    )
+    cause = categorise_exception(exc)
+    assert "<path>" in cause.message
+    assert "jane" not in cause.message
+
+
+def test_categorise_preserves_categorisation_through_paths():
+    """Category routing happens on the raw message; only the persisted
+    message gets sanitised. So an AUTH error with a path embedded still
+    routes as AUTH (not UNKNOWN), and the path is gone from the cause."""
+    exc = RuntimeError(
+        "401 Unauthorized: invalid api key for /api/key/secret/123",
+    )
+    cause = categorise_exception(exc)
+    assert cause.category == CauseCategoryEnum.AUTH
+    assert "<path>" in cause.message
+    assert "secret/123" not in cause.message
+
+
 def test_categorise_auth():
     cause = categorise_exception(RuntimeError("401 Unauthorized: invalid api key"))
     assert cause.category == CauseCategoryEnum.AUTH

@@ -34,7 +34,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
-| `bristlenose_branch trytrytry/` | `trytrytry` | diagnostic | Throwaway / test-the-skill run |
 | `bristlenose_branch pipeline-summary-events/` | `pipeline-summary-events` | feature | Structured per-stage failure summaries; abandon path for empty-data runs; new Cause categories |
 | `bristlenose_branch pipeline-diagnostic-pill/` | `pipeline-diagnostic-pill` | feature | Two new pill states (.completed_partial, .failed_with_diagnostic) with rich popover bodies showing per-session failure causes; consumes the structured PipelineSummary from Branch 1 |
 
@@ -128,7 +127,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
-| `trytrytry` | `bristlenose_branch trytrytry/` | local only |
 | `pipeline-summary-events` | `bristlenose_branch pipeline-summary-events/` | local only |
 | `pipeline-diagnostic-pill` | `bristlenose_branch pipeline-diagnostic-pill/` | local only |
 
@@ -190,24 +188,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Potential conflicts with other branches:**
 - No active branches currently touch `events.py`, `run_lifecycle.py`, or pipeline stages — clean territory.
 - `bundled-binary-helper` (already merged via `670a002`) is conceptually adjacent (binary discovery) but file-disjoint.
-
----
-
-### `trytrytry`
-
-**Kind:** diagnostic — discard when done; not intended to merge
-**Status:** Just started
-**Started:** 6 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch trytrytry/`
-**Remote:** local only (push when ready)
-
-**What it does:** Throwaway / test-the-skill run — exercising `/new-feature` end-to-end. Will be discarded shortly.
-
-**Files this branch will touch:**
-- TBD — none expected (throwaway)
-
-**Potential conflicts with other branches:**
-- None expected — no real edits planned
 
 ---
 

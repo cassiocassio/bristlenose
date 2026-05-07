@@ -101,7 +101,8 @@ surface picks it up automatically — there is no per-surface override.
 | Pill label (toolbar) | ~28 | ellipsis at toolbar boundary |
 | Stage row label | ~50 (proportional) / ~58 (with monospace time column) | wrap to 2 lines, no truncation |
 | Per-session cause label (in row) | ~40 | `.lineLimit(1)` + `.truncationMode(.tail)` + `.help(...)` tooltip |
-| Raw `cause.message` | 4 KB (capped at write time, see `bristlenose/events.py:CAUSE_MESSAGE_MAX`) | shown only in tooltip + Copy/Email |
+| Raw `cause.message` | 4 KB (capped at write time, see `bristlenose/events.py:CAUSE_MESSAGE_MAX`) — path-sanitised at the source via `_sanitise_message()` | shown only in tooltip + Copy/Email |
+| Per-stage `failed[]` list | **10 entries + 1 overflow placeholder** (`STAGE_FAILED_MAX = 10`, see `bristlenose/events.py:_truncate_failed`). Worst-case terminus event line ~43 KB, comfortably under Swift `EventLogReader.readBoundedTail`'s 64 KB read window. | placeholder is a `StageFailure` with `session_id=null`, `cause.category=unknown`, `cause.message="... and N more failures truncated"` — popover renders as a single muted summary row, never as an N+1th session |
 | Toast message | ~60 | wrap to 2 lines |
 
 Stage row labels come from `bristlenose/pipeline.py` directly — they are
@@ -120,6 +121,13 @@ them; they are domain terminology like "Build" or "Compile" in Xcode.
   failed stages.
 - **Skipped** rows render once with `—` and the `skipped` suffix. No
   sub-rows.
+- **Overflow placeholder** — when a stage failed >10 sessions, the wire
+  carries 10 real failures + 1 sentinel `StageFailure` (session_id=null,
+  category=unknown, message starts `"... and "`). Render as one muted
+  summary row at the bottom of the stage's sub-rows: `— and N more`,
+  `.secondary` foregroundStyle. Detection: `failure.sessionID == nil &&
+  failure.cause.message.hasPrefix("... and ")`. Lock the contract via
+  the `run_completed_partial_truncated` fixture scenario.
 
 ### Pill label derivation
 

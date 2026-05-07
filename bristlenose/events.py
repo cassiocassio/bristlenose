@@ -35,6 +35,16 @@ SCHEMA_VERSION = 1
 # 4 KB cap on cause.message — protects Swift's 64 KB readLogTail window.
 CAUSE_MESSAGE_MAX = 4096
 
+# Max StageFailure entries persisted per StageOutcome.failed list. With
+# CAUSE_MESSAGE_MAX (4 KB), a 50-failure stage could otherwise produce a
+# 200 KB terminus line and bust the desktop's 64 KB readLogTail window
+# (silent event drop → "state unknown" pill). 10 keeps the worst-case
+# line under 64 KB while still surfacing enough per-session detail for
+# the diagnostic-pill popover. The truncation appends a synthetic
+# placeholder entry recording the dropped count, so the desktop can show
+# "+ N more failures" without re-reading the original log.
+STAGE_FAILED_MAX = 10
+
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -302,15 +312,65 @@ def new_run_id() -> str:
 # ---------------------------------------------------------------------------
 
 
+def _truncate_failed(outcome: StageOutcome | None) -> StageOutcome | None:
+    """Cap ``outcome.failed`` at STAGE_FAILED_MAX and append a placeholder.
+
+    Returns the (possibly new) StageOutcome — caller should swap it in.
+    Pure: never mutates the input.
+    """
+    if outcome is None or len(outcome.failed) <= STAGE_FAILED_MAX:
+        return outcome
+    dropped = len(outcome.failed) - STAGE_FAILED_MAX
+    placeholder = StageFailure(
+        session_id=None,
+        cause=Cause(
+            category=CauseCategoryEnum.UNKNOWN,
+            message=f"... and {dropped} more failures truncated",
+        ),
+    )
+    return outcome.model_copy(update={
+        "failed": [*outcome.failed[:STAGE_FAILED_MAX], placeholder],
+    })
+
+
+def _truncate_event_summary(event: AnyEvent) -> AnyEvent:
+    """Apply STAGE_FAILED_MAX to a terminus event's per-stage failed lists.
+
+    No-op for RunStartedEvent (no summary field) and for events whose
+    summary.{transcripts,quotes,themes} all stay under the cap.
+    """
+    summary = getattr(event, "summary", None)
+    if summary is None:
+        return event
+    new_t = _truncate_failed(summary.transcripts)
+    new_q = _truncate_failed(summary.quotes)
+    new_th = _truncate_failed(summary.themes)
+    if (
+        new_t is summary.transcripts
+        and new_q is summary.quotes
+        and new_th is summary.themes
+    ):
+        return event  # nothing changed
+    new_summary = summary.model_copy(update={
+        "transcripts": new_t,
+        "quotes": new_q,
+        "themes": new_th,
+    })
+    return event.model_copy(update={"summary": new_summary})
+
+
 def append_event(events_file: Path, event: AnyEvent) -> None:
     """Append one event line atomically.
 
     Uses ``O_APPEND`` + ``fsync``. POSIX guarantees seek-to-end-and-write
     is atomic per ``write()`` call on regular files; concurrent appenders
     that single-write a line under PIPE_BUF (4 KB on macOS) don't tear.
-    The 4 KB cap on ``Cause.message`` keeps run-level events under that
-    bound; the ``ConcurrentRunError`` PID-file check is the real guard
-    against parallel writers, since the manifest and SQLite DB also race.
+    The 4 KB cap on ``Cause.message`` keeps individual messages bounded;
+    ``STAGE_FAILED_MAX`` (10) caps each per-stage ``failed`` list so a
+    50-session failure doesn't produce a 200 KB terminus line that would
+    bust the desktop's 64 KB ``readLogTail`` window. The
+    ``ConcurrentRunError`` PID-file check is the real guard against
+    parallel writers, since the manifest and SQLite DB also race.
 
     Mode 0o600 + O_NOFOLLOW: events log contains the OS username +
     hostname in the process envelope; restrict readability to the
@@ -320,6 +380,7 @@ def append_event(events_file: Path, event: AnyEvent) -> None:
     promised on macOS — that requires F_FULLFSYNC, deferred per design doc.
     """
     events_file.parent.mkdir(parents=True, exist_ok=True)
+    event = _truncate_event_summary(event)
     line = event.model_dump_json(exclude_none=False) + "\n"
     data = line.encode("utf-8")
 

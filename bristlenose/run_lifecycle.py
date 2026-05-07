@@ -283,6 +283,27 @@ _QUOTA_RE = re.compile(r"\b(rate limit|quota|429|credit)\b")
 _NETWORK_RE = re.compile(r"\b(connection|timeout|dns|unreachable)\b")
 _API_SERVER_RE = re.compile(r"\b(internal server|500|502|503|504)\b")
 
+# Filesystem path token — any run of non-whitespace, non-quote characters
+# that starts with `/` and has at least one more `/` so we don't eat an
+# isolated leading slash. Matches both POSIX absolute paths and the
+# embedded-in-quoted-message variants (`'/Users/.../jane.wav'`). Replaced
+# wholesale by `<path>` before building the Cause — the events log is a
+# re-identification key (see CLAUDE.md alongside `pii_summary.txt`,
+# `llm-calls.jsonl`); category + class name + session_id retain the
+# diagnostic value without persisting filenames that may carry participant
+# names.
+_PATH_RE = re.compile(r"/[^\s'\"<>]*/[^\s'\"<>]*")
+
+
+def _sanitise_message(msg: str) -> str:
+    """Replace absolute filesystem paths in ``msg`` with a literal ``<path>``.
+
+    Run on every exception message before it lands in a ``Cause`` so audio
+    filenames (often participant-bearing — `interview-jane-doe.wav`) don't
+    leak into ``pipeline-events.jsonl``.
+    """
+    return _PATH_RE.sub("<path>", msg)
+
 
 def categorise_exception(exc: BaseException) -> Cause:
     """Best-effort mapping of an exception to a structured Cause.
@@ -294,10 +315,17 @@ def categorise_exception(exc: BaseException) -> Cause:
     Substring matchers are anchored with `\\b` word boundaries to avoid
     false positives — `"credit"` must not match `"credentials"`,
     `"authentication"` must not match an unrelated `OSError` quoting it.
+
+    The message is run through ``_sanitise_message`` before being attached
+    to the Cause so absolute filesystem paths never reach the events log.
+    Categorisation runs on the *raw* message so `[Errno 2] '/usr/bin/foo'`
+    still carries the slash needed for the MISSING_BINARY path-presence
+    check; the sanitised string only feeds the persisted ``cause.message``.
     """
-    msg = str(exc) or exc.__class__.__name__
+    raw_msg = str(exc) or exc.__class__.__name__
+    msg = _sanitise_message(raw_msg)
     name = exc.__class__.__name__.lower()
-    haystack = f"{name} {msg}".lower()
+    haystack = f"{name} {raw_msg}".lower()
 
     # Disk space.
     if isinstance(exc, OSError) and getattr(exc, "errno", None) == 28:  # ENOSPC

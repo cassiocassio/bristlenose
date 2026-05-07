@@ -194,6 +194,106 @@ def test_run_completed_event_decodes_without_summary_field():
     assert parsed.summary is None
 
 
+def test_append_event_truncates_long_failed_list(tmp_path):
+    """Per-stage failed[] is capped to STAGE_FAILED_MAX + 1 placeholder.
+
+    50 maximum-length failures would produce a ~214 KB JSONL line and
+    bust the desktop's 64 KB readLogTail window. After truncation the
+    line stays well under that ceiling and the desktop can still render
+    'N more failures' from the placeholder.
+    """
+    from bristlenose.events import (
+        STAGE_FAILED_MAX,
+        Cause,
+        PipelineSummary,
+        RunFailedEvent,
+        StageFailure,
+        StageOutcome,
+        append_event,
+        events_path,
+        read_events,
+    )
+
+    fails = [
+        StageFailure(
+            session_id=f"s{i}",
+            cause=Cause(
+                category=CauseCategoryEnum.WHISPER,
+                message="x" * 4096,
+            ),
+        )
+        for i in range(50)
+    ]
+    ev = RunFailedEvent(
+        ts="2026-05-07T10:00:00Z",
+        run_id="01J0000000000000000000000A",
+        kind="run",
+        started_at="2026-05-07T09:00:00Z",
+        ended_at="2026-05-07T10:00:00Z",
+        cause=Cause(category=CauseCategoryEnum.WHISPER, message="all failed"),
+        summary=PipelineSummary(
+            transcripts=StageOutcome(attempted=50, succeeded=0, failed=fails),
+        ),
+    )
+    file = events_path(tmp_path)
+    append_event(file, ev)
+
+    # Persisted line is bounded — reads back without losing the event.
+    line = file.read_bytes()
+    assert len(line) < 65_536, f"line is {len(line)} bytes — would bust desktop's 64KB read window"
+
+    # Persisted summary has STAGE_FAILED_MAX real entries + 1 placeholder.
+    parsed = read_events(file)
+    assert len(parsed) == 1
+    failed = parsed[0].summary.transcripts.failed
+    assert len(failed) == STAGE_FAILED_MAX + 1
+    placeholder = failed[-1]
+    assert placeholder.session_id is None
+    assert "40 more failures" in placeholder.cause.message
+    # Original Pydantic object is not mutated.
+    assert len(ev.summary.transcripts.failed) == 50
+
+
+def test_append_event_passes_short_failed_list_unchanged(tmp_path):
+    """Truncation is a no-op when failed[] is under the cap."""
+    from bristlenose.events import (
+        Cause,
+        PipelineSummary,
+        RunFailedEvent,
+        StageFailure,
+        StageOutcome,
+        append_event,
+        events_path,
+        read_events,
+    )
+
+    fails = [
+        StageFailure(
+            session_id=f"s{i}",
+            cause=Cause(category=CauseCategoryEnum.WHISPER, message="oops"),
+        )
+        for i in range(3)
+    ]
+    ev = RunFailedEvent(
+        ts="2026-05-07T10:00:00Z",
+        run_id="01J0000000000000000000000A",
+        kind="run",
+        started_at="2026-05-07T09:00:00Z",
+        ended_at="2026-05-07T10:00:00Z",
+        cause=Cause(category=CauseCategoryEnum.WHISPER, message="all failed"),
+        summary=PipelineSummary(
+            transcripts=StageOutcome(attempted=3, succeeded=0, failed=fails),
+        ),
+    )
+    file = events_path(tmp_path)
+    append_event(file, ev)
+    parsed = read_events(file)
+    failed = parsed[0].summary.transcripts.failed
+    assert len(failed) == 3
+    # No placeholder — all entries are real.
+    assert all(f.session_id is not None for f in failed)
+
+
 def test_run_failed_event_round_trips_summary():
     """summary serialises and parses back identically."""
     import json

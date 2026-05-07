@@ -708,3 +708,137 @@ def test_concurrent_o_append_does_not_tear_lines(tmp_path: Path, n_writers: int,
     # All run_ids must be unique (no torn / merged lines).
     run_ids = {e.run_id for e in events}
     assert len(run_ids) == n_writers * events_per
+
+
+# ---------------------------------------------------------------------------
+# Cross-language schema contract — fixture round-trip
+# ---------------------------------------------------------------------------
+# tests/fixtures/pipeline-summary-contract.json is the source of truth for
+# the Python ↔ Swift schema. Both sides must round-trip every scenario.
+# This test owns the Python side; PipelineSummaryTests on the Swift side
+# owns the consumer side.
+
+
+_CONTRACT_PATH = Path(__file__).parent / "fixtures" / "pipeline-summary-contract.json"
+
+
+def _load_contract() -> dict:
+    return json.loads(_CONTRACT_PATH.read_text(encoding="utf-8"))
+
+
+def test_contract_fixture_present_and_versioned():
+    """The fixture exists and declares its schema version. Lock-step bump."""
+    contract = _load_contract()
+    assert contract["version"] == 3, (
+        "Contract schema version drifted. If the fixture moved to v4, audit "
+        "every consumer (Python events.py, Swift PipelineSummary.swift) and "
+        "update tests on both sides."
+    )
+
+
+@pytest.mark.parametrize("scenario_name", [
+    "run_completed_partial",
+    "run_failed_abandoned",
+    "run_completed_partial_truncated",
+    "run_completed_clean",
+])
+def test_contract_scenarios_round_trip(scenario_name: str):
+    """Each fixture scenario decodes into the right event model and re-encodes
+    losslessly (modulo Pydantic's normalisation of optional fields).
+
+    Catches schema drift between the fixture and the Pydantic models — e.g.
+    a fixture field gets renamed but the model still has the old name, or a
+    new fixture field has no model home.
+    """
+    contract = _load_contract()
+    payload = contract["scenarios"][scenario_name]
+    event_type = payload["event"]
+
+    if event_type == "run_completed":
+        parsed = RunCompletedEvent.model_validate(payload)
+    elif event_type == "run_failed":
+        parsed = RunFailedEvent.model_validate(payload)
+    else:
+        pytest.fail(f"Unhandled event type in contract: {event_type}")
+
+    # Round-trip: serialise, parse back, structural identity.
+    re_parsed = type(parsed).model_validate_json(parsed.model_dump_json())
+    assert re_parsed.model_dump() == parsed.model_dump()
+
+
+def test_contract_run_completed_partial_carries_durations():
+    """Partial-run scenario: every populated stage outcome carries duration_ms.
+
+    Locks the v2 schema addition. Catches a regression where a writer
+    forgot to populate duration_ms (every popover row would render '—').
+    """
+    contract = _load_contract()
+    payload = contract["scenarios"]["run_completed_partial"]
+    parsed = RunCompletedEvent.model_validate(payload)
+    assert parsed.summary is not None
+    assert parsed.summary.transcripts is not None
+    assert parsed.summary.transcripts.duration_ms == 723000
+    assert parsed.summary.quotes is not None
+    assert parsed.summary.quotes.duration_ms == 82000
+    # themes is None for this scenario — duration_ms moot.
+    assert parsed.summary.themes is None
+
+
+def test_contract_truncated_marker_shape():
+    """v3 truncation marker: 12 entries (10 real + 1 placeholder + ... wait, 11).
+
+    Locks the STAGE_FAILED_MAX overflow placeholder shape:
+    session_id=null, cause.category=unknown, cause.message="... and N more
+    failures truncated". The Swift popover renders this as a single muted
+    summary row, not as an N+1th session.
+    """
+    contract = _load_contract()
+    payload = contract["scenarios"]["run_completed_partial_truncated"]
+    parsed = RunCompletedEvent.model_validate(payload)
+    failed = parsed.summary.transcripts.failed
+    # Real failures + 1 placeholder. The fixture shows 14 real → truncated
+    # to 10 + 1 placeholder. But the fixture authors may emit any count;
+    # the contract is "the LAST entry is the placeholder when truncation
+    # happened". Don't over-constrain the count here — that's the writer's
+    # business via STAGE_FAILED_MAX. Just verify the placeholder shape.
+    placeholder = failed[-1]
+    assert placeholder.session_id is None
+    assert placeholder.cause.category == CauseCategoryEnum.UNKNOWN
+    assert "more failures truncated" in placeholder.cause.message
+    # All non-placeholder entries have a real session_id.
+    for entry in failed[:-1]:
+        assert entry.session_id is not None
+        assert entry.cause.category != CauseCategoryEnum.UNKNOWN or (
+            "truncated" not in (entry.cause.message or "")
+        )
+
+
+def test_contract_run_failed_abandoned_has_cause_and_summary():
+    """Abandoned-run scenario: top-level cause AND partial summary present.
+
+    Confirms the abandon path's contract — the run_failed event carries a
+    structured cause (for the pill label) AND the partial PipelineSummary
+    (for the popover body).
+    """
+    contract = _load_contract()
+    payload = contract["scenarios"]["run_failed_abandoned"]
+    parsed = RunFailedEvent.model_validate(payload)
+    assert parsed.cause is not None
+    assert parsed.cause.category == CauseCategoryEnum.AUTH
+    assert parsed.summary is not None
+
+
+def test_contract_clean_scenario_has_empty_failed_lists():
+    """Clean run: every populated stage has empty failed[].
+
+    Confirms desktop should derive .ready (not .completedPartial) from this
+    shape. The fixture's _doc field calls this out explicitly.
+    """
+    contract = _load_contract()
+    payload = contract["scenarios"]["run_completed_clean"]
+    parsed = RunCompletedEvent.model_validate(payload)
+    assert parsed.summary is not None
+    for stage in (parsed.summary.transcripts, parsed.summary.quotes, parsed.summary.themes):
+        assert stage is not None
+        assert stage.failed == []
+        assert stage.duration_ms is not None  # All three populated for the clean run.

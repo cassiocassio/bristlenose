@@ -164,11 +164,19 @@ class StageFailure(BaseModel):
 
 
 class StageOutcome(BaseModel):
-    """Per-stage rollup: how many were attempted, how many succeeded, what failed."""
+    """Per-stage rollup: how many were attempted, how many succeeded, what failed.
+
+    ``duration_ms`` is the wall-clock the orchestrator spent in this stage on
+    *this* run (not cumulative across resumes). The Swift popover renders it
+    Xcode-build-log-style in a monospace trailing column. ``None`` when the
+    stage didn't run (cache hit on every entry, or the stage was skipped) —
+    distinct from ``0`` which would mean "ran but instantaneous".
+    """
 
     attempted: int = 0
     succeeded: int = 0
     failed: list[StageFailure] = Field(default_factory=list)
+    duration_ms: int | None = None
 
 
 class PipelineSummary(BaseModel):

@@ -1,0 +1,167 @@
+{
+  "_doc": "Cross-language schema contract between Python (bristlenose/events.py) and Swift (desktop/Bristlenose/Bristlenose/PipelineSummary.swift). Both sides round-trip these scenarios in tests. If you change this file, both sides' tests must continue to pass. Established 7 May 2026 for branches pipeline-summary-events (Python) and pipeline-diagnostic-pill (Swift).",
+  "version": 1,
+  "scenarios": {
+    "run_completed_partial": {
+      "_doc": "Partial run: 3 of 5 transcripts succeeded; pipeline continued and produced a (low-value, dev-feedback) report. Diagnostic pill state .completedPartial on Swift side.",
+      "schema_version": 1,
+      "ts": "2026-05-07T15:30:00Z",
+      "event": "run_completed",
+      "run_id": "01HXYZ000000000000000PARTL",
+      "kind": "run",
+      "started_at": "2026-05-07T15:00:00Z",
+      "ended_at": "2026-05-07T15:30:00Z",
+      "outcome": "completed",
+      "cause": null,
+      "input_tokens": 12500,
+      "output_tokens": 4200,
+      "cost_usd_estimate": 0.18,
+      "price_table_version": "2026-04-01",
+      "summary": {
+        "transcripts": {
+          "attempted": 5,
+          "succeeded": 3,
+          "failed": [
+            {
+              "session_id": "session-002-show-and-tell-40",
+              "cause": {
+                "category": "whisper",
+                "code": null,
+                "message": "Whisper transcription timed out after 600s",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "session-002-show-and-tell-40",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "session-005-deep-dive",
+              "cause": {
+                "category": "missing_binary",
+                "code": null,
+                "message": "[Errno 2] No such file or directory: 'ffmpeg'",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "session-005-deep-dive",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            }
+          ]
+        },
+        "quotes": {
+          "attempted": 3,
+          "succeeded": 3,
+          "failed": []
+        },
+        "themes": null
+      }
+    },
+    "run_failed_abandoned": {
+      "_doc": "Abandoned run: all quote-extraction calls failed (auth revoked mid-run). PipelineAbandonedError raised; no report on disk. Swift state .failedWithDiagnostic.",
+      "schema_version": 1,
+      "ts": "2026-05-07T16:30:00Z",
+      "event": "run_failed",
+      "run_id": "01HXYZ000000000000ABANDONED",
+      "kind": "run",
+      "started_at": "2026-05-07T16:00:00Z",
+      "ended_at": "2026-05-07T16:30:00Z",
+      "outcome": "failed",
+      "cause": {
+        "category": "auth",
+        "code": "401",
+        "message": "Anthropic API authentication failed: invalid API key",
+        "provider": "anthropic",
+        "stage": "s09_quote_extraction",
+        "session_id": null,
+        "exit_code": null,
+        "signal": null,
+        "signal_name": null
+      },
+      "input_tokens": 8200,
+      "output_tokens": 0,
+      "cost_usd_estimate": 0.04,
+      "price_table_version": "2026-04-01",
+      "summary": {
+        "transcripts": {
+          "attempted": 3,
+          "succeeded": 3,
+          "failed": []
+        },
+        "quotes": {
+          "attempted": 3,
+          "succeeded": 0,
+          "failed": [
+            {
+              "session_id": "session-001",
+              "cause": {
+                "category": "auth",
+                "code": "401",
+                "message": "Anthropic API authentication failed: invalid API key",
+                "provider": "anthropic",
+                "stage": "s09_quote_extraction",
+                "session_id": "session-001",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "session-002",
+              "cause": {
+                "category": "auth",
+                "code": "401",
+                "message": "Anthropic API authentication failed: invalid API key",
+                "provider": "anthropic",
+                "stage": "s09_quote_extraction",
+                "session_id": "session-002",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "session-003",
+              "cause": {
+                "category": "auth",
+                "code": "401",
+                "message": "Anthropic API authentication failed: invalid API key",
+                "provider": "anthropic",
+                "stage": "s09_quote_extraction",
+                "session_id": "session-003",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            }
+          ]
+        },
+        "themes": null
+      }
+    },
+    "run_completed_clean": {
+      "_doc": "Clean run baseline: all stages fully successful, summary present with empty failed lists. Confirms desktop should derive .ready, not .completedPartial.",
+      "schema_version": 1,
+      "ts": "2026-05-07T17:00:00Z",
+      "event": "run_completed",
+      "run_id": "01HXYZ00000000000000000CLEAN",
+      "kind": "run",
+      "started_at": "2026-05-07T16:45:00Z",
+      "ended_at": "2026-05-07T17:00:00Z",
+      "outcome": "completed",
+      "cause": null,
+      "input_tokens": 9500,
+      "output_tokens": 3100,
+      "cost_usd_estimate": 0.14,
+      "price_table_version": "2026-04-01",
+      "summary": {
+        "transcripts": {"attempted": 3, "succeeded": 3, "failed": []},
+        "quotes":      {"attempted": 3, "succeeded": 3, "failed": []},
+        "themes":      {"attempted": 1, "succeeded": 1, "failed": []}
+      }
+    }
+  }
+}

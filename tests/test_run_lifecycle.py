@@ -67,11 +67,36 @@ def test_categorise_missing_dependency():
     assert cause.category == CauseCategoryEnum.MISSING_DEP
 
 
-def test_categorise_filenotfound_is_unknown_not_missing_dep():
-    """FileNotFoundError is too broad for MISSING_DEP — pipelines raise it for
-    missing input/audio/people files all the time. Should land in UNKNOWN.
-    Only ImportError / ModuleNotFoundError signal a missing tool."""
+def test_categorise_bare_filenotfound_is_missing_binary():
+    """Bare-name FileNotFoundError → MISSING_BINARY.
+
+    This is the today's-ffmpeg-under-sandbox bug pattern: a PyPI dep shells
+    out with ``["ffmpeg", ...]`` and PATH lookup fails. The filename has
+    no path separator, which is the tell.
+    """
+    cause = categorise_exception(
+        FileNotFoundError(2, "No such file or directory", "ffmpeg"),
+    )
+    assert cause.category == CauseCategoryEnum.MISSING_BINARY
+
+
+def test_categorise_filenotfound_with_slash_falls_through():
+    """Slash-containing FileNotFoundError → not MISSING_BINARY.
+
+    A path-bearing filename means the file is genuinely missing on disk
+    (e.g. a deleted input video), not a missing system binary. Falls
+    through to UNKNOWN by default; ImportError still routes to MISSING_DEP.
+    """
+    cause = categorise_exception(
+        FileNotFoundError(2, "No such file or directory", "/usr/bin/foo"),
+    )
+    assert cause.category == CauseCategoryEnum.UNKNOWN
+
+
+def test_categorise_filenotfound_no_filename_falls_through():
+    """FileNotFoundError without a .filename attr → falls through to UNKNOWN."""
     cause = categorise_exception(FileNotFoundError("ffmpeg"))
+    # exc.filename is None for the single-arg constructor
     assert cause.category == CauseCategoryEnum.UNKNOWN
 
 

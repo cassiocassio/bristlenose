@@ -222,7 +222,7 @@ class TestQuoteExtractionConcurrency:
         mock_client = AsyncMock()
         mock_client.analyze = mock_analyze
 
-        result = await extract_quotes(
+        result, _outcome = await extract_quotes(
             transcripts, topic_maps, mock_client, concurrency=3,
         )
 
@@ -249,7 +249,7 @@ class TestQuoteExtractionConcurrency:
         mock_client = AsyncMock()
         mock_client.analyze = mock_analyze
 
-        result = await extract_quotes(
+        result, _outcome = await extract_quotes(
             transcripts, topic_maps, mock_client, concurrency=3,
         )
 
@@ -345,7 +345,7 @@ class TestQuoteExtractionEarlyTermination:
         mock_client.analyze = mock_analyze
         errors: list[str] = []
 
-        result = await extract_quotes(
+        result, _outcome = await extract_quotes(
             transcripts, topic_maps, mock_client, concurrency=1, errors=errors,
         )
 

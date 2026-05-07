@@ -16,6 +16,13 @@ _os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
 from bristlenose import __version__
 from bristlenose.config import BristlenoseSettings
+from bristlenose.events import (
+    Cause,
+    CauseCategoryEnum,
+    PipelineAbandonedError,
+    PipelineSummary,
+    StageOutcome,
+)
 from bristlenose.hashing import hash_bytes, hash_file_metadata, verify_file_hash
 from bristlenose.llm import telemetry as _llm_telemetry
 from bristlenose.manifest import (
@@ -56,6 +63,55 @@ logger = logging.getLogger(__name__)
 console = Console(width=min(80, Console().width))
 
 _MAX_SESSIONS_NO_CONFIRM = 16
+
+
+def _dominant_cause(
+    failures: list,
+    *,
+    default_category: CauseCategoryEnum,
+    message: str,
+) -> Cause:
+    """Pick the dominant Cause from a list of StageFailures.
+
+    Strategy: most common category wins. If tied, prefer non-retryable —
+    those are the ones the user actually needs to act on. Specific
+    precedence within non-retryable, in descending action-priority:
+    AUTH > MISSING_BINARY > MISSING_DEP > MISSING_INPUT > DISK. Within
+    retryable, just pick the first encountered. Falls back to a synthetic
+    Cause built from ``default_category`` + ``message`` when ``failures``
+    is empty (shouldn't happen on the abandon path, but defensive).
+    """
+    from collections import Counter
+
+    if not failures:
+        return Cause(category=default_category, message=message)
+
+    # Pull the underlying Cause out of each StageFailure.
+    causes = [f.cause for f in failures]
+    counter = Counter(c.category for c in causes)
+    top_count = counter.most_common(1)[0][1]
+    contenders = [cat for cat, n in counter.items() if n == top_count]
+
+    if len(contenders) == 1:
+        chosen_cat = contenders[0]
+    else:
+        # Tie — prefer non-retryable in priority order.
+        priority = [
+            CauseCategoryEnum.AUTH,
+            CauseCategoryEnum.MISSING_BINARY,
+            CauseCategoryEnum.MISSING_DEP,
+            CauseCategoryEnum.MISSING_INPUT,
+            CauseCategoryEnum.DISK,
+        ]
+        chosen_cat = next(
+            (p for p in priority if p in contenders),
+            contenders[0],
+        )
+
+    # Use the first cause matching the chosen category, but stamp the
+    # abandon-level message so the terminus event reads cleanly.
+    chosen = next(c for c in causes if c.category == chosen_cat)
+    return chosen.model_copy(update={"message": message})
 
 
 # ---------------------------------------------------------------------------
@@ -326,6 +382,13 @@ class Pipeline:
         self._estimator = estimator
         self._skip_confirm = skip_confirm
 
+        # Per-stage outcome accumulator. Reset at the top of run / analyze /
+        # transcribe-only; populated as each stage finishes; stamped onto
+        # PipelineResult.summary at the end. Carried into
+        # PipelineAbandonedError on abandon paths so the terminus event
+        # includes whatever ran before the failing stage.
+        self._summary = PipelineSummary()
+
         # Logging is configured later (once output_dir is known) via
         # _configure_logging().  Pipeline methods call it at the top of
         # run() / run_analysis_only() / run_transcription_only() /
@@ -420,6 +483,8 @@ class Pipeline:
 
         pipeline_start = time.perf_counter()
         _printed_warnings.clear()
+        # Reset the per-stage summary accumulator at the start of each run.
+        self._summary = PipelineSummary()
         output_dir.mkdir(parents=True, exist_ok=True)
         self._configure_logging(output_dir)
         write_pipeline_metadata(output_dir, self.settings.project_name)
@@ -515,6 +580,9 @@ class Pipeline:
             _ss_path = intermediate / "session_segments.json"
             _source_paths = [f.path for s in sessions for f in s.files]
             _tx_input_hashes = {"source_files": hash_file_metadata(_source_paths)}
+            # Outer-scope default so the abandon check below has a value
+            # even when the full-cache-hit branch runs.
+            _fresh_transcript_outcome = StageOutcome()
             if _is_stage_verified(
                 _prev_manifest, _M_STAGE_TRANSCRIBE, [_ss_path],
                 current_input_hashes=_tx_input_hashes,
@@ -583,9 +651,11 @@ class Pipeline:
                             f" ({current}/{total} files)[/dim]"
                         )
 
-                    _fresh_segments = await self._gather_all_segments(
-                        _remaining_sessions,
-                        on_progress=_on_transcribe_progress,
+                    _fresh_segments, _fresh_transcript_outcome = (
+                        await self._gather_all_segments(
+                            _remaining_sessions,
+                            on_progress=_on_transcribe_progress,
+                        )
                     )
                     for sid in _fresh_segments:
                         mark_session_complete(
@@ -593,6 +663,7 @@ class Pipeline:
                         )
                 else:
                     _fresh_segments = {}
+                    _fresh_transcript_outcome = StageOutcome()
 
                 session_segments = {**_cached_segments, **_fresh_segments}
 
@@ -646,6 +717,36 @@ class Pipeline:
                 input_hashes=_tx_input_hashes,
             )
             write_manifest(manifest, output_dir)
+
+            # ── Transcript outcome rollup + abandon check ──────────────
+            # Build from session_segments (the union of cached + fresh):
+            # one attempt per input session, success when segments are
+            # non-empty. Failures come from the fresh path; cached sessions
+            # were already complete in a prior run and don't fail here.
+            # If every session ends up with empty segments, abandon now —
+            # no point running LLM stages on empty data, and we must not
+            # write a fake-empty report at the end.
+            _succeeded_sids = [
+                s.session_id for s in sessions
+                if session_segments.get(s.session_id)
+            ]
+            self._summary.transcripts = StageOutcome(
+                attempted=len(sessions),
+                succeeded=len(_succeeded_sids),
+                failed=list(_fresh_transcript_outcome.failed),
+            )
+            if (
+                self._summary.transcripts.attempted > 0
+                and self._summary.transcripts.succeeded == 0
+            ):
+                raise PipelineAbandonedError(
+                    cause=_dominant_cause(
+                        self._summary.transcripts.failed,
+                        default_category=CauseCategoryEnum.WHISPER,
+                        message="All sessions failed to transcribe.",
+                    ),
+                    summary=self._summary,
+                )
 
             # ── Cost estimate before LLM stages ──────────────────────
             from bristlenose.llm.pricing import estimate_pipeline_cost
@@ -1055,6 +1156,8 @@ class Pipeline:
             _quote_errors: list[str] = []
             _eq_path = intermediate / "extracted_quotes.json"
             _qe_input_hashes = {"upstream": _tb_hash or _MISSING_HASH}
+            # Outer-scope default — see transcript section for rationale.
+            _fresh_quote_outcome = StageOutcome()
             if _is_stage_verified(
                 _prev_manifest, STAGE_QUOTE_EXTRACTION, [_eq_path],
                 current_input_hashes=_qe_input_hashes,
@@ -1114,7 +1217,7 @@ class Pipeline:
                     if llm_client is None:
                         llm_client = LLMClient(self.settings)
                     with _llm_telemetry.stage("s09_quote_extraction"):
-                        _fresh_quotes = await extract_quotes(
+                        _fresh_quotes, _fresh_quote_outcome = await extract_quotes(
                             _remaining_transcripts_q,
                             _remaining_topic_maps,
                             llm_client,
@@ -1174,6 +1277,32 @@ class Pipeline:
             )
             write_manifest(manifest, output_dir)
 
+            # ── Quote outcome rollup + abandon check ───────────────────
+            # Each transcript that reached s09 is one attempt. Cached
+            # quotes from prior runs count as successes. If every quote
+            # extraction call failed, abandon: a report with no quotes is
+            # the symptom we're guarding against.
+            _cached_q_count = (
+                len(_cached_quote_sids) if "_cached_quote_sids" in dir() else 0
+            )
+            self._summary.quotes = StageOutcome(
+                attempted=_cached_q_count + _fresh_quote_outcome.attempted,
+                succeeded=_cached_q_count + _fresh_quote_outcome.succeeded,
+                failed=list(_fresh_quote_outcome.failed),
+            )
+            if (
+                self._summary.quotes.attempted > 0
+                and self._summary.quotes.succeeded == 0
+            ):
+                raise PipelineAbandonedError(
+                    cause=_dominant_cause(
+                        self._summary.quotes.failed,
+                        default_category=CauseCategoryEnum.UNKNOWN,
+                        message="All quote extraction calls failed.",
+                    ),
+                    summary=self._summary,
+                )
+
             # ── Stages 10+11: Cluster by screen + thematic grouping ──
             _sc_path = intermediate / "screen_clusters.json"
             _tg_path = intermediate / "theme_groups.json"
@@ -1208,13 +1337,16 @@ class Pipeline:
                     with _llm_telemetry.stage("s10_quote_clustering"):
                         return await cluster_by_screen(all_quotes, _client_cg)
 
-                async def _run_grouping() -> list[ThemeGroup]:
+                async def _run_grouping() -> tuple[list[ThemeGroup], StageOutcome]:
                     with _llm_telemetry.stage("s11_thematic_grouping"):
                         return await group_by_theme(all_quotes, _client_cg)
 
-                screen_clusters, theme_groups = await asyncio.gather(
+                screen_clusters, _grouping = await asyncio.gather(
                     _run_clustering(), _run_grouping(),
                 )
+                theme_groups, _theme_outcome = _grouping
+                # Soft stage: failure here doesn't abandon — record and move on.
+                self._summary.themes = _theme_outcome
                 if self.settings.write_intermediate:
                     write_intermediate_json(
                         screen_clusters, "screen_clusters.json", output_dir,
@@ -1360,6 +1492,7 @@ class Pipeline:
             pipeline_error=_p_error,
             pipeline_error_link=_p_error_link,
             pipeline_warning=_p_warning,
+            summary=self._summary,
         )
 
     async def run_transcription_only(
@@ -1382,6 +1515,7 @@ class Pipeline:
         )
 
         pipeline_start = time.perf_counter()
+        self._summary = PipelineSummary()
         output_dir.mkdir(parents=True, exist_ok=True)
         self._configure_logging(output_dir)
 
@@ -1390,7 +1524,14 @@ class Pipeline:
         sessions = ingest(input_dir)
         if not sessions:
             console.print("[red]No supported files found.[/red]")
-            return self._empty_result(output_dir)
+            raise PipelineAbandonedError(
+                cause=Cause(
+                    category=CauseCategoryEnum.MISSING_INPUT,
+                    message="No supported files found in input directory.",
+                    stage="s01_ingest",
+                ),
+                summary=self._summary,
+            )
 
         ingest_elapsed = time.perf_counter() - t0
 
@@ -1433,9 +1574,31 @@ class Pipeline:
             def _on_transcribe_progress(current: int, total: int) -> None:
                 status.update(f"[dim]Transcribing... ({current}/{total} files)[/dim]")
 
-            session_segments = await self._gather_all_segments(
+            session_segments, _transcript_outcome_t = await self._gather_all_segments(
                 sessions, on_progress=_on_transcribe_progress
             )
+            # Mirror the run() rollup: one attempt per session, success when
+            # segments are non-empty. Whisper failures already flowed in via
+            # _gather_all_segments.
+            self._summary.transcripts = StageOutcome(
+                attempted=len(sessions),
+                succeeded=sum(
+                    1 for s in sessions if session_segments.get(s.session_id)
+                ),
+                failed=list(_transcript_outcome_t.failed),
+            )
+            if (
+                self._summary.transcripts.attempted > 0
+                and self._summary.transcripts.succeeded == 0
+            ):
+                raise PipelineAbandonedError(
+                    cause=_dominant_cause(
+                        self._summary.transcripts.failed,
+                        default_category=CauseCategoryEnum.WHISPER,
+                        message="All sessions failed to transcribe.",
+                    ),
+                    summary=self._summary,
+                )
             total_segments = sum(len(s) for s in session_segments.values())
             total_audio = sum(
                 f.duration_seconds or 0 for s in sessions for f in s.files
@@ -1496,6 +1659,7 @@ class Pipeline:
             output_dir=output_dir,
             people=people,
             elapsed_seconds=elapsed,
+            summary=self._summary,
         )
 
     async def run_analysis_only(
@@ -1521,6 +1685,7 @@ class Pipeline:
 
         pipeline_start = time.perf_counter()
         _printed_warnings.clear()
+        self._summary = PipelineSummary()
         output_dir.mkdir(parents=True, exist_ok=True)
         self._configure_logging(output_dir)
         write_pipeline_metadata(output_dir, self.settings.project_name)
@@ -1595,11 +1760,24 @@ class Pipeline:
             t0 = time.perf_counter()
             _quote_errors_a: list[str] = []
             with _llm_telemetry.stage("s09_quote_extraction"):
-                all_quotes = await extract_quotes(
+                all_quotes, _quote_outcome_a = await extract_quotes(
                     clean_transcripts, topic_maps, llm_client,
                     min_quote_words=self.settings.min_quote_words,
                     concurrency=concurrency,
                     errors=_quote_errors_a,
+                )
+            self._summary.quotes = _quote_outcome_a
+            if (
+                _quote_outcome_a.attempted > 0
+                and _quote_outcome_a.succeeded == 0
+            ):
+                raise PipelineAbandonedError(
+                    cause=_dominant_cause(
+                        _quote_outcome_a.failed,
+                        default_category=CauseCategoryEnum.UNKNOWN,
+                        message="All quote extraction calls failed.",
+                    ),
+                    summary=self._summary,
                 )
             if self.settings.write_intermediate:
                 write_intermediate_json(
@@ -1624,14 +1802,16 @@ class Pipeline:
                 with _llm_telemetry.stage("s10_quote_clustering"):
                     return await cluster_by_screen(all_quotes, llm_client)
 
-            async def _run_grouping_a() -> list[ThemeGroup]:
+            async def _run_grouping_a() -> tuple[list[ThemeGroup], StageOutcome]:
                 with _llm_telemetry.stage("s11_thematic_grouping"):
                     return await group_by_theme(all_quotes, llm_client)
 
-            screen_clusters, theme_groups = await asyncio.gather(
+            screen_clusters, _grouping_a = await asyncio.gather(
                 _run_clustering_a(),
                 _run_grouping_a(),
             )
+            theme_groups, _theme_outcome_a = _grouping_a
+            self._summary.themes = _theme_outcome_a
             if self.settings.write_intermediate:
                 write_intermediate_json(
                     screen_clusters, "screen_clusters.json", output_dir,
@@ -1712,6 +1892,7 @@ class Pipeline:
             pipeline_error=_p_error_a,
             pipeline_error_link=_p_error_link_a,
             pipeline_warning=_p_warning_a,
+            summary=self._summary,
         )
 
     async def _gather_all_segments(
@@ -1719,7 +1900,7 @@ class Pipeline:
         sessions: list[InputSession],
         *,
         on_progress: object | None = None,
-    ) -> dict[str, list[TranscriptSegment]]:
+    ) -> tuple[dict[str, list[TranscriptSegment]], StageOutcome]:
         """Gather transcript segments from all sources (subtitle, docx, whisper).
 
         Args:
@@ -1727,7 +1908,10 @@ class Pipeline:
             on_progress: Optional callback(current, total) for transcription progress.
 
         Returns:
-            Dict mapping session_id to list of TranscriptSegments.
+            Tuple of (session_segments, transcript_outcome). Subtitle / docx
+            sources are recorded as successes in the outcome (one per session
+            that produced segments); Whisper failures come from
+            ``transcribe_sessions`` directly.
         """
         from bristlenose.stages.s03_parse_subtitles import parse_subtitle_file
         from bristlenose.stages.s04_parse_docx import parse_docx_file
@@ -1782,6 +1966,13 @@ class Pipeline:
                 session_segments[session.session_id] = segments
             # If no existing transcript, audio will be transcribed below
 
+        # Pre-existing-transcript sessions count as transcript successes —
+        # they don't go through Whisper, but they did produce segments.
+        transcript_outcome = StageOutcome(
+            attempted=len(session_segments),
+            succeeded=len(session_segments),
+        )
+
         # Transcribe sessions that still need it
         if not self.settings.skip_transcription:
             needs_transcription = [
@@ -1789,14 +1980,17 @@ class Pipeline:
                 if s.session_id not in session_segments and s.audio_path is not None
             ]
             if needs_transcription:
-                whisper_results = transcribe_sessions(
+                whisper_results, whisper_outcome = transcribe_sessions(
                     needs_transcription,
                     self.settings,
                     on_progress=on_progress,
                 )
                 session_segments.update(whisper_results)
+                transcript_outcome.attempted += whisper_outcome.attempted
+                transcript_outcome.succeeded += whisper_outcome.succeeded
+                transcript_outcome.failed.extend(whisper_outcome.failed)
 
-        return session_segments
+        return session_segments, transcript_outcome
 
     def run_render_only(
         self,

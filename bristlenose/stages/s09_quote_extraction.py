@@ -5,6 +5,12 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from bristlenose.events import (
+    Cause,
+    CauseCategoryEnum,
+    StageFailure,
+    StageOutcome,
+)
 from bristlenose.llm import telemetry
 from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.llm.client import LLMClient
@@ -22,6 +28,7 @@ from bristlenose.models import (
     TranscriptSegment,
     format_timecode,
 )
+from bristlenose.run_lifecycle import categorise_exception
 from bristlenose.utils.text import apply_smart_quotes
 from bristlenose.utils.timecodes import parse_timecode
 
@@ -80,7 +87,7 @@ async def extract_quotes(
     min_quote_words: int = 5,
     concurrency: int = 1,
     errors: list[str] | None = None,
-) -> list[ExtractedQuote]:
+) -> tuple[list[ExtractedQuote], StageOutcome]:
     """Extract verbatim quotes from all transcripts.
 
     Args:
@@ -89,10 +96,12 @@ async def extract_quotes(
         llm_client: LLM client for analysis.
         min_quote_words: Minimum word count for a quote to be included.
         concurrency: Max concurrent LLM calls (default 1 = sequential).
-        errors: Optional list to append error messages to.
+        errors: Optional list to append error messages to (legacy short-form).
 
     Returns:
-        List of all extracted quotes across all sessions.
+        Tuple of (quotes, outcome). ``outcome`` records per-session
+        attempts/successes/failures so the orchestrator can decide whether
+        to abandon the run.
     """
     # Build a lookup from session_id to topic map
     topic_map_lookup: dict[str, SessionTopicMap] = {
@@ -102,6 +111,7 @@ async def extract_quotes(
     semaphore = asyncio.Semaphore(concurrency)
     stop = asyncio.Event()
     consecutive_failures = 0
+    outcome = StageOutcome(attempted=len(transcripts))
 
     async def _process(
         transcript: PiiCleanTranscript,
@@ -110,6 +120,18 @@ async def extract_quotes(
 
         async with semaphore:
             if stop.is_set():
+                # Early-stop sessions: not attempted at the LLM layer; record
+                # as failures with a synthetic cause so abandon arithmetic
+                # (succeeded == 0) reflects the user-visible reality.
+                outcome.failed.append(StageFailure(
+                    session_id=transcript.session_id,
+                    cause=Cause(
+                        category=CauseCategoryEnum.UNKNOWN,
+                        message="Skipped after consecutive upstream failures",
+                        stage="s09_quote_extraction",
+                        session_id=transcript.session_id,
+                    ),
+                ))
                 return []
 
             logger.info(
@@ -123,6 +145,7 @@ async def extract_quotes(
                         transcript, topic_map, llm_client, min_quote_words
                     )
                 consecutive_failures = 0
+                outcome.succeeded += 1
                 logger.info(
                     "%s: Extracted %d quotes",
                     transcript.session_id,
@@ -137,6 +160,13 @@ async def extract_quotes(
                 )
                 if errors is not None:
                     errors.append(str(exc))
+                cause = categorise_exception(exc).model_copy(update={
+                    "stage": "s09_quote_extraction",
+                    "session_id": transcript.session_id,
+                })
+                outcome.failed.append(StageFailure(
+                    session_id=transcript.session_id, cause=cause,
+                ))
                 consecutive_failures += 1
                 if consecutive_failures >= _FAIL_THRESHOLD:
                     logger.warning(
@@ -151,7 +181,7 @@ async def extract_quotes(
     all_quotes: list[ExtractedQuote] = []
     for quotes in results:
         all_quotes.extend(quotes)
-    return all_quotes
+    return all_quotes, outcome
 
 
 async def _extract_single(

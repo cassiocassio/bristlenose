@@ -25,4 +25,16 @@ _mimetypes.add_type("image/svg+xml", ".svg")
 _mimetypes.add_type("font/woff2", ".woff2")
 del _mimetypes
 
+# Make bundled ffmpeg/ffprobe reachable to subpackages that shell out via
+# bare-name argv (e.g. mlx_whisper.audio.load_audio runs
+# `subprocess.run(["ffmpeg", …])`). Under macOS App Sandbox the inherited
+# PATH doesn't include Homebrew, so the bare lookup fails with ENOENT.
+# Prepending the bundled directory is a one-line fix that covers every
+# transitive shell-out without monkey-patching each upstream caller.
+# No-op outside the bundle (CLI / pip / Homebrew installs).
+from bristlenose.utils.bundled_binary import prepend_bundled_to_path as _prepend  # noqa: E402
+
+_prepend()
+del _prepend
+
 __version__ = "0.15.3"

@@ -31,6 +31,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch pipeline-silent-skip-raw-video/` | `pipeline-silent-skip-raw-video` | feature | Silent fail-soft on raw video pipeline |
+| `bristlenose_branch fix-new-feature-skill/` | `fix-new-feature-skill` | chore | Patch four bugs in the new-feature skill discovered during whos-afraid debug run |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
@@ -120,6 +121,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `pipeline-silent-skip-raw-video` | `bristlenose_branch pipeline-silent-skip-raw-video/` | local only |
+| `fix-new-feature-skill` | `bristlenose_branch fix-new-feature-skill/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
@@ -133,6 +135,24 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `fix-new-feature-skill`
+
+**Kind:** chore — small ephemeral work; merge or discard, low ceremony
+**Status:** Just started
+**Started:** 8 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch fix-new-feature-skill/`
+**Remote:** local only (push when ready)
+
+**What it does:** Patch four bugs in the new-feature skill discovered during whos-afraid debug run.
+
+**Files this branch will touch:**
+- `.claude/skills/new-feature/SKILL.md`
+
+**Potential conflicts with other branches:**
+- None expected — no other active branch touches `.claude/skills/new-feature/SKILL.md`.
 
 ---
 

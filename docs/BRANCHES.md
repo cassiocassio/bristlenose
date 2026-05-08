@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 8 May 2026 (closed `pipeline-runner-sidecar-mode`; finished migrating `bundled-binary-helper` entry to Completed Branches)
+**Updated:** 8 May 2026 (closed `pipeline-silent-skip-raw-video` — created same-day, no commits made)
 
 ---
 
@@ -30,7 +30,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
-| `bristlenose_branch pipeline-silent-skip-raw-video/` | `pipeline-silent-skip-raw-video` | feature | Silent fail-soft on raw video pipeline |
 | `bristlenose_branch fix-new-feature-skill/` | `fix-new-feature-skill` | chore | Patch four bugs in the new-feature skill discovered during whos-afraid debug run |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -120,7 +119,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
-| `pipeline-silent-skip-raw-video` | `bristlenose_branch pipeline-silent-skip-raw-video/` | local only |
 | `fix-new-feature-skill` | `bristlenose_branch fix-new-feature-skill/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
@@ -153,29 +151,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - None expected — no other active branch touches `.claude/skills/new-feature/SKILL.md`.
-
----
-
-### `pipeline-silent-skip-raw-video`
-
-**Kind:** feature — code lands on main
-**Status:** Just started
-**Started:** 8 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-silent-skip-raw-video/`
-**Remote:** local only (push when ready)
-
-**What it does:** Silent fail-soft on raw video pipeline.
-
-**Files this branch will touch:**
-- `bristlenose/pipeline.py`
-- `bristlenose/cli.py`
-- `desktop/Bristlenose/Bristlenose/PipelineRunner.swift`
-- `bristlenose/llm/credentials.py`
-- `bristlenose/stages/s05_transcribe.py`
-
-**Potential conflicts with other branches:**
-- `responsive-signal-cards` — none expected (frontend layout, no pipeline overlap)
-- All currently active branches are parked experimental — no overlap on `pipeline.py` / `cli.py` / `PipelineRunner.swift`
 
 ---
 
@@ -259,6 +234,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `pipeline-silent-skip-raw-video` — closed 8 May 2026
+
+Intended to make the pipeline fail-soft on raw video files. Branch was created on 8 May 2026 but no commits were ever made — closed same-day as part of routine cleanup. Worktree detached and tagged orange on disk; no work to rescue.
 
 ### `pipeline-runner-sidecar-mode` — merged 2 May 2026
 

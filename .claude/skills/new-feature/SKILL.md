@@ -22,9 +22,12 @@ If no branch name was provided (`$0` is empty), ask the user for one before proc
 
 ```bash
 export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:$PATH"
+hash -r 2>/dev/null || true
 ```
 
 The Claude Code Bash tool inherits PATH from the harness, which has occasionally been observed without `/usr/bin` and `/bin` — bare `mkdir` / `ln` / `rm` / `date` then fail with `command not found` mid-step. Prepending the standard system paths is cheap and makes every block robust regardless of harness state. `/opt/homebrew/bin` is included so `python3.12`, `npm`, etc. resolve. Apply this to every bash block in this skill — including the inline ones below.
+
+`hash -r` is required because zsh caches "command → path" lookups at shell start. If the harness shell came up with a degraded PATH and zsh cached `mkdir` as not-found, a later `export PATH` doesn't invalidate that cache — bare `mkdir`/`ln` would still hit the cached miss. Clearing the hash table after the PATH fix ensures fresh lookups. (Observed 2026-05-08: silent `mkdir`/`ln` "command not found" inside Step 9 despite a corrected PATH.)
 
 ## Step 0: Parse optional flags
 
@@ -184,9 +187,14 @@ Skip if both `frontend/node_modules/.bin/tsc` exists AND `bristlenose/server/sta
 
 ```bash
 cd "/Users/cassio/Code/bristlenose_branch $0/frontend"
-if [ -x node_modules/.bin/tsc ] && \
-   [ -f ../bristlenose/server/static/index.html ] && \
-   [ ../bristlenose/server/static/index.html -nt package.json ]; then
+if ! node --version >/dev/null 2>&1; then
+  echo "✗ node is broken — frontend build skipped"
+  echo "  Likely cause: homebrew library drift (run 'node --version' to see the dyld error)"
+  echo "  Try: brew reinstall node"
+  echo "  Worktree is still usable for Python-only work; sentinel stays in place via Step 8."
+elif [ -x node_modules/.bin/tsc ] && \
+     [ -f ../bristlenose/server/static/index.html ] && \
+     [ ../bristlenose/server/static/index.html -nt package.json ]; then
   echo "Frontend already built — skipping"
 else
   npm install && npm run build
@@ -194,6 +202,8 @@ fi
 ```
 
 This takes ~2 minutes on first run (npm install ~60s, build ~30s). If it fails, warn but don't stop — the worktree is still usable for Python-only work, and frontend can be set up manually with `cd frontend && npm install && npm run build`.
+
+**Node-health pre-check rationale:** if `node` itself is broken (e.g. homebrew bumped a shared library and the locally-installed `node` is hardcoded against the older `.dylib`), `npm install` fails with a cryptic dyld error and the eventual smoke-test message recommends rerunning the exact thing that just failed. The pre-check surfaces "your node is broken, here's what to try" instead. Don't auto-`brew reinstall` — invasive, slow, and not the skill's job.
 
 ## Step 8: Smoke test the worktree (non-critical)
 
@@ -221,26 +231,11 @@ fi
 
 # 4. Doctor (canonical 'does this thing work' check; doesn't fail on missing API key)
 .venv/bin/bristlenose doctor 2>&1 | head -20
-
-# 5. Desktop binaries (only meaningful if Resources/ exists in this worktree).
-#    Probes the resolution path the app actually uses (bundled_binary_path)
-#    rather than just `test -f`, so a broken symlink or wrong layout is caught.
-if [ -d desktop/Bristlenose/Resources ]; then
-  if .venv/bin/python -c "
-from bristlenose.utils.bundled_binary import bundled_binary_path
-import sys
-missing = [n for n in ('ffmpeg', 'ffprobe') if bundled_binary_path(n) is None]
-if missing:
-    print('missing:', ' '.join(missing)); sys.exit(1)
-" 2>/dev/null; then
-    echo "✓ desktop binaries resolvable"
-  else
-    echo "✗ desktop binaries not resolvable — Cmd+R from this worktree's Xcode project will produce an .app without them. Either: re-run /new-feature setup (Step 9 should have symlinked them), or run desktop/scripts/fetch-ffmpeg.sh from main."
-  fi
-fi
 ```
 
-Print a one-line summary at the end: "Smoke test: N/5 checks passed" (or "N/4" if probe 5 was skipped because `desktop/Bristlenose/Resources` doesn't exist). If any failed, list the specific remediation lines for the user.
+(Desktop-binaries probe lives in Step 9, after the symlinks are created — running it here would always say "skipped" on a fresh worktree, since `Resources/` contents are gitignored and Step 9 is what creates them.)
+
+Print a one-line summary at the end: "Smoke test: N/4 checks passed". If any failed, list the specific remediation lines for the user.
 
 **If all checks passed, remove the setup-incomplete sentinel:**
 
@@ -278,15 +273,39 @@ for path in ffmpeg ffprobe models; do
   src="/Users/cassio/Code/bristlenose/desktop/Bristlenose/Resources/$path"
   dst="$WORKTREE/desktop/Bristlenose/Resources/$path"
   if [ -e "$src" ] && [ ! -e "$dst" ]; then
-    mkdir -p "$WORKTREE/desktop/Bristlenose/Resources"
-    ln -s "$src" "$dst"
-    echo "✓ symlinked $path from main"
+    mkdir -p "$WORKTREE/desktop/Bristlenose/Resources" \
+      && ln -s "$src" "$dst" \
+      && echo "✓ symlinked $path from main" \
+      || echo "✗ failed to symlink $path"
   elif [ -e "$dst" ]; then
     echo "✓ $path already present in worktree"
   else
     echo "ℹ $path not in main — run desktop/scripts/fetch-ffmpeg.sh in main first if you'll build the desktop .app"
   fi
 done
+```
+
+Chain `mkdir`/`ln`/`echo` with `&&` (not separate lines): a bare `echo` after a failed `mkdir`/`ln` would still fire, falsely reporting "✓ symlinked" while `Resources/` doesn't exist. (Observed 2026-05-08 alongside the `hash -r` issue — three "✓ symlinked" lines printed despite `mkdir`/`ln` failing with "command not found".)
+
+Then probe the resolution path the app actually uses, so a broken symlink or wrong layout is caught now rather than at Cmd+R time:
+
+```bash
+cd "$WORKTREE"
+if [ -d desktop/Bristlenose/Resources ]; then
+  if .venv/bin/python -c "
+from bristlenose.utils.bundled_binary import bundled_binary_path
+import sys
+missing = [n for n in ('ffmpeg', 'ffprobe') if bundled_binary_path(n) is None]
+if missing:
+    print('missing:', ' '.join(missing)); sys.exit(1)
+" 2>/dev/null; then
+    echo "✓ desktop binaries resolvable"
+  else
+    echo "✗ desktop binaries not resolvable — Cmd+R from this worktree's Xcode project will produce an .app without them. Either: re-run /new-feature setup, or run desktop/scripts/fetch-ffmpeg.sh from main."
+  fi
+else
+  echo "ℹ no desktop/Bristlenose/Resources/ in this worktree — desktop .app build will be missing ffmpeg/ffprobe. Run desktop/scripts/fetch-ffmpeg.sh in main first if you'll build the desktop app."
+fi
 ```
 
 ## Step 10: Stay local (do NOT push)

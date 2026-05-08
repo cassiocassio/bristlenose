@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 8 May 2026 (finished migrating `bundled-binary-helper` entry to Completed Branches)
+**Updated:** 8 May 2026 (closed `pipeline-runner-sidecar-mode`; finished migrating `bundled-binary-helper` entry to Completed Branches)
 
 ---
 
@@ -117,7 +117,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
-| `pipeline-runner-sidecar-mode` _(merged)_ | `bristlenose_branch pipeline-runner-sidecar-mode/` _(detached, on disk)_ | merged via PR #96 (`0e0157e`) on 2 May 2026 |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
@@ -132,20 +131,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `pipeline-runner-sidecar-mode` (merged)
-
-**Kind:** feature _(merged)_
-**Status:** Merged 2 May 2026 via PR #96 (`0e0157e`)
-**Started:** 1 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-runner-sidecar-mode/` (still on disk for backup; close via `/close-branch` when ready)
-**Remote:** branch deleted by GitHub on merge
-
-**What shipped:** `PipelineRunner.spawn()` migrated to `SidecarMode.resolve(...)` (same path as `ServeManager`); `findBristlenoseBinary()` deleted from `BristlenoseShared.swift` (zero remaining callers); bundled sidecar (`desktop/sidecar_entry.py`) accepts `run` as a third subcommand alongside `serve` and `doctor`, gated on env var `_BRISTLENOSE_HOSTED_BY_DESKTOP=1` (confused-deputy mitigation, belt-and-braces post-A2). 5 new pytest cases in `tests/test_sidecar_entry.py`.
-
-**Why it mattered:** Cleared the last engineering blocker for the sandbox-triage checkpoint. Beats 6→13 now reachable under sandbox-on Debug for the first time. Next session picks up from the gitignored handoff prompt in the sandbox-debug worktree.
 
 ---
 
@@ -229,6 +214,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `pipeline-runner-sidecar-mode` — merged 2 May 2026
+
+`PipelineRunner.spawn()` migrated to `SidecarMode.resolve(...)` (same path as `ServeManager`); `findBristlenoseBinary()` deleted from `BristlenoseShared.swift`. Bundled sidecar (`desktop/sidecar_entry.py`) gained a `run` subcommand alongside `serve`/`doctor`, gated on `_BRISTLENOSE_HOSTED_BY_DESKTOP=1` (confused-deputy mitigation). 5 new pytest cases in `tests/test_sidecar_entry.py`. Merged via PR #96 (`0e0157e`); cleared the last engineering blocker before the sandbox-triage checkpoint.
 
 ### `bundled-binary-helper` — closed 2 May 2026
 

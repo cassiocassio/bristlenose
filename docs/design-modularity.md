@@ -388,7 +388,7 @@ This is not a design. The Track C C0/C1 work needs a separate UX-design pass (li
 - [`docs/design-desktop-python-runtime.md`](./design-desktop-python-runtime.md) — canonical desktop sidecar architecture (written 18 Apr 2026 as Track C C0 output; updated through C3). Read this for the credential flow, bundle-data requirements, validation gates, and fail-loud contracts
 - [`desktop/CLAUDE.md`](../desktop/CLAUDE.md) — desktop app working notes; points here for cross-channel component decisions
 - [`docs/private/sprint2-tracks.md`](./private/sprint2-tracks.md) — Track C scope
-- [`docs/private/road-to-alpha.md`](./private/road-to-alpha.md) — TestFlight path
+- [`docs/private/road-to-app-store.md`](./private/road-to-app-store.md) — TestFlight path
 - [`docs/design-homebrew-packaging.md`](./design-homebrew-packaging.md) — Mac CLI formula
 - [`docs/design-doctor-and-snap.md`](./design-doctor-and-snap.md) — Snap packaging
 - [`docs/archive/design-llm-providers.md`](./archive/design-llm-providers.md) — provider SDKs (historical roadmap; all 5 phases shipped)

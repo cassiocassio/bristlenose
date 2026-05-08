@@ -1,6 +1,8 @@
 # Bristlenose — 100-Day Launch Inventory
 
-**Launch: 30 June 2026 · Mac App Store · Beta · $TBD/month**
+**Goal: ship Bristlenose Beta in the App Store — paid, funded relay, by-researchers-for-researchers — to a self-funding indie audience. Day-job-quit at 2000 customers.**
+
+**Original aspiration: 30 June 2026 Beta launch.** At material risk per 8 May 2026 reframe — relay-infrastructure work spans the summer, realistic Beta launch is fall 2026, with stage 2.5 (`.dmg` from bristlenose.app) carrying the public face in the meantime. The honest psychological endpoint of "100 days" is **stage 5: ready to ask 1000+ strangers on LinkedIn for their attention** — not stage 2 (Internal TF). The countdown is to that moment.
 
 Gathered from: TODO.md, ROADMAP.md, 37 GitHub issues, 20+ design docs, 6 CLAUDE.md files, 5 active branches, source code TODOs.
 
@@ -15,11 +17,13 @@ Items tagged `[S1]`–`[S6]` are assigned to a sprint. Untagged items are unassi
 | Tag | Dates | Theme |
 |-----|-------|-------|
 | ~~[S1]~~ | ~~14–25 Apr~~ | ~~Start the clocks~~ ✅ **Done 17 Apr 2026** (8 days early; succession plan deferred beyond 100days) |
-| [S2] | 28 Apr–9 May | Road to alpha — A/B interleave sandbox + MVP flow, CI cleanup first |
-| [S3] | 12–23 May | Multi-project |
-| [S4] | 26 May–6 Jun | First-run + export |
-| [S5] | 8–19 Jun | Visual design + a11y |
-| [S6] | 22–30 Jun | Launch prep + public legal |
+| ~~[S2]~~ | ~~28 Apr–9 May~~ | ~~Road to alpha — A/B interleave sandbox + MVP flow~~ ✅ **Declared done 7 May 2026** — see Lifecycle stages + 7 May quality reset above. Tracks A + B + C MVP all landed; Mission Sandbox PASSED 4 May; quality-reset reframed next gate as walks-fix-walks |
+| [S3] | 12–23 May | Walks-fix-walks gate + Internal TF prerequisites — fold of road-to-testflight blockers (fake-success audit, pipeline silent-skip, SPA refresh, export silent-fail, ErrorBoundary, Keychain ACL, titlebar). Multi-project Phase 1 carries over from original plan |
+| [S4] | 26 May–6 Jun | Critical-path completion + Internal TF cohort calls + start of relay-infra summer (Friendly-CTO Sunday §0 → relay endpoint scaffolding) |
+| [S5] | 8–19 Jun | Visual + a11y, Mac craft, Beta-prep continued; relay infra ongoing |
+| [S6] | 22–30 Jun | App Store admin (form-filling, screenshots, copy), Beta App Review pre-flight (External TF gate), DPA execution |
+
+> **Beta launch (stage 5) is not 30 June 2026 — at material risk per 8 May reframe.** Realistic fall 2026, with stage 2.5 (`.dmg` from bristlenose.app) carrying the public face through summer. Friendly-CTO Sunday work-stream runs in parallel on relay-infra architecture. GA targets 2027+. See Lifecycle stages above.
 
 **Sprint 2 re-scope v3 (17 Apr 2026).** Alpha path decided: **internal TestFlight, not `.dmg`.** Sandbox work is unavoidable (StoreKit needs it), and a `.dmg` path would be throwaway code. Doing it now gets us a modern sandbox-aware codebase from the start. Rejected items: Developer ID cert, `.dmg` build pipeline, Gatekeeper README (all struck in §11 Operations). See `docs/private/road-to-alpha.md` for the full 14-checkpoint path.
 
@@ -96,6 +100,127 @@ Reviewed S2–S4 Musts plus four S5 visual-design Musts row-by-row in `docs/priv
 
 Performance: stress sweep shows clean linear scaling to 3000 quotes — virtualisation deferred to Icebox. AI disclosure dialog: already shipped (`AIConsentView.swift`). Solicitor contact: still May (external TestFlight and public legal paperwork are S6+, not alpha-blocking).
 
+## Lifecycle stages (locked 8 May 2026)
+
+The six stages in sequence. Each stage does one job. Stage-prerequisite context on Musts in the numbered sections below indicates which stage a Must gates. Canonical reference: `project_lifecycle_stages.md` memory.
+
+| # | Internal name | Public | Audience | Channel | Money |
+|---|---|---|---|---|---|
+| 1 | Solo | — | Martin | Local build | — |
+| 2 | Internal TF | (private) | 5–10 watched UXR friends | TestFlight invite | Free |
+| 2.5 | `.dmg` from bristlenose.app | Public download | 10–50 friends-of-friends | Direct download | Free, BYOK |
+| 4 | External TF gate | (Apple only) | Apple reviewers | App Store Connect submission | Free, no testers |
+| 5 | Beta in store | `Bristlenose Beta` | ≤50–100 paying purchasers | App Store | $5 + funded relay |
+| 6 | GA | `Bristlenose` | Open | App Store | Subscription / packs |
+
+"Alpha" is internal-planning-only, never user-facing. "Beta" = paid-in-store with funded relay. "GA" = subscription. Sparkle integration plan: `docs/private/sparkle-plan.md`.
+
+## Critical Path to Internal TF (active focus, 8 May 2026)
+
+_View only — links to canonical entries by title in numbered sections below. Sprint tags on canonical entries drive `/sync-board`. Each completed lifecycle stage shifts the active focus._
+
+### Now
+**Pipeline silently skips stages 2–11 on raw video**
+- **Why on path:** core "drop folder, get report" pitch fails silently
+- **Ship criteria:** fresh folder of 3 videos produces non-empty `sessions/` and `transcripts-raw/`; pipeline events log shows per-stage events for s02–s11; ≥1 quote per session
+- **Canonical:** §1 Missing > Must (item to be added during full fold-in)
+- **Status:** open
+
+### Next
+**React SPA misses pipeline-completion signal**
+- **Why on path:** 0 sessions/quotes after run; Reload button broken; user concludes analysis silently failed
+- **Ship criteria:** run-completion event triggers SPA refetch; project view reflects analysed state without tab-away-and-back workaround
+- **Canonical:** §2 Broken > Must (to be added)
+- **Status:** open
+
+### Then
+**Filesystem export silent fail under sandbox**
+- **Why on path:** "the export button doesn't export" is a cohort-call killer
+- **Ship criteria:** Export Report routes through `NSSavePanel`; file lands in chosen location; success toast only on confirmed write
+- **Canonical:** §2 Broken > Must (to be added)
+- **Status:** open
+
+### Internal TF gate criteria
+- Walks-fix-walks gate: 2–3 consecutive walks across different scenarios produce zero new snags
+- Research-craft surface engageable: 60-minute walk where attention doesn't bounce sideways
+- 5–10 trusted UXR friends recruited as ASC users with Apple IDs collected
+- App Store Connect app record minimally complete (no listing copy / screenshots needed for Internal TF)
+- First TestFlight upload succeeds and appears in TF Internal
+
+### After Internal TF
+Active focus shifts to stage 2.5 (`.dmg` from bristlenose.app). Sparkle integration plan: `docs/private/sparkle-plan.md`. Friendly-CTO Sunday §0 first.
+
+## 7 May 2026 quality reset
+
+Mission Sandbox passed 4 May. The two weeks before that were sandbox plumbing — entitlements, codesigning, sidecar trim, Keychain under sandbox, first-run beats, log-tail trust. None of it required operating the app as a user. The 7 May UX walk was the first end-to-end session in two weeks, and the snagging list isn't last-mile polish — it's a class of bug: **fake success feedback**. Exports that don't export. Pipelines that report "Analysed" without producing transcripts. SPA that shows empty state on a completed run. AutoCode buttons firing on groups they can't produce work for. The user's mental model of "did this work?" can't currently be trusted anywhere in the app.
+
+**The new gate:** operate the app end-to-end as a user; nothing surprises you in a session. Not a list of items — a property of the product. Drop a folder, get a report, browse it, export it, close it, re-open it, change provider, run again — no surprises, no fake-success states, no crashes, no raw keys, no broken affordances. Then the cohort question re-opens.
+
+**Why we don't share yet.** Five seasoned UXR friends' evenings are the most valuable signal source we have. We save them for what they're actually good at — study design, methodology critique, edge cases in real research workflow, cross-cohort patterns. We don't burn them on "the export button doesn't export" or "the toolbar is ugly" — we already know all of that, we'd waste their time finding it, and first impressions don't reset. The conversation worth having is on the research-craft surface (tags / codebook / AutoCode threshold review / signals / quote ergonomics). None of it lands if the first ten minutes are spent finding out the basic-affordance surface is broken.
+
+**Duration measured in walks, not weeks.** Could be 2 weeks. Could be 6. The metric isn't elapsed time — it's walks-without-new-snags. When 2–3 consecutive walks across different scenarios produce nothing new, the cohort conversation re-opens, and likely starts smaller than five-at-once anyway.
+
+## Three positioning differentiators (in priority order)
+
+1. **By researchers, for researchers** — THE pitch. Headline. Listing copy. Welcome view. LinkedIn framing. The competitive frame against Dovetail/Marvin: those tools are built for *making research consumable by non-researchers* (PMs, stakeholders); Bristlenose is for **the analysis pass itself** — the deep listen, the coding, the pattern emergence. Product-decision test: does this feature help the researcher do the listening, or help someone who wasn't in the room consume the listening? First is core; second is incidental and probably off-roadmap. Pulled toward the second = Dovetail-drift = lose the audience the product is for.
+2. **Native Mac craft** — secret weapon, never headlined. Pxlnv / Daring Fireball / Hypercritical / The Sweet Setup readers detect it without being told. Few percent of any population, disproportionately the recommender-class. *Craft, not slogan*: signals through what doesn't go wrong (toolbar feels right, sidebar feels Photos-like, Tahoe glass-bar lands, NSWindow popouts have proper titlebars). Telegraphing it ("natively built for Mac!") undermines the effect — the audience that cares doesn't need telling and the audience that doesn't care won't notice the claim.
+3. **Local-first** — footnote / virtue-flag. Becomes headline candidate when M6+ silicon makes local-model analysis quality-competitive (2027+). Until then, mention where it matters internally, never as the lead.
+
+Layered signal: deep audience (researcher) recognises the deep alignment. Very-deep audience (researcher + Mac-craft) recognises both. Neither layer telegraphed.
+
+## Customer profile (ICP) and negative roadmap
+
+**The customer is the buyer, the user, and the toolchain decision-maker — same person.** Own credit card. No procurement gate. No IT compliance review. No enterprise contract signed two reorgs ago. Once a studio gets big enough, standardisation kicks in — Dovetail because someone signed the contract, Photoshop layers because that's what the team uses. **Bristlenose customers are the people who would suffer working there.**
+
+Concrete profile: freelancers, indie consultants, head-of-research-at-tiny-shop, senior researchers with leverage over their own toolchain even in larger orgs. Personality trait: routinely BYOD their Mac into Windows-default offices, refuse Outlook for Mail.app, keep personal Adobe / Things / HEY subs despite their org's standardisation, would rather buy their own tool than use the locked-down approved one. Mac-craft-aware *and* freelancer-mindset *and* taste-driven *and* willing-to-pay. Reads Daring Fireball, Pxlnv, Six Colors, The Sweet Setup, ATP listener-class. Mastodon over LinkedIn. Substack subscriptions to people they respect. **Concrete demographic exemplar: The Sweet Setup interview subjects + readership.**
+
+**App Store distribution itself filters the audience.** Enterprise IT blocks App Store on managed Macs as standard policy; procurement won't approve $5 personal purchases. People for whom App Store works are by definition not behind the procurement wall. No work needed to exclude the wrong audience; distribution does it.
+
+**Negative roadmap (deliberate not-build categories — fail the ICP lens):**
+- Enterprise SSO / SAML
+- SOC2 compliance
+- Audit logging for compliance officers
+- Admin consoles
+- Multi-seat licensing
+- Bulk procurement / volume licensing
+- DPA / vendor-onboarding paperwork at scale
+- Stakeholder-export-as-headline (export zip ships, but not as the pitch)
+
+All real work that real B2B SaaS companies do; none serves this customer profile. Rejecting as a category frees roadmap and stays consistent with positioning.
+
+## 2000-customer day-job-quit target
+
+**Target: 2000 paying customers globally** — Martin's day-job-quit threshold (stated 8 May 2026).
+
+Sizing: global UXR community ~250k–400k practitioners; addressable niche after ICP filters (individual-purchaser autonomy × Mac × willing-to-pay × App-Store-accessible) ~50k–80k. **2000 = ~3–4% capture of addressable niche** = ~0.6% of broad UXR community. Squarely in indie-Mac-app-business territory: Things, Bear, Drafts, Reeder, iA Writer all operate at 50k–500k paying users with sustainable economics.
+
+Time horizon: realistically year 2–4 from Beta launch. Daring Fireball / Sweet Setup / ATP-Charlie editorial boost compresses by 6–18 months if it lands. Higher per-customer willingness-to-pay than note-taking apps (professional tool-ROI, $15–20/month plausible vs $3–5/month). Higher recommender-density inside niche (UXRs talk to UXRs at conferences, on Mastodon, in Slack — dense peer-graph, higher viral coefficient than diffuse general-Mac audiences).
+
+**Cheap signal Beta surfaces:** conversion from "tried for $5 with funded preview" to "kept paying after trial credit ran out." **>15% conversion → 2000 is on track.** **<5% conversion → product needs more iteration before betting day job.**
+
+2000 is *enough to quit*, not *the ceiling*. Same machinery that gets to 2000 keeps working past it. Day-job-quit number is the reasonable-bet threshold; upside above is real and not capped.
+
+**Lens for scope decisions:** does this contribute to or distract from the path to 2000 paying individual-purchaser customers? Enterprise features fail the lens. Stakeholder-export features fail the lens. Mac-craft polish, codebook framework richness, peer-recommendation channels, editorial-venue craft — all serve the lens.
+
+## Two-mode data architecture and two gates
+
+**Two-mode data architecture:**
+- **Pre-Beta (CLI, Internal TF, `.dmg`):** transcripts go directly from user's Mac to Anthropic on **user's** key. Bristlenose never touches them. Local-first technically true.
+- **Beta funded preview window (≤$4 of relay credits per user):** transcripts route through **Bristlenose's relay on Martin's key**. Bristlenose is data controller in transit. **DPA with Anthropic required before any traffic flows.**
+- **Post-credit-exhaustion BYOK fallback:** restores pre-Beta direct path. Two-mode messaging in privacy policy.
+
+**Two gates, two bars:**
+- **Internal TF gate (cohort):** NO surprises. Every minute of 5-hour cohort time protected. "Could you have spent this hour talking about codebooks / signals / quotes rather than apologising?"
+- **Beta gate (paid public, original-warning-label):** warning-label-tolerable rough edges allowed *if* the warning is visible. "Would someone reading 'Beta — things will break' be surprised by THIS specific issue?" The original-Beta meaning of the word is reclaimed; "things will break" is the social contract.
+
+## Editorial channel discipline
+
+Marketing channels are peer-recommendation + editorial coverage from craft venues — Daring Fireball linklog, Pxlnv, Six Colors, The Sweet Setup app reviews, ATP "Charlie" segment, Mastodon, indie Substacks. *Not* LinkedIn ads, *not* "5 ways to improve your research workflow" content marketing. One Beta tester who recommends to one peer >> 1000 LinkedIn impressions to PMs.
+
+**Don't pitch craft venues until there's a polished thing to point at.** They don't review unfinished things and reviewing too early burns the chance permanently. One-shot per outlet. Premature pitch = relationship gone.
+
+**External TF reframed as a GATE not a STAGE.** Submit a build → Beta App Review (24–48h, Apple verdict) → either passes or bounces. No tester recruitment, no 90-day rebuild cadence, no feedback channel work. Apple-review reconnaissance only. Internal TF can grow 5 → 20 → 50 → up to 100 testers within its own ceiling without crossing into External TF territory.
+
 ---
 
 ## 1. Missing — essential feature gaps ("it's not done without it")
@@ -121,6 +246,8 @@ Performance: stress sweep shows clean linear scaling to 3000 quotes — virtuali
 - **Subprocess lifecycle / orphan management** — make orphan handling invisible to the user. PID-file-based scan-and-reconcile at app init for both `bristlenose run` and `bristlenose serve`; sandbox-clean (`proc_pidinfo` / `proc_pidpath` instead of `lsof`/`pgrep`). Replaces today's serve-only `lsof`-based cleanup. Required before sandbox flips on for TestFlight. Surfaced during port-v01-ingestion QA. Design: `docs/design-subprocess-lifecycle.md`. Estimated ~2 days. _(24 Apr 2026: Stop-is-a-lie + stale-pill alpha blockers shipped — 4 commits 896c074..da5cc45. Owned- and orphan-path cancel both ack instantly via `isStopping`; orphan-path SIGINT→SIGTERM→SIGKILL escalation; orphan-attach popover tails `bristlenose.log`. Sandbox-clean probes + `stopAll()` still TODO.)_
 - ~~[S2] **Alpha telemetry — Phase 1 plumbing**~~ — `/api/health` advertises `telemetry: {enabled, url}`; dev-only `POST/GET/DELETE /api/dev/telemetry` stub with Pydantic validation, 500-event batch cap, PID-scoped JSONL; `website/telemetry.php` + moved `website/feedback.php` with `hash_equals`, placeholder-token guardrail, CSV cell-safety helper. Reviewed (3 agents, 8 mechanical findings fixed, 8 design-questions parked). Done 26 Apr 2026 (alpha-telemetry branch, 6 commits). PHP files NOT yet deployed to bristlenose.app — run the `deploy-website` shell alias only when Phase 2 starts so the URL the health endpoint advertises actually resolves
 - **Alpha telemetry — Phases 2–4 (deferred to post-TestFlight)** — TestFlight tester feedback path is video-call + UX observation, not instrumented data; alpha telemetry can wait without losing the testers (they don't notice it's missing). Deferred 26 Apr 2026 to keep the TestFlight runway clear of feature-creep. Pick up after first TestFlight cohort reports back. Open work: (2) Python — `TelemetryEvent` SQLite table + Alembic migration, `POST /api/telemetry/events`, background batched shipper, `bristlenose/llm/prompt_version.py` + `prompts/versions.jsonl` sidecar. (3) React — emission hook on suggest/accept/reject/edit, 2 s debounce collapse rule, `edited` as flag not offset. (4) Swift — Sheet 2 telemetry opt-in (verbatim from spec §First-launch sheets), Keychain UUID helper, sidecar env-var injection (`BRISTLENOSE_RESEARCHER_ID`), Settings → Privacy screen. Four architectural questions + eight parked `/usual-suspects` findings — full context in `docs/private/alpha-telemetry-next-session-prompt.md`. Methodology spec stays on main as the plan; absence of in-alpha data means the first Substack piece pushes to second cohort, not first
+- **Trial-expired handoff UX** — [Beta-must, stage-5-prereq] most consequential Beta surface. When a Beta tester's funded preview budget (~$4 of relay credits) is exhausted, the path back to BYOK must be obvious and non-punitive. Surfaces: in-app banner ("preview budget exhausted, BYOK to continue"), Settings → LLM provider key entry pre-routed, copy that doesn't read as paywall. Pairs with two-mode data architecture and the funded-relay endpoint. Friendly-CTO Sunday relevant. **Ship criteria:** running out of preview credits never produces a silent failure or confusing error; BYOK switch is one click + paste; the user understands what just happened and what to do next
+- **In-app feedback channel — low-friction "tell me anything" path** — [Beta-must, stage-5-prereq] Beta gate is "warning-label-tolerable rough edges allowed *if* the warning is visible"; the inverse is testers must have a frictionless channel to *tell us* when something surprises them. Existing feedback endpoint (`feedback.php`) is the plumbing; what's missing is the in-app surface that makes "tell me anything" the easiest path. Reference: existing `Toast.tsx` + `FeedbackModal.tsx` (frontend); desktop equivalent. **Ship criteria:** every screen has a one-keypress / one-click way to send freeform feedback; submission persists (not lost on app close); confirmation toast; works without a server roundtrip if relay is down
 
 ### Should
 - **i18n marketing demo dataset (es + ja)** — sample VTT transcripts seeded 5 May 2026: `trial-runs/demo-escuela-gastronomica/` (es-MX, Mexican culinary school — María + Carlos) and `trial-runs/demo-sapporo-guide/` (ja-JP, Sapporo local-business guide app — Yuki + Tanaka). Two participants per project so quotes/themes/tags show cross-participant signal in App Store and bristlenose.app screenshots. Companion to IKEA codebook validation dataset (which covers English). Native review by es and ja UX-designer friends owed before screenshots ship — same loop as locale strings; raw machine-feel will read to a native UXR researcher's ear. Files explicitly marked demo content (`NOTE` blocks in VTT) so nobody mistakes for real research. Re-uses the multilingual UI Bristlenose already ships; no code changes required
@@ -132,6 +259,9 @@ Performance: stress sweep shows clean linear scaling to 3000 quotes — virtuali
 - **~~Standard modal with nav for Settings and About~~** — consistent modal pattern, consider unifying help + about
 - **New title bar design** — current title bar needs refresh
 - **Post-analysis review panel** — non-modal, dismissable panel after pipeline completes: name correction, token summary, coverage overview
+- **Project name input cap** — [Beta-must] folded from 7 May walk (T13). Project name (and folder, tag, codebook group) accepts 299+ characters with no input cap. Display truncation IS working (sidebar shows `jandslkfbnalkjsdbflk…`), but no validation at input — long names persist underneath. Risks: export filenames via `slugify()` already cap at 50, so collisions possible when long names share a prefix; whole-name shows up in modals/breadcrumbs/headers without consistent truncation. Sensible caps: project 80, folder 60, tag 40, codebook group 60. Apply across all user-named fields
+- **AutoCode silent-zero on non-English** — [Beta-must] folded from 7 May walk (T5). On Spanish VTT, running AutoCode appears to execute (progress UI fires) but no tags land on any quote. Reruns ("still there") show tags still absent. Likely cause: AutoCode prompt is English-only, so the LLM either returns nothing applicable or returns proposals that don't match Spanish quote text. Same fake-success-feedback family. **Ship criteria:** non-English content either produces tags OR shows an honest "0 proposals returned for this codebook on this content (try a different codebook, or report)" state — not a clean-looking success
+- **Whisper 1.5GB download — bridge with sample/tour** — [Beta-must] folded from 7 May walk (TD13). First-run UX has a long opaque wait while Whisper model downloads. Bridge with a guided tour or sample report so the wait isn't dead time. Pairs with the demo dataset Should items above
 
 ### Could
 - **Batch processing dashboard** — queue multiple projects (#27)
@@ -189,6 +319,28 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - **~~Circular dependency in production build~~** — fixed in 0.13.6 but regression-prone (SidebarStore import cycle)
 - ~~[S3]~~ **Import FK constraint** — _Demoted to Should 4 May 2026, S6 with Playwright layers 4–5._ fixed in 0.13.4 (ProposedTag cleanup) but needs E2E coverage to prevent regression
 - ~~[S3]~~ **Native toolbar tab i18n not reactive** — _Demoted to Could 4 May 2026 — alpha is English-only with English-speaking testers._ changing language in Settings doesn't update toolbar labels until app restart. `I18n` `@StateObject` doesn't trigger segmented control re-render
+- [S3] **Pipeline silently skips stages 2–11 on raw video** — [stage-2-prereq] 🔴 folded from `road-to-testflight.md` 7 May 2026 walk. Project of three `.mov` files completes in 1.7 s; sidebar reports "Analysed"; `sessions/` and `transcripts-raw/` empty; `pipeline-events.jsonl` records `run_started` → `run_completed` with no per-stage events. Same files transcribe cleanly on a sibling project — some difference between the two creation paths short-circuits stages 2–11. **Ship criteria:** fresh folder of 3 raw videos produces non-empty `sessions/` and `transcripts-raw/`; per-stage events for s02–s11 in events log; ≥1 quote per session; missing prerequisites (transcription backend, LLM key) fail loud with a `Cause`-tagged event rather than degrading to "ingest + render". Investigate stage-filter flag, LLM-key check, mlx-whisper / faster-whisper backend availability. Bar repro evidence in `road-to-testflight.md`. Linked from Critical Path → Now
+- [S3] **React SPA misses pipeline-completion signal** — [stage-2-prereq] 🔴 folded from 7 May walk. Drop files → pipeline runs cleanly → toolbar pill vanishes → sidebar row says "Analysed 1 min ago" → project content shows 0 sessions / 0 quotes. Reload button does not recover. Workaround: click to a different project and back triggers a remount + refetch. Diagnosis: project-content components don't subscribe to the same completion event the pill listens to. **Ship criteria:** run-completion event triggers SPA refetch (or invalidates the project's React Query cache); project view reflects analysed state without tab-away-and-back workaround; Reload button works. Linked from Critical Path → Next
+- [S3] **Filesystem export silent fail under sandbox** — [stage-2-prereq] 🔴 folded from 7 May walk. Click Export Report → modal closes (looks successful) → no file in `~/Downloads`. Pre-sandbox this worked. Likely cause: file-write going direct to `~/Downloads` without `NSSavePanel`. Sandboxed apps need `com.apple.security.files.user-selected.read-write` plus user-granted URL from a save panel. Affects every export-to-disk surface — HTML report, video clips, CSV file, slides, anonymised bundle. **Ship criteria:** all file-writing exports route through `NSSavePanel`; file lands at chosen location; success toast only on confirmed write; identical behaviour across HTML / clips / CSV / slides. Privacy-default consistency in same modal also flagged ("Remove participant names" inconsistent between projects — verify per-project state vs default). Linked from Critical Path → Then
+- [S3] **Clipboard CSV silent fail** — [stage-2-prereq] 🔴 folded from 7 May walk. Different bug, same family as filesystem export. Click Copy as CSV → toast fires (with raw i18n key, see separate item) → clipboard is empty. Different root cause: clipboard access in sandboxed app via WKWebView needs `WKWebViewConfiguration` allowing `JavaScriptCanAccessClipboard` (or `navigator.clipboard.writeText` permission), and the app entitlement for clipboard. Fire-and-forget success toast happens regardless of whether write landed. **Ship criteria:** clipboard write actually lands; success toast waits on confirmation, not button click; failure path shows honest error. Investigate `navigator.clipboard.writeText()` vs fallback `document.execCommand("copy")`, WKWebView config, entitlement
+- [S3] **Route-level ErrorBoundary + Analysis crash** — [stage-2-prereq] 🔴 folded from 7 May walk. Analysis tab crashes with React error #300 on Spanish VTT project; stack trace in `components-BzJXEGiq.js`. Companion finding (higher priority): no `ErrorBoundary` / `errorElement` on React Router routes, so users see the developer-facing default ("Hey developer 👋…") with a minified stack trace. **Ship criteria:** route-level ErrorBoundary on every React Router route, rendering "Something went wrong on this tab. [Reload] [Report]" — covers the Analysis crash AND every future crash with one fix. Investigate the specific data-shape / conditional hook / undefined value that triggers #300 (likely sparse / non-English data) and fix in parallel. Per [React Router docs on errorElement](https://reactrouter.com/en/main/route/error-element)
+- [S3] **Fake-success-feedback audit (one read of the codebase)** — [stage-2-prereq] 🔴 folded from 7 May quality reset. The recurring class-not-instance: filesystem export, clipboard CSV, AutoCode silent-zero, post-pipeline empty state all signal "done / complete / success / exported / applied" while the artifact doesn't exist. **Ship criteria:** one targeted grep + audit pass over every UI surface that signals success — verify the artifact exists, the data is correct, the failure path is honest. Likely surfaces 3–5 cousins not yet hit. Treat as one investigation, not seven separate fixes. Quality-reset framing: the user's mental model of "did this work?" must be trustable everywhere
+- [S3] **Keychain ACL prompt at launch + Settings open** — [stage-2-prereq] 🟡 folded from 7 May walk. App eagerly fetches `Bristlenose Anthropic API Key` before showing any UI; macOS surfaces "Bristlenose wants to use your confidential information…" with zero context. Same pattern fires opening Settings — LLM Settings rows eagerly read all provider keys. Fix shape: (a) defer launch read entirely (only fetch when an LLM call needs the key, with in-app pre-prompt context); (b) Settings opens with zero Keychain calls (Appearance / Language fully usable); (c) LLM Settings only fetches when user clicks into that pane, framed inside the UI; (d) on Deny, panes still render in usable "key not loaded — click to authenticate" state. Status surface: non-blocking microbanner ("API keys stored in Keychain — click to authenticate") rather than blocking modal
+- [S3] **i18n locales not reaching host bundle under sandbox** — [stage-2-prereq] 🟡 folded from 7 May walk and A1c sandbox findings. Welcome view + AIConsent leak raw keys when host i18n locales aren't bundled at `Resources/locales/`. Pre-existing build-system bug surfaced under sandbox. **Ship criteria:** locale JSON files reach the bundled `.app` Resources dir for every release build; gate in `build-all.sh`
+- [S3] **i18n key leak `toolbar.quotesExported`** — [stage-2-prereq] 🟡 folded from 7 May walk. After Copy as CSV, success toast shows raw key instead of translated string. Either missing entry in `bristlenose/locales/en.json`, call before i18n init, or hard-coded key bypassing `t()`. **Ship criteria:** all 6 locales have the entry; toolbar toast helper enforces `t()` use
+- [S3] **OllamaSetupSheet silent happy-path** — [stage-2-prereq] 🟡 folded from 7 May walk (TD6). When daemon + model already present, setup sheet flips through with no signal. **Ship criteria:** explicit "ready" state with confirmation before dismiss
+- [S3] **Ollama setup quality + perf expectations copy** — [stage-2-prereq] 🟡 folded from 7 May walk (TD4). Honest-affordance copy: "slower & less precise than cloud" so cohort testers don't conclude the product itself is broken when the local backend underperforms
+- [S3] **Titlebar redesign — drop project lozenge + centred app name; promote project + Photos-style subtitle** — [stage-2-prereq] 🟡 folded from 7 May walk. macOS app name lives in the menu bar, not the titlebar; project lozenge reads as an interactive control. Fix: drop centred app name AND lozenge styling; promote project name to centred bold with muted subtitle ("3 sessions · April 2026"). References: Xcode, Notes, Mail, Photos. Sessions = human-meaningful unit; date = at-a-glance recency. Pairs with the existing "**New title bar design**" entry in §1 Should — this folds the specific design call
+- [S3] **Nav arrows leftmost edge** — [stage-2-prereq] 🟡 folded from 7 May walk. Back/forward arrows should sit immediately to the right of the sidebar toggle (Safari / Finder / Mail convention). Currently floating in middle of titlebar between project lozenge and centred title. Layout: `[sidebar panel | sidebar-toggle][< back][> forward] … rest of toolbar`
+- [S3] **Toolbar overflow priority — back/forward last to collapse** — [stage-2-prereq] 🟡 folded from 7 May walk. At narrow widths the overflow ≫ menu absorbs back/forward alongside Export/Tags/Search. Back/forward are core navigation; should be among the *last* to collapse, not first
+- [S3] **Sidebar drag-drop into folder** — [stage-2-prereq] 🟡 folded from 7 May walk. Right-click → "Move to…" works; data path is there. Wire the drag-and-drop affordance to the same handler. Small
+- [S3] **Sidebar row-height jump on new project** — [stage-2-prereq] 🟡 folded from 7 May walk. Existing analysed projects show subtitle ("Analysed 8 hr ago"); newly-created render with no subtitle (shorter row), then become taller once a value lands. Reserve subtitle row height from the start (placeholder line / dash / "Empty / Not analysed yet") so row height is stable
+- [S3] **"Analysed in 0 sec" preposition + sub-minute formatting** — [stage-2-prereq] 🟡 folded from 7 May walk (T28). Two bugs in one string: preposition ("in" reads future-tense — should be "Analysed 0 sec ago" / "just now") and sub-minute rounding ("0 sec" should round to "just now"). Same relative-time formatter as `Analysed 8 hr ago`; needs `< 1 min` branch + correct preposition
+- [S3] **AutoCode button disabled on Sentiment group** — [stage-2-prereq] 🟡 folded from 7 May walk (T15). Sentiment is auto-applied during analysis pipeline by default — every quote already has its sentiment tag by the time the user reaches the Codebook page. The "+ AutoCode quotes" button on Sentiment can never produce work; clicking gives "0 of 0 proposals remaining / No proposals to review". Disable (not hide) the button on any group whose tags are pipeline-auto-applied; tooltip explaining why ("Sentiment is auto-coded during analysis"). Surface via flag on codebook group definition (e.g. `auto_applied_in_pipeline: true`)
+- [S3] **Codebook first-arrival imbalance** — [stage-2-prereq] 🟡 folded from 7 May walk (T23). When only Sentiment is populated, Uncategorised + New-group placeholders dominate the top row at full width; "Emotional & Cognitive Signals" supergroup heading sits alone with a single child at ~1/3 width. "Drag tags between groups… drop to merge" instruction assumes ≥2 populated groups. Either collapse the supergroup band when it has only one child, OR ship default sibling groups (Cognitive Load, Mental Models, etc.) so layout is balanced from the start
+- [S3] **Dashboard sessions table — full row clickable** — [stage-2-prereq] 🟡 folded from 7 May walk (T17). Hover highlights whole row in pale blue, implying it's clickable, but only the `#3` session-ID column actually opens the session. Affordance lies. Make whole row clickable (matches hover, aligns with Mail / Finder list patterns); keep `#3` as the existing target. Don't shrink hover; expand hit area
+- [S3] **VTT speaker names in body parens** — [stage-2-prereq] 🟡 folded from 7 May walk (T18). VTT-sourced transcripts show speaker names inline in parentheses in quote body (`(Carlos) Me cambié a esta…`), even though participant badge already carries the same identity (`p2`). Lift names out of body text into the badge (e.g. `p2 Carlos`), matching non-VTT rendering. Fix lives in VTT parser stage — strip leading `(Name) ` from segment text and attach to speaker label metadata
+- [S3] **Project dashboard width inconsistent** — [stage-2-prereq] 🟡 folded from 7 May walk (T25). Project dashboard is the only tab that doesn't use full window width — Sessions / Quotes / Codebook / Analysis all do. Cap or align Project page to match
 
 
 ### Should
@@ -228,6 +380,9 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - ~~**Help modal polish**~~ — platform-aware shortcuts, typography tokens, entrance animation, dark kbd. Shipped 0.13.3
 - **~~"Made with Bristlenose" branding footer~~** — Phase 5 of export, quick win (design-export-sharing.md)
 - ~~[S5]~~ **Export polish** — _Demoted to beta-Must 4 May 2026, rides with #17 zip export deferral._ minimum viable: delete things that should not be in an export, tidy up rough edges
+- **Tahoe glass-bar styling** — [Beta-must] folded from 7 May walk (T19). Modernise toolbar/titlebar to follow the Tahoe pattern (and broader iOS/iPadOS direction): content slides edge-to-edge *underneath* floating glass-blur icon pills, rather than sitting in a discrete bar that crowds the content area. Forward-looking — also gracefully handles the toolbar overflow case better than a dense bar collapsing into ≫ menus. Worth aligning toolbar redesign with this rather than fixing the current bar in isolation. Pairs with the [S3] titlebar redesign in §2 — [S3] is the affordance fix (drop lozenge / promote project name); this is the visual-language modernisation
+- **Structural sidebar reorg (Photos-style) — sketch first** — [Beta-must] folded from 7 May walk (T21). Move Project / Sessions / Quotes / Codebook / Analysis from the top toolbar into the left sidebar, Photos-style. Top of sidebar: tab items as primary nav (like `Library` / `Collections`); then a tiny grey-caps `Projects` section header (like `Pinned` / `Albums`); then the project list. Frees the titlebar for content + a few genuine controls; lets users *think about their content* rather than navigate around chrome. Dissolves several other titlebar problems (overflow ≫ menu, nav-arrow positioning, lozenge clutter, app-name-vs-project-name confusion). **Big snag, not a niggle — sketch before committing.** Mac sidebar conventions span "sidebar = nav + mode" (Photos / Things / Music / Finder / Claude Code) vs "sidebar = nav only, mode in toolbar" (Mail). Bristlenose's choice depends on whether tabs feel more like *mode* (case for sidebar) or *view on a project* (case for toolbar). Sectioning + visual differentiation carries the load (Finder / Notes / Reminders precedents)
+- **Browse codebooks horizontal → vertical grid** — [Beta-must] folded from 7 May walk (T22). Browse codebooks modal uses horizontal scrolling for framework cards. Made sense at 2–3; with the catalogue grown (Emotional & Cognitive Signals, Bristlenose UXR Codebook, Elements of UX, plus more off-screen) horizontal swipe-through hides options users can't predict are there. Switch to vertical grid (2–3 cards per row, scroll down) so the full catalogue is visible at a glance
 
 
 ### Should
@@ -323,6 +478,9 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - [S6] **Terms of service** — subscription terms, refund policy, data handling. Draft v0.9.1 complete (`launch-docs/terms-of-service.md` in delivery repo), needs solicitor review (May)
 - [S2] **App Store review compliance (TestFlight subset)** — umbrella for: Apple Distribution cert ✅, sandbox + entitlements (Track A: A1 spike done 29 Apr 2026 — minimal entitlement set predicted; **A blocked on C1** because venv-based dev sidecar can't run under sandbox; resume as A1c once C1 lands), PyInstaller sidecar signing ✅, Privacy Manifest reason-code audit ✅ (C4, 28 Apr 2026), Hardened Runtime ✅. All tracked as individual items. Full review hardening for external testers / submission lives in S6. **C3 (Apr 2026) shipped Keychain → env-var injection + bundle integrity gates** (`check-bundle-manifest.sh` source→spec + `bristlenose doctor --self-test` spec→bundle, both wired into `build-all.sh`). Discovered 3 datas-coverage bugs during smoke test, resolved. **A1 spike output (29 Apr 2026):** `docs/private/sandbox-violations-A1.md` — predicted minimal entitlement set: host = `app-sandbox` + `network.client` + `files.user-selected.read-write`; sidecar = `cs.disable-library-validation` + `inherit`. SSB confirmed working with user-selected-files. **A1c smoke (30 Apr 2026):** `docs/private/sandbox-violations-A1c.md` — bundled sidecar present + spawning correctly. Confirmed: `files.user-selected.read-write` clears A1's bookmark deny ✅. Need to add: `network.server` (sidecar bind 9131 denied at kernel level — every report-rendering beat blocked). New non-sandbox findings: (1) `PipelineRunner.spawn()` PipelineRunner.swift:888 still calls stale `findBristlenoseBinary()` with `TODO(track-c-c1)` comment — C1 missed this code path, blocks all drop-and-run flows; (2) host i18n locales not bundled at `Resources/locales/` — pre-existing build-system bug, not sandbox; (3) `proc_listpids` denied (zombie cleanup non-functional under sandbox); (4) `iokit-open-user-client AppleNVMeEANUC` denied (silent). Two follow-up tasks chipped on main (cohort-baselines.json bundle datas, locales Copy Bundle Resources). Narrow-branch ordering: PipelineRunner migration → network.server entitlement → A1c-prime to surface Python-side surface (Whisper/FFmpeg/AppSupport/Ollama). **A2 ✅ shipped 1 May 2026** on `track-a-a2-network-server` worktree: `ENABLE_INCOMING_NETWORK_CONNECTIONS = YES` for the host Debug config grants `com.apple.security.network.server`, sidecar `bind()` succeeds, app reaches welcome view; A1c row 1 resolved. Side-effect: `desktop/scripts/reset-sandbox-state.sh` dev helper for libsecinit/secinitd EXC_BREAKPOINT recovery between iterations. Three design docs trued (desktop-python-runtime, desktop-security-audit, road-to-alpha) and `docs/private/sandbox-violations-A1c.md` appended with A2 verification block. Branch unpushed (4 working commits + 1 truing commit).
 - [S5] **PII redaction audit** — verify Presidio catches names/emails in transcripts before shipping to paying users. Per `docs/design-modularity.md`: PII moves to `[pii]` pip extra (CLI) and tier-2 Background Assets pack (macOS, public beta) — out of base install. Alpha bundles it inline to avoid the asset-pack Python-packages-as-data problem; public beta deferred-downloads it. _Scoped 4 May 2026: spot-check Presidio on IKEA + FOSSDA for alpha; full audit + `[pii]` extra split + Background Assets pack is beta-Must. Alpha cohort = consensual UXR friends, not paying customers handling third-party data._
+- **DPA executed with Anthropic** — [Beta-must, stage-5-prereq] _Promoted from §12 Should "[S6] Execute DPAs with LLM providers" 8 May 2026 per quality-reset folding._ Beta funded-preview routes user transcripts through Bristlenose's relay on Martin's Anthropic key, making Bristlenose data controller in transit. DPA must be signed before *any* relay traffic flows. Friendly-CTO Sunday topic. Solicitor review required. Sequencing: solicitor review → DPA signed → relay endpoint deployed → first Beta cohort. Cannot ship Beta without this
+- **StoreKit receipt validation (server-side)** — [Beta-must, stage-5-prereq] _Promoted from §6 Should "[S6] Rate-limit trial-key endpoint" 8 May 2026._ Beta funded preview is gated by App Store purchase; relay endpoint validates the StoreKit receipt server-side before issuing per-user budget tokens. Without this, the funded relay is a free-for-all. Friendly-CTO Sunday relevant. Pairs with the funded-relay endpoint + budget-ledger work in §11. **Ship criteria:** every relay request carries a verified receipt token; replay attacks blocked; receipt revocation propagates to budget invalidation
+- **Cost modelling defended numerically** — [Beta-must, stage-5-prereq] Per-user economics: ~$2/interview Claude cost on typical 30–60 min sessions × N interviews per Beta tester × ≤$4 funded-preview cap. Apple takes 15% (Small Business Program). $5 Beta price point is psychological, not revenue-generating — at price - 15% Apple - $4 relay the margin is roughly zero. Need numbers defended before pricing copy ships: average interview cost across the test corpus (FOSSDA / IKEA / demo-escuela / demo-sapporo), typical session count per cohort tester, kill-switch threshold for the global spend cap. Friendly-CTO Sunday topic. Output: a single numbers page reviewable by a battle-tested engineer before relay traffic flows
 - ~~**Security scanning** — npm audit, pip-audit, CodeQL before public release (design-test-strategy.md)~~
 - ~~[S1] **Alembic/migration strategy** — DB schema changes without data loss. Currently no migration framework~~
 - ~~**AI data disclosure dialog** — Apple Guideline 5.1.2(i). Shipped: `desktop/Bristlenose/Bristlenose/AIConsentView.swift` (first-run sheet, consent version policy, re-accessible via menu)~~
@@ -524,7 +682,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 
 ### Must
 - [S2] **CI: desktop-build job** — `xcodebuild build` + `xcodebuild test` on macOS runner, `CODE_SIGNING_ALLOWED=NO`, informational initially. Catches Swift compilation errors and Swift Testing regressions on every push. Prerequisite for the full build pipeline below. Plan: `docs/design-ci.md` §Coverage gaps
-- [S2] **TestFlight upload pipeline** — Xcode archive → App Store Connect upload (notarytool). Manual first (local `xcodebuild -exportArchive` + `xcrun notarytool submit`). Automate in S6. Only runs when MVP flow is green + sandbox is clean. _Scoped 4 May 2026: manual-only for first iteration; automation deferred to S6. M → S._
+- [S3] **TestFlight upload pipeline** — Xcode archive → App Store Connect upload (notarytool). Manual first (local `xcodebuild -exportArchive` + `xcrun notarytool submit`). Automate in S6. Only runs when MVP flow is green + sandbox is clean. _Scoped 4 May 2026: manual-only for first iteration; automation deferred to S6. M → S._ _Re-tagged S2→S3 8 May 2026 — S2 declared done; this slipped per quality-reset walks-gate._
 - ~~**Desktop app build pipeline (.dmg path)** — won't do (17 Apr 2026). App Store is the sole distribution channel. See `docs/private/road-to-alpha.md` Decision section~~
 - [S2] **App Store Connect setup** — app record, TestFlight internal beta group (≤100 testers, no Beta App Review), Privacy Nutrition Labels. Pricing + external tester config deferred to S6. _Scoped 4 May 2026: engineering work mostly done (cert, profile, bundle ID); what's left is form-filling. S → XS._
 - ~~[S2] **Apple Distribution certificate + provisioning profile**~~ ✅ **Done 19 Apr 2026 (Track C C2).** Cert + profile installed; notarytool keychain profile `bristlenose-notary` set up. Portal artefacts in `~/Code/Apple Developer/`
@@ -535,6 +693,8 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - ~~[S1] **Build number auto-increment** — `CFBundleVersion = 1` blocks Sparkle and App Store update logic. Set up CI auto-increment. Done: `bump-version.py` unifies desktop+CLI, auto-increments build number~~
 - ~~[S1] **Domain & email infrastructure** — register `bristlenose.app`, configure SPF/DKIM/DMARC, Substack custom domain (`blog.bristlenose.app`), deploy site, set up email on DreamHost (`hello@`, `support@`, `security@`). Full plan: `docs/private/infrastructure-and-identity.md`~~
 - [S6] **Supply chain hardening** — GitHub 2FA with hardware key, branch protection on main, PyPI hardware key + project-scoped token, register PyPI typosquats. Full checklist: `docs/private/infrastructure-and-identity.md`. Deferred from S1: low threat until commercial launch (see `docs/private/supply-chain-deferral.md`)
+- **Funded relay endpoint and budget ledger** — Server-side proxy to Anthropic on Bristlenose's key for Beta funded-preview. Per-user budget cap (~$4 per receipt), global spend cap with auto-degrade-to-BYOK kill switch. Stage-5 prerequisite (Beta in store launch). Friendly-CTO Sunday topic. Cost: $5 - 15% Apple - $4 relay = ~zero margin (price is psychological, not revenue). See `project_lifecycle_stages.md`, `project_2000_customers_target.md`.
+- **Crash telemetry baseline** — Lightweight crash reporting for Beta cohort. Was deferred phase 2-4 of alpha-telemetry; promoted to Beta-must per 7 May quality reset. Stage-5 prerequisite. Server-side (Sentry-class or first-party); opt-in disclosed in privacy policy.
 
 (Succession plan moved to §Post 100 days — deferred 17 Apr 2026.)
 
@@ -600,6 +760,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - ~~[S6] **Landing page + domain** — `bristlenose.app` registered (DreamHost), DNS configured, site deployed. Deploy skill: `/deploy-website`. Shell alias: `deploy-website`~~
 - [S6] **App Store screenshots** — 3-5 screenshots at required resolutions
 - [S6] **App Store preview video** — 15-30 second demo (optional but high impact)
+- **`Bristlenose Beta` listing copy in original-Beta-warning-label voice** — [Beta-must, stage-5-prereq] Beta gate is "warning-label-tolerable rough edges allowed *if* the warning is visible." App Store listing copy reclaims the original meaning of "Beta": this is software under active development, things will break, your feedback shapes what ships. *Not* the modern marketing-Beta where "beta" is just lower-case "1.0". Listing description, What's New, screenshot captions, support page all carry the warning-label voice. The honest framing earns more trust than the sanitised one with this customer profile. **Ship criteria:** listing reads as "we're being straight with you about where this is" not "we're slightly hedging the launch"; the word "Beta" appears in the public app name (`Bristlenose Beta`) and drops to `Bristlenose` only at GA
 
 ### Should
 - **Product Hunt launch** — prepared assets, description, maker comment

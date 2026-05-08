@@ -124,7 +124,7 @@ written.
 ## 3. Status-table desync across docs
 **Signal:** three tracking docs reference the same checkpoint; one
 says ⬜, one ✅, one 🟡.
-**Example:** `road-to-alpha.md` row 4 ⬜, `sprint2-tracks.md` ✅,
+**Example:** `road-to-app-store.md` row 4 ⬜, `sprint2-tracks.md` ✅,
 runtime doc "C2, 19 Apr".
 **Fix shape:** flag for a cross-doc sweep, not per-doc editing. Surface
 every occurrence in findings so the skill can resolve all at once.

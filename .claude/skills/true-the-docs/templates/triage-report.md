@@ -60,7 +60,7 @@ cross-doc parity issues found.>
 
 ### Cross-doc parity issues
 
-- Checkpoint C2 status: `road-to-alpha.md` says ⬜, `sprint2-tracks.md`
+- Checkpoint C2 status: `road-to-app-store.md` says ⬜, `sprint2-tracks.md`
   says ✅. Resolve by sweep — run `/true-the-docs --topic "track C"`.
 
 ## Structural additions suggested

@@ -113,10 +113,10 @@ Written here so they're catchable.
 
 ## What the review is not
 
-It's not a roadmap, a backlog, or a status report. Those live elsewhere (`TODO.md`, `docs/ROADMAP.md`, `docs/private/road-to-alpha.md`). The review is a check against the arc, deliberately above day-to-day execution, written to be readable in a decade as a record of how decisions were made over time.
+It's not a roadmap, a backlog, or a status report. Those live elsewhere (`TODO.md`, `docs/ROADMAP.md`, `docs/private/road-to-app-store.md`). The review is a check against the arc, deliberately above day-to-day execution, written to be readable in a decade as a record of how decisions were made over time.
 
 It's also not a document to share externally. Some of its honest answers — about commercial reality, about founder energy, about what didn't work — shouldn't be published. Its value is internal: a commitment device, a drift detector, and an archive of decisions made with the arc explicitly in view.
 
 ## First review
 
-The first review should be written at the end of the quarter in which beta launches. Prior to that, the alpha checkpoints in `docs/private/road-to-alpha.md` are doing the equivalent job at the right granularity.
+The first review should be written at the end of the quarter in which beta launches. Prior to that, the alpha checkpoints in `docs/private/road-to-app-store.md` are doing the equivalent job at the right granularity.

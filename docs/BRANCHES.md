@@ -32,6 +32,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch fix-new-feature-skill/` | `fix-new-feature-skill` | chore | Patch four bugs in the new-feature skill discovered during whos-afraid debug run |
 | `bristlenose_branch pipeline-silent-skip-raw-video2/` | `pipeline-silent-skip-raw-video2` | feature | Re-attempt pipeline-silent-skip-raw-video |
+| `bristlenose_branch spa-pipeline-completion-refetch/` | `spa-pipeline-completion-refetch` | feature | React SPA refetches project content on pipeline run completion (no tab-away-and-back workaround) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
@@ -122,6 +123,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `fix-new-feature-skill` | `bristlenose_branch fix-new-feature-skill/` | local only |
 | `pipeline-silent-skip-raw-video2` | `bristlenose_branch pipeline-silent-skip-raw-video2/` | local only |
+| `spa-pipeline-completion-refetch` | `bristlenose_branch spa-pipeline-completion-refetch/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
@@ -135,6 +137,29 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `spa-pipeline-completion-refetch`
+
+**Kind:** feature — code lands on main via merge or PR-and-squash
+**Status:** Just started
+**Started:** 8 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch spa-pipeline-completion-refetch/`
+**Remote:** local only (push when ready)
+
+**What it does:** React SPA refetches project content on pipeline run completion (no tab-away-and-back workaround).
+
+**Files this branch will touch:**
+- `frontend/src/components/ActivityChipStack.tsx`
+- `frontend/src/layouts/AppLayout.tsx`
+- `frontend/src/islands/SessionsTable.tsx`
+- `frontend/src/islands/QuoteSections.tsx`
+- `frontend/src/islands/CodebookPanel.tsx`
+- `frontend/src/contexts/ActivityStore.ts`
+
+**Potential conflicts with other branches:**
+- None expected — no other active branch touches these frontend modules. `responsive-signal-cards` is dormant (placeholder); `pipeline-silent-skip-raw-video2` and `fix-new-feature-skill` are scoped to Python/skill files.
 
 ---
 

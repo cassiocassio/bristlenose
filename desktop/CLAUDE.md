@@ -447,6 +447,6 @@ Two injection points exist for safe testing:
 
 - `docs/design-modularity.md` — canonical reference for what ships where (Python deps, extras, Background Assets, no-fork principle across CLI + macOS)
 - `docs/design-desktop-python-runtime.md` — canonical shipping architecture for the Mac sidecar specifically (write-up due as part of Track C C0)
-- `docs/private/road-to-alpha.md` — 14 checkpoints to TestFlight
+- `docs/private/road-to-app-store.md` — 14 checkpoints to TestFlight
 - `docs/private/sprint2-tracks.md` — Track A (sandbox plumbing), Track B (MVP UX flow), Track C (sidecar bundling + signing)
 - `desktop/v0.1-archive/README.md` — v0.1 bundling pipeline reference

@@ -88,7 +88,7 @@ looks like.
 
 **Drift class:** 1 (pre-spike guesses reality contradicted).
 
-**Before** (`docs/private/road-to-alpha.md` §3):
+**Before** (`docs/private/road-to-app-store.md` §3):
 
 > C0 spike (see sprint2-tracks.md) will enumerate the actual minimum
 > entitlement set by building v0.1 fresh under Hardened Runtime and
@@ -139,7 +139,7 @@ future improvement; "requirements" framing codifies the invariant.
 
 **Drift class:** 3 (status-table desync across docs).
 
-**Before** (`docs/private/road-to-alpha.md` table):
+**Before** (`docs/private/road-to-app-store.md` table):
 
 ```
 | 4 | PyInstaller sidecar signing script | ⬜ S2 |

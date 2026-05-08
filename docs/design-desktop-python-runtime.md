@@ -527,7 +527,7 @@ Lesson from the smoke test: treat "the pipeline produced an artefact" as weak ev
 
 - [`docs/design-modularity.md`](./design-modularity.md) — what gets bundled
 - [`docs/private/sprint2-tracks.md`](./private/sprint2-tracks.md) — Track C C0–C5
-- [`docs/private/road-to-alpha.md`](./private/road-to-alpha.md) §3, §4, §5 — sandbox, signing, Hardened Runtime checkpoints
+- [`docs/private/road-to-app-store.md`](./private/road-to-app-store.md) §3, §4, §5 — sandbox, signing, Hardened Runtime checkpoints
 - [`desktop/bristlenose-sidecar.spec`](../desktop/bristlenose-sidecar.spec), [`desktop/bristlenose-sidecar.entitlements`](../desktop/bristlenose-sidecar.entitlements), [`desktop/sidecar_entry.py`](../desktop/sidecar_entry.py) — sidecar packaging
 - [`desktop/scripts/build-all.sh`](../desktop/scripts/build-all.sh) — C2 end-to-end orchestrator
 - [`desktop/scripts/build-sidecar.sh`](../desktop/scripts/build-sidecar.sh), [`desktop/scripts/sign-sidecar.sh`](../desktop/scripts/sign-sidecar.sh), [`desktop/scripts/fetch-ffmpeg.sh`](../desktop/scripts/fetch-ffmpeg.sh), [`desktop/scripts/sign-ffmpeg.sh`](../desktop/scripts/sign-ffmpeg.sh) — C2 build + sign chain

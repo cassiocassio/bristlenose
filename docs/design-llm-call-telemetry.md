@@ -175,7 +175,7 @@ If a future telemetry phase ever uploads `llm-calls.jsonl` (it doesn't today), t
 - Even though no original PII strings are recorded, the combination of `session_id` + timestamp + `input_chars` + `elapsed_ms` + `hardware_signature` is enough to reconstruct "participant X was interviewed on date Y and analysed by model Z on machine W." Treat it as such.
 - `hardware_signature` is coarse by deliberate design — chip family + memory tier, never UUIDs or serial numbers. But it's still a re-identification dimension and inherits the same handling rules.
 - A parallel gotcha line in root `CLAUDE.md` (sibling to the existing `pii_summary.txt` line) lands with the implementation, not after.
-- Future opt-in alpha-telemetry upload boundary redaction rules (Phase 2+, see `docs/private/road-to-alpha.md` §13b):
+- Future opt-in alpha-telemetry upload boundary redaction rules (Phase 2+, see `docs/private/road-to-app-store.md` §13b):
 
 | Field | Action at upload boundary |
 |---|---|
@@ -677,7 +677,7 @@ These are all post-hoc queries against the JSONL. No live aggregation.
 - The JSONL stays on the user's machine. Same posture as `pipeline-events.jsonl`.
 - No automatic upload, no phone-home.
 - The forecast lookup reads only from the local user's history. We do not pool across users.
-- If we later want anonymous opt-in telemetry to improve the bundled defaults, that's a separate design (alpha-telemetry Phase 2+, see `docs/private/road-to-alpha.md` §13b).
+- If we later want anonymous opt-in telemetry to improve the bundled defaults, that's a separate design (alpha-telemetry Phase 2+, see `docs/private/road-to-app-store.md` §13b).
 
 ## Known pitfalls (lifted from postmortems)
 

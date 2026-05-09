@@ -136,6 +136,8 @@ struct PipelineActivityItem: View {
         case .apiRequest: return "Provider rejected request"
         case .apiServer:  return "Provider unavailable"
         case .missingDep: return "Setup needed"
+        case .missingInput: return "Missing input"
+        case .missingBinary: return "Missing tool"
         case .unknown:    return "Failed"
         }
     }
@@ -263,10 +265,8 @@ struct PipelineActivityItem: View {
     }
 
     private var technicalDetails: some View {
-        let lines = liveData.outputLines[project.id] ?? []
-        let tail = lines.suffix(20)
-        return ScrollView {
-            Text(tail.joined(separator: "\n"))
+        ScrollView {
+            Text(detailsText)
                 .font(.system(.caption2, design: .monospaced))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .textSelection(.enabled)
@@ -274,14 +274,38 @@ struct PipelineActivityItem: View {
         .frame(maxHeight: 140)
     }
 
+    /// Text shown inside the disclosure and copied via Copy error details.
+    /// Combines the structured cause from `pipeline-events.jsonl` (which is
+    /// populated even when stdout is empty — e.g. the abandon path) with the
+    /// last 20 stdout lines (which are populated for crash-style failures
+    /// before the events log gets a terminus).
+    private var detailsText: String {
+        var parts: [String] = []
+        if case .failed(let summary, let category) = state {
+            parts.append("Category: \(category.rawValue)")
+            if !summary.isEmpty {
+                parts.append("Cause: \(summary)")
+            }
+        }
+        let lines = liveData.outputLines[project.id] ?? []
+        let tail = lines.suffix(20)
+        if !tail.isEmpty {
+            if !parts.isEmpty { parts.append("") }
+            parts.append("Last output:")
+            parts.append(tail.joined(separator: "\n"))
+        }
+        if parts.isEmpty {
+            return "(no output captured)"
+        }
+        return parts.joined(separator: "\n")
+    }
+
     // MARK: - Helpers
 
     private func copyErrorDetails() {
-        let lines = liveData.outputLines[project.id] ?? []
         // Pre-pasteboard sanitisation: replace project path with a sentinel so
         // a hastily-emailed log doesn't leak the user's folder structure.
-        let sanitised = lines
-            .joined(separator: "\n")
+        let sanitised = detailsText
             .replacingOccurrences(of: project.path, with: "<project>")
         let pb = NSPasteboard.general
         pb.clearContents()

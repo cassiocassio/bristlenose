@@ -34,6 +34,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch pipeline-silent-skip-raw-video2/` | `pipeline-silent-skip-raw-video2` | feature | Re-attempt pipeline-silent-skip-raw-video |
 | `bristlenose_branch spa-pipeline-completion-refetch/` | `spa-pipeline-completion-refetch` | feature | React SPA refetches project content on pipeline run completion (no tab-away-and-back workaround) |
 | `bristlenose_branch sandbox-export-savepanel/` | `sandbox-export-savepanel` | feature | Route file-writing exports through WKDownloadDelegate + NSSavePanel so sandboxed app actually delivers files; collapse the React Export modal on desktop in favour of a native accessory view |
+| `bristlenose_branch pipeline-completion-trust-ux/` | `pipeline-completion-trust-ux` | feature | Trust-UX layer (refresh button + skeleton + empty-state + cross-island test) on top of the auto-refetch correctness slice |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
@@ -126,6 +127,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `pipeline-silent-skip-raw-video2` | `bristlenose_branch pipeline-silent-skip-raw-video2/` | local only |
 | `spa-pipeline-completion-refetch` | `bristlenose_branch spa-pipeline-completion-refetch/` | local only |
 | `sandbox-export-savepanel` | `bristlenose_branch sandbox-export-savepanel/` | local only |
+| `pipeline-completion-trust-ux` | `bristlenose_branch pipeline-completion-trust-ux/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
@@ -139,6 +141,30 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `pipeline-completion-trust-ux`
+
+**Kind:** feature — code lands on main via merge or PR-and-squash
+**Status:** Just started
+**Started:** 10 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-completion-trust-ux/`
+**Remote:** local only (push when ready)
+
+**What it does:** Trust-UX layer (refresh button + skeleton + empty-state + cross-island test) on top of the auto-refetch correctness slice.
+
+**Files this branch will touch:**
+- `frontend/src/contexts/LastRunStore.ts`
+- `frontend/src/components/RefreshButton.tsx`
+- `frontend/src/components/EmptyState.tsx`
+- `frontend/src/islands/{QuoteSections,QuoteThemes,SessionsTable,Dashboard,Toolbar}.tsx`
+- `frontend/src/pages/{QuotesTab,SessionsTab,ProjectTab,CodebookTab}.tsx`
+- `frontend/src/pages/QuotesTab.test.tsx`
+
+**Potential conflicts with other branches:**
+- `spa-pipeline-completion-refetch` — sibling correctness slice that this branch builds on; both touch `frontend/src/islands/{QuoteSections,SessionsTable}.tsx` and contexts. Coordinate at merge time (the refetch slice should land first).
+- `sandbox-export-savepanel` touches `frontend/src/layouts/AppLayout.tsx` — not in this branch's file list, so no expected overlap.
 
 ---
 

@@ -33,6 +33,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch fix-new-feature-skill/` | `fix-new-feature-skill` | chore | Patch four bugs in the new-feature skill discovered during whos-afraid debug run |
 | `bristlenose_branch pipeline-silent-skip-raw-video2/` | `pipeline-silent-skip-raw-video2` | feature | Re-attempt pipeline-silent-skip-raw-video |
 | `bristlenose_branch spa-pipeline-completion-refetch/` | `spa-pipeline-completion-refetch` | feature | React SPA refetches project content on pipeline run completion (no tab-away-and-back workaround) |
+| `bristlenose_branch sandbox-export-savepanel/` | `sandbox-export-savepanel` | feature | Route file-writing exports through WKDownloadDelegate + NSSavePanel so sandboxed app actually delivers files; collapse the React Export modal on desktop in favour of a native accessory view |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
@@ -124,6 +125,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `fix-new-feature-skill` | `bristlenose_branch fix-new-feature-skill/` | local only |
 | `pipeline-silent-skip-raw-video2` | `bristlenose_branch pipeline-silent-skip-raw-video2/` | local only |
 | `spa-pipeline-completion-refetch` | `bristlenose_branch spa-pipeline-completion-refetch/` | local only |
+| `sandbox-export-savepanel` | `bristlenose_branch sandbox-export-savepanel/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
@@ -137,6 +139,29 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `sandbox-export-savepanel`
+
+**Kind:** feature — code lands on main via merge or PR-and-squash
+**Status:** Just started
+**Started:** 10 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch sandbox-export-savepanel/`
+**Remote:** local only (push when ready)
+
+**What it does:** Route file-writing exports through WKDownloadDelegate + NSSavePanel so the sandboxed desktop app actually delivers files; collapse the React Export modal on desktop in favour of a native accessory view.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/WebView.swift`
+- `desktop/Bristlenose/Bristlenose/ExportAccessoryView.swift`
+- `frontend/src/components/ExportDialog.tsx`
+- `frontend/src/components/ExportDropdown.tsx`
+- `frontend/src/layouts/AppLayout.tsx`
+- `bristlenose/locales/en/common.json`
+
+**Potential conflicts with other branches:**
+- `spa-pipeline-completion-refetch` also touches `frontend/src/layouts/AppLayout.tsx` — coordinate at merge time. No other active branch touches the desktop Swift surface or the Export components.
 
 ---
 

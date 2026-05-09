@@ -1,15 +1,18 @@
 # Sprint 2 — Three parallel tracks
 
-_Written 18 Apr 2026. The plan that A, B, and C branches all share. Update when the tracks' scope changes._
+_Written 18 Apr 2026. The plan that A, B, and C branches all share. **Sprint 2 declared done 7 May 2026** per the quality reset — preserved as a historical record of how S2 went rather than as a live planning doc. See `100days.md` Lifecycle stages + 7 May quality reset blocks for the new shape._
 
-S2 work runs on three concurrent tracks. Each lives on its own branch (or family of branches), can progress independently, and only converges at the first TestFlight upload.
+> **Sprint 2 declared done 7 May 2026.** Mission Sandbox PASSED 4 May. Tracks A + B + C MVP all landed: A (sandbox plumbing), B (MVP UX happy path), C (signing + Keychain-in-sandbox + Privacy Manifest + supply chain). The 2-week timebox stretched by the 2-week holiday but the goal is met. Next gate is **walks-fix-walks**, not "ship to TestFlight cohort" — see `100days.md` "7 May 2026 quality reset" block. The cohort question re-opens when 2–3 consecutive walks across different scenarios produce nothing new. This doc preserved as historical context for how S2 went; the plan that picks up from here is `100days.md` Critical Path + S3 sprint cell. Sparkle integration plan: `docs/private/sparkle-plan.md` (linked from lifecycle stage 2.5).
 
-This doc is the shared map. Branches in any of the three tracks should read this first, and reference it in their commit messages / PR descriptions when scope is unclear.
+S2 work ran on three concurrent tracks. Each lived on its own branch (or family of branches), progressed independently, and only converged at the first TestFlight upload.
+
+This doc is the shared map. Branches in any of the three tracks read this first, and referenced it in their commit messages / PR descriptions when scope was unclear.
 
 ## Sources of truth
 
 - **`docs/private/100days.md`** §1a — MVP 1-hour flow (the B-track checklist)
-- **`docs/private/road-to-alpha.md`** — 14 checkpoints to TestFlight (A and C are subsets)
+- **`docs/private/100days.md`** Lifecycle stages + 7 May quality reset — the shape that supersedes this doc as live plan (8 May 2026)
+- **`docs/private/road-to-app-store.md`** — Apple-side gate sequence (A and C are subsets); renamed from `road-to-alpha.md` 8 May 2026
 - **`docs/private/100days.md`** §"Sprint 2 cadence" — A/B interleave rationale
 
 This doc does not duplicate those — it cuts them into branch-shaped pieces.
@@ -138,7 +141,7 @@ Until that point, A, B, and C ship independently to `main`. None blocks the othe
 
 ## Out of scope for all three tracks
 
-These belong to S6 (per `100days.md` and `road-to-alpha.md` §14):
+These belong to S6 (per `100days.md` and `road-to-app-store.md` §14):
 
 - App Store Connect app record (#10)
 - Privacy Nutrition Labels (#7)
@@ -179,4 +182,4 @@ S2–S4 Musts (and four S5 visual-design Musts) reviewed row-by-row against the 
 
 After the first internal-TestFlight cohort reports back, pick up work that was deferred from S2 to keep the TestFlight runway clear:
 
-- **Alpha telemetry Phases 2–4** — Phase 1 plumbing landed 26 Apr 2026 (`alpha-telemetry` branch, merge `c5a7f61`). Remaining: Python event API + SQLite buffer + shipper + prompt-version sidecar, React emission hook, Swift opt-in sheet + Keychain UUID + Settings → Privacy. Full prompt: `docs/private/alpha-telemetry-next-session-prompt.md`. Tracked in `road-to-alpha.md` §13b and `100days.md` §1 Must.
+- **Alpha telemetry Phases 2–4** — Phase 1 plumbing landed 26 Apr 2026 (`alpha-telemetry` branch, merge `c5a7f61`). Remaining: Python event API + SQLite buffer + shipper + prompt-version sidecar, React emission hook, Swift opt-in sheet + Keychain UUID + Settings → Privacy. Full prompt: `docs/private/alpha-telemetry-next-session-prompt.md`. Tracked in `road-to-app-store.md` §13b and `100days.md` §1 Must.

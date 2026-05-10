@@ -74,6 +74,27 @@
     border-color: var(--bn-colour-border-hover);
 }
 
+.toolbar-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.toolbar-btn:disabled:hover {
+    background: var(--bn-colour-bg);
+    border-color: var(--bn-colour-border);
+}
+
+.bn-refresh-icon-spin {
+    animation: bn-refresh-spin 0.8s linear infinite;
+    transform-origin: center;
+}
+
+@keyframes bn-refresh-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .bn-refresh-icon-spin { animation: none; }
+}
+
 .toolbar-btn .toolbar-icon {
     font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);

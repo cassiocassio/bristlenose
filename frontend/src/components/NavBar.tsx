@@ -9,6 +9,7 @@
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ExportDropdown } from "./ExportDropdown";
+import { RefreshButton } from "./RefreshButton";
 
 interface NavBarProps {
   onExportReport?: () => void;
@@ -44,6 +45,7 @@ export function NavBar({ onExportReport, onSettings, onHelp }: NavBarProps) {
         </NavLink>
       ))}
       <div className="bn-tab-spacer" />
+      <RefreshButton iconOnly data-testid="bn-navbar-refresh" />
       {onExportReport && (
         <ExportDropdown onExportReport={onExportReport} />
       )}

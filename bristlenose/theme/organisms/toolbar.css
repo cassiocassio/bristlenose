@@ -40,6 +40,32 @@
     margin-top: -0.5rem;
 }
 
+/* EmptyState — pre-pipeline / post-pipeline-zero copy. Replaces the
+   silent `return null` in islands when there's no data to show. */
+.bn-empty-state {
+    color: var(--bn-colour-muted);
+    padding: 2rem 1rem;
+    text-align: center;
+    font-size: var(--bn-text-body);
+    line-height: var(--bn-text-body-lh);
+}
+
+/* Refetch overlay — dim existing data while a refetch is in flight.
+   `inert` is set on the same element from the React hook to block AT
+   and keyboard input; this rule covers visual dim + pointer cursor.
+   Opacity 0.7 keeps body text above WCAG AA against the page bg.
+   `pointer-events: none` is belt-and-braces alongside `inert`. */
+.bn-refetching {
+    opacity: 0.7;
+    pointer-events: none;
+    cursor: progress;
+    transition: opacity var(--bn-transition-fast) ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bn-refetching { transition: none; }
+}
+
 /* View switcher dropdown */
 .view-switcher {
     position: relative;

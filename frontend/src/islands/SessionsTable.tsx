@@ -21,6 +21,7 @@ import type { PersonData } from "../utils/api";
 import { isExportMode } from "../utils/exportData";
 import { formatDuration, formatFinderDate, formatFinderFilename } from "../utils/format";
 import type { SessionResponse, SessionsListResponse } from "../utils/types";
+import { refetchOverlayProps } from "../hooks/useRefetching";
 
 // ---------------------------------------------------------------------------
 // Sentiment → Sparkline mapping
@@ -114,10 +115,17 @@ export function SessionsTable({
   const [peopleMap, setPeopleMap] = useState<Record<string, PersonData> | null>(null);
   const [editingCode, setEditingCode] = useState<string | null>(null);
 
+  const [isRefetching, setIsRefetching] = useState(false);
+
   useEffect(() => {
+    // refreshKey starts at 0; LastRunStore bumps it to 1 on the first
+    // observed terminus. So a non-zero value is by definition a refetch
+    // — no separate "is this the initial mount?" tracking needed.
+    if (refreshKey > 0) setIsRefetching(true);
     apiGet<SessionsListResponse>("/sessions")
       .then((json) => setData(json))
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(err.message))
+      .finally(() => setIsRefetching(false));
 
     getPeople().then(setPeopleMap).catch(() => {});
   }, [projectId, refreshKey]);
@@ -179,6 +187,9 @@ export function SessionsTable({
 
   const { sessions, moderator_names, observer_names, source_folder_uri } = data;
 
+  // Pre-pipeline / no-sessions cases are server-failure-page territory,
+  // not SPA territory — see docs/private/handoffs/generic-failure-surface.md.
+
   const interviewsHeader = source_folder_uri ? (
     <a
       className="bn-interviews-link"
@@ -196,7 +207,7 @@ export function SessionsTable({
   );
 
   return (
-    <section className="bn-session-table">
+    <section {...refetchOverlayProps(isRefetching, "bn-session-table")}>
       <ModeratorHeader moderatorNames={moderator_names} />
       <ObserverHeader observerNames={observer_names} />
       <table>

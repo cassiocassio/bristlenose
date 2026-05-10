@@ -18,6 +18,7 @@ import { initFromQuotes, useQuotesStore } from "../contexts/QuotesContext";
 import { useFocus } from "../contexts/FocusContext";
 import { filterQuotes } from "../utils/filter";
 import { QuoteGroup } from "./QuoteGroup";
+import { useRefetching, refetchOverlayProps } from "../hooks/useRefetching";
 
 interface QuoteThemesProps {
   projectId: string;
@@ -32,6 +33,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
   const [codebookTagNames, setCodebookTagNames] = useState<string[]>([]);
   const [tagGroupMap, setTagGroupMap] = useState<Record<string, TagGroupInfo>>({});
   const [groupedVocabulary, setGroupedVocabulary] = useState<TagVocabularyGroup[]>([]);
+  const { isRefetching, beginRefetch, endRefetch } = useRefetching();
 
   const fetchQuotes = useCallback((replace = false) => {
     apiGet<QuotesListResponse>("/quotes")
@@ -43,7 +45,8 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
         ];
         initFromQuotes(allQuotes, replace);
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(err.message))
+      .finally(() => endRefetch());
     // Also fetch codebook tag names for auto-suggest vocabulary
     getCodebook()
       .then((cb) => {
@@ -66,7 +69,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
         setGroupedVocabulary(groups);
       })
       .catch(() => {}); // Non-critical — silently ignore
-  }, [projectId]);
+  }, [projectId, endRefetch]);
 
   useEffect(() => {
     fetchQuotes();
@@ -82,8 +85,9 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
   // Re-fetch on pipeline-run completion (LastRunStore bump).
   useEffect(() => {
     if (refreshKey === 0) return;
+    beginRefetch();
     fetchQuotes(true);
-  }, [refreshKey, fetchQuotes]);
+  }, [refreshKey, fetchQuotes, beginRefetch]);
 
   // Collect all tag names across all quotes + codebook for the vocabulary.
   const tagVocabulary = useMemo(() => {
@@ -179,7 +183,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
   if (data.themes.length === 0) return null;
 
   return (
-    <section>
+    <section {...refetchOverlayProps(isRefetching)}>
       <h2 id="themes">{t("quotes.themes")}</h2>
       {filteredThemes.map((theme) => {
         const anchor = `theme-${theme.theme_label.toLowerCase().replace(/ /g, "-")}`;

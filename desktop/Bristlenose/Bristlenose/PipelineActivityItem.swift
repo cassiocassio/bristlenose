@@ -18,6 +18,8 @@ struct PipelineActivityItem: View {
     @ObservedObject var liveData: PipelineLiveData
     @State private var showPopover = false
     @State private var nowTick: Date = Date()
+    @State private var copyConfirmed = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var state: PipelineState? { pipelineRunner.state[project.id] }
     private var progress: PipelineProgress? { liveData.progress[project.id] }
@@ -126,6 +128,12 @@ struct PipelineActivityItem: View {
 
     private var failureCategoryLabel: String {
         guard case .failed(_, let category) = state else { return "Failed" }
+        return Self.humanCategoryLabel(category)
+    }
+
+    /// Single source of truth for the human-readable category string used in
+    /// the pill, the disclosure text, and the copied payload.
+    static func humanCategoryLabel(_ category: PipelineFailureCategory) -> String {
         switch category {
         case .auth:       return "Provider key issue"
         case .network:    return "Network error"
@@ -136,6 +144,8 @@ struct PipelineActivityItem: View {
         case .apiRequest: return "Provider rejected request"
         case .apiServer:  return "Provider unavailable"
         case .missingDep: return "Setup needed"
+        case .missingInput: return "Missing input"
+        case .missingBinary: return "Missing tool"
         case .unknown:    return "Failed"
         }
     }
@@ -234,9 +244,10 @@ struct PipelineActivityItem: View {
                     showPopover = false
                 }
                 .keyboardShortcut(.defaultAction)
-                Button("Copy error details") {
+                Button(copyConfirmed ? "Copied" : "Copy error details") {
                     copyErrorDetails()
                 }
+                .disabled(copyConfirmed)
                 if category == .auth {
                     Spacer()
                     // Deeplink to Settings — opens the native Settings scene.
@@ -263,29 +274,80 @@ struct PipelineActivityItem: View {
     }
 
     private var technicalDetails: some View {
-        let lines = liveData.outputLines[project.id] ?? []
-        let tail = lines.suffix(20)
-        return ScrollView {
-            Text(tail.joined(separator: "\n"))
+        ScrollView {
+            Text(detailsText)
                 .font(.system(.caption2, design: .monospaced))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .textSelection(.enabled)
         }
         .frame(maxHeight: 140)
+        .accessibilityLabel("Technical failure details")
+    }
+
+    /// Text shown inside the disclosure and copied via Copy error details.
+    /// Combines the structured cause from `pipeline-events.jsonl` (which is
+    /// populated even when stdout is empty — e.g. the abandon path) with the
+    /// last 20 stdout lines (which are populated for crash-style failures
+    /// before the events log gets a terminus).
+    private var detailsText: String {
+        detailsText(includeRawCategory: false)
+    }
+
+    /// Build the disclosure / pasteboard text. The disclosure (user-facing)
+    /// uses only the human label so the panel doesn't read like stderr;
+    /// the pasted form keeps the raw enum token so triagers can grep.
+    private func detailsText(includeRawCategory: Bool) -> String {
+        var parts: [String] = []
+        if case .failed(let summary, let category) = state {
+            if !summary.isEmpty {
+                parts.append("Cause: \(summary)")
+            }
+            let label = Self.humanCategoryLabel(category)
+            if includeRawCategory {
+                parts.append("Category: \(label) (\(category.rawValue))")
+            } else {
+                parts.append("Category: \(label)")
+            }
+        }
+        let lines = liveData.outputLines[project.id] ?? []
+        let tail = lines.suffix(20)
+        if !tail.isEmpty {
+            if !parts.isEmpty { parts.append("") }
+            parts.append("Last output:")
+            parts.append(tail.joined(separator: "\n"))
+        }
+        if parts.isEmpty {
+            return "(no output captured)"
+        }
+        return parts.joined(separator: "\n")
     }
 
     // MARK: - Helpers
 
     private func copyErrorDetails() {
-        let lines = liveData.outputLines[project.id] ?? []
         // Pre-pasteboard sanitisation: replace project path with a sentinel so
         // a hastily-emailed log doesn't leak the user's folder structure.
-        let sanitised = lines
-            .joined(separator: "\n")
+        let sanitised = detailsText(includeRawCategory: true)
             .replacingOccurrences(of: project.path, with: "<project>")
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(sanitised, forType: .string)
+
+        // HIG affordance: brief label flip so the silent pasteboard write has
+        // visible feedback. ~1.5s, animated unless the user has Reduce Motion.
+        if reduceMotion {
+            copyConfirmed = true
+        } else {
+            withAnimation { copyConfirmed = true }
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(1500))
+            if reduceMotion {
+                copyConfirmed = false
+            } else {
+                withAnimation { copyConfirmed = false }
+            }
+        }
     }
 
     private static func format(elapsed: TimeInterval) -> String {

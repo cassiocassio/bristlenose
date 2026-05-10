@@ -10,6 +10,7 @@ import {
   resetLastRunStore,
   startLastRunPolling,
   stopLastRunPolling,
+  triggerManualRefresh,
 } from "./LastRunStore";
 
 // authHeaders is read inside fetch — mock to a no-op map.
@@ -278,6 +279,79 @@ describe("LastRunStore — visibility pause", () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(result.current.refreshKey).toBe(0);
+  });
+});
+
+describe("LastRunStore — triggerManualRefresh", () => {
+  it("is a no-op when no project is active", async () => {
+    const { result } = renderHook(() => useLastRun());
+    await act(async () => {
+      await triggerManualRefresh();
+    });
+    expect(result.current.refreshKey).toBe(0);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(announceMock).not.toHaveBeenCalled();
+  });
+
+  it("bumps refreshKey synchronously and announces after poll", async () => {
+    fetchMock.mockResolvedValue(
+      makeResponse({
+        run_id: "01J100",
+        outcome: "completed",
+        completed_at: "2026-05-09T12:00:00Z",
+      }),
+    );
+    const { result } = renderHook(() => useLastRun());
+
+    // Seed via initial poll.
+    await act(async () => {
+      startLastRunPolling("1");
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.refreshKey).toBe(1);
+    announceMock.mockClear();
+
+    await act(async () => {
+      await triggerManualRefresh();
+    });
+
+    // Bump even though server returned same run_id.
+    expect(result.current.refreshKey).toBeGreaterThanOrEqual(2);
+    expect(announceMock).toHaveBeenCalledWith("announce.pipelineCompleted");
+  });
+
+  it("does NOT double-announce when pollOnce catches a new run mid-click", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        makeResponse({
+          run_id: "01J100",
+          outcome: "completed",
+          completed_at: "2026-05-09T12:00:00Z",
+        }),
+      )
+      .mockResolvedValueOnce(
+        makeResponse({
+          run_id: "01J200",
+          outcome: "completed",
+          completed_at: "2026-05-09T12:05:00Z",
+        }),
+      );
+
+    renderHook(() => useLastRun());
+    await act(async () => {
+      startLastRunPolling("1");
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    announceMock.mockClear();
+
+    await act(async () => {
+      await triggerManualRefresh();
+    });
+
+    // pollOnce already announced the transition; manual must not duplicate it.
+    expect(announceMock).toHaveBeenCalledTimes(1);
   });
 });
 

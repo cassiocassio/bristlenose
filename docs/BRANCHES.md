@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 10 May 2026 (closed `sandbox-export-savepanel` — merged to main)
+**Updated:** 10 May 2026 (closed `pipeline-completion-trust-ux` — merged to main)
 
 ---
 
@@ -31,7 +31,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch fix-new-feature-skill/` | `fix-new-feature-skill` | chore | Patch four bugs in the new-feature skill discovered during whos-afraid debug run |
-| `bristlenose_branch pipeline-completion-trust-ux/` | `pipeline-completion-trust-ux` | feature | Trust-UX layer (refresh button + skeleton + empty-state + cross-island test) on top of the auto-refetch correctness slice |
 | `bristlenose_branch generic-failure-surface/` | `generic-failure-surface` | feature | Server-rendered failure/empty-state page; same surface for CLI browser and WKWebView |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -122,7 +121,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `fix-new-feature-skill` | `bristlenose_branch fix-new-feature-skill/` | local only |
-| `pipeline-completion-trust-ux` | `bristlenose_branch pipeline-completion-trust-ux/` | local only |
 | `generic-failure-surface` | `bristlenose_branch generic-failure-surface/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
@@ -159,31 +157,8 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - Possibly `frontend/src/components/FeedbackModal.tsx` reuse path (no new feedback widget)
 
 **Potential conflicts with other branches:**
-- `pipeline-completion-trust-ux` — that branch removed SPA-side EmptyState mounts for pre-pipeline / no-sessions cases in anticipation of this server intercept. Land trust-UX first, or coordinate the EmptyState retirement.
+- `pipeline-completion-trust-ux` _(merged 10 May 2026)_ — that branch removed SPA-side EmptyState mounts for pre-pipeline / no-sessions cases in anticipation of this server intercept. Coordinate the EmptyState retirement.
 - `responsive-signal-cards` — none expected (different surface).
-
----
-
-### `pipeline-completion-trust-ux`
-
-**Kind:** feature — code lands on main via merge or PR-and-squash
-**Status:** Just started
-**Started:** 10 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-completion-trust-ux/`
-**Remote:** local only (push when ready)
-
-**What it does:** Trust-UX layer (refresh button + skeleton + empty-state + cross-island test) on top of the auto-refetch correctness slice.
-
-**Files this branch will touch:**
-- `frontend/src/contexts/LastRunStore.ts`
-- `frontend/src/components/RefreshButton.tsx`
-- `frontend/src/components/EmptyState.tsx`
-- `frontend/src/islands/{QuoteSections,QuoteThemes,SessionsTable,Dashboard,Toolbar}.tsx`
-- `frontend/src/pages/{QuotesTab,SessionsTab,ProjectTab,CodebookTab}.tsx`
-- `frontend/src/pages/QuotesTab.test.tsx`
-
-**Potential conflicts with other branches:**
-- `spa-pipeline-completion-refetch` _(merged 10 May 2026)_ — this branch builds on that correctness slice; the auto-refetch code is now on main.
 
 ---
 
@@ -286,6 +261,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 
 ## Completed Branches (for reference)
 
+### `pipeline-completion-trust-ux` — merged 10 May 2026
+
+Trust-UX layer on top of the auto-refetch correctness slice — refresh button (`RefreshButton.tsx` + test), refetching skeleton overlay (`useRefetching` hook + button/toolbar CSS), post-zero-quotes empty-state messaging across QuoteSections / QuoteThemes / SessionsTable / Dashboard, and cross-island Vitest coverage in `QuotesTab.test.tsx`. Two commits (`9e173e2`, `4f3714e`) merged as `823a801`. Worktree detached and tagged orange on disk. The follow-on `generic-failure-surface` branch picks up the server-rendered failure/empty-state surface flagged in this branch's review (Findings 7a + 7b).
+
 ### `sandbox-export-savepanel` — merged 10 May 2026
 
 Routed file-writing exports through `WKDownloadDelegate` + `NSSavePanel` so the sandboxed desktop app actually delivers files; collapsed the React Export modal on desktop in favour of a native accessory view.
@@ -296,7 +275,7 @@ Second attempt at making the pipeline fail-soft on raw (non-transcoded) video fi
 
 ### `spa-pipeline-completion-refetch` — merged 10 May 2026
 
-React SPA auto-refetches project content (quotes, sessions, codebook) when a pipeline run completes, removing the tab-away-and-back workaround. Single commit `7136890` on the branch; merged to main as `82c8b45`. Worktree detached and tagged orange on disk; correctness slice that the in-flight `pipeline-completion-trust-ux` branch builds on.
+React SPA auto-refetches project content (quotes, sessions, codebook) when a pipeline run completes, removing the tab-away-and-back workaround. Single commit `7136890` on the branch; merged to main as `82c8b45`. Worktree detached and tagged orange on disk; correctness slice that `pipeline-completion-trust-ux` _(merged 10 May 2026)_ built on.
 
 ### `pipeline-silent-skip-raw-video` — closed 8 May 2026
 

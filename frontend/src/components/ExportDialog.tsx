@@ -12,7 +12,6 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
 import { useProjectId } from "../hooks/useProjectId";
-import { authHeaders } from "../utils/api";
 import { isExportMode } from "../utils/exportData";
 
 interface ExportDialogProps {
@@ -27,7 +26,6 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
   useInert(open);
   const projectId = useProjectId();
   const [anonymise, setAnonymise] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const triggerRef = useRef<Element | null>(null);
 
@@ -64,41 +62,23 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
     return () => document.removeEventListener("keydown", handler, true);
   }, [open, onClose]);
 
-  const handleExport = useCallback(async () => {
-    setExporting(true);
+  const handleExport = useCallback(() => {
+    // Direct anchor navigation — no fetch, no blob.  The auth cookie set on
+    // the SPA HTML response carries the bearer token; the server replies
+    // with `Content-Disposition: attachment` and (in the desktop app)
+    // WKDownload routes the bytes through NSSavePanel.  In the browser the
+    // native download UI takes over.
     setError(null);
-    try {
-      const qs = anonymise ? "?anonymise=true" : "";
-      const resp = await globalThis.fetch(
-        `/api/projects/${projectId}/export${qs}`,
-        { headers: authHeaders() },
-      );
-      if (!resp.ok) {
-        throw new Error(`${t("export.exportFailed")} (${resp.status})`);
-      }
-      // Extract filename from Content-Disposition header
-      const cd = resp.headers.get("content-disposition") || "";
-      const filenameMatch = cd.match(/filename="([^"]+)"/);
-      const filename = filenameMatch ? filenameMatch[1] : "bristlenose-report.html";
-
-      // Create blob and trigger download
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("export.exportFailed"));
-    } finally {
-      setExporting(false);
-    }
-  }, [anonymise, onClose]);
+    const qs = anonymise ? "?anonymise=true" : "";
+    const url = `/api/projects/${projectId}/export${qs}`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "";  // hint download intent; server's Content-Disposition wins
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    onClose();
+  }, [anonymise, onClose, projectId]);
 
   if (isExportMode()) return null;
 
@@ -119,8 +99,7 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
             type="checkbox"
             checked={anonymise}
             onChange={(e) => setAnonymise(e.target.checked)}
-            disabled={exporting}
-          />
+                      />
           <span>
             {t("export.anonymise")}
             <small className="bn-export-hint">
@@ -137,16 +116,14 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
           <button
             className="bn-btn bn-btn-secondary"
             onClick={onClose}
-            disabled={exporting}
           >
             {t("buttons.cancel")}
           </button>
           <button
             className="bn-btn bn-btn-primary"
             onClick={handleExport}
-            disabled={exporting}
           >
-            {exporting ? t("export.exporting") : t("buttons.export")}
+            {t("buttons.export")}
           </button>
         </div>
       </div>

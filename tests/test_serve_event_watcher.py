@@ -71,10 +71,10 @@ def _failed(run_id: str) -> RunFailedEvent:
 async def test_dispatches_on_new_run_completed(tmp_path: Path) -> None:
     output_dir = tmp_path / "bristlenose-output"
     events_file = events_path(output_dir)
-    calls: list[None] = []
+    calls: list[RunCompletedEvent] = []
 
-    async def cb() -> None:
-        calls.append(None)
+    async def cb(ev: RunCompletedEvent) -> None:
+        calls.append(ev)
 
     task = asyncio.create_task(
         run_event_watcher(events_file, cb, poll_interval=0.05),
@@ -91,6 +91,7 @@ async def test_dispatches_on_new_run_completed(tmp_path: Path) -> None:
             await task
 
     assert len(calls) == 1
+    assert calls[0].run_id == run_id
 
 
 @pytest.mark.asyncio
@@ -102,10 +103,10 @@ async def test_skips_events_written_before_watcher_started(tmp_path: Path) -> No
     append_event(events_file, _started(run_id))
     append_event(events_file, _completed(run_id))
 
-    calls: list[None] = []
+    calls: list[RunCompletedEvent] = []
 
-    async def cb() -> None:
-        calls.append(None)
+    async def cb(ev: RunCompletedEvent) -> None:
+        calls.append(ev)
 
     task = asyncio.create_task(
         run_event_watcher(events_file, cb, poll_interval=0.05),
@@ -125,10 +126,10 @@ async def test_ignores_run_failed(tmp_path: Path) -> None:
     """Only run_completed triggers re-import; failures have nothing new to import."""
     output_dir = tmp_path / "bristlenose-output"
     events_file = events_path(output_dir)
-    calls: list[None] = []
+    calls: list[RunCompletedEvent] = []
 
-    async def cb() -> None:
-        calls.append(None)
+    async def cb(ev: RunCompletedEvent) -> None:
+        calls.append(ev)
 
     task = asyncio.create_task(
         run_event_watcher(events_file, cb, poll_interval=0.05),
@@ -154,7 +155,7 @@ async def test_callback_failure_does_not_kill_watcher(tmp_path: Path) -> None:
     events_file = events_path(output_dir)
     calls: list[int] = []
 
-    async def cb() -> None:
+    async def cb(ev: RunCompletedEvent) -> None:
         calls.append(len(calls))
         if len(calls) == 1:
             raise RuntimeError("first call fails")
@@ -185,10 +186,10 @@ async def test_handles_missing_events_file(tmp_path: Path) -> None:
     """Project that has never run a pipeline yet — file appears later."""
     output_dir = tmp_path / "bristlenose-output"
     events_file = events_path(output_dir)
-    calls: list[None] = []
+    calls: list[RunCompletedEvent] = []
 
-    async def cb() -> None:
-        calls.append(None)
+    async def cb(ev: RunCompletedEvent) -> None:
+        calls.append(ev)
 
     task = asyncio.create_task(
         run_event_watcher(events_file, cb, poll_interval=0.05),

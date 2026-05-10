@@ -26,14 +26,14 @@ import logging
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
-from bristlenose.events import EventTypeEnum, read_events
+from bristlenose.events import EventTypeEnum, RunCompletedEvent, read_events
 
 logger = logging.getLogger(__name__)
 
 
 async def run_event_watcher(
     events_file: Path,
-    on_run_completed: Callable[[], Awaitable[None]],
+    on_run_completed: Callable[[RunCompletedEvent], Awaitable[None]],
     *,
     poll_interval: float = 1.0,
 ) -> None:
@@ -68,12 +68,13 @@ async def run_event_watcher(
 
         for ev in new_events:
             if ev.event == EventTypeEnum.RUN_COMPLETED:
+                assert isinstance(ev, RunCompletedEvent)
                 logger.info(
                     "event_watcher saw run_completed | run_id=%s",
-                    getattr(ev, "run_id", "?"),
+                    ev.run_id,
                 )
                 try:
-                    await on_run_completed()
+                    await on_run_completed(ev)
                 except Exception:
                     logger.exception(
                         "event_watcher callback failed — "

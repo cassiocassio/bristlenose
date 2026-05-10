@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 10 May 2026 (closed `spa-pipeline-completion-refetch` — merged to main)
+**Updated:** 10 May 2026 (closed `pipeline-silent-skip-raw-video2` — merged to main)
 
 ---
 
@@ -31,7 +31,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch fix-new-feature-skill/` | `fix-new-feature-skill` | chore | Patch four bugs in the new-feature skill discovered during whos-afraid debug run |
-| `bristlenose_branch pipeline-silent-skip-raw-video2/` | `pipeline-silent-skip-raw-video2` | feature | Re-attempt pipeline-silent-skip-raw-video |
 | `bristlenose_branch sandbox-export-savepanel/` | `sandbox-export-savepanel` | feature | Route file-writing exports through WKDownloadDelegate + NSSavePanel so sandboxed app actually delivers files; collapse the React Export modal on desktop in favour of a native accessory view |
 | `bristlenose_branch pipeline-completion-trust-ux/` | `pipeline-completion-trust-ux` | feature | Trust-UX layer (refresh button + skeleton + empty-state + cross-island test) on top of the auto-refetch correctness slice |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
@@ -123,7 +122,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `fix-new-feature-skill` | `bristlenose_branch fix-new-feature-skill/` | local only |
-| `pipeline-silent-skip-raw-video2` | `bristlenose_branch pipeline-silent-skip-raw-video2/` | local only |
 | `sandbox-export-savepanel` | `bristlenose_branch sandbox-export-savepanel/` | local only |
 | `pipeline-completion-trust-ux` | `bristlenose_branch pipeline-completion-trust-ux/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
@@ -186,24 +184,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - None expected — no other active branch touches the desktop Swift surface or the Export components. (`spa-pipeline-completion-refetch` also touched `frontend/src/layouts/AppLayout.tsx` but merged to main on 10 May 2026.)
-
----
-
-### `pipeline-silent-skip-raw-video2`
-
-**Kind:** feature — code lands on main via merge or PR-and-squash
-**Status:** Just started
-**Started:** 8 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-silent-skip-raw-video2/`
-**Remote:** local only (push when ready)
-
-**What it does:** Second attempt at making the pipeline fail-soft on raw (non-transcoded) video files. The first branch (`pipeline-silent-skip-raw-video`) was closed same-day with no commits — see Completed Branches.
-
-**Files this branch will touch:**
-- TBD — will be filled in as work progresses
-
-**Potential conflicts with other branches:**
-- None expected — no other active branch touches the ingest / transcode pipeline stages.
 
 ---
 
@@ -305,6 +285,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `pipeline-silent-skip-raw-video2` — merged 10 May 2026
+
+Second attempt at making the pipeline fail-soft on raw (non-transcoded) video files. Surfaced structured cause from the events log in the desktop failure pill, added a `Pipeline.run` integration test for the transcribe-all-fail abandon path, plus review fixes (pytest.raises, copy-button feedback, human category label). Three commits (`37e5049`, `d93e5e0`, `4f31b31`) merged as `0804eda`. Worktree detached and tagged orange on disk.
 
 ### `spa-pipeline-completion-refetch` — merged 10 May 2026
 

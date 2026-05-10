@@ -1,3 +1,20 @@
+---
+status: current
+last-trued: 2026-05-10
+trued-against: HEAD@sandbox-export-savepanel on 2026-05-10
+---
+
+## Changelog
+
+- _2026-05-10_ — trued up: added §"Cookie fallback for plain navigations"
+  describing the `bristlenose_auth` HttpOnly/SameSite=Strict cookie set on
+  SPA HTML responses, used by anchor-click downloads (export flow) under
+  sandboxed WKWebView where the JS-injected `Authorization` header doesn't
+  ride along. Anchors: `bristlenose/server/middleware.py:33-39, 70-74`,
+  `bristlenose/server/app.py:_spa_response`,
+  `tests/test_serve_auth.py::TestCookieFallback`.
+- _2026-04-18_ — initial draft + dev-mode env-override gap captured.
+
 # Localhost Auth Token — Design Plan
 
 ## Context
@@ -92,6 +109,21 @@ function authHeaders(): HeadersInit {
 ```
 
 All six fetch helpers use this. When `__BRISTLENOSE_AUTH_TOKEN__` is absent (static HTML opened from disk), no header is sent — existing offline graceful degradation is unaffected.
+
+### Cookie fallback for plain navigations
+
+`fetch()` calls authenticate via the JS-injected `Authorization: Bearer …` header. **Plain browser navigations don't** — when the React export modal triggers `<a download>` against `/api/projects/{id}/export…`, WKWebView (and any browser) issues a cooked navigation with no chance for JS to add a header. Under App Sandbox the click would 401 silently and never reach the WKDownload path.
+
+To cover those cases, `_spa_response()` in `app.py` sets a `bristlenose_auth` cookie on every SPA HTML response carrying the same token. `BearerTokenMiddleware.dispatch` checks the cookie as a fallback after the header check fails:
+
+```python
+if request.cookies.get(AUTH_COOKIE_NAME) == expected:
+    return await call_next(request)
+```
+
+Cookie attributes: `HttpOnly` (defence-in-depth — JS already has the same value via `window.__BRISTLENOSE_AUTH_TOKEN__`, but no need to expose the cookie itself), `SameSite=Strict` (CSRF), `Secure=False` (localhost is `http://`; the cookie never traverses a network), `Path=/`, no `Expires` (session-scoped, dies with the WKWebView's ephemeral data store).
+
+CSRF is out of scope: the existing CORS middleware (`allow_origins=[]` by default) blocks every cross-origin request before the cookie ever ships. The cookie carries no per-user/per-project information — it's the same opaque random string as the Bearer header, just in a delivery channel native to anchor-click navigations.
 
 ### 401 response design
 

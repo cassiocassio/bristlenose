@@ -193,7 +193,9 @@
       "failed": "Clip-Extraktion fehlgeschlagen",
       "ffmpegMissing": "FFmpeg nicht gefunden \u2014 installieren Sie es, um Clips zu extrahieren",
       "noClips": "Keine markierten oder hervorgehobenen Zitate zum Extrahieren"
-    }
+    },
+    "savePanelMessage": "W\u00e4hle, wo der Bericht gespeichert werden soll.",
+    "saveFailedAlert": "Der Export konnte nicht gespeichert werden."
   },
   "feedback": {
     "heading": "Wie funktioniert Bristlenose für Sie?",

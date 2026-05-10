@@ -20,7 +20,7 @@ from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 
 from bristlenose.server.db import create_session_factory, db_url_for_project, get_engine, init_db
-from bristlenose.server.middleware import BearerTokenMiddleware
+from bristlenose.server.middleware import AUTH_COOKIE_NAME, BearerTokenMiddleware
 from bristlenose.server.routes.analysis import router as analysis_router
 from bristlenose.server.routes.autocode import router as autocode_router
 from bristlenose.server.routes.clips_export import router as clips_export_router
@@ -401,6 +401,27 @@ def _build_spa_html(
     return html
 
 
+def _spa_response(html: str, auth_token: str) -> HTMLResponse:
+    """Return the SPA HTML with the auth cookie attached.
+
+    The same token already lives in ``window.__BRISTLENOSE_AUTH_TOKEN__`` for
+    JS-side ``fetch()`` calls; the cookie covers plain navigations (e.g. the
+    export ``<a download>`` anchor click). CORS middleware blocks all
+    cross-origin requests, so CSRF is out of scope.
+    """
+    response = HTMLResponse(html)
+    if auth_token:
+        response.set_cookie(
+            key=AUTH_COOKIE_NAME,
+            value=auth_token,
+            httponly=True,
+            secure=False,  # localhost only — never traverses the network
+            samesite="strict",
+            path="/",
+        )
+    return response
+
+
 def _build_dev_html(output_dir: Path, *, auth_token: str = "") -> str:
     """Build a self-contained dev HTML page with Vite HMR scripts.
 
@@ -487,7 +508,7 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
                 return FileResponse(asset_path)
             raise HTTPException(status_code=404, detail="Asset not found")
 
-        return HTMLResponse(dev_html)
+        return _spa_response(dev_html, app.state.auth_token)
 
     # Non-HTML assets (CSS, images, thumbnails, player HTML) from the output dir
     app.mount("/report", StaticFiles(directory=output_dir), name="report")
@@ -612,7 +633,7 @@ def _mount_prod_report(app: FastAPI, output_dir: Path, *, dev: bool = False) -> 
                 return FileResponse(asset_path)
             raise HTTPException(status_code=404, detail="Asset not found")
 
-        return HTMLResponse(spa_html)
+        return _spa_response(spa_html, app.state.auth_token)
 
     # Non-HTML assets (CSS, images, thumbnails, player HTML) from the output dir
     app.mount("/report", StaticFiles(directory=output_dir), name="report")

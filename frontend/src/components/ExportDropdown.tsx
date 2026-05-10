@@ -178,26 +178,16 @@ export function ExportDropdown({ onExportReport }: ExportDropdownProps) {
       return;
     }
     const idsParam = exportIds.join(",");
-    try {
-      const resp = await globalThis.fetch(
-        `/api/projects/${projectId}/export/quotes.xlsx?quote_ids=${encodeURIComponent(idsParam)}&col_headers=${encodeURIComponent(colHeaders)}`,
-        { headers: authHeaders() },
-      );
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const blob = await resp.blob();
-      const cd = resp.headers.get("content-disposition") ?? "";
-      const match = cd.match(/filename="(.+)"/);
-      const filename = match?.[1] ?? "quotes.xlsx";
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("[ExportDropdown] Spreadsheet download failed:", err);
-      toast(t("export.exportFailed"));
-    }
+    // Direct anchor navigation — auth cookie carries the bearer; server's
+    // Content-Disposition supplies the filename; native side (sandboxed
+    // WKWebView) routes via NSSavePanel, browsers via the native download UI.
+    const url = `/api/projects/${projectId}/export/quotes.xlsx?quote_ids=${encodeURIComponent(idsParam)}&col_headers=${encodeURIComponent(colHeaders)}`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }, [setOpen, quoteCount, exportIds, projectId, colHeaders, t]);
 
   const handleExportReport = useCallback(() => {

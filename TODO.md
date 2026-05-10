@@ -1,8 +1,8 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 6 May 2026 (Mission Sandbox PASSED 4 May — alpha-checkpoint #3 cleared; #14 + #15 landed direct-on-main. TestFlight now gated only on Track B + S6. Earlier 5 May: sandbox-ps-libproc-swap merged — third libproc swap in the family, `proc_pidinfo(PROC_PIDTBSDINFO)` ctypes call on Darwin in `run_lifecycle._ps_start_time`. Rule of Three met for `bristlenose/utils/libproc.py` extraction; deferred to next libproc call site per `desktop/CLAUDE.md` convention.)
+Last updated: 10 May 2026 (v0.15.4 shipped — SPA auto-refetch on pipeline completion + trust-UX layer + sandbox-safe Export via WKDownload/NSSavePanel + structured failure category surfaced in desktop failure pill.)
 
-**Most recent ship: v0.15.0 (26 Apr 2026)** — Phase 1f / 4a-pre. Pipeline-resilience event log (`pipeline-events.jsonl`) + structured `Cause` (10 categories) + honest `cost_usd_estimate` + desktop `EventLogReader`. Replaces the manifest-inference path that mis-classified interrupted runs as `.ready`. See `CHANGELOG.md` for full features, `docs/design-pipeline-resilience.md` for the design, and `docs/private/desktop-ux-iteration.md` for the deferred desktop UX work (Resume / Retry / Re-analyse… verb wiring + 9 other themed sections).
+**Most recent ship: v0.15.4 (10 May 2026)** — Browser SPA refreshes within ~3 s of pipeline completion (no more "drop folder → nothing happens until you reload"); refresh button + refetch overlay + post-zero-quotes empty-state copy; Export downloads route via `WKDownload` + `NSSavePanel` under App Sandbox (HTML report path; other export surfaces tracked in follow-up); failure pill on desktop now renders the structured `Cause` category from the events log instead of a generic "Failed" badge. See `CHANGELOG.md` for full bullet list.
 
 **Launch plan:** `docs/private/100days.md` — triaged by topic + MoSCoW priority. That's the source of truth for what ships. This file is a public capture inbox + session context + done history.
 

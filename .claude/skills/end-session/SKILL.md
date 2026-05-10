@@ -62,6 +62,50 @@ Two audiences, done in parallel where possible.
 
     **Skip if nothing new was learned.** Don't write memory for the sake of writing memory.
 
+### Handoff drift (this branch's own handoff)
+
+If this session implemented against a `HANDOFF.md` (symlink to `.claude/plans/<branch>.md`, canonical home `~/Code/bristlenose/docs/private/handoffs/<branch>.md`), capture any judgement calls that deviated from the original §Scope before closing.
+
+**Why:** the original §Scope is what QA reads against. If the implementer changed a control from disabled-to-hidden, picked a different component than specced, deferred a sub-item to a follow-up branch, or chose inline over an extracted molecule — and only documented it in a code comment — QA verifies against the wrong spec. The fix is to log the drift in the handoff as it happens, so the next reader (QA, reviewer, future-Claude) sees the current spec alongside the original reasoning.
+
+**Heuristic — fire the prompt automatically.** Grep this session's commits and changed files for deviation markers; if any match, run the prompt below. (If they don't match, still ask once — the implementer may have made an undocumented call.)
+
+```bash
+# Commit messages since branch diverged from main
+git log main..HEAD --format=%B | grep -iE "judgement call|decided to|instead of|deviation|chose .* over|hide.*instead|disabled.*instead"
+# Code comments touched this branch
+git diff main...HEAD -- '*.ts' '*.tsx' '*.py' '*.swift' | grep -iE "^\+.*(judgement call|decided to|instead of|reason:|rather than|visual noise)"
+```
+
+**Prompt to the user (or to self if running autonomously):**
+
+> Did you make any judgement calls during implementation that weren't in the original handoff? Common examples:
+> - changing a control from disabled-to-hidden (or vice versa)
+> - picking a different component over the one specced
+> - deferring a sub-item to a follow-up branch
+> - choosing inline over an extracted molecule (or vice versa)
+> - swapping an icon, copy string, or interaction pattern
+>
+> If yes, append to §Decisions in `HANDOFF.md` before closing.
+
+**Pattern — append-only `## Decisions during implementation` block.** Preserve the original §Scope verbatim (useful for "why did we change our mind?"); the §Decisions block carries the current spec. QA reads both together.
+
+```markdown
+## Decisions during implementation
+
+- YYYY-MM-DD: <decision in one line>. Reason: <why>. Supersedes §<section> "<original wording verbatim>".
+```
+
+Example (from `pipeline-completion-trust-ux`, 10 May 2026):
+
+```markdown
+- 2026-05-10: RefreshButton renders nothing when `lastRun === null` rather than rendering disabled. Reason: a disabled control with no path to enabled is just visual noise; empty-state copy carries the page. Supersedes §Scope item 1 "Pre-pipeline state: button is disabled (no run to refresh against). Read `lastRun === null` from the store."
+```
+
+Edit the **canonical** path (`~/Code/bristlenose/docs/private/handoffs/<branch>.md` in the main repo) so the change survives worktree removal. The `HANDOFF.md` symlink in this worktree points at the `.claude/plans/` copy — if the canonical path no longer exists, write to whichever path resolves.
+
+If this session did not work off a HANDOFF, skip this step.
+
 ### Branch handoffs (only if this session identified follow-up branches)
 
 If this session was a diagnostic / sandpit / planning walk that identified one or more follow-up branches the next session should pick up — **write a handoff prompt for each** before closing out. Do not assume the next session will reverse-engineer it from your logs.
@@ -113,6 +157,7 @@ End of session:
 - Updated: TODO.md, CLAUDE.md (list what was touched)
 - 100days: struck through 2 items in S1 (or "no sprint items completed")
 - Memory: saved feedback on X (or "nothing new")
+- Handoff drift: appended 1 decision to HANDOFF.md (or "none" / "no handoff")
 - Committed: "commit message here" (N files, +X -Y lines)
 - Maintenance: nothing due (or "May 2026 dep review is due")
 - QA backlog: 0 unacked (or "3 items need review")

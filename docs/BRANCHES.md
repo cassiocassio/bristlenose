@@ -32,6 +32,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch fix-new-feature-skill/` | `fix-new-feature-skill` | chore | Patch four bugs in the new-feature skill discovered during whos-afraid debug run |
 | `bristlenose_branch pipeline-completion-trust-ux/` | `pipeline-completion-trust-ux` | feature | Trust-UX layer (refresh button + skeleton + empty-state + cross-island test) on top of the auto-refetch correctness slice |
+| `bristlenose_branch generic-failure-surface/` | `generic-failure-surface` | feature | Server-rendered failure/empty-state page; same surface for CLI browser and WKWebView |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
@@ -122,6 +123,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `fix-new-feature-skill` | `bristlenose_branch fix-new-feature-skill/` | local only |
 | `pipeline-completion-trust-ux` | `bristlenose_branch pipeline-completion-trust-ux/` | local only |
+| `generic-failure-surface` | `bristlenose_branch generic-failure-surface/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
@@ -135,6 +137,30 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `generic-failure-surface`
+
+**Kind:** feature — code lands on main via merge or PR-and-squash
+**Status:** Just started
+**Started:** 10 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch generic-failure-surface/`
+**Remote:** local only (push when ready)
+
+**What it does:** Server-rendered HTML failure/empty-state page served by FastAPI whenever the latest run is incomplete, missing, or the project has no usable data. Single surface for both `bristlenose serve` (CLI browser) and the desktop WKWebView. SPA only mounts when there's renderable data; otherwise the backend intercepts `GET /report/` and serves a state-specific glyph + short + long copy + progressive disclosure. Spun out of `pipeline-completion-trust-ux` review (Findings 7a + 7b).
+
+**Files this branch will touch:**
+- New Jinja template (likely `bristlenose/server/templates/run_status.html` or under `s12_render/templates/`)
+- `bristlenose/server/app.py` — route interceptor for `/report/` when no usable run
+- `bristlenose/ui_kinds.py` — reuse existing `MessageKind` taxonomy (don't add a sixth)
+- ≤3 new locale keys (English-locked this PR)
+- `frontend/src/components/EmptyState.tsx` — likely retired or narrowed once server intercept lands
+- Possibly `frontend/src/components/FeedbackModal.tsx` reuse path (no new feedback widget)
+
+**Potential conflicts with other branches:**
+- `pipeline-completion-trust-ux` — that branch removed SPA-side EmptyState mounts for pre-pipeline / no-sessions cases in anticipation of this server intercept. Land trust-UX first, or coordinate the EmptyState retirement.
+- `responsive-signal-cards` — none expected (different surface).
 
 ---
 

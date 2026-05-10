@@ -1,5 +1,7 @@
+import AppKit
 import OSLog
 import SwiftUI
+import UniformTypeIdentifiers
 import WebKit
 
 private let log = Logger(subsystem: "app.bristlenose", category: "webview")
@@ -20,8 +22,10 @@ struct WebView: NSViewRepresentable {
     /// Injected via WKUserScript at document start.
     var authToken: String?
 
+    @EnvironmentObject var i18n: I18n
+
     func makeCoordinator() -> Coordinator {
-        Coordinator(bridgeHandler: bridgeHandler)
+        Coordinator(bridgeHandler: bridgeHandler, i18n: i18n)
     }
 
     func makeNSView(context: Context) -> WKWebView {
@@ -111,10 +115,11 @@ struct WebView: NSViewRepresentable {
 
     // MARK: - Coordinator
 
-    /// Handles WKScriptMessageHandler, WKNavigationDelegate, and WKUIDelegate.
-    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate {
+    /// Handles WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate, and WKDownloadDelegate.
+    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
 
         let bridgeHandler: BridgeHandler
+        let i18n: I18n
         @MainActor var webView: WKWebView?
         @MainActor var lastLoadedURL: URL?
 
@@ -130,8 +135,14 @@ struct WebView: NSViewRepresentable {
         /// KVO observation for syncing popout document.title → NSWindow title.
         var popoutTitleObservation: NSKeyValueObservation?
 
-        init(bridgeHandler: BridgeHandler) {
+        /// Per-download original request URL — used to detect HTML report
+        /// downloads (path component) and to build the alternate
+        /// `?anonymise=…` URL when the user toggles in the panel.
+        @MainActor private var pendingRequestURL: [ObjectIdentifier: URL] = [:]
+
+        init(bridgeHandler: BridgeHandler, i18n: I18n) {
             self.bridgeHandler = bridgeHandler
+            self.i18n = i18n
         }
 
         // MARK: - WKScriptMessageHandler
@@ -173,6 +184,15 @@ struct WebView: NSViewRepresentable {
         ) {
             guard let url = navigationAction.request.url else {
                 decisionHandler(.cancel)
+                return
+            }
+
+            // Anchor-with-`download` clicks (including blob: URLs from the
+            // React export modal). Convert to a WKDownload so the
+            // download-delegate path runs — under App Sandbox a same-frame
+            // navigation to a blob: URL is otherwise dropped silently.
+            if navigationAction.shouldPerformDownload {
+                decisionHandler(.download)
                 return
             }
 
@@ -251,6 +271,243 @@ struct WebView: NSViewRepresentable {
         /// The serve process is still running; only the renderer crashed.
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
             webView.reload()
+        }
+
+        // MARK: - WKNavigationDelegate (downloads)
+
+        /// Convert HTTP responses with `Content-Disposition: attachment` to
+        /// downloads. Direct-URL navigation to `/api/.../export` would 401
+        /// today (auth lives in a Bearer header injected by JS, not a cookie),
+        /// so this branch is reserved for a future server-side cookie or
+        /// query-token change. The current path runs the React `fetch()` →
+        /// blob URL → `<a download>` click — handled by the navigationAction
+        /// `shouldPerformDownload` branch.
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationResponse: WKNavigationResponse,
+            decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void
+        ) {
+            if let httpResp = navigationResponse.response as? HTTPURLResponse,
+               let disposition = httpResp.value(forHTTPHeaderField: "Content-Disposition")?.lowercased(),
+               disposition.contains("attachment") {
+                decisionHandler(.download)
+                return
+            }
+            decisionHandler(.allow)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            navigationAction: WKNavigationAction,
+            didBecome download: WKDownload
+        ) {
+            download.delegate = self
+            Task { @MainActor in
+                self.pendingRequestURL[ObjectIdentifier(download)] = navigationAction.request.url
+            }
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            navigationResponse: WKNavigationResponse,
+            didBecome download: WKDownload
+        ) {
+            download.delegate = self
+            Task { @MainActor in
+                self.pendingRequestURL[ObjectIdentifier(download)] = navigationResponse.response.url
+            }
+        }
+
+        // MARK: - WKDownloadDelegate
+
+        nonisolated func download(
+            _ download: WKDownload,
+            decideDestinationUsing response: URLResponse,
+            suggestedFilename: String,
+            completionHandler: @escaping (URL?) -> Void
+        ) {
+            // NSSavePanel is main-thread only.
+            Task { @MainActor in
+                self.handleDecideDestination(
+                    download: download,
+                    response: response,
+                    suggestedFilename: suggestedFilename,
+                    completionHandler: completionHandler
+                )
+            }
+        }
+
+        @MainActor
+        private func handleDecideDestination(
+            download: WKDownload,
+            response: URLResponse,
+            suggestedFilename: String,
+            completionHandler: @escaping (URL?) -> Void
+        ) {
+            let id = ObjectIdentifier(download)
+            let requestURL = pendingRequestURL[id] ?? response.url
+            defer { pendingRequestURL.removeValue(forKey: id) }
+
+            let suggested = suggestedFilename.isEmpty
+                ? (requestURL?.lastPathComponent ?? "export")
+                : suggestedFilename
+            let ext = (suggested as NSString).pathExtension.lowercased()
+
+            let panel = NSSavePanel()
+            panel.nameFieldStringValue = suggested
+            panel.allowedContentTypes = Self.contentTypes(forExt: ext)
+            panel.canCreateDirectories = true
+            if let dir = Self.lastSaveDirectory(forExt: ext) {
+                panel.directoryURL = dir
+            }
+
+            // HTML report from /api/.../export → attach anonymise toggle.
+            // Detect by URL path so blob: fallbacks (browsers, dev paths
+            // that haven't migrated) don't accidentally show the accessory.
+            let isHTMLReport = Self.isHTMLReportURL(requestURL)
+            var controller: ExportAccessoryController?
+            var initialAnonymise = false
+            if isHTMLReport {
+                initialAnonymise = Self.anonymiseFlag(in: requestURL)
+                let c = ExportAccessoryController(initial: initialAnonymise)
+                controller = c
+                panel.accessoryView = ExportAccessory.makeView(
+                    controller: c,
+                    label: i18n.t("common.export.anonymise"),
+                    hint: i18n.t("common.export.anonymiseHint")
+                )
+                panel.message = i18n.t("common.export.savePanelMessage")
+            }
+
+            let result = panel.runModal()
+            guard result == .OK, let chosen = panel.url else {
+                completionHandler(nil)
+                return
+            }
+
+            Self.persistLastSaveDirectory(
+                chosen.deletingLastPathComponent(),
+                forExt: chosen.pathExtension.lowercased()
+            )
+
+            // Mid-panel anonymise toggle: cancel this download and re-fire a
+            // fresh navigation against the alternate URL. The new download
+            // re-enters the delegate.
+            if isHTMLReport,
+               let c = controller,
+               c.anonymise != initialAnonymise,
+               let original = requestURL,
+               let alternate = Self.urlWithAnonymise(c.anonymise, basedOn: original),
+               let webView = self.webView {
+                download.cancel { _ in }
+                webView.load(URLRequest(url: alternate))
+                completionHandler(nil)
+                return
+            }
+
+            completionHandler(chosen)
+        }
+
+        nonisolated func downloadDidFinish(_ download: WKDownload) {
+            // No toast: panel closing is the success signal. Best-effort
+            // quarantine strip on a copy that may be running on a
+            // background queue — the file is the user's own data, never
+            // from an untrusted external source.
+            Task { @MainActor in
+                self.stripQuarantineIfPossible(download: download)
+            }
+        }
+
+        @MainActor
+        private func stripQuarantineIfPossible(download: WKDownload) {
+            guard let url = download.progress.fileURL else { return }
+            var values = URLResourceValues()
+            values.quarantineProperties = nil
+            do {
+                var mutableURL = url
+                try mutableURL.setResourceValues(values)
+            } catch {
+                log.info("quarantine strip failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+
+        nonisolated func download(_ download: WKDownload,
+                                  didFailWithError error: Error,
+                                  resumeData: Data?) {
+            let nsError = error as NSError
+            if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                return  // user-initiated cancel
+            }
+            Task { @MainActor in
+                let alert = NSAlert()
+                alert.messageText = self.i18n.t("common.export.saveFailedAlert")
+                alert.informativeText = error.localizedDescription
+                alert.alertStyle = .warning
+                alert.addButton(withTitle: "OK")
+                alert.runModal()
+            }
+        }
+
+        // MARK: - Download helpers
+
+        private static func contentTypes(forExt ext: String) -> [UTType] {
+            switch ext {
+            case "html", "htm": return [.html]
+            case "csv":         return [.commaSeparatedText]
+            case "xlsx":
+                if let t = UTType(filenameExtension: "xlsx") { return [t] }
+                return [.data]
+            case "zip":         return [.zip]
+            default:            return [.data]
+            }
+        }
+
+        private static func lastSaveDirectoryKey(forExt ext: String) -> String {
+            "export.lastSaveDirectory.\(ext.isEmpty ? "default" : ext)"
+        }
+
+        private static func lastSaveDirectory(forExt ext: String) -> URL? {
+            let key = lastSaveDirectoryKey(forExt: ext)
+            guard let path = UserDefaults.standard.string(forKey: key) else { return nil }
+            let url = URL(fileURLWithPath: path)
+            var isDir: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir),
+                  isDir.boolValue else { return nil }
+            return url
+        }
+
+        private static func persistLastSaveDirectory(_ url: URL, forExt ext: String) {
+            UserDefaults.standard.set(url.path, forKey: lastSaveDirectoryKey(forExt: ext))
+        }
+
+        /// True iff the URL is the HTML report endpoint.  Path component is
+        /// `…/projects/{id}/export` (no trailing slash) — the CSV/XLSX
+        /// endpoints have `…/export/quotes.csv` / `…/export/quotes.xlsx`.
+        private static func isHTMLReportURL(_ url: URL?) -> Bool {
+            guard let url else { return false }
+            return url.path.hasSuffix("/export")
+        }
+
+        /// Read `?anonymise=true` from a URL's query string.
+        private static func anonymiseFlag(in url: URL?) -> Bool {
+            guard let url,
+                  let comps = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+                return false
+            }
+            return comps.queryItems?.first(where: { $0.name == "anonymise" })?.value == "true"
+        }
+
+        /// Build the alternate URL with the given anonymise flag set or removed.
+        private static func urlWithAnonymise(_ on: Bool, basedOn url: URL) -> URL? {
+            guard var comps = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+                return nil
+            }
+            var items = (comps.queryItems ?? []).filter { $0.name != "anonymise" }
+            if on {
+                items.append(URLQueryItem(name: "anonymise", value: "true"))
+            }
+            comps.queryItems = items.isEmpty ? nil : items
+            return comps.url
         }
 
         // MARK: - WKUIDelegate

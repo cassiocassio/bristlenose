@@ -196,7 +196,9 @@
       "failed": "Échec de l’extraction des clips",
       "ffmpegMissing": "FFmpeg introuvable — installez-le pour extraire des clips",
       "noClips": "Aucune citation marquée ou mise en avant à extraire"
-    }
+    },
+    "savePanelMessage": "Choisissez où enregistrer le rapport.",
+    "saveFailedAlert": "L'exportation n'a pas pu être enregistrée."
   },
   "feedback": {
     "heading": "Comment fonctionne Bristlenose pour vous ?",

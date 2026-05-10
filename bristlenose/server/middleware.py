@@ -31,6 +31,12 @@ _AUTH_REQUIRED_PREFIXES: tuple[str, ...] = (
 
 _UNAUTHORIZED_BODY = json.dumps({"detail": "Unauthorized"}).encode()
 
+# Cookie name carrying the same token as the Bearer header.  Set on the SPA
+# HTML response so plain browser navigations (e.g. the export `<a download>`
+# anchor click) can authenticate without JS adding the header.  CORS
+# middleware blocks all cross-origin requests, so CSRF is not in scope.
+AUTH_COOKIE_NAME = "bristlenose_auth"
+
 
 class BearerTokenMiddleware(BaseHTTPMiddleware):
     """Validate ``Authorization: Bearer <token>`` on API and media routes.
@@ -63,6 +69,11 @@ class BearerTokenMiddleware(BaseHTTPMiddleware):
 
         auth_header = request.headers.get("authorization", "")
         if auth_header == f"Bearer {expected}":
+            return await call_next(request)
+
+        # Cookie fallback for plain browser navigations (e.g. export anchor
+        # clicks) that don't carry the Authorization header.
+        if request.cookies.get(AUTH_COOKIE_NAME) == expected:
             return await call_next(request)
 
         return Response(

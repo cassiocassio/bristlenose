@@ -8,7 +8,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from bristlenose.server.app import create_app
-from bristlenose.server.middleware import _AUTH_EXEMPT_PREFIXES, _AUTH_REQUIRED_PREFIXES
+from bristlenose.server.middleware import (
+    _AUTH_EXEMPT_PREFIXES,
+    _AUTH_REQUIRED_PREFIXES,
+    AUTH_COOKIE_NAME,
+)
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
 
@@ -174,3 +178,22 @@ class TestMiddlewareConstants:
 
     def test_health_is_exempt(self) -> None:
         assert "/api/health" in _AUTH_EXEMPT_PREFIXES
+
+
+class TestCookieFallback:
+    """Cookie auth covers plain navigations (e.g. export <a download> click)."""
+
+    def test_valid_cookie_authenticates(self, raw_client: TestClient, token: str) -> None:
+        raw_client.cookies.set(AUTH_COOKIE_NAME, token)
+        resp = raw_client.get("/api/projects/1/quotes")
+        assert resp.status_code == 200
+
+    def test_wrong_cookie_rejected(self, raw_client: TestClient) -> None:
+        raw_client.cookies.set(AUTH_COOKIE_NAME, "not-the-token")
+        resp = raw_client.get("/api/projects/1/quotes")
+        assert resp.status_code == 401
+
+    def test_spa_html_sets_cookie(self, raw_client: TestClient, token: str) -> None:
+        resp = raw_client.get("/report/")
+        assert resp.status_code == 200
+        assert resp.cookies.get(AUTH_COOKIE_NAME) == token

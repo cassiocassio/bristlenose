@@ -20,7 +20,8 @@
     "deny": "却下",
     "undo": "取り消す",
     "apply": "適用",
-    "reset": "リセット"
+    "reset": "リセット",
+    "refresh": "更新"
   },
   "labels": {
     "search": "検索",
@@ -138,7 +139,8 @@
     "tagRemoved": "タグを削除: {{name}}",
     "navigatedTo": "{{label}} に移動しました",
     "transcript": "トランスクリプト",
-    "playing": "{{pid}} を再生中"
+    "playing": "{{pid}} を再生中",
+    "pipelineCompleted": "分析を更新しました"
   },
   "activity": {
     "cancel": "キャンセル",
@@ -507,5 +509,9 @@
     "moderators": "モデレーター",
     "observer": "オブザーバー",
     "observers": "オブザーバー"
+  },
+  "emptyState": {
+    "prePipeline": "インタビューのフォルダをドロップすると分析が始まります",
+    "postZeroQuotes": "分析は終わりましたが、引用は見つかりませんでした。ソースファイルを確認するか、別のLLMプロバイダーをお試しください。"
   }
 }

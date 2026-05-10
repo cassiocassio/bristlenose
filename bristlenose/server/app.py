@@ -32,6 +32,7 @@ from bristlenose.server.routes.health import router as health_router
 from bristlenose.server.routes.miro import router as miro_router
 from bristlenose.server.routes.quotes import router as quotes_router
 from bristlenose.server.routes.quotes_export import router as quotes_export_router
+from bristlenose.server.routes.runs import router as runs_router
 from bristlenose.server.routes.sessions import router as sessions_router
 from bristlenose.server.routes.transcript import router as transcript_router
 
@@ -163,6 +164,7 @@ def create_app(
     app.include_router(dashboard_router)
     app.include_router(export_router)
     app.include_router(quotes_export_router)
+    app.include_router(runs_router)
     app.include_router(sessions_router)
     app.include_router(quotes_router)
     app.include_router(transcript_router)
@@ -652,6 +654,44 @@ def _import_on_startup(
         db.close()
 
 
+def _make_run_completed_handler(
+    app: FastAPI,
+    session_factory: object,
+    project_dir: Path,
+):
+    """Build the watcher callback: re-import THEN publish ``last_run``.
+
+    Extracted to module level so the race ordering (import before
+    ``last_run`` assignment) is testable without standing up a full
+    server lifecycle. SPA polling is keyed off ``run_id``; flipping the
+    key before the DB is fresh would race the refetch and show stale or
+    empty data.
+    """
+    from bristlenose.events import RunCompletedEvent
+    from bristlenose.server.importer import import_project
+
+    def _reimport_sync() -> None:
+        db = session_factory()  # type: ignore[operator]
+        try:
+            import_project(db, project_dir)
+        except Exception:
+            logger.exception(
+                "Re-import after run_completed failed for %s", project_dir,
+            )
+        finally:
+            db.close()
+
+    async def _on_run_completed(ev: RunCompletedEvent) -> None:
+        await asyncio.to_thread(_reimport_sync)
+        app.state.last_run[1] = {
+            "run_id": ev.run_id,
+            "outcome": ev.outcome.value,
+            "completed_at": ev.ended_at,
+        }
+
+    return _on_run_completed
+
+
 def _install_event_watcher(
     app: FastAPI,
     session_factory: object,
@@ -667,28 +707,43 @@ def _install_event_watcher(
     """
     from contextlib import asynccontextmanager
 
-    from bristlenose.events import events_path
+    from bristlenose.events import (
+        EventTypeEnum,
+        RunCompletedEvent,
+        events_path,
+        read_events,
+    )
     from bristlenose.server.event_watcher import run_event_watcher
-    from bristlenose.server.importer import import_project
 
     output_dir = project_dir / "bristlenose-output"
     if not output_dir.is_dir():
         output_dir = project_dir
     events_file = events_path(output_dir)
 
-    def _reimport_sync() -> None:
-        db = session_factory()  # type: ignore[operator]
-        try:
-            import_project(db, project_dir)
-        except Exception:
-            logger.exception(
-                "Re-import after run_completed failed for %s", project_dir,
-            )
-        finally:
-            db.close()
+    # Per-project last-run map. Single project (id=1) for now; the dict
+    # shape carries forward to multi-project without an API change. Each
+    # entry is populated AFTER the SQLite re-import completes — the
+    # endpoint's correctness contract is "if last_run.run_id is set, the
+    # DB has data from that run".
+    app.state.last_run = {}
 
-    async def _on_run_completed() -> None:
-        await asyncio.to_thread(_reimport_sync)
+    # Seed from any existing terminus on disk so the SPA's first poll
+    # sees a non-null run_id and can reconcile against its own (null)
+    # baseline. Startup import has already loaded that data into SQLite.
+    if events_file.exists():
+        for ev in reversed(read_events(events_file)):
+            if ev.event == EventTypeEnum.RUN_COMPLETED:
+                assert isinstance(ev, RunCompletedEvent)
+                app.state.last_run[1] = {
+                    "run_id": ev.run_id,
+                    "outcome": ev.outcome.value,
+                    "completed_at": ev.ended_at,
+                }
+                break
+
+    _on_run_completed = _make_run_completed_handler(
+        app, session_factory, project_dir,
+    )
 
     @asynccontextmanager
     async def _lifespan(_: FastAPI):

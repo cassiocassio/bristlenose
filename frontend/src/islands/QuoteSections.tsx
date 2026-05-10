@@ -22,9 +22,15 @@ import { QuoteGroup } from "./QuoteGroup";
 
 interface QuoteSectionsProps {
   projectId: string;
+  /**
+   * Bumped by `LastRunStore` when a pipeline run completes. When this
+   * changes, the island refetches `/quotes` and replaces QuotesStore.
+   * Optional so non-SPA mounts (legacy island mode) continue to work.
+   */
+  refreshKey?: number;
 }
 
-export function QuoteSections({ projectId }: QuoteSectionsProps) {
+export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps) {
   const { t } = useTranslation();
   const [data, setData] = useState<QuotesListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +82,13 @@ export function QuoteSections({ projectId }: QuoteSectionsProps) {
     document.addEventListener("bn:tags-changed", handler);
     return () => document.removeEventListener("bn:tags-changed", handler);
   }, [fetchQuotes]);
+
+  // Re-fetch on pipeline-run completion (LastRunStore bump). Skip the
+  // initial mount — the dedicated mount effect above handles that.
+  useEffect(() => {
+    if (refreshKey === 0) return;
+    fetchQuotes(true);
+  }, [refreshKey, fetchQuotes]);
 
   // Collect all tag names across all quotes + codebook for the vocabulary.
   const tagVocabulary = useMemo(() => {

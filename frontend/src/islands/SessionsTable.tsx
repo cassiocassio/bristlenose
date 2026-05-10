@@ -102,8 +102,11 @@ function oxfordList(items: string[]): string {
 
 export function SessionsTable({
   projectId,
+  refreshKey = 0,
 }: {
   projectId: string;
+  /** Bumped by LastRunStore on pipeline completion → triggers refetch. */
+  refreshKey?: number;
 }) {
   const { t } = useTranslation();
   const [data, setData] = useState<SessionsListResponse | null>(null);
@@ -117,7 +120,7 @@ export function SessionsTable({
       .catch((err: Error) => setError(err.message));
 
     getPeople().then(setPeopleMap).catch(() => {});
-  }, [projectId]);
+  }, [projectId, refreshKey]);
 
   const handleNameCommit = useCallback(
     (speakerCode: string, newName: string) => {

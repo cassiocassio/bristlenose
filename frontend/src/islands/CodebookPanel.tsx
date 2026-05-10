@@ -505,9 +505,11 @@ function CodebookGroupColumn({
 
 interface CodebookPanelProps {
   projectId: string;
+  /** Bumped by LastRunStore on pipeline completion → re-fetches codebook. */
+  refreshKey?: number;
 }
 
-export function CodebookPanel({ projectId }: CodebookPanelProps) {
+export function CodebookPanel({ projectId, refreshKey = 0 }: CodebookPanelProps) {
   const { t } = useTranslation();
   const [data, setData] = useState<CodebookResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -539,7 +541,7 @@ export function CodebookPanel({ projectId }: CodebookPanelProps) {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData, projectId]);
+  }, [fetchData, projectId, refreshKey]);
 
   // Re-fetch when a background AutoCode job completes (event dispatched by
   // AppLayout's ActivityChipStack onComplete callback). Refreshes both codebook

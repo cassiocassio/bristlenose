@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 10 May 2026 (closed `pipeline-silent-skip-raw-video2` — merged to main)
+**Updated:** 10 May 2026 (closed `sandbox-export-savepanel` — merged to main)
 
 ---
 
@@ -31,7 +31,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch fix-new-feature-skill/` | `fix-new-feature-skill` | chore | Patch four bugs in the new-feature skill discovered during whos-afraid debug run |
-| `bristlenose_branch sandbox-export-savepanel/` | `sandbox-export-savepanel` | feature | Route file-writing exports through WKDownloadDelegate + NSSavePanel so sandboxed app actually delivers files; collapse the React Export modal on desktop in favour of a native accessory view |
 | `bristlenose_branch pipeline-completion-trust-ux/` | `pipeline-completion-trust-ux` | feature | Trust-UX layer (refresh button + skeleton + empty-state + cross-island test) on top of the auto-refetch correctness slice |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -122,7 +121,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `fix-new-feature-skill` | `bristlenose_branch fix-new-feature-skill/` | local only |
-| `sandbox-export-savepanel` | `bristlenose_branch sandbox-export-savepanel/` | local only |
 | `pipeline-completion-trust-ux` | `bristlenose_branch pipeline-completion-trust-ux/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
@@ -160,30 +158,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - `spa-pipeline-completion-refetch` _(merged 10 May 2026)_ — this branch builds on that correctness slice; the auto-refetch code is now on main.
-- `sandbox-export-savepanel` touches `frontend/src/layouts/AppLayout.tsx` — not in this branch's file list, so no expected overlap.
-
----
-
-### `sandbox-export-savepanel`
-
-**Kind:** feature — code lands on main via merge or PR-and-squash
-**Status:** Just started
-**Started:** 10 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch sandbox-export-savepanel/`
-**Remote:** local only (push when ready)
-
-**What it does:** Route file-writing exports through WKDownloadDelegate + NSSavePanel so the sandboxed desktop app actually delivers files; collapse the React Export modal on desktop in favour of a native accessory view.
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/WebView.swift`
-- `desktop/Bristlenose/Bristlenose/ExportAccessoryView.swift`
-- `frontend/src/components/ExportDialog.tsx`
-- `frontend/src/components/ExportDropdown.tsx`
-- `frontend/src/layouts/AppLayout.tsx`
-- `bristlenose/locales/en/common.json`
-
-**Potential conflicts with other branches:**
-- None expected — no other active branch touches the desktop Swift surface or the Export components. (`spa-pipeline-completion-refetch` also touched `frontend/src/layouts/AppLayout.tsx` but merged to main on 10 May 2026.)
 
 ---
 
@@ -285,6 +259,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `sandbox-export-savepanel` — merged 10 May 2026
+
+Routed file-writing exports through `WKDownloadDelegate` + `NSSavePanel` so the sandboxed desktop app actually delivers files; collapsed the React Export modal on desktop in favour of a native accessory view.
 
 ### `pipeline-silent-skip-raw-video2` — merged 10 May 2026
 

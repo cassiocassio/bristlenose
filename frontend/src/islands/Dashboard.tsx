@@ -621,9 +621,11 @@ function CoverageBox({
 
 interface DashboardProps {
   projectId: string;
+  /** Bumped by LastRunStore on pipeline completion → triggers refetch. */
+  refreshKey?: number;
 }
 
-export function Dashboard({ projectId }: DashboardProps) {
+export function Dashboard({ projectId, refreshKey = 0 }: DashboardProps) {
   const { t } = useTranslation();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -632,7 +634,7 @@ export function Dashboard({ projectId }: DashboardProps) {
     apiGet<DashboardResponse>("/dashboard")
       .then((json) => setData(json))
       .catch((err: Error) => setError(err.message));
-  }, [projectId]);
+  }, [projectId, refreshKey]);
 
   if (error) {
     return (

@@ -21,9 +21,11 @@ import { QuoteGroup } from "./QuoteGroup";
 
 interface QuoteThemesProps {
   projectId: string;
+  /** See `QuoteSectionsProps.refreshKey`. */
+  refreshKey?: number;
 }
 
-export function QuoteThemes({ projectId }: QuoteThemesProps) {
+export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
   const { t } = useTranslation();
   const [data, setData] = useState<QuotesListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +78,12 @@ export function QuoteThemes({ projectId }: QuoteThemesProps) {
     document.addEventListener("bn:tags-changed", handler);
     return () => document.removeEventListener("bn:tags-changed", handler);
   }, [fetchQuotes]);
+
+  // Re-fetch on pipeline-run completion (LastRunStore bump).
+  useEffect(() => {
+    if (refreshKey === 0) return;
+    fetchQuotes(true);
+  }, [refreshKey, fetchQuotes]);
 
   // Collect all tag names across all quotes + codebook for the vocabulary.
   const tagVocabulary = useMemo(() => {

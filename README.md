@@ -362,6 +362,17 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.4** — _10 May 2026_
+
+- **SPA: auto-refetch on pipeline completion** — new `GET /api/projects/{id}/last-run` endpoint and `LastRunStore` (3 s poll, visibility-paused, single timer). Browser SPA now refreshes content within ~3 s of pipeline completion instead of going silent. All four content tabs and five island consumers wired
+- **SPA: trust-UX layer** — manual refresh button in the NavBar (serve-mode only, hidden in the desktop app), refetch overlay on Quotes / Sessions / Dashboard while a refetch is in flight, post-zero-quotes empty state on the Quotes tab
+- **Desktop: Export downloads route via `WKDownload` + `NSSavePanel`** — sandbox-safe Export. The previous synthetic `<a download>` click was silently dropped by the App Sandbox; the shell now intercepts the request, hands the response to `WKDownload`, and prompts via `NSSavePanel`. Six locales updated for the save dialog
+- **Desktop: structured failure category surfaced in the failure pill** — `EventLogReader` now exposes the categorised `Cause` from the events log (10 categories: missing input, missing binary, all-LLM-failed, etc.). The failure pill renders the category-appropriate glyph + label instead of the generic "Failed" badge
+- **Pipeline: structured per-stage failure summaries + abandon path** — every terminus event (`run_completed` / `run_failed` / `run_cancelled`) now carries an optional `PipelineSummary` rollup. When every transcription session fails or every quote-extraction LLM call fails, the pipeline now raises `PipelineAbandonedError` instead of silently writing an empty report. Two new `Cause.category` values (`MISSING_INPUT`, `MISSING_BINARY`)
+- **Sidecar: sandbox compliance for the bundled FFmpeg `$PATH`, the libproc start-time check, and the React-bundle static serving** — three fixes that unblock the sandboxed desktop sidecar (`mlx_whisper`'s bare `"ffmpeg"` shellout now resolves; `/bin/ps` exec replaced with `proc_pidinfo`; Starlette `StaticFiles` mmap replaced with in-memory `read_bytes` for the React bundle)
+- **CLI: glyphs and colours sourced from a single `MessageKind` table** — CLI, popover, and toast now consult `bristlenose.ui_kinds.cli_prefix(kind)` instead of ~20 ad-hoc `console.print("[colour]...[/colour]")` calls
+- **Desktop: i18n sweep + locale delegated to System Settings** — extracted hardcoded English literals from `LLMProvider.swift`, `TranscriptionSettingsView`, `BuildInfoSheet`, default project name (all six locale `desktop.json` files updated). The in-app language picker is removed on macOS; selection flows through System Settings → Apps → Bristlenose. Web/CLI serve picker unchanged
+
 **0.15.3** — _4 May 2026_
 
 - **Desktop: provider-switching hardened end-to-end** — Change-provider flow now activates the new provider across Keychain, sidecar env, and UI; Ollama choice persists before consent log; sidecar key injection scoped to the active provider only; LLM Settings lazy-loads Keychain per row

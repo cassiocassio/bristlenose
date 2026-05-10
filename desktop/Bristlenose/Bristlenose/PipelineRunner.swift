@@ -21,6 +21,8 @@ enum PipelineFailureCategory: String, Codable, Equatable {
     case apiRequest = "api_request"
     case apiServer = "api_server"
     case missingDep = "missing_dep"
+    case missingInput = "missing_input"
+    case missingBinary = "missing_binary"
 }
 
 // MARK: - Neutral progress struct
@@ -1098,10 +1100,24 @@ final class PipelineRunner: ObservableObject {
             }
             let projectName = projectIndex?.projects
                 .first(where: { $0.id == projectID })?.name
-            let category = Self.categoriseFailure(
-                lines: lines, exitStatus: status, projectName: projectName
-            )
-            let summary = Self.humanSummary(for: category)
+            // Prefer the structured cause emitted by the Python abandon path
+            // (`pipeline-events.jsonl` → `run_failed` → `cause.{category,message}`).
+            // Stdout regex is a best-effort fallback for older Python versions
+            // and crash-style failures that exit before writing a terminus event.
+            let project = projectIndex?.projects
+                .first(where: { $0.id == projectID })
+            let derived = project.flatMap { Self.deriveFailureFromEvents(project: $0) }
+            let category: PipelineFailureCategory
+            let summary: String
+            if let (cat, msg) = derived {
+                category = cat
+                summary = msg ?? Self.humanSummary(for: cat)
+            } else {
+                category = Self.categoriseFailure(
+                    lines: lines, exitStatus: status, projectName: projectName
+                )
+                summary = Self.humanSummary(for: category)
+            }
             state[projectID] = .failed(summary, category: category)
             Self.logger.warning(
                 """
@@ -1182,6 +1198,25 @@ final class PipelineRunner: ObservableObject {
         return hasDone && hasReport
     }
 
+    /// Read the structured `cause` from `<project>/bristlenose-output/.bristlenose/
+    /// pipeline-events.jsonl` if a `run_failed` terminus is present. Returns
+    /// `(category, message)` or `nil` when the events log is missing, the most
+    /// recent event isn't `run_failed`, or the line can't be decoded.
+    private static func deriveFailureFromEvents(
+        project: Project
+    ) -> (PipelineFailureCategory, String?)? {
+        let eventsURL = URL(fileURLWithPath: project.path)
+            .appendingPathComponent("bristlenose-output")
+            .appendingPathComponent(".bristlenose")
+            .appendingPathComponent(EventLogReader.filename)
+        guard let event = EventLogReader.tailEvent(at: eventsURL),
+              event.event == "run_failed",
+              let cause = event.cause else {
+            return nil
+        }
+        return (cause.category, cause.message)
+    }
+
     static func humanSummary(for category: PipelineFailureCategory) -> String {
         switch category {
         case .auth:       return "Your LLM provider key isn't working."
@@ -1193,6 +1228,8 @@ final class PipelineRunner: ObservableObject {
         case .apiRequest: return "LLM provider rejected the request."
         case .apiServer:  return "LLM provider is unavailable — try again shortly."
         case .missingDep: return "Setup needed — a required tool isn't installed."
+        case .missingInput: return "A required input file is missing."
+        case .missingBinary: return "FFmpeg couldn't be found."
         case .unknown:    return "Something went wrong during analysis."
         }
     }

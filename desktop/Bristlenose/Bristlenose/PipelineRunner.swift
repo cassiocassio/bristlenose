@@ -1229,7 +1229,7 @@ final class PipelineRunner: ObservableObject {
         case .apiServer:  return "LLM provider is unavailable — try again shortly."
         case .missingDep: return "Setup needed — a required tool isn't installed."
         case .missingInput: return "A required input file is missing."
-        case .missingBinary: return "A required system tool (FFmpeg or similar) couldn't be found."
+        case .missingBinary: return "FFmpeg couldn't be found."
         case .unknown:    return "Something went wrong during analysis."
         }
     }

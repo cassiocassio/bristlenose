@@ -19,7 +19,12 @@ These tests cover the orchestrator-level mechanism in four layers:
 
 from __future__ import annotations
 
+import asyncio
+from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from bristlenose.events import (
     Cause,
@@ -32,7 +37,8 @@ from bristlenose.events import (
     StageOutcome,
     read_events,
 )
-from bristlenose.pipeline import _dominant_cause
+from bristlenose.models import FileType, InputFile, InputSession
+from bristlenose.pipeline import Pipeline, _dominant_cause
 from bristlenose.run_lifecycle import (
     _restore_signal_handlers,
     run_lifecycle,
@@ -240,13 +246,6 @@ def test_pipeline_run_abandons_when_all_transcribe_fail(tmp_path: Path) -> None:
     sandbox path). The orchestrator must abandon before s06–s12, otherwise
     the user sees a fake-empty "Analysed" report with no diagnostic.
     """
-    import asyncio
-    from datetime import datetime, timezone
-    from unittest.mock import MagicMock, patch
-
-    from bristlenose.models import FileType, InputFile, InputSession
-    from bristlenose.pipeline import Pipeline
-
     settings = MagicMock()
     settings.project_name = "test-bar"
     settings.llm_provider = "anthropic"
@@ -332,21 +331,17 @@ def test_pipeline_run_abandons_when_all_transcribe_fail(tmp_path: Path) -> None:
             new=_async_passthrough,
         ),
     ):
-        try:
+        with pytest.raises(PipelineAbandonedError) as exc_info:
             asyncio.run(pipeline.run(input_dir, output_dir))
-        except PipelineAbandonedError as exc:
-            assert exc.cause.category == CauseCategoryEnum.MISSING_BINARY, (
-                f"expected MISSING_BINARY, got {exc.cause.category}"
-            )
-            assert exc.summary.transcripts is not None
-            assert exc.summary.transcripts.attempted == 3
-            assert exc.summary.transcripts.succeeded == 0
-            assert len(exc.summary.transcripts.failed) == 3
-        else:
-            raise AssertionError(
-                "Pipeline.run should have raised PipelineAbandonedError when "
-                "all transcription attempts failed",
-            )
+
+    exc = exc_info.value
+    assert exc.cause.category == CauseCategoryEnum.MISSING_BINARY, (
+        f"expected MISSING_BINARY, got {exc.cause.category}"
+    )
+    assert exc.summary.transcripts is not None
+    assert exc.summary.transcripts.attempted == 3
+    assert exc.summary.transcripts.succeeded == 0
+    assert len(exc.summary.transcripts.failed) == 3
 
     # No rendered report should exist on disk — abandon must fire before s12.
     report_html = output_dir / "bristlenose-test-bar-report.html"

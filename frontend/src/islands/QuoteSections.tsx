@@ -19,6 +19,8 @@ import { initFromQuotes, useQuotesStore } from "../contexts/QuotesContext";
 import { useFocus } from "../contexts/FocusContext";
 import { filterQuotes } from "../utils/filter";
 import { QuoteGroup } from "./QuoteGroup";
+import { useLastRun } from "../contexts/LastRunStore";
+import { useRefetching, refetchOverlayProps } from "../hooks/useRefetching";
 
 interface QuoteSectionsProps {
   projectId: string;
@@ -37,6 +39,8 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
   const [codebookTagNames, setCodebookTagNames] = useState<string[]>([]);
   const [tagGroupMap, setTagGroupMap] = useState<Record<string, TagGroupInfo>>({});
   const [groupedVocabulary, setGroupedVocabulary] = useState<TagVocabularyGroup[]>([]);
+  const { isRefetching, beginRefetch, endRefetch } = useRefetching();
+  const { lastRun } = useLastRun();
 
   const fetchQuotes = useCallback((replace = false) => {
     apiGet<QuotesListResponse>("/quotes")
@@ -48,7 +52,8 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
         ];
         initFromQuotes(allQuotes, replace);
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(err.message))
+      .finally(() => endRefetch());
     getCodebook()
       .then((cb) => {
         setCodebookTagNames(cb.all_tag_names);
@@ -70,7 +75,7 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
         setGroupedVocabulary(groups);
       })
       .catch(() => {});
-  }, [projectId]);
+  }, [projectId, endRefetch]);
 
   useEffect(() => {
     fetchQuotes();
@@ -87,8 +92,9 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
   // initial mount — the dedicated mount effect above handles that.
   useEffect(() => {
     if (refreshKey === 0) return;
+    beginRefetch();
     fetchQuotes(true);
-  }, [refreshKey, fetchQuotes]);
+  }, [refreshKey, fetchQuotes, beginRefetch]);
 
   // Collect all tag names across all quotes + codebook for the vocabulary.
   const tagVocabulary = useMemo(() => {
@@ -184,10 +190,23 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
     );
   }
 
-  if (data.sections.length === 0) return null;
+  if (data.sections.length === 0) {
+    // Pre-pipeline (no completed run) leaves the SPA entirely — the
+    // server-failure-page intercept handles that surface. Render
+    // nothing here. Once a run has completed (lastRun !== null) but
+    // produced zero quotes, surface the explanation in-SPA — that's a
+    // legitimate "successful but empty" sub-state.
+    if (lastRun === null) return null;
+    return (
+      <section>
+        <h2 id="sections">{t("quotes.sections")}</h2>
+        <p className="bn-empty-state">{t("emptyState.postZeroQuotes")}</p>
+      </section>
+    );
+  }
 
   return (
-    <section>
+    <section {...refetchOverlayProps(isRefetching)}>
       <h2 id="sections">{t("quotes.sections")}</h2>
       {filteredSections.map((section) => {
         const anchor = `section-${section.screen_label.toLowerCase().replace(/ /g, "-")}`;

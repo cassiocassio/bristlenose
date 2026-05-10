@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { Badge, PersonBadge, TimecodeLink } from "../components";
 import { PlayerContext } from "../contexts/PlayerContext";
 import { apiGet } from "../utils/api";
+import { refetchOverlayProps } from "../hooks/useRefetching";
 import { formatDuration, formatFinderDate, formatFinderFilename, formatTimecode } from "../utils/format";
 import type {
   CoverageResponse,
@@ -629,11 +630,14 @@ export function Dashboard({ projectId, refreshKey = 0 }: DashboardProps) {
   const { t } = useTranslation();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRefetching, setIsRefetching] = useState(false);
 
   useEffect(() => {
+    if (refreshKey > 0) setIsRefetching(true);
     apiGet<DashboardResponse>("/dashboard")
       .then((json) => setData(json))
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(err.message))
+      .finally(() => setIsRefetching(false));
   }, [projectId, refreshKey]);
 
   if (error) {
@@ -654,8 +658,13 @@ export function Dashboard({ projectId, refreshKey = 0 }: DashboardProps) {
     );
   }
 
+  // Pre-pipeline / no-sessions cases are server-failure-page territory,
+  // not SPA territory — see docs/private/handoffs/generic-failure-surface.md.
+  // Render the dashboard with whatever data is present; the intercept
+  // catches incomplete runs upstream.
+
   return (
-    <div className="bn-dashboard">
+    <div {...refetchOverlayProps(isRefetching, "bn-dashboard")}>
       <StatsRow stats={data.stats} />
 
       <CompactSessionsTable

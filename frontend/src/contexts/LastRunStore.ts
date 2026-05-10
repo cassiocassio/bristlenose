@@ -201,6 +201,29 @@ export function stopLastRunPolling(): void {
   }
 }
 
+/**
+ * Manual refresh — bumps `refreshKey` synchronously so islands refetch
+ * immediately, then polls the server for fresh `lastRun` state. Fires an
+ * announce() unconditionally so AT users get confirmation that the click
+ * took effect even when the server has nothing new to report.
+ *
+ * No-op if no project is active. Safe to call repeatedly; the in-flight
+ * guard inside `pollOnce()` skips the second poll when one is already
+ * resolving (the synchronous `refreshKey` bump still happens).
+ */
+export async function triggerManualRefresh(): Promise<void> {
+  if (activeProjectId === null) return;
+  setState({ ...state, refreshKey: state.refreshKey + 1 });
+  // Snapshot the run_id so we can tell whether pollOnce() already fired
+  // its own transition-announce. We only announce ourselves when it
+  // didn't — otherwise AT users hear "Pipeline completed" twice.
+  const prevRunId = state.lastRun?.run_id;
+  await pollOnce();
+  if (state.lastRun?.run_id === prevRunId) {
+    announce(i18n.t("announce.pipelineCompleted"));
+  }
+}
+
 /** Reset for tests. */
 export function resetLastRunStore(): void {
   stopLastRunPolling();

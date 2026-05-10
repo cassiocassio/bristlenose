@@ -193,7 +193,9 @@
       "failed": "Clip extraction failed",
       "ffmpegMissing": "FFmpeg not found \u2014 install it to extract clips",
       "noClips": "No starred or featured quotes to extract"
-    }
+    },
+    "savePanelMessage": "Choose where to save the report.",
+    "saveFailedAlert": "The export could not be saved."
   },
   "feedback": {
     "heading": "How is Bristlenose working for you?",

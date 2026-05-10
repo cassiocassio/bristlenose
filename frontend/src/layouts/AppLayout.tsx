@@ -29,6 +29,7 @@ import { useActivityJobs, removeJob } from "../contexts/ActivityStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useScrollToAnchor } from "../hooks/useScrollToAnchor";
 import { installNavigationShims } from "../shims/navigation";
+import { useProjectId } from "../hooks/useProjectId";
 import {
   installBridge,
   postRouteChange,
@@ -159,6 +160,23 @@ function AppShell() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportAnonymise, setExportAnonymise] = useState(false);
+  const projectId = useProjectId();
+  const isEmbeddedDesktop = useCallback(
+    () => Boolean((window as unknown as { __BRISTLENOSE_EMBEDDED__?: boolean }).__BRISTLENOSE_EMBEDDED__),
+    [],
+  );
+  const triggerReportDownload = useCallback(
+    (anonymise: boolean) => {
+      const qs = anonymise ? "?anonymise=true" : "";
+      const a = document.createElement("a");
+      a.href = `/api/projects/${projectId}/export${qs}`;
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    },
+    [projectId],
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [health, setHealth] = useState<HealthResponse>(DEFAULT_HEALTH_RESPONSE);
   const toggleHelp = useCallback(() => setHelpOpen((prev) => !prev), []);
@@ -332,12 +350,20 @@ function AppShell() {
 
         // ── Tier 2: export, filter, help, zoom, dark mode ──────────────
         case "exportReport":
-          setExportAnonymise(false);
-          setExportOpen(true);
+          if (isEmbeddedDesktop()) {
+            triggerReportDownload(false);
+          } else {
+            setExportAnonymise(false);
+            setExportOpen(true);
+          }
           break;
         case "exportAnonymised":
-          setExportAnonymise(true);
-          setExportOpen(true);
+          if (isEmbeddedDesktop()) {
+            triggerReportDownload(true);
+          } else {
+            setExportAnonymise(true);
+            setExportOpen(true);
+          }
           break;
         case "exportQuotesCSV": {
           const snap = getQuotesSnapshot();

@@ -194,7 +194,9 @@
       "failed": "Error al extraer clips",
       "ffmpegMissing": "FFmpeg no encontrado \u2014 inst\u00e1lelo para extraer clips",
       "noClips": "No hay citas destacadas o favoritas para extraer"
-    }
+    },
+    "savePanelMessage": "Elige d\u00f3nde guardar el informe.",
+    "saveFailedAlert": "No se pudo guardar la exportaci\u00f3n."
   },
   "feedback": {
     "heading": "¿Cómo te va con Bristlenose?",

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 8 May 2026 (closed `pipeline-silent-skip-raw-video` — created same-day, no commits made)
+**Updated:** 10 May 2026 (closed `spa-pipeline-completion-refetch` — merged to main)
 
 ---
 
@@ -32,7 +32,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch fix-new-feature-skill/` | `fix-new-feature-skill` | chore | Patch four bugs in the new-feature skill discovered during whos-afraid debug run |
 | `bristlenose_branch pipeline-silent-skip-raw-video2/` | `pipeline-silent-skip-raw-video2` | feature | Re-attempt pipeline-silent-skip-raw-video |
-| `bristlenose_branch spa-pipeline-completion-refetch/` | `spa-pipeline-completion-refetch` | feature | React SPA refetches project content on pipeline run completion (no tab-away-and-back workaround) |
 | `bristlenose_branch sandbox-export-savepanel/` | `sandbox-export-savepanel` | feature | Route file-writing exports through WKDownloadDelegate + NSSavePanel so sandboxed app actually delivers files; collapse the React Export modal on desktop in favour of a native accessory view |
 | `bristlenose_branch pipeline-completion-trust-ux/` | `pipeline-completion-trust-ux` | feature | Trust-UX layer (refresh button + skeleton + empty-state + cross-island test) on top of the auto-refetch correctness slice |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
@@ -125,7 +124,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `fix-new-feature-skill` | `bristlenose_branch fix-new-feature-skill/` | local only |
 | `pipeline-silent-skip-raw-video2` | `bristlenose_branch pipeline-silent-skip-raw-video2/` | local only |
-| `spa-pipeline-completion-refetch` | `bristlenose_branch spa-pipeline-completion-refetch/` | local only |
 | `sandbox-export-savepanel` | `bristlenose_branch sandbox-export-savepanel/` | local only |
 | `pipeline-completion-trust-ux` | `bristlenose_branch pipeline-completion-trust-ux/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
@@ -163,7 +161,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `frontend/src/pages/QuotesTab.test.tsx`
 
 **Potential conflicts with other branches:**
-- `spa-pipeline-completion-refetch` — sibling correctness slice that this branch builds on; both touch `frontend/src/islands/{QuoteSections,SessionsTable}.tsx` and contexts. Coordinate at merge time (the refetch slice should land first).
+- `spa-pipeline-completion-refetch` _(merged 10 May 2026)_ — this branch builds on that correctness slice; the auto-refetch code is now on main.
 - `sandbox-export-savepanel` touches `frontend/src/layouts/AppLayout.tsx` — not in this branch's file list, so no expected overlap.
 
 ---
@@ -187,30 +185,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/locales/en/common.json`
 
 **Potential conflicts with other branches:**
-- `spa-pipeline-completion-refetch` also touches `frontend/src/layouts/AppLayout.tsx` — coordinate at merge time. No other active branch touches the desktop Swift surface or the Export components.
-
----
-
-### `spa-pipeline-completion-refetch`
-
-**Kind:** feature — code lands on main via merge or PR-and-squash
-**Status:** Just started
-**Started:** 8 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch spa-pipeline-completion-refetch/`
-**Remote:** local only (push when ready)
-
-**What it does:** React SPA refetches project content on pipeline run completion (no tab-away-and-back workaround).
-
-**Files this branch will touch:**
-- `frontend/src/components/ActivityChipStack.tsx`
-- `frontend/src/layouts/AppLayout.tsx`
-- `frontend/src/islands/SessionsTable.tsx`
-- `frontend/src/islands/QuoteSections.tsx`
-- `frontend/src/islands/CodebookPanel.tsx`
-- `frontend/src/contexts/ActivityStore.ts`
-
-**Potential conflicts with other branches:**
-- None expected — no other active branch touches these frontend modules. `responsive-signal-cards` is dormant (placeholder); `pipeline-silent-skip-raw-video2` and `fix-new-feature-skill` are scoped to Python/skill files.
+- None expected — no other active branch touches the desktop Swift surface or the Export components. (`spa-pipeline-completion-refetch` also touched `frontend/src/layouts/AppLayout.tsx` but merged to main on 10 May 2026.)
 
 ---
 
@@ -330,6 +305,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `spa-pipeline-completion-refetch` — merged 10 May 2026
+
+React SPA auto-refetches project content (quotes, sessions, codebook) when a pipeline run completes, removing the tab-away-and-back workaround. Single commit `7136890` on the branch; merged to main as `82c8b45`. Worktree detached and tagged orange on disk; correctness slice that the in-flight `pipeline-completion-trust-ux` branch builds on.
 
 ### `pipeline-silent-skip-raw-video` — closed 8 May 2026
 

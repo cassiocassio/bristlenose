@@ -1,7 +1,8 @@
 # Platform transcript ingestion — design doc
 
-**Status**: Phase 1 in progress — session matching (1a, 1b, 1c) and audio extraction skip done
+**Status**: Phase 1 shipped (Zoom + Teams "it just works"). Researchers can drop a folder of Teams `.docx` + `.mp4` or Zoom `.vtt` + `.mp4` and Bristlenose uses the platform transcript directly, skipping both audio extraction and Whisper. Phase 2 (Google Meet, filename metadata) and Phase 3 (supplementary sources, manual overrides) remain open.
 **Created**: 2026-02-01
+**Updated**: 2026-05-11
 
 ## Problem
 
@@ -325,7 +326,7 @@ parseable — we just need to match them and skip Whisper.
 | 1b. Zoom folder-as-session | 1 | Detect Zoom local folder pattern, group contents | **Done** |
 | 1c. Zoom cloud ID matching | 1 | Extract meeting ID from cloud download filenames | **Done** |
 | 3a. Transcript source config | 3 | `transcript_source` in `bristlenose.toml` | |
-| 3b. Skip Whisper + audio extraction | 3 | Skip transcription + FFmpeg when platform transcript parsed | **Done** (audio skip) |
+| 3b. Skip Whisper + audio extraction | 3 | Skip transcription + FFmpeg when platform transcript parsed | **Done** — double-gated at `pipeline.py:2026-2035` (skips `transcribe_sessions` if no session needs it) and `s05_transcribe.py:58-65` (early return inside the stage). Whisper model is never instantiated when all sessions have transcripts; no 1.5GB download. Audio extraction also skipped per `s02_extract_audio.py:62-67`. |
 | 3c. Preserve platform names | 3 | Higher-confidence names from directory lookups | |
 | 3d. CLI flag | 3 | `--transcript-source` override | |
 | 5a. Meeting title from filename | 5 | Parse title from Teams/Zoom conventions | |

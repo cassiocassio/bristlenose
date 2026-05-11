@@ -1,0 +1,565 @@
+id: cli-ux
+version: "1.0"
+title: Command-Line UX
+author: ""
+enabled: true
+sort_order: 40
+
+description: >
+  Tags for research on command-line tools, developer tools, and sysadmin
+  workflows — anywhere the primary interface is a terminal. Generic UX
+  codebooks tell you "the user was frustrated"; this one tells you whether
+  the friction was flag ergonomics, error-message illegibility, exit-code
+  confusion, or a piping mental-model breakdown. Different design problems,
+  different fixes.
+
+author_bio: >
+  Drawn from observed friction in real CLI-tool research — sysadmins fighting
+  with package managers, developers wrestling with build tools, operators
+  trying to recover from a misfired command. The vocabulary is meant to be
+  immediately useful to anyone writing or evaluating a terminal-first product.
+
+author_links: []
+
+preamble: >
+  Import this codebook when the product under study is primarily a CLI.
+  Use it alongside the sentiment codebook — sentiment tells you the
+  participant was frustrated; these tags tell you why. If a tag here
+  starts to overlap with a sentiment tag, prefer the more specific one:
+  "this is so annoying" is sentiment/frustration; "I don't know what the
+  hell that error means" is errors/error-message-illegible. The
+  expected reader of a Bristlenose report driven by this codebook is
+  an API designer, DX engineer, or OSS maintainer — not a classically-
+  trained UX researcher. The report's voice should match that audience:
+  command-line artifacts quoted verbatim, counts before prose, no
+  discipline-name citations, comparisons to other tools the reader
+  already knows. See docs/design-cli-analysis-register.md for the
+  full register rules and worked examples.
+
+groups:
+  - name: Discoverability
+    subtitle: First-touch friction — where do I even start?
+    colour_set: ux
+    tags:
+      - name: starting-point-unclear
+        definition: >
+          The participant has installed the tool but can't find the first
+          rung — no obvious "hello world," no opinionated quickstart path.
+        apply_when: >
+          The participant pauses after install and asks (out loud or by
+          searching) what to type next. "OK, now what?" "Where do I start?"
+          "Is there a tutorial?" Or runs the bare command name hoping it'll
+          print something useful and gets a usage stub instead.
+        not_this: >
+          If the participant knows what to do but can't remember the syntax,
+          that's --help-reliance or man-page-friction. Starting-point is
+          about the very first invocation, not subsequent lookup.
+
+      - name: --help-reliance
+        definition: >
+          The participant's primary documentation surface is `--help` /
+          `-h`, used repeatedly for both discovery and reminder.
+        apply_when: >
+          The participant reaches for `--help` more than once in the
+          session, including when they could plausibly have used man, a
+          README, or recall. Includes piping `--help` to grep or less.
+        not_this: >
+          A single `--help` lookup is just normal use. This tag is for
+          patterns — the participant treating --help as the docs, not a
+          quick reminder. If they explicitly complain about --help being
+          incomplete, also tag --help-discoverability.
+
+      - name: man-page-friction
+        definition: >
+          The participant tries `man <tool>` and bounces off — page is
+          missing, too dense, badly structured, or doesn't match the
+          command they actually want to run.
+        apply_when: >
+          The participant runs `man X`, scrolls or searches inside less,
+          then quits without finding what they needed. Or grumbles about
+          the man page being a wall of text, alphabetised flags, no
+          examples, or wrong section.
+        not_this: >
+          If they never tried `man` in the first place, that's --help-
+          reliance or readme-as-first-resort. This is specifically about
+          the man page failing them.
+
+      - name: readme-as-first-resort
+        definition: >
+          The participant skips --help and man entirely and goes straight
+          to the project's README — on GitHub, in the source checkout, or
+          via a browser search.
+        apply_when: >
+          The participant alt-tabs to a browser to find the README before
+          (or instead of) using the tool's own help surfaces. Or `cat
+          README.md` / `less README.md` from the repo root.
+        not_this: >
+          If they only reach for the README after --help and man have
+          failed, the primary tag is the earlier failure. README-as-first-
+          resort is about the leapfrog — bypassing local docs entirely.
+
+      - name: search-engine-fallback
+        definition: >
+          The participant gives up on first-party docs and searches the
+          open web — Stack Overflow, blog posts, AI chat, GitHub issues.
+        apply_when: >
+          The participant opens a browser tab and types the command name,
+          error message, or task description into a search engine. Often
+          paired with copy-paste-from-docs once they find an answer.
+        not_this: >
+          If they search the web for the *concept* (not the tool) — e.g.
+          "what's a sparse checkout" — that's a learning gap, not a docs
+          failure. Search-engine-fallback is specifically about looking
+          up the tool's own usage off-platform.
+
+      - name: tab-completion-reliance
+        definition: >
+          The participant uses tab-completion as the primary way of
+          discovering what commands, flags, or arguments exist.
+        apply_when: >
+          The participant types a partial command and hits tab to see
+          what's available, treating completion as a menu. Includes
+          double-tab to list options and tab-cycling through completions.
+        not_this: >
+          Tab-completion as a typing speedup (completing a known long
+          flag) is just normal use. This tag is for completion-as-
+          discovery — using tab because they don't know what to type.
+
+      - name: subcommand-hierarchy-confusion
+        definition: >
+          The participant struggles with multi-level subcommand structures
+          (`git remote add`, `kubectl get pods`, `gcloud compute instances
+          list`) — wrong level, wrong order, or can't find the verb.
+        apply_when: >
+          The participant types `tool action object` when the tool wants
+          `tool object action`, or hunts through `tool --help` then
+          `tool sub --help` then `tool sub subsub --help` to find the
+          leaf command. "Is it git branch delete or git delete branch?"
+        not_this: >
+          If they know the right subcommand path but mistype a flag,
+          that's a mental-model issue, not a hierarchy one. This tag is
+          specifically about the tree structure.
+
+  - name: Mental model
+    subtitle: How the participant reasons about the command surface
+    colour_set: ux
+    tags:
+      - name: verb-noun-mismatch
+        definition: >
+          The participant's mental verb-noun ordering doesn't match the
+          tool's. They reach for `delete branch` when the tool says
+          `branch delete`, or vice versa.
+        apply_when: >
+          The participant tries an obvious-to-them phrasing, gets a usage
+          error, then tries the reverse. Or expresses surprise that the
+          ordering is the way it is. Common pain point in tools that
+          changed conventions (juju, kubectl, gh).
+        not_this: >
+          If they can't find the right subcommand at all, that's
+          subcommand-hierarchy-confusion. Verb-noun-mismatch is when they
+          know both words but get the order wrong.
+
+      - name: flag-short-vs-long
+        definition: >
+          The participant has a preference (or struggle) with short flags
+          (`-v`) vs long flags (`--verbose`) — readability, recall,
+          collision, or copy-paste safety.
+        apply_when: >
+          The participant comments on flag form, refuses to use short
+          flags they don't recognise, copy-pastes short flags from
+          examples without understanding them, or gets bitten by a flag
+          that has different short and long meanings.
+        not_this: >
+          Forgetting a flag entirely is --help-reliance, not this. This
+          tag is specifically about preference or confusion around the
+          short/long pairing.
+
+      - name: positional-vs-flag-confusion
+        definition: >
+          The participant gets positional arguments and flag arguments
+          mixed up — passing positionals as flags, missing required
+          positionals, or putting flags after a `--` boundary they
+          didn't know existed.
+        apply_when: >
+          The participant runs the command, gets a "missing argument" or
+          "unexpected positional" error, and has to puzzle out which is
+          which. Or asks "wait, is that a flag or just the file name?"
+        not_this: >
+          If they know the structure but mistype a value, that's just
+          typing. This is specifically about confusing the two shapes.
+
+      - name: implicit-default-surprise
+        definition: >
+          The participant runs a command expecting one default and gets
+          another — current directory vs home, current branch vs main,
+          dry-run vs apply, last-used vs none.
+        apply_when: >
+          The participant runs a command without specifying a target and
+          is surprised by what got affected. "Wait, I didn't tell it to
+          do that to *everything*." "I thought it would only…"
+        not_this: >
+          If the default is documented and they read it but ignored it,
+          that's more of a workflow issue. Implicit-default-surprise
+          requires actual surprise — a violated expectation.
+
+      - name: composition-friction
+        definition: >
+          The participant struggles to compose commands together — pipes,
+          process substitution, xargs, command substitution, here-docs.
+        apply_when: >
+          The participant knows what they want to achieve as a pipeline
+          but can't get the plumbing right. xargs separator issues, pipe-
+          to-while loop variable scope, `$(...)` vs backticks, "why is
+          stderr not going through the pipe?"
+        not_this: >
+          Confusion about *which* tools to chain is a different problem.
+          Composition-friction is specifically about the glue.
+
+      - name: subcommand-vs-flag-boundary
+        definition: >
+          The participant can't tell if a particular concept is exposed
+          as a subcommand or as a flag — `git log --oneline` (flag) vs
+          `git shortlog` (subcommand) — and tries the wrong shape.
+        apply_when: >
+          The participant guesses `tool foo --bar` when the tool wants
+          `tool foo bar`, or hunts through subcommands for a behaviour
+          that's actually a flag on a more general one.
+        not_this: >
+          If they know it's a flag but can't remember its name, that's
+          --help-reliance. This tag is about the shape choice itself.
+
+  - name: Errors and recovery
+    subtitle: What happens when things go wrong
+    colour_set: trust
+    tags:
+      - name: error-message-illegible
+        definition: >
+          The participant reads an error message and can't tell what
+          went wrong, what to do about it, or even whether it's actually
+          an error.
+        apply_when: >
+          The participant pauses on the error, re-reads it, copies it
+          into a search box, asks the room what it means, or describes
+          the error as "a wall of text." Includes Python tracebacks,
+          Go stack traces, or "Error: unknown error" non-messages.
+        not_this: >
+          If the message is clear but the underlying problem is unclear,
+          that's a different tag (often did-it-work-ambiguity). Error-
+          message-illegible is about the message itself failing.
+
+      - name: exit-code-unaware
+        definition: >
+          The participant doesn't check or doesn't know about exit codes
+          — assumes success because the command "looked done," misses a
+          non-zero exit, or doesn't realise scripts need `set -e`.
+        apply_when: >
+          The participant moves on after a command that quietly failed,
+          chains commands with `;` instead of `&&`, or expresses surprise
+          when a script kept running past a failed step.
+        not_this: >
+          If they check exit codes but the codes themselves are
+          meaningless (`1` for everything), that's the tool's fault,
+          not exit-code-unaware.
+
+      - name: stderr-stdout-confusion
+        definition: >
+          The participant's mental model for stderr vs stdout doesn't
+          match what the tool does — output goes to the wrong stream
+          for piping, redirection misses errors, or progress noise
+          contaminates parseable output.
+        apply_when: >
+          The participant pipes a command's output to grep or jq and
+          finds nothing because the relevant text was on stderr. Or
+          redirects with `>` and is surprised that errors still appear
+          on the terminal.
+        not_this: >
+          Not knowing what stderr is at all is a learning gap; this tag
+          is about the confusion in practice, hit by someone who knows
+          the concept exists.
+
+      - name: did-it-work-ambiguity
+        definition: >
+          The command returned, but the participant can't tell whether
+          it succeeded — silent success, generic "done" with no detail,
+          or output that looks identical for success and failure.
+        apply_when: >
+          The participant runs a command and pauses, then re-runs it,
+          checks a file, or runs `echo $?` to confirm. "Did that work?"
+          "Wait, was that supposed to do anything?"
+        not_this: >
+          If there's an explicit error they can't decipher, that's
+          error-message-illegible. Did-it-work is specifically the
+          absence of clear signal.
+
+      - name: destructive-action-protection
+        definition: >
+          The participant either trips a destructive-action guardrail
+          (`--force`, confirmation prompt) or wishes one existed after
+          the fact.
+        apply_when: >
+          The participant pauses before a destructive command, types
+          and then deletes it, runs with `--dry-run` first, copies the
+          target into a clipboard for sanity-check, or expresses regret
+          that the tool didn't ask.
+        not_this: >
+          Generic caution before any unfamiliar command is just normal
+          care. This tag is for destructive-action-specific friction —
+          rm, drop, delete, push --force, kubectl delete, terraform
+          destroy.
+
+      - name: undo-expectation
+        definition: >
+          The participant expects to be able to undo a CLI action and
+          discovers there's no undo, or the undo path is non-obvious.
+        apply_when: >
+          The participant runs a command, realises it was wrong, and
+          asks "how do I undo that?" Or pauses before a command thinking
+          about reversibility. Particularly common in version-control,
+          database, and cloud-infrastructure tools.
+        not_this: >
+          Wanting to undo a destructive action they were warned about
+          is destructive-action-protection. Undo-expectation is the
+          broader assumption that CLI work is reversible.
+
+      - name: dry-run-usage
+        definition: >
+          The participant uses `--dry-run`, `--check`, `--plan`, or
+          similar preview modes — habitually or in response to anxiety.
+        apply_when: >
+          The participant runs a preview before the real command, runs
+          the same command twice (once with --dry-run, once without),
+          or asks if a dry-run mode exists.
+        not_this: >
+          If the tool *requires* an explicit apply step (terraform,
+          kubectl apply), that's by design rather than dry-run-usage.
+          This tag is about the participant's habit, not the tool's
+          structure.
+
+  - name: Workflow
+    subtitle: Daily-driver mechanics
+    colour_set: task
+    tags:
+      - name: copy-paste-from-docs
+        definition: >
+          The participant copies a command from docs, a blog post, an
+          LLM, or a colleague's chat message — and runs it without
+          (or before) understanding it.
+        apply_when: >
+          The participant selects text from a browser/terminal/chat,
+          pastes into the shell, runs. May or may not edit before
+          running. Includes pasting multi-line snippets and shell
+          history exports.
+        not_this: >
+          Copying a path or filename isn't this — it's just clipboard
+          use. Copy-paste-from-docs is specifically about executable
+          commands taken from elsewhere.
+
+      - name: history-reuse
+        definition: >
+          The participant retrieves and runs past commands via shell
+          history — Ctrl-R, up-arrow scrubbing, `!!`, `!$`, `history |
+          grep`.
+        apply_when: >
+          The participant uses any history-recall mechanism. Including
+          when they can't find the exact command and resort to grep,
+          or get bit by `!!` running the wrong thing.
+        not_this: >
+          Re-typing a similar command from memory isn't this. History-
+          reuse requires the shell's history mechanism being the
+          retrieval surface.
+
+      - name: alias-and-function-writing
+        definition: >
+          The participant has built — or wishes they had built — shell
+          aliases, functions, or wrapper scripts to make the tool less
+          painful.
+        apply_when: >
+          The participant references their own aliases, opens their
+          dotfiles mid-session, or says "I should make an alias for
+          this." Includes complaints about tools so verbose they need
+          a wrapper.
+        not_this: >
+          Using someone else's alias library (oh-my-zsh, fish abbrs)
+          isn't this — it's just tool use. Alias-and-function-writing
+          is about the participant's own work to smooth the tool.
+
+      - name: multi-terminal-context-switching
+        definition: >
+          The participant runs the session across multiple terminal
+          windows, tabs, or tmux panes, and the context-switching
+          itself is part of the friction.
+        apply_when: >
+          The participant alt-tabs between terminals, gets confused
+          about which terminal is on which host or which directory,
+          runs the right command in the wrong pane, or comments on
+          terminal management as a coping mechanism.
+        not_this: >
+          Single-terminal work isn't this. The tag is for friction
+          from the multi-terminal *coping pattern*, not just having
+          more than one window open.
+
+      - name: one-shot-vs-repl-preference
+        definition: >
+          The participant has a preference — implicit or explicit —
+          for invoking the tool as a one-shot command vs. entering an
+          interactive REPL.
+        apply_when: >
+          The participant uses (or refuses) an interactive subcommand
+          when a one-shot exists, or vice versa. Or comments on the
+          fit — "I never use the REPL, I just script it."
+        not_this: >
+          If the tool offers no REPL, this tag doesn't apply. It's
+          about a meaningful choice between two real modes.
+
+      - name: script-vs-interactive
+        definition: >
+          The participant treats the tool differently for scripting vs.
+          interactive use — different flags, different output formats,
+          different error tolerance.
+        apply_when: >
+          The participant references writing a script that calls this
+          tool, asks if the output format is parseable, uses --json or
+          --porcelain, or complains about output changing between
+          interactive and piped contexts.
+        not_this: >
+          If they only ever use the tool interactively, this tag
+          doesn't apply. It's about the awareness or friction of
+          dual-mode use.
+
+  - name: Learning and docs
+    subtitle: How the participant acquires knowledge about the tool
+    colour_set: trust
+    tags:
+      - name: --help-discoverability
+        definition: >
+          The participant explicitly complains about `--help` being
+          incomplete, badly organised, or missing the thing they were
+          looking for.
+        apply_when: >
+          The participant reads --help, says "but where does it tell
+          me how to…", or finds the answer outside --help and
+          comments that it should have been in there.
+        not_this: >
+          Heavy use of --help without complaint is --help-reliance.
+          This tag is specifically about --help failing the
+          participant.
+
+      - name: example-driven-learning
+        definition: >
+          The participant learns by reading or running examples — and
+          notably falters when no examples are provided.
+        apply_when: >
+          The participant searches for "[tool] example", scrolls past
+          the reference section to find the examples block, says
+          "show me an example," or copies an example verbatim before
+          adapting it.
+        not_this: >
+          Just running the tool isn't example-driven. The tag is
+          about the participant's explicit reliance on worked
+          examples as the primary learning surface.
+
+      - name: reference-vs-tutorial
+        definition: >
+          The participant gets bounced between reference docs (what
+          everything is) and tutorial docs (how to do a thing) and
+          can't find the right one for their current need.
+        apply_when: >
+          The participant says "I just want to do X, not read about
+          every option." Or the reverse — "the tutorial doesn't cover
+          my case, I want the reference." Reads the wrong doc, comes
+          back grumpy.
+        not_this: >
+          Generic "the docs are bad" is too broad for this tag. This
+          is specifically the mismatch between what the participant
+          needs and what kind of doc they got.
+
+      - name: llm-as-docs
+        definition: >
+          The participant uses an LLM (ChatGPT, Claude, Copilot, local
+          model) as the primary documentation surface — instead of, or
+          before, the tool's own docs.
+        apply_when: >
+          The participant alt-tabs to a chat interface, types the task
+          or error message into an LLM, and runs the returned command.
+          Includes IDE-integrated LLMs that surface commands.
+        not_this: >
+          Search-engine-fallback is the older pattern (Stack Overflow
+          via Google). LLM-as-docs is specifically the conversational
+          surface. Worth separating because the failure modes are
+          different (hallucinated flags, outdated syntax).
+
+      - name: peer-asking
+        definition: >
+          The participant pings a colleague, a chat room, or an open-
+          source community for help instead of (or after) consulting
+          docs.
+        apply_when: >
+          The participant says "let me ask in Slack," opens a forum
+          post, comments on a GitHub issue, or describes a past
+          incident resolved by asking someone.
+        not_this: >
+          Reading a colleague's answer in an existing thread is more
+          like search-engine-fallback. Peer-asking is the act of
+          posing a new question to people.
+
+  - name: Trust and risk
+    subtitle: Sandbox, secrets, and "should I really run this?"
+    colour_set: trust
+    tags:
+      - name: sudo-hesitation
+        definition: >
+          The participant pauses on `sudo`, double-checks the command,
+          or expresses unease about elevating privileges for this
+          particular invocation.
+        apply_when: >
+          The participant types sudo then reviews the rest of the
+          command before pressing Enter. Or comments "do I really need
+          sudo for this?" Or removes sudo and tries without.
+        not_this: >
+          Routine sudo use without comment isn't this. The tag is
+          about visible hesitation or doubt at the privilege boundary.
+
+      - name: prod-vs-sandbox-confusion
+        definition: >
+          The participant isn't sure (or makes a mistake about)
+          whether they're operating on production or a test
+          environment — wrong context, wrong cluster, wrong account.
+        apply_when: >
+          The participant checks `kubectl config current-context`,
+          `aws configure list`, the shell prompt colour, or asks the
+          room "wait, am I on prod?" Or runs the command and
+          immediately panics that it might have been prod.
+        not_this: >
+          If they know which environment they're on and choose
+          deliberately, this tag doesn't fire. Prod-vs-sandbox-
+          confusion is about uncertainty or error.
+
+      - name: secret-handling-friction
+        definition: >
+          The participant struggles with handling API keys, tokens,
+          passwords, or credentials in the CLI — pasting in plaintext,
+          worrying about history, fighting keychain integration.
+        apply_when: >
+          The participant pastes a token into a command, then thinks
+          about whether it's now in shell history. Or wrestles with
+          `--password-stdin`, `read -s`, GPG-encrypted env files,
+          1Password CLI shims.
+        not_this: >
+          Generic credential setup isn't this — it's onboarding. The
+          tag is about friction or anxiety at the secret-handling
+          interface.
+
+      - name: script-from-internet-risk
+        definition: >
+          The participant is asked to run a script from the internet
+          (`curl … | sh`, a one-line installer) and either does so
+          reluctantly, refuses, or reads the script first.
+        apply_when: >
+          The participant encounters a `curl | sh` install instruction
+          and expresses unease, pipes to a file first to inspect, or
+          comments on the practice. Or runs it anyway and notes the
+          discomfort.
+        not_this: >
+          Running a script from a vendor they fully trust without
+          comment isn't this. The tag is about the risk awareness
+          surfacing — even if they proceed.

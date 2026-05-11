@@ -4,6 +4,8 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 
 **Unreleased**
 
+- **Server-rendered status page for runs the SPA can't render** — `bristlenose serve`'s `/report/*` catch-all now serves a server-rendered page (no React mount) when the project has no completed run, or the latest run failed or was cancelled. The SPA's invariant becomes: it only mounts when there's data to render. Three states surfaced — no-run-yet (CLI vs desktop copy via `BRISTLENOSE_PLATFORM`), failed (with cause + log tail in a `<details>` block, sourced from `pipeline-events.jsonl`), cancelled. Reuses the five-kind `MessageKind` taxonomy from `bristlenose/ui_kinds.py` — no sixth kind invented. Page styling lives at `bristlenose/theme/templates/status-page.css` and uses the design system's tokens exclusively (sibling to `report.css` / `transcript.css` / `print.css` / `export.css`). The event-watcher startup seed in `bristlenose/server/app.py` also widened to seed `failed` and `cancelled` termini, not just `completed`, so non-happy-path runs survive a server restart. English-only in v1; locale fills for es/fr/de/ko/ja batched into the next translation pass
+
 **0.15.5** — _11 May 2026_
 
 - **First-run preflight block: Whisper / ffmpeg / API-key / spaCy, all before stage 2.** Eight-slice landing of `docs/design-cli-just-works.md`. Triggered by a 2-hour first-run call with a friendly CTO on 9 May where four blockers fired in sequence (silent ~1.5 GB Whisper download, Ctrl+C resumption opacity, `--redact-pii` hard-failing on missing `en_core_web_sm`, API key with no billing balance burning six minutes of transcription before stage 8 noticed). Every gap now surfaces up front:

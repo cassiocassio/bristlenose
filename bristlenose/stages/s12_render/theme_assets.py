@@ -92,6 +92,7 @@ _THEME_FILES: list[str] = [
     "templates/transcript.css",
     "templates/print.css",
     "templates/export.css",
+    "templates/status-page.css",
 ]
 
 

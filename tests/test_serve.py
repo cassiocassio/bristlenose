@@ -300,6 +300,27 @@ class TestProdServeReport:
         output_dir = tmp_path / "bristlenose-output"
         output_dir.mkdir()
 
+        # Seed a completed run so the new server-status-page intercept lets
+        # /report/ fall through to the SPA. Without this the catch-all serves
+        # the "Nothing to see here, yet." page instead.
+        from bristlenose.events import (
+            KindEnum,
+            RunCompletedEvent,
+            append_event,
+            events_path,
+            new_run_id,
+        )
+        append_event(
+            events_path(output_dir),
+            RunCompletedEvent(
+                ts="2026-05-10T20:00:00Z",
+                run_id=new_run_id(),
+                kind=KindEnum.RUN,
+                started_at="2026-05-10T19:00:00Z",
+                ended_at="2026-05-10T20:00:00Z",
+            ),
+        )
+
         # Set up mock static directory with a built index.html
         static_dir = tmp_path / "static"
         static_dir.mkdir()
@@ -434,6 +455,26 @@ class TestProdServeTranscript:
         sessions_dir.mkdir()
         (sessions_dir / "transcript_s1.html").write_text("<html>transcript</html>")
 
+        # Seed a completed run so the server-status-page intercept lets the
+        # SPA render (otherwise /report/* returns "Nothing to see here, yet.").
+        from bristlenose.events import (
+            KindEnum,
+            RunCompletedEvent,
+            append_event,
+            events_path,
+            new_run_id,
+        )
+        append_event(
+            events_path(output_dir),
+            RunCompletedEvent(
+                ts="2026-05-10T20:00:00Z",
+                run_id=new_run_id(),
+                kind=KindEnum.RUN,
+                started_at="2026-05-10T19:00:00Z",
+                ended_at="2026-05-10T20:00:00Z",
+            ),
+        )
+
         static_dir = tmp_path / "static"
         static_dir.mkdir()
         (static_dir / "index.html").write_text(_VITE_INDEX_HTML)
@@ -473,6 +514,26 @@ class TestDevServeReport:
         """Create a test client in HMR dev mode (serve --dev) with an output dir."""
         output_dir = tmp_path / "bristlenose-output"
         output_dir.mkdir()
+
+        # Seed a completed run so the server-status-page intercept lets the
+        # SPA render in /report/* paths.
+        from bristlenose.events import (
+            KindEnum,
+            RunCompletedEvent,
+            append_event,
+            events_path,
+            new_run_id,
+        )
+        append_event(
+            events_path(output_dir),
+            RunCompletedEvent(
+                ts="2026-05-10T20:00:00Z",
+                run_id=new_run_id(),
+                kind=KindEnum.RUN,
+                started_at="2026-05-10T19:00:00Z",
+                ended_at="2026-05-10T20:00:00Z",
+            ),
+        )
 
         # serve --dev sets this env var before calling create_app via uvicorn reload
         monkeypatch.setenv("_BRISTLENOSE_DEV", "1")

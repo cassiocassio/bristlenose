@@ -75,7 +75,7 @@ The generated HTML report has interactive features: inline editing (quotes, head
 
 Doctor command: `bristlenose doctor` — runtime environment checks. See `docs/design-doctor-and-snap.md`.
 
-Snap + man page: see `docs/design-doctor-and-snap.md` and `docs/release.md`.
+Snap + man page: see `docs/design-doctor-and-snap.md` and `docs/release.md`. **`man/bristlenose.1` is a symlink to `bristlenose/data/bristlenose.1`** — single source of truth. Edit either; both update. Validate with `mandoc -Tlint bristlenose/data/bristlenose.1` (macOS-default; `groff` / `nroff` aren't installed). `bump-version.py` refreshes both the version and the `.TH` ISO date on every bump (don't write "March 2026"-style human dates in `.TH` — they bitrot and produce mandoc WARNINGs).
 
 CLI output: Cargo/uv-style checkmark lines with per-stage timing. Time estimation via Welford's algorithm in `bristlenose/timing.py`. See `bristlenose/stages/CLAUDE.md` for pipeline runtime details.
 

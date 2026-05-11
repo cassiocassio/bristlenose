@@ -17,6 +17,8 @@ from bristlenose.cost import compute_run_cost
 from bristlenose.events import KindEnum
 from bristlenose.i18n import SUPPORTED_LOCALES as _I18N_LOCALES
 from bristlenose.i18n import set_locale as _set_locale
+from bristlenose.preflight import PreflightAbortedError
+from bristlenose.preflight.whisper import WHISPER_SIZE_HUMAN
 from bristlenose.run_lifecycle import ConcurrentRunError, run_lifecycle
 from bristlenose.ui_kinds import MessageKind, cli_prefix
 
@@ -873,6 +875,14 @@ def run(
         bool,
         typer.Option("--yes", "-y", help="Skip confirmation for large session counts."),
     ] = False,
+    no_fetch: Annotated[
+        bool,
+        typer.Option(
+            "--no-fetch",
+            help="Abort instead of downloading missing models (Whisper, spaCy). "
+            "Run `bristlenose doctor --fetch` first to pre-warm the cache.",
+        ),
+    ] = False,
 ) -> None:
     """Process a folder of user-research recordings into themed, timestamped quotes."""
     # Default output location: inside the input folder
@@ -915,6 +925,7 @@ def run(
         "llm_provider": llm_provider,
         "skip_transcription": skip_transcription,
         "pii_enabled": redact_pii,
+        "no_fetch": no_fetch,
     }
     # Only pass whisper options if explicitly set on the CLI — otherwise let
     # env vars (BRISTLENOSE_WHISPER_MODEL, BRISTLENOSE_WHISPER_BACKEND) or
@@ -960,6 +971,9 @@ def run(
     except ConcurrentRunError as exc:
         _say(MessageKind.ERROR, str(exc))
         raise typer.Exit(1) from exc
+    except PreflightAbortedError as exc:
+        _say(MessageKind.ERROR, str(exc))
+        raise typer.Exit(2) from exc
 
     # Detect pipeline errors (LLM ran but 0 quotes)
     llm_ran = getattr(result, "llm_calls", 0) > 0
@@ -1035,6 +1049,14 @@ def transcribe(
         bool,
         typer.Option("--yes", "-y", help="Skip confirmation for large session counts."),
     ] = False,
+    no_fetch: Annotated[
+        bool,
+        typer.Option(
+            "--no-fetch",
+            help="Abort instead of downloading missing models. "
+            "Run `bristlenose doctor --fetch` first to pre-warm the cache.",
+        ),
+    ] = False,
 ) -> None:
     """Only run transcription (no LLM analysis). Produces raw transcripts."""
     # Default output location: inside the input folder
@@ -1044,6 +1066,7 @@ def transcribe(
     settings_kwargs: dict[str, object] = {
         "output_dir": output_dir,
         "skip_transcription": False,
+        "no_fetch": no_fetch,
     }
     if whisper_model is not None:
         settings_kwargs["whisper_model"] = whisper_model
@@ -1064,6 +1087,9 @@ def transcribe(
     except ConcurrentRunError as exc:
         _say(MessageKind.ERROR, str(exc))
         raise typer.Exit(1) from exc
+    except PreflightAbortedError as exc:
+        _say(MessageKind.ERROR, str(exc))
+        raise typer.Exit(2) from exc
 
     _print_pipeline_summary(result)
     # Transcript-specific: point to the transcripts dir, not the report
@@ -1103,6 +1129,14 @@ def analyze(
         bool,
         typer.Option("--yes", "-y", help="Skip confirmation for large session counts."),
     ] = False,
+    no_fetch: Annotated[
+        bool,
+        typer.Option(
+            "--no-fetch",
+            help="Abort instead of downloading missing models. "
+            "Run `bristlenose doctor --fetch` first to pre-warm the cache.",
+        ),
+    ] = False,
 ) -> None:
     """Run LLM analysis on existing transcripts (skip ingestion and transcription)."""
     # Default output location: if transcripts_dir is transcripts-raw/ inside a bristlenose-output,
@@ -1120,6 +1154,7 @@ def analyze(
         output_dir=output_dir,
         project_name=project_name,
         llm_provider=llm_provider,
+        no_fetch=no_fetch,
     )
 
     # Offer provider selection if no API key / local provider is not ready
@@ -1149,6 +1184,9 @@ def analyze(
     except ConcurrentRunError as exc:
         _say(MessageKind.ERROR, str(exc))
         raise typer.Exit(1) from exc
+    except PreflightAbortedError as exc:
+        _say(MessageKind.ERROR, str(exc))
+        raise typer.Exit(2) from exc
 
     _print_pipeline_summary(result)
 
@@ -1908,6 +1946,17 @@ def doctor(
             help="Run bundle-integrity checks only (for build-all.sh pre-archive).",
         ),
     ] = False,
+    fetch: Annotated[
+        bool,
+        typer.Option(
+            "--fetch",
+            help=(
+                f"Pre-download the Whisper transcription model "
+                f"({WHISPER_SIZE_HUMAN}) so transcription works offline or "
+                "with --no-fetch."
+            ),
+        ),
+    ] = False,
 ) -> None:
     """Check dependencies, API keys, and system configuration.
 
@@ -1917,6 +1966,14 @@ def doctor(
     Exits non-zero on any failure. Used by desktop/scripts/build-all.sh
     step 7a to catch BUG-3/4/5-class packaging bugs at build time.
     """
+    if fetch:
+        from bristlenose.preflight.whisper import preflight_whisper
+        settings = load_settings()
+        preflight_whisper(
+            settings=settings, console=console, status=None, allow_fetch=True,
+        )
+        return
+
     if self_test:
         from bristlenose.doctor import run_bundle_integrity
         report = run_bundle_integrity()

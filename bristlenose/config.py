@@ -97,6 +97,12 @@ class BristlenoseSettings(BaseSettings):
     # Pipeline
     skip_transcription: bool = False
     write_intermediate: bool = True
+
+    # Preflight model-fetch policy. When True, missing runtime-fetched models
+    # (Whisper, spaCy, etc.) abort the pipeline with an instructive message
+    # instead of fetching them. Escape hatch for offline / air-gapped runs.
+    no_fetch: bool = False
+
     output_dir: Path = Path("output")
     input_dir: Path = Path("input")
 

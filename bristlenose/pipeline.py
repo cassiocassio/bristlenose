@@ -575,6 +575,22 @@ class Pipeline:
             _stage_actuals: dict[str, StageActual] = {}
             _n_sessions = float(len(sessions))
 
+            # Whisper preflight — front-loaded so the model is guaranteed
+            # cached before any stage runs (rather than failing 8 minutes
+            # into transcription).
+            _needs_whisper = (
+                not self.settings.skip_transcription
+                and any(not s.has_existing_transcript for s in sessions)
+            )
+            if _needs_whisper:
+                from bristlenose.preflight.whisper import preflight_whisper
+                preflight_whisper(
+                    settings=self.settings,
+                    console=console,
+                    status=status,
+                    allow_fetch=not self.settings.no_fetch,
+                )
+
             # ── Stage 2: Extract audio from video ────────────────────
             mark_stage_running(manifest, STAGE_EXTRACT_AUDIO)
             status.update("[dim]Extracting audio...[/dim]")
@@ -658,6 +674,11 @@ class Pipeline:
                             for sid, sr in _prev_tx_rec.sessions.items()
                             if sr.status == StageStatus.COMPLETE
                         }
+
+                # Whisper preflight is front-loaded (runs right after
+                # ingest), so by the time we hit transcribe stage 5 the
+                # model is guaranteed to be cached (or the pipeline
+                # already aborted with the banner).
 
                 status.update("[dim]Transcribing...[/dim]")
                 t0 = time.perf_counter()

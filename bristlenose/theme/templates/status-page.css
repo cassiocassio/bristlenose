@@ -1,0 +1,109 @@
+/* Template: server-rendered status page.
+
+   Served by bristlenose/server/status_page.py when the project has no
+   completed run, or the latest run failed / was cancelled. The SPA never
+   renders these states — the server intercepts /report/* and ships this
+   template instead. See .claude/plans/generic-failure-surface.md.
+
+   All visual values come from tokens. No hard-coded sizes / colours /
+   spacing — drift back to the rest of the app must remain impossible. */
+
+.bn-status-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    font-family: var(--bn-font-body);
+    margin: 0;
+}
+
+.bn-status {
+    max-width: var(--bn-max-width);
+    padding: var(--bn-space-xl) var(--bn-space-lg);
+    text-align: center;
+}
+
+.bn-status-glyph {
+    font-size: var(--bn-text-display);
+    line-height: var(--bn-text-display-lh);
+    margin-bottom: var(--bn-space-lg);
+    color: var(--bn-colour-muted);
+}
+
+.bn-status-glyph.kind-error    { color: var(--bn-sentiment-frustration); }
+.bn-status-glyph.kind-warning  { color: var(--bn-sentiment-surprise); }
+.bn-status-glyph.kind-info     { color: var(--bn-colour-muted); }
+
+.bn-status-short {
+    font-size: var(--bn-text-title);
+    line-height: var(--bn-text-title-lh);
+    font-weight: var(--bn-weight-emphasis);
+    margin: 0 0 var(--bn-space-md);
+    color: var(--bn-colour-text);
+}
+
+.bn-status-long {
+    font-size: var(--bn-text-body);
+    line-height: var(--bn-text-body-lh);
+    color: var(--bn-colour-muted);
+    margin: 0 0 var(--bn-space-md);
+    font-weight: var(--bn-weight-normal);
+}
+
+.bn-status-long.is-mono {
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
+}
+
+.bn-status-details {
+    text-align: left;
+    margin: var(--bn-space-lg) auto;
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    color: var(--bn-colour-muted);
+}
+
+.bn-status-details summary {
+    cursor: pointer;
+    user-select: none;
+    font-weight: var(--bn-weight-emphasis);
+}
+
+.bn-status-details pre {
+    background: var(--bn-colour-hover);
+    border: 1px solid var(--bn-colour-border);
+    padding: var(--bn-space-md);
+    border-radius: var(--bn-radius-md);
+    overflow-x: auto;
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-top: var(--bn-space-sm);
+    color: var(--bn-colour-text);
+}
+
+.bn-status-footer {
+    margin-top: var(--bn-space-xl);
+    padding-top: var(--bn-space-md);
+    border-top: 1px solid var(--bn-colour-border);
+    display: flex;
+    gap: var(--bn-space-lg);
+    justify-content: center;
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
+}
+
+.bn-status-footer a {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+    transition: color var(--bn-transition-fast);
+}
+
+.bn-status-footer a:hover {
+    text-decoration: underline;
+}

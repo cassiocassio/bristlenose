@@ -1,0 +1,42 @@
+{
+  "whisper": {
+    "banner_intro": "Bristlenose needs the Whisper transcription model ({size}).",
+    "reassurance": "Cancellable with Ctrl+C; resumes cleanly next run.",
+    "verb_downloading": "Downloading",
+    "verb_resuming": "Resuming download",
+    "fetching": "{verb} {repo_id}...",
+    "ready": "Whisper model ready",
+    "aborted_no_fetch": "Whisper model {repo_id} is not in cache and --no-fetch is set. Run `bristlenose doctor --fetch` to fetch it ahead of time, or re-run without --no-fetch."
+  },
+  "ffmpeg": {
+    "banner_missing": "ffmpeg is required to read video files. Not found on PATH.",
+    "prompt_brew_install": "Run `brew install ffmpeg` now?",
+    "installed": "ffmpeg installed",
+    "aborted": "ffmpeg is required but was not found. Install it using the command above and re-run.",
+    "label_macos": "macOS",
+    "label_ubuntu": "Ubuntu / Debian",
+    "label_fedora": "Fedora / RHEL",
+    "label_arch": "Arch / Manjaro",
+    "label_other": "Other",
+    "cmd_macos": "brew install ffmpeg",
+    "cmd_ubuntu": "sudo apt install ffmpeg",
+    "cmd_fedora": "sudo dnf install ffmpeg",
+    "cmd_arch": "sudo pacman -S ffmpeg",
+    "cmd_other": "https://ffmpeg.org/download.html"
+  },
+  "api_key": {
+    "source_attribution": "Using {provider_display} API key from {source}. Verifying: ~$0.0001, no transcript content.",
+    "rejected_invalid_key": "Your {provider_display} API key was rejected (HTTP 401).\nCheck the key at {keys_url}\nand re-run.",
+    "no_credit": "Your {provider_display} account has no API credit available.\nTop up at {billing_url}\n({minimum_note})\nand re-run.",
+    "model_unavailable": "The requested model is not available for your {provider_display} account. Check available models at {console_url} and either enable the model or change `--llm-model` to one your account can use.",
+    "rate_limit": "{provider_display} is rate-limiting this account. Wait a minute and re-run, or reduce `llm_concurrency` in your bristlenose.toml.",
+    "generic": "Provider says: {message}.\nIf this looks like a credit-balance issue, top up at the provider's billing console and re-run.",
+    "network": "Couldn't reach the provider: {message}.\nCheck DNS / VPN / proxy settings, then re-run."
+  },
+  "pii": {
+    "downloading": "Downloading PII detector (~12 MB, one-off)..."
+  },
+  "closing": {
+    "no_more_questions": "No more questions.{estimate_suffix} Ctrl+C anytime."
+  }
+}

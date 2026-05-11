@@ -2,7 +2,7 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
-**Unreleased**
+**0.15.6** — _11 May 2026_
 
 - **Server-rendered status page for runs the SPA can't render** — `bristlenose serve`'s `/report/*` catch-all now serves a server-rendered page (no React mount) when the project has no completed run, or the latest run failed or was cancelled. The SPA's invariant becomes: it only mounts when there's data to render. Three states surfaced — no-run-yet (CLI vs desktop copy via `BRISTLENOSE_PLATFORM`), failed (with cause + log tail in a `<details>` block, sourced from `pipeline-events.jsonl`), cancelled. Reuses the five-kind `MessageKind` taxonomy from `bristlenose/ui_kinds.py` — no sixth kind invented. Page styling lives at `bristlenose/theme/templates/status-page.css` and uses the design system's tokens exclusively (sibling to `report.css` / `transcript.css` / `print.css` / `export.css`). The event-watcher startup seed in `bristlenose/server/app.py` also widened to seed `failed` and `cancelled` termini, not just `completed`, so non-happy-path runs survive a server restart. English-only in v1; locale fills for es/fr/de/ko/ja batched into the next translation pass
 

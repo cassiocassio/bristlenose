@@ -35,6 +35,7 @@ from bristlenose.server.routes.quotes_export import router as quotes_export_rout
 from bristlenose.server.routes.runs import router as runs_router
 from bristlenose.server.routes.sessions import router as sessions_router
 from bristlenose.server.routes.transcript import router as transcript_router
+from bristlenose.server.status_page import detect_status, render_page
 
 logger = logging.getLogger(__name__)
 
@@ -469,6 +470,44 @@ def _build_dev_html(output_dir: Path, *, auth_token: str = "") -> str:
     )
 
 
+def _maybe_status_response(app: FastAPI, output_dir: Path) -> HTMLResponse | None:
+    """Return a server-rendered status page when the SPA can't render.
+
+    Intercepts the SPA catch-all route when the project has no completed
+    run, or the latest run failed / was cancelled. ``None`` lets the SPA
+    handle the request as today. See ``status_page.detect_status`` for the
+    decision matrix.
+    """
+    last_run = getattr(app.state, "last_run", None)
+    status = detect_status(
+        output_dir,
+        last_run,
+        platform=os.environ.get("BRISTLENOSE_PLATFORM", ""),
+    )
+    if status is None:
+        return None
+    from bristlenose.server.routes.health import (
+        DEFAULT_FEEDBACK_URL,
+        DEFAULT_GITHUB_ISSUES_URL,
+    )
+
+    feedback_url = os.environ.get("BRISTLENOSE_FEEDBACK_URL", DEFAULT_FEEDBACK_URL)
+    help_url = os.environ.get(
+        "BRISTLENOSE_HELP_URL",
+        os.environ.get("BRISTLENOSE_GITHUB_ISSUES_URL", DEFAULT_GITHUB_ISSUES_URL),
+    )
+    html_str = render_page(
+        status,
+        feedback_url=feedback_url,
+        help_url=help_url,
+        html_root_attrs=_html_root_attrs(),
+    )
+    # Match the SPA response's cookie contract — every /report/* HTML response
+    # sets the auth cookie so subsequent /api/* fetches from the same origin
+    # work even if/when the SPA mounts (e.g. user reruns and reloads).
+    return _spa_response(html_str, app.state.auth_token)
+
+
 def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
     """Mount the report SPA in dev mode with Vite HMR.
 
@@ -510,6 +549,9 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
                 return FileResponse(asset_path)
             raise HTTPException(status_code=404, detail="Asset not found")
 
+        status_resp = _maybe_status_response(app, output_dir)
+        if status_resp is not None:
+            return status_resp
         return _spa_response(dev_html, app.state.auth_token)
 
     # Non-HTML assets (CSS, images, thumbnails, player HTML) from the output dir
@@ -635,6 +677,9 @@ def _mount_prod_report(app: FastAPI, output_dir: Path, *, dev: bool = False) -> 
                 return FileResponse(asset_path)
             raise HTTPException(status_code=404, detail="Asset not found")
 
+        status_resp = _maybe_status_response(app, output_dir)
+        if status_resp is not None:
+            return status_resp
         return _spa_response(spa_html, app.state.auth_token)
 
     # Non-HTML assets (CSS, images, thumbnails, player HTML) from the output dir
@@ -730,7 +775,6 @@ def _install_event_watcher(
 
     from bristlenose.events import (
         EventTypeEnum,
-        RunCompletedEvent,
         events_path,
         read_events,
     )
@@ -751,14 +795,21 @@ def _install_event_watcher(
     # Seed from any existing terminus on disk so the SPA's first poll
     # sees a non-null run_id and can reconcile against its own (null)
     # baseline. Startup import has already loaded that data into SQLite.
+    # Includes failed and cancelled terminus events so the server-rendered
+    # status page (status_page.detect_status) can surface them on restart
+    # without re-reading the events log on every catch-all request.
     if events_file.exists():
+        termini = (
+            EventTypeEnum.RUN_COMPLETED,
+            EventTypeEnum.RUN_FAILED,
+            EventTypeEnum.RUN_CANCELLED,
+        )
         for ev in reversed(read_events(events_file)):
-            if ev.event == EventTypeEnum.RUN_COMPLETED:
-                assert isinstance(ev, RunCompletedEvent)
+            if ev.event in termini:
                 app.state.last_run[1] = {
                     "run_id": ev.run_id,
-                    "outcome": ev.outcome.value,
-                    "completed_at": ev.ended_at,
+                    "outcome": getattr(ev, "outcome").value,
+                    "completed_at": getattr(ev, "ended_at"),
                 }
                 break
 

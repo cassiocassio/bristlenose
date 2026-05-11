@@ -257,6 +257,10 @@ def test_pipeline_run_abandons_when_all_transcribe_fail(tmp_path: Path) -> None:
     settings.whisper_model = "tiny"
     settings.color_scheme = "default"
     settings.pii_score_threshold = 0.5
+    # Slice C: Whisper preflight checks settings.no_fetch — opt out so the
+    # test reaches the real-failure path (transcribe stage), not the
+    # preflight-abort path.
+    settings.no_fetch = False
 
     pipeline = Pipeline(settings, skip_confirm=True)
 
@@ -329,6 +333,13 @@ def test_pipeline_run_abandons_when_all_transcribe_fail(tmp_path: Path) -> None:
         patch(
             "bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
             new=_async_passthrough,
+        ),
+        # Slice C: the Whisper preflight runs before transcribe; bypass it
+        # here so the test exercises the orchestrator's reaction to the
+        # all-failed transcribe outcome (its actual contract).
+        patch(
+            "bristlenose.preflight.whisper.preflight_whisper",
+            new=lambda **kw: None,
         ),
     ):
         with pytest.raises(PipelineAbandonedError) as exc_info:

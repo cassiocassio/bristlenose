@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 10 May 2026 (v0.15.4 shipped — SPA auto-refetch on pipeline completion + trust-UX layer + sandbox-safe Export via WKDownload/NSSavePanel + structured failure category surfaced in desktop failure pill.)
+Last updated: 11 May 2026 (cli-just-works branch ready to merge — 8 slices land first-run UX preflights: package_install helpers, spaCy lazy fetch in s07, Whisper banner + native HF Hub progress, ffmpeg distro table + brew auto-install offer, paid API-key billing validation + state.json + 24h TTL, front-loaded block + closing line, en/preflight.json across 6 locales, design doc + man page trued post-implementation.)
 
 **Most recent ship: v0.15.4 (10 May 2026)** — Browser SPA refreshes within ~3 s of pipeline completion (no more "drop folder → nothing happens until you reload"); refresh button + refetch overlay + post-zero-quotes empty-state copy; Export downloads route via `WKDownload` + `NSSavePanel` under App Sandbox (HTML report path; other export surfaces tracked in follow-up); failure pill on desktop now renders the structured `Cause` category from the events log instead of a generic "Failed" badge. See `CHANGELOG.md` for full bullet list.
 
@@ -20,6 +20,13 @@ Open follow-ups not in any active branch (surface separately, not alpha blockers
 - **IOKit AppleNVMeEANUC deny** — silent, single occurrence per launch. Investigate only if it surfaces user-visibly.
 
 Reference: `docs/private/handoffs/sandbox-walk-followup-fixes.md` (closeout), `docs/private/sandbox-inventory-beats-6-13.md` (16-finding inventory + status block).
+
+### cli-just-works follow-ups (deferred from this branch — see Decisions block at `.claude/plans/cli-just-works.md`)
+
+- **No-account-yet flow** — numbered URL → getpass → optional Keychain persist → re-enter validation. Existing `_maybe_prompt_for_provider` covers the simpler "missing-key → prompt" case; full-numbered flow defers to a follow-up branch. Spec lives in the Decisions block.
+- **`pipeline-events.jsonl` `Cause` entries on preflight aborts** (finding 12 in design doc) — currently aborts go through `typer.Exit(2)` with the recovery message; threading the event writer through the preflight modules is its own small refactor.
+- **Verify quarterly-drift cron `trig_01BtVXKG5hBnhPF4bGwR78CR` is armed** against current `billing_hints.py` URLs/minimums. Verification task, not code.
+- **Translation review** for `bristlenose/locales/{es,fr,de,ko,ja}/preflight.json` — currently English mirrors. Picks up the parked product-polish text rewrites (Findings 12, 13, 14, 45, 49 in the review log) at the same time so translators see the final English shape once, not twice.
 
 ---
 

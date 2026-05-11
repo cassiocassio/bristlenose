@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 11 May 2026 (opened `cli-just-works`)
+**Updated:** 11 May 2026 (closed `fix-new-feature-skill`)
 
 ---
 
@@ -30,7 +30,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
-| `bristlenose_branch fix-new-feature-skill/` | `fix-new-feature-skill` | chore | Patch four bugs in the new-feature skill discovered during whos-afraid debug run |
 | `bristlenose_branch generic-failure-surface/` | `generic-failure-surface` | feature | Server-rendered failure/empty-state page; same surface for CLI browser and WKWebView |
 | `bristlenose_branch cli-just-works/` | `cli-just-works` | feature | first-run CLI UX: preflights, lazy fetches, API-key flow, front-loaded questions |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
@@ -121,7 +120,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
-| `fix-new-feature-skill` | `bristlenose_branch fix-new-feature-skill/` | local only |
 | `generic-failure-surface` | `bristlenose_branch generic-failure-surface/` | local only |
 | `cli-just-works` | `bristlenose_branch cli-just-works/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
@@ -173,7 +171,6 @@ Eight planned slices (smallest-useful-first, helper-first per design call): (A) 
 **Potential conflicts with other branches:**
 - `generic-failure-surface` — both touch `pipeline.py` (preflight orchestration vs failure-surface route). Coordinate the `pipeline.py` edits if both land in parallel. Different stages of the pipeline lifecycle (preflight is pre-stage-1; failure-surface is at request time), so logical conflict is low; merge conflicts possible if same file blocks are edited.
 - `responsive-signal-cards` — none expected (different surface).
-- `fix-new-feature-skill` — none expected (different files).
 
 ---
 
@@ -198,24 +195,6 @@ Eight planned slices (smallest-useful-first, helper-first per design call): (A) 
 **Potential conflicts with other branches:**
 - `pipeline-completion-trust-ux` _(merged 10 May 2026)_ — that branch removed SPA-side EmptyState mounts for pre-pipeline / no-sessions cases in anticipation of this server intercept. Coordinate the EmptyState retirement.
 - `responsive-signal-cards` — none expected (different surface).
-
----
-
-### `fix-new-feature-skill`
-
-**Kind:** chore — small ephemeral work; merge or discard, low ceremony
-**Status:** Just started
-**Started:** 8 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch fix-new-feature-skill/`
-**Remote:** local only (push when ready)
-
-**What it does:** Patch four bugs in the new-feature skill discovered during whos-afraid debug run.
-
-**Files this branch will touch:**
-- `.claude/skills/new-feature/SKILL.md`
-
-**Potential conflicts with other branches:**
-- None expected — no other active branch touches `.claude/skills/new-feature/SKILL.md`.
 
 ---
 
@@ -299,6 +278,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `fix-new-feature-skill` — merged 11 May 2026
+
+Patched four bugs in the `/new-feature` skill discovered during the whos-afraid debug run: moved desktop-binaries probe from Step 8 to Step 9 (no longer reports "skipped" on fresh worktrees), chained `mkdir/ln/echo` with `&&` so failed symlinks don't print "✓", added `hash -r` to the shell preamble to invalidate zsh's cached command lookups after PATH fixes, and added a node-health pre-check to Step 7 so dyld errors surface as actionable remediation instead of a doomed `npm install`. Single commit (`74e59b8`); FF-merged as `9bed5fd`.
 
 ### `pipeline-completion-trust-ux` — merged 10 May 2026
 

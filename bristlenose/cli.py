@@ -945,6 +945,20 @@ def run(
     if not _maybe_auto_doctor(settings, "run"):
         _run_preflight(settings, "run", skip_transcription=skip_transcription)
 
+    # API-key validation against billing. Runs after _maybe_prompt_for_provider
+    # so a freshly-pasted key gets validated immediately. Aborts cleanly with
+    # provider-specific recovery copy on invalid-key / billing-empty / etc.
+    from bristlenose.preflight.api_key import (
+        ApiKeyPreflightAbortedError,
+        preflight_api_key,
+    )
+
+    try:
+        preflight_api_key(settings=settings, console=console)
+    except ApiKeyPreflightAbortedError as exc:
+        _say(MessageKind.ERROR, str(exc))
+        raise typer.Exit(2) from exc
+
     # Clean after checks so user sees setup context first
     if output_exists and clean:
         import shutil

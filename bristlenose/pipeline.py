@@ -575,6 +575,20 @@ class Pipeline:
             _stage_actuals: dict[str, StageActual] = {}
             _n_sessions = float(len(sessions))
 
+            # ffmpeg preflight — front-loaded so a missing binary is
+            # caught before stage 2 starts, not 30s into video decode.
+            _needs_ffmpeg = any(
+                f.file_type == FileType.VIDEO and not s.has_existing_transcript
+                for s in sessions for f in s.files
+            )
+            if _needs_ffmpeg:
+                from bristlenose.preflight.ffmpeg import preflight_ffmpeg
+                preflight_ffmpeg(
+                    console=console,
+                    status=status,
+                    allow_install=not self.settings.no_fetch,
+                )
+
             # Whisper preflight — front-loaded so the model is guaranteed
             # cached before any stage runs (rather than failing 8 minutes
             # into transcription).

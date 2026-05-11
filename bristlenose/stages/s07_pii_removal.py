@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import logging
+import time
 import warnings
 from collections import Counter
 from pathlib import Path
 
+from rich.console import Console
+
 from bristlenose.config import BristlenoseSettings
+from bristlenose.i18n import t
 from bristlenose.models import (
     FullTranscript,
     PiiCleanTranscript,
@@ -16,6 +20,58 @@ from bristlenose.models import (
 )
 
 logger = logging.getLogger(__name__)
+
+_SPACY_MODEL = "en_core_web_sm"
+
+
+def _ensure_spacy_model() -> None:
+    """Probe spaCy for ``en_core_web_sm``; lazily download it on first run.
+
+    The model is ~12 MB — small enough to use the inline-status treatment (one
+    line, no banner) rather than the framed-banner pattern reserved for big
+    fetches like Whisper. Per the design doc's "fetch UX should scale with fetch
+    size" cutoff, anything under 50 MB gets a single line.
+
+    On success the function returns; Presidio's ``AnalyzerEngine()`` constructor
+    will pick up the now-installed model the next time it calls ``spacy.load``.
+
+    Raises:
+        Whatever :func:`ensure_spacy_model` raises (network failure, frozen
+        sidecar). Caller surfaces the error.
+    """
+    import spacy
+
+    from bristlenose.utils.package_install import ensure_spacy_model
+
+    try:
+        spacy.load(_SPACY_MODEL)
+        return
+    except OSError:
+        pass
+
+    from bristlenose.ui_kinds import MessageKind, cli_prefix
+
+    # Per-call Console: terminal width is detected at call time so the desktop
+    # sidecar's stdout piping isn't frozen at module-import time (avoiding the
+    # gotcha where a sandboxed run inherits an 80-wide assumption made before
+    # the host wired up its pipes).
+    console = Console(width=min(80, Console().width))
+
+    console.print(
+        "  " + t("preflight.pii.downloading"),
+        end="",
+    )
+    t0 = time.perf_counter()
+    try:
+        ensure_spacy_model(_SPACY_MODEL)
+    except Exception:
+        console.print(f" {cli_prefix(MessageKind.ERROR)}")
+        raise
+    elapsed = time.perf_counter() - t0
+    console.print(f" {cli_prefix(MessageKind.SUCCESS)} [{elapsed:.0f}s]")
+
+    # Re-load to confirm Presidio's later spacy.load() will succeed (finding 23).
+    spacy.load(_SPACY_MODEL)
 
 # Mapping from Presidio entity types to our redaction labels
 _ENTITY_MAP: dict[str, str] = {
@@ -346,6 +402,8 @@ def _init_presidio(
     Returns:
         (AnalyzerEngine, AnonymizerEngine) tuple.
     """
+    _ensure_spacy_model()
+
     from presidio_analyzer import AnalyzerEngine
     from presidio_anonymizer import AnonymizerEngine
 

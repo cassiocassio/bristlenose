@@ -1,6 +1,6 @@
 .\" Man page for bristlenose
 .\" Generated from cli.py help text
-.TH BRISTLENOSE 1 "March 2026" "bristlenose 0.15.4" "User Commands"
+.TH BRISTLENOSE 1 "2026-05-11" "bristlenose 0.15.4" "User Commands"
 .SH NAME
 bristlenose \- user-research transcription and quote extraction engine
 .SH SYNOPSIS
@@ -43,6 +43,8 @@ bristlenose \- user-research transcription and quote extraction engine
 .RB [ \-v ]
 .br
 .B bristlenose doctor
+.RB [ \-\-fetch ]
+.RB [ \-\-self\-test ]
 .br
 .B bristlenose configure
 .I provider
@@ -63,6 +65,33 @@ The HTML report includes sections (grouped by screen), themes (cross-participant
 patterns), a sentiment histogram, friction points, user journeys, clickable
 timecodes with a popout video player, starred quotes with CSV export, inline
 editing, and a tag system with auto-suggest.
+.PP
+.B First-run preflight.
+On every \fBrun\fR / \fBtranscribe\fR / \fBanalyze\fR invocation \fBbristlenose\fR
+runs a short block of preflight checks after the input scan but before any
+stage executes. Each check fires only when needed:
+.IP \(bu 4
+\fBWhisper model\fR \(em if the model isn't fully cached, prints a framed banner
+(model name, \(ti1.5 GB, Ctrl+C-resumable) and lets Hugging Face Hub print its
+own progress natively. Use \fB\-\-no\-fetch\fR to abort instead, or run
+\fBbristlenose doctor \-\-fetch\fR up front.
+.IP \(bu 4
+\fBffmpeg\fR \(em if not on PATH, prints a per-distro install table. On
+macOS with Homebrew installed and its prefix writable, offers to run
+\fBbrew install ffmpeg\fR (default: \fBn\fR; an explicit \fBy\fR is required
+before any system mutation).
+.IP \(bu 4
+\fBAPI-key validation\fR \(em for Anthropic / OpenAI providers, runs a paid
+single-token \fI/messages\fR call (\(ti$0.0001) to verify the key works and
+has billing balance, before any transcription begins. Result cached for
+24 hours per provider in the state file (see \fBFILES\fR). Set
+\fBBRISTLENOSE_SKIP_PREFLIGHT=1\fR to skip.
+.IP \(bu 4
+\fBspaCy PII model\fR \(em fetched lazily on the first
+\fB\-\-redact\-pii\fR run; one inline line, no banner.
+.PP
+The block ends with a closing line (\fINo more questions. \(ti<X> min to your
+report. Ctrl+C anytime.\fR) after which no prompt fires for the rest of the run.
 .SH COMMANDS
 .TP
 .B run
@@ -165,28 +194,63 @@ Path to a \fIbristlenose.toml\fR config file.
 .BR \-\-clean
 Delete the output directory before running.
 .TP
+.BR \-\-static ", " \-\-no\-serve
+Output a static HTML file instead of auto-launching the interactive server.
+By default, \fBrun\fR auto-serves the report at the end of the pipeline on a
+free port and opens it in the browser.
+.TP
+.BR \-\-dev
+Development mode: enable the responsive playground in the served report
+(grid overlay, breakpoint widget, design-system browser). Has no effect with
+\fB\-\-static\fR.
+.TP
+.BR \-y ", " \-\-yes
+Skip the "Found N sessions in ..." confirmation prompt when ingest discovers
+more than 16 sessions. Use for scripting and CI.
+.TP
+.BR \-\-no\-fetch
+Abort instead of downloading missing runtime-fetched models (Whisper, spaCy)
+or installing system binaries (ffmpeg via Homebrew). Run
+\fBbristlenose doctor \-\-fetch\fR ahead of time to pre-warm the Whisper
+cache for offline / air-gapped use.
+.TP
 .BR \-v ", " \-\-verbose
 Enable verbose logging.
 .SS Options for \fBtranscribe\fR
 .TP
 .BR \-o ", " \-\-output " " \fIDIR\fR
-Output directory.
+Output directory. Default: \fIbristlenose-output/\fR inside the input folder.
 .TP
 .BR \-w ", " \-\-whisper\-model " " \fIMODEL\fR
 Whisper model size.
+.TP
+.BR \-y ", " \-\-yes
+Skip the large-session-count confirmation prompt.
+.TP
+.BR \-\-no\-fetch
+Abort instead of downloading the Whisper model if it isn't cached.
 .TP
 .BR \-v ", " \-\-verbose
 Enable verbose logging.
 .SS Options for \fBanalyze\fR
 .TP
 .BR \-o ", " \-\-output " " \fIDIR\fR
-Output directory.
+Output directory. Default: parent of \fItranscripts-dir\fR if it's named
+\fBtranscripts-raw\fR / \fBtranscripts-cooked\fR, otherwise creates
+\fIbristlenose-output/\fR alongside.
 .TP
 .BR \-p ", " \-\-project " " \fINAME\fR
 Project name.
 .TP
 .BR \-l ", " \-\-llm " " \fIPROVIDER\fR
 LLM provider.
+.TP
+.BR \-y ", " \-\-yes
+Skip the large-session-count confirmation prompt.
+.TP
+.BR \-\-no\-fetch
+Abort instead of downloading missing runtime-fetched models. Used together
+with \fBbristlenose doctor \-\-fetch\fR for offline runs.
 .TP
 .BR \-v ", " \-\-verbose
 Enable verbose logging.
@@ -227,6 +291,20 @@ Show per-session detail with completion status.
 .TP
 .BR \-k ", " \-\-key " " \fIKEY\fR
 API key to store. If not provided, prompts interactively.
+.SS Options for \fBdoctor\fR
+.TP
+.BR \-\-fetch
+Pre-download the Whisper transcription model (\(ti1.5 GB) so subsequent
+\fBrun\fR / \fBtranscribe\fR invocations work offline or with
+\fB\-\-no\-fetch\fR. Honours the \fI~/.cache/huggingface/hub/\fR cache root
+(or \fBHF_HUB_CACHE\fR / \fBHF_HOME\fR if set). Idempotent and Ctrl+C-resumable.
+.TP
+.BR \-\-self\-test
+Run bundle-integrity checks only (asserts every runtime-data file the
+sidecar expects is present and non-trivial). Used by
+\fBdesktop/scripts/build-all.sh\fR to fail-loud at build time when
+PyInstaller \fBdatas\fR misses a runtime file. Exits non-zero on any
+failure. Not for end-user use.
 .SH CONFIGURATION
 Settings are loaded in order (last wins):
 .IP 1. 4
@@ -327,6 +405,24 @@ Minimum words per extracted quote. Default: \fB5\fR.
 .TP
 .B BRISTLENOSE_MERGE_SPEAKER_GAP_SECONDS
 Gap threshold for merging consecutive speaker segments. Default: \fB2.0\fR.
+.SS Preflight / runtime
+.TP
+.B BRISTLENOSE_SKIP_PREFLIGHT
+When set to \fB1\fR, skip the first-run API-key preflight (paid \fI/messages\fR
+validation call). Use on CI / scripted runs where the TTY heuristic isn't
+reliable (Buildkite, \fIscript(1)\fR wrappers, tmux-from-cron).
+.TP
+.B BRISTLENOSE_LOG_LEVEL
+Log file verbosity (\fI<output-dir>/.bristlenose/bristlenose.log\fR). Default:
+\fBINFO\fR. The \fB\-v\fR flag controls terminal verbosity independently.
+.TP
+.B BRISTLENOSE_WHISPER_MODEL_DIR
+Directory containing pre-downloaded Whisper models, used by the desktop
+sidecar to bypass the runtime cache. Not needed for CLI use.
+.TP
+.B HF_HUB_CACHE \fR/ \fBHF_HOME
+Hugging Face Hub cache locations \(em respected by the Whisper preflight when
+determining whether the model is cached.
 .SH INPUT FILES
 .B bristlenose
 accepts any mix of audio, video, subtitle, and transcript files:
@@ -472,6 +568,24 @@ bristlenose doctor
 .fi
 .RE
 .PP
+Pre-warm the Whisper cache for an offline run:
+.PP
+.RS
+.nf
+bristlenose doctor \-\-fetch         # downloads \(ti1.5 GB once
+bristlenose run interviews \-\-no\-fetch
+# Now safe on a flight / air-gapped network
+.fi
+.RE
+.PP
+Skip the API-key preflight on a CI runner that has a known-good key:
+.PP
+.RS
+.nf
+BRISTLENOSE_SKIP_PREFLIGHT=1 bristlenose run interviews \-\-yes
+.fi
+.RE
+.PP
 Show configuration reference:
 .PP
 .RS
@@ -497,6 +611,27 @@ Template with all available configuration variables.
 .TP
 .I bristlenose.toml
 Optional TOML configuration file.
+.TP
+.I ~/Library/Application Support/Bristlenose/state.json \fR(macOS)
+.TQ
+.I $XDG_DATA_HOME/Bristlenose/state.json \fR(Linux, default
+.IR ~/.local/share/Bristlenose/state.json )
+Per-user preflight state \(em records the last successful API-key
+validation timestamp per provider (24-hour TTL) so subsequent runs skip
+the paid \fI/messages\fR call. Mode \fB0600\fR. Contains no API keys and
+no transcript data. Delete the file to force re-validation on next run.
+.TP
+.I ~/.cache/huggingface/hub/ \fR(or \fB$HF_HUB_CACHE\fR)
+Whisper model cache. Several GB depending on chosen model. Pre-warm with
+\fBbristlenose doctor \-\-fetch\fR for offline / air-gapped use.
+.TP
+.I <output-dir>/.bristlenose/bristlenose.log
+Per-project log file (default level \fBINFO\fR; override with
+\fBBRISTLENOSE_LOG_LEVEL\fR).
+.TP
+.I <output-dir>/.bristlenose/pipeline-events.jsonl
+Append-only forensic event log (run start / complete / cancel / fail with
+structured failure cause). Read by the desktop diagnostic popover.
 .SH EXIT STATUS
 .TP
 .B 0
@@ -504,6 +639,13 @@ Success.
 .TP
 .B 1
 Error (missing input, configuration problem, pipeline failure).
+.TP
+.B 2
+Preflight aborted: a required dependency is missing and could not be
+auto-installed (e.g. ffmpeg not found and Homebrew unavailable / declined),
+\fB\-\-no\-fetch\fR was set with an uncached Whisper model, or API-key
+validation rejected the key (invalid, billing-empty, model-unavailable).
+The terminal message names the recovery action.
 .SH BUGS
 Report bugs at \fIhttps://github.com/cassiocassio/bristlenose/issues\fR.
 .SH AUTHOR

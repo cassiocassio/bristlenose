@@ -66,12 +66,15 @@ def update_init(new_version: str) -> None:
 
 
 def update_man_page(new_version: str) -> None:
-    """Update .TH line in man page."""
+    """Update .TH line in man page (version + date)."""
+    from datetime import date
+
+    today = date.today().isoformat()  # YYYY-MM-DD, mandoc-friendly
     text = MAN_FILE.read_text()
-    # Match: .TH BRISTLENOSE 1 "January 2026" "bristlenose 0.6.8"
+    # Match: .TH BRISTLENOSE 1 "2026-05-11" "bristlenose 0.6.8"
     new_text = re.sub(
-        r'(\.TH BRISTLENOSE 1 "[^"]+" "bristlenose )\d+\.\d+\.\d+(")',
-        rf"\g<1>{new_version}\g<2>",
+        r'(\.TH BRISTLENOSE 1 ")[^"]+(" "bristlenose )\d+\.\d+\.\d+(")',
+        rf"\g<1>{today}\g<2>{new_version}\g<3>",
         text,
     )
     MAN_FILE.write_text(new_text)

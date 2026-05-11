@@ -1,8 +1,31 @@
 # Design: CLI / desktop "just works" defaults
 
-**Status:** draft (Mon 11 May 2026) — captured during A1 brew-formula closeout after a 2-hour first-run call with a friendly CTO. We got there in the end, but it was a struggle that no first-run user should have to repeat — and that a less patient one wouldn't have completed.
+**Status:** post-implementation (Mon 11 May 2026). Initially drafted during A1 brew-formula closeout after a 2-hour first-run call with a friendly CTO. Slices A–H shipped on the `cli-just-works` branch; deferred items called out below per section.
 
 **Scope:** primarily the CLI channel (`bristlenose run`, `bristlenose serve`, `bristlenose doctor`), but the same principle and several of the same primitives apply to the macOS desktop. Cross-channel notes inline.
+
+## Status (post-Slices A–H)
+
+The handoff's eight sequenced slices all landed in one branch; the friendly-CTO blockers below are all addressed. What follows is the shipped-vs-deferred map so this doc can be read after-the-fact without diffing against `cli-just-works`.
+
+| Item | Status | Where |
+|---|---|---|
+| Three install helpers (`ensure_wheel`, `ensure_spacy_model`, `ensure_hf_model`) | ✅ shipped (two of three — `ensure_wheel` deleted as unused, see Slice A note) | `bristlenose/utils/package_install.py` |
+| spaCy lazy fetch wired into Presidio | ✅ shipped | `bristlenose/stages/s07_pii_removal.py` `_ensure_spacy_model` |
+| Whisper preflight (banner, native HF Hub progress, `--no-fetch`, `doctor --fetch`) | ✅ shipped | `bristlenose/preflight/whisper.py` |
+| ffmpeg preflight (distro table, brew auto-install on macOS) | ✅ shipped (consent default flipped to N) | `bristlenose/preflight/ffmpeg.py` |
+| API-key preflight + `billing_hints.py` (Anthropic + OpenAI rich; Azure/Gemini fall-through) | ✅ shipped (validate-existing-key) | `bristlenose/preflight/api_key.py`, `bristlenose/llm/billing_hints.py` |
+| Front-loaded preflight block + closing line | ✅ shipped (inlined — Rule of Three did not fire) | `bristlenose/pipeline.py` (block runs after ingest, before stage 2) |
+| Quarterly drift cron on `billing_hints.py` | ✅ armed (`trig_01BtVXKG5hBnhPF4bGwR78CR`) | external |
+| i18n namespace (`preflight.*` in all 6 locales) | ✅ shipped (es/fr/de/ko/ja mirror en for the translation review pass) | `bristlenose/locales/<loc>/preflight.json` |
+| No-account-yet flow (numbered URL + getpass + Keychain persist) | 🟡 deferred | see Decisions block in `.claude/plans/cli-just-works.md` |
+| `pipeline-events.jsonl` Cause entries on preflight abort | 🟡 deferred | aborts go through `typer.Exit(2)` for now |
+| Whitelist enforcement for read-only commands | 🟡 deferred | preflight is only wired into LLM-touching commands so no leak today |
+| Keychain-source attribution refinement | 🟡 deferred | labels are `env` / `stored` (cannot distinguish Keychain) |
+| Preflight registry / `Preflight` dataclass / lint rule | ⛔ parked (Rule of Three did not fire; inline block is simpler) |
+| Rich-bridge tqdm class | ⛔ parked (Option B / native HF Hub progress won the spike) |
+| `cli/messages.py` framed renderer, `prompt_yes_no` generaliser, paste-flow factor | ⛔ parked (one consumer each — kept inline) |
+| Machine-capability fallback for Whisper | ⛔ parked (no real cohort signal of OOM/thrash) |
 
 ---
 
@@ -52,7 +75,7 @@ The first-run experience must:
 1. **Never go silent for more than ~5 seconds without surfacing why.** Either it's working (spinner + stage name) or it's downloading (progress bar + size + ETA) or it's waiting for the user (prompt with default).
 2. **Pre-empt foreseeable blockers** before the long-running stages start, so the user isn't 8 minutes into transcription before discovering the model isn't on disk.
 3. **Translate machine truths into human framing.** "First run on this machine — Bristlenose needs to download the Whisper transcription model (~1.5 GB, one-off)" beats "model not found in HF cache at ~/.cache/huggingface/hub/models--…".
-4. **Make Ctrl+C safe and resumption obvious.** Pipeline resume is already in place (Phase 1c/1d); the same must hold for model downloads (HF Hub's built-in resume is fine; the UX must say "resuming download").
+4. **Make Ctrl+C safe and resumption obvious.** Pipeline resume is already in place (Phase 1c/1d — see [`docs/design-pipeline-resilience.md`](design-pipeline-resilience.md) for the manifest + per-session cache mechanics this builds on); the same must hold for model downloads (HF Hub's built-in resume is fine; the UX must say "resuming download").
 5. **Be the same shape across CLI and desktop — each authentic to its medium.** A user moving between channels shouldn't relearn the vocabulary, defaults, or recovery semantics. Glyphs and colours come from one taxonomy (`MessageKind`); copy stays consistent; defaults match. But the *chrome* is channel-appropriate by design — CLI is authentically CLI (terminal text, `[Y/n]`, "re-run with"); desktop is authentically Mac-native (SwiftUI sheets, buttons, modal flow). The same *question* may surface as a paste prompt in one channel and a sheet with a text field in the other; that's correct, not a failure to harmonise.
 6. **Tell the user where bytes went and how to evict them.** Disk-conscious users are owed a one-line "cached at `<path>` — delete with `bristlenose doctor --evict-models`."
 7. **Never require reading the manual to complete a first run.** The man page and `--help` are reference, not curriculum.
@@ -124,7 +147,7 @@ After this line, **no prompt fires again** for the rest of this run. Downloads, 
 
 **What if a state actually emerges mid-pipeline that needs decision?** Treat it as a hard failure with a `Cause`, not a prompt. Bail with a clear message; user re-runs after fixing. Examples: API credit exhausted mid-pipeline (already covered by existing `Cause` category), LLM provider unavailable, disk full. None of these should drop the user into a prompt at minute 35; they should bail with an error and surface in the diagnostic popover.
 
-**Implementation pattern:** the preflight registry (when/if it emerges per finding 36's helper-first sequencing) returns a list of `UserQuestion` records *before* the pipeline starts executing. The pipeline accumulates them, renders them as the numbered block above, collects answers, and only then begins stage execution. No stage code ever calls `input()` or `getpass()` directly — those are all owned by the upfront question collector. This is enforceable with a lint rule.
+**Implementation pattern (as shipped, Slice F):** preflight callers fire in a single inline block in `pipeline.py` immediately after ingest, before stage 2 starts. The collector / `UserQuestion` dataclass / registry didn't get factored because the Rule-of-Three didn't fire (one interactive prompt today: `brew install [Y/n]`). No stage code calls `input()` or `getpass()` outside that block today; the discipline is enforced by code review rather than a lint rule for now.
 
 **Exception:** the existing session-count guard ("Found 47 sessions in dir/. Continue? [Y/n]") fires at the end of ingest, which is technically before the rest of the pipeline. It belongs in the upfront question block conceptually, just rendered after the discovery line. Keep it where it is; treat it as the prototype for this pattern, not an exception to it.
 
@@ -240,7 +263,7 @@ Bristlenose's posture matches HF CLI / Ollama / brew, not apt. User-scope, named
 **Implementation:**
 
 1. New helper `bristlenose/utils/hf_cache.py:model_is_cached(repo_id) -> bool` using `huggingface_hub.try_to_load_from_cache` (returns sentinel `_CACHED_NO_EXIST` if not found, a path if found, `None` if uncached).
-2. Call it from `_init_mlx_backend` / `_init_faster_whisper_backend` *before* the Rich `console.status()` spinner opens — these are called inside `transcribe_sessions()`, so the preflight needs to lift into `pipeline.py` between stages 4 and 5.
+2. Call it from `_init_mlx_backend` / `_init_faster_whisper_backend` *before* the Rich `console.status()` spinner opens — these are called inside `transcribe_sessions()`, so the preflight has to lift into `pipeline.py`. **Shipped placement:** the call lives in the front-loaded preflight block immediately after ingest (Slice F), not between stages 4 and 5 as originally sketched. Same effect, surfaced earlier.
 3. If missing: close the spinner, print the framed pre-message, prompt, then call `snapshot_download(repo_id, tqdm_class=<rich-bridge>)` outside the spinner context. Reopen the spinner for actual transcription.
 4. `--yes` / `-y` already exists (session-count guard). Re-use it to skip the prompt for CI / scripts.
 5. **Resume:** HF Hub handles partial downloads automatically. The pre-message should say "Resuming download" instead of "Downloading" when `~/.cache/huggingface/hub/models--…/blobs/` contains partial files.
@@ -352,12 +375,12 @@ Detect the platform / distro (`platform.system()`, `/etc/os-release`) and surfac
 
 Asking during `bristlenose run` is too late for case (2). By that point the user has chosen a folder, typed the command, watched ingest spin up — and we're now interrupting with "actually first, 20 minutes of side-quest." That's a drop-off cliff.
 
-Better: surface the key requirement at **first invocation of anything**, including `bristlenose --help`, `bristlenose doctor`, `bristlenose <folder>`. Detect first-ever-on-this-machine via the absence of a marker file (e.g. `~/.config/bristlenose/state.json`). On detection, print one line up-front:
+Better: surface the key requirement at **first invocation of anything**, including `bristlenose --help`, `bristlenose doctor`, `bristlenose <folder>`. Detect first-ever-on-this-machine via the absence of a marker file (macOS: `~/Library/Application Support/Bristlenose/state.json`; Linux: `$XDG_DATA_HOME/Bristlenose/state.json`, defaulting to `~/.local/share/Bristlenose/state.json`). On detection, print one line up-front:
 
 ```
 $ bristlenose interviews/
 
-  Looks like this is your first run on this machine. Bristlenose needs
+  First run on this machine. Bristlenose needs
   an API key for Claude (or another provider) to extract quotes.
   Set one up now? (~30s if you have a key, ~10 min if you need to
   create an account and add billing.) [Y/n]
@@ -408,9 +431,9 @@ This catches the **single most common first-run trap**: the user has a valid key
 What good failure messages look like for the billing-empty case — provider-specific copy, same shape:
 
 ```
-  ⊘ Key works, but your Anthropic account has no API credit yet.
+  ⊘ Key works, but your Claude account has no API credit yet.
 
-  Heads up: your Claude.ai subscription does NOT fund API usage.
+  Heads up: your Claude.ai subscription does _not_ fund API usage.
   API credit is separate — you load it as prepay on the console.
 
   1. Open  https://console.anthropic.com/settings/billing
@@ -427,9 +450,9 @@ The "subscription ≠ API credit" sentence is doing the real work — without it
 
 | Provider | Shape of "add money" | Minimum | URL | Subscription confusion |
 |---|---|---|---|---|
-| **Claude** (Anthropic) | Prepay credit on console | $5 | `https://console.anthropic.com/settings/billing` | Claude.ai Pro/Team subscription does NOT fund API |
-| **ChatGPT** (OpenAI) | Prepay credit on platform | $5 | `https://platform.openai.com/account/billing` | ChatGPT Plus / Team / Enterprise subscription does NOT fund API |
-| **Gemini** (Google) | Two-mode — AI Studio free tier, then Google Cloud billing | Free tier first, then post-paid via GCP project | `https://aistudio.google.com/apikey` / `https://console.cloud.google.com/billing` | Google One / Workspace / Gemini Advanced subscription does NOT fund API |
+| **Claude** (Anthropic) | Prepay credit on console | $5 | `https://console.anthropic.com/settings/billing` | Claude.ai Pro/Team subscription does _not_ fund API |
+| **ChatGPT** (OpenAI) | Prepay credit on platform | $5 | `https://platform.openai.com/account/billing` | ChatGPT Plus / Team / Enterprise subscription does _not_ fund API |
+| **Gemini** (Google) | Two-mode — AI Studio free tier, then Google Cloud billing | Free tier first, then post-paid via GCP project | `https://aistudio.google.com/apikey` / `https://console.cloud.google.com/billing` | Google One / Workspace / Gemini Advanced subscription does _not_ fund API |
 | **Azure OpenAI** | Azure subscription billing — pay against an Azure account, no separate prepay | Azure subscription minimums (varies; many users have $$ via existing employer/student credits) | `https://portal.azure.com/#blade/Microsoft_Azure_Billing/SubscriptionsBlade` | n/a — there's no "Azure subscription that doesn't cover API"; if Azure is set up at all, billing works |
 | **Local** (Ollama) | Free, runs on your machine | n/a — free | n/a | n/a — confusion vector is "do I have enough RAM," handled separately |
 
@@ -462,6 +485,8 @@ Other error-class translations, same shape (translate the provider's error class
 Validation runs in <1 s for typical providers. Worth every millisecond.
 
 #### Branch (2): doesn't-have-a-key-yet flow
+
+> **Status:** 🟡 deferred to follow-up. The shipped `preflight_api_key` covers the *has-a-key, validate-it-now* path; the numbered-URL flow below has not landed. The existing `_maybe_prompt_for_provider` path in `cli.py` covers the simpler "missing-key → prompt" case. Full deferral rationale + concrete follow-up steps are in the Decisions block of `.claude/plans/cli-just-works.md`.
 
 ```
   No account yet? Here's the path — open in a browser:
@@ -546,7 +571,7 @@ Option B's banner + ✓ outer frame; Option A's Rich-bridge *inside* the banner 
 Move all Shape-1 fetches out of the pipeline entirely. `bristlenose doctor --fetch-models` is the official path; the first `bristlenose run` on a cold machine errors with "Run `bristlenose doctor --fetch-models` first."
 
 - **Pros:** the pipeline UX is always "models present"; no in-pipeline download UX needed.
-- **Cons:** pushes the question to `doctor`'s UX (we still have to render *something* there). The user who skips `doctor` hits a hard error instead of a working tool. Conflicts with the philosophy at the top of this doc.
+- **Cons:** pushes the question to `doctor`'s UX (we still have to render *something* there). The user who skips `doctor` hits a hard error instead of a working tool. Conflicts with the philosophy at the top of this doc — and the error copy here ("Run `bristlenose doctor --fetch-models` first") is itself an anti-pattern: a tool telling the user to run a different command before the one they typed actually works is exactly the friction the doc opens by ruling out. Listed as a debate alternative for completeness, not adopted.
 
 #### Side-by-side: Whisper vs spaCy native progress (Option B output)
 
@@ -635,9 +660,9 @@ uv's wins concentrate on **contributor venv + CI cold installs**, not end-user i
 
 So uv is a **developer-experience question, not an end-user-experience question** at the current mix. Worth doing — slow contributor onboarding is a real cost, the `/new-feature` and worktree dance bit us this session — but framing it as a first-run UX win would be misreading the audience. End users will not notice.
 
-**Third audience — evaluators / advisors / tech-aware decision influencers.** The "uv vibe" the CTO surfaced (Simon, friendly-CTO call, May 2026: "newer, better, what I'd expect") is one data point *in a class* that's becoming a direction of travel. uv is from the same outfit that shipped `ruff`, which won the lint category outright in ~18 months — Bristlenose itself defaults to `ruff` for exactly this reason. uv hit 1.0 mid-2024 and the discourse flipped from "what's uv?" to "why aren't you on uv?" inside 12 months. Pydantic, Polars, FastAPI docs recommend it. The convergence on a single cargo/npm-shaped tool is the Python ecosystem fixing its longstanding embarrassment. Against pure direction-of-travel: pip is in stdlib via `ensurepip` and won't disappear; Poetry was the "newer better" answer 2018-2022 and lost, so "newer" isn't destiny; Astral is VC-backed with unclear long-term governance.
+**Third audience — evaluators / advisors / tech-aware decision influencers.** The "uv vibe" the CTO surfaced (the friendly CTO, friendly-CTO call, May 2026: "newer, better, what I'd expect") is one data point *in a class* that's becoming a direction of travel. uv is from the same outfit that shipped `ruff`, which won the lint category outright in ~18 months — Bristlenose itself defaults to `ruff` for exactly this reason. uv hit 1.0 mid-2024 and the discourse flipped from "what's uv?" to "why aren't you on uv?" inside 12 months. Pydantic, Polars, FastAPI docs recommend it. The convergence on a single cargo/npm-shaped tool is the Python ecosystem fixing its longstanding embarrassment. Against pure direction-of-travel: pip is in stdlib via `ensurepip` and won't disappear; Poetry was the "newer better" answer 2018-2022 and lost, so "newer" isn't destiny; Astral is VC-backed with unclear long-term governance.
 
-The skew: end-user researchers won't have heard of uv. But the people who *evaluate* Bristlenose for adoption — friend-who-codes advisors, CTO contacts at UXR teams' parent companies, OSS contributors deciding whether to engage — are exactly the cohort where uv-expectation is rising. The credibility tax for "still on pip" rises in *that* class over the next 18 months. So Debate 2's real framing isn't "does uv help users" (no) or "does it help contributors" (yes) — it's "does it help the people who decide whether Bristlenose looks like a credible modern tool." That class is small but disproportionately influential; it's the same class that adopted ruff first and pulled everyone along. Simon is one data point, and probably an early one rather than an outlier.
+The skew: end-user researchers won't have heard of uv. But the people who *evaluate* Bristlenose for adoption — friend-who-codes advisors, CTO contacts at UXR teams' parent companies, OSS contributors deciding whether to engage — are exactly the cohort where uv-expectation is rising. The credibility tax for "still on pip" rises in *that* class over the next 18 months. So Debate 2's real framing isn't "does uv help users" (no) or "does it help contributors" (yes) — it's "does it help the people who decide whether Bristlenose looks like a credible modern tool." That class is small but disproportionately influential; it's the same class that adopted ruff first and pulled everyone along. the friendly CTO is one data point, and probably an early one rather than an outlier.
 
 #### Working call
 
@@ -748,6 +773,64 @@ The "i-in-a-blue-circle" affordance familiar from GUIs is doing work that plain 
 
 ---
 
+## i18n implications
+
+All preflight strings live in the `preflight` namespace under
+`bristlenose/locales/<locale>/preflight.json` and route through
+`bristlenose.i18n.t()`. English is the source of truth; the five other
+locales (`es`, `fr`, `de`, `ko`, `ja`) fall through to English via the
+existing fallback path until a translator copies and adapts each section.
+
+**Namespace shape** (`bristlenose/locales/en/preflight.json`):
+
+- `whisper.*` — banner intro, reassurance line, verb (`Downloading` / `Resuming download`), fetching template, ready line, `--no-fetch` abort copy
+- `ffmpeg.*` — banner, brew prompt, ready line, abort copy, five install-table rows (one per distro)
+- `api_key.*` — source attribution, four error-class messages (`invalid_key`, `billing_empty`, `model_unavailable`, `rate_limit`), generic fall-through
+- `closing.*` — "No more questions" line with/without estimate
+
+**Channel-fork inventory** — all preflight strings are CLI-only. The
+desktop sidecar bundles spaCy + Whisper + ffmpeg at build time and uses a
+Swift-side Keychain flow, so none of `preflight.whisper.*`,
+`preflight.ffmpeg.*`, or `preflight.api_key.*` fire under the desktop
+runtime. The `dt()`/`ct()` channel-fork helpers in `frontend/` don't
+apply because these strings are consumed only from Python; the equivalent
+on the Python side is "this whole namespace is CLI-only," documented
+here.
+
+**Code-owned (not translated):**
+
+- URLs in `bristlenose/llm/billing_hints.py` (`console.anthropic.com/...`, `platform.openai.com/...`, etc.) — factual provider properties
+- `minimum_note` string in `ProviderBilling` (the "$5 minimum, subscription does not fund API" sentence) — interpolated into translated wrappers but the factual content is static
+- The locked validation prompt (`_VALIDATION_PROMPT = "."`) and `User-Agent` header — never user-visible
+- The Whisper repo IDs (`mlx-community/whisper-large-v3-turbo`, `Systran/faster-whisper-large-v3`) — registry keys, not prose
+- Hardcoded size string (`~1.5 GB` for Whisper) — see formatting rules below
+
+**Formatting rules:**
+
+- ICU-style `{placeholder}` interpolation. Placeholders that are factual
+  (URLs, model repo IDs, shell commands like `brew install ffmpeg`,
+  `bristlenose doctor --fetch`, `--no-fetch`) pass through unchanged in
+  every locale.
+- USD provider amounts stay USD (`$5`); locales may adapt the *separator*
+  (e.g. `$5,00` in fr-FR) but never the currency. Bristlenose itself
+  doesn't transact; we're echoing the provider's pricing in the
+  provider's currency.
+- Size strings (`~1.5 GB`) currently ship as a literal English string.
+  A future pass can route these through `babel` for locale-appropriate
+  separators (`~1,5 Go` in fr); the placeholder name (`{size}`) is
+  already in the template so the swap is single-call.
+- Backtick-wrapped shell commands and file paths in messages are
+  treated as code spans and shouldn't be translated even when nested
+  inside translated prose.
+
+**Translator workflow:** copy `en/preflight.json` to each target locale,
+translate prose around the `{placeholder}` markers, keep the JSON
+structure identical. See CLAUDE.md → "i18n — single source of truth" for
+the JSON round-trip gotcha (don't re-dump existing locale files; this
+namespace is fresh so it's a non-issue for the first translation pass).
+
+---
+
 ## Open questions
 
 See **Design debates** above for the two big ones (rendering ownership and install backend). The rest:
@@ -776,7 +859,7 @@ Both spikes are independent; run in parallel sessions.
 Then, smallest-useful-first (helper-first per Debate-2 / finding 36 design call; registry/collector emerges later if Rule of Three fires):
 
 1. **`bristlenose/utils/package_install.py` — three helpers, not one.** Per finding 10 design call: `ensure_wheel(pip_spec)`, `ensure_spacy_model(model_name)`, `ensure_hf_model(repo_id)`. Each call site already knows which verb it needs; the apparent shared interface is over-abstraction. Each helper hides its own install command (today `pip install` / `python -m spacy download` / `huggingface_hub.snapshot_download`; tomorrow `uv pip install` for the wheel helper if Debate 2 lands a switch). Resume / error / target-dir semantics documented per-helper, not in a single shared docstring. ~1 h to write three small focused functions; pays back if/when a fourth install-shaped operation arrives (let it be its own helper too).
-2. **spaCy lazy fetch.** Ships value within hours. Goes through the helper from (1). Use platformdirs for any state writes. ~1 h.
+2. **spaCy lazy fetch.** Ships value within hours. Goes through the helper from (1). (State writes use a small in-house path resolver — `state_path()` in `bristlenose/preflight/api_key.py` — rather than adding `platformdirs` as a dep.) ~1 h.
 3. **Whisper preflight (conditional on `needs_transcription`).** Per finding 39 design call — only fires if any session needs transcription. Teams/Zoom users never see this. Banner + auto-proceed (no Y/n per finding 5). Hardcode `~1.5 GB` in banner (finding 3 — no `model_info()` network call). ~half-day.
 4. **ffmpeg preflight on pip-installed channels.** Distro-aware install instructions; macOS-with-brew gets `[Y/n]` auto-install offer. ~half-day.
 5. **API-key preflight + first-invocation marker.** Keychain on macOS (finding 1), `~/Library/Application Support/Bristlenose/` for marker (finding 2), validation-exercises-billing (paid `/messages` call, locked inert prompt content per finding 15), 24-hour TTL on successful validation (finding 7), three-tier validation policy (LLM commands validate, read-only don't, billing-empty has separate attempted-marker). Has-a-key branch + no-account-yet branch with URLs. Whitelist `--help` / `--version` / `status` / `render` / non-TTY (finding 4). ~1.5 days.

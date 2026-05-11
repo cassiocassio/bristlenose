@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 11 May 2026 (closed `fix-new-feature-skill`)
+**Updated:** 11 May 2026 (closed `cli-just-works`)
 
 ---
 
@@ -31,7 +31,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch generic-failure-surface/` | `generic-failure-surface` | feature | Server-rendered failure/empty-state page; same surface for CLI browser and WKWebView |
-| `bristlenose_branch cli-just-works/` | `cli-just-works` | feature | first-run CLI UX: preflights, lazy fetches, API-key flow, front-loaded questions |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
@@ -121,7 +120,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
 | `generic-failure-surface` | `bristlenose_branch generic-failure-surface/` | local only |
-| `cli-just-works` | `bristlenose_branch cli-just-works/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
@@ -135,42 +133,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `cli-just-works`
-
-**Kind:** feature — code lands on main via merge or PR-and-squash
-**Status:** Just started
-**Started:** 11 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch cli-just-works/`
-**Remote:** local only (push when ready)
-
-**What it does:** first-run CLI UX: preflights, lazy fetches, API-key flow, front-loaded questions. Spec in `docs/design-cli-just-works.md` (committed to main as `64dc0c3`); the gitignored handoff + review log live in the usual private docs area in the main repo.
-
-Eight planned slices (smallest-useful-first, helper-first per design call): (A) three install helpers, (B) spaCy lazy fetch via helper, (C) Whisper preflight conditional on `needs_transcription`, (D) ffmpeg preflight with brew auto-install on macOS, (E) API-key preflight (Keychain via `keyring` + validation-exercises-billing + 24h TTL + `billing_hints.py` for Anthropic+OpenAI + source attribution), (F) front-load all questions before stage 1 (refactor C+D+E if Rule of Three fires), (G) i18n across all 6 locales, (H) niggle fixes + design-doc §"i18n implications" subsection.
-
-**Files this branch will touch:**
-- `bristlenose/utils/package_install.py` (new)
-- `bristlenose/preflight/` (new package: `whisper.py`, `ffmpeg.py`, `api_key.py`)
-- `bristlenose/llm/billing_hints.py` (new)
-- `bristlenose/stages/s07_pii_removal.py` (spaCy lazy fetch integration)
-- `bristlenose/pipeline.py` (preflight orchestration + front-loaded question collector)
-- `bristlenose/locales/{en,es,fr,de,ko,ja}/preflight.json` (new locale files)
-- `docs/design-cli-just-works.md` (niggle fixes + §"i18n implications" subsection)
-
-**Out of scope** (do NOT touch):
-- uv migration (parked per Debate 2)
-- 16-session prompt enrichment with cost+filenames (deferred low-risk)
-- Machine-capability fallback for Whisper (parked)
-- Channel-mix telemetry ping (folds into Phase 2)
-- Rich-bridge tqdm class (Option A — only if Option B native rendering looks unacceptable in practice)
-- `bristlenose-website` (entirely separate repo)
-- Desktop sidecar changes (frozen-sidecar guard in `_ensure_spacy_model()` is the only desktop-aware code)
-
-**Potential conflicts with other branches:**
-- `generic-failure-surface` — both touch `pipeline.py` (preflight orchestration vs failure-surface route). Coordinate the `pipeline.py` edits if both land in parallel. Different stages of the pipeline lifecycle (preflight is pre-stage-1; failure-surface is at request time), so logical conflict is low; merge conflicts possible if same file blocks are edited.
-- `responsive-signal-cards` — none expected (different surface).
 
 ---
 
@@ -278,6 +240,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `cli-just-works` — merged 11 May 2026
+
+First-run CLI UX shipped as v0.15.5: preflights (Whisper, ffmpeg, API-key billing, spaCy lazy fetch) all fire between ingest and audio extraction, ending with a "No more questions" line after which no prompt fires for the rest of the run. New `--no-fetch` flag plus `bristlenose doctor --fetch` for offline pre-warm; `BRISTLENOSE_SKIP_PREFLIGHT=1` defence-in-depth env escape; `state.json` (mode 0600) at `~/Library/Application Support/Bristlenose/` caching API-key validation for 24h. New `bristlenose/preflight/` package, `bristlenose/llm/billing_hints.py` registry, and a `preflight.*` i18n namespace in all six locales. Documentation pass: design doc Status table, SECURITY.md preflight bullet + "What Bristlenose writes to your machine" appendix + HF Hub LFS-hash integrity caveat, and the man page (now `mandoc -Tlint` clean) documents the new flags + `state.json` under FILES + exit code 2. Ten commits merged as `372a0aa`. Worktree detached and tagged orange on disk.
 
 ### `fix-new-feature-skill` — merged 11 May 2026
 

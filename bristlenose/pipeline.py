@@ -562,6 +562,7 @@ class Pipeline:
                 (f.duration_seconds or 0) for s in sessions for f in s.files
             ) / 60.0
 
+            _est = None
             if self._estimator is not None:
                 _est = self._estimator.initial_estimate(
                     total_audio_mins, len(sessions),
@@ -574,6 +575,50 @@ class Pipeline:
 
             _stage_actuals: dict[str, StageActual] = {}
             _n_sessions = float(len(sessions))
+
+            # ── Front-loaded preflights ──────────────────────────────
+            # All user-interactive prompts (and any native subprocess
+            # output — `brew install`, HF Hub progress) fire here, in
+            # one block, after ingest and before any further stage
+            # runs. The closing "No more questions" line guarantees no
+            # later stage will pause to ask anything. See
+            # docs/design-cli-just-works.md → "Front-load the entire
+            # decision tree".
+            _needs_ffmpeg = any(
+                f.file_type == FileType.VIDEO and not s.has_existing_transcript
+                for s in sessions for f in s.files
+            )
+            if _needs_ffmpeg:
+                from bristlenose.preflight.ffmpeg import preflight_ffmpeg
+                preflight_ffmpeg(
+                    console=console,
+                    status=status,
+                    allow_install=not self.settings.no_fetch,
+                )
+
+            _needs_whisper = (
+                not self.settings.skip_transcription
+                and any(not s.has_existing_transcript for s in sessions)
+            )
+            if _needs_whisper:
+                from bristlenose.preflight.whisper import preflight_whisper
+                preflight_whisper(
+                    settings=self.settings,
+                    console=console,
+                    status=status,
+                    allow_fetch=not self.settings.no_fetch,
+                )
+
+            # Closing line — guarantees no further prompt this run.
+            from bristlenose.i18n import t as _i18n_t
+            _suffix = f" {_est.range_str} to your report." if _est is not None else ""
+            _closing = _i18n_t(
+                "preflight.closing.no_more_questions",
+                estimate_suffix=_suffix,
+            )
+            console.print()
+            console.print("  " + _closing)
+            console.print()
 
             # ── Stage 2: Extract audio from video ────────────────────
             mark_stage_running(manifest, STAGE_EXTRACT_AUDIO)
@@ -658,6 +703,11 @@ class Pipeline:
                             for sid, sr in _prev_tx_rec.sessions.items()
                             if sr.status == StageStatus.COMPLETE
                         }
+
+                # Whisper preflight is front-loaded (runs right after
+                # ingest), so by the time we hit transcribe stage 5 the
+                # model is guaranteed to be cached (or the pipeline
+                # already aborted with the banner).
 
                 status.update("[dim]Transcribing...[/dim]")
                 t0 = time.perf_counter()

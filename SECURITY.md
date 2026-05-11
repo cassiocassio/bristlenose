@@ -35,9 +35,20 @@ A complete inventory of every third-party binary and Python wheel that ships in 
 
 1. **You use a cloud LLM provider.** Transcript text is sent to the provider you selected in Settings (Claude, ChatGPT, Azure OpenAI, or Gemini), using your own API key, at the moment you trigger an analysis. Using Ollama with a local model eliminates even this.
 2. **You open the LLM settings tab.** Bristlenose pings each configured cloud provider with a minimal auth-check request to confirm your key still works. No transcript data is sent — just an empty or minimal request that the provider answers with a 200 or 401. Capped at once per minute per provider (verdict cache). Ollama is never contacted off-machine — the URL is hardwired to localhost in the desktop GUI.
-3. **Whisper downloads its transcription model**, once per model, on first transcription. Model files are downloaded from huggingface.co to `~/Library/Application Support/Bristlenose/models/`. This is data, not code — the download is consumed by the transcription library that already ships signed inside the app.
+3. **Whisper downloads its transcription model**, once per model, on first transcription. Model files are downloaded from huggingface.co to `~/Library/Application Support/Bristlenose/models/`. This is data, not code — the download is consumed by the transcription library that already ships signed inside the app. Integrity relies on Hugging Face Hub's own LFS hash verification against `huggingface.co`'s manifest endpoint; Bristlenose does not pin model SHAs. If you set `HF_ENDPOINT` to a third-party mirror, that mirror's integrity story is the one that applies.
+4. **You start a CLI pipeline run.** Before transcription begins, Bristlenose makes a one-token request to your configured cloud provider to verify the key works and has billing balance, so the run aborts up-front instead of failing six minutes in. The request body is the literal character `.` — no transcript content. Capped at one call per 24h per provider (validation cache). Skipped when the provider is Ollama, or when `BRISTLENOSE_SKIP_PREFLIGHT=1` is set.
 
 Bristlenose itself has zero sub-processors. There is no cloud database, no analytics service, no error-tracking vendor, no auth provider, and no telemetry endpoint.
+
+### What Bristlenose writes to your machine
+
+Per-user state lives outside your project directories and persists across runs:
+
+- **API keys** — macOS Keychain (`security`) or Linux Secret Service (`secret-tool`). Service names listed in `bristlenose/llm/CLAUDE.md`.
+- **Whisper model cache** — `~/.cache/huggingface/hub/` (CLI) or `~/Library/Application Support/Bristlenose/models/` (desktop). Several GB depending on chosen model.
+- **Validation state** — `~/Library/Application Support/Bristlenose/state.json` on macOS, `$XDG_DATA_HOME/Bristlenose/state.json` (default `~/.local/share/Bristlenose/state.json`) on Linux. Contains last-validated timestamps per provider — no keys, no transcript data. Mode `0o600`.
+
+Project artefacts (transcripts, reports, intermediates) live exclusively under your input folder's `bristlenose-output/` and never leave it. `rm -rf bristlenose-output` deletes every per-project byte Bristlenose wrote.
 
 ## Prompt injection via transcripts
 

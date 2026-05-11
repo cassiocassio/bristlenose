@@ -66,6 +66,7 @@ Text that only appears in terminal output. Never rendered in the web UI or deskt
 | `pipeline.json` | ~4 | Pipeline stage display names | 6 locales |
 | `cli.py` help strings | ~30 | Typer `--help` flag descriptions | English only |
 | `bristlenose.1` man page | 517 lines | Full man page | English only |
+| `preflight.json` | ~25 | First-run preflight banners, prompts, error recovery (Whisper download, ffmpeg install table, API-key validation, closing line) | 6 locales (en source; es/fr/de/ko/ja mirror en pending translation review) |
 
 **Gap**: CLI `--help` strings and the man page are English-only and not wired through i18next. Translating these is a future task (low priority — CLI users overwhelmingly work in English).
 

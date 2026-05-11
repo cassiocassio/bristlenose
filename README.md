@@ -362,6 +362,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.5** — _11 May 2026_
+
+- **First-run preflight block** — Whisper / ffmpeg / API-key / spaCy preflights all fire between ingest and audio extraction, surfacing every "would this run actually work?" question up front. Whisper banner + native HF Hub progress with hardcoded `~1.5 GB`; per-distro ffmpeg install table with macOS-brew auto-install offer (default N); paid single-token API-key validation against billing (Anthropic + OpenAI; 24h TTL cached in `~/Library/Application Support/Bristlenose/state.json` mode 0600). Closing line "No more questions. ~X min to your report. Ctrl+C anytime." after which no prompt fires
+- **`--no-fetch` flag** on `run` / `transcribe` / `analyze` — aborts cleanly instead of fetching missing models. Pair with `bristlenose doctor --fetch` to pre-warm the Whisper cache before going offline
+- **`BRISTLENOSE_SKIP_PREFLIGHT=1`** — defence-in-depth env-var escape hatch for spoofed-TTY CI runners
+- **`bristlenose/preflight/{whisper,ffmpeg,api_key}.py`** new package; **`bristlenose/llm/billing_hints.py`** code-owned provider URLs / minimums / recovery copy; new `preflight.*` i18n namespace across all six locales (English source; es/fr/de/ko/ja mirror en pending native review)
+- **Documentation truing** — design doc carries a post-implementation Status table; SECURITY.md adds preflight bullet + "What Bristlenose writes to your machine" appendix + HF Hub LFS-hash integrity caveat; man page gains a doctor-options section plus `--no-fetch` / `--fetch` / `--yes` / `--static` / `--dev` (the last three pre-existing gaps), `state.json` under FILES, and exit code 2
+
 **0.15.4** — _10 May 2026_
 
 - **SPA: auto-refetch on pipeline completion** — new `GET /api/projects/{id}/last-run` endpoint and `LastRunStore` (3 s poll, visibility-paused, single timer). Browser SPA now refreshes content within ~3 s of pipeline completion instead of going silent. All four content tabs and five island consumers wired

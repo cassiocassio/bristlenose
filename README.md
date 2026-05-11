@@ -362,6 +362,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.6** — _11 May 2026_
+
+- **Server-rendered status page for runs the SPA can't render** — `bristlenose serve` now serves a server-rendered page (no React mount) when the project has no completed run, or the latest run failed or was cancelled. The SPA's invariant becomes: it only mounts when there's data to render. Three states surfaced — no-run-yet (CLI vs desktop copy), failed (with cause + log tail in a `<details>` block, sourced from `pipeline-events.jsonl`), cancelled. Reuses the five-kind `MessageKind` taxonomy — no sixth kind invented. Styling lives at `bristlenose/theme/templates/status-page.css` and uses the design system's tokens exclusively. Event-watcher startup seed also widened to seed `failed` and `cancelled` termini, not just `completed`, so non-happy-path runs survive a server restart. English-only in v1; locale fills batched into the next translation pass
+
 **0.15.5** — _11 May 2026_
 
 - **First-run preflight block** — Whisper / ffmpeg / API-key / spaCy preflights all fire between ingest and audio extraction, surfacing every "would this run actually work?" question up front. Whisper banner + native HF Hub progress with hardcoded `~1.5 GB`; per-distro ffmpeg install table with macOS-brew auto-install offer (default N); paid single-token API-key validation against billing (Anthropic + OpenAI; 24h TTL cached in `~/Library/Application Support/Bristlenose/state.json` mode 0600). Closing line "No more questions. ~X min to your report. Ctrl+C anytime." after which no prompt fires

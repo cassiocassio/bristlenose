@@ -37,4 +37,4 @@ from bristlenose.utils.bundled_binary import prepend_bundled_to_path as _prepend
 _prepend()
 del _prepend
 
-__version__ = "0.15.5"
+__version__ = "0.15.6"

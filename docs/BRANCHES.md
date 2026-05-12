@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 12 May 2026 (opened `a4-stage-cache-honesty`)
+**Updated:** 12 May 2026 (opened `tower-of-hanoi`)
 
 ---
 
@@ -31,6 +31,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch a2-install-doctor-checks/` | `a2-install-doctor-checks` | feature | Hard doctor check for serve extras + zsh-glob-safe install messages + README Python 3.10+ note |
 | `bristlenose_branch a4-stage-cache-honesty/` | `a4-stage-cache-honesty` | feature | Reorder abandon-check before `mark_stage_complete`; close fake-success-feedback class for s08–s11 |
+| `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -119,6 +120,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `a2-install-doctor-checks` | `bristlenose_branch a2-install-doctor-checks/` | local only |
 | `a4-stage-cache-honesty` | `bristlenose_branch a4-stage-cache-honesty/` | local only |
+| `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
@@ -182,6 +184,24 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - None expected — `a2-install-doctor-checks` touches `doctor.py` + `README.md` (no overlap); `responsive-signal-cards` is signal-card layout; parked branches are UI experiments. `pipeline.py` is a hot file historically but no other active branch is currently editing it.
+
+---
+
+### `tower-of-hanoi`
+
+**Kind:** spike — exploratory throwaway, won't merge to main; cherry-pick selectively if anything earns its keep
+**Status:** Just started
+**Started:** 12 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch tower-of-hanoi/`
+**Remote:** local only (push when ready)
+
+**What it does:** Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated. Self-contained prototype under `experiments/tower-of-hanoi/` (auto-discovered by `bristlenose serve --dev` in the Design section). The point is not the solver — it's walking the full plan → `/usual-suspects` → William-only → implement → `/usual-suspects` → William-only loop on a toy, and observing how the agent loop behaves. i18n is stipulated in scope; any William objection to it is recorded verbatim and overruled in `.claude/plans/tower-of-hanoi-decisions.md`.
+
+**Files this branch will touch:**
+- `experiments/tower-of-hanoi/` (all new — solver, theme-primitive consumption, six locale files)
+
+**Potential conflicts with other branches:**
+- None expected — `experiments/` is excluded from `ruff check` (per `pyproject.toml`) and no other active branch touches that subtree. Locale files live under `experiments/tower-of-hanoi/locales/`, **not** `bristlenose/locales/`, so the i18n surface is isolated from any other branch's locale edits.
 
 ---
 

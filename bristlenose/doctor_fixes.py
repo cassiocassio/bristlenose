@@ -392,6 +392,34 @@ def _fix_ollama_model_missing(_method: str) -> str:
     )
 
 
+def _fix_serve_deps_missing(method: str) -> str:
+    # Single quotes around the package spec so zsh doesn't interpret the
+    # brackets as a glob character class — without them, pip gets a mangled
+    # argument and the user sees "no matches found".
+    if method == "snap":
+        return (
+            "`bristlenose serve` deps missing — this is a bug in the snap package.\n"
+            "  sudo snap refresh bristlenose\n"
+            "If it persists: github.com/cassiocassio/bristlenose/issues"
+        )
+    if method == "brew":
+        return (
+            "`bristlenose serve` needs extras that weren't installed.\n\n"
+            "  brew upgrade bristlenose"
+        )
+    # pip / pipx / uv. Pipx venvs have "pipx" in sys.prefix; suggest the
+    # right command for re-installing in place.
+    if "pipx" in sys.prefix:
+        return (
+            "`bristlenose serve` needs extras that weren't installed.\n\n"
+            "  pipx install --force 'bristlenose[serve]'"
+        )
+    return (
+        "`bristlenose serve` needs extras that weren't installed.\n\n"
+        "  pip install 'bristlenose[serve]'"
+    )
+
+
 def _fix_auth_token_env_set(_method: str) -> str:
     return (
         "_BRISTLENOSE_AUTH_TOKEN is set in your shell. `bristlenose serve` "
@@ -430,4 +458,5 @@ _FIX_TABLE: dict[str, object] = {
     "ollama_not_installed": _fix_ollama_not_installed,
     "ollama_model_missing": _fix_ollama_model_missing,
     "auth_token_env_set": _fix_auth_token_env_set,
+    "serve_deps_missing": _fix_serve_deps_missing,
 }

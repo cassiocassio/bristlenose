@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -193,7 +194,49 @@ class TestCookieFallback:
         resp = raw_client.get("/api/projects/1/quotes")
         assert resp.status_code == 401
 
-    def test_spa_html_sets_cookie(self, raw_client: TestClient, token: str) -> None:
-        resp = raw_client.get("/report/")
+    def test_spa_html_sets_cookie(self, tmp_path: Path) -> None:
+        """SPA HTML response sets the auth cookie for plain navigations.
+
+        Requires (a) a completed-run event so the status-page intercept
+        falls through to the SPA, and (b) a stub ``static/index.html`` so
+        ``_mount_prod_report`` wires up the real SPA route instead of the
+        fail-loud bundle-error route. The CI ``test`` job doesn't run
+        ``npm run build``, so we stub the bundle here — same pattern as
+        ``test_serve.py``'s ``prod_client`` fixture.
+        """
+        from bristlenose.events import (
+            KindEnum,
+            RunCompletedEvent,
+            append_event,
+            events_path,
+            new_run_id,
+        )
+
+        output_dir = tmp_path / "bristlenose-output"
+        output_dir.mkdir()
+        append_event(
+            events_path(output_dir),
+            RunCompletedEvent(
+                ts="2026-05-10T20:00:00Z",
+                run_id=new_run_id(),
+                kind=KindEnum.RUN,
+                started_at="2026-05-10T19:00:00Z",
+                ended_at="2026-05-10T20:00:00Z",
+            ),
+        )
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text(
+            '<!doctype html><html><body>'
+            '<div id="bn-app-root" data-project-id="1"></div>'
+            "</body></html>"
+        )
+
+        with patch("bristlenose.server.app._STATIC_DIR", static_dir):
+            app = create_app(project_dir=tmp_path, dev=False, db_url="sqlite://")
+        client = TestClient(app)
+        token = app.state.auth_token
+
+        resp = client.get("/report/")
         assert resp.status_code == 200
         assert resp.cookies.get(AUTH_COOKIE_NAME) == token

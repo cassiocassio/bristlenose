@@ -361,6 +361,47 @@ def categorise_exception(exc: BaseException) -> Cause:
     return Cause(category=CauseCategoryEnum.UNKNOWN, message=msg)
 
 
+def _build_cause(
+    exc: BaseException,
+    *,
+    stage: str,
+    provider: str | None = None,
+    http_status: int | str | None = None,
+    session_id: str | None = None,
+) -> Cause:
+    """Build a Cause for a per-stage failure caught at an LLM call site.
+
+    Privacy contract (see CLAUDE.md alongside ``pii_summary.txt`` /
+    ``llm-calls.jsonl``): provider error bodies sometimes echo prompt
+    fragments — participant names, email/phone tokens lifted from
+    transcripts, or LLM response text. ``pipeline-events.jsonl`` is a
+    named re-identification surface; ``Cause.message`` is persisted there
+    and read by the desktop popover.
+
+    This helper composes ``Cause.message`` from structured fields only —
+    the exception's class name, the stage, and the provider slug. It
+    NEVER consumes ``str(exc)`` or ``repr(exc)``. Category is inferred via
+    ``categorise_exception`` (whose substring matchers are bristlenose-
+    controlled patterns like ``\\b401\\b`` / ``\\brate limit\\b`` and will
+    not echo participant tokens), but the persisted message is replaced.
+
+    ``http_status`` lands in ``cause.code`` so the desktop can render the
+    HTTP status independently of the message.
+    """
+    category = categorise_exception(exc).category
+    parts = [f"{stage} failed: {exc.__class__.__name__}"]
+    if provider:
+        parts.append(f"on {provider}")
+    return Cause(
+        category=category,
+        stage=stage,
+        provider=provider,
+        code=str(http_status) if http_status is not None else None,
+        message=" ".join(parts),
+        session_id=session_id,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Public API: run_lifecycle context manager
 # ---------------------------------------------------------------------------

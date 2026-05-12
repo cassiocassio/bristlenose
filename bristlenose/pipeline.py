@@ -789,16 +789,22 @@ class Pipeline:
             write_manifest(manifest, output_dir)
 
             # ── Transcript outcome rollup + abandon check ──────────────
-            # Build from session_segments (the union of cached + fresh):
-            # one attempt per input session, success when segments are
-            # non-empty. Failures come from the fresh path; cached sessions
-            # were already complete in a prior run and don't fail here.
-            # If every session ends up with empty segments, abandon now —
-            # no point running LLM stages on empty data, and we must not
-            # write a fake-empty report at the end.
+            # Success semantics: a session is "succeeded" when transcription
+            # did NOT record a StageFailure for it. Whisper returning zero
+            # segments on legitimate silent input is a success (Pass 3 lock);
+            # only a real exception in the transcribe stage routes through
+            # `_fresh_transcript_outcome.failed`. The previous predicate
+            # `session_segments.get(sid)` was value-truthy and fired the
+            # abandon check on every silent recording — false-positive
+            # abandons. Drive the predicate off the explicit failure list
+            # instead.
+            _failed_sids = {
+                f.session_id for f in _fresh_transcript_outcome.failed
+                if f.session_id is not None
+            }
             _succeeded_sids = [
                 s.session_id for s in sessions
-                if session_segments.get(s.session_id)
+                if s.session_id not in _failed_sids
             ]
             self._summary.transcripts = StageOutcome(
                 attempted=len(sessions),
@@ -1107,6 +1113,13 @@ class Pipeline:
             # ── Stage 8: Topic segmentation ──────────────────────────
             _seg_errors: list[str] = []
             _tb_path = intermediate / "topic_boundaries.json"
+            # Outer-scope defaults — both branches below populate. Cache-hit
+            # branch treats every cached topic-map as attempted+succeeded;
+            # per-session branch only counts truly cached items here, and
+            # combines with `_seg_outcome` from the fresh call below.
+            _seg_outcome = StageOutcome()
+            _cached_topic_count = 0
+            _topics_elapsed: float | None = None
             # Track both upstream transcript hash and PII config — toggling
             # --redact-pii changes the transcript content that topics see.
             _topic_input_hashes = {
@@ -1124,6 +1137,7 @@ class Pipeline:
                     for obj in _json.loads(_tb_path.read_text(encoding="utf-8"))
                 ]
                 total_boundaries = sum(len(m.boundaries) for m in topic_maps)
+                _cached_topic_count = len(topic_maps)
                 _print_cached_step(
                     f"Segmented {total_boundaries} topic boundaries",
                 )
@@ -1145,6 +1159,7 @@ class Pipeline:
                         if obj.get("session_id") in _cached_topic_sids
                     ]
 
+                _cached_topic_count = len(_cached_topic_maps)
                 _remaining_transcripts = [
                     t for t in clean_transcripts
                     if t.session_id not in _cached_topic_sids
@@ -1170,12 +1185,22 @@ class Pipeline:
                     if llm_client is None:
                         llm_client = LLMClient(self.settings)
                     with _llm_telemetry.stage("s08_topic_segmentation"):
-                        _fresh_topic_maps = await segment_topics(
+                        _fresh_topic_maps, _seg_outcome = await segment_topics(
                             _remaining_transcripts, llm_client,
                             concurrency=concurrency, errors=_seg_errors,
                         )
-                    # Record per-session completion
+                    # Record per-session completion only for sessions whose
+                    # boundaries were actually produced (skip-after-failure
+                    # entries return an empty SessionTopicMap that is NOT a
+                    # success, and per-session manifest marking must not
+                    # claim otherwise).
+                    _seg_failed_sids = {
+                        f.session_id for f in _seg_outcome.failed
+                        if f.session_id is not None
+                    }
                     for tm in _fresh_topic_maps:
+                        if tm.session_id in _seg_failed_sids:
+                            continue
                         mark_session_complete(
                             manifest, STAGE_TOPIC_SEGMENTATION,
                             tm.session_id,
@@ -1216,6 +1241,35 @@ class Pipeline:
                 self._emit_remaining(STAGE_TOPICS, _topics_elapsed)
                 if _seg_errors:
                     _print_warn(*_short_reason(_seg_errors, self.settings.llm_provider))
+
+            # ── Topic outcome rollup + abandon check ────────────────────
+            # MUST run BEFORE mark_stage_complete: writing the manifest
+            # before raising would poison the cache (empty
+            # topic_boundaries.json reads back as "stage already done") and
+            # downstream stages run on zero topic data, producing an empty
+            # report on every subsequent run.
+            self._summary.topics = StageOutcome(
+                attempted=_cached_topic_count + _seg_outcome.attempted,
+                succeeded=_cached_topic_count + _seg_outcome.succeeded,
+                failed=list(_seg_outcome.failed),
+                duration_ms=(
+                    int(_topics_elapsed * 1000)
+                    if _topics_elapsed is not None else None
+                ),
+            )
+            if (
+                self._summary.topics.attempted > 0
+                and self._summary.topics.succeeded == 0
+            ):
+                raise PipelineAbandonedError(
+                    cause=_dominant_cause(
+                        self._summary.topics.failed,
+                        default_category=CauseCategoryEnum.UNKNOWN,
+                        message="All topic segmentation calls failed.",
+                    ),
+                    summary=self._summary,
+                )
+
             _tb_hash = (
                 hash_bytes(_tb_path.read_bytes()) if _tb_path.exists() else None
             )
@@ -1223,6 +1277,7 @@ class Pipeline:
                 manifest, STAGE_TOPIC_SEGMENTATION,
                 content_hash=_tb_hash,
                 input_hashes=_topic_input_hashes,
+                output_path=_tb_path,
             )
             write_manifest(manifest, output_dir)
 
@@ -1352,17 +1407,12 @@ class Pipeline:
                 self._emit_remaining(STAGE_QUOTES, _quotes_elapsed)
                 if _quote_errors:
                     _print_warn(*_short_reason(_quote_errors, self.settings.llm_provider))
-            _eq_hash = (
-                hash_bytes(_eq_path.read_bytes()) if _eq_path.exists() else None
-            )
-            mark_stage_complete(
-                manifest, STAGE_QUOTE_EXTRACTION,
-                content_hash=_eq_hash,
-                input_hashes=_qe_input_hashes,
-            )
-            write_manifest(manifest, output_dir)
-
             # ── Quote outcome rollup + abandon check ───────────────────
+            # MUST run BEFORE mark_stage_complete: if we mark the stage
+            # complete first and then raise, the manifest poisons the next
+            # run's cache (empty extracted_quotes.json reads back as
+            # "stage already done"). Order is non-negotiable — A4 fix #1.
+            #
             # Each transcript that reached s09 is one attempt. Cached
             # quotes from prior runs count as successes. If every quote
             # extraction call failed, abandon: a report with no quotes is
@@ -1389,10 +1439,27 @@ class Pipeline:
                     summary=self._summary,
                 )
 
+            _eq_hash = (
+                hash_bytes(_eq_path.read_bytes()) if _eq_path.exists() else None
+            )
+            mark_stage_complete(
+                manifest, STAGE_QUOTE_EXTRACTION,
+                content_hash=_eq_hash,
+                input_hashes=_qe_input_hashes,
+                output_path=_eq_path,
+            )
+            write_manifest(manifest, output_dir)
+
             # ── Stages 10+11: Cluster by screen + thematic grouping ──
             _sc_path = intermediate / "screen_clusters.json"
             _tg_path = intermediate / "theme_groups.json"
             _cg_input_hashes = {"upstream": _eq_hash or _MISSING_HASH}
+            # Defaults — populated by either branch below. Cache hit treats
+            # both stages as one attempt + one success each (the cached
+            # result IS the success). Fresh path captures real outcomes.
+            _cluster_outcome = StageOutcome()
+            _theme_outcome = StageOutcome()
+            _cluster_elapsed: float | None = None
             if _is_stage_verified(
                 _prev_manifest, STAGE_CLUSTER_AND_GROUP,
                 [_sc_path, _tg_path],
@@ -1408,6 +1475,8 @@ class Pipeline:
                     ThemeGroup.model_validate(obj)
                     for obj in _json.loads(_tg_path.read_text(encoding="utf-8"))
                 ]
+                _cluster_outcome = StageOutcome(attempted=1, succeeded=1)
+                _theme_outcome = StageOutcome(attempted=1, succeeded=1)
                 _print_cached_step(
                     f"Clustered {len(screen_clusters)} screens"
                     f" · Grouped {len(theme_groups)} themes",
@@ -1419,7 +1488,7 @@ class Pipeline:
                 assert llm_client is not None  # narrowed by upstream lazy-init guards
                 _client_cg = llm_client
 
-                async def _run_clustering() -> list[ScreenCluster]:
+                async def _run_clustering() -> tuple[list[ScreenCluster], StageOutcome]:
                     with _llm_telemetry.stage("s10_quote_clustering"):
                         return await cluster_by_screen(all_quotes, _client_cg)
 
@@ -1427,17 +1496,11 @@ class Pipeline:
                     with _llm_telemetry.stage("s11_thematic_grouping"):
                         return await group_by_theme(all_quotes, _client_cg)
 
-                screen_clusters, _grouping = await asyncio.gather(
+                _clustering, _grouping = await asyncio.gather(
                     _run_clustering(), _run_grouping(),
                 )
+                screen_clusters, _cluster_outcome = _clustering
                 theme_groups, _theme_outcome = _grouping
-                # Soft stage: failure here doesn't abandon — record and move on.
-                # Stamp duration_ms from the gather wall-clock (stage 10 + 11
-                # ran together; same duration covers both — Swift renders it
-                # against the s11 row which is the user-facing stage label).
-                self._summary.themes = _theme_outcome.model_copy(update={
-                    "duration_ms": int((time.perf_counter() - t0) * 1000),
-                })
                 if self.settings.write_intermediate:
                     write_intermediate_json(
                         screen_clusters, "screen_clusters.json", output_dir,
@@ -1457,6 +1520,36 @@ class Pipeline:
                     elapsed=_cluster_elapsed, input_size=_n_sessions,
                 )
                 self._emit_remaining(STAGE_CLUSTER, _cluster_elapsed)
+
+            # ── Cluster+group outcome rollup + abandon check ────────────
+            # MUST run BEFORE mark_stage_complete (cache-poisoning guard).
+            # Pass 3 flips this from soft to hard: a fallback-clustered
+            # report that LOOKS real is worse than honest abandon. Fallback
+            # output still flows to render so partial state survives, but
+            # the orchestrator reads outcome.succeeded and abandons when
+            # both stages' LLM calls failed.
+            self._summary.themes = StageOutcome(
+                attempted=_cluster_outcome.attempted + _theme_outcome.attempted,
+                succeeded=_cluster_outcome.succeeded + _theme_outcome.succeeded,
+                failed=list(_cluster_outcome.failed) + list(_theme_outcome.failed),
+                duration_ms=(
+                    int(_cluster_elapsed * 1000)
+                    if _cluster_elapsed is not None else None
+                ),
+            )
+            if (
+                self._summary.themes.attempted > 0
+                and self._summary.themes.succeeded == 0
+            ):
+                raise PipelineAbandonedError(
+                    cause=_dominant_cause(
+                        self._summary.themes.failed,
+                        default_category=CauseCategoryEnum.UNKNOWN,
+                        message="All cluster and group calls failed.",
+                    ),
+                    summary=self._summary,
+                )
+
             # Hash both output files; combine into a single stage hash
             _cg_parts: list[bytes] = []
             if _sc_path.exists():
@@ -1826,7 +1919,7 @@ class Pipeline:
             t0 = time.perf_counter()
             _seg_errors_a: list[str] = []
             with _llm_telemetry.stage("s08_topic_segmentation"):
-                topic_maps = await segment_topics(
+                topic_maps, _seg_outcome_a = await segment_topics(
                     clean_transcripts, llm_client, concurrency=concurrency,
                     errors=_seg_errors_a,
                 )
@@ -1846,6 +1939,25 @@ class Pipeline:
                 _print_step(_msg_8a, _seg_elapsed_a)
             if _seg_errors_a:
                 _print_warn(*_short_reason(_seg_errors_a, self.settings.llm_provider))
+
+            # Topic abandon-check — Pass 3 addition. `bristlenose analyze`
+            # with a bad API key used to waste s09 LLM calls when s08 had
+            # already 100%-failed. Gate s09 entry on s08 success.
+            self._summary.topics = _seg_outcome_a.model_copy(update={
+                "duration_ms": int(_seg_elapsed_a * 1000),
+            })
+            if (
+                _seg_outcome_a.attempted > 0
+                and _seg_outcome_a.succeeded == 0
+            ):
+                raise PipelineAbandonedError(
+                    cause=_dominant_cause(
+                        _seg_outcome_a.failed,
+                        default_category=CauseCategoryEnum.UNKNOWN,
+                        message="All topic segmentation calls failed.",
+                    ),
+                    summary=self._summary,
+                )
 
             # ── Quote extraction ──
             status.update("[dim]Extracting quotes...[/dim]")
@@ -1894,7 +2006,7 @@ class Pipeline:
             # ── Cluster + group ──
             status.update("[dim]Clustering and grouping...[/dim]")
             t0 = time.perf_counter()
-            async def _run_clustering_a() -> list[ScreenCluster]:
+            async def _run_clustering_a() -> tuple[list[ScreenCluster], StageOutcome]:
                 with _llm_telemetry.stage("s10_quote_clustering"):
                     return await cluster_by_screen(all_quotes, llm_client)
 
@@ -1902,14 +2014,37 @@ class Pipeline:
                 with _llm_telemetry.stage("s11_thematic_grouping"):
                     return await group_by_theme(all_quotes, llm_client)
 
-            screen_clusters, _grouping_a = await asyncio.gather(
+            _clustering_a, _grouping_a = await asyncio.gather(
                 _run_clustering_a(),
                 _run_grouping_a(),
             )
+            screen_clusters, _cluster_outcome_a = _clustering_a
             theme_groups, _theme_outcome_a = _grouping_a
-            self._summary.themes = _theme_outcome_a.model_copy(update={
-                "duration_ms": int((time.perf_counter() - t0) * 1000),
-            })
+            _cg_elapsed_a = time.perf_counter() - t0
+            # Combined cluster+group rollup. Pass 3 flip: soft → hard. If
+            # both LLM calls failed, abandon honestly instead of shipping a
+            # fallback-clustered "degraded" report dressed up as the real
+            # thing. Fallback output still flows to render (so the partial
+            # state survives if A4 isn't fully wired everywhere), but the
+            # orchestrator reads outcome.succeeded and abandons.
+            self._summary.themes = StageOutcome(
+                attempted=_cluster_outcome_a.attempted + _theme_outcome_a.attempted,
+                succeeded=_cluster_outcome_a.succeeded + _theme_outcome_a.succeeded,
+                failed=list(_cluster_outcome_a.failed) + list(_theme_outcome_a.failed),
+                duration_ms=int(_cg_elapsed_a * 1000),
+            )
+            if (
+                self._summary.themes.attempted > 0
+                and self._summary.themes.succeeded == 0
+            ):
+                raise PipelineAbandonedError(
+                    cause=_dominant_cause(
+                        self._summary.themes.failed,
+                        default_category=CauseCategoryEnum.UNKNOWN,
+                        message="All cluster and group calls failed.",
+                    ),
+                    summary=self._summary,
+                )
             if self.settings.write_intermediate:
                 write_intermediate_json(
                     screen_clusters, "screen_clusters.json", output_dir,
@@ -1922,7 +2057,7 @@ class Pipeline:
             _print_step(
                 f"Clustered {len(screen_clusters)} screens"
                 f" · Grouped {len(theme_groups)} themes",
-                time.perf_counter() - t0,
+                _cg_elapsed_a,
             )
 
             # ── Render ──

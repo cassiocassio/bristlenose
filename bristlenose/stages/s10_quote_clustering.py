@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 import logging
 
+from bristlenose.events import StageFailure, StageOutcome
 from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.llm.client import LLMClient
 from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import ScreenClusteringResult
 from bristlenose.models import ExtractedQuote, QuoteType, ScreenCluster
+from bristlenose.run_lifecycle import _build_cause
 from bristlenose.utils.timecodes import format_timecode
 
 logger = logging.getLogger(__name__)
@@ -18,7 +20,7 @@ logger = logging.getLogger(__name__)
 async def cluster_by_screen(
     quotes: list[ExtractedQuote],
     llm_client: LLMClient,
-) -> list[ScreenCluster]:
+) -> tuple[list[ScreenCluster], StageOutcome]:
     """Cluster screen-specific quotes by the screen or task discussed.
 
     Takes all screen_specific quotes across all participants and groups them
@@ -30,15 +32,21 @@ async def cluster_by_screen(
         llm_client: LLM client for analysis.
 
     Returns:
-        List of ScreenCluster objects ordered by logical product flow.
+        Tuple of (clusters, outcome). The LLM call's success/failure is
+        emitted on ``outcome`` at the call site, BEFORE any fallback fires.
+        A fallback clustering by topic label is returned so the rest of the
+        pipeline has structured data to render, but the orchestrator reads
+        ``outcome.succeeded == 0 AND outcome.attempted > 0`` and abandons
+        the run honestly rather than shipping a degraded report.
     """
     screen_quotes = [q for q in quotes if q.quote_type == QuoteType.SCREEN_SPECIFIC]
 
     if not screen_quotes:
         logger.info("No screen-specific quotes to cluster.")
-        return []
+        return [], StageOutcome()
 
     logger.info("Clustering %d screen-specific quotes", len(screen_quotes))
+    outcome = StageOutcome(attempted=1)
 
     # Prepare quotes for the LLM — include index so it can reference them
     quotes_for_llm = [
@@ -65,8 +73,18 @@ async def cluster_by_screen(
         )
     except Exception as exc:
         logger.error("Screen clustering failed: %s", exc)
-        # Fallback: one cluster per unique topic label
-        return _fallback_clustering(screen_quotes)
+        outcome.failed.append(StageFailure(
+            session_id=None,
+            cause=_build_cause(
+                exc,
+                stage="cluster_and_group",
+                provider=llm_client.provider,
+            ),
+        ))
+        # Fallback: one cluster per unique topic label. Returned so downstream
+        # rendering has structured data; the orchestrator reads outcome.failed
+        # to decide whether to abandon.
+        return _fallback_clustering(screen_quotes), outcome
 
     # Convert LLM output to domain models
     clusters: list[ScreenCluster] = []
@@ -93,7 +111,8 @@ async def cluster_by_screen(
     clusters.sort(key=lambda c: c.display_order)
 
     logger.info("Created %d screen clusters", len(clusters))
-    return clusters
+    outcome.succeeded = 1
+    return clusters, outcome
 
 
 def _fallback_clustering(quotes: list[ExtractedQuote]) -> list[ScreenCluster]:

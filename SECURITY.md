@@ -50,6 +50,16 @@ Per-user state lives outside your project directories and persists across runs:
 
 Project artefacts (transcripts, reports, intermediates) live exclusively under your input folder's `bristlenose-output/` and never leave it. `rm -rf bristlenose-output` deletes every per-project byte Bristlenose wrote.
 
+#### Event log (`pipeline-events.jsonl`)
+
+`<output_dir>/.bristlenose/pipeline-events.jsonl` is an append-only schema-versioned log of run lifecycle events (started / completed / cancelled / failed). The desktop app reads its tail to render the diagnostic pill and popover.
+
+**Privacy contract:** `cause.message` strings are bristlenose-constructed from structured fields only — exception class name, stage slug, provider slug, and HTTP status. They never carry `str(exc)`, raw provider response bodies, LLM output text, transcript substrings, or participant-derived tokens. This matters because provider error bodies (Anthropic on rate-limit / content-policy; OpenAI BadRequest; Azure content filters) sometimes echo prompt fragments — without the contract, an abandoned run could persist participant names or transcript text into the event log. Implementation: `_build_cause()` in [`bristlenose/run_lifecycle.py`](bristlenose/run_lifecycle.py); contract test in [`tests/test_run_lifecycle.py`](tests/test_run_lifecycle.py) (`test_build_cause_redacts_pii_from_exception_body`).
+
+Each message is capped at 4 KB; each stage's `failed` list is capped at 10 entries (with a synthetic "+ N more" overflow placeholder). These caps protect the desktop's 64 KB log-tail read window from a 50-session failure producing a 200 KB terminus line.
+
+**This file is a re-identification key** when combined with the transcript files in the same project (session ordinals correlate to participant codes). Never include in any export, support bundle, or shareable archive. Mode `0o600` + `O_NOFOLLOW` enforced. To purge: `rm <project>/.bristlenose/pipeline-events.jsonl` (deleting the project folder removes it automatically). The file is local-only and never transmitted.
+
 ## Prompt injection via transcripts
 
 Bristlenose feeds participant speech into a third-party LLM (Claude, ChatGPT, Azure OpenAI, Gemini, or local Ollama) for quote extraction, theme clustering, and elaboration. A participant who knows their words will be analysed by an LLM — or a third party who hands the researcher a doctored `.docx` / `.srt` transcript — could craft text designed to override the system prompt and produce off-topic, misleading, or embarrassing content in the rendered report. This is a known property of any system that places untrusted text into LLM context.

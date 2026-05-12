@@ -11,7 +11,7 @@ from bristlenose.llm.client import LLMClient
 from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import ThematicGroupingResult
 from bristlenose.models import ExtractedQuote, QuoteType, ThemeGroup
-from bristlenose.run_lifecycle import categorise_exception
+from bristlenose.run_lifecycle import _build_cause
 from bristlenose.utils.timecodes import format_timecode
 
 logger = logging.getLogger(__name__)
@@ -31,10 +31,13 @@ async def group_by_theme(
         llm_client: LLM client for analysis.
 
     Returns:
-        Tuple of (themes, outcome). Failure here is soft: even when the LLM
-        call raises, we return a fallback grouping by topic label so quotes
-        remain organised — the orchestrator never abandons a run for an s11
-        failure. ``outcome.failed`` carries one stage-wide entry in that case.
+        Tuple of (themes, outcome). The LLM call's success/failure is
+        emitted on ``outcome`` at the call site, BEFORE any fallback fires.
+        A fallback grouping by topic label is returned so the rest of the
+        pipeline has structured data to render, but the orchestrator reads
+        ``outcome.succeeded == 0 AND outcome.attempted > 0`` and abandons
+        the run honestly rather than shipping a degraded report dressed up
+        as a real one.
     """
     context_quotes = [q for q in quotes if q.quote_type == QuoteType.GENERAL_CONTEXT]
 
@@ -70,10 +73,14 @@ async def group_by_theme(
         )
     except Exception as exc:
         logger.error("Thematic grouping failed: %s", exc)
-        cause = categorise_exception(exc).model_copy(update={
-            "stage": "s11_thematic_grouping",
-        })
-        outcome.failed.append(StageFailure(session_id=None, cause=cause))
+        outcome.failed.append(StageFailure(
+            session_id=None,
+            cause=_build_cause(
+                exc,
+                stage="cluster_and_group",
+                provider=llm_client.provider,
+            ),
+        ))
         return _fallback_grouping(context_quotes), outcome
 
     # Convert LLM output to domain models

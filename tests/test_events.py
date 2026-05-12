@@ -729,8 +729,8 @@ def _load_contract() -> dict:
 def test_contract_fixture_present_and_versioned():
     """The fixture exists and declares its schema version. Lock-step bump."""
     contract = _load_contract()
-    assert contract["version"] == 4, (
-        "Contract schema version drifted. If the fixture moved to v5, audit "
+    assert contract["version"] == 5, (
+        "Contract schema version drifted. If the fixture moved to v6, audit "
         "every consumer (Python events.py, Swift PipelineSummary.swift) and "
         "update tests on both sides."
     )
@@ -739,6 +739,7 @@ def test_contract_fixture_present_and_versioned():
 @pytest.mark.parametrize("scenario_name", [
     "run_completed_partial",
     "run_failed_abandoned",
+    "run_failed_abandoned_at_topics",
     "run_completed_partial_truncated",
     "run_completed_clean",
 ])
@@ -778,9 +779,34 @@ def test_contract_run_completed_partial_carries_durations():
     assert parsed.summary is not None
     assert parsed.summary.transcripts is not None
     assert parsed.summary.transcripts.duration_ms == 723000
+    assert parsed.summary.topics is not None
+    assert parsed.summary.topics.duration_ms == 41000
     assert parsed.summary.quotes is not None
     assert parsed.summary.quotes.duration_ms == 82000
     # themes is None for this scenario — duration_ms moot.
+    assert parsed.summary.themes is None
+
+
+def test_contract_topics_bucket_present_and_typed():
+    """v5: PipelineSummary has a topics bucket between transcripts and quotes.
+
+    Locks the schema-additive bump. The bucket is StageOutcome | None — same
+    shape as transcripts/quotes/themes. Swift readers that don't yet decode
+    the field still parse fine (additive); future Swift work should mirror.
+    """
+    contract = _load_contract()
+    payload = contract["scenarios"]["run_failed_abandoned_at_topics"]
+    parsed = RunFailedEvent.model_validate(payload)
+    assert parsed.summary is not None
+    assert parsed.summary.topics is not None
+    assert parsed.summary.topics.attempted == 2
+    assert parsed.summary.topics.succeeded == 0
+    assert len(parsed.summary.topics.failed) == 2
+    for entry in parsed.summary.topics.failed:
+        assert entry.cause.category == CauseCategoryEnum.QUOTA
+        assert entry.cause.stage == "topic_segmentation"
+    # s09 / s10+s11 never ran — abandon fired at s08 first.
+    assert parsed.summary.quotes is None
     assert parsed.summary.themes is None
 
 
@@ -838,7 +864,12 @@ def test_contract_clean_scenario_has_empty_failed_lists():
     payload = contract["scenarios"]["run_completed_clean"]
     parsed = RunCompletedEvent.model_validate(payload)
     assert parsed.summary is not None
-    for stage in (parsed.summary.transcripts, parsed.summary.quotes, parsed.summary.themes):
+    for stage in (
+        parsed.summary.transcripts,
+        parsed.summary.topics,
+        parsed.summary.quotes,
+        parsed.summary.themes,
+    ):
         assert stage is not None
         assert stage.failed == []
-        assert stage.duration_ms is not None  # All three populated for the clean run.
+        assert stage.duration_ms is not None  # All four populated for the clean run.

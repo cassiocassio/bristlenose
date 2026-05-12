@@ -362,6 +362,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.7** — _12 May 2026_
+
+- **Release-pipeline fix** — three CI failures had stacked up since 10 May, leaving PyPI + Homebrew on 0.15.3 while source was on 0.15.6. No new source features in 0.15.7; on upgrade you pick up everything from v0.15.4 / v0.15.5 / v0.15.6 (preflight block, server-rendered status page, SPA auto-refetch, sandbox-safe Export, structured failure causes). The fixes: ffmpeg preflight bypass in the pipeline-abandon test; stub SPA bundle in the cookie auth test; CI Node 20 → 24 (the bundle-size "overage" was an older-zlib measurement artefact, not a real regression)
+
 **0.15.6** — _11 May 2026_
 
 - **Server-rendered status page for runs the SPA can't render** — `bristlenose serve` now serves a server-rendered page (no React mount) when the project has no completed run, or the latest run failed or was cancelled. The SPA's invariant becomes: it only mounts when there's data to render. Three states surfaced — no-run-yet (CLI vs desktop copy), failed (with cause + log tail in a `<details>` block, sourced from `pipeline-events.jsonl`), cancelled. Reuses the five-kind `MessageKind` taxonomy — no sixth kind invented. Styling lives at `bristlenose/theme/templates/status-page.css` and uses the design system's tokens exclusively. Event-watcher startup seed also widened to seed `failed` and `cancelled` termini, not just `completed`, so non-happy-path runs survive a server restart. English-only in v1; locale fills batched into the next translation pass

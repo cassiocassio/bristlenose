@@ -20,10 +20,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version-file: '.tool-versions'
 
       - name: Install dependencies
         run: |
@@ -82,6 +82,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Multi-version test matrix. Lower bound must match
+        # pyproject.toml `requires-python` (currently ">=3.10").
+        # Primary dev version lives in .tool-versions; this matrix is
+        # intentionally independent and bumped manually on a yearly cadence.
         python-version: ["3.10", "3.11", "3.12", "3.13"]
         os: [ubuntu-latest, macos-latest]
 
@@ -119,7 +123,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version-file: '.tool-versions'
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -184,10 +188,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version-file: '.tool-versions'
 
       - name: Install Python dependencies (including serve extras)
         run: |
@@ -197,7 +201,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version-file: '.tool-versions'
 
       - name: Build frontend
         working-directory: frontend
@@ -243,10 +247,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version-file: '.tool-versions'
 
       - name: Install Python dependencies (including serve extras)
         run: |
@@ -256,7 +260,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version-file: '.tool-versions'
 
       - name: Build frontend
         working-directory: frontend

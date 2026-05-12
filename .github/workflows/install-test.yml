@@ -48,7 +48,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version-file: '.tool-versions'
 
       - name: Install bristlenose from local source
         run: |
@@ -93,7 +93,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version-file: '.tool-versions'
 
       - name: Install bristlenose via pipx
         run: pipx install .
@@ -126,7 +126,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version-file: '.tool-versions'
 
       - name: Install bristlenose
         run: |
@@ -205,7 +205,7 @@ jobs:
       - uses: actions/setup-python@v5
         if: env.HAS_KEY == 'true'
         with:
-          python-version: "3.12"
+          python-version-file: '.tool-versions'
 
       - name: Install bristlenose
         if: env.HAS_KEY == 'true'

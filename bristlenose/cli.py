@@ -226,7 +226,9 @@ def _print_doctor_fixes(
         for result in all_fixable:
             fix = get_fix(result.fix_key)
             if fix:
-                console.print(fix)
+                # markup=False so e.g. `'bristlenose[serve]'` isn't parsed as
+                # a Rich style tag and silently stripped from the output.
+                console.print(fix, markup=False)
                 console.print()  # Blank line between fixes
 
 
@@ -1001,8 +1003,11 @@ def run(
     try:
         import uvicorn  # noqa: F401
     except ImportError:
+        from rich.markup import escape as _rich_escape
         _print_pipeline_summary(result)
-        console.print(f"  [dim]Tip: {_install_hint()} for the interactive report[/dim]")
+        console.print(
+            f"  [dim]Tip: {_rich_escape(_install_hint())} for the interactive report[/dim]"
+        )
         return
 
     try:
@@ -1356,8 +1361,8 @@ def _install_hint() -> str:
     import sys as _sys
 
     if "pipx" in _sys.prefix:
-        return "pipx install bristlenose[serve]"
-    return "pip install bristlenose[serve]"
+        return "pipx install 'bristlenose[serve]'"
+    return "pip install 'bristlenose[serve]'"
 
 
 def _find_open_port(start: int = 8150, attempts: int = 10) -> int:
@@ -1571,8 +1576,9 @@ def serve(
     try:
         import uvicorn  # noqa: F401 — test that serve deps are installed
     except ImportError:
+        from rich.markup import escape as _rich_escape
         _say(MessageKind.ERROR, "Server dependencies not installed.")
-        console.print(f"Install with: [bold]{_install_hint()}[/bold]")
+        console.print(f"Install with: [bold]{_rich_escape(_install_hint())}[/bold]")
         raise typer.Exit(1)
 
     # Re-render the HTML report before serving so it always matches the

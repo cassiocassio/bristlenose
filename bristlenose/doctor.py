@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from bristlenose.utils.bundled_binary import bundled_binary_path
+from bristlenose.utils.text import count_noun
 
 if TYPE_CHECKING:
     from bristlenose.config import BristlenoseSettings
@@ -889,7 +890,7 @@ def _check_data_dir(
     return CheckResult(
         status=CheckStatus.OK,
         label=label,
-        detail=f"{len(files)} file(s) in {rel_path}",
+        detail=f"{count_noun(len(files), 'file')} in {rel_path}",
     )
 
 
@@ -909,7 +910,10 @@ def check_bundle_react_spa() -> CheckResult:
         return CheckResult(
             status=CheckStatus.FAIL,
             label="Bundle: React SPA",
-            detail=f"index.html suspiciously small ({size} bytes) — Vite build may have failed",
+            detail=(
+                f"index.html suspiciously small ({count_noun(size, 'byte')})"
+                f" — Vite build may have failed"
+            ),
             fix_key="bundle_react_truncated",
         )
     assets = _package_root() / "server" / "static" / "assets"
@@ -923,7 +927,7 @@ def check_bundle_react_spa() -> CheckResult:
     return CheckResult(
         status=CheckStatus.OK,
         label="Bundle: React SPA",
-        detail=f"index.html ({size} bytes) + assets/",
+        detail=f"index.html ({count_noun(size, 'byte')}) + assets/",
     )
 
 

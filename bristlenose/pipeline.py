@@ -56,7 +56,7 @@ from bristlenose.models import (
     TranscriptSegment,
 )
 from bristlenose.ui_kinds import MessageKind, cli_prefix
-from bristlenose.utils.text import pluralize
+from bristlenose.utils.text import count_noun
 
 logger = logging.getLogger(__name__)
 console = Console(width=min(80, Console().width))
@@ -445,7 +445,7 @@ class Pipeline:
         from rich.prompt import Confirm
 
         console.print(
-            f"\n[yellow]Found {pluralize(count, 'session')} in {source_dir.name}/.[/yellow]"
+            f"\n[yellow]Found {count_noun(count, 'session')} in {source_dir.name}/.[/yellow]"
         )
         return Confirm.ask("Continue?", default=True)
 
@@ -528,14 +528,14 @@ class Pipeline:
 
         # ── Print found-sessions line, then ingest checkmark ──
         console.print(
-            f"  [dim]{pluralize(len(sessions), 'session')} in {input_dir.name}/[/dim]\n",
+            f"  [dim]{count_noun(len(sessions), 'session')} in {input_dir.name}/[/dim]\n",
         )
         type_counts = Counter(
             f.file_type.value for s in sessions for f in s.files
         )
         type_parts = [f"{n} {t}" for t, n in type_counts.most_common()]
         _print_step(
-            f"Ingested {pluralize(len(sessions), 'session')} ({', '.join(type_parts)})",
+            f"Ingested {count_noun(len(sessions), 'session')} ({', '.join(type_parts)})",
             ingest_elapsed,
         )
         mark_stage_complete(manifest, STAGE_INGEST)
@@ -627,7 +627,7 @@ class Pipeline:
             temp_dir.mkdir(parents=True, exist_ok=True)
             sessions = await extract_audio_for_sessions(sessions, temp_dir)
             _print_step(
-                f"Extracted audio from {pluralize(len(sessions), 'session')}",
+                f"Extracted audio from {count_noun(len(sessions), 'session')}",
                 time.perf_counter() - t0,
             )
             mark_stage_complete(manifest, STAGE_EXTRACT_AUDIO)
@@ -659,8 +659,8 @@ class Pipeline:
                 }
                 total_segments = sum(len(s) for s in session_segments.values())
                 _print_cached_step(
-                    f"Transcribed {pluralize(len(sessions), 'session')}"
-                    f" ({total_segments} segments)",
+                    f"Transcribed {count_noun(len(sessions), 'session')}"
+                    f" ({count_noun(total_segments, 'segment')})",
                 )
             else:
                 import json as _json
@@ -714,9 +714,10 @@ class Pipeline:
                     def _on_transcribe_progress(
                         current: int, total: int,
                     ) -> None:
+                        word = "file" if total == 1 else "files"
                         status.update(
                             f"[dim]Transcribing..."
-                            f" ({current}/{pluralize(total, 'file')})[/dim]"
+                            f" ({current}/{total} {word})[/dim]"
                         )
 
                     _fresh_segments, _fresh_transcript_outcome = (
@@ -759,14 +760,14 @@ class Pipeline:
                 _n_new_tx = len(_remaining_sessions)
                 if _cached_segments and _n_new_tx:
                     msg = (
-                        f"Transcribed {pluralize(len(sessions), 'session')}"
-                        f" ({total_segments} segments,"
-                        f" {pluralize(_n_new_tx, 'new session')})"
+                        f"Transcribed {count_noun(len(sessions), 'session')}"
+                        f" ({count_noun(total_segments, 'segment')},"
+                        f" {count_noun(_n_new_tx, 'new session')})"
                     )
                 else:
                     msg = (
-                        f"Transcribed {pluralize(len(sessions), 'session')}"
-                        f" ({total_segments} segments"
+                        f"Transcribed {count_noun(len(sessions), 'session')}"
+                        f" ({count_noun(total_segments, 'segment')}"
                     )
                     if audio_str:
                         msg += f", {audio_str} audio"
@@ -830,7 +831,7 @@ class Pipeline:
             if est is not None:
                 console.print(
                     f"  [dim]Estimated LLM cost: ~${est:.2f}"
-                    f" for {pluralize(len(sessions), 'session')}"
+                    f" for {count_noun(len(sessions), 'session')}"
                     f" ({self.settings.llm_model})[/dim]\n"
                 )
 
@@ -1123,7 +1124,7 @@ class Pipeline:
                 ]
                 total_boundaries = sum(len(m.boundaries) for m in topic_maps)
                 _print_cached_step(
-                    f"Segmented {total_boundaries} topic boundaries",
+                    f"Segmented {count_noun(total_boundaries, 'topic boundary')}",
                 )
             else:
                 # Per-session resume: load cached topic maps for completed
@@ -1196,11 +1197,11 @@ class Pipeline:
                 _n_new = len(_remaining_transcripts)
                 if _cached_topic_maps and _n_new:
                     _msg_8 = (
-                        f"Segmented {total_boundaries} topic boundaries"
-                        f" ({_n_new} new sessions)"
+                        f"Segmented {count_noun(total_boundaries, 'topic boundary')}"
+                        f" ({count_noun(_n_new, 'new session')})"
                     )
                 else:
-                    _msg_8 = f"Segmented {total_boundaries} topic boundaries"
+                    _msg_8 = f"Segmented {count_noun(total_boundaries, 'topic boundary')}"
                 if _seg_errors and total_boundaries == 0:
                     _print_error_step(_msg_8, _topics_elapsed)
                 elif _seg_errors:
@@ -1250,7 +1251,7 @@ class Pipeline:
                 # them as both attempted and succeeded so the rollup tells
                 # the truth ("all cached, all good") instead of "0/0".
                 _cached_q_count = len(all_quotes)
-                _print_cached_step(f"Extracted {len(all_quotes)} quotes")
+                _print_cached_step(f"Extracted {count_noun(len(all_quotes), 'quote')}")
             else:
                 # Per-session resume: load cached quotes for completed
                 # sessions and only run LLM on the remaining ones.
@@ -1332,11 +1333,11 @@ class Pipeline:
                 _n_new_q = len(_remaining_transcripts_q)
                 if _cached_quotes and _n_new_q:
                     _msg_9 = (
-                        f"Extracted {len(all_quotes)} quotes"
-                        f" ({_n_new_q} new sessions)"
+                        f"Extracted {count_noun(len(all_quotes), 'quote')}"
+                        f" ({count_noun(_n_new_q, 'new session')})"
                     )
                 else:
-                    _msg_9 = f"Extracted {len(all_quotes)} quotes"
+                    _msg_9 = f"Extracted {count_noun(len(all_quotes), 'quote')}"
                 if _quote_errors and len(all_quotes) == 0:
                     _print_error_step(_msg_9, _quotes_elapsed)
                 elif _quote_errors:
@@ -1407,8 +1408,8 @@ class Pipeline:
                     for obj in _json.loads(_tg_path.read_text(encoding="utf-8"))
                 ]
                 _print_cached_step(
-                    f"Clustered {len(screen_clusters)} screens"
-                    f" · Grouped {len(theme_groups)} themes",
+                    f"Clustered {count_noun(len(screen_clusters), 'screen')}"
+                    f" · Grouped {count_noun(len(theme_groups), 'theme')}",
                 )
             else:
                 mark_stage_running(manifest, STAGE_CLUSTER_AND_GROUP)
@@ -1447,8 +1448,8 @@ class Pipeline:
                     )
                 _cluster_elapsed = time.perf_counter() - t0
                 _print_step(
-                    f"Clustered {len(screen_clusters)} screens"
-                    f" · Grouped {len(theme_groups)} themes",
+                    f"Clustered {count_noun(len(screen_clusters), 'screen')}"
+                    f" · Grouped {count_noun(len(theme_groups), 'theme')}",
                     _cluster_elapsed,
                 )
                 _stage_actuals[STAGE_CLUSTER] = StageActual(
@@ -1631,14 +1632,14 @@ class Pipeline:
 
         # ── Print found-sessions line, then ingest checkmark ──
         console.print(
-            f"  [dim]{pluralize(len(sessions), 'session')} in {input_dir.name}/[/dim]\n",
+            f"  [dim]{count_noun(len(sessions), 'session')} in {input_dir.name}/[/dim]\n",
         )
         type_counts = Counter(
             f.file_type.value for s in sessions for f in s.files
         )
         type_parts = [f"{n} {t}" for t, n in type_counts.most_common()]
         _print_step(
-            f"Ingested {pluralize(len(sessions), 'session')} ({', '.join(type_parts)})",
+            f"Ingested {count_noun(len(sessions), 'session')} ({', '.join(type_parts)})",
             ingest_elapsed,
         )
 
@@ -1652,7 +1653,7 @@ class Pipeline:
             temp_dir.mkdir(parents=True, exist_ok=True)
             sessions = await extract_audio_for_sessions(sessions, temp_dir)
             _print_step(
-                f"Extracted audio from {pluralize(len(sessions), 'session')}",
+                f"Extracted audio from {count_noun(len(sessions), 'session')}",
                 time.perf_counter() - t0,
             )
 
@@ -1661,9 +1662,8 @@ class Pipeline:
             t0 = time.perf_counter()
 
             def _on_transcribe_progress(current: int, total: int) -> None:
-                status.update(
-                    f"[dim]Transcribing... ({current}/{pluralize(total, 'file')})[/dim]"
-                )
+                word = "file" if total == 1 else "files"
+                status.update(f"[dim]Transcribing... ({current}/{total} {word})[/dim]")
 
             session_segments, _transcript_outcome_t = await self._gather_all_segments(
                 sessions, on_progress=_on_transcribe_progress
@@ -1697,8 +1697,8 @@ class Pipeline:
             )
             audio_str = _format_duration(total_audio) if total_audio else ""
             msg = (
-                f"Transcribed {pluralize(len(sessions), 'session')}"
-                f" ({total_segments} segments"
+                f"Transcribed {count_noun(len(sessions), 'session')}"
+                f" ({count_noun(total_segments, 'segment')}"
             )
             if audio_str:
                 msg += f", {audio_str} audio"
@@ -1802,7 +1802,7 @@ class Pipeline:
         concurrency = self.settings.llm_concurrency
 
         console.print(
-            f"[dim]{pluralize(len(clean_transcripts), 'transcript')} in"
+            f"[dim]{count_noun(len(clean_transcripts), 'transcript')} in"
             f" {transcripts_dir.name}/[/dim]",
         )
 
@@ -1815,7 +1815,7 @@ class Pipeline:
         if est is not None:
             console.print(
                 f"  [dim]Estimated LLM cost: ~${est:.2f}"
-                f" for {pluralize(len(clean_transcripts), 'session')}"
+                f" for {count_noun(len(clean_transcripts), 'session')}"
                 f" ({self.settings.llm_model})[/dim]\n"
             )
         else:
@@ -1840,7 +1840,7 @@ class Pipeline:
                 )
             total_boundaries = sum(len(m.boundaries) for m in topic_maps)
             _seg_elapsed_a = time.perf_counter() - t0
-            _msg_8a = f"Segmented {total_boundaries} topic boundaries"
+            _msg_8a = f"Segmented {count_noun(total_boundaries, 'topic boundary')}"
             if _seg_errors_a and total_boundaries == 0:
                 _print_error_step(_msg_8a, _seg_elapsed_a)
             elif _seg_errors_a:
@@ -1884,7 +1884,7 @@ class Pipeline:
                     self.settings.project_name,
                 )
             _quotes_elapsed_a = time.perf_counter() - t0
-            _msg_9a = f"Extracted {len(all_quotes)} quotes"
+            _msg_9a = f"Extracted {count_noun(len(all_quotes), 'quote')}"
             if _quote_errors_a and len(all_quotes) == 0:
                 _print_error_step(_msg_9a, _quotes_elapsed_a)
             elif _quote_errors_a:
@@ -1923,8 +1923,8 @@ class Pipeline:
                     self.settings.project_name,
                 )
             _print_step(
-                f"Clustered {len(screen_clusters)} screens"
-                f" · Grouped {len(theme_groups)} themes",
+                f"Clustered {count_noun(len(screen_clusters), 'screen')}"
+                f" · Grouped {count_noun(len(theme_groups), 'theme')}",
                 time.perf_counter() - t0,
             )
 

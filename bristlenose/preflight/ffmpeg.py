@@ -185,6 +185,9 @@ def preflight_ffmpeg(
     """Run the ffmpeg preflight.
 
     Behaviour:
+    - **``BRISTLENOSE_SKIP_PREFLIGHT=1``**: explicit escape hatch, skip silently.
+      Defence-in-depth for spoofed-TTY CI runners and the pytest suite
+      (set in ``tests/conftest.py``).
     - **Present**: silent, return immediately.
     - **Missing on macOS + brew available + writable prefix + ``allow_install``**:
       print the install table, prompt ``[Y/n]``, on Y shell out to brew, on N
@@ -197,6 +200,8 @@ def preflight_ffmpeg(
             ``doctor`` command where we just report status without offering
             to mutate the system.
     """
+    if os.environ.get("BRISTLENOSE_SKIP_PREFLIGHT") == "1":
+        return
     if shutil.which("ffmpeg"):
         return
 

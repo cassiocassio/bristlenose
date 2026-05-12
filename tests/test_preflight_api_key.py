@@ -22,6 +22,13 @@ from bristlenose.preflight.api_key import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _allow_preflight(monkeypatch):
+    """Opt out of the global ``BRISTLENOSE_SKIP_PREFLIGHT=1`` set in
+    ``tests/conftest.py`` — this file tests the preflight itself."""
+    monkeypatch.delenv("BRISTLENOSE_SKIP_PREFLIGHT", raising=False)
+
+
 def _settings(**kwargs) -> MagicMock:
     s = MagicMock()
     s.llm_provider = kwargs.get("llm_provider", "anthropic")

@@ -18,6 +18,13 @@ from bristlenose.preflight.whisper import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _allow_preflight(monkeypatch):
+    """Opt out of the global ``BRISTLENOSE_SKIP_PREFLIGHT=1`` set in
+    ``tests/conftest.py`` — this file tests the preflight itself."""
+    monkeypatch.delenv("BRISTLENOSE_SKIP_PREFLIGHT", raising=False)
+
+
 def _settings(**kwargs) -> BristlenoseSettings:
     base = {
         "whisper_backend": "mlx",

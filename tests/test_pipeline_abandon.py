@@ -334,20 +334,8 @@ def test_pipeline_run_abandons_when_all_transcribe_fail(tmp_path: Path) -> None:
             "bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
             new=_async_passthrough,
         ),
-        # Bypass front-loaded preflights so the test reaches its actual
-        # contract — the orchestrator's reaction to an all-failed
-        # transcribe outcome. CI Linux runners have no ffmpeg on PATH,
-        # so without these patches the ffmpeg preflight aborts before
-        # transcribe is reached. If you add a new preflight to
-        # Pipeline.run, patch it here too.
-        patch(
-            "bristlenose.preflight.ffmpeg.preflight_ffmpeg",
-            new=lambda **kw: None,
-        ),
-        patch(
-            "bristlenose.preflight.whisper.preflight_whisper",
-            new=lambda **kw: None,
-        ),
+        # Preflights are globally bypassed via BRISTLENOSE_SKIP_PREFLIGHT=1
+        # in tests/conftest.py — no need to patch each one individually.
     ):
         with pytest.raises(PipelineAbandonedError) as exc_info:
             asyncio.run(pipeline.run(input_dir, output_dir))

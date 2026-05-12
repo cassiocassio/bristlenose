@@ -1,6 +1,6 @@
 {
-  "_doc": "Cross-language schema contract between Python (bristlenose/events.py) and Swift (desktop/Bristlenose/Bristlenose/PipelineSummary.swift). Both sides round-trip these scenarios in tests. If you change this file, both sides' tests must continue to pass. Established 7 May 2026 for branches pipeline-summary-events (Python) and pipeline-diagnostic-pill (Swift). Schema version 2: added duration_ms on StageOutcome. Schema version 3: added run_completed_partial_truncated scenario locking STAGE_FAILED_MAX=10 overflow marker shape. Schema version 4: realigned session_id values to ordinal format (s1, s2, ...) matching what bristlenose actually emits at runtime — earlier versions used illustrative descriptive ids that didn't reflect production shape.",
-  "version": 4,
+  "_doc": "Cross-language schema contract between Python (bristlenose/events.py) and Swift (desktop/Bristlenose/Bristlenose/PipelineSummary.swift). Both sides round-trip these scenarios in tests. If you change this file, both sides' tests must continue to pass. Established 7 May 2026 for branches pipeline-summary-events (Python) and pipeline-diagnostic-pill (Swift). Schema version 2: added duration_ms on StageOutcome. Schema version 3: added run_completed_partial_truncated scenario locking STAGE_FAILED_MAX=10 overflow marker shape. Schema version 4: realigned session_id values to ordinal format (s1, s2, ...) matching what bristlenose actually emits at runtime — earlier versions used illustrative descriptive ids that didn't reflect production shape. Schema version 5: added topics bucket to PipelineSummary (between transcripts and quotes) to carry s08 topic-segmentation StageOutcome. Schema-additive — Swift readers that don't yet decode the field still parse fine. Added run_failed_abandoned_at_topics scenario locking the topics-populated shape for the A4-stage-cache-honesty cohort.",
+  "version": 5,
   "scenarios": {
     "run_completed_partial": {
       "_doc": "Partial run: 3 of 5 transcripts succeeded; pipeline continued and produced a (low-value, dev-feedback) report. Diagnostic pill state .completedPartial on Swift side.",
@@ -53,6 +53,12 @@
             }
           ]
         },
+        "topics": {
+          "attempted": 3,
+          "succeeded": 3,
+          "duration_ms": 41000,
+          "failed": []
+        },
         "quotes": {
           "attempted": 3,
           "succeeded": 3,
@@ -92,6 +98,12 @@
           "attempted": 3,
           "succeeded": 3,
           "duration_ms": 412000,
+          "failed": []
+        },
+        "topics": {
+          "attempted": 3,
+          "succeeded": 3,
+          "duration_ms": 39000,
           "failed": []
         },
         "quotes": {
@@ -146,6 +158,77 @@
         "themes": null
       }
     },
+    "run_failed_abandoned_at_topics": {
+      "_doc": "v5 scenario: all topic-segmentation calls fail (quota exhausted mid-run during s08). PipelineAbandonedError raises BEFORE s09 entry; no quote-extraction LLM calls fire. Locks the topics-populated abandon shape — Swift's stage-resolution logic (which stage failed) must look at the topics bucket, not just quotes. After A4 lands, this is the most common abandon shape for first-run-with-bad-key (the original 2026-05-09 friend bug).",
+      "schema_version": 1,
+      "ts": "2026-05-12T11:00:00Z",
+      "event": "run_failed",
+      "run_id": "01HXYZ00000000000TOPICSABNDN",
+      "kind": "run",
+      "started_at": "2026-05-12T10:30:00Z",
+      "ended_at": "2026-05-12T11:00:00Z",
+      "outcome": "failed",
+      "cause": {
+        "category": "quota",
+        "code": "429",
+        "message": "Topic segmentation failed: APIStatusError on anthropic",
+        "provider": "anthropic",
+        "stage": "topic_segmentation",
+        "session_id": null,
+        "exit_code": null,
+        "signal": null,
+        "signal_name": null
+      },
+      "input_tokens": 4200,
+      "output_tokens": 0,
+      "cost_usd_estimate": 0.02,
+      "price_table_version": "2026-04-01",
+      "summary": {
+        "transcripts": {
+          "attempted": 2,
+          "succeeded": 2,
+          "duration_ms": 318000,
+          "failed": []
+        },
+        "topics": {
+          "attempted": 2,
+          "succeeded": 0,
+          "duration_ms": 14000,
+          "failed": [
+            {
+              "session_id": "s1",
+              "cause": {
+                "category": "quota",
+                "code": "429",
+                "message": "Topic segmentation failed: APIStatusError on anthropic",
+                "provider": "anthropic",
+                "stage": "topic_segmentation",
+                "session_id": "s1",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s2",
+              "cause": {
+                "category": "quota",
+                "code": "429",
+                "message": "Topic segmentation failed: APIStatusError on anthropic",
+                "provider": "anthropic",
+                "stage": "topic_segmentation",
+                "session_id": "s2",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            }
+          ]
+        },
+        "quotes": null,
+        "themes": null
+      }
+    },
     "run_completed_partial_truncated": {
       "_doc": "Truncation marker scenario: 14 transcription failures collapsed to 10 + 1 overflow placeholder (12 total entries on the wire). Locks the STAGE_FAILED_MAX=10 contract from bristlenose/events.py:_truncate_failed. Swift renders the placeholder as a single muted summary row at the bottom of the stage's sub-rows, not as an N+1th session.",
       "schema_version": 1,
@@ -180,6 +263,7 @@
             {"session_id": null,  "cause": {"category": "unknown", "code": null, "message": "... and 4 more failures truncated", "provider": null, "stage": null, "session_id": null, "exit_code": null, "signal": null, "signal_name": null}}
           ]
         },
+        "topics": {"attempted": 4, "succeeded": 4, "duration_ms": 54000, "failed": []},
         "quotes": {"attempted": 4, "succeeded": 4, "duration_ms": 96000, "failed": []},
         "themes": null
       }
@@ -201,6 +285,7 @@
       "price_table_version": "2026-04-01",
       "summary": {
         "transcripts": {"attempted": 3, "succeeded": 3, "duration_ms": 412000, "failed": []},
+        "topics":      {"attempted": 3, "succeeded": 3, "duration_ms": 41000,  "failed": []},
         "quotes":      {"attempted": 3, "succeeded": 3, "duration_ms": 82000,  "failed": []},
         "themes":      {"attempted": 1, "succeeded": 1, "duration_ms": 14000,  "failed": []}
       }

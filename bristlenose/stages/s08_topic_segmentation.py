@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from bristlenose.events import StageFailure, StageOutcome
 from bristlenose.llm import telemetry
 from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.llm.client import LLMClient
@@ -16,6 +17,7 @@ from bristlenose.models import (
     TopicBoundary,
     TransitionType,
 )
+from bristlenose.run_lifecycle import _build_cause
 from bristlenose.utils.timecodes import parse_timecode
 
 logger = logging.getLogger(__name__)
@@ -29,21 +31,24 @@ async def segment_topics(
     llm_client: LLMClient,
     concurrency: int = 1,
     errors: list[str] | None = None,
-) -> list[SessionTopicMap]:
+) -> tuple[list[SessionTopicMap], StageOutcome]:
     """Identify topic/screen transitions in each transcript.
 
     Args:
         transcripts: PII-cleaned transcripts to analyse.
         llm_client: LLM client for analysis.
         concurrency: Max concurrent LLM calls (default 1 = sequential).
-        errors: Optional list to append error messages to.
+        errors: Optional list to append error messages to (legacy short-form).
 
     Returns:
-        List of SessionTopicMap objects, one per transcript.
+        Tuple of (topic_maps, outcome). ``outcome`` records per-session
+        attempts/successes/failures so the orchestrator can decide whether
+        to abandon the run when every topic-segmentation call fails.
     """
     semaphore = asyncio.Semaphore(concurrency)
     stop = asyncio.Event()
     consecutive_failures = 0
+    outcome = StageOutcome(attempted=len(transcripts))
 
     async def _process(transcript: PiiCleanTranscript) -> SessionTopicMap:
         nonlocal consecutive_failures
@@ -56,6 +61,18 @@ async def segment_topics(
 
         async with semaphore:
             if stop.is_set():
+                # Early-stop sessions: not attempted at the LLM layer; record
+                # as failures with a synthetic cause so abandon arithmetic
+                # (succeeded == 0) reflects the user-visible reality.
+                outcome.failed.append(StageFailure(
+                    session_id=transcript.session_id,
+                    cause=_build_cause(
+                        RuntimeError("Skipped after consecutive upstream failures"),
+                        stage="topic_segmentation",
+                        provider=llm_client.provider,
+                        session_id=transcript.session_id,
+                    ),
+                ))
                 return empty
 
             logger.info(
@@ -67,6 +84,7 @@ async def segment_topics(
                 with telemetry.session(transcript.participant_id):
                     topic_map = await _segment_single(transcript, llm_client)
                 consecutive_failures = 0
+                outcome.succeeded += 1
                 logger.info(
                     "%s: Found %d topic boundaries",
                     transcript.session_id,
@@ -81,6 +99,15 @@ async def segment_topics(
                 )
                 if errors is not None:
                     errors.append(str(exc))
+                outcome.failed.append(StageFailure(
+                    session_id=transcript.session_id,
+                    cause=_build_cause(
+                        exc,
+                        stage="topic_segmentation",
+                        provider=llm_client.provider,
+                        session_id=transcript.session_id,
+                    ),
+                ))
                 consecutive_failures += 1
                 if consecutive_failures >= _FAIL_THRESHOLD:
                     logger.warning(
@@ -90,7 +117,8 @@ async def segment_topics(
                     stop.set()
                 return empty
 
-    return list(await asyncio.gather(*(_process(t) for t in transcripts)))
+    results = list(await asyncio.gather(*(_process(t) for t in transcripts)))
+    return results, outcome
 
 
 async def _segment_single(

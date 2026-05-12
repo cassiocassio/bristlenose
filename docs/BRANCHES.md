@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 12 May 2026 (closed `a2-install-doctor-checks`)
+**Updated:** 12 May 2026 (closed `a4-stage-cache-honesty`)
 
 ---
 
@@ -29,7 +29,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | Directory | Branch | Kind | Purpose |
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
-| `bristlenose_branch a4-stage-cache-honesty/` | `a4-stage-cache-honesty` | feature | Reorder abandon-check before `mark_stage_complete`; close fake-success-feedback class for s08–s11 |
 | `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
@@ -117,7 +116,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | Branch | Local worktree | GitHub remote |
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
-| `a4-stage-cache-honesty` | `bristlenose_branch a4-stage-cache-honesty/` | local only |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
@@ -135,34 +133,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `a4-stage-cache-honesty`
-
-**Kind:** feature — code lands on main
-**Status:** Just started
-**Started:** 12 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch a4-stage-cache-honesty/`
-**Remote:** local only (push when ready)
-
-**What it does:** Reorder abandon-check before `mark_stage_complete`; close fake-success-feedback class for s08–s11. The pipeline currently marks stages complete in the manifest before checking whether the stage actually produced usable output — so a stage that fails to extract any quotes (or themes, etc.) still appears "complete" in the manifest cache, which then short-circuits any re-run with the stale empty state. This branch reorders the abandon-check so the manifest only records completion when there's something real to cache.
-
-**Files this branch will touch:**
-- `bristlenose/pipeline.py`
-- `bristlenose/manifest.py`
-- `bristlenose/run_lifecycle.py`
-- `bristlenose/events.py`
-- `bristlenose/stages/s08_topic_segmentation.py`
-- `bristlenose/stages/s10_quote_clustering.py`
-- `bristlenose/stages/s11_thematic_grouping.py`
-- `SECURITY.md`
-- `tests/test_manifest.py`
-- `tests/test_run_lifecycle.py`
-- `tests/fixtures/pipeline-summary-contract.json`
-
-**Potential conflicts with other branches:**
-- None expected — `a2-install-doctor-checks` touches `doctor.py` + `README.md` (no overlap); `responsive-signal-cards` is signal-card layout; parked branches are UI experiments. `pipeline.py` is a hot file historically but no other active branch is currently editing it.
 
 ---
 
@@ -264,6 +234,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `a4-stage-cache-honesty` — merged 12 May 2026
+
+Reorder abandon-check before `mark_stage_complete` so the manifest only records completion when a stage produced usable output. Closes the fake-success-feedback class for s08–s11: a stage that fails to extract any quotes (or themes) no longer caches as "complete" and short-circuits re-runs with stale empty state. Single commit (`0381a06`) merged as `9d2cd2e`. Touched `pipeline.py`, `manifest.py`, `run_lifecycle.py`, `events.py`, s08/s10/s11 stage files, `SECURITY.md`, and three test files plus the pipeline-summary contract fixture. Worktree detached and tagged orange on disk.
 
 ### `a2-install-doctor-checks` — merged 12 May 2026
 

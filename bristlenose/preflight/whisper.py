@@ -168,7 +168,6 @@ def _print_banner(
     console.print(
         "  " + t("preflight.whisper.banner_intro", size=WHISPER_SIZE_HUMAN)
     )
-    console.print("  " + t("preflight.whisper.reassurance"))
     console.print()
     console.print(
         "  " + t(

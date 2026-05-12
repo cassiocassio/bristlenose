@@ -13,11 +13,15 @@ original run.  Stage 12 (render) always re-runs.
 
 from __future__ import annotations
 
+import json
+import logging
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class StageStatus(str, Enum):
@@ -161,13 +165,66 @@ def mark_stage_running(manifest: PipelineManifest, stage: str) -> None:
     manifest.updated_at = _now_iso()
 
 
+def _is_content_empty(path: Path | None) -> bool:
+    """True iff ``path`` exists and is empty / content-equivalent-to-empty.
+
+    Used by ``mark_stage_complete`` to refuse recording completion when the
+    stage produced no usable output. Without this guard, a stage that
+    abandoned mid-flight could still stamp the manifest as COMPLETE with a
+    valid ``content_hash`` of an empty intermediate JSON file (`b"[]"`),
+    and the next run would read `(cached)` and re-render an empty report —
+    the cache-poisoning bug A4 closes structurally at the source.
+
+    Returns False when ``path`` is None or absent: nothing to refuse, caller
+    proceeds as usual. Non-JSON paths return False unless zero-byte (rare
+    for our intermediates; defensive).
+    """
+    if path is None or not path.exists():
+        return False
+    if path.stat().st_size == 0:
+        return True
+    if path.suffix == ".json":
+        try:
+            parsed = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return False  # malformed — let the next layer fail loudly
+        # Empty array / empty object / explicit null / whitespace-only string
+        if parsed in ([], {}, None):
+            return True
+        if isinstance(parsed, str) and not parsed.strip():
+            return True
+    return False
+
+
 def mark_stage_complete(
     manifest: PipelineManifest,
     stage: str,
     content_hash: str | None = None,
     input_hashes: dict[str, str] | None = None,
+    output_path: Path | None = None,
 ) -> None:
-    """Mark a stage as complete and update the manifest timestamp."""
+    """Mark a stage as complete and update the manifest timestamp.
+
+    When ``output_path`` is provided and the file is empty (zero-length OR
+    content-equivalent-to-empty for JSON: ``[]`` / ``{}`` / ``null``), the
+    manifest is **not** mutated — a warning is logged and the next run will
+    re-execute the stage. This closes the A4 cache-poisoning bug at the
+    source: even if a caller forgets to add an abandon-check, the manifest
+    refuses to record completion for empty output.
+
+    Callers should always pass ``output_path`` when the stage writes an
+    intermediate file. Legacy callers without the kwarg get the old
+    behaviour (always-mark-complete) and are protected by the call-site
+    abandon-checks in pipeline.py.
+    """
+    if _is_content_empty(output_path):
+        logger.warning(
+            "manifest.refuse_empty_complete stage=%s path=%s — "
+            "next run will re-execute this stage",
+            stage,
+            output_path,
+        )
+        return
     record = manifest.stages.get(stage, StageRecord())
     record.status = StageStatus.COMPLETE
     record.completed_at = _now_iso()

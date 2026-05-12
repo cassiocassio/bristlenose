@@ -4,16 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os as _os
 from pathlib import Path
 
 from rich.console import Console
 
-# Suppress all tqdm/huggingface_hub progress bars at module level.
-# Must be set before any tqdm import; setting inside __init__() is too late.
-_os.environ.setdefault("TQDM_DISABLE", "1")
-_os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
-
+# tqdm / huggingface_hub progress-bar suppression lives in
+# `bristlenose/__init__.py` (must be set before any HF import, including
+# the doctor preflight that runs before pipeline.py is reached).
 from bristlenose import __version__
 from bristlenose.config import BristlenoseSettings
 from bristlenose.events import (

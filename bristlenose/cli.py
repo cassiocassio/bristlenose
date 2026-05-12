@@ -21,6 +21,7 @@ from bristlenose.preflight import PreflightAbortedError
 from bristlenose.preflight.whisper import WHISPER_SIZE_HUMAN
 from bristlenose.run_lifecycle import ConcurrentRunError, run_lifecycle
 from bristlenose.ui_kinds import MessageKind, cli_prefix
+from bristlenose.utils.text import count_noun
 
 # Known commands — used by _maybe_inject_run() to detect bare directory arguments
 _COMMANDS = {
@@ -682,18 +683,18 @@ def _print_pipeline_summary(result: object, *, serve_url: str | None = None) -> 
         people = getattr(result, "people", None)
         named = _named_participant_summary(people, len(participants))
         if named:
-            parts.append(f"{len(participants)} participants ({named})")
+            parts.append(f"{count_noun(len(participants), 'participant')} ({named})")
         else:
-            parts.append(f"{len(participants)} participants")
+            parts.append(count_noun(len(participants), "participant"))
     screen_clusters = getattr(result, "screen_clusters", [])
     if screen_clusters:
-        parts.append(f"{len(screen_clusters)} screens")
+        parts.append(count_noun(len(screen_clusters), "screen"))
     theme_groups = getattr(result, "theme_groups", [])
     if theme_groups:
-        parts.append(f"{len(theme_groups)} themes")
+        parts.append(count_noun(len(theme_groups), "theme"))
     total_quotes = getattr(result, "total_quotes", 0)
     if total_quotes:
-        parts.append(f"{total_quotes} quotes")
+        parts.append(count_noun(total_quotes, "quote"))
     if parts:
         console.print(f"\n  [dim]{' · '.join(parts)}[/dim]")
 
@@ -1544,7 +1545,10 @@ def _auto_render(project_dir: Path) -> None:
 
     pipeline = Pipeline(settings, verbose=False)
     result = pipeline.run_render_only(output_dir, input_dir)
-    console.print(f" {cli_prefix(MessageKind.SUCCESS)} [dim]Rendered report[/dim]  {result.total_quotes} quotes")
+    console.print(
+        f" {cli_prefix(MessageKind.SUCCESS)} [dim]Rendered report[/dim]"
+        f"  {count_noun(result.total_quotes, 'quote')}"
+    )
 
 
 @app.command()

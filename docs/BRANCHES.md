@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 12 May 2026 (opened `tower-of-hanoi`)
+**Updated:** 12 May 2026 (closed `a2-install-doctor-checks`)
 
 ---
 
@@ -29,7 +29,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | Directory | Branch | Kind | Purpose |
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
-| `bristlenose_branch a2-install-doctor-checks/` | `a2-install-doctor-checks` | feature | Hard doctor check for serve extras + zsh-glob-safe install messages + README Python 3.10+ note |
 | `bristlenose_branch a4-stage-cache-honesty/` | `a4-stage-cache-honesty` | feature | Reorder abandon-check before `mark_stage_complete`; close fake-success-feedback class for s08–s11 |
 | `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
@@ -118,7 +117,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | Branch | Local worktree | GitHub remote |
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
-| `a2-install-doctor-checks` | `bristlenose_branch a2-install-doctor-checks/` | local only |
 | `a4-stage-cache-honesty` | `bristlenose_branch a4-stage-cache-honesty/` | local only |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
@@ -137,25 +135,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `a2-install-doctor-checks`
-
-**Kind:** feature — code lands on main
-**Status:** Just started
-**Started:** 12 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch a2-install-doctor-checks/`
-**Remote:** local only (push when ready)
-
-**What it does:** Hard doctor check for serve extras + zsh-glob-safe install messages + README Python 3.10+ note. Adds `check_serve_deps()` as an error-severity check in `bristlenose/doctor.py` (catches the silent-brew-install-without-extras bug), makes fix messages install-method-aware (brew vs pipx vs pip), uses single-quoted `'bristlenose[serve]'` everywhere so zsh doesn't glob the brackets, and optionally detects anaconda Python shadowing. README gets an explicit "Python 3.10+ required" note plus an anaconda caveat. Depends on A1 brew formula work landing first (the fix message references `brew upgrade bristlenose`).
-
-**Files this branch will touch:**
-- `bristlenose/doctor.py`
-- `README.md`
-
-**Potential conflicts with other branches:**
-- None expected — `doctor.py` and `README.md` aren't being edited by other active branches (`responsive-signal-cards` is signal-card layout; parked branches are UI experiments)
 
 ---
 
@@ -285,6 +264,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `a2-install-doctor-checks` — merged 12 May 2026
+
+Doctor hard error for missing `[serve]` extras (`check_serve_deps()` in `bristlenose/doctor.py`), install-method-aware fix message (brew vs pipx vs pip) with single-quoted `'bristlenose[serve]'` so zsh doesn't glob the brackets. README gained a "Python 3.10+ required" line plus anaconda caveat. Latent Rich-markup bug fixed at three `console.print` sites that were silently dropping `[serve]` from `_install_hint()` and the fix messages alike. Fix 3 (anaconda runtime detection) dropped as unreachable under `requires-python = ">=3.10"`. Single commit (`ea8162f`) merged as `f10b68e`. Worktree detached and tagged orange on disk.
 
 ### `generic-failure-surface` — merged 11 May 2026
 

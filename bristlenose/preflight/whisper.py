@@ -189,6 +189,9 @@ def preflight_whisper(
     """Run the Whisper-model preflight.
 
     Behaviour:
+    - **``BRISTLENOSE_SKIP_PREFLIGHT=1``**: explicit escape hatch, skip silently.
+      Defence-in-depth for spoofed-TTY CI runners and the pytest suite
+      (set in ``tests/conftest.py``).
     - **Fully cached**: silent, return immediately.
     - **Missing or partial**: print the framed banner; if ``allow_fetch`` is
       False raise :class:`WhisperPreflightAbortedError`; otherwise stop the Rich
@@ -204,6 +207,8 @@ def preflight_whisper(
         PackageInstallError: when the download itself fails (propagated from
             :func:`bristlenose.utils.package_install.ensure_hf_model`).
     """
+    if os.environ.get("BRISTLENOSE_SKIP_PREFLIGHT") == "1":
+        return
     from bristlenose.utils.package_install import ensure_hf_model
 
     repo_id = _resolve_repo_id(settings)

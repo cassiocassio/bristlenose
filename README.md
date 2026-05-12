@@ -72,6 +72,8 @@ Requires macOS 15 Sequoia, Apple Silicon (M1+).
 
 ### macOS (Homebrew), Linux, Windows
 
+Requires Python 3.10 or newer.
+
 ```bash
 # macOS (Homebrew) -- handles ffmpeg + Python for you
 brew install cassiocassio/bristlenose/bristlenose
@@ -82,6 +84,8 @@ uv tool install bristlenose    # alternative
 ```
 
 If using pipx or uv, you'll also need FFmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Ubuntu, `winget install FFmpeg` on Windows).
+
+If you have Anaconda installed, its bundled Python may shadow newer system Pythons. Either `conda deactivate` before running pip/pipx, or install via Homebrew (which uses its own bundled Python 3.12).
 
 After installing, run `bristlenose doctor` to verify your setup.
 

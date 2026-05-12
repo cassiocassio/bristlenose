@@ -148,15 +148,15 @@ class TestHardwareLabel:
 class TestInstallHint:
     def test_pip_default(self) -> None:
         with patch("sys.prefix", "/usr/local"):
-            assert _install_hint() == "pip install bristlenose[serve]"
+            assert _install_hint() == "pip install 'bristlenose[serve]'"
 
     def test_pipx_detected(self) -> None:
         with patch("sys.prefix", "/home/user/.local/share/pipx/venvs/bristlenose"):
-            assert _install_hint() == "pipx install bristlenose[serve]"
+            assert _install_hint() == "pipx install 'bristlenose[serve]'"
 
     def test_venv_without_pipx(self) -> None:
         with patch("sys.prefix", "/home/user/projects/bristlenose/.venv"):
-            assert _install_hint() == "pip install bristlenose[serve]"
+            assert _install_hint() == "pip install 'bristlenose[serve]'"
 
 
 # ---------------------------------------------------------------------------

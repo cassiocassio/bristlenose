@@ -334,9 +334,16 @@ def test_pipeline_run_abandons_when_all_transcribe_fail(tmp_path: Path) -> None:
             "bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
             new=_async_passthrough,
         ),
-        # Slice C: the Whisper preflight runs before transcribe; bypass it
-        # here so the test exercises the orchestrator's reaction to the
-        # all-failed transcribe outcome (its actual contract).
+        # Bypass front-loaded preflights so the test reaches its actual
+        # contract — the orchestrator's reaction to an all-failed
+        # transcribe outcome. CI Linux runners have no ffmpeg on PATH,
+        # so without these patches the ffmpeg preflight aborts before
+        # transcribe is reached. If you add a new preflight to
+        # Pipeline.run, patch it here too.
+        patch(
+            "bristlenose.preflight.ffmpeg.preflight_ffmpeg",
+            new=lambda **kw: None,
+        ),
         patch(
             "bristlenose.preflight.whisper.preflight_whisper",
             new=lambda **kw: None,

@@ -101,9 +101,10 @@ class TestTopicSegmentationConcurrency:
 
         transcripts = [_make_transcript(f"p{i}") for i in range(1, 5)]
         mock_client = AsyncMock()
+        mock_client.provider = "anthropic"
         mock_client.analyze = mock_analyze
 
-        result = await segment_topics(transcripts, mock_client, concurrency=1)
+        result, _outcome = await segment_topics(transcripts, mock_client, concurrency=1)
 
         assert len(result) == 4
         # With concurrency=1, each call should start after the previous ends
@@ -129,9 +130,10 @@ class TestTopicSegmentationConcurrency:
 
         transcripts = [_make_transcript(f"p{i}") for i in range(1, 7)]
         mock_client = AsyncMock()
+        mock_client.provider = "anthropic"
         mock_client.analyze = mock_analyze
 
-        result = await segment_topics(transcripts, mock_client, concurrency=3)
+        result, _outcome = await segment_topics(transcripts, mock_client, concurrency=3)
 
         assert len(result) == 6
         assert max_active <= 3, f"Max concurrent calls was {max_active}, expected <= 3"
@@ -154,9 +156,10 @@ class TestTopicSegmentationConcurrency:
 
         transcripts = [_make_transcript(f"p{i}") for i in range(1, 4)]
         mock_client = AsyncMock()
+        mock_client.provider = "anthropic"
         mock_client.analyze = mock_analyze
 
-        result = await segment_topics(transcripts, mock_client, concurrency=3)
+        result, _outcome = await segment_topics(transcripts, mock_client, concurrency=3)
 
         assert len(result) == 3
         assert call_count == 3
@@ -183,9 +186,10 @@ class TestTopicSegmentationConcurrency:
 
         transcripts = [_make_transcript(f"p{i}") for i in range(1, 4)]
         mock_client = AsyncMock()
+        mock_client.provider = "anthropic"
         mock_client.analyze = mock_analyze
 
-        result = await segment_topics(transcripts, mock_client, concurrency=3)
+        result, _outcome = await segment_topics(transcripts, mock_client, concurrency=3)
 
         assert [r.participant_id for r in result] == ["p1", "p2", "p3"]
 
@@ -220,6 +224,7 @@ class TestQuoteExtractionConcurrency:
             for i in range(1, 7)
         ]
         mock_client = AsyncMock()
+        mock_client.provider = "anthropic"
         mock_client.analyze = mock_analyze
 
         result, _outcome = await extract_quotes(
@@ -247,6 +252,7 @@ class TestQuoteExtractionConcurrency:
             for i in range(1, 4)
         ]
         mock_client = AsyncMock()
+        mock_client.provider = "anthropic"
         mock_client.analyze = mock_analyze
 
         result, _outcome = await extract_quotes(
@@ -278,10 +284,11 @@ class TestTopicSegmentationEarlyTermination:
 
         transcripts = [_make_transcript(f"p{i}") for i in range(1, 11)]
         mock_client = AsyncMock()
+        mock_client.provider = "anthropic"
         mock_client.analyze = mock_analyze
         errors: list[str] = []
 
-        result = await segment_topics(
+        result, _outcome = await segment_topics(
             transcripts, mock_client, concurrency=1, errors=errors,
         )
 
@@ -308,6 +315,7 @@ class TestTopicSegmentationEarlyTermination:
 
         transcripts = [_make_transcript(f"p{i}") for i in range(1, 6)]
         mock_client = AsyncMock()
+        mock_client.provider = "anthropic"
         mock_client.analyze = mock_analyze
         errors: list[str] = []
 
@@ -342,6 +350,7 @@ class TestQuoteExtractionEarlyTermination:
             for i in range(1, 11)
         ]
         mock_client = AsyncMock()
+        mock_client.provider = "anthropic"
         mock_client.analyze = mock_analyze
         errors: list[str] = []
 
@@ -377,6 +386,7 @@ class TestQuoteExtractionEarlyTermination:
             for i in range(1, 6)
         ]
         mock_client = AsyncMock()
+        mock_client.provider = "anthropic"
         mock_client.analyze = mock_analyze
         errors: list[str] = []
 
@@ -409,6 +419,7 @@ class TestConcurrencySpeedup:
 
         # Sequential
         mock_client = AsyncMock()
+        mock_client.provider = "anthropic"
         mock_client.analyze = mock_analyze
         t0 = time.monotonic()
         await segment_topics(transcripts, mock_client, concurrency=1)
@@ -416,6 +427,7 @@ class TestConcurrencySpeedup:
 
         # Concurrent
         mock_client2 = AsyncMock()
+        mock_client2.provider = "anthropic"
         mock_client2.analyze = mock_analyze
         t0 = time.monotonic()
         await segment_topics(transcripts, mock_client2, concurrency=3)

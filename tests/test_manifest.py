@@ -332,3 +332,124 @@ def test_backward_compat_manifest_without_hashes(tmp_path: Path):
     assert loaded.stages["ingest"].content_hash is None
     assert loaded.stages["quote_extraction"].content_hash is None
     assert loaded.stages["quote_extraction"].sessions["s1"].content_hash is None
+
+
+# ---------------------------------------------------------------------------
+# Empty-content rejection (A4-stage-cache-honesty Fix 6)
+# ---------------------------------------------------------------------------
+
+
+def test_mark_stage_complete_refuses_zero_byte_file(tmp_path: Path):
+    """A truly empty output file must NOT cause the manifest to record
+    completion. Otherwise the next run would see `(cached)` and read empty
+    intermediate JSON, rendering an empty report — the cache-poisoning bug."""
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, STAGE_QUOTE_EXTRACTION)
+
+    empty_path = tmp_path / "extracted_quotes.json"
+    empty_path.write_bytes(b"")
+
+    mark_stage_complete(
+        m, STAGE_QUOTE_EXTRACTION,
+        content_hash="zzz", output_path=empty_path,
+    )
+    # Stage status stays RUNNING — the refusal is silent (logged warning).
+    rec = m.stages[STAGE_QUOTE_EXTRACTION]
+    assert rec.status == StageStatus.RUNNING
+    assert rec.content_hash is None  # not recorded
+
+
+def test_mark_stage_complete_refuses_empty_json_array(tmp_path: Path):
+    """`b"[]"` is content-valid JSON but semantically empty for our
+    intermediates (no quotes / no clusters / no themes). Must refuse."""
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, STAGE_TOPIC_SEGMENTATION)
+
+    empty_array = tmp_path / "topic_boundaries.json"
+    empty_array.write_text("[]", encoding="utf-8")
+
+    mark_stage_complete(
+        m, STAGE_TOPIC_SEGMENTATION,
+        content_hash="zzz", output_path=empty_array,
+    )
+    rec = m.stages[STAGE_TOPIC_SEGMENTATION]
+    assert rec.status == StageStatus.RUNNING
+
+
+def test_mark_stage_complete_refuses_empty_json_object(tmp_path: Path):
+    """`b"{}"` also counts as content-empty. Defensive — none of our
+    current intermediates use top-level objects, but the helper is general."""
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, STAGE_TOPIC_SEGMENTATION)
+
+    empty_obj = tmp_path / "topic_boundaries.json"
+    empty_obj.write_text("{}", encoding="utf-8")
+
+    mark_stage_complete(
+        m, STAGE_TOPIC_SEGMENTATION,
+        content_hash="zzz", output_path=empty_obj,
+    )
+    rec = m.stages[STAGE_TOPIC_SEGMENTATION]
+    assert rec.status == StageStatus.RUNNING
+
+
+def test_mark_stage_complete_refuses_json_null(tmp_path: Path):
+    """`b"null"` parses to None — content-empty."""
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, STAGE_TOPIC_SEGMENTATION)
+
+    null_file = tmp_path / "topic_boundaries.json"
+    null_file.write_text("null", encoding="utf-8")
+
+    mark_stage_complete(
+        m, STAGE_TOPIC_SEGMENTATION,
+        content_hash="zzz", output_path=null_file,
+    )
+    rec = m.stages[STAGE_TOPIC_SEGMENTATION]
+    assert rec.status == StageStatus.RUNNING
+
+
+def test_mark_stage_complete_records_populated_file(tmp_path: Path):
+    """A non-empty intermediate file records completion as expected."""
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, STAGE_QUOTE_EXTRACTION)
+
+    populated = tmp_path / "extracted_quotes.json"
+    populated.write_text('[{"text": "hello"}]', encoding="utf-8")
+
+    mark_stage_complete(
+        m, STAGE_QUOTE_EXTRACTION,
+        content_hash="abc123", output_path=populated,
+    )
+    rec = m.stages[STAGE_QUOTE_EXTRACTION]
+    assert rec.status == StageStatus.COMPLETE
+    assert rec.content_hash == "abc123"
+
+
+def test_mark_stage_complete_without_output_path_preserves_legacy(tmp_path: Path):
+    """Callers that don't pass output_path get the legacy behaviour
+    (always-mark-complete). The abandon-checks at the call sites cover the
+    cache-poisoning bug for these callers; the empty-content guard is
+    additional belt-and-braces."""
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, STAGE_INGEST)
+    mark_stage_complete(m, STAGE_INGEST, content_hash="abc")
+    rec = m.stages[STAGE_INGEST]
+    assert rec.status == StageStatus.COMPLETE
+    assert rec.content_hash == "abc"
+
+
+def test_mark_stage_complete_missing_path_is_no_op_guard(tmp_path: Path):
+    """``output_path`` referring to a non-existent file does NOT refuse —
+    the helper only refuses when the file exists and is empty. Caller-side
+    abandon-checks handle the "file should exist but doesn't" case."""
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, STAGE_QUOTE_EXTRACTION)
+    missing = tmp_path / "never_written.json"
+    mark_stage_complete(
+        m, STAGE_QUOTE_EXTRACTION,
+        content_hash="abc", output_path=missing,
+    )
+    rec = m.stages[STAGE_QUOTE_EXTRACTION]
+    assert rec.status == StageStatus.COMPLETE
+    assert rec.content_hash == "abc"

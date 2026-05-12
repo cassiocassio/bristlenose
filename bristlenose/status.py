@@ -16,6 +16,7 @@ from bristlenose.manifest import (
     _derive_stage_status,
     load_manifest,
 )
+from bristlenose.utils.text import pluralize
 
 # ---------------------------------------------------------------------------
 # Intermediate file names — keep in sync with pipeline.py / render_output.py
@@ -147,12 +148,12 @@ def _build_stage_info(
         info.session_total = total
         info.session_complete = complete
         if effective_status == StageStatus.COMPLETE:
-            info.detail = f"{total} sessions"
+            info.detail = pluralize(total, "session")
         elif complete > 0:
             incomplete = total - complete
-            info.detail = f"{complete}/{total} sessions ({incomplete} incomplete)"
+            info.detail = f"{complete}/{pluralize(total, 'session')} ({incomplete} incomplete)"
         else:
-            info.detail = f"{total} sessions pending"
+            info.detail = f"{pluralize(total, 'session')} pending"
 
     # Stage-specific detail enrichment
     if effective_status == StageStatus.COMPLETE:
@@ -163,7 +164,11 @@ def _build_stage_info(
         elif stage_key == "quote_extraction":
             count = _count_json_array(intermediate_dir / "extracted_quotes.json")
             if count is not None:
-                session_part = f" ({info.session_total} sessions)" if info.session_total else ""
+                session_part = (
+                    f" ({pluralize(info.session_total, 'session')})"
+                    if info.session_total
+                    else ""
+                )
                 info.detail = f"{count} quotes{session_part}"
         elif stage_key == "cluster_and_group":
             clusters = _count_json_array(intermediate_dir / "screen_clusters.json")
@@ -188,7 +193,7 @@ def _build_stage_info(
                               "quote_extraction"):
                 other = manifest.stages.get(other_key)
                 if other and other.sessions:
-                    info.detail = f"{len(other.sessions)} sessions"
+                    info.detail = pluralize(len(other.sessions), "session")
                     break
             if not info.detail:
                 info.detail = "complete"

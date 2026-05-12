@@ -100,6 +100,16 @@ def safe_filename(text: str, max_length: int = _MAX_FILENAME_LENGTH) -> str:
     return text or "_"
 
 
+def pluralize(n: int, singular: str, plural: str | None = None) -> str:
+    """Format `1 session` vs `2 sessions` for CLI output.
+
+    For irregular plurals pass *plural* explicitly:
+    ``pluralize(n, "boundary", "boundaries")``.
+    """
+    word = singular if n == 1 else (plural or singular + "s")
+    return f"{n} {word}"
+
+
 def apply_smart_quotes(text: str) -> str:
     """Replace straight double quotes with smart (curly) double quotes.
 

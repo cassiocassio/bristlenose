@@ -59,6 +59,7 @@ from bristlenose.models import (
     TranscriptSegment,
 )
 from bristlenose.ui_kinds import MessageKind, cli_prefix
+from bristlenose.utils.text import pluralize
 
 logger = logging.getLogger(__name__)
 console = Console(width=min(80, Console().width))
@@ -447,7 +448,7 @@ class Pipeline:
         from rich.prompt import Confirm
 
         console.print(
-            f"\n[yellow]Found {count} sessions in {source_dir.name}/.[/yellow]"
+            f"\n[yellow]Found {pluralize(count, 'session')} in {source_dir.name}/.[/yellow]"
         )
         return Confirm.ask("Continue?", default=True)
 
@@ -530,14 +531,14 @@ class Pipeline:
 
         # ── Print found-sessions line, then ingest checkmark ──
         console.print(
-            f"  [dim]{len(sessions)} sessions in {input_dir.name}/[/dim]\n",
+            f"  [dim]{pluralize(len(sessions), 'session')} in {input_dir.name}/[/dim]\n",
         )
         type_counts = Counter(
             f.file_type.value for s in sessions for f in s.files
         )
         type_parts = [f"{n} {t}" for t, n in type_counts.most_common()]
         _print_step(
-            f"Ingested {len(sessions)} sessions ({', '.join(type_parts)})",
+            f"Ingested {pluralize(len(sessions), 'session')} ({', '.join(type_parts)})",
             ingest_elapsed,
         )
         mark_stage_complete(manifest, STAGE_INGEST)
@@ -629,7 +630,7 @@ class Pipeline:
             temp_dir.mkdir(parents=True, exist_ok=True)
             sessions = await extract_audio_for_sessions(sessions, temp_dir)
             _print_step(
-                f"Extracted audio from {len(sessions)} sessions",
+                f"Extracted audio from {pluralize(len(sessions), 'session')}",
                 time.perf_counter() - t0,
             )
             mark_stage_complete(manifest, STAGE_EXTRACT_AUDIO)
@@ -661,7 +662,7 @@ class Pipeline:
                 }
                 total_segments = sum(len(s) for s in session_segments.values())
                 _print_cached_step(
-                    f"Transcribed {len(sessions)} sessions"
+                    f"Transcribed {pluralize(len(sessions), 'session')}"
                     f" ({total_segments} segments)",
                 )
             else:
@@ -718,7 +719,7 @@ class Pipeline:
                     ) -> None:
                         status.update(
                             f"[dim]Transcribing..."
-                            f" ({current}/{total} files)[/dim]"
+                            f" ({current}/{pluralize(total, 'file')})[/dim]"
                         )
 
                     _fresh_segments, _fresh_transcript_outcome = (
@@ -761,13 +762,13 @@ class Pipeline:
                 _n_new_tx = len(_remaining_sessions)
                 if _cached_segments and _n_new_tx:
                     msg = (
-                        f"Transcribed {len(sessions)} sessions"
+                        f"Transcribed {pluralize(len(sessions), 'session')}"
                         f" ({total_segments} segments,"
-                        f" {_n_new_tx} new sessions)"
+                        f" {pluralize(_n_new_tx, 'new session')})"
                     )
                 else:
                     msg = (
-                        f"Transcribed {len(sessions)} sessions"
+                        f"Transcribed {pluralize(len(sessions), 'session')}"
                         f" ({total_segments} segments"
                     )
                     if audio_str:
@@ -832,7 +833,7 @@ class Pipeline:
             if est is not None:
                 console.print(
                     f"  [dim]Estimated LLM cost: ~${est:.2f}"
-                    f" for {len(sessions)} sessions"
+                    f" for {pluralize(len(sessions), 'session')}"
                     f" ({self.settings.llm_model})[/dim]\n"
                 )
 
@@ -1633,14 +1634,14 @@ class Pipeline:
 
         # ── Print found-sessions line, then ingest checkmark ──
         console.print(
-            f"  [dim]{len(sessions)} sessions in {input_dir.name}/[/dim]\n",
+            f"  [dim]{pluralize(len(sessions), 'session')} in {input_dir.name}/[/dim]\n",
         )
         type_counts = Counter(
             f.file_type.value for s in sessions for f in s.files
         )
         type_parts = [f"{n} {t}" for t, n in type_counts.most_common()]
         _print_step(
-            f"Ingested {len(sessions)} sessions ({', '.join(type_parts)})",
+            f"Ingested {pluralize(len(sessions), 'session')} ({', '.join(type_parts)})",
             ingest_elapsed,
         )
 
@@ -1654,7 +1655,7 @@ class Pipeline:
             temp_dir.mkdir(parents=True, exist_ok=True)
             sessions = await extract_audio_for_sessions(sessions, temp_dir)
             _print_step(
-                f"Extracted audio from {len(sessions)} sessions",
+                f"Extracted audio from {pluralize(len(sessions), 'session')}",
                 time.perf_counter() - t0,
             )
 
@@ -1663,7 +1664,9 @@ class Pipeline:
             t0 = time.perf_counter()
 
             def _on_transcribe_progress(current: int, total: int) -> None:
-                status.update(f"[dim]Transcribing... ({current}/{total} files)[/dim]")
+                status.update(
+                    f"[dim]Transcribing... ({current}/{pluralize(total, 'file')})[/dim]"
+                )
 
             session_segments, _transcript_outcome_t = await self._gather_all_segments(
                 sessions, on_progress=_on_transcribe_progress
@@ -1696,7 +1699,10 @@ class Pipeline:
                 f.duration_seconds or 0 for s in sessions for f in s.files
             )
             audio_str = _format_duration(total_audio) if total_audio else ""
-            msg = f"Transcribed {len(sessions)} sessions ({total_segments} segments"
+            msg = (
+                f"Transcribed {pluralize(len(sessions), 'session')}"
+                f" ({total_segments} segments"
+            )
             if audio_str:
                 msg += f", {audio_str} audio"
             msg += ")"
@@ -1799,7 +1805,7 @@ class Pipeline:
         concurrency = self.settings.llm_concurrency
 
         console.print(
-            f"[dim]{len(clean_transcripts)} transcripts in"
+            f"[dim]{pluralize(len(clean_transcripts), 'transcript')} in"
             f" {transcripts_dir.name}/[/dim]",
         )
 
@@ -1812,7 +1818,7 @@ class Pipeline:
         if est is not None:
             console.print(
                 f"  [dim]Estimated LLM cost: ~${est:.2f}"
-                f" for {len(clean_transcripts)} sessions"
+                f" for {pluralize(len(clean_transcripts), 'session')}"
                 f" ({self.settings.llm_model})[/dim]\n"
             )
         else:

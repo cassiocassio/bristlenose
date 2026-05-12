@@ -3,6 +3,7 @@
 from bristlenose.utils.text import (
     apply_smart_quotes,
     clean_transcript_text,
+    pluralize,
     remove_disfluencies,
     safe_filename,
     wrap_in_smart_quotes,
@@ -164,3 +165,30 @@ class TestSafeFilename:
         """Realistic clip filename from the design doc."""
         result = safe_filename("p1 03m45 Sarah onboarding was confusing")
         assert result == "p1 03m45 Sarah onboarding was confusing"
+
+
+# -- pluralize tests --
+
+
+def test_pluralize_zero() -> None:
+    assert pluralize(0, "session") == "0 sessions"
+
+
+def test_pluralize_one() -> None:
+    assert pluralize(1, "session") == "1 session"
+
+
+def test_pluralize_many() -> None:
+    assert pluralize(2, "session") == "2 sessions"
+    assert pluralize(42, "file") == "42 files"
+
+
+def test_pluralize_irregular() -> None:
+    assert pluralize(1, "boundary", "boundaries") == "1 boundary"
+    assert pluralize(2, "boundary", "boundaries") == "2 boundaries"
+
+
+def test_pluralize_explicit_plural_ignored_when_one() -> None:
+    """Explicit plural is only used when n != 1."""
+    assert pluralize(1, "person", "people") == "1 person"
+    assert pluralize(3, "person", "people") == "3 people"

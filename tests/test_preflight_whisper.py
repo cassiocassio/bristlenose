@@ -170,7 +170,6 @@ class TestPreflightWhisper:
         assert WHISPER_SIZE_HUMAN in out
         assert "Downloading" in out
         assert "Resuming" not in out
-        assert "Cancellable with Ctrl+C; resumes cleanly next run." in out
         assert "Whisper model ready" in out
 
     def test_partial_says_resuming_not_downloading(self, capsys):

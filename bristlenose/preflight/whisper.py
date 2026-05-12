@@ -210,6 +210,19 @@ def preflight_whisper(
         return
     from bristlenose.utils.package_install import ensure_hf_model
 
+    # Defence-in-depth against the env-var suppression in
+    # `bristlenose/__init__.py`: when `bristlenose.doctor._check_whisper_model`
+    # imports `huggingface_hub` (which it does during the doctor preflight),
+    # `HF_HUB_DISABLE_PROGRESS_BARS` gets read into a module-level constant —
+    # so if the env var is somehow unset by the time HF is first imported,
+    # the programmatic call still suppresses `Fetching N files:` and the
+    # trailing `Download complete: : 0.00B` summary line.
+    try:
+        from huggingface_hub.utils import disable_progress_bars
+        disable_progress_bars()
+    except ImportError:
+        pass
+
     repo_id = _resolve_repo_id(settings)
     state = cache_state(repo_id)
     if state == "cached":

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 12 May 2026 (opened `a2-install-doctor-checks`)
+**Updated:** 12 May 2026 (opened `a4-stage-cache-honesty`)
 
 ---
 
@@ -30,6 +30,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch a2-install-doctor-checks/` | `a2-install-doctor-checks` | feature | Hard doctor check for serve extras + zsh-glob-safe install messages + README Python 3.10+ note |
+| `bristlenose_branch a4-stage-cache-honesty/` | `a4-stage-cache-honesty` | feature | Reorder abandon-check before `mark_stage_complete`; close fake-success-feedback class for s08–s11 |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -117,6 +118,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `a2-install-doctor-checks` | `bristlenose_branch a2-install-doctor-checks/` | local only |
+| `a4-stage-cache-honesty` | `bristlenose_branch a4-stage-cache-honesty/` | local only |
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
@@ -152,6 +154,34 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - None expected — `doctor.py` and `README.md` aren't being edited by other active branches (`responsive-signal-cards` is signal-card layout; parked branches are UI experiments)
+
+---
+
+### `a4-stage-cache-honesty`
+
+**Kind:** feature — code lands on main
+**Status:** Just started
+**Started:** 12 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch a4-stage-cache-honesty/`
+**Remote:** local only (push when ready)
+
+**What it does:** Reorder abandon-check before `mark_stage_complete`; close fake-success-feedback class for s08–s11. The pipeline currently marks stages complete in the manifest before checking whether the stage actually produced usable output — so a stage that fails to extract any quotes (or themes, etc.) still appears "complete" in the manifest cache, which then short-circuits any re-run with the stale empty state. This branch reorders the abandon-check so the manifest only records completion when there's something real to cache.
+
+**Files this branch will touch:**
+- `bristlenose/pipeline.py`
+- `bristlenose/manifest.py`
+- `bristlenose/run_lifecycle.py`
+- `bristlenose/events.py`
+- `bristlenose/stages/s08_topic_segmentation.py`
+- `bristlenose/stages/s10_quote_clustering.py`
+- `bristlenose/stages/s11_thematic_grouping.py`
+- `SECURITY.md`
+- `tests/test_manifest.py`
+- `tests/test_run_lifecycle.py`
+- `tests/fixtures/pipeline-summary-contract.json`
+
+**Potential conflicts with other branches:**
+- None expected — `a2-install-doctor-checks` touches `doctor.py` + `README.md` (no overlap); `responsive-signal-cards` is signal-card layout; parked branches are UI experiments. `pipeline.py` is a hot file historically but no other active branch is currently editing it.
 
 ---
 

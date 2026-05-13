@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 12 May 2026 (added `no-red-ci-merges`)
+**Updated:** 13 May 2026 (added `tf-multi-project`)
 
 ---
 
@@ -32,6 +32,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
 | `bristlenose_branch ci-version-pinning/` | `ci-version-pinning` | chore | single source of truth for Node + Python primary versions via .tool-versions |
 | `bristlenose_branch no-red-ci-merges/` | `no-red-ci-merges` | chore | Enforce "don't merge red CI" via GitHub branch-protection rule on `main` + short CONTRIBUTING.md policy section |
+| `bristlenose_branch tf-multi-project/` | `tf-multi-project` | feature | Desktop multi-project for TF alpha — schema lock, UX wins, sidecar restart switch |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -121,6 +122,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `ci-version-pinning` | `bristlenose_branch ci-version-pinning/` | local only |
 | `no-red-ci-merges` | `bristlenose_branch no-red-ci-merges/` | local only |
+| `tf-multi-project` | `bristlenose_branch tf-multi-project/` | local only |
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
@@ -137,6 +139,30 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `tf-multi-project`
+
+**Kind:** feature — code intended for main; lands the TestFlight multi-project capability
+**Status:** Just started
+**Started:** 13 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch tf-multi-project/`
+**Remote:** local only (push when ready)
+
+**What it does:** Desktop multi-project for TF alpha — schema lock, UX wins, sidecar restart switch. Phase 0: `projects.json` schema v1 with mandatory `bookmarkData` + `schemaVersion`; `ProjectAvailability` enum + (state, copy, icon, action) triple. Phase 1 (UX wins, independently shippable): Remove-from-Sidebar + Undo, unified "Can't find this project" affordance. Phase 2 (architectural, gated on Phase 1 evidence): sidebar→server project switch via sidecar restart, Create new project with bookmark capture, drag-onto-existing-project, folder watching for new files. Phase 3 (after switch works): cloud-evicted project state. CLI multi-project, cross-project search, person linking, archive UI, add-interviews-to-existing, and re-analyse/Rebuild are explicitly out of scope. Full spec at `.claude/plans/tf-multi-project.md` (or `HANDOFF.md`).
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/ProjectIndex.swift` (schema v1, bookmarkData mandatory)
+- `desktop/Bristlenose/Bristlenose/ProjectAvailability.swift` (new enum)
+- `desktop/Bristlenose/Bristlenose/SidebarView.swift` (Remove + Undo toast, unified can't-find affordance)
+- `desktop/Bristlenose/Bristlenose/ServeManager.swift` / `PipelineRunner.swift` (sidecar restart on project switch)
+- `desktop/Bristlenose/Bristlenose/` create-new-project + drag-on flow
+- `bristlenose/locales/*/desktop.json` (six locales, new project-state copy)
+- `docs/design-multi-project.md` (truing during/after)
+
+**Potential conflicts with other branches:**
+- None active touch `desktop/Bristlenose/`. `ci-version-pinning` and `no-red-ci-merges` are CI-only. Watch for new locale-key collisions if a parallel translation pass lands.
 
 ---
 

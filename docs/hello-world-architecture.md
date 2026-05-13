@@ -42,7 +42,7 @@ This single command triggers a 12-stage pipeline, 4 LLM calls, a SQLite import, 
 
 **What happens:** Bristlenose figures out you want to run the full pipeline.
 
-**Why:** The CLI supports multiple commands (`run`, `serve`, `render`, `analyze`, `doctor`). But the most common thing people do is point it at a folder. So if the first argument is a directory that exists, `run` is injected automatically.
+**Why:** The CLI supports multiple commands (`run`, `serve`, `analyze`, `transcribe`, `status`, `doctor`, `configure`). But the most common thing people do is point it at a folder. So if the first argument is a directory that exists, `run` is injected automatically.
 
 ```python
 # bristlenose/cli.py — auto-inject 'run' if first arg is a directory

@@ -333,7 +333,7 @@ The expensive stages (transcription, quote extraction) operate per-session. Trac
 The deeper issue is that "where we are" depends on three orthogonal dimensions the schema currently flattens onto a single per-stage status field:
 
 1. **Outcome** — what happened? (running / completed / cancelled / failed)
-2. **Kind** — what was attempted? (`run` / `analyze` / `transcribe-only` / `render`)
+2. **Kind** — what was attempted? (`run` / `analyze` / `transcribe-only`. `render` is gone — A3, 12 May 2026.)
 3. **Cause** — why did it end this way? (user signal / parent died / API auth / API quota / network / missing dependency / unknown)
 
 Plus orthogonal to all three: **what work has value right now** (artifacts on disk) and **what it cost to produce** (tokens, dollars, wall time). Without these, the desktop has to choose between under-honesty ("Analysed 5 min ago" for a project with no report) and over-conservatism ("Idle" for a project with eight hours of valid transcripts).
@@ -415,11 +415,11 @@ The "retryable" column is the rule the desktop and CLI both apply via `is_retrya
 
 | `kind` | "Completed" means | Terminal stage |
 |---|---|---|
-| `run` | All stages including render | `render` |
-| `analyze` | All post-transcription stages including render | `render` |
+| `run` | All stages through stage 12 (the static-render byproduct write) | `s12_render_output` |
+| `analyze` | All post-transcription stages through stage 12 | `s12_render_output` |
 | `transcribe-only` | All sessions transcribed | `transcribe` |
 
-The `render` command does **not** write the events log — it's a read-only re-emission of cached JSON, no project-state change, no run-level outcome to record. This matches the project rule "static render is being phased out, don't find clever uses for it" (root CLAUDE.md, MEMORY `feedback_static_html_actively_remove.md`). If a future "I exported on date X" history is wanted, that's an export-tracking concern, not pipeline resilience.
+The `render` CLI command (removed in A3, 12 May 2026 — now a hidden redirect stub) did not write the events log; the stub doesn't either. Stage 12 still writes the static HTML byproduct on every `run` / `analyze` — that's a pipeline phase, not a separate command. If a future "I exported on date X" history is wanted, that's an export-tracking concern, not pipeline resilience.
 
 This replaces the hardcoded `terminalStage = "render"` in Swift `PipelineRunner` (current commit `9ca4461`) — the Python side is the source of truth for "done", and Swift derives state from the event log.
 

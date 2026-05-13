@@ -36,7 +36,7 @@ React islands replace static Jinja2 content at serve time using a **marker-based
 3. Add `re.sub()` call in `serve_report_html()` to swap markers for mount div
 4. Register the mount point in the renderer overlay CSS (4 places: `position:relative`, `:not(:has())` exclusions, cancel-inside-React, green overlay+outline)
 5. Add mount logic in `frontend/src/main.tsx`
-6. Re-render the report (`bristlenose render`) to bake in the new markers
+6. Re-open the project with `bristlenose serve <folder>` — serve mode auto-renders intermediate data on open, so the new markers are baked in without a separate render step. (Pre-A3 this step was `bristlenose render`, removed 12 May 2026.)
 
 ## Renderer overlay (dev-only)
 

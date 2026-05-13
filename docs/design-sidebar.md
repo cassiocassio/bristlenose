@@ -250,7 +250,7 @@ Module-level (not React Context) because:
 
 ## Static Render Isolation
 
-The `.layout` wrapper exists only in the React tree (SPA mode). The static render path (`bristlenose render`) never produces a `.layout` element, so sidebar CSS is inert — it ships in the theme bundle but has no visual effect.
+The `.layout` wrapper exists only in the React tree (SPA mode). The stage-12 static-render byproduct never produces a `.layout` element, so sidebar CSS is inert there — it ships in the theme bundle but has no visual effect. (Post-A3, 12 May 2026 — `bristlenose render` removed; byproduct still on disk, never surfaced.)
 
 ---
 

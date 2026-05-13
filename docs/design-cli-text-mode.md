@@ -2,7 +2,9 @@
 
 A pipe-friendly way to run Bristlenose's full pipeline (audio, video, Zoom/Teams recordings, or existing transcripts) and get themes, signals, sections, codebook-tagged quotes, sentiment, and friction back as plain markdown — no HTML render, no React, no browser, no Mac app required.
 
-**Status (Apr 2026):** design stage, parked. Not scheduled. Revisit when the first CLI-native user asks for it, when we want a prompt-regression harness, or when we decide it's time to stop being dogmatic about the GUI being the only surface.
+**Status (12 May 2026):** still parked, design stage. Superseded in framing by `docs/design-cli-improvements.md` §Future direction (post-A3): the *concept* lives on — markdown as the CLI deliverable — but the *surface* changed. The `--text` flag proposed below assumed `bristlenose render --text`, but `render` was removed in A3 (12 May). When this revives, the surface is `bristlenose run --static <folder>` (where `--static` is repurposed from "deprecated HTML thing" to "the markdown deliverable for terminal users"). All the design thinking below — sections, quote sequences, sentiment, codebook-tagged quotes, friction blocks — still applies; just substitute `bristlenose run --static` wherever the body says `bristlenose render --text`. Revisit trigger unchanged: 2+ cohort members say "I just wanted a text file I could grep / share / paste."
+
+**Original status (Apr 2026):** design stage, parked. Not scheduled. Revisit when the first CLI-native user asks for it, when we want a prompt-regression harness, or when we decide it's time to stop being dogmatic about the GUI being the only surface.
 
 ---
 
@@ -84,7 +86,7 @@ A `--text` flag on **both** `run` and `analyze`, because the audience wants both
 
 - `bristlenose run <folder> --text` — full pipeline, audio/video/Zoom/Teams/subtitles/docx in, markdown out. This is the headline surface. Someone dropped a folder of Zoom recordings and a voice memo from a committee meeting? One command.
 - `bristlenose analyze <transcripts> --text` — skip ingestion/transcription, go straight from existing transcripts to analysis. Fast iteration when you already have transcripts, or for prompt-tweaking loops.
-- `bristlenose render <output-dir> --text` — re-emit markdown from an already-completed run's intermediate JSON. No LLM calls. Cheap.
+- `bristlenose run --static <folder>` — emit markdown for the project's deliverable. (Pre-A3 this was the proposed `bristlenose render --text` shape; `render` was removed 12 May 2026 and `--static` is the post-A3 repurpose target.) No LLM calls when intermediate data is current. Cheap.
 
 All three routes produce the same markdown using the same formatter. The flag is the switch; the input stage is whatever the command already supports.
 
@@ -101,7 +103,7 @@ bristlenose analyze transcripts/ --llm local --model qwen2.5:72b  --text > qwen.
 diff llama.md qwen.md
 
 # Pipe a specific section into grep
-bristlenose render output/ --text | grep -A5 "mental-model"
+bristlenose run --static output/ | grep -A5 "mental-model"
 
 # Regression diff after prompt edit
 bristlenose analyze transcripts/ --text > after.md
@@ -202,7 +204,7 @@ Skeleton (illustrative, not final):
    diff before.md after.md
    ```
 
-4. **Running a codebook over an existing project.** `bristlenose render output/ --text | grep -B2 -A5 "mental-model"` to see every quote tagged `mental-model` with context.
+4. **Running a codebook over an existing project.** `bristlenose run --static output/ | grep -B2 -A5 "mental-model"` to see every quote tagged `mental-model` with context.
 
 5. **Regression harness.** Commit a transcript fixture + expected markdown. CI runs analyze and diffs.
 
@@ -283,7 +285,7 @@ Reuse what's already there. Most `format_*` helpers likely exist in `utils/markd
 1. **`--fake-llm` / deterministic mode for tests?** If we want a true regression harness, we need a way to run analysis without real API calls and without network. Options: record/replay via VCR-style fixtures, or a stub provider that returns canned responses keyed off transcript text. Out of scope for v1 — add when/if regression testing is actually wanted.
 2. **stdin support?** Lovely in principle, awkward in practice — the pipeline currently assumes a folder with one file per session. Deferred.
 3. **JSON output too?** `--json` would give structured output for tooling — `jq '.themes[] | .label'`, feeding into other scripts. Probably yes eventually, but markdown-first because diffability and human-readability are the main motivators.
-4. **`--codebook mental-model` / tag-filter from the CLI?** Rather than forcing the user to `grep`, expose codebook/tag filtering as a flag: `bristlenose render output/ --text --tag mental-model`. Smaller, more Unix-y than a grep pipeline when the data model already knows what a tag is. Worth sketching.
+4. **`--codebook mental-model` / tag-filter from the CLI?** Rather than forcing the user to `grep`, expose codebook/tag filtering as a flag: `bristlenose run --static output/ --tag mental-model`. Smaller, more Unix-y than a grep pipeline when the data model already knows what a tag is. Worth sketching.
 5. **Snap integration.** The 100-day plan already has a "won't" on Snap/Flatpak polish, but a working text mode makes the snap a lot more useful. Check whether the current snap lets you pipe stdout cleanly (confinement can interfere with stdio in surprising ways).
 6. **Discoverability.** Where does text mode get advertised? README top section alongside `brew install`? A dedicated "For command-line users" heading? Probably the latter — it tells the right audience they're welcome without confusing the researcher audience.
 7. **Progress output on stderr.** Text-mode output goes to stdout; Rich progress/status output from the pipeline currently also goes to stdout (via `console.print`). We'll need a clean split so `> report.md` captures only the markdown, not the spinner. Already done elsewhere in typer tools — check `console.print(file=sys.stderr)` or route progress to stderr by default in `--text` mode.

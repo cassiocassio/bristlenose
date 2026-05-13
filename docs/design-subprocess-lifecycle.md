@@ -49,7 +49,7 @@ In-process tools (FFmpeg, Whisper) are children of the Bristlenose subprocess, n
 Two-day debug detour during port-v01-ingestion QA, all caused by orphan subprocesses:
 
 1. **Cmd+R doesn't kill subprocess children.** macOS doesn't propagate parent death by default. Each Cmd+R cycle leaves `bristlenose run` and/or `bristlenose serve` alive. Next launch's Bristlenose can't bind ports, can't tell what the user's project state should be, and surfaces confusing errors ("address already in use" on a port the user never asked about).
-2. **`bristlenose run` auto-served and waited for Ctrl-C** — subprocess never reached exit, `terminationHandler` never fired, state machine stuck. Also fixed in port-v01-ingestion by passing `--static`.
+2. **`bristlenose run` auto-served and waited for Ctrl-C** — subprocess never reached exit, `terminationHandler` never fired, state machine stuck. Originally worked around in port-v01-ingestion by passing `--static` to suppress auto-serve. (Post-A3 / 12 May 2026 the `--static` flag is gone; the sidecar invocation pattern needs review against current behaviour.)
 3. **Multiple Bristlenose.app instances** — Cmd+R sometimes failed to kill the previous .app, leaving 3 instances running, each fighting for keychain prompts and ports.
 4. **Today's cleanup mechanism doesn't survive sandbox.** `ServeManager.killOrphanedServeProcesses()` uses `lsof -ti :5173,8150-9149` + `kill`. Both `lsof` exec and arbitrary-PID `kill` are blocked under App Sandbox. `PipelineRunner.aliveOwnedRunPID()` additionally execs `/bin/ps -p <pid> -o uid=` and `-o args=` twice per scan — also sandbox-incompatible. TestFlight build will silently fail to clean up until both sites move to `libproc.h` probes.
 
@@ -128,7 +128,7 @@ The only sandbox-incompatible piece in today's code is `ServeManager.killOrphane
 >
 > Migrating (1) to port-range TCP-connect sweep OR PID-file-scan-and-reconcile, and (2) to `proc_pidinfo` + `proc_pidpath`, are both prerequisite to flipping `ENABLE_APP_SANDBOX = YES`.
 >
-> **Also worth documenting**: ServeManager's `lsof` cleanup, despite being aggressive, is port-scoped — it does NOT cascade to `bristlenose run` subprocesses (which run with `--static` and bind no port). Initial QA suspicion (23 Apr 2026) that ServeManager was killing run-orphans was wrong; the two lifecycles are properly independent today.
+> **Also worth documenting**: ServeManager's `lsof` cleanup, despite being aggressive, is port-scoped — it does NOT cascade to `bristlenose run` subprocesses (which bind no port for the pipeline phase). Initial QA suspicion (23 Apr 2026) that ServeManager was killing run-orphans was wrong; the two lifecycles are properly independent today. (Pre-A3 the `run` subprocess explicitly passed `--static` to suppress auto-serve; A3 removed that flag — the no-port property is now an emergent property of the pipeline phase rather than an explicit flag, worth re-verifying.)
 
 ### What we explicitly don't build
 

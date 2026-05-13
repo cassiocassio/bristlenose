@@ -109,8 +109,8 @@ The structural hinge — everything before it is self-contained, everything afte
 At this point, every vanilla JS module has been replaced by a React equivalent. This step removes them from the serve path.
 
 - **Retires:** All 26 modules in `_JS_FILES` — `storage.js`, `api-client.js`, `badge-utils.js`, `modal.js`, `codebook.js`, `player.js`, `starred.js`, `editing.js`, `tags.js`, `histogram.js`, `csv-export.js`, `view-switcher.js`, `search.js`, `tag-filter.js`, `hidden.js`, `names.js`, `focus.js`, `feedback.js`, `global-nav.js`, `transcript-names.js`, `transcript-annotations.js`, `journey-sort.js`, `analysis.js`, `settings.js`, `person-display.js`, `main.js`
-- **What changed:** `_strip_vanilla_js()` in `app.py` uses the existing `_JS_MARKER` boundary to remove concatenated module code from the IIFE while keeping global declarations (`BRISTLENOSE_VIDEO_MAP`, `BRISTLENOSE_PLAYER_URL`, `BRISTLENOSE_ANALYSIS`) that React reads from `window.*`. Called from `_transform_report_html()` (both dev and prod paths). Dead code removed: 9 individual island marker substitutions, `_replace_baked_js()` calls from dev routes, 9 `_REACT_*_MOUNT` constants. `_JS_FILES` list in `render/theme_assets.py` stays for `bristlenose render` (offline HTML). 6 new tests
-- **Test:** `bristlenose serve` works with zero vanilla JS. `bristlenose render` still produces a working static report
+- **What changed:** `_strip_vanilla_js()` in `app.py` uses the existing `_JS_MARKER` boundary to remove concatenated module code from the IIFE while keeping global declarations (`BRISTLENOSE_VIDEO_MAP`, `BRISTLENOSE_PLAYER_URL`, `BRISTLENOSE_ANALYSIS`) that React reads from `window.*`. Called from `_transform_report_html()` (both dev and prod paths). Dead code removed: 9 individual island marker substitutions, `_replace_baked_js()` calls from dev routes, 9 `_REACT_*_MOUNT` constants. `_JS_FILES` list in `render/theme_assets.py` stays for the stage-12 static-render byproduct (post-A3, 12 May 2026 — `bristlenose render` removed; package still writes HTML to disk but the path is never surfaced). 6 new tests
+- **Test (historical):** `bristlenose serve` works with zero vanilla JS. Stage 12 still writes a working static byproduct.
 
 ### Step 9: React app shell — kill the skeleton ✓ DONE
 
@@ -118,8 +118,8 @@ The serve path stopped reading the static HTML file. Instead, it serves the Vite
 
 - **Replaces:** `_transform_report_html()`, `_transform_transcript_html()`, all `_REACT_*_MOUNT` constants, `_replace_baked_js()`, the marker-based substitution pattern
 - **What was built:** React `<Header>` (logo, project name, subtitle from `/api/health`), `<Footer>` (version, `?` for Help link triggering `onToggleHelp`), `<HelpModal>` (keyboard shortcuts overlay using `createPortal`, `bn-overlay` + `bn-modal` CSS classes). `AppShell` inner component owns help modal state and wires `useKeyboardShortcuts`. Route extraction: `app.py` refactored from monolith to route modules (`routes/analysis.py`, `routes/dashboard.py`, `routes/sessions.py`, `routes/transcript.py`). Dev serve function generates SPA HTML directly (no baked HTML reading). Prod serve reads `frontend/dist/index.html`. `_strip_vanilla_js()` removes module code from IIFE while keeping `window.*` globals for React
-- **What stays:** `render/report.py` continues producing static HTML for `bristlenose render`. CSS in `bristlenose/theme/` is shared. The regex surgery in `app.py` is deleted — no more link escape bugs, ever
-- **Test:** `bristlenose serve` serves a complete React SPA. `bristlenose render` still produces a working static report. All tabs, navigation, interactions work
+- **What stays:** `render/report.py` continues producing static HTML as a sealed byproduct of stage 12 (post-A3, 12 May 2026 — `bristlenose render` CLI command removed; the file still gets written but its path is never surfaced). CSS in `bristlenose/theme/` is shared. The regex surgery in `app.py` is deleted — no more link escape bugs, ever
+- **Test (historical):** `bristlenose serve` serves a complete React SPA. Stage 12 still produces a working static byproduct on disk. All tabs, navigation, interactions work
 
 ### Step 10: Export — DOM snapshot _(large — new feature)_
 
@@ -160,7 +160,7 @@ Step 1 (Settings) ✓   Step 2 (About) ✓   Step 3 (QuotesStore) ✓
 
 | Thing | Why |
 |-------|-----|
-| `bristlenose render` | Offline HTML fallback — works today, no changes |
+| `bristlenose render` | ~~Offline HTML fallback~~ — **removed in A3 (12 May 2026)**. Stage 12 still writes static HTML to disk as a sealed byproduct (so `s12_render/` code stays), but the path is never surfaced. Offline-share moved to `bristlenose serve` → toolbar **Export HTML**. |
 | `bristlenose/theme/js/` | Kept for offline path; data-integrity fixes only |
 | `bristlenose/theme/` CSS | Shared between both paths — changes apply to both |
 | 16 React primitives | Already built and tested — consumed as-is |

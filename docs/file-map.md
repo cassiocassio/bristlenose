@@ -55,7 +55,7 @@ All 12 stages of the pipeline, from ingest to render.
 | `s12_render/dashboard.py` | Session rows, project tab, featured quotes, coverage |
 | `s12_render/transcript_pages.py` | Per-participant transcript pages, quote highlighting |
 | `s12_render/standalone_pages.py` | Codebook page, analysis page, matrix serialisation |
-| `s12_render_output.py` | Markdown report + JSON snapshots for `render` command |
+| `s12_render_output.py` | Markdown report + JSON snapshots — consumed by `bristlenose serve` to re-open without LLM calls. (Post-A3 / 12 May 2026 the `render` CLI command was removed; the byproduct is still written for serve-mode auto-render and the future markdown-deliverable repurpose.) |
 
 ## LLM layer (`bristlenose/llm/`)
 

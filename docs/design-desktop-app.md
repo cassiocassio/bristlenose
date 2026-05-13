@@ -76,7 +76,7 @@ No terminal. No `brew install`. No API key signup. No Python.
 | 2 | Launcher screen with folder picker + drag target | Native NSOpenPanel + SwiftUI drag-and-drop |
 | 3 | Folder validation | Count processable files, warn if none found |
 | 4 | "Analyse" button (primary) | Runs `bristlenose run <folder>` via bundled sidecar |
-| 5 | "Re-render" button (secondary) | Runs `bristlenose render`, only if existing output found |
+| 5 | "Re-open" button (secondary) | Runs `bristlenose serve <folder>` when existing output is found (post-A3, 12 May 2026 — `bristlenose render` removed; serve mode auto-renders on open). |
 | 6 | Pipeline progress display | Stream stdout checkmark lines into styled log area |
 | 7 | "View Report" button when done | Opens report HTML in default browser |
 | 8 | "Start over" to return to launcher | Reset state, pick new folder |

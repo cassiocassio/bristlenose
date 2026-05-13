@@ -141,7 +141,7 @@ Also clear `bn-word-active` in the glow-removal path and in `clearAllGlow()`.
 - **Don't break VTT-only sessions** — when `words` is `null`, the existing rendering (plain text or `html_text`) must still work
 - **Performance:** `querySelectorAll` inside `updateGlow` runs at ~4Hz. For a typical segment of 10–30 words, this is negligible. If profiling shows issues, consider building a word index alongside the glow index
 - **`html_text` trade-off:** When words exist, we skip the inline `<mark>` quote highlighting. Margin annotations (labels, badges, tags) still work. The reconciliation (mapping quote boundaries to word spans) is a future enhancement
-- **CSS in `bristlenose/theme/`** — CSS changes need a `bristlenose render` to take effect in serve mode (CSS is baked at render time, not live-reloaded like Vite JS)
+- **CSS in `bristlenose/theme/`** — CSS changes need a restart of `bristlenose serve` to take effect (serve mode auto-renders intermediate data on open; CSS is baked at render time, not live-reloaded like Vite JS). Pre-A3 / 12 May 2026 the recipe was `bristlenose render`; the command was removed and the auto-render-on-open path supersedes it.
 
 ## Verification
 

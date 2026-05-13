@@ -89,7 +89,7 @@ Steps:
 4. Wait for server ready. Log import time in summary table (if >20s at 1,500 quotes, that's a separate finding — batch inserts needed)
 5. Run Playwright stress test (DOM counts, API timing)
 6. Run Lighthouse against `/report/quotes/` (heaviest page)
-7. Hit serve-mode export endpoint (`GET /api/projects/1/export`) and measure response size (the production export path — `bristlenose render` is deprecated)
+7. Hit serve-mode export endpoint (`GET /api/projects/1/export`) and measure response size (the production export path — `bristlenose render` was removed in A3 / 12 May 2026)
 8. Print summary table
 9. Kill server
 

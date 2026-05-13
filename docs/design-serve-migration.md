@@ -71,7 +71,7 @@ At every milestone, the report works. Never broken.
 
 ## Key principles
 
-1. **Static export stays forever.** `bristlenose render` always produces a self-contained HTML file. The React app is the "workspace"; static HTML is the "deliverable."
+1. **Static export stays forever (post-A3 reframe, 12 May 2026).** Original framing was `bristlenose render` as the offline deliverable. Reality after the React migration: the deliverable is `bristlenose serve` → **Export HTML** in the toolbar, which embeds the React bundle + JSON in a single self-contained file. The CLI `bristlenose render` command was removed; stage 12 still writes the Jinja2 static HTML to disk as a sealed byproduct, but the path is never surfaced. The React app remains the workspace. Future direction: repurpose `--static` as a markdown deliverable for terminal users (post-100-days, see `docs/design-cli-improvements.md` §Future direction).
 
 2. **Islands, not big bang.** Each React component mounts into a DOM node in the existing HTML. The surrounding page stays vanilla JS until it's replaced.
 

@@ -102,8 +102,7 @@ ungrouped:
 - New `bristlenose/codebook.py` module — `CodebookFile` Pydantic model, `load_codebook()`, `write_codebook()`, `merge_codebook()` functions.
 - `render/report.py` writes `codebook.yaml` alongside the report (like `people.yaml`).
 - `render/report.py` reads `codebook.yaml` on render and bakes group/tag/colour data into the HTML as a `BN_CODEBOOK` JavaScript constant. The codebook page reads this on load and seeds localStorage if empty.
-- **Bidirectional sync:** browser edits → localStorage → export YAML (clipboard, like names) → paste into `codebook.yaml` → `bristlenose render` → reconcile. Same pattern as `people.yaml`.
-- **Future:** once `bristlenose serve` exists, the server writes `codebook.yaml` directly on save — no clipboard dance.
+- **Bidirectional sync (legacy plan, pre-`bristlenose serve`):** browser edits → localStorage → export YAML (clipboard, like names) → paste into `codebook.yaml`. The clipboard-dance reconciliation step (originally `bristlenose render`) is obsolete — `bristlenose serve` is the product now and writes codebook edits directly to SQLite via the API. The `render` command itself was removed in A3 (12 May 2026).
 
 **Files touched:**
 
@@ -319,11 +318,7 @@ AI codes become editable:
 - **Merge two themes** → quotes reassigned, report sections merged.
 - **Delete a sentiment** → quotes lose that tag (like AI badge delete, but permanent across re-renders).
 
-**Key challenge:** AI codes live in intermediate JSON files on disk, not localStorage. Editing them requires either:
-1. `bristlenose serve` (server writes files directly), or
-2. Export → edit YAML → `bristlenose render` (clipboard dance, like names/people).
-
-Recommendation: ship this after `bristlenose serve` exists. The clipboard dance would be too clunky for code management across four different taxonomies.
+**Key challenge:** AI codes live in intermediate JSON files on disk, not localStorage. Editing them requires `bristlenose serve` (server writes directly to SQLite via the API). The historical alternative — Export → edit YAML → `bristlenose render` clipboard dance — is no longer available; `render` was removed in A3 (12 May 2026).
 
 ---
 

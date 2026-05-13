@@ -160,7 +160,7 @@ Logic:
 - If auto-doctor passes (no `fail` results) → sentinel written, won't auto-run again until version changes
 - If auto-doctor finds `fail` results → sentinel NOT written, pipeline doesn't start, auto-doctor triggers again next time
 - `bristlenose doctor` (explicit) always runs regardless of sentinel
-- `render` never triggers auto-doctor (it doesn't need external deps)
+- The (now removed in A3, 12 May 2026) `render` command never triggered auto-doctor; the catch-all stub that replaced it doesn't either
 
 ### Architecture
 

@@ -12,11 +12,11 @@ Reference doc for the generated HTML report and per-participant transcript pages
 - **Display names**: `short_name` → used as display name in quotes/friction/journeys. `full_name` → used in participant table Name column. Resolved at render time only — canonical `participant_id` (p1, p2) stays in all data models and HTML `data-participant` attributes. Display names are cosmetic
 - **Sessions table columns**: `Session | Speakers | Start | Duration | Source file`. One row per session. Session column links to the transcript page (`transcript_s1.html`). Speakers column lists all speaker codes for that session (m→p→o sorted, comma-separated), each in `<span class="speaker-code" data-participant="...">` for JS name resolution. Start uses macOS Finder-style relative dates via `format_finder_date()` in `utils/markdown.py`. Duration from `PersonComputed.duration_seconds` (works for VTT-only sessions); falls back to `InputFile.duration_seconds`
 - **Pipeline wiring**: `run()` and `run_transcription_only()` compute+write+auto-populate; `run_analysis_only()` and `run_render_only()` load existing for display names only
-- **Key workflows**:
-  - User edits `short_name` / `full_name` in `people.yaml` → `bristlenose render` → report uses new names
-  - User edits name in HTML report → localStorage → "Export names" → paste YAML into `people.yaml` → `bristlenose render`
+- **Key workflows** (post-A3, 12 May 2026 — `bristlenose render` removed):
+  - **Serve mode (the path):** User edits name in browser → `PUT /people` → DB + write-through to `people.yaml` → pipeline re-run sees edits. Importer reads `people.yaml` on startup to populate `Person` rows. Re-import fills empty fields from YAML without overwriting browser edits
+  - YAML hand-edits before serving: edit `short_name` / `full_name` in `people.yaml` → `bristlenose serve <folder>` (auto-renders on open with the new names)
   - Full pipeline run auto-extracts names from LLM + speaker label metadata → auto-populates empty fields
-  - **Serve mode** (new): User edits name in browser → `PUT /people` → DB + write-through to `people.yaml` → pipeline re-run sees edits. Importer reads `people.yaml` on startup to populate `Person` rows. Re-import fills empty fields from YAML without overwriting browser edits
+  - _Historical:_ pre-A3 the reconciliation step was `bristlenose render`; serve mode supersedes this (auto-renders intermediate data before showing the report)
 - **YAML as canonical source**: `people.yaml` is the single source of truth. The SQLite `Person` table is a materialized view. Browser edits write-through to both DB and YAML atomically. See `bristlenose/server/CLAUDE.md` "Names architecture" for full lifecycle
 - **YAML comments**: inline comments added by users are lost on re-write (PyYAML limitation, documented in file header)
 

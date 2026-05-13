@@ -440,7 +440,7 @@ The `render/` package renders the full Jinja2 sessions table as it does today. R
 
 ### Option C — Standalone React shell, no static renderer
 
-`bristlenose serve` doesn't produce or serve the static HTML report at all. It serves a React SPA that fetches everything from APIs. The pipeline's `render/` package is untouched — it still produces static exports for `bristlenose render`.
+`bristlenose serve` doesn't produce or serve the static HTML report at all. It serves a React SPA that fetches everything from APIs. The pipeline's `render/` package is untouched — stage 12 still produces a static HTML byproduct on disk. (Post-A3, 12 May 2026 — the `bristlenose render` CLI command was removed; the byproduct still gets written but its path is never surfaced.)
 
 **How it works:**
 1. `bristlenose serve ./project` imports data into SQLite, starts FastAPI

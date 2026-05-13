@@ -23,7 +23,13 @@ Detailed LLM provider implementation records (Ollama, Azure, Keychain — all sh
 
 ## High friction (users complain or get confused)
 
-### 1. `render` argument is `INPUT_DIR` but should be `OUTPUT_DIR`
+### 1. ~~`render` argument is `INPUT_DIR` but should be `OUTPUT_DIR`~~ — OBSOLETE (A3, 12 May 2026)
+
+**The `render` command was removed in A3.** Invoking `bristlenose render` now hits a hidden catch-and-interpret stub that redirects to `bristlenose run` (analyse) or `bristlenose serve` (open existing). The argument-naming problem this section describes no longer applies. The historical analysis is preserved below as context for the §Future direction repurpose.
+
+---
+
+_Historical (Apr 2026):_
 
 Real session:
 ```
@@ -248,9 +254,9 @@ The model names themselves are Whisper's (`tiny`, `base`, `small`, `medium`, `la
 
 **Recommendation:** (b) for now — document the tradeoffs. (a) is nice but adds magic.
 
-### 8. `render` argument semantics are wrong (see #1)
+### 8. ~~`render` argument semantics are wrong (see #1)~~ — OBSOLETE (A3, 12 May 2026)
 
-Moved to #1 as high-friction. The positional argument is named `INPUT_DIR` but render doesn't read the input directory — it reads from `output/intermediate/`. Users have to pass `.` or the project parent directory, which is confusing.
+Moot — the `render` command was removed in A3. See §1 above.
 
 ### 9. No `--dry-run` — but time estimate warning would be valuable
 
@@ -384,42 +390,18 @@ It could show what was deleted (like `git clean -n`).
 
 ### 15. Command order in `--help` is arbitrary
 
-The commands list shows:
-```
-│ help             Show detailed help...                  │
-│ doctor           Check dependencies...                  │
-│ run              Process a folder...                    │
-│ transcribe-only  Only run transcription...              │
-│ analyze          Run LLM analysis...                    │
-│ render           Re-render the HTML...                  │
-```
-
-This order is neither alphabetical nor by frequency of use. `run` is the main command but it's third. `help` and `doctor` are utility commands but they're first.
+**Post-A3 status (12 May 2026):** `render` was removed from the command list (now a hidden catch-all stub redirecting to `run` / `serve`); the rest of the order remains a Typer-definition-order quirk. Current top-level help shows `run, transcribe, analyze, serve, status, configure, doctor, help`.
 
 **Options:**
-- (a) Reorder by workflow: `run`, `transcribe-only`, `analyze`, `render`, `doctor`, `help`
+- (a) Reorder by workflow: `run`, `transcribe`, `analyze`, `serve`, `status`, `doctor`, `configure`, `help`
 - (b) Reorder alphabetically
 - (c) Do nothing — users scan the list anyway
 
-**Recommendation:** (a) — put `run` first since it's the primary command. Group pipeline commands together, then utilities.
+**Recommendation:** (a) — `run` first as primary; pipeline commands grouped; utilities (`doctor`, `configure`, `help`) last.
 
 **Implementation:**
 
-Typer orders commands by definition order in the source file. Current order in `cli.py`:
-1. `help` (line 45)
-2. `doctor` (line 347)
-3. `run` (line 495)
-4. `transcribe_only` (line 602)
-5. `analyze` (line 648)
-6. `render` (line 697)
-
-To reorder, just move the function definitions. Desired order:
-1. `run` — primary command
-2. `transcribe_only` — subset of run
-3. `analyze` — works on existing transcripts
-4. `render` — works on existing intermediate
-5. `doctor` — utility
-6. `help` — utility
+Typer orders commands by definition order in the source file. Move function definitions in `cli.py` to the desired order. Verb-sharp top-level help descriptions for `run` ("Analyse a folder of interviews and open the report in your browser.") and `serve` ("Open a previous report in your browser (no analysis).") shipped in A3.
 
 This is a pure code reorganisation with no functional change. Could do it as a separate commit: "reorder CLI commands for better discoverability".
 
@@ -442,6 +424,22 @@ Works but could be prettier with proper column alignment or Rich tables.
 **Recommendation:** (b) — current output matches the Cargo/uv aesthetic. Don't over-style.
 
 ---
+
+## Future direction
+
+### Markdown report as the CLI deliverable (post-100-days)
+
+The static HTML report is on the deletion path as a *user-facing surface* — `--static` and `bristlenose render` are being removed in A3 (the file still gets written as a sealed byproduct of stage 12, just nowhere referenced). The interactive React SPA via `bristlenose serve` is the product.
+
+But the CLI population (engineers, devrel, OSS-research folk) has a separate, legitimate need: a deliverable that plays to terminal strengths — emailable, greppable, diffable, pipeable through `pandoc`, checkable-into-git, attachable-to-Slack, pasteable-into-a-paper. The static HTML doesn't serve that; a well-designed **markdown report** would.
+
+Reframes `--static` from "the old thing, deprecated" (sad, vestigial) to "the markdown deliverable for terminal users" (confident, differentiated). Different output target than the SPA, smaller scope (markdown is far easier to keep design-coherent than HTML), might even simplify `s12_render/` rather than carrying it as appendix-of-the-digestive-system code.
+
+**Not for now.** This needs a real design pass — what does a *good* markdown research report look like? — and that pass shouldn't happen pre-alpha. Capture, park, revisit.
+
+**Revisit trigger:** post-first-cohort signal. If 2+ cohort members say "I just wanted a text file I could grep / share / paste", that's the unlock. Until then, the HTML byproduct sits silently and nobody types `--static`.
+
+**Not blocked by:** anything. The current vestigial HTML write doesn't get in the way; A3 just stops surfacing it. When this revives, the design work is the gate, not the code.
 
 ## Won't fix (documented for completeness)
 

@@ -162,7 +162,7 @@ These systems must not merge. The operational log is disposable. The event log i
 | `bristlenose/logging.py` | `setup_logging()`, `_parse_log_level()`, rotation config, PII policy reference |
 | `bristlenose/pipeline.py` | `Pipeline._configure_logging()` — deferred setup |
 | `bristlenose/server/app.py` | `create_app(verbose=...)` — serve mode setup |
-| `bristlenose/cli.py` | `-v` flag on `run`, `transcribe`, `analyze`, `render`, `serve` |
+| `bristlenose/cli.py` | `-v` flag on `run`, `transcribe`, `analyze`, `serve` (post-A3 / 12 May 2026; `render` removed) |
 | `tests/test_logging.py` | 12 tests covering handlers, levels, independence, rotation |
 
 ## Existing logger coverage

@@ -141,7 +141,7 @@ In `atoms/logo.css`, add:
 
 ### Static render path
 
-The static render path (`bristlenose render`) keeps the existing Jinja2 header with the current logotype style. The breathing animation is serve-mode only — no JS in static HTML reports. This is consistent with the rule: "new features target React serve version only."
+The stage-12 static-render byproduct keeps the existing Jinja2 header with the current logotype style. The breathing animation is serve-mode only — no JS in the static HTML byproduct. This is consistent with the rule: "new features target React serve version only." (Post-A3, 12 May 2026 — the `bristlenose render` CLI command was removed; stage 12 still writes the byproduct to disk but its path is never surfaced.)
 
 ### Coordination with `living-fish` branch
 
@@ -159,7 +159,7 @@ The `living-fish` branch replaces the fish `<img>` with a `<video>` loop. That's
 2. `npm test` (Vitest)
 3. `bristlenose serve <folder> --dev` — visual check: logotype breathes, colours drift, crossovers happen
 4. Toggle dark mode — bias inverts (light text on dark bg ~70%)
-5. Check static render (`bristlenose render`) — logotype uses fallback CSS colours, no animation, no errors
+5. Spot-check the stage-12 static-render byproduct on disk — logotype uses fallback CSS colours, no animation, no errors. (Post-A3 there's no CLI command for this; the byproduct is at `<output_dir>/bristlenose-<slug>-report.html`.)
 
 ---
 

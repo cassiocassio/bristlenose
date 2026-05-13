@@ -250,7 +250,7 @@ interviews/                              # your input folder
     ├── transcripts-raw/                     # one .txt + .md per session
     ├── transcripts-cooked/                  # PII-redacted (only with --redact-pii)
     └── .bristlenose/                        # internal files
-        └── intermediate/                    # JSON snapshots for `bristlenose render`
+        └── intermediate/                    # JSON snapshots (re-readable by `bristlenose serve`)
 ```
 
 Override the output location with `--output`: `bristlenose run interviews/ -o /elsewhere/`
@@ -261,8 +261,7 @@ Override the output location with `--output`: `bristlenose run interviews/ -o /e
 bristlenose run interviews -p "Q1 Usability Study"    # name the project
 bristlenose transcribe interviews                        # transcribe, no LLM
 bristlenose analyze interviews/bristlenose-output/       # skip transcription, run LLM analysis
-bristlenose render interviews/bristlenose-output/        # re-render from JSON, no LLM calls
-bristlenose serve interviews                             # browse the report interactively
+bristlenose serve interviews                             # open a previous report (no analysis)
 bristlenose status interviews                            # check project status (read-only)
 bristlenose doctor                                       # check dependencies
 ```

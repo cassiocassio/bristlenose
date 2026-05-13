@@ -169,7 +169,7 @@ bristlenose serve interviews
 
 Opens an interactive version of your report in the browser at `http://127.0.0.1:8150/report/`. Everything you do is saved to a local SQLite database — star quotes, tag, hide noise, edit names, edit transcripts, reorganise your codebook. Changes persist between sessions.
 
-Serve mode is the product. To share offline, click **Export HTML** in the toolbar — it produces a self-contained file with the full React report and all your edits embedded (optionally anonymised). The legacy `bristlenose render` static HTML still exists but is deprecated.
+Serve mode is the product. To share offline, click **Export HTML** in the toolbar — it produces a self-contained file with the full React report and all your edits embedded (optionally anonymised).
 
 ### What you can do in serve mode
 
@@ -225,11 +225,10 @@ Press the ✦ button on a codebook section to let the LLM propose tags for your 
 
 | Command | What it does |
 |---------|--------------|
-| `bristlenose run <folder>` | Full pipeline — transcribe, analyse, render. Default command: `bristlenose <folder>` does the same thing. |
-| `bristlenose serve <folder>` | Interactive browser-based report with live editing and database sync. |
+| `bristlenose run <folder>` | Analyse a folder of interviews and open the report in your browser. Default command: `bristlenose <folder>` does the same thing. |
+| `bristlenose serve <folder>` | Open a previous report in your browser (no analysis). Same project picks up where you left off. |
 | `bristlenose transcribe <folder>` | Transcription only — no LLM calls. Useful for checking transcripts before analysis. |
 | `bristlenose analyze <folder>` | Skip transcription, run LLM analysis on existing transcripts. |
-| `bristlenose render <folder>` | Re-render HTML from existing JSON — no LLM calls. For tweaking names or formatting. |
 | `bristlenose status <folder>` | Read-only project status — which stages completed, how many sessions. |
 | `bristlenose doctor` | Check dependencies, API keys, and runtime environment. Add `--self-test` to verify a bundled sidecar's data files (used by the desktop app). |
 | `bristlenose configure <provider>` | Store an API key securely. Providers: `claude`, `chatgpt`, `gemini`, `azure`, `miro`. |

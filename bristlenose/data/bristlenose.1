@@ -28,10 +28,6 @@ bristlenose \- user-research transcription and quote extraction engine
 .IR output-dir ]
 .RI [ options ]
 .br
-.B bristlenose render
-.RI [ output-dir ]
-.RI [ options ]
-.br
 .B bristlenose serve
 .RI [ project-dir ]
 .RB [ \-\-port
@@ -111,15 +107,12 @@ transcription. Useful after reviewing or editing raw transcripts.
 .B analyse
 British English alias for \fBanalyze\fR.
 .TP
-.B render
-Re-render reports from existing intermediate JSON data. No transcription, no LLM
-calls, no API key needed. Useful after CSS or JavaScript changes.
-.TP
 .B serve \fR[\fIproject-dir\fR]
-Launch a local web server to browse reports interactively. Auto-renders the
-report before serving so it always matches the current code. Opens the report
-in the default browser. Requires server dependencies (\fBpip install
-bristlenose[serve]\fR).
+Open a previous report in your browser (no analysis). Launches a local web
+server and opens the React interface. Auto-renders intermediate data before
+serving so the report always matches the current code. The \fB[serve]\fR extras
+are installed by default with the standard distributions (brew, pip with
+extras, snap) and are checked by \fBbristlenose doctor\fR.
 .TP
 .B status \fIproject-dir\fR
 Show pipeline status for a project. Reads the manifest and prints which stages
@@ -251,21 +244,6 @@ Skip the large-session-count confirmation prompt.
 .BR \-\-no\-fetch
 Abort instead of downloading missing runtime-fetched models. Used together
 with \fBbristlenose doctor \-\-fetch\fR for offline runs.
-.TP
-.BR \-v ", " \-\-verbose
-Enable verbose logging.
-.SS Options for \fBrender\fR
-.TP
-.BR \-i ", " \-\-input " " \fIDIR\fR
-Original input directory for video linking. Auto-detected if not specified.
-.TP
-.BR \-p ", " \-\-project " " \fINAME\fR
-Project name.
-.TP
-.BR \-\-clean
-Accepted for consistency but ignored \(em render is always non-destructive
-(overwrites reports only, never touches transcripts, people.yaml, or
-intermediate data).
 .TP
 .BR \-v ", " \-\-verbose
 Enable verbose logging.
@@ -533,17 +511,7 @@ bristlenose analyze interviews/bristlenose-output/transcripts-raw/
 .fi
 .RE
 .PP
-Re-render after CSS changes (no API key needed):
-.PP
-.RS
-.nf
-cd interviews && bristlenose render
-# Or specify explicitly:
-bristlenose render interviews/bristlenose-output/
-.fi
-.RE
-.PP
-Browse the report interactively:
+Re-open a previous report without re-running the pipeline:
 .PP
 .RS
 .nf

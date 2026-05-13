@@ -171,7 +171,7 @@ Moderator and observer names (m1, m2, o1) are not stripped — they are part of 
 Bristlenose creates output inside the input folder (`<folder>/bristlenose-output/` by default). Output includes:
 
 - Raw and optionally PII-redacted transcripts
-- Intermediate JSON (used by `bristlenose render` to re-render without LLM calls)
+- Intermediate JSON (consumed by `bristlenose serve` to re-open the project without re-running the pipeline)
 - HTML report, Markdown summary, CSV of quotes
 - `people.yaml` with participant display names
 

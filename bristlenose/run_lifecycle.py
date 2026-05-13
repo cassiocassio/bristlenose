@@ -278,8 +278,23 @@ def _is_alive_owned(pid_file: dict) -> bool:
 # ---------------------------------------------------------------------------
 
 
-_AUTH_RE = re.compile(r"\b(unauthorized|401|invalid api key|authentication)\b")
-_QUOTA_RE = re.compile(r"\b(rate limit|quota|429|credit)\b")
+_AUTH_RE = re.compile(
+    r"\b("
+    r"unauthorized|401|authentication_error|"
+    # Provider-specific 401 phrasings: Anthropic `invalid x-api-key`,
+    # OpenAI `incorrect api key`, generic `invalid api key`. The bare token
+    # `authentication` was deliberately dropped — it false-positives on
+    # benign error bodies (e.g. "two-factor authentication required for the
+    # billing portal" in a quota-redirect response, where the correct
+    # banner is "top up", not "rotate your key"). All real provider 401
+    # strings we've seen are covered by the more specific alternations
+    # above; if a new provider surfaces a different phrasing, add it
+    # explicitly with a regression test in `test_run_lifecycle.py`.
+    r"invalid (x-)?api[-_ ]key|incorrect api key"
+    r")\b"
+)
+_QUOTA_RE = re.compile(r"\b(quota|credit)\b")
+_API_REQUEST_RE = re.compile(r"\b(rate limit|429)\b")
 _NETWORK_RE = re.compile(r"\b(connection|timeout|dns|unreachable)\b")
 _API_SERVER_RE = re.compile(r"\b(internal server|500|502|503|504)\b")
 
@@ -349,8 +364,20 @@ def categorise_exception(exc: BaseException) -> Cause:
     if _AUTH_RE.search(haystack):
         return Cause(category=CauseCategoryEnum.AUTH, message=msg)
 
+    # QUOTA wins over API_REQUEST when both substrings appear (e.g. provider
+    # body "credit balance is too low — rate limit exceeded"). The
+    # billing-exhaustion advice ("top up at …") is correct for that exact
+    # body — the rate-limit *is* a consequence of being out of credit, and
+    # waiting wouldn't help. Clean 429s without credit context fall through
+    # to API_REQUEST below ("wait a minute, retry"). If a fully-funded
+    # account ever hits a per-minute rate limit with a body tangentially
+    # mentioning "credit" (e.g. "you have $X credit remaining"), the user
+    # is mis-routed to billing — accept that trade for now.
     if _QUOTA_RE.search(haystack):
         return Cause(category=CauseCategoryEnum.QUOTA, message=msg)
+
+    if _API_REQUEST_RE.search(haystack):
+        return Cause(category=CauseCategoryEnum.API_REQUEST, message=msg)
 
     if _NETWORK_RE.search(haystack):
         return Cause(category=CauseCategoryEnum.NETWORK, message=msg)

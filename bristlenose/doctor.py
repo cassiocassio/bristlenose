@@ -807,10 +807,12 @@ def check_auth_token_env() -> CheckResult:
 _COMMAND_CHECKS: dict[str, list[str]] = {
     "run": [
         "ffmpeg", "backend", "whisper_model", "api_key", "network", "pii", "disk_space",
+        "serve_deps",
     ],
-    "run_skip_tx": ["api_key", "network", "pii", "disk_space"],
+    "run_skip_tx": ["api_key", "network", "pii", "disk_space", "serve_deps"],
     "transcribe-only": ["ffmpeg", "backend", "whisper_model", "disk_space"],
-    "analyze": ["api_key", "network", "disk_space"],
+    "analyze": ["api_key", "network", "disk_space", "serve_deps"],
+    "serve": ["serve_deps"],
     "render": [],  # no pre-flight needed
 }
 

@@ -14,7 +14,7 @@ from rich.console import Console
 from bristlenose import __version__
 from bristlenose.config import load_settings
 from bristlenose.cost import compute_run_cost
-from bristlenose.events import KindEnum
+from bristlenose.events import KindEnum, PipelineAbandonedError
 from bristlenose.i18n import SUPPORTED_LOCALES as _I18N_LOCALES
 from bristlenose.i18n import set_locale as _set_locale
 from bristlenose.preflight import PreflightAbortedError
@@ -115,7 +115,6 @@ _DOCTOR_SENTINEL_FILE = _DOCTOR_SENTINEL_DIR / ".doctor-ran"
 
 def _doctor_sentinel_dir() -> Path:
     """Return sentinel directory, respecting $SNAP_USER_COMMON."""
-    import os
 
     snap_common = os.environ.get("SNAP_USER_COMMON")
     if snap_common:
@@ -145,7 +144,6 @@ def _install_man_page() -> None:
     Skipped inside snap and Homebrew — those package managers handle their own
     man page installation.
     """
-    import os
     import shutil
     import sys
 
@@ -667,11 +665,21 @@ def _named_participant_summary(people: object, n_participants: int) -> str:
     return f"{len(named)} of {total} named"
 
 
-def _print_pipeline_summary(result: object, *, serve_url: str | None = None) -> None:
+def _print_pipeline_summary(
+    result: object,
+    *,
+    serve_url: str | None = None,
+    quiet_errors: bool = False,
+) -> None:
     """Print a clean summary after any pipeline command.
 
     Adapts to the fields available on the result (LLM usage, timing, etc.).
     When *serve_url* is given, prints the serve URL instead of a file:// link.
+
+    When *quiet_errors* is True, suppresses the "Finished with errors" speech
+    act so the caller can render its own researcher-facing banner (used by
+    the legacy 0-quotes path post-A3 which says "no usable content found"
+    rather than blaming API credits).
     """
     from bristlenose.llm.pricing import PRICING_URLS, estimate_cost
     from bristlenose.pipeline import _format_duration
@@ -720,7 +728,7 @@ def _print_pipeline_summary(result: object, *, serve_url: str | None = None) -> 
     no_quotes = getattr(result, "total_quotes", 0) == 0
     has_errors = llm_ran and no_quotes
 
-    if has_errors:
+    if has_errors and not quiet_errors:
         time_str = f" in {_format_duration(elapsed)}" if elapsed else ""
         p_error = getattr(result, "pipeline_error", "")
         p_error_link = getattr(result, "pipeline_error_link", "")
@@ -739,6 +747,12 @@ def _print_pipeline_summary(result: object, *, serve_url: str | None = None) -> 
                 indent="  ",
             )
         console.print("  [dim]Run [bold]bristlenose doctor[/bold] to diagnose[/dim]")
+    elif has_errors and quiet_errors:
+        # Caller will print the researcher-facing banner. We still show the
+        # elapsed-time line so the user has timing context.
+        if elapsed:
+            console.print()
+            _say(MessageKind.WARNING, f"Finished in {_format_duration(elapsed)}", indent="  ")
     elif getattr(result, "pipeline_warning", ""):
         p_warning = getattr(result, "pipeline_warning", "")
         time_str = f" in {_format_duration(elapsed)}" if elapsed else ""
@@ -751,19 +765,109 @@ def _print_pipeline_summary(result: object, *, serve_url: str | None = None) -> 
         console.print()
         _say(MessageKind.SUCCESS, "Done.", indent="  ")
 
-    # Report line — serve URL or file path
+    # Report line — only print when serving. The static HTML still exists on
+    # disk as a sealed byproduct of stage 12, but it's not the product and we
+    # don't surface its path. Failure paths print no Report: line at all.
     if serve_url:
         console.print(f"\n  Report:  [bold cyan]{serve_url}[/bold cyan]")
+
+
+def _print_pipeline_failure(cause: object, input_dir: Path, settings: object) -> None:
+    """Print a researcher-facing failure banner from a structured Cause.
+
+    Maps cause.category to actionable copy; falls back to cause.message for
+    categories without a custom mapping. Never prints engineer text like
+    'category=QUOTA' or stack traces. Naming the user's actual folder in
+    retry hints (`bristlenose run interviews/`) matches their mental model.
+
+    Intentional minimalism — only the banner, no stats line, no elapsed
+    time, no LLM cost. When the pipeline abandons (QUOTA, AUTH, NETWORK,
+    etc.), the researcher's question is "what do I do?", not "how many
+    sessions made it through?". Partial-run details remain available in
+    `pipeline-events.jsonl` for diagnostic follow-up; the CLI banner is
+    deliberately scoped to recovery action. If a future cohort tester
+    asks for partial-run context in mid-run DISK / MISSING_BINARY cases,
+    surface it via a `--verbose` flag on `run`, not by default.
+    """
+    from bristlenose.events import CauseCategoryEnum
+    from bristlenose.llm.billing_hints import billing_for
+    from bristlenose.providers import PROVIDERS
+
+    folder = input_dir.name or str(input_dir)
+    retry_cmd = f"bristlenose run {folder}/"
+    category = getattr(cause, "category", None)
+    message = getattr(cause, "message", "") or ""
+    provider_key = getattr(cause, "provider", None) or getattr(settings, "llm_provider", None)
+    provider_display = (
+        PROVIDERS[provider_key].display_name
+        if provider_key and provider_key in PROVIDERS
+        else "the API"
+    )
+
+    console.print()
+    if category == CauseCategoryEnum.QUOTA:
+        _say(MessageKind.ERROR, f"Your {provider_display} account ran out of credit.")
+        billing = billing_for(provider_key) if provider_key else None
+        if billing:
+            console.print(f"  Top up at {billing.billing_url}")
+        console.print(f"  then run  [bold]{retry_cmd}[/bold]  again.")
+    elif category == CauseCategoryEnum.API_REQUEST:
+        _say(MessageKind.ERROR, f"Rate-limited by {provider_display}.")
+        console.print(f"  Wait a minute and run  [bold]{retry_cmd}[/bold]  again.")
+    elif category == CauseCategoryEnum.API_SERVER:
+        _say(MessageKind.ERROR, f"{provider_display} had a server error.")
+        console.print("  Try again in a few minutes.")
+    elif category == CauseCategoryEnum.NETWORK:
+        _say(MessageKind.ERROR, f"Couldn't reach {provider_display}.")
+        console.print("  Check your network connection.")
+    elif category == CauseCategoryEnum.AUTH:
+        suffix = _active_api_key_suffix(settings, provider_key)
+        suffix_part = f" (…{suffix})" if suffix else ""
+        _say(MessageKind.ERROR, f"{provider_display} rejected your API key{suffix_part}.")
+        console.print("  Run  [bold]bristlenose configure[/bold]  to set a new key.")
+    elif category == CauseCategoryEnum.DISK:
+        _say(MessageKind.ERROR, "Ran out of disk space.")
+        if message:
+            console.print(f"  {message}")
+    elif category in (
+        CauseCategoryEnum.MISSING_BINARY,
+        CauseCategoryEnum.MISSING_DEP,
+        CauseCategoryEnum.MISSING_INPUT,
+    ):
+        _say(MessageKind.ERROR, message or "Required component missing.")
     else:
-        report_path = getattr(result, "report_path", None)
-        if report_path and report_path.exists():
-            file_url = f"file://{report_path.resolve()}"
-            # Show relative path for readability, with OSC 8 link underneath
-            try:
-                display_path = report_path.resolve().relative_to(Path.cwd())
-            except ValueError:
-                display_path = report_path.name
-            console.print(f"\n  Report:  [link={file_url}]{display_path}[/link]")
+        _say(MessageKind.ERROR, message or "Pipeline failed.")
+
+
+def _active_api_key_suffix(settings: object, provider: str | None) -> str:
+    """Return the last 3 chars of the active provider's API key, or empty.
+
+    Reads the key from settings (already populated from keychain / env / .env
+    by ``load_settings`` — including any ``BRISTLENOSE_*_API_KEY`` env-var
+    overrides via pydantic-settings; the doctor table uses the same source).
+    Returns empty string for providers without a key-bearing concept (local)
+    or when the key isn't set.
+
+    Suffix length matches ``bristlenose doctor``'s key masking
+    (`doctor.py:351,385,435,470` — all `key[-3:]`). A3's banner names the
+    provider in the surrounding sentence ("Claude rejected your API key
+    (…wAA)") so we don't repeat the doctor table's provider-stem prefix.
+    """
+    if not provider:
+        return ""
+    field_map = {
+        "anthropic": "anthropic_api_key",
+        "openai": "openai_api_key",
+        "azure": "azure_api_key",
+        "google": "google_api_key",
+    }
+    field = field_map.get(provider)
+    if not field:
+        return ""
+    key = getattr(settings, field, "") or ""
+    if len(key) < 3:
+        return ""
+    return key[-3:]
 
 
 # ---------------------------------------------------------------------------
@@ -838,7 +942,7 @@ def run(
     llm_provider: Annotated[
         str,
         typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, gemini, local."),
-    ] = "anthropic",
+    ] = "claude",
     skip_transcription: Annotated[
         bool,
         typer.Option("--skip-transcription", help="Skip audio transcription."),
@@ -855,11 +959,16 @@ def run(
         Path | None,
         typer.Option("--config", "-c", help="Path to bristlenose.toml config file."),
     ] = None,
-    static: Annotated[
+    no_serve: Annotated[
         bool,
         typer.Option(
-            "--static", "--no-serve",
-            help="Output a static HTML file instead of starting the interactive server.",
+            "--no-serve",
+            help=(
+                "Don't auto-start the local web server when the pipeline finishes. "
+                "Used by the macOS desktop sidecar (the desktop app manages its own "
+                "serve lifecycle separately). Hidden — not part of the CLI happy path."
+            ),
+            hidden=True,
         ),
     ] = False,
     clean: Annotated[
@@ -887,7 +996,7 @@ def run(
         ),
     ] = False,
 ) -> None:
-    """Process a folder of user-research recordings into themed, timestamped quotes."""
+    """Analyse a folder of interviews and open the report in your browser."""
     # Default output location: inside the input folder
     if output_dir is None:
         output_dir = input_dir / "bristlenose-output"
@@ -991,24 +1100,36 @@ def run(
     except PreflightAbortedError as exc:
         _say(MessageKind.ERROR, str(exc))
         raise typer.Exit(2) from exc
+    except PipelineAbandonedError as exc:
+        _print_pipeline_failure(exc.cause, input_dir, settings)
+        raise typer.Exit(1) from exc
 
-    # Detect pipeline errors (LLM ran but 0 quotes)
+    # Legacy path: pipeline ran cleanly but produced zero usable quotes
+    # (silent audio, no spoken content). Not an abandon — just empty input.
     llm_ran = getattr(result, "llm_calls", 0) > 0
     pipeline_errored = llm_ran and getattr(result, "total_quotes", 0) == 0
 
-    if static or pipeline_errored:
-        _print_pipeline_summary(result)
-        return
-
-    # Try to auto-serve the report
-    try:
-        import uvicorn  # noqa: F401
-    except ImportError:
-        from rich.markup import escape as _rich_escape
-        _print_pipeline_summary(result)
+    if pipeline_errored:
+        _print_pipeline_summary(result, quiet_errors=True)
+        console.print()
+        _say(MessageKind.WARNING, "No usable content found in this folder.", indent="  ")
         console.print(
-            f"  [dim]Tip: {_rich_escape(_install_hint())} for the interactive report[/dim]"
+            "  Bristlenose looks for spoken interviews. If this folder contains them,"
         )
+        console.print(
+            "  the audio may be too quiet or in an unsupported format. Try:"
+        )
+        console.print("    [bold]bristlenose doctor[/bold]")
+        console.print("  to check your install.")
+        raise typer.Exit(1)
+
+    # uvicorn is guaranteed importable here — preflight gates `serve_deps`.
+
+    # `--no-serve` is the desktop sidecar's escape hatch: pipeline runs, summary
+    # prints, then exit cleanly without binding a server port. The desktop app
+    # manages its own serve lifecycle through ServeManager. Hidden from --help.
+    if no_serve:
+        _print_pipeline_summary(result)
         return
 
     try:
@@ -1140,7 +1261,7 @@ def analyze(
     llm_provider: Annotated[
         str,
         typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, gemini, local."),
-    ] = "anthropic",
+    ] = "claude",
     verbose: Annotated[
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose logging."),
@@ -1215,155 +1336,18 @@ def analyze(
 analyse = app.command(name="analyse", hidden=True)(analyze)
 
 
-@app.command()
-def render(
-    output_dir: Annotated[
-        Path | None,
-        typer.Argument(
-            help="Output directory containing .bristlenose/intermediate/ from a previous run. "
-                 "Defaults to ./bristlenose-output/ if it exists.",
-        ),
-    ] = None,
-    input_dir: Annotated[
-        Path | None,
-        typer.Option("--input", "-i", help="Original input directory (for video linking). Auto-detected if possible."),
-    ] = None,
-    project_name: Annotated[
-        str | None,
-        typer.Option("--project", "-p", help="Name of the research project (defaults to directory name)."),
-    ] = None,
-    clean: Annotated[
-        bool,
-        typer.Option("--clean", help="Accepted for consistency but ignored — render is always non-destructive."),
-    ] = False,
-    verbose: Annotated[
-        bool,
-        typer.Option("--verbose", "-v", help="Enable verbose logging."),
-    ] = False,
-) -> None:
-    """Re-render the HTML and Markdown reports from existing intermediate data.
-
-    No transcription or LLM calls. Useful after CSS/JS changes or to regenerate
-    reports without re-processing.
-    """
-    # Auto-detect output directory
-    if output_dir is None:
-        # New layout: bristlenose-output/.bristlenose/intermediate/
-        if (Path.cwd() / "bristlenose-output" / ".bristlenose" / "intermediate").exists():
-            output_dir = Path("bristlenose-output")
-        # Legacy layout: output/intermediate/ or output/.bristlenose/intermediate/
-        elif (Path.cwd() / "output" / ".bristlenose" / "intermediate").exists():
-            output_dir = Path("output")
-        elif (Path.cwd() / "output" / "intermediate").exists():
-            output_dir = Path("output")
-        elif (Path.cwd() / ".bristlenose" / "intermediate").exists():
-            output_dir = Path.cwd()
-        elif (Path.cwd() / "intermediate").exists():
-            output_dir = Path.cwd()
-        else:
-            _say(MessageKind.ERROR, "No intermediate data found.")
-            console.print(
-                "Run from a directory containing bristlenose-output/, "
-                "or specify the output path as an argument."
-            )
-            raise typer.Exit(1)
-
-    # Check that the directory actually exists first
-    if not output_dir.exists():
-        _say(MessageKind.ERROR, f"Directory {output_dir} not found.")
-        raise typer.Exit(1)
-
-    # Validate that intermediate exists (try new layout first, then legacy)
-    # Also handle case where user passes input dir instead of output dir
-    intermediate_dir = output_dir / ".bristlenose" / "intermediate"
-    if not intermediate_dir.exists():
-        intermediate_dir = output_dir / "intermediate"
-    if not intermediate_dir.exists():
-        # User might have passed the input dir — check for bristlenose-output/ inside
-        nested_output = output_dir / "bristlenose-output"
-        if (nested_output / ".bristlenose" / "intermediate").exists():
-            output_dir = nested_output
-            intermediate_dir = nested_output / ".bristlenose" / "intermediate"
-        else:
-            _say(MessageKind.ERROR, f"No intermediate data in {output_dir}")
-            console.print("Run 'bristlenose run' first to generate intermediate data.")
-            raise typer.Exit(1)
-
-    # Auto-detect input directory if not specified
-    if input_dir is None:
-        # New layout: output is inside input (interviews/bristlenose-output/)
-        if output_dir.name == "bristlenose-output":
-            input_dir = output_dir.resolve().parent
-        else:
-            # Legacy layout: input_dir is sibling of output_dir
-            # e.g., project/interviews/ and project/output/
-            project_root = output_dir.resolve().parent
-            candidates = [
-                d for d in project_root.iterdir()
-                if d.is_dir() and d.name != output_dir.name and d.name not in ("output", "bristlenose-output")
-            ]
-            # Look for directories with media files
-            for candidate in candidates:
-                media_exts = {".mp4", ".mov", ".mp3", ".wav", ".m4a", ".vtt", ".srt", ".docx"}
-                try:
-                    if any(f.suffix.lower() in media_exts for f in candidate.iterdir() if f.is_file()):
-                        input_dir = candidate
-                        break
-                except PermissionError:
-                    continue
-
-            if input_dir is None:
-                # Fall back to project root (render will work but no video linking)
-                input_dir = project_root
-
-    if clean:
-        console.print(
-            "[dim]--clean ignored — render is always non-destructive "
-            "(overwrites reports only, never touches transcripts, "
-            "people.yaml, or intermediate data).[/dim]"
-        )
-
-    # Recover project name from metadata written by a previous run
-    if project_name is None:
-        from bristlenose.stages.s12_render_output import read_pipeline_metadata
-
-        meta = read_pipeline_metadata(output_dir)
-        project_name = meta.get("project_name")
-
-    # Fallback: derive from directory name (pre-metadata output dirs)
-    if project_name is None:
-        if output_dir.name in ("bristlenose-output", "output"):
-            project_name = output_dir.resolve().parent.name
-        else:
-            project_name = output_dir.resolve().name
-
-    settings = load_settings(
-        output_dir=output_dir,
-        project_name=project_name,
-    )
-
-    # render: no auto-doctor, no pre-flight (reads JSON, writes HTML, needs nothing external)
-
-    from bristlenose.pipeline import Pipeline
-
-    pipeline = Pipeline(settings, verbose=verbose)
-    result = pipeline.run_render_only(output_dir, input_dir)
-
-    _print_pipeline_summary(result)
-
-
-# ---------------------------------------------------------------------------
-# Serve command (FastAPI web server)
-# ---------------------------------------------------------------------------
-
-
-def _install_hint() -> str:
-    """Return the right install command for serve extras based on install method."""
-    import sys as _sys
-
-    if "pipx" in _sys.prefix:
-        return "pipx install 'bristlenose[serve]'"
-    return "pip install 'bristlenose[serve]'"
+@app.command(
+    name="render",
+    hidden=True,
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+)
+def render(ctx: typer.Context) -> None:
+    """Removed — use `bristlenose run` or `bristlenose serve`."""
+    _say(MessageKind.ERROR, "bristlenose render was removed.")
+    console.print()
+    console.print("  To analyse interviews:        [bold]bristlenose run[/bold] <folder>")
+    console.print("  To open a previous report:    [bold]bristlenose serve[/bold] <folder>")
+    raise typer.Exit(2)
 
 
 def _find_open_port(start: int = 8150, attempts: int = 10) -> int:
@@ -1551,6 +1535,8 @@ def _auto_render(project_dir: Path) -> None:
     )
 
 
+
+
 @app.command()
 def serve(
     project_dir: Annotated[
@@ -1576,14 +1562,10 @@ def serve(
         typer.Option("--verbose", "-v", help="Enable verbose logging."),
     ] = False,
 ) -> None:
-    """Launch the Bristlenose web server to browse reports interactively."""
-    try:
-        import uvicorn  # noqa: F401 — test that serve deps are installed
-    except ImportError:
-        from rich.markup import escape as _rich_escape
-        _say(MessageKind.ERROR, "Server dependencies not installed.")
-        console.print(f"Install with: [bold]{_rich_escape(_install_hint())}[/bold]")
-        raise typer.Exit(1)
+    """Open a previous report in your browser (no analysis)."""
+    settings = load_settings()
+    _run_preflight(settings, "serve")
+    import uvicorn  # noqa: F401 — needed in the dev-mode branch below
 
     # Re-render the HTML report before serving so it always matches the
     # current code (templates, CSS, JS).  This is fast (<0.1s) and avoids

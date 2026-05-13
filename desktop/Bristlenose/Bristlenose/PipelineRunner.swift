@@ -948,13 +948,16 @@ final class PipelineRunner: ObservableObject {
 
         let proc = Process()
         proc.executableURL = binary
-        // --static (alias for --no-serve) makes `bristlenose run` exit after
-        // rendering instead of auto-starting a serve and waiting for Ctrl-C.
-        // Without this the subprocess never terminates → terminationHandler
-        // never fires → state stays .running indefinitely (QA, 20 Apr 2026).
-        // ServeManager.start() starts the serve on the Mac side after pipeline
-        // success per the plan's "pipeline first, then serve" policy.
-        proc.arguments = ["run", project.path, "--static"]
+        // --no-serve makes `bristlenose run` exit after the pipeline completes
+        // instead of auto-starting a serve and waiting for Ctrl-C. Without it
+        // the subprocess never terminates → terminationHandler never fires →
+        // state stays .running indefinitely (QA, 20 Apr 2026). The desktop's
+        // ServeManager.start() runs the serve on the Mac side separately, per
+        // the plan's "pipeline first, then serve" policy. (Pre-A3 the same
+        // flag was spelled `--static` and conflated with the static-render
+        // surface; A3 dropped `--static` and kept `--no-serve` as the honest
+        // hidden flag — see bristlenose/cli.py.)
+        proc.arguments = ["run", project.path, "--no-serve"]
         // Host-gate handshake for the bundled sidecar's `run` passthrough —
         // see desktop/sidecar_entry.py. Third-party callers of the bundled
         // binary don't set this env var; we do. Belt-and-braces post-A1c

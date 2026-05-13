@@ -84,14 +84,15 @@ For Ollama (free, no key): set `BRISTLENOSE_LLM_PROVIDER=local` and install [Oll
 
 ## Two render paths
 
-| | Serve mode (`bristlenose serve`) | Static render (`bristlenose render`) |
+| | Serve mode (`bristlenose serve` — the product) | Static render (sealed byproduct) |
 |---|---|---|
 | **Routing** | React Router (pathname: `/report/quotes/`) | Vanilla JS (hash: `#quotes`) |
 | **React** | Single `RouterProvider` root | Individual `createRoot()` per island |
 | **JS** | Vanilla JS loads but nav/toolbar no-op | Full vanilla JS suite active |
 | **Data** | API endpoints (`/api/projects/...`) | Baked into HTML / localStorage |
+| **User-facing** | Yes — `bristlenose run` opens it automatically; `bristlenose serve <folder>` re-opens an existing project | No (post-A3, 12 May 2026 — `render` command + `--static` flag both removed). Stage 12 still writes the file but its path is never surfaced. Future: repurpose as markdown deliverable (`docs/design-cli-improvements.md` §Future direction) |
 
-Serve mode is the actively developed experience. Static render is a frozen offline fallback.
+Serve mode is the actively developed experience. The static render is a sealed byproduct — written to disk by stage 12 but never surfaced as a user-facing command after A3 (12 May 2026).
 
 ## Version bumping
 

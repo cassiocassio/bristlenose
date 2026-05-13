@@ -203,12 +203,13 @@ The interactive serve-mode experience is a React + TypeScript SPA in `frontend/`
 
 ### Two render paths
 
-| | Serve mode (`bristlenose serve`) | Static render (`bristlenose render`) |
+| | Serve mode (`bristlenose serve` — the product) | Static render (sealed byproduct) |
 |---|---|---|
 | **Routing** | React Router (pathname) | Vanilla JS (hash) |
 | **React** | Single `RouterProvider` root | Individual `createRoot()` per island |
 | **JS** | Vanilla JS loads but nav/toolbar no-op | Full vanilla JS suite active |
 | **Data** | API endpoints (`/api/projects/...`) | Baked into HTML / localStorage |
+| **User-facing** | Yes — `bristlenose run` opens it automatically; `bristlenose serve <folder>` re-opens an existing project | No — stage 12 still writes the file but its path is never surfaced. The `render` CLI command was removed in A3 (12 May 2026); `--static` flag also gone. Future direction: repurpose as a markdown deliverable (post-100-days, see `docs/design-cli-improvements.md` §Future direction) |
 
 ### Dev workflow
 

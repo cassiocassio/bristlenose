@@ -3,6 +3,7 @@
 from bristlenose.utils.text import (
     apply_smart_quotes,
     clean_transcript_text,
+    count_noun,
     remove_disfluencies,
     safe_filename,
     wrap_in_smart_quotes,
@@ -164,3 +165,41 @@ class TestSafeFilename:
         """Realistic clip filename from the design doc."""
         result = safe_filename("p1 03m45 Sarah onboarding was confusing")
         assert result == "p1 03m45 Sarah onboarding was confusing"
+
+
+# -- count_noun tests --
+
+
+class TestCountNoun:
+    """Pluralisation helper for CLI count-bearing strings."""
+
+    def test_zero(self) -> None:
+        assert count_noun(0, "session") == "0 sessions"
+
+    def test_one(self) -> None:
+        assert count_noun(1, "session") == "1 session"
+
+    def test_many(self) -> None:
+        assert count_noun(2, "session") == "2 sessions"
+        assert count_noun(42, "session") == "42 sessions"
+
+    def test_irregular_plural(self) -> None:
+        assert count_noun(1, "child") == "1 child"
+        assert count_noun(2, "child") == "2 children"
+
+    def test_irregular_person(self) -> None:
+        assert count_noun(1, "person") == "1 person"
+        assert count_noun(3, "person") == "3 people"
+
+    def test_explicit_plural_override(self) -> None:
+        assert count_noun(1, "datum", plural="data") == "1 datum"
+        assert count_noun(5, "datum", plural="data") == "5 data"
+
+    def test_compound_noun_pluralises_head(self) -> None:
+        # inflect pluralises the trailing noun in a multi-word phrase
+        assert count_noun(1, "topic boundary") == "1 topic boundary"
+        assert count_noun(7, "topic boundary") == "7 topic boundaries"
+
+    def test_words_ending_y(self) -> None:
+        assert count_noun(1, "boundary") == "1 boundary"
+        assert count_noun(2, "boundary") == "2 boundaries"

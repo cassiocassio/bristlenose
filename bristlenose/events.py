@@ -188,6 +188,7 @@ class PipelineSummary(BaseModel):
     """
 
     transcripts: StageOutcome | None = None
+    topics: StageOutcome | None = None
     quotes: StageOutcome | None = None
     themes: StageOutcome | None = None
 
@@ -345,22 +346,25 @@ def _truncate_event_summary(event: AnyEvent) -> AnyEvent:
     """Apply STAGE_FAILED_MAX to a terminus event's per-stage failed lists.
 
     No-op for RunStartedEvent (no summary field) and for events whose
-    summary.{transcripts,quotes,themes} all stay under the cap.
+    summary.{transcripts,topics,quotes,themes} all stay under the cap.
     """
     summary = getattr(event, "summary", None)
     if summary is None:
         return event
     new_t = _truncate_failed(summary.transcripts)
+    new_topics = _truncate_failed(summary.topics)
     new_q = _truncate_failed(summary.quotes)
     new_th = _truncate_failed(summary.themes)
     if (
         new_t is summary.transcripts
+        and new_topics is summary.topics
         and new_q is summary.quotes
         and new_th is summary.themes
     ):
         return event  # nothing changed
     new_summary = summary.model_copy(update={
         "transcripts": new_t,
+        "topics": new_topics,
         "quotes": new_q,
         "themes": new_th,
     })

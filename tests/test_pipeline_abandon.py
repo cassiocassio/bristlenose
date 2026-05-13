@@ -334,13 +334,8 @@ def test_pipeline_run_abandons_when_all_transcribe_fail(tmp_path: Path) -> None:
             "bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
             new=_async_passthrough,
         ),
-        # Slice C: the Whisper preflight runs before transcribe; bypass it
-        # here so the test exercises the orchestrator's reaction to the
-        # all-failed transcribe outcome (its actual contract).
-        patch(
-            "bristlenose.preflight.whisper.preflight_whisper",
-            new=lambda **kw: None,
-        ),
+        # Preflights are globally bypassed via BRISTLENOSE_SKIP_PREFLIGHT=1
+        # in tests/conftest.py — no need to patch each one individually.
     ):
         with pytest.raises(PipelineAbandonedError) as exc_info:
             asyncio.run(pipeline.run(input_dir, output_dir))
@@ -364,3 +359,252 @@ def test_pipeline_run_abandons_when_all_transcribe_fail(tmp_path: Path) -> None:
 async def _async_passthrough(sessions, _temp_dir, **_kwargs):
     """Bypass for extract_audio_for_sessions (audio already on disk)."""
     return sessions
+
+
+# ---------------------------------------------------------------------------
+# Stage emission honesty (A4 Fix 5) — fallback paths must NOT mask LLM
+# failure. The stage returns fallback content for the renderer, but the
+# StageOutcome records the LLM exception so the orchestrator can abandon.
+# ---------------------------------------------------------------------------
+
+
+def _make_pii_clean_transcript(participant_id: str):
+    """Build a minimal PiiCleanTranscript for unit-testing stages."""
+    from bristlenose.models import (
+        PiiCleanTranscript,
+        SpeakerRole,
+        TranscriptSegment,
+    )
+
+    return PiiCleanTranscript(
+        participant_id=participant_id,
+        session_id=f"s-{participant_id}",
+        source_file=f"{participant_id}.txt",
+        session_date=datetime.now(timezone.utc),
+        duration_seconds=60.0,
+        segments=[
+            TranscriptSegment(
+                segment_index=0,
+                start_time=0.0,
+                end_time=10.0,
+                text=f"Test from {participant_id}",
+                speaker_role=SpeakerRole.PARTICIPANT,
+            ),
+        ],
+    )
+
+
+def _make_quote(participant_id: str, text: str, qtype=None):
+    """Build a minimal ExtractedQuote for unit-testing stages 10/11."""
+    from bristlenose.models import (
+        EmotionalTone,
+        ExtractedQuote,
+        JourneyStage,
+        QuoteIntent,
+        QuoteType,
+    )
+
+    return ExtractedQuote(
+        session_id=f"s-{participant_id}",
+        participant_id=participant_id,
+        start_timecode=0.0,
+        end_timecode=5.0,
+        text=text,
+        verbatim_excerpt=text,
+        topic_label="general",
+        quote_type=qtype or QuoteType.SCREEN_SPECIFIC,
+        researcher_context="",
+        intent=QuoteIntent.NARRATION,
+        emotion=EmotionalTone.NEUTRAL,
+        journey_stage=JourneyStage.OTHER,
+    )
+
+
+def test_s08_emits_stage_failure_when_llm_raises() -> None:
+    """A failing LLM call at s08's call site must record per-session
+    StageFailure entries on the outcome — not just silently return an
+    empty SessionTopicMap. The orchestrator reads outcome.failed to fire
+    the abandon predicate; if the stage hid the failures, abandon never
+    fires and the cache poisons."""
+    from unittest.mock import AsyncMock
+
+    from bristlenose.stages.s08_topic_segmentation import segment_topics
+
+    transcripts = [_make_pii_clean_transcript(f"p{i}") for i in range(1, 4)]
+    mock_client = AsyncMock()
+    mock_client.provider = "anthropic"
+    mock_client.analyze = AsyncMock(
+        side_effect=RuntimeError("Anthropic 429 rate limit"),
+    )
+
+    topic_maps, outcome = asyncio.run(
+        segment_topics(transcripts, mock_client, concurrency=1),
+    )
+
+    # Stage still returned per-session SessionTopicMap objects (empty
+    # boundaries) so downstream stages have structured input.
+    assert len(topic_maps) == 3
+    # The honest outcome: 3 attempts, 0 successes, 3 explicit failures.
+    assert outcome.attempted == 3
+    # Note: after _FAIL_THRESHOLD (3) consecutive failures the stage stops.
+    # With concurrency=1 and 3 sessions, all 3 see the failure but only the
+    # last is the threshold trigger — all 3 are recorded.
+    assert outcome.succeeded == 0
+    assert len(outcome.failed) == 3
+    # cause.category is inferred from the substring matcher — QUOTA for "429".
+    assert all(
+        f.cause.category == CauseCategoryEnum.QUOTA for f in outcome.failed
+    )
+    # Privacy contract — no raw exception text in the persisted message.
+    assert all("rate limit" not in (f.cause.message or "") for f in outcome.failed)
+    # But the structured fields are populated for diagnostic context.
+    assert all(f.cause.stage == "topic_segmentation" for f in outcome.failed)
+    assert all(f.cause.provider == "anthropic" for f in outcome.failed)
+
+
+def test_s10_emits_stage_failure_before_fallback_runs() -> None:
+    """When cluster_by_screen's LLM call raises, the stage:
+    1. Records the failure in outcome.failed BEFORE the fallback fires
+    2. Returns the non-empty fallback clustering for downstream rendering
+    3. Reports succeeded=0 so the orchestrator can abandon
+
+    This is the Pass 3 lock: a degraded fallback report that LOOKS real is
+    worse than honest abandon. The stage's emission must NOT be hidden by
+    the fact that the function returns a non-empty list.
+    """
+    from unittest.mock import AsyncMock
+
+    from bristlenose.stages.s10_quote_clustering import cluster_by_screen
+
+    quotes = [_make_quote(f"p{i}", f"quote {i}") for i in range(1, 4)]
+    mock_client = AsyncMock()
+    mock_client.provider = "anthropic"
+    mock_client.analyze = AsyncMock(side_effect=RuntimeError("500 Internal Server Error"))
+
+    clusters, outcome = asyncio.run(cluster_by_screen(quotes, mock_client))
+
+    # Fallback produced non-empty result (clusters by topic_label).
+    assert len(clusters) > 0
+    # But the honest outcome reports the LLM failure.
+    assert outcome.attempted == 1
+    assert outcome.succeeded == 0
+    assert len(outcome.failed) == 1
+    assert outcome.failed[0].cause.category == CauseCategoryEnum.API_SERVER
+    assert outcome.failed[0].cause.stage == "cluster_and_group"
+    assert outcome.failed[0].cause.provider == "anthropic"
+    # Privacy: raw exception text not leaked.
+    assert "500" not in (outcome.failed[0].cause.message or "")  # category, not message
+    assert "Internal Server Error" not in (outcome.failed[0].cause.message or "")
+
+
+def test_s11_emits_stage_failure_before_fallback_runs() -> None:
+    """Same invariant for s11 group_by_theme: emit on the outcome BEFORE
+    fallback runs. The abandon-check above the call site needs
+    succeeded=0 on the rollup; if the outcome only sees successes
+    (post-fallback), the predicate never fires."""
+    from unittest.mock import AsyncMock
+
+    from bristlenose.models import QuoteType
+    from bristlenose.stages.s11_thematic_grouping import group_by_theme
+
+    quotes = [
+        _make_quote(f"p{i}", f"quote {i}", QuoteType.GENERAL_CONTEXT)
+        for i in range(1, 4)
+    ]
+    mock_client = AsyncMock()
+    mock_client.provider = "openai"
+    mock_client.analyze = AsyncMock(side_effect=RuntimeError("invalid api key 401"))
+
+    themes, outcome = asyncio.run(group_by_theme(quotes, mock_client))
+
+    assert len(themes) > 0  # fallback produced non-empty result
+    assert outcome.attempted == 1
+    assert outcome.succeeded == 0
+    assert len(outcome.failed) == 1
+    assert outcome.failed[0].cause.category == CauseCategoryEnum.AUTH
+    assert outcome.failed[0].cause.stage == "cluster_and_group"
+    assert outcome.failed[0].cause.provider == "openai"
+
+
+def test_run_analysis_only_abandons_at_s08_for_quota_failure(tmp_path: Path) -> None:
+    """`bristlenose analyze` with a quota-exhausted key: every topic-seg call
+    raises QUOTA. The pipeline must abandon at s08 (gating s09 entry) so no
+    quote-extraction LLM calls fire. This is the Pass-3 acceptance criterion
+    for the analyze path."""
+    from unittest.mock import AsyncMock, patch
+
+    transcripts_dir = tmp_path / "transcripts"
+    transcripts_dir.mkdir()
+    # Two minimal .txt transcripts in the canonical format that
+    # load_transcripts_from_dir() expects:
+    #   `# Transcript: s1` header + `[MM:SS] [p1] text` lines.
+    (transcripts_dir / "s1.txt").write_text(
+        "# Transcript: s1\n"
+        "# Source: s1.wav\n"
+        "# Date: 2026-05-12\n"
+        "# Duration: 00:00:10\n\n"
+        "[00:00] [m1] Hello.\n"
+        "[00:05] [p1] Hi there.\n",
+        encoding="utf-8",
+    )
+    (transcripts_dir / "s2.txt").write_text(
+        "# Transcript: s2\n"
+        "# Source: s2.wav\n"
+        "# Date: 2026-05-12\n"
+        "# Duration: 00:00:10\n\n"
+        "[00:00] [m1] Hello again.\n"
+        "[00:05] [p2] Nice to meet you.\n",
+        encoding="utf-8",
+    )
+
+    settings = MagicMock()
+    settings.project_name = "test-quota-abandon"
+    settings.llm_provider = "anthropic"
+    settings.llm_model = "claude-sonnet-4-5-20250929"
+    settings.anthropic_api_key = "sk-fake"
+    settings.openai_api_key = None
+    settings.google_api_key = None
+    settings.azure_api_key = None
+    settings.azure_endpoint = None
+    settings.azure_deployment = None
+    settings.write_intermediate = True
+    settings.llm_concurrency = 1
+    settings.min_quote_words = 3
+    settings.color_scheme = "default"
+    settings.pii_enabled = False
+
+    pipeline = Pipeline(settings, skip_confirm=True)
+    output_dir = tmp_path / "output"
+
+    async def _failing_analyze(**_kw):
+        raise RuntimeError("Anthropic 429 rate limit exceeded — credit exhausted")
+
+    def _llm_init(_settings):
+        client = AsyncMock()
+        client.provider = "anthropic"
+        client.tracker = MagicMock(input_tokens=0, output_tokens=0, calls=0)
+        client.analyze = AsyncMock(side_effect=_failing_analyze)
+        return client
+
+    # `run_analysis_only` does `from bristlenose.llm.client import LLMClient`
+    # inside the function body, so patch the source module.
+    with patch("bristlenose.llm.client.LLMClient", side_effect=_llm_init):
+        with pytest.raises(PipelineAbandonedError) as exc_info:
+            asyncio.run(pipeline.run_analysis_only(transcripts_dir, output_dir))
+
+    exc = exc_info.value
+    assert exc.cause.category == CauseCategoryEnum.QUOTA, (
+        f"expected QUOTA, got {exc.cause.category}"
+    )
+    # Summary captures s08 failures; s09/s10/s11 untouched. summary.quotes
+    # is None because the abandon-check at s08 fires BEFORE the s09 outcome
+    # rollup populates `self._summary.quotes` — the proxy for "s09 never
+    # entered" is the absence of that field on the abandoned summary.
+    assert exc.summary.topics is not None
+    assert exc.summary.topics.attempted >= 2
+    assert exc.summary.topics.succeeded == 0
+    assert exc.summary.quotes is None
+    assert exc.summary.themes is None
+    # No report on disk — abandon before render.
+    report_html = output_dir / "bristlenose-test-quota-abandon-report.html"
+    assert not report_html.exists()

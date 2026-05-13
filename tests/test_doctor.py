@@ -31,6 +31,7 @@ from bristlenose.doctor import (
     check_ffmpeg,
     check_network,
     check_pii,
+    check_serve_deps,
     check_whisper_model,
     run_all,
     run_preflight,
@@ -931,6 +932,52 @@ class TestCheckDiskSpace:
 # ---------------------------------------------------------------------------
 
 
+class TestCheckServeDeps:
+    """Hard error when `[serve]` extras are missing."""
+
+    def test_all_present(self) -> None:
+        """If find_spec returns a non-None value for every package, OK."""
+        with patch(
+            "importlib.util.find_spec",
+            return_value=MagicMock(),
+        ):
+            result = check_serve_deps()
+        assert result.status == CheckStatus.OK
+        assert result.fix_key == ""
+        assert "6 deps installed" in result.detail
+
+    def test_all_missing(self) -> None:
+        """If find_spec returns None for every package, FAIL with all names listed."""
+        with patch(
+            "importlib.util.find_spec",
+            return_value=None,
+        ):
+            result = check_serve_deps()
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "serve_deps_missing"
+        for name in ("fastapi", "uvicorn", "sqlalchemy", "sqladmin", "alembic", "openpyxl"):
+            assert name in result.detail
+
+    def test_partial_missing(self) -> None:
+        """If some packages are missing, FAIL listing only the missing ones."""
+
+        def fake_find_spec(name: str) -> object:
+            return None if name in {"sqladmin", "openpyxl"} else MagicMock()
+
+        with patch(
+            "importlib.util.find_spec",
+            side_effect=fake_find_spec,
+        ):
+            result = check_serve_deps()
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "serve_deps_missing"
+        assert "sqladmin" in result.detail
+        assert "openpyxl" in result.detail
+        # Present deps should not appear in the missing list
+        assert "fastapi" not in result.detail
+        assert "uvicorn" not in result.detail
+
+
 class TestCheckAuthTokenEnv:
     def test_env_var_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """No env var → OK, no warning."""
@@ -961,7 +1008,7 @@ class TestCheckAuthTokenEnv:
 
 
 class TestRunAll:
-    def test_run_all_returns_eight_results(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_run_all_returns_nine_results(self, monkeypatch: pytest.MonkeyPatch) -> None:
         settings = _settings()
         # check_auth_token_env reads os.environ directly; pin it OK for this test.
         monkeypatch.delenv("_BRISTLENOSE_AUTH_TOKEN", raising=False)
@@ -973,12 +1020,13 @@ class TestRunAll:
             patch("bristlenose.doctor.check_network") as m5,
             patch("bristlenose.doctor.check_pii") as m6,
             patch("bristlenose.doctor.check_disk_space") as m7,
+            patch("bristlenose.doctor.check_serve_deps") as m8,
         ):
-            for m in (m1, m2, m3, m4, m5, m6, m7):
+            for m in (m1, m2, m3, m4, m5, m6, m7, m8):
                 m.return_value = CheckResult(status=CheckStatus.OK, label="test")
             report = run_all(settings)
 
-        assert len(report.results) == 8
+        assert len(report.results) == 9
         assert not report.has_failures
 
 
@@ -1341,6 +1389,35 @@ class TestGetFixGrid:
         fix = get_fix("auth_token_env_set", method)
         assert "_BRISTLENOSE_AUTH_TOKEN" in fix
         assert "unset _BRISTLENOSE_AUTH_TOKEN" in fix
+
+    # -- serve_deps_missing: varies by method, pip branch also varies on pipx --
+
+    def test_serve_deps_missing_snap(self) -> None:
+        fix = get_fix("serve_deps_missing", "snap")
+        assert "bug in the snap" in fix
+        assert "snap refresh" in fix
+
+    def test_serve_deps_missing_brew(self) -> None:
+        fix = get_fix("serve_deps_missing", "brew")
+        assert "brew upgrade bristlenose" in fix
+        assert "'bristlenose[serve]'" not in fix  # brew users don't pip
+
+    def test_serve_deps_missing_pip(self) -> None:
+        """Plain pip / venv path → `pip install 'bristlenose[serve]'` (quoted)."""
+        with patch("bristlenose.doctor_fixes.sys.prefix", "/usr/local"):
+            fix = get_fix("serve_deps_missing", "pip")
+        assert "pip install 'bristlenose[serve]'" in fix
+        # Brackets must be quoted so zsh doesn't glob-expand them.
+        assert "pip install bristlenose[serve]" not in fix
+
+    def test_serve_deps_missing_pipx(self) -> None:
+        """pipx venv detected via sys.prefix → `pipx install --force ...` (quoted)."""
+        with patch(
+            "bristlenose.doctor_fixes.sys.prefix",
+            "/home/user/.local/share/pipx/venvs/bristlenose",
+        ):
+            fix = get_fix("serve_deps_missing", "pip")
+        assert "pipx install --force 'bristlenose[serve]'" in fix
 
     # -- unknown key --
 

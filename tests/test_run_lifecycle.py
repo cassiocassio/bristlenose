@@ -34,6 +34,7 @@ from bristlenose.events import (
 )
 from bristlenose.run_lifecycle import (
     ConcurrentRunError,
+    _build_cause,
     _is_alive_owned,
     _ps_start_time,
     _read_pid_file,
@@ -167,6 +168,104 @@ def test_categorise_message_always_populated():
     """Writer rule: message must be non-empty for non-user_signal causes."""
     cause = categorise_exception(Exception())  # empty
     assert cause.message  # falls back to class name
+
+
+# ---------------------------------------------------------------------------
+# _build_cause — privacy contract
+# ---------------------------------------------------------------------------
+
+
+def test_build_cause_structured_message_only():
+    """``_build_cause`` composes message from stage + class name + provider —
+    no leakage of the exception's text content."""
+    exc = RuntimeError("Some provider error body")
+    cause = _build_cause(exc, stage="topic_segmentation", provider="anthropic")
+    assert cause.stage == "topic_segmentation"
+    assert cause.provider == "anthropic"
+    assert "RuntimeError" in cause.message
+    assert "topic_segmentation" in cause.message
+    assert "anthropic" in cause.message
+    # Crucially: the user-supplied exception body must not leak.
+    assert "Some provider error body" not in cause.message
+
+
+def test_build_cause_redacts_pii_from_exception_body():
+    """Provider error bodies sometimes echo prompt fragments — participant
+    tokens, emails, phone numbers. ``_build_cause`` must NOT persist any of
+    that into ``Cause.message`` / ``Cause.code`` / ``Cause.provider``.
+
+    Closes the privacy contract from the A4-stage-cache-honesty handoff:
+    pipeline-events.jsonl is a named re-identification surface; widening
+    the surface via Fix 5 must not enlarge what's persistable to it.
+    """
+    pii_tokens = [
+        "Jane Q. Doe",
+        "jane.doe@example.com",
+        "+44 7700 900123",
+        "the participant said something embarrassing",
+    ]
+    payload = "; ".join(pii_tokens)
+    exc = RuntimeError(f"OpenAI 429 rate limit: {payload}")
+
+    cause = _build_cause(
+        exc, stage="cluster_and_group", provider="openai", http_status=429,
+    )
+    # Sanity: category should still route via the categoriser substring matchers.
+    assert cause.category == CauseCategoryEnum.QUOTA
+    assert cause.code == "429"
+
+    # Privacy: no PII tokens anywhere in the persisted Cause.
+    persisted = " ".join(
+        str(v) for v in (cause.message, cause.code, cause.provider, cause.stage)
+        if v is not None
+    )
+    for tok in pii_tokens:
+        assert tok not in persisted, f"PII leaked: {tok!r} in {persisted!r}"
+
+
+def test_build_cause_preserves_category_from_substring_matchers():
+    """Category should follow ``categorise_exception`` even though the
+    message is overridden. Substring matchers are bristlenose-controlled
+    patterns (``\\b401\\b`` / ``\\brate limit\\b``) and can run safely
+    against the raw exception text without exposing PII to disk."""
+    cases = [
+        (RuntimeError("Anthropic 401 Unauthorized"), CauseCategoryEnum.AUTH),
+        (RuntimeError("429 rate limit on call"), CauseCategoryEnum.QUOTA),
+        (RuntimeError("connection timeout to api"), CauseCategoryEnum.NETWORK),
+        (RuntimeError("500 internal server error"), CauseCategoryEnum.API_SERVER),
+        (ValueError("something obscure"), CauseCategoryEnum.UNKNOWN),
+    ]
+    for exc, expected in cases:
+        cause = _build_cause(exc, stage="quote_extraction", provider="anthropic")
+        assert cause.category == expected, f"{exc} → {cause.category} (wanted {expected})"
+
+
+def test_build_cause_with_session_id_stamped():
+    """Session-scoped failures stamp session_id onto the Cause."""
+    cause = _build_cause(
+        RuntimeError("anything"),
+        stage="topic_segmentation",
+        provider="anthropic",
+        session_id="s3",
+    )
+    assert cause.session_id == "s3"
+
+
+def test_build_cause_without_provider_omits_on_clause():
+    """No provider known → message contains stage + class name only."""
+    cause = _build_cause(ValueError("x"), stage="topic_segmentation")
+    assert cause.provider is None
+    assert "topic_segmentation" in cause.message
+    assert "ValueError" in cause.message
+    assert " on " not in cause.message
+
+
+def test_build_cause_http_status_int_becomes_string_code():
+    """``http_status`` lands on ``cause.code`` as a string."""
+    cause = _build_cause(
+        RuntimeError("x"), stage="cluster_and_group", http_status=503,
+    )
+    assert cause.code == "503"
 
 
 # ---------------------------------------------------------------------------

@@ -168,7 +168,6 @@ def _print_banner(
     console.print(
         "  " + t("preflight.whisper.banner_intro", size=WHISPER_SIZE_HUMAN)
     )
-    console.print("  " + t("preflight.whisper.reassurance"))
     console.print()
     console.print(
         "  " + t(
@@ -189,6 +188,9 @@ def preflight_whisper(
     """Run the Whisper-model preflight.
 
     Behaviour:
+    - **``BRISTLENOSE_SKIP_PREFLIGHT=1``**: explicit escape hatch, skip silently.
+      Defence-in-depth for spoofed-TTY CI runners and the pytest suite
+      (set in ``tests/conftest.py``).
     - **Fully cached**: silent, return immediately.
     - **Missing or partial**: print the framed banner; if ``allow_fetch`` is
       False raise :class:`WhisperPreflightAbortedError`; otherwise stop the Rich
@@ -204,7 +206,22 @@ def preflight_whisper(
         PackageInstallError: when the download itself fails (propagated from
             :func:`bristlenose.utils.package_install.ensure_hf_model`).
     """
+    if os.environ.get("BRISTLENOSE_SKIP_PREFLIGHT") == "1":
+        return
     from bristlenose.utils.package_install import ensure_hf_model
+
+    # Defence-in-depth against the env-var suppression in
+    # `bristlenose/__init__.py`: when `bristlenose.doctor._check_whisper_model`
+    # imports `huggingface_hub` (which it does during the doctor preflight),
+    # `HF_HUB_DISABLE_PROGRESS_BARS` gets read into a module-level constant —
+    # so if the env var is somehow unset by the time HF is first imported,
+    # the programmatic call still suppresses `Fetching N files:` and the
+    # trailing `Download complete: : 0.00B` summary line.
+    try:
+        from huggingface_hub.utils import disable_progress_bars
+        disable_progress_bars()
+    except ImportError:
+        pass
 
     repo_id = _resolve_repo_id(settings)
     state = cache_state(repo_id)

@@ -1,7 +1,6 @@
 {
   "whisper": {
     "banner_intro": "Bristlenose needs the Whisper transcription model ({size}).",
-    "reassurance": "Cancellable with Ctrl+C; resumes cleanly next run.",
     "verb_downloading": "Downloading",
     "verb_resuming": "Resuming download",
     "fetching": "{verb} {repo_id}...",

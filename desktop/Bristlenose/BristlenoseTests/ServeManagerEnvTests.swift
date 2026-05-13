@@ -1,4 +1,5 @@
 import Testing
+import Foundation
 @testable import Bristlenose
 
 /// Tests for ServeManager.overlayAPIKeys — C3 credential injection path.

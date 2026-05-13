@@ -34,9 +34,24 @@ struct Location: Codable, Hashable {
 /// This follows the Logic Pro / Final Cut precedent: the project is a logical
 /// thing, the files are references. See `docs/design-project-sidebar.md`.
 struct Project: Identifiable, Hashable, Codable {
+    /// Per-project schema version. `0` means a pre-v1 record (missing on decode);
+    /// migration on load upgrades to `1`. Bump in lockstep with breaking schema
+    /// changes; always decode-with-default so older readers don't crash on
+    /// newer files.
+    static let currentSchemaVersion: Int = 1
+
     var id: UUID
     var name: String
     var path: String
+    /// The path last observed to resolve successfully. Display fallback when
+    /// the live path has drifted but the bookmark still resolves to a different
+    /// URL — keeps the sidebar truthful while the bookmark re-anchors.
+    var lastSeenPath: String
+    /// Stable filesystem identity captured from `URLResourceKey.fileResourceIdentifierKey`,
+    /// base64-encoded. Used by drag-onto-existing dedupe (#11) and lazy-captured
+    /// on first availability resolution if not present.
+    var resourceIdentifier: String?
+    var schemaVersion: Int
     var inputFiles: [String]?
     var location: Location?
     var bookmarkData: Data?
@@ -54,6 +69,9 @@ struct Project: Identifiable, Hashable, Codable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, path, icon, position
+        case schemaVersion = "schema_version"
+        case lastSeenPath = "last_seen_path"
+        case resourceIdentifier = "resource_identifier"
         case inputFiles = "input_files"
         case location
         case bookmarkData = "bookmark_data"
@@ -70,6 +88,12 @@ struct Project: Identifiable, Hashable, Codable {
         id = try container.decode(UUID.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         path = try container.decode(String.self, forKey: .path)
+        // Pre-v1 records have no schemaVersion; decode-with-default flags them
+        // for migration on load. `lastSeenPath` defaults to `path` for the same
+        // reason — the load-time migration block fills it in for real.
+        schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 0
+        lastSeenPath = try container.decodeIfPresent(String.self, forKey: .lastSeenPath) ?? path
+        resourceIdentifier = try container.decodeIfPresent(String.self, forKey: .resourceIdentifier)
         inputFiles = try container.decodeIfPresent([String].self, forKey: .inputFiles)
         icon = try container.decodeIfPresent(String.self, forKey: .icon)
         location = try container.decodeIfPresent(Location.self, forKey: .location)
@@ -90,6 +114,9 @@ struct Project: Identifiable, Hashable, Codable {
         try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
         try container.encode(path, forKey: .path)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(lastSeenPath, forKey: .lastSeenPath)
+        try container.encodeIfPresent(resourceIdentifier, forKey: .resourceIdentifier)
         try container.encodeIfPresent(inputFiles, forKey: .inputFiles)
         try container.encodeIfPresent(icon, forKey: .icon)
         try container.encodeIfPresent(location, forKey: .location)
@@ -104,10 +131,15 @@ struct Project: Identifiable, Hashable, Codable {
     init(id: UUID, name: String, path: String, inputFiles: [String]? = nil,
          icon: String? = nil, location: Location? = nil, bookmarkData: Data? = nil,
          folderId: UUID? = nil, position: Int = 0, createdAt: Date = Date(),
-         lastOpened: Date? = nil, lastPipelineRunAt: Date? = nil) {
+         lastOpened: Date? = nil, lastPipelineRunAt: Date? = nil,
+         lastSeenPath: String? = nil, resourceIdentifier: String? = nil,
+         schemaVersion: Int = Project.currentSchemaVersion) {
         self.id = id
         self.name = name
         self.path = path
+        self.lastSeenPath = lastSeenPath ?? path
+        self.resourceIdentifier = resourceIdentifier
+        self.schemaVersion = schemaVersion
         self.inputFiles = inputFiles
         self.icon = icon
         self.location = location
@@ -120,32 +152,10 @@ struct Project: Identifiable, Hashable, Codable {
     }
 
     /// Whether the project directory is currently accessible on disk.
-    /// Always true for projects with no path (new, unsaved projects).
-    var isAvailable: Bool {
-        guard !path.isEmpty else { return true }
-        return FileManager.default.fileExists(atPath: path)
-    }
-
-    /// Why the project is unavailable, if it is.
-    enum UnavailabilityReason {
-        /// The volume (external drive, network share) isn't mounted.
-        case volumeNotMounted(displayHint: String)
-        /// The path doesn't exist on a mounted volume — moved or deleted.
-        case movedOrDeleted
-    }
-
-    /// Returns nil when the project is available.
-    var unavailabilityReason: UnavailabilityReason? {
-        guard !path.isEmpty, !isAvailable else { return nil }
-        if let location, location.type == .volume || location.type == .network,
-           let volumeName = location.volumeName {
-            let volumePath = "/Volumes/\(volumeName)"
-            if !FileManager.default.fileExists(atPath: volumePath) {
-                return .volumeNotMounted(displayHint: location.displayHint)
-            }
-        }
-        return .movedOrDeleted
-    }
+    /// Thin convenience wrapper around `availability` (defined in
+    /// `ProjectAvailability.swift`). Prefer `availability` for new code that
+    /// needs to discriminate cases.
+    var isAvailable: Bool { availability.isReady }
 }
 
 // MARK: - Folder model
@@ -300,6 +310,7 @@ final class ProjectIndex: ObservableObject {
         let finalName = uniqueName(name, excluding: nil)
         let location = path.isEmpty ? nil : Self.detectLocation(for: path)
         let bookmark = Self.createBookmark(for: path)
+        let resourceID = Self.captureResourceIdentifier(for: path)
         // New items get position 0; push all existing root items down by 1.
         for i in projects.indices where projects[i].folderId == nil {
             projects[i].position += 1
@@ -316,7 +327,10 @@ final class ProjectIndex: ObservableObject {
             bookmarkData: bookmark,
             position: 0,
             createdAt: Date(),
-            lastOpened: nil
+            lastOpened: nil,
+            lastSeenPath: path,
+            resourceIdentifier: resourceID,
+            schemaVersion: Project.currentSchemaVersion
         )
         projects.insert(project, at: 0)
         save()
@@ -574,6 +588,26 @@ final class ProjectIndex: ObservableObject {
         return try? url.bookmarkData(options: .withSecurityScope)
     }
 
+    /// Capture the stable filesystem identity for a path, base64-encoded.
+    /// Returns nil if the path doesn't exist or the identifier isn't available
+    /// (e.g. on filesystems that don't support `fileResourceIdentifierKey`).
+    /// Used by #11 drag-onto-existing dedupe and as a defence-in-depth check
+    /// against bookmark/path drift.
+    static func captureResourceIdentifier(for path: String) -> String? {
+        guard !path.isEmpty,
+              FileManager.default.fileExists(atPath: path) else { return nil }
+        let url = URL(fileURLWithPath: path)
+        guard let values = try? url.resourceValues(forKeys: [.fileResourceIdentifierKey]),
+              let identifier = values.fileResourceIdentifier else { return nil }
+        // `fileResourceIdentifier` is documented as `(NSCopying & NSSecureCoding & NSObjectProtocol)` —
+        // typically NSData on local volumes. Serialise via NSKeyedArchiver so any
+        // conforming value type round-trips losslessly.
+        guard let data = try? NSKeyedArchiver.archivedData(
+            withRootObject: identifier as Any, requiringSecureCoding: true
+        ) else { return nil }
+        return data.base64EncodedString()
+    }
+
     /// Try to resolve a path from bookmark data.
     /// Returns the resolved path if the target exists, nil otherwise.
     private static func resolveBookmark(_ data: Data) -> String? {
@@ -605,8 +639,15 @@ final class ProjectIndex: ObservableObject {
                let resolvedPath = Self.resolveBookmark(bookmark) {
                 if resolvedPath != project.path {
                     projects[i].path = resolvedPath
+                    projects[i].lastSeenPath = resolvedPath
                     projects[i].location = Self.detectLocation(for: resolvedPath)
                     projects[i].bookmarkData = Self.createBookmark(for: resolvedPath)
+                    changed = true
+                }
+                // Lazy-capture resourceIdentifier on first successful resolution.
+                if projects[i].resourceIdentifier == nil,
+                   let id = Self.captureResourceIdentifier(for: resolvedPath) {
+                    projects[i].resourceIdentifier = id
                     changed = true
                 }
                 continue
@@ -618,8 +659,13 @@ final class ProjectIndex: ObservableObject {
                let relativePath = location.volumeRelativePath, !relativePath.isEmpty {
                 if let resolvedPath = Self.resolveVolumeRelativePath(relativePath) {
                     projects[i].path = resolvedPath
+                    projects[i].lastSeenPath = resolvedPath
                     projects[i].location = Self.detectLocation(for: resolvedPath)
                     projects[i].bookmarkData = Self.createBookmark(for: resolvedPath)
+                    if projects[i].resourceIdentifier == nil,
+                       let id = Self.captureResourceIdentifier(for: resolvedPath) {
+                        projects[i].resourceIdentifier = id
+                    }
                     changed = true
                 }
             }
@@ -647,8 +693,10 @@ final class ProjectIndex: ObservableObject {
     func relocateProject(id: UUID, newPath: String) {
         guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
         projects[index].path = newPath
+        projects[index].lastSeenPath = newPath
         projects[index].location = Self.detectLocation(for: newPath)
         projects[index].bookmarkData = Self.createBookmark(for: newPath)
+        projects[index].resourceIdentifier = Self.captureResourceIdentifier(for: newPath)
         save()
     }
 
@@ -673,6 +721,17 @@ final class ProjectIndex: ObservableObject {
                 if !projects[i].path.isEmpty && projects[i].location == nil {
                     projects[i].location = Self.detectLocation(for: projects[i].path)
                     projects[i].bookmarkData = Self.createBookmark(for: projects[i].path)
+                    needsSave = true
+                }
+
+                // Phase 0 schema lock: upgrade pre-v1 records.
+                if projects[i].schemaVersion < Project.currentSchemaVersion {
+                    if projects[i].lastSeenPath.isEmpty {
+                        projects[i].lastSeenPath = projects[i].path
+                    }
+                    // resourceIdentifier stays nil — lazy-captured on next
+                    // successful availability resolution.
+                    projects[i].schemaVersion = Project.currentSchemaVersion
                     needsSave = true
                 }
             }

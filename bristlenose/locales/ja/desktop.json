@@ -202,6 +202,12 @@
     "useOllama": "代わりに Ollama を使用 (クラウドなし)",
     "done": "完了"
   },
+  "availability": {
+    "unmountedVolume": "{{name}} · 見つかりません",
+    "networkUnreachable": "{{host}} · 接続できません",
+    "missing": "見つかりません",
+    "inCloud": "iCloud にあります"
+  },
   "boot": {
     "tagline": "ユーザーリサーチの分析",
     "startingSidecar": "Bristlenose を起動中…",

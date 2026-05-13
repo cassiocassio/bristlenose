@@ -32,8 +32,8 @@ struct ProjectRow: View {
     @State private var showScanIndicator: Bool = false
     @FocusState private var isTextFieldFocused: Bool
 
-    private var available: Bool { project.isAvailable }
-    private var reason: Project.UnavailabilityReason? { project.unavailabilityReason }
+    private var availability: ProjectAvailability { project.availability }
+    private var available: Bool { availability.isReady }
     private var pipelineState: PipelineState? { pipelineRunner.state[project.id] }
     /// Observed so the row reflects `isStopping` updates instantly.
     @ObservedObject private var liveData: PipelineLiveData
@@ -114,18 +114,10 @@ struct ProjectRow: View {
                     }
 
                     if !available {
-                        switch reason {
-                        case .volumeNotMounted(let hint):
-                            Text(hint)
+                        if let subtitle = availability.subtitle(using: i18n) {
+                            Text(subtitle)
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
-                        case .movedOrDeleted:
-                            Text(i18n.t("desktop.chrome.locate"))
-                                .font(.caption)
-                                // No explicit foregroundStyle — inherits primary (deselected)
-                                // or white (selected) from the List selection environment.
-                        case nil:
-                            EmptyView()
                         }
                     } else {
                         // Reserve the subtitle line so row heights stay fixed
@@ -144,23 +136,24 @@ struct ProjectRow: View {
                 }
             }
         } icon: {
-            if case .movedOrDeleted = reason {
-                Image(systemName: "questionmark.folder")
-                    .foregroundStyle(.secondary)
+            // Leading icon is always the project's identity. Availability state
+            // is communicated by the trailing indicator + dimming, never by
+            // overwriting the chosen icon.
+            if available {
+                Image(systemName: project.icon ?? IconPickerPopover.defaultIcon)
             } else {
-                if available {
-                    Image(systemName: project.icon ?? IconPickerPopover.defaultIcon)
-                } else {
-                    Image(systemName: project.icon ?? IconPickerPopover.defaultIcon)
-                        .foregroundStyle(.secondary)
-                }
+                Image(systemName: project.icon ?? IconPickerPopover.defaultIcon)
+                    .foregroundStyle(.secondary)
             }
         }
     }
 
     /// Trailing element: spinner while scanning (after delay), red glyph for
-    /// failures, otherwise empty. Spinner uses `.controlSize(.small)` to match
-    /// Finder's "determining size…" indicator.
+    /// pipeline failures, cantFind / inCloud glyph for availability states,
+    /// otherwise empty. Spinner uses `.controlSize(.small)` to match Finder's
+    /// "determining size…" indicator. Order: scan-in-flight beats pipeline
+    /// failure beats availability state — the most-recent / most-actionable
+    /// signal wins the slot.
     @ViewBuilder
     private var trailingIndicator: some View {
         if isScanning && showScanIndicator {
@@ -169,6 +162,10 @@ struct ProjectRow: View {
         } else if case .failed = pipelineState {
             Image(systemName: "exclamationmark.circle.fill")
                 .foregroundStyle(.red)
+                .imageScale(.small)
+        } else if let glyph = availability.sfSymbolName {
+            Image(systemName: glyph)
+                .foregroundStyle(.secondary)
                 .imageScale(.small)
         } else {
             EmptyView()
@@ -262,12 +259,17 @@ struct ProjectRow: View {
     private var accessibilityLabel: String {
         var label = project.name
         if !available {
-            switch reason {
-            case .volumeNotMounted(let hint):
-                label += ", \(i18n.t("desktop.chrome.projectUnavailable")), \(hint)"
-            case .movedOrDeleted:
-                label += ", \(i18n.t("desktop.chrome.projectMoved"))"
-            case nil:
+            switch availability {
+            case .cantFind(let reason):
+                switch reason {
+                case .unmountedVolume(let name), .networkUnreachable(let name):
+                    label += ", \(i18n.t("desktop.chrome.projectUnavailable")), \(name)"
+                case .moved, .missingBookmark:
+                    label += ", \(i18n.t("desktop.chrome.projectMoved"))"
+                }
+            case .inCloud:
+                label += ", \(i18n.t("desktop.availability.inCloud"))"
+            case .ready:
                 break
             }
         } else if let subtitle = pipelineSubtitle {

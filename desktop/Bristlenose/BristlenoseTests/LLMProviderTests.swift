@@ -73,10 +73,11 @@ struct LLMProviderTests {
         #expect(ProviderStatus.checking.isConfigured == false)
     }
 
-    @Test func providerStatus_labels_areNonEmpty() {
+    @MainActor @Test func providerStatus_labels_areNonEmpty() {
+        let i18n = I18n()
         let statuses: [ProviderStatus] = [.online, .notSetUp, .invalid, .unavailable, .checking]
         for status in statuses {
-            #expect(!status.label.isEmpty)
+            #expect(!status.label(i18n).isEmpty)
         }
     }
 }

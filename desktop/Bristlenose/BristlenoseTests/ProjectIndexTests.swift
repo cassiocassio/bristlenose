@@ -259,4 +259,148 @@ struct ProjectIndexTests {
         index.setFolderCollapsed(id: folder.id, collapsed: true)
         #expect(index.folders.first?.collapsed == true)
     }
+
+    // MARK: - Phase 0a schema lock
+
+    /// New projects added via `addProject(...)` get the current schema version
+    /// and `lastSeenPath` mirrors `path`.
+    @MainActor @Test func addProject_setsCurrentSchemaVersion() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let p = index.addProject(name: "Schema", path: "/tmp/schema-v1")
+        #expect(p.schemaVersion == Project.currentSchemaVersion)
+        #expect(p.lastSeenPath == "/tmp/schema-v1")
+    }
+
+    /// Pre-v1 records (no `schema_version` / `last_seen_path` keys in JSON)
+    /// load, migrate on first save, and round-trip with the new fields filled.
+    @MainActor @Test func loadPreV1Record_upgradesToCurrentSchema() throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("BristlenoseTests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let fileURL = tempDir.appendingPathComponent("projects.json")
+
+        // Hand-rolled pre-v1 fixture — no schema_version, no last_seen_path,
+        // no resource_identifier. Matches what existing user installs have.
+        let preV1 = """
+        {
+          "version": "1.0",
+          "folders": [],
+          "projects": [
+            {
+              "id": "00000000-0000-0000-0000-000000000001",
+              "name": "Legacy",
+              "path": "/tmp/legacy",
+              "position": 0,
+              "created_at": "2026-01-01T00:00:00Z"
+            }
+          ]
+        }
+        """
+        try preV1.write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let index = ProjectIndex(fileURL: fileURL)
+        #expect(index.projects.count == 1)
+        let migrated = try #require(index.projects.first)
+        #expect(migrated.schemaVersion == Project.currentSchemaVersion)
+        #expect(migrated.lastSeenPath == "/tmp/legacy")
+        #expect(migrated.resourceIdentifier == nil)
+
+        // Round-trip: the on-disk file now has the new fields.
+        let reloaded = ProjectIndex(fileURL: fileURL)
+        let again = try #require(reloaded.projects.first)
+        #expect(again.schemaVersion == Project.currentSchemaVersion)
+        #expect(again.lastSeenPath == "/tmp/legacy")
+    }
+
+    /// A v1 record (schema_version explicitly present) loads unchanged.
+    @MainActor @Test func loadV1Record_noMigrationTriggered() throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("BristlenoseTests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let fileURL = tempDir.appendingPathComponent("projects.json")
+
+        let v1 = """
+        {
+          "version": "1.0",
+          "folders": [],
+          "projects": [
+            {
+              "id": "00000000-0000-0000-0000-000000000002",
+              "name": "Already v1",
+              "path": "/tmp/already-v1",
+              "schema_version": 1,
+              "last_seen_path": "/tmp/already-v1-elsewhere",
+              "position": 0,
+              "created_at": "2026-04-01T00:00:00Z"
+            }
+          ]
+        }
+        """
+        try v1.write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let index = ProjectIndex(fileURL: fileURL)
+        let p = try #require(index.projects.first)
+        #expect(p.schemaVersion == 1)
+        // lastSeenPath preserved verbatim — not stomped to match path.
+        #expect(p.lastSeenPath == "/tmp/already-v1-elsewhere")
+    }
+
+    // MARK: - Phase 0b ProjectAvailability
+
+    /// A project with a path that exists returns `.ready`.
+    @MainActor @Test func availability_existingPath_isReady() throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("BristlenoseTests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let (index, _) = Self.makeTempIndex()
+        let p = index.addProject(name: "Live", path: tempDir.path)
+        #expect(p.availability == .ready)
+        #expect(p.isAvailable)
+    }
+
+    /// A project with a non-existent path on the local volume returns
+    /// `.cantFind(.moved)` (or `.missingBookmark` if no bookmark survived).
+    @MainActor @Test func availability_missingLocalPath_isCantFind() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let p = index.addProject(name: "Ghost", path: "/tmp/definitely-not-a-real-path-\(UUID().uuidString)")
+        if case .cantFind = p.availability { } else {
+            Issue.record("Expected .cantFind, got \(p.availability)")
+        }
+        #expect(!p.isAvailable)
+    }
+
+    /// Volume paths with the volume missing surface the volume name in
+    /// `.unmountedVolume` so the row subtitle can say "Samsung T7 · missing".
+    @MainActor @Test func availability_volumePathMissing_surfacesVolumeName() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        // Synthetic volume path — /Volumes/Phantom Drive almost certainly
+        // doesn't exist on the test host.
+        let p = index.addProject(name: "Drive", path: "/Volumes/Phantom Drive/research")
+        switch p.availability {
+        case .cantFind(.unmountedVolume(let name)):
+            #expect(name == "Phantom Drive")
+        default:
+            Issue.record("Expected .cantFind(.unmountedVolume), got \(p.availability)")
+        }
+    }
+
+    /// The enum's UI mapping is deterministic — each case has a fixed icon
+    /// and primary action. Catches accidental drift in the type-level switch.
+    @Test func availability_uiMapping_isStable() {
+        #expect(ProjectAvailability.ready.sfSymbolName == nil)
+        #expect(ProjectAvailability.ready.primaryAction == .none)
+        #expect(ProjectAvailability.cantFind(reason: .moved).sfSymbolName == "questionmark.folder")
+        #expect(ProjectAvailability.cantFind(reason: .moved).primaryAction == .locate)
+        #expect(ProjectAvailability.inCloud(downloading: nil).primaryAction == .downloadFromCloud)
+    }
 }

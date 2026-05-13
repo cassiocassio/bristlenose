@@ -144,6 +144,12 @@
     "welcomeTitle": "Willkommen bei Bristlenose",
     "welcomeBody": "Ziehen Sie einen Ordner mit Interview-Aufnahmen in die Seitenleiste, oder klicken Sie auf + Neues Projekt, um zu starten."
   },
+  "availability": {
+    "unmountedVolume": "{{name}} · nicht gefunden",
+    "networkUnreachable": "{{host}} · nicht erreichbar",
+    "missing": "nicht gefunden",
+    "inCloud": "In iCloud"
+  },
   "boot": {
     "tagline": "Analyse für User Research",
     "startingSidecar": "Bristlenose wird gestartet…",

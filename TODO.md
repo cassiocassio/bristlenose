@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 11 May 2026 (v0.15.5 shipping — cli-just-works branch lands 8-slice first-run preflight block: Whisper / ffmpeg / API-key billing / spaCy lazy-fetch all before stage 2; plus CLI-UX codebook + analysis-register + asciinema session-matching captured to Ideas earlier in the day.)
+Last updated: 13 May 2026 (branch protection on `main` enabled; PR #104 docs the policy in CONTRIBUTING.md; first CI run on the new gate surfaced two pre-existing failures captured below.)
 
 **Most recent ship: v0.15.4 (10 May 2026)** — Browser SPA refreshes within ~3 s of pipeline completion (no more "drop folder → nothing happens until you reload"); refresh button + refetch overlay + post-zero-quotes empty-state copy; Export downloads route via `WKDownload` + `NSSavePanel` under App Sandbox (HTML report path; other export surfaces tracked in follow-up); failure pill on desktop now renders the structured `Cause` category from the events log instead of a generic "Failed" badge. See `CHANGELOG.md` for full bullet list.
 
@@ -18,6 +18,8 @@ Open follow-ups not in any active branch (surface separately, not alpha blockers
 - **i18n locales not reaching host bundle under sandbox** — chrome keys leak verbatim in welcome view + AIConsent modal under sandbox-on, despite commit `ea21bb1`. Pre-existing build-system bug; cosmetic but visible.
 - **`proc_listpids` EPERM** — zombie cleanup non-functional under sandbox. Deferred post-alpha (triaged).
 - **IOKit AppleNVMeEANUC deny** — silent, single occurrence per launch. Investigate only if it surfaces user-visibly.
+- **frontend size-limit fails on `main` by 547 B** — gate trips at 210 kB, build measures 210.55 kB gzipped. v0.15.7 bumped CI `node-version: "24"` but the budget wasn't re-baselined for Node 24's slightly different gzip output. Bump `size-limit` in `frontend/package.json` to ~215 kB (or 212 kB to keep some headroom). Surfaced 13 May 2026 by PR #104's CI run.
+- **`test_subprocess_sigterm_writes_run_cancelled` flakes on Ubuntu Python 3.10 + 3.11** — `RunCancelledEvent (SIGTERM) never landed within 30s`. CLAUDE.md documents the polling-fix pattern in `tests/test_run_lifecycle.py:_wait_for_event` for 3.10; the same pattern is now failing for 3.11 too under runner contention. Extend the polling timeout, or quarantine on slow-runner cells. Surfaced 13 May 2026 by PR #104's CI run.
 
 Reference: `docs/private/handoffs/sandbox-walk-followup-fixes.md` (closeout), `docs/private/sandbox-inventory-beats-6-13.md` (16-finding inventory + status block).
 

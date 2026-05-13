@@ -143,9 +143,37 @@ def test_categorise_auth():
     assert cause.category == CauseCategoryEnum.AUTH
 
 
+def test_categorise_auth_real_provider_strings():
+    """Real-world 401 messages from Anthropic / OpenAI / Gemini SDKs.
+
+    The CLI AUTH banner is the user-facing surface for these — if any of
+    these fall through to UNKNOWN, the researcher sees engineer text
+    instead of "Claude rejected your API key. Run bristlenose configure".
+    """
+    cases = [
+        "invalid x-api-key",  # Anthropic SDK 401
+        "Incorrect API key provided: sk-...wAA",  # OpenAI SDK 401
+        "'type': 'authentication_error'",  # JSON-quoted SDK error body
+        "invalid api key",  # generic
+        "401 Unauthorized",  # raw HTTP
+    ]
+    for msg in cases:
+        cause = categorise_exception(RuntimeError(msg))
+        assert cause.category == CauseCategoryEnum.AUTH, (
+            f"{msg!r} -> {cause.category.value} (wanted auth)"
+        )
+
+
 def test_categorise_quota():
-    cause = categorise_exception(RuntimeError("Anthropic 429 rate limit exceeded"))
+    """`quota` and `credit` substrings → QUOTA (billing-exhaustion path)."""
+    cause = categorise_exception(RuntimeError("Anthropic credit balance is too low"))
     assert cause.category == CauseCategoryEnum.QUOTA
+
+
+def test_categorise_api_request():
+    """`rate limit` and `429` → API_REQUEST (throttling, different recovery)."""
+    cause = categorise_exception(RuntimeError("Anthropic 429 rate limit exceeded"))
+    assert cause.category == CauseCategoryEnum.API_REQUEST
 
 
 def test_categorise_network():
@@ -211,7 +239,9 @@ def test_build_cause_redacts_pii_from_exception_body():
         exc, stage="cluster_and_group", provider="openai", http_status=429,
     )
     # Sanity: category should still route via the categoriser substring matchers.
-    assert cause.category == CauseCategoryEnum.QUOTA
+    # "429 rate limit" → API_REQUEST (post Fix 8 — split from QUOTA so the
+    # CLI banner says "wait a minute" not "top up your account").
+    assert cause.category == CauseCategoryEnum.API_REQUEST
     assert cause.code == "429"
 
     # Privacy: no PII tokens anywhere in the persisted Cause.
@@ -230,7 +260,8 @@ def test_build_cause_preserves_category_from_substring_matchers():
     against the raw exception text without exposing PII to disk."""
     cases = [
         (RuntimeError("Anthropic 401 Unauthorized"), CauseCategoryEnum.AUTH),
-        (RuntimeError("429 rate limit on call"), CauseCategoryEnum.QUOTA),
+        (RuntimeError("credit balance is too low"), CauseCategoryEnum.QUOTA),
+        (RuntimeError("429 rate limit on call"), CauseCategoryEnum.API_REQUEST),
         (RuntimeError("connection timeout to api"), CauseCategoryEnum.NETWORK),
         (RuntimeError("500 internal server error"), CauseCategoryEnum.API_SERVER),
         (ValueError("something obscure"), CauseCategoryEnum.UNKNOWN),

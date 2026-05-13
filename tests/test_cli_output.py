@@ -11,7 +11,6 @@ from unittest.mock import patch
 from bristlenose.cli import (
     _COMMANDS,
     _find_open_port,
-    _install_hint,
     _maybe_inject_run,
     _print_pipeline_summary,
 )
@@ -141,25 +140,6 @@ class TestHardwareLabel:
 
 
 # ---------------------------------------------------------------------------
-# _install_hint (pip vs pipx detection)
-# ---------------------------------------------------------------------------
-
-
-class TestInstallHint:
-    def test_pip_default(self) -> None:
-        with patch("sys.prefix", "/usr/local"):
-            assert _install_hint() == "pip install 'bristlenose[serve]'"
-
-    def test_pipx_detected(self) -> None:
-        with patch("sys.prefix", "/home/user/.local/share/pipx/venvs/bristlenose"):
-            assert _install_hint() == "pipx install 'bristlenose[serve]'"
-
-    def test_venv_without_pipx(self) -> None:
-        with patch("sys.prefix", "/home/user/projects/bristlenose/.venv"):
-            assert _install_hint() == "pip install 'bristlenose[serve]'"
-
-
-# ---------------------------------------------------------------------------
 # _find_open_port
 # ---------------------------------------------------------------------------
 
@@ -248,8 +228,13 @@ class TestPrintPipelineSummary:
         assert "http://127.0.0.1:8150/report/" in output
         assert "Done" in output
 
-    def test_no_serve_url_shows_file_path(self, tmp_path: Path) -> None:
-        """Without serve_url, the file path is shown."""
+    def test_no_serve_url_omits_report_line(self, tmp_path: Path) -> None:
+        """Without serve_url, no Report: line is printed.
+
+        Post-A3: the static HTML still exists on disk as a sealed byproduct
+        of stage 12, but its path is never surfaced to the user. Failure
+        paths and `--static` paths (now removed) print no Report: line.
+        """
         from io import StringIO
 
         from rich.console import Console
@@ -261,7 +246,8 @@ class TestPrintPipelineSummary:
         with patch("bristlenose.cli.console", c):
             _print_pipeline_summary(_make_result(report_path=report))
         output = buf.getvalue()
-        assert "report.html" in output
+        assert "Report:" not in output
+        assert "report.html" not in output
         assert "http://" not in output
 
     def test_doctor_hint_on_zero_quotes(self) -> None:

@@ -228,6 +228,10 @@ In serve mode, `app.py` replaces `<!-- bn-app -->` markers in the rendered HTML 
 
 Backward-compat shims (`frontend/src/shims/navigation.ts`) install `window.switchToTab`, `window.scrollToAnchor`, and `window.navigateToSession` as functions that delegate to React Router's `navigate()`. This lets vanilla JS modules and React islands that still use the globals work unchanged.
 
+## Don't merge red CI
+
+The branch-protection rule on `main` blocks merges with failing required status checks. Admins can bypass with a manual override — only do this when you've **verified locally** that the failure is a CI infrastructure issue (runner outage, etc.) and not real. If it's a real test failure, fix it on the branch first. Pre-existing red workflows (Snap, scheduled 2026-05-24) are explicitly excluded from the required-check list, so they don't gate merges.
+
 ## Releasing
 
 Day-to-day development just means committing and pushing to `main`. CI runs automatically. PyPI and Homebrew are updated when you tag a release.

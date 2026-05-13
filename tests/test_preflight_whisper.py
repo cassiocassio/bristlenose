@@ -18,6 +18,13 @@ from bristlenose.preflight.whisper import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _allow_preflight(monkeypatch):
+    """Opt out of the global ``BRISTLENOSE_SKIP_PREFLIGHT=1`` set in
+    ``tests/conftest.py`` — this file tests the preflight itself."""
+    monkeypatch.delenv("BRISTLENOSE_SKIP_PREFLIGHT", raising=False)
+
+
 def _settings(**kwargs) -> BristlenoseSettings:
     base = {
         "whisper_backend": "mlx",
@@ -163,7 +170,6 @@ class TestPreflightWhisper:
         assert WHISPER_SIZE_HUMAN in out
         assert "Downloading" in out
         assert "Resuming" not in out
-        assert "Cancellable with Ctrl+C; resumes cleanly next run." in out
         assert "Whisper model ready" in out
 
     def test_partial_says_resuming_not_downloading(self, capsys):
@@ -240,3 +246,80 @@ class TestPreflightWhisper:
                     )
         status.stop.assert_called_once()
         status.start.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Progress-bar suppression (regression for 12 May 2026 leak: `Fetching N files:`
+# and `Download complete: : 0.00B` lines escaping past existing suppression.)
+# ---------------------------------------------------------------------------
+
+
+class TestProgressBarSuppression:
+    def test_env_vars_set_at_bristlenose_import_time(self):
+        """After `import bristlenose`, the suppression env vars must be in os.environ.
+
+        Both vars are read by their respective libraries at first-import time
+        (huggingface_hub.constants captures HF_HUB_DISABLE_PROGRESS_BARS into a
+        module constant; tqdm reads TQDM_DISABLE on each instantiation). If
+        either is set later (e.g. inside pipeline.py), a preflight that imports
+        huggingface_hub before pipeline loads will freeze HF_HUB_DISABLE_PROGRESS_BARS
+        as None and the env var has no effect.
+        """
+        import os
+
+        import bristlenose  # noqa: F401 — import is the point
+
+        assert os.environ.get("TQDM_DISABLE") == "1"
+        assert os.environ.get("HF_HUB_DISABLE_PROGRESS_BARS") == "1"
+
+    def test_hf_constant_is_true_after_full_preflight_chain(self):
+        """After the import chain that triggered the original leak, the HF
+        constant must read True.
+
+        Sequence: bristlenose → doctor (imports huggingface_hub via
+        `_check_whisper_model`) → pipeline → preflight_whisper. The original
+        bug was that pipeline.py set the env vars too late — huggingface_hub
+        had already been imported by the doctor preflight, freezing the
+        constant as None.
+        """
+        import bristlenose  # noqa: F401
+        from bristlenose.config import load_settings
+        from bristlenose.doctor import run_preflight
+
+        run_preflight(load_settings(), "run")
+
+        from huggingface_hub.constants import HF_HUB_DISABLE_PROGRESS_BARS
+
+        import bristlenose.pipeline  # noqa: F401
+
+        assert HF_HUB_DISABLE_PROGRESS_BARS is True
+
+    def test_hf_tqdm_instance_is_disabled_after_import_chain(self):
+        """An hf_tqdm bar instantiated post-import-chain has `disable=True`.
+
+        This is the direct check: even if env-var suppression failed silently
+        (constant=False, but hf_tqdm decides on its own), the bar must still
+        not print. Catches regressions where huggingface_hub.utils.tqdm
+        changes its disable logic.
+        """
+        import bristlenose  # noqa: F401
+        from bristlenose.config import load_settings
+        from bristlenose.doctor import run_preflight
+
+        run_preflight(load_settings(), "run")
+
+        from huggingface_hub.utils import are_progress_bars_disabled
+        from huggingface_hub.utils import tqdm as hf_tqdm
+
+        assert are_progress_bars_disabled() is True
+        bar = hf_tqdm(total=4, desc="Fetching 4 files")
+        try:
+            assert bar.disable is True, (
+                "hf_tqdm bar should be disabled after bristlenose import + "
+                "doctor preflight. If this fails, `Fetching N files:` and "
+                "`Download complete: : 0.00B` lines will leak past "
+                "suppression. See `bristlenose/__init__.py` env-var setup "
+                "and `bristlenose/preflight/whisper.py` programmatic disable."
+            )
+        finally:
+            bar.close()

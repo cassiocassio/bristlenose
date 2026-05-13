@@ -192,3 +192,46 @@ Reference for `_derive_journeys`, `_oxford_list_html`, `_build_session_rows`, `_
 - **`_render_transcript_page()` accepts `FullTranscript`, not just `PiiCleanTranscript`** — the assertion uses `isinstance(transcript, FullTranscript)`. Since `PiiCleanTranscript` is a subclass, both types pass. Don't tighten this to `PiiCleanTranscript` or it will crash when PII redaction is off (the default)
 - **`player.js` only intercepts `.timecode` clicks with `data-participant` and `data-seconds`** — coverage section links use `class="timecode"` but NO data attributes, so they navigate normally. If you add new timecode links that should navigate (not open the player), omit the data attributes
 - **Transcript headers store filename only, not full path** — `merge_transcript.py` (line 59) and `render_output.py` (line 202) write `# Source: filename.mov` using `.path.name`, stripping the subdirectory. The static renderer (`html_helpers._build_video_map()` in `render/`) doesn't use these headers — it reads `InputSession.files` directly (full absolute paths). But the serve-mode importer reads transcript headers and must reconstruct the path. If source files live in a subdirectory (e.g. `interviews/`), the importer's `_import_source_files()` scans one level of subdirectories to find them (mirroring `ingest.discover_files()`). This is a known data-loss point — the pipeline has access to `InputSession.files` with full paths, but this information is not persisted in intermediate data. Future improvement: store relative paths (including subdirectory) in transcript headers or in a dedicated manifest field
+
+## Stage-cache honesty (A4, May 2026)
+
+When adding or modifying analysis stages, three invariants must hold or the cache poisons on failure (the 2026-05-09 first-run repro). All landed via `a4-stage-cache-honesty`:
+
+1. **Abandon-check fires BEFORE `mark_stage_complete`** at every analysis-stage site in `pipeline.py`. If `mark_stage_complete` runs first and the abandon then raises, the manifest is already poisoned (empty intermediate JSON cached as COMPLETE). The next run reads `(cached)` and renders an empty report. Pattern at every site:
+
+   ```python
+   # 1. Build the StageOutcome rollup
+   self._summary.<bucket> = StageOutcome(...)
+
+   # 2. Abandon check FIRST — raises before any manifest write on failure
+   if self._summary.<bucket>.attempted > 0 and self._summary.<bucket>.succeeded == 0:
+       raise PipelineAbandonedError(cause=_dominant_cause(...), summary=self._summary)
+
+   # 3. ONLY THEN write success state to manifest
+   mark_stage_complete(manifest, STAGE_X, ..., output_path=<intermediate_file>)
+   write_manifest(manifest, output_dir)
+   ```
+
+2. **Stages with fallback paths must emit `StageFailure` at the LLM call site, BEFORE the fallback runs.** `s10_quote_clustering.cluster_by_screen` has `_fallback_clustering`; `s11_thematic_grouping` has `_fallback_grouping`. Both produce non-empty results on LLM failure. If `outcome.failed.append(...)` runs only when no fallback fires, `succeeded > 0 AND failed == 0` and the abandon predicate never fires (cluster_and_group was historically "soft" for this reason — now hard). Pattern:
+
+   ```python
+   try:
+       result = await llm_call(...)
+       outcome.succeeded = 1
+   except Exception as exc:
+       outcome.failed.append(StageFailure(
+           session_id=None,  # or sid for session-scoped
+           cause=_build_cause(exc, stage=..., provider=llm_client.provider),
+       ))
+       result = _fallback_something(...)  # fallback runs AFTER outcome.failed.append
+   ```
+
+3. **`Cause.message` is constructed from structured fields only, never from `str(exc)` or `repr(exc)`.** Provider error bodies sometimes echo prompt fragments (participant tokens, transcript substrings). `pipeline-events.jsonl` is a named re-identification surface (see CLAUDE.md alongside `pii_summary.txt`, `llm-calls.jsonl`). Use `_build_cause(exc, *, stage, provider, http_status, session_id)` from `run_lifecycle.py` — it composes `Cause.message` as `f"<stage> failed: <ClassName> on <provider>"` and never reads exception body content. Category is still inferred via `categorise_exception` substring matchers (bristlenose-controlled patterns like `\b401\b` / `\brate limit\b`, safe to run against raw text).
+
+`mark_stage_complete` itself enforces invariant 1 belt-and-braces: pass `output_path=<intermediate_file>` and it refuses to record completion when the file is empty (zero-byte OR JSON-equivalent-to-empty: `[]` / `{}` / `null`). Defensive — covers call sites that forgot the explicit abandon-check.
+
+Stage signatures: `s08_topic_segmentation.segment_topics` returns `tuple[list[SessionTopicMap], StageOutcome]` (session-scoped, `attempted=len(transcripts)` upfront). `s09_quote_extraction.extract_quotes` same pattern. `s10_quote_clustering.cluster_by_screen` and `s11_thematic_grouping.group_by_theme` return `tuple[..., StageOutcome]` stage-scoped (`attempted=1`).
+
+`_succeeded_sids` (transcribe stage success derivation) treats Whisper-success-with-zero-segments as SUCCESS — silent recording is valid input. Drive the predicate off `_fresh_transcript_outcome.failed` exclusion, not `session_segments` value-truthiness.
+
+Full design: `docs/design-pipeline-resilience.md` §"Changelog" 2026-05-12 entry. Implementation handoff: `docs/private/handoffs/A4-stage-cache-honesty.md`.

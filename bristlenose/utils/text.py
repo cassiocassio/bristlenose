@@ -5,6 +5,24 @@ from __future__ import annotations
 import re
 import unicodedata
 
+import inflect
+
+_inflect = inflect.engine()
+
+
+def count_noun(n: int, singular: str, plural: str | None = None) -> str:
+    """Format ``1 session`` / ``2 sessions`` / ``0 sessions`` for CLI output.
+
+    Uses ``inflect`` for irregular plurals (child→children, person→people).
+    Pass ``plural`` explicitly only when inflect's default disagrees.
+
+    Note: returns ``"0 sessions"`` for ``n == 0`` (matches existing voice).
+    Use ``inflect.engine().no()`` directly if you want ``"no sessions"``.
+    """
+    plural_form = plural if plural is not None else _inflect.plural_noun(singular)
+    word = singular if n == 1 else plural_form
+    return f"{n} {word}"
+
 # Maximum length for slugified project names in filenames
 _MAX_SLUG_LENGTH = 50
 

@@ -72,6 +72,8 @@ Requires macOS 15 Sequoia, Apple Silicon (M1+).
 
 ### macOS (Homebrew), Linux, Windows
 
+Requires Python 3.10 or newer.
+
 ```bash
 # macOS (Homebrew) -- handles ffmpeg + Python for you
 brew install cassiocassio/bristlenose/bristlenose
@@ -82,6 +84,8 @@ uv tool install bristlenose    # alternative
 ```
 
 If using pipx or uv, you'll also need FFmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Ubuntu, `winget install FFmpeg` on Windows).
+
+If you have Anaconda installed, its bundled Python may shadow newer system Pythons. Either `conda deactivate` before running pip/pipx, or install via Homebrew (which uses its own bundled Python 3.12).
 
 After installing, run `bristlenose doctor` to verify your setup.
 
@@ -361,6 +365,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 ---
 
 ## Changelog
+
+**0.15.7** — _12 May 2026_
+
+- **Release-pipeline fix** — three CI failures had stacked up since 10 May, leaving PyPI + Homebrew on 0.15.3 while source was on 0.15.6. No new source features in 0.15.7; on upgrade you pick up everything from v0.15.4 / v0.15.5 / v0.15.6 (preflight block, server-rendered status page, SPA auto-refetch, sandbox-safe Export, structured failure causes). The fixes: ffmpeg preflight bypass in the pipeline-abandon test; stub SPA bundle in the cookie auth test; CI Node 20 → 24 (the bundle-size "overage" was an older-zlib measurement artefact, not a real regression)
 
 **0.15.6** — _11 May 2026_
 

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 11 May 2026 (closed `generic-failure-surface`)
+**Updated:** 12 May 2026 (closed `a4-stage-cache-honesty`)
 
 ---
 
@@ -29,6 +29,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | Directory | Branch | Kind | Purpose |
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
+| `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -115,6 +116,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | Branch | Local worktree | GitHub remote |
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
+| `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
@@ -131,6 +133,24 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `tower-of-hanoi`
+
+**Kind:** spike — exploratory throwaway, won't merge to main; cherry-pick selectively if anything earns its keep
+**Status:** Just started
+**Started:** 12 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch tower-of-hanoi/`
+**Remote:** local only (push when ready)
+
+**What it does:** Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated. Self-contained prototype under `experiments/tower-of-hanoi/` (auto-discovered by `bristlenose serve --dev` in the Design section). The point is not the solver — it's walking the full plan → `/usual-suspects` → William-only → implement → `/usual-suspects` → William-only loop on a toy, and observing how the agent loop behaves. i18n is stipulated in scope; any William objection to it is recorded verbatim and overruled in `.claude/plans/tower-of-hanoi-decisions.md`.
+
+**Files this branch will touch:**
+- `experiments/tower-of-hanoi/` (all new — solver, theme-primitive consumption, six locale files)
+
+**Potential conflicts with other branches:**
+- None expected — `experiments/` is excluded from `ruff check` (per `pyproject.toml`) and no other active branch touches that subtree. Locale files live under `experiments/tower-of-hanoi/locales/`, **not** `bristlenose/locales/`, so the i18n surface is isolated from any other branch's locale edits.
 
 ---
 
@@ -214,6 +234,14 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `a4-stage-cache-honesty` — merged 12 May 2026
+
+Reorder abandon-check before `mark_stage_complete` so the manifest only records completion when a stage produced usable output. Closes the fake-success-feedback class for s08–s11: a stage that fails to extract any quotes (or themes) no longer caches as "complete" and short-circuits re-runs with stale empty state. Single commit (`0381a06`) merged as `9d2cd2e`. Touched `pipeline.py`, `manifest.py`, `run_lifecycle.py`, `events.py`, s08/s10/s11 stage files, `SECURITY.md`, and three test files plus the pipeline-summary contract fixture. Worktree detached and tagged orange on disk.
+
+### `a2-install-doctor-checks` — merged 12 May 2026
+
+Doctor hard error for missing `[serve]` extras (`check_serve_deps()` in `bristlenose/doctor.py`), install-method-aware fix message (brew vs pipx vs pip) with single-quoted `'bristlenose[serve]'` so zsh doesn't glob the brackets. README gained a "Python 3.10+ required" line plus anaconda caveat. Latent Rich-markup bug fixed at three `console.print` sites that were silently dropping `[serve]` from `_install_hint()` and the fix messages alike. Fix 3 (anaconda runtime detection) dropped as unreachable under `requires-python = ">=3.10"`. Single commit (`ea8162f`) merged as `f10b68e`. Worktree detached and tagged orange on disk.
 
 ### `generic-failure-surface` — merged 11 May 2026
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,15 @@ import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+
+# Bypass all preflight checks by default. The front-loaded preflight block
+# in Pipeline.run (Whisper / ffmpeg / API-key) aborts on CI runners that
+# lack one of those binaries, even for tests that don't exercise the
+# preflight contract. The env var is the documented "explicit escape
+# hatch" — see bristlenose/preflight/*.py. Tests that DO exercise a
+# preflight directly (tests/test_preflight_*.py) opt back in with an
+# autouse `monkeypatch.delenv` fixture in those files.
+os.environ.setdefault("BRISTLENOSE_SKIP_PREFLIGHT", "1")
 
 from bristlenose.models import (
     ExtractedQuote,

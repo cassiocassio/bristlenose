@@ -21,6 +21,7 @@ from bristlenose.preflight import PreflightAbortedError
 from bristlenose.preflight.whisper import WHISPER_SIZE_HUMAN
 from bristlenose.run_lifecycle import ConcurrentRunError, run_lifecycle
 from bristlenose.ui_kinds import MessageKind, cli_prefix
+from bristlenose.utils.text import count_noun
 
 # Known commands — used by _maybe_inject_run() to detect bare directory arguments
 _COMMANDS = {
@@ -226,7 +227,9 @@ def _print_doctor_fixes(
         for result in all_fixable:
             fix = get_fix(result.fix_key)
             if fix:
-                console.print(fix)
+                # markup=False so e.g. `'bristlenose[serve]'` isn't parsed as
+                # a Rich style tag and silently stripped from the output.
+                console.print(fix, markup=False)
                 console.print()  # Blank line between fixes
 
 
@@ -680,18 +683,18 @@ def _print_pipeline_summary(result: object, *, serve_url: str | None = None) -> 
         people = getattr(result, "people", None)
         named = _named_participant_summary(people, len(participants))
         if named:
-            parts.append(f"{len(participants)} participants ({named})")
+            parts.append(f"{count_noun(len(participants), 'participant')} ({named})")
         else:
-            parts.append(f"{len(participants)} participants")
+            parts.append(count_noun(len(participants), "participant"))
     screen_clusters = getattr(result, "screen_clusters", [])
     if screen_clusters:
-        parts.append(f"{len(screen_clusters)} screens")
+        parts.append(count_noun(len(screen_clusters), "screen"))
     theme_groups = getattr(result, "theme_groups", [])
     if theme_groups:
-        parts.append(f"{len(theme_groups)} themes")
+        parts.append(count_noun(len(theme_groups), "theme"))
     total_quotes = getattr(result, "total_quotes", 0)
     if total_quotes:
-        parts.append(f"{total_quotes} quotes")
+        parts.append(count_noun(total_quotes, "quote"))
     if parts:
         console.print(f"\n  [dim]{' · '.join(parts)}[/dim]")
 
@@ -1001,8 +1004,11 @@ def run(
     try:
         import uvicorn  # noqa: F401
     except ImportError:
+        from rich.markup import escape as _rich_escape
         _print_pipeline_summary(result)
-        console.print(f"  [dim]Tip: {_install_hint()} for the interactive report[/dim]")
+        console.print(
+            f"  [dim]Tip: {_rich_escape(_install_hint())} for the interactive report[/dim]"
+        )
         return
 
     try:
@@ -1356,8 +1362,8 @@ def _install_hint() -> str:
     import sys as _sys
 
     if "pipx" in _sys.prefix:
-        return "pipx install bristlenose[serve]"
-    return "pip install bristlenose[serve]"
+        return "pipx install 'bristlenose[serve]'"
+    return "pip install 'bristlenose[serve]'"
 
 
 def _find_open_port(start: int = 8150, attempts: int = 10) -> int:
@@ -1539,7 +1545,10 @@ def _auto_render(project_dir: Path) -> None:
 
     pipeline = Pipeline(settings, verbose=False)
     result = pipeline.run_render_only(output_dir, input_dir)
-    console.print(f" {cli_prefix(MessageKind.SUCCESS)} [dim]Rendered report[/dim]  {result.total_quotes} quotes")
+    console.print(
+        f" {cli_prefix(MessageKind.SUCCESS)} [dim]Rendered report[/dim]"
+        f"  {count_noun(result.total_quotes, 'quote')}"
+    )
 
 
 @app.command()
@@ -1571,8 +1580,9 @@ def serve(
     try:
         import uvicorn  # noqa: F401 — test that serve deps are installed
     except ImportError:
+        from rich.markup import escape as _rich_escape
         _say(MessageKind.ERROR, "Server dependencies not installed.")
-        console.print(f"Install with: [bold]{_install_hint()}[/bold]")
+        console.print(f"Install with: [bold]{_rich_escape(_install_hint())}[/bold]")
         raise typer.Exit(1)
 
     # Re-render the HTML report before serving so it always matches the

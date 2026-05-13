@@ -16,6 +16,7 @@ from bristlenose.manifest import (
     _derive_stage_status,
     load_manifest,
 )
+from bristlenose.utils.text import count_noun
 
 # ---------------------------------------------------------------------------
 # Intermediate file names — keep in sync with pipeline.py / render_output.py
@@ -147,32 +148,38 @@ def _build_stage_info(
         info.session_total = total
         info.session_complete = complete
         if effective_status == StageStatus.COMPLETE:
-            info.detail = f"{total} sessions"
+            info.detail = count_noun(total, "session")
         elif complete > 0:
             incomplete = total - complete
-            info.detail = f"{complete}/{total} sessions ({incomplete} incomplete)"
+            info.detail = (
+                f"{complete}/{count_noun(total, 'session')} ({incomplete} incomplete)"
+            )
         else:
-            info.detail = f"{total} sessions pending"
+            info.detail = f"{count_noun(total, 'session')} pending"
 
     # Stage-specific detail enrichment
     if effective_status == StageStatus.COMPLETE:
         if stage_key == "topic_segmentation":
             count = _count_json_array(intermediate_dir / "topic_boundaries.json")
             if count is not None:
-                info.detail = f"{count} boundaries"
+                info.detail = count_noun(count, "boundary")
         elif stage_key == "quote_extraction":
             count = _count_json_array(intermediate_dir / "extracted_quotes.json")
             if count is not None:
-                session_part = f" ({info.session_total} sessions)" if info.session_total else ""
-                info.detail = f"{count} quotes{session_part}"
+                session_part = (
+                    f" ({count_noun(info.session_total, 'session')})"
+                    if info.session_total
+                    else ""
+                )
+                info.detail = f"{count_noun(count, 'quote')}{session_part}"
         elif stage_key == "cluster_and_group":
             clusters = _count_json_array(intermediate_dir / "screen_clusters.json")
             themes = _count_json_array(intermediate_dir / "theme_groups.json")
             parts = []
             if clusters is not None:
-                parts.append(f"{clusters} screens")
+                parts.append(count_noun(clusters, "screen"))
             if themes is not None:
-                parts.append(f"{themes} themes")
+                parts.append(count_noun(themes, "theme"))
             if parts:
                 info.detail = " · ".join(parts)
         elif stage_key == "render":
@@ -188,7 +195,7 @@ def _build_stage_info(
                               "quote_extraction"):
                 other = manifest.stages.get(other_key)
                 if other and other.sessions:
-                    info.detail = f"{len(other.sessions)} sessions"
+                    info.detail = count_noun(len(other.sessions), "session")
                     break
             if not info.detail:
                 info.detail = "complete"
@@ -245,8 +252,9 @@ def format_resume_summary(status: ProjectStatus) -> str:
             if info.session_total and info.session_complete is not None:
                 remaining = info.session_total - info.session_complete
                 return (
-                    f"Resuming: {info.session_complete}/{info.session_total} "
-                    f"sessions have {info.name.lower()}, {remaining} remaining."
+                    f"Resuming: {info.session_complete}/"
+                    f"{count_noun(info.session_total, 'session')} "
+                    f"have {info.name.lower()}, {remaining} remaining."
                 )
             return f"Resuming from {info.name.lower()}."
 

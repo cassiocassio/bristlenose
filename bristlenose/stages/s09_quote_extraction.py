@@ -5,12 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from bristlenose.events import (
-    Cause,
-    CauseCategoryEnum,
-    StageFailure,
-    StageOutcome,
-)
+from bristlenose.events import StageFailure, StageOutcome
 from bristlenose.llm import telemetry
 from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.llm.client import LLMClient
@@ -28,7 +23,7 @@ from bristlenose.models import (
     TranscriptSegment,
     format_timecode,
 )
-from bristlenose.run_lifecycle import categorise_exception
+from bristlenose.run_lifecycle import _build_cause
 from bristlenose.utils.text import apply_smart_quotes
 from bristlenose.utils.timecodes import parse_timecode
 
@@ -125,10 +120,10 @@ async def extract_quotes(
                 # (succeeded == 0) reflects the user-visible reality.
                 outcome.failed.append(StageFailure(
                     session_id=transcript.session_id,
-                    cause=Cause(
-                        category=CauseCategoryEnum.UNKNOWN,
-                        message="Skipped after consecutive upstream failures",
-                        stage="s09_quote_extraction",
+                    cause=_build_cause(
+                        RuntimeError("Skipped after consecutive upstream failures"),
+                        stage="quote_extraction",
+                        provider=llm_client.provider,
                         session_id=transcript.session_id,
                     ),
                 ))
@@ -160,12 +155,14 @@ async def extract_quotes(
                 )
                 if errors is not None:
                     errors.append(str(exc))
-                cause = categorise_exception(exc).model_copy(update={
-                    "stage": "s09_quote_extraction",
-                    "session_id": transcript.session_id,
-                })
                 outcome.failed.append(StageFailure(
-                    session_id=transcript.session_id, cause=cause,
+                    session_id=transcript.session_id,
+                    cause=_build_cause(
+                        exc,
+                        stage="quote_extraction",
+                        provider=llm_client.provider,
+                        session_id=transcript.session_id,
+                    ),
                 ))
                 consecutive_failures += 1
                 if consecutive_failures >= _FAIL_THRESHOLD:

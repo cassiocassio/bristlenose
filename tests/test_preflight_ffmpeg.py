@@ -15,6 +15,13 @@ from bristlenose.preflight.ffmpeg import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _allow_preflight(monkeypatch):
+    """Opt out of the global ``BRISTLENOSE_SKIP_PREFLIGHT=1`` set in
+    ``tests/conftest.py`` — this file tests the preflight itself."""
+    monkeypatch.delenv("BRISTLENOSE_SKIP_PREFLIGHT", raising=False)
+
+
 def _silent_console() -> Console:
     return Console(force_terminal=False, no_color=True, width=80)
 

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from bristlenose.utils.bundled_binary import bundled_binary_path
+from bristlenose.utils.text import count_noun
 
 if TYPE_CHECKING:
     from bristlenose.config import BristlenoseSettings
@@ -730,6 +731,45 @@ def check_disk_space(settings: BristlenoseSettings) -> CheckResult:
         )
 
 
+_SERVE_DEP_PACKAGES = (
+    "fastapi",
+    "uvicorn",
+    "sqlalchemy",
+    "sqladmin",
+    "alembic",
+    "openpyxl",
+)
+
+
+def check_serve_deps() -> CheckResult:
+    """Check whether the `[serve]` extras are installed.
+
+    `bristlenose serve` (and any embedded WKWebView in the desktop app) needs
+    FastAPI/Uvicorn/SQLAlchemy/SQLAdmin/Alembic/openpyxl. These are declared
+    as the `serve` extra in pyproject.toml. Some packaging channels (e.g. the
+    brew formula's pip step pre-A1) silently skip extras, leaving doctor
+    reporting "All clear" while serve is broken. Failing hard here surfaces
+    the gap before the user hits a confusing serve-time crash.
+    """
+    import importlib.util
+
+    missing = [
+        name for name in _SERVE_DEP_PACKAGES if importlib.util.find_spec(name) is None
+    ]
+    if missing:
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="Serve mode",
+            detail=f"missing: {', '.join(missing)}",
+            fix_key="serve_deps_missing",
+        )
+    return CheckResult(
+        status=CheckStatus.OK,
+        label="Serve mode",
+        detail=f"{len(_SERVE_DEP_PACKAGES)} deps installed",
+    )
+
+
 def check_auth_token_env() -> CheckResult:
     """Warn when _BRISTLENOSE_AUTH_TOKEN is set in the shell env.
 
@@ -850,7 +890,7 @@ def _check_data_dir(
     return CheckResult(
         status=CheckStatus.OK,
         label=label,
-        detail=f"{len(files)} file(s) in {rel_path}",
+        detail=f"{count_noun(len(files), 'file')} in {rel_path}",
     )
 
 
@@ -870,7 +910,10 @@ def check_bundle_react_spa() -> CheckResult:
         return CheckResult(
             status=CheckStatus.FAIL,
             label="Bundle: React SPA",
-            detail=f"index.html suspiciously small ({size} bytes) — Vite build may have failed",
+            detail=(
+                f"index.html suspiciously small ({count_noun(size, 'byte')})"
+                f" — Vite build may have failed"
+            ),
             fix_key="bundle_react_truncated",
         )
     assets = _package_root() / "server" / "static" / "assets"
@@ -884,7 +927,7 @@ def check_bundle_react_spa() -> CheckResult:
     return CheckResult(
         status=CheckStatus.OK,
         label="Bundle: React SPA",
-        detail=f"index.html ({size} bytes) + assets/",
+        detail=f"index.html ({count_noun(size, 'byte')}) + assets/",
     )
 
 
@@ -1034,6 +1077,7 @@ def run_all(settings: BristlenoseSettings) -> DoctorReport:
         check_network(settings),
         check_pii(settings),
         check_disk_space(settings),
+        check_serve_deps(),
         check_auth_token_env(),
     ])
 

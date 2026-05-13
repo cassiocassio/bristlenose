@@ -1009,8 +1009,7 @@ struct ContentView: View {
         .draggable(project.id.uuidString)
         .contextMenu {
             // "Locate…" for moved/deleted projects — actionable first.
-            if !project.isAvailable,
-               case .movedOrDeleted = project.unavailabilityReason {
+            if case .cantFind = project.availability {
                 Button(i18n.t("desktop.chrome.locate")) {
                     locateProject(project)
                 }
@@ -1151,25 +1150,37 @@ struct ContentView: View {
     /// Detail pane for an unavailable project — shows why and offers Locate action.
     @ViewBuilder
     private func unavailableProjectView(_ project: Project) -> some View {
-        switch project.unavailabilityReason {
-        case .volumeNotMounted(let hint):
-            ContentUnavailableView {
-                Label(i18n.t("desktop.chrome.projectUnavailable"), systemImage: "externaldrive.trianglebadge.exclamationmark")
-            } description: {
-                Text(hint)
-                Text(i18n.t("desktop.chrome.projectUnavailableHint"))
-            }
-        case .movedOrDeleted:
-            ContentUnavailableView {
-                Label(i18n.t("desktop.chrome.projectMoved"), systemImage: "questionmark.folder")
-            } description: {
-                Text(i18n.t("desktop.chrome.projectMovedDescription"))
-            } actions: {
-                Button(i18n.t("desktop.chrome.locate")) {
-                    locateProject(project)
+        switch project.availability {
+        case .cantFind(let reason):
+            switch reason {
+            case .unmountedVolume(let name), .networkUnreachable(let name):
+                ContentUnavailableView {
+                    Label(i18n.t("desktop.chrome.projectUnavailable"),
+                          systemImage: "externaldrive.trianglebadge.exclamationmark")
+                } description: {
+                    Text(name)
+                    Text(i18n.t("desktop.chrome.projectUnavailableHint"))
+                }
+            case .moved, .missingBookmark:
+                ContentUnavailableView {
+                    Label(i18n.t("desktop.chrome.projectMoved"),
+                          systemImage: "questionmark.folder")
+                } description: {
+                    Text(i18n.t("desktop.chrome.projectMovedDescription"))
+                } actions: {
+                    Button(i18n.t("desktop.chrome.locate")) {
+                        locateProject(project)
+                    }
                 }
             }
-        case nil:
+        case .inCloud:
+            ContentUnavailableView {
+                Label(i18n.t("desktop.availability.inCloud"),
+                      systemImage: "icloud.and.arrow.down")
+            } description: {
+                Text(i18n.t("desktop.chrome.projectUnavailableHint"))
+            }
+        case .ready:
             EmptyView()
         }
     }

@@ -288,6 +288,26 @@ done
 
 Chain `mkdir`/`ln`/`echo` with `&&` (not separate lines): a bare `echo` after a failed `mkdir`/`ln` would still fire, falsely reporting "✓ symlinked" while `Resources/` doesn't exist. (Observed 2026-05-08 alongside the `hash -r` issue — three "✓ symlinked" lines printed despite `mkdir`/`ln` failing with "command not found".)
 
+Then copy main's PyInstaller sidecar bundle into the worktree using `ditto`. Without it, Cmd+R on the default Bristlenose scheme fails with "Bundled sidecar missing at …" — and the bundled scheme is the only TestFlight-honest path; the v0.2-launcher fallbacks (External Server / Dev Sidecar) are deprecated scaffolding. The sidecar is ~428 MB per worktree, disk-cheap. If you're iterating on `bristlenose/server/` or signing, run `desktop/scripts/build-sidecar.sh` in this worktree afterwards to replace the copy with a locally-built bundle.
+
+**Why `ditto`, not `cp -R*` or symlink:** A symlink at the top-level breaks Xcode's `Copy Sidecar Resources` build phase, which uses `rsync -a` and preserves symlinks as dangling-outside-bundle pointers the sandbox can't follow. `cp -RL` materialises real bytes but *also dereferences internal symlinks*, which breaks the PyInstaller bundle's rpath-relative library structure — mlx then can't find its Metal library and the sidecar crashes at startup with "Failed to load the default metallib". `cp -R` (default `-P`) preserves internal symlinks but follows the source-argument symlink correctly. `ditto` is the macOS-native bundle-aware copy: preserves resource forks, extended attributes, codesignatures, and internal symlinks; auto-dereferences the source-argument. Use `ditto`.
+
+```bash
+WORKTREE="/Users/cassio/Code/bristlenose_branch $0"
+src="/Users/cassio/Code/bristlenose/desktop/Bristlenose/Resources/bristlenose-sidecar"
+dst="$WORKTREE/desktop/Bristlenose/Resources/bristlenose-sidecar"
+if [ -d "$src" ] && [ ! -e "$dst" ]; then
+  mkdir -p "$WORKTREE/desktop/Bristlenose/Resources" \
+    && ditto "$src" "$dst" \
+    && echo "✓ copied sidecar bundle from main (~428 MB)" \
+    || echo "✗ failed to copy sidecar bundle"
+elif [ -e "$dst" ]; then
+  echo "✓ sidecar bundle already present in worktree"
+else
+  echo "ℹ sidecar bundle not in main — run desktop/scripts/build-sidecar.sh in main first if you'll build the desktop .app"
+fi
+```
+
 Then probe the resolution path the app actually uses, so a broken symlink or wrong layout is caught now rather than at Cmd+R time:
 
 ```bash

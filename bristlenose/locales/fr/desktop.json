@@ -144,6 +144,12 @@
     "welcomeTitle": "Bienvenue dans Bristlenose",
     "welcomeBody": "Glissez un dossier d’enregistrements d’entretiens dans la barre latérale, ou cliquez sur + Nouveau projet pour commencer."
   },
+  "availability": {
+    "unmountedVolume": "{{name}} · introuvable",
+    "networkUnreachable": "{{host}} · injoignable",
+    "missing": "introuvable",
+    "inCloud": "Dans iCloud"
+  },
   "boot": {
     "tagline": "Analyse pour la recherche utilisateur",
     "startingSidecar": "Démarrage de Bristlenose…",

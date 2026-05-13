@@ -144,6 +144,12 @@
     "welcomeTitle": "Bristlenose에 오신 것을 환영합니다",
     "welcomeBody": "인터뷰 녹음 폴더를 사이드바로 드래그하거나, + 새 프로젝트를 클릭하여 시작하세요."
   },
+  "availability": {
+    "unmountedVolume": "{{name}} · 없음",
+    "networkUnreachable": "{{host}} · 연결할 수 없음",
+    "missing": "없음",
+    "inCloud": "iCloud에 있음"
+  },
   "boot": {
     "tagline": "사용자 조사 분석",
     "startingSidecar": "Bristlenose 시작 중…",

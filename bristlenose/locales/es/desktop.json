@@ -144,6 +144,12 @@
     "welcomeTitle": "Te damos la bienvenida a Bristlenose",
     "welcomeBody": "Arrastra una carpeta con grabaciones de entrevistas a la barra lateral, o haz clic en + Nuevo proyecto para empezar."
   },
+  "availability": {
+    "unmountedVolume": "{{name}} · no disponible",
+    "networkUnreachable": "{{host}} · inaccesible",
+    "missing": "no disponible",
+    "inCloud": "En iCloud"
+  },
   "boot": {
     "tagline": "Análisis para investigación de usuarios",
     "startingSidecar": "Iniciando Bristlenose…",

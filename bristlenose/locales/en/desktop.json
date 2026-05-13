@@ -144,6 +144,12 @@
     "welcomeTitle": "Welcome to Bristlenose",
     "welcomeBody": "Drag a folder of interview recordings into the sidebar, or click + New Project to start."
   },
+  "availability": {
+    "unmountedVolume": "{{name}} · missing",
+    "networkUnreachable": "{{host}} · unreachable",
+    "missing": "missing",
+    "inCloud": "In iCloud"
+  },
   "boot": {
     "tagline": "Sensemaking for User Research",
     "startingSidecar": "Starting Bristlenose…",

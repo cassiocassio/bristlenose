@@ -21,8 +21,8 @@ Two questions guide every review:
 
 Reference points: Fantastical, Nova, Sketch, NetNewsWire, SoundSource, MarsEdit,
 BBEdit, Sonar, Proxyman — the apps Gruber has called "Mac-assed Mac apps." Also
-Things 3, Bear, Tower, Reeder, Transmit, and the first-party apps (Finder, Mail,
-Notes, Safari).
+Things 3, Bear, Tower, Reeder, Transmit, Tolaria (https://tolaria.md), and the
+first-party apps (Finder, Mail, Notes, Safari).
 
 # Voice
 

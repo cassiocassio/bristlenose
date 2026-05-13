@@ -39,6 +39,7 @@ The Claude Code Bash tool inherits PATH from the harness, which has occasionally
 | `--plan=<path>` | Path (absolute or `~/`-style) to a Markdown file with the self-contained prompt for the new session | Nothing — feeds Step 4b |
 | `--purpose="<one line>"` | "What it does" line for BRANCHES.md | Step 11 question |
 | `--files="<comma,separated,paths>"` | Files this branch will touch | Step 11 question |
+| `--print-launch-url` | Print a `claude://code/new?folder=…` URL the user can click to open a new desktop-app session | Step 14 |
 
 **All flags are optional.** Bare `/new-feature my-branch` works exactly as before — interactive prompts for Kind, purpose, files. Flags exist so a parent Claude session that already knows these answers can pass them in and avoid re-asking.
 
@@ -371,4 +372,29 @@ Print a summary:
 - BRANCHES.md: updated and committed
 - Handoff plan: copied from prior diagnostic to `.claude/plans/$0.md` (or note "no prior handoff — next session will need a brief from you")
 
-Then: "To start working, open a new Claude session in the worktree directory, or tell me to switch."
+## Step 14: Hand off to the worktree (do NOT auto-launch)
+
+The Bash tool in *this* (parent) session pins CWD to the project root, so a parent session can't "switch into" the worktree — every command resets back. The user has to start a fresh session whose CWD *is* the worktree.
+
+**Don't auto-launch.** Claude Desktop registers a `claude://code/new?folder=…` URL scheme that opens a new session at a given folder. It triggers a trust dialog by design — the human approves each folder. A skill that fires this URL on every invocation trains the user to click Confirm reflexively, defeating the safeguard. Same applies to spawning a terminal `claude` CLI: that's a *different* surface (separate settings, history, MCP servers) and quietly forks the session graph.
+
+Default behaviour: just print the worktree path and let the user open it however they want — desktop-app "Open Folder" UI, drag-onto-Dock, whatever fits their flow.
+
+Optional: if the user passed `--print-launch-url`, also print a clickable `claude://code/new` URL alongside the path. They can click it (still hits the trust dialog) but at least the URL isn't being fired reflexively by the skill itself.
+
+```bash
+WORKTREE="/Users/cassio/Code/bristlenose_branch $0"
+echo ""
+echo "  Worktree ready: $WORKTREE"
+echo ""
+# Only if --print-launch-url was passed:
+if [ "$PRINT_LAUNCH_URL" = "1" ]; then
+  ENCODED=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$WORKTREE")
+  echo "  Click to open in Claude Desktop:"
+  echo "  claude://code/new?folder=$ENCODED"
+  echo ""
+fi
+echo "  This session stays here on main."
+```
+
+Don't `open` the URL programmatically. Don't open a Terminal window. Don't spawn a CLI claude. The user opens the new session themselves.

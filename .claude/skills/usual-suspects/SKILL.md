@@ -96,8 +96,40 @@ Check which areas are touched (file extensions, directory prefixes, content):
 | HTML/React components with interactive elements | `a11y-review` |
 | `desktop/`, `.swift` files, macOS/HIG mentioned | `what-would-gruber-say` |
 | `.ts`/`.tsx`/`.css`, `package.json`, server, pipeline, or perf-sensitive | `perf-review` |
+| Test files touched, new public API without tests, or any `.swift` change | `what-would-james-bach-say` (see three-way selector below) |
 
 **`code-review` always runs.** The others run only if their area is touched.
+
+### James Bach three-way selector
+
+The Bach reviewer (`what-would-james-bach-say`) is testing-taste-specific.
+Run a finer decision than the binary table above:
+
+**Auto-call Bach when ANY of:**
+- Diff touches `*test*`, `*Tests.swift`, `tests/`, `e2e/`, or `frontend/src/**/*.test.{ts,tsx}`
+- Diff adds a new module, public API, or new file under `bristlenose/`,
+  `frontend/src/`, or `desktop/Bristlenose/Bristlenose/` **without**
+  corresponding test changes
+- Plan-review mode where the plan mentions testing
+- Any `.swift` change (Swift is the under-served layer per
+  `docs/design-test-philosophy.md` — Bach has the most to say there)
+
+**Skip Bach silently when ALL of:**
+- Pure doc edits (`docs/**/*.md`, `README.md`, `CHANGELOG.md`)
+- Config / dependency bumps with no code changes
+- Comment-only or copy-only changes
+- Locale-only changes (i18n-review handles these)
+
+**Prompt the user when:**
+- Refactor with no test changes — could be "didn't need tests" or "should
+  have updated tests"; user knows which
+- Cross-cutting diff that touches many surfaces; Bach's value depends on
+  which surface dominates
+- Another agent has already raised a test-shaped concern that Bach would
+  amplify (avoid double-billing)
+
+Prompt format: one-liner — *"Bach selector is grey: <one-sentence reason>.
+Call Bach? (y/n)"* — keep it tight, don't break flow.
 
 Announce which agents you're launching and why:
 ```
@@ -105,6 +137,7 @@ Calling the usual suspects:
 - code-review (always)
 - ux-critique (frontend components changed)
 - i18n-review (locale files touched)
+- what-would-james-bach-say (Swift change + no test updates)
 Skipping: security-review, a11y-review, what-would-gruber-say (not in scope)
 ```
 
@@ -316,7 +349,7 @@ during slice transitions. Keep entries terse.
 **Pass:** Slice 2 plan-review (or "Slice 2 impl-review", etc.)
 **Doc:** <doc-slug> — `docs/private/reviews/<doc-slug>.md` (or "none — no continuity log")
 **Scope:** <summary>
-**Agents called:** code-review, ux-critique, i18n-review (3 of 6)
+**Agents called:** code-review, ux-critique, i18n-review (3 of 8)
 **Prior log:** N findings carried in (X open, Y parked, Z resolved) — or "first pass for this doc"
 
 ## Bugs / Errors

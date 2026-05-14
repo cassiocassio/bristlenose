@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 13 May 2026 (branch protection on `main` enabled; PR #104 docs the policy in CONTRIBUTING.md; first CI run on the new gate surfaced two pre-existing failures captured below.)
+Last updated: 14 May 2026 (A3 cli-honest-output landed on main — preflight gates `[serve]` extras across run/serve/analyze; pipeline failure summary maps `Cause.category` to researcher-facing banners; `bristlenose render` removed and `--static` deleted; `--no-serve` restored as hidden flag for the desktop sidecar after a doc-sweep caught the regression; doc truing across man page, README, manual, CLAUDE, CONTRIBUTING/DEVELOPMENT/SECURITY, and 20 design docs. Full review log: `docs/private/reviews/cli-improvements.md`.)
 
 **Most recent ship: v0.15.4 (10 May 2026)** — Browser SPA refreshes within ~3 s of pipeline completion (no more "drop folder → nothing happens until you reload"); refresh button + refetch overlay + post-zero-quotes empty-state copy; Export downloads route via `WKDownload` + `NSSavePanel` under App Sandbox (HTML report path; other export surfaces tracked in follow-up); failure pill on desktop now renders the structured `Cause` category from the events log instead of a generic "Failed" badge. See `CHANGELOG.md` for full bullet list.
 
@@ -23,7 +23,16 @@ Open follow-ups not in any active branch (surface separately, not alpha blockers
 
 Reference: `docs/private/handoffs/sandbox-walk-followup-fixes.md` (closeout), `docs/private/sandbox-inventory-beats-6-13.md` (16-finding inventory + status block).
 
-### cli-just-works follow-ups (deferred from this branch — see Decisions block at `.claude/plans/cli-just-works.md`)
+### A3 cli-honest-output follow-ups (parked, see review log)
+
+Status: A3 landed on `main` 14 May 2026 as commits `dc71073` (code+tests+Swift), `607202d` (user-facing docs), `04dcdd6` (design-doc sweep). Review log: `docs/private/reviews/cli-improvements.md` — 30 findings, 15 resolved / 7 parked / 8 ignored.
+
+Parked items most likely to resurface during cohort calls (in priority order):
+- **Failure-banner copy in manual.md** (Finding 22) — new banners aren't documented anywhere user-readable. Manual.html is the natural Google landing for "bristlenose claude api key invalid". 3–5 bullet "When things go wrong" section. Pairs with Finding 25 (doctor positioning) and Finding 24 (run/serve mental-model one-liner).
+- **AUTH suffix edge cases** (Finding 14) — `(no key set)` / `(key too short)` alternate diagnostic when key is missing/typo'd. Surfaces if a tester hits "rejected" with no suffix and asks why.
+- **Abandon-path verbosity** (Finding 7, parked Chesterton) — surface partial-run stats on mid-run DISK / MISSING_BINARY via a `--verbose` flag on `run` if cohort asks.
+
+### cli-just-works follow-ups (deferred from cli-just-works branch — see Decisions block at `.claude/plans/cli-just-works.md`)
 
 - **No-account-yet flow** — numbered URL → getpass → optional Keychain persist → re-enter validation. Existing `_maybe_prompt_for_provider` covers the simpler "missing-key → prompt" case; full-numbered flow defers to a follow-up branch. Spec lives in the Decisions block.
 - **`pipeline-events.jsonl` `Cause` entries on preflight aborts** (finding 12 in design doc) — currently aborts go through `typer.Exit(2)` with the recovery message; threading the event writer through the preflight modules is its own small refactor.

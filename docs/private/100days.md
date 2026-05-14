@@ -623,6 +623,7 @@ The canonical end-to-end beats a first-time user must complete successfully in t
 - **Input focus CSS `.bn-input` atom** — extract shared input styling
 - **Checkbox atom** — extract ghost checkbox style
 - **Titlebar project icon** — show the chosen SF Symbol icon next to the project name in the macOS title bar. SwiftUI `.navigationTitle` doesn't support inline images and toolbar items always get a lozenge. Needs AppKit-level NSWindow manipulation or a future SwiftUI API
+- **Choose Icon as flyout menu** — context-menu "Choose Icon" currently opens an attached popover (100 SF Symbols in a grid). Mouse-up dismissal on the menu item feels mediocre next to a true submenu flyout. Options: (a) trim palette to ~15 inline icons in a submenu and lose the long tail; (b) Finder tag-colour hybrid — top 12 inline + "All Icons…" opens the full popover; (c) inline `Menu` with custom grid view (fights NSMenu's text-list shape). Ellipsis already trimmed from the menu label; full UX treatment deferred
 
 ### Icebox
 - **Highlighter feature** — active branch, scope TBD. Parked

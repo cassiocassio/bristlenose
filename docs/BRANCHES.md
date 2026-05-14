@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 14 May 2026 (closed `no-red-ci-merges`)
+**Updated:** 14 May 2026 (closed `ci-version-pinning`)
 
 ---
 
@@ -30,7 +30,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
-| `bristlenose_branch ci-version-pinning/` | `ci-version-pinning` | chore | single source of truth for Node + Python primary versions via .tool-versions |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -118,7 +117,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
-| `ci-version-pinning` | `bristlenose_branch ci-version-pinning/` | local only |
+| `ci-version-pinning` _(merged)_ | `bristlenose_branch ci-version-pinning/` _(detached, on disk)_ | local + remote deleted — merged to main 14 May 2026 (`e1c8083`) |
 | `tf-multi-project` _(merged)_ | `bristlenose_branch tf-multi-project/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`e73de11`) |
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
@@ -136,29 +135,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `ci-version-pinning`
-
-**Kind:** chore — small refactor, merges to main with low ceremony
-**Status:** Just started
-**Started:** 12 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch ci-version-pinning/`
-**Remote:** local only (push when ready)
-
-**What it does:** Single source of truth for Node + Python primary versions via `.tool-versions` at repo root. Replaces 12 hardcoded `python-version: "3.12"` / `node-version: "24"` pins across 5 workflow files with `python-version-file` / `node-version-file` references read natively by `actions/setup-python@v5` and `actions/setup-node@v4`. Closes the drift class that caused v0.15.4/5/6 release failures (Node 20 vs 24 zlib gzip-measurement mismatch). The test matrix in `ci.yml:85` is intentionally multi-version and stays untouched. Full spec at `.claude/plans/ci-version-pinning.md`.
-
-**Files this branch will touch:**
-- `.tool-versions` (new)
-- `.github/workflows/ci.yml`
-- `.github/workflows/release.yml`
-- `.github/workflows/install-test.yml`
-- `.github/workflows/i18n-check.yml`
-- `frontend/CLAUDE.md`
-
-**Potential conflicts with other branches:**
-- None expected — no active branch touches `.github/workflows/` or `frontend/CLAUDE.md`'s Node-version line.
 
 ---
 
@@ -260,6 +236,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `ci-version-pinning` — merged 14 May 2026
+
+Single source of truth for Node + Python primary versions via `.tool-versions` at repo root. Replaced 12 hardcoded `python-version: "3.12"` / `node-version: "24"` pins across 5 workflow files with `python-version-file` / `node-version-file` references read natively by `actions/setup-python@v5` and `actions/setup-node@v4`. Closes the drift class that caused v0.15.4/5/6 release failures (Node 20 vs 24 zlib gzip-measurement mismatch). The test matrix in `ci.yml` stays multi-version. Two commits merged as `e1c8083`. Worktree detached and tagged orange on disk; local + remote branches deleted.
 
 ### `no-red-ci-merges` — closed 14 May 2026
 

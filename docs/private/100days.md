@@ -130,7 +130,8 @@ _View only — links to canonical entries by title in numbered sections below. S
 
 ### Promote next (12 May 2026)
 _The Now/Next/Then ladder is fully cleared. Pick the new Now from in-flight cluster work or open surfaces. Candidates:_
-- **A4 stage-cache honesty** (S0, brew cluster, in-flight) — generalises the cure above to every "stage failed but pipeline says completed" case; six concrete fixes specced in handoff
+- ~~**A4 stage-cache honesty**~~ ✅ **Done 12 May 2026** (`0381a06` / `9d2cd2e`) — abandon-check now fires BEFORE `mark_stage_complete`; s08 abandon-check added; s10+s11 flipped soft→hard with `StageFailure` emitted at the LLM call site before fallback runs; `mark_stage_complete` refuses to record `content_hash` for empty content; privacy contract on `cause.message` (class name + provider + stage, never `str(exc)`); Whisper-zero-segments treated as success; `topics` bucket added to `PipelineSummary`, contract fixture bumped to v5; 470 lines of new tests across `test_pipeline_abandon.py` / `test_manifest.py` / `test_run_lifecycle.py`. Open follow-ups (small, defer or fold into D1): #17 duplicate-quote-rows dedup on re-run; #1 HF Hub unauthenticated warning mid-spinner; explicit `bristlenose analyze` smoke repro (Pass 3 acceptance gap).
+- **D1 stage-contract audit** (S1, meta-plan systemic follow-up, now unblocked) — audits all 12 stages for the silent-empty failure class and introduces a `StageGuard` contract preventing recurrence. Gated on A4 + B1 having shipped first (both ✅, May 12 + 14) so the worked pattern exists before generalising. Plan: `docs/private/plans/2026-05-meta-plan.md` §D1; coherence doc: `docs/private/plans/2026-05-cluster-coherence.md`.
 - ~~**B1 long-audio quality**~~ ✅ **Done 14 May 2026** — Whisper hallucination + untranscribed gaps + diarization-collapse. Pre-implementation diagnostic against preserved IKEA artefacts showed only one of three bugs reproducing as described: role-inversion did NOT reproduce (current run correctly assigns m1=moderator, p1=participant); `pct_words` 0/100 is by-design (m-codes intentionally excluded from denominator); mid-stream "diarization decay" is real but architectural (LLM splitter forward-propagates last label from 5–8 min sample window past the window). Shipped: regression-pin unit tests for heuristic + `pct_words` (defends against silent flip on future refactors); design-doc clarification + INFO log surfacing the propagation limit; Whisper parameter tuning (`condition_on_previous_text=False`, `no_speech_threshold=0.85`, `compression_ratio_threshold=1.8`) for mlx-whisper; `collapse_adjacent_repeats()` post-processor catching Whisper looping ("thanks thanks thanks", "facebook facebook") while preserving natural interjection doubling ("No. No. No.", "yeah yeah"). 5 files, ~155 lines. Review log: `docs/private/reviews/b1-long-audio-quality.md` (29 findings).
 - **Remaining export surfaces under sandbox** — clips / CSV / slides / anonymised bundle (route via `WKDownload` + `NSSavePanel` like the HTML path)
 - **C-stream UX papercuts** (S3, post-A-stream) — 14 items from 9 May IKEA call
@@ -145,6 +146,21 @@ _The Now/Next/Then ladder is fully cleared. Pick the new Now from in-flight clus
 
 ### After Internal TF
 Active focus shifts to stage 2.5 (`.dmg` from bristlenose.app). Sparkle integration plan: `docs/private/sparkle-plan.md`. Friendly-CTO Sunday §0 first.
+
+### Lateral wins shipped 6–14 May 2026 (not in any plan doc at start of window)
+
+Out-of-order discoveries and infrastructure work that landed alongside the planned A-stream + B1. Captured here so reverse-audit and sitreps see them; not load-bearing tracker entries.
+
+- **CLI "just works" preflight block** (v0.15.5, 11 May) — api-key + whisper + ffmpeg preflights, HF progress-bar suppression, `count_noun`/inflect plurals, 6-locale `preflight.*` i18n namespace, lazy-fetch `en_core_web_sm`. Broader than A2's original scope. Design doc: `docs/design-cli-just-works.md`.
+- **Pipeline diagnostic popover infrastructure** (7 May) — `design-pipeline-diagnostic-popover.md` + `MessageKind` taxonomy + structured per-stage failure summaries + cross-branch contract fixture (v1 → v5). Branches: `pipeline-summary-events`, `pipeline-diagnostic-pill`, `cli-message-kinds`. Foundation under A4 and the desktop failure pill.
+- **Generic failure-surface** (v0.15.6, 11 May, `488952d`) — server-rendered status page for incomplete/failed/cancelled runs. Catches "navigate to a report mid-run" case.
+- **SPA trust-UX** (10 May, `7136890` + `9e173e2`) — auto-refetch on pipeline completion + manual refresh button + refetch overlay + post-zero-quotes empty-state copy. Wasn't on any plan doc.
+- **Sandbox export — HTML path** (10 May, `4f1b8c4`) — `WKDownload` + `NSSavePanel` routing. Other export surfaces (clips/CSV/slides/anonymised bundle) still pending.
+- **Session-handoff sentinels** (14 May, `0054fea` + `07506dc`) — `/end-session` sign-off sentinel + `/close-branch` drift check. Workflow tooling, now load-bearing.
+- **CI hygiene** (13 May) — `.tool-versions` node + python pin (`3bc1796`), no-red-CI-merges policy in CONTRIBUTING (`c9d1c81`), release-pipeline unblock (v0.15.7, `040c520`).
+- **Workflow / agent ecosystem** (14 May) — James Bach reviewer agent + test philosophy doc (`958cca5`), `/new-feature --print-launch-url` + Step 14 hand-off (`2a737f8`), true-the-docs v2 with `--claude-pointers` mode (`2d3a019`).
+- **Sandbox fixes** (7 May) — `prepend_bundled_to_path()` for mlx_whisper bare-name shellout (`d3ed409`), serve-importer re-import on `run_completed` (`02daeee`), `reset-app-state.sh` helper (12 May, `824422d`).
+- **Captured design docs** (now in `TODO.md` Ideas): `design-incremental-analysis.md` (13 May), `design-asr-backend-strategy.md` (11 May), `design-native-vs-web-surfaces.md` (12 May), `design-cli-analysis-register.md` + cli-ux.yaml codebook (11 May).
 
 ## 7 May 2026 quality reset
 

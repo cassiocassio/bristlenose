@@ -19,6 +19,10 @@ struct PipelineActivityItem: View {
     @State private var showPopover = false
     @State private var nowTick: Date = Date()
     @State private var copyConfirmed = false
+    /// Confirm sheet for the destructive Re-analyse path (outputExists).
+    /// Decoupled from `showPopover` so the popover dismisses cleanly before
+    /// the confirm sheet opens.
+    @State private var showReAnalyseConfirm = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var state: PipelineState? { pipelineRunner.state[project.id] }
@@ -55,6 +59,24 @@ struct PipelineActivityItem: View {
                     nowTick = Date()
                     try? await Task.sleep(for: .seconds(1))
                 }
+            }
+            .alert(
+                "Re-analyse “\(project.name)”?",
+                isPresented: $showReAnalyseConfirm
+            ) {
+                // Destructive — `--clean` deletes bristlenose-output/ wholesale,
+                // wiping the previous successful analysis (including any
+                // researcher edits not yet exported). Confirm + named action.
+                Button("Re-analyse", role: .destructive) {
+                    pipelineRunner.start(project: project, clean: true)
+                }
+                .keyboardShortcut(.defaultAction)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(
+                    "This will delete the existing analysis and run from scratch. "
+                    + "Any researcher edits in this project will be lost."
+                )
             }
         }
     }
@@ -146,6 +168,7 @@ struct PipelineActivityItem: View {
         case .missingDep: return "Setup needed"
         case .missingInput: return "Missing input"
         case .missingBinary: return "Missing tool"
+        case .outputExists: return "Already analysed"
         case .unknown:    return "Failed"
         }
     }
@@ -239,11 +262,26 @@ struct PipelineActivityItem: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(summary).font(.callout)
             HStack(spacing: 8) {
-                Button("Retry") {
-                    pipelineRunner.start(project: project)
-                    showPopover = false
+                if category == .outputExists {
+                    // outputExists isn't a real failure — the prior analysis
+                    // is intact. The "Retry" path would just hit the same
+                    // refusal. Surface the destructive Re-analyse option
+                    // behind a confirm sheet instead. The project's existing
+                    // report is already viewable in the detail pane.
+                    Button("Re-analyse…") {
+                        showPopover = false
+                        // Defer the sheet so the popover dismissal completes
+                        // first (NSPopover + alert chains can race).
+                        DispatchQueue.main.async { showReAnalyseConfirm = true }
+                    }
+                    .keyboardShortcut(.defaultAction)
+                } else {
+                    Button("Retry") {
+                        pipelineRunner.start(project: project)
+                        showPopover = false
+                    }
+                    .keyboardShortcut(.defaultAction)
                 }
-                .keyboardShortcut(.defaultAction)
                 Button(copyConfirmed ? "Copied" : "Copy error details") {
                     copyErrorDetails()
                 }

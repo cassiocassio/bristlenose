@@ -27,6 +27,75 @@ from bristlenose.utils.hardware import AcceleratorType, HardwareInfo, detect_har
 logger = logging.getLogger(__name__)
 
 
+# English interjections / discourse markers that double naturally in real
+# speech ("No. No. No." Thatcher, "yeah yeah", "very very good"). Repeats of
+# these at the unigram level are protected. Phrase-level repeats (>=2 tokens)
+# are never natural — those collapse regardless.
+_REDUPLICABLE = frozenset([
+    "yes", "yeah", "yep", "yup", "mhm",
+    "no", "nope", "nah",
+    "okay", "ok", "oh", "ah", "hmm", "uh", "um", "er",
+    "well", "so", "right", "sure", "fine", "true",
+    "wow", "hey", "now", "then",
+    "very", "really", "much",
+    "here", "there",
+])
+
+
+def _is_reduplicable(token: str) -> bool:
+    """A token reduplicates naturally if its lowercased alpha core is listed."""
+    core = "".join(c for c in token.lower() if c.isalpha())
+    return core in _REDUPLICABLE
+
+
+def collapse_adjacent_repeats(text: str) -> str:
+    """Collapse adjacent identical n-gram repetitions in transcript text.
+
+    Targets two sources: Whisper hallucination ("thanks thanks thanks",
+    "Thank you. Thank you.", "facebook facebook") and content-word
+    doubling that's almost always an artefact ("crockpot crockpot"). Real
+    speech doubles interjections / discourse markers ("No. No. No.",
+    "yeah yeah", "very very good") — those are protected by the
+    ``_REDUPLICABLE`` set.
+
+    Algorithm walks n-gram lengths 8 → 1 so longer matches win first.
+    Threshold: phrase-level (n>=2) collapses at any adjacent repeat;
+    single-token (n=1) collapses at 2+ for content words, 6+ for
+    interjections (covers extreme Whisper loops without touching natural
+    emphasis).
+    """
+    tokens = text.split()
+    for n in range(8, 0, -1):
+        i = 0
+        out: list[str] = []
+        while i < len(tokens):
+            if i + n > len(tokens):
+                out.append(tokens[i])
+                i += 1
+                continue
+            ngram = tokens[i:i + n]
+            run_end = i + n
+            while run_end + n <= len(tokens) and tokens[run_end:run_end + n] == ngram:
+                run_end += n
+            run_count = (run_end - i) // n
+            # If every token is a natural-reduplication interjection, treat
+            # the run as protected speech regardless of n-gram length —
+            # otherwise the n=2 pass would eat "no no no no" pairwise before
+            # the n=1 protection could apply.
+            if all(_is_reduplicable(t) for t in ngram):
+                threshold = 6
+            else:
+                threshold = 2
+            if run_count >= threshold:
+                out.extend(ngram)
+                i = run_end
+            else:
+                out.append(tokens[i])
+                i += 1
+        tokens = out
+    return " ".join(tokens)
+
+
 ProgressCallback = type(lambda current, total: None)
 
 
@@ -223,12 +292,17 @@ def _init_mlx_backend(
         # mlx-whisper uses HuggingFace model names
         model_name = _mlx_model_name(settings.whisper_model)
 
+        # Hallucination mitigations for mlx-whisper (faster-whisper has
+        # vad_filter); revisit after cohort feedback (see 100days.md).
         result = mlx_whisper.transcribe(
             str(audio_path),
             path_or_hf_repo=model_name,
             language=settings.whisper_language if settings.whisper_language != "auto" else None,
             word_timestamps=True,
             verbose=None,
+            condition_on_previous_text=False,
+            no_speech_threshold=0.85,
+            compression_ratio_threshold=1.8,
         )
 
         segments: list[TranscriptSegment] = []
@@ -244,7 +318,7 @@ def _init_mlx_backend(
                         confidence=w.get("probability", 1.0),
                     ))
 
-            text = seg.get("text", "").strip()
+            text = collapse_adjacent_repeats(seg.get("text", "").strip())
             if text:
                 segments.append(TranscriptSegment(
                     start_time=seg.get("start", 0.0),
@@ -375,7 +449,7 @@ def _init_faster_whisper_backend(
                 TranscriptSegment(
                     start_time=segment.start,
                     end_time=segment.end,
-                    text=segment.text.strip(),
+                    text=collapse_adjacent_repeats(segment.text.strip()),
                     words=words,
                     source="faster-whisper",
                 )

@@ -438,3 +438,61 @@ class TestInterviewerHeuristic:
 
         assert segments[0].speaker_role == SpeakerRole.RESEARCHER
         assert segments[1].speaker_role == SpeakerRole.PARTICIPANT
+
+    def test_ikea_shape_inputs_assign_roles_correctly(self) -> None:
+        """Heavy word-share asymmetry survives participant rhetorical questions.
+
+        Regression pin (b1-long-audio-quality, 2026-05-14): IKEA-shape session
+        where the moderator gives short prompts and the participant runs long
+        monologues that occasionally include question-shaped utterances
+        ("Do you know what I mean?"). The ~10:1 word ratio should ensure
+        word_asymmetry dominates, keeping the right speaker as moderator.
+        """
+        from bristlenose.stages.s05b_identify_speakers import (
+            identify_speaker_roles_heuristic,
+        )
+
+        segments = [
+            _seg(0.0, 5.0, "Tell me about your favourite household object.", "Mod"),
+            _seg(6.0, 80.0,
+                 "Well, I've got one of those crock pots that you use for "
+                 "fermentation, do you know what I mean? It's kind of a "
+                 "classic design. The thing about it is that the water "
+                 "creates a seal so when it's fermenting the gas can come "
+                 "out, which is ingenious really. And the alternatives are "
+                 "all just plastic with these silly burping lids. Is that "
+                 "the right thing to be saying? I think so.",
+                 "Guest"),
+            _seg(81.0, 84.0, "Okay. What else?", "Mod"),
+            _seg(85.0, 180.0,
+                 "Then there's the IKEA shopping experience itself. I'd "
+                 "probably go straight to search because some of these "
+                 "taxonomies, I'm not sure if they would be helpful. Maybe "
+                 "I'd check the room seating but actually I'd probably look "
+                 "for a specific thing I had in mind, you know? It's quite "
+                 "busy, the homepage. I'd want kitchenware probably. Do you "
+                 "see what I'm getting at? Hard to say without trying.",
+                 "Guest"),
+            _seg(181.0, 184.0, "Walk me through what you'd do.", "Mod"),
+            _seg(185.0, 280.0,
+                 "So I'd type crockpot and probably get nothing useful. "
+                 "Then I'd browse food and storage, find one of the jars "
+                 "and tins sections. Actually that's exactly what I want. "
+                 "The naming is interesting, all Swedish, slight plays on "
+                 "words. It feels designed for browsing rather than direct "
+                 "search, which worked for me in the end. Although I got "
+                 "confused at checkout with the minimum order business.",
+                 "Guest"),
+        ]
+
+        identify_speaker_roles_heuristic(segments)
+
+        for seg in segments:
+            if seg.speaker_label == "Mod":
+                assert seg.speaker_role == SpeakerRole.RESEARCHER, (
+                    f"Expected RESEARCHER for moderator segment: {seg.text[:40]!r}"
+                )
+            else:
+                assert seg.speaker_role == SpeakerRole.PARTICIPANT, (
+                    f"Expected PARTICIPANT for guest segment: {seg.text[:40]!r}"
+                )

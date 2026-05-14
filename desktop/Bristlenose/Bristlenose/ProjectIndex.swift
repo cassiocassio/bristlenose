@@ -247,9 +247,6 @@ extension Notification.Name {
     /// Posted by Project > Rename Folder to trigger inline rename on the selected folder.
     static let renameSelectedFolder = Notification.Name("bristlenoseRenameSelectedFolder")
 
-    /// Posted by Project > Delete to remove the selected project.
-    static let deleteSelectedProject = Notification.Name("bristlenoseDeleteSelectedProject")
-
     /// Posted by Project > Delete Folder to remove the selected folder.
     static let deleteSelectedFolder = Notification.Name("bristlenoseDeleteSelectedFolder")
 
@@ -340,6 +337,35 @@ final class ProjectIndex: ObservableObject {
     /// Remove a project by ID.
     func removeProject(id: UUID) {
         projects.removeAll { $0.id == id }
+        save()
+    }
+
+    /// Re-insert a previously-removed project, preserving its prior folder
+    /// membership and position. Other items in the same scope shift to make
+    /// room. Used by `UndoableRemovalStore` for Undo of "Remove from Sidebar".
+    /// No-op if a project with the same ID already exists (idempotent against
+    /// double-undo / race with manifest scans).
+    func restoreProject(_ project: Project, folderId: UUID?, position: Int) {
+        guard !projects.contains(where: { $0.id == project.id }) else { return }
+        var restored = project
+        restored.folderId = folderId
+        restored.position = position
+        // Shift items in the same scope at or after `position` down by 1.
+        if folderId == nil {
+            for i in projects.indices where projects[i].folderId == nil
+                && projects[i].position >= position {
+                projects[i].position += 1
+            }
+            for i in folders.indices where folders[i].position >= position {
+                folders[i].position += 1
+            }
+        } else {
+            for i in projects.indices where projects[i].folderId == folderId
+                && projects[i].position >= position {
+                projects[i].position += 1
+            }
+        }
+        projects.append(restored)
         save()
     }
 

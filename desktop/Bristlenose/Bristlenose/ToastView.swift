@@ -1,11 +1,13 @@
 import SwiftUI
 
-/// App-wide toast notification overlay.
+/// Shared bottom-of-window toast surface. Two consumers today:
+///   - `ToastStore` + `ToastOverlay` — informational toasts (3s auto-dismiss).
+///   - `UndoableRemovalStore` + `RemoveToast` — undoable removal toasts
+///     (8s window with an action button).
 ///
-/// Shows a brief message at the bottom of the window, auto-dismisses after 3 seconds.
-/// One toast at a time — new messages replace the current one.
-///
-/// Usage: inject `ToastStore` as `@EnvironmentObject` and call `toast.show("message")`.
+/// Visual surface lives in `ToastSurface` so the two consumers stay
+/// pixel-aligned without ad-hoc copies.
+
 @MainActor
 final class ToastStore: ObservableObject {
     @Published var message: String?
@@ -27,21 +29,52 @@ final class ToastStore: ObservableObject {
 /// Attach to the root content view via `.overlay { ToastOverlay() }`.
 struct ToastOverlay: View {
     @EnvironmentObject var toast: ToastStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack {
             Spacer()
             if let message = toast.message {
-                Text(message)
-                    .font(.callout)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-                    .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
+                ToastSurface(message: message, action: nil, tooltip: nil)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .padding(.bottom, 16)
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: toast.message)
+        .animation(
+            reduceMotion ? nil : .easeInOut(duration: 0.25),
+            value: toast.message
+        )
+    }
+}
+
+/// Shared visual surface for toasts. Composable: optional action button
+/// (rendered to the right of the message), optional hover tooltip.
+struct ToastSurface: View {
+
+    /// Trailing action — button label + handler.
+    struct Action {
+        let label: String
+        let handler: () -> Void
+    }
+
+    let message: String
+    let action: Action?
+    let tooltip: String?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(message)
+                .font(.callout)
+
+            if let action {
+                Button(action.label, action: action.handler)
+                    .buttonStyle(.borderless)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+        .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
+        .help(tooltip ?? "")
     }
 }

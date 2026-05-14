@@ -403,4 +403,211 @@ struct ProjectIndexTests {
         #expect(ProjectAvailability.cantFind(reason: .moved).primaryAction == .locate)
         #expect(ProjectAvailability.inCloud(downloading: nil).primaryAction == .downloadFromCloud)
     }
+
+    // MARK: - restoreProject (undoable removal)
+
+    @MainActor @Test func restoreProject_reinsertsAtSameRootPosition() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        index.addProject(name: "Alpha", path: "/tmp/a")
+        let beta = index.addProject(name: "Beta", path: "/tmp/b")
+        index.addProject(name: "Gamma", path: "/tmp/g")
+        // After three insertions, positions are 0=Gamma, 1=Beta, 2=Alpha
+        // (each new project goes to position 0, others shift down).
+        let snapshot = index.projects.first { $0.id == beta.id }!
+        let originalPosition = snapshot.position
+        index.removeProject(id: beta.id)
+        #expect(index.projects.count == 2)
+
+        index.restoreProject(snapshot, folderId: nil, position: originalPosition)
+        #expect(index.projects.count == 3)
+        #expect(index.projects.first { $0.id == beta.id }?.position == originalPosition)
+    }
+
+    @MainActor @Test func restoreProject_isIdempotent_whenAlreadyPresent() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let p = index.addProject(name: "Alpha", path: "/tmp/a")
+        let snapshot = index.projects.first { $0.id == p.id }!
+        index.restoreProject(snapshot, folderId: nil, position: snapshot.position)
+        #expect(index.projects.count == 1)
+    }
+
+    @MainActor @Test func restoreProject_preservesFolderMembership() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let folder = index.addFolder(name: "Studies")
+        let p = index.addProject(name: "Alpha", path: "/tmp/a")
+        index.moveProject(projectId: p.id, toFolder: folder.id)
+        let snapshot = index.projects.first { $0.id == p.id }!
+        #expect(snapshot.folderId == folder.id)
+
+        index.removeProject(id: p.id)
+        index.restoreProject(snapshot, folderId: folder.id, position: snapshot.position)
+        let restored = index.projects.first { $0.id == p.id }
+        #expect(restored?.folderId == folder.id)
+    }
+
+    // MARK: - UndoableRemovalStore round-trip
+
+    @MainActor @Test func removalStore_undo_restoresProject() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let p = index.addProject(name: "Alpha", path: "/tmp/a")
+        let store = UndoableRemovalStore(undoWindow: 60)
+        store.setProjectIndex(index)
+
+        store.removeFromSidebar(p)
+        #expect(index.projects.isEmpty)
+        #expect(store.hasPending)
+        #expect(store.pendingName == "Alpha")
+        #expect(store.pendingCount == 1)
+
+        store.undoLastRemoval()
+        #expect(index.projects.count == 1)
+        #expect(!store.hasPending)
+    }
+
+    @MainActor @Test func removalStore_secondRemove_commitsFirst() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let a = index.addProject(name: "Alpha", path: "/tmp/a")
+        let b = index.addProject(name: "Beta", path: "/tmp/b")
+        let store = UndoableRemovalStore(undoWindow: 60)
+        store.setProjectIndex(index)
+
+        store.removeFromSidebar(a)
+        store.removeFromSidebar(b)
+        // Only the most recent removal is undoable.
+        #expect(store.pendingName == "Beta")
+        store.undoLastRemoval()
+        // Alpha was committed by the second remove call — it stays gone.
+        #expect(index.projects.contains { $0.id == b.id })
+        #expect(!index.projects.contains { $0.id == a.id })
+    }
+
+    @MainActor @Test func removalStore_batchRemove_undoRestoresAll() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let a = index.addProject(name: "Alpha", path: "/tmp/a")
+        let b = index.addProject(name: "Beta", path: "/tmp/b")
+        let c = index.addProject(name: "Gamma", path: "/tmp/c")
+        let store = UndoableRemovalStore(undoWindow: 60)
+        store.setProjectIndex(index)
+
+        store.removeFromSidebar([a, b, c])
+        #expect(index.projects.isEmpty)
+        #expect(store.pendingCount == 3)
+        // pendingName is nil for batches > 1.
+        #expect(store.pendingName == nil)
+
+        store.undoLastRemoval()
+        #expect(index.projects.count == 3)
+    }
+
+    @MainActor @Test func removalStore_undoRestoresPriorSelection() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let a = index.addProject(name: "Alpha", path: "/tmp/a")
+        let b = index.addProject(name: "Beta", path: "/tmp/b")
+        let store = UndoableRemovalStore(undoWindow: 60)
+        store.setProjectIndex(index)
+
+        var restored: Set<SidebarSelection> = []
+        store.setOnUndo { selection in
+            restored = selection
+        }
+
+        let priorSelection: Set<SidebarSelection> = [.project(a.id), .project(b.id)]
+        store.removeFromSidebar([a, b], priorSelection: priorSelection)
+        store.undoLastRemoval()
+        #expect(restored == priorSelection)
+    }
+
+    /// Acceptance criterion 1: removed cantFind projects must restore to the
+    /// exact prior state — including bookmarkData. Locks the round-trip so
+    /// future refactors of `Pending` can't drop the bookmark field by mistake.
+    @MainActor @Test func removalStore_cantFindProject_restoresBookmark() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let p = index.addProject(name: "Acme Q3", path: "/tmp/a")
+        // Force-stamp bookmark bytes so the test doesn't depend on the
+        // sandbox-scoped bookmark machinery succeeding under xcodebuild test.
+        let bookmarkBytes = Data([0x01, 0x02, 0x03, 0x04, 0x05])
+        if let idx = index.projects.firstIndex(where: { $0.id == p.id }) {
+            index.projects[idx].bookmarkData = bookmarkBytes
+            index.projects[idx].lastSeenPath = "/Volumes/Phantom/Acme Q3"
+        }
+        let snapshot = index.projects.first { $0.id == p.id }!
+        #expect(snapshot.bookmarkData == bookmarkBytes)
+
+        let store = UndoableRemovalStore(undoWindow: 60)
+        store.setProjectIndex(index)
+        store.removeFromSidebar(snapshot)
+        store.undoLastRemoval()
+
+        let restored = index.projects.first { $0.id == p.id }
+        #expect(restored?.bookmarkData == bookmarkBytes)
+        #expect(restored?.lastSeenPath == "/Volumes/Phantom/Acme Q3")
+    }
+
+    // MARK: - LocateFlow marker validation
+
+    @MainActor @Test func locateFlow_rejectsEmptyMarkerDirectory() throws {
+        // Folder with an empty `bristlenose-output/` shouldn't pass — the
+        // stronger marker check (security finding #15) requires at least one
+        // canonical artefact inside.
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LocateFlowTest-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("bristlenose-output"),
+            withIntermediateDirectories: true
+        )
+
+        #expect(LocateFlow.folderLooksAnalysed(url: tempDir) == false)
+    }
+
+    @MainActor @Test func locateFlow_acceptsFolderWithManifest() throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LocateFlowTest-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let outputDir = tempDir.appendingPathComponent("bristlenose-output")
+        try FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
+        try Data().write(to: outputDir.appendingPathComponent("manifest.json"))
+
+        #expect(LocateFlow.folderLooksAnalysed(url: tempDir) == true)
+    }
+
+    @MainActor @Test func locateFlow_acceptsFolderWithBristlenoseDir() throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LocateFlowTest-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let outputDir = tempDir.appendingPathComponent("bristlenose-output")
+        try FileManager.default.createDirectory(
+            at: outputDir.appendingPathComponent(".bristlenose"),
+            withIntermediateDirectories: true
+        )
+
+        #expect(LocateFlow.folderLooksAnalysed(url: tempDir) == true)
+    }
+
+    @MainActor @Test func locateFlow_rejectsArbitraryFolder() throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LocateFlowTest-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        #expect(LocateFlow.folderLooksAnalysed(url: tempDir) == false)
+    }
 }

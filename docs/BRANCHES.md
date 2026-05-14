@@ -31,6 +31,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
 | `bristlenose_branch session-handoff-sentinels/` | `session-handoff-sentinels` | chore | Bridge visibility gap between /new-feature, /end-session, /close-branch via `.claude/last-end-session.json` sentinel |
+| `bristlenose_branch b1-long-audio-quality/` | `b1-long-audio-quality` | feature | TBD — fill in later |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -119,6 +120,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `session-handoff-sentinels` | `bristlenose_branch session-handoff-sentinels/` | local only |
+| `b1-long-audio-quality` | `bristlenose_branch b1-long-audio-quality/` | local only |
 | `ci-version-pinning` _(merged)_ | `bristlenose_branch ci-version-pinning/` _(detached, on disk)_ | local + remote deleted — merged to main 14 May 2026 (`e1c8083`) |
 | `tf-multi-project` _(merged)_ | `bristlenose_branch tf-multi-project/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`e73de11`) |
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
@@ -137,6 +139,24 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `b1-long-audio-quality`
+
+**Kind:** feature — code intended for main; ends in merge or PR-and-squash
+**Status:** Just started
+**Started:** 14 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch b1-long-audio-quality/`
+**Remote:** local only (push when ready)
+
+**What it does:** TBD — fill in later (see `.claude/plans/b1-long-audio-quality.md` for handoff brief).
+
+**Files this branch will touch:**
+- TBD — will be filled in as work progresses
+
+**Potential conflicts with other branches:**
+- TBD — fill in once scope firms up
 
 ---
 

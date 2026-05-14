@@ -29,11 +29,16 @@ picking up this doc fresh in six months?" — not by gap count.
 
 # Invocation
 
-Three modes, picked by args:
+Four modes, picked by args:
 
 - `/true-the-docs --corpus` — whole-tree triage report (no edits)
 - `/true-the-docs --topic <theme>` — reconcile a slice, apply edits
 - `/true-the-docs --doc <path>` — reconcile one doc, apply edits
+- `/true-the-docs --claude-pointers` — classify just the design docs
+  that `CLAUDE.md` (root + siblings) actively points at, then sweep
+  the CLAUDE.md files informed by the result. Cheaper than `--corpus`
+  for the most common "is the orientation layer still honest?" ask,
+  and the only mode that edits CLAUDE.md. See Phase 5 below.
 - `--dry-run` — any mode, writes edits to `/tmp/true-the-docs-preview/`
   instead of real paths
 
@@ -45,9 +50,13 @@ notes), `docs/walkthroughs/*.md` as evidence, `docs/*.md` top-level,
 moves — source-aware: public docs archive public, private docs archive
 private. Never cross the boundary.
 
-**Out of scope (v1):**
-- `CLAUDE.md` at any level — always-loaded-into-context truth docs,
-  higher blast radius, different genre. Stretch goal.
+**`CLAUDE.md` handling.** `CLAUDE.md` is in scope **only via
+`--claude-pointers` mode** (Phase 5). The other modes never touch
+CLAUDE.md — different genre, higher blast radius, always-in-context.
+Editing CLAUDE.md without the pointer-classification context is the
+trust-by-association failure mode that motivated v2.
+
+**Out of scope:**
 - `docs/private/*-session-notes.md` and `docs/walkthroughs/*.md` as
   edit targets — append-only historical records. Used as evidence only.
 - User-facing text — owned by `user-documentation-review` agent.
@@ -141,6 +150,83 @@ cheap; catches what re-reading won't):
    public doc landed in `docs/private/archive/`. Privacy ≠ staleness.
 
 Running the checks is cheap. Skipping is where docs re-rot.
+
+## Phase 5 — CLAUDE.md sweep (`--claude-pointers` mode only)
+
+After Phases 1–4 finish for the docs CLAUDE.md points at, sweep the
+CLAUDE.md files themselves informed by the per-doc classifications.
+This is the *only* mode that edits CLAUDE.md.
+
+### Phase 5a — Extract the pointer set
+
+Find the design-doc paths CLAUDE.md (root + every sibling) actively
+points at. One shot:
+
+```bash
+grep -oE "docs/[a-zA-Z0-9_/-]+\.(md|html)" CLAUDE.md desktop/CLAUDE.md \
+  bristlenose/*/CLAUDE.md frontend/CLAUDE.md 2>/dev/null \
+  | awk -F: '{print $2}' | sort -u
+```
+
+Flag any pointer whose target file doesn't exist — those are sweep
+wins regardless (broken link or already-archived doc).
+
+### Phase 5b — Classify in batches
+
+Fan out 3 parallel `design-doc-review` agents in shallow mode, batched
+by topic affinity (~25 docs per batch). Each agent returns archetype
+classifications and *especially* flags **patched-but-aspirational**
+bodies — see Traps. The classification feeds the sweep, not edits.
+
+### Phase 5c — Act on Archetype D before the sweep
+
+Any D-classified doc moves to its archive (source-aware) before
+CLAUDE.md is edited. The sweep updates pointers to the new archive
+paths. Don't sweep first and archive later — you'll re-edit CLAUDE.md
+twice.
+
+### Phase 5d — Sweep CLAUDE.md
+
+Concrete cuts to look for (in priority order):
+
+1. **Wall-of-text "Current status" / version-history blocks.** If
+   `CHANGELOG.md` exists, replace with one orienting paragraph + a
+   pointer. Version-history mirrors bitrot fast.
+2. **Pointers to docs the agent flagged D or to files that don't
+   exist.** Drop or redirect to archive.
+3. **Duplicate guidance.** A rule in Key Conventions repeated in
+   Gotchas is dead weight in Gotchas. A topic-pointer in Gotchas that
+   duplicates the sibling-CLAUDE.md index in Reference Docs is dead
+   weight. Always prefer the authoritative location.
+4. **Gotchas now enforced by a CI gate / hook / test.** The gate is
+   the fence; the prose is the redundant sign. Borderline: keep prose
+   if it explains *why* the gate exists in non-obvious ways.
+
+Do **not** sweep on autopilot. The third-pass test: "would removing
+this make a future session more likely to repeat the mistake?" If
+yes, keep.
+
+### Phase 5e — Update orphan refs in other docs
+
+When archive moves happen, refs in other design docs and sibling
+CLAUDE.md files break. Bulk path updates via `gsed` are faster than
+per-file Edit calls for mechanical substitutions. **But watch the
+leak-scan trap**: if updating a public doc that mentions a leak-pattern
+stem (`100days`, `qa-backlog`, `succession-plan`, etc. — see
+`~/.bristlenose-leak-patterns`), the Edit/Write hook will block. Use
+indirect rephrasing or leave the existing reference and add a
+breadcrumb elsewhere.
+
+### Phase 5 verification
+
+In addition to the 6 standard checks, run:
+
+7. **CLAUDE.md size delta:** report `wc -c` before and after. Useful
+   to spot whether the sweep earned its keep (char delta, not lines —
+   wall-of-text blocks are often one very long wrapped line).
+8. **Sibling-CLAUDE.md drift check:** the per-package CLAUDE.md files
+   should still cohere with the root after the sweep. Spot-check any
+   pointer that crosses files.
 
 # The archetypes (summary)
 
@@ -246,6 +332,22 @@ new section authoritative.
   and catches what re-reading won't.
 - **"Same subject" two docs.** Not duplication — one is canonical, one
   is cross-cutting. Cross-reference, don't mirror.
+- **Patched-but-aspirational bodies.** A doc with a recent status
+  banner at the top but a body that still describes the old or
+  proposed approach. Surface-trued, substance-stale. The cheap test
+  ("follow the pointer, does it look fresh?") gives a false pass — the
+  banner reassures, the body misleads. Shallow agent pass must look
+  past the header and spot-check the body. Flag explicitly in
+  classification output; don't fold into B or C silently. **Inverse
+  case** (header conservative, body shipped) is the same failure mode
+  in reverse — also flag.
+- **Leak-scan trap when updating orphan refs.** Public-doc Edit/Write
+  operations that touch a leak-pattern stem (`100days`, `qa-backlog`,
+  `succession-plan`, etc.) are blocked by the PreToolUse hook. When
+  archival creates orphan refs in public docs that mention those
+  stems, prefer indirect rephrasing or leave the original reference
+  and add a breadcrumb elsewhere. Don't fight the hook with
+  `--no-verify` — the hook is doing its job.
 
 # Output
 
@@ -262,13 +364,26 @@ Plan note: docs/private/truing-<scope>-<date>.md
 Next: review git diff; commit when satisfied
 ```
 
-# Known limitations (v1)
+# Known limitations
 
-- `CLAUDE.md` truing not supported. A trued design doc + stale sibling
-  `CLAUDE.md` can be worse than two stale docs (trust-by-association).
-  Users should know the skill's coverage is incomplete.
-- Cross-cutting docs (`design-modularity.md`, `design-i18n.md`) may
-  classify differently under different `--topic` invocations. Naive
-  last-write-wins for now. Owning-theme convention is future work.
-- Raw SHA anchors on feature branches are naive — trust user to not
-  invoke mid-squash-merge.
+- **CLAUDE.md truing** is supported only via `--claude-pointers` mode
+  (Phase 5). The other modes don't touch CLAUDE.md by design — the
+  pointer-classification context is what makes the sweep honest.
+- **Cross-cutting docs** (`design-modularity.md`, `design-i18n.md`)
+  may classify differently under different `--topic` invocations.
+  Naive last-write-wins for now. Owning-theme convention is future
+  work.
+- **Raw SHA anchors on feature branches are naive** — trust user to
+  not invoke mid-squash-merge.
+- **`--claude-pointers` mode skips orphan design docs.** Docs in
+  `docs/` that no CLAUDE.md points at aren't classified or audited —
+  that's a separate "orphan audit" pass, run quarterly.
+
+# Version history
+
+- **v2 (May 2026)** — added `--claude-pointers` mode + Phase 5
+  (CLAUDE.md sweep); source-aware archive boundary (public/private);
+  6th + 7th + 8th verification checks; patched-but-aspirational named
+  as an explicit trap; leak-scan trap documented.
+- **v1 (Apr 2026)** — initial release: `--corpus`, `--topic`, `--doc`
+  modes; A/B/C/D/E/P archetypes; 5-check verification.

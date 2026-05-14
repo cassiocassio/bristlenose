@@ -169,6 +169,23 @@ after transitive pulls (torch 288 MB, llvmlite 110 MB).
 cause and how the architecture absorbs it. Bare number updates rot
 again; the why keeps them honest.
 
+## 6a. Patched-but-aspirational (surface-trued, substance-stale)
+**Signal:** a doc with a recent header / status banner / truing note
+that suggests it's been brought current, but whose body still
+describes the *old* or *proposed* approach. Or the inverse: header
+says "not yet implemented" but the feature shipped. The cheap test
+("follow the pointer, does it look fresh?") gives a false pass — the
+banner reassures, the body misleads.
+**Example:** `design-react-islands.md` had a single-line A3 patch (14
+May 2026) updating its `bristlenose render` reference, but the entire
+body describes the pre-SPA marker-substitution architecture that the
+React migration replaced.
+**Fix shape:** flag **explicitly and separately** in classification
+output — do not fold into B (one-section drift) or C (multi-section)
+silently. The patched header gives skills like CLAUDE.md-pointer
+sweeps a false signal. Treat as `--doc` deep-pass candidate or D-move
+candidate depending on body coverage.
+
 ## 7. External service referenced but missing from succession plan
 **Signal:** doc mentions an external service, account, API key,
 OAuth app, signing certificate, domain, hosted endpoint, or other

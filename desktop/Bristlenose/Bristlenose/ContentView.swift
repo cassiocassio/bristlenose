@@ -317,6 +317,16 @@ struct ContentView: View {
                 showingAIConsent = true
             }
         }
+        // Defensive cleanup — macOS sometimes fails to fire
+        // `isTargeted=false` if the cursor drag-leaves the window
+        // entirely (Apple bug, intermittent for years). When the
+        // sidebar disappears (window close, scene teardown), clear
+        // any stale drop-target highlight state so it doesn't
+        // persist into the next appearance. (gruber-pass, fce69e4.)
+        .onDisappear {
+            dropTargetProjectID = nil
+            dropTargetFolderID = nil
+        }
         // AI & Privacy... re-access from app menu.
         .onReceive(NotificationCenter.default.publisher(for: .showAIConsentSheet)) { _ in
             aiConsentReviewMode = true

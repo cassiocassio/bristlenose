@@ -127,6 +127,6 @@ bristlenose serve ./my-interviews    # serves bristlenose-output/ from that dir 
 
 ## Supersedes
 
-- `docs/design-reactive-ui.md` — framework comparison (still relevant for rationale, but migration strategy is replaced by this doc)
+- `docs/archive/design-reactive-ui.md` — framework comparison (still relevant for rationale, but migration strategy is replaced by this doc)
 - `docs/private/frontend-evolution.md` — "100 pushes" phased roadmap (Jinja2 intermediate step no longer planned)
 - `docs/design-export-sharing.md` "dependency on React migration" section — export/sharing still deferred until React, but islands approach changes the timeline

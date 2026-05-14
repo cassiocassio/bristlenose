@@ -24,7 +24,7 @@ Active work, driven by the push from CLI tool to end-user app:
 - **Drag-and-drop import** — add recordings without the command line
 - **Research-package export** — zip of report + transcripts + video clips for handing off ([design-export-html.md](design-export-html.md))
 - **First-run experience** — skip the terminal and the API-key ceremony
-- **Incremental re-run** — add new interviews to an existing project, preserve your tags and edits ([design-serve-milestone-1.md](design-serve-milestone-1.md))
+- **Incremental re-run** — add new interviews to an existing project, preserve your tags and edits ([design-serve-milestone-1.md](archive/design-serve-milestone-1.md))
 - **Performance gates** — virtualisation for 1000+ quote reports, bundle-size budget, CI regression tests ([design-performance.md](design-performance.md))
 - **Accessibility pass** — WCAG 2.1 AA, VoiceOver, keyboard-complete navigation
 - **Visual polish** — typography audit, SVG icon set, colour themes, responsive quote grid ([design-responsive-layout.md](design-responsive-layout.md))

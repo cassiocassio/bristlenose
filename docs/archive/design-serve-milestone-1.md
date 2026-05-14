@@ -1,3 +1,37 @@
+---
+status: archived-reference
+last-trued: 2026-05-14
+trued-against: HEAD@main on 2026-05-14
+superseded-by:
+  - design-react-migration.md
+  - design-multi-project.md
+  - design-session-management.md
+---
+
+> **Archived — do not treat body as current.**
+
+# Milestone 1 — Sessions Table as React Island (archived)
+
+## What changed since this doc was written
+
+This doc is the planning record for the first React island — the sessions table — written when only milestone 0 had landed (FastAPI serving static HTML, SQLite with a single `projects` table, `HelloIsland` hitting `/api/health`). Everything it proposes has been implemented and the work has moved on: the React migration is complete through Step 10 (1 Mar 2026), the database schema covers projects + sessions + people + edits, all 11 islands shipped and were then consolidated into a single SPA with `RouterProvider` (vanilla JS stripped in serve mode), and multi-project handling has its own design doc.
+
+## Current authoritative docs
+
+- [design-react-migration.md](../design-react-migration.md) — completed React migration plan and step-by-step record
+- [design-multi-project.md](../design-multi-project.md) — current multi-project schema (instance vs project tables, scope rules)
+- [design-session-management.md](../design-session-management.md) — current session model and re-import flow
+- [design-html-report.md](../design-html-report.md) — current report architecture
+- `bristlenose/server/CLAUDE.md` — current serve-mode architecture
+
+## Retention note
+
+Retained as `archived-reference`. The decision narrative around the domain model (Decision 1, the "first-class citizens" inventory) is useful design-rationale for future contributors trying to understand why entities are named and shaped the way they are. The specific milestone plan and incremental component-migration steps are replaced by the completed React migration.
+
+---
+
+# Original body (preserved verbatim)
+
 # Milestone 1 — Sessions Table as React Island
 
 ## What we're building

@@ -14,7 +14,7 @@ This worked well during the island-by-island migration, but the hybrid architect
 
 The vanilla JS shell owns ~2,800 lines across 25 modules. The React side has 16 primitives, 7 islands, 12 API endpoints, and 330+ tests. The path forward is clear: migrate the shell to React, smallest pieces first.
 
-This plan supersedes `docs/design-reactive-ui.md` (migration strategy sections) and extends `docs/design-react-component-library.md` (which covered primitives — all 16 now complete).
+This plan supersedes `docs/archive/design-reactive-ui.md` (migration strategy sections) and extends `docs/design-react-component-library.md` (which covered primitives — all 16 now complete).
 
 ## Sequencing principle
 
@@ -207,7 +207,7 @@ Step 1 (Settings) ✓   Step 2 (About) ✓   Step 3 (QuotesStore) ✓
 
 | Doc | Status after this plan |
 |-----|----------------------|
-| `docs/design-reactive-ui.md` | Migration strategy sections superseded. Framework choice, business risk assessment, file:// audit, server options, and testing strategy sections remain valid reference |
+| `docs/archive/design-reactive-ui.md` | Migration strategy sections superseded. Framework choice, business risk assessment, file:// audit, server options, and testing strategy sections remain valid reference |
 | `docs/design-react-component-library.md` | Primitive dictionary and build sequence complete (all 16 primitives shipped). Coverage matrix and CSS alignment sections remain valid reference |
 | `docs/design-export-sharing.md` | Unchanged — Step 10 implements the design described there |
-| `docs/design-serve-milestone-1.md` | Complete — domain schema, importer, sessions API all shipped |
+| `docs/archive/design-serve-milestone-1.md` | Complete — domain schema, importer, sessions API all shipped |

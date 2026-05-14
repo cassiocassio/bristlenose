@@ -395,7 +395,7 @@ Originally called "researcher-scoped" — renamed to "instance-scoped" after the
 
 **10. `session_speaker` as the missing entity.** Identified during the concept inventory: a speaker code is really a join between a person and a session. Modelling it explicitly (with speaker_code, role, and per-session stats) is what makes cross-session moderator linking possible in Phase 2.
 
-Full design rationale in `docs/design-serve-milestone-1.md`.
+Full design rationale in `docs/archive/design-serve-milestone-1.md`.
 
 ---
 

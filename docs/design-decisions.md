@@ -94,7 +94,7 @@ The contentEditable and TreeWalker pain with React is real but bounded — a few
 
 Rules: (1) New features and design changes: React only. (2) CSS is shared — changes apply to both paths. (3) Vanilla JS is frozen — data-integrity fixes only. (4) When a section becomes a React component, its Jinja2 equivalent is dead code. (5) Post-A3 (12 May 2026): the `bristlenose render` command was removed; stage 12 still writes the static HTML to disk as a sealed byproduct but the path is never surfaced. Offline share happens via `bristlenose serve` → toolbar **Export HTML** (self-contained file with the React bundle embedded). Future direction: repurpose `--static` as a markdown deliverable for CLI users (post-100-days; see `docs/design-cli-improvements.md` §Future direction).
 
-_See also: `docs/design-reactive-ui.md` §Business risk assessment, `docs/design-react-migration.md`_
+_See also: `docs/archive/design-reactive-ui.md` §Business risk assessment, `docs/design-react-migration.md`_
 
 ### Module-level store
 

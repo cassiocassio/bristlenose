@@ -15,6 +15,7 @@
       "print": "Drucken…"
     },
     "edit": {
+      "undoRemove": "\u201e%@\u201c wiederherstellen",
       "undo": "Widerrufen",
       "redo": "Wiederholen",
       "find": "Suchen…",
@@ -45,6 +46,7 @@
       "switchToDarkMode": "Zum dunklen Modus wechseln"
     },
     "project": {
+      "removeFromSidebar": "Aus Seitenleiste entfernen",
       "showInFinder": "Im Finder zeigen",
       "rename": "Umbenennen…",
       "moveTo": "Bewegen in",
@@ -113,6 +115,16 @@
     }
   },
   "chrome": {
+    "spotlight": {
+      "breadcrumbA11y": "Ordnerpfad: %@",
+      "chooseDifferent": "Anderen w\u00e4hlen\u2026",
+      "useThisFolder": "Diesen Ordner verwenden",
+      "title": "Ein Ordner, der \u201e%@\u201c sein k\u00f6nnte, wurde gefunden."
+    },
+    "locateError": {
+      "message": "Dieser Ordner sieht nicht wie ein analysiertes Projekt aus. W\u00e4hlen Sie den Ordner, in dem die Analyse ausgef\u00fchrt wurde, oder analysieren Sie einen neuen Ordner \u00fcber den Begr\u00fc\u00dfungsbildschirm.",
+      "title": "Ordner konnte nicht ge\u00f6ffnet werden"
+    },
     "startingServer": "Server wird gestartet…",
     "loadingReport": "Bericht wird geladen…",
     "noProjectSelected": "Kein Projekt ausgewählt",
@@ -308,5 +320,13 @@
     "errorTimedOut": "Zeitüberschreitung der Verbindung. Die Server von Ollama sind möglicherweise gerade langsam; versuche es gleich noch einmal.",
     "errorCantReach": "Ollama ist nicht erreichbar. Starte es nach der Installation aus „Programme“ und versuche es erneut.",
     "errorGeneric": "Einrichtung fehlgeschlagen: %@"
+  },
+  "toast": {
+    "removedBatchAnnouncement": "%d Projekte entfernt. Dr\u00fccken Sie Befehl-Z, um den Vorgang r\u00fcckg\u00e4ngig zu machen.",
+    "removedAnnouncement": "\u201e%@\u201c entfernt. Dr\u00fccken Sie Befehl-Z, um den Vorgang r\u00fcckg\u00e4ngig zu machen.",
+    "removeBlockedByRun": "Beenden Sie den Lauf von \u201e%@\u201c, bevor Sie ihn entfernen.",
+    "removedBatch": "%d Projekte entfernt.",
+    "undo": "R\u00fcckg\u00e4ngig",
+    "removed": "Projekt entfernt."
   }
 }

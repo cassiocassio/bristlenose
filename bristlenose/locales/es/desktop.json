@@ -154,7 +154,11 @@
     "multipleSelected": "%d elementos seleccionados",
     "multipleSelectedHint": "Selecciona un solo proyecto para ver su informe.",
     "welcomeTitle": "Te damos la bienvenida a Bristlenose",
-    "welcomeBody": "Arrastra una carpeta con grabaciones de entrevistas a la barra lateral, o haz clic en + Nuevo proyecto para empezar."
+    "welcomeBody": "Arrastra una carpeta con grabaciones de entrevistas a la barra lateral, o haz clic en + Nuevo proyecto para empezar.",
+    "inFlightSwitchTitle": "¿Cancelar el análisis actual?",
+    "inFlightSwitchMessage": "«%@» aún se está analizando. Cambiar de proyecto lo cancelará — podrás reanudar desde donde se detuvo.",
+    "cancelAndSwitch": "Detener y cambiar",
+    "stay": "No cambiar"
   },
   "availability": {
     "unmountedVolume": "{{name}} · no disponible",

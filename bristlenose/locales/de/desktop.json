@@ -154,7 +154,11 @@
     "multipleSelected": "%d Elemente ausgewählt",
     "multipleSelectedHint": "Wählen Sie ein einzelnes Projekt aus, um den Bericht anzuzeigen.",
     "welcomeTitle": "Willkommen bei Bristlenose",
-    "welcomeBody": "Ziehen Sie einen Ordner mit Interview-Aufnahmen in die Seitenleiste, oder klicken Sie auf + Neues Projekt, um zu starten."
+    "welcomeBody": "Ziehen Sie einen Ordner mit Interview-Aufnahmen in die Seitenleiste, oder klicken Sie auf + Neues Projekt, um zu starten.",
+    "inFlightSwitchTitle": "Aktuelle Analyse abbrechen?",
+    "inFlightSwitchMessage": "„%@“ wird noch analysiert. Beim Wechsel des Projekts wird die Analyse abgebrochen — Sie können dort fortsetzen, wo sie unterbrochen wurde.",
+    "cancelAndSwitch": "Anhalten und wechseln",
+    "stay": "Nicht wechseln"
   },
   "availability": {
     "unmountedVolume": "{{name}} · nicht gefunden",

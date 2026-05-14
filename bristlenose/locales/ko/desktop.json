@@ -154,7 +154,11 @@
     "multipleSelected": "%d개 항목 선택됨",
     "multipleSelectedHint": "보고서를 보려면 프로젝트를 하나만 선택하세요.",
     "welcomeTitle": "Bristlenose에 오신 것을 환영합니다",
-    "welcomeBody": "인터뷰 녹음 폴더를 사이드바로 드래그하거나, + 새 프로젝트를 클릭하여 시작하세요."
+    "welcomeBody": "인터뷰 녹음 폴더를 사이드바로 드래그하거나, + 새 프로젝트를 클릭하여 시작하세요.",
+    "inFlightSwitchTitle": "현재 분석을 취소하시겠어요?",
+    "inFlightSwitchMessage": "\"%@\" 분석이 진행 중입니다. 프로젝트를 전환하면 분석이 취소됩니다 — 중단된 지점부터 다시 시작할 수 있습니다.",
+    "cancelAndSwitch": "중지하고 전환",
+    "stay": "그대로 두기"
   },
   "availability": {
     "unmountedVolume": "{{name}} · 없음",

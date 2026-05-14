@@ -154,7 +154,11 @@
     "multipleSelected": "%d 個の項目を選択中",
     "multipleSelectedHint": "レポートを表示するには、プロジェクトを 1 つ選択してください。",
     "welcomeTitle": "Bristlenose へようこそ",
-    "welcomeBody": "インタビュー録音のフォルダをサイドバーにドラッグするか、＋ 新規プロジェクト をクリックして始めてください。"
+    "welcomeBody": "インタビュー録音のフォルダをサイドバーにドラッグするか、＋ 新規プロジェクト をクリックして始めてください。",
+    "inFlightSwitchTitle": "現在の分析をキャンセルしますか？",
+    "inFlightSwitchMessage": "「%@」はまだ分析中です。プロジェクトを切り替えると分析がキャンセルされます — 中断したところから再開できます。",
+    "cancelAndSwitch": "停止して切り替え",
+    "stay": "変更しない"
   },
   "toolbar": {
     "back": "戻る (⌘[)",

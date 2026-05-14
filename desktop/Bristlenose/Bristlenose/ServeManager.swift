@@ -117,11 +117,18 @@ final class ServeManager: ObservableObject {
     /// Observer for preference changes that require a serve restart.
     private var prefsObserver: Any?
 
-    /// Start serving a project. Stops any existing serve process first.
+    /// Start serving a project. Callers must call `stop()` or
+    /// `shutdown(timeout:)` first if a sidecar is already running — `start()`
+    /// only forwards to `stop()` defensively when a `process` reference
+    /// lingers. Direct callers without a prior sidecar (cold launch,
+    /// post-Locate resume, post-failure retry) skip the teardown entirely.
+    /// `switchProject(to:)` is the orchestrator for the prior-running case.
     ///
     /// - Parameter projectPath: Absolute path to the project directory.
     func start(projectPath: String) {
-        stop()
+        if process != nil {
+            stop()
+        }
 
         guard let mode = self.mode else {
             // Resolution failed at init; state is already .failed.
@@ -291,10 +298,134 @@ final class ServeManager: ObservableObject {
 
     /// Restart the serve process if one is running, using the same project path.
     /// Called when user preferences change (provider, model, API key, etc.).
+    /// Uses the same escalating teardown as `switchProject(to:)` so a Whisper-wedged
+    /// sidecar doesn't survive a prefs save (William's parsimony pass, Finding 32).
     func restartIfRunning() {
         guard case .running = state, let path = currentProjectPath else { return }
         log.info("preferences changed — restarting serve")
+        Task { @MainActor in
+            await shutdown(timeout: .seconds(2))
+            start(projectPath: path)
+        }
+    }
+
+    /// Synchronously kill the running sidecar with signal escalation.
+    /// SIGINT first (Uvicorn graceful shutdown), wait up to `timeout` seconds,
+    /// then SIGKILL if the process is still alive.
+    ///
+    /// Async because the wait is non-blocking. Safe to call when no process
+    /// is running (no-op).
+    ///
+    /// This is the teardown half of `switchProject(to:)`. `stop()` is the
+    /// fire-and-forget version used by Cmd+Q and selection-cleared paths —
+    /// it sends SIGINT and returns immediately without waiting for exit.
+    func shutdown(timeout: Duration) async {
+        timeoutTask?.cancel()
+        timeoutTask = nil
+
+        if case .external = mode, process == nil {
+            readTask?.cancel()
+            readTask = nil
+            state = .idle
+            serverVersion = nil
+            authToken = nil
+            currentProjectPath = nil
+            return
+        }
+
+        guard let proc = process, proc.isRunning else {
+            readTask?.cancel()
+            readTask = nil
+            process = nil
+            state = .idle
+            serverVersion = nil
+            authToken = nil
+            currentProjectPath = nil
+            return
+        }
+
+        // Polite signal — Uvicorn handles SIGINT as graceful shutdown.
+        proc.interrupt()
+
+        // Wait up to `timeout`, polling every 50ms. Uvicorn typically exits
+        // in <100ms; the timeout protects against a wedged event loop or a
+        // C extension holding the GIL through the shutdown signal.
+        let deadline = ContinuousClock.now.advanced(by: timeout)
+        while proc.isRunning && ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+
+        if proc.isRunning {
+            // SIGKILL — bypasses Python signal handling entirely; always wins.
+            // Side effect: no `sidecar_exit` log line (handler never runs).
+            log.warning("sidecar didn't exit within timeout; sending SIGKILL")
+            kill(proc.processIdentifier, SIGKILL)
+            // Best-effort grace for kernel to reap. The `generation` counter
+            // protects state writes against a late terminationHandler callback
+            // if the kernel hasn't yet reaped by the time we clear `process`
+            // below — see `start()` for that guard.
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+
+        readTask?.cancel()
+        readTask = nil
+        process = nil
+        state = .idle
+        serverVersion = nil
+        authToken = nil
+        currentProjectPath = nil
+    }
+
+    /// Switch the loaded project. Tears down the current sidecar with signal
+    /// escalation, starts a new one pointed at `path`, and resolves when the
+    /// new sidecar reports ready (or fails).
+    ///
+    /// **Choreography** (Mini-spec 4 in `tf-multi-project.md`):
+    /// 1. (caller) In-flight run guard — present confirm sheet before invoking
+    /// 2. (caller) UI skeleton — sidebar selection updates immediately;
+    ///    detail pane shows `BootView(phase: .startingSidecar)` while
+    ///    `state == .starting`. This is the SwiftUI `.id(project.id)` reset
+    ///    on `WebView`, which fully tears down the old WKWebView.
+    /// 3. (here) Tear down current sidecar — `shutdown(timeout:)` above.
+    /// 4. (caller) Resolve new bookmark + acquire `ProjectBookmarkLease` —
+    ///    if it throws, mark project `cantFind` and don't call this.
+    /// 5. (here) Spawn new sidecar via existing `start(projectPath:)`.
+    /// 6. (automatic) WKWebView reload — when `selectedProject.id` changes,
+    ///    SwiftUI rebuilds `WebView` with a fresh `WKWebsiteDataStore`
+    ///    (`.nonPersistent()` returns a new partition every call). This
+    ///    drops all `localStorage`, `sessionStorage`, cookies, and HTTP
+    ///    cache from the previous project. No explicit `resetDataStore()`
+    ///    call is required.
+    ///
+    /// **Cache leak defence:** the server adds `Cache-Control: no-store` to
+    /// every `/api/projects/*` response (see `bristlenose/server/app.py`).
+    /// Belt-and-braces against any cache layer between WKWebView and the
+    /// sidecar that the data-store reset doesn't cover.
+    ///
+    /// - Parameter path: filesystem path to the project root.
+    /// - Returns: when the new sidecar reaches `.running` or `.failed`.
+    ///   Does NOT throw — callers inspect `state` (`@Published`) afterwards;
+    ///   the `.failed` case flows through SwiftUI to `BootView(.failed)` in
+    ///   `ContentView.detail`. No explicit caller-side error handling needed.
+    ///
+    /// **TODO(phase-2-followup):** wire `ProjectBookmarkLease` here per Mini-spec
+    /// 4 step 4. The lease type is shipped (`ProjectBookmarkLease.swift`) but
+    /// not yet integrated — `ProjectIndex` needs to hold one lease per `ready`
+    /// project, drop on switch, acquire on selection. The next branch wires it
+    /// (also unblocks #14 folder watcher).
+    func switchProject(to path: String) async {
+        log.info("switching project — shutting down current sidecar")
+        await shutdown(timeout: .seconds(2))
+        log.info("starting new sidecar")
         start(projectPath: path)
+        // Wait for transition out of .starting (to .running or .failed) so
+        // callers can await the switch completing. Bounded by start()'s own
+        // 15s timeout — it transitions to .failed if the sidecar never prints
+        // the Report line.
+        let deadline = ContinuousClock.now.advanced(by: .seconds(20))
+        while case .starting = state, ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
     }
 
     /// Overlay UserDefaults preferences as environment variables for the

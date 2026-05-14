@@ -651,7 +651,7 @@ Both reviews acknowledged these design decisions as correct:
 
 ### Summary
 
-The **schema is already multi-project ready** — the dangerous assumptions are in the **server startup** (single project import) and **frontend hardcoded IDs** (12 locations, all parameterisable). The data model decisions made in Milestone 1 (`design-serve-milestone-1.md`) were forward-looking: instance-scoped persons, project-scoped analysis tables, and the `SessionSpeaker` join table all support multi-project without migration.
+The **schema is already multi-project ready** — the dangerous assumptions are in the **server startup** (single project import) and **frontend hardcoded IDs** (12 locations, all parameterisable). The data model decisions made in Milestone 1 (`archive/design-serve-milestone-1.md`) were forward-looking: instance-scoped persons, project-scoped analysis tables, and the `SessionSpeaker` join table all support multi-project without migration.
 
 ---
 

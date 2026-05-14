@@ -1,10 +1,39 @@
-# Reactive UI Architecture
+---
+status: archived-reference
+last-trued: 2026-05-14
+trued-against: HEAD@main on 2026-05-14
+superseded-by:
+  - design-react-migration.md
+  - design-react-component-library.md
+  - design-react-islands.md
+---
 
-> **Partially superseded (Feb 2026).** The migration strategy, milestones, and incremental plan sections are replaced by [`docs/design-react-migration.md`](design-react-migration.md). Framework choice, business risk assessment, file:// audit, server options, and testing strategy sections below remain valid reference.
+> **Archived — do not treat body as current.**
+
+# Reactive UI Architecture (archived)
+
+## What changed since this doc was written
+
+This doc framed the original decision (Feb 2026) to add a local dev server and pick a reactive UI framework for the report. The migration strategy, milestones, and incremental plan it describes are fully superseded: the FastAPI + SQLite server shipped, the React migration completed (Steps 1–10, 1 Mar 2026), and the vanilla JS shell was stripped in serve mode. The framework-comparison table, business-risk assessment, file:// audit, server options, and testing strategy sections remain useful as design-rationale reference.
+
+## Current authoritative docs
+
+- [design-react-migration.md](../design-react-migration.md) — completed React migration plan and step-by-step record
+- [design-react-component-library.md](../design-react-component-library.md) — the 16 React primitives that landed
+- [design-react-islands.md](../design-react-islands.md) — original island architecture (note: the marker-substitution mechanism is itself superseded by SPA mode; see that doc's truing banners)
+- [design-playwright-testing.md](../design-playwright-testing.md) — the Playwright E2E layer this doc anticipated
+
+## Retention note
+
+Retained as `archived-reference`. The framework-choice analysis (business risk, hiring pool, "too big to fail" reasoning) and the file:// → http:// audit are still useful design-rationale references for future contributors revisiting these problem spaces. The specific migration plan is replaced.
+
+---
+
+# Original body (preserved verbatim)
 
 Local dev server + framework migration for the HTML report.
 
-**Status:** Server shipped (FastAPI + SQLite). React islands shipped (7/7 content panels). Vanilla JS shell migration planned — see [`docs/design-react-migration.md`](design-react-migration.md).
+**Status (Feb 2026, at time of writing):** Server shipped (FastAPI + SQLite). React islands shipped (7/7 content panels). Vanilla JS shell migration planned — see [`docs/design-react-migration.md`](../design-react-migration.md).
 
 ---
 

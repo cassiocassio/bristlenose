@@ -10,7 +10,7 @@ FastAPI server (`bristlenose serve`) that serves a React SPA (React Router, path
 bristlenose/server/
   app.py          — FastAPI factory (create_app), dev-mode HTML injection
   db.py           — SQLAlchemy engine, session factory, SQLite with WAL + FK
-  models.py       — 24 ORM tables (see docs/design-serve-milestone-1.md)
+  models.py       — 24 ORM tables (see docs/archive/design-serve-milestone-1.md)
   importer.py     — Pipeline JSON → SQLite on startup (idempotent upsert)
   admin.py        — SQLAdmin browser (dev-only, /admin/)
   autocode.py     — AutoCode engine (taxonomy, batching, async job runner)
@@ -273,7 +273,7 @@ Stress tests cover: Unicode (emoji, CJK, RTL, combining chars), large payloads (
 
 ### Future: Playwright E2E tests (post-React migration)
 
-After the React migration, Playwright E2E tests will cover the full browser → JS → API → DB path. Currently deferred because E2E tests target DOM selectors which all change during migration. The React components will emit `data-testid` attributes from day one to provide stable selectors. See `docs/design-reactive-ui.md` "Testing strategy" section for the full plan.
+After the React migration, Playwright E2E tests will cover the full browser → JS → API → DB path. Currently deferred because E2E tests target DOM selectors which all change during migration. The React components will emit `data-testid` attributes from day one to provide stable selectors. See `docs/archive/design-reactive-ui.md` "Testing strategy" section for the full plan.
 
 ## React migration status
 
@@ -289,9 +289,9 @@ See `docs/design-autocode.md` for the 7-step workflow, API endpoints, and testin
 
 ## Reference docs
 
-- **Domain model rationale**: `docs/design-serve-milestone-1.md`
+- **Domain model rationale**: `docs/archive/design-serve-milestone-1.md`
 - **Migration architecture**: `docs/design-serve-migration.md`
 - **React component library** (16 primitives, build sequence, coverage matrix): `docs/design-react-component-library.md` — **read this before building any React component**
 - **Codebook island design** (audit, decisions, CSS cleanup): `docs/design-codebook-island.md`
-- **React migration plan**: `docs/design-reactive-ui.md`
+- **React migration plan**: `docs/archive/design-reactive-ui.md`
 - **Phase-by-phase walkthrough**: `docs/react-migration-walkthrough.md`

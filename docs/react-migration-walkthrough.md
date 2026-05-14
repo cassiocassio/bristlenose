@@ -139,7 +139,7 @@ This is the **prerequisite for the sharing/export story**. Once the React app ca
 - **Bundle size** — the full React app + all components need to be small enough for a standalone HTML file. Code splitting helps for served mode but not for export. May need to revisit Preact at this point (same API, ~3 KB vs ~42 KB)
 - **SSR/hydration** — for the standalone file, the HTML needs to be pre-rendered (not just a blank `<div id="root">`). Either server-side render in Python (via a Node subprocess or a Python JSX renderer) or ship the app as a client-only SPA with a loading state
 - **Backward compatibility** — existing reports (static HTML files) should still work. The pipeline version that generated them predates the React app. These files are self-contained and will continue to work as-is
-- **E2E testing** — once the full SPA stabilises, add Playwright E2E tests covering all 11 DB-mutating user actions. The `data-testid` attributes added during Phase 2 component migrations make this straightforward. See `docs/design-reactive-ui.md` "Testing strategy" section
+- **E2E testing** — once the full SPA stabilises, add Playwright E2E tests covering all 11 DB-mutating user actions. The `data-testid` attributes added during Phase 2 component migrations make this straightforward. See `docs/archive/design-reactive-ui.md` "Testing strategy" section
 
 ---
 
@@ -178,7 +178,7 @@ Copy this into a new Claude session in the `serve` worktree:
 
 > **Phase 1: Data API for the React migration.**
 >
-> Context: Read `docs/design-reactive-ui.md` (the full migration plan) and `docs/react-migration-walkthrough.md` (phase-by-phase walkthrough). Phase 0 is done — FastAPI server exists at `bristlenose/server/app.py`, React islands work, `bristlenose serve` runs.
+> Context: Read `docs/archive/design-reactive-ui.md` (the full migration plan) and `docs/react-migration-walkthrough.md` (phase-by-phase walkthrough). Phase 0 is done — FastAPI server exists at `bristlenose/server/app.py`, React islands work, `bristlenose serve` runs.
 >
 > Phase 1 goal: Add REST API endpoints so the vanilla JS modules can save edits via HTTP instead of localStorage/clipboard. No React changes — keep existing JS, just swap the storage layer.
 >

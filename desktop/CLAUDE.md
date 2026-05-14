@@ -4,7 +4,7 @@ SwiftUI macOS app wrapping the Bristlenose React SPA in a WKWebView. Native proj
 
 ## Shipping architecture (alpha and beyond)
 
-See `docs/design-desktop-python-runtime.md` (to be written as part of Track C C0) for the canonical design. Summary:
+See `docs/design-desktop-python-runtime.md` for the canonical design. Summary:
 
 - **Bundled, signed PyInstaller sidecar.** The Python `bristlenose serve` runtime ships inside `Bristlenose.app/Contents/Resources/bristlenose-sidecar/`. Every `.dylib`, `.so`, and framework inside is individually codesigned with Hardened Runtime. FFmpeg + ffprobe bundled alongside (trimmed codec set, ~25 MB). Whisper transcription model downloaded on first run to `~/Library/Application Support/Bristlenose/models/` — keeps the `.app` under ~200 MB, matches Aiko/MacWhisper/Audio Hijack UX.
 - **Why sidecar, not embedded interpreter.** Long-running pipeline operations (transcription, LLM calls) must be independently killable from Activity Monitor. An embedded Python interpreter takes the SwiftUI chrome down if Python hangs — beach ball on the toolbar, force-quit the whole app. Separate process keeps that failure mode contained.
@@ -309,7 +309,7 @@ After Track C C1 lands, three shared Xcode schemes map to three sidecar resoluti
 
 **Linux / Windows contributors** never touch this — these env vars are read by Swift, not Python. If you're working on the Python sidecar or React frontend, run `bristlenose serve` directly from your terminal and use any browser; the macOS shell is out of scope.
 
-See `docs/design-modularity.md` "External dev server" glossary entry and `docs/private/sprint2-tracks.md` Track C C1 for the implementation spec. Underlying resolver is `SidecarMode.resolve(externalPortRaw:sidecarPathRaw:bundleResourceURL:fileManager:)` — a pure function (takes the two env-var raw strings as typed `Optional<String>` rather than an env dictionary, so the string literals live only inside the caller's `#if DEBUG` block and are absent from the Release Mach-O). Unit-tested in `BristlenoseTests/SidecarModeTests.swift` (orphan target today — see test-target note in this file).
+See `docs/design-modularity.md` "External dev server" glossary entry for the implementation spec. Underlying resolver is `SidecarMode.resolve(externalPortRaw:sidecarPathRaw:bundleResourceURL:fileManager:)` — a pure function (takes the two env-var raw strings as typed `Optional<String>` rather than an env dictionary, so the string literals live only inside the caller's `#if DEBUG` block and are absent from the Release Mach-O). Unit-tested in `BristlenoseTests/SidecarModeTests.swift` (orphan target today — see test-target note in this file).
 
 ## Gotchas
 
@@ -449,6 +449,5 @@ Two injection points exist for safe testing:
 
 - `docs/design-modularity.md` — canonical reference for what ships where (Python deps, extras, Background Assets, no-fork principle across CLI + macOS)
 - `docs/design-desktop-python-runtime.md` — canonical shipping architecture for the Mac sidecar specifically (write-up due as part of Track C C0)
-- `docs/private/road-to-app-store.md` — 14 checkpoints to TestFlight
-- `docs/private/sprint2-tracks.md` — Track A (sandbox plumbing), Track B (MVP UX flow), Track C (sidecar bundling + signing)
+- `docs/private/road-to-app-store.md` — current Apple-side gate sequence to TestFlight
 - `desktop/v0.1-archive/README.md` — v0.1 bundling pipeline reference

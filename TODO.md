@@ -83,7 +83,7 @@ Remaining desktop bugs and i18n items tracked in `docs/private/100days.md` §2, 
 
 - [x] **Phase 3: Folders** — `FolderRow.swift`, `Folder` model with CRUD, `folderId` on Project, `SidebarSelection` enum, `DisclosureGroup` collapse, "Move to" submenu, adaptive Project menu, File > New Folder (⇧⌘N), `folder.badge.plus` enabled, collapsed state persistence, locale keys in all 6 languages
 
-Remaining multi-project phases tracked in `docs/design-project-sidebar.md` (Phases 4–5: bookmarks/availability, archive/bin).
+Remaining multi-project work tracked in `.claude/plans/tf-multi-project.md` (Phase 0 + Phase 1 shipped 14 May 2026; Phase 2 sidecar-restart switch / drag-onto-existing / folder watcher and Phase 3 cloud-evicted still open). Original 5-phase plan in `docs/design-project-sidebar.md` is superseded for TF scope.
 
 ## CI hardening — sprint 2 step 0 (18 Apr 2026, ci-cleanup branch)
 
@@ -243,7 +243,7 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 
 | Document | Covers |
 |----------|--------|
-| `docs/design-reactive-ui.md` | Framework comparison, risk assessment (partially superseded by React migration) |
+| `docs/archive/design-reactive-ui.md` | Framework comparison, risk assessment (partially superseded by React migration) |
 | `docs/design-react-migration.md` | **React migration plan** (Steps 1–10, all complete) |
 | `docs/design-react-component-library.md` | 16-primitive component library (complete) |
 | `docs/design-llm-providers.md` | Provider roadmap |

@@ -1716,12 +1716,31 @@ private struct SidebarDropDelegate: DropDelegate {
     let onDropOnFreeSpace: ([NSItemProvider]) -> Void
     let onMoveProjectToFolder: (UUID, UUID?) -> Void
 
-    /// Translate `DropInfo.location` (local to the .onDrop view) into the
-    /// `.global` coord space the row/folder frames are recorded in.
-    private func globalPoint(_ local: CGPoint) -> CGPoint {
-        CGPoint(
-            x: local.x + receiverGlobalOrigin.x,
-            y: local.y + receiverGlobalOrigin.y
+    /// Translate `DropInfo.location` into the `.global` coord space the
+    /// row/folder frames are recorded in.
+    ///
+    /// Apple's docs say `info.location` is local to the receiving view, so
+    /// in theory adding `receiverGlobalOrigin` converts it. In practice on
+    /// macOS 26 the conversion produces a constant one-row offset (cohort
+    /// QA, 14 May 2026) — most likely because SwiftUI's List places
+    /// `info.location`'s anchor inside the table-content area (below the
+    /// section header) while `.background(GeometryReader)` captures the
+    /// outer List frame (above the header).
+    ///
+    /// **Fallback:** if a straight `info.location` (treated as already
+    /// global) lands inside any known row frame, use it directly; otherwise
+    /// fall back to the local+origin translation. This works either way
+    /// the SDK's behaviour swings, and the second case still fires when
+    /// info.location is genuinely local.
+    private func globalPoint(_ point: CGPoint) -> CGPoint {
+        let direct = point
+        if rowFrames.values.contains(where: { $0.contains(direct) }) ||
+           folderFrames.values.contains(where: { $0.contains(direct) }) {
+            return direct
+        }
+        return CGPoint(
+            x: point.x + receiverGlobalOrigin.x,
+            y: point.y + receiverGlobalOrigin.y
         )
     }
 

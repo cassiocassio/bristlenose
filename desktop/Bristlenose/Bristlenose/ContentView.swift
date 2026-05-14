@@ -117,35 +117,6 @@ struct InFlightSwitchPrompt: Identifiable {
     let priorSelection: Set<SidebarSelection>
 }
 
-// MARK: - Row frame preference key
-
-/// Preference key collecting project row frames for drop hit-testing.
-/// Each project row reports its frame in the sidebar's named coordinate space.
-private struct RowFramePreferenceKey: PreferenceKey {
-    static let defaultValue: [UUID: CGRect] = [:]
-    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
-        value.merge(nextValue(), uniquingKeysWith: { $1 })
-    }
-}
-
-/// Preference key collecting folder row frames for drop hit-testing.
-private struct FolderFramePreferenceKey: PreferenceKey {
-    static let defaultValue: [UUID: CGRect] = [:]
-    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
-        value.merge(nextValue(), uniquingKeysWith: { $1 })
-    }
-}
-
-/// Preference key carrying the sidebar's global origin so the drop delegate
-/// can translate `DropInfo.location` (delegate-local) into the same coord
-/// space as the row/folder frames (which we record in `.global`).
-private struct SidebarOriginPreferenceKey: PreferenceKey {
-    static let defaultValue: CGPoint = .zero
-    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) {
-        value = nextValue()
-    }
-}
-
 /// Two-column NavigationSplitView: project list sidebar + WKWebView detail.
 ///
 /// Selecting a project starts `bristlenose serve` and loads the React SPA
@@ -190,25 +161,15 @@ struct ContentView: View {
     /// The ID of the project currently showing the icon picker popover, or nil.
     @State private var iconPickerProjectID: UUID?
 
-    /// Row frames for drop hit-testing — populated via preference key.
-    @State private var rowFrames: [UUID: CGRect] = [:]
-
-    /// Folder frames for drop hit-testing — populated via preference key.
-    @State private var folderFrames: [UUID: CGRect] = [:]
-
     /// The project row currently targeted by a drag hover, or nil.
+    /// Bound to per-row `.dropDestination(isTargeted:)` closures; drives the
+    /// hover-highlight visual on `ProjectRow`.
     @State private var dropTargetProjectID: UUID?
 
     /// The folder row currently targeted by a drag hover, or nil.
+    /// Bound to per-folder `.dropDestination(isTargeted:)` closures; drives
+    /// the accent-stroke overlay on the folder row.
     @State private var dropTargetFolderID: UUID?
-
-    /// Origin of the sidebar (the `.onDrop`-attached view) in global window
-    /// coordinates. `DropInfo.location` is local to that view; row/folder
-    /// frames are captured in `.global`. Hit-test needs to translate
-    /// info.location → global by adding this origin. macOS 26 SwiftUI
-    /// quirk: named-coordinate-space hit-test produced a constant offset
-    /// (cohort QA, 14 May 2026); going through `.global` is defensive.
-    @State private var sidebarGlobalOrigin: CGPoint = .zero
 
     /// Alert state for duplicate folder drop warning.
     @State private var duplicateDropAlert: DuplicateDropAlert?
@@ -799,43 +760,12 @@ struct ContentView: View {
     /// - Folder: create project pointing to that directory (scan all files)
     /// - File(s): create project with inputFiles restricting to the dropped files
     /// De-duplicates by path — if a project already exists for that folder, selects it.
-    private func handleDrop(providers: [NSItemProvider]) {
-        Task {
-            let urls = await loadURLs(from: providers)
-            let accepted = Self.filterAcceptedURLs(urls)
-            await MainActor.run {
-                processDroppedURLs(accepted)
-            }
-        }
-    }
-
-    /// Load file URLs from drop providers.
-    private func loadURLs(from providers: [NSItemProvider]) async -> [URL] {
-        await withTaskGroup(of: URL?.self) { group in
-            for provider in providers {
-                group.addTask {
-                    await withCheckedContinuation { continuation in
-                        provider.loadItem(
-                            forTypeIdentifier: UTType.fileURL.identifier
-                        ) { data, _ in
-                            guard let data = data as? Data,
-                                  let url = URL(
-                                      dataRepresentation: data, relativeTo: nil
-                                  ) else {
-                                continuation.resume(returning: nil)
-                                return
-                            }
-                            continuation.resume(returning: url)
-                        }
-                    }
-                }
-            }
-            var results: [URL] = []
-            for await url in group {
-                if let url { results.append(url) }
-            }
-            return results
-        }
+    /// `.dropDestination(for: URL.self)` hands us pre-resolved URLs — no
+    /// NSItemProvider loading dance. Empty-sidebar drop → create/locate
+    /// project; per-row drops route to `handleDropOnProject`.
+    private func handleDrop(urls: [URL]) {
+        let accepted = Self.filterAcceptedURLs(urls)
+        processDroppedURLs(accepted)
     }
 
     /// Process collected URLs from a sidebar drop.
@@ -913,96 +843,88 @@ struct ContentView: View {
     /// - target `.idle` / `.failed` / `.scanning` / `.unreachable`: accept,
     ///   addFiles, kick off pipeline (`PipelineRunner` will queue if another
     ///   project is currently running)
-    private func handleDropOnProject(id: UUID, providers: [NSItemProvider]) {
-        Task {
-            let urls = await loadURLs(from: providers)
-            let accepted = Self.filterAcceptedURLs(urls)
-            await MainActor.run {
-                guard let project = projectIndex.projects.first(where: { $0.id == id }) else {
-                    return
-                }
+    private func handleDropOnProject(id: UUID, urls: [URL]) {
+        let accepted = Self.filterAcceptedURLs(urls)
+        guard let project = projectIndex.projects.first(where: { $0.id == id }) else {
+            return
+        }
 
-                // Plan §11 data-integrity guards:
-                // 1. Silently dedupe a drop of the project's own folder
-                //    (researcher dragged the project root back onto itself).
-                // 2. Reject a drop that contains a *different* folder which
-                //    is itself a Bristlenose project — adding it as files
-                //    would corrupt directory structure / leak its outputs.
-                let projectPath = URL(fileURLWithPath: project.path)
-                    .standardizedFileURL.path
-                var filteredURLs: [URL] = []
-                for url in accepted {
-                    let path = url.standardizedFileURL.path
-                    if url.hasDirectoryPath, path == projectPath {
-                        // Self-drop — ignore silently. No toast (this is the
-                        // gesture that produces the 0.4s flash in the full
-                        // §11 spec; for cohort 1 we just no-op).
-                        continue
-                    }
-                    if url.hasDirectoryPath, LocateFlow.folderLooksAnalysed(url: url) {
-                        // Plan §11 reject — non-modal toast, not an alert.
-                        // The cohort-confidence UX rule: don't open a modal
-                        // to apologise for a thing the user shouldn't have
-                        // tried; tell them what to do instead, briefly, and
-                        // get out of the way. Apple-HIG-aligned: alerts are
-                        // for decisions, toasts are for acknowledgements.
-                        let message = String(
-                            format: i18n.t("desktop.chrome.dropProjectOntoProjectToast"),
-                            url.lastPathComponent
-                        )
-                        toast.show(message)
-                        return
-                    }
-                    filteredURLs.append(url)
-                }
-
-                let paths = filteredURLs.map { $0.path }
-                guard !paths.isEmpty else { return }
-
-                switch pipelineRunner.state[id] {
-                case .running, .queued:
-                    toast.show("Finish or stop the current run before adding more.")
-                    return
-                case .ready:
-                    projectIndex.addFiles(to: id, files: paths)
-                    selection = [.project(id)]
-                    toast.show("Adding extra interviews to an analysed project isn't supported yet.")
-                    return
-                case .failed:
-                    // Don't silently retry a known-broken pipeline (would burn
-                    // LLM spend repeating the same failure). User explicitly
-                    // re-runs from the toolbar pill's Retry button.
-                    toast.show("Use Retry on the toolbar to try this run again.")
-                    return
-                case .unreachable:
-                    // Volume not mounted / folder gone — addFiles would write
-                    // to a path that doesn't exist; pipeline would fail with
-                    // a generic error stacked on top. Surface the real cause.
-                    toast.show("This project's folder isn't reachable right now.")
-                    return
-                default:
-                    break
-                }
-
-                projectIndex.addFiles(to: id, files: paths)
-                selection = [.project(id)]
-                // Toast confirmation: "Added 3 interviews to Project Name"
-                let count = paths.count
+        // Plan §11 data-integrity guards:
+        // 1. Silently dedupe a drop of the project's own folder
+        //    (researcher dragged the project root back onto itself).
+        // 2. Reject a drop that contains a *different* folder which
+        //    is itself a Bristlenose project — adding it as files
+        //    would corrupt directory structure / leak its outputs.
+        let projectPath = URL(fileURLWithPath: project.path)
+            .standardizedFileURL.path
+        var filteredURLs: [URL] = []
+        for url in accepted {
+            let path = url.standardizedFileURL.path
+            if url.hasDirectoryPath, path == projectPath {
+                // Self-drop — ignore silently. (Plan §11 says 0.4s
+                // accent flash here; cohort 1 just no-ops.)
+                continue
+            }
+            if url.hasDirectoryPath, LocateFlow.folderLooksAnalysed(url: url) {
+                // Plan §11 reject — non-modal toast. Alerts are for
+                // decisions, not apologies. Toast itself is a webism
+                // banked for a native replacement (Mac drop-cursor
+                // decoration or sidebar HUD) on a later pass.
                 let message = String(
-                    format: i18n.t("desktop.chrome.addedInterviews"),
-                    count, project.name
+                    format: i18n.t("desktop.chrome.dropProjectOntoProjectToast"),
+                    url.lastPathComponent
                 )
                 toast.show(message)
+                return
+            }
+            filteredURLs.append(url)
+        }
 
-                // Re-fetch the project — addFiles may have mutated inputFiles.
-                if let updated = projectIndex.projects.first(where: { $0.id == id }) {
-                    // Only auto-run if this project is folder-shaped
-                    // (`inputFiles == nil`). File-subset projects can't run
-                    // until the CLI gains `--files` support.
-                    if updated.inputFiles == nil {
-                        pipelineRunner.start(project: updated)
-                    }
-                }
+        let paths = filteredURLs.map { $0.path }
+        guard !paths.isEmpty else { return }
+
+        switch pipelineRunner.state[id] {
+        case .running, .queued:
+            toast.show("Finish or stop the current run before adding more.")
+            return
+        case .ready:
+            projectIndex.addFiles(to: id, files: paths)
+            selection = [.project(id)]
+            toast.show("Adding extra interviews to an analysed project isn't supported yet.")
+            return
+        case .failed:
+            // Don't silently retry a known-broken pipeline (would burn
+            // LLM spend repeating the same failure). User explicitly
+            // re-runs from the toolbar pill's Retry button.
+            toast.show("Use Retry on the toolbar to try this run again.")
+            return
+        case .unreachable:
+            // Volume not mounted / folder gone — addFiles would write
+            // to a path that doesn't exist; pipeline would fail with
+            // a generic error stacked on top. Surface the real cause.
+            toast.show("This project's folder isn't reachable right now.")
+            return
+        default:
+            break
+        }
+
+        projectIndex.addFiles(to: id, files: paths)
+        selection = [.project(id)]
+        // Toast confirmation: "Added 3 interviews to Project Name"
+        let count = paths.count
+        let message = String(
+            format: i18n.t("desktop.chrome.addedInterviews"),
+            count, project.name
+        )
+        toast.show(message)
+
+        // Re-fetch the project — addFiles may have mutated inputFiles.
+        if let updated = projectIndex.projects.first(where: { $0.id == id }) {
+            // Only auto-run if this project is folder-shaped
+            // (`inputFiles == nil`). File-subset projects can't run
+            // until the CLI gains `--files` support.
+            if updated.inputFiles == nil {
+                pipelineRunner.start(project: updated)
             }
         }
     }
@@ -1205,38 +1127,14 @@ struct ContentView: View {
             }
         }
         .accessibilityLabel(i18n.t("desktop.chrome.projects"))
-        // Capture the sidebar's origin in global window coordinates so the
-        // drop delegate can translate DropInfo.location (local to this view)
-        // into the same global space the row/folder frames are recorded in.
-        .background(
-            GeometryReader { geo in
-                Color.clear.preference(
-                    key: SidebarOriginPreferenceKey.self,
-                    value: geo.frame(in: .global).origin
-                )
-            }
-        )
-        .onPreferenceChange(SidebarOriginPreferenceKey.self) { origin in
-            sidebarGlobalOrigin = origin
+        // Empty-space Finder drops (drops not consumed by a project row or
+        // folder row) create a new project. Per-row .dropDestination
+        // takes precedence — SwiftUI delivers the drop to the innermost
+        // valid target, so this only fires when no row was hit.
+        .dropDestination(for: URL.self) { urls, _ in
+            handleDrop(urls: urls)
+            return true
         }
-        .onPreferenceChange(RowFramePreferenceKey.self) { frames in
-            rowFrames = frames
-        }
-        .onPreferenceChange(FolderFramePreferenceKey.self) { frames in
-            folderFrames = frames
-        }
-        .onDrop(of: [.fileURL, .utf8PlainText], delegate: SidebarDropDelegate(
-            rowFrames: rowFrames,
-            folderFrames: folderFrames,
-            receiverGlobalOrigin: sidebarGlobalOrigin,
-            dropTargetProjectID: $dropTargetProjectID,
-            dropTargetFolderID: $dropTargetFolderID,
-            onDropOnProject: { id, providers in handleDropOnProject(id: id, providers: providers) },
-            onDropOnFreeSpace: { providers in handleDrop(providers: providers) },
-            onMoveProjectToFolder: { projectId, folderId in
-                projectIndex.moveProject(projectId: projectId, toFolder: folderId)
-            }
-        ))
         .focusSection()
         // Empty-space deselection is handled by SidebarDeselectMonitor (NSEvent
         // local monitor on the NavigationSplitView background) — no SwiftUI
@@ -1304,14 +1202,22 @@ struct ContentView: View {
             }
         }
         .tag(SidebarSelection.folder(folder.id))
-        .background(
-            GeometryReader { geo in
-                Color.clear.preference(
-                    key: FolderFramePreferenceKey.self,
-                    value: [folder.id: geo.frame(in: .global)]
-                )
+        // Internal project-row drag onto this folder — moves the project
+        // into the folder. The draggable payload from ProjectRow is the
+        // project UUID as a String.
+        .dropDestination(for: String.self) { uuids, _ in
+            for uuidString in uuids {
+                guard let projectId = UUID(uuidString: uuidString) else { continue }
+                projectIndex.moveProject(projectId: projectId, toFolder: folder.id)
             }
-        )
+            return true
+        } isTargeted: { isOver in
+            if isOver {
+                dropTargetFolderID = folder.id
+            } else if dropTargetFolderID == folder.id {
+                dropTargetFolderID = nil
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: 4)
                 .stroke(Color.accentColor, lineWidth: 2)
@@ -1341,14 +1247,21 @@ struct ContentView: View {
             },
             onLocate: project.isAvailable ? nil : { locateProject(project) }
         )
-        .background(
-            GeometryReader { geo in
-                Color.clear.preference(
-                    key: RowFramePreferenceKey.self,
-                    value: [project.id: geo.frame(in: .global)]
-                )
+        // Finder file drops onto this project row — add files or surface
+        // the reject-toast if the dropped folder is itself a project.
+        // SwiftUI's per-row .dropDestination handles all hit-testing —
+        // no GeometryReader frame capture, no coordinate-space gymnastics.
+        // isTargeted drives the hover-highlight on the row.
+        .dropDestination(for: URL.self) { urls, _ in
+            handleDropOnProject(id: project.id, urls: urls)
+            return true
+        } isTargeted: { isOver in
+            if isOver {
+                dropTargetProjectID = project.id
+            } else if dropTargetProjectID == project.id {
+                dropTargetProjectID = nil
             }
-        )
+        }
         .tag(SidebarSelection.project(project.id))
         .draggable(project.id.uuidString)
         .contextMenu {
@@ -1690,135 +1603,13 @@ struct SpotlightConfirmSheet: View {
     }
 }
 
-// MARK: - Sidebar drop delegate
-
-/// Custom `DropDelegate` that uses geometry hit-testing to determine whether a
-/// drop targets an existing project row, a folder, or free sidebar space.
-///
-/// Handles two drop types:
-/// - **File URLs** (from Finder): add files to existing project or create new project
-/// - **Plain text** (internal project UUID): move a project into a folder
-///
-/// This avoids per-row `.onDrop` which breaks List selection on macOS 26.
-/// Row/folder frames are collected via preference keys in the "sidebar"
-/// coordinate space.
-private struct SidebarDropDelegate: DropDelegate {
-    /// Row frames recorded in `.global` (window-relative) coordinate space.
-    let rowFrames: [UUID: CGRect]
-    /// Folder frames recorded in `.global` coordinate space.
-    let folderFrames: [UUID: CGRect]
-    /// The receiving view's origin in `.global`. `DropInfo.location` is
-    /// local to that view; add this origin to translate to global.
-    let receiverGlobalOrigin: CGPoint
-    @Binding var dropTargetProjectID: UUID?
-    @Binding var dropTargetFolderID: UUID?
-    let onDropOnProject: (UUID, [NSItemProvider]) -> Void
-    let onDropOnFreeSpace: ([NSItemProvider]) -> Void
-    let onMoveProjectToFolder: (UUID, UUID?) -> Void
-
-    /// Translate `DropInfo.location` into the `.global` coord space the
-    /// row/folder frames are recorded in.
-    ///
-    /// Apple's docs say `info.location` is local to the receiving view, so
-    /// in theory adding `receiverGlobalOrigin` converts it. In practice on
-    /// macOS 26 the conversion produces a constant one-row offset (cohort
-    /// QA, 14 May 2026) — most likely because SwiftUI's List places
-    /// `info.location`'s anchor inside the table-content area (below the
-    /// section header) while `.background(GeometryReader)` captures the
-    /// outer List frame (above the header).
-    ///
-    /// **Fallback:** if a straight `info.location` (treated as already
-    /// global) lands inside any known row frame, use it directly; otherwise
-    /// fall back to the local+origin translation. This works either way
-    /// the SDK's behaviour swings, and the second case still fires when
-    /// info.location is genuinely local.
-    private func globalPoint(_ point: CGPoint) -> CGPoint {
-        let direct = point
-        if rowFrames.values.contains(where: { $0.contains(direct) }) ||
-           folderFrames.values.contains(where: { $0.contains(direct) }) {
-            return direct
-        }
-        return CGPoint(
-            x: point.x + receiverGlobalOrigin.x,
-            y: point.y + receiverGlobalOrigin.y
-        )
-    }
-
-    /// Find which project row (if any) contains the given global point.
-    private func projectAt(_ globalLocation: CGPoint) -> UUID? {
-        for (id, frame) in rowFrames where frame.contains(globalLocation) {
-            return id
-        }
-        return nil
-    }
-
-    /// Find which folder (if any) contains the given global point.
-    private func folderAt(_ globalLocation: CGPoint) -> UUID? {
-        for (id, frame) in folderFrames where frame.contains(globalLocation) {
-            return id
-        }
-        return nil
-    }
-
-    /// Whether this drag is an internal project move (vs Finder file drop).
-    private func isInternalDrag(_ info: DropInfo) -> Bool {
-        info.hasItemsConforming(to: [.utf8PlainText]) && !info.hasItemsConforming(to: [.fileURL])
-    }
-
-    func validateDrop(info: DropInfo) -> Bool {
-        info.hasItemsConforming(to: [.fileURL]) || info.hasItemsConforming(to: [.utf8PlainText])
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        let p = globalPoint(info.location)
-        if isInternalDrag(info) {
-            // Internal project drag — highlight folders only.
-            dropTargetProjectID = nil
-            dropTargetFolderID = folderAt(p)
-            return DropProposal(operation: .move)
-        } else {
-            // External Finder drop — highlight project rows only.
-            dropTargetFolderID = nil
-            dropTargetProjectID = projectAt(p)
-            return DropProposal(operation: .copy)
-        }
-    }
-
-    func dropExited(info: DropInfo) {
-        dropTargetProjectID = nil
-        dropTargetFolderID = nil
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        let p = globalPoint(info.location)
-        let targetFolder = folderAt(p)
-        let targetProject = projectAt(p)
-        dropTargetProjectID = nil
-        dropTargetFolderID = nil
-
-        if isInternalDrag(info) {
-            // Internal project move — extract UUID from plain text.
-            let providers = info.itemProviders(for: [.utf8PlainText])
-            guard let provider = providers.first else { return false }
-            provider.loadItem(forTypeIdentifier: "public.utf8-plain-text") { data, _ in
-                guard let data = data as? Data,
-                      let uuidString = String(data: data, encoding: .utf8),
-                      let projectId = UUID(uuidString: uuidString) else { return }
-                Task { @MainActor in
-                    // Drop on folder → move into it. Drop on free space → move to root.
-                    onMoveProjectToFolder(projectId, targetFolder)
-                }
-            }
-            return true
-        } else {
-            // External Finder drop.
-            let providers = info.itemProviders(for: [.fileURL])
-            if let targetProject {
-                onDropOnProject(targetProject, providers)
-            } else {
-                onDropOnFreeSpace(providers)
-            }
-            return true
-        }
-    }
-}
+// SidebarDropDelegate removed 14 May 2026 — replaced with per-row
+// `.dropDestination(for:action:isTargeted:)` modifiers on `ProjectRow`
+// and `FolderRow`. SwiftUI handles hit-testing per-row natively; no
+// GeometryReader frame capture, no coordinate-space translation, no
+// drift between `.global` (bottom-left on macOS Cocoa) and named or
+// local spaces (top-left in SwiftUI). The canonical Mac pattern.
+//
+// The original SidebarDropDelegate is preserved in git history at
+// commits 2d3a019 (pre-branch) through 31c5eb2; future archaeology
+// should start there if the per-row approach ever needs to be reverted.

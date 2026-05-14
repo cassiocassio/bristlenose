@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 14 May 2026 (closed `tf-multi-project`)
+**Updated:** 14 May 2026 (closed `tf-phase-1-ux-wins`)
 
 ---
 
@@ -282,6 +282,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `tf-phase-1-ux-wins` — merged 14 May 2026
+
+TF alpha phase 1 UX wins — undoable Remove-from-Sidebar (toast + undo) and locate-flow polish, plus a test-philosophy design doc and the `what-would-james-bach-say` reviewer agent. Two commits (`256e8d0`, `958cca5`) merged as `bb54010`. Worktree detached and tagged orange on disk.
 
 ### `tf-multi-project` — merged 14 May 2026
 

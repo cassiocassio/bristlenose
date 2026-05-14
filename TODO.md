@@ -83,7 +83,7 @@ Remaining desktop bugs and i18n items tracked in `docs/private/100days.md` §2, 
 
 - [x] **Phase 3: Folders** — `FolderRow.swift`, `Folder` model with CRUD, `folderId` on Project, `SidebarSelection` enum, `DisclosureGroup` collapse, "Move to" submenu, adaptive Project menu, File > New Folder (⇧⌘N), `folder.badge.plus` enabled, collapsed state persistence, locale keys in all 6 languages
 
-Remaining multi-project work tracked in `.claude/plans/tf-multi-project.md` (Phase 0 + Phase 1 shipped 14 May 2026; Phase 2 sidecar-restart switch / drag-onto-existing / folder watcher and Phase 3 cloud-evicted still open). Original 5-phase plan in `docs/design-project-sidebar.md` is superseded for TF scope.
+Remaining multi-project work tracked in `.claude/plans/tf-multi-project.md` (Phase 0 + Phase 1 shipped 14 May 2026; Phase 2 sidecar-restart switch (#1/#2/#3) shipped 14 May 2026 on `multi-project-switch`; Phase 2 #11 drag-onto-existing and #14 folder watcher still open; Phase 3 cloud-evicted post-cohort). Original 5-phase plan in `docs/design-project-sidebar.md` is superseded for TF scope.
 
 ## CI hardening — sprint 2 step 0 (18 Apr 2026, ci-cleanup branch)
 

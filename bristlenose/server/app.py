@@ -9,6 +9,7 @@ import mimetypes
 import os
 import secrets
 import traceback
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -123,6 +124,23 @@ def create_app(
     # Print BEFORE the "Report:" readiness line so ServeManager.swift
     # has the token before transitioning to .running.
     print(f"[bristlenose] auth-token: {auth_token}", flush=True)
+
+    # Cache-Control: no-store on /api/projects/* — defence-in-depth for the
+    # desktop multi-project switch. WKWebView is torn down on project change
+    # (SwiftUI `.id(project.id)` reset), but a stale HTTP cache entry could
+    # still leak project A's data into project B's first paint. no-store
+    # prevents any cache layer (WKWebView HTTP cache, intermediate proxy,
+    # browser back/forward cache) from holding /api/projects/* responses
+    # across the switch. See `desktop/Bristlenose/Bristlenose/ServeManager.swift`
+    # `switchProject(to:)` for the Swift side.
+    @app.middleware("http")
+    async def _no_store_for_project_api(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        response = await call_next(request)
+        if request.url.path.startswith("/api/projects/"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
 
     # Bearer token middleware — must be added before CORS so it runs after CORS
     # in the middleware stack (Starlette processes middleware in reverse order).

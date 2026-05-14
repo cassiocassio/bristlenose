@@ -154,7 +154,11 @@
     "multipleSelected": "%d items selected",
     "multipleSelectedHint": "Select a single project to view its report.",
     "welcomeTitle": "Welcome to Bristlenose",
-    "welcomeBody": "Drag a folder of interview recordings into the sidebar, or click + New Project to start."
+    "welcomeBody": "Drag a folder of interview recordings into the sidebar, or click + New Project to start.",
+    "inFlightSwitchTitle": "Cancel the current analysis?",
+    "inFlightSwitchMessage": "“%@” is still being analysed. Switching projects will cancel it — you can resume from where it stopped.",
+    "cancelAndSwitch": "Stop and Switch",
+    "stay": "Stay"
   },
   "availability": {
     "unmountedVolume": "{{name}} · missing",

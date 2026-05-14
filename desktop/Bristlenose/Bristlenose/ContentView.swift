@@ -104,6 +104,19 @@ struct LocateErrorState: Identifiable {
     let pickedURL: URL
 }
 
+/// State for the "another project is still analysing — cancel and switch?"
+/// confirm sheet. Presented when the user selects a different project while
+/// the current one has a `bristlenose run` in flight (per Mini-spec 4 step 1).
+struct InFlightSwitchPrompt: Identifiable {
+    let id = UUID()
+    /// The project whose run is currently in flight.
+    let runningProject: Project
+    /// The new selection the user requested.
+    let targetSelection: Set<SidebarSelection>
+    /// Selection to restore if the user picks "Stay".
+    let priorSelection: Set<SidebarSelection>
+}
+
 // MARK: - Row frame preference key
 
 /// Preference key collecting project row frames for drop hit-testing.
@@ -189,6 +202,18 @@ struct ContentView: View {
     /// Validation-error alert after the user picked a folder without
     /// `bristlenose-output/` inside.
     @State private var locateError: LocateErrorState?
+
+    /// In-flight run confirm sheet — set when the user selects a different
+    /// project while the current one has a pipeline run going. The sheet
+    /// asks whether to cancel the run and switch, or stay on the current
+    /// project. Per Mini-spec 4 step 1.
+    @State private var inFlightSwitch: InFlightSwitchPrompt?
+
+    /// Re-entry guard for `handleSelectionChange` — set to true while we
+    /// programmatically revert `selection` after the user picks "Stay" on
+    /// the in-flight confirm sheet, so the re-entrant `.onChange` callback
+    /// doesn't trigger another switch attempt.
+    @State private var revertingSelection: Bool = false
 
     /// The single selected item, if exactly one is selected.
     private var soleSelection: SidebarSelection? {
@@ -288,8 +313,8 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
             bridgeHandler.setWindowActive(false)
         }
-        .onChange(of: selection) { _, newSelection in
-            handleSelectionChange(newSelection)
+        .onChange(of: selection) { oldSelection, newSelection in
+            handleSelectionChange(from: oldSelection, to: newSelection)
         }
         // When consent is granted (version updated), start serve for the
         // already-selected project if one exists.
@@ -416,6 +441,33 @@ struct ContentView: View {
             // researchers who keep recordings in subdirs. William's pick.
             Text(i18n.t("desktop.chrome.locateError.message"))
         }
+        // In-flight pipeline-run guard (Mini-spec 4 step 1). Presented when
+        // the user picks a different project while the prior one's run is
+        // still going. Choosing "Stay" reverts the sidebar selection.
+        .alert(
+            i18n.t("desktop.chrome.inFlightSwitchTitle"),
+            isPresented: Binding(
+                get: { inFlightSwitch != nil },
+                set: { if !$0 { inFlightSwitch = nil } }
+            ),
+            presenting: inFlightSwitch
+        ) { prompt in
+            Button(i18n.t("desktop.chrome.cancelAndSwitch"), role: .destructive) {
+                resolveInFlightSwitch(prompt, cancelAndSwitch: true)
+            }
+            // "Stay" reverts the sidebar selection — it mutates state, not a
+            // no-op dismissal. Drop `.cancel` role; make it the default action
+            // so Return commits Stay (gruber-pass finding 39; HIG pattern).
+            Button(i18n.t("desktop.chrome.stay")) {
+                resolveInFlightSwitch(prompt, cancelAndSwitch: false)
+            }
+            .keyboardShortcut(.defaultAction)
+        } message: { prompt in
+            Text(String(
+                format: i18n.t("desktop.chrome.inFlightSwitchMessage"),
+                prompt.runningProject.name
+            ))
+        }
     }
 
     /// Re-enter the Locate flow at the NSOpenPanel step (skips Spotlight,
@@ -446,10 +498,48 @@ struct ContentView: View {
 
     // MARK: - Selection change
 
-    private func handleSelectionChange(_ newSelection: Set<SidebarSelection>) {
+    /// Extract the sole-selected project UUID from a selection set, or nil.
+    private func soleProjectID(in selection: Set<SidebarSelection>) -> UUID? {
+        guard selection.count == 1,
+              case .project(let id) = selection.first else { return nil }
+        return id
+    }
+
+    private func handleSelectionChange(
+        from oldSelection: Set<SidebarSelection>,
+        to newSelection: Set<SidebarSelection>
+    ) {
+        // Re-entry guard — see `revertingSelection` documentation.
+        if revertingSelection {
+            revertingSelection = false
+            return
+        }
+
+        // In-flight run guard (Mini-spec 4 step 1). If the user is leaving a
+        // project whose pipeline run is going, present the confirm sheet
+        // before any teardown — UX needs the chance to back out.
+        if let oldID = soleProjectID(in: oldSelection),
+           soleProjectID(in: newSelection) != oldID,
+           pipelineRunner.state[oldID] == .running,
+           let runningProject = projectIndex.projects.first(where: { $0.id == oldID }) {
+            inFlightSwitch = InFlightSwitchPrompt(
+                runningProject: runningProject,
+                targetSelection: newSelection,
+                priorSelection: oldSelection
+            )
+            return
+        }
+
+        applySelectionChange(newSelection)
+    }
+
+    /// Resolve a sidebar selection — wires bridge state and orchestrates the
+    /// sidecar lifecycle via `switchProject`. Separated from
+    /// `handleSelectionChange` so the in-flight confirm path can call it
+    /// after cancelling the prior run.
+    private func applySelectionChange(_ newSelection: Set<SidebarSelection>) {
         bridgeHandler.reset()
 
-        // Only serve when exactly one project is selected.
         let sole = newSelection.count == 1 ? newSelection.first : nil
 
         switch sole {
@@ -464,7 +554,10 @@ struct ContentView: View {
                 // Gate serve on consent + availability — no data leaves the machine
                 // before the user has seen the AI data disclosure (Apple 5.1.2(i)).
                 if hasConsent && !project.path.isEmpty && project.isAvailable {
-                    serveManager.start(projectPath: project.path)
+                    let path = project.path
+                    Task { @MainActor in
+                        await serveManager.switchProject(to: path)
+                    }
                 }
             }
         case .folder(let id):
@@ -481,6 +574,23 @@ struct ContentView: View {
             bridgeHandler.selectedProjectRevealablePath = ""
             bridgeHandler.selectedFolderName = ""
             serveManager.stop()
+        }
+    }
+
+    /// Resolve the in-flight switch confirm sheet. Called from the alert
+    /// button handlers. On "Cancel and Switch" we cancel the running pipeline
+    /// then proceed with the deferred selection; on "Stay" we restore the
+    /// prior selection.
+    private func resolveInFlightSwitch(_ prompt: InFlightSwitchPrompt, cancelAndSwitch: Bool) {
+        inFlightSwitch = nil
+        if cancelAndSwitch {
+            pipelineRunner.cancel(project: prompt.runningProject)
+            applySelectionChange(prompt.targetSelection)
+        } else {
+            // Revert the SwiftUI selection back to the running project.
+            // The re-entrant `.onChange` is suppressed by `revertingSelection`.
+            revertingSelection = true
+            selection = prompt.priorSelection
         }
     }
 

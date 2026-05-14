@@ -568,3 +568,28 @@ class TestDevServeReport:
             resp = dev_client.get(path)
             assert resp.status_code == 200
             assert 'id="bn-app-root"' in resp.text
+
+
+class TestProjectApiNoStore:
+    """Regression pin for the desktop multi-project switch.
+
+    `/api/projects/*` responses MUST carry `Cache-Control: no-store` so a
+    project A response never gets served to a project B request after the
+    sidecar restart. The primary isolation mechanism is the WKWebView
+    teardown via SwiftUI `.id(project.id)` (see desktop ServeManager
+    `switchProject(to:)`); this header is the belt-and-braces second
+    layer. The shim is small enough that a casual refactor could silently
+    delete it without anyone noticing — this test is the canary.
+    """
+
+    def test_api_projects_path_carries_no_store(self, client: TestClient) -> None:
+        resp = client.get("/api/projects/1/quotes")
+        # 200 (smoke data) or 404 (no project_dir bound in this fixture) both
+        # exercise the middleware. Header is set on every response in scope.
+        assert resp.headers.get("Cache-Control") == "no-store"
+
+    def test_api_health_unaffected(self, client: TestClient) -> None:
+        # Sanity — middleware must not over-scope.
+        resp = client.get("/api/health")
+        assert resp.status_code == 200
+        assert resp.headers.get("Cache-Control") != "no-store"

@@ -154,7 +154,11 @@
     "multipleSelected": "%d éléments sélectionnés",
     "multipleSelectedHint": "Sélectionnez un seul projet pour afficher son rapport.",
     "welcomeTitle": "Bienvenue dans Bristlenose",
-    "welcomeBody": "Glissez un dossier d’enregistrements d’entretiens dans la barre latérale, ou cliquez sur + Nouveau projet pour commencer."
+    "welcomeBody": "Glissez un dossier d’enregistrements d’entretiens dans la barre latérale, ou cliquez sur + Nouveau projet pour commencer.",
+    "inFlightSwitchTitle": "Annuler l’analyse en cours ?",
+    "inFlightSwitchMessage": "« %@ » est toujours en cours d’analyse. Changer de projet l’annulera — vous pourrez reprendre là où elle s’est arrêtée.",
+    "cancelAndSwitch": "Arrêter et changer",
+    "stay": "Ne pas changer"
   },
   "availability": {
     "unmountedVolume": "{{name}} · introuvable",

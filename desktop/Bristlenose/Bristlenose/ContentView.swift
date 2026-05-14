@@ -87,6 +87,23 @@ struct DuplicateDropAlert: Identifiable {
     let urls: [URL]
 }
 
+/// State for the Spotlight one-shot confirm sheet. Carries the resume
+/// continuation so the LocateFlow can wait for the user's choice.
+struct SpotlightConfirmState: Identifiable {
+    let id = UUID()
+    let project: Project
+    let candidate: URL
+    let resume: (SpotlightConfirmChoice) -> Void
+}
+
+/// State for the post-pick validation error alert. Carries the project so
+/// the "Choose Different…" alert button can re-enter the NSOpenPanel step.
+struct LocateErrorState: Identifiable {
+    let id = UUID()
+    let project: Project
+    let pickedURL: URL
+}
+
 // MARK: - Row frame preference key
 
 /// Preference key collecting project row frames for drop hit-testing.
@@ -123,6 +140,7 @@ struct ContentView: View {
     @EnvironmentObject var projectIndex: ProjectIndex
     @EnvironmentObject var pipelineRunner: PipelineRunner
     @EnvironmentObject var toast: ToastStore
+    @EnvironmentObject var removalStore: UndoableRemovalStore
     @EnvironmentObject var i18n: I18n
     @AppStorage("appearance") private var appearance: String = "auto"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -163,6 +181,14 @@ struct ContentView: View {
 
     /// Alert state for duplicate folder drop warning.
     @State private var duplicateDropAlert: DuplicateDropAlert?
+
+    /// Spotlight one-shot confirm sheet — populated when the Locate flow
+    /// found a unique high-confidence match. Resolves the awaiting continuation.
+    @State private var spotlightConfirm: SpotlightConfirmState?
+
+    /// Validation-error alert after the user picked a folder without
+    /// `bristlenose-output/` inside.
+    @State private var locateError: LocateErrorState?
 
     /// The single selected item, if exactly one is selected.
     private var soleSelection: SidebarSelection? {
@@ -305,6 +331,12 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .createNewProject)) { _ in
             createNewProject()
         }
+        // Undo restored a removal batch — re-apply the prior selection.
+        .onReceive(NotificationCenter.default.publisher(for: .undoableRemovalRestoredSelection)) { note in
+            if let restored = note.userInfo?["selection"] as? Set<SidebarSelection> {
+                selection = restored
+            }
+        }
         // File > New Folder (⇧⌘N) and sidebar folder.badge.plus button.
         .onReceive(NotificationCenter.default.publisher(for: .createNewFolder)) { _ in
             createNewFolder()
@@ -314,7 +346,8 @@ struct ContentView: View {
             renamingProjectID: $renamingProjectID,
             renamingFolderID: $renamingFolderID,
             projectIndex: projectIndex,
-            onLocate: { project in locateProject(project) }
+            onLocate: { project in locateProject(project) },
+            onRemoveFromSidebar: { removeSelectedProjectsFromSidebar() }
         ))
         .sheet(isPresented: $showingAIConsent) {
             AIConsentView(
@@ -347,6 +380,68 @@ struct ContentView: View {
                 alert.existingProject.name
             ))
         }
+        .sheet(item: $spotlightConfirm) { state in
+            SpotlightConfirmSheet(
+                project: state.project,
+                candidate: state.candidate,
+                onChoose: { choice in
+                    state.resume(choice)
+                    spotlightConfirm = nil
+                }
+            )
+            .environmentObject(i18n)
+        }
+        .alert(
+            i18n.t("desktop.chrome.locateError.title"),
+            isPresented: Binding(
+                get: { locateError != nil },
+                set: { if !$0 { locateError = nil } }
+            ),
+            presenting: locateError
+        ) { err in
+            Button(i18n.t("desktop.chrome.spotlight.chooseDifferent")) {
+                let project = err.project
+                locateError = nil
+                // Re-enter the flow at the NSOpenPanel step. Skip Spotlight
+                // since the user has already rejected its suggestion (if any).
+                Task { @MainActor in
+                    chooseDifferentFolder(for: project)
+                }
+            }
+            .keyboardShortcut(.defaultAction)
+            Button(i18n.t("common.cancel"), role: .cancel) {}
+        } message: { _ in
+            // One honest message — the prior split (noOutputFolder /
+            // wrongFolder) leaned on a heuristic that misclassified
+            // researchers who keep recordings in subdirs. William's pick.
+            Text(i18n.t("desktop.chrome.locateError.message"))
+        }
+    }
+
+    /// Re-enter the Locate flow at the NSOpenPanel step (skips Spotlight,
+    /// since this fires after the user already rejected one folder).
+    private func chooseDifferentFolder(for project: Project) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.message = String(format: i18n.t("desktop.chrome.locateMessage"), project.name)
+        panel.begin { response in
+            Task { @MainActor in
+                guard response == .OK, let url = panel.url else { return }
+                if LocateFlow.folderLooksAnalysed(url: url) {
+                    projectIndex.relocateProject(id: project.id, newPath: url.path)
+                    bridgeHandler.selectedProjectPath = url.path
+                    bridgeHandler.selectedProjectAvailable = true
+                    bridgeHandler.selectedProjectRevealablePath = url.path
+                    if selection.contains(.project(project.id)), hasConsent {
+                        serveManager.start(projectPath: url.path)
+                    }
+                } else {
+                    locateError = LocateErrorState(project: project, pickedURL: url)
+                }
+            }
+        }
     }
 
     // MARK: - Selection change
@@ -364,6 +459,7 @@ struct ContentView: View {
                 persistedProjectID = id.uuidString
                 bridgeHandler.selectedProjectPath = project.path
                 bridgeHandler.selectedProjectAvailable = project.isAvailable
+                bridgeHandler.selectedProjectRevealablePath = revealPath(for: project) ?? ""
                 projectIndex.updateLastOpened(id: id)
                 // Gate serve on consent + availability — no data leaves the machine
                 // before the user has seen the AI data disclosure (Apple 5.1.2(i)).
@@ -374,6 +470,7 @@ struct ContentView: View {
         case .folder(let id):
             persistedProjectID = ""
             bridgeHandler.selectedProjectPath = ""
+            bridgeHandler.selectedProjectRevealablePath = ""
             bridgeHandler.selectedFolderName =
                 projectIndex.folders.first { $0.id == id }?.name ?? ""
             serveManager.stop()
@@ -381,6 +478,7 @@ struct ContentView: View {
             // Multi-select or empty — stop serve, clear state.
             persistedProjectID = ""
             bridgeHandler.selectedProjectPath = ""
+            bridgeHandler.selectedProjectRevealablePath = ""
             bridgeHandler.selectedFolderName = ""
             serveManager.stop()
         }
@@ -405,30 +503,9 @@ struct ContentView: View {
         renamingFolderID = folder.id
     }
 
-    /// Open NSOpenPanel to re-locate a moved/deleted project.
-    /// Finder/Mail pattern for context-menu Delete on a multi-select.
-    /// If the right-clicked row is part of the current selection, the
-    /// action applies to all selected rows. If the right-clicked row is
-    /// NOT in the selection, it acts on only that row (the click is
-    /// treated as a temporary single-row target without disturbing the
-    /// existing selection — matches Finder behaviour).
-    private func deleteFromContextMenu(targetingProject id: UUID) {
-        if selection.contains(.project(id)) {
-            let projectIds = selection.compactMap { sel -> UUID? in
-                if case .project(let pid) = sel { return pid }
-                return nil
-            }
-            for pid in projectIds {
-                selection.remove(.project(pid))
-                projectIndex.removeProject(id: pid)
-            }
-        } else {
-            // Right-clicked row is not in the current selection — leave
-            // selection alone (Finder behaviour) and act only on the target.
-            projectIndex.removeProject(id: id)
-        }
-    }
-
+    /// Folder-context-menu delete. Project removals go through
+    /// `removeFromSidebarContextMenu(targetingProject:)` which routes via
+    /// `UndoableRemovalStore`. Folders don't get undo today (separate scope).
     private func deleteFromContextMenu(targetingFolder id: UUID) {
         if selection.contains(.folder(id)) {
             let folderIds = selection.compactMap { sel -> UUID? in
@@ -446,26 +523,123 @@ struct ContentView: View {
         }
     }
 
-    private func locateProject(_ project: Project) {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        panel.prompt = i18n.t("desktop.chrome.locate")
-        panel.message = String(format: i18n.t("desktop.chrome.locateMessage"), project.name)
+    /// Best path to reveal in Finder. For `.ready` projects use the live path;
+    /// for `.cantFind`, fall back to `lastSeenPath` so Finder can show its
+    /// own dead-alias UX (HANDOFF §7). Returns nil when there is no path to
+    /// hand to Finder, which is the signal to dim the menu item.
+    private func revealPath(for project: Project) -> String? {
+        if project.isAvailable, !project.path.isEmpty { return project.path }
+        let fallback = project.lastSeenPath
+        return fallback.isEmpty ? nil : fallback
+    }
 
-        panel.begin { response in
-            if response == .OK, let url = panel.url {
-                Task { @MainActor in
+    private func canRevealInFinder(_ project: Project) -> Bool {
+        revealPath(for: project) != nil
+    }
+
+    private func revealInFinder(_ project: Project) {
+        guard let path = revealPath(for: project) else { return }
+        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
+    }
+
+    private func locateProject(_ project: Project) {
+        let flow = LocateFlow(project: project, i18n: i18n)
+        flow.run(
+            confirm: { candidate in
+                await withCheckedContinuation { (cont: CheckedContinuation<SpotlightConfirmChoice, Never>) in
+                    Task { @MainActor in
+                        spotlightConfirm = SpotlightConfirmState(
+                            project: project, candidate: candidate, resume: { choice in
+                                cont.resume(returning: choice)
+                            }
+                        )
+                    }
+                }
+            },
+            completion: { [self] result in
+                switch result {
+                case .located(let url):
                     projectIndex.relocateProject(id: project.id, newPath: url.path)
                     bridgeHandler.selectedProjectPath = url.path
                     bridgeHandler.selectedProjectAvailable = true
+                    bridgeHandler.selectedProjectRevealablePath = url.path
                     if selection.contains(.project(project.id)), hasConsent {
                         serveManager.start(projectPath: url.path)
                     }
+                case .invalidFolder(let pickedURL):
+                    locateError = LocateErrorState(project: project, pickedURL: pickedURL)
+                case .cancelled:
+                    break
                 }
             }
+        )
+    }
+
+    /// Remove the selected project(s) from the sidebar via the undoable store.
+    /// All selected projects go into a single Pending batch — undo restores
+    /// the whole batch at once, toast reads "N projects removed" when N>1.
+    /// Projects whose pipeline is .running / .queued are skipped with a
+    /// per-project toast (symmetric with `handleDropOnProject`).
+    private func removeSelectedProjectsFromSidebar() {
+        let candidates: [Project] = selection.compactMap { sel in
+            guard case .project(let id) = sel else { return nil }
+            return projectIndex.projects.first { $0.id == id }
         }
+        let (removable, blockedNames) = partitionRemovable(candidates)
+        if !blockedNames.isEmpty {
+            // One toast even when multiple are blocked — the first name is
+            // enough to point the user at the issue.
+            let first = blockedNames.first ?? ""
+            toast.show(String(
+                format: i18n.t("desktop.toast.removeBlockedByRun"),
+                first
+            ))
+        }
+        guard !removable.isEmpty else { return }
+        let priorSelection = selection
+        for project in removable {
+            selection.remove(.project(project.id))
+        }
+        removalStore.removeFromSidebar(removable, priorSelection: priorSelection)
+    }
+
+    /// Same logic but for the context-menu single-row case (Finder pattern —
+    /// applies to all selected rows if the clicked row is part of the selection,
+    /// otherwise to only that row).
+    private func removeFromSidebarContextMenu(targetingProject id: UUID) {
+        if selection.contains(.project(id)) {
+            removeSelectedProjectsFromSidebar()
+            return
+        }
+        guard let project = projectIndex.projects.first(where: { $0.id == id }) else { return }
+        let (removable, blockedNames) = partitionRemovable([project])
+        if let first = blockedNames.first {
+            toast.show(String(
+                format: i18n.t("desktop.toast.removeBlockedByRun"),
+                first
+            ))
+            return
+        }
+        guard !removable.isEmpty else { return }
+        removalStore.removeFromSidebar(removable, priorSelection: selection)
+    }
+
+    /// Split candidates into (removable, blocked-by-running-pipeline).
+    /// Pipeline-state coupling avoids the "remove + sidecar keeps writing for
+    /// hours" footgun. Symmetric with `handleDropOnProject`'s `.running` /
+    /// `.queued` rejection.
+    private func partitionRemovable(_ projects: [Project]) -> (removable: [Project], blockedNames: [String]) {
+        var removable: [Project] = []
+        var blocked: [String] = []
+        for project in projects {
+            switch pipelineRunner.state[project.id] {
+            case .running, .queued:
+                blocked.append(project.name)
+            default:
+                removable.append(project)
+            }
+        }
+        return (removable, blocked)
     }
 
     // MARK: - Drag and drop
@@ -984,16 +1158,9 @@ struct ContentView: View {
             onRename: { newName in
                 projectIndex.renameProject(id: project.id, newName: newName)
             },
-            onShowInFinder: {
-                if !project.path.isEmpty {
-                    NSWorkspace.shared.selectFile(
-                        nil, inFileViewerRootedAtPath: project.path
-                    )
-                }
-            },
+            onShowInFinder: { revealInFinder(project) },
             onDelete: {
-                selection.remove(.project(project.id))
-                projectIndex.removeProject(id: project.id)
+                removeFromSidebarContextMenu(targetingProject: project.id)
             },
             onLocate: project.isAvailable ? nil : { locateProject(project) }
         )
@@ -1017,13 +1184,9 @@ struct ContentView: View {
             }
 
             Button(i18n.t("desktop.menu.project.showInFinder")) {
-                if !project.path.isEmpty {
-                    NSWorkspace.shared.selectFile(
-                        nil, inFileViewerRootedAtPath: project.path
-                    )
-                }
+                revealInFinder(project)
             }
-            .disabled(!project.isAvailable)
+            .disabled(!canRevealInFinder(project))
 
             Button(i18n.t("desktop.menu.project.rename")) {
                 renamingProjectID = project.id
@@ -1053,8 +1216,8 @@ struct ContentView: View {
             }
 
             Divider()
-            Button(i18n.t("desktop.menu.project.delete"), role: .destructive) {
-                deleteFromContextMenu(targetingProject: project.id)
+            Button(i18n.t("desktop.menu.project.removeFromSidebar"), role: .destructive) {
+                removeFromSidebarContextMenu(targetingProject: project.id)
             }
         }
         .popover(
@@ -1199,6 +1362,7 @@ private struct ProjectNotificationReceivers: ViewModifier {
     @Binding var renamingFolderID: UUID?
     let projectIndex: ProjectIndex
     let onLocate: (Project) -> Void
+    let onRemoveFromSidebar: () -> Void
 
     /// The single selected item, if exactly one.
     private var sole: SidebarSelection? {
@@ -1215,17 +1379,6 @@ private struct ProjectNotificationReceivers: ViewModifier {
             .onReceive(NotificationCenter.default.publisher(for: .renameSelectedFolder)) { _ in
                 if case .folder(let id) = sole {
                     renamingFolderID = id
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .deleteSelectedProject)) { _ in
-                // Delete all selected projects.
-                let projectIds = selection.compactMap { sel -> UUID? in
-                    if case .project(let id) = sel { return id }
-                    return nil
-                }
-                for id in projectIds {
-                    selection.remove(.project(id))
-                    projectIndex.removeProject(id: id)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .deleteSelectedFolder)) { _ in
@@ -1249,6 +1402,9 @@ private struct ProjectNotificationReceivers: ViewModifier {
                 if let project = projectIndex.projects.first(where: { $0.id == id }) {
                     onLocate(project)
                 }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .removeSelectedProjectsFromSidebar)) { _ in
+                onRemoveFromSidebar()
             }
     }
 }
@@ -1281,6 +1437,79 @@ struct ExportMenuButton: View {
             Label(i18n.t("desktop.toolbar.export"), systemImage: "square.and.arrow.up")
         }
         .help(i18n.t("desktop.toolbar.exportShortcut"))
+    }
+}
+
+// MARK: - Spotlight confirm sheet
+
+/// Confirms a unique Spotlight match for a `.cantFind` project. Rendered as a
+/// SwiftUI sheet so it inherits the window centring + Escape-to-cancel that
+/// HIG expects. Three buttons mirror Finder's "Use This / Choose Different /
+/// Cancel" pattern.
+struct SpotlightConfirmSheet: View {
+    let project: Project
+    let candidate: URL
+    let onChoose: (SpotlightConfirmChoice) -> Void
+
+    @EnvironmentObject var i18n: I18n
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(String(format: i18n.t("desktop.chrome.spotlight.title"), project.name))
+                .font(.headline)
+
+            Text(breadcrumb(for: candidate))
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .truncationMode(.middle)
+                .textSelection(.enabled)
+                // VoiceOver reads `›` literally ("right pointing angle
+                // quotation mark") — comma-separated segments read cleanly.
+                .accessibilityLabel(String(
+                    format: i18n.t("desktop.chrome.spotlight.breadcrumbA11y"),
+                    breadcrumbSegments(for: candidate).joined(separator: ", ")
+                ))
+
+            HStack {
+                Button(i18n.t("common.cancel"), role: .cancel) {
+                    onChoose(.cancel)
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button(i18n.t("desktop.chrome.spotlight.chooseDifferent")) {
+                    onChoose(.chooseDifferent)
+                }
+
+                Button(i18n.t("desktop.chrome.spotlight.useThisFolder")) {
+                    onChoose(.useThisFolder)
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 420)
+    }
+
+    /// Finder-style breadcrumb: `~ › Research › 2026 › Project Ikea`.
+    private func breadcrumb(for url: URL) -> String {
+        breadcrumbSegments(for: url).joined(separator: " › ")
+    }
+
+    /// Path segments suitable for a comma-joined VoiceOver label.
+    private func breadcrumbSegments(for url: URL) -> [String] {
+        let home = NSHomeDirectory()
+        let path = url.path
+        var trimmed = path
+        var leading = ""
+        if path.hasPrefix(home) {
+            trimmed = String(path.dropFirst(home.count))
+            leading = "~"
+        }
+        let parts = trimmed.split(separator: "/").map(String.init)
+        return leading.isEmpty ? parts : ([leading] + parts)
     }
 }
 

@@ -15,6 +15,7 @@
       "print": "Imprimir…"
     },
     "edit": {
+      "undoRemove": "Deshacer Quitar \u00ab%@\u00bb",
       "undo": "Deshacer",
       "redo": "Rehacer",
       "find": "Buscar…",
@@ -45,6 +46,7 @@
       "switchToDarkMode": "Cambiar a modo oscuro"
     },
     "project": {
+      "removeFromSidebar": "Quitar de la barra lateral",
       "showInFinder": "Mostrar en Finder",
       "rename": "Renombrar…",
       "moveTo": "Mover a",
@@ -113,6 +115,16 @@
     }
   },
   "chrome": {
+    "spotlight": {
+      "breadcrumbA11y": "Ruta de la carpeta: %@",
+      "chooseDifferent": "Elegir otra\u2026",
+      "useThisFolder": "Usar esta carpeta",
+      "title": "Encontr\u00e9 una carpeta que podr\u00eda ser \u00ab%@\u00bb."
+    },
+    "locateError": {
+      "message": "Esa carpeta no parece un proyecto analizado. Elija la carpeta en la que se ejecut\u00f3 el an\u00e1lisis o analice una carpeta nueva desde la pantalla de bienvenida.",
+      "title": "No se pudo abrir esa carpeta"
+    },
     "startingServer": "Iniciando servidor…",
     "loadingReport": "Cargando informe…",
     "noProjectSelected": "Ningún proyecto seleccionado",
@@ -308,5 +320,13 @@
     "errorTimedOut": "La conexión ha caducado. Los servidores de Ollama pueden estar lentos; inténtalo de nuevo en un momento.",
     "errorCantReach": "No se puede conectar con Ollama. Después de instalarlo, ábrelo desde Aplicaciones e inténtalo de nuevo.",
     "errorGeneric": "Error de configuración: %@"
+  },
+  "toast": {
+    "removedBatchAnnouncement": "Se eliminaron %d proyectos. Pulse Comando-Z para deshacer.",
+    "removedAnnouncement": "Se elimin\u00f3 \u00ab%@\u00bb. Pulse Comando-Z para deshacer.",
+    "removeBlockedByRun": "Detenga la ejecuci\u00f3n de \u00ab%@\u00bb antes de quitarlo.",
+    "removedBatch": "%d proyectos eliminados.",
+    "undo": "Deshacer",
+    "removed": "Proyecto eliminado."
   }
 }

@@ -78,6 +78,13 @@ final class BridgeHandler: ObservableObject {
     /// enable/disable "Locate…" and "Show in Finder".
     @Published var selectedProjectAvailable: Bool = true
 
+    /// Best-effort path to hand to Finder for the currently selected project.
+    /// Equal to `selectedProjectPath` for available projects; falls back to
+    /// `lastSeenPath` when the project is `cantFind` so Finder can show its
+    /// dead-alias UX (HANDOFF §7). Empty string means there's nothing usable
+    /// to reveal — menu items should dim.
+    @Published var selectedProjectRevealablePath: String = ""
+
     /// Reference to the WKWebView for outbound calls (goBack, switchToTab).
     /// Set by WebView.makeNSView, cleared on reset(). Weak to avoid retain cycles.
     weak var webView: WKWebView?
@@ -273,6 +280,7 @@ final class BridgeHandler: ObservableObject {
         undoLabel = nil
         isDarkMode = false
         selectedProjectPath = ""
+        selectedProjectRevealablePath = ""
         selectedFolderName = ""
         selectedProjectAvailable = true
         webView = nil

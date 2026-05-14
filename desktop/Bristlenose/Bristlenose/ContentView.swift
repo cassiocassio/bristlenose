@@ -387,7 +387,7 @@ struct ContentView: View {
                 let files = alert.urls.filter { !$0.hasDirectoryPath }
                 createProjectFromURLs(directories: directories, files: files)
             }
-            Button(i18n.t("common.cancel"), role: .cancel) {}
+            Button(i18n.t("common.buttons.cancel"), role: .cancel) {}
         } message: { alert in
             Text(String(
                 format: i18n.t("desktop.chrome.duplicateProjectMessage"),
@@ -423,7 +423,7 @@ struct ContentView: View {
                 }
             }
             .keyboardShortcut(.defaultAction)
-            Button(i18n.t("common.cancel"), role: .cancel) {}
+            Button(i18n.t("common.buttons.cancel"), role: .cancel) {}
         } message: { _ in
             // One honest message — the prior split (noOutputFolder /
             // wrongFolder) leaned on a heuristic that misclassified
@@ -763,6 +763,20 @@ struct ContentView: View {
             if url.hasDirectoryPath { return true }
             let ext = url.pathExtension.lowercased()
             return acceptedExtensions.contains(ext)
+        }
+    }
+
+    /// Whether a pipeline state means the project has analysis data the
+    /// user should be able to view. `.ready` and `.partial` both qualify;
+    /// everything else (idle/scanning/queued/running/failed/etc.) doesn't.
+    /// Used by the detail-pane gating for file-subset projects — they
+    /// can't *run* analysis but can *show* it if it exists.
+    private static func pipelineHasViewableData(_ state: PipelineState?) -> Bool {
+        switch state {
+        case .ready, .partial:
+            return true
+        default:
+            return false
         }
     }
 
@@ -1352,9 +1366,18 @@ struct ContentView: View {
                     systemImage: "square.and.arrow.down",
                     description: Text(i18n.t("desktop.chrome.dragInterviewsDescription"))
                 )
-            } else if project.inputFiles != nil {
-                // File-subset project — CLI can't analyse this shape yet.
-                // Show files + Show-in-Finder; pipeline never starts.
+            } else if project.inputFiles != nil
+                        && !Self.pipelineHasViewableData(pipelineRunner.state[project.id]) {
+                // File-subset project with no prior analysis — CLI can't
+                // analyse this shape yet. Show files + Show-in-Finder;
+                // pipeline never starts.
+                //
+                // BUT: if the project somehow already has analysis data
+                // (state == .ready or .partial — e.g. analysed when it was
+                // folder-shaped, then had files added afterwards), don't
+                // gate viewing the report. Same principle as pipeline
+                // failure trust-UX: the run state shouldn't block the
+                // user from seeing what's already there.
                 UnsupportedSubsetView(project: project)
             } else {
                 ZStack {
@@ -1572,7 +1595,7 @@ struct SpotlightConfirmSheet: View {
                 ))
 
             HStack {
-                Button(i18n.t("common.cancel"), role: .cancel) {
+                Button(i18n.t("common.buttons.cancel"), role: .cancel) {
                     onChoose(.cancel)
                 }
                 .keyboardShortcut(.cancelAction)

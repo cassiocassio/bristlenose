@@ -16,7 +16,7 @@ Bristlenose is a local-first user-research analysis tool. It takes a folder of i
 
 - **Python 3.10+**, strict mypy, Ruff linting (line-length 100, rules: E/F/I/N/W/UP, E501 ignored)
 - **Type hints everywhere** — Pydantic models for all data structures
-- **Single source of version**: `bristlenose/__init__.py` (`__version__`). Never add version to `pyproject.toml`. Use `./scripts/bump-version.py` to bump (updates `__init__.py`, man page, creates git tag)
+- **Single source of version**: `bristlenose/__init__.py` (`__version__`). Never add version to `pyproject.toml`. Use `./scripts/bump-version.py` to bump (updates `__init__.py`, man page, creates git tag). **The tag is created immediately on current HEAD — before the bump commit lands.** That means it points at the wrong commit until you delete and re-tag after committing. Standard flow: write CHANGELOG + README first, run `bump-version.py`, `git tag -d v<X.Y.Z>`, stage everything (`CHANGELOG.md README.md` + the three version files the script staged), commit, `git tag v<X.Y.Z>`, push branch then tag separately
 - **Markdown style template** in `bristlenose/utils/markdown.py` — single source of truth for all markdown/txt formatting. Change formatting here, not in stage files
 - **Atomic CSS design system** in `bristlenose/theme/` — tokens, atoms, molecules, organisms, templates (see `bristlenose/theme/CLAUDE.md`)
 - **Licence**: AGPL-3.0 with CLA

@@ -158,7 +158,9 @@
     "inFlightSwitchTitle": "Annuler l’analyse en cours ?",
     "inFlightSwitchMessage": "« %@ » est toujours en cours d’analyse. Changer de projet l’annulera — vous pourrez reprendre là où elle s’est arrêtée.",
     "cancelAndSwitch": "Arrêter et changer",
-    "stay": "Ne pas changer"
+    "stay": "Ne pas changer",
+    "dropProjectOntoProjectTitle": "Impossible d’ajouter un projet à un autre projet",
+    "dropProjectOntoProjectMessage": "« %@ » est déjà un projet Bristlenose. Pour ajouter ses entretiens à « %@ », glissez plutôt les fichiers sources qu’il contient — ou déposez le dossier sur un espace vide pour l’ajouter comme projet distinct."
   },
   "availability": {
     "unmountedVolume": "{{name}} · introuvable",

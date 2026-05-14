@@ -158,7 +158,9 @@
     "inFlightSwitchTitle": "Aktuelle Analyse abbrechen?",
     "inFlightSwitchMessage": "„%@“ wird noch analysiert. Beim Wechsel des Projekts wird die Analyse abgebrochen — Sie können dort fortsetzen, wo sie unterbrochen wurde.",
     "cancelAndSwitch": "Anhalten und wechseln",
-    "stay": "Nicht wechseln"
+    "stay": "Nicht wechseln",
+    "dropProjectOntoProjectTitle": "Ein Projekt kann nicht zu einem Projekt hinzugefügt werden",
+    "dropProjectOntoProjectMessage": "„%@“ ist bereits ein Bristlenose-Projekt. Um die Interviews zu „%@“ hinzuzufügen, ziehen Sie stattdessen die enthaltenen Quelldateien — oder legen Sie den Ordner auf einer leeren Fläche ab, um ihn als separates Projekt hinzuzufügen."
   },
   "availability": {
     "unmountedVolume": "{{name}} · nicht gefunden",

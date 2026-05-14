@@ -104,6 +104,18 @@ struct LocateErrorState: Identifiable {
     let pickedURL: URL
 }
 
+/// State for the "this folder is itself a Bristlenose project" reject alert,
+/// fired when the researcher drags a Bristlenose project folder onto a
+/// different project's row in the sidebar. Plan §11 — data-integrity guard,
+/// not a UX confirmation.
+struct ProjectDropOntoProjectAlert: Identifiable {
+    let id = UUID()
+    /// The project whose row was the drop target.
+    let targetProjectName: String
+    /// The folder that looked like a Bristlenose project.
+    let droppedFolder: URL
+}
+
 /// State for the "another project is still analysing — cancel and switch?"
 /// confirm sheet. Presented when the user selects a different project while
 /// the current one has a `bristlenose run` in flight (per Mini-spec 4 step 1).
@@ -208,6 +220,10 @@ struct ContentView: View {
     /// asks whether to cancel the run and switch, or stay on the current
     /// project. Per Mini-spec 4 step 1.
     @State private var inFlightSwitch: InFlightSwitchPrompt?
+
+    /// Reject alert for dragging another Bristlenose project's folder
+    /// onto an existing project row. Plan §11 — data-integrity guard.
+    @State private var projectDropAlert: ProjectDropOntoProjectAlert?
 
     /// Re-entry guard for `handleSelectionChange` — set to true while we
     /// programmatically revert `selection` after the user picks "Stay" on
@@ -441,6 +457,9 @@ struct ContentView: View {
             // researchers who keep recordings in subdirs. William's pick.
             Text(i18n.t("desktop.chrome.locateError.message"))
         }
+        // Plan §11 reject alert — extracted to a ViewModifier so the body
+        // stays under SwiftUI's type-checker budget.
+        .modifier(ProjectDropAlertModifier(state: $projectDropAlert, i18n: i18n))
         // In-flight pipeline-run guard (Mini-spec 4 step 1). Presented when
         // the user picks a different project while the prior one's run is
         // still going. Choosing "Stay" reverts the sidebar selection.
@@ -900,11 +919,39 @@ struct ContentView: View {
             let urls = await loadURLs(from: providers)
             let accepted = Self.filterAcceptedURLs(urls)
             await MainActor.run {
-                let paths = accepted.map { $0.path }
-                guard !paths.isEmpty else { return }
                 guard let project = projectIndex.projects.first(where: { $0.id == id }) else {
                     return
                 }
+
+                // Plan §11 data-integrity guards:
+                // 1. Silently dedupe a drop of the project's own folder
+                //    (researcher dragged the project root back onto itself).
+                // 2. Reject a drop that contains a *different* folder which
+                //    is itself a Bristlenose project — adding it as files
+                //    would corrupt directory structure / leak its outputs.
+                let projectPath = URL(fileURLWithPath: project.path)
+                    .standardizedFileURL.path
+                var filteredURLs: [URL] = []
+                for url in accepted {
+                    let path = url.standardizedFileURL.path
+                    if url.hasDirectoryPath, path == projectPath {
+                        // Self-drop — ignore silently. No toast (this is the
+                        // gesture that produces the 0.4s flash in the full
+                        // §11 spec; for cohort 1 we just no-op).
+                        continue
+                    }
+                    if url.hasDirectoryPath, LocateFlow.folderLooksAnalysed(url: url) {
+                        projectDropAlert = ProjectDropOntoProjectAlert(
+                            targetProjectName: project.name,
+                            droppedFolder: url
+                        )
+                        return
+                    }
+                    filteredURLs.append(url)
+                }
+
+                let paths = filteredURLs.map { $0.path }
+                guard !paths.isEmpty else { return }
 
                 switch pipelineRunner.state[id] {
                 case .running, .queued:
@@ -1466,6 +1513,34 @@ struct ContentView: View {
 /// Receives project-related notifications (rename, delete, move, locate) from the
 /// native menu bar. Extracted from ContentView's body to keep the SwiftUI expression
 /// within the type-checker's complexity limits.
+/// Reject-alert for "you dragged a Bristlenose project's folder onto a
+/// different project's row." Extracted to keep `ContentView.body` under
+/// the SwiftUI type-checker's expression budget — adding the alert inline
+/// pushed past the limit (commit `2d3ea7d`-era body was already alert-heavy).
+private struct ProjectDropAlertModifier: ViewModifier {
+    @Binding var state: ProjectDropOntoProjectAlert?
+    let i18n: I18n
+
+    func body(content: Content) -> some View {
+        content.alert(
+            i18n.t("desktop.chrome.dropProjectOntoProjectTitle"),
+            isPresented: Binding(
+                get: { state != nil },
+                set: { if !$0 { state = nil } }
+            ),
+            presenting: state
+        ) { _ in
+            Button(i18n.t("common.close"), role: .cancel) {}
+        } message: { alert in
+            Text(String(
+                format: i18n.t("desktop.chrome.dropProjectOntoProjectMessage"),
+                alert.droppedFolder.lastPathComponent,
+                alert.targetProjectName
+            ))
+        }
+    }
+}
+
 private struct ProjectNotificationReceivers: ViewModifier {
     @Binding var selection: Set<SidebarSelection>
     @Binding var renamingProjectID: UUID?

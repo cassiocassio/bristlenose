@@ -41,7 +41,9 @@ Three modes, picked by args:
 
 **In scope:** `docs/design-*.md`, `docs/private/*.md` (excluding session
 notes), `docs/walkthroughs/*.md` as evidence, `docs/*.md` top-level,
-`docs/archive/` for moves.
+`docs/archive/` (public) and `docs/private/archive/` (gitignored) for
+moves — source-aware: public docs archive public, private docs archive
+private. Never cross the boundary.
 
 **Out of scope (v1):**
 - `CLAUDE.md` at any level — always-loaded-into-context truth docs,
@@ -131,9 +133,12 @@ cheap; catches what re-reading won't):
 4. **Status-table parity:** if tracking docs were edited, grep all
    `| N | X | ⬜/✅/🟡 |` rows and `- [ ]`/`- [x]` lines for the same
    checkpoint across docs. They must agree.
-5. **Orphan-reference grep:** for any doc moved to `docs/archive/`,
-   grep the rest of `docs/` + CLAUDE.md for references to the old
-   path. Update or flag.
+5. **Orphan-reference grep:** for any doc moved to an archive folder
+   (`docs/archive/` or `docs/private/archive/`), grep the rest of
+   `docs/` + CLAUDE.md for references to the old path. Update or flag.
+6. **Boundary check:** for every move this pass, verify source-aware
+   destination — no `docs/private/*.md` landed in `docs/archive/`, no
+   public doc landed in `docs/private/archive/`. Privacy ≠ staleness.
 
 Running the checks is cheap. Skipping is where docs re-rot.
 
@@ -186,7 +191,12 @@ Two kinds, both using blockquote syntax so they render visibly:
 
 ## Archive
 
-Single folder `docs/archive/`. Front-matter `status` disambiguates
+Two folders, mirrored: `docs/archive/` (public) and
+`docs/private/archive/` (gitignored). **Source determines destination:**
+a doc moves into the archive that matches its origin tree. Never cross
+the boundary — a superseded private doc stays private. Each archive
+has a `README.md` stating "historical interest only, do not consult as
+spec." Front-matter `status` disambiguates
 historical vs reference. No subfolders — folder-name-as-editorial-
 judgement blurs.
 

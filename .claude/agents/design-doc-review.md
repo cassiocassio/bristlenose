@@ -78,9 +78,12 @@ you're thinking "and also…", it's C.
 
 ## D — Very stale — body is a historical artefact
 Body no longer describes how the thing works or how we plan to build
-it. Action (for the skill): prepend a superseded report, move to
-`docs/archive/`, front-matter `archived-historical` (factually obsolete)
-or `archived-reference` (body still offers reasoning insight).
+it. Action (for the skill): prepend a superseded report, set
+front-matter `archived-historical` (factually obsolete) or
+`archived-reference` (body still offers reasoning insight), and move
+source-aware: `docs/*.md` → `docs/archive/`, `docs/private/*.md` →
+`docs/private/archive/`. Never cross the boundary — privacy is a
+property of the content, archival doesn't downgrade it.
 
 ## E — Insufficient evidence
 Cannot cross-check the doc against code with reasonable confidence

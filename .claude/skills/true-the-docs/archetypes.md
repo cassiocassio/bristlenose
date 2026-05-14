@@ -58,9 +58,16 @@ summarises the rescue.
 
 Body no longer describes how the thing works or how we plan to build
 it. Fix: **don't rewrite the body**. Prepend a superseded report,
-move to `docs/archive/` with front-matter `archived-historical` (if
-factually obsolete) or `archived-reference` (if body still offers
-reasoning insight even if obsolete).
+set front-matter `archived-historical` (if factually obsolete) or
+`archived-reference` (if body still offers reasoning insight even if
+obsolete), then **move source-aware**:
+
+- Docs originating in `docs/` (public) → `docs/archive/`
+- Docs originating in `docs/private/` (gitignored) → `docs/private/archive/`
+
+**Never cross the boundary.** Archival does not downgrade sensitivity —
+a superseded private doc is still private. The source path determines
+the destination path; no exceptions, no prompts.
 
 ## E — Insufficient evidence
 

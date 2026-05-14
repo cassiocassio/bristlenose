@@ -1,6 +1,7 @@
 # Superseded report template (Archetype D)
 
-Prepended to Archetype D docs when they move to `docs/archive/`.
+Prepended to Archetype D docs when they move to an archive folder
+(`docs/archive/` for public docs, `docs/private/archive/` for private).
 Replaces the need for readers to infer "is this doc still useful?"
 by reading the whole body. The body below remains unedited as a
 historical record.

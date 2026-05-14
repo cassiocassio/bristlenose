@@ -23,6 +23,11 @@ enum PipelineFailureCategory: String, Codable, Equatable {
     case missingDep = "missing_dep"
     case missingInput = "missing_input"
     case missingBinary = "missing_binary"
+    /// CLI refused to re-run because `bristlenose-output/` already exists.
+    /// Distinct from a real failure — the *project* is fine, the *attempt
+    /// to re-analyse* was blocked. UX surfaces this with a "Re-analyse
+    /// (replaces existing output)" CTA that spawns with `--clean`.
+    case outputExists = "output_exists"
 }
 
 // MARK: - Neutral progress struct
@@ -760,7 +765,13 @@ final class PipelineRunner: ObservableObject {
     /// non-dismissable `AIConsentView` sheet in ContentView. If somehow the
     /// guard below fails, the subprocess still can't send data anywhere
     /// because API keys live in Keychain behind a user prompt.
-    func start(project: Project) {
+    /// Start a `bristlenose run` for this project.
+    ///
+    /// - Parameter clean: when true, pass `--clean` to the CLI, which deletes
+    ///   `bristlenose-output/` before running. Used by the `outputExists`
+    ///   re-analyse CTA in the failed-popover. Destructive — caller must
+    ///   confirm with the user first. Default false.
+    func start(project: Project, clean: Bool = false) {
         guard Self.hasAIConsent else {
             Self.logger.warning(
                 "start blocked — no AI consent (project=\(project.id.uuidString, privacy: .public))"
@@ -781,7 +792,7 @@ final class PipelineRunner: ObservableObject {
         }
 
         if currentlyRunning == nil {
-            spawn(project: project)
+            spawn(project: project, clean: clean)
         } else if currentlyRunning != project.id, !queue.contains(project.id) {
             queue.append(project.id)
             renumberQueue()
@@ -886,7 +897,11 @@ final class PipelineRunner: ObservableObject {
 
     // MARK: - Spawn
 
-    private func spawn(project: Project) {
+    /// Spawn the subprocess. When `clean` is true, `--clean` is added — used
+    /// by the Re-analyse CTA on `outputExists` failures. Queued spawns
+    /// (`startNextQueued`) don't preserve the flag; the queue + Re-analyse
+    /// interaction is a follow-up if it surfaces.
+    private func spawn(project: Project, clean: Bool = false) {
         // Resolve the sidecar binary the same way ServeManager does. Three
         // shapes of failure: external-server scheme has no binary to spawn,
         // resolver itself can fail (bundle missing, dev path invalid), and
@@ -957,7 +972,9 @@ final class PipelineRunner: ObservableObject {
         // flag was spelled `--static` and conflated with the static-render
         // surface; A3 dropped `--static` and kept `--no-serve` as the honest
         // hidden flag — see bristlenose/cli.py.)
-        proc.arguments = ["run", project.path, "--no-serve"]
+        var args = ["run", project.path, "--no-serve"]
+        if clean { args.append("--clean") }
+        proc.arguments = args
         // Host-gate handshake for the bundled sidecar's `run` passthrough —
         // see desktop/sidecar_entry.py. Third-party callers of the bundled
         // binary don't set this env var; we do. Belt-and-braces post-A1c
@@ -1176,6 +1193,10 @@ final class PipelineRunner: ObservableObject {
             tail = tail.replacingOccurrences(of: name, with: "")
         }
 
+        // Output-exists check first — the CLI message contains the project
+        // name in some locales, and we want it classified before the broader
+        // "model" / "whisper" matches accidentally fire on unrelated output.
+        if matches(tail, #"output directory already exists"#) { return .outputExists }
         if matches(tail, #"401|invalid api key|authentication"#) { return .auth }
         if matches(tail, #"rate limit|quota|insufficient_quota|429"#) { return .quota }
         if matches(tail, #"connection refused|timed out|dns|could not resolve"#) {
@@ -1233,6 +1254,7 @@ final class PipelineRunner: ObservableObject {
         case .missingDep: return "Setup needed — a required tool isn't installed."
         case .missingInput: return "A required input file is missing."
         case .missingBinary: return "FFmpeg couldn't be found."
+        case .outputExists: return "Already analysed — re-analysing would replace the existing results."
         case .unknown:    return "Something went wrong during analysis."
         }
     }

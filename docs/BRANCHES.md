@@ -30,6 +30,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
+| `bristlenose_branch multi-project-switch/` | `multi-project-switch` | feature | Phase 2 core: sidebar→server project switch via sidecar restart (#1), verify create-new-project bookmark capture (#2), verify #3 falls out |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -117,6 +118,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
+| `multi-project-switch` | `bristlenose_branch multi-project-switch/` | local only |
 | `ci-version-pinning` _(merged)_ | `bristlenose_branch ci-version-pinning/` _(detached, on disk)_ | local + remote deleted — merged to main 14 May 2026 (`e1c8083`) |
 | `tf-multi-project` _(merged)_ | `bristlenose_branch tf-multi-project/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`e73de11`) |
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
@@ -135,6 +137,30 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `multi-project-switch`
+
+**Kind:** feature — code lands on main; Phase 2 of the desktop multi-project effort (Phase 0 shipped via `tf-multi-project`)
+**Status:** Just started
+**Started:** 14 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch multi-project-switch/`
+**Remote:** local only (push when ready)
+
+**What it does:** Phase 2 core: sidebar→server project switch via sidecar restart (#1), verify create-new-project bookmark capture (#2), verify #3 falls out. Plan seeded into the worktree's `.claude/plans/` from the gitignored handoffs area.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/ServeManager.swift`
+- `desktop/Bristlenose/Bristlenose/PipelineRunner.swift`
+- `desktop/Bristlenose/Bristlenose/ContentView.swift`
+- `desktop/Bristlenose/Bristlenose/ProjectIndex.swift`
+- `desktop/Bristlenose/Bristlenose/WelcomeView.swift`
+- `bristlenose/server/app.py`
+
+**Potential conflicts with other branches:**
+- `responsive-signal-cards` — none (frontend layout, not desktop Swift / server boot)
+- `tower-of-hanoi` — none (isolated under `experiments/`)
 
 ---
 

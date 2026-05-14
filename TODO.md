@@ -15,7 +15,6 @@ Last updated: 14 May 2026 (A3 cli-honest-output landed on main — preflight gat
 Pick up from `docs/private/100days.md` and `docs/private/sprint2-tracks.md` — Track B (MVP UX) and S6 are the remaining alpha gates. No active sandbox triage.
 
 Open follow-ups not in any active branch (surface separately, not alpha blockers):
-- **i18n locales not reaching host bundle under sandbox** — chrome keys leak verbatim in welcome view + AIConsent modal under sandbox-on, despite commit `ea21bb1`. Pre-existing build-system bug; cosmetic but visible.
 - **`proc_listpids` EPERM** — zombie cleanup non-functional under sandbox. Deferred post-alpha (triaged).
 - **IOKit AppleNVMeEANUC deny** — silent, single occurrence per launch. Investigate only if it surfaces user-visibly.
 - ~~**frontend size-limit fails on `main` by 547 B**~~ ✅ **Resolved 14 May 2026** — bumped budget to 215 kB (was 210 kB) to re-baseline against Node 24 gzip output. Runtime currency / security / dep coherence outweighs sub-1% size headroom; the right fix when a version bump trips a size gate by < a few kB is to raise the budget, not lower the runtime. `frontend/CLAUDE.md` reflects the new ceiling.

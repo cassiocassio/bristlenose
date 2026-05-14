@@ -83,3 +83,7 @@ frontend/trial-runs/
 
 # Per-worktree branch handoff symlink (points into .claude/plans/<branch>.md)
 HANDOFF.md
+
+# Session-handoff sentinels (per-worktree state, not for the repo)
+.claude/setup-incomplete
+.claude/last-end-session.json

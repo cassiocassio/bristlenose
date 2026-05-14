@@ -136,6 +136,29 @@ If this session did **not** identify follow-up branches, skip this step.
     - `fix tag suggest offering tags the quote already has`
     - `inspector panel with drag-resize and signal card selection`
 
+13a. **Write end-of-session sentinel** — once Phase 2 (document) has completed successfully and any required commit has landed (or has been skipped because there was nothing to commit), write `.claude/last-end-session.json` in the worktree root. This trigger is independent of step ordering — it fires whether the session went through the standard commit path (step 13), the branch-handoff path, or the no-changes-to-commit short-circuit. Write only once per `/end-session` invocation; subsequent steps (maintenance, QA backlog, push) don't re-trigger it. The sentinel reflects "documenting was committed", not "push succeeded" — `pushed` records the decision made at step 17, but the sentinel's primary consumer (`/close-branch` drift detection) only reads `head_sha`. This is the positive sentinel `/close-branch` reads to confirm sign-off and detect drift. Gitignored.
+
+   Schema (ASCII-only — use `ensure_ascii=True` if writing via Python):
+
+   ```json
+   {
+     "completed_at": "2026-05-14T09:52:18Z",
+     "head_sha": "<full 40-char SHA from git rev-parse HEAD>",
+     "branch": "<git branch --show-current>",
+     "phases": {
+       "verify": "ok" | "skipped-docs-only" | "skipped-no-changes",
+       "document": "ok" | "skipped",
+       "commit": "ok" | "skipped-no-changes"
+     },
+     "tests": "passed" | "skipped" | "failed",
+     "lint": "clean" | "skipped" | "errors",
+     "handoff_drift": "none" | "appended" | "no-handoff",
+     "pushed": false | "origin/main" | "origin/main:wip" | "origin/<branch>"
+   }
+   ```
+
+   Timestamp via `date -u +"%Y-%m-%dT%H:%M:%SZ"`. Write only on successful completion of Phase 3 commit (or successful no-op skip). If `/end-session` aborts mid-phase, leave any prior sentinel in place — stale-but-truthful beats absent. Re-running `/end-session` overwrites with the new timestamp; that's fine.
+
 14. **Maintenance schedule check** — read the "Dependency maintenance" section of `TODO.md`. If today's date is past any unchecked quarterly/annual item, remind the user it's due.
 
 15. **QA backlog reminder** — check `docs/qa-backlog.md` for unacked items. Remind the user if any exist.
@@ -159,6 +182,7 @@ End of session:
 - Memory: saved feedback on X (or "nothing new")
 - Handoff drift: appended 1 decision to HANDOFF.md (or "none" / "no handoff")
 - Committed: "commit message here" (N files, +X -Y lines)
+- Sentinel: wrote .claude/last-end-session.json (HEAD <short-sha>)
 - Maintenance: nothing due (or "May 2026 dep review is due")
 - QA backlog: 0 unacked (or "3 items need review")
 - Not pushed (evening release rule — push with `git push origin main`)

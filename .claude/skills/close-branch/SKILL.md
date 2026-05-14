@@ -12,7 +12,7 @@ If no branch name was provided (`$0` is empty), run `git worktree list` and show
 
 **Important:** This skill does NOT delete the local worktree directory. The directory stays on disk with a stale marker file so the user can revisit old experiments or delete it manually later.
 
-**Failure policy:** Steps 1–3 are critical safety checks — stop on failure (or stop if the user says so in Step 3). Steps 4–9 are cleanup — warn on failure but continue through the rest.
+**Failure policy:** Steps 1–3 (and 3.5) are critical safety checks — stop on failure (or stop if the user says so in Step 3 or 3.5). Steps 4–9 are cleanup — warn on failure but continue through the rest.
 
 **Idempotency:** If this skill was partially run before (e.g. stale marker exists but BRANCHES.md wasn't updated), detect what's already done and skip to the first incomplete step.
 
@@ -55,6 +55,54 @@ Ignore `trial-runs` (symlink) and `_Stale*` files (from partial previous run). I
 2. **Stop.** Tell the user to deal with the uncommitted work first (commit it, move it to main, or discard it), then re-run `/close-branch`.
 
 Do NOT proceed past this step. Detaching the worktree makes it a non-git directory — uncommitted changes become invisible diffs with no easy recovery.
+
+## Step 3.5: Check `/end-session` sign-off
+
+Look for `.claude/last-end-session.json` inside the worktree — the positive sentinel `/end-session` writes on successful close-out. Compare its `head_sha` to current HEAD of the branch.
+
+```bash
+WORKTREE="/Users/cassio/Code/bristlenose_branch $0"
+SENTINEL="$WORKTREE/.claude/last-end-session.json"
+HEAD_SHA=$(git -C "$WORKTREE" rev-parse HEAD 2>/dev/null)
+```
+
+**If the sentinel is missing** — the branch was never `/end-session`'d (or was end-sessioned before this feature existed). Prompt the user via `AskUserQuestion`:
+
+> This branch has no `/end-session` sign-off record. The verify/document ritual (tests, lint, TODO/100days, CLAUDE.md gotchas, memory) may have been skipped. Run `/end-session` first? (Y/n)
+
+- "Yes" → stop. Tell user: `cd "/Users/cassio/Code/bristlenose_branch $0"` and run `/end-session`, then re-run `/close-branch $0`.
+- "No" → continue (override path for branches end-sessioned before this feature, or where the user explicitly accepts the gap).
+
+**If the sentinel exists** — read `head_sha` via stdin (avoids shell-quoting hazards in the path or branch name):
+
+```bash
+LAST_SHA=$(python3 -c "import json,sys; print(json.load(sys.stdin)['head_sha'])" < "$SENTINEL" 2>/dev/null)
+```
+
+If `python3` fails or the file is malformed, warn ("sentinel exists but unreadable — continuing") and proceed.
+
+If `LAST_SHA` matches current `HEAD_SHA`, continue silently.
+
+If they differ, check whether the drift is a simple fast-forward or a history rewrite:
+
+```bash
+if git -C "$WORKTREE" merge-base --is-ancestor "$LAST_SHA" "$HEAD_SHA" 2>/dev/null; then
+  AHEAD=$(git -C "$WORKTREE" rev-list --count "$LAST_SHA..$HEAD_SHA" 2>/dev/null)
+  # Fast-forward drift: $AHEAD new commits on top of sign-off
+else
+  AHEAD="diverged"
+  # History was rewritten (rebase / amend / force-push): LAST_SHA is no longer
+  # reachable from HEAD. The ahead-count is meaningless — surface the divergence.
+fi
+```
+
+Prompt via `AskUserQuestion`:
+
+- Fast-forward: > HEAD is $AHEAD commit(s) ahead of last `/end-session` (signed off at `$LAST_SHA`). The new commits haven't been through the verify/document ritual. Run `/end-session` again first? (Y/n)
+- Diverged: > Branch history has diverged from the last `/end-session` sign-off (`$LAST_SHA` is no longer an ancestor of HEAD — likely a rebase or amend). The previous sign-off no longer applies. Run `/end-session` again first? (Y/n)
+
+- "Yes" → stop with the same instruction as above.
+- "No" → continue (override).
 
 ## Step 4: Capture commit history (BEFORE any deletion)
 

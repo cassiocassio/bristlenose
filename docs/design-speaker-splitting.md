@@ -48,7 +48,7 @@ Location: `bristlenose/stages/s05b_identify_speakers.py`
 
 **Guard**: count unique `speaker_label` values. If >=2 distinct labels already exist, return segments unchanged.
 
-**Sample window**: first 10 minutes of transcript (longer than the 5-minute window used for role identification — splitting needs more context to establish conversational patterns).
+**Sample window**: `min(max(300, total_duration * 0.18), 480)` seconds — i.e. at least 5 minutes, up to 18% of the recording, capped at 8 minutes. (Longer than the 5-minute window used for role identification — splitting needs more context to establish conversational patterns.) Boundaries detected within this window are then forward-propagated to every remaining segment: the last detected speaker label is applied to all later segments without further analysis.
 
 **Input format**: numbered lines (`[0] text`, `[1] text`, ...) without timecodes. The LLM doesn't need timing information to detect speaker changes.
 
@@ -117,7 +117,9 @@ Default assumption: 2 speakers (interviewer + interviewee). Returns `speaker_cou
 ## Limitations
 
 - **Text-only**: relies on linguistic cues, not acoustic features. Won't work for rapid back-and-forth without name mentions or clear conversational structure
-- **Sample window**: only reads first 10 minutes. If speakers don't appear until later, they won't be detected (carry-forward assigns them the last detected speaker)
+- **Sample window**: LLM only inspects the first 5–8 minutes (`min(max(300, dur*0.18), 480)`s). The last detected speaker label is then forward-propagated to every later segment. Two consequences worth knowing for long-form recordings:
+  - Speakers who first appear past the sample window won't be detected at all
+  - Speakers who turn-take normally inside the window will *also* be flattened past it — every subsequent segment inherits whichever label was last set. For an 18-minute raw recording the propagation zone is ~13 minutes; for a 2-hour recording it's ~112 minutes. If you have raw long-form audio (no platform transcript), prefer Teams / Zoom platform transcripts when possible — they bring their own diarization. Tracked under *Future → Full-transcript splitting* below.
 - **No overlapping speech**: assumes one speaker per segment. If a segment contains two speakers talking simultaneously, it gets assigned to one
 - **LLM accuracy varies**: local models (Ollama) are less reliable than cloud models for structured output. The 3-retry mechanism in `_analyze_local()` helps but doesn't guarantee correct boundary detection
 

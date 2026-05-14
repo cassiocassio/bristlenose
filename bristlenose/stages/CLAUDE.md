@@ -40,6 +40,12 @@ interviews/bristlenose-output/          # default output location
 
 **Path helpers**: Use `OutputPaths` from `bristlenose/output_paths.py` for consistent path construction.
 
+## Stage 5: Transcription — Whisper hallucination mitigations
+
+- **mlx-whisper and faster-whisper diverge on VAD by default.** `faster-whisper` runs with `vad_filter=True` so Silero VAD strips silence before transcription — hallucination-resistant out of the box. `mlx-whisper` has no built-in VAD, so the same recording transcribed on Apple Silicon (the primary alpha-cohort path) is more prone to "thanks thanks thanks", "Thank you. Thank you.", "Bye." loops in low-signal audio. When tuning transcription, don't assume parity across the two backends
+- **mlx-whisper accepts `condition_on_previous_text`, `no_speech_threshold`, `compression_ratio_threshold` as kwargs** (mirrors openai-whisper API). B1 sets these to `False / 0.85 / 1.8` respectively in `transcribe_mlx` — breaks the autoregressive loop and tightens silence + compression-ratio drops. Trade-off: slightly worse cross-chunk proper-noun continuity
+- **`collapse_adjacent_repeats()` is a post-process band-aid, not the proper fix.** Catches "thanks thanks thanks" + "facebook facebook" patterns; protects English interjection doubling ("No. No. No.", "yeah yeah", "very very good") via the `_REDUPLICABLE` set in `s05_transcribe.py`. English-only — non-English audio needs a locale-specific reduplicable list. Proper fix is Silero VAD pre-filter for mlx-whisper, tracked post-cohort
+
 ## Stage 5b: Speaker identification
 
 `identify_speakers.py` runs a three-pass speaker assignment: splitting, heuristic, then LLM refinement.

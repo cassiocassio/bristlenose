@@ -304,6 +304,19 @@ async def split_single_speaker_llm(
             names or "(none extracted)",
         )
 
+        # Surface the sample-window propagation limit (see
+        # docs/design-speaker-splitting.md) as INFO so it lands in
+        # support-bundle log review; thresholds are policy (no unit-test).
+        tail_seconds = total_duration - sample_ceiling
+        if tail_seconds > 120.0 and tail_seconds / total_duration > 0.25:
+            logger.info(
+                "Speaker splitting analysed first %.0fs of %.0fs; later "
+                "segments inherit the last detected label. For accurate "
+                "long-form diarization, prefer Teams / Zoom transcripts.",
+                sample_ceiling,
+                total_duration,
+            )
+
         return segments
 
     except Exception as exc:

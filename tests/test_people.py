@@ -369,3 +369,32 @@ def test_pct_words_sums_to_approximately_100() -> None:
 
     total_pct = sum(s.pct_words for s in stats.values())
     assert 99.5 <= total_pct <= 100.5  # allow rounding
+
+
+def test_pct_words_excludes_moderator_from_denominator() -> None:
+    """`m`-coded segments stay at pct_words=0.0; only `p`-codes form the denominator.
+
+    Regression pin: observed IKEA people.yaml shows m1=0.0, p1=100.0 — correct
+    by design, not an inversion bug. Without this test, a refactor that pulled
+    moderator words into total_words_all would silently flip the percentages.
+    """
+    sessions = [_session("p1", 1)]
+    m_seg = TranscriptSegment(
+        start_time=0.0, end_time=10.0, text="one two three", speaker_code="m1"
+    )
+    p1_seg = TranscriptSegment(
+        start_time=11.0, end_time=21.0, text="four five six seven", speaker_code="p1"
+    )
+    p2_seg = TranscriptSegment(
+        start_time=22.0, end_time=32.0,
+        text="eight nine ten eleven twelve thirteen", speaker_code="p2",
+    )
+    transcripts = [_transcript("p1", [m_seg, p1_seg, p2_seg])]
+
+    stats = compute_participant_stats(sessions, transcripts)
+
+    # Load-bearing: moderator excluded from denominator, p-codes split 4/6.
+    # If m_seg's 3 words leaked into total_words_all, p1 would be 30% / p2 45%.
+    assert stats["m1"].pct_words == 0.0
+    assert stats["p1"].pct_words == 40.0
+    assert stats["p2"].pct_words == 60.0

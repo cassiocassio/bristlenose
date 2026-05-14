@@ -15,6 +15,7 @@
       "print": "プリント…"
     },
     "edit": {
+      "undoRemove": "\u300c%@\u300d\u306e\u53d6\u308a\u9664\u304d\u3092\u53d6\u308a\u6d88\u3059",
       "undo": "取り消す",
       "redo": "やり直す",
       "find": "検索…",
@@ -45,6 +46,7 @@
       "switchToDarkMode": "ダークモードに切り替え"
     },
     "project": {
+      "removeFromSidebar": "\u30b5\u30a4\u30c9\u30d0\u30fc\u304b\u3089\u53d6\u308a\u9664\u304f",
       "showInFinder": "Finder に表示",
       "rename": "名前を変更…",
       "moveTo": "移動先",
@@ -113,6 +115,16 @@
     }
   },
   "chrome": {
+    "spotlight": {
+      "breadcrumbA11y": "\u30d5\u30a9\u30eb\u30c0\u30d1\u30b9: %@",
+      "chooseDifferent": "\u5225\u306e\u30d5\u30a9\u30eb\u30c0\u3092\u9078\u629e\u2026",
+      "useThisFolder": "\u3053\u306e\u30d5\u30a9\u30eb\u30c0\u3092\u4f7f\u7528",
+      "title": "\u300c%@\u300d\u306e\u53ef\u80fd\u6027\u304c\u3042\u308b\u30d5\u30a9\u30eb\u30c0\u304c\u898b\u3064\u304b\u308a\u307e\u3057\u305f\u3002"
+    },
+    "locateError": {
+      "message": "\u305d\u306e\u30d5\u30a9\u30eb\u30c0\u306f\u5206\u6790\u6e08\u307f\u306e\u30d7\u30ed\u30b8\u30a7\u30af\u30c8\u306e\u3088\u3046\u306b\u898b\u3048\u307e\u305b\u3093\u3002\u5206\u6790\u3092\u5b9f\u884c\u3057\u305f\u30d5\u30a9\u30eb\u30c0\u3092\u9078\u629e\u3059\u308b\u304b\u3001\u30a6\u30a7\u30eb\u30ab\u30e0\u753b\u9762\u304b\u3089\u65b0\u305f\u306b\u5206\u6790\u3057\u3066\u304f\u3060\u3055\u3044\u3002",
+      "title": "\u305d\u306e\u30d5\u30a9\u30eb\u30c0\u3092\u958b\u3051\u307e\u305b\u3093\u3067\u3057\u305f"
+    },
     "startingServer": "サーバーを起動しています…",
     "loadingReport": "レポートを読み込んでいます…",
     "noProjectSelected": "プロジェクトが選択されていません",
@@ -308,5 +320,13 @@
     "errorTimedOut": "接続がタイムアウトしました。Ollamaのサーバが遅い可能性があります。しばらくしてから再試行してください。",
     "errorCantReach": "Ollamaに接続できません。インストール後、アプリケーションから起動してもう一度お試しください。",
     "errorGeneric": "セットアップに失敗しました: %@"
+  },
+  "toast": {
+    "removedBatchAnnouncement": "%d \u3064\u306e\u30d7\u30ed\u30b8\u30a7\u30af\u30c8\u3092\u53d6\u308a\u9664\u304d\u307e\u3057\u305f\u3002\u30b3\u30de\u30f3\u30c9-Z \u3067\u53d6\u308a\u6d88\u305b\u307e\u3059\u3002",
+    "removedAnnouncement": "\u300c%@\u300d\u3092\u53d6\u308a\u9664\u304d\u307e\u3057\u305f\u3002\u30b3\u30de\u30f3\u30c9-Z \u3067\u53d6\u308a\u6d88\u305b\u307e\u3059\u3002",
+    "removeBlockedByRun": "\u300c%@\u300d\u306e\u5b9f\u884c\u3092\u505c\u6b62\u3057\u3066\u304b\u3089\u53d6\u308a\u9664\u3044\u3066\u304f\u3060\u3055\u3044\u3002",
+    "removedBatch": "%d \u3064\u306e\u30d7\u30ed\u30b8\u30a7\u30af\u30c8\u3092\u53d6\u308a\u9664\u304d\u307e\u3057\u305f\u3002",
+    "undo": "\u53d6\u308a\u6d88\u3059",
+    "removed": "\u30d7\u30ed\u30b8\u30a7\u30af\u30c8\u3092\u53d6\u308a\u9664\u304d\u307e\u3057\u305f\u3002"
   }
 }

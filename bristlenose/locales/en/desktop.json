@@ -15,6 +15,7 @@
       "print": "Print…"
     },
     "edit": {
+      "undoRemove": "Undo Remove \u201c%@\u201d",
       "undo": "Undo",
       "redo": "Redo",
       "find": "Find…",
@@ -45,6 +46,7 @@
       "switchToDarkMode": "Switch to Dark Mode"
     },
     "project": {
+      "removeFromSidebar": "Remove from Sidebar",
       "showInFinder": "Show in Finder",
       "rename": "Rename…",
       "moveTo": "Move to",
@@ -113,6 +115,16 @@
     }
   },
   "chrome": {
+    "spotlight": {
+      "breadcrumbA11y": "Folder path: %@",
+      "chooseDifferent": "Choose Different\u2026",
+      "useThisFolder": "Use This Folder",
+      "title": "Found a folder that might be \u201c%@\u201d."
+    },
+    "locateError": {
+      "message": "That folder doesn\u2019t look like an analysed project. Pick the folder where the analysis was run, or analyse a folder fresh from the Welcome screen.",
+      "title": "Couldn\u2019t open that folder"
+    },
     "startingServer": "Starting server…",
     "loadingReport": "Loading report…",
     "noProjectSelected": "No Project Selected",
@@ -308,5 +320,13 @@
     "errorTimedOut": "The connection timed out. Ollama’s servers may be slow right now; try again in a moment.",
     "errorCantReach": "Can’t reach Ollama. After installing, launch it from Applications and try again.",
     "errorGeneric": "Setup failed: %@"
+  },
+  "toast": {
+    "removedBatchAnnouncement": "Removed %d projects. Press Command-Z to undo.",
+    "removedAnnouncement": "Removed \u201c%@\u201d. Press Command-Z to undo.",
+    "removeBlockedByRun": "Stop the run on \u201c%@\u201d before removing it.",
+    "removedBatch": "%d projects removed.",
+    "undo": "Undo",
+    "removed": "Project removed."
   }
 }

@@ -28,6 +28,7 @@ struct BristlenoseApp: App {
     @StateObject private var pipelineRunner = PipelineRunner()
     @StateObject private var volumeWatcher = VolumeWatcher()
     @StateObject private var toast = ToastStore()
+    @StateObject private var removalStore = UndoableRemovalStore()
     @StateObject private var i18n: I18n = {
         let i = I18n()
         if let dir = I18n.findLocalesDirectory() {
@@ -45,13 +46,26 @@ struct BristlenoseApp: App {
                 .environmentObject(projectIndex)
                 .environmentObject(pipelineRunner)
                 .environmentObject(toast)
+                .environmentObject(removalStore)
                 .environmentObject(i18n)
                 .overlay { ToastOverlay().environmentObject(toast) }
+                .overlay { RemoveToast().environmentObject(removalStore).environmentObject(i18n) }
                 .onAppear {
                     volumeWatcher.projectIndex = projectIndex
                     projectIndex.refreshAvailability()
                     pipelineRunner.setProjectIndex(projectIndex)
                     pipelineRunner.scanAllProjects(projectIndex.projects)
+                    removalStore.setProjectIndex(projectIndex)
+                    // Selection-restore is owned by ContentView (the @State
+                    // selection holder); wired via NotificationCenter to keep
+                    // the store SwiftUI-free.
+                    removalStore.setOnUndo { restoredSelection in
+                        NotificationCenter.default.post(
+                            name: .undoableRemovalRestoredSelection,
+                            object: nil,
+                            userInfo: ["selection": restoredSelection]
+                        )
+                    }
                 }
                 .onReceive(
                     NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
@@ -62,7 +76,7 @@ struct BristlenoseApp: App {
         .defaultSize(width: 1000, height: 700)
         .windowResizability(.contentMinSize)
         .commands {
-            MenuCommands(bridgeHandler: bridgeHandler, serveManager: serveManager, projectIndex: projectIndex, i18n: i18n)
+            MenuCommands(bridgeHandler: bridgeHandler, serveManager: serveManager, projectIndex: projectIndex, removalStore: removalStore, i18n: i18n)
         }
 
         Settings {

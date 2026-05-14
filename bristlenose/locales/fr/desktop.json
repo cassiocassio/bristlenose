@@ -15,6 +15,7 @@
       "print": "Imprimer…"
     },
     "edit": {
+      "undoRemove": "Annuler Retirer \u00ab\u00a0%@\u00a0\u00bb",
       "undo": "Annuler",
       "redo": "Rétablir",
       "find": "Rechercher…",
@@ -45,6 +46,7 @@
       "switchToDarkMode": "Passer en mode sombre"
     },
     "project": {
+      "removeFromSidebar": "Retirer de la barre lat\u00e9rale",
       "showInFinder": "Afficher dans le Finder",
       "rename": "Renommer…",
       "moveTo": "Déplacer vers",
@@ -113,6 +115,16 @@
     }
   },
   "chrome": {
+    "spotlight": {
+      "breadcrumbA11y": "Chemin du dossier\u00a0: %@",
+      "chooseDifferent": "Choisir un autre\u2026",
+      "useThisFolder": "Utiliser ce dossier",
+      "title": "Un dossier qui pourrait \u00eatre \u00ab\u00a0%@\u00a0\u00bb a \u00e9t\u00e9 trouv\u00e9."
+    },
+    "locateError": {
+      "message": "Ce dossier ne ressemble pas \u00e0 un projet analys\u00e9. Choisissez le dossier dans lequel l\u2019analyse a \u00e9t\u00e9 ex\u00e9cut\u00e9e ou analysez un dossier depuis l\u2019\u00e9cran de bienvenue.",
+      "title": "Impossible d\u2019ouvrir ce dossier"
+    },
     "startingServer": "Démarrage du serveur…",
     "loadingReport": "Chargement du rapport…",
     "noProjectSelected": "Aucun projet sélectionné",
@@ -308,5 +320,13 @@
     "errorTimedOut": "La connexion a expiré. Les serveurs d’Ollama sont peut-être lents en ce moment ; réessayez dans un instant.",
     "errorCantReach": "Impossible de joindre Ollama. Après l’installation, lancez-le depuis Applications et réessayez.",
     "errorGeneric": "Échec de la configuration : %@"
+  },
+  "toast": {
+    "removedBatchAnnouncement": "%d projets retir\u00e9s. Appuyez sur Commande-Z pour annuler.",
+    "removedAnnouncement": "\u00ab\u00a0%@\u00a0\u00bb a \u00e9t\u00e9 retir\u00e9. Appuyez sur Commande-Z pour annuler.",
+    "removeBlockedByRun": "Arr\u00eatez l\u2019analyse de \u00ab\u00a0%@\u00a0\u00bb avant de la retirer.",
+    "removedBatch": "%d projets retir\u00e9s.",
+    "undo": "Annuler",
+    "removed": "Projet retir\u00e9."
   }
 }

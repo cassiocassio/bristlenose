@@ -21,6 +21,7 @@ struct MenuCommands: Commands {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var serveManager: ServeManager
     @ObservedObject var projectIndex: ProjectIndex
+    @ObservedObject var removalStore: UndoableRemovalStore
     @ObservedObject var i18n: I18n
 
     var body: some Commands {
@@ -33,7 +34,7 @@ struct MenuCommands: Commands {
         }
 
         CommandGroup(replacing: .undoRedo) {
-            UndoRedoMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
+            UndoRedoMenuContent(bridgeHandler: bridgeHandler, removalStore: removalStore, i18n: i18n)
         }
 
         CommandGroup(after: .textEditing) {
@@ -177,15 +178,34 @@ private struct FileMenuContent: View {
 
 private struct UndoRedoMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
+    @ObservedObject var removalStore: UndoableRemovalStore
     @ObservedObject var i18n: I18n
+
+    /// Removal-undo takes priority over web-side undo when pending: it's the
+    /// most recent action and has a strict 8s window. After commit it falls
+    /// back to the previous (web) behaviour.
+    private var undoLabel: String {
+        if let name = removalStore.pendingName {
+            return String(format: i18n.t("desktop.menu.edit.undoRemove"), name)
+        }
+        return bridgeHandler.undoLabel ?? i18n.t("desktop.menu.edit.undo")
+    }
+
+    private var canUndo: Bool {
+        removalStore.hasPending || bridgeHandler.canUndo
+    }
 
     var body: some View {
         if !bridgeHandler.isEditing {
-            Button(bridgeHandler.undoLabel ?? i18n.t("desktop.menu.edit.undo")) {
-                bridgeHandler.menuAction("undo")
+            Button(undoLabel) {
+                if removalStore.hasPending {
+                    removalStore.undoLastRemoval()
+                } else {
+                    bridgeHandler.menuAction("undo")
+                }
             }
             .keyboardShortcut("z", modifiers: .command)
-            .disabled(!bridgeHandler.canUndo)
+            .disabled(!canUndo)
 
             Button(i18n.t("desktop.menu.edit.redo")) {
                 bridgeHandler.menuAction("redo")
@@ -377,13 +397,13 @@ private struct ProjectMenuContent: View {
         } else {
             // Project-specific items (or nothing selected)
             Button(i18n.t("desktop.menu.project.showInFinder")) {
-                let path = bridgeHandler.selectedProjectPath
+                let path = bridgeHandler.selectedProjectRevealablePath
                 if !path.isEmpty {
                     NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
                 }
             }
             .keyboardShortcut("r", modifiers: [.command, .shift])
-            .disabled(!hasProject || !bridgeHandler.selectedProjectAvailable)
+            .disabled(!hasProject || bridgeHandler.selectedProjectRevealablePath.isEmpty)
 
             Button(i18n.t("desktop.chrome.locate")) {
                 NotificationCenter.default.post(name: .locateSelectedProject, object: nil)
@@ -430,8 +450,10 @@ private struct ProjectMenuContent: View {
 
             Divider()
 
-            Button(i18n.t("desktop.menu.project.delete")) {
-                NotificationCenter.default.post(name: .deleteSelectedProject, object: nil)
+            Button(i18n.t("desktop.menu.project.removeFromSidebar")) {
+                NotificationCenter.default.post(
+                    name: .removeSelectedProjectsFromSidebar, object: nil
+                )
             }
             .keyboardShortcut(.delete, modifiers: .command)
             .disabled(!hasProject)

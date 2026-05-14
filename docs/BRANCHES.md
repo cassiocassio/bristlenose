@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 14 May 2026 (closed `b1-long-audio-quality`)
+**Updated:** 14 May 2026 (closed `multi-project-switch`)
 
 ---
 
@@ -30,7 +30,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
-| `bristlenose_branch multi-project-switch/` | `multi-project-switch` | feature | Phase 2 core: sidebar→server project switch via sidecar restart (#1), verify create-new-project bookmark capture (#2), verify #3 falls out |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -118,7 +117,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
-| `multi-project-switch` | `bristlenose_branch multi-project-switch/` | local only |
+| `multi-project-switch` _(merged)_ | `bristlenose_branch multi-project-switch/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`baf1896`) |
 | `ci-version-pinning` _(merged)_ | `bristlenose_branch ci-version-pinning/` _(detached, on disk)_ | local + remote deleted — merged to main 14 May 2026 (`e1c8083`) |
 | `tf-multi-project` _(merged)_ | `bristlenose_branch tf-multi-project/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`e73de11`) |
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
@@ -137,30 +136,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `multi-project-switch`
-
-**Kind:** feature — code lands on main; Phase 2 of the desktop multi-project effort (Phase 0 shipped via `tf-multi-project`)
-**Status:** Just started
-**Started:** 14 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch multi-project-switch/`
-**Remote:** local only (push when ready)
-
-**What it does:** Phase 2 core: sidebar→server project switch via sidecar restart (#1), verify create-new-project bookmark capture (#2), verify #3 falls out. Plan seeded into the worktree's `.claude/plans/` from the gitignored handoffs area.
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/ServeManager.swift`
-- `desktop/Bristlenose/Bristlenose/PipelineRunner.swift`
-- `desktop/Bristlenose/Bristlenose/ContentView.swift`
-- `desktop/Bristlenose/Bristlenose/ProjectIndex.swift`
-- `desktop/Bristlenose/Bristlenose/WelcomeView.swift`
-- `bristlenose/server/app.py`
-
-**Potential conflicts with other branches:**
-- `responsive-signal-cards` — none (frontend layout, not desktop Swift / server boot)
-- `tower-of-hanoi` — none (isolated under `experiments/`)
 
 ---
 
@@ -262,6 +237,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `multi-project-switch` — merged 14 May 2026
+
+Phase 2 core of the desktop multi-project effort: sidebar→server project switch via sidecar restart (#1), verify create-new-project bookmark capture (#2), verify #3 falls out. `ServeManager.switchProject(to:)` orchestrator with escalating `shutdown(timeout:)`, in-flight-run confirm sheet, `Cache-Control: no-store` middleware, and `ProjectBookmarkLease` foundation. Also picked up sidebar drop hit-test work (per-row `.dropDestination` native pattern, drag-onto-project reject for self-drops, toast over alert), the pipeline-failure-trust-UX `outputExists` category + Re-analyse CTA, and a QA pass on `common.cancel` key path plus the "Choose Icon" menu ellipsis trim. 14 commits merged as `baf1896`. Worktree detached and tagged orange on disk; local branch deleted; remote was never pushed.
 
 ### `b1-long-audio-quality` — merged 14 May 2026
 

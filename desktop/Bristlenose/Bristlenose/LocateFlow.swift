@@ -41,10 +41,15 @@ final class LocateFlow {
     private let spotlight: SpotlightOneShot
     private let i18n: I18n
 
-    init(project: Project, i18n: I18n, spotlight: SpotlightOneShot = SpotlightOneShot()) {
+    // Default `spotlight` to nil and construct inside the body — Swift 6
+    // evaluates default-arg expressions in the caller's isolation context,
+    // and `SpotlightOneShot.init` is `@MainActor`-isolated. Constructing
+    // here keeps the call MainActor-scoped (this initializer is @MainActor
+    // by class annotation) without forcing every caller to be async.
+    init(project: Project, i18n: I18n, spotlight: SpotlightOneShot? = nil) {
         self.project = project
         self.i18n = i18n
-        self.spotlight = spotlight
+        self.spotlight = spotlight ?? SpotlightOneShot()
     }
 
     /// Whether a directory looks like a real analysed Bristlenose project —

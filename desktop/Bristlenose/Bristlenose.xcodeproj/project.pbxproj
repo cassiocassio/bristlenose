@@ -221,6 +221,7 @@
 		};
 		DFF545202F466A4A00A539C4 /* Copy Sidecar Resources */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);

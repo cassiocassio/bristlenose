@@ -365,6 +365,19 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.8** — _14 May 2026_
+
+- **Honesty everywhere — the pipeline, the install path, and the sidebar all stop faking success.** Walks-fix-walks groundwork across three currents:
+  - **CLI honesty (A-stream).** `bristlenose doctor` hard-errors with a brew/pipx/pip-aware fix message when `[serve]` extras are missing (zsh-glob-safe quoted); `bristlenose run` / `serve` / `analyze` gate `serve_deps` in preflight; mid-run abandons surface a researcher-facing banner (QUOTA, AUTH, NETWORK, API_SERVER, DISK, MISSING_INPUT, MISSING_BINARY) instead of a generic "Failed". The static-render naming is sealed: `bristlenose render` removed, `--static` deleted, `--no-serve` restored as a hidden flag for the desktop sidecar's auto-serve suppression.
+  - **Stage-cache honesty (A4).** Failed analysis stages no longer cache empty output and silently re-serve it on the next run; `mark_stage_complete` refuses empty `content_hash`; `s10`/`s11` hard-fail at the LLM call site before fallback runs. Privacy contract on `cause.message` (class name + provider + stage, never `str(exc)`).
+  - **Long-audio quality (B1).** `collapse_adjacent_repeats()` post-processor catches Whisper looping ("thanks thanks thanks") without harming natural interjection doubling. Three Whisper params tuned for mlx-whisper. Speaker-propagation regression-pin tests + INFO log surfacing the LLM-splitter's sample-window limit.
+- **Multi-project foundation (Phase 0 + Phase 1).** `ProjectAvailability` enum (`ready` / `not-found` / `cloud-evicted` / `permission-denied`) with `last_seen_at`; undoable Remove via 5-second toast; "Locate…" flow for `not-found` projects (Spotlight 2-second one-shot → NSOpenPanel fallback → security-scoped bookmark capture).
+- **CI hygiene.** `.tool-versions` pins node 24.6.0 + python 3.12.13 (mise/asdf/rtx + CI workflows derive from the same file); `no-red-CI-merges` policy in `CONTRIBUTING.md`.
+- **Workflow tooling.** `/end-session` sign-off sentinel + `/close-branch` drift check; `/new-feature --print-launch-url`; new `/sitrep` skill (situation-report with sprint-aware grid format).
+- **Agent ecosystem.** New `what-would-james-bach-say` reviewer agent (test-placement / context-driven-testing tradition). `/true-the-docs` v2 with `--claude-pointers` mode.
+- **Sidecar build.** PyInstaller bundle now ships `inflect` + `typeguard` `.py` sources for `inspect.getsource()`; resource-copy switched to `rsync -aL` (was `cp -RL` — broke mlx metallib rpath symlinks under sandbox).
+- **Frontend bundle ceiling 210 → 215 kB.** Node 24's zlib re-baseline; runtime currency outweighs sub-1% size headroom.
+
 **0.15.7** — _12 May 2026_
 
 - **Release-pipeline fix** — three CI failures had stacked up since 10 May, leaving PyPI + Homebrew on 0.15.3 while source was on 0.15.6. No new source features in 0.15.7; on upgrade you pick up everything from v0.15.4 / v0.15.5 / v0.15.6 (preflight block, server-rendered status page, SPA auto-refetch, sandbox-safe Export, structured failure causes). The fixes: ffmpeg preflight bypass in the pipeline-abandon test; stub SPA bundle in the cookie auth test; CI Node 20 → 24 (the bundle-size "overage" was an older-zlib measurement artefact, not a real regression)

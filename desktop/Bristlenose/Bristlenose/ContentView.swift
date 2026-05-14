@@ -148,6 +148,16 @@ private struct FolderFramePreferenceKey: PreferenceKey {
     }
 }
 
+/// Preference key carrying the sidebar's global origin so the drop delegate
+/// can translate `DropInfo.location` (delegate-local) into the same coord
+/// space as the row/folder frames (which we record in `.global`).
+private struct SidebarOriginPreferenceKey: PreferenceKey {
+    static let defaultValue: CGPoint = .zero
+    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) {
+        value = nextValue()
+    }
+}
+
 /// Two-column NavigationSplitView: project list sidebar + WKWebView detail.
 ///
 /// Selecting a project starts `bristlenose serve` and loads the React SPA
@@ -203,6 +213,14 @@ struct ContentView: View {
 
     /// The folder row currently targeted by a drag hover, or nil.
     @State private var dropTargetFolderID: UUID?
+
+    /// Origin of the sidebar (the `.onDrop`-attached view) in global window
+    /// coordinates. `DropInfo.location` is local to that view; row/folder
+    /// frames are captured in `.global`. Hit-test needs to translate
+    /// info.location → global by adding this origin. macOS 26 SwiftUI
+    /// quirk: named-coordinate-space hit-test produced a constant offset
+    /// (cohort QA, 14 May 2026); going through `.global` is defensive.
+    @State private var sidebarGlobalOrigin: CGPoint = .zero
 
     /// Alert state for duplicate folder drop warning.
     @State private var duplicateDropAlert: DuplicateDropAlert?
@@ -1199,7 +1217,20 @@ struct ContentView: View {
             }
         }
         .accessibilityLabel(i18n.t("desktop.chrome.projects"))
-        .coordinateSpace(name: "sidebar")
+        // Capture the sidebar's origin in global window coordinates so the
+        // drop delegate can translate DropInfo.location (local to this view)
+        // into the same global space the row/folder frames are recorded in.
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: SidebarOriginPreferenceKey.self,
+                    value: geo.frame(in: .global).origin
+                )
+            }
+        )
+        .onPreferenceChange(SidebarOriginPreferenceKey.self) { origin in
+            sidebarGlobalOrigin = origin
+        }
         .onPreferenceChange(RowFramePreferenceKey.self) { frames in
             rowFrames = frames
         }
@@ -1209,6 +1240,7 @@ struct ContentView: View {
         .onDrop(of: [.fileURL, .utf8PlainText], delegate: SidebarDropDelegate(
             rowFrames: rowFrames,
             folderFrames: folderFrames,
+            receiverGlobalOrigin: sidebarGlobalOrigin,
             dropTargetProjectID: $dropTargetProjectID,
             dropTargetFolderID: $dropTargetFolderID,
             onDropOnProject: { id, providers in handleDropOnProject(id: id, providers: providers) },
@@ -1288,7 +1320,7 @@ struct ContentView: View {
             GeometryReader { geo in
                 Color.clear.preference(
                     key: FolderFramePreferenceKey.self,
-                    value: [folder.id: geo.frame(in: .named("sidebar"))]
+                    value: [folder.id: geo.frame(in: .global)]
                 )
             }
         )
@@ -1325,7 +1357,7 @@ struct ContentView: View {
             GeometryReader { geo in
                 Color.clear.preference(
                     key: RowFramePreferenceKey.self,
-                    value: [project.id: geo.frame(in: .named("sidebar"))]
+                    value: [project.id: geo.frame(in: .global)]
                 )
             }
         )
@@ -1711,25 +1743,39 @@ struct SpotlightConfirmSheet: View {
 /// Row/folder frames are collected via preference keys in the "sidebar"
 /// coordinate space.
 private struct SidebarDropDelegate: DropDelegate {
+    /// Row frames recorded in `.global` (window-relative) coordinate space.
     let rowFrames: [UUID: CGRect]
+    /// Folder frames recorded in `.global` coordinate space.
     let folderFrames: [UUID: CGRect]
+    /// The receiving view's origin in `.global`. `DropInfo.location` is
+    /// local to that view; add this origin to translate to global.
+    let receiverGlobalOrigin: CGPoint
     @Binding var dropTargetProjectID: UUID?
     @Binding var dropTargetFolderID: UUID?
     let onDropOnProject: (UUID, [NSItemProvider]) -> Void
     let onDropOnFreeSpace: ([NSItemProvider]) -> Void
     let onMoveProjectToFolder: (UUID, UUID?) -> Void
 
-    /// Find which project row (if any) contains the given point.
-    private func projectAt(_ location: CGPoint) -> UUID? {
-        for (id, frame) in rowFrames where frame.contains(location) {
+    /// Translate `DropInfo.location` (local to the .onDrop view) into the
+    /// `.global` coord space the row/folder frames are recorded in.
+    private func globalPoint(_ local: CGPoint) -> CGPoint {
+        CGPoint(
+            x: local.x + receiverGlobalOrigin.x,
+            y: local.y + receiverGlobalOrigin.y
+        )
+    }
+
+    /// Find which project row (if any) contains the given global point.
+    private func projectAt(_ globalLocation: CGPoint) -> UUID? {
+        for (id, frame) in rowFrames where frame.contains(globalLocation) {
             return id
         }
         return nil
     }
 
-    /// Find which folder (if any) contains the given point.
-    private func folderAt(_ location: CGPoint) -> UUID? {
-        for (id, frame) in folderFrames where frame.contains(location) {
+    /// Find which folder (if any) contains the given global point.
+    private func folderAt(_ globalLocation: CGPoint) -> UUID? {
+        for (id, frame) in folderFrames where frame.contains(globalLocation) {
             return id
         }
         return nil
@@ -1745,15 +1791,16 @@ private struct SidebarDropDelegate: DropDelegate {
     }
 
     func dropUpdated(info: DropInfo) -> DropProposal? {
+        let p = globalPoint(info.location)
         if isInternalDrag(info) {
             // Internal project drag — highlight folders only.
             dropTargetProjectID = nil
-            dropTargetFolderID = folderAt(info.location)
+            dropTargetFolderID = folderAt(p)
             return DropProposal(operation: .move)
         } else {
             // External Finder drop — highlight project rows only.
             dropTargetFolderID = nil
-            dropTargetProjectID = projectAt(info.location)
+            dropTargetProjectID = projectAt(p)
             return DropProposal(operation: .copy)
         }
     }
@@ -1764,8 +1811,9 @@ private struct SidebarDropDelegate: DropDelegate {
     }
 
     func performDrop(info: DropInfo) -> Bool {
-        let targetFolder = folderAt(info.location)
-        let targetProject = projectAt(info.location)
+        let p = globalPoint(info.location)
+        let targetFolder = folderAt(p)
+        let targetProject = projectAt(p)
         dropTargetProjectID = nil
         dropTargetFolderID = nil
 

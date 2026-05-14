@@ -30,6 +30,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
+| `bristlenose_branch session-handoff-sentinels/` | `session-handoff-sentinels` | chore | Bridge visibility gap between /new-feature, /end-session, /close-branch via `.claude/last-end-session.json` sentinel |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -117,6 +118,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
+| `session-handoff-sentinels` | `bristlenose_branch session-handoff-sentinels/` | local only |
 | `ci-version-pinning` _(merged)_ | `bristlenose_branch ci-version-pinning/` _(detached, on disk)_ | local + remote deleted — merged to main 14 May 2026 (`e1c8083`) |
 | `tf-multi-project` _(merged)_ | `bristlenose_branch tf-multi-project/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`e73de11`) |
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
@@ -135,6 +137,27 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `session-handoff-sentinels`
+
+**Kind:** chore — small ephemeral wiring; merge to main when the three skills agree
+**Status:** Just started
+**Started:** 14 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch session-handoff-sentinels/`
+**Remote:** local only (push when ready)
+
+**What it does:** Bridge the visibility gap between `/new-feature`, `/end-session` and `/close-branch` — `/end-session` writes `.claude/last-end-session.json` on success; `/close-branch` reads it and prompts on drift or absence.
+
+**Files this branch will touch:**
+- `.claude/skills/end-session/SKILL.md`
+- `.claude/skills/close-branch/SKILL.md`
+- `CLAUDE.md`
+- `.gitignore`
+
+**Potential conflicts with other branches:**
+- None expected — no other active branch touches `.claude/skills/{end-session,close-branch}/`. `CLAUDE.md` edits are append-only gotcha additions, low risk of conflict with feature branches.
 
 ---
 

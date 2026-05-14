@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 14 May 2026 (closed `tf-phase-1-ux-wins`)
+**Updated:** 14 May 2026 (closed `no-red-ci-merges`)
 
 ---
 
@@ -31,7 +31,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
 | `bristlenose_branch ci-version-pinning/` | `ci-version-pinning` | chore | single source of truth for Node + Python primary versions via .tool-versions |
-| `bristlenose_branch no-red-ci-merges/` | `no-red-ci-merges` | chore | Enforce "don't merge red CI" via GitHub branch-protection rule on `main` + short CONTRIBUTING.md policy section |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -120,7 +119,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `ci-version-pinning` | `bristlenose_branch ci-version-pinning/` | local only |
-| `no-red-ci-merges` | `bristlenose_branch no-red-ci-merges/` | local only |
 | `tf-multi-project` _(merged)_ | `bristlenose_branch tf-multi-project/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`e73de11`) |
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
@@ -138,26 +136,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `no-red-ci-merges`
-
-**Kind:** chore — small ephemeral discipline/docs work; merge with low ceremony
-**Status:** Just started
-**Started:** 12 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch no-red-ci-merges/`
-**Remote:** local only (push when ready)
-
-**What it does:** Enforce "don't merge red CI" mechanically — add a GitHub branch-protection rule on `main` requiring the 6 reliably-green required checks (`ci / lint`, `ci / test (3.10–3.13, ubuntu-latest)`, `ci / frontend-lint-type-test`) and document the policy in `CONTRIBUTING.md`. Excludes Snap (deliberately red, scheduled 2026-05-24), macOS test cells (`continue-on-error: true`), and `Release to PyPI` (tag-push only). Keeps the admin-bypass escape hatch for legitimate red-merge exceptions. Full spec at `.claude/plans/no-red-ci-merges.md` (or `HANDOFF.md`).
-
-**Files this branch will touch:**
-- `CONTRIBUTING.md`
-- GitHub repo Settings → Branches (UI only, no file change)
-
-**Potential conflicts with other branches:**
-- `ci-version-pinning` — touches `.github/workflows/` files but not the GitHub-side branch-protection rule; the rule references *check names* which the version-pinning branch deliberately keeps stable. Low risk.
-- No other active branch touches `CONTRIBUTING.md`.
 
 ---
 
@@ -282,6 +260,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `no-red-ci-merges` — closed 14 May 2026
+
+Two-part chore that landed without using the branch itself. The `CONTRIBUTING.md` "Don't merge red CI" policy bullet went direct-on-main as `c9d1c81` before the branch was started; the GitHub branch-protection rule on `main` was applied via the Settings UI on 14 May (after an earlier attempt didn't save). Required status checks: `ci / lint`, `ci / test (3.10–3.13, ubuntu-latest)`, `ci / frontend-lint-type-test`; Snap / macOS / Release-to-PyPI correctly excluded; admin-bypass escape hatch retained. Worktree detached and tagged orange on disk.
 
 ### `tf-phase-1-ux-wins` — merged 14 May 2026
 

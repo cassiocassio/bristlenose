@@ -159,8 +159,7 @@
     "inFlightSwitchMessage": "\"%@\" 분석이 진행 중입니다. 프로젝트를 전환하면 분석이 취소됩니다 — 중단된 지점부터 다시 시작할 수 있습니다.",
     "cancelAndSwitch": "중지하고 전환",
     "stay": "그대로 두기",
-    "dropProjectOntoProjectTitle": "프로젝트를 다른 프로젝트에 추가할 수 없습니다",
-    "dropProjectOntoProjectMessage": "\"%@\"은(는) 이미 Bristlenose 프로젝트입니다. \"%@\"에 인터뷰를 추가하려면 그 안의 원본 파일을 드래그하거나, 빈 공간에 폴더를 놓아 별도의 프로젝트로 추가하세요."
+    "dropProjectOntoProjectToast": "\"%@\"은(는) 이미 Bristlenose 프로젝트입니다 — 원본 파일을 드래그하세요."
   },
   "availability": {
     "unmountedVolume": "{{name}} · 없음",

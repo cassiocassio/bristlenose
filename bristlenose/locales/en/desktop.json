@@ -159,8 +159,7 @@
     "inFlightSwitchMessage": "“%@” is still being analysed. Switching projects will cancel it — you can resume from where it stopped.",
     "cancelAndSwitch": "Stop and Switch",
     "stay": "Stay",
-    "dropProjectOntoProjectTitle": "Can’t add a project to a project",
-    "dropProjectOntoProjectMessage": "“%@” is already a Bristlenose project. To add its interviews to “%@”, drag the source files inside it instead — or drop the folder on empty space to add as a separate project."
+    "dropProjectOntoProjectToast": "“%@” is already a Bristlenose project — drag its source files instead."
   },
   "availability": {
     "unmountedVolume": "{{name}} · missing",

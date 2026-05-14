@@ -159,8 +159,7 @@
     "inFlightSwitchMessage": "«%@» aún se está analizando. Cambiar de proyecto lo cancelará — podrás reanudar desde donde se detuvo.",
     "cancelAndSwitch": "Detener y cambiar",
     "stay": "No cambiar",
-    "dropProjectOntoProjectTitle": "No se puede añadir un proyecto a otro proyecto",
-    "dropProjectOntoProjectMessage": "«%@» ya es un proyecto de Bristlenose. Para añadir sus entrevistas a «%@», arrastra los archivos que contiene — o suelta la carpeta en un espacio vacío para añadirla como un proyecto aparte."
+    "dropProjectOntoProjectToast": "«%@» ya es un proyecto de Bristlenose — arrastra sus archivos en su lugar."
   },
   "availability": {
     "unmountedVolume": "{{name}} · no disponible",

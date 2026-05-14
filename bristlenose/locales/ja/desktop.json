@@ -159,8 +159,7 @@
     "inFlightSwitchMessage": "「%@」はまだ分析中です。プロジェクトを切り替えると分析がキャンセルされます — 中断したところから再開できます。",
     "cancelAndSwitch": "停止して切り替え",
     "stay": "変更しない",
-    "dropProjectOntoProjectTitle": "プロジェクトを別のプロジェクトに追加することはできません",
-    "dropProjectOntoProjectMessage": "「%@」はすでに Bristlenose プロジェクトです。「%@」にインタビューを追加するには、その中にあるソースファイルをドラッグするか、空き領域にフォルダをドロップして別のプロジェクトとして追加してください。"
+    "dropProjectOntoProjectToast": "「%@」はすでに Bristlenose プロジェクトです — ソースファイルをドラッグしてください。"
   },
   "toolbar": {
     "back": "戻る (⌘[)",

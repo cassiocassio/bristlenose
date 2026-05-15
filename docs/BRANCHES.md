@@ -35,6 +35,8 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
+| `bristlenose_branch sidebar-analysed-honesty/` | `sidebar-analysed-honesty` | chore | Gate sidebar "Analysed N min ago" on disk evidence, not pipeline exit code |
+| `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | chore | Translate ProjectRow pipelineSubtitle + locale-aware date formatters |
 
 
 
@@ -130,6 +132,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
+| `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
 
 
 
@@ -137,6 +140,30 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `pipeline-subtitle-i18n`
+
+**Kind:** chore — small ephemeral i18n work; lands on main once locale keys + Swift call sites are wired up
+**Status:** Just started
+**Started:** 15 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-subtitle-i18n/`
+**Remote:** local only (push when ready)
+
+**What it does:** Translate ProjectRow pipelineSubtitle + locale-aware date formatters. See `.claude/plans/pipeline-subtitle-i18n.md` for the full handoff.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/ProjectRow.swift`
+- `bristlenose/locales/en/desktop.json`
+- `bristlenose/locales/es/desktop.json`
+- `bristlenose/locales/fr/desktop.json`
+- `bristlenose/locales/de/desktop.json`
+- `bristlenose/locales/ko/desktop.json`
+- `bristlenose/locales/ja/desktop.json`
+
+**Potential conflicts with other branches:**
+- None expected — no other active branch touches `ProjectRow.swift` or `desktop.json` locale files. Coordinate with any in-flight desktop i18n work before merging.
 
 ---
 

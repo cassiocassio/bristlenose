@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 14 May 2026 (closed `multi-project-switch`)
+**Updated:** 15 May 2026 (closed `multi-project-drag-onto`)
 
 ---
 
@@ -30,7 +30,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
-| `bristlenose_branch multi-project-drag-onto/` | `multi-project-drag-onto` | feature | drag onto existing project row adds files; empty space creates new |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
@@ -118,7 +117,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
-| `multi-project-drag-onto` | `bristlenose_branch multi-project-drag-onto/` | local only |
+| `multi-project-drag-onto` _(merged)_ | `bristlenose_branch multi-project-drag-onto/` _(detached, on disk)_ | local only — merged to main 15 May 2026 |
 | `multi-project-switch` _(merged)_ | `bristlenose_branch multi-project-switch/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`baf1896`) |
 | `ci-version-pinning` _(merged)_ | `bristlenose_branch ci-version-pinning/` _(detached, on disk)_ | local + remote deleted — merged to main 14 May 2026 (`e1c8083`) |
 | `tf-multi-project` _(merged)_ | `bristlenose_branch tf-multi-project/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`e73de11`) |
@@ -138,28 +137,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `multi-project-drag-onto`
-
-**Kind:** feature — code intended for main; ships sidebar drag-onto-row add-files + drag-to-empty-space create-new
-**Status:** Just started
-**Started:** 14 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch multi-project-drag-onto/`
-**Remote:** local only (push when ready)
-
-**What it does:** drag onto existing project row adds files; empty space creates new. Phase 2 item #11 of tf-multi-project — extends `SidebarDropDelegate` hit-test to distinguish row vs empty-space, adds `CopyMachinery` (same-volume `clonefile(2)` via `FileManager.copyItem`, cross-volume real copy with progress + Cancel + rollback), title-bar progress pill with ETA, disk-space precheck, drop-affordance highlighting. Auto-opens NewFilesSheet (from #14) on completion. Builds on `multi-project-switch` (merged 14 May). Handoff at `.claude/plans/multi-project-drag-onto.md` (visible as `HANDOFF.md`).
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/ContentView.swift` (drop delegate hit-test, drop-target detection, visual affordance)
-- `desktop/Bristlenose/Bristlenose/ProjectIndex.swift` (extend `addFiles` if needed)
-- `desktop/Bristlenose/Bristlenose/CopyMachinery.swift` (new — same/cross-volume copy with progress + Cancel + rollback)
-- `desktop/Bristlenose/Bristlenose/CopyProgressPill.swift` (new — title-bar toolbar item)
-- `bristlenose/locales/*/desktop.json` (six locales — pill copy, reject-alert strings)
-
-**Potential conflicts with other branches:**
-- None expected. `tower-of-hanoi` lives in `experiments/` and is isolated. No other active branch is in `desktop/Bristlenose/Bristlenose/`.
 
 ---
 
@@ -261,6 +238,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `multi-project-drag-onto` — merged 15 May 2026
+
+Phase 2 item #11 of tf-multi-project — sidebar drag-onto-row adds files to existing project; drag-to-empty-space path remains for the new-project create. Extended `SidebarDropDelegate` hit-test to distinguish row vs empty-space, added `CopyMachinery` (same-volume `clonefile(2)` via `FileManager.copyItem`, cross-volume real copy with progress + Cancel + rollback), title-bar progress pill with ETA, disk-space precheck, drop-affordance highlighting; auto-opens NewFilesSheet on completion. `CopyMachineryTests` pin collision-rename and folder-name preservation behaviour. Built on `multi-project-switch` (merged 14 May). Worktree detached and tagged orange on disk; local branch deleted; remote was never pushed.
 
 ### `multi-project-switch` — merged 14 May 2026
 

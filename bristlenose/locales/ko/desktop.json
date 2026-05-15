@@ -168,7 +168,16 @@
     "copyingPill": "%@(\uc73c)\ub85c \ubcf5\uc0ac \uc911",
     "copyCancelling": "\ucde8\uc18c \uc911\u2026",
     "copyDiskSpaceTitle": "\ub514\uc2a4\ud06c \uacf5\uac04 \ubd80\uc871",
-    "copyDiskSpaceMessage": "\uc774 \ubcf5\uc0ac\uc5d0\ub294 %@\uc758 \uc5ec\uc720 \uacf5\uac04\uc774 \ud544\uc694\ud558\uc9c0\ub9cc \ub300\uc0c1 \ubcfc\ub968\uc5d0 %@\ub9cc \uc0ac\uc6a9 \uac00\ub2a5\ud569\ub2c8\ub2e4."
+    "copyDiskSpaceMessage": "\uc774 \ubcf5\uc0ac\uc5d0\ub294 %@\uc758 \uc5ec\uc720 \uacf5\uac04\uc774 \ud544\uc694\ud558\uc9c0\ub9cc \ub300\uc0c1 \ubcfc\ub968\uc5d0 %@\ub9cc \uc0ac\uc6a9 \uac00\ub2a5\ud569\ub2c8\ub2e4.",
+    "pipeline": {
+      "queuedPosition": "\ub300\uae30\uc5f4 \u00b7 {{position}}\ubc88\uc9f8",
+      "stopping": "\uc911\uc9c0 \uc911\u2026",
+      "analysing": "\ubd84\uc11d \uc911\u2026",
+      "analysedRelative": "\ubd84\uc11d\ub428 {{when}}",
+      "transcribed": "\uc804\uc0ac\ub428",
+      "partialRun": "\ubd80\ubd84 \uc2e4\ud589",
+      "stopped": "\uc911\uc9c0\ub428"
+    }
   },
   "availability": {
     "unmountedVolume": "{{name}} · 없음",

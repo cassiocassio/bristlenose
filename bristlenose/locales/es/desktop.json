@@ -168,7 +168,16 @@
     "copyingPill": "Copiando a %@",
     "copyCancelling": "Cancelando\u2026",
     "copyDiskSpaceTitle": "Espacio en disco insuficiente",
-    "copyDiskSpaceMessage": "Esta copia necesita %@ libres, pero solo hay %@ disponibles en el volumen de destino."
+    "copyDiskSpaceMessage": "Esta copia necesita %@ libres, pero solo hay %@ disponibles en el volumen de destino.",
+    "pipeline": {
+      "queuedPosition": "En cola \u00b7 posici\u00f3n {{position}}",
+      "stopping": "Deteniendo\u2026",
+      "analysing": "Analizando\u2026",
+      "analysedRelative": "Analizado {{when}}",
+      "transcribed": "Transcrito",
+      "partialRun": "Ejecuci\u00f3n parcial",
+      "stopped": "Detenido"
+    }
   },
   "availability": {
     "unmountedVolume": "{{name}} · no disponible",

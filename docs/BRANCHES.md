@@ -37,6 +37,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch sidebar-analysed-honesty/` | `sidebar-analysed-honesty` | chore | Gate sidebar "Analysed N min ago" on disk evidence, not pipeline exit code |
 | `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | chore | Translate ProjectRow pipelineSubtitle + locale-aware date formatters |
+| `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
 
 
 
@@ -134,6 +135,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
 | `sidebar-analysed-honesty` | `bristlenose_branch sidebar-analysed-honesty/` | local only |
+| `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
 
 
 
@@ -141,6 +143,31 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `multi-project-folder-watcher`
+
+**Kind:** feature — code intended for main; lands the Phase 2 #14 watcher + sidebar surface
+**Status:** Just started
+**Started:** 15 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch multi-project-folder-watcher/`
+**Remote:** local only (push when ready)
+
+**What it does:** Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files in a project folder, surface as Mail-style sidebar count pill + NewFilesSheet. Detect and surface only; no auto-process (re-analysis is post-TF). Wires `ProjectBookmarkLease` into `ProjectIndex`; opens with a 30-min spike comparing NSFilePresenter vs DispatchSource. See `.claude/plans/multi-project-folder-watcher.md` for the full handoff.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/ProjectIndex.swift`
+- `desktop/Bristlenose/Bristlenose/ProjectBookmarkLease.swift`
+- `desktop/Bristlenose/Bristlenose/ProjectAvailability.swift`
+- `desktop/Bristlenose/Bristlenose/Sidebar/`
+- `desktop/Bristlenose/Bristlenose/NewFilesSheet.swift` (new)
+- `.claude/plans/tf-multi-project.md`
+- `bristlenose/locales/*/desktop.json` (six locales for sidebar pill + sheet copy)
+
+**Potential conflicts with other branches:**
+- `pipeline-subtitle-i18n` — overlapping `bristlenose/locales/*/desktop.json` edits. Coordinate locale-key additions at merge time; key namespaces are different (`projectRow.*` vs new watcher keys), so conflicts should be additive, not semantic.
+- `sidebar-analysed-honesty` — sibling sidebar work (`PipelineRunner.swift`/`LocateFlow.swift`). No file overlap expected with this branch's `Sidebar/` edits, but visual ordering of state indicators should be checked at merge.
 
 ---
 

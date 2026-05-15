@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 14 May 2026 (A3 cli-honest-output landed on main — preflight gates `[serve]` extras across run/serve/analyze; pipeline failure summary maps `Cause.category` to researcher-facing banners; `bristlenose render` removed and `--static` deleted; `--no-serve` restored as hidden flag for the desktop sidecar after a doc-sweep caught the regression; doc truing across man page, README, manual, CLAUDE, CONTRIBUTING/DEVELOPMENT/SECURITY, and 20 design docs. Full review log: `docs/private/reviews/cli-improvements.md`.)
+Last updated: 15 May 2026 (`multi-project-drag-onto` shipped Phase 2 #11 — `CopyMachinery` with clonefile + cross-volume + cancel + rollback, `CopyProgressPill`, `NewFilesSheet` stub, empty-project establishment, drop-target outer-bounds shape, Photos/Mail folder-name preservation, auto-run fix for folder-shaped projects, 9 new locale keys × 6 locales. Cohort-1 placeholder rejections superseded by V1/V2 designs in `docs/design-sidebar-drop-*.md`.)
 
 **Most recent ship: v0.15.4 (10 May 2026)** — Browser SPA refreshes within ~3 s of pipeline completion (no more "drop folder → nothing happens until you reload"); refresh button + refetch overlay + post-zero-quotes empty-state copy; Export downloads route via `WKDownload` + `NSSavePanel` under App Sandbox (HTML report path; other export surfaces tracked in follow-up); failure pill on desktop now renders the structured `Cause` category from the events log instead of a generic "Failed" badge. See `CHANGELOG.md` for full bullet list.
 
@@ -83,7 +83,7 @@ Remaining desktop bugs and i18n items tracked in `docs/private/100days.md` §2, 
 
 - [x] **Phase 3: Folders** — `FolderRow.swift`, `Folder` model with CRUD, `folderId` on Project, `SidebarSelection` enum, `DisclosureGroup` collapse, "Move to" submenu, adaptive Project menu, File > New Folder (⇧⌘N), `folder.badge.plus` enabled, collapsed state persistence, locale keys in all 6 languages
 
-Remaining multi-project work tracked in `.claude/plans/tf-multi-project.md` (Phase 0 + Phase 1 shipped 14 May 2026; Phase 2 sidecar-restart switch (#1/#2/#3) shipped 14 May 2026 on `multi-project-switch`; Phase 2 #11 drag-onto-existing and #14 folder watcher still open; Phase 3 cloud-evicted post-cohort). Original 5-phase plan in `docs/design-project-sidebar.md` is superseded for TF scope.
+Remaining multi-project work tracked in `.claude/plans/tf-multi-project.md` (Phase 0 + Phase 1 shipped 14 May 2026; Phase 2 sidecar-restart switch (#1/#2/#3) shipped 14 May 2026 on `multi-project-switch`; Phase 2 #11 drag-onto-existing shipped 15 May 2026 on `multi-project-drag-onto`; Phase 2 #14 folder watcher still open; Phase 3 cloud-evicted post-cohort). Original 5-phase plan in `docs/design-project-sidebar.md` is superseded for TF scope.
 
 ## CI hardening — sprint 2 step 0 (18 Apr 2026, ci-cleanup branch)
 

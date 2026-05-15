@@ -187,23 +187,21 @@ struct ProjectRow: View {
 
     /// Subtitle text for the pipeline state. Nil means no subtitle row — the
     /// label collapses to single-line like projects without a state.
-    /// Copy is draft-quality for alpha; final strings belong in
-    /// `bristlenose/locales/*/desktop.json` (see `docs/design-i18n.md`).
     private var pipelineSubtitle: String? {
         switch pipelineState {
         case .none, .scanning, .idle:
             return nil
         case .queued(let position):
-            return "Queued · position \(position)"
+            return i18n.t("desktop.chrome.pipeline.queuedPosition", ["position": String(position)])
         case .running:
-            return isStoppingProgress ? "Stopping…" : "Analysing…"
+            return i18n.t(isStoppingProgress ? "desktop.chrome.pipeline.stopping" : "desktop.chrome.pipeline.analysing")
         case .ready(let date):
-            return "Analysed \(Self.formatAnalysed(date))"
+            return i18n.t("desktop.chrome.pipeline.analysedRelative", ["when": formatAnalysed(date)])
         case .partial(let kind, _):
             // transcribe-only completed; full-analysis verbs land in next UX iteration.
-            return kind == "transcribe-only" ? "Transcribed" : "Partial run"
+            return i18n.t(kind == "transcribe-only" ? "desktop.chrome.pipeline.transcribed" : "desktop.chrome.pipeline.partialRun")
         case .stopped:
-            return "Stopped"
+            return i18n.t("desktop.chrome.pipeline.stopped")
         case .failed(let summary, _):
             // Use the human summary the runner already computed for us — far
             // more useful than a generic "Last run failed".
@@ -221,26 +219,22 @@ struct ProjectRow: View {
     }
 
     /// Relative for the first week ("2 hr ago"), absolute thereafter
-    /// ("14 Mar"). Matches Mail's pattern.
-    private static func formatAnalysed(_ date: Date) -> String {
+    /// ("14 Mar"). Matches Mail's pattern. Locale follows the in-app `i18n.locale`
+    /// rather than the system locale, so the row matches the rest of the chrome.
+    private func formatAnalysed(_ date: Date) -> String {
+        let appLocale = Locale(identifier: i18n.locale)
         let elapsed = Date().timeIntervalSince(date)
         if elapsed < 7 * 24 * 60 * 60 {
-            return relativeFormatter.localizedString(for: date, relativeTo: Date())
+            let f = RelativeDateTimeFormatter()
+            f.locale = appLocale
+            f.unitsStyle = .short
+            return f.localizedString(for: date, relativeTo: Date())
         }
-        return absoluteFormatter.string(from: date)
-    }
-
-    private static let relativeFormatter: RelativeDateTimeFormatter = {
-        let f = RelativeDateTimeFormatter()
-        f.unitsStyle = .short
-        return f
-    }()
-
-    private static let absoluteFormatter: DateFormatter = {
         let f = DateFormatter()
+        f.locale = appLocale
         f.setLocalizedDateFormatFromTemplate("d MMM")
-        return f
-    }()
+        return f.string(from: date)
+    }
 
     /// Schedule the spinner to appear after a brief delay, but only if the
     /// scan hasn't already resolved by then. Most local-disk reads complete

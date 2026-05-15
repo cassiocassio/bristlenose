@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 14 May 2026 (closed `multi-project-switch`)
+**Updated:** 15 May 2026 (added `pipeline-subtitle-i18n`)
 
 ---
 
@@ -31,6 +31,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
 | `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
 | `bristlenose_branch multi-project-drag-onto/` | `multi-project-drag-onto` | feature | drag onto existing project row adds files; empty space creates new |
+| `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | feature | i18n the sidebar pipeline subtitles ("Analysed 1 min ago" etc.) across all 6 locales before TestFlight cohort |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |

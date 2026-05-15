@@ -168,7 +168,16 @@
     "copyingPill": "Kopiere zu %@",
     "copyCancelling": "Abbrechen\u2026",
     "copyDiskSpaceTitle": "Nicht genug Speicherplatz",
-    "copyDiskSpaceMessage": "Dieser Kopiervorgang ben\u00f6tigt %@ frei, aber nur %@ sind auf dem Zielvolume verf\u00fcgbar."
+    "copyDiskSpaceMessage": "Dieser Kopiervorgang ben\u00f6tigt %@ frei, aber nur %@ sind auf dem Zielvolume verf\u00fcgbar.",
+    "pipeline": {
+      "queuedPosition": "In Warteschlange \u00b7 Position {{position}}",
+      "stopping": "Wird angehalten\u2026",
+      "analysing": "Wird analysiert\u2026",
+      "analysedRelative": "Analysiert {{when}}",
+      "transcribed": "Transkribiert",
+      "partialRun": "Teildurchlauf",
+      "stopped": "Angehalten"
+    }
   },
   "availability": {
     "unmountedVolume": "{{name}} · nicht gefunden",

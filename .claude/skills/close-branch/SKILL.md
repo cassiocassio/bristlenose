@@ -32,10 +32,9 @@ Run `git branch --merged main` and check if `$0` appears.
 
 If the branch is **NOT merged**, show the unmerged commits with `git log main..$0 --oneline`, then stop with:
 
-> Branch `$0` has NOT been merged to main. To close it you can either:
-> - Merge it first: `git merge $0` (from main)
-> - Abandon the work: `git worktree remove "/Users/cassio/Code/bristlenose_branch $0" && git branch -D $0`
-> - Force-delete just the branch: `git branch -D $0`
+> Branch `$0` has NOT been merged to main. Merge it first: `git merge $0` (from main), then re-run `/close-branch $0`.
+>
+> <sub>If you actually want to abandon or force-delete instead, ask.</sub>
 
 If the branch ref no longer exists (already deleted in a partial previous run), check if the worktree directory still exists — if so, continue from Step 4 (archival).
 

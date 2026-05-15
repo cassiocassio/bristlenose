@@ -168,7 +168,16 @@
     "copyingPill": "Copying to %@",
     "copyCancelling": "Cancelling\u2026",
     "copyDiskSpaceTitle": "Not enough disk space",
-    "copyDiskSpaceMessage": "This copy needs %@ free, but only %@ is available on the destination volume."
+    "copyDiskSpaceMessage": "This copy needs %@ free, but only %@ is available on the destination volume.",
+    "pipeline": {
+      "queuedPosition": "Queued \u00b7 position {{position}}",
+      "stopping": "Stopping\u2026",
+      "analysing": "Analysing\u2026",
+      "analysedRelative": "Analysed {{when}}",
+      "transcribed": "Transcribed",
+      "partialRun": "Partial run",
+      "stopped": "Stopped"
+    }
   },
   "availability": {
     "unmountedVolume": "{{name}} · missing",

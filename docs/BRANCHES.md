@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 15 May 2026 (closed `multi-project-drag-onto`)
+**Updated:** 15 May 2026 (merged `pipeline-subtitle-i18n`)
 
 ---
 

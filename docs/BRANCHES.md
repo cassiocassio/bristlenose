@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 15 May 2026 (merged `pipeline-subtitle-i18n`)
+**Updated:** 15 May 2026 (merged `sidebar-analysed-honesty`)
 
 ---
 
@@ -35,7 +35,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
-| `bristlenose_branch sidebar-analysed-honesty/` | `sidebar-analysed-honesty` | chore | Gate sidebar "Analysed N min ago" on disk evidence, not pipeline exit code |
 | `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | chore | Translate ProjectRow pipelineSubtitle + locale-aware date formatters |
 | `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
 
@@ -134,7 +133,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
-| `sidebar-analysed-honesty` | `bristlenose_branch sidebar-analysed-honesty/` | local only |
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
 
 
@@ -168,26 +166,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Potential conflicts with other branches:**
 - `pipeline-subtitle-i18n` — overlapping `bristlenose/locales/*/desktop.json` edits. Coordinate locale-key additions at merge time; key namespaces are different (`projectRow.*` vs new watcher keys), so conflicts should be additive, not semantic.
 - `sidebar-analysed-honesty` — sibling sidebar work (`PipelineRunner.swift`/`LocateFlow.swift`). No file overlap expected with this branch's `Sidebar/` edits, but visual ordering of state indicators should be checked at merge.
-
----
-
-### `sidebar-analysed-honesty`
-
-**Kind:** chore — small fix landing on main; tightens an existing signal, no new feature surface
-**Status:** Just started
-**Started:** 15 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch sidebar-analysed-honesty/`
-**Remote:** local only (push when ready)
-
-**What it does:** Sidebar shows "Analysed N min ago" for projects whose pipeline never produced any analysis (repro 15 May 2026 during `multi-project-drag-onto` QA). Gate the `.ready(...)` transition in `PipelineRunner.handleTermination` on disk evidence (reuse `readManifestState` / `EventLogReader.deriveState`) rather than sidecar exit code or log-tail heuristics; secondary tighten `LocateFlow.outputArtefacts` to require `manifest.json` not `.bristlenose/`. See `.claude/plans/sidebar-analysed-honesty.md` for the full handoff.
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/PipelineRunner.swift`
-- `desktop/Bristlenose/Bristlenose/LocateFlow.swift`
-- `desktop/Bristlenose/BristlenoseTests/` (new test coverage)
-
-**Potential conflicts with other branches:**
-- `pipeline-subtitle-i18n` — adjacent: touches sibling Swift file `ProjectRow.swift`, no overlap with `PipelineRunner.swift` / `LocateFlow.swift`. Coordinate at merge time if both land close together.
 
 ---
 
@@ -313,6 +291,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `sidebar-analysed-honesty` — merged 15 May 2026
+
+Gate sidebar "Analysed N min ago" on disk evidence, not pipeline exit code. `PipelineRunner.handleTermination` now derives terminal state from `readManifestState` / `EventLogReader.deriveState` rather than sidecar exit code or log-tail heuristics; `LocateFlow.outputArtefacts` tightened to require `manifest.json` rather than just the `.bristlenose/` directory. Added `PipelineRunnerTerminationTests` coverage. Two commits (`626cca7`, `33c16f2`) merged as `8c83544`. Worktree detached and tagged orange on disk; local branch deleted; remote was never pushed.
 
 ### `multi-project-drag-onto` — merged 15 May 2026
 

@@ -164,7 +164,7 @@ classifyTarget(location):
 
 **Why the action table, not the predicate cascade I had before.** The old form ("rule 2a wins over rule 2b...") collapsed `classify(content) × classify(target)` into a single linear cascade and lost the structure. The two-stage form makes it obvious that (a) the same dragged content takes different actions depending on the target, and (b) Tracked-vs-Untracked is a real distinction that drives different behaviour even when targets are identical.
 
-**BN-project marker.** Folder contains `bristlenose-output/` with at least one canonical artefact inside. Same predicate as `LocateFlow.folderLooksAnalysed(url:)` ([LocateFlow.swift:59](../desktop/Bristlenose/Bristlenose/LocateFlow.swift#L59)).
+**BN-project marker.** Folder contains `bristlenose-output/.bristlenose/pipeline-manifest.json` (the canonical "analysed" artefact, matching what `PipelineRunner.readManifestState` reads). Same predicate as `LocateFlow.folderLooksAnalysed(url:)` ([LocateFlow.swift:59](../desktop/Bristlenose/Bristlenose/LocateFlow.swift#L59)). Tightened 2026-05-15 (sidebar-analysed-honesty, `626cca7`) — was previously `["manifest.json", ".bristlenose"]`; the bare `.bristlenose/` directory is a "looks started" marker (created early in stage 1), not "looks analysed."
 
 **Media allowlist.** `bristlenose.models.ALL_EXTENSIONS`:
 

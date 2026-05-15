@@ -577,19 +577,26 @@ struct ProjectIndexTests {
         #expect(LocateFlow.folderLooksAnalysed(url: tempDir) == false)
     }
 
-    @MainActor @Test func locateFlow_acceptsFolderWithManifest() throws {
+    @MainActor @Test func locateFlow_acceptsFolderWithPipelineManifest() throws {
+        // Canonical "analysed" marker is `.bristlenose/pipeline-manifest.json`
+        // — what PipelineRunner.readManifestState reads.
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("LocateFlowTest-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
-        let outputDir = tempDir.appendingPathComponent("bristlenose-output")
-        try FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
-        try Data().write(to: outputDir.appendingPathComponent("manifest.json"))
+        let bristlenoseDir = tempDir
+            .appendingPathComponent("bristlenose-output")
+            .appendingPathComponent(".bristlenose")
+        try FileManager.default.createDirectory(at: bristlenoseDir, withIntermediateDirectories: true)
+        try Data().write(to: bristlenoseDir.appendingPathComponent("pipeline-manifest.json"))
 
         #expect(LocateFlow.folderLooksAnalysed(url: tempDir) == true)
     }
 
-    @MainActor @Test func locateFlow_acceptsFolderWithBristlenoseDir() throws {
+    @MainActor @Test func locateFlow_rejectsEmptyBristlenoseDir() throws {
+        // Bare `.bristlenose/` (no manifest inside) is a "looks started" not
+        // "looks analysed" signal — a run that crashed before stage 1 leaves
+        // this dir. Must NOT pass the analysed check.
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("LocateFlowTest-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -600,7 +607,7 @@ struct ProjectIndexTests {
             withIntermediateDirectories: true
         )
 
-        #expect(LocateFlow.folderLooksAnalysed(url: tempDir) == true)
+        #expect(LocateFlow.folderLooksAnalysed(url: tempDir) == false)
     }
 
     @MainActor @Test func locateFlow_rejectsArbitraryFolder() throws {

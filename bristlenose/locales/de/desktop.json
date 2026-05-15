@@ -159,7 +159,16 @@
     "inFlightSwitchMessage": "„%@“ wird noch analysiert. Beim Wechsel des Projekts wird die Analyse abgebrochen — Sie können dort fortsetzen, wo sie unterbrochen wurde.",
     "cancelAndSwitch": "Anhalten und wechseln",
     "stay": "Nicht wechseln",
-    "dropProjectOntoProjectToast": "„%@“ ist bereits ein Bristlenose-Projekt — ziehen Sie stattdessen die Quelldateien."
+    "dropProjectOntoProjectToast": "„%@“ ist bereits ein Bristlenose-Projekt — ziehen Sie stattdessen die Quelldateien.",
+    "dropOntoRunningProject": "Beenden oder stoppen Sie den laufenden Vorgang, bevor Sie weitere hinzuf\u00fcgen.",
+    "dropOntoAnalysedProject": "Das Hinzuf\u00fcgen weiterer Interviews zu einem analysierten Projekt wird noch nicht unterst\u00fctzt.",
+    "dropOntoFailedProject": "Verwenden Sie \u201eErneut versuchen\u201c in der Symbolleiste, um diesen Vorgang erneut zu starten.",
+    "dropOntoUnreachableProject": "Der Ordner dieses Projekts ist derzeit nicht erreichbar.",
+    "dropFolderContainsProject": "Dieser Ordner enth\u00e4lt das Bristlenose-Projekt \u201e%@\u201c. Ziehen Sie das Projekt selbst oder seine Quelldateien einzeln.",
+    "copyingPill": "Kopiere zu %@",
+    "copyCancelling": "Abbrechen\u2026",
+    "copyDiskSpaceTitle": "Nicht genug Speicherplatz",
+    "copyDiskSpaceMessage": "Dieser Kopiervorgang ben\u00f6tigt %@ frei, aber nur %@ sind auf dem Zielvolume verf\u00fcgbar."
   },
   "availability": {
     "unmountedVolume": "{{name}} · nicht gefunden",

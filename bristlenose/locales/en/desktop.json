@@ -159,7 +159,16 @@
     "inFlightSwitchMessage": "“%@” is still being analysed. Switching projects will cancel it — you can resume from where it stopped.",
     "cancelAndSwitch": "Stop and Switch",
     "stay": "Stay",
-    "dropProjectOntoProjectToast": "“%@” is already a Bristlenose project — drag its source files instead."
+    "dropProjectOntoProjectToast": "“%@” is already a Bristlenose project — drag its source files instead.",
+    "dropOntoRunningProject": "Finish or stop the current run before adding more.",
+    "dropOntoAnalysedProject": "Adding extra interviews to an analysed project isn't supported yet.",
+    "dropOntoFailedProject": "Use Retry on the toolbar to try this run again.",
+    "dropOntoUnreachableProject": "This project's folder isn't reachable right now.",
+    "dropFolderContainsProject": "This folder contains the Bristlenose project \u201c%@\u201d. Drag the project itself, or its source files separately.",
+    "copyingPill": "Copying to %@",
+    "copyCancelling": "Cancelling\u2026",
+    "copyDiskSpaceTitle": "Not enough disk space",
+    "copyDiskSpaceMessage": "This copy needs %@ free, but only %@ is available on the destination volume."
   },
   "availability": {
     "unmountedVolume": "{{name}} · missing",

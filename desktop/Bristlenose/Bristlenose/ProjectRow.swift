@@ -69,10 +69,16 @@ struct ProjectRow: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
+        // Drop-target highlight traces the outer row container, not the
+        // inner HStack — negative padding pushes the stroke past the row
+        // content's natural bounds so it matches the selection pill shape
+        // (Finder-style full-row drop affordance).
         .overlay(
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: 8)
                 .stroke(Color.accentColor, lineWidth: 2)
                 .opacity(isDropTarget ? 1 : 0)
+                .padding(.horizontal, -6)
+                .padding(.vertical, -3)
         )
         .onAppear { scheduleScanIndicator() }
         .onChange(of: pipelineState) { _, _ in scheduleScanIndicator() }

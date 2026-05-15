@@ -87,6 +87,43 @@ struct DuplicateDropAlert: Identifiable {
     let urls: [URL]
 }
 
+/// State for the disk-space precheck alert thrown by `CopyMachinery`.
+struct CopyDiskSpaceAlertState: Identifiable {
+    let id = UUID()
+    let needed: Int64
+    let available: Int64
+}
+
+/// Sheet + alert presentation for the drag-onto-project copy flow.
+/// Extracted into a ViewModifier so the ContentView body stays inside the
+/// Swift type-checker's expression-complexity budget.
+private struct CopyDropPresentation: ViewModifier {
+    @Binding var newFilesSheet: NewFilesSheetState?
+    @Binding var copyDiskSpaceAlert: CopyDiskSpaceAlertState?
+    let i18n: I18n
+    let diskSpaceMessage: (CopyDiskSpaceAlertState) -> String
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(item: $newFilesSheet) { state in
+                NewFilesSheet(state: state, onDismiss: { newFilesSheet = nil })
+                    .environmentObject(i18n)
+            }
+            .alert(
+                i18n.t("desktop.chrome.copyDiskSpaceTitle"),
+                isPresented: Binding(
+                    get: { copyDiskSpaceAlert != nil },
+                    set: { if !$0 { copyDiskSpaceAlert = nil } }
+                ),
+                presenting: copyDiskSpaceAlert
+            ) { _ in
+                Button(i18n.t("common.buttons.close"), role: .cancel) {}
+            } message: { alert in
+                Text(diskSpaceMessage(alert))
+            }
+    }
+}
+
 /// State for the Spotlight one-shot confirm sheet. Carries the resume
 /// continuation so the LocateFlow can wait for the user's choice.
 struct SpotlightConfirmState: Identifiable {
@@ -135,6 +172,7 @@ struct ContentView: View {
     @EnvironmentObject var pipelineRunner: PipelineRunner
     @EnvironmentObject var toast: ToastStore
     @EnvironmentObject var removalStore: UndoableRemovalStore
+    @EnvironmentObject var copyMachinery: CopyMachinery
     @EnvironmentObject var i18n: I18n
     @AppStorage("appearance") private var appearance: String = "auto"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -173,6 +211,15 @@ struct ContentView: View {
 
     /// Alert state for duplicate folder drop warning.
     @State private var duplicateDropAlert: DuplicateDropAlert?
+
+    /// "Added N files to X" sheet shown after a copy completes (Plan §11).
+    /// nil = sheet hidden. Stub for #14; will gain richer affordances.
+    @State private var newFilesSheet: NewFilesSheetState?
+
+    /// Disk-space precheck alert state. Populated when the copy machinery
+    /// throws `.insufficientDiskSpace`. Carries needed/available byte counts
+    /// for a localised message.
+    @State private var copyDiskSpaceAlert: CopyDiskSpaceAlertState?
 
     /// Spotlight one-shot confirm sheet — populated when the Locate flow
     /// found a unique high-confidence match. Resolves the awaiting continuation.
@@ -371,6 +418,12 @@ struct ContentView: View {
             .environmentObject(i18n)
             .interactiveDismissDisabled(!aiConsentReviewMode)
         }
+        .modifier(CopyDropPresentation(
+            newFilesSheet: $newFilesSheet,
+            copyDiskSpaceAlert: $copyDiskSpaceAlert,
+            i18n: i18n,
+            diskSpaceMessage: diskSpaceMessage(for:)
+        ))
         .alert(
             i18n.t("desktop.chrome.duplicateProject"),
             isPresented: Binding(
@@ -766,6 +819,39 @@ struct ContentView: View {
         }
     }
 
+    /// Shallow check: does any direct child of `folder` itself look like an
+    /// analysed Bristlenose project? If yes, returns that child's basename.
+    /// Used to reject drops of a folder that *contains* a project (per
+    /// plan §11 drop-matrix row).
+    private static func containedAnalysedProjectName(in folder: URL) -> String? {
+        let fm = FileManager.default
+        guard let entries = try? fm.contentsOfDirectory(
+            at: folder,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+        ) else { return nil }
+        for entry in entries where entry.hasDirectoryPath {
+            if LocateFlow.folderLooksAnalysed(url: entry) {
+                return entry.lastPathComponent
+            }
+        }
+        return nil
+    }
+
+    /// Format the disk-space alert body using a ByteCountFormatter.
+    /// Extracted from the alert closure to keep the body type-checker
+    /// expression-size manageable.
+    private func diskSpaceMessage(for alert: CopyDiskSpaceAlertState) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        let needed = formatter.string(fromByteCount: alert.needed)
+        let available = formatter.string(fromByteCount: alert.available)
+        return String(
+            format: i18n.t("desktop.chrome.copyDiskSpaceMessage"),
+            needed, available
+        )
+    }
+
     /// Whether a pipeline state means the project has analysis data the
     /// user should be able to view. `.ready` and `.partial` both qualify;
     /// everything else (idle/scanning/queued/running/failed/etc.) doesn't.
@@ -873,6 +959,15 @@ struct ContentView: View {
             return
         }
 
+        // Empty placeholder ("+ New Project" with no folder yet): the drop
+        // establishes the project's location instead of copying files into a
+        // nonexistent target. Same end-state as a drop on empty sidebar:
+        // single folder → adopt path + auto-run; multi-item → file-subset.
+        if project.path.isEmpty {
+            establishEmptyProject(id: id, accepted: accepted)
+            return
+        }
+
         // Plan §11 data-integrity guards:
         // 1. Silently dedupe a drop of the project's own folder
         //    (researcher dragged the project root back onto itself).
@@ -882,11 +977,15 @@ struct ContentView: View {
         let projectPath = URL(fileURLWithPath: project.path)
             .standardizedFileURL.path
         var filteredURLs: [URL] = []
+        var selfDropDetected = false
         for url in accepted {
             let path = url.standardizedFileURL.path
             if url.hasDirectoryPath, path == projectPath {
-                // Self-drop — ignore silently. (Plan §11 says 0.4s
-                // accent flash here; cohort 1 just no-ops.)
+                // Self-drop — plan §11 calls for a 0.4s accent flash
+                // on the project's own row, then no-op. We re-set the
+                // hover-highlight state (cleared by isTargeted=false
+                // when the drop completed) and schedule a clear.
+                selfDropDetected = true
                 continue
             }
             if url.hasDirectoryPath, LocateFlow.folderLooksAnalysed(url: url) {
@@ -901,55 +1000,164 @@ struct ContentView: View {
                 toast.show(message)
                 return
             }
+            if url.hasDirectoryPath,
+               let containedName = Self.containedAnalysedProjectName(in: url) {
+                // Plan §11 reject — dropping a *parent* of a Bristlenose
+                // project. Copying would haul that project's output into
+                // the target alongside its source media, corrupting both.
+                let message = String(
+                    format: i18n.t("desktop.chrome.dropFolderContainsProject"),
+                    containedName
+                )
+                toast.show(message)
+                return
+            }
             filteredURLs.append(url)
+        }
+
+        if selfDropDetected {
+            dropTargetProjectID = id
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                if dropTargetProjectID == id { dropTargetProjectID = nil }
+            }
         }
 
         let paths = filteredURLs.map { $0.path }
         guard !paths.isEmpty else { return }
 
+        // State guards — fail-fast for states where copy doesn't make sense.
+        // `.ready` is intentionally NOT an early return; we copy the files
+        // into the project folder (so they live alongside the analysed
+        // sources) but don't auto-run — re-analysis is post-TF.
         switch pipelineRunner.state[id] {
         case .running, .queued:
-            toast.show("Finish or stop the current run before adding more.")
-            return
-        case .ready:
-            projectIndex.addFiles(to: id, files: paths)
-            selection = [.project(id)]
-            toast.show("Adding extra interviews to an analysed project isn't supported yet.")
+            toast.show(i18n.t("desktop.chrome.dropOntoRunningProject"))
             return
         case .failed:
             // Don't silently retry a known-broken pipeline (would burn
             // LLM spend repeating the same failure). User explicitly
             // re-runs from the toolbar pill's Retry button.
-            toast.show("Use Retry on the toolbar to try this run again.")
+            toast.show(i18n.t("desktop.chrome.dropOntoFailedProject"))
             return
         case .unreachable:
-            // Volume not mounted / folder gone — addFiles would write
-            // to a path that doesn't exist; pipeline would fail with
-            // a generic error stacked on top. Surface the real cause.
-            toast.show("This project's folder isn't reachable right now.")
+            // Volume not mounted / folder gone — copying would fail with
+            // a generic OS error. Surface the real cause.
+            toast.show(i18n.t("desktop.chrome.dropOntoUnreachableProject"))
             return
         default:
             break
         }
 
-        projectIndex.addFiles(to: id, files: paths)
+        let alreadyAnalysed: Bool = {
+            if case .ready = pipelineRunner.state[id] { return true }
+            return false
+        }()
+        // Folder-shaped projects (inputFiles == nil) scan their folder at
+        // run time, so the freshly-copied files become visible to the CLI
+        // automatically. File-subset projects must register the new paths
+        // via addFiles — but the CLI can't run them (no `--files` yet), so
+        // those don't auto-run.
+        let wasFolderShaped = (project.inputFiles == nil)
         selection = [.project(id)]
-        // Toast confirmation: "Added 3 interviews to Project Name"
-        let count = paths.count
-        let message = String(
-            format: i18n.t("desktop.chrome.addedInterviews"),
-            count, project.name
-        )
-        toast.show(message)
 
-        // Re-fetch the project — addFiles may have mutated inputFiles.
-        if let updated = projectIndex.projects.first(where: { $0.id == id }) {
-            // Only auto-run if this project is folder-shaped
-            // (`inputFiles == nil`). File-subset projects can't run
-            // until the CLI gains `--files` support.
-            if updated.inputFiles == nil {
+        // Copy is async (cross-volume runs off the main thread). The
+        // toolbar pill self-shows while `copyMachinery.inFlight != nil`.
+        Task {
+            do {
+                let copied = try await copyMachinery.copy(
+                    urls: filteredURLs,
+                    into: URL(fileURLWithPath: project.path),
+                    projectID: id,
+                    projectName: project.name,
+                    acceptedExtensions: Self.acceptedExtensions
+                )
+                if !wasFolderShaped {
+                    projectIndex.addFiles(to: id, files: copied.map(\.path))
+                }
+                newFilesSheet = NewFilesSheetState(
+                    projectID: id,
+                    projectName: project.name,
+                    files: copied
+                )
+                if alreadyAnalysed {
+                    // Files are now in the folder; analysis won't pick
+                    // them up until re-analysis (#post-TF).
+                    toast.show(i18n.t("desktop.chrome.dropOntoAnalysedProject"))
+                    return
+                }
+                if wasFolderShaped {
+                    pipelineRunner.start(project: project)
+                }
+            } catch is CancellationError {
+                // Pill already showed "Cancelling…" and rolled back. No toast.
+            } catch CopyMachinery.CopyError.insufficientDiskSpace(let needed, let available) {
+                copyDiskSpaceAlert = CopyDiskSpaceAlertState(
+                    needed: needed, available: available
+                )
+            } catch CopyMachinery.CopyError.noItemsAfterFiltering {
+                // Should not happen — we filtered above. Silent.
+            } catch CopyMachinery.CopyError.underlying(let msg) {
+                toast.show(msg)
+            } catch {
+                toast.show(error.localizedDescription)
+            }
+        }
+    }
+
+    /// Handle a drop onto an empty placeholder project (path == ""). This
+    /// is the "+ New Project then drag here" flow — the drop *establishes*
+    /// the project's folder rather than copying files into a non-folder.
+    /// Mirrors `createProjectFromURLs` semantics but updates the existing
+    /// project in place (preserves ID, user-typed name, position).
+    private func establishEmptyProject(id: UUID, accepted: [URL]) {
+        // Same integrity guards as the populated-project path — reject
+        // dropping another Bristlenose project or a folder that contains
+        // one. Self-drop isn't possible here (project has no path).
+        for url in accepted where url.hasDirectoryPath {
+            if LocateFlow.folderLooksAnalysed(url: url) {
+                let message = String(
+                    format: i18n.t("desktop.chrome.dropProjectOntoProjectToast"),
+                    url.lastPathComponent
+                )
+                toast.show(message)
+                return
+            }
+            if let containedName = Self.containedAnalysedProjectName(in: url) {
+                let message = String(
+                    format: i18n.t("desktop.chrome.dropFolderContainsProject"),
+                    containedName
+                )
+                toast.show(message)
+                return
+            }
+        }
+
+        let directories = accepted.filter { $0.hasDirectoryPath }
+        let files = accepted.filter { !$0.hasDirectoryPath }
+        guard !directories.isEmpty || !files.isEmpty else { return }
+
+        if directories.count == 1 && files.isEmpty {
+            // Single folder — adopt as project path; folder-shaped → auto-run.
+            let folder = directories[0]
+            projectIndex.relocateProject(id: id, newPath: folder.path)
+            selection = [.project(id)]
+            if let updated = projectIndex.projects.first(where: { $0.id == id }) {
                 pipelineRunner.start(project: updated)
             }
+        } else {
+            // Multi-item or file(s) — file-subset shape; pick first parent
+            // as the project path. No auto-run (CLI lacks `--files`).
+            let firstPath: String
+            if let firstDir = directories.first {
+                firstPath = firstDir.path
+            } else {
+                firstPath = files[0].deletingLastPathComponent().path
+            }
+            let allPaths = directories.map { $0.path } + files.map { $0.path }
+            projectIndex.relocateProject(id: id, newPath: firstPath)
+            projectIndex.addFiles(to: id, files: allPaths)
+            selection = [.project(id)]
         }
     }
 
@@ -1107,6 +1315,11 @@ struct ContentView: View {
                     liveData: pipelineRunner.liveData
                 )
             }
+        }
+
+        // Copy-in-flight pill — self-hides when copyMachinery.inFlight is nil.
+        ToolbarItem(placement: .primaryAction) {
+            CopyProgressPill(copyMachinery: copyMachinery)
         }
     }
 
@@ -1330,7 +1543,10 @@ struct ContentView: View {
             }
 
             Divider()
-            Button(i18n.t("desktop.menu.project.removeFromSidebar"), role: .destructive) {
+            // Not `.destructive` — Remove from Sidebar is undoable (8s toast)
+            // and leaves the on-disk folder untouched. The role would lie
+            // about the action's blast radius if Apple ever paints it red.
+            Button(i18n.t("desktop.menu.project.removeFromSidebar")) {
                 removeFromSidebarContextMenu(targetingProject: project.id)
             }
         }

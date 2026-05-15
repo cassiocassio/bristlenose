@@ -2,16 +2,23 @@ import SwiftUI
 
 /// A single project row in the sidebar.
 ///
-/// Shows the project name with a document icon. Supports inline rename triggered by:
-/// - `isRenaming` binding (menu-driven, context menu, or [+] button)
+/// **Anatomy (two-line):**
+/// - Title line: identity icon · project name · *(right)* session count
+/// - Subtitle line: optional ⚠/❓ prefix glyph · status text · optional delta segment · *(right)* cloud arrow
 ///
-/// When a project is unavailable (volume ejected, folder moved), the row shows
-/// grey text with a secondary line explaining why. Moved/deleted projects get
-/// a `questionmark.folder` icon; volume-not-mounted projects keep `doc.text` greyed.
+/// **Right-edge convention:**
+/// - Title-line right = canonical data quantity (the session count — Finder's
+///   right column). Empty when the analysis DB isn't readable.
+/// - Subtitle-line right = storage location qualifier (currently just the
+///   iCloud download arrow). Finder-esque, only appears when the project's
+///   sources live in iCloud.
+///
+/// **Precedence chain for the subtitle (see memory `feedback_exception_precedence_chain`):**
+/// failed > running/stopped/partial > cantFind > ready+missing > ready+unanalysed > ready (bare date).
+/// One state per row; we don't stack errors. Tooltips carry the full picture.
 ///
 /// Slow-double-click rename is parked — `simultaneousGesture(TapGesture())` and
-/// `onTapGesture` both break List selection on macOS 26. See 100days.md.
-///
+/// `onTapGesture` both break List selection on macOS 26.
 /// Commit on Return, cancel on Escape.
 struct ProjectRow: View {
 
@@ -22,19 +29,20 @@ struct ProjectRow: View {
     let onShowInFinder: () -> Void
     let onDelete: () -> Void
     let onLocate: (() -> Void)?
-    /// Unanalysed state for this project (count pill + missing badge).
-    /// Nil means "don't render the pill" — caller passes nil while a
-    /// drag-onto copy sheet is up (handoff §Stacking rule).
+    /// Data state for this project (session count, unanalysed delta, missing
+    /// delta). Nil while a drag-onto copy sheet is up for this project — the
+    /// row falls back to "no deltas, no count" so the copy flow's own sheet
+    /// is the user's focus (handoff §Stacking rule).
     let unanalysed: UnanalysedState?
-    /// Called when the user clicks the count pill. Caller opens the
-    /// `NewFilesSheet` in watcher mode.
+    /// Called when the user taps the `+N unanalysed` subtitle segment. Caller
+    /// opens the `NewFilesSheet` in watcher mode.
     let onOpenUnanalysed: (() -> Void)?
 
     @EnvironmentObject var i18n: I18n
     @EnvironmentObject var pipelineRunner: PipelineRunner
     @State private var editText: String = ""
-    /// Trailing spinner appears only after a short delay so the steady-state
-    /// case (manifests already on disk, scan resolves in a few ms) shows no
+    /// Spinner appears only after a short delay so the steady-state case
+    /// (manifests already on disk, scan resolves in a few ms) shows no
     /// indicator at all. Avoids a stadium-wave of spinners at every launch.
     @State private var showScanIndicator: Bool = false
     @FocusState private var isTextFieldFocused: Bool
@@ -73,13 +81,16 @@ struct ProjectRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 6) {
-            rowLabel
-            Spacer(minLength: 4)
-            trailingIndicator
+        HStack(alignment: .center, spacing: 6) {
+            leadingIcon
+            VStack(alignment: .leading, spacing: 1) {
+                titleLine
+                subtitleLine
+            }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
+        .help(rowTooltip)
         // Drop-target highlight traces the outer row container, not the
         // inner HStack — negative padding pushes the stroke past the row
         // content's natural bounds so it matches the selection pill shape
@@ -95,203 +106,314 @@ struct ProjectRow: View {
         .onChange(of: pipelineState) { _, _ in scheduleScanIndicator() }
     }
 
-    @ViewBuilder
-    private var rowLabel: some View {
-        Label {
-            if isRenaming {
-                TextField("Project name", text: $editText)
-                    .textFieldStyle(.plain)
-                    .focused($isTextFieldFocused)
-                    .onSubmit {
-                        commitRename()
-                    }
-                    .onExitCommand {
-                        cancelRename()
-                    }
-                    .onAppear {
-                        editText = project.name
-                        // Delay focus slightly so the TextField is fully mounted.
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                            isTextFieldFocused = true
-                        }
-                    }
-                    // Commit when focus leaves (e.g. clicking elsewhere).
-                    .onChange(of: isTextFieldFocused) { _, focused in
-                        if !focused && isRenaming {
-                            commitRename()
-                        }
-                    }
-            } else {
-                VStack(alignment: .leading, spacing: 1) {
-                    if available {
-                        Text(project.name)
-                    } else {
-                        Text(project.name)
-                            .foregroundStyle(.secondary)
-                    }
+    // MARK: - Leading icon
 
-                    if !available {
-                        if let subtitle = availability.subtitle(using: i18n) {
-                            Text(subtitle)
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                    } else {
-                        // Reserve the subtitle line so row heights stay fixed
-                        // across the sidebar — Mail/Notes/Finder convention.
-                        // Hidden placeholder when there's no real subtitle.
-                        if let subtitle = pipelineSubtitle {
-                            Text(subtitle)
-                                .font(.caption)
-                                .foregroundStyle(pipelineSubtitleStyle)
-                        } else {
-                            Text(" ")
-                                .font(.caption)
-                                .hidden()
-                        }
-                    }
+    @ViewBuilder
+    private var leadingIcon: some View {
+        // Identity icon — the project's chosen SF Symbol. Availability state
+        // is signalled by dimming the name + a subtitle prefix glyph, never
+        // by overwriting the chosen icon.
+        let name = project.icon ?? IconPickerPopover.defaultIcon
+        if available {
+            Image(systemName: name)
+        } else {
+            Image(systemName: name).foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Title line
+
+    @ViewBuilder
+    private var titleLine: some View {
+        if isRenaming {
+            renameField
+        } else {
+            HStack(spacing: 6) {
+                if available {
+                    Text(project.name).lineLimit(1)
+                } else {
+                    Text(project.name).foregroundStyle(.secondary).lineLimit(1)
                 }
-            }
-        } icon: {
-            // Leading icon is always the project's identity. Availability state
-            // is communicated by the trailing indicator + dimming, never by
-            // overwriting the chosen icon.
-            if available {
-                Image(systemName: project.icon ?? IconPickerPopover.defaultIcon)
-            } else {
-                Image(systemName: project.icon ?? IconPickerPopover.defaultIcon)
-                    .foregroundStyle(.secondary)
+                Spacer(minLength: 4)
+                titleRightSlot
             }
         }
     }
 
-    /// Trailing element: spinner while scanning (after delay), red glyph for
-    /// pipeline failures, cantFind / inCloud glyph for availability states,
-    /// otherwise empty. Spinner uses `.controlSize(.small)` to match Finder's
-    /// "determining size…" indicator. Order: scan-in-flight beats pipeline
-    /// failure beats availability state — the most-recent / most-actionable
-    /// signal wins the slot.
+    /// Right side of the title line. Priority:
+    /// 1. Spinner (scanning, after 250ms)
+    /// 2. Session count (when DB readable)
+    /// 3. Empty
     @ViewBuilder
-    private var trailingIndicator: some View {
+    private var titleRightSlot: some View {
         if isScanning && showScanIndicator {
-            ProgressView()
-                .controlSize(.small)
-        } else if case .failed = pipelineState {
-            Image(systemName: "exclamationmark.circle.fill")
-                .foregroundStyle(.red)
-                .imageScale(.small)
-        } else if hasUnanalysed {
-            unanalysedPill
-        } else if let glyph = availability.sfSymbolName {
-            Image(systemName: glyph)
+            ProgressView().controlSize(.small)
+        } else if let count = unanalysed?.sessionCount {
+            Text("\(count)")
+                .font(.callout.monospacedDigit())
+                .foregroundStyle(.tertiary)
+        }
+    }
+
+    // MARK: - Subtitle line
+
+    /// Subtitle line: prefix glyph + status text + optional tappable delta,
+    /// with the cloud arrow right-aligned on the same line. Always renders
+    /// something (even if a hidden placeholder) so row heights stay fixed —
+    /// Mail/Notes/Finder convention.
+    @ViewBuilder
+    private var subtitleLine: some View {
+        HStack(spacing: 4) {
+            subtitleContent
+            Spacer(minLength: 4)
+            subtitleRightSlot
+        }
+    }
+
+    @ViewBuilder
+    private var subtitleContent: some View {
+        switch subtitleVariant {
+        case .failed(let summary):
+            subtitleText(prefix: "exclamationmark.circle.fill",
+                         prefixColor: .red,
+                         text: summary,
+                         style: .secondary)
+        case .pipelineText(let text):
+            subtitleText(prefix: nil, text: text, style: .tertiary)
+        case .cantFind(let text):
+            subtitleText(prefix: "questionmark.folder",
+                         prefixColor: .secondary,
+                         text: text,
+                         style: .tertiary)
+        case .ready(let dateText, let delta):
+            HStack(spacing: 4) {
+                Text(dateText).font(.caption).foregroundStyle(.tertiary)
+                if let delta {
+                    Text("·").font(.caption).foregroundStyle(.tertiary)
+                    deltaSegment(delta)
+                }
+            }
+        case .placeholder:
+            // Hidden but layout-occupying so row heights remain consistent.
+            Text(" ").font(.caption).hidden()
+        }
+    }
+
+    /// Right-aligned subtitle slot — cloud arrow when the project lives in
+    /// iCloud, otherwise empty. Finder-esque placement.
+    @ViewBuilder
+    private var subtitleRightSlot: some View {
+        if case .inCloud = availability {
+            Image(systemName: "icloud.and.arrow.down")
                 .foregroundStyle(.secondary)
                 .imageScale(.small)
-        } else {
-            EmptyView()
         }
     }
 
-    private var hasUnanalysed: Bool {
-        if let state = unanalysed, !state.isEmpty { return true }
-        return false
+    @ViewBuilder
+    private func subtitleText(prefix: String?,
+                              prefixColor: Color = .secondary,
+                              text: String,
+                              style: HierarchicalShapeStyle) -> some View {
+        HStack(spacing: 4) {
+            if let prefix {
+                Image(systemName: prefix)
+                    .foregroundStyle(prefixColor)
+                    .imageScale(.small)
+            }
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(style)
+                .lineLimit(1)
+        }
     }
 
-    /// Mail-style count pill plus optional missing badge for the project.
-    /// Pill is suppressed at 0 newFiles; caller can suppress entirely by
-    /// passing `unanalysed = nil` (handoff §Stacking rule: hidden while
-    /// drag-onto copy sheet is active).
+    /// Tappable subtitle segment for the unanalysed delta. `Button` with
+    /// `.buttonStyle(.plain)` — `.onTapGesture` on List-row content breaks
+    /// selection on macOS 26 (see `desktop/CLAUDE.md` gotcha).
     @ViewBuilder
-    private var unanalysedPill: some View {
-        if let state = unanalysed {
-            HStack(spacing: 4) {
-                if !state.newFiles.isEmpty {
-                    Text("\(state.newFiles.count)")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 1)
-                        .background(
-                            Capsule().fill(Color.accentColor.opacity(0.12))
-                        )
-                        .help(i18n.t("desktop.chrome.unanalysedTooltip",
-                                     ["count": String(state.newFiles.count)]))
-                        .accessibilityLabel(
-                            i18n.t("desktop.chrome.unanalysedVoiceOver",
-                                   ["count": String(state.newFiles.count)])
-                        )
-                        .onTapGesture { onOpenUnanalysed?() }
-                }
-                if !state.missingFiles.isEmpty {
-                    Text(i18n.t("desktop.chrome.unanalysedMissingBadge",
-                                ["count": String(state.missingFiles.count)]))
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(
-                            Capsule().stroke(Color.secondary.opacity(0.3), lineWidth: 0.5)
-                        )
+    private func deltaSegment(_ delta: SubtitleDelta) -> some View {
+        switch delta {
+        case .unanalysed(let count):
+            Button(action: { onOpenUnanalysed?() }) {
+                Text(i18n.t("desktop.chrome.unanalysedSubtitle",
+                            ["count": String(count)]))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        case .missing(let count):
+            Text(i18n.t("desktop.chrome.missingSubtitle",
+                        ["count": String(count)]))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Rename field (unchanged from prior shape)
+
+    @ViewBuilder
+    private var renameField: some View {
+        TextField("Project name", text: $editText)
+            .textFieldStyle(.plain)
+            .focused($isTextFieldFocused)
+            .onSubmit { commitRename() }
+            .onExitCommand { cancelRename() }
+            .onAppear {
+                editText = project.name
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    isTextFieldFocused = true
                 }
             }
+            .onChange(of: isTextFieldFocused) { _, focused in
+                if !focused && isRenaming { commitRename() }
+            }
+    }
+
+    // MARK: - Subtitle variant + precedence
+
+    /// One-of variants of the subtitle composition. The precedence chain
+    /// collapses concurrent conditions into a single variant before we render.
+    private enum SubtitleVariant {
+        /// `.failed` pipeline state — ⚠ prefix + summary, no delta composition.
+        case failed(summary: String)
+        /// Verb-led pipeline state (running / stopped / partial / queued /
+        /// unreachable) — text speaks; no prefix, no delta.
+        case pipelineText(String)
+        /// `.cantFind` availability — ❓ prefix + factual subtitle.
+        case cantFind(String)
+        /// `.ready` or `.inCloud` (or idle when project has analysis history) —
+        /// bare date with optional single delta segment. Cloud arrow renders
+        /// in the right slot independently.
+        case ready(dateText: String, delta: SubtitleDelta?)
+        /// Nothing to say — render a hidden placeholder to reserve height.
+        case placeholder
+    }
+
+    private enum SubtitleDelta {
+        case unanalysed(count: Int)
+        case missing(count: Int)
+    }
+
+    /// Apply the precedence chain to the concurrent conditions to produce a
+    /// single subtitle variant. The chain:
+    /// 1. cantFind availability (volume issues — row is otherwise content-less)
+    /// 2. failed pipeline state (surprising; needs visibility)
+    /// 3. Other verb-led pipeline states (running / stopped / partial / queued)
+    /// 4. ready + missing delta (data drift wins over feature gap)
+    /// 5. ready + unanalysed delta
+    /// 6. ready alone (bare date)
+    /// 7. placeholder
+    private var subtitleVariant: SubtitleVariant {
+        // Availability beats everything when the project can't be reached.
+        if case .cantFind = availability {
+            if let text = availability.subtitle(using: i18n) {
+                return .cantFind(text)
+            }
+            return .placeholder
+        }
+
+        // Pipeline-state subtitles.
+        switch pipelineState {
+        case .failed(let summary, _):
+            return .failed(summary: summary)
+        case .running:
+            let key = isStoppingProgress
+                ? "desktop.chrome.pipeline.stopping"
+                : "desktop.chrome.pipeline.analysing"
+            return .pipelineText(i18n.t(key))
+        case .queued(let position):
+            return .pipelineText(i18n.t(
+                "desktop.chrome.pipeline.queuedPosition",
+                ["position": String(position)]
+            ))
+        case .stopped:
+            return .pipelineText(i18n.t("desktop.chrome.pipeline.stopped"))
+        case .partial(let kind, _):
+            let key = kind == "transcribe-only"
+                ? "desktop.chrome.pipeline.transcribed"
+                : "desktop.chrome.pipeline.partialRun"
+            return .pipelineText(i18n.t(key))
+        case .unreachable(let reason):
+            return .pipelineText(reason)
+        case .ready(let date):
+            return .ready(dateText: formatBareDate(date), delta: pickDelta())
+        case .none, .scanning, .idle:
+            // No pipeline subtitle. If we have a last-run timestamp AND deltas,
+            // fall through to a ready-style subtitle anchored on that date.
+            if let lastRun = project.lastPipelineRunAt {
+                return .ready(dateText: formatBareDate(lastRun), delta: pickDelta())
+            }
+            return .placeholder
         }
     }
 
-    // MARK: - Pipeline state display
+    /// Per precedence: pick ONE delta. Missing wins over unanalysed
+    /// (data drift > feature gap).
+    private func pickDelta() -> SubtitleDelta? {
+        guard let state = unanalysed else { return nil }
+        if !state.missingFiles.isEmpty {
+            return .missing(count: state.missingFiles.count)
+        }
+        if !state.newFiles.isEmpty {
+            return .unanalysed(count: state.newFiles.count)
+        }
+        return nil
+    }
+
+    // MARK: - Date formatting (Schema A)
+
+    /// Bare progressive coarsen — Just now / Today / Yesterday / D MMM /
+    /// MMM YYYY. No verb prefix; the row's identity establishes that
+    /// the date refers to "last analysed."
+    private func formatBareDate(_ date: Date) -> String {
+        let appLocale = Locale(identifier: i18n.locale)
+        let now = Date()
+        let elapsed = now.timeIntervalSince(date)
+
+        // Just now — under ~5 minutes.
+        if elapsed >= 0 && elapsed < 5 * 60 {
+            return i18n.t("desktop.chrome.dateRelativeJustNow")
+        }
+
+        let calendar = Calendar(identifier: .gregorian)
+        if calendar.isDateInToday(date) {
+            // Apple's RelativeDateTimeFormatter with .named gives us "today"
+            // localised across all 6 locales; we just leading-capitalise.
+            return relative(date, locale: appLocale)
+        }
+        if calendar.isDateInYesterday(date) {
+            return relative(date, locale: appLocale)
+        }
+
+        let nowYear = calendar.component(.year, from: now)
+        let dateYear = calendar.component(.year, from: date)
+        let f = DateFormatter()
+        f.locale = appLocale
+        if dateYear == nowYear {
+            f.setLocalizedDateFormatFromTemplate("d MMM")
+        } else {
+            f.setLocalizedDateFormatFromTemplate("MMM yyyy")
+        }
+        return f.string(from: date)
+    }
+
+    /// Localised "today" / "yesterday" via Apple's named relative formatter.
+    /// Leading-capitalise the first character to match sentence-start chrome.
+    private func relative(_ date: Date, locale: Locale) -> String {
+        let f = RelativeDateTimeFormatter()
+        f.locale = locale
+        f.dateTimeStyle = .named
+        f.unitsStyle = .full
+        let s = f.localizedString(for: date, relativeTo: Date())
+        return s.prefix(1).uppercased() + s.dropFirst()
+    }
+
+    // MARK: - Pipeline state helpers
 
     private var isScanning: Bool {
         if case .scanning = pipelineState { return true }
         return false
-    }
-
-    /// Subtitle text for the pipeline state. Nil means no subtitle row — the
-    /// label collapses to single-line like projects without a state.
-    private var pipelineSubtitle: String? {
-        switch pipelineState {
-        case .none, .scanning, .idle:
-            return nil
-        case .queued(let position):
-            return i18n.t("desktop.chrome.pipeline.queuedPosition", ["position": String(position)])
-        case .running:
-            return i18n.t(isStoppingProgress ? "desktop.chrome.pipeline.stopping" : "desktop.chrome.pipeline.analysing")
-        case .ready(let date):
-            return i18n.t("desktop.chrome.pipeline.analysedRelative", ["when": formatAnalysed(date)])
-        case .partial(let kind, _):
-            // transcribe-only completed; full-analysis verbs land in next UX iteration.
-            return i18n.t(kind == "transcribe-only" ? "desktop.chrome.pipeline.transcribed" : "desktop.chrome.pipeline.partialRun")
-        case .stopped:
-            return i18n.t("desktop.chrome.pipeline.stopped")
-        case .failed(let summary, _):
-            // Use the human summary the runner already computed for us — far
-            // more useful than a generic "Last run failed".
-            return summary
-        case .unreachable(let reason):
-            return reason
-        }
-    }
-
-    /// Failed subtitle gets a slightly stronger colour so the human summary
-    /// reads as actionable, not muted away.
-    private var pipelineSubtitleStyle: HierarchicalShapeStyle {
-        if case .failed = pipelineState { return .secondary }
-        return .tertiary
-    }
-
-    /// Relative for the first week ("2 hr ago"), absolute thereafter
-    /// ("14 Mar"). Matches Mail's pattern. Locale follows the in-app `i18n.locale`
-    /// rather than the system locale, so the row matches the rest of the chrome.
-    private func formatAnalysed(_ date: Date) -> String {
-        let appLocale = Locale(identifier: i18n.locale)
-        let elapsed = Date().timeIntervalSince(date)
-        if elapsed < 7 * 24 * 60 * 60 {
-            let f = RelativeDateTimeFormatter()
-            f.locale = appLocale
-            f.unitsStyle = .short
-            return f.localizedString(for: date, relativeTo: Date())
-        }
-        let f = DateFormatter()
-        f.locale = appLocale
-        f.setLocalizedDateFormatFromTemplate("d MMM")
-        return f.string(from: date)
     }
 
     /// Schedule the spinner to appear after a brief delay, but only if the
@@ -305,11 +427,42 @@ struct ProjectRow: View {
         let projectID = project.id
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(250))
-            // Re-check after the delay — the scan may have resolved already,
-            // and the row may now be looking at a different project.
             guard project.id == projectID, isScanning else { return }
             showScanIndicator = true
         }
+    }
+
+    // MARK: - Tooltip (covers what the row doesn't show)
+
+    /// Hover tooltip composes "6 interviews · 3 waiting, 1 missing" so the
+    /// per-row precedence chain doesn't hide information from a user who
+    /// goes looking for it.
+    private var rowTooltip: String {
+        var parts: [String] = []
+        if let count = unanalysed?.sessionCount {
+            parts.append(interviewCountText(count))
+        }
+        if let state = unanalysed {
+            if !state.newFiles.isEmpty {
+                parts.append(i18n.t("desktop.chrome.tooltipWaiting",
+                                    ["count": String(state.newFiles.count)]))
+            }
+            if !state.missingFiles.isEmpty {
+                parts.append(i18n.t("desktop.chrome.missingSubtitle",
+                                    ["count": String(state.missingFiles.count)]))
+            }
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// Pick singular vs plural interview-count key. Some locales need the
+    /// morphological split (en/es/fr/de); ko/ja use invariant counters
+    /// but use the same two-key shape for consistency.
+    private func interviewCountText(_ count: Int) -> String {
+        let key = count == 1
+            ? "desktop.chrome.interviewCountOne"
+            : "desktop.chrome.interviewCountOther"
+        return i18n.t(key, ["count": String(count)])
     }
 
     // MARK: - Accessibility
@@ -330,8 +483,18 @@ struct ProjectRow: View {
             case .ready:
                 break
             }
-        } else if let subtitle = pipelineSubtitle {
-            label += ", \(subtitle)"
+        }
+        // Always announce session count + deltas if present.
+        if let count = unanalysed?.sessionCount {
+            label += ", \(interviewCountText(count))"
+        }
+        if let state = unanalysed {
+            if !state.newFiles.isEmpty {
+                label += ", \(i18n.t("desktop.chrome.tooltipWaiting", ["count": String(state.newFiles.count)]))"
+            }
+            if !state.missingFiles.isEmpty {
+                label += ", \(i18n.t("desktop.chrome.missingSubtitle", ["count": String(state.missingFiles.count)]))"
+            }
         }
         return label
     }

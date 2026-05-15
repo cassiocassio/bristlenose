@@ -7,20 +7,30 @@ private let log = Logger(subsystem: "app.bristlenose", category: "folder-watcher
 // Filenames captured here may identify participants. Render to UI only.
 // Never write basenames to os_log, pipeline-events.jsonl, or any persisted channel.
 
-/// Snapshot of unanalysed files in a project's top-level folder, plus a count
-/// of previously-ingested files that have gone missing. Published to
-/// `ProjectIndex` by `ProjectFolderWatcher`.
+/// Snapshot of a project's data state: unanalysed-but-present files, missing
+/// previously-ingested files, and the canonical session count. Published to
+/// `ProjectIndex` by `ProjectFolderWatcher` on every scan.
 struct UnanalysedState: Equatable {
     /// Files present at the project root, with eligible extensions, that are
     /// not in the ingested-set. Empty when there's nothing new.
     let newFiles: [URL]
     /// Files previously ingested that are no longer present and are not
-    /// iCloud-evicted. Used to render the "N missing" badge.
+    /// iCloud-evicted. Surfaces in the row subtitle delta and the sheet.
     let missingFiles: [URL]
+    /// Count of rows in the `sessions` table — the canonical "size of the
+    /// study" metric rendered on the row's title line. Nil when the DB
+    /// isn't readable (pre-analysis, locked, etc.).
+    let sessionCount: Int?
 
-    static let empty = UnanalysedState(newFiles: [], missingFiles: [])
+    static let empty = UnanalysedState(
+        newFiles: [], missingFiles: [], sessionCount: nil
+    )
 
-    var isEmpty: Bool { newFiles.isEmpty && missingFiles.isEmpty }
+    /// True when there's nothing to render for the data-state deltas (no
+    /// newFiles, no missingFiles). The session count is independent — a
+    /// project can have a session count but no deltas; that's the steady
+    /// state.
+    var hasDeltas: Bool { !newFiles.isEmpty || !missingFiles.isEmpty }
 }
 
 /// Watches a project's top-level folder for Finder-side file additions and
@@ -175,7 +185,8 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
         guard let projectURL = presentedItemURL else { return }
 
         let topLevelEligible = Self.enumerateTopLevelEligible(projectURL)
-        let ingested = SourceFilesReader.ingestedBasenames(projectRoot: projectURL)
+        let snapshot = SourceFilesReader.readSnapshot(projectRoot: projectURL)
+        let ingested = snapshot.ingestedBasenames
 
         var newFiles: [URL] = []
         var presentBasenames: Set<String> = []
@@ -186,6 +197,8 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
                 newFiles.append(url)
             }
         }
+        // Sort for stable Equatable comparison and stable display order.
+        newFiles.sort { $0.lastPathComponent < $1.lastPathComponent }
 
         var missingFiles: [URL] = []
         for base in ingested where !presentBasenames.contains(base) {
@@ -193,8 +206,13 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
             if Self.isCloudEvicted(candidate) { continue }
             missingFiles.append(candidate)
         }
+        missingFiles.sort { $0.lastPathComponent < $1.lastPathComponent }
 
-        let state = UnanalysedState(newFiles: newFiles, missingFiles: missingFiles)
+        let state = UnanalysedState(
+            newFiles: newFiles,
+            missingFiles: missingFiles,
+            sessionCount: snapshot.sessionCount
+        )
         if state == lastPublished { return }
         lastPublished = state
         let cb = onChange

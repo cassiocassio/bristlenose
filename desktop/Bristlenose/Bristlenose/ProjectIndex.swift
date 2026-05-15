@@ -273,9 +273,15 @@ final class ProjectIndex: ObservableObject {
 
     @Published var projects: [Project] = []
     @Published var folders: [Folder] = []
-    /// Per-project unanalysed-files state, published by `ProjectFolderWatcher`.
-    /// Absent entry = no watcher running (project not ready, or watcher not
-    /// yet started). `.empty` value = watcher running, nothing to show.
+    /// Per-project data state — unanalysed files, missing files, and
+    /// session count — published by `ProjectFolderWatcher`. Absent entry =
+    /// no watcher running (project not ready, or watcher not yet started).
+    /// `.empty` value = watcher running, nothing to show.
+    ///
+    /// **F14 policy:** for projects that have never been analysed
+    /// (`lastPipelineRunAt == nil`), `newFiles` is zeroed before publishing —
+    /// "unanalysed" only makes sense once an analysis baseline exists.
+    /// `sessionCount` and `missingFiles` are unaffected.
     @Published var unanalysed: [UUID: UnanalysedState] = [:]
 
     /// Bookmark leases held while a project is `.ready`. Released on
@@ -790,10 +796,30 @@ final class ProjectIndex: ObservableObject {
     }
 
     private func handleWatcherUpdate(projectID: UUID, state: UnanalysedState) {
-        // Only publish if the project is still live and ready. Race-safe
-        // against rapid switch/remove.
+        // The `watchers[id] != nil` guard is load-bearing: between the scan
+        // running and this hop to main, the project may have been removed
+        // or transitioned out of `.ready` (lease + watcher released, scan
+        // result still in-flight). Without this guard we'd republish state
+        // for a project the user has dismissed.
         guard watchers[projectID] != nil else { return }
-        unanalysed[projectID] = state
+        // F14 policy: suppress newFiles for projects that have never been
+        // analysed. The +N delta means "new since the last analysis run" —
+        // before there's been a run, every file in the folder is "to be
+        // analysed" by default and surfacing it as an exception would be
+        // surprising. Session count + missingFiles are unaffected (neither
+        // can be non-empty pre-analysis anyway).
+        let project = projects.first { $0.id == projectID }
+        let gated: UnanalysedState
+        if project?.lastPipelineRunAt == nil {
+            gated = UnanalysedState(
+                newFiles: [],
+                missingFiles: state.missingFiles,
+                sessionCount: state.sessionCount
+            )
+        } else {
+            gated = state
+        }
+        unanalysed[projectID] = gated
     }
 
     /// Scan all mounted volumes for a relative path.

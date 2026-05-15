@@ -694,23 +694,11 @@ struct ContentView: View {
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
     }
 
-    /// Unanalysed state for a project's sidebar row — nil while the
-    /// drag-onto copy sheet is up for this project (handoff §Stacking rule:
-    /// hide the count pill while a copy is in-flight).
-    private func pillStateForRow(project: Project) -> UnanalysedState? {
-        if let sheet = newFilesSheet,
-           sheet.projectID == project.id,
-           case .copy = sheet.source {
-            return nil
-        }
-        return projectIndex.unanalysed[project.id]
-    }
-
     /// Open the watcher-mode unanalysed-files sheet for a project. No-op if
-    /// the watcher hasn't reported any unanalysed files yet (shouldn't be
-    /// reachable from the pill, but defended for safety).
+    /// the watcher hasn't reported any deltas yet (shouldn't be reachable
+    /// from the subtitle Button, but defended for safety).
     private func openUnanalysedSheet(for project: Project) {
-        guard let state = projectIndex.unanalysed[project.id], !state.isEmpty
+        guard let state = projectIndex.unanalysed[project.id], state.hasDeltas
         else { return }
         newFilesSheet = NewFilesSheetState(
             projectID: project.id,
@@ -1508,7 +1496,7 @@ struct ContentView: View {
             ),
             isDropTarget: dropTargetProjectID == project.id,
             liveData: pipelineRunner.liveData,
-            unanalysed: pillStateForRow(project: project),
+            unanalysed: projectIndex.unanalysed[project.id],
             onRename: { newName in
                 projectIndex.renameProject(id: project.id, newName: newName)
             },

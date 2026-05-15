@@ -98,7 +98,7 @@ struct NewFilesSheet: View {
                     }
                 }
             }
-            .frame(maxHeight: 280)
+            .frame(minHeight: 120, idealHeight: 280, maxHeight: 500)
             if let footer {
                 Text(footer)
                     .font(.caption)
@@ -107,7 +107,10 @@ struct NewFilesSheet: View {
             HStack {
                 Spacer()
                 Button(i18n.t("common.buttons.close"), action: onDismiss)
-                    .keyboardShortcut(.defaultAction)
+                    // .cancelAction — Escape dismisses; Mac convention is
+                    // that a Close button is the dismissive action, not the
+                    // affirmative (Return) one.
+                    .keyboardShortcut(.cancelAction)
             }
         }
         .padding(20)

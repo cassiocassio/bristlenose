@@ -61,12 +61,24 @@ enum SourceFilesReader {
         defer { sqlite3_finalize(stmt) }
 
         var basenames: Set<String> = []
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            if let cStr = sqlite3_column_text(stmt, 0) {
-                let path = String(cString: cStr)
-                if !path.isEmpty {
-                    basenames.insert((path as NSString).lastPathComponent)
+        while true {
+            let rc = sqlite3_step(stmt)
+            if rc == SQLITE_ROW {
+                if let cStr = sqlite3_column_text(stmt, 0) {
+                    let path = String(cString: cStr)
+                    if !path.isEmpty {
+                        basenames.insert((path as NSString).lastPathComponent)
+                    }
                 }
+            } else if rc == SQLITE_DONE {
+                break
+            } else {
+                // SQLITE_BUSY / SQLITE_LOCKED / corruption — bail with an
+                // empty set rather than returning a partial read. A partial
+                // read would short-cut the ingested-set and spike every
+                // non-included file into newFiles, flicking the count pill
+                // unhelpfully during concurrent pipeline writes.
+                return []
             }
         }
         return basenames

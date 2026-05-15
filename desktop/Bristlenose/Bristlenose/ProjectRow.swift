@@ -199,12 +199,19 @@ struct ProjectRow: View {
         }
     }
 
-    /// Right-aligned subtitle slot — cloud arrow when the project lives in
-    /// iCloud, otherwise empty. Finder-esque placement.
+    /// Right-aligned subtitle slot — status glyph showing the project lives
+    /// in iCloud, otherwise empty. Finder-esque placement.
+    ///
+    /// Uses the outline `icloud` (not `.fill`, not `.and.arrow.down`):
+    /// status-only, no action attached. Matches Finder's sidebar treatment
+    /// for cloud-managed locations — a quiet warning that opening the
+    /// project may pause while macOS fetches evicted files. macOS handles
+    /// the fetch transparently when the project is opened; no explicit
+    /// download affordance for TF.
     @ViewBuilder
     private var subtitleRightSlot: some View {
         if case .inCloud = availability {
-            Image(systemName: "icloud.and.arrow.down")
+            Image(systemName: "icloud")
                 .foregroundStyle(.secondary)
                 .imageScale(.small)
         }

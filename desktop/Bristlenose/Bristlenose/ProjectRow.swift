@@ -175,6 +175,11 @@ struct ProjectRow: View {
 
     @ViewBuilder
     private var subtitleContent: some View {
+        // Subtitle text is uniformly `.secondary` per Apple's
+        // `secondaryLabelColor` purpose: "subheading or additional
+        // information." State is communicated by the prefix glyph and
+        // its semantic colour (.red for failed, .orange for cantFind
+        // warning) — not by graduating the text colour.
         switch subtitleVariant {
         case .failed(let summary):
             subtitleText(prefix: "exclamationmark.circle.fill",
@@ -182,15 +187,15 @@ struct ProjectRow: View {
                          text: summary,
                          style: .secondary)
         case .pipelineText(let text):
-            subtitleText(prefix: nil, text: text, style: .tertiary)
+            subtitleText(prefix: nil, text: text, style: .secondary)
         case .cantFind(let text):
             subtitleText(prefix: "questionmark.folder",
-                         prefixColor: .secondary,
+                         prefixColor: .orange,
                          text: text,
-                         style: .tertiary)
+                         style: .secondary)
         case .ready(let dateText, let delta):
             HStack(spacing: 4) {
-                Text(dateText).font(.caption).foregroundStyle(.tertiary)
+                Text(dateText).font(.caption).foregroundStyle(.secondary)
                 if let delta {
                     Text("·").font(.caption).foregroundStyle(.tertiary)
                     deltaSegment(delta)

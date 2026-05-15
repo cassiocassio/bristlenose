@@ -149,8 +149,11 @@ struct ProjectRow: View {
         if isScanning && showScanIndicator {
             ProgressView().controlSize(.small)
         } else if let count = unanalysed?.sessionCount {
+            // Function: row metadata annotation (a count). Apple's role for
+            // that is Footnote — let the system pick size, weight, line
+            // height, Dynamic Type scaling. No overrides.
             Text("\(count)")
-                .font(.callout.monospacedDigit())
+                .font(.footnote)
                 .foregroundStyle(.tertiary)
         }
     }

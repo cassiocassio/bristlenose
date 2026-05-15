@@ -158,13 +158,13 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Files this branch will touch:**
 - `scripts/scrape-hig.py` (new)
-- `~/.claude/agents/what-would-gruber-say.md`
-- `~/.claude/agents/ux-critique.md`
-- `~/.claude/agents/a11y-review.md`
-- `~/.claude/agents/what-would-james-bach-say.md`
+- `.claude/agents/what-would-gruber-say.md`
+- `.claude/agents/ux-critique.md`
+- `.claude/agents/a11y-review.md`
+- `.claude/agents/what-would-james-bach-say.md`
 
 **Potential conflicts with other branches:**
-- None expected — scraper is new, agent files live outside the repo under `~/.claude/agents/`. No overlap with any in-flight branch.
+- None expected — scraper is new, agent files are project-local but no other in-flight branch edits them. Worktree-isolated edits + git diff review + `git checkout .claude/agents/<file>` rollback path.
 
 ---
 

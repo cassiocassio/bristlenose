@@ -5,6 +5,17 @@ import SwiftUI
 // Filenames rendered here may identify participants. Don't write them to
 // os_log, pipeline-events.jsonl, or any persisted channel.
 
+// MARK: TF scaffolding — migrate to React SPA project dashboard
+// This sheet is a *data view* (a list of project source files) that sits in
+// native chrome. Native chrome should own navigation / status / system
+// integration; data views belong in the React SPA's project dashboard.
+// Kept here for TF because the watcher's pulse-to-pill-to-sheet end-to-end
+// is the cohort's first visible proof of incremental detection.
+// Retire when EITHER (a) incremental processing lands (no "+N unanalysed"
+// exception state to surface), OR (b) the SPA dashboard grows an
+// "unanalysed files" panel that subsumes this. Sidebar count + delta in
+// `ProjectRow` stays — that's chrome and belongs in native.
+
 /// Source that opened the sheet. `.copy` mirrors the original Phase 2 #11
 /// drag-onto flow ("Added N interviews to X"); `.watcher` is the Phase 2 #14
 /// Finder-side flow with the longer "These files aren't part of your

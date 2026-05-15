@@ -1030,7 +1030,7 @@ final class PipelineRunner: ObservableObject {
         proc.terminationHandler = { [weak self] p in
             let status = p.terminationStatus
             Task { @MainActor in
-                self?.handleTermination(
+                await self?.handleTermination(
                     projectID: projectID, status: status, generation: gen
                 )
             }
@@ -1075,10 +1075,13 @@ final class PipelineRunner: ObservableObject {
         }
     }
 
-    private func handleTermination(projectID: UUID, status: Int32, generation gen: Int) {
+    private func handleTermination(
+        projectID: UUID, status: Int32, generation gen: Int
+    ) async {
         guard gen == generation else { return }
 
-        if let project = projectIndex?.projects.first(where: { $0.id == projectID }) {
+        let project = projectIndex?.projects.first(where: { $0.id == projectID })
+        if let project {
             Self.removePIDFile(for: project)
         }
         currentProcess = nil
@@ -1086,68 +1089,169 @@ final class PipelineRunner: ObservableObject {
         currentReadTask = nil
         currentlyRunning = nil
         currentProject = nil
+        // NOTE: state[projectID] stays `.running` until the manifest-read
+        // await below resolves. cancel() guards on `proc.isRunning`, so a
+        // Stop click during this window is a clean no-op (no signal sent,
+        // no crash). The spinner-into-the-void is a sub-5s papercut on
+        // slow disks; flipping to a transient state here would race with
+        // any concurrent passive sidebar scan that preserves .running.
 
-        if status == 0 {
-            state[projectID] = .ready(Date())
-            Self.logger.info(
-                "run succeeded project=\(projectID.uuidString, privacy: .public)"
-            )
-        } else if cancellationRequested {
+        // Cancellation only takes effect on a non-zero exit — if the sidecar
+        // raced the cancel and finished cleanly anyway, we keep the result.
+        if status != 0, cancellationRequested {
             cancellationRequested = false
             state[projectID] = .idle
             Self.logger.info(
                 "run cancelled project=\(projectID.uuidString, privacy: .public)"
             )
+            startNextQueued()
+            return
+        }
+
+        let lines = status == 0 ? [] : liveData.snapshotOutput(for: projectID)
+        // looksLikeSuccess on a non-zero exit is a *trigger to re-derive*,
+        // not a verdict. (Sidecar exits 1 after SIGINT even on a clean run
+        // — uvicorn graceful shutdown.) Combine with exit-0 into a single
+        // "sidecar believes it succeeded" signal; the pure decision function
+        // below picks the right final state from disk evidence.
+        let sidecarReportedSuccess = (status == 0) || Self.looksLikeSuccess(lines: lines)
+
+        let derived: PipelineState
+        if sidecarReportedSuccess {
+            derived = await resolveTerminationState(
+                projectID: projectID, project: project
+            )
+            guard gen == generation else { return }
         } else {
-            let lines = liveData.snapshotOutput(for: projectID)
-            // Sidecar exits with code 1 after SIGINT (uvicorn graceful
-            // shutdown via Python signal handling) even when the run
-            // itself succeeded. Trust the log tail: `bristlenose run`
-            // prints "Done" + "Report:" on success and "Finished with
-            // errors" on failure. If the success markers are present and
-            // the failure marker isn't, the pipeline succeeded — treat
-            // the non-zero exit as a shutdown artefact.
-            if Self.looksLikeSuccess(lines: lines) {
-                state[projectID] = .ready(Date())
+            // Non-zero exit + no success markers — skip the disk read.
+            derived = .idle
+        }
+
+        let decision = Self.decideTermination(
+            exitStatus: status,
+            sidecarReportedSuccess: sidecarReportedSuccess,
+            derived: derived
+        )
+
+        switch decision {
+        case .accept(let final):
+            state[projectID] = final
+            if case .ready = final {
                 Self.logger.info(
                     """
                     run succeeded project=\(projectID.uuidString, privacy: .public) \
-                    status=\(status) (overridden by log-tail heuristic)
+                    status=\(status)
                     """
                 )
-                startNextQueued()
-                return
             }
-            let projectName = projectIndex?.projects
-                .first(where: { $0.id == projectID })?.name
-            // Prefer the structured cause emitted by the Python abandon path
-            // (`pipeline-events.jsonl` → `run_failed` → `cause.{category,message}`).
-            // Stdout regex is a best-effort fallback for older Python versions
-            // and crash-style failures that exit before writing a terminus event.
-            let project = projectIndex?.projects
-                .first(where: { $0.id == projectID })
-            let derived = project.flatMap { Self.deriveFailureFromEvents(project: $0) }
-            let category: PipelineFailureCategory
-            let summary: String
-            if let (cat, msg) = derived {
-                category = cat
-                summary = msg ?? Self.humanSummary(for: cat)
-            } else {
-                category = Self.categoriseFailure(
-                    lines: lines, exitStatus: status, projectName: projectName
-                )
-                summary = Self.humanSummary(for: category)
-            }
-            state[projectID] = .failed(summary, category: category)
-            Self.logger.warning(
-                """
-                run failed project=\(projectID.uuidString, privacy: .public) \
-                status=\(status) category=\(category.rawValue, privacy: .public)
-                """
+        case .treatAsFailure:
+            state[projectID] = deriveFailureState(
+                projectID: projectID, project: project,
+                status: status, lines: lines
             )
         }
 
         startNextQueued()
+    }
+
+    /// Pure decision: given exit status + log-marker result + the
+    /// derived-from-disk state, what should the runner write?
+    ///
+    /// Extracted from `handleTermination` to make the branch table
+    /// unit-testable without standing up a full `PipelineRunner` harness.
+    /// No I/O, no actor state — caller computes `derived` (async) and
+    /// passes it in.
+    ///
+    /// **Honesty invariant:** `.ready` is only ever returned when disk
+    /// derivation confirmed `.ready`. Exit code 0 alone is never sufficient.
+    enum TerminationDecision: Equatable {
+        case accept(PipelineState)   // write this state directly
+        case treatAsFailure          // caller categorises via deriveFailureState
+    }
+
+    nonisolated static func decideTermination(
+        exitStatus: Int32,
+        sidecarReportedSuccess: Bool,
+        derived: PipelineState
+    ) -> TerminationDecision {
+        if sidecarReportedSuccess {
+            // Sidecar said it worked. Trust the disk derivation:
+            //   .ready  → accept (real success)
+            //   .idle/.partial/.stopped → accept (botched run, honest signal)
+            //   .unreachable → accept (slow disk; sidebar will self-correct
+            //                  on next passive scan)
+            // When exit was non-zero AND log markers passed but disk says
+            // not-ready, that's a real failure (log markers lied) — fall
+            // through to categorisation rather than write a misleading state.
+            if case .ready = derived {
+                return .accept(derived)
+            }
+            if exitStatus == 0 {
+                return .accept(derived)
+            }
+            return .treatAsFailure
+        }
+        return .treatAsFailure
+    }
+
+    /// Read the post-termination disk state. Thin wrapper around
+    /// `readManifestState` that also logs a warning if the sidecar claimed
+    /// success but the manifest doesn't confirm — a Python-side bug to chase.
+    ///
+    /// Timeout is 5s (vs 2s on the passive scan path): termination runs once
+    /// per run completion, and 2s lost to a successful-but-slow disk would
+    /// flip exit-0 to `.unreachable` for users with audio on network shares.
+    private func resolveTerminationState(
+        projectID: UUID, project: Project?
+    ) async -> PipelineState {
+        guard let project else { return .idle }
+        let url = Self.manifestURL(for: project)
+        let derived = await Self.readManifestState(
+            at: url, timeout: .seconds(5)
+        )
+        if case .ready = derived {
+            return derived
+        }
+        Self.logger.warning(
+            """
+            sidecar reported success but manifest derivation did not \
+            confirm ready project=\(projectID.uuidString, privacy: .public) \
+            derived=\(String(describing: derived), privacy: .public)
+            """
+        )
+        return derived
+    }
+
+    /// Categorise a non-zero exit into `.failed(summary, category:)`. Extracted
+    /// so both the "log-tail says success but manifest disagrees" path and the
+    /// original "log-tail also looks bad" path can share this logic.
+    private func deriveFailureState(
+        projectID: UUID, project: Project?,
+        status: Int32, lines: [String]
+    ) -> PipelineState {
+        // Prefer the structured cause emitted by the Python abandon path
+        // (`pipeline-events.jsonl` → `run_failed` → `cause.{category,message}`).
+        // Stdout regex is a best-effort fallback for older Python versions
+        // and crash-style failures that exit before writing a terminus event.
+        let derived = project.flatMap { Self.deriveFailureFromEvents(project: $0) }
+        let category: PipelineFailureCategory
+        let summary: String
+        if let (cat, msg) = derived {
+            category = cat
+            summary = msg ?? Self.humanSummary(for: cat)
+        } else {
+            category = Self.categoriseFailure(
+                lines: lines, exitStatus: status, projectName: project?.name
+            )
+            summary = Self.humanSummary(for: category)
+        }
+        Self.logger.warning(
+            """
+            run failed project=\(projectID.uuidString, privacy: .public) \
+            status=\(status) category=\(category.rawValue, privacy: .public)
+            """
+        )
+        return .failed(summary, category: category)
     }
 
     private func startNextQueued() {

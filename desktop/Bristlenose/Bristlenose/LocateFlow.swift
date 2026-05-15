@@ -35,7 +35,13 @@ final class LocateFlow {
     /// Files inside `bristlenose-output/` that signal a real analysed project.
     /// At least one of these must exist — defeats the "empty marker dir
     /// confuses Spotlight" path (security finding #15).
-    static let outputArtefacts = ["manifest.json", ".bristlenose"]
+    ///
+    /// `.bristlenose/pipeline-manifest.json` (not the bare `.bristlenose/`
+    /// directory) is the canonical marker: the directory itself is created
+    /// the moment a run starts, so its presence is a "looks started" not
+    /// "looks analysed" signal. Requiring the manifest file matches what
+    /// `PipelineRunner.readManifestState` reads.
+    static let outputArtefacts = [".bristlenose/pipeline-manifest.json"]
 
     private let project: Project
     private let spotlight: SpotlightOneShot

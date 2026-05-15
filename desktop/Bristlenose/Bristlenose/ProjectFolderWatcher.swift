@@ -53,6 +53,16 @@ struct UnanalysedState: Equatable {
 /// **Thread model.** `knownBasenames` is confined to `scanQueue`; both
 /// `seedKnown(basenames:)` and `performScan()` mutate it on that queue.
 /// `onChange` is always invoked on the main actor.
+///
+/// **`@unchecked Sendable` soundness.** Hand-audited: `lease` is set once
+/// in init and never mutated except in `deinit`; `onChange` is `@Sendable`
+/// by type and only invoked via `DispatchQueue.main.async`; `knownBasenames`,
+/// `lastPublished`, and `pendingScan` are scanQueue-confined (all reads and
+/// writes hop through `scanQueue.async`). NSFilePresenter callbacks arrive
+/// on `sharedPresenterQueue` but only call `scheduleScan()`, which hops to
+/// `scanQueue`. No state is read or written off-queue. The unchecked waiver
+/// is justified by this confinement discipline — if a future change shares
+/// state across queues, this conformance must become checked or drop.
 final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable {
 
     /// Project ID this watcher belongs to. Used by callers to key state.
@@ -201,6 +211,13 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
         newFiles.sort { $0.lastPathComponent < $1.lastPathComponent }
 
         var missingFiles: [URL] = []
+        // The iCloud-evicted rescue here is load-bearing. `enumerateTopLevelEligible`
+        // filters by `isRegularFileKey == true`, and evicted placeholders fail
+        // that test → they never land in `presentBasenames` → they fall into
+        // this loop as "missing." The `isCloudEvicted` skip is what stops them
+        // being mis-flagged as truly gone. If a future refactor shortcuts the
+        // enumeration path (e.g. includes placeholders), this branch needs to
+        // be revisited so eviction handling doesn't double-count.
         for base in ingested where !presentBasenames.contains(base) {
             let candidate = projectURL.appendingPathComponent(base)
             if Self.isCloudEvicted(candidate) { continue }

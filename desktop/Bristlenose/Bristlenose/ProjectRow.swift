@@ -236,18 +236,28 @@ struct ProjectRow: View {
         switch delta {
         case .unanalysed(let count):
             Button(action: { onOpenUnanalysed?() }) {
-                Text(i18n.t("desktop.chrome.unanalysedSubtitle",
-                            ["count": String(count)]))
+                Text(deltaText(prefix: "unanalysedSubtitle", count: count))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
+            .accessibilityHint(i18n.t("desktop.chrome.unanalysedSheetTitle",
+                                      ["project": project.name]))
         case .missing(let count):
-            Text(i18n.t("desktop.chrome.missingSubtitle",
-                        ["count": String(count)]))
+            Text(deltaText(prefix: "missingSubtitle", count: count))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    /// Pick singular vs plural key for a count-bearing delta phrase. Two-key
+    /// shape (One/Other) because `I18n.swift` doesn't do CLDR-suffix lookup;
+    /// some locales (fr/de/es) inflect on count=1 even for adjectival phrases.
+    private func deltaText(prefix: String, count: Int) -> String {
+        let key = count == 1
+            ? "desktop.chrome.\(prefix)One"
+            : "desktop.chrome.\(prefix)Other"
+        return i18n.t(key, ["count": String(count)])
     }
 
     // MARK: - Rename field (unchanged from prior shape)
@@ -336,8 +346,15 @@ struct ProjectRow: View {
             return .pipelineText(i18n.t(key))
         case .unreachable(let reason):
             return .pipelineText(reason)
-        case .ready(let date):
-            return .ready(dateText: formatBareDate(date), delta: pickDelta())
+        case .ready:
+            // Source the date from `project.lastPipelineRunAt` rather than
+            // the embedded PipelineState date so this arm and the
+            // `.none/.scanning/.idle` fall-through arm agree on the
+            // truth-source (the persisted project model).
+            if let lastRun = project.lastPipelineRunAt {
+                return .ready(dateText: formatBareDate(lastRun), delta: pickDelta())
+            }
+            return .placeholder
         case .none, .scanning, .idle:
             // No pipeline subtitle. If we have a last-run timestamp AND deltas,
             // fall through to a ready-style subtitle anchored on that date.
@@ -366,24 +383,27 @@ struct ProjectRow: View {
     /// Bare progressive coarsen — Just now / Today / Yesterday / D MMM /
     /// MMM YYYY. No verb prefix; the row's identity establishes that
     /// the date refers to "last analysed."
+    ///
+    /// Future-dated `date` (clock skew) skips the relative branches and goes
+    /// straight to the absolute formatter — `RelativeDateTimeFormatter.named`
+    /// would otherwise render "in 2 hours" on a "last analysed" subtitle.
     private func formatBareDate(_ date: Date) -> String {
         let appLocale = Locale(identifier: i18n.locale)
         let now = Date()
         let elapsed = now.timeIntervalSince(date)
 
-        // Just now — under ~5 minutes.
+        // Just now — under ~5 minutes. Future dates skip this branch.
         if elapsed >= 0 && elapsed < 5 * 60 {
             return i18n.t("desktop.chrome.dateRelativeJustNow")
         }
 
         let calendar = Calendar(identifier: .gregorian)
-        if calendar.isDateInToday(date) {
-            // Apple's RelativeDateTimeFormatter with .named gives us "today"
-            // localised across all 6 locales; we just leading-capitalise.
-            return relative(date, locale: appLocale)
-        }
-        if calendar.isDateInYesterday(date) {
-            return relative(date, locale: appLocale)
+        // Future dates: always render absolute. Past dates use relative
+        // names for today / yesterday.
+        if elapsed >= 0 {
+            if calendar.isDateInToday(date) || calendar.isDateInYesterday(date) {
+                return relative(date, now: now, locale: appLocale)
+            }
         }
 
         let nowYear = calendar.component(.year, from: now)
@@ -399,13 +419,15 @@ struct ProjectRow: View {
     }
 
     /// Localised "today" / "yesterday" via Apple's named relative formatter.
-    /// Leading-capitalise the first character to match sentence-start chrome.
-    private func relative(_ date: Date, locale: Locale) -> String {
+    /// Leading-capitalise the first character to match sentence-start chrome
+    /// — a no-op on CJK ideographs and Hangul (Unicode case folding leaves
+    /// them untouched), so safe across all 6 locales.
+    private func relative(_ date: Date, now: Date, locale: Locale) -> String {
         let f = RelativeDateTimeFormatter()
         f.locale = locale
         f.dateTimeStyle = .named
         f.unitsStyle = .full
-        let s = f.localizedString(for: date, relativeTo: Date())
+        let s = f.localizedString(for: date, relativeTo: now)
         return s.prefix(1).uppercased() + s.dropFirst()
     }
 
@@ -437,6 +459,10 @@ struct ProjectRow: View {
     /// Hover tooltip composes "6 interviews · 3 waiting, 1 missing" so the
     /// per-row precedence chain doesn't hide information from a user who
     /// goes looking for it.
+    // PII: tooltip composition uses counts only — never interpolate
+    // state.newFiles / missingFiles basenames here. Accessibility services
+    // have system-wide read access; the watcher's "filenames stay UI-only"
+    // invariant means rendered text only, no .help() / .accessibilityLabel.
     private var rowTooltip: String {
         var parts: [String] = []
         if let count = unanalysed?.sessionCount {
@@ -448,8 +474,8 @@ struct ProjectRow: View {
                                     ["count": String(state.newFiles.count)]))
             }
             if !state.missingFiles.isEmpty {
-                parts.append(i18n.t("desktop.chrome.missingSubtitle",
-                                    ["count": String(state.missingFiles.count)]))
+                parts.append(deltaText(prefix: "missingSubtitle",
+                                       count: state.missingFiles.count))
             }
         }
         return parts.joined(separator: " · ")
@@ -493,7 +519,7 @@ struct ProjectRow: View {
                 label += ", \(i18n.t("desktop.chrome.tooltipWaiting", ["count": String(state.newFiles.count)]))"
             }
             if !state.missingFiles.isEmpty {
-                label += ", \(i18n.t("desktop.chrome.missingSubtitle", ["count": String(state.missingFiles.count)]))"
+                label += ", \(deltaText(prefix: "missingSubtitle", count: state.missingFiles.count))"
             }
         }
         return label

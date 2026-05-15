@@ -52,7 +52,12 @@ enum SourceFilesReader {
         var db: OpaquePointer?
         // SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX — we only read, and the
         // pipeline server may be writing concurrently. SQLite handles WAL
-        // readers safely. NOMUTEX = caller serialises (we do, per-call).
+        // readers safely. NOMUTEX correctness rests on a single
+        // open-prepare-step-finalise-close lifecycle per call: the handle
+        // never crosses threads. Caller invokes from `ProjectFolderWatcher`'s
+        // per-watcher serial scanQueue, satisfying the contract. Future
+        // refactors that share a handle across queues must switch to
+        // `SQLITE_OPEN_FULLMUTEX`.
         let flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX
         guard sqlite3_open_v2(dbURL.path, &db, flags, nil) == SQLITE_OK else {
             log.debug("could not open source_files database (pre-analysis project)")

@@ -22,6 +22,13 @@ struct ProjectRow: View {
     let onShowInFinder: () -> Void
     let onDelete: () -> Void
     let onLocate: (() -> Void)?
+    /// Unanalysed state for this project (count pill + missing badge).
+    /// Nil means "don't render the pill" — caller passes nil while a
+    /// drag-onto copy sheet is up (handoff §Stacking rule).
+    let unanalysed: UnanalysedState?
+    /// Called when the user clicks the count pill. Caller opens the
+    /// `NewFilesSheet` in watcher mode.
+    let onOpenUnanalysed: (() -> Void)?
 
     @EnvironmentObject var i18n: I18n
     @EnvironmentObject var pipelineRunner: PipelineRunner
@@ -46,18 +53,22 @@ struct ProjectRow: View {
         isRenaming: Binding<Bool>,
         isDropTarget: Bool = false,
         liveData: PipelineLiveData,
+        unanalysed: UnanalysedState? = nil,
         onRename: @escaping (String) -> Void,
         onShowInFinder: @escaping () -> Void,
         onDelete: @escaping () -> Void,
-        onLocate: (() -> Void)? = nil
+        onLocate: (() -> Void)? = nil,
+        onOpenUnanalysed: (() -> Void)? = nil
     ) {
         self.project = project
         self._isRenaming = isRenaming
         self.isDropTarget = isDropTarget
+        self.unanalysed = unanalysed
         self.onRename = onRename
         self.onShowInFinder = onShowInFinder
         self.onDelete = onDelete
         self.onLocate = onLocate
+        self.onOpenUnanalysed = onOpenUnanalysed
         self._liveData = ObservedObject(wrappedValue: liveData)
     }
 
@@ -169,12 +180,59 @@ struct ProjectRow: View {
             Image(systemName: "exclamationmark.circle.fill")
                 .foregroundStyle(.red)
                 .imageScale(.small)
+        } else if hasUnanalysed {
+            unanalysedPill
         } else if let glyph = availability.sfSymbolName {
             Image(systemName: glyph)
                 .foregroundStyle(.secondary)
                 .imageScale(.small)
         } else {
             EmptyView()
+        }
+    }
+
+    private var hasUnanalysed: Bool {
+        if let state = unanalysed, !state.isEmpty { return true }
+        return false
+    }
+
+    /// Mail-style count pill plus optional missing badge for the project.
+    /// Pill is suppressed at 0 newFiles; caller can suppress entirely by
+    /// passing `unanalysed = nil` (handoff §Stacking rule: hidden while
+    /// drag-onto copy sheet is active).
+    @ViewBuilder
+    private var unanalysedPill: some View {
+        if let state = unanalysed {
+            HStack(spacing: 4) {
+                if !state.newFiles.isEmpty {
+                    Text("\(state.newFiles.count)")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                        .background(
+                            Capsule().fill(Color.accentColor.opacity(0.12))
+                        )
+                        .help(i18n.t("desktop.chrome.unanalysedTooltip",
+                                     ["count": String(state.newFiles.count)]))
+                        .accessibilityLabel(
+                            i18n.t("desktop.chrome.unanalysedVoiceOver",
+                                   ["count": String(state.newFiles.count)])
+                        )
+                        .onTapGesture { onOpenUnanalysed?() }
+                }
+                if !state.missingFiles.isEmpty {
+                    Text(i18n.t("desktop.chrome.unanalysedMissingBadge",
+                                ["count": String(state.missingFiles.count)]))
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(
+                            Capsule().stroke(Color.secondary.opacity(0.3), lineWidth: 0.5)
+                        )
+                }
+            }
         }
     }
 

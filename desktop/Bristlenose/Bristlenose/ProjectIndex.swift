@@ -1,4 +1,7 @@
 import Foundation
+import OSLog
+
+private let log = Logger(subsystem: "app.bristlenose", category: "project-index")
 
 // MARK: - Location model
 
@@ -270,6 +273,19 @@ final class ProjectIndex: ObservableObject {
 
     @Published var projects: [Project] = []
     @Published var folders: [Folder] = []
+    /// Per-project unanalysed-files state, published by `ProjectFolderWatcher`.
+    /// Absent entry = no watcher running (project not ready, or watcher not
+    /// yet started). `.empty` value = watcher running, nothing to show.
+    @Published var unanalysed: [UUID: UnanalysedState] = [:]
+
+    /// Bookmark leases held while a project is `.ready`. Released on
+    /// transition to `.cantFind` / `.inCloud` or when the project is removed.
+    /// Co-terminous with the watcher in `watchers`.
+    private var leases: [UUID: ProjectBookmarkLease] = [:]
+    /// Folder watchers, one per `.ready` project. Caps at ~50 to stay
+    /// well under filecoordinationd's practical ceiling.
+    private var watchers: [UUID: ProjectFolderWatcher] = [:]
+    static let maxConcurrentWatchers: Int = 50
 
     private let fileURL: URL
 
@@ -293,6 +309,7 @@ final class ProjectIndex: ObservableObject {
             self.fileURL = appSupport.appendingPathComponent("projects.json")
         }
         load()
+        syncWatchers()
     }
 
     // MARK: - CRUD
@@ -331,11 +348,13 @@ final class ProjectIndex: ObservableObject {
         )
         projects.insert(project, at: 0)
         save()
+        syncWatchers()
         return project
     }
 
     /// Remove a project by ID.
     func removeProject(id: UUID) {
+        releaseLeaseAndWatcher(for: id)
         projects.removeAll { $0.id == id }
         save()
     }
@@ -367,6 +386,7 @@ final class ProjectIndex: ObservableObject {
         }
         projects.append(restored)
         save()
+        syncWatchers()
     }
 
     /// Rename a project by ID.
@@ -697,7 +717,83 @@ final class ProjectIndex: ObservableObject {
             }
         }
         if changed { save() }
+        syncWatchers()
         objectWillChange.send()
+    }
+
+    // MARK: - Watcher lifecycle
+
+    /// Bring `leases` and `watchers` into sync with current `availability`
+    /// across all projects. Acquires lease + starts watcher on each `.ready`
+    /// project that doesn't have one; releases lease + removes watcher on
+    /// each non-`.ready` project that does. Idempotent. Safe to call from
+    /// `refreshAvailability()`, project switch, or any state change.
+    func syncWatchers() {
+        let liveIDs = Set(projects.map(\.id))
+        for stale in leases.keys where !liveIDs.contains(stale) {
+            releaseLeaseAndWatcher(for: stale)
+        }
+        for project in projects {
+            switch project.availability {
+            case .ready:
+                if watchers[project.id] != nil { continue }
+                if watchers.count >= Self.maxConcurrentWatchers {
+                    log.notice("watcher cap reached; skipping new presenter")
+                    continue
+                }
+                guard let bookmark = project.bookmarkData else { continue }
+                do {
+                    let lease = try ProjectBookmarkLease(bookmarkData: bookmark)
+                    leases[project.id] = lease
+                    let id = project.id
+                    let watcher = ProjectFolderWatcher(
+                        projectID: id,
+                        lease: lease,
+                        initialKnownBasenames: []
+                    ) { [weak self] state in
+                        Task { @MainActor [weak self] in
+                            self?.handleWatcherUpdate(projectID: id, state: state)
+                        }
+                    }
+                    watchers[project.id] = watcher
+                } catch {
+                    log.notice("could not acquire lease for project")
+                }
+            case .cantFind, .inCloud:
+                releaseLeaseAndWatcher(for: project.id)
+            }
+        }
+    }
+
+    /// Borrow the lease URL for a project. Returned URL has security scope
+    /// open for the lifetime of the lease (i.e. while the project is
+    /// `.ready`). Callers must not call `start/stopAccessingSecurityScopedResource`.
+    /// Nil if the project is not currently `.ready` or has no bookmark.
+    func leaseURL(projectID: UUID) -> URL? {
+        leases[projectID]?.url
+    }
+
+    /// Extend a project's known-basenames after a drag-onto copy completes,
+    /// so the count pill stays hidden for the just-copied files.
+    func seedKnownBasenames(projectID: UUID, basenames: Set<String>) {
+        watchers[projectID]?.seedKnown(basenames: basenames)
+    }
+
+    private func releaseLeaseAndWatcher(for id: UUID) {
+        if let watcher = watchers.removeValue(forKey: id) {
+            // NSFilePresenter is removed in deinit; explicit nil-out drops
+            // our strong reference so deinit fires now.
+            _ = watcher
+        }
+        leases.removeValue(forKey: id)
+        unanalysed.removeValue(forKey: id)
+    }
+
+    private func handleWatcherUpdate(projectID: UUID, state: UnanalysedState) {
+        // Only publish if the project is still live and ready. Race-safe
+        // against rapid switch/remove.
+        guard watchers[projectID] != nil else { return }
+        unanalysed[projectID] = state
     }
 
     /// Scan all mounted volumes for a relative path.
@@ -724,6 +820,9 @@ final class ProjectIndex: ObservableObject {
         projects[index].bookmarkData = Self.createBookmark(for: newPath)
         projects[index].resourceIdentifier = Self.captureResourceIdentifier(for: newPath)
         save()
+        // Drop any old lease/watcher and re-establish against the new path.
+        releaseLeaseAndWatcher(for: id)
+        syncWatchers()
     }
 
     // MARK: - Persistence

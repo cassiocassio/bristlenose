@@ -248,6 +248,13 @@ struct ProjectRow: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
+            // Pointing-hand cursor is the native Mac affordance for inline
+            // clickable text — no underline, no accent colour. Anchor-tag
+            // styling belongs in the browser, not in native chrome.
+            .onHover { hovering in
+                if hovering { NSCursor.pointingHand.push() }
+                else        { NSCursor.pop() }
+            }
             .accessibilityHint(i18n.t("desktop.chrome.unanalysedSheetTitle",
                                       ["project": project.name]))
         case .missing(let count):

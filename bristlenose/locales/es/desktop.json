@@ -159,7 +159,16 @@
     "inFlightSwitchMessage": "«%@» aún se está analizando. Cambiar de proyecto lo cancelará — podrás reanudar desde donde se detuvo.",
     "cancelAndSwitch": "Detener y cambiar",
     "stay": "No cambiar",
-    "dropProjectOntoProjectToast": "«%@» ya es un proyecto de Bristlenose — arrastra sus archivos en su lugar."
+    "dropProjectOntoProjectToast": "«%@» ya es un proyecto de Bristlenose — arrastra sus archivos en su lugar.",
+    "dropOntoRunningProject": "Termina o det\u00e9n la ejecuci\u00f3n actual antes de a\u00f1adir m\u00e1s.",
+    "dropOntoAnalysedProject": "A\u00fan no se admite a\u00f1adir entrevistas a un proyecto analizado.",
+    "dropOntoFailedProject": "Usa Reintentar en la barra de herramientas para volver a ejecutar.",
+    "dropOntoUnreachableProject": "La carpeta de este proyecto no est\u00e1 accesible en este momento.",
+    "dropFolderContainsProject": "Esta carpeta contiene el proyecto Bristlenose \u00ab%@\u00bb. Arrastra el proyecto en s\u00ed, o sus archivos fuente por separado.",
+    "copyingPill": "Copiando a %@",
+    "copyCancelling": "Cancelando\u2026",
+    "copyDiskSpaceTitle": "Espacio en disco insuficiente",
+    "copyDiskSpaceMessage": "Esta copia necesita %@ libres, pero solo hay %@ disponibles en el volumen de destino."
   },
   "availability": {
     "unmountedVolume": "{{name}} · no disponible",

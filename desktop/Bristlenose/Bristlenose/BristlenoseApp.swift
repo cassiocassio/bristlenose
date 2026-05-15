@@ -29,6 +29,7 @@ struct BristlenoseApp: App {
     @StateObject private var volumeWatcher = VolumeWatcher()
     @StateObject private var toast = ToastStore()
     @StateObject private var removalStore = UndoableRemovalStore()
+    @StateObject private var copyMachinery = CopyMachinery()
     @StateObject private var i18n: I18n = {
         let i = I18n()
         if let dir = I18n.findLocalesDirectory() {
@@ -47,6 +48,7 @@ struct BristlenoseApp: App {
                 .environmentObject(pipelineRunner)
                 .environmentObject(toast)
                 .environmentObject(removalStore)
+                .environmentObject(copyMachinery)
                 .environmentObject(i18n)
                 .overlay { ToastOverlay().environmentObject(toast) }
                 .overlay { RemoveToast().environmentObject(removalStore).environmentObject(i18n) }

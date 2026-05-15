@@ -57,6 +57,14 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
     private var knownBasenames: Set<String>
     /// Confined to `scanQueue`. Suppresses no-op `onChange` calls.
     private var lastPublished: UnanalysedState = .empty
+    /// Confined to `scanQueue`. Pending debounced scan; replaced on each new
+    /// event so a burst of Finder callbacks collapses to one scan after the
+    /// debounce window expires.
+    private var pendingScan: DispatchWorkItem?
+    /// Debounce window. Finder copying many files fires per-file
+    /// `presentedSubitemDidAppear` callbacks in rapid succession; one scan
+    /// after the burst quiets is enough.
+    private static let scanDebounce: DispatchTimeInterval = .milliseconds(300)
 
     /// Eligible top-level extensions. Lowercased; comparison is case-insensitive.
     static let eligibleExtensions: Set<String> = [
@@ -93,10 +101,13 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
         )
         super.init()
         NSFileCoordinator.addFilePresenter(self)
-        scheduleScan()
+        // Run the initial scan immediately, not via the debounce window —
+        // callers want baseline state without waiting 300ms.
+        scanQueue.async { [weak self] in self?.performScanLocked() }
     }
 
     deinit {
+        pendingScan?.cancel()
         NSFileCoordinator.removeFilePresenter(self)
     }
 
@@ -142,9 +153,18 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
 
     // MARK: - Scan
 
+    /// Debounced scan trigger. A burst of NSFilePresenter callbacks during a
+    /// Finder copy of N files collapses to a single scan ~300ms after the
+    /// last callback. Replaces the pending work item on each call.
     private func scheduleScan() {
         scanQueue.async { [weak self] in
-            self?.performScanLocked()
+            guard let self else { return }
+            self.pendingScan?.cancel()
+            let item = DispatchWorkItem { [weak self] in
+                self?.performScanLocked()
+            }
+            self.pendingScan = item
+            self.scanQueue.asyncAfter(deadline: .now() + Self.scanDebounce, execute: item)
         }
     }
 
@@ -231,11 +251,16 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
 
     /// True when a missing file is actually iCloud-evicted (still "logically
     /// present"). Such files are not treated as truly missing.
+    ///
+    /// Only `.notDownloaded` counts as evicted. `.downloaded` and `.current`
+    /// mean the file IS locally present — those would normally show up in
+    /// directory enumeration and never reach this branch; if they don't,
+    /// the file is genuinely gone, not evicted.
     static func isCloudEvicted(_ url: URL) -> Bool {
         let values = try? url.resourceValues(
             forKeys: [.ubiquitousItemDownloadingStatusKey]
         )
         guard let status = values?.ubiquitousItemDownloadingStatus else { return false }
-        return status == .notDownloaded || status == .downloaded
+        return status == .notDownloaded
     }
 }

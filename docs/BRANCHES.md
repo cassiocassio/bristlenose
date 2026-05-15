@@ -133,6 +133,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
+| `sidebar-analysed-honesty` | `bristlenose_branch sidebar-analysed-honesty/` | local only |
 
 
 
@@ -140,6 +141,26 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `sidebar-analysed-honesty`
+
+**Kind:** chore — small fix landing on main; tightens an existing signal, no new feature surface
+**Status:** Just started
+**Started:** 15 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch sidebar-analysed-honesty/`
+**Remote:** local only (push when ready)
+
+**What it does:** Sidebar shows "Analysed N min ago" for projects whose pipeline never produced any analysis (repro 15 May 2026 during `multi-project-drag-onto` QA). Gate the `.ready(...)` transition in `PipelineRunner.handleTermination` on disk evidence (reuse `readManifestState` / `EventLogReader.deriveState`) rather than sidecar exit code or log-tail heuristics; secondary tighten `LocateFlow.outputArtefacts` to require `manifest.json` not `.bristlenose/`. See `.claude/plans/sidebar-analysed-honesty.md` for the full handoff.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/PipelineRunner.swift`
+- `desktop/Bristlenose/Bristlenose/LocateFlow.swift`
+- `desktop/Bristlenose/BristlenoseTests/` (new test coverage)
+
+**Potential conflicts with other branches:**
+- `pipeline-subtitle-i18n` — adjacent: touches sibling Swift file `ProjectRow.swift`, no overlap with `PipelineRunner.swift` / `LocateFlow.swift`. Coordinate at merge time if both land close together.
 
 ---
 

@@ -168,7 +168,7 @@
     "inFlightSwitchTitle": "Aktuelle Analyse abbrechen?",
     "inFlightSwitchMessage": "„%@“ wird noch analysiert. Beim Wechsel des Projekts wird die Analyse abgebrochen — Sie können dort fortsetzen, wo sie unterbrochen wurde.",
     "cancelAndSwitch": "Anhalten und wechseln",
-    "stay": "Nicht wechseln",
+    "continueAnalysing": "Analyse fortsetzen",
     "dropProjectOntoProjectToast": "„%@“ ist bereits ein Bristlenose-Projekt — ziehen Sie stattdessen die Quelldateien.",
     "dropOntoRunningProject": "Beenden oder stoppen Sie den laufenden Vorgang, bevor Sie weitere hinzuf\u00fcgen.",
     "dropOntoAnalysedProject": "Das Hinzuf\u00fcgen weiterer Interviews zu einem analysierten Projekt wird noch nicht unterst\u00fctzt.",

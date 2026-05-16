@@ -333,6 +333,17 @@ final class PipelineRunner: ObservableObject {
         let projectID = project.id
         let manifestURL = Self.manifestURL(for: project)
 
+        // Pre-set .scanning so the sidebar row has a defined state during the
+        // off-main manifest read. Callers other than `scanAllProjects` (e.g.
+        // post-drop ingest of an already-analysed folder) skip the launch-
+        // time scan and would otherwise leave state[projectID] = nil during
+        // the async hop — invisible on local SSD but multi-second on a slow
+        // disk / network mount. Idempotent: scanAllProjects already does the
+        // same nil-check before calling scan, so this is a no-op there.
+        if state[projectID] == nil {
+            state[projectID] = .scanning
+        }
+
         Task.detached { [weak self] in
             let outcome = await Self.performScan(project: project, manifestURL: manifestURL)
             await self?.applyScan(outcome: outcome, project: project, projectID: projectID)

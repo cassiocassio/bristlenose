@@ -46,21 +46,38 @@ enum SourceFilesReader {
             .appendingPathComponent("bristlenose.db")
 
         guard FileManager.default.fileExists(atPath: dbURL.path) else {
+            log.info("readSnapshot: no DB at \(dbURL.path, privacy: .public) — pre-analysis project")
             return .empty
         }
 
         var db: OpaquePointer?
-        // SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX — we only read, and the
-        // pipeline server may be writing concurrently. SQLite handles WAL
-        // readers safely. NOMUTEX correctness rests on a single
+        // URI form with `?immutable=1` is load-bearing under App Sandbox.
+        //
+        // SQLite WAL journal mode requires the reader to access (and
+        // sometimes create) `*-wal` and `*-shm` companion files. If the
+        // last pipeline writer checkpointed and removed the WAL, but left
+        // the DB header in WAL mode, a fresh read connection in
+        // `SQLITE_OPEN_READONLY` mode will still try to touch the WAL
+        // and error with "unable to open database file" at prepare time.
+        // Under macOS Sandbox the failure surfaces as ENOENT on `*-wal`.
+        // `?immutable=1` tells SQLite "this DB will not change during
+        // my session" — SQLite skips the WAL/SHM dance entirely and
+        // reads pages directly from the main DB file. Trade-off: if the
+        // pipeline writes mid-scan we get the prior state, which is
+        // acceptable for the watcher's snapshot-style reads (next
+        // callback re-scans).
+        //
+        // SQLITE_OPEN_NOMUTEX correctness rests on a single
         // open-prepare-step-finalise-close lifecycle per call: the handle
         // never crosses threads. Caller invokes from `ProjectFolderWatcher`'s
         // per-watcher serial scanQueue, satisfying the contract. Future
         // refactors that share a handle across queues must switch to
         // `SQLITE_OPEN_FULLMUTEX`.
-        let flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX
-        guard sqlite3_open_v2(dbURL.path, &db, flags, nil) == SQLITE_OK else {
-            log.debug("could not open source_files database (pre-analysis project)")
+        let uri = "file:\(dbURL.path)?immutable=1"
+        let flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_URI
+        guard sqlite3_open_v2(uri, &db, flags, nil) == SQLITE_OK else {
+            let msg = db.flatMap { sqlite3_errmsg($0).map(String.init(cString:)) } ?? "unknown"
+            log.notice("readSnapshot: sqlite3_open_v2 failed: \(msg, privacy: .public)")
             sqlite3_close(db)
             return .empty
         }
@@ -68,6 +85,7 @@ enum SourceFilesReader {
 
         let basenames = readBasenames(db: db)
         let sessions = readSessionCount(db: db)
+        log.info("readSnapshot: ingested=\(basenames.count), sessions=\(sessions.map { String($0) } ?? "nil", privacy: .public)")
         return ProjectDBSnapshot(ingestedBasenames: basenames, sessionCount: sessions)
     }
 

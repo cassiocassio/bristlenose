@@ -1,7 +1,7 @@
 ---
 status: mixed
-last-trued: 2026-05-01
-trued-against: HEAD@first-run on 2026-05-01
+last-trued: 2026-05-16
+trued-against: HEAD@cantfind-remount-recovery on 2026-05-16
 split-candidate: true
 ---
 
@@ -9,6 +9,7 @@ split-candidate: true
 
 ## Changelog
 
+- 2026-05-16 — §"Lifecycle states" remount path: pre-fix, a re-inserted volume race-regressed the row's `CantFindReason` from `.unmountedVolume` to `.moved`, losing the volume-name subtitle. Layer 1 (bounded backoff ladder on `didMountNotification`) + Layer 2 (sticky `.unmountedVolume` in `Project.availability` while `lastSeenPath` carries the volume prefix) on `cantfind-remount-recovery` close the gap so the documented "resumes normally on remount" behaviour now holds in practice. Anchors: `VolumeWatcher.swift` `runRemountLadder`, `ProjectAvailability.swift` `.volume` arm.
 - 2026-05-01 — §"Status" updated: the detail-pane welcome placeholder from commit `4772c3a` was replaced by `WelcomeView` (commit `816ab65` on `first-run`) with `.firstRun` and `.noSelection` variants. The "parked for full design post-alpha" framing carried over from the placeholder is no longer accurate — a minimum-viable home view has shipped; what remains parked is the recents / community-codebooks expansion and window-frame restoration.
 - 2026-04-30 — Trued against shipped reality. Phase 1 (Project Index, Folders, VolumeWatcher / availability) shipped via `port-v01-ingestion` (commit `e781ebe`, merged to v0.15.0 on 26 Apr 2026); per-section `status:current` markers added. Person identity (§2), Archive (§3a), cross-project search (§3b), `bristlenose forget` (§3c), CLI `bristlenose projects` / `--recent` / `--all` all stay pending.
 - 2026-03-18 — Original draft (single-project assumptions audit + multi-project data-model + identity problem).

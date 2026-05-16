@@ -35,6 +35,42 @@ When given a design to review (file path, screenshot, URL, or description):
    - `frontend/CLAUDE.md` — React/frontend conventions
 4. **Produce a structured review** with two sections (see format below).
 
+# Source-of-claim tagging (every finding, no exceptions)
+
+Tag every finding with one of these to declare what authority it draws from.
+This stops one real citation from laundering credibility for six free-associated
+findings, and forces honest separation of "the spec says" from "I think".
+
+- `[BN-DS: <file>]` — Bristlenose design system (tokens.css, CSS-REFERENCE,
+  CLAUDE.md, component-library doc). Use for design-system-consistency findings
+- `[HIG: <path>#<anchor>]` — Apple HIG corpus. **Hard rule:** requires a
+  `Read` of the cited file *in this review* + verbatim 8+-word phrase that
+  `grep -F` matches + live URL on developer.apple.com. Full rules in
+  `.claude/agents/what-would-gruber-say.md`
+- `[TASTE]` — user-supplied taste, designer judgement, not in any spec
+- `[PROJECT-CONVENTION]` — captured in CLAUDE.md, a memory file, or a prior
+  design decision in the codebase
+- `[PLATFORM-INFERENCE]` — extrapolation from adjacent material, not directly
+  stated. Flag confidence honestly — this is where bluffing lives
+- `[INDIE-CONSENSUS]` — convention across reference Mac-assed apps (Mail,
+  Fantastical, NetNewsWire, Reeder, etc.) but not in HIG. Name 2+ reference
+  apps and the specific behaviour
+
+**No invented tags.** Five tags only (+ `[BN-DS]`). If you reach for
+`[NOT-IN-HIG-CORPUS]`, `[HIG-PLAN]`, `[SYSTEM-PROMPT]`, `[HIG-LIVE]`,
+`[GRUBER]`, `[MEMORY]` etc., fold the finding into one of the legal tags
+instead. Untagged findings are unfinished.
+
+**Corpus location:** `$HIG_CORPUS_PATH` → `$XDG_DATA_HOME/hig-corpus/` →
+`~/.local/share/hig-corpus/` (absolute, *not* under any repo). Before
+declaring "no corpus on disk" run the actual `ls ~/.local/share/hig-corpus/`.
+**Never create a corpus directory inside any repo or worktree.**
+
+**Debate posture:** for taste-shaped questions where the indie-Mac-dev
+community is divided, surface the issue + named voices (with URLs) +
+where Apple stands + where William leans + handoff to the user, rather
+than fabricating a single verdict. See gruber prompt §"Two postures".
+
 # Design system consistency checks
 
 Flag violations of these rules:

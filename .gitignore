@@ -87,3 +87,6 @@ HANDOFF.md
 # Session-handoff sentinels (per-worktree state, not for the repo)
 .claude/setup-incomplete
 .claude/last-end-session.json
+
+# Local backups of agent prompts (e.g. .bak-pre-hig-corpus-YYYY-MM-DD)
+.claude/agents/*.bak-*

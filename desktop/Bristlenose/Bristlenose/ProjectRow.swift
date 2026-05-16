@@ -188,8 +188,8 @@ struct ProjectRow: View {
                          style: .secondary)
         case .pipelineText(let text):
             subtitleText(prefix: nil, text: text, style: .secondary)
-        case .cantFind(let text):
-            subtitleText(prefix: "questionmark.folder",
+        case .cantFind(let prefix, let text):
+            subtitleText(prefix: prefix,
                          prefixColor: .orange,
                          text: text,
                          style: .secondary)
@@ -317,8 +317,8 @@ struct ProjectRow: View {
         /// Verb-led pipeline state (running / stopped / partial / queued /
         /// unreachable) — text speaks; no prefix, no delta.
         case pipelineText(String)
-        /// `.cantFind` availability — ❓ prefix + factual subtitle.
-        case cantFind(String)
+        /// `.cantFind` availability — reason-aware prefix glyph + factual subtitle.
+        case cantFind(prefix: String, text: String)
         /// `.ready` or `.inCloud` (or idle when project has analysis history) —
         /// bare date with optional single delta segment. Cloud arrow renders
         /// in the right slot independently.
@@ -350,7 +350,8 @@ struct ProjectRow: View {
         // Availability beats everything when the project can't be reached.
         if case .cantFind = availability {
             if let text = availability.subtitle(using: i18n) {
-                return .cantFind(text)
+                let prefix = availability.sfSymbolName ?? "questionmark.folder"
+                return .cantFind(prefix: prefix, text: text)
             }
             return .placeholder
         }

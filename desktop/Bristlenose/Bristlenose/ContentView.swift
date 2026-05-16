@@ -926,10 +926,28 @@ struct ContentView: View {
                 name: url.lastPathComponent, path: url.path
             )
             selection = [.project(project.id)]
-            renamingProjectID = project.id
-            // Folder-drop is the explicit signal to analyse — auto-run.
-            // Plan §Phase 3 point 2 (the ~90% happy path).
-            pipelineRunner.start(project: project)
+            if LocateFlow.folderLooksAnalysed(url: url) {
+                // Dropped folder already contains a Bristlenose project —
+                // re-open it instead of starting a fresh analysis. Skip
+                // inline rename mode: this is an adoption, not a creation,
+                // and the folder name was the project name on the prior
+                // run. The manifest scan resolves the actual state (.ready
+                // / .partial / .stopped / .failed); the user resumes from
+                // the row's affordances if the run was interrupted.
+                //
+                // Asymmetry note: `establishEmptyProject` and
+                // `handleDropOnProject` reject analysed-folder drops —
+                // they'd corrupt an existing project. The empty-sidebar
+                // path adopts instead because there's no project to
+                // pollute. Legitimate cases: clone across machines, prior
+                // CLI run, removed-then-re-dropped.
+                pipelineRunner.scan(project: project)
+            } else {
+                renamingProjectID = project.id
+                // Folder-drop is the explicit signal to analyse — auto-run.
+                // Plan §Phase 3 point 2 (the ~90% happy path).
+                pipelineRunner.start(project: project)
+            }
         } else if !directories.isEmpty || !files.isEmpty {
             // Multiple items — one project with explicit input list.
             // CLI's `discover_files` doesn't accept a subset list yet

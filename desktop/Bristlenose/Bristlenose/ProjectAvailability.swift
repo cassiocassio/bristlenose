@@ -133,8 +133,28 @@ extension Project {
         if let location {
             switch location.type {
             case .volume:
-                let volumePath = "/Volumes/\(location.volumeName ?? "")"
-                if !FileManager.default.fileExists(atPath: volumePath) {
+                // We're here because the project's own path didn't exist
+                // (checked at line 131). For volume projects, that means the
+                // volume isn't usable from our perspective — either it's
+                // unmounted, or it's freshly mounted and DiskArbitration
+                // hasn't surfaced contents yet. Report `.unmountedVolume`
+                // either way; falling through to `.moved` would lose the
+                // volume-name context and flicker the subtitle on remount.
+                let volumeName = location.volumeName ?? ""
+                if volumeName.isEmpty {
+                    // Malformed migration: `.volume` location with no name.
+                    // Fall through to `.moved` so Locate still works.
+                    assertionFailure(".volume location without volumeName")
+                    break
+                }
+                // Trailing slash is load-bearing: it stops "T7" matching a
+                // path under "/Volumes/T7 Pro/" when the project actually
+                // lives on a sibling volume whose name is a prefix.
+                let wasOnThisVolume = lastSeenPath
+                    .hasPrefix("/Volumes/\(volumeName)/")
+                if wasOnThisVolume || !FileManager.default.fileExists(
+                    atPath: "/Volumes/\(volumeName)"
+                ) {
                     return .cantFind(reason: .unmountedVolume(
                         name: location.volumeName ?? location.displayHint
                     ))

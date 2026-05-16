@@ -394,6 +394,77 @@ struct ProjectIndexTests {
         }
     }
 
+    // MARK: - Race-window stickiness (cantfind-remount-recovery)
+
+    /// Volume mount-point present, project path absent, `lastSeenPath` under
+    /// `/Volumes/<name>/` → `.unmountedVolume`. This is the DiskArbitration
+    /// settling race: the volume mounts before contents surface; without the
+    /// `wasOnThisVolume` guard, control fell through to `.moved` and lost
+    /// the volume-name context.
+    @MainActor @Test func availability_volumeMountedButPathRacing_isUnmountedVolume() throws {
+        let mounted = (try? FileManager.default.contentsOfDirectory(atPath: "/Volumes")) ?? []
+        guard let realVolume = mounted.first else {
+            // No mounted volumes — can't exercise the mount-point-present arm.
+            return
+        }
+        let missing = "/Volumes/\(realVolume)/__bn_remount_test_\(UUID().uuidString)__"
+        let project = Project(
+            id: UUID(), name: "Race", path: missing,
+            location: Location(
+                type: .volume, volumeName: realVolume,
+                volumeRelativePath: "irrelevant",
+                displayHint: "External drive — \(realVolume)"
+            ),
+            lastSeenPath: missing
+        )
+        switch project.availability {
+        case .cantFind(.unmountedVolume(let name)):
+            #expect(name == realVolume)
+        default:
+            Issue.record("Expected .unmountedVolume during race window, got \(project.availability)")
+        }
+    }
+
+    /// Volume mount-point absent, project path absent → `.unmountedVolume`.
+    /// Regression guard for the case that already worked pre-fix.
+    @MainActor @Test func availability_volumeUnmounted_isUnmountedVolume() {
+        let project = Project(
+            id: UUID(), name: "Ejected",
+            path: "/Volumes/Phantom Drive/research",
+            location: Location(
+                type: .volume, volumeName: "Phantom Drive",
+                volumeRelativePath: "research",
+                displayHint: "External drive — Phantom Drive"
+            ),
+            lastSeenPath: "/Volumes/Phantom Drive/research"
+        )
+        switch project.availability {
+        case .cantFind(.unmountedVolume(let name)):
+            #expect(name == "Phantom Drive")
+        default:
+            Issue.record("Expected .unmountedVolume, got \(project.availability)")
+        }
+    }
+
+    /// Volume project whose path exists → `.ready`. The new `wasOnThisVolume`
+    /// arm must not swallow a healthy volume project.
+    @MainActor @Test func availability_volumeWithExistingPath_isReady() throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("BristlenoseTests-Volume-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let project = Project(
+            id: UUID(), name: "Healthy", path: tempDir.path,
+            location: Location(
+                type: .volume, volumeName: "T7",
+                volumeRelativePath: "study",
+                displayHint: "External drive — T7"
+            ),
+            lastSeenPath: tempDir.path
+        )
+        #expect(project.availability == .ready)
+    }
+
     /// The enum's UI mapping is deterministic — each case has a fixed icon
     /// and primary action. Catches accidental drift in the type-level switch.
     @Test func availability_uiMapping_isStable() {

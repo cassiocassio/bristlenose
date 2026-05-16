@@ -102,6 +102,12 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 
 **Rule: when writing shell commands that use regex or platform-specific flags, prefer `gsed`/`ggrep`/`gawk`/`greadlink` (all from `brew install coreutils gnu-sed gawk findutils grep`), or use Python/Perl for portability.** The `g`-prefixed GNU tools are always available on this machine.
 
+### AppleDouble files on external drives
+
+When macOS copies files to a filesystem that can't store xattrs/resource forks natively (ExFAT, FAT32, SMB shares, some NFS exports), Finder creates a `._<name>` sidecar alongside every user file to carry the metadata. These are **binary blobs that share the user file's extension** — `._foo.mp4` looks like a video to anything that classifies by suffix; `._s1.txt` looks like a transcript and crashes utf-8 decode (`UnicodeDecodeError: byte 0xb0`).
+
+Any directory scanner that walks a user-supplied folder must filter these. Use `is_os_metadata(path)` from `bristlenose/utils/fs.py` — it catches `._*` AND `.DS_Store`. Already applied at `discover_files` (s01_ingest), `load_transcripts_from_dir` (pipeline.py), and the server importer scan sites. **When adding a new scan site that walks a project folder, call `is_os_metadata` first.** Hit 16 May 2026 when a project was copied to an ExFAT SD card. The Swift `ProjectFolderWatcher` already filters via `.skipsHiddenFiles` + `name.hasPrefix(".")`.
+
 ### i18n — single source of truth
 
 - **Locale files live in `bristlenose/locales/` only** — `frontend/src/locales/` was deleted. The frontend imports via Vite alias `@locales`. Don't create locale files in the frontend tree. `I18n.swift` (desktop) reads the same JSON at runtime

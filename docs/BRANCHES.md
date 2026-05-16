@@ -38,6 +38,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | chore | Translate ProjectRow pipelineSubtitle + locale-aware date formatters |
 | `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
 | `bristlenose_branch hig-corpus/` | `hig-corpus` | feature | Mirror Apple HIG for agent reference; citation discipline for review agents |
+| `bristlenose_branch keychain-touch-id/` | `keychain-touch-id` | feature | Biometric ACL on Keychain writes so reads offer Touch ID instead of password prompt |
 
 
 
@@ -136,6 +137,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
 | `hig-corpus` | `bristlenose_branch hig-corpus/` | local only |
+| `keychain-touch-id` | `bristlenose_branch keychain-touch-id/` | local only |
 
 
 
@@ -143,6 +145,25 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `keychain-touch-id`
+
+**Kind:** feature — code intended for main; biometric ACL on Keychain writes so subsequent reads offer Touch ID instead of the login-keychain password prompt
+**Status:** Just started
+**Started:** 16 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch keychain-touch-id/`
+**Remote:** local only (push when ready)
+
+**What it does:** Add biometric ACL to Keychain writes so reads offer Touch ID. See `.claude/plans/keychain-touch-id.md` for the full handoff (root cause, scope, sidecar cross-compat decision).
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/KeychainHelper.swift`
+- `bristlenose/llm/credentials_macos.py`
+
+**Potential conflicts with other branches:**
+- None expected — `KeychainHelper.swift` and `credentials_macos.py` are not touched by any other in-flight branch (`hig-corpus`, `multi-project-folder-watcher`, `pipeline-subtitle-i18n`).
 
 ---
 

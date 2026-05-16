@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 16 May 2026 (closed `cantfind-remount-recovery`)
+**Updated:** 16 May 2026 (closed `dev-keychain-signing-fix`)
 
 ---
 
@@ -37,7 +37,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | chore | Translate ProjectRow pipelineSubtitle + locale-aware date formatters |
 | `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
-| `bristlenose_branch dev-keychain-signing-fix/` | `dev-keychain-signing-fix` | feature | Switch Debug signing to Apple Development so Keychain Always Allow persists across Cmd+R |
 
 
 
@@ -135,7 +134,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
-| `dev-keychain-signing-fix` | `bristlenose_branch dev-keychain-signing-fix/` | local only |
 
 
 
@@ -143,24 +141,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `dev-keychain-signing-fix`
-
-**Kind:** feature — code intended for main; switches Debug signing config so Keychain trust persists across Cmd+R
-**Status:** Just started
-**Started:** 16 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch dev-keychain-signing-fix/`
-**Remote:** local only (push when ready)
-
-**What it does:** Switch Debug signing to Apple Development so Keychain Always Allow persists across Cmd+R. See `.claude/plans/dev-keychain-signing-fix.md` for the full handoff.
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj`
-
-**Potential conflicts with other branches:**
-- None expected — no other active branch edits the Xcode project file.
 
 ---
 
@@ -311,6 +291,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `dev-keychain-signing-fix` — merged 16 May 2026
+
+Switched Debug signing config to Apple Development so Keychain "Always Allow" persists across Cmd+R rebuilds. Two commits (`e5d0e5c`, `0cfab23`) merged via `db3a0f9`. Worktree detached and tagged orange on disk; local branch deleted; remote was never pushed.
 
 ### `cantfind-remount-recovery` — merged 16 May 2026
 

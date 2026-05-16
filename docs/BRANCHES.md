@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 16 May 2026 (merged `cantfind-glyphs`)
+**Updated:** 16 May 2026 (closed `cantfind-remount-recovery`)
 
 ---
 
@@ -37,7 +37,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | chore | Translate ProjectRow pipelineSubtitle + locale-aware date formatters |
 | `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
-| `bristlenose_branch cantfind-remount-recovery/` | `cantfind-remount-recovery` | feature | Re-insert ejected volume returns row to `.ready` without regressing CantFindReason from `.unmountedVolume` to `.moved` |
 | `bristlenose_branch dev-keychain-signing-fix/` | `dev-keychain-signing-fix` | feature | Switch Debug signing to Apple Development so Keychain Always Allow persists across Cmd+R |
 
 
@@ -136,7 +135,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
-| `cantfind-remount-recovery` | `bristlenose_branch cantfind-remount-recovery/` | local only |
 | `dev-keychain-signing-fix` | `bristlenose_branch dev-keychain-signing-fix/` | local only |
 
 
@@ -163,26 +161,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - None expected — no other active branch edits the Xcode project file.
-
----
-
-### `cantfind-remount-recovery`
-
-**Kind:** feature — code intended for main; fixes remount recovery so re-inserting an ejected volume returns the row to `.ready`
-**Status:** Just started
-**Started:** 16 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch cantfind-remount-recovery/`
-**Remote:** local only (push when ready)
-
-**What it does:** Re-insert ejected volume returns row to `.ready` without regressing `CantFindReason` from `.unmountedVolume` to `.moved`. See `.claude/plans/cantfind-remount-recovery.md` for the full handoff.
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/VolumeWatcher.swift`
-- `desktop/Bristlenose/Bristlenose/ProjectAvailability.swift`
-- `desktop/Bristlenose/Bristlenose/ProjectIndex.swift`
-
-**Potential conflicts with other branches:**
-- `multi-project-folder-watcher` — touches availability/sidebar surface area. Watcher focuses on file-add detection, not volume mount events. Low overlap.
 
 ---
 
@@ -333,6 +311,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `cantfind-remount-recovery` — merged 16 May 2026
+
+Re-insert ejected volume returns row to `.ready` without regressing `CantFindReason` from `.unmountedVolume` to `.moved`. Single commit (`ceb7366`) merged as `f824e92`. Worktree detached and tagged orange on disk; local branch deleted; remote was never pushed.
 
 ### `cantfind-glyphs` — merged 16 May 2026
 

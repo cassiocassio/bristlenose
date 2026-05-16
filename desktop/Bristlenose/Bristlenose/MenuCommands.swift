@@ -46,6 +46,37 @@ struct MenuCommands: Commands {
         }
 
         // CommandMenu titles stay in English (see doc comment above).
+        // Grouped into a child Commands struct to stay under CommandsBuilder's
+        // 10-element limit.
+        CustomMenus(
+            bridgeHandler: bridgeHandler,
+            projectIndex: projectIndex,
+            i18n: i18n
+        )
+
+        // Window > Bristlenose — reopen the main window if the user has closed it
+        // but the app process is still alive (Notes / Music / Pages convention).
+        // No keyboard shortcut: ⌘0 collides with WKWebView's "reset zoom" and
+        // there's no recognisable alternative. Cohort feedback can revisit.
+        CommandGroup(before: .windowList) {
+            ShowMainWindowMenuContent()
+            Divider()
+        }
+
+        CommandGroup(replacing: .help) {
+            HelpMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
+        }
+    }
+}
+
+// MARK: - Custom CommandMenus grouped
+
+private struct CustomMenus: Commands {
+    let bridgeHandler: BridgeHandler
+    let projectIndex: ProjectIndex
+    let i18n: I18n
+
+    var body: some Commands {
         CommandMenu("Project") {
             ProjectMenuContent(bridgeHandler: bridgeHandler, projectIndex: projectIndex, i18n: i18n)
         }
@@ -58,9 +89,19 @@ struct MenuCommands: Commands {
         CommandMenu("Video") {
             VideoMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
         }
+    }
+}
 
-        CommandGroup(replacing: .help) {
-            HelpMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
+// MARK: - Window > Bristlenose
+
+private struct ShowMainWindowMenuContent: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        // Brand name, not a translatable phrase — Notes / Music / Pages all
+        // use the app's own name here regardless of system language.
+        Button("Bristlenose") {
+            openWindow(id: "main")
         }
     }
 }

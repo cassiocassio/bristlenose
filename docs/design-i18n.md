@@ -430,6 +430,8 @@ Key lessons from [Mozilla's L10N best practices](https://mozilla-l10n.github.io/
 
 3. **Never concatenate fragments** — `"You have " + count + " items"` breaks word order in German, Japanese, Arabic. Always use full-sentence interpolation: `t("items.count", { count })` with i18next's plural rules.
 
+   - **Desktop (Swift `I18n.swift`) uses `One` / `Other` camelCase suffix keys, picked by Swift-side `count == 1` ternary.** React frontend uses i18next's `_one` / `_other` (CLDR-rule auto-suffix). The desktop divergence exists because `I18n.swift` doesn't implement CLDR plural-suffix lookup — the Swift call site does the pick. Example: `chrome.interviewCountOne` / `chrome.interviewCountOther` selected by `count == 1 ? key+"One" : key+"Other"`. Keep this consistent across desktop chrome keys; don't introduce `_one` / `_other` suffixes there. Captured 15 May 2026 during the `multi-project-folder-watcher` watcher subtitle work.
+
 4. **Respect grammatical gender** — "1 item selected" vs "1 photo selected" may need different adjective forms in French/German/Spanish. Use i18next's `context` feature when the noun changes the sentence.
 
 5. **Don't hardcode punctuation** — French puts a space before `:` and `?`. Japanese uses full-width punctuation (`。` not `.`). Let the translation include its own punctuation.

@@ -694,6 +694,20 @@ struct ContentView: View {
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
     }
 
+    /// Open the watcher-mode unanalysed-files sheet for a project. No-op if
+    /// the watcher hasn't reported any deltas yet (shouldn't be reachable
+    /// from the subtitle Button, but defended for safety).
+    private func openUnanalysedSheet(for project: Project) {
+        guard let state = projectIndex.unanalysed[project.id], state.hasDeltas
+        else { return }
+        newFilesSheet = NewFilesSheetState(
+            projectID: project.id,
+            projectName: project.name,
+            newFiles: state.newFiles,
+            missingFiles: state.missingFiles
+        )
+    }
+
     private func locateProject(_ project: Project) {
         let flow = LocateFlow(project: project, i18n: i18n)
         flow.run(
@@ -1079,6 +1093,13 @@ struct ContentView: View {
                     projectID: id,
                     projectName: project.name,
                     files: copied
+                )
+                // Seed the folder watcher with the copied filenames so the
+                // count pill stays hidden — they're "known," not surprise
+                // drops. Handoff §Watcher lifecycle / Stacking rule.
+                projectIndex.seedKnownBasenames(
+                    projectID: id,
+                    basenames: Set(copied.map { $0.lastPathComponent })
                 )
                 if alreadyAnalysed {
                     // Files are now in the folder; analysis won't pick
@@ -1475,6 +1496,7 @@ struct ContentView: View {
             ),
             isDropTarget: dropTargetProjectID == project.id,
             liveData: pipelineRunner.liveData,
+            unanalysed: projectIndex.unanalysed[project.id],
             onRename: { newName in
                 projectIndex.renameProject(id: project.id, newName: newName)
             },
@@ -1482,7 +1504,8 @@ struct ContentView: View {
             onDelete: {
                 removeFromSidebarContextMenu(targetingProject: project.id)
             },
-            onLocate: project.isAvailable ? nil : { locateProject(project) }
+            onLocate: project.isAvailable ? nil : { locateProject(project) },
+            onOpenUnanalysed: { openUnanalysedSheet(for: project) }
         )
         // Finder file drops onto this project row — add files or surface
         // the reject-toast if the dropped folder is itself a project.

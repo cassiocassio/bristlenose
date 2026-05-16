@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 16 May 2026 (closed `hig-corpus`)
+**Updated:** 16 May 2026 (closed `keychain-touch-id`)
 
 ---
 
@@ -37,7 +37,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | chore | Translate ProjectRow pipelineSubtitle + locale-aware date formatters |
 | `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
-| `bristlenose_branch keychain-touch-id/` | `keychain-touch-id` | feature | Biometric ACL on Keychain writes so reads offer Touch ID instead of password prompt |
 | `bristlenose_branch cantfind-glyphs/` | `cantfind-glyphs` | feature | Specialise sidebar cantFind glyph per CantFindReason (unmounted volume vs unreachable network vs moved folder) |
 | `bristlenose_branch cantfind-remount-recovery/` | `cantfind-remount-recovery` | feature | Re-insert ejected volume returns row to `.ready` without regressing CantFindReason from `.unmountedVolume` to `.moved` |
 
@@ -137,7 +136,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
-| `keychain-touch-id` | `bristlenose_branch keychain-touch-id/` | local only |
 | `cantfind-glyphs` | `bristlenose_branch cantfind-glyphs/` | local only |
 | `cantfind-remount-recovery` | `bristlenose_branch cantfind-remount-recovery/` | local only |
 
@@ -187,25 +185,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - `multi-project-folder-watcher` — also edits `ProjectAvailability.swift` and `Sidebar/`. Coordinate at merge; glyph specialisation is additive to availability state, watcher work focuses on file-add detection. Likely additive, not semantic.
-
----
-
-### `keychain-touch-id`
-
-**Kind:** feature — code intended for main; biometric ACL on Keychain writes so subsequent reads offer Touch ID instead of the login-keychain password prompt
-**Status:** Just started
-**Started:** 16 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch keychain-touch-id/`
-**Remote:** local only (push when ready)
-
-**What it does:** Add biometric ACL to Keychain writes so reads offer Touch ID. See `.claude/plans/keychain-touch-id.md` for the full handoff (root cause, scope, sidecar cross-compat decision).
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/KeychainHelper.swift`
-- `bristlenose/llm/credentials_macos.py`
-
-**Potential conflicts with other branches:**
-- None expected — `KeychainHelper.swift` and `credentials_macos.py` are not touched by any other in-flight branch (`multi-project-folder-watcher`, `pipeline-subtitle-i18n`).
 
 ---
 
@@ -356,6 +335,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `keychain-touch-id` — merged 16 May 2026
+
+Biometric ACL on Keychain writes (`KeychainHelper.swift` + `credentials_macos.py`) so subsequent reads offer Touch ID instead of the login-keychain password prompt. Single commit (`68a7eaf`) merged as `15528c1`. Worktree detached and tagged orange on disk; local branch deleted; remote was never pushed.
 
 ### `hig-corpus` — merged 16 May 2026
 

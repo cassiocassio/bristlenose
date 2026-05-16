@@ -44,6 +44,7 @@ from bristlenose.server.models import (
 from bristlenose.server.models import (
     Session as SessionModel,
 )
+from bristlenose.utils.fs import is_os_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -291,6 +292,8 @@ def _parse_transcript_headers(
         return result
 
     for txt_file in sorted(transcripts_dir.glob("*.txt")):
+        if is_os_metadata(txt_file):
+            continue
         # Session ID from filename: "s1.txt" → "s1"
         sid = txt_file.stem
         header = txt_file.read_text(encoding="utf-8")[:500]  # only need header
@@ -342,6 +345,8 @@ def _import_source_files(
         source_path = project_dir / source_name
         if not source_path.exists():
             for subdir in project_dir.iterdir():
+                if is_os_metadata(subdir):
+                    continue
                 if subdir.is_dir() and (subdir / source_name).exists():
                     source_path = subdir / source_name
                     break
@@ -405,6 +410,8 @@ def _import_transcript_segments(
         return
 
     for txt_file in sorted(transcripts_dir.glob("*.txt")):
+        if is_os_metadata(txt_file):
+            continue
         sid = txt_file.stem
         sess = session_map.get(sid)
         if not sess:
@@ -561,6 +568,8 @@ def _import_speakers(
     people = _load_people_for_import(output_dir)
 
     for txt_file in sorted(transcripts_dir.glob("*.txt")):
+        if is_os_metadata(txt_file):
+            continue
         sid = txt_file.stem
         sess = session_map.get(sid)
         if not sess:

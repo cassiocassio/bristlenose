@@ -39,6 +39,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
 | `bristlenose_branch hig-corpus/` | `hig-corpus` | feature | Mirror Apple HIG for agent reference; citation discipline for review agents |
 | `bristlenose_branch keychain-touch-id/` | `keychain-touch-id` | feature | Biometric ACL on Keychain writes so reads offer Touch ID instead of password prompt |
+| `bristlenose_branch cantfind-glyphs/` | `cantfind-glyphs` | feature | Specialise sidebar cantFind glyph per CantFindReason (unmounted volume vs unreachable network vs moved folder) |
 
 
 
@@ -138,6 +139,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
 | `hig-corpus` | `bristlenose_branch hig-corpus/` | local only |
 | `keychain-touch-id` | `bristlenose_branch keychain-touch-id/` | local only |
+| `cantfind-glyphs` | `bristlenose_branch cantfind-glyphs/` | local only |
 
 
 
@@ -145,6 +147,25 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `cantfind-glyphs`
+
+**Kind:** feature — code intended for main; specialises the sidebar `cantFind` glyph per `CantFindReason`
+**Status:** Just started
+**Started:** 16 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch cantfind-glyphs/`
+**Remote:** local only (push when ready)
+
+**What it does:** Specialise the sidebar cantFind glyph per CantFindReason — distinct glyphs for unmounted volume vs unreachable network vs moved folder. See `.claude/plans/cantfind-glyphs.md` for the full handoff.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/ProjectAvailability.swift`
+- `desktop/Bristlenose/Bristlenose/ProjectRow.swift`
+
+**Potential conflicts with other branches:**
+- `multi-project-folder-watcher` — also edits `ProjectAvailability.swift` and `Sidebar/`. Coordinate at merge; glyph specialisation is additive to availability state, watcher work focuses on file-add detection. Likely additive, not semantic.
 
 ---
 

@@ -15,6 +15,7 @@ from bristlenose.models import (
     classify_file,
 )
 from bristlenose.utils.audio import probe_duration
+from bristlenose.utils.fs import is_os_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +48,13 @@ def discover_files(input_dir: Path) -> list[InputFile]:
     files: list[InputFile] = []
 
     for entry in sorted(input_dir.iterdir()):
+        if is_os_metadata(entry):
+            continue
         if entry.is_dir():
             # Recurse one level into subdirectories
             for sub_entry in sorted(entry.iterdir()):
+                if is_os_metadata(sub_entry):
+                    continue
                 if sub_entry.is_file():
                     _try_add_file(sub_entry, files)
         elif entry.is_file():

@@ -56,6 +56,7 @@ from bristlenose.models import (
     TranscriptSegment,
 )
 from bristlenose.ui_kinds import MessageKind, cli_prefix
+from bristlenose.utils.fs import is_os_metadata
 from bristlenose.utils.text import count_noun
 
 logger = logging.getLogger(__name__)
@@ -2399,6 +2400,8 @@ def load_transcripts_from_dir(
     transcripts: list[PiiCleanTranscript] = []
 
     for path in sorted(transcripts_dir.glob("*.txt")):
+        if is_os_metadata(path):
+            continue
         segments: list[TranscriptSegment] = []
         session_id = ""
         source_file = ""

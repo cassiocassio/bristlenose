@@ -40,6 +40,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch hig-corpus/` | `hig-corpus` | feature | Mirror Apple HIG for agent reference; citation discipline for review agents |
 | `bristlenose_branch keychain-touch-id/` | `keychain-touch-id` | feature | Biometric ACL on Keychain writes so reads offer Touch ID instead of password prompt |
 | `bristlenose_branch cantfind-glyphs/` | `cantfind-glyphs` | feature | Specialise sidebar cantFind glyph per CantFindReason (unmounted volume vs unreachable network vs moved folder) |
+| `bristlenose_branch cantfind-remount-recovery/` | `cantfind-remount-recovery` | feature | Re-insert ejected volume returns row to `.ready` without regressing CantFindReason from `.unmountedVolume` to `.moved` |
 
 
 
@@ -140,6 +141,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `hig-corpus` | `bristlenose_branch hig-corpus/` | local only |
 | `keychain-touch-id` | `bristlenose_branch keychain-touch-id/` | local only |
 | `cantfind-glyphs` | `bristlenose_branch cantfind-glyphs/` | local only |
+| `cantfind-remount-recovery` | `bristlenose_branch cantfind-remount-recovery/` | local only |
 
 
 
@@ -147,6 +149,27 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `cantfind-remount-recovery`
+
+**Kind:** feature — code intended for main; fixes remount recovery so re-inserting an ejected volume returns the row to `.ready`
+**Status:** Just started
+**Started:** 16 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch cantfind-remount-recovery/`
+**Remote:** local only (push when ready)
+
+**What it does:** Re-insert ejected volume returns row to `.ready` without regressing `CantFindReason` from `.unmountedVolume` to `.moved`. See `.claude/plans/cantfind-remount-recovery.md` for the full handoff.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/VolumeWatcher.swift`
+- `desktop/Bristlenose/Bristlenose/ProjectAvailability.swift`
+- `desktop/Bristlenose/Bristlenose/ProjectIndex.swift`
+
+**Potential conflicts with other branches:**
+- `cantfind-glyphs` — also edits `ProjectAvailability.swift`. Glyph branch is presentation-layer (per-reason glyph), this branch is state-transition logic (reason classification on remount). Likely additive at merge; coordinate the `CantFindReason` enum if either branch grows it.
+- `multi-project-folder-watcher` — touches availability/sidebar surface area. Watcher focuses on file-add detection, not volume mount events. Low overlap.
 
 ---
 

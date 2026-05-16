@@ -113,26 +113,36 @@ Your atoms/molecules from `bristlenose/theme/` — the ones you actually use in 
 - Toolbar (search, filters, sort).
 - Sidebar TOC row.
 - Modal shell (title + body + footer).
+- Minimap strip (right edge of Quotes view).
+- Signal card (Analysis view — section/theme + signal/conc/agree/intensity numbers).
 
-Draw once, use everywhere. Auto-layout from the start — never fixed widths.
+**Bootstrap by import, not by redraw.** Render the components on a static HTML page (or use a live serve URL), then pull them into Figma via whatever CSS→Figma importer is least bad this month (html.to.design, Anthropic's Code-to-Canvas, etc. — landscape churns weekly; don't pin to a vendor in this doc). Accept imperfect output: fixed-position frames that look right are fine for sketch use. The Figma copy is a stamp, not a live component — when CSS changes, re-import (~5 min) rather than hand-sync.
+
+Tier expectations:
+- **Perfect** (auto-layout + variants + linked tokens): nice if it comes free; don't spend hours promoting frames to components.
+- **Good** (auto-layout + grouped): workable.
+- **Mediocre** (fixed-position frames): acceptable floor for the next month of basic-layout work.
+
+Responsive behaviour does **not** live in Figma — see Guides. Browser breakpoint experiments own that.
 
 ### 📐 Guides
 
-Window templates at three sizes:
+**One template, not three.** Pick a single generous-but-not-luxurious working width and stay there for the month. Current target: a width that gives 2-col quote grid, 2-col signal cards, comfortable project pill + toolbar + tabs, and both sidebars open. Empirically that's around the **Window / working** size below; measure off a real screenshot of the app at the preferred zoom.
 
 | Template | Inner dims | Use |
 |---|---|---|
-| Window / compact | 900 × 600 | Minimum viable Bristlenose |
-| Window / standard | 1280 × 800 | Typical target |
-| Window / wide | 1600 × 1000 | Reviewer's big monitor |
+| Window / working | ~1400 × 900 | Information-design and layout sketching. The canonical wireframe target. |
 
-Each template pre-fills:
-- Toolbar at 52pt unified (or 38pt compact).
-- Sidebar at 220pt source list.
-- Content margin 20pt standard / 16pt compact.
+Pre-fills:
+- Traffic lights + title bar.
+- Toolbar at 52pt unified.
+- Sidebar at 220pt source list (left), inspector at ~280pt (right).
+- Content area inside with a 20pt margin.
 - An annotation strip along the side listing these numbers.
 
-Drop these as the starting frame for every new screen. Don't start from a blank rectangle.
+Drop this as the starting frame for every new screen. Don't start from a blank rectangle.
+
+**Responsive lives in the browser, not Figma.** Smaller-screen behaviour (collapse one sidebar, reflow to 1-col, etc.) is sketched as rapid HTML mockups in `experiments/` with real breakpoints — Figma is no good at that and pretending otherwise burns hours. Figma owns *which components in what order at what relative weight*; the browser owns *how it reflows.*
 
 ### 🪞 Parity
 
@@ -189,11 +199,16 @@ Open questions, decisions, things to check with implementation. Not designs. Kep
 - Apple kit import + page scaffold: 30 min.
 - Tokens (spacing, radius, colour light+dark): 45 min.
 - Type styles (11 HIG + 2 annotation): 30 min.
-- Web kit (6 components): 1–2 hrs (reusable forever).
-- Guides (3 templates): 30 min.
+- Web kit (import 6–8 components via CSS→Figma tool, accept mediocre tier, clean up only what's blocking): 30–60 min.
+- Guides (1 template): 15 min.
 - Parity page (4 real screenshot comparisons): 1 hr.
 
-**~4 hrs to first screen.** Resist shortcuts — skipping the guides page is the one that bites most.
+**~3 hrs to first screen** — and most of that is reusable. Resist shortcuts on tokens and guides; everything else can be rough.
+
+## Figma plan
+
+- **Free (Starter)** covers one scratch file, unlimited pages within it, 2 variable modes per collection (exactly enough for light + dark), components, plugins, Apple Design Resources. Sufficient for everything in this doc.
+- **Professional (~£12/month)** unlocks Dev Mode (needed for Anthropic Code-to-Canvas), Tokens Studio GitHub sync, branching, unlimited files. Defer until a specific wall hits — most likely "want Code-to-Canvas" or "want a separate hi-fi file."
 
 ## Gotchas
 

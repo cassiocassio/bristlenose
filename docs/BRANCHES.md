@@ -38,6 +38,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | chore | Translate ProjectRow pipelineSubtitle + locale-aware date formatters |
 | `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
 | `bristlenose_branch cantfind-remount-recovery/` | `cantfind-remount-recovery` | feature | Re-insert ejected volume returns row to `.ready` without regressing CantFindReason from `.unmountedVolume` to `.moved` |
+| `bristlenose_branch dev-keychain-signing-fix/` | `dev-keychain-signing-fix` | feature | Switch Debug signing to Apple Development so Keychain Always Allow persists across Cmd+R |
 
 
 
@@ -136,6 +137,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
 | `cantfind-remount-recovery` | `bristlenose_branch cantfind-remount-recovery/` | local only |
+| `dev-keychain-signing-fix` | `bristlenose_branch dev-keychain-signing-fix/` | local only |
 
 
 
@@ -143,6 +145,24 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `dev-keychain-signing-fix`
+
+**Kind:** feature — code intended for main; switches Debug signing config so Keychain trust persists across Cmd+R
+**Status:** Just started
+**Started:** 16 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch dev-keychain-signing-fix/`
+**Remote:** local only (push when ready)
+
+**What it does:** Switch Debug signing to Apple Development so Keychain Always Allow persists across Cmd+R. See `.claude/plans/dev-keychain-signing-fix.md` for the full handoff.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj`
+
+**Potential conflicts with other branches:**
+- None expected — no other active branch edits the Xcode project file.
 
 ---
 

@@ -201,6 +201,11 @@ struct ProjectRow: View {
                     deltaSegment(delta)
                 }
             }
+        case .deltaOnly(let delta):
+            // Delta without a date anchor (legacy / CLI-analysed project).
+            // No middle-dot separator since there's nothing on the left to
+            // separate from.
+            deltaSegment(delta)
         case .placeholder:
             // Hidden but layout-occupying so row heights remain consistent.
             Text(" ").font(.caption).hidden()
@@ -318,6 +323,11 @@ struct ProjectRow: View {
         /// bare date with optional single delta segment. Cloud arrow renders
         /// in the right slot independently.
         case ready(dateText: String, delta: SubtitleDelta?)
+        /// Project with no `lastPipelineRunAt` (analysed via CLI / imported /
+        /// pre-this-build) but the data layer surfaced a missingFiles delta
+        /// that should still render. No date prefix; the delta is the whole
+        /// subtitle.
+        case deltaOnly(SubtitleDelta)
         /// Nothing to say — render a hidden placeholder to reserve height.
         case placeholder
     }
@@ -376,12 +386,25 @@ struct ProjectRow: View {
             if let lastRun = project.lastPipelineRunAt {
                 return .ready(dateText: formatBareDate(lastRun), delta: pickDelta())
             }
+            // No `lastPipelineRunAt` (CLI-analysed / imported project) — F14
+            // gates `newFiles` out at the ProjectIndex level, so `pickDelta()`
+            // here only surfaces `.missing`. Render the missing delta even
+            // without a date anchor; otherwise data-drift signal is silently
+            // dropped for legacy projects.
+            if let delta = pickDelta() {
+                return .deltaOnly(delta)
+            }
             return .placeholder
         case .none, .scanning, .idle:
-            // No pipeline subtitle. If we have a last-run timestamp AND deltas,
-            // fall through to a ready-style subtitle anchored on that date.
+            // No pipeline subtitle. If we have a last-run timestamp, render
+            // the ready-style subtitle anchored on that date.
             if let lastRun = project.lastPipelineRunAt {
                 return .ready(dateText: formatBareDate(lastRun), delta: pickDelta())
+            }
+            // No `lastPipelineRunAt` but possibly a delta — same reasoning
+            // as the `.ready` arm above.
+            if let delta = pickDelta() {
+                return .deltaOnly(delta)
             }
             return .placeholder
         }

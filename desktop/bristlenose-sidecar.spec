@@ -235,6 +235,18 @@ a = Analysis(
         "mypy",
     ],
     noarchive=False,
+    # `inflect` (used by bristlenose/utils/text.py::count_noun) decorates its
+    # `engine()` factory with typeguard's @typechecked at import time.
+    # typeguard 4.x rewrites the decorated function's AST via
+    # `inspect.getsource`, which fails inside a frozen PyInstaller bundle
+    # because the package is only shipped as bytecode in PYZ — no .py source
+    # for inspect to read. Result: import-time OSError "could not get source
+    # code" before the sidecar serves a byte. Fix: tell PyInstaller to also
+    # collect inflect's source files alongside the bytecode.
+    # Hit 16 May 2026 on the multi-project-folder-watcher acceptance walk.
+    module_collection_mode={
+        "inflect": "pyz+py",
+    },
 )
 
 pyz = PYZ(a.pure)

@@ -102,16 +102,6 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 
 **Rule: when writing shell commands that use regex or platform-specific flags, prefer `gsed`/`ggrep`/`gawk`/`greadlink` (all from `brew install coreutils gnu-sed gawk findutils grep`), or use Python/Perl for portability.** The `g`-prefixed GNU tools are always available on this machine.
 
-### macOS volume paths — trailing whitespace and stale cwd
-
-Two SD-card / external-volume gotchas that bit during the `multi-project-folder-watcher` QA walk (16 May 2026):
-
-1. **Volume names can carry trailing whitespace.** A card formatted with a name like `"NIKON D800 "` (trailing space) mounts at `/Volumes/NIKON D800 ` — the trailing char is part of the path. `mount | grep` reveals it via two adjacent spaces before the `(filesystem)` field: `/dev/disk6s1 on /Volumes/NIKON D800  (exfat, ...)`. Shell prompts and `ls /Volumes/` strip the trailing whitespace visually, so you'll think the path is `/Volumes/NIKON D800` and every `cd` / `dot_clean` / `ls` against that path will fail with `No such file or directory`. **Diagnostic:** `ls /Volumes/ | cat -A` (shows trailing chars as `$`). **Fix:** use tab completion in the shell, or read the literal name from `mount` output.
-
-2. **Eject-and-reinsert can leave your shell's cwd stale.** If you're sitting in a Terminal cd'd into `/Volumes/X` and the user ejects+reinserts X (often as part of QA), the volume may remount at `/Volumes/X 1` while your shell's inode-tracked cwd still works for relative ops (`ls`, `pwd`-from-inode) but every absolute-path lookup against `/Volumes/X` fails. Symptom: `ll` succeeds, `cd "/Volumes/X/sub"` fails, `ls "/Volumes/X/"` fails. **Fix:** `cd ~` to detach, then `mount | grep -i <volname>` for the real mountpoint.
-
-Both worth a `mount | grep` check first when shell commands against `/Volumes/...` paths fail mysteriously on what looks like the right path.
-
 ### i18n — single source of truth
 
 - **Locale files live in `bristlenose/locales/` only** — `frontend/src/locales/` was deleted. The frontend imports via Vite alias `@locales`. Don't create locale files in the frontend tree. `I18n.swift` (desktop) reads the same JSON at runtime

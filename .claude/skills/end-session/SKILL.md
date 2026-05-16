@@ -114,6 +114,8 @@ Path: `~/Code/bristlenose/docs/private/handoffs/<branch>.md` (gitignored, lives 
 
 Required shape: see `docs/private/handoffs/README.md` in that directory. Sections — Purpose / Context (cold-read) / Spec / Call sites / Acceptance / Out of scope / Open questions. Self-contained — readable cold by a fresh session.
 
+**`/new-feature` invocation line — `--kind` is a closed enum.** When you draft the recommended `/new-feature <branch> --plan=… --kind=… --purpose=… --files=…` line at the bottom of the handoff, `--kind` MUST be one of: `feature | diagnostic | spike | chore | parked`. These are the five values defined in `docs/BRANCHES.md` §"Branch Kinds (merge intent)" — the single source of truth — and they encode *merge intent / end-of-life*, not area. Do not invent area-shaped kinds (`desktop`, `i18n`, `ci`, `fix`, `infrastructure`, `research`, `tooling`); those belong in `--purpose` or in the "Files this branch will touch" list. If the new branch's code is intended for main, the kind is `feature`. `/new-feature` will reject anything outside the enum and stop before creating the branch.
+
 **The test:** "If a future Claude session opened the new branch and read only this file, would they know exactly what to do?" If no, expand the handoff before closing the session. The cost of writing it now is a few minutes; the cost of skipping it is the next session re-doing the diagnostic walk to figure out its own purpose.
 
 If this session did **not** identify follow-up branches, skip this step.

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 15 May 2026 (merged `sidebar-analysed-honesty`)
+**Updated:** 16 May 2026 (closed `hig-corpus`)
 
 ---
 
@@ -37,7 +37,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | chore | Translate ProjectRow pipelineSubtitle + locale-aware date formatters |
 | `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
-| `bristlenose_branch hig-corpus/` | `hig-corpus` | feature | Mirror Apple HIG for agent reference; citation discipline for review agents |
 | `bristlenose_branch keychain-touch-id/` | `keychain-touch-id` | feature | Biometric ACL on Keychain writes so reads offer Touch ID instead of password prompt |
 | `bristlenose_branch cantfind-glyphs/` | `cantfind-glyphs` | feature | Specialise sidebar cantFind glyph per CantFindReason (unmounted volume vs unreachable network vs moved folder) |
 | `bristlenose_branch cantfind-remount-recovery/` | `cantfind-remount-recovery` | feature | Re-insert ejected volume returns row to `.ready` without regressing CantFindReason from `.unmountedVolume` to `.moved` |
@@ -138,7 +137,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
-| `hig-corpus` | `bristlenose_branch hig-corpus/` | local only |
 | `keychain-touch-id` | `bristlenose_branch keychain-touch-id/` | local only |
 | `cantfind-glyphs` | `bristlenose_branch cantfind-glyphs/` | local only |
 | `cantfind-remount-recovery` | `bristlenose_branch cantfind-remount-recovery/` | local only |
@@ -207,29 +205,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/llm/credentials_macos.py`
 
 **Potential conflicts with other branches:**
-- None expected — `KeychainHelper.swift` and `credentials_macos.py` are not touched by any other in-flight branch (`hig-corpus`, `multi-project-folder-watcher`, `pipeline-subtitle-i18n`).
-
----
-
-### `hig-corpus`
-
-**Kind:** feature — code intended for main; lands a HIG scraper + mirrored corpus and wires citation discipline into review agents
-**Status:** Just started
-**Started:** 16 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch hig-corpus/`
-**Remote:** local only (push when ready)
-
-**What it does:** Mirror Apple HIG for agent reference; citation discipline for review agents. See `.claude/plans/hig-corpus.md` for the full handoff.
-
-**Files this branch will touch:**
-- `scripts/scrape-hig.py` (new)
-- `.claude/agents/what-would-gruber-say.md`
-- `.claude/agents/ux-critique.md`
-- `.claude/agents/a11y-review.md`
-- `.claude/agents/what-would-james-bach-say.md`
-
-**Potential conflicts with other branches:**
-- None expected — scraper is new, agent files are project-local but no other in-flight branch edits them. Worktree-isolated edits + git diff review + `git checkout .claude/agents/<file>` rollback path.
+- None expected — `KeychainHelper.swift` and `credentials_macos.py` are not touched by any other in-flight branch (`multi-project-folder-watcher`, `pipeline-subtitle-i18n`).
 
 ---
 
@@ -380,6 +356,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `hig-corpus` — merged 16 May 2026
+
+Mirrored Apple HIG locally for agent reference and wired citation discipline into review agents (what-would-gruber-say, ux-critique, a11y-review, what-would-james-bach-say). Added scraper at `scripts/scrape-hig.py`.
 
 ### `sidebar-analysed-honesty` — merged 15 May 2026
 

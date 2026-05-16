@@ -150,7 +150,7 @@ struct InFlightSwitchPrompt: Identifiable {
     let runningProject: Project
     /// The new selection the user requested.
     let targetSelection: Set<SidebarSelection>
-    /// Selection to restore if the user picks "Stay".
+    /// Selection to restore if the user picks "Continue Analysing".
     let priorSelection: Set<SidebarSelection>
 }
 
@@ -236,7 +236,7 @@ struct ContentView: View {
     @State private var inFlightSwitch: InFlightSwitchPrompt?
 
     /// Re-entry guard for `handleSelectionChange` — set to true while we
-    /// programmatically revert `selection` after the user picks "Stay" on
+    /// programmatically revert `selection` after the user picks "Continue Analysing" on
     /// the in-flight confirm sheet, so the re-entrant `.onChange` callback
     /// doesn't trigger another switch attempt.
     @State private var revertingSelection: Bool = false
@@ -485,7 +485,7 @@ struct ContentView: View {
         }
         // In-flight pipeline-run guard (Mini-spec 4 step 1). Presented when
         // the user picks a different project while the prior one's run is
-        // still going. Choosing "Stay" reverts the sidebar selection.
+        // still going. Choosing "Continue Analysing" reverts the sidebar selection.
         .alert(
             i18n.t("desktop.chrome.inFlightSwitchTitle"),
             isPresented: Binding(
@@ -497,10 +497,11 @@ struct ContentView: View {
             Button(i18n.t("desktop.chrome.cancelAndSwitch"), role: .destructive) {
                 resolveInFlightSwitch(prompt, cancelAndSwitch: true)
             }
-            // "Stay" reverts the sidebar selection — it mutates state, not a
-            // no-op dismissal. Drop `.cancel` role; make it the default action
-            // so Return commits Stay (gruber-pass finding 39; HIG pattern).
-            Button(i18n.t("desktop.chrome.stay")) {
+            // Continue Analysing is the safe escape. `.cancel` role binds Esc;
+            // `.defaultAction` binds Return — both keys land on the safe path,
+            // and the role prevents SwiftUI auto-injecting a third Cancel
+            // button alongside our explicit two.
+            Button(i18n.t("desktop.chrome.continueAnalysing"), role: .cancel) {
                 resolveInFlightSwitch(prompt, cancelAndSwitch: false)
             }
             .keyboardShortcut(.defaultAction)
@@ -620,9 +621,9 @@ struct ContentView: View {
     }
 
     /// Resolve the in-flight switch confirm sheet. Called from the alert
-    /// button handlers. On "Cancel and Switch" we cancel the running pipeline
-    /// then proceed with the deferred selection; on "Stay" we restore the
-    /// prior selection.
+    /// button handlers. On "Stop and Switch" we cancel the running pipeline
+    /// then proceed with the deferred selection; on "Continue Analysing" we
+    /// restore the prior selection.
     private func resolveInFlightSwitch(_ prompt: InFlightSwitchPrompt, cancelAndSwitch: Bool) {
         inFlightSwitch = nil
         if cancelAndSwitch {

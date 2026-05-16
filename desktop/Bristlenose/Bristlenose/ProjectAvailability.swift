@@ -57,8 +57,18 @@ extension ProjectAvailability {
         switch self {
         case .ready:
             return nil
-        case .cantFind:
-            return "questionmark.folder"
+        case .cantFind(let reason):
+            switch reason {
+            case .unmountedVolume:
+                return "externaldrive.badge.xmark"
+            case .networkUnreachable:
+                return "network.slash"
+            case .moved, .missingBookmark:
+                // Same glyph by design — both lead to the Locate flow.
+                // `.missingBookmark` is the schema-defensive v1 case; treat
+                // identically to `.moved`.
+                return "questionmark.folder"
+            }
         case .inCloud:
             return "icloud.and.arrow.down"
         }

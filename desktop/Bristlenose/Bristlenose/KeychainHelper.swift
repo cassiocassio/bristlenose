@@ -70,6 +70,16 @@ enum KeychainHelper {
     }
 
     /// Write a key to Keychain. Uses add-then-update (atomic, no race window).
+    ///
+    /// New items are written with a biometric access-control (`.biometryCurrentSet`
+    /// + `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`), so subsequent reads offer
+    /// Touch ID instead of a password prompt. `.biometryCurrentSet` invalidates the
+    /// ACL if the enrolled fingerprint set changes — a deliberate security choice.
+    ///
+    /// On overwrite (`errSecDuplicateItem`) the attrs dict is also passed to
+    /// `SecItemUpdate`. Whether macOS rewrites the ACL of a pre-existing
+    /// password-protected entry via update is not contractually documented; users
+    /// who need the upgrade reliably can remove the entry in Keychain Access first.
     @discardableResult
     static func set(provider: String, value: String) -> Bool {
         guard let service = serviceNames[provider],
@@ -82,9 +92,25 @@ enum KeychainHelper {
             kSecAttrAccount as String: account,
         ]
 
+        var accessControlError: Unmanaged<CFError>?
+        guard let accessControl = SecAccessControlCreateWithFlags(
+            nil,
+            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            .biometryCurrentSet,
+            &accessControlError
+        ) else {
+            let err = accessControlError?.takeRetainedValue()
+            #if DEBUG
+            print("[KeychainHelper] SecAccessControlCreateWithFlags failed: \(String(describing: err))")
+            #endif
+            return false
+        }
+
+        // `kSecAttrAccessControl` and `kSecAttrAccessible` are mutually exclusive —
+        // the access-control object embeds its own protection class.
         let attrs: [String: Any] = [
             kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
+            kSecAttrAccessControl as String: accessControl,
         ]
 
         // Try add first
@@ -95,12 +121,19 @@ enum KeychainHelper {
         if addStatus == errSecSuccess { return true }
 
         if addStatus == errSecDuplicateItem {
-            // Already exists — update in place (atomic, no race window)
+            // Already exists — update in place (atomic, no race window).
             let updateStatus = SecItemUpdate(query as CFDictionary, attrs as CFDictionary)
-            if updateStatus != errSecSuccess {
+            if updateStatus == errSecSuccess { return true }
+            if updateStatus == errSecAuthFailed {
+                // Existing item is biometric-protected and the ACL is no longer
+                // satisfiable (e.g. `.biometryCurrentSet` invalidated by an
+                // enrolment change, or the user cancelled the auth sheet).
+                // Distinct log line so this is greppable from Console.app.
+                logKeychainError("SecItemUpdate (auth failed — biometry invalidated or cancelled)", status: updateStatus)
+            } else {
                 logKeychainError("SecItemUpdate", status: updateStatus)
             }
-            return updateStatus == errSecSuccess
+            return false
         }
 
         logKeychainError("SecItemAdd", status: addStatus)

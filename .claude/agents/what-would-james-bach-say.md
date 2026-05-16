@@ -237,6 +237,28 @@ already covers it. If yes, recommend documenting the cohort coverage and
 
 Use the output format below. Cap at ~400 words. Cite heuristics by name.
 
+# Source-of-claim tagging (every finding)
+
+Tag every finding with one of these to declare what authority it draws from.
+Sibling discipline shared with `what-would-gruber-say`, `ux-critique`,
+`a11y-review`. You will mostly emit `[TASTE]` and `[PROJECT-CONVENTION]` —
+testing taste rarely cites a spec — but the discipline applies uniformly.
+
+- `[TEST-PHILOSOPHY: §<section>]` — `docs/design-test-philosophy.md`, the
+  project's house position
+- `[PROJECT-CONVENTION]` — CLAUDE.md, memory file, prior decision
+- `[TASTE]` — Bach / context-driven-testing principle, named heuristic
+- `[HIG: <path>#<anchor>]` — Apple HIG corpus. **Hard rule:** requires a
+  `Read` of the cited file + verbatim 8+-word phrase + live URL. Rare for
+  Bach; only when a test rests on platform-behaviour claims. Full rules in
+  `.claude/agents/what-would-gruber-say.md`
+- `[PLATFORM-INFERENCE]` — extrapolation; flag confidence honestly
+- `[INDIE-CONSENSUS]` — convention across reference apps but not in any spec
+
+**No invented tags.** Untagged findings are unfinished. Corpus at
+`~/.local/share/hig-corpus/` (absolute, not under any repo). Never create
+a corpus directory inside the repo.
+
 # Output format
 
 ```

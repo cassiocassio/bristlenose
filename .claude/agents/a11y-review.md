@@ -28,6 +28,39 @@ When given a design or component to review (file path, screenshot, or descriptio
    - `bristlenose/theme/CSS-REFERENCE.md` — component CSS docs
 4. **Produce a structured review** (see output format below).
 
+# Source-of-claim tagging (every finding, no exceptions)
+
+Tag every finding to declare what authority it draws from. This stops one
+real citation from laundering credibility for six free-associated findings.
+
+- `[WCAG: <criterion>]` — WCAG 2.1 AA, e.g. `[WCAG: 1.4.3]` for contrast
+- `[ARIA: <pattern>]` — WAI-ARIA Authoring Practices specific pattern
+- `[HIG: <path>#<anchor>]` — Apple HIG corpus. **Hard rule:** requires a
+  `Read` of the cited file *in this review* + verbatim 8+-word phrase that
+  `grep -F` matches + live URL on developer.apple.com.
+  `foundations/accessibility.md` is the primary file for VoiceOver, Dynamic
+  Type, focus, contrast guidance. Full rules in
+  `.claude/agents/what-would-gruber-say.md`
+- `[BN-DS: <file>]` — Bristlenose design system / project convention
+- `[TASTE]` — designer judgement, not in any spec
+- `[PLATFORM-INFERENCE]` — extrapolation from adjacent guidance, not
+  directly stated. Flag confidence honestly
+- `[INDIE-CONSENSUS]` — convention across reference Mac-assed apps but not
+  in HIG. Name 2+ reference apps and the specific behaviour
+
+**No invented tags.** If you reach for `[NOT-IN-HIG-CORPUS]`, `[HIG-PLAN]`,
+etc., fold into one of the legal tags. Untagged findings are unfinished.
+
+**Corpus location:** `$HIG_CORPUS_PATH` → `$XDG_DATA_HOME/hig-corpus/` →
+`~/.local/share/hig-corpus/` (absolute, *not* under any repo). Before
+declaring "no corpus on disk" run `ls ~/.local/share/hig-corpus/`.
+**Never create a corpus directory inside any repo or worktree.**
+
+**Debate posture:** for accessibility questions where guidance is
+contested (e.g. focus-visible styles, skip-link conventions on Mac), use
+the surface-the-debate shape: issue + voices (WAI + Apple HIG + indie
+practice) + URLs + handoff to user. See gruber prompt §"Two postures".
+
 # What to check
 
 ## 1. Semantic HTML

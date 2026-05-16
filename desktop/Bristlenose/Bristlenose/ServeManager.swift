@@ -408,11 +408,11 @@ final class ServeManager: ObservableObject {
     ///   the `.failed` case flows through SwiftUI to `BootView(.failed)` in
     ///   `ContentView.detail`. No explicit caller-side error handling needed.
     ///
-    /// **TODO(phase-2-followup):** wire `ProjectBookmarkLease` here per Mini-spec
-    /// 4 step 4. The lease type is shipped (`ProjectBookmarkLease.swift`) but
-    /// not yet integrated — `ProjectIndex` needs to hold one lease per `ready`
-    /// project, drop on switch, acquire on selection. The next branch wires it
-    /// (also unblocks #14 folder watcher).
+    /// **Security-scoped bookmark lifecycle.** `ProjectIndex.syncWatchers()`
+    /// holds a `ProjectBookmarkLease` for every `.ready` project across the
+    /// app's lifetime, so the sidecar inherits an already-open security
+    /// scope on the project's folder for as long as it runs. No explicit
+    /// lease handoff is needed here.
     func switchProject(to path: String) async {
         log.info("switching project — shutting down current sidecar")
         await shutdown(timeout: .seconds(2))

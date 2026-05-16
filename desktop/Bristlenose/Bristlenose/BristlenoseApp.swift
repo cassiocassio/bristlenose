@@ -39,7 +39,10 @@ struct BristlenoseApp: App {
     }()
 
     var body: some Scene {
-        WindowGroup {
+        // `id` lets the Window > Bristlenose menu item reopen this scene via
+        // `openWindow(id:)` after the user has closed the main window but the
+        // app process is still alive (e.g. after a sidecar crash dialog).
+        WindowGroup(id: "main") {
             ContentView()
                 .frame(minWidth: 700, minHeight: 500)
                 .environmentObject(serveManager)

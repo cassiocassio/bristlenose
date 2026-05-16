@@ -76,12 +76,23 @@ def _parse_duration_to_seconds(dur: str) -> float:
 
 
 def _parse_date(date_str: str) -> datetime | None:
-    """Parse a date string like ``2026-01-20`` into a datetime."""
+    """Parse a transcript-header date into a datetime.
+
+    Accepts full ISO 8601 (``2026-05-09T14:23:00+00:00``) — the current
+    format — and the legacy date-only form (``2026-05-09``) from output dirs
+    written before the time-of-recording fix.
+    """
     date_str = date_str.strip()
     try:
-        return datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        dt = datetime.fromisoformat(date_str)
     except ValueError:
-        return None
+        try:
+            dt = datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 # ---------------------------------------------------------------------------

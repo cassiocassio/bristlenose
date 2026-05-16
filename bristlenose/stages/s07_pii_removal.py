@@ -245,7 +245,7 @@ def write_cooked_transcripts(
         header = format_transcript_header_txt(
             participant_id=transcript.session_id,
             source_file=transcript.source_file,
-            session_date=str(transcript.session_date.date()),
+            session_date=transcript.session_date.isoformat(),
             duration=format_timecode(transcript.duration_seconds),
             label="Transcript (cooked)",
             extra_headers={
@@ -301,7 +301,7 @@ def write_cooked_transcripts_md(
         header = format_transcript_header_md(
             participant_id=transcript.session_id,
             source_file=transcript.source_file,
-            session_date=str(transcript.session_date.date()),
+            session_date=transcript.session_date.isoformat(),
             duration=format_timecode(transcript.duration_seconds),
             label="Transcript (cooked)",
             extra_headers={

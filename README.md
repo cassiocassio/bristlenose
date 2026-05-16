@@ -365,6 +365,15 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.9** — _16 May 2026_
+
+- **Multi-project Phase 2 #11 + #14 — drag-onto-folder copy + folder watcher.** Drag-onto-existing-project now uses a copy path (`CopyMachinery`) with progress pill, `NewFilesSheet` stub, and collision-rename + folder-name-preservation regression tests. Folder watcher: `NSFilePresenter` + SQLite ingested-set, count pill on the row, delta sheet for triage. Two review passes for visual + i18n polish (cloud-evicted glyph swap to `icloud` outline, pointing-hand cursor on delta button, `.footnote` typography for session count, `.secondary` text uniformly, F59 / F62 i18n).
+- **Sidebar honesty wave 2.** `.ready` now requires disk evidence — re-opened completed projects read "Ready" instantly instead of briefly flashing "analysing…". cantFind glyph specialises per reason (`.moved` / `.cloudEvicted` / `.permissionDenied` / `.removed`). Volume remount no longer regresses to `.moved`. AppleDouble (`._*`) + `.DS_Store` skipped across every directory scanner — closes a 16 May ExFAT SD-card crash where `._s1.txt` looked like a transcript and broke utf-8 decode.
+- **Pipeline subtitle i18n across 6 locales.** Sidebar in-flight stage subtitles ("Transcribing…", "Extracting quotes…", "Clustering themes…", etc.) now translated in es / fr / de / ko / ja.
+- **Keychain hardening.** API keys in the macOS Keychain now require Touch ID (or password fallback) to read — biometric ACL on the keychain item. Debug builds switched from Apple Distribution to Apple Development signing so ACLs persist across rebuilds (was un-dogfoodable; every debug Run re-prompted for access).
+- **HIG corpus mirror.** Local Apple HIG mirror so `what-would-gruber-say` cites by path + paragraph anchor instead of paraphrasing. Generic scraper for future public release.
+- **Misc.** `Window > Bristlenose` menu item to reopen the closed main window. Session start time no longer floored to midnight on the dashboard. In-flight switch modal: "Continue analysing" reframed as the cancel role (default-action stays non-destructive per HIG).
+
 **0.15.8** — _14 May 2026_
 
 - **Honesty everywhere — the pipeline, the install path, and the sidebar all stop faking success.** Walks-fix-walks groundwork across three currents:

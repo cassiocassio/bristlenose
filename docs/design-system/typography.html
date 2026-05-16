@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Typography — Bristlenose design system</title>
+
+  <!--
+    Theme CSS loaded directly from source files. Order follows the
+    canonical sequence in bristlenose/stages/s12_render/theme_assets.py
+    (tokens → palette → atoms → molecules → organisms). Only files
+    relevant to typography + sidebars are included.
+    Paths are relative — works under file:// and `bristlenose serve --dev`.
+  -->
+  <link rel="stylesheet" href="../../bristlenose/theme/tokens.css">
+  <link rel="stylesheet" href="../../bristlenose/theme/tokens-typography.css">
+  <link rel="stylesheet" href="../../bristlenose/theme/colors/palette-default.css">
+  <link rel="stylesheet" href="../../bristlenose/theme/atoms/badge.css">
+  <link rel="stylesheet" href="../../bristlenose/theme/atoms/button.css">
+  <link rel="stylesheet" href="../../bristlenose/theme/organisms/sidebar.css">
+  <link rel="stylesheet" href="../../bristlenose/theme/organisms/sidebar-tags.css">
+
+  <!-- Inter from Google Fonts, matching frontend/index.html -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap">
+
+  <style>
+    /* Specimen-page chrome — neutral, clarity-first.
+       Does NOT use theme tokens for layout chrome by design;
+       the specimens themselves render real markup against real tokens. */
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #f6f6f6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      color: #222;
+    }
+    .page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+    .page-header {
+      border-bottom: 1px solid #d0d0d0;
+      padding-bottom: 16px;
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    .page-header p {
+      margin: 0 0 4px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #555;
+      max-width: 60ch;
+    }
+    .page-header .meta {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #888;
+    }
+
+    .section {
+      margin-top: 40px;
+    }
+    .section-title {
+      margin: 0 0 16px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #222;
+    }
+    .section-intro {
+      margin: 0 0 20px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #555;
+      max-width: 70ch;
+    }
+
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .card {
+      width: 340px;
+      background: #fff;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .card.wide {
+      width: 540px;
+    }
+    .specimen {
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 8px 0;
+      position: relative;
+    }
+    .label {
+      border-top: 1px dashed #e0e0e0;
+      padding-top: 12px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .label .cls {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      font-weight: 600;
+      color: #222;
+    }
+    .label .meta {
+      color: #888;
+      margin-top: 2px;
+    }
+    .label .note {
+      color: #555;
+      margin-top: 4px;
+    }
+
+    /* Type-scale table: one row per stop. */
+    .scale-table {
+      width: 100%;
+      max-width: 900px;
+      background: #fff;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow: hidden;
+    }
+    .scale-table tr + tr td {
+      border-top: 1px dashed #e8e8e8;
+    }
+    .scale-table td {
+      padding: 14px 16px;
+      vertical-align: middle;
+    }
+    .scale-table td.token {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      color: #555;
+      white-space: nowrap;
+      width: 220px;
+    }
+    .scale-table td.size {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      color: #888;
+      white-space: nowrap;
+      width: 120px;
+    }
+    .scale-table td.sample {
+      color: #222;
+      font-family: "Inter", -apple-system, system-ui, sans-serif;
+    }
+
+    /* Weight ladder. */
+    .weight-table {
+      width: 100%;
+      max-width: 900px;
+      background: #fff;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    .weight-table tr + tr td { border-top: 1px dashed #e8e8e8; }
+    .weight-table td { padding: 14px 16px; vertical-align: middle; }
+    .weight-table td.token {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      color: #555;
+      white-space: nowrap;
+      width: 220px;
+    }
+    .weight-table td.value {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      color: #888;
+      width: 80px;
+    }
+    .weight-table td.sample {
+      color: #222;
+      font-family: "Inter", -apple-system, system-ui, sans-serif;
+      font-size: 15px;
+    }
+
+    /* Sidebar specimen frame.
+       Width matches --bn-sidebar-width default (280px). */
+    .sidebar-card {
+      width: 280px;
+      background: #fff;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-card .sidebar-head {
+      padding: 8px 12px;
+      border-bottom: 1px solid #e8e8e8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      color: #888;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .sidebar-card .sidebar-body {
+      padding: 12px 14px;
+      min-height: 320px;
+      /* Reset to chrome defaults expected by sidebar.css. */
+      font-family: var(--bn-font-body);
+      color: var(--bn-colour-text);
+      background: var(--bn-colour-bg);
+    }
+    .sidebar-card .sidebar-foot {
+      padding: 8px 12px;
+      border-top: 1px dashed #e0e0e0;
+      font-size: 12px;
+      color: #888;
+      line-height: 1.5;
+    }
+    .sidebar-card .sidebar-foot .cls {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #222;
+    }
+
+    /* Sessions sidebar — session-entry inner layout helpers
+       (these classes exist in sidebar.css; specimen needs no overrides) */
+
+    /* Tiny grid for the four sidebar cards. */
+    .sidebars-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <header class="page-header">
+      <h1>Typography</h1>
+      <p>Specimen page for the Bristlenose type system: the 8-stop size/line-height scale, the 4-tier weight ladder, the five primary left-hand sidebars rendered at their default width with representative data, and a per-style spec sheet for redrawing in Figma.</p>
+      <p>Each card shows one specimen rendered with real markup against the live theme CSS. Sidebars use the same classes the React components emit (<code>.toc-heading</code>, <code>.toc-link</code>, <code>.session-entry</code>, <code>.signal-entry</code>) so behaviour and proportions match production.</p>
+      <p class="meta">Generated 16 May 2026 · sources: <code>bristlenose/theme/tokens-typography.css</code>, <code>organisms/sidebar.css</code>, <code>atoms/badge.css</code></p>
+    </header>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section class="section">
+      <h2 class="section-title">Type scale (Scale D, 8 stops)</h2>
+      <p class="section-intro">Paired font-size + line-height tokens. Line-height decreases as size increases (Bringhurst): large letterforms anchor visually and need less leading. All sizes in <code>rem</code>; the rendered <code>px</code> assumes the 16px browser default.</p>
+
+      <table class="scale-table">
+        <tr>
+          <td class="token">--bn-text-micro<br>--bn-text-micro-lh</td>
+          <td class="size">9.6px · 1.3</td>
+          <td class="sample" style="font-size: var(--bn-text-micro); line-height: var(--bn-text-micro-lh); font-weight: var(--bn-weight-emphasis);">DRAG · 12 · ×</td>
+        </tr>
+        <tr>
+          <td class="token">--bn-text-badge<br>--bn-text-badge-lh</td>
+          <td class="size">11.5px · 1.35</td>
+          <td class="sample" style="font-size: var(--bn-text-badge); line-height: var(--bn-text-badge-lh); font-weight: var(--bn-weight-emphasis);">badge text · group totals · 247</td>
+        </tr>
+        <tr>
+          <td class="token">--bn-text-caption<br>--bn-text-caption-lh</td>
+          <td class="size">12px · 1.4</td>
+          <td class="sample" style="font-size: var(--bn-text-caption); line-height: var(--bn-text-caption-lh);">12 Feb · 1h 03 · footnote · timestamp</td>
+        </tr>
+        <tr>
+          <td class="token">--bn-text-label<br>--bn-text-label-lh</td>
+          <td class="size">13px · 1.45</td>
+          <td class="sample" style="font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh);">UI chrome · sidebar entries · table cells</td>
+        </tr>
+        <tr>
+          <td class="token">--bn-text-body<br>--bn-text-body-lh</td>
+          <td class="size">15px · 1.5</td>
+          <td class="sample" style="font-size: var(--bn-text-body); line-height: var(--bn-text-body-lh);">Quote text and transcript segments — the participant voice. "I just couldn't figure out where to click next."</td>
+        </tr>
+        <tr>
+          <td class="token">--bn-text-heading<br>--bn-text-heading-lh</td>
+          <td class="size">18px · 1.3</td>
+          <td class="sample" style="font-size: var(--bn-text-heading); line-height: var(--bn-text-heading-lh); font-weight: var(--bn-weight-emphasis);">Section heading · card title</td>
+        </tr>
+        <tr>
+          <td class="token">--bn-text-title<br>--bn-text-title-lh</td>
+          <td class="size">22px · 1.25</td>
+          <td class="sample" style="font-size: var(--bn-text-title); line-height: var(--bn-text-title-lh); font-weight: var(--bn-weight-emphasis);">Page title · h1</td>
+        </tr>
+        <tr>
+          <td class="token">--bn-text-display<br>--bn-text-display-lh</td>
+          <td class="size">28px · 1.2</td>
+          <td class="sample" style="font-size: var(--bn-text-display); line-height: var(--bn-text-display-lh); font-weight: var(--bn-weight-strong);">347</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section class="section">
+      <h2 class="section-title">Weight ladder</h2>
+      <p class="section-intro">Inter Variable, four tiers. Static-font fallbacks (Windows 10 Segoe UI offline) snap 420→400 and 490→400 — structural cues still carry hierarchy.</p>
+
+      <table class="weight-table">
+        <tr>
+          <td class="token">--bn-weight-normal</td>
+          <td class="value">420</td>
+          <td class="sample" style="font-weight: var(--bn-weight-normal);">Body text, descriptions, quote content, secondary labels.</td>
+        </tr>
+        <tr>
+          <td class="token">--bn-weight-emphasis</td>
+          <td class="value">490</td>
+          <td class="sample" style="font-weight: var(--bn-weight-emphasis);">Headings, section titles, sidebar headings, badge text.</td>
+        </tr>
+        <tr>
+          <td class="token">--bn-weight-starred</td>
+          <td class="value">520</td>
+          <td class="sample" style="font-weight: var(--bn-weight-starred);">Starred quote body — pops above emphasis, below strong.</td>
+        </tr>
+        <tr>
+          <td class="token">--bn-weight-strong</td>
+          <td class="value">700</td>
+          <td class="sample" style="font-weight: var(--bn-weight-strong);">Page h1, delete × glyphs, accept/deny ✓/✗, bar counts.</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section class="section">
+      <h2 class="section-title">Sidebar specimens</h2>
+      <p class="section-intro">All five sidebars share <code>--bn-sidebar-width: 280px</code> as their default width and load <code>organisms/sidebar.css</code> (plus <code>sidebar-tags.css</code> for Tags). Hierarchy is built almost entirely from <code>--bn-text-label</code> (13px) plus weight contrast — Sessions and Tags reach down to <code>caption</code>/<code>badge</code> for metadata, and only Signals reaches down to <code>micro</code> for compact chips.</p>
+
+      <div class="sidebars-grid">
+
+        <!-- ── 1. SESSIONS ──────────────────────────────────────── -->
+        <div class="sidebar-card">
+          <div class="sidebar-head">Sessions · SessionsSidebar.tsx</div>
+          <div class="sidebar-body">
+            <div class="toc-heading">Sessions</div>
+
+            <a href="#" class="session-entry active">
+              <div class="session-entry-row">
+                <span class="badge session-id-badge">#1</span>
+                <div class="session-entry-speakers">
+                  <div class="session-entry-speaker-row">
+                    <span class="badge">m1</span>
+                    <span class="session-entry-name">Sarah Chen</span>
+                  </div>
+                  <div class="session-entry-speaker-row">
+                    <span class="badge">p1</span>
+                    <span class="session-entry-name">Rachel Park</span>
+                  </div>
+                </div>
+              </div>
+              <div class="session-entry-row">
+                <span class="session-entry-date">12 Feb</span>
+                <span class="session-entry-sep">·</span>
+                <span class="session-entry-duration">47:00</span>
+              </div>
+            </a>
+
+            <a href="#" class="session-entry">
+              <div class="session-entry-row">
+                <span class="badge session-id-badge">#2</span>
+                <div class="session-entry-speakers">
+                  <div class="session-entry-speaker-row">
+                    <span class="badge">m1</span>
+                    <span class="session-entry-name">Sarah Chen</span>
+                  </div>
+                  <div class="session-entry-speaker-row">
+                    <span class="badge">p2</span>
+                    <span class="session-entry-name">Andre Costa</span>
+                  </div>
+                </div>
+              </div>
+              <div class="session-entry-row">
+                <span class="session-entry-date">14 Feb</span>
+                <span class="session-entry-sep">·</span>
+                <span class="session-entry-duration">1:03:00</span>
+              </div>
+            </a>
+
+            <a href="#" class="session-entry">
+              <div class="session-entry-row">
+                <span class="badge session-id-badge">#3</span>
+                <div class="session-entry-speakers">
+                  <div class="session-entry-speaker-row">
+                    <span class="badge">m2</span>
+                    <span class="session-entry-name">Marcus Vale</span>
+                  </div>
+                  <div class="session-entry-speaker-row">
+                    <span class="badge">p3</span>
+                    <span class="session-entry-name">Lena Hoffmann</span>
+                  </div>
+                  <div class="session-entry-speaker-row">
+                    <span class="badge">p4</span>
+                    <span class="session-entry-name">Yuki Tanaka</span>
+                  </div>
+                </div>
+              </div>
+              <div class="session-entry-row">
+                <span class="session-entry-date">18 Feb</span>
+                <span class="session-entry-sep">·</span>
+                <span class="session-entry-duration">52:30</span>
+              </div>
+            </a>
+
+            <a href="#" class="session-entry">
+              <div class="session-entry-row">
+                <span class="badge session-id-badge">#4</span>
+                <div class="session-entry-speakers">
+                  <div class="session-entry-speaker-row">
+                    <span class="badge">m1</span>
+                    <span class="session-entry-name">Sarah Chen</span>
+                  </div>
+                  <div class="session-entry-speaker-row">
+                    <span class="badge">p5</span>
+                    <span class="session-entry-name">Priya Sharma</span>
+                  </div>
+                </div>
+              </div>
+              <div class="session-entry-row">
+                <span class="session-entry-date">21 Feb</span>
+                <span class="session-entry-sep">·</span>
+                <span class="session-entry-duration">41:15</span>
+              </div>
+            </a>
+          </div>
+          <div class="sidebar-foot">
+            <span class="cls">.session-entry</span> · label + caption + badge<br>
+            <span class="cls">--bn-text-label</span> name · <span class="cls">--bn-text-caption</span> date/duration
+          </div>
+        </div>
+
+        <!-- ── 2. QUOTES (TocSidebar) ───────────────────────────── -->
+        <div class="sidebar-card">
+          <div class="sidebar-head">Quotes · TocSidebar.tsx</div>
+          <div class="sidebar-body">
+            <div class="toc-heading">Sections</div>
+            <a href="#" class="toc-link active">Getting Started</a>
+            <a href="#" class="toc-link">First Project</a>
+            <a href="#" class="toc-link">Onboarding Flow</a>
+            <a href="#" class="toc-link">Daily Use</a>
+            <a href="#" class="toc-link">Power Features</a>
+
+            <div class="toc-heading">Themes</div>
+            <a href="#" class="toc-link">Trust</a>
+            <a href="#" class="toc-link">Navigation</a>
+            <a href="#" class="toc-link">Accessibility</a>
+            <a href="#" class="toc-link">Performance</a>
+            <a href="#" class="toc-link">Mental models</a>
+            <a href="#" class="toc-link">Recovery from error</a>
+          </div>
+          <div class="sidebar-foot">
+            <span class="cls">.toc-heading</span> emphasis · <span class="cls">.toc-link</span> normal<br>
+            <span class="cls">--bn-text-label</span> throughout
+          </div>
+        </div>
+
+        <!-- ── 3. CODES (Codebook) ──────────────────────────────── -->
+        <div class="sidebar-card">
+          <div class="sidebar-head">Codes · CodebookSidebar.tsx</div>
+          <div class="sidebar-body">
+            <div class="toc-heading">Your tags</div>
+            <a href="#" class="toc-link active">Project Ikea</a>
+
+            <div class="toc-heading">Built-in</div>
+            <a href="#" class="toc-link">Sentiment</a>
+            <a href="#" class="toc-link not-imported">UXR</a>
+
+            <div class="toc-heading">Frameworks</div>
+            <a href="#" class="toc-link">Honeycomb</a>
+            <a href="#" class="toc-link not-imported">Elements of UX</a>
+            <a href="#" class="toc-link not-imported">Heuristics (Nielsen)</a>
+            <a href="#" class="toc-link not-imported">Jobs-to-be-done</a>
+
+            <div style="margin-top: 1rem;">
+              <button class="sidebar-mini-btn">Browse codebooks…</button>
+            </div>
+          </div>
+          <div class="sidebar-foot">
+            <span class="cls">.toc-link.not-imported</span> · 50% opacity<br>
+            <span class="cls">.sidebar-mini-btn</span> · footer action
+          </div>
+        </div>
+
+        <!-- ── 4. TAGS (TagSidebar) ─────────────────────────────── -->
+        <div class="sidebar-card">
+          <div class="sidebar-head">Tags · TagSidebar.tsx</div>
+          <div class="sidebar-body" style="padding: 0;">
+            <div style="padding: 12px 14px 0;">
+              <div class="toc-heading" style="margin-top: 0;">Tags</div>
+              <div class="tag-sidebar-subtitle">247 quotes · 18 tags</div>
+              <div class="tag-sidebar-actions">
+                <button type="button" class="tag-filter-action">Select all</button>
+                <span class="tag-filter-separator">|</span>
+                <button type="button" class="tag-filter-action">Clear</button>
+                <span class="tag-filter-separator">|</span>
+                <button type="button" class="tag-filter-action tag-filter-action-active">Used only</button>
+              </div>
+            </div>
+
+            <div class="tag-sidebar-body" style="padding: 12px 14px;">
+              <details class="codebook-framework" open>
+                <summary>
+                  <svg class="codebook-disclosure" width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M4 3l6 4-6 4z"/></svg>
+                  <div class="codebook-info">
+                    <div class="codebook-title">Project Ikea</div>
+                    <div class="codebook-author">Your tags · 12 tags</div>
+                  </div>
+                </summary>
+              </details>
+
+              <details class="codebook-framework" open>
+                <summary>
+                  <svg class="codebook-disclosure" width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M4 3l6 4-6 4z"/></svg>
+                  <div class="codebook-info">
+                    <div class="codebook-title">Sentiment</div>
+                    <div class="codebook-author">Built-in · 7 tags</div>
+                  </div>
+                </summary>
+              </details>
+
+              <details class="codebook-framework">
+                <summary>
+                  <svg class="codebook-disclosure" width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M4 3l6 4-6 4z"/></svg>
+                  <div class="codebook-info">
+                    <div class="codebook-title">Honeycomb</div>
+                    <div class="codebook-author">Peter Morville · 7 tags</div>
+                  </div>
+                </summary>
+              </details>
+
+              <details class="codebook-framework eye-hidden">
+                <summary>
+                  <svg class="codebook-disclosure" width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M4 3l6 4-6 4z"/></svg>
+                  <div class="codebook-info">
+                    <div class="codebook-title">Heuristics</div>
+                    <div class="codebook-author">Jakob Nielsen · 10 tags</div>
+                  </div>
+                </summary>
+              </details>
+            </div>
+          </div>
+          <div class="sidebar-foot">
+            <span class="cls">.codebook-title</span> label/emphasis<br>
+            <span class="cls">.codebook-author</span> badge/muted · <span class="cls">.tag-sidebar-subtitle</span> badge
+          </div>
+        </div>
+
+        <!-- ── 5. SIGNALS (Analysis) ────────────────────────────── -->
+        <div class="sidebar-card">
+          <div class="sidebar-head">Signals · AnalysisSidebar.tsx</div>
+          <div class="sidebar-body">
+            <div class="toc-heading">Sentiment</div>
+
+            <div class="toc-sub-heading">By section</div>
+            <a href="#" class="signal-entry active">
+              <span class="signal-entry-name">Onboarding Flow</span>
+              <span class="badge">frustration</span>
+            </a>
+            <a href="#" class="signal-entry">
+              <span class="signal-entry-name">First Project</span>
+              <span class="badge">confusion</span>
+            </a>
+            <a href="#" class="signal-entry">
+              <span class="signal-entry-name">Daily Use</span>
+              <span class="badge">delight</span>
+            </a>
+
+            <div class="toc-sub-heading">By theme</div>
+            <a href="#" class="signal-entry">
+              <span class="signal-entry-name">Navigation</span>
+              <span class="badge">delight</span>
+            </a>
+            <a href="#" class="signal-entry">
+              <span class="signal-entry-name">Trust</span>
+              <span class="badge">satisfaction</span>
+            </a>
+
+            <div class="toc-heading">Codebook tags</div>
+            <div class="toc-sub-heading">By section</div>
+            <a href="#" class="signal-entry">
+              <span class="signal-entry-name">Onboarding Flow</span>
+              <span class="badge">Trust</span>
+            </a>
+            <a href="#" class="signal-entry">
+              <span class="signal-entry-name">Power Features</span>
+              <span class="badge">Mental model</span>
+            </a>
+          </div>
+          <div class="sidebar-foot">
+            <span class="cls">.toc-sub-heading</span> · <span class="cls">--bn-text-caption</span> uppercase<br>
+            <span class="cls">.badge</span> · <span class="cls">--bn-text-micro</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section class="section">
+      <h2 class="section-title">Font specs (named roles)</h2>
+      <p class="section-intro">One card per named typographic role — the unit a designer redraws in Figma as a Text Style. Each card pairs a real rendering with the exact CSS spec the production code emits. Family <code>Inter</code> unless noted; <code>SF Mono</code> for monospace; colour <code>--bn-colour-text</code> unless noted. Letter-spacing is the CSS default (0) unless listed.</p>
+
+      <div class="grid">
+
+        <div class="card">
+          <div class="specimen" style="display: block;">
+            <div style="font-size: var(--bn-text-display); line-height: var(--bn-text-display-lh); font-weight: var(--bn-weight-strong);">347</div>
+          </div>
+          <div class="label">
+            <div class="cls">Display</div>
+            <div class="meta">Inter · 28 / 33.6 · 700</div>
+            <div class="note">Dashboard hero numbers, big counts.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="specimen" style="display: block;">
+            <div style="font-size: var(--bn-text-title); line-height: var(--bn-text-title-lh); font-weight: var(--bn-weight-emphasis);">Project Ikea</div>
+          </div>
+          <div class="label">
+            <div class="cls">Title</div>
+            <div class="meta">Inter · 22 / 27.5 · 490</div>
+            <div class="note">Page titles, h1, logotype.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="specimen" style="display: block;">
+            <div style="font-size: var(--bn-text-heading); line-height: var(--bn-text-heading-lh); font-weight: var(--bn-weight-emphasis);">Onboarding Flow</div>
+          </div>
+          <div class="label">
+            <div class="cls">Heading</div>
+            <div class="meta">Inter · 18 / 23.4 · 490</div>
+            <div class="note">Section headings, card titles, modal titles.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="specimen" style="display: block;">
+            <div style="font-size: var(--bn-text-body); line-height: var(--bn-text-body-lh); font-weight: var(--bn-weight-normal);">"I just couldn't figure out where to click next."</div>
+          </div>
+          <div class="label">
+            <div class="cls">Body — quote</div>
+            <div class="meta">Inter · 15 / 22.5 · 420</div>
+            <div class="note">Quote text, transcript segments — participant voice.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="specimen" style="display: block;">
+            <div style="font-size: var(--bn-text-body); line-height: var(--bn-text-body-lh); font-weight: var(--bn-weight-starred);">"This is the one I'll remember from this round."</div>
+          </div>
+          <div class="label">
+            <div class="cls">Body — quote starred</div>
+            <div class="meta">Inter · 15 / 22.5 · 520</div>
+            <div class="note">Starred quotes — pops above emphasis without reaching bold.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="specimen" style="display: block;">
+            <div style="font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); font-weight: var(--bn-weight-emphasis); padding-bottom: 0.25rem; border-bottom: 1px solid #e0e0e0;">Sessions</div>
+          </div>
+          <div class="label">
+            <div class="cls">Label — heading</div>
+            <div class="meta">Inter · 13 / 18.85 · 490 · underline rule</div>
+            <div class="note">Sidebar headings (<code>.toc-heading</code>), sidebar titles.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="specimen" style="display: block;">
+            <div style="font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); font-weight: var(--bn-weight-light, 380);">Getting Started</div>
+          </div>
+          <div class="label">
+            <div class="cls">Label — link</div>
+            <div class="meta">Inter · 13 / 18.85 · light (~380)</div>
+            <div class="note">Sidebar links (<code>.toc-link</code>), nav entries. Underline on hover.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="specimen" style="display: block;">
+            <div style="font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); font-weight: var(--bn-weight-normal);">Mental models · Accessibility</div>
+          </div>
+          <div class="label">
+            <div class="cls">Label — UI</div>
+            <div class="meta">Inter · 13 / 18.85 · 420</div>
+            <div class="note">Toolbar, filters, context, timecodes (app voice).</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="specimen" style="display: block;">
+            <div style="font-size: var(--bn-text-caption); line-height: var(--bn-text-caption-lh);">12 Feb · 1h 03 · 247 quotes</div>
+          </div>
+          <div class="label">
+            <div class="cls">Caption</div>
+            <div class="meta">Inter · 12 / 16.8 · 420</div>
+            <div class="note">Dates, durations, footnotes, footer, modal footer.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="specimen" style="display: block;">
+            <div style="font-size: var(--bn-text-caption); line-height: var(--bn-text-caption-lh); font-weight: var(--bn-weight-emphasis); text-transform: uppercase; letter-spacing: 0.06em; color: #666;">By section</div>
+          </div>
+          <div class="label">
+            <div class="cls">Caption — sub-heading</div>
+            <div class="meta">Inter · 12 / 16.8 · 490 · uppercase · +0.06em</div>
+            <div class="note">Signals grouping headers (<code>.toc-sub-heading</code>).</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="specimen" style="display: block;">
+            <div style="font-size: var(--bn-text-badge); line-height: var(--bn-text-badge-lh); font-weight: var(--bn-weight-emphasis);">247 quotes · 18 tags</div>
+          </div>
+          <div class="label">
+            <div class="cls">Badge — group total</div>
+            <div class="meta">Inter · 11.5 / 15.5 · 490</div>
+            <div class="note">Group totals, sidebar subtitles (<code>.tag-sidebar-subtitle</code>).</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="specimen" style="display: block;">
+            <div style="font-size: var(--bn-text-badge); line-height: var(--bn-text-badge-lh); color: #888;">Peter Morville · Jakob Nielsen</div>
+          </div>
+          <div class="label">
+            <div class="cls">Badge — author/muted</div>
+            <div class="meta">Inter · 11.5 / 15.5 · 420 · muted</div>
+            <div class="note">Author bylines (<code>.codebook-author</code>), provenance.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="specimen" style="display: block;">
+            <div style="font-size: var(--bn-text-micro); line-height: var(--bn-text-micro-lh); font-weight: var(--bn-weight-emphasis);">DRAG · 12 · ×</div>
+          </div>
+          <div class="label">
+            <div class="cls">Micro</div>
+            <div class="meta">Inter · 9.6 / 12.5 · 490</div>
+            <div class="note">Drag handles, pill counts, signal-entry badges.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="specimen" style="display: block;">
+            <div style="font-family: var(--bn-font-mono); font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh);">.toc-link.active</div>
+          </div>
+          <div class="label">
+            <div class="cls">Mono — label</div>
+            <div class="meta">SF Mono · 13 / 18.85 · 420</div>
+            <div class="note">Inline code, selectors, kbd. Fallback: Fira Code, Consolas.</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────── -->
+    <section class="section">
+      <h2 class="section-title">Inventory: where each stop lives</h2>
+      <p class="section-intro">A reader's map of which size token surfaces in which sidebar. Anything not listed here is currently unused at sidebar scale — the larger stops (<code>body</code>, <code>heading</code>, <code>title</code>, <code>display</code>) live in the centre column (quote cards, section headers, dashboard hero numbers).</p>
+
+      <div class="grid">
+        <div class="card wide">
+          <div class="specimen" style="display: block;">
+            <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+              <tr style="border-bottom: 1px solid #e8e8e8;">
+                <td style="padding: 8px 0; color: #888; font-family: ui-monospace, monospace; width: 180px;">--bn-text-micro</td>
+                <td style="padding: 8px 0;">Signals badge label</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e8e8e8;">
+                <td style="padding: 8px 0; color: #888; font-family: ui-monospace, monospace;">--bn-text-badge</td>
+                <td style="padding: 8px 0;">Session ID badge (#1, #2…), speaker code badge (m1, p1…)</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e8e8e8;">
+                <td style="padding: 8px 0; color: #888; font-family: ui-monospace, monospace;">--bn-text-caption</td>
+                <td style="padding: 8px 0;">Session date · duration · Signals sub-heading (uppercase)</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #888; font-family: ui-monospace, monospace;">--bn-text-label</td>
+                <td style="padding: 8px 0;">Section heading · link text · entry name (Sessions/Quotes/Codes/Signals primary)</td>
+              </tr>
+            </table>
+          </div>
+          <div class="label">
+            <div class="cls">All four sidebars</div>
+            <div class="note">Hierarchy is built from <strong>weight contrast at a single size</strong> wherever possible. Reaching down the scale is reserved for genuine metadata (Sessions caption row) or compact indicators (Signals badge).</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Buttons — Bristlenose design system</title>
+
+  <!--
+    Theme CSS loaded directly from source files. Order follows the
+    canonical sequence in bristlenose/stages/s12_render/theme_assets.py
+    (tokens → palette → atoms). Only files relevant to button atoms are
+    included; this is a specimen page, not a full report render.
+    Paths are relative — works under file:// and `bristlenose serve --dev`.
+  -->
+  <link rel="stylesheet" href="../../bristlenose/theme/tokens.css">
+  <link rel="stylesheet" href="../../bristlenose/theme/tokens-typography.css">
+  <link rel="stylesheet" href="../../bristlenose/theme/colors/palette-default.css">
+  <link rel="stylesheet" href="../../bristlenose/theme/atoms/button.css">
+  <link rel="stylesheet" href="../../bristlenose/theme/atoms/toggle.css">
+  <link rel="stylesheet" href="../../bristlenose/theme/atoms/modal.css">
+
+  <style>
+    /* Specimen-page chrome only — neutral, clarity-first.
+       Does NOT use theme tokens for layout chrome by design;
+       the cards themselves render real atoms via real tokens. */
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #f6f6f6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      color: #222;
+    }
+    .page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+    .page-header {
+      border-bottom: 1px solid #d0d0d0;
+      padding-bottom: 16px;
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    .page-header p {
+      margin: 0 0 4px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #555;
+      max-width: 60ch;
+    }
+    .page-header .meta {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #888;
+    }
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .card {
+      width: 340px;
+      background: #fff;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .specimen {
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 8px 0;
+      /* Reset specimen area so atom positioning works.
+         Some atoms (.edit-pencil, .star-btn, .hide-btn) use
+         position: absolute and need a positioned ancestor. */
+      position: relative;
+    }
+    .specimen-stage {
+      position: relative;
+      min-height: 48px;
+      min-width: 80px;
+      width: 100%;
+    }
+    .label {
+      border-top: 1px dashed #e0e0e0;
+      padding-top: 12px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .label .cls {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      font-weight: 600;
+      color: #111;
+      word-break: break-all;
+    }
+    .label .tier {
+      color: #666;
+      margin-top: 2px;
+    }
+    .label .src {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #999;
+      margin-top: 2px;
+      word-break: break-all;
+    }
+    /* Some specimens need a parent context */
+    .stage-relative { position: relative; min-height: 40px; padding-right: 60px; }
+    /* The .hide-btn is opacity:0 unless parent is hovered or .bn-focused.
+       Force it visible in the specimen via the documented .bn-focused class. */
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <h1>Buttons</h1>
+      <p>Specimen page for the button atoms in the Bristlenose design system. Each card shows one variant rendered with real markup against the live theme CSS.</p>
+      <p class="meta">Generated 16 May 2026 · sources: <code>bristlenose/theme/atoms/button.css</code>, <code>atoms/toggle.css</code>, <code>atoms/modal.css</code></p>
+    </header>
+
+    <div class="grid">
+
+      <!-- atoms/button.css -->
+
+      <div class="card">
+        <div class="specimen">
+          <div class="specimen-stage stage-relative">
+            <button class="edit-pencil" aria-label="Edit">&#9998;</button>
+          </div>
+        </div>
+        <div class="label">
+          <div class="cls">.edit-pencil</div>
+          <div class="tier">Atom</div>
+          <div class="src">theme/atoms/button.css</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="specimen">
+          <span>Heading text <button class="edit-pencil edit-pencil-inline" aria-label="Edit heading">&#9998;</button></span>
+        </div>
+        <div class="label">
+          <div class="cls">.edit-pencil.edit-pencil-inline</div>
+          <div class="tier">Atom</div>
+          <div class="src">theme/atoms/button.css</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="specimen">
+          <button class="badge-restore" aria-label="Restore">&#8634; Restore</button>
+        </div>
+        <div class="label">
+          <div class="cls">.badge-restore</div>
+          <div class="tier">Atom</div>
+          <div class="src">theme/atoms/button.css</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="specimen">
+          <button type="button" class="toolbar-btn">
+            <span class="toolbar-icon-svg" aria-hidden="true">&#9776;</span>
+            Codebook
+          </button>
+        </div>
+        <div class="label">
+          <div class="cls">.toolbar-btn</div>
+          <div class="tier">Atom</div>
+          <div class="src">theme/atoms/button.css</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="specimen">
+          <button type="button" class="toolbar-btn" aria-expanded="false" aria-haspopup="true">
+            <span class="toolbar-icon-svg" aria-hidden="true">&#9873;</span>
+            Tag filter
+            <svg class="toolbar-arrow" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.75 5 6.25 7.5 3.75"/></svg>
+          </button>
+        </div>
+        <div class="label">
+          <div class="cls">.toolbar-btn (dropdown)</div>
+          <div class="tier">Atom</div>
+          <div class="src">theme/atoms/button.css</div>
+        </div>
+      </div>
+
+      <!-- atoms/toggle.css -->
+
+      <div class="card">
+        <div class="specimen">
+          <div class="specimen-stage stage-relative">
+            <button class="star-btn" aria-label="Star quote">&#9733;</button>
+          </div>
+        </div>
+        <div class="label">
+          <div class="cls">.star-btn</div>
+          <div class="tier">Atom</div>
+          <div class="src">theme/atoms/toggle.css</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="specimen">
+          <!-- .hide-btn is opacity:0 unless parent has .quote-card:hover or .bn-focused.
+               We give the parent .quote-card.bn-focused so the specimen renders. -->
+          <div class="specimen-stage stage-relative quote-card bn-focused" style="background:transparent;border:none;padding:0;">
+            <button class="hide-btn" aria-label="Hide quote">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="label">
+          <div class="cls">.hide-btn</div>
+          <div class="tier">Atom</div>
+          <div class="src">theme/atoms/toggle.css <span style="color:#bbb">· needs .quote-card:hover or .bn-focused parent</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="specimen">
+          <button type="button" class="toolbar-btn toolbar-btn-toggle">
+            Inactive
+          </button>
+        </div>
+        <div class="label">
+          <div class="cls">.toolbar-btn.toolbar-btn-toggle</div>
+          <div class="tier">Atom</div>
+          <div class="src">theme/atoms/toggle.css</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="specimen">
+          <button type="button" class="toolbar-btn toolbar-btn-toggle active">
+            Active
+          </button>
+        </div>
+        <div class="label">
+          <div class="cls">.toolbar-btn.toolbar-btn-toggle.active</div>
+          <div class="tier">Atom</div>
+          <div class="src">theme/atoms/toggle.css</div>
+        </div>
+      </div>
+
+      <!-- atoms/modal.css — .bn-btn family -->
+
+      <div class="card">
+        <div class="specimen">
+          <button type="button" class="bn-btn bn-btn-primary">Export</button>
+        </div>
+        <div class="label">
+          <div class="cls">.bn-btn.bn-btn-primary</div>
+          <div class="tier">Atom</div>
+          <div class="src">theme/atoms/modal.css</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="specimen">
+          <button type="button" class="bn-btn bn-btn-secondary">Browse codebooks</button>
+        </div>
+        <div class="label">
+          <div class="cls">.bn-btn.bn-btn-secondary</div>
+          <div class="tier">Atom</div>
+          <div class="src">theme/atoms/modal.css</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="specimen">
+          <button type="button" class="bn-btn bn-btn-cancel">Cancel</button>
+        </div>
+        <div class="label">
+          <div class="cls">.bn-btn.bn-btn-cancel</div>
+          <div class="tier">Atom</div>
+          <div class="src">theme/atoms/modal.css</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="specimen">
+          <button type="button" class="bn-btn bn-btn-danger">Delete</button>
+        </div>
+        <div class="label">
+          <div class="cls">.bn-btn.bn-btn-danger</div>
+          <div class="tier">Atom</div>
+          <div class="src">theme/atoms/modal.css</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="specimen">
+          <button type="button" class="bn-btn">Default</button>
+        </div>
+        <div class="label">
+          <div class="cls">.bn-btn (base)</div>
+          <div class="tier">Atom</div>
+          <div class="src">theme/atoms/modal.css</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="specimen">
+          <button type="button" class="bn-modal-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="label">
+          <div class="cls">.bn-modal-close</div>
+          <div class="tier">Atom</div>
+          <div class="src">theme/atoms/modal.css</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

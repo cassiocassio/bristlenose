@@ -168,7 +168,7 @@
     "inFlightSwitchTitle": "Cancel the current analysis?",
     "inFlightSwitchMessage": "“%@” is still being analysed. Switching projects will cancel it — you can resume from where it stopped.",
     "cancelAndSwitch": "Stop and Switch",
-    "stay": "Stay",
+    "continueAnalysing": "Continue Analysing",
     "dropProjectOntoProjectToast": "“%@” is already a Bristlenose project — drag its source files instead.",
     "dropOntoRunningProject": "Finish or stop the current run before adding more.",
     "dropOntoAnalysedProject": "Adding extra interviews to an analysed project isn't supported yet.",

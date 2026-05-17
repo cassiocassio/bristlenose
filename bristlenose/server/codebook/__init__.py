@@ -184,5 +184,15 @@ def load_all_templates() -> list[CodebookTemplate]:
     return templates
 
 
+def list_available_templates() -> list[CodebookTemplate]:
+    """Return the enabled codebook templates, in display order."""
+    return [t for t in load_all_templates() if t.enabled]
+
+
+def list_available_slugs() -> list[str]:
+    """Return the slugs of enabled codebook templates, in display order."""
+    return [t.id for t in list_available_templates()]
+
+
 # Backward-compatible constant — routes/codebook.py used this directly.
 CODEBOOK_TEMPLATES = load_all_templates()

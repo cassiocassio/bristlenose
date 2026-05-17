@@ -26,7 +26,7 @@ from bristlenose.utils.text import count_noun
 # Known commands — used by _maybe_inject_run() to detect bare directory arguments
 _COMMANDS = {
     "run", "transcribe", "analyze", "analyse", "render", "doctor", "help", "configure", "serve",
-    "status",
+    "status", "codebooks",
 }
 
 
@@ -68,6 +68,24 @@ def _say(kind: MessageKind, message: str, *, indent: str = "") -> None:
     ``[dim]…[/dim]`` annotations stay as plain ``console.print``.
     """
     console.print(f"{indent}{cli_prefix(kind)} {message}")
+
+
+def _validate_codebook_slug(slug: str) -> None:
+    """Raise ``typer.Exit(2)`` with the available-slugs list when ``slug`` is unknown.
+
+    Cheap probe via :func:`bristlenose.server.codebook.get_template`; on miss,
+    prints the recognised slugs and a pointer to ``bristlenose codebooks``.
+    """
+    from bristlenose.server.codebook import get_template, list_available_slugs
+
+    if get_template(slug) is not None:
+        return
+    available = list_available_slugs()
+    _say(MessageKind.ERROR, f"Unknown codebook: {slug!r}")
+    if available:
+        console.print(f"  Available: {', '.join(available)}")
+    console.print("  Run [bold]bristlenose codebooks[/bold] for full details.")
+    raise typer.Exit(2)
 
 
 def _version_callback(value: bool) -> None:
@@ -943,6 +961,13 @@ def run(
         str,
         typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, gemini, local."),
     ] = "claude",
+    codebook: Annotated[
+        str | None,
+        typer.Option(
+            "--codebook",
+            help="Codebook framework for AutoCode (run `bristlenose codebooks` to list).",
+        ),
+    ] = None,
     skip_transcription: Annotated[
         bool,
         typer.Option("--skip-transcription", help="Skip audio transcription."),
@@ -1027,6 +1052,9 @@ def run(
         _say(MessageKind.ERROR, "Cannot use both --redact-pii and --retain-pii.")
         raise typer.Exit(1)
 
+    if codebook is not None:
+        _validate_codebook_slug(codebook)
+
     if project_name is None:
         project_name = input_dir.resolve().name
 
@@ -1046,6 +1074,8 @@ def run(
         settings_kwargs["whisper_backend"] = whisper_backend
     if whisper_model is not None:
         settings_kwargs["whisper_model"] = whisper_model
+    if codebook is not None:
+        settings_kwargs["codebook"] = codebook
     settings = load_settings(**settings_kwargs)
 
     # Offer provider selection if no API key / local provider is not ready
@@ -1262,6 +1292,13 @@ def analyze(
         str,
         typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, gemini, local."),
     ] = "claude",
+    codebook: Annotated[
+        str | None,
+        typer.Option(
+            "--codebook",
+            help="Codebook framework for AutoCode (run `bristlenose codebooks` to list).",
+        ),
+    ] = None,
     verbose: Annotated[
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose logging."),
@@ -1288,15 +1325,21 @@ def analyze(
         else:
             output_dir = transcripts_dir.parent / "bristlenose-output"
 
+    if codebook is not None:
+        _validate_codebook_slug(codebook)
+
     if project_name is None:
         project_name = transcripts_dir.resolve().name
 
-    settings = load_settings(
-        output_dir=output_dir,
-        project_name=project_name,
-        llm_provider=llm_provider,
-        no_fetch=no_fetch,
-    )
+    settings_kwargs: dict[str, object] = {
+        "output_dir": output_dir,
+        "project_name": project_name,
+        "llm_provider": llm_provider,
+        "no_fetch": no_fetch,
+    }
+    if codebook is not None:
+        settings_kwargs["codebook"] = codebook
+    settings = load_settings(**settings_kwargs)
 
     # Offer provider selection if no API key / local provider is not ready
     settings = _maybe_prompt_for_provider(settings)
@@ -2015,6 +2058,29 @@ def doctor(
 
     # Always update sentinel on explicit doctor
     _write_doctor_sentinel()
+    console.print()
+
+
+@app.command()
+def codebooks() -> None:
+    """List available codebook frameworks for AutoCode."""
+    from rich.markup import escape
+
+    from bristlenose.server.codebook import list_available_templates
+
+    enabled = list_available_templates()
+
+    console.print()
+    for t in enabled:
+        author_part = f" — {escape(t.author)}" if t.author else ""
+        console.print(f"  [bold]{escape(t.id)}[/bold]  {escape(t.title)}{author_part}")
+        if t.description:
+            console.print(f"    [dim]{escape(t.description)}[/dim]")
+    console.print()
+    console.print(
+        f"  [dim]{count_noun(len(enabled), 'codebook')} available. "
+        f"Use [bold]--codebook=<id>[/bold] with [bold]run[/bold] or [bold]analyze[/bold].[/dim]"
+    )
     console.print()
 
 

@@ -88,6 +88,11 @@ class BristlenoseSettings(BaseSettings):
     # See: https://microsoft.github.io/presidio/analyzer/
     pii_score_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
 
+    # Codebook (AutoCode framework). Slug matches a YAML file under
+    # bristlenose/server/codebook/ (e.g. "garrett", "norman", "uxr").
+    # None = no preference; user picks in the report UI.
+    codebook: str | None = None
+
     # Miro
     miro_access_token: str = ""
 

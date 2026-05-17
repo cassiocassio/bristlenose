@@ -37,6 +37,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | chore | Translate ProjectRow pipelineSubtitle + locale-aware date formatters |
 | `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
+| `bristlenose_branch foundation-models-corpus/` | `foundation-models-corpus` | feature | Parameterise HIG scraper into multi-corpus scraper, produce Foundation Models corpus, iterate pluggable-LLM-routing / stage-backends / modularity docs against it pre-WWDC 2026 |
 
 
 
@@ -134,6 +135,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
+| `foundation-models-corpus` | `bristlenose_branch foundation-models-corpus/` | local only |
 
 
 
@@ -141,6 +143,27 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `foundation-models-corpus`
+
+**Kind:** feature — code intended for main; lands the parameterised multi-corpus scraper plus iterated design docs informed by the Foundation Models corpus
+**Status:** Just started
+**Started:** 17 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch foundation-models-corpus/`
+**Remote:** local only (push when ready)
+
+**What it does:** Parameterise the HIG scraper into a multi-corpus scraper and produce a Foundation Models corpus, then read it and iterate `design-pluggable-llm-routing.md` / `design-stage-backends.md` / `design-modularity.md` against what FM actually offers. Pre-WWDC 2026 plumbing + reading exercise (per the Apple-AI direction-of-travel thesis): cheap scaffolding only, no FM-provider code yet. Starts with WIP doc edits already in flight on main copied across. See `.claude/plans/foundation-models-corpus.md` for the full handoff.
+
+**Files this branch will touch:**
+- `scripts/scrape-hig.py` (parameterise into multi-corpus scraper)
+- `docs/design-pluggable-llm-routing.md`
+- `docs/design-stage-backends.md`
+- `docs/design-modularity.md`
+
+**Potential conflicts with other branches:**
+- None expected — no other active branch touches the scraper or those three design docs. Worktree starts with the same WIP doc edits that are currently uncommitted on main; expect to either drop those edits from main or coordinate at merge time.
 
 ---
 

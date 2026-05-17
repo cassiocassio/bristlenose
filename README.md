@@ -365,6 +365,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.10** — _17 May 2026_
+
+- **`--codebook=<slug>` flag + `bristlenose codebooks` subcommand.** Pick an AutoCode codebook framework from the command line. `bristlenose codebooks` lists the nine available templates with title and author; `--codebook=<slug>` on `run` and `analyze` validates the slug against the YAML inventory and exits cleanly with the available list on a typo. Validation only for now — the pipeline doesn't auto-run AutoCode yet; the flag stores the preference for a follow-up branch to wire the consumer.
+
 **0.15.9** — _16 May 2026_
 
 - **Multi-project Phase 2 #11 + #14 — drag-onto-folder copy + folder watcher.** Drag-onto-existing-project now uses a copy path (`CopyMachinery`) with progress pill, `NewFilesSheet` stub, and collision-rename + folder-name-preservation regression tests. Folder watcher: `NSFilePresenter` + SQLite ingested-set, count pill on the row, delta sheet for triage. Two review passes for visual + i18n polish (cloud-evicted glyph swap to `icloud` outline, pointing-hand cursor on delta button, `.footnote` typography for session count, `.secondary` text uniformly, F59 / F62 i18n).

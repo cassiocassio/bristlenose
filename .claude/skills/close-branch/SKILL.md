@@ -72,15 +72,24 @@ HEAD_SHA=$(git -C "$WORKTREE" rev-parse HEAD 2>/dev/null)
 - "Yes" → stop. Tell user: `cd "/Users/cassio/Code/bristlenose_branch $0"` and run `/end-session`, then re-run `/close-branch $0`.
 - "No" → continue (override path for branches end-sessioned before this feature, or where the user explicitly accepts the gap).
 
-**If the sentinel exists** — read `head_sha` via stdin (avoids shell-quoting hazards in the path or branch name):
+**If the sentinel exists** — read `head_sha` and `audit_version` via stdin (avoids shell-quoting hazards in the path or branch name):
 
 ```bash
-LAST_SHA=$(python3 -c "import json,sys; print(json.load(sys.stdin)['head_sha'])" < "$SENTINEL" 2>/dev/null)
+LAST_SHA=$(python3 -c "import json,sys; d=json.load(sys.stdin); print(d['head_sha'])" < "$SENTINEL" 2>/dev/null)
+LAST_AUDIT=$(python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('audit_version', 0))" < "$SENTINEL" 2>/dev/null)
+CURRENT_AUDIT=1  # bumped when end-session's Durable-artefact audit matcher/doc-set changes
 ```
 
 If `python3` fails or the file is malformed, warn ("sentinel exists but unreadable — continuing") and proceed.
 
-If `LAST_SHA` matches current `HEAD_SHA`, continue silently.
+**If `LAST_AUDIT < CURRENT_AUDIT`** — sentinel predates current audit feature (or current matcher version). Treat as if the sentinel were stale, regardless of SHA match. Prompt via `AskUserQuestion`:
+
+> Last `/end-session` ran audit version $LAST_AUDIT; current is $CURRENT_AUDIT. The Durable-artefact audit (Scan A: decisions; Scan B: incidental closures) may not have run, or ran with an older matcher. Re-run `/end-session`? (Y/n)
+
+- "Yes" → stop with the same instruction as the missing-sentinel branch.
+- "No" → continue (override path for branches the user explicitly accepts without the current audit).
+
+If `LAST_SHA` matches current `HEAD_SHA` AND `LAST_AUDIT` is current, continue silently.
 
 If they differ, check whether the drift is a simple fast-forward or a history rewrite:
 
@@ -113,7 +122,19 @@ git log $(git merge-base main $0)..$0 --oneline
 
 This uses `merge-base` instead of `main..$0` because `main..$0` is empty for merged branches.
 
-Save this output — you'll need it for the stale marker file in Step 4.
+Save this output — you'll need it for the stale marker file in Step 6.
+
+## Step 4.5: Durable-artefact audit — delegated to `/end-session`
+
+The decision-promotion + incidental-closure scans (Scan A + Scan B) live in `/end-session`'s "Durable-artefact audit" subsection, not here. Reason: `/end-session` runs at peak context — work is fresh, the user can judge candidates quickly. `/close-branch` runs later, after merge, when context has cooled. Direct-on-main work also has no `/close-branch`, so `/end-session` is the universal surface; duplicating the scans here introduces drift between two implementations of the same logic.
+
+The gate is **Step 3.5 above** — the `.claude/last-end-session.json` sentinel check, augmented to read `audit_version`:
+- Sentinel missing → `/end-session` was never run → Step 3.5 prompts.
+- Sentinel present but `audit_version` < current → audit ran with an older matcher (or predates the audit feature) → Step 3.5 prompts.
+- Sentinel current AND `audit_version` current AND `head_sha` matches HEAD → trust the audit ran; proceed silently.
+- Sentinel SHA stale (drift) → Step 3.5's existing drift-detection prompts.
+
+**Worked example that motivated this routing** — F49 (`e4037d5`, the `cantfind-glyphs` branch decision rejecting `icloud.and.arrow.down`): a sibling branch's handoff proposed the rejected affordance 3 days later. The rejection wasn't visible anywhere except `git log -p` of one file. Scan A on `cantfind-glyphs`'s `/end-session` would have surfaced the commit and promoted the decision to `docs/design-decisions.md` while context was fresh; the sibling handoff would have hit the documented decision instead of `git log`.
 
 ## Step 5: Run tests on main (optional)
 

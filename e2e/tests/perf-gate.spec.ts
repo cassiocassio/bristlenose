@@ -14,6 +14,16 @@ import os from 'os';
 
 test.describe.configure({ mode: 'serial' });
 
+// Surface browser-side console errors and uncaught exceptions on every test —
+// silent mount failures used to look like ``DOM nodes — Quotes`` timeouts
+// with no stack trace. With this, the stack trace reaches CI logs.
+test.beforeEach(async ({ page }) => {
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') console.error('[browser]', msg.text());
+  });
+  page.on('pageerror', (err) => console.error('[pageerror]', err.message, err.stack));
+});
+
 // ── Results collector ───────────────────────────────────────────────────
 
 const results: Record<string, number> = {};

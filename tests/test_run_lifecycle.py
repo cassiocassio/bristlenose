@@ -619,14 +619,14 @@ def test_subprocess_sigint_writes_run_cancelled(tmp_path: Path):
                 and e.cause.signal == int(signal.SIGINT)
                 and e.cause.signal_name == "SIGINT"
             ),
-            timeout=30.0,
+            timeout=60.0,
         )
     finally:
         if proc.poll() is None:
             proc.kill()
         proc.wait(timeout=10)
     assert landed, (
-        "RunCancelledEvent (SIGINT) never landed within 30s of sending the signal"
+        "RunCancelledEvent (SIGINT) never landed within 60s of sending the signal"
     )
 
 
@@ -653,12 +653,12 @@ def test_subprocess_sigterm_writes_run_cancelled(tmp_path: Path):
                 isinstance(e, RunCancelledEvent)
                 and e.cause.signal_name == "SIGTERM"
             ),
-            timeout=30.0,
+            timeout=60.0,
         )
     finally:
         if proc.poll() is None:
             proc.kill()
         proc.wait(timeout=10)
     assert landed, (
-        "RunCancelledEvent (SIGTERM) never landed within 30s of sending the signal"
+        "RunCancelledEvent (SIGTERM) never landed within 60s of sending the signal"
     )

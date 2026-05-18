@@ -337,3 +337,48 @@ class TestProdIntercept:
         client, _ = prod_app_factory()
         resp = client.get("/report/")
         assert "https://example.test/fb" in resp.text
+
+
+class TestSmokeFixtureMountsSPA:
+    """Contract test: the on-disk smoke fixture must boot into the SPA.
+
+    The Playwright perf-gate suite boots ``bristlenose serve`` against this
+    fixture and expects ``/report/quotes/`` to render the React SPA. If the
+    fixture is missing a terminus event (or the run never completed), the
+    status page intercepts and ``#bn-app-root`` is never created — the
+    failure surfaces in CI as ``DOM nodes — Quotes`` timing out, which is
+    far away from the actual cause. This test catches the regression at the
+    pytest layer where it's cheap to diagnose.
+
+    See ``e2e/tests/spa-mounts.spec.ts`` for the parallel Playwright check.
+    """
+
+    def test_report_quotes_renders_react_root(self, tmp_path: Path) -> None:
+        # The CI test job doesn't build the React bundle (see CLAUDE.md
+        # "React bundle missing in CI test job"), so ``_STATIC_DIR`` is empty
+        # and ``_mount_prod_report`` would fail loud with "Build incomplete".
+        # Patch a synthetic Vite-shaped index.html into ``_STATIC_DIR`` —
+        # same pattern as ``TestProdIntercept``'s ``prod_app_factory`` above.
+        # This still exercises the real status-page interceptor against the
+        # real smoke fixture's events file, which is what we want to assert.
+        fixture_dir = (
+            Path(__file__).parent / "fixtures" / "smoke-test" / "input"
+        )
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text(_VITE_INDEX_HTML)
+        (static_dir / "assets").mkdir()
+        with patch("bristlenose.server.app._STATIC_DIR", static_dir):
+            app = create_app(project_dir=fixture_dir, dev=False, db_url="sqlite://")
+        client = AuthTestClient(app)
+        resp = client.get("/report/quotes/")
+        assert resp.status_code == 200, resp.text
+        # SPA mount point must be present — status-page intercept must NOT fire.
+        assert 'id="bn-app-root"' in resp.text, (
+            "Smoke fixture is not in a 'completed run' state — the status "
+            "page intercepted /report/quotes/. Ensure "
+            "tests/fixtures/smoke-test/input/bristlenose-output/.bristlenose/"
+            "pipeline-events.jsonl contains a RunCompletedEvent for project 1."
+        )
+        assert "Nothing to see here" not in resp.text
+        assert "bn-status-page" not in resp.text

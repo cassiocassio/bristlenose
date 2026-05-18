@@ -317,6 +317,21 @@ Releases should land on GitHub after 9pm London time on weekdays to avoid pushin
 
 **Why:** Avoids notifications during client working hours; batches releases into a predictable window.
 
+### Post-push PyPI verification (mandatory)
+
+A tag push that reaches GitHub is NOT the same as a release that reaches PyPI. The release pipeline silently stalled from v0.15.5 to v0.15.9 (five versions, ~6 days) because no step checked that PyPI actually accepted the upload. **After every `git push origin main --tags`, verify before declaring the release done:**
+
+```sh
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  sleep 90
+  pypi=$(curl -s https://pypi.org/pypi/bristlenose/json | jq -r .info.version)
+  echo "[$i] PyPI: $pypi"
+  [ "$pypi" = "<X.Y.Z>" ] && break
+done
+```
+
+If PyPI still reports the previous version after 15 minutes: `gh run view --workflow=release.yml` to check the workflow fired. Apply the v0.15.0 debouncing workaround (`git push --delete origin v<X.Y.Z> && git push origin v<X.Y.Z>`) if it didn't.
+
 ## Before committing
 
 1. `.venv/bin/python -m pytest tests/` — all pass

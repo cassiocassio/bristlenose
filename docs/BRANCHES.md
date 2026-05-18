@@ -40,6 +40,8 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch foundation-models-corpus/` | `foundation-models-corpus` | feature | Parameterise HIG scraper into multi-corpus scraper, produce Foundation Models corpus, iterate pluggable-LLM-routing / stage-backends / modularity docs against it pre-WWDC 2026 |
 | `bristlenose_branch release-pipeline-actually-broken/` | `release-pipeline-actually-broken` | diagnostic | Investigate + fix the perf-gate CI failure blocking PyPI publish since v0.15.5; discard branch once narrow fix lands |
 | `bristlenose_branch pipeline-view-v1/` | `pipeline-view-v1` | feature | Read-only Pipeline view — one CLI verb (`bristlenose pipeline`) + one React Settings tab; validates the mixture-of-models mental model with the cohort, nothing else |
+| `bristlenose_branch pipeline-diagnostic-popover-swift/` | `pipeline-diagnostic-popover-swift` | feature | Swift half of pipeline diagnostic popover — two new pill states + popover view consuming PipelineSummary fixture v5 |
+| `bristlenose_branch multi-project-cloud-evicted/` | `multi-project-cloud-evicted` | feature | Phase 3 #10 iCloud-evicted single state + ride-along fix for re-mount cantFind reason regressing to .moved |
 
 
 
@@ -140,6 +142,8 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `foundation-models-corpus` | `bristlenose_branch foundation-models-corpus/` | local only |
 | `release-pipeline-actually-broken` | `bristlenose_branch release-pipeline-actually-broken/` | local only |
 | `pipeline-view-v1` | `bristlenose_branch pipeline-view-v1/` | local only |
+| `pipeline-diagnostic-popover-swift` | `bristlenose_branch pipeline-diagnostic-popover-swift/` | local only |
+| `multi-project-cloud-evicted` | `bristlenose_branch multi-project-cloud-evicted/` | local only |
 
 
 
@@ -147,6 +151,29 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `pipeline-diagnostic-popover-swift`
+
+**Kind:** feature — code intended for main; ends in merge or PR-and-squash
+**Status:** Just started
+**Started:** 18 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-diagnostic-popover-swift/`
+**Remote:** local only (push when ready)
+
+**What it does:** Swift half of the pipeline diagnostic popover (branch 2 of `docs/design-pipeline-diagnostic-popover.md`). Python half shipped weeks ago — `PipelineSummary` is emitted on every run, contract fixture v5 is locked, `MessageKind` taxonomy exists on both sides. This branch implements the two new pill states (`.completedPartial`, `.failedWithDiagnostic`) and the popover view that the spec calls for, consuming the existing contract. Pill label derives from `dominantCategory()` precedence (AUTH > MISSING_BINARY > QUOTA > NETWORK > UNKNOWN); DisclosureGroup hierarchy (≤2 inline, ≥3 collapsible); Copy/Email plaintext following Xcode "Copy Issue" pattern. Debug-only fixture-injection harness for reproducing diagnostic states. See `HANDOFF.md` for the full brief.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/PipelineActivityItem.swift` — popover body, `formatDiagnosticPlaintext` helper, DisclosureGroup hierarchy, pill-label derivation
+- `desktop/Bristlenose/Bristlenose/MessageKind.swift` — Swift mirror of `bristlenose/ui_kinds.py`; may need extension for new pill states
+- `bristlenose/locales/{en,es,fr,de,ko,ja}/common.json` — `desktop.pipeline.diagnostic.*` keys (targeted text-replace, NOT json.dump round-trip)
+- `tests/fixtures/pipeline-summary-contract.json` — read-only, schema lock
+
+**Potential conflicts with other branches:**
+- `pipeline-subtitle-i18n` — also touches `common.json` under `desktop.pipeline.*`; coordinate at merge time, keep keys distinct (`desktop.pipeline.subtitle.*` vs `desktop.pipeline.diagnostic.*`).
+- `pipeline-view-v1` — adjacent mixture-of-models settings UI but different files; no overlap with Swift pill / popover.
+- `multi-project-folder-watcher` — Swift desktop work but different files (folder watcher / sidebar count pill); low overlap.
 
 ---
 

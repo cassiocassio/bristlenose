@@ -154,6 +154,31 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
+### `multi-project-cloud-evicted`
+
+**Kind:** feature — code intended for main; lands the iCloud-evicted single state in the project sidebar and a ride-along fix for the re-mount `cantFind` reason regressing to `.moved`
+**Status:** Just started
+**Started:** 18 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch multi-project-cloud-evicted/`
+**Remote:** local only (push when ready)
+
+**What it does:** Phase 3 #10 — collapse the iCloud-evicted case into a single sidebar state (cloud-arrow glyph in the trailing slot, subtitle qualifier) instead of overloading the `.cantFind` path. Includes a ride-along fix for the re-mount regression where the `cantFind` reason flips back to `.moved` after a volume comes back. See `HANDOFF.md` for the full brief.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/CloudWatcher.swift`
+- `desktop/Bristlenose/Bristlenose/ProjectAvailability.swift`
+- `desktop/Bristlenose/Bristlenose/ProjectRow.swift`
+- `desktop/Bristlenose/Bristlenose/VolumeWatcher.swift`
+- `desktop/Bristlenose/Bristlenose/ProjectIndex.swift`
+- `bristlenose/locales/{en,es,fr,de,ko,ja}/common.json`
+
+**Potential conflicts with other branches:**
+- `multi-project-folder-watcher` — also touches `ProjectIndex.swift` and sidebar row chrome; coordinate at merge time on the row-state model.
+- `pipeline-subtitle-i18n` — touches the same `common.json` locale files for ProjectRow subtitles; coordinate on key naming to avoid duplicate-key churn at merge.
+- `pipeline-diagnostic-popover-swift` — adjacent Swift surface but different pill/popover concern; low overlap.
+
+---
+
 ### `pipeline-diagnostic-popover-swift`
 
 **Kind:** feature — code intended for main; ends in merge or PR-and-squash

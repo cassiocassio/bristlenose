@@ -42,6 +42,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch pipeline-view-v1/` | `pipeline-view-v1` | feature | Read-only Pipeline view — one CLI verb (`bristlenose pipeline`) + one React Settings tab; validates the mixture-of-models mental model with the cohort, nothing else |
 | `bristlenose_branch pipeline-diagnostic-popover-swift/` | `pipeline-diagnostic-popover-swift` | feature | Swift half of pipeline diagnostic popover — two new pill states + popover view consuming PipelineSummary fixture v5 |
 | `bristlenose_branch multi-project-cloud-evicted/` | `multi-project-cloud-evicted` | feature | Phase 3 #10 iCloud-evicted single state + ride-along fix for re-mount cantFind reason regressing to .moved |
+| `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
 
 
 
@@ -144,6 +145,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `pipeline-view-v1` | `bristlenose_branch pipeline-view-v1/` | local only |
 | `pipeline-diagnostic-popover-swift` | `bristlenose_branch pipeline-diagnostic-popover-swift/` | local only |
 | `multi-project-cloud-evicted` | `bristlenose_branch multi-project-cloud-evicted/` | local only |
+| `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
 
 
 
@@ -151,6 +153,34 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `pipeline-view-v1-5`
+
+**Kind:** feature — code intended for main; extends the v1 Pipeline view with a per-stage Alternatives column. Ends in merge or PR-and-squash.
+**Status:** Just started
+**Started:** 18 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-view-v1-5/`
+**Remote:** local only (push when ready)
+
+**What it does:** Extend the read-only Pipeline view (v1) with a per-stage "Alternatives" surface — for every stage, render the other backends that *could* run it on this host, with ✓/✗ availability flags and a one-line reason on ✗. Read-only; quality ratings (●/○/⚠/✗) deferred to v1.9, auto-pick to v2, per-stage overrides to v3. **The point is the data-model rung:** v1.5 encodes the full eligibility space per stage (catalogue of `BackendOption` + `Requirement` predicates against `HostFacts` + `BristlenoseSettings`) that the v2 resolver and v3 overrides will both consume. When Apple FM ships a research-viable on-device model post-WWDC, the work is "edit one catalogue cell + verify a host predicate," not "build a resolver from scratch." See `HANDOFF.md` for the full brief.
+
+**Files this branch will touch:**
+- New: `bristlenose/pipeline_view/eligibility.py` — `check_requirement` + `evaluate_backend` pure functions
+- Modified: `bristlenose/pipeline_view/catalogue.py` — add `Requirement`, `BackendOption`, populate `viable_backends`
+- Modified: `bristlenose/pipeline_view/host.py` — add `os_version`, `installed_packages` fields + probes
+- Modified: `bristlenose/pipeline_view/render.py` — `BackendAvailability` type, `alternatives` field, sort logic
+- Modified: `bristlenose/pipeline_view/cli.py` — Alternatives sub-line rendering
+- Modified: `frontend/src/components/SettingsModal.tsx` `PipelineSection` — alternatives list render
+- Modified: `bristlenose/theme/organisms/settings.css` — `.bn-pipeline-alternatives` styling
+- Modified: `tests/fixtures/pipeline-view-contract.json` — schema v1 → v2 (additive)
+- New: `tests/pipeline_view/test_eligibility.py`, `test_alternatives.py`
+- Modified: 6 locale files — `pipeline.alternatives` heading only
+
+**Potential conflicts with other branches:**
+- `pipeline-view-v1` — direct parent; v1.5 lives in the same `bristlenose/pipeline_view/` package and edits files v1 introduces. Don't start v1.5 work until v1 merges, or be ready to rebase.
+- `pipeline-subtitle-i18n` / `pipeline-diagnostic-popover-swift` / `multi-project-cloud-evicted` — all touch the 6 `common.json` locale files. Keep keys distinct (`pipeline.alternatives.*`) and use targeted text-replace, never `json.dump` round-trip.
 
 ---
 

@@ -39,6 +39,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
 | `bristlenose_branch foundation-models-corpus/` | `foundation-models-corpus` | feature | Parameterise HIG scraper into multi-corpus scraper, produce Foundation Models corpus, iterate pluggable-LLM-routing / stage-backends / modularity docs against it pre-WWDC 2026 |
 | `bristlenose_branch release-pipeline-actually-broken/` | `release-pipeline-actually-broken` | diagnostic | Investigate + fix the perf-gate CI failure blocking PyPI publish since v0.15.5; discard branch once narrow fix lands |
+| `bristlenose_branch pipeline-view-v1/` | `pipeline-view-v1` | feature | Read-only Pipeline view — one CLI verb (`bristlenose pipeline`) + one React Settings tab; validates the mixture-of-models mental model with the cohort, nothing else |
 
 
 
@@ -138,6 +139,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
 | `foundation-models-corpus` | `bristlenose_branch foundation-models-corpus/` | local only |
 | `release-pipeline-actually-broken` | `bristlenose_branch release-pipeline-actually-broken/` | local only |
+| `pipeline-view-v1` | `bristlenose_branch pipeline-view-v1/` | local only |
 
 
 
@@ -145,6 +147,30 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `pipeline-view-v1`
+
+**Kind:** feature — code intended for main; lands a read-only Pipeline view (one CLI verb + one Settings tab) and ends in merge or PR-and-squash
+**Status:** Just started
+**Started:** 18 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-view-v1/`
+**Remote:** local only (push when ready)
+
+**What it does:** Ship a read-only surface for the mixture-of-models Bristlenose already runs across pipeline stages, so cohort users can react to the mental-model framing before any per-stage choice machinery earns its place. Single new CLI verb `bristlenose pipeline` (table view of stage → backend → model) plus a matching read-only Settings tab in the React SPA (two-column card-per-stage layout, last position). Explicitly out of scope: `bristlenose use <provider>`, `bristlenose config` namespace, TOML preferences, per-stage overrides, interactive doctor expansion, Apple FM probe — all parked in `docs/design-cli-improvements.md` pending cohort signal. See `HANDOFF.md` for the full brief, locked decisions, and contract fixture plan.
+
+**Files this branch will touch:**
+- New: `bristlenose/pipeline/__init__.py`, `catalogue.py`, `host.py`, `render.py`, `cli.py`
+- New: React component under `frontend/src/components/Settings/`
+- Modified: `bristlenose/cli.py` (register `pipeline` command)
+- Modified: `bristlenose/server/` (new `/api/pipeline` route, inherits `BearerTokenMiddleware`)
+- Tests: `tests/pipeline/test_render.py`, `test_host.py`, `test_cli_pipeline.py`, `test_catalogue.py`, `tests/fixtures/pipeline-view-contract.json`
+
+**Potential conflicts with other branches:**
+- `foundation-models-corpus` — iterates the same family of design docs (`design-pluggable-llm-routing.md`, `design-stage-backends.md`, `design-modularity.md`) and may revise the model-catalogue shape this branch consumes. Coordinate at merge time; the contract fixture (`tests/fixtures/pipeline-view-contract.json`) is the schema lock.
+- `release-pipeline-actually-broken` — touches `bristlenose/server/` and `tests/` but for CI smoke-test / mount paths; low overlap with the new `/api/pipeline` route.
+- Multi-project / sidebar branches — Swift and locale work; no overlap.
 
 ---
 

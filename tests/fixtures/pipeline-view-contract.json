@@ -1,0 +1,89 @@
+{
+  "_doc": "Schema contract between bristlenose.pipeline.render.PipelineView (Python) and the React Pipeline Settings tab (TypeScript). Both sides round-trip this fixture in tests so additions / renames trip a build failure. Established 18 May 2026 for branch pipeline-view-v1. Schema version 1: catalogue + host split, host loopback-only (no telemetry fields).",
+  "schema_version": 1,
+  "scenarios": {
+    "claude_apple_silicon_keys_present": {
+      "_doc": "Common cohort path: Apple Silicon Mac, Claude provider with key, no PII redaction. Anonymisation row dim. Apple FM row 'unknown' on CLI.",
+      "catalogue": [
+        {
+          "id": "transcription",
+          "name": "Transcription",
+          "kind": "transcription",
+          "chosen": "MLX Whisper large-v3-turbo",
+          "notes": "Auto-detected from your hardware. Local, private, free.",
+          "available": true
+        },
+        {
+          "id": "speaker_identification",
+          "name": "Speaker identification",
+          "kind": "llm",
+          "chosen": "Claude · claude-sonnet-4-20250514",
+          "notes": "Set by your provider choice.",
+          "available": true
+        },
+        {
+          "id": "anonymisation",
+          "name": "Anonymisation",
+          "kind": "anonymisation",
+          "chosen": "Off (enable with --redact-pii)",
+          "notes": "Presidio runs locally when --redact-pii is enabled.",
+          "available": false
+        },
+        {
+          "id": "topic_segmentation",
+          "name": "Topic segmentation",
+          "kind": "llm",
+          "chosen": "Claude · claude-sonnet-4-20250514",
+          "notes": "Set by your provider choice.",
+          "available": true
+        },
+        {
+          "id": "quote_extraction",
+          "name": "Quote extraction",
+          "kind": "llm",
+          "chosen": "Claude · claude-sonnet-4-20250514",
+          "notes": "Set by your provider choice. Typically the largest LLM cost.",
+          "available": true
+        },
+        {
+          "id": "quote_clustering",
+          "name": "Quote clustering",
+          "kind": "llm",
+          "chosen": "Claude · claude-sonnet-4-20250514",
+          "notes": "Set by your provider choice.",
+          "available": true
+        },
+        {
+          "id": "thematic_grouping",
+          "name": "Thematic grouping",
+          "kind": "llm",
+          "chosen": "Claude · claude-sonnet-4-20250514",
+          "notes": "Set by your provider choice.",
+          "available": true
+        },
+        {
+          "id": "apple_foundation_models",
+          "name": "Apple Foundation Models",
+          "kind": "apple_fm",
+          "chosen": "Unknown from CLI",
+          "notes": "Availability not detected from CLI; see the desktop app's Pipeline view for status. A CLI probe is planned.",
+          "available": false
+        }
+      ],
+      "host": {
+        "os": "Darwin",
+        "arch": "arm64",
+        "memory_gb": 32.0,
+        "keys_present": {
+          "anthropic": true,
+          "openai": false,
+          "azure": false,
+          "google": false
+        },
+        "ollama_running": false,
+        "network_reachable": true,
+        "apple_fm_status": "unknown"
+      }
+    }
+  }
+}

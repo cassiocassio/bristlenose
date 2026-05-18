@@ -19,12 +19,23 @@
     "config": "Configuration",
     "projectStub": "Les réglages du projet apparaîtront ici. Bientôt disponible.",
     "profileStub": "Les réglages du profil (nom, e-mail, backend whisper) apparaîtront ici. Bientôt disponible.",
-    "apiKeysStub": "La gestion des clés API apparaîtra ici. Bientôt disponible."
+    "apiKeysStub": "La gestion des clés API apparaîtra ici. Bientôt disponible.",
+    "pipeline": "Pipeline"
   },
   "configReference": {
     "heading": "Référence de configuration",
     "intro": "Tous les réglages ci-dessous sont configurés via des variables d'environnement ou un fichier <code>.env</code>. Ils sont affichés ici à titre indicatif — pour modifier une valeur, éditez le fichier indiqué dans chaque ligne.",
     "clickToCopy": "Cliquer pour copier",
     "copied": "Copié"
+  },
+  "pipeline": {
+    "intro": "Vue en lecture seule des modèles utilisés par Bristlenose pour chaque étape du pipeline. Pour changer un backend, modifiez vos paramètres (variables d'environnement ou fichier .env).",
+    "loading": "Chargement de la vue du pipeline…",
+    "error": "Impossible de charger la vue",
+    "keys": "clés",
+    "keysNone": "aucune",
+    "ollama": "ollama",
+    "running": "en cours",
+    "notDetected": "non détecté"
   }
 }

@@ -19,12 +19,23 @@
     "config": "構成",
     "projectStub": "プロジェクトごとの設定はここに表示されます。近日公開。",
     "profileStub": "プロフィール設定 (名前、メール、Whisper バックエンド) はここに表示されます。近日公開。",
-    "apiKeysStub": "API キーの管理はここに表示されます。近日公開。"
+    "apiKeysStub": "API キーの管理はここに表示されます。近日公開。",
+    "pipeline": "パイプライン"
   },
   "configReference": {
     "heading": "構成リファレンス",
     "intro": "以下の設定はすべて環境変数または <code>.env</code> ファイルで構成します。値を変更するには、各行に表示されているファイルを編集してください。",
     "clickToCopy": "クリックでコピー",
     "copied": "コピーしました"
+  },
+  "pipeline": {
+    "intro": "Bristlenose が各パイプラインステージで現在使用しているモデルの読み取り専用ビュー。バックエンドを変更するには、設定（環境変数または .env ファイル）を編集してください。",
+    "loading": "パイプラインビューを読み込み中…",
+    "error": "パイプラインビューを読み込めませんでした",
+    "keys": "キー",
+    "keysNone": "なし",
+    "ollama": "Ollama",
+    "running": "実行中",
+    "notDetected": "未検出"
   }
 }

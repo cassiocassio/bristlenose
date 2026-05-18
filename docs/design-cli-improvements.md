@@ -441,6 +441,218 @@ Reframes `--static` from "the old thing, deprecated" (sad, vestigial) to "the ma
 
 **Not blocked by:** anything. The current vestigial HTML write doesn't get in the way; A3 just stops surfacing it. When this revives, the design work is the gate, not the code.
 
+## Captured design — preferences UX, pipeline view, per-stage routing (May 2026)
+
+A design conversation in May 2026 (out of the foundation-models-corpus reading) explored what the CLI surface for preferences, multi-stage model choice, and key management *could* eventually look like. None of it is committed beyond a single v1 read-only Pipeline view (the spike for which lives in the local-only branch handoff for this work). Captured here so the design space isn't re-derived from scratch when each piece earns its place.
+
+**The shipping reality** (so the contrast is honest):
+- `bristlenose configure <provider>` already ships — interactive key entry, validates via test call, stores in Keychain (macOS) / Secret Service (Linux). See `bristlenose/cli.py:1843`. This is what the conversation rediscovered as a desirable `auth login`-style verb; it's already there.
+- `bristlenose doctor` already nudges users to run `configure` when keys are missing (`bristlenose/doctor.py`).
+- Provider switching today is done by editing `.env` or setting `BRISTLENOSE_LLM_PROVIDER` env var.
+- No per-stage routing exists in dispatch — `bristlenose/llm/client.py` reads one provider, applies it to every LLM-using stage.
+- No TOML preferences file. Pydantic-settings reads from env vars + `.env` only.
+
+What follows is parked ideas, each with the question they answer + when they'd earn their place. None are commitments.
+
+### Future verb: `bristlenose use <provider>` — fast-path provider switch
+
+**The case:** switching active provider when keys for multiple are present (e.g. "Claude credit ran out, swap to ChatGPT"). Today you edit `.env` or pass an env var inline. Aspirationally:
+
+```
+bristlenose use claude       # sugar for: config set llm_provider anthropic
+bristlenose use chatgpt
+bristlenose use local
+bristlenose use claude-opus  # product + tier shorthand
+bristlenose use              # print currently active
+```
+
+**Pros:**
+- Verb-name reflects user intent ("use claude"), not mechanism ("set the llm_provider key to anthropic").
+- One word, zero subcommands — the slickest CLI for the most common write.
+- Sugar over the eventual `config set` path; no duplicate logic.
+
+**Cons:**
+- Provider switching isn't actually the dominant write — the conversation eventually established that the dominant write is *initial key entry*, which `configure` already handles.
+- Adds a new top-level verb for an operation that today is two-line edit of `.env`.
+- Speculative until a cohort member says "I keep editing `.env` to flip providers."
+
+**Earns its place when:** a cohort member volunteers that provider-flipping is a friction point. One-line Typer alias when the time comes; not before. *(William's call.)*
+
+### Future verb: `bristlenose config [show|set|get|edit|path]` — long-tail prefs read/write
+
+**The case:** a `git config` / `npm config`-style noun-namespace for the non-key, non-provider settings that today live as env vars (temperature, concurrency, future per-stage overrides):
+
+```
+bristlenose config                       # show effective config (sparse)
+bristlenose config set llm_temperature 0.2
+bristlenose config get llm_concurrency
+bristlenose config edit                  # open prefs file in $EDITOR
+bristlenose config path                  # print where the file lives
+bristlenose config --per-stage           # the pipeline-view lens
+```
+
+**Pros:**
+- Standard CLI idiom (git, npm, gh, kubectl, helm, docker).
+- One namespace for everything that isn't keys (`configure`) or provider-switch (`use`).
+- The `--per-stage` flag is a natural home for the pipeline view — same data, lens applied.
+
+**Cons:**
+- Pre-commits a namespace to features that don't exist (per-stage overrides, `optimise_for` axis).
+- William's verdict: "easy because `config` is the obvious bucket; not simple because it braids 'show me what's running' with 'let me change it.'"
+- First-run + a text editor cover the long tail today (no v2/v3 settings exist that need this).
+
+**Earns its place when:** there are 2+ writeable settings that don't fit cleanly under `use` or `configure`. Probably alongside the `optimise_for` axis (v2) or per-stage overrides (v3) — not before.
+
+### Future expansion: interactive `doctor` (diagnose + prompt-to-fix)
+
+**The case:** `doctor` today is read-only diagnostic. The conversation wondered whether it should expand to "diagnose + walk through fixing what it found":
+
+```
+$ bristlenose doctor
+  ⚠ Anthropic API key missing.
+    Paste it now (hidden input), or press Enter to skip: _
+```
+
+**Pros:**
+- Single command does diagnosis + first-fix; matches `brew doctor` / `pyenv doctor` patterns where suggestions are inline.
+- One conversation = one user keystroke flow.
+- The hooks already exist (`_maybe_auto_doctor` at `bristlenose/cli.py:300` runs implicitly at startup).
+
+**Cons:**
+- Mission expansion on a tool that does one thing today. William: "may be a fine idea; not this spike's idea."
+- `bristlenose configure <provider>` already exists for the specific key-entry case; doctor pointing at it is honest pointer-following, not a missing surface.
+- Interactive prompts in a diagnostic command complicate scripting / CI use.
+
+**Earns its place when:** a cohort member fails first-run and the watch-them-do-it tape shows that "run `bristlenose configure claude`" was a step too many. Today the doctor → configure pointer is one extra command, not a dealbreaker.
+
+### Future storage: TOML preferences file
+
+**The case:** Pydantic-settings reads env vars + `.env` today. A future preferences file at:
+
+```
+~/.config/bristlenose/preferences.toml          # user-scoped
+<project>/.bristlenose/preferences.toml         # project-scoped (per study)
+```
+
+Precedence: env vars > project TOML > user TOML > defaults.
+
+```toml
+# Example future shape — not implemented
+optimise_for = "privacy"
+
+[stage_overrides]
+s10_quote_extraction = "claude-sonnet"
+sentiment = "apple-fm"
+
+[stage_forbids]
+s07_pii_removal = ["cloud"]
+```
+
+**Pros:**
+- Per-user *and* per-project scopes — research projects carry their own preferences when handed off to collaborators (researchers think in projects).
+- Diffable, syncable, debuggable in a way env vars aren't (env vars don't survive shells; `.env` is often reserved for API keys only).
+- Pydantic-settings supports TOML source natively — one-line `SettingsConfigDict` change.
+- Storage location `~/.config/bristlenose/` already exists (`bristlenose.db` lives there).
+- Per-project location `.bristlenose/` already exists (PII summary, manifest, LLM call log).
+- The desktop UserDefaults → env var translation in `BristlenoseShared.swift:105` already provides the bridge mechanism; TOML becomes the durable middle-ground.
+
+**Cons:**
+- A file format with no writeable settings (today) is YAGNI — what would you put in it?
+- Existing `.env` + env vars cover the current configuration surface.
+- `~/.gitconfig` / `npm config` precedent: file format exposed because *something* writes to it. Without writes, there's nothing to format.
+
+**Earns its place when:** any of: (a) `optimise_for` axis ships and needs persistence, (b) per-stage overrides ship and need persistence, (c) the desktop UI wants to write user-mutable settings that the CLI should also see. Not before.
+
+### Future round-trip: CLI ↔ Desktop preferences via TOML
+
+**The case:** Desktop today writes to `@AppStorage` (UserDefaults); CLI reads env vars + `.env`. They don't share state. Desktop's sidecar-spawn translates UserDefaults → env vars for the child process (`BristlenoseShared.swift:105`, `ServeManager.swift:431`), so the wire format is already env vars on both sides.
+
+The aspirational addition: Desktop writes through to `~/.config/bristlenose/preferences.toml` on every UserDefaults change; CLI reads the same file. Same file, two surfaces.
+
+**Pros:**
+- A Mac user who edits Settings on the desktop app can run `bristlenose run` from the terminal and get the same routing.
+- A Linux/CLI user can edit TOML; if they later install the desktop app it reads the file.
+- The bridge mechanism (env-var translation) already exists; this is the durable persistence layer behind it.
+
+**Cons:**
+- Today there are no user-mutable settings that need round-trip; both surfaces converge on the same env vars at runtime.
+- Writing TOML from a sandboxed desktop app needs explicit container-path → user-home mapping. Solvable but real work.
+- "Schema lives Python-side, written by Swift" needs careful contract testing.
+
+**Earns its place when:** there is more than one preferences-writeable setting AND a real user reports cross-surface drift. Sequencing: comes after TOML itself ships (above).
+
+### Future write surface: per-stage backend overrides
+
+**The case:** the design conversation that motivated all of this — [design-pluggable-llm-routing.md](design-pluggable-llm-routing.md) and [design-stage-backends.md](design-stage-backends.md) propose a resolver that picks per-stage backends. The user-facing edit surface in some future v3 would be:
+
+```toml
+[stage_overrides]
+s10_quote_extraction = "claude-sonnet"   # too many guardrail refusals on Apple FM
+sentiment = "apple-fm"                    # enum classification, no need to spend tokens
+```
+
+Or via CLI: `bristlenose config set stages.s10_quote_extraction claude-sonnet`.
+
+**Pros:**
+- The mixture-of-models story (Whisper + Pyannote + LLM-per-stage) becomes user-controllable.
+- Linux/eGPU users get fine-grained routing for offload (s10 to a local 4090, s11/s12 to cloud).
+- The pipeline view becomes interactive — the same data, click-to-edit.
+
+**Cons:**
+- Requires the resolver to exist (catalogue, requirements, selection — see [design-stage-backends.md](design-stage-backends.md)).
+- Requires the TOML format to exist.
+- Requires the cohort to have validated that the mental model lands (the v1 read-only Pipeline view is the experiment that gates this).
+
+**Earns its place when:** v1 pipeline view ships AND cohort feedback indicates per-stage choice is desired. Probably 2027.
+
+### Future preference: `optimise_for` axis
+
+**The case:** before per-stage overrides, a simpler intermediate — one global preference axis that re-ranks the resolver's eligible-backend list:
+
+```
+optimise_for = "privacy" | "speed" | "cost" | "best-available"
+```
+
+`privacy` ranks on-device backends first. `speed` prefers low-latency cloud (Claude Haiku, GPT-4o-mini). `cost` prefers free local / cheap cloud. `best-available` is the current default.
+
+**Pros:**
+- Single knob that's understandable to non-engineers ("I want privacy" / "I want speed").
+- Survives backend churn — when a new backend appears in the catalogue, it slots into the existing ranking automatically.
+- Doesn't require users to know what backends exist.
+
+**Cons:**
+- Requires the resolver + catalogue to exist.
+- May not be necessary if `use <provider>` is enough for the common case.
+
+**Earns its place when:** the resolver exists AND cohort feedback shows a "preference dial" is more legible than a stage-by-stage table.
+
+### Naming notes (won't relitigate)
+
+- **`config` vs `configure`**: settled in shipped code. `configure <provider>` is the interactive wizard for key entry (matches `aws configure` / `gcloud auth login` idiom). If a `config` namespace ever ships, it's read/write of non-secret settings (matches `git config` / `npm config`). The two coexist without overlap.
+- **Why `bristlenose config claude` (positional shortcut) is bad**: `config` as a noun-namespace expects subcommands. A bare positional would be ambiguous (key? value? provider?). `git config foo` means *get* the value of `foo` — readers would be unable to tell write-by-positional from read-by-positional.
+- **`use` reads as intent, `config set` reads as mechanism**: subtle but real distinction. If both ever ship, they're not aliases — they're different surfaces over the same underlying writer.
+
+### JSON wire-format design questions (parked)
+
+If/when the Pipeline view's JSON becomes a multi-consumer contract (today: CLI table + React tab):
+
+- **Pydantic vs dataclass for boundary types**: project rule says Pydantic for things crossing JSON boundaries. Internal frozen records can stay dataclass.
+- **Codegen vs hand-mirrored TS + fixture round-trip**: precedent in the codebase is hand-mirror + contract fixture (`tests/fixtures/pipeline-summary-contract.json`). Don't introduce codegen for one boundary — Rule of Three applies.
+- **`schema_version` field from day one**: no external consumers exist; Rule of Three argues against. Add when the second consumer appears.
+
+### Things explicitly decided NOT to do (in v1 or near-term)
+
+- **Apple FM availability probe on CLI**: returns `unknown` for v1 with honest "see desktop app" copy. The probe needs Swift-side access to `SystemLanguageModel.Availability`; a bundled `bristlenose-fm-probe` Swift binary in the Homebrew formula is the eventual answer (~50 lines, single function, returns enum). Not v1 spike scope. *(Five-agent convergence in the v1 plan review.)*
+- **Network connectivity probe via HEAD to Apple endpoint**: replace with OS route-table check (no outbound packets). Preserves "Bristlenose never phones home" promise.
+- **Schema versioning, codegen, per-stage overrides, optimise_for axis, TOML file, `use` verb, `config` namespace, interactive doctor expansion**: all deferred per William's parsimony pass. Each earns its place from real cohort signal, not from design-doc speculation.
+
+### Cross-references
+
+- Design rationale: [design-pluggable-llm-routing.md](design-pluggable-llm-routing.md), [design-stage-backends.md](design-stage-backends.md), [design-modularity.md](design-modularity.md) §Modularisation matrix
+- Existing `configure` command: `bristlenose/cli.py:1843`
+- Existing UserDefaults→env-var translation: `desktop/Bristlenose/Bristlenose/BristlenoseShared.swift:105`
+- The v1 spike plan + review log live in the local-only branch handoff for this work.
+
 ## Won't fix (documented for completeness)
 
 ### `run` is too short / ambiguous

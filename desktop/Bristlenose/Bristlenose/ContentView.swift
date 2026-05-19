@@ -364,6 +364,26 @@ struct ContentView: View {
                 showingAIConsent = true
             }
         }
+        #if DEBUG
+        // Debug-only: apply BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE only to
+        // the currently-selected project, so the other sidebar rows keep
+        // their real state for comparison. 500ms delay lets the per-project
+        // scan run applyScanResult first; the override survives because
+        // applyScanResult early-returns on the diagnostic states.
+        //
+        // The 500ms is a **heuristic, not a contract** — it's empirically
+        // long enough for the initial manifest scan to settle on this Mac
+        // under normal load. `_applyDebugFixture` is idempotent per-project
+        // (guards via `_debugFixtureApplied: Set<UUID>`), so a late scan
+        // racing past it is benign. If a slower machine ever needs a longer
+        // wait, the right fix is making the override wait on the scan's
+        // completion signal rather than tuning this number.
+        .task(id: selectedProjectID) {
+            guard let id = selectedProjectID else { return }
+            try? await Task.sleep(for: .milliseconds(500))
+            pipelineRunner._applyDebugFixture(to: id)
+        }
+        #endif
         // Defensive cleanup — macOS sometimes fails to fire
         // `isTargeted=false` if the cursor drag-leaves the window
         // entirely (Apple bug, intermittent for years). When the
@@ -874,7 +894,10 @@ struct ContentView: View {
     /// can't *run* analysis but can *show* it if it exists.
     private static func pipelineHasViewableData(_ state: PipelineState?) -> Bool {
         switch state {
-        case .ready, .partial:
+        case .ready, .partial, .completedPartial:
+            // `.completedPartial` ran to terminus and wrote a (degraded) report;
+            // file-subset projects must be able to view it. `.failedWithDiagnostic`
+            // deliberately stays false — abandon path leaves no report on disk.
             return true
         default:
             return false
@@ -1234,21 +1257,13 @@ struct ContentView: View {
 
     @ToolbarContentBuilder
     private var toolbarLeading: some ToolbarContent {
-        // Project icon + name — replaces the system title lozenge (.toolbar(removing: .title)
-        // is set on the detail view). Shows the project's custom SF Symbol and name directly
-        // on the toolbar surface, matching the Finder visual pattern.
-        ToolbarItem(placement: .navigation) {
-            HStack(spacing: 4) {
-                if let project = selectedProject {
-                    Image(systemName: project.icon ?? IconPickerPopover.defaultIcon)
-                        .foregroundStyle(.secondary)
-                }
-                Text(selectedProject?.name ?? "Bristlenose")
-                    .lineLimit(1)
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(selectedProject?.name ?? "Bristlenose")
-        }
+        // Project name / icon intentionally NOT in the toolbar. The chip
+        // previously here sat where the system back affordance lives, which
+        // is the wrong real estate for a per-project title indicator.
+        // `WindowTitleManager` still sets the NSWindow title to the project
+        // name so it shows in Mission Control / window-menu / Cmd+~ switcher.
+        // A correct in-toolbar project surface will return via a separate
+        // design pass — placeholder removed by user request.
 
         // Contextual — Quotes/Codebook/Analysis: left panel toggle
         // The native sidebar toggle (for the project list) is provided by
@@ -1346,9 +1361,17 @@ struct ContentView: View {
         }
 
         // Pipeline activity pill — only visible when the selected project's
-        // run is .running / .queued / .failed. Self-hides otherwise.
+        // run is .running / .queued / .failed / .completedPartial /
+        // .failedWithDiagnostic. Self-hides otherwise.
+        //
+        // `placement: .status` (macOS-only) gives the pill its own zone in
+        // the trailing toolbar, separate from the `.primaryAction` cluster
+        // that holds Share + Search. Without this, macOS 26's unified
+        // trailing-actions capsule visually contains the pill *inside*
+        // the search-shaped chrome — wrong for a per-project status
+        // indicator.
         if let project = selectedProject {
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItem(placement: .status) {
                 PipelineActivityItem(
                     project: project,
                     pipelineRunner: pipelineRunner,

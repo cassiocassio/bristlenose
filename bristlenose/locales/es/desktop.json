@@ -189,6 +189,29 @@
       "stopped": "Detenido"
     }
   },
+  "pipeline": {
+    "diagnostic": {
+      "pill": {
+        "auth": "Problema con la clave",
+        "missing_binary": "Herramienta faltante",
+        "quota": "L\u00edmite de uso",
+        "network": "Error de red",
+        "unknown": "Ejecuci\u00f3n con fallos"
+      },
+      "header": {
+        "completed_partial": "Completado parcialmente",
+        "failed": "Ejecuci\u00f3n fallida"
+      },
+      "action": {
+        "copy": "Copiar detalles"
+      },
+      "tooltip": {
+        "completed_partial": "El an\u00e1lisis termin\u00f3 con fallos en {{project}}"
+      },
+      "overflow_one": "\u2026 y {{count}} fallo m\u00e1s truncado",
+      "overflow_other": "\u2026 y {{count}} fallos m\u00e1s truncados"
+    }
+  },
   "availability": {
     "unmountedVolume": "{{name}} · no disponible",
     "networkUnreachable": "{{host}} · inaccesible",

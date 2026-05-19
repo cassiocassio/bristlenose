@@ -280,4 +280,114 @@ struct EventLogReaderTests {
         return String(data: data, encoding: .utf8)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
+
+    // MARK: - v5 PipelineSummary routing (Finding 7)
+
+    /// A `run_completed` line carrying a minimal v5 `summary` block with N
+    /// transcript failures.
+    private func runCompletedWithSummary(failures: Int) -> String {
+        let failedJSON = (0..<failures).map { i in
+            """
+            {"session_id":"s\(i)","cause":{"category":"whisper","code":null,"message":"x","provider":null,"stage":"s05_transcribe","session_id":"s\(i)","exit_code":null,"signal":null,"signal_name":null}}
+            """
+        }.joined(separator: ",")
+        let summary = """
+        {"transcripts":{"attempted":\(failures + 1),"succeeded":1,"duration_ms":1000,"failed":[\(failedJSON)]},"topics":null,"quotes":null,"themes":null}
+        """
+        return """
+        {"schema_version":1,"ts":"2026-04-25T09:12:34Z","event":"run_completed","run_id":"01H","kind":"run","started_at":"2026-04-25T09:00:00Z","ended_at":"2026-04-25T09:12:34Z","outcome":"completed","cause":null,"summary":\(summary)}
+        """
+    }
+
+    /// A `run_failed` line carrying a populated v5 summary (abandon path).
+    private func runFailedWithSummary(category: String) -> String {
+        let summary = """
+        {"transcripts":null,"topics":null,"quotes":{"attempted":2,"succeeded":0,"duration_ms":100,"failed":[{"session_id":"s1","cause":{"category":"\(category)","code":null,"message":"x","provider":null,"stage":"s09","session_id":"s1","exit_code":null,"signal":null,"signal_name":null}}]},"themes":null}
+        """
+        return """
+        {"schema_version":1,"ts":"2026-04-25T09:05:00Z","event":"run_failed","run_id":"01H","kind":"run","started_at":"2026-04-25T09:00:00Z","ended_at":"2026-04-25T09:05:00Z","outcome":"failed","cause":{"category":"\(category)","message":"abandoned"},"summary":\(summary)}
+        """
+    }
+
+    @Test func deriveStateRunCompletedWithFailuresMapsToCompletedPartial() {
+        let dir = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        writeEventLog(in: dir, lines: [
+            runStartedLine(),
+            runCompletedWithSummary(failures: 2),
+        ])
+        let result = EventLogReader.deriveState(
+            eventsURL: dir.appendingPathComponent(EventLogReader.filename),
+            pidURL: dir.appendingPathComponent(EventLogReader.pidFilename),
+            stagesComplete: [],
+        )
+        guard case .completedPartial(let summary) = result else {
+            Issue.record("expected .completedPartial, got \(String(describing: result))")
+            return
+        }
+        #expect(summary.totalFailureCount == 2)
+    }
+
+    @Test func deriveStateRunCompletedWithNilSummaryStaysReady() {
+        // Pre-v5 logs and v5 logs from clean transcribe-then-analyze runs
+        // carry no `summary` (or null). Must keep mapping to `.ready` so the
+        // sidebar pill doesn't surface a diagnostic.
+        let dir = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        writeEventLog(in: dir, lines: [
+            runStartedLine(),
+            runCompletedLine(),  // no summary field
+        ])
+        let result = EventLogReader.deriveState(
+            eventsURL: dir.appendingPathComponent(EventLogReader.filename),
+            pidURL: dir.appendingPathComponent(EventLogReader.pidFilename),
+            stagesComplete: [],
+        )
+        guard case .ready = result else {
+            Issue.record("expected .ready, got \(String(describing: result))")
+            return
+        }
+    }
+
+    @Test func deriveStateRunFailedWithSummaryMapsToFailedWithDiagnostic() {
+        let dir = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        writeEventLog(in: dir, lines: [
+            runStartedLine(),
+            runFailedWithSummary(category: "auth"),
+        ])
+        let result = EventLogReader.deriveState(
+            eventsURL: dir.appendingPathComponent(EventLogReader.filename),
+            pidURL: dir.appendingPathComponent(EventLogReader.pidFilename),
+            stagesComplete: [],
+        )
+        guard case .failedWithDiagnostic(let summary) = result else {
+            Issue.record("expected .failedWithDiagnostic, got \(String(describing: result))")
+            return
+        }
+        #expect(summary.dominantCategory() == .auth)
+    }
+
+    @Test func deriveStateRunFailedWithNilSummaryUsesLegacyFailed() {
+        // Pre-v5 logs lack `summary` on failure events. Must fall through to
+        // the legacy `.failed(summary, category:)` surface so older runs
+        // (and runs from CLI users on older Bristlenose) keep rendering.
+        let dir = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        writeEventLog(in: dir, lines: [
+            runStartedLine(),
+            runFailedLine(category: "auth", message: "boom"),
+        ])
+        let result = EventLogReader.deriveState(
+            eventsURL: dir.appendingPathComponent(EventLogReader.filename),
+            pidURL: dir.appendingPathComponent(EventLogReader.pidFilename),
+            stagesComplete: [],
+        )
+        guard case .failed(let summary, let category) = result else {
+            Issue.record("expected .failed, got \(String(describing: result))")
+            return
+        }
+        #expect(summary == "boom")
+        #expect(category == .auth)
+    }
 }

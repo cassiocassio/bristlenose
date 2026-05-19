@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 19 May 2026 (closed `release-pipeline-actually-broken`; removed merged `pipeline-subtitle-i18n` + `multi-project-folder-watcher` rows)
+**Updated:** 19 May 2026 (closed `foundation-models-corpus`)
 
 ---
 
@@ -35,7 +35,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
-| `bristlenose_branch foundation-models-corpus/` | `foundation-models-corpus` | feature | Parameterise HIG scraper into multi-corpus scraper, produce Foundation Models corpus, iterate pluggable-LLM-routing / stage-backends / modularity docs against it pre-WWDC 2026 |
 | `bristlenose_branch pipeline-view-v1/` | `pipeline-view-v1` | feature | Read-only Pipeline view — one CLI verb (`bristlenose pipeline`) + one React Settings tab; validates the mixture-of-models mental model with the cohort, nothing else |
 | `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
 | `bristlenose_branch sidebar-drop-folder-row/` | `sidebar-drop-folder-row` | feature | Close V1 design-doc gap: Finder content dropped on project-sidebar-folder row creates a new project *inside* the folder (folderId set); upgrade internal project-drag payload from String to a typed `ProjectDragID: Transferable` newtype (UTType `app.bristlenose.project-id`) so the folder row's two drop modifiers don't payload-collide |
@@ -136,7 +135,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
-| `foundation-models-corpus` | `bristlenose_branch foundation-models-corpus/` | local only |
 | `pipeline-view-v1` | `bristlenose_branch pipeline-view-v1/` | local only |
 | `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
 
@@ -195,29 +193,8 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - Tests: `tests/pipeline/test_render.py`, `test_host.py`, `test_cli_pipeline.py`, `test_catalogue.py`, `tests/fixtures/pipeline-view-contract.json`
 
 **Potential conflicts with other branches:**
-- `foundation-models-corpus` — iterates the same family of design docs (`design-pluggable-llm-routing.md`, `design-stage-backends.md`, `design-modularity.md`) and may revise the model-catalogue shape this branch consumes. Coordinate at merge time; the contract fixture (`tests/fixtures/pipeline-view-contract.json`) is the schema lock.
+- `foundation-models-corpus` — _merged 19 May 2026_; corpus-driven edits to `design-pluggable-llm-routing.md`, `design-stage-backends.md`, `design-modularity.md` already landed. Re-coordinate after WWDC 2026 re-scrape if the model-catalogue shape shifts; the contract fixture (`tests/fixtures/pipeline-view-contract.json`) is the schema lock.
 - Multi-project / sidebar branches — Swift and locale work; no overlap.
-
----
-
-### `foundation-models-corpus`
-
-**Kind:** feature — code intended for main; lands the parameterised multi-corpus scraper plus iterated design docs informed by the Foundation Models corpus
-**Status:** Just started
-**Started:** 17 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch foundation-models-corpus/`
-**Remote:** local only (push when ready)
-
-**What it does:** Parameterise the HIG scraper into a multi-corpus scraper and produce a Foundation Models corpus, then read it and iterate `design-pluggable-llm-routing.md` / `design-stage-backends.md` / `design-modularity.md` against what FM actually offers. Pre-WWDC 2026 plumbing + reading exercise (per the Apple-AI direction-of-travel thesis): cheap scaffolding only, no FM-provider code yet. Starts with WIP doc edits already in flight on main copied across. See `.claude/plans/foundation-models-corpus.md` for the full handoff.
-
-**Files this branch will touch:**
-- `scripts/scrape-hig.py` (parameterise into multi-corpus scraper)
-- `docs/design-pluggable-llm-routing.md`
-- `docs/design-stage-backends.md`
-- `docs/design-modularity.md`
-
-**Potential conflicts with other branches:**
-- None expected — no other active branch touches the scraper or those three design docs. Worktree starts with the same WIP doc edits that are currently uncommitted on main; expect to either drop those edits from main or coordinate at merge time.
 
 ---
 
@@ -368,6 +345,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `foundation-models-corpus` — merged 19 May 2026
+
+Parameterised HIG scraper into multi-corpus scraper (`scrape-hig.py` → `scrape-apple-corpus.py` with `--corpus {hig,fm}`), scraped Foundation Models corpus to `~/.local/share/foundation-models-corpus/` (20 pages, 304 KB), and trued `design-pluggable-llm-routing.md` / `design-stage-backends.md` / `design-modularity.md` against the corpus. Phase 0 + 1 + 1b complete; Phase 2 (MLX-Swift) + Phase 3 (MLX Python) + Phase 4 (agent) explicitly deferred. Re-scrape trigger: WWDC 2026 keynote, then macOS 27 GA. Two commits merged via `cea008a`. Worktree detached and tagged orange on disk; local + remote branch deletion pending user push.
 
 ### `release-pipeline-actually-broken` — merged 19 May 2026
 

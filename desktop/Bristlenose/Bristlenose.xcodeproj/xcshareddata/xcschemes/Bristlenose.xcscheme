@@ -102,7 +102,7 @@
          <EnvironmentVariable
             key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
             value = "showcase_typical_partial"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </EnvironmentVariable>
       </EnvironmentVariables>
    </LaunchAction>

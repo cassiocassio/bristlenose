@@ -3,11 +3,11 @@
 import Foundation
 
 enum GeneratedBuildInfo {
-    static let gitBranch = "pipeline-diagnostic-popover-swift"
-    static let gitSHA = "04b86ee"
+    static let gitBranch = "main"
+    static let gitSHA = "bf272cc"
     static let gitDirty = true
     static let configuration = "Debug"
     static let sandboxEnabled = true
     static let hardenedRuntimeEnabled = false
-    static let buildDate = "2026-05-19T12:04:04Z"
+    static let buildDate = "2026-05-19T16:13:52Z"
 }

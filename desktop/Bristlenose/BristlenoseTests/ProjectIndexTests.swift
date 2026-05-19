@@ -93,6 +93,77 @@ struct ProjectIndexTests {
         #expect(index.findByPath("/tmp/nonexistent") == nil)
     }
 
+    // MARK: - addProject(intoFolder:)
+    //
+    // sidebar-drop-folder-row branch (May 2026): a Finder folder dropped on
+    // a project-sidebar-folder row creates a new project *inside* the
+    // folder. The drop-routing itself lives in ContentView (QA-walk
+    // territory — needs a UI host); these tests pin the ProjectIndex-layer
+    // invariants the routing depends on.
+
+    @MainActor @Test func addProject_intoFolder_setsFolderId() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let folder = index.addFolder(name: "Research")
+        let project = index.addProject(name: "P", path: "/tmp/p", intoFolder: folder.id)
+
+        #expect(project.folderId == folder.id)
+        #expect(index.projectsInFolder(folder.id).contains { $0.id == project.id })
+    }
+
+    @MainActor @Test func addProject_intoFolder_landsAtTop() {
+        // Q3=a: new project lands at position 0 of the folder's project list
+        // (matches Notes / Things "newest at top" convention for
+        // project-shaped content).
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let folder = index.addFolder(name: "F")
+        let older = index.addProject(name: "Older", path: "/tmp/older", intoFolder: folder.id)
+        let newer = index.addProject(name: "Newer", path: "/tmp/newer", intoFolder: folder.id)
+
+        let inFolder = index.projectsInFolder(folder.id)
+        #expect(inFolder.first?.id == newer.id, "newest should be at top of folder")
+        #expect(inFolder.last?.id == older.id, "older should have been pushed down")
+    }
+
+    @MainActor @Test func addProject_intoFolder_doesNotShiftRootItems() {
+        // intoFolder insertions are folder-scoped: existing root projects
+        // and root folders keep their positions. Otherwise the sidebar
+        // would visibly reflow on a drop targeted at one folder.
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let folder = index.addFolder(name: "F")
+        let rootProject = index.addProject(name: "Root", path: "/tmp/root")
+        let rootPosBefore = rootProject.position
+        let folderPosBefore = folder.position
+
+        index.addProject(name: "InFolder", path: "/tmp/in", intoFolder: folder.id)
+
+        let rootAfter = index.projects.first { $0.id == rootProject.id }
+        let folderAfter = index.folders.first { $0.id == folder.id }
+        #expect(rootAfter?.position == rootPosBefore, "root project position unchanged")
+        #expect(folderAfter?.position == folderPosBefore, "folder position unchanged")
+    }
+
+    @MainActor @Test func setFolderCollapsed_canExpandCollapsedFolder() {
+        // Q4=a auto-expand contract: handleDropOnFolder calls
+        // setFolderCollapsed(false) so the user sees the row they just
+        // dropped. Routing lives in the view; this test pins the
+        // ProjectIndex contract the view depends on.
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let folder = index.addFolder(name: "F")
+        index.setFolderCollapsed(id: folder.id, collapsed: true)
+        #expect(index.folders.first { $0.id == folder.id }?.collapsed == true)
+
+        index.setFolderCollapsed(id: folder.id, collapsed: false)
+        #expect(index.folders.first { $0.id == folder.id }?.collapsed == false)
+    }
+
     // MARK: - Folder CRUD
 
     @MainActor @Test func addFolder_createsFolder() {

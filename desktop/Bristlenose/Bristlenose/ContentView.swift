@@ -916,8 +916,27 @@ struct ContentView: View {
         processDroppedURLs(accepted)
     }
 
-    /// Process collected URLs from a sidebar drop.
-    private func processDroppedURLs(_ urls: [URL]) {
+    /// Handle Finder content dropped onto a project-sidebar-folder row.
+    /// Routes through the same `processDroppedURLs` machinery as the empty-
+    /// sidebar path, with `intoFolder:` set so the new project lands inside
+    /// the target folder. Auto-expands the folder so the user sees the row
+    /// they just created (Q4=a in plan Decisions block).
+    ///
+    /// Vocabulary discipline (Gruber pass, 19 May 2026): in *code comments*
+    /// distinguish "project-sidebar-folder" (the `Folder` model in our
+    /// sidebar) from "Finder folder" (a directory on disk). User-facing
+    /// strings still collapse to "folder" — sidebar context disambiguates.
+    private func handleDropOnFolder(id folderID: UUID, urls: [URL]) {
+        let accepted = Self.filterAcceptedURLs(urls)
+        guard !accepted.isEmpty else { return }
+        projectIndex.setFolderCollapsed(id: folderID, collapsed: false)
+        processDroppedURLs(accepted, intoFolder: folderID)
+    }
+
+    /// Process collected URLs from a sidebar drop. `intoFolder` is non-nil
+    /// for drops on a project-sidebar-folder row (see `handleDropOnFolder`);
+    /// nil for empty-sidebar drops, which create at root.
+    private func processDroppedURLs(_ urls: [URL], intoFolder folderID: UUID? = nil) {
         guard !urls.isEmpty else { return }
 
         let directories = urls.filter { $0.hasDirectoryPath }
@@ -933,11 +952,12 @@ struct ContentView: View {
             }
         }
 
-        createProjectFromURLs(directories: directories, files: files)
+        createProjectFromURLs(directories: directories, files: files, intoFolder: folderID)
     }
 
     /// Create a project from classified URLs (after duplicate check passes).
-    private func createProjectFromURLs(directories: [URL], files: [URL]) {
+    private func createProjectFromURLs(directories: [URL], files: [URL],
+                                       intoFolder folderID: UUID? = nil) {
         // All drops create one project. The name comes from the first item.
         // - Single folder: path = folder, inputFiles = nil (scan whole directory)
         // - Multiple folders: path = first folder, inputFiles = all folder paths
@@ -947,7 +967,7 @@ struct ContentView: View {
             // Single folder — classic mode, scan everything in it.
             let url = directories[0]
             let project = projectIndex.addProject(
-                name: url.lastPathComponent, path: url.path
+                name: url.lastPathComponent, path: url.path, intoFolder: folderID
             )
             selection = [.project(project.id)]
             if LocateFlow.folderLooksAnalysed(url: url) {
@@ -990,7 +1010,8 @@ struct ContentView: View {
                 firstPath = files[0].deletingLastPathComponent().path
             }
             let project = projectIndex.addProject(
-                name: firstName, path: firstPath, inputFiles: allPaths
+                name: firstName, path: firstPath, inputFiles: allPaths,
+                intoFolder: folderID
             )
             selection = [.project(project.id)]
             renamingProjectID = project.id
@@ -1502,14 +1523,34 @@ struct ContentView: View {
             }
         }
         .tag(SidebarSelection.folder(folder.id))
-        // Internal project-row drag onto this folder — moves the project
-        // into the folder. The draggable payload from ProjectRow is the
-        // project UUID as a String.
+        // Internal project-row drag onto this project-sidebar-folder —
+        // moves the project into the folder. The draggable payload from
+        // ProjectRow is the project UUID as a String.
+        // (Typed-payload upgrade — ProjectDragID Transferable newtype —
+        // captured as a follow-up branch; not bundled here. SwiftUI
+        // dispatches by Transferable type, so the sibling URL-drop
+        // modifier below already disambiguates without it.)
         .dropDestination(for: String.self) { uuids, _ in
             for uuidString in uuids {
                 guard let projectId = UUID(uuidString: uuidString) else { continue }
                 projectIndex.moveProject(projectId: projectId, toFolder: folder.id)
             }
+            return true
+        } isTargeted: { isOver in
+            if isOver {
+                dropTargetFolderID = folder.id
+            } else if dropTargetFolderID == folder.id {
+                dropTargetFolderID = nil
+            }
+        }
+        // Finder content dropped onto this project-sidebar-folder — creates
+        // a new project inside the folder. Routes via `handleDropOnFolder`,
+        // which also auto-expands the folder so the new row is visible.
+        // Both this modifier and the String one above share the same
+        // `dropTargetFolderID` isTargeted state — SwiftUI dispatches by
+        // payload type, so only one fires per drag.
+        .dropDestination(for: URL.self) { urls, _ in
+            handleDropOnFolder(id: folder.id, urls: urls)
             return true
         } isTargeted: { isOver in
             if isOver {

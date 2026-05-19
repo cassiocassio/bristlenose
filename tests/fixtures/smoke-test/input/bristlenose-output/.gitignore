@@ -8,3 +8,6 @@ people.yaml
 # SQLite files created by bristlenose serve (E2E tests)
 *.db
 *.db-*
+
+# Log written by bristlenose serve when test/E2E runs use this fixture
+bristlenose.log

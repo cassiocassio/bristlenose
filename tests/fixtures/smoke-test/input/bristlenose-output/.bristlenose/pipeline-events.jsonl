@@ -1,0 +1,1 @@
+{"schema_version":1,"ts":"2026-05-01T12:00:30Z","event":"run_completed","run_id":"01JT0000000000000000000000","kind":"run","started_at":"2026-05-01T12:00:00Z","ended_at":"2026-05-01T12:00:30Z","outcome":"completed","cause":null,"input_tokens":null,"output_tokens":null,"cost_usd_estimate":null,"price_table_version":null,"summary":null}

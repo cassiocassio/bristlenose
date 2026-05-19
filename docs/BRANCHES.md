@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 19 May 2026 (closed `pipeline-diagnostic-popover-swift`)
+**Updated:** 19 May 2026 (closed `release-pipeline-actually-broken`)
 
 ---
 
@@ -38,7 +38,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | chore | Translate ProjectRow pipelineSubtitle + locale-aware date formatters |
 | `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
 | `bristlenose_branch foundation-models-corpus/` | `foundation-models-corpus` | feature | Parameterise HIG scraper into multi-corpus scraper, produce Foundation Models corpus, iterate pluggable-LLM-routing / stage-backends / modularity docs against it pre-WWDC 2026 |
-| `bristlenose_branch release-pipeline-actually-broken/` | `release-pipeline-actually-broken` | diagnostic | Investigate + fix the perf-gate CI failure blocking PyPI publish since v0.15.5; discard branch once narrow fix lands |
 | `bristlenose_branch pipeline-view-v1/` | `pipeline-view-v1` | feature | Read-only Pipeline view — one CLI verb (`bristlenose pipeline`) + one React Settings tab; validates the mixture-of-models mental model with the cohort, nothing else |
 | `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
 
@@ -139,7 +138,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
 | `foundation-models-corpus` | `bristlenose_branch foundation-models-corpus/` | local only |
-| `release-pipeline-actually-broken` | `bristlenose_branch release-pipeline-actually-broken/` | local only |
 | `pipeline-view-v1` | `bristlenose_branch pipeline-view-v1/` | local only |
 | `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
 
@@ -199,33 +197,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - `foundation-models-corpus` — iterates the same family of design docs (`design-pluggable-llm-routing.md`, `design-stage-backends.md`, `design-modularity.md`) and may revise the model-catalogue shape this branch consumes. Coordinate at merge time; the contract fixture (`tests/fixtures/pipeline-view-contract.json`) is the schema lock.
-- `release-pipeline-actually-broken` — touches `bristlenose/server/` and `tests/` but for CI smoke-test / mount paths; low overlap with the new `/api/pipeline` route.
 - Multi-project / sidebar branches — Swift and locale work; no overlap.
-
----
-
-### `release-pipeline-actually-broken`
-
-**Kind:** diagnostic — produces fix(es) + structural test reshape; branch itself is discarded once narrow fix lands. The actual PyPI-publish fix is a small commit; this branch carries the investigation + supporting test-layer changes that surface mount-failures loudly in future.
-**Status:** Just started
-**Started:** 18 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch release-pipeline-actually-broken/`
-**Remote:** local only (push when ready)
-
-**What it does:** Restore PyPI publishing (stuck on 0.15.3 since ~10 May 2026) by diagnosing and fixing the `ci/perf-gate` CI failure that has silently blocked every release tag since v0.15.5. Confirmed blocker is the `DOM nodes — Quotes` test: `#bn-app-root` exists but has zero children after 5s. Plan walks H8 (mount-time API 500s) → H2 (SQLite schema drift in smoke fixture) → H7 → H5 → H6 (bisect). Includes structural test reshape (standalone mount precondition test + pytest schema round-trip) and post-fix CLAUDE.md PyPI verification step. Companion `release-pipeline-audit` branch carries the systemic CI/observability follow-ups. See `HANDOFF.md` for the full plan.
-
-**Files this branch will touch:**
-- `e2e/tests/perf-gate.spec.ts` (browser-console capture, possible standalone mount test)
-- New e2e spec for SPA-mounts smoke check (if Bach split is taken)
-- `tests/` — new TestClient round-trip test for mount-time APIs
-- Whatever Phase B locates as the actual root cause (likely `bristlenose/server/` or fixture data)
-- `CHANGELOG.md`, `bristlenose/__init__.py`, `bristlenose/data/bristlenose.1` (0.15.10 bump)
-- `CLAUDE.md` (post-push PyPI verification step)
-
-**Potential conflicts with other branches:**
-- `foundation-models-corpus` touches design docs only — no overlap.
-- `multi-project-folder-watcher` and `pipeline-subtitle-i18n` are Swift / locale work — no overlap with CI / e2e / server.
-- `release-pipeline-audit` (separate handoff, not yet a branch) is paired: one logical change per patch; coordinate at merge time so audit doesn't re-fix what this branch fixes.
 
 ---
 
@@ -397,6 +369,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `release-pipeline-actually-broken` — merged 19 May 2026
+
+Restored PyPI publishing (stuck on v0.15.3 since ~10 May) by fixing the `ci/perf-gate` CI failure blocking every release tag since v0.15.5. Root cause: the status-page interceptor returns "Nothing to see here, yet." when `app.state.last_run[1]` has no terminus event, and the Playwright smoke fixture never carried `pipeline-events.jsonl`. Fix is test-only — pytest `TestSmokeFixtureMountsSPA`, Playwright `spa-mounts.spec.ts`, browser-console capture in `perf-gate.spec.ts`, plus CLAUDE.md release-flow doc edit. Four commits merged via `a3abd9d`. Worktree detached and tagged orange on disk; local and remote branches deleted.
 
 ### `pipeline-diagnostic-popover-swift` — merged 19 May 2026
 

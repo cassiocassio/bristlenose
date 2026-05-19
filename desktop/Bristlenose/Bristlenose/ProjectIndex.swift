@@ -326,17 +326,27 @@ final class ProjectIndex: ObservableObject {
     /// (nil = scan the whole directory).
     /// Returns the new project so the caller can select it.
     @discardableResult
-    func addProject(name: String, path: String, inputFiles: [String]? = nil) -> Project {
+    func addProject(name: String, path: String, inputFiles: [String]? = nil,
+                    intoFolder folderID: UUID? = nil) -> Project {
         let finalName = uniqueName(name, excluding: nil)
         let location = path.isEmpty ? nil : Self.detectLocation(for: path)
         let bookmark = Self.createBookmark(for: path)
         let resourceID = Self.captureResourceIdentifier(for: path)
-        // New items get position 0; push all existing root items down by 1.
-        for i in projects.indices where projects[i].folderId == nil {
-            projects[i].position += 1
-        }
-        for i in folders.indices {
-            folders[i].position += 1
+        // New items land at position 0 within their scope (root or folder);
+        // push existing same-scope items down by 1. Folder positions are a
+        // root-scope concept, so bump them only when inserting at root —
+        // intoFolder insertions don't shift them.
+        if let folderID {
+            for i in projects.indices where projects[i].folderId == folderID {
+                projects[i].position += 1
+            }
+        } else {
+            for i in projects.indices where projects[i].folderId == nil {
+                projects[i].position += 1
+            }
+            for i in folders.indices {
+                folders[i].position += 1
+            }
         }
         let project = Project(
             id: UUID(),
@@ -345,6 +355,7 @@ final class ProjectIndex: ObservableObject {
             inputFiles: inputFiles,
             location: location,
             bookmarkData: bookmark,
+            folderId: folderID,
             position: 0,
             createdAt: Date(),
             lastOpened: nil,

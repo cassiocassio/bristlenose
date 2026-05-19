@@ -137,7 +137,9 @@ classifyTarget(location):
     return .acceptingRow(projectID)
 
   if location is over a sidebar folder row:
-    return .sidebarFolder(folderID)   # reorder destination
+    return .sidebarFolder(folderID)   # internal-drag: reorder destination
+                                      # finder-drag: create project inside
+                                      # (shipped sidebar-drop-folder-row, 19 May 2026)
 
   if location is over a project row's gap (between rows):
     return .reorderGap
@@ -158,9 +160,16 @@ classifyTarget(location):
 | Untracked project | refusedRow | no-entry | Refuse. |
 | Source folder | empty sidebar | green plus | Create new project _(existing path)_. |
 | Source folder | acceptingRow | green plus | Copy files into project _(cohort 1 shipped)_. |
+| Source folder | sidebarFolder | green plus | **Create new project *inside* the project-sidebar-folder.** Auto-expand the folder on drop. _(shipped sidebar-drop-folder-row, 19 May 2026.)_ |
 | Source folder | refusedRow | no-entry | Refuse. |
+| Untracked project | sidebarFolder | green plus | **Import as new project *inside* the project-sidebar-folder.** Auto-expand. Adoption path (existing analysed folder), `scan` not `start`. _(shipped sidebar-drop-folder-row, 19 May 2026.)_ |
+| Tracked project | sidebarFolder | green plus | Move into the project-sidebar-folder _(internal-drag, already shipped via String payload — typed `ProjectDragID` upgrade captured as follow-up branch)_. |
 | Multiple nested projects | empty sidebar | no-entry | V1 refuses _(V2 = bulk import)_. |
 | Other | any | no-entry | Refuse. |
+
+**Vocabulary note (19 May 2026, Gruber pass on sidebar-drop-folder-row).** This doc and code comments distinguish "project-sidebar-folder" (the `Folder` model in our sidebar) from "Finder folder" (a directory on disk). User-facing strings collapse to "folder" — sidebar context disambiguates. Do not surface "project-sidebar-folder" in i18n keys or UI copy.
+
+**Follow-up: true Finder-style hover-spring-load.** sidebar-drop-folder-row landed *post-drop* auto-expand (Q4=a) as the floor — confirmation-by-visible-change after the drop commits. The destination is Finder's spring-loaded-folder gesture: hover over a collapsed `sidebarFolder` row for ~500ms (honouring System Settings → Accessibility → Pointer Control → Spring-loading delay) and the disclosure opens *during* the drag, letting the user drop deeper. `DisclosureGroup` doesn't get this for free; needs an `isTargeted`-tied timer. Not in scope for the gap-closing branch; log here so it doesn't evaporate.
 
 **Why the action table, not the predicate cascade I had before.** The old form ("rule 2a wins over rule 2b...") collapsed `classify(content) × classify(target)` into a single linear cascade and lost the structure. The two-stage form makes it obvious that (a) the same dragged content takes different actions depending on the target, and (b) Tracked-vs-Untracked is a real distinction that drives different behaviour even when targets are identical.
 

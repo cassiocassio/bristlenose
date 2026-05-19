@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 16 May 2026 (closed `dev-keychain-signing-fix`)
+**Updated:** 19 May 2026 (closed `multi-project-cloud-evicted`)
 
 ---
 
@@ -41,7 +41,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch release-pipeline-actually-broken/` | `release-pipeline-actually-broken` | diagnostic | Investigate + fix the perf-gate CI failure blocking PyPI publish since v0.15.5; discard branch once narrow fix lands |
 | `bristlenose_branch pipeline-view-v1/` | `pipeline-view-v1` | feature | Read-only Pipeline view — one CLI verb (`bristlenose pipeline`) + one React Settings tab; validates the mixture-of-models mental model with the cohort, nothing else |
 | `bristlenose_branch pipeline-diagnostic-popover-swift/` | `pipeline-diagnostic-popover-swift` | feature | Swift half of pipeline diagnostic popover — two new pill states + popover view consuming PipelineSummary fixture v5 |
-| `bristlenose_branch multi-project-cloud-evicted/` | `multi-project-cloud-evicted` | feature | Phase 3 #10 iCloud-evicted single state + ride-along fix for re-mount cantFind reason regressing to .moved |
 | `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
 
 
@@ -144,7 +143,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `release-pipeline-actually-broken` | `bristlenose_branch release-pipeline-actually-broken/` | local only |
 | `pipeline-view-v1` | `bristlenose_branch pipeline-view-v1/` | local only |
 | `pipeline-diagnostic-popover-swift` | `bristlenose_branch pipeline-diagnostic-popover-swift/` | local only |
-| `multi-project-cloud-evicted` | `bristlenose_branch multi-project-cloud-evicted/` | local only |
 | `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
 
 
@@ -181,31 +179,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Potential conflicts with other branches:**
 - `pipeline-view-v1` — direct parent; v1.5 lives in the same `bristlenose/pipeline_view/` package and edits files v1 introduces. Don't start v1.5 work until v1 merges, or be ready to rebase.
 - `pipeline-subtitle-i18n` / `pipeline-diagnostic-popover-swift` / `multi-project-cloud-evicted` — all touch the 6 `common.json` locale files. Keep keys distinct (`pipeline.alternatives.*`) and use targeted text-replace, never `json.dump` round-trip.
-
----
-
-### `multi-project-cloud-evicted`
-
-**Kind:** feature — code intended for main; lands the iCloud-evicted single state in the project sidebar and a ride-along fix for the re-mount `cantFind` reason regressing to `.moved`
-**Status:** Just started
-**Started:** 18 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch multi-project-cloud-evicted/`
-**Remote:** local only (push when ready)
-
-**What it does:** Phase 3 #10 — collapse the iCloud-evicted case into a single sidebar state (cloud-arrow glyph in the trailing slot, subtitle qualifier) instead of overloading the `.cantFind` path. Includes a ride-along fix for the re-mount regression where the `cantFind` reason flips back to `.moved` after a volume comes back. See `HANDOFF.md` for the full brief.
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/CloudWatcher.swift`
-- `desktop/Bristlenose/Bristlenose/ProjectAvailability.swift`
-- `desktop/Bristlenose/Bristlenose/ProjectRow.swift`
-- `desktop/Bristlenose/Bristlenose/VolumeWatcher.swift`
-- `desktop/Bristlenose/Bristlenose/ProjectIndex.swift`
-- `bristlenose/locales/{en,es,fr,de,ko,ja}/common.json`
-
-**Potential conflicts with other branches:**
-- `multi-project-folder-watcher` — also touches `ProjectIndex.swift` and sidebar row chrome; coordinate at merge time on the row-state model.
-- `pipeline-subtitle-i18n` — touches the same `common.json` locale files for ProjectRow subtitles; coordinate on key naming to avoid duplicate-key churn at merge.
-- `pipeline-diagnostic-popover-swift` — adjacent Swift surface but different pill/popover concern; low overlap.
 
 ---
 
@@ -449,6 +422,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `multi-project-cloud-evicted` — merged 19 May 2026
+
+Phase 3 #10 — collapsed the iCloud-evicted case into a single sidebar state (cloud-arrow glyph in the trailing slot, subtitle qualifier) instead of overloading the `.cantFind` path. Includes a ride-along fix for the re-mount regression where the `cantFind` reason flipped back to `.moved` after a volume came back. Merged via `5876152`. Worktree detached and tagged orange on disk; local branch deleted; remote was never pushed.
 
 ### `dev-keychain-signing-fix` — merged 16 May 2026
 

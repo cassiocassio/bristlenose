@@ -360,6 +360,15 @@ struct ProjectRow: View {
         switch pipelineState {
         case .failed(let summary, _):
             return .failed(summary: summary)
+        case .failedWithDiagnostic:
+            // Sidebar is the attention surface, not the detail surface —
+            // budget is ~22 EN chars before DE/ES/FR swell truncates. The
+            // toolbar pill carries the dominant category + count; the
+            // sidebar row just says "row needs your eyes". Per
+            // `feedback_sidebar_is_attention_not_affordance`.
+            return .failed(summary: i18n.t("desktop.pipeline.diagnostic.header.failed"))
+        case .completedPartial:
+            return .pipelineText(i18n.t("desktop.pipeline.diagnostic.header.completed_partial"))
         case .running:
             let key = isStoppingProgress
                 ? "desktop.chrome.pipeline.stopping"

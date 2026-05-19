@@ -38,6 +38,12 @@ enum EventLogReader {
         let endedAt: String?
         let outcome: String?
         let cause: Cause?
+        /// Schema v5 (May 2026). Present on `run_completed` / `run_failed`
+        /// terminus events once the run has begun populating per-stage
+        /// outcomes. Schema-additive — older logs decode as `nil` and the
+        /// `mapCompleted` / `run_failed` paths fall back to the pre-v5
+        /// state derivations. See `tests/fixtures/pipeline-summary-contract.json`.
+        let summary: PipelineSummary?
 
         enum CodingKeys: String, CodingKey {
             case event, kind
@@ -46,6 +52,7 @@ enum EventLogReader {
             case endedAt = "ended_at"
             case outcome
             case cause
+            case summary
         }
     }
 
@@ -136,6 +143,13 @@ enum EventLogReader {
         case "run_cancelled":
             return .stopped(stagesComplete: stagesComplete)
         case "run_failed":
+            // v5 path: a populated `summary` carries per-stage / per-session
+            // diagnostics — route to the diagnostic popover instead of the
+            // legacy stderr-tail surface.
+            if let pipelineSummary = event.summary,
+               pipelineSummary.totalFailureCount > 0 {
+                return .failedWithDiagnostic(summary: pipelineSummary)
+            }
             let summary = event.cause?.message ?? "Failed"
             let category = event.cause?.category ?? .unknown
             return .failed(summary, category: category)
@@ -155,6 +169,12 @@ enum EventLogReader {
         // full render → .ready.
         if event.kind == "transcribe-only" {
             return .partial(kind: event.kind, stagesComplete: stagesComplete)
+        }
+        // v5 path: `run_completed` with a summary that carries any session
+        // failure → `.completedPartial` (a report was written but degraded).
+        // Zero failures (or no summary at all) keeps the existing `.ready`.
+        if let summary = event.summary, summary.totalFailureCount > 0 {
+            return .completedPartial(summary: summary)
         }
         // For .ready we want a Date — parse `ended_at` if available.
         let date: Date

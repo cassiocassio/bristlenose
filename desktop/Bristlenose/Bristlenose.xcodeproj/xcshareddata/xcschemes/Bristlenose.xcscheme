@@ -63,6 +63,48 @@
             ReferencedContainer = "container:Bristlenose.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "showcase_partial_dense"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "showcase_failed_auth_burst"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "showcase_failed_multi_category"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "showcase_truncated_varied"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "showcase_all_glyphs"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "isAllStatesContextMode"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "showcase_all_states"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "showcase_typical_partial"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"

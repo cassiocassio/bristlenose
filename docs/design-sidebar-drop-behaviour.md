@@ -160,7 +160,7 @@ classifyTarget(location):
 | Untracked project | refusedRow | no-entry | Refuse. |
 | Source folder | empty sidebar | green plus | Create new project _(existing path)_. |
 | Source folder | acceptingRow | green plus | Copy files into project _(cohort 1 shipped)_. |
-| Source folder | sidebarFolder | green plus | **Create new project *inside* the project-sidebar-folder.** Auto-expand the folder on drop. _(shipped sidebar-drop-folder-row, 19 May 2026.)_ |
+| Source folder | sidebarFolder | green plus | **Create new project *inside* the project-sidebar-folder, at the top.** Auto-expand on drop. _(shipped sidebar-drop-folder-row, 19 May 2026.)_ **Why top, not bottom (Finder default):** UR projects are weeks-long. There aren't fifty of them. The active project sits at the top; older ones drop down and eventually off the bottom. The sidebar is a recency surface, not a filesystem listing. Don't "fix" this to match Finder's append-to-bottom convention. |
 | Source folder | refusedRow | no-entry | Refuse. |
 | Untracked project | sidebarFolder | green plus | **Import as new project *inside* the project-sidebar-folder.** Auto-expand. Adoption path (existing analysed folder), `scan` not `start`. _(shipped sidebar-drop-folder-row, 19 May 2026.)_ |
 | Tracked project | sidebarFolder | green plus | Move into the project-sidebar-folder _(internal-drag, already shipped via String payload — typed `ProjectDragID` upgrade captured as follow-up branch)_. |

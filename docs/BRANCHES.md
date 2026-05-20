@@ -43,6 +43,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
 | `bristlenose_branch sidebar-drop-folder-row/` | `sidebar-drop-folder-row` | feature | Close V1 design-doc gap: Finder content dropped on project-sidebar-folder row creates a new project *inside* the folder (folderId set); upgrade internal project-drag payload from String to a typed `ProjectDragID: Transferable` newtype (UTType `app.bristlenose.project-id`) so the folder row's two drop modifiers don't payload-collide |
 | `bristlenose_branch unify-failure-popover/` | `unify-failure-popover` | feature | One popover surface for all failure-shaped pill states; legacy popover view deleted, `.failed` routes through the diagnostic popover with degraded-fidelity hint when `PipelineSummary` is missing |
+| `bristlenose_branch sidebar-list-not-rendering/` | `sidebar-list-not-rendering` | bugfix | Fix: sidebar List renders nothing in zero-projects state — folders persisted but never visible |
 
 
 
@@ -143,6 +144,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `pipeline-view-v1` | `bristlenose_branch pipeline-view-v1/` | local only |
 | `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
 | `unify-failure-popover` | `bristlenose_branch unify-failure-popover/` | local only |
+| `sidebar-list-not-rendering` | `bristlenose_branch sidebar-list-not-rendering/` | local only |
 
 
 
@@ -150,6 +152,26 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `sidebar-list-not-rendering`
+
+**Kind:** bugfix — corrective change; sidebar List renders nothing in zero-projects state even when folders are persisted. Ends in merge to `sidebar-drop-folder-row` (then on to main with the parent).
+**Status:** Just started
+**Started:** 21 May 2026
+**Forked from:** `sidebar-drop-folder-row`
+**Worktree:** `/Users/cassio/Code/bristlenose_branch sidebar-list-not-rendering/`
+**Remote:** local only (push when ready)
+
+**What it does:** Fix: sidebar List renders nothing in zero-projects state — folders persisted but never visible. See `HANDOFF.md` for the full brief.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/ContentView.swift`
+
+**Potential conflicts with other branches:**
+- `sidebar-drop-folder-row` — direct parent; both touch sidebar SwiftUI. Merge target is the parent, so conflicts resolve into the parent's working set rather than against main.
+- `unify-failure-popover` / `multi-project-folder-watcher` — sibling sidebar work but different files; no overlap with `ContentView.swift` expected.
 
 ---
 

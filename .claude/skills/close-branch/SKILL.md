@@ -28,17 +28,64 @@ If ANY of these checks fail, **stop immediately** with:
 
 ## Step 2: Check merge status
 
-Run `git branch --merged main` and check if `$0` appears.
+**First, determine the merge-back target.** Most branches fork from `main` and merge back to `main`. Stacked branches (created via `/new-feature --base=<other>`) fork from another in-flight branch and typically merge back to that branch first, riding into main as part of the parent's eventual merge.
 
-If the branch is **NOT merged**, show the unmerged commits with `git log main..$0 --oneline`, then stop with:
+Read `docs/BRANCHES.md` and look for a `**Forked from:**` line in `$0`'s Active Branches section. If present, that's the base. If absent, the base is `main`. Call this `$BASE`.
 
-> Branch `$0` has NOT been merged to main. Merge it first: `git merge $0` (from main), then re-run `/close-branch $0`.
->
-> <sub>If you actually want to abandon or force-delete instead, ask.</sub>
+```bash
+BASE=$(awk -v branch="### \`$0\`" '
+  $0 == branch { in_section = 1; next }
+  in_section && /^### / { exit }
+  in_section && /^\*\*Forked from:\*\*/ {
+    # Strip "**Forked from:** " prefix and any trailing whitespace
+    sub(/^\*\*Forked from:\*\*[[:space:]]*/, ""); sub(/[[:space:]]+$/, "")
+    print; exit
+  }
+' /Users/cassio/Code/bristlenose/docs/BRANCHES.md)
+BASE=${BASE:-main}
+```
+
+Then check merged status. Three states matter:
+
+1. **Merged to main** — clean close, branch ride is over. Run `git branch --merged main` and look for `$0`.
+2. **Merged to `$BASE` but not main** (only possible if `$BASE` != main) — branch landed on the parent; parent hasn't reached main yet. Run `git branch --merged $BASE` and look for `$0`.
+3. **Not merged anywhere** — fail-loud.
+
+```bash
+MERGED_MAIN=$(git branch --merged main | grep -E "^[* ]*$0\$" || true)
+if [ -n "$MERGED_MAIN" ]; then
+  STATE="merged-main"
+elif [ "$BASE" != "main" ] && git show-ref --verify --quiet "refs/heads/$BASE"; then
+  MERGED_BASE=$(git branch --merged "$BASE" | grep -E "^[* ]*$0\$" || true)
+  if [ -n "$MERGED_BASE" ]; then
+    STATE="merged-base"
+  else
+    STATE="unmerged"
+  fi
+else
+  STATE="unmerged"
+fi
+```
+
+Then act on `$STATE`:
+
+- **`merged-main`** — continue (the usual path).
+- **`merged-base`** — surface the situation and ask:
+  > Branch `$0` is merged to `$BASE` but `$BASE` hasn't reached main yet. Archive `$0` now (the work rides into main when `$BASE` merges), or wait until `$BASE` merges first?
+  >
+  > [Archive now / Wait]
+  
+  "Archive now" is the typical answer for stacked branches — the worktree is no longer being touched. "Wait" stops with a reminder to re-run `/close-branch $0` after `$BASE` lands.
+- **`unmerged`** — show unmerged commits and stop:
+  > Branch `$0` has NOT been merged to `$BASE` (or main). Unmerged commits:
+  > ```
+  > $(git log $(git merge-base $BASE $0)..$0 --oneline)
+  > ```
+  > Merge it first: `git checkout $BASE && git merge $0` (or open a PR), then re-run `/close-branch $0`.
+  >
+  > <sub>If you actually want to abandon or force-delete instead, ask.</sub>
 
 If the branch ref no longer exists (already deleted in a partial previous run), check if the worktree directory still exists — if so, continue from Step 4 (archival).
-
-If merged, continue.
 
 ## Step 3: Check for uncommitted work in the worktree
 
@@ -114,13 +161,15 @@ Prompt via `AskUserQuestion`:
 
 ## Step 4: Capture commit history (BEFORE any deletion)
 
-This must happen while the branch ref still exists. Capture:
+This must happen while the branch ref still exists. Capture commits since the fork point:
 
 ```bash
-git log $(git merge-base main $0)..$0 --oneline
+git log $(git merge-base $BASE $0)..$0 --oneline
 ```
 
-This uses `merge-base` instead of `main..$0` because `main..$0` is empty for merged branches.
+Uses `merge-base $BASE` (not `merge-base main`) so stacked branches show only their *own* commits, not the inherited parent commits. For branches forked from main, `$BASE` is `main` and the result is identical.
+
+Uses `merge-base` instead of `$BASE..$0` because the latter is empty for merged branches.
 
 Save this output — you'll need it for the stale marker file in Step 6.
 
@@ -242,12 +291,15 @@ Then:
 1. Remove the branch's full section from **Active Branches**
 2. Remove the branch's row from the **Worktree Convention** table (if present)
 3. Remove the branch's row from the **Backup Strategy** table (if present)
-4. Add an entry under **Completed Branches (for reference)** following the existing format:
+4. Add an entry under **Completed Branches (for reference)** following the existing format. If `$BASE` (from Step 2) is not `main`, include the merge target so the history reads correctly:
 
 ```markdown
 ### `$0` — merged <today's date, D Mon YYYY>
 
 <Brief summary pulled from the "What it does" text of the active entry>
+
+<If $BASE is not main, add one line:>
+Forked from and merged back to `$BASE`.
 ```
 
 5. Update the **Updated:** date at the top of the file
@@ -264,12 +316,16 @@ git commit -m "close $0 branch, update BRANCHES.md"
 
 Print a summary of everything that was done:
 
+- Merge target: `$BASE` (note explicitly if not `main`, so the user remembers the parent still needs to land)
 - Stale marker: created (or skipped if directory was gone)
 - Worktree: detached from git, directory preserved on disk at `...`
 - Local branch: deleted / kept
 - Remote branch: deleted / kept / didn't exist
 - BRANCHES.md: updated and committed
 - Tests: passed / skipped / N failures noted
+
+If `$BASE` is not `main`, add an explicit reminder:
+> `$0` rode into `$BASE`. `$BASE` itself still needs to land in main — track via its own `/close-branch` later.
 
 Then remind the user:
 > The worktree directory is still on disk at `/Users/cassio/Code/bristlenose_branch $0/`. Delete it whenever you like — it's just a regular folder now, not connected to git.

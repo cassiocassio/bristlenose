@@ -6,19 +6,23 @@ This document tracks active feature branches to help multiple Claude sessions co
 
 ---
 
-## Branch Kinds (merge intent)
+## Branch Kinds
 
-Every branch declares a **Kind** that encodes what it's *for* and what should happen to it at end of life:
+Every branch declares a **Kind** — a one-word descriptor of what the branch is for. Kind is metadata for human readers of this file; it doesn't gate skill behaviour (merge target comes from `**Forked from:**`; merge-or-abandon is asked at `/close-branch` time regardless of Kind).
 
-| Kind | What it produces | End-of-life |
-|------|------------------|-------------|
-| **feature** | Code intended for main | Merge / PR-and-squash |
-| **diagnostic** | Inventory, reports, reproductions — fixes happen in *other* branches | **Discard** when narrow-fix children land. The branch itself never merges; its useful output already left via siblings |
-| **spike** | Exploratory throwaway — proves or disproves an approach | Discard. Cherry-pick selectively if a commit's worth keeping |
-| **chore** | Small ephemeral work (release tooling, doc reconciliation, dep bumps) | Merge or discard, low ceremony |
+| Kind | Description | Typical end-of-life |
+|------|-------------|---------------------|
+| **feature** | New capability or surface | Merge to main |
+| **bugfix** | Corrective change to existing behaviour | Merge to main |
+| **refactor** | Same behaviour, cleaner internals | Merge to main |
+| **docs** | Documentation-only (design docs, user manual, READMEs) | Merge to main; trivial fixes go direct |
+| **ci** | Build / release / test-infra | Merge to main |
+| **chore** | Small ephemeral work (dep bumps, doc reconciliation, release tooling) | Merge or discard, low ceremony |
+| **spike** | Exploratory throwaway — proves or disproves an approach | Usually discarded; cherry-pick if a commit's worth keeping. If it turns out unexpectedly great, just merge it. |
+| **diagnostic** | Inventory / reports / reproductions — fixes happen in *other* branches | Discarded when narrow-fix children land; the branch itself never merges, its useful output already left via siblings |
 | **parked** | On hold; may resume later | Stays on disk + remote until revived or formally retired |
 
-When opening a new branch, declare its Kind in the table below. When closing one, the Kind tells you whether to merge or just `/close-branch`.
+Pick the Kind that best describes what you're doing. Don't agonise — Kind is descriptive, not normative. If two fit, pick either.
 
 ## Worktree Convention
 

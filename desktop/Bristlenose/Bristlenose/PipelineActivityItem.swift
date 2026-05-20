@@ -376,16 +376,18 @@ struct PipelineActivityItem: View {
                     .controlSize(.small)
                     .help(i18n.t("desktop.pipeline.diagnostic.action.showLogTooltip"))
                 }
-                // Copy stays as a borderless icon button — utility gesture
-                // (silent pasteboard write, native Finder / Safari Copy URL
-                // pattern). Intentional asymmetry with Show Log: one bordered
-                // action affordance + utility icon.
+                // Copy as `.bordered .small` icon button — symmetric chrome
+                // with Show Log, asymmetric content (one text, one glyph).
+                // Apple's Finder window toolbar idiom: bordered icon-only
+                // buttons next to bordered text buttons read as one button
+                // bar at consistent visual weight.
                 Button {
                     copyDiagnosticForCurrentState()
                 } label: {
                     Image(systemName: "doc.on.doc")
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
                 .help(i18n.t("desktop.pipeline.diagnostic.action.copy"))
             }
             ScrollView {

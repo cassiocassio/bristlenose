@@ -388,7 +388,7 @@ Header (always present):
   under App Sandbox without extra entitlements. Verb-first label matches
   Apple's "Show in Finder" / "Show Package Contents" idiom for
   reveal-and-look gestures.
-- Top-right: a single `doc.on.doc` icon button (`buttonStyle(.borderless)`)
+- Top-right: a single `doc.on.doc` icon button (`buttonStyle(.bordered)` + `.controlSize(.small)` — symmetric chrome with the Show Log button, asymmetric content; Apple's Finder toolbar idiom for bordered icon-only buttons next to bordered text buttons)
   with `help("Copy details")` tooltip. Click → write plaintext to
   `NSPasteboard`. No "Copied" tick flip (silent copy is the native
   Finder / Safari Copy URL pattern). Dispatches on state — uses

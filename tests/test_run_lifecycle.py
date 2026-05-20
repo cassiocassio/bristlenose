@@ -556,7 +556,10 @@ def _spawn_lifecycle_subprocess(tmp_path: Path, body: str) -> subprocess.Popen:
     """)
     return subprocess.Popen(
         [sys.executable, "-c", script],
-        env={**os.environ},
+        # BRISTLENOSE_LOG_LEVEL=ERROR cuts cold-import logging chatter on
+        # slow CI runners — the subprocess body waits in signal.pause()
+        # so we don't need INFO/DEBUG noise here.
+        env={**os.environ, "BRISTLENOSE_LOG_LEVEL": "ERROR"},
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
@@ -602,7 +605,7 @@ def _wait_for_run_started(events_file: Path, *, timeout: float = 30.0) -> None:
 def test_subprocess_sigint_writes_run_cancelled(tmp_path: Path):
     proc = _spawn_lifecycle_subprocess(
         tmp_path,
-        body="import time\n            time.sleep(60)",
+        body="import signal\n            signal.pause()",
     )
     f = events_path(tmp_path)
     try:
@@ -641,7 +644,7 @@ def test_subprocess_clean_exit_writes_run_completed(tmp_path: Path):
 def test_subprocess_sigterm_writes_run_cancelled(tmp_path: Path):
     proc = _spawn_lifecycle_subprocess(
         tmp_path,
-        body="import time\n            time.sleep(60)",
+        body="import signal\n            signal.pause()",
     )
     f = events_path(tmp_path)
     try:

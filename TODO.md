@@ -16,10 +16,6 @@ Pick up from `docs/private/100days.md` §Critical Path. Within-sprint candidates
 
 Open follow-ups not in any active branch (surface separately, not alpha blockers):
 - **Sidebar drag-and-drop polish chips** (14 May 2026, gruber pass on commit `fce69e4`) — two small UX/correctness items deferred after the `.dropDestination` refactor. The bullets are mechanically linked — fixing (2) closes (1) cleanly: (1) **Folder row should accept Finder URL drops directly** — currently a Finder folder dropped onto a `FolderRow` bubbles up to the List's URL drop and creates a top-level project, ignoring the folder under the cursor (verified in code 19 May 2026: `ContentView.swift:1508` accepts `String.self` only). Either consume silently or, better, create the project *inside* the folder (requires threading `intoFolder: UUID?` through `processDroppedURLs` / `addProject`; current signature at `ProjectIndex.swift:329` has no `intoFolder` param). Gap V1 design doc explicitly left open — `design-sidebar-drop-behaviour.md` types `sidebarFolder(folderID)` as a target but its action table has no row for Finder content × sidebar folder. Real UX bug — visible. (2) **Replace String-typed internal-project payload with a custom `Transferable` newtype** — `.draggable(project.id.uuidString)` (`ContentView.swift:1568`) + `.dropDestination(for: String.self)` (`ContentView.swift:1508`) works but is type-weak; a `ProjectDragID: Codable, Transferable` with a custom UTType (`app.bristlenose.project-id`) would be the idiomatic version and would also close the snag in (1) by making the folder row's two drop types non-overlapping. _Drop-affordance VoiceOver moved to 100days §14 beta-Must (S6) 19 May 2026._
-- **`proc_listpids` EPERM** — zombie cleanup non-functional under sandbox. Deferred post-alpha (triaged).
-- **IOKit AppleNVMeEANUC deny** — silent, single occurrence per launch. Investigate only if it surfaces user-visibly.
-- ~~**frontend size-limit fails on `main` by 547 B**~~ ✅ **Resolved 14 May 2026** — bumped budget to 215 kB (was 210 kB) to re-baseline against Node 24 gzip output. Runtime currency / security / dep coherence outweighs sub-1% size headroom; the right fix when a version bump trips a size gate by < a few kB is to raise the budget, not lower the runtime. `frontend/CLAUDE.md` reflects the new ceiling.
-- ~~**`test_subprocess_sigterm_writes_run_cancelled` flakes on Ubuntu Python 3.10 + 3.11**~~ ✅ **Defended 19 May 2026** — post-signal `_wait_for_event` deadline bumped 30s → 60s → 120s through the `release-pipeline-actually-broken` cycle. 60s wasn't enough on 3.12 ubuntu under a 590s full-suite run; 120s holds. Defensive only — the wait is monotonic against runner load. Eventual refactor: replace the subprocess's `time.sleep(60)` body with an event-driven start signal so the test doesn't park on a long sleep at all. Post-release scope.
 
 Reference: `docs/private/handoffs/sandbox-walk-followup-fixes.md` (closeout), `docs/private/sandbox-inventory-beats-6-13.md` (16-finding inventory + status block).
 
@@ -139,25 +135,9 @@ Bigger question: same calibration likely applies to other adversarial-by-design 
 
 ---
 
-## Local AI (Ollama) — set expectations on quality + perf (3 May 2026)
-
-- [→] **Ollama setup sheet quality + perf expectations copy** — folded 8 May 2026 into `docs/private/100days.md` §2 Broken Must as `[S3] **Ollama setup quality + perf expectations copy**`. Removed from TODO.md per "antechamber not duplicate" rule.
-- [ ] **Collab with [`llmfit`](https://github.com/AlexsJones/llmfit)** for "what local model should this hardware run?" — currently `OllamaCatalog.fits()` is a hand-rolled approximation: bundled curated list + memory thresholds + "recommended for this Mac" hint. `llmfit`'s whole job is that question. Two scopes: (a) reuse llmfit as a dependency to power the model picker (replace the curated list + hint logic), (b) closer collab — contribute Bristlenose's actual analysis-task profiles (long-context theme clustering, structured quote extraction) so llmfit's "fit" metric incorporates analysis quality, not just "will it load." Reach out to AlexsJones once we have a story to tell (post-alpha, when we have real user-machine data on what actually works for analysis runs vs just chat). Captured 3 May 2026 during sandbox-debug walk.
-
----
-
-## OllamaSetupSheet — confirmation when daemon + model already present (4 May 2026)
-
-When `OllamaSetupModel.run()` finds the daemon already reachable AND the chosen model already pulled (common on a re-test, or a user who already had Ollama installed), the sheet flips straight from `.idle` → `.finishing` in a few hundred ms. AIConsentView dismisses, user lands on WelcomeView, and there's **no signal that anything actually happened**. The user has to trust that "Set up" did its job.
-
-Options to consider (don't bikeshed in this entry — pick one when it surfaces):
-- Brief success state (`.completed` phase before `.finishing`) showing "Ollama is set up — using Gemma 4 E4B" for 1.5–2s before auto-dismiss
-- A toolbar pill / toast on the WelcomeView confirming the active provider after consent flow completes ("Local AI ready — Gemma 4 E4B")
-- A persistent indicator in the toolbar/footer showing active provider + model whenever the active provider changes (broader, more useful long-term)
-
-Found during sandbox walk verification of `local-ai-provider-actually-switches` branch (4 May 2026). Not blocking alpha — fixes there are correct, the persistence works, but the speed of the happy-path tells the user nothing.
-
 ## Ideas (captured, not triaged)
+
+- **Collab with [`llmfit`](https://github.com/AlexsJones/llmfit)** for "what local model should this hardware run?" (3 May 2026) — currently `OllamaCatalog.fits()` is a hand-rolled approximation: bundled curated list + memory thresholds + "recommended for this Mac" hint. `llmfit`'s whole job is that question. Two scopes: (a) reuse llmfit as a dependency to power the model picker (replace the curated list + hint logic), (b) closer collab — contribute Bristlenose's actual analysis-task profiles (long-context theme clustering, structured quote extraction) so llmfit's "fit" metric incorporates analysis quality, not just "will it load." Reach out to AlexsJones once we have a story to tell (post-alpha, when we have real user-machine data on what actually works for analysis runs vs just chat). Captured during sandbox-debug walk.
 
 - **Post-TestFlight: adopt `mise` / `uv` / `just` per `docs/design-dev-environment.md`** (6 May 2026) — Phase 0 (skill-level desktop-binary symlinks) **landed 6 May 2026**; Phases 1–4 are post-cohort-feedback only. Don't open as a branch during the alpha sprint. The doc is the parking lot. One open chip flagged in the doc's "Codesigning vs symlinks" section: change `rsync -a` → `rsync -aL` in the xcodeproj `Copy Sidecar Resources` script so `models/` ships as real bytes, not a dangling symlink. Verify production sidecar path first — may be redundant.
 - **Doctor "(bundled)" annotation on FFmpeg path** (2 May 2026, parked from `bundled-binary-helper` review) — `bristlenose doctor` reports the resolved ffmpeg path even when it's bundle-relative inside the .app. Honest diagnostic vs add a `(bundled)` suffix so TestFlight users aren't surprised by absolute paths inside their `.app`. Product call. Park until alpha tester feedback says it's confusing. Reference: `bristlenose/doctor.py:check_ffmpeg`

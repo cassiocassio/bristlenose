@@ -38,6 +38,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch pipeline-view-v1/` | `pipeline-view-v1` | feature | Read-only Pipeline view — one CLI verb (`bristlenose pipeline`) + one React Settings tab; validates the mixture-of-models mental model with the cohort, nothing else |
 | `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
 | `bristlenose_branch sidebar-drop-folder-row/` | `sidebar-drop-folder-row` | feature | Close V1 design-doc gap: Finder content dropped on project-sidebar-folder row creates a new project *inside* the folder (folderId set); upgrade internal project-drag payload from String to a typed `ProjectDragID: Transferable` newtype (UTType `app.bristlenose.project-id`) so the folder row's two drop modifiers don't payload-collide |
+| `bristlenose_branch unify-failure-popover/` | `unify-failure-popover` | feature | One popover surface for all failure-shaped pill states; legacy popover view deleted, `.failed` routes through the diagnostic popover with degraded-fidelity hint when `PipelineSummary` is missing |
 
 
 
@@ -137,6 +138,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
 | `pipeline-view-v1` | `bristlenose_branch pipeline-view-v1/` | local only |
 | `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
+| `unify-failure-popover` | `bristlenose_branch unify-failure-popover/` | local only |
 
 
 
@@ -144,6 +146,29 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `unify-failure-popover`
+
+**Kind:** feature — code intended for main; collapses legacy failure-popover scaffolding into the diagnostic popover so all failure-shaped pill states share one SwiftUI view. Ends in merge or PR-and-squash.
+**Status:** Just started
+**Started:** 20 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch unify-failure-popover/`
+**Remote:** local only (push when ready)
+
+**What it does:** Unify the two failure popovers (legacy `.failed` and new `.failedWithDiagnostic` / `.completedPartial`) into a single SwiftUI view in `PipelineActivityItem.swift`. The new view consumes optional `PipelineSummary?` and degrades gracefully when structured data is missing (orphan `run_started`, killed sidecar, older sidecars with `summary == nil`) — same chrome, same Retry/Copy, with one explanatory line where the per-bucket SF Symbol section would be. Legacy popover view is deleted; `EventLogReader.swift` still emits `.failed(...)` for backward-compat. Alpha-Must because the legacy popover fires for the most common alpha failure mode (sidecar killed / force-quit / OOM); cohort would see two different layouts and conclude the app is half-finished. See `HANDOFF.md` for the full brief.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/PipelineActivityItem.swift` — popover view consolidation, `formatDiagnosticPlaintext` extension
+- `desktop/Bristlenose/Bristlenose/EventLogReader.swift` — comment-only (routing pointer); `.failed` enum case stays
+- `bristlenose/locales/{en,es,fr,de,ko,ja}/common.json` — one new `desktop:` key for the degraded-fidelity hint
+- `docs/design-pipeline-diagnostic-popover.md` — extend User-facing vocabulary § with the unified-surface rule
+
+**Potential conflicts with other branches:**
+- `pipeline-view-v1` / `pipeline-view-v1-5` — different surface (CLI verb + Settings tab); no overlap with `PipelineActivityItem.swift` or `EventLogReader.swift`.
+- `pipeline-subtitle-i18n` / `multi-project-folder-watcher` — both touch the 6 locale files. Keep the new key in `desktop:` namespace under a distinct path (`desktop.pipeline.diagnostic.noStructuredCause` or similar) and use targeted text-replace, never `json.dump` round-trip (CLAUDE.md i18n gotcha).
+- `sidebar-drop-folder-row` — sibling sidebar work; no file overlap.
 
 ---
 

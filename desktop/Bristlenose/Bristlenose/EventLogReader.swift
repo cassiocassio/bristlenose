@@ -131,6 +131,11 @@ enum EventLogReader {
             // In flight if the Python PID file confirms a live owned process.
             // Otherwise the prior run died without writing a terminus — display
             // as failed(unknown). The Python side reconciles on next start.
+            //
+            // `.failed` and `.failedWithDiagnostic` both route through the same
+            // SwiftUI popover surface (`PipelineActivityItem.unifiedPopoverBody`).
+            // This case renders with the degraded body (no `PipelineSummary`);
+            // the visual chrome matches the structured popovers.
             if pythonOwnedRunIsAlive(at: pidURL) {
                 return .running
             }
@@ -144,8 +149,12 @@ enum EventLogReader {
             return .stopped(stagesComplete: stagesComplete)
         case "run_failed":
             // v5 path: a populated `summary` carries per-stage / per-session
-            // diagnostics — route to the diagnostic popover instead of the
-            // legacy stderr-tail surface.
+            // diagnostics — route to `.failedWithDiagnostic` which renders
+            // the per-bucket Grid in the unified popover. Older sidecars
+            // without `summary` decode to `.failed`, which renders through
+            // the SAME popover surface with the degraded body (no buckets,
+            // just the cause string + category). See
+            // `PipelineActivityItem.unifiedPopoverBody`.
             if let pipelineSummary = event.summary,
                pipelineSummary.totalFailureCount > 0 {
                 return .failedWithDiagnostic(summary: pipelineSummary)

@@ -203,11 +203,14 @@
         "failed": "Lauf fehlgeschlagen"
       },
       "action": {
-        "copy": "Details kopieren"
+        "copy": "Details kopieren",
+        "showLog": "Protokoll anzeigen",
+        "showLogTooltip": "Analyseprotokolldatei anzeigen"
       },
       "tooltip": {
         "completed_partial": "Analyse für {{project}} mit Fehlern beendet"
       },
+      "noStructuredCause": "Detaillierte Ursache nicht erfasst.",
       "overflow_one": "… und {{count}} weiterer Fehler gekürzt",
       "overflow_other": "… und {{count}} weitere Fehler gekürzt"
     }

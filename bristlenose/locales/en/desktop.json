@@ -203,11 +203,14 @@
         "failed": "Run failed"
       },
       "action": {
-        "copy": "Copy details"
+        "copy": "Copy details",
+        "showLog": "Show Log",
+        "showLogTooltip": "Show the analysis log file"
       },
       "tooltip": {
         "completed_partial": "Analysis finished with failures for {{project}}"
       },
+      "noStructuredCause": "Detailed cause not captured.",
       "overflow_one": "… and {{count}} more failure truncated",
       "overflow_other": "… and {{count}} more failures truncated"
     }

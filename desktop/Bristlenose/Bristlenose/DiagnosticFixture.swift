@@ -32,11 +32,16 @@ enum DiagnosticFixture {
     /// Result of loading a scenario. `.none` = env var unset / Release build.
     /// `.clean` = scenario has zero failures — caller should NOT override
     /// (matches the spec's "clean run keeps `.ready`" regression check).
+    /// `.noSummary` covers the `.failed(message, category)` enum case
+    /// (older sidecars / orphan-`run_started`) — no `PipelineSummary` on the
+    /// wire, so the popover renders the degraded body. Same unified popover
+    /// surface as the structured cases; only the body shape differs.
     enum Result {
         case none
         case clean
         case partial(PipelineSummary)
         case failed(PipelineSummary)
+        case noSummary(message: String, category: PipelineFailureCategory)
     }
 
     #if DEBUG
@@ -48,9 +53,24 @@ enum DiagnosticFixture {
         }
         logger.info("env var = \(name, privacy: .public)")
 
+        // `failed_no_summary` is a sentinel scenario — no `PipelineSummary` is
+        // available on this path; the caller injects `.failed(message, category)`
+        // directly. Short-circuit before the scenario-table lookup so we don't
+        // need to fabricate a synthetic summary for an enum case that exists
+        // precisely for the no-summary path.
+        if name == "failed_no_summary" {
+            logger.info(
+                "injecting failed_no_summary; .failed(message, category: .unknown)"
+            )
+            return .noSummary(
+                message: "Analysis stopped unexpectedly.",
+                category: .unknown
+            )
+        }
+
         guard let scenario = scenarios[name] else {
             logger.warning(
-                "scenario '\(name, privacy: .public)' not found; valid names: \(scenarios.keys.sorted().joined(separator: ", "), privacy: .public)"
+                "scenario '\(name, privacy: .public)' not found; valid names: \(scenarios.keys.sorted().joined(separator: ", ") + ", failed_no_summary", privacy: .public)"
             )
             return .none
         }

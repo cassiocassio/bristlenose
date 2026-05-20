@@ -104,6 +104,11 @@
             value = "showcase_typical_partial"
             isEnabled = "NO">
          </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "failed_no_summary"
+            isEnabled = "NO">
+         </EnvironmentVariable>
       </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction

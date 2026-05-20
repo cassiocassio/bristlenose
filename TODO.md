@@ -19,22 +19,6 @@ Open follow-ups not in any active branch (surface separately, not alpha blockers
 
 Reference: `docs/private/handoffs/sandbox-walk-followup-fixes.md` (closeout), `docs/private/sandbox-inventory-beats-6-13.md` (16-finding inventory + status block).
 
-### A3 cli-honest-output follow-ups (parked, see review log)
-
-Status: A3 landed on `main` 14 May 2026 as commits `dc71073` (code+tests+Swift), `607202d` (user-facing docs), `04dcdd6` (design-doc sweep). Review log: `docs/private/reviews/cli-improvements.md` — 30 findings, 15 resolved / 7 parked / 8 ignored.
-
-Parked items most likely to resurface during cohort calls (in priority order):
-- **Failure-banner copy in manual.md** (Finding 22) — new banners aren't documented anywhere user-readable. Manual.html is the natural Google landing for "bristlenose claude api key invalid". 3–5 bullet "When things go wrong" section. Pairs with Finding 25 (doctor positioning) and Finding 24 (run/serve mental-model one-liner).
-- **AUTH suffix edge cases** (Finding 14) — `(no key set)` / `(key too short)` alternate diagnostic when key is missing/typo'd. Surfaces if a tester hits "rejected" with no suffix and asks why.
-- **Abandon-path verbosity** (Finding 7, parked Chesterton) — surface partial-run stats on mid-run DISK / MISSING_BINARY via a `--verbose` flag on `run` if cohort asks.
-
-### cli-just-works follow-ups (deferred from cli-just-works branch — see Decisions block at `.claude/plans/cli-just-works.md`)
-
-- **No-account-yet flow** — numbered URL → getpass → optional Keychain persist → re-enter validation. Existing `_maybe_prompt_for_provider` covers the simpler "missing-key → prompt" case; full-numbered flow defers to a follow-up branch. Spec lives in the Decisions block.
-- **`pipeline-events.jsonl` `Cause` entries on preflight aborts** (finding 12 in design doc) — currently aborts go through `typer.Exit(2)` with the recovery message; threading the event writer through the preflight modules is its own small refactor.
-- **Verify quarterly-drift cron `trig_01BtVXKG5hBnhPF4bGwR78CR` is armed** against current `billing_hints.py` URLs/minimums. Verification task, not code.
-- **Translation review** for `bristlenose/locales/{es,fr,de,ko,ja}/preflight.json` — currently English mirrors. Picks up the parked product-polish text rewrites (Findings 12, 13, 14, 45, 49 in the review log) at the same time so translators see the final English shape once, not twice.
-
 ---
 
 ## Desktop app security (must-fix before any distribution)
@@ -117,21 +101,6 @@ Remaining multi-project work tracked in `.claude/plans/tf-multi-project.md` (Pha
 - [x] **PII audit artifacts** — `docs/pii-audit/` with README, redacted transcript, and summary log. Linked from help panel
 
 Remaining PII work tracked in `docs/private/100days.md` §4 Value (PII dashboard widget) and §6 Risk.
-
----
-
-## Re-evaluate security-review agent calibration (29 Apr 2026)
-
-AI makes it cheap to enumerate every "could go wrong" — that doesn't mean every finding is worth acting on. During Beat 3 QA setup, security-review returned 11 findings against a single QA doc; piping them verbatim (rotate test keys, dedicated $5-cap key, Logger privacy spot-check, quit Zoom/iCloud before Wi-Fi off, wipe keychain via shell) added theatre without proportional risk reduction for a dev Mac with $20-cap + no-auto-renew keys. User pushback ("if they get my mac and cut my thumb off they can have the keychain — what do i care about $20 in a log") was the right calibration check.
-
-Agent-side fixes to evaluate:
-- Have the agent lead each finding with realistic impact + cost-of-mitigation, not adversarial scenario. Proportionality as burden of proof.
-- Self-classify findings as "ship blocker" / "code-quality nice" / "threat-model dependent" instead of flat severity.
-- Inject the user's threat model (single-user dev Mac, capped keys, security-literate ex-Canonical) so the agent weighs against actual consequence.
-
-Caller-side discipline already captured in `feedback_proportionate_security.md` and the index entry in `MEMORY.md` — don't pipe agent output verbatim, mediate.
-
-Bigger question: same calibration likely applies to other adversarial-by-design agents (a11y-review, perf-review). Worth tuning the suite prompts together.
 
 ---
 

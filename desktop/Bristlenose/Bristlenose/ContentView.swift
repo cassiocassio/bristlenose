@@ -1417,16 +1417,22 @@ struct ContentView: View {
         // PROBE — sidebar-list-not-rendering. Fires on every body re-evaluation.
         let _ = Self.sidebarProbe.debug("sidebar body: projects=\(self.projectIndex.projects.count, privacy: .public) folders=\(self.projectIndex.folders.count, privacy: .public) sidebarItems=\(self.projectIndex.sidebarItems.count, privacy: .public) selection.count=\(self.selection.count, privacy: .public) persistedProjectID=\(self.persistedProjectID, privacy: .public)")
         return List(selection: $selection) {
-            Section {
-                // "+ New Project" at the top of the list — always visible.
-                Button {
-                    createNewProject()
-                } label: {
-                    Label(i18n.t("desktop.menu.file.newProject"), systemImage: "plus")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
+            // "+ New Project" lives OUTSIDE the Section. Per handoff Fix 1
+            // and `desktop/CLAUDE.md`'s documented-fragile composition:
+            // `Section + Button + ForEach.onMove + conditional Text` drops
+            // Section content when `projects.isEmpty == true` on macOS 26.
+            // First pass moved the Text out; folders still didn't render with
+            // projects=0. Moving the Button out too is the rest of the fix —
+            // Section now contains only the ForEach.
+            Button {
+                createNewProject()
+            } label: {
+                Label(i18n.t("desktop.menu.file.newProject"), systemImage: "plus")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
 
+            Section {
                 ForEach(projectIndex.sidebarItems) { item in
                     // PROBE — sidebar-list-not-rendering. Fires once per row evaluated.
                     let _ = Self.sidebarProbe.debug("sidebar row: \(String(describing: item), privacy: .public)")

@@ -48,6 +48,19 @@ struct FolderRow: View {
         } icon: {
             Image(systemName: "folder.fill")
         }
+        // Stretch to full row width with a hittable shape so drag-and-drop
+        // targets the whole row, not just the icon+text Label extent. Without
+        // this, drops over the empty space right of the folder name fall
+        // through to the DisclosureGroup (no drop handler) and spring back.
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // Extend hit region vertically into the SwiftUI List inter-row gap.
+        // SidebarDropDelegate hit-tests via the row's rendered frame, so
+        // padding here (before contentShape) widens the captured rectangle
+        // — the List-level URL dropDestination becomes a true fallback for
+        // the empty area below the last row, instead of stealing drops that
+        // landed in the gap above a folder the user was aiming at.
+        .padding(.vertical, 2)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Rename

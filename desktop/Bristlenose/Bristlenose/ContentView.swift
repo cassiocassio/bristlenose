@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import os
 
 // MARK: - Window title manager
 
@@ -165,6 +166,9 @@ struct InFlightSwitchPrompt: Identifiable {
 /// - Centre: tab segmented control (Cmd+1-5)
 /// - Trailing: project name as window title
 struct ContentView: View {
+
+    // PROBE — sidebar-list-not-rendering branch. Remove once fix lands.
+    private static let sidebarProbe = Logger(subsystem: "app.bristlenose", category: "sidebar-debug")
 
     @EnvironmentObject var serveManager: ServeManager
     @EnvironmentObject var bridgeHandler: BridgeHandler
@@ -1410,7 +1414,9 @@ struct ContentView: View {
     // MARK: - Sidebar
 
     private var sidebar: some View {
-        List(selection: $selection) {
+        // PROBE — sidebar-list-not-rendering. Fires on every body re-evaluation.
+        let _ = Self.sidebarProbe.debug("sidebar body: projects=\(self.projectIndex.projects.count, privacy: .public) folders=\(self.projectIndex.folders.count, privacy: .public) sidebarItems=\(self.projectIndex.sidebarItems.count, privacy: .public) selection.count=\(self.selection.count, privacy: .public) persistedProjectID=\(self.persistedProjectID, privacy: .public)")
+        return List(selection: $selection) {
             Section {
                 // "+ New Project" at the top of the list — always visible.
                 Button {
@@ -1422,6 +1428,8 @@ struct ContentView: View {
                 .buttonStyle(.plain)
 
                 ForEach(projectIndex.sidebarItems) { item in
+                    // PROBE — sidebar-list-not-rendering. Fires once per row evaluated.
+                    let _ = Self.sidebarProbe.debug("sidebar row: \(String(describing: item), privacy: .public)")
                     switch item {
                     case .folder(let folder):
                         folderSection(folder)

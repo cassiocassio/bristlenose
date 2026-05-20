@@ -1508,6 +1508,34 @@ struct ContentView: View {
                     projectIndex.removeFolder(id: folder.id)
                 }
             )
+            // Single `.dropDestination(for: SidebarDrop.self)` handles both
+            // internal project drags (String payload) and Finder URL drops.
+            // Stacking two `.dropDestination` modifiers is unsupported and
+            // silently breaks on List rows / DisclosureGroup hosts
+            // (FB12980427) — see `SidebarDrop.swift` for the rationale.
+            // Attached to FolderRow (the drawn content), not the
+            // DisclosureGroup container, per Apple's recommendation.
+            .dropDestination(for: SidebarDrop.self) { items, _ in
+                var finderURLs: [URL] = []
+                for item in items {
+                    switch item {
+                    case .project(let id):
+                        projectIndex.moveProject(projectId: id, toFolder: folder.id)
+                    case .url(let url):
+                        finderURLs.append(url)
+                    }
+                }
+                if !finderURLs.isEmpty {
+                    handleDropOnFolder(id: folder.id, urls: finderURLs)
+                }
+                return true
+            } isTargeted: { isOver in
+                if isOver {
+                    dropTargetFolderID = folder.id
+                } else if dropTargetFolderID == folder.id {
+                    dropTargetFolderID = nil
+                }
+            }
             .contextMenu {
                 Button(i18n.t("desktop.menu.folder.rename")) {
                     renamingFolderID = folder.id
@@ -1523,42 +1551,6 @@ struct ContentView: View {
             }
         }
         .tag(SidebarSelection.folder(folder.id))
-        // Internal project-row drag onto this project-sidebar-folder —
-        // moves the project into the folder. The draggable payload from
-        // ProjectRow is the project UUID as a String.
-        // (Typed-payload upgrade — ProjectDragID Transferable newtype —
-        // captured as a follow-up branch; not bundled here. SwiftUI
-        // dispatches by Transferable type, so the sibling URL-drop
-        // modifier below already disambiguates without it.)
-        .dropDestination(for: String.self) { uuids, _ in
-            for uuidString in uuids {
-                guard let projectId = UUID(uuidString: uuidString) else { continue }
-                projectIndex.moveProject(projectId: projectId, toFolder: folder.id)
-            }
-            return true
-        } isTargeted: { isOver in
-            if isOver {
-                dropTargetFolderID = folder.id
-            } else if dropTargetFolderID == folder.id {
-                dropTargetFolderID = nil
-            }
-        }
-        // Finder content dropped onto this project-sidebar-folder — creates
-        // a new project inside the folder. Routes via `handleDropOnFolder`,
-        // which also auto-expands the folder so the new row is visible.
-        // Both this modifier and the String one above share the same
-        // `dropTargetFolderID` isTargeted state — SwiftUI dispatches by
-        // payload type, so only one fires per drag.
-        .dropDestination(for: URL.self) { urls, _ in
-            handleDropOnFolder(id: folder.id, urls: urls)
-            return true
-        } isTargeted: { isOver in
-            if isOver {
-                dropTargetFolderID = folder.id
-            } else if dropTargetFolderID == folder.id {
-                dropTargetFolderID = nil
-            }
-        }
         .overlay(
             RoundedRectangle(cornerRadius: 4)
                 .stroke(Color.accentColor, lineWidth: 2)
@@ -1606,7 +1598,7 @@ struct ContentView: View {
             }
         }
         .tag(SidebarSelection.project(project.id))
-        .draggable(project.id.uuidString)
+        .draggable(ProjectDragID(id: project.id))
         .contextMenu {
             // "Locate…" for moved/deleted projects — actionable first.
             if case .cantFind = project.availability {

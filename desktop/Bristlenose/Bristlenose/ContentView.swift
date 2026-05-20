@@ -1441,18 +1441,24 @@ struct ContentView: View {
                 .onMove { source, destination in
                     projectIndex.moveSidebarItems(from: source, to: destination)
                 }
-
-                // Empty state hint when no projects exist.
-                if projectIndex.projects.isEmpty {
-                    Text(i18n.t("desktop.chrome.emptyStateHint"))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 20)
-                        .listRowSeparator(.hidden)
-                }
             } header: {
                 Text(i18n.t("desktop.chrome.projects"))
+            }
+
+            // Empty-state hint lives OUTSIDE the Section. Inside the Section,
+            // its conditional presence destabilised the ForEach.onMove
+            // identity contract — Section content (header, button, folder
+            // rows) silently dropped from the rendered List. Tightened to
+            // `projects.isEmpty && folders.isEmpty`: folders-only is an
+            // intentional setup state (user has filing-cabinet-laid-out
+            // their projects but not yet dropped interviews), not empty.
+            if projectIndex.projects.isEmpty && projectIndex.folders.isEmpty {
+                Text(i18n.t("desktop.chrome.emptyStateHint"))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 20)
+                    .listRowSeparator(.hidden)
             }
         }
         .accessibilityLabel(i18n.t("desktop.chrome.projects"))

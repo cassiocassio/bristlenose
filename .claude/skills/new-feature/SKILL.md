@@ -36,6 +36,7 @@ The Claude Code Bash tool inherits PATH from the harness, which has occasionally
 | Flag | Purpose | Skips |
 |---|---|---|
 | `--kind=<feature\|spike\|diagnostic\|chore\|parked>` | Pre-declares Branch Kind | Step 3.5 question |
+| `--base=<branch-name>` | Fork from a branch other than `main`. Used when the new branch sits on top of in-flight work that hasn't merged yet (typical case: stacked feature branches where conflicting with the parent would be guaranteed). Defaults to `main`. | Nothing — feeds Step 4 |
 | `--plan=<path>` | Path (absolute or `~/`-style) to a Markdown file with the self-contained prompt for the new session | Nothing — feeds Step 4b |
 | `--purpose="<one line>"` | "What it does" line for BRANCHES.md | Step 11 question |
 | `--files="<comma,separated,paths>"` | Files this branch will touch | Step 11 question |
@@ -47,6 +48,7 @@ Parse the args as: first token is the branch name, remaining tokens are flags. I
 
 Validation:
 - `--kind` value must be one of the five enum entries; reject anything else with a clear message (don't silently fall back).
+- `--base` value must be an existing local branch ref (`git show-ref --verify --quiet refs/heads/<value>`). If it doesn't exist, stop with: "Base branch `<value>` doesn't exist locally. Check `git branch --list` or fetch from origin first." If `--base` is absent, the effective base is `main`.
 - `--plan` path must exist and be a `.md` file; if not, stop with the bad path quoted back.
 - `--purpose` and `--files` are free text; no validation.
 
@@ -84,6 +86,8 @@ Record the answer; it gets written into BRANCHES.md in Step 11. **Don't default 
 
 ## Step 4: Create branch and worktree
 
+The effective base from Step 0 is the value of `--base`, or `main` if absent. Call this `$BASE` below.
+
 First, check current state to handle partial previous runs:
 
 ```bash
@@ -94,10 +98,18 @@ test -d "/Users/cassio/Code/bristlenose_branch $0" && echo "DIR_EXISTS" || echo 
 ```
 
 Then proceed based on what exists:
-- **Neither exists:** Create both: `git branch $0 main && git worktree add "/Users/cassio/Code/bristlenose_branch $0" $0`
-- **Branch exists, no directory:** Just add the worktree: `git worktree add "/Users/cassio/Code/bristlenose_branch $0" $0`
+- **Neither exists:** Create both: `git branch $0 $BASE && git worktree add "/Users/cassio/Code/bristlenose_branch $0" $0`
+- **Branch exists, no directory:** Just add the worktree: `git worktree add "/Users/cassio/Code/bristlenose_branch $0" $0`. (Don't re-fork from `$BASE` — the existing branch ref wins; if the user wanted a different base they should delete the branch first.)
 - **Both exist and worktree is registered** (`git worktree list` shows it): Skip — tell the user "Branch and worktree already exist, resuming setup."
 - **Directory exists but isn't a worktree:** Stop — something unexpected is there, ask the user what to do.
+
+**If `$BASE` is not `main`**, tell the user explicitly so they know what the branch is forked from — this matters for `/close-branch` later (merge-back target) and for understanding which other in-flight work this branch depends on:
+
+```
+Branch $0 forked from $BASE (not main). It inherits all commits on $BASE.
+When you /close-branch later, it'll be expected to merge back to $BASE,
+not directly to main (unless $BASE itself is discarded first).
+```
 
 If the git commands fail for any other reason, tell the user and stop.
 
@@ -359,6 +371,7 @@ Then:
    **Kind:** <feature | diagnostic | spike | chore | parked> — <one-line on merge intent: "code lands on main", "discard when children land", "throwaway exploration", etc.>
    **Status:** Just started
    **Started:** <today's date, format: D Mon YYYY, no leading zero on day>
+   **Forked from:** <$BASE — omit this line entirely if $BASE is `main`; include if non-main so /close-branch knows the merge-back target>
    **Worktree:** `/Users/cassio/Code/bristlenose_branch $0/`
    **Remote:** local only (push when ready)
 

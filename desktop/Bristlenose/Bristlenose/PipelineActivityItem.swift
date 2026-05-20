@@ -19,12 +19,6 @@ struct PipelineActivityItem: View {
     @EnvironmentObject var i18n: I18n
     @State private var showPopover = false
     @State private var nowTick: Date = Date()
-    @State private var copyConfirmed = false
-    /// Confirm sheet for the destructive Re-analyse path (outputExists).
-    /// Decoupled from `showPopover` so the popover dismisses cleanly before
-    /// the confirm sheet opens.
-    @State private var showReAnalyseConfirm = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var state: PipelineState? { pipelineRunner.state[project.id] }
     private var progress: PipelineProgress? { liveData.progress[project.id] }
@@ -80,29 +74,11 @@ struct PipelineActivityItem: View {
                     try? await Task.sleep(for: .seconds(1))
                 }
             }
-            .alert(
-                "Re-analyse “\(project.name)”?",
-                isPresented: $showReAnalyseConfirm
-            ) {
-                // Destructive — `--clean` deletes bristlenose-output/ wholesale,
-                // wiping the previous successful analysis (including any
-                // researcher edits not yet exported). Confirm + named action.
-                Button("Re-analyse", role: .destructive) {
-                    pipelineRunner.start(project: project, clean: true)
-                }
-                .keyboardShortcut(.defaultAction)
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text(
-                    "This will delete the existing analysis and run from scratch. "
-                    + "Any researcher edits in this project will be lost."
-                )
-            }
     }
 
     /// One-shot debug-only override that swaps the project's state to
-    /// `.completedPartial` / `.failedWithDiagnostic` from a fixture scenario.
-    /// No-op in Release and when the env var is unset.
+    /// `.completedPartial` / `.failedWithDiagnostic` / `.failed` from a
+    /// fixture scenario. No-op in Release and when the env var is unset.
     private func applyDebugFixtureIfNeeded() {
         #if DEBUG
         switch DiagnosticFixture.loadIfEnabled() {
@@ -112,9 +88,36 @@ struct PipelineActivityItem: View {
             pipelineRunner._debugSetState(.completedPartial(summary: summary), for: project.id)
         case .failed(let summary):
             pipelineRunner._debugSetState(.failedWithDiagnostic(summary: summary), for: project.id)
+        case .noSummary(let message, let category):
+            // Synthesize a minimal bristlenose.log so the Log button is
+            // exercised under the fixture path (real failures populate it
+            // naturally; the harness has to do it by hand).
+            writeSyntheticLogIfMissing()
+            pipelineRunner._debugSetState(.failed(message, category: category), for: project.id)
         }
         #endif
     }
+
+    #if DEBUG
+    /// Write a 4-line stand-in `bristlenose.log` so the Log button's
+    /// existence-guard fires in fixture mode. Skips if the file already
+    /// exists — real runs own the log, the harness only seeds it.
+    private func writeSyntheticLogIfMissing() {
+        let logURL = PipelineRunner.logFileURL(for: project)
+        let fm = FileManager.default
+        guard !fm.fileExists(atPath: logURL.path) else { return }
+        let parent = logURL.deletingLastPathComponent()
+        try? fm.createDirectory(at: parent, withIntermediateDirectories: true)
+        let body = [
+            "INFO bristlenose 0.0.0 (fixture) — synthesised by DiagnosticFixture.failed_no_summary",
+            "INFO this file stands in for a real CLI log so the popover's Log button has",
+            "INFO something to open. Production runs write the real log here.",
+            "INFO sidecar_exit reason=parent_death uptime_sec=0 original_ppid=1 current_ppid=1",
+            "",
+        ].joined(separator: "\n")
+        try? body.write(to: logURL, atomically: true, encoding: .utf8)
+    }
+    #endif
 
     // MARK: - Pill content
 
@@ -235,13 +238,17 @@ struct PipelineActivityItem: View {
 
     @ViewBuilder
     private var popoverContent: some View {
-        // Diagnostic popovers own their own header (status as title +
-        // Copy icon) — see `diagnosticPopoverBody`. Other states keep the
-        // legacy project-name + status header.
-        if case .completedPartial(let pipelineSummary) = state {
-            diagnosticPopoverBody(summary: pipelineSummary, abandoned: false)
-        } else if case .failedWithDiagnostic(let pipelineSummary) = state {
-            diagnosticPopoverBody(summary: pipelineSummary, abandoned: true)
+        // All failure-shaped states route through `unifiedPopoverBody` —
+        // chrome is identical (status-as-title header, [Log][Copy] icons),
+        // body branches on whether a `PipelineSummary` is available. The
+        // legacy `.failed` popover was undesigned scaffolding; this
+        // collapses both surfaces into the diagnostic-popover design.
+        if case .completedPartial = state {
+            unifiedPopoverBody()
+        } else if case .failedWithDiagnostic = state {
+            unifiedPopoverBody()
+        } else if case .failed = state {
+            unifiedPopoverBody()
         } else {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
@@ -258,18 +265,6 @@ struct PipelineActivityItem: View {
                     Text("Waiting for another project to finish (position \(position) in queue).")
                         .font(.callout)
                         .foregroundStyle(.secondary)
-                } else if case .failed(let summary, let category) = state {
-                    failedPopoverBody(summary: summary, category: category)
-                }
-
-                // Technical-details disclosure only on the legacy
-                // summary-less failure path; the diagnostic popover exposes
-                // per-stage detail inline.
-                if case .failed = state {
-                    DisclosureGroup("Show technical details") {
-                        technicalDetails
-                    }
-                    .font(.caption)
                 }
             }
         }
@@ -333,136 +328,7 @@ struct PipelineActivityItem: View {
         }
     }
 
-    @ViewBuilder
-    private func failedPopoverBody(summary: String, category: PipelineFailureCategory) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(summary).font(.callout)
-            HStack(spacing: 8) {
-                if category == .outputExists {
-                    // outputExists isn't a real failure — the prior analysis
-                    // is intact. The "Retry" path would just hit the same
-                    // refusal. Surface the destructive Re-analyse option
-                    // behind a confirm sheet instead. The project's existing
-                    // report is already viewable in the detail pane.
-                    Button("Re-analyse…") {
-                        showPopover = false
-                        // Defer the sheet so the popover dismissal completes
-                        // first (NSPopover + alert chains can race).
-                        DispatchQueue.main.async { showReAnalyseConfirm = true }
-                    }
-                    .keyboardShortcut(.defaultAction)
-                } else {
-                    Button("Retry") {
-                        pipelineRunner.start(project: project)
-                        showPopover = false
-                    }
-                    .keyboardShortcut(.defaultAction)
-                }
-                Button(copyConfirmed ? "Copied" : "Copy error details") {
-                    copyErrorDetails()
-                }
-                .disabled(copyConfirmed)
-                if category == .auth {
-                    Spacer()
-                    // Deeplink to Settings — opens the native Settings scene.
-                    // The LLM tab is the default tab so we don't need a sub-route.
-                    // Activate the app first so the Settings window can become
-                    // key after the popover dismisses (the popover chain steals
-                    // first-responder otherwise, swallowing the action).
-                    Button("Change provider") {
-                        showPopover = false
-                        NSApp.activate(ignoringOtherApps: true)
-                        // macOS 14+ uses showSettingsWindow:; pre-14 used
-                        // showPreferencesWindow:. Try the modern selector
-                        // first and fall back so a missed responder-chain
-                        // resolution can't silently no-op.
-                        let modern = Selector(("showSettingsWindow:"))
-                        let legacy = Selector(("showPreferencesWindow:"))
-                        if !NSApp.sendAction(modern, to: nil, from: nil) {
-                            NSApp.sendAction(legacy, to: nil, from: nil)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private var technicalDetails: some View {
-        ScrollView {
-            Text(detailsText)
-                .font(.system(.caption2, design: .monospaced))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .textSelection(.enabled)
-        }
-        .frame(maxHeight: 140)
-        .accessibilityLabel("Technical failure details")
-    }
-
-    /// Text shown inside the disclosure and copied via Copy error details.
-    /// Combines the structured cause from `pipeline-events.jsonl` (which is
-    /// populated even when stdout is empty — e.g. the abandon path) with the
-    /// last 20 stdout lines (which are populated for crash-style failures
-    /// before the events log gets a terminus).
-    private var detailsText: String {
-        detailsText(includeRawCategory: false)
-    }
-
-    /// Build the disclosure / pasteboard text. The disclosure (user-facing)
-    /// uses only the human label so the panel doesn't read like stderr;
-    /// the pasted form keeps the raw enum token so triagers can grep.
-    private func detailsText(includeRawCategory: Bool) -> String {
-        var parts: [String] = []
-        if case .failed(let summary, let category) = state {
-            if !summary.isEmpty {
-                parts.append("Cause: \(summary)")
-            }
-            let label = Self.humanCategoryLabel(category)
-            if includeRawCategory {
-                parts.append("Category: \(label) (\(category.rawValue))")
-            } else {
-                parts.append("Category: \(label)")
-            }
-        }
-        let lines = liveData.outputLines[project.id] ?? []
-        let tail = lines.suffix(20)
-        if !tail.isEmpty {
-            if !parts.isEmpty { parts.append("") }
-            parts.append("Last output:")
-            parts.append(tail.joined(separator: "\n"))
-        }
-        if parts.isEmpty {
-            return "(no output captured)"
-        }
-        return parts.joined(separator: "\n")
-    }
-
     // MARK: - Helpers
-
-    private func copyErrorDetails() {
-        // Pre-pasteboard sanitisation: replace project path with a sentinel so
-        // a hastily-emailed log doesn't leak the user's folder structure.
-        let sanitised = detailsText(includeRawCategory: true)
-            .replacingOccurrences(of: project.path, with: "<project>")
-        let pb = NSPasteboard.general
-        pb.clearContents()
-        pb.setString(sanitised, forType: .string)
-
-        // HIG affordance: brief label flip so the silent pasteboard write has
-        // visible feedback. ~1.5s, animated unless the user has Reduce Motion.
-        if reduceMotion {
-            copyConfirmed = true
-        } else {
-            withAnimation { copyConfirmed = true }
-        }
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(1500))
-            if reduceMotion {
-                copyConfirmed = false
-            } else {
-                withAnimation { copyConfirmed = false }
-            }
-        }
-    }
 
     private static func format(elapsed: TimeInterval) -> String {
         let total = Int(elapsed)
@@ -471,7 +337,7 @@ struct PipelineActivityItem: View {
         return String(format: "%d:%02d", m, s)
     }
 
-    // MARK: - Diagnostic popover (.completedPartial / .failedWithDiagnostic)
+    // MARK: - Unified popover (.failed / .completedPartial / .failedWithDiagnostic)
 
     /// Pill label derived from `summary.dominantCategory()`. Falls back to
     /// the English raw value if the locale string is missing (i18n.t returns
@@ -481,23 +347,41 @@ struct PipelineActivityItem: View {
         return i18n.t("desktop.pipeline.diagnostic.pill.\(category.rawValue)")
     }
 
+    /// Single popover surface for every failure-shaped state. Chrome is
+    /// identical across `.failed`, `.completedPartial`, `.failedWithDiagnostic`:
+    /// status-as-title + optional Log button + Copy icon in the header;
+    /// scrolling body below. The body switches between `bucketsBody` (when a
+    /// `PipelineSummary` is in hand) and `degradedBody` (when only a
+    /// summary string + category from older sidecars / orphan-`run_started`
+    /// is available). No bottom action row anywhere — Retry / Change provider /
+    /// Re-analyse… live in the project's natural run affordance + Settings.
     @ViewBuilder
-    private func diagnosticPopoverBody(summary: PipelineSummary, abandoned: Bool) -> some View {
-        // Header: status as title + Copy icon top-right. No project-name
-        // repeat (it's already in the toolbar chip + sidebar + window title).
-        // No Email button or bottom action bar — single Copy icon is enough;
-        // users find feedback channels via app + website + GitHub.
-        //
-        // **Diagnostic only — no Retry / Change-provider here by design.**
-        // Abandon-style failures are typically multi-cause; retry-as-is
-        // rarely succeeds. The legacy `.failed` path keeps those CTAs.
-        // Don't add Retry "for parity" with `.failed`.
+    private func unifiedPopoverBody() -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
+            HStack(spacing: 8) {
                 Text(headlineStatus).font(.headline)
                 Spacer()
+                if FileManager.default.fileExists(
+                    atPath: PipelineRunner.logFileURL(for: project).path
+                ) {
+                    // Mac-canonical small bordered button — Apple's HIG
+                    // popover example pattern (Calendar event info, Mail VIP
+                    // popovers, etc.). Verb-first label ("Show Log") matches
+                    // Apple's "Show in Finder" / "Show Package Contents"
+                    // idiom for reveal-and-look gestures.
+                    Button(i18n.t("desktop.pipeline.diagnostic.action.showLog")) {
+                        showLog()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help(i18n.t("desktop.pipeline.diagnostic.action.showLogTooltip"))
+                }
+                // Copy stays as a borderless icon button — utility gesture
+                // (silent pasteboard write, native Finder / Safari Copy URL
+                // pattern). Intentional asymmetry with Show Log: one bordered
+                // action affordance + utility icon.
                 Button {
-                    copyDiagnostic(summary: summary, abandoned: abandoned)
+                    copyDiagnosticForCurrentState()
                 } label: {
                     Image(systemName: "doc.on.doc")
                 }
@@ -513,13 +397,67 @@ struct PipelineActivityItem: View {
                     allStatesContext
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
-                    bucketsBody(summary: summary)
+                    popoverBodyForCurrentState()
                 }
                 #else
-                bucketsBody(summary: summary)
+                popoverBodyForCurrentState()
                 #endif
             }
         }
+    }
+
+    /// Dispatch the scroll body content based on `state`. Pulled out of
+    /// `unifiedPopoverBody`'s `ScrollView` so the DEBUG-vs-Release branch
+    /// stays a one-liner per arm.
+    @ViewBuilder
+    private func popoverBodyForCurrentState() -> some View {
+        switch state {
+        case .completedPartial(let summary), .failedWithDiagnostic(let summary):
+            bucketsBody(summary: summary)
+        case .failed(let message, let category):
+            degradedBody(message: message, category: category)
+        default:
+            EmptyView()
+        }
+    }
+
+    /// Body for the `.failed` legacy / orphan path — `PipelineSummary` is
+    /// not available, so we render EventLogReader's existing reader string,
+    /// the localised "Detailed cause not captured." hint, and the human
+    /// category label. No stdout tail in the visible body — stdout (when
+    /// populated) flows into the Copy plaintext + lives in the on-disk log
+    /// reachable via the Log button.
+    @ViewBuilder
+    private func degradedBody(
+        message: String, category: PipelineFailureCategory
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if !message.isEmpty {
+                Text(message)
+                    .font(.callout)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Text(i18n.t("desktop.pipeline.diagnostic.noStructuredCause"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text("Category: \(Self.humanCategoryLabel(category))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Reveal the per-project CLI log file via macOS LaunchServices. Respects
+    /// the user's default `.log` handler (Console.app for most). Apple-brokered
+    /// handoff — works under App Sandbox without extra entitlements because
+    /// LaunchServices vends the file across the process boundary.
+    private func showLog() {
+        let logURL = PipelineRunner.logFileURL(for: project)
+        NSWorkspace.shared.open(logURL)
+        showPopover = false
     }
 
     @ViewBuilder
@@ -775,13 +713,39 @@ struct PipelineActivityItem: View {
     /// "Copied" affordance — silent copy is the native Mac pattern (Finder,
     /// Safari Copy URL). Users find feedback channels via app + website +
     /// GitHub rather than an in-popover mailto.
-    private func copyDiagnostic(summary: PipelineSummary, abandoned: Bool) {
-        let text = Self.formatDiagnosticPlaintext(
-            summary: summary,
-            projectName: project.name,
-            projectPath: project.path,
-            abandoned: abandoned
-        )
+    ///
+    /// Dispatches on `state`: `.failedWithDiagnostic` / `.completedPartial`
+    /// → structured `formatDiagnosticPlaintext`; `.failed` →
+    /// `formatDiagnosticPlaintextDegraded` with `liveData.outputLines` tail.
+    private func copyDiagnosticForCurrentState() {
+        let text: String
+        switch state {
+        case .completedPartial(let summary):
+            text = Self.formatDiagnosticPlaintext(
+                summary: summary,
+                projectName: project.name,
+                projectPath: project.path,
+                abandoned: false
+            )
+        case .failedWithDiagnostic(let summary):
+            text = Self.formatDiagnosticPlaintext(
+                summary: summary,
+                projectName: project.name,
+                projectPath: project.path,
+                abandoned: true
+            )
+        case .failed(let message, let category):
+            let tail = (liveData.outputLines[project.id] ?? []).suffix(20)
+            text = Self.formatDiagnosticPlaintextDegraded(
+                cause: message,
+                category: category,
+                projectName: project.name,
+                projectPath: project.path,
+                stdoutTail: Array(tail)
+            )
+        default:
+            return
+        }
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(text, forType: .string)
@@ -841,6 +805,40 @@ struct PipelineActivityItem: View {
         }
         // Sanitise absolute project path before returning so a hastily-emailed
         // log doesn't leak folder structure.
+        return lines
+            .joined(separator: "\n")
+            .replacingOccurrences(of: projectPath, with: "<project>")
+    }
+
+    /// Degraded-fidelity variant of `formatDiagnosticPlaintext` for the
+    /// `.failed` case (older sidecars / orphan-`run_started` paths where no
+    /// `PipelineSummary` exists). Same English-only triager-greppable shape;
+    /// appends a stdout tail when `liveData.outputLines` is populated (which
+    /// it is for crash-style failures before the events log gets a terminus).
+    static func formatDiagnosticPlaintextDegraded(
+        cause: String,
+        category: PipelineFailureCategory,
+        projectName: String,
+        projectPath: String,
+        stdoutTail: [String]
+    ) -> String {
+        var lines: [String] = []
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+        let os = ProcessInfo.processInfo.operatingSystemVersionString
+        lines.append("Bristlenose \(appVersion) (\(build)) on \(os)")
+        lines.append("Project: \(projectName)")
+        lines.append("Outcome: Run failed (no terminus event)")
+        // Raw enum token — same grepability principle as the structured form.
+        lines.append("Category: \(category.rawValue)")
+        if !cause.isEmpty {
+            lines.append("Cause: \(cause)")
+        }
+        if !stdoutTail.isEmpty {
+            lines.append("")
+            lines.append("Last output:")
+            lines.append(stdoutTail.joined(separator: "\n"))
+        }
         return lines
             .joined(separator: "\n")
             .replacingOccurrences(of: projectPath, with: "<project>")

@@ -365,25 +365,55 @@ deferred to a future design pass.
 
 ### Popover header + actions
 
-Diagnostic popovers (`.completedPartial` / `.failedWithDiagnostic`)
-render their own header:
+**One popover surface for every failure-shaped state.** `.failed`,
+`.completedPartial`, and `.failedWithDiagnostic` all route through the
+same SwiftUI code path (`PipelineActivityItem.unifiedPopoverBody`).
+Chrome is identical; only the body content branches. Was two surfaces
+through May 2026 — the legacy `.failed` popover was undesigned scaffolding
+that grew out of spec; `unify-failure-popover` (May 2026) deleted it.
 
-- Title: the status verb only (`Partial completion` / `Run failed`).
-  No project-name repeat (already in the toolbar chip, sidebar, and
-  window title).
+Header (always present):
+
+- Title: the status verb only (`Partial completion` / `Run failed` /
+  `Failed`). No project-name repeat (already in the toolbar chip,
+  sidebar, and window title).
+- Top-right `Show Log` button (conditional): small bordered text button
+  (`.buttonStyle(.bordered)` + `.controlSize(.small)` — HIG popover idiom,
+  matches Apple's Calendar / Mail VIP popover examples) rendered
+  immediately to the left of the Copy icon, present only when
+  `PipelineRunner.logFileURL(for: project)` exists on disk. Click →
+  `NSWorkspace.shared.open(logURL)` — opens the per-project CLI log in
+  the user's default `.log` handler (Console.app for most). LaunchServices
+  brokers the file vend across the process boundary so the call works
+  under App Sandbox without extra entitlements. Verb-first label matches
+  Apple's "Show in Finder" / "Show Package Contents" idiom for
+  reveal-and-look gestures.
 - Top-right: a single `doc.on.doc` icon button (`buttonStyle(.borderless)`)
   with `help("Copy details")` tooltip. Click → write plaintext to
   `NSPasteboard`. No "Copied" tick flip (silent copy is the native
-  Finder / Safari Copy URL pattern).
-- No bottom action bar. No Email button. No Retry / Change-provider
-  here by design — abandon-style failures are typically multi-cause,
-  retry-as-is rarely succeeds, and these CTAs belong on a different
-  surface (project header / settings) if they belong anywhere.
+  Finder / Safari Copy URL pattern). Dispatches on state — uses
+  `formatDiagnosticPlaintext` for summary-bearing cases,
+  `formatDiagnosticPlaintextDegraded` for `.failed`.
 
-The legacy `.failed` popover keeps its older shape (Retry / Copy error
-details / Change provider for `.auth` / Show technical details
-disclosure). It surfaces for runs that lack a populated `summary`
-(pre-v5 logs, stranded `run_started` events, etc.).
+**No bottom action row anywhere.** No Retry, no Change provider, no
+Re-analyse…, no Email, no Show technical details disclosure.
+Retry / Re-analyse live in the project's natural run affordance
+(sidebar context menu, toolbar Run button); Change provider lives in
+Settings (Cmd+,). The popover stays a calm, diagnostic-only surface
+across all three failure states.
+
+Body content branches on the state:
+
+- `.failedWithDiagnostic` / `.completedPartial` → `bucketsBody`:
+  per-bucket Grid with SF Symbol + session id + message rows. Unchanged
+  from `pipeline-diagnostic-popover-swift`.
+- `.failed` → `degradedBody`: three lines — the `EventLogReader`-emitted
+  reader string (e.g. `Analysis stopped unexpectedly.` for the orphan
+  path; `cause.message` for older sidecars), the localised
+  `desktop.pipeline.diagnostic.noStructuredCause` hint
+  ("Detailed cause not captured."), and `Category: <humanCategoryLabel>`.
+  No stdout tail in the visible body — stdout (when populated) flows
+  into the Copy plaintext + the on-disk log reachable via the Log button.
 
 ### Two new `PipelineState` cases
 
@@ -434,6 +464,9 @@ Shipped on this branch, in all six `desktop.json` locale files:
 - `desktop.pipeline.diagnostic.pill.{auth, missing_binary, quota, network, unknown}` — dominant-category pill labels
 - `desktop.pipeline.diagnostic.header.{completed_partial, failed}` — popover titles
 - `desktop.pipeline.diagnostic.action.copy` — Copy icon tooltip ("Copy details"). `action.copied` and `action.email` were removed in pass-4 cleanup (Finding 31) — the Copy button does silent-copy (no flip), and the Email button was dropped entirely. The locale keys had zero call sites.
+- `desktop.pipeline.diagnostic.action.showLog` — Log button label ("Log" / "Registro" / "Journal" / "Protokoll" / "로그" / "ログ"). Shipped on `unify-failure-popover` (May 2026).
+- `desktop.pipeline.diagnostic.action.showLogTooltip` — Log button `help(...)` tooltip ("Open the analysis log file"). Shipped on `unify-failure-popover` (May 2026).
+- `desktop.pipeline.diagnostic.noStructuredCause` — degraded-body hint line ("Detailed cause not captured.") rendered under EventLogReader's reader string in the `.failed` body. Shipped on `unify-failure-popover` (May 2026).
 - `desktop.pipeline.diagnostic.tooltip.completed_partial` — pill help text for `.completedPartial`. Wording uses "Analysis" not "Pipeline" — see the *User-facing vocabulary* note below.
 - `desktop.pipeline.diagnostic.overflow_one` / `_other` — CLDR-plural-keyed truncation marker (en/es/fr/de carry both forms; ko/ja carry `_other` only)
 

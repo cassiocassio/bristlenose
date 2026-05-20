@@ -203,11 +203,14 @@
         "failed": "Ejecuci\u00f3n fallida"
       },
       "action": {
-        "copy": "Copiar detalles"
+        "copy": "Copiar detalles",
+        "showLog": "Mostrar registro",
+        "showLogTooltip": "Mostrar el archivo de registro del an\u00e1lisis"
       },
       "tooltip": {
         "completed_partial": "El an\u00e1lisis termin\u00f3 con fallos en {{project}}"
       },
+      "noStructuredCause": "Causa detallada no registrada.",
       "overflow_one": "\u2026 y {{count}} fallo m\u00e1s truncado",
       "overflow_other": "\u2026 y {{count}} fallos m\u00e1s truncados"
     }

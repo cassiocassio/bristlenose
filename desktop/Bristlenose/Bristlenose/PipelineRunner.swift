@@ -227,6 +227,11 @@ final class PipelineRunner: ObservableObject {
             self.state[projectID] = .completedPartial(summary: s)
         case .failed(let s):
             self.state[projectID] = .failedWithDiagnostic(summary: s)
+        case .noSummary(let message, let category):
+            // The popover's `applyDebugFixtureIfNeeded` is the synthetic-log
+            // writer for this path (it has access to the Project, which we
+            // don't). Here we just inject the state.
+            self.state[projectID] = .failed(message, category: category)
         }
         _debugFixtureApplied.insert(projectID)
     }

@@ -14,15 +14,10 @@ import os from 'os';
 
 test.describe.configure({ mode: 'serial' });
 
-// Surface browser-side console errors and uncaught exceptions on every test —
-// silent mount failures used to look like ``DOM nodes — Quotes`` timeouts
-// with no stack trace. With this, the stack trace reaches CI logs.
-test.beforeEach(async ({ page }) => {
-  page.on('console', (msg) => {
-    if (msg.type() === 'error') console.error('[browser]', msg.text());
-  });
-  page.on('pageerror', (err) => console.error('[pageerror]', err.message, err.stack));
-});
+// Mount + schema integrity is covered at the pytest layer
+// (tests/test_server_status_page.py::TestSmokeFixtureMountsSPA and
+// tests/test_smoke_fixture_schema.py) — no need to repeat at the browser
+// layer.
 
 // ── Results collector ───────────────────────────────────────────────────
 

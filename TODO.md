@@ -4,7 +4,7 @@ Last updated: 19 May 2026 (`pipeline-diagnostic-popover-swift` Swift half shippe
 
 **Most recent ship: v0.15.10 (17 May 2026)** — C1 codebook plumbing (`--codebook=<slug>` + `bristlenose codebooks` subcommand) and smoke-fixture `RunCompletedEvent` so e2e perf-gate stops timing out on `#bn-app-root`. **Caveat:** PyPI is still at 0.15.3 as of 19 May — seven tag pushes since 10 May haven't reached users; `ci/perf-gate` failed on every release workflow run in that span. CI fix in flight, release attempt expected tonight (19 May). v0.15.8/9 carry the substantive work — honesty everywhere (A3 + A4 + B1), multi-project Phases 0–3, sidebar honesty wave 2, HIG corpus, Keychain biometric ACL, folder watcher, AppleDouble skip. See `CHANGELOG.md` for full bullet list.
 
-**Launch plan:** `docs/private/100days.md` — triaged by topic + MoSCoW priority. That's the source of truth for what ships. This file is a public capture inbox + session context + done history.
+**Launch plan:** `docs/private/100days.md` — triaged by topic + MoSCoW priority. That's the source of truth for what ships. This file is a public capture inbox + session context — antechamber for untriaged items only; promote to the plan doc once triaged.
 
 ---
 
@@ -20,7 +20,6 @@ Open follow-ups not in any active branch (surface separately, not alpha blockers
 Reference: `docs/private/handoffs/sandbox-walk-followup-fixes.md` (closeout), `docs/private/sandbox-inventory-beats-6-13.md` (16-finding inventory + status block).
 
 ---
-
 
 ## Ideas (captured, not triaged)
 
@@ -45,7 +44,7 @@ Reference: `docs/private/handoffs/sandbox-walk-followup-fixes.md` (closeout), `d
 
 **Launch plan:** `docs/private/100days.md` — triaged by topic and MoSCoW priority.
 
-This file contains: session reminders, done history, dependency maintenance, and reference tables.
+This file contains: session reminders, untriaged captures, dependency maintenance, and reference tables.
 
 ---
 

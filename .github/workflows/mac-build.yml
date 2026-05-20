@@ -1,0 +1,58 @@
+name: Mac Build
+
+# Compile-only macOS build. Catches Swift breakage between dev Mac and a
+# clean checkout pre-TestFlight. Does NOT sign, bundle, test, or run —
+# see docs/private/handoffs/ci-reshape.md item 6.
+#
+# Path-filtered: skipped on Python-only PRs. Don't add as a required
+# status check — non-desktop PRs would block forever.
+
+on:
+  push:
+    branches: [main]
+    paths: ['desktop/**', '.github/workflows/mac-build.yml']
+  pull_request:
+    branches: [main]
+    paths: ['desktop/**', '.github/workflows/mac-build.yml']
+
+jobs:
+  build:
+    runs-on: macos-15  # ships current Xcode 16 + macOS 15 SDK (deployment target = 15.0)
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          cd desktop/Bristlenose && xcodebuild -list
+
+      - name: Stub bundled sidecar input path
+        # The "Copy Sidecar Resources" Build Phase declares the sidecar
+        # binary as a hard input — Xcode bails at dependency analysis if
+        # missing, before Swift compile. Real PyInstaller bundle is
+        # ~400 MB and gitignored; for compile-only, an existing path is
+        # all Xcode needs.
+        run: |
+          mkdir -p desktop/Bristlenose/Resources/bristlenose-sidecar
+          touch desktop/Bristlenose/Resources/bristlenose-sidecar/bristlenose-sidecar
+          chmod +x desktop/Bristlenose/Resources/bristlenose-sidecar/bristlenose-sidecar
+
+      - name: Compile (Debug, no codesigning)
+        working-directory: desktop/Bristlenose
+        run: |
+          xcodebuild build \
+            -scheme Bristlenose \
+            -configuration Debug \
+            -destination "generic/platform=macOS" \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee xcodebuild.log
+
+      - name: Upload xcodebuild log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: desktop/Bristlenose/xcodebuild.log
+          retention-days: 30

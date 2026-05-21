@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 21 May 2026 (closed `sidebar-list-not-rendering` + `sidebar-drop-folder-row`)
+**Updated:** 21 May 2026 (closed `pipeline-view-v1`)
 
 ---
 
@@ -41,7 +41,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | chore | Translate ProjectRow pipelineSubtitle + locale-aware date formatters |
 | `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
-| `bristlenose_branch pipeline-view-v1/` | `pipeline-view-v1` | feature | Read-only Pipeline view — one CLI verb (`bristlenose pipeline`) + one React Settings tab; validates the mixture-of-models mental model with the cohort, nothing else |
 | `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
 
 
@@ -140,7 +139,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
-| `pipeline-view-v1` | `bristlenose_branch pipeline-view-v1/` | local only |
 | `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
 
 
@@ -177,29 +175,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Potential conflicts with other branches:**
 - `pipeline-view-v1` — direct parent; v1.5 lives in the same `bristlenose/pipeline_view/` package and edits files v1 introduces. Don't start v1.5 work until v1 merges, or be ready to rebase.
 - `pipeline-subtitle-i18n` — touches the 6 `common.json` locale files. Keep keys distinct (`pipeline.alternatives.*`) and use targeted text-replace, never `json.dump` round-trip.
-
----
-
-### `pipeline-view-v1`
-
-**Kind:** feature — code intended for main; lands a read-only Pipeline view (one CLI verb + one Settings tab) and ends in merge or PR-and-squash
-**Status:** Just started
-**Started:** 18 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-view-v1/`
-**Remote:** local only (push when ready)
-
-**What it does:** Ship a read-only surface for the mixture-of-models Bristlenose already runs across pipeline stages, so cohort users can react to the mental-model framing before any per-stage choice machinery earns its place. Single new CLI verb `bristlenose pipeline` (table view of stage → backend → model) plus a matching read-only Settings tab in the React SPA (two-column card-per-stage layout, last position). Explicitly out of scope: `bristlenose use <provider>`, `bristlenose config` namespace, TOML preferences, per-stage overrides, interactive doctor expansion, Apple FM probe — all parked in `docs/design-cli-improvements.md` pending cohort signal. See `HANDOFF.md` for the full brief, locked decisions, and contract fixture plan.
-
-**Files this branch will touch:**
-- New: `bristlenose/pipeline/__init__.py`, `catalogue.py`, `host.py`, `render.py`, `cli.py`
-- New: React component under `frontend/src/components/Settings/`
-- Modified: `bristlenose/cli.py` (register `pipeline` command)
-- Modified: `bristlenose/server/` (new `/api/pipeline` route, inherits `BearerTokenMiddleware`)
-- Tests: `tests/pipeline/test_render.py`, `test_host.py`, `test_cli_pipeline.py`, `test_catalogue.py`, `tests/fixtures/pipeline-view-contract.json`
-
-**Potential conflicts with other branches:**
-- `foundation-models-corpus` — _merged 19 May 2026_; corpus-driven edits to `design-pluggable-llm-routing.md`, `design-stage-backends.md`, `design-modularity.md` already landed. Re-coordinate after WWDC 2026 re-scrape if the model-catalogue shape shifts; the contract fixture (`tests/fixtures/pipeline-view-contract.json`) is the schema lock.
-- Multi-project / sidebar branches — Swift and locale work; no overlap.
 
 ---
 
@@ -350,6 +325,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `pipeline-view-v1` — merged 21 May 2026
+
+Read-only Pipeline view: new `bristlenose pipeline` CLI verb (stage → backend → model table) and matching read-only Settings tab in the React SPA. Validates the mixture-of-models mental model with the cohort before any per-stage choice machinery earns its place. Per-stage overrides, `bristlenose use <provider>`, and `bristlenose config` namespace remain parked in `docs/design-cli-improvements.md` pending cohort signal. Contract fixture `tests/fixtures/pipeline-view-contract.json` locks the schema for the v1.5 follow-on.
 
 ### `sidebar-list-not-rendering` — merged 21 May 2026
 

@@ -34,7 +34,10 @@ test('no failed API requests during full navigation', async ({
 
   for (const path of routes) {
     await page.goto(path);
-    await page.waitForLoadState('networkidle');
+    // Bounded networkidle — SPA poll loops prevent the unbounded form from
+    // settling on CI Linux. `load` is deterministic. See root CLAUDE.md.
+    await page.waitForLoadState('load');
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
   }
 
   expect(failures).toEqual([]);

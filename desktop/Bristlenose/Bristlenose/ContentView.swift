@@ -364,6 +364,26 @@ struct ContentView: View {
                 showingAIConsent = true
             }
         }
+        #if DEBUG
+        // Debug-only: apply BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE only to
+        // the currently-selected project, so the other sidebar rows keep
+        // their real state for comparison. 500ms delay lets the per-project
+        // scan run applyScanResult first; the override survives because
+        // applyScanResult early-returns on the diagnostic states.
+        //
+        // The 500ms is a **heuristic, not a contract** — it's empirically
+        // long enough for the initial manifest scan to settle on this Mac
+        // under normal load. `_applyDebugFixture` is idempotent per-project
+        // (guards via `_debugFixtureApplied: Set<UUID>`), so a late scan
+        // racing past it is benign. If a slower machine ever needs a longer
+        // wait, the right fix is making the override wait on the scan's
+        // completion signal rather than tuning this number.
+        .task(id: selectedProjectID) {
+            guard let id = selectedProjectID else { return }
+            try? await Task.sleep(for: .milliseconds(500))
+            pipelineRunner._applyDebugFixture(to: id)
+        }
+        #endif
         // Defensive cleanup — macOS sometimes fails to fire
         // `isTargeted=false` if the cursor drag-leaves the window
         // entirely (Apple bug, intermittent for years). When the
@@ -874,7 +894,10 @@ struct ContentView: View {
     /// can't *run* analysis but can *show* it if it exists.
     private static func pipelineHasViewableData(_ state: PipelineState?) -> Bool {
         switch state {
-        case .ready, .partial:
+        case .ready, .partial, .completedPartial:
+            // `.completedPartial` ran to terminus and wrote a (degraded) report;
+            // file-subset projects must be able to view it. `.failedWithDiagnostic`
+            // deliberately stays false — abandon path leaves no report on disk.
             return true
         default:
             return false
@@ -893,8 +916,27 @@ struct ContentView: View {
         processDroppedURLs(accepted)
     }
 
-    /// Process collected URLs from a sidebar drop.
-    private func processDroppedURLs(_ urls: [URL]) {
+    /// Handle Finder content dropped onto a project-sidebar-folder row.
+    /// Routes through the same `processDroppedURLs` machinery as the empty-
+    /// sidebar path, with `intoFolder:` set so the new project lands inside
+    /// the target folder. Auto-expands the folder so the user sees the row
+    /// they just created (Q4=a in plan Decisions block).
+    ///
+    /// Vocabulary discipline (Gruber pass, 19 May 2026): in *code comments*
+    /// distinguish "project-sidebar-folder" (the `Folder` model in our
+    /// sidebar) from "Finder folder" (a directory on disk). User-facing
+    /// strings still collapse to "folder" — sidebar context disambiguates.
+    private func handleDropOnFolder(id folderID: UUID, urls: [URL]) {
+        let accepted = Self.filterAcceptedURLs(urls)
+        guard !accepted.isEmpty else { return }
+        projectIndex.setFolderCollapsed(id: folderID, collapsed: false)
+        processDroppedURLs(accepted, intoFolder: folderID)
+    }
+
+    /// Process collected URLs from a sidebar drop. `intoFolder` is non-nil
+    /// for drops on a project-sidebar-folder row (see `handleDropOnFolder`);
+    /// nil for empty-sidebar drops, which create at root.
+    private func processDroppedURLs(_ urls: [URL], intoFolder folderID: UUID? = nil) {
         guard !urls.isEmpty else { return }
 
         let directories = urls.filter { $0.hasDirectoryPath }
@@ -910,11 +952,12 @@ struct ContentView: View {
             }
         }
 
-        createProjectFromURLs(directories: directories, files: files)
+        createProjectFromURLs(directories: directories, files: files, intoFolder: folderID)
     }
 
     /// Create a project from classified URLs (after duplicate check passes).
-    private func createProjectFromURLs(directories: [URL], files: [URL]) {
+    private func createProjectFromURLs(directories: [URL], files: [URL],
+                                       intoFolder folderID: UUID? = nil) {
         // All drops create one project. The name comes from the first item.
         // - Single folder: path = folder, inputFiles = nil (scan whole directory)
         // - Multiple folders: path = first folder, inputFiles = all folder paths
@@ -924,7 +967,7 @@ struct ContentView: View {
             // Single folder — classic mode, scan everything in it.
             let url = directories[0]
             let project = projectIndex.addProject(
-                name: url.lastPathComponent, path: url.path
+                name: url.lastPathComponent, path: url.path, intoFolder: folderID
             )
             selection = [.project(project.id)]
             if LocateFlow.folderLooksAnalysed(url: url) {
@@ -967,7 +1010,8 @@ struct ContentView: View {
                 firstPath = files[0].deletingLastPathComponent().path
             }
             let project = projectIndex.addProject(
-                name: firstName, path: firstPath, inputFiles: allPaths
+                name: firstName, path: firstPath, inputFiles: allPaths,
+                intoFolder: folderID
             )
             selection = [.project(project.id)]
             renamingProjectID = project.id
@@ -1234,21 +1278,13 @@ struct ContentView: View {
 
     @ToolbarContentBuilder
     private var toolbarLeading: some ToolbarContent {
-        // Project icon + name — replaces the system title lozenge (.toolbar(removing: .title)
-        // is set on the detail view). Shows the project's custom SF Symbol and name directly
-        // on the toolbar surface, matching the Finder visual pattern.
-        ToolbarItem(placement: .navigation) {
-            HStack(spacing: 4) {
-                if let project = selectedProject {
-                    Image(systemName: project.icon ?? IconPickerPopover.defaultIcon)
-                        .foregroundStyle(.secondary)
-                }
-                Text(selectedProject?.name ?? "Bristlenose")
-                    .lineLimit(1)
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(selectedProject?.name ?? "Bristlenose")
-        }
+        // Project name / icon intentionally NOT in the toolbar. The chip
+        // previously here sat where the system back affordance lives, which
+        // is the wrong real estate for a per-project title indicator.
+        // `WindowTitleManager` still sets the NSWindow title to the project
+        // name so it shows in Mission Control / window-menu / Cmd+~ switcher.
+        // A correct in-toolbar project surface will return via a separate
+        // design pass — placeholder removed by user request.
 
         // Contextual — Quotes/Codebook/Analysis: left panel toggle
         // The native sidebar toggle (for the project list) is provided by
@@ -1346,9 +1382,17 @@ struct ContentView: View {
         }
 
         // Pipeline activity pill — only visible when the selected project's
-        // run is .running / .queued / .failed. Self-hides otherwise.
+        // run is .running / .queued / .failed / .completedPartial /
+        // .failedWithDiagnostic. Self-hides otherwise.
+        //
+        // `placement: .status` (macOS-only) gives the pill its own zone in
+        // the trailing toolbar, separate from the `.primaryAction` cluster
+        // that holds Share + Search. Without this, macOS 26's unified
+        // trailing-actions capsule visually contains the pill *inside*
+        // the search-shaped chrome — wrong for a per-project status
+        // indicator.
         if let project = selectedProject {
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItem(placement: .status) {
                 PipelineActivityItem(
                     project: project,
                     pipelineRunner: pipelineRunner,
@@ -1367,16 +1411,19 @@ struct ContentView: View {
 
     private var sidebar: some View {
         List(selection: $selection) {
-            Section {
-                // "+ New Project" at the top of the list — always visible.
-                Button {
-                    createNewProject()
-                } label: {
-                    Label(i18n.t("desktop.menu.file.newProject"), systemImage: "plus")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
+            // "+ New Project" lives outside the Section. Per desktop/CLAUDE.md:
+            // `Section + Button + ForEach.onMove + conditional Text` drops
+            // Section content when `projects.isEmpty == true` on macOS 26.
+            // Section here contains only the ForEach.
+            Button {
+                createNewProject()
+            } label: {
+                Label(i18n.t("desktop.menu.file.newProject"), systemImage: "plus")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
 
+            Section {
                 ForEach(projectIndex.sidebarItems) { item in
                     switch item {
                     case .folder(let folder):
@@ -1389,18 +1436,24 @@ struct ContentView: View {
                 .onMove { source, destination in
                     projectIndex.moveSidebarItems(from: source, to: destination)
                 }
-
-                // Empty state hint when no projects exist.
-                if projectIndex.projects.isEmpty {
-                    Text(i18n.t("desktop.chrome.emptyStateHint"))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 20)
-                        .listRowSeparator(.hidden)
-                }
             } header: {
                 Text(i18n.t("desktop.chrome.projects"))
+            }
+
+            // Empty-state hint lives OUTSIDE the Section. Inside the Section,
+            // its conditional presence destabilised the ForEach.onMove
+            // identity contract — Section content (header, button, folder
+            // rows) silently dropped from the rendered List. Tightened to
+            // `projects.isEmpty && folders.isEmpty`: folders-only is an
+            // intentional setup state (user has filing-cabinet-laid-out
+            // their projects but not yet dropped interviews), not empty.
+            if projectIndex.projects.isEmpty && projectIndex.folders.isEmpty {
+                Text(i18n.t("desktop.chrome.emptyStateHint"))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 20)
+                    .listRowSeparator(.hidden)
             }
         }
         .accessibilityLabel(i18n.t("desktop.chrome.projects"))
@@ -1464,6 +1517,34 @@ struct ContentView: View {
                     projectIndex.removeFolder(id: folder.id)
                 }
             )
+            // Single `.dropDestination(for: SidebarDrop.self)` handles both
+            // internal project drags (String payload) and Finder URL drops.
+            // Stacking two `.dropDestination` modifiers is unsupported and
+            // silently breaks on List rows / DisclosureGroup hosts
+            // (FB12980427) — see `SidebarDrop.swift` for the rationale.
+            // Attached to FolderRow (the drawn content), not the
+            // DisclosureGroup container, per Apple's recommendation.
+            .dropDestination(for: SidebarDrop.self) { items, _ in
+                var finderURLs: [URL] = []
+                for item in items {
+                    switch item {
+                    case .project(let id):
+                        projectIndex.moveProject(projectId: id, toFolder: folder.id)
+                    case .url(let url):
+                        finderURLs.append(url)
+                    }
+                }
+                if !finderURLs.isEmpty {
+                    handleDropOnFolder(id: folder.id, urls: finderURLs)
+                }
+                return true
+            } isTargeted: { isOver in
+                if isOver {
+                    dropTargetFolderID = folder.id
+                } else if dropTargetFolderID == folder.id {
+                    dropTargetFolderID = nil
+                }
+            }
             .contextMenu {
                 Button(i18n.t("desktop.menu.folder.rename")) {
                     renamingFolderID = folder.id
@@ -1479,22 +1560,6 @@ struct ContentView: View {
             }
         }
         .tag(SidebarSelection.folder(folder.id))
-        // Internal project-row drag onto this folder — moves the project
-        // into the folder. The draggable payload from ProjectRow is the
-        // project UUID as a String.
-        .dropDestination(for: String.self) { uuids, _ in
-            for uuidString in uuids {
-                guard let projectId = UUID(uuidString: uuidString) else { continue }
-                projectIndex.moveProject(projectId: projectId, toFolder: folder.id)
-            }
-            return true
-        } isTargeted: { isOver in
-            if isOver {
-                dropTargetFolderID = folder.id
-            } else if dropTargetFolderID == folder.id {
-                dropTargetFolderID = nil
-            }
-        }
         .overlay(
             RoundedRectangle(cornerRadius: 4)
                 .stroke(Color.accentColor, lineWidth: 2)
@@ -1542,7 +1607,7 @@ struct ContentView: View {
             }
         }
         .tag(SidebarSelection.project(project.id))
-        .draggable(project.id.uuidString)
+        .draggable(ProjectDragID(id: project.id))
         .contextMenu {
             // "Locate…" for moved/deleted projects — actionable first.
             if case .cantFind = project.availability {

@@ -67,10 +67,15 @@ def client() -> TestClient:
 
 
 class TestEndpointShape:
-    def test_returns_null_when_no_run_yet(self, client: TestClient) -> None:
+    def test_returns_null_when_no_run_yet(self, tmp_path: Path) -> None:
         """Fresh project (no events file) → endpoint returns null."""
-        # Smoke-test fixture has no pipeline-events.jsonl on disk.
-        resp = client.get("/api/projects/1/last-run")
+        # Use an empty tmp project — the smoke fixture now has a terminus
+        # event (required for the SPA mount precondition).
+        project_dir = tmp_path / "fresh-project"
+        (project_dir / "bristlenose-output").mkdir(parents=True)
+        app = create_app(project_dir=project_dir, dev=True, db_url="sqlite://")
+        fresh = AuthTestClient(app)
+        resp = fresh.get("/api/projects/1/last-run")
         assert resp.status_code == 200
         assert resp.json() is None
 

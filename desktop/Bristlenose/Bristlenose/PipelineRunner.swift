@@ -84,6 +84,17 @@ enum PipelineState: Equatable {
     /// User cancelled the prior run via SIGINT/SIGTERM. Resume / Re-analyse…
     /// `stagesComplete` derived from the manifest at display time.
     case stopped(stagesComplete: [String])
+    /// `run_completed` terminus AND ≥1 session failed in some stage. A
+    /// report was written but at reduced fidelity. Pill + popover surface
+    /// the per-stage breakdown via `PipelineSummary`.
+    /// See `docs/design-pipeline-diagnostic-popover.md`.
+    case completedPartial(summary: PipelineSummary)
+    /// `run_failed` terminus with a populated `summary` (A4-stage-cache-
+    /// honesty cohort onward). The run was abandoned mid-pipeline; no
+    /// usable report on disk. Distinct from `.failed`, which is the older
+    /// summary-less path retained for forwards-compat with logs from
+    /// before the summary started landing on failures.
+    case failedWithDiagnostic(summary: PipelineSummary)
 }
 
 // MARK: - Progress parser protocol
@@ -194,6 +205,37 @@ final class PipelineRunner: ObservableObject {
     )
 
     @Published private(set) var state: [UUID: PipelineState] = [:]
+
+    #if DEBUG
+    /// Debug-only state override for the diagnostic-popover fixture harness.
+    /// Used by `PipelineActivityItem.applyDebugFixtureIfNeeded()`. Not
+    /// compiled into Release builds.
+    func _debugSetState(_ state: PipelineState, for projectID: UUID) {
+        self.state[projectID] = state
+    }
+
+    /// Debug-only: apply fixture override for one project (called from
+    /// ContentView when the selection changes). Idempotent per project.
+    private var _debugFixtureApplied = Set<UUID>()
+    func _applyDebugFixture(to projectID: UUID) {
+        guard !_debugFixtureApplied.contains(projectID) else { return }
+        let result = DiagnosticFixture.loadIfEnabled()
+        switch result {
+        case .none, .clean:
+            return
+        case .partial(let s):
+            self.state[projectID] = .completedPartial(summary: s)
+        case .failed(let s):
+            self.state[projectID] = .failedWithDiagnostic(summary: s)
+        case .noSummary(let message, let category):
+            // The popover's `applyDebugFixtureIfNeeded` is the synthetic-log
+            // writer for this path (it has access to the Project, which we
+            // don't). Here we just inject the state.
+            self.state[projectID] = .failed(message, category: category)
+        }
+        _debugFixtureApplied.insert(projectID)
+    }
+    #endif
 
     /// Noisy progress data + stdout ring buffer. See `PipelineLiveData` for
     /// why this lives in a separate `ObservableObject`.
@@ -563,11 +605,13 @@ final class PipelineRunner: ObservableObject {
     /// polling strategy for attached orphans lands in Slice 7.)
     private func applyScanResult(_ resolved: PipelineState, for projectID: UUID) {
         switch state[projectID] {
-        case .running, .queued, .failed:
+        case .running, .queued, .failed, .completedPartial, .failedWithDiagnostic:
             // .running/.queued: live state owned by the runner, not the manifest.
-            // .failed: a stale manifest must not erase a fresh failure summary
-            //          (and its Retry CTA) just because the prior run wrote
-            //          .ready before crashing.
+            // .failed / .completedPartial / .failedWithDiagnostic: a stale
+            // manifest must not erase a fresh diagnostic summary (and its
+            // Retry / Copy / Email CTAs) just because the prior run wrote
+            // .ready before crashing — or because the debug-fixture harness
+            // just injected a synthesized diagnostic for visual evaluation.
             return
         default:
             state[projectID] = resolved

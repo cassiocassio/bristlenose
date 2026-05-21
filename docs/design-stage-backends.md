@@ -87,12 +87,17 @@ Treating "on-device on Mac" as a single option is wrong. There are three tiers, 
 Apple shipped Foundation Models at WWDC 2025. For Bristlenose-on-Mac it offers:
 
 - **~3B parameter on-device LLM** via `LanguageModelSession` (Swift-only)
-- **`@Generable` guided generation** producing typed structs (equivalent to our Pydantic schemas)
+- **`@Generable` guided generation** producing typed structs (equivalent to our Pydantic schemas). Confirmed against corpus 18 May 2026: nested `Generable` types and enums-with-associated-values both supported, so `QuoteCluster` → `Quote[]` shapes translate directly (`structured-output/generating-swift-data-structures-with-guided-generation.md`).
+- **Runtime-defined schemas via `DynamicGenerationSchema`** — the codebook stage (user-defined tags chosen at run time) maps onto Apple's documented `DynamicGenerationSchema` + `GenerationSchema(root:dependencies:)` pattern. No need to wait for "the raw-JSON-schema path" to mature; it already ships.
+- **Specialized model variants via `SystemLanguageModel.UseCase`** — Apple ships purpose-trained model heads, including `contentTagging`, that align directly with Bristlenose's tagging stages (`sessions/systemlanguagemodel.md`). Worth evaluating before routing tagging to the general-purpose model.
 - **Tool calling, streaming**
-- **~4k token context** — the defining constraint
+- **Small context window** — defining constraint. Apple does **not** publish a token number on the public reference pages; the canonical reference is [TN3193: Managing the on-device foundation model's context window](https://developer.apple.com/documentation/Technotes/tn3193-managing-the-on-device-foundation-model-s-context-window) (not in our scrape — Technotes live under a different DocC root). ~4k is the widely-cited estimate; treat as "small enough that we must chunk" rather than as a hard number, and re-verify per OS release.
+- **Multiple model versions per major OS rev** — corpus confirms two model versions already shipped under macOS 26 (26.0–26.3 and 26.4). Prompt design isn't stable across point releases; that compounds the durable-plumbing vs specific-API distinction below.
+- **Guardrails fire on both input and output, no opt-out** — the framework throws `guardrailViolation` when either the prompt or the response trips Apple's safety classifier (self-harm, violence, adult). Guided-generation calls throw `refusal(_:_:)` separately. For Bristlenose this is a real constraint on the higher-sensitivity stages — UR text about healthcare, end-of-life, abuse, or sensitive products can plausibly hit guardrails — and not addressable by prompt-engineering alone (`safety/improving-the-safety-of-generative-model-output.md`). See updated per-stage fit table below.
+- **Availability is gated, not assumed** — `SystemLanguageModel.Availability` cases include `.deviceNotEligible`, `.appleIntelligenceNotEnabled`, `.modelNotReady`. Not every Mac that runs the app will have FM live. Routing must degrade rather than fail.
 - **Free, private, offline, fast on the Neural Engine**
 - **macOS 26+, Apple Silicon only**
-- **Zero user setup** — ships with the OS
+- **Zero user setup beyond Apple Intelligence opt-in** — ships with the OS
 
 This is the "it just works" path for Mac users. Whether it is *good enough* for s10 is an open question today; whether it's good enough after WWDC 2026 is a stronger open question.
 
@@ -146,6 +151,31 @@ Anchor dates on our horizon:
 
 This means the spike is most valuable as a **re-runnable benchmark we re-measure each quarter**, not a one-shot reading. First run: April 2026 baseline. Then at WWDC 2026, at macOS 27 GA, at the next Claude generation, at M5 availability on the dev machine. The curve we publish to users / App Store reviewers / investors is the interesting artefact — the first reading is just the "before".
 
+### Durable plumbing vs specific APIs (firmed up 17 May 2026)
+
+Two horizons need separating, because they have different investment profiles:
+
+- **Durable plumbing** — per-stage routing layer, structured-output translators, eval harness, corpus scrapers ([handoff](private/handoffs/foundation-models-corpus.md)), Swift-side FM host endpoint, hardware-tier detection. These survive WWDC restructures; we build confidently. Pre-WWDC investment pays off whatever Apple ships.
+- **Specific-API surface** — the current `@generable` syntax, today's FM ~4k context window, `mlx-lm 0.x` Python API, specific model SKUs. These get thin shims with `# verified against API as of <date>` comments. Each WWDC / macOS release may invalidate; cost of re-verification is minutes-to-hours per shim.
+
+The pre-WWDC corpus + per-stage routing investment is plumbing. The post-WWDC swap-in of WWDC26's actual `@generable` features is shim. **Different cost ceilings, different urgency.**
+
+### Hardware-economics curve (the second arc)
+
+The per-stage tier table above describes *technical fit*. It does not describe *who can afford to run it*. Two curves on the same time axis:
+
+| Year | High-end Mac (M-Ultra Studio) | Mid-tier Mac (M-Pro MacBook) | Researcher entry (Mac mini class) |
+|---|---|---|---|
+| 2026 | 30B MoE comfortable | 14B BF16 comfortable | FM (~3B) only |
+| 2027 | next-gen MoE class | 30B MoE expected | 14B BF16 expected |
+| 2028 | frontier-on-device speculative | next-gen MoE expected | 30B MoE expected |
+
+The 2027 Mac mini inflection is the one to watch: that's when mid-range Apple Silicon reaches the capability tier needed for serious on-device pipeline runs, at hardware the target freelance UX researcher already owns or can justify. Today the equivalent capability needs an M-Ultra Studio, which is not the target user's setup.
+
+**Consequence for design:** treat **hardware tier as a first-class modularisation axis** alongside platform and pipeline-stage. The same code path on the same macOS may route s10 to FM on a 16GB M2 Air, MLX-14B on a 24GB M5 MacBook Pro, and MLX-MoE on an M5 Ultra Studio. Detection lives in a single resolver; the rest of the codebase doesn't branch. See [design-modularity.md](design-modularity.md) §Modularisation matrix.
+
+**Consequence for sequencing:** the on-device pipeline option for mid-tier Macs (14B BF16 or better as a routine choice) isn't a 2026 story — it's mid-decade Apple Silicon territory, plausibly M-series-N for some N ≥ 6. The routing-layer plumbing is worth investing in earlier so the option turns on when the hardware reaches researchers, but exactly *how* it surfaces in the commercial Mac product (gating, tiering, packaging) is a post-WWDC / post-cohort question, not settled here. (Pricing strategy is out of scope for design docs — see [design-pluggable-llm-routing.md](design-pluggable-llm-routing.md) §What this document is not.)
+
 ### Stage-by-stage fit (on-device tiers)
 
 "FM" = Apple Foundation Models (~3B, 4k). "MLX-14B" = MLX-hosted Qwen-class 14B BF16. "MLX-MoE" = 30B MoE 4-bit.
@@ -169,13 +199,16 @@ This means the spike is most valuable as a **re-runnable benchmark we re-measure
 
 Key: ◉ strong fit, ◐ plausible, ✗ poor fit, — not an LLM stage.
 
+**Guardrails are an orthogonal axis to context-fit.** The table above tracks *technical* fit. FM's guardrails fire on input AND output (no opt-out — see Tier 1 above), so any stage that handles raw UR content from sensitive domains (healthcare, end-of-life, abuse, mental health, intimate products) carries a guardrail-violation risk that the ◉/◐/✗ marks don't capture. Tentative ranking by guardrail exposure: **low** = s08 PII removal, s09 topic segmentation, sentiment classification (operates on already-extracted text, structured-output enums); **medium** = s10 quote extraction (raw transcript in, quote text out); **high** = anything that asks FM to *summarise* or *paraphrase* sensitive content (s11/s12 — already ✗ for context reasons, but doubly so for safety). The starter roles in `design-pluggable-llm-routing.md` (PII + topic seg) were chosen for context-size reasons; they also happen to be the lowest-guardrail-risk stages. The eval harness needs a sensitive-content slice to measure violation rate, not just precision.
+
 ### Constraints that matter
 
-- **FM 4k context** will bite on long quotes with surrounding windows. Needs chunking or session-length filtering. May loosen at WWDC 2026; still a real constraint today.
+- **FM context size** will bite on long quotes with surrounding windows. Needs chunking or session-length filtering. May loosen at WWDC 2026; still a real constraint today. Apple doesn't publish a number on public reference pages — see Tier 1 above for the TN3193 reference.
+- **FM guardrails / refusals** are non-bypassable; sensitive-domain interviews can hit `guardrailViolation` or guided-generation `refusal`. Routing must downgrade to a non-FM backend for affected sessions rather than fail the run.
 - **Quality ceiling** on synthesis — do not let FM touch s11/s12. MLX-MoE is an open question we should measure, not assume.
 - **FM is Swift-only** — access must live in the desktop sidecar, with a local HTTP/XPC endpoint the Python pipeline calls. Respects [`design-modularity.md`](design-modularity.md) ("single Python artefact, no CLI fork") — Python code stays identical, only the sidecar exposes an extra provider on Mac.
 - **MLX is Python-native** — `mlx-lm` ships as a pip package. No sidecar needed. Weights are a one-time download (several GB for 14B, more for 30B). First-run user experience matters.
-- **OS/hardware gating** — must fall back gracefully on macOS <26 (no FM), Intel Macs (no MLX), and non-Apple platforms (neither).
+- **OS/hardware gating** — must fall back gracefully on macOS <26 (no FM), Intel Macs (no MLX), and non-Apple platforms (neither). `SystemLanguageModel.Availability` cases (`.deviceNotEligible`, `.appleIntelligenceNotEnabled`, `.modelNotReady`, plus `unknown`) are the surface the resolver consumes.
 
 ## Generalised principle: per-stage backends
 

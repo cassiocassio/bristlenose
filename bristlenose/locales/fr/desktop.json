@@ -189,6 +189,32 @@
       "stopped": "Arr\u00eat\u00e9"
     }
   },
+  "pipeline": {
+    "diagnostic": {
+      "pill": {
+        "auth": "Probl\u00e8me de cl\u00e9",
+        "missing_binary": "Outil manquant",
+        "quota": "Quota atteint",
+        "network": "Erreur r\u00e9seau",
+        "unknown": "Ex\u00e9cution avec erreurs"
+      },
+      "header": {
+        "completed_partial": "Termin\u00e9 partiellement",
+        "failed": "\u00c9chec de l\u2019ex\u00e9cution"
+      },
+      "action": {
+        "copy": "Copier les d\u00e9tails",
+        "showLog": "Afficher le journal",
+        "showLogTooltip": "Afficher le fichier journal de l'analyse"
+      },
+      "tooltip": {
+        "completed_partial": "Analyse termin\u00e9e avec des erreurs pour {{project}}"
+      },
+      "noStructuredCause": "Cause d\u00e9taill\u00e9e non enregistr\u00e9e.",
+      "overflow_one": "\u2026 et {{count}} autre \u00e9chec tronqu\u00e9",
+      "overflow_other": "\u2026 et {{count}} autres \u00e9checs tronqu\u00e9s"
+    }
+  },
   "availability": {
     "unmountedVolume": "{{name}} · introuvable",
     "networkUnreachable": "{{host}} · injoignable",

@@ -28,17 +28,64 @@ If ANY of these checks fail, **stop immediately** with:
 
 ## Step 2: Check merge status
 
-Run `git branch --merged main` and check if `$0` appears.
+**First, determine the merge-back target.** Most branches fork from `main` and merge back to `main`. Stacked branches (created via `/new-feature --base=<other>`) fork from another in-flight branch and typically merge back to that branch first, riding into main as part of the parent's eventual merge.
 
-If the branch is **NOT merged**, show the unmerged commits with `git log main..$0 --oneline`, then stop with:
+Read `docs/BRANCHES.md` and look for a `**Forked from:**` line in `$0`'s Active Branches section. If present, that's the base. If absent, the base is `main`. Call this `$BASE`.
 
-> Branch `$0` has NOT been merged to main. Merge it first: `git merge $0` (from main), then re-run `/close-branch $0`.
->
-> <sub>If you actually want to abandon or force-delete instead, ask.</sub>
+```bash
+BASE=$(awk -v branch="### \`$0\`" '
+  $0 == branch { in_section = 1; next }
+  in_section && /^### / { exit }
+  in_section && /^\*\*Forked from:\*\*/ {
+    # Strip "**Forked from:** " prefix and any trailing whitespace
+    sub(/^\*\*Forked from:\*\*[[:space:]]*/, ""); sub(/[[:space:]]+$/, "")
+    print; exit
+  }
+' /Users/cassio/Code/bristlenose/docs/BRANCHES.md)
+BASE=${BASE:-main}
+```
+
+Then check merged status. Three states matter:
+
+1. **Merged to main** — clean close, branch ride is over. Run `git branch --merged main` and look for `$0`.
+2. **Merged to `$BASE` but not main** (only possible if `$BASE` != main) — branch landed on the parent; parent hasn't reached main yet. Run `git branch --merged $BASE` and look for `$0`.
+3. **Not merged anywhere** — fail-loud.
+
+```bash
+MERGED_MAIN=$(git branch --merged main | grep -E "^[* ]*$0\$" || true)
+if [ -n "$MERGED_MAIN" ]; then
+  STATE="merged-main"
+elif [ "$BASE" != "main" ] && git show-ref --verify --quiet "refs/heads/$BASE"; then
+  MERGED_BASE=$(git branch --merged "$BASE" | grep -E "^[* ]*$0\$" || true)
+  if [ -n "$MERGED_BASE" ]; then
+    STATE="merged-base"
+  else
+    STATE="unmerged"
+  fi
+else
+  STATE="unmerged"
+fi
+```
+
+Then act on `$STATE`:
+
+- **`merged-main`** — continue (the usual path).
+- **`merged-base`** — surface the situation and ask:
+  > Branch `$0` is merged to `$BASE` but `$BASE` hasn't reached main yet. Archive `$0` now (the work rides into main when `$BASE` merges), or wait until `$BASE` merges first?
+  >
+  > [Archive now / Wait]
+  
+  "Archive now" is the typical answer for stacked branches — the worktree is no longer being touched. "Wait" stops with a reminder to re-run `/close-branch $0` after `$BASE` lands.
+- **`unmerged`** — show unmerged commits and stop:
+  > Branch `$0` has NOT been merged to `$BASE` (or main). Unmerged commits:
+  > ```
+  > $(git log $(git merge-base $BASE $0)..$0 --oneline)
+  > ```
+  > Merge it first: `git checkout $BASE && git merge $0` (or open a PR), then re-run `/close-branch $0`.
+  >
+  > <sub>If you actually want to abandon or force-delete instead, ask.</sub>
 
 If the branch ref no longer exists (already deleted in a partial previous run), check if the worktree directory still exists — if so, continue from Step 4 (archival).
-
-If merged, continue.
 
 ## Step 3: Check for uncommitted work in the worktree
 
@@ -72,15 +119,24 @@ HEAD_SHA=$(git -C "$WORKTREE" rev-parse HEAD 2>/dev/null)
 - "Yes" → stop. Tell user: `cd "/Users/cassio/Code/bristlenose_branch $0"` and run `/end-session`, then re-run `/close-branch $0`.
 - "No" → continue (override path for branches end-sessioned before this feature, or where the user explicitly accepts the gap).
 
-**If the sentinel exists** — read `head_sha` via stdin (avoids shell-quoting hazards in the path or branch name):
+**If the sentinel exists** — read `head_sha` and `audit_version` via stdin (avoids shell-quoting hazards in the path or branch name):
 
 ```bash
-LAST_SHA=$(python3 -c "import json,sys; print(json.load(sys.stdin)['head_sha'])" < "$SENTINEL" 2>/dev/null)
+LAST_SHA=$(python3 -c "import json,sys; d=json.load(sys.stdin); print(d['head_sha'])" < "$SENTINEL" 2>/dev/null)
+LAST_AUDIT=$(python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('audit_version', 0))" < "$SENTINEL" 2>/dev/null)
+CURRENT_AUDIT=1  # bumped when end-session's Durable-artefact audit matcher/doc-set changes
 ```
 
 If `python3` fails or the file is malformed, warn ("sentinel exists but unreadable — continuing") and proceed.
 
-If `LAST_SHA` matches current `HEAD_SHA`, continue silently.
+**If `LAST_AUDIT < CURRENT_AUDIT`** — sentinel predates current audit feature (or current matcher version). Treat as if the sentinel were stale, regardless of SHA match. Prompt via `AskUserQuestion`:
+
+> Last `/end-session` ran audit version $LAST_AUDIT; current is $CURRENT_AUDIT. The Durable-artefact audit (Scan A: decisions; Scan B: incidental closures) may not have run, or ran with an older matcher. Re-run `/end-session`? (Y/n)
+
+- "Yes" → stop with the same instruction as the missing-sentinel branch.
+- "No" → continue (override path for branches the user explicitly accepts without the current audit).
+
+If `LAST_SHA` matches current `HEAD_SHA` AND `LAST_AUDIT` is current, continue silently.
 
 If they differ, check whether the drift is a simple fast-forward or a history rewrite:
 
@@ -105,15 +161,29 @@ Prompt via `AskUserQuestion`:
 
 ## Step 4: Capture commit history (BEFORE any deletion)
 
-This must happen while the branch ref still exists. Capture:
+This must happen while the branch ref still exists. Capture commits since the fork point:
 
 ```bash
-git log $(git merge-base main $0)..$0 --oneline
+git log $(git merge-base $BASE $0)..$0 --oneline
 ```
 
-This uses `merge-base` instead of `main..$0` because `main..$0` is empty for merged branches.
+Uses `merge-base $BASE` (not `merge-base main`) so stacked branches show only their *own* commits, not the inherited parent commits. For branches forked from main, `$BASE` is `main` and the result is identical.
 
-Save this output — you'll need it for the stale marker file in Step 4.
+Uses `merge-base` instead of `$BASE..$0` because the latter is empty for merged branches.
+
+Save this output — you'll need it for the stale marker file in Step 6.
+
+## Step 4.5: Durable-artefact audit — delegated to `/end-session`
+
+The decision-promotion + incidental-closure scans (Scan A + Scan B) live in `/end-session`'s "Durable-artefact audit" subsection, not here. Reason: `/end-session` runs at peak context — work is fresh, the user can judge candidates quickly. `/close-branch` runs later, after merge, when context has cooled. Direct-on-main work also has no `/close-branch`, so `/end-session` is the universal surface; duplicating the scans here introduces drift between two implementations of the same logic.
+
+The gate is **Step 3.5 above** — the `.claude/last-end-session.json` sentinel check, augmented to read `audit_version`:
+- Sentinel missing → `/end-session` was never run → Step 3.5 prompts.
+- Sentinel present but `audit_version` < current → audit ran with an older matcher (or predates the audit feature) → Step 3.5 prompts.
+- Sentinel current AND `audit_version` current AND `head_sha` matches HEAD → trust the audit ran; proceed silently.
+- Sentinel SHA stale (drift) → Step 3.5's existing drift-detection prompts.
+
+**Worked example that motivated this routing** — F49 (`e4037d5`, the `cantfind-glyphs` branch decision rejecting `icloud.and.arrow.down`): a sibling branch's handoff proposed the rejected affordance 3 days later. The rejection wasn't visible anywhere except `git log -p` of one file. Scan A on `cantfind-glyphs`'s `/end-session` would have surfaced the commit and promoted the decision to `docs/design-decisions.md` while context was fresh; the sibling handoff would have hit the documented decision instead of `git log`.
 
 ## Step 5: Run tests on main (optional)
 
@@ -221,12 +291,15 @@ Then:
 1. Remove the branch's full section from **Active Branches**
 2. Remove the branch's row from the **Worktree Convention** table (if present)
 3. Remove the branch's row from the **Backup Strategy** table (if present)
-4. Add an entry under **Completed Branches (for reference)** following the existing format:
+4. Add an entry under **Completed Branches (for reference)** following the existing format. If `$BASE` (from Step 2) is not `main`, include the merge target so the history reads correctly:
 
 ```markdown
 ### `$0` — merged <today's date, D Mon YYYY>
 
 <Brief summary pulled from the "What it does" text of the active entry>
+
+<If $BASE is not main, add one line:>
+Forked from and merged back to `$BASE`.
 ```
 
 5. Update the **Updated:** date at the top of the file
@@ -243,12 +316,16 @@ git commit -m "close $0 branch, update BRANCHES.md"
 
 Print a summary of everything that was done:
 
+- Merge target: `$BASE` (note explicitly if not `main`, so the user remembers the parent still needs to land)
 - Stale marker: created (or skipped if directory was gone)
 - Worktree: detached from git, directory preserved on disk at `...`
 - Local branch: deleted / kept
 - Remote branch: deleted / kept / didn't exist
 - BRANCHES.md: updated and committed
 - Tests: passed / skipped / N failures noted
+
+If `$BASE` is not `main`, add an explicit reminder:
+> `$0` rode into `$BASE`. `$BASE` itself still needs to land in main — track via its own `/close-branch` later.
 
 Then remind the user:
 > The worktree directory is still on disk at `/Users/cassio/Code/bristlenose_branch $0/`. Delete it whenever you like — it's just a regular folder now, not connected to git.

@@ -14,6 +14,11 @@ import os from 'os';
 
 test.describe.configure({ mode: 'serial' });
 
+// Mount + schema integrity is covered at the pytest layer
+// (tests/test_server_status_page.py::TestSmokeFixtureMountsSPA and
+// tests/test_smoke_fixture_schema.py) — no need to repeat at the browser
+// layer.
+
 // ── Results collector ───────────────────────────────────────────────────
 
 const results: Record<string, number> = {};

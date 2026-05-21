@@ -297,16 +297,27 @@
     gap: var(--bn-space-xs) var(--bn-space-md);
 }
 
+/* When a list carries reasons (unavailable items), stack each row on its own
+   line so name + reason wrap together as a coherent unit. Available items
+   stay horizontal — they're short and benefit from compact display. */
+.bn-pipeline-alternatives-row:has(.bn-pipeline-alt-reason) .bn-pipeline-alternatives-list {
+    flex-direction: column;
+    gap: var(--bn-space-xxs);
+}
+
 .bn-pipeline-alternatives-empty {
     color: var(--bn-colour-muted);
     font-style: italic;
 }
 
 .bn-pipeline-alt {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.25em;
-    white-space: normal;
+    display: inline;
+}
+
+.bn-pipeline-alt-glyph {
+    /* The glyph and the name belong together — non-breaking space prevents
+       the row from wrapping between "✗" and the backend name. */
+    margin-right: 0.25em;
 }
 
 .bn-pipeline-alt-glyph {

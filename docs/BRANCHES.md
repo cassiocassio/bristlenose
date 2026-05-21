@@ -39,6 +39,8 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
+| `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | chore | Translate ProjectRow pipelineSubtitle + locale-aware date formatters |
+| `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
 | `bristlenose_branch pipeline-view-v1/` | `pipeline-view-v1` | feature | Read-only Pipeline view — one CLI verb (`bristlenose pipeline`) + one React Settings tab; validates the mixture-of-models mental model with the cohort, nothing else |
 | `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
 

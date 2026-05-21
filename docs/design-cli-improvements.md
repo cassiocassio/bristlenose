@@ -445,6 +445,8 @@ Reframes `--static` from "the old thing, deprecated" (sad, vestigial) to "the ma
 
 A design conversation in May 2026 (out of the foundation-models-corpus reading) explored what the CLI surface for preferences, multi-stage model choice, and key management *could* eventually look like. None of it is committed beyond a single v1 read-only Pipeline view (the spike for which lives in the local-only branch handoff for this work). Captured here so the design space isn't re-derived from scratch when each piece earns its place.
 
+**Shipped 18 May 2026 (branch `pipeline-view-v1`):** the read-only Pipeline view. `bristlenose pipeline` CLI verb (with `--json` and `--stage` filter) + a "Pipeline" tab as the last item in the React Settings modal, consuming `GET /api/pipeline`. Reads existing settings + reuses `_resolve_backend` from `s05_transcribe.py` for the transcription row; no new dispatch. Apple FM row returns `Unknown from CLI` (Swift-side probe deferred — see below). Catalogue lives in `bristlenose/pipeline_view/catalogue.py`; cross-language contract fixture at `tests/fixtures/pipeline-view-contract.json` round-tripped by both Python tests and the React component. Everything else below is still parked.
+
 **The shipping reality** (so the contrast is honest):
 - `bristlenose configure <provider>` already ships — interactive key entry, validates via test call, stores in Keychain (macOS) / Secret Service (Linux). See `bristlenose/cli.py:1843`. This is what the conversation rediscovered as a desirable `auth login`-style verb; it's already there.
 - `bristlenose doctor` already nudges users to run `configure` when keys are missing (`bristlenose/doctor.py`).

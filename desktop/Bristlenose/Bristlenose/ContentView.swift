@@ -1,6 +1,5 @@
 import SwiftUI
 import UniformTypeIdentifiers
-import os
 
 // MARK: - Window title manager
 
@@ -166,9 +165,6 @@ struct InFlightSwitchPrompt: Identifiable {
 /// - Centre: tab segmented control (Cmd+1-5)
 /// - Trailing: project name as window title
 struct ContentView: View {
-
-    // PROBE — sidebar-list-not-rendering branch. Remove once fix lands.
-    private static let sidebarProbe = Logger(subsystem: "app.bristlenose", category: "sidebar-debug")
 
     @EnvironmentObject var serveManager: ServeManager
     @EnvironmentObject var bridgeHandler: BridgeHandler
@@ -1414,16 +1410,11 @@ struct ContentView: View {
     // MARK: - Sidebar
 
     private var sidebar: some View {
-        // PROBE — sidebar-list-not-rendering. Fires on every body re-evaluation.
-        let _ = Self.sidebarProbe.debug("sidebar body: projects=\(self.projectIndex.projects.count, privacy: .public) folders=\(self.projectIndex.folders.count, privacy: .public) sidebarItems=\(self.projectIndex.sidebarItems.count, privacy: .public) selection.count=\(self.selection.count, privacy: .public) persistedProjectID=\(self.persistedProjectID, privacy: .public)")
-        return List(selection: $selection) {
-            // "+ New Project" lives OUTSIDE the Section. Per handoff Fix 1
-            // and `desktop/CLAUDE.md`'s documented-fragile composition:
+        List(selection: $selection) {
+            // "+ New Project" lives outside the Section. Per desktop/CLAUDE.md:
             // `Section + Button + ForEach.onMove + conditional Text` drops
             // Section content when `projects.isEmpty == true` on macOS 26.
-            // First pass moved the Text out; folders still didn't render with
-            // projects=0. Moving the Button out too is the rest of the fix —
-            // Section now contains only the ForEach.
+            // Section here contains only the ForEach.
             Button {
                 createNewProject()
             } label: {
@@ -1434,8 +1425,6 @@ struct ContentView: View {
 
             Section {
                 ForEach(projectIndex.sidebarItems) { item in
-                    // PROBE — sidebar-list-not-rendering. Fires once per row evaluated.
-                    let _ = Self.sidebarProbe.debug("sidebar row: \(String(describing: item), privacy: .public)")
                     switch item {
                     case .folder(let folder):
                         folderSection(folder)

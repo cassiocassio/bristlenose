@@ -2,7 +2,7 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
-**Unreleased**
+**0.15.11** — _21 May 2026_
 
 - **`bristlenose pipeline` + read-only Pipeline tab in Settings.** New CLI verb (`bristlenose pipeline`, with `--json` and `--stage <id>` filter) and matching last-position tab in the React Settings modal that render the mixture of models Bristlenose currently uses across its pipeline stages: MLX/faster-whisper for transcription, the chosen LLM provider × model for speaker identification / topic segmentation / quote extraction / quote clustering / thematic grouping, Presidio (or "Off") for anonymisation, and an Apple Foundation Models row that returns `Unknown from CLI` until the Swift-side probe ships. Two-column definition-list layout; deterministic ingest/audio/parse/merge stages omitted (they don't participate in the mixture story). Host context strip at the bottom shows OS · arch · RAM · keys present · ollama status. Read-only on purpose — to change a backend you still edit settings or .env. Reuses `_resolve_backend` from `s05_transcribe.py` for the transcription row; no parallel resolver. Cross-language schema lock at `tests/fixtures/pipeline-view-contract.json` round-tripped by Python tests and the React tab. New module `bristlenose/pipeline_view/` (renamed mid-branch from `pipeline/` after the collision with the existing `pipeline.py` orchestrator surfaced); the underscore in the package name keeps the user-facing CLI verb intact. 28 new tests; full suite green. Design captured in `docs/design-cli-improvements.md` §Captured design.
 

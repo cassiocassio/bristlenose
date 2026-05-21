@@ -29,14 +29,13 @@ Group the output mentally into:
 
 ## Phase 2: Read the plan docs
 
-**Working-tree check first.** Run `git status --porcelain docs/private/100days.md TODO.md docs/BRANCHES.md docs/private/THIS\ IS\ NEXT.md` before reading. If any of these are dirty, the skill is reading working-tree intent and comparing to committed reality — false stale findings will follow. Flag the dirty files in the preamble so the user knows the audit was against in-flight edits.
+**Working-tree check first.** Run `git status --porcelain docs/private/100days.md TODO.md docs/BRANCHES.md` before reading. If any of these are dirty, the skill is reading working-tree intent and comparing to committed reality — false stale findings will follow. Flag the dirty files in the preamble so the user knows the audit was against in-flight edits.
 
 **Boundary with `/sync-board`:** sitrep *reads* plan docs vs git; sync-board *writes* GitHub Projects cards from `100days.md`. If both surface the same item it's because both consult the same source — not duplication, just two skills with two motions over one source-of-truth.
 
 Read these in parallel where possible. They're authoritative for different things:
 
 - `docs/private/100days.md` — esp. §Critical Path to Internal TF block + canonical §1–§3 entries (the §1 cluster entries are usually the most current; the Now/Next/Then ladder is the summary)
-- `docs/private/THIS IS NEXT.md` — head-of-session pointer (often the most stale file in the tree; trust it least)
 - `docs/private/plans/*.md` — chunk decompositions; check the status banner at top if one exists
 - `TODO.md` — "Next session focus" + Ideas (Ideas is the antechamber for captured-but-not-triaged design docs)
 - `docs/private/road-to-app-store.md` — 14-checkpoint table around line 290 + "Current status summary"
@@ -146,7 +145,7 @@ Top pick + the main tradeoff vs the runner-up. Optionally one "if you only do on
 
 ### Suggestions (bullet list, 2–5 items)
 Lateral observations the user can ignore or pluck:
-- Doc edits offered (`THIS IS NEXT.md` header refresh, lateral-wins block, stale-done strikes)
+- Doc edits offered (lateral-wins block, stale-done strikes)
 - Things worth flagging for the next window (half-life concerns, parked-too-long branches)
 - **Sprint-slip candidates** — if the close-projection says not everything fits, propose what should slip to S<n+1> or beta-Must
 - Chip candidates if any surfaced during the audit
@@ -161,7 +160,6 @@ After presenting, ask the user which stale-done / cosmetic / lateral-win finding
 - Status banner at top of plan docs that lack one
 - New entries in `TODO.md` Ideas for orphaned design docs
 - Lateral-wins block in `100days.md` (between §Critical Path and §quality reset) if not already present
-- Refresh `THIS IS NEXT.md` head + suggested-next-move block
 
 Do **not** apply edits without confirmation. Some "stale" claims are intentional historical record (e.g. dated execution-order sections in plan docs); the user knows which.
 

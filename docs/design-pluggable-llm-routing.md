@@ -1,7 +1,7 @@
 # Pluggable LLM routing, per-stage model choice, and quality eval
 
-**Status:** Design draft — not yet implemented. April 2026.
-**Related:** [design-gemma4-local-models.md](design-gemma4-local-models.md), [design-modularity.md](design-modularity.md), [design-perf-fossda-baseline.md](design-perf-fossda-baseline.md), [archive/design-llm-providers.md](archive/design-llm-providers.md) (historical roadmap)
+**Status:** Design draft — not yet implemented. April 2026. The routing layer itself is *durable plumbing* worth investing in early; specific provider shims (Apple FM, MLX-LM) are surface that re-verifies per release. See [design-stage-backends.md](design-stage-backends.md) §"Durable plumbing vs specific APIs" for the cost/urgency split.
+**Related:** [design-stage-backends.md](design-stage-backends.md), [design-modularity.md](design-modularity.md) §Modularisation matrix, [design-gemma4-local-models.md](design-gemma4-local-models.md), [design-perf-fossda-baseline.md](design-perf-fossda-baseline.md), [archive/design-llm-providers.md](archive/design-llm-providers.md) (historical roadmap), [private handoff: foundation-models-corpus](private/handoffs/foundation-models-corpus.md) (offline API reference)
 
 ## Why now
 
@@ -53,8 +53,9 @@ For Bristlenose this means the blessed route to Apple's on-device model is **Swi
 **Consequences:**
 
 - **CLI parity is out of scope for Apple FM.** First explicit break from [design-modularity.md](design-modularity.md)'s no-fork principle. Justified: the feature is structurally tied to a macOS entitlement and Apple silicon. Document as a capability-gate, not a fork.
-- **Structured output translation lives Swift-side.** Swift's `@Generable` is where the Pydantic schema needs to land. The Python side ships the JSON schema; Swift translates into an ad-hoc `@Generable` struct or uses the FM framework's raw-JSON-schema path when that surface matures.
-- **Starting role:** `pii_removal` and `topic_segmentation` — per-session, short prompts, small-context-friendly, benefit most from "stays on device". Not `quote_clustering` / `thematic_grouping`, which need cross-session reasoning and a larger context than the on-device model provides.
+- **Structured output translation lives Swift-side.** Swift's `@Generable` is where the Pydantic schema needs to land. Two viable paths, both confirmed against the corpus (18 May 2026): (a) compile-time `@Generable` structs translated from our Pydantic models; (b) runtime `DynamicGenerationSchema` + `GenerationSchema(root:dependencies:)` for codebook stages where tags are user-defined. Nested `Generable` types and enums-with-associated-values are documented as supported, so `QuoteCluster` → `Quote[]` shapes translate without restructuring.
+- **Starting role:** `pii_removal` and `topic_segmentation` — per-session, short prompts, small-context-friendly, benefit most from "stays on device". Two compounding reasons: small context fits, and these are the lowest-guardrail-risk stages (see [design-stage-backends.md](design-stage-backends.md) §"Guardrails are an orthogonal axis"). Not `quote_clustering` / `thematic_grouping`, which need cross-session reasoning and a larger context than the on-device model provides.
+- **Specialized model variants worth evaluating** — `SystemLanguageModel.UseCase.contentTagging` ships a purpose-trained head for tagging tasks. Worth a per-stage A/B before routing tagging to the general-purpose model.
 - **Not the python-apple-fm-sdk.** Bundling it in the sidecar would drag Swift-backed dylibs into PyInstaller for no benefit — the model still needs the Swift entitlement to run. Python shim adds cost, not capability.
 
 ### 3. Quality eval harness
@@ -92,9 +93,10 @@ Matrix form: run N models × M stages, write a comparison table. This is the thi
 ## Open questions
 
 - Swift-side FM endpoint: what's the XPC/messaging shape between Swift host and Python sidecar for a structured LLM call? Extension of the existing credential-injection bridge, but request/response is heavier. Needs a small spike.
-- Is Swift `@Generable` rich enough for our nested schemas (e.g. `QuoteCluster` with nested quote lists)? Flat looks fine, nested unclear — verify with a spike.
+- ~~Is Swift `@Generable` rich enough for our nested schemas (e.g. `QuoteCluster` with nested quote lists)?~~ **Resolved 18 May 2026 against corpus:** yes — nested `Generable` types and enums-with-associated-values are documented as supported (`structured-output/generating-swift-data-structures-with-guided-generation.md`). Runtime-known schemas use `DynamicGenerationSchema`. Spike not needed for the schema-shape question; still needed for the XPC bridge shape above.
 - What's the right eval cadence? On every provider/model config change manually? Nightly on a perf branch? Pre-release only?
 - Do we expose eval scores to end users ("this config scores 0.87 precision on the reference set"), or keep it an internal tool? Leaning internal until the numbers are defensible.
+- **Guardrails on sensitive UR content.** Apple's guardrails fire on input and output; refusals throw `LanguageModelSession.GenerationError.refusal(_:_:)` for guided generation. The eval harness needs a sensitive-content slice (healthcare, end-of-life, abuse) to measure violation rate per stage. Routing must downgrade rather than fail when a session hits a violation. Open: what's the user-facing UX when this happens — silent fallback to cloud (with notice), or explicit opt-in per session?
 
 ## What this document is not
 

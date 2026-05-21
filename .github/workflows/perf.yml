@@ -1,0 +1,73 @@
+name: Perf
+
+# Perf-gate runs post-merge on main only — not as a pre-merge gate.
+# Rationale: false positives (CI-runner noise, transient network) were
+# silently stalling release-pipeline workflows because perf-gate ran
+# pre-merge in ci.yml. Moving it post-merge keeps the regression signal
+# without gating PRs or releases. Failures here are monitored via the
+# daily ci-health-check skill + statusline.
+on:
+  push:
+    branches: [main]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  perf-gate:
+    # Regression gate for the serve-mode report SPA: DOM node counts,
+    # API latency, export size. Chromium-only, runs against the smoke
+    # fixture (1 session, 4 quotes).
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: '.tool-versions'
+
+      - name: Install Python dependencies (including serve extras)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,serve]"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.tool-versions'
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install E2E dependencies
+        working-directory: e2e
+        run: npm ci
+
+      - name: Install Playwright (chromium only)
+        working-directory: e2e
+        run: npx playwright install chromium --with-deps
+
+      - name: Run perf-gate
+        working-directory: e2e
+        run: npx playwright test tests/perf-gate.spec.ts --project=chromium
+        env:
+          CI: true
+          BN_RUN_PERF_GATE: "1"
+          # Smoke fixture only — no real data; token is not a secret.
+          _BRISTLENOSE_AUTH_TOKEN: test-token
+
+      - name: Upload perf results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-results-${{ github.run_id }}
+          path: |
+            e2e/perf-results.json
+            e2e/.perf-history.jsonl
+          retention-days: 90
+          if-no-files-found: warn

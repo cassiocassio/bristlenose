@@ -91,6 +91,13 @@ struct ProjectRow: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
         .help(rowTooltip)
+        // Extend hit region vertically into the SwiftUI List inter-row gap.
+        // SidebarDropDelegate hit-tests via the row's rendered frame, so
+        // padding here widens the captured rectangle and stops gap-drops
+        // between sibling rows from routing to the List-level URL fallback
+        // (which would create the project at root instead of inside the
+        // surrounding folder). Symmetric with FolderRow.
+        .padding(.vertical, 2)
         // Drop-target highlight traces the outer row container, not the
         // inner HStack — negative padding pushes the stroke past the row
         // content's natural bounds so it matches the selection pill shape
@@ -360,6 +367,15 @@ struct ProjectRow: View {
         switch pipelineState {
         case .failed(let summary, _):
             return .failed(summary: summary)
+        case .failedWithDiagnostic:
+            // Sidebar is the attention surface, not the detail surface —
+            // budget is ~22 EN chars before DE/ES/FR swell truncates. The
+            // toolbar pill carries the dominant category + count; the
+            // sidebar row just says "row needs your eyes". Per
+            // `feedback_sidebar_is_attention_not_affordance`.
+            return .failed(summary: i18n.t("desktop.pipeline.diagnostic.header.failed"))
+        case .completedPartial:
+            return .pipelineText(i18n.t("desktop.pipeline.diagnostic.header.completed_partial"))
         case .running:
             let key = isStoppingProgress
                 ? "desktop.chrome.pipeline.stopping"

@@ -189,6 +189,32 @@
       "stopped": "Angehalten"
     }
   },
+  "pipeline": {
+    "diagnostic": {
+      "pill": {
+        "auth": "Schlüsselproblem",
+        "missing_binary": "Werkzeug fehlt",
+        "quota": "Limit erreicht",
+        "network": "Netzwerkfehler",
+        "unknown": "Lauf mit Fehlern"
+      },
+      "header": {
+        "completed_partial": "Teilweise abgeschlossen",
+        "failed": "Lauf fehlgeschlagen"
+      },
+      "action": {
+        "copy": "Details kopieren",
+        "showLog": "Protokoll anzeigen",
+        "showLogTooltip": "Analyseprotokolldatei anzeigen"
+      },
+      "tooltip": {
+        "completed_partial": "Analyse für {{project}} mit Fehlern beendet"
+      },
+      "noStructuredCause": "Detaillierte Ursache nicht erfasst.",
+      "overflow_one": "… und {{count}} weiterer Fehler gekürzt",
+      "overflow_other": "… und {{count}} weitere Fehler gekürzt"
+    }
+  },
   "availability": {
     "unmountedVolume": "{{name}} · nicht gefunden",
     "networkUnreachable": "{{host}} · nicht erreichbar",

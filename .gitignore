@@ -89,5 +89,8 @@ HANDOFF.md
 .claude/setup-incomplete
 .claude/last-end-session.json
 
+# End-session Durable-artefact audit telemetry (per-worktree, gitignored)
+.claude/audit-log.jsonl
+
 # Local backups of agent prompts (e.g. .bak-pre-hig-corpus-YYYY-MM-DD)
 .claude/agents/*.bak-*

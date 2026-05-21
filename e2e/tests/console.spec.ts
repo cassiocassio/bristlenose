@@ -27,7 +27,15 @@ test('no console errors on any route', async ({ page, baseURL }) => {
 
   for (const path of routes) {
     await page.goto(path);
-    await page.waitForLoadState('networkidle');
+    // `networkidle` is bounded — the SPA owns several poll loops
+    // (LastRunStore, ActivityChipStack, PlayerContext, AutoCodeToast,
+    // PlaygroundHUD) which prevent the 500ms idle window from ever firing
+    // under CI Linux. `load` is deterministic; the small follow-up settle
+    // lets first-paint React effects run before we sample console errors.
+    // See root CLAUDE.md "E2E: waitForLoadState('networkidle') is too
+    // fragile for SPAs".
+    await page.waitForLoadState('load');
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
   }
 
   expect(errors).toEqual([]);

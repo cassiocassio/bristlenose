@@ -26,7 +26,7 @@ from bristlenose.utils.text import count_noun
 # Known commands — used by _maybe_inject_run() to detect bare directory arguments
 _COMMANDS = {
     "run", "transcribe", "analyze", "analyse", "render", "doctor", "help", "configure", "serve",
-    "status", "codebooks",
+    "status", "codebooks", "pipeline",
 }
 
 
@@ -2256,3 +2256,11 @@ def _help_workflows() -> None:
     console.print("  Transcripts: .docx (Teams exports)")
     console.print("  Files sharing a name stem are treated as one session.")
     console.print()
+
+
+# `bristlenose pipeline` — read-only mixture-of-models view.
+# The command body lives in bristlenose.pipeline.cli so the catalogue + render
+# stay isolated from the 2k-line main CLI module.
+from bristlenose.pipeline_view.cli import pipeline_command as _pipeline_command  # noqa: E402
+
+app.command(name="pipeline")(_pipeline_command)

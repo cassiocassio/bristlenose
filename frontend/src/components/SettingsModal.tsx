@@ -270,6 +270,9 @@ const NAV_KEYS: { id: string; labelKey: string; hasChildren?: boolean }[] = [
   { id: "profile", labelKey: "settingsNav.profile" },
   { id: "api-keys", labelKey: "settingsNav.apiKeys" },
   { id: "config", labelKey: "settingsNav.config", hasChildren: true },
+  // Pipeline is last on purpose — "for the interested" placement. See
+  // pipeline-view-v1 plan and docs/design-cli-improvements.md §Captured design.
+  { id: "pipeline", labelKey: "settingsNav.pipeline" },
 ];
 
 // ── Section components ────────────────────────────────────────────────────
@@ -404,6 +407,102 @@ function ConfigSection({ categoryId }: { categoryId: string }) {
   );
 }
 
+// ── Pipeline section ──────────────────────────────────────────────────────
+
+interface PipelineStageView {
+  id: string;
+  name: string;
+  kind: string;
+  chosen: string;
+  notes: string;
+  available: boolean;
+}
+
+interface PipelineViewResponse {
+  catalogue: PipelineStageView[];
+  host: {
+    os: string;
+    arch: string;
+    memory_gb: number | null;
+    keys_present: Record<string, boolean>;
+    ollama_running: boolean;
+    network_reachable: boolean;
+    apple_fm_status: string;
+  };
+}
+
+function authToken(): string | undefined {
+  return (window as unknown as Record<string, unknown>)
+    .__BRISTLENOSE_AUTH_TOKEN__ as string | undefined;
+}
+
+function PipelineSection() {
+  const { t } = useTranslation("settings");
+  const [data, setData] = useState<PipelineViewResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const token = authToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    fetch("/api/pipeline", { headers })
+      .then((res) => {
+        if (!res.ok) throw new Error(`GET /api/pipeline ${res.status}`);
+        return res.json() as Promise<PipelineViewResponse>;
+      })
+      .then((json) => {
+        if (!cancelled) setData(json);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(String(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (error) {
+    return <p className="bn-setting-description">{t("pipeline.error")}: {error}</p>;
+  }
+  if (!data) {
+    return <p className="bn-setting-description">{t("pipeline.loading")}</p>;
+  }
+
+  const host = data.host;
+  const keysOn = Object.entries(host.keys_present)
+    .filter(([, on]) => on)
+    .map(([p]) => p);
+
+  return (
+    <div className="bn-pipeline-view">
+      <p className="bn-setting-description">{t("pipeline.intro")}</p>
+      <dl className="bn-pipeline-stages">
+        {data.catalogue.map((stage) => (
+          <div
+            key={stage.id}
+            className={`bn-pipeline-stage${stage.available ? "" : " bn-pipeline-stage-dim"}`}
+          >
+            <dt className="bn-pipeline-stage-name">{stage.name}</dt>
+            <dd className="bn-pipeline-stage-body">
+              <div className="bn-pipeline-stage-chosen">{stage.chosen}</div>
+              <div className="bn-pipeline-stage-notes">{stage.notes}</div>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p className="bn-pipeline-host">
+        {host.os} {host.arch}
+        {host.memory_gb !== null ? ` · ${host.memory_gb} GB` : ""}
+        {" · "}
+        {t("pipeline.keys")}: {keysOn.length > 0 ? keysOn.join(", ") : t("pipeline.keysNone")}
+        {" · "}
+        {t("pipeline.ollama")}: {host.ollama_running ? t("pipeline.running") : t("pipeline.notDetected")}
+      </p>
+    </div>
+  );
+}
+
 // ── SettingsModal ─────────────────────────────────────────────────────────
 
 interface SettingsModalProps {
@@ -446,6 +545,8 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     content = <StubSection description={t("settingsNav.apiKeysStub")} />;
   } else if (activeId.startsWith("config-")) {
     content = <ConfigSection categoryId={activeId} />;
+  } else if (activeId === "pipeline") {
+    content = <PipelineSection />;
   } else {
     content = null;
   }

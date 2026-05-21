@@ -2,23 +2,27 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 16 May 2026 (closed `dev-keychain-signing-fix`)
+**Updated:** 21 May 2026 (closed `pipeline-view-v1`)
 
 ---
 
-## Branch Kinds (merge intent)
+## Branch Kinds
 
-Every branch declares a **Kind** that encodes what it's *for* and what should happen to it at end of life:
+Every branch declares a **Kind** — a one-word descriptor of what the branch is for. Kind is metadata for human readers of this file; it doesn't gate skill behaviour (merge target comes from `**Forked from:**`; merge-or-abandon is asked at `/close-branch` time regardless of Kind).
 
-| Kind | What it produces | End-of-life |
-|------|------------------|-------------|
-| **feature** | Code intended for main | Merge / PR-and-squash |
-| **diagnostic** | Inventory, reports, reproductions — fixes happen in *other* branches | **Discard** when narrow-fix children land. The branch itself never merges; its useful output already left via siblings |
-| **spike** | Exploratory throwaway — proves or disproves an approach | Discard. Cherry-pick selectively if a commit's worth keeping |
-| **chore** | Small ephemeral work (release tooling, doc reconciliation, dep bumps) | Merge or discard, low ceremony |
+| Kind | Description | Typical end-of-life |
+|------|-------------|---------------------|
+| **feature** | New capability or surface | Merge to main |
+| **bugfix** | Corrective change to existing behaviour | Merge to main |
+| **refactor** | Same behaviour, cleaner internals | Merge to main |
+| **docs** | Documentation-only (design docs, user manual, READMEs) | Merge to main; trivial fixes go direct |
+| **ci** | Build / release / test-infra | Merge to main |
+| **chore** | Small ephemeral work (dep bumps, doc reconciliation, release tooling) | Merge or discard, low ceremony |
+| **spike** | Exploratory throwaway — proves or disproves an approach | Usually discarded; cherry-pick if a commit's worth keeping. If it turns out unexpectedly great, just merge it. |
+| **diagnostic** | Inventory / reports / reproductions — fixes happen in *other* branches | Discarded when narrow-fix children land; the branch itself never merges, its useful output already left via siblings |
 | **parked** | On hold; may resume later | Stays on disk + remote until revived or formally retired |
 
-When opening a new branch, declare its Kind in the table below. When closing one, the Kind tells you whether to merge or just `/close-branch`.
+Pick the Kind that best describes what you're doing. Don't agonise — Kind is descriptive, not normative. If two fit, pick either.
 
 ## Worktree Convention
 
@@ -37,11 +41,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | chore | Translate ProjectRow pipelineSubtitle + locale-aware date formatters |
 | `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
-| `bristlenose_branch foundation-models-corpus/` | `foundation-models-corpus` | feature | Parameterise HIG scraper into multi-corpus scraper, produce Foundation Models corpus, iterate pluggable-LLM-routing / stage-backends / modularity docs against it pre-WWDC 2026 |
-| `bristlenose_branch release-pipeline-actually-broken/` | `release-pipeline-actually-broken` | diagnostic | Investigate + fix the perf-gate CI failure blocking PyPI publish since v0.15.5; discard branch once narrow fix lands |
-| `bristlenose_branch pipeline-view-v1/` | `pipeline-view-v1` | feature | Read-only Pipeline view — one CLI verb (`bristlenose pipeline`) + one React Settings tab; validates the mixture-of-models mental model with the cohort, nothing else |
-| `bristlenose_branch pipeline-diagnostic-popover-swift/` | `pipeline-diagnostic-popover-swift` | feature | Swift half of pipeline diagnostic popover — two new pill states + popover view consuming PipelineSummary fixture v5 |
-| `bristlenose_branch multi-project-cloud-evicted/` | `multi-project-cloud-evicted` | feature | Phase 3 #10 iCloud-evicted single state + ride-along fix for re-mount cantFind reason regressing to .moved |
+| `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
 
 
 
@@ -139,11 +139,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
-| `foundation-models-corpus` | `bristlenose_branch foundation-models-corpus/` | local only |
-| `release-pipeline-actually-broken` | `bristlenose_branch release-pipeline-actually-broken/` | local only |
-| `pipeline-view-v1` | `bristlenose_branch pipeline-view-v1/` | local only |
-| `pipeline-diagnostic-popover-swift` | `bristlenose_branch pipeline-diagnostic-popover-swift/` | local only |
-| `multi-project-cloud-evicted` | `bristlenose_branch multi-project-cloud-evicted/` | local only |
+| `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
 
 
 
@@ -154,121 +150,31 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
-### `multi-project-cloud-evicted`
+### `pipeline-view-v1-5`
 
-**Kind:** feature — code intended for main; lands the iCloud-evicted single state in the project sidebar and a ride-along fix for the re-mount `cantFind` reason regressing to `.moved`
+**Kind:** feature — code intended for main; extends the v1 Pipeline view with a per-stage Alternatives column. Ends in merge or PR-and-squash.
 **Status:** Just started
 **Started:** 18 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch multi-project-cloud-evicted/`
+**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-view-v1-5/`
 **Remote:** local only (push when ready)
 
-**What it does:** Phase 3 #10 — collapse the iCloud-evicted case into a single sidebar state (cloud-arrow glyph in the trailing slot, subtitle qualifier) instead of overloading the `.cantFind` path. Includes a ride-along fix for the re-mount regression where the `cantFind` reason flips back to `.moved` after a volume comes back. See `HANDOFF.md` for the full brief.
+**What it does:** Extend the read-only Pipeline view (v1) with a per-stage "Alternatives" surface — for every stage, render the other backends that *could* run it on this host, with ✓/✗ availability flags and a one-line reason on ✗. Read-only; quality ratings (●/○/⚠/✗) deferred to v1.9, auto-pick to v2, per-stage overrides to v3. **The point is the data-model rung:** v1.5 encodes the full eligibility space per stage (catalogue of `BackendOption` + `Requirement` predicates against `HostFacts` + `BristlenoseSettings`) that the v2 resolver and v3 overrides will both consume. When Apple FM ships a research-viable on-device model post-WWDC, the work is "edit one catalogue cell + verify a host predicate," not "build a resolver from scratch." See `HANDOFF.md` for the full brief.
 
 **Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/CloudWatcher.swift`
-- `desktop/Bristlenose/Bristlenose/ProjectAvailability.swift`
-- `desktop/Bristlenose/Bristlenose/ProjectRow.swift`
-- `desktop/Bristlenose/Bristlenose/VolumeWatcher.swift`
-- `desktop/Bristlenose/Bristlenose/ProjectIndex.swift`
-- `bristlenose/locales/{en,es,fr,de,ko,ja}/common.json`
+- New: `bristlenose/pipeline_view/eligibility.py` — `check_requirement` + `evaluate_backend` pure functions
+- Modified: `bristlenose/pipeline_view/catalogue.py` — add `Requirement`, `BackendOption`, populate `viable_backends`
+- Modified: `bristlenose/pipeline_view/host.py` — add `os_version`, `installed_packages` fields + probes
+- Modified: `bristlenose/pipeline_view/render.py` — `BackendAvailability` type, `alternatives` field, sort logic
+- Modified: `bristlenose/pipeline_view/cli.py` — Alternatives sub-line rendering
+- Modified: `frontend/src/components/SettingsModal.tsx` `PipelineSection` — alternatives list render
+- Modified: `bristlenose/theme/organisms/settings.css` — `.bn-pipeline-alternatives` styling
+- Modified: `tests/fixtures/pipeline-view-contract.json` — schema v1 → v2 (additive)
+- New: `tests/pipeline_view/test_eligibility.py`, `test_alternatives.py`
+- Modified: 6 locale files — `pipeline.alternatives` heading only
 
 **Potential conflicts with other branches:**
-- `multi-project-folder-watcher` — also touches `ProjectIndex.swift` and sidebar row chrome; coordinate at merge time on the row-state model.
-- `pipeline-subtitle-i18n` — touches the same `common.json` locale files for ProjectRow subtitles; coordinate on key naming to avoid duplicate-key churn at merge.
-- `pipeline-diagnostic-popover-swift` — adjacent Swift surface but different pill/popover concern; low overlap.
-
----
-
-### `pipeline-diagnostic-popover-swift`
-
-**Kind:** feature — code intended for main; ends in merge or PR-and-squash
-**Status:** Just started
-**Started:** 18 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-diagnostic-popover-swift/`
-**Remote:** local only (push when ready)
-
-**What it does:** Swift half of the pipeline diagnostic popover (branch 2 of `docs/design-pipeline-diagnostic-popover.md`). Python half shipped weeks ago — `PipelineSummary` is emitted on every run, contract fixture v5 is locked, `MessageKind` taxonomy exists on both sides. This branch implements the two new pill states (`.completedPartial`, `.failedWithDiagnostic`) and the popover view that the spec calls for, consuming the existing contract. Pill label derives from `dominantCategory()` precedence (AUTH > MISSING_BINARY > QUOTA > NETWORK > UNKNOWN); DisclosureGroup hierarchy (≤2 inline, ≥3 collapsible); Copy/Email plaintext following Xcode "Copy Issue" pattern. Debug-only fixture-injection harness for reproducing diagnostic states. See `HANDOFF.md` for the full brief.
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/PipelineActivityItem.swift` — popover body, `formatDiagnosticPlaintext` helper, DisclosureGroup hierarchy, pill-label derivation
-- `desktop/Bristlenose/Bristlenose/MessageKind.swift` — Swift mirror of `bristlenose/ui_kinds.py`; may need extension for new pill states
-- `bristlenose/locales/{en,es,fr,de,ko,ja}/common.json` — `desktop.pipeline.diagnostic.*` keys (targeted text-replace, NOT json.dump round-trip)
-- `tests/fixtures/pipeline-summary-contract.json` — read-only, schema lock
-
-**Potential conflicts with other branches:**
-- `pipeline-subtitle-i18n` — also touches `common.json` under `desktop.pipeline.*`; coordinate at merge time, keep keys distinct (`desktop.pipeline.subtitle.*` vs `desktop.pipeline.diagnostic.*`).
-- `pipeline-view-v1` — adjacent mixture-of-models settings UI but different files; no overlap with Swift pill / popover.
-- `multi-project-folder-watcher` — Swift desktop work but different files (folder watcher / sidebar count pill); low overlap.
-
----
-
-### `pipeline-view-v1`
-
-**Kind:** feature — code intended for main; lands a read-only Pipeline view (one CLI verb + one Settings tab) and ends in merge or PR-and-squash
-**Status:** Just started
-**Started:** 18 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-view-v1/`
-**Remote:** local only (push when ready)
-
-**What it does:** Ship a read-only surface for the mixture-of-models Bristlenose already runs across pipeline stages, so cohort users can react to the mental-model framing before any per-stage choice machinery earns its place. Single new CLI verb `bristlenose pipeline` (table view of stage → backend → model) plus a matching read-only Settings tab in the React SPA (two-column card-per-stage layout, last position). Explicitly out of scope: `bristlenose use <provider>`, `bristlenose config` namespace, TOML preferences, per-stage overrides, interactive doctor expansion, Apple FM probe — all parked in `docs/design-cli-improvements.md` pending cohort signal. See `HANDOFF.md` for the full brief, locked decisions, and contract fixture plan.
-
-**Files this branch will touch:**
-- New: `bristlenose/pipeline/__init__.py`, `catalogue.py`, `host.py`, `render.py`, `cli.py`
-- New: React component under `frontend/src/components/Settings/`
-- Modified: `bristlenose/cli.py` (register `pipeline` command)
-- Modified: `bristlenose/server/` (new `/api/pipeline` route, inherits `BearerTokenMiddleware`)
-- Tests: `tests/pipeline/test_render.py`, `test_host.py`, `test_cli_pipeline.py`, `test_catalogue.py`, `tests/fixtures/pipeline-view-contract.json`
-
-**Potential conflicts with other branches:**
-- `foundation-models-corpus` — iterates the same family of design docs (`design-pluggable-llm-routing.md`, `design-stage-backends.md`, `design-modularity.md`) and may revise the model-catalogue shape this branch consumes. Coordinate at merge time; the contract fixture (`tests/fixtures/pipeline-view-contract.json`) is the schema lock.
-- `release-pipeline-actually-broken` — touches `bristlenose/server/` and `tests/` but for CI smoke-test / mount paths; low overlap with the new `/api/pipeline` route.
-- Multi-project / sidebar branches — Swift and locale work; no overlap.
-
----
-
-### `release-pipeline-actually-broken`
-
-**Kind:** diagnostic — produces fix(es) + structural test reshape; branch itself is discarded once narrow fix lands. The actual PyPI-publish fix is a small commit; this branch carries the investigation + supporting test-layer changes that surface mount-failures loudly in future.
-**Status:** Just started
-**Started:** 18 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch release-pipeline-actually-broken/`
-**Remote:** local only (push when ready)
-
-**What it does:** Restore PyPI publishing (stuck on 0.15.3 since ~10 May 2026) by diagnosing and fixing the `ci/perf-gate` CI failure that has silently blocked every release tag since v0.15.5. Confirmed blocker is the `DOM nodes — Quotes` test: `#bn-app-root` exists but has zero children after 5s. Plan walks H8 (mount-time API 500s) → H2 (SQLite schema drift in smoke fixture) → H7 → H5 → H6 (bisect). Includes structural test reshape (standalone mount precondition test + pytest schema round-trip) and post-fix CLAUDE.md PyPI verification step. Companion `release-pipeline-audit` branch carries the systemic CI/observability follow-ups. See `HANDOFF.md` for the full plan.
-
-**Files this branch will touch:**
-- `e2e/tests/perf-gate.spec.ts` (browser-console capture, possible standalone mount test)
-- New e2e spec for SPA-mounts smoke check (if Bach split is taken)
-- `tests/` — new TestClient round-trip test for mount-time APIs
-- Whatever Phase B locates as the actual root cause (likely `bristlenose/server/` or fixture data)
-- `CHANGELOG.md`, `bristlenose/__init__.py`, `bristlenose/data/bristlenose.1` (0.15.10 bump)
-- `CLAUDE.md` (post-push PyPI verification step)
-
-**Potential conflicts with other branches:**
-- `foundation-models-corpus` touches design docs only — no overlap.
-- `multi-project-folder-watcher` and `pipeline-subtitle-i18n` are Swift / locale work — no overlap with CI / e2e / server.
-- `release-pipeline-audit` (separate handoff, not yet a branch) is paired: one logical change per patch; coordinate at merge time so audit doesn't re-fix what this branch fixes.
-
----
-
-### `foundation-models-corpus`
-
-**Kind:** feature — code intended for main; lands the parameterised multi-corpus scraper plus iterated design docs informed by the Foundation Models corpus
-**Status:** Just started
-**Started:** 17 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch foundation-models-corpus/`
-**Remote:** local only (push when ready)
-
-**What it does:** Parameterise the HIG scraper into a multi-corpus scraper and produce a Foundation Models corpus, then read it and iterate `design-pluggable-llm-routing.md` / `design-stage-backends.md` / `design-modularity.md` against what FM actually offers. Pre-WWDC 2026 plumbing + reading exercise (per the Apple-AI direction-of-travel thesis): cheap scaffolding only, no FM-provider code yet. Starts with WIP doc edits already in flight on main copied across. See `.claude/plans/foundation-models-corpus.md` for the full handoff.
-
-**Files this branch will touch:**
-- `scripts/scrape-hig.py` (parameterise into multi-corpus scraper)
-- `docs/design-pluggable-llm-routing.md`
-- `docs/design-stage-backends.md`
-- `docs/design-modularity.md`
-
-**Potential conflicts with other branches:**
-- None expected — no other active branch touches the scraper or those three design docs. Worktree starts with the same WIP doc edits that are currently uncommitted on main; expect to either drop those edits from main or coordinate at merge time.
+- `pipeline-view-v1` — direct parent; v1.5 lives in the same `bristlenose/pipeline_view/` package and edits files v1 introduces. Don't start v1.5 work until v1 merges, or be ready to rebase.
+- `pipeline-subtitle-i18n` — touches the 6 `common.json` locale files. Keep keys distinct (`pipeline.alternatives.*`) and use targeted text-replace, never `json.dump` round-trip.
 
 ---
 
@@ -419,6 +325,38 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `pipeline-view-v1` — merged 21 May 2026
+
+Read-only Pipeline view: new `bristlenose pipeline` CLI verb (stage → backend → model table) and matching read-only Settings tab in the React SPA. Validates the mixture-of-models mental model with the cohort before any per-stage choice machinery earns its place. Per-stage overrides, `bristlenose use <provider>`, and `bristlenose config` namespace remain parked in `docs/design-cli-improvements.md` pending cohort signal. Contract fixture `tests/fixtures/pipeline-view-contract.json` locks the schema for the v1.5 follow-on.
+
+### `sidebar-list-not-rendering` — merged 21 May 2026
+
+Fix: macOS 26 SwiftUI List dropped Section content when the composition was Section + Button + ForEach.onMove + conditional Text and `projects.isEmpty == true`. Moved Button AND empty-state Text out of the Section (Section now contains only the ForEach + .onMove). Tightened empty-state condition to `projects.isEmpty && folders.isEmpty` — folders-only is intentional setup state, not empty. Merged via cherry-pick (4 commits) on top of `sidebar-drop-folder-row`'s work. Forked from and effectively stacked on `sidebar-drop-folder-row`.
+
+### `sidebar-drop-folder-row` — merged 21 May 2026
+
+Close V1 design-doc gap: Finder content dropped on a project-sidebar folder row now creates a new project *inside* the folder (folderId set). Replaced stacked `.dropDestination(for: T.self)` modifiers with a single `SidebarDrop` wrapper Transferable exposing multiple `ProxyRepresentation`s (Apple's canonical pattern — FB12980427). Introduced `ProjectDragID` typed Transferable with custom UTType `app.bristlenose.project-id` (`conformingTo: .data`) so internal project drags don't get auto-coerced to URL on the pasteboard. Row hit region extended into the inter-row gap via `.padding(.vertical, 2)`. Merged via cherry-pick (4 commits).
+
+### `unify-failure-popover` — merged 20 May 2026
+
+Unified the two failure popovers (legacy `.failed` and new `.failedWithDiagnostic` / `.completedPartial`) into a single SwiftUI view in `PipelineActivityItem.swift`. Degrades gracefully when structured data is missing (orphan `run_started`, killed sidecar, older sidecars with `summary == nil`) — same chrome, same Retry/Copy, with one explanatory line.
+
+### `foundation-models-corpus` — merged 19 May 2026
+
+Parameterised HIG scraper into multi-corpus scraper (`scrape-hig.py` → `scrape-apple-corpus.py` with `--corpus {hig,fm}`), scraped Foundation Models corpus to `~/.local/share/foundation-models-corpus/` (20 pages, 304 KB), and trued `design-pluggable-llm-routing.md` / `design-stage-backends.md` / `design-modularity.md` against the corpus. Phase 0 + 1 + 1b complete; Phase 2 (MLX-Swift) + Phase 3 (MLX Python) + Phase 4 (agent) explicitly deferred. Re-scrape trigger: WWDC 2026 keynote, then macOS 27 GA. Two commits merged via `cea008a`. Worktree detached and tagged orange on disk; local + remote branch deletion pending user push.
+
+### `release-pipeline-actually-broken` — merged 19 May 2026
+
+Restored PyPI publishing (stuck on v0.15.3 since ~10 May) by fixing the `ci/perf-gate` CI failure blocking every release tag since v0.15.5. Root cause: the status-page interceptor returns "Nothing to see here, yet." when `app.state.last_run[1]` has no terminus event, and the Playwright smoke fixture never carried `pipeline-events.jsonl`. Fix is test-only — pytest `TestSmokeFixtureMountsSPA`, Playwright `spa-mounts.spec.ts`, browser-console capture in `perf-gate.spec.ts`, plus CLAUDE.md release-flow doc edit. Four commits merged via `a3abd9d`. Worktree detached and tagged orange on disk; local and remote branches deleted.
+
+### `pipeline-diagnostic-popover-swift` — merged 19 May 2026
+
+Swift half of the pipeline diagnostic popover (branch 2 of `docs/design-pipeline-diagnostic-popover.md`). Two new pill states (`.completedPartial`, `.failedWithDiagnostic`) and the popover view consuming `PipelineSummary` fixture v5. Pill label derives from `dominantCategory()` precedence (AUTH > MISSING_BINARY > QUOTA > NETWORK > UNKNOWN); DisclosureGroup hierarchy (≤2 inline, ≥3 collapsible); Copy/Email plaintext following Xcode "Copy Issue" pattern. Debug-only fixture-injection harness for reproducing diagnostic states. Merged via `5e2ff68`. Worktree detached and tagged orange on disk; local branch deleted; remote was never pushed.
+
+### `multi-project-cloud-evicted` — merged 19 May 2026
+
+Phase 3 #10 — collapsed the iCloud-evicted case into a single sidebar state (cloud-arrow glyph in the trailing slot, subtitle qualifier) instead of overloading the `.cantFind` path. Includes a ride-along fix for the re-mount regression where the `cantFind` reason flipped back to `.moved` after a volume came back. Merged via `5876152`. Worktree detached and tagged orange on disk; local branch deleted; remote was never pushed.
 
 ### `dev-keychain-signing-fix` — merged 16 May 2026
 

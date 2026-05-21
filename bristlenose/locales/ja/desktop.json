@@ -247,6 +247,31 @@
     "useOllama": "代わりに Ollama を使用 (クラウドなし)",
     "done": "完了"
   },
+  "pipeline": {
+    "diagnostic": {
+      "pill": {
+        "auth": "Provider key issue",
+        "missing_binary": "Missing tool",
+        "quota": "Rate limited",
+        "network": "Network error",
+        "unknown": "Run had failures"
+      },
+      "header": {
+        "completed_partial": "Partial completion",
+        "failed": "Run failed"
+      },
+      "action": {
+        "copy": "Copy details",
+        "showLog": "\u30ed\u30b0\u3092\u8868\u793a",
+        "showLogTooltip": "\u89e3\u6790\u30ed\u30b0\u30d5\u30a1\u30a4\u30eb\u3092\u8868\u793a"
+      },
+      "tooltip": {
+        "completed_partial": "Analysis finished with failures for {{project}}"
+      },
+      "noStructuredCause": "\u8a73\u7d30\u306a\u539f\u56e0\u306f\u8a18\u9332\u3055\u308c\u3066\u3044\u307e\u305b\u3093\u3002",
+      "overflow_other": "… and {{count}} more failures truncated"
+    }
+  },
   "availability": {
     "unmountedVolume": "{{name}} · 見つかりません",
     "networkUnreachable": "{{host}} · 接続できません",

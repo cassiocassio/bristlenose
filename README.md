@@ -365,8 +365,13 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.11** — _21 May 2026_
+
+- **`bristlenose pipeline` + read-only Pipeline tab in Settings.** New CLI verb (`bristlenose pipeline`, with `--json` and `--stage <id>` filter) and a matching last-position tab in the React Settings modal render the mixture of models Bristlenose actually uses across its pipeline stages: MLX/faster-whisper for transcription, the chosen LLM provider × model for speaker identification / topic segmentation / quote extraction / quote clustering / thematic grouping, Presidio (or "Off") for anonymisation, and an Apple Foundation Models row that returns `Unknown from CLI` until the Swift-side probe ships. Read-only on purpose — to change a backend you still edit settings or `.env`. Host context strip shows OS · arch · RAM · keys present · ollama status. Cross-language schema lock at `tests/fixtures/pipeline-view-contract.json` keeps the Python emit and React consumer in agreement. 28 new tests.
+
 **0.15.10** — _17 May 2026_
 
+- **Release pipeline actually fixed (test-only — wheel unchanged).** PyPI had been stuck at 0.15.3 since ~10 May — six tag pushes (0.15.4-0.15.10) reached GitHub but the perf-gate CI job failed on each one, blocking the release workflow. Root cause: the server-rendered status page interceptor was returning "Nothing to see here, yet." against the Playwright smoke fixture because the fixture had never carried a `pipeline-events.jsonl`. `#bn-app-root` mounted empty, perf-gate's DOM-nodes test timed out, and the cascade silently masked the cause for five releases. Fix: ship a `RunCompletedEvent` line in the smoke fixture, plus a mount-precondition test at the pytest layer and a standalone Playwright mount gate so the next silent regression fails loudly. CLAUDE.md release flow grows a post-push PyPI verification step — pushing a tag is not the same as shipping a release. Test-only fix; v0.15.10's wheel is byte-identical with or without it.
 - **`--codebook=<slug>` flag + `bristlenose codebooks` subcommand.** Pick an AutoCode codebook framework from the command line. `bristlenose codebooks` lists the nine available templates with title and author; `--codebook=<slug>` on `run` and `analyze` validates the slug against the YAML inventory and exits cleanly with the available list on a typo. Validation only for now — the pipeline doesn't auto-run AutoCode yet; the flag stores the preference for a follow-up branch to wire the consumer.
 
 **0.15.9** — _16 May 2026_

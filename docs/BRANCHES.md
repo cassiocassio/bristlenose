@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 21 May 2026 (closed `unify-failure-popover`)
+**Updated:** 21 May 2026 (closed `sidebar-list-not-rendering` + `sidebar-drop-folder-row`)
 
 ---
 
@@ -41,8 +41,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch pipeline-view-v1/` | `pipeline-view-v1` | feature | Read-only Pipeline view — one CLI verb (`bristlenose pipeline`) + one React Settings tab; validates the mixture-of-models mental model with the cohort, nothing else |
 | `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
-| `bristlenose_branch sidebar-drop-folder-row/` | `sidebar-drop-folder-row` | feature | Close V1 design-doc gap: Finder content dropped on project-sidebar-folder row creates a new project *inside* the folder (folderId set); upgrade internal project-drag payload from String to a typed `ProjectDragID: Transferable` newtype (UTType `app.bristlenose.project-id`) so the folder row's two drop modifiers don't payload-collide |
-| `bristlenose_branch sidebar-list-not-rendering/` | `sidebar-list-not-rendering` | bugfix | Fix: sidebar List renders nothing in zero-projects state — folders persisted but never visible |
 
 
 
@@ -142,7 +140,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
 | `pipeline-view-v1` | `bristlenose_branch pipeline-view-v1/` | local only |
 | `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
-| `sidebar-list-not-rendering` | `bristlenose_branch sidebar-list-not-rendering/` | local only |
 
 
 
@@ -150,25 +147,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `sidebar-list-not-rendering`
-
-**Kind:** bugfix — corrective change; sidebar List renders nothing in zero-projects state even when folders are persisted. Ends in merge to `sidebar-drop-folder-row` (then on to main with the parent).
-**Status:** Just started
-**Started:** 21 May 2026
-**Forked from:** `sidebar-drop-folder-row`
-**Worktree:** `/Users/cassio/Code/bristlenose_branch sidebar-list-not-rendering/`
-**Remote:** local only (push when ready)
-
-**What it does:** Fix: sidebar List renders nothing in zero-projects state — folders persisted but never visible. See `HANDOFF.md` for the full brief.
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/ContentView.swift`
-
-**Potential conflicts with other branches:**
-- `sidebar-drop-folder-row` — direct parent; both touch sidebar SwiftUI. Merge target is the parent, so conflicts resolve into the parent's working set rather than against main.
 
 ---
 
@@ -370,6 +348,14 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `sidebar-list-not-rendering` — merged 21 May 2026
+
+Fix: macOS 26 SwiftUI List dropped Section content when the composition was Section + Button + ForEach.onMove + conditional Text and `projects.isEmpty == true`. Moved Button AND empty-state Text out of the Section (Section now contains only the ForEach + .onMove). Tightened empty-state condition to `projects.isEmpty && folders.isEmpty` — folders-only is intentional setup state, not empty. Merged via cherry-pick (4 commits) on top of `sidebar-drop-folder-row`'s work. Forked from and effectively stacked on `sidebar-drop-folder-row`.
+
+### `sidebar-drop-folder-row` — merged 21 May 2026
+
+Close V1 design-doc gap: Finder content dropped on a project-sidebar folder row now creates a new project *inside* the folder (folderId set). Replaced stacked `.dropDestination(for: T.self)` modifiers with a single `SidebarDrop` wrapper Transferable exposing multiple `ProxyRepresentation`s (Apple's canonical pattern — FB12980427). Introduced `ProjectDragID` typed Transferable with custom UTType `app.bristlenose.project-id` (`conformingTo: .data`) so internal project drags don't get auto-coerced to URL on the pasteboard. Row hit region extended into the inter-row gap via `.padding(.vertical, 2)`. Merged via cherry-pick (4 commits).
 
 ### `unify-failure-popover` — merged 20 May 2026
 

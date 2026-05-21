@@ -28,14 +28,42 @@
     "clickToCopy": "Clic para copiar",
     "copied": "Copiado"
   },
-  "pipeline": {
-    "intro": "Vista de solo lectura de los modelos que Bristlenose usa actualmente en cada etapa. Para cambiar un backend, edita tus ajustes (variables de entorno o archivo .env).",
-    "loading": "Cargando vista de la canalización…",
-    "error": "No se pudo cargar la vista",
-    "keys": "claves",
-    "keysNone": "ninguna",
-    "ollama": "ollama",
-    "running": "en ejecución",
-    "notDetected": "no detectado"
-  }
+    "pipeline": {
+      "intro": "Vista de solo lectura de los modelos que Bristlenose usa actualmente en cada etapa del pipeline. Para cambiar un backend, edita la configuraci\u00f3n (variables de entorno o archivo .env).",
+      "loading": "Cargando vista del pipeline\u2026",
+      "error": "No se pudo cargar la vista del pipeline",
+      "keys": "claves",
+      "keysNone": "ninguna",
+      "ollama": "ollama",
+      "running": "en ejecuci\u00f3n",
+      "notDetected": "no detectado",
+      "available": "disponible",
+      "unavailable": "no disponible",
+      "alternatives": {
+        "summaryHeading": "Backends LLM en este equipo",
+        "available": "Disponibles",
+        "unavailable": "No disponibles",
+        "none": "ninguno"
+      },
+      "backends": {
+        "local_ollama": "Local (Ollama)",
+        "builtin_anonymiser": "Anonimizador integrado"
+      },
+      "reasons": {
+        "no_anthropic_key": "no hay clave API de Claude",
+        "no_openai_key": "no hay clave API de ChatGPT",
+        "no_azure_key": "no hay clave de Azure OpenAI",
+        "no_azure_endpoint": "endpoint de Azure no configurado",
+        "no_azure_deployment": "despliegue de Azure no configurado",
+        "no_google_key": "no hay clave API de Gemini",
+        "ollama_not_running": "Ollama no est\u00e1 en ejecuci\u00f3n",
+        "apple_fm_check_desktop": "consultar en la aplicaci\u00f3n de escritorio",
+        "requires_apple_silicon": "requiere Apple Silicon",
+        "mlx_whisper_not_installed": "MLX Whisper no instalado",
+        "ctranslate2_not_installed": "ctranslate2 no instalado",
+        "presidio_not_installed": "Anonimizador integrado no instalado",
+        "spacy_model_missing": "modelo de lenguaje no instalado",
+        "pii_disabled": "La redacci\u00f3n de PII est\u00e1 desactivada"
+      }
+    }
 }

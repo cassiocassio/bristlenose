@@ -251,3 +251,96 @@
     padding-top: var(--bn-space-sm);
     margin: var(--bn-space-sm) 0 0;
 }
+
+/* v1.5 — host-wide LLM backend summary card + per-stage alternatives */
+
+.bn-pipeline-summary {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: var(--bn-space-sm) var(--bn-space-md);
+    background: var(--bn-colour-bg);
+}
+
+.bn-pipeline-summary-heading {
+    font-size: var(--bn-text-label);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    margin: 0 0 var(--bn-space-xs);
+}
+
+.bn-pipeline-alternatives {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bn-space-xxs);
+    font-size: var(--bn-text-caption);
+}
+
+.bn-pipeline-alternatives-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--bn-space-xs);
+}
+
+.bn-pipeline-alternatives-label {
+    color: var(--bn-colour-muted);
+    font-weight: var(--bn-weight-emphasis);
+    margin-right: var(--bn-space-xxs);
+}
+
+.bn-pipeline-alternatives-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--bn-space-xs) var(--bn-space-md);
+}
+
+.bn-pipeline-alternatives-empty {
+    color: var(--bn-colour-muted);
+    font-style: italic;
+}
+
+.bn-pipeline-alt {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.25em;
+    white-space: normal;
+}
+
+.bn-pipeline-alt-glyph {
+    font-weight: var(--bn-weight-strong);
+    /* Shape carries state (✓ vs ✗); colour reinforces. ✓ uses the positive
+       sentiment token; ✗ uses muted text — NOT danger (not destructive). */
+}
+
+.bn-pipeline-alt-on .bn-pipeline-alt-glyph {
+    color: var(--bn-sentiment-satisfaction);
+}
+
+.bn-pipeline-alt-off .bn-pipeline-alt-glyph {
+    color: var(--bn-colour-muted);
+}
+
+.bn-pipeline-alt-off .bn-pipeline-alt-name {
+    color: var(--bn-colour-muted);
+}
+
+.bn-pipeline-alt-reason {
+    color: var(--bn-colour-muted);
+    margin-left: 0.25em;
+}
+
+/* Visually-hidden text for screen readers — paired with aria-hidden glyphs. */
+.bn-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}

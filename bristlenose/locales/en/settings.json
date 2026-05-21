@@ -19,12 +19,23 @@
     "config": "Config",
     "projectStub": "Per-project settings will appear here. Coming soon.",
     "profileStub": "Profile settings (name, email, whisper backend) will appear here. Coming soon.",
-    "apiKeysStub": "API key management will appear here. Coming soon."
+    "apiKeysStub": "API key management will appear here. Coming soon.",
+    "pipeline": "Pipeline"
   },
   "configReference": {
     "heading": "Configuration reference",
     "intro": "All settings below are configured via environment variables or a <code>.env</code> file. They are shown here for reference — to change a value, edit the file shown in each row.",
     "clickToCopy": "Click to copy",
     "copied": "Copied"
+  },
+  "pipeline": {
+    "intro": "Read-only view of the models Bristlenose currently uses for each pipeline stage. To change a backend, edit your settings (env vars or .env file).",
+    "loading": "Loading pipeline view…",
+    "error": "Could not load pipeline view",
+    "keys": "keys",
+    "keysNone": "none",
+    "ollama": "ollama",
+    "running": "running",
+    "notDetected": "not detected"
   }
 }

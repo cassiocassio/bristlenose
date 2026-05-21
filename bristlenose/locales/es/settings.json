@@ -19,12 +19,23 @@
     "config": "Configuración",
     "projectStub": "Los ajustes del proyecto aparecerán aquí. Próximamente.",
     "profileStub": "Los ajustes de perfil (nombre, correo, backend de whisper) aparecerán aquí. Próximamente.",
-    "apiKeysStub": "La gestión de claves API aparecerá aquí. Próximamente."
+    "apiKeysStub": "La gestión de claves API aparecerá aquí. Próximamente.",
+    "pipeline": "Tubería"
   },
   "configReference": {
     "heading": "Referencia de configuración",
     "intro": "Todos los ajustes se configuran mediante variables de entorno o un archivo <code>.env</code>. Se muestran aquí como referencia — para cambiar un valor, edita el archivo indicado en cada fila.",
     "clickToCopy": "Clic para copiar",
     "copied": "Copiado"
+  },
+  "pipeline": {
+    "intro": "Vista de solo lectura de los modelos que Bristlenose usa actualmente en cada etapa. Para cambiar un backend, edita tus ajustes (variables de entorno o archivo .env).",
+    "loading": "Cargando vista de la canalización…",
+    "error": "No se pudo cargar la vista",
+    "keys": "claves",
+    "keysNone": "ninguna",
+    "ollama": "ollama",
+    "running": "en ejecución",
+    "notDetected": "no detectado"
   }
 }

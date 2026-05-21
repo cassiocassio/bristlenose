@@ -108,6 +108,24 @@ Fixed taxonomy. Do not add new categories without research justification.
 
 ---
 
+## Process & architecture vocabulary
+
+| Canonical (user-facing) | Forbidden (in user text) | Where "pipeline" IS fine | Why |
+|---|---|---|---|
+| **analysis** / **analyse** (verb) / **run** (noun for an instance) | pipeline (in user-facing chrome) | CLI command verbs (`bristlenose run` / `analyse`); design docs; commit messages; man page; code identifiers (`pipeline.py`, `PipelineRunner`); CHANGELOG | Researchers don't have "pipelines"; they have analyses. "Pipeline" is a Pythonista / CS term — correct internally, wrong in chrome. "Running analysis on these interviews" reads naturally; "running the pipeline on these interviews" reads like a developer talking to themselves. |
+
+Examples:
+- ✓ "Analysing…" (popover, sidebar) ✗ "Running pipeline…"
+- ✓ "Analysis finished with failures for {{project}}" (tooltip) ✗ "Pipeline finished with failures"
+- ✓ "Run failed" / "Partial completion" (popover header) ✗ "Pipeline failed"
+- ✓ "Analysis stages" (settings panel label) ✗ "Pipeline stages"
+- ✓ `bristlenose run <folder>` (CLI command) — "run" as a verb here is the command name, not the chrome word
+- ✓ commit message "fix pipeline early-exit when …" — internal audience, no problem
+
+Existing leak in `bristlenose/cli.py:857` prints `"Pipeline failed."` — pre-existing main-branch issue; small sweep when convenient.
+
+---
+
 ## Spelling & mechanics
 
 - **British English**: analyse, colour, organisation, behaviour, licence (noun), categorise

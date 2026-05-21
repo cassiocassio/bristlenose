@@ -1,6 +1,6 @@
 ---
 name: new-feature
-description: Create a new branch (feature, diagnostic, spike, chore, or parked) with git worktree, venv, remote tracking, and BRANCHES.md entry. Despite the skill name, not every branch is a feature — Kind is captured in Step 3.5.
+description: Create a new branch (any Kind — feature, bugfix, refactor, docs, ci, chore, spike, diagnostic, or parked) with git worktree, venv, remote tracking, and BRANCHES.md entry. Despite the skill name, not every branch is a feature — Kind is captured in Step 3.5.
 disable-model-invocation: true
 user-invocable: true
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion
@@ -35,7 +35,8 @@ The Claude Code Bash tool inherits PATH from the harness, which has occasionally
 
 | Flag | Purpose | Skips |
 |---|---|---|
-| `--kind=<feature\|spike\|diagnostic\|chore\|parked>` | Pre-declares Branch Kind | Step 3.5 question |
+| `--kind=<feature\|bugfix\|refactor\|docs\|ci\|chore\|spike\|diagnostic\|parked>` | Pre-declares Branch Kind | Step 3.5 question |
+| `--base=<branch-name>` | Fork from a branch other than `main`. Used when the new branch sits on top of in-flight work that hasn't merged yet (typical case: stacked feature branches where conflicting with the parent would be guaranteed). Defaults to `main`. | Nothing — feeds Step 4 |
 | `--plan=<path>` | Path (absolute or `~/`-style) to a Markdown file with the self-contained prompt for the new session | Nothing — feeds Step 4b |
 | `--purpose="<one line>"` | "What it does" line for BRANCHES.md | Step 11 question |
 | `--files="<comma,separated,paths>"` | Files this branch will touch | Step 11 question |
@@ -46,7 +47,8 @@ The Claude Code Bash tool inherits PATH from the harness, which has occasionally
 Parse the args as: first token is the branch name, remaining tokens are flags. If a flag's value contains spaces it must be quoted (`--purpose="trim bundle: stage 1 + stage 2"`).
 
 Validation:
-- `--kind` value must be one of the five enum entries; reject anything else with a clear message (don't silently fall back).
+- `--kind` value must be one of the nine entries in `docs/BRANCHES.md` § "Branch Kinds" (currently: feature, bugfix, refactor, docs, ci, chore, spike, diagnostic, parked); reject anything else with a clear message (don't silently fall back).
+- `--base` value must be an existing local branch ref (`git show-ref --verify --quiet refs/heads/<value>`). If it doesn't exist, stop with: "Base branch `<value>` doesn't exist locally. Check `git branch --list` or fetch from origin first." If `--base` is absent, the effective base is `main`.
 - `--plan` path must exist and be a `.md` file; if not, stop with the bad path quoted back.
 - `--purpose` and `--files` are free text; no validation.
 
@@ -72,17 +74,23 @@ Run `git status --porcelain`. If there are changes, warn the user and ask whethe
 
 ## Step 3.5: Determine Branch Kind (mandatory)
 
-**If `--kind=<value>` was passed in Step 0, use that value and skip the question.** Otherwise, ask the user which **Kind** this branch is — this controls how it ends, not just what it does. Use `AskUserQuestion` with these choices:
+**If `--kind=<value>` was passed in Step 0, use that value and skip the question.** Otherwise, ask the user which **Kind** best describes the branch. Use `AskUserQuestion` with these choices (full descriptions in `docs/BRANCHES.md` § "Branch Kinds"):
 
-- **feature** — code intended for main; ends in merge or PR-and-squash
-- **diagnostic** — produces inventory/reports/reproductions; fixes happen in *other* branches; the branch itself is **discarded** (not merged) when narrow children land. Example: `sandbox-debug`
-- **spike** — exploratory throwaway; usually discarded; cherry-pick selectively if a commit is worth keeping
-- **chore** — small ephemeral work (release tooling, doc reconciliation, dep bumps); merge or discard, low ceremony
-- **parked** — opened now but on hold; may resume later. Pushed to origin as backup
+- **feature** — new capability or surface
+- **bugfix** — corrective change to existing behaviour
+- **refactor** — same behaviour, cleaner internals
+- **docs** — documentation-only
+- **ci** — build / release / test-infra
+- **chore** — small ephemeral work (dep bumps, doc reconciliation, release tooling)
+- **spike** — exploratory throwaway
+- **diagnostic** — produces reports/repros for *other* branches to fix
+- **parked** — opened now but on hold; may resume later
 
-Record the answer; it gets written into BRANCHES.md in Step 11. **Don't default to feature.** If the user can't articulate why this is a feature, it's probably a diagnostic or spike.
+Record the answer; it gets written into BRANCHES.md in Step 11. Kind is descriptive metadata, not control flow — pick the one that best matches the work shape, don't agonise.
 
 ## Step 4: Create branch and worktree
+
+The effective base from Step 0 is the value of `--base`, or `main` if absent. Call this `$BASE` below.
 
 First, check current state to handle partial previous runs:
 
@@ -94,10 +102,18 @@ test -d "/Users/cassio/Code/bristlenose_branch $0" && echo "DIR_EXISTS" || echo 
 ```
 
 Then proceed based on what exists:
-- **Neither exists:** Create both: `git branch $0 main && git worktree add "/Users/cassio/Code/bristlenose_branch $0" $0`
-- **Branch exists, no directory:** Just add the worktree: `git worktree add "/Users/cassio/Code/bristlenose_branch $0" $0`
+- **Neither exists:** Create both: `git branch $0 $BASE && git worktree add "/Users/cassio/Code/bristlenose_branch $0" $0`
+- **Branch exists, no directory:** Just add the worktree: `git worktree add "/Users/cassio/Code/bristlenose_branch $0" $0`. (Don't re-fork from `$BASE` — the existing branch ref wins; if the user wanted a different base they should delete the branch first.)
 - **Both exist and worktree is registered** (`git worktree list` shows it): Skip — tell the user "Branch and worktree already exist, resuming setup."
 - **Directory exists but isn't a worktree:** Stop — something unexpected is there, ask the user what to do.
+
+**If `$BASE` is not `main`**, tell the user explicitly so they know what the branch is forked from — this matters for `/close-branch` later (merge-back target) and for understanding which other in-flight work this branch depends on:
+
+```
+Branch $0 forked from $BASE (not main). It inherits all commits on $BASE.
+When you /close-branch later, it'll be expected to merge back to $BASE,
+not directly to main (unless $BASE itself is discarded first).
+```
 
 If the git commands fail for any other reason, tell the user and stop.
 
@@ -356,9 +372,10 @@ Then:
    ```markdown
    ### `$0`
 
-   **Kind:** <feature | diagnostic | spike | chore | parked> — <one-line on merge intent: "code lands on main", "discard when children land", "throwaway exploration", etc.>
+   **Kind:** <one of: feature | bugfix | refactor | docs | ci | chore | spike | diagnostic | parked> — <one-line summary of what the branch is for>
    **Status:** Just started
    **Started:** <today's date, format: D Mon YYYY, no leading zero on day>
+   **Forked from:** <$BASE — omit this line entirely if $BASE is `main`; include if non-main so /close-branch knows the merge-back target>
    **Worktree:** `/Users/cassio/Code/bristlenose_branch $0/`
    **Remote:** local only (push when ready)
 

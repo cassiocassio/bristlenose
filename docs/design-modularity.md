@@ -38,6 +38,19 @@ They do **not** live in separate stage logic, separate pipeline branches, or Mac
 
 **Prefer macOS-native mechanisms when available**, but only when they don't force duplication. If CLI needs the same optionality and there's a good cross-platform pattern, use one pattern and layer macOS chrome on top.
 
+## Modularisation matrix (firmed up 17 May 2026)
+
+Four orthogonal axes, not two. The same Python code path varies along each:
+
+1. **Channel** — pip, Homebrew, Snap, macOS .app. Differs in what's bundled vs downloaded vs installed by the user. Owned by this doc.
+2. **Platform** — macOS / Linux / (Windows, future). Differs in available native APIs (Apple FM, SpeechAnalyzer, Background Assets, Keychain on Mac; equivalents or absences elsewhere). Owned by per-platform sections below + `bristlenose/server/CLAUDE.md`.
+3. **Pipeline stage** — s05 transcribe vs s08 PII vs s10 quote-extraction vs s11 clustering. Differs in context-window need, structured-output complexity, sensitivity to latency vs throughput. Owned by [design-stage-backends.md](design-stage-backends.md) and [design-pluggable-llm-routing.md](design-pluggable-llm-routing.md).
+4. **Hardware tier** — M1 baseline / M2-M4 mid / M5+ high / M-Ultra / non-Apple-Silicon. Differs in available local-model size (FM ~3B, MLX 14B BF16, MLX 30B MoE 4-bit), Neural Engine generation, unified memory bandwidth, RAM ceiling. Owned by [design-stage-backends.md](design-stage-backends.md) §Hardware-economics curve.
+
+**The intersection is the resolver job, not branched code.** A single `select_backend(stage, platform, hardware_tier, channel)` function returns a `(provider, model)` tuple. Stage logic stays single-source. Adding a new dimension means extending the resolver, never forking pipeline code.
+
+This is the contract that lets the commercial Mac product, the free cross-platform CLI, and the alpha-cohort macOS app all run the same Python with the same stage code — only the resolver's answers differ.
+
 ## Component inventory
 
 ### Always essential (every channel, every platform)

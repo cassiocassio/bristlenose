@@ -85,6 +85,36 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "${{ github.ref_name }}" --generate-notes man/bristlenose.1
 
+  verify-pypi:
+    # Independent check that PyPI actually accepted the upload. Runs in
+    # parallel to github-release (does NOT gate it). Fails the workflow
+    # red if PyPI's JSON endpoint doesn't surface the expected version
+    # within ~10 minutes. PyPI's Fastly cache can be up to ~5 min stale,
+    # so a single curl will false-negative; we poll. Does NOT auto-delete
+    # the tag — twine has already consumed the version immutably by the
+    # time we get here, and auto-deletion would mask that.
+    needs: publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Poll PyPI for the published version
+        run: |
+          expected="${GITHUB_REF_NAME#v}"
+          echo "Looking for bristlenose==$expected on PyPI"
+          for i in $(seq 1 20); do
+            published=$(curl -fsSL https://pypi.org/pypi/bristlenose/json | jq -r .info.version || echo "")
+            echo "[attempt $i] PyPI reports: $published"
+            if [ "$published" = "$expected" ]; then
+              echo "✅ PyPI accepted $expected"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::PyPI never surfaced $expected after 20 attempts (~10 min)."
+          echo "::error::Twine likely consumed the version already — do NOT delete the tag."
+          echo "::error::Check https://pypi.org/project/bristlenose/ and the publish job log."
+          exit 1
+
   notify-homebrew:
     needs: publish
     runs-on: ubuntu-latest

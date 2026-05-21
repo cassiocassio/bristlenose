@@ -107,7 +107,18 @@ for f in "${TARGETS[@]}"; do
     # evade exact-literal matches. No legitimate Swift code in the
     # shipped Mach-O should reference that prefix.
     hits=$(strings -a "$f" | grep -F \
-        -e "BRISTLENOSE_DEV_" || true)
+        -e "BRISTLENOSE_DEV_" \
+        -e "BRISTLENOSE_DEBUG_" \
+        -e "Design-review sample" \
+        || true)
+    # `BRISTLENOSE_DEV_*` catches dev escape-hatch env vars (legacy guard).
+    # `BRISTLENOSE_DEBUG_*` catches the diagnostic-fixture env var
+    #   (`BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE`) used by the popover harness.
+    # "Design-review sample" is a distinctive English literal from the
+    #   `allStatesContext` debug view in PipelineActivityItem.swift; its
+    #   presence in a Release binary means a `#if DEBUG` block leaked.
+    # All three classes of literal are `#if DEBUG`-guarded in Swift; a
+    # leak here means the guard moved or was removed.
     if [ -n "$hits" ]; then
         LEAK_COUNT=$((LEAK_COUNT + 1))
         echo "  LEAK: $f" >&2

@@ -404,18 +404,10 @@ private struct ProjectMenuContent: View {
     @ObservedObject var projectIndex: ProjectIndex
     @ObservedObject var i18n: I18n
 
-    /// Whether a project is selected (path is non-empty or project is unavailable).
-    private var hasProject: Bool {
-        !bridgeHandler.selectedProjectPath.isEmpty || !bridgeHandler.selectedProjectAvailable
-    }
-
     /// Whether a folder is selected.
     private var hasFolder: Bool {
         !bridgeHandler.selectedFolderName.isEmpty
     }
-
-    /// Whether anything is selected.
-    private var hasSelection: Bool { hasProject || hasFolder }
 
     var body: some View {
         if hasFolder {
@@ -444,7 +436,7 @@ private struct ProjectMenuContent: View {
                 }
             }
             .keyboardShortcut("r", modifiers: [.command, .shift])
-            .disabled(!hasProject || bridgeHandler.selectedProjectRevealablePath.isEmpty)
+            .disabled(bridgeHandler.selectedProjectRevealablePath.isEmpty)
 
             Button(i18n.t("desktop.chrome.locate")) {
                 NotificationCenter.default.post(name: .locateSelectedProject, object: nil)
@@ -454,9 +446,19 @@ private struct ProjectMenuContent: View {
             Button(i18n.t("desktop.menu.project.rename")) {
                 NotificationCenter.default.post(name: .renameSelectedProject, object: nil)
             }
-            .disabled(!hasProject)
+            // Single-selection-only operation; receiver guards on `sole`.
+            // `selectedProjectPath.isEmpty` covers both no-selection AND
+            // multi-selection (cleared by applySelectionChange's default
+            // branch). Indie-consensus: Finder/Notes/Mail/Things disable
+            // Rename on multi-select rather than silently no-op.
+            .disabled(bridgeHandler.selectedProjectPath.isEmpty)
 
             // "Move to" submenu — lists all folders + "No Folder" for root.
+            // Disabled on no-selection AND multi-selection for the same
+            // reason as Rename — receiver guards on `sole`, so submenu
+            // children would silently no-op (and that's especially bad in
+            // a submenu, where the user has invested two clicks before
+            // discovering the dead end).
             if !projectIndex.folders.isEmpty {
                 Menu(i18n.t("desktop.menu.project.moveTo")) {
                     Button(i18n.t("desktop.menu.project.noFolder")) {
@@ -476,7 +478,7 @@ private struct ProjectMenuContent: View {
                         }
                     }
                 }
-                .disabled(!hasProject)
+                .disabled(bridgeHandler.selectedProjectPath.isEmpty)
             }
 
             Button(i18n.t("desktop.menu.project.reAnalyse")) {
@@ -497,7 +499,6 @@ private struct ProjectMenuContent: View {
                 )
             }
             .keyboardShortcut(.delete, modifiers: .command)
-            .disabled(!hasProject)
         }
     }
 }

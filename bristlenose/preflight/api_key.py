@@ -217,9 +217,10 @@ def _validate_anthropic(api_key: str, model: str) -> ValidationResult:
     except anthropic.AuthenticationError as exc:
         return ValidationResult(ok=False, error_class="invalid_key", raw_message=str(exc))
     except anthropic.BadRequestError as exc:
-        # Anthropic returns 400 with "credit_balance_too_low" when the
-        # workspace is funded but has no remaining credit.
-        if "credit_balance_too_low" in str(exc):
+        # Live SDK message is "Your credit balance is too low to access the
+        # Claude API. ..." — match the spaced phrase, not the underscored
+        # error.type token (which doesn't appear in str(exc)).
+        if "credit balance" in str(exc).lower():
             return ValidationResult(
                 ok=False, error_class="billing_empty", raw_message=str(exc)
             )

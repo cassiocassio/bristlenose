@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 24 May 2026 (closed `llm-error-distinguishability`)
+**Updated:** 24 May 2026 (added `pipeline-view-v1-9`; closed `llm-error-distinguishability`)
 
 ---
 
@@ -41,6 +41,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
 | `bristlenose_branch llm-error-distinguishability-all-providers/` | `llm-error-distinguishability-all-providers` | feature | Extend preflight error classification to Azure, Gemini, Ollama using structured error.code/error.status fields; switch OpenAI's substring branches to structured fields |
+| `bristlenose_branch pipeline-view-v1-9/` | `pipeline-view-v1-9` | feature | Continue pipeline-view iteration (v1.9) — per-(stage, backend) editorial quality rating (●/○/⚠/✗) layered on v1.5's eligibility ✓/✗, closing the viable-but-poor backend trap |
 
 
 
@@ -138,6 +139,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
 | `llm-error-distinguishability-all-providers` | `bristlenose_branch llm-error-distinguishability-all-providers/` | local only |
+| `pipeline-view-v1-9` | `bristlenose_branch pipeline-view-v1-9/` | local only |
 
 
 
@@ -145,6 +147,29 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `pipeline-view-v1-9`
+
+**Kind:** feature — per-(stage, backend) editorial quality rating layered on v1.5's eligibility, intended to merge to main
+**Status:** Just started
+**Started:** 24 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-view-v1-9/`
+**Remote:** local only (push when ready)
+
+**What it does:** Continue pipeline-view iteration (v1.9). Adds a four-glyph editorial quality rating (●/○/⚠/✗) per (stage, backend) cell alongside v1.5's eligibility ✓/✗, closing the "viable-but-poor backend confidence trap" the v1.5 review flagged (e.g. Ollama 3B is ✓ for quote extraction but disappointing). Read-only catalogue layer — not auto-pick (v2) and not user overrides (v3). See `HANDOFF.md` for the full brief.
+
+**Files this branch will touch:**
+- `bristlenose/pipeline/` (catalogue / view layer)
+- `bristlenose/locales/` (`quality_note` strings, all 6 locales)
+- `frontend/` (Pipeline view UI for quality column)
+- `tests/` (catalogue + view tests)
+- TBD — exact paths firm up as work progresses
+
+**Potential conflicts with other branches:**
+- `pipeline-view-v1-5` — direct predecessor; v1-9 layers on top. Conflicts likely if v1-5 hasn't merged when v1-9 lands. Coordinate ordering.
+- `llm-error-distinguishability-all-providers` — overlapping LLM-provider surface but different concerns (error classification vs. quality rating); unlikely to step on each other.
 
 ---
 

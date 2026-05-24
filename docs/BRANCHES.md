@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 21 May 2026 (closed `pipeline-view-v1`)
+**Updated:** 21 May 2026 (added `llm-error-distinguishability` branch; closed `pipeline-view-v1`; swept stale `pipeline-subtitle-i18n` + `multi-project-folder-watcher` rows — both merged earlier in the window)
 
 ---
 
@@ -39,9 +39,8 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
-| `bristlenose_branch pipeline-subtitle-i18n/` | `pipeline-subtitle-i18n` | chore | Translate ProjectRow pipelineSubtitle + locale-aware date formatters |
-| `bristlenose_branch multi-project-folder-watcher/` | `multi-project-folder-watcher` | feature | Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files, surface as sidebar count pill + NewFilesSheet |
 | `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
+| `bristlenose_branch llm-error-distinguishability/` | `llm-error-distinguishability` | feature | Distinguish LLM provider failure root causes (credit / model / rate-limit / deprecation) so users see the right recovery action, not a misleading "change your model" message |
 
 
 
@@ -137,9 +136,8 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
-| `pipeline-subtitle-i18n` | `bristlenose_branch pipeline-subtitle-i18n/` | local only |
-| `multi-project-folder-watcher` | `bristlenose_branch multi-project-folder-watcher/` | local only |
 | `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
+| `llm-error-distinguishability` | `bristlenose_branch llm-error-distinguishability/` | local only |
 
 
 
@@ -178,52 +176,27 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
-### `multi-project-folder-watcher`
+### `llm-error-distinguishability`
 
-**Kind:** feature — code intended for main; lands the Phase 2 #14 watcher + sidebar surface
+**Kind:** feature — distinguish LLM provider failure root causes so users see the right recovery action, not a misleading "change your model" message.
 **Status:** Just started
-**Started:** 15 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch multi-project-folder-watcher/`
+**Started:** 21 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch llm-error-distinguishability/`
 **Remote:** local only (push when ready)
 
-**What it does:** Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files in a project folder, surface as Mail-style sidebar count pill + NewFilesSheet. Detect and surface only; no auto-process (re-analysis is post-TF). Wires `ProjectBookmarkLease` into `ProjectIndex`; opens with a 30-min spike comparing NSFilePresenter vs DispatchSource. See `.claude/plans/multi-project-folder-watcher.md` for the full handoff.
+**What it does:** Replace the single collapsed user-facing error ("The requested model is not available for your Claude account…") with a 9-class taxonomy mapping each provider's actual error signals (Anthropic, OpenAI, Azure, Gemini, Ollama) to specific recovery copy. Headline bug: `preflight/api_key.py` maps every Anthropic `400 invalid_request_error` to `model_unavailable` without inspecting `error.message` for the `"credit balance"` substring — so credit-exhausted users see a hopeless "change your model" prompt when the real fix is "add credit." Full taxonomy + per-provider classifier shape in `HANDOFF.md`.
 
 **Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/ProjectIndex.swift`
-- `desktop/Bristlenose/Bristlenose/ProjectBookmarkLease.swift`
-- `desktop/Bristlenose/Bristlenose/ProjectAvailability.swift`
-- `desktop/Bristlenose/Bristlenose/Sidebar/`
-- `desktop/Bristlenose/Bristlenose/NewFilesSheet.swift` (new)
-- `.claude/plans/tf-multi-project.md`
-- `bristlenose/locales/*/desktop.json` (six locales for sidebar pill + sheet copy)
+- `bristlenose/llm/` — per-provider classifier functions returning `LLMErrorKind`
+- `bristlenose/preflight/api_key.py` — credit-balance substring check before falling through to model-unavailable
+- `bristlenose/doctor.py` — surface the new taxonomy in doctor output where relevant
+- `bristlenose/locales/` — new recovery-copy strings (6 locales)
+- `tests/llm/` — per-provider classifier coverage
+- `tests/test_preflight_api_key.py` — credit-vs-model regression tests
 
 **Potential conflicts with other branches:**
-- `pipeline-subtitle-i18n` — overlapping `bristlenose/locales/*/desktop.json` edits. Coordinate locale-key additions at merge time; key namespaces are different (`projectRow.*` vs new watcher keys), so conflicts should be additive, not semantic.
-- `sidebar-analysed-honesty` — sibling sidebar work (`PipelineRunner.swift`/`LocateFlow.swift`). No file overlap expected with this branch's `Sidebar/` edits, but visual ordering of state indicators should be checked at merge.
-
----
-
-### `pipeline-subtitle-i18n`
-
-**Kind:** chore — small ephemeral i18n work; lands on main once locale keys + Swift call sites are wired up
-**Status:** Just started
-**Started:** 15 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-subtitle-i18n/`
-**Remote:** local only (push when ready)
-
-**What it does:** Translate ProjectRow pipelineSubtitle + locale-aware date formatters. See `.claude/plans/pipeline-subtitle-i18n.md` for the full handoff.
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/ProjectRow.swift`
-- `bristlenose/locales/en/desktop.json`
-- `bristlenose/locales/es/desktop.json`
-- `bristlenose/locales/fr/desktop.json`
-- `bristlenose/locales/de/desktop.json`
-- `bristlenose/locales/ko/desktop.json`
-- `bristlenose/locales/ja/desktop.json`
-
-**Potential conflicts with other branches:**
-- None expected — no other active branch touches `ProjectRow.swift` or `desktop.json` locale files. Coordinate with any in-flight desktop i18n work before merging.
+- `pipeline-view-v1-5` — touches 6 locale `common.json` files. Keep keys distinct (`llm.error.*`) and use targeted text-replace, never `json.dump` round-trip.
+- Future `lazy-auth-startup` work touches `bristlenose/preflight/api_key.py` boundaries — if it lands first, rebase; if this lands first, lazy-auth absorbs the new classifier shape.
 
 ---
 
@@ -325,6 +298,14 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `multi-project-folder-watcher` — merged 16 May 2026
+
+Phase 2 #14 — NSFilePresenter folder watcher: detect Finder-added files in a project folder, surface as Mail-style sidebar count pill + NewFilesSheet (detect-and-surface only; no auto-process). Wires `ProjectBookmarkLease` into `ProjectIndex`, lands the SQLite ingested-set foundation with `immutable=1` read path, session count + subtitle-delta row layout, Schema A dates, semantic state colours. Merged via `fdd0a1e`. Acceptance walk closed 16 May (5 of 8 steps verified; 2 deferred for design reasons; Step 7 re-mount regression filed as a chip — later closed by `cantfind-remount-recovery`). `NewFilesSheet` marked as TF scaffolding for SPA migration post-incremental-processing.
+
+### `pipeline-subtitle-i18n` — merged 15 May 2026
+
+Translated ProjectRow `pipelineSubtitle` and locale-aware date formatters across all 6 locales (en/es/fr/de/ko/ja) using `dt()` desktop overrides where the register diverges from CLI. Sidebar in-flight pipeline subtitles (Transcribing… / Extracting quotes… / Clustering themes…) now render in the user's locale instead of English-only. Merged via `b935f8d`. Translations matched against the Apple glossary where possible.
 
 ### `pipeline-view-v1` — merged 21 May 2026
 

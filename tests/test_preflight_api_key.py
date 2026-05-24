@@ -169,14 +169,21 @@ class TestValidateAnthropic:
         assert result.error_class == "invalid_key"
 
     def test_credit_balance_too_low_maps_to_billing_empty(self, monkeypatch):
+        # Real SDK message shape — "credit balance" with spaces, not the
+        # underscored error.type. The classifier matches on this verbatim;
+        # if a future refactor reverts to "credit_balance_too_low" the
+        # branch will silently miss and route to model_unavailable.
         bad_req = type("BadRequestError", (Exception,), {})
-        fake = self._fake_anthropic(
-            exc_class=bad_req, exc=bad_req("400 credit_balance_too_low"),
+        real_msg = (
+            "Your credit balance is too low to access the Claude API. "
+            "Please go to Plans & Billing to upgrade or purchase credits."
         )
+        fake = self._fake_anthropic(exc_class=bad_req, exc=bad_req(real_msg))
         monkeypatch.setitem(__import__("sys").modules, "anthropic", fake)
         result = _validate_anthropic("sk-key", "claude-sonnet-4-5-20250929")
         assert not result.ok
         assert result.error_class == "billing_empty"
+        assert "credit balance" in result.raw_message.lower()
 
     def test_other_bad_request_maps_to_model_unavailable(self, monkeypatch):
         bad_req = type("BadRequestError", (Exception,), {})

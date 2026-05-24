@@ -335,3 +335,124 @@ def find_stage(stage_id: str) -> PipelineStageDef | None:
         if stage.id == stage_id:
             return stage
     return None
+
+
+# ── v1.9 quality ratings (editorial layer over v1.5 eligibility) ────────────
+
+
+QualityLevel = Literal["excellent", "good", "marginal", "avoid"]
+QualitySource = Literal["internal_bench", "published_bench", "community", "default"]
+
+
+class QualityRating(BaseModel):
+    """Per-(stage, option) editorial judgement of fitness for purpose.
+
+    `rating` is a four-glyph closed enum:
+        "excellent" (●) — proven and recommended for this stage
+        "good"      (○) — solid choice, no known issues
+        "marginal"  (⚠) — works but with observed quality risk; explain in note
+        "avoid"     (✗) — known-bad for this stage; use only if no alternative
+
+    `note_key` is a translation key for the one-line editorial reason
+    (e.g. "pipeline.quality.local_quote_extraction_miss_rate"). Locale files
+    mirror it; English is the source.
+
+    `source` documents where the rating came from:
+        "internal_bench"  — measured on a Bristlenose trial run
+        "published_bench" — third-party benchmark (cite in note)
+        "community"       — aggregated researcher feedback
+        "default"         — no measured signal; placeholder
+    """
+
+    rating: QualityLevel
+    note_key: str | None = None
+    source: QualitySource
+
+
+# Shared LLM cells. Same option-id set across all five LLM stages —
+# `test_quality.py` enforces parity (mirrors v1.5's _LLM_BACKENDS invariant).
+# Apple FM omitted by design: stays untested (renders as ⚠) until the probe
+# ships. Editorial judgements only; refine from cohort signal as it arrives.
+_LLM_QUALITY: dict[tuple[str, str], QualityRating] = {
+    # speaker_identification — structural task; most LLMs handle it well.
+    ("speaker_identification", "claude"): QualityRating(
+        rating="excellent", source="internal_bench"
+    ),
+    ("speaker_identification", "openai"): QualityRating(
+        rating="excellent", source="internal_bench"
+    ),
+    ("speaker_identification", "google"): QualityRating(rating="good", source="default"),
+    ("speaker_identification", "azure"): QualityRating(rating="good", source="default"),
+    ("speaker_identification", "local"): QualityRating(
+        rating="good",
+        note_key="pipeline.quality.local_speaker_id_acceptable",
+        source="community",
+    ),
+    # topic_segmentation — structural; similar profile to speaker_id.
+    ("topic_segmentation", "claude"): QualityRating(rating="excellent", source="internal_bench"),
+    ("topic_segmentation", "openai"): QualityRating(rating="excellent", source="internal_bench"),
+    ("topic_segmentation", "google"): QualityRating(rating="good", source="default"),
+    ("topic_segmentation", "azure"): QualityRating(rating="good", source="default"),
+    ("topic_segmentation", "local"): QualityRating(
+        rating="good",
+        note_key="pipeline.quality.local_topic_segmentation_acceptable",
+        source="community",
+    ),
+    # quote_extraction — high-stakes; longest prompts, smallest-model risk.
+    ("quote_extraction", "claude"): QualityRating(rating="excellent", source="internal_bench"),
+    ("quote_extraction", "openai"): QualityRating(rating="excellent", source="internal_bench"),
+    ("quote_extraction", "google"): QualityRating(rating="good", source="default"),
+    ("quote_extraction", "azure"): QualityRating(rating="good", source="default"),
+    ("quote_extraction", "local"): QualityRating(
+        rating="marginal",
+        note_key="pipeline.quality.local_quote_extraction_miss_rate",
+        source="community",
+    ),
+    # quote_clustering — high-stakes; nuance matters.
+    ("quote_clustering", "claude"): QualityRating(rating="excellent", source="internal_bench"),
+    ("quote_clustering", "openai"): QualityRating(rating="excellent", source="internal_bench"),
+    ("quote_clustering", "google"): QualityRating(rating="good", source="default"),
+    ("quote_clustering", "azure"): QualityRating(rating="good", source="default"),
+    ("quote_clustering", "local"): QualityRating(
+        rating="marginal",
+        note_key="pipeline.quality.local_quote_clustering_drift",
+        source="community",
+    ),
+    # thematic_grouping — high-stakes synthesis; small-model drift highest here.
+    ("thematic_grouping", "claude"): QualityRating(rating="excellent", source="internal_bench"),
+    ("thematic_grouping", "openai"): QualityRating(rating="excellent", source="internal_bench"),
+    ("thematic_grouping", "google"): QualityRating(rating="good", source="default"),
+    ("thematic_grouping", "azure"): QualityRating(rating="good", source="default"),
+    ("thematic_grouping", "local"): QualityRating(
+        rating="marginal",
+        note_key="pipeline.quality.local_thematic_grouping_drift",
+        source="community",
+    ),
+}
+
+
+_TRANSCRIPTION_QUALITY: dict[tuple[str, str], QualityRating] = {
+    ("transcription", "mlx"): QualityRating(
+        rating="excellent",
+        note_key="pipeline.quality.mlx_whisper_apple_silicon_optimal",
+        source="internal_bench",
+    ),
+    ("transcription", "faster-whisper"): QualityRating(
+        rating="good",
+        note_key="pipeline.quality.faster_whisper_cpu_baseline",
+        source="internal_bench",
+    ),
+}
+
+
+def quality_for(stage_id: str, option_id: str) -> QualityRating | None:
+    """Return the editorial quality rating for a (stage, option) cell.
+
+    None when the cell is not yet rated — render layer defaults this to
+    ⚠ "untested" (pipeline.quality.untested). Catalogue stays explicit
+    about what's measured vs guessed; absence is information.
+    """
+    llm = _LLM_QUALITY.get((stage_id, option_id))
+    if llm is not None:
+        return llm
+    return _TRANSCRIPTION_QUALITY.get((stage_id, option_id))

@@ -365,6 +365,11 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.12** — _23 May 2026_
+
+- **Anthropic credit-exhausted now reports "out of credit", not "model unavailable".** Preflight's BadRequestError classifier was substring-matching on `credit_balance_too_low` (an `error.type` token that doesn't appear in `str(exc)`) — the live SDK message is `Your credit balance is too low to access the Claude API. ...`, so the branch silently fell through to the model-unavailable copy. Substring widened to `credit balance`; regression-pinned with the real SDK message. Runtime path was already correct; preflight-only miss.
+- **Desktop: ⌘⌫ no longer beeps on placeholder projects or multi-selection.** Project-menu disable gates were over-broad — `hasProject` required either a non-empty path OR an unavailable project, so brand-new placeholders (empty path, available) and multi-selections (path cleared) both failed and hit AppKit's disabled-shortcut beep. Gates dropped; receivers were already total over empty/mismatched selection. Rename and Move-to-folder kept a narrower gate so they dim correctly on multi-select rather than silently no-op. Desktop-only; reaches the alpha cohort with the next bundled sidecar build.
+
 **0.15.11** — _21 May 2026_
 
 - **`bristlenose pipeline` + read-only Pipeline tab in Settings.** New CLI verb (`bristlenose pipeline`, with `--json` and `--stage <id>` filter) and a matching last-position tab in the React Settings modal render the mixture of models Bristlenose actually uses across its pipeline stages: MLX/faster-whisper for transcription, the chosen LLM provider × model for speaker identification / topic segmentation / quote extraction / quote clustering / thematic grouping, Presidio (or "Off") for anonymisation, and an Apple Foundation Models row that returns `Unknown from CLI` until the Swift-side probe ships. Read-only on purpose — to change a backend you still edit settings or `.env`. Host context strip shows OS · arch · RAM · keys present · ollama status. Cross-language schema lock at `tests/fixtures/pipeline-view-contract.json` keeps the Python emit and React consumer in agreement. 28 new tests.

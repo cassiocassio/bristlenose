@@ -12,8 +12,10 @@ when that lands).
 
 from __future__ import annotations
 
+import importlib.util
 import platform
 import socket
+from functools import lru_cache
 from typing import Literal
 
 from pydantic import BaseModel
@@ -32,8 +34,10 @@ class HostFacts(BaseModel):
 
     os: str  # "Darwin", "Linux", "Windows"
     arch: str  # "arm64", "x86_64"
+    os_version: str | None = None  # e.g. "26.1" on Darwin; None elsewhere
     memory_gb: float | None  # rounded; None when undetected
     keys_present: dict[str, bool]  # provider name → has API key set
+    installed_packages: dict[str, bool] = {}  # python_package name → present
     ollama_running: bool
     network_reachable: bool  # OS route-table check only, no HEAD probe
     apple_fm_status: AppleFmStatus  # always "unknown" on CLI in v1
@@ -91,6 +95,45 @@ def _probe_keys_present(settings: BristlenoseSettings) -> dict[str, bool]:
     }
 
 
+def _detect_os_version() -> str | None:
+    """Return the OS version on Darwin (e.g. "26.1"); None on other platforms.
+
+    Pre-flight: `platform.mac_ver()` returns `("", ...)` on non-Darwin —
+    guard with an explicit empty check.
+    """
+    if platform.system() != "Darwin":
+        return None
+    version, _, _ = platform.mac_ver()
+    return version or None
+
+
+@lru_cache(maxsize=1)
+def _probe_installed_packages() -> dict[str, bool]:
+    """Lazy-import probe of every python_package requirement in the catalogue.
+
+    Single source of truth: the probe set is derived from
+    `catalogue.all_python_packages()`, so adding a new backend that depends
+    on a Python package only requires editing the catalogue cell.
+
+    Cached per process: `lru_cache(maxsize=1)` on a zero-arg function. Tests
+    reset via `_probe_installed_packages.cache_clear()` between scenarios.
+
+    `importlib.util.find_spec` is presence-only — does NOT import. ~0.5 ms
+    per package on a warm cache.
+    """
+    # Local import to avoid a top-level circular reference when host.py is
+    # imported by catalogue consumers.
+    from bristlenose.pipeline_view.catalogue import all_python_packages
+
+    result: dict[str, bool] = {}
+    for pkg in all_python_packages():
+        try:
+            result[pkg] = importlib.util.find_spec(pkg) is not None
+        except (ValueError, ModuleNotFoundError):
+            result[pkg] = False
+    return result
+
+
 def probe_host(settings: BristlenoseSettings) -> HostFacts:
     """Probe the local machine for Pipeline-view host facts.
 
@@ -100,8 +143,10 @@ def probe_host(settings: BristlenoseSettings) -> HostFacts:
     return HostFacts(
         os=platform.system(),
         arch=platform.machine(),
+        os_version=_detect_os_version(),
         memory_gb=_detect_memory_gb(),
         keys_present=_probe_keys_present(settings),
+        installed_packages=_probe_installed_packages(),
         ollama_running=_probe_ollama_running(),
         network_reachable=_probe_network_reachable(),
         apple_fm_status="unknown",

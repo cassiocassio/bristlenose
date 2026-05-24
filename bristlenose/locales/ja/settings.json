@@ -28,14 +28,42 @@
     "clickToCopy": "クリックでコピー",
     "copied": "コピーしました"
   },
-  "pipeline": {
-    "intro": "Bristlenose が各パイプラインステージで現在使用しているモデルの読み取り専用ビュー。バックエンドを変更するには、設定（環境変数または .env ファイル）を編集してください。",
-    "loading": "パイプラインビューを読み込み中…",
-    "error": "パイプラインビューを読み込めませんでした",
-    "keys": "キー",
-    "keysNone": "なし",
-    "ollama": "Ollama",
-    "running": "実行中",
-    "notDetected": "未検出"
-  }
+    "pipeline": {
+      "intro": "Bristlenose\u304c\u5404\u30d1\u30a4\u30d7\u30e9\u30a4\u30f3\u30b9\u30c6\u30fc\u30b8\u3067\u73fe\u5728\u4f7f\u7528\u3057\u3066\u3044\u308b\u30e2\u30c7\u30eb\u306e\u8aad\u307f\u53d6\u308a\u5c02\u7528\u30d3\u30e5\u30fc\u3067\u3059\u3002\u30d0\u30c3\u30af\u30a8\u30f3\u30c9\u3092\u5909\u66f4\u3059\u308b\u306b\u306f\u3001\u8a2d\u5b9a\uff08\u74b0\u5883\u5909\u6570\u307e\u305f\u306f.env\u30d5\u30a1\u30a4\u30eb\uff09\u3092\u7de8\u96c6\u3057\u3066\u304f\u3060\u3055\u3044\u3002",
+      "loading": "\u30d1\u30a4\u30d7\u30e9\u30a4\u30f3\u30d3\u30e5\u30fc\u3092\u8aad\u307f\u8fbc\u307f\u4e2d\u2026",
+      "error": "\u30d1\u30a4\u30d7\u30e9\u30a4\u30f3\u30d3\u30e5\u30fc\u3092\u8aad\u307f\u8fbc\u3081\u307e\u305b\u3093\u3067\u3057\u305f",
+      "keys": "\u30ad\u30fc",
+      "keysNone": "\u306a\u3057",
+      "ollama": "ollama",
+      "running": "\u5b9f\u884c\u4e2d",
+      "notDetected": "\u691c\u51fa\u3055\u308c\u307e\u305b\u3093",
+      "available": "\u5229\u7528\u53ef\u80fd",
+      "unavailable": "\u5229\u7528\u4e0d\u53ef",
+      "alternatives": {
+        "summaryHeading": "\u3053\u306e\u30de\u30b7\u30f3\u3067\u5229\u7528\u3067\u304d\u308bLLM\u30d0\u30c3\u30af\u30a8\u30f3\u30c9",
+        "available": "\u5229\u7528\u53ef\u80fd",
+        "unavailable": "\u5229\u7528\u4e0d\u53ef",
+        "none": "\u306a\u3057"
+      },
+      "backends": {
+        "local_ollama": "\u30ed\u30fc\u30ab\u30eb (Ollama)",
+        "builtin_anonymiser": "\u7d44\u307f\u8fbc\u307f\u533f\u540d\u5316\u30c4\u30fc\u30eb"
+      },
+      "reasons": {
+        "no_anthropic_key": "Claude API\u30ad\u30fc\u304c\u8a2d\u5b9a\u3055\u308c\u3066\u3044\u307e\u305b\u3093",
+        "no_openai_key": "ChatGPT API\u30ad\u30fc\u304c\u8a2d\u5b9a\u3055\u308c\u3066\u3044\u307e\u305b\u3093",
+        "no_azure_key": "Azure OpenAI\u30ad\u30fc\u304c\u8a2d\u5b9a\u3055\u308c\u3066\u3044\u307e\u305b\u3093",
+        "no_azure_endpoint": "Azure\u30a8\u30f3\u30c9\u30dd\u30a4\u30f3\u30c8\u304c\u8a2d\u5b9a\u3055\u308c\u3066\u3044\u307e\u305b\u3093",
+        "no_azure_deployment": "Azure\u30c7\u30d7\u30ed\u30a4\u30e1\u30f3\u30c8\u304c\u8a2d\u5b9a\u3055\u308c\u3066\u3044\u307e\u305b\u3093",
+        "no_google_key": "Gemini API\u30ad\u30fc\u304c\u8a2d\u5b9a\u3055\u308c\u3066\u3044\u307e\u305b\u3093",
+        "ollama_not_running": "Ollama\u304c\u5b9f\u884c\u3055\u308c\u3066\u3044\u307e\u305b\u3093",
+        "apple_fm_check_desktop": "\u30c7\u30b9\u30af\u30c8\u30c3\u30d7\u30a2\u30d7\u30ea\u3067\u78ba\u8a8d\u3057\u3066\u304f\u3060\u3055\u3044",
+        "requires_apple_silicon": "Apple Silicon\u304c\u5fc5\u8981\u3067\u3059",
+        "mlx_whisper_not_installed": "MLX Whisper\u304c\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb\u3055\u308c\u3066\u3044\u307e\u305b\u3093",
+        "ctranslate2_not_installed": "ctranslate2\u304c\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb\u3055\u308c\u3066\u3044\u307e\u305b\u3093",
+        "presidio_not_installed": "\u7d44\u307f\u8fbc\u307f\u533f\u540d\u5316\u30c4\u30fc\u30eb\u304c\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb\u3055\u308c\u3066\u3044\u307e\u305b\u3093",
+        "spacy_model_missing": "\u8a00\u8a9e\u30e2\u30c7\u30eb\u304c\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb\u3055\u308c\u3066\u3044\u307e\u305b\u3093",
+        "pii_disabled": "PII\u7de8\u96c6\u306f\u30aa\u30d5\u3067\u3059"
+      }
+    }
 }

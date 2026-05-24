@@ -1,84 +1,349 @@
 {
-  "_doc": "Schema contract between bristlenose.pipeline.render.PipelineView (Python) and the React Pipeline Settings tab (TypeScript). Both sides round-trip this fixture in tests so additions / renames trip a build failure. Established 18 May 2026 for branch pipeline-view-v1. Schema version 1: catalogue + host split, host loopback-only (no telemetry fields).",
-  "schema_version": 1,
+  "_doc": "Schema contract between bristlenose.pipeline_view.render.PipelineView (Python) and the React Pipeline Settings tab (TypeScript). Both sides round-trip this fixture in tests so additions / renames trip a build failure. Established 18 May 2026 for branch pipeline-view-v1. Schema version 2 (21 May 2026): adds llm_summary host-wide LLM eligibility + per-stage alternatives for transcription/anonymisation. Schema-additive — v1 consumers ignore the new fields.",
+  "schema_version": 2,
   "scenarios": {
     "claude_apple_silicon_keys_present": {
       "_doc": "Common cohort path: Apple Silicon Mac, Claude provider with key, no PII redaction. Anonymisation row dim. Apple FM row 'unknown' on CLI.",
+      "schema_version": 2,
       "catalogue": [
         {
           "id": "transcription",
           "name": "Transcription",
           "kind": "transcription",
           "chosen": "MLX Whisper large-v3-turbo",
+          "chosen_id": "mlx",
           "notes": "Auto-detected from your hardware. Local, private, free.",
-          "available": true
+          "available": true,
+          "alternatives": [
+            {
+              "id": "mlx",
+              "display": "MLX Whisper",
+              "display_key": null,
+              "available": true,
+              "reason": null
+            },
+            {
+              "id": "faster-whisper",
+              "display": "faster-whisper",
+              "display_key": null,
+              "available": true,
+              "reason": null
+            }
+          ]
         },
         {
           "id": "speaker_identification",
           "name": "Speaker identification",
           "kind": "llm",
           "chosen": "Claude · claude-sonnet-4-20250514",
+          "chosen_id": "claude",
           "notes": "Set by your provider choice.",
-          "available": true
+          "available": true,
+          "alternatives": []
         },
         {
           "id": "anonymisation",
           "name": "Anonymisation",
           "kind": "anonymisation",
           "chosen": "Off (enable with --redact-pii)",
+          "chosen_id": null,
           "notes": "Presidio runs locally when --redact-pii is enabled.",
-          "available": false
+          "available": false,
+          "alternatives": [
+            {
+              "id": "presidio",
+              "display": "Built-in anonymiser",
+              "display_key": "pipeline.backends.builtin_anonymiser",
+              "available": false,
+              "reason": "pipeline.reasons.pii_disabled"
+            }
+          ]
         },
         {
           "id": "topic_segmentation",
           "name": "Topic segmentation",
           "kind": "llm",
           "chosen": "Claude · claude-sonnet-4-20250514",
+          "chosen_id": "claude",
           "notes": "Set by your provider choice.",
-          "available": true
+          "available": true,
+          "alternatives": []
         },
         {
           "id": "quote_extraction",
           "name": "Quote extraction",
           "kind": "llm",
           "chosen": "Claude · claude-sonnet-4-20250514",
+          "chosen_id": "claude",
           "notes": "Set by your provider choice. Typically the largest LLM cost.",
-          "available": true
+          "available": true,
+          "alternatives": []
         },
         {
           "id": "quote_clustering",
           "name": "Quote clustering",
           "kind": "llm",
           "chosen": "Claude · claude-sonnet-4-20250514",
+          "chosen_id": "claude",
           "notes": "Set by your provider choice.",
-          "available": true
+          "available": true,
+          "alternatives": []
         },
         {
           "id": "thematic_grouping",
           "name": "Thematic grouping",
           "kind": "llm",
           "chosen": "Claude · claude-sonnet-4-20250514",
+          "chosen_id": "claude",
           "notes": "Set by your provider choice.",
-          "available": true
+          "available": true,
+          "alternatives": []
         },
         {
           "id": "apple_foundation_models",
           "name": "Apple Foundation Models",
           "kind": "apple_fm",
           "chosen": "Unknown from CLI",
+          "chosen_id": null,
           "notes": "Availability not detected from CLI; see the desktop app's Pipeline view for status. A CLI probe is planned.",
-          "available": false
+          "available": false,
+          "alternatives": []
+        }
+      ],
+      "llm_summary": [
+        {
+          "id": "claude",
+          "display": "Claude",
+          "display_key": null,
+          "available": true,
+          "reason": null
+        },
+        {
+          "id": "openai",
+          "display": "ChatGPT",
+          "display_key": null,
+          "available": false,
+          "reason": "pipeline.reasons.no_openai_key"
+        },
+        {
+          "id": "azure",
+          "display": "Azure OpenAI",
+          "display_key": null,
+          "available": false,
+          "reason": "pipeline.reasons.no_azure_key"
+        },
+        {
+          "id": "google",
+          "display": "Gemini",
+          "display_key": null,
+          "available": false,
+          "reason": "pipeline.reasons.no_google_key"
+        },
+        {
+          "id": "local",
+          "display": "Local (Ollama)",
+          "display_key": "pipeline.backends.local_ollama",
+          "available": false,
+          "reason": "pipeline.reasons.ollama_not_running"
+        },
+        {
+          "id": "apple_fm",
+          "display": "Apple FM",
+          "display_key": null,
+          "available": false,
+          "reason": "pipeline.reasons.apple_fm_check_desktop"
         }
       ],
       "host": {
         "os": "Darwin",
         "arch": "arm64",
+        "os_version": "26.0",
         "memory_gb": 32.0,
         "keys_present": {
           "anthropic": true,
           "openai": false,
           "azure": false,
           "google": false
+        },
+        "installed_packages": {
+          "mlx_whisper": true,
+          "ctranslate2": true,
+          "presidio_analyzer": false,
+          "en_core_web_lg": false
+        },
+        "ollama_running": false,
+        "network_reachable": true,
+        "apple_fm_status": "unknown"
+      }
+    },
+    "linux_cpu_no_keys": {
+      "_doc": "Linux x86_64 host, no LLM provider keys, no Ollama. MLX unavailable (no Apple Silicon); faster-whisper available if ctranslate2 is installed. Every LLM alternative ✗ with its own reason. Used to verify CI/Linux fixture-vs-reality drift via the Linux CI matrix step.",
+      "schema_version": 2,
+      "catalogue": [
+        {
+          "id": "transcription",
+          "name": "Transcription",
+          "kind": "transcription",
+          "chosen": "faster-whisper large-v3-turbo",
+          "chosen_id": "faster-whisper",
+          "notes": "Auto-detected from your hardware. Local, private, free.",
+          "available": true,
+          "alternatives": [
+            {
+              "id": "faster-whisper",
+              "display": "faster-whisper",
+              "display_key": null,
+              "available": true,
+              "reason": null
+            },
+            {
+              "id": "mlx",
+              "display": "MLX Whisper",
+              "display_key": null,
+              "available": false,
+              "reason": "pipeline.reasons.requires_apple_silicon"
+            }
+          ]
+        },
+        {
+          "id": "speaker_identification",
+          "name": "Speaker identification",
+          "kind": "llm",
+          "chosen": "anthropic · claude-sonnet-4-20250514",
+          "chosen_id": "claude",
+          "notes": "Set by your provider choice.",
+          "available": true,
+          "alternatives": []
+        },
+        {
+          "id": "anonymisation",
+          "name": "Anonymisation",
+          "kind": "anonymisation",
+          "chosen": "Off (enable with --redact-pii)",
+          "chosen_id": null,
+          "notes": "Presidio runs locally when --redact-pii is enabled.",
+          "available": false,
+          "alternatives": [
+            {
+              "id": "presidio",
+              "display": "Built-in anonymiser",
+              "display_key": "pipeline.backends.builtin_anonymiser",
+              "available": false,
+              "reason": "pipeline.reasons.presidio_not_installed"
+            }
+          ]
+        },
+        {
+          "id": "topic_segmentation",
+          "name": "Topic segmentation",
+          "kind": "llm",
+          "chosen": "anthropic · claude-sonnet-4-20250514",
+          "chosen_id": "claude",
+          "notes": "Set by your provider choice.",
+          "available": true,
+          "alternatives": []
+        },
+        {
+          "id": "quote_extraction",
+          "name": "Quote extraction",
+          "kind": "llm",
+          "chosen": "anthropic · claude-sonnet-4-20250514",
+          "chosen_id": "claude",
+          "notes": "Set by your provider choice. Typically the largest LLM cost.",
+          "available": true,
+          "alternatives": []
+        },
+        {
+          "id": "quote_clustering",
+          "name": "Quote clustering",
+          "kind": "llm",
+          "chosen": "anthropic · claude-sonnet-4-20250514",
+          "chosen_id": "claude",
+          "notes": "Set by your provider choice.",
+          "available": true,
+          "alternatives": []
+        },
+        {
+          "id": "thematic_grouping",
+          "name": "Thematic grouping",
+          "kind": "llm",
+          "chosen": "anthropic · claude-sonnet-4-20250514",
+          "chosen_id": "claude",
+          "notes": "Set by your provider choice.",
+          "available": true,
+          "alternatives": []
+        },
+        {
+          "id": "apple_foundation_models",
+          "name": "Apple Foundation Models",
+          "kind": "apple_fm",
+          "chosen": "Unknown from CLI",
+          "chosen_id": null,
+          "notes": "Availability not detected from CLI; see the desktop app's Pipeline view for status. A CLI probe is planned.",
+          "available": false,
+          "alternatives": []
+        }
+      ],
+      "llm_summary": [
+        {
+          "id": "claude",
+          "display": "Claude",
+          "display_key": null,
+          "available": false,
+          "reason": "pipeline.reasons.no_anthropic_key"
+        },
+        {
+          "id": "openai",
+          "display": "ChatGPT",
+          "display_key": null,
+          "available": false,
+          "reason": "pipeline.reasons.no_openai_key"
+        },
+        {
+          "id": "azure",
+          "display": "Azure OpenAI",
+          "display_key": null,
+          "available": false,
+          "reason": "pipeline.reasons.no_azure_key"
+        },
+        {
+          "id": "google",
+          "display": "Gemini",
+          "display_key": null,
+          "available": false,
+          "reason": "pipeline.reasons.no_google_key"
+        },
+        {
+          "id": "local",
+          "display": "Local (Ollama)",
+          "display_key": "pipeline.backends.local_ollama",
+          "available": false,
+          "reason": "pipeline.reasons.ollama_not_running"
+        },
+        {
+          "id": "apple_fm",
+          "display": "Apple FM",
+          "display_key": null,
+          "available": false,
+          "reason": "pipeline.reasons.apple_fm_check_desktop"
+        }
+      ],
+      "host": {
+        "os": "Linux",
+        "arch": "x86_64",
+        "os_version": null,
+        "memory_gb": 16.0,
+        "keys_present": {
+          "anthropic": false,
+          "openai": false,
+          "azure": false,
+          "google": false
+        },
+        "installed_packages": {
+          "mlx_whisper": false,
+          "ctranslate2": true,
+          "presidio_analyzer": false,
+          "en_core_web_lg": false
         },
         "ollama_running": false,
         "network_reachable": true,

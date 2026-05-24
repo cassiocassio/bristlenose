@@ -28,14 +28,42 @@
     "clickToCopy": "클릭하여 복사",
     "copied": "복사됨"
   },
-  "pipeline": {
-    "intro": "Bristlenose가 각 파이프라인 단계에서 현재 사용하는 모델의 읽기 전용 보기. 백엔드를 변경하려면 설정(환경 변수 또는 .env 파일)을 편집하세요.",
-    "loading": "파이프라인 보기를 불러오는 중…",
-    "error": "파이프라인 보기를 불러올 수 없습니다",
-    "keys": "키",
-    "keysNone": "없음",
-    "ollama": "Ollama",
-    "running": "실행 중",
-    "notDetected": "감지되지 않음"
-  }
+    "pipeline": {
+      "intro": "Bristlenose\uac00 \uac01 \ud30c\uc774\ud504\ub77c\uc778 \ub2e8\uacc4\uc5d0\uc11c \ud604\uc7ac \uc0ac\uc6a9 \uc911\uc778 \ubaa8\ub378\uc758 \uc77d\uae30 \uc804\uc6a9 \ubcf4\uae30\uc785\ub2c8\ub2e4. \ubc31\uc5d4\ub4dc\ub97c \ubcc0\uacbd\ud558\ub824\uba74 \uc124\uc815(\ud658\uacbd \ubcc0\uc218 \ub610\ub294 .env \ud30c\uc77c)\uc744 \ud3b8\uc9d1\ud558\uc138\uc694.",
+      "loading": "\ud30c\uc774\ud504\ub77c\uc778 \ubcf4\uae30 \ub85c\ub4dc \uc911\u2026",
+      "error": "\ud30c\uc774\ud504\ub77c\uc778 \ubcf4\uae30\ub97c \ubd88\ub7ec\uc62c \uc218 \uc5c6\uc2b5\ub2c8\ub2e4",
+      "keys": "\ud0a4",
+      "keysNone": "\uc5c6\uc74c",
+      "ollama": "ollama",
+      "running": "\uc2e4\ud589 \uc911",
+      "notDetected": "\uac10\uc9c0\ub418\uc9c0 \uc54a\uc74c",
+      "available": "\uc0ac\uc6a9 \uac00\ub2a5",
+      "unavailable": "\uc0ac\uc6a9 \ubd88\uac00",
+      "alternatives": {
+        "summaryHeading": "\uc774 \uae30\uae30\uc5d0\uc11c \uc0ac\uc6a9 \uac00\ub2a5\ud55c LLM \ubc31\uc5d4\ub4dc",
+        "available": "\uc0ac\uc6a9 \uac00\ub2a5",
+        "unavailable": "\uc0ac\uc6a9 \ubd88\uac00",
+        "none": "\uc5c6\uc74c"
+      },
+      "backends": {
+        "local_ollama": "\ub85c\uceec (Ollama)",
+        "builtin_anonymiser": "\uae30\ubcf8 \uc775\uba85\ud654 \ub3c4\uad6c"
+      },
+      "reasons": {
+        "no_anthropic_key": "Claude API \ud0a4\uac00 \uc124\uc815\ub418\uc9c0 \uc54a\uc74c",
+        "no_openai_key": "ChatGPT API \ud0a4\uac00 \uc124\uc815\ub418\uc9c0 \uc54a\uc74c",
+        "no_azure_key": "Azure OpenAI \ud0a4\uac00 \uc124\uc815\ub418\uc9c0 \uc54a\uc74c",
+        "no_azure_endpoint": "Azure \uc5d4\ub4dc\ud3ec\uc778\ud2b8\uac00 \uc124\uc815\ub418\uc9c0 \uc54a\uc74c",
+        "no_azure_deployment": "Azure \ubc30\ud3ec\uac00 \uc124\uc815\ub418\uc9c0 \uc54a\uc74c",
+        "no_google_key": "Gemini API \ud0a4\uac00 \uc124\uc815\ub418\uc9c0 \uc54a\uc74c",
+        "ollama_not_running": "Ollama\uac00 \uc2e4\ud589\ub418\uace0 \uc788\uc9c0 \uc54a\uc74c",
+        "apple_fm_check_desktop": "\ub370\uc2a4\ud06c\ud1b1 \uc571\uc5d0\uc11c \ud655\uc778\ud558\uc138\uc694",
+        "requires_apple_silicon": "Apple Silicon\uc774 \ud544\uc694\ud569\ub2c8\ub2e4",
+        "mlx_whisper_not_installed": "MLX Whisper\uac00 \uc124\uce58\ub418\uc9c0 \uc54a\uc74c",
+        "ctranslate2_not_installed": "ctranslate2\uac00 \uc124\uce58\ub418\uc9c0 \uc54a\uc74c",
+        "presidio_not_installed": "\uae30\ubcf8 \uc775\uba85\ud654 \ub3c4\uad6c\uac00 \uc124\uce58\ub418\uc9c0 \uc54a\uc74c",
+        "spacy_model_missing": "\uc5b8\uc5b4 \ubaa8\ub378\uc774 \uc124\uce58\ub418\uc9c0 \uc54a\uc74c",
+        "pii_disabled": "PII \ud3b8\uc9d1\uc774 \uaebc\uc838 \uc788\uc74c"
+      }
+    }
 }

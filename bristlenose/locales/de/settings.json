@@ -28,14 +28,42 @@
     "clickToCopy": "Zum Kopieren klicken",
     "copied": "Kopiert"
   },
-  "pipeline": {
-    "intro": "Schreibgeschützte Ansicht der Modelle, die Bristlenose derzeit für jede Pipeline-Stufe verwendet. Um ein Backend zu ändern, bearbeite deine Einstellungen (Umgebungsvariablen oder .env-Datei).",
-    "loading": "Pipeline-Ansicht wird geladen…",
-    "error": "Pipeline-Ansicht konnte nicht geladen werden",
-    "keys": "Schlüssel",
-    "keysNone": "keine",
-    "ollama": "Ollama",
-    "running": "läuft",
-    "notDetected": "nicht erkannt"
-  }
+    "pipeline": {
+      "intro": "Schreibgesch\u00fctzte Ansicht der Modelle, die Bristlenose derzeit f\u00fcr jede Pipeline-Stufe verwendet. Um ein Backend zu \u00e4ndern, bearbeite deine Einstellungen (Umgebungsvariablen oder .env-Datei).",
+      "loading": "Pipeline-Ansicht wird geladen\u2026",
+      "error": "Pipeline-Ansicht konnte nicht geladen werden",
+      "keys": "Schl\u00fcssel",
+      "keysNone": "keine",
+      "ollama": "ollama",
+      "running": "l\u00e4uft",
+      "notDetected": "nicht erkannt",
+      "available": "verf\u00fcgbar",
+      "unavailable": "nicht verf\u00fcgbar",
+      "alternatives": {
+        "summaryHeading": "LLM-Backends auf diesem Ger\u00e4t",
+        "available": "Verf\u00fcgbar",
+        "unavailable": "Nicht verf\u00fcgbar",
+        "none": "keine"
+      },
+      "backends": {
+        "local_ollama": "Lokal (Ollama)",
+        "builtin_anonymiser": "Integrierte Anonymisierung"
+      },
+      "reasons": {
+        "no_anthropic_key": "kein Claude-API-Schl\u00fcssel gesetzt",
+        "no_openai_key": "kein ChatGPT-API-Schl\u00fcssel gesetzt",
+        "no_azure_key": "kein Azure-OpenAI-Schl\u00fcssel gesetzt",
+        "no_azure_endpoint": "Azure-Endpoint nicht gesetzt",
+        "no_azure_deployment": "Azure-Deployment nicht gesetzt",
+        "no_google_key": "kein Gemini-API-Schl\u00fcssel gesetzt",
+        "ollama_not_running": "Ollama l\u00e4uft nicht",
+        "apple_fm_check_desktop": "in der Desktop-App nachsehen",
+        "requires_apple_silicon": "ben\u00f6tigt Apple Silicon",
+        "mlx_whisper_not_installed": "MLX Whisper nicht installiert",
+        "ctranslate2_not_installed": "ctranslate2 nicht installiert",
+        "presidio_not_installed": "Integrierte Anonymisierung nicht installiert",
+        "spacy_model_missing": "Sprachmodell nicht installiert",
+        "pii_disabled": "PII-Redaktion ist deaktiviert"
+      }
+    }
 }

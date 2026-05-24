@@ -390,7 +390,7 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 - ~~UTType validation for media files~~ — **shipped** as extension allow-list (`acceptedExtensions`, `ContentView.swift:410-419`); not UTType-based but equivalent outcome
 
 > **Superseded 2026-04-23 — items that actually did ship:**
-> - **Multi-select** shipped via `List(selection: Set<SidebarSelection>)` (`ContentView.swift` sidebar). Multi-select context-menu Delete has a known bug: deletes only the focused row, not the full selection (logged as alpha fix).
+> - **Multi-select** shipped via `List(selection: Set<SidebarSelection>)` (`ContentView.swift` sidebar). Context-menu Delete uses the Finder pattern (`removeFromSidebarContextMenu`, `ContentView.swift:797`) — right-clicking a row in the selection acts on the whole selection; right-clicking outside acts only on that row. ⌘⌫ bulk-deletes. The earlier "context-menu Delete deletes only focused row" bug is resolved; verified by smoke 21 May 2026.
 > - **Drop-on-existing-project-row** shipped via `SidebarDropDelegate` with frame hit-testing (workaround for `.onDrop` + List selection breakage). Outcome is state-dependent (see drop matrix above).
 > - **Duplicate folder drop warning** shipped as `duplicateDropAlert` with Open Existing / Create Anyway / Cancel (`ContentView.swift:301-323`).
 > - **"Added interviews to project" toast** shipped via `desktop.chrome.addedInterviews` format string (`ContentView.swift:586-592`) for `.idle` / `.scanning` targets.

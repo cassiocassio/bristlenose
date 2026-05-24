@@ -87,7 +87,7 @@ def test_anonymisation_on_when_pii_enabled() -> None:
     view = build_pipeline_view(_settings(pii_enabled=True))
     anon = next(s for s in view.catalogue if s.id == "anonymisation")
     assert anon.available is True
-    assert "Presidio" in anon.chosen
+    assert "Built-in anonymiser" in anon.chosen
 
 
 def test_apple_fm_always_unknown_from_cli() -> None:
@@ -109,8 +109,15 @@ def test_contract_fixture_round_trips_through_pydantic() -> None:
     data = json.loads(_FIXTURE.read_text())
     scenario = data["scenarios"]["claude_apple_silicon_keys_present"]
     view = PipelineView.model_validate(
-        {"catalogue": scenario["catalogue"], "host": scenario["host"]}
+        {
+            "schema_version": scenario["schema_version"],
+            "catalogue": scenario["catalogue"],
+            "llm_summary": scenario["llm_summary"],
+            "host": scenario["host"],
+        }
     )
     re_serialised = json.loads(view.model_dump_json())
     assert re_serialised["catalogue"] == scenario["catalogue"]
     assert re_serialised["host"] == scenario["host"]
+    assert re_serialised["llm_summary"] == scenario["llm_summary"]
+    assert re_serialised["schema_version"] == 2

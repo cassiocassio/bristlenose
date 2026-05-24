@@ -28,14 +28,42 @@
     "clickToCopy": "Cliquer pour copier",
     "copied": "Copié"
   },
-  "pipeline": {
-    "intro": "Vue en lecture seule des modèles utilisés par Bristlenose pour chaque étape du pipeline. Pour changer un backend, modifiez vos paramètres (variables d'environnement ou fichier .env).",
-    "loading": "Chargement de la vue du pipeline…",
-    "error": "Impossible de charger la vue",
-    "keys": "clés",
-    "keysNone": "aucune",
-    "ollama": "ollama",
-    "running": "en cours",
-    "notDetected": "non détecté"
-  }
+    "pipeline": {
+      "intro": "Vue en lecture seule des mod\u00e8les que Bristlenose utilise actuellement pour chaque \u00e9tape du pipeline. Pour changer de backend, modifiez votre configuration (variables d'environnement ou fichier .env).",
+      "loading": "Chargement de la vue du pipeline\u2026",
+      "error": "Impossible de charger la vue du pipeline",
+      "keys": "cl\u00e9s",
+      "keysNone": "aucune",
+      "ollama": "ollama",
+      "running": "en cours d'ex\u00e9cution",
+      "notDetected": "non d\u00e9tect\u00e9",
+      "available": "disponible",
+      "unavailable": "non disponible",
+      "alternatives": {
+        "summaryHeading": "Backends LLM disponibles sur cette machine",
+        "available": "Disponibles",
+        "unavailable": "Non disponibles",
+        "none": "aucun"
+      },
+      "backends": {
+        "local_ollama": "Local (Ollama)",
+        "builtin_anonymiser": "Anonymiseur int\u00e9gr\u00e9"
+      },
+      "reasons": {
+        "no_anthropic_key": "aucune cl\u00e9 API Claude configur\u00e9e",
+        "no_openai_key": "aucune cl\u00e9 API ChatGPT configur\u00e9e",
+        "no_azure_key": "aucune cl\u00e9 Azure OpenAI configur\u00e9e",
+        "no_azure_endpoint": "endpoint Azure non configur\u00e9",
+        "no_azure_deployment": "d\u00e9ploiement Azure non configur\u00e9",
+        "no_google_key": "aucune cl\u00e9 API Gemini configur\u00e9e",
+        "ollama_not_running": "Ollama n'est pas en cours d'ex\u00e9cution",
+        "apple_fm_check_desktop": "v\u00e9rifier dans l'application de bureau",
+        "requires_apple_silicon": "n\u00e9cessite Apple Silicon",
+        "mlx_whisper_not_installed": "MLX Whisper n'est pas install\u00e9",
+        "ctranslate2_not_installed": "ctranslate2 n'est pas install\u00e9",
+        "presidio_not_installed": "Anonymiseur int\u00e9gr\u00e9 non install\u00e9",
+        "spacy_model_missing": "mod\u00e8le de langue non install\u00e9",
+        "pii_disabled": "L'anonymisation PII est d\u00e9sactiv\u00e9e"
+      }
+    }
 }

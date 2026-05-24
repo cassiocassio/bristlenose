@@ -1,9 +1,14 @@
-"""Resolve, per stage, what Bristlenose currently uses.
+"""Resolve, per stage, what Bristlenose currently uses + what it could use.
 
 The single load-bearing claim of the Pipeline view is: the "Currently using"
 column matches what `bristlenose run` would actually dispatch given the
 current settings. `build_pipeline_view()` reads settings + (where needed) the
 real dispatch helpers and produces a stable `PipelineView` payload.
+
+v1.5: each stage gains `alternatives: list[BackendAvailability]`. The five
+LLM stages share host-wide eligibility — rendered once as `llm_summary` at
+the top of the payload, with the per-stage `alternatives` list empty. The
+transcription and anonymisation stages render their own per-stage lists.
 
 For transcription, we reuse `_resolve_backend()` from `s05_transcribe.py` —
 do NOT invent a parallel resolver here.
@@ -17,6 +22,7 @@ from pydantic import BaseModel
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.pipeline_view.catalogue import STAGES, PipelineStageDef
+from bristlenose.pipeline_view.eligibility import evaluate_backend
 from bristlenose.pipeline_view.host import HostFacts, probe_host
 
 ProviderId = Literal["anthropic", "openai", "azure", "google", "local"]
@@ -29,6 +35,34 @@ PROVIDER_DISPLAY = {
     "local": "Local (Ollama)",
 }
 
+# Map BristlenoseSettings.llm_provider → catalogue BackendOption.id.
+_PROVIDER_TO_OPTION_ID = {
+    "anthropic": "claude",
+    "openai": "openai",
+    "azure": "azure",
+    "google": "google",
+    "local": "local",
+}
+
+
+SCHEMA_VERSION = 2
+
+
+class BackendAvailability(BaseModel):
+    """Resolved availability of one `BackendOption` against the host.
+
+    `display` is the English label as authored in the catalogue; the React
+    layer translates qualifier labels via `display_key` when set. `reason`
+    is a translation key (None when available). Render layers look up the
+    matching locale string.
+    """
+
+    id: str
+    display: str
+    display_key: str | None = None
+    available: bool
+    reason: str | None = None  # translation key, None when available
+
 
 class StageSelection(BaseModel):
     """The user-visible row rendered per stage in the Pipeline view."""
@@ -37,23 +71,31 @@ class StageSelection(BaseModel):
     name: str
     kind: str
     chosen: str  # human-readable e.g. "MLX Whisper large-v3-turbo"
+    chosen_id: str | None = None  # catalogue option id for the chosen backend
     notes: str
     available: bool  # False when the stage is currently disabled/skipped
+    alternatives: list[BackendAvailability] = []
 
 
 class PipelineView(BaseModel):
     """Top-level payload returned by `bristlenose pipeline --json` and the API.
 
-    Split into `catalogue` (shareable across machines) and `host` (loopback
-    snapshot — excluded from any future support-bundle export).
+    Split into:
+    - `catalogue`: per-stage rows (one per visible stage).
+    - `host`: loopback-only host snapshot (excluded from any support-bundle).
+    - `llm_summary`: host-wide LLM-backend availability, shared by the five
+      LLM stages. v1.5 dedup: per-stage LLM rows render `alternatives=[]`;
+      the React/CLI layer reads the summary instead.
     """
 
+    schema_version: int = SCHEMA_VERSION
     catalogue: list[StageSelection]
+    llm_summary: list[BackendAvailability] = []
     host: HostFacts
 
 
-def _resolve_transcription(settings: BristlenoseSettings) -> str:
-    """Return a human-readable "Currently using" string for transcription."""
+def _resolve_transcription(settings: BristlenoseSettings) -> tuple[str, str | None]:
+    """Return `(label, option_id)` for the transcription stage's current choice."""
     from bristlenose.stages.s05_transcribe import _resolve_backend
     from bristlenose.utils.hardware import detect_hardware
 
@@ -63,45 +105,81 @@ def _resolve_transcription(settings: BristlenoseSettings) -> str:
     except Exception:
         backend = settings.whisper_backend or "auto"
 
+    option_id = backend if backend in {"mlx", "faster-whisper"} else None
     label = {
         "mlx": "MLX Whisper",
         "faster-whisper": "faster-whisper",
     }.get(backend, backend)
-    return f"{label} {settings.whisper_model}"
+    return f"{label} {settings.whisper_model}", option_id
 
 
-def _resolve_llm_provider(settings: BristlenoseSettings) -> str:
-    """Format the active LLM provider + model for an LLM stage row."""
+def _resolve_llm_provider(settings: BristlenoseSettings) -> tuple[str, str | None]:
+    """Format the active LLM provider + model. Returns `(label, option_id)`."""
     provider = settings.llm_provider
     display = PROVIDER_DISPLAY.get(provider, provider)
+    option_id = _PROVIDER_TO_OPTION_ID.get(provider)
     if provider == "local":
-        return f"{display} · {settings.local_model}"
+        return f"{display} · {settings.local_model}", option_id
     if provider == "azure":
-        # Azure surfaces a deployment name, not a stable public model id.
         deployment = settings.azure_deployment or "(deployment unset)"
-        return f"{display} · {deployment}"
-    return f"{display} · {settings.llm_model}"
+        return f"{display} · {deployment}", option_id
+    return f"{display} · {settings.llm_model}", option_id
 
 
-def _resolve_anonymisation(settings: BristlenoseSettings) -> tuple[str, bool]:
+def _resolve_anonymisation(settings: BristlenoseSettings) -> tuple[str, bool, str | None]:
     """Anonymisation runs Presidio only when --redact-pii / pii_enabled is set."""
     if settings.pii_enabled:
-        return ("Presidio (local)", True)
-    return ("Off (enable with --redact-pii)", False)
+        return ("Built-in anonymiser (local)", True, "presidio")
+    return ("Off (enable with --redact-pii)", False, None)
+
+
+def _stage_alternatives(
+    stage: PipelineStageDef,
+    chosen_id: str | None,
+    host: HostFacts,
+    settings: BristlenoseSettings,
+) -> list[BackendAvailability]:
+    """Evaluate every `BackendOption` for one stage; sort available-first.
+
+    Deterministic ordering: chosen-id first (if present and available),
+    then remaining available, then unavailable — each group preserves
+    catalogue declaration order.
+    """
+    rows: list[BackendAvailability] = []
+    for option in stage.viable_backends:
+        available, reason = evaluate_backend(stage.id, option, host, settings)
+        rows.append(
+            BackendAvailability(
+                id=option.id,
+                display=option.display,
+                display_key=option.display_key,
+                available=available,
+                reason=None if available else reason,
+            )
+        )
+
+    def sort_key(row: BackendAvailability) -> tuple[int, int]:
+        is_chosen = 0 if (chosen_id is not None and row.id == chosen_id) else 1
+        is_available = 0 if row.available else 1
+        return (is_available, is_chosen)
+
+    return sorted(rows, key=sort_key)
 
 
 def what_does_this_stage_currently_use(
     stage: PipelineStageDef,
+    host: HostFacts,
     settings: BristlenoseSettings,
 ) -> StageSelection:
     """Map one catalogue stage to its current-dispatch StageSelection."""
     available = True
+    chosen_id: str | None = None
     if stage.kind == "transcription":
-        chosen = _resolve_transcription(settings)
+        chosen, chosen_id = _resolve_transcription(settings)
     elif stage.kind == "llm":
-        chosen = _resolve_llm_provider(settings)
+        chosen, chosen_id = _resolve_llm_provider(settings)
     elif stage.kind == "anonymisation":
-        chosen, available = _resolve_anonymisation(settings)
+        chosen, available, chosen_id = _resolve_anonymisation(settings)
     elif stage.kind == "apple_fm":
         chosen = "Unknown from CLI"
         available = False
@@ -109,17 +187,46 @@ def what_does_this_stage_currently_use(
         chosen = "—"
         available = False
 
+    # Dedup: LLM stages share host-wide eligibility — surfaced once in
+    # `llm_summary`, not per-stage. Transcription and anonymisation differ
+    # per host (hardware/setting) so they keep their own per-stage list.
+    if stage.kind == "llm":
+        alternatives: list[BackendAvailability] = []
+    else:
+        alternatives = _stage_alternatives(stage, chosen_id, host, settings)
+
     return StageSelection(
         id=stage.id,
         name=stage.name,
         kind=stage.kind,
         chosen=chosen,
+        chosen_id=chosen_id,
         notes=stage.notes,
         available=available,
+        alternatives=alternatives,
     )
+
+
+def _build_llm_summary(
+    host: HostFacts,
+    settings: BristlenoseSettings,
+    chosen_id: str | None,
+) -> list[BackendAvailability]:
+    """Host-wide LLM-backend availability shared across the five LLM stages."""
+    template = next((s for s in STAGES if s.id == "speaker_identification"), None)
+    if template is None:
+        return []
+    return _stage_alternatives(template, chosen_id, host, settings)
 
 
 def build_pipeline_view(settings: BristlenoseSettings) -> PipelineView:
     """Produce the full Pipeline view payload for one set of settings."""
-    catalogue = [what_does_this_stage_currently_use(s, settings) for s in STAGES]
-    return PipelineView(catalogue=catalogue, host=probe_host(settings))
+    host = probe_host(settings)
+    catalogue = [what_does_this_stage_currently_use(s, host, settings) for s in STAGES]
+    _, chosen_llm_id = _resolve_llm_provider(settings)
+    llm_summary = _build_llm_summary(host, settings, chosen_llm_id)
+    return PipelineView(
+        catalogue=catalogue,
+        llm_summary=llm_summary,
+        host=host,
+    )

@@ -28,14 +28,42 @@
     "clickToCopy": "Click to copy",
     "copied": "Copied"
   },
-  "pipeline": {
-    "intro": "Read-only view of the models Bristlenose currently uses for each pipeline stage. To change a backend, edit your settings (env vars or .env file).",
-    "loading": "Loading pipeline view…",
-    "error": "Could not load pipeline view",
-    "keys": "keys",
-    "keysNone": "none",
-    "ollama": "ollama",
-    "running": "running",
-    "notDetected": "not detected"
-  }
+    "pipeline": {
+      "intro": "Read-only view of the models Bristlenose currently uses for each pipeline stage. To change a backend, edit your settings (env vars or .env file).",
+      "loading": "Loading pipeline view\u2026",
+      "error": "Could not load pipeline view",
+      "keys": "keys",
+      "keysNone": "none",
+      "ollama": "ollama",
+      "running": "running",
+      "notDetected": "not detected",
+      "available": "available",
+      "unavailable": "unavailable",
+      "alternatives": {
+        "summaryHeading": "LLM backends on this host",
+        "available": "Available",
+        "unavailable": "Unavailable",
+        "none": "none"
+      },
+      "backends": {
+        "local_ollama": "Local (Ollama)",
+        "builtin_anonymiser": "Built-in anonymiser"
+      },
+      "reasons": {
+        "no_anthropic_key": "no Claude API key set",
+        "no_openai_key": "no ChatGPT API key set",
+        "no_azure_key": "no Azure OpenAI key set",
+        "no_azure_endpoint": "Azure endpoint not set",
+        "no_azure_deployment": "Azure deployment not set",
+        "no_google_key": "no Gemini API key set",
+        "ollama_not_running": "Ollama not running",
+        "apple_fm_check_desktop": "check in the desktop app",
+        "requires_apple_silicon": "requires Apple Silicon",
+        "mlx_whisper_not_installed": "MLX Whisper not installed",
+        "ctranslate2_not_installed": "ctranslate2 not installed",
+        "presidio_not_installed": "Built-in anonymiser not installed",
+        "spacy_model_missing": "language model not installed",
+        "pii_disabled": "PII redaction is off"
+      }
+    }
 }

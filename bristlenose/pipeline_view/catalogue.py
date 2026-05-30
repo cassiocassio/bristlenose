@@ -335,3 +335,185 @@ def find_stage(stage_id: str) -> PipelineStageDef | None:
         if stage.id == stage_id:
             return stage
     return None
+
+
+# ── v1.9 quality ratings (editorial layer over v1.5 eligibility) ────────────
+
+
+QualityLevel = Literal["excellent", "good", "marginal", "avoid"]
+QualitySource = Literal["internal_bench", "published_bench", "community", "editorial"]
+
+
+# Translation key referenced by the render layer for cells without a
+# catalogue rating (apple_fm today; any future unrated cell). Module-level
+# constant so it's grep-discoverable and importable — not just a docstring.
+UNTESTED_NOTE_KEY = "pipeline.quality.untested"
+
+
+class QualityRating(BaseModel):
+    """Per-(stage, option) editorial judgement of fitness for purpose.
+
+    Quality and "is this the default" are intentionally orthogonal axes:
+    quality measures fitness; `default` flags Bristlenose's out-of-the-box
+    pick. The default is usually `excellent` or `good`, never `marginal`
+    or `avoid` — but BN may default to a `good` cell over an `excellent`
+    one when the extra quality isn't worth a cost / speed / locality
+    trade-off. Researchers who go off-piste are free to; the default flag
+    is the breadcrumb showing where BN's recommendation would have landed.
+
+    `rating` is a four-glyph closed enum:
+        "excellent" (●) — top of measured quality for this stage
+        "good"      (○) — production-usable; no known issues. May be the
+                         default over an `excellent` peer when the
+                         trade-off is worth it
+        "marginal"  (⚠) — borderline. The minimum that will sustain the
+                         work — the 65th parallel where crops still grow
+                         but harvests are thin, the Sahel where rain still
+                         falls but you plan around drought. Acceptable if
+                         you have no alternative, are prioritising speed /
+                         cost over quality, or are testing other parts of
+                         the pipeline and want to spend the fewest
+                         resources here
+        "avoid"     (✗) — known-bad for this stage; use only if no
+                         alternative
+
+    `default` flags the cell Bristlenose ships as default. At most one cell
+    per (stage, provider-family) should be flagged. Used by the render
+    layer to mark "this is what runs if you don't change anything."
+    Necessarily singular — dispatch is singular.
+
+    `recommended` flags a cell BN actively endorses as a production choice.
+    **Independent of quality**: an `excellent` cell isn't automatically
+    recommended if BN thinks the cost / speed / locality trade-off favours
+    a peer; a `good` cell can be recommended over an `excellent` peer when
+    the trade-off is worth it. **Plural by design** — multiple cells may
+    be recommended per stage. **Invariant: `default ⇒ recommended`** — BN
+    cannot default to a cell it doesn't actively endorse. In the v1.9
+    initial catalogue, the only `recommended=True` cells coincide with
+    `default=True` (we have no evidence yet for alternative endorsements);
+    as cohort data arrives — e.g. ChatGPT comparison, Local-for-structural
+    confidence — we widen the recommended set one cell at a time without
+    touching the default.
+
+    `note_key` is a translation key for the one-line editorial caveat
+    (e.g. "pipeline.quality.local_quote_extraction_miss_rate"). Locale
+    files mirror it; English is the source.
+
+    `source` documents where the rating came from:
+        "internal_bench"  — measured on a Bristlenose trial run
+        "published_bench" — third-party benchmark (cite in note)
+        "community"       — aggregated researcher feedback
+        "editorial"       — Bristlenose's subjective opinion, no measurement.
+                            Shipped as a starting point; refines as data
+                            arrives. Honest about being unmeasured
+    """
+
+    rating: QualityLevel
+    note_key: str | None = None
+    source: QualitySource
+    default: bool = False
+    recommended: bool = False
+
+
+# Shared LLM cells. Same option-id set across all five LLM stages —
+# `test_quality.py` enforces parity (mirrors v1.5's _LLM_BACKENDS invariant).
+# Apple FM omitted by design: stays untested (renders as ⚠) until the probe
+# ships. Editorial judgements only; refine from cohort signal as it arrives.
+_LLM_QUALITY: dict[tuple[str, str], QualityRating] = {
+    # Claude is BN's default LLM provider (matches BristlenoseSettings.
+    # llm_provider="anthropic"); flagged default=True across LLM stages so
+    # the render layer can mark the BN-recommended pick. All 25 LLM cells
+    # currently `source="editorial"` — these are BN's subjective opinion,
+    # honest about being unmeasured until benchmark data lands.
+    # speaker_identification — structural task; most LLMs handle it well.
+    ("speaker_identification", "claude"): QualityRating(
+        rating="excellent", source="editorial", default=True, recommended=True
+    ),
+    ("speaker_identification", "openai"): QualityRating(rating="excellent", source="editorial"),
+    ("speaker_identification", "google"): QualityRating(rating="good", source="editorial"),
+    ("speaker_identification", "azure"): QualityRating(rating="good", source="editorial"),
+    ("speaker_identification", "local"): QualityRating(
+        rating="good",
+        note_key="pipeline.quality.local_speaker_id_acceptable",
+        source="community",
+    ),
+    # topic_segmentation — structural; similar profile to speaker_id.
+    ("topic_segmentation", "claude"): QualityRating(
+        rating="excellent", source="editorial", default=True, recommended=True
+    ),
+    ("topic_segmentation", "openai"): QualityRating(rating="excellent", source="editorial"),
+    ("topic_segmentation", "google"): QualityRating(rating="good", source="editorial"),
+    ("topic_segmentation", "azure"): QualityRating(rating="good", source="editorial"),
+    ("topic_segmentation", "local"): QualityRating(
+        rating="good",
+        note_key="pipeline.quality.local_topic_segmentation_acceptable",
+        source="community",
+    ),
+    # quote_extraction — high-stakes; longest prompts, smallest-model risk.
+    ("quote_extraction", "claude"): QualityRating(
+        rating="excellent", source="editorial", default=True, recommended=True
+    ),
+    ("quote_extraction", "openai"): QualityRating(rating="excellent", source="editorial"),
+    ("quote_extraction", "google"): QualityRating(rating="good", source="editorial"),
+    ("quote_extraction", "azure"): QualityRating(rating="good", source="editorial"),
+    ("quote_extraction", "local"): QualityRating(
+        rating="marginal",
+        note_key="pipeline.quality.local_quote_extraction_miss_rate",
+        source="community",
+    ),
+    # quote_clustering — high-stakes; nuance matters.
+    ("quote_clustering", "claude"): QualityRating(
+        rating="excellent", source="editorial", default=True, recommended=True
+    ),
+    ("quote_clustering", "openai"): QualityRating(rating="excellent", source="editorial"),
+    ("quote_clustering", "google"): QualityRating(rating="good", source="editorial"),
+    ("quote_clustering", "azure"): QualityRating(rating="good", source="editorial"),
+    ("quote_clustering", "local"): QualityRating(
+        rating="marginal",
+        note_key="pipeline.quality.local_quote_clustering_drift",
+        source="community",
+    ),
+    # thematic_grouping — high-stakes synthesis; small-model drift highest here.
+    ("thematic_grouping", "claude"): QualityRating(
+        rating="excellent", source="editorial", default=True, recommended=True
+    ),
+    ("thematic_grouping", "openai"): QualityRating(rating="excellent", source="editorial"),
+    ("thematic_grouping", "google"): QualityRating(rating="good", source="editorial"),
+    ("thematic_grouping", "azure"): QualityRating(rating="good", source="editorial"),
+    ("thematic_grouping", "local"): QualityRating(
+        rating="marginal",
+        note_key="pipeline.quality.local_thematic_grouping_drift",
+        source="community",
+    ),
+}
+
+
+# Transcription cells deliberately omit `default=True`: the host-aware
+# resolver in s05_transcribe._resolve_backend() already picks based on
+# hardware (MLX on Apple Silicon, faster-whisper elsewhere). A static
+# catalogue flag would conflict with that dynamic choice.
+_TRANSCRIPTION_QUALITY: dict[tuple[str, str], QualityRating] = {
+    ("transcription", "mlx"): QualityRating(
+        rating="excellent",
+        note_key="pipeline.quality.mlx_whisper_apple_silicon_optimal",
+        source="editorial",
+    ),
+    ("transcription", "faster-whisper"): QualityRating(
+        rating="good",
+        note_key="pipeline.quality.faster_whisper_cpu_baseline",
+        source="editorial",
+    ),
+}
+
+
+def quality_for(stage_id: str, option_id: str) -> QualityRating | None:
+    """Return the editorial quality rating for a (stage, option) cell.
+
+    None when the cell is not yet rated — render layer defaults this to
+    ⚠ "untested" (pipeline.quality.untested). Catalogue stays explicit
+    about what's measured vs guessed; absence is information.
+    """
+    llm = _LLM_QUALITY.get((stage_id, option_id))
+    if llm is not None:
+        return llm
+    return _TRANSCRIPTION_QUALITY.get((stage_id, option_id))

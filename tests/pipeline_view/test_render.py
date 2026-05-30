@@ -120,4 +120,4 @@ def test_contract_fixture_round_trips_through_pydantic() -> None:
     assert re_serialised["catalogue"] == scenario["catalogue"]
     assert re_serialised["host"] == scenario["host"]
     assert re_serialised["llm_summary"] == scenario["llm_summary"]
-    assert re_serialised["schema_version"] == 2
+    assert re_serialised["schema_version"] == 3

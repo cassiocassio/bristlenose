@@ -29,10 +29,14 @@ class TestBillingFor:
         assert "platform.openai.com" in facts.keys_url
         assert "subscription" in facts.minimum_note.lower()
 
+    def test_all_five_providers_have_facts(self):
+        # Azure, Google, Local were added on the
+        # llm-error-distinguishability-all-providers branch.
+        for provider in ("anthropic", "openai", "azure", "google", "local"):
+            assert billing_for(provider) is not None
+
     def test_unknown_provider_returns_none(self):
-        assert billing_for("azure") is None
-        assert billing_for("google") is None
-        assert billing_for("local") is None
+        assert billing_for("nonsense-provider") is None
 
 
 class TestRecoveryMessage:
@@ -63,5 +67,25 @@ class TestRecoveryMessage:
         assert msg == GENERIC_RECOVERY.format(message="raw msg")
 
     def test_unknown_provider_falls_through_to_generic(self):
-        msg = recovery_message("azure", "invalid_key", "raw msg")
-        assert msg == GENERIC_RECOVERY.format(message="raw msg")
+        msg = recovery_message("nonsense-provider", "invalid_key", "raw msg")
+        assert "raw msg" in msg
+
+    def test_azure_deployment_unavailable_has_portal_copy(self):
+        # Headline Azure foot-gun — recovery copy must name the
+        # deployment-name distinction so users don't mistake it for a model id.
+        msg = recovery_message(
+            "azure", "model_unavailable", "DeploymentNotFound: foo",
+        )
+        assert "deployment" in msg.lower()
+
+    def test_local_server_down_recovery_mentions_ollama(self):
+        msg = recovery_message("local", "network", "Connection refused")
+        assert "ollama" in msg.lower()
+
+    def test_local_model_unavailable_recovery_mentions_pull(self):
+        msg = recovery_message("local", "model_unavailable", "not found")
+        assert "ollama pull" in msg.lower()
+
+    def test_google_model_unavailable_mentions_cloud_console(self):
+        msg = recovery_message("google", "model_unavailable", "permission denied")
+        assert "console.cloud.google.com" in msg

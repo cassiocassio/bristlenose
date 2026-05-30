@@ -30,7 +30,11 @@
     "model_unavailable": "The requested model is not available for your {provider_display} account. Check available models at {console_url} and either enable the model or change `--llm-model` to one your account can use.",
     "rate_limit": "{provider_display} is rate-limiting this account. Wait a minute and re-run, or reduce `llm_concurrency` in your bristlenose.toml.",
     "generic": "Provider says: {message}.\nIf this looks like a credit-balance issue, top up at the provider's billing console and re-run.",
-    "network": "Couldn't reach the provider: {message}.\nCheck DNS / VPN / proxy settings, then re-run."
+    "network": "Couldn't reach the provider: {message}.\nCheck DNS / VPN / proxy settings, then re-run.",
+    "azure_deployment_unavailable": "Azure deployment wasn't found. This is your Azure portal **deployment name**, not a model id \u2014 check it in the Azure portal under Azure OpenAI \u2192 Deployments. Update BRISTLENOSE_AZURE_DEPLOYMENT (or azure_deployment in bristlenose.toml) and re-run. Underlying: {message}.",
+    "google_model_unavailable": "Gemini denied access to the requested model. This is usually a tier gate, region restriction, or billing not enabled \u2014 check the Google Cloud Console at {console_url}. If billing is set up, try a different model via --llm-model. Underlying: {message}.",
+    "local_server_down": "Ollama doesn't appear to be running. Start it with \u0060ollama serve\u0060 (or open the Ollama app on macOS), then re-run. Underlying: {message}.",
+    "local_model_not_pulled": "The requested local model isn't pulled. Run \u0060ollama pull <model>\u0060 to download it (check the model name in bristlenose.toml or --llm-model), then re-run. Underlying: {message}."
   },
   "pii": {
     "downloading": "Downloading PII detector (~12 MB, one-off)..."

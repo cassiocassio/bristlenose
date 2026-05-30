@@ -2,6 +2,8 @@
 
 **Status (20 Apr 2026):** Evidence-gathering stage. Per-stage wall-time and LLM-time breakdowns captured via [`scripts/perf-breakdown.py`](../scripts/perf-breakdown.py) on FOSSDA and project-ikea. This doc frames the architectural principle, records what the numbers actually say, surveys the Mac-side on-device trajectory (Apple FM, MLX, M5), and proposes a narrow A/B spike on the dominant stage (s10 `quote_extraction`) before any resolver or provider-registry work begins. The spike is explicitly designed as a **re-runnable benchmark** we re-measure at each Apple release and each Claude generation — not a one-shot comparison.
 
+**Update (25 May 2026):** The **read-only catalogue surface** of this design shipped in v1.5 + v1.9 of the Pipeline view (see [design-pipeline-view.md](design-pipeline-view.md)). Per-stage backend declarations + eligibility predicates + editorial quality ratings now ship as data in `bristlenose/pipeline_view/catalogue.py`, surfaced via a JSON API to the React Settings tab. The **resolver, A/B spike, and eval harness remain unshipped** — exactly as the §Recommendation below advised. v1.5 + v1.9 chose to build the visible side first (showing researchers what a resolver would pick + how good each cell is), keeping researchers in control rather than automating the choice.
+
 ## Problem
 
 The pipeline is pluggable at the **provider level** today — one `LLMClient` backend for the whole run, chosen once via `BristlenoseSettings.llm_provider` — and the LLM provider abstraction covers five backends (Anthropic, OpenAI, Azure, Google, local Ollama). It is **not** pluggable at the **stage level**.
@@ -250,6 +252,8 @@ The cheap, high-signal next step is an **isolated s10 A/B spike**. No app wiring
 
 If the spike shows local models are competitive on s10, we have the strongest possible case for the per-stage architecture — because s10 is 90%+ of the cost on Teams/Zoom inputs, and localising s10 alone is a category-changing product story. If the spike shows local models are not yet competitive on s10, we have saved months of resolver-building for a payoff that would not land.
 
+> **Status update (May 2026):** The catalogue-surface side of this recommendation shipped via `bristlenose/pipeline_view/` (v1.5 eligibility + v1.9 editorial ratings) — see [design-pipeline-view.md](design-pipeline-view.md). The A/B spike + resolver remain deliberately deferred. The visible side made per-stage backend signal legible to researchers without committing to auto-pick logic; the evidence-gathering recommendation still stands for when the eval harness ships.
+
 ## Appendix — stage A/B spike plan
 
 ### Goal
@@ -392,8 +396,10 @@ Isolated script wins on every axis.
 - [`docs/design-performance.md`](design-performance.md) — principle-level performance notes, complementary
 - [`docs/design-perf-fossda-baseline.md`](design-perf-fossda-baseline.md) — precedent for this kind of evidence doc
 - [`docs/design-pluggable-llm-routing.md`](design-pluggable-llm-routing.md) — provider abstraction (replaces archived `design-llm-providers.md`)
+- [`docs/design-pipeline-view.md`](design-pipeline-view.md) — the read-only catalogue surface that ships the visible side of this design (v1.5 + v1.9)
 - [`docs/design-modularity.md`](design-modularity.md) — single-Python-artefact principle; Apple FM must respect it
 - [`scripts/perf-breakdown.py`](../scripts/perf-breakdown.py) — evidence producer
 - [`bristlenose/llm/client.py`](../bristlenose/llm/client.py) — `LLMClient.analyze`
+- [`bristlenose/pipeline_view/catalogue.py`](../bristlenose/pipeline_view/catalogue.py) — shipped capability-declaration data (`BackendOption`, `Requirement`, `QualityRating`)
 - [`bristlenose/stages/s09_quote_extraction.py`](../bristlenose/stages/s09_quote_extraction.py) — s10 call site
 - [`bristlenose/llm/prompts/quote-extraction.md`](../bristlenose/llm/prompts/quote-extraction.md) — the prompt under test

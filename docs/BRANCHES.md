@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 21 May 2026 (added `llm-error-distinguishability` branch; closed `pipeline-view-v1`; swept stale `pipeline-subtitle-i18n` + `multi-project-folder-watcher` rows — both merged earlier in the window)
+**Updated:** 24 May 2026 (closed `llm-error-distinguishability`)
 
 ---
 
@@ -40,7 +40,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
-| `bristlenose_branch llm-error-distinguishability/` | `llm-error-distinguishability` | feature | Distinguish LLM provider failure root causes (credit / model / rate-limit / deprecation) so users see the right recovery action, not a misleading "change your model" message |
 
 
 
@@ -137,7 +136,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
-| `llm-error-distinguishability` | `bristlenose_branch llm-error-distinguishability/` | local only |
 
 
 
@@ -173,30 +171,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Potential conflicts with other branches:**
 - `pipeline-view-v1` — direct parent; v1.5 lives in the same `bristlenose/pipeline_view/` package and edits files v1 introduces. Don't start v1.5 work until v1 merges, or be ready to rebase.
 - `pipeline-subtitle-i18n` — touches the 6 `common.json` locale files. Keep keys distinct (`pipeline.alternatives.*`) and use targeted text-replace, never `json.dump` round-trip.
-
----
-
-### `llm-error-distinguishability`
-
-**Kind:** feature — distinguish LLM provider failure root causes so users see the right recovery action, not a misleading "change your model" message.
-**Status:** Just started
-**Started:** 21 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch llm-error-distinguishability/`
-**Remote:** local only (push when ready)
-
-**What it does:** Replace the single collapsed user-facing error ("The requested model is not available for your Claude account…") with a 9-class taxonomy mapping each provider's actual error signals (Anthropic, OpenAI, Azure, Gemini, Ollama) to specific recovery copy. Headline bug: `preflight/api_key.py` maps every Anthropic `400 invalid_request_error` to `model_unavailable` without inspecting `error.message` for the `"credit balance"` substring — so credit-exhausted users see a hopeless "change your model" prompt when the real fix is "add credit." Full taxonomy + per-provider classifier shape in `HANDOFF.md`.
-
-**Files this branch will touch:**
-- `bristlenose/llm/` — per-provider classifier functions returning `LLMErrorKind`
-- `bristlenose/preflight/api_key.py` — credit-balance substring check before falling through to model-unavailable
-- `bristlenose/doctor.py` — surface the new taxonomy in doctor output where relevant
-- `bristlenose/locales/` — new recovery-copy strings (6 locales)
-- `tests/llm/` — per-provider classifier coverage
-- `tests/test_preflight_api_key.py` — credit-vs-model regression tests
-
-**Potential conflicts with other branches:**
-- `pipeline-view-v1-5` — touches 6 locale `common.json` files. Keep keys distinct (`llm.error.*`) and use targeted text-replace, never `json.dump` round-trip.
-- Future `lazy-auth-startup` work touches `bristlenose/preflight/api_key.py` boundaries — if it lands first, rebase; if this lands first, lazy-auth absorbs the new classifier shape.
 
 ---
 
@@ -298,6 +272,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `llm-error-distinguishability` — merged 24 May 2026
+
+Distinguish LLM provider failure root causes so users see the right recovery action instead of a misleading "change your model" message. Headline fix: Anthropic credit-exhausted (`400 invalid_request_error` with `"credit balance"` in `error.message`) now classifies as `billing_empty` rather than falling through to `model_unavailable`. Merged via `c3b21c0` (single commit `4eed191`).
 
 ### `multi-project-folder-watcher` — merged 16 May 2026
 

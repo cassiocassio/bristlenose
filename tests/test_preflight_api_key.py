@@ -13,7 +13,11 @@ from bristlenose.preflight.api_key import (
     ValidationResult,
     _is_recently_validated,
     _mark_validated,
+    _openai_error_code,
     _validate_anthropic,
+    _validate_azure,
+    _validate_google,
+    _validate_local,
     _validate_openai,
     preflight_api_key,
     read_state,
@@ -35,6 +39,13 @@ def _settings(**kwargs) -> MagicMock:
     s.llm_model = kwargs.get("llm_model", "claude-sonnet-4-5-20250929")
     s.anthropic_api_key = kwargs.get("anthropic_api_key", "")
     s.openai_api_key = kwargs.get("openai_api_key", "")
+    s.azure_api_key = kwargs.get("azure_api_key", "")
+    s.azure_endpoint = kwargs.get("azure_endpoint", "https://example.openai.azure.com/")
+    s.azure_deployment = kwargs.get("azure_deployment", "gpt-4o")
+    s.azure_api_version = kwargs.get("azure_api_version", "2024-10-21")
+    s.google_api_key = kwargs.get("google_api_key", "")
+    s.local_url = kwargs.get("local_url", "http://localhost:11434/v1")
+    s.local_model = kwargs.get("local_model", "llama3.2:3b")
     s.local_api_key = ""
     return s
 
@@ -247,6 +258,258 @@ class TestValidateOpenai:
 
 
 # ---------------------------------------------------------------------------
+# Real-SDK-exception validators (Azure, Google, Local, OpenAI-structured).
+# Per Bach finding on the prior branch: faked-SDK tests let bugs through
+# because the fakes didn't match real exception shapes. These instantiate
+# real SDK exception classes with realistic body dicts.
+# ---------------------------------------------------------------------------
+
+
+def _openai_exc(cls, *, status_code: int, code: str | None, message: str = "err"):
+    """Build a real openai SDK exception with a structured body."""
+    import httpx
+
+    req = httpx.Request("POST", "https://example.com/")
+    body: dict = {"error": {"message": message}}
+    if code is not None:
+        body["error"]["code"] = code
+    resp = httpx.Response(status_code, request=req, json=body)
+    return cls(message=message, response=resp, body=body)  # type: ignore[arg-type]
+
+
+class TestOpenaiErrorCodeHelper:
+    def test_reads_body_error_code(self):
+        import openai
+        exc = _openai_exc(openai.RateLimitError, status_code=429,
+                          code="insufficient_quota", message="no funds")
+        assert _openai_error_code(exc) == "insufficient_quota"
+
+    def test_returns_none_when_body_missing(self):
+        import openai
+        # APIError accepts a None body shape — should degrade gracefully.
+        exc = _openai_exc(openai.RateLimitError, status_code=429,
+                          code=None, message="generic")
+        assert _openai_error_code(exc) is None
+
+
+class TestValidateOpenaiSDKExceptions:
+    """Use real openai SDK exceptions to verify structured-field reads."""
+
+    def _patched_client(self, monkeypatch, exc):
+        import openai
+        client = MagicMock()
+        client.chat.completions.create.side_effect = exc
+        monkeypatch.setattr(openai, "OpenAI", lambda **kw: client)
+
+    def test_insufficient_quota_via_structured_code(self, monkeypatch):
+        import openai
+        exc = _openai_exc(
+            openai.RateLimitError, status_code=429, code="insufficient_quota",
+            message="You exceeded your current quota",
+        )
+        self._patched_client(monkeypatch, exc)
+        result = _validate_openai("sk-key", "gpt-4o-mini")
+        assert not result.ok
+        assert result.error_class == "billing_empty"
+
+    def test_plain_rate_limit_no_quota_code(self, monkeypatch):
+        import openai
+        exc = _openai_exc(
+            openai.RateLimitError, status_code=429, code="rate_limit_exceeded",
+            message="429 Too Many Requests",
+        )
+        self._patched_client(monkeypatch, exc)
+        result = _validate_openai("sk-key", "gpt-4o-mini")
+        assert not result.ok
+        assert result.error_class == "rate_limit"
+
+
+class TestValidateAzure:
+    def _patched_client(self, monkeypatch, exc=None):
+        import openai
+        client = MagicMock()
+        if exc is not None:
+            client.chat.completions.create.side_effect = exc
+        else:
+            client.chat.completions.create.return_value = MagicMock()
+        monkeypatch.setattr(openai, "AzureOpenAI", lambda **kw: client)
+
+    def test_ok_path(self, monkeypatch):
+        self._patched_client(monkeypatch)
+        result = _validate_azure(
+            "az-key", "https://x.openai.azure.com/", "gpt-4o", "2024-10-21",
+        )
+        assert result.ok
+
+    def test_auth_error_maps_to_invalid_key(self, monkeypatch):
+        import openai
+        exc = _openai_exc(
+            openai.AuthenticationError, status_code=401, code="invalid_api_key",
+            message="401 unauthorized",
+        )
+        self._patched_client(monkeypatch, exc)
+        result = _validate_azure(
+            "bad-key", "https://x.openai.azure.com/", "gpt-4o", "2024-10-21",
+        )
+        assert not result.ok
+        assert result.error_class == "invalid_key"
+
+    def test_deployment_not_found_maps_to_model_unavailable(self, monkeypatch):
+        # Headline Azure foot-gun. The downstream-disambiguation contract
+        # (raw_message → recovery_message override copy) is tested in
+        # test_billing_hints.py, not here — keeps this test loose to a
+        # refactor of the raw_message prefix.
+        import openai
+        exc = _openai_exc(
+            openai.NotFoundError, status_code=404, code="DeploymentNotFound",
+            message="The API deployment for this resource does not exist.",
+        )
+        self._patched_client(monkeypatch, exc)
+        result = _validate_azure(
+            "az-key", "https://x.openai.azure.com/", "missing-deploy", "2024-10-21",
+        )
+        assert not result.ok
+        assert result.error_class == "model_unavailable"
+
+    def test_other_not_found_maps_to_model_unavailable(self, monkeypatch):
+        import openai
+        exc = _openai_exc(
+            openai.NotFoundError, status_code=404, code="model_not_found",
+            message="not found",
+        )
+        self._patched_client(monkeypatch, exc)
+        result = _validate_azure(
+            "az-key", "https://x.openai.azure.com/", "gpt-4o", "2024-10-21",
+        )
+        assert not result.ok
+        assert result.error_class == "model_unavailable"
+
+    def test_rate_limit_maps_to_rate_limit(self, monkeypatch):
+        import openai
+        exc = _openai_exc(
+            openai.RateLimitError, status_code=429, code=None, message="429",
+        )
+        self._patched_client(monkeypatch, exc)
+        result = _validate_azure(
+            "az-key", "https://x.openai.azure.com/", "gpt-4o", "2024-10-21",
+        )
+        assert not result.ok
+        assert result.error_class == "rate_limit"
+
+
+class TestValidateGoogle:
+    def _patched_client(self, monkeypatch, exc=None):
+        from google import genai
+        models = MagicMock()
+        if exc is not None:
+            models.generate_content.side_effect = exc
+        else:
+            models.generate_content.return_value = MagicMock()
+        client_instance = MagicMock()
+        client_instance.models = models
+        monkeypatch.setattr(genai, "Client", lambda **kw: client_instance)
+
+    def _api_error(self, *, code: int, status: str, message: str = "err",
+                   details: list | None = None):
+        """Build a real google.genai APIError. APIError __init__ takes
+        (code, response_json, response=None)."""
+        from google.genai import errors as genai_errors
+        response_json = {
+            "error": {"code": code, "message": message, "status": status,
+                      "details": details or []}
+        }
+        return genai_errors.APIError(code, response_json)
+
+    def test_ok_path(self, monkeypatch):
+        self._patched_client(monkeypatch)
+        result = _validate_google("g-key", "gemini-2.5-pro")
+        assert result.ok
+
+    def test_unauthenticated_maps_to_invalid_key(self, monkeypatch):
+        exc = self._api_error(code=401, status="UNAUTHENTICATED")
+        self._patched_client(monkeypatch, exc)
+        result = _validate_google("bad-key", "gemini-2.5-pro")
+        assert not result.ok
+        assert result.error_class == "invalid_key"
+
+    def test_api_key_invalid_detail_maps_to_invalid_key(self, monkeypatch):
+        # Some failures surface as INVALID_ARGUMENT (400) but carry an
+        # API_KEY_INVALID reason in details — still invalid_key.
+        exc = self._api_error(
+            code=400, status="INVALID_ARGUMENT",
+            details=[{"reason": "API_KEY_INVALID"}],
+        )
+        self._patched_client(monkeypatch, exc)
+        result = _validate_google("bad-key", "gemini-2.5-pro")
+        assert not result.ok
+        assert result.error_class == "invalid_key"
+
+    def test_permission_denied_maps_to_model_unavailable(self, monkeypatch):
+        exc = self._api_error(code=403, status="PERMISSION_DENIED")
+        self._patched_client(monkeypatch, exc)
+        result = _validate_google("g-key", "gemini-2.5-pro")
+        assert not result.ok
+        assert result.error_class == "model_unavailable"
+
+    def test_resource_exhausted_maps_to_rate_limit(self, monkeypatch):
+        exc = self._api_error(code=429, status="RESOURCE_EXHAUSTED")
+        self._patched_client(monkeypatch, exc)
+        result = _validate_google("g-key", "gemini-2.5-pro")
+        assert not result.ok
+        assert result.error_class == "rate_limit"
+
+    def test_not_found_maps_to_model_unavailable(self, monkeypatch):
+        exc = self._api_error(code=404, status="NOT_FOUND")
+        self._patched_client(monkeypatch, exc)
+        result = _validate_google("g-key", "fake-model")
+        assert not result.ok
+        assert result.error_class == "model_unavailable"
+
+
+class TestValidateLocal:
+    def _patched_client(self, monkeypatch, exc=None):
+        import openai
+        client = MagicMock()
+        if exc is not None:
+            client.chat.completions.create.side_effect = exc
+        else:
+            client.chat.completions.create.return_value = MagicMock()
+        monkeypatch.setattr(openai, "OpenAI", lambda **kw: client)
+
+    def test_ok_path(self, monkeypatch):
+        self._patched_client(monkeypatch)
+        result = _validate_local("http://localhost:11434/v1", "llama3.2:3b")
+        assert result.ok
+
+    def test_connection_refused_maps_to_network(self, monkeypatch):
+        import httpx
+        import openai
+        # APIConnectionError wraps an httpx error. Construct it via the
+        # SDK's documented signature so the test exercises the real class.
+        req = httpx.Request("POST", "http://localhost:11434/v1/chat/completions")
+        underlying = httpx.ConnectError("Connection refused", request=req)
+        exc = openai.APIConnectionError(request=req)
+        exc.__cause__ = underlying
+        self._patched_client(monkeypatch, exc)
+        result = _validate_local("http://localhost:11434/v1", "llama3.2:3b")
+        assert not result.ok
+        assert result.error_class == "network"
+
+    def test_model_not_pulled_maps_to_model_unavailable(self, monkeypatch):
+        import openai
+        # Ollama's 404 body is free-text ("model 'foo' not found, try
+        # pulling it first").
+        exc = _openai_exc(
+            openai.NotFoundError, status_code=404, code=None,
+            message="model 'foo' not found, try pulling it first",
+        )
+        self._patched_client(monkeypatch, exc)
+        result = _validate_local("http://localhost:11434/v1", "foo")
+        assert not result.ok
+        assert result.error_class == "model_unavailable"
+
+
+# ---------------------------------------------------------------------------
 # preflight_api_key orchestration
 # ---------------------------------------------------------------------------
 
@@ -281,27 +544,70 @@ class TestPreflightApiKey:
             )
         validator.assert_not_called()
 
-    def test_local_provider_skips(self, monkeypatch):
+    def test_local_provider_validates_without_api_key(self, monkeypatch, tmp_path):
+        # Local has no key but still runs validation (server-running + model-pulled).
         monkeypatch.setattr(
             "bristlenose.preflight.api_key.sys.stdin.isatty", lambda: True,
         )
+        path = tmp_path / "state.json"
+        monkeypatch.setattr(
+            "bristlenose.preflight.api_key.state_path", lambda: path,
+        )
         with patch(
-            "bristlenose.preflight.api_key._validate_anthropic"
+            "bristlenose.preflight.api_key._validate_local",
+            return_value=ValidationResult(ok=True),
         ) as validator:
             preflight_api_key(
                 settings=_settings(llm_provider="local"),
                 console=_console(),
             )
-        validator.assert_not_called()
+        validator.assert_called_once()
 
-    def test_azure_provider_falls_through_silently(self, monkeypatch):
+    def test_google_provider_validates_when_key_present(self, monkeypatch, tmp_path):
+        # Pin the (api_key, model) call shape — symmetric to the Azure
+        # test below; catches silent regressions if the orchestrator's
+        # arg threading for google drifts.
         monkeypatch.setattr(
             "bristlenose.preflight.api_key.sys.stdin.isatty", lambda: True,
         )
-        # No validator registered for azure → return without raising.
-        preflight_api_key(
-            settings=_settings(llm_provider="azure"),
-            console=_console(),
+        path = tmp_path / "state.json"
+        monkeypatch.setattr(
+            "bristlenose.preflight.api_key.state_path", lambda: path,
+        )
+        with patch(
+            "bristlenose.preflight.api_key._validate_google",
+            return_value=ValidationResult(ok=True),
+        ) as validator:
+            preflight_api_key(
+                settings=_settings(
+                    llm_provider="google",
+                    google_api_key="g-key",
+                    llm_model="gemini-2.5-pro",
+                ),
+                console=_console(),
+            )
+        validator.assert_called_once_with("g-key", "gemini-2.5-pro")
+
+    def test_azure_provider_validates_when_key_present(self, monkeypatch, tmp_path):
+        # Azure now has a real validator — confirm it runs and threads
+        # the 4-arg (api_key, endpoint, deployment, api_version) signature.
+        monkeypatch.setattr(
+            "bristlenose.preflight.api_key.sys.stdin.isatty", lambda: True,
+        )
+        path = tmp_path / "state.json"
+        monkeypatch.setattr(
+            "bristlenose.preflight.api_key.state_path", lambda: path,
+        )
+        with patch(
+            "bristlenose.preflight.api_key._validate_azure",
+            return_value=ValidationResult(ok=True),
+        ) as validator:
+            preflight_api_key(
+                settings=_settings(llm_provider="azure", azure_api_key="az-key"),
+                console=_console(),
+            )
+        validator.assert_called_once_with(
+            "az-key", "https://example.openai.azure.com/", "gpt-4o", "2024-10-21",
         )
 
     def test_no_key_skips(self, monkeypatch):

@@ -182,6 +182,30 @@ _See also: `bristlenose/stages/CLAUDE.md`_
 
 **Strict `>` comparisons, not `>=`.** Strong signal requires concentration > 2, moderate > 1.5. The analysis module is pure math — no LLM calls. Using strict inequality avoids edge-case ambiguity at threshold boundaries. Cell keys use `"label|sentiment"` format (pipe in labels is a known limitation, documented but not guarded).
 
+### Backend quality scale: four levels, not three or five
+
+**Four ordinal levels: `excellent` / `good` / `marginal` / `avoid`.** Three (WCAG-style) is too coarse for the editorial gradient researchers want; five (ITU-T MOS for audio) assumes A/B rater comparison, not glance-at-a-glyph reading; six was considered and rejected during the v1.9 design discussion. Four is the empirical sweet spot for ordinal decision buckets the user must act on — GRADE evidence quality and GitHub security advisories both land here. The `marginal` level is verbatim-defined in [design-research-methodology.md](design-research-methodology.md) §Backend quality scale with the user's "65th parallel / Sahel" metaphor — load-bearing wording for what "borderline acceptable" actually means.
+
+_See also: [design-pipeline-view.md](design-pipeline-view.md), [design-research-methodology.md](design-research-methodology.md) §Backend quality scale_
+
+### Default vs recommended: two orthogonal axes
+
+**Backend endorsement splits into `default: bool` (singular) and `recommended: bool` (plural).** Default is necessarily singular because dispatch is singular — there is exactly one cell that runs when `bristlenose run` fires for a stage. Recommended is plural by design — Bristlenose can endorse multiple in-bounds production choices and let researchers pick what fits their constraints. Invariant: `default ⇒ recommended`. Collapsing the axes (the v1.9 first-cut) produced a monolithic feel where the default's authority outshone every other option even when Bristlenose would happily endorse two or three of them. The split is the architectural form of the autonomy commitment in [methodology/consent-gradient.md](methodology/consent-gradient.md) §"Default to professional norms" — multiple cells endorsed, the researcher picks.
+
+_See also: [design-pipeline-view.md](design-pipeline-view.md) §Worked example — default vs recommended_
+
+### Editorial as a source value
+
+**Quality-rating provenance ships an `editorial` value to acknowledge subjectivity honestly.** A `QualityRating.source` of `editorial` means "Bristlenose's subjective opinion, not measured, not benchmarked." All v1.9 cells ship this — explicit honesty until the eval harness ([design-pluggable-llm-routing.md](design-pluggable-llm-routing.md) §3) produces `internal_bench` measurements. The alternative — calling unmeasured judgements `default` or omitting source entirely — would conflate "we measured this" with "we have an opinion," which is exactly the audit-trail confusion the field is designed to prevent. When evidence arrives, the cell's source flips; the rating updates if it needs to.
+
+_See also: [design-pipeline-view.md](design-pipeline-view.md) §Honesty about provenance: `source`_
+
+### Catalogue before resolver
+
+**The read-only Pipeline view shipped before any auto-pick resolver.** [design-stage-backends.md](design-stage-backends.md) §"Recommendation: don't build the resolver, build the evidence" advised against auto-pick logic before there was empirical signal to drive it. The catalogue surface is a slightly different reading of the same recommendation: build the **visible** side that shows researchers what would be picked and how good each option is, defer the **selecting** side until evidence + the `optimise_for` axis exist. Two benefits: researchers stay in control (consistent with [methodology/consent-gradient.md](methodology/consent-gradient.md) §Level 1+ "researchers are adults"), and whatever resolver v2 eventually introduces inherits the catalogue as its knowledge base — no separate spec to maintain.
+
+_See also: [design-pipeline-view.md](design-pipeline-view.md) §Why catalogue before resolver_
+
 ### Session-count guard
 
 **If ingest discovers more than 16 sessions, prompt before proceeding.** Prevents accidentally transcribing an entire multi-project directory. The guard applies to all three pipeline methods (`run`, `transcribe-only`, `analyze-only`). `--yes` / `-y` CLI flag bypasses the prompt for scripting and CI.

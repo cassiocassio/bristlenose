@@ -222,6 +222,55 @@ A safety-net dedup in `thematic_grouping.py` catches any LLM violations when wea
 
 ---
 
+## Backend quality scale
+
+Bristlenose runs each pipeline stage against an LLM (or local Whisper-class model for transcription). Different (stage, backend) pairs produce meaningfully different report quality — Claude does excellent quote extraction; a 3B Ollama model on the same prompt misses multi-clause quotes. The Pipeline view (see [design-pipeline-view.md](design-pipeline-view.md)) makes this legible *before* researchers run an interview through a viable-but-poor configuration.
+
+The methodology commits to a **four-level editorial scale**, with two **orthogonal axes** layered on top.
+
+### The four levels
+
+| Glyph | Level | Meaning |
+|---|---|---|
+| ● | `excellent` | Top of measured quality for this stage. |
+| ○ | `good` | Production-usable. No known issues. Bristlenose may default to a `good` cell over an `excellent` peer when the cost / speed / locality trade-off is worth it. |
+| ⚠ | `marginal` | Borderline. The minimum that will sustain the work — the 65th parallel where crops still grow but harvests are thin, the Sahel where rain still falls but you plan around drought. Acceptable if you have no alternative, are prioritising speed or cost over quality, or are testing other parts of the pipeline and want to spend the fewest resources here. |
+| ✗ | `avoid` | Known-bad for this stage. Use only if no alternative exists. |
+
+Four levels rather than three (WCAG A / AA / AAA), five (ITU-T MOS Bad / Poor / Fair / Good / Excellent), or six (the proposal floated during the v1.9 design discussion). Four is the empirical sweet spot for *ordinal decision buckets the user has to act on* — GRADE evidence quality and GitHub security advisories both land here. Five works for A/B audio rating because raters are comparing; four works when you're glancing at a glyph in a row.
+
+Untested cells (no rating in the catalogue) render as ⚠ and sort with `marginal`. The conservative choice: never silently promote an unmeasured cell to excellent-equivalent rank.
+
+### The two orthogonal axes
+
+Quality alone doesn't tell a researcher what Bristlenose itself would pick or endorse. Two booleans layered on the rating:
+
+- **`default`** — singular per (stage, provider-family). What Bristlenose runs if the user changes nothing. Necessarily singular because dispatch is singular: there is exactly one cell that executes when `bristlenose run` fires for a stage under the current settings.
+- **`recommended`** — plural by design. Cells Bristlenose actively endorses as production choices. Independent of `quality` — an `excellent` cell isn't automatically recommended if the cost / speed / locality trade-off favours a peer; a `good` cell can be recommended over an `excellent` peer when the trade-off is worth it.
+
+**Invariant:** `default ⇒ recommended`. Bristlenose cannot default to a cell it does not actively endorse. Recommended is strictly wider than default; both are subsets of `rating ∈ {excellent, good}` (Bristlenose never defaults to or recommends `marginal` / `avoid`).
+
+This split is methodologically load-bearing. The plural `recommended` axis is the architectural form of the researcher-autonomy commitment ([methodology/consent-gradient.md](methodology/consent-gradient.md) §"Default to professional norms"): multiple in-bounds production choices, picked by the researcher to fit their constraints. Without it, the default's authority outshines every other option even when Bristlenose would happily endorse two or three of them; cohort signal that "ChatGPT is also production-grade for quote extraction" accumulates nowhere.
+
+### Honesty about provenance
+
+Each rating ships with a `source` value documenting where it came from:
+
+- `editorial` — Bristlenose's subjective opinion. No measurement, no benchmark. **All v1.9 cells ship this** — a starting point that the methodology is honest about.
+- `community` — aggregated researcher feedback (used today for the Local-LLM rows where small-model failure modes are well-known).
+- `published_bench` — third-party benchmark (cite in note).
+- `internal_bench` — measured on a Bristlenose trial run (FOSSDA corpus or equivalent).
+
+The trajectory: as the eval harness in [design-pluggable-llm-routing.md](design-pluggable-llm-routing.md) §3 ships, ratings flip from `editorial` to `internal_bench` cell by cell. The `source` field is internal context — it ships in the JSON payload for debug / tooling but is not rendered to users. The honesty is for us: an audit later can tell which ratings have evidence behind them.
+
+### Why the catalogue ships before the resolver
+
+[design-stage-backends.md](design-stage-backends.md) §"Recommendation: don't build the resolver, build the evidence" advised against auto-pick logic before there was empirical signal to drive it. The v1.5 + v1.9 catalogue is a slightly different choice: build the **read-only surface** that shows researchers what would be picked, with editorial signal about how good each cell is. Researchers stay in control; the tool makes the trade-offs legible.
+
+This is consistent with the §"What the tool does not do" non-goals below: no recommendation *generation* about research outcomes, but explicit editorial endorsement of *configurations* the tool runs under. The two are different categories of recommendation, on different surfaces.
+
+---
+
 ## What the tool does not do
 
 These are explicit non-goals, reflecting the philosophy that the tool assists but does not replace the researcher:
@@ -250,3 +299,4 @@ These are explicit non-goals, reflecting the philosophy that the tool assists bu
 | Thematic grouping | `bristlenose/stages/s11_thematic_grouping.py` |
 | Academic citations | `docs/academic-sources.html` |
 | Quote exclusivity detail | `bristlenose/stages/CLAUDE.md` |
+| Backend quality catalogue | `bristlenose/pipeline_view/catalogue.py` (`QualityRating` + `_LLM_QUALITY` + `_TRANSCRIPTION_QUALITY`) |

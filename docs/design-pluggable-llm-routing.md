@@ -1,7 +1,7 @@
 # Pluggable LLM routing, per-stage model choice, and quality eval
 
-**Status:** Design draft — not yet implemented. April 2026. The routing layer itself is *durable plumbing* worth investing in early; specific provider shims (Apple FM, MLX-LM) are surface that re-verifies per release. See [design-stage-backends.md](design-stage-backends.md) §"Durable plumbing vs specific APIs" for the cost/urgency split.
-**Related:** [design-stage-backends.md](design-stage-backends.md), [design-modularity.md](design-modularity.md) §Modularisation matrix, [design-gemma4-local-models.md](design-gemma4-local-models.md), [design-perf-fossda-baseline.md](design-perf-fossda-baseline.md), [archive/design-llm-providers.md](archive/design-llm-providers.md) (historical roadmap), [private handoff: foundation-models-corpus](private/handoffs/foundation-models-corpus.md) (offline API reference)
+**Status:** Design draft, partially shipped (May 2026). The **display side** of stage→provider routing — showing the user which backends each stage could use, which BN runs by default, and editorial quality ratings per (stage, backend) cell — shipped via the Pipeline view (v1.5 + v1.9). See [design-pipeline-view.md](design-pipeline-view.md) for the shipped catalogue surface. The **selection/dispatch side** (per-stage TOML config, `stage:` kwarg through `LLMClient`, Apple FM Swift endpoint, `bristlenose eval` harness) **remains unbuilt** — design below is unchanged. April 2026 framing of "durable plumbing vs provider shims" still applies: routing layer is durable; provider shims re-verify per release. See [design-stage-backends.md](design-stage-backends.md) §"Durable plumbing vs specific APIs" for the cost/urgency split.
+**Related:** [design-stage-backends.md](design-stage-backends.md), [design-pipeline-view.md](design-pipeline-view.md) (shipped catalogue surface), [design-modularity.md](design-modularity.md) §Modularisation matrix, [design-gemma4-local-models.md](design-gemma4-local-models.md), [design-perf-fossda-baseline.md](design-perf-fossda-baseline.md), [archive/design-llm-providers.md](archive/design-llm-providers.md) (historical roadmap)
 
 ## Why now
 
@@ -15,11 +15,15 @@ None of this is deliverable without (a) a stage → provider routing layer, and 
 
 ## What exists today
 
-Single global provider selection via `BRISTLENOSE_PROVIDER`. `LLMClient` in [bristlenose/llm/client.py](../bristlenose/llm/client.py) dispatches `analyze()` to one of five backends (Claude, ChatGPT, Azure, Gemini, Ollama). No per-stage configuration, no quality metric beyond "JSON parses and schema validates". FOSSDA perf baselines measure wall-clock and LLM latency only.
+**Dispatch side (unchanged from April 2026):** Single global provider selection via `BRISTLENOSE_PROVIDER`. `LLMClient` in [bristlenose/llm/client.py](../bristlenose/llm/client.py) dispatches `analyze()` to one of five backends (Claude, ChatGPT, Azure, Gemini, Ollama). No per-stage runtime configuration, no `stage:` kwarg, no derived quality metric beyond "JSON parses and schema validates". FOSSDA perf baselines measure wall-clock and LLM latency only.
+
+**Display side (shipped May 2026, v1.5 + v1.9):** A read-only **catalogue surface** in `bristlenose/pipeline_view/` declares per-stage backends, their eligibility predicates against host facts, and editorial quality ratings per (stage, backend) cell. The catalogue is consumed by the React Settings → Pipeline tab and the CLI `bristlenose pipeline` command — making per-stage backend choice **legible** to researchers, without committing to auto-pick logic. See [design-pipeline-view.md](design-pipeline-view.md). This means we now have *editorial* per-stage quality ratings as catalogue data, even though no runtime routing or eval-harness measurement exists.
 
 ## Proposed design
 
 ### 1. Stage → provider routing
+
+> **Status (May 2026):** The display side of this routing — what backend each stage uses today + which alternatives are eligible + how good each is for the stage — shipped via the read-only Pipeline view (`bristlenose/pipeline_view/`, v1.5 + v1.9). See [design-pipeline-view.md](design-pipeline-view.md). The selection / dispatch side described below (per-stage TOML config, `stage:` kwarg through `LLMClient`) **remains unbuilt**. The display-first path means whatever resolver eventually lands inherits the catalogue as its knowledge base — no separate spec to maintain.
 
 Extend config with an optional `llm_stages` mapping. Absent key = fall back to global `llm_provider`.
 
@@ -83,6 +87,8 @@ Matrix form: run N models × M stages, write a comparison table. This is the thi
 - First-run: no change. Global default still works. Per-stage routing is an optional power-user layer, not something a new user has to configure.
 
 ## Sequencing
+
+> **Status (May 2026):** v1.5 + v1.9 took a different sequence than originally proposed below — the **display-first** path (catalogue surface in the Pipeline view) shipped before items 1 and 2. The display side makes per-stage backend choice legible without committing to runtime dispatch logic; researchers stay in control. The original items 1–5 sequence below remains correct for the unbuilt selection / eval / Apple-FM work.
 
 1. **Eval harness first.** Without it, every subsequent change is faith-based. Estimate: ~1 week including golden-set curation on 3–4 FOSSDA sessions.
 2. **Stage routing config + `stage:` kwarg through `LLMClient`.** Purely mechanical. ~1 day. No new provider needed — immediate value: run `quote_extraction` on Haiku, keep `thematic_grouping` on Sonnet, measure the cost delta against quality.

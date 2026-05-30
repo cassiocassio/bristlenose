@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 24 May 2026 (added `pipeline-view-v1-9`; closed `llm-error-distinguishability`)
+**Updated:** 30 May 2026 (closed `llm-error-distinguishability-all-providers`)
 
 ---
 
@@ -40,7 +40,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
-| `bristlenose_branch llm-error-distinguishability-all-providers/` | `llm-error-distinguishability-all-providers` | feature | Extend preflight error classification to Azure, Gemini, Ollama using structured error.code/error.status fields; switch OpenAI's substring branches to structured fields |
 | `bristlenose_branch pipeline-view-v1-9/` | `pipeline-view-v1-9` | feature | Continue pipeline-view iteration (v1.9) — per-(stage, backend) editorial quality rating (●/○/⚠/✗) layered on v1.5's eligibility ✓/✗, closing the viable-but-poor backend trap |
 
 
@@ -138,7 +137,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
-| `llm-error-distinguishability-all-providers` | `bristlenose_branch llm-error-distinguishability-all-providers/` | local only |
 | `pipeline-view-v1-9` | `bristlenose_branch pipeline-view-v1-9/` | local only |
 
 
@@ -170,27 +168,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Potential conflicts with other branches:**
 - `pipeline-view-v1-5` — direct predecessor; v1-9 layers on top. Conflicts likely if v1-5 hasn't merged when v1-9 lands. Coordinate ordering.
 - `llm-error-distinguishability-all-providers` — overlapping LLM-provider surface but different concerns (error classification vs. quality rating); unlikely to step on each other.
-
----
-
-### `llm-error-distinguishability-all-providers`
-
-**Kind:** feature — extends preflight error classification across all LLM providers, intended to merge to main
-**Status:** Just started
-**Started:** 24 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch llm-error-distinguishability-all-providers/`
-**Remote:** local only (push when ready)
-
-**What it does:** Extend preflight error classification to Azure, Gemini, and Ollama using structured `error.code` / `error.status` fields where available; switch OpenAI's substring branches to read structured fields; keep the 4-bucket `error_class` vocabulary. Builds on the just-closed `llm-error-distinguishability` (Anthropic-only `billing_empty`) by generalising the approach across all providers. See `HANDOFF.md` for the full brief.
-
-**Files this branch will touch:**
-- `bristlenose/preflight/api_key.py`
-- `bristlenose/llm/billing_hints.py`
-- `bristlenose/locales/`
-- `tests/test_preflight_api_key.py`
-
-**Potential conflicts with other branches:**
-- None expected — preflight + billing_hints surface is not touched by other active branches. Locale changes likely confined to preflight-namespaced keys; use targeted text-replace (never `json.dump` round-trip) per the i18n gotcha.
 
 ---
 
@@ -320,6 +297,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `llm-error-distinguishability-all-providers` — merged 30 May 2026
+
+Extended preflight error classification to Azure, Gemini, and Ollama using structured `error.code` / `error.status` fields, and switched OpenAI's substring branches to read structured fields, keeping the 4-bucket `error_class` vocabulary. Generalises the just-closed `llm-error-distinguishability` (Anthropic-only `billing_empty`) across all five providers. Two commits (`970f478`, `59ac9ae`) merged via `f19bd32`. Worktree detached and tagged orange on disk; local branch deleted; remote was never pushed.
 
 ### `llm-error-distinguishability` — merged 24 May 2026
 

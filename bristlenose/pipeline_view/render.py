@@ -21,7 +21,13 @@ from typing import Literal
 from pydantic import BaseModel
 
 from bristlenose.config import BristlenoseSettings
-from bristlenose.pipeline_view.catalogue import STAGES, PipelineStageDef
+from bristlenose.pipeline_view.catalogue import (
+    STAGES,
+    PipelineStageDef,
+    QualityLevel,
+    QualitySource,
+    quality_for,
+)
 from bristlenose.pipeline_view.eligibility import evaluate_backend
 from bristlenose.pipeline_view.host import HostFacts, probe_host
 
@@ -45,7 +51,19 @@ _PROVIDER_TO_OPTION_ID = {
 }
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
+
+
+# Sort weight for quality ratings. Untested cells (None at the catalogue
+# layer) rank with `marginal` — render layer defaults the glyph the same
+# way, so sort and glyph stay in agreement.
+_QUALITY_SORT_WEIGHT: dict[QualityLevel | None, int] = {
+    "excellent": 0,
+    "good": 1,
+    "marginal": 2,
+    None: 2,
+    "avoid": 3,
+}
 
 
 class BackendAvailability(BaseModel):
@@ -55,6 +73,23 @@ class BackendAvailability(BaseModel):
     layer translates qualifier labels via `display_key` when set. `reason`
     is a translation key (None when available). Render layers look up the
     matching locale string.
+
+    v1.9 additions — editorial quality layered over mechanical availability:
+    - `quality`: four-glyph rating (excellent/good/marginal/avoid); None when
+      the catalogue hasn't rated this cell yet (render layer shows ⚠ untested).
+    - `quality_note`: translation key for the one-line editorial caveat.
+    - `quality_source`: provenance of the rating (internal_bench / community /
+      editorial / etc.). Ships in JSON for debug/tooling; not rendered to users.
+    - `default`: True when this cell is Bristlenose's out-of-the-box pick for
+      the (stage, provider-family). Orthogonal to quality — BN may default to
+      a `good` cell over an `excellent` peer when the trade-off is worth it.
+      Necessarily singular per stage (dispatch is singular).
+    - `recommended`: True when BN actively endorses this cell as a production
+      choice. Independent of `quality` AND of `default` — `default ⇒ recommended`
+      (BN can't default to a cell it doesn't endorse) but `recommended` is
+      plural by design (multiple cells per stage may be recommended). In the
+      v1.9 initial catalogue, `recommended=True` coincides with `default=True`;
+      widens as cohort signal arrives.
     """
 
     id: str
@@ -62,6 +97,11 @@ class BackendAvailability(BaseModel):
     display_key: str | None = None
     available: bool
     reason: str | None = None  # translation key, None when available
+    quality: QualityLevel | None = None
+    quality_note: str | None = None  # translation key, None when no caveat
+    quality_source: QualitySource | None = None
+    default: bool = False
+    recommended: bool = False
 
 
 class StageSelection(BaseModel):
@@ -86,6 +126,13 @@ class PipelineView(BaseModel):
     - `llm_summary`: host-wide LLM-backend availability, shared by the five
       LLM stages. v1.5 dedup: per-stage LLM rows render `alternatives=[]`;
       the React/CLI layer reads the summary instead.
+
+    `schema_version` defaults to `SCHEMA_VERSION` (the current shipping
+    version) when a view is built fresh in Python, but preserves the
+    parsed value when read from JSON — round-trip fidelity is intentional,
+    Pydantic does not coerce. Downstream code can branch on the field.
+    No `model_validator` bumps the version on parse; that's deferred until
+    there's a third schema transition (Rule of Three).
     """
 
     schema_version: int = SCHEMA_VERSION
@@ -148,6 +195,7 @@ def _stage_alternatives(
     rows: list[BackendAvailability] = []
     for option in stage.viable_backends:
         available, reason = evaluate_backend(stage.id, option, host, settings)
+        rating = quality_for(stage.id, option.id)
         rows.append(
             BackendAvailability(
                 id=option.id,
@@ -155,13 +203,24 @@ def _stage_alternatives(
                 display_key=option.display_key,
                 available=available,
                 reason=None if available else reason,
+                quality=rating.rating if rating else None,
+                quality_note=rating.note_key if rating else None,
+                quality_source=rating.source if rating else None,
+                default=rating.default if rating else False,
+                recommended=rating.recommended if rating else False,
             )
         )
 
-    def sort_key(row: BackendAvailability) -> tuple[int, int]:
+    def sort_key(row: BackendAvailability) -> tuple[int, int, int]:
         is_chosen = 0 if (chosen_id is not None and row.id == chosen_id) else 1
         is_available = 0 if row.available else 1
-        return (is_available, is_chosen)
+        # Quality is a tiebreaker WITHIN the available group only. For
+        # unavailable rows, all three sort fields are constant across the
+        # group (is_available=1; is_chosen always 1 — chosen_id is only set
+        # for an available row; quality_weight=0 below), so Python's stable
+        # sort preserves catalogue declaration order.
+        quality_weight = _QUALITY_SORT_WEIGHT[row.quality] if row.available else 0
+        return (is_available, is_chosen, quality_weight)
 
     return sorted(rows, key=sort_key)
 

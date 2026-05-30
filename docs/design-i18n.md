@@ -164,10 +164,10 @@ Low-frequency content. Researchers see it once.
 | Namespace | Used by | Keys |
 |-----------|---------|------|
 | `common.json` | React + Desktop | ~34 (nav tabs, buttons, labels, footer) |
-| `settings.json` | React + Desktop | ~15 (settings panel labels) |
+| `settings.json` | React + Desktop | ~15 panel labels + `pipeline.alternatives.*`, `pipeline.reasons.*`, `pipeline.backends.*` (v1.5 Pipeline-view keys; ~25 leaves) |
 | `enums.json` | React + Python + Desktop | ~11 (sentiments, speaker roles) |
 | `cli.json` | Python only | ~15 (CLI output) |
-| `pipeline.json` | Python only | ~5 (stage progress) |
+| `pipeline.json` | Python only | 4 (stage progress: `start`, `stageStart`, `stageComplete`, `done`). **Note:** the Pipeline-view editorial keys (`pipeline.reasons.*`, `pipeline.backends.*`, `pipeline.alternatives.*`, and v1.9's `pipeline.quality.*`) currently colocate under `settings.json`, not `pipeline.json`. Eventual housekeeping question — consolidate under one file or split semantically — tracked separately. |
 | `server.json` | Python only | ~5 (API errors) |
 | `doctor.json` | Python only | ~5 (health checks) |
 | `desktop.json` | Desktop only | ~95 (menu bar, toolbar, native chrome, `boot.*` and `welcome.*` blocks added 2026-05-01) |
@@ -197,6 +197,17 @@ SwiftUI's `CommandMenu("Project")` takes `LocalizedStringKey` which resolves fro
 | codebook (fr) | Grille de codage | Codage |
 
 ## Terminology standards
+
+### Per-namespace key convention
+
+Two conventions coexist in the locale tree, applied per surface:
+
+- **camelCase flat / shallow-nested** — short, sentence-ish action / progress strings authored fresh in JSON. Examples: `pipeline.json`'s `stageStart` / `stageComplete`; `common.json`'s `nav.codebook`; `enums.json`'s `speakerRole.participant`.
+- **`<category>.<snake_case_leaf>`** — keys that map 1-to-1 to Python identifiers (predicate explainers, backend ids, quality note keys). Examples from `settings.json`: `pipeline.reasons.mlx_whisper_not_installed`, `pipeline.backends.local_ollama`, and v1.9's `pipeline.quality.local_quote_extraction_miss_rate`. The snake_case leaf preserves grep parity between the Python identifier and the i18n key — `grep miss_rate locales/` finds the locale entry; `grep miss_rate bristlenose/` finds the catalogue cell that references it.
+
+The rule is **convention-by-origin, not convention-by-file**. New keys derived from Python identifiers (catalogue cells, requirement names, enum-like predicates) use snake_case leaves under their category. New keys authored fresh for UI chrome (button labels, panel titles, action verbs) use camelCase. When in doubt, look at the sibling keys in the same category block; consistency within a block matters more than uniformity across the file.
+
+See [design-pipeline-view.md](design-pipeline-view.md) §Locale convention for the v1.9 instantiation of this rule.
 
 ### The "Cancel button problem"
 

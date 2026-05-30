@@ -202,6 +202,75 @@ def test_reason_is_none_when_available() -> None:
             )
 
 
+def test_quality_fields_populate_from_catalogue() -> None:
+    """v1.9: every BackendAvailability carries quality / quality_note / quality_source."""
+    settings = _settings(anthropic_api_key="sk-test")
+    patches = _patched_host()
+    view = _run_with_patches(patches, lambda: build_pipeline_view(settings))
+
+    by_id = {a.id: a for a in view.llm_summary}
+    claude = by_id["claude"]
+    # Pin presence + the orthogonal `default` + `recommended` invariants
+    # (Claude is BN's default LLM provider, and seeded as recommended in
+    # the v1.9 initial catalogue). Don't pin literal rating/source — editorial.
+    assert claude.quality is not None
+    assert claude.quality_source is not None
+    assert claude.default is True
+    assert claude.recommended is True
+    # Apple FM stays unrated until a probe ships → quality is None for now.
+    assert by_id["apple_fm"].quality is None
+    assert by_id["apple_fm"].quality_source is None
+    assert by_id["apple_fm"].default is False
+    assert by_id["apple_fm"].recommended is False
+
+
+def test_transcription_quality_carries_note_keys() -> None:
+    settings = _settings(anthropic_api_key="sk-test")
+    patches = _patched_host()
+    view = _run_with_patches(patches, lambda: build_pipeline_view(settings))
+
+    transcription = next(s for s in view.catalogue if s.id == "transcription")
+    by_id = {a.id: a for a in transcription.alternatives}
+    # Don't pin literal keys/values — catalogue editorial data can shift
+    # (e.g. F6 consolidation). Pin the invariant: namespace adherence + presence.
+    for opt_id in ("mlx", "faster-whisper"):
+        assert by_id[opt_id].quality is not None
+        assert by_id[opt_id].quality_note is not None
+        assert by_id[opt_id].quality_note.startswith("pipeline.quality.")
+
+
+def test_available_rows_sort_by_quality_within_available_group() -> None:
+    """Sort order: chosen → available → quality (excellent < good < marginal < avoid)."""
+    # All keys + Ollama, with `local` chosen. Available rows: local (good for
+    # speaker_id) is chosen-first; the remaining four (claude/openai/google/azure)
+    # sort by quality next.
+    settings = _settings(
+        llm_provider="local",
+        anthropic_api_key="a",
+        openai_api_key="b",
+        azure_api_key="c",
+        azure_endpoint="https://x.openai.azure.com/",
+        azure_deployment="gpt-4o",
+        google_api_key="d",
+    )
+    patches = _patched_host(ollama_running=True)
+    view = _run_with_patches(patches, lambda: build_pipeline_view(settings))
+
+    available = [a for a in view.llm_summary if a.available]
+    # Chosen-first invariant first.
+    assert available[0].id == "local"
+    # Remaining-available are sorted by quality. claude + openai are excellent;
+    # azure + google are good. So index 1-2 ∈ {claude, openai}, 3-4 ∈ {azure, google}.
+    remaining = available[1:]
+    qualities = [a.quality for a in remaining]
+    assert qualities[:2] == ["excellent", "excellent"], (
+        f"first two non-chosen-available should be excellent; got {qualities}"
+    )
+    assert qualities[2:] == ["good", "good"], (
+        f"next two should be good; got {qualities}"
+    )
+
+
 def test_anonymisation_per_stage_alternatives_keep_pii_toggle_separate() -> None:
     """Presidio is three Requirements: package + spaCy model + pii_enabled."""
     settings = _settings(pii_enabled=False)

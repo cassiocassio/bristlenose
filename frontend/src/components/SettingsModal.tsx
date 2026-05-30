@@ -409,22 +409,36 @@ function ConfigSection({ categoryId }: { categoryId: string }) {
 
 // ── Pipeline section ──────────────────────────────────────────────────────
 
+interface BackendAvailability {
+  id: string;
+  display: string;
+  display_key?: string | null;
+  available: boolean;
+  reason?: string | null;
+}
+
 interface PipelineStageView {
   id: string;
   name: string;
   kind: string;
   chosen: string;
+  chosen_id?: string | null;
   notes: string;
   available: boolean;
+  alternatives?: BackendAvailability[];
 }
 
 interface PipelineViewResponse {
+  schema_version?: number;
   catalogue: PipelineStageView[];
+  llm_summary?: BackendAvailability[];
   host: {
     os: string;
     arch: string;
+    os_version?: string | null;
     memory_gb: number | null;
     keys_present: Record<string, boolean>;
+    installed_packages?: Record<string, boolean>;
     ollama_running: boolean;
     network_reachable: boolean;
     apple_fm_status: string;
@@ -474,9 +488,18 @@ function PipelineSection() {
     .filter(([, on]) => on)
     .map(([p]) => p);
 
+  const llmSummary = data.llm_summary ?? [];
   return (
     <div className="bn-pipeline-view">
       <p className="bn-setting-description">{t("pipeline.intro")}</p>
+      {llmSummary.length > 0 && (
+        <section className="bn-pipeline-summary">
+          <h3 className="bn-pipeline-summary-heading">
+            {t("pipeline.alternatives.summaryHeading")}
+          </h3>
+          <AlternativesList alternatives={llmSummary} />
+        </section>
+      )}
       <dl className="bn-pipeline-stages">
         {data.catalogue.map((stage) => (
           <div
@@ -487,6 +510,9 @@ function PipelineSection() {
             <dd className="bn-pipeline-stage-body">
               <div className="bn-pipeline-stage-chosen">{stage.chosen}</div>
               <div className="bn-pipeline-stage-notes">{stage.notes}</div>
+              {stage.alternatives && stage.alternatives.length > 0 && (
+                <AlternativesList alternatives={stage.alternatives} />
+              )}
             </dd>
           </div>
         ))}
@@ -499,6 +525,70 @@ function PipelineSection() {
         {" · "}
         {t("pipeline.ollama")}: {host.ollama_running ? t("pipeline.running") : t("pipeline.notDetected")}
       </p>
+    </div>
+  );
+}
+
+// `AlternativesList` renders the v1.5 backend-availability list as a semantic
+// `<ul>` so AT can navigate item-by-item. Glyphs carry a visually-hidden
+// "available" / "unavailable" label (WCAG 1.1.1, 4.1.2). Reasons render inline
+// below each ✗ — no hover tooltips (WCAG 1.4.13). The "Unavailable" group is
+// wrapped in lang="en" until catalogue reasons are localised everywhere —
+// today they are translated into all six locales, so the attribute is omitted
+// to let AT use the document language naturally.
+function AlternativesList({ alternatives }: { alternatives: BackendAvailability[] }) {
+  const { t } = useTranslation("settings");
+  const available = alternatives.filter((a) => a.available);
+  const unavailable = alternatives.filter((a) => !a.available);
+  const labelOf = (a: BackendAvailability) =>
+    a.display_key ? t(a.display_key, { defaultValue: a.display }) : a.display;
+  const reasonOf = (a: BackendAvailability) =>
+    a.reason ? t(a.reason, { defaultValue: a.reason }) : "";
+  return (
+    <div className="bn-pipeline-alternatives">
+      <div className="bn-pipeline-alternatives-row">
+        <span className="bn-pipeline-alternatives-label">
+          {t("pipeline.alternatives.available")}:
+        </span>
+        {available.length === 0 ? (
+          <span className="bn-pipeline-alternatives-empty">
+            {t("pipeline.alternatives.none")}
+          </span>
+        ) : (
+          <ul role="list" className="bn-pipeline-alternatives-list">
+            {available.map((a) => (
+              <li key={a.id} className="bn-pipeline-alt bn-pipeline-alt-on">
+                <span aria-hidden="true" className="bn-pipeline-alt-glyph">
+                  ✓
+                </span>
+                <span className="bn-sr-only">{t("pipeline.available")}</span>
+                <span className="bn-pipeline-alt-name">{labelOf(a)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {unavailable.length > 0 && (
+        <div className="bn-pipeline-alternatives-row">
+          <span className="bn-pipeline-alternatives-label">
+            {t("pipeline.alternatives.unavailable")}:
+          </span>
+          <ul role="list" className="bn-pipeline-alternatives-list">
+            {unavailable.map((a) => (
+              <li key={a.id} className="bn-pipeline-alt bn-pipeline-alt-off">
+                <span aria-hidden="true" className="bn-pipeline-alt-glyph">
+                  ✗
+                </span>
+                <span className="bn-sr-only">{t("pipeline.unavailable")}</span>
+                <span className="bn-pipeline-alt-name">{labelOf(a)}</span>
+                {a.reason && (
+                  <span className="bn-pipeline-alt-reason">— {reasonOf(a)}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

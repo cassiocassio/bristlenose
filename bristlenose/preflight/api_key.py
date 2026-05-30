@@ -247,6 +247,23 @@ def _validate_anthropic(api_key: str, model: str) -> ValidationResult:
     return ValidationResult(ok=True)
 
 
+def _openai_error_code(exc: BaseException) -> str | None:
+    """Safely read ``exc.body["error"]["code"]`` from an openai SDK exception.
+
+    Recent SDK versions sometimes wrap the body; guard against non-dict shapes.
+    Same body schema is used by Azure (shares the openai SDK), so this helper
+    is reused there.
+    """
+    body = getattr(exc, "body", None)
+    if not isinstance(body, dict):
+        return None
+    error = body.get("error")
+    if not isinstance(error, dict):
+        return None
+    code = error.get("code")
+    return code if isinstance(code, str) else None
+
+
 def _validate_openai(api_key: str, model: str) -> ValidationResult:
     """Exercise billing via a 1-token chat-completion to the OpenAI API."""
     import openai
@@ -265,8 +282,11 @@ def _validate_openai(api_key: str, model: str) -> ValidationResult:
         return ValidationResult(ok=False, error_class="invalid_key", raw_message=str(exc))
     except openai.RateLimitError as exc:
         # OpenAI overloads 429 — billing-empty is signalled by the
-        # ``insufficient_quota`` code in the response body.
-        if "insufficient_quota" in str(exc):
+        # ``insufficient_quota`` code in the response body. Read the
+        # structured field; the substring fallback covers SDK versions
+        # that don't surface ``exc.body`` as a dict.
+        code = _openai_error_code(exc)
+        if code == "insufficient_quota" or "insufficient_quota" in str(exc):
             return ValidationResult(
                 ok=False, error_class="billing_empty", raw_message=str(exc)
             )
@@ -291,10 +311,196 @@ def _validate_openai(api_key: str, model: str) -> ValidationResult:
     return ValidationResult(ok=True)
 
 
-# Providers with rich validation (paid /messages call + error-class translation).
-# Other providers — azure, google, local — fall through to the generic "Provider
-# says: ..." path on the call site.
-_SUPPORTED_PROVIDERS = frozenset({"anthropic", "openai"})
+def _validate_azure(
+    api_key: str, endpoint: str, deployment: str, api_version: str
+) -> ValidationResult:
+    """Exercise the Azure OpenAI deployment via a 1-token chat-completion.
+
+    Shares the openai SDK; differs from OpenAI in needing endpoint URL,
+    deployment name (distinct from model id), and api version. The
+    ``DeploymentNotFound`` 404 is the most common Azure foot-gun — recovery
+    copy must call out that this is the **portal deployment name**, not
+    a model id.
+    """
+    import openai
+
+    client = openai.AzureOpenAI(
+        api_key=api_key,
+        azure_endpoint=endpoint,
+        api_version=api_version,
+        default_headers={"User-Agent": f"bristlenose/{__version__}"},
+    )
+    try:
+        client.chat.completions.create(
+            model=deployment,
+            max_tokens=1,
+            messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
+        )
+    except openai.AuthenticationError as exc:
+        return ValidationResult(ok=False, error_class="invalid_key", raw_message=str(exc))
+    except openai.NotFoundError as exc:
+        # DeploymentNotFound is the headline Azure error; the recovery
+        # copy distinguishes it from generic model_unavailable.
+        code = _openai_error_code(exc)
+        raw = str(exc)
+        if code == "DeploymentNotFound":
+            return ValidationResult(
+                ok=False,
+                error_class="model_unavailable",
+                raw_message=f"DeploymentNotFound: {raw}",
+            )
+        return ValidationResult(
+            ok=False, error_class="model_unavailable", raw_message=raw
+        )
+    except openai.RateLimitError as exc:
+        # Azure has no insufficient_quota concept — subscription billing
+        # is separate, not credit-pool based.
+        return ValidationResult(
+            ok=False, error_class="rate_limit", raw_message=str(exc)
+        )
+    except openai.BadRequestError as exc:
+        # Content filter and invalid_api_version fall through with no
+        # recovery bucket — surface raw message.
+        return ValidationResult(ok=False, error_class=None, raw_message=str(exc))
+    except openai.APIStatusError as exc:
+        return ValidationResult(ok=False, error_class=None, raw_message=str(exc))
+    except Exception as exc:
+        network = _classify_network_error(exc)
+        if network is not None:
+            return network
+        logger.warning(
+            "azure validation unknown error: %s: %s",
+            type(exc).__name__, exc,
+        )
+        return ValidationResult(ok=False, error_class=None, raw_message=str(exc))
+    return ValidationResult(ok=True)
+
+
+def _validate_google(api_key: str, model: str) -> ValidationResult:
+    """Exercise the Gemini API via a minimal ``generate_content`` call.
+
+    Reads structured ``.code`` / ``.status`` fields on ``APIError`` instead
+    of substring-matching the message. Gemini has no billing-empty concept
+    (post-paid via GCP billing) — those errors route to model_unavailable.
+    """
+    from google import genai
+    from google.genai import errors as genai_errors
+    from google.genai import types
+
+    client = genai.Client(api_key=api_key)
+    try:
+        client.models.generate_content(
+            model=model,
+            contents=_VALIDATION_PROMPT,
+            config=types.GenerateContentConfig(max_output_tokens=1),
+        )
+    except genai_errors.APIError as exc:
+        status = (getattr(exc, "status", "") or "").upper()
+        code = getattr(exc, "code", None)
+        raw = str(exc)
+        # Some details flag bad API keys even when the top-level status is
+        # INVALID_ARGUMENT — surface as invalid_key. ``.details`` on the
+        # SDK exception holds the full response JSON dict; the actual
+        # details array lives at ``details["error"]["details"]``.
+        details_blob = getattr(exc, "details", None)
+        details_list: list = []
+        if isinstance(details_blob, dict):
+            err = details_blob.get("error")
+            if isinstance(err, dict):
+                inner = err.get("details")
+                if isinstance(inner, list):
+                    details_list = inner
+        api_key_flagged = any(
+            isinstance(d, dict) and d.get("reason") == "API_KEY_INVALID"
+            for d in details_list
+        )
+
+        if status == "UNAUTHENTICATED" or code == 401 or api_key_flagged:
+            return ValidationResult(
+                ok=False, error_class="invalid_key", raw_message=raw
+            )
+        if status == "PERMISSION_DENIED" or code == 403:
+            return ValidationResult(
+                ok=False, error_class="model_unavailable", raw_message=raw
+            )
+        if status == "RESOURCE_EXHAUSTED" or code == 429:
+            return ValidationResult(
+                ok=False, error_class="rate_limit", raw_message=raw
+            )
+        if status == "NOT_FOUND" or code == 404:
+            return ValidationResult(
+                ok=False, error_class="model_unavailable", raw_message=raw
+            )
+        return ValidationResult(ok=False, error_class=None, raw_message=raw)
+    except Exception as exc:
+        network = _classify_network_error(exc)
+        if network is not None:
+            return network
+        logger.warning(
+            "google validation unknown error: %s: %s",
+            type(exc).__name__, exc,
+        )
+        return ValidationResult(ok=False, error_class=None, raw_message=str(exc))
+    return ValidationResult(ok=True)
+
+
+def _validate_local(local_url: str, model: str) -> ValidationResult:
+    """Exercise a local Ollama-compatible endpoint via a 1-token call.
+
+    Runtime path uses the openai SDK pointed at ``local_url`` (Ollama is
+    OpenAI-compatible); the preflight does the same — keeps the dep
+    surface narrow and the failure modes consistent. No api key, no
+    billing — failures are server-down or model-not-pulled.
+    """
+    import openai
+
+    client = openai.OpenAI(
+        base_url=local_url,
+        api_key="ollama",  # required by SDK, ignored by Ollama
+        default_headers={"User-Agent": f"bristlenose/{__version__}"},
+    )
+    try:
+        client.chat.completions.create(
+            model=model,
+            max_tokens=1,
+            messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
+        )
+    except openai.APIConnectionError as exc:
+        # Server down is the dominant local failure — surface as a
+        # network-class result. ``recovery_message`` switches on
+        # provider=="local" to emit "Start Ollama with `ollama serve`"
+        # instead of the generic network copy. Note: this catches
+        # *before* ``_classify_network_error`` runs, so SSL / corporate
+        # proxy errors don't get their specific recovery message —
+        # acceptable narrowing since ``local_url`` defaults to plain
+        # HTTP on loopback.
+        return ValidationResult(
+            ok=False, error_class="network", raw_message=str(exc)
+        )
+    except openai.NotFoundError as exc:
+        # Ollama returns 404 with a "not found, try pulling" body when
+        # the model isn't downloaded. Both 404 shapes map to
+        # model_unavailable; recovery_message handles the per-provider
+        # "ollama pull" wording.
+        return ValidationResult(
+            ok=False, error_class="model_unavailable", raw_message=str(exc)
+        )
+    except openai.APIStatusError as exc:
+        return ValidationResult(ok=False, error_class=None, raw_message=str(exc))
+    except Exception as exc:
+        network = _classify_network_error(exc)
+        if network is not None:
+            return network
+        logger.warning(
+            "local validation unknown error: %s: %s",
+            type(exc).__name__, exc,
+        )
+        return ValidationResult(ok=False, error_class=None, raw_message=str(exc))
+    return ValidationResult(ok=True)
+
+
+# Providers with rich validation. Local has no key; orchestrator handles that.
+_SUPPORTED_PROVIDERS = frozenset({"anthropic", "openai", "azure", "google", "local"})
 
 
 # ---------------------------------------------------------------------------
@@ -352,8 +558,21 @@ def preflight_api_key(
     provider = settings.llm_provider
     if provider not in _SUPPORTED_PROVIDERS:
         return
-    api_key, source = _api_key_for(settings)
-    if not api_key:
+
+    # Local has no API key but still validates (server-running, model-pulled).
+    if provider == "local":
+        api_key, source = "", "stored"
+    else:
+        api_key, source = _api_key_for(settings)
+        if not api_key:
+            return
+
+    # Azure needs endpoint + deployment alongside the key; mirror the
+    # missing-key early-exit rather than letting AzureOpenAI('', ...) send
+    # to a nonsense URL on first-setup.
+    if provider == "azure" and not (
+        settings.azure_endpoint and settings.azure_deployment
+    ):
         return
 
     state = read_state()
@@ -362,11 +581,12 @@ def preflight_api_key(
         return
 
     facts = billing_for(provider)
-    if first_run and facts is not None and sys.stdin.isatty():
+    if first_run and facts is not None and sys.stdin.isatty() and provider != "local":
         # Source attribution on first run only, TTY only (per "anti-patterns:
         # silent magic on credential surfaces"). ``first_run`` is
         # until-first-success, not until-first-attempt: an invalid-key first
         # run leaves the flag set so the attribution fires again next time.
+        # Local has no key source to attribute — skip the line.
         console.print(
             "  "
             + t(
@@ -377,10 +597,20 @@ def preflight_api_key(
         )
 
     # Resolve the validator through globals() rather than a module-level dict:
-    # tests monkeypatch ``_validate_anthropic`` / ``_validate_openai`` by name,
-    # and a captured-at-import dict reference would not pick that up.
+    # tests monkeypatch ``_validate_*`` by name, and a captured-at-import
+    # dict reference would not pick that up.
     validator = globals()[f"_validate_{provider}"]
-    result = validator(api_key, settings.llm_model)
+    if provider == "azure":
+        result = validator(
+            api_key,
+            settings.azure_endpoint,
+            settings.azure_deployment,
+            settings.azure_api_version,
+        )
+    elif provider == "local":
+        result = validator(settings.local_url, settings.local_model)
+    else:
+        result = validator(api_key, settings.llm_model)
     if result.ok:
         _mark_validated(state, provider, source=source)
         try:

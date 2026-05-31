@@ -40,6 +40,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
+| `bristlenose_branch beat3-provider-activation/` | `beat3-provider-activation` | bugfix | Fix AI-consent sheet provider activation (Continue → first validated cloud; Use Ollama → RAM default + ambient pull) |
 
 
 
@@ -136,6 +137,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
+| `beat3-provider-activation` | `bristlenose_branch beat3-provider-activation/` | local only |
 
 
 
@@ -143,6 +145,30 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `beat3-provider-activation`
+
+**Kind:** bugfix — corrective change to the AI-consent sheet's provider activation; ends in merge to main.
+**Status:** Just started
+**Started:** 31 May 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch beat3-provider-activation/`
+**Remote:** local only (push when ready)
+
+**What it does:** Fixes the asymmetric exit paths in `AIConsentView`. (1) **Continue** (cloud) now activates the first validated cloud provider — only when the current `activeProvider` is local/unconfigured — via a tested helper `ConsentActivation.resolve(active:statuses:)`, posting `.bristlenosePrefsChanged` so serve restarts and injects the key (fixes the re-consent bug the 5 May walkthrough caught). (2) **Use Ollama** no longer opens the model picker on the default path: it applies the RAM-aware default (`OllamaCatalog.recommendedTag()`), dismisses immediately, and pulls the model ambiently via a new toolbar pill (modelled on `CopyProgressPill`). The Ollama download `ObservableObject` is hoisted out of `OllamaSetupSheet` to app level so the pull survives sheet dismissal. See `HANDOFF.md` + `.claude/plans/APPROVED-PLAN.md` for the full brief (dialog sequences, ASCII mocks, user stories).
+
+**Files this branch will touch:**
+- New: `desktop/Bristlenose/Bristlenose/ConsentActivation.swift` — pure `resolve(active:statuses:)` helper
+- New: `desktop/Bristlenose/BristlenoseTests/ConsentActivationTests.swift` — Swift Testing suite
+- New: `desktop/Bristlenose/Bristlenose/OllamaDownloadPill.swift` (+ hoisted `OllamaDownloadModel`)
+- Modified: `desktop/Bristlenose/Bristlenose/AIConsentView.swift` — both exit paths
+- Modified: `desktop/Bristlenose/Bristlenose/ContentView.swift` — toolbar pill + app-level download model
+- Modified: `desktop/Bristlenose/Bristlenose/OllamaSetupSheet.swift` — extract reusable pull state
+- Modified: 6 locale `desktop.json` files — pill state strings + any reworded consent copy
+
+**Potential conflicts with other branches:**
+- None active on the desktop Swift surface right now. `pipeline-view-v1-5` is Python/React only — no overlap.
 
 ---
 

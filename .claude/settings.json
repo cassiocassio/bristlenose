@@ -7,6 +7,19 @@
           {
             "type": "command",
             "command": ".claude/hooks/block-checkout.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/block-private-add.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/block-env-edits.sh"
           }
         ]
       }

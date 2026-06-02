@@ -41,6 +41,9 @@ git-cheatsheet.md
 docs/private/
 _comparison/
 
+# Personal mail-ops / triage notes — developer's own workflow, not for the public repo
+docs/design-inbox-triage.md
+
 # Bristlenose log files (created by pipeline runs and serve mode)
 bristlenose.log
 bristlenose.log.*
@@ -94,3 +97,6 @@ HANDOFF.md
 
 # Local backups of agent prompts (e.g. .bak-pre-hig-corpus-YYYY-MM-DD)
 .claude/agents/*.bak-*
+
+# hookify rule files (local convention; per-machine, not committed)
+.claude/hookify.*.local.md

@@ -26,10 +26,10 @@ struct AIConsentView: View {
     static let currentVersion = 1
 
     @EnvironmentObject var i18n: I18n
+    @EnvironmentObject var ollamaDownload: OllamaDownloadModel
     @AppStorage("aiConsentVersion") private var consentVersion: Int = 0
     @AppStorage("activeProvider") private var activeProvider: String = "anthropic"
     @AppStorage("llmModel_local") private var ollamaModel: String = ""
-    @State private var showingOllamaSetup = false
 
     /// When true, shows "Done" instead of "Continue" (re-access mode).
     var isReviewMode: Bool = false
@@ -54,33 +54,6 @@ struct AIConsentView: View {
         .padding(24)
         .frame(width: 520)
         .fixedSize(horizontal: false, vertical: true)
-        .sheet(isPresented: $showingOllamaSetup) {
-            OllamaSetupSheet(
-                onComplete: { chosenTag in
-                    // Order: provider write FIRST, then consent log, then
-                    // prefs notification, then dismiss. recordConsent reads
-                    // `activeProvider` for the audit trail, so it must see
-                    // "local" not the default "anthropic". Belt-and-braces:
-                    // mirror the @AppStorage write through UserDefaults so
-                    // any same-tick observer sees a coherent value before
-                    // the sheet tears down.
-                    activeProvider = LLMProvider.ollama.rawValue
-                    ollamaModel = chosenTag
-                    UserDefaults.standard.set(
-                        LLMProvider.ollama.rawValue, forKey: "activeProvider")
-                    UserDefaults.standard.set(
-                        chosenTag, forKey: "llmModel_local")
-                    recordConsent(action: "ollama")
-                    NotificationCenter.default.post(
-                        name: .bristlenosePrefsChanged, object: nil)
-                    showingOllamaSetup = false
-                    onDismiss()
-                },
-                onCancel: {
-                    showingOllamaSetup = false
-                }
-            )
-        }
     }
 
     // MARK: - Header
@@ -183,12 +156,12 @@ struct AIConsentView: View {
 
     private var buttonBar: some View {
         HStack {
-            // Beat 3b: replaces the old direct activeProvider write with
-            // a guided sheet that picks a model + downloads it. Consent
-            // recording moves into the sheet's onComplete success path so
-            // a mid-setup cancel leaves the user unconsented.
+            // Stay local: apply the RAM-aware default model, activate Ollama,
+            // and pull the model ambiently (toolbar pill) — no blocking
+            // picker. Micro-prefs (model choice, temperature) live in Settings.
             Button(i18n.t("desktop.aiConsent.useOllama")) {
-                showingOllamaSetup = true
+                activateLocalDefault()
+                onDismiss()
             }
             .buttonStyle(.borderless)
 
@@ -197,14 +170,73 @@ struct AIConsentView: View {
             Button(isReviewMode
                    ? i18n.t("desktop.aiConsent.done")
                    : i18n.t("desktop.aiConsent.continue")) {
-                if !isReviewMode {
-                    recordConsent(action: "continue")
-                }
+                activateChosenCloudProviderIfNeeded()
                 onDismiss()
             }
             .buttonStyle(.borderedProminent)
             .keyboardShortcut(.defaultAction)
         }
+    }
+
+    // MARK: - Activation
+
+    /// Stay-local path. Resolves the RAM-aware default, activates Ollama via
+    /// the canonical triad (activeProvider → global model → prefs notify),
+    /// records consent, and kicks off the ambient pull.
+    private func activateLocalDefault() {
+        let tag = OllamaCatalog.recommendedTag()
+        // Order: provider + model writes FIRST (recordConsent reads
+        // `activeProvider` for the audit trail), then sync the global model
+        // so ServeManager routes to it, then consent, then notify, then pull.
+        activeProvider = LLMProvider.ollama.rawValue
+        ollamaModel = tag
+        UserDefaults.standard.set(LLMProvider.ollama.rawValue, forKey: "activeProvider")
+        UserDefaults.standard.set(tag, forKey: "llmModel_local")
+        syncGlobalModel(for: .ollama)
+        recordConsent(action: "ollama")
+        NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
+        ollamaDownload.start(tag: tag)
+    }
+
+    /// Continue / Done path. Runs the same decision the Settings "Use this
+    /// provider" toggle makes: if the active provider is local / unconfigured
+    /// and a validated cloud provider exists, activate it via the canonical
+    /// triad. Never overrides a deliberate, working cloud choice. On true
+    /// first run (no validated cloud) it just records consent and keeps the
+    /// cloud default.
+    private func activateChosenCloudProviderIfNeeded() {
+        let statuses = ConsentActivation.cloudStatuses()
+        let target = ConsentActivation.resolve(active: activeProvider, statuses: statuses)
+
+        if let target {
+            activeProvider = target.rawValue
+            UserDefaults.standard.set(target.rawValue, forKey: "activeProvider")
+            syncGlobalModel(for: target)
+        }
+
+        // Record consent on first acknowledgement; re-record when a re-consent
+        // pass actually switches the active provider, so the audit `provider`
+        // field stays truthful (US-7).
+        if !isReviewMode {
+            recordConsent(action: "continue")
+        } else if target != nil {
+            recordConsent(action: "switch")
+        }
+
+        if target != nil {
+            NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
+        }
+    }
+
+    /// Mirror the canonical `syncGlobalModel()` from LLMSettingsView: write the
+    /// newly-active provider's per-provider model into the global `llmModel`
+    /// key so ServeManager injects the right model. Without this the Continue
+    /// path would reproduce the same provider/model mismatch class of bug it
+    /// exists to fix.
+    private func syncGlobalModel(for provider: LLMProvider) {
+        let model = UserDefaults.standard.string(forKey: "llmModel_\(provider.rawValue)")
+            ?? provider.defaultModel
+        UserDefaults.standard.set(model, forKey: "llmModel")
     }
 
     // MARK: - Helpers

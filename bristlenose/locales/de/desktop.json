@@ -374,6 +374,8 @@
     "installingRuntime": "Lokale Laufzeitumgebung wird installiert…",
     "startingRuntime": "Lokale Laufzeitumgebung wird gestartet…",
     "downloadingModel": "%@ wird heruntergeladen…",
+    "finishingUp": "Wird abgeschlossen\u2026",
+    "pullFailedTitle": "Lokales Modell konnte nicht vorbereitet werden",
     "runtimeDidNotStart": "Die lokale Laufzeitumgebung wurde nicht gestartet. Starte Ollama nach der Installation aus „Programme“ und versuche es erneut.",
     "errorNoInternet": "Keine Internetverbindung. Stelle eine Verbindung her und versuche es erneut – Ollama muss das Modell herunterladen.",
     "errorTimedOut": "Zeitüberschreitung der Verbindung. Die Server von Ollama sind möglicherweise gerade langsam; versuche es gleich noch einmal.",

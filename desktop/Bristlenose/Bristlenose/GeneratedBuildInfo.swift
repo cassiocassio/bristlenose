@@ -3,11 +3,11 @@
 import Foundation
 
 enum GeneratedBuildInfo {
-    static let gitBranch = "unify-failure-popover"
-    static let gitSHA = "b9f8fcc"
+    static let gitBranch = "beat3-provider-activation"
+    static let gitSHA = "4018d62"
     static let gitDirty = true
     static let configuration = "Debug"
     static let sandboxEnabled = true
     static let hardenedRuntimeEnabled = false
-    static let buildDate = "2026-05-20T18:24:09Z"
+    static let buildDate = "2026-06-02T17:22:50Z"
 }

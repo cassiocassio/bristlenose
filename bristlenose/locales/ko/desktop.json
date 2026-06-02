@@ -373,6 +373,8 @@
     "installingRuntime": "로컬 런타임 설치 중…",
     "startingRuntime": "로컬 런타임 시작 중…",
     "downloadingModel": "%@ 다운로드 중…",
+    "finishingUp": "\ub9c8\ubb34\ub9ac\ud558\ub294 \uc911\u2026",
+    "pullFailedTitle": "\ub85c\uceec \ubaa8\ub378\uc744 \uc900\ube44\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4",
     "runtimeDidNotStart": "로컬 런타임이 시작되지 않았습니다. Ollama를 설치한 후 응용 프로그램에서 실행하고 다시 시도하세요.",
     "errorNoInternet": "인터넷 연결이 없습니다. 연결한 후 다시 시도하세요 — Ollama가 모델을 다운로드해야 합니다.",
     "errorTimedOut": "연결 시간이 초과되었습니다. Ollama 서버가 느릴 수 있으니 잠시 후 다시 시도하세요.",

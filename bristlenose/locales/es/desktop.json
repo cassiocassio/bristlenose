@@ -374,6 +374,8 @@
     "installingRuntime": "Instalando entorno local…",
     "startingRuntime": "Iniciando entorno local…",
     "downloadingModel": "Descargando %@…",
+    "finishingUp": "Finalizando\u2026",
+    "pullFailedTitle": "No se pudo preparar el modelo local",
     "runtimeDidNotStart": "El entorno local no se inició. Después de instalar Ollama, ábrelo desde Aplicaciones e inténtalo de nuevo.",
     "errorNoInternet": "Sin conexión a Internet. Conéctate e inténtalo de nuevo: Ollama necesita descargar el modelo.",
     "errorTimedOut": "La conexión ha caducado. Los servidores de Ollama pueden estar lentos; inténtalo de nuevo en un momento.",

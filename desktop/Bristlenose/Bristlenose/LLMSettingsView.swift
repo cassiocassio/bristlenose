@@ -314,12 +314,18 @@ struct LLMSettingsView: View {
             validationTasks[selectedProvider] = nil
             applyPresenceAndCache(provider: selectedProvider)
         } else {
-            KeychainHelper.set(provider: keychainKey, value: value)
-            // applyPresenceAndCache will pick up cache for this key (if it's
-            // a re-paste of a previously-validated key) or fall through to
-            // .checking for new keys; kickOffValidation refreshes truth.
-            applyPresenceAndCache(provider: selectedProvider)
-            kickOffValidation(provider: selectedProvider, key: value)
+            // Validate the *persisted* key, never the in-memory value — a green
+            // "Online" must not outrun what actually reached the Keychain. If the
+            // write silently fails (e.g. a future sandbox/entitlement regression),
+            // the read-back mismatches and we reflect real Keychain state instead
+            // of flashing green for a key that isn't stored.
+            let saved = KeychainHelper.set(provider: keychainKey, value: value)
+            if saved, KeychainHelper.get(provider: keychainKey) == value {
+                applyPresenceAndCache(provider: selectedProvider)
+                kickOffValidation(provider: selectedProvider, key: value)
+            } else {
+                applyPresenceAndCache(provider: selectedProvider)
+            }
         }
         NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
     }

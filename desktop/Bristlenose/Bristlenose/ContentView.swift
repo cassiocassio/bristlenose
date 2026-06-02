@@ -173,6 +173,7 @@ struct ContentView: View {
     @EnvironmentObject var toast: ToastStore
     @EnvironmentObject var removalStore: UndoableRemovalStore
     @EnvironmentObject var copyMachinery: CopyMachinery
+    @EnvironmentObject var ollamaDownload: OllamaDownloadModel
     @EnvironmentObject var i18n: I18n
     @AppStorage("appearance") private var appearance: String = "auto"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -318,12 +319,19 @@ struct ContentView: View {
             // can opt in. Never shipped to TestFlight / App Store users.
             // See BuildInfo.swift for the rationale and target format.
             #if DEBUG || BRISTLENOSE_SHOW_DIAGNOSTIC_OVERLAY
+            // Frosted capsule so the diagnostic reads on any background —
+            // including the bright empty/welcome state, where first-run QA
+            // happens and branch-verification from a screenshot matters most.
+            // .thinMaterial + .secondary stay on the system grid (adapts to
+            // light/dark automatically); no off-grid colours or opacities.
             Text(BuildInfo.current.oneLine(sidecar: serveManager.mode?.shortSummary ?? "?"))
                 .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(Color.secondary.opacity(0.6))
+                .foregroundStyle(.secondary)
                 .textSelection(.enabled)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
+                .background(.thinMaterial, in: Capsule())
+                .padding(8)
                 .allowsHitTesting(true)
                 .accessibilityHidden(true)
             #endif
@@ -436,6 +444,7 @@ struct ContentView: View {
                 onDismiss: { showingAIConsent = false }
             )
             .environmentObject(i18n)
+            .environmentObject(ollamaDownload)
             .interactiveDismissDisabled(!aiConsentReviewMode)
         }
         .modifier(CopyDropPresentation(
@@ -1404,6 +1413,11 @@ struct ContentView: View {
         // Copy-in-flight pill — self-hides when copyMachinery.inFlight is nil.
         ToolbarItem(placement: .primaryAction) {
             CopyProgressPill(copyMachinery: copyMachinery)
+        }
+
+        // Ambient local-model pull pill — self-hides when idle.
+        ToolbarItem(placement: .primaryAction) {
+            OllamaDownloadPill(model: ollamaDownload)
         }
     }
 

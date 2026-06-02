@@ -374,6 +374,8 @@
     "installingRuntime": "Installation de l’environnement local…",
     "startingRuntime": "Démarrage de l’environnement local…",
     "downloadingModel": "Téléchargement de %@…",
+    "finishingUp": "Finalisation\u2026",
+    "pullFailedTitle": "Impossible de pr\u00e9parer le mod\u00e8le local",
     "runtimeDidNotStart": "L’environnement local n’a pas démarré. Après avoir installé Ollama, lancez-le depuis Applications et réessayez.",
     "errorNoInternet": "Aucune connexion Internet. Connectez-vous et réessayez — Ollama doit télécharger le modèle.",
     "errorTimedOut": "La connexion a expiré. Les serveurs d’Ollama sont peut-être lents en ce moment ; réessayez dans un instant.",

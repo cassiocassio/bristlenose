@@ -12,6 +12,7 @@
   "buttons": {
     "save": "保存",
     "cancel": "キャンセル",
+    "retry": "\u518d\u8a66\u884c",
     "export": "書き出す",
     "close": "閉じる",
     "copy": "コピー",

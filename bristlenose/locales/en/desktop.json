@@ -374,6 +374,8 @@
     "installingRuntime": "Installing local runtime…",
     "startingRuntime": "Starting local runtime…",
     "downloadingModel": "Downloading %@…",
+    "finishingUp": "Finishing up\u2026",
+    "pullFailedTitle": "Couldn\u2019t prepare the local model",
     "runtimeDidNotStart": "Local runtime didn’t start. After installing Ollama, launch it from Applications and try again.",
     "errorNoInternet": "No internet connection. Connect and try again — Ollama needs to download the model.",
     "errorTimedOut": "The connection timed out. Ollama’s servers may be slow right now; try again in a moment.",

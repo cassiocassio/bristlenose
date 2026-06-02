@@ -294,6 +294,19 @@ enum OllamaCatalog {
     /// floor model. Mirrors the waterfall in
     /// `docs/design-gemma4-local-models.md`.
     static func recommendedTag(forRAMGB ramGB: Double = systemRAMGB) -> String {
+        #if DEBUG
+        // QA convenience: override the RAM-aware pick with a tiny model so the
+        // ambient download pill can be exercised without fetching multi-GB
+        // weights. Opt-in via the scheme's environment — when unset, normal
+        // RAM-aware behaviour applies, so DEBUG analysis-quality QA still runs
+        // the real model. Point it at a tag you don't already have (e.g.
+        // BRISTLENOSE_DEBUG_OLLAMA_TAG=qwen2.5:0.5b, ~400 MB) to guarantee a
+        // genuine, visible download. Never compiled into Release.
+        if let override = ProcessInfo.processInfo.environment["BRISTLENOSE_DEBUG_OLLAMA_TAG"],
+           !override.isEmpty {
+            return override
+        }
+        #endif
         if ramGB >= 47 { return "gemma4:31b" }
         if ramGB >= 35 { return "gemma4:26b" }
         if ramGB >= 15 { return "gemma4:e4b" }

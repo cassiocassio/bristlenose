@@ -373,6 +373,8 @@
     "installingRuntime": "ローカルランタイムをインストール中…",
     "startingRuntime": "ローカルランタイムを起動中…",
     "downloadingModel": "%@ をダウンロード中…",
+    "finishingUp": "\u4ed5\u4e0a\u3052\u4e2d\u2026",
+    "pullFailedTitle": "\u30ed\u30fc\u30ab\u30eb\u30e2\u30c7\u30eb\u3092\u6e96\u5099\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f",
     "runtimeDidNotStart": "ローカルランタイムが起動しませんでした。Ollamaをインストールした後、アプリケーションから起動してもう一度お試しください。",
     "errorNoInternet": "インターネット接続がありません。接続してから再試行してください — Ollamaがモデルをダウンロードする必要があります。",
     "errorTimedOut": "接続がタイムアウトしました。Ollamaのサーバが遅い可能性があります。しばらくしてから再試行してください。",

@@ -11,9 +11,6 @@ import Foundation
 /// Until ServeManager grows a `Process` protocol seam for full mock-driven
 /// teardown coverage, this suite asserts the cheap-but-load-bearing path:
 /// shutdown on an already-idle manager leaves the invariants intact.
-///
-/// NOTE: BristlenoseTests target is not wired into Xcode yet (qa-backlog).
-/// These tests are aspirational reference code that compiles standalone.
 @Suite("ServeManager.shutdown invariants")
 @MainActor
 struct ServeManagerShutdownTests {

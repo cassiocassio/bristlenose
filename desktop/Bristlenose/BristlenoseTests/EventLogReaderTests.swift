@@ -253,9 +253,16 @@ struct EventLogReaderTests {
         defer { try? FileManager.default.removeItem(at: dir) }
         writeEventLog(in: dir, lines: [runStartedLine()])
         // Write a PID file pointing at this test process so liveness check passes.
+        // start_time uses the same libproc query the production code reads with —
+        // a `proc_pidinfo(PROC_PIDTBSDINFO)` "<tvsec>.<tvusec>" token, byte-identical
+        // to what Python's run_lifecycle._ps_start_time writes on macOS. Deterministic
+        // and sandbox-safe (no /bin/ps subprocess).
         let pidURL = dir.appendingPathComponent(EventLogReader.pidFilename)
-        let lstart = lstartForCurrentProcess() ?? "fallback"
-        let body = "{\"pid\":\(getpid()),\"start_time\":\"\(lstart)\",\"run_id\":\"X\"}"
+        guard let start = EventLogReader.procStartTime(pid: getpid()) else {
+            Issue.record("procStartTime(getpid()) returned nil — libproc query failed")
+            return
+        }
+        let body = "{\"pid\":\(getpid()),\"start_time\":\"\(start)\",\"run_id\":\"X\"}"
         try? body.data(using: .utf8)?.write(to: pidURL, options: .atomic)
         let result = EventLogReader.deriveState(
             eventsURL: dir.appendingPathComponent(EventLogReader.filename),
@@ -266,19 +273,6 @@ struct EventLogReaderTests {
             Issue.record("expected .running, got \(String(describing: result))")
             return
         }
-    }
-
-    private func lstartForCurrentProcess() -> String? {
-        let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: "/bin/ps")
-        proc.arguments = ["-o", "lstart=", "-p", String(getpid())]
-        let pipe = Pipe()
-        proc.standardOutput = pipe
-        do { try proc.run() } catch { return nil }
-        proc.waitUntilExit()
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        return String(data: data, encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     // MARK: - v5 PipelineSummary routing (Finding 7)

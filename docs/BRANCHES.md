@@ -177,7 +177,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/locales/`
 
 **Potential conflicts with other branches:**
-- **`pipeline-view-v1-5` — HEAVY overlap.** Both live in `bristlenose/pipeline_view/` and edit the same surface files: `SettingsModal.tsx` (`PipelineSection`), `theme/organisms/settings.css`, `tests/fixtures/pipeline-view-contract.json`, and the locale files. v1-5 takes the contract fixture to schema v2 (additive); this branch takes it v3→v4. Both forked from `main`, not from each other — whichever merges second will need to rebase and reconcile the catalogue/render/contract changes. Coordinate merge order; keep locale keys distinct and use targeted text-replace (never `json.dump` round-trip).
+- **`pipeline-view-v1-5` — NOT a live conflict (stale, abandonable).** Its work was rescued into `pipeline-view-v1-9`, which merged to main 30 May. The v1-5 branch ref (`8a21aed`) is an ancestor of main and contributes zero unmerged commits; its worktree holds only untracked scaffolding. This branch builds on the pipeline_view foundation **already shipped in main** (catalogue/eligibility/host/render present; contract fixture at schema_version 3), so the "overlap" is just normal extension of existing code, not a merge-order race. v1-5 can be `/close-branch`'d / left behind with nothing lost.
 - `beat3-provider-activation` / `gemini-provider` — touch the same 6 locale files but on the desktop `desktop.json` keys / Swift surface; keep keys distinct, mechanical merge.
 
 ---

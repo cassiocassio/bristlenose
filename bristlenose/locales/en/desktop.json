@@ -298,10 +298,10 @@
     "localItem3": "Your edits, tags, and report customisations",
     "localSummary": "Data that stays on your device: recordings, personal details, and your edits",
     "providersIntro": "Cloud providers that may process your data:",
-    "ollamaCallout": "Ollama runs entirely on your device. No data leaves your machine.",
-    "researcherResponsibility": "Ensure participants have been informed that their interview data may be processed by third-party AI services, as required by your research ethics approval.",
+    "researcherResponsibility": "Inform participants their interview data may be processed by third-party AI services, as required.",
     "continue": "Continue",
-    "useOllama": "Use Ollama Instead (No Cloud)",
+    "useOllama": "Use Ollama model on-device",
+    "ollamaDownloadSize": "~%@ download",
     "done": "Done"
   },
   "llmSettings": {

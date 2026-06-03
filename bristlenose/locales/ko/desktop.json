@@ -297,10 +297,10 @@
     "localItem3": "편집, 태그 및 보고서 사용자 지정",
     "localSummary": "기기에 보관되는 데이터: 녹음, 개인 정보, 편집 내용",
     "providersIntro": "데이터를 처리할 수 있는 클라우드 제공업체:",
-    "ollamaCallout": "Ollama는 기기에서 완전히 실행됩니다. 데이터가 기기를 벗어나지 않습니다.",
-    "researcherResponsibility": "연구 윤리 승인에 따라 참여자에게 인터뷰 데이터가 제3자 AI 서비스에 의해 처리될 수 있음을 알렸는지 확인하세요.",
+    "researcherResponsibility": "필요에 따라 참가자에게 인터뷰 데이터가 제3자 AI 서비스에서 처리될 수 있음을 알리세요.",
     "continue": "계속",
-    "useOllama": "Ollama 사용 (클라우드 없음)",
+    "useOllama": "기기에서 Ollama 모델 사용",
+    "ollamaDownloadSize": "~%@ 다운로드",
     "done": "완료"
   },
   "llmSettings": {

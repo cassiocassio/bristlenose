@@ -44,7 +44,6 @@ struct AIConsentView: View {
             sentToCloudBox
             staysLocalBox
             providersRow
-            ollamaCallout
             responsibilityText
 
             Spacer(minLength: 8)
@@ -130,20 +129,6 @@ struct AIConsentView: View {
         }
     }
 
-    // MARK: - Ollama callout
-
-    private var ollamaCallout: some View {
-        HStack(spacing: 8) {
-            Image(systemName: LLMProvider.ollama.iconName)
-                .foregroundStyle(.green)
-            Text(i18n.t("desktop.aiConsent.ollamaCallout"))
-                .font(.callout)
-        }
-        .padding(8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.green.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
-    }
-
     // MARK: - Researcher responsibility
 
     private var responsibilityText: some View {
@@ -155,15 +140,26 @@ struct AIConsentView: View {
     // MARK: - Buttons
 
     private var buttonBar: some View {
-        HStack {
+        HStack(alignment: .firstTextBaseline) {
             // Stay local: apply the RAM-aware default model, activate Ollama,
             // and pull the model ambiently (toolbar pill) — no blocking
             // picker. Micro-prefs (model choice, temperature) live in Settings.
-            Button(i18n.t("desktop.aiConsent.useOllama")) {
-                activateLocalDefault()
-                onDismiss()
+            // The size hint under the button discloses the multi-GB first-run
+            // pull before the click (replacing the line the removed
+            // OllamaSetupSheet used to show).
+            VStack(alignment: .leading, spacing: 2) {
+                Button(i18n.t("desktop.aiConsent.useOllama")) {
+                    activateLocalDefault()
+                    onDismiss()
+                }
+                .buttonStyle(.borderless)
+
+                if let sizeHint = ollamaDownloadSizeHint {
+                    Text(sizeHint)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
-            .buttonStyle(.borderless)
 
             Spacer()
 
@@ -178,6 +174,16 @@ struct AIConsentView: View {
         }
     }
 
+    /// Approximate first-run download size for the RAM-aware default model,
+    /// e.g. "~3 GB download". Nil for tags outside the curated catalog (a
+    /// DEBUG tag override), so the hint simply doesn't render.
+    private var ollamaDownloadSizeHint: String? {
+        guard let model = OllamaCatalog.model(for: OllamaCatalog.recommendedTag())
+        else { return nil }
+        let size = "\(Int(model.weightsGB)) GB"
+        return String(format: i18n.t("desktop.aiConsent.ollamaDownloadSize"), size)
+    }
+
     // MARK: - Activation
 
     /// Stay-local path. Resolves the RAM-aware default, activates Ollama via
@@ -190,11 +196,11 @@ struct AIConsentView: View {
         // so ServeManager routes to it, then consent, then notify, then pull.
         activeProvider = LLMProvider.ollama.rawValue
         ollamaModel = tag
-        UserDefaults.standard.set(LLMProvider.ollama.rawValue, forKey: "activeProvider")
-        UserDefaults.standard.set(tag, forKey: "llmModel_local")
         syncGlobalModel(for: .ollama)
         recordConsent(action: "ollama")
         NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
+        // Re-entry safe: start(tag:) cancels any in-flight pull before
+        // launching, so a double-tap before dismissal can't race two pulls.
         ollamaDownload.start(tag: tag)
     }
 
@@ -210,7 +216,6 @@ struct AIConsentView: View {
 
         if let target {
             activeProvider = target.rawValue
-            UserDefaults.standard.set(target.rawValue, forKey: "activeProvider")
             syncGlobalModel(for: target)
         }
 

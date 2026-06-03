@@ -298,10 +298,10 @@
     "localItem3": "Sus ediciones, etiquetas y personalizaciones del informe",
     "localSummary": "Datos que permanecen en su dispositivo: grabaciones, datos personales y sus ediciones",
     "providersIntro": "Proveedores en la nube que pueden procesar sus datos:",
-    "ollamaCallout": "Ollama se ejecuta completamente en su dispositivo. Ningún dato sale de su máquina.",
-    "researcherResponsibility": "Asegúrese de que los participantes hayan sido informados de que sus datos de entrevista pueden ser procesados por servicios de IA de terceros, según lo requiera la aprobación de su comité de ética.",
+    "researcherResponsibility": "Informe a los participantes de que sus datos de entrevista pueden ser procesados por servicios de IA de terceros, según sea necesario.",
     "continue": "Continuar",
-    "useOllama": "Usar Ollama (sin nube)",
+    "useOllama": "Usar modelo Ollama en el dispositivo",
+    "ollamaDownloadSize": "~%@ de descarga",
     "done": "Listo"
   },
   "llmSettings": {

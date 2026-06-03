@@ -298,10 +298,10 @@
     "localItem3": "Ihre Bearbeitungen, Tags und Berichtsanpassungen",
     "localSummary": "Daten, die auf Ihrem Gerät verbleiben: Aufnahmen, persönliche Daten und Ihre Bearbeitungen",
     "providersIntro": "Cloud-Anbieter, die Ihre Daten verarbeiten können:",
-    "ollamaCallout": "Ollama läuft vollständig auf Ihrem Gerät. Keine Daten verlassen Ihren Computer.",
-    "researcherResponsibility": "Stellen Sie sicher, dass die Teilnehmer darüber informiert wurden, dass ihre Interviewdaten von KI-Diensten Dritter verarbeitet werden können, wie von Ihrer Ethikkommission gefordert.",
+    "researcherResponsibility": "Informieren Sie die Teilnehmer, dass ihre Interviewdaten von KI-Diensten Dritter verarbeitet werden können, sofern erforderlich.",
     "continue": "Fortfahren",
-    "useOllama": "Ollama verwenden (ohne Cloud)",
+    "useOllama": "Ollama-Modell auf dem Gerät verwenden",
+    "ollamaDownloadSize": "~%@ Download",
     "done": "Fertig"
   },
   "llmSettings": {

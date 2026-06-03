@@ -298,10 +298,10 @@
     "localItem3": "Vos modifications, étiquettes et personnalisations du rapport",
     "localSummary": "Données qui restent sur votre appareil : enregistrements, données personnelles et vos modifications",
     "providersIntro": "Fournisseurs cloud susceptibles de traiter vos données :",
-    "ollamaCallout": "Ollama s'exécute entièrement sur votre appareil. Aucune donnée ne quitte votre machine.",
-    "researcherResponsibility": "Assurez-vous que les participants ont été informés que leurs données d'entretien peuvent être traitées par des services d'IA tiers, conformément à l'approbation de votre comité d'éthique.",
+    "researcherResponsibility": "Informez les participants que leurs données d'entretien peuvent être traitées par des services d'IA tiers, comme requis.",
     "continue": "Continuer",
-    "useOllama": "Utiliser Ollama (sans cloud)",
+    "useOllama": "Utiliser un modèle Ollama sur l'appareil",
+    "ollamaDownloadSize": "~%@ à télécharger",
     "done": "Terminé"
   },
   "llmSettings": {

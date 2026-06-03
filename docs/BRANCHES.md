@@ -43,6 +43,12 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch beat3-provider-activation/` | `beat3-provider-activation` | bugfix | Fix AI-consent sheet provider activation (Continue → first validated cloud; Use Ollama → RAM default + ambient pull) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 
+> ⚠️ **MERGE-ORDER COORDINATION — `gemini-provider` ↔ `beat3-provider-activation`** (analysed 2 Jun 2026)
+> These two share `LLMProvider.swift` (different regions — auto-merges) and the 6 `common.json` locale files (different keys — mechanical). They're independent; **no hard dependency.**
+> **Before merging either**, know:
+> 1. **Never re-fork / rebase `gemini-provider` onto `beat3-provider-activation`.** beat3 has ZERO commits — its ref is *behind* main; you'd lose main and inherit none of beat3's (uncommitted) work. Rebase gemini onto **main** only.
+> 2. **Prefer merging `beat3` to main FIRST** (bugfix, further along, owns the locale churn), then `gemini` rebases onto main and adds its one "Data use" key + Gemini-enum fix. **Reverse order also works** — beat3 then resolves the trivial overlap.
+> Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
 
 
 

@@ -4,12 +4,6 @@ import Testing
 @testable import Bristlenose
 
 /// Unit tests for `LLMValidator`'s pure functions and verdict cache.
-///
-/// **Aspirational reference** — `BristlenoseTests/` is not wired into the
-/// Xcode target as of 29 Apr 2026 (see `desktop/CLAUDE.md` "Test target
-/// setup"). This file compiles standalone and is ready to run the moment
-/// the target line lands; until then it serves as documented intent for
-/// what coverage looks like.
 @MainActor
 @Suite("LLMValidator")
 struct LLMValidatorTests {

@@ -137,8 +137,13 @@ struct ProjectIndexTests {
 
         let folder = index.addFolder(name: "F")
         let rootProject = index.addProject(name: "Root", path: "/tmp/root")
-        let rootPosBefore = rootProject.position
-        let folderPosBefore = folder.position
+        // Capture positions live from the index AFTER setup — the root-scope
+        // addProject above legitimately bumped the folder's position (folders
+        // are root-scoped). The snapshot returned by addFolder is stale by now;
+        // we want the positions as they stand immediately before the operation
+        // under test (the intoFolder insert).
+        let rootPosBefore = index.projects.first { $0.id == rootProject.id }?.position
+        let folderPosBefore = index.folders.first { $0.id == folder.id }?.position
 
         index.addProject(name: "InFolder", path: "/tmp/in", intoFolder: folder.id)
 

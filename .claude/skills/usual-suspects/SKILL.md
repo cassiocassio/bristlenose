@@ -97,6 +97,7 @@ Check which areas are touched (file extensions, directory prefixes, content):
 | `desktop/`, `.swift` files, macOS/HIG mentioned | `what-would-gruber-say` |
 | `.ts`/`.tsx`/`.css`, `package.json`, server, pipeline, or perf-sensitive | `perf-review` |
 | Test files touched, new public API without tests, or any `.swift` change | `what-would-james-bach-say` (see three-way selector below) |
+| try/except or catch blocks, fallback logic, subprocess/shellouts, JSON serialization, or E2E/Playwright specs touched | `silent-failure-hunter` |
 
 **`code-review` always runs.** The others run only if their area is touched.
 

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 3 Jun 2026 (started `pipeline-view-models`)
+**Updated:** 3 Jun 2026 (started `pipeline-view-models`; closed + deleted `pipeline-view-v1-5`)
 
 ---
 
@@ -39,7 +39,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
-| `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
 | `bristlenose_branch beat3-provider-activation/` | `beat3-provider-activation` | bugfix | Fix AI-consent sheet provider activation (Continue → first validated cloud; Use Ollama → RAM default + ambient pull) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 | `bristlenose_branch pipeline-view-models/` | `pipeline-view-models` | feature | Extend pipeline-view catalogue from provider grain to provider→model hierarchy; sectioned-flat matrix with two-glyph columns + Why column; schema v3→v4 (additive read, llm_summary deletion on write) |
@@ -144,7 +143,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
-| `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
 | `beat3-provider-activation` | `bristlenose_branch beat3-provider-activation/` | local only |
 | `pipeline-view-models` | `bristlenose_branch pipeline-view-models/` | local only |
 
@@ -177,7 +175,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/locales/`
 
 **Potential conflicts with other branches:**
-- **`pipeline-view-v1-5` — NOT a live conflict (stale, abandonable).** Its work was rescued into `pipeline-view-v1-9`, which merged to main 30 May. The v1-5 branch ref (`8a21aed`) is an ancestor of main and contributes zero unmerged commits; its worktree holds only untracked scaffolding. This branch builds on the pipeline_view foundation **already shipped in main** (catalogue/eligibility/host/render present; contract fixture at schema_version 3), so the "overlap" is just normal extension of existing code, not a merge-order race. v1-5 can be `/close-branch`'d / left behind with nothing lost.
+- **None on the pipeline_view surface.** This branch builds on the pipeline_view foundation **already shipped in main** (catalogue/eligibility/host/render present via v1-5/v1-9; contract fixture at schema_version 3). v1-5 and v1-9 are both merged and deleted — normal extension of existing code, no live race.
 - `beat3-provider-activation` / `gemini-provider` — touch the same 6 locale files but on the desktop `desktop.json` keys / Swift surface; keep keys distinct, mechanical merge.
 
 ---
@@ -203,34 +201,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - None active on the desktop Swift surface right now. `pipeline-view-v1-5` is Python/React only — no overlap.
-
----
-
-### `pipeline-view-v1-5`
-
-**Kind:** feature — code intended for main; extends the v1 Pipeline view with a per-stage Alternatives column. Ends in merge or PR-and-squash.
-**Status:** Just started
-**Started:** 18 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-view-v1-5/`
-**Remote:** local only (push when ready)
-
-**What it does:** Extend the read-only Pipeline view (v1) with a per-stage "Alternatives" surface — for every stage, render the other backends that *could* run it on this host, with ✓/✗ availability flags and a one-line reason on ✗. Read-only; quality ratings (●/○/⚠/✗) deferred to v1.9, auto-pick to v2, per-stage overrides to v3. **The point is the data-model rung:** v1.5 encodes the full eligibility space per stage (catalogue of `BackendOption` + `Requirement` predicates against `HostFacts` + `BristlenoseSettings`) that the v2 resolver and v3 overrides will both consume. When Apple FM ships a research-viable on-device model post-WWDC, the work is "edit one catalogue cell + verify a host predicate," not "build a resolver from scratch." See `HANDOFF.md` for the full brief.
-
-**Files this branch will touch:**
-- New: `bristlenose/pipeline_view/eligibility.py` — `check_requirement` + `evaluate_backend` pure functions
-- Modified: `bristlenose/pipeline_view/catalogue.py` — add `Requirement`, `BackendOption`, populate `viable_backends`
-- Modified: `bristlenose/pipeline_view/host.py` — add `os_version`, `installed_packages` fields + probes
-- Modified: `bristlenose/pipeline_view/render.py` — `BackendAvailability` type, `alternatives` field, sort logic
-- Modified: `bristlenose/pipeline_view/cli.py` — Alternatives sub-line rendering
-- Modified: `frontend/src/components/SettingsModal.tsx` `PipelineSection` — alternatives list render
-- Modified: `bristlenose/theme/organisms/settings.css` — `.bn-pipeline-alternatives` styling
-- Modified: `tests/fixtures/pipeline-view-contract.json` — schema v1 → v2 (additive)
-- New: `tests/pipeline_view/test_eligibility.py`, `test_alternatives.py`
-- Modified: 6 locale files — `pipeline.alternatives` heading only
-
-**Potential conflicts with other branches:**
-- `pipeline-view-v1` — direct parent; v1.5 lives in the same `bristlenose/pipeline_view/` package and edits files v1 introduces. Don't start v1.5 work until v1 merges, or be ready to rebase.
-- `pipeline-subtitle-i18n` — touches the 6 `common.json` locale files. Keep keys distinct (`pipeline.alternatives.*`) and use targeted text-replace, never `json.dump` round-trip.
 
 ---
 
@@ -332,6 +302,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `pipeline-view-v1-5` — merged (via PR #115, 25 May 2026); worktree + branch deleted 3 Jun 2026
+
+Per-stage Alternatives surface (✓/✗ eligibility + one-line reasons) — the data-model rung the v2 resolver / v3 overrides consume. Work landed on `main` via PR #115; v1-9 stacked on top and also merged. Branch ref (`8a21aed`) was an ancestor of main (zero unmerged commits) — confirmed nothing lost. Worktree directory deleted from disk; stale worktree ref pruned and merged branch `git branch -d`'d 3 Jun 2026.
 
 ### `pipeline-view-v1-9` — merged 30 May 2026
 

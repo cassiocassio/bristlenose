@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 30 May 2026 (closed `pipeline-view-v1-9`)
+**Updated:** 3 Jun 2026 (started `pipeline-view-models`)
 
 ---
 
@@ -42,6 +42,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
 | `bristlenose_branch beat3-provider-activation/` | `beat3-provider-activation` | bugfix | Fix AI-consent sheet provider activation (Continue → first validated cloud; Use Ollama → RAM default + ambient pull) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
+| `bristlenose_branch pipeline-view-models/` | `pipeline-view-models` | feature | Extend pipeline-view catalogue from provider grain to provider→model hierarchy; sectioned-flat matrix with two-glyph columns + Why column; schema v3→v4 (additive read, llm_summary deletion on write) |
 
 > ⚠️ **MERGE-ORDER COORDINATION — `gemini-provider` ↔ `beat3-provider-activation`** (analysed 2 Jun 2026)
 > These two share `LLMProvider.swift` (different regions — auto-merges) and the 6 `common.json` locale files (different keys — mechanical). They're independent; **no hard dependency.**
@@ -145,6 +146,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
 | `beat3-provider-activation` | `bristlenose_branch beat3-provider-activation/` | local only |
+| `pipeline-view-models` | `bristlenose_branch pipeline-view-models/` | local only |
 
 
 
@@ -152,6 +154,31 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `pipeline-view-models`
+
+**Kind:** feature — extends the read-only Pipeline view from provider grain to a provider→model hierarchy; ends in merge to main.
+**Status:** Just started
+**Started:** 3 Jun 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-view-models/`
+**Remote:** local only (push when ready)
+
+**What it does:** Extends the pipeline-view catalogue from provider grain to a provider→model hierarchy. Sectioned-flat matrix render with two-glyph columns and a Why column; ~5-model curated minimum. Read-only. Schema v3→v4 (additive on read; `llm_summary` deletion on write). Paves the way for per-stage overrides + picker UX in a later branch. See `HANDOFF.md` for the full brief.
+
+**Files this branch will touch:**
+- `bristlenose/pipeline_view/`
+- `bristlenose/ollama.py`
+- `frontend/src/components/SettingsModal.tsx`
+- `bristlenose/theme/organisms/settings.css`
+- `tests/pipeline_view/`
+- `tests/fixtures/pipeline-view-contract.json`
+- `bristlenose/locales/`
+
+**Potential conflicts with other branches:**
+- **`pipeline-view-v1-5` — HEAVY overlap.** Both live in `bristlenose/pipeline_view/` and edit the same surface files: `SettingsModal.tsx` (`PipelineSection`), `theme/organisms/settings.css`, `tests/fixtures/pipeline-view-contract.json`, and the locale files. v1-5 takes the contract fixture to schema v2 (additive); this branch takes it v3→v4. Both forked from `main`, not from each other — whichever merges second will need to rebase and reconcile the catalogue/render/contract changes. Coordinate merge order; keep locale keys distinct and use targeted text-replace (never `json.dump` round-trip).
+- `beat3-provider-activation` / `gemini-provider` — touch the same 6 locale files but on the desktop `desktop.json` keys / Swift surface; keep keys distinct, mechanical merge.
 
 ---
 

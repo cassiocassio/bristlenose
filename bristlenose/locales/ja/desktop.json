@@ -241,10 +241,10 @@
     "localItem3": "編集内容、タグ、レポートのカスタマイズ",
     "localSummary": "デバイス内に保持されるデータ: 録音データ、個人情報、編集内容",
     "providersIntro": "データを処理する可能性のあるクラウドプロバイダ:",
-    "ollamaCallout": "Ollama はすべてデバイス内で動作します。データがマシンの外に出ることはありません。",
-    "researcherResponsibility": "研究倫理の承認に基づき、参加者のインタビューデータが第三者の AI サービスで処理される可能性があることを参加者に通知してください。",
+    "researcherResponsibility": "必要に応じて、インタビューデータが第三者の AI サービスで処理される可能性があることを参加者に通知してください。",
     "continue": "続ける",
-    "useOllama": "代わりに Ollama を使用 (クラウドなし)",
+    "useOllama": "デバイス上で Ollama モデルを使用",
+    "ollamaDownloadSize": "~%@ をダウンロード",
     "done": "完了"
   },
   "pipeline": {

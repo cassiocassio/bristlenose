@@ -44,6 +44,14 @@ struct ConsentActivationTests {
 
     // MARK: - Ordering determinism with multiple validated clouds
 
+    @Test func cloudProviderOrder_isClaudeChatGPTGeminiAzure() {
+        // Pins the order `resolve` depends on. If `LLMProvider.allCases` is
+        // reordered, this fails loudly rather than silently rotting the
+        // determinism tests below.
+        #expect(LLMProvider.allCases.filter(\.needsAPIKey)
+                == [.claude, .chatGPT, .gemini, .azure])
+    }
+
     @Test func localActive_multipleOnline_returnsFirstByAllCasesOrder() {
         // allCases order: claude, chatGPT, gemini, azure → claude wins.
         let result = ConsentActivation.resolve(

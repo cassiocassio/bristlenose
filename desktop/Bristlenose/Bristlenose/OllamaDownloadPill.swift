@@ -21,6 +21,8 @@ struct OllamaDownloadPill: View {
                 pillBody
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(statusText)
+            .accessibilityValue(accessibilityValueText)
             .popover(isPresented: $showingDetail, arrowEdge: .bottom) {
                 detailPopover
             }
@@ -48,9 +50,9 @@ struct OllamaDownloadPill: View {
     @ViewBuilder
     private var icon: some View {
         if case .failed = model.phase {
-            Image(systemName: "exclamationmark.triangle.fill")
+            Image(systemName: "xmark.circle.fill")
                 .imageScale(.small)
-                .foregroundStyle(.orange)
+                .foregroundStyle(.red)
         } else {
             Image(systemName: "arrow.down.circle")
                 .imageScale(.small)
@@ -139,6 +141,15 @@ struct OllamaDownloadPill: View {
         case .idle:
             return ""
         }
+    }
+
+    /// VoiceOver value: download percentage while a determinate pull is in
+    /// flight; empty otherwise (the label alone carries indeterminate phases).
+    private var accessibilityValueText: String {
+        if case .downloading = model.phase, model.totalBytes > 0 {
+            return model.downloadRatio.formatted(.percent.precision(.fractionLength(0)))
+        }
+        return ""
     }
 
     /// Humanised model name from the catalog (e.g. "Gemma 4 E4B"), falling

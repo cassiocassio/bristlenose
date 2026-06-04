@@ -60,6 +60,10 @@
         "quality": "Qualit\u00e4t",
         "notes": "Hinweise"
       },
+      "key": {
+        "italic_label": "kursiv",
+        "synthesised": "aus Ihren Einstellungen, nicht aus unserem Katalog"
+      },
       "qualifier": {
         "default": "Standard",
         "current": "aktuell",
@@ -73,7 +77,7 @@
           "avoid": "vermeiden \u2014 Qualit\u00e4t zu niedrig",
           "untested": "ungetestet"
         },
-        "untested": "ungetestet \u2013 noch keine redaktionelle Einsch\u00e4tzung",
+        "untested": "ungetestet",
         "local_speaker_id_acceptable": "Lokale Modelle bew\u00e4ltigen die Sprechererkennung gut",
         "local_topic_segmentation_acceptable": "Lokale Modelle bew\u00e4ltigen die Themensegmentierung gut",
         "local_quote_extraction_miss_rate": "kleine Modelle \u00fcbersehen mehrteilige Zitate",

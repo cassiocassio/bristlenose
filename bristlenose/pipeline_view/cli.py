@@ -53,7 +53,7 @@ _REASON_TEXT: dict[str, str] = {
 # English fallback for the editorial quality notes (Why column). Mirrors the
 # `pipeline.quality.*` keys in the locale files.
 _NOTE_TEXT: dict[str, str] = {
-    "pipeline.quality.untested": "untested — no editorial signal yet",
+    "pipeline.quality.untested": "untested",
     "pipeline.quality.local_speaker_id_acceptable": (
         "Local models handle speaker identification well"
     ),

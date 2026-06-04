@@ -223,6 +223,63 @@
     width: 100%;
     border-collapse: collapse;
     font-size: var(--bn-text-label);
+    /* Fixed layout + shared colgroup widths so the 4 columns line up across
+       every stage table (transcription / anonymisation match the LLM tables),
+       letting the eye scan all four columns straight down the page. */
+    table-layout: fixed;
+}
+
+.bn-pipeline-col-model {
+    width: 40%;
+}
+
+.bn-pipeline-col-avail,
+.bn-pipeline-col-quality {
+    width: 2.5em;
+}
+
+/* .bn-pipeline-col-notes takes the remaining width (no explicit rule). */
+
+/* Symbol key — compact legend above the tables. Availability / Quality
+   subheadings group their glyphs; glyphs reuse the table colour classes so
+   the legend's marks match the cells exactly. */
+.bn-pipeline-key {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bn-space-xs);
+    margin: var(--bn-space-sm) 0 var(--bn-space-md);
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+}
+
+.bn-pipeline-key-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--bn-space-xs) var(--bn-space-md);
+}
+
+.bn-pipeline-key-label {
+    font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.bn-pipeline-key-item {
+    white-space: nowrap;
+}
+
+/* Visible column header — first table only (Model / Notes labels). */
+.bn-pipeline-col-head {
+    text-align: left;
+    font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0 var(--bn-space-md) var(--bn-space-xs);
 }
 
 .bn-pipeline-provider-heading th {
@@ -237,6 +294,14 @@
     font-weight: var(--bn-weight-normal);
     color: var(--bn-colour-text);
     padding: var(--bn-space-xs) var(--bn-space-md);
+}
+
+/* Collapsed-provider rows (no model granularity, or all-unavailable) render at
+   provider level — bold + flush-left, peers of the expanded provider heading —
+   so ChatGPT / Gemini / MLX read as backends, not Claude's children. */
+.bn-pipeline-row-name-provider {
+    font-weight: var(--bn-weight-strong);
+    padding-left: var(--bn-space-xs);
 }
 
 .bn-pipeline-avail-cell,
@@ -298,10 +363,25 @@
     font-style: italic;
 }
 
-/* Current dispatch row — neutral emphasis only; the (current) badge carries the
-   textual signal, weight reinforces without introducing a new colour. */
+/* Current dispatch row — the selection wash used app-wide for selected quotes
+   & signal cards (.bn-selected): --bn-selection-* tokens + accent leading edge.
+   Read-only here ("in use") rather than user-selected, but visually coherent. */
+.bn-pipeline-model-row[aria-current="true"] {
+    background: var(--bn-selection-bg);
+}
+
 .bn-pipeline-model-row[aria-current="true"] .bn-pipeline-row-name {
-    font-weight: var(--bn-weight-emphasis);
+    box-shadow: inset 2px 0 0 var(--bn-selection-border);
+}
+
+/* Inactive window — selection recedes to grey (macOS convention), matching
+   the .bn-selected behaviour in atoms/interactive.css. */
+.bn-window-inactive .bn-pipeline-model-row[aria-current="true"] {
+    background: var(--bn-selection-bg-inactive);
+}
+
+.bn-window-inactive .bn-pipeline-model-row[aria-current="true"] .bn-pipeline-row-name {
+    box-shadow: inset 2px 0 0 var(--bn-selection-border-inactive);
 }
 
 .bn-pipeline-host {

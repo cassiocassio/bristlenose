@@ -60,6 +60,10 @@
         "quality": "\u54c1\u8cea",
         "notes": "\u5099\u8003"
       },
+      "key": {
+        "italic_label": "\u659c\u4f53",
+        "synthesised": "\u30ab\u30bf\u30ed\u30b0\u3067\u306f\u306a\u304f\u8a2d\u5b9a\u304b\u3089"
+      },
       "qualifier": {
         "default": "\u30c7\u30d5\u30a9\u30eb\u30c8",
         "current": "\u73fe\u5728",
@@ -73,7 +77,7 @@
           "avoid": "\u975e\u63a8\u5968 \u2014 \u54c1\u8cea\u304c\u4f4e\u3059\u304e\u307e\u3059",
           "untested": "\u672a\u691c\u8a3c"
         },
-        "untested": "\u672a\u691c\u8a3c \u2014 \u307e\u3060\u7de8\u96c6\u8a55\u4fa1\u304c\u3042\u308a\u307e\u305b\u3093",
+        "untested": "\u672a\u691c\u8a3c",
         "local_speaker_id_acceptable": "\u30ed\u30fc\u30ab\u30eb\u30e2\u30c7\u30eb\u306f\u8a71\u8005\u8b58\u5225\u3092\u9069\u5207\u306b\u51e6\u7406\u3057\u307e\u3059",
         "local_topic_segmentation_acceptable": "\u30ed\u30fc\u30ab\u30eb\u30e2\u30c7\u30eb\u306f\u30c8\u30d4\u30c3\u30af\u5206\u5272\u3092\u9069\u5207\u306b\u51e6\u7406\u3057\u307e\u3059",
         "local_quote_extraction_miss_rate": "\u5c0f\u3055\u306a\u30e2\u30c7\u30eb\u306f\u8907\u6570\u7bc0\u306e\u5f15\u7528\u3092\u898b\u843d\u3068\u3057\u307e\u3059",

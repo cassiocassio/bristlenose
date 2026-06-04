@@ -60,6 +60,10 @@
         "quality": "Calidad",
         "notes": "Notas"
       },
+      "key": {
+        "italic_label": "cursiva",
+        "synthesised": "de tu configuraci\u00f3n, no de nuestro cat\u00e1logo"
+      },
       "qualifier": {
         "default": "predeterminado",
         "current": "actual",
@@ -73,7 +77,7 @@
           "avoid": "evitar \u2014 calidad demasiado baja",
           "untested": "sin probar"
         },
-        "untested": "sin probar: a\u00fan no hay valoraci\u00f3n editorial",
+        "untested": "sin probar",
         "local_speaker_id_acceptable": "Los modelos locales gestionan bien la identificaci\u00f3n de hablantes",
         "local_topic_segmentation_acceptable": "Los modelos locales gestionan bien la segmentaci\u00f3n por temas",
         "local_quote_extraction_miss_rate": "los modelos peque\u00f1os omiten citas de varias cl\u00e1usulas",

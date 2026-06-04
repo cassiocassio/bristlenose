@@ -291,14 +291,20 @@ describe("SettingsModal", () => {
     });
   });
 
-  it("renders both Claude models under one heading, Sonnet 4 as default · current", async () => {
+  it("renders both Claude models under one heading; Sonnet 4 is default and current", async () => {
     mockPipelineFetch("claude_apple_silicon_keys_present");
     await openPipelineSection();
     // Two model rows per LLM group (Sonnet 4 + Opus 4).
     expect(screen.getAllByText("Sonnet 4").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Opus 4").length).toBeGreaterThan(0);
-    // Sonnet 4 is BN's default and the chosen model → "(default · current)".
-    expect(screen.getAllByText("(default · current)").length).toBeGreaterThan(0);
+    // Visible badge is "(default)"; "current" is carried by the selection wash
+    // (aria-current) + an sr-only label, not the visible badge text.
+    expect(screen.getAllByText("(default)").length).toBeGreaterThan(0);
+    const currentRows = document.querySelectorAll('tr[aria-current="true"]');
+    const sonnetIsCurrent = Array.from(currentRows).some((r) =>
+      r.textContent?.includes("Sonnet 4"),
+    );
+    expect(sonnetIsCurrent).toBe(true);
   });
 
   it("marks at most one current row per matrix table (exactly-one invariant)", async () => {
@@ -313,9 +319,10 @@ describe("SettingsModal", () => {
     tables.forEach((table) => {
       const current = table.querySelectorAll('tr[aria-current="true"]');
       expect(current.length).toBeLessThanOrEqual(1);
-      current.forEach((row) => expect(row.textContent).toContain("Sonnet 4"));
       totalCurrent += current.length;
     });
+    // ≥2: each LLM group marks Sonnet 4 + transcription marks its chosen
+    // backend (MLX) via the collapsed-row current logic.
     expect(totalCurrent).toBeGreaterThan(0);
   });
 

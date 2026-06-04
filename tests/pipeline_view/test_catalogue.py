@@ -32,7 +32,7 @@ def test_kinds_are_within_known_set() -> None:
         assert s.kind in allowed, f"unknown kind {s.kind!r} on {s.id}"
 
 
-# ── v1.5 catalogue invariants ─────────────────────────────────────────────
+# ── catalogue invariants ──────────────────────────────────────────────────
 
 
 def test_every_backend_option_has_non_empty_id_and_display() -> None:
@@ -43,24 +43,28 @@ def test_every_backend_option_has_non_empty_id_and_display() -> None:
 
 
 def test_every_requirement_has_a_translation_key() -> None:
-    """`explain_failure` is a translation key like `pipeline.reasons.foo`."""
+    """`reason_key` is a translation key like `pipeline.reasons.foo`.
+
+    v2: `requirements_for` is object-taking and aggregates backend-level +
+    model-level requirements. Sweep both grains."""
     from bristlenose.pipeline_view.catalogue import requirements_for
 
     for stage in STAGES:
         for option in stage.viable_backends:
-            for req in requirements_for(stage.id, option.id):
-                assert req.explain_failure.startswith("pipeline.reasons."), (
-                    f"{stage.id}/{option.id} requirement {req.kind} has non-key "
-                    f"explain_failure={req.explain_failure!r}"
-                )
+            grains = [None, *option.models]
+            for model in grains:
+                for req in requirements_for(option, model):
+                    assert req.reason_key.startswith("pipeline.reasons."), (
+                        f"{stage.id}/{option.id} requirement {req.kind} has "
+                        f"non-key reason_key={req.reason_key!r}"
+                    )
 
 
 def test_five_llm_stages_share_identical_viable_backends() -> None:
     """If someone hand-edits one LLM stage's options, this catches the drift.
 
-    Load-bearing per the plan: dedup at code level relies on the shared
-    `_LLM_BACKENDS` constant. Render-layer dedup (LLM summary card) relies
-    on this equality.
+    Load-bearing: dedup at code level relies on the shared `_LLM_BACKENDS`
+    constant; the render layer's collapse-when-uniform relies on this equality.
     """
     llm_stages = [s for s in STAGES if s.kind == "llm"]
     assert len(llm_stages) == 5, f"expected 5 LLM stages, found {len(llm_stages)}"
@@ -78,5 +82,5 @@ def test_all_python_packages_derives_from_catalogue() -> None:
     from bristlenose.pipeline_view.catalogue import all_python_packages
 
     pkgs = all_python_packages()
-    # The four packages declared in v1.5 catalogue cells.
+    # The four packages declared in catalogue cells.
     assert pkgs == {"mlx_whisper", "ctranslate2", "presidio_analyzer", "en_core_web_lg"}

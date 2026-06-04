@@ -153,7 +153,7 @@ See [design-i18n.md](design-i18n.md) §Per-namespace key convention for the full
 
 ## Schema versioning
 
-> **`schema_version` is a different number line from the feature rungs.** The rungs (v1 / v1.5 / v1.9 / v2 / v3 …, see the rung map) track *features*; `schema_version` (an integer: 1 / 2 / 3 / 4) tracks the *JSON payload contract*. They move independently — feature **v2** happens to carry **schema 4**, and the render-only rungs v3 and v4 won't bump the schema at all. Below, "schema N" always means `schema_version`.
+> **`schema_version` is a different number line from the feature rungs — keep them apart deliberately.** The rungs (v1 / v1.5 / v1.9 / v2 / v3 …, see the rung map) track *features*; `schema_version` (an integer: 1 / 2 / 3 / 4) tracks the *JSON payload contract*. They are decoupled in **both** directions, which is the whole reason for two counters: we often change the **schema** with no visible / UX change (an internal payload restructure), and we improve **UX in a feature rung** with no schema change at all (the render-only rungs v3 and v4 ship new chrome over data the schema already carries). So feature **v2** happens to carry **schema 4**, and that coincidence will drift further over time — don't tie one number to the other. Below, "schema N" always means `schema_version`.
 
 `PipelineView.schema_version` is currently `4` (`render.py:55`). The bump policy:
 

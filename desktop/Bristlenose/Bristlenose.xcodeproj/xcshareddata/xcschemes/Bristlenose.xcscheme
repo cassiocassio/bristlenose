@@ -109,6 +109,16 @@
             value = "failed_no_summary"
             isEnabled = "NO">
          </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_OLLAMA_TAG"
+            value = "qwen2.5:0.5b"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_OLLAMA_PHASE"
+            value = "choosing"
+            isEnabled = "NO">
+         </EnvironmentVariable>
       </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction

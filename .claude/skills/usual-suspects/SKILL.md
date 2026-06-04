@@ -98,6 +98,7 @@ Check which areas are touched (file extensions, directory prefixes, content):
 | `.ts`/`.tsx`/`.css`, `package.json`, server, pipeline, or perf-sensitive | `perf-review` |
 | Test files touched, new public API without tests, or any `.swift` change | `what-would-james-bach-say` (see three-way selector below) |
 | try/except or catch blocks, fallback logic, subprocess/shellouts, JSON serialization, or E2E/Playwright specs touched | `silent-failure-hunter` |
+| `.github/workflows/**` or other CI/release config touched | `security-review` + `silent-failure-hunter` (**CI workflow lens** — see below) |
 
 **`code-review` always runs.** The others run only if their area is touched.
 
@@ -131,6 +132,37 @@ Run a finer decision than the binary table above:
 
 Prompt format: one-liner — *"Bach selector is grey: <one-sentence reason>.
 Call Bach? (y/n)"* — keep it tight, don't break flow.
+
+### CI workflow lens
+
+CI config rarely changes but is high-blast-radius, and the project's CI has a
+documented fragility history (`docs/design-ci.md` § Fragility classes). When a
+diff touches `.github/workflows/**` (or release/CI config), this lens ensures
+the two reviewers who own those failure modes both fire, and points them at the
+charter's invariants:
+
+- **`security-review`** — the supply-chain + least-privilege invariants: every
+  third-party action SHA-pinned, every workflow carries a `permissions:` block
+  scoped to the minimum, no secret widened in reach. Ref: `docs/design-ci.md`
+  § Least privilege and supply-chain pinning.
+- **`silent-failure-hunter`** — the false-green invariants: no new
+  `continue-on-error` swallowing a real failure, non-`success` conclusions
+  still treated as non-green, no bounded step that fails open. Ref:
+  `docs/design-ci.md` § Standing audit targets.
+- **`what-would-james-bach-say`** — add only if the change alters *what gets
+  tested* (matrix cells, test invocation, markers), not just infra plumbing.
+
+This is a routing lens over existing reviewers, **not a new agent**. There is
+deliberately **no standalone CI-audit mode**: the Rule of Three isn't met (one
+steward use-case, not three), so the lens runs only as part of a normal
+`/usual-suspects` pass on a diff that touches CI.
+
+**Sunset.** Remove this lens row when either holds: (a) the invariants are
+enforced mechanically in CI (an actionlint / pinned-SHA / permissions-check
+job — at which point human review is redundant), or (b) a post-TestFlight retro
+confirms two consecutive quarters with no new fragility-class incident and no
+unreviewed workflow regression. Re-evaluate at the first post-TF retro; don't
+let this lens ossify unexamined.
 
 Announce which agents you're launching and why:
 ```

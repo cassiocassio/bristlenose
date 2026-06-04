@@ -7,6 +7,11 @@
 #
 # Security advisories bypass `ignore` rules. Dependabot still opens a PR
 # for any CVE-flagged version regardless of the version-update filter.
+#
+# Before merging a batch of these PRs (or a coordinated tooling sprint),
+# run `/cassandra` — it pre-mortems the blast radius of the bumps and
+# records the prophecy for later calibration.
+# See docs/design-dependency-premortem.md.
 
 version: 2
 
@@ -31,6 +36,23 @@ updates:
       - dependency-name: "pydantic"
         update-types: ["version-update:semver-major"]
       - dependency-name: "fastapi"
+        update-types: ["version-update:semver-major"]
+      # spaCy ecosystem cluster — HELD, not dead-pinned. spaCy 3.8.x pins
+      # thinc<8.4 + weasel<0.5; thinc pins confection<1.0; weasel 1.0
+      # *requires* confection>=1.0 (mutually exclusive with thinc 8.3). The
+      # 1.x/9.x generation is spaCy-4 era. A lone bump of any of the three is
+      # a guaranteed resolver-red while spaCy is 3.8, and it would take the
+      # Presidio PII path down with it.
+      #   Release-condition (lifts this ignore): spaCy 4 reaches GA and we
+      #   take the spaCy-4 wave (spacy + thinc + weasel + confection +
+      #   srsly/preshed/cymem/murmurhash/blis + en_core_web_lg re-pin) as one
+      #   atomic move. Re-checked by `/cassandra --watch`, not by hand.
+      #   See docs/dependency-premortem-log.md § Held register.
+      - dependency-name: "thinc"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "weasel"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "confection"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"

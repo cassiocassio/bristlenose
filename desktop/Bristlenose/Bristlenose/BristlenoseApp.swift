@@ -30,6 +30,9 @@ struct BristlenoseApp: App {
     @StateObject private var toast = ToastStore()
     @StateObject private var removalStore = UndoableRemovalStore()
     @StateObject private var copyMachinery = CopyMachinery()
+    // Ambient local-model pull (Beat 3). Owned at app level so the download
+    // survives the consent sheet's dismissal and surfaces in the toolbar pill.
+    @StateObject private var ollamaDownload = OllamaDownloadModel()
     @StateObject private var i18n: I18n = {
         let i = I18n()
         if let dir = I18n.findLocalesDirectory() {
@@ -52,6 +55,7 @@ struct BristlenoseApp: App {
                 .environmentObject(toast)
                 .environmentObject(removalStore)
                 .environmentObject(copyMachinery)
+                .environmentObject(ollamaDownload)
                 .environmentObject(i18n)
                 .overlay { ToastOverlay().environmentObject(toast) }
                 .overlay { RemoveToast().environmentObject(removalStore).environmentObject(i18n) }
@@ -81,7 +85,7 @@ struct BristlenoseApp: App {
         .defaultSize(width: 1000, height: 700)
         .windowResizability(.contentMinSize)
         .commands {
-            MenuCommands(bridgeHandler: bridgeHandler, serveManager: serveManager, projectIndex: projectIndex, removalStore: removalStore, i18n: i18n)
+            MenuCommands(bridgeHandler: bridgeHandler, serveManager: serveManager, projectIndex: projectIndex, removalStore: removalStore, i18n: i18n, ollamaDownload: ollamaDownload)
         }
 
         Settings {

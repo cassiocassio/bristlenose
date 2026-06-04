@@ -42,29 +42,8 @@ struct OllamaDownloadPill: View {
                 showingDetail = true
                 model.consumeAutoPresent()
             }
-            #if DEBUG
-            .contextMenu { debugStateMenu }
-            #endif
         }
     }
-
-    #if DEBUG
-    /// Right-click gallery for live UX QA — jump the pill/popover to any state
-    /// without a real daemon or network. See the harness in
-    /// `OllamaDownloadModel.swift`. Never compiled into Release.
-    @ViewBuilder
-    private var debugStateMenu: some View {
-        Section("Force state (DEBUG)") {
-            Button("Cycle ▸ next") { model.debugCycleNext() }
-            Divider()
-            ForEach(OllamaDownloadModel.DebugScene.allCases, id: \.self) { scene in
-                Button(scene.label) { model.debugApply(scene) }
-            }
-            Divider()
-            Button("Hide (idle)") { model.cancel() }
-        }
-    }
-    #endif
 
     // MARK: - Pill
 

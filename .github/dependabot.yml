@@ -54,6 +54,22 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "confection"
         update-types: ["version-update:semver-major"]
+      # HELD (resolver-gated), not dead-pinned. transformers 5.7.x AND
+      # 5.10.x both pin `tokenizers<=0.23.0` (deps.dev verified 2026-06-05);
+      # tokenizers 0.23.1 violates it, so a lone or grouped bump goes
+      # resolver-red. Block 0.23.1+ until a transformers release floats the
+      # cap, then move tokenizers+transformers together. Re-checked by
+      # `/cassandra --watch`.
+      #   See docs/dependency-premortem-log.md § Held register.
+      - dependency-name: "tokenizers"
+        versions: [">=0.23.1"]
+      # HELD (resolver-gated). sqladmin (0.23 and 0.27) pins `wtforms<3.2`
+      # (deps.dev verified 2026-06-05); WTForms 3.2.x can't resolve until
+      # sqladmin floats its cap, then bump sqladmin+WTForms together.
+      # Re-checked by `/cassandra --watch`.
+      #   See docs/dependency-premortem-log.md § Held register.
+      - dependency-name: "WTForms"
+        versions: [">=3.2"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"

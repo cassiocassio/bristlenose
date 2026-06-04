@@ -60,6 +60,10 @@
         "quality": "Quality",
         "notes": "Notes"
       },
+      "key": {
+        "italic_label": "italic",
+        "synthesised": "from your settings, not our catalogue"
+      },
       "qualifier": {
         "default": "default",
         "current": "current",
@@ -73,7 +77,7 @@
           "avoid": "avoid \u2014 quality too low",
           "untested": "untested"
         },
-        "untested": "untested \u2014 no editorial signal yet",
+        "untested": "untested",
         "local_speaker_id_acceptable": "Local models handle speaker identification well",
         "local_topic_segmentation_acceptable": "Local models handle topic segmentation well",
         "local_quote_extraction_miss_rate": "small models miss multi-clause quotes",

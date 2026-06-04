@@ -671,19 +671,65 @@ function PipelineSection() {
     return "";
   };
 
-  const badgeText = (row: ModelAvailability, isCurrent: boolean): string => {
-    const parts: string[] = [];
-    if (row.default) parts.push(t("pipeline.qualifier.default"));
-    if (isCurrent) parts.push(t("pipeline.qualifier.current"));
-    return parts.length ? ` (${parts.join(" · ")})` : "";
-  };
+  // Visible qualifier badge — "default" only. "current" is carried visually by
+  // the selection wash (.bn-pipeline-model-row[aria-current="true"]) plus
+  // aria-current; an sr-only "current" rides the row name for AT robustness
+  // (aria-current on a <tr> is unreliably announced).
+  const defaultBadge = (row: ModelAvailability): string =>
+    row.default ? ` (${t("pipeline.qualifier.default")})` : "";
 
   const groups = buildStageGroups(data.catalogue);
 
   return (
     <div className="bn-pipeline-view">
       <p className="bn-setting-description">{t("pipeline.intro")}</p>
-      {groups.map(({ names, sel }) => (
+      <div className="bn-pipeline-key">
+        <div className="bn-pipeline-key-group">
+          <span className="bn-pipeline-key-label">{t("pipeline.column.availability")}</span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-avail-ok">✓</span>{" "}
+            {t("pipeline.glyph.available")}
+          </span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-avail-error">✗</span>{" "}
+            {t("pipeline.glyph.unavailable")}
+          </span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-avail-skip">—</span>{" "}
+            {t("pipeline.glyph.skipped")}
+          </span>
+        </div>
+        <div className="bn-pipeline-key-group">
+          <span className="bn-pipeline-key-label">{t("pipeline.column.quality")}</span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-quality-excellent">●</span>{" "}
+            {t("pipeline.quality.glyph.excellent")}
+          </span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-quality-good">○</span>{" "}
+            {t("pipeline.quality.glyph.good")}
+          </span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-quality-marginal">⚠</span>{" "}
+            {t("pipeline.quality.glyph.marginal")}
+          </span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-quality-avoid">✗</span>{" "}
+            {t("pipeline.quality.glyph.avoid")}
+          </span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-quality-untested">?</span>{" "}
+            {t("pipeline.quality.glyph.untested")}
+          </span>
+        </div>
+        <div className="bn-pipeline-key-group">
+          <span className="bn-pipeline-key-item">
+            <em className="bn-pipeline-key-italic">{t("pipeline.key.italic_label")}</em> ={" "}
+            {t("pipeline.key.synthesised")}
+          </span>
+        </div>
+      </div>
+      {groups.map(({ names, sel }, gi) => (
         <section className="bn-pipeline-stage-group" key={sel.id}>
           <h3
             className="bn-pipeline-stage-group-heading"
@@ -695,9 +741,21 @@ function PipelineSection() {
             className="bn-pipeline-matrix"
             aria-labelledby={`pipeline-group-${sel.id}`}
           >
+            <colgroup>
+              <col className="bn-pipeline-col-model" />
+              <col className="bn-pipeline-col-avail" />
+              <col className="bn-pipeline-col-quality" />
+              <col className="bn-pipeline-col-notes" />
+            </colgroup>
             <thead>
               <tr>
-                <th scope="col" className="bn-sr-only">
+                {/* Visible Model/Notes labels on the first table only; the glyph
+                    columns stay sr-only (the key above explains ✓ / ● etc.).
+                    table-layout:fixed aligns these over every table below. */}
+                <th
+                  scope="col"
+                  className={gi === 0 ? "bn-pipeline-col-head" : "bn-sr-only"}
+                >
                   {t("pipeline.column.model")}
                 </th>
                 <th scope="col" className="bn-sr-only">
@@ -706,7 +764,10 @@ function PipelineSection() {
                 <th scope="col" className="bn-sr-only">
                   {t("pipeline.column.quality")}
                 </th>
-                <th scope="col" className="bn-sr-only">
+                <th
+                  scope="col"
+                  className={gi === 0 ? "bn-pipeline-col-head" : "bn-sr-only"}
+                >
                   {t("pipeline.column.notes")}
                 </th>
               </tr>
@@ -715,11 +776,28 @@ function PipelineSection() {
               const { collapsed, rep } = collapseProvider(rows);
               const pid = rep.provider_id;
               if (collapsed) {
+                const isCurrent =
+                  rep.provider_id === sel.chosen_id &&
+                  rep.model_id === sel.chosen_model_id;
+                const badge = defaultBadge(rep);
                 return (
                   <tbody key={`${pid}-${gi}`}>
-                    <tr className="bn-pipeline-model-row">
-                      <th scope="row" className="bn-pipeline-row-name">
+                    <tr
+                      className="bn-pipeline-model-row"
+                      aria-current={isCurrent ? "true" : undefined}
+                    >
+                      <th
+                        scope="row"
+                        className="bn-pipeline-row-name bn-pipeline-row-name-provider"
+                      >
                         {providerLabel(rep)}
+                        {badge && <span className="bn-pipeline-badge">{badge}</span>}
+                        {isCurrent && (
+                          <span className="bn-sr-only">
+                            {" "}
+                            ({t("pipeline.qualifier.current")})
+                          </span>
+                        )}
                       </th>
                       <td className="bn-pipeline-avail-cell">{availCell(rep)}</td>
                       <td className="bn-pipeline-quality-cell">{qualityCell(rep)}</td>
@@ -739,7 +817,7 @@ function PipelineSection() {
                     const isCurrent =
                       row.provider_id === sel.chosen_id &&
                       row.model_id === sel.chosen_model_id;
-                    const badge = badgeText(row, isCurrent);
+                    const badge = defaultBadge(row);
                     return (
                       <tr
                         key={`${pid}-${row.model_id ?? "—"}-${ri}`}
@@ -751,6 +829,12 @@ function PipelineSection() {
                         <th scope="row" className="bn-pipeline-row-name">
                           {row.display}
                           {badge && <span className="bn-pipeline-badge">{badge}</span>}
+                          {isCurrent && (
+                            <span className="bn-sr-only">
+                              {" "}
+                              ({t("pipeline.qualifier.current")})
+                            </span>
+                          )}
                           {row.synthesised && row.provider_id === "azure" && (
                             <span className="bn-sr-only">
                               {" "}

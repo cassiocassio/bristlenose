@@ -60,6 +60,10 @@
         "quality": "Qualit\u00e9",
         "notes": "Notes"
       },
+      "key": {
+        "italic_label": "italique",
+        "synthesised": "depuis vos r\u00e9glages, pas notre catalogue"
+      },
       "qualifier": {
         "default": "par d\u00e9faut",
         "current": "actuel",
@@ -73,7 +77,7 @@
           "avoid": "\u00e0 \u00e9viter \u2014 qualit\u00e9 trop faible",
           "untested": "non test\u00e9"
         },
-        "untested": "non test\u00e9 \u2014 pas encore d'\u00e9valuation \u00e9ditoriale",
+        "untested": "non test\u00e9",
         "local_speaker_id_acceptable": "Les mod\u00e8les locaux g\u00e8rent bien l'identification des locuteurs",
         "local_topic_segmentation_acceptable": "Les mod\u00e8les locaux g\u00e8rent bien la segmentation th\u00e9matique",
         "local_quote_extraction_miss_rate": "les petits mod\u00e8les manquent les citations \u00e0 plusieurs propositions",

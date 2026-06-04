@@ -194,6 +194,27 @@ don't bump the schema).
 - **v5 — manual model choice.** Let users pick, per stage, between the models the catalogue shows as available. This is the first rung where the view stops being purely read-only.
 - **v6 — `optimise_for`, simplest form.** A single **speed ↔ quality** slider that moves multiple stages up and down that axis at once, as a master controller — like a macro on a digital synthesiser (a Yamaha DX): one knob, many parameters moving together. This is the simplest possible expression of the `optimise_for` axis (cost / speed / privacy / determinism); the full multi-axis form, per-stage TOML overrides (`[llm_stages]` in [design-pluggable-llm-routing.md](design-pluggable-llm-routing.md)), and any auto-pick resolver remain further out.
 
+### Provider naming — keep product names (deferred: account-vs-product + logos)
+
+**Decision (4 Jun 2026):** provider headings stay **product names** (Claude,
+ChatGPT, Gemini, Azure OpenAI, Ollama), matching the desktop provider picker,
+the CLAUDE.md convention, and the vendors' own branding (Anthropic brands its
+platform "Claude", not "Anthropic"). Press register says "Anthropic"; day-to-day
+people say "Claude". The **account/billing identity** ("who you pay") is carried
+by the **vendor domain link** already shown in the desktop provider detail
+(`anthropic.com` / `openai.com` · Pricing · Keys), not by renaming the heading.
+
+**Parked (post-TestFlight):** a possible account-vs-product rename (company
+headings + product on the model rows) and **vendor logos** in the pipeline view
+(the desktop picker already uses logo + product name). Both are deliberately
+deferred — the desktop settings view is ~95% of users; the pipeline deep view
+is a freshly-working edge case we don't want to destabilise before the macOS
+TestFlight. Rough scope if revisited: `bristlenose/providers.py` (`display_name`
+×5), `bristlenose/llm/billing_hints.py`, the Settings → API Keys labels
+(`frontend/src/components/SettingsModal.tsx`), `doctor.py`, CLI help in
+`bristlenose/cli.py`, the `pipeline.reasons.*` / `pipeline.backends.*` keys ×6
+locales, and the CLAUDE.md provider-naming convention itself.
+
 ## File map
 
 | Concern | Path |

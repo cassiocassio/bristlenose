@@ -29,7 +29,7 @@ It is also the policy layer that makes Dependabot useful instead of noisy. Depen
 
 ### Pillar 1 — Node
 
-Current state: CI on Node 20 (4× `node-version: "20"` in `.github/workflows/{ci,release}.yml`); local-dev target Node 24 LTS per `frontend/CLAUDE.md`. The mismatch is flagged as known in [`docs/design-ci.md`](design-ci.md) §"Known gaps" (line 156).
+Current state: CI and local-dev are aligned on **Node 24 LTS**. All three workflows resolve Node from `.tool-versions` (`node 24`) via `node-version-file: '.tool-versions'` (`.github/workflows/ci.yml:133,217`, `release.yml:38`) — there are no hardcoded `node-version: "20"` pins. (Historical note: an earlier Node-20 / Node-24 mismatch was the original motivation here; it's since been closed by the `.tool-versions` single-source.)
 
 **Policy:**
 
@@ -115,6 +115,8 @@ Once per quarter, batch the deferred majors into a coordinated release. This is 
 - Re-check of pins from the register.
 - macOS deployment-target review.
 
+**Before applying the batch, run `/cassandra`.** It pre-mortems the blast radius of the whole wave — resolver conflicts, ABI couplings, silent runtime breaks — grounded against installed metadata (not the `outdated` headline) and the gossip on each bump, and records the prophecy to `docs/dependency-premortem-log.md` so the next sprint can see how well the last call held. After the batch lands, `/cassandra --score` closes the loop. See [`docs/design-dependency-premortem.md`](design-dependency-premortem.md).
+
 A tooling sprint is roughly 1–2 days for a maintainer with a tidy testing surface. Skip it if there's nothing to do; don't ritualise for its own sake.
 
 ## Quarterly tooling review
@@ -128,7 +130,7 @@ The review answers, in order:
 3. **macOS deployment target review.** Should the floor move? Is the dual-target setup (prod 15.0 + AI-features-only 26.1) still right?
 4. **Beta-window check** — was the most recent beta window honoured? (Q3 has WWDC + developer beta install; Q4 has GA + Xcode bump.)
 5. **Pinning register sweep** — any pin past its re-check date? Re-validate or remove.
-6. **Tooling-sprint trigger** — have enough deferred majors piled up to justify a 1–2 day batch release? (Three is usually the trigger; one or two is below the per-PR cost.)
+6. **Tooling-sprint trigger** — have enough deferred majors piled up to justify a 1–2 day batch release? (Three is usually the trigger; one or two is below the per-PR cost.) If triggered, **run `/cassandra` on the batch before applying it** — pre-mortem first, apply second.
 7. **Security advisories** — any open more than 2 weeks? Note exceptions and reasons.
 
 Output is a single bullet list in the quarterly review note ("Tooling: …") — not a separate document. The discipline is honesty: "nothing changed" is a valid answer if it's true.

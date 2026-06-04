@@ -391,6 +391,12 @@ struct ContentView: View {
             try? await Task.sleep(for: .milliseconds(500))
             pipelineRunner._applyDebugFixture(to: id)
         }
+        // Debug-only: if BRISTLENOSE_DEBUG_OLLAMA_PHASE is set, open the
+        // local-model pill in that state at launch (no consent dance) so the
+        // popover/pill UX can be QA'd without a real daemon. No-op when unset.
+        .task {
+            ollamaDownload.debugBootstrapFromEnv()
+        }
         #endif
         // Defensive cleanup — macOS sometimes fails to fire
         // `isTargeted=false` if the cursor drag-leaves the window
@@ -1415,8 +1421,12 @@ struct ContentView: View {
             CopyProgressPill(copyMachinery: copyMachinery)
         }
 
-        // Ambient local-model pull pill — self-hides when idle.
-        ToolbarItem(placement: .primaryAction) {
+        // Ambient local-model pull pill — self-hides when idle. `.status`
+        // (not `.primaryAction`) per spec §8: like PipelineActivityItem above
+        // this is a passive ambient indicator, so it earns its own trailing
+        // zone instead of being absorbed into macOS 26's primary-action capsule
+        // alongside Share + Search.
+        ToolbarItem(placement: .status) {
             OllamaDownloadPill(model: ollamaDownload)
         }
     }

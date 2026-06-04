@@ -13,6 +13,13 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
+# Least-privilege default: the automatic GITHUB_TOKEN is read-only for every
+# job unless a job opts into more. Without this, the token inherits the repo
+# default (often read/write), so a compromised dependency in any step could
+# push commits or open releases. Supply-chain hardening 2026-06-04.
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -184,6 +191,12 @@ jobs:
   e2e:
     needs: [test, frontend-lint-type-test]
     runs-on: ubuntu-latest
+    # Fail fast instead of burning the default 6h job ceiling. A hung
+    # Playwright download (see the install step) once stalled this job for
+    # 6h on 2026-06-03, which auto-cancelled the parent CI + Perf workflows.
+    # Rule + postmortem: docs/design-ci.md § Timeouts and external-download
+    # resilience.
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -215,7 +228,22 @@ jobs:
 
       - name: Install Playwright browsers
         working-directory: e2e
-        run: npx playwright install chromium webkit --with-deps
+        # `playwright install` has no internal download deadline: a half-open
+        # CDN socket hangs forever (it stalled 6h on 2026-06-03). Bound each
+        # attempt with `timeout` — a healthy download finishes in seconds, so
+        # 5m is generous — and retry to ride out a transient CDN stall.
+        # See docs/design-ci.md § Timeouts and external-download resilience.
+        timeout-minutes: 18
+        run: |
+          n=0
+          until [ "$n" -ge 3 ]; do
+            timeout 5m npx playwright install chromium webkit --with-deps && exit 0
+            n=$((n + 1))
+            echo "::warning::playwright browser install attempt $n stalled or failed; retrying in 15s"
+            sleep 15
+          done
+          echo "::error::playwright browser install failed after 3 attempts"
+          exit 1
 
       - name: Run E2E tests
         working-directory: e2e

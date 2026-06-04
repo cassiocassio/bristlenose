@@ -2,8 +2,10 @@ name: Install & Smoke Test
 
 # Verifies install instructions work on clean VMs.
 # Each job follows the documented install steps, then runs:
+#   bristlenose --version (entry-point + import smoke — no API key needed)
 #   bristlenose doctor    (dependency check — no API key needed)
-#   bristlenose render    (render from pre-built fixtures — no LLM needed)
+# Deeper functional coverage (real transcribe→analyse→render on representative
+# input) is the keyed `full-run` job's domain, not the per-push install gate.
 
 on:
   # Weekly Monday 6am UTC — catches breakage from upstream deps
@@ -69,21 +71,6 @@ jobs:
         # We just want to verify FFmpeg and Python deps are found.
         run: bristlenose doctor || true
 
-      - name: Smoke test — render from fixtures
-        run: |
-          bristlenose render \
-            tests/fixtures/smoke-test/input/bristlenose-output \
-            -i tests/fixtures/smoke-test/input \
-            -p "Smoke Test"
-
-      - name: Verify report was generated
-        run: |
-          test -f tests/fixtures/smoke-test/input/bristlenose-output/bristlenose-smoke-test-report.html
-          echo "HTML report exists ($(wc -c < tests/fixtures/smoke-test/input/bristlenose-output/bristlenose-smoke-test-report.html) bytes)"
-
-          test -f tests/fixtures/smoke-test/input/bristlenose-output/bristlenose-smoke-test-report.md
-          echo "Markdown report exists"
-
   # ── Linux: pipx install from source ─────────────────────────────
 
   linux-pipx:
@@ -108,17 +95,6 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           bristlenose --version
-
-      - name: Smoke test — render from fixtures
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          bristlenose render \
-            tests/fixtures/smoke-test/input/bristlenose-output \
-            -i tests/fixtures/smoke-test/input \
-            -p "Smoke Test"
-
-      - name: Verify report
-        run: test -f tests/fixtures/smoke-test/input/bristlenose-output/bristlenose-smoke-test-report.html
 
   # ── macOS: pip install from source ──────────────────────────────
 
@@ -145,18 +121,6 @@ jobs:
       - name: Run doctor
         run: bristlenose doctor || true
 
-      - name: Smoke test — render from fixtures
-        run: |
-          bristlenose render \
-            tests/fixtures/smoke-test/input/bristlenose-output \
-            -i tests/fixtures/smoke-test/input \
-            -p "Smoke Test"
-
-      - name: Verify report
-        run: |
-          test -f tests/fixtures/smoke-test/input/bristlenose-output/bristlenose-smoke-test-report.html
-          echo "HTML report exists ($(wc -c < tests/fixtures/smoke-test/input/bristlenose-output/bristlenose-smoke-test-report.html) bytes)"
-
   # ── macOS: Homebrew tap install ─────────────────────────────────
 
   macos-brew:
@@ -177,16 +141,6 @@ jobs:
 
       - name: Run doctor
         run: bristlenose doctor || true
-
-      - name: Smoke test — render from fixtures
-        run: |
-          bristlenose render \
-            tests/fixtures/smoke-test/input/bristlenose-output \
-            -i tests/fixtures/smoke-test/input \
-            -p "Smoke Test"
-
-      - name: Verify report
-        run: test -f tests/fixtures/smoke-test/input/bristlenose-output/bristlenose-smoke-test-report.html
 
   # ── Full pipeline run with real API key (weekly only) ───────────
 

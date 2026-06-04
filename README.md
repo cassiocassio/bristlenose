@@ -365,6 +365,12 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.13** — _4 Jun 2026_
+
+- **`bristlenose pipeline` gains per-(provider, model) grain.** The pipeline view (0.15.11) now renders a row per (provider, model) pair — each LLM stage shows Claude / ChatGPT / Gemini / Azure with their individual models, per-model quality ratings, and a `recommended` axis split from `default` (Opus 4, gpt-4o). CLI + React Settings → Pipeline tab share a sectioned matrix with quality glyphs, a compact symbol key, fixed column alignment across stage tables, and the current row marked by the selection wash + `aria-current` rather than a loud badge. Payload `schema_version` 3 → 4; feature rungs and schema are decoupled both ways. Ships on PyPI.
+- **Desktop: model-first Ollama setup (flow B) + consent activates the chosen provider.** A toolbar pill drives the on-device setup popovers (choose model → get Ollama → wait → download), with an honesty rule — static hourglass while waiting on the human, motion only while Bristlenose is working, red only for genuine failure. The AI-consent sheet's Continue/Done now actually activates the chosen provider (was leaving a validated cloud key inert and routing to a stale backend); Stay-local applies the RAM-aware default and pulls the model ambiently so the fetch survives sheet dismissal. 43-key locale layer across 6 locales. Desktop-only.
+- **CI hardening.** Job timeouts on e2e + perf-gate with a bounded-retry around the Playwright install, SHA-pinned third-party actions that touch secrets, read-only default `permissions:` blocks, and a six-class fragility map in `docs/design-ci.md`. Workflow + docs only.
+
 **0.15.12** — _23 May 2026_
 
 - **Anthropic credit-exhausted now reports "out of credit", not "model unavailable".** Preflight's BadRequestError classifier was substring-matching on `credit_balance_too_low` (an `error.type` token that doesn't appear in `str(exc)`) — the live SDK message is `Your credit balance is too low to access the Claude API. ...`, so the branch silently fell through to the model-unavailable copy. Substring widened to `credit balance`; regression-pinned with the real SDK message. Runtime path was already correct; preflight-only miss.

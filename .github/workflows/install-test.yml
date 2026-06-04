@@ -32,6 +32,12 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
+# Least-privilege default — GITHUB_TOKEN read-only. Install/smoke jobs only
+# check out and run; the full-run job reads ANTHROPIC_API_KEY from secrets,
+# not the repo token. Supply-chain hardening 2026-06-04.
+permissions:
+  contents: read
+
 jobs:
 
   # ── Linux: pip install from source ──────────────────────────────

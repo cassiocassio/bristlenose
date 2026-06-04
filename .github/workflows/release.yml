@@ -7,6 +7,13 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
+# Least-privilege default — read-only token for every job. The two jobs that
+# need to write (publish → id-token: write for PyPI OIDC; github-release →
+# contents: write) declare their own permissions block, which fully overrides
+# this default for that job. Supply-chain hardening 2026-06-04.
+permissions:
+  contents: read
+
 jobs:
   # Run the full CI suite first — don't publish a broken release.
   ci:
@@ -125,7 +132,12 @@ jobs:
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Dispatch Homebrew tap update
-        uses: peter-evans/repository-dispatch@v3
+        # SHA-pinned (supply-chain): a moving tag like @v3 lets the action's
+        # author (or anyone who compromises their account) swap the code this
+        # workflow runs — and this step holds HOMEBREW_TAP_TOKEN. Pin to an
+        # immutable commit; the trailing comment tracks the human version so
+        # Dependabot can still propose upgrades. See docs/design-ci.md.
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0  # v3.0.0
         with:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           repository: cassiocassio/homebrew-bristlenose

@@ -13,12 +13,22 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
+# Least-privilege default — GITHUB_TOKEN read-only unless a job opts into
+# more. Supply-chain hardening 2026-06-04.
+permissions:
+  contents: read
+
 jobs:
   perf-gate:
     # Regression gate for the serve-mode report SPA: DOM node counts,
     # API latency, export size. Chromium-only, runs against the smoke
     # fixture (1 session, 4 quotes).
     runs-on: ubuntu-latest
+    # Fail fast instead of the default 6h job ceiling — same hung-download
+    # class as the e2e job (a stalled Playwright install cancelled this
+    # workflow alongside CI on 2026-06-03). Rule + postmortem:
+    # docs/design-ci.md § Timeouts and external-download resilience.
+    timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v4
@@ -50,7 +60,20 @@ jobs:
 
       - name: Install Playwright (chromium only)
         working-directory: e2e
-        run: npx playwright install chromium --with-deps
+        # See ci.yml e2e job + docs/design-ci.md § Timeouts and external-
+        # download resilience: bound each download attempt with `timeout` and
+        # retry, so a half-open CDN socket can't hang the step indefinitely.
+        timeout-minutes: 18
+        run: |
+          n=0
+          until [ "$n" -ge 3 ]; do
+            timeout 5m npx playwright install chromium --with-deps && exit 0
+            n=$((n + 1))
+            echo "::warning::playwright chromium install attempt $n stalled or failed; retrying in 15s"
+            sleep 15
+          done
+          echo "::error::playwright chromium install failed after 3 attempts"
+          exit 1
 
       - name: Run perf-gate
         working-directory: e2e

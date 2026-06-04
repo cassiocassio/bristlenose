@@ -200,48 +200,188 @@
     gap: var(--bn-space-md);
 }
 
-.bn-pipeline-stages {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--bn-space-md) var(--bn-space-lg);
-    margin: 0;
-}
+/* v4 — sectioned-flat matrix: one <table> per stage-profile cluster, providers
+   as typographic colgroup headings, per-model rows with two glyph columns
+   (Availability + Quality) and a Why column. Glyph colours reuse existing
+   sentiment + neutral tokens — no new colour vocabulary (a11y lock). */
 
-@media (max-width: 640px) {
-    .bn-pipeline-stages {
-        grid-template-columns: 1fr;
-    }
-}
-
-.bn-pipeline-stage {
+.bn-pipeline-stage-group {
     display: flex;
     flex-direction: column;
     gap: var(--bn-space-xs);
 }
 
-.bn-pipeline-stage-dim {
-    opacity: 0.55;
-}
-
-.bn-pipeline-stage-name {
-    font-weight: 600;
-    color: var(--bn-colour-text);
-}
-
-.bn-pipeline-stage-body {
+.bn-pipeline-stage-group-heading {
+    font-size: var(--bn-text-caption);
+    font-weight: var(--bn-weight-emphasis);
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
     margin: 0;
+}
+
+.bn-pipeline-matrix {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--bn-text-label);
+    /* Fixed layout + shared colgroup widths so the 4 columns line up across
+       every stage table (transcription / anonymisation match the LLM tables),
+       letting the eye scan all four columns straight down the page. */
+    table-layout: fixed;
+}
+
+.bn-pipeline-col-model {
+    width: 40%;
+}
+
+.bn-pipeline-col-avail,
+.bn-pipeline-col-quality {
+    width: 2.5em;
+}
+
+/* .bn-pipeline-col-notes takes the remaining width (no explicit rule). */
+
+/* Symbol key — compact legend above the tables. Availability / Quality
+   subheadings group their glyphs; glyphs reuse the table colour classes so
+   the legend's marks match the cells exactly. */
+.bn-pipeline-key {
     display: flex;
     flex-direction: column;
-    gap: var(--bn-space-xxs);
-}
-
-.bn-pipeline-stage-chosen {
-    color: var(--bn-colour-text);
-}
-
-.bn-pipeline-stage-notes {
+    gap: var(--bn-space-xs);
+    margin: var(--bn-space-sm) 0 var(--bn-space-md);
     font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
+}
+
+.bn-pipeline-key-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--bn-space-xs) var(--bn-space-md);
+}
+
+.bn-pipeline-key-label {
+    font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.bn-pipeline-key-item {
+    white-space: nowrap;
+}
+
+/* Visible column header — first table only (Model / Notes labels). */
+.bn-pipeline-col-head {
+    text-align: left;
+    font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0 var(--bn-space-md) var(--bn-space-xs);
+}
+
+.bn-pipeline-provider-heading th {
+    text-align: left;
+    font-weight: var(--bn-weight-strong);
+    color: var(--bn-colour-text);
+    padding: var(--bn-space-sm) var(--bn-space-xs) var(--bn-space-xs);
+}
+
+.bn-pipeline-row-name {
+    text-align: left;
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-text);
+    padding: var(--bn-space-xs) var(--bn-space-md);
+}
+
+/* Collapsed-provider rows (no model granularity, or all-unavailable) render at
+   provider level — bold + flush-left, peers of the expanded provider heading —
+   so ChatGPT / Gemini / MLX read as backends, not Claude's children. */
+.bn-pipeline-row-name-provider {
+    font-weight: var(--bn-weight-strong);
+    padding-left: var(--bn-space-xs);
+}
+
+.bn-pipeline-avail-cell,
+.bn-pipeline-quality-cell {
+    text-align: center;
+    width: 2.5em;
+    white-space: nowrap;
+}
+
+.bn-pipeline-why-cell {
+    color: var(--bn-colour-muted);
+    padding: var(--bn-space-xs);
+    font-size: var(--bn-text-caption);
+}
+
+.bn-pipeline-glyph {
+    font-weight: var(--bn-weight-strong);
+}
+
+.bn-pipeline-badge {
+    color: var(--bn-colour-muted);
+    font-weight: var(--bn-weight-normal);
+}
+
+/* Availability glyph colours — MessageKind vocabulary (shared with CLI/doctor). */
+.bn-pipeline-avail-ok {
+    color: var(--bn-sentiment-satisfaction);
+}
+
+.bn-pipeline-avail-error {
+    color: var(--bn-sentiment-confusion);
+}
+
+.bn-pipeline-avail-skip {
+    color: var(--bn-colour-muted);
+}
+
+/* Quality glyph colours — editorial vocabulary; sentiment-token mapping. */
+.bn-pipeline-quality-excellent,
+.bn-pipeline-quality-good {
+    color: var(--bn-sentiment-satisfaction);
+}
+
+.bn-pipeline-quality-marginal {
+    color: var(--bn-sentiment-surprise);
+}
+
+.bn-pipeline-quality-avoid {
+    color: var(--bn-sentiment-confusion);
+}
+
+.bn-pipeline-quality-untested {
+    color: var(--bn-colour-muted);
+}
+
+/* Synthesised rows (Azure deployment, pulled Ollama, dispatched-not-catalogued)
+   — italic signals "from your settings, not our catalogue." */
+.bn-pipeline-synthesised-row .bn-pipeline-row-name {
+    font-style: italic;
+}
+
+/* Current dispatch row — the selection wash used app-wide for selected quotes
+   & signal cards (.bn-selected): --bn-selection-* tokens + accent leading edge.
+   Read-only here ("in use") rather than user-selected, but visually coherent. */
+.bn-pipeline-model-row[aria-current="true"] {
+    background: var(--bn-selection-bg);
+}
+
+.bn-pipeline-model-row[aria-current="true"] .bn-pipeline-row-name {
+    box-shadow: inset 2px 0 0 var(--bn-selection-border);
+}
+
+/* Inactive window — selection recedes to grey (macOS convention), matching
+   the .bn-selected behaviour in atoms/interactive.css. */
+.bn-window-inactive .bn-pipeline-model-row[aria-current="true"] {
+    background: var(--bn-selection-bg-inactive);
+}
+
+.bn-window-inactive .bn-pipeline-model-row[aria-current="true"] .bn-pipeline-row-name {
+    box-shadow: inset 2px 0 0 var(--bn-selection-border-inactive);
 }
 
 .bn-pipeline-host {
@@ -250,97 +390,6 @@
     border-top: 1px solid var(--bn-colour-border);
     padding-top: var(--bn-space-sm);
     margin: var(--bn-space-sm) 0 0;
-}
-
-/* v1.5 — host-wide LLM backend summary card + per-stage alternatives */
-
-.bn-pipeline-summary {
-    border: 1px solid var(--bn-colour-border);
-    border-radius: var(--bn-radius-md);
-    padding: var(--bn-space-sm) var(--bn-space-md);
-    background: var(--bn-colour-bg);
-}
-
-.bn-pipeline-summary-heading {
-    font-size: var(--bn-text-label);
-    font-weight: var(--bn-weight-emphasis);
-    color: var(--bn-colour-text);
-    margin: 0 0 var(--bn-space-xs);
-}
-
-.bn-pipeline-alternatives {
-    display: flex;
-    flex-direction: column;
-    gap: var(--bn-space-xxs);
-    font-size: var(--bn-text-caption);
-}
-
-.bn-pipeline-alternatives-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: var(--bn-space-xs);
-}
-
-.bn-pipeline-alternatives-label {
-    color: var(--bn-colour-muted);
-    font-weight: var(--bn-weight-emphasis);
-    margin-right: var(--bn-space-xxs);
-}
-
-.bn-pipeline-alternatives-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--bn-space-xs) var(--bn-space-md);
-}
-
-/* When a list carries reasons (unavailable items), stack each row on its own
-   line so name + reason wrap together as a coherent unit. Available items
-   stay horizontal — they're short and benefit from compact display. */
-.bn-pipeline-alternatives-row:has(.bn-pipeline-alt-reason) .bn-pipeline-alternatives-list {
-    flex-direction: column;
-    gap: var(--bn-space-xxs);
-}
-
-.bn-pipeline-alternatives-empty {
-    color: var(--bn-colour-muted);
-    font-style: italic;
-}
-
-.bn-pipeline-alt {
-    display: inline;
-}
-
-.bn-pipeline-alt-glyph {
-    /* The glyph and the name belong together — non-breaking space prevents
-       the row from wrapping between "✗" and the backend name. */
-    margin-right: 0.25em;
-}
-
-.bn-pipeline-alt-glyph {
-    font-weight: var(--bn-weight-strong);
-    /* Shape carries state (✓ vs ✗); colour reinforces. ✓ uses the positive
-       sentiment token; ✗ uses muted text — NOT danger (not destructive). */
-}
-
-.bn-pipeline-alt-on .bn-pipeline-alt-glyph {
-    color: var(--bn-sentiment-satisfaction);
-}
-
-.bn-pipeline-alt-off .bn-pipeline-alt-glyph {
-    color: var(--bn-colour-muted);
-}
-
-.bn-pipeline-alt-off .bn-pipeline-alt-name {
-    color: var(--bn-colour-muted);
-}
-
-.bn-pipeline-alt-reason {
-    color: var(--bn-colour-muted);
-    margin-left: 0.25em;
 }
 
 /* Visually-hidden text for screen readers — paired with aria-hidden glyphs. */

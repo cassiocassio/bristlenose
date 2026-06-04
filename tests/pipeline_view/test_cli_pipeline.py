@@ -12,14 +12,65 @@ import json
 from typer.testing import CliRunner
 
 from bristlenose.cli import app
+from bristlenose.pipeline_view.cli import _collapse
+from bristlenose.pipeline_view.render import ModelAvailability
 
 runner = CliRunner()
+
+
+def _row(
+    *, model_id: str | None, available: bool, reason_key: str | None = None
+) -> ModelAvailability:
+    return ModelAvailability(
+        provider_id="anthropic",
+        model_id=model_id,
+        display=model_id or "Claude",
+        provider_display="Claude",
+        available=available,
+        reason_key=reason_key,
+    )
+
+
+def test_collapse_single_no_model_grain() -> None:
+    """A provider with one row and no model_id IS the backend — collapse."""
+    rows = [_row(model_id=None, available=True)]
+    collapsed, rep = _collapse(rows)
+    assert collapsed is True
+    assert rep is rows[0]
+
+
+def test_collapse_all_unavailable_uniform_reason() -> None:
+    """Every model failing the same provider-level reason collapses to one line."""
+    rows = [
+        _row(model_id="claude-opus-4-20250514", available=False, reason_key="no_key"),
+        _row(model_id="claude-sonnet-4-20250514", available=False, reason_key="no_key"),
+    ]
+    collapsed, rep = _collapse(rows)
+    assert collapsed is True
+    assert rep is rows[0]
+
+
+def test_collapse_all_unavailable_divergent_reasons_expands() -> None:
+    """Divergent per-model failure reasons must stay expanded — one line would
+    lose the distinction between why each model is unavailable."""
+    rows = [
+        _row(model_id="claude-opus-4-20250514", available=False, reason_key="no_key"),
+        _row(
+            model_id="claude-sonnet-4-20250514",
+            available=False,
+            reason_key="not_in_account",
+        ),
+    ]
+    collapsed, _ = _collapse(rows)
+    assert collapsed is False
 
 
 def test_pipeline_command_exits_zero() -> None:
     result = runner.invoke(app, ["pipeline"])
     assert result.exit_code == 0
-    assert "Transcription" in result.output
+    # The matrix renders stage-group headings in uppercase; transcription is
+    # always its own single-stage group regardless of host facts.
+    assert "TRANSCRIPTION" in result.output.upper()
 
 
 def test_pipeline_json_parses() -> None:

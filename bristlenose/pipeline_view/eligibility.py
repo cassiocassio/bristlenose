@@ -1,4 +1,5 @@
-"""Resolve `BackendOption` eligibility against `HostFacts` + `BristlenoseSettings`.
+"""Resolve `BackendOption` / `ModelOption` eligibility against `HostFacts` +
+`BristlenoseSettings`.
 
 Pure functions — no I/O. The host probe owns runtime I/O (find_spec,
 platform.mac_ver, socket); this module reads from the already-populated
@@ -10,6 +11,12 @@ platform.mac_ver, socket); this module reads from the already-populated
    `find_spec` call (~0.5ms) ≈ 75 ms wasted.
 2. Tests can fully mock eligibility by constructing a synthetic `HostFacts`
    — no need to patch stdlib.
+
+v2: eligibility resolves at (provider, model) grain. `evaluate_backend` takes
+a `BackendOption` + optional `ModelOption` and aggregates both requirement
+lists via `requirements_for`. Returns the failing requirement's `reason_key`
+*and* `action_key` so the render layer can compose the Why column and (later)
+a fixable-failure picker.
 """
 
 from __future__ import annotations
@@ -17,6 +24,7 @@ from __future__ import annotations
 from bristlenose.config import BristlenoseSettings
 from bristlenose.pipeline_view.catalogue import (
     BackendOption,
+    ModelOption,
     Requirement,
     requirements_for,
 )
@@ -27,8 +35,8 @@ def check_requirement(
     req: Requirement,
     host: HostFacts,
     settings: BristlenoseSettings,
-) -> tuple[bool, str | None]:
-    """Return `(ok, explain_failure_key)`. Key is None on success."""
+) -> tuple[bool, str | None, str | None]:
+    """Return `(ok, reason_key, action_key)`. Keys are None on success."""
     value = req.value
     if req.kind == "api_key":
         ok = bool(host.keys_present.get(str(value), False))
@@ -52,7 +60,7 @@ def check_requirement(
         ok = host.apple_fm_status == str(value)
     else:  # pragma: no cover — closed enum, mypy guards exhaustiveness
         ok = False
-    return (True, None) if ok else (False, req.explain_failure)
+    return (True, None, None) if ok else (False, req.reason_key, req.action_key)
 
 
 def _matches_hardware(host: HostFacts, required: str) -> bool:
@@ -60,7 +68,7 @@ def _matches_hardware(host: HostFacts, required: str) -> bool:
     if required == "apple_silicon":
         return host.os == "Darwin" and host.arch == "arm64"
     if required == "cuda":
-        # v1.5 doesn't probe CUDA presence — out of scope for the alpha cohort.
+        # v2 doesn't probe CUDA presence — out of scope for the alpha cohort.
         # If/when we do, this is the single spot to update.
         return False
     return False
@@ -78,18 +86,19 @@ def _meets_min_os_version(os_version: str | None, minimum: float) -> bool:
 
 
 def evaluate_backend(
-    stage_id: str,
-    option: BackendOption,
+    backend: BackendOption,
+    model: ModelOption | None,
     host: HostFacts,
     settings: BristlenoseSettings,
-) -> tuple[bool, str | None]:
-    """Aggregate all requirements for a (stage, option) cell.
+) -> tuple[bool, str | None, str | None]:
+    """Aggregate all requirements for one (backend, model) cell.
 
-    Returns `(available, first_failing_reason_key)`. Determinism: the first
-    failing requirement in declaration order wins. None when all pass.
+    Returns `(available, reason_key, action_key)` for the first failing
+    requirement in declaration order (provider-level requirements first, then
+    model-level). Both keys are None when all requirements pass.
     """
-    for req in requirements_for(stage_id, option.id):
-        ok, reason = check_requirement(req, host, settings)
+    for req in requirements_for(backend, model):
+        ok, reason, action = check_requirement(req, host, settings)
         if not ok:
-            return False, reason
-    return True, None
+            return False, reason, action
+    return True, None, None

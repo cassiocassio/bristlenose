@@ -49,6 +49,54 @@
         "local_ollama": "Local (Ollama)",
         "builtin_anonymiser": "Anonimizador integrado"
       },
+      "glyph": {
+        "available": "disponible",
+        "unavailable": "no disponible",
+        "skipped": "no aplicable en este host"
+      },
+      "column": {
+        "model": "Modelo",
+        "availability": "Disponibilidad",
+        "quality": "Calidad",
+        "notes": "Notas"
+      },
+      "key": {
+        "italic_label": "cursiva",
+        "synthesised": "de tu configuraci\u00f3n, no de nuestro cat\u00e1logo"
+      },
+      "qualifier": {
+        "default": "predeterminado",
+        "current": "actual",
+        "your_deployment": "tu implementaci\u00f3n de Azure"
+      },
+      "quality": {
+        "glyph": {
+          "excellent": "calidad excelente",
+          "good": "buena calidad",
+          "marginal": "calidad marginal",
+          "avoid": "evitar \u2014 calidad demasiado baja",
+          "untested": "sin probar"
+        },
+        "untested": "sin probar",
+        "local_speaker_id_acceptable": "Los modelos locales gestionan bien la identificaci\u00f3n de hablantes",
+        "local_topic_segmentation_acceptable": "Los modelos locales gestionan bien la segmentaci\u00f3n por temas",
+        "local_quote_extraction_miss_rate": "los modelos peque\u00f1os omiten citas de varias cl\u00e1usulas",
+        "local_quote_clustering_drift": "los modelos peque\u00f1os agrupan las citas de forma inconsistente",
+        "local_thematic_grouping_drift": "los modelos peque\u00f1os se desv\u00edan en la s\u00edntesis tem\u00e1tica",
+        "mlx_whisper_apple_silicon_optimal": "\u00f3ptimo en Apple Silicon",
+        "faster_whisper_cpu_baseline": "base s\u00f3lida en CPU; no requiere GPU"
+      },
+      "actions": {
+        "obtain_anthropic_key": "obt\u00e9n una clave de API en console.anthropic.com y configura ANTHROPIC_API_KEY o p\u00e9gala en Ajustes \u2192 Claves",
+        "obtain_openai_key": "obt\u00e9n una clave de API en platform.openai.com y configura OPENAI_API_KEY o p\u00e9gala en Ajustes \u2192 Claves",
+        "obtain_google_key": "obt\u00e9n una clave de API en aistudio.google.com y configura GOOGLE_API_KEY o p\u00e9gala en Ajustes \u2192 Claves",
+        "configure_azure": "configura la clave, el endpoint y la implementaci\u00f3n de Azure en Ajustes \u2192 Claves",
+        "start_ollama": "inicia el servicio de Ollama (ollama serve)",
+        "install_mlx_whisper": "pip install mlx-whisper (requiere Apple Silicon)",
+        "install_ctranslate2": "pip install ctranslate2",
+        "install_presidio": "pip install bristlenose[redact-pii] para activar el anonimizador integrado",
+        "enable_pii_redaction": "ejecuta con --redact-pii o configura pii_enabled=true"
+      },
       "reasons": {
         "no_anthropic_key": "no hay clave API de Claude",
         "no_openai_key": "no hay clave API de ChatGPT",

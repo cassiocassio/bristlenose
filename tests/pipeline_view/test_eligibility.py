@@ -52,14 +52,14 @@ def _settings(**overrides: object) -> BristlenoseSettings:
 # ── api_key ─────────────────────────────────────────────────────────────────
 
 def test_api_key_present_passes() -> None:
-    req = Requirement(kind="api_key", value="anthropic", explain_failure="reasons.k")
-    ok, reason = check_requirement(req, _host(), _settings())
+    req = Requirement(kind="api_key", value="anthropic", reason_key="reasons.k")
+    ok, reason, _action = check_requirement(req, _host(), _settings())
     assert ok and reason is None
 
 
 def test_api_key_missing_fails_with_reason() -> None:
-    req = Requirement(kind="api_key", value="openai", explain_failure="reasons.no_openai")
-    ok, reason = check_requirement(req, _host(), _settings())
+    req = Requirement(kind="api_key", value="openai", reason_key="reasons.no_openai")
+    ok, reason, _action = check_requirement(req, _host(), _settings())
     assert not ok and "no_openai" in (reason or "")
 
 
@@ -69,17 +69,17 @@ def test_setting_present_truthy_string_passes() -> None:
     req = Requirement(
         kind="setting_present",
         value="azure_endpoint",
-        explain_failure="reasons.endpoint",
+        reason_key="reasons.endpoint",
     )
-    ok, _ = check_requirement(req, _host(), _settings(azure_endpoint="https://x.openai.azure.com/"))
+    ok, _, _ = check_requirement(req, _host(), _settings(azure_endpoint="https://x.openai.azure.com/"))
     assert ok
 
 
 def test_setting_present_empty_string_fails() -> None:
     req = Requirement(
-        kind="setting_present", value="azure_endpoint", explain_failure="reasons.endpoint"
+        kind="setting_present", value="azure_endpoint", reason_key="reasons.endpoint"
     )
-    ok, reason = check_requirement(req, _host(), _settings(azure_endpoint=""))
+    ok, reason, _action = check_requirement(req, _host(), _settings(azure_endpoint=""))
     assert not ok and "endpoint" in (reason or "")
 
 
@@ -87,17 +87,17 @@ def test_setting_present_empty_string_fails() -> None:
 
 def test_setting_enabled_true_passes() -> None:
     req = Requirement(
-        kind="setting_enabled", value="pii_enabled", explain_failure="reasons.pii"
+        kind="setting_enabled", value="pii_enabled", reason_key="reasons.pii"
     )
-    ok, _ = check_requirement(req, _host(), _settings(pii_enabled=True))
+    ok, _, _ = check_requirement(req, _host(), _settings(pii_enabled=True))
     assert ok
 
 
 def test_setting_enabled_false_fails() -> None:
     req = Requirement(
-        kind="setting_enabled", value="pii_enabled", explain_failure="reasons.pii"
+        kind="setting_enabled", value="pii_enabled", reason_key="reasons.pii"
     )
-    ok, reason = check_requirement(req, _host(), _settings(pii_enabled=False))
+    ok, reason, _action = check_requirement(req, _host(), _settings(pii_enabled=False))
     assert not ok and "pii" in (reason or "")
 
 
@@ -105,80 +105,80 @@ def test_setting_enabled_false_fails() -> None:
 
 def test_hardware_apple_silicon_passes_on_arm_darwin() -> None:
     req = Requirement(
-        kind="hardware", value="apple_silicon", explain_failure="reasons.apple"
+        kind="hardware", value="apple_silicon", reason_key="reasons.apple"
     )
-    ok, _ = check_requirement(req, _host(os="Darwin", arch="arm64"), _settings())
+    ok, _, _ = check_requirement(req, _host(os="Darwin", arch="arm64"), _settings())
     assert ok
 
 
 def test_hardware_apple_silicon_fails_on_intel_mac() -> None:
     req = Requirement(
-        kind="hardware", value="apple_silicon", explain_failure="reasons.apple"
+        kind="hardware", value="apple_silicon", reason_key="reasons.apple"
     )
-    ok, reason = check_requirement(req, _host(os="Darwin", arch="x86_64"), _settings())
+    ok, reason, _action = check_requirement(req, _host(os="Darwin", arch="x86_64"), _settings())
     assert not ok and "apple" in (reason or "")
 
 
 def test_hardware_apple_silicon_fails_on_linux() -> None:
     req = Requirement(
-        kind="hardware", value="apple_silicon", explain_failure="reasons.apple"
+        kind="hardware", value="apple_silicon", reason_key="reasons.apple"
     )
-    ok, _ = check_requirement(req, _host(os="Linux", arch="x86_64"), _settings())
+    ok, _, _ = check_requirement(req, _host(os="Linux", arch="x86_64"), _settings())
     assert not ok
 
 
 def test_hardware_cuda_unsupported_in_v1_5() -> None:
     """CUDA always fails — v1.5 doesn't probe it; explicit documented limit."""
-    req = Requirement(kind="hardware", value="cuda", explain_failure="reasons.cuda")
-    ok, _ = check_requirement(req, _host(), _settings())
+    req = Requirement(kind="hardware", value="cuda", reason_key="reasons.cuda")
+    ok, _, _ = check_requirement(req, _host(), _settings())
     assert not ok
 
 
 # ── os ──────────────────────────────────────────────────────────────────────
 
 def test_os_match_passes() -> None:
-    req = Requirement(kind="os", value="Darwin", explain_failure="reasons.os")
-    ok, _ = check_requirement(req, _host(os="Darwin"), _settings())
+    req = Requirement(kind="os", value="Darwin", reason_key="reasons.os")
+    ok, _, _ = check_requirement(req, _host(os="Darwin"), _settings())
     assert ok
 
 
 def test_os_mismatch_fails() -> None:
-    req = Requirement(kind="os", value="Darwin", explain_failure="reasons.os")
-    ok, _ = check_requirement(req, _host(os="Linux"), _settings())
+    req = Requirement(kind="os", value="Darwin", reason_key="reasons.os")
+    ok, _, _ = check_requirement(req, _host(os="Linux"), _settings())
     assert not ok
 
 
 # ── min_ram_gb (boundary cases) ─────────────────────────────────────────────
 
 def test_min_ram_at_boundary_passes() -> None:
-    req = Requirement(kind="min_ram_gb", value=16, explain_failure="reasons.ram")
-    ok, _ = check_requirement(req, _host(memory_gb=16.0), _settings())
+    req = Requirement(kind="min_ram_gb", value=16, reason_key="reasons.ram")
+    ok, _, _ = check_requirement(req, _host(memory_gb=16.0), _settings())
     assert ok
 
 
 def test_min_ram_below_boundary_fails() -> None:
-    req = Requirement(kind="min_ram_gb", value=16, explain_failure="reasons.ram")
-    ok, _ = check_requirement(req, _host(memory_gb=15.9), _settings())
+    req = Requirement(kind="min_ram_gb", value=16, reason_key="reasons.ram")
+    ok, _, _ = check_requirement(req, _host(memory_gb=15.9), _settings())
     assert not ok
 
 
 def test_min_ram_undetected_fails() -> None:
-    req = Requirement(kind="min_ram_gb", value=16, explain_failure="reasons.ram")
-    ok, _ = check_requirement(req, _host(memory_gb=None), _settings())
+    req = Requirement(kind="min_ram_gb", value=16, reason_key="reasons.ram")
+    ok, _, _ = check_requirement(req, _host(memory_gb=None), _settings())
     assert not ok
 
 
 # ── ollama_running ──────────────────────────────────────────────────────────
 
 def test_ollama_running_true_passes() -> None:
-    req = Requirement(kind="ollama_running", value=True, explain_failure="reasons.ollama")
-    ok, _ = check_requirement(req, _host(ollama_running=True), _settings())
+    req = Requirement(kind="ollama_running", value=True, reason_key="reasons.ollama")
+    ok, _, _ = check_requirement(req, _host(ollama_running=True), _settings())
     assert ok
 
 
 def test_ollama_running_false_fails() -> None:
-    req = Requirement(kind="ollama_running", value=True, explain_failure="reasons.ollama")
-    ok, reason = check_requirement(req, _host(ollama_running=False), _settings())
+    req = Requirement(kind="ollama_running", value=True, reason_key="reasons.ollama")
+    ok, reason, _action = check_requirement(req, _host(ollama_running=False), _settings())
     assert not ok and "ollama" in (reason or "").lower()
 
 
@@ -186,59 +186,59 @@ def test_ollama_running_false_fails() -> None:
 
 def test_python_package_installed_passes() -> None:
     req = Requirement(
-        kind="python_package", value="mlx_whisper", explain_failure="reasons.mlx"
+        kind="python_package", value="mlx_whisper", reason_key="reasons.mlx"
     )
-    ok, _ = check_requirement(req, _host(), _settings())
+    ok, _, _ = check_requirement(req, _host(), _settings())
     assert ok
 
 
 def test_python_package_missing_fails() -> None:
     req = Requirement(
-        kind="python_package", value="presidio_analyzer", explain_failure="reasons.presidio"
+        kind="python_package", value="presidio_analyzer", reason_key="reasons.presidio"
     )
-    ok, reason = check_requirement(req, _host(), _settings())
+    ok, reason, _action = check_requirement(req, _host(), _settings())
     assert not ok and "presidio" in (reason or "")
 
 
 def test_python_package_not_in_probe_set_treated_as_missing() -> None:
     """If a package isn't in installed_packages dict at all, treat as missing."""
     req = Requirement(
-        kind="python_package", value="unknown_pkg", explain_failure="reasons.unknown"
+        kind="python_package", value="unknown_pkg", reason_key="reasons.unknown"
     )
-    ok, _ = check_requirement(req, _host(), _settings())
+    ok, _, _ = check_requirement(req, _host(), _settings())
     assert not ok
 
 
 # ── min_os_version (boundary cases) ─────────────────────────────────────────
 
 def test_min_os_version_at_boundary_passes() -> None:
-    req = Requirement(kind="min_os_version", value=26.0, explain_failure="reasons.osv")
-    ok, _ = check_requirement(req, _host(os_version="26.0"), _settings())
+    req = Requirement(kind="min_os_version", value=26.0, reason_key="reasons.osv")
+    ok, _, _ = check_requirement(req, _host(os_version="26.0"), _settings())
     assert ok
 
 
 def test_min_os_version_above_boundary_passes() -> None:
-    req = Requirement(kind="min_os_version", value=26.0, explain_failure="reasons.osv")
-    ok, _ = check_requirement(req, _host(os_version="26.1"), _settings())
+    req = Requirement(kind="min_os_version", value=26.0, reason_key="reasons.osv")
+    ok, _, _ = check_requirement(req, _host(os_version="26.1"), _settings())
     assert ok
 
 
 def test_min_os_version_below_boundary_fails() -> None:
-    req = Requirement(kind="min_os_version", value=26.0, explain_failure="reasons.osv")
-    ok, _ = check_requirement(req, _host(os_version="25.4"), _settings())
+    req = Requirement(kind="min_os_version", value=26.0, reason_key="reasons.osv")
+    ok, _, _ = check_requirement(req, _host(os_version="25.4"), _settings())
     assert not ok
 
 
 def test_min_os_version_none_fails() -> None:
     """Non-Darwin reports `os_version=None`; predicate must not crash."""
-    req = Requirement(kind="min_os_version", value=26.0, explain_failure="reasons.osv")
-    ok, _ = check_requirement(req, _host(os_version=None), _settings())
+    req = Requirement(kind="min_os_version", value=26.0, reason_key="reasons.osv")
+    ok, _, _ = check_requirement(req, _host(os_version=None), _settings())
     assert not ok
 
 
 def test_min_os_version_malformed_string_fails_gracefully() -> None:
-    req = Requirement(kind="min_os_version", value=26.0, explain_failure="reasons.osv")
-    ok, _ = check_requirement(req, _host(os_version="not-a-version"), _settings())
+    req = Requirement(kind="min_os_version", value=26.0, reason_key="reasons.osv")
+    ok, _, _ = check_requirement(req, _host(os_version="not-a-version"), _settings())
     assert not ok
 
 
@@ -250,7 +250,7 @@ def test_min_os_version_malformed_string_fails_gracefully() -> None:
 )
 def test_apple_fm_status_only_available_passes(status: str, expected_ok: bool) -> None:
     req = Requirement(
-        kind="apple_fm_status", value="available", explain_failure="reasons.fm"
+        kind="apple_fm_status", value="available", reason_key="reasons.fm"
     )
-    ok, _ = check_requirement(req, _host(apple_fm_status=status), _settings())
+    ok, _, _ = check_requirement(req, _host(apple_fm_status=status), _settings())
     assert ok is expected_ok

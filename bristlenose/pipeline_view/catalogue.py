@@ -11,9 +11,14 @@ fill it once a Swift-side probe binary ships (deferred, see
 `docs/design-cli-improvements.md` §Captured design).
 
 v1.5: each stage gains a `viable_backends` list of `BackendOption` — the full
-eligibility space. Each option declares `requires: list[Requirement]` against
-HostFacts + BristlenoseSettings. Pure data; eligibility resolution lives in
-`bristlenose/pipeline_view/eligibility.py`.
+eligibility space. Each option declares eligibility against HostFacts +
+BristlenoseSettings.
+
+v2: the catalogue gains a **provider → model** hierarchy. `BackendOption` is a
+provider endpoint that holds `models: list[ModelOption]` (the actual dispatch
+unit) plus provider-level `requires`. Quality is re-keyed from `(stage,
+provider)` to `(stage, provider, model)`. Pure data; eligibility resolution
+lives in `bristlenose/pipeline_view/eligibility.py`.
 """
 
 from __future__ import annotations
@@ -41,30 +46,75 @@ RequirementKind = Literal[
 class Requirement(BaseModel):
     """A single predicate against (HostFacts, BristlenoseSettings).
 
-    `explain_failure` is a translation key (not literal text), resolved at
-    render time so non-English researchers see localised reasons. Catalogue
-    is the canonical map of key → English message; locale files mirror it.
+    `reason_key` (renamed from v1.5's `explain_failure`) is a translation key
+    for *what's wrong now* — resolved at render time so non-English researchers
+    see localised reasons. Catalogue is the canonical map of key → English
+    message; locale files mirror it.
+
+    `action_key` is a translation key for *what to do about it*. None when the
+    failure is structural (no user action available — hardware, min_ram_gb,
+    apple_fm_status pre-OS-26). Set for fixable failures (api_key,
+    setting_present, python_package, ollama_running, etc.). Two namespaces,
+    two purposes — the render layer composes whatever surface it needs from
+    these keys without prescribing UX shape.
     """
 
     kind: RequirementKind
     value: str | int | float | bool
-    explain_failure: str  # translation key, e.g. "pipeline.reasons.no_anthropic_key"
+    reason_key: str  # translation key, e.g. "pipeline.reasons.no_anthropic_key"
+    action_key: str | None = None  # translation key for the fix, None when structural
+
+
+class ModelOption(BaseModel):
+    """One specific model within a provider — the actual dispatch unit.
+
+    `id` is the string the provider's API accepts unchanged
+    ("claude-sonnet-4-20250514", "gpt-4o", "llama3.2:3b"). BN treats it as
+    opaque — provider-specific id conventions differ; we don't normalise.
+
+    `publisher` names who *made* the model when distinct from the provider that
+    serves it (Meta publishes Llama, served via Ollama). Omit when provider ==
+    publisher (Claude, gpt-4o, Gemini). Data-only in v4; not rendered yet.
+
+    `requires` adds model-level eligibility on top of the provider's (e.g. a
+    paid-tier requirement for Opus, RAM threshold for llama-70b). Empty for
+    most cells today.
+
+    `default` flags the provider's out-of-the-box default model. At most one
+    model per provider with default=True — dispatch is singular.
+    """
+
+    id: str
+    display: str
+    publisher: str | None = None
+    requires: list[Requirement] = []
+    default: bool = False
 
 
 class BackendOption(BaseModel):
-    """A backend that *could* run a stage. Eligible iff all `requires` pass.
+    """A provider endpoint — an API namespace. Holds models.
 
-    `id` is the stable identifier. `display` is the English label as it
-    appears in the React/CLI surface; product names (Claude, ChatGPT, Azure
-    OpenAI, Gemini, MLX Whisper, faster-whisper, Apple FM) stay verbatim
-    across locales. Translation-qualifier labels (e.g. "Local (Ollama)" →
-    "Lokal (Ollama)") resolve via `display_key` if set; the catalogue ships
-    English and React/CLI render layers apply the key when present.
+    `id` is the stable identifier. `display` is the English label as it appears
+    in the React/CLI surface; product names (Claude, ChatGPT, Azure OpenAI,
+    Gemini, MLX Whisper, faster-whisper, Apple FM) stay verbatim across locales.
+    Translation-qualifier labels (e.g. "Local (Ollama)" → "Lokal (Ollama)")
+    resolve via `display_key` if set.
+
+    `requires` (v2) carries provider-level eligibility (api key, ollama
+    running, OS version, python package). Cells under this provider inherit
+    these. Absorbs the v1.5 `_llm_requires()` function which is deleted.
+
+    `models` (v2) is the provider's catalogued models. Empty means BN doesn't
+    treat this provider as having model-level granularity (anonymisation;
+    transcription today; Apple FM until WWDC; Azure until configured at render
+    time).
     """
 
     id: str
     display: str
     display_key: str | None = None  # i18n key for qualifier-localised labels
+    requires: list[Requirement] = []  # v2 — provider-level eligibility
+    models: list[ModelOption] = []  # v2 — catalogued models
 
 
 class PipelineStageDef(BaseModel):
@@ -79,100 +129,112 @@ class PipelineStageDef(BaseModel):
 
 # ── Backend options (catalogue cells) ───────────────────────────────────────
 
-# Shared by all five LLM stages. Render-time dedup is in `render.py`:
-# LLM stages render a single host-wide summary card and no per-stage list.
+# Shared by all five LLM stages. v2: each provider carries its own `requires`
+# (provider-level eligibility) and `models` (the dispatch unit). Quality is
+# re-keyed to (stage, provider, model) in `_LLM_QUALITY` below.
 _LLM_BACKENDS: list[BackendOption] = [
     BackendOption(
         id="claude",
         display="Claude",
+        requires=[
+            Requirement(
+                kind="api_key",
+                value="anthropic",
+                reason_key="pipeline.reasons.no_anthropic_key",
+                action_key="pipeline.actions.obtain_anthropic_key",
+            ),
+        ],
+        models=[
+            ModelOption(id="claude-sonnet-4-20250514", display="Sonnet 4", default=True),
+            ModelOption(id="claude-opus-4-20250514", display="Opus 4"),
+        ],
     ),
     BackendOption(
         id="openai",
         display="ChatGPT",
+        requires=[
+            Requirement(
+                kind="api_key",
+                value="openai",
+                reason_key="pipeline.reasons.no_openai_key",
+                action_key="pipeline.actions.obtain_openai_key",
+            ),
+        ],
+        models=[ModelOption(id="gpt-4o", display="gpt-4o", default=True)],
     ),
     BackendOption(
         id="azure",
         display="Azure OpenAI",
+        requires=[
+            Requirement(
+                kind="api_key",
+                value="azure",
+                reason_key="pipeline.reasons.no_azure_key",
+                action_key="pipeline.actions.configure_azure",
+            ),
+            Requirement(
+                kind="setting_present",
+                value="azure_endpoint",
+                reason_key="pipeline.reasons.no_azure_endpoint",
+                action_key="pipeline.actions.configure_azure",
+            ),
+            Requirement(
+                kind="setting_present",
+                value="azure_deployment",
+                reason_key="pipeline.reasons.no_azure_deployment",
+                action_key="pipeline.actions.configure_azure",
+            ),
+        ],
+        models=[],  # synthesised at render time from settings.azure_deployment
     ),
     BackendOption(
         id="google",
         display="Gemini",
+        requires=[
+            Requirement(
+                kind="api_key",
+                value="google",
+                reason_key="pipeline.reasons.no_google_key",
+                action_key="pipeline.actions.obtain_google_key",
+            ),
+        ],
+        models=[ModelOption(id="gemini-2.5-pro", display="2.5 Pro", default=True)],
     ),
     BackendOption(
         id="local",
         display="Local (Ollama)",
         display_key="pipeline.backends.local_ollama",
+        requires=[
+            Requirement(
+                kind="ollama_running",
+                value=True,
+                reason_key="pipeline.reasons.ollama_not_running",
+                action_key="pipeline.actions.start_ollama",
+            ),
+        ],
+        models=[
+            ModelOption(
+                id="llama3.2:3b", display="llama3.2 3B", publisher="Meta", default=True
+            ),
+        ],
     ),
     BackendOption(
         id="apple_fm",
         display="Apple FM",
-    ),
-]
-
-
-def _llm_requires(option_id: str) -> list[Requirement]:
-    """Return the requirement list a given LLM option imposes."""
-    if option_id == "claude":
-        return [
-            Requirement(
-                kind="api_key",
-                value="anthropic",
-                explain_failure="pipeline.reasons.no_anthropic_key",
-            ),
-        ]
-    if option_id == "openai":
-        return [
-            Requirement(
-                kind="api_key",
-                value="openai",
-                explain_failure="pipeline.reasons.no_openai_key",
-            ),
-        ]
-    if option_id == "azure":
-        return [
-            Requirement(
-                kind="api_key",
-                value="azure",
-                explain_failure="pipeline.reasons.no_azure_key",
-            ),
-            Requirement(
-                kind="setting_present",
-                value="azure_endpoint",
-                explain_failure="pipeline.reasons.no_azure_endpoint",
-            ),
-            Requirement(
-                kind="setting_present",
-                value="azure_deployment",
-                explain_failure="pipeline.reasons.no_azure_deployment",
-            ),
-        ]
-    if option_id == "google":
-        return [
-            Requirement(
-                kind="api_key",
-                value="google",
-                explain_failure="pipeline.reasons.no_google_key",
-            ),
-        ]
-    if option_id == "local":
-        return [
-            Requirement(
-                kind="ollama_running",
-                value=True,
-                explain_failure="pipeline.reasons.ollama_not_running",
-            ),
-        ]
-    if option_id == "apple_fm":
-        # Always shows ✗ on the CLI (status="unknown"); desktop app fills
-        # it once the Swift-side probe ships. Single shared reason key.
-        return [
+        requires=[
+            # Always shows ✗/— on the CLI (status="unknown"); desktop app fills
+            # it once the Swift-side probe ships. Structural until OS 26 ships,
+            # so action_key=None.
             Requirement(
                 kind="apple_fm_status",
                 value="available",
-                explain_failure="pipeline.reasons.apple_fm_check_desktop",
+                reason_key="pipeline.reasons.apple_fm_check_desktop",
+                action_key=None,
             ),
-        ]
-    return []
+        ],
+        models=[],  # post-WWDC
+    ),
+]
 
 
 # ── Stage catalogue ─────────────────────────────────────────────────────────
@@ -184,8 +246,38 @@ STAGES: list[PipelineStageDef] = [
         kind="transcription",
         notes="Auto-detected from your hardware. Local, private, free.",
         viable_backends=[
-            BackendOption(id="mlx", display="MLX Whisper"),
-            BackendOption(id="faster-whisper", display="faster-whisper"),
+            BackendOption(
+                id="mlx",
+                display="MLX Whisper",
+                requires=[
+                    Requirement(
+                        kind="hardware",
+                        value="apple_silicon",
+                        reason_key="pipeline.reasons.requires_apple_silicon",
+                        action_key=None,  # structural
+                    ),
+                    Requirement(
+                        kind="python_package",
+                        value="mlx_whisper",
+                        reason_key="pipeline.reasons.mlx_whisper_not_installed",
+                        action_key="pipeline.actions.install_mlx_whisper",
+                    ),
+                ],
+                models=[],  # transcription stays flat in v2
+            ),
+            BackendOption(
+                id="faster-whisper",
+                display="faster-whisper",
+                requires=[
+                    Requirement(
+                        kind="python_package",
+                        value="ctranslate2",
+                        reason_key="pipeline.reasons.ctranslate2_not_installed",
+                        action_key="pipeline.actions.install_ctranslate2",
+                    ),
+                ],
+                models=[],
+            ),
         ],
     ),
     PipelineStageDef(
@@ -205,6 +297,27 @@ STAGES: list[PipelineStageDef] = [
                 id="presidio",
                 display="Built-in anonymiser",
                 display_key="pipeline.backends.builtin_anonymiser",
+                requires=[
+                    Requirement(
+                        kind="python_package",
+                        value="presidio_analyzer",
+                        reason_key="pipeline.reasons.presidio_not_installed",
+                        action_key="pipeline.actions.install_presidio",
+                    ),
+                    Requirement(
+                        kind="python_package",
+                        value="en_core_web_lg",
+                        reason_key="pipeline.reasons.spacy_model_missing",
+                        action_key="pipeline.actions.install_presidio",
+                    ),
+                    Requirement(
+                        kind="setting_enabled",
+                        value="pii_enabled",
+                        reason_key="pipeline.reasons.pii_disabled",
+                        action_key="pipeline.actions.enable_pii_redaction",
+                    ),
+                ],
+                models=[],
             ),
         ],
     ),
@@ -251,79 +364,35 @@ STAGES: list[PipelineStageDef] = [
 
 # ── Requirement aggregation ─────────────────────────────────────────────────
 
-# Per-option requirement lookup, keyed by (stage_id, option_id). The shared
-# LLM backends share requirements (api_key, ollama_running, etc.) — but the
-# transcription/anonymisation options each have their own requirements wired
-# below. Eligibility.py consumes this view; catalogue.py is pure data.
 
-_TRANSCRIPTION_REQUIRES: dict[str, list[Requirement]] = {
-    "mlx": [
-        Requirement(
-            kind="hardware",
-            value="apple_silicon",
-            explain_failure="pipeline.reasons.requires_apple_silicon",
-        ),
-        Requirement(
-            kind="python_package",
-            value="mlx_whisper",
-            explain_failure="pipeline.reasons.mlx_whisper_not_installed",
-        ),
-    ],
-    "faster-whisper": [
-        Requirement(
-            kind="python_package",
-            value="ctranslate2",
-            explain_failure="pipeline.reasons.ctranslate2_not_installed",
-        ),
-    ],
-}
+def requirements_for(
+    backend: BackendOption,
+    model: ModelOption | None = None,
+) -> list[Requirement]:
+    """Combined provider + model requirements for one (backend, model) cell.
 
-_ANONYMISATION_REQUIRES: dict[str, list[Requirement]] = {
-    "presidio": [
-        Requirement(
-            kind="python_package",
-            value="presidio_analyzer",
-            explain_failure="pipeline.reasons.presidio_not_installed",
-        ),
-        Requirement(
-            kind="python_package",
-            value="en_core_web_lg",
-            explain_failure="pipeline.reasons.spacy_model_missing",
-        ),
-        Requirement(
-            kind="setting_enabled",
-            value="pii_enabled",
-            explain_failure="pipeline.reasons.pii_disabled",
-        ),
-    ],
-}
-
-
-def requirements_for(stage_id: str, option_id: str) -> list[Requirement]:
-    """Return the requirement list for a (stage, option) cell.
-
-    LLM stages share `_llm_requires`. Transcription + anonymisation use their
-    own tables. Stages without an option (`apple_foundation_models`) return [].
+    Pass model=None for cells without model granularity (transcription today,
+    anonymisation, apple_fm pre-WWDC, and the provider-collapse path).
     """
-    if option_id in {"claude", "openai", "azure", "google", "local", "apple_fm"}:
-        return _llm_requires(option_id)
-    if stage_id == "transcription":
-        return _TRANSCRIPTION_REQUIRES.get(option_id, [])
-    if stage_id == "anonymisation":
-        return _ANONYMISATION_REQUIRES.get(option_id, [])
-    return []
+    if model is None:
+        return list(backend.requires)
+    return [*backend.requires, *model.requires]
 
 
 def all_python_packages() -> set[str]:
     """Every `python_package` requirement value across the catalogue.
 
     Single source of truth for what `host.installed_packages` must probe.
-    Derived at module load; host.py reads this once.
+    Walks both provider-level and model-level requirements. Derived at module
+    load; host.py reads this once.
     """
     packages: set[str] = set()
     for stage in STAGES:
         for option in stage.viable_backends:
-            for req in requirements_for(stage.id, option.id):
+            reqs = list(option.requires)
+            for model in option.models:
+                reqs.extend(model.requires)
+            for req in reqs:
                 if req.kind == "python_package" and isinstance(req.value, str):
                     packages.add(req.value)
     return packages
@@ -351,7 +420,7 @@ UNTESTED_NOTE_KEY = "pipeline.quality.untested"
 
 
 class QualityRating(BaseModel):
-    """Per-(stage, option) editorial judgement of fitness for purpose.
+    """Per-(stage, provider, model) editorial judgement of fitness for purpose.
 
     Quality and "is this the default" are intentionally orthogonal axes:
     quality measures fitness; `default` flags Bristlenose's out-of-the-box
@@ -388,12 +457,9 @@ class QualityRating(BaseModel):
     a peer; a `good` cell can be recommended over an `excellent` peer when
     the trade-off is worth it. **Plural by design** — multiple cells may
     be recommended per stage. **Invariant: `default ⇒ recommended`** — BN
-    cannot default to a cell it doesn't actively endorse. In the v1.9
-    initial catalogue, the only `recommended=True` cells coincide with
-    `default=True` (we have no evidence yet for alternative endorsements);
-    as cohort data arrives — e.g. ChatGPT comparison, Local-for-structural
-    confidence — we widen the recommended set one cell at a time without
-    touching the default.
+    cannot default to a cell it doesn't actively endorse. v2 is the first
+    time `recommended ≠ default` fires (Opus 4, gpt-4o are recommended but
+    not default).
 
     `note_key` is a translation key for the one-line editorial caveat
     (e.g. "pipeline.quality.local_quote_extraction_miss_rate"). Locale
@@ -415,72 +481,104 @@ class QualityRating(BaseModel):
     recommended: bool = False
 
 
-# Shared LLM cells. Same option-id set across all five LLM stages —
-# `test_quality.py` enforces parity (mirrors v1.5's _LLM_BACKENDS invariant).
-# Apple FM omitted by design: stays untested (renders as ⚠) until the probe
-# ships. Editorial judgements only; refine from cohort signal as it arrives.
-_LLM_QUALITY: dict[tuple[str, str], QualityRating] = {
-    # Claude is BN's default LLM provider (matches BristlenoseSettings.
-    # llm_provider="anthropic"); flagged default=True across LLM stages so
-    # the render layer can mark the BN-recommended pick. All 25 LLM cells
-    # currently `source="editorial"` — these are BN's subjective opinion,
-    # honest about being unmeasured until benchmark data lands.
-    # speaker_identification — structural task; most LLMs handle it well.
-    ("speaker_identification", "claude"): QualityRating(
+# Shared LLM cells, keyed (stage, provider, model). Same (provider, model)
+# keyset across all five LLM stages — `test_quality.py` enforces parity.
+# Azure + Apple FM omitted by design: Azure's model is synthesised at render
+# time from settings.azure_deployment (no catalogue model to rate); Apple FM
+# stays untested (renders as ?) until the probe ships. Editorial judgements
+# only; refine from cohort signal as it arrives.
+#
+# Structural stages (speaker_identification, topic_segmentation) rate Local as
+# `good`; synthesis stages (quote_extraction, quote_clustering,
+# thematic_grouping) rate it `marginal` — the per-stage variation v2 exists to
+# surface. claude/openai/google ratings are uniform across all five stages.
+_LLM_QUALITY: dict[tuple[str, str, str], QualityRating] = {
+    # ── speaker_identification — structural; most LLMs handle it well ──
+    ("speaker_identification", "claude", "claude-sonnet-4-20250514"): QualityRating(
         rating="excellent", source="editorial", default=True, recommended=True
     ),
-    ("speaker_identification", "openai"): QualityRating(rating="excellent", source="editorial"),
-    ("speaker_identification", "google"): QualityRating(rating="good", source="editorial"),
-    ("speaker_identification", "azure"): QualityRating(rating="good", source="editorial"),
-    ("speaker_identification", "local"): QualityRating(
+    ("speaker_identification", "claude", "claude-opus-4-20250514"): QualityRating(
+        rating="excellent", source="editorial", recommended=True
+    ),
+    ("speaker_identification", "openai", "gpt-4o"): QualityRating(
+        rating="excellent", source="editorial", recommended=True
+    ),
+    ("speaker_identification", "google", "gemini-2.5-pro"): QualityRating(
+        rating="good", source="editorial"
+    ),
+    ("speaker_identification", "local", "llama3.2:3b"): QualityRating(
         rating="good",
         note_key="pipeline.quality.local_speaker_id_acceptable",
         source="community",
     ),
-    # topic_segmentation — structural; similar profile to speaker_id.
-    ("topic_segmentation", "claude"): QualityRating(
+    # ── topic_segmentation — structural; similar profile to speaker_id ──
+    ("topic_segmentation", "claude", "claude-sonnet-4-20250514"): QualityRating(
         rating="excellent", source="editorial", default=True, recommended=True
     ),
-    ("topic_segmentation", "openai"): QualityRating(rating="excellent", source="editorial"),
-    ("topic_segmentation", "google"): QualityRating(rating="good", source="editorial"),
-    ("topic_segmentation", "azure"): QualityRating(rating="good", source="editorial"),
-    ("topic_segmentation", "local"): QualityRating(
+    ("topic_segmentation", "claude", "claude-opus-4-20250514"): QualityRating(
+        rating="excellent", source="editorial", recommended=True
+    ),
+    ("topic_segmentation", "openai", "gpt-4o"): QualityRating(
+        rating="excellent", source="editorial", recommended=True
+    ),
+    ("topic_segmentation", "google", "gemini-2.5-pro"): QualityRating(
+        rating="good", source="editorial"
+    ),
+    ("topic_segmentation", "local", "llama3.2:3b"): QualityRating(
         rating="good",
         note_key="pipeline.quality.local_topic_segmentation_acceptable",
         source="community",
     ),
-    # quote_extraction — high-stakes; longest prompts, smallest-model risk.
-    ("quote_extraction", "claude"): QualityRating(
+    # ── quote_extraction — high-stakes; longest prompts, smallest-model risk ──
+    ("quote_extraction", "claude", "claude-sonnet-4-20250514"): QualityRating(
         rating="excellent", source="editorial", default=True, recommended=True
     ),
-    ("quote_extraction", "openai"): QualityRating(rating="excellent", source="editorial"),
-    ("quote_extraction", "google"): QualityRating(rating="good", source="editorial"),
-    ("quote_extraction", "azure"): QualityRating(rating="good", source="editorial"),
-    ("quote_extraction", "local"): QualityRating(
+    ("quote_extraction", "claude", "claude-opus-4-20250514"): QualityRating(
+        rating="excellent", source="editorial", recommended=True
+    ),
+    ("quote_extraction", "openai", "gpt-4o"): QualityRating(
+        rating="excellent", source="editorial", recommended=True
+    ),
+    ("quote_extraction", "google", "gemini-2.5-pro"): QualityRating(
+        rating="good", source="editorial"
+    ),
+    ("quote_extraction", "local", "llama3.2:3b"): QualityRating(
         rating="marginal",
         note_key="pipeline.quality.local_quote_extraction_miss_rate",
         source="community",
     ),
-    # quote_clustering — high-stakes; nuance matters.
-    ("quote_clustering", "claude"): QualityRating(
+    # ── quote_clustering — high-stakes; nuance matters ──
+    ("quote_clustering", "claude", "claude-sonnet-4-20250514"): QualityRating(
         rating="excellent", source="editorial", default=True, recommended=True
     ),
-    ("quote_clustering", "openai"): QualityRating(rating="excellent", source="editorial"),
-    ("quote_clustering", "google"): QualityRating(rating="good", source="editorial"),
-    ("quote_clustering", "azure"): QualityRating(rating="good", source="editorial"),
-    ("quote_clustering", "local"): QualityRating(
+    ("quote_clustering", "claude", "claude-opus-4-20250514"): QualityRating(
+        rating="excellent", source="editorial", recommended=True
+    ),
+    ("quote_clustering", "openai", "gpt-4o"): QualityRating(
+        rating="excellent", source="editorial", recommended=True
+    ),
+    ("quote_clustering", "google", "gemini-2.5-pro"): QualityRating(
+        rating="good", source="editorial"
+    ),
+    ("quote_clustering", "local", "llama3.2:3b"): QualityRating(
         rating="marginal",
         note_key="pipeline.quality.local_quote_clustering_drift",
         source="community",
     ),
-    # thematic_grouping — high-stakes synthesis; small-model drift highest here.
-    ("thematic_grouping", "claude"): QualityRating(
+    # ── thematic_grouping — high-stakes synthesis; small-model drift highest ──
+    ("thematic_grouping", "claude", "claude-sonnet-4-20250514"): QualityRating(
         rating="excellent", source="editorial", default=True, recommended=True
     ),
-    ("thematic_grouping", "openai"): QualityRating(rating="excellent", source="editorial"),
-    ("thematic_grouping", "google"): QualityRating(rating="good", source="editorial"),
-    ("thematic_grouping", "azure"): QualityRating(rating="good", source="editorial"),
-    ("thematic_grouping", "local"): QualityRating(
+    ("thematic_grouping", "claude", "claude-opus-4-20250514"): QualityRating(
+        rating="excellent", source="editorial", recommended=True
+    ),
+    ("thematic_grouping", "openai", "gpt-4o"): QualityRating(
+        rating="excellent", source="editorial", recommended=True
+    ),
+    ("thematic_grouping", "google", "gemini-2.5-pro"): QualityRating(
+        rating="good", source="editorial"
+    ),
+    ("thematic_grouping", "local", "llama3.2:3b"): QualityRating(
         rating="marginal",
         note_key="pipeline.quality.local_thematic_grouping_drift",
         source="community",
@@ -491,7 +589,8 @@ _LLM_QUALITY: dict[tuple[str, str], QualityRating] = {
 # Transcription cells deliberately omit `default=True`: the host-aware
 # resolver in s05_transcribe._resolve_backend() already picks based on
 # hardware (MLX on Apple Silicon, faster-whisper elsewhere). A static
-# catalogue flag would conflict with that dynamic choice.
+# catalogue flag would conflict with that dynamic choice. Keyed (stage,
+# provider) — transcription has no model granularity in v2.
 _TRANSCRIPTION_QUALITY: dict[tuple[str, str], QualityRating] = {
     ("transcription", "mlx"): QualityRating(
         rating="excellent",
@@ -506,14 +605,20 @@ _TRANSCRIPTION_QUALITY: dict[tuple[str, str], QualityRating] = {
 }
 
 
-def quality_for(stage_id: str, option_id: str) -> QualityRating | None:
-    """Return the editorial quality rating for a (stage, option) cell.
+def quality_for(
+    stage_id: str,
+    provider_id: str,
+    model_id: str | None = None,
+) -> QualityRating | None:
+    """Editorial quality rating for a (stage, provider, model) cell.
 
-    None when the cell is not yet rated — render layer defaults this to
-    ⚠ "untested" (pipeline.quality.untested). Catalogue stays explicit
-    about what's measured vs guessed; absence is information.
+    `model_id` is required for LLM stages (model granularity); None falls
+    through to the provider-level transcription/anonymisation table. Returns
+    None when unrated — render layer shows ? "untested". Catalogue stays
+    explicit about what's measured vs guessed; absence is information.
     """
-    llm = _LLM_QUALITY.get((stage_id, option_id))
-    if llm is not None:
-        return llm
-    return _TRANSCRIPTION_QUALITY.get((stage_id, option_id))
+    if model_id is not None:
+        rating = _LLM_QUALITY.get((stage_id, provider_id, model_id))
+        if rating is not None:
+            return rating
+    return _TRANSCRIPTION_QUALITY.get((stage_id, provider_id))

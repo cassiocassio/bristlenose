@@ -49,6 +49,54 @@
         "local_ollama": "\ub85c\uceec (Ollama)",
         "builtin_anonymiser": "\uae30\ubcf8 \uc775\uba85\ud654 \ub3c4\uad6c"
       },
+      "glyph": {
+        "available": "\uc0ac\uc6a9 \uac00\ub2a5",
+        "unavailable": "\uc0ac\uc6a9 \ubd88\uac00",
+        "skipped": "\uc774 \ud638\uc2a4\ud2b8\uc5d0\uc11c\ub294 \ud574\ub2f9 \uc5c6\uc74c"
+      },
+      "column": {
+        "model": "\ubaa8\ub378",
+        "availability": "\uc0ac\uc6a9 \uac00\ub2a5 \uc5ec\ubd80",
+        "quality": "\ud488\uc9c8",
+        "notes": "\ucc38\uace0"
+      },
+      "key": {
+        "italic_label": "\uae30\uc6b8\uc784\uaf34",
+        "synthesised": "\uce74\ud0c8\ub85c\uadf8\uac00 \uc544\ub2cc \uc0ac\uc6a9\uc790 \uc124\uc815\uc5d0\uc11c"
+      },
+      "qualifier": {
+        "default": "\uae30\ubcf8\uac12",
+        "current": "\ud604\uc7ac",
+        "your_deployment": "\ub0b4 Azure \ubc30\ud3ec"
+      },
+      "quality": {
+        "glyph": {
+          "excellent": "\ub9e4\uc6b0 \uc6b0\uc218\ud55c \ud488\uc9c8",
+          "good": "\uc591\ud638\ud55c \ud488\uc9c8",
+          "marginal": "\ud55c\uacc4 \ud488\uc9c8",
+          "avoid": "\uad8c\uc7a5\ud558\uc9c0 \uc54a\uc74c \u2014 \ud488\uc9c8\uc774 \ub108\ubb34 \ub0ae\uc74c",
+          "untested": "\ubbf8\uac80\uc99d"
+        },
+        "untested": "\ubbf8\uac80\uc99d",
+        "local_speaker_id_acceptable": "\ub85c\uceec \ubaa8\ub378\uc740 \ud654\uc790 \uc2dd\ubcc4\uc744 \uc798 \ucc98\ub9ac\ud569\ub2c8\ub2e4",
+        "local_topic_segmentation_acceptable": "\ub85c\uceec \ubaa8\ub378\uc740 \uc8fc\uc81c \ubd84\ud560\uc744 \uc798 \ucc98\ub9ac\ud569\ub2c8\ub2e4",
+        "local_quote_extraction_miss_rate": "\uc18c\ud615 \ubaa8\ub378\uc740 \uc5ec\ub7ec \uc808\ub85c \ub41c \uc778\uc6a9\uc744 \ub193\uce69\ub2c8\ub2e4",
+        "local_quote_clustering_drift": "\uc18c\ud615 \ubaa8\ub378\uc740 \uc778\uc6a9\uc744 \uc77c\uad00\ub418\uc9c0 \uc54a\uac8c \ubb36\uc2b5\ub2c8\ub2e4",
+        "local_thematic_grouping_drift": "\uc18c\ud615 \ubaa8\ub378\uc740 \uc8fc\uc81c \uc885\ud569\uc5d0\uc11c \ubc97\uc5b4\ub0a9\ub2c8\ub2e4",
+        "mlx_whisper_apple_silicon_optimal": "Apple Silicon\uc5d0\uc11c \ucd5c\uc801",
+        "faster_whisper_cpu_baseline": "\uacac\uace0\ud55c CPU \uae30\uc900, GPU \ubd88\ud544\uc694"
+      },
+      "actions": {
+        "obtain_anthropic_key": "console.anthropic.com\uc5d0\uc11c API \ud0a4\ub97c \ubc1c\uae09\ubc1b\uc544 ANTHROPIC_API_KEY\ub97c \uc124\uc815\ud558\uac70\ub098 \uc124\uc815 \u2192 \ud0a4\uc5d0 \ubd99\uc5ec\ub123\uc73c\uc138\uc694",
+        "obtain_openai_key": "platform.openai.com\uc5d0\uc11c API \ud0a4\ub97c \ubc1c\uae09\ubc1b\uc544 OPENAI_API_KEY\ub97c \uc124\uc815\ud558\uac70\ub098 \uc124\uc815 \u2192 \ud0a4\uc5d0 \ubd99\uc5ec\ub123\uc73c\uc138\uc694",
+        "obtain_google_key": "aistudio.google.com\uc5d0\uc11c API \ud0a4\ub97c \ubc1c\uae09\ubc1b\uc544 GOOGLE_API_KEY\ub97c \uc124\uc815\ud558\uac70\ub098 \uc124\uc815 \u2192 \ud0a4\uc5d0 \ubd99\uc5ec\ub123\uc73c\uc138\uc694",
+        "configure_azure": "\uc124\uc815 \u2192 \ud0a4\uc5d0\uc11c Azure \ud0a4, \uc5d4\ub4dc\ud3ec\uc778\ud2b8, \ubc30\ud3ec\ub97c \uc124\uc815\ud558\uc138\uc694",
+        "start_ollama": "Ollama \uc11c\ube44\uc2a4\ub97c \uc2dc\uc791\ud558\uc138\uc694 (ollama serve)",
+        "install_mlx_whisper": "pip install mlx-whisper (Apple Silicon \ud544\uc694)",
+        "install_ctranslate2": "pip install ctranslate2",
+        "install_presidio": "\ub0b4\uc7a5 \uc775\uba85\ud654 \ub3c4\uad6c\ub97c \uc0ac\uc6a9\ud558\ub824\uba74 pip install bristlenose[redact-pii]",
+        "enable_pii_redaction": "--redact-pii\ub85c \uc2e4\ud589\ud558\uac70\ub098 pii_enabled=true\ub85c \uc124\uc815\ud558\uc138\uc694"
+      },
       "reasons": {
         "no_anthropic_key": "Claude API \ud0a4\uac00 \uc124\uc815\ub418\uc9c0 \uc54a\uc74c",
         "no_openai_key": "ChatGPT API \ud0a4\uac00 \uc124\uc815\ub418\uc9c0 \uc54a\uc74c",

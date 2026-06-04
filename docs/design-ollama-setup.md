@@ -1,7 +1,7 @@
 ---
-status: proposed
-last-trued: 2026-06-03
-trued-against: beat3-provider-activation @ design-time (not yet implemented)
+status: implemented
+last-trued: 2026-06-04
+trued-against: beat3-provider-activation @ implemented + QA-verified (ea4c2e5, 065698a; 4 Jun 2026)
 ---
 
 # Design: Ollama setup flow (first-run on-device AI)
@@ -10,10 +10,11 @@ _3 Jun 2026 — functional + UX spec. Supersedes the silent browser-open + blind
 120s daemon-spin in the original `OllamaSetupSheet` / `OllamaDownloadModel`
 flow (review-log Finding 3, branch `beat3-provider-activation`)._
 
-> **Status (`proposed`):** This is the agreed design for the redesigned flow.
-> Not yet implemented. The shipping code still does the silent-open behaviour
-> this doc removes. **This doc is the canonical spec** (the implementation map is
-> §16); the earlier terse plan
+> **Status (`implemented`):** Shipped on `beat3-provider-activation` (`ea4c2e5`
+> flow-B pill + popovers; `065698a` menu-bar Debug state harness) and walked
+> through every state in a screenshot QA pass (4 Jun 2026). The silent-open +
+> blind-120s behaviour this doc removes is gone. **This doc is the canonical
+> spec** (the implementation map is §16); the earlier terse plan
 > (`.claude/plans/archive/finding-3-ollama-setup.md`) is superseded and archived.
 > Model catalogue + RAM recommendation logic lives in
 > `docs/design-gemma4-local-models.md` and is referenced, not redefined, here.

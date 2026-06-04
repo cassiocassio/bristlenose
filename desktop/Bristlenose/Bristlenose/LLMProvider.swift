@@ -269,6 +269,20 @@ struct OllamaModel: Identifiable, Hashable {
     let displayName: String
     let weightsGB: Double
     let minRAMGB: Double
+
+    /// Quality tier shown as the picker's descriptor word (§9.1). Semantic
+    /// only — the pill maps each case to localised copy. The two large
+    /// models share `.best`; their RAM qualifier (`needs N GB`) tells them
+    /// apart on a Mac that can't run either.
+    enum Tier { case smallest, balanced, best }
+
+    var tier: Tier {
+        switch tag {
+        case "llama3.2:3b": .smallest
+        case "gemma4:e4b": .balanced
+        default: .best
+        }
+    }
 }
 
 enum OllamaCatalog {
@@ -307,6 +321,15 @@ enum OllamaCatalog {
             return override
         }
         #endif
+        return tagForRAM(ramGB)
+    }
+
+    /// Pure RAM → tag waterfall — the testable core of `recommendedTag`,
+    /// with no environment reads or DEBUG override. Boundaries are deliberate:
+    /// `>= 15` (not 16) and `>= 35` / `>= 47` carry the comfort margin above
+    /// each model's `minRAMGB` floor, and `physicalMemory` under-reports the
+    /// advertised tier. Unit-pinned in `OllamaCatalogTests`.
+    static func tagForRAM(_ ramGB: Double) -> String {
         if ramGB >= 47 { return "gemma4:31b" }
         if ramGB >= 35 { return "gemma4:26b" }
         if ramGB >= 15 { return "gemma4:e4b" }
@@ -331,5 +354,43 @@ enum OllamaCatalog {
     /// list (e.g. user-typed Custom… values).
     static func model(for tag: String) -> OllamaModel? {
         curated.first { $0.tag == tag }
+    }
+
+    // MARK: - Disk space
+
+    /// The largest model the user can actually run on this Mac — the
+    /// biggest-weights model whose `minRAMGB` floor the hardware clears.
+    /// Drives the low-disk advisory: we warn against the largest model the
+    /// user could *select*, not the largest model merely *shown* (the
+    /// greyed over-RAM rows can't be picked, so their size is irrelevant
+    /// to the disk decision). Finding 19.
+    static func largestSelectable(forRAMGB ramGB: Double = systemRAMGB) -> OllamaModel? {
+        curated.filter { fits($0, ramGB: ramGB) }.max { $0.weightsGB < $1.weightsGB }
+    }
+
+    /// Free space on the volume backing the user's home directory, in
+    /// bytes. Uses `volumeAvailableCapacityForImportantUsage` — the
+    /// purgeable-aware figure macOS reports to apps for "will this
+    /// download fit?" decisions. Returns nil if the query fails (unknown
+    /// → caller treats as "don't warn").
+    static func freeDiskBytes() -> Int64? {
+        let home = URL(fileURLWithPath: NSHomeDirectory())
+        let values = try? home.resourceValues(
+            forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+        return values?.volumeAvailableCapacityForImportantUsage
+    }
+
+    /// Advisory: is free disk below the largest model the user could
+    /// select? Advisory only — never blocks the picker's Use button; the
+    /// pull either fits or Ollama reports the failure honestly. Returns
+    /// false when free space is unknown (don't cry wolf) and when there's
+    /// no selectable model at all. Finding 19.
+    static func isLowDisk(
+        freeBytes: Int64? = freeDiskBytes(),
+        ramGB: Double = systemRAMGB
+    ) -> Bool {
+        guard let freeBytes,
+              let largest = largestSelectable(forRAMGB: ramGB) else { return false }
+        return freeBytes < Int64(largest.weightsGB * 1_000_000_000)
     }
 }

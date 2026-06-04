@@ -159,6 +159,7 @@ struct PipelineRunnerTerminationTests {
     /// Single positive assertion guards against accidental deletion of the
     /// helper. The heuristic is now a trigger (not a verdict), so don't
     /// over-pin its shape — it may be removed entirely in a future pass.
+    @MainActor
     @Test func looksLikeSuccess_recognisesCanonicalMarkers() {
         #expect(PipelineRunner.looksLikeSuccess(lines: ["Done", "Report: http://…"]))
     }

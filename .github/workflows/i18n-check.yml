@@ -13,6 +13,11 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
+# Least-privilege default — GITHUB_TOKEN read-only (this workflow only reads
+# and validates locale files). Supply-chain hardening 2026-06-04.
+permissions:
+  contents: read
+
 jobs:
   validate-locales:
     runs-on: ubuntu-latest

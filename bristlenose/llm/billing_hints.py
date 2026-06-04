@@ -10,16 +10,18 @@ Drift is policed by the quarterly-drift cron (`trig_01BtVXKG5hBnhPF4bGwR78CR`)
 which walks these URLs and confirms the minimums + flow descriptions still
 hold. The cron is already armed; it activates when this module exists.
 
-Coverage scope (finding 24): only ``anthropic`` and ``openai`` get rich
-error-class translations and recovery copy. Azure and Gemini fall through
-to the generic ``"Provider says: <message>."`` path because their billing
-models are more variable (subscription-tied, enterprise contracts) and the
-prescriptive copy would mislead more than it helps.
+Coverage scope: all five providers (anthropic, openai, azure, google,
+local) get rich error-class translations. Azure / Google / Local don't
+have credit-balance billing (subscription / GCP-billed / free) so their
+``billing_url`` and ``minimum_note`` are honest about that rather than
+faking a top-up flow.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+
+from rich.markup import escape as _rich_escape
 
 from bristlenose.i18n import t
 
@@ -61,6 +63,36 @@ _BILLING: dict[str, ProviderBilling] = {
             "refilled at Billing → Add to credit balance."
         ),
     ),
+    "azure": ProviderBilling(
+        display_name="Azure OpenAI",
+        console_url="https://portal.azure.com/",
+        keys_url="https://portal.azure.com/",
+        billing_url="https://portal.azure.com/",
+        minimum_usd=0.0,
+        minimum_note=(
+            "Azure OpenAI is billed through your Azure subscription, not a "
+            "credit balance. Check usage and quotas in the Azure portal."
+        ),
+    ),
+    "google": ProviderBilling(
+        display_name="Gemini",
+        console_url="https://console.cloud.google.com/",
+        keys_url="https://aistudio.google.com/apikey",
+        billing_url="https://console.cloud.google.com/billing",
+        minimum_usd=0.0,
+        minimum_note=(
+            "Gemini is billed through Google Cloud (post-paid), not a "
+            "credit balance. Manage billing in the Google Cloud Console."
+        ),
+    ),
+    "local": ProviderBilling(
+        display_name="Local",
+        console_url="https://ollama.com/",
+        keys_url="https://ollama.com/",
+        billing_url="https://ollama.com/",
+        minimum_usd=0.0,
+        minimum_note="Local models run via Ollama on this machine — no billing.",
+    ),
 }
 
 
@@ -91,19 +123,60 @@ def recovery_message(provider: str, error_class: str, raw_message: str = "") -> 
 
     Translatable prose comes from ``preflight.api_key.*`` via :mod:`bristlenose.i18n`;
     URLs and the ``minimum_note`` are code-owned in :data:`_BILLING` and
-    interpolated. Falls through to :data:`GENERIC_RECOVERY` for non-(anthropic|openai)
-    providers or unknown error classes.
-    """
-    # ``network`` errors are provider-agnostic (TLS / proxy / DNS).
-    if error_class == "network":
-        return t("preflight.api_key.network", message=raw_message or "no message")
+    interpolated. Falls through to a generic key for unknown error classes.
 
+    Per-provider override keys (Azure deployment-name copy, Local
+    server-down / model-not-pulled, Google Cloud-console copy) take
+    precedence over the four-bucket defaults when present.
+    """
     facts = billing_for(provider)
+
+    # raw_message is provider-controlled text (``str(exc)`` from an SDK
+    # exception). Escape Rich markup before interpolating: a hostile or
+    # MITM'd provider response can embed ``[link=…]`` OSC-8 hyperlinks
+    # or other markup that Rich would render in the user's terminal.
+    safe_message = _rich_escape(raw_message) if raw_message else "no message"
+
+    # ``network`` errors are provider-agnostic except for local Ollama,
+    # where "connect refused" is "ollama isn't running" with a specific fix.
+    if error_class == "network":
+        if provider == "local":
+            return t(
+                "preflight.api_key.local_server_down",
+                message=safe_message,
+            )
+        return t("preflight.api_key.network", message=safe_message)
+
     if facts is None or error_class not in {
         "invalid_key", "billing_empty", "model_unavailable", "rate_limit",
     }:
-        return t("preflight.api_key.generic", message=raw_message or "no message")
+        return t("preflight.api_key.generic", message=safe_message)
 
+    # Per-provider overrides — Azure portal deployment-name, Google
+    # Cloud-console for tier-gate / billing-disabled, Local pull copy.
+    override_key: str | None = None
+    if provider == "azure" and error_class == "model_unavailable":
+        override_key = "preflight.api_key.azure_deployment_unavailable"
+    elif provider == "google" and error_class == "model_unavailable":
+        override_key = "preflight.api_key.google_model_unavailable"
+    elif provider == "local" and error_class == "model_unavailable":
+        override_key = "preflight.api_key.local_model_not_pulled"
+
+    if override_key is not None:
+        return t(
+            override_key,
+            provider_display=facts.display_name,
+            keys_url=facts.keys_url,
+            billing_url=facts.billing_url,
+            console_url=facts.console_url,
+            minimum_note=facts.minimum_note,
+            message=safe_message,
+        )
+
+    # Note: Azure never produces ``billing_empty`` — Azure OpenAI is billed
+    # through the Azure subscription, not a credit pool (the validator
+    # routes 429s to ``rate_limit`` unconditionally). The mapping is kept
+    # complete for symmetry; the Azure branch is unreachable in practice.
     key = {
         "invalid_key": "preflight.api_key.rejected_invalid_key",
         "billing_empty": "preflight.api_key.no_credit",

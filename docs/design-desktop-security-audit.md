@@ -130,6 +130,36 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 
 ---
 
+## Consent Audit Trail (DPIA anchor)
+
+The AI-disclosure sheet (`AIConsentView`, Apple Guideline 5.1.2(i)) records an
+acknowledgement entry every time the user acts on the disclosure. This is the
+evidence a customer's DPIA (GDPR Art. 35) cites to show informed consent was
+obtained before any interview data reached an LLM.
+
+- **Location**: `UserDefaults` (standard suite), key `consentLog` — an array of
+  entries. Written by `AIConsentView.recordConsent(action:)`. Local to the
+  machine; never uploaded, exported, or included in any support bundle
+  (consistent with the local-first model — same discipline as the
+  re-identification keys in `.bristlenose/`).
+- **Schema**: each entry is a flat `[String: String]` with four fields —
+  `version` (consent-disclosure version acknowledged), `date` (ISO 8601),
+  `provider` (the active provider at acknowledgement time), `action`
+  (`continue` / `ollama` / `switch`).
+- **Semantics**: the entry records *acknowledgement of the disclosure*, not an
+  activation event. `provider` reflects the active provider when the user
+  acknowledged (the cloud default if nothing was switched); a `continue` entry
+  does not assert that a provider was activated on that click.
+- **Retention**: unbounded and local-only — entries accumulate across consent
+  versions and are cleared only by resetting the app's defaults (e.g. deleting
+  the app's preferences). No automatic pruning.
+- **Threat model**: a user with shell access can edit `consentLog` directly,
+  but such a user already has direct access to all research data on the
+  machine. The record protects against *uninformed* use, not determined
+  circumvention (see the docstring on `recordConsent`).
+
+---
+
 ## Relevant Standards & Tools
 
 | Standard/Tool | Applicability | Link |

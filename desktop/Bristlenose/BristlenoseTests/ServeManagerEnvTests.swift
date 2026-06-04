@@ -2,17 +2,24 @@ import Testing
 import Foundation
 @testable import Bristlenose
 
-/// Tests for ServeManager.overlayAPIKeys — C3 credential injection path.
+/// Tests for BristlenoseShared.overlayAPIKeys — C3 credential injection path,
+/// shared by both spawn sites (ServeManager serve + PipelineRunner run).
 /// Uses InMemoryKeychain; no real macOS Keychain access.
 ///
 /// Contract (post sandbox-walk #7 fix): only the active provider's key is
 /// injected. Other providers' keys stay in Keychain untouched. Ollama
 /// (active = "local") injects nothing — Ollama is keyless.
 ///
-/// NOTE: BristlenoseTests target is not wired into Xcode yet (qa-backlog).
-/// These tests are aspirational reference code. Compile-standalone when
-/// referenced via @testable import once the target lands.
-@Suite("ServeManager.overlayAPIKeys")
+/// The `childEnvironment` wiring test is the real regression guard for this
+/// slice: it proves the shared env factory injects the key, so BOTH spawn
+/// sites (which route through `childEnvironment`) get it. The run path
+/// historically forgot the overlay; the factory makes that un-forgettable.
+///
+/// In addition to that contract test, the invariant is protected
+/// structurally: both spawn sites call `childEnvironment`, which always
+/// injects the key, so there is no per-site line to forget (the bug this
+/// slice fixed).
+@Suite("BristlenoseShared.overlayAPIKeys")
 @MainActor
 struct ServeManagerEnvTests {
 
@@ -37,7 +44,7 @@ struct ServeManagerEnvTests {
 
         var env: [String: String] = [:]
         withActiveProvider("anthropic") {
-            ServeManager.overlayAPIKeys(into: &env, using: store)
+            BristlenoseShared.overlayAPIKeys(into: &env, using: store)
         }
 
         #expect(env["BRISTLENOSE_ANTHROPIC_API_KEY"] == "sk-ant-test-anthropic")
@@ -53,7 +60,7 @@ struct ServeManagerEnvTests {
 
         var env: [String: String] = [:]
         withActiveProvider("local") {
-            ServeManager.overlayAPIKeys(into: &env, using: store)
+            BristlenoseShared.overlayAPIKeys(into: &env, using: store)
         }
 
         let bristlenoseKeys = env.keys.filter { $0.hasPrefix("BRISTLENOSE_") && $0.hasSuffix("_API_KEY") }
@@ -65,7 +72,7 @@ struct ServeManagerEnvTests {
         var env: [String: String] = [:]
 
         withActiveProvider("anthropic") {
-            ServeManager.overlayAPIKeys(into: &env, using: store)
+            BristlenoseShared.overlayAPIKeys(into: &env, using: store)
         }
 
         let bristlenoseKeys = env.keys.filter { $0.hasPrefix("BRISTLENOSE_") && $0.hasSuffix("_API_KEY") }
@@ -81,7 +88,7 @@ struct ServeManagerEnvTests {
 
         var env: [String: String] = [:]
         withActiveProvider("anthropic") {
-            ServeManager.overlayAPIKeys(into: &env, using: store)
+            BristlenoseShared.overlayAPIKeys(into: &env, using: store)
         }
 
         #expect(env["BRISTLENOSE_ANTHROPIC_API_KEY"] == nil)
@@ -94,7 +101,7 @@ struct ServeManagerEnvTests {
 
         var env: [String: String] = [:]
         withActiveProvider("anthropic") {
-            ServeManager.overlayAPIKeys(into: &env, using: store)
+            BristlenoseShared.overlayAPIKeys(into: &env, using: store)
         }
 
         #expect(env["BRISTLENOSE_ANTHROPIC_API_KEY"] == weirdValue)
@@ -106,11 +113,48 @@ struct ServeManagerEnvTests {
 
         var env: [String: String] = ["PATH": "/usr/bin", "HOME": "/tmp/fake"]
         withActiveProvider("anthropic") {
-            ServeManager.overlayAPIKeys(into: &env, using: store)
+            BristlenoseShared.overlayAPIKeys(into: &env, using: store)
         }
 
         #expect(env["PATH"] == "/usr/bin")
         #expect(env["HOME"] == "/tmp/fake")
         #expect(env["BRISTLENOSE_ANTHROPIC_API_KEY"] == "sk-ant-from-keychain")
+    }
+
+    /// Wiring guard: the shared env factory injects the active provider's key.
+    /// This is what makes BOTH spawn sites correct — they route through
+    /// `childEnvironment`, so neither can forget the overlay. The run path
+    /// previously omitted it, breaking `bristlenose run` under App Sandbox.
+    /// Uses `.devSidecar` mode: sslEnvironment/bundledBinaryEnvironment return
+    /// empty for non-bundled modes, so no real bundle resources are needed.
+    @Test func childEnvironment_injects_active_provider_key() {
+        let store = InMemoryKeychain()
+        store.set(provider: "anthropic", value: "sk-ant-from-keychain")
+        let mode = SidecarMode.devSidecar(path: URL(fileURLWithPath: "/tmp/fake-bristlenose"))
+
+        let env = withActiveProvider("anthropic") {
+            BristlenoseShared.childEnvironment(for: mode, store: store)
+        }
+
+        // The key the run path used to miss.
+        #expect(env["BRISTLENOSE_ANTHROPIC_API_KEY"] == "sk-ant-from-keychain")
+        // And the parent-death handshake every desktop-spawned child needs.
+        #expect(env["_BRISTLENOSE_HOSTED_BY_DESKTOP"] == "1")
+    }
+
+    /// Keyless provider through the factory injects no key (local-only users
+    /// trigger no Keychain access — the "loudest possible local-only failure"
+    /// the single-provider scoping was designed to avoid).
+    @Test func childEnvironment_keyless_provider_injects_no_key() {
+        let store = InMemoryKeychain()
+        store.set(provider: "anthropic", value: "sk-ant-from-keychain")
+        let mode = SidecarMode.devSidecar(path: URL(fileURLWithPath: "/tmp/fake-bristlenose"))
+
+        let env = withActiveProvider("local") {
+            BristlenoseShared.childEnvironment(for: mode, store: store)
+        }
+
+        let bristlenoseKeys = env.keys.filter { $0.hasPrefix("BRISTLENOSE_") && $0.hasSuffix("_API_KEY") }
+        #expect(bristlenoseKeys.isEmpty)
     }
 }

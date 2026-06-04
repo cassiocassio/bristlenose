@@ -215,5 +215,5 @@ When the network-fetch slice ships for public-beta GM:
 - Current pricing module: [bristlenose/llm/pricing.py](../bristlenose/llm/pricing.py)
 - Slice B telemetry stamping: [design-cost-forecast-phase1.md §schema](design-cost-forecast-phase1.md)
 - Local-first promises this must not undermine: [SECURITY.md](../SECURITY.md)
-- Static-site deploy mechanism: deploy script in the separate `bristlenose-website` private repo (reads `bristlenose/llm/pricing.json` from this public repo at deploy time)
-- Deploy target: `bristlenose.app` (DreamHost shared hosting)
+- Static-site deploy mechanism: deploy script in the separate private deploy repo (reads `bristlenose/llm/pricing.json` from this public repo at deploy time)
+- Deploy target: `bristlenose.app`

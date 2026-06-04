@@ -23,6 +23,8 @@ struct MenuCommands: Commands {
     @ObservedObject var projectIndex: ProjectIndex
     @ObservedObject var removalStore: UndoableRemovalStore
     @ObservedObject var i18n: I18n
+    /// Used only by the DEBUG "Debug" menu (Ollama setup-pill state harness).
+    @ObservedObject var ollamaDownload: OllamaDownloadModel
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
@@ -66,8 +68,39 @@ struct MenuCommands: Commands {
         CommandGroup(replacing: .help) {
             HelpMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
         }
+
+        #if DEBUG
+        // DEBUG-only state harness for the Ollama setup pill. A menu-bar menu
+        // (not a toolbar context menu, which macOS swallows for "Customize
+        // Toolbar") so it's reliable, and reachable even when the pill is idle.
+        CommandMenu("Debug") {
+            DebugMenuContent(ollamaDownload: ollamaDownload)
+        }
+        #endif
     }
 }
+
+#if DEBUG
+/// DEBUG-only menu driving the Ollama setup pill through every state for live
+/// UX QA — no daemon or network needed. Forcing any scene also resurrects the
+/// pill from idle (the `BRISTLENOSE_DEBUG_OLLAMA_PHASE` bootstrap only fires at
+/// launch). View struct per the `@ObservedObject`-in-Commands pattern.
+private struct DebugMenuContent: View {
+    @ObservedObject var ollamaDownload: OllamaDownloadModel
+
+    var body: some View {
+        Section("Ollama setup pill") {
+            Button("Cycle ▸ next state") { ollamaDownload.debugCycleNext() }
+                .keyboardShortcut("o", modifiers: [.command, .control])
+            ForEach(OllamaDownloadModel.DebugScene.allCases, id: \.self) { scene in
+                Button(scene.label) { ollamaDownload.debugApply(scene) }
+            }
+            Divider()
+            Button("Hide pill (idle)") { ollamaDownload.cancel() }
+        }
+    }
+}
+#endif
 
 // MARK: - Custom CommandMenus grouped
 

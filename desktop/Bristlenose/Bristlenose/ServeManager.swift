@@ -164,37 +164,11 @@ final class ServeManager: ObservableObject {
         // from the "Report:" stdout line in handleLine(_:).
         proc.arguments = Self.arguments(for: mode, projectPath: projectPath)
 
-        // Minimal environment — only what the sidecar needs. Avoids leaking
-        // DYLD_* vars, Xcode debug vars, etc. to the subprocess.
-        // API keys are fetched from Keychain in Swift (host process) and
-        // injected as BRISTLENOSE_*_API_KEY env vars — Python never touches
-        // Keychain directly, so it works under App Sandbox without any
-        // Security.framework dep on the Python side.
-        var env: [String: String] = [:]
-        let parentEnv = ProcessInfo.processInfo.environment
-        for key in ["PATH", "HOME", "TMPDIR", "USER", "SHELL",
-                     "LANG", "LC_ALL", "LC_CTYPE", "VIRTUAL_ENV"] {
-            if let val = parentEnv[key] { env[key] = val }
-        }
-        // Tells the sidecar to install the parent-death watcher (so it
-        // self-terminates if this host process dies abnormally, instead
-        // of leaving an orphan holding a port). CLI users don't get this
-        // — they may legitimately nohup the server.
-        env["_BRISTLENOSE_HOSTED_BY_DESKTOP"] = "1"
-        // Bundled-sidecar TLS fix — see BristlenoseShared.sslEnvironment(for:).
-        // Without this, PyInstaller's OpenSSL probes Homebrew paths blocked
-        // by App Sandbox → all HTTPS-out fails (A1c row 4).
-        for (key, value) in BristlenoseShared.sslEnvironment(for: mode) {
-            env[key] = value
-        }
-        // Bundled-sidecar FFmpeg/ffprobe — sandbox-stripped PATH can't find
-        // Homebrew binaries; point Python at the bundled siblings.
-        for (key, value) in BristlenoseShared.bundledBinaryEnvironment(for: mode) {
-            env[key] = value
-        }
-        Self.overlayPreferences(into: &env)
-        Self.overlayAPIKeys(into: &env, using: KeychainHelper.liveStore)
-        proc.environment = env
+        // Complete subprocess environment — minimal var allowlist, prefs, TLS
+        // certs, bundled FFmpeg/ffprobe, parent-death handshake, and the active
+        // provider's API key. Single source of truth shared with PipelineRunner
+        // so the two spawn sites can't drift. See BristlenoseShared.childEnvironment.
+        proc.environment = BristlenoseShared.childEnvironment(for: mode)
 
         let pipe = Pipe()
         proc.standardOutput = pipe
@@ -428,99 +402,6 @@ final class ServeManager: ObservableObject {
         }
     }
 
-    /// Overlay UserDefaults preferences as environment variables for the
-    /// `bristlenose serve` subprocess. Only sets vars that differ from defaults
-    /// to avoid overriding `.env` file or Keychain values unnecessarily.
-    private static func overlayPreferences(into env: inout [String: String]) {
-        let defaults = UserDefaults.standard
-
-        // LLM provider & model
-        if let provider = defaults.string(forKey: "activeProvider") {
-            env["BRISTLENOSE_LLM_PROVIDER"] = provider
-        }
-        if let model = defaults.string(forKey: "llmModel") {
-            env["BRISTLENOSE_LLM_MODEL"] = model
-        }
-
-        // Temperature & concurrency (only if user has explicitly set them)
-        if defaults.object(forKey: "llmTemperature") != nil {
-            env["BRISTLENOSE_LLM_TEMPERATURE"] = String(defaults.double(forKey: "llmTemperature"))
-        }
-        if defaults.object(forKey: "llmConcurrency") != nil {
-            env["BRISTLENOSE_LLM_CONCURRENCY"] = String(Int(defaults.double(forKey: "llmConcurrency")))
-        }
-
-        // Whisper transcription
-        if let backend = defaults.string(forKey: "whisperBackend"), backend != "auto" {
-            env["BRISTLENOSE_WHISPER_BACKEND"] = backend
-        }
-        if let model = defaults.string(forKey: "whisperModel") {
-            env["BRISTLENOSE_WHISPER_MODEL"] = model
-        }
-
-        // Language
-        if let lang = defaults.string(forKey: "language"), lang != "en" {
-            env["BRISTLENOSE_WHISPER_LANGUAGE"] = lang
-        }
-
-        // Azure-specific
-        if let endpoint = defaults.string(forKey: "azureEndpoint"), !endpoint.isEmpty {
-            env["BRISTLENOSE_AZURE_ENDPOINT"] = endpoint
-        }
-        if let deployment = defaults.string(forKey: "azureDeployment"), !deployment.isEmpty {
-            env["BRISTLENOSE_AZURE_DEPLOYMENT"] = deployment
-        }
-        if let apiVersion = defaults.string(forKey: "azureAPIVersion"), !apiVersion.isEmpty {
-            env["BRISTLENOSE_AZURE_API_VERSION"] = apiVersion
-        }
-
-        // Ollama — hardwired to localhost in the desktop GUI (security
-        // boundary; see LLMSettingsView.hardwiredOllamaURL). CLI users
-        // and CI override via the parent process env var.
-        if let envURL = ProcessInfo.processInfo.environment["BRISTLENOSE_LOCAL_URL"],
-           !envURL.isEmpty {
-            env["BRISTLENOSE_LOCAL_URL"] = envURL
-        }
-    }
-
-    /// Fetch LLM API keys from Keychain and overlay them as `BRISTLENOSE_<PROVIDER>_API_KEY`
-    /// env vars on the subprocess environment dict.
-    ///
-    /// This is the sandbox-compatible credential path: the Swift host reads Keychain
-    /// (Security.framework, no Python dep), the sidecar reads env vars via
-    /// pydantic-settings. No `/usr/bin/security` subprocess call needed by Python,
-    /// so the sidecar works under App Sandbox without `keychain-access-groups`
-    /// or any Security.framework linkage on the Python side.
-    ///
-    /// Residual risk: env vars are visible to same-UID processes via `ps -E`.
-    /// Under that threat model the attacker can also call SecItemCopyMatching
-    /// directly, so net attack-surface delta is small. Documented in
-    /// `docs/design-desktop-python-runtime.md`.
-    ///
-    /// - Parameter env: env dict to mutate
-    /// - Parameter store: Keychain-abstracted store (`KeychainHelper.liveStore` in
-    ///   production, `InMemoryKeychain` in tests)
-    static func overlayAPIKeys(into env: inout [String: String], using store: any KeychainStore) {
-        // Scope to the active provider only. Eager fetch of all four cloud
-        // keys (sandbox walk #7) caused 3× Keychain prompts the moment a
-        // local-only user dropped a project — the loudest possible "I chose
-        // local-only" failure. Ollama is keyless: nothing to inject; bail.
-        // Miro descoped from alpha (see c3 plan).
-        let active = UserDefaults.standard.string(forKey: "activeProvider") ?? "anthropic"
-        let cloudProviders: Set<String> = ["anthropic", "openai", "azure", "google"]
-        guard cloudProviders.contains(active) else {
-            log.info("active provider=\(active, privacy: .public) is keyless — no API key injection")
-            return
-        }
-        guard let value = store.get(provider: active), !value.isEmpty else {
-            log.info("no API key in Keychain for active provider=\(active, privacy: .public)")
-            return
-        }
-        let envKey = "BRISTLENOSE_\(active.uppercased())_API_KEY"
-        env[envKey] = value
-        log.info("injected API key for active provider=\(active, privacy: .public)")
-    }
-
     // MARK: - Private
 
     /// Fetch the Bristlenose version from the serve health endpoint.
@@ -543,44 +424,6 @@ final class ServeManager: ObservableObject {
         pattern: "\\x1b\\[[0-9;]*m|\\x1b\\]8;;[^\\x1b]*\\x1b\\\\",
         options: []
     )
-
-    /// Key-shape redactor — defence against Python-side leakage of LLM API keys
-    /// (Uvicorn env dumps on startup errors, pydantic tracebacks that echo a
-    /// SecretStr, accidental `print(os.environ)` from a future change).
-    ///
-    /// Covers: Anthropic (`sk-ant-api/sid<NN>-<90+ chars>`), OpenAI (project-scoped
-    /// `sk-proj-<48+>` + historical `sk-<48>`), Google (`AIza<35>`).
-    ///
-    /// Limitations:
-    /// - Per-line only. If Python wraps a key across two log lines (e.g. in a
-    ///   boxed stack trace) the redactor won't catch the split halves. Inherent
-    ///   to line-based processing.
-    /// - Azure deliberately NOT covered: 32-char hex false-positives on UUIDs
-    ///   and SHA hashes are worse than the residual risk. Pre-beta audit
-    ///   tracked in `docs/private/100days.md` §6 Risk → Should.
-    /// - Does not catch provider-format changes after this code was written.
-    /// - Does not catch misformatted keys the regex doesn't match by shape.
-    ///
-    /// This is defence in depth, not a substitute for avoiding key logs in the
-    /// first place — see `check-logging-hygiene.sh` for the source-level gate.
-    static let keyRedactionRegex = try! NSRegularExpression(
-        pattern: [
-            "sk-ant-(api|sid)[0-9]{2}-[A-Za-z0-9_\\-]{90,}",
-            "sk-(proj|None)-[A-Za-z0-9_\\-]{48,}",
-            "sk-[A-Za-z0-9]{48}",
-            "AIza[A-Za-z0-9_\\-]{35}",
-        ].joined(separator: "|"),
-        options: []
-    )
-
-    /// Apply the key-shape redactor to a string. Exposed for testing.
-    static func redactKeys(in line: String) -> String {
-        keyRedactionRegex.stringByReplacingMatches(
-            in: line,
-            range: NSRange(line.startIndex..., in: line),
-            withTemplate: "***REDACTED***"
-        )
-    }
 
     /// Regex captures the kernel-assigned port from a "Report: http://..."
     /// stdout line (e.g. `  Report: http://127.0.0.1:54321/report/`). The
@@ -620,7 +463,7 @@ final class ServeManager: ObservableObject {
         // Redact key-shaped substrings for everything published downstream:
         // outputLines (displayed, exposed in error messages, suffix used in
         // termination failure reporting).
-        outputLines.append(Self.redactKeys(in: clean))
+        outputLines.append(BristlenoseShared.redactKeys(in: clean))
 
         // Detect readiness AND extract the port: bristlenose serve prints
         // "  Report: http://127.0.0.1:NNNN/report/" *after* the socket is

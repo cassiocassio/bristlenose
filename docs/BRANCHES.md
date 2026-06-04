@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 24 May 2026 (closed `llm-error-distinguishability`)
+**Updated:** 4 Jun 2026 (merged + closed `beat3-provider-activation`)
 
 ---
 
@@ -39,8 +39,10 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
-| `bristlenose_branch pipeline-view-v1-5/` | `pipeline-view-v1-5` | feature | Extend Pipeline view with per-stage Alternatives (✓/✗ eligibility + one-line reasons) — data-model rung for v2 resolver / v3 overrides |
+| `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 
+> ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
+> `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
 
 
 
@@ -135,7 +137,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
-| `pipeline-view-v1-5` | `bristlenose_branch pipeline-view-v1-5/` | local only |
 
 
 
@@ -143,34 +144,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `pipeline-view-v1-5`
-
-**Kind:** feature — code intended for main; extends the v1 Pipeline view with a per-stage Alternatives column. Ends in merge or PR-and-squash.
-**Status:** Just started
-**Started:** 18 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-view-v1-5/`
-**Remote:** local only (push when ready)
-
-**What it does:** Extend the read-only Pipeline view (v1) with a per-stage "Alternatives" surface — for every stage, render the other backends that *could* run it on this host, with ✓/✗ availability flags and a one-line reason on ✗. Read-only; quality ratings (●/○/⚠/✗) deferred to v1.9, auto-pick to v2, per-stage overrides to v3. **The point is the data-model rung:** v1.5 encodes the full eligibility space per stage (catalogue of `BackendOption` + `Requirement` predicates against `HostFacts` + `BristlenoseSettings`) that the v2 resolver and v3 overrides will both consume. When Apple FM ships a research-viable on-device model post-WWDC, the work is "edit one catalogue cell + verify a host predicate," not "build a resolver from scratch." See `HANDOFF.md` for the full brief.
-
-**Files this branch will touch:**
-- New: `bristlenose/pipeline_view/eligibility.py` — `check_requirement` + `evaluate_backend` pure functions
-- Modified: `bristlenose/pipeline_view/catalogue.py` — add `Requirement`, `BackendOption`, populate `viable_backends`
-- Modified: `bristlenose/pipeline_view/host.py` — add `os_version`, `installed_packages` fields + probes
-- Modified: `bristlenose/pipeline_view/render.py` — `BackendAvailability` type, `alternatives` field, sort logic
-- Modified: `bristlenose/pipeline_view/cli.py` — Alternatives sub-line rendering
-- Modified: `frontend/src/components/SettingsModal.tsx` `PipelineSection` — alternatives list render
-- Modified: `bristlenose/theme/organisms/settings.css` — `.bn-pipeline-alternatives` styling
-- Modified: `tests/fixtures/pipeline-view-contract.json` — schema v1 → v2 (additive)
-- New: `tests/pipeline_view/test_eligibility.py`, `test_alternatives.py`
-- Modified: 6 locale files — `pipeline.alternatives` heading only
-
-**Potential conflicts with other branches:**
-- `pipeline-view-v1` — direct parent; v1.5 lives in the same `bristlenose/pipeline_view/` package and edits files v1 introduces. Don't start v1.5 work until v1 merges, or be ready to rebase.
-- `pipeline-subtitle-i18n` — touches the 6 `common.json` locale files. Keep keys distinct (`pipeline.alternatives.*`) and use targeted text-replace, never `json.dump` round-trip.
 
 ---
 
@@ -272,6 +245,26 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `beat3-provider-activation` — merged 4 Jun 2026
+
+Fixed the asymmetric exit paths in `AIConsentView`. **Continue** (cloud) now activates the first validated cloud provider (only when `activeProvider` is local/unconfigured) via the tested helper `ConsentActivation.resolve(active:statuses:)`, posting `.bristlenosePrefsChanged` so serve restarts and injects the key — fixes the re-consent bug the 5 May walkthrough caught. **Use Ollama** applies the RAM-aware default (`OllamaCatalog.recommendedTag()`), dismisses immediately, and pulls the model ambiently via a new toolbar pill; the download `ObservableObject` is hoisted to app level so the pull survives sheet dismissal. Later commits added the flow-B pill + popovers, a menu-bar Debug state harness, and marked `design-ollama-setup.md` implemented. Merged via `a8606df`.
+
+### `pipeline-view-models` — merged 4 Jun 2026
+
+pipeline-view v2: extended the read-only Pipeline view from provider grain to a provider→model hierarchy. Sectioned-flat matrix render with two-glyph columns + Why column, ~5-model curated minimum, schema v3→v4 (additive on read, `llm_summary` deletion on write). Paves the way for per-stage overrides + picker UX in a later branch.
+
+### `pipeline-view-v1-5` — merged (via PR #115, 25 May 2026); worktree + branch deleted 3 Jun 2026
+
+Per-stage Alternatives surface (✓/✗ eligibility + one-line reasons) — the data-model rung the v2 resolver / v3 overrides consume. Work landed on `main` via PR #115; v1-9 stacked on top and also merged. Branch ref (`8a21aed`) was an ancestor of main (zero unmerged commits) — confirmed nothing lost. Worktree directory deleted from disk; stale worktree ref pruned and merged branch `git branch -d`'d 3 Jun 2026.
+
+### `pipeline-view-v1-9` — merged 30 May 2026
+
+Per-(stage, backend) editorial quality rating (●/○/⚠/✗) layered on v1.5's eligibility ✓/✗, closing the "viable-but-poor backend confidence trap" — e.g. Ollama 3B is ✓ for quote extraction but disappointing. Read-only catalogue layer; not auto-pick (v2) and not user overrides (v3). Stacked on `pipeline-view-v1-5` (which landed via PR #115 on 25 May); v1-9 merged via `d0dcba0`. Worktree detached and tagged orange on disk; local and remote branches deleted.
+
+### `llm-error-distinguishability-all-providers` — merged 30 May 2026
+
+Extended preflight error classification to Azure, Gemini, and Ollama using structured `error.code` / `error.status` fields, and switched OpenAI's substring branches to read structured fields, keeping the 4-bucket `error_class` vocabulary. Generalises the just-closed `llm-error-distinguishability` (Anthropic-only `billing_empty`) across all five providers. Two commits (`970f478`, `59ac9ae`) merged via `f19bd32`. Worktree detached and tagged orange on disk; local branch deleted; remote was never pushed.
 
 ### `llm-error-distinguishability` — merged 24 May 2026
 
@@ -503,7 +496,7 @@ LLM call telemetry + data-driven pipeline cost forecast. Slice A: telemetry sche
 
 ### `alpha-telemetry` — merged 26 Apr 2026
 
-Phase 1 plumbing only for Level 0 tag-rejection telemetry — TestFlight alpha groundwork. Added `telemetry.php` (PHP endpoint patterned on `feedback.php`, deployed alongside it on DreamHost — both live in the separate `bristlenose-website` private repo as of 2 May 2026), extended `/api/health` with telemetry payload, dev stub endpoint `POST /api/_dev/telemetry`, `DEFAULT_TELEMETRY_URL` and extended `HealthResponse` in `frontend/src/utils/health.ts`. Phases 2–4 (event emission, SQLite buffer, SwiftUI sheets, Settings Privacy screen, prompts/versions.jsonl) deferred to post-TestFlight. Spec: [`docs/methodology/tag-rejections-are-great.md`](methodology/tag-rejections-are-great.md). Merge commit `c5a7f61`.
+Phase 1 plumbing only for Level 0 tag-rejection telemetry — TestFlight alpha groundwork. Added `telemetry.php` (PHP endpoint patterned on `feedback.php`, deployed alongside it — both live in the separate private deploy repo as of 2 May 2026), extended `/api/health` with telemetry payload, dev stub endpoint `POST /api/_dev/telemetry`, `DEFAULT_TELEMETRY_URL` and extended `HealthResponse` in `frontend/src/utils/health.ts`. Phases 2–4 (event emission, SQLite buffer, SwiftUI sheets, Settings Privacy screen, prompts/versions.jsonl) deferred to post-TestFlight. Spec: [`docs/methodology/tag-rejections-are-great.md`](methodology/tag-rejections-are-great.md). Merge commit `c5a7f61`.
 
 ### `port-v01-ingestion` — merged 26 Apr 2026
 

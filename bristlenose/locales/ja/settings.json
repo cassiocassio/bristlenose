@@ -49,6 +49,54 @@
         "local_ollama": "\u30ed\u30fc\u30ab\u30eb (Ollama)",
         "builtin_anonymiser": "\u7d44\u307f\u8fbc\u307f\u533f\u540d\u5316\u30c4\u30fc\u30eb"
       },
+      "glyph": {
+        "available": "\u5229\u7528\u53ef\u80fd",
+        "unavailable": "\u5229\u7528\u4e0d\u53ef",
+        "skipped": "\u3053\u306e\u30db\u30b9\u30c8\u3067\u306f\u8a72\u5f53\u306a\u3057"
+      },
+      "column": {
+        "model": "\u30e2\u30c7\u30eb",
+        "availability": "\u5229\u7528\u53ef\u5426",
+        "quality": "\u54c1\u8cea",
+        "notes": "\u5099\u8003"
+      },
+      "key": {
+        "italic_label": "\u659c\u4f53",
+        "synthesised": "\u30ab\u30bf\u30ed\u30b0\u3067\u306f\u306a\u304f\u8a2d\u5b9a\u304b\u3089"
+      },
+      "qualifier": {
+        "default": "\u30c7\u30d5\u30a9\u30eb\u30c8",
+        "current": "\u73fe\u5728",
+        "your_deployment": "\u304a\u4f7f\u3044\u306e Azure \u30c7\u30d7\u30ed\u30a4"
+      },
+      "quality": {
+        "glyph": {
+          "excellent": "\u975e\u5e38\u306b\u9ad8\u3044\u54c1\u8cea",
+          "good": "\u826f\u597d\u306a\u54c1\u8cea",
+          "marginal": "\u9650\u754c\u7684\u306a\u54c1\u8cea",
+          "avoid": "\u975e\u63a8\u5968 \u2014 \u54c1\u8cea\u304c\u4f4e\u3059\u304e\u307e\u3059",
+          "untested": "\u672a\u691c\u8a3c"
+        },
+        "untested": "\u672a\u691c\u8a3c",
+        "local_speaker_id_acceptable": "\u30ed\u30fc\u30ab\u30eb\u30e2\u30c7\u30eb\u306f\u8a71\u8005\u8b58\u5225\u3092\u9069\u5207\u306b\u51e6\u7406\u3057\u307e\u3059",
+        "local_topic_segmentation_acceptable": "\u30ed\u30fc\u30ab\u30eb\u30e2\u30c7\u30eb\u306f\u30c8\u30d4\u30c3\u30af\u5206\u5272\u3092\u9069\u5207\u306b\u51e6\u7406\u3057\u307e\u3059",
+        "local_quote_extraction_miss_rate": "\u5c0f\u3055\u306a\u30e2\u30c7\u30eb\u306f\u8907\u6570\u7bc0\u306e\u5f15\u7528\u3092\u898b\u843d\u3068\u3057\u307e\u3059",
+        "local_quote_clustering_drift": "\u5c0f\u3055\u306a\u30e2\u30c7\u30eb\u306f\u5f15\u7528\u306e\u30af\u30e9\u30b9\u30bf\u30ea\u30f3\u30b0\u304c\u4e00\u8cab\u3057\u307e\u305b\u3093",
+        "local_thematic_grouping_drift": "\u5c0f\u3055\u306a\u30e2\u30c7\u30eb\u306f\u30c6\u30fc\u30de\u306e\u7d71\u5408\u3067\u3076\u308c\u307e\u3059",
+        "mlx_whisper_apple_silicon_optimal": "Apple Silicon \u3067\u6700\u9069",
+        "faster_whisper_cpu_baseline": "\u5805\u5b9f\u306a CPU \u30d9\u30fc\u30b9\u30e9\u30a4\u30f3\u3002GPU \u306f\u4e0d\u8981"
+      },
+      "actions": {
+        "obtain_anthropic_key": "console.anthropic.com \u3067 API \u30ad\u30fc\u3092\u53d6\u5f97\u3057\u3001ANTHROPIC_API_KEY \u3092\u8a2d\u5b9a\u3059\u308b\u304b\u3001\u8a2d\u5b9a \u2192 \u30ad\u30fc\u306b\u8cbc\u308a\u4ed8\u3051\u3066\u304f\u3060\u3055\u3044",
+        "obtain_openai_key": "platform.openai.com \u3067 API \u30ad\u30fc\u3092\u53d6\u5f97\u3057\u3001OPENAI_API_KEY \u3092\u8a2d\u5b9a\u3059\u308b\u304b\u3001\u8a2d\u5b9a \u2192 \u30ad\u30fc\u306b\u8cbc\u308a\u4ed8\u3051\u3066\u304f\u3060\u3055\u3044",
+        "obtain_google_key": "aistudio.google.com \u3067 API \u30ad\u30fc\u3092\u53d6\u5f97\u3057\u3001GOOGLE_API_KEY \u3092\u8a2d\u5b9a\u3059\u308b\u304b\u3001\u8a2d\u5b9a \u2192 \u30ad\u30fc\u306b\u8cbc\u308a\u4ed8\u3051\u3066\u304f\u3060\u3055\u3044",
+        "configure_azure": "\u8a2d\u5b9a \u2192 \u30ad\u30fc\u3067 Azure \u306e\u30ad\u30fc\u3001\u30a8\u30f3\u30c9\u30dd\u30a4\u30f3\u30c8\u3001\u30c7\u30d7\u30ed\u30a4\u3092\u8a2d\u5b9a\u3057\u3066\u304f\u3060\u3055\u3044",
+        "start_ollama": "Ollama \u30b5\u30fc\u30d3\u30b9\u3092\u958b\u59cb\u3057\u3066\u304f\u3060\u3055\u3044 (ollama serve)",
+        "install_mlx_whisper": "pip install mlx-whisper (Apple Silicon \u304c\u5fc5\u8981)",
+        "install_ctranslate2": "pip install ctranslate2",
+        "install_presidio": "\u5185\u8535\u306e\u533f\u540d\u5316\u30c4\u30fc\u30eb\u3092\u6709\u52b9\u306b\u3059\u308b\u306b\u306f pip install bristlenose[redact-pii]",
+        "enable_pii_redaction": "--redact-pii \u3092\u4ed8\u3051\u3066\u5b9f\u884c\u3059\u308b\u304b\u3001pii_enabled=true \u3092\u8a2d\u5b9a\u3057\u3066\u304f\u3060\u3055\u3044"
+      },
       "reasons": {
         "no_anthropic_key": "Claude API\u30ad\u30fc\u304c\u8a2d\u5b9a\u3055\u308c\u3066\u3044\u307e\u305b\u3093",
         "no_openai_key": "ChatGPT API\u30ad\u30fc\u304c\u8a2d\u5b9a\u3055\u308c\u3066\u3044\u307e\u305b\u3093",

@@ -8,3 +8,13 @@ repos:
         # Catches secrets (API keys, tokens, credentials) before they
         # reach the remote. GitHub server-side secret scanning doesn't
         # cover all LLM provider key formats (Anthropic, some Azure).
+  - repo: local
+    hooks:
+      - id: tracked-vs-gitignore
+        name: no tracked files match .gitignore
+        # Catches files committed before their ignore rule existed (or
+        # force-added) — the failure mode that exposed docs/private/.
+        entry: scripts/check-tracked-vs-gitignore.sh
+        language: script
+        pass_filenames: false
+        always_run: true

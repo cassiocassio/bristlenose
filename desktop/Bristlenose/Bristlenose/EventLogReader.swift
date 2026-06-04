@@ -204,24 +204,26 @@ enum EventLogReader {
         }
         guard kill(payload.pid, 0) == 0 else { return false }
         // Verify start_time matches — defeats PID reuse.
-        guard let lstart = psLstart(pid: payload.pid) else { return false }
-        return lstart == payload.startTime
+        guard let start = procStartTime(pid: payload.pid) else { return false }
+        return start == payload.startTime
     }
 
-    private static func psLstart(pid: Int32) -> String? {
-        let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: "/bin/ps")
-        proc.arguments = ["-o", "lstart=", "-p", String(pid)]
-        let pipe = Pipe()
-        proc.standardOutput = pipe
-        proc.standardError = FileHandle.nullDevice
-        do { try proc.run() } catch { return nil }
-        proc.waitUntilExit()
-        guard proc.terminationStatus == 0 else { return nil }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard let str = String(data: data, encoding: .utf8) else { return nil }
-        let trimmed = str.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+    /// Returns the process start time as `"<tvsec>.<tvusec>"`, byte-identical
+    /// to what Python's `run_lifecycle._ps_start_time` writes on macOS
+    /// (`f"{info.pbi_start_tvsec}.{info.pbi_start_tvusec}"`). Must match that
+    /// format exactly — the value is compared for equality across the
+    /// Swift/Python boundary, never parsed.
+    ///
+    /// Uses `proc_pidinfo(PROC_PIDTBSDINFO)` (libproc) rather than `/bin/ps`:
+    /// the bundled desktop sidecar runs under App Sandbox, which blocks
+    /// `Process()` exec of `/bin/ps` at the exec boundary, but permits narrow
+    /// libproc syscalls for a known PID. See `docs/design-desktop-python-runtime.md`.
+    static func procStartTime(pid: Int32) -> String? {
+        var info = proc_bsdinfo()
+        let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+        let n = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size)
+        guard n == size else { return nil }
+        return "\(info.pbi_start_tvsec).\(info.pbi_start_tvusec)"
     }
 
     /// Read the last `maxBytes` bytes of `url`. Returns `(data, wasTruncated)`

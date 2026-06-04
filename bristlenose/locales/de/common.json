@@ -12,6 +12,7 @@
   "buttons": {
     "save": "Sichern",
     "cancel": "Abbrechen",
+    "retry": "Erneut versuchen",
     "export": "Exportieren",
     "close": "Schließen",
     "copy": "Kopieren",

@@ -8,9 +8,6 @@ import Foundation
 /// scope on `url` is open; when it deinitialises, the scope is released.
 /// This invariant is silent — scope mismanagement produces no console error,
 /// just folder-watcher (NSFilePresenter) callbacks failing to fire.
-///
-/// NOTE: BristlenoseTests target is not wired into Xcode yet (qa-backlog).
-/// These tests are aspirational reference code that compiles standalone.
 @Suite("ProjectBookmarkLease")
 struct ProjectBookmarkLeaseTests {
 

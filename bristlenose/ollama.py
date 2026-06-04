@@ -115,6 +115,39 @@ def check_ollama() -> OllamaStatus:
         )
 
 
+def list_models(timeout: float = 2.0) -> list[str]:
+    """Return the names of locally-installed Ollama models via `ollama list`.
+
+    Single source of truth for parsing `ollama list` output: takes the first
+    column (the model NAME) of each row, skipping the header. The pipeline-view
+    host probe (`bristlenose/pipeline_view/host.py`) delegates here so model
+    inventory has one parser.
+
+    Raises `subprocess.TimeoutExpired` / `FileNotFoundError` / `OSError` on
+    failure (binary missing, hung process); callers decide whether to treat
+    those as an empty inventory. Returns `[]` for a clean run with no models or
+    a non-zero exit.
+    """
+    result = subprocess.run(
+        ["ollama", "list"],
+        capture_output=True,
+        text=True,
+        errors="replace",  # a wedged binary's non-UTF-8 bytes must not raise
+        timeout=timeout,
+    )
+    if result.returncode != 0:
+        return []
+    models: list[str] = []
+    for line in result.stdout.splitlines()[1:]:  # skip the NAME/ID/SIZE header
+        stripped = line.strip()
+        if not stripped:
+            continue
+        name = stripped.split()[0]
+        if name:
+            models.append(name)
+    return models
+
+
 def is_ollama_installed() -> bool:
     """Check if the ollama command is available in PATH."""
     import shutil

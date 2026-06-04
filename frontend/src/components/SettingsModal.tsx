@@ -409,12 +409,28 @@ function ConfigSection({ categoryId }: { categoryId: string }) {
 
 // ── Pipeline section ──────────────────────────────────────────────────────
 
-interface BackendAvailability {
-  id: string;
+type QualityLevel = "excellent" | "good" | "marginal" | "avoid";
+
+// Mirrors `ModelAvailability` in bristlenose/pipeline_view/render.py (schema v4).
+// One row per (provider, model) cell, plus synthesised rows for runtime-detected
+// models. Field-for-field parity is pinned by tests/fixtures/pipeline-view-contract.json.
+interface ModelAvailability {
+  provider_id: string;
+  model_id?: string | null;
   display: string;
   display_key?: string | null;
+  provider_display: string;
+  provider_display_key?: string | null;
+  publisher?: string | null;
   available: boolean;
-  reason?: string | null;
+  reason_key?: string | null;
+  action_key?: string | null;
+  quality?: QualityLevel | null;
+  quality_note?: string | null;
+  quality_source?: string | null;
+  default: boolean;
+  recommended: boolean;
+  synthesised: boolean;
 }
 
 interface PipelineStageView {
@@ -423,15 +439,15 @@ interface PipelineStageView {
   kind: string;
   chosen: string;
   chosen_id?: string | null;
+  chosen_model_id?: string | null;
   notes: string;
   available: boolean;
-  alternatives?: BackendAvailability[];
+  alternatives?: ModelAvailability[];
 }
 
 interface PipelineViewResponse {
   schema_version?: number;
   catalogue: PipelineStageView[];
-  llm_summary?: BackendAvailability[];
   host: {
     os: string;
     arch: string;
@@ -443,6 +459,98 @@ interface PipelineViewResponse {
     network_reachable: boolean;
     apple_fm_status: string;
   };
+}
+
+// Editorial quality glyphs — distinct vocabulary from MessageKind by design
+// (a cell's fitness is orthogonal to whether it can run). Mirrors cli.py's
+// _QUALITY_GLYPH; untested (?) is handled separately (quality === null).
+const QUALITY_GLYPH: Record<QualityLevel, string> = {
+  excellent: "●",
+  good: "○",
+  marginal: "⚠",
+  avoid: "✗",
+};
+
+interface StageGroup {
+  names: string[];
+  sel: PipelineStageView;
+}
+
+// Stage-profile clustering — mirrors cli.py's _cluster_signature. LLM stages
+// whose per-model availability + quality *level* columns are byte-identical
+// merge under one heading; quality_note is deliberately excluded so the three
+// synthesis stages (distinct notes) still merge. Non-LLM stages never merge.
+function clusterSignature(stage: PipelineStageView): string {
+  return JSON.stringify(
+    (stage.alternatives ?? []).map((a) => [
+      a.provider_id,
+      a.model_id ?? null,
+      a.available,
+      a.reason_key ?? null,
+      a.quality ?? null,
+      a.default,
+      a.recommended,
+    ]),
+  );
+}
+
+function buildStageGroups(catalogue: PipelineStageView[]): StageGroup[] {
+  const llmGroups: StageGroup[] = [];
+  const llmIndex = new Map<string, StageGroup>();
+  const nonLlmGroups: StageGroup[] = [];
+  for (const stage of catalogue) {
+    if (!stage.alternatives || stage.alternatives.length === 0) continue;
+    if (stage.kind === "llm") {
+      const sig = clusterSignature(stage);
+      const existing = llmIndex.get(sig);
+      if (existing) {
+        existing.names.push(stage.name);
+      } else {
+        const group: StageGroup = { names: [stage.name], sel: stage };
+        llmIndex.set(sig, group);
+        llmGroups.push(group);
+      }
+    } else {
+      nonLlmGroups.push({ names: [stage.name], sel: stage });
+    }
+  }
+  return [...llmGroups, ...nonLlmGroups];
+}
+
+// Bucket a flat alternatives list into per-provider groups (order-preserving).
+// Mirrors cli.py's _by_provider.
+function byProvider(alts: ModelAvailability[]): ModelAvailability[][] {
+  const groups: ModelAvailability[][] = [];
+  let currentPid: string | null = null;
+  let bucket: ModelAvailability[] = [];
+  for (const a of alts) {
+    if (a.provider_id !== currentPid) {
+      if (bucket.length) groups.push(bucket);
+      bucket = [a];
+      currentPid = a.provider_id;
+    } else {
+      bucket.push(a);
+    }
+  }
+  if (bucket.length) groups.push(bucket);
+  return groups;
+}
+
+// Collapse-when-uniform (F49) — mirrors cli.py's _collapse. A provider renders
+// as a single row when it has no model granularity, or when no model is
+// available AND every failure shares one provider-level reason.
+function collapseProvider(rows: ModelAvailability[]): {
+  collapsed: boolean;
+  rep: ModelAvailability;
+} {
+  if (rows.length === 1 && rows[0].model_id == null) {
+    return { collapsed: true, rep: rows[0] };
+  }
+  if (rows.every((r) => !r.available)) {
+    const reasons = new Set(rows.map((r) => r.reason_key ?? null));
+    if (reasons.size === 1) return { collapsed: true, rep: rows[0] };
+  }
+  return { collapsed: false, rep: rows[0] };
 }
 
 function authToken(): string | undefined {
@@ -488,35 +596,264 @@ function PipelineSection() {
     .filter(([, on]) => on)
     .map(([p]) => p);
 
-  const llmSummary = data.llm_summary ?? [];
+  const providerLabel = (row: ModelAvailability): string =>
+    row.provider_display_key
+      ? t(row.provider_display_key, { defaultValue: row.provider_display })
+      : row.provider_display;
+
+  // Availability glyph cell — MessageKind vocabulary (cli.py _avail_glyph):
+  // ✓ available, ✗ fixable failure (action_key present), — structural skip.
+  const availCell = (row: ModelAvailability) => {
+    let glyph: string;
+    let cls: string;
+    let label: string;
+    if (row.available) {
+      glyph = "✓";
+      cls = "bn-pipeline-avail-ok";
+      label = t("pipeline.glyph.available");
+    } else if (row.action_key != null) {
+      glyph = "✗";
+      cls = "bn-pipeline-avail-error";
+      label = t("pipeline.glyph.unavailable");
+    } else {
+      glyph = "—";
+      cls = "bn-pipeline-avail-skip";
+      label = t("pipeline.glyph.skipped");
+    }
+    return (
+      <>
+        <span aria-hidden="true" className={`bn-pipeline-glyph ${cls}`}>
+          {glyph}
+        </span>
+        <span className="bn-sr-only">{label}</span>
+      </>
+    );
+  };
+
+  // Quality glyph cell — empty when the row can't run (cli.py _quality_glyph).
+  const qualityCell = (row: ModelAvailability) => {
+    if (!row.available) return null;
+    if (row.quality == null) {
+      return (
+        <>
+          <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-quality-untested">
+            ?
+          </span>
+          <span className="bn-sr-only">{t("pipeline.quality.glyph.untested")}</span>
+        </>
+      );
+    }
+    return (
+      <>
+        <span
+          aria-hidden="true"
+          className={`bn-pipeline-glyph bn-pipeline-quality-${row.quality}`}
+        >
+          {QUALITY_GLYPH[row.quality]}
+        </span>
+        <span className="bn-sr-only">
+          {t(`pipeline.quality.glyph.${row.quality}`, { defaultValue: row.quality })}
+        </span>
+      </>
+    );
+  };
+
+  // Why text — failure reason (✗/—), editorial caveat (✓⚠), untested
+  // explanation (✓?), or empty for ✓●/✓○ (cli.py _why_text).
+  const whyText = (row: ModelAvailability): string => {
+    if (!row.available) {
+      return row.reason_key ? t(row.reason_key, { defaultValue: row.reason_key }) : "";
+    }
+    if (row.quality == null) return t("pipeline.quality.untested");
+    if ((row.quality === "marginal" || row.quality === "avoid") && row.quality_note) {
+      return t(row.quality_note, { defaultValue: row.quality_note });
+    }
+    return "";
+  };
+
+  // Visible qualifier badge — "default" only. "current" is carried visually by
+  // the selection wash (.bn-pipeline-model-row[aria-current="true"]) plus
+  // aria-current; an sr-only "current" rides the row name for AT robustness
+  // (aria-current on a <tr> is unreliably announced).
+  const defaultBadge = (row: ModelAvailability): string =>
+    row.default ? ` (${t("pipeline.qualifier.default")})` : "";
+
+  const groups = buildStageGroups(data.catalogue);
+
   return (
     <div className="bn-pipeline-view">
       <p className="bn-setting-description">{t("pipeline.intro")}</p>
-      {llmSummary.length > 0 && (
-        <section className="bn-pipeline-summary">
-          <h3 className="bn-pipeline-summary-heading">
-            {t("pipeline.alternatives.summaryHeading")}
-          </h3>
-          <AlternativesList alternatives={llmSummary} />
-        </section>
-      )}
-      <dl className="bn-pipeline-stages">
-        {data.catalogue.map((stage) => (
-          <div
-            key={stage.id}
-            className={`bn-pipeline-stage${stage.available ? "" : " bn-pipeline-stage-dim"}`}
+      <div className="bn-pipeline-key">
+        <div className="bn-pipeline-key-group">
+          <span className="bn-pipeline-key-label">{t("pipeline.column.availability")}</span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-avail-ok">✓</span>{" "}
+            {t("pipeline.glyph.available")}
+          </span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-avail-error">✗</span>{" "}
+            {t("pipeline.glyph.unavailable")}
+          </span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-avail-skip">—</span>{" "}
+            {t("pipeline.glyph.skipped")}
+          </span>
+        </div>
+        <div className="bn-pipeline-key-group">
+          <span className="bn-pipeline-key-label">{t("pipeline.column.quality")}</span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-quality-excellent">●</span>{" "}
+            {t("pipeline.quality.glyph.excellent")}
+          </span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-quality-good">○</span>{" "}
+            {t("pipeline.quality.glyph.good")}
+          </span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-quality-marginal">⚠</span>{" "}
+            {t("pipeline.quality.glyph.marginal")}
+          </span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-quality-avoid">✗</span>{" "}
+            {t("pipeline.quality.glyph.avoid")}
+          </span>
+          <span className="bn-pipeline-key-item">
+            <span aria-hidden="true" className="bn-pipeline-glyph bn-pipeline-quality-untested">?</span>{" "}
+            {t("pipeline.quality.glyph.untested")}
+          </span>
+        </div>
+        <div className="bn-pipeline-key-group">
+          <span className="bn-pipeline-key-item">
+            <em className="bn-pipeline-key-italic">{t("pipeline.key.italic_label")}</em> ={" "}
+            {t("pipeline.key.synthesised")}
+          </span>
+        </div>
+      </div>
+      {groups.map(({ names, sel }, gi) => (
+        <section className="bn-pipeline-stage-group" key={sel.id}>
+          <h3
+            className="bn-pipeline-stage-group-heading"
+            id={`pipeline-group-${sel.id}`}
           >
-            <dt className="bn-pipeline-stage-name">{stage.name}</dt>
-            <dd className="bn-pipeline-stage-body">
-              <div className="bn-pipeline-stage-chosen">{stage.chosen}</div>
-              <div className="bn-pipeline-stage-notes">{stage.notes}</div>
-              {stage.alternatives && stage.alternatives.length > 0 && (
-                <AlternativesList alternatives={stage.alternatives} />
-              )}
-            </dd>
-          </div>
-        ))}
-      </dl>
+            {names.join(", ").toUpperCase()}
+          </h3>
+          <table
+            className="bn-pipeline-matrix"
+            aria-labelledby={`pipeline-group-${sel.id}`}
+          >
+            <colgroup>
+              <col className="bn-pipeline-col-model" />
+              <col className="bn-pipeline-col-avail" />
+              <col className="bn-pipeline-col-quality" />
+              <col className="bn-pipeline-col-notes" />
+            </colgroup>
+            <thead>
+              <tr>
+                {/* Visible Model/Notes labels on the first table only; the glyph
+                    columns stay sr-only (the key above explains ✓ / ● etc.).
+                    table-layout:fixed aligns these over every table below. */}
+                <th
+                  scope="col"
+                  className={gi === 0 ? "bn-pipeline-col-head" : "bn-sr-only"}
+                >
+                  {t("pipeline.column.model")}
+                </th>
+                <th scope="col" className="bn-sr-only">
+                  {t("pipeline.column.availability")}
+                </th>
+                <th scope="col" className="bn-sr-only">
+                  {t("pipeline.column.quality")}
+                </th>
+                <th
+                  scope="col"
+                  className={gi === 0 ? "bn-pipeline-col-head" : "bn-sr-only"}
+                >
+                  {t("pipeline.column.notes")}
+                </th>
+              </tr>
+            </thead>
+            {byProvider(sel.alternatives ?? []).map((rows, gi) => {
+              const { collapsed, rep } = collapseProvider(rows);
+              const pid = rep.provider_id;
+              if (collapsed) {
+                const isCurrent =
+                  rep.provider_id === sel.chosen_id &&
+                  rep.model_id === sel.chosen_model_id;
+                const badge = defaultBadge(rep);
+                return (
+                  <tbody key={`${pid}-${gi}`}>
+                    <tr
+                      className="bn-pipeline-model-row"
+                      aria-current={isCurrent ? "true" : undefined}
+                    >
+                      <th
+                        scope="row"
+                        className="bn-pipeline-row-name bn-pipeline-row-name-provider"
+                      >
+                        {providerLabel(rep)}
+                        {badge && <span className="bn-pipeline-badge">{badge}</span>}
+                        {isCurrent && (
+                          <span className="bn-sr-only">
+                            {" "}
+                            ({t("pipeline.qualifier.current")})
+                          </span>
+                        )}
+                      </th>
+                      <td className="bn-pipeline-avail-cell">{availCell(rep)}</td>
+                      <td className="bn-pipeline-quality-cell">{qualityCell(rep)}</td>
+                      <td className="bn-pipeline-why-cell">{whyText(rep)}</td>
+                    </tr>
+                  </tbody>
+                );
+              }
+              return (
+                <tbody key={`${pid}-${gi}`}>
+                  <tr className="bn-pipeline-provider-heading">
+                    <th scope="rowgroup" colSpan={4}>
+                      {providerLabel(rep)}
+                    </th>
+                  </tr>
+                  {rows.map((row, ri) => {
+                    const isCurrent =
+                      row.provider_id === sel.chosen_id &&
+                      row.model_id === sel.chosen_model_id;
+                    const badge = defaultBadge(row);
+                    return (
+                      <tr
+                        key={`${pid}-${row.model_id ?? "—"}-${ri}`}
+                        className={`bn-pipeline-model-row${
+                          row.synthesised ? " bn-pipeline-synthesised-row" : ""
+                        }`}
+                        aria-current={isCurrent ? "true" : undefined}
+                      >
+                        <th scope="row" className="bn-pipeline-row-name">
+                          {row.display}
+                          {badge && <span className="bn-pipeline-badge">{badge}</span>}
+                          {isCurrent && (
+                            <span className="bn-sr-only">
+                              {" "}
+                              ({t("pipeline.qualifier.current")})
+                            </span>
+                          )}
+                          {row.synthesised && row.provider_id === "azure" && (
+                            <span className="bn-sr-only">
+                              {" "}
+                              ({t("pipeline.qualifier.your_deployment")})
+                            </span>
+                          )}
+                        </th>
+                        <td className="bn-pipeline-avail-cell">{availCell(row)}</td>
+                        <td className="bn-pipeline-quality-cell">{qualityCell(row)}</td>
+                        <td className="bn-pipeline-why-cell">{whyText(row)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              );
+            })}
+          </table>
+        </section>
+      ))}
       <p className="bn-pipeline-host">
         {host.os} {host.arch}
         {host.memory_gb !== null ? ` · ${host.memory_gb} GB` : ""}
@@ -525,70 +862,6 @@ function PipelineSection() {
         {" · "}
         {t("pipeline.ollama")}: {host.ollama_running ? t("pipeline.running") : t("pipeline.notDetected")}
       </p>
-    </div>
-  );
-}
-
-// `AlternativesList` renders the v1.5 backend-availability list as a semantic
-// `<ul>` so AT can navigate item-by-item. Glyphs carry a visually-hidden
-// "available" / "unavailable" label (WCAG 1.1.1, 4.1.2). Reasons render inline
-// below each ✗ — no hover tooltips (WCAG 1.4.13). The "Unavailable" group is
-// wrapped in lang="en" until catalogue reasons are localised everywhere —
-// today they are translated into all six locales, so the attribute is omitted
-// to let AT use the document language naturally.
-function AlternativesList({ alternatives }: { alternatives: BackendAvailability[] }) {
-  const { t } = useTranslation("settings");
-  const available = alternatives.filter((a) => a.available);
-  const unavailable = alternatives.filter((a) => !a.available);
-  const labelOf = (a: BackendAvailability) =>
-    a.display_key ? t(a.display_key, { defaultValue: a.display }) : a.display;
-  const reasonOf = (a: BackendAvailability) =>
-    a.reason ? t(a.reason, { defaultValue: a.reason }) : "";
-  return (
-    <div className="bn-pipeline-alternatives">
-      <div className="bn-pipeline-alternatives-row">
-        <span className="bn-pipeline-alternatives-label">
-          {t("pipeline.alternatives.available")}:
-        </span>
-        {available.length === 0 ? (
-          <span className="bn-pipeline-alternatives-empty">
-            {t("pipeline.alternatives.none")}
-          </span>
-        ) : (
-          <ul role="list" className="bn-pipeline-alternatives-list">
-            {available.map((a) => (
-              <li key={a.id} className="bn-pipeline-alt bn-pipeline-alt-on">
-                <span aria-hidden="true" className="bn-pipeline-alt-glyph">
-                  ✓
-                </span>
-                <span className="bn-sr-only">{t("pipeline.available")}</span>
-                <span className="bn-pipeline-alt-name">{labelOf(a)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      {unavailable.length > 0 && (
-        <div className="bn-pipeline-alternatives-row">
-          <span className="bn-pipeline-alternatives-label">
-            {t("pipeline.alternatives.unavailable")}:
-          </span>
-          <ul role="list" className="bn-pipeline-alternatives-list">
-            {unavailable.map((a) => (
-              <li key={a.id} className="bn-pipeline-alt bn-pipeline-alt-off">
-                <span aria-hidden="true" className="bn-pipeline-alt-glyph">
-                  ✗
-                </span>
-                <span className="bn-sr-only">{t("pipeline.unavailable")}</span>
-                <span className="bn-pipeline-alt-name">{labelOf(a)}</span>
-                {a.reason && (
-                  <span className="bn-pipeline-alt-reason">— {reasonOf(a)}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }

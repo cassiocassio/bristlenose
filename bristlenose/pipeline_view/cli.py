@@ -1,9 +1,13 @@
 """`bristlenose pipeline` — render the mixture-of-models view.
 
-Read-only CLI surface. v1.5: adds an "LLM backends available on this host"
-summary card at the top + per-stage alternatives for transcription and
-anonymisation. Reasons render inline beneath unavailable options (matches
-the React surface; no hover-only tooltips).
+Read-only CLI surface. v2: a sectioned-flat matrix grouped by stage-profile
+cluster. Stages whose quality columns are byte-identical merge under one
+heading (today: {speaker id, topic segmentation} and {quote extraction, quote
+clustering, thematic grouping}). Four columns per row — Provider/Model ·
+Availability · Quality · Why. Providers collapse to a single line when every
+model shares the same provider-level failure; expand to per-model rows
+otherwise. Reasons / editorial caveats render inline in the Why column (no
+hover-only tooltips).
 """
 
 from __future__ import annotations
@@ -15,13 +19,19 @@ from rich.console import Console
 from rich.table import Table
 
 from bristlenose.config import load_settings
-from bristlenose.pipeline_view.catalogue import find_stage
-from bristlenose.pipeline_view.render import BackendAvailability, build_pipeline_view
+from bristlenose.pipeline_view.catalogue import STAGES, UNTESTED_NOTE_KEY, find_stage
+from bristlenose.pipeline_view.render import (
+    ModelAvailability,
+    PipelineView,
+    StageSelection,
+    build_pipeline_view,
+)
+from bristlenose.ui_kinds import MessageKind, cli_prefix
 
 console = Console()
 
 # English fallback strings used by the CLI surface. Mirrors the
-# `pipeline.reasons.*` keys in `bristlenose/locales/*/preflight.json`.
+# `pipeline.reasons.*` keys in `bristlenose/locales/*/settings.json`.
 # Catalogue/eligibility return translation keys; CLI maps them to English.
 _REASON_TEXT: dict[str, str] = {
     "pipeline.reasons.no_anthropic_key": "no Claude API key set",
@@ -40,6 +50,29 @@ _REASON_TEXT: dict[str, str] = {
     "pipeline.reasons.pii_disabled": "PII redaction is off",
 }
 
+# English fallback for the editorial quality notes (Why column). Mirrors the
+# `pipeline.quality.*` keys in the locale files.
+_NOTE_TEXT: dict[str, str] = {
+    "pipeline.quality.untested": "untested",
+    "pipeline.quality.local_speaker_id_acceptable": (
+        "Local models handle speaker identification well"
+    ),
+    "pipeline.quality.local_topic_segmentation_acceptable": (
+        "Local models handle topic segmentation well"
+    ),
+    "pipeline.quality.local_quote_extraction_miss_rate": (
+        "small models miss multi-clause quotes"
+    ),
+    "pipeline.quality.local_quote_clustering_drift": (
+        "small models cluster quotes inconsistently"
+    ),
+    "pipeline.quality.local_thematic_grouping_drift": (
+        "small models drift on thematic synthesis"
+    ),
+    "pipeline.quality.mlx_whisper_apple_silicon_optimal": "optimal on Apple Silicon",
+    "pipeline.quality.faster_whisper_cpu_baseline": "solid CPU baseline; no GPU required",
+}
+
 _LOCAL_OLLAMA_LABEL = "Local (Ollama)"
 _BUILTIN_ANONYMISER_LABEL = "Built-in anonymiser"
 
@@ -47,6 +80,29 @@ _DISPLAY_KEY_TEXT: dict[str, str] = {
     "pipeline.backends.local_ollama": _LOCAL_OLLAMA_LABEL,
     "pipeline.backends.builtin_anonymiser": _BUILTIN_ANONYMISER_LABEL,
 }
+
+# Editorial quality vocabulary — distinct from MessageKind by design (a cell's
+# fitness is orthogonal to whether it can run). Empty when the row is ✗ or —.
+_QUALITY_GLYPH: dict[str, str] = {
+    "excellent": "●",
+    "good": "○",
+    "marginal": "⚠",
+    "avoid": "✗",
+}
+_QUALITY_COLOUR: dict[str, str] = {
+    "excellent": "green",
+    "good": "green",
+    "marginal": "yellow",
+    "avoid": "red",
+}
+
+# Provider display labels + qualifier keys, sourced from the catalogue.
+_PROVIDER_DISPLAY: dict[str, str] = {}
+_PROVIDER_DISPLAY_KEY: dict[str, str | None] = {}
+for _stage in STAGES:
+    for _backend in _stage.viable_backends:
+        _PROVIDER_DISPLAY[_backend.id] = _backend.display
+        _PROVIDER_DISPLAY_KEY[_backend.id] = _backend.display_key
 
 
 def pipeline_command(
@@ -91,68 +147,176 @@ def _display_text(display: str, display_key: str | None) -> str:
     return display
 
 
-def _format_alternatives(alts: list[BackendAvailability]) -> tuple[str, list[str]]:
-    """Return `(available_line, reason_lines)` for an alternatives list.
+def _avail_glyph(row: ModelAvailability) -> str:
+    """MessageKind glyph for the Availability column.
 
-    available_line: e.g. "Available: ✓ Claude · ✓ ChatGPT · ✓ Gemini".
-    reason_lines: one per unavailable option, e.g.
-        "Unavailable: Azure OpenAI (no Azure key set)".
+    ✗ (ERROR) for fixable failures (an `action_key` exists); — (SKIPPED) for
+    structural ones (hardware / OS version — no user action). ✓ when available.
     """
-    available = [a for a in alts if a.available]
-    unavailable = [a for a in alts if not a.available]
-    if available:
-        labels = " · ".join(
-            f"[green]✓[/green] {_display_text(a.display, a.display_key)}" for a in available
-        )
-        available_line = f"Available: {labels}"
+    if row.available:
+        kind = MessageKind.SUCCESS
+    elif row.action_key is not None:
+        kind = MessageKind.ERROR
     else:
-        available_line = "Available: [dim]none[/dim]"
-    reason_lines: list[str] = []
-    for a in unavailable:
-        reason_text = _REASON_TEXT.get(a.reason or "", a.reason or "unavailable")
-        reason_lines.append(
-            f"[dim]✗ {_display_text(a.display, a.display_key)} — {reason_text}[/dim]"
-        )
-    return available_line, reason_lines
+        kind = MessageKind.SKIPPED
+    return cli_prefix(kind)
 
 
-def _render_table(view) -> None:  # type: ignore[no-untyped-def]
-    """Render the Pipeline view as a two-column definition-list-style table.
+def _quality_glyph(row: ModelAvailability) -> str:
+    """Editorial quality glyph. Empty when the row can't run."""
+    if not row.available:
+        return ""
+    if row.quality is None:
+        return "[dim]?[/dim]"
+    glyph = _QUALITY_GLYPH.get(row.quality, "?")
+    colour = _QUALITY_COLOUR.get(row.quality, "dim")
+    return f"[{colour}]{glyph}[/{colour}]"
 
-    v1.5: the LLM summary card renders first; the per-stage LLM rows show
-    only the chosen backend. Transcription / anonymisation rows render
-    their per-stage alternatives directly.
+
+def _why_text(row: ModelAvailability) -> str:
+    """Unified Why text: failure reason (✗/—), editorial caveat (✓⚠), or
+    untested explanation (✓?). Empty for ✓●/✓○ — no caveat to surface."""
+    if not row.available:
+        return _REASON_TEXT.get(row.reason_key or "", row.reason_key or "")
+    if row.quality is None:
+        return _NOTE_TEXT.get(UNTESTED_NOTE_KEY, "untested")
+    if row.quality in ("marginal", "avoid") and row.quality_note:
+        return _NOTE_TEXT.get(row.quality_note, row.quality_note)
+    return ""
+
+
+def _badges(row: ModelAvailability, is_current: bool) -> str:
+    parts: list[str] = []
+    if row.default:
+        parts.append("default")
+    if is_current:
+        parts.append("current")
+    return f"  ({' · '.join(parts)})" if parts else ""
+
+
+def _by_provider(alts: list[ModelAvailability]) -> list[list[ModelAvailability]]:
+    """Bucket a flat alternatives list into per-provider groups (order-preserving)."""
+    groups: list[list[ModelAvailability]] = []
+    current_pid: str | None = None
+    bucket: list[ModelAvailability] = []
+    for a in alts:
+        if a.provider_id != current_pid:
+            if bucket:
+                groups.append(bucket)
+            bucket = [a]
+            current_pid = a.provider_id
+        else:
+            bucket.append(a)
+    if bucket:
+        groups.append(bucket)
+    return groups
+
+
+def _collapse(
+    provider_rows: list[ModelAvailability],
+) -> tuple[bool, ModelAvailability]:
+    """Return `(collapsed, representative_row)` for one provider's rows.
+
+    Collapses to a single line when there's no model granularity, or when no
+    model is available AND every failure shares the same provider-level reason.
     """
-    if view.llm_summary:
-        avail_line, reason_lines = _format_alternatives(view.llm_summary)
-        console.print("[bold]LLM backends on this host[/bold]")
-        console.print(f"  {avail_line}")
-        for line in reason_lines:
-            console.print(f"  {line}")
-        console.print()
+    if len(provider_rows) == 1 and provider_rows[0].model_id is None:
+        return True, provider_rows[0]
+    if all(not r.available for r in provider_rows):
+        reasons = {r.reason_key for r in provider_rows}
+        if len(reasons) == 1:
+            return True, provider_rows[0]
+    return False, provider_rows[0]
 
-    table = Table(
-        title="Pipeline — currently used models",
-        show_header=False,
-        box=None,
-        pad_edge=False,
-        padding=(0, 2),
+
+def _provider_block(
+    provider_rows: list[ModelAvailability],
+    sel: StageSelection,
+) -> list[tuple[str, str, str, str]]:
+    """Render one provider's rows as (name, avail, quality, why) tuples."""
+    pid = provider_rows[0].provider_id
+    pdisplay = _display_text(
+        _PROVIDER_DISPLAY.get(pid, pid), _PROVIDER_DISPLAY_KEY.get(pid)
     )
-    table.add_column("Stage", style="bold", no_wrap=False)
-    table.add_column("Backend", no_wrap=False)
+    collapsed, rep = _collapse(provider_rows)
+    if collapsed:
+        # Transcription/anonymisation collapse to a flat provider row but can
+        # still carry a quality rating (MLX ●, faster-whisper ○). `_quality_glyph`
+        # returns "" when the row is unavailable, so failed LLM providers stay
+        # quality-blank.
+        return [(f"  {pdisplay}", _avail_glyph(rep), _quality_glyph(rep), _why_text(rep))]
+
+    out: list[tuple[str, str, str, str]] = [(f"  [bold]{pdisplay}[/bold]", "", "", "")]
+    for row in provider_rows:
+        is_current = (
+            row.provider_id == sel.chosen_id and row.model_id == sel.chosen_model_id
+        )
+        name = f"    {row.display}{_badges(row, is_current)}"
+        out.append((name, _avail_glyph(row), _quality_glyph(row), _why_text(row)))
+    return out
+
+
+def _cluster_signature(sel: StageSelection) -> tuple:  # type: ignore[type-arg]
+    """Hashable signature of a stage's per-model column for stage-group dedup.
+
+    Stages with byte-identical availability + quality-*level* columns share a
+    heading. Availability is uniform across LLM stages (same host); the quality
+    *level* varies (Local is good for structural stages, marginal for synthesis)
+    — that's the axis the clustering surfaces. The per-stage `quality_note` is
+    deliberately excluded: the three synthesis stages carry distinct notes
+    ("miss multi-clause quotes" / "cluster inconsistently" / "drift on
+    synthesis") yet merge into one group, the first stage in declaration order
+    contributing the displayed note (matches the canonical mockup).
+    """
+    return tuple(
+        (
+            a.provider_id,
+            a.model_id,
+            a.available,
+            a.reason_key,
+            a.quality,
+            a.default,
+            a.recommended,
+        )
+        for a in sel.alternatives
+    )
+
+
+def _render_table(view: PipelineView) -> None:
+    """Render the sectioned-flat matrix: stage-group headings, per-provider rows."""
+    llm_groups: list[tuple[list[str], StageSelection]] = []
+    llm_index: dict[tuple, tuple[list[str], StageSelection]] = {}  # type: ignore[type-arg]
+    non_llm_groups: list[tuple[list[str], StageSelection]] = []
 
     for sel in view.catalogue:
-        if sel.available:
-            backend_block = f"{sel.chosen}\n[dim]{sel.notes}[/dim]"
+        if not sel.alternatives:
+            continue  # e.g. the apple_foundation_models stub (Apple FM is a row above)
+        if sel.kind == "llm":
+            sig = _cluster_signature(sel)
+            if sig in llm_index:
+                llm_index[sig][0].append(sel.name)
+            else:
+                group = ([sel.name], sel)
+                llm_index[sig] = group
+                llm_groups.append(group)
         else:
-            backend_block = f"[dim]{sel.chosen}[/dim]\n[dim]{sel.notes}[/dim]"
-        if sel.alternatives:
-            avail_line, reason_lines = _format_alternatives(sel.alternatives)
-            backend_block += f"\n{avail_line}"
-            for line in reason_lines:
-                backend_block += f"\n{line}"
-        table.add_row(sel.name, backend_block)
-        table.add_row("", "")  # blank spacer row between stages
+            non_llm_groups.append(([sel.name], sel))
+
+    ordered = llm_groups + non_llm_groups
+
+    table = Table(show_header=False, box=None, pad_edge=False, padding=(0, 1))
+    table.add_column("name", no_wrap=False)
+    table.add_column("avail", justify="center", no_wrap=True)
+    table.add_column("quality", justify="center", no_wrap=True)
+    table.add_column("why", no_wrap=False, style="dim")
+
+    for names, sel in ordered:
+        heading = ", ".join(names).upper()
+        table.add_row(f"[bold]{heading}[/bold]", "", "", "")
+        for provider_rows in _by_provider(sel.alternatives):
+            for name, avail, quality, why in _provider_block(provider_rows, sel):
+                table.add_row(name, avail, quality, why)
+        table.add_row("", "", "", "")  # spacer between groups
 
     console.print(table)
     console.print()

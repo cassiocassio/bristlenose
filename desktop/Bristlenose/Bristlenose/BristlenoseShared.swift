@@ -1,9 +1,16 @@
 import Foundation
+import OSLog
+
+/// Logger for shared subprocess concerns. Distinct category from ServeManager's
+/// `serve` logger so credential/env injection from the *run* path is filed
+/// under `subprocess`, not falsely under `serve`, in Console.app.
+private let log = Logger(subsystem: "app.bristlenose", category: "subprocess")
 
 /// Shared helpers used by both ServeManager and PipelineRunner.
 ///
-/// Keeps the Python-subprocess concerns (binary discovery, ANSI stripping)
-/// in one place so the two runners stay in lockstep.
+/// Keeps the Python-subprocess concerns (binary discovery, ANSI stripping,
+/// environment assembly, key redaction) in one place so the two runners stay
+/// in lockstep.
 enum BristlenoseShared {
 
     /// Strip ANSI escape sequences, OSC sequences (BEL- and ST-terminated),
@@ -87,10 +94,13 @@ enum BristlenoseShared {
         ]
     }
 
-    /// Build the minimal environment for a `bristlenose` subprocess.
+    /// Build the minimal base environment for a `bristlenose` subprocess.
     /// Inherits only the handful of vars the CLI needs; avoids leaking
-    /// credentials, DYLD_* vars, Xcode debug vars, etc. API keys are read
-    /// from Keychain by Python directly — no env var needed for them.
+    /// DYLD_* vars, Xcode debug vars, etc. Applies UserDefaults preferences.
+    ///
+    /// Does NOT inject TLS, bundled-binary, or API-key vars — use
+    /// `childEnvironment(for:)` for the complete, spawn-ready environment.
+    /// This base is the building block the factory wraps.
     static func buildChildEnvironment() -> [String: String] {
         var env: [String: String] = [:]
         let parentEnv = ProcessInfo.processInfo.environment
@@ -99,6 +109,39 @@ enum BristlenoseShared {
             if let val = parentEnv[key] { env[key] = val }
         }
         overlayPreferences(into: &env)
+        return env
+    }
+
+    /// Build the COMPLETE environment for a desktop-spawned `bristlenose`
+    /// subprocess (serve or run). Single source of truth for every env concern
+    /// a spawn site needs, so the two spawn sites can't drift:
+    ///   1. minimal var allowlist + UserDefaults preferences (buildChildEnvironment)
+    ///   2. `_BRISTLENOSE_HOSTED_BY_DESKTOP` parent-death handshake
+    ///   3. TLS cert paths for the bundled OpenSSL (sslEnvironment)
+    ///   4. bundled FFmpeg/ffprobe paths (bundledBinaryEnvironment)
+    ///   5. the active provider's API key (overlayAPIKeys)
+    ///
+    /// Both `ServeManager.start` and `PipelineRunner.start` route through here.
+    /// The run path previously hand-rolled this block and forgot step 5, which
+    /// broke `bristlenose run` under App Sandbox (Python can't read Keychain
+    /// itself). Adding a spawn site = one call here, not five lines to remember.
+    ///
+    /// - Parameter mode: resolved sidecar mode (bundled / dev-sidecar).
+    /// - Parameter store: Keychain-abstracted store (`KeychainHelper.liveStore`
+    ///   in production, `InMemoryKeychain` in tests).
+    static func childEnvironment(
+        for mode: SidecarMode,
+        store: any KeychainStore = KeychainHelper.liveStore
+    ) -> [String: String] {
+        var env = buildChildEnvironment()
+        // Tells the sidecar to install the parent-death watcher (so it
+        // self-terminates if this host process dies abnormally, instead of
+        // leaving an orphan holding a port). CLI users don't get this — they
+        // may legitimately nohup the server.
+        env["_BRISTLENOSE_HOSTED_BY_DESKTOP"] = "1"
+        for (key, value) in sslEnvironment(for: mode) { env[key] = value }
+        for (key, value) in bundledBinaryEnvironment(for: mode) { env[key] = value }
+        overlayAPIKeys(into: &env, using: store)
         return env
     }
 
@@ -145,5 +188,89 @@ enum BristlenoseShared {
            !envURL.isEmpty {
             env["BRISTLENOSE_LOCAL_URL"] = envURL
         }
+    }
+
+    /// Fetch the active LLM provider's API key from Keychain and overlay it as a
+    /// `BRISTLENOSE_<PROVIDER>_API_KEY` env var on the subprocess environment.
+    ///
+    /// This is the sandbox-compatible credential path: the Swift host reads
+    /// Keychain (Security.framework, no Python dep), the sidecar reads the env
+    /// var via pydantic-settings. No `/usr/bin/security` subprocess call needed
+    /// by Python, so the sidecar works under App Sandbox without
+    /// `keychain-access-groups` or any Security.framework linkage on the
+    /// Python side.
+    ///
+    /// Called from BOTH spawn sites (via `childEnvironment(for:)`): the serve
+    /// sidecar and the `bristlenose run` pipeline. Reads `activeProvider` LIVE
+    /// at call time (not a captured snapshot) so a mid-session provider switch
+    /// picks up the right key on the next spawn.
+    ///
+    /// Residual risk: env vars are visible to same-UID processes via `ps -E`.
+    /// Under that threat model the attacker can also call SecItemCopyMatching
+    /// directly, so net attack-surface delta is small. Documented in
+    /// `docs/design-desktop-python-runtime.md`.
+    ///
+    /// - Parameter env: env dict to mutate
+    /// - Parameter store: Keychain-abstracted store (`KeychainHelper.liveStore` in
+    ///   production, `InMemoryKeychain` in tests)
+    static func overlayAPIKeys(into env: inout [String: String], using store: any KeychainStore) {
+        // Scope to the active provider only. Eager fetch of all four cloud
+        // keys (sandbox walk #7) caused 3× Keychain prompts the moment a
+        // local-only user dropped a project — the loudest possible "I chose
+        // local-only" failure. Ollama is keyless: nothing to inject; bail.
+        // Miro descoped from alpha (see c3 plan).
+        let active = UserDefaults.standard.string(forKey: "activeProvider") ?? "anthropic"
+        let cloudProviders: Set<String> = ["anthropic", "openai", "azure", "google"]
+        guard cloudProviders.contains(active) else {
+            log.info("active provider=\(active, privacy: .public) is keyless — no API key injection")
+            return
+        }
+        guard let value = store.get(provider: active), !value.isEmpty else {
+            log.info("no API key in Keychain for active provider=\(active, privacy: .public)")
+            return
+        }
+        let envKey = "BRISTLENOSE_\(active.uppercased())_API_KEY"
+        env[envKey] = value
+        log.info("injected API key for active provider=\(active, privacy: .public)")
+    }
+
+    /// Key-shape redactor — defence against Python-side leakage of LLM API keys
+    /// (Uvicorn env dumps on startup errors, pydantic tracebacks that echo a
+    /// SecretStr, accidental `print(os.environ)` from a future change). Applied
+    /// at BOTH spawn sites' line handlers before output is buffered, because
+    /// both now inject the key via `overlayAPIKeys`.
+    ///
+    /// Covers: Anthropic (`sk-ant-api/sid<NN>-<90+ chars>`), OpenAI (project-scoped
+    /// `sk-proj-<48+>` + historical `sk-<48>`), Google (`AIza<35>`).
+    ///
+    /// Limitations:
+    /// - Per-line only. If Python wraps a key across two log lines (e.g. in a
+    ///   boxed stack trace) the redactor won't catch the split halves. Inherent
+    ///   to line-based processing.
+    /// - Azure deliberately NOT covered: 32-char hex false-positives on UUIDs
+    ///   and SHA hashes are worse than the residual risk. Pre-beta audit
+    ///   tracked in `docs/private/100days.md` §6 Risk → Should.
+    /// - Does not catch provider-format changes after this code was written.
+    /// - Does not catch misformatted keys the regex doesn't match by shape.
+    ///
+    /// This is defence in depth, not a substitute for avoiding key logs in the
+    /// first place — see `check-logging-hygiene.sh` for the source-level gate.
+    static let keyRedactionRegex = try! NSRegularExpression(
+        pattern: [
+            "sk-ant-(api|sid)[0-9]{2}-[A-Za-z0-9_\\-]{90,}",
+            "sk-(proj|None)-[A-Za-z0-9_\\-]{48,}",
+            "sk-[A-Za-z0-9]{48}",
+            "AIza[A-Za-z0-9_\\-]{35}",
+        ].joined(separator: "|"),
+        options: []
+    )
+
+    /// Apply the key-shape redactor to a string. Exposed for testing.
+    static func redactKeys(in line: String) -> String {
+        keyRedactionRegex.stringByReplacingMatches(
+            in: line,
+            range: NSRange(line.startIndex..., in: line),
+            withTemplate: "***REDACTED***"
+        )
     }
 }

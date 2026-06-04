@@ -51,6 +51,11 @@ enum KeychainHelper {
             kSecAttrAccount as String: account,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
+            // Data-protection keychain + match synced OR local items. Without
+            // `kSecAttrSynchronizableAny` a default query only matches
+            // non-synchronizable items, so synced keys would be invisible.
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
         ]
 
         var result: AnyObject?
@@ -69,48 +74,39 @@ enum KeychainHelper {
         return value
     }
 
-    /// Write a key to Keychain. Uses add-then-update (atomic, no race window).
+    /// Write a key to Keychain (data-protection keychain, iCloud-synced).
     ///
-    /// New items are written with a biometric access-control (`.biometryCurrentSet`
-    /// + `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`), so subsequent reads offer
-    /// Touch ID instead of a password prompt. `.biometryCurrentSet` invalidates the
-    /// ACL if the enrolled fingerprint set changes — a deliberate security choice.
-    ///
-    /// On overwrite (`errSecDuplicateItem`) the attrs dict is also passed to
-    /// `SecItemUpdate`. Whether macOS rewrites the ACL of a pre-existing
-    /// password-protected entry via update is not contractually documented; users
-    /// who need the upgrade reliably can remove the entry in Keychain Access first.
+    /// Items are stored with `kSecUseDataProtectionKeychain` + `kSecAttrSynchronizable`,
+    /// so they sync across the user's Macs via iCloud Keychain (when it's enabled; they
+    /// stay local silently otherwise) and survive a damaged login keychain — the
+    /// data-protection partition is separate from the file-based login keychain.
+    /// Accessibility is `kSecAttrAccessibleAfterFirstUnlock` (sync-compatible;
+    /// `*ThisDeviceOnly` classes can't sync). NO biometric `SecAccessControl`: it is
+    /// mutually exclusive with sync, and would prompt Touch ID on every headless
+    /// sidecar read. A deliberate Touch ID gate lives at the app level on the
+    /// reveal/edit action instead. The `keychain-access-groups` entitlement (Keychain
+    /// Sharing capability) is required for the data-protection keychain under App
+    /// Sandbox — see docs/private/handoffs/keychain-sandbox-entitlement.md.
     @discardableResult
     static func set(provider: String, value: String) -> Bool {
         guard let service = serviceNames[provider],
               let data = value.data(using: .utf8)
         else { return false }
 
+        // Base match query — `kSecAttrSynchronizableAny` so add-then-update finds
+        // a pre-existing item regardless of its sync flag.
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
         ]
 
-        var accessControlError: Unmanaged<CFError>?
-        guard let accessControl = SecAccessControlCreateWithFlags(
-            nil,
-            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-            .biometryCurrentSet,
-            &accessControlError
-        ) else {
-            let err = accessControlError?.takeRetainedValue()
-            #if DEBUG
-            print("[KeychainHelper] SecAccessControlCreateWithFlags failed: \(String(describing: err))")
-            #endif
-            return false
-        }
-
-        // `kSecAttrAccessControl` and `kSecAttrAccessible` are mutually exclusive —
-        // the access-control object embeds its own protection class.
         let attrs: [String: Any] = [
             kSecValueData as String: data,
-            kSecAttrAccessControl as String: accessControl,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+            kSecAttrSynchronizable as String: true,
         ]
 
         // Try add first
@@ -125,11 +121,10 @@ enum KeychainHelper {
             let updateStatus = SecItemUpdate(query as CFDictionary, attrs as CFDictionary)
             if updateStatus == errSecSuccess { return true }
             if updateStatus == errSecAuthFailed {
-                // Existing item is biometric-protected and the ACL is no longer
-                // satisfiable (e.g. `.biometryCurrentSet` invalidated by an
-                // enrolment change, or the user cancelled the auth sheet).
+                // ACL of a pre-existing entry can't be satisfied — e.g. a
+                // biometric item left by an older build, or a locked keychain.
                 // Distinct log line so this is greppable from Console.app.
-                logKeychainError("SecItemUpdate (auth failed — biometry invalidated or cancelled)", status: updateStatus)
+                logKeychainError("SecItemUpdate (auth failed)", status: updateStatus)
             } else {
                 logKeychainError("SecItemUpdate", status: updateStatus)
             }
@@ -148,6 +143,8 @@ enum KeychainHelper {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
         ]
 
         let status = SecItemDelete(query as CFDictionary)

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ollama setup — popover states (flow B mock)</title>
+<style>
+  /* ---------------------------------------------------------------------------
+     MEDIUM-FIDELITY MOCK of the NATIVE macOS popover + toolbar pill.
+     Emulates AppKit/SwiftUI system styling (system font, vibrancy popover,
+     accent buttons) — NOT the Bristlenose web theme — because the real surface
+     is native Swift. Throwaway design artefact.
+     Widths match the SwiftUI .frame(width:) so wrapping is honest:
+       · standard popover  = 280pt outer, 16pt padding  -> ~248pt text column
+       · choose-model      = 360pt outer, 16pt padding  -> ~328pt text column
+     Animation rule: the hourglass NEVER moves (waiting on the human); only the
+     download bar + "Bristlenose-is-working" spinner animate.
+  --------------------------------------------------------------------------- */
+  :root {
+    --label: #1d1d1f;
+    --secondary: rgba(60,60,67,0.62);
+    --tertiary: rgba(60,60,67,0.40);
+    --accent: #0a6cff;
+    --sep: rgba(0,0,0,0.10);
+    --red: #e0301a;
+    --pop-bg: #f4f4f5;
+    --pop-stroke: rgba(0,0,0,0.12);
+    font-synthesis: none;
+    -webkit-font-smoothing: antialiased;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+    background: #e7e7ea;
+    color: var(--label);
+    padding: 32px 28px 80px;
+  }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  .lede { color: var(--secondary); font-size: 13px; max-width: 760px; margin: 0 0 6px; line-height: 1.45; }
+  .lede code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .legend { color: var(--tertiary); font-size: 12px; margin: 0 0 28px; }
+
+  /* gallery */
+  .grid { display: flex; flex-wrap: wrap; gap: 40px 36px; align-items: flex-start; }
+  .card { width: max-content; }
+  .meta {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; color: var(--tertiary); margin: 0 0 10px; letter-spacing: .2px;
+  }
+  .meta b { color: var(--secondary); font-weight: 600; }
+
+  /* faux toolbar holding the pill (status placement, right-aligned) */
+  .toolbar {
+    width: 360px; height: 38px; border-radius: 9px 9px 0 0;
+    background: linear-gradient(#fbfbfc,#ededf0);
+    border: 0.5px solid rgba(0,0,0,0.14); border-bottom: none;
+    display: flex; align-items: center; justify-content: flex-end;
+    padding: 0 10px;
+  }
+  .toolbar.narrow { width: 280px; }
+
+  /* the pill */
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 9px; border-radius: 999px;
+    background: rgba(0,0,0,0.055);
+    border: 0.5px solid rgba(0,0,0,0.16);
+    font-size: 12px; font-weight: 500; color: var(--label);
+    line-height: 1; white-space: nowrap;
+  }
+  .pill svg { display:block; color: var(--secondary); }
+  .pill.failed svg { color: var(--red); }
+  .pill .pct { font-variant-numeric: tabular-nums; color: var(--secondary); font-size: 11px; }
+
+  /* mini progress bar */
+  .bar { height: 4px; border-radius: 2px; background: rgba(0,0,0,0.12); overflow: hidden; }
+  .bar > i { display:block; height:100%; background: var(--accent); border-radius:2px;
+             animation: grow 3.2s ease-in-out infinite alternate; }
+  .pill .bar { width: 58px; }
+  @keyframes grow { from { width: 28%; } to { width: 62%; } }
+
+  /* the popover */
+  .pop {
+    position: relative;
+    width: 280px;
+    background: var(--pop-bg);
+    border: 0.5px solid var(--pop-stroke);
+    border-radius: 11px;
+    box-shadow: 0 12px 34px rgba(0,0,0,0.20), 0 0 0 0.5px rgba(0,0,0,0.06);
+    padding: 16px;
+  }
+  .pop.wide { width: 360px; }
+  .pop::before {
+    content:""; position:absolute; top:-7px; right: 22px;
+    width:13px; height:13px; background: var(--pop-bg);
+    border-left:0.5px solid var(--pop-stroke); border-top:0.5px solid var(--pop-stroke);
+    transform: rotate(45deg); border-top-left-radius:3px;
+  }
+
+  .title { font-size: 14px; font-weight: 600; line-height: 1.3; margin: 0 0 8px; }
+  .body  { font-size: 12.5px; line-height: 1.42; color: var(--secondary); margin: 0 0 12px; }
+  .body.tight { margin-bottom: 10px; }
+  .body a, .footnote a { color: var(--accent); text-decoration: none; }
+  .footnote { font-size: 12px; line-height: 1.4; color: var(--secondary); margin: 10px 0 0; }
+  .caption  { font-size: 11.5px; line-height: 1.35; color: var(--tertiary); margin: 8px 0 0; }
+  .caption.center { text-align:center; }
+
+  /* numbered steps */
+  ol.steps { margin: 8px 0 0; padding-left: 20px; }
+  ol.steps li { font-size: 12.5px; line-height: 1.5; color: var(--label); }
+
+  /* buttons */
+  .actions { display:flex; gap:8px; justify-content:flex-end; align-items:center; margin-top: 14px; }
+  .actions.center { justify-content:center; }
+  .btn {
+    font-size: 12.5px; font-weight: 500; padding: 5px 13px; border-radius: 7px;
+    border: 0.5px solid rgba(0,0,0,0.2); background: #fff; color: var(--label);
+    cursor: default; white-space: nowrap;
+  }
+  .btn.def { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.small { padding: 3px 10px; font-size: 12px; }
+
+  /* model rows (choose-model) */
+  .models { border: 0.5px solid var(--sep); border-radius: 8px; overflow: hidden; margin: 4px 0 10px; }
+  .mrow { display:flex; gap:9px; padding: 9px 11px; align-items:flex-start; }
+  .mrow + .mrow { border-top: 0.5px solid var(--sep); }
+  .mrow.sel { background: rgba(10,108,255,0.06); }
+  .radio { width:14px; height:14px; border-radius:50%; border:1px solid rgba(0,0,0,0.32);
+           margin-top:1px; flex:none; }
+  .radio.on { border-color: var(--accent); background: radial-gradient(var(--accent) 0 4px, #fff 5px 14px); }
+  .radio.dis { border-color: rgba(0,0,0,0.16); background: rgba(0,0,0,0.03); }
+  .mr-main { font-size: 12.5px; font-weight: 600; line-height: 1.25; }
+  .mr-tag { font-weight: 400; color: var(--secondary); }
+  .mr-sub { font-size: 11.5px; color: var(--secondary); line-height: 1.3; margin-top: 2px;
+            font-variant-numeric: tabular-nums; }
+  /* disabled (over-RAM) row: dim name + sub, keep the reason in red */
+  .mrow.dis .mr-main { color: var(--tertiary); }
+  .mrow.dis .mr-sub  { color: var(--tertiary); }
+  .rednote { color: var(--red); font-weight: 500; }
+  .group-h { font-size: 11px; font-weight:600; color: var(--tertiary); text-transform: uppercase;
+             letter-spacing: .4px; padding: 7px 11px 4px; }
+
+  /* low disk-space warning line (Step 1) */
+  .diskwarn { display:flex; gap:6px; align-items:center; color: var(--red);
+              font-size: 12px; font-weight: 500; margin: 0 0 10px; }
+
+  /* foreshadow line */
+  .foreshadow { font-size: 11.5px; line-height: 1.4; color: var(--secondary);
+                background: rgba(0,0,0,0.035); border-radius: 7px; padding: 7px 9px; margin: 2px 0 0; }
+  .foreshadow b { font-weight: 600; color: var(--label); }
+
+  /* status row (waiting) */
+  .statusrow { display:flex; align-items:center; gap:8px; margin-top: 14px;
+               padding-top: 12px; border-top: 0.5px solid var(--sep); }
+  .statusrow .lbl { font-size: 12px; color: var(--secondary); flex:1; display:flex; gap:6px; align-items:center; }
+
+  /* spinner (BN-working only — animated on purpose) */
+  .spin { width:13px; height:13px; border-radius:50%;
+          border:1.6px solid rgba(0,0,0,0.18); border-top-color: var(--secondary);
+          animation: rot 0.8s linear infinite; }
+  @keyframes rot { to { transform: rotate(360deg); } }
+
+  .section-h { font-size: 13px; font-weight:600; color: var(--secondary); width:100%;
+               margin: 34px 0 -8px; border-top:1px solid rgba(0,0,0,0.08); padding-top: 22px;}
+</style>
+</head>
+<body>
+
+<h1>Ollama setup — popover states</h1>
+<p class="lede">Flow <b>B</b> (model-first / Ollama incidental): <code>choosingModel</code> → <code>needsOllama</code> → <code>waitingForOllama</code> → <code>downloading</code>. Each card shows the toolbar <b>pill</b> and the <b>popover</b> it opens, at native widths (280pt standard, 360pt for the model picker) so wrapping is real.</p>
+<p class="legend">Honesty rule made visible: the ⏳ hourglass is <b>static</b> (waiting on the human); only the download bar and "Bristlenose-is-working" spinner animate.</p>
+
+<div class="grid">
+
+  <!-- ============ STEP 1 — choosingModel (daemon down) ============ -->
+  <div class="card">
+    <p class="meta">STEP 1 · <b>choosingModel</b> · 360pt · daemon down</p>
+    <div class="toolbar">
+      <span class="pill">
+        <svg width="13" height="13" viewBox="0 0 16 16"><path d="M4.5 2h7M4.5 14h7M5.5 2v2.2L8 8 5.5 11.8V14M10.5 2v2.2L8 8l2.5 3.8V14" stroke="currentColor" fill="none" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        Set up on-device AI
+      </span>
+    </div>
+    <div class="pop wide">
+      <p class="title">Choose your on-device model</p>
+      <p class="body tight">Tuned to your Mac (16&nbsp;GB&nbsp;RAM). Bigger models are smarter but need more memory; all are a sizeable download.</p>
+      <div class="models">
+        <div class="mrow sel">
+          <span class="radio on"></span>
+          <div><div class="mr-main">Gemma 4 E4B <span class="mr-tag">· balanced · recommended</span></div>
+          <div class="mr-sub">~3 GB download</div></div>
+        </div>
+        <div class="mrow">
+          <span class="radio"></span>
+          <div><div class="mr-main">Llama 3.2 3B <span class="mr-tag">· smallest · fastest</span></div>
+          <div class="mr-sub">~2 GB download</div></div>
+        </div>
+        <div class="mrow dis">
+          <span class="radio dis"></span>
+          <div><div class="mr-main">Gemma 4 26B <span class="mr-tag">· best quality · <span class="rednote">needs 24 GB</span></span></div>
+          <div class="mr-sub">~16 GB download</div></div>
+        </div>
+      </div>
+      <p class="foreshadow">These run on <b>Ollama</b>, free software you'll set up next.</p>
+      <div class="actions">
+        <button class="btn def">Use Gemma 4 E4B</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ STEP 1 — choosingModel (low disk space) ============ -->
+  <div class="card">
+    <p class="meta">STEP 1 · <b>choosingModel</b> · 360pt · low disk space</p>
+    <div class="toolbar">
+      <span class="pill">
+        <svg width="13" height="13" viewBox="0 0 16 16"><path d="M4.5 2h7M4.5 14h7M5.5 2v2.2L8 8 5.5 11.8V14M10.5 2v2.2L8 8l2.5 3.8V14" stroke="currentColor" fill="none" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        Set up on-device AI
+      </span>
+    </div>
+    <div class="pop wide">
+      <p class="title">Choose your on-device model</p>
+      <p class="body tight">Tuned to your Mac (16&nbsp;GB&nbsp;RAM). Bigger models are smarter but need more memory; all are a sizeable download.</p>
+      <div class="models">
+        <div class="mrow sel">
+          <span class="radio on"></span>
+          <div><div class="mr-main">Gemma 4 E4B <span class="mr-tag">· balanced · recommended</span></div>
+          <div class="mr-sub">~3 GB download</div></div>
+        </div>
+        <div class="mrow">
+          <span class="radio"></span>
+          <div><div class="mr-main">Llama 3.2 3B <span class="mr-tag">· smallest · fastest</span></div>
+          <div class="mr-sub">~2 GB download</div></div>
+        </div>
+        <div class="mrow dis">
+          <span class="radio dis"></span>
+          <div><div class="mr-main">Gemma 4 26B <span class="mr-tag">· best quality · <span class="rednote">needs 24 GB</span></span></div>
+          <div class="mr-sub">~16 GB download</div></div>
+        </div>
+      </div>
+      <p class="diskwarn">
+        <svg width="13" height="13" viewBox="0 0 16 16"><path d="M8 2 L15 14 H1 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 6.2 v3.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="11.6" r="0.5" fill="currentColor" stroke="currentColor" stroke-width=".6"/></svg>
+        Low disk space
+      </p>
+      <p class="foreshadow">These run on <b>Ollama</b>, free software you'll set up next.</p>
+      <div class="actions">
+        <button class="btn def">Use Gemma 4 E4B</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ STEP 1 — choosingModel (daemon up, grouped) ============ -->
+  <div class="card">
+    <p class="meta">STEP 1 · <b>choosingModel</b> · 360pt · daemon already up</p>
+    <div class="toolbar">
+      <span class="pill">
+        <svg width="13" height="13" viewBox="0 0 16 16"><path d="M4.5 2h7M4.5 14h7M5.5 2v2.2L8 8 5.5 11.8V14M10.5 2v2.2L8 8l2.5 3.8V14" stroke="currentColor" fill="none" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        Set up on-device AI
+      </span>
+    </div>
+    <div class="pop wide">
+      <p class="title">Choose your on-device model</p>
+      <p class="body tight">Tuned to your Mac (16&nbsp;GB&nbsp;RAM). One model is already on this Mac.</p>
+      <div class="models">
+        <div class="group-h">Already on this Mac</div>
+        <div class="mrow sel">
+          <span class="radio on"></span>
+          <div><div class="mr-main">Gemma 4 E4B <span class="mr-tag">· ready · no download</span></div>
+          <div class="mr-sub">3.0 GB on disk</div></div>
+        </div>
+        <div class="group-h">Download</div>
+        <div class="mrow">
+          <span class="radio"></span>
+          <div><div class="mr-main">Llama 3.2 3B <span class="mr-tag">· smallest · fastest</span></div>
+          <div class="mr-sub">~2 GB download</div></div>
+        </div>
+        <div class="mrow dis">
+          <span class="radio dis"></span>
+          <div><div class="mr-main">Gemma 4 26B <span class="mr-tag">· best quality · <span class="rednote">needs 24 GB</span></span></div>
+          <div class="mr-sub">~16 GB download</div></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn def">Use Gemma 4 E4B</button>
+      </div>
+      <p class="caption">Already installed — starts right away.</p>
+    </div>
+  </div>
+
+  <!-- ============ STEP 2 — needsOllama ============ -->
+  <div class="card">
+    <p class="meta">STEP 2 · <b>needsOllama</b> · 280pt · the "ah, but" reveal</p>
+    <div class="toolbar narrow">
+      <span class="pill">
+        <svg width="13" height="13" viewBox="0 0 16 16"><path d="M4.5 2h7M4.5 14h7M5.5 2v2.2L8 8 5.5 11.8V14M10.5 2v2.2L8 8l2.5 3.8V14" stroke="currentColor" fill="none" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        Get Ollama
+      </span>
+    </div>
+    <div class="pop">
+      <p class="title">Get Ollama to run Gemma 4 E4B</p>
+      <p class="body" style="margin-bottom:0;">Bristlenose runs models locally through Ollama — free. Opens ollama.com to download and install it.</p>
+      <div class="actions">
+        <button class="btn def">Get Ollama…</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ STEP 3 — waitingForOllama ============ -->
+  <div class="card">
+    <p class="meta">STEP 3 · <b>waitingForOllama</b> · 280pt · passive · static ⏳</p>
+    <div class="toolbar narrow">
+      <span class="pill">
+        <svg width="13" height="13" viewBox="0 0 16 16"><path d="M4.5 2h7M4.5 14h7M5.5 2v2.2L8 8 5.5 11.8V14M10.5 2v2.2L8 8l2.5 3.8V14" stroke="currentColor" fill="none" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        Waiting for Ollama
+      </span>
+    </div>
+    <div class="pop">
+      <p class="title">Finish installing Ollama</p>
+      <p class="body tight"><a>ollama.com</a> is open in your browser.</p>
+      <ol class="steps">
+        <li>Download Ollama for macOS</li>
+        <li>Open the download, install and launch Ollama</li>
+      </ol>
+      <p class="footnote">Bristlenose will download Gemma 4 E4B automatically once Ollama is running.</p>
+      <div class="statusrow">
+        <span class="lbl">
+          <svg width="12" height="12" viewBox="0 0 16 16"><path d="M4.5 2h7M4.5 14h7M5.5 2v2.2L8 8 5.5 11.8V14M10.5 2v2.2L8 8l2.5 3.8V14" stroke="currentColor" fill="none" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/></svg>
+          Waiting for Ollama install
+        </span>
+        <button class="btn small">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DOWNLOADING ============ -->
+  <div class="card">
+    <p class="meta">DOWNLOADING · 280pt · animated bar (BN working)</p>
+    <div class="toolbar narrow">
+      <span class="pill">
+        <svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="currentColor" fill="none" stroke-width="1.1"/><path d="M8 4v6M5.4 7.6l2.6 2.6 2.6-2.6" stroke="currentColor" fill="none" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Downloading Gemma 4 E4B
+        <span class="bar"><i></i></span>
+        <span class="pct">41%</span>
+      </span>
+    </div>
+    <div class="pop">
+      <p class="title">Downloading Gemma 4 E4B</p>
+      <p class="body tight" style="font-variant-numeric:tabular-nums;">1.2 GB of 3.0 GB</p>
+      <div class="bar" style="width:100%; margin-top:4px;"><i></i></div>
+      <div class="actions" style="margin-top:14px;">
+        <button class="btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FINISHING ============ -->
+  <div class="card">
+    <p class="meta">FINISHING · 280pt · spinner (BN working)</p>
+    <div class="toolbar narrow">
+      <span class="pill">
+        <svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="currentColor" fill="none" stroke-width="1.1"/><path d="M8 4v6M5.4 7.6l2.6 2.6 2.6-2.6" stroke="currentColor" fill="none" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Finishing up
+        <span class="spin"></span>
+      </span>
+    </div>
+    <div class="pop">
+      <p class="title">Finishing up</p>
+      <p class="body" style="margin-bottom:0;">Getting Gemma 4 E4B ready…</p>
+      <div class="actions" style="margin-top:14px;">
+        <span class="spin"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FAILED ============ -->
+  <div class="card">
+    <p class="meta">FAILED · 280pt · red ✗ · the only red state</p>
+    <div class="toolbar narrow">
+      <span class="pill failed">
+        <svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#e0301a"/><path d="M5.6 5.6l4.8 4.8M10.4 5.6l-4.8 4.8" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>
+        Couldn't get model
+      </span>
+    </div>
+    <div class="pop">
+      <p class="title">Couldn't get model</p>
+      <p class="body">No internet connection. Check your network and try again.</p>
+      <div class="actions">
+        <button class="btn def">Retry</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ PILL-ONLY STRIP (judge labels side by side) ============ -->
+<div class="section-h">All pill texts, side by side (toolbar context)</div>
+<div class="grid" style="gap:14px; margin-top:18px;">
+  <span class="pill"><svg width="13" height="13" viewBox="0 0 16 16"><path d="M4.5 2h7M4.5 14h7M5.5 2v2.2L8 8 5.5 11.8V14M10.5 2v2.2L8 8l2.5 3.8V14" stroke="currentColor" fill="none" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/></svg>Set up on-device AI</span>
+  <span class="pill"><svg width="13" height="13" viewBox="0 0 16 16"><path d="M4.5 2h7M4.5 14h7M5.5 2v2.2L8 8 5.5 11.8V14M10.5 2v2.2L8 8l2.5 3.8V14" stroke="currentColor" fill="none" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/></svg>Get Ollama</span>
+  <span class="pill"><svg width="13" height="13" viewBox="0 0 16 16"><path d="M4.5 2h7M4.5 14h7M5.5 2v2.2L8 8 5.5 11.8V14M10.5 2v2.2L8 8l2.5 3.8V14" stroke="currentColor" fill="none" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/></svg>Waiting for Ollama</span>
+  <span class="pill"><svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="currentColor" fill="none" stroke-width="1.1"/><path d="M8 4v6M5.4 7.6l2.6 2.6 2.6-2.6" stroke="currentColor" fill="none" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Downloading Gemma 4 E4B<span class="bar"><i></i></span><span class="pct">41%</span></span>
+  <span class="pill"><svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="currentColor" fill="none" stroke-width="1.1"/><path d="M8 4v6M5.4 7.6l2.6 2.6 2.6-2.6" stroke="currentColor" fill="none" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Downloading…<span class="spin"></span></span>
+  <span class="pill"><svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="currentColor" fill="none" stroke-width="1.1"/><path d="M8 4v6M5.4 7.6l2.6 2.6 2.6-2.6" stroke="currentColor" fill="none" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Finishing up<span class="spin"></span></span>
+  <span class="pill failed"><svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#e0301a"/><path d="M5.6 5.6l4.8 4.8M10.4 5.6l-4.8 4.8" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>Couldn't get model</span>
+</div>
+
+<!-- ============ FAILURE DETAIL STRINGS (all four, at the 248pt text column) ============ -->
+<div class="section-h">Failure detail strings — wrapping at the 248pt text column (title is always "Couldn't get model")</div>
+<div class="grid" style="gap:18px; margin-top:18px; align-items:flex-start;">
+  <div>
+    <p class="meta"><b>noInternet</b></p>
+    <div style="width:248px; background:var(--pop-bg); border:0.5px solid var(--pop-stroke); border-radius:8px; padding:12px 14px; font-size:12.5px; line-height:1.42; color:var(--secondary);">No internet connection. Check your network and try again.</div>
+  </div>
+  <div>
+    <p class="meta"><b>timedOut</b></p>
+    <div style="width:248px; background:var(--pop-bg); border:0.5px solid var(--pop-stroke); border-radius:8px; padding:12px 14px; font-size:12.5px; line-height:1.42; color:var(--secondary);">The download timed out. Check your connection and try again.</div>
+  </div>
+  <div>
+    <p class="meta"><b>cantReach</b></p>
+    <div style="width:248px; background:var(--pop-bg); border:0.5px solid var(--pop-stroke); border-radius:8px; padding:12px 14px; font-size:12.5px; line-height:1.42; color:var(--secondary);">Lost connection to Ollama. Make sure it's running, then try again.</div>
+  </div>
+  <div>
+    <p class="meta"><b>generic</b> · %@ = system message</p>
+    <div style="width:248px; background:var(--pop-bg); border:0.5px solid var(--pop-stroke); border-radius:8px; padding:12px 14px; font-size:12.5px; line-height:1.42; color:var(--secondary);">The download couldn't finish. The server returned an unexpected response.</div>
+  </div>
+</div>
+
+</body>
+</html>

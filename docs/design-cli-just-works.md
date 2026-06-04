@@ -14,7 +14,7 @@ The handoff's eight sequenced slices all landed in one branch; the friendly-CTO 
 | spaCy lazy fetch wired into Presidio | ✅ shipped | `bristlenose/stages/s07_pii_removal.py` `_ensure_spacy_model` |
 | Whisper preflight (banner, native HF Hub progress, `--no-fetch`, `doctor --fetch`) | ✅ shipped | `bristlenose/preflight/whisper.py` |
 | ffmpeg preflight (distro table, brew auto-install on macOS) | ✅ shipped (consent default flipped to N) | `bristlenose/preflight/ffmpeg.py` |
-| API-key preflight + `billing_hints.py` (Anthropic + OpenAI rich; Azure/Gemini fall-through) | ✅ shipped (validate-existing-key) | `bristlenose/preflight/api_key.py`, `bristlenose/llm/billing_hints.py` |
+| API-key preflight + `billing_hints.py` (all 5 providers rich: Anthropic, OpenAI, Azure, Gemini, Local/Ollama; structured `error.code` reads where SDK exposes them) | ✅ shipped (validate-existing-key; extended to Azure / Gemini / Local on `llm-error-distinguishability-all-providers`, 30 May 2026) | `bristlenose/preflight/api_key.py`, `bristlenose/llm/billing_hints.py` |
 | Front-loaded preflight block + closing line | ✅ shipped (inlined — Rule of Three did not fire) | `bristlenose/pipeline.py` (block runs after ingest, before stage 2) |
 | Quarterly drift cron on `billing_hints.py` | ✅ armed (`trig_01BtVXKG5hBnhPF4bGwR78CR`) | external |
 | i18n namespace (`preflight.*` in all 6 locales) | ✅ shipped (es/fr/de/ko/ja mirror en for the translation review pass) | `bristlenose/locales/<loc>/preflight.json` |

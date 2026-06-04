@@ -510,7 +510,12 @@ final class PipelineRunner: ObservableObject {
                 if !newLines.isEmpty {
                     self.orphanLogOffsets[projectID] = newOffset
                     for line in newLines {
-                        self.liveData.appendOutput(line, for: projectID)
+                        // Same redaction as handleLine — the on-disk CLI log can
+                        // carry a key-shaped echo, and this feeds the same
+                        // clipboard-copyable popover buffer.
+                        self.liveData.appendOutput(
+                            BristlenoseShared.redactKeys(in: line), for: projectID
+                        )
                     }
                 }
 
@@ -817,9 +822,12 @@ final class PipelineRunner: ObservableObject {
     /// immediately; otherwise enqueues.
     ///
     /// Consent guard is defence-in-depth — the primary enforcement is the
-    /// non-dismissable `AIConsentView` sheet in ContentView. If somehow the
-    /// guard below fails, the subprocess still can't send data anywhere
-    /// because API keys live in Keychain behind a user prompt.
+    /// non-dismissable `AIConsentView` sheet in ContentView. The `hasAIConsent`
+    /// guard below runs BEFORE the subprocess environment is built, so no API
+    /// key is injected without consent (and Ollama/keyless providers inject
+    /// nothing at all). Don't lean on "the key lives in Keychain behind a
+    /// prompt" — under App Sandbox the host injects the key as an env var, so
+    /// the guard ordering is the real backstop, not a Keychain dialog.
     /// Start a `bristlenose run` for this project.
     ///
     /// - Parameter clean: when true, pass `--clean` to the CLI, which deletes
@@ -1030,25 +1038,16 @@ final class PipelineRunner: ObservableObject {
         var args = ["run", project.path, "--no-serve"]
         if clean { args.append("--clean") }
         proc.arguments = args
-        // Host-gate handshake for the bundled sidecar's `run` passthrough —
-        // see desktop/sidecar_entry.py. Third-party callers of the bundled
-        // binary don't set this env var; we do. Belt-and-braces post-A1c
-        // (sandbox enforces caller-inherits-sandbox semantics anyway), but
-        // it's the only access control pre-A1c.
-        var env = BristlenoseShared.buildChildEnvironment()
-        env["_BRISTLENOSE_HOSTED_BY_DESKTOP"] = "1"
-        // Bundled-sidecar TLS fix — see BristlenoseShared.sslEnvironment(for:).
-        // Without this, PyInstaller's OpenSSL probes Homebrew paths blocked
-        // by App Sandbox → all HTTPS-out fails (A1c row 4).
-        for (key, value) in BristlenoseShared.sslEnvironment(for: resolvedMode) {
-            env[key] = value
-        }
-        // Bundled-sidecar FFmpeg/ffprobe — sandbox-stripped PATH can't find
-        // Homebrew binaries; point Python at the bundled siblings.
-        for (key, value) in BristlenoseShared.bundledBinaryEnvironment(for: resolvedMode) {
-            env[key] = value
-        }
-        proc.environment = env
+        // Complete subprocess environment — minimal var allowlist, prefs, TLS
+        // certs, bundled FFmpeg/ffprobe, the active provider's API key, and the
+        // `_BRISTLENOSE_HOSTED_BY_DESKTOP` host-gate handshake (read by
+        // desktop/sidecar_entry.py — third-party callers of the bundled binary
+        // don't set it; we do). Single source of truth shared with ServeManager
+        // so the two spawn sites can't drift. The run path historically omitted
+        // the API-key overlay here, which broke `bristlenose run` under App
+        // Sandbox (Python can't read Keychain itself). See
+        // BristlenoseShared.childEnvironment.
+        proc.environment = BristlenoseShared.childEnvironment(for: resolvedMode)
 
         let pipe = Pipe()
         proc.standardOutput = pipe
@@ -1123,8 +1122,15 @@ final class PipelineRunner: ObservableObject {
         guard gen == generation else { return }
 
         let clean = BristlenoseShared.stripANSI(line)
-        liveData.appendOutput(clean, for: projectID)
+        // Redact key-shaped substrings before buffering — this buffer is shown
+        // in the diagnostic popover and copied by "Copy error details", so a
+        // Python-side key echo (pydantic SecretStr in a traceback, SDK debug
+        // line) must not ferry the injected BRISTLENOSE_*_API_KEY out via the
+        // clipboard / a pasted bug report. Mirrors ServeManager.handleLine.
+        liveData.appendOutput(BristlenoseShared.redactKeys(in: clean), for: projectID)
 
+        // Parser consumes the unredacted line — progress markers (`✓ stage`)
+        // never contain key-shaped substrings, and redaction could corrupt them.
         liveData.mutateProgress(for: projectID) { p in
             currentParser.consume(clean, into: &p)
         }
@@ -1373,7 +1379,7 @@ final class PipelineRunner: ObservableObject {
     /// We require both success markers and the absence of the failure
     /// marker — a partial match (e.g. `Report:` from a stale earlier run)
     /// shouldn't be enough to override a non-zero exit.
-    static func looksLikeSuccess(lines: [String]) -> Bool {
+    nonisolated static func looksLikeSuccess(lines: [String]) -> Bool {
         let tail = lines.suffix(50).joined(separator: "\n")
         if tail.contains("Finished with errors") { return false }
         let hasDone = tail.range(of: #"\bDone\b"#, options: .regularExpression) != nil

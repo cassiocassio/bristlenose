@@ -350,7 +350,7 @@ Credentials live as a `bristlenose-notary` profile in the login keychain. One-ti
 
 ```bash
 xcrun notarytool store-credentials "bristlenose-notary" \
-  --apple-id martin_storey@mac.com \
+  --apple-id <your-apple-id> \
   --team-id Z56GZVA2QB \
   --password <app-specific-password>
 ```

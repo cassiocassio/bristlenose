@@ -14,7 +14,7 @@ import pytest
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.pipeline_view.render import (
-    PROVIDER_DISPLAY,
+    _PROVIDER_DISPLAY_BY_OPTION,
     PipelineView,
     build_pipeline_view,
 )
@@ -98,10 +98,16 @@ def test_apple_fm_always_unknown_from_cli() -> None:
     assert view.host.apple_fm_status == "unknown"
 
 
-def test_provider_display_covers_every_provider_id() -> None:
-    """If we add a provider, this catches the missing display label."""
-    for provider in ("anthropic", "openai", "azure", "google", "local"):
-        assert provider in PROVIDER_DISPLAY
+def test_provider_display_covers_every_backend_option() -> None:
+    """If we add an LLM backend, this catches the missing display label.
+
+    The map is keyed by catalogue option id ("claude"/"openai"/...), not by
+    settings provider value ("anthropic"). It's derived from the catalogue, so
+    coverage is automatic — this pins the contract that it stays exhaustive.
+    """
+    for option_id in ("claude", "openai", "azure", "google", "local"):
+        assert option_id in _PROVIDER_DISPLAY_BY_OPTION
+        assert _PROVIDER_DISPLAY_BY_OPTION[option_id]
 
 
 def test_contract_fixture_round_trips_through_pydantic() -> None:
@@ -112,12 +118,10 @@ def test_contract_fixture_round_trips_through_pydantic() -> None:
         {
             "schema_version": scenario["schema_version"],
             "catalogue": scenario["catalogue"],
-            "llm_summary": scenario["llm_summary"],
             "host": scenario["host"],
         }
     )
     re_serialised = json.loads(view.model_dump_json())
     assert re_serialised["catalogue"] == scenario["catalogue"]
     assert re_serialised["host"] == scenario["host"]
-    assert re_serialised["llm_summary"] == scenario["llm_summary"]
-    assert re_serialised["schema_version"] == 3
+    assert re_serialised["schema_version"] == 4

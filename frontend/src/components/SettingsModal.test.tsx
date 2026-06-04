@@ -5,6 +5,9 @@
 
 import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
 import { SettingsModal } from "./SettingsModal";
+// Source the v4 schema from the same cross-language contract the Python side
+// round-trips — prevents matrix/payload drift (feedback_cross_branch_schema_fixture).
+import contract from "../../../tests/fixtures/pipeline-view-contract.json";
 
 // Mock the locale store.
 const mockLocale = { locale: "en" as const };
@@ -241,5 +244,89 @@ describe("SettingsModal", () => {
     const selects = screen.getAllByRole("combobox");
     // One is the nav dropdown, one is the language selector
     expect(selects.length).toBe(2);
+  });
+
+  // ── Pipeline matrix (schema v4 — provider→model grain) ────────────────
+  //
+  // Mocks /api/pipeline with the shared contract fixture. Pins the matrix's
+  // load-bearing render contract, not glyph CSS (that's WS3 + visual QA).
+
+  const scenarios = (contract as { scenarios: Record<string, unknown> }).scenarios;
+
+  function mockPipelineFetch(scenarioName: string) {
+    const scenario = scenarios[scenarioName];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(scenario),
+        }),
+      ),
+    );
+  }
+
+  async function openPipelineSection() {
+    render(<SettingsModal open={true} onClose={vi.fn()} />);
+    const nav = screen.getByRole("navigation", { name: /sections/i });
+    fireEvent.click(within(nav).getByText("Pipeline"));
+    // Wait for the async /api/pipeline fetch to populate the matrix.
+    await screen.findAllByText("Claude");
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("renders provider heading rows without availability glyphs", async () => {
+    mockPipelineFetch("claude_apple_silicon_keys_present");
+    await openPipelineSection();
+    const headings = document.querySelectorAll(".bn-pipeline-provider-heading");
+    expect(headings.length).toBeGreaterThan(0);
+    headings.forEach((h) => {
+      expect(h.textContent).toContain("Claude");
+      // Provider headings are colgroup labels only — no ✓/✗/— glyph cell.
+      expect(h.querySelector(".bn-pipeline-glyph")).toBeNull();
+    });
+  });
+
+  it("renders both Claude models under one heading, Sonnet 4 as default · current", async () => {
+    mockPipelineFetch("claude_apple_silicon_keys_present");
+    await openPipelineSection();
+    // Two model rows per LLM group (Sonnet 4 + Opus 4).
+    expect(screen.getAllByText("Sonnet 4").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Opus 4").length).toBeGreaterThan(0);
+    // Sonnet 4 is BN's default and the chosen model → "(default · current)".
+    expect(screen.getAllByText("(default · current)").length).toBeGreaterThan(0);
+  });
+
+  it("marks at most one current row per matrix table (exactly-one invariant)", async () => {
+    mockPipelineFetch("claude_apple_silicon_keys_present");
+    await openPipelineSection();
+    // Clustering renders one table per LLM group; each marks its chosen row.
+    // The invariant is "≤1 current per table" — a global count would vary with
+    // the number of rendered groups. Assert per-table uniqueness + ≥1 overall.
+    const tables = document.querySelectorAll("table.bn-pipeline-matrix");
+    expect(tables.length).toBeGreaterThan(0);
+    let totalCurrent = 0;
+    tables.forEach((table) => {
+      const current = table.querySelectorAll('tr[aria-current="true"]');
+      expect(current.length).toBeLessThanOrEqual(1);
+      current.forEach((row) => expect(row.textContent).toContain("Sonnet 4"));
+      totalCurrent += current.length;
+    });
+    expect(totalCurrent).toBeGreaterThan(0);
+  });
+
+  it("tags runtime-detected models with the synthesised-row class", async () => {
+    // f66: settings point at an uncatalogued model → a synthesised row.
+    mockPipelineFetch("f66_unrated_declared_model");
+    await openPipelineSection();
+    const synth = document.querySelectorAll(".bn-pipeline-synthesised-row");
+    expect(synth.length).toBeGreaterThan(0);
+    synth.forEach((row) => {
+      expect(row.textContent).toContain("claude-opus-5-future");
+    });
   });
 });

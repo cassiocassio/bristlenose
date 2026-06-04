@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 4 Jun 2026 (merged + closed `pipeline-view-models`)
+**Updated:** 4 Jun 2026 (merged + closed `beat3-provider-activation`)
 
 ---
 
@@ -39,15 +39,10 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
-| `bristlenose_branch beat3-provider-activation/` | `beat3-provider-activation` | bugfix | Fix AI-consent sheet provider activation (Continue → first validated cloud; Use Ollama → RAM default + ambient pull) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 
-> ⚠️ **MERGE-ORDER COORDINATION — `gemini-provider` ↔ `beat3-provider-activation`** (analysed 2 Jun 2026)
-> These two share `LLMProvider.swift` (different regions — auto-merges) and the 6 `common.json` locale files (different keys — mechanical). They're independent; **no hard dependency.**
-> **Before merging either**, know:
-> 1. **Never re-fork / rebase `gemini-provider` onto `beat3-provider-activation`.** beat3 has ZERO commits — its ref is *behind* main; you'd lose main and inherit none of beat3's (uncommitted) work. Rebase gemini onto **main** only.
-> 2. **Prefer merging `beat3` to main FIRST** (bugfix, further along, owns the locale churn), then `gemini` rebases onto main and adds its one "Data use" key + Gemini-enum fix. **Reverse order also works** — beat3 then resolves the trivial overlap.
-> Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
+> ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
+> `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
 
 
 
@@ -142,7 +137,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
-| `beat3-provider-activation` | `bristlenose_branch beat3-provider-activation/` | local only |
 
 
 
@@ -150,30 +144,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `beat3-provider-activation`
-
-**Kind:** bugfix — corrective change to the AI-consent sheet's provider activation; ends in merge to main.
-**Status:** Just started
-**Started:** 31 May 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch beat3-provider-activation/`
-**Remote:** local only (push when ready)
-
-**What it does:** Fixes the asymmetric exit paths in `AIConsentView`. (1) **Continue** (cloud) now activates the first validated cloud provider — only when the current `activeProvider` is local/unconfigured — via a tested helper `ConsentActivation.resolve(active:statuses:)`, posting `.bristlenosePrefsChanged` so serve restarts and injects the key (fixes the re-consent bug the 5 May walkthrough caught). (2) **Use Ollama** no longer opens the model picker on the default path: it applies the RAM-aware default (`OllamaCatalog.recommendedTag()`), dismisses immediately, and pulls the model ambiently via a new toolbar pill (modelled on `CopyProgressPill`). The Ollama download `ObservableObject` is hoisted out of `OllamaSetupSheet` to app level so the pull survives sheet dismissal. See `HANDOFF.md` + `.claude/plans/APPROVED-PLAN.md` for the full brief (dialog sequences, ASCII mocks, user stories).
-
-**Files this branch will touch:**
-- New: `desktop/Bristlenose/Bristlenose/ConsentActivation.swift` — pure `resolve(active:statuses:)` helper
-- New: `desktop/Bristlenose/BristlenoseTests/ConsentActivationTests.swift` — Swift Testing suite
-- New: `desktop/Bristlenose/Bristlenose/OllamaDownloadPill.swift` (+ hoisted `OllamaDownloadModel`)
-- Modified: `desktop/Bristlenose/Bristlenose/AIConsentView.swift` — both exit paths
-- Modified: `desktop/Bristlenose/Bristlenose/ContentView.swift` — toolbar pill + app-level download model
-- Modified: `desktop/Bristlenose/Bristlenose/OllamaSetupSheet.swift` — extract reusable pull state
-- Modified: 6 locale `desktop.json` files — pill state strings + any reworded consent copy
-
-**Potential conflicts with other branches:**
-- None active on the desktop Swift surface right now. `pipeline-view-v1-5` is Python/React only — no overlap.
 
 ---
 
@@ -275,6 +245,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `beat3-provider-activation` — merged 4 Jun 2026
+
+Fixed the asymmetric exit paths in `AIConsentView`. **Continue** (cloud) now activates the first validated cloud provider (only when `activeProvider` is local/unconfigured) via the tested helper `ConsentActivation.resolve(active:statuses:)`, posting `.bristlenosePrefsChanged` so serve restarts and injects the key — fixes the re-consent bug the 5 May walkthrough caught. **Use Ollama** applies the RAM-aware default (`OllamaCatalog.recommendedTag()`), dismisses immediately, and pulls the model ambiently via a new toolbar pill; the download `ObservableObject` is hoisted to app level so the pull survives sheet dismissal. Later commits added the flow-B pill + popovers, a menu-bar Debug state harness, and marked `design-ollama-setup.md` implemented. Merged via `a8606df`.
 
 ### `pipeline-view-models` — merged 4 Jun 2026
 

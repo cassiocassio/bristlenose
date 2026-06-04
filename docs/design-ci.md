@@ -124,6 +124,8 @@ The `e2e` job had no `timeout-minutes` and ran `npx playwright install chromium 
 
 The tell that this is an infra stall, not a real failure: a genuine test or compile failure exits in seconds-to-minutes, never hours. A multi-hour "failure" is almost always a missing timeout around a network call.
 
+**Root-cause update (5 Jun 2026).** The "half-open socket" reading above was the best guess at the time; the v0.15.13 release surfaced the real mechanism. It was a **yauzl extraction hang** in Playwright `<1.60.0` on **Node 24.16+**: the browser zip downloads to 100%, then *extraction* silently stalls (microsoft/playwright#40998, fixed in 1.60.0). It presents like a CDN stall but isn't — the bytes arrive, the unzip wedges. Bumping `@playwright/test` to 1.60.0 (`14af414`) was the durable fix. The timeout+retry below is still the correct *structural* defence regardless of mechanism — and it proved itself here, converting the original 6-hour silent cascade into a 15-minute fast-fail — but the root fix was the version bump. Generalised lesson: a `playwright install` that reaches 100% then hangs is an *extraction* problem (check Node × Playwright compatibility), not a network one.
+
 ### The pattern
 
 Job-level backstop:

@@ -1,156 +1,90 @@
-# Adapting the transcript-analysis pipeline to Claude Opus 4.8
+# Adapting transcript analysis to Claude Opus 4.8
 
-**Status:** Findings + proposed plan. **No pipeline behaviour changed yet — awaiting approval.**
-**Date:** 28 May 2026. **Branch:** `claude/opus-4-8-transcript-eval`.
-**Related:** [design-pluggable-llm-routing.md](design-pluggable-llm-routing.md), [design-perf-scale-and-tokens.md](design-perf-scale-and-tokens.md), [design-llm-call-telemetry.md](design-llm-call-telemetry.md), [design-cost-forecast-phase1.md](design-cost-forecast-phase1.md), [bristlenose/llm/CLAUDE.md](../bristlenose/llm/CLAUDE.md).
+> **Status:** Findings + plan, reconciled against **pipeline-view v2** (shipped on `main`, v0.15.13, 4 Jun 2026). **No pipeline behaviour changed.**
+> **⏰ REVISIT 18 Jun 2026 (post-WWDC).** Opus 4.8's value may be partly superseded by Apple Foundation Models announced at WWDC (week of 8 Jun). Treat the bigger investments below as *decide-after-WWDC*; only the low-regret data work is safe to do before.
+> **🚦 Must NOT block TestFlight.** Per-stage execution routing and Opus adoption are post-TF / non-blocking. TF ships on the current single-global-model dispatch.
 
----
-
-## 1. Scope
-
-This document investigates what it takes to adopt **Claude Opus 4.8** (`claude-opus-4-8`, released 2026-05-28) in the transcript-analysis pipeline, and proposes a phased plan. It deliberately stops short of changing any pipeline behaviour.
-
-### Verified Opus 4.8 facts (provided, not from training data)
-
-- Model id `claude-opus-4-8`.
-- **1M-token context** by default on the Claude API (was 200K). Vertex/Bedrock also 1M; Microsoft Foundry 200K.
-- **128K max output** tokens.
-- **Adaptive thinking** — model decides per-turn whether to think; fewer wasted thinking tokens at a given effort level.
-- **Prompt caching** — minimum cacheable prompt lowered to **1,024 tokens**; up to 90% savings on cached input.
-- Messages API now accepts `role:"system"` entries inside the `messages` array (mid-task instruction updates without breaking the prompt cache).
-- Improved tool triggering vs 4.7.
-- Claimed better long-context quality and compaction handling.
-- **Batch processing: 50% cost savings.** Pricing unchanged at **$5 / $25 per M tokens** (input/output).
+**Date:** 4 Jun 2026. **Branch:** `claude/opus-4-8-transcript-eval`.
+**Related:** [design-pluggable-llm-routing.md](design-pluggable-llm-routing.md), [design-perf-scale-and-tokens.md](design-perf-scale-and-tokens.md), `bristlenose/pipeline_view/` (v2), [bristlenose/llm/CLAUDE.md](../bristlenose/llm/CLAUDE.md).
 
 ---
 
-## 2. How the pipeline calls Claude today
+## 1. Verified Opus 4.8 facts (provided; not from training data)
 
-### 2.1 The single API call site
+- Model id `claude-opus-4-8`; released 2026-05-28.
+- **1M context** default on the Claude API (Vertex/Bedrock 1M; MS Foundry 200K). **128K max output.**
+- Pricing **$5 / $25** per M tok (in/out) — vs Sonnet 4 at $3/$15 → **~1.67×**.
+- **Prompt caching:** min cacheable prefix lowered to **1,024 tokens**; up to **90%** off cached input. (Caching itself is GA on current models — see §4.)
+- Adaptive thinking; Batch API 50% off; `role:"system"` allowed mid-`messages`; improved tool triggering; better long-context/compaction.
 
-Every LLM call funnels through `LLMClient.analyze()` ([bristlenose/llm/client.py:180](../bristlenose/llm/client.py)), which dispatches per provider. The Anthropic path is `_analyze_anthropic()` ([client.py:324](../bristlenose/llm/client.py)):
+## 2. Current state of the codebase (v2)
 
-- Builds a **forced tool-use** call for structured output: a single tool `structured_output` whose `input_schema` is the Pydantic model's JSON schema, with `tool_choice={"type":"tool","name":"structured_output"}` ([client.py:345–365](../bristlenose/llm/client.py)).
-- `system=system_prompt` (a plain string), `messages=[{"role":"user","content":user_prompt}]`.
-- `temperature=0.1` ([config.py:57](../bristlenose/config.py)), `max_tokens` from settings (default 64000).
-- `timeout=600.0` is set explicitly to bypass the SDK's streaming heuristic for high `max_tokens` ([client.py:368](../bristlenose/llm/client.py); see CLAUDE.md gotcha).
-- Token usage is already read back, **including `cache_read_input_tokens` and `cache_creation_input_tokens`** ([client.py:393–394](../bristlenose/llm/client.py)) — telemetry is wired for caching even though we never request it.
+### 2.1 The per-stage model framework — what shipped
 
-**What is *not* used today:** no `cache_control`, no `anthropic-beta` headers, no extended/adaptive thinking, no `role:"system"` mid-message, no Batch API, no per-stage model routing. Confirmed by grep — the only `cache_control` / `extra_headers` hits in the tree are HTTP response headers and the markdown transcript-header writer, not the LLM client.
+`pipeline-view v2` (`4290174`) added the **model axis** that earlier drafts of this doc flagged as missing:
 
-### 2.2 Where Claude is invoked in the pipeline
+- The catalogue is now keyed **`(stage, provider, model)`**. `BackendOption` (provider) holds `models: list[ModelOption]`; each `ModelOption` carries `default`, `publisher`, model-level `requires`.
+- Quality cells (`_LLM_QUALITY`) and the orthogonal **`recommended` vs `default`** flags are per-model. v2 is the first time `recommended ≠ default` fires (Opus 4, gpt-4o recommended-but-not-default).
+- Claude is catalogued with `claude-sonnet-4-20250514` (Sonnet 4, `default`) and **`claude-opus-4-20250514` (Opus *4*)**.
 
-| Stage | Call site | Granularity | Input shape | Output-heavy? |
-|------|-----------|-------------|-------------|---------------|
-| 5b speaker id / split | [s05b_identify_speakers.py:251,378](../bristlenose/stages/s05b_identify_speakers.py) | per session | first ~5–10 min of transcript | no |
-| 8 topic segmentation | [s08_topic_segmentation.py:133](../bristlenose/stages/s08_topic_segmentation.py) | per session | full transcript | small (boundaries only) |
-| 9 quote extraction | [s09_quote_extraction.py:207](../bristlenose/stages/s09_quote_extraction.py) | per session | full transcript + topic boundaries | **yes — the truncation hotspot** |
-| 10 quote clustering | [s10_quote_clustering.py:68](../bristlenose/stages/s10_quote_clustering.py) | per run | all screen-specific quotes (compact JSON) | medium |
-| 11 thematic grouping | [s11_thematic_grouping.py:68](../bristlenose/stages/s11_thematic_grouping.py) | per run | all contextual quotes (compact JSON) | medium |
-| AutoCode (serve) | [server/autocode.py:339](../bristlenose/server/autocode.py) | per batch of 25 quotes | codebook taxonomy + 25 quotes | medium |
-| Signal elaboration (serve) | [server/elaboration.py:305](../bristlenose/server/elaboration.py) | per batch | signal cards | small |
+**Two live gaps this introduced:**
+1. **The catalogued Opus is a generation stale** — `claude-opus-4-20250514` (May 2025), not `claude-opus-4-8`.
+2. **Opus 4 is `recommended=True` but unpriced** — `PRICING` has only Sonnet + Haiku, so `estimate_cost()` returns `None` for a model BN now actively recommends. Cost forecast silently dark on a recommended option. The 4-level rating enum can't differentiate Opus from Sonnet anyway (both flat `"excellent"`, `source="editorial"` = unmeasured).
 
-Per-session stages (5b/8/9) run **concurrently, bounded by `llm_concurrency=3`** ([config.py:119](../bristlenose/config.py)); stages 10/11 run as one call each. AutoCode batches with `BATCH_SIZE=25` ([autocode.py:37](../bristlenose/server/autocode.py)), bounded by the same semaphore.
+### 2.2 What v2 did **not** change: dispatch is still global
 
-### 2.3 Ingestion / chunking / segmentation
+The per-model grain is a **recommendation surface, not execution.** `LLMClient.analyze()` ([client.py:180](../bristlenose/llm/client.py)) has **no `stage` kwarg**; there is **no `llm_stages` config**. All five LLM stages dispatch the single global `settings.llm_provider` / `llm_model`. The catalogue docstrings still state "dispatch is singular." So "Opus on synthesis only" is advisory in the Pipeline view — `run` cannot yet act on it.
 
-- **Ingestion** (s01–s06) is non-LLM: file grouping, audio extraction, transcription (Whisper), merge. No model concern.
-- **There is no transcript chunking or windowing anywhere.** Each per-session stage sends the *entire* `transcript.full_text()` in one call ([s08:129](../bristlenose/stages/s08_topic_segmentation.py), [s09:203](../bristlenose/stages/s09_quote_extraction.py)). The only size management is **output**-side truncation detection (`stop_reason == "max_tokens"` → `RuntimeError`).
-- Per the scale analysis ([design-perf-scale-and-tokens.md](design-perf-scale-and-tokens.md)), even the largest observed session is ~18.5K input tokens — far below 200K, let alone 1M. **Input context has never been the constraint; output ceiling is.**
+### 2.3 How Claude is actually called (unchanged)
 
-### 2.4 Model identity, pricing, cohorts
+- One Anthropic call site: `_analyze_anthropic()` ([client.py:324](../bristlenose/llm/client.py)) — forced tool-use for structured output, `system` as a plain string, one user message, `temperature=0.1`, `max_tokens` default **64000** (global; the "portable ceiling" because Sonnet caps output at 64000).
+- **No `cache_control`, no betas, no thinking, no Batch, no `role:"system"`.** Token usage already reads back `cache_read_input_tokens` — telemetry is pre-wired for caching.
+- **No transcript chunking anywhere.** Each per-session stage (8 segmentation, 9 quote-extraction) sends the full transcript in one call; stages 10/11 + AutoCode send all quotes / the whole taxonomy in one call. Largest observed input ~18.5K tok — input ceiling has never been the constraint; **output** is.
+- Pricing/cohort: `cohort_normalise` already parses `claude-opus-4-8` → `("claude-opus","4")`; no change needed. `PRICING` has no Opus row at all.
 
-- Default model is **`claude-sonnet-4-20250514`** ([config.py:55](../bristlenose/config.py), [providers.py:50](../bristlenose/providers.py)). Opus is not the default and **is not in the pricing table**.
-- `PRICING` ([pricing.py:34](../bristlenose/llm/pricing.py)) and `_MODEL_PROVIDER` ([pricing.py:47](../bristlenose/llm/pricing.py)) have no `claude-opus-*` entry. `estimate_cost()` returns `None` for unknown models, so **cost reporting and the pre-run forecast silently go dark for Opus**.
-- `max_tokens` default is **64000** ([config.py:56](../bristlenose/config.py)) — deliberately the "portable ceiling" because Sonnet 4 hard-caps output at 64000 ([llm/CLAUDE.md §max_tokens](../bristlenose/llm/CLAUDE.md)). Opus 4.8 allows 128K, but raising the global default would break the other providers; this needs a per-model clamp.
-- **Good news:** `cohort_normalise._ANTHROPIC_RE` already parses `claude-opus-4-8` → `("claude-opus", "4")` ([cohort_normalise.py](../bristlenose/llm/cohort_normalise.py)). Telemetry/cohort keys work unchanged. But `cohort-baselines.json` has no `claude-opus` baseline, so the *pre-run* forecast for Opus falls through to `None` until a local run populates `llm-calls.jsonl`.
-- The Anthropic SDK is pinned `anthropic>=0.39` ([pyproject.toml:30](../pyproject.toml)). Prompt caching is GA and fine on 0.39, but the **1M-context beta header and `role:"system"`-in-messages need a newer SDK** — pin must be verified/bumped before using those.
+## 3. Opportunities mapped to 4.8 features
 
----
+- **A. Prompt caching — biggest cost lever, zero dependencies, available today (see §4).** AutoCode taxonomy + per-session system/tool prefix.
+- **B. Price Opus + per-model `max_tokens` clamp + add `claude-opus-4-8` ModelOption.** Required correctness; now mostly *data* because the model axis exists. Fixes the §2.1 gaps.
+- **C. 1M context — headroom, not a need.** Largest input far below 200K. Enables bigger AutoCode batches / whole-study passes later. Defer.
+- **D. Batch API (50%)** — fits non-interactive `run`; stacks with caching; not for serve/interactive.
+- **E. Adaptive thinking** — measure on synthesis stages before enabling.
+- **F. `role:"system"` / tool-triggering** — no current use (we force `tool_choice`). Park.
 
-## 3. Opportunity analysis — which Opus 4.8 features actually help Bristlenose
+## 4. Why caching needs nothing from 4.8
 
-Ranked by value-to-effort for *this* codebase.
+Prompt caching is GA on the currently-shipped `claude-sonnet-4-20250514`. The repeated prefixes we'd cache (AutoCode's ~14–17K-token taxonomy; the per-session system+tool prefix) are well above any minimum, so they qualify **today**. 4.8 only lowers the minimum to 1,024 tokens and advertises up to 90%. **Implication: ship caching now on Sonnet, independent of Opus/WWDC/TF.** Gate `cache_control` to the Anthropic path only — it must not leak to OpenAI/Azure/Gemini/local.
 
-### A. Prompt caching — highest value, low risk
+## 5. Plan (sequenced around TF + WWDC)
 
-Two call patterns repeat an identical large prefix many times per run:
+**Now — low-regret, TF-non-blocking, no WWDC dependency:**
+- **P1. Prompt caching** on the Anthropic path (system+tool / AutoCode taxonomy). Cost win on current models; ships independent of everything.
+- **P2. Price Opus + per-model `max_tokens` clamp + add `claude-opus-4-8` as a `ModelOption`** (replace/augment the stale Opus 4). Fixes the recommend-but-unpriced bug and the stale-model gap. Pure data + a clamp.
 
-1. **Per-session stages 8 & 9.** The `system` prompt + tool schema is byte-identical across every session in a study (10–20 calls). The quote-extraction system prompt + schema is well over 1,024 tokens, so it now qualifies for caching with the lowered minimum.
-2. **AutoCode.** System prompt + codebook taxonomy is ~14–17K tokens ([design-autocode.md](design-autocode.md)) and is identical across every 25-quote batch — a large, highly-repeated prefix. This is the single best caching candidate in the product.
+**After WWDC (decide 18 Jun) — only if Opus still looks worth it vs Apple FM:**
+- **P3. Eval harness** (FOSSDA, Sonnet vs Opus 4.8 vs Apple FM). Converts the `editorial` quality cells into measured ones; earns the right to recommend/default Opus.
+- **P4. Execution routing** (`stage:` kwarg + `llm_stages`). The remaining prerequisite to make v2's per-model recommendation *executable*. **Post-TF.**
+- **P5. Opus 4.8 recommended/default on synthesis stages (10/11) only**, expressed via the existing `recommended`/`default` flags + cost signal — no new "best" tier needed. **Gated on P3 + P4.**
+- **P6. Batch API / adaptive thinking** — opt-in, gated on the eval.
 
-Caching the stable prefix (system + tool definition + taxonomy) could cut input cost up to 90% on the repeated portion and offset most of Opus's higher input price. **Caveat:** caching is Anthropic-only and must be gated to `_analyze_anthropic` — it must not leak into the OpenAI/Azure/Gemini/local paths. The provider-agnostic `analyze()` signature means the "what is the cacheable prefix" decision has to be expressed in a provider-neutral way (e.g. mark system+tool as cacheable, let each provider honour or ignore it).
+## 6. Gains per move — quality / speed / cost
 
-### B. Cost + per-model `max_tokens` clamp — required for correctness
+| Move | Quality | Speed | Cost | Notes |
+|---|---|---|---|---|
+| **P1 caching** | — | ↑ small | ⬇⬇⬇ **dominant** | Up to ~90% off the repeated AutoCode taxonomy + per-session prefix. **Today, Sonnet, no routing.** |
+| **P2 price + 4.8 ModelOption + clamp** | — | — | ⬆ accuracy | Fixes recommend-but-unpriced bug; clamp also fixes latent Haiku/GPT over-cap errors. XS–S. |
+| **P3 eval harness** | ⬆ *measures* | — | — | Flips Opus cells off `editorial`; decides default vs Apple FM. |
+| **P4 execution routing** | enables ↑ | enables ↕ | enables ⬇⬇ | Makes per-model grain executable. Mixture-of-models: cheap/local on prep, frontier on synthesis. **Post-TF.** |
+| **P5 Opus on 10/11** | ⬆⬆ cross-session reasoning | ↓ (slower) | ⬆ 1.67×, offset by P1+P4 | Synthesis only; structural stays `recommended=False` (equal quality, pure overpay). |
+| **P6 batch / thinking** | thinking ↑ maybe | batch ↓↓ / thinking ↓ | batch ⬇⬇ 50% | Gate thinking on P3. |
+| *1M context (deferred)* | ↑ marginal | ↑ marginal | ⬇ marginal | No current need. |
 
-Adopting Opus *requires* adding it to the pricing table (`(5.0, 25.0)`) and `_MODEL_PROVIDER`, or cost reporting breaks. Separately, the 64000 portable ceiling can be lifted **for Opus only** via a per-model output cap (Opus → 128000), which directly retires the stage-9 truncation hotspot on dense oral-history sessions without the deferred "smart-splitting" work.
+## 7. WWDC supersession risk
 
-### C. 1M context — headroom, not a current need
+Apple Foundation Models (WWDC, week of 8 Jun) may make on-device inference the right home for the *structural* prep stages (speaker-id, segmentation) — exactly the stages where Opus offers no advantage. If Apple FM lands strong, the case narrows to **Opus 4.8 on the two synthesis stages only**, and the routing layer (P4) becomes more about "local prep + frontier synthesis" than "Opus everywhere." **Decision point: 18 Jun.** Don't commit to P3–P5 before then. P1–P2 are WWDC-proof.
 
-No current dataset approaches even 200K input. 1M context does *not* unblock anything today, but it:
-- removes any future need to chunk long oral-history corpora,
-- lets AutoCode raise `BATCH_SIZE` substantially (fewer round-trips, better cross-quote consistency),
-- could enable a future "whole-study in one call" thematic pass.
-Lower priority; revisit when a real >200K dataset appears. Note the **Microsoft Foundry 200K** asymmetry if Azure-routed.
+## 8. Open decisions (for 18 Jun revisit)
 
-### D. Batch API (50% off) — strong fit, medium effort
-
-The `run` pipeline is fundamentally batch-like (not interactive). Routing stages 8/9 (and AutoCode) through the Batch API would halve their cost, stacking with caching. Cost: async submit/poll plumbing, and it trades latency for price — so it should be opt-in (e.g. `--batch` or a non-interactive default), not forced on the serve-mode interactive paths.
-
-### E. Adaptive thinking — measure before enabling
-
-Could improve thematic grouping / clustering quality (the cross-session reasoning stages) at controlled token cost. Needs the eval harness (§5) to justify; don't enable blind.
-
-### F. Improved tool triggering / `role:"system"` — low relevance
-
-We already *force* `tool_choice`, so "model skips the tool" isn't our failure mode. `role:"system"` mid-message has no current use case. Park both.
-
----
-
-## 4. Risks & constraints
-
-- **Cost.** Opus is $5/$25 vs Sonnet $3/$15 — ~1.67× input, ~1.67× output. For a tool that advertises "~$1.50/study", that's material. Caching (A) + Batch (D) are what make Opus defensible; adopting Opus *without* them raises user cost noticeably.
-- **Provider isolation.** `LLMClient.analyze()` is provider-agnostic. Every Opus-specific feature must be confined to `_analyze_anthropic`; a leaked kwarg breaks ChatGPT/Azure/Gemini/Ollama users.
-- **Default-change blast radius.** Many tests assert on `claude-sonnet-4-20250514` (test_providers, test_cost, test_llm_truncation, test_autocode_engine, test_cohort_normalise, …) and docs cite it. Changing the *default* is a larger, noisier change than adding Opus as an *option*.
-- **SDK pin.** Verify `anthropic` runtime version supports any beta features used; bump `>=0.39` if needed (and re-check the streaming-timeout heuristic).
-- **`max_tokens` portability.** The current single global default is load-bearing across 5 providers; a per-model clamp is the clean way to give Opus 128K without breaking Haiku/GPT-4o (which already fail above their ceilings — see scale doc).
-- **No behaviour change without measurement.** This branch is named `transcript-eval` for a reason: we should *prove* Opus changes report quality (better/neutral/worse per stage), not assume it.
-
----
-
-## 5. Proposed plan (phased, gated on approval)
-
-Sequenced so each phase is independently shippable and reversible. **Nothing here is implemented yet.**
-
-**Phase 0 — Make Opus selectable & honest (small, safe).**
-- Add `claude-opus-4-8` to `PRICING` `(5.0, 25.0)` and `_MODEL_PROVIDER` ([pricing.py](../bristlenose/llm/pricing.py)).
-- Add a per-model output-cap helper; clamp `max_tokens` to the model ceiling (Opus 128K, Sonnet 64K, etc.) instead of the single global 64000. Warn (don't fail) when the configured value exceeds the cap.
-- Confirm/bump the `anthropic` SDK pin.
-- Users can then run `--model claude-opus-4-8` with correct cost reporting. **Default stays Sonnet.** Tests + docs updated for the new pricing row only.
-
-**Phase 1 — Eval harness (decide with data).**
-- Build the `bristlenose eval` slice from [design-pluggable-llm-routing.md §3](design-pluggable-llm-routing.md) against the **public FOSSDA** golden set only (never private `trial-runs/`).
-- Metrics per stage: quote precision/recall + Jaccard, segmentation boundary F1, clustering/theme ARI, plus tokens/cost/latency/parse-failure rate.
-- Run **Sonnet 4 vs Opus 4.8** head-to-head. This is the artifact that answers "should Opus be the default?" — output a comparison table, change nothing yet.
-
-**Phase 2 — Prompt caching (cost offset).**
-- Gate `cache_control` to `_analyze_anthropic`, marking system + tool schema (and AutoCode taxonomy) as the cached prefix; keep the interface provider-neutral.
-- Verify via the already-wired `cache_read_input_tokens` telemetry that hit-rates are real. Expected biggest win on AutoCode.
-
-**Phase 3 — Decide default & adaptive thinking (data-driven).**
-- If Phase 1 shows Opus materially better and Phase 2 offsets cost, promote Opus to default (large test/doc sweep) — otherwise keep it opt-in.
-- A/B adaptive thinking on stages 10/11 using the harness.
-
-**Phase 4 — Batch API (optional, opt-in).**
-- Route non-interactive `run` stages through the Batch API for 50% savings; leave serve-mode interactive paths synchronous.
-
-**Deferred:** 1M context exploitation (raise AutoCode `BATCH_SIZE`, whole-study passes) — revisit when a >200K dataset appears.
-
----
-
-## 6. Open questions for the user
-
-1. **Adopt-as-option vs change-the-default?** Phase 0 (Opus selectable, Sonnet still default) is low-risk; making Opus the default is a big test/doc sweep and a cost increase. Recommend gating the default change on Phase 1 eval results.
-2. **Is the eval harness in scope for this branch**, or is the immediate ask narrower (just "make Opus work")? The branch name suggests eval; confirming changes the size of the work.
-3. **Cost posture.** Are we willing to ship Opus only *with* caching/Batch to hold the per-study cost, or is a higher per-study cost acceptable for a quality gain?
-4. **Where should the findings live** — this doc (`docs/design-opus-4-8-adoption.md`) is the developer-facing home; happy to relocate/rename.
+1. Replace Opus 4 in the catalogue with Opus 4.8, or list both?
+2. After the eval: does Opus 4.8 earn `default` on synthesis, or stay `recommended`-only with Sonnet as default?
+3. Is P4 (execution routing) a post-TF priority, or does Apple FM reshape it first?

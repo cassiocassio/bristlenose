@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 3 Jun 2026 (started `pipeline-view-models`; closed + deleted `pipeline-view-v1-5`)
+**Updated:** 4 Jun 2026 (merged + closed `pipeline-view-models`)
 
 ---
 
@@ -41,7 +41,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch beat3-provider-activation/` | `beat3-provider-activation` | bugfix | Fix AI-consent sheet provider activation (Continue → first validated cloud; Use Ollama → RAM default + ambient pull) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
-| `bristlenose_branch pipeline-view-models/` | `pipeline-view-models` | feature | Extend pipeline-view catalogue from provider grain to provider→model hierarchy; sectioned-flat matrix with two-glyph columns + Why column; schema v3→v4 (additive read, llm_summary deletion on write) |
 
 > ⚠️ **MERGE-ORDER COORDINATION — `gemini-provider` ↔ `beat3-provider-activation`** (analysed 2 Jun 2026)
 > These two share `LLMProvider.swift` (different regions — auto-merges) and the 6 `common.json` locale files (different keys — mechanical). They're independent; **no hard dependency.**
@@ -144,7 +143,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `beat3-provider-activation` | `bristlenose_branch beat3-provider-activation/` | local only |
-| `pipeline-view-models` | `bristlenose_branch pipeline-view-models/` | local only |
 
 
 
@@ -152,31 +150,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `pipeline-view-models`
-
-**Kind:** feature — extends the read-only Pipeline view from provider grain to a provider→model hierarchy; ends in merge to main.
-**Status:** Just started
-**Started:** 3 Jun 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch pipeline-view-models/`
-**Remote:** local only (push when ready)
-
-**What it does:** Extends the pipeline-view catalogue from provider grain to a provider→model hierarchy. Sectioned-flat matrix render with two-glyph columns and a Why column; ~5-model curated minimum. Read-only. Schema v3→v4 (additive on read; `llm_summary` deletion on write). Paves the way for per-stage overrides + picker UX in a later branch. See `HANDOFF.md` for the full brief.
-
-**Files this branch will touch:**
-- `bristlenose/pipeline_view/`
-- `bristlenose/ollama.py`
-- `frontend/src/components/SettingsModal.tsx`
-- `bristlenose/theme/organisms/settings.css`
-- `tests/pipeline_view/`
-- `tests/fixtures/pipeline-view-contract.json`
-- `bristlenose/locales/`
-
-**Potential conflicts with other branches:**
-- **None on the pipeline_view surface.** This branch builds on the pipeline_view foundation **already shipped in main** (catalogue/eligibility/host/render present via v1-5/v1-9; contract fixture at schema_version 3). v1-5 and v1-9 are both merged and deleted — normal extension of existing code, no live race.
-- `beat3-provider-activation` / `gemini-provider` — touch the same 6 locale files but on the desktop `desktop.json` keys / Swift surface; keep keys distinct, mechanical merge.
 
 ---
 
@@ -302,6 +275,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `pipeline-view-models` — merged 4 Jun 2026
+
+pipeline-view v2: extended the read-only Pipeline view from provider grain to a provider→model hierarchy. Sectioned-flat matrix render with two-glyph columns + Why column, ~5-model curated minimum, schema v3→v4 (additive on read, `llm_summary` deletion on write). Paves the way for per-stage overrides + picker UX in a later branch.
 
 ### `pipeline-view-v1-5` — merged (via PR #115, 25 May 2026); worktree + branch deleted 3 Jun 2026
 

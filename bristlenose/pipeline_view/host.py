@@ -15,6 +15,7 @@ from __future__ import annotations
 import importlib.util
 import platform
 import socket
+import subprocess
 from functools import lru_cache
 from typing import Literal
 
@@ -39,6 +40,7 @@ class HostFacts(BaseModel):
     keys_present: dict[str, bool]  # provider name → has API key set
     installed_packages: dict[str, bool] = {}  # python_package name → present
     ollama_running: bool
+    ollama_models: list[str] = []  # `ollama list` names; empty when not running
     network_reachable: bool  # OS route-table check only, no HEAD probe
     apple_fm_status: AppleFmStatus  # always "unknown" on CLI in v1
 
@@ -57,16 +59,34 @@ def _detect_memory_gb() -> float | None:
 def _probe_ollama_running() -> bool:
     """Cheap TCP-only probe — does someone hold the Ollama port?
 
-    We don't import or call `check_ollama()` from `bristlenose/ollama.py`: that
-    helper opens an HTTP connection to enumerate models, which is more work
-    than the Pipeline view needs and risks shipping model names into a render
-    that should be pure host facts. The route-table sense is enough.
+    Just the running/not-running flag. Model inventory is a separate, heavier
+    probe: `ollama_models` is populated when `ollama_running=True`; parsing is
+    delegated to `bristlenose/ollama.py` (`list_models`). The route-table sense
+    is enough to answer "is the port held?"
     """
     try:
         with socket.create_connection(("127.0.0.1", 11434), timeout=0.3):
             return True
     except OSError:
         return False
+
+
+@lru_cache(maxsize=1)
+def _probe_ollama_models() -> list[str]:
+    """Parse `ollama list` output. Empty list on any failure (timeout, missing
+    binary, parse error). Caller filters by `ollama_running` first.
+
+    Cached per process: `lru_cache(maxsize=1)` on a zero-arg function. Tests
+    reset via `_probe_ollama_models.cache_clear()` between scenarios. Pulling a
+    model is a heavy user action, so a stale cache until server restart is an
+    acceptable trade for not shelling out on every render.
+    """
+    from bristlenose.ollama import list_models  # reuse single source of truth
+
+    try:
+        return list_models(timeout=2.0)
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return []
 
 
 def _probe_network_reachable() -> bool:
@@ -138,8 +158,9 @@ def probe_host(settings: BristlenoseSettings) -> HostFacts:
     """Probe the local machine for Pipeline-view host facts.
 
     All probes are best-effort. Failures default to the safe value (False /
-    None / "unknown"). Never raises.
+    None / "unknown" / []). Never raises.
     """
+    ollama_running = _probe_ollama_running()
     return HostFacts(
         os=platform.system(),
         arch=platform.machine(),
@@ -147,7 +168,8 @@ def probe_host(settings: BristlenoseSettings) -> HostFacts:
         memory_gb=_detect_memory_gb(),
         keys_present=_probe_keys_present(settings),
         installed_packages=_probe_installed_packages(),
-        ollama_running=_probe_ollama_running(),
+        ollama_running=ollama_running,
+        ollama_models=_probe_ollama_models() if ollama_running else [],
         network_reachable=_probe_network_reachable(),
         apple_fm_status="unknown",
     )

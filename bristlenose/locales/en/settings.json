@@ -49,6 +49,50 @@
         "local_ollama": "Local (Ollama)",
         "builtin_anonymiser": "Built-in anonymiser"
       },
+      "glyph": {
+        "available": "available",
+        "unavailable": "unavailable",
+        "skipped": "not applicable on this host"
+      },
+      "column": {
+        "model": "Model",
+        "availability": "Availability",
+        "quality": "Quality",
+        "notes": "Notes"
+      },
+      "qualifier": {
+        "default": "default",
+        "current": "current",
+        "your_deployment": "your Azure deployment"
+      },
+      "quality": {
+        "glyph": {
+          "excellent": "excellent quality",
+          "good": "good quality",
+          "marginal": "marginal quality",
+          "avoid": "avoid \u2014 quality too low",
+          "untested": "untested"
+        },
+        "untested": "untested \u2014 no editorial signal yet",
+        "local_speaker_id_acceptable": "Local models handle speaker identification well",
+        "local_topic_segmentation_acceptable": "Local models handle topic segmentation well",
+        "local_quote_extraction_miss_rate": "small models miss multi-clause quotes",
+        "local_quote_clustering_drift": "small models cluster quotes inconsistently",
+        "local_thematic_grouping_drift": "small models drift on thematic synthesis",
+        "mlx_whisper_apple_silicon_optimal": "optimal on Apple Silicon",
+        "faster_whisper_cpu_baseline": "solid CPU baseline; no GPU required"
+      },
+      "actions": {
+        "obtain_anthropic_key": "obtain an API key at console.anthropic.com and set ANTHROPIC_API_KEY or paste in Settings \u2192 Keys",
+        "obtain_openai_key": "obtain an API key at platform.openai.com and set OPENAI_API_KEY or paste in Settings \u2192 Keys",
+        "obtain_google_key": "obtain an API key at aistudio.google.com and set GOOGLE_API_KEY or paste in Settings \u2192 Keys",
+        "configure_azure": "set Azure key, endpoint, and deployment in Settings \u2192 Keys",
+        "start_ollama": "start the Ollama service (ollama serve)",
+        "install_mlx_whisper": "pip install mlx-whisper (requires Apple Silicon)",
+        "install_ctranslate2": "pip install ctranslate2",
+        "install_presidio": "pip install bristlenose[redact-pii] to enable the built-in anonymiser",
+        "enable_pii_redaction": "run with --redact-pii or set pii_enabled=true"
+      },
       "reasons": {
         "no_anthropic_key": "no Claude API key set",
         "no_openai_key": "no ChatGPT API key set",

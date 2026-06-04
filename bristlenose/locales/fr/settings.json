@@ -49,6 +49,50 @@
         "local_ollama": "Local (Ollama)",
         "builtin_anonymiser": "Anonymiseur int\u00e9gr\u00e9"
       },
+      "glyph": {
+        "available": "disponible",
+        "unavailable": "indisponible",
+        "skipped": "non applicable sur cet h\u00f4te"
+      },
+      "column": {
+        "model": "Mod\u00e8le",
+        "availability": "Disponibilit\u00e9",
+        "quality": "Qualit\u00e9",
+        "notes": "Notes"
+      },
+      "qualifier": {
+        "default": "par d\u00e9faut",
+        "current": "actuel",
+        "your_deployment": "votre d\u00e9ploiement Azure"
+      },
+      "quality": {
+        "glyph": {
+          "excellent": "qualit\u00e9 excellente",
+          "good": "bonne qualit\u00e9",
+          "marginal": "qualit\u00e9 marginale",
+          "avoid": "\u00e0 \u00e9viter \u2014 qualit\u00e9 trop faible",
+          "untested": "non test\u00e9"
+        },
+        "untested": "non test\u00e9 \u2014 pas encore d'\u00e9valuation \u00e9ditoriale",
+        "local_speaker_id_acceptable": "Les mod\u00e8les locaux g\u00e8rent bien l'identification des locuteurs",
+        "local_topic_segmentation_acceptable": "Les mod\u00e8les locaux g\u00e8rent bien la segmentation th\u00e9matique",
+        "local_quote_extraction_miss_rate": "les petits mod\u00e8les manquent les citations \u00e0 plusieurs propositions",
+        "local_quote_clustering_drift": "les petits mod\u00e8les regroupent les citations de fa\u00e7on incoh\u00e9rente",
+        "local_thematic_grouping_drift": "les petits mod\u00e8les d\u00e9rivent dans la synth\u00e8se th\u00e9matique",
+        "mlx_whisper_apple_silicon_optimal": "optimal sur Apple Silicon",
+        "faster_whisper_cpu_baseline": "base solide sur CPU ; aucun GPU requis"
+      },
+      "actions": {
+        "obtain_anthropic_key": "obtenez une cl\u00e9 API sur console.anthropic.com et d\u00e9finissez ANTHROPIC_API_KEY ou collez-la dans R\u00e9glages \u2192 Cl\u00e9s",
+        "obtain_openai_key": "obtenez une cl\u00e9 API sur platform.openai.com et d\u00e9finissez OPENAI_API_KEY ou collez-la dans R\u00e9glages \u2192 Cl\u00e9s",
+        "obtain_google_key": "obtenez une cl\u00e9 API sur aistudio.google.com et d\u00e9finissez GOOGLE_API_KEY ou collez-la dans R\u00e9glages \u2192 Cl\u00e9s",
+        "configure_azure": "d\u00e9finissez la cl\u00e9, le point de terminaison et le d\u00e9ploiement Azure dans R\u00e9glages \u2192 Cl\u00e9s",
+        "start_ollama": "d\u00e9marrez le service Ollama (ollama serve)",
+        "install_mlx_whisper": "pip install mlx-whisper (n\u00e9cessite Apple Silicon)",
+        "install_ctranslate2": "pip install ctranslate2",
+        "install_presidio": "pip install bristlenose[redact-pii] pour activer l'anonymiseur int\u00e9gr\u00e9",
+        "enable_pii_redaction": "lancez avec --redact-pii ou d\u00e9finissez pii_enabled=true"
+      },
       "reasons": {
         "no_anthropic_key": "aucune cl\u00e9 API Claude configur\u00e9e",
         "no_openai_key": "aucune cl\u00e9 API ChatGPT configur\u00e9e",

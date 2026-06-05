@@ -19,6 +19,72 @@ None of this is deliverable without (a) a stage → provider routing layer, and 
 
 **Display side (shipped May 2026, v1.5 + v1.9):** A read-only **catalogue surface** in `bristlenose/pipeline_view/` declares per-stage backends, their eligibility predicates against host facts, and editorial quality ratings per (stage, backend) cell. The catalogue is consumed by the React Settings → Pipeline tab and the CLI `bristlenose pipeline` command — making per-stage backend choice **legible** to researchers, without committing to auto-pick logic. See [design-pipeline-view.md](design-pipeline-view.md). This means we now have *editorial* per-stage quality ratings as catalogue data, even though no runtime routing or eval-harness measurement exists.
 
+### Corollary: model-identity drift is a symptom of the unbuilt selection side
+
+Because the selection side is unbuilt, the *runtime* model is still a single string — `settings.llm_model`, read by `LLMClient` on every call ([bristlenose/llm/client.py](../bristlenose/llm/client.py)), seeded from `providers.py` `default_model`. The descriptive catalogue *selects nothing*: it is consumed only by `cli.py` (`pipeline` command) and `server/routes/pipeline.py` (`build_pipeline_view`) to render. So three surfaces each independently assert "the default model," and they can disagree — because there is no single authority that selects:
+
+| Surface | Holds (Gemini) | Role |
+|---|---|---|
+| `providers.py` `default_model` | `gemini-2.5-flash` | seeds `settings.llm_model` — the real runtime decider |
+| `LLMProvider.swift` `defaultModel` / `availableModels` | `gemini-2.5-flash` | desktop Settings picker that *writes* `llm_model` |
+| `pipeline_view/catalogue.py` `ModelOption(default=True)` | `gemini-2.5-pro` | renders the Pipeline tab; selects nothing |
+
+(The catalogue lists Pro because Pro is the only Gemini model anyone wrote `QualityRating`s for — a descriptive-layer artifact, not a product stance.) **This divergence is not a bug to paper over with a code comment** — it's the expected shape of N consumers with no shared selector. Wiring the catalogue as the source that both seeds `llm_model` and feeds the picker (the selection side, below) collapses the three to one and **dissolves the divergence**.
+
+**Model retirement is orthogonal — and stays a standing chore.** A single source of truth does not stop a provider retiring a model ID (an external-world event). It only (a) shrinks the fix from N edits to 1, and (b) makes it *catchable* via a guard that the source-of-truth IDs ∈ `pricing.PRICING` (or a live model list). Worked example (5 Jun 2026): `gemini-2.0-flash` was retired by Google 3 Mar 2026 yet survived as the Swift default for months, because the swap costs two edits in a file no Python test sees, and no automated check knows a model is retired. Until unification lands, every retirement is an N-place patch; after it, it's one place plus a guard. The guard is the durable win — pin it on the unified source, not on a Swift enum that's on its way out.
+
+### Migration inventory: where model/provider facts are baked today
+
+Every row below is a site that must be hand-edited when a model retires or a fact moves — i.e. a place that should eventually *defer to the schema* (`ProviderSpec` for vendor facts, catalogue `ModelOption` for model facts) rather than hold its own copy. Grouped by the fact-tier each defers to. (Built 5 Jun 2026 from a repo-wide grep; verify line numbers before acting.)
+
+**Already-diverged today** (same concept, different values shipped) — the proof this isn't theoretical:
+- Anthropic "pricing": `providers.py:52` (`docs.anthropic.com/.../models`) vs `LLMProvider.swift:142` (`anthropic.com/pricing`)
+- Gemini "get a key": `aistudio.google.com/apikey` (cli / billing_hints / doctor_fixes) vs `/app/apikey` (`LLMProvider.swift:159`) vs bare `aistudio.google.com` (`cli.py:427,2195`)
+- Gemini "pricing": `ai.google.dev/gemini-api/docs/pricing` (`providers.py:117`) vs `ai.google.dev/pricing` (`LLMProvider.swift:158`)
+- `pricing_url` is defined twice in Python alone (`providers.py` + `pricing.py:57-60`)
+
+**A · LLM model selection (which model runs)**
+| Site | Holds | Defer to |
+|---|---|---|
+| `config.py:55` | `llm_model` global default | decision-engine default |
+| `providers.py` `default_model` ×5 | per-provider runtime seed | `ModelOption(default=True)` |
+| `llm/client.py` `settings.llm_model` | the dispatch read | `resolve(stage) → model` |
+| `LLMProvider.swift:61-81` | desktop picker default / available | generated `models.json` |
+
+**B · LLM model facts (cost, quality, eligibility)**
+| Site | Holds | Defer to |
+|---|---|---|
+| `pricing.py` `PRICING` | model → cost | `ModelOption.cost` |
+| `pricing.py` model→provider | reverse lookup | `ModelOption` under its `BackendOption` |
+| `catalogue.py` `QualityRating` / `ModelOption.requires` | quality, eligibility | *(already the home)* |
+
+**C · Provider facts + URLs (the "things we know about Anthropic" mini-DB)**
+| Site | Holds | Defer to |
+|---|---|---|
+| `providers.py` `ProviderSpec` | name/aliases/env/sdk/**pricing_url** | *(the home — extend with the full URL set)* |
+| `pricing.py` URL dict · `billing_hints.py:44-92` · `cli.py:418-462,2190` · `doctor_fixes.py:63-205` · `client.py:147-176` · `pipeline.py:317` | docs / console / keys / billing / get-a-key URLs | `ProviderSpec` |
+| `doctor.py` · `LLMValidator.swift:119` | API-endpoint URLs | `ProviderSpec.api_endpoint` |
+| `LLMProvider.swift:140-179` `links` | homepage / pricing / console | generated `providers.json` |
+| `KeychainHelper.serviceNames` ↔ `credentials_macos` | keychain service name | `ProviderSpec` |
+| handoff "Data use" URLs | terms / data-use | `ProviderSpec.terms_url` *(not in code anywhere yet)* |
+
+**D · Transcription (Whisper) model selection** — same baked-choice smell, and the active cause of the 5 Jun transcription failure
+| Site | Holds | Defer to |
+|---|---|---|
+| `config.py:74` | `whisper_model` default `large-v3-turbo` | transcription `BackendOption.models` default |
+| `s05_transcribe.py:336` `_mlx_model_name` | hardcoded short → `mlx-community/...` repo map | `ModelOption.id` per transcription backend |
+| `s05_transcribe.py:293` `transcribe_mlx` | bakes `path_or_hf_repo`; **ignores** `BRISTLENOSE_WHISPER_MODEL_DIR` | catalogue + host-aware / bundled-model resolution |
+| `TranscriptionSettingsView.swift:9` | desktop default `large-v3-turbo` | generated `models.json` |
+| `pipeline_view/catalogue.py` transcription `BackendOption` | `models=[]` (no model-level granularity yet) | **THE home — populate it** |
+
+The transcription rows make the point sharpest: the model is resolved from a hardcoded map in *stage code* (`_mlx_model_name`), not from the catalogue — so a host-aware, bundled, or quality-rated choice is impossible, and on Apple Silicon it silently forces a 1.5 GB `large-v3-turbo` HuggingFace download (the 5 Jun failure). Wiring transcription model choice through the catalogue — whose transcription `BackendOption.models` is empty today — is the same fix as the LLM tier, not a separate effort.
+
+### Future: selection-tier validation (validate, not decide)
+
+The catalogue above describes *what can be selected* (which models belong to which provider, eligibility, quality). The **selection** layer — "which provider/model is current" — has no shared source of truth: CLI reads env / `.env` / `bristlenose.toml` / flags; desktop reads UserDefaults (`activeProvider` + a global `llmModel` that can desync from it); serve/React is read-only and uses the launch config. They converge only at `settings.llm_provider` / `llm_model`. Nothing validates the chosen `(provider, model)` pair against the catalogue — which is why a desktop provider/model desync (provider=`anthropic` + model=`gemini-2.5-flash`) reached the provider as a raw 404 and was then mislabelled "Transcription failed" (5 Jun 2026).
+
+The next *non-render* use of the catalogue is **validate, not decide**: at config resolution, reject a `(provider, model)` pair the catalogue knows is impossible (a `gemini-*` model under `anthropic`) with a clear message instead of a 404. Permissive for custom/unknown models, and it **never overrides the user's choice** — so the catalogue stays informational, not the auto-selector (the auto-pick unification stays deferred). One check, in the shared sidecar layer, protects CLI + serve + desktop at once. The model→provider fact already exists in `pricing.py` (`MODEL_PROVIDER`) and implicitly in `ModelOption`-under-`BackendOption`; this step makes the catalogue its single home and first consumer beyond rendering. **Deferred — captured here so it's not lost.** The immediate desktop fix (inject the active provider's per-provider model at spawn, not the global `llmModel` — `BristlenoseShared.overlayPreferences`) ships separately and stops the desync at source; this guard is the cross-channel defence-in-depth on top.
+
 ## Proposed design
 
 ### 1. Stage → provider routing

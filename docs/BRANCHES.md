@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 4 Jun 2026 (merged + closed `beat3-provider-activation`)
+**Updated:** 7 Jun 2026 (merged + closed `desktop-provider-resolution`)
 
 ---
 
@@ -40,7 +40,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
-| `bristlenose_branch desktop-provider-resolution/` | `desktop-provider-resolution` | bugfix | Desktop runs the selected provider with a matched model; stop mislabelling LLM errors as transcription failures |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -138,7 +137,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
-| `desktop-provider-resolution` | `bristlenose_branch desktop-provider-resolution/` | local only |
+| `desktop-provider-resolution` _(merged)_ | `bristlenose_branch desktop-provider-resolution/` _(detached, on disk)_ | local only — merged to main 7 Jun 2026 (`5292802`) |
 
 
 
@@ -146,27 +145,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `desktop-provider-resolution`
-
-**Kind:** bugfix — Desktop runs the selected provider with a matched model; stop mislabelling LLM errors as transcription failures
-**Status:** Just started
-**Started:** 5 Jun 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch desktop-provider-resolution/`
-**Remote:** local only (push when ready)
-
-**What it does:** Desktop runs the selected provider with a matched model; stop mislabelling LLM errors as transcription failures. See `HANDOFF.md` in the worktree for the full brief.
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/ConsentActivation.swift`
-- `desktop/Bristlenose/Bristlenose/AIConsentView.swift`
-- `desktop/Bristlenose/Bristlenose/BristlenoseShared.swift`
-- `desktop/Bristlenose/Bristlenose/PipelineRunner.swift`
-
-**Potential conflicts with other branches:**
-- `gemini-provider` — moderate risk: both touch the provider-resolution surface. `gemini-provider` owns `LLMProvider.swift` + the 6 `common.json` locale files (provider enum + "Data use" key); this branch owns the consent/activation + pipeline-runner path. Overlap is on the provider-selection seam — coordinate merge order if both are in flight. Closely follows the just-merged `beat3-provider-activation`, which owned `ConsentActivation`/`AIConsentView`.
 
 ---
 
@@ -268,6 +246,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `desktop-provider-resolution` — merged 7 Jun 2026
+
+Desktop now runs the LLM provider the user selected, with a matched model, and stops mislabelling LLM errors as transcription failures. Honest provider status + failure copy, cmd-comma opens native Settings from report focus, copyable CLI help in the LLM status surface (selectable monospace commands, silent copy), and a true-up of the provider/keychain design docs to the data-protection-keychain + status-board reality. Five commits merged via `5292802`. Worktree detached and tagged orange on disk; local branch deleted; remote was never pushed.
 
 ### `beat3-provider-activation` — merged 4 Jun 2026
 

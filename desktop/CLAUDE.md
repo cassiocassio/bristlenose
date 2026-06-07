@@ -2,6 +2,21 @@
 
 SwiftUI macOS app wrapping the Bristlenose React SPA in a WKWebView. Native project sidebar, native toolbar, native Settings window, web content in embedded mode. **Alpha ships a bundled, signed PyInstaller sidecar** that runs `bristlenose serve` inside the `.app`, distributed via internal TestFlight. The current code uses **launcher-style scaffolding** (the Swift app searches the user's `$PATH` and venv directories for an installed `bristlenose` CLI rather than carrying its own) so v0.2 native-shell work could iterate without paying the bundle-sign-distribute tax on every change. Track C in Sprint 2 replaces it with the bundled sidecar.
 
+## SwiftUI authoring + review help
+
+`.claude/skills/swiftui-pro/` is a vendored SwiftUI review skill (Paul Hudson's
+`swiftui-pro`, MIT — see its `VENDORED.md`). It auto-triggers when you read,
+write, or review SwiftUI in the main conversation, and its `references/*.md`
+(deprecated API, view composition, data flow, navigation, design/HIG,
+accessibility, performance, modern Swift, hygiene) are read directly by the
+review agents during `/usual-suspects` on `.swift` changes.
+
+It's a **knowledge source for generic SwiftUI craft**, not a Mac-taste
+authority — it's iOS-first. On any conflict, project hard rules (`MEMORY.md`,
+this file) win, then macOS idiom (`what-would-gruber-say` / `app-store-police`),
+then swiftui-pro. It beats an agent's untrained SwiftUI hunch; it never overrides
+a documented Mac decision. Details in the skill's `VENDORED.md`.
+
 ## Shipping architecture (alpha and beyond)
 
 See `docs/design-desktop-python-runtime.md` for the canonical design. Summary:

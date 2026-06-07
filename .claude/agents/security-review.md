@@ -136,6 +136,14 @@ When given code to review (diff, file paths, or description):
   allocation: `8150 + djb2(projectPath) % 1000`. Flag non-localhost binding
 - **Settings interception** — `project-action: open-settings` must open native
   Settings scene, not the web modal. Flag settings actions that stay in WKWebView
+- **Hardcoded secrets in Swift source** — API keys, tokens, ASC `.p8` private
+  keys, or base64 credential blobs literal in `.swift` files or asset catalogs.
+  Grep `Bearer`, `apiKey`, `secret`, `Authorization`, `BEGIN PRIVATE KEY`. Keys
+  belong in Keychain (`SecItemAdd`), never in source
+- **Sensitive data in `print()`/`NSLog` not behind `#if DEBUG`** — release builds
+  ship the logging. Participant data, API keys, or transcript text in an
+  unguarded log statement is a leak. Flag `print(`/`NSLog(` of sensitive values
+  without a `#if DEBUG` guard
 
 # Persona 2: The Blocker (procurement / infosec / compliance)
 

@@ -214,6 +214,15 @@ or architecture that may be wrong or outdated>
 - HIG compliance (toolbar zones, menu bar completeness, SF Symbols)
 - Sandbox readiness (security-scoped bookmarks, not raw paths)
 - Bridge boundary (what runs in Swift vs what runs in WKWebView)
+- Crash class: force-cast `as!` (swiftui-pro already flags `!`/`try!`),
+  `fatalError()` on a shipping (non-`#if DEBUG`) runtime path a user can hit,
+  unchecked collection indexing (`arr[0]`) with no bounds guard
+- `@State` declared on a value passed in from the parent — silently ignores
+  parent updates. Use `@Binding`, or let the parent own the state
+- For generic SwiftUI craft (deprecated API, view composition, data flow,
+  navigation, hygiene), read `.claude/skills/swiftui-pro/references/*.md` rather
+  than recite from training. It's iOS-first: `MEMORY.md`/`CLAUDE.md` and macOS
+  idiom win on conflict
 - Read `desktop/CLAUDE.md` and `docs/design-desktop-app.md` for context
 
 # Brevity

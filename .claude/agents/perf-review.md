@@ -114,6 +114,15 @@ the files changed.
 - **New module-level imports of heavy libraries?** (spacy, torch, etc. should
   be lazy-imported inside functions)
 
+### Swift concurrency (desktop/ Swift)
+
+- **Long-running or `Task.detached` work with no cancellation path?** A `Task`
+  spawned for transcription, LLM calls, or long I/O that the owner can't cancel
+  keeps the sidecar busy after the user navigates away. Flag tasks with no
+  `cancel()` handle and no `Task.checkCancellation()`, and `Task.detached` used
+  where a structured child task (auto-cancelled with its parent) would do.
+  For deeper Swift-concurrency craft see `.claude/skills/swiftui-pro/references/swift.md`.
+
 ### Static export
 
 - **Increased inline payload?** The static export embeds data as JSON in a

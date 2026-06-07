@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pipeline popover — rolling-log speculation mock</title>
+<style>
+  /* ---- Native macOS approximation (NOT the web theme — this mimics a SwiftUI
+         popover so wrapping/size/typography are a fair design preview). ------ */
+  :root {
+    --sf: -apple-system, "SF Pro Text", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    --green: #34C759; --orange: #FF9F0A; --red: #FF3B30;
+    --blue: #0A84FF; --cyan: #32ADE6;
+    --label: rgba(0,0,0,0.85);
+    --secondary: rgba(0,0,0,0.5);
+    --tertiary: rgba(0,0,0,0.3);
+    --pop-bg: rgba(246,246,246,0.92);
+    --pop-border: rgba(0,0,0,0.12);
+    --row-tint: rgba(0,0,0,0.035);
+    --hair: rgba(0,0,0,0.08);
+  }
+  body.dark {
+    --label: rgba(255,255,255,0.92);
+    --secondary: rgba(255,255,255,0.55);
+    --tertiary: rgba(255,255,255,0.32);
+    --pop-bg: rgba(40,40,42,0.86);
+    --pop-border: rgba(255,255,255,0.12);
+    --row-tint: rgba(255,255,255,0.06);
+    --hair: rgba(255,255,255,0.1);
+  }
+  html,body { height:100%; }
+  body {
+    margin:0; font-family:var(--sf);
+    color:var(--label);
+    background:
+      radial-gradient(120% 120% at 20% 0%, #6a86b8, #3a4a6b 60%, #232a3d);
+    display:flex; flex-direction:column; align-items:center;
+    gap:18px; padding:32px 16px 56px;
+    -webkit-font-smoothing:antialiased;
+  }
+  body.dark { background: radial-gradient(120% 120% at 20% 0%, #2b3340, #1a1d24 60%, #0e1014); }
+
+  .chrome { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center; }
+  .chrome button {
+    font:13px/1 var(--sf); padding:6px 12px; border-radius:7px;
+    border:0.5px solid rgba(255,255,255,0.35); background:rgba(255,255,255,0.14);
+    color:#fff; cursor:pointer; backdrop-filter:blur(8px);
+  }
+  .chrome button.on { background:#fff; color:#1d1d1f; border-color:#fff; }
+  .caption { color:rgba(255,255,255,0.82); font:12px/1.4 var(--sf); max-width:420px; text-align:center; }
+  .caption b { color:#fff; }
+
+  /* ---- The popover envelope: fixed 360×320, matching PipelineActivityItem.swift ---- */
+  .stage { position:relative; }
+  .popover {
+    width:360px; height:320px; box-sizing:border-box;
+    background:var(--pop-bg); backdrop-filter:blur(30px) saturate(1.3);
+    border:0.5px solid var(--pop-border); border-radius:11px;
+    box-shadow:0 12px 34px rgba(0,0,0,0.32), 0 1px 0 rgba(255,255,255,0.5) inset;
+    padding:16px; display:flex; flex-direction:column; overflow:hidden;
+    font-size:13px; line-height:1.34;
+  }
+  body.dark .popover { box-shadow:0 12px 34px rgba(0,0,0,0.5); }
+  .pop-arrow {
+    position:absolute; top:-7px; left:50%; transform:translateX(-50%) rotate(45deg);
+    width:14px; height:14px; background:var(--pop-bg);
+    border-left:0.5px solid var(--pop-border); border-top:0.5px solid var(--pop-border);
+  }
+
+  .head { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .head .verb { font-size:13px; font-weight:600; flex:1; }
+  .head .btn {
+    font:11px/1 var(--sf); padding:3px 8px; border-radius:5px;
+    border:0.5px solid var(--hair); background:transparent; color:var(--secondary); cursor:default;
+  }
+  .scroll { flex:1; overflow-y:auto; margin:0 -4px; padding:0 4px; }
+
+  /* phase rows (accordion) */
+  .phase { padding:3px 0; }
+  .phase-row { display:flex; align-items:center; gap:7px; }
+  .chev { width:10px; color:var(--tertiary); font-size:9px; transition:transform .15s; }
+  .glyph { width:15px; text-align:center; font-size:12px; }
+  .g-ok { color:var(--green); } .g-warn { color:var(--orange); }
+  .g-err { color:var(--red); } .g-skip { color:var(--cyan); } .g-info { color:var(--blue); }
+  .pname { flex:1; }
+  .pname.active { font-weight:600; }
+  .pname.pending { color:var(--tertiary); }
+  .dur { font-family:var(--mono); font-size:11px; color:var(--tertiary); }
+  .spinner {
+    width:11px; height:11px; border-radius:50%;
+    border:1.6px solid var(--tertiary); border-top-color:var(--blue);
+    display:inline-block; animation:spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* nested live log under the active phase */
+  .log { margin:4px 0 4px 17px; padding:6px 8px; background:var(--row-tint); border-radius:6px; }
+  .log .line { display:flex; align-items:center; gap:7px; padding:1px 0; color:var(--secondary); }
+  .log .line .glyph { font-size:11px; }
+  .sid { font-family:var(--mono); font-size:11px; color:var(--tertiary); }
+
+  /* today / single-line running */
+  .today { display:flex; flex-direction:column; gap:6px; flex:1; justify-content:center; }
+  .today .big { font-size:13px; font-weight:600; }
+  .today .sub { color:var(--secondary); }
+  .today .stop { align-self:flex-start; margin-top:6px; font:12px/1 var(--sf);
+    padding:5px 12px; border-radius:7px; border:0.5px solid var(--hair); background:transparent; color:var(--red); cursor:default; }
+
+  /* carousel */
+  .car-body { flex:1; display:flex; flex-direction:column; }
+  .car-title { display:flex; align-items:center; gap:7px; font-weight:600; margin-bottom:6px; }
+  .car-log { flex:1; overflow-y:auto; }
+  .car-bar { display:flex; align-items:center; justify-content:center; gap:14px; padding-top:8px; border-top:0.5px solid var(--hair); margin-top:6px; }
+  .car-bar button { font:15px/1 var(--sf); width:26px; height:22px; border-radius:6px; border:0.5px solid var(--hair); background:transparent; color:var(--label); cursor:pointer; }
+  .car-bar button:disabled { color:var(--tertiary); cursor:default; }
+  .car-pos { font-size:11px; color:var(--secondary); min-width:118px; text-align:center; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <button id="tab-today" class="on" onclick="show('today')">Today (shipped)</button>
+  <button id="tab-accordion" onclick="show('accordion')">A · Collapsing accordion</button>
+  <button id="tab-carousel" onclick="show('carousel')">B · Carousel</button>
+  <span style="width:14px"></span>
+  <button onclick="document.body.classList.toggle('dark')">◐ Light / Dark</button>
+  <button id="replay" onclick="replayFastRun()">⏵ Replay fast run</button>
+</div>
+
+<div class="stage">
+  <div class="popover">
+    <div class="pop-arrow"></div>
+
+    <!-- ===== TODAY (shipped runningPopoverBody) ===== -->
+    <div id="view-today">
+      <div class="head"><span class="verb">Analysing…</span></div>
+      <div class="today">
+        <div class="big" id="today-stage">Extracting quotes</div>
+        <div class="sub" id="today-idx">Stage 6</div>
+        <div class="sub">Elapsed: <span class="mono">4:20</span></div>
+        <button class="stop">Stop</button>
+      </div>
+    </div>
+
+    <!-- ===== A · COLLAPSING ACCORDION ===== -->
+    <div id="view-accordion" class="hidden" style="display:flex; flex-direction:column; flex:1;">
+      <div class="head"><span class="verb">Analysing — 6 of 9</span><span class="btn">Log</span></div>
+      <div class="scroll">
+        <div class="phase"><div class="phase-row"><span class="chev">▸</span><span class="glyph g-ok">✓</span><span class="pname">Ingesting files</span><span class="dur">0.8s</span></div></div>
+        <div class="phase"><div class="phase-row"><span class="chev">▸</span><span class="glyph g-warn">⚠</span><span class="pname">Transcribing audio</span><span class="dur">3:12</span></div></div>
+        <div class="phase"><div class="phase-row"><span class="chev">▸</span><span class="glyph g-ok">✓</span><span class="pname">Identifying speakers</span><span class="dur">14s</span></div></div>
+        <div class="phase"><div class="phase-row"><span class="chev">▸</span><span class="glyph g-ok">✓</span><span class="pname">Removing personal info</span><span class="dur">6s</span></div></div>
+        <div class="phase"><div class="phase-row"><span class="chev">▸</span><span class="glyph g-ok">✓</span><span class="pname">Finding topics</span><span class="dur">22s</span></div></div>
+        <div class="phase">
+          <div class="phase-row"><span class="chev" style="transform:rotate(90deg)">▸</span><span class="glyph"><span class="spinner"></span></span><span class="pname active">Extracting quotes</span><span class="dur">0:48</span></div>
+          <div class="log">
+            <div class="line"><span class="glyph g-ok">✓</span><span class="sid">P3</span><span>18 quotes extracted</span></div>
+            <div class="line"><span class="glyph g-ok">✓</span><span class="sid">P4</span><span>11 quotes extracted</span></div>
+            <div class="line"><span class="glyph"><span class="spinner"></span></span><span class="sid">P5</span><span>extracting…</span></div>
+          </div>
+        </div>
+        <div class="phase"><div class="phase-row"><span class="chev"></span><span class="glyph"></span><span class="pname pending">Clustering quotes</span></div></div>
+        <div class="phase"><div class="phase-row"><span class="chev"></span><span class="glyph"></span><span class="pname pending">Grouping themes</span></div></div>
+        <div class="phase"><div class="phase-row"><span class="chev"></span><span class="glyph"></span><span class="pname pending">Rendering report</span></div></div>
+      </div>
+    </div>
+
+    <!-- ===== B · CAROUSEL ===== -->
+    <div id="view-carousel" class="hidden" style="display:flex; flex-direction:column; flex:1;">
+      <div class="head"><span class="verb">Analysing…</span><span class="btn">Log</span></div>
+      <div class="car-body">
+        <div class="car-title"><span class="glyph" id="car-glyph"></span><span id="car-name"></span><span class="dur" id="car-dur" style="margin-left:auto"></span></div>
+        <div class="car-log" id="car-log"></div>
+        <div class="car-bar">
+          <button id="car-prev" onclick="page(-1)">‹</button>
+          <span class="car-pos" id="car-pos"></span>
+          <button id="car-next" onclick="page(1)">›</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="caption">
+  <b>Approximation, not a spec.</b> Native size (360×320 fixed) and SF system font so wrapping is a fair preview.
+  Glyphs are the settled CLI Unicode vocabulary (✓ ⚠ ✗ — ℹ); natively these render as the same-meaning SF Symbols — nothing settled is changed.
+  Human-named phases are illustrative — "where legible phase names live" is an open question. The point is to make the
+  <i>collapsing-accordion</i> assumptions concrete (completed phases collapse to one line + outcome glyph; active phase expanded with its live log; rest pending) and let you compare against today and the carousel.
+</div>
+
+<script>
+  // ---- phase data shared by the carousel ----
+  const phases = [
+    { name:"Ingesting files",        glyph:"✓", cls:"g-ok",   dur:"0.8s", state:"done",
+      log:[["✓","g-ok","","6 files found, 0 skipped"]] },
+    { name:"Transcribing audio",     glyph:"⚠", cls:"g-warn", dur:"3:12", state:"done",
+      log:[["✓","g-ok","P1","done"],["✓","g-ok","P2","done"],["⚠","g-warn","P6","slow — fell back to CPU"]] },
+    { name:"Identifying speakers",   glyph:"✓", cls:"g-ok",   dur:"14s",  state:"done",
+      log:[["✓","g-ok","","4 speakers across 6 sessions"]] },
+    { name:"Removing personal info", glyph:"✓", cls:"g-ok",   dur:"6s",   state:"done",
+      log:[["✓","g-ok","","redacted 23 spans"]] },
+    { name:"Finding topics",         glyph:"✓", cls:"g-ok",   dur:"22s",  state:"done",
+      log:[["✓","g-ok","","31 topic boundaries"]] },
+    { name:"Extracting quotes",      glyph:"spin", cls:"",     dur:"0:48", state:"active",
+      log:[["✓","g-ok","P3","18 quotes extracted"],["✓","g-ok","P4","11 quotes extracted"],["spin","","P5","extracting…"]] },
+    { name:"Clustering quotes",      glyph:"", cls:"", dur:"", state:"pending", log:[] },
+    { name:"Grouping themes",        glyph:"", cls:"", dur:"", state:"pending", log:[] },
+    { name:"Rendering report",       glyph:"", cls:"", dur:"", state:"pending", log:[] },
+  ];
+  let cur = 5; // start on the active phase
+
+  function glyphHTML(g, cls){
+    if (g === "spin") return '<span class="spinner"></span>';
+    if (!g) return '';
+    return '<span class="'+cls+'">'+g+'</span>';
+  }
+  function renderCarousel(){
+    const p = phases[cur];
+    document.getElementById('car-glyph').innerHTML = glyphHTML(p.glyph, p.cls);
+    document.getElementById('car-name').textContent = p.name;
+    document.getElementById('car-name').className = p.state==='pending' ? 'pname pending' : '';
+    document.getElementById('car-dur').textContent = p.dur;
+    const log = document.getElementById('car-log');
+    if (p.state === 'pending') {
+      log.innerHTML = '<div class="line" style="color:var(--tertiary)">Not started yet</div>';
+    } else {
+      log.innerHTML = p.log.map(function(l){
+        return '<div class="line">'+glyphHTML(l[0], l[1])+
+          (l[2] ? '<span class="sid">'+l[2]+'</span>' : '')+
+          '<span>'+l[3]+'</span></div>';
+      }).join('');
+    }
+    document.getElementById('car-pos').textContent = 'Phase '+(cur+1)+' of '+phases.length+' · '+p.name;
+    document.getElementById('car-prev').disabled = cur===0;
+    document.getElementById('car-next').disabled = cur===phases.length-1;
+  }
+  function page(d){ cur = Math.max(0, Math.min(phases.length-1, cur+d)); renderCarousel(); }
+
+  function show(which){
+    ['today','accordion','carousel'].forEach(function(v){
+      document.getElementById('view-'+v).classList.toggle('hidden', v!==which);
+      document.getElementById('tab-'+v).classList.toggle('on', v===which);
+    });
+    if (which==='carousel') renderCarousel();
+  }
+
+  // ---- demonstrate the "flicking past" bug on the Today view ----
+  function replayFastRun(){
+    const names = phases.map(function(p){return p.name;});
+    show('today');
+    let i = 0;
+    const stageEl = document.getElementById('today-stage');
+    const idxEl = document.getElementById('today-idx');
+    const t = setInterval(function(){
+      if (i >= names.length) { clearInterval(t); stageEl.textContent="Extracting quotes"; idxEl.textContent="Stage 6"; return; }
+      stageEl.textContent = names[i];
+      idxEl.textContent = "Stage " + (i+1);
+      i++;
+    }, 180); // ~5 stages/sec — the speed a real fast run flicks past
+  }
+  renderCarousel();
+</script>
+</body>
+</html>

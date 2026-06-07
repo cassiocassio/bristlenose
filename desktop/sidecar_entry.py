@@ -47,6 +47,18 @@ _HOST_GATED_COMMANDS = {"run"}
 
 
 def main() -> None:
+    # PyInstaller + multiprocessing: a dependency (mlx-whisper / tokenizers /
+    # onnxruntime) spawns a multiprocessing child by RE-EXECUTING this frozen
+    # binary with interpreter bootstrap args (`-B -S -c "from multiprocessing…"`).
+    # Without freeze_support() that child falls through to the argv rewrite below,
+    # becomes `serve -B …`, and Typer dies with "No such option '-B'" —
+    # surfacing as `resource_tracker: process died unexpectedly`. freeze_support()
+    # detects the bootstrap, runs the worker, and exits; it's a no-op for a normal
+    # invocation. Must run before any argv manipulation.
+    import multiprocessing
+
+    multiprocessing.freeze_support()
+
     # Inject "serve" unless the caller explicitly invoked an allowed
     # passthrough subcommand. Any unknown / disallowed first arg falls
     # through to "serve" injection so Swift's typical invocation

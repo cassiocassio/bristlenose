@@ -197,7 +197,8 @@ enum LLMProvider: String, CaseIterable, Identifiable {
 /// Derived from API test calls (same validation as `bristlenose doctor`):
 /// - 2xx → `.online`
 /// - 401/403 → `.invalid`
-/// - 402/429/network error → `.unavailable`
+/// - 402 (out of credit) → `.outOfCredit` (observed negative — sticky, shown)
+/// - 429/5xx/network error → `.unavailable` (transient — masked by cache)
 /// - No key in Keychain → `.notSetUp`
 ///
 /// Providers don't expose balance, free-tier, or trial info via API,
@@ -210,9 +211,18 @@ enum ProviderStatus: Equatable {
     case notSetUp
     /// Key rejected by the API (401 Unauthorized, 403 Forbidden).
     case invalid
-    /// Key valid but unusable right now (402 no credits, 429 rate limited,
-    /// network error, or Ollama not running).
+    /// Transiently unusable: 429 rate-limited, 5xx, network error, or Ollama
+    /// not running. A *failed observation* — we learned nothing about the
+    /// credential, so a cached `.online` legitimately masks it (offline
+    /// survival). Contrast `.outOfCredit`, which is an observed negative.
     case unavailable
+    /// Key valid and authenticated, but the account is out of credit (HTTP
+    /// 402). An *observed negative*, not a failed observation: it must NOT be
+    /// masked by a cached `.online`, and it is sticky (persisted) so it
+    /// survives going offline — topping up happens out-of-band at the
+    /// provider's console, exactly like fixing an `.invalid` key. Amber, like
+    /// `.unavailable`; the label + detail string disambiguate.
+    case outOfCredit
     /// Validation in progress.
     case checking
 
@@ -222,6 +232,7 @@ enum ProviderStatus: Equatable {
         case .notSetUp: .secondary
         case .invalid: .red
         case .unavailable: .orange
+        case .outOfCredit: .orange
         case .checking: .secondary
         }
     }
@@ -233,14 +244,30 @@ enum ProviderStatus: Equatable {
         case .notSetUp: i18n.t("desktop.llmSettings.status.notSetUp")
         case .invalid: i18n.t("desktop.llmSettings.status.invalid")
         case .unavailable: i18n.t("desktop.llmSettings.status.unavailable")
+        case .outOfCredit: i18n.t("desktop.llmSettings.status.outOfCredit")
         case .checking: i18n.t("desktop.llmSettings.status.checking")
         }
     }
 
-    /// True when the provider may be activated. `.online` only — every
-    /// other state (including `.unavailable`) blocks the radio.
+    /// True when the provider is set up and confirmed healthy. `.online` only.
+    /// Kept for "is this provider working right now" styling; activation uses
+    /// the broader `canActivate`.
     var isConfigured: Bool {
         self == .online
+    }
+
+    /// True when this provider may be set active (the radio / "Use this
+    /// provider" toggle). Broader than `isConfigured`: a provider whose
+    /// account is out of credit, or merely unreachable right now, is still a
+    /// legitimate choice — the user may top up or reconnect, and "never gate
+    /// Run on a stale light" means activation must not require a live green.
+    /// Only a definitively-bad key (`.invalid`), a missing one (`.notSetUp`),
+    /// or an as-yet-unknown one (`.checking`) blocks activation.
+    var canActivate: Bool {
+        switch self {
+        case .online, .outOfCredit, .unavailable: return true
+        case .invalid, .notSetUp, .checking: return false
+        }
     }
 }
 

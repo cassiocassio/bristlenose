@@ -70,12 +70,27 @@ struct LLMProviderTests {
         #expect(ProviderStatus.notSetUp.isConfigured == false)
         #expect(ProviderStatus.invalid.isConfigured == false)
         #expect(ProviderStatus.unavailable.isConfigured == false)
+        #expect(ProviderStatus.outOfCredit.isConfigured == false)
         #expect(ProviderStatus.checking.isConfigured == false)
+    }
+
+    /// `canActivate` is the broader activation predicate (Finding 3 / Defect L):
+    /// a provider may be activated unless its key is definitively bad
+    /// (`.invalid`), missing (`.notSetUp`), or as-yet-unknown (`.checking`).
+    /// Crucially `.outOfCredit` and `.unavailable` CAN be activated — "never
+    /// gate Run on a stale light"; the user may top up or reconnect.
+    @Test func providerStatus_canActivate_allowsPaidButDegradedStates() {
+        #expect(ProviderStatus.online.canActivate == true)
+        #expect(ProviderStatus.outOfCredit.canActivate == true)
+        #expect(ProviderStatus.unavailable.canActivate == true)
+        #expect(ProviderStatus.invalid.canActivate == false)
+        #expect(ProviderStatus.notSetUp.canActivate == false)
+        #expect(ProviderStatus.checking.canActivate == false)
     }
 
     @MainActor @Test func providerStatus_labels_areNonEmpty() {
         let i18n = I18n()
-        let statuses: [ProviderStatus] = [.online, .notSetUp, .invalid, .unavailable, .checking]
+        let statuses: [ProviderStatus] = [.online, .notSetUp, .invalid, .unavailable, .outOfCredit, .checking]
         for status in statuses {
             #expect(!status.label(i18n).isEmpty)
         }

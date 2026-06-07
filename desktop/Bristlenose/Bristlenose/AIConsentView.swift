@@ -212,7 +212,9 @@ struct AIConsentView: View {
     /// cloud default.
     private func activateChosenCloudProviderIfNeeded() {
         let statuses = ConsentActivation.cloudStatuses()
-        let target = ConsentActivation.resolve(active: activeProvider, statuses: statuses)
+        let activeHasKey = ConsentActivation.hasStoredKey(forActive: activeProvider)
+        let target = ConsentActivation.resolve(
+            active: activeProvider, activeHasKey: activeHasKey, statuses: statuses)
 
         if let target {
             activeProvider = target.rawValue

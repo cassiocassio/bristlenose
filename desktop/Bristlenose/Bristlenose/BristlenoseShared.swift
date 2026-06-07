@@ -149,14 +149,33 @@ enum BristlenoseShared {
     /// vars that differ from defaults to avoid overriding `.env` or Keychain
     /// values unnecessarily. Used for both `bristlenose serve` and
     /// `bristlenose run`.
-    static func overlayPreferences(into env: inout [String: String]) {
-        let defaults = UserDefaults.standard
-
-        if let provider = defaults.string(forKey: "activeProvider") {
+    static func overlayPreferences(
+        into env: inout [String: String], defaults: UserDefaults = .standard
+    ) {
+        let activeProvider = defaults.string(forKey: "activeProvider")
+        if let provider = activeProvider {
             env["BRISTLENOSE_LLM_PROVIDER"] = provider
         }
-        if let model = defaults.string(forKey: "llmModel") {
-            env["BRISTLENOSE_LLM_MODEL"] = model
+        // Inject the model that MATCHES the active provider, read from the
+        // per-provider `llmModel_<provider>` key (fallback to the provider's
+        // built-in default). The global `llmModel` key only tracks the active
+        // provider while `syncGlobalModel` runs — a provider revert leaves it
+        // stale, so spawning off it produces a provider≠model mismatch (e.g.
+        // provider=anthropic + model=gemini-2.5-flash → 404).
+        //
+        // Critically: only inject a model when a provider is also set. The old
+        // `else if` arm injected the bare global `llmModel` key with NO
+        // matching provider — so Python fell back to its *default* provider
+        // (anthropic) but ran it against whatever model the global key last
+        // held (e.g. gpt-4o left over from a ChatGPT session), producing a
+        // cross-provider 404 (`model: gpt-4o` rejected by Anthropic). When
+        // `activeProvider` is unset we inject neither, letting Python default
+        // both coherently.
+        if let provider = activeProvider {
+            if let model = defaults.string(forKey: "llmModel_\(provider)")
+                ?? LLMProvider(rawValue: provider)?.defaultModel {
+                env["BRISTLENOSE_LLM_MODEL"] = model
+            }
         }
         if defaults.object(forKey: "llmTemperature") != nil {
             env["BRISTLENOSE_LLM_TEMPERATURE"] = String(defaults.double(forKey: "llmTemperature"))
@@ -190,6 +209,12 @@ enum BristlenoseShared {
         }
     }
 
+    /// Python's default `llm_provider` (`bristlenose/config.py`). Mirrored here
+    /// because the Swift host must inject the matching API key when no provider
+    /// is explicitly active. If the Python default ever changes, grep this
+    /// constant and update both sides together.
+    static let pythonDefaultProvider = "anthropic"
+
     /// Fetch the active LLM provider's API key from Keychain and overlay it as a
     /// `BRISTLENOSE_<PROVIDER>_API_KEY` env var on the subprocess environment.
     ///
@@ -213,13 +238,23 @@ enum BristlenoseShared {
     /// - Parameter env: env dict to mutate
     /// - Parameter store: Keychain-abstracted store (`KeychainHelper.liveStore` in
     ///   production, `InMemoryKeychain` in tests)
-    static func overlayAPIKeys(into env: inout [String: String], using store: any KeychainStore) {
+    static func overlayAPIKeys(
+        into env: inout [String: String], using store: any KeychainStore,
+        defaults: UserDefaults = .standard
+    ) {
         // Scope to the active provider only. Eager fetch of all four cloud
         // keys (sandbox walk #7) caused 3× Keychain prompts the moment a
         // local-only user dropped a project — the loudest possible "I chose
         // local-only" failure. Ollama is keyless: nothing to inject; bail.
         // Miro descoped from alpha (see c3 plan).
-        let active = UserDefaults.standard.string(forKey: "activeProvider") ?? "anthropic"
+        // Nil-case coupling: `overlayPreferences` injects NO
+        // `BRISTLENOSE_LLM_PROVIDER` when `activeProvider` is unset, so Python
+        // falls back to its own default (`config.py` `llm_provider`). This key
+        // fallback MUST match that Python default or we'd inject the wrong
+        // provider's key for a defaulted run. Kept as a named constant so a
+        // change to either side is greppable across the Swift/Python boundary.
+        let active = defaults.string(forKey: "activeProvider")
+            ?? Self.pythonDefaultProvider
         let cloudProviders: Set<String> = ["anthropic", "openai", "azure", "google"]
         guard cloudProviders.contains(active) else {
             log.info("active provider=\(active, privacy: .public) is keyless — no API key injection")

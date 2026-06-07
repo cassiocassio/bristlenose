@@ -27,14 +27,20 @@ struct LLMValidatorTests {
         #expect(s403 == .invalid)
     }
 
-    @Test("402 maps to .unavailable with out-of-credits message that names the key as fine")
+    @Test("402 maps to .outOfCredit (observed negative, not transient) with key-is-fine message")
     func classifyOutOfCredits() {
         let (status, err) = LLMValidator.classify(provider: .claude, status: 402)
-        #expect(status == .unavailable)
-        // The whole point of a separate message: user sees orange, reads
-        // "Your key is fine — top up", does NOT delete the key.
-        #expect(err?.contains("out of credits") == true)
-        #expect(err?.contains("Your key is fine") == true)
+        // .outOfCredit, NOT .unavailable: a 402 is an observed negative that
+        // must show through (amber) rather than be masked by a cached green.
+        #expect(status == .outOfCredit)
+        // The invariant is the DISTINCTION, not the exact words: the 402 copy
+        // must read differently from the 401 ("invalid key") copy so the user
+        // tops up instead of deleting a good key. Asserting exact substrings on
+        // user-facing copy reddens this test on any reword (prior Finding 21);
+        // assert non-empty + differs-from-401 instead.
+        let (_, invalidErr) = LLMValidator.classify(provider: .claude, status: 401)
+        #expect(err?.isEmpty == false)
+        #expect(err != invalidErr)
     }
 
     @Test("429 maps to .unavailable with rate-limit message naming the key as fine")
@@ -75,6 +81,60 @@ struct LLMValidatorTests {
     func classifyServerError() {
         let (status, _) = LLMValidator.classify(provider: .claude, status: 500)
         #expect(status == .unavailable)
+    }
+
+    // MARK: - resolveStatus (the cache-promotion / 402-masking decision)
+    //
+    // This is the actual masking site (the Settings view delegates to it), so
+    // it's tested directly rather than only through the cache round-trip.
+
+    @Test("resolveStatus: transient .unavailable defers to a cached verdict (offline survival)")
+    func resolveTransientDefersToCache() {
+        #expect(LLMValidator.resolveStatus(observed: .unavailable, cached: .ok) == .online)
+        #expect(LLMValidator.resolveStatus(observed: .unavailable, cached: .invalid) == .invalid)
+        #expect(LLMValidator.resolveStatus(observed: .unavailable, cached: .outOfCredit) == .outOfCredit)
+    }
+
+    @Test("resolveStatus: transient .unavailable with NO cache shows .unavailable")
+    func resolveTransientNoCache() {
+        #expect(LLMValidator.resolveStatus(observed: .unavailable, cached: nil) == .unavailable)
+    }
+
+    @Test("resolveStatus: a fresh .outOfCredit (402) is NOT masked by a cached .ok")
+    func resolveOutOfCreditNotMasked() {
+        // The anti-masking invariant the whole branch exists for: an observed
+        // 402 shows amber even when the cache still says the key was good.
+        #expect(LLMValidator.resolveStatus(observed: .outOfCredit, cached: .ok) == .outOfCredit)
+    }
+
+    @Test("resolveStatus: a fresh .invalid (401) is NOT masked by a cached .ok")
+    func resolveInvalidNotMasked() {
+        #expect(LLMValidator.resolveStatus(observed: .invalid, cached: .ok) == .invalid)
+    }
+
+    @Test("resolveStatus: a definitive .online wins over any cache")
+    func resolveOnlineWins() {
+        #expect(LLMValidator.resolveStatus(observed: .online, cached: .invalid) == .online)
+    }
+
+    @Test("resolveStatus: an observed .outOfCredit is unchanged by any cache (incl. stale .outOfCredit)")
+    func resolveOutOfCreditStableUnderCache() {
+        // Double-amber: re-observing 402 while the cache already holds
+        // .outOfCredit is a no-op, never a promotion to something greener.
+        #expect(LLMValidator.resolveStatus(observed: .outOfCredit, cached: .outOfCredit) == .outOfCredit)
+        #expect(LLMValidator.resolveStatus(observed: .outOfCredit, cached: .invalid) == .outOfCredit)
+        #expect(LLMValidator.resolveStatus(observed: .outOfCredit, cached: nil) == .outOfCredit)
+    }
+
+    @Test("resolveStatus: only .unavailable defers to cache — .checking/.notSetUp pass through")
+    func resolveNonTransientPassThrough() {
+        // Contract pin: resolveStatus keys on observed == .unavailable. Should
+        // validate() ever return .checking/.notSetUp as an observed value with
+        // a cache present, it must pass through unchanged — under-report, never
+        // mask a worse reality as green. Unreachable today; pinned so a future
+        // validate() return value can't silently break the anti-masking rule.
+        #expect(LLMValidator.resolveStatus(observed: .checking, cached: .ok) == .checking)
+        #expect(LLMValidator.resolveStatus(observed: .notSetUp, cached: .ok) == .notSetUp)
     }
 
     // MARK: - Verdict cache round-trip
@@ -137,6 +197,44 @@ struct LLMValidatorTests {
             // That IS authoritative and should replace the cache.
             LLMValidator.recordVerdict(provider: .claude, key: key, status: .invalid)
             #expect(LLMValidator.cachedVerdict(provider: .claude, key: key) == .invalid)
+        }
+    }
+
+    @Test(".outOfCredit verdict round-trips through cache (sticky)")
+    func cacheRoundTripOutOfCredit() {
+        withIsolatedStore {
+            let key = "sk-ant-broke-account"
+            LLMValidator.recordVerdict(provider: .claude, key: key, status: .outOfCredit)
+            #expect(LLMValidator.cachedVerdict(provider: .claude, key: key) == .outOfCredit)
+        }
+    }
+
+    @Test("402-then-transient does NOT re-green: cached .outOfCredit survives a later .unavailable")
+    func cacheOutOfCreditStickyUnderTransient() {
+        withIsolatedStore {
+            let key = "sk-ant-ran-dry"
+            // Was good, then ran out of credit.
+            LLMValidator.recordVerdict(provider: .claude, key: key, status: .online)
+            LLMValidator.recordVerdict(provider: .claude, key: key, status: .outOfCredit)
+            // Then the network drops. A transient .unavailable must NOT overwrite
+            // the sticky out-of-credit verdict, so the offline fallback resolves
+            // to amber, not stale green. (Finding 2: 402-then-timeout re-green.)
+            LLMValidator.recordVerdict(provider: .claude, key: key, status: .unavailable)
+            #expect(LLMValidator.cachedVerdict(provider: .claude, key: key) == .outOfCredit)
+        }
+    }
+
+    @Test("Top-up clears it: a fresh .online overwrites a cached .outOfCredit")
+    func cacheTopUpClearsOutOfCredit() {
+        withIsolatedStore {
+            let key = "sk-ant-topped-up"
+            LLMValidator.recordVerdict(provider: .claude, key: key, status: .outOfCredit)
+            // User tops up; next validation returns 200 → .online. Authoritative,
+            // so it replaces the amber verdict.
+            LLMValidator.recordVerdict(provider: .claude, key: key, status: .online)
+            // `.ok` is the CachedVerdict *representation* of an .online
+            // observation (cache layer), not the rendered ProviderStatus.
+            #expect(LLMValidator.cachedVerdict(provider: .claude, key: key) == .ok)
         }
     }
 

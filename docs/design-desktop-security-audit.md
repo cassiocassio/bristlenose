@@ -1,5 +1,7 @@
 # Desktop App Security Audit — March 2026
 
+> **Trued 7 Jun 2026** — reconciled the desktop credential surface to the data-protection keychain migration (`8b2ef51`, 2 Jun): the Keychain rows below now reflect `kSecAttrAccessibleAfterFirstUnlock` + `kSecUseDataProtectionKeychain` + team-scoped `keychain-access-groups` + **deliberate iCloud Keychain sync** (which *reverses* Opportunity S). The LLM Settings tab's new eager all-providers Keychain read (provider-resolution slice, `1fe904e`) is enumerated as a cleared item, and the verdict cache now also holds a sticky `.outOfCredit`. Opportunity B (PID-before-zombie-kill) marked obviated by Finding #7. See `design-keychain.md` for the storage-model detail.
+
 > **Trued 1 May 2026** — Track A A2 lands `com.apple.security.network.server` for the Debug host (`49cb600`), unblocking sandboxed sidecar `bind()` on 127.0.0.1:9131. Distribution Blocker #2 status updated; Constraint #17 cross-references the now-shipped sandbox entitlement set; new "What's Already Strong" row for sandboxed-sidecar bind verification.
 
 > **Trued 30 Apr 2026** — Beat 3 + 3b first-run round of fixes: Finding #12 (Ollama URL accepts arbitrary HTTP) and Opportunity G closed by the desktop GUI hardwire (commit `dbd54ec`); new auth-check trust surface enumerated under "What's Already Strong" (verdict cache, TTL gate, privacy-marked logging); HTTP-only Ollama detection ✅ row added.
@@ -21,14 +23,14 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 
 | Area | Assessment | Evidence |
 |------|------------|----------|
-| Keychain credential storage | Excellent | Native Security.framework, `kSecAttrAccessibleWhenUnlocked`, no plaintext fallback. **C3 (Apr 2026)**: Swift reads Keychain at sidecar launch and injects `BRISTLENOSE_<PROVIDER>_API_KEY` env vars; the sandboxed sidecar never reaches `MacOSCredentialStore`. `credentials_macos.py` remains the CLI-Mac happy path. See `design-desktop-python-runtime.md` §"Credential flow" |
+| Keychain credential storage | Excellent | Native Security.framework, **data-protection keychain** (`kSecUseDataProtectionKeychain`, `kSecAttrAccessibleAfterFirstUnlock`, team-scoped `keychain-access-groups`; **`kSecAttrSynchronizable` = iCloud Keychain sync by design** — a revocable credential that survives a damaged login keychain), no biometric ACL, no plaintext fallback (migration `8b2ef51`, 2 Jun 2026; see `design-keychain.md`). **C3 (Apr 2026)**: Swift reads Keychain at sidecar launch and injects `BRISTLENOSE_<PROVIDER>_API_KEY` env vars; the sandboxed sidecar never reaches `MacOSCredentialStore`. `credentials_macos.py` remains the CLI-Mac happy path. See `design-desktop-python-runtime.md` §"Credential flow" |
 | Environment scrubbing | Excellent | Sidecar receives an allowlisted env dict. No DYLD, no cloud tokens. **API keys are now intentional, allowlisted entries** (`BRISTLENOSE_<PROVIDER>_API_KEY`) fetched by Swift from Keychain at spawn time — keys live in-process only; no disk write |
 | Bearer token auth | Strong | 256-bit random token per instance, CORS blocks cross-origin, media route has path-traversal guard + extension allowlist |
 | JS bridge design | Strong | All 5 `callAsyncJavaScript` sites use parameterised `arguments:` dicts. Zero `evaluateJavaScript` calls |
 | Ephemeral WKWebView | Strong | `.nonPersistent()` data store per project — no cross-project leakage |
 | SecurityChecklist.swift | Innovative | Compile-time `#error` blocks Release builds with known security gaps |
 | Local-first privacy | Major differentiator | Zero telemetry, zero phone-home, zero crash reporting. Ollama escape hatch |
-| Settings auth-check trust surface | Strong | Beat 3 round-trip key validation (`LLMValidator.swift`, `LLMSettingsView.swift`). Verdict cache stores 8-byte SHA256 hash + verdict only — no key material. 60s TTL gate caps outbound traffic (verified by `LLMValidatorTests.swift`). All `os.Logger` calls covering `error.localizedDescription` are `privacy: .private`. Provider-specific HTTP semantics (Anthropic 4xx-not-401-is-online forward-compat, Azure 404 → invalid, OpenAI standard codes). User-facing disclosure in `SECURITY.md` §"Data leaves your machine only when" item 2 |
+| Settings auth-check trust surface | Strong | Beat 3 round-trip key validation (`LLMValidator.swift`, `LLMSettingsView.swift`). Verdict cache stores 8-byte SHA256 hash + verdict only — no key material. 60s TTL gate caps outbound traffic (verified by `LLMValidatorTests.swift`). All `os.Logger` calls covering `error.localizedDescription` are `privacy: .private`. Provider-specific HTTP semantics (Anthropic 4xx-not-401-is-online forward-compat, Azure 404 → invalid, OpenAI standard codes). User-facing disclosure in `SECURITY.md` §"Data leaves your machine only when" item 2. **Provider-resolution slice (7 Jun, `1fe904e`)**: the tab now eagerly reads *all* providers' Keychain entries on open (was selected+active) to paint the status board — more keys read into process memory on open, but none logged and Gemini's key-in-URL stays `privacy: .private`; the read is prompt-free on the data-protection keychain (Team-ID validation, not binary hash). Verdict cache gained a sticky `.outOfCredit` (402) value alongside `.ok`/`.invalid` — still hash+verdict+timestamp, no key material |
 | Ollama URL hardwired in desktop GUI | Strong | Trust-boundary closure (commit `dbd54ec`, 30 Apr 2026). Settings shows static read-only `localhost:11434`; no editable field. CLI/CI override path preserved via parent-process `BRISTLENOSE_LOCAL_URL` env var (`ServeManager.swift:351-357`, `BristlenoseShared.swift:122-127`). Replaces what would otherwise be a social-engineering footgun (paste an attacker URL → silent transcript exfil) |
 | Ollama detection HTTP-only | Strong | First-run install/probe via `OllamaSetupSheet.swift` uses HTTP GET `127.0.0.1:11434/api/tags` exclusively. No `Process()` exec, no `/usr/sbin/lsof`, no `/Applications/Ollama.app` filesystem polling — sandbox-clean and Homebrew-friendly. `failureMessage(for:)` catalogues `URLError.notConnectedToInternet` / `.timedOut` / `.cannotConnectToHost` |
 
@@ -81,7 +83,7 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 | # | Opportunity | Effort | Impact |
 |---|-------------|--------|--------|
 | A | Port-restrict navigation policy | ~10 lines | Closes SECURITY #8 |
-| B | Verify PID before zombie kill (`ps -p <pid> -o comm=`) | ~5 lines | Closes SECURITY #5 |
+| B | ~~Verify PID before zombie kill~~ ✅ **OBVIATED** — the A6 zombie-cleanup redesign removed host-side process enumeration entirely (the sidecar self-terminates via a parent-death watcher); the libproc PID-verify helper was deleted. See Finding #7. | — | — |
 | C | Clean up SecurityChecklist.swift (remove #1, #3, #7) | Trivial | Clearer release gate |
 | D | Wrap dev paths in `#if DEBUG` | Trivial | No info disclosure |
 | E | Strip token prefix from release logs | 1 line | No token fragment in Console.app |
@@ -111,7 +113,7 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 | P | Semgrep CI (Swift experimental + Python mature) | Catches injection, path traversal, insecure crypto |
 | Q | Objective-See QA (KnockKnock + LuLu) | Verify system footprint pre-release |
 | R | AV false-positive testing | PyInstaller bundles get flagged |
-| S | `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` | Prevent iCloud Keychain sync of API keys |
+| S | ~~`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`~~ | ❌ **REVERSED (2 Jun 2026)** — shipped the *opposite*: `kSecAttrAccessibleAfterFirstUnlock` + `kSecAttrSynchronizable: true`, so keys **do** sync via iCloud Keychain *by design* (a user's own revocable credential; `*ThisDeviceOnly` can't sync). Kept as the reasoning trail — a reviewer asking "why do keys sync?" should land on the data-protection-keychain rationale in `design-keychain.md`, not implement this. |
 
 ---
 
@@ -119,7 +121,7 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 
 1. All 12 Swift source files — zero `evaluateJavaScript`, `NSAppleScript`, `osascript`, `shell=True`
 2. `callAsyncJavaScript` — 5 call sites, all use parameterised `arguments:`
-3. Keychain — correct Security.framework, `kSecAttrAccessibleWhenUnlocked`, no plaintext fallback
+3. Keychain — correct Security.framework, data-protection keychain (`kSecAttrAccessibleAfterFirstUnlock` + `kSecUseDataProtectionKeychain` + team-scoped access group; iCloud-sync by design), no biometric ACL, no plaintext fallback
 4. Subprocess spawning — 2 `Process()` instances, neither uses shell mode
 5. WKWebView — ephemeral data store, main-frame-only user scripts, navigation delegate with origin restriction
 6. Bridge messages — typed dictionary lookups with safe casting (`as? String`, `as? Bool`)

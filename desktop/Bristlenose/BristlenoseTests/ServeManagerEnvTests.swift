@@ -157,4 +157,58 @@ struct ServeManagerEnvTests {
         let bristlenoseKeys = env.keys.filter { $0.hasPrefix("BRISTLENOSE_") && $0.hasSuffix("_API_KEY") }
         #expect(bristlenoseKeys.isEmpty)
     }
+
+    // MARK: - overlayPreferences provider+model coherence (Defect M invariant)
+
+    /// Isolated UserDefaults suite for overlayPreferences tests — avoids
+    /// polluting `.standard` and gives each test a clean slate.
+    private func withIsolatedDefaults(_ body: (UserDefaults) -> Void) {
+        let name = "ServeManagerEnvTests-\(UUID().uuidString)"
+        let suite = UserDefaults(suiteName: name)!
+        defer { suite.removePersistentDomain(forName: name) }
+        body(suite)
+    }
+
+    /// The active provider and a matching model are injected TOGETHER, from the
+    /// per-provider `llmModel_<provider>` key. This is the activation-persistence
+    /// invariant: a chosen provider reaches the env overlay with a coherent
+    /// model, so `bristlenose run` analyses with the provider+model the user
+    /// actually selected.
+    @Test func overlayPreferences_injects_provider_and_matching_model_together() {
+        withIsolatedDefaults { defaults in
+            defaults.set("openai", forKey: "activeProvider")
+            defaults.set("gpt-4o-mini", forKey: "llmModel_openai")
+            var env: [String: String] = [:]
+            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+            #expect(env["BRISTLENOSE_LLM_PROVIDER"] == "openai")
+            #expect(env["BRISTLENOSE_LLM_MODEL"] == "gpt-4o-mini")
+        }
+    }
+
+    /// Defect M invariant: NEVER a model without a provider. With no active
+    /// provider, inject NEITHER and let Python default both coherently — not a
+    /// bare global model that would mismatch Python's default provider (the
+    /// gpt-4o-rejected-by-Anthropic 404 this branch was opened to fix).
+    @Test func overlayPreferences_no_active_provider_injects_neither() {
+        withIsolatedDefaults { defaults in
+            defaults.set("gpt-4o", forKey: "llmModel")  // stale global model, no provider
+            var env: [String: String] = [:]
+            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+            #expect(env["BRISTLENOSE_LLM_PROVIDER"] == nil)
+            #expect(env["BRISTLENOSE_LLM_MODEL"] == nil)
+        }
+    }
+
+    /// Provider set, no per-provider model → model falls back to the provider's
+    /// built-in default. Still a coherent provider+model pair (never one without
+    /// the other).
+    @Test func overlayPreferences_provider_without_per_provider_model_uses_default() {
+        withIsolatedDefaults { defaults in
+            defaults.set("anthropic", forKey: "activeProvider")
+            var env: [String: String] = [:]
+            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+            #expect(env["BRISTLENOSE_LLM_PROVIDER"] == "anthropic")
+            #expect(env["BRISTLENOSE_LLM_MODEL"] == LLMProvider.claude.defaultModel)
+        }
+    }
 }

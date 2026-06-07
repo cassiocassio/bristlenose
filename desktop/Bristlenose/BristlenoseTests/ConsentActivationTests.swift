@@ -8,29 +8,59 @@ import Testing
 @Suite("Consent activation resolution")
 struct ConsentActivationTests {
 
-    // MARK: - No-override: a working cloud choice is never replaced
+    // MARK: - No-override: a cloud choice with a key is never replaced
 
     @Test func onlineCloudActive_returnsNil() {
         let result = ConsentActivation.resolve(
             active: "anthropic",
+            activeHasKey: true,
             statuses: [.claude: .online])
         #expect(result == nil)
     }
 
     @Test func onlineCloudActive_ignoresOtherOnlineClouds() {
-        // Active is a working cloud — even if another cloud is also online,
+        // Active is a configured cloud — even if another cloud is also online,
         // don't switch. Deliberate choice wins.
         let result = ConsentActivation.resolve(
             active: "google",
+            activeHasKey: true,
             statuses: [.gemini: .online, .claude: .online])
         #expect(result == nil)
     }
 
-    // MARK: - Re-consent path (the bug): local active + validated cloud
+    // MARK: - Defect #1: a keyed cloud with no/stale verdict is NOT flipped
+
+    @Test func keyedCloudActive_noVerdict_otherCloudOnline_returnsNil() {
+        // The 5 Jun ghost-bug: Gemini is deliberately active and has a stored
+        // key, but its `.online` verdict isn't cached (stale cache / post-
+        // relaunch). Anthropic IS cached online. The old verdict gate flipped
+        // google → anthropic here, producing a cross-provider 404. With a key
+        // present, the deliberate choice must survive an absent verdict.
+        let result = ConsentActivation.resolve(
+            active: "google",
+            activeHasKey: true,
+            statuses: [.claude: .online])
+        #expect(result == nil)
+    }
+
+    @Test func keyedCloudActive_invalidVerdict_returnsNil() {
+        // Even an explicitly non-online cached verdict doesn't trigger a
+        // silent flip while a key is present — re-validation is the run path's
+        // job, not the consent sheet's. (The user sees the invalid state in
+        // Settings; we don't reroute their data behind their back.)
+        let result = ConsentActivation.resolve(
+            active: "google",
+            activeHasKey: true,
+            statuses: [.gemini: .invalid, .claude: .online])
+        #expect(result == nil)
+    }
+
+    // MARK: - Re-consent path: local active + validated cloud
 
     @Test func localActive_oneOnlineCloud_returnsThatCloud() {
         let result = ConsentActivation.resolve(
             active: "local",
+            activeHasKey: false,
             statuses: [.claude: .online])
         #expect(result == .claude)
     }
@@ -38,6 +68,7 @@ struct ConsentActivationTests {
     @Test func localActive_onlyGeminiOnline_returnsGemini() {
         let result = ConsentActivation.resolve(
             active: "local",
+            activeHasKey: false,
             statuses: [.gemini: .online])
         #expect(result == .gemini)
     }
@@ -56,6 +87,7 @@ struct ConsentActivationTests {
         // allCases order: claude, chatGPT, gemini, azure → claude wins.
         let result = ConsentActivation.resolve(
             active: "local",
+            activeHasKey: false,
             statuses: [.gemini: .online, .claude: .online, .chatGPT: .online])
         #expect(result == .claude)
     }
@@ -63,6 +95,7 @@ struct ConsentActivationTests {
     @Test func localActive_chatGPTAndAzureOnline_returnsChatGPT() {
         let result = ConsentActivation.resolve(
             active: "local",
+            activeHasKey: false,
             statuses: [.azure: .online, .chatGPT: .online])
         #expect(result == .chatGPT)
     }
@@ -72,6 +105,7 @@ struct ConsentActivationTests {
     @Test func localActive_noOnlineCloud_returnsNil() {
         let result = ConsentActivation.resolve(
             active: "local",
+            activeHasKey: false,
             statuses: [:])
         #expect(result == nil)
     }
@@ -80,32 +114,38 @@ struct ConsentActivationTests {
         // Key present but invalid / unavailable / checking must NOT activate.
         let result = ConsentActivation.resolve(
             active: "local",
+            activeHasKey: false,
             statuses: [.claude: .invalid, .chatGPT: .unavailable, .gemini: .checking])
         #expect(result == nil)
     }
 
-    // MARK: - Unconfigured cloud active → adopt first validated cloud
+    // MARK: - Cloud active with NO stored key → adopt first validated cloud
 
-    @Test func unconfiguredCloudActive_otherCloudOnline_switches() {
-        // active is anthropic but anthropic isn't validated; gemini is online.
+    @Test func keylessCloudActive_otherCloudOnline_switches() {
+        // active is anthropic but anthropic has no stored key; gemini is
+        // online. With no key the choice isn't deliberate/usable, so adopt
+        // the validated cloud. (Contrast keyedCloudActive_* above.)
         let result = ConsentActivation.resolve(
             active: "anthropic",
+            activeHasKey: false,
             statuses: [.gemini: .online])
         #expect(result == .gemini)
     }
 
-    @Test func unconfiguredCloudActive_noOnlineCloud_returnsNil() {
+    @Test func keylessCloudActive_noOnlineCloud_returnsNil() {
         let result = ConsentActivation.resolve(
             active: "anthropic",
+            activeHasKey: false,
             statuses: [.claude: .notSetUp])
         #expect(result == nil)
     }
 
-    // MARK: - Malformed / empty active string treated as unconfigured
+    // MARK: - Malformed / empty active string treated as keyless
 
     @Test func emptyActive_oneOnlineCloud_returnsThatCloud() {
         let result = ConsentActivation.resolve(
             active: "",
+            activeHasKey: false,
             statuses: [.claude: .online])
         #expect(result == .claude)
     }
@@ -113,6 +153,7 @@ struct ConsentActivationTests {
     @Test func garbageActive_oneOnlineCloud_returnsThatCloud() {
         let result = ConsentActivation.resolve(
             active: "not-a-provider",
+            activeHasKey: false,
             statuses: [.chatGPT: .online])
         #expect(result == .chatGPT)
     }
@@ -120,6 +161,7 @@ struct ConsentActivationTests {
     @Test func garbageActive_noOnlineCloud_returnsNil() {
         let result = ConsentActivation.resolve(
             active: "not-a-provider",
+            activeHasKey: false,
             statuses: [:])
         #expect(result == nil)
     }

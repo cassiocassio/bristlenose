@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import os
 
@@ -60,12 +61,18 @@ struct LLMSettingsView: View {
             if let active = LLMProvider(rawValue: activeProvider) {
                 selectedProvider = active
             }
-            // Lazy load: only touch Keychain for the provider the user is
-            // actually looking at. Other providers' rows show .notSetUp until
-            // the user clicks into them — sandbox walk #7 traced the 3×
-            // Keychain prompt cascade to eager all-providers fetches here.
-            applyPresenceAndCache(provider: selectedProvider)
-            revalidateSelectedIfNeeded()
+            // Eager board: paint EVERY row from Keychain presence + cache
+            // immediately (no spinner wall), then silently reconfirm each keyed
+            // provider whose cache is stale. Replaces the old lazy-load, which
+            // left non-selected rows grey-by-laziness and broke radio
+            // activation (Defect L). The "3× Keychain prompt cascade" (sandbox
+            // walk #7) that justified lazy-load was a *legacy file-based
+            // keychain* artifact (Always-Allow grant bound to the binary hash);
+            // we moved to the data-protection keychain (8b2ef51), which
+            // validates by Team ID and doesn't prompt for own-access-group reads
+            // on a team-signed build (Apple TN3137; cf. steipete/CodexBar #585).
+            refreshAllStatuses()
+            revalidateAllStale()
         }
         // Lazy load: when the user clicks a different provider in the
         // sidebar, that's the moment we touch Keychain for it. This is the
@@ -95,13 +102,7 @@ struct LLMSettingsView: View {
                     // Uses a Button for a reliable click target — onTapGesture
                     // on a small image inside a List row gets eaten by List selection.
                     Button {
-                        // Only allow activation if the provider is configured.
-                        guard statusFor(provider).isConfigured else { return }
-                        activeProvider = provider.rawValue
-                        syncGlobalModel()
-                        refreshStatuses()
-                        NotificationCenter.default.post(
-                            name: .bristlenosePrefsChanged, object: nil)
+                        activate(provider)
                     } label: {
                         Image(systemName: provider.rawValue == activeProvider
                               ? "checkmark.circle.fill" : "circle")
@@ -110,7 +111,7 @@ struct LLMSettingsView: View {
                             .font(.system(size: 14))
                     }
                     .buttonStyle(.plain)
-                    .disabled(!statusFor(provider).isConfigured
+                    .disabled(!statusFor(provider).canActivate
                               && provider.rawValue != activeProvider)
 
                     // Mail-density icon. Full saturation when the provider
@@ -154,7 +155,7 @@ struct LLMSettingsView: View {
         Form {
             Section(i18n.t("desktop.llmSettings.statusSection")) {
                 Toggle(selectedProvider.activationToggleLabel(i18n), isOn: activeBinding)
-                    .disabled(!statusFor(selectedProvider).isConfigured
+                    .disabled(!statusFor(selectedProvider).canActivate
                               && activeProvider != selectedProvider.rawValue)
 
                 providerLinks
@@ -170,14 +171,37 @@ struct LLMSettingsView: View {
                         value: statusFor(selectedProvider))
                     if let error = statusErrors[selectedProvider],
                        statusFor(selectedProvider) != .online {
-                        // Per Mac convention (Mail, Internet Accounts) the
-                        // dot carries the colour signal; the error text is
-                        // .secondary so we don't have two channels for one
-                        // signal.
-                        Text(error)
+                        // Per Mac convention (Mail, Internet Accounts) the dot
+                        // carries the colour signal; the error text is .secondary
+                        // so we don't have two channels for one signal. Rendered
+                        // as markdown so a backtick `command` shows inline
+                        // monospace (not literal backticks); selectable so the
+                        // whole explanation is copyable.
+                        Text(LocalizedStringKey(error))
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
+                        // Any shell command in the message (today only Ollama's
+                        // `ollama pull …` / `ollama serve`) gets a monospace,
+                        // one-click-copyable row — reusing the popover's silent
+                        // copy idiom.
+                        ForEach(LLMValidator.shellCommands(in: error), id: \.self) { command in
+                            HStack(spacing: 6) {
+                                Text(command)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .textSelection(.enabled)
+                                    .padding(.vertical, 2)
+                                    .padding(.horizontal, 6)
+                                    .background(
+                                        Color(nsColor: .quaternarySystemFill),
+                                        in: RoundedRectangle(cornerRadius: 5))
+                                CopyButton(
+                                    text: command,
+                                    label: i18n.t("desktop.llmSettings.copyCommand"))
+                                Spacer(minLength: 0)
+                            }
+                        }
                     }
                     if let lastVerified = lastVerifiedText(for: selectedProvider) {
                         Text(lastVerified)
@@ -218,12 +242,7 @@ struct LLMSettingsView: View {
         Binding(
             get: { activeProvider == selectedProvider.rawValue },
             set: { newValue in
-                if newValue, statusFor(selectedProvider).isConfigured {
-                    activeProvider = selectedProvider.rawValue
-                    syncGlobalModel()
-                    refreshStatuses()
-                    NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
-                }
+                if newValue { activate(selectedProvider) }
                 // Unchecking the active provider is a no-op — one must always be active.
             }
         )
@@ -645,6 +664,69 @@ struct LLMSettingsView: View {
         }
     }
 
+    /// Set `provider` active (sidebar radio / detail-pane toggle), if it
+    /// `canActivate`. Single home for the activation contract, shared by both
+    /// controls. Gated on `canActivate` (key present + not known-bad), NOT a
+    /// live `.online`: an out-of-credit or momentarily-unreachable provider is
+    /// still a legitimate choice (Defect L / "never gate Run on a stale
+    /// light"). A `.notSetUp` / `.invalid` / `.checking` provider can't be
+    /// activated — its control is `.disabled`, so the click is visibly
+    /// unavailable rather than silently swallowed (the old guard's failure
+    /// mode). `syncGlobalModel` keeps provider+model coherent at activation.
+    private func activate(_ provider: LLMProvider) {
+        guard statusFor(provider).canActivate else { return }
+        activeProvider = provider.rawValue
+        syncGlobalModel()
+        refreshStatuses()
+        NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
+    }
+
+    /// Eager board: paint EVERY provider row from Keychain presence + verdict
+    /// cache. Pure presence-and-cache read — no network. Replaces the lazy
+    /// selected+active-only read on Settings open so no row is grey-by-laziness.
+    /// Reading all keys is safe: the data-protection keychain grants
+    /// own-access-group reads by Team ID without a prompt on a team-signed
+    /// build (see `onAppear`).
+    private func refreshAllStatuses() {
+        for provider in LLMProvider.allCases {
+            applyPresenceAndCache(provider: provider)
+        }
+    }
+
+    /// Eager board: silently reconfirm every keyed provider whose cached
+    /// verdict is stale (older than `cacheTTL`). "Silent" = keep showing the
+    /// already-painted cached value instead of flashing `.checking`, so the
+    /// lights settle into present-tense truth with no spinner wall (the
+    /// "magically reconfirmed" behaviour). A provider with a key but NO cache
+    /// gets a visible `.checking` — there's genuinely nothing to show yet.
+    /// Ollama keeps selected/active scoping: probing localhost for an unused
+    /// provider just generates `Socket SO_ERROR ::1.11434` console noise.
+    private func revalidateAllStale() {
+        for provider in LLMProvider.allCases {
+            if provider == .ollama {
+                let activeOllama = LLMProvider(rawValue: activeProvider) == .ollama
+                guard provider == selectedProvider || activeOllama else { continue }
+                let urlStr = ollamaURL.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !urlStr.isEmpty {
+                    kickOffValidation(provider: .ollama, key: "")
+                }
+                continue
+            }
+            guard let kc = provider.keychainProvider,
+                  let stored = KeychainHelper.get(provider: kc),
+                  !stored.isEmpty
+            else { continue }
+            if LLMValidator.cacheIsFresh(
+                provider: provider, key: stored, ttl: Self.cacheTTL)
+            {
+                continue
+            }
+            let hasCache = LLMValidator.cachedVerdict(
+                provider: provider, key: stored) != nil
+            kickOffValidation(provider: provider, key: stored, silent: hasCache)
+        }
+    }
+
     /// Read the cache for one provider and update its UI state. No network.
     ///
     /// State derivation:
@@ -688,9 +770,14 @@ struct LLMSettingsView: View {
                 ? i18n.t("desktop.llmSettings.revalidating")
                 : nil
         } else {
-            // Key present but no cached verdict — let the existing status
-            // stand (likely `.notSetUp` if first paste, since `kickOffValidation`
-            // will follow within the same tick from the saveAPIKey path).
+            // Key present but no cached verdict yet. Leave the existing status
+            // (typically `.notSetUp`) — a follow-up `kickOffValidation` paints
+            // the real state. Two callers reach here: `saveAPIKey` (kickoff in
+            // the same tick → only `.checking` renders) and the eager board's
+            // `revalidateAllStale` (a separate function, but it runs
+            // synchronously in the same `.onAppear` pass and calls
+            // `kickOffValidation(silent: false)` for a keyed-but-uncached
+            // provider, so `.checking` still wins the batched render).
             statusErrors[provider] = nil
         }
     }
@@ -743,14 +830,23 @@ struct LLMSettingsView: View {
     /// key keeps showing `.online` at the café; a previously-rejected key
     /// keeps showing `.invalid`. Definitive verdicts (`.online`, `.invalid`)
     /// from the network always overwrite the cache.
-    private func kickOffValidation(provider: LLMProvider, key: String) {
+    private func kickOffValidation(
+        provider: LLMProvider, key: String, silent: Bool = false
+    ) {
         validationTasks[provider]?.cancel()
-        // Show .checking spinner from the moment validation kicks off — even
+        // Non-silent (explicit user action — a paste, or no cache to show):
+        // show the .checking spinner from the moment validation kicks off, even
         // if the cache pre-set us to .online a tick earlier. SwiftUI batches
-        // these state writes within the same synchronous tick, so the
-        // rendered transition is dot → spinner → settled, never the
-        // misleading green-flash-red on a rotated key.
-        statuses[provider] = .checking
+        // these state writes within the same synchronous tick, so the rendered
+        // transition is dot → spinner → settled, never the misleading
+        // green-flash-red on a rotated key.
+        // Silent (eager background reconfirm with a cached value already
+        // painted): keep showing the cache and let the network result update it
+        // when it lands — no spinner wall on Settings open. Companion to the
+        // "applyPresenceAndCache never sets .checking" invariant.
+        if !silent {
+            statuses[provider] = .checking
+        }
         statusErrors[provider] = nil
         let azureCfg: LLMValidator.AzureConfig? =
             (provider == .azure)
@@ -767,30 +863,55 @@ struct LLMSettingsView: View {
                 azureConfig: azureCfg, ollamaURL: ollamaURLValue)
             if Task.isCancelled { return }
 
-            if status == .unavailable,
-               let cached = LLMValidator.cachedVerdict(provider: provider, key: key)
-            {
-                // Transient failure with a cached verdict — trust the cache.
-                // Surface the network error in the tooltip though, so the user
-                // knows we tried and what happened.
-                statuses[provider] = cached.status
+            // The 402-masking decision lives in LLMValidator.resolveStatus
+            // (pure + unit-tested): a transient .unavailable defers to the
+            // cache (offline survival); a definitive observation — including a
+            // fresh .outOfCredit — wins and is shown through any cached green.
+            let cached = LLMValidator.cachedVerdict(provider: provider, key: key)
+            let resolved = LLMValidator.resolveStatus(observed: status, cached: cached)
+            statuses[provider] = resolved
+            if resolved != status {
+                // Fell back to a cached verdict (transient failure). Surface the
+                // network error so the user knows we tried; a cached .invalid
+                // shows the "revalidating" hint instead.
                 statusErrors[provider] =
                     (cached == .invalid)
                     ? i18n.t("desktop.llmSettings.revalidating")
                     : error  // typically "No network connection" / "rate-limited"
                 Self.logger.info(
-                    "validate \(provider.rawValue, privacy: .public) → \(cached.rawValue, privacy: .public) (cache fallback, network said unavailable)"
+                    "validate \(provider.rawValue, privacy: .public) → \(String(describing: resolved), privacy: .public) (cache fallback, network said \(String(describing: status), privacy: .public))"
                 )
-                return
+            } else {
+                // Definitive observation — record it and show its own error.
+                statusErrors[provider] = error
+                LLMValidator.recordVerdict(provider: provider, key: key, status: status)
+                Self.logger.info(
+                    "validate \(provider.rawValue, privacy: .public) → \(String(describing: status), privacy: .public)"
+                )
             }
-
-            statuses[provider] = status
-            statusErrors[provider] = error
-            LLMValidator.recordVerdict(provider: provider, key: key, status: status)
-            Self.logger.info(
-                "validate \(provider.rawValue, privacy: .public) → \(String(describing: status), privacy: .public)"
-            )
         }
+    }
+}
+
+/// Small silent copy-to-clipboard button matching the diagnostic popover's idiom
+/// (`PipelineActivityItem`): a `.bordered .small` `doc.on.doc` icon that copies
+/// WITHOUT a "Copied" flash — the native Mac pattern (Finder, Safari "Copy URL").
+/// Used for copyable CLI commands in the LLM status area.
+private struct CopyButton: View {
+    let text: String
+    let label: String
+    var body: some View {
+        Button {
+            let pb = NSPasteboard.general
+            pb.clearContents()
+            pb.setString(text, forType: .string)
+        } label: {
+            Image(systemName: "doc.on.doc")
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .help(label)
+        .accessibilityLabel(label)
     }
 }
 

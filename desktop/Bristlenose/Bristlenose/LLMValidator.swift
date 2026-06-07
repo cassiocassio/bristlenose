@@ -84,7 +84,10 @@ enum LLMValidator {
             case .timedOut:
                 return (.unavailable, "Request timed out — \(provider.displayName) didn't respond in 5s.")
             case .notConnectedToInternet, .networkConnectionLost:
-                return (.unavailable, "No network connection. Your key is fine — we just can't check it right now.")
+                // Past tense: offline, we can't re-check, so we can only vouch for
+                // what we knew before. "is fine" overclaims (the key may have
+                // changed since the last good check); "was fine" is honest.
+                return (.unavailable, "No network connection. Your key was fine — we just can't check it right now.")
             case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
                 return (.unavailable, "Could not reach \(provider.displayName). Check your network connection.")
             default:
@@ -198,11 +201,18 @@ enum LLMValidator {
                 "\(provider.displayName) rejected this key (\(status)). It may have been deleted, rotated, or never had access — generate a new key in your provider dashboard."
             )
         case 402:
+            // Observed negative, NOT a failed observation: the account is
+            // authenticated but out of credit. `.outOfCredit` is sticky and is
+            // never masked by a cached `.online` — a credit-exhausted provider
+            // must not show green while every run fails on quota.
             return (
-                .unavailable,
+                .outOfCredit,
                 "\(provider.displayName) is out of credits (402). Your key is fine — top up your account to use it."
             )
         case 429:
+            // Transient: self-clears in a minute. Masking behind cache-green is
+            // acceptable (see `.unavailable` doc) — don't make the user chase a
+            // rate-limit that resolves itself.
             return (
                 .unavailable,
                 "\(provider.displayName) is rate-limited right now (429). Your key is fine — try again in a minute."
@@ -225,13 +235,42 @@ enum LLMValidator {
             // The "auth before payload" pattern is institutional across
             // well-designed APIs; the specific status code returned for a
             // good-key/bad-payload is fragile, but the order isn't.
-            logger.info(
-                "validate(\(provider.rawValue, privacy: .public)) treating HTTP \(status, privacy: .public) as auth-passed (Anthropic auth-before-payload)"
+            // WARNING, not info: this arm swallows every non-401/402/403/429
+            // 4xx as green. The forward-compat rationale is sound (survive
+            // model deprecation on a stale binary) but the blast radius is
+            // wide — a real regression hides here. Keep it greppable in
+            // Console.app so a recurring swallow is visible, not silent.
+            logger.warning(
+                "validate(\(provider.rawValue, privacy: .public)) treating HTTP \(status, privacy: .public) as auth-passed (Anthropic auth-before-payload) — non-401/402/403/429 4xx swallowed as .online"
             )
             return (.online, nil)
         default:
+            // Everything else — notably 5xx provider outages — is treated as
+            // transient `.unavailable` and therefore masked by a cached
+            // `.online`. Deliberate: a provider outage self-resolves and is not
+            // the user's fault (unlike 402); the next Run surfaces a clear
+            // server error if it's still down. If a specific 5xx ever needs to
+            // be *shown* (not masked), split it out here the way 402 is.
             return (.unavailable, "\(provider.displayName) returned HTTP \(status).")
         }
+    }
+
+    /// Backtick-wrapped shell commands embedded in a status message, surfaced so
+    /// the UI can render them as copyable monospace rows. Today only the Ollama
+    /// messages embed commands (`ollama pull …`, `ollama serve`); cloud-provider
+    /// messages carry no backticks → returns []. Pure; unit-tested.
+    static func shellCommands(in message: String) -> [String] {
+        var commands: [String] = []
+        var rest = Substring(message)
+        while let open = rest.firstIndex(of: "`") {
+            let afterOpen = rest.index(after: open)
+            guard let close = rest[afterOpen...].firstIndex(of: "`") else { break }
+            let command = rest[afterOpen..<close]
+                .trimmingCharacters(in: .whitespaces)
+            if !command.isEmpty { commands.append(command) }
+            rest = rest[rest.index(after: close)...]
+        }
+        return commands
     }
 
     // MARK: - Ollama probe
@@ -297,13 +336,16 @@ enum LLMValidator {
 
     // MARK: - Verdict cache
     //
-    // Persists the last definitive validation result (`.online` / `.invalid`)
-    // per provider, keyed by a hash of the credential. Lets the Settings UI
-    // show last-known truth offline and survive an app relaunch without a
-    // network round-trip. Transient states (`.unavailable`, `.checking`,
-    // `.notSetUp`) never write to the cache — they carry no information
-    // about the credential's validity. The cache is the reason the user can
-    // activate a previously-valid Claude key at a café with no Wi-Fi.
+    // Persists the last definitive validation result (`.online` / `.invalid` /
+    // `.outOfCredit`) per provider, keyed by a hash of the credential. Lets the
+    // Settings UI show last-known truth offline and survive an app relaunch
+    // without a network round-trip. Failed observations (`.unavailable`,
+    // `.checking`, `.notSetUp`) never write to the cache — they carry no
+    // information about the credential's validity. `.outOfCredit` DOES write
+    // (it's an observed negative, not a failed observation) and is sticky, so a
+    // 402 followed by going offline falls back to amber, not a stale green. The
+    // cache is the reason the user can activate a previously-valid Claude key at
+    // a café with no Wi-Fi.
     //
     // **Why UserDefaults, not Keychain.** The cache stores a 64-bit SHA-256
     // prefix of the credential, plus a verdict ("ok" / "invalid"), plus a
@@ -324,12 +366,17 @@ enum LLMValidator {
     enum CachedVerdict: String {
         case ok
         case invalid
+        /// Account out of credit (HTTP 402). Cached so it's sticky: after a 402
+        /// a later network failure falls back to *this*, not a stale `.ok` —
+        /// the credit-exhausted-then-offline path must not silently re-green.
+        case outOfCredit
 
         /// Map a cached verdict back to a UI status.
         var status: ProviderStatus {
             switch self {
             case .ok: return .online
             case .invalid: return .invalid
+            case .outOfCredit: return .outOfCredit
             }
         }
     }
@@ -383,9 +430,31 @@ enum LLMValidator {
         return Date().timeIntervalSince(entry.lastCheckedAt) < ttl
     }
 
+    /// Resolve the status to display from a fresh network observation plus
+    /// whatever the cache already knows — the actual 402-masking decision,
+    /// extracted from the Settings view so it's unit-testable (a view making a
+    /// decision belongs in a testable helper). Pure.
+    ///
+    /// Rule: a transient `.unavailable` (a *failed* observation — timeout, no
+    /// network, 429, 5xx) defers to a cached verdict if one exists — "offline
+    /// survival," so a previously-good key keeps showing online at a café. Every
+    /// other observed status is a *definitive* observation and wins outright —
+    /// including `.outOfCredit`, so a fresh 402 shows amber THROUGH a cached
+    /// green rather than being masked back to it.
+    static func resolveStatus(
+        observed: ProviderStatus, cached: CachedVerdict?
+    ) -> ProviderStatus {
+        if observed == .unavailable, let cached {
+            return cached.status
+        }
+        return observed
+    }
+
     /// Persist the verdict for `key` under `provider`. No-op for non-definitive
     /// statuses — `.unavailable` from a transient network failure must not
-    /// overwrite a previous `.online` verdict.
+    /// overwrite a previous `.online` verdict. `.online`, `.invalid`, and
+    /// `.outOfCredit` are the three *definitive observations* that persist;
+    /// `.outOfCredit` is sticky so a later transient failure can't re-green it.
     static func recordVerdict(provider: LLMProvider, key: String, status: ProviderStatus) {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -393,6 +462,7 @@ enum LLMValidator {
         switch status {
         case .online: verdict = .ok
         case .invalid: verdict = .invalid
+        case .outOfCredit: verdict = .outOfCredit
         default: verdict = nil
         }
         guard let verdict else { return }

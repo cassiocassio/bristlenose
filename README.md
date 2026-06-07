@@ -365,6 +365,11 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.14** — _7 Jun 2026_
+
+- **Desktop runs the provider you chose, and stops blaming transcription for LLM errors.** Four provider-resolution defects closed: the consent resolver no longer reverts a deliberately-chosen ChatGPT / Gemini / Azure account to Claude when its cached verdict is merely absent; spawn-time overlay injects provider **and** model as a matched pair (fixes `gpt-4o` 404'ing under the Anthropic endpoint); the failure classifier checks LLM markers before Whisper and names the provider, so an out-of-credit / bad-key failure no longer reads as "Transcription failed"; and the Settings status board paints eagerly from cache + silently reconfirms instead of lazily, with out-of-credit (402) as its own sticky state. Reviewed by six agents + William. Desktop-only.
+- **Desktop status polish.** Provider explanations are now selectable markdown with one-click copyable shell-command rows (silent copy, Finder/Safari idiom); `⌘,` opens native Settings from report focus too (WKWebView was claiming the key equivalent); offline caption softened "Your key is fine" → "Your key was fine"; status vocabulary settled on colour + label, no per-state glyphs. Design docs trued to the data-protection-keychain + eager-status-board reality. Desktop-only; reaches the alpha cohort with the next bundled-sidecar build.
+
 **0.15.13** — _4 Jun 2026_
 
 - **`bristlenose pipeline` gains per-(provider, model) grain.** The pipeline view (0.15.11) now renders a row per (provider, model) pair — each LLM stage shows Claude / ChatGPT / Gemini / Azure with their individual models, per-model quality ratings, and a `recommended` axis split from `default` (Opus 4, gpt-4o). CLI + React Settings → Pipeline tab share a sectioned matrix with quality glyphs, a compact symbol key, fixed column alignment across stage tables, and the current row marked by the selection wash + `aria-current` rather than a loud badge. Payload `schema_version` 3 → 4; feature rungs and schema are decoupled both ways. Ships on PyPI.

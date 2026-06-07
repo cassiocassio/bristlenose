@@ -111,3 +111,6 @@ HANDOFF.md
 
 # hookify rule files (local convention; per-machine, not committed)
 .claude/hookify.*.local.md
+
+# Generated build provenance (baked into the sidecar bundle at build time)
+bristlenose/_build_info.py

@@ -8,8 +8,23 @@ from unittest.mock import AsyncMock
 import pytest
 
 from bristlenose.config import BristlenoseSettings
-from bristlenose.llm.client import LLMClient
+from bristlenose.llm.client import LLMClient, _clamp_max_tokens
 from bristlenose.llm.structured import QuoteExtractionResult
+
+
+class TestMaxTokensClamp:
+    """Per-model output ceiling — gpt-4o rejects max_tokens > 16384 with a 400."""
+
+    def test_gpt4o_clamped_to_16384(self) -> None:
+        assert _clamp_max_tokens("gpt-4o", 64000) == 16384
+        assert _clamp_max_tokens("gpt-4o-mini", 64000) == 16384
+
+    def test_under_cap_untouched(self) -> None:
+        assert _clamp_max_tokens("gpt-4o", 8000) == 8000
+
+    def test_unknown_model_not_clamped(self) -> None:
+        # Claude (and any model without a known ceiling) keeps the full default.
+        assert _clamp_max_tokens("claude-sonnet-4-20250514", 64000) == 64000
 
 # ---------------------------------------------------------------------------
 # Helpers

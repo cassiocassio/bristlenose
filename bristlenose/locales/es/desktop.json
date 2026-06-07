@@ -338,6 +338,7 @@
       "invalid": "Clave no válida",
       "unavailable": "No disponible",
       "checking": "Comprobando…",
+      "outOfCredit": "Sin crédito",
       "local": "Local"
     },
     "console": {

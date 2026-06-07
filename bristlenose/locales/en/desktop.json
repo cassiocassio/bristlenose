@@ -338,6 +338,7 @@
       "invalid": "Invalid key",
       "unavailable": "Unavailable",
       "checking": "Checking…",
+      "outOfCredit": "Out of credit",
       "local": "Local"
     },
     "console": {

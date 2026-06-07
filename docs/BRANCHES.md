@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 7 Jun 2026 (merged + closed `desktop-provider-resolution`)
+**Updated:** 7 Jun 2026 (added `cz` Czech-localisation branch)
 
 ---
 
@@ -40,6 +40,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
+| `bristlenose_branch cz/` | `cz` | feature | Czech localisation across all surfaces (CLI, desktop, React SPA) — MT seed + i18n locale files + docs/glossary, building on Weblate |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -131,6 +132,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `sandbox-debug` _(closed)_ | _removed 2 May 2026_ | local only — diagnostic, never pushed |
 | `bundled-tls-config` _(merged)_ | `bristlenose_branch bundled-tls-config/` _(detached, on disk)_ | merged to main on 2 May 2026 (`7240675`) |
 | `responsive-signal-cards` | `bristlenose_branch responsive-signal-cards/` | local only |
+| `cz` | `bristlenose_branch cz/` | local only |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
@@ -194,6 +196,26 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Potential conflicts with other branches:**
 - `symbology` — low risk (touches render/template files, not signal card layout)
 - `drag-push` — low risk (sidebar CSS, not signal cards)
+
+---
+
+### `cz`
+
+**Kind:** feature — Czech localisation across all surfaces (CLI, desktop, React SPA)
+**Status:** Just started
+**Started:** 7 Jun 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch cz/`
+**Remote:** local only (push when ready)
+
+**What it does:** End-to-end Czech localisation — adds a new locale alongside the existing six (en/es/fr/de/ko/ja), seeded by machine translation and building on existing Weblate work. Spans the React SPA + desktop (`bristlenose/locales/` JSON including `desktop.json` overrides) and updates the i18n docs + glossary. Adds a *seventh* language, so it also touches the "all six locale files" assumptions baked into i18n tooling/CI and docs.
+
+**Files this branch will touch:**
+- TBD — will be filled in as work progresses (likely: a new `bristlenose/locales/<code>/` locale tree, the language registry in `frontend/src/i18n.ts`, `desktop/`'s `I18n.swift`, `docs/design-i18n.md`, `docs/glossary.md`, and the i18n CI check)
+
+**Potential conflicts with other branches:**
+- `gemini-provider` — low/moderate: gemini-provider adds a "Data use" key to the six existing `common.json` files; this branch adds a *new* locale directory (additive, no same-line overlap). Coordinate the Czech translation of any keys the other branch lands — whichever merges second backfills the new locale.
+- `tower-of-hanoi` — none: its locale files live under `experiments/tower-of-hanoi/locales/`, isolated from `bristlenose/locales/`.
+- `responsive-signal-cards` — none (CSS/layout, no i18n surface).
 
 ---
 

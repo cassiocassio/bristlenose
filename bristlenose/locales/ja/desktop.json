@@ -337,8 +337,10 @@
       "invalid": "無効なキー",
       "unavailable": "利用不可",
       "checking": "確認中…",
+      "outOfCredit": "クレジット不足",
       "local": "ローカル"
     },
+    "copyCommand": "コマンドをコピー",
     "console": {
       "keys": "キー",
       "portal": "ポータル"

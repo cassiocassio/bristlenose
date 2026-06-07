@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-04-30
-trued-against: HEAD@first-run on 2026-04-30
+last-trued: 2026-06-07
+trued-against: HEAD@desktop-provider-resolution on 2026-06-07
 ---
 
 > **Truing status:** Partial — Phase 1 (web gear-icon modal, `SettingsModal.tsx`, `ModalNav.tsx`, `⌘,` shortcut) **shipped**; Phases 2/3/4 remain pending as described. The "API Keys" section is architecturally superseded for the desktop-embedded deployment — see banner there. The serve-mode CLI path still applies when running `bristlenose serve` outside the sandboxed desktop app.
@@ -315,7 +315,7 @@ Nested `role="alertdialog"` with `aria-describedby` pointing to the warning text
 - Ready: `var(--bn-colour-muted)` + open circle icon
 - Invalid: `var(--bn-colour-danger)` + cross icon
 
-Each status uses colour + icon shape + text label (three redundant cues — colour is never the sole indicator).
+Each status uses colour + icon shape + text label (three redundant cues — colour is never the sole indicator). (The *native desktop* surface deliberately chose colour-dot + label, **no glyph** — the row already carries a provider logo and a blue selected-tick, so a status glyph would collide; see [design-desktop-settings.md](design-desktop-settings.md) §"Status indicator vocabulary". Different surface, different vocabulary — not a desync.)
 
 ### Reduced motion
 

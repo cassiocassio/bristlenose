@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Provider status — dot/glyph vocabulary review</title>
+<style>
+  /* ---- Native-macOS reference palette ----
+     These mirror Apple's system colours so the mockup reads like the real
+     Settings window, NOT the Bristlenose web theme (the point is native
+     accuracy). The app uses SwiftUI semantic colours (.green/.orange/.red),
+     which track the OS and shift slightly per release — macOS renders the
+     amber nearer #FF8D28 than iOS's #FF9500. Don't read exact hue as gospel;
+     the question here is SHAPE, not the precise orange. */
+  :root {
+    --green:  #34C759;   /* .online            (systemGreen)  */
+    --amber:  #FF9500;   /* .unavailable/.outOfCredit (systemOrange; macOS ≈ #FF8D28) */
+    --red:    #FF3B30;   /* .invalid           (systemRed)    */
+    --grey:   #8E8E93;   /* .notSetUp / .checking (systemGray) */
+    --accent: #0A60FF;   /* default macOS accent (active radio) */
+
+    --label:      rgba(0,0,0,0.85);   /* labelColor          */
+    --label-2:    rgba(0,0,0,0.50);   /* secondaryLabelColor */
+    --label-3:    rgba(0,0,0,0.28);   /* tertiaryLabelColor  */
+
+    --win-bg:   #ECECEC;   /* window background  */
+    --list-bg:  #FFFFFF;   /* List background    */
+    --hairline: rgba(0,0,0,0.10);
+
+    --sf: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+          "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+
+  html { -webkit-font-smoothing: antialiased; }
+  body {
+    font-family: var(--sf);
+    background: var(--win-bg);
+    color: var(--label);
+    margin: 0;
+    padding: 40px 32px 80px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+
+  h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 4px; }
+  h2 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; margin: 40px 0 12px; }
+  h3 { font-size: 13px; font-weight: 600; margin: 0 0 10px; }
+  p  { max-width: 70ch; color: var(--label); }
+  .sub { color: var(--label-2); font-size: 13px; margin-top: 0; }
+  .tag { display:inline-block; font-size: 11px; font-weight: 600; color: var(--label-2);
+         background: rgba(0,0,0,0.05); border-radius: 5px; padding: 2px 7px; margin-right: 6px; }
+
+  .note { font-size: 12px; color: var(--label-2); max-width: 70ch; }
+  code { font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 11.5px;
+         background: rgba(0,0,0,0.05); padding: 1px 5px; border-radius: 4px; }
+
+  /* ---- the three constraints ---- */
+  .constraints { display:flex; gap:16px; flex-wrap:wrap; margin: 18px 0 8px; }
+  .card {
+    background:#fff; border:1px solid var(--hairline); border-radius:10px;
+    padding:14px 16px; flex:1 1 280px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .card h3 { margin-bottom:6px; }
+  .card p { font-size:12.5px; color:var(--label-2); margin:0; }
+  .pull { color: var(--accent); font-weight:600; }
+  .pull.warn { color: #C77700; }
+  .pull.stop { color: var(--red); }
+
+  /* ---- a macOS Settings sidebar (260pt) ---- */
+  .panes { display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start; }
+  .pane { flex: 0 0 auto; }
+  .pane > .label { font-size:11px; font-weight:600; color:var(--label-2);
+                   text-transform:uppercase; letter-spacing:0.04em; margin:0 0 8px 2px; }
+  .pane > .desc { font-size:11.5px; color:var(--label-2); width:260px; margin:8px 2px 0; min-height:30px; }
+
+  .sidebar {
+    width: 260px;             /* LLMSettingsView providerList .frame(width: 260) */
+    background: var(--list-bg);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .row {
+    display:flex; align-items:center; gap:10px;   /* HStack(spacing:10) */
+    padding: 7px 12px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+  }
+  .row:last-child { border-bottom: 0; }
+
+  /* radio (leading) — Button: checkmark.circle.fill / circle, .font(.system(size:14)) */
+  .radio { flex:0 0 auto; width:16px; height:16px; display:grid; place-items:center; }
+  .radio svg { width:14px; height:14px; display:block; }
+  .radio.disabled { opacity:0.32; }   /* !canActivate → .disabled */
+
+  /* provider icon 28×28 (Image .frame(28,28)); .opacity(0.45) when .notSetUp */
+  .icon {
+    flex:0 0 auto; width:28px; height:28px; border-radius:6px;
+    background: rgba(0,0,0,0.06); display:grid; place-items:center;
+    color: var(--label); font-weight:600; font-size:12px;
+  }
+  .icon.dim { opacity:0.45; }
+
+  /* text column: VStack(spacing:3){ name(.body 13) ; HStack(spacing:6){ dot ; label(.caption) } } */
+  .txt { display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .name { font-size:13px; color:var(--label); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .name.dim { color:var(--label-2); }            /* .notSetUp → .secondary */
+  .statusline { display:flex; align-items:center; gap:6px; }
+  .slabel { font-size:11px; color:var(--label-2); white-space:nowrap; }  /* .font(.caption) */
+
+  /* status indicator slot: ZStack .frame(width: max(dotSize,14)) — dot is 10pt */
+  .ind { flex:0 0 auto; width:14px; height:14px; display:grid; place-items:center; }
+  .dot { width:10px; height:10px; border-radius:50%; display:block; }
+  .dot.green { background:var(--green); }
+  .dot.amber { background:var(--amber); }
+  .dot.red   { background:var(--red); }
+  .dot.grey  { background:rgba(142,142,147,0.45); }      /* .secondary.opacity(0.3) */
+  .ring { width:10px; height:10px; border-radius:50%; box-sizing:border-box;
+          border:1.5px solid rgba(142,142,147,0.7); background:transparent; }  /* hollow "empty slot" */
+
+  /* glyph indicators (inline SVG, 13px, white symbol on filled shape) */
+  .ind svg { width:13px; height:13px; display:block; }
+  svg text { font-family: var(--sf); }
+
+  /* spinner — ProgressView .controlSize(.small) */
+  .spin { width:12px; height:12px; border-radius:50%;
+          border:2px solid rgba(0,0,0,0.15); border-top-color:rgba(0,0,0,0.45);
+          animation:spin 0.7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* settling: a faint expanding ring pulsing behind a (cached) dot */
+  .settle { position:relative; }
+  .settle::after {
+    content:""; position:absolute; inset:-3px; border-radius:50%;
+    border:1.5px solid var(--accent); opacity:0.0;
+    animation:pulse 1.6s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { transform:scale(0.6); opacity:0.55; }
+    100% { transform:scale(1.25); opacity:0; }
+  }
+
+  .lastv { font-size:11px; color:var(--label-3); margin-top:1px; }
+
+  /* colour-blind strips */
+  .cbstrip { display:flex; gap:28px; flex-wrap:wrap; margin-top:12px; }
+  .cbcol { background:#fff; border:1px solid var(--hairline); border-radius:8px; padding:12px 14px; }
+  .cbcol h3 { font-size:11px; text-transform:uppercase; letter-spacing:0.04em; color:var(--label-2); }
+  .cbrow { display:flex; align-items:center; gap:14px; padding:6px 2px; }
+  .cbrow .cap { font-size:11px; color:var(--label-2); width:96px; }
+  .swatchset { display:flex; gap:16px; }
+  .swatch { display:flex; flex-direction:column; align-items:center; gap:4px; width:56px; }
+  .swatch .tiny { font-size:9.5px; color:var(--label-3); text-align:center; }
+  .grayscale { filter: grayscale(1) contrast(0.95); }
+  .deuter    { filter: url(#deuteranopia); }
+
+  table.legend { border-collapse:collapse; width:100%; max-width:860px; margin-top:6px; background:#fff;
+                 border:1px solid var(--hairline); border-radius:8px; overflow:hidden; }
+  table.legend th, table.legend td { text-align:left; padding:8px 12px; font-size:12px; border-bottom:1px solid rgba(0,0,0,0.06); vertical-align:middle; }
+  table.legend th { font-size:11px; text-transform:uppercase; letter-spacing:0.03em; color:var(--label-2); font-weight:600; }
+  table.legend tr:last-child td { border-bottom:0; }
+  .mini { display:inline-flex; width:14px; height:14px; vertical-align:middle; }
+  .mini .dot { margin:auto; }
+
+  .decision { background:#fff; border:1px solid var(--hairline); border-radius:10px; padding:18px 20px; margin-top:14px; }
+  .decision ol { margin:8px 0 0; padding-left:20px; }
+  .decision li { margin:7px 0; font-size:13px; }
+  .kbd { font-size:11px; color:var(--label-2); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <filter id="deuteranopia">
+    <feColorMatrix type="matrix" values="
+      0.367 0.861 -0.228 0 0
+      0.280 0.673  0.047 0 0
+     -0.012 0.043  0.969 0 0
+      0     0      0     1 0"/>
+  </filter>
+</svg>
+
+<div class="wrap">
+
+  <h1>Provider status — dot &amp; glyph vocabulary</h1>
+  <p class="sub">LLM Settings tab · one short design decision · rendered at native width (260pt sidebar), SF font, system colours.</p>
+
+  <p>The status indicator next to each provider is a 10&nbsp;pt coloured dot. After this branch it carries
+  <strong>three</strong> colour meanings on <strong>two</strong> hues: <span class="pull">green</span> = online,
+  <span class="pull warn">amber</span> = <em>unavailable</em> (429/offline/5xx) <em>and</em> <span class="pull warn">amber</span> = <em>out&nbsp;of&nbsp;credit</em> (402),
+  <span class="pull stop">red</span> = invalid. The two ambers are different states sharing one dot; green-vs-amber is the
+  whole &ldquo;is it ready&rdquo; signal carried by hue alone. That&rsquo;s the question.</p>
+
+  <div class="constraints">
+    <div class="card">
+      <h3>The a11y floor (gruber)</h3>
+      <p>HIG: &ldquo;differentiate without colour — add shape or glyph.&rdquo; Green/amber and a deuteranope can&rsquo;t tell the dots apart. Pair each coloured indicator with a <strong>shape</strong>, not just hue.</p>
+    </div>
+    <div class="card">
+      <h3>Parsimony (William)</h3>
+      <p>Glyph only the <strong>exceptions</strong> (the ambers + red); leave <code>.online</code> a plain dot. The normal case stays silent.</p>
+    </div>
+    <div class="card">
+      <h3>The tension (your rule)</h3>
+      <p>&ldquo;Absence is information — <strong>no glyph for the normal case</strong>.&rdquo; gruber&rsquo;s fuller set puts a checkmark on <code>.online</code> too. That&rsquo;s the line to draw. The <em>settling</em> indicator (G) is the same vocabulary.</p>
+    </div>
+  </div>
+
+  <h2>The states, with example data</h2>
+  <table class="legend">
+    <tr><th>State</th><th>Dot</th><th>When</th><th>Label</th><th>Activatable?</th></tr>
+    <tr><td><code>.online</code></td><td><span class="mini"><span class="dot green"></span></span></td><td>2xx — key valid &amp; reachable</td><td>Online · <span style="color:var(--label-3)">Last verified 2 minutes ago</span></td><td>yes</td></tr>
+    <tr><td><code>.outOfCredit</code></td><td><span class="mini"><span class="dot amber"></span></span></td><td>402 — authenticated, no credit</td><td>Out of credit</td><td><strong>yes</strong> (top up &amp; run)</td></tr>
+    <tr><td><code>.unavailable</code></td><td><span class="mini"><span class="dot amber"></span></span></td><td>429 / 5xx / offline (transient)</td><td>Unavailable</td><td>yes</td></tr>
+    <tr><td><code>.invalid</code></td><td><span class="mini"><span class="dot red"></span></span></td><td>401 / 403 — key rejected</td><td>Invalid key</td><td>no</td></tr>
+    <tr><td><code>.notSetUp</code></td><td><span class="mini"><span class="dot grey"></span></span></td><td>no key in Keychain</td><td>Not set up</td><td>no</td></tr>
+    <tr><td><code>.checking</code></td><td><span class="mini"><span class="spin"></span></span></td><td>first validation in flight</td><td>Checking…</td><td>no</td></tr>
+  </table>
+  <p class="note">Two ambers, one hue. In the table you read them apart by the <em>label</em> — but the column-scan signal is the dot, and that&rsquo;s where colour-only fails.</p>
+
+  <h2>Three treatments, same data, native width</h2>
+  <div class="panes">
+
+    <!-- ============ OPTION A: colour only (shipped today) ============ -->
+    <div class="pane">
+      <div class="label">A · Colour only (today)</div>
+      <div class="sidebar">
+        <!-- Claude online, active -->
+        <div class="row">
+          <span class="radio"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#0A60FF"/><path d="M4.5 8.3l2.2 2.2 4.8-5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="icon">A</span>
+          <span class="txt"><span class="name">Claude</span><span class="statusline"><span class="ind"><span class="dot green"></span></span><span class="slabel">Online</span></span></span>
+        </div>
+        <!-- ChatGPT out of credit -->
+        <div class="row">
+          <span class="radio"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.2" fill="none" stroke="#8E8E93" stroke-width="1.5"/></svg></span>
+          <span class="icon">O</span>
+          <span class="txt"><span class="name">ChatGPT</span><span class="statusline"><span class="ind"><span class="dot amber"></span></span><span class="slabel">Out of credit</span></span></span>
+        </div>
+        <!-- Gemini unavailable -->
+        <div class="row">
+          <span class="radio"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.2" fill="none" stroke="#8E8E93" stroke-width="1.5"/></svg></span>
+          <span class="icon">G</span>
+          <span class="txt"><span class="name">Gemini</span><span class="statusline"><span class="ind"><span class="dot amber"></span></span><span class="slabel">Unavailable</span></span></span>
+        </div>
+        <!-- Azure invalid -->
+        <div class="row">
+          <span class="radio disabled"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.2" fill="none" stroke="#8E8E93" stroke-width="1.5"/></svg></span>
+          <span class="icon">Az</span>
+          <span class="txt"><span class="name">Azure OpenAI</span><span class="statusline"><span class="ind"><span class="dot red"></span></span><span class="slabel">Invalid key</span></span></span>
+        </div>
+        <!-- Ollama not set up -->
+        <div class="row">
+          <span class="radio disabled"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.2" fill="none" stroke="#8E8E93" stroke-width="1.5"/></svg></span>
+          <span class="icon dim">Ol</span>
+          <span class="txt"><span class="name dim">Ollama</span><span class="statusline"><span class="ind"><span class="dot grey"></span></span><span class="slabel">Not set up</span></span></span>
+        </div>
+      </div>
+      <div class="desc">Ships today. The two ambers and green/amber are hue-only. Fails the a11y floor.</div>
+    </div>
+
+    <!-- ============ OPTION B: glyph the exceptions (William) ============ -->
+    <div class="pane">
+      <div class="label">B · Glyph the exceptions</div>
+      <div class="sidebar">
+        <!-- Claude online, active — PLAIN dot (no glyph for normal case) -->
+        <div class="row">
+          <span class="radio"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#0A60FF"/><path d="M4.5 8.3l2.2 2.2 4.8-5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="icon">A</span>
+          <span class="txt"><span class="name">Claude</span><span class="statusline"><span class="ind"><span class="dot green"></span></span><span class="slabel">Online</span></span></span>
+        </div>
+        <!-- ChatGPT out of credit — amber circle with $ -->
+        <div class="row">
+          <span class="radio"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.2" fill="none" stroke="#8E8E93" stroke-width="1.5"/></svg></span>
+          <span class="icon">O</span>
+          <span class="txt"><span class="name">ChatGPT</span><span class="statusline"><span class="ind"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="7" fill="#FF9500"/><text x="7" y="10.4" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff">$</text></svg></span><span class="slabel">Out of credit</span></span></span>
+        </div>
+        <!-- Gemini unavailable — amber triangle with ! -->
+        <div class="row">
+          <span class="radio"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.2" fill="none" stroke="#8E8E93" stroke-width="1.5"/></svg></span>
+          <span class="icon">G</span>
+          <span class="txt"><span class="name">Gemini</span><span class="statusline"><span class="ind"><svg viewBox="0 0 14 14"><path d="M7 1 L13.4 12.5 H0.6 Z" fill="#FF9500"/><rect x="6.25" y="5" width="1.5" height="3.6" rx="0.7" fill="#fff"/><circle cx="7" cy="10.2" r="0.85" fill="#fff"/></svg></span><span class="slabel">Unavailable</span></span></span>
+        </div>
+        <!-- Azure invalid — red octagon with × -->
+        <div class="row">
+          <span class="radio disabled"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.2" fill="none" stroke="#8E8E93" stroke-width="1.5"/></svg></span>
+          <span class="icon">Az</span>
+          <span class="txt"><span class="name">Azure OpenAI</span><span class="statusline"><span class="ind"><svg viewBox="0 0 14 14"><polygon points="4.6,0.7 9.4,0.7 13.3,4.6 13.3,9.4 9.4,13.3 4.6,13.3 0.7,9.4 0.7,4.6" fill="#FF3B30"/><path d="M5 5 L9 9 M9 5 L5 9" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg></span><span class="slabel">Invalid key</span></span></span>
+        </div>
+        <!-- Ollama not set up — hollow ring ("empty slot") -->
+        <div class="row">
+          <span class="radio disabled"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.2" fill="none" stroke="#8E8E93" stroke-width="1.5"/></svg></span>
+          <span class="icon dim">Ol</span>
+          <span class="txt"><span class="name dim">Ollama</span><span class="statusline"><span class="ind"><span class="ring"></span></span><span class="slabel">Not set up</span></span></span>
+        </div>
+      </div>
+      <div class="desc">Online stays a silent plain dot (honours &ldquo;no glyph for the normal case&rdquo;). The two ambers now differ by shape; red is unmistakable. Empty slot reads as a hollow ring.</div>
+    </div>
+
+    <!-- ============ OPTION C: glyph every state (gruber's fuller set) ============ -->
+    <div class="pane">
+      <div class="label">C · Glyph every state</div>
+      <div class="sidebar">
+        <!-- Claude online — green circle WITH checkmark (the contested bit) -->
+        <div class="row">
+          <span class="radio"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#0A60FF"/><path d="M4.5 8.3l2.2 2.2 4.8-5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="icon">A</span>
+          <span class="txt"><span class="name">Claude</span><span class="statusline"><span class="ind"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="7" fill="#34C759"/><path d="M3.8 7.2l2 2 4.3-4.5" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="slabel">Online</span></span></span>
+        </div>
+        <div class="row">
+          <span class="radio"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.2" fill="none" stroke="#8E8E93" stroke-width="1.5"/></svg></span>
+          <span class="icon">O</span>
+          <span class="txt"><span class="name">ChatGPT</span><span class="statusline"><span class="ind"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="7" fill="#FF9500"/><text x="7" y="10.4" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff">$</text></svg></span><span class="slabel">Out of credit</span></span></span>
+        </div>
+        <div class="row">
+          <span class="radio"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.2" fill="none" stroke="#8E8E93" stroke-width="1.5"/></svg></span>
+          <span class="icon">G</span>
+          <span class="txt"><span class="name">Gemini</span><span class="statusline"><span class="ind"><svg viewBox="0 0 14 14"><path d="M7 1 L13.4 12.5 H0.6 Z" fill="#FF9500"/><rect x="6.25" y="5" width="1.5" height="3.6" rx="0.7" fill="#fff"/><circle cx="7" cy="10.2" r="0.85" fill="#fff"/></svg></span><span class="slabel">Unavailable</span></span></span>
+        </div>
+        <div class="row">
+          <span class="radio disabled"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.2" fill="none" stroke="#8E8E93" stroke-width="1.5"/></svg></span>
+          <span class="icon">Az</span>
+          <span class="txt"><span class="name">Azure OpenAI</span><span class="statusline"><span class="ind"><svg viewBox="0 0 14 14"><polygon points="4.6,0.7 9.4,0.7 13.3,4.6 13.3,9.4 9.4,13.3 4.6,13.3 0.7,9.4 0.7,4.6" fill="#FF3B30"/><path d="M5 5 L9 9 M9 5 L5 9" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg></span><span class="slabel">Invalid key</span></span></span>
+        </div>
+        <div class="row">
+          <span class="radio disabled"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.2" fill="none" stroke="#8E8E93" stroke-width="1.5"/></svg></span>
+          <span class="icon dim">Ol</span>
+          <span class="txt"><span class="name dim">Ollama</span><span class="statusline"><span class="ind"><span class="ring"></span></span><span class="slabel">Not set up</span></span></span>
+        </div>
+      </div>
+      <div class="desc">Every state shapes-up, incl. a checkmark on <code>.online</code>. Most a11y-redundant — but the checkmark on the normal case is exactly what &ldquo;absence is information&rdquo; argues against.</div>
+    </div>
+
+  </div>
+
+  <h2>Why colour-only fails — the same dots, three ways</h2>
+  <p class="note">Left: normal vision. Middle: greyscale (luminance only). Right: deuteranopia (red-green, ~6% of men). Watch A&rsquo;s green/amber/amber/red collapse; B keeps every state distinct by shape.</p>
+  <div class="cbstrip">
+    <div class="cbcol">
+      <h3>A · colour only</h3>
+      <div class="cbrow"><span class="cap">normal</span>
+        <span class="swatchset">
+          <span class="swatch"><span class="dot green"></span><span class="tiny">online</span></span>
+          <span class="swatch"><span class="dot amber"></span><span class="tiny">credit</span></span>
+          <span class="swatch"><span class="dot amber"></span><span class="tiny">unavail</span></span>
+          <span class="swatch"><span class="dot red"></span><span class="tiny">invalid</span></span>
+        </span>
+      </div>
+      <div class="cbrow grayscale"><span class="cap">greyscale</span>
+        <span class="swatchset">
+          <span class="swatch"><span class="dot green"></span></span>
+          <span class="swatch"><span class="dot amber"></span></span>
+          <span class="swatch"><span class="dot amber"></span></span>
+          <span class="swatch"><span class="dot red"></span></span>
+        </span>
+      </div>
+      <div class="cbrow deuter"><span class="cap">deuteranopia</span>
+        <span class="swatchset">
+          <span class="swatch"><span class="dot green"></span></span>
+          <span class="swatch"><span class="dot amber"></span></span>
+          <span class="swatch"><span class="dot amber"></span></span>
+          <span class="swatch"><span class="dot red"></span></span>
+        </span>
+      </div>
+    </div>
+
+    <div class="cbcol">
+      <h3>B · glyph the exceptions</h3>
+      <div class="cbrow"><span class="cap">normal</span>
+        <span class="swatchset">
+          <span class="swatch"><span class="dot green"></span><span class="tiny">online</span></span>
+          <span class="swatch"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="7" fill="#FF9500"/><text x="7" y="10.4" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff">$</text></svg><span class="tiny">credit</span></span>
+          <span class="swatch"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 1 L13.4 12.5 H0.6 Z" fill="#FF9500"/><rect x="6.25" y="5" width="1.5" height="3.6" rx="0.7" fill="#fff"/><circle cx="7" cy="10.2" r="0.85" fill="#fff"/></svg><span class="tiny">unavail</span></span>
+          <span class="swatch"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="4.6,0.7 9.4,0.7 13.3,4.6 13.3,9.4 9.4,13.3 4.6,13.3 0.7,9.4 0.7,4.6" fill="#FF3B30"/><path d="M5 5 L9 9 M9 5 L5 9" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg><span class="tiny">invalid</span></span>
+        </span>
+      </div>
+      <div class="cbrow grayscale"><span class="cap">greyscale</span>
+        <span class="swatchset">
+          <span class="swatch"><span class="dot green"></span></span>
+          <span class="swatch"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="7" fill="#FF9500"/><text x="7" y="10.4" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff">$</text></svg></span>
+          <span class="swatch"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 1 L13.4 12.5 H0.6 Z" fill="#FF9500"/><rect x="6.25" y="5" width="1.5" height="3.6" rx="0.7" fill="#fff"/><circle cx="7" cy="10.2" r="0.85" fill="#fff"/></svg></span>
+          <span class="swatch"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="4.6,0.7 9.4,0.7 13.3,4.6 13.3,9.4 9.4,13.3 4.6,13.3 0.7,9.4 0.7,4.6" fill="#FF3B30"/><path d="M5 5 L9 9 M9 5 L5 9" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+        </span>
+      </div>
+      <div class="cbrow deuter"><span class="cap">deuteranopia</span>
+        <span class="swatchset">
+          <span class="swatch"><span class="dot green"></span></span>
+          <span class="swatch"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="7" fill="#FF9500"/><text x="7" y="10.4" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff">$</text></svg></span>
+          <span class="swatch"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 1 L13.4 12.5 H0.6 Z" fill="#FF9500"/><rect x="6.25" y="5" width="1.5" height="3.6" rx="0.7" fill="#fff"/><circle cx="7" cy="10.2" r="0.85" fill="#fff"/></svg></span>
+          <span class="swatch"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="4.6,0.7 9.4,0.7 13.3,4.6 13.3,9.4 9.4,13.3 4.6,13.3 0.7,9.4 0.7,4.6" fill="#FF3B30"/><path d="M5 5 L9 9 M9 5 L5 9" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <h2>The settling indicator (G) — same vocabulary question</h2>
+  <p class="note">During the eager board&rsquo;s silent background reconfirm, a row keeps showing its cached value. Should a reconfirming row look different from a settled one? If yes, that&rsquo;s another glyph in the same family. Here Claude is mid-reconfirm (faint pulsing ring behind the cached green dot) — gates nothing, just &ldquo;the app is checking.&rdquo;</p>
+  <div class="panes">
+    <div class="pane">
+      <div class="label">Settled vs settling</div>
+      <div class="sidebar">
+        <div class="row">
+          <span class="radio"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#0A60FF"/><path d="M4.5 8.3l2.2 2.2 4.8-5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="icon">A</span>
+          <span class="txt"><span class="name">Claude</span><span class="statusline"><span class="ind settle"><span class="dot green"></span></span><span class="slabel">Online · rechecking…</span></span></span>
+        </div>
+        <div class="row">
+          <span class="radio"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.2" fill="none" stroke="#8E8E93" stroke-width="1.5"/></svg></span>
+          <span class="icon">O</span>
+          <span class="txt"><span class="name">ChatGPT</span><span class="statusline"><span class="ind"><span class="dot green"></span></span><span class="slabel">Online</span></span></span>
+        </div>
+      </div>
+      <div class="desc">vs the alternative: reconfirm in total silence (no settling cue) and only move the dot if the verdict changes.</div>
+    </div>
+  </div>
+
+  <h2>The decision</h2>
+  <div class="decision">
+    <p style="margin-top:0">Three questions, in order:</p>
+    <ol>
+      <li><strong>Shape the exception states?</strong> (B) — amber-credit, amber-unavailable, red-invalid each get a distinct shape. This clears the a11y floor and disambiguates the two ambers. <span class="kbd">My read: yes — it&rsquo;s an Apple-documented floor and the two-amber collision is real.</span></li>
+      <li><strong>Glyph <code>.online</code> too?</strong> (C) — a checkmark on the normal case. <span class="kbd">This is the one that collides with &ldquo;absence is information — no glyph for the normal case.&rdquo; B leaves it a plain green dot; C marks it.</span></li>
+      <li><strong>Show a settling cue during reconfirm?</strong> (G) — or reconfirm invisibly. <span class="kbd">Additive, gates nothing; or silence if the dot only moves on a real change.</span></li>
+    </ol>
+    <p class="note" style="margin-top:12px">Glyphs shown are stand-ins (HTML can&rsquo;t use SF Symbols). In the app: <code>exclamationmark.triangle.fill</code> (unavailable), <code>creditcard.trianglebadge.exclamationmark</code> or <code>dollarsign.circle.fill</code> (out&nbsp;of&nbsp;credit), <code>xmark.octagon.fill</code> (invalid), <code>checkmark.circle.fill</code> (online, if C). Provider icons are letter placeholders — real app uses the monochrome brand logos.</p>
+  </div>
+
+</div>
+</body>
+</html>

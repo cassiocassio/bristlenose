@@ -439,11 +439,17 @@ struct PipelineActivityItem: View {
                     .font(.callout)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                // Show "Detailed cause not captured." ONLY when there's no
+                // message to show. Previously appended unconditionally, so it
+                // rode under every real summary and made captured failures
+                // (the cause IS in the event log + last-run-failure.log) read
+                // as if nothing was captured. The Log button reaches the tail.
+                Text(i18n.t("desktop.pipeline.diagnostic.noStructuredCause"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            Text(i18n.t("desktop.pipeline.diagnostic.noStructuredCause"))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
             Text("Category: \(Self.humanCategoryLabel(category))")
                 .font(.caption)
                 .foregroundStyle(.secondary)

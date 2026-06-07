@@ -338,8 +338,10 @@
       "invalid": "Ungültiger Schlüssel",
       "unavailable": "Nicht verfügbar",
       "checking": "Wird geprüft…",
+      "outOfCredit": "Kein Guthaben",
       "local": "Lokal"
     },
+    "copyCommand": "Befehl kopieren",
     "console": {
       "keys": "Schlüssel",
       "portal": "Portal"

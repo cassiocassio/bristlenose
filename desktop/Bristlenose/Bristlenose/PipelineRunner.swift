@@ -1295,16 +1295,21 @@ final class PipelineRunner: ObservableObject {
         // Stdout regex is a best-effort fallback for older Python versions
         // and crash-style failures that exit before writing a terminus event.
         let derived = project.flatMap { Self.deriveFailureFromEvents(project: $0) }
+        // The run used whatever provider was active when it spawned; unless the
+        // user switched since exit (rare, and harmless), that's still the live
+        // `activeProvider`. Same source `overlayAPIKeys` reads at spawn time.
+        let activeProvider = UserDefaults.standard.string(forKey: "activeProvider")
+            .flatMap(LLMProvider.init(rawValue:))
         let category: PipelineFailureCategory
         let summary: String
         if let (cat, msg) = derived {
             category = cat
-            summary = msg ?? Self.humanSummary(for: cat)
+            summary = msg ?? Self.humanSummary(for: cat, provider: activeProvider)
         } else {
             category = Self.categoriseFailure(
                 lines: lines, exitStatus: status, projectName: project?.name
             )
-            summary = Self.humanSummary(for: category)
+            summary = Self.humanSummary(for: category, provider: activeProvider)
         }
         Self.logger.warning(
             """
@@ -1312,7 +1317,57 @@ final class PipelineRunner: ObservableObject {
             status=\(status) category=\(category.rawValue, privacy: .public)
             """
         )
+        // Persist the (already key-redacted) stderr tail so a mislabelled
+        // category isn't the only forensic trace. The classifier is a guess;
+        // this file is the ground truth. Greppable at
+        // `<output>/.bristlenose/last-run-failure.log`.
+        if let project, !lines.isEmpty {
+            Self.captureFailureLog(
+                project: project, status: status, category: category, lines: lines
+            )
+        }
         return .failed(summary, category: category)
+    }
+
+    /// Write the redacted stderr tail of a failed run to
+    /// `bristlenose-output/.bristlenose/last-run-failure.log` and emit the tail
+    /// to the unified log. Best-effort — never throws into the failure path.
+    private static func captureFailureLog(
+        project: Project, status: Int32,
+        category: PipelineFailureCategory, lines: [String]
+    ) {
+        let tail = lines.suffix(50).joined(separator: "\n")
+        Self.logger.error(
+            """
+            failure stderr tail category=\(category.rawValue, privacy: .public) \
+            status=\(status):
+            \(tail, privacy: .private)
+            """
+        )
+        // Path mirrors the default output location. The desktop host never
+        // passes `--output`, so `bristlenose-output/.bristlenose` is always the
+        // real run dir; if a caller ever relocates output, derive this from
+        // OutputPaths instead of hardcoding.
+        let dir = URL(fileURLWithPath: project.path)
+            .appendingPathComponent("bristlenose-output")
+            .appendingPathComponent(".bristlenose")
+        let header = "category=\(category.rawValue) status=\(status)\n"
+        do {
+            try FileManager.default.createDirectory(
+                at: dir, withIntermediateDirectories: true
+            )
+            try (header + tail + "\n").write(
+                to: dir.appendingPathComponent("last-run-failure.log"),
+                atomically: true, encoding: .utf8
+            )
+        } catch {
+            // Don't fail the failure path — but don't swallow silently either.
+            // The tail is in the unified log above, so the forensic file
+            // failing to write is greppable rather than invisible.
+            Self.logger.warning(
+                "captureFailureLog: could not write last-run-failure.log: \(error.localizedDescription, privacy: .public)"
+            )
+        }
     }
 
     private func startNextQueued() {
@@ -1368,7 +1423,20 @@ final class PipelineRunner: ObservableObject {
             return .network
         }
         if matches(tail, #"no space|enospc|disk full"#) { return .disk }
-        if matches(tail, #"whisper|faster_whisper|(speech )?model"#) { return .whisper }
+        // LLM provider errors BEFORE whisper. A provider/model-mismatch 404
+        // prints "model: gemini-2.5-flash" / "not_found_error", which the old
+        // broad whisper pattern (bare "model") mis-grabbed — surfacing an LLM
+        // 404 as "Transcription failed" (5 Jun 2026 ghost-debugging session).
+        if matches(tail, #"provider says|not_found_error|no such model|model not found"#) {
+            return .apiRequest
+        }
+        // Whisper requires a REAL error signature, never the benign preflight
+        // block — `bristlenose run` always prints "✓ Transcription mlx-whisper"
+        // + "Whisper model … not cached", so bare "whisper"/"model" would match
+        // healthy output. Match install/download/native-lib failures instead.
+        if matches(tail, #"packageinstallerror|snapshot_download|metallib|libjaccl|faster_whisper"#) {
+            return .whisper
+        }
         return .unknown
     }
 
@@ -1406,16 +1474,30 @@ final class PipelineRunner: ObservableObject {
         return (cause.category, cause.message)
     }
 
-    static func humanSummary(for category: PipelineFailureCategory) -> String {
+    /// Human-readable one-liner for a failure category. When `provider` is
+    /// supplied, LLM-related categories name it ("Claude rejected the request.")
+    /// instead of the generic "LLM provider …" — the cause classifier can't
+    /// always recover a structured message, and a named provider is the
+    /// difference between an actionable summary and a shrug. Non-LLM categories
+    /// (disk, whisper, …) ignore `provider`.
+    static func humanSummary(
+        for category: PipelineFailureCategory,
+        provider: LLMProvider? = nil
+    ) -> String {
+        // `subject` reads in subject position ("Claude rate limit reached"),
+        // `object` in object position ("Couldn't reach Claude" / "the LLM
+        // provider"). Both collapse to the provider's display name when known.
+        let subject = provider?.displayName ?? "LLM provider"
+        let object = provider?.displayName ?? "the LLM provider"
         switch category {
-        case .auth:       return "Your LLM provider key isn't working."
-        case .network:    return "Couldn't reach the LLM provider."
-        case .quota:      return "LLM provider rate limit reached."
+        case .auth:       return "Your \(subject) key isn't working."
+        case .network:    return "Couldn't reach \(object)."
+        case .quota:      return "\(subject) rate limit reached."
         case .disk:       return "Not enough disk space to finish."
         case .whisper:    return "Transcription failed — the speech model didn't load."
         case .userSignal: return "Run was stopped."
-        case .apiRequest: return "LLM provider rejected the request."
-        case .apiServer:  return "LLM provider is unavailable — try again shortly."
+        case .apiRequest: return "\(subject) rejected the request."
+        case .apiServer:  return "\(subject) is unavailable — try again shortly."
         case .missingDep: return "Setup needed — a required tool isn't installed."
         case .missingInput: return "A required input file is missing."
         case .missingBinary: return "FFmpeg couldn't be found."

@@ -340,6 +340,7 @@
       "outOfCredit": "크레딧 소진",
       "local": "로컬"
     },
+    "copyCommand": "명령어 복사",
     "console": {
       "keys": "키",
       "portal": "포털"

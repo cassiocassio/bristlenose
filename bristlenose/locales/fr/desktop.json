@@ -341,6 +341,7 @@
       "outOfCredit": "Crédit épuisé",
       "local": "Local"
     },
+    "copyCommand": "Copier la commande",
     "console": {
       "keys": "Clés",
       "portal": "Portail"

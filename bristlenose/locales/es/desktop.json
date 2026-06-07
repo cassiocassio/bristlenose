@@ -341,6 +341,7 @@
       "outOfCredit": "Sin crédito",
       "local": "Local"
     },
+    "copyCommand": "Copiar comando",
     "console": {
       "keys": "Claves",
       "portal": "Portal"

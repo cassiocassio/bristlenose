@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import os
 
@@ -170,14 +171,37 @@ struct LLMSettingsView: View {
                         value: statusFor(selectedProvider))
                     if let error = statusErrors[selectedProvider],
                        statusFor(selectedProvider) != .online {
-                        // Per Mac convention (Mail, Internet Accounts) the
-                        // dot carries the colour signal; the error text is
-                        // .secondary so we don't have two channels for one
-                        // signal.
-                        Text(error)
+                        // Per Mac convention (Mail, Internet Accounts) the dot
+                        // carries the colour signal; the error text is .secondary
+                        // so we don't have two channels for one signal. Rendered
+                        // as markdown so a backtick `command` shows inline
+                        // monospace (not literal backticks); selectable so the
+                        // whole explanation is copyable.
+                        Text(LocalizedStringKey(error))
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
+                        // Any shell command in the message (today only Ollama's
+                        // `ollama pull …` / `ollama serve`) gets a monospace,
+                        // one-click-copyable row — reusing the popover's silent
+                        // copy idiom.
+                        ForEach(LLMValidator.shellCommands(in: error), id: \.self) { command in
+                            HStack(spacing: 6) {
+                                Text(command)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .textSelection(.enabled)
+                                    .padding(.vertical, 2)
+                                    .padding(.horizontal, 6)
+                                    .background(
+                                        Color(nsColor: .quaternarySystemFill),
+                                        in: RoundedRectangle(cornerRadius: 5))
+                                CopyButton(
+                                    text: command,
+                                    label: i18n.t("desktop.llmSettings.copyCommand"))
+                                Spacer(minLength: 0)
+                            }
+                        }
                     }
                     if let lastVerified = lastVerifiedText(for: selectedProvider) {
                         Text(lastVerified)
@@ -866,6 +890,28 @@ struct LLMSettingsView: View {
                 )
             }
         }
+    }
+}
+
+/// Small silent copy-to-clipboard button matching the diagnostic popover's idiom
+/// (`PipelineActivityItem`): a `.bordered .small` `doc.on.doc` icon that copies
+/// WITHOUT a "Copied" flash — the native Mac pattern (Finder, Safari "Copy URL").
+/// Used for copyable CLI commands in the LLM status area.
+private struct CopyButton: View {
+    let text: String
+    let label: String
+    var body: some View {
+        Button {
+            let pb = NSPasteboard.general
+            pb.clearContents()
+            pb.setString(text, forType: .string)
+        } label: {
+            Image(systemName: "doc.on.doc")
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .help(label)
+        .accessibilityLabel(label)
     }
 }
 

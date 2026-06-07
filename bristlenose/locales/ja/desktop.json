@@ -340,6 +340,7 @@
       "outOfCredit": "クレジット不足",
       "local": "ローカル"
     },
+    "copyCommand": "コマンドをコピー",
     "console": {
       "keys": "キー",
       "portal": "ポータル"

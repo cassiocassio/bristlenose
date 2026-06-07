@@ -341,6 +341,7 @@
       "outOfCredit": "Kein Guthaben",
       "local": "Lokal"
     },
+    "copyCommand": "Befehl kopieren",
     "console": {
       "keys": "Schlüssel",
       "portal": "Portal"

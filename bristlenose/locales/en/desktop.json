@@ -341,6 +341,7 @@
       "outOfCredit": "Out of credit",
       "local": "Local"
     },
+    "copyCommand": "Copy command",
     "console": {
       "keys": "Keys",
       "portal": "Portal"

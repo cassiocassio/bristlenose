@@ -137,6 +137,20 @@ struct LLMValidatorTests {
         #expect(LLMValidator.resolveStatus(observed: .notSetUp, cached: .ok) == .notSetUp)
     }
 
+    // MARK: - Shell command extraction (copyable CLI help)
+
+    @Test("shellCommands extracts backtick commands; empty for plain messages")
+    func shellCommandsExtraction() {
+        #expect(LLMValidator.shellCommands(
+            in: "Run `ollama pull llama3.2:3b` to add one.") == ["ollama pull llama3.2:3b"])
+        #expect(LLMValidator.shellCommands(
+            in: "Start it with `ollama serve` or open the Ollama app.") == ["ollama serve"])
+        #expect(LLMValidator.shellCommands(
+            in: "Claude rejected this key (401).") == [])
+        #expect(LLMValidator.shellCommands(
+            in: "No network connection. Your key was fine — we just can't check it right now.") == [])
+    }
+
     // MARK: - Verdict cache round-trip
 
     /// Each cache test gets its own UserDefaults suite so they don't share

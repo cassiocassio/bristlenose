@@ -48,6 +48,17 @@ docs/design-inbox-triage.md
 bristlenose.log
 bristlenose.log.*
 
+# Per-run pipeline state dir (db, llm-calls.jsonl, log, intermediate JSON).
+# Created wherever the tool is run from (e.g. repo root via `serve`/`run`).
+# Carries re-identification keys — never commit. The committed smoke-test
+# fixture is re-included surgically below (events + intermediate JSON only;
+# logs and db stay ignored even inside the fixture).
+.bristlenose/
+!tests/fixtures/**/.bristlenose/
+!tests/fixtures/**/.bristlenose/pipeline-events.jsonl
+!tests/fixtures/**/.bristlenose/intermediate/
+!tests/fixtures/**/.bristlenose/intermediate/**
+
 # Local font files for typography mockups (proprietary/large, not committed)
 docs/mockups/fonts/*.ttf
 docs/mockups/fonts/*.woff2

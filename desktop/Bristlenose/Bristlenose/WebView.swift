@@ -6,6 +6,24 @@ import WebKit
 
 private let log = Logger(subsystem: "app.bristlenose", category: "webview")
 
+/// WKWebView subclass that declines the ⌘, key equivalent so it propagates to
+/// the app's native Settings menu item. A plain WKWebView claims command-key
+/// equivalents while it hosts the window's first responder, so ⌘, was swallowed
+/// whenever the user was focused in the report content (the common case) — the
+/// Settings menu item fired only when focus sat in native chrome. Returning
+/// `false` here lets AppKit route ⌘, to the main menu from any focus, restoring
+/// the standard macOS "⌘, opens Settings from anywhere" behaviour. Every other
+/// key equivalent (the web layer's own shortcuts, copy/paste, …) is untouched.
+final class BristlenoseWebView: WKWebView {
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if flags == .command, event.charactersIgnoringModifiers == "," {
+            return false  // not handled here → AppKit routes ⌘, to the main menu
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
 /// WKWebView wrapper for displaying the Bristlenose React SPA in embedded mode.
 ///
 /// Security hardening (design doc lines 1149–1161):
@@ -68,7 +86,7 @@ struct WebView: NSViewRepresentable {
         // parent config because child WKWebViews inherit media permissions.
         config.mediaTypesRequiringUserActionForPlayback = []
 
-        let webView = WKWebView(frame: .zero, configuration: config)
+        let webView = BristlenoseWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         context.coordinator.webView = webView

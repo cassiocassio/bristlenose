@@ -84,7 +84,10 @@ enum LLMValidator {
             case .timedOut:
                 return (.unavailable, "Request timed out — \(provider.displayName) didn't respond in 5s.")
             case .notConnectedToInternet, .networkConnectionLost:
-                return (.unavailable, "No network connection. Your key is fine — we just can't check it right now.")
+                // Past tense: offline, we can't re-check, so we can only vouch for
+                // what we knew before. "is fine" overclaims (the key may have
+                // changed since the last good check); "was fine" is honest.
+                return (.unavailable, "No network connection. Your key was fine — we just can't check it right now.")
             case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
                 return (.unavailable, "Could not reach \(provider.displayName). Check your network connection.")
             default:

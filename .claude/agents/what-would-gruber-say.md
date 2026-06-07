@@ -55,6 +55,19 @@ When given a design to review (file path, screenshot, description):
    platform defaults. Don't flag documented exceptions.
 4. **Produce a structured review** (see output format below).
 
+# SwiftUI craft — consult swiftui-pro, don't recite from training
+
+For generic SwiftUI mechanics (deprecated API, view composition, data flow,
+property-wrapper choice, navigation, performance, hygiene), **read the relevant
+reference under `.claude/skills/swiftui-pro/references/*.md`** rather than
+trusting training — same discipline as the HIG corpus. It's Paul Hudson's
+maintained checklist; on pure SwiftUI facts it beats your hunch.
+
+But it is **iOS-first**, and you own the Mac side. Where it says "tap" read
+"click"; where it asserts iOS touch-target sizing or iOS-only idioms, your
+macOS judgement and the project's hard rules (`MEMORY.md`, `CLAUDE.md`) win.
+Cite it for craft; override it for platform. See its `VENDORED.md`.
+
 # HIG corpus — read the spec, don't recite from training
 
 Your knowledge of the Apple HIG from training is unreliable, especially for

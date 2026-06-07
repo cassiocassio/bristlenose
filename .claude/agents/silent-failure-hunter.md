@@ -45,6 +45,9 @@ try/except (Python), try/catch (TS), error callbacks, fallback/default-on-failur
 - **`mimetypes.init([])` / lazy init reading system files** — raises `PermissionError` under sandbox, poisons `mimetypes._db`, and every later `guess_type()` 500s on `/static/*.js`. Must set `mimetypes.knownfiles = []` before any init.
 - **PyInstaller bundle datas** — a non-`.py` file present in source but absent from `bristlenose-sidecar.spec` `datas=[…]` ships missing, with no error until runtime. Gated by `check-bundle-manifest.sh` + `doctor --self-test`.
 
+**Desktop build config (Swift):**
+- **Debug-vs-prod endpoint gated only by `#if DEBUG`** — if the server URL / API endpoint / sidecar-mode selection hangs off `#if DEBUG` alone, a misbuilt Release silently ships pointing at the dev target (or a Debug build at prod). It "works" in dev and only the shipped build is wrong. Flag environment switches with no Release-path assertion or test asserting the resolved value.
+
 **Pipeline / data integrity:**
 - **`model_copy()` is shallow** — redacting a segment's `.text` leaves `.words` pointing at the original unredacted `Word` objects: a silent PII leak. Always clear `clean_seg.words = []` (and audit `speaker_label`, `source_file`).
 - **Declared-but-unwired config** — `pii_llm_pass` and `pii_custom_names` exist in `config.py` but `s07_pii_removal.py` ignores them (warn-only). Never write code that *reads* a config flag as if it's implemented without checking it's wired.

@@ -95,7 +95,7 @@ Check which areas are touched (file extensions, directory prefixes, content):
 | Security-sensitive (auth, tokens, PII, file access, bridge) | `security-review` |
 | HTML/React components with interactive elements | `a11y-review` |
 | `desktop/`, `.swift` files, macOS/HIG mentioned | `what-would-gruber-say` |
-| `.ts`/`.tsx`/`.css`, `package.json`, server, pipeline, or perf-sensitive | `perf-review` |
+| `.ts`/`.tsx`/`.css`, `package.json`, server, pipeline, perf-sensitive, or `.swift` (concurrency/cancellation) | `perf-review` |
 | Test files touched, new public API without tests, or any `.swift` change | `what-would-james-bach-say` (see three-way selector below) |
 | try/except or catch blocks, fallback logic, subprocess/shellouts, JSON serialization, or E2E/Playwright specs touched | `silent-failure-hunter` |
 | `.github/workflows/**` or other CI/release config touched | `security-review` + `silent-failure-hunter` (**CI workflow lens** — see below) |
@@ -220,6 +220,35 @@ Review these changes: <git range or "staged + unstaged changes">
 Mode: implementation review
 Scope: <list of changed files from git diff --stat>
 ```
+
+### SwiftUI knowledge source (not a peer agent)
+
+When `.swift` files or `desktop/` are in scope, the SwiftUI-aware agents
+(`what-would-gruber-say`, `code-review`, `what-would-james-bach-say`) get an
+extra line telling them to consult the vendored **swiftui-pro** skill:
+
+```
+For generic SwiftUI craft (deprecated API, view composition, data flow,
+navigation, performance, hygiene), read the relevant reference files under
+.claude/skills/swiftui-pro/references/*.md before flagging. It is iOS-first:
+project hard rules (MEMORY.md / CLAUDE.md) and macOS idiom win on any conflict.
+```
+
+`swiftui-pro` is a **knowledge source, not a reviewer persona** — it does not
+fan out as its own agent and does not appear in the agent-selection table. It
+informs the agents that already run. (Review subagents can't invoke skills, so
+they `Read` the reference files directly — that's why this is a per-agent
+instruction, not a Skill call.) It also auto-triggers in the main conversation
+when authoring SwiftUI. See `.claude/skills/swiftui-pro/VENDORED.md`.
+
+**Adjudication.** swiftui-pro is *evidence*, not a *vote*. If a finding cites a
+swiftui-pro reference and an agent's hunch disagrees on a pure SwiftUI fact
+(deprecated API, property-wrapper choice), trust swiftui-pro. If swiftui-pro's
+iOS-flavoured advice collides with a Mac-platform concern or a documented
+project decision, the project/Mac side wins. **William does not adjudicate
+SwiftUI correctness** — his Step 4.6 pass is scope/proportion only. A
+swiftui-pro-backed finding that is real but over-engineered still gets William's
+"real problem, smaller fix" treatment like any other.
 
 ## Step 4: Consolidate
 

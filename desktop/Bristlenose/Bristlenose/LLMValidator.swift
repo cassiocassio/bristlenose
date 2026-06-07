@@ -255,6 +255,24 @@ enum LLMValidator {
         }
     }
 
+    /// Backtick-wrapped shell commands embedded in a status message, surfaced so
+    /// the UI can render them as copyable monospace rows. Today only the Ollama
+    /// messages embed commands (`ollama pull …`, `ollama serve`); cloud-provider
+    /// messages carry no backticks → returns []. Pure; unit-tested.
+    static func shellCommands(in message: String) -> [String] {
+        var commands: [String] = []
+        var rest = Substring(message)
+        while let open = rest.firstIndex(of: "`") {
+            let afterOpen = rest.index(after: open)
+            guard let close = rest[afterOpen...].firstIndex(of: "`") else { break }
+            let command = rest[afterOpen..<close]
+                .trimmingCharacters(in: .whitespaces)
+            if !command.isEmpty { commands.append(command) }
+            rest = rest[rest.index(after: close)...]
+        }
+        return commands
+    }
+
     // MARK: - Ollama probe
 
     /// HTTP-only Ollama detection. Mirrors `bristlenose/ollama.py`'s

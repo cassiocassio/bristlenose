@@ -17,7 +17,19 @@ trued-against: HEAD@pipeline-diagnostic-popover-swift on 2026-05-19 (working tre
 
 ## Changelog
 
-- _2026-05-19_ — **Pass-4 cleanup landed.** Small fixes from the
+- _2026-06-05_ — **Popover & status-surface state catalog + display-kind
+  taxonomy added.** New "Popover & status-surface state catalog" section
+  enumerates every state the desktop app can show (with real data and its
+  invocation path), plus a surface-level "display-kind" taxonomy that *codifies
+  the already-shipped popover/pill forms* (a sibling to the atom-level MessageKind
+  taxonomy — orthogonal, they nest). Catalogue only — designs nothing new; the
+  run's icons, typography, MessageKind glyphs, and diagnostic IA are settled and
+  untouched. Surfaced a coverage finding: only the Ollama pill is live-invocable
+  from `CommandMenu("Debug")`; the diagnostic popover is env-var + relaunch; every
+  other surface is real-condition-only. A deferred appendix ("Future direction —
+  in-flight progress as rolling logs") captures the QA observation (fast runs flick
+  per-stage screens past unread) and the design conversation behind it, for a
+  post-TF pass — design nothing yet. Small fixes from the
   final-pass review: removed unused `action.email` + `action.copied`
   locale keys (Finding 31); renamed `tooltip.completed_partial`
   wording from "Pipeline" to "Analysis" across 6 locales (Finding 44 —
@@ -89,9 +101,14 @@ own glyph or colour.
 - **Not a result viewer.** Partial runs are not interpretable data; we
   do not link to the half-broken report from the partial popover. The
   `Open report` button is intentionally absent in both popover variants.
-- **Not a progress display.** While a run is in flight the pill renders
-  `.running` with the existing spinner-and-elapsed pattern; this doc
-  applies to terminal states (`.completedPartial`, `.failedWithDiagnostic`).
+- **Not a progress display — today.** While a run is in flight the pill
+  renders `.running` with the existing spinner-and-elapsed pattern, and the
+  bulk of this doc covers terminal states (`.completedPartial`,
+  `.failedWithDiagnostic`). A minimal *running* popover does exist, though
+  (`runningPopoverBody` — a single replace-in-place status line); the
+  catalog below names every state including the running sub-states, and the
+  deferred "Future direction — in-flight progress as rolling logs" appendix
+  revisits whether the in-flight surface should carry more than a status line.
 - **Not a settings surface.** The only operational button is `Retry`
   (and conditionally `Change provider` on `.auth`). Everything else is
   share-affordances.
@@ -153,6 +170,143 @@ every surface picks it up automatically — there is no per-surface
 override. (The two macOS surfaces — popover row and plaintext export —
 intentionally render different *forms* of the same kind: SF Symbol for
 the native UI, Unicode for the cross-platform plaintext.)
+
+## Popover & status-surface state catalog
+
+This section **catalogues what the desktop app already shows** — every
+popover / pill / sheet / alert / toast state, with its real data, its name
+in the display-kind taxonomy below, and how (if at all) you can invoke it
+from a debug affordance. It codifies shipped reality; it designs nothing
+new. (Genuinely-new ideas live in the deferred appendix at the end.)
+
+### Display-kinds (a second, surface-level taxonomy)
+
+`MessageKind` (above) is **atom-level** — the glyph on a single row.
+*Display-kind* is **surface-level** — the form the **whole** popover/pill
+takes for the situation it's in. The two are orthogonal and they **nest**:
+a surface's form is one display-kind; within a log / failure form, each row
+still carries a `MessageKind`. Don't collapse the two axes.
+
+This library **names forms that already ship** — it is not a wish-list. Each
+row points at its canonical shipped exemplar. Treat it as *forms + a
+non-dogmatic recommended mapping* from situation to form: a state may pick a
+different form when that's more appropriate and natural to the moment.
+
+| Display-kind | Form | Canonical shipped exemplar | Status |
+|---|---|---|---|
+| **Live status line** | one updating line + spinner/elapsed | running popover (`runningPopoverBody`); LLM-settings dot/spinner | shipped |
+| **Phase progression** (one popover, walks named phases, no re-anchor) | step through named phases in a single popover | **`OllamaDownloadPill`** (choosing → needsOllama → waiting → downloading → finishing → failed) | shipped (Ollama) |
+| **Accumulating rows / log** | per-bucket grid of `MessageKind` rows | diagnostic `bucketsBody`; boot-failure "last 40 lines" disclosure | shipped |
+| **Determinate progress** | 0–100% bar + Cancel | `CopyProgressPill`; `OllamaDownloadPill` when byte-total known | shipped |
+| **Indeterminate progress** | spinner + short status line | copy-cancelling; project scan; Ollama start/finish; boot "Starting sidecar" | shipped |
+| **Choice / picker** | grid or radio list of options | `IconPickerPopover` (symbol grid); Ollama model picker (radio list) | shipped |
+| **Dialog / confirmation** (blocking on the user) | prompt + action button(s) | 4 `.alert` sites; AI & Privacy consent sheet; OllamaDownloadPill needs-Ollama phase | shipped |
+| **Terminal failure with reason** | failure buckets + reason + Copy / Show Log | diagnostic popover (`unifiedPopoverBody`) | shipped |
+| **Ephemeral note** (toast) | bottom-of-window, auto-dismiss or undo | informational toast (3s); undoable-removal toast (8s) — `ToastSurface` | shipped (see toast anti-pattern) |
+| **Info / explanatory card** | full-content prose + per-item actions | `UnsupportedSubsetView` | shipped |
+| **Success poster** | small graphical summary of a settled good state | — _none_ | **not shipped** — the one genuine candidate-new (optional; see deferred appendix) |
+
+Two facts the inventory settled, recorded here so they aren't re-litigated:
+
+- **Dialog/choice is shipped, not a gap.** Four `.alert` sites + the consent
+  sheet + the Ollama needs-Ollama phase already cover "blocking on the user".
+- **Shipped cross-surface conventions** (codify, don't reinvent): the three
+  pills share one visual envelope (Capsule + secondary stroke); toasts share
+  `ToastSurface`; toolbar/row spinners use `.controlSize(.small)`; status
+  glyphs carry severity while text stays `.secondary`; sidebar row indicators
+  never stack (single precedence chain failed > running > warning > ready);
+  popovers are **fixed-size** (`PipelineActivityItem.swift` ≈ 59–63: a fixed
+  360×320 envelope, to dodge an NSPopover resize-animation livelock); the app
+  uses `.alert` **exclusively** — never `.confirmationDialog`.
+
+### The state catalog
+
+Grouped by surface. *Invocation* records how each state can be summoned for
+inspection today: `debug-menu (live)` · `fixture (env, relaunch)` · `env var`
+· `real-condition-only` · `not-implemented`.
+
+**Pipeline activity pill / popover** — states in `PipelineRunner.swift`,
+rendering in `PipelineActivityItem.swift`:
+
+| State | Display-kind | Real text / data | Invocation |
+|---|---|---|---|
+| `.scanning` / `.idle` | _(hidden — no surface)_ | pill hidden | real-condition-only |
+| `.queued(position)` | Live status line | "Queued · N" / "Waiting for another project to finish (position N in queue)" | real-condition-only |
+| `.running` — starting (`stageIndex == 0`) | Indeterminate progress | "Starting…" / "Starting up — loading models and validating credentials." | real-condition-only |
+| `.running` — resuming (`attachedFromOrphan`) | Indeterminate progress | "Starting…" / "Resuming analysis (reconnected after app restart)." | real-condition-only |
+| `.running` — mid-pipeline (`stageIndex > 0`) | Live status line _(the flicking bug; deferred target = phase progression + log)_ | "Stage N · stageName" + elapsed + Stop | real-condition-only |
+| `.running` — stopping (`isStopping`) | Indeterminate progress | "Stopping…" / "Waiting for the analysis subprocess to exit." | real-condition-only |
+| `.ready(Date)` | _(hidden — clean success)_ | pill hidden | real-condition-only |
+| `.failed(message, category)` | Terminal failure with reason _(degraded body)_ | message + `Category:` line | fixture `failed_no_summary` (env, relaunch) |
+| `.completedPartial(summary)` | Terminal failure with reason _(accumulating rows)_ | per-bucket failure grid | fixtures `run_completed_partial`, `run_completed_partial_truncated`, `showcase_partial_dense`, `showcase_truncated_varied`, `showcase_typical_partial`, `showcase_overflow_one` |
+| `.failedWithDiagnostic(summary)` | Terminal failure with reason | per-bucket failure grid | fixtures `run_failed_abandoned`, `run_failed_abandoned_at_topics`, `showcase_failed_auth_burst`, `showcase_failed_multi_category` |
+| `.unreachable(reason)` | _(inline sidebar glyph, not the pill)_ | greyed project row | real-condition-only |
+| `.partial(kind, stages)` / `.stopped(stages)` | _(no pill/popover rendering)_ | — | not-implemented |
+| `run_completed_clean` | _(validates clean — no override)_ | pill stays hidden | fixture (env, relaunch) |
+| `showcase_all_glyphs` | Design gallery _(special-cased body)_ | 5-glyph `MessageKind` reference card | fixture (env, relaunch) |
+| `showcase_all_states` | Design gallery _(special-cased body)_ | 5 states, varied message lengths | fixture (env, relaunch) |
+
+Diagnostic fixtures are set via `BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE=<key>`
+in the Xcode scheme (read once at launch; relaunch to change). 13 scenarios
++ the `failed_no_summary` sentinel live in `DiagnosticFixture.swift`. There
+is no live picker.
+
+**OllamaDownloadPill** — phases in `OllamaDownloadModel.swift`; all 10
+`DebugScene` cases are live-invocable from the Debug menu (`MenuCommands.swift`
+≈ 76–97: "Cycle ▸ next state" Ctrl+Cmd+O + per-scene buttons) and via
+`BRISTLENOSE_DEBUG_OLLAMA_PHASE=<scene>`:
+
+| Scene | Display-kind | Real text / data |
+|---|---|---|
+| `idle` | _(hidden)_ | pill hidden |
+| `choosing` | Choice / picker | model radio grid |
+| `needsOllama` | Dialog / choice (blocking) | "Needs Ollama" info + action button |
+| `waiting` | Indeterminate progress | hourglass + setup step list (passive: human installing) |
+| `downloadingDeterminate` | Determinate progress | % bar + Cancel |
+| `downloadingIndeterminate` | Indeterminate progress | spinner + status |
+| `finishing` | Indeterminate progress | spinner |
+| `failNoInternet` / `failTimedOut` / `failCantReach` / `failGeneric` | Terminal failure with reason | error message + Retry |
+
+**Other surfaces** — none have a debug affordance; all are real-condition-only:
+
+| Surface | State(s) | Display-kind | Invocation |
+|---|---|---|---|
+| `CopyProgressPill` | copying / cancelling | Determinate progress / Indeterminate progress | real-condition-only (drag files onto a project) |
+| `IconPickerPopover` | symbol grid | Choice / picker | real-condition-only (row context menu "Choose Icon…") |
+| AI & Privacy consent sheet | first-run (non-dismissable) / re-access (Done) | Dialog / choice (blocking) | real-condition-only (first launch / Bristlenose ▸ AI & Privacy…) |
+| Alerts (`.alert`, 4 sites) | duplicate-project drop; disk-space precheck; locate error; in-flight pipeline switch (destructive) | Dialog / confirmation (blocking) | real-condition-only |
+| Toasts (`ToastSurface`, 2) | informational (3s) / undoable removal (8s, shows count + name) | Ephemeral note | real-condition-only |
+| `BootView` | startingSidecar / loadingReport | Indeterminate progress | transient (cold start) |
+| `BootView` | failed (message + Retry + details disclosure) | Terminal failure with reason | partial — misconfigure `BRISTLENOSE_DEV_SIDECAR_PATH` / `_EXTERNAL_PORT` |
+| `UnsupportedSubsetView` | files-not-folder card | Info / explanatory card | real-condition-only |
+
+_(Sibling surfaces, out of scope for a popover catalog but noted: sidebar
+inline indicators — row-subtitle status, session count, scan spinner, iCloud
+download arrow — are persistent inline status, not popovers.)_
+
+### Invocation coverage (a finding, not a proposal)
+
+The catalog above doubles as a coverage map, and the coverage is uneven:
+
+- **Only the Ollama pill is live-invocable** from a real `CommandMenu("Debug")`
+  with no relaunch — the gold-standard harness.
+- **The diagnostic popover** is env-var + relaunch only (no live picker).
+- **Every other surface is real-condition-only** — no fixture, no SwiftUI
+  `#Preview`, no debug hook. To see them you must trigger the real condition.
+
+The Ollama `CommandMenu("Debug")` live-cycle is the **proven pattern** for
+making any catalogued state summonable on demand. Extending it to the rest is
+deliberately *out of scope here* — design that step with intention later, when
+it's wanted; this section only catalogues what exists.
+
+### Guardrail — settled, do not relitigate
+
+The run's icons, typography, `MessageKind` glyph weights/tints, and the
+diagnostic-popover information architecture were arrived at through
+substantial design effort and are **settled**. This catalogue *names and
+reuses* that vocabulary; it does not reopen it. Any future work (including the
+deferred appendix) extends *where* the settled vocabulary is used — never
+*what* it is.
 
 ## Information architecture
 
@@ -336,6 +490,13 @@ When you find yourself wanting to surface a new error, status, or note,
 - **Don't bypass `MessageKind` for "just one weird case".** If a
   message looks like it doesn't fit, it almost certainly does and
   you're over-thinking it. Re-read the kind table.
+- **Don't let in-flight progress flick past unread.** When stages advance
+  faster than a human can read, a replace-in-place running surface is the
+  auto-dismissing-toast anti-pattern in another costume — transient UI for
+  information the user needed to retain ("the user missed it" is the failure
+  mode). See the deferred "Future direction — in-flight progress as rolling
+  logs" appendix for the design conversation; the fix is to let progress that
+  naturally accumulates be readable, not to make every surface a scrollback.
 
 ## Mac surface as implemented (May 2026)
 
@@ -501,6 +662,92 @@ across the Grid was experimented with via `AttributedString` in a
 single Text but reverted because the layout — column alignment with
 hanging indent — was the higher-value affordance. Researchers who want
 the whole popover content as text use the Copy button.
+
+## Future direction — in-flight progress as rolling logs (deferred, post-TF)
+
+> **Status: captured, not designed.** This appendix records a design
+> conversation (5 Jun 2026) so it isn't lost. Nothing here is decided or
+> scheduled, and per the catalog's guardrail it reuses the settled
+> icon/typography/`MessageKind` vocabulary unchanged — it only proposes
+> extending *where* that vocabulary is used.
+
+**The QA observation.** On a fast `bristlenose run`, the `.running` popover
+(`runningPopoverBody`) replaces its single status line each time a stage
+completes (`StdoutProgressParser` increments `stageIndex` on every `✓ <stage>`
+stdout line). Stages can advance faster than a human can read — the tester
+couldn't even screenshot them. This is the auto-dismissing-toast failure mode:
+transient UI for information the user needed to retain.
+
+**Nature of the information governs the treatment — not run speed.** Three
+categories (user framing, verbatim: *"there are some things that naturally
+scroll, and other things that are a complete state change — if it got that far
+you don't care about the previous history (devs do, in debug logs, but not
+regular users)"*):
+
+1. *Naturally-scrolling / progressive* — stage progress; accumulates. The bug
+   is that we replace it instead of letting recent progress stay readable.
+2. *Complete state change* — terminal outcomes supersede; replace-in-place is
+   correct (what the terminal popovers already do).
+3. *Full history* — a developer concern; lives in the on-disk `bristlenose.log`
+   (Show Log). Don't turn the user surface into a debug log.
+
+But the categories aren't hermetic: *sometimes being able to see the previous
+states or steps is useful* even to a regular user ("which stages completed
+before this failed?"). The state leads; the path is worth a glance.
+
+**Unifying concept: the popover is a series of rolling logs.** Rather than a
+bare replace-in-place running paragraph versus a rich terminal grid, both are
+the *same* surface — a rolling log — at different points in the process, using
+the same row vocabulary already developed from the CLI output. Consistent with
+this doc's Xcode-build-log visual reference. Two composable modes:
+
+- *Accumulating history* — reviewable `MessageKind` rows.
+- *Phase progression* — a known, named, ordered itinerary (user metaphor,
+  verbatim: *"other times it's moving through states, e.g. on the launchpad,
+  countdown, launch phase, orbiting, translunar injection, etc."*). This names
+  the current bug: the pipeline *is* a phase progression but is rendered as an
+  opaque, too-fast `Stage N · stageName` counter — neither a legible itinerary
+  nor a log.
+
+The modes **nest** (verbatim: *"and for each state you want the log"*): the
+phase itinerary is the spine; each phase owns a rolling log of its detail —
+structurally what the terminal `bucketsBody` already does, played forward. And
+**relevance recedes with distance** (verbatim: *"when you're in lunar descent
+you don't want to scrollback all the way to the launchpad"*): completed phases
+collapse to a one-line outcome summary, the active phase is expanded with its
+live log, any phase expands on demand — bounded by structure, not a 1000-line
+scroll. This revisits the superseded `DisclosureGroup` note as a properly-
+stateful disclosure, and is, again, the Xcode build navigator.
+
+**Rendering mechanism — two candidates (undecided):** (A) a vertical collapsing
+accordion (whole itinerary at a glance; grows tall); or (B) a horizontal
+carousel of time-sliced phase-windows (user proposal, verbatim: *"perhaps we
+can conceptualise each phase as a sublog that can scroll, but they are a series
+of windows onto a time-sliced phase? so perhaps just a tiny pair of carousel
+controls at the bottom of the popover left-right to go back in time is
+enough?"*) — one window at a time, "back to the launchpad" = N pages left, not
+N screens of scroll; compact and low-chrome. Tradeoffs for (B): loss of
+at-a-glance overview (mitigable with a `Phase 3 of 7` position indicator); and
+the `tail -f`-vs-scrollback live-follow question (does it auto-advance while
+running; is there a "jump to live" after paging back?).
+
+**Resizeability** (discussed, resolved): no user drag-resize handle (that
+implies the content wants to be a window); size-to-content auto-fit is fine and
+idiomatic. This aligns with the shipped fixed-size (360×320) popover envelope,
+which exists for a concrete reason — an NSPopover resize-animation livelock. The
+one wrinkle is a carousel of differently-sized windows making the popover height
+jump per page; mitigate with a stable window height or a capped height with
+internal scroll. A live run-status log is legitimate native status chrome; a
+durable, browsable history is data and belongs in Show Log / the on-disk log /
+the React SPA, not a stretched popover.
+
+**Open questions (for the later, intentional pass):** where legible human-named
+phase names live (a single source the CLI/popover/sidebar share, replacing
+`Stage N · sNN_internal`); default expansion policy; whether the in-flight
+itinerary and the terminal `bucketsBody` become literally one view; per-phase
+log depth before internal scroll. The lone genuinely-new display-kind, the
+**success poster**, also belongs to this pass — present as an option, not a
+default.
 
 ## Implementation references
 

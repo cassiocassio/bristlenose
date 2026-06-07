@@ -1243,6 +1243,8 @@ Same app, same bundle ID. v1 replaces v0.1 as an update (`.dmg` swap or auto-upd
 
 ### Native Settings window
 
+> **Superseded by shipped reality as of 2026-06-07** — the native Settings window shipped (3 icon tabs: Appearance / LLM / Transcription), but **not** in the flat Provider / API-key / Model / Local-URL layout sketched below. The LLM tab uses the **Mail-Accounts pattern** (provider sidebar + detail pane, per-provider status dots, read-only Ollama URL). The ASCII mock and "becomes dead code" / future-tense framing here are the original *plan*; for the as-built spec see [design-desktop-settings.md](design-desktop-settings.md). Body preserved below as the design-intent record.
+
 SwiftUI `Settings` scene — proper window, `Cmd+,`, native controls. Changes apply immediately (no Save button). The web `SettingsModal` becomes dead code in embedded mode.
 
 **Layout:** Grid of icons at top (Panic Nova pattern), sections drill down:

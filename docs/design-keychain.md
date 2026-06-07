@@ -1,13 +1,14 @@
 ---
 status: partial
-last-trued: 2026-04-30
-trued-against: HEAD@first-run on 2026-04-30
+last-trued: 2026-06-07
+trued-against: HEAD@desktop-provider-resolution on 2026-06-07
 ---
 
 > **Truing status:** Partial — the original design (§Design Decisions, §Module Structure, §CLI Commands) shipped and remains the canonical CLI/serve-mode credential path, with provider-list expansion (2→5). The Track C sandboxed-desktop deployment ships a different credential path (Swift reads Keychain, injects env vars; Python never touches Keychain) — documented in the new §"Desktop (sandboxed) credential path" section. Inline Python source (§Module Structure) is the pre-ship plan; see `bristlenose/credentials.py` + `credentials_macos.py` for current.
 
 ## Changelog
 
+- _2026-06-07_ — reconciled the desktop credential path to the **data-protection keychain** migration (commit `8b2ef51`, 2 Jun 2026): added a migration note (Team-ID-not-binary-hash validation, deliberate iCloud sync, no biometric ACL, host-side `keychain-access-groups`), flipped the §"Why this split" framing (the host ships access groups; the sidecar stays keychain-free), re-anchored `overlayAPIKeys` to `BristlenoseShared.swift` (moved from `ServeManager`, now active-provider-scoped at spawn time), and fixed the Gemini service name. The CLI/serve-mode `security`-CLI path below is unchanged and still canonical. Anchors: `KeychainHelper.swift` header, `BristlenoseShared.swift` `overlayAPIKeys`, Apple TN3137, steipete/CodexBar #585. (Edge-case §"Keychain sync" hedge is now superseded by the migration note but left for a deeper pass.)
 - _2026-04-29_ — confirmed still current after Beat 3 (desktop SwiftUI round-trip credential validation, `LLMValidator.swift`). Beat 3 added a new validation surface in Swift Settings that reads the Keychain key briefly to authenticate against the provider's API, but does NOT change the storage or injection architecture this doc describes — the Swift→env-var→Python flow on sidecar launch is unchanged. The verdict cache (UserDefaults: SHA-256 hash prefix + status + timestamp) is opaque metadata, not secret material; threat shape unchanged. See `design-desktop-settings.md` §"Validation flow (Beat 3)" for the validator details.
 - _2026-04-21_ — trued up: expanded provider list from 2 (anthropic, openai) to 5 (anthropic, openai, azure, google, miro); updated `bristlenose configure` samples to use product names (`claude`, `chatgpt`); marked Snap section as shipped via env-var fallback; added new §"Desktop (sandboxed) credential path" for the Track C Swift→env-var→Python architecture (load-bearing invariant for alpha); added §"Secret-leak defences" covering runtime log redactor + `check-logging-hygiene.sh` CI gate. Anchors: `bristlenose/credentials.py:53-58`, `bristlenose/credentials_macos.py:42-44`, `bristlenose/cli.py:1613-1727`, `desktop/Bristlenose/Bristlenose/ServeManager.swift:183-197,356-383,409-473`, `desktop/Bristlenose/Bristlenose/KeychainHelper.swift`, `desktop/scripts/check-logging-hygiene.sh`, commits "inject keychain api keys as env vars", "runtime log redactor for api key shapes", "tests for env injection, redactor", "CI grep gate for Swift logging hygiene". Preserved: inlined Python source in §Module Structure as pre-ship plan record.
 
@@ -47,7 +48,7 @@ Examples (expanded from original 2 providers to 5 shipped):
 - `Bristlenose Anthropic API Key`
 - `Bristlenose OpenAI API Key`
 - `Bristlenose Azure API Key`
-- `Bristlenose Google API Key`
+- `Bristlenose Google Gemini API Key`
 - ~~`Bristlenose Miro API Key`~~ (Miro board-bridge descoped from alpha — `KeychainHelper` and `ServeManager.overlayAPIKeys()` iterate only the four cloud providers `anthropic / openai / azure / google`. Re-add this row when Miro integration ships.)
 
 See `bristlenose/credentials_macos.py:42-44` for the shipped service-name table.
@@ -121,6 +122,8 @@ bristlenose configure chatgpt
 
 > **Beat 3 addition (2026-04-29).** A new component, `LLMValidator.swift`, reads the Keychain key inside Swift Settings to do round-trip authentication against the provider's API. It does NOT change the flow below — the env-var injection on sidecar launch is unchanged. See `design-desktop-settings.md` §"Validation flow (Beat 3)" for the validator details (verdict cache, TTL, offline survival).
 
+> **Data-protection keychain migration (2026-06-02, commit `8b2ef51`).** The desktop store moved off the file-based login keychain onto the **data-protection keychain**: `kSecUseDataProtectionKeychain` on every get/set/delete, a team-scoped `keychain-access-groups` entitlement (`$(AppIdentifierPrefix)app.bristlenose`), `kSecAttrSynchronizable: true` (iCloud Keychain sync — *deliberate*: a revocable credential that also survives a damaged login keychain), `kSecAttrAccessibleAfterFirstUnlock`, and **no** biometric `SecAccessControl`. The DP keychain validates access by **Team ID, not the binary's code-directory hash** — so the host reads its own keys without a prompt across rebuilds, and the old "3× prompt cascade" (which had justified a since-removed lazy status-load) was a *legacy-keychain* artifact, not a sandbox limit (refs: Apple TN3137; steipete/CodexBar #585). Read/delete match queries use `kSecAttrSynchronizableAny` or synced items are invisible. Diagnose `errSecMissingEntitlement` (-34018) as an entitlement/keychain-world problem, not a damaged keychain. Canonical: `desktop/CLAUDE.md` §Key conventions + the `KeychainHelper.swift` header.
+
 ### The flow
 
 ```
@@ -141,7 +144,7 @@ bristlenose configure chatgpt
 ```
 
 **Anchors:**
-- `desktop/Bristlenose/Bristlenose/ServeManager.swift:356-383` — `overlayAPIKeys(into:)` iterates providers, reads keychain, injects env vars
+- `desktop/Bristlenose/Bristlenose/BristlenoseShared.swift` — `overlayAPIKeys(into:)` reads the **active** provider's keychain entry and injects its env var (moved here from `ServeManager`; callers reach it via `childEnvironment`). Distinct from the Settings tab's eager all-providers status read.
 - `desktop/Bristlenose/Bristlenose/KeychainHelper.swift` — Security.framework-based store (no shell-out to `security` CLI)
 - `desktop/Bristlenose/Bristlenose/LLMSettingsView.swift` — SwiftUI Settings UI that calls KeychainHelper
 - `desktop/Bristlenose/Bristlenose/ServeManager.swift:183-197` — subprocess boot that applies the overlay
@@ -151,7 +154,7 @@ bristlenose configure chatgpt
 
 The sandboxed desktop context adds constraints that change the optimal design:
 
-- **Sandbox entitlements.** Giving the Python sidecar `keychain-access-groups` would require additional entitlements and complicate the sandbox profile. Reading Keychain from Swift (the app's sandbox principal) and passing credentials via process env vars is simpler.
+- **Sandbox entitlements.** The *host* carries the `keychain-access-groups` entitlement (load-bearing for the data-protection keychain — see the migration note above); the *sidecar* deliberately does not. Giving the Python sidecar its own keychain access would add entitlements plus a Security.framework linkage for no benefit — reading Keychain from Swift (the app's sandbox principal) and injecting credentials via process env vars keeps Python keychain-free.
 - **PyInstaller bundle size.** Linking Security.framework from Python via PyObjC or similar adds weight to a bundle that's already 644 MB. The `security` CLI shell-out wouldn't work from the sandboxed Python subprocess either.
 - **Separation of concerns.** The Swift side owns all OS-integration concerns (Keychain, notifications, unified logging). Python focuses on the analysis pipeline.
 

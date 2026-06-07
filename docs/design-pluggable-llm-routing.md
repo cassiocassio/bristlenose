@@ -1,6 +1,12 @@
+---
+status: pending
+last-trued: 2026-06-07
+trued-against: HEAD@desktop-provider-resolution on 2026-06-07
+---
+
 # Pluggable LLM routing, per-stage model choice, and quality eval
 
-**Status:** Design draft, partially shipped (May 2026). The **display side** of stage→provider routing — showing the user which backends each stage could use, which BN runs by default, and editorial quality ratings per (stage, backend) cell — shipped via the Pipeline view (v1.5 + v1.9). See [design-pipeline-view.md](design-pipeline-view.md) for the shipped catalogue surface. The **selection/dispatch side** (per-stage TOML config, `stage:` kwarg through `LLMClient`, Apple FM Swift endpoint, `bristlenose eval` harness) **remains unbuilt** — design below is unchanged. April 2026 framing of "durable plumbing vs provider shims" still applies: routing layer is durable; provider shims re-verify per release. See [design-stage-backends.md](design-stage-backends.md) §"Durable plumbing vs specific APIs" for the cost/urgency split.
+**Status:** Design draft, partially shipped (May 2026). The **display side** of stage→provider routing — showing the user which backends each stage could use, which BN runs by default, and editorial quality ratings per (stage, backend) cell — shipped via the Pipeline view (v1.5 + v1.9). See [design-pipeline-view.md](design-pipeline-view.md) for the shipped catalogue surface. The **selection/dispatch side** (per-stage TOML config, `stage:` kwarg through `LLMClient`, Apple FM Swift endpoint, `bristlenose eval` harness) **remains unbuilt** — design below is unchanged. April 2026 framing of "durable plumbing vs provider shims" still applies: routing layer is durable; provider shims re-verify per release. See [design-stage-backends.md](design-stage-backends.md) §"Durable plumbing vs specific APIs" for the cost/urgency split. **Update (7 Jun 2026):** the immediate desktop provider/model-resolution fix landed on `desktop-provider-resolution` (commits `1fe904e` + `743b784`) — stops the impossible-(provider, model) desync at source on the desktop path; the cross-channel "validate, not decide" guard below remains the deferred future work (one check in the shared layer, protects CLI + serve + desktop).
 **Related:** [design-stage-backends.md](design-stage-backends.md), [design-pipeline-view.md](design-pipeline-view.md) (shipped catalogue surface), [design-modularity.md](design-modularity.md) §Modularisation matrix, [design-gemma4-local-models.md](design-gemma4-local-models.md), [design-perf-fossda-baseline.md](design-perf-fossda-baseline.md), [archive/design-llm-providers.md](archive/design-llm-providers.md) (historical roadmap)
 
 ## Why now

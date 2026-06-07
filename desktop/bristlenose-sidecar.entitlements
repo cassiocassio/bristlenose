@@ -18,10 +18,32 @@ Full diagnostic + path forward in docs/private/c3-session-notes.md
 section Empty-entitlements retest. Plan for a future attempt at
 framework-level resigning in plans/c3-empty-ents-retest.md.
 
-NOT needed for serve-only scope (confirmed Apr 2026):
+REQUIRED for the run/transcription path (added 7 Jun 2026 — crash RED→GREEN):
+  cs.allow-jit + cs.allow-unsigned-executable-memory.
+The Apr 2026 "not needed" reasoning below was scoped to SERVE ONLY. The run
+path transcribes via mlx-whisper, which pulls numba → llvmlite. llvmlite
+JIT-compiles numba's DTW/word-timestamp kernels at runtime and makes the
+mapped pages executable (llvm::sys::Memory::protectMappedMemory →
+sys_icache_invalidate). Under Hardened Runtime without these two exceptions
+the kernel SIGKILLs the process with EXC_BAD_ACCESS / "Code Signature Invalid"
+(CODESIGNING Invalid Page) before transcription produces anything — surfaces
+in the desktop as "Run failed (no terminus event) / unknown", with no output
+dir created. Crash reports: ~/Library/Logs/DiagnosticReports/bristlenose-sidecar-*.ips.
+The provider-resolution fix (same day) unmasked this: runs previously died at
+LLM-validation preflight, before ever reaching transcription.
+
+  cs.allow-dyld-environment-variables: still not required.
+
+APP STORE / TestFlight REVIEW FLAG: both exceptions are legitimate for a
+JIT-using dependency (numba) but are Hardened Runtime relaxations Apple Review
+scrutinises. Route through the app-store-police agent before submitting. The
+numba-free alternative (exclude numba, lose mlx-whisper word-level timestamps
+→ breaks deep-linked transcript timecodes) was considered and rejected as a
+worse trade; revisit only if Review pushes back.
+
+Stale (Apr 2026, serve-only — kept for the audit trail):
   cs.allow-unsigned-executable-memory: CPython 3.12 has no W+X.
   cs.allow-jit: ctranslate2 excluded, MLX uses Metal GPU not CPU JIT.
-  cs.allow-dyld-environment-variables: not required for serve.
 
 C3 credential path (Apr 2026): sidecar never accesses macOS Keychain.
 Swift host fetches via Security.framework, injects BRISTLENOSE_*_API_KEY
@@ -34,6 +56,13 @@ at that point so the parent sandbox applies.
 <plist version="1.0">
 <dict>
     <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    <!-- Run-path transcription: numba/llvmlite JIT. See header comment +
+         crash analysis (7 Jun 2026). Without these the sidecar SIGKILLs at
+         the transcription stage under Hardened Runtime. -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
     <true/>
     <!-- Track A (sandbox-debug branch only): inherit parent sandbox so
          the sidecar's denials show up in the violation log alongside

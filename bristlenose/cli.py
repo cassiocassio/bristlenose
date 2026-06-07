@@ -635,10 +635,14 @@ def _maybe_prompt_for_provider(settings: object) -> object:
 
 def _print_header(settings: object, *, show_provider: bool = True, show_hardware: bool = True) -> None:
     """Print the Bristlenose version + provider + hardware header line."""
+    from bristlenose._build import build_label
     from bristlenose.providers import PROVIDERS
     from bristlenose.utils.hardware import detect_hardware
 
     parts: list[str] = [f"v{__version__}"]
+    label = build_label()
+    if label:
+        parts.append(label)
     if show_provider:
         provider_name = PROVIDERS.get(
             settings.llm_provider, PROVIDERS["anthropic"]  # type: ignore[union-attr]
@@ -1077,6 +1081,16 @@ def run(
     if codebook is not None:
         settings_kwargs["codebook"] = codebook
     settings = load_settings(**settings_kwargs)
+
+    # Configure logging BEFORE preflight so the provider/model resolution ledger
+    # and the api-key preflight call (where a provider/model-mismatch 404 fires)
+    # land in <output>/.bristlenose/bristlenose.log. Without this, both run
+    # before pipeline._configure_logging attaches the file handler and are lost.
+    from bristlenose.config import log_resolution_trace
+    from bristlenose.logging import setup_logging
+
+    setup_logging(output_dir=output_dir, verbose=verbose)
+    log_resolution_trace()
 
     # Offer provider selection if no API key / local provider is not ready
     settings = _maybe_prompt_for_provider(settings)

@@ -2,10 +2,25 @@
 
 from __future__ import annotations
 
+import logging
+import os
 from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
+
+# Set by the macOS desktop host (BristlenoseShared.childEnvironment) on every
+# spawned sidecar. Its presence means "the GUI + Keychain are the single source
+# of truth for this process" — see _find_env_files for why that disables disk
+# `.env` discovery.
+_HOSTED_BY_DESKTOP_ENV = "_BRISTLENOSE_HOSTED_BY_DESKTOP"
+
+
+def hosted_by_desktop() -> bool:
+    """True when this process was spawned by the macOS desktop app."""
+    return bool(os.environ.get(_HOSTED_BY_DESKTOP_ENV))
 
 
 def _find_env_files() -> list[Path]:
@@ -18,7 +33,19 @@ def _find_env_files() -> list[Path]:
 
     This means ``bristlenose`` finds its .env whether you run it from the
     project root, a trial-runs subfolder, or anywhere on your system.
+
+    **Desktop deployment carve-out:** when the process is spawned by the macOS
+    app (``_BRISTLENOSE_HOSTED_BY_DESKTOP=1``), disk ``.env`` files are ignored
+    entirely. A desktop user configures provider/model in GUI Settings and keys
+    in Keychain; a stray ``.env`` on disk (e.g. the repo root during dev, or a
+    file inside a dropped project folder) must never silently override those
+    choices — that's a consent-integrity violation, not a convenience. Real env
+    vars the host injects (Swift's transport for the GUI/Keychain values) are
+    unaffected; only file discovery is disabled.
     """
+    if hosted_by_desktop():
+        return []
+
     candidates: list[Path] = []
 
     # Package directory (where bristlenose is installed / editable-linked)
@@ -119,6 +146,35 @@ class BristlenoseSettings(BaseSettings):
     llm_concurrency: int = 3
 
 
+# Provider/model resolution ledger. Each load_settings() call rebuilds this as
+# an ordered list of human-readable steps: the value of provider+model at every
+# moment it is set or changed, what event caused the change, and the source of
+# the new value. Stored module-global (the sidecar runs one resolution per
+# process) so it can be REPLAYED into the log file after the per-run log handler
+# attaches — load_settings runs before pipeline._configure_logging, so a live
+# emit at resolution time is lost from the run log. See log_resolution_trace.
+_LAST_RESOLUTION_TRACE: list[str] = []
+
+
+def get_resolution_trace() -> list[str]:
+    """Return a copy of the last provider/model resolution ledger."""
+    return list(_LAST_RESOLUTION_TRACE)
+
+
+def log_resolution_trace(target: logging.Logger | None = None) -> None:
+    """Replay the provider/model resolution ledger into the (now-attached) log.
+
+    Called from points that run AFTER logging is configured — LLMClient init
+    (analysis stage) and the early-logging hook in the ``run`` command — so the
+    full ledger lands in ``<output>/.bristlenose/bristlenose.log`` next to the
+    LLM call. Cheap and short (a handful of lines); duplication across call
+    sites is acceptable and even useful (confirms the value didn't drift).
+    """
+    lg = target or logger
+    for line in _LAST_RESOLUTION_TRACE:
+        lg.info(line)
+
+
 def load_settings(**overrides: object) -> BristlenoseSettings:
     """Load settings with optional CLI overrides.
 
@@ -127,22 +183,145 @@ def load_settings(**overrides: object) -> BristlenoseSettings:
 
     Also populates API keys from the system keychain if not already set
     from environment variables or .env file.
+
+    Builds the provider/model resolution ledger (``_LAST_RESOLUTION_TRACE``) as
+    a side effect — every mutation of provider/model is recorded with its cause
+    and source for later replay into the run log.
     """
     # Import here to avoid circular import at module load time
     from bristlenose.providers import get_provider_aliases
 
-    # Normalise LLM provider aliases
+    trace: list[str] = []
+    raw_env_provider = os.environ.get("BRISTLENOSE_LLM_PROVIDER")
+    raw_env_model = os.environ.get("BRISTLENOSE_LLM_MODEL")
+    dotenv = [str(p) for p in _find_env_files()]
+    trace.append(
+        "llm_resolve | step=0-inputs | event=load_settings() [config.py] | "
+        f"env.BRISTLENOSE_LLM_PROVIDER={raw_env_provider!r} | "
+        f"env.BRISTLENOSE_LLM_MODEL={raw_env_model!r} | "
+        f"dotenv_files={dotenv} | hosted_by_desktop={hosted_by_desktop()} | "
+        f"overrides={sorted(overrides)}"
+    )
+
+    # Normalise LLM provider aliases (claude→anthropic, etc.)
     if "llm_provider" in overrides and isinstance(overrides["llm_provider"], str):
-        provider = overrides["llm_provider"].lower()
+        before = overrides["llm_provider"]
+        provider = before.lower()
         aliases = get_provider_aliases()
         overrides["llm_provider"] = aliases.get(provider, provider)
+        if overrides["llm_provider"] != before:
+            trace.append(
+                "llm_resolve | step=1-alias | "
+                "event=alias-normalise [config.py:load_settings] | "
+                f"provider {before!r} -> {overrides['llm_provider']!r} | "
+                "source=cli-override (get_provider_aliases)"
+            )
 
     settings = BristlenoseSettings(**overrides)  # type: ignore[arg-type]
+
+    def _src(field: str, raw_env: str | None) -> str:
+        if field in overrides:
+            return "cli-override"
+        if raw_env is not None:
+            return "env-var"
+        if dotenv and not hosted_by_desktop():
+            return "dotenv-file"
+        return "code-default"
+
+    trace.append(
+        "llm_resolve | step=2-pydantic | "
+        "event=BristlenoseSettings(**overrides) [config.py] | "
+        f"provider={settings.llm_provider} (source={_src('llm_provider', raw_env_provider)}) | "
+        f"model={settings.llm_model} (source={_src('llm_model', raw_env_model)})"
+    )
+
+    before_model = settings.llm_model
+    settings = _guard_orphan_desktop_model(settings, overrides)
+    if settings.llm_model != before_model:
+        trace.append(
+            "llm_resolve | step=3-orphan-guard | "
+            "event=_guard_orphan_desktop_model [config.py] | "
+            f"model {before_model!r} -> {settings.llm_model!r} | "
+            "cause=model-injected-without-provider-under-desktop | "
+            f"source={settings.llm_provider}-provider-default"
+        )
 
     # Populate API keys from keychain if not set from env/.env
     settings = _populate_keys_from_keychain(settings)
 
+    key_value = {
+        "anthropic": settings.anthropic_api_key,
+        "openai": settings.openai_api_key,
+        "azure": settings.azure_api_key,
+        "google": settings.google_api_key,
+        "local": "",
+    }.get(settings.llm_provider, "")
+    trace.append(
+        "llm_resolve | step=4-final | event=load_settings() return [config.py] | "
+        f"provider={settings.llm_provider} | model={settings.llm_model} | "
+        f"key={_key_fingerprint(key_value)}"
+    )
+
+    _LAST_RESOLUTION_TRACE[:] = trace
+    # Live emit too — lands when logging is already configured (e.g. the run
+    # command's early-logging hook); otherwise replayed later via
+    # log_resolution_trace from LLMClient.
+    for line in trace:
+        logger.info(line)
+
     return settings
+
+
+def _guard_orphan_desktop_model(
+    settings: BristlenoseSettings, overrides: dict[str, object]
+) -> BristlenoseSettings:
+    """Under desktop hosting, drop a model env var that has no matching provider.
+
+    The desktop injects provider+model together or neither. A
+    ``BRISTLENOSE_LLM_MODEL`` with no ``BRISTLENOSE_LLM_PROVIDER`` is therefore
+    a malformed injection (the historical Swift ``else if`` bug: a stale global
+    ``llmModel`` like ``gpt-4o`` rode in while the provider defaulted to
+    anthropic → cross-provider 404). Rather than let that orphan model 404, snap
+    the model back to the resolved provider's coherent default. Defense-in-depth
+    so a buggy or stale host binary can't produce an impossible provider/model
+    pair. CLI runs (not desktop-hosted) keep ``BRISTLENOSE_LLM_MODEL`` as a
+    valid standalone override.
+    """
+    if not hosted_by_desktop():
+        return settings
+    if "llm_model" in overrides or "llm_provider" in overrides:
+        return settings  # explicit CLI override wins
+    model_set = os.environ.get("BRISTLENOSE_LLM_MODEL") is not None
+    provider_set = os.environ.get("BRISTLENOSE_LLM_PROVIDER") is not None
+    if not (model_set and not provider_set):
+        return settings
+
+    from bristlenose.providers import PROVIDERS
+
+    spec = PROVIDERS.get(settings.llm_provider)
+    coherent = spec.default_model if spec else settings.llm_model
+    if coherent and coherent != settings.llm_model:
+        logger.warning(
+            "orphan_model_dropped | desktop injected model=%r with no provider; "
+            "snapping to %s default %r to avoid a cross-provider mismatch",
+            settings.llm_model,
+            settings.llm_provider,
+            coherent,
+        )
+        settings = settings.model_copy(update={"llm_model": coherent})
+    return settings
+
+
+def _key_fingerprint(value: str) -> str:
+    """Non-reversible fingerprint for a secret: length + last 4 chars only.
+
+    Mirrors what the preflight UI already shows ("sk-ant-...wAA"). Safe to log;
+    never emit the full key.
+    """
+    if not value:
+        return "absent"
+    tail = value[-4:] if len(value) >= 4 else "?"
+    return f"present(len={len(value)}, …{tail})"
 
 
 def _populate_keys_from_keychain(settings: BristlenoseSettings) -> BristlenoseSettings:

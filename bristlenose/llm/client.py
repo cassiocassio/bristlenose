@@ -92,6 +92,25 @@ def _flatten_schema_for_gemini(schema: dict) -> dict:
     return _resolve(schema)  # type: ignore[return-value]
 
 
+# Per-model output-token ceilings. The default `llm_max_tokens` (64000) fits
+# Claude (hard cap 64000) but exceeds what some models accept as `max_tokens` —
+# gpt-4o / gpt-4o-mini cap completion at 16384 and 400 ("max_tokens is too
+# large") if asked for more. Requests are clamped to this ceiling so a default
+# tuned for one provider doesn't hard-fail another (the desktop injects no
+# max_tokens override, so the config default reaches every provider verbatim).
+# Models absent here are not clamped. Keep in sync with provider docs.
+_MODEL_MAX_OUTPUT_TOKENS: dict[str, int] = {
+    "gpt-4o": 16384,
+    "gpt-4o-mini": 16384,
+}
+
+
+def _clamp_max_tokens(model: str, requested: int) -> int:
+    """Clamp requested output tokens to the model's known ceiling (if any)."""
+    cap = _MODEL_MAX_OUTPUT_TOKENS.get(model)
+    return min(requested, cap) if cap else requested
+
+
 class LLMUsageTracker:
     """Accumulates token usage across multiple LLM calls.
 
@@ -135,8 +154,45 @@ class LLMClient:
         self._local_client: object | None = None
         self.tracker = LLMUsageTracker()
 
+        # Log the resolved target BEFORE validation so we capture it even when
+        # the key/endpoint check below raises. This is the single most useful
+        # line for diagnosing provider≠model mismatches (e.g. anthropic + gpt-4o).
+        self._log_resolved_target()
+
         # Validate API key is present for the selected provider
         self._validate_api_key()
+
+    def _log_resolved_target(self) -> None:
+        """Log exactly what this client will talk to: provider, model, key, URL."""
+        from bristlenose.config import _key_fingerprint, log_resolution_trace
+
+        # Replay the provider/model resolution ledger here — analyze/render
+        # paths configure logging only at the pipeline stage, so this is the
+        # first point the ledger reliably reaches the run log file.
+        log_resolution_trace()
+
+        endpoint = {
+            "anthropic": "api.anthropic.com (SDK default)",
+            "openai": "api.openai.com (SDK default)",
+            "azure": self.settings.azure_endpoint or "(unset)",
+            "google": "generativelanguage.googleapis.com (SDK default)",
+            "local": self.settings.local_url,
+        }.get(self.provider, "(unknown)")
+        key_value = {
+            "anthropic": self.settings.anthropic_api_key,
+            "openai": self.settings.openai_api_key,
+            "azure": self.settings.azure_api_key,
+            "google": self.settings.google_api_key,
+            "local": "",
+        }.get(self.provider, "")
+        logger.info(
+            "llm_client_target | provider=%s | request_model=%s | endpoint=%s | "
+            "key=%s",
+            self.provider,
+            self._provider_request_model(),
+            endpoint,
+            _key_fingerprint(key_value),
+        )
 
     def _validate_api_key(self) -> None:
         """Check that the required API key is configured (cloud providers only)."""
@@ -200,7 +256,26 @@ class LLMClient:
             An instance of response_model populated from the LLM response.
         """
         max_tokens = max_tokens or self.settings.llm_max_tokens
+        requested_max_tokens = max_tokens
+        max_tokens = _clamp_max_tokens(self._provider_request_model(), max_tokens)
+        if max_tokens != requested_max_tokens:
+            logger.info(
+                "llm_max_tokens_clamped | model=%s | %d -> %d (model output ceiling)",
+                self._provider_request_model(),
+                requested_max_tokens,
+                max_tokens,
+            )
         input_chars = len(system_prompt) + len(user_prompt)
+
+        logger.debug(
+            "llm_call_start | provider=%s | request_model=%s | schema=%s | "
+            "input_chars=%d | max_tokens=%d",
+            self.provider,
+            self._provider_request_model(),
+            response_model.__name__,
+            input_chars,
+            max_tokens,
+        )
 
         t0 = time.perf_counter()
         try:
@@ -241,6 +316,21 @@ class LLMClient:
                     outcome="cancelled",
                     prompt_template=prompt_template,
                     usage_source="missing",
+                )
+                raise
+            except Exception as exc:
+                # Surface BOTH halves of the call on any failure — the recurring
+                # bug is a provider/model mismatch (anthropic endpoint rejecting
+                # gpt-4o with a 404), which is invisible if only the error string
+                # is logged. errno/status come through in str(exc).
+                logger.warning(
+                    "llm_call_failed | provider=%s | request_model=%s | "
+                    "schema=%s | error_type=%s | error=%s",
+                    self.provider,
+                    self._provider_request_model(),
+                    response_model.__name__,
+                    type(exc).__name__,
+                    exc,
                 )
                 raise
         finally:

@@ -596,6 +596,20 @@ def preflight_api_key(
             )
         )
 
+    # The moment the provider/model pair is sent on the wire — this is where a
+    # provider≠model mismatch (e.g. anthropic endpoint + gpt-4o) surfaces as a
+    # 404. Logged so the run log pinpoints which pair was validated.
+    _wire_model = settings.azure_deployment if provider == "azure" else (
+        settings.local_model if provider == "local" else settings.llm_model
+    )
+    logger.info(
+        "llm_preflight_validate | provider=%s | model=%s | event=preflight_api_key "
+        "[preflight/api_key.py] validator=_validate_%s",
+        provider,
+        _wire_model,
+        provider,
+    )
+
     # Resolve the validator through globals() rather than a module-level dict:
     # tests monkeypatch ``_validate_*`` by name, and a captured-at-import
     # dict reference would not pick that up.

@@ -1,6 +1,7 @@
 ---
 name: sync-board
 description: Bidirectional sync between 100days.md and GitHub Projects board — strikethrough Done items, create new cards, backfill Sprint tags
+model: haiku
 disable-model-invocation: false
 user-invocable: true
 allowed-tools: Bash, Read, Edit

@@ -1,6 +1,7 @@
 ---
 name: close-branch
 description: Archive a merged feature branch — stale marker, detach worktree, update BRANCHES.md (preserves local directory)
+model: haiku
 disable-model-invocation: true
 user-invocable: true
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion

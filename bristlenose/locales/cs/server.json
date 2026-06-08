@@ -1,1 +1,11 @@
-{}
+{
+  "error": {
+    "notFound": "Zdroj nenalezen.",
+    "badRequest": "Chybný požadavek: {detail}",
+    "internal": "Vnitřní chyba serveru."
+  },
+  "status": {
+    "healthy": "V pořádku",
+    "degraded": "Omezený provoz"
+  }
+}

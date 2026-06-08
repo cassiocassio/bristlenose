@@ -6,7 +6,8 @@ of the required keys the popover silently renders the raw dotted key.
 This is a smoke test: every locale must carry every key.
 
 CLDR plural keys are checked separately because the locale rules differ
-(en/es/fr/de carry `_one` + `_other`; ko/ja carry `_other` only).
+(en/es/fr/de carry `_one` + `_other`; ko/ja carry `_other` only; Czech is the
+first four-form locale — `_one`/`_few`/`_many`/`_other`).
 """
 
 from __future__ import annotations
@@ -89,6 +90,24 @@ def test_single_form_locales_have_only_other(locale: str) -> None:
     assert "overflow_one" not in diagnostic, (
         f"locale={locale} unexpectedly carries overflow_one"
     )
+
+
+@pytest.mark.parametrize("locale", _ALL_LOCALES)
+def test_four_form_locales_carry_all_forms(locale: str) -> None:
+    # Czech is the first four-form locale. A locale that carries `overflow_few`
+    # (the 2–4 form) MUST also carry `_one`, `_many`, and `_other` — a partial
+    # four-form set (e.g. `_few` without `_many`) would silently render the
+    # wrong grammar at runtime. Derived from the presence of `_few`, so a
+    # future four-form locale is covered without a hardcoded list. (Guards the
+    # gap behind the Swift CLDR-selector fix: the desktop selector now requests
+    # `overflow_few` for Czech counts 2–4, so the form must exist.)
+    diagnostic = _load_desktop(locale)["pipeline"]["diagnostic"]
+    if "overflow_few" in diagnostic:
+        for form in ("overflow_one", "overflow_few", "overflow_many", "overflow_other"):
+            assert form in diagnostic, (
+                f"locale={locale} carries overflow_few but is missing {form} "
+                "(four-form CLDR locales need all of one/few/many/other)"
+            )
 
 
 # ── pipeline.status.* — the activity-pill / popover live status strings ──────

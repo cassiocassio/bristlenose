@@ -678,10 +678,12 @@ struct PipelineActivityItem: View {
     }
 
     /// Extract the truncation count from the Python-emitted overflow
-    /// message ("... and N more failures truncated") and render via the
-    /// CLDR plural key (`overflow_one` / `overflow_other`). Falls back to
-    /// the wire string when the regex doesn't match — guards against
-    /// future Python-side wording changes.
+    /// message ("... and N more failures truncated") and render via the CLDR
+    /// plural form for the active locale (`overflow_one` / `_few` / `_other`
+    /// — Czech needs all of them; the prior binary `one`/`other` selector
+    /// rendered the `_other` form for Czech counts 2–4). Falls back to the
+    /// wire string when the regex doesn't match — guards against future
+    /// Python-side wording changes.
     ///
     /// Python keeps the wire shape as a single human-readable string
     /// rather than emitting a structured sentinel; the Swift side does the
@@ -691,10 +693,15 @@ struct PipelineActivityItem: View {
         guard let count = parseOverflowCount(from: message) else {
             return message
         }
-        let key = count == 1
-            ? "desktop.pipeline.diagnostic.overflow_one"
-            : "desktop.pipeline.diagnostic.overflow_other"
-        return i18n.t(key, ["count": String(count)])
+        let base = "desktop.pipeline.diagnostic.overflow"
+        let key = "\(base)_\(i18n.pluralCategory(count))"
+        let rendered = i18n.t(key, ["count": String(count)])
+        // Defensive: if a locale lacks the selected form, t() returns the raw
+        // dotted key — fall back to `_other` rather than show it to the user.
+        if rendered == key {
+            return i18n.t("\(base)_other", ["count": String(count)])
+        }
+        return rendered
     }
 
     /// Parse `N` out of `"... and N more failures truncated"`.

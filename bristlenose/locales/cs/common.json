@@ -454,6 +454,7 @@
     "tagOnQuotes_many": "Tento štítek je na {{count}} citátu.",
     "tagOnQuotes_other": "Tento štítek je na {{count}} citátech.",
     "newGroup": "Nová skupina",
+    "newCode": "Nový kód",
     "browseCodebooks": "Procházet knihy kódů",
     "browseTitle": "Procházet knihy kódů",
     "browseSubtitle": "Importujte rámcovou knihu kódů nebo si vytvořte vlastní",
@@ -549,7 +550,10 @@
     "moderator": "Moderátor",
     "moderators": "Moderátoři",
     "observer": "Pozorovatel",
-    "observers": "Pozorovatelé"
+    "observers": "Pozorovatelé",
+    "loading": "Načítání přepisu…",
+    "failedToLoad": "Nepodařilo se načíst přepis",
+    "noData": "Nejsou k dispozici žádná data přepisu."
   },
   "emptyState": {
     "prePipeline": "Přetáhněte složku s rozhovory pro zahájení analýzy",

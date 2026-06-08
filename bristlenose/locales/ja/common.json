@@ -422,6 +422,7 @@
     "tagOnQuotes_one": "このタグは {{count}} 件の発言に付いています。",
     "tagOnQuotes_other": "このタグは {{count}} 件の発言に付いています。",
     "newGroup": "新規グループ",
+    "newCode": "新規コード",
     "browseCodebooks": "コードブックを参照",
     "browseTitle": "コードブックを参照",
     "browseSubtitle": "フレームワークのコードブックを読み込むか、独自に作成します",
@@ -511,7 +512,10 @@
     "moderator": "モデレーター",
     "moderators": "モデレーター",
     "observer": "オブザーバー",
-    "observers": "オブザーバー"
+    "observers": "オブザーバー",
+    "loading": "トランスクリプトを読み込み中…",
+    "failedToLoad": "トランスクリプトの読み込みに失敗しました",
+    "noData": "トランスクリプトデータはありません。"
   },
   "emptyState": {
     "prePipeline": "インタビューのフォルダをドロップすると分析が始まります",

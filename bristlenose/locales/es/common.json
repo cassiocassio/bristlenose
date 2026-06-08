@@ -423,6 +423,7 @@
     "tagOnQuotes_one": "Esta etiqueta está en {{count}} cita.",
     "tagOnQuotes_other": "Esta etiqueta está en {{count}} citas.",
     "newGroup": "Nuevo grupo",
+    "newCode": "Nuevo código",
     "browseCodebooks": "Explorar libros de códigos",
     "browseTitle": "Explorar libros de códigos",
     "browseSubtitle": "Importa un libro de códigos de framework o crea el tuyo",
@@ -512,7 +513,10 @@
     "moderator": "Moderador",
     "moderators": "Moderadores",
     "observer": "Observador",
-    "observers": "Observadores"
+    "observers": "Observadores",
+    "loading": "Cargando transcripción…",
+    "failedToLoad": "Error al cargar la transcripción",
+    "noData": "No hay datos de transcripción disponibles."
   },
   "emptyState": {
     "prePipeline": "Arrastra una carpeta de entrevistas para comenzar el análisis",

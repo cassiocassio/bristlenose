@@ -423,6 +423,7 @@
     "tagOnQuotes_one": "Cette étiquette est sur {{count}} verbatim.",
     "tagOnQuotes_other": "Cette étiquette est sur {{count}} verbatim.",
     "newGroup": "Nouveau groupe",
+    "newCode": "Nouveau code",
     "browseCodebooks": "Parcourir les grilles de codage",
     "browseTitle": "Parcourir les grilles de codage",
     "browseSubtitle": "Importez une grille de codage de framework ou créez la vôtre",
@@ -512,7 +513,10 @@
     "moderator": "Modérateur",
     "moderators": "Modérateurs",
     "observer": "Observateur",
-    "observers": "Observateurs"
+    "observers": "Observateurs",
+    "loading": "Chargement de la transcription…",
+    "failedToLoad": "Échec du chargement de la transcription",
+    "noData": "Aucune donnée de transcription disponible."
   },
   "emptyState": {
     "prePipeline": "Déposez un dossier d’entretiens pour démarrer l’analyse",

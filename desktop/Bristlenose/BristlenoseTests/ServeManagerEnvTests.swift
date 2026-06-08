@@ -236,4 +236,122 @@ struct ServeManagerEnvTests {
             #expect(env["BRISTLENOSE_LLM_MODEL"] == LLMProvider.claude.defaultModel)
         }
     }
+
+    // MARK: - resolvedProviderModel (shared source of truth)
+
+    /// `resolvedProviderModel` is the single source overlayPreferences and
+    /// hostResolutionTrace both read, so the env vars and the ledger line can't
+    /// disagree about what was injected — a disagreement there would be the
+    /// trace LYING about the 8 Jun 404, the one thing it exists to expose.
+    @Test func resolvedProviderModel_matches_what_overlayPreferences_injects() {
+        withIsolatedDefaults { defaults in
+            defaults.set("openai", forKey: "activeProvider")
+            defaults.set("gpt-4o-mini", forKey: "llmModel_openai")
+            let resolved = BristlenoseShared.resolvedProviderModel(defaults: defaults)
+            var env: [String: String] = [:]
+            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+            #expect(resolved.provider == env["BRISTLENOSE_LLM_PROVIDER"])
+            #expect(resolved.model == env["BRISTLENOSE_LLM_MODEL"])
+        }
+    }
+
+    @Test func resolvedProviderModel_no_provider_resolves_neither() {
+        withIsolatedDefaults { defaults in
+            defaults.set("gpt-4o", forKey: "llmModel")  // stale global, no provider
+            let resolved = BristlenoseShared.resolvedProviderModel(defaults: defaults)
+            #expect(resolved.provider == nil)
+            #expect(resolved.model == nil)
+        }
+    }
+
+    // MARK: - hostResolutionTrace (cross-seam ledger)
+
+    /// The host emits a `step=host-defaults` ledger line naming the provider and
+    /// model it resolved, plus `key=present` when the active provider's key is in
+    /// Keychain. Provider/model NAMES are not secret; only the key value is
+    /// withheld (reported as present/absent).
+    @Test func hostResolutionTrace_reports_provider_model_and_key_present() {
+        withIsolatedDefaults { defaults in
+            defaults.set("openai", forKey: "activeProvider")
+            defaults.set("gpt-4o-mini", forKey: "llmModel_openai")
+            let store = InMemoryKeychain()
+            store.set(provider: "openai", value: "sk-test-openai")
+            let lines = BristlenoseShared.hostResolutionTrace(
+                defaults: defaults, store: store
+            )
+            #expect(lines.count == 1)
+            let line = lines[0]
+            #expect(line.contains("step=host-defaults"))
+            #expect(line.contains("activeProvider='openai'"))
+            #expect(line.contains("model='gpt-4o-mini'"))
+            #expect(line.contains("key=present"))
+            // SECURITY: the key VALUE must never appear (env var is ps -E-visible).
+            #expect(!line.contains("sk-test-openai"))
+        }
+    }
+
+    /// No key in Keychain for the active cloud provider → `key=absent` (still no
+    /// secret leaked, and the absence is exactly what a 401/"add a key" failure
+    /// would want to confirm in the log).
+    @Test func hostResolutionTrace_reports_key_absent_when_missing() {
+        withIsolatedDefaults { defaults in
+            defaults.set("anthropic", forKey: "activeProvider")
+            let store = InMemoryKeychain()  // empty
+            let lines = BristlenoseShared.hostResolutionTrace(
+                defaults: defaults, store: store
+            )
+            #expect(lines[0].contains("key=absent"))
+        }
+    }
+
+    /// Keyless provider (local/Ollama) → `key=keyless`, never a Keychain miss
+    /// dressed up as `absent`.
+    @Test func hostResolutionTrace_reports_keyless_for_local() {
+        withIsolatedDefaults { defaults in
+            defaults.set("local", forKey: "activeProvider")
+            let store = InMemoryKeychain()
+            let lines = BristlenoseShared.hostResolutionTrace(
+                defaults: defaults, store: store
+            )
+            #expect(lines[0].contains("activeProvider='local'"))
+            #expect(lines[0].contains("key=keyless"))
+        }
+    }
+
+    /// No active provider → activeProvider=nil but effectiveProvider names
+    /// Python's default, and key presence is judged against THAT (the
+    /// defaulted-run path the 404 came through).
+    @Test func hostResolutionTrace_no_provider_uses_python_default() {
+        withIsolatedDefaults { defaults in
+            let store = InMemoryKeychain()
+            store.set(
+                provider: BristlenoseShared.pythonDefaultProvider,
+                value: "sk-default"
+            )
+            let lines = BristlenoseShared.hostResolutionTrace(
+                defaults: defaults, store: store
+            )
+            #expect(lines[0].contains("activeProvider=nil"))
+            #expect(lines[0].contains(
+                "effectiveProvider='\(BristlenoseShared.pythonDefaultProvider)'"
+            ))
+            #expect(lines[0].contains("key=present"))
+        }
+    }
+
+    /// The shared env factory injects the cross-seam trace env var, so BOTH
+    /// spawn sites carry it (structural guarantee, same as the API-key overlay).
+    @Test func childEnvironment_injects_host_resolution_trace() {
+        let store = InMemoryKeychain()
+        store.set(provider: "anthropic", value: "sk-ant-from-keychain")
+        let mode = SidecarMode.devSidecar(path: URL(fileURLWithPath: "/tmp/fake-bristlenose"))
+        let env = withActiveProvider("anthropic") {
+            BristlenoseShared.childEnvironment(for: mode, store: store)
+        }
+        let trace = env["_BRISTLENOSE_HOST_RESOLUTION_TRACE"]
+        #expect(trace != nil)
+        #expect(trace?.contains("step=host-defaults") == true)
+        #expect(trace?.contains("activeProvider='anthropic'") == true)
+        #expect(trace?.contains("sk-ant-from-keychain") == false)
+    }
 }

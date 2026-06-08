@@ -213,3 +213,135 @@ def test_orphan_guard_recorded_in_ledger(
         config.load_settings()
     msgs = [r.message for r in caplog.records]
     assert any("step=3-orphan-guard" in m and "gpt-4o" in m for m in msgs)
+
+
+class TestCliProviderDecisionLedger:
+    """The CLI layer records its --llm forward-or-not decision in the ledger.
+
+    load_settings only sees the *result* (llm_provider in overrides or not). The
+    forwarding decision is made one layer up, in the run/analyze command — the
+    actor that produced the 8 Jun 404 by forwarding a non-None --llm default that
+    silently beat the desktop-injected env var. `describe_cli_provider_decision`
+    + `note_resolution_input` make that decision legible, attributed to cli.py,
+    at the front of the resolution trace. Pure-Python, so it's pinned in the only
+    CI-running suite (the Swift spawn path can't be).
+    """
+
+    def test_forwarded_decision_is_pure_and_legible(self) -> None:
+        line = config.describe_cli_provider_decision(
+            "openai", hosted=True, command="run"
+        )
+        assert "step=cli-args" in line
+        assert "event=run --llm [cli.py]" in line
+        assert "'openai'" in line
+        assert "forwarding as cli-override" in line
+        assert "hosted_by_desktop=True" in line
+
+    def test_absent_decision_is_pure_and_legible(self) -> None:
+        line = config.describe_cli_provider_decision(
+            None, hosted=False, command="analyze"
+        )
+        assert "step=cli-args" in line
+        assert "event=analyze --llm [cli.py]" in line
+        assert "--llm absent -> not forwarding" in line
+        assert "hosted_by_desktop=False" in line
+
+    def test_pending_note_drained_to_front_of_trace(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
+        config.note_resolution_input(
+            config.describe_cli_provider_decision(
+                None, hosted=True, command="run"
+            )
+        )
+        config.load_settings()
+        trace = config.get_resolution_trace()
+        # The CLI note leads the ledger, above load_settings' own step-0-inputs.
+        assert trace[0].startswith("llm_resolve | step=cli-args")
+        assert any("step=0-inputs" in line for line in trace)
+        assert trace.index(trace[0]) < next(
+            i for i, line in enumerate(trace) if "step=0-inputs" in line
+        )
+
+    def test_pending_note_cleared_after_drain(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
+        config.note_resolution_input("llm_resolve | step=cli-args | once")
+        config.load_settings()
+        # A second resolution must not re-emit the first run's note (the sidecar
+        # resolves once per process, but a stale note must never leak across runs).
+        config.load_settings()
+        trace = config.get_resolution_trace()
+        assert not any("once" in line for line in trace)
+
+
+class TestHostResolutionTrace:
+    """The desktop host's cross-seam resolution lines lead every ledger.
+
+    The Swift host (BristlenoseShared.childEnvironment) injects a newline-joined
+    block of `step=host-defaults` lines describing the provider/model/key decision
+    that produced the env vars this process inherits. Unlike the CLI-note queue,
+    this is a stable PROPERTY of the spawn: re-read on every load_settings() call
+    and never cleared, so autocode/analysis/run resolutions in one long-lived
+    serve process all carry the same cross-seam origin. The 8 Jun 404 lived
+    entirely on the Swift side of this seam, invisible to Python — these lines
+    make it legible in the run log.
+    """
+
+    def test_drain_empty_when_not_hosted(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("_BRISTLENOSE_HOST_RESOLUTION_TRACE", raising=False)
+        assert config._drain_host_resolution_trace() == []
+
+    def test_drain_splits_and_filters_blanks(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(
+            "_BRISTLENOSE_HOST_RESOLUTION_TRACE",
+            "llm_resolve | step=host-defaults | a\n\nllm_resolve | "
+            "step=host-defaults | b\n",
+        )
+        lines = config._drain_host_resolution_trace()
+        assert lines == [
+            "llm_resolve | step=host-defaults | a",
+            "llm_resolve | step=host-defaults | b",
+        ]
+
+    def test_host_block_leads_the_ledger(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
+        monkeypatch.setenv(
+            "_BRISTLENOSE_HOST_RESOLUTION_TRACE",
+            "llm_resolve | step=host-defaults | event=spawn [Swift] | "
+            "activeProvider='openai' | key=present",
+        )
+        # A CLI note too, to pin the ordering host-defaults -> cli-args -> 0-inputs.
+        config.note_resolution_input(
+            config.describe_cli_provider_decision(None, hosted=True, command="run")
+        )
+        config.load_settings()
+        trace = config.get_resolution_trace()
+        assert trace[0].startswith("llm_resolve | step=host-defaults")
+        host_i = 0
+        cli_i = next(i for i, ln in enumerate(trace) if "step=cli-args" in ln)
+        inputs_i = next(i for i, ln in enumerate(trace) if "step=0-inputs" in ln)
+        assert host_i < cli_i < inputs_i
+
+    def test_host_block_reread_every_call_not_cleared(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
+        monkeypatch.setenv(
+            "_BRISTLENOSE_HOST_RESOLUTION_TRACE",
+            "llm_resolve | step=host-defaults | sticky",
+        )
+        # Idempotent env read: a second resolution (e.g. autocode after the run)
+        # must STILL carry the origin — the env var is a property of the spawn.
+        config.load_settings()
+        config.load_settings()
+        trace = config.get_resolution_trace()
+        assert any("sticky" in line for line in trace)

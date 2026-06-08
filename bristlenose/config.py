@@ -17,10 +17,37 @@ logger = logging.getLogger(__name__)
 # `.env` discovery.
 _HOSTED_BY_DESKTOP_ENV = "_BRISTLENOSE_HOSTED_BY_DESKTOP"
 
+# Set by the macOS desktop host (BristlenoseShared.childEnvironment) on every
+# spawned sidecar: a newline-joined block of `llm_resolve | step=host-defaults …`
+# ledger lines describing the Swift-side decision that produced the provider/model
+# env vars this process inherits (which provider is active, whether a model
+# override and an API key are present). Unlike _PENDING_RESOLUTION_NOTES (an
+# in-process queue drained once per invocation), this is a stable PROPERTY of the
+# spawn — re-read on every load_settings() call and NEVER cleared, so every
+# resolution in a long-lived serve process (run pipeline, autocode, analysis)
+# carries the same cross-seam origin. Human-read-only (nothing parses it), so
+# format drift degrades gracefully. Swift emits key=present/absent ONLY — these
+# lines ride into bristlenose.log and are `ps -E`-visible, never the key value.
+_HOST_RESOLUTION_TRACE_ENV = "_BRISTLENOSE_HOST_RESOLUTION_TRACE"
+
 
 def hosted_by_desktop() -> bool:
     """True when this process was spawned by the macOS desktop app."""
     return bool(os.environ.get(_HOSTED_BY_DESKTOP_ENV))
+
+
+def _drain_host_resolution_trace() -> list[str]:
+    """Read the host-emitted resolution ledger lines (cross-seam, Swift origin).
+
+    Returns the desktop host's `step=host-defaults` lines, or [] when not hosted
+    (CLI/dev). Idempotent: reading an env var has no side effect, so unlike the
+    CLI-note queue this is NOT cleared — every load_settings() in a long-lived
+    serve process re-reads it and prepends the same origin to its ledger.
+    """
+    raw = os.environ.get(_HOST_RESOLUTION_TRACE_ENV)
+    if not raw:
+        return []
+    return [line for line in raw.split("\n") if line.strip()]
 
 
 def _find_env_files() -> list[Path]:
@@ -161,6 +188,51 @@ def get_resolution_trace() -> list[str]:
     return list(_LAST_RESOLUTION_TRACE)
 
 
+# CLI-layer notes queued for the NEXT load_settings() trace. load_settings builds
+# the ledger from step-0-inputs onward, but the value of provider/model is decided
+# one layer up — in the `run`/`analyze` command, which chooses whether to forward
+# `--llm` as a cli-override at all. That decision (the actor that spoke uninvited
+# in the 8 Jun 404) is invisible to load_settings, which only sees the *result*
+# (`llm_provider` present in overrides or not). The CLI records its own decision
+# here; load_settings drains it to the FRONT of the trace so the ledger reads
+# top-down: who spoke → what they said → how pydantic resolved it. Pure-Python and
+# pytest-testable (the only CI-running suite), unlike the Swift spawn path.
+_PENDING_RESOLUTION_NOTES: list[str] = []
+
+
+def note_resolution_input(line: str) -> None:
+    """Queue a CLI-layer ledger line for the next load_settings() trace.
+
+    Drained (and cleared) at the top of load_settings — one resolution per
+    process for the sidecar, so stale notes can't leak across runs.
+    """
+    _PENDING_RESOLUTION_NOTES.append(line)
+
+
+def describe_cli_provider_decision(
+    llm_provider: str | None, *, hosted: bool, command: str = "run"
+) -> str:
+    """Render the `<command> --llm` forwarding decision as a ledger line.
+
+    Pure — no I/O, no globals. The 404 root cause was the CLI forwarding a
+    non-None `--llm` default as a cli-override that silently beat the
+    desktop-injected ``BRISTLENOSE_LLM_PROVIDER`` env var. This line makes the
+    forward-or-not decision legible in the run log, attributed to the layer that
+    actually made it (cli.py), above load_settings' own step-0-inputs.
+    """
+    if llm_provider is not None:
+        decision = (
+            f"--llm={llm_provider!r} provided -> forwarding as cli-override "
+            "(beats env var)"
+        )
+    else:
+        decision = "--llm absent -> not forwarding (env/config decides)"
+    return (
+        f"llm_resolve | step=cli-args | event={command} --llm [cli.py] | "
+        f"{decision} | hosted_by_desktop={hosted}"
+    )
+
+
 def log_resolution_trace(target: logging.Logger | None = None) -> None:
     """Replay the provider/model resolution ledger into the (now-attached) log.
 
@@ -192,6 +264,17 @@ def load_settings(**overrides: object) -> BristlenoseSettings:
     from bristlenose.providers import get_provider_aliases
 
     trace: list[str] = []
+    # Prepend the host-defaults block (Swift origin) to the very front — it
+    # describes the cross-seam decision (which provider/model/key the desktop app
+    # injected) that precedes everything Python sees. Re-read every call, never
+    # cleared, so autocode/analysis resolutions in a long-lived serve process all
+    # carry the same origin. Empty on CLI/dev.
+    trace.extend(_drain_host_resolution_trace())
+    # Drain any CLI-layer notes next — they describe the decision (forward
+    # --llm or not) that produced the `overrides` this function is about to resolve.
+    if _PENDING_RESOLUTION_NOTES:
+        trace.extend(_PENDING_RESOLUTION_NOTES)
+        _PENDING_RESOLUTION_NOTES.clear()
     raw_env_provider = os.environ.get("BRISTLENOSE_LLM_PROVIDER")
     raw_env_model = os.environ.get("BRISTLENOSE_LLM_MODEL")
     dotenv = [str(p) for p in _find_env_files()]

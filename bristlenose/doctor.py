@@ -959,7 +959,7 @@ def check_bundle_prompts() -> CheckResult:
 
 
 def check_bundle_locales() -> CheckResult:
-    """i18n locale files (6 languages)."""
+    """i18n locale files (7 languages)."""
 
     locales_root = _package_root() / "locales"
     if not locales_root.is_dir():
@@ -969,7 +969,7 @@ def check_bundle_locales() -> CheckResult:
             detail=f"missing: {locales_root}",
             fix_key="bundle_dir_missing",
         )
-    expected = {"en", "es", "fr", "de", "ja", "ko"}
+    expected = {"en", "es", "fr", "de", "ja", "ko", "cs"}
     present = {p.name for p in locales_root.iterdir() if p.is_dir()}
     missing = expected - present
     if missing:

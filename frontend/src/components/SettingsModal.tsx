@@ -43,6 +43,7 @@ const LOCALE_LABELS: Record<Locale, string> = {
   fr: "Français",
   de: "Deutsch",
   ko: "한국어",
+  cs: "Čeština",
 };
 
 // ── Appearance helpers ────────────────────────────────────────────────────

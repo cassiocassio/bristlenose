@@ -26,7 +26,107 @@
     "heading": "Référence de configuration",
     "intro": "Tous les réglages ci-dessous sont configurés via des variables d'environnement ou un fichier <code>.env</code>. Ils sont affichés ici à titre indicatif — pour modifier une valeur, éditez le fichier indiqué dans chaque ligne.",
     "clickToCopy": "Cliquer pour copier",
-    "copied": "Copié"
+    "copied": "Copié",
+    "categories": {
+      "llm": "Fournisseur et modèle LLM",
+      "transcription": "Transcription",
+      "privacy": "Confidentialité",
+      "quotes": "Citations",
+      "analysis": "Analyse",
+      "autocode": "AutoCode",
+      "display": "Affichage",
+      "pipeline": "Pipeline",
+      "thumbnails": "Miniatures",
+      "server": "Serveur",
+      "logging": "Journalisation",
+      "timing": "Chronométrage"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Fournisseur",
+        "model": "Modèle",
+        "temperature": "Température",
+        "maxTokens": "Tokens de sortie max",
+        "concurrency": "Concurrence",
+        "claudeKey": "Clé API Claude",
+        "chatgptKey": "Clé API ChatGPT",
+        "geminiKey": "Clé API Gemini",
+        "azureKey": "Clé API Azure",
+        "azureEndpoint": "Point de terminaison Azure",
+        "azureDeployment": "Déploiement Azure",
+        "azureApiVersion": "Version d'API Azure",
+        "ollamaUrl": "URL Ollama",
+        "ollamaModel": "Modèle Ollama"
+      },
+      "transcription": {
+        "backend": "Backend",
+        "model": "Modèle",
+        "language": "Langue",
+        "device": "Appareil",
+        "computeType": "Type de calcul",
+        "audioConcurrency": "Concurrence d'extraction audio"
+      },
+      "privacy": {
+        "piiRedaction": "Expurgation des PII",
+        "piiLlmPass": "Passe PII par LLM",
+        "customNames": "Noms personnalisés à expurger"
+      },
+      "quotes": {
+        "minQuoteWords": "Mots min. par citation",
+        "speakerMergeGap": "Écart de fusion des locuteurs",
+        "quoteSequenceGap": "Écart de séquence de citations",
+        "llmFailureThreshold": "Seuil d'échec LLM",
+        "autocodeBatchSize": "Taille de lot AutoCode"
+      },
+      "analysis": {
+        "topNSignals": "N signaux principaux",
+        "topNSignalsGeneric": "N signaux principaux (générique)",
+        "topNElaboration": "N principaux pour l'élaboration",
+        "minQuotesPerCell": "Citations min. par cellule",
+        "strongConcentration": "Fort : concentration >",
+        "strongParticipants": "Fort : participants ≥",
+        "strongQuotes": "Fort : citations ≥",
+        "moderateConcentration": "Modéré : concentration >",
+        "moderateParticipants": "Modéré : participants ≥",
+        "moderateQuotes": "Modéré : citations ≥"
+      },
+      "autocode": {
+        "defaultLower": "Seuil inférieur par défaut",
+        "defaultUpper": "Seuil supérieur par défaut",
+        "sliderStep": "Pas du curseur",
+        "sliderMinGap": "Écart min. du curseur",
+        "histogramBins": "Classes de l'histogramme"
+      },
+      "display": {
+        "searchMinChars": "Caractères min. de recherche",
+        "activityPollInterval": "Intervalle d'interrogation d'activité"
+      },
+      "pipeline": {
+        "projectName": "Nom du projet",
+        "writeIntermediate": "Écrire les fichiers intermédiaires",
+        "skipTranscription": "Ignorer la transcription",
+        "maxSessionsBeforeConfirm": "Sessions max. avant confirmation"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Fenêtre de recherche d'image clé",
+        "fallbackFrameTime": "Temps d'image de secours",
+        "thumbnailWidth": "Largeur de miniature",
+        "jpegQuality": "Qualité JPEG"
+      },
+      "server": {
+        "serverPort": "Port du serveur",
+        "miroAccessToken": "Jeton d'accès Miro"
+      },
+      "logging": {
+        "logLevel": "Niveau de journal (fichier)",
+        "logFileMaxSize": "Taille max. du fichier journal",
+        "logBackupCount": "Nombre de sauvegardes de journal"
+      },
+      "timing": {
+        "minRunsEstimate": "Exécutions min. avant estimation",
+        "minRunsRange": "Exécutions min. avant la plage ±"
+      }
+    }
   },
     "pipeline": {
       "intro": "Vue en lecture seule des mod\u00e8les que Bristlenose utilise actuellement pour chaque \u00e9tape du pipeline. Pour changer de backend, modifiez votre configuration (variables d'environnement ou fichier .env).",

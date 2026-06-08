@@ -26,7 +26,107 @@
     "heading": "Referencia de configuración",
     "intro": "Todos los ajustes se configuran mediante variables de entorno o un archivo <code>.env</code>. Se muestran aquí como referencia — para cambiar un valor, edita el archivo indicado en cada fila.",
     "clickToCopy": "Clic para copiar",
-    "copied": "Copiado"
+    "copied": "Copiado",
+    "categories": {
+      "llm": "Proveedor y modelo LLM",
+      "transcription": "Transcripción",
+      "privacy": "Privacidad",
+      "quotes": "Citas",
+      "analysis": "Análisis",
+      "autocode": "AutoCode",
+      "display": "Visualización",
+      "pipeline": "Tubería",
+      "thumbnails": "Miniaturas",
+      "server": "Servidor",
+      "logging": "Registro",
+      "timing": "Tiempos"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Proveedor",
+        "model": "Modelo",
+        "temperature": "Temperatura",
+        "maxTokens": "Tokens de salida máx.",
+        "concurrency": "Concurrencia",
+        "claudeKey": "Clave API de Claude",
+        "chatgptKey": "Clave API de ChatGPT",
+        "geminiKey": "Clave API de Gemini",
+        "azureKey": "Clave API de Azure",
+        "azureEndpoint": "Endpoint de Azure",
+        "azureDeployment": "Implementación de Azure",
+        "azureApiVersion": "Versión de API de Azure",
+        "ollamaUrl": "URL de Ollama",
+        "ollamaModel": "Modelo de Ollama"
+      },
+      "transcription": {
+        "backend": "Backend",
+        "model": "Modelo",
+        "language": "Idioma",
+        "device": "Dispositivo",
+        "computeType": "Tipo de cómputo",
+        "audioConcurrency": "Concurrencia de extracción de audio"
+      },
+      "privacy": {
+        "piiRedaction": "Redacción de PII",
+        "piiLlmPass": "Pasada de PII con LLM",
+        "customNames": "Nombres personalizados a redactar"
+      },
+      "quotes": {
+        "minQuoteWords": "Palabras mínimas por cita",
+        "speakerMergeGap": "Intervalo de fusión de hablantes",
+        "quoteSequenceGap": "Intervalo de secuencia de citas",
+        "llmFailureThreshold": "Umbral de fallos de LLM",
+        "autocodeBatchSize": "Tamaño de lote de AutoCode"
+      },
+      "analysis": {
+        "topNSignals": "N señales principales",
+        "topNSignalsGeneric": "N señales principales (genérico)",
+        "topNElaboration": "N principales para elaboración",
+        "minQuotesPerCell": "Citas mínimas por celda",
+        "strongConcentration": "Fuerte: concentración >",
+        "strongParticipants": "Fuerte: participantes ≥",
+        "strongQuotes": "Fuerte: citas ≥",
+        "moderateConcentration": "Moderado: concentración >",
+        "moderateParticipants": "Moderado: participantes ≥",
+        "moderateQuotes": "Moderado: citas ≥"
+      },
+      "autocode": {
+        "defaultLower": "Umbral inferior predeterminado",
+        "defaultUpper": "Umbral superior predeterminado",
+        "sliderStep": "Paso del control deslizante",
+        "sliderMinGap": "Intervalo mínimo del control deslizante",
+        "histogramBins": "Compartimentos del histograma"
+      },
+      "display": {
+        "searchMinChars": "Caracteres mínimos de búsqueda",
+        "activityPollInterval": "Intervalo de sondeo de actividad"
+      },
+      "pipeline": {
+        "projectName": "Nombre del proyecto",
+        "writeIntermediate": "Escribir archivos intermedios",
+        "skipTranscription": "Omitir transcripción",
+        "maxSessionsBeforeConfirm": "Máx. sesiones antes de confirmar"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Ventana de búsqueda de fotograma clave",
+        "fallbackFrameTime": "Tiempo de fotograma de reserva",
+        "thumbnailWidth": "Ancho de miniatura",
+        "jpegQuality": "Calidad JPEG"
+      },
+      "server": {
+        "serverPort": "Puerto del servidor",
+        "miroAccessToken": "Token de acceso de Miro"
+      },
+      "logging": {
+        "logLevel": "Nivel de registro (archivo)",
+        "logFileMaxSize": "Tamaño máx. del archivo de registro",
+        "logBackupCount": "Número de copias de registro"
+      },
+      "timing": {
+        "minRunsEstimate": "Ejecuciones mínimas antes de estimar",
+        "minRunsRange": "Ejecuciones mínimas antes del rango ±"
+      }
+    }
   },
     "pipeline": {
       "intro": "Vista de solo lectura de los modelos que Bristlenose usa actualmente en cada etapa del pipeline. Para cambiar un backend, edita la configuraci\u00f3n (variables de entorno o archivo .env).",

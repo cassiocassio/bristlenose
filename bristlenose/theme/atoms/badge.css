@@ -185,7 +185,8 @@ body.hide-ai-tags .badge-ai { display: none; }
     z-index: 1;                              /* sit above adjacent badges */
 }
 
-.badge-proposed:hover .badge-action-pill {
+.badge-proposed:hover .badge-action-pill,
+.badge-proposed:focus-within .badge-action-pill {
     opacity: 1;
     pointer-events: auto;
 }
@@ -217,6 +218,14 @@ body.hide-ai-tags .badge-ai { display: none; }
 
 .badge-action-deny:hover { background: #fef2f2; }
 .badge-action-accept:hover { background: #dcfce7; }
+
+/* Keyboard focus ring — inset (outline-offset negative) because the pill has
+   overflow:hidden, which would clip an outset ring on these 16px buttons. */
+.badge-action-deny:focus-visible,
+.badge-action-accept:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
 
 /* Dark mode: pill and action compartments */
 @supports (color: light-dark(#000, #fff)) {

@@ -142,6 +142,11 @@ enum BristlenoseShared {
         for (key, value) in sslEnvironment(for: mode) { env[key] = value }
         for (key, value) in bundledBinaryEnvironment(for: mode) { env[key] = value }
         overlayAPIKeys(into: &env, using: store)
+        // Cross-seam resolution ledger: describe the provider/model/key decision
+        // this host just made so it leads Python's own ledger in the run log.
+        // Set last so it observes the same `store`/defaults overlayAPIKeys did.
+        env["_BRISTLENOSE_HOST_RESOLUTION_TRACE"] =
+            hostResolutionTrace(store: store).joined(separator: "\n")
         return env
     }
 
@@ -149,12 +154,20 @@ enum BristlenoseShared {
     /// vars that differ from defaults to avoid overriding `.env` or Keychain
     /// values unnecessarily. Used for both `bristlenose serve` and
     /// `bristlenose run`.
-    static func overlayPreferences(
-        into env: inout [String: String], defaults: UserDefaults = .standard
-    ) {
-        let activeProvider = defaults.string(forKey: "activeProvider")
-        if let provider = activeProvider {
-            env["BRISTLENOSE_LLM_PROVIDER"] = provider
+    /// Resolve the provider/model pair the host will inject, WITHOUT mutating
+    /// anything. Single source of truth shared by `overlayPreferences` (which
+    /// turns it into env vars) and `hostResolutionTrace` (which describes it in
+    /// the cross-seam ledger) so the two can never drift — a divergence here was
+    /// exactly the 8 Jun 404 (the trace would have lied about what was injected).
+    ///
+    /// Returns `(nil, nil)` when no provider is active, so Python defaults both
+    /// coherently. Model is non-nil ONLY when provider is — see the orphan-model
+    /// hazard below.
+    static func resolvedProviderModel(
+        defaults: UserDefaults = .standard
+    ) -> (provider: String?, model: String?) {
+        guard let provider = defaults.string(forKey: "activeProvider") else {
+            return (nil, nil)
         }
         // Inject the model that MATCHES the active provider, read from the
         // per-provider `llmModel_<provider>` key (fallback to the provider's
@@ -163,19 +176,28 @@ enum BristlenoseShared {
         // stale, so spawning off it produces a provider≠model mismatch (e.g.
         // provider=anthropic + model=gemini-2.5-flash → 404).
         //
-        // Critically: only inject a model when a provider is also set. The old
+        // Critically: only resolve a model when a provider is also set. The old
         // `else if` arm injected the bare global `llmModel` key with NO
         // matching provider — so Python fell back to its *default* provider
         // (anthropic) but ran it against whatever model the global key last
         // held (e.g. gpt-4o left over from a ChatGPT session), producing a
         // cross-provider 404 (`model: gpt-4o` rejected by Anthropic). When
-        // `activeProvider` is unset we inject neither, letting Python default
+        // `activeProvider` is unset we resolve neither, letting Python default
         // both coherently.
-        if let provider = activeProvider {
-            if let model = defaults.string(forKey: "llmModel_\(provider)")
-                ?? LLMProvider(rawValue: provider)?.defaultModel {
-                env["BRISTLENOSE_LLM_MODEL"] = model
-            }
+        let model = defaults.string(forKey: "llmModel_\(provider)")
+            ?? LLMProvider(rawValue: provider)?.defaultModel
+        return (provider, model)
+    }
+
+    static func overlayPreferences(
+        into env: inout [String: String], defaults: UserDefaults = .standard
+    ) {
+        let (provider, model) = resolvedProviderModel(defaults: defaults)
+        if let provider {
+            env["BRISTLENOSE_LLM_PROVIDER"] = provider
+        }
+        if let model {
+            env["BRISTLENOSE_LLM_MODEL"] = model
         }
         if defaults.object(forKey: "llmTemperature") != nil {
             env["BRISTLENOSE_LLM_TEMPERATURE"] = String(defaults.double(forKey: "llmTemperature"))
@@ -267,6 +289,58 @@ enum BristlenoseShared {
         let envKey = "BRISTLENOSE_\(active.uppercased())_API_KEY"
         env[envKey] = value
         log.info("injected API key for active provider=\(active, privacy: .public)")
+    }
+
+    /// Cloud (key-bearing) providers. Single source shared by `overlayAPIKeys`
+    /// (decides whether to inject a key) and `hostResolutionTrace` (decides
+    /// whether to report key presence vs `keyless`).
+    static let cloudProviders: Set<String> = ["anthropic", "openai", "azure", "google"]
+
+    /// Describe the host-side provider/model/key decision as cross-seam ledger
+    /// lines, injected via `_BRISTLENOSE_HOST_RESOLUTION_TRACE` so they lead the
+    /// Python resolution ledger in `<output>/.bristlenose/bristlenose.log`.
+    ///
+    /// The 8 Jun 404 lived ENTIRELY on this side of the seam — the wrong
+    /// provider/model env vars were injected here, invisible to Python, which
+    /// only ever saw the result. These lines make the host's decision legible in
+    /// the same log as the LLM call, so a future cross-seam mismatch is one grep,
+    /// not a debugger that can't step across the language boundary.
+    ///
+    /// SECURITY: emits `key=present/absent/keyless` ONLY, never the key value —
+    /// these lines ride into bristlenose.log and are `ps -E`-visible on the env
+    /// var. Provider and model NAMES are not secret and are emitted in full.
+    ///
+    /// Pure read (no env mutation), reads `activeProvider` + Keychain LIVE so a
+    /// mid-session switch is reflected on the next spawn — matching
+    /// `overlayAPIKeys`/`overlayPreferences`, with which it shares
+    /// `resolvedProviderModel` and `cloudProviders` to prevent drift.
+    static func hostResolutionTrace(
+        defaults: UserDefaults = .standard,
+        store: any KeychainStore = KeychainHelper.liveStore
+    ) -> [String] {
+        let (provider, model) = resolvedProviderModel(defaults: defaults)
+        // The provider Python will actually use: explicit, else its own default
+        // (which the keyless-fallback in overlayAPIKeys mirrors).
+        let effectiveProvider = provider ?? Self.pythonDefaultProvider
+        let keyState: String
+        if Self.cloudProviders.contains(effectiveProvider) {
+            if let value = store.get(provider: effectiveProvider), !value.isEmpty {
+                keyState = "present"
+            } else {
+                keyState = "absent"
+            }
+        } else {
+            keyState = "keyless"
+        }
+        let providerStr = provider.map { "'\($0)'" } ?? "nil"
+        let modelStr = model.map { "'\($0)'" } ?? "nil"
+        return [
+            "llm_resolve | step=host-defaults | "
+                + "event=spawn [BristlenoseShared.swift] | "
+                + "activeProvider=\(providerStr) | "
+                + "effectiveProvider='\(effectiveProvider)' | "
+                + "model=\(modelStr) | key=\(keyState)"
+        ]
     }
 
     /// Key-shape redactor — defence against Python-side leakage of LLM API keys

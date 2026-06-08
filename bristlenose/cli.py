@@ -1085,6 +1085,21 @@ def run(
         settings_kwargs["whisper_model"] = whisper_model
     if codebook is not None:
         settings_kwargs["codebook"] = codebook
+    # Record the forward-or-not decision in the resolution ledger BEFORE resolving,
+    # attributed to this CLI layer. load_settings only sees the result (llm_provider
+    # present in overrides or not); this names the actor that chose. See the 8 Jun
+    # 404: a non-None --llm default silently beat the desktop-injected env var.
+    from bristlenose.config import (
+        describe_cli_provider_decision,
+        hosted_by_desktop,
+        note_resolution_input,
+    )
+
+    note_resolution_input(
+        describe_cli_provider_decision(
+            llm_provider, hosted=hosted_by_desktop(), command="run"
+        )
+    )
     settings = load_settings(**settings_kwargs)
 
     # Configure logging BEFORE preflight so the provider/model resolution ledger
@@ -1361,6 +1376,19 @@ def analyze(
         settings_kwargs["llm_provider"] = llm_provider
     if codebook is not None:
         settings_kwargs["codebook"] = codebook
+    # See run() — record the --llm forward-or-not decision in the ledger, attributed
+    # to this CLI layer, before load_settings resolves the winner.
+    from bristlenose.config import (
+        describe_cli_provider_decision,
+        hosted_by_desktop,
+        note_resolution_input,
+    )
+
+    note_resolution_input(
+        describe_cli_provider_decision(
+            llm_provider, hosted=hosted_by_desktop(), command="analyze"
+        )
+    )
     settings = load_settings(**settings_kwargs)
 
     # Offer provider selection if no API key / local provider is not ready

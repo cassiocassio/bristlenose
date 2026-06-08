@@ -53,6 +53,7 @@ ja  日本語       (Japanese)
 fr  Français    (French)
 de  Deutsch     (German)
 ko  한국어       (Korean)
+cs  Čeština     (Czech)
 ```
 
 Already declared in `SUPPORTED_LOCALES` in both `frontend/src/i18n/index.ts` and

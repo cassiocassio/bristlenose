@@ -365,6 +365,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.15** — _8 Jun 2026_
+
+- **Čeština — Bristlenose now speaks Czech.** Czech (`cs`) joins Spanish, Japanese, French, German, and Korean across the desktop app, web report, and settings (Settings → Language → Čeština). A volunteer signed up to translate Bristlenose into Czech on [Weblate](https://hosted.weblate.org/projects/bristlenose/) before we'd shipped the language — the first organic demand signal for a locale — so we machine-seeded a complete baseline (all 8 namespaces + `preflight`, ~950 strings, with proper Czech four-form plurals) for them to react to and refine. Fill-empty-only: the seed never overwrites a contributed string. Apple-HIG Czech glossary terms added.
+
 **0.15.14** — _7 Jun 2026_
 
 - **Desktop runs the provider you chose, and stops blaming transcription for LLM errors.** Four provider-resolution defects closed: the consent resolver no longer reverts a deliberately-chosen ChatGPT / Gemini / Azure account to Claude when its cached verdict is merely absent; spawn-time overlay injects provider **and** model as a matched pair (fixes `gpt-4o` 404'ing under the Anthropic endpoint); the failure classifier checks LLM markers before Whisper and names the provider, so an out-of-credit / bad-key failure no longer reads as "Transcription failed"; and the Settings status board paints eagerly from cache + silently reconfirms instead of lazily, with out-of-credit (402) as its own sticky state. Reviewed by six agents + William. Desktop-only.

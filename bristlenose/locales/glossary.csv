@@ -167,3 +167,24 @@ Pipeline,パイプライン,ja,Engineering loanword
 Stage,ステージ,ja,Apple HIG (tech context)
 Render,レンダリング,ja,Tech standard
 Heatmap,ヒートマップ,ja,Universal
+Save,Uložit,cs,Apple HIG
+Cancel,Zrušit,cs,Apple HIG
+Close,Zavřít,cs,Apple HIG
+Copy,Kopírovat,cs,Apple HIG
+Delete,Smazat,cs,Apple HIG (action sense)
+Undo,Zpět,cs,Apple HIG (macOS Edit menu)
+Redo,Znovu,cs,Apple HIG (macOS Edit menu)
+Search,Hledat,cs,Apple HIG
+Print,Tisknout,cs,Apple HIG
+Export,Exportovat,cs,Apple HIG
+Settings,Nastavení,cs,Apple HIG
+Open,Otevřít,cs,Apple HIG
+Hide,Skrýt,cs,Apple HIG
+Accept,Přijmout,cs,Apple HIG
+Apply,Použít,cs,Apple HIG
+Reset,Obnovit,cs,Apple HIG
+Codebook,Kniha kódů,cs,QDA convention
+Quotes,Citáty,cs,QDA term — countable: citát
+Sessions,Sezení,cs,QDA term
+Signals,Signály,cs,QDA term
+Codes,Kódy,cs,QDA term

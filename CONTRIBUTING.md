@@ -21,6 +21,12 @@ individually.
 
 Bristlenose uses [Weblate](https://hosted.weblate.org/projects/bristlenose/) for community translation. See [TRANSLATING.md](TRANSLATING.md) for how to get started — no Git or JSON knowledge required.
 
+## Windows port
+
+Bristlenose ships on macOS and Linux today. A Windows CLI port (distributed via [Scoop](https://scoop.sh/)) is parked but costed — it's a ~1.5–2 week piece of work for a contributor familiar with Python on Windows, and the maintainer would happily review and merge it. See [docs/design-windows-port.md](docs/design-windows-port.md) for the sketch (components, decisions, step-by-step). Open an issue first to coordinate.
+
+A Windows-native GUI app is a separate, much larger project and is not on the roadmap.
+
 ## How to contribute
 
 1. Fork the repo and create a branch.

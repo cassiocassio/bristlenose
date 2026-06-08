@@ -26,7 +26,107 @@
     "heading": "설정 참조",
     "intro": "아래의 모든 설정은 환경 변수 또는 <code>.env</code> 파일을 통해 구성됩니다. 참조용으로 표시되며, 값을 변경하려면 각 행에 표시된 파일을 편집하십시오.",
     "clickToCopy": "클릭하여 복사",
-    "copied": "복사됨"
+    "copied": "복사됨",
+    "categories": {
+      "llm": "LLM 제공자 및 모델",
+      "transcription": "전사",
+      "privacy": "개인정보",
+      "quotes": "인용",
+      "analysis": "분석",
+      "autocode": "AutoCode",
+      "display": "표시",
+      "pipeline": "파이프라인",
+      "thumbnails": "썸네일",
+      "server": "서버",
+      "logging": "로깅",
+      "timing": "타이밍"
+    },
+    "settings": {
+      "llm": {
+        "provider": "제공자",
+        "model": "모델",
+        "temperature": "온도",
+        "maxTokens": "최대 출력 토큰",
+        "concurrency": "동시성",
+        "claudeKey": "Claude API 키",
+        "chatgptKey": "ChatGPT API 키",
+        "geminiKey": "Gemini API 키",
+        "azureKey": "Azure API 키",
+        "azureEndpoint": "Azure 엔드포인트",
+        "azureDeployment": "Azure 배포",
+        "azureApiVersion": "Azure API 버전",
+        "ollamaUrl": "Ollama URL",
+        "ollamaModel": "Ollama 모델"
+      },
+      "transcription": {
+        "backend": "백엔드",
+        "model": "모델",
+        "language": "언어",
+        "device": "장치",
+        "computeType": "연산 유형",
+        "audioConcurrency": "오디오 추출 동시성"
+      },
+      "privacy": {
+        "piiRedaction": "PII 삭제",
+        "piiLlmPass": "PII LLM 패스",
+        "customNames": "삭제할 사용자 지정 이름"
+      },
+      "quotes": {
+        "minQuoteWords": "최소 인용 단어 수",
+        "speakerMergeGap": "화자 병합 간격",
+        "quoteSequenceGap": "인용 시퀀스 간격",
+        "llmFailureThreshold": "LLM 실패 임계값",
+        "autocodeBatchSize": "AutoCode 배치 크기"
+      },
+      "analysis": {
+        "topNSignals": "상위 N개 신호",
+        "topNSignalsGeneric": "상위 N개 신호 (일반)",
+        "topNElaboration": "상세 분석용 상위 N개",
+        "minQuotesPerCell": "셀당 최소 인용 수",
+        "strongConcentration": "강함: 집중도 >",
+        "strongParticipants": "강함: 참가자 ≥",
+        "strongQuotes": "강함: 인용 ≥",
+        "moderateConcentration": "보통: 집중도 >",
+        "moderateParticipants": "보통: 참가자 ≥",
+        "moderateQuotes": "보통: 인용 ≥"
+      },
+      "autocode": {
+        "defaultLower": "기본 하한 임계값",
+        "defaultUpper": "기본 상한 임계값",
+        "sliderStep": "슬라이더 단계",
+        "sliderMinGap": "슬라이더 최소 간격",
+        "histogramBins": "히스토그램 구간"
+      },
+      "display": {
+        "searchMinChars": "검색 최소 문자 수",
+        "activityPollInterval": "활동 폴링 간격"
+      },
+      "pipeline": {
+        "projectName": "프로젝트 이름",
+        "writeIntermediate": "중간 파일 쓰기",
+        "skipTranscription": "전사 건너뛰기",
+        "maxSessionsBeforeConfirm": "확인 전 최대 세션 수"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "키프레임 검색 범위",
+        "fallbackFrameTime": "대체 프레임 시간",
+        "thumbnailWidth": "썸네일 너비",
+        "jpegQuality": "JPEG 품질"
+      },
+      "server": {
+        "serverPort": "서버 포트",
+        "miroAccessToken": "Miro 액세스 토큰"
+      },
+      "logging": {
+        "logLevel": "로그 수준 (파일)",
+        "logFileMaxSize": "로그 파일 최대 크기",
+        "logBackupCount": "로그 백업 개수"
+      },
+      "timing": {
+        "minRunsEstimate": "추정 전 최소 실행 수",
+        "minRunsRange": "± 범위 전 최소 실행 수"
+      }
+    }
   },
     "pipeline": {
       "intro": "Bristlenose\uac00 \uac01 \ud30c\uc774\ud504\ub77c\uc778 \ub2e8\uacc4\uc5d0\uc11c \ud604\uc7ac \uc0ac\uc6a9 \uc911\uc778 \ubaa8\ub378\uc758 \uc77d\uae30 \uc804\uc6a9 \ubcf4\uae30\uc785\ub2c8\ub2e4. \ubc31\uc5d4\ub4dc\ub97c \ubcc0\uacbd\ud558\ub824\uba74 \uc124\uc815(\ud658\uacbd \ubcc0\uc218 \ub610\ub294 .env \ud30c\uc77c)\uc744 \ud3b8\uc9d1\ud558\uc138\uc694.",

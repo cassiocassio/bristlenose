@@ -26,7 +26,107 @@
     "heading": "Přehled konfigurace",
     "intro": "Všechna níže uvedená nastavení se konfigurují pomocí proměnných prostředí nebo souboru <code>.env</code>. Zde jsou zobrazena pro orientaci — chcete-li hodnotu změnit, upravte soubor uvedený v každém řádku.",
     "clickToCopy": "Klikněte pro kopírování",
-    "copied": "Zkopírováno"
+    "copied": "Zkopírováno",
+    "categories": {
+      "llm": "Poskytovatel a model LLM",
+      "transcription": "Přepis",
+      "privacy": "Soukromí",
+      "quotes": "Citace",
+      "analysis": "Analýza",
+      "autocode": "AutoCode",
+      "display": "Zobrazení",
+      "pipeline": "Zpracování",
+      "thumbnails": "Náhledy",
+      "server": "Server",
+      "logging": "Protokolování",
+      "timing": "Časování"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Poskytovatel",
+        "model": "Model",
+        "temperature": "Teplota",
+        "maxTokens": "Max. výstupních tokenů",
+        "concurrency": "Souběžnost",
+        "claudeKey": "API klíč Claude",
+        "chatgptKey": "API klíč ChatGPT",
+        "geminiKey": "API klíč Gemini",
+        "azureKey": "API klíč Azure",
+        "azureEndpoint": "Endpoint Azure",
+        "azureDeployment": "Nasazení Azure",
+        "azureApiVersion": "Verze API Azure",
+        "ollamaUrl": "URL Ollama",
+        "ollamaModel": "Model Ollama"
+      },
+      "transcription": {
+        "backend": "Backend",
+        "model": "Model",
+        "language": "Jazyk",
+        "device": "Zařízení",
+        "computeType": "Typ výpočtu",
+        "audioConcurrency": "Souběžnost extrakce zvuku"
+      },
+      "privacy": {
+        "piiRedaction": "Redakce PII",
+        "piiLlmPass": "Průchod PII přes LLM",
+        "customNames": "Vlastní jména k redakci"
+      },
+      "quotes": {
+        "minQuoteWords": "Min. slov v citaci",
+        "speakerMergeGap": "Mezera pro sloučení mluvčích",
+        "quoteSequenceGap": "Mezera sekvence citací",
+        "llmFailureThreshold": "Práh selhání LLM",
+        "autocodeBatchSize": "Velikost dávky AutoCode"
+      },
+      "analysis": {
+        "topNSignals": "Top N signálů",
+        "topNSignalsGeneric": "Top N signálů (obecné)",
+        "topNElaboration": "Top N pro rozpracování",
+        "minQuotesPerCell": "Min. citací na buňku",
+        "strongConcentration": "Silné: koncentrace >",
+        "strongParticipants": "Silné: účastníci ≥",
+        "strongQuotes": "Silné: citace ≥",
+        "moderateConcentration": "Střední: koncentrace >",
+        "moderateParticipants": "Střední: účastníci ≥",
+        "moderateQuotes": "Střední: citace ≥"
+      },
+      "autocode": {
+        "defaultLower": "Výchozí dolní práh",
+        "defaultUpper": "Výchozí horní práh",
+        "sliderStep": "Krok posuvníku",
+        "sliderMinGap": "Min. mezera posuvníku",
+        "histogramBins": "Třídy histogramu"
+      },
+      "display": {
+        "searchMinChars": "Min. znaků pro hledání",
+        "activityPollInterval": "Interval dotazování aktivity"
+      },
+      "pipeline": {
+        "projectName": "Název projektu",
+        "writeIntermediate": "Zapisovat mezisoubory",
+        "skipTranscription": "Přeskočit přepis",
+        "maxSessionsBeforeConfirm": "Max. sezení před potvrzením"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Okno hledání klíčového snímku",
+        "fallbackFrameTime": "Záložní čas snímku",
+        "thumbnailWidth": "Šířka náhledu",
+        "jpegQuality": "Kvalita JPEG"
+      },
+      "server": {
+        "serverPort": "Port serveru",
+        "miroAccessToken": "Přístupový token Miro"
+      },
+      "logging": {
+        "logLevel": "Úroveň protokolu (soubor)",
+        "logFileMaxSize": "Max. velikost souboru protokolu",
+        "logBackupCount": "Počet záloh protokolu"
+      },
+      "timing": {
+        "minRunsEstimate": "Min. běhů před odhadem",
+        "minRunsRange": "Min. běhů před rozsahem ±"
+      }
+    }
   },
   "pipeline": {
     "intro": "Pohled jen pro čtení na modely, které Bristlenose aktuálně používá pro každou fázi zpracování. Chcete-li změnit backend, upravte svá nastavení (proměnné prostředí nebo soubor .env).",

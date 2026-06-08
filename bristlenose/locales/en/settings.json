@@ -26,7 +26,107 @@
     "heading": "Configuration reference",
     "intro": "All settings below are configured via environment variables or a <code>.env</code> file. They are shown here for reference — to change a value, edit the file shown in each row.",
     "clickToCopy": "Click to copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "categories": {
+      "llm": "LLM Provider & Model",
+      "transcription": "Transcription",
+      "privacy": "Privacy",
+      "quotes": "Quotes",
+      "analysis": "Analysis",
+      "autocode": "AutoCode",
+      "display": "Display",
+      "pipeline": "Pipeline",
+      "thumbnails": "Thumbnails",
+      "server": "Server",
+      "logging": "Logging",
+      "timing": "Timing"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Provider",
+        "model": "Model",
+        "temperature": "Temperature",
+        "maxTokens": "Max output tokens",
+        "concurrency": "Concurrency",
+        "claudeKey": "Claude API key",
+        "chatgptKey": "ChatGPT API key",
+        "geminiKey": "Gemini API key",
+        "azureKey": "Azure API key",
+        "azureEndpoint": "Azure endpoint",
+        "azureDeployment": "Azure deployment",
+        "azureApiVersion": "Azure API version",
+        "ollamaUrl": "Ollama URL",
+        "ollamaModel": "Ollama model"
+      },
+      "transcription": {
+        "backend": "Backend",
+        "model": "Model",
+        "language": "Language",
+        "device": "Device",
+        "computeType": "Compute type",
+        "audioConcurrency": "Audio extraction concurrency"
+      },
+      "privacy": {
+        "piiRedaction": "PII redaction",
+        "piiLlmPass": "PII LLM pass",
+        "customNames": "Custom names to redact"
+      },
+      "quotes": {
+        "minQuoteWords": "Min quote words",
+        "speakerMergeGap": "Speaker merge gap",
+        "quoteSequenceGap": "Quote sequence gap",
+        "llmFailureThreshold": "LLM failure threshold",
+        "autocodeBatchSize": "AutoCode batch size"
+      },
+      "analysis": {
+        "topNSignals": "Top N signals",
+        "topNSignalsGeneric": "Top N signals (generic)",
+        "topNElaboration": "Top N for elaboration",
+        "minQuotesPerCell": "Min quotes per cell",
+        "strongConcentration": "Strong: concentration >",
+        "strongParticipants": "Strong: participants ≥",
+        "strongQuotes": "Strong: quotes ≥",
+        "moderateConcentration": "Moderate: concentration >",
+        "moderateParticipants": "Moderate: participants ≥",
+        "moderateQuotes": "Moderate: quotes ≥"
+      },
+      "autocode": {
+        "defaultLower": "Default lower threshold",
+        "defaultUpper": "Default upper threshold",
+        "sliderStep": "Slider step",
+        "sliderMinGap": "Slider min gap",
+        "histogramBins": "Histogram bins"
+      },
+      "display": {
+        "searchMinChars": "Search min characters",
+        "activityPollInterval": "Activity poll interval"
+      },
+      "pipeline": {
+        "projectName": "Project name",
+        "writeIntermediate": "Write intermediate files",
+        "skipTranscription": "Skip transcription",
+        "maxSessionsBeforeConfirm": "Max sessions before confirm"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Keyframe search window",
+        "fallbackFrameTime": "Fallback frame time",
+        "thumbnailWidth": "Thumbnail width",
+        "jpegQuality": "JPEG quality"
+      },
+      "server": {
+        "serverPort": "Server port",
+        "miroAccessToken": "Miro access token"
+      },
+      "logging": {
+        "logLevel": "Log level (file)",
+        "logFileMaxSize": "Log file max size",
+        "logBackupCount": "Log backup count"
+      },
+      "timing": {
+        "minRunsEstimate": "Min runs before estimate",
+        "minRunsRange": "Min runs before ±range"
+      }
+    }
   },
     "pipeline": {
       "intro": "Read-only view of the models Bristlenose currently uses for each pipeline stage. To change a backend, edit your settings (env vars or .env file).",

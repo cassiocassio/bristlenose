@@ -112,7 +112,7 @@ function updateLogo(value: Appearance): void {
 // ── Configuration reference data ──────────────────────────────────────────
 
 interface SettingRef {
-  label: string;
+  labelKey: string;
   envVar: string;
   default: string;
   file: string;
@@ -123,141 +123,141 @@ interface SettingRef {
 
 interface SettingCategory {
   id: string;
-  label: string;
+  labelKey: string;
   settings: SettingRef[];
 }
 
 const CONFIG_DATA: SettingCategory[] = [
   {
     id: "llm",
-    label: "LLM Provider & Model",
+    labelKey: "configReference.categories.llm",
     settings: [
-      { label: "Provider", envVar: "BRISTLENOSE_LLM_PROVIDER", default: "anthropic", file: ".env", filePath: "bristlenose/config.py", options: ["anthropic", "openai", "azure", "google", "local"] },
-      { label: "Model", envVar: "BRISTLENOSE_LLM_MODEL", default: "claude-sonnet-4-20250514", file: ".env", filePath: "bristlenose/config.py" },
-      { label: "Temperature", envVar: "BRISTLENOSE_LLM_TEMPERATURE", default: "0.1", file: ".env", filePath: "bristlenose/config.py", options: ["0.0\u20131.0"] },
-      { label: "Max output tokens", envVar: "BRISTLENOSE_LLM_MAX_TOKENS", default: "32768", file: ".env", filePath: "bristlenose/config.py" },
-      { label: "Concurrency", envVar: "BRISTLENOSE_LLM_CONCURRENCY", default: "3", file: ".env", filePath: "bristlenose/config.py", options: ["1\u201310"] },
-      { label: "Claude API key", envVar: "BRISTLENOSE_ANTHROPIC_API_KEY", default: "(not set)", file: ".env", filePath: "bristlenose/config.py", sensitive: true },
-      { label: "ChatGPT API key", envVar: "BRISTLENOSE_OPENAI_API_KEY", default: "(not set)", file: ".env", filePath: "bristlenose/config.py", sensitive: true },
-      { label: "Gemini API key", envVar: "BRISTLENOSE_GOOGLE_API_KEY", default: "(not set)", file: ".env", filePath: "bristlenose/config.py", sensitive: true },
-      { label: "Azure API key", envVar: "BRISTLENOSE_AZURE_API_KEY", default: "(not set)", file: ".env", filePath: "bristlenose/config.py", sensitive: true },
-      { label: "Azure endpoint", envVar: "BRISTLENOSE_AZURE_ENDPOINT", default: "(not set)", file: ".env", filePath: "bristlenose/config.py" },
-      { label: "Azure deployment", envVar: "BRISTLENOSE_AZURE_DEPLOYMENT", default: "(not set)", file: ".env", filePath: "bristlenose/config.py" },
-      { label: "Azure API version", envVar: "BRISTLENOSE_AZURE_API_VERSION", default: "2024-10-21", file: ".env", filePath: "bristlenose/config.py" },
-      { label: "Ollama URL", envVar: "BRISTLENOSE_LOCAL_URL", default: "http://localhost:11434/v1", file: ".env", filePath: "bristlenose/config.py" },
-      { label: "Ollama model", envVar: "BRISTLENOSE_LOCAL_MODEL", default: "llama3.2:3b", file: ".env", filePath: "bristlenose/config.py" },
+      { labelKey: "configReference.settings.llm.provider", envVar: "BRISTLENOSE_LLM_PROVIDER", default: "anthropic", file: ".env", filePath: "bristlenose/config.py", options: ["anthropic", "openai", "azure", "google", "local"] },
+      { labelKey: "configReference.settings.llm.model", envVar: "BRISTLENOSE_LLM_MODEL", default: "claude-sonnet-4-20250514", file: ".env", filePath: "bristlenose/config.py" },
+      { labelKey: "configReference.settings.llm.temperature", envVar: "BRISTLENOSE_LLM_TEMPERATURE", default: "0.1", file: ".env", filePath: "bristlenose/config.py", options: ["0.0\u20131.0"] },
+      { labelKey: "configReference.settings.llm.maxTokens", envVar: "BRISTLENOSE_LLM_MAX_TOKENS", default: "32768", file: ".env", filePath: "bristlenose/config.py" },
+      { labelKey: "configReference.settings.llm.concurrency", envVar: "BRISTLENOSE_LLM_CONCURRENCY", default: "3", file: ".env", filePath: "bristlenose/config.py", options: ["1\u201310"] },
+      { labelKey: "configReference.settings.llm.claudeKey", envVar: "BRISTLENOSE_ANTHROPIC_API_KEY", default: "(not set)", file: ".env", filePath: "bristlenose/config.py", sensitive: true },
+      { labelKey: "configReference.settings.llm.chatgptKey", envVar: "BRISTLENOSE_OPENAI_API_KEY", default: "(not set)", file: ".env", filePath: "bristlenose/config.py", sensitive: true },
+      { labelKey: "configReference.settings.llm.geminiKey", envVar: "BRISTLENOSE_GOOGLE_API_KEY", default: "(not set)", file: ".env", filePath: "bristlenose/config.py", sensitive: true },
+      { labelKey: "configReference.settings.llm.azureKey", envVar: "BRISTLENOSE_AZURE_API_KEY", default: "(not set)", file: ".env", filePath: "bristlenose/config.py", sensitive: true },
+      { labelKey: "configReference.settings.llm.azureEndpoint", envVar: "BRISTLENOSE_AZURE_ENDPOINT", default: "(not set)", file: ".env", filePath: "bristlenose/config.py" },
+      { labelKey: "configReference.settings.llm.azureDeployment", envVar: "BRISTLENOSE_AZURE_DEPLOYMENT", default: "(not set)", file: ".env", filePath: "bristlenose/config.py" },
+      { labelKey: "configReference.settings.llm.azureApiVersion", envVar: "BRISTLENOSE_AZURE_API_VERSION", default: "2024-10-21", file: ".env", filePath: "bristlenose/config.py" },
+      { labelKey: "configReference.settings.llm.ollamaUrl", envVar: "BRISTLENOSE_LOCAL_URL", default: "http://localhost:11434/v1", file: ".env", filePath: "bristlenose/config.py" },
+      { labelKey: "configReference.settings.llm.ollamaModel", envVar: "BRISTLENOSE_LOCAL_MODEL", default: "llama3.2:3b", file: ".env", filePath: "bristlenose/config.py" },
     ],
   },
   {
     id: "transcription",
-    label: "Transcription",
+    labelKey: "configReference.categories.transcription",
     settings: [
-      { label: "Backend", envVar: "BRISTLENOSE_WHISPER_BACKEND", default: "auto", file: ".env", filePath: "bristlenose/config.py", options: ["auto", "mlx", "faster-whisper"] },
-      { label: "Model", envVar: "BRISTLENOSE_WHISPER_MODEL", default: "large-v3-turbo", file: ".env", filePath: "bristlenose/config.py" },
-      { label: "Language", envVar: "BRISTLENOSE_WHISPER_LANGUAGE", default: "en", file: ".env", filePath: "bristlenose/config.py", options: ["ISO 639 code"] },
-      { label: "Device", envVar: "BRISTLENOSE_WHISPER_DEVICE", default: "auto", file: ".env", filePath: "bristlenose/config.py", options: ["auto", "cpu", "cuda"] },
-      { label: "Compute type", envVar: "BRISTLENOSE_WHISPER_COMPUTE_TYPE", default: "int8", file: ".env", filePath: "bristlenose/config.py", options: ["int8", "float16", "float32"] },
-      { label: "Audio extraction concurrency", envVar: "_DEFAULT_CONCURRENCY", default: "4", file: "extract_audio.py", filePath: "bristlenose/stages/extract_audio.py" },
+      { labelKey: "configReference.settings.transcription.backend", envVar: "BRISTLENOSE_WHISPER_BACKEND", default: "auto", file: ".env", filePath: "bristlenose/config.py", options: ["auto", "mlx", "faster-whisper"] },
+      { labelKey: "configReference.settings.transcription.model", envVar: "BRISTLENOSE_WHISPER_MODEL", default: "large-v3-turbo", file: ".env", filePath: "bristlenose/config.py" },
+      { labelKey: "configReference.settings.transcription.language", envVar: "BRISTLENOSE_WHISPER_LANGUAGE", default: "en", file: ".env", filePath: "bristlenose/config.py", options: ["ISO 639 code"] },
+      { labelKey: "configReference.settings.transcription.device", envVar: "BRISTLENOSE_WHISPER_DEVICE", default: "auto", file: ".env", filePath: "bristlenose/config.py", options: ["auto", "cpu", "cuda"] },
+      { labelKey: "configReference.settings.transcription.computeType", envVar: "BRISTLENOSE_WHISPER_COMPUTE_TYPE", default: "int8", file: ".env", filePath: "bristlenose/config.py", options: ["int8", "float16", "float32"] },
+      { labelKey: "configReference.settings.transcription.audioConcurrency", envVar: "_DEFAULT_CONCURRENCY", default: "4", file: "extract_audio.py", filePath: "bristlenose/stages/extract_audio.py" },
     ],
   },
   {
     id: "privacy",
-    label: "Privacy",
+    labelKey: "configReference.categories.privacy",
     settings: [
-      { label: "PII redaction", envVar: "BRISTLENOSE_PII_ENABLED", default: "false", file: ".env", filePath: "bristlenose/config.py", options: ["true", "false"] },
-      { label: "PII LLM pass", envVar: "BRISTLENOSE_PII_LLM_PASS", default: "false", file: ".env", filePath: "bristlenose/config.py", options: ["true", "false"] },
-      { label: "Custom names to redact", envVar: "BRISTLENOSE_PII_CUSTOM_NAMES", default: "(none)", file: ".env", filePath: "bristlenose/config.py", options: ["comma-separated"] },
+      { labelKey: "configReference.settings.privacy.piiRedaction", envVar: "BRISTLENOSE_PII_ENABLED", default: "false", file: ".env", filePath: "bristlenose/config.py", options: ["true", "false"] },
+      { labelKey: "configReference.settings.privacy.piiLlmPass", envVar: "BRISTLENOSE_PII_LLM_PASS", default: "false", file: ".env", filePath: "bristlenose/config.py", options: ["true", "false"] },
+      { labelKey: "configReference.settings.privacy.customNames", envVar: "BRISTLENOSE_PII_CUSTOM_NAMES", default: "(none)", file: ".env", filePath: "bristlenose/config.py", options: ["comma-separated"] },
     ],
   },
   {
     id: "quotes",
-    label: "Quotes",
+    labelKey: "configReference.categories.quotes",
     settings: [
-      { label: "Min quote words", envVar: "BRISTLENOSE_MIN_QUOTE_WORDS", default: "5", file: ".env", filePath: "bristlenose/config.py" },
-      { label: "Speaker merge gap", envVar: "BRISTLENOSE_MERGE_SPEAKER_GAP_SECONDS", default: "2.0", file: ".env", filePath: "bristlenose/config.py", options: ["seconds"] },
-      { label: "Quote sequence gap", envVar: "SEQUENCE_GAP_SECONDS", default: "17.5", file: "models.py", filePath: "bristlenose/analysis/models.py", options: ["seconds"] },
-      { label: "LLM failure threshold", envVar: "_FAIL_THRESHOLD", default: "3", file: "quote_extraction.py", filePath: "bristlenose/stages/quote_extraction.py" },
-      { label: "AutoCode batch size", envVar: "BATCH_SIZE", default: "25", file: "autocode.py", filePath: "bristlenose/server/autocode.py" },
+      { labelKey: "configReference.settings.quotes.minQuoteWords", envVar: "BRISTLENOSE_MIN_QUOTE_WORDS", default: "5", file: ".env", filePath: "bristlenose/config.py" },
+      { labelKey: "configReference.settings.quotes.speakerMergeGap", envVar: "BRISTLENOSE_MERGE_SPEAKER_GAP_SECONDS", default: "2.0", file: ".env", filePath: "bristlenose/config.py", options: ["seconds"] },
+      { labelKey: "configReference.settings.quotes.quoteSequenceGap", envVar: "SEQUENCE_GAP_SECONDS", default: "17.5", file: "models.py", filePath: "bristlenose/analysis/models.py", options: ["seconds"] },
+      { labelKey: "configReference.settings.quotes.llmFailureThreshold", envVar: "_FAIL_THRESHOLD", default: "3", file: "quote_extraction.py", filePath: "bristlenose/stages/quote_extraction.py" },
+      { labelKey: "configReference.settings.quotes.autocodeBatchSize", envVar: "BATCH_SIZE", default: "25", file: "autocode.py", filePath: "bristlenose/server/autocode.py" },
     ],
   },
   {
     id: "analysis",
-    label: "Analysis",
+    labelKey: "configReference.categories.analysis",
     settings: [
-      { label: "Top N signals", envVar: "DEFAULT_TOP_N", default: "12", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
-      { label: "Top N signals (generic)", envVar: "DEFAULT_TOP_N", default: "12", file: "generic_signals.py", filePath: "bristlenose/analysis/generic_signals.py" },
-      { label: "Top N for elaboration", envVar: "DEFAULT_TOP_N", default: "10", file: "elaboration.py", filePath: "bristlenose/server/elaboration.py" },
-      { label: "Min quotes per cell", envVar: "MIN_QUOTES_PER_CELL", default: "2", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
-      { label: "Strong: concentration >", envVar: "hardcoded", default: "2", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
-      { label: "Strong: participants \u2265", envVar: "hardcoded", default: "5", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
-      { label: "Strong: quotes \u2265", envVar: "hardcoded", default: "6", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
-      { label: "Moderate: concentration >", envVar: "hardcoded", default: "1.5", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
-      { label: "Moderate: participants \u2265", envVar: "hardcoded", default: "3", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
-      { label: "Moderate: quotes \u2265", envVar: "hardcoded", default: "4", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
+      { labelKey: "configReference.settings.analysis.topNSignals", envVar: "DEFAULT_TOP_N", default: "12", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
+      { labelKey: "configReference.settings.analysis.topNSignalsGeneric", envVar: "DEFAULT_TOP_N", default: "12", file: "generic_signals.py", filePath: "bristlenose/analysis/generic_signals.py" },
+      { labelKey: "configReference.settings.analysis.topNElaboration", envVar: "DEFAULT_TOP_N", default: "10", file: "elaboration.py", filePath: "bristlenose/server/elaboration.py" },
+      { labelKey: "configReference.settings.analysis.minQuotesPerCell", envVar: "MIN_QUOTES_PER_CELL", default: "2", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
+      { labelKey: "configReference.settings.analysis.strongConcentration", envVar: "hardcoded", default: "2", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
+      { labelKey: "configReference.settings.analysis.strongParticipants", envVar: "hardcoded", default: "5", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
+      { labelKey: "configReference.settings.analysis.strongQuotes", envVar: "hardcoded", default: "6", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
+      { labelKey: "configReference.settings.analysis.moderateConcentration", envVar: "hardcoded", default: "1.5", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
+      { labelKey: "configReference.settings.analysis.moderateParticipants", envVar: "hardcoded", default: "3", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
+      { labelKey: "configReference.settings.analysis.moderateQuotes", envVar: "hardcoded", default: "4", file: "signals.py", filePath: "bristlenose/analysis/signals.py" },
     ],
   },
   {
     id: "autocode",
-    label: "AutoCode",
+    labelKey: "configReference.categories.autocode",
     settings: [
-      { label: "Default lower threshold", envVar: "DEFAULT_LOWER", default: "0.30", file: "ThresholdReviewModal.tsx", filePath: "frontend/src/components/ThresholdReviewModal.tsx", options: ["0.0\u20131.0"] },
-      { label: "Default upper threshold", envVar: "DEFAULT_UPPER", default: "0.70", file: "ThresholdReviewModal.tsx", filePath: "frontend/src/components/ThresholdReviewModal.tsx", options: ["0.0\u20131.0"] },
-      { label: "Slider step", envVar: "STEP", default: "0.05", file: "DualThresholdSlider.tsx", filePath: "frontend/src/components/DualThresholdSlider.tsx" },
-      { label: "Slider min gap", envVar: "MIN_GAP", default: "0.05", file: "DualThresholdSlider.tsx", filePath: "frontend/src/components/DualThresholdSlider.tsx" },
-      { label: "Histogram bins", envVar: "NUM_BINS", default: "20", file: "ConfidenceHistogram.tsx", filePath: "frontend/src/components/ConfidenceHistogram.tsx" },
+      { labelKey: "configReference.settings.autocode.defaultLower", envVar: "DEFAULT_LOWER", default: "0.30", file: "ThresholdReviewModal.tsx", filePath: "frontend/src/components/ThresholdReviewModal.tsx", options: ["0.0\u20131.0"] },
+      { labelKey: "configReference.settings.autocode.defaultUpper", envVar: "DEFAULT_UPPER", default: "0.70", file: "ThresholdReviewModal.tsx", filePath: "frontend/src/components/ThresholdReviewModal.tsx", options: ["0.0\u20131.0"] },
+      { labelKey: "configReference.settings.autocode.sliderStep", envVar: "STEP", default: "0.05", file: "DualThresholdSlider.tsx", filePath: "frontend/src/components/DualThresholdSlider.tsx" },
+      { labelKey: "configReference.settings.autocode.sliderMinGap", envVar: "MIN_GAP", default: "0.05", file: "DualThresholdSlider.tsx", filePath: "frontend/src/components/DualThresholdSlider.tsx" },
+      { labelKey: "configReference.settings.autocode.histogramBins", envVar: "NUM_BINS", default: "20", file: "ConfidenceHistogram.tsx", filePath: "frontend/src/components/ConfidenceHistogram.tsx" },
     ],
   },
   {
     id: "display",
-    label: "Display",
+    labelKey: "configReference.categories.display",
     settings: [
-      { label: "Search min characters", envVar: "hardcoded", default: "3", file: "filter.ts", filePath: "frontend/src/utils/filter.ts" },
-      { label: "Activity poll interval", envVar: "POLL_INTERVAL", default: "2000", file: "ActivityChipStack.tsx", filePath: "frontend/src/components/ActivityChipStack.tsx", options: ["ms"] },
+      { labelKey: "configReference.settings.display.searchMinChars", envVar: "hardcoded", default: "3", file: "filter.ts", filePath: "frontend/src/utils/filter.ts" },
+      { labelKey: "configReference.settings.display.activityPollInterval", envVar: "POLL_INTERVAL", default: "2000", file: "ActivityChipStack.tsx", filePath: "frontend/src/components/ActivityChipStack.tsx", options: ["ms"] },
     ],
   },
   {
     id: "pipeline",
-    label: "Pipeline",
+    labelKey: "configReference.categories.pipeline",
     settings: [
-      { label: "Project name", envVar: "BRISTLENOSE_PROJECT_NAME", default: "User Research", file: ".env", filePath: "bristlenose/config.py" },
-      { label: "Write intermediate files", envVar: "BRISTLENOSE_WRITE_INTERMEDIATE", default: "true", file: ".env", filePath: "bristlenose/config.py", options: ["true", "false"] },
-      { label: "Skip transcription", envVar: "BRISTLENOSE_SKIP_TRANSCRIPTION", default: "false", file: ".env", filePath: "bristlenose/config.py", options: ["true", "false"] },
-      { label: "Max sessions before confirm", envVar: "_MAX_SESSIONS_NO_CONFIRM", default: "16", file: "pipeline.py", filePath: "bristlenose/pipeline.py" },
+      { labelKey: "configReference.settings.pipeline.projectName", envVar: "BRISTLENOSE_PROJECT_NAME", default: "User Research", file: ".env", filePath: "bristlenose/config.py" },
+      { labelKey: "configReference.settings.pipeline.writeIntermediate", envVar: "BRISTLENOSE_WRITE_INTERMEDIATE", default: "true", file: ".env", filePath: "bristlenose/config.py", options: ["true", "false"] },
+      { labelKey: "configReference.settings.pipeline.skipTranscription", envVar: "BRISTLENOSE_SKIP_TRANSCRIPTION", default: "false", file: ".env", filePath: "bristlenose/config.py", options: ["true", "false"] },
+      { labelKey: "configReference.settings.pipeline.maxSessionsBeforeConfirm", envVar: "_MAX_SESSIONS_NO_CONFIRM", default: "16", file: "pipeline.py", filePath: "bristlenose/pipeline.py" },
     ],
   },
   {
     id: "thumbnails",
-    label: "Thumbnails",
+    labelKey: "configReference.categories.thumbnails",
     settings: [
-      { label: "Keyframe search window", envVar: "_WINDOW_SECONDS", default: "180", file: "video.py", filePath: "bristlenose/utils/video.py", options: ["seconds"] },
-      { label: "Fallback frame time", envVar: "_FALLBACK_SECONDS", default: "60", file: "video.py", filePath: "bristlenose/utils/video.py", options: ["seconds"] },
-      { label: "Thumbnail width", envVar: "_THUMB_WIDTH", default: "384", file: "video.py", filePath: "bristlenose/utils/video.py", options: ["px"] },
-      { label: "JPEG quality", envVar: "_THUMB_QUALITY", default: "5", file: "video.py", filePath: "bristlenose/utils/video.py", options: ["2 (best) \u2013 31 (worst)"] },
+      { labelKey: "configReference.settings.thumbnails.keyframeSearchWindow", envVar: "_WINDOW_SECONDS", default: "180", file: "video.py", filePath: "bristlenose/utils/video.py", options: ["seconds"] },
+      { labelKey: "configReference.settings.thumbnails.fallbackFrameTime", envVar: "_FALLBACK_SECONDS", default: "60", file: "video.py", filePath: "bristlenose/utils/video.py", options: ["seconds"] },
+      { labelKey: "configReference.settings.thumbnails.thumbnailWidth", envVar: "_THUMB_WIDTH", default: "384", file: "video.py", filePath: "bristlenose/utils/video.py", options: ["px"] },
+      { labelKey: "configReference.settings.thumbnails.jpegQuality", envVar: "_THUMB_QUALITY", default: "5", file: "video.py", filePath: "bristlenose/utils/video.py", options: ["2 (best) \u2013 31 (worst)"] },
     ],
   },
   {
     id: "server",
-    label: "Server",
+    labelKey: "configReference.categories.server",
     settings: [
-      { label: "Server port", envVar: "_BRISTLENOSE_PORT", default: "8150", file: "cli.py", filePath: "bristlenose/cli.py" },
-      { label: "Miro access token", envVar: "BRISTLENOSE_MIRO_ACCESS_TOKEN", default: "(not set)", file: ".env", filePath: "bristlenose/config.py", sensitive: true },
+      { labelKey: "configReference.settings.server.serverPort", envVar: "_BRISTLENOSE_PORT", default: "8150", file: "cli.py", filePath: "bristlenose/cli.py" },
+      { labelKey: "configReference.settings.server.miroAccessToken", envVar: "BRISTLENOSE_MIRO_ACCESS_TOKEN", default: "(not set)", file: ".env", filePath: "bristlenose/config.py", sensitive: true },
     ],
   },
   {
     id: "logging",
-    label: "Logging",
+    labelKey: "configReference.categories.logging",
     settings: [
-      { label: "Log level (file)", envVar: "BRISTLENOSE_LOG_LEVEL", default: "INFO", file: ".env", filePath: "bristlenose/logging.py", options: ["DEBUG", "INFO", "WARNING", "ERROR"] },
-      { label: "Log file max size", envVar: "_MAX_BYTES", default: "5 MB", file: "logging.py", filePath: "bristlenose/logging.py" },
-      { label: "Log backup count", envVar: "_BACKUP_COUNT", default: "2", file: "logging.py", filePath: "bristlenose/logging.py" },
+      { labelKey: "configReference.settings.logging.logLevel", envVar: "BRISTLENOSE_LOG_LEVEL", default: "INFO", file: ".env", filePath: "bristlenose/logging.py", options: ["DEBUG", "INFO", "WARNING", "ERROR"] },
+      { labelKey: "configReference.settings.logging.logFileMaxSize", envVar: "_MAX_BYTES", default: "5 MB", file: "logging.py", filePath: "bristlenose/logging.py" },
+      { labelKey: "configReference.settings.logging.logBackupCount", envVar: "_BACKUP_COUNT", default: "2", file: "logging.py", filePath: "bristlenose/logging.py" },
     ],
   },
   {
     id: "timing",
-    label: "Timing",
+    labelKey: "configReference.categories.timing",
     settings: [
-      { label: "Min runs before estimate", envVar: "_MIN_N_ESTIMATE", default: "4", file: "timing.py", filePath: "bristlenose/timing.py" },
-      { label: "Min runs before \u00b1range", envVar: "_MIN_N_RANGE", default: "8", file: "timing.py", filePath: "bristlenose/timing.py" },
+      { labelKey: "configReference.settings.timing.minRunsEstimate", envVar: "_MIN_N_ESTIMATE", default: "4", file: "timing.py", filePath: "bristlenose/timing.py" },
+      { labelKey: "configReference.settings.timing.minRunsRange", envVar: "_MIN_N_RANGE", default: "8", file: "timing.py", filePath: "bristlenose/timing.py" },
     ],
   },
 ];
@@ -381,7 +381,7 @@ function ConfigSection({ categoryId }: { categoryId: string }) {
       />
       {cat.settings.map((s, i) => (
         <div key={`${cat.id}-${i}`} className="bn-config-ref-row">
-          <span className="bn-config-ref-label">{s.label}</span>
+          <span className="bn-config-ref-label">{t(s.labelKey)}</span>
           <code className="bn-config-ref-value">
             {s.sensitive ? "\u2022\u2022\u2022\u2022\u2022\u2022" : s.default}
           </code>
@@ -893,7 +893,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       ? {
           id: k.id,
           label: t(k.labelKey),
-          children: CONFIG_DATA.map((cat) => ({ id: `config-${cat.id}`, label: cat.label })),
+          children: CONFIG_DATA.map((cat) => ({ id: `config-${cat.id}`, label: t(cat.labelKey) })),
         }
       : { id: k.id, label: t(k.labelKey) },
   );

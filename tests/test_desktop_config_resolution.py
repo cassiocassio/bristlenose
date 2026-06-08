@@ -116,6 +116,39 @@ class TestKeyFingerprint:
         assert _key_fingerprint("") == "absent"
 
 
+class TestRunCommandDefaultDoesNotOverrideEnv:
+    """The `run`/`analyze` --llm flag must NOT override an injected env provider.
+
+    Regression: --llm defaulted to "claude" and was always passed as a CLI override,
+    which beat the desktop-injected BRISTLENOSE_LLM_PROVIDER=openai → the run resolved
+    to the anthropic endpoint while the model env var (gpt-4o) rode along → 404. The
+    fix defaults --llm to None and only passes it when explicitly set. This test pins
+    the invariant at the resolution layer: when llm_provider is NOT in overrides and a
+    provider env var is present, the env var wins.
+    """
+
+    def test_env_provider_wins_when_no_cli_override(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
+        monkeypatch.setenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1")
+        monkeypatch.setenv("BRISTLENOSE_LLM_PROVIDER", "openai")
+        monkeypatch.setenv("BRISTLENOSE_LLM_MODEL", "gpt-4o")
+        # Mimic run() AFTER the fix: llm_provider omitted from kwargs entirely.
+        s = config.load_settings(project_name="x", no_fetch=False)
+        assert s.llm_provider == "openai"
+        assert s.llm_model == "gpt-4o"
+
+    def test_explicit_cli_override_still_wins(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
+        monkeypatch.setenv("BRISTLENOSE_LLM_PROVIDER", "openai")
+        # User explicitly passed --llm claude → still honoured.
+        s = config.load_settings(llm_provider="claude")
+        assert s.llm_provider == "anthropic"
+
+
 class TestOrphanModelGuard:
     """Desktop defense: a model env var with no provider must not 404."""
 

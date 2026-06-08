@@ -8,12 +8,23 @@ stages.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from typer.testing import CliRunner
 
 from bristlenose.cli import app
-from bristlenose.pipeline_view.cli import _collapse
+from bristlenose.pipeline_view.cli import _NOTE_TEXT, _REASON_TEXT, _collapse
 from bristlenose.pipeline_view.render import ModelAvailability
+
+# CLI keys whose English deliberately differs from the GUI locale value: the
+# CLI shows the technical package/model name (its users are technical), the
+# SPA/desktop show a researcher-friendly label ("no dev jargon in researcher
+# chrome"). Anything NOT in here must stay byte-identical to settings.json.
+_INTENTIONAL_CLI_DRIFT = {
+    "pipeline.reasons.mlx_whisper_not_installed",   # "mlx_whisper …" vs "MLX Whisper …"
+    "pipeline.reasons.presidio_not_installed",      # "presidio_analyzer …" vs "Built-in anonymiser …"
+    "pipeline.reasons.spacy_model_missing",         # "spaCy en_core_web_lg …" vs "language model …"
+}
 
 runner = CliRunner()
 
@@ -94,3 +105,46 @@ def test_pipeline_stage_filter() -> None:
 def test_pipeline_stage_unknown_exits_nonzero() -> None:
     result = runner.invoke(app, ["pipeline", "--stage", "not_a_stage"])
     assert result.exit_code != 0
+
+
+def test_cli_reason_note_mirror_matches_locale() -> None:
+    """The CLI's English `_REASON_TEXT` / `_NOTE_TEXT` dicts mirror the same
+    `pipeline.reasons.*` / `pipeline.quality.*` keys the SPA + desktop render
+    from `settings.json`. The CLI is English-only, so this is mirror-SYNC, not
+    translation — but the two have silently diverged twice (root CLAUDE.md i18n
+    note). Pins: every CLI key exists in the locale, and the values match
+    except the deliberately-technical CLI exceptions.
+    """
+    settings = json.loads(
+        (
+            Path(__file__).resolve().parents[2]
+            / "bristlenose"
+            / "locales"
+            / "en"
+            / "settings.json"
+        ).read_text(encoding="utf-8")
+    )
+
+    def locale_value(dotted: str) -> str | None:
+        cur: object = settings
+        for part in dotted.split("."):
+            if not isinstance(cur, dict) or part not in cur:
+                return None
+            cur = cur[part]
+        return cur if isinstance(cur, str) else None
+
+    for table in (_REASON_TEXT, _NOTE_TEXT):
+        for key, cli_value in table.items():
+            loc = locale_value(key)
+            assert loc is not None, f"CLI key {key} absent from en/settings.json"
+            if key in _INTENTIONAL_CLI_DRIFT:
+                assert loc != cli_value, (
+                    f"{key} is allowlisted as intentional CLI/GUI drift but the "
+                    "values now match — drop it from _INTENTIONAL_CLI_DRIFT"
+                )
+            else:
+                assert loc == cli_value, (
+                    f"CLI/locale drift for {key}: cli={cli_value!r} locale={loc!r}. "
+                    "If intentional (CLI-technical vs GUI-friendly), add it to "
+                    "_INTENTIONAL_CLI_DRIFT; otherwise sync the two."
+                )

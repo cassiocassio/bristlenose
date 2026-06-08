@@ -42,6 +42,10 @@ Where Bristlenose is expected to run, and what each target implies for deps, pac
 
 **Browser preview of served HTML:** unknown from inside the VM. The Claude Code-in-assistant "preview" tools (`preview_start` etc.) are explicitly banned for Bristlenose (see CLAUDE.md — they fail consistently). Whether the Claude Code *web client* on iPad offers a port-forwarding pane (à la Codespaces) is a UI-side question, not testable from here. If it does, `bristlenose serve --host 0.0.0.0 --port 8150` would be the target. Worth a manual experiment next time you're on iPad.
 
+### Deferred: Windows x86_64 (CLI only, via Scoop)
+
+Parked in the long grass. CLI port via Scoop is costed at ~1.5–2 weeks for a contributor familiar with Python packaging on Windows. No bundled Python, no codesigning, no SKU split — Scoop dep on `python` + `ffmpeg`, install-time GPU probe for CPU vs CUDA torch wheel, one universal manifest. See [design-windows-port.md](design-windows-port.md). Open invitation in [CONTRIBUTING.md](../CONTRIBUTING.md#windows-port). Windows-native GUI app is out of scope.
+
 ## Cloud VM audit checklist
 
 Run in a fresh Claude Code Cloud session and paste output into this doc under "Cloud VM spec" below.

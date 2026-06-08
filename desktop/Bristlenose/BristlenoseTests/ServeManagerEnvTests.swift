@@ -54,6 +54,31 @@ struct ServeManagerEnvTests {
         #expect(env["BRISTLENOSE_GOOGLE_API_KEY"] == nil)
     }
 
+    /// No active provider → the key overlay scopes to `pythonDefaultProvider`
+    /// (the `?? Self.pythonDefaultProvider` branch). overlayPreferences injects
+    /// no BRISTLENOSE_LLM_PROVIDER in this case, so Python falls back to its own
+    /// config.py default; the key overlay MUST inject THAT provider's key or a
+    /// defaulted run 404s on a missing/mismatched key. This proves the Swift
+    /// code PATH uses the constant; tests/test_swift_python_contract.py proves
+    /// the constant's VALUE still equals Python's default. Different failure
+    /// modes — defence-in-depth, not duplication.
+    @Test func no_active_provider_falls_back_to_python_default_key() {
+        withIsolatedDefaults { defaults in
+            // activeProvider deliberately unset on this isolated suite.
+            let fallback = BristlenoseShared.pythonDefaultProvider
+            let store = InMemoryKeychain()
+            store.set(provider: fallback, value: "sk-default-fallback")
+            // A non-default provider's key is present but must NOT leak in.
+            store.set(provider: "openai", value: "sk-openai-should-not-leak")
+
+            var env: [String: String] = [:]
+            BristlenoseShared.overlayAPIKeys(into: &env, using: store, defaults: defaults)
+
+            #expect(env["BRISTLENOSE_\(fallback.uppercased())_API_KEY"] == "sk-default-fallback")
+            #expect(env["BRISTLENOSE_OPENAI_API_KEY"] == nil)
+        }
+    }
+
     @Test func ollama_active_injects_no_key() {
         let store = InMemoryKeychain()
         store.set(provider: "anthropic", value: "sk-ant-test-anthropic")

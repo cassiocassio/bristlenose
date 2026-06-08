@@ -394,7 +394,7 @@ The Libre plan carries one condition: attribution. Mention Weblate in the README
 - Monolingual base: `bristlenose/locales/en/{ns}.json` for each component
 - Components share the same repo clone via `weblate://bristlenose/common`
 
-**Glossary:** uploaded from `bristlenose/locales/glossary.csv` — Apple HIG terms + QDA domain terms (Codebook, Quotes, Sessions, etc.) across es/fr/de/ko.
+**Glossary:** uploaded from `bristlenose/locales/glossary.csv` — Apple HIG terms + QDA domain terms (Codebook, Quotes, Sessions, etc.) across es/fr/de/ko/ja/cs.
 
 **Translation instructions:** linked to `TRANSLATING.md` in project settings.
 
@@ -405,6 +405,25 @@ The Libre plan carries one condition: attribution. Mention Weblate in the README
 - The "Source code repository" field on the create-component form pre-fills with a label prefix (`Source code repository: https://...`) — this must be cleared to just the bare URL or git clone fails with "protocol not supported"
 - JSON indentation defaults to 4 — must change to 2 to match our files, otherwise Weblate reformats every file on first commit
 - Second+ components should use "From an existing component" tab and select `common` to share the repo clone
+
+### Czech (`cs`) — community-initiated
+
+Czech is the first locale Bristlenose didn't plan. A volunteer signed up on Weblate and
+started a `cs` translation _before_ we'd added the language to the product — the first
+_organic_ demand signal for a locale we've had, and evidence of at least one Czech-speaking
+researcher in the wild. We treated it as a delight opportunity rather than a backlog item:
+instead of handing the volunteer a blank slate, we machine-seeded a complete Czech baseline
+across all eight namespaces (+ `preflight`), with proper Czech four-form CLDR plurals
+(`one`/`few`/`many`/`other`), for them to react to and correct.
+
+**Fill-empty-only invariant.** The MT seed is additive: for each English key it writes a
+Czech value _only_ where `cs` is currently empty or missing — it never overwrites a
+non-empty value, because that value may be a human contribution. The guarantee is structural
+(file-level) and re-runnable. On Weblate's side, its database is authoritative for any string
+translated in its UI, so on the next sync a human translation wins over our machine seed (the
+conflict self-heals in the right direction: human > MT). Before the final Weblate pull,
+trigger **Commit + Push** in Weblate so any not-yet-committed UI translations land in the repo
+first; fill-empty then skips them.
 
 ### Alternatives considered
 

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Counter } from "./Counter";
 import type { CounterItem } from "./Counter";
@@ -124,6 +124,41 @@ describe("Counter", () => {
       />,
     );
     await userEvent.click(screen.getByTestId("bn-counter-preview-q-p1-42"));
+    expect(onUnhide).toHaveBeenCalledWith("q-p1-42");
+  });
+
+  it("preview is a button whose accessible name carries the action and the quote", () => {
+    render(
+      <Counter
+        count={1}
+        items={[makeItem({ domId: "q-p1-42" })]}
+        isOpen={true}
+        onToggle={() => {}}
+        onUnhide={() => {}}
+        onUnhideAll={() => {}}
+        data-testid="bn-counter"
+      />,
+    );
+    const preview = screen.getByRole("button", { name: /unhide/i });
+    expect(preview).toHaveAttribute("data-testid", "bn-counter-preview-q-p1-42");
+    // WCAG 2.5.3 (Label in Name): the accessible name includes the visible quote.
+    expect(preview.getAttribute("aria-label")).toContain("checkout process");
+  });
+
+  it("fires onUnhide when the preview is activated by keyboard (Enter)", () => {
+    const onUnhide = vi.fn();
+    render(
+      <Counter
+        count={1}
+        items={[makeItem({ domId: "q-p1-42" })]}
+        isOpen={true}
+        onToggle={() => {}}
+        onUnhide={onUnhide}
+        onUnhideAll={() => {}}
+        data-testid="bn-counter"
+      />,
+    );
+    fireEvent.keyDown(screen.getByTestId("bn-counter-preview-q-p1-42"), { key: "Enter" });
     expect(onUnhide).toHaveBeenCalledWith("q-p1-42");
   });
 

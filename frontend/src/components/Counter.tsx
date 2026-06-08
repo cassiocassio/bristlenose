@@ -109,11 +109,20 @@ export function Counter({
                 )}
                 <span
                   className="bn-hidden-preview"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${t("quotes.unhide")}: ${truncateQuote(item.previewText, 50)}`}
                   title={t("quotes.unhide")}
                   data-quote-id={item.domId}
                   onClick={(e) => {
                     e.preventDefault();
                     onUnhide(item.domId);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onUnhide(item.domId);
+                    }
                   }}
                   data-testid={testId ? `${testId}-preview-${item.domId}` : undefined}
                 >

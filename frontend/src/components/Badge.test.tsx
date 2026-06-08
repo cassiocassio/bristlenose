@@ -83,6 +83,34 @@ describe("Badge", () => {
     expect(onDeny).toHaveBeenCalledOnce();
   });
 
+  it("proposed: accept and deny are buttons with accessible names (AT-reachable)", () => {
+    render(<Badge text="Frustration" variant="proposed" onAccept={vi.fn()} onDeny={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Accept" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Deny" })).toBeInTheDocument();
+  });
+
+  it("proposed: Enter on the accept button fires onAccept (keyboard-operable)", () => {
+    const onAccept = vi.fn();
+    render(<Badge text="Frustration" variant="proposed" onAccept={onAccept} />);
+    fireEvent.keyDown(screen.getByRole("button", { name: "Accept" }), { key: "Enter" });
+    expect(onAccept).toHaveBeenCalledOnce();
+  });
+
+  it("proposed: Space on the deny button fires onDeny", () => {
+    const onDeny = vi.fn();
+    render(<Badge text="Frustration" variant="proposed" onDeny={onDeny} />);
+    fireEvent.keyDown(screen.getByRole("button", { name: "Deny" }), { key: " " });
+    expect(onDeny).toHaveBeenCalledOnce();
+  });
+
+  it("proposed: the a/d shortcut fires while a button is focused, not only on hover", () => {
+    const onAccept = vi.fn();
+    render(<Badge text="Frustration" variant="proposed" onAccept={onAccept} />);
+    screen.getByRole("button", { name: "Accept" }).focus();
+    fireEvent.keyDown(document, { key: "a" });
+    expect(onAccept).toHaveBeenCalledOnce();
+  });
+
   it("proposed: shows rationale tooltip", () => {
     render(
       <Badge

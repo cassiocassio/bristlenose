@@ -95,7 +95,7 @@ Keys live in your operating system's secure credential store — never in plaint
 
 ## Languages {#languages}
 
-The UI ships in six languages: English (`en`), Spanish (`es`), French (`fr`), German (`de`), Korean (`ko`), and Japanese (`ja`). The browser's preferred language is auto-detected; override with `--lang <code>` on the CLI or in Settings in the desktop app.
+The UI ships in seven languages: English (`en`), Spanish (`es`), French (`fr`), German (`de`), Korean (`ko`), Japanese (`ja`), and Czech (`cs`). The browser's preferred language is auto-detected; override with `--lang <code>` on the CLI or in Settings in the desktop app.
 
 Translations live on [Hosted Weblate](https://hosted.weblate.org/projects/bristlenose/) — contributions welcome.
 

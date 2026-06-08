@@ -145,7 +145,7 @@ Low-frequency content. Researchers see it once.
 
 ### Scale
 
-~180 keys across 8 namespaces × 6 languages = ~1,080 translation strings total.
+~180 keys across 8 namespaces × 7 languages = ~1,260 translation strings total.
 
 ## Architecture: single source of truth (implemented, Mar 2026)
 
@@ -407,6 +407,12 @@ The Libre plan carries one condition: attribution. Mention Weblate in the README
 - Second+ components should use "From an existing component" tab and select `common` to share the repo clone
 
 ### Czech (`cs`) — community-initiated
+
+**Language code, not country code.** The locale is ISO 639-1 `cs` (the Czech _language_),
+**not** `cz` (the ISO 3166-1 country code for Czechia — what's on Praha number plates). The
+`cz` git branch is a label only; every locale dir, `SUPPORTED_LOCALES` entry, `glossary.csv`
+row, and language-picker tag uses `cs`. (Slovak, which split from Czech administratively in
+1993, is the separate language code `sk`; `cs` is unambiguously Czech.)
 
 Czech is the first locale Bristlenose didn't plan. A volunteer signed up on Weblate and
 started a `cs` translation _before_ we'd added the language to the product — the first

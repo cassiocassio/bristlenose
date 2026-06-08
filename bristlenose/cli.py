@@ -962,9 +962,9 @@ def run(
         ),
     ] = None,
     llm_provider: Annotated[
-        str,
+        str | None,
         typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, gemini, local."),
-    ] = "claude",
+    ] = None,
     codebook: Annotated[
         str | None,
         typer.Option(
@@ -1066,14 +1066,19 @@ def run(
         "input_dir": input_dir,
         "output_dir": output_dir,
         "project_name": project_name,
-        "llm_provider": llm_provider,
         "skip_transcription": skip_transcription,
         "pii_enabled": redact_pii,
         "no_fetch": no_fetch,
     }
-    # Only pass whisper options if explicitly set on the CLI — otherwise let
-    # env vars (BRISTLENOSE_WHISPER_MODEL, BRISTLENOSE_WHISPER_BACKEND) or
-    # config-file defaults take effect.
+    # Only pass these as overrides when explicitly set on the CLI — otherwise let
+    # injected env vars (BRISTLENOSE_LLM_PROVIDER/MODEL, BRISTLENOSE_WHISPER_*)
+    # or config-file defaults take effect. A non-None llm_provider default here
+    # would override the desktop-injected BRISTLENOSE_LLM_PROVIDER: the desktop
+    # injects openai, the old `--llm` default "claude" beat it (cli-override),
+    # and the model env var (gpt-4o) rode along → anthropic endpoint + gpt-4o
+    # → 404. See docs/private/ikea-run-debug-log.md.
+    if llm_provider is not None:
+        settings_kwargs["llm_provider"] = llm_provider
     if whisper_backend is not None:
         settings_kwargs["whisper_backend"] = whisper_backend
     if whisper_model is not None:
@@ -1303,9 +1308,9 @@ def analyze(
         typer.Option("--project", "-p", help="Name of the research project (defaults to input folder name)."),
     ] = None,
     llm_provider: Annotated[
-        str,
+        str | None,
         typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, gemini, local."),
-    ] = "claude",
+    ] = None,
     codebook: Annotated[
         str | None,
         typer.Option(
@@ -1348,9 +1353,12 @@ def analyze(
     settings_kwargs: dict[str, object] = {
         "output_dir": output_dir,
         "project_name": project_name,
-        "llm_provider": llm_provider,
         "no_fetch": no_fetch,
     }
+    # Only override provider when explicitly set — otherwise honour the injected
+    # BRISTLENOSE_LLM_PROVIDER env var / config default (see run() for rationale).
+    if llm_provider is not None:
+        settings_kwargs["llm_provider"] = llm_provider
     if codebook is not None:
         settings_kwargs["codebook"] = codebook
     settings = load_settings(**settings_kwargs)

@@ -210,6 +210,104 @@ Priority order by community size and demand:
 5. **Export** — exported HTML snapshots should carry the active locale's strings
    (the export already snapshots the DOM, so this may work automatically)
 
+## Language roadmap — which languages to add next
+
+_Added Jun 2026, after Czech (`cs`) arrived as a community contribution. The original
+Phase 3 list above is the translation order for the **first six** dirs (de/es/fr/ja/ko +
+en). This section is the model for choosing the **next** ones._
+
+### The selection model: two lanes, not one ranked list
+
+Languages arrive by two different mechanisms, and conflating them produces bad calls:
+
+- **Opportunistic (wildcards):** a contributor or warm contact shows up. You take it
+  because it's offered, not because it ranked high. Czech (~13M speakers, modest UR
+  community) is here — it shipped because a volunteer added `cs` on Weblate, not because
+  the numbers chose it.
+- **Proactive (commissioned):** you decide a market is worth pursuing and go find a
+  reviewer. Driven by *reachable* community size, not headline speaker count.
+
+Both are valid; they answer different questions. Don't rank a wildcard against a
+commissioned target — they're not competing for the same slot.
+
+### Headline speaker count is the wrong metric — use *reachable UR community*
+
+Raw speaker numbers mislead. The thing that matters is the size of the UX/UR
+**professional community that works in that language** (not in English), times your
+ability to reach a native reviewer. Two corrections this surfaces:
+
+- **English-default markets need no localization.** Hong Kong, Singapore, and India's UR
+  practitioners produce work product in business English. A localization there is
+  near-zero ROI regardless of population. (Singapore's Mandarin is Simplified, same as
+  the mainland — but the professional class works in English anyway.)
+- **Reachability beats reach.** zh-Hans has the largest raw speaker base on earth, but the
+  *reachable* mainland market is gated by App Store ICP licensing and by all four cloud
+  LLM providers (Claude/ChatGPT/Gemini/Azure) being unavailable there. Its real value is
+  diaspora + the local-first story (see below), not the 1.1B headline.
+
+### The reviewer gate runs both ways — MT-first is the bait
+
+The release bar is **native-speaker review before release** (design-i18n.md §Step 5),
+*not* native review before translation. That inverts the apparent chicken-and-egg:
+
+- You can't recruit a reviewer for a blank page. You _can_ recruit one for a rough
+  machine-translated build — "here's a draft in your language, tell us what's wrong" is a
+  far smaller ask than "translate this from scratch," which is why it gets takers.
+- So the proactive play is: **MT-seed → ship as a labelled community preview → promote to
+  "reviewed" when a native passes it.** The preview artifact _is_ the reviewer-recruitment
+  mechanism. Out of a large speaker base, the draft is the lure.
+- **Two disciplines keep this from backfiring:** (1) seed the MT *with the glossary*
+  (`docs/glossary.md`, `bristlenose/locales/glossary.csv`) so the UR-specific terms
+  (quote, theme, sentiment, friction, journey) aren't mangled — mangled domain terms repel
+  the exact reviewer you want; (2) surface it honestly as **"community preview — help us
+  improve"** (this is what Weblate is for), never as finished. Raw MT shipped *as done* is
+  the only version of "work up front" that hurts you.
+
+### Variants are separate locales — don't ship one `pt` or one `zh`
+
+- **Portuguese:** pt-BR (Brazil) and pt-PT (Portugal) differ on exactly the high-frequency
+  UI words — file (arquivo/ficheiro), user (usuário/utilizador), screen (tela/ecrã),
+  download (baixar/transferir) — plus formality and gerund use. Apple ships both as
+  separate localizations; that's the deciding signal. A single `pt` reads as foreign to one
+  side. **Intra-pair leverage:** translate the dominant variant, then *fork the vocabulary
+  deltas* with a second reviewer — "both" is ~1.4× the cost of "one," not 2×.
+- **Chinese:** zh-Hans (Simplified — mainland, Singapore) vs zh-Hant (Traditional — Taiwan,
+  HK, Macau). The Simplified→Traditional script conversion is semi-mechanical (OpenCC), but
+  terminology still diverges (軟體/软件 for "software") and needs a native pass. Across the
+  Sinophone professional world, **zh-Hant rests on Taiwan alone** — HK and Singapore work in
+  English. So zh-Hant is the speculative variant: fork it cheaply off zh-Hans, float it as a
+  preview, add it only if a Taiwanese reviewer materialises.
+
+### China: product-fit and commercial-fit are decoupled
+
+A useful distinction for the zh-Hans decision. The *product* fit for the mainland is
+arguably the strongest you have anywhere: the mainland open-weight models (DeepSeek, Qwen,
+GLM/Zhipu, Kimi) are frontier-competitive, run through Bristlenose's **Local/Ollama path**,
+give in-language analysis, and never upload data — which is exactly the posture the
+regulatory regime rewards. But the *commercial* fit is hard: ICP licensing, no cloud
+providers, and the support/marketing burden on a solo non-Chinese dev. **These don't have
+to be solved together.** Shipping the zh-Hans localization has value (diaspora, Singapore,
+the open-model crowd) without any China commercial-market entry — which is a separate,
+boots-on-the-ground decision, not a localization one.
+
+### The standing tax — why this isn't free
+
+Each locale is a *forever* maintenance burden, not a one-time translation: every new UI
+string must land in all N locales, each gated on a native reviewer. Going 6→10 locales
+nearly doubles the per-release review surface. The translation was never the bottleneck —
+the **people in the review loop** are. Add a locale only when you have a credible path to
+keeping it reviewed, or it costs more than not having it.
+
+### Current roadmap snapshot (Jun 2026)
+
+| Lane | Language | Status / gate |
+|------|----------|---------------|
+| Opportunistic | `cs` Czech | In-flight (`cz` branch) — community-initiated |
+| Proactive | `pt-PT` Portuguese (Portugal) | Next, after `cz` merges — MT-seed + preview; cold-but-friendly Lisbon UR contact |
+| Proactive | `pt-BR` Portuguese (Brazil) | Next, after `cz` merges — largest non-Anglo UR community; needs a Brazilian reviewer (Lisbon contact may bridge) |
+| Proactive | `zh-Hans` Chinese (Simplified) | Strong product-fit (local open-weights); MT-seed + preview to recruit reviewer |
+| Speculative | `zh-Hant` Chinese (Traditional) | Taiwan-only justification; fork off zh-Hans, add only if a Taiwan reviewer appears |
+
 ## File map
 
 ```

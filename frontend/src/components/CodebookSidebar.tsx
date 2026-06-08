@@ -155,7 +155,7 @@ export function CodebookSidebar() {
   // ── Render ───────────────────────────────────────────────────────
 
   return (
-    <nav aria-label="Codebooks">
+    <nav aria-label={t("nav.codebook")}>
       <div className="toc-heading">{t("codebook.yourTags")}</div>
       <a
         href="#codebook-project"

@@ -1,0 +1,45 @@
+{
+  "whisper": {
+    "banner_intro": "Bristlenose potřebuje přepisovací model Whisper ({size}).",
+    "verb_downloading": "Stahování",
+    "verb_resuming": "Pokračování ve stahování",
+    "fetching": "{verb} {repo_id}...",
+    "ready": "Model Whisper je připraven",
+    "aborted_no_fetch": "Model Whisper {repo_id} není v mezipaměti a je nastaveno --no-fetch. Spusťte `bristlenose doctor --fetch` pro jeho stažení předem, nebo spusťte znovu bez --no-fetch."
+  },
+  "ffmpeg": {
+    "banner_missing": "Pro čtení video souborů je vyžadován ffmpeg. Nebyl nalezen v PATH.",
+    "prompt_brew_install": "Spustit nyní `brew install ffmpeg`?",
+    "installed": "ffmpeg nainstalován",
+    "aborted": "ffmpeg je vyžadován, ale nebyl nalezen. Nainstalujte jej pomocí výše uvedeného příkazu a spusťte znovu.",
+    "label_macos": "macOS",
+    "label_ubuntu": "Ubuntu / Debian",
+    "label_fedora": "Fedora / RHEL",
+    "label_arch": "Arch / Manjaro",
+    "label_other": "Ostatní",
+    "cmd_macos": "brew install ffmpeg",
+    "cmd_ubuntu": "sudo apt install ffmpeg",
+    "cmd_fedora": "sudo dnf install ffmpeg",
+    "cmd_arch": "sudo pacman -S ffmpeg",
+    "cmd_other": "https://ffmpeg.org/download.html"
+  },
+  "api_key": {
+    "source_attribution": "Používá se API klíč {provider_display} ze zdroje {source}. Ověřuji: ~$0,0001, žádný obsah přepisu.",
+    "rejected_invalid_key": "Váš API klíč {provider_display} byl odmítnut (HTTP 401).\nZkontrolujte klíč na {keys_url}\na spusťte znovu.",
+    "no_credit": "Váš účet {provider_display} nemá k dispozici žádný API kredit.\nDobijte na {billing_url}\n({minimum_note})\na spusťte znovu.",
+    "model_unavailable": "Požadovaný model není pro váš účet {provider_display} k dispozici. Zkontrolujte dostupné modely na {console_url} a buď model povolte, nebo změňte `--llm-model` na takový, který váš účet může použít.",
+    "rate_limit": "{provider_display} omezuje rychlost tohoto účtu. Počkejte minutu a spusťte znovu, nebo snižte `llm_concurrency` ve vašem bristlenose.toml.",
+    "generic": "Poskytovatel hlásí: {message}.\nPokud to vypadá jako problém se zůstatkem kreditu, dobijte v účtovací konzoli poskytovatele a spusťte znovu.",
+    "network": "Nepodařilo se spojit s poskytovatelem: {message}.\nZkontrolujte nastavení DNS / VPN / proxy a spusťte znovu.",
+    "azure_deployment_unavailable": "Nasazení Azure nebylo nalezeno. Toto je **název nasazení** ve vašem portálu Azure, nikoli id modelu — zkontrolujte jej v portálu Azure pod Azure OpenAI → Deployments. Aktualizujte BRISTLENOSE_AZURE_DEPLOYMENT (nebo azure_deployment v bristlenose.toml) a spusťte znovu. Příčina: {message}.",
+    "google_model_unavailable": "Gemini odepřel přístup k požadovanému modelu. Obvykle jde o omezení tarifu, regionální omezení nebo nezapnuté účtování — zkontrolujte Google Cloud Console na {console_url}. Pokud je účtování nastaveno, zkuste jiný model přes --llm-model. Příčina: {message}.",
+    "local_server_down": "Zdá se, že Ollama neběží. Spusťte ji příkazem `ollama serve` (nebo otevřete aplikaci Ollama na macOS) a spusťte znovu. Příčina: {message}.",
+    "local_model_not_pulled": "Požadovaný místní model není stažen. Spusťte `ollama pull <model>` pro jeho stažení (zkontrolujte název modelu v bristlenose.toml nebo --llm-model) a spusťte znovu. Příčina: {message}."
+  },
+  "pii": {
+    "downloading": "Stahování detektoru osobních údajů (~12 MB, jednorázově)..."
+  },
+  "closing": {
+    "no_more_questions": "Žádné další otázky.{estimate_suffix} Ctrl+C kdykoli."
+  }
+}

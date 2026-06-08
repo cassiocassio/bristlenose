@@ -113,7 +113,7 @@ function computeBreakpoints(
 // ── Component ─────────────────────────────────────────────────────
 
 export function SessionsSidebar() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const projectId = useProjectId();
   const navigate = useNavigate();
   const transcriptMatch = useMatch("/report/sessions/:sessionId");
@@ -190,7 +190,7 @@ export function SessionsSidebar() {
   if (!data) return null;
 
   return (
-    <nav aria-label="Sessions" ref={navCallbackRef}>
+    <nav aria-label={t("nav.sessions")} ref={navCallbackRef}>
       {data.sessions.map((session) => {
         const isActive = session.session_id === activeSessionId;
         const path = `/report/sessions/${session.session_id}`;

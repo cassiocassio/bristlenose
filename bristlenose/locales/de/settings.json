@@ -26,7 +26,107 @@
     "heading": "Konfigurationsreferenz",
     "intro": "Alle nachfolgenden Einstellungen werden über Umgebungsvariablen oder eine <code>.env</code>-Datei konfiguriert. Sie werden hier als Referenz angezeigt — um einen Wert zu ändern, bearbeiten Sie die in der jeweiligen Zeile angezeigte Datei.",
     "clickToCopy": "Zum Kopieren klicken",
-    "copied": "Kopiert"
+    "copied": "Kopiert",
+    "categories": {
+      "llm": "LLM-Anbieter & Modell",
+      "transcription": "Transkription",
+      "privacy": "Datenschutz",
+      "quotes": "Zitate",
+      "analysis": "Analyse",
+      "autocode": "AutoCode",
+      "display": "Anzeige",
+      "pipeline": "Pipeline",
+      "thumbnails": "Miniaturbilder",
+      "server": "Server",
+      "logging": "Protokollierung",
+      "timing": "Zeitmessung"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Anbieter",
+        "model": "Modell",
+        "temperature": "Temperatur",
+        "maxTokens": "Max. Ausgabetokens",
+        "concurrency": "Nebenläufigkeit",
+        "claudeKey": "Claude-API-Schlüssel",
+        "chatgptKey": "ChatGPT-API-Schlüssel",
+        "geminiKey": "Gemini-API-Schlüssel",
+        "azureKey": "Azure-API-Schlüssel",
+        "azureEndpoint": "Azure-Endpunkt",
+        "azureDeployment": "Azure-Bereitstellung",
+        "azureApiVersion": "Azure-API-Version",
+        "ollamaUrl": "Ollama-URL",
+        "ollamaModel": "Ollama-Modell"
+      },
+      "transcription": {
+        "backend": "Backend",
+        "model": "Modell",
+        "language": "Sprache",
+        "device": "Gerät",
+        "computeType": "Berechnungstyp",
+        "audioConcurrency": "Nebenläufigkeit der Audioextraktion"
+      },
+      "privacy": {
+        "piiRedaction": "PII-Schwärzung",
+        "piiLlmPass": "PII-LLM-Durchlauf",
+        "customNames": "Eigene zu schwärzende Namen"
+      },
+      "quotes": {
+        "minQuoteWords": "Min. Wörter pro Zitat",
+        "speakerMergeGap": "Sprecher-Zusammenführungsabstand",
+        "quoteSequenceGap": "Zitatsequenz-Abstand",
+        "llmFailureThreshold": "LLM-Fehlerschwelle",
+        "autocodeBatchSize": "AutoCode-Stapelgröße"
+      },
+      "analysis": {
+        "topNSignals": "Top-N-Signale",
+        "topNSignalsGeneric": "Top-N-Signale (generisch)",
+        "topNElaboration": "Top N für Ausarbeitung",
+        "minQuotesPerCell": "Min. Zitate pro Zelle",
+        "strongConcentration": "Stark: Konzentration >",
+        "strongParticipants": "Stark: Teilnehmer ≥",
+        "strongQuotes": "Stark: Zitate ≥",
+        "moderateConcentration": "Moderat: Konzentration >",
+        "moderateParticipants": "Moderat: Teilnehmer ≥",
+        "moderateQuotes": "Moderat: Zitate ≥"
+      },
+      "autocode": {
+        "defaultLower": "Standard-Untergrenze",
+        "defaultUpper": "Standard-Obergrenze",
+        "sliderStep": "Schrittweite des Reglers",
+        "sliderMinGap": "Min. Reglerabstand",
+        "histogramBins": "Histogramm-Klassen"
+      },
+      "display": {
+        "searchMinChars": "Min. Suchzeichen",
+        "activityPollInterval": "Aktivitäts-Abfrageintervall"
+      },
+      "pipeline": {
+        "projectName": "Projektname",
+        "writeIntermediate": "Zwischendateien schreiben",
+        "skipTranscription": "Transkription überspringen",
+        "maxSessionsBeforeConfirm": "Max. Sitzungen vor Bestätigung"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Keyframe-Suchfenster",
+        "fallbackFrameTime": "Ausweich-Bildzeitpunkt",
+        "thumbnailWidth": "Miniaturbildbreite",
+        "jpegQuality": "JPEG-Qualität"
+      },
+      "server": {
+        "serverPort": "Server-Port",
+        "miroAccessToken": "Miro-Zugriffstoken"
+      },
+      "logging": {
+        "logLevel": "Protokollebene (Datei)",
+        "logFileMaxSize": "Max. Größe der Protokolldatei",
+        "logBackupCount": "Anzahl der Protokoll-Backups"
+      },
+      "timing": {
+        "minRunsEstimate": "Min. Durchläufe vor Schätzung",
+        "minRunsRange": "Min. Durchläufe vor ±-Bereich"
+      }
+    }
   },
     "pipeline": {
       "intro": "Schreibgesch\u00fctzte Ansicht der Modelle, die Bristlenose derzeit f\u00fcr jede Pipeline-Stufe verwendet. Um ein Backend zu \u00e4ndern, bearbeite deine Einstellungen (Umgebungsvariablen oder .env-Datei).",

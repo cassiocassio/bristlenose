@@ -1,5 +1,9 @@
 {
   "nav": {
+    "tableOfContents": "Table of contents",
+    "closeTableOfContents": "Close table of contents",
+    "resizeTableOfContents": "Resize table of contents",
+    "resizeTagSidebar": "Resize tag sidebar",
     "project": "Project",
     "quotes": "Quotes",
     "sessions": "Sessions",
@@ -44,6 +48,17 @@
     "clearAriaLabel": "Clear search"
   },
   "quotes": {
+    "unhideHeader": "Unhide:",
+    "unhideAll": "Unhide all",
+    "dismissModeratorQuestion": "Dismiss moderator question",
+    "showModeratorQuestion": "Show moderator question",
+    "addTag": "Add tag",
+    "restoreTags": "Restore tags",
+    "hideQuote": "Hide this quote",
+    "revertToOriginal": "Revert to original",
+    "starQuote": "Star this quote",
+    "playVideo": "Play video",
+    "unhide": "Unhide",
     "allQuotes": "All quotes",
     "starredQuotes": "Starred quotes",
     "sections": "Sections",
@@ -144,6 +159,8 @@
     "pipelineCompleted": "Analysis updated"
   },
   "activity": {
+    "expand": "Expand",
+    "collapse": "Collapse",
     "cancel": "Cancel",
     "cancelAriaLabel": "Cancel",
     "dismiss": "Dismiss",
@@ -422,6 +439,7 @@
     "tagOnQuotes_one": "This tag is on {{count}} quote.",
     "tagOnQuotes_other": "This tag is on {{count}} quotes.",
     "newGroup": "New group",
+    "newCode": "New code",
     "browseCodebooks": "Browse codebooks",
     "browseTitle": "Browse codebooks",
     "browseSubtitle": "Import a framework codebook or create your own",
@@ -461,6 +479,8 @@
     "deleteGroupAriaLabel": "Delete group {{name}}"
   },
   "autocode": {
+    "lowerThreshold": "Lower threshold",
+    "upperThreshold": "Upper threshold",
     "deny": "Deny",
     "accept": "Accept",
     "close": "Close",
@@ -508,10 +528,15 @@
     }
   },
   "transcript": {
+    "showPrevSegment": "Show previous transcript segment",
+    "showNextSegment": "Show next transcript segment",
     "moderator": "Moderator",
     "moderators": "Moderators",
     "observer": "Observer",
-    "observers": "Observers"
+    "observers": "Observers",
+    "loading": "Loading transcript…",
+    "failedToLoad": "Failed to load transcript",
+    "noData": "No transcript data available."
   },
   "emptyState": {
     "prePipeline": "Drop a folder of interviews to start analysis",

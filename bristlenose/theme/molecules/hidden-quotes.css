@@ -135,6 +135,14 @@
     color: var(--bn-colour-accent);
 }
 
+/* Keyboard focus — match the hover affordance plus the standard ring. */
+.bn-hidden-preview:focus-visible {
+    text-decoration: underline;
+    color: var(--bn-colour-accent);
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
 .bn-hidden-item .speaker-link {
     flex-shrink: 0;
     margin-left: 0.3em;

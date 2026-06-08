@@ -284,14 +284,23 @@ struct ProjectRow: View {
         }
     }
 
-    /// Pick singular vs plural key for a count-bearing delta phrase. Two-key
-    /// shape (One/Other) because `I18n.swift` doesn't do CLDR-suffix lookup;
-    /// some locales (fr/de/es) inflect on count=1 even for adjectival phrases.
+    /// Render a count-bearing chrome phrase using the active locale's CLDR
+    /// plural category (one/few/many/other). Czech needs all four; en/es/fr/de
+    /// carry one+other; ko/ja carry only other.
     private func deltaText(prefix: String, count: Int) -> String {
-        let key = count == 1
-            ? "desktop.chrome.\(prefix)One"
-            : "desktop.chrome.\(prefix)Other"
-        return i18n.t(key, ["count": String(count)])
+        // Select the CLDR plural form for the active locale (Czech needs
+        // one/few/many/other — the old `count == 1 ? One : Other` ternary
+        // rendered the `_other` form for Czech counts 2–4). Mirrors
+        // PipelineActivityItem.localisedOverflowText.
+        let base = "desktop.chrome.\(prefix)"
+        let key = "\(base)_\(i18n.pluralCategory(count))"
+        let rendered = i18n.t(key, ["count": String(count)])
+        // Defensive: a locale lacking the selected form (ko/ja carry only
+        // `_other`) falls back to `_other` rather than showing the raw key.
+        if rendered == key {
+            return i18n.t("\(base)_other", ["count": String(count)])
+        }
+        return rendered
     }
 
     // MARK: - Rename field (unchanged from prior shape)
@@ -543,14 +552,11 @@ struct ProjectRow: View {
         return parts.joined(separator: " · ")
     }
 
-    /// Pick singular vs plural interview-count key. Some locales need the
-    /// morphological split (en/es/fr/de); ko/ja use invariant counters
-    /// but use the same two-key shape for consistency.
+    /// Pick the interview-count form via the locale's CLDR plural category.
+    /// Routes through `deltaText` so every chrome count string shares one
+    /// plural-selection path (cs needs one/few/many/other, not a binary split).
     private func interviewCountText(_ count: Int) -> String {
-        let key = count == 1
-            ? "desktop.chrome.interviewCountOne"
-            : "desktop.chrome.interviewCountOther"
-        return i18n.t(key, ["count": String(count)])
+        deltaText(prefix: "interviewCount", count: count)
     }
 
     // MARK: - Accessibility

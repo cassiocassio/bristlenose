@@ -1,0 +1,17 @@
+{
+  "sentiment": {
+    "frustration": "Frustrace",
+    "confusion": "Zmatení",
+    "doubt": "Pochybnost",
+    "surprise": "Překvapení",
+    "satisfaction": "Spokojenost",
+    "delight": "Nadšení",
+    "confidence": "Sebejistota"
+  },
+  "speakerRole": {
+    "researcher": "Výzkumník",
+    "participant": "Účastník",
+    "observer": "Pozorovatel",
+    "unknown": "Neznámé"
+  }
+}

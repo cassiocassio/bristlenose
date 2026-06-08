@@ -1,0 +1,10 @@
+{
+  "heading": "Diagnostika",
+  "checkOk": "{label}",
+  "checkFail": "{label}",
+  "checkWarn": "{label}",
+  "summary": {
+    "allPassed": "Všechny kontroly proběhly úspěšně.",
+    "issuesFound": "Nalezeno problémů: {count}."
+  }
+}

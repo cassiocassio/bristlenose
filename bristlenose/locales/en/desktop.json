@@ -151,12 +151,12 @@
     "createAnyway": "Create Anyway",
     "emptyStateHint": "Drag a folder here or press \u2318N",
     "addedInterviews": "Added %d interviews to %@",
-    "interviewCountOne": "1 interview",
-    "interviewCountOther": "{{count}} interviews",
-    "unanalysedSubtitleOne": "+1 unanalysed",
-    "unanalysedSubtitleOther": "+{{count}} unanalysed",
-    "missingSubtitleOne": "1 missing",
-    "missingSubtitleOther": "{{count}} missing",
+    "interviewCount_one": "1 interview",
+    "interviewCount_other": "{{count}} interviews",
+    "unanalysedSubtitle_one": "+1 unanalysed",
+    "unanalysedSubtitle_other": "+{{count}} unanalysed",
+    "missingSubtitle_one": "1 missing",
+    "missingSubtitle_other": "{{count}} missing",
     "tooltipWaiting": "{{count}} waiting",
     "dateRelativeJustNow": "Just now",
     "unanalysedSheetTitle": "Unanalysed files in {{project}}",
@@ -190,6 +190,32 @@
     }
   },
   "pipeline": {
+    "status": {
+      "stopping": "Stopping…",
+      "starting": "Starting…",
+      "analysing": "Analysing…",
+      "working": "Working…",
+      "stage": "Stage {{index}} · {{stage}}",
+      "stageShort": "Stage {{index}}",
+      "queued": "Queued · {{position}}",
+      "waitingSubprocess": "Waiting for the analysis subprocess to exit.",
+      "resuming": "Resuming analysis (reconnected after app restart).",
+      "startingUp": "Starting up — loading models and validating credentials.",
+      "elapsed": "Elapsed: {{time}}",
+      "waitingInQueue": "Waiting for another project to finish (position {{position}} in queue).",
+      "stop": "Stop",
+      "headline": {
+        "running": "Running",
+        "stopping": "Stopping",
+        "queued": "Queued",
+        "failed": "Failed"
+      },
+      "help": {
+        "running": "Show pipeline progress for {{project}}",
+        "queued": "Pipeline run queued for {{project}}",
+        "failed": "Pipeline run failed for {{project}}"
+      }
+    },
     "diagnostic": {
       "pill": {
         "auth": "Provider key issue",

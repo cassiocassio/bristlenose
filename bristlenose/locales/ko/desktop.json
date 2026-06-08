@@ -151,12 +151,9 @@
     "createAnyway": "그래도 만들기",
     "emptyStateHint": "폴더를 여기로 드래그하거나 ⌘N을 누르세요",
     "addedInterviews": "%@에 %d개 인터뷰 추가됨",
-    "interviewCountOne": "\uc778\ud130\ubdf0 1\uac1c",
-    "interviewCountOther": "\uc778\ud130\ubdf0 {{count}}\uac1c",
-    "unanalysedSubtitleOne": "\ubbf8\ubd84\uc11d +1\uac1c",
-    "unanalysedSubtitleOther": "\ubbf8\ubd84\uc11d +{{count}}\uac1c",
-    "missingSubtitleOne": "1\uac1c \ub204\ub77d",
-    "missingSubtitleOther": "{{count}}\uac1c \ub204\ub77d",
+    "interviewCount_other": "\uc778\ud130\ubdf0 {{count}}\uac1c",
+    "unanalysedSubtitle_other": "\ubbf8\ubd84\uc11d +{{count}}\uac1c",
+    "missingSubtitle_other": "{{count}}\uac1c \ub204\ub77d",
     "tooltipWaiting": "{{count}}\uac1c \ub300\uae30 \uc911",
     "dateRelativeJustNow": "\ubc29\uae08",
     "unanalysedSheetTitle": "{{project}}\uc758 \ubd84\uc11d\ub418\uc9c0 \uc54a\uc740 \ud30c\uc77c",
@@ -190,6 +187,32 @@
     }
   },
   "pipeline": {
+    "status": {
+      "stopping": "중지 중…",
+      "starting": "시작 중…",
+      "analysing": "분석 중…",
+      "working": "처리 중…",
+      "stage": "{{index}}단계 · {{stage}}",
+      "stageShort": "{{index}}단계",
+      "queued": "대기 중 · {{position}}",
+      "waitingSubprocess": "분석 하위 프로세스가 종료되기를 기다리는 중입니다.",
+      "resuming": "분석을 재개하는 중입니다(앱 재시작 후 다시 연결됨).",
+      "startingUp": "시작 중 — 모델을 로드하고 자격 증명을 확인하는 중입니다.",
+      "elapsed": "경과: {{time}}",
+      "waitingInQueue": "다른 프로젝트가 끝나기를 기다리는 중입니다(대기열 {{position}}번).",
+      "stop": "중지",
+      "headline": {
+        "running": "실행 중",
+        "stopping": "중지 중",
+        "queued": "대기 중",
+        "failed": "실패"
+      },
+      "help": {
+        "running": "{{project}}의 파이프라인 진행 상황 표시",
+        "queued": "{{project}}의 파이프라인 실행 대기 중",
+        "failed": "{{project}}의 파이프라인 실행 실패"
+      }
+    },
     "diagnostic": {
       "pill": {
         "auth": "\ud0a4 \ubb38\uc81c",

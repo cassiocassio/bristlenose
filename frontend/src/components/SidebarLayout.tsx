@@ -359,8 +359,8 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
           <button
             className="sidebar-close"
             onClick={handleCloseToc}
-            title="Close"
-            aria-label="Close table of contents"
+            title={t("buttons.close")}
+            aria-label={t("nav.closeTableOfContents")}
           >
             ×
           </button>
@@ -376,7 +376,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
             aria-valuenow={tocWidth}
             aria-valuemin={MIN_WIDTH}
             aria-valuemax={MAX_WIDTH}
-            aria-label="Resize table of contents"
+            aria-label={t("nav.resizeTableOfContents")}
             tabIndex={0}
             onPointerDown={tocEdge.handlePointerDown}
             onKeyDown={tocEdge.handleKeyDown}
@@ -422,7 +422,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
                 aria-valuenow={tagsWidth}
                 aria-valuemin={MIN_WIDTH}
                 aria-valuemax={MAX_WIDTH}
-                aria-label="Resize tag sidebar"
+                aria-label={t("nav.resizeTagSidebar")}
                 tabIndex={0}
                 onPointerDown={tagEdge.handlePointerDown}
                 onKeyDown={tagEdge.handleKeyDown}

@@ -15,6 +15,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Badge,
   ContextSegment,
@@ -173,6 +174,7 @@ export function QuoteCard({
   contextBelow,
   searchQuery,
 }: QuoteCardProps) {
+  const { t } = useTranslation();
   const [isTagInputOpen, setIsTagInputOpen] = useState(false);
   const [showFullModQ, setShowFullModQ] = useState(false);
   const [bracketsVisible, setBracketsVisible] = useState(false);
@@ -599,7 +601,7 @@ export function QuoteCard({
                 <button
                   className="moderator-question-dismiss"
                   onClick={() => onToggleQuestion(domId)}
-                  aria-label="Dismiss moderator question"
+                  aria-label={t("quotes.dismissModeratorQuestion")}
                   data-testid={`bn-quote-${domId}-mod-q-dismiss`}
                 >
                   &times;
@@ -659,7 +661,7 @@ export function QuoteCard({
               onClick={() => onToggleQuestion(domId)}
               onMouseEnter={() => onPillHoverEnter(domId)}
               onMouseLeave={() => onPillHoverLeave(domId)}
-              aria-label="Show moderator question"
+              aria-label={t("quotes.showModeratorQuestion")}
               data-testid={`bn-quote-${domId}-mod-q`}
             >
               Question?
@@ -740,7 +742,7 @@ export function QuoteCard({
             ) : (
               <span
                 className="badge badge-add"
-                aria-label="Add tag"
+                aria-label={t("quotes.addTag")}
                 onClick={() => setIsTagInputOpen(true)}
                 data-testid={`bn-quote-${domId}-add-tag`}
               >
@@ -750,8 +752,8 @@ export function QuoteCard({
             {hasDeletedBadges && (
               <button
                 className="badge-restore"
-                aria-label="Restore tags"
-                title="Restore tags"
+                aria-label={t("quotes.restoreTags")}
+                title={t("quotes.restoreTags")}
                 onClick={() => onBadgeRestore(domId)}
                 data-testid={`bn-quote-${domId}-restore`}
               >
@@ -776,15 +778,15 @@ export function QuoteCard({
         active={false}
         onToggle={() => onToggleHide(domId, true)}
         className="hide-btn"
-        aria-label="Hide this quote"
+        aria-label={t("quotes.hideQuote")}
         data-testid={`bn-quote-${domId}-hide`}
       >
         {HideIcon}
       </Toggle>
       <button
         className={`action-btn undo-btn${isEdited ? " visible" : ""}`}
-        aria-label="Revert to original"
-        title="Revert to original"
+        aria-label={t("quotes.revertToOriginal")}
+        title={t("quotes.revertToOriginal")}
         onClick={handleUndo}
         data-testid={`bn-quote-${domId}-undo`}
       >
@@ -795,7 +797,7 @@ export function QuoteCard({
         onToggle={(newState) => onToggleStar(domId, newState)}
         className="star-btn"
         activeClassName="starred"
-        aria-label="Star this quote"
+        aria-label={t("quotes.starQuote")}
         data-testid={`bn-quote-${domId}-star`}
       >
         &#9733;

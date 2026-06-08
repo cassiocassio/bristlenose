@@ -39,11 +39,17 @@ function ProposedBadge({
   onAccept: (() => void) | undefined;
   onDeny: (() => void) | undefined;
 }) {
+  const { t } = useTranslation();
   const hoveredRef = useRef(false);
+  const containerRef = useRef<HTMLSpanElement>(null);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (!hoveredRef.current) return;
+      // Fire the a/d shortcut when the badge is hovered OR keyboard-focused
+      // (focus is on one of its action buttons) — hover-only gating excluded
+      // keyboard-only users entirely.
+      const focused = containerRef.current?.contains(document.activeElement) ?? false;
+      if (!hoveredRef.current && !focused) return;
       if (isTypingTarget(e.target)) return;
       const key = e.key.toLowerCase();
       if (key === "a") {
@@ -64,6 +70,7 @@ function ProposedBadge({
 
   return (
     <span
+      ref={containerRef}
       className={classes}
       style={style}
       data-testid={testId}
@@ -74,16 +81,38 @@ function ProposedBadge({
       <span className="badge-action-pill">
         <span
           className="badge-action-deny"
+          role="button"
+          tabIndex={0}
+          aria-label={t("buttons.deny")}
+          aria-keyshortcuts="d"
           onClick={(e) => { e.stopPropagation(); onDeny?.(); }}
-          title="Deny (d)"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              onDeny?.();
+            }
+          }}
+          title={`${t("buttons.deny")} (d)`}
           data-testid={testId ? `${testId}-deny` : undefined}
         >
           &times;
         </span>
         <span
           className="badge-action-accept"
+          role="button"
+          tabIndex={0}
+          aria-label={t("buttons.accept")}
+          aria-keyshortcuts="a"
           onClick={(e) => { e.stopPropagation(); onAccept?.(); }}
-          title="Accept (a)"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              onAccept?.();
+            }
+          }}
+          title={`${t("buttons.accept")} (a)`}
           data-testid={testId ? `${testId}-accept` : undefined}
         >
           &#x2713;

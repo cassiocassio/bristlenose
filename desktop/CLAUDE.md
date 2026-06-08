@@ -289,6 +289,8 @@ The Xcode project uses `PBXFileSystemSynchronizedRootGroup` — Swift files adde
 
 **Auto-sync only covers files inside `desktop/Bristlenose/Bristlenose/`.** Shared data dirs at the repo root (e.g. `bristlenose/locales/`) won't ship in the bundle unless an explicit Copy Bundle Resources phase or shell-script copy puts them there. Without that, `Bundle.main` lookups return nil at runtime — symptom is chrome strings rendering as raw i18n keys (e.g. `desktop.settingsTabs.llm` instead of "LLM"). The "Copy Sidecar Resources" shell-script phase in `Bristlenose.xcodeproj/project.pbxproj` is the established pattern for this — it `rsync`s the sidecar, ffmpeg, models, and locales (added Apr 2026 after locales were missing from the bundle on `main`). Add new shared dirs to that phase rather than inventing new ones.
 
+**Swift i18n sweeps: grep helper-function `return "…"` + `Button("…")` / `.help("…")`, not just `Text("…")`.** Hardcoded user-facing strings hide in computed vars and static funcs that `return "…"` (e.g. `PipelineActivityItem.headlineStatus`, `pillHelp`, `humanCategoryLabel`) and in `Button("…")` / `.help("…")` / `.accessibilityLabel("…")`. A `Text("…")`-only grep undercounts and ships a half-localised view (popover header English, body translated). Grep `return "[A-Z]`, `Button("`, `.help("`, `.accessibilityLabel("` too. **Watch static funcs shared with English-only surfaces:** `humanCategoryLabel` is the single source for the UI label AND the English-only `formatDiagnosticPlaintext` copy-payload — translating it in place breaks the plaintext; it needs a UI-vs-plaintext split (cz-branch i18n review Finding 13, deferred).
+
 ### Alpha build (Track C C1 and beyond)
 
 End-to-end orchestration lives in `desktop/scripts/build-all.sh`:

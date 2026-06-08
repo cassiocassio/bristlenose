@@ -1,5 +1,9 @@
 {
   "nav": {
+    "tableOfContents": "目次",
+    "closeTableOfContents": "目次を閉じる",
+    "resizeTableOfContents": "目次のサイズを変更",
+    "resizeTagSidebar": "タグサイドバーのサイズを変更",
     "project": "プロジェクト",
     "quotes": "発言",
     "sessions": "セッション",
@@ -44,6 +48,17 @@
     "clearAriaLabel": "検索をクリア"
   },
   "quotes": {
+    "unhideHeader": "再表示:",
+    "unhideAll": "すべて再表示",
+    "dismissModeratorQuestion": "モデレーターの質問を非表示",
+    "showModeratorQuestion": "モデレーターの質問を表示",
+    "addTag": "タグを追加",
+    "restoreTags": "タグを復元",
+    "hideQuote": "この引用を非表示",
+    "revertToOriginal": "元に戻す",
+    "starQuote": "この引用にスターを付ける",
+    "playVideo": "動画を再生",
+    "unhide": "再表示",
     "allQuotes": "すべての発言",
     "starredQuotes": "スター付きの発言",
     "sections": "セクション",
@@ -144,6 +159,8 @@
     "pipelineCompleted": "分析を更新しました"
   },
   "activity": {
+    "expand": "展開",
+    "collapse": "折りたたむ",
     "cancel": "キャンセル",
     "cancelAriaLabel": "キャンセル",
     "dismiss": "閉じる",
@@ -422,6 +439,7 @@
     "tagOnQuotes_one": "このタグは {{count}} 件の発言に付いています。",
     "tagOnQuotes_other": "このタグは {{count}} 件の発言に付いています。",
     "newGroup": "新規グループ",
+    "newCode": "新規コード",
     "browseCodebooks": "コードブックを参照",
     "browseTitle": "コードブックを参照",
     "browseSubtitle": "フレームワークのコードブックを読み込むか、独自に作成します",
@@ -461,6 +479,8 @@
     "deleteGroupAriaLabel": "グループ {{name}} を削除"
   },
   "autocode": {
+    "lowerThreshold": "下限しきい値",
+    "upperThreshold": "上限しきい値",
     "deny": "却下",
     "accept": "承認",
     "close": "閉じる",
@@ -508,10 +528,15 @@
     }
   },
   "transcript": {
+    "showPrevSegment": "前のトランスクリプトセグメントを表示",
+    "showNextSegment": "次のトランスクリプトセグメントを表示",
     "moderator": "モデレーター",
     "moderators": "モデレーター",
     "observer": "オブザーバー",
-    "observers": "オブザーバー"
+    "observers": "オブザーバー",
+    "loading": "トランスクリプトを読み込み中…",
+    "failedToLoad": "トランスクリプトの読み込みに失敗しました",
+    "noData": "トランスクリプトデータはありません。"
   },
   "emptyState": {
     "prePipeline": "インタビューのフォルダをドロップすると分析が始まります",

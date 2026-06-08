@@ -383,7 +383,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         setError(null);
       })
       .catch((err) => {
-        setError(err.message || "Failed to load transcript");
+        setError(err.message || i18n.t("transcript.failedToLoad"));
       })
       .finally(() => setLoading(false));
   }, [sessionId]);
@@ -473,7 +473,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   if (loading) {
     return (
       <div className="bn-loading" data-testid="transcript-loading">
-        Loading transcript&hellip;
+        {t("transcript.loading")}
       </div>
     );
   }
@@ -482,7 +482,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   if (error || !data) {
     return (
       <div className="bn-error" data-testid="transcript-error">
-        {error || "No transcript data available."}
+        {error || t("transcript.noData")}
       </div>
     );
   }

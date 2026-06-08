@@ -26,7 +26,107 @@
     "heading": "構成リファレンス",
     "intro": "以下の設定はすべて環境変数または <code>.env</code> ファイルで構成します。値を変更するには、各行に表示されているファイルを編集してください。",
     "clickToCopy": "クリックでコピー",
-    "copied": "コピーしました"
+    "copied": "コピーしました",
+    "categories": {
+      "llm": "LLM プロバイダーとモデル",
+      "transcription": "文字起こし",
+      "privacy": "プライバシー",
+      "quotes": "引用",
+      "analysis": "分析",
+      "autocode": "AutoCode",
+      "display": "表示",
+      "pipeline": "パイプライン",
+      "thumbnails": "サムネイル",
+      "server": "サーバー",
+      "logging": "ログ記録",
+      "timing": "タイミング"
+    },
+    "settings": {
+      "llm": {
+        "provider": "プロバイダー",
+        "model": "モデル",
+        "temperature": "温度",
+        "maxTokens": "最大出力トークン",
+        "concurrency": "並行数",
+        "claudeKey": "Claude API キー",
+        "chatgptKey": "ChatGPT API キー",
+        "geminiKey": "Gemini API キー",
+        "azureKey": "Azure API キー",
+        "azureEndpoint": "Azure エンドポイント",
+        "azureDeployment": "Azure デプロイメント",
+        "azureApiVersion": "Azure API バージョン",
+        "ollamaUrl": "Ollama URL",
+        "ollamaModel": "Ollama モデル"
+      },
+      "transcription": {
+        "backend": "バックエンド",
+        "model": "モデル",
+        "language": "言語",
+        "device": "デバイス",
+        "computeType": "計算タイプ",
+        "audioConcurrency": "音声抽出の並行数"
+      },
+      "privacy": {
+        "piiRedaction": "PII の墨消し",
+        "piiLlmPass": "PII LLM パス",
+        "customNames": "墨消しするカスタム名"
+      },
+      "quotes": {
+        "minQuoteWords": "引用の最小単語数",
+        "speakerMergeGap": "話者マージ間隔",
+        "quoteSequenceGap": "引用シーケンス間隔",
+        "llmFailureThreshold": "LLM 失敗しきい値",
+        "autocodeBatchSize": "AutoCode バッチサイズ"
+      },
+      "analysis": {
+        "topNSignals": "上位 N シグナル",
+        "topNSignalsGeneric": "上位 N シグナル（汎用）",
+        "topNElaboration": "詳細化の上位 N",
+        "minQuotesPerCell": "セルあたりの最小引用数",
+        "strongConcentration": "強い：集中度 >",
+        "strongParticipants": "強い：参加者 ≥",
+        "strongQuotes": "強い：引用 ≥",
+        "moderateConcentration": "中程度：集中度 >",
+        "moderateParticipants": "中程度：参加者 ≥",
+        "moderateQuotes": "中程度：引用 ≥"
+      },
+      "autocode": {
+        "defaultLower": "デフォルト下限しきい値",
+        "defaultUpper": "デフォルト上限しきい値",
+        "sliderStep": "スライダーのステップ",
+        "sliderMinGap": "スライダーの最小間隔",
+        "histogramBins": "ヒストグラムのビン"
+      },
+      "display": {
+        "searchMinChars": "検索の最小文字数",
+        "activityPollInterval": "アクティビティのポーリング間隔"
+      },
+      "pipeline": {
+        "projectName": "プロジェクト名",
+        "writeIntermediate": "中間ファイルを書き出す",
+        "skipTranscription": "文字起こしをスキップ",
+        "maxSessionsBeforeConfirm": "確認前の最大セッション数"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "キーフレーム検索ウィンドウ",
+        "fallbackFrameTime": "フォールバックフレーム時間",
+        "thumbnailWidth": "サムネイルの幅",
+        "jpegQuality": "JPEG 品質"
+      },
+      "server": {
+        "serverPort": "サーバーポート",
+        "miroAccessToken": "Miro アクセストークン"
+      },
+      "logging": {
+        "logLevel": "ログレベル（ファイル）",
+        "logFileMaxSize": "ログファイルの最大サイズ",
+        "logBackupCount": "ログバックアップ数"
+      },
+      "timing": {
+        "minRunsEstimate": "推定前の最小実行回数",
+        "minRunsRange": "±範囲前の最小実行回数"
+      }
+    }
   },
     "pipeline": {
       "intro": "Bristlenose\u304c\u5404\u30d1\u30a4\u30d7\u30e9\u30a4\u30f3\u30b9\u30c6\u30fc\u30b8\u3067\u73fe\u5728\u4f7f\u7528\u3057\u3066\u3044\u308b\u30e2\u30c7\u30eb\u306e\u8aad\u307f\u53d6\u308a\u5c02\u7528\u30d3\u30e5\u30fc\u3067\u3059\u3002\u30d0\u30c3\u30af\u30a8\u30f3\u30c9\u3092\u5909\u66f4\u3059\u308b\u306b\u306f\u3001\u8a2d\u5b9a\uff08\u74b0\u5883\u5909\u6570\u307e\u305f\u306f.env\u30d5\u30a1\u30a4\u30eb\uff09\u3092\u7de8\u96c6\u3057\u3066\u304f\u3060\u3055\u3044\u3002",

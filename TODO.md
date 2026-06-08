@@ -61,7 +61,7 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 
 ### Quarterly dep review (next: May 2026, then Aug 2026, Nov 2026)
 
-- [ ] **May 2026** — Run `pip list --outdated`. Bump floor pins in `pyproject.toml` only if there's a security fix, a feature you need, or the floor is 2+ major versions behind
+- [x] **May 2026** — Run `pip list --outdated`. Bump floor pins in `pyproject.toml` only if there's a security fix, a feature you need, or the floor is 2+ major versions behind _(closed 8 Jun 2026 — Cassandra ledger Entry 1 effectively is this review minus floor-pin bumps; see TODO.md L27)_
 - [ ] **Aug 2026** — Same
 - [ ] **Nov 2026** — Same
 

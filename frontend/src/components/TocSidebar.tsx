@@ -137,7 +137,7 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
   if (!data) return null;
 
   return (
-    <nav aria-label="Table of contents">
+    <nav aria-label={t("nav.tableOfContents")}>
       {sections.length > 0 && (
         <>
           <div className="toc-heading">{t("quotes.sections")}</div>

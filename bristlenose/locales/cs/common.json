@@ -1,5 +1,9 @@
 {
   "nav": {
+    "tableOfContents": "Obsah",
+    "closeTableOfContents": "Zavřít obsah",
+    "resizeTableOfContents": "Změnit velikost obsahu",
+    "resizeTagSidebar": "Změnit velikost panelu štítků",
     "project": "Projekt",
     "quotes": "Citáty",
     "sessions": "Sezení",
@@ -48,6 +52,17 @@
     "clearAriaLabel": "Vymazat hledání"
   },
   "quotes": {
+    "unhideHeader": "Zobrazit:",
+    "unhideAll": "Zobrazit vše",
+    "dismissModeratorQuestion": "Zavřít otázku moderátora",
+    "showModeratorQuestion": "Zobrazit otázku moderátora",
+    "addTag": "Přidat štítek",
+    "restoreTags": "Obnovit štítky",
+    "hideQuote": "Skrýt tuto citaci",
+    "revertToOriginal": "Vrátit na originál",
+    "starQuote": "Označit tuto citaci hvězdičkou",
+    "playVideo": "Přehrát video",
+    "unhide": "Zobrazit",
     "allQuotes": "Všechny citáty",
     "starredQuotes": "Citáty s hvězdičkou",
     "sections": "Sekce",
@@ -162,6 +177,8 @@
     "pipelineCompleted": "Analýza aktualizována"
   },
   "activity": {
+    "expand": "Rozbalit",
+    "collapse": "Sbalit",
     "cancel": "Zrušit",
     "cancelAriaLabel": "Zrušit",
     "dismiss": "Zavřít",
@@ -496,6 +513,8 @@
     "deleteGroupAriaLabel": "Smazat skupinu {{name}}"
   },
   "autocode": {
+    "lowerThreshold": "Dolní práh",
+    "upperThreshold": "Horní práh",
     "deny": "Odmítnout",
     "accept": "Přijmout",
     "close": "Zavřít",
@@ -547,6 +566,8 @@
     }
   },
   "transcript": {
+    "showPrevSegment": "Zobrazit předchozí segment přepisu",
+    "showNextSegment": "Zobrazit další segment přepisu",
     "moderator": "Moderátor",
     "moderators": "Moderátoři",
     "observer": "Pozorovatel",

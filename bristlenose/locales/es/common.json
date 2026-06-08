@@ -1,5 +1,9 @@
 {
   "nav": {
+    "tableOfContents": "Tabla de contenidos",
+    "closeTableOfContents": "Cerrar tabla de contenidos",
+    "resizeTableOfContents": "Redimensionar tabla de contenidos",
+    "resizeTagSidebar": "Redimensionar barra lateral de etiquetas",
     "project": "Proyecto",
     "quotes": "Citas",
     "sessions": "Sesiones",
@@ -37,6 +41,17 @@
     "clearAriaLabel": "Borrar búsqueda"
   },
   "quotes": {
+    "unhideHeader": "Mostrar:",
+    "unhideAll": "Mostrar todo",
+    "dismissModeratorQuestion": "Descartar pregunta del moderador",
+    "showModeratorQuestion": "Mostrar pregunta del moderador",
+    "addTag": "Añadir etiqueta",
+    "restoreTags": "Restaurar etiquetas",
+    "hideQuote": "Ocultar esta cita",
+    "revertToOriginal": "Revertir al original",
+    "starQuote": "Destacar esta cita",
+    "playVideo": "Reproducir vídeo",
+    "unhide": "Mostrar",
     "allQuotes": "Todas las citas",
     "starredQuotes": "Citas destacadas",
     "sections": "Secciones",
@@ -145,6 +160,8 @@
     "pipelineCompleted": "Análisis actualizado"
   },
   "activity": {
+    "expand": "Expandir",
+    "collapse": "Contraer",
     "cancel": "Cancelar",
     "cancelAriaLabel": "Cancelar",
     "dismiss": "Descartar",
@@ -463,6 +480,8 @@
     "deleteGroupAriaLabel": "Eliminar grupo {{name}}"
   },
   "autocode": {
+    "lowerThreshold": "Umbral inferior",
+    "upperThreshold": "Umbral superior",
     "deny": "Rechazar",
     "accept": "Aceptar",
     "close": "Cerrar",
@@ -510,6 +529,8 @@
     }
   },
   "transcript": {
+    "showPrevSegment": "Mostrar segmento anterior de la transcripción",
+    "showNextSegment": "Mostrar segmento siguiente de la transcripción",
     "moderator": "Moderador",
     "moderators": "Moderadores",
     "observer": "Observador",

@@ -7,6 +7,7 @@
  */
 
 import type { ReactNode, MouseEvent } from "react";
+import { useTranslation } from "react-i18next";
 
 interface ExpandableTimecodeProps {
   children: ReactNode;
@@ -29,6 +30,7 @@ export function ExpandableTimecode({
   exhaustedBelow = false,
   "data-testid": testId,
 }: ExpandableTimecodeProps) {
+  const { t } = useTranslation();
   const handleClickAbove = (e: MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -49,7 +51,7 @@ export function ExpandableTimecode({
           data-dir="up"
           onClick={handleClickAbove}
           disabled={exhaustedAbove}
-          aria-label="Show previous transcript segment"
+          aria-label={t("transcript.showPrevSegment")}
           data-testid={testId ? `${testId}-arrow-up` : undefined}
         >
           &#x2303;
@@ -62,7 +64,7 @@ export function ExpandableTimecode({
           data-dir="down"
           onClick={handleClickBelow}
           disabled={exhaustedBelow}
-          aria-label="Show next transcript segment"
+          aria-label={t("transcript.showNextSegment")}
           data-testid={testId ? `${testId}-arrow-down` : undefined}
         >
           &#x2303;

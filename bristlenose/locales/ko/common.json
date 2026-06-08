@@ -1,5 +1,9 @@
 {
   "nav": {
+    "tableOfContents": "목차",
+    "closeTableOfContents": "목차 닫기",
+    "resizeTableOfContents": "목차 크기 조정",
+    "resizeTagSidebar": "태그 사이드바 크기 조정",
     "project": "프로젝트",
     "quotes": "인용문",
     "sessions": "세션",
@@ -36,6 +40,17 @@
     "clearAriaLabel": "검색 지우기"
   },
   "quotes": {
+    "unhideHeader": "표시:",
+    "unhideAll": "모두 표시",
+    "dismissModeratorQuestion": "진행자 질문 닫기",
+    "showModeratorQuestion": "진행자 질문 표시",
+    "addTag": "태그 추가",
+    "restoreTags": "태그 복원",
+    "hideQuote": "이 인용 숨기기",
+    "revertToOriginal": "원본으로 되돌리기",
+    "starQuote": "이 인용에 별표 표시",
+    "playVideo": "동영상 재생",
+    "unhide": "표시",
     "allQuotes": "전체 인용문",
     "starredQuotes": "즐겨찾기 인용문",
     "sections": "섹션",
@@ -135,6 +150,8 @@
     "pipelineCompleted": "분석 업데이트됨"
   },
   "activity": {
+    "expand": "펼치기",
+    "collapse": "접기",
     "cancel": "취소",
     "cancelAriaLabel": "취소",
     "dismiss": "닫기",
@@ -445,6 +462,8 @@
     "deleteGroupAriaLabel": "{{name}} 그룹 삭제"
   },
   "autocode": {
+    "lowerThreshold": "하한 임계값",
+    "upperThreshold": "상한 임계값",
     "deny": "거부",
     "accept": "수락",
     "close": "닫기",
@@ -490,6 +509,8 @@
     }
   },
   "transcript": {
+    "showPrevSegment": "이전 전사 구간 표시",
+    "showNextSegment": "다음 전사 구간 표시",
     "moderator": "진행자",
     "moderators": "진행자",
     "observer": "관찰자",

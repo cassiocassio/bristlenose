@@ -39,6 +39,7 @@ function ProposedBadge({
   onAccept: (() => void) | undefined;
   onDeny: (() => void) | undefined;
 }) {
+  const { t } = useTranslation();
   const hoveredRef = useRef(false);
 
   const handleKeyDown = useCallback(
@@ -75,7 +76,7 @@ function ProposedBadge({
         <span
           className="badge-action-deny"
           onClick={(e) => { e.stopPropagation(); onDeny?.(); }}
-          title="Deny (d)"
+          title={`${t("buttons.deny")} (d)`}
           data-testid={testId ? `${testId}-deny` : undefined}
         >
           &times;
@@ -83,7 +84,7 @@ function ProposedBadge({
         <span
           className="badge-action-accept"
           onClick={(e) => { e.stopPropagation(); onAccept?.(); }}
-          title="Accept (a)"
+          title={`${t("buttons.accept")} (a)`}
           data-testid={testId ? `${testId}-accept` : undefined}
         >
           &#x2713;

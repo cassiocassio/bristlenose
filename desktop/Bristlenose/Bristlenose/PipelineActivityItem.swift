@@ -127,17 +127,17 @@ struct PipelineActivityItem: View {
             switch state {
             case .running:
                 if let p = progress, p.isStopping {
-                    Text("Stopping…")
+                    Text(i18n.t("desktop.pipeline.status.stopping"))
                         .font(.system(.caption, design: .default).weight(.medium))
                 } else if let p = progress, p.stageIndex == 0 {
-                    Text("Starting…")
+                    Text(i18n.t("desktop.pipeline.status.starting"))
                         .font(.system(.caption, design: .default).weight(.medium))
                 } else if let p = progress {
-                    Text("Stage \(p.stageIndex) · \(p.stageName.isEmpty ? "Working…" : p.stageName)")
+                    Text(i18n.t("desktop.pipeline.status.stage", ["index": String(p.stageIndex), "stage": p.stageName.isEmpty ? i18n.t("desktop.pipeline.status.working") : p.stageName]))
                         .font(.system(.caption, design: .default).weight(.medium))
                         .lineLimit(1)
                 } else {
-                    Text("Analysing…")
+                    Text(i18n.t("desktop.pipeline.status.analysing"))
                         .font(.system(.caption).weight(.medium))
                 }
                 ProgressView().controlSize(.small)
@@ -145,7 +145,7 @@ struct PipelineActivityItem: View {
             case .queued(let position):
                 Image(systemName: "clock")
                     .imageScale(.small)
-                Text("Queued · \(position)")
+                Text(i18n.t("desktop.pipeline.status.queued", ["position": String(position)]))
                     .font(.system(.caption).weight(.medium))
 
             case .failed:
@@ -194,10 +194,10 @@ struct PipelineActivityItem: View {
 
     private var pillHelp: String {
         switch state {
-        case .running: return "Show pipeline progress for \(project.name)"
-        case .queued: return "Pipeline run queued for \(project.name)"
+        case .running: return i18n.t("desktop.pipeline.status.help.running", ["project": project.name])
+        case .queued: return i18n.t("desktop.pipeline.status.help.queued", ["project": project.name])
         case .failed, .failedWithDiagnostic:
-            return "Pipeline run failed for \(project.name)"
+            return i18n.t("desktop.pipeline.status.help.failed", ["project": project.name])
         case .completedPartial:
             return i18n.t(
                 "desktop.pipeline.diagnostic.tooltip.completed_partial",
@@ -262,7 +262,7 @@ struct PipelineActivityItem: View {
                 if case .running = state, let p = progress {
                     runningPopoverBody(progress: p)
                 } else if case .queued(let position) = state {
-                    Text("Waiting for another project to finish (position \(position) in queue).")
+                    Text(i18n.t("desktop.pipeline.status.waitingInQueue", ["position": String(position)]))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -273,10 +273,10 @@ struct PipelineActivityItem: View {
     private var headlineStatus: String {
         switch state {
         case .running:
-            if let p = progress, p.isStopping { return "Stopping" }
-            return "Running"
-        case .queued:  return "Queued"
-        case .failed:  return "Failed"
+            if let p = progress, p.isStopping { return i18n.t("desktop.pipeline.status.headline.stopping") }
+            return i18n.t("desktop.pipeline.status.headline.running")
+        case .queued:  return i18n.t("desktop.pipeline.status.headline.queued")
+        case .failed:  return i18n.t("desktop.pipeline.status.headline.failed")
         case .completedPartial:
             return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")
         case .failedWithDiagnostic:
@@ -289,13 +289,13 @@ struct PipelineActivityItem: View {
     private func runningPopoverBody(progress p: PipelineProgress) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             if p.isStopping {
-                Text("Stopping…")
+                Text(i18n.t("desktop.pipeline.status.stopping"))
                     .font(.callout)
-                Text("Waiting for the analysis subprocess to exit.")
+                Text(i18n.t("desktop.pipeline.status.waitingSubprocess"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else if p.attachedFromOrphan && p.stageIndex == 0 {
-                Text("Resuming analysis (reconnected after app restart).")
+                Text(i18n.t("desktop.pipeline.status.resuming"))
                     .font(.callout)
                 if !p.lastLine.isEmpty {
                     Text(p.lastLine)
@@ -304,21 +304,21 @@ struct PipelineActivityItem: View {
                         .lineLimit(2)
                 }
             } else if p.stageIndex == 0 {
-                Text("Starting up — loading models and validating credentials.")
+                Text(i18n.t("desktop.pipeline.status.startingUp"))
                     .font(.callout)
             } else {
-                Text(p.stageName.isEmpty ? "Working…" : p.stageName)
+                Text(p.stageName.isEmpty ? i18n.t("desktop.pipeline.status.working") : p.stageName)
                     .font(.callout)
-                Text("Stage \(p.stageIndex)")
+                Text(i18n.t("desktop.pipeline.status.stageShort", ["index": String(p.stageIndex)]))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             HStack {
-                Text("Elapsed: \(Self.format(elapsed: max(0, nowTick.timeIntervalSince(p.startedAt))))")
+                Text(i18n.t("desktop.pipeline.status.elapsed", ["time": Self.format(elapsed: max(0, nowTick.timeIntervalSince(p.startedAt)))]))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button(p.isStopping ? "Stopping…" : "Stop", role: .destructive) {
+                Button(p.isStopping ? i18n.t("desktop.pipeline.status.stopping") : i18n.t("desktop.pipeline.status.stop"), role: .destructive) {
                     pipelineRunner.cancel(project: project)
                     showPopover = false
                 }

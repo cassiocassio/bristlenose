@@ -248,6 +248,32 @@
     "done": "完了"
   },
   "pipeline": {
+    "status": {
+      "stopping": "停止中…",
+      "starting": "開始中…",
+      "analysing": "分析中…",
+      "working": "処理中…",
+      "stage": "ステージ {{index}} · {{stage}}",
+      "stageShort": "ステージ {{index}}",
+      "queued": "待機中 · {{position}}",
+      "waitingSubprocess": "分析サブプロセスの終了を待機しています。",
+      "resuming": "分析を再開しています（アプリ再起動後に再接続）。",
+      "startingUp": "起動中 — モデルを読み込み、認証情報を検証しています。",
+      "elapsed": "経過: {{time}}",
+      "waitingInQueue": "別のプロジェクトの完了を待機しています（キュー内 {{position}} 番目）。",
+      "stop": "停止",
+      "headline": {
+        "running": "実行中",
+        "stopping": "停止中",
+        "queued": "待機中",
+        "failed": "失敗"
+      },
+      "help": {
+        "running": "{{project}} のパイプライン進行状況を表示",
+        "queued": "{{project}} のパイプライン実行がキューに登録されました",
+        "failed": "{{project}} のパイプライン実行が失敗しました"
+      }
+    },
     "diagnostic": {
       "pill": {
         "auth": "Provider key issue",

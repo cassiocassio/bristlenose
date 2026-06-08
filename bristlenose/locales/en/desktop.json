@@ -190,6 +190,32 @@
     }
   },
   "pipeline": {
+    "status": {
+      "stopping": "Stopping…",
+      "starting": "Starting…",
+      "analysing": "Analysing…",
+      "working": "Working…",
+      "stage": "Stage {{index}} · {{stage}}",
+      "stageShort": "Stage {{index}}",
+      "queued": "Queued · {{position}}",
+      "waitingSubprocess": "Waiting for the analysis subprocess to exit.",
+      "resuming": "Resuming analysis (reconnected after app restart).",
+      "startingUp": "Starting up — loading models and validating credentials.",
+      "elapsed": "Elapsed: {{time}}",
+      "waitingInQueue": "Waiting for another project to finish (position {{position}} in queue).",
+      "stop": "Stop",
+      "headline": {
+        "running": "Running",
+        "stopping": "Stopping",
+        "queued": "Queued",
+        "failed": "Failed"
+      },
+      "help": {
+        "running": "Show pipeline progress for {{project}}",
+        "queued": "Pipeline run queued for {{project}}",
+        "failed": "Pipeline run failed for {{project}}"
+      }
+    },
     "diagnostic": {
       "pill": {
         "auth": "Provider key issue",

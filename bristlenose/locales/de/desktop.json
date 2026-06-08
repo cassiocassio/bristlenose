@@ -190,6 +190,32 @@
     }
   },
   "pipeline": {
+    "status": {
+      "stopping": "Wird angehalten…",
+      "starting": "Wird gestartet…",
+      "analysing": "Wird analysiert…",
+      "working": "Wird verarbeitet…",
+      "stage": "Schritt {{index}} · {{stage}}",
+      "stageShort": "Schritt {{index}}",
+      "queued": "In Warteschlange · {{position}}",
+      "waitingSubprocess": "Warten auf das Beenden des Analyse-Unterprozesses.",
+      "resuming": "Analyse wird fortgesetzt (nach App-Neustart wieder verbunden).",
+      "startingUp": "Wird gestartet — Modelle werden geladen und Anmeldedaten geprüft.",
+      "elapsed": "Verstrichen: {{time}}",
+      "waitingInQueue": "Warten auf den Abschluss eines anderen Projekts (Position {{position}} in der Warteschlange).",
+      "stop": "Anhalten",
+      "headline": {
+        "running": "Läuft",
+        "stopping": "Wird angehalten",
+        "queued": "In Warteschlange",
+        "failed": "Fehlgeschlagen"
+      },
+      "help": {
+        "running": "Pipeline-Fortschritt für {{project}} anzeigen",
+        "queued": "Pipeline-Lauf für {{project}} in der Warteschlange",
+        "failed": "Pipeline-Lauf für {{project}} fehlgeschlagen"
+      }
+    },
     "diagnostic": {
       "pill": {
         "auth": "Schlüsselproblem",

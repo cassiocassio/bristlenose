@@ -114,6 +114,38 @@ final class I18n: ObservableObject {
         return s
     }
 
+    // MARK: - Plurals
+
+    /// CLDR plural category — "one" / "few" / "many" / "other" — for an integer
+    /// `count` in the active locale. Bristlenose's i18n is JSON-based (not
+    /// Apple `.stringsdict`), so the category is computed here and the caller
+    /// selects the `<key>_<category>` form (e.g. `overflow_few`).
+    ///
+    /// Integer rules for the supported locales only. `many` is the Czech
+    /// decimals-only category, so it is intentionally never returned for an
+    /// integer `count`; whole-number Czech overflow counts resolve to
+    /// one / few / other. A locale not handled here falls through to the
+    /// English rule (one = 1, other = else), which is the safe default.
+    func pluralCategory(_ count: Int) -> String {
+        let n = abs(count)
+        switch locale {
+        case "cs":
+            // Czech: one = 1; few = 2–4; other = 0, 5+.
+            if n == 1 { return "one" }
+            if (2...4).contains(n) { return "few" }
+            return "other"
+        case "fr":
+            // French: 0 and 1 are both "one".
+            return n <= 1 ? "one" : "other"
+        case "ja", "ko":
+            // Single-form locales — always "other".
+            return "other"
+        default:
+            // en, es, de (and any unmapped locale): one = 1, other = else.
+            return n == 1 ? "one" : "other"
+        }
+    }
+
     // MARK: - Private
 
     private static func sanitized(_ code: String) -> String {

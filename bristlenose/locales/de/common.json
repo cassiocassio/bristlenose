@@ -1,5 +1,9 @@
 {
   "nav": {
+    "tableOfContents": "Inhaltsverzeichnis",
+    "closeTableOfContents": "Inhaltsverzeichnis schließen",
+    "resizeTableOfContents": "Größe des Inhaltsverzeichnisses ändern",
+    "resizeTagSidebar": "Größe der Tag-Seitenleiste ändern",
     "project": "Projekt",
     "quotes": "Zitate",
     "sessions": "Interviews",
@@ -36,6 +40,17 @@
     "clearAriaLabel": "Suche löschen"
   },
   "quotes": {
+    "unhideHeader": "Einblenden:",
+    "unhideAll": "Alle einblenden",
+    "dismissModeratorQuestion": "Moderatorfrage verwerfen",
+    "showModeratorQuestion": "Moderatorfrage anzeigen",
+    "addTag": "Tag hinzufügen",
+    "restoreTags": "Tags wiederherstellen",
+    "hideQuote": "Dieses Zitat ausblenden",
+    "revertToOriginal": "Auf Original zurücksetzen",
+    "starQuote": "Dieses Zitat markieren",
+    "playVideo": "Video abspielen",
+    "unhide": "Einblenden",
     "allQuotes": "Alle Zitate",
     "starredQuotes": "Markierte Zitate",
     "sections": "Abschnitte",
@@ -144,6 +159,8 @@
     "pipelineCompleted": "Analyse aktualisiert"
   },
   "activity": {
+    "expand": "Erweitern",
+    "collapse": "Einklappen",
     "cancel": "Abbrechen",
     "cancelAriaLabel": "Abbrechen",
     "dismiss": "Schließen",
@@ -462,6 +479,8 @@
     "deleteGroupAriaLabel": "Gruppe {{name}} löschen"
   },
   "autocode": {
+    "lowerThreshold": "Untere Schwelle",
+    "upperThreshold": "Obere Schwelle",
     "deny": "Ablehnen",
     "accept": "Akzeptieren",
     "close": "Schließen",
@@ -509,6 +528,8 @@
     }
   },
   "transcript": {
+    "showPrevSegment": "Vorheriges Transkriptsegment anzeigen",
+    "showNextSegment": "Nächstes Transkriptsegment anzeigen",
     "moderator": "Moderator",
     "moderators": "Moderatoren",
     "observer": "Beobachter",

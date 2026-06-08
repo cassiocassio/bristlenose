@@ -8,6 +8,8 @@
  * Uses existing `molecules/hidden-quotes.css` classes — zero new CSS.
  */
 
+import { useTranslation } from "react-i18next";
+
 export interface CounterItem {
   domId: string;
   timecode: string;
@@ -46,6 +48,7 @@ export function Counter({
   onUnhideAll,
   "data-testid": testId,
 }: CounterProps) {
+  const { t } = useTranslation();
   if (count === 0) return null;
 
   const label = `${count} hidden quote${count !== 1 ? "s" : ""}`;
@@ -66,7 +69,7 @@ export function Counter({
       {isOpen && (
         <div className="bn-hidden-dropdown" data-testid={testId ? `${testId}-dropdown` : undefined}>
           <div className="bn-hidden-header">
-            <span>Unhide:</span>
+            <span>{t("quotes.unhideHeader")}</span>
             {count > 1 && (
               <a
                 href="#"
@@ -77,7 +80,7 @@ export function Counter({
                 }}
                 data-testid={testId ? `${testId}-unhide-all` : undefined}
               >
-                Unhide all
+                {t("quotes.unhideAll")}
               </a>
             )}
           </div>
@@ -97,7 +100,7 @@ export function Counter({
                     {...(item.endSeconds !== undefined && {
                       "data-end-seconds": item.endSeconds,
                     })}
-                    title="Play video"
+                    title={t("quotes.playVideo")}
                   >
                     [{item.timecode}]
                   </a>
@@ -106,7 +109,7 @@ export function Counter({
                 )}
                 <span
                   className="bn-hidden-preview"
-                  title="Unhide"
+                  title={t("quotes.unhide")}
                   data-quote-id={item.domId}
                   onClick={(e) => {
                     e.preventDefault();

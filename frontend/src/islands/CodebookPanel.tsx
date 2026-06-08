@@ -1133,7 +1133,7 @@ export function CodebookPanel({ projectId, refreshKey = 0 }: CodebookPanelProps)
                   <button
                     className="codebook-modal-close"
                     onClick={handleCloseModal}
-                    aria-label="Close"
+                    aria-label={t("buttons.close")}
                   >
                     &times;
                   </button>
@@ -1232,7 +1232,7 @@ export function CodebookPanel({ projectId, refreshKey = 0 }: CodebookPanelProps)
                   <button
                     className="codebook-modal-close"
                     onClick={handleCloseModal}
-                    aria-label="Close"
+                    aria-label={t("buttons.close")}
                   >
                     &times;
                   </button>

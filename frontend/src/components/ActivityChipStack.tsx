@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { getAutoCodeStatus } from "../utils/api";
 import type { AutoCodeJobStatus } from "../utils/types";
@@ -102,6 +103,7 @@ function toChipJob(job: ActivityJob, norm: NormalisedJobStatus | null): Activity
 const POLL_INTERVAL = 2000;
 
 export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
+  const { t } = useTranslation();
   const [statuses, setStatuses] = useState<Record<string, NormalisedJobStatus | null>>({});
   const [expanded, setExpanded] = useState(false);
   const completeFired = useRef<Set<string>>(new Set());
@@ -183,7 +185,7 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
           </span>
           <button
             className="chip-toggle"
-            aria-label="Expand"
+            aria-label={t("activity.expand")}
             data-testid="bn-activity-chip-expand"
           >
             &#x25BE;
@@ -206,7 +208,7 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
         <button
           className="activity-chip activity-chip-collapse"
           onClick={() => setExpanded(false)}
-          aria-label="Collapse"
+          aria-label={t("activity.collapse")}
           data-testid="bn-activity-chip-collapse"
         >
           &#x25B4;

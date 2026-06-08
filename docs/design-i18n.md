@@ -26,6 +26,16 @@ Three layers, three strategies:
 - Translation is display-only — tags are interoperable across languages
 - A German user's tags are readable by an English user
 
+**Localised defaults vs English-canonical defaults.** A placeholder *name* the user
+immediately renames (a "rename seed") IS localised: `codebook.newGroup` / `codebook.newCode`
+resolve in the active UI language at creation time, because nothing downstream keys off the
+string — it exists to be typed over. The English-always rule above governs *canonical* values
+only (enum keys, tags, LLM-facing strings, anything matched / joined / fed to a prompt). The
+test when adding a defaulted field: **does anything downstream match, join, or feed this
+string to an LLM?** If yes → store English. If it's a freeform field the user overwrites →
+localise the default. (Contrast `project_name = "Untitled"` in `server/importer.py`, an
+identifier-ish fallback that deliberately stays English.)
+
 ## Terminology research — what researchers actually call things
 
 Sources: ATLAS.ti and MAXQDA localized interfaces (both German-origin QDA tools), NVivo, academic textbooks (Flick, Mayring, Kuckartz), UXR industry usage.
@@ -430,6 +440,37 @@ translated in its UI, so on the next sync a human translation wins over our mach
 conflict self-heals in the right direction: human > MT). Before the final Weblate pull,
 trigger **Commit + Push** in Weblate so any not-yet-committed UI translations land in the repo
 first; fill-empty then skips them.
+
+### Future locales (deferred)
+
+Breadcrumbs so the analysis isn't re-derived. Neither is started.
+
+**Portuguese (`pt-PT` + `pt-BR`) — light; a later-summer-weekend seed.** Romance, Latin
+script (no script subtag), `one`/`other` plurals — same shape as `es`/`fr`/`de`, so MT-seed
+quality is high and mechanical cost is low. Two locales though: lexical divergence
+(`ecrã`/`utilizador` PT vs `tela`/`usuário` BR) → two native reviews eventually. `pt-BR`
+(Brazil) is the larger market (reach); `pt-PT` is more completeness. Normal App Store
+regions, providers reachable. `pt` base + `pt-BR` override, or two full locales — decide at
+seed time.
+
+**Chinese (`zh-Hant` + `zh-Hans`) — don't touch before autumn/winter 2026.** Split by
+distribution channel, not just script:
+
+- **`zh-Hant` (Traditional) = Taiwan, via the App Store.** Normal storefront;
+  Claude/ChatGPT/Gemini all resolve. The work is translation quality → wants a
+  **Taiwan-native** reviewer (Taiwan vocabulary, e.g. `軟體` not mainland `軟件`); an auto
+  Simplified→Traditional convert gets glyphs but not idiom. This is the gated piece.
+- **`zh-Hans` (Simplified) = mainland, CLI / serve only.** No App Store, no mainland
+  commercialisation planned near-term — the local-first OSS CLI is the access route, so no
+  firewall / ICP / provider entanglement (users self-configure Ollama/local). Note the **CLI
+  is English-only in alpha**, so a Chinese experience there appears only via `bristlenose
+  serve` + the SPA *if* `zh-Hans` exists. It's just repo JSON → a free ride-along whenever
+  someone translates it; gates nothing.
+- **First locale with a script subtag.** `zh-Hant`/`zh-Hans` forces the flat two-letter
+  registry (hand-duplicated across React `LOCALE_LABELS`, Swift `supportedLocales`, Python
+  `_ALL_LOCALES`) to learn script tags — a plumbing change, not a flat-locale copy-paste.
+  Plurals are trivial (`other`-only, like `ja`/`ko`); CJK typography mostly rides existing
+  `ja`/`ko` handling.
 
 ### Alternatives considered
 

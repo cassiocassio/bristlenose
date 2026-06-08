@@ -329,7 +329,7 @@ Releases should land on GitHub after 9pm London time on weekdays to avoid pushin
 A tag push that reaches GitHub is NOT the same as a release that reaches PyPI. The release pipeline silently stalled from v0.15.5 to v0.15.9 (five versions, ~6 days) because no step checked that PyPI actually accepted the upload. **After every `git push origin main --tags`, verify before declaring the release done:**
 
 ```sh
-for i in 1 2 3 4 5 6 7 8 9 10; do
+for i in $(seq 1 20); do
   sleep 90
   pypi=$(curl -s https://pypi.org/pypi/bristlenose/json | jq -r .info.version)
   echo "[$i] PyPI: $pypi"
@@ -337,7 +337,7 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
 done
 ```
 
-If PyPI still reports the previous version after 15 minutes: `gh run view --workflow=release.yml` to check the workflow fired. Apply the v0.15.0 debouncing workaround (`git push --delete origin v<X.Y.Z> && git push origin v<X.Y.Z>`) if it didn't.
+20 iterations × 90s = 30 minutes. Recent releases have run 23–25 minutes (v0.15.13: 25m41s, v0.15.14: 23m22s); the original 15-minute budget routinely expired during a normal release. If PyPI still reports the previous version after 30 minutes: `gh run view --workflow=release.yml` to check the workflow fired. Apply the v0.15.0 debouncing workaround (`git push --delete origin v<X.Y.Z> && git push origin v<X.Y.Z>`) if it didn't.
 
 ## Before committing
 

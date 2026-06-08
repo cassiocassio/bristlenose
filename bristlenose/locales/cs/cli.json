@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "Nástroj pro přepis uživatelského výzkumu a extrakci citátů.",
+  "stage": {
+    "ingest": "Načtení",
+    "extractAudio": "Extrakce zvuku",
+    "transcribe": "Přepis",
+    "identifySpeakers": "Identifikace mluvčích",
+    "mergeTranscript": "Sloučení přepisu",
+    "piiRemoval": "Odstranění osobních údajů",
+    "topicSegmentation": "Segmentace témat",
+    "quoteExtraction": "Extrakce citátů",
+    "quoteClustering": "Shlukování citátů",
+    "thematicGrouping": "Tematické seskupení",
+    "render": "Vykreslení"
+  },
+  "error": {
+    "noInput": "Nebyl zadán vstupní adresář.",
+    "notFound": "Adresář nenalezen: {path}",
+    "noFiles": "V {path} nebyly nalezeny žádné zvukové, video ani přepisové soubory"
+  },
+  "progress": {
+    "complete": "Hotovo",
+    "failed": "Selhalo",
+    "skipped": "Přeskočeno"
+  }
+}

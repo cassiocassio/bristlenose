@@ -33,7 +33,7 @@ Text in `common.json`, `settings.json`, `enums.json`, and `server.json` that ren
 | `enums.json` | ~11 | Sentiment display names, provider labels |
 | `server.json` | ~5 | Server health check labels |
 
-**i18n**: all 6 locales (en, es, fr, de, ja, ko).
+**i18n**: all 7 locales (en, es, fr, de, ja, ko, cs).
 
 ---
 
@@ -51,7 +51,7 @@ Keys in `desktop.json` that only render inside the macOS app shell. CLI serve mo
 | `help.*` (overrides) | 3 | Desktop variants for forked keys (see Forked section below) |
 | `configReference.*` | 1 | Desktop variant for config reference intro |
 
-**Total**: ~150 keys. **i18n**: all 6 locales.
+**Total**: ~150 keys. **i18n**: all 7 locales.
 
 ---
 
@@ -61,12 +61,12 @@ Text that only appears in terminal output. Never rendered in the web UI or deskt
 
 | Source | Key count | Content | i18n? |
 |---|---|---|---|
-| `cli.json` | ~19 | CLI stage names, progress output, error messages | 6 locales |
-| `doctor.json` | ~6 | `bristlenose doctor` health check output | 6 locales |
-| `pipeline.json` | ~4 | Pipeline stage display names | 6 locales |
+| `cli.json` | ~19 | CLI stage names, progress output, error messages | 7 locales |
+| `doctor.json` | ~6 | `bristlenose doctor` health check output | 7 locales |
+| `pipeline.json` | ~4 | Pipeline stage display names | 7 locales |
 | `cli.py` help strings | ~30 | Typer `--help` flag descriptions | English only |
 | `bristlenose.1` man page | 517 lines | Full man page | English only |
-| `preflight.json` | ~25 | First-run preflight banners, prompts, error recovery (Whisper download, ffmpeg install table, API-key validation, closing line) | 6 locales (en source; es/fr/de/ko/ja mirror en pending translation review) |
+| `preflight.json` | ~25 | First-run preflight banners, prompts, error recovery (Whisper download, ffmpeg install table, API-key validation, closing line) | 7 locales (en source; es/fr/de/ko/ja/cs mirror en pending translation review) |
 
 **Gap**: CLI `--help` strings and the man page are English-only and not wired through i18next. Translating these is a future task (low priority — CLI users overwhelmingly work in English).
 
@@ -83,7 +83,7 @@ Keys where `common.json` or `settings.json` has the CLI version and `desktop.jso
 | `help.contributing.beforeBody` | `ContributingSection.tsx:13` | Inline terminal commands (`ruff check .`, `pytest tests/`, `npm run build`) | Single link to GitHub contributing guide | Desktop users aren't running terminal commands |
 | `configReference.intro` | `SettingsModal.tsx:376` | "configured via environment variables or a `.env` file" | "Most settings are in the Settings window (Cmd+,)" | Different configuration paradigm |
 
-**i18n**: all 4 keys have desktop variants in all 6 locale `desktop.json` files.
+**i18n**: all 4 keys have desktop variants in all 7 locale `desktop.json` files.
 
 ---
 
@@ -106,11 +106,11 @@ The `ct()` helper is defined, tested, and ready — but has **zero production ca
 
 | Category | Keys | i18n coverage | Mechanism |
 |---|---|---|---|
-| Shared | ~456 | 6 locales | `t()` |
-| Desktop-only | ~150 | 6 locales | `desktop.json` namespace |
-| CLI-only (translated) | ~29 | 6 locales | `cli.json` / `doctor.json` / `pipeline.json` |
+| Shared | ~456 | 7 locales | `t()` |
+| Desktop-only | ~150 | 7 locales | `desktop.json` namespace |
+| CLI-only (translated) | ~29 | 7 locales | `cli.json` / `doctor.json` / `pipeline.json` |
 | CLI-only (untranslated) | ~30 + man page | English only | Typer help strings / `bristlenose.1` |
-| Forked | 4 | 6 locales | `dt()` + `desktop.json` override |
+| Forked | 4 | 7 locales | `dt()` + `desktop.json` override |
 | CLI-hideable | 0 active | — | `ct()` (ready, unused) |
 
 ---

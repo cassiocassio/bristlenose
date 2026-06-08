@@ -151,12 +151,9 @@
     "createAnyway": "それでも作成",
     "emptyStateHint": "フォルダをここにドラッグするか、⌘N を押してください",
     "addedInterviews": "%@ に %d 件のインタビューを追加しました",
-    "interviewCountOne": "\u30a4\u30f3\u30bf\u30d3\u30e5\u30fc 1 \u4ef6",
-    "interviewCountOther": "\u30a4\u30f3\u30bf\u30d3\u30e5\u30fc {{count}} \u4ef6",
-    "unanalysedSubtitleOne": "\u672a\u5206\u6790 +1 \u4ef6",
-    "unanalysedSubtitleOther": "\u672a\u5206\u6790 +{{count}} \u4ef6",
-    "missingSubtitleOne": "1 \u4ef6\u4e0d\u8db3",
-    "missingSubtitleOther": "{{count}} \u4ef6\u4e0d\u8db3",
+    "interviewCount_other": "\u30a4\u30f3\u30bf\u30d3\u30e5\u30fc {{count}} \u4ef6",
+    "unanalysedSubtitle_other": "\u672a\u5206\u6790 +{{count}} \u4ef6",
+    "missingSubtitle_other": "{{count}} \u4ef6\u4e0d\u8db3",
     "tooltipWaiting": "{{count}} \u4ef6\u5f85\u6a5f\u4e2d",
     "dateRelativeJustNow": "\u305f\u3063\u305f\u4eca",
     "unanalysedSheetTitle": "{{project}} \u306e\u672a\u5206\u6790\u30d5\u30a1\u30a4\u30eb",
@@ -248,6 +245,32 @@
     "done": "完了"
   },
   "pipeline": {
+    "status": {
+      "stopping": "停止中…",
+      "starting": "開始中…",
+      "analysing": "分析中…",
+      "working": "処理中…",
+      "stage": "ステージ {{index}} · {{stage}}",
+      "stageShort": "ステージ {{index}}",
+      "queued": "待機中 · {{position}}",
+      "waitingSubprocess": "分析サブプロセスの終了を待機しています。",
+      "resuming": "分析を再開しています（アプリ再起動後に再接続）。",
+      "startingUp": "起動中 — モデルを読み込み、認証情報を検証しています。",
+      "elapsed": "経過: {{time}}",
+      "waitingInQueue": "別のプロジェクトの完了を待機しています（キュー内 {{position}} 番目）。",
+      "stop": "停止",
+      "headline": {
+        "running": "実行中",
+        "stopping": "停止中",
+        "queued": "待機中",
+        "failed": "失敗"
+      },
+      "help": {
+        "running": "{{project}} のパイプライン進行状況を表示",
+        "queued": "{{project}} のパイプライン実行がキューに登録されました",
+        "failed": "{{project}} のパイプライン実行が失敗しました"
+      }
+    },
     "diagnostic": {
       "pill": {
         "auth": "Provider key issue",

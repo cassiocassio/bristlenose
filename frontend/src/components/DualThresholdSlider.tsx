@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 const STEP = 0.05;
 const MIN_GAP = 0.05;
@@ -33,6 +34,7 @@ export function DualThresholdSlider({
   onLowerChange,
   onUpperChange,
 }: DualThresholdSliderProps) {
+  const { t } = useTranslation();
   const trackRef = useRef<HTMLDivElement>(null);
 
   /** Convert a mouse/touch clientX to a 0–1 value along the track. */
@@ -116,7 +118,7 @@ export function DualThresholdSlider({
         className="threshold-slider-thumb"
         style={{ left: lowerPct }}
         role="slider"
-        aria-label="Lower threshold"
+        aria-label={t("autocode.lowerThreshold")}
         aria-valuemin={0}
         aria-valuemax={upper - MIN_GAP}
         aria-valuenow={lower}
@@ -133,7 +135,7 @@ export function DualThresholdSlider({
         className="threshold-slider-thumb"
         style={{ left: upperPct }}
         role="slider"
-        aria-label="Upper threshold"
+        aria-label={t("autocode.upperThreshold")}
         aria-valuemin={lower + MIN_GAP}
         aria-valuemax={1}
         aria-valuenow={upper}

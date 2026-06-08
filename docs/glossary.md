@@ -12,7 +12,7 @@ Consumers: human writers, translators (Weblate glossary seed), user-documentatio
 
 **Register.** Explain *why* before *how*. Name the research principle, then show the button. Cite frameworks on first use ("thematic analysis (Braun & Clarke, 2006)"). No jargon without inline explanation — "Presidio" always needs "(an open-source text scanner)" on first mention. Researchers need to understand the research logic, not just the button sequence.
 
-**Anti-patterns.** No superlatives ("best", "powerful", "revolutionary"). No minimisers ("simply", "just", "easily" — these dismiss real complexity researchers face). No marketing language. No exclamation marks in help text. No "click here" link text — describe the destination. No idioms or cultural references that don't translate across our six languages.
+**Anti-patterns.** No superlatives ("best", "powerful", "revolutionary"). No minimisers ("simply", "just", "easily" — these dismiss real complexity researchers face). No marketing language. No exclamation marks in help text. No "click here" link text — describe the destination. No idioms or cultural references that don't translate across our seven languages.
 
 ---
 

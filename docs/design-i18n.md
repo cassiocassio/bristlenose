@@ -26,6 +26,16 @@ Three layers, three strategies:
 - Translation is display-only — tags are interoperable across languages
 - A German user's tags are readable by an English user
 
+**Localised defaults vs English-canonical defaults.** A placeholder *name* the user
+immediately renames (a "rename seed") IS localised: `codebook.newGroup` / `codebook.newCode`
+resolve in the active UI language at creation time, because nothing downstream keys off the
+string — it exists to be typed over. The English-always rule above governs *canonical* values
+only (enum keys, tags, LLM-facing strings, anything matched / joined / fed to a prompt). The
+test when adding a defaulted field: **does anything downstream match, join, or feed this
+string to an LLM?** If yes → store English. If it's a freeform field the user overwrites →
+localise the default. (Contrast `project_name = "Untitled"` in `server/importer.py`, an
+identifier-ish fallback that deliberately stays English.)
+
 ## Terminology research — what researchers actually call things
 
 Sources: ATLAS.ti and MAXQDA localized interfaces (both German-origin QDA tools), NVivo, academic textbooks (Flick, Mayring, Kuckartz), UXR industry usage.
@@ -145,7 +155,7 @@ Low-frequency content. Researchers see it once.
 
 ### Scale
 
-~180 keys across 8 namespaces × 6 languages = ~1,080 translation strings total.
+~180 keys across 8 namespaces × 7 languages = ~1,260 translation strings total.
 
 ## Architecture: single source of truth (implemented, Mar 2026)
 
@@ -394,7 +404,7 @@ The Libre plan carries one condition: attribution. Mention Weblate in the README
 - Monolingual base: `bristlenose/locales/en/{ns}.json` for each component
 - Components share the same repo clone via `weblate://bristlenose/common`
 
-**Glossary:** uploaded from `bristlenose/locales/glossary.csv` — Apple HIG terms + QDA domain terms (Codebook, Quotes, Sessions, etc.) across es/fr/de/ko.
+**Glossary:** uploaded from `bristlenose/locales/glossary.csv` — Apple HIG terms + QDA domain terms (Codebook, Quotes, Sessions, etc.) across es/fr/de/ko/ja/cs.
 
 **Translation instructions:** linked to `TRANSLATING.md` in project settings.
 
@@ -405,6 +415,150 @@ The Libre plan carries one condition: attribution. Mention Weblate in the README
 - The "Source code repository" field on the create-component form pre-fills with a label prefix (`Source code repository: https://...`) — this must be cleared to just the bare URL or git clone fails with "protocol not supported"
 - JSON indentation defaults to 4 — must change to 2 to match our files, otherwise Weblate reformats every file on first commit
 - Second+ components should use "From an existing component" tab and select `common` to share the repo clone
+
+### Czech (`cs`) — community-initiated
+
+**Language code, not country code.** The locale is ISO 639-1 `cs` (the Czech _language_),
+**not** `cz` (the ISO 3166-1 country code for Czechia — what's on Praha number plates). The
+`cz` git branch is a label only; every locale dir, `SUPPORTED_LOCALES` entry, `glossary.csv`
+row, and language-picker tag uses `cs`. (Slovak, which split from Czech administratively in
+1993, is the separate language code `sk`; `cs` is unambiguously Czech.)
+
+Czech is the first locale Bristlenose didn't plan. A volunteer signed up on Weblate and
+started a `cs` translation _before_ we'd added the language to the product — the first
+_organic_ demand signal for a locale we've had, and evidence of at least one Czech-speaking
+researcher in the wild. We treated it as a delight opportunity rather than a backlog item:
+instead of handing the volunteer a blank slate, we machine-seeded a complete Czech baseline
+across all eight namespaces (+ `preflight`), with proper Czech four-form CLDR plurals
+(`one`/`few`/`many`/`other`), for them to react to and correct.
+
+**Fill-empty-only invariant.** The MT seed is additive: for each English key it writes a
+Czech value _only_ where `cs` is currently empty or missing — it never overwrites a
+non-empty value, because that value may be a human contribution. The guarantee is structural
+(file-level) and re-runnable. On Weblate's side, its database is authoritative for any string
+translated in its UI, so on the next sync a human translation wins over our machine seed (the
+conflict self-heals in the right direction: human > MT). Before the final Weblate pull,
+trigger **Commit + Push** in Weblate so any not-yet-committed UI translations land in the repo
+first; fill-empty then skips them.
+
+#### Czech plurals — the pernickety one/few/many/other rule
+
+Czech is the first locale Bristlenose ships that inflects nouns by count beyond a
+singular/plural binary, and the wrong form is **immediately wrong-sounding** to a
+native speaker. The same trap exists for every Slavic language we might add later
+(Polish, Russian, Ukrainian, Slovak — each with its own boundary rules); the
+mechanism described here is generic, the seeded values are Czech-specific.
+
+**The four CLDR categories for Czech**, with the noun _rozhovor_ ("interview") as
+the worked example. The boundary rules use CLDR's `i` (integer part) and `v` (number
+of visible fraction digits):
+
+| Category | Rule (CLDR) | Integer counts | Example string |
+|----------|-------------|----------------|----------------|
+| `one`   | `i = 1 ∧ v = 0`        | `1`         | `1 rozhovor` |
+| `few`   | `i ∈ {2,3,4} ∧ v = 0`  | `2, 3, 4`   | `3 rozhovory` |
+| `many`  | `v ≠ 0`                | _(none)_    | `1,5 rozhovoru` _(fractional)_ |
+| `other` | everything else        | `0, 5, 6, …` | `7 rozhovorů` |
+
+The single-letter ending changes are the whole point — _rozhovor_ → _rozhovory_
+→ _rozhovoru_ → _rozhovorů_ is the **same word in four cases**, not four
+different words. Machine translation routinely picks the wrong one (the genitive
+plural `-ů` is the most common machine error in `few` contexts), which is why
+every machine-seeded `_few` value needs native review.
+
+**Why `many` is in the locale files but never actually rendered.** Bristlenose's
+UI displays integer counts only — interview counts, hidden-quote counts, etc. —
+so the `many` form (decimals) is never selected at runtime; `pluralCategory` for
+Czech only ever returns `one` / `few` / `other`. We seed `_many` anyway because
+(a) CLDR considers the four-form set canonical and Weblate / glossary tooling
+expect it, (b) it documents the rule for anyone reading the locale file, and
+(c) it's a zero-cost guard against a future Decimal-aware call site.
+
+**The mechanism.** `I18n.pluralCategory(_ count: Int) -> String`
+(`desktop/Bristlenose/Bristlenose/I18n.swift`) returns the CLDR category for the
+active locale. Call sites resolve `<base>_<category>` and fall back to
+`<base>_other` if the form is missing — so a half-translated locale renders
+"plain plural" rather than the raw key. The two reference implementations are
+`PipelineActivityItem.localisedOverflowText` and `ProjectRow.deltaText`; copy
+one of them when you add a new pluralised desktop string. (Pattern reference:
+§ Process philosophy, item 3 above.)
+
+**Inventory of Czech four-form values, as of `bc72b7a` (cz branch, 8 Jun 2026) —
+machine-seeded, awaiting native review.** Every entry below is a best-effort
+Czech form generated mechanically and **may be wrong in a way that's invisible
+to anyone who doesn't speak Czech**. A native-speaker pass is the gate, not
+the seed.
+
+| Key prefix (under `chrome.` or `pipeline.diagnostic.`) | English source | Seeded cs forms |
+|--------|----------------|------------------|
+| `interviewCount` | `{{count}} interview(s)` | `1 rozhovor` / `{{count}} rozhovory` / `{{count}} rozhovoru` / `{{count}} rozhovorů` |
+| `unanalysedSubtitle` | `+{{count}} unanalysed` | `+1 neanalyzovaný` / `+{{count}} neanalyzované` / `+{{count}} neanalyzovaných` / `+{{count}} neanalyzovaných` |
+| `missingSubtitle` | `{{count}} missing` | `1 chybí` / `{{count}} chybí` / `{{count}} chybí` / `{{count}} chybí` _(verb-final; invariant)_ |
+| `overflow` (diagnostic) | `… and {{count}} more failures truncated` | `… a {{count}} další chyba skryta` / `… a {{count}} další chyby skryty` / `… a {{count}} další chyby skryto` / `… a {{count}} dalších chyb skryto` |
+
+Note that `missingSubtitle` uses the verb `chybí` ("is/are missing") which doesn't
+inflect for count, so all four forms are deliberately identical. `interviewCount`
+and `unanalysedSubtitle` are the entries where a native reviewer will most likely
+correct an ending; `overflow` involves a full sentence and is the most likely to
+need wording revision beyond endings. The current cs overflow seed also translates
+"truncated" as `skryta/skryty/skryto` (literally _hidden_), which is a small
+semantic drift from the English — flag for the reviewer.
+
+**For the native-speaker reviewer (Pavel and successors).** The forms above were
+generated to satisfy CLDR's grammar shape, not to read naturally. Likely areas
+to correct: (a) the `-ý` / `-é` / `-ých` adjective endings on
+`neanalyzovaný / -é / -ých` (these agree with the noun's gender + case + number,
+and the seed assumes a default that may not match how the UI reads — Bristlenose
+displays these strings without an explicit noun, so the form choice is doing
+double duty); (b) word order and the elided noun in `unanalysedSubtitle` —
+you may want to make the noun explicit, e.g. _neanalyzovaných souborů_; (c) the
+participle choice in `overflow` (`skryta` / `skryty` / `skryto`), and whether
+_hidden_ is the right translation of _truncated_ in this UI. Edit in Weblate or
+directly in `bristlenose/locales/cs/desktop.json` — chrome counts are top-level
+`chrome.*` keys; overflow lives under `pipeline.diagnostic.*` in the same file.
+**You don't need to touch `_many` unless you want to** — it's CLDR-canonical
+shape, never rendered in our UI.
+
+**For future Slavic locales (Polish, Russian, Ukrainian, Slovak).** The
+mechanism extends — add a `case "pl":` (etc.) branch to `pluralCategory` with
+that language's CLDR rules and seed the four-form set across all keys carrying
+`_few`. The boundary rules differ (Polish has its own; Russian/Ukrainian distinguish
+`many` from `other` for integers, unlike Czech). The Python test
+`test_four_form_locales_carry_all_forms` and `test_chrome_count_four_form_locales_carry_all_forms`
+already gate on presence of `_few` — so any new four-form locale auto-acquires
+coverage without a test edit. The Swift `@Test` (`localisedOverflowText_czech_selectsFewForm`)
+should be mirrored per language; the assertion shape is generic.
+
+### Future locales (deferred)
+
+Breadcrumbs so the analysis isn't re-derived. Neither is started.
+
+**Portuguese (`pt-PT` + `pt-BR`) — light; a later-summer-weekend seed.** Romance, Latin
+script (no script subtag), `one`/`other` plurals — same shape as `es`/`fr`/`de`, so MT-seed
+quality is high and mechanical cost is low. Two locales though: lexical divergence
+(`ecrã`/`utilizador` PT vs `tela`/`usuário` BR) → two native reviews eventually. `pt-BR`
+(Brazil) is the larger market (reach); `pt-PT` is more completeness. Normal App Store
+regions, providers reachable. `pt` base + `pt-BR` override, or two full locales — decide at
+seed time.
+
+**Chinese (`zh-Hant` + `zh-Hans`) — don't touch before autumn/winter 2026.** Split by
+distribution channel, not just script:
+
+- **`zh-Hant` (Traditional) = Taiwan, via the App Store.** Normal storefront;
+  Claude/ChatGPT/Gemini all resolve. The work is translation quality → wants a
+  **Taiwan-native** reviewer (Taiwan vocabulary, e.g. `軟體` not mainland `軟件`); an auto
+  Simplified→Traditional convert gets glyphs but not idiom. This is the gated piece.
+- **`zh-Hans` (Simplified) = mainland, CLI / serve only.** No App Store, no mainland
+  commercialisation planned near-term — the local-first OSS CLI is the access route, so no
+  firewall / ICP / provider entanglement (users self-configure Ollama/local). Note the **CLI
+  is English-only in alpha**, so a Chinese experience there appears only via `bristlenose
+  serve` + the SPA *if* `zh-Hans` exists. It's just repo JSON → a free ride-along whenever
+  someone translates it; gates nothing.
+- **First locale with a script subtag.** `zh-Hant`/`zh-Hans` forces the flat two-letter
+  registry (hand-duplicated across React `LOCALE_LABELS`, Swift `supportedLocales`, Python
+  `_ALL_LOCALES`) to learn script tags — a plumbing change, not a flat-locale copy-paste.
+  Plurals are trivial (`other`-only, like `ja`/`ko`); CJK typography mostly rides existing
+  `ja`/`ko` handling.
 
 ### Alternatives considered
 
@@ -441,7 +595,9 @@ Key lessons from [Mozilla's L10N best practices](https://mozilla-l10n.github.io/
 
 3. **Never concatenate fragments** — `"You have " + count + " items"` breaks word order in German, Japanese, Arabic. Always use full-sentence interpolation: `t("items.count", { count })` with i18next's plural rules.
 
-   - **Desktop (Swift `I18n.swift`) uses `One` / `Other` camelCase suffix keys, picked by Swift-side `count == 1` ternary.** React frontend uses i18next's `_one` / `_other` (CLDR-rule auto-suffix). The desktop divergence exists because `I18n.swift` doesn't implement CLDR plural-suffix lookup — the Swift call site does the pick. Example: `chrome.interviewCountOne` / `chrome.interviewCountOther` selected by `count == 1 ? key+"One" : key+"Other"`. Keep this consistent across desktop chrome keys; don't introduce `_one` / `_other` suffixes there. Captured 15 May 2026 during the `multi-project-folder-watcher` watcher subtitle work.
+   - **Desktop (Swift `I18n.swift`) uses CLDR plural categories — `_one` / `_few` / `_many` / `_other` snake_case suffix keys selected via `I18n.pluralCategory(_ count:)`.** React uses the same i18next suffix convention (CLDR auto-suffix). The Swift selector returns the category for the active locale — cs: one=1, few=2–4, other=0/5+; fr: 0,1=one else other; ja/ko: always other; en/es/de (and any unmapped locale): one=1 else other. Call sites resolve `<base>_<category>` with an `_other` fallback. Reference implementations: `PipelineActivityItem.localisedOverflowText` (diagnostic overflow text) and `ProjectRow.deltaText` (sidebar chrome counts).
+     - **Historical note (closed).** Before 8 Jun 2026 the desktop count strings used a Swift `count == 1` ternary on camelCase `One` / `Other` keys (e.g. `chrome.interviewCountOne` / `chrome.interviewCountOther`, captured 15 May 2026 in `multi-project-folder-watcher`). That binary split rendered Czech counts 2–4 in the `Other` form — `"2 rozhovorů"` where Czech grammar wants the `few` form `"2 rozhovory"`. Finding 1 introduced `pluralCategory` for the diagnostic overflow (8 Jun 2026); Finding 14 (`bc72b7a`, cz branch) migrated the three remaining chrome prefixes (`interviewCount`, `unanalysedSubtitle`, `missingSubtitle`). There are now **no `*One` / `*Other` camelCase keys anywhere** in `bristlenose/locales/`. The earlier chrome guidance ("don't introduce `_one` / `_other` suffixes") is **superseded** — snake_case CLDR forms are the only correct path.
+     - **Adding a new desktop count string:** seed `<base>_one` + `<base>_other` for en/es/fr/de (one+other), `<base>_other` only for ja/ko (single-form), and the full `<base>_one` / `_few` / `_many` / `_other` for cs (four-form — see the "Czech plurals" subsection above for what each form means). Route the Swift call site through `i18n.pluralCategory(count)` → `<base>_<category>` with `_other` fallback. The parametrised tests in `tests/test_pipeline_diagnostic_locale_keys.py` (chrome-count and overflow blocks — derive the four-form requirement from presence of `_few`) auto-extend to any new prefix that follows this shape; mirror the existing Swift `@Test` (`chromeInterviewCount_czech_selectsCldrForm` / `localisedOverflowText_czech_selectsFewForm`) for the cs end-to-end assertion.
 
 4. **Respect grammatical gender** — "1 item selected" vs "1 photo selected" may need different adjective forms in French/German/Spanish. Use i18next's `context` feature when the noun changes the sentence.
 

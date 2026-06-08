@@ -1,0 +1,6 @@
+{
+  "start": "Spouštění zpracování pro {path}",
+  "stageStart": "Probíhá {stage}…",
+  "stageComplete": "{stage} dokončeno ({duration})",
+  "done": "Zpracování dokončeno. Výstup: {output}"
+}

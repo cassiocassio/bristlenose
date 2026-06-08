@@ -1,0 +1,449 @@
+{
+  "menu": {
+    "app": {
+      "about": "O aplikaci Bristlenose",
+      "aiPrivacy": "AI a soukromí…",
+      "checkHealth": "Zkontrolovat stav systému…"
+    },
+    "file": {
+      "newProject": "Nový projekt…",
+      "newFolder": "Nová složka…",
+      "openInNewWindow": "Otevřít v novém okně",
+      "exportReport": "Exportovat zprávu…",
+      "exportAnonymised": "Exportovat anonymizovaně…",
+      "pageSetup": "Vzhled stránky…",
+      "print": "Tisk…"
+    },
+    "edit": {
+      "undoRemove": "Vrátit zpět odebrání „%@“",
+      "undo": "Zpět",
+      "redo": "Znovu",
+      "find": "Hledat…",
+      "findNext": "Najít další",
+      "findPrevious": "Najít předchozí",
+      "useSelectionForFind": "Použít výběr pro hledání",
+      "jumpToSelection": "Přejít na výběr"
+    },
+    "view": {
+      "toggleSidebar": "Přepnout postranní panel",
+      "showContents": "Zobrazit obsah",
+      "hideContents": "Skrýt obsah",
+      "showCodes": "Zobrazit kódy",
+      "hideCodes": "Skrýt kódy",
+      "showSignals": "Zobrazit signály",
+      "hideSignals": "Skrýt signály",
+      "showTags": "Zobrazit štítky",
+      "hideTags": "Skrýt štítky",
+      "showHeatmap": "Zobrazit teplotní mapu",
+      "hideHeatmap": "Skrýt teplotní mapu",
+      "allQuotes": "Všechny citáty",
+      "starredQuotesOnly": "Pouze citáty s hvězdičkou",
+      "filterByTag": "Filtrovat podle štítku…",
+      "zoomIn": "Přiblížit",
+      "zoomOut": "Oddálit",
+      "actualSize": "Skutečná velikost",
+      "switchToLightMode": "Přepnout na světlý režim",
+      "switchToDarkMode": "Přepnout na tmavý režim"
+    },
+    "project": {
+      "removeFromSidebar": "Odebrat z postranního panelu",
+      "showInFinder": "Zobrazit ve Finderu",
+      "rename": "Přejmenovat…",
+      "moveTo": "Přesunout do",
+      "noFolder": "Žádná složka",
+      "reAnalyse": "Znovu analyzovat…",
+      "archive": "Archivovat…",
+      "delete": "Smazat…",
+      "chooseIcon": "Vybrat ikonu"
+    },
+    "folder": {
+      "rename": "Přejmenovat složku",
+      "archive": "Archivovat složku",
+      "delete": "Smazat složku…"
+    },
+    "codes": {
+      "createCodeGroup": "Vytvořit skupinu kódů",
+      "renameCodeGroup": "Přejmenovat skupinu kódů…",
+      "deleteCodeGroup": "Smazat skupinu kódů",
+      "showHideCodeGroup": "Zobrazit/skrýt skupinu kódů",
+      "createCode": "Vytvořit kód",
+      "renameCode": "Přejmenovat kód…",
+      "deleteCode": "Smazat kód",
+      "mergeCodes": "Sloučit kódy…",
+      "browseCodebooks": "Procházet knihy kódů…",
+      "importFramework": "Importovat rámec…",
+      "removeFramework": "Odebrat rámec"
+    },
+    "quotes": {
+      "star": "Označit hvězdičkou",
+      "hide": "Skrýt",
+      "addTag": "Přidat štítek…",
+      "applyLastTag": "Použít poslední štítek",
+      "revealInTranscript": "Zobrazit v přepisu",
+      "playPause": "Přehrát/pozastavit",
+      "nextQuote": "Další citát",
+      "previousQuote": "Předchozí citát",
+      "extendSelectionDown": "Rozšířit výběr dolů",
+      "extendSelectionUp": "Rozšířit výběr nahoru",
+      "toggleSelection": "Přepnout výběr",
+      "clearSelection": "Zrušit výběr",
+      "copyAsCSV": "Kopírovat jako CSV"
+    },
+    "video": {
+      "play": "Přehrát",
+      "pause": "Pozastavit",
+      "skipForward5": "Přeskočit o 5 sekund vpřed",
+      "skipBack5": "Přeskočit o 5 sekund zpět",
+      "skipForward30": "Přeskočit o 30 sekund vpřed",
+      "skipBack30": "Přeskočit o 30 sekund zpět",
+      "speedUp": "Zrychlit",
+      "slowDown": "Zpomalit",
+      "normalSpeed": "Normální rychlost",
+      "volumeUp": "Zvýšit hlasitost",
+      "volumeDown": "Snížit hlasitost",
+      "mute": "Ztlumit",
+      "pictureInPicture": "Obraz v obraze",
+      "fullscreen": "Celá obrazovka"
+    },
+    "help": {
+      "bristlenoseHelp": "Nápověda Bristlenose",
+      "keyboardShortcuts": "Klávesové zkratky",
+      "releaseNotes": "Poznámky k verzi",
+      "sendFeedback": "Odeslat zpětnou vazbu…",
+      "blog": "Bristlenose na Substacku",
+      "acknowledgements": "Poděkování"
+    }
+  },
+  "chrome": {
+    "spotlight": {
+      "breadcrumbA11y": "Cesta ke složce: %@",
+      "chooseDifferent": "Vybrat jinou…",
+      "useThisFolder": "Použít tuto složku",
+      "title": "Nalezena složka, která by mohla být „%@“."
+    },
+    "locateError": {
+      "message": "Tato složka nevypadá jako analyzovaný projekt. Vyberte složku, ve které byla analýza spuštěna, nebo analyzujte složku znovu z úvodní obrazovky.",
+      "title": "Tuto složku se nepodařilo otevřít"
+    },
+    "startingServer": "Spouštění serveru…",
+    "loadingReport": "Načítání zprávy…",
+    "noProjectSelected": "Není vybrán žádný projekt",
+    "selectProject": "Vyberte projekt z postranního panelu.",
+    "serverError": "Chyba serveru",
+    "retry": "Zkusit znovu",
+    "projects": "Projekty",
+    "reportContent": "Obsah zprávy",
+    "newFolder": "Nová složka",
+    "newProject": "Nový projekt",
+    "dragInterviews": "Přetáhněte rozhovory sem",
+    "dragInterviewsDescription": "Začněte přidáním nahrávek rozhovorů nebo přepisů.",
+    "projectUnavailable": "Projekt není dostupný",
+    "projectUnavailableHint": "Pro přístup k tomuto projektu připojte disk.",
+    "projectMoved": "Projekt přesunut nebo smazán",
+    "projectMovedDescription": "Složku projektu se nepodařilo najít. Mohla být přesunuta nebo smazána.",
+    "locate": "Najít…",
+    "locateMessage": "Najděte nové umístění pro „%@“",
+    "onThisMac": "Na tomto Macu",
+    "projectIcon": "Ikona projektu",
+    "duplicateProject": "Projekt již existuje",
+    "duplicateProjectMessage": "Projekt pro tuto složku již existuje: „%@“. Můžete otevřít existující projekt nebo vytvořit nový.",
+    "openExisting": "Otevřít existující",
+    "createAnyway": "Přesto vytvořit",
+    "emptyStateHint": "Přetáhněte složku sem nebo stiskněte ⌘N",
+    "addedInterviews": "Přidáno %d rozhovorů do %@",
+    "interviewCount_one": "1 rozhovor",
+    "interviewCount_few": "{{count}} rozhovory",
+    "interviewCount_many": "{{count}} rozhovoru",
+    "interviewCount_other": "{{count}} rozhovorů",
+    "unanalysedSubtitle_one": "+1 neanalyzovaný",
+    "unanalysedSubtitle_few": "+{{count}} neanalyzované",
+    "unanalysedSubtitle_many": "+{{count}} neanalyzovaných",
+    "unanalysedSubtitle_other": "+{{count}} neanalyzovaných",
+    "missingSubtitle_one": "1 chybí",
+    "missingSubtitle_few": "{{count}} chybí",
+    "missingSubtitle_many": "{{count}} chybí",
+    "missingSubtitle_other": "{{count}} chybí",
+    "tooltipWaiting": "{{count}} čeká",
+    "dateRelativeJustNow": "Právě teď",
+    "unanalysedSheetTitle": "Neanalyzované soubory v {{project}}",
+    "unanalysedSheetFooter": "Tyto soubory byly přidány po poslední analýze.",
+    "multipleSelected": "Vybráno %d položek",
+    "multipleSelectedHint": "Pro zobrazení zprávy vyberte jeden projekt.",
+    "welcomeTitle": "Vítejte v Bristlenose",
+    "welcomeBody": "Přetáhněte složku s nahrávkami rozhovorů do postranního panelu nebo klikněte na + Nový projekt a začněte.",
+    "inFlightSwitchTitle": "Zrušit aktuální analýzu?",
+    "inFlightSwitchMessage": "„%@“ se stále analyzuje. Přepnutím projektu se analýza zruší — můžete pokračovat od místa, kde se zastavila.",
+    "cancelAndSwitch": "Zastavit a přepnout",
+    "continueAnalysing": "Pokračovat v analýze",
+    "dropProjectOntoProjectToast": "„%@“ už je projekt Bristlenose — přetáhněte místo toho jeho zdrojové soubory.",
+    "dropOntoRunningProject": "Před přidáním dalších dokončete nebo zastavte aktuální běh.",
+    "dropOntoAnalysedProject": "Přidávání dalších rozhovorů do analyzovaného projektu zatím není podporováno.",
+    "dropOntoFailedProject": "Tento běh zkuste znovu pomocí tlačítka Zkusit znovu na nástrojové liště.",
+    "dropOntoUnreachableProject": "Složka tohoto projektu je nyní nedostupná.",
+    "dropFolderContainsProject": "Tato složka obsahuje projekt Bristlenose „%@“. Přetáhněte samotný projekt nebo jeho zdrojové soubory zvlášť.",
+    "copyingPill": "Kopírování do %@",
+    "copyCancelling": "Rušení…",
+    "copyDiskSpaceTitle": "Nedostatek místa na disku",
+    "copyDiskSpaceMessage": "Tato kopie potřebuje %@ volného místa, ale na cílovém svazku je k dispozici pouze %@.",
+    "pipeline": {
+      "queuedPosition": "Ve frontě · pozice {{position}}",
+      "stopping": "Zastavování…",
+      "analysing": "Analýza…",
+      "analysedRelative": "Analyzováno {{when}}",
+      "transcribed": "Přepsáno",
+      "partialRun": "Částečný běh",
+      "stopped": "Zastaveno"
+    }
+  },
+  "pipeline": {
+    "status": {
+      "stopping": "Zastavování…",
+      "starting": "Spouštění…",
+      "analysing": "Analýza…",
+      "working": "Zpracování…",
+      "stage": "Fáze {{index}} · {{stage}}",
+      "stageShort": "Fáze {{index}}",
+      "queued": "Ve frontě · {{position}}",
+      "waitingSubprocess": "Čekání na ukončení podprocesu analýzy.",
+      "resuming": "Obnovování analýzy (znovu připojeno po restartu aplikace).",
+      "startingUp": "Spouštění — načítání modelů a ověřování přihlašovacích údajů.",
+      "elapsed": "Uplynulo: {{time}}",
+      "waitingInQueue": "Čekání na dokončení jiného projektu (pozice {{position}} ve frontě).",
+      "stop": "Zastavit",
+      "headline": {
+        "running": "Probíhá",
+        "stopping": "Zastavování",
+        "queued": "Ve frontě",
+        "failed": "Selhalo"
+      },
+      "help": {
+        "running": "Zobrazit průběh zpracování pro {{project}}",
+        "queued": "Zpracování ve frontě pro {{project}}",
+        "failed": "Zpracování pro {{project}} selhalo"
+      }
+    },
+    "diagnostic": {
+      "pill": {
+        "auth": "Problém s klíčem poskytovatele",
+        "missing_binary": "Chybějící nástroj",
+        "quota": "Omezení četnosti",
+        "network": "Chyba sítě",
+        "unknown": "Běh měl chyby"
+      },
+      "header": {
+        "completed_partial": "Částečné dokončení",
+        "failed": "Běh selhal"
+      },
+      "action": {
+        "copy": "Kopírovat podrobnosti",
+        "showLog": "Zobrazit protokol",
+        "showLogTooltip": "Zobrazit soubor protokolu analýzy"
+      },
+      "tooltip": {
+        "completed_partial": "Analýza projektu {{project}} skončila s chybami"
+      },
+      "noStructuredCause": "Podrobná příčina nebyla zaznamenána.",
+      "overflow_one": "… a {{count}} další chyba skryta",
+      "overflow_few": "… a {{count}} další chyby skryty",
+      "overflow_many": "… a {{count}} další chyby skryto",
+      "overflow_other": "… a {{count}} dalších chyb skryto"
+    }
+  },
+  "availability": {
+    "unmountedVolume": "{{name}} · chybí",
+    "networkUnreachable": "{{host}} · nedostupný",
+    "missing": "chybí",
+    "inCloud": "Na iCloudu"
+  },
+  "boot": {
+    "tagline": "Smysl pro uživatelský výzkum",
+    "startingSidecar": "Spouštění Bristlenose…",
+    "loadingReport": "Načítání zprávy…",
+    "failedTitle": "Bristlenose se nepodařilo spustit",
+    "retry": "Zkusit znovu",
+    "showDetails": "Zobrazit podrobnosti",
+    "hideDetails": "Skrýt podrobnosti"
+  },
+  "welcome": {
+    "subtitle": "Proměňte složku rozhovorů ve zprávu, kterou můžete sdílet — na svém notebooku, nic se nenahrává.",
+    "newProject": "Nový projekt",
+    "newProjectHint": "Vyberte složku nahrávek nebo přepisů a začněte od začátku.",
+    "dropFolderTitle": "Přetáhněte složku",
+    "dropFolderHint": "Přetáhněte sem složku nahrávek nebo přepisů a přidejte ji jako projekt.",
+    "aiPrivacyLink": "Zkontrolovat nastavení AI a soukromí…",
+    "steps": {
+      "ingestTitle": "Přidat rozhovory",
+      "ingestDetail": "Audio, video nebo existující přepisy.",
+      "processTitle": "Bristlenose analyzuje",
+      "processDetail": "Přepis, hledání citátů, shlukování témat.",
+      "exportTitle": "Procházet a exportovat",
+      "exportDetail": "Čtěte zjištění, exportujte HTML nebo CSV."
+    }
+  },
+  "toolbar": {
+    "back": "Zpět (⌘[)",
+    "forward": "Vpřed (⌘])",
+    "tab": "Panel",
+    "sidebar": "Postranní panel",
+    "contents": "Obsah",
+    "showContents": "Zobrazit obsah (⌘⌥L)",
+    "codes": "Kódy",
+    "showCodes": "Zobrazit kódy (⌘⌥L)",
+    "signals": "Signály",
+    "showSignals": "Zobrazit signály (⌘⌥L)",
+    "tags": "Štítky",
+    "showTags": "Zobrazit štítky (⌘⌥T)",
+    "heatmap": "Teplotní mapa",
+    "showHeatmap": "Zobrazit teplotní mapu (m)",
+    "search": "Hledat",
+    "searchShortcut": "Hledat (⌘F)",
+    "export": "Exportovat",
+    "exportShortcut": "Exportovat (⌘⇧E)"
+  },
+  "settingsTabs": {
+    "appearance": "Vzhled",
+    "llm": "LLM",
+    "transcription": "Přepis"
+  },
+  "help": {
+    "privacy": {
+      "redactionIntro": "Redakce osobních údajů je volitelná. Ve výchozím nastavení je vypnutá, protože falešně pozitivní výsledky (redakce textu relevantního pro výzkum) poškozují přesnost dat. Funkce využívá Microsoft Presidio, open-source skener textu, s nastavitelným prahem spolehlivosti (výchozí 0,7).",
+      "actionThreshold": "U citlivých dat snižte práh spolehlivosti (zkuste 0,5), abyste zachytili více za cenu většího počtu falešně pozitivních výsledků."
+    },
+    "contributing": {
+      "beforeBody": "Pro nastavení vývoje a kontroly kvality kódu si přečtěte <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">průvodce přispíváním</a> na GitHubu."
+    }
+  },
+  "configReference": {
+    "intro": "Většina nastavení je v okně Nastavení (⌘,). Názvy proměnných prostředí jsou uvedeny níže pro pokročilou konfiguraci."
+  },
+  "aiConsent": {
+    "title": "Analýza poháněná AI",
+    "intro": "Bristlenose využívá AI k analýze vašich přepisů rozhovorů. Když použijete cloudového poskytovatele, data přepisu se odesílají ke zpracování na servery tohoto poskytovatele.",
+    "notUsedForTraining": "Vaše data nejsou používána k trénování modelů AI. Zásady uchovávání dat najdete v podmínkách jednotlivých poskytovatelů.",
+    "sentToCloudLabel": "Odesláno vámi zvolenému cloudovému poskytovateli",
+    "sentItem1": "Zpracované přepisy rozhovorů (s případně předem aplikovanou redakcí osobních údajů, pokud je povolena)",
+    "sentItem2": "Kódy mluvčích a časové značky",
+    "sentItem3": "Požadavky na analýzu (segmentace témat, extrakce citátů, shlukování témat)",
+    "sentSummary": "Data odeslaná cloudovému poskytovateli: zpracované přepisy, kódy mluvčích a požadavky na analýzu",
+    "staysLocalLabel": "Vždy zůstává ve vašem zařízení",
+    "localItem1": "Surové audio a video nahrávky",
+    "localItem2": "Jména účastníků, kontaktní údaje a osobní data",
+    "localItem3": "Vaše úpravy, štítky a přizpůsobení zprávy",
+    "localSummary": "Data, která zůstávají ve vašem zařízení: nahrávky, osobní údaje a vaše úpravy",
+    "providersIntro": "Cloudoví poskytovatelé, kteří mohou zpracovávat vaše data:",
+    "researcherResponsibility": "Informujte účastníky, že jejich data z rozhovorů mohou být zpracována službami AI třetích stran, jak je vyžadováno.",
+    "continue": "Pokračovat",
+    "useOllama": "Použít model Ollama v zařízení",
+    "ollamaDownloadSize": "~%@ ke stažení",
+    "done": "Hotovo"
+  },
+  "llmSettings": {
+    "statusSection": "Stav",
+    "apiKeySection": "Klíč API",
+    "apiKeyPlaceholder": "Klíč API",
+    "showApiKey": "Zobrazit klíč API",
+    "hideApiKey": "Skrýt klíč API",
+    "clearApiKey": "Vymazat klíč API",
+    "serverSection": "Server",
+    "serverURL": "URL",
+    "modelSection": "Model",
+    "customModelOption": "Vlastní…",
+    "customModelPlaceholder": "Název vlastního modelu",
+    "temperatureLabel": "Teplota",
+    "temperatureHint": "Nízká = zaměřená, vysoká = kreativní",
+    "concurrencyLabel": "Souběžnost",
+    "concurrencyHint": "Souběžná volání LLM",
+    "azureSection": "Nastavení Azure",
+    "azureEndpoint": "URL koncového bodu",
+    "azureDeployment": "Název nasazení",
+    "azureAPIVersion": "Verze API",
+    "pricingLink": "Ceník",
+    "lastVerified": "Naposledy ověřeno %@",
+    "revalidating": "Poslední ověření bylo zamítnuto — opětovná kontrola…",
+    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
+    "activate": {
+      "generic": "Použít tohoto poskytovatele",
+      "ollama": "Použít místní model Ollama"
+    },
+    "status": {
+      "online": "Online",
+      "notSetUp": "Nenastaveno",
+      "invalid": "Neplatný klíč",
+      "unavailable": "Nedostupné",
+      "checking": "Kontrola…",
+      "outOfCredit": "Bez kreditu",
+      "local": "Místní"
+    },
+    "copyCommand": "Kopírovat příkaz",
+    "console": {
+      "keys": "Klíče",
+      "portal": "Portál"
+    },
+    "providers": {
+      "ollama": {
+        "description": "Zdarma, běží lokálně. Není potřeba klíč API."
+      }
+    }
+  },
+  "transcriptionSettings": {
+    "backendLabel": "Backend",
+    "modelLabel": "Model",
+    "backendAuto": "Automaticky",
+    "backendHint": "Automatika zjistí nejlepší engine pro váš Mac.",
+    "modelRecommended": "{{model}} (doporučeno)"
+  },
+  "ollamaSetup": {
+    "pillChoosingModel": "Nastavit AI v zařízení",
+    "pillNeedsOllama": "Získat Ollama",
+    "pillWaiting": "Čekání na Ollama",
+    "pillDownloading": "Stahování %@",
+    "pillDownloadingNoModel": "Stahování…",
+    "pillFinishing": "Dokončování",
+    "pillFailed": "Model se nepodařilo získat",
+    "chooseTitle": "Vyberte svůj model v zařízení",
+    "chooseBody": "Vyladěno pro váš Mac (%@ RAM). Větší modely jsou chytřejší, ale potřebují více paměti; všechny mají značnou velikost ke stažení.",
+    "chooseBodyHasInstalled": "Vyladěno pro váš Mac (%@ RAM). Jeden model je na tomto Macu již nainstalován.",
+    "tagSmallest": "nejmenší",
+    "tagBalanced": "vyvážený",
+    "tagBest": "nejlepší kvalita",
+    "tagFastest": "nejrychlejší",
+    "tagRecommended": "doporučeno",
+    "tagReady": "připraveno · žádné stahování",
+    "rowNeedsRam": "potřebuje %@ GB",
+    "rowDownloadSize": "~%@ ke stažení",
+    "rowOnDisk": "%@ na disku",
+    "groupInstalled": "Již na tomto Macu",
+    "groupDownload": "Stáhnout",
+    "foreshadow": "Tyto běží na **Ollama**, svobodném softwaru, který nastavíte v dalším kroku.",
+    "lowDisk": "Málo místa na disku",
+    "useModel": "Použít %@",
+    "chooseInstalledCaption": "Již nainstalováno — spustí se ihned.",
+    "needsTitle": "Získejte Ollama pro spuštění %@",
+    "needsBody": "Bristlenose spouští modely lokálně prostřednictvím Ollama — zdarma. Otevře ollama.com pro stažení a instalaci.",
+    "getOllamaButton": "Získat Ollama…",
+    "waitingTitle": "Dokončete instalaci Ollama",
+    "waitingBody": "[ollama.com](https://ollama.com/download) je otevřený ve vašem prohlížeči.",
+    "waitingStep1": "Stáhněte Ollama pro macOS",
+    "waitingStep2": "Otevřete stažený soubor, nainstalujte a spusťte Ollama",
+    "waitingFootnote": "Bristlenose stáhne %@ automaticky, jakmile bude Ollama spuštěna.",
+    "waitingStatusLabel": "Čekání na instalaci Ollama",
+    "bytesProgress": "%@ z %@",
+    "downloadingTitle": "Stahování %@",
+    "finishingTitle": "Dokončování",
+    "finishingBody": "Připravuje se %@…",
+    "failedTitle": "Model se nepodařilo získat",
+    "failNoInternet": "Žádné připojení k internetu. Zkontrolujte síť a zkuste to znovu.",
+    "failTimedOut": "Stahování vypršelo. Zkontrolujte připojení a zkuste to znovu.",
+    "failCantReach": "Ztraceno spojení s Ollama. Ujistěte se, že běží, a zkuste to znovu.",
+    "failGeneric": "Stahování se nepodařilo dokončit. %@"
+  },
+  "toast": {
+    "removedBatchAnnouncement": "Odebráno %d projektů. Stisknutím Command-Z vrátíte zpět.",
+    "removedAnnouncement": "Odebráno „%@“. Stisknutím Command-Z vrátíte zpět.",
+    "removeBlockedByRun": "Před odebráním zastavte běh na „%@“.",
+    "removedBatch": "Odebráno %d projektů.",
+    "undo": "Zpět",
+    "removed": "Projekt odebrán."
+  }
+}

@@ -151,12 +151,12 @@
     "createAnyway": "Créer quand même",
     "emptyStateHint": "Glissez un dossier ici ou appuyez sur ⌘N",
     "addedInterviews": "%d entretiens ajoutés à %@",
-    "interviewCountOne": "1 entretien",
-    "interviewCountOther": "{{count}} entretiens",
-    "unanalysedSubtitleOne": "+1 non analys\u00e9",
-    "unanalysedSubtitleOther": "+{{count}} non analys\u00e9s",
-    "missingSubtitleOne": "1 manquant",
-    "missingSubtitleOther": "{{count}} manquants",
+    "interviewCount_one": "1 entretien",
+    "interviewCount_other": "{{count}} entretiens",
+    "unanalysedSubtitle_one": "+1 non analys\u00e9",
+    "unanalysedSubtitle_other": "+{{count}} non analys\u00e9s",
+    "missingSubtitle_one": "1 manquant",
+    "missingSubtitle_other": "{{count}} manquants",
     "tooltipWaiting": "{{count}} en attente",
     "dateRelativeJustNow": "\u00c0 l\u2019instant",
     "unanalysedSheetTitle": "Fichiers non analys\u00e9s dans {{project}}",
@@ -190,6 +190,32 @@
     }
   },
   "pipeline": {
+    "status": {
+      "stopping": "Arrêt…",
+      "starting": "Démarrage…",
+      "analysing": "Analyse…",
+      "working": "Traitement…",
+      "stage": "Étape {{index}} · {{stage}}",
+      "stageShort": "Étape {{index}}",
+      "queued": "En file · {{position}}",
+      "waitingSubprocess": "En attente de la fin du sous-processus d'analyse.",
+      "resuming": "Reprise de l'analyse (reconnecté après le redémarrage de l'app).",
+      "startingUp": "Démarrage — chargement des modèles et validation des identifiants.",
+      "elapsed": "Écoulé : {{time}}",
+      "waitingInQueue": "En attente de la fin d'un autre projet (position {{position}} dans la file).",
+      "stop": "Arrêter",
+      "headline": {
+        "running": "En cours",
+        "stopping": "Arrêt",
+        "queued": "En file",
+        "failed": "Échec"
+      },
+      "help": {
+        "running": "Afficher la progression du pipeline pour {{project}}",
+        "queued": "Exécution du pipeline en file pour {{project}}",
+        "failed": "L'exécution du pipeline a échoué pour {{project}}"
+      }
+    },
     "diagnostic": {
       "pill": {
         "auth": "Probl\u00e8me de cl\u00e9",

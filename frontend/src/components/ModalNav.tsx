@@ -16,6 +16,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { useInert } from "../hooks/useInert";
 
@@ -72,6 +73,7 @@ export function ModalNav({
   testId,
   titleId,
 }: ModalNavProps) {
+  const { t } = useTranslation();
   useInert(open);
   const resolvedTestId = testId ?? "modal-nav";
   const resolvedTitleId = titleId ?? `${resolvedTestId}-title`;
@@ -203,7 +205,7 @@ export function ModalNav({
           ref={closeButtonRef}
           className="bn-modal-close"
           onClick={onClose}
-          aria-label="Close"
+          aria-label={t("buttons.close")}
         >
           &times;
         </button>

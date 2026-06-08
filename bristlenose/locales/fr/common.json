@@ -1,5 +1,9 @@
 {
   "nav": {
+    "tableOfContents": "Table des matières",
+    "closeTableOfContents": "Fermer la table des matières",
+    "resizeTableOfContents": "Redimensionner la table des matières",
+    "resizeTagSidebar": "Redimensionner la barre latérale des étiquettes",
     "project": "Projet",
     "quotes": "Verbatim",
     "sessions": "Entretiens",
@@ -37,6 +41,17 @@
     "clearAriaLabel": "Effacer la recherche"
   },
   "quotes": {
+    "unhideHeader": "Afficher :",
+    "unhideAll": "Tout afficher",
+    "dismissModeratorQuestion": "Ignorer la question du modérateur",
+    "showModeratorQuestion": "Afficher la question du modérateur",
+    "addTag": "Ajouter une étiquette",
+    "restoreTags": "Restaurer les étiquettes",
+    "hideQuote": "Masquer cette citation",
+    "revertToOriginal": "Revenir à l'original",
+    "starQuote": "Mettre cette citation en favori",
+    "playVideo": "Lire la vidéo",
+    "unhide": "Afficher",
     "allQuotes": "Tous les verbatim",
     "starredQuotes": "Verbatim favoris",
     "sections": "Sections",
@@ -145,6 +160,8 @@
     "pipelineCompleted": "Analyse mise à jour"
   },
   "activity": {
+    "expand": "Développer",
+    "collapse": "Réduire",
     "cancel": "Annuler",
     "cancelAriaLabel": "Annuler",
     "dismiss": "Fermer",
@@ -423,6 +440,7 @@
     "tagOnQuotes_one": "Cette étiquette est sur {{count}} verbatim.",
     "tagOnQuotes_other": "Cette étiquette est sur {{count}} verbatim.",
     "newGroup": "Nouveau groupe",
+    "newCode": "Nouveau code",
     "browseCodebooks": "Parcourir les grilles de codage",
     "browseTitle": "Parcourir les grilles de codage",
     "browseSubtitle": "Importez une grille de codage de framework ou créez la vôtre",
@@ -462,6 +480,8 @@
     "deleteGroupAriaLabel": "Supprimer le groupe {{name}}"
   },
   "autocode": {
+    "lowerThreshold": "Seuil inférieur",
+    "upperThreshold": "Seuil supérieur",
     "deny": "Refuser",
     "accept": "Accepter",
     "close": "Fermer",
@@ -509,10 +529,15 @@
     }
   },
   "transcript": {
+    "showPrevSegment": "Afficher le segment précédent de la transcription",
+    "showNextSegment": "Afficher le segment suivant de la transcription",
     "moderator": "Modérateur",
     "moderators": "Modérateurs",
     "observer": "Observateur",
-    "observers": "Observateurs"
+    "observers": "Observateurs",
+    "loading": "Chargement de la transcription…",
+    "failedToLoad": "Échec du chargement de la transcription",
+    "noData": "Aucune donnée de transcription disponible."
   },
   "emptyState": {
     "prePipeline": "Déposez un dossier d’entretiens pour démarrer l’analyse",

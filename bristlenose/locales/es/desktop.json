@@ -151,12 +151,12 @@
     "createAnyway": "Crear de todos modos",
     "emptyStateHint": "Arrastra una carpeta aquí o pulsa ⌘N",
     "addedInterviews": "%d entrevistas añadidas a %@",
-    "interviewCountOne": "1 entrevista",
-    "interviewCountOther": "{{count}} entrevistas",
-    "unanalysedSubtitleOne": "+1 sin analizar",
-    "unanalysedSubtitleOther": "+{{count}} sin analizar",
-    "missingSubtitleOne": "1 falta",
-    "missingSubtitleOther": "{{count}} faltan",
+    "interviewCount_one": "1 entrevista",
+    "interviewCount_other": "{{count}} entrevistas",
+    "unanalysedSubtitle_one": "+1 sin analizar",
+    "unanalysedSubtitle_other": "+{{count}} sin analizar",
+    "missingSubtitle_one": "1 falta",
+    "missingSubtitle_other": "{{count}} faltan",
     "tooltipWaiting": "{{count}} en espera",
     "dateRelativeJustNow": "Ahora",
     "unanalysedSheetTitle": "Archivos sin analizar en {{project}}",
@@ -190,6 +190,32 @@
     }
   },
   "pipeline": {
+    "status": {
+      "stopping": "Deteniendo…",
+      "starting": "Iniciando…",
+      "analysing": "Analizando…",
+      "working": "Trabajando…",
+      "stage": "Etapa {{index}} · {{stage}}",
+      "stageShort": "Etapa {{index}}",
+      "queued": "En cola · {{position}}",
+      "waitingSubprocess": "Esperando a que finalice el subproceso de análisis.",
+      "resuming": "Reanudando el análisis (reconectado tras reiniciar la app).",
+      "startingUp": "Iniciando — cargando modelos y validando credenciales.",
+      "elapsed": "Transcurrido: {{time}}",
+      "waitingInQueue": "Esperando a que termine otro proyecto (posición {{position}} en la cola).",
+      "stop": "Detener",
+      "headline": {
+        "running": "En ejecución",
+        "stopping": "Deteniendo",
+        "queued": "En cola",
+        "failed": "Falló"
+      },
+      "help": {
+        "running": "Mostrar el progreso del pipeline de {{project}}",
+        "queued": "Ejecución del pipeline en cola para {{project}}",
+        "failed": "La ejecución del pipeline falló para {{project}}"
+      }
+    },
     "diagnostic": {
       "pill": {
         "auth": "Problema con la clave",

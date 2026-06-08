@@ -422,6 +422,7 @@
     "tagOnQuotes_one": "This tag is on {{count}} quote.",
     "tagOnQuotes_other": "This tag is on {{count}} quotes.",
     "newGroup": "New group",
+    "newCode": "New code",
     "browseCodebooks": "Browse codebooks",
     "browseTitle": "Browse codebooks",
     "browseSubtitle": "Import a framework codebook or create your own",
@@ -511,7 +512,10 @@
     "moderator": "Moderator",
     "moderators": "Moderators",
     "observer": "Observer",
-    "observers": "Observers"
+    "observers": "Observers",
+    "loading": "Loading transcript…",
+    "failedToLoad": "Failed to load transcript",
+    "noData": "No transcript data available."
   },
   "emptyState": {
     "prePipeline": "Drop a folder of interviews to start analysis",

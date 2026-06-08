@@ -406,6 +406,7 @@
     "deleteTagTitle": "\"{{name}}\"을(를) 삭제하시겠습니까?",
     "tagOnQuotes_other": "이 태그는 {{count}}개 인용문에 있습니다.",
     "newGroup": "새 그룹",
+    "newCode": "새 코드",
     "browseCodebooks": "코드북 탐색",
     "browseTitle": "코드북 탐색",
     "browseSubtitle": "프레임워크 코드북을 가져오거나 직접 만드세요",
@@ -492,7 +493,10 @@
     "moderator": "진행자",
     "moderators": "진행자",
     "observer": "관찰자",
-    "observers": "관찰자"
+    "observers": "관찰자",
+    "loading": "전사 로드 중…",
+    "failedToLoad": "전사 로드 실패",
+    "noData": "전사 데이터가 없습니다."
   },
   "emptyState": {
     "prePipeline": "인터뷰 폴더를 끌어다 놓으면 분석이 시작됩니다",

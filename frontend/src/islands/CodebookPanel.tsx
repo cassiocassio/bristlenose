@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 import {
   Badge,
   ConfirmDialog,
@@ -639,7 +640,7 @@ export function CodebookPanel({ projectId, refreshKey = 0 }: CodebookPanelProps)
     const COLOUR_SET_ORDER = ["ux", "emo", "task", "trust", "opp"];
     const usedSets = new Set(data?.groups.map((g) => g.colour_set) ?? []);
     const nextSet = COLOUR_SET_ORDER.find((s) => !usedSets.has(s)) ?? "ux";
-    createCodebookGroup("New group", nextSet)
+    createCodebookGroup(i18n.t("codebook.newGroup"), nextSet)
       .then(fetchData)
       .catch((err) => console.error("Create group failed:", err));
   }, [data, fetchData]);
@@ -727,7 +728,7 @@ export function CodebookPanel({ projectId, refreshKey = 0 }: CodebookPanelProps)
       const COLOUR_SET_ORDER = ["ux", "emo", "task", "trust", "opp"];
       const usedSets = new Set(data?.groups.map((g) => g.colour_set) ?? []);
       const nextSet = COLOUR_SET_ORDER.find((s) => !usedSets.has(s)) ?? "ux";
-      createCodebookGroup("New group", nextSet)
+      createCodebookGroup(i18n.t("codebook.newGroup"), nextSet)
         .then((newGroup) => {
           return updateCodebookTag(dragInfo.tag.id, { group_id: newGroup.id });
         })
@@ -897,7 +898,7 @@ export function CodebookPanel({ projectId, refreshKey = 0 }: CodebookPanelProps)
         .filter((g) => g.framework_id == null)
         .sort((a, b) => (a.is_default === b.is_default ? a.order - b.order : a.is_default ? -1 : 1))[0];
       if (researcherGroup) {
-        handleCreateTag("New code", researcherGroup.id);
+        handleCreateTag(i18n.t("codebook.newCode"), researcherGroup.id);
       }
     };
     window.addEventListener("bn:codebook-create-code", handler);

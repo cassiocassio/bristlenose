@@ -422,6 +422,7 @@
     "tagOnQuotes_one": "Dieses Tag ist an {{count}} Zitat.",
     "tagOnQuotes_other": "Dieses Tag ist an {{count}} Zitaten.",
     "newGroup": "Neue Gruppe",
+    "newCode": "Neuer Code",
     "browseCodebooks": "Codebücher durchsuchen",
     "browseTitle": "Codebücher durchsuchen",
     "browseSubtitle": "Importieren Sie ein Framework-Codebuch oder erstellen Sie Ihr eigenes",
@@ -511,7 +512,10 @@
     "moderator": "Moderator",
     "moderators": "Moderatoren",
     "observer": "Beobachter",
-    "observers": "Beobachter"
+    "observers": "Beobachter",
+    "loading": "Transkript wird geladen…",
+    "failedToLoad": "Fehler beim Laden des Transkripts",
+    "noData": "Keine Transkriptdaten verfügbar."
   },
   "emptyState": {
     "prePipeline": "Ziehen Sie einen Ordner mit Interviews hierher, um die Analyse zu starten",

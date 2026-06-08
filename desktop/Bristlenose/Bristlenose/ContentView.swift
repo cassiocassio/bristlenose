@@ -78,15 +78,6 @@ private struct SidebarDeselectMonitor: NSViewRepresentable {
     }
 }
 
-// MARK: - Duplicate drop alert model
-
-/// State for the "this folder already has a project" alert.
-struct DuplicateDropAlert: Identifiable {
-    let id = UUID()
-    let existingProject: Project
-    let urls: [URL]
-}
-
 /// State for the disk-space precheck alert thrown by `CopyMachinery`.
 struct CopyDiskSpaceAlertState: Identifiable {
     let id = UUID()
@@ -211,7 +202,6 @@ struct ContentView: View {
     @State private var dropTargetFolderID: UUID?
 
     /// Alert state for duplicate folder drop warning.
-    @State private var duplicateDropAlert: DuplicateDropAlert?
 
     /// "Added N files to X" sheet shown after a copy completes (Plan §11).
     /// nil = sheet hidden. Stub for #14; will gain richer affordances.
@@ -459,29 +449,6 @@ struct ContentView: View {
             i18n: i18n,
             diskSpaceMessage: diskSpaceMessage(for:)
         ))
-        .alert(
-            i18n.t("desktop.chrome.duplicateProject"),
-            isPresented: Binding(
-                get: { duplicateDropAlert != nil },
-                set: { if !$0 { duplicateDropAlert = nil } }
-            ),
-            presenting: duplicateDropAlert
-        ) { alert in
-            Button(i18n.t("desktop.chrome.openExisting")) {
-                selection = [.project(alert.existingProject.id)]
-            }
-            Button(i18n.t("desktop.chrome.createAnyway")) {
-                let directories = alert.urls.filter { $0.hasDirectoryPath }
-                let files = alert.urls.filter { !$0.hasDirectoryPath }
-                createProjectFromURLs(directories: directories, files: files)
-            }
-            Button(i18n.t("common.buttons.cancel"), role: .cancel) {}
-        } message: { alert in
-            Text(String(
-                format: i18n.t("desktop.chrome.duplicateProjectMessage"),
-                alert.existingProject.name
-            ))
-        }
         .sheet(item: $spotlightConfirm) { state in
             SpotlightConfirmSheet(
                 project: state.project,
@@ -957,12 +924,48 @@ struct ContentView: View {
         let directories = urls.filter { $0.hasDirectoryPath }
         let files = urls.filter { !$0.hasDirectoryPath }
 
-        // Check for duplicate: single folder that already has a project.
+        // Single folder already in the index: route by whether it's actually
+        // been analysed, not merely tracked. Drop means "analyse these
+        // interviews unless I already did — then show me the analysis." A
+        // tracked-but-unanalysed folder (run interrupted before output, or
+        // added-and-never-run) must still honour drag-to-analyse; a tracked +
+        // analysed folder is a navigation gesture ("show me this one"), so it
+        // selects + flashes, never re-runs and never prompts. See
+        // design-sidebar-drop-behaviour.md action table and DroppedFolderState.
         if directories.count == 1 && files.isEmpty {
-            if let existing = projectIndex.findByPath(directories[0].path) {
-                duplicateDropAlert = DuplicateDropAlert(
-                    existingProject: existing, urls: urls
-                )
+            let folder = directories[0]
+            let existing = projectIndex.findByPath(folder.path)
+            switch DroppedFolderState.classify(
+                isTracked: existing != nil,
+                folderLooksAnalysed: LocateFlow.folderLooksAnalysed(url: folder)
+            ) {
+            case .untracked:
+                break  // fall through to createProjectFromURLs
+            case .trackedUnanalysed:
+                if let existing {
+                    selection = [.project(existing.id)]
+                    // start() is safe if a run is already in flight (no
+                    // double-spawn); if there's no media / no provider it
+                    // fails with a reason in the detail pane ("say why not").
+                    pipelineRunner.start(project: existing)
+                }
+                return
+            case .trackedAnalysed:
+                if let existing {
+                    // Re-drop of an already-analysed project: navigate to it
+                    // (selecting starts serve, which shows the existing
+                    // report) with a 0.4s accent flash. No re-run, no modal —
+                    // design-sidebar-drop-behaviour.md: "Select existing entry
+                    // + 0.4s accent flash. No model change."
+                    selection = [.project(existing.id)]
+                    dropTargetProjectID = existing.id
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 400_000_000)
+                        if dropTargetProjectID == existing.id {
+                            dropTargetProjectID = nil
+                        }
+                    }
+                }
                 return
             }
         }

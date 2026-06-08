@@ -139,6 +139,33 @@ struct I18nTests {
             #expect(out == expected, "cs count=\(count) should pick overflow_\(form)")
         }
     }
+
+    /// The sidebar chrome count strings (`ProjectRow.deltaText`) select their
+    /// form via `pluralCategory` the same way. `deltaText` is a private view
+    /// method, so this pins the data+selector contract it depends on: for cs,
+    /// counts 1/3/7 must resolve to distinct `chrome.interviewCount_<form>`
+    /// strings (one/few/other), proving the four-form keys exist and the legacy
+    /// binary split is gone.
+    @MainActor @Test func chromeInterviewCount_czech_selectsCldrForm() {
+        guard let dir = I18n.findLocalesDirectory() else { return }  // skip if no locales
+        let i18n = I18n()
+        i18n.configure(localesDirectory: dir)
+        i18n.setLocale("cs")
+        let base = "desktop.chrome.interviewCount"
+        var rendered: [String] = []
+        for (count, form) in [(1, "one"), (3, "few"), (7, "other")] {
+            #expect(i18n.pluralCategory(count) == form,
+                    "cs count=\(count) should map to \(form)")
+            let out = i18n.t("\(base)_\(i18n.pluralCategory(count))", ["count": String(count)])
+            // Form must exist (not the raw key echoed back) and interpolate.
+            #expect(out != "\(base)_\(form)", "cs is missing chrome.interviewCount_\(form)")
+            #expect(out.contains(String(count)), "cs interviewCount_\(form) dropped {{count}}")
+            rendered.append(out)
+        }
+        // one/few/other are grammatically distinct in Czech — a collapsed
+        // binary split would render two of these identically.
+        #expect(Set(rendered).count == 3, "cs one/few/other should be distinct: \(rendered)")
+    }
 }
 
 /// Anchor class for finding the test bundle at runtime.

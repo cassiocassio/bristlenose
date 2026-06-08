@@ -110,6 +110,58 @@ def test_four_form_locales_carry_all_forms(locale: str) -> None:
             )
 
 
+# ── chrome.* count strings — sidebar row interview/unanalysed/missing deltas ─
+# ProjectRow.swift renders these via `deltaText` → `pluralCategory`, the same
+# CLDR-selector class as the diagnostic overflow. These were converted from the
+# legacy camelCase `One`/`Other` binary pair (which mis-rendered Czech counts
+# 2–4) to snake_case `_one`/`_few`/`_many`/`_other` forms (Finding 14). Same
+# per-locale form rules as overflow: en/es/fr/de carry one+other, ko/ja carry
+# only other, cs carries all four.
+_CHROME_COUNT_PREFIXES = ("interviewCount", "unanalysedSubtitle", "missingSubtitle")
+
+
+def _chrome_count(locale: str) -> dict:
+    return _load_desktop(locale)["chrome"]
+
+
+@pytest.mark.parametrize("locale", _PLURAL_LOCALES)
+@pytest.mark.parametrize("prefix", _CHROME_COUNT_PREFIXES)
+def test_chrome_count_plural_locales_have_one_and_other(prefix: str, locale: str) -> None:
+    chrome = _chrome_count(locale)
+    assert chrome.get(f"{prefix}_one"), f"locale={locale} missing chrome.{prefix}_one"
+    assert chrome.get(f"{prefix}_other"), f"locale={locale} missing chrome.{prefix}_other"
+    # The legacy camelCase keys must be gone — a stray `interviewCountOne` would
+    # mean a half-finished conversion that the Swift selector never reads.
+    assert f"{prefix}One" not in chrome, f"locale={locale} still carries legacy chrome.{prefix}One"
+    assert f"{prefix}Other" not in chrome, f"locale={locale} still carries legacy chrome.{prefix}Other"
+
+
+@pytest.mark.parametrize("locale", _SINGLE_FORM_LOCALES)
+@pytest.mark.parametrize("prefix", _CHROME_COUNT_PREFIXES)
+def test_chrome_count_single_form_locales_have_only_other(prefix: str, locale: str) -> None:
+    chrome = _chrome_count(locale)
+    assert chrome.get(f"{prefix}_other"), f"locale={locale} missing chrome.{prefix}_other"
+    assert f"{prefix}_one" not in chrome, (
+        f"locale={locale} unexpectedly carries chrome.{prefix}_one "
+        "(ko/ja are single-form — other only)"
+    )
+
+
+@pytest.mark.parametrize("locale", _ALL_LOCALES)
+@pytest.mark.parametrize("prefix", _CHROME_COUNT_PREFIXES)
+def test_chrome_count_four_form_locales_carry_all_forms(prefix: str, locale: str) -> None:
+    # Presence of `_few` (the 2–4 form) implies a four-form locale (cs) that
+    # MUST carry all of one/few/many/other — derived from `_few` so a future
+    # four-form locale is covered without a hardcoded list.
+    chrome = _chrome_count(locale)
+    if f"{prefix}_few" in chrome:
+        for form in ("_one", "_few", "_many", "_other"):
+            assert chrome.get(f"{prefix}{form}"), (
+                f"locale={locale} carries chrome.{prefix}_few but is missing "
+                f"chrome.{prefix}{form} (four-form locales need one/few/many/other)"
+            )
+
+
 # ── pipeline.status.* — the activity-pill / popover live status strings ──────
 # (PipelineActivityItem.swift; added in the cz-branch desktop i18n wave). Same
 # silent-failure class as the diagnostic block: a missing key renders the raw

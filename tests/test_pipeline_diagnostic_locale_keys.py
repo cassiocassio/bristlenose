@@ -18,8 +18,8 @@ import pytest
 
 _LOCALES_DIR = Path(__file__).resolve().parents[1] / "bristlenose" / "locales"
 
-_ALL_LOCALES = ("en", "es", "fr", "de", "ko", "ja")
-_PLURAL_LOCALES = ("en", "es", "fr", "de")
+_ALL_LOCALES = ("en", "es", "fr", "de", "ko", "ja", "cs")
+_PLURAL_LOCALES = ("en", "es", "fr", "de", "cs")
 _SINGLE_FORM_LOCALES = ("ko", "ja")
 
 _REQUIRED_PILL_CATEGORIES = (

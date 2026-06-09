@@ -342,6 +342,14 @@ def categorise_exception(exc: BaseException) -> Cause:
     name = exc.__class__.__name__.lower()
     haystack = f"{name} {raw_msg}".lower()
 
+    # Output-cap truncation. Local import keeps client.py off the module-load
+    # path of run_lifecycle (avoids any import-order fragility). The message is
+    # bristlenose-authored (no provider body), so str(exc) is safe to surface.
+    from bristlenose.llm.client import TruncatedResponseError
+
+    if isinstance(exc, TruncatedResponseError):
+        return Cause(category=CauseCategoryEnum.OUTPUT_TRUNCATED, message=msg)
+
     # Disk space.
     if isinstance(exc, OSError) and getattr(exc, "errno", None) == 28:  # ENOSPC
         return Cause(category=CauseCategoryEnum.DISK, message=msg)
@@ -416,15 +424,35 @@ def _build_cause(
     HTTP status independently of the message.
     """
     category = categorise_exception(exc).category
-    parts = [f"{stage} failed: {exc.__class__.__name__}"]
-    if provider:
-        parts.append(f"on {provider}")
+    if category is CauseCategoryEnum.OUTPUT_TRUNCATED and stage == "quote_extraction":
+        # Actionable, bristlenose-authored, re-id-safe (constant string, no
+        # provider body). Surfaces only after smart-split exhausts its depth
+        # budget — by then the only recovery is a larger-output model or
+        # manual pre-segmentation.
+        message = (
+            "Quote extraction exceeded the model's output limit even after "
+            "splitting the session. Switch to a model with a larger output "
+            "capacity (see the --llm and --model options), or pre-segment the "
+            "session into shorter recordings."
+        )
+    elif category is CauseCategoryEnum.OUTPUT_TRUNCATED:
+        # Same cause from a stage that doesn't smart-split (only s09 does
+        # today). `stage` is a bristlenose-controlled slug, safe to interpolate.
+        message = (
+            f"{stage} exceeded the model's output limit. Switch to a model "
+            "with a larger output capacity (see the --llm and --model options)."
+        )
+    else:
+        parts = [f"{stage} failed: {exc.__class__.__name__}"]
+        if provider:
+            parts.append(f"on {provider}")
+        message = " ".join(parts)
     return Cause(
         category=category,
         stage=stage,
         provider=provider,
         code=str(http_status) if http_status is not None else None,
-        message=" ".join(parts),
+        message=message,
         session_id=session_id,
     )
 

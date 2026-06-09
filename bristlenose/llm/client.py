@@ -7,9 +7,15 @@ import copy
 import json
 import logging
 import time
-from typing import Literal, TypeVar
+from typing import TYPE_CHECKING, Literal, TypeVar
 
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    # Type-only imports — keeps the lazy-import discipline (SDKs are imported
+    # inside the methods that use them) while letting annotations name them.
+    import anthropic
+    import openai
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.llm import telemetry
@@ -109,6 +115,49 @@ def _clamp_max_tokens(model: str, requested: int) -> int:
     """Clamp requested output tokens to the model's known ceiling (if any)."""
     cap = _MODEL_MAX_OUTPUT_TOKENS.get(model)
     return min(requested, cap) if cap else requested
+
+
+# Cloud-provider client retry budget. The Anthropic / OpenAI / Azure SDKs all
+# retry 429 / 408 / 409 / 5xx / connection errors with exponential backoff,
+# honouring the server's `Retry-After` (and `retry-after-ms`) header — we don't
+# hand-roll any of that. The SDK default of 2 is too few for the request bursts
+# smart-split quote extraction can produce on a low-TPM tier (a Tier-1 gpt-4o
+# account is 30k TPM). 6 rides out transient rate-limit windows. This is the
+# reactive layer only; global adaptive concurrency (AIMD) is a measure-first
+# follow-up if the logs ever show *sustained* (not transient) 429 pressure.
+# Local (Ollama) talks to localhost — no provider rate limits — so it keeps the
+# SDK default and its own JSON-parse retry loop.
+_CLOUD_MAX_RETRIES = 6
+
+
+class TruncatedResponseError(RuntimeError):
+    """Raised when an LLM response was cut off at the model's output cap.
+
+    Subclasses ``RuntimeError`` so existing broad ``except RuntimeError`` /
+    ``except Exception`` handlers keep working, while letting callers that
+    care (s09 smart-split) catch this case specifically and retry on smaller
+    chunks.
+
+    ``message`` MUST be a bristlenose-authored template built from the
+    structured scalar fields below — never ``str(provider_response)``.
+    Provider response bodies can echo prompt fragments (the re-identification
+    rule in CLAUDE.md / ``pipeline-events.jsonl``).
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        provider: str,
+        model: str,
+        requested_max_tokens: int,
+        model_cap: int | None,
+    ) -> None:
+        super().__init__(message)
+        self.provider = provider
+        self.model = model
+        self.requested_max_tokens = requested_max_tokens
+        self.model_cap = model_cap
 
 
 class LLMUsageTracker:
@@ -355,6 +404,42 @@ class LLMClient:
             return self.settings.local_model
         return self.settings.llm_model
 
+    # Lazy, cached client constructors. Each carries `max_retries` so the SDK's
+    # built-in Retry-After-honouring backoff actually gets enough attempts —
+    # see `_CLOUD_MAX_RETRIES`. Kept as one-liners so the retry budget can't
+    # silently drift between providers.
+    def _ensure_anthropic_client(self) -> anthropic.AsyncAnthropic:
+        import anthropic
+
+        if self._anthropic_client is None:
+            self._anthropic_client = anthropic.AsyncAnthropic(
+                api_key=self.settings.anthropic_api_key,
+                max_retries=_CLOUD_MAX_RETRIES,
+            )
+        return self._anthropic_client
+
+    def _ensure_openai_client(self) -> openai.AsyncOpenAI:
+        import openai
+
+        if self._openai_client is None:
+            self._openai_client = openai.AsyncOpenAI(
+                api_key=self.settings.openai_api_key,
+                max_retries=_CLOUD_MAX_RETRIES,
+            )
+        return self._openai_client
+
+    def _ensure_azure_client(self) -> openai.AsyncAzureOpenAI:
+        import openai
+
+        if self._azure_client is None:
+            self._azure_client = openai.AsyncAzureOpenAI(
+                api_key=self.settings.azure_api_key,
+                azure_endpoint=self.settings.azure_endpoint,
+                api_version=self.settings.azure_api_version,
+                max_retries=_CLOUD_MAX_RETRIES,
+            )
+        return self._azure_client
+
     def _record_call(
         self,
         *,
@@ -422,14 +507,7 @@ class LLMClient:
         t0: float,
     ) -> T:
         """Call Anthropic API with tool use for structured output."""
-        import anthropic
-
-        if self._anthropic_client is None:
-            self._anthropic_client = anthropic.AsyncAnthropic(
-                api_key=self.settings.anthropic_api_key,
-            )
-
-        client: anthropic.AsyncAnthropic = self._anthropic_client  # type: ignore[assignment]
+        client = self._ensure_anthropic_client()
 
         # Build a tool definition from the Pydantic schema
         schema = response_model.model_json_schema()
@@ -510,9 +588,14 @@ class LLMClient:
                 finish_reason="max_tokens",
                 usage_source=usage_source,
             )
-            raise RuntimeError(
-                f"LLM response was truncated (hit max_tokens={max_tokens}). "
-                f"Set BRISTLENOSE_LLM_MAX_TOKENS=65536 in your .env file."
+            raise TruncatedResponseError(
+                f"LLM response truncated at the model output cap "
+                f"(provider={self.provider}, model={request_model}, "
+                f"max_tokens={max_tokens}).",
+                provider=self.provider,
+                model=request_model,
+                requested_max_tokens=max_tokens,
+                model_cap=_MODEL_MAX_OUTPUT_TOKENS.get(request_model),
             )
 
         self._record_call(
@@ -552,14 +635,7 @@ class LLMClient:
         t0: float,
     ) -> T:
         """Call OpenAI API with JSON mode for structured output."""
-        import openai
-
-        if self._openai_client is None:
-            self._openai_client = openai.AsyncOpenAI(
-                api_key=self.settings.openai_api_key,
-            )
-
-        client: openai.AsyncOpenAI = self._openai_client  # type: ignore[assignment]
+        client = self._ensure_openai_client()
 
         # Add JSON schema instruction to the system prompt
         schema = response_model.model_json_schema()
@@ -622,9 +698,14 @@ class LLMClient:
                 input_tokens=input_tokens, output_tokens=output_tokens,
                 finish_reason=finish_reason, usage_source=usage_source,
             )
-            raise RuntimeError(
-                f"LLM response was truncated (hit max_tokens={max_tokens}). "
-                f"Set BRISTLENOSE_LLM_MAX_TOKENS=65536 in your .env file."
+            raise TruncatedResponseError(
+                f"LLM response truncated at the model output cap "
+                f"(provider={self.provider}, model={request_model}, "
+                f"max_tokens={max_tokens}).",
+                provider=self.provider,
+                model=request_model,
+                requested_max_tokens=max_tokens,
+                model_cap=_MODEL_MAX_OUTPUT_TOKENS.get(request_model),
             )
 
         self._record_call(
@@ -659,16 +740,7 @@ class LLMClient:
         t0: float,
     ) -> T:
         """Call Azure OpenAI API with JSON mode for structured output."""
-        import openai
-
-        if self._azure_client is None:
-            self._azure_client = openai.AsyncAzureOpenAI(
-                api_key=self.settings.azure_api_key,
-                azure_endpoint=self.settings.azure_endpoint,
-                api_version=self.settings.azure_api_version,
-            )
-
-        client: openai.AsyncAzureOpenAI = self._azure_client  # type: ignore[assignment]
+        client = self._ensure_azure_client()
 
         # Add JSON schema instruction to the system prompt
         schema = response_model.model_json_schema()
@@ -732,9 +804,14 @@ class LLMClient:
                 input_tokens=input_tokens, output_tokens=output_tokens,
                 finish_reason=finish_reason, usage_source=usage_source,
             )
-            raise RuntimeError(
-                f"LLM response was truncated (hit max_tokens={max_tokens}). "
-                f"Set BRISTLENOSE_LLM_MAX_TOKENS=65536 in your .env file."
+            raise TruncatedResponseError(
+                f"LLM response truncated at the model output cap "
+                f"(provider={self.provider}, model={request_model}, "
+                f"max_tokens={max_tokens}).",
+                provider=self.provider,
+                model=request_model,
+                requested_max_tokens=max_tokens,
+                model_cap=_MODEL_MAX_OUTPUT_TOKENS.get(request_model),
             )
 
         self._record_call(
@@ -841,9 +918,14 @@ class LLMClient:
                 input_tokens=input_tokens, output_tokens=output_tokens,
                 finish_reason=finish_reason, usage_source=usage_source,
             )
-            raise RuntimeError(
-                f"LLM response was truncated (hit max_tokens={max_tokens}). "
-                f"Set BRISTLENOSE_LLM_MAX_TOKENS=65536 in your .env file."
+            raise TruncatedResponseError(
+                f"LLM response truncated at the model output cap "
+                f"(provider={self.provider}, model={request_model}, "
+                f"max_tokens={max_tokens}).",
+                provider=self.provider,
+                model=request_model,
+                requested_max_tokens=max_tokens,
+                model_cap=_MODEL_MAX_OUTPUT_TOKENS.get(request_model),
             )
 
         self._record_call(
@@ -975,9 +1057,14 @@ class LLMClient:
                         retry_count=attempts_used - 1,
                         usage_source="reported" if any_usage else "missing",
                     )
-                    raise RuntimeError(
-                        f"LLM response was truncated (hit max_tokens={max_tokens}). "
-                        f"Set BRISTLENOSE_LLM_MAX_TOKENS=65536 in your .env file."
+                    raise TruncatedResponseError(
+                        f"LLM response truncated at the model output cap "
+                        f"(provider={self.provider}, model={model}, "
+                        f"max_tokens={max_tokens}).",
+                        provider=self.provider,
+                        model=model,
+                        requested_max_tokens=max_tokens,
+                        model_cap=_MODEL_MAX_OUTPUT_TOKENS.get(model),
                     )
 
                 content = response.choices[0].message.content
@@ -1006,6 +1093,12 @@ class LLMClient:
                 )
                 return validated
 
+            except TruncatedResponseError:
+                # Output-cap truncation is not a JSON/validation failure — let
+                # it propagate so s09 smart-split can catch and re-chunk.
+                # Without this the generic `except Exception` below would
+                # mis-handle it (RuntimeError subclass).
+                raise
             except json.JSONDecodeError as e:
                 last_error = e
                 logger.debug(

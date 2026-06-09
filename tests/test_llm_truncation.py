@@ -8,7 +8,12 @@ from unittest.mock import AsyncMock
 import pytest
 
 from bristlenose.config import BristlenoseSettings
-from bristlenose.llm.client import LLMClient, _clamp_max_tokens
+from bristlenose.llm.client import (
+    _CLOUD_MAX_RETRIES,
+    LLMClient,
+    TruncatedResponseError,
+    _clamp_max_tokens,
+)
 from bristlenose.llm.structured import QuoteExtractionResult
 
 
@@ -96,8 +101,14 @@ class TestAnthropicTruncation:
             )
 
     @pytest.mark.asyncio
-    async def test_error_mentions_env_var(self) -> None:
-        """Error message should tell the user how to fix it."""
+    async def test_truncation_raises_typed_error_without_misleading_hint(self) -> None:
+        """Truncation raises TruncatedResponseError with structured fields.
+
+        The old message pointed users at ``BRISTLENOSE_LLM_MAX_TOKENS=65536``,
+        which is actively misleading for gpt-4o (its 16384 cap clamps the value
+        back). Smart-split is the real recovery, so the message must NOT carry
+        that hint and the error must carry the structured forensic fields.
+        """
         settings = _make_settings()
         client = LLMClient(settings)
 
@@ -110,12 +121,18 @@ class TestAnthropicTruncation:
         mock_anthropic.messages.create = AsyncMock(return_value=mock_response)
         client._anthropic_client = mock_anthropic
 
-        with pytest.raises(RuntimeError, match=r"BRISTLENOSE_LLM_MAX_TOKENS=65536 in your \.env"):
+        with pytest.raises(TruncatedResponseError) as exc_info:
             await client.analyze(
                 system_prompt="test",
                 user_prompt="test",
                 response_model=QuoteExtractionResult,
             )
+
+        err = exc_info.value
+        assert "BRISTLENOSE_LLM_MAX_TOKENS" not in str(err)
+        assert "truncated" in str(err).lower()
+        assert err.provider == "anthropic"
+        assert err.requested_max_tokens > 0
 
     @pytest.mark.asyncio
     async def test_normal_response_not_affected(self) -> None:
@@ -557,3 +574,42 @@ class TestDefaultMaxTokens:
         """
         settings = BristlenoseSettings()
         assert settings.llm_max_tokens == 64000
+
+
+# ---------------------------------------------------------------------------
+# Cloud client retry budget (429 resilience — SDK honours Retry-After)
+# ---------------------------------------------------------------------------
+
+
+class TestCloudClientRetries:
+    """Each cloud SDK client is constructed with ``max_retries`` so the SDK's
+    Retry-After-honouring exponential backoff gets enough attempts to ride out
+    a 429 burst (smart-split can produce one on a low-TPM tier). SDK
+    constructors are offline, so this needs no network or real keys.
+    """
+
+    def test_anthropic_client_has_retry_budget(self) -> None:
+        client = LLMClient(_make_settings(llm_provider="anthropic"))
+        assert client._ensure_anthropic_client().max_retries == _CLOUD_MAX_RETRIES
+
+    def test_openai_client_has_retry_budget(self) -> None:
+        client = LLMClient(
+            _make_settings(llm_provider="openai", openai_api_key="sk-test")
+        )
+        assert client._ensure_openai_client().max_retries == _CLOUD_MAX_RETRIES
+
+    def test_azure_client_has_retry_budget(self) -> None:
+        client = LLMClient(
+            _make_settings(
+                llm_provider="azure",
+                azure_api_key="az-test",
+                azure_endpoint="https://example.openai.azure.com",
+                azure_api_version="2024-02-01",
+                azure_deployment="my-deployment",
+            )
+        )
+        assert client._ensure_azure_client().max_retries == _CLOUD_MAX_RETRIES
+
+    def test_default_retry_budget_exceeds_sdk_default(self) -> None:
+        """Guards the intent: more than the SDK default of 2."""
+        assert _CLOUD_MAX_RETRIES > 2

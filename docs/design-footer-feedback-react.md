@@ -37,7 +37,7 @@ Out of scope:
   },
   "feedback": {
     "enabled": true,
-    "url": "https://cassiocassio.co.uk/feedback.php"
+    "url": "https://bristlenose.app/feedback.php"
   }
 }
 ```
@@ -57,7 +57,7 @@ Defaults:
 
 - `links.github_issues_url`: `https://github.com/cassiocassio/bristlenose/issues/new`
 - `feedback.enabled`: `true`
-- `feedback.url`: `https://cassiocassio.co.uk/feedback.php`
+- `feedback.url`: `https://bristlenose.app/feedback.php`
 
 Environment overrides:
 

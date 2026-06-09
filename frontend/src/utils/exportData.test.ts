@@ -30,7 +30,7 @@ const MOCK_EXPORT = {
     },
     feedback: {
       enabled: true,
-      url: "https://cassiocassio.co.uk/feedback.php",
+      url: "https://bristlenose.app/feedback.php",
     },
   },
   dashboard: { stats: { session_count: 2 } },

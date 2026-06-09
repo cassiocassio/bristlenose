@@ -137,7 +137,14 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
           clearAndClose(t("feedback.sent"));
           return;
         }
-      } catch {
+        console.warn(
+          `Bristlenose feedback: POST ${url} returned ${resp.status}; falling back to clipboard`,
+        );
+      } catch (err) {
+        console.warn(
+          `Bristlenose feedback: POST ${url} failed; falling back to clipboard`,
+          err,
+        );
       }
     }
     await fallbackToClipboard();

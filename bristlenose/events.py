@@ -86,6 +86,7 @@ class CauseCategoryEnum(str, Enum):
     MISSING_INPUT = "missing_input"
     MISSING_BINARY = "missing_binary"
     DISK = "disk"
+    OUTPUT_TRUNCATED = "output_truncated"
     UNKNOWN = "unknown"
 
 
@@ -109,6 +110,9 @@ _RETRYABLE: dict[CauseCategoryEnum, bool] = {
     CauseCategoryEnum.MISSING_INPUT: False,
     CauseCategoryEnum.MISSING_BINARY: False,
     CauseCategoryEnum.DISK: False,
+    # Re-running the same provider/model truncates again deterministically;
+    # recovery requires switching model or pre-segmenting, so not retryable.
+    CauseCategoryEnum.OUTPUT_TRUNCATED: False,
     CauseCategoryEnum.UNKNOWN: True,
 }
 

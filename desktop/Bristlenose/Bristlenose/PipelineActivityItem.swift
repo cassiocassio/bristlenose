@@ -230,6 +230,7 @@ struct PipelineActivityItem: View {
         case .missingInput: return "Missing input"
         case .missingBinary: return "Missing tool"
         case .outputExists: return "Already analysed"
+        case .outputTruncated: return "Output limit reached"
         case .unknown:    return "Failed"
         }
     }

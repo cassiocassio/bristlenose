@@ -177,6 +177,7 @@ struct EventLogReaderTests {
         ("api_request", .apiRequest),
         ("api_server", .apiServer),
         ("missing_dep", .missingDep),
+        ("output_truncated", .outputTruncated),
         ("unknown", .unknown),
     ])
     func deriveStateRunFailedMapsAllCategories(rawCategory: String, expected: PipelineFailureCategory) {

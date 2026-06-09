@@ -63,13 +63,10 @@ updates:
       #   See docs/dependency-premortem-log.md § Held register.
       - dependency-name: "tokenizers"
         versions: [">=0.23.1"]
-      # HELD (resolver-gated). sqladmin (0.23 and 0.27) pins `wtforms<3.2`
-      # (deps.dev verified 2026-06-05); WTForms 3.2.x can't resolve until
-      # sqladmin floats its cap, then bump sqladmin+WTForms together.
-      # Re-checked by `/cassandra --watch`.
-      #   See docs/dependency-premortem-log.md § Held register.
-      - dependency-name: "WTForms"
-        versions: [">=3.2"]
+      # WTForms hold GRADUATED 2026-06-09: sqladmin 0.27.2 (2026-06-08)
+      # floated its cap to `wtforms>=3.1,<3.3`. Pair (sqladmin 0.27.2 +
+      # WTForms 3.2.2) taken; ignore dropped. See
+      # docs/dependency-premortem-log.md § `--watch` 2026-06-09.
 
   - package-ecosystem: "npm"
     directory: "/frontend"
@@ -121,8 +118,12 @@ updates:
       minor-and-patch:
         update-types: ["minor", "patch"]
     ignore:
-      # Lighthouse 13 requires Node ≥22.19; CI is on 20. Coordinate
-      # with the CI Node bump.
+      # Lighthouse 13 requires Node ≥22.19, which CI satisfies (Node 24
+      # per .tool-versions). Major still ignored pending a deliberate audit
+      # of the bundled-Chromium channel and any audit-ID drift; no e2e spec
+      # asserts on Lighthouse audit IDs today (grep clean), so the cost of
+      # taking it is mostly a perf-baseline re-pin. Drop this ignore when
+      # someone runs `/cassandra` on a Lighthouse 13 PR.
       - dependency-name: "lighthouse"
         update-types: ["version-update:semver-major"]
       # Playwright majors occasionally rotate the bundled Chromium /

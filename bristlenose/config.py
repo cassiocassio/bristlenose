@@ -319,6 +319,17 @@ def load_settings(**overrides: object) -> BristlenoseSettings:
     )
 
     before_model = settings.llm_model
+    settings = _fill_provider_default_model(settings, overrides, raw_env_model)
+    if settings.llm_model != before_model:
+        trace.append(
+            "llm_resolve | step=3-provider-default | "
+            "event=_fill_provider_default_model [config.py] | "
+            f"model {before_model!r} -> {settings.llm_model!r} | "
+            "cause=provider-selected-no-explicit-model | "
+            f"source={settings.llm_provider}-provider-default"
+        )
+
+    before_model = settings.llm_model
     settings = _guard_orphan_desktop_model(settings, overrides)
     if settings.llm_model != before_model:
         trace.append(
@@ -352,6 +363,59 @@ def load_settings(**overrides: object) -> BristlenoseSettings:
     for line in trace:
         logger.info(line)
 
+    return settings
+
+
+def _fill_provider_default_model(
+    settings: BristlenoseSettings,
+    overrides: dict[str, object],
+    raw_env_model: str | None,
+) -> BristlenoseSettings:
+    """Snap a never-chosen model to the resolved provider's default model (CLI only).
+
+    On the CLI, selecting a provider (``--llm chatgpt`` / ``BRISTLENOSE_LLM_PROVIDER``)
+    without a model left ``llm_model`` at its Anthropic code-default
+    (``config.py`` ``llm_model`` field). Sending that name to a non-Anthropic
+    provider 404s (cross-provider ``model_not_found``), surfacing as
+    ``PipelineAbandonedError`` at topic segmentation. When the user expressed no
+    model preference, adopt the resolved provider's ``default_model`` so provider
+    and model stay coherent.
+
+    Gating, in order:
+
+    - **Desktop is a no-op** — desktop model coherence is owned wholly by
+      ``_guard_orphan_desktop_model``; this fix stays on the CLI.
+    - **Rule 1: an explicit model always wins** — a ``--model`` override (none
+      today) or ``BRISTLENOSE_LLM_MODEL`` env var is never overridden.
+    - **Value gate** — fire only when ``llm_model`` is *still the field's
+      code-default value*. This is deliberately a value comparison, not the
+      ``_src`` ``"dotenv-file"`` source label: ``_src`` reports ``"dotenv-file"``
+      whenever a ``.env`` merely exists (file presence, not field presence), so a
+      user who sets provider+key in ``.env`` but omits the model would otherwise be
+      mislabelled and 404. A ``.env`` that sets a *real* model leaves a non-default
+      value and is honoured (rule 1); a ``.env`` that omits it leaves the
+      code-default and is filled.
+
+    Azure (``default_model == ""``) is skipped by the final ``if default`` guard.
+
+    For ``local`` (Ollama) the snap is cosmetic: execution reads ``local_model`` /
+    ``BRISTLENOSE_LOCAL_MODEL`` (a separate axis), not ``llm_model`` — so the
+    ``step=3-provider-default`` line on a local run records a config decision that
+    never reaches a request. Harmless, and not worth a fourth gate to suppress.
+    """
+    if hosted_by_desktop():
+        return settings
+    if "llm_model" in overrides or raw_env_model is not None:
+        return settings
+    if settings.llm_model != BristlenoseSettings.model_fields["llm_model"].default:
+        return settings
+
+    from bristlenose.providers import PROVIDERS
+
+    spec = PROVIDERS.get(settings.llm_provider)
+    default = spec.default_model if spec else ""
+    if default and default != settings.llm_model:
+        settings = settings.model_copy(update={"llm_model": default})
     return settings
 
 

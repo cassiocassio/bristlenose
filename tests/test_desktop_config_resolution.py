@@ -185,6 +185,97 @@ class TestOrphanModelGuard:
         assert s.llm_model == "gpt-4o"  # CLI override respected
 
 
+class TestProviderDefaultModelFill:
+    """CLI: ``--llm <provider>`` with no model adopts that provider's default model.
+
+    The bug: ``bristlenose run <folder> --llm chatgpt`` resolved provider=openai but
+    left ``llm_model`` at the Anthropic code-default, which 404s when sent to OpenAI
+    (cross-provider ``model_not_found``) → ``PipelineAbandonedError`` at s08. The fill
+    snaps a *never-chosen* model to the resolved provider's ``default_model``. Gated to
+    the CLI (no-op under desktop, which injects an explicit model) and to the
+    code-default *value* (any explicitly-chosen model wins — rule 1).
+    """
+
+    def test_chatgpt_alias_fills_gpt_4o(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
+        monkeypatch.delenv("BRISTLENOSE_LLM_MODEL", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_LLM_PROVIDER", raising=False)
+        s = config.load_settings(llm_provider="chatgpt")  # alias → openai
+        assert s.llm_provider == "openai"
+        assert s.llm_model == "gpt-4o"
+
+    def test_gemini_fills_gemini_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
+        monkeypatch.delenv("BRISTLENOSE_LLM_MODEL", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_LLM_PROVIDER", raising=False)
+        s = config.load_settings(llm_provider="gemini")  # alias → google
+        assert s.llm_provider == "google"
+        assert s.llm_model == "gemini-2.5-flash"
+
+    def test_claude_keeps_code_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
+        monkeypatch.delenv("BRISTLENOSE_LLM_MODEL", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_LLM_PROVIDER", raising=False)
+        s = config.load_settings(llm_provider="claude")  # alias → anthropic
+        assert s.llm_provider == "anthropic"
+        # default == provider default → no snap. Assert against the field default
+        # (the implementation's own expression) so an Anthropic-default bump doesn't
+        # redden this without a behaviour change.
+        assert s.llm_model == BristlenoseSettings.model_fields["llm_model"].default
+
+    def test_fill_fires_when_dotenv_present_but_sets_no_model(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The gap a source-label gate (`model_source == "code-default"`) would miss:
+        # `_src` reports "dotenv-file" whenever a .env merely EXISTS, even if it sets
+        # no model line. A user with provider+key in .env but no model must still get
+        # the coherent provider default, not the Anthropic code-default → 404. The
+        # value gate fires regardless of the source label. Goes red if anyone reverts
+        # to a source-label gate.
+        monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
+        monkeypatch.setattr(config, "_find_env_files", lambda: [Path("/fake/.env")])
+        monkeypatch.delenv("BRISTLENOSE_LLM_MODEL", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_LLM_PROVIDER", raising=False)
+        s = config.load_settings(llm_provider="chatgpt")
+        assert s.llm_model == "gpt-4o"
+
+    def test_explicit_env_model_wins_over_fill(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Rule 1 precedes the value gate: a user who explicitly sets
+        # BRISTLENOSE_LLM_MODEL to the Anthropic default string AND picks chatgpt has
+        # made an (incoherent) explicit choice — the rule-1 short-circuit honours it
+        # and does NOT snap, even though the value equals the code-default.
+        monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
+        monkeypatch.setenv("BRISTLENOSE_LLM_MODEL", "claude-sonnet-4-20250514")
+        monkeypatch.delenv("BRISTLENOSE_LLM_PROVIDER", raising=False)
+        s = config.load_settings(llm_provider="chatgpt")
+        assert s.llm_model == "claude-sonnet-4-20250514"  # explicit env wins
+
+    def test_azure_not_filled(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Azure's default_model is "" (deployment names) → no snap.
+        monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
+        monkeypatch.delenv("BRISTLENOSE_LLM_MODEL", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_LLM_PROVIDER", raising=False)
+        s = config.load_settings(llm_provider="azure")
+        assert s.llm_provider == "azure"
+        assert s.llm_model == BristlenoseSettings.model_fields["llm_model"].default  # unchanged
+
+
+def test_anthropic_default_matches_field_default() -> None:
+    # _fill_provider_default_model's value gate compares llm_model against the field
+    # default; that stays correct only while the field default (config.py) and the
+    # Anthropic registry default (providers.py) agree. They are independent literals
+    # in two files — pin their equality so a one-sided bump reddens CI instead of
+    # silently mis-firing the gate.
+    from bristlenose.providers import PROVIDERS
+
+    assert (
+        BristlenoseSettings.model_fields["llm_model"].default
+        == PROVIDERS["anthropic"].default_model
+    )
+
+
 def test_resolution_ledger_built_and_replayable(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -213,6 +304,19 @@ def test_orphan_guard_recorded_in_ledger(
         config.load_settings()
     msgs = [r.message for r in caplog.records]
     assert any("step=3-orphan-guard" in m and "gpt-4o" in m for m in msgs)
+
+
+def test_provider_default_fill_recorded_in_ledger(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
+    monkeypatch.delenv("BRISTLENOSE_LLM_MODEL", raising=False)
+    monkeypatch.delenv("BRISTLENOSE_LLM_PROVIDER", raising=False)
+    with caplog.at_level("INFO", logger="bristlenose.config"):
+        config.load_settings(llm_provider="chatgpt")  # alias → openai, no model
+    msgs = [r.message for r in caplog.records]
+    # Token presence, not the verbatim sentence (don't lock the formatting).
+    assert any("step=3-provider-default" in m and "gpt-4o" in m for m in msgs)
 
 
 class TestCliProviderDecisionLedger:

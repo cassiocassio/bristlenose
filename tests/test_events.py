@@ -139,7 +139,7 @@ def test_cause_category_matches_swift_enum():
     expected = {
         "user_signal", "auth", "quota", "api_request", "api_server",
         "network", "whisper", "missing_dep", "missing_input",
-        "missing_binary", "disk", "unknown",
+        "missing_binary", "disk", "output_truncated", "unknown",
     }
     actual = {c.value for c in CauseCategoryEnum}
     assert actual == expected
@@ -159,6 +159,7 @@ def test_is_retryable_rule():
     assert is_retryable(CauseCategoryEnum.MISSING_INPUT) is False
     assert is_retryable(CauseCategoryEnum.MISSING_BINARY) is False
     assert is_retryable(CauseCategoryEnum.DISK) is False
+    assert is_retryable(CauseCategoryEnum.OUTPUT_TRUNCATED) is False
     assert is_retryable(CauseCategoryEnum.QUOTA) is True
     assert is_retryable(CauseCategoryEnum.NETWORK) is True
     assert is_retryable(CauseCategoryEnum.UNKNOWN) is True

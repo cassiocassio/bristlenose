@@ -28,6 +28,10 @@ enum PipelineFailureCategory: String, Codable, Equatable {
     /// to re-analyse* was blocked. UX surfaces this with a "Re-analyse
     /// (replaces existing output)" CTA that spawns with `--clean`.
     case outputExists = "output_exists"
+    /// Quote extraction produced more output than the model's cap allows,
+    /// even after the pipeline split the session into smaller chunks.
+    /// Recovery is a larger-output model or manual pre-segmentation.
+    case outputTruncated = "output_truncated"
 }
 
 // MARK: - Neutral progress struct
@@ -1502,6 +1506,7 @@ final class PipelineRunner: ObservableObject {
         case .missingInput: return "A required input file is missing."
         case .missingBinary: return "FFmpeg couldn't be found."
         case .outputExists: return "Already analysed — re-analysing would replace the existing results."
+        case .outputTruncated: return "This session is too dense for \(subject)'s output limit — try a model with a larger output, or split the recording."
         case .unknown:    return "Something went wrong during analysis."
         }
     }

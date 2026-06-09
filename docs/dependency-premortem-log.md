@@ -9,7 +9,7 @@ See `docs/design-dependency-premortem.md` for how this works and
 score one (Mode B `/cassandra --score`), or re-examine the holds below
 (Mode C `/cassandra --watch`).
 
-**Tally:** 2 prophecies scored — 2 hits, 0 misses, 0 false-alarms.
+**Tally:** 4 prophecies scored — 4 hits, 0 misses, 0 false-alarms.
 
 ## Held register
 
@@ -130,16 +130,22 @@ with the most surface area.
   the Dependabot PR — #110 was Dependabot-closed). It fixed the
   chromium-install hang exactly as predicted. See CLAUDE.md "Release-to-PyPI
   workflow" gotcha for the receipt.
+- **starlette 0.52.1→1.2.1 + fastapi 0.129.0→0.136.3 (atomic pair):**
+  APPLIED 2026-06-09 as part of the graduated-holds wave (Branch 2).
+  Predicate met — FastAPI 0.136.3 requirements now `starlette>=0.46.0` with
+  no upper bound. pytest tests/ green (3078 pass / 7 skip / 42 xfail /
+  243s); ruff clean.
 - All other Entry-1 verdicts remain UNTESTED — the bumps haven't landed.
-  The 9 Jun 2026 `--watch` pass (below) covers state since 5 Jun: starlette
-  hold graduated (FastAPI 0.136.3 dropped the cap entirely); spaCy cluster
-  + tokenizers still held.
 
 ### SCORE — partial
 
 - **@playwright/test 1.60.0** → 🟢 **HIT.** Prophecy was SAFE; shipped and
   fixed a real CI flake. Lesson: a green verdict on a minor playwright bump
   was the right call; no chromium channel rotation in range.
+- **starlette 1.x (with fastapi 0.136.3 pair)** → 🟢 **HIT.** Prophecy was
+  RESOLVER-NON-EVENT until FastAPI floated the cap; predicate satisfied
+  4 days later, pair taken atomically, no break. Lesson: the
+  resolver-gated framing held — never a lone bump, always wait for the cap.
 - Everything else: pending — not yet merged.
 
 ---
@@ -273,6 +279,13 @@ Entry 1 stands in full.
   42 xfailed / 168s). `ruff check .` clean. `pip check` clean (the
   `torch 2.10.0 is not supported on this platform` line is pre-existing
   macOS-arm64 noise unrelated to this wave).
+- **WTForms 3.1.2→3.2.2 + sqladmin 0.23.0→0.27.2 (atomic pair):** APPLIED
+  2026-06-09 as part of the graduated-holds wave (Branch 2). Predicate met
+  — sqladmin 0.27.2 (2026-06-08) floated `wtforms<3.3`. Took the pair;
+  pytest tests/ green (3078 pass / 7 skip / 42 xfail / 243s). Note that
+  sqladmin actually jumped 0.23.0→0.27.2 (Entry 2 grounded against 0.23.0,
+  not 0.27.0); the 0.23→0.27 minor gap was implicitly green per Entry 2 row
+  18 ("sqladmin 0.27 safe").
 - All other Entry-2 verdicts remain UNTESTED — those bumps haven't landed.
 
 ### SCORE — partial
@@ -282,8 +295,13 @@ Entry 1 stands in full.
   tests green, dep-graph consistent, OSV count for crypto dropped to 0.
   Lesson: the deps.dev-verified mandatory-pair framing was correct — the
   bump was not litigable as "just upgrade crypto."
-- Everything else (tokenizers/WTForms holds, starlette gating, HF wave,
-  numpy trio, the independent greens): pending — not yet merged.
+- **WTForms 3.2.x (with sqladmin 0.27.2 pair)** → 🟢 **HIT.** Prophecy was
+  RESOLVER-WILL-BREAK as lone bump, then GRADUATED via `--watch` when
+  sqladmin 0.27.2 dropped the cap. Pair taken same day; no break. Lesson:
+  the predicate pattern works — Cassandra caught the cap-float within 24h
+  of the sqladmin release.
+- Everything else (tokenizers hold, HF wave, numpy trio, independent
+  greens): pending — not yet merged.
 
 ---
 
@@ -312,8 +330,11 @@ cryptography 44.0.3 OSV count: **3 open advisories on 2026-06-09**
 (was 2 on 2026-06-05; PYSEC-2026-35 added). Resolved by the Entry 2
 security wave applied above.
 
-### Stale-register drift still present
+### Stale-register drift — fixed in the graduated-holds wave
 
-- `.github/dependabot.yml` lighthouse comment "CI is on 20" — still
-  contradicted by `.tool-versions` (node 24). Fix queued for the
-  graduated-holds branch alongside the WTForms ignore drop.
+- `.github/dependabot.yml` lighthouse comment "CI is on 20" → corrected
+  2026-06-09 to reflect Node 24 + the real reason for keeping the ignore
+  (perf-baseline re-pin cost on a deliberate lighthouse-13 audit).
+- `docs/design-platform-policy.md` "CI Node 20" / "lighthouse 12.x"
+  drift remains — out of scope for this branch; queued for a separate
+  policy-doc sweep.

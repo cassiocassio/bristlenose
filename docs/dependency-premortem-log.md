@@ -9,7 +9,7 @@ See `docs/design-dependency-premortem.md` for how this works and
 score one (Mode B `/cassandra --score`), or re-examine the holds below
 (Mode C `/cassandra --watch`).
 
-**Tally:** 0 prophecies scored — 0 hits, 0 misses, 0 false-alarms.
+**Tally:** 2 prophecies scored — 2 hits, 0 misses, 0 false-alarms.
 
 ## Held register
 
@@ -22,12 +22,12 @@ tombstone; fix it by adding the row.
 
 | Held bump | Cluster | Reason (blocks now) | Release-predicate (lifts it) | Last watched | Status |
 |-----------|---------|---------------------|------------------------------|--------------|--------|
-| **thinc** (major) | spaCy ecosystem | spaCy 3.8.x pins `thinc<8.4`; thinc 9.x is spaCy-4 era | spaCy 4 reaches GA **and** the cluster (spacy+thinc+weasel+confection+en_core_web_lg) co-resolves; take atomically | 2026-06-04 | held |
-| **weasel** (major) | spaCy ecosystem | spaCy 3.8.x pins `weasel<0.5`; weasel 1.0 *requires* `confection>=1.0`, mutually exclusive with thinc 8.3's `confection<1.0` | same spaCy-4 wave as thinc | 2026-06-04 | held |
-| **confection** (major) | spaCy ecosystem | thinc 8.3 pins `confection<1.0` | thinc moves to 9.x (⇒ spaCy 4 wave) | 2026-06-04 | held |
-| **starlette** 1.x | FastAPI / starlette | FastAPI caps `starlette<1.0` (installed metadata); the PR can't resolve | FastAPI floats its starlette cap past 1.0 (check `GetRequirements` for fastapi); then bump fastapi+starlette together | 2026-06-04 | held |
-| **tokenizers** 0.23.1 | HF transformer stack | `transformers` 5.7.0 **and** 5.10.2 both pin `tokenizers<=0.23.0` (deps.dev verified 2026-06-05) | a transformers release floats its tokenizers cap to admit 0.23.1 (`GetRequirements` for transformers: cap becomes `<0.24`/`<=0.23.1`); then move tokenizers+transformers together | 2026-06-05 | held |
-| **WTForms** 3.2.2 | sqladmin / serve DB | `sqladmin` 0.23.0 **and** 0.27.0 both pin `wtforms>=3.1,<3.2` (deps.dev verified 2026-06-05) | a sqladmin release floats `wtforms<3.2` → `<3.3`/`<4` (`GetRequirements` for sqladmin); then bump sqladmin+WTForms together | 2026-06-05 | held |
+| **thinc** (major) | spaCy ecosystem | spaCy 3.8.x pins `thinc<8.4`; thinc 9.x is spaCy-4 era | spaCy 4 reaches GA **and** the cluster (spacy+thinc+weasel+confection+en_core_web_lg) co-resolves; take atomically | 2026-06-09 | held |
+| **weasel** (major) | spaCy ecosystem | spaCy 3.8.x pins `weasel<0.5`; weasel 1.0 *requires* `confection>=1.0`, mutually exclusive with thinc 8.3's `confection<1.0` | same spaCy-4 wave as thinc | 2026-06-09 | held |
+| **confection** (major) | spaCy ecosystem | thinc 8.3 pins `confection<1.0` | thinc moves to 9.x (⇒ spaCy 4 wave) | 2026-06-09 | held |
+| **starlette** 1.x | FastAPI / starlette | _(graduated 2026-06-09 — FastAPI 0.136.3 dropped the `starlette<1.0` cap, pair pre-mortemed in the graduated-holds wave)_ | n/a — graduated | 2026-06-09 | **graduated** |
+| **tokenizers** 0.23.1 | HF transformer stack | `transformers` 5.7.0 **and** 5.10.2 both pin `tokenizers<=0.23.0` (deps.dev verified 2026-06-05) | a transformers release floats its tokenizers cap to admit 0.23.1 (`GetRequirements` for transformers: cap becomes `<0.24`/`<=0.23.1`); then move tokenizers+transformers together | 2026-06-09 | held |
+| **WTForms** 3.2.2 | sqladmin / serve DB | _(graduated 2026-06-09 — sqladmin 0.27.2 floated `wtforms<3.3`, pair pre-mortemed in the graduated-holds wave)_ | n/a — graduated | 2026-06-09 | **graduated** |
 
 <!-- Watch grounding: deps.dev GetRequirements for the upstream caps
      (spacy→thinc, fastapi→starlette), GetVersion for publishedAt/scorecard,
@@ -123,11 +123,24 @@ with the most surface area.
   Node-20-gated tooling are stale against `.tool-versions` (node 24).
   Misleads the next prophecy; worth a sweep.
 
-### OUTCOME — open
-<!-- filled in by /cassandra --score after the bumps are applied -->
+### OUTCOME — partial (open)
 
-### SCORE — pending
-<!-- hit / miss / false-alarm per verdict, with evidence and the lesson -->
+- **PR #110 (@playwright/test 1.59.1→1.60.0):** SHIPPED via the v0.15.13
+  release-pipeline fix path (commit on `e2e/package.json`, not via merging
+  the Dependabot PR — #110 was Dependabot-closed). It fixed the
+  chromium-install hang exactly as predicted. See CLAUDE.md "Release-to-PyPI
+  workflow" gotcha for the receipt.
+- All other Entry-1 verdicts remain UNTESTED — the bumps haven't landed.
+  The 9 Jun 2026 `--watch` pass (below) covers state since 5 Jun: starlette
+  hold graduated (FastAPI 0.136.3 dropped the cap entirely); spaCy cluster
+  + tokenizers still held.
+
+### SCORE — partial
+
+- **@playwright/test 1.60.0** → 🟢 **HIT.** Prophecy was SAFE; shipped and
+  fixed a real CI flake. Lesson: a green verdict on a minor playwright bump
+  was the right call; no chromium channel rotation in range.
+- Everything else: pending — not yet merged.
 
 ---
 
@@ -249,9 +262,58 @@ websockets 16 is the resolver-companion to Entry 1's google-genai 2.x green; the
 cryptography/presidio security pair is new surface orthogonal to everything Entry 1 called.
 Entry 1 stands in full.
 
-### OUTCOME — open
-<!-- filled in by /cassandra --score after the bumps are applied -->
+### OUTCOME — partial (open)
 
-### SCORE — pending
-<!-- hit / miss / false-alarm per verdict, with evidence and the lesson.
-     untested is the default; a hit costs proof (CI run, lockfile diff, test). -->
+- **Security wave (presidio×2 + cryptography 48):** APPLIED 2026-06-09.
+  Atomic bump in `.venv` (`cryptography 44.0.3→48.0.0`,
+  `presidio-analyzer 2.2.360→2.2.362`,
+  `presidio-anonymizer 2.2.360→2.2.362`). Pre-bump OSV count on
+  cryptography 44.0.3: three open advisories per `--watch` grounding;
+  post-bump: zero. `pytest tests/` green (3078 passed / 7 skipped /
+  42 xfailed / 168s). `ruff check .` clean. `pip check` clean (the
+  `torch 2.10.0 is not supported on this platform` line is pre-existing
+  macOS-arm64 noise unrelated to this wave).
+- All other Entry-2 verdicts remain UNTESTED — those bumps haven't landed.
+
+### SCORE — partial
+
+- **Security wave atomic (presidio×2 + cryptography 48)** → 🟢 **HIT.**
+  Prophecy was SAFE-as-trio / WILL-BREAK as lone bumps. Took the trio;
+  tests green, dep-graph consistent, OSV count for crypto dropped to 0.
+  Lesson: the deps.dev-verified mandatory-pair framing was correct — the
+  bump was not litigable as "just upgrade crypto."
+- Everything else (tokenizers/WTForms holds, starlette gating, HF wave,
+  numpy trio, the independent greens): pending — not yet merged.
+
+---
+
+## `--watch` — 2026-06-09 — held-register re-examination
+
+Trigger: maintenance-overdue reminder on the May-2026 quarterly dep
+review (TODO.md L64); user asked to ground Cassandra against current
+state before any execution.
+
+**Grounded against:** installed metadata + **deps.dev v3 (live)** + OSV.
+
+### Held register — delta since 2026-06-05
+
+| Row | Verdict | Receipt |
+|-----|---------|---------|
+| **thinc** (major) | still held | No spaCy 4 GA; predicate unmet. |
+| **weasel** (major) | still held | Same wave as thinc. |
+| **confection** (major) | still held | Same wave as thinc. |
+| **starlette** 1.x | **GRADUATED** | FastAPI 0.136.3 requirements now `starlette>=0.46.0` — cap dropped entirely (deps.dev verified 2026-06-09). Wave is live: pair fastapi 0.129→0.136.3 + starlette 0.52→1.2.1, atomic. |
+| **tokenizers** 0.23.1 | still held | transformers 5.10.2 (latest, 2026-06-04) still pins `tokenizers<=0.23.0,>=0.22.0`. Predicate unmet. |
+| **WTForms** 3.2.2 | **GRADUATED** | sqladmin **0.27.2** (2026-06-08) floated to `wtforms>=3.1,<3.3` (deps.dev verified). Pair: sqladmin 0.27.0→0.27.2 + WTForms 3.1.2→3.2.x. |
+
+### New security pressure noted
+
+cryptography 44.0.3 OSV count: **3 open advisories on 2026-06-09**
+(was 2 on 2026-06-05; PYSEC-2026-35 added). Resolved by the Entry 2
+security wave applied above.
+
+### Stale-register drift still present
+
+- `.github/dependabot.yml` lighthouse comment "CI is on 20" — still
+  contradicted by `.tool-versions` (node 24). Fix queued for the
+  graduated-holds branch alongside the WTForms ignore drop.

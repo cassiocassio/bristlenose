@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 8 Jun 2026 (closed `cz` Czech-localisation branch — merged via `ec4b849`)
+**Updated:** 9 Jun 2026 (closed `chunked-quote-extraction` branch — merged via `927fa63`)
 
 ---
 
@@ -40,7 +40,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
-| `bristlenose_branch chunked-quote-extraction/` | `chunked-quote-extraction` | feature | smart-split quote extraction for low-output-cap models (gpt-4o 16384) |
+| `bristlenose_branch llm-provider-default-model/` | `llm-provider-default-model` | bugfix | CLI `--llm <provider>` applies that provider's default model (fixes cross-provider 404) |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -140,7 +140,8 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `desktop-provider-resolution` _(merged)_ | `bristlenose_branch desktop-provider-resolution/` _(detached, on disk)_ | local only — merged to main 7 Jun 2026 (`5292802`) |
-| `chunked-quote-extraction` | `bristlenose_branch chunked-quote-extraction/` | local only |
+| `chunked-quote-extraction` _(merged)_ | `bristlenose_branch chunked-quote-extraction/` _(detached, on disk)_ | local only — merged to main 9 Jun 2026 (`927fa63`) |
+| `llm-provider-default-model` | `bristlenose_branch llm-provider-default-model/` | local only |
 
 
 
@@ -151,28 +152,26 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
-### `chunked-quote-extraction`
+### `llm-provider-default-model`
 
-**Kind:** feature — smart-split fallback for quote extraction when an LLM response exceeds the model's output cap (gpt-4o = 16384 tokens; gpt-4o-mini same; Local llama3.2:3b ~2–4K practical). Reactive: catch truncation, split on a high-confidence s08 topic boundary (or mechanical halves if none), Map-Reduce per chunk, dedup by `verbatim_excerpt`, all-or-nothing per session. Depth bound 3 (≤8 chunks).
-**Status:** Just started — 9 Jun 2026
+**Kind:** bugfix — on the CLI, `--llm <provider>` (or `BRISTLENOSE_LLM_PROVIDER`) does not switch the model to that provider's `default_model`. The Claude code-default model name (`claude-sonnet-4-20250514`) rides along to a non-Anthropic provider → cross-provider `404 model_not_found`, surfacing as `PipelineAbandonedError: All topic segmentation calls failed` at s08.
+**Status:** Just started
 **Started:** 9 Jun 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch chunked-quote-extraction/`
+**Worktree:** `/Users/cassio/Code/bristlenose_branch llm-provider-default-model/`
 **Remote:** local only (push when ready)
 
-**What it does:** Eliminates the ~1/3 dense-run failure rate observed on the desktop ChatGPT path (8 Jun 2026, ikea-debug session). Adds a typed `TruncatedResponseError`, a recursive `_extract_with_split` driver in s09, and a two-tier split-point picker (high-confidence s08 boundary → mechanical halves). Boundary hierarchy was simplified from three tiers to two during plan iteration (Plan v3) — the moderator-question-pivot tier was dropped because topic shifts in skilled interviews emerge from semantic drift over many turns, not lexical signposts. Defensibility: per-session classification drift (`SCREEN_SPECIFIC` vs `GENERAL_CONTEXT`) is bounded by cross-session voting at s10/s11; a post-merge re-classification stage is named as a follow-up. Full plan: `HANDOFF.md` (445 lines, Plan v3).
+**What it does:** When the resolved provider differs from the model's provider *and* the user set no explicit model (no `--model`, no `BRISTLENOSE_LLM_MODEL`), fill in the resolved provider's `default_model` from the `PROVIDERS` registry. An existing coherence helper in `config.py` already does this but is gated `if not hosted_by_desktop()` and restricted to the desktop orphan-model case, so the CLI path never fires it. The fix moves the fill into the CLI-reachable path. Constraints: explicit user model always wins; existing `--llm`-vs-env precedence unchanged (only the *model* default-fill is new); desktop is a no-op (host injects an explicit model); Azure left alone (deployment names, no fixed default). Adds a `step=3-provider-default` line to the `llm_resolve` ledger when the fill fires. Found during `chunked-quote-extraction` gpt-4o testing; deliberately not fixed there. Full plan: `HANDOFF.md`.
 
 **Files this branch will touch:**
-- `bristlenose/stages/s09_quote_extraction.py`
-- `bristlenose/llm/client.py`
-- `bristlenose/run_lifecycle.py`
-- `tests/test_quote_extraction.py`
-- `tests/test_llm_truncation.py`
-- `bristlenose/llm/CLAUDE.md`
-- `bristlenose/stages/CLAUDE.md`
+- `bristlenose/config.py` (`load_settings` + the `hosted_by_desktop`-gated coherence-snap helper ~lines 373–395; `llm_model` code-default at line 109)
+- `bristlenose/providers.py` (read-only: `PROVIDERS[*].default_model` source of truth)
+- `bristlenose/cli.py` (`analyze` / `run` option decls — possibly add `--model` to `analyze`)
+- `tests/test_desktop_config_resolution.py` (new regression test)
 
 **Potential conflicts with other branches:**
-- `gemini-provider` touches `bristlenose/llm/client.py` (provider-side) and `bristlenose/llm/CLAUDE.md`. The truncation-raise sites in `client.py` (lines 513/625/735/844/978) are distinct from the gemini provider work, and the CLAUDE.md edits are in different sections, but a rebase or merge-order coordination may be needed depending on which lands first.
-- No other active branch touches s09 or `run_lifecycle.py`.
+- `gemini-provider` (feature, active) edits `bristlenose/providers.py` for the `gemini-2.0-flash`→`gemini-2.5-flash` `default_model` fix. This branch only *reads* `providers.py`, so the overlap is low-risk — but if gemini lands first, rebase to pick up the corrected Gemini default before asserting on it in the regression test.
+- `chunked-quote-extraction` (feature, active) is the branch this bug was found on, but it touches s09 / `llm/client.py` / `run_lifecycle.py` — no overlap with `config.py` / `cli.py`.
+- No other active branch touches `config.py` provider/model resolution.
 
 ---
 
@@ -274,6 +273,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `chunked-quote-extraction` — merged 9 Jun 2026
+
+Smart-split fallback for quote extraction when an LLM response exceeds the model's output cap (gpt-4o = 16384 tokens). Reactive: catch truncation, split on a high-confidence s08 topic boundary (or mechanical halves if none), Map-Reduce per chunk, dedup by `verbatim_excerpt`, all-or-nothing per session, depth bound 3 (≤8 chunks). Eliminates the ~1/3 dense-run failure rate observed on the desktop ChatGPT path (8 Jun 2026, ikea-debug session). Adds a typed `TruncatedResponseError` + `OUTPUT_TRUNCATED` Cause (Swift-mirrored), a recursive `_extract_with_split` driver in s09, a two-tier split-point picker, and cloud-client `max_retries=6` for 429 bursts. Boundary hierarchy collapsed 3→2 during Plan v3 (moderator-question-pivot tier dropped — topic shifts in skilled interviews emerge from semantic drift, not lexical signposts). Two commits (`f8ea55a`, `418b819`) merged via `927fa63` (TODO.md conflict resolved in favour of the branch's shipped narrative). Worktree detached and tagged orange on disk; local branch deleted; remote was never pushed. Surfaced a separate CLI bug (`--llm chatgpt` doesn't apply the provider's default model → cross-provider 404) — chip filed for its own branch.
 
 ### `cz` — merged 8 Jun 2026
 

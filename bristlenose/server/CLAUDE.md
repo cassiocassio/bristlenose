@@ -107,7 +107,7 @@ Default values:
 
 - `links.github_issues_url` = `https://github.com/cassiocassio/bristlenose/issues/new`
 - `feedback.enabled` = `true`
-- `feedback.url` = `https://bristlenose.app/feedback.php` (was `cassiocassio.co.uk/feedback.php` — 90-day overlap in effect until the old endpoint is retired)
+- `feedback.url` = `https://bristlenose.app/feedback.php`
 - `telemetry.enabled` = `true`
 - `telemetry.url` = `https://bristlenose.app/telemetry.php` (prod) or `/api/dev/telemetry` (dev mode, relative → local stub)
 

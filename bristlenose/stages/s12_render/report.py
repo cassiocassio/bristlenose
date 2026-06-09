@@ -509,7 +509,7 @@ def render_html(
 
     # Feedback feature flag — set to true to enable the feedback widget.
     _w("var BRISTLENOSE_FEEDBACK = true;")
-    _w("var BRISTLENOSE_FEEDBACK_URL = 'https://cassiocassio.co.uk/feedback.php';")
+    _w("var BRISTLENOSE_FEEDBACK_URL = 'https://bristlenose.app/feedback.php';")
 
     # Quote annotation data for inline transcript pages (transcript-annotations.js).
     # Build a combined quote map for all sessions.

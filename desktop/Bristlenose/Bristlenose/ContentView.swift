@@ -1406,24 +1406,17 @@ struct ContentView: View {
             .help(i18n.t("desktop.toolbar.searchShortcut"))
         }
 
-        // Ambient pills — all three share `placement: .status` (macOS-only) so
-        // they sit in their own zone, separate from the `.primaryAction`
-        // capsule (Export + contextual toggles + Search). Without this,
-        // macOS 26's unified trailing-actions capsule visually absorbs the
-        // pills into the search-shaped chrome, which reads wrong for passive
-        // status indicators. Uniform rule: actions go `.primaryAction`,
-        // ambient self-hiding status indicators go `.status`. See toolbar
-        // discussion notes for the three-pill simultaneity analysis.
-        if let project = selectedProject {
-            ToolbarItem(placement: .status) {
-                PipelineActivityItem(
-                    project: project,
-                    pipelineRunner: pipelineRunner,
-                    liveData: pipelineRunner.liveData
-                )
-            }
-        }
-
+        // App-wide ambient pills share `placement: .status` (macOS-only) so they
+        // sit in their own zone, separate from the `.primaryAction` capsule
+        // (Export + contextual toggles + Search) — otherwise macOS 26's unified
+        // trailing-actions capsule absorbs them into the search-shaped chrome.
+        //
+        // Per-project pipeline activity used to have a pill here; it now lives on
+        // the project's sidebar row (status lives where its subject lives — the
+        // spinner with hover-× Stop, and the failure glyph that opens the
+        // diagnostic popover). The toolbar keeps only genuinely app-wide
+        // concerns: the copy-in-flight pill (interim — moves to the row when
+        // copy-on-row lands) and the Ollama model-download pill.
         ToolbarItem(placement: .status) {
             CopyProgressPill(copyMachinery: copyMachinery)
         }

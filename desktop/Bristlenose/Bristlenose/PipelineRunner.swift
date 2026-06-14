@@ -236,6 +236,8 @@ final class PipelineRunner: ObservableObject {
             // writer for this path (it has access to the Project, which we
             // don't). Here we just inject the state.
             self.state[projectID] = .failed(message, category: category)
+        case .simpleState(let injected):
+            self.state[projectID] = injected
         }
         _debugFixtureApplied.insert(projectID)
     }

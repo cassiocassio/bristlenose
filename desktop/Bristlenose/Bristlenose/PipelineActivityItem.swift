@@ -94,6 +94,8 @@ struct PipelineActivityItem: View {
             // naturally; the harness has to do it by hand).
             writeSyntheticLogIfMissing()
             pipelineRunner._debugSetState(.failed(message, category: category), for: project.id)
+        case .simpleState(let injected):
+            pipelineRunner._debugSetState(injected, for: project.id)
         }
         #endif
     }

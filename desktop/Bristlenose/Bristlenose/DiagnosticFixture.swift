@@ -42,6 +42,10 @@ enum DiagnosticFixture {
         case partial(PipelineSummary)
         case failed(PipelineSummary)
         case noSummary(message: String, category: PipelineFailureCategory)
+        /// A verb-led state with no `PipelineSummary` (running / queued /
+        /// stopped) — injected directly for visual QA of the sidebar activity
+        /// indicator + verb-led subtitle without provoking a real run.
+        case simpleState(PipelineState)
     }
 
     #if DEBUG
@@ -66,6 +70,14 @@ enum DiagnosticFixture {
                 message: "Analysis stopped unexpectedly.",
                 category: .unknown
             )
+        }
+
+        // Verb-led states carry no summary — inject directly so the sidebar
+        // activity indicator (and the verb-led subtitle) can be eyeballed
+        // without a real run. Checked before the summary-scenario table.
+        if let simple = simpleStates[name] {
+            logger.info("injecting simple state \(name, privacy: .public)")
+            return .simpleState(simple)
         }
 
         guard let scenario = scenarios[name] else {
@@ -453,6 +465,16 @@ enum DiagnosticFixture {
                 quotes: StageOutcome(attempted: 4, succeeded: 4, durationMs: 96_000, failed: []),
                 themes: nil)
         ),
+    ]
+
+    /// Verb-led states (no `PipelineSummary`) for visual QA of the sidebar
+    /// activity indicator + subtitle. `running` shows the spinner; `queued` /
+    /// `stopped` verify the indicator yields the slot to subtitle text.
+    /// Applies to whichever project is selected (the env var is global).
+    private static let simpleStates: [String: PipelineState] = [
+        "running": .running,
+        "queued": .queued(position: 1),
+        "stopped": .stopped(stagesComplete: ["s01_ingest", "s02_extract_audio"]),
     ]
 
     // MARK: - Constructors (terse helpers — keep the scenario tables readable)

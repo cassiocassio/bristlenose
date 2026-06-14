@@ -51,15 +51,55 @@ struct ProjectRowActivityIndicator: View {
 
     let kind: Kind
 
+    /// When non-nil and `kind == .running`, hovering swaps the spinner for a
+    /// cancel × in the *same* fixed frame; clicking it calls this. Mouse-only
+    /// fast path (App Store download-ring lineage) — Stop is also reachable via
+    /// the Project menu (⌘.) and the row context menu, which is where keyboard
+    /// and VoiceOver users (who can't hover) reach it.
+    var onStop: (() -> Void)? = nil
+
+    @State private var hovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         switch kind {
         case .running:
-            // Same control as the toolbar pill — a system spinner that respects
-            // Reduce Motion natively. Hidden from VoiceOver: the row's
-            // accessibilityLabel carries the state in words.
-            ProgressView()
-                .controlSize(.small)
-                .accessibilityHidden(true)
+            ZStack {
+                if hovering, onStop != nil {
+                    // Hover state: a neutral grey cancel × (Finder/App Store
+                    // idiom — grey, not red; red would read as "error"). A
+                    // Button, not a tap gesture, so List selection isn't broken
+                    // on macOS 26 (same reason the `+N` delta is a Button).
+                    Button(action: { onStop?() }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .imageScale(.small)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+            }
+            // Fixed frame: spinner and × share one 16pt box, so the hover swap
+            // never changes the row's layout — nothing jumps or reflows.
+            .frame(width: 16, height: 16)
+            .contentShape(Rectangle())
+            .onHover { inside in
+                if reduceMotion {
+                    hovering = inside
+                } else {
+                    withAnimation(.easeInOut(duration: 0.12)) { hovering = inside }
+                }
+                // Pointing-hand only while the × is live (native inline-click
+                // affordance; no underline). Balanced push/pop.
+                if onStop != nil {
+                    if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                }
+            }
+            // Decorative + mouse-only: VoiceOver/keyboard reach Stop via the
+            // menu, and the row's accessibilityLabel carries "Analysing…".
+            .accessibilityHidden(true)
         case .none:
             EmptyView()
         }

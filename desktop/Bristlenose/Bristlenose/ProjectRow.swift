@@ -234,7 +234,10 @@ struct ProjectRow: View {
     private var subtitleRightSlot: some View {
         let activity = ProjectRowActivityIndicator.Kind.from(pipelineState: pipelineState)
         if activity != .none {
-            ProjectRowActivityIndicator(kind: activity)
+            ProjectRowActivityIndicator(
+                kind: activity,
+                onStop: { pipelineRunner.cancel(project: project) }
+            )
         } else if case .inCloud = availability {
             Image(systemName: "icloud")
                 .foregroundStyle(.secondary)

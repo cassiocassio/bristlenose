@@ -191,6 +191,11 @@ struct ContentView: View {
     /// The ID of the project currently showing the icon picker popover, or nil.
     @State private var iconPickerProjectID: UUID?
 
+    /// The project currently showing the diagnostic popover (anchored to its
+    /// failure glyph), or nil. Owned here so both the glyph click and the
+    /// context-menu "Show Diagnostics…" backstop open the same popover.
+    @State private var diagnosticProjectID: UUID?
+
     /// The project row currently targeted by a drag hover, or nil.
     /// Bound to per-row `.dropDestination(isTargeted:)` closures; drives the
     /// hover-highlight visual on `ProjectRow`.
@@ -1610,7 +1615,15 @@ struct ContentView: View {
                 removeFromSidebarContextMenu(targetingProject: project.id)
             },
             onLocate: project.isAvailable ? nil : { locateProject(project) },
-            onOpenUnanalysed: { openUnanalysedSheet(for: project) }
+            onOpenUnanalysed: { openUnanalysedSheet(for: project) },
+            onShowDiagnostics: {
+                selection = [.project(project.id)]
+                diagnosticProjectID = project.id
+            },
+            isShowingDiagnostics: Binding(
+                get: { diagnosticProjectID == project.id },
+                set: { diagnosticProjectID = $0 ? project.id : nil }
+            )
         )
         // Finder file drops onto this project row — add files or surface
         // the reject-toast if the dropped folder is itself a project.

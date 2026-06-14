@@ -37,6 +37,13 @@ struct ProjectRow: View {
     /// Called when the user taps the `+N unanalysed` subtitle segment. Caller
     /// opens the `NewFilesSheet` in watcher mode.
     let onOpenUnanalysed: (() -> Void)?
+    /// Called when the user clicks the failure glyph (or picks "Show
+    /// Diagnostics…"). Caller selects the row + flips `isShowingDiagnostics`.
+    let onShowDiagnostics: (() -> Void)?
+    /// Drives the glyph-anchored diagnostic popover. Owned by ContentView
+    /// (keyed to the selected diagnostic project) so the context-menu backstop
+    /// can open the same popover.
+    @Binding var isShowingDiagnostics: Bool
 
     @EnvironmentObject var i18n: I18n
     @EnvironmentObject var pipelineRunner: PipelineRunner
@@ -66,7 +73,9 @@ struct ProjectRow: View {
         onShowInFinder: @escaping () -> Void,
         onDelete: @escaping () -> Void,
         onLocate: (() -> Void)? = nil,
-        onOpenUnanalysed: (() -> Void)? = nil
+        onOpenUnanalysed: (() -> Void)? = nil,
+        onShowDiagnostics: (() -> Void)? = nil,
+        isShowingDiagnostics: Binding<Bool> = .constant(false)
     ) {
         self.project = project
         self._isRenaming = isRenaming
@@ -77,6 +86,8 @@ struct ProjectRow: View {
         self.onDelete = onDelete
         self.onLocate = onLocate
         self.onOpenUnanalysed = onOpenUnanalysed
+        self.onShowDiagnostics = onShowDiagnostics
+        self._isShowingDiagnostics = isShowingDiagnostics
         self._liveData = ObservedObject(wrappedValue: liveData)
     }
 
@@ -188,11 +199,8 @@ struct ProjectRow: View {
         // its semantic colour (.red for failed, .orange for cantFind
         // warning) — not by graduating the text colour.
         switch subtitleVariant {
-        case .failed(let summary):
-            subtitleText(prefix: "exclamationmark.circle.fill",
-                         prefixColor: .red,
-                         text: summary,
-                         style: .secondary)
+        case .diagnostic(let kind, let text):
+            diagnosticSubtitle(kind: kind, text: text)
         case .pipelineText(let text):
             subtitleText(prefix: nil, text: text, style: .secondary)
         case .cantFind(let prefix, let text):
@@ -259,6 +267,43 @@ struct ProjectRow: View {
             Text(text)
                 .font(.caption)
                 .foregroundStyle(style)
+                .lineLimit(1)
+        }
+    }
+
+    /// Failure-family subtitle: a clickable `MessageKind` glyph (xmark/red for
+    /// failures, triangle/orange for partial — the canonical taxonomy) that
+    /// opens the diagnostic popover anchored to itself, plus the summary text.
+    /// The glyph is a `Button(.plain)` with pointing-hand hover (the `+N`
+    /// pattern) — mouse-only; VoiceOver hears the state via `accessibilityLabel`
+    /// and reaches diagnostics via the row context menu.
+    @ViewBuilder
+    private func diagnosticSubtitle(kind: MessageKind, text: String) -> some View {
+        HStack(spacing: 4) {
+            Button {
+                onShowDiagnostics?()
+            } label: {
+                Image(systemName: kind.symbolName)
+                    .foregroundStyle(kind.tint)
+                    .imageScale(.small)
+            }
+            .buttonStyle(.plain)
+            .onHover { hovering in
+                if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+            }
+            .popover(isPresented: $isShowingDiagnostics, arrowEdge: .trailing) {
+                if let state = pipelineState {
+                    ProjectDiagnosticPopover(
+                        project: project, state: state, liveData: liveData
+                    )
+                    .padding(16)
+                    .frame(width: 360, height: 320)
+                }
+            }
+            .accessibilityHidden(true)
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
     }
@@ -336,8 +381,10 @@ struct ProjectRow: View {
     /// One-of variants of the subtitle composition. The precedence chain
     /// collapses concurrent conditions into a single variant before we render.
     private enum SubtitleVariant {
-        /// `.failed` pipeline state — ⚠ prefix + summary, no delta composition.
-        case failed(summary: String)
+        /// A failure-shaped state (`.failed` / `.failedWithDiagnostic` /
+        /// `.completedPartial`) — a clickable `MessageKind` glyph that opens the
+        /// diagnostic popover, plus a one-line summary. No delta composition.
+        case diagnostic(kind: MessageKind, text: String)
         /// Verb-led pipeline state (running / stopped / partial / queued /
         /// unreachable) — text speaks; no prefix, no delta.
         case pipelineText(String)
@@ -383,16 +430,16 @@ struct ProjectRow: View {
         // Pipeline-state subtitles.
         switch pipelineState {
         case .failed(let summary, _):
-            return .failed(summary: summary)
+            return .diagnostic(kind: .error, text: summary)
         case .failedWithDiagnostic:
             // Sidebar is the attention surface, not the detail surface —
             // budget is ~22 EN chars before DE/ES/FR swell truncates. The
             // toolbar pill carries the dominant category + count; the
             // sidebar row just says "row needs your eyes". Per
             // `feedback_sidebar_is_attention_not_affordance`.
-            return .failed(summary: i18n.t("desktop.pipeline.diagnostic.header.failed"))
+            return .diagnostic(kind: .error, text: i18n.t("desktop.pipeline.diagnostic.header.failed"))
         case .completedPartial:
-            return .pipelineText(i18n.t("desktop.pipeline.diagnostic.header.completed_partial"))
+            return .diagnostic(kind: .warning, text: i18n.t("desktop.pipeline.diagnostic.header.completed_partial"))
         case .running:
             let key = isStoppingProgress
                 ? "desktop.chrome.pipeline.stopping"

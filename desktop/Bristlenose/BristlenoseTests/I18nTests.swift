@@ -133,7 +133,7 @@ struct I18nTests {
         i18n.setLocale("cs")
         let base = "desktop.pipeline.diagnostic.overflow"
         for (count, form) in [(1, "one"), (3, "few"), (7, "other")] {
-            let out = PipelineActivityItem.localisedOverflowText(
+            let out = ProjectDiagnosticPopover.localisedOverflowText(
                 message: "… and \(count) more failures truncated", i18n: i18n)
             let expected = i18n.t("\(base)_\(form)", ["count": String(count)])
             #expect(out == expected, "cs count=\(count) should pick overflow_\(form)")

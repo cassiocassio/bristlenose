@@ -3,7 +3,7 @@ import Testing
 @testable import Bristlenose
 
 /// Tests for `PipelineSummary` Codable mirror + `dominantCategory()` +
-/// `PipelineActivityItem.formatDiagnosticPlaintext`.
+/// `ProjectDiagnosticPopover.formatDiagnosticPlaintext`.
 ///
 /// The Codable round-trip runs every scenario in
 /// `tests/fixtures/pipeline-summary-contract.json` — both sides of the
@@ -169,7 +169,7 @@ struct PipelineSummaryTests {
     @Test func plaintextIncludesDominantCategoryAndBucketHeaders() throws {
         let scenario = try requireScenario("run_completed_partial")
         let summary = try decodeSummary(from: scenario)
-        let text = PipelineActivityItem.formatDiagnosticPlaintext(
+        let text = ProjectDiagnosticPopover.formatDiagnosticPlaintext(
             summary: summary,
             projectName: "Test Project",
             projectPath: "/Users/x/path",
@@ -186,7 +186,7 @@ struct PipelineSummaryTests {
     @Test func plaintextOverflowMarkerUsesWarningGlyph() throws {
         let scenario = try requireScenario("run_completed_partial_truncated")
         let summary = try decodeSummary(from: scenario)
-        let text = PipelineActivityItem.formatDiagnosticPlaintext(
+        let text = ProjectDiagnosticPopover.formatDiagnosticPlaintext(
             summary: summary,
             projectName: "X", projectPath: "/p",
             abandoned: false
@@ -221,7 +221,7 @@ struct PipelineSummaryTests {
         // regression a user-visible-but-not-asserted bug hides.
         let i18n = I18n()
         i18n.configure(localesDirectory: Self.productionLocalesURL)
-        let rendered = PipelineActivityItem.localisedOverflowText(
+        let rendered = ProjectDiagnosticPopover.localisedOverflowText(
             message: "... and 1 more failure truncated", i18n: i18n
         )
         // English singular form contains "1 more failure" (singular). The
@@ -239,7 +239,7 @@ struct PipelineSummaryTests {
         // count=N (N > 1) dispatches to `overflow_other`.
         let i18n = I18n()
         i18n.configure(localesDirectory: Self.productionLocalesURL)
-        let rendered = PipelineActivityItem.localisedOverflowText(
+        let rendered = ProjectDiagnosticPopover.localisedOverflowText(
             message: "... and 4 more failures truncated", i18n: i18n
         )
         #expect(rendered.contains("4"))
@@ -253,7 +253,7 @@ struct PipelineSummaryTests {
         // locale key as a literal.
         let i18n = I18n()
         i18n.configure(localesDirectory: Self.productionLocalesURL)
-        let rendered = PipelineActivityItem.localisedOverflowText(
+        let rendered = ProjectDiagnosticPopover.localisedOverflowText(
             message: "no count here", i18n: i18n
         )
         #expect(rendered == "no count here")
@@ -273,7 +273,7 @@ struct PipelineSummaryTests {
         ]
         for (input, expected) in cases {
             #expect(
-                PipelineActivityItem.parseOverflowCount(from: input) == expected,
+                ProjectDiagnosticPopover.parseOverflowCount(from: input) == expected,
                 "input: \(input)"
             )
         }
@@ -282,7 +282,7 @@ struct PipelineSummaryTests {
     @Test func plaintextSanitisesProjectPath() throws {
         let scenario = try requireScenario("run_failed_abandoned")
         let summary = try decodeSummary(from: scenario)
-        let text = PipelineActivityItem.formatDiagnosticPlaintext(
+        let text = ProjectDiagnosticPopover.formatDiagnosticPlaintext(
             summary: summary,
             projectName: "X",
             projectPath: "/Users/someone/secret/path",

@@ -1389,9 +1389,11 @@ struct ContentView: View {
             }
         }
 
-        // Search — always rightmost, always active. The web layer handles
-        // context: Quotes → search bar, Sessions → transcript search,
-        // Codebook → filter codes, Analysis → filter signals.
+        // Search — rightmost in `.primaryAction`, always active. Declared last
+        // so it sits at the trailing edge of the capsule (Notes / Mail / Finder
+        // convention). The web layer routes per tab: Quotes → search bar,
+        // Sessions → transcript search, Codebook → filter codes, Analysis →
+        // filter signals.
         ToolbarItem(placement: .primaryAction) {
             Button { bridgeHandler.menuAction("find") } label: {
                 Label(i18n.t("desktop.toolbar.search"), systemImage: "magnifyingglass")
@@ -1399,16 +1401,14 @@ struct ContentView: View {
             .help(i18n.t("desktop.toolbar.searchShortcut"))
         }
 
-        // Pipeline activity pill — only visible when the selected project's
-        // run is .running / .queued / .failed / .completedPartial /
-        // .failedWithDiagnostic. Self-hides otherwise.
-        //
-        // `placement: .status` (macOS-only) gives the pill its own zone in
-        // the trailing toolbar, separate from the `.primaryAction` cluster
-        // that holds Share + Search. Without this, macOS 26's unified
-        // trailing-actions capsule visually contains the pill *inside*
-        // the search-shaped chrome — wrong for a per-project status
-        // indicator.
+        // Ambient pills — all three share `placement: .status` (macOS-only) so
+        // they sit in their own zone, separate from the `.primaryAction`
+        // capsule (Export + contextual toggles + Search). Without this,
+        // macOS 26's unified trailing-actions capsule visually absorbs the
+        // pills into the search-shaped chrome, which reads wrong for passive
+        // status indicators. Uniform rule: actions go `.primaryAction`,
+        // ambient self-hiding status indicators go `.status`. See toolbar
+        // discussion notes for the three-pill simultaneity analysis.
         if let project = selectedProject {
             ToolbarItem(placement: .status) {
                 PipelineActivityItem(
@@ -1419,16 +1419,10 @@ struct ContentView: View {
             }
         }
 
-        // Copy-in-flight pill — self-hides when copyMachinery.inFlight is nil.
-        ToolbarItem(placement: .primaryAction) {
+        ToolbarItem(placement: .status) {
             CopyProgressPill(copyMachinery: copyMachinery)
         }
 
-        // Ambient local-model pull pill — self-hides when idle. `.status`
-        // (not `.primaryAction`) per spec §8: like PipelineActivityItem above
-        // this is a passive ambient indicator, so it earns its own trailing
-        // zone instead of being absorbed into macOS 26's primary-action capsule
-        // alongside Share + Search.
         ToolbarItem(placement: .status) {
             OllamaDownloadPill(model: ollamaDownload)
         }
@@ -1890,10 +1884,12 @@ struct ExportMenuButton: View {
 
     var body: some View {
         Menu {
+            // Shortcut (Cmd+Shift+E) lives on the File > Export Report… item
+            // in MenuCommands.swift — single source so re-binding only touches
+            // one place. The toolbar Menu item invokes the same bridge action.
             Button(i18n.t("desktop.menu.file.exportReport")) {
                 bridgeHandler.menuAction("exportReport")
             }
-            .keyboardShortcut("e", modifiers: [.command, .shift])
 
             if bridgeHandler.activeTab == .quotes {
                 Divider()

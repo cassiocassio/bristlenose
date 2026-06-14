@@ -354,6 +354,12 @@ struct ContentView: View {
                 }
             }
         }
+        // Keep Project ▸ Stop Analysis (⌘.) enablement current as runs
+        // start/stop for the selected project (selection-time sync lives in
+        // applySelectionChange; `state` is low-frequency, unlike liveData).
+        .onChange(of: pipelineRunner.state) { _, _ in
+            updateSelectedProjectRunState()
+        }
         .onAppear {
             // Restore last-selected project from persisted ID.
             if selection.isEmpty, !persistedProjectID.isEmpty,
@@ -437,7 +443,8 @@ struct ContentView: View {
             renamingFolderID: $renamingFolderID,
             projectIndex: projectIndex,
             onLocate: { project in locateProject(project) },
-            onRemoveFromSidebar: { removeSelectedProjectsFromSidebar() }
+            onRemoveFromSidebar: { removeSelectedProjectsFromSidebar() },
+            onStop: { project in pipelineRunner.cancel(project: project) }
         ))
         .sheet(isPresented: $showingAIConsent) {
             AIConsentView(
@@ -600,6 +607,8 @@ struct ContentView: View {
                 bridgeHandler.selectedProjectPath = project.path
                 bridgeHandler.selectedProjectAvailable = project.isAvailable
                 bridgeHandler.selectedProjectRevealablePath = revealPath(for: project) ?? ""
+                bridgeHandler.selectedProjectIsRunning =
+                    isRunningOrQueued(pipelineRunner.state[id])
                 projectIndex.updateLastOpened(id: id)
                 // Gate serve on consent + availability — no data leaves the machine
                 // before the user has seen the AI data disclosure (Apple 5.1.2(i)).
@@ -1595,6 +1604,18 @@ struct ContentView: View {
         }
     }
 
+    /// Mirror the sole-selected project's run state into the bridge so the
+    /// Project ▸ Stop Analysis (⌘.) menu item dims when there's nothing to
+    /// stop. Called on pipeline-state change; selection-time sync is inline in
+    /// `applySelectionChange`.
+    private func updateSelectedProjectRunState() {
+        if case .project(let id) = (selection.count == 1 ? selection.first : nil) {
+            bridgeHandler.selectedProjectIsRunning = isRunningOrQueued(pipelineRunner.state[id])
+        } else {
+            bridgeHandler.selectedProjectIsRunning = false
+        }
+    }
+
     /// True for failure-shaped states that have a diagnostic to show.
     private func isFailureState(_ s: PipelineState?) -> Bool {
         switch s {
@@ -1869,6 +1890,7 @@ private struct ProjectNotificationReceivers: ViewModifier {
     let projectIndex: ProjectIndex
     let onLocate: (Project) -> Void
     let onRemoveFromSidebar: () -> Void
+    let onStop: (Project) -> Void
 
     /// The single selected item, if exactly one.
     private var sole: SidebarSelection? {
@@ -1907,6 +1929,12 @@ private struct ProjectNotificationReceivers: ViewModifier {
                 guard case .project(let id) = sole else { return }
                 if let project = projectIndex.projects.first(where: { $0.id == id }) {
                     onLocate(project)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .stopSelectedProject)) { _ in
+                guard case .project(let id) = sole else { return }
+                if let project = projectIndex.projects.first(where: { $0.id == id }) {
+                    onStop(project)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .removeSelectedProjectsFromSidebar)) { _ in

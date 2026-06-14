@@ -259,6 +259,11 @@ extension Notification.Name {
 
     /// Posted by Project > Locate… to re-point a moved/deleted project.
     static let locateSelectedProject = Notification.Name("bristlenoseLocateSelectedProject")
+
+    /// Posted by Project > Stop Analysis (⌘.) to cancel the selected project's
+    /// run. The keyboard accelerator for the hover-× / context-menu Stop; acts
+    /// on the sole-selected project (the menu item dims when it isn't running).
+    static let stopSelectedProject = Notification.Name("bristlenoseStopSelectedProject")
 }
 
 // MARK: - Project index (persistence)

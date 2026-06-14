@@ -514,6 +514,16 @@ private struct ProjectMenuContent: View {
                 .disabled(bridgeHandler.selectedProjectPath.isEmpty)
             }
 
+            // ⌘. is the canonical macOS Stop/Cancel; here it's the keyboard
+            // accelerator for the row's hover-× and context-menu Stop. Acts on
+            // the sole-selected project; dimmed (not hidden) when it isn't
+            // running, per menu-bar HIG (context menus hide instead).
+            Button(i18n.t("desktop.menu.project.stopAnalysis")) {
+                NotificationCenter.default.post(name: .stopSelectedProject, object: nil)
+            }
+            .keyboardShortcut(".", modifiers: .command)
+            .disabled(!bridgeHandler.selectedProjectIsRunning)
+
             Button(i18n.t("desktop.menu.project.reAnalyse")) {
                 bridgeHandler.menuAction("reAnalyse")
             }

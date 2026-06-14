@@ -85,6 +85,13 @@ final class BridgeHandler: ObservableObject {
     /// to reveal — menu items should dim.
     @Published var selectedProjectRevealablePath: String = ""
 
+    /// Whether the currently selected project has a run in flight (running or
+    /// queued). Mirrored from `PipelineRunner.state` by ContentView on both
+    /// selection change and state change. Drives the enable/disable of
+    /// Project ▸ Stop Analysis (⌘.) — the menu-bar accelerator for the
+    /// hover-× / context-menu Stop. Dimmed (not hidden) when false, per HIG.
+    @Published var selectedProjectIsRunning: Bool = false
+
     /// Reference to the WKWebView for outbound calls (goBack, switchToTab).
     /// Set by WebView.makeNSView, cleared on reset(). Weak to avoid retain cycles.
     weak var webView: WKWebView?
@@ -283,6 +290,7 @@ final class BridgeHandler: ObservableObject {
         selectedProjectRevealablePath = ""
         selectedFolderName = ""
         selectedProjectAvailable = true
+        selectedProjectIsRunning = false
         webView = nil
     }
 

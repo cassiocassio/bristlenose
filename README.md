@@ -18,7 +18,7 @@ Filter your quotes, and export via CSV to your boards in Miro, Figjam, Mural or 
 
 Bristlenose transcribes locally, and can do the thematic analysis on a (built in) local LLM — but for speedy results you'll want an API key from Claude, ChatGPT, Gemini, or Azure OpenAI. For commercial work, check your org's policies on public LLM use.
 
-A study costs about $0.40 per hour of interview audio, with Claude — LLM provider costs vary.
+Expect about $0.40 per hour of interview audio with Claude — provider costs vary.
 
 Pre-release software, without warranty. All feedback welcome.  
 <!-- TODO: screenshot of an HTML report here -->
@@ -55,7 +55,7 @@ The report includes:
 - **Word-level transcript highlighting** -- karaoke-style sync with video playback
 - **Video clip extraction** -- export starred quotes as video clips (FFmpeg stream-copy)
 - **Self-contained HTML export** -- one-click bundle for stakeholders, optional anonymisation
-- **Six languages** -- en, es, fr, de, ko, ja (`--lang` flag)
+- **Seven languages** -- en, es, fr, de, ko, ja, cs (`--lang` flag)
 
 
 ## Install
@@ -264,6 +264,8 @@ bristlenose analyze interviews/bristlenose-output/       # skip transcription, r
 bristlenose serve interviews                             # open a previous report (no analysis)
 bristlenose status interviews                            # check project status (read-only)
 bristlenose doctor                                       # check dependencies
+bristlenose codebooks                                    # list AutoCode framework templates
+bristlenose pipeline                                     # show which AI models each stage uses
 ```
 
 ### Configuration
@@ -304,7 +306,7 @@ Priorities may shift. If something is missing that matters to you, [open an issu
 **Developers** -- Python 3.10+, fully typed, Pydantic models. See [CONTRIBUTING.md](CONTRIBUTING.md) for the CLA, project layout, and design system docs.
 
 **Help us test** -- we'd love feedback from people using bristlenose with:
-- **Gemini** -- newly added; budget option at ~$0.06 per hour of interview audio
+- **Gemini** -- budget option at ~$0.06 per hour of interview audio
 - **Azure OpenAI** -- enterprise deployments
 - **Windows** -- the pipeline works but hasn't been widely tested
 - **Linux** -- pipx works today; snap is deferred (CI build is currently broken)
@@ -333,7 +335,7 @@ On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows
 ### Verify everything works
 
 ```bash
-.venv/bin/python -m pytest tests/    # ~2300 Python tests; frontend has ~1300 Vitest tests (`npm test` in frontend/)
+.venv/bin/python -m pytest tests/    # ~2800 Python tests; frontend has ~1300 Vitest tests (`npm test` in frontend/)
 .venv/bin/ruff check .               # lint
 .venv/bin/mypy bristlenose/          # type check (some third-party SDK errors are expected)
 ```
@@ -351,7 +353,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full project layout, but the shor
 - `bristlenose/server/` -- FastAPI + SQLite + SQLAlchemy data layer behind serve mode
 - `bristlenose/stages/` -- 12-stage pipeline (ingest through render), one module per stage
 - `bristlenose/llm/` -- multi-provider client + prompt templates (Markdown)
-- `bristlenose/locales/` -- six UI locales (en, es, fr, de, ko, ja)
+- `bristlenose/locales/` -- seven UI locales (en, es, fr, de, ko, ja, cs)
 - `desktop/` -- SwiftUI macOS shell that bundles a signed PyInstaller sidecar
 - `bristlenose/pipeline.py` -- orchestrator that wires the stages together
 - `bristlenose/cli.py` -- Typer CLI entry point

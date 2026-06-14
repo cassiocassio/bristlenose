@@ -52,6 +52,8 @@
       "moveTo": "Move to",
       "noFolder": "No Folder",
       "reAnalyse": "Re-analyse…",
+      "stopAnalysis": "Stop Analysis",
+      "showDiagnostics": "Show Diagnostics…",
       "archive": "Archive…",
       "delete": "Delete…",
       "chooseIcon": "Choose Icon"

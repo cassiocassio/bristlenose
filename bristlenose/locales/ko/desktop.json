@@ -52,6 +52,8 @@
       "moveTo": "이동",
       "noFolder": "폴더 없음",
       "reAnalyse": "재분석…",
+      "stopAnalysis": "분석 중지",
+      "showDiagnostics": "진단 보기…",
       "archive": "보관…",
       "delete": "삭제…",
       "chooseIcon": "아이콘 선택"

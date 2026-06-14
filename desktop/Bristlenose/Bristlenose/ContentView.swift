@@ -1593,6 +1593,23 @@ struct ContentView: View {
         )
     }
 
+    /// True when a run is active (or queued) for this project — gates the
+    /// context-menu Stop item.
+    private func isRunningOrQueued(_ s: PipelineState?) -> Bool {
+        switch s {
+        case .running, .queued: return true
+        default: return false
+        }
+    }
+
+    /// True for failure-shaped states that have a diagnostic to show.
+    private func isFailureState(_ s: PipelineState?) -> Bool {
+        switch s {
+        case .failed, .completedPartial, .failedWithDiagnostic: return true
+        default: return false
+        }
+    }
+
     /// A single project row with context menu (used at root level and inside folders).
     @ViewBuilder
     private func projectRow(_ project: Project) -> some View {
@@ -1643,6 +1660,22 @@ struct ContentView: View {
         .tag(SidebarSelection.project(project.id))
         .draggable(ProjectDragID(id: project.id))
         .contextMenu {
+            // Run lifecycle, most contextually-relevant first. Hidden (not
+            // dimmed) when N/A — context-menu HIG.
+            if isRunningOrQueued(pipelineRunner.state[project.id]) {
+                Button(i18n.t("desktop.menu.project.stopAnalysis")) {
+                    pipelineRunner.cancel(project: project)
+                }
+                Divider()
+            }
+            if isFailureState(pipelineRunner.state[project.id]) {
+                Button(i18n.t("desktop.menu.project.showDiagnostics")) {
+                    selection = [.project(project.id)]
+                    diagnosticProjectID = project.id
+                }
+                Divider()
+            }
+
             // "Locate…" for moved/deleted projects — actionable first.
             if case .cantFind = project.availability {
                 Button(i18n.t("desktop.chrome.locate")) {

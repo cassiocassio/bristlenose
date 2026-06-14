@@ -614,8 +614,12 @@ final class PipelineRunner: ObservableObject {
     /// polling strategy for attached orphans lands in Slice 7.)
     private func applyScanResult(_ resolved: PipelineState, for projectID: UUID) {
         switch state[projectID] {
-        case .running, .queued, .failed, .completedPartial, .failedWithDiagnostic:
+        case .running, .queued, .stopped, .partial, .failed,
+             .completedPartial, .failedWithDiagnostic:
             // .running/.queued: live state owned by the runner, not the manifest.
+            // .stopped / .partial: terminal runner-owned states (user cancelled,
+            // or transcribe-only completed) — a passive manifest re-scan must
+            // not flicker them, which would jitter the sidebar activity glyphs.
             // .failed / .completedPartial / .failedWithDiagnostic: a stale
             // manifest must not erase a fresh diagnostic summary (and its
             // Retry / Copy / Email CTAs) just because the prior run wrote

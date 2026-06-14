@@ -219,18 +219,23 @@ struct ProjectRow: View {
         }
     }
 
-    /// Right-aligned subtitle slot — status glyph showing the project lives
-    /// in iCloud, otherwise empty. Finder-esque placement.
+    /// Right-aligned subtitle slot. Precedence: per-project run activity wins,
+    /// otherwise the iCloud status glyph, otherwise empty.
     ///
-    /// Uses the outline `icloud` (not `.fill`, not `.and.arrow.down`):
-    /// status-only, no action attached. Matches Finder's sidebar treatment
-    /// for cloud-managed locations — a quiet warning that opening the
-    /// project may pause while macOS fetches evicted files. macOS handles
-    /// the fetch transparently when the project is opened; no explicit
-    /// download affordance for TF.
+    /// The activity indicator carries the *motion* signal for an in-flight run
+    /// (its determinate, time-weighted form lands with the events channel in a
+    /// later increment). The cloud glyph is the outline `icloud` (not `.fill`,
+    /// not `.and.arrow.down`): status-only, no action attached — Finder's
+    /// treatment for cloud-managed locations. macOS fetches evicted files
+    /// transparently on open; no explicit download affordance for TF. A run and
+    /// iCloud-eviction are mutually exclusive in practice (a run can't proceed
+    /// on evicted sources), but the precedence keeps it honest either way.
     @ViewBuilder
     private var subtitleRightSlot: some View {
-        if case .inCloud = availability {
+        let activity = ProjectRowActivityIndicator.Kind.from(pipelineState: pipelineState)
+        if activity != .none {
+            ProjectRowActivityIndicator(kind: activity)
+        } else if case .inCloud = availability {
             Image(systemName: "icloud")
                 .foregroundStyle(.secondary)
                 .imageScale(.small)
@@ -561,6 +566,37 @@ struct ProjectRow: View {
 
     // MARK: - Accessibility
 
+    /// Pipeline state rendered as words for VoiceOver. Reuses the same locale
+    /// keys as the visible subtitle so wording can't drift. Exhaustive (no
+    /// `default:`) so a new `PipelineState` case forces a decision here too.
+    private var pipelineStateAccessibilityPhrase: String? {
+        switch pipelineState {
+        case .running:
+            return i18n.t(isStoppingProgress
+                ? "desktop.chrome.pipeline.stopping"
+                : "desktop.chrome.pipeline.analysing")
+        case .queued(let position):
+            return i18n.t("desktop.chrome.pipeline.queuedPosition",
+                          ["position": String(position)])
+        case .stopped:
+            return i18n.t("desktop.chrome.pipeline.stopped")
+        case .partial(let kind, _):
+            return i18n.t(kind == "transcribe-only"
+                ? "desktop.chrome.pipeline.transcribed"
+                : "desktop.chrome.pipeline.partialRun")
+        case .failed(let summary, _):
+            return summary
+        case .failedWithDiagnostic:
+            return i18n.t("desktop.pipeline.diagnostic.header.failed")
+        case .completedPartial:
+            return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")
+        case .unreachable(let reason):
+            return reason
+        case .scanning, .ready, .idle, .none:
+            return nil
+        }
+    }
+
     private var accessibilityLabel: String {
         var label = project.name
         if !available {
@@ -577,6 +613,12 @@ struct ProjectRow: View {
             case .ready:
                 break
             }
+        }
+        // Pipeline state — the visible subtitle carries this for sighted
+        // users, but this combined label overrides children, so VoiceOver
+        // would otherwise never hear "Analysing…", "Queued", "Failed".
+        if let phrase = pipelineStateAccessibilityPhrase {
+            label += ", \(phrase)"
         }
         // Always announce session count + deltas if present.
         if let count = unanalysed?.sessionCount {

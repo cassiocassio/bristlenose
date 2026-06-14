@@ -52,6 +52,8 @@
       "moveTo": "Bewegen in",
       "noFolder": "Kein Ordner",
       "reAnalyse": "Erneut analysieren…",
+      "stopAnalysis": "Analyse stoppen",
+      "showDiagnostics": "Diagnose anzeigen…",
       "archive": "Archivieren…",
       "delete": "Löschen…",
       "chooseIcon": "Symbol auswählen"

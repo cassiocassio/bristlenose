@@ -52,6 +52,8 @@
       "moveTo": "移動先",
       "noFolder": "フォルダなし",
       "reAnalyse": "再分析…",
+      "stopAnalysis": "分析を停止",
+      "showDiagnostics": "診断を表示…",
       "archive": "アーカイブ…",
       "delete": "削除…",
       "chooseIcon": "アイコンを選択"

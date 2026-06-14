@@ -52,6 +52,8 @@
       "moveTo": "Přesunout do",
       "noFolder": "Žádná složka",
       "reAnalyse": "Znovu analyzovat…",
+      "stopAnalysis": "Zastavit analýzu",
+      "showDiagnostics": "Zobrazit diagnostiku…",
       "archive": "Archivovat…",
       "delete": "Smazat…",
       "chooseIcon": "Vybrat ikonu"

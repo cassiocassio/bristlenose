@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sidebar activity indicators — mockup</title>
+<!--
+  Throwaway design mockup for docs/design-sidebar-activity-indicators.md.
+  Animated timeline: a small + large project run through the 10-stage pipeline on a sped-up clock.
+  Encodes the plan's assumptions: FIFO single-slot queue, Welford ETA-weighted determinate ring
+  (with monotonic + asymptote honesty rules), terse markers-first text that truncates to tooltip,
+  per-session counts, self-hiding global model-download pill, collapsed-folder aggregate, partial
+  terminus. Cloud is a static availability glyph (no fetch animation) per the shipped F49 decision.
+  Self-contained: defines its own --color-* tokens (light/dark) rather than the app theme.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.17.0/dist/tabler-icons.min.css" />
+<style>
+:root {
+  --color-background-primary:#ffffff; --color-background-secondary:#f5f4ef; --color-background-tertiary:#eceae3;
+  --color-background-info:#e6f1fb;
+  --color-text-primary:#1a1a18; --color-text-secondary:#5f5e5a; --color-text-tertiary:#8a8980;
+  --color-text-info:#0c447c; --color-text-warning:#b46a00; --color-text-danger:#a32d2d;
+  --color-border-tertiary:rgba(0,0,0,0.12); --color-border-secondary:rgba(0,0,0,0.22); --color-border-info:#378add;
+  --border-radius-md:8px; --border-radius-lg:12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background-primary:#1e1e1c; --color-background-secondary:#262624; --color-background-tertiary:#2f2f2c;
+    --color-background-info:#0c2a47;
+    --color-text-primary:#ededea; --color-text-secondary:#a8a79f; --color-text-tertiary:#77766f;
+    --color-text-info:#85b7eb; --color-text-warning:#f0b057; --color-text-danger:#f09595;
+    --color-border-tertiary:rgba(255,255,255,0.12); --color-border-secondary:rgba(255,255,255,0.22); --color-border-info:#378add;
+  }
+}
+* { box-sizing: border-box; }
+body { margin:0; padding:24px; background:var(--color-background-tertiary); color:var(--color-text-primary);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif; }
+.wrap { max-width:720px; margin:0 auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { display:inline-block; width:13px; height:13px; border:2px solid var(--color-border-secondary); border-top-color:var(--color-text-secondary); border-radius:50%; animation:spin 0.8s linear infinite; vertical-align:middle; }
+.row { display:flex; align-items:center; gap:9px; padding:6px 8px; border-radius:var(--border-radius-md); }
+.frow { display:flex; align-items:center; gap:7px; padding:6px 8px; border-radius:var(--border-radius-md); }
+.kids { padding-left:14px; }
+.txt { flex:1; min-width:0; }
+.rt { font-size:13px; color:var(--color-text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rs { font-size:11px; color:var(--color-text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cnt { font-size:11px; color:var(--color-text-tertiary); min-width:14px; text-align:right; }
+.fname { font-size:12px; font-weight:500; color:var(--color-text-secondary); flex:1; }
+.trail { flex:none; display:inline-flex; align-items:center; gap:5px; }
+.ctlbtn { font-size:12px; padding:3px 9px; border:0.5px solid var(--color-border-secondary); border-radius:var(--border-radius-md); background:transparent; color:var(--color-text-primary); cursor:pointer; }
+.ctlbtn.on { background:var(--color-background-info); color:var(--color-text-info); border-color:var(--color-border-info); }
+@media (prefers-reduced-motion: reduce) { .spin { animation:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+  <button class="ctlbtn" id="btnPlay">Pause</button>
+  <button class="ctlbtn" id="btnRestart">Restart</button>
+  <span style="font-size:11px;color:var(--color-text-tertiary);">speed</span>
+  <button class="ctlbtn" data-spd="1">1×</button>
+  <button class="ctlbtn on" data-spd="4">4×</button>
+  <button class="ctlbtn" data-spd="16">16×</button>
+  <span style="flex:1;"></span>
+  <span style="font-size:11px;color:var(--color-text-secondary);">run clock (demo, sped up): <span id="clock" style="font-variant-numeric:tabular-nums;color:var(--color-text-primary);">0:00</span></span>
+</div>
+
+<div style="background:var(--color-background-primary); border:0.5px solid var(--color-border-secondary); border-radius:var(--border-radius-lg); overflow:hidden;">
+
+  <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:0.5px solid var(--color-border-tertiary);">
+    <div style="display:flex; gap:6px;">
+      <span style="width:11px;height:11px;border-radius:50%;background:#ff5f57;"></span>
+      <span style="width:11px;height:11px;border-radius:50%;background:#febc2e;"></span>
+      <span style="width:11px;height:11px;border-radius:50%;background:#28c840;"></span>
+    </div>
+    <i class="ti ti-layout-sidebar" style="font-size:18px;color:var(--color-text-secondary);"></i>
+    <div style="flex:1; text-align:center; font-size:13px; font-weight:500; color:var(--color-text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; margin:0 auto;">Pricing Pilot Q4 Discovery</div>
+    <div id="ollamaPill" style="display:flex; align-items:center; gap:6px; padding:3px 10px; border:0.5px solid var(--color-border-secondary); border-radius:999px; font-size:12px; color:var(--color-text-secondary);">
+      <span id="ollamaRing"></span><span id="ollamaTxt">Getting llama3.2 · 0%</span>
+    </div>
+    <i class="ti ti-upload" style="font-size:18px;color:var(--color-text-secondary);"></i>
+    <i class="ti ti-search" style="font-size:18px;color:var(--color-text-secondary);"></i>
+  </div>
+
+  <div style="display:flex; min-height:360px;">
+
+    <div style="width:256px; border-right:0.5px solid var(--color-border-tertiary); background:var(--color-background-secondary); padding:8px;">
+
+      <div class="frow">
+        <i class="ti ti-chevron-down" style="font-size:14px;color:var(--color-text-tertiary);"></i>
+        <i class="ti ti-folder-open" style="font-size:17px;color:var(--color-text-secondary);"></i>
+        <span class="fname">Client work</span>
+      </div>
+      <div class="kids">
+        <div class="row" style="background:var(--color-background-info);">
+          <i class="ti ti-target" style="font-size:17px;color:var(--color-text-info);"></i>
+          <div class="txt"><div class="rt" style="color:var(--color-text-info);" title="Pricing Pilot Q4 Discovery">Pricing Pilot Q4 Discovery</div><div class="rs" style="color:var(--color-text-info);">Analysed yesterday</div></div>
+          <span class="cnt" style="color:var(--color-text-info);">9</span>
+        </div>
+        <div class="row">
+          <i class="ti ti-building-bank" style="font-size:17px;color:var(--color-text-secondary);"></i>
+          <div class="txt"><div class="rt">Banking Onboarding Q3</div><div class="rs" id="rowLargeSub" title="">Waiting…</div></div>
+          <span class="trail" id="rowLargeTrail"></span>
+        </div>
+        <div class="row">
+          <i class="ti ti-device-mobile-message" style="font-size:17px;color:var(--color-text-secondary);"></i>
+          <div class="txt"><div class="rt">Mobile Diary Pilot</div><div class="rs" id="rowSmallSub" title="">Queued · next</div></div>
+          <span class="trail" id="rowSmallTrail"></span>
+        </div>
+        <div class="row">
+          <i class="ti ti-package-import" style="font-size:17px;color:var(--color-text-secondary);"></i>
+          <div class="txt"><div class="rt">Retail Imports</div><div class="rs" id="rowCopySub" title="">Ready</div></div>
+          <span class="trail" id="rowCopyTrail"></span>
+        </div>
+      </div>
+
+      <div class="frow">
+        <i class="ti ti-chevron-right" style="font-size:14px;color:var(--color-text-tertiary);"></i>
+        <i class="ti ti-folder" style="font-size:17px;color:var(--color-text-secondary);"></i>
+        <span class="fname">Pitches</span>
+        <span class="trail" id="folderAggTrail"></span>
+      </div>
+
+      <div class="frow">
+        <i class="ti ti-chevron-down" style="font-size:14px;color:var(--color-text-tertiary);"></i>
+        <i class="ti ti-folder-open" style="font-size:17px;color:var(--color-text-secondary);"></i>
+        <span class="fname">Archive 2025</span>
+      </div>
+      <div class="kids">
+        <div class="row">
+          <i class="ti ti-flask" style="font-size:17px;color:var(--color-text-secondary);"></i>
+          <div class="txt"><div class="rt">Delta Concept Test</div><div class="rs" style="color:var(--color-text-warning);">Finished with failures</div></div>
+          <span class="trail"><i class="ti ti-alert-triangle" style="font-size:16px;color:var(--color-text-warning);"></i></span>
+        </div>
+        <div class="row">
+          <i class="ti ti-heart" style="font-size:17px;color:var(--color-text-secondary);"></i>
+          <div class="txt"><div class="rt">Epsilon Loyalty</div><div class="rs" style="color:var(--color-text-danger);">Analysis failed</div></div>
+          <span class="trail"><i class="ti ti-circle-x" style="font-size:16px;color:var(--color-text-danger);"></i></span>
+        </div>
+      </div>
+
+      <div style="height:8px;"></div>
+      <div class="row">
+        <i class="ti ti-device-mobile" style="font-size:17px;color:var(--color-text-secondary);"></i>
+        <div class="txt"><div class="rt">Zeta Mobile Audit</div><div class="rs">In iCloud</div></div>
+        <span class="trail"><i class="ti ti-cloud" style="font-size:16px;color:var(--color-text-tertiary);" title="Cloud-managed — macOS downloads it on open"></i></span>
+      </div>
+
+    </div>
+
+    <div style="flex:1; padding:16px; min-width:0;">
+      <div style="font-size:15px; font-weight:500; color:var(--color-text-primary); margin-bottom:4px;">Pricing Pilot Q4 Discovery</div>
+      <div style="font-size:12px; color:var(--color-text-tertiary); margin-bottom:14px;">9 sessions · served from the report SPA (this project is just being viewed)</div>
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px;">
+        <div style="background:var(--color-background-secondary); border-radius:var(--border-radius-md); padding:10px;"><div style="font-size:11px;color:var(--color-text-secondary);">Quotes</div><div style="font-size:20px;font-weight:500;color:var(--color-text-primary);">168</div></div>
+        <div style="background:var(--color-background-secondary); border-radius:var(--border-radius-md); padding:10px;"><div style="font-size:11px;color:var(--color-text-secondary);">Themes</div><div style="font-size:20px;font-weight:500;color:var(--color-text-primary);">11</div></div>
+        <div style="background:var(--color-background-secondary); border-radius:var(--border-radius-md); padding:10px;"><div style="font-size:11px;color:var(--color-text-secondary);">Friction</div><div style="font-size:20px;font-weight:500;color:var(--color-text-primary);">6</div></div>
+      </div>
+      <div style="border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); padding:10px; margin-bottom:8px;">
+        <div style="font-size:12px; color:var(--color-text-primary); line-height:1.5;">&ldquo;I check the fees screen before I commit to anything.&rdquo;</div>
+        <div style="font-size:11px; color:var(--color-text-tertiary); margin-top:4px;">P07 · Fee transparency</div>
+      </div>
+      <div style="border:0.5px solid var(--color-border-tertiary); border-radius:var(--border-radius-md); padding:10px;">
+        <div style="font-size:12px; color:var(--color-text-primary); line-height:1.5;">&ldquo;If onboarding asks for too much up front, I bail.&rdquo;</div>
+        <div style="font-size:11px; color:var(--color-text-tertiary); margin-top:4px;">P12 · Onboarding friction</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-top:12px; font-size:11px; color:var(--color-text-secondary);">
+  <span style="display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="var(--color-border-tertiary)" stroke-width="3.5"/><circle cx="10" cy="10" r="8" fill="none" stroke="var(--color-text-secondary)" stroke-width="3.5" stroke-dasharray="50.3" stroke-dashoffset="20" transform="rotate(-90 10 10)" stroke-linecap="round"/></svg> determinate (ETA-weighted)</span>
+  <span style="display:flex;align-items:center;gap:6px;"><span class="spin"></span> working, duration unknown</span>
+  <span style="display:flex;align-items:center;gap:6px;"><i class="ti ti-cloud" style="color:var(--color-text-tertiary);font-size:14px;"></i> in iCloud (idle)</span>
+  <span style="display:flex;align-items:center;gap:6px;"><i class="ti ti-alert-triangle" style="color:var(--color-text-warning);font-size:14px;"></i> finished with failures</span>
+  <span style="display:flex;align-items:center;gap:6px;"><i class="ti ti-circle-x" style="color:var(--color-text-danger);font-size:14px;"></i> failed</span>
+</div>
+
+</div>
+
+<script>
+(function(){
+  var C = 50.3;
+  function ringHTML(frac){
+    var o = (C * (1 - Math.max(0, Math.min(0.97, frac)))).toFixed(1);
+    return '<svg width="15" height="15" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="var(--color-border-tertiary)" stroke-width="3"/><circle cx="10" cy="10" r="8" fill="none" stroke="var(--color-text-secondary)" stroke-width="3" stroke-dasharray="'+C+'" stroke-dashoffset="'+o+'" transform="rotate(-90 10 10)" stroke-linecap="round"/></svg>';
+  }
+  function miniRingHTML(frac){
+    var o = (C * (1 - Math.max(0, Math.min(1, frac)))).toFixed(1);
+    return '<svg width="13" height="13" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="var(--color-border-tertiary)" stroke-width="3.5"/><circle cx="10" cy="10" r="8" fill="none" stroke="var(--color-text-secondary)" stroke-width="3.5" stroke-dasharray="'+C+'" stroke-dashoffset="'+o+'" transform="rotate(-90 10 10)" stroke-linecap="round"/></svg>';
+  }
+  var spinHTML = '<span class="spin"></span>';
+
+  function proj(sessions, stages){ var total=0; for(var i=0;i<stages.length;i++) total+=stages[i].t; return {sessions:sessions, stages:stages, total:total}; }
+  var large = proj(12, [
+    {v:'Ingesting', t:0.3}, {v:'Extracting audio', t:1.6},
+    {v:'Transcribing', t:22, ps:true}, {v:'Identifying speakers', t:3, ps:true},
+    {v:'Merging', t:0.6}, {v:'Removing PII', t:1.1},
+    {v:'Finding topics', t:4, ps:true}, {v:'Extracting quotes', t:4, ps:true},
+    {v:'Grouping themes', t:1.2}, {v:'Rendering', t:0.5}
+  ]);
+  var small = proj(3, [
+    {v:'Ingesting', t:0.2}, {v:'Extracting audio', t:0.5},
+    {v:'Transcribing', t:3.4, ps:true}, {v:'Identifying speakers', t:0.8, ps:true},
+    {v:'Merging', t:0.2}, {v:'Removing PII', t:0.4},
+    {v:'Finding topics', t:1.0, ps:true}, {v:'Extracting quotes', t:1.0, ps:true},
+    {v:'Grouping themes', t:0.4}, {v:'Rendering', t:0.2}
+  ]);
+
+  function stageInfo(p, el){
+    if(el<=0) return {pre:true};
+    var acc=0;
+    for(var i=0;i<p.stages.length;i++){
+      var s=p.stages[i];
+      if(el < acc+s.t){
+        var sub=(el-acc)/s.t;
+        var k = s.ps ? Math.min(p.sessions, Math.floor(sub*p.sessions)+1) : null;
+        return {v:s.v, k:k, N:p.sessions, ps:!!s.ps};
+      }
+      acc+=s.t;
+    }
+    return {done:true};
+  }
+  function subText(p, el){
+    var info=stageInfo(p, el);
+    if(info.done) return 'done';
+    var rem = p.total - el;
+    var tail = rem < 0.75 ? 'finishing…' : '~'+Math.ceil(rem)+'m left';
+    if(info.ps) return info.v+' '+info.k+'/'+info.N+' · '+tail;
+    return info.v+' · '+tail;
+  }
+  function fmt(min){ var s=Math.max(0,Math.floor(min*60)); var m=Math.floor(s/60); var ss=s%60; return m+':'+(ss<10?'0':'')+ss; }
+
+  var LOOP = large.total + small.total + 6;
+  var sceneT = 0, last = null, playing = true, speed = 4;
+
+  var el = {
+    clock: document.getElementById('clock'),
+    ollamaPill: document.getElementById('ollamaPill'), ollamaRing: document.getElementById('ollamaRing'), ollamaTxt: document.getElementById('ollamaTxt'),
+    largeSub: document.getElementById('rowLargeSub'), largeTrail: document.getElementById('rowLargeTrail'),
+    smallSub: document.getElementById('rowSmallSub'), smallTrail: document.getElementById('rowSmallTrail'),
+    copySub: document.getElementById('rowCopySub'), copyTrail: document.getElementById('rowCopyTrail'),
+    folderAgg: document.getElementById('folderAggTrail'),
+    btnPlay: document.getElementById('btnPlay'), btnRestart: document.getElementById('btnRestart')
+  };
+  function setRow(subEl, trailEl, text, trailHTML){ subEl.textContent = text; subEl.setAttribute('title', text); trailEl.innerHTML = trailHTML; }
+
+  function render(){
+    el.clock.textContent = fmt(Math.min(sceneT, large.total));
+
+    if(sceneT < 7){ var pct=Math.round(sceneT/7*100); el.ollamaPill.style.display='flex'; el.ollamaRing.innerHTML=miniRingHTML(sceneT/7); el.ollamaTxt.textContent='Getting llama3.2 · '+pct+'%'; }
+    else { el.ollamaPill.style.display='none'; }
+
+    if(sceneT >= large.total){ setRow(el.largeSub, el.largeTrail, 'Analysed just now', '<span class="cnt">12</span>'); }
+    else { var le=Math.max(0,sceneT); setRow(el.largeSub, el.largeTrail, subText(large, le), ringHTML(le/large.total)); }
+
+    if(sceneT < large.total){ setRow(el.smallSub, el.smallTrail, 'Queued · next', ''); }
+    else { var se=sceneT-large.total; if(se>=small.total){ el.smallSub.textContent='Finished with failures'; el.smallSub.setAttribute('title','Finished with failures'); el.smallSub.style.color='var(--color-text-warning)'; el.smallTrail.innerHTML='<i class="ti ti-alert-triangle" style="font-size:16px;color:var(--color-text-warning);"></i>'; } else { el.smallSub.style.color=''; setRow(el.smallSub, el.smallTrail, subText(small, se), ringHTML(se/small.total)); } }
+
+    if(sceneT < 2){ setRow(el.copySub, el.copyTrail, 'Ready', '<span class="cnt">7</span>'); }
+    else if(sceneT < 9){ var k=Math.min(12, Math.floor((sceneT-2)/7*12)+1); setRow(el.copySub, el.copyTrail, 'Copying '+k+'/12 files', miniRingHTML((sceneT-2)/7)); }
+    else { setRow(el.copySub, el.copyTrail, 'Added 12 files · just now', '<span class="cnt">19</span>'); }
+
+    el.folderAgg.innerHTML = (sceneT < large.total) ? spinHTML : '';
+  }
+
+  function frame(ts){
+    if(last===null) last=ts;
+    var dt=(ts-last)/1000; last=ts;
+    if(playing){ sceneT += dt*speed; if(sceneT>LOOP){ sceneT=0; el.smallSub.style.color=''; } }
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  el.btnPlay.addEventListener('click', function(){ playing=!playing; el.btnPlay.textContent = playing?'Pause':'Play'; });
+  el.btnRestart.addEventListener('click', function(){ sceneT=0; el.smallSub.style.color=''; });
+  var spds=document.querySelectorAll('[data-spd]');
+  for(var i=0;i<spds.length;i++){ spds[i].addEventListener('click', function(e){ speed=parseFloat(e.target.getAttribute('data-spd')); for(var j=0;j<spds.length;j++) spds[j].classList.remove('on'); e.target.classList.add('on'); }); }
+
+  render();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

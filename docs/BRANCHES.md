@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 9 Jun 2026 (closed `chunked-quote-extraction` branch — merged via `927fa63`)
+**Updated:** 15 Jun 2026 (merged `per-project-activity` → main, FF `35d9c14` — Phase 0 of multi-project)
 
 ---
 
@@ -41,6 +41,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 | `bristlenose_branch llm-provider-default-model/` | `llm-provider-default-model` | bugfix | CLI `--llm <provider>` applies that provider's default model (fixes cross-provider 404) |
+| `bristlenose_branch per-project-activity/` | `per-project-activity` | feature | Move the per-project progress pill from the toolbar into the project sidebar row |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -142,6 +143,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `desktop-provider-resolution` _(merged)_ | `bristlenose_branch desktop-provider-resolution/` _(detached, on disk)_ | local only — merged to main 7 Jun 2026 (`5292802`) |
 | `chunked-quote-extraction` _(merged)_ | `bristlenose_branch chunked-quote-extraction/` _(detached, on disk)_ | local only — merged to main 9 Jun 2026 (`927fa63`) |
 | `llm-provider-default-model` | `bristlenose_branch llm-provider-default-model/` | local only |
+| `per-project-activity` | `bristlenose_branch per-project-activity/` | local only |
 
 
 
@@ -151,6 +153,28 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ## Active Branches
 
 ---
+
+### `per-project-activity`
+
+**Kind:** feature — move the per-project progress pill from the macOS toolbar into the project sidebar row, so pipeline activity is shown against the project it belongs to (in the list) rather than as an ambient toolbar indicator decoupled from the selection.
+**Status:** ✅ Merged to main 15 Jun 2026 (FF `35d9c14`) — Phase 0 / TF visual layer. Awaiting `/close-branch` (worktree still on disk). Multi-project continues on `background-runs-view-switch` (Phase A1).
+**Started:** 14 Jun 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch per-project-activity/`
+**Remote:** local only — push `main` to origin after 9pm (release-timing rule)
+
+**Note (15 Jun):** the implementation went beyond "relocate the pill" — the pill (`PipelineActivityItem.swift`) was **deleted** and replaced by `ProjectRowActivityIndicator` (sidebar spinner + hover-× Stop) + the extracted `ProjectDiagnosticPopover` (failure-glyph popover) + context-menu / Project-menu (⌘.) Stop backstops. 0a shipped the indeterminate spinner; the determinate ETA ring is deferred to Phase 0b. See `docs/design-sidebar-activity-indicators.md`.
+
+**What it does:** Move the per-project progress pill (`PipelineActivityItem`) out of the trailing toolbar `.status` zone and into the per-project sidebar row (`ProjectRow.swift`), so progress is anchored to the project it describes instead of to the global toolbar. This makes activity legible across *multiple* projects at once (the toolbar pill only ever reflected the selected project) and frees the toolbar's ambient `.status` zone. Note: `main` just landed a toolbar refactor (`f27cd25`) that consolidated all three ambient pills — pipeline / copy / Ollama — into `.status`; this branch reverses that decision for the pipeline pill specifically by relocating it into the row.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/ContentView.swift` — remove the `PipelineActivityItem` ToolbarItem from the `.status` zone
+- `desktop/Bristlenose/Bristlenose/ProjectRow.swift` — host the progress pill in the per-project sidebar row (already references the pill)
+- `desktop/Bristlenose/Bristlenose/PipelineActivityItem.swift` — adapt the pill view for sidebar-row placement (sizing, trailing-slot vs subtitle-prefix per sidebar glyph conventions)
+
+**Potential conflicts with other branches:**
+- `gemini-provider` (feature, active) and `llm-provider-default-model` (bugfix, active) touch providers / config / `LLMProvider.swift` / locales — no overlap with the sidebar/toolbar Swift surfaces.
+- `drag-push` (parked) touches the sidebar but is stale (last activity v0.13.3); if it's ever revived, `ProjectRow.swift` is the shared surface to coordinate on.
+- No other active branch touches `ProjectRow.swift` / `PipelineActivityItem.swift` / the `ContentView.swift` toolbar region.
 
 ### `llm-provider-default-model`
 

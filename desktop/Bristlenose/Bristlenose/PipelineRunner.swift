@@ -212,7 +212,7 @@ final class PipelineRunner: ObservableObject {
 
     #if DEBUG
     /// Debug-only state override for the diagnostic-popover fixture harness.
-    /// Used by `PipelineActivityItem.applyDebugFixtureIfNeeded()`. Not
+    /// Used by `_applyDebugFixture(to:)` (called from `ContentView`). Not
     /// compiled into Release builds.
     func _debugSetState(_ state: PipelineState, for projectID: UUID) {
         self.state[projectID] = state
@@ -232,9 +232,12 @@ final class PipelineRunner: ObservableObject {
         case .failed(let s):
             self.state[projectID] = .failedWithDiagnostic(summary: s)
         case .noSummary(let message, let category):
-            // The popover's `applyDebugFixtureIfNeeded` is the synthetic-log
-            // writer for this path (it has access to the Project, which we
-            // don't). Here we just inject the state.
+            // We just inject the state here. The deleted toolbar pill used to
+            // write a synthetic log for this path so its popover could show
+            // "Show Log"; with the pill gone no synthetic log is written, so
+            // the `failed_no_summary` debug scenario's popover omits Show Log
+            // (the button is gated on a real log file existing). Acceptable —
+            // debug-only path; real runs always have a log.
             self.state[projectID] = .failed(message, category: category)
         case .simpleState(let injected):
             self.state[projectID] = injected

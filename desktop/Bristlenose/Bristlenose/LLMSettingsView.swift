@@ -894,7 +894,7 @@ struct LLMSettingsView: View {
 }
 
 /// Small silent copy-to-clipboard button matching the diagnostic popover's idiom
-/// (`PipelineActivityItem`): a `.bordered .small` `doc.on.doc` icon that copies
+/// (`ProjectDiagnosticPopover`): a `.bordered .small` `doc.on.doc` icon that copies
 /// WITHOUT a "Copied" flash — the native Mac pattern (Finder, Safari "Copy URL").
 /// Used for copyable CLI commands in the LLM status area.
 private struct CopyButton: View {

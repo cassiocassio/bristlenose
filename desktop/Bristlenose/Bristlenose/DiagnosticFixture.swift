@@ -5,8 +5,9 @@ import os
 /// synthesized `PipelineSummary`. Lets a contributor reproduce
 /// `.completedPartial` / `.failedWithDiagnostic` without provoking a real
 /// run. Set `BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE=<scenario_name>` in the
-/// active Xcode scheme; `PipelineActivityItem` reads it on first appear and
-/// overrides `pipelineRunner.state[project.id]`. Gated by `#if DEBUG` so
+/// active Xcode scheme; `ContentView` reads it on first appear via
+/// `PipelineRunner._applyDebugFixture(to:)`, which overrides
+/// `pipelineRunner.state[project.id]`. Gated by `#if DEBUG` so
 /// the env-var read + the scenario tables are absent from Release builds.
 ///
 /// **Scenarios are embedded as Swift code, not loaded from JSON.** Earlier
@@ -376,8 +377,8 @@ enum DiagnosticFixture {
                 themes: nil)
         ),
 
-        // Debug-only swatch: triggers a `.completedPartial` (so the pill
-        // is visible) but PipelineActivityItem's popover body intercepts
+        // Debug-only swatch: triggers a `.completedPartial` (so the row
+        // indicator is visible) but `ProjectDiagnosticPopover`'s body intercepts
         // this scenario name and renders the 5-glyph reference card
         // instead. Use this to eyeball the full MessageKind vocabulary
         // (symbol + tint pairs for every kind, alongside the CLI Unicode

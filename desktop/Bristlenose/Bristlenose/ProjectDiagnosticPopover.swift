@@ -1,11 +1,11 @@
 import SwiftUI
 
 /// Diagnostic popover for a failure-shaped pipeline state — `.failed`,
-/// `.completedPartial`, `.failedWithDiagnostic`. Extracted from
-/// `PipelineActivityItem` so it can be presented from the sidebar row's failure
-/// glyph (anchored to the project it describes), not only the toolbar pill.
+/// `.completedPartial`, `.failedWithDiagnostic`. Extracted from the former
+/// toolbar pill (`PipelineActivityItem`, since removed) so it can be presented
+/// from the sidebar row's failure glyph, anchored to the project it describes.
 ///
-/// Chrome (unchanged from the pill's design): status-as-title header + optional
+/// Chrome (carried over from the original pill design): status-as-title header + optional
 /// "Show Log" + a Copy icon; a scrolling per-stage failure breakdown below. No
 /// action row — Retry / Change provider / Re-analyse… live in the project's
 /// natural run affordance + Settings. The reduced-fidelity `.failed` path (no

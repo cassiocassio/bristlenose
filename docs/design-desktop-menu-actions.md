@@ -1,8 +1,13 @@
 ---
-status: trued
-last-trued: 2026-04-24
-trued-against: HEAD@port-v01-ingestion on 2026-04-24
+status: partial
+last-trued: 2026-06-15
+trued-against: HEAD@per-project-activity (518e6d3) on 2026-06-15
 ---
+
+> **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`):** the Project menu + row context menu
+> gained **Stop Analysis** (⌘. on the Project menu) and **Show Diagnostics…**; the toolbar pill that
+> previously carried Retry was deleted. Only the §"Project operations" alpha-gap callout changed; the
+> rest of the catalogue is untouched by this branch.
 
 > **Truing status:** Trued. Project-ops table rewritten with NotificationCenter / bridge split; old contradicting Future-only table removed. Keyboard shortcuts added throughout. `openInNewWindow` corrected (Shipped, not Future). Help, View, and Codes menus given dedicated sub-sections. Alpha gap (no Analyse/Resume/Retry in context menu) called out inline. See changelog.
 
@@ -109,7 +114,14 @@ These are either native-only (Finder, print) or depend on features not yet built
 > | `checkSystemHealth` | — | Bridge dispatch | `bridgeHandler.menuAction("checkSystemHealth")` — handler in frontend |
 > | `pageSetup` / `print` | ⌘P (print) | Bridge / future | NSPrintOperation on WKWebView snapshot |
 >
-> **Alpha gap (24 Apr 2026):** the project-row context menu (`ContentView.swift:944-995`) and the Project menu do **not** include `Analyse`, `Resume`, or `Retry` actions. Today the only Retry lives on the toolbar pill (`ContentView.swift:572`) and the detail-pane error state (`ContentView.swift:1061`). Tracked in the alpha-blocker shortlist (`docs/private/truing-ingestion-lifecycle-2026-04-23.md`).
+> **Alpha gap (24 Apr 2026; partially closed 15 Jun 2026):** the Project menu and row context menu now
+> include **Stop Analysis** (Project menu ⌘., `MenuCommands.swift`, gated on
+> `BridgeHandler.selectedProjectIsRunning`; row context-menu, gated on run state) and **Show
+> Diagnostics…** (locale keys `desktop.menu.project.stopAnalysis` / `.showDiagnostics`, all 7
+> `desktop.json`). `Analyse` / `Resume` / `Retry` verbs remain **absent** as menu items. The per-project
+> toolbar pill that previously carried Retry was **deleted** (commit `8ffa470`) — Stop now lives on the
+> sidebar-row hover-× + the two menus above; the original `ContentView.swift:572` pill-Retry anchor is
+> dead. Tracked in the private alpha-blocker shortlist (ingestion-lifecycle truing note, 23 Apr 2026).
 
 ### View menu (3)
 

@@ -1,8 +1,15 @@
 ---
-status: current
-last-trued: 2026-05-01
-trued-against: HEAD@first-run on 2026-05-01
+status: partial
+last-trued: 2026-06-15
+trued-against: HEAD@per-project-activity (518e6d3) on 2026-06-15
 ---
+
+> **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`):** the per-project run glance **moved onto the
+> sidebar row** (spinner + hover-× Stop, `ProjectRowActivityIndicator.swift`; clickable failure glyph →
+> diagnostic popover). The toolbar pill (`PipelineActivityItem.swift`) was **deleted** (commit
+> `8ffa470`). Two 2026-04-23 "Superseded" banners below claimed the spinner/badges were *not* on the
+> row and lived in the toolbar pill — that is **now reversed**: the row-spinner vision they dismissed is
+> what shipped. The banners are re-flipped inline. See `docs/design-sidebar-activity-indicators.md`.
 
 > **Truing status:** Trued. Phases 1–3 shipped; remaining drift carries inline banners. Project-menu and context-menu ASCII art trued (phantom Add Interviews / Analyse / Get Info removed). Drop matrix duplicate row clarified. Phase 2 "not shipped" list updated with strikethrough on items that did ship. Pipeline-state × run-trigger matrix at end of doc.
 
@@ -57,7 +64,15 @@ Mental model: **Mail sidebar** — curated list of items you've placed, not a li
 
 ### Project states (simplified)
 
-> **Superseded 2026-04-23.** Shipped `PipelineState` enum (`PipelineRunner.swift:37-53`) has additional states not in this table: `.scanning` (initial), `.queued` (FIFO wait), `.running` (includes attached orphans), `.failed(category)`, `.unreachable` (e.g. offline volume). User-cancelled runs land in `.idle`; never-run and post-cancel are conflated under `.idle` today — a split (`.stopped` / `.cancelled`) is in the alpha backlog. Shipped UI surfaces activity in the toolbar pill `PipelineActivityItem`, not in the sidebar row — the spinner/badges described below are not on the row. See `Pipeline state × run-trigger matrix` at end of doc for the current trigger map.
+> **Partially superseded 2026-04-23, re-flipped 2026-06-15.** Shipped `PipelineState` enum
+> (`PipelineRunner.swift`) has additional states not in this table: `.scanning` (initial), `.queued`
+> (FIFO wait), `.running` (includes attached orphans), `.failed(category)`, `.completedPartial`,
+> `.stopped`, `.unreachable` (e.g. offline volume). **Update (15 Jun 2026):** the row-level spinner +
+> trailing-icon vision in the table below is now **shipped** — the per-project glance lives on the
+> sidebar row (`ProjectRowActivityIndicator.swift`), not the toolbar pill (which was deleted, commit
+> `8ffa470`). The 2026-04-23 claim that "spinner/badges are not on the row" no longer holds. See
+> `Pipeline state × run-trigger matrix` at end of doc for the trigger map (its "Pill popover Retry"
+> column is itself now stale — Stop moved to the row hover-× / context menu / Project-menu ⌘.).
 
 | State | Row appearance | Trailing icon |
 |-------|---------------|---------------|
@@ -323,7 +338,12 @@ Built later — not Phase 1.
 
 ## Activity status bar
 
-> **Superseded 2026-04-23.** Shipped placement is a trailing-toolbar pill (`PipelineActivityItem` in `ContentView.swift:754-761`), not a sidebar-bottom status bar. The pill opens a popover with stage/elapsed/Stop/Retry. Per-row spinner icons and row-level completion checkmarks described below are not shipped — all activity is centralised in the toolbar pill. This section retained as planning history; when re-designing the cross-project activity surface, reconsider the Mail-pattern bottom strip vs the current pill.
+> **Superseded 2026-04-23, updated 2026-06-15.** The 2026-04-23 note said all activity was centralised
+> in a trailing-toolbar pill (`PipelineActivityItem`) and per-row spinners were *not* shipped. **Both
+> halves are now stale:** the pill was **deleted** (commit `8ffa470`), and the **per-row spinner IS
+> shipped** (`ProjectRowActivityIndicator.swift`, right-slot — running spinner, hover-× Stop, clickable
+> failure glyph). The Mail-pattern sidebar-bottom status strip described in this section is still *not*
+> the shipped placement (the row is) — retained as planning history for a future cross-project surface.
 
 Bottom-left of sidebar, like Mail's "Updated just now" area.
 - Use `safeAreaInset(edge: .bottom)` to place below the list without fighting scroll

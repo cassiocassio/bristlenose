@@ -344,7 +344,7 @@ struct ProjectRow: View {
         // Select the CLDR plural form for the active locale (Czech needs
         // one/few/many/other — the old `count == 1 ? One : Other` ternary
         // rendered the `_other` form for Czech counts 2–4). Mirrors
-        // PipelineActivityItem.localisedOverflowText.
+        // ProjectDiagnosticPopover.localisedOverflowText.
         let base = "desktop.chrome.\(prefix)"
         let key = "\(base)_\(i18n.pluralCategory(count))"
         let rendered = i18n.t(key, ["count": String(count)])

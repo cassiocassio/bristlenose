@@ -14,8 +14,8 @@ import SwiftUI
 /// subtitle text + their `MessageKind` glyph — not here. Availability (the
 /// cloud glyph) is a separate concern owned by `ProjectRow.subtitleRightSlot`.
 ///
-/// **Determinacy.** Today a run shows an indeterminate spinner — the same
-/// control the toolbar pill uses (`PipelineActivityItem`). The determinate,
+/// **Determinacy.** Today a run shows an indeterminate spinner
+/// (`ProgressView().controlSize(.small)`). The determinate,
 /// Welford-ETA-weighted ring (time, not stage-count) lands once the events
 /// channel carries the estimate (Phase 0b); copy-in-flight's determinate ring
 /// (byte ratio) is a sibling increment. Both add a `Kind` case without touching

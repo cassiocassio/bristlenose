@@ -1,8 +1,22 @@
 ---
-status: current
-last-trued: 2026-05-19
-trued-against: HEAD@pipeline-diagnostic-popover-swift on 2026-05-19 (working tree, post pass-4 cleanup)
+status: partial
+last-trued: 2026-06-15
+trued-against: HEAD@per-project-activity (518e6d3) on 2026-06-15
 ---
+
+> **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`) — the toolbar pill was deleted.**
+> The per-project pipeline pill (`PipelineActivityItem.swift`) was **removed** (commit `8ffa470`)
+> and the diagnostic popover **extracted** into its own reusable view
+> `ProjectDiagnosticPopover.swift` (commit `02ad258`). The per-project run *glance* moved to the
+> **sidebar row** (spinner + hover-× Stop, `ProjectRowActivityIndicator.swift`); the diagnostic
+> popover is now opened by **clicking the row's failure glyph** (selects row, anchors `arrowEdge:
+> .trailing`) or via row context-menu / Project-menu "Show Diagnostics…". Throughout this doc, read
+> any reference to **"the toolbar pill"**, **`PipelineActivityItem.swift`**, **`unifiedPopoverBody`**,
+> or **`runningPopoverBody`** as the per-project surface as *superseded* — the popover taxonomy and
+> MessageKind content are unchanged, only the owning view + invocation moved. The surviving toolbar
+> pills are `OllamaDownloadPill` + `CopyProgressPill` only. The running popover (`runningPopoverBody`)
+> was deleted with the pill — running state is now the sidebar spinner, no running popover. See
+> `docs/design-sidebar-activity-indicators.md` for the new home.
 
 > **Truing status:** Current — schema (v5), IA, message-kind taxonomy,
 > fixture contract, CLI vocabulary, Swift popover, and pass-4 cleanup all
@@ -761,11 +775,12 @@ default.
 | Pipeline summary Pydantic model | `bristlenose/events.py` (`PipelineSummary`, `StageOutcome`, `StageFailure`) |
 | Pipeline summary Swift Codable mirror | `desktop/Bristlenose/Bristlenose/PipelineSummary.swift` |
 | Failure-category enum (single source) | `bristlenose/events.py:CauseCategoryEnum`; Swift mirror at `PipelineSummary.swift::CauseCategory` |
-| Swift popover bodies | `desktop/Bristlenose/Bristlenose/PipelineActivityItem.swift` |
-| Sidebar subtitle / glyph | `desktop/Bristlenose/Bristlenose/ProjectRow.swift` (search for `pipelineStateSubtitle`) |
+| Swift diagnostic popover | `desktop/Bristlenose/Bristlenose/ProjectDiagnosticPopover.swift` (extracted from the deleted `PipelineActivityItem.swift`, commit `02ad258`) |
+| Sidebar run indicator (spinner + hover-× Stop) | `desktop/Bristlenose/Bristlenose/ProjectRowActivityIndicator.swift` |
+| Sidebar subtitle / failure glyph → popover | `desktop/Bristlenose/Bristlenose/ProjectRow.swift` (search for `pipelineStateSubtitle`; glyph `Button` → `.popover`) |
 | State-machine guard against scan clobber | `desktop/Bristlenose/Bristlenose/PipelineRunner.swift::applyScanResult` |
 | Event-log → state routing | `desktop/Bristlenose/Bristlenose/EventLogReader.swift::deriveState` |
-| Plaintext diagnostic formatter | `PipelineActivityItem.swift::formatDiagnosticPlaintext` (static) |
+| Plaintext diagnostic formatter | `ProjectDiagnosticPopover.swift::formatDiagnosticPlaintext` (static) |
 | Debug-only fixture harness | `desktop/Bristlenose/Bristlenose/DiagnosticFixture.swift` |
 | Toast store (desktop) | `desktop/Bristlenose/Bristlenose/ToastView.swift` |
 | Toast component (frontend) | `frontend/src/components/Toast.tsx`, `AutoCodeToast.tsx` |

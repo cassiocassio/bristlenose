@@ -4,9 +4,9 @@ import SwiftUI
 /// Plan §11: "title-bar pill shows progress + Cancel". Self-hides when no
 /// copy is in flight.
 ///
-/// Mirrors `PipelineActivityItem`'s visual envelope (Capsule + secondary
-/// stroke) so the two pills feel like the same surface — only one is ever
-/// visible at a time (cohort 1 doesn't drop onto a running project).
+/// Uses the shared toolbar-pill visual envelope (Capsule + secondary stroke)
+/// so it feels like the same surface as the sibling `OllamaDownloadPill` —
+/// only one is ever visible at a time (cohort 1 doesn't drop onto a running project).
 struct CopyProgressPill: View {
     @ObservedObject var copyMachinery: CopyMachinery
     @EnvironmentObject var i18n: I18n

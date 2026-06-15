@@ -133,7 +133,7 @@ enum EventLogReader {
             // as failed(unknown). The Python side reconciles on next start.
             //
             // `.failed` and `.failedWithDiagnostic` both route through the same
-            // SwiftUI popover surface (`PipelineActivityItem.unifiedPopoverBody`).
+            // SwiftUI popover surface (`ProjectDiagnosticPopover`).
             // This case renders with the degraded body (no `PipelineSummary`);
             // the visual chrome matches the structured popovers.
             if pythonOwnedRunIsAlive(at: pidURL) {
@@ -154,7 +154,7 @@ enum EventLogReader {
             // without `summary` decode to `.failed`, which renders through
             // the SAME popover surface with the degraded body (no buckets,
             // just the cause string + category). See
-            // `PipelineActivityItem.unifiedPopoverBody`.
+            // `ProjectDiagnosticPopover.popoverBodyForCurrentState()`.
             if let pipelineSummary = event.summary,
                pipelineSummary.totalFailureCount > 0 {
                 return .failedWithDiagnostic(summary: pipelineSummary)

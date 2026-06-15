@@ -42,6 +42,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 | `bristlenose_branch llm-provider-default-model/` | `llm-provider-default-model` | bugfix | CLI `--llm <provider>` applies that provider's default model (fixes cross-provider 404) |
 | `bristlenose_branch per-project-activity/` | `per-project-activity` | feature | Move the per-project progress pill from the toolbar into the project sidebar row |
+| `bristlenose_branch background-runs-view-switch/` | `background-runs-view-switch` | feature | Phase A1 of multi-project: switch the viewed project while a pipeline runs in the background (remove the cancel-on-switch modal) |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -143,6 +144,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `desktop-provider-resolution` _(merged)_ | `bristlenose_branch desktop-provider-resolution/` _(detached, on disk)_ | local only — merged to main 7 Jun 2026 (`5292802`) |
 | `chunked-quote-extraction` _(merged)_ | `bristlenose_branch chunked-quote-extraction/` _(detached, on disk)_ | local only — merged to main 9 Jun 2026 (`927fa63`) |
 | `llm-provider-default-model` | `bristlenose_branch llm-provider-default-model/` | local only |
+| `background-runs-view-switch` | `bristlenose_branch background-runs-view-switch/` | local only |
 | `per-project-activity` | `bristlenose_branch per-project-activity/` | local only |
 
 
@@ -153,6 +155,23 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ## Active Branches
 
 ---
+
+### `background-runs-view-switch`
+
+**Kind:** feature — Phase A1 of the multi-project roadmap: let the user switch the viewed/served project while a pipeline runs in the background, by removing the cancel-on-switch modal ("processing X whilst serving Y").
+**Status:** Just started
+**Started:** 15 Jun 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch background-runs-view-switch/`
+**Remote:** local only (push when ready)
+
+**What it does:** Today `handleSelectionChange` (`ContentView.swift`) presents the `InFlightSwitchPrompt` modal when you leave a `.running` project, forcing "Stop and Switch" (kills the run) or "Continue Analysing" (stay). This blocks the felt multi-project experience. The pipeline already runs as an independent `--no-serve` subprocess with per-project WAL DBs, and Phase 0's sidebar tracks it regardless of selection — so the modal is a guard, not a necessity. A1 verifies the run survives a serve switch (real `.app`), then removes the modal machinery so serve follows selection freely. Full brief in the worktree's `HANDOFF.md`. Sequenced after: A2 (warm-sidecar pool / instant switch), B (cap-2 concurrent execution), C (multi-window).
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/ContentView.swift` — `handleSelectionChange`, `applySelectionChange`, `resolveInFlightSwitch`, `inFlightSwitch`, `revertingSelection`, `InFlightSwitchPrompt`
+- `desktop/Bristlenose/Bristlenose/ServeManager.swift` — confirm `switchProject` doesn't touch the pipeline
+- `bristlenose/locales/{en,es,fr,de,ko,ja,cs}/desktop.json` — remove the 3 now-dead `inFlightSwitch*` keys
+
+**Potential conflicts with other branches:** none active — `ContentView.swift` selection/serve region isn't touched by `gemini-provider` / `llm-provider-default-model`. Builds directly on `per-project-activity` (Phase 0, now merged to main).
 
 ### `per-project-activity`
 

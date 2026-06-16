@@ -132,19 +132,6 @@ struct LocateErrorState: Identifiable {
     let pickedURL: URL
 }
 
-/// State for the "another project is still analysing — cancel and switch?"
-/// confirm sheet. Presented when the user selects a different project while
-/// the current one has a `bristlenose run` in flight (per Mini-spec 4 step 1).
-struct InFlightSwitchPrompt: Identifiable {
-    let id = UUID()
-    /// The project whose run is currently in flight.
-    let runningProject: Project
-    /// The new selection the user requested.
-    let targetSelection: Set<SidebarSelection>
-    /// Selection to restore if the user picks "Continue Analysing".
-    let priorSelection: Set<SidebarSelection>
-}
-
 /// Two-column NavigationSplitView: project list sidebar + WKWebView detail.
 ///
 /// Selecting a project starts `bristlenose serve` and loads the React SPA
@@ -225,17 +212,13 @@ struct ContentView: View {
     /// `bristlenose-output/` inside.
     @State private var locateError: LocateErrorState?
 
-    /// In-flight run confirm sheet — set when the user selects a different
-    /// project while the current one has a pipeline run going. The sheet
-    /// asks whether to cancel the run and switch, or stay on the current
-    /// project. Per Mini-spec 4 step 1.
-    @State private var inFlightSwitch: InFlightSwitchPrompt?
-
-    /// Re-entry guard for `handleSelectionChange` — set to true while we
-    /// programmatically revert `selection` after the user picks "Continue Analysing" on
-    /// the in-flight confirm sheet, so the re-entrant `.onChange` callback
-    /// doesn't trigger another switch attempt.
-    @State private var revertingSelection: Bool = false
+    /// Handle to the in-flight project-switch Task. Switching is async (serve
+    /// sidecar teardown + respawn); a background pipeline run makes rapid
+    /// switching routine, so we cancel the prior switch before starting the
+    /// next — only one switch is ever in flight. `switchProject` itself honours
+    /// the cancellation (guards before `start()`), so a superseded switch bails
+    /// rather than clobbering the winner's sidecar.
+    @State private var switchTask: Task<Void, Never>?
 
     /// The single selected item, if exactly one is selected.
     private var soleSelection: SidebarSelection? {
@@ -342,8 +325,12 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
             bridgeHandler.setWindowActive(false)
         }
-        .onChange(of: selection) { oldSelection, newSelection in
-            handleSelectionChange(from: oldSelection, to: newSelection)
+        .onChange(of: selection) { _, newSelection in
+            // Switching the viewed project never cancels a background run — the
+            // pipeline runs as an independent subprocess. (The cancel-on-switch
+            // confirm modal was removed in A1; serialization of the async serve
+            // switch lives in applySelectionChange via `switchTask`.)
+            applySelectionChange(newSelection)
         }
         // When consent is granted (version updated), start serve for the
         // already-selected project if one exists.
@@ -497,34 +484,6 @@ struct ContentView: View {
             // researchers who keep recordings in subdirs. William's pick.
             Text(i18n.t("desktop.chrome.locateError.message"))
         }
-        // In-flight pipeline-run guard (Mini-spec 4 step 1). Presented when
-        // the user picks a different project while the prior one's run is
-        // still going. Choosing "Continue Analysing" reverts the sidebar selection.
-        .alert(
-            i18n.t("desktop.chrome.inFlightSwitchTitle"),
-            isPresented: Binding(
-                get: { inFlightSwitch != nil },
-                set: { if !$0 { inFlightSwitch = nil } }
-            ),
-            presenting: inFlightSwitch
-        ) { prompt in
-            Button(i18n.t("desktop.chrome.cancelAndSwitch"), role: .destructive) {
-                resolveInFlightSwitch(prompt, cancelAndSwitch: true)
-            }
-            // Continue Analysing is the safe escape. `.cancel` role binds Esc;
-            // `.defaultAction` binds Return — both keys land on the safe path,
-            // and the role prevents SwiftUI auto-injecting a third Cancel
-            // button alongside our explicit two.
-            Button(i18n.t("desktop.chrome.continueAnalysing"), role: .cancel) {
-                resolveInFlightSwitch(prompt, cancelAndSwitch: false)
-            }
-            .keyboardShortcut(.defaultAction)
-        } message: { prompt in
-            Text(String(
-                format: i18n.t("desktop.chrome.inFlightSwitchMessage"),
-                prompt.runningProject.name
-            ))
-        }
     }
 
     /// Re-enter the Locate flow at the NSOpenPanel step (skips Spotlight,
@@ -555,45 +514,11 @@ struct ContentView: View {
 
     // MARK: - Selection change
 
-    /// Extract the sole-selected project UUID from a selection set, or nil.
-    private func soleProjectID(in selection: Set<SidebarSelection>) -> UUID? {
-        guard selection.count == 1,
-              case .project(let id) = selection.first else { return nil }
-        return id
-    }
-
-    private func handleSelectionChange(
-        from oldSelection: Set<SidebarSelection>,
-        to newSelection: Set<SidebarSelection>
-    ) {
-        // Re-entry guard — see `revertingSelection` documentation.
-        if revertingSelection {
-            revertingSelection = false
-            return
-        }
-
-        // In-flight run guard (Mini-spec 4 step 1). If the user is leaving a
-        // project whose pipeline run is going, present the confirm sheet
-        // before any teardown — UX needs the chance to back out.
-        if let oldID = soleProjectID(in: oldSelection),
-           soleProjectID(in: newSelection) != oldID,
-           pipelineRunner.state[oldID] == .running,
-           let runningProject = projectIndex.projects.first(where: { $0.id == oldID }) {
-            inFlightSwitch = InFlightSwitchPrompt(
-                runningProject: runningProject,
-                targetSelection: newSelection,
-                priorSelection: oldSelection
-            )
-            return
-        }
-
-        applySelectionChange(newSelection)
-    }
-
     /// Resolve a sidebar selection — wires bridge state and orchestrates the
-    /// sidecar lifecycle via `switchProject`. Separated from
-    /// `handleSelectionChange` so the in-flight confirm path can call it
-    /// after cancelling the prior run.
+    /// serve sidecar lifecycle via `switchProject`. Called directly from
+    /// `.onChange(of: selection)`. Switching the viewed project never blocks on
+    /// or cancels a background pipeline run — the run is an independent
+    /// subprocess (the cancel-on-switch confirm modal was removed in A1).
     private func applySelectionChange(_ newSelection: Set<SidebarSelection>) {
         bridgeHandler.reset()
 
@@ -614,42 +539,41 @@ struct ContentView: View {
                 // before the user has seen the AI data disclosure (Apple 5.1.2(i)).
                 if hasConsent && !project.path.isEmpty && project.isAvailable {
                     let path = project.path
-                    Task { @MainActor in
+                    // Serialize switches: cancel any in-flight switch before
+                    // starting the next, so only one is ever live. switchProject
+                    // honours the cancellation (bails before start()), so a
+                    // superseded switch can't clobber the winner's sidecar.
+                    switchTask?.cancel()
+                    switchTask = Task { @MainActor in
                         await serveManager.switchProject(to: path)
                     }
+                } else {
+                    // Not serving this project (empty path or unavailable) — stop
+                    // the prior sidecar so it doesn't linger. Symmetric with the
+                    // .folder / default arms; the detail pane shows the
+                    // onboarding / Locate state, not the old project's report.
+                    switchTask?.cancel()
+                    serveManager.stop()
                 }
             }
         case .folder(let id):
             persistedProjectID = ""
             bridgeHandler.selectedProjectPath = ""
             bridgeHandler.selectedProjectRevealablePath = ""
+            bridgeHandler.selectedProjectIsRunning = false
             bridgeHandler.selectedFolderName =
                 projectIndex.folders.first { $0.id == id }?.name ?? ""
+            switchTask?.cancel()
             serveManager.stop()
         default:
             // Multi-select or empty — stop serve, clear state.
             persistedProjectID = ""
             bridgeHandler.selectedProjectPath = ""
             bridgeHandler.selectedProjectRevealablePath = ""
+            bridgeHandler.selectedProjectIsRunning = false
             bridgeHandler.selectedFolderName = ""
+            switchTask?.cancel()
             serveManager.stop()
-        }
-    }
-
-    /// Resolve the in-flight switch confirm sheet. Called from the alert
-    /// button handlers. On "Stop and Switch" we cancel the running pipeline
-    /// then proceed with the deferred selection; on "Continue Analysing" we
-    /// restore the prior selection.
-    private func resolveInFlightSwitch(_ prompt: InFlightSwitchPrompt, cancelAndSwitch: Bool) {
-        inFlightSwitch = nil
-        if cancelAndSwitch {
-            pipelineRunner.cancel(project: prompt.runningProject)
-            applySelectionChange(prompt.targetSelection)
-        } else {
-            // Revert the SwiftUI selection back to the running project.
-            // The re-entrant `.onChange` is suppressed by `revertingSelection`.
-            revertingSelection = true
-            selection = prompt.priorSelection
         }
     }
 

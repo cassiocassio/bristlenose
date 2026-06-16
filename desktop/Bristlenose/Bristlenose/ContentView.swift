@@ -219,6 +219,10 @@ struct ContentView: View {
     /// the cancellation (guards before `start()`), so a superseded switch bails
     /// rather than clobbering the winner's sidecar.
     @State private var switchTask: Task<Void, Never>?
+    /// Recreates the detail WebView (keyed by project.id + this token) to reload
+    /// the report after a run finishes — see scheduleReportReloadIfNeeded.
+    @State private var reportReloadToken = 0
+    @State private var reportReloadTask: Task<Void, Never>?
 
     /// The single selected item, if exactly one is selected.
     private var soleSelection: SidebarSelection? {
@@ -346,6 +350,13 @@ struct ContentView: View {
         // applySelectionChange; `state` is low-frequency, unlike liveData).
         .onChange(of: pipelineRunner.state) { _, _ in
             updateSelectedProjectRunState()
+            scheduleReportReloadIfNeeded()
+        }
+        .onChange(of: serveManager.state) { _, _ in
+            scheduleReportReloadIfNeeded()
+        }
+        .onChange(of: bridgeHandler.isReady) { _, _ in
+            scheduleReportReloadIfNeeded()
         }
         .onAppear {
             // Restore last-selected project from persisted ID.
@@ -1532,6 +1543,41 @@ struct ContentView: View {
         }
     }
 
+    /// True for states whose report is on disk + (re-)imported by serve.
+    private func isReportReady(_ s: PipelineState?) -> Bool {
+        switch s {
+        case .ready, .completedPartial: return true
+        default: return false
+        }
+    }
+
+    /// Reload the report after a run finishes. The serve re-imports the finished
+    /// report on the run_completed terminus within ~1s (verified in
+    /// bristlenose.log), and `last_run` is set — but the detail WebView, loaded
+    /// earlier on the empty status page, never reloads itself, so the report only
+    /// appears after a manual project switch. When the selected project is
+    /// report-ready, serve is up, and the SPA hasn't mounted (`!isReady`),
+    /// recreate the WebView (bump its id token) up to a few times until it
+    /// mounts. State-driven (not transition-driven) + capped, so it survives
+    /// transition-timing and can never loop. Pre-existing jank — separate from
+    /// the determinate ring; the serve side is confirmed healthy.
+    private func scheduleReportReloadIfNeeded() {
+        guard let id = selectedProjectID,
+              isReportReady(pipelineRunner.state[id]),
+              case .running = serveManager.state,
+              !bridgeHandler.isReady else { return }
+        reportReloadTask?.cancel()
+        reportReloadTask = Task { @MainActor in
+            for _ in 0..<4 {
+                try? await Task.sleep(for: .seconds(1.5))
+                guard selectedProjectID == id,
+                      isReportReady(pipelineRunner.state[id]),
+                      !bridgeHandler.isReady else { return }
+                reportReloadToken &+= 1
+            }
+        }
+    }
+
     /// Mirror the sole-selected project's run state into the bridge so the
     /// Project ▸ Stop Analysis (⌘.) menu item dims when there's nothing to
     /// stop. Called on pipeline-state change; selection-time sync is inline in
@@ -1719,7 +1765,7 @@ struct ContentView: View {
 
                     case .running:
                         WebView(url: serveURLWithLocale, bridgeHandler: bridgeHandler, authToken: serveManager.authToken)
-                            .id(project.id)
+                            .id("\(project.id.uuidString)-\(reportReloadToken)")
                             .accessibilityLabel(i18n.t("desktop.chrome.reportContent"))
                             .accessibilityHidden(!bridgeHandler.isReady)
                             .focusSection()

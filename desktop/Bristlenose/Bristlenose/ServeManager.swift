@@ -297,6 +297,14 @@ final class ServeManager: ObservableObject {
         timeoutTask?.cancel()
         timeoutTask = nil
 
+        // Ownership token captured at entry. If a newer start() (a superseding
+        // switch, or restartIfRunning) bumps `generation` while we await teardown
+        // below, our terminal state-writes must NOT clobber the new owner's
+        // process/state/readTask. Same counter that start()/terminationHandler
+        // use. Only the post-await main path needs this — the early-return arms
+        // run synchronously from entry, before any owner change can interleave.
+        let myGeneration = generation
+
         if case .external = mode, process == nil {
             readTask?.cancel()
             readTask = nil
@@ -341,6 +349,18 @@ final class ServeManager: ObservableObject {
             try? await Task.sleep(for: .milliseconds(100))
         }
 
+        // A newer owner took over while we awaited teardown — leave its
+        // process/state/readTask intact and bail. Our captured `proc` was
+        // already SIGINT'd above, which is correct: it's the one being torn
+        // down. Closes Finding 18 (a superseded switch's shutdown could
+        // otherwise overwrite the winner's process=proc/state=.starting with
+        // nil/.idle → orphaned sidecar, detail pane stuck on the boot spinner);
+        // also bounds the restartIfRunning-vs-switch terminal-state clobber
+        // (Finding 19). Reuses the existing `generation` token — no second epoch.
+        guard generation == myGeneration else {
+            log.info("shutdown superseded mid-teardown — leaving published state to the new owner")
+            return
+        }
         readTask?.cancel()
         readTask = nil
         process = nil

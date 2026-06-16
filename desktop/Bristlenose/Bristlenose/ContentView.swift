@@ -548,10 +548,14 @@ struct ContentView: View {
                         await serveManager.switchProject(to: path)
                     }
                 } else {
-                    // Not serving this project (empty path or unavailable) — stop
-                    // the prior sidecar so it doesn't linger. Symmetric with the
-                    // .folder / default arms; the detail pane shows the
-                    // onboarding / Locate state, not the old project's report.
+                    // Not serving this project (empty path, unavailable, or
+                    // consent not yet granted) — stop the prior sidecar so it
+                    // doesn't linger. Symmetric with the .folder / default arms;
+                    // the detail pane shows the onboarding / Locate state, not the
+                    // old project's report. Safe in the no-consent case: serve is
+                    // consent-gated (never running pre-consent), and granting
+                    // consent (re)starts via the .onChange(of: consentVersion) →
+                    // start() path, not this one.
                     switchTask?.cancel()
                     serveManager.stop()
                 }

@@ -159,7 +159,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ### `background-runs-view-switch`
 
 **Kind:** feature (macOS desktop) — Phase A1 of multi-project. Let the user switch the viewed/served project freely while a pipeline runs in the background, by removing the cancel-on-switch confirm modal that forced stop-or-stay.
-**Status:** Implemented — pending GUI QA + merge (16 Jun 2026). 3 commits on the branch (`655abd8` code · `56c4358` design artifacts · `717afa9` impl-review fix); `xcodebuild build` + full `BristlenoseTests` green, ruff + locale pytest green. Not pushed (release-timing rule). **Acceptance gate is human GUI QA** — see "Verify" below.
+**Status:** ✅ GUI-QA passed — **ready to merge** (16 Jun 2026, build `717afa9`). Core A1 acceptance verified live in the real `.app`: ran one project while viewing another's report (background run kept ticking, served project switched freely) — the cancel-on-switch modal is gone and switching no longer touches the running pipeline. 3 commits (`655abd8` code · `56c4358` design artifacts · `717afa9` impl-review fix); build + `BristlenoseTests` + ruff + locale pytest all green. **Not yet pushed/merged** (release-timing rule — push `main` after 9pm). Edge scenarios (machine-gun rapid-switch / failed-switch) rest on the guards + two review passes; manual stress optional. Next: merge → `/close-branch` → Phase 0b.
 **Started:** 16 Jun 2026 (off `main` after Phase 0 / `35d9c14`)
 **Worktree:** `/Users/cassio/Code/bristlenose_branch background-runs-view-switch/`
 **Remote:** local only — push `main` after merge + 9pm

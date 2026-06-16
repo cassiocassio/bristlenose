@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 16 Jun 2026 (`background-runs-view-switch` Phase A1 archived. Active: gemini-provider, llm-provider-default-model, responsive-signal-cards, tower-of-hanoi)
+**Updated:** 16 Jun 2026 (`determinate-progress` started — Phase 0b determinate ETA ring. Active: determinate-progress, gemini-provider, llm-provider-default-model, responsive-signal-cards, tower-of-hanoi)
 
 ---
 
@@ -41,6 +41,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 | `bristlenose_branch llm-provider-default-model/` | `llm-provider-default-model` | bugfix | CLI `--llm <provider>` applies that provider's default model (fixes cross-provider 404) |
+| `bristlenose_branch determinate-progress/` | `determinate-progress` | feature | Phase 0b: determinate ETA ring in the sidebar — emit the Welford ETA through the event channel to the Swift indicator (wire-up, not build-the-estimator) |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -143,6 +144,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `chunked-quote-extraction` _(merged)_ | `bristlenose_branch chunked-quote-extraction/` _(detached, on disk)_ | local only — merged to main 9 Jun 2026 (`927fa63`) |
 | `background-runs-view-switch` _(merged)_ | `bristlenose_branch background-runs-view-switch/` _(detached, on disk)_ | local only — merged to main 16 Jun 2026 (`bf03d55`) |
 | `llm-provider-default-model` | `bristlenose_branch llm-provider-default-model/` | local only |
+| `determinate-progress` | `bristlenose_branch determinate-progress/` | local only |
 
 
 
@@ -152,6 +154,28 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ## Active Branches
 
 ---
+
+### `determinate-progress`
+
+**Kind:** feature (desktop, **Python + Swift cross-cutting**) — Phase 0b of the sidebar-activity work. Replace the Phase-0a indeterminate sidebar spinner with a determinate ETA ring, by emitting the Welford ETA (already computed in Python) through the event channel to the Swift indicator.
+**Status:** Just started
+**Started:** 16 Jun 2026 (off `main` / `5205223`, after A1 `background-runs-view-switch` merged + closed)
+**Worktree:** `/Users/cassio/Code/bristlenose_branch determinate-progress/`
+**Remote:** local only (push when ready)
+
+**What it does:** It's **wire-up, not build-the-estimator** — the Welford estimator already exists (`bristlenose/timing.py` `WelfordStat`), it's just never emitted (the event channel carries lifecycle-only today; Swift scrapes stdout for coarse stage progress). The canonical 0b plan lives in `docs/design-sidebar-activity-indicators.md` (banner-marked "0b plan" sections — the determinate ring, honesty rules, best-available ladder, vocabulary). **That doc is the spec; this branch translates it into Swift+Python, it does not redesign it.** Three layers: (1) Python emits a structured progress event carrying stage, sessions N-of-M, and the Welford ETA + ±band; (2) `EventLogReader` parses it → populates `PipelineProgress.sessionsComplete/Total` + an ETA field, retiring the fragile `StdoutProgressParser`; (3) `ProjectRowActivityIndicator` swaps the indeterminate spinner for a determinate `ProgressView(value:)` on the best-available ladder (Welford ETA → session fraction → `stageIndex/10`), with honesty rules (monotonic ring, ~95-99% asymptote until terminus). Plus the A1-QA forward note: mid-first-analysis projects should show analysis-in-progress in the content area, not the empty "Nothing to see here, yet" status page.
+
+**Files this branch will touch:**
+- `bristlenose/events.py` (new `run_progress`/`stage_progress` event type + schema)
+- `bristlenose/run_lifecycle.py` / `bristlenose/pipeline.py` (emit the progress event alongside the lifecycle writer)
+- `bristlenose/timing.py` (read-only — source the ETA from `WelfordStat`/`Estimator`)
+- `desktop/Bristlenose/Bristlenose/EventLogReader.swift` (parse the new event)
+- `desktop/Bristlenose/Bristlenose/PipelineRunner.swift` (populate `PipelineProgress.sessionsComplete/Total` + ETA; deprecate `StdoutProgressParser`)
+- `desktop/Bristlenose/Bristlenose/ProjectRowActivityIndicator.swift` (determinate ring render — `Kind` case)
+- `desktop/Bristlenose/Bristlenose/ContentView.swift` (`detail` ~:1761) + `BootView.swift` (mid-first-analysis surfacing)
+- Tests: pytest event round-trip + `BristlenoseTests/EventLogReaderTests.swift` parse coverage
+
+**Potential conflicts with other branches:** low. Touches the events channel + Python pipeline + desktop indicator — a different surface from A1's serve-switch (`ContentView.swift`/`ServeManager.swift`, now merged). `gemini-provider` / `llm-provider-default-model` are provider/config (`providers.py`/`config.py`/`cli.py`); `responsive-signal-cards` is React signal cards; `tower-of-hanoi` is `experiments/`. The one shared file is `ContentView.swift` (A1 already merged, so no live conflict). **Reuse A1's `generation` ownership token if any serve-lifecycle path is touched — don't add a second epoch counter** (per `desktop/CLAUDE.md`).
 
 ### `llm-provider-default-model`
 

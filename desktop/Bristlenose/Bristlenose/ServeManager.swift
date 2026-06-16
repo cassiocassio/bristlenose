@@ -297,6 +297,14 @@ final class ServeManager: ObservableObject {
         timeoutTask?.cancel()
         timeoutTask = nil
 
+        // Ownership token captured at entry. If a newer start() (a superseding
+        // switch, or restartIfRunning) bumps `generation` while we await teardown
+        // below, our terminal state-writes must NOT clobber the new owner's
+        // process/state/readTask. Same counter that start()/terminationHandler
+        // use. Only the post-await main path needs this — the early-return arms
+        // run synchronously from entry, before any owner change can interleave.
+        let myGeneration = generation
+
         if case .external = mode, process == nil {
             readTask?.cancel()
             readTask = nil
@@ -341,6 +349,18 @@ final class ServeManager: ObservableObject {
             try? await Task.sleep(for: .milliseconds(100))
         }
 
+        // A newer owner took over while we awaited teardown — leave its
+        // process/state/readTask intact and bail. Our captured `proc` was
+        // already SIGINT'd above, which is correct: it's the one being torn
+        // down. Closes Finding 18 (a superseded switch's shutdown could
+        // otherwise overwrite the winner's process=proc/state=.starting with
+        // nil/.idle → orphaned sidecar, detail pane stuck on the boot spinner);
+        // also bounds the restartIfRunning-vs-switch terminal-state clobber
+        // (Finding 19). Reuses the existing `generation` token — no second epoch.
+        guard generation == myGeneration else {
+            log.info("shutdown superseded mid-teardown — leaving published state to the new owner")
+            return
+        }
         readTask?.cancel()
         readTask = nil
         process = nil
@@ -354,17 +374,16 @@ final class ServeManager: ObservableObject {
     /// escalation, starts a new one pointed at `path`, and resolves when the
     /// new sidecar reports ready (or fails).
     ///
-    /// **Choreography** (Mini-spec 4 in `tf-multi-project.md`):
-    /// 1. (caller) In-flight run guard — present confirm sheet before invoking
-    /// 2. (caller) UI skeleton — sidebar selection updates immediately;
+    /// **Choreography:**
+    /// 1. (caller) UI skeleton — sidebar selection updates immediately;
     ///    detail pane shows `BootView(phase: .startingSidecar)` while
     ///    `state == .starting`. This is the SwiftUI `.id(project.id)` reset
     ///    on `WebView`, which fully tears down the old WKWebView.
-    /// 3. (here) Tear down current sidecar — `shutdown(timeout:)` above.
-    /// 4. (caller) Resolve new bookmark + acquire `ProjectBookmarkLease` —
+    /// 2. (here) Tear down current sidecar — `shutdown(timeout:)` above.
+    /// 3. (caller) Resolve new bookmark + acquire `ProjectBookmarkLease` —
     ///    if it throws, mark project `cantFind` and don't call this.
-    /// 5. (here) Spawn new sidecar via existing `start(projectPath:)`.
-    /// 6. (automatic) WKWebView reload — when `selectedProject.id` changes,
+    /// 4. (here) Spawn new sidecar via existing `start(projectPath:)`.
+    /// 5. (automatic) WKWebView reload — when `selectedProject.id` changes,
     ///    SwiftUI rebuilds `WebView` with a fresh `WKWebsiteDataStore`
     ///    (`.nonPersistent()` returns a new partition every call). This
     ///    drops all `localStorage`, `sessionStorage`, cookies, and HTTP
@@ -390,14 +409,26 @@ final class ServeManager: ObservableObject {
     func switchProject(to path: String) async {
         log.info("switching project — shutting down current sidecar")
         await shutdown(timeout: .seconds(2))
+        // A newer switch may have superseded us while we awaited teardown. The
+        // caller (applySelectionChange) cancels the prior switch Task before
+        // spawning the next, so bail HERE — before start() — when cancelled.
+        // Without this guard the superseded switch would still call start(),
+        // whose defensive `if process != nil { stop() }` would SIGINT the
+        // winning switch's freshly-spawned sidecar (the rapid-switch fail-open).
+        // shutdown()'s `try? await Task.sleep` swallows CancellationError, so
+        // the explicit Task.isCancelled check is what actually honours the cancel.
+        guard !Task.isCancelled else {
+            log.info("switchProject superseded — abandoning before start()")
+            return
+        }
         log.info("starting new sidecar")
         start(projectPath: path)
         // Wait for transition out of .starting (to .running or .failed) so
         // callers can await the switch completing. Bounded by start()'s own
         // 15s timeout — it transitions to .failed if the sidecar never prints
-        // the Report line.
+        // the Report line. Also bail if a newer switch cancels us mid-wait.
         let deadline = ContinuousClock.now.advanced(by: .seconds(20))
-        while case .starting = state, ContinuousClock.now < deadline {
+        while case .starting = state, !Task.isCancelled, ContinuousClock.now < deadline {
             try? await Task.sleep(for: .milliseconds(50))
         }
     }

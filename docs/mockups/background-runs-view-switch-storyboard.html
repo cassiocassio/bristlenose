@@ -1,0 +1,429 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Background-runs view-switch — state storyboard</title>
+<!--
+  Phase A1 (background-runs-view-switch) STATE STORYBOARD — not a simulator, not a UX mockup.
+  Every state is AUTHORED by hand from the plan + the Swift code (file:line cited per step),
+  NOT computed by a model. Purpose: inspect intended logic — races, state machine, invisible
+  state — by eye, and catch edge cases in the act of authoring. Schematic UI on purpose.
+  Scenarios tagged: ⚠ = surfaced a finding · ✓ = resolved/de-risked · ○ = clean / orthogonal.
+-->
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --ink:#1d1f24; --muted:#6b7280; --line:#d6dae0;
+    --accent:#2f6feb; --sel:#dceafe; --selln:#2f6feb;
+    --idle:#57606a; --run:#1a7f37; --warn:#9a6700; --bad:#cf222e;
+    --okbg:#e7f4ea; --warnbg:#fbf3df; --badbg:#fbe9e8;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 22px 60px}
+  h1{font-size:18px;margin:0 0 2px}
+  .sub{color:var(--muted);font-size:12.5px;margin:0 0 12px}
+  .banner{background:#fff8e6;border:1px solid #f0dca0;border-radius:8px;padding:8px 12px;font-size:12.5px;color:#6a5300;margin:0 0 12px}
+  .banner b{color:#4a3a00}
+  .tabs{display:flex;gap:7px;margin:0 0 10px;flex-wrap:wrap}
+  .tab{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 12px;cursor:pointer;font-size:12.5px;color:var(--ink)}
+  .tab[aria-selected="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .note{font-size:12.5px;border-radius:8px;padding:7px 11px;margin:0 0 14px}
+  .note.warn{background:var(--warnbg);color:#7a5200}
+  .note.ok{background:var(--okbg);color:#16622e}
+  .note.neutral{background:#eef1f5;color:#48505c}
+  .stage{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start}
+  @media(max-width:860px){.stage{grid-template-columns:1fr}}
+
+  .win{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .titlebar{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);background:#fbfcfd}
+  .lights{display:flex;gap:6px}.lights i{width:11px;height:11px;border-radius:50%;display:block}
+  .lights .r{background:#ff5f57}.lights .y{background:#febc2e}.lights .g{background:#28c840}
+  .wintitle{font-size:12.5px;color:var(--muted)}
+  .body{display:grid;grid-template-columns:212px 1fr;min-height:272px}
+  .sidebar{border-right:1px solid var(--line);padding:8px 7px;background:#fcfcfd}
+  .row{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;font-size:13px;margin-bottom:2px}
+  .row.sel{background:var(--sel);box-shadow:inset 2px 0 0 var(--selln)}
+  .row .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .sub2{font-size:10.5px;color:var(--bad)}
+  .glyph{width:15px;text-align:center;font-size:12px}
+  .g-idle{color:var(--idle)}.g-run{color:var(--run)}.g-fail{color:var(--bad)}.g-queue{color:var(--warn)}.g-folder{color:var(--muted)}.g-new{color:var(--accent)}
+  .spin{display:inline-block;animation:sp 1.1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+  .pid{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+  .detail{padding:14px;display:flex;flex-direction:column;gap:10px;position:relative}
+  .serveline{font-size:12.5px;color:var(--muted);font-family:var(--mono)}
+  .reportcard{flex:1;border:1px dashed var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;text-align:center;padding:14px;min-height:120px}
+  .reportcard.bad{border-color:var(--bad);background:var(--badbg);color:var(--bad)}
+  .reportcard.warnb{border-color:#e4c14d;background:var(--warnbg);color:#7a5200}
+  .reportcard b{color:inherit}
+  .inconsistent{background:var(--bad);color:#fff;border-radius:6px;padding:6px 9px;font-size:12px;font-weight:600}
+  .toast{position:absolute;left:14px;right:14px;bottom:14px;background:#2b2f36;color:#fff;border-radius:8px;padding:9px 12px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px}
+  .panel h2{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 9px}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:3px 10px;font-size:12.5px}
+  .kv dt{color:var(--muted)}
+  .kv dd{margin:0;font-family:var(--mono);font-size:11.5px;word-break:break-word}
+  .kv dd.t-run{color:var(--run);font-weight:600}.kv dd.t-warn{color:var(--warn);font-weight:600}.kv dd.t-bad{color:var(--bad);font-weight:600}
+  .flag{margin-top:11px;border-radius:8px;padding:8px 11px;font-size:12.5px;font-weight:600}
+  .flag.ok{background:var(--okbg);color:var(--run)}.flag.warn{background:var(--warnbg);color:var(--warn)}.flag.bad,.flag.inconsistent{background:var(--badbg);color:var(--bad)}
+
+  .below{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .tstamp{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:600}
+  .caption{font-size:15px;font-weight:600;margin:3px 0 6px}
+  .commentary{font-size:13.5px;margin:0 0 9px}
+  .refs{font-family:var(--mono);font-size:11px;color:var(--muted)}.refs b{color:var(--ink)}
+  .nav{display:flex;align-items:center;gap:12px;margin-top:14px}
+  .nav button{font-size:13px;padding:7px 16px;border-radius:8px;border:1px solid var(--line);background:var(--panel);cursor:pointer}
+  .nav button:disabled{opacity:.4;cursor:default}
+  .counter{font-size:12.5px;color:var(--muted)}
+  .dots{display:flex;gap:6px;margin-left:auto}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--line);cursor:pointer}.dot.on{background:var(--accent)}
+  footer{margin-top:22px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+  footer code{font-family:var(--mono);font-size:11px}
+</style>
+
+<div class="wrap">
+  <h1>Background-runs view-switch — state storyboard</h1>
+  <p class="sub">Phase A1 · serve project Y while project X's pipeline runs · authored from plan + <code style="font-family:var(--mono)">35d9c14</code> code</p>
+  <div class="banner"><b>Authored, not simulated.</b> Every state is hand-written from the Swift source (file:line per step). It is not a running model and not pixel-faithful Mac chrome — the value is the invisible-state panel + commentary. Tags: <b>⚠</b> surfaced a finding · <b>✓</b> resolved/de-risked · <b>○</b> clean / orthogonal.</div>
+
+  <div class="tabs" id="tabs" role="tablist"></div>
+  <div class="note" id="scnote"></div>
+
+  <div class="stage">
+    <div class="win">
+      <div class="titlebar"><div class="lights"><i class="r"></i><i class="y"></i><i class="g"></i></div><div class="wintitle" id="wintitle">Bristlenose</div></div>
+      <div class="body"><div class="sidebar" id="sidebar"></div><div class="detail" id="detail"></div></div>
+    </div>
+    <div class="panel">
+      <h2>Invisible state (what the app doesn't show you)</h2>
+      <dl class="kv" id="kv"></dl>
+      <div class="flag" id="flag"></div>
+    </div>
+  </div>
+
+  <div class="below">
+    <div class="tstamp" id="tstamp"></div>
+    <div class="caption" id="caption"></div>
+    <p class="commentary" id="commentary"></p>
+    <div class="refs" id="refs"></div>
+  </div>
+
+  <div class="nav">
+    <button id="prev">‹ Prev</button><button id="next">Next ›</button>
+    <span class="counter" id="counter"></span>
+    <div class="dots" id="dots"></div>
+  </div>
+
+  <footer>
+    <b>Cast:</b> Acme Onboarding (idle) · Beta Cohort 3 (running, run PID 4200) · Q2 Diary Study (idle) · Pension Interviews (failed) · IKEA Kitchens (folder moved → can't find) · Untitled Project (new, empty) · folder "Archive 2025".
+    <br><b>Findings this storyboard surfaced:</b> the <b>Step 2.5</b> cancellation defect (scenario 2 — folded into the plan); <b>Finding 17 (LOW)</b> lingering sidecar on switch-to-empty/unavailable (scenario 5). <b>De-risked:</b> delete-while-running is already blocked (scenario 8); moved-folder/new-project never render a stale report (scenarios 4–5).
+    <br>Plan: <code>.claude/plans/background-runs-view-switch-implementation.md</code> · review log: the branch's gitignored <code>/usual-suspects</code> ledger.
+  </footer>
+</div>
+
+<script>
+const NAMES = {acme:"Acme Onboarding", beta:"Beta Cohort 3", q2:"Q2 Diary Study",
+  pension:"Pension Interviews", ikea:"IKEA Kitchens", newproj:"Untitled Project", archive:"Archive 2025"};
+const GLYPH = {
+  idle:'<span class="glyph g-idle">▣</span>',
+  run:'<span class="glyph g-run"><span class="spin">◐</span></span>',
+  fail:'<span class="glyph g-fail">⚠</span>',
+  queue:'<span class="glyph g-queue">…</span>',
+  folder:'<span class="glyph g-folder">▸</span>',
+  newp:'<span class="glyph g-new">＋</span>',
+};
+// default sidebar for the rapid-switch scenarios
+const BASE = [
+  {key:"acme",state:"idle"},{key:"beta",state:"run",pid:"run 4200"},
+  {key:"q2",state:"idle"},{key:"pension",state:"fail"},
+];
+
+const DATA = [
+{ title:"1 · Rapid switch — CURRENT (race) ⚠", note:{tone:"warn",txt:"⚠ This is where authoring the FIXED track (scenario 2) caught the Step 2.5 defect. Shows the fail-open: UI says Q2, you're served Beta."},
+  steps:[
+    {t:"t = setup", sel:"acme", serve:{phase:"running",project:"acme",pid:4101,port:51001},
+      kv:[["selection","{ Acme }"],["serve.state",".running(51001)","run"],["serving","Acme · PID 4101"],["generation","1"],["run subprocesses","Beta PID 4200","run"],["in-flight switches","0"]],
+      flag:{tone:"ok",label:"Consistent — viewing Acme, serving Acme."},
+      caption:"You're viewing Acme. Beta analyses in the background.",
+      commentary:"Beta's run (PID 4200) keeps its spinner ticking regardless of what's served (Phase 0 / EventLogReader). The serve sidecar (PID 4101) is a separate process from any run.",
+      refs:["applySelectionChange <b>ContentView.swift:597</b>","Phase 0 EventLogReader"]},
+    {t:"t = 0 ms — click Beta", sel:"beta", serve:{phase:"tearing",project:"acme",pid:4101,port:51001},
+      kv:[["selection","{ Beta } ← sync"],["serve.state","tearing down Acme","warn"],["Task_B","switchProject(Beta): await shutdown","warn"],["generation","1"],["in-flight switches","1 (UN-OWNED)","warn"]],
+      flag:{tone:"warn",label:"1 switch in flight — nobody holds its handle."},
+      caption:"Click Beta → an un-owned switch Task spawns and suspends.",
+      commentary:"selection becomes { Beta } synchronously. applySelectionChange spawns Task_B running switchProject(Beta), suspended awaiting Acme teardown. ⚠ fire-and-forget — no handle kept.",
+      refs:["fire-and-forget Task <b>ContentView.swift:617</b>","switchProject <b>ServeManager.swift:390</b>"]},
+    {t:"t ≈ 80 ms — click Q2 (before Beta finished)", sel:"q2", serve:{phase:"tearing",project:"acme",pid:4101,port:51001},
+      kv:[["selection","{ Q2 }"],["Task_B","suspended in shutdown poll","warn"],["Task_C","switchProject(Q2): await shutdown","bad"],["generation","1"],["in-flight switches","2 ← RACE","bad"]],
+      flag:{tone:"bad",label:"2 switchProject bodies racing. generation does NOT serialize them."},
+      caption:"Click Q2 → a SECOND un-owned switch Task. Two race.",
+      commentary:"A second Task_C spawns. generation guards only stale termination callbacks, not two overlapping switchProject bodies — each independently runs shutdown() then start().",
+      refs:["generation guards terminationHandler only <b>ServeManager.swift:112,198</b>"]},
+    {t:"t ≈ 120 ms — Q2 reaches start() first", sel:"q2", serve:{phase:"starting",project:"q2",pid:4103,port:null},
+      kv:[["selection","{ Q2 }"],["serve.state",".starting(Q2)","warn"],["process","Q2 sidecar PID 4103"],["Task_B","still resuming shutdown…","warn"],["generation","2"]],
+      flag:{tone:"warn",label:"So far so good — selection {Q2} and serve→Q2 agree."},
+      caption:"Q2's switch wins the race to start(): spawns Q2's sidecar.",
+      commentary:"Task_C finishes shutdown, calls start(Q2): process was nil → generation→2, Q2 sidecar (PID 4103). selection and serve agree — but Task_B hasn't run its start() yet.",
+      refs:["start() <b>ServeManager.swift:128</b>"]},
+    {t:"t ≈ 140 ms — Beta resumes LAST, clobbers", sel:"q2", serve:{phase:"starting",project:"beta",pid:4102,port:null},
+      kv:[["selection","{ Q2 }"],["serve.state",".starting(Beta)","bad"],["process","Beta sidecar PID 4102"],["Q2 sidecar 4103","SIGINT'd by Beta's start()","bad"],["generation","3"]],
+      flag:{tone:"bad",label:"Selection says Q2; serve is bringing up Beta. Diverged."},
+      caption:"⚠ THE BUG — the EARLIER click resumes last and kills Q2's sidecar.",
+      commentary:"Task_B resumes, calls start(Beta). start() sees a live sidecar (Q2's 4103), runs its defensive stop() — SIGINTs Q2 — then spawns Beta. serve now brings up BETA while selection is { Q2 }. generation can't help: it guards state writes, not start()'s teardown.",
+      refs:["defensive stop() in start() <b>ServeManager.swift:129–131</b>"]},
+    {t:"t ≈ 1.5 s — settled, inconsistent", sel:"q2", serve:{phase:"running",project:"beta",pid:4102,port:51002}, inconsistent:true,
+      kv:[["selection","{ Q2 }"],["serve.state",".running(51002)","bad"],["serving","BETA · PID 4102","bad"],["WebView .id","Q2 → loads :51002","bad"],["generation","3"]],
+      flag:{tone:"inconsistent",label:"INCONSISTENT: UI = Q2, serving = Beta. No error surfaced."},
+      caption:"You selected Q2 — but you're served Beta's data, labelled Q2.",
+      commentary:"Sidebar highlights Q2, WebView keyed to Q2, but the live sidecar is BETA (:51002) so the detail's .running branch loads Beta's port. Detail trusts serve's port, not 'the selected project's port' — that's WHY it renders wrong. Finding 1's fail-open, reachable with two clicks.",
+      refs:["detail .running → serveURL <b>ContentView.swift:1793</b>","Finding 1"]},
+  ]},
+
+{ title:"2 · Rapid switch — WITH Step 2.5 fix ✓", note:{tone:"ok",txt:"✓ Authoring this track frame-by-frame is what revealed that 'just cancel the Task' is a no-op (shutdown swallows cancellation). The fix below — make switchProject honour cancellation — is now in the plan."},
+  steps:[
+    {t:"t = setup", sel:"acme", serve:{phase:"running",project:"acme",pid:4101,port:51001},
+      kv:[["selection","{ Acme }"],["serve.state",".running(51001)","run"],["switchTask","nil"],["run subprocesses","Beta PID 4200","run"]],
+      flag:{tone:"ok",label:"Consistent — viewing Acme, serving Acme."},
+      caption:"Same start. The fix adds a switchTask handle + cancellation-aware switchProject.",
+      commentary:"Identical setup; the only difference is the caller now keeps a handle (switchTask) and switchProject is made to honour cancellation.",
+      refs:["Step 2.5 (a)"]},
+    {t:"t = 0 ms — click Beta", sel:"beta", serve:{phase:"tearing",project:"acme",pid:4101,port:51001},
+      kv:[["selection","{ Beta }"],["switchTask","Task_B (owned)"],["Task_B","await shutdown","warn"],["in-flight switches","1 (OWNED)"]],
+      flag:{tone:"ok",label:"1 switch in flight — and we hold its handle."},
+      caption:"Click Beta → switchTask?.cancel() (nil); switchTask = Task_B.",
+      commentary:"applySelectionChange cancels the prior switchTask (nil, no-op) then stores switchTask = Task_B. Same suspend on shutdown, now cancellable.",
+      refs:["Step 2.5 (a) — caller stores+cancels"]},
+    {t:"t ≈ 80 ms — click Q2", sel:"q2", serve:{phase:"tearing",project:"acme",pid:4101,port:51001},
+      kv:[["selection","{ Q2 }"],["switchTask","Task_C (Task_B cancelled)","warn"],["Task_B","cancelled — but shutdown try? swallows it","warn"],["Task_C","await shutdown"]],
+      flag:{tone:"warn",label:"Task_B is cancelled — the bail happens at the next guard, not here."},
+      caption:"Click Q2 → cancel Task_B, store Task_C.",
+      commentary:"The subtlety the storyboard forced out: Task_B is cancelled, but it's parked in shutdown()'s `try? await Task.sleep`, which SWALLOWS the cancellation — so its shutdown still completes. Cancellation alone is toothless; the load-bearing check is next.",
+      refs:["shutdown swallows cancel <b>ServeManager.swift:329</b>"]},
+    {t:"t ≈ 120 ms — Task_B hits the guard and BAILS", sel:"q2", serve:{phase:"starting",project:"q2",pid:4103,port:null},
+      kv:[["selection","{ Q2 }"],["serve.state",".starting(Q2)","run"],["process","Q2 sidecar PID 4103"],["Task_B","guard !isCancelled → RETURN (no start)","run"],["Task_C","proceeds → start(Q2)"]],
+      flag:{tone:"ok",label:"Beta's switch returns before start() — nothing to clobber Q2."},
+      caption:"✓ THE FIX — superseded switch returns before spawning a sidecar.",
+      commentary:"Task_B finishes shutdown, hits `guard !Task.isCancelled else { return }` (it WAS cancelled) and returns BEFORE start(). No Beta sidecar spawned → nothing clobbers Q2. Reuses the cancellation the caller sends — no separate epoch counter.",
+      refs:["guard after await shutdown <b>Step 2.5 (b)</b>"]},
+    {t:"t ≈ 1.5 s — settled, consistent", sel:"q2", serve:{phase:"running",project:"q2",pid:4103,port:51003},
+      kv:[["selection","{ Q2 }"],["serve.state",".running(51003)","run"],["serving","Q2 · PID 4103","run"],["WebView .id","Q2 → loads :51003","run"],["run subprocesses","Beta PID 4200","run"]],
+      flag:{tone:"ok",label:"Consistent: selection = Q2, serving = Q2. One sidecar alive."},
+      caption:"You selected Q2; you're served Q2. Beta still runs untouched.",
+      commentary:"Final: selection { Q2 }, serving Q2 (:51003), one sidecar. Beta's pipeline (PID 4200) runs on, untouched. The A1 promise without the fail-open.",
+      refs:["—"]},
+  ]},
+
+{ title:"3 · Happy coexistence ○", note:{tone:"neutral",txt:"○ The simple path — one deliberate switch, no race. Clean. This is the A1 promise on the everyday case."},
+  steps:[
+    {t:"viewing Acme", sel:"acme", serve:{phase:"running",project:"acme",pid:4101,port:51001},
+      kv:[["selection","{ Acme }"],["serving","Acme · :51001","run"],["run subprocesses","Beta PID 4200","run"]],
+      flag:{tone:"ok",label:"Viewing Acme; Beta analysing in background."},
+      caption:"Baseline — view Acme, Beta running.",
+      commentary:"Same start state used throughout.",refs:["—"]},
+    {t:"switch to Q2 (single, deliberate)", sel:"q2", serve:{phase:"running",project:"q2",pid:4103,port:51003},
+      kv:[["selection","{ Q2 }"],["serving","Q2 · :51003","run"],["run subprocesses","Beta PID 4200","run"],["in-flight switches","0"]],
+      flag:{tone:"ok",label:"Serve Q2; Beta keeps analysing. The A1 promise."},
+      caption:"One unhurried switch: serve Q2, Beta keeps running.",
+      commentary:"A single switchProject completes cleanly: shutdown Acme → start Q2. Beta's run (PID 4200) is untouched — its sidebar spinner keeps ticking while you read Q2.",
+      refs:["switchProject <b>ServeManager.swift:390</b>"]},
+    {t:"Beta completes while you're on Q2", sel:"q2", rows:[{key:"acme",state:"idle"},{key:"beta",state:"idle"},{key:"q2",state:"idle"},{key:"pension",state:"fail"}], serve:{phase:"running",project:"q2",pid:4103,port:51003},
+      kv:[["selection","{ Q2 }"],["serving","Q2 · :51003 (untouched)","run"],["pipeline[Beta]",".running → .idle","run"],["run subprocesses","(none)"]],
+      flag:{tone:"ok",label:"Beta's row flips to ready. Q2's serve untouched."},
+      caption:"Beta finishes in the background — its row flips to ready.",
+      commentary:"handleOrphanExit is the 'run is over' signal: it sets state[Beta]=.idle then schedules a manifest re-read. Nothing touches serve — you're still on Q2. No interruption.",
+      refs:["handleOrphanExit <b>PipelineRunner.swift:551,564</b>"]},
+    {t:"switch back to Beta", sel:"beta", rows:[{key:"acme",state:"idle"},{key:"beta",state:"idle"},{key:"q2",state:"idle"},{key:"pension",state:"fail"}], serve:{phase:"running",project:"beta",pid:4105,port:51005},
+      kv:[["selection","{ Beta }"],["serving","Beta · :51005","run"],["pipeline[Beta]",".idle"]],
+      flag:{tone:"ok",label:"Switching back re-serves Beta — now complete."},
+      caption:"Back to Beta — now its finished report serves.",
+      commentary:"A fresh switchProject brings up Beta's sidecar against its now-complete output. (Mid-run, this same path would serve Beta's partial report — see the parked serve-reads-running-DB question.)",
+      refs:["switchProject <b>ServeManager.swift:390</b>"]},
+  ]},
+
+{ title:"4 · Switch into a moved folder ✓", note:{tone:"ok",txt:"✓ De-risked: switching into an unavailable project never renders a stale report — the detail pane gates on availability BEFORE serve.state. (But note the lingering sidecar → scenario 5.)"},
+  steps:[
+    {t:"viewing Acme", sel:"acme", rows:[{key:"acme",state:"idle"},{key:"beta",state:"run",pid:"run 4200"},{key:"ikea",state:"fail"}], serve:{phase:"running",project:"acme",pid:4101,port:51001},
+      kv:[["selection","{ Acme }"],["serving","Acme · :51001","run"],["pipeline[IKEA]",".idle (folder moved)","warn"]],
+      flag:{tone:"ok",label:"IKEA's folder was moved on disk — its row shows can't-find."},
+      caption:"IKEA Kitchens' folder moved; you're viewing Acme.",
+      commentary:"IKEA is marked unavailable (its bookmarked folder moved). Its sidebar row carries the can't-find glyph.",
+      refs:["isAvailable / revealPath <b>ContentView.swift:700</b>"]},
+    {t:"click IKEA (unavailable)", sel:"ikea", rows:[{key:"acme",state:"idle"},{key:"beta",state:"run",pid:"run 4200"},{key:"ikea",state:"fail"}], serve:{phase:"running",project:"acme",pid:4101,port:51001}, detailMode:"locate",
+      kv:[["selection","{ IKEA }"],["selectedProjectAvailable","false","warn"],["switchProject","NOT called (isAvailable guard)","warn"],["serve.state",".running — STILL Acme :51001","warn"]],
+      flag:{tone:"warn",label:"serve still on Acme, but detail shows Locate — no stale report."},
+      caption:"Detail gates on availability first → Locate panel, not Acme's report.",
+      commentary:"The .project arm sets available=false and SKIPS switchProject (guard requires isAvailable, :615). serve still points at Acme. But the detail pane checks `!project.isAvailable` FIRST (:1763), so you see the Locate panel for IKEA — never Acme's report mislabelled as IKEA. The gating order is what saves it.",
+      refs:["switchProject guard <b>ContentView.swift:615</b>","detail availability gate <b>:1763</b>"]},
+  ]},
+
+{ title:"5 · New empty project — lingering sidecar ⚠", note:{tone:"warn",txt:"⚠ Finding 17 (LOW): the .project arm conditionally STARTS serve but never STOPS it. Switching to an empty/unavailable project leaves the old sidecar alive. Bounded & invisible, but an asymmetry vs the .folder/default arms."},
+  steps:[
+    {t:"viewing Acme", sel:"acme", rows:[{key:"acme",state:"idle"},{key:"beta",state:"run",pid:"run 4200"},{key:"q2",state:"idle"}], serve:{phase:"running",project:"acme",pid:4101,port:51001},
+      kv:[["selection","{ Acme }"],["serving","Acme · :51001","run"]],
+      flag:{tone:"ok",label:"Viewing Acme."},
+      caption:"Baseline — viewing Acme (sidecar 4101).",
+      commentary:"Starting point before ⌘N.",refs:["—"]},
+    {t:"⌘N — New Project", sel:"newproj", rows:[{key:"acme",state:"idle"},{key:"beta",state:"run",pid:"run 4200"},{key:"q2",state:"idle"},{key:"newproj",state:"newp"}], serve:{phase:"running",project:"acme",pid:4101,port:51001}, detailMode:"onboarding",
+      kv:[["selection","{ Untitled }"],["project.path","\"\" (empty)"],["switchProject","skipped (path.isEmpty)","warn"],["serveManager.stop()","NOT called","bad"],["serve.state",".running — STILL Acme 4101","bad"]],
+      flag:{tone:"warn",label:"Detail shows onboarding; Acme's sidecar lingers behind it."},
+      caption:"New empty project → onboarding shown, but Acme's sidecar lingers.",
+      commentary:"createNewProject adds a path-less project and selects it. The .project arm skips switchProject (path.isEmpty) AND never calls stop(). Detail gates on path.isEmpty (:1766) so you see onboarding — but Acme's sidecar (4101) is still alive, serving Acme on localhost, invisibly.",
+      refs:["createNewProject <b>ContentView.swift:662</b>","no else-stop in .project arm <b>:615</b>","detail empty gate <b>:1766</b>"]},
+    {t:"the asymmetry (Finding 17)", sel:"newproj", rows:[{key:"acme",state:"idle"},{key:"beta",state:"run",pid:"run 4200"},{key:"q2",state:"idle"},{key:"newproj",state:"newp"}], serve:{phase:"running",project:"acme",pid:4101,port:51001}, detailMode:"onboarding",
+      kv:[[".folder arm","calls stop()","run"],[".default arm","calls stop()","run"],[".project arm (empty/unavail)","neither start nor stop","bad"],["lingering until","next folder-select / real switch / quit"]],
+      flag:{tone:"warn",label:"LOW: bounded leak. One-line fix: else { serveManager.stop() }."},
+      caption:"⚠ Finding 17 — only the .project arm leaks a sidecar.",
+      commentary:"The .folder and default arms both stop serve; the .project arm doesn't when it skips switchProject. The old sidecar lingers until the next folder-select (stop), real switch (shutdown), or quit (willTerminate → stop). Invisible & localhost, so LOW — but a clean one-line fix restores symmetry: an else-branch stop() when not starting.",
+      refs:[".folder/.default stop() <b>ContentView.swift:628,635</b>","Finding 17 (LOW)"]},
+  ]},
+
+{ title:"6 · Queued second run ○", note:{tone:"neutral",txt:"○ A1 doesn't touch queueing. Confirms the single-slot FIFO + queued sidebar still read correctly while a background run holds the slot."},
+  steps:[
+    {t:"Beta running, viewing Beta", sel:"beta", rows:[{key:"beta",state:"run",pid:"run 4200"},{key:"q2",state:"idle"},{key:"acme",state:"idle"}], serve:{phase:"running",project:"beta",pid:4102,port:51002},
+      kv:[["currentlyRunning","Beta"],["queue","[]"],["serving","Beta · :51002","run"]],
+      flag:{tone:"ok",label:"Beta holds the single run slot."},
+      caption:"Beta is running and viewed.",
+      commentary:"PipelineRunner runs one project at a time (single slot); the queue is empty.",
+      refs:["start() single-slot <b>PipelineRunner.swift:870</b>"]},
+    {t:"start a run on Q2", sel:"beta", rows:[{key:"beta",state:"run",pid:"run 4200"},{key:"q2",state:"queue"},{key:"acme",state:"idle"}], serve:{phase:"running",project:"beta",pid:4102,port:51002},
+      kv:[["currentlyRunning","Beta"],["queue","[Q2]"],["pipeline[Q2]",".queued(1)","warn"]],
+      flag:{tone:"ok",label:"Q2 queues behind Beta. FIFO."},
+      caption:"Run requested on Q2 → it queues (slot busy).",
+      commentary:"start(Q2): currentlyRunning≠nil and ≠Q2 and not already queued → queue.append(Q2), renumber. state[Q2]=.queued(1). Q2's row shows the queued glyph.",
+      refs:["start() enqueue <b>PipelineRunner.swift:872–875</b>"]},
+    {t:"view Q2 while it's queued", sel:"q2", rows:[{key:"beta",state:"run",pid:"run 4200"},{key:"q2",state:"queue"},{key:"acme",state:"idle"}], serve:{phase:"running",project:"q2",pid:4103,port:51003},
+      kv:[["selection","{ Q2 }"],["serving","Q2 · :51003","run"],["pipeline[Q2]",".queued(1)","warn"],["currentlyRunning","Beta (still)"]],
+      flag:{tone:"ok",label:"Serve Q2's existing report; its re-run stays queued."},
+      caption:"Viewing a queued project serves its existing report.",
+      commentary:"serve and run are independent: switching to Q2 serves Q2's prior report while its re-run waits in the queue. Beta keeps the run slot. (A1's view-freedom and the FIFO compose cleanly.)",
+      refs:["switchProject ⟂ PipelineRunner"]},
+    {t:"Beta completes → Q2 promoted", sel:"q2", rows:[{key:"beta",state:"idle"},{key:"q2",state:"run",pid:"run 4300"},{key:"acme",state:"idle"}], serve:{phase:"running",project:"q2",pid:4103,port:51003},
+      kv:[["currentlyRunning","Q2"],["queue","[]"],["pipeline[Q2]",".running","run"]],
+      flag:{tone:"ok",label:"FIFO drains: Q2 promoted to running."},
+      caption:"Beta finishes → startNextQueued promotes Q2.",
+      commentary:"On Beta's exit the termination path clears currentlyRunning and startNextQueued spawns Q2. Its row flips to the spinner. Serve (on Q2) is untouched by the promotion.",
+      refs:["startNextQueued","currentlyRunning=nil <b>PipelineRunner.swift:1119</b>"]},
+  ]},
+
+{ title:"7 · Folder select clears running flag ✓", note:{tone:"ok",txt:"✓ Shows Finding 4 (the stale ⌘. flag) and its one-line fix. CURRENT vs FIXED in the last two steps."},
+  steps:[
+    {t:"Beta running, viewing Beta", sel:"beta", rows:[{key:"archive",state:"folder"},{key:"beta",state:"run",pid:"run 4200"},{key:"q2",state:"idle"}], serve:{phase:"running",project:"beta",pid:4102,port:51002},
+      kv:[["selection","{ Beta }"],["selectedProjectIsRunning","true","run"],["⌘. (Stop Analysis)","enabled → acts on Beta"]],
+      flag:{tone:"ok",label:"Viewing running Beta; ⌘. stops Beta."},
+      caption:"Viewing running Beta — ⌘. correctly targets it.",
+      commentary:"selectedProjectIsRunning=true because the viewed project (Beta) is running; ⌘. acts on the sole selection.",
+      refs:["selectedProjectIsRunning <b>ContentView.swift:610</b>"]},
+    {t:"select folder 'Archive 2025' — CURRENT", sel:"archive", rows:[{key:"archive",state:"folder"},{key:"beta",state:"run",pid:"run 4200"},{key:"q2",state:"idle"}], serve:{phase:"stopped",project:null,pid:null,port:null}, detailMode:"folder",
+      kv:[["selection","{ Archive (folder) }"],[".folder arm","serveManager.stop()","run"],["selectedProjectIsRunning","true (NOT cleared)","bad"],["⌘. ","enabled but sole=nil → no-op","bad"],["run subprocesses","Beta PID 4200 (alive)","run"]],
+      flag:{tone:"warn",label:"⌘. looks enabled but silently no-ops (Finding 4)."},
+      caption:"Select the folder → serve stops, Beta runs on. But ⌘. lies.",
+      commentary:"The .folder arm stops serve (correct — separate process, Beta keeps running). But it doesn't clear selectedProjectIsRunning, so ⌘. stays enabled; with a folder selected, sole is nil and .stopSelectedProject silently no-ops.",
+      refs:[".folder arm stop() <b>ContentView.swift:628</b>","Finding 4"]},
+    {t:"WITH the Finding 4 fix", sel:"archive", rows:[{key:"archive",state:"folder"},{key:"beta",state:"run",pid:"run 4200"},{key:"q2",state:"idle"}], serve:{phase:"stopped",project:null,pid:null,port:null}, detailMode:"folder",
+      kv:[["selection","{ Archive (folder) }"],["selectedProjectIsRunning","false (cleared)","run"],["⌘. ","correctly dimmed","run"],["run subprocesses","Beta PID 4200 (alive)","run"]],
+      flag:{tone:"ok",label:"⌘. correctly dims. Beta still running, stoppable from its row."},
+      caption:"✓ Fix: clear the flag in the .folder/default arms.",
+      commentary:"One line each arm: selectedProjectIsRunning=false. ⌘. dims immediately. Beta keeps running and is still stoppable via its row's context-menu Stop.",
+      refs:["Finding 4 fix — Step 2 item 7"]},
+  ]},
+
+{ title:"8 · Delete while running — blocked ✓", note:{tone:"ok",txt:"✓ De-risked a parked concern: removing a running/queued project is already blocked with a toast. No 'remove + sidecar writes for hours' footgun. Not a gap."},
+  steps:[
+    {t:"Beta running; try Remove from Sidebar", sel:"beta", rows:[{key:"beta",state:"run",pid:"run 4200"},{key:"q2",state:"idle"}], serve:{phase:"running",project:"beta",pid:4102,port:51002}, toast:"Can't remove “Beta Cohort 3” while it's analysing.",
+      kv:[["pipeline[Beta]",".running","run"],["partitionRemovable","→ blocked","warn"],["Beta removed?","NO"]],
+      flag:{tone:"ok",label:"Correctly blocked — running project can't be removed."},
+      caption:"Remove on a running project → blocked with a toast.",
+      commentary:"partitionRemovable splits candidates: .running/.queued → blocked, everything else removable. Beta is blocked and a toast explains why. This is the existing guard — it retires the delete-while-running worry.",
+      refs:["partitionRemovable <b>ContentView.swift:814–825</b>","removeBlockedByRun toast"]},
+    {t:"remove an idle project (Q2)", sel:"q2", rows:[{key:"beta",state:"run",pid:"run 4200"},{key:"q2",state:"idle"}], serve:{phase:"running",project:"beta",pid:4102,port:51002}, toast:"Removed “Q2 Diary Study”.  Undo",
+      kv:[["pipeline[Q2]",".idle"],["partitionRemovable","→ removable","run"],["UndoableRemovalStore","8s undo window"]],
+      flag:{tone:"ok",label:"Idle project removes normally, with 8s undo."},
+      caption:"Idle projects remove normally — 8s undo.",
+      commentary:"An idle project passes partitionRemovable and routes through UndoableRemovalStore (8s undo + toast). Beta, still running, is untouched.",
+      refs:["removalStore.removeFromSidebar <b>ContentView.swift:786</b>"]},
+  ]},
+
+{ title:"9 · Tab switch (orthogonal) ○", note:{tone:"neutral",txt:"○ Switching the 5 tabs is web-layer navigation inside the SAME serve sidecar — it never calls switchProject. Shown once; orthogonal to A1."},
+  steps:[
+    {t:"viewing Beta — Project tab", sel:"beta", rows:[{key:"beta",state:"idle"},{key:"q2",state:"idle"}], serve:{phase:"running",project:"beta",pid:4102,port:51002},
+      kv:[["selection","{ Beta }"],["activeTab",".project"],["serving","Beta · :51002","run"]],
+      flag:{tone:"ok",label:"Serving Beta, Project tab."},
+      caption:"Viewing Beta on the Project tab.",
+      commentary:"The 5 tabs (Project/Sessions/Quotes/Codebook/Analysis) are routes within the served SPA.",
+      refs:["Tab.swift"]},
+    {t:"switch to Quotes tab", sel:"beta", rows:[{key:"beta",state:"idle"},{key:"q2",state:"idle"}], serve:{phase:"running",project:"beta",pid:4102,port:51002},
+      kv:[["selection","{ Beta } (unchanged)"],["activeTab",".quotes"],["serve.state","unchanged :51002","run"],["switchProject","NOT called"]],
+      flag:{tone:"ok",label:"Tab switch = web navigation. serve untouched."},
+      caption:"Quotes tab — same sidecar, WebView navigates.",
+      commentary:"bridgeHandler → window.switchToTab drives an in-page route change. selection and serve.state are untouched; no switchProject. Entirely orthogonal to A1's project-switch logic.",
+      refs:["bridgeHandler.switchToTab","callAsyncJavaScript in:.page"]},
+  ]},
+];
+
+let si=0, pi=0;
+
+function render(){
+  const sc=DATA[si], st=sc.steps[pi];
+  const rows = st.rows || BASE;
+  document.getElementById("wintitle").textContent = NAMES[st.sel] || "Bristlenose";
+
+  document.getElementById("sidebar").innerHTML = rows.map(r=>{
+    const sel=r.key===st.sel?" sel":"";
+    const pid=r.pid?`<span class="pid">${r.pid}</span>`:"";
+    const sub = r.state==="fail" ? `<span class="sub2">can't find</span>`:"";
+    const g = r.state==="newp"?GLYPH.newp:(GLYPH[r.state]||GLYPH.idle);
+    return `<div class="row${sel}">${g}<span class="nm">${NAMES[r.key]}</span>${sub}${pid}</div>`;
+  }).join("");
+
+  const sv=st.serve, d=document.getElementById("detail");
+  let serveTxt;
+  if(sv.phase==="running") serveTxt=`serving ${NAMES[sv.project]} · PID ${sv.pid} · :${sv.port}`;
+  else if(sv.phase==="starting") serveTxt=`starting ${NAMES[sv.project]} · PID ${sv.pid}`;
+  else if(sv.phase==="tearing") serveTxt=`tearing down ${NAMES[sv.project]} · PID ${sv.pid}`;
+  else serveTxt="serve stopped";
+
+  const mode = st.detailMode || (st.inconsistent?"inconsistent":sv.phase);
+  let card;
+  if(mode==="inconsistent") card=`<div class="reportcard bad">⚠ Report shown = <b>${NAMES[sv.project]}</b><br>but selection = <b>${NAMES[st.sel]}</b></div>`;
+  else if(mode==="locate") card=`<div class="reportcard warnb">⚲ Locate “<b>${NAMES[st.sel]}</b>” — its folder moved</div>`;
+  else if(mode==="onboarding") card=`<div class="reportcard">＋ New project — drop a folder of recordings to begin</div>`;
+  else if(mode==="folder") card=`<div class="reportcard">▸ Folder “<b>${NAMES[st.sel]}</b>” — no report (serve stopped)</div>`;
+  else if(mode==="failed") card=`<div class="reportcard bad">⚠ ${st.detailMsg||"Couldn't start"}</div>`;
+  else if(mode==="running") card=`<div class="reportcard">${NAMES[sv.project]} — report</div>`;
+  else card=`<div class="reportcard">starting sidecar…</div>`;
+
+  const mism = !st.detailMode && sv.project && sv.project!==st.sel && (sv.phase==="running"||sv.phase==="starting") && !st.inconsistent;
+  const toast = st.toast?`<div class="toast">${st.toast}</div>`:"";
+  d.innerHTML = `<div class="serveline">${serveTxt}</div>${mism?`<div class="inconsistent">selection ${NAMES[st.sel]} ≠ serving ${NAMES[sv.project]}</div>`:""}${card}${toast}`;
+
+  document.getElementById("kv").innerHTML = st.kv.map(([k,v,t])=>`<dt>${k}</dt><dd class="${t?("t-"+t):""}">${v}</dd>`).join("");
+  const f=document.getElementById("flag"); f.className="flag "+st.flag.tone; f.textContent=st.flag.label;
+
+  document.getElementById("tstamp").textContent=st.t;
+  document.getElementById("caption").textContent=st.caption;
+  document.getElementById("commentary").textContent=st.commentary;
+  document.getElementById("refs").innerHTML="↳ "+st.refs.join(" &nbsp;·&nbsp; ");
+
+  document.getElementById("counter").textContent=`Step ${pi+1} / ${sc.steps.length}`;
+  document.getElementById("prev").disabled=pi===0;
+  document.getElementById("next").disabled=pi===sc.steps.length-1;
+  const dots=document.getElementById("dots");
+  dots.innerHTML=sc.steps.map((_,i)=>`<span class="dot${i===pi?" on":""}" data-i="${i}"></span>`).join("");
+  dots.querySelectorAll(".dot").forEach(el=>el.onclick=()=>{pi=+el.dataset.i;render();});
+
+  const nb=document.getElementById("scnote"); nb.className="note "+sc.note.tone; nb.textContent=sc.note.txt;
+  document.querySelectorAll(".tab").forEach((t,i)=>t.setAttribute("aria-selected",i===si));
+}
+
+const tabs=document.getElementById("tabs");
+tabs.innerHTML=DATA.map((s,i)=>`<button class="tab" role="tab" data-i="${i}">${s.title}</button>`).join("");
+tabs.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{si=+t.dataset.i;pi=0;render();});
+document.getElementById("prev").onclick=()=>{if(pi>0){pi--;render();}};
+document.getElementById("next").onclick=()=>{if(pi<DATA[si].steps.length-1){pi++;render();}};
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowRight"||e.key===" "){if(pi<DATA[si].steps.length-1){pi++;render();}}
+  if(e.key==="ArrowLeft"){if(pi>0){pi--;render();}}
+});
+render();
+</script>

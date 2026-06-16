@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 15 Jun 2026 (closed `per-project-activity` branch; active: background-runs-view-switch, gemini-provider, llm-provider-default-model, responsive-signal-cards, tower-of-hanoi)
+**Updated:** 16 Jun 2026 (`background-runs-view-switch` Phase A1 of multi-project merged to main — pending `/close-branch`; `per-project-activity` closed. Active: gemini-provider, llm-provider-default-model, responsive-signal-cards, tower-of-hanoi)
 
 ---
 
@@ -41,7 +41,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 | `bristlenose_branch llm-provider-default-model/` | `llm-provider-default-model` | bugfix | CLI `--llm <provider>` applies that provider's default model (fixes cross-provider 404) |
-| `bristlenose_branch background-runs-view-switch/` | `background-runs-view-switch` | feature | Phase A1 of multi-project: switch the viewed project while a pipeline runs in the background (remove the cancel-on-switch modal) |
+| `bristlenose_branch background-runs-view-switch/` | `background-runs-view-switch` | feature | Phase A1: switch the viewed/served project freely while a pipeline runs in the background (remove the cancel-on-switch modal; serialize the async serve-switch) |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -156,20 +156,28 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ### `background-runs-view-switch`
 
-**Kind:** feature — Phase A1 of the multi-project roadmap: let the user switch the viewed/served project while a pipeline runs in the background, by removing the cancel-on-switch modal ("processing X whilst serving Y").
-**Status:** Just started
-**Started:** 15 Jun 2026
+**Kind:** feature (macOS desktop) — Phase A1 of multi-project. Let the user switch the viewed/served project freely while a pipeline runs in the background, by removing the cancel-on-switch confirm modal that forced stop-or-stay.
+**Status:** ✅ GUI-QA passed — **ready to merge** (16 Jun 2026, build `717afa9`). Core A1 acceptance verified live in the real `.app`: ran one project while viewing another's report (background run kept ticking, served project switched freely) — the cancel-on-switch modal is gone and switching no longer touches the running pipeline. 3 commits (`655abd8` code · `56c4358` design artifacts · `717afa9` impl-review fix); build + `BristlenoseTests` + ruff + locale pytest all green. **Not yet pushed/merged** (release-timing rule — push `main` after 9pm). Edge scenarios (machine-gun rapid-switch / failed-switch) rest on the guards + two review passes; manual stress optional. Next: merge → `/close-branch` → Phase 0b.
+**Started:** 16 Jun 2026 (off `main` after Phase 0 / `35d9c14`)
 **Worktree:** `/Users/cassio/Code/bristlenose_branch background-runs-view-switch/`
-**Remote:** local only (push when ready)
+**Remote:** local only — push `main` after merge + 9pm
 
-**What it does:** Today `handleSelectionChange` (`ContentView.swift`) presents the `InFlightSwitchPrompt` modal when you leave a `.running` project, forcing "Stop and Switch" (kills the run) or "Continue Analysing" (stay). This blocks the felt multi-project experience. The pipeline already runs as an independent `--no-serve` subprocess with per-project WAL DBs, and Phase 0's sidebar tracks it regardless of selection — so the modal is a guard, not a necessity. A1 verifies the run survives a serve switch (real `.app`), then removes the modal machinery so serve follows selection freely. Full brief in the worktree's `HANDOFF.md`. Sequenced after: A2 (warm-sidecar pool / instant switch), B (cap-2 concurrent execution), C (multi-window).
+**What it does:** Removes the `InFlightSwitchPrompt` cancel-on-switch modal (the former "Mini-spec 4" guard) so selecting another project no longer blocks on a running pipeline — the run is an independent `bristlenose run --no-serve` subprocess and continues in the background while you serve another project (the felt multi-project blocker per the roadmap: being *stuck* on the running project). The async serve-switch is serialized so rapid switching can't corrupt state: `ContentView.applySelectionChange` holds a `switchTask` and cancels the prior switch before starting the next; `ServeManager.switchProject` honours the cancellation (`guard !Task.isCancelled` before `start()`); and `shutdown()`'s terminal writes are guarded by the existing `generation` ownership counter — so a superseded switch can't leave the UI on Y while the live sidecar is X. Also: clears a stale `selectedProjectIsRunning` flag on folder/multi-select, stops serve when switching to an empty/unavailable project (no lingering sidecar), removes 4 dead `desktop.json` keys.
 
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/ContentView.swift` — `handleSelectionChange`, `applySelectionChange`, `resolveInFlightSwitch`, `inFlightSwitch`, `revertingSelection`, `InFlightSwitchPrompt`
-- `desktop/Bristlenose/Bristlenose/ServeManager.swift` — confirm `switchProject` doesn't touch the pipeline
-- `bristlenose/locales/{en,es,fr,de,ko,ja,cs}/desktop.json` — remove the 3 now-dead `inFlightSwitch*` keys
+**Files touched:** `ContentView.swift` (modal deletion + `applySelectionChange`), `ServeManager.swift` (`switchProject`/`shutdown`), `bristlenose/locales/{en,es,fr,de,ko,ja,cs}/desktop.json`. Design record: `docs/mockups/background-runs-view-switch-storyboard.html` (9-scenario state storyboard — happy/failure/edge paths with the invisible-state machine made explicit) + `docs/design-consequence-storyboarding.md` (the review method it demonstrates).
 
-**Potential conflicts with other branches:** none active — `ContentView.swift` selection/serve region isn't touched by `gemini-provider` / `llm-provider-default-model`. Builds directly on `per-project-activity` (Phase 0, now merged to main).
+**Review:** two `/usual-suspects` passes (plan + impl) + William. The impl-review earned its keep — it caught that the first serialization commit (`655abd8`) left `shutdown()`'s terminal writes unguarded (a residual rapid-switch clobber that would orphan the winner's sidecar and strand the detail pane on the boot spinner); fixed in `717afa9` by reusing the existing `generation` counter rather than adding a second epoch.
+
+**Verify (human GUI QA — the acceptance gate, can't be automated here):** build the worktree's `.app` (open its `desktop/Bristlenose/Bristlenose.xcodeproj`, Cmd+R), then: (1) run a pipeline on X, switch to Y — X keeps running (spinner ticks), Y serves; (2) **rapid-switch** A→B→C — served report always matches the *final* selection, `lsof -i tcp -P -n | grep bristlenose-sidecar` shows exactly one sidecar, no project stuck on the boot spinner; (3) **failed-switch** — move a project's folder in Finder, select it → Locate panel (not a stale report), switch back recovers; (4) note click→report latency (<4s idle).
+
+**Deferred (next steps — A2 and beyond):**
+- **A2** — warm-sidecar pool so switching feels instant (today `switchProject` tears down + respawns each click), plus a ServeManager-owned serialization primitive routing *every* serve-lifecycle driver (`restartIfRunning` / consent-grant / post-Locate) through one ownership token (the deeper half of the rapid-switch coordination — review Findings 19/20).
+- Multi-window: cancel `switchTask` on view teardown (a one-liner once ContentView can actually be torn down — Finding 22).
+- Remove-while-running → one-click async cancel-then-remove, no confirm, no toast (Topic 8 — see the plan doc's deferred-design section).
+- Availability failure-surface vocabulary reconciliation (row-popover vs content-area), Topic 4.
+- Toast-debt sweep: the shipped remove-blocked + 8s undo toasts violate the no-toast rule.
+
+**Potential conflicts with other branches:** touches `ContentView.swift` + `ServeManager.swift` (desktop serve/sidebar). No other active branch touches these — `gemini-provider` / `llm-provider-default-model` are provider/config; `per-project-activity` (the sidebar-row work this builds on) is merged. `drag-push` (parked) shares `ProjectRow.swift` but not the files this branch changed.
 
 ### `llm-provider-default-model`
 

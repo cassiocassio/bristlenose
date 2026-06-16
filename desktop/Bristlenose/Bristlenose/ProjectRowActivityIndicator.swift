@@ -25,19 +25,23 @@ struct ProjectRowActivityIndicator: View {
     /// What the trailing slot should show for *activity* — distinct from
     /// availability (cloud glyph) and from failure/partial (subtitle text).
     enum Kind: Equatable {
-        /// A run is in flight — indeterminate spinner (Welford-ETA ring in 0b).
-        case running
+        /// A run is in flight. `fraction` is the determinate ring fill
+        /// (monotonic + asymptote-clamped); nil → indeterminate spinner
+        /// (uncalibrated first run before any measured signal arrives).
+        case running(fraction: Double?)
         /// Nothing to show; the row falls back to the cloud glyph / empty.
         case none
 
         /// Pure derivation from the project's pipeline state. Exhaustive with
         /// no `default:` so a new `PipelineState` case forces an explicit
         /// decision here at compile time rather than silently mapping to
-        /// `.none`.
-        static func from(pipelineState: PipelineState?) -> Kind {
+        /// `.none`. `progress` carries the determinate ring fill when in flight.
+        static func from(
+            pipelineState: PipelineState?, progress: PipelineProgress? = nil
+        ) -> Kind {
             switch pipelineState {
             case .running:
-                return .running
+                return .running(fraction: progress?.ringFraction)
             case .scanning, .idle, .queued, .ready, .failed, .unreachable,
                  .partial, .stopped, .completedPartial, .failedWithDiagnostic,
                  .none:
@@ -63,7 +67,7 @@ struct ProjectRowActivityIndicator: View {
 
     var body: some View {
         switch kind {
-        case .running:
+        case .running(let fraction):
             ZStack {
                 if hovering, onStop != nil {
                     // Hover state: a neutral grey cancel × (Finder/App Store
@@ -76,6 +80,17 @@ struct ProjectRowActivityIndicator: View {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
+                } else if let fraction {
+                    // Determinate Welford-ETA ring (Phase 0b). Stock circular
+                    // ProgressView (on the system grid). The fill is already
+                    // monotonic + asymptote-capped (RunProgressMath), so an
+                    // over-running run holds near-full rather than hitting 100%.
+                    // QA: confirm macOS 26 renders value-circular as a determinate
+                    // ring, not a spinner ignoring `value` — fall back to
+                    // `Circle().trim(...)` if the stock style doesn't fill.
+                    ProgressView(value: fraction)
+                        .progressViewStyle(.circular)
+                        .controlSize(.small)
                 } else {
                     ProgressView()
                         .controlSize(.small)

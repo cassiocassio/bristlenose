@@ -44,6 +44,7 @@ from pathlib import Path
 from bristlenose import __version__ as _bristlenose_version
 from bristlenose.cost import RunCost
 from bristlenose.events import (
+    AnyEvent,
     Cause,
     CauseCategoryEnum,
     KindEnum,
@@ -53,6 +54,7 @@ from bristlenose.events import (
     RunCancelledEvent,
     RunCompletedEvent,
     RunFailedEvent,
+    RunProgressEvent,
     RunStartedEvent,
     _now_iso,
     append_event,
@@ -474,10 +476,22 @@ class RunHandle:
     with local Whisper) — that's fine; the terminus event records None.
     """
 
-    def __init__(self, run_id: str) -> None:
+    def __init__(
+        self,
+        run_id: str,
+        *,
+        events_file: Path | None = None,
+        kind: KindEnum | None = None,
+        started_at: str | None = None,
+    ) -> None:
         self.run_id = run_id
         self.cost: RunCost | None = None
         self.summary: PipelineSummary | None = None
+        # Envelope for in-flight progress events emitted via ``progress``.
+        self._events_file = events_file
+        self._kind = kind
+        self._started_at = started_at
+        self._progress_warned = False
 
     def set_cost(self, cost: RunCost | None) -> None:
         """Attach the cost totals; stamped onto the terminus event."""
@@ -486,6 +500,56 @@ class RunHandle:
     def set_summary(self, summary: PipelineSummary | None) -> None:
         """Attach the per-stage outcome rollup; stamped onto the terminus event."""
         self.summary = summary
+
+    def progress(
+        self,
+        *,
+        stage: str | None = None,
+        sessions_complete: int | None = None,
+        sessions_total: int | None = None,
+        stage_fraction: float | None = None,
+        eta_remaining_seconds: float | None = None,
+        predicted_total_seconds: float | None = None,
+        elapsed_seconds: float | None = None,
+    ) -> None:
+        """Emit one in-flight ``run_progress`` event — the pipeline's sink.
+
+        The pipeline computes the numbers (it owns the estimator + session
+        loops); the handle owns the envelope (run_id / kind / started_at /
+        events_file) and writes through ``append_event`` (the only
+        0o600 + O_NOFOLLOW path — never open the file directly).
+
+        Best-effort by design: a progress write must never fail an
+        otherwise-healthy run. But the swallow is *narrow* — only the I/O is
+        guarded, only ``OSError`` (disk full / fsync / symlink attack), and
+        it logs once. The model is built BEFORE the ``try`` so a programmer
+        error (bad type) still raises instead of hiding as "no progress".
+        """
+        if self._events_file is None:
+            return
+        event = RunProgressEvent(
+            ts=_now_iso(),
+            run_id=self.run_id,
+            kind=self._kind or KindEnum.RUN,
+            started_at=self._started_at or _now_iso(),
+            stage=stage,
+            sessions_complete=sessions_complete,
+            sessions_total=sessions_total,
+            stage_fraction=stage_fraction,
+            eta_remaining_seconds=eta_remaining_seconds,
+            predicted_total_seconds=predicted_total_seconds,
+            elapsed_seconds=elapsed_seconds,
+        )
+        try:
+            append_event(self._events_file, event)
+        except OSError as exc:
+            if not self._progress_warned:
+                self._progress_warned = True
+                log.warning(
+                    "progress_write_failed run_id=%s stage=%s: %s "
+                    "(further progress-write failures suppressed)",
+                    self.run_id, stage, exc,
+                )
 
 
 def _process_envelope(start_time: str) -> Process:
@@ -509,7 +573,15 @@ def _reconcile_stranded_run(events_file: Path) -> None:
     events = read_events(events_file)
     if not events:
         return
-    tail = events[-1]
+    # Key off the last *lifecycle* event — skip in-flight run_progress
+    # telemetry, or a trailing progress line would suppress reconciliation of
+    # a genuinely stranded run_started (Finding 1).
+    tail: AnyEvent | None = None
+    for ev in reversed(events):
+        if isinstance(ev, RunProgressEvent):
+            continue
+        tail = ev
+        break
     if not isinstance(tail, RunStartedEvent):
         return
     now = _now_iso()
@@ -597,7 +669,12 @@ def run_lifecycle(
 
     log.info("run_started run_id=%s kind=%s", run_id, kind.value)
 
-    handle = RunHandle(run_id)
+    handle = RunHandle(
+        run_id,
+        events_file=events_file,
+        kind=kind,
+        started_at=started_at,
+    )
 
     def _terminus_kwargs() -> dict[str, object]:
         """Render handle-attached cost + summary as terminus-event kwargs."""

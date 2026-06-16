@@ -1151,6 +1151,7 @@ def run(
     )
     try:
         with run_lifecycle(output_dir, KindEnum.RUN) as _run_handle:
+            pipeline.set_progress_sink(_run_handle.progress)
             result = asyncio.run(pipeline.run(input_dir, output_dir))
             _run_handle.set_cost(compute_run_cost(
                 result.llm_model,
@@ -1408,6 +1409,7 @@ def analyze(
     )
     try:
         with run_lifecycle(output_dir, KindEnum.ANALYZE) as _run_handle:
+            pipeline.set_progress_sink(_run_handle.progress)
             result = asyncio.run(pipeline.run_analysis_only(transcripts_dir, output_dir))
             _run_handle.set_cost(compute_run_cost(
                 result.llm_model,

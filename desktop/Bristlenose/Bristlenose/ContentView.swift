@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import os
 
 // MARK: - Window title manager
 
@@ -219,9 +220,8 @@ struct ContentView: View {
     /// the cancellation (guards before `start()`), so a superseded switch bails
     /// rather than clobbering the winner's sidecar.
     @State private var switchTask: Task<Void, Never>?
-    /// Recreates the detail WebView (keyed by project.id + this token) to reload
-    /// the report after a run finishes — see scheduleReportReloadIfNeeded.
-    @State private var reportReloadToken = 0
+    /// In-flight retry task that reloads the detail WebView after a run finishes
+    /// — see scheduleReportReloadIfNeeded.
     @State private var reportReloadTask: Task<Void, Never>?
 
     /// The single selected item, if exactly one is selected.
@@ -348,15 +348,9 @@ struct ContentView: View {
         // Keep Project ▸ Stop Analysis (⌘.) enablement current as runs
         // start/stop for the selected project (selection-time sync lives in
         // applySelectionChange; `state` is low-frequency, unlike liveData).
-        .onChange(of: pipelineRunner.state) { _, _ in
+        .onChange(of: pipelineRunner.state) { old, new in
             updateSelectedProjectRunState()
-            scheduleReportReloadIfNeeded()
-        }
-        .onChange(of: serveManager.state) { _, _ in
-            scheduleReportReloadIfNeeded()
-        }
-        .onChange(of: bridgeHandler.isReady) { _, _ in
-            scheduleReportReloadIfNeeded()
+            scheduleReportReloadOnCompletion(old: old, new: new)
         }
         .onAppear {
             // Restore last-selected project from persisted ID.
@@ -1551,30 +1545,70 @@ struct ContentView: View {
         }
     }
 
+    /// A project actively mid-analysis. Used to distinguish a real run
+    /// completion (analysing → ready) from the launch-time disk read of an
+    /// already-finished project (nil → ready), which must not trigger a reload.
+    private func isAnalysing(_ s: PipelineState?) -> Bool {
+        switch s {
+        case .scanning, .running: return true
+        default: return false
+        }
+    }
+
     /// Reload the report after a run finishes. The serve re-imports the finished
     /// report on the run_completed terminus within ~1s (verified in
-    /// bristlenose.log), and `last_run` is set — but the detail WebView, loaded
+    /// bristlenose.log) and `last_run` is set — but the detail WebView, loaded
     /// earlier on the empty status page, never reloads itself, so the report only
-    /// appears after a manual project switch. When the selected project is
-    /// report-ready, serve is up, and the SPA hasn't mounted (`!isReady`),
-    /// recreate the WebView (bump its id token) up to a few times until it
-    /// mounts. State-driven (not transition-driven) + capped, so it survives
-    /// transition-timing and can never loop. Pre-existing jank — separate from
-    /// the determinate ring; the serve side is confirmed healthy.
-    private func scheduleReportReloadIfNeeded() {
+    /// appears after a manual project switch (which recreates the WebView).
+    ///
+    /// Fire on the selected project's transition from analysing INTO a
+    /// report-ready state — the one moment an in-place WebView (no switch, so not
+    /// recreated) is left on stale content. (Gating on the analysing origin, not
+    /// just `!ready → ready`, keeps the launch-time disk read of an
+    /// already-finished project from triggering a spurious reload.) Then
+    /// `reloadFromOrigin` it directly: a real WKWebView
+    /// reload that bypasses the cache and doesn't depend on SwiftUI recreating
+    /// the view. The earlier `.id`-token approach was silently defeated by
+    /// updateNSView's same-URL guard (the serve URL never changes).
+    ///
+    /// `isReady` can't gate this: the status page never posts `ready`, and
+    /// didFinish force-sets isReady true 2s after any load — so it stays true on
+    /// stale content. Instead retry only until one real reload lands (webView
+    /// present + serve running), riding out the ~1s re-import and the brief
+    /// webView-nil window during a concurrent switch. One reloadFromOrigin is
+    /// then enough; the loop self-limits (it returns on the first reload).
+    private static let reloadLog = Logger(
+        subsystem: "app.bristlenose", category: "report-reload"
+    )
+
+    private func scheduleReportReloadOnCompletion(
+        old: [UUID: PipelineState], new: [UUID: PipelineState]
+    ) {
         guard let id = selectedProjectID,
-              isReportReady(pipelineRunner.state[id]),
-              case .running = serveManager.state,
-              !bridgeHandler.isReady else { return }
+              isAnalysing(old[id]), isReportReady(new[id]) else { return }
+        Self.reloadLog.info("completion id=\(id.uuidString, privacy: .public)")
         reportReloadTask?.cancel()
         reportReloadTask = Task { @MainActor in
-            for _ in 0..<4 {
+            // Ride out the serve's ~1s re-import and any brief serve-restart or
+            // webView-nil window. Wait through a not-yet-running serve rather
+            // than bailing; abandon only if the user navigates away or the
+            // project stops being report-ready. One real reload is enough.
+            for attempt in 0..<6 {
                 try? await Task.sleep(for: .seconds(1.5))
                 guard selectedProjectID == id,
-                      isReportReady(pipelineRunner.state[id]),
-                      !bridgeHandler.isReady else { return }
-                reportReloadToken &+= 1
+                      isReportReady(pipelineRunner.state[id]) else {
+                    Self.reloadLog.info("reload abandon attempt=\(attempt)")
+                    return
+                }
+                guard case .running = serveManager.state else {
+                    Self.reloadLog.info("reload wait attempt=\(attempt)")
+                    continue
+                }
+                let didReload = bridgeHandler.reloadWebView()
+                Self.reloadLog.info("reload attempt=\(attempt) didReload=\(didReload)")
+                if didReload { return }
             }
+            Self.reloadLog.info("reload gave up")
         }
     }
 
@@ -1765,7 +1799,7 @@ struct ContentView: View {
 
                     case .running:
                         WebView(url: serveURLWithLocale, bridgeHandler: bridgeHandler, authToken: serveManager.authToken)
-                            .id("\(project.id.uuidString)-\(reportReloadToken)")
+                            .id(project.id)
                             .accessibilityLabel(i18n.t("desktop.chrome.reportContent"))
                             .accessibilityHidden(!bridgeHandler.isReady)
                             .focusSection()

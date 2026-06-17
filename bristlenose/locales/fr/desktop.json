@@ -184,7 +184,18 @@
       "analysedRelative": "Analys\u00e9 {{when}}",
       "transcribed": "Transcrit",
       "partialRun": "Ex\u00e9cution partielle",
-      "stopped": "Arr\u00eat\u00e9"
+      "stopped": "Arr\u00eat\u00e9",
+      "sessionsCount": "{{complete}} sur {{total}}",
+      "etaMinutes": "~{{count}} min restantes",
+      "etaUnderMinute": "<1 min restante",
+      "stage": {
+        "transcribe": "Transcription",
+        "speakers": "Identification des intervenants",
+        "topics": "Rep\u00e9rage des sujets",
+        "quotes": "Extraction des citations",
+        "cluster": "Regroupement des th\u00e8mes",
+        "render": "Cr\u00e9ation du rapport"
+      }
     }
   },
   "pipeline": {

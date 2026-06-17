@@ -184,7 +184,18 @@
       "analysedRelative": "Analysiert {{when}}",
       "transcribed": "Transkribiert",
       "partialRun": "Teildurchlauf",
-      "stopped": "Angehalten"
+      "stopped": "Angehalten",
+      "sessionsCount": "{{complete}} von {{total}}",
+      "etaMinutes": "noch ~{{count}} Min",
+      "etaUnderMinute": "noch <1 Min",
+      "stage": {
+        "transcribe": "Wird transkribiert",
+        "speakers": "Sprecher werden erkannt",
+        "topics": "Themen werden erkannt",
+        "quotes": "Zitate werden gesucht",
+        "cluster": "Themen werden gruppiert",
+        "render": "Bericht wird erstellt"
+      }
     }
   },
   "pipeline": {

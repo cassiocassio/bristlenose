@@ -25,7 +25,7 @@ class TestProviderSpec:
         assert spec.name == "anthropic"
         assert spec.display_name == "Claude"
         assert "claude" in spec.aliases
-        assert spec.default_model == "claude-sonnet-4-20250514"
+        assert spec.default_model == "claude-sonnet-4-6"
         assert spec.sdk_module == "anthropic"
 
     def test_openai_spec(self) -> None:

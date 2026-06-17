@@ -60,7 +60,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
     /// `OllamaCatalog.recommendedTag()` — see end of file.
     var defaultModel: String {
         switch self {
-        case .claude: "claude-sonnet-4-20250514"
+        case .claude: "claude-sonnet-4-6"
         case .chatGPT: "gpt-4o"
         case .gemini: "gemini-2.0-flash"
         case .azure: "gpt-4o"
@@ -72,7 +72,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
     /// Ollama's list comes from the curated catalog (RAM tiers + sizes).
     var availableModels: [String] {
         switch self {
-        case .claude: ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001", "claude-opus-4-20250514"]
+        case .claude: ["claude-sonnet-4-6", "claude-haiku-4-5-20251001", "claude-opus-4-8"]
         case .chatGPT: ["gpt-4o", "gpt-4o-mini"]
         case .gemini: ["gemini-2.0-flash", "gemini-2.5-pro"]
         case .azure: ["gpt-4o", "gpt-4o-mini"]

@@ -98,12 +98,18 @@ ContentView uses `@EnvironmentObject` — it does not own these objects.
 
 **Inbound** (web → native): `WKScriptMessageHandler` receives messages from `window.webkit.messageHandlers.navigation.postMessage(...)`. Types: `ready`, `route-change`, `editing-started`, `editing-ended`, `focus-change`, `undo-state`, `player-state`, `project-action`, `find-pasteboard-write`.
 
-**Outbound** (native → web): `BridgeHandler` holds a `weak var webView: WKWebView?` (set in `WebView.makeNSView`). Four outbound methods:
+**Outbound** (native → web): `BridgeHandler` holds a `weak var webView: WKWebView?` (set in `WebView.makeNSView`). Five outbound methods:
 - `goBack()` / `goForward()` — delegates to `webView?.goBack()` / `.goForward()`
 - `switchToTab(_ tab: Tab)` — calls `callAsyncJavaScript("window.switchToTab(tab)", ...)`
 - `menuAction(_ action: String, payload:)` — calls `callAsyncJavaScript("window.__bristlenose.menuAction(action, payload)", ...)`. Single dispatch point for all ~89 menu actions (security rule 3 — structured arguments, no string interpolation)
+- `reloadWebView() -> Bool` — `webView?.reloadFromOrigin()`; returns false when the webView is momentarily nil mid project-switch so the caller can retry. Swaps the stale status page for the freshly-served report after a run finishes — see the report-auto-reload gotcha below
 
 The `callAsyncJavaScript` parameter labels are `in: nil, in: .page` — not `contentWorld:`. Content world `.page` is required because `window.switchToTab` and `window.__bristlenose.menuAction` are installed by page-level JS, not a `WKUserScript`.
+
+**Report auto-reload after a run finishes — don't reach for `.id`.** When a run completes and the user *stays* on the project, the detail WebView is still on the serve's status page ("Nothing to see here, yet."). The serve re-imports the report on the `run_completed` terminus within ~1s and sets `last_run`, but the WebView never reloads itself. Three traps, all hit on the determinate-progress branch (`ContentView.scheduleReportReloadOnCompletion`):
+- **`.id(project.id)`-bump recreation does not reliably reload.** SwiftUI may *reuse* the `NSViewRepresentable` rather than recreate it, running `updateNSView` — whose `guard url != lastLoadedURL` short-circuits because the serve URL never changes. The bump silently no-ops. Reload directly via `bridgeHandler.reloadWebView()` (`reloadFromOrigin`, bypasses cache) instead.
+- **`bridgeHandler.isReady` is NOT "the report is showing."** The status page never posts `ready`, and `WebView.didFinish` force-sets `isReady = true` 2s after *any* load — so it stays true on stale content and never resets without a project switch. Don't gate render-state logic on it.
+- **Gate the trigger on `analysing → ready`, not `!ready → ready`.** The launch-time `nil → ready` disk read of an already-finished project otherwise fires a spurious reload (and bails because the serve is still booting). Project *switches* don't need this path at all — the WebView is recreated fresh, and a serve-port change reloads via `updateNSView`; only the no-switch completion does.
 
 ### Toolbar
 

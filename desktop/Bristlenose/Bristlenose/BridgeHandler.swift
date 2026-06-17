@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import WebKit
+import os
 
 /// Holds state derived from WKScriptMessageHandler bridge messages.
 ///
@@ -95,6 +96,23 @@ final class BridgeHandler: ObservableObject {
     /// Reference to the WKWebView for outbound calls (goBack, switchToTab).
     /// Set by WebView.makeNSView, cleared on reset(). Weak to avoid retain cycles.
     weak var webView: WKWebView?
+
+    private static let log = Logger(subsystem: "app.bristlenose", category: "bridge")
+
+    /// Force the detail WebView to re-fetch its current URL from the serve — used
+    /// after a run finishes so the now-served report replaces the stale status
+    /// page. `reloadFromOrigin` bypasses the cache. Direct WKWebView reload, so it
+    /// doesn't depend on SwiftUI recreating the view (the `.id` approach was
+    /// defeated by updateNSView's same-URL guard). Returns false when there's no
+    /// WebView to reload (e.g. momentarily nil mid project-switch) so the caller
+    /// can retry.
+    @discardableResult
+    func reloadWebView() -> Bool {
+        Self.log.info("reloadWebView webView=\(self.webView != nil)")
+        guard let webView else { return false }
+        webView.reloadFromOrigin()
+        return true
+    }
 
     /// The currently active tab, derived from `currentPath`.
     var activeTab: Tab? {

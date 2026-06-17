@@ -104,6 +104,7 @@ def transcribe_sessions(
     settings: BristlenoseSettings,
     *,
     on_progress: ProgressCallback | None = None,
+    on_segment: object | None = None,
 ) -> tuple[dict[str, list[TranscriptSegment]], StageOutcome]:
     """Transcribe audio for sessions that need it.
 
@@ -117,6 +118,9 @@ def transcribe_sessions(
         sessions: Sessions to transcribe.
         settings: Application settings.
         on_progress: Optional callback(current, total) called after each file completes.
+        on_segment: Optional callback(file_index, file_total, seconds_done,
+            file_seconds) called repeatedly *within* a file as audio is
+            transcribed — faster-whisper only (mlx is one blocking call).
 
     Returns:
         Tuple of (results, outcome). ``results`` maps session_id to
@@ -163,8 +167,21 @@ def transcribe_sessions(
             session.audio_path.name,
         )
 
+        seg_cb = None
+        if on_segment is not None:
+            def seg_cb(seconds_done: float, file_seconds: float, _i: int = i) -> None:
+                on_segment(_i, total, seconds_done, file_seconds)
+
         try:
-            segments = transcribe_fn(session.audio_path, settings)
+            # Only pass on_segment when a caller actually wants the within-file
+            # heartbeat — keeps backward-compat with transcribe_fn callables
+            # (and test stubs) that take only (audio_path, settings).
+            if seg_cb is not None:
+                segments = transcribe_fn(
+                    session.audio_path, settings, on_segment=seg_cb,
+                )
+            else:
+                segments = transcribe_fn(session.audio_path, settings)
             results[session.session_id] = segments
             outcome.succeeded += 1
             logger.info(
@@ -288,7 +305,11 @@ def _init_mlx_backend(
     def transcribe_mlx(
         audio_path: Path,
         settings: BristlenoseSettings,
+        on_segment: object | None = None,
     ) -> list[TranscriptSegment]:
+        # on_segment is ignored: mlx_whisper.transcribe() is one blocking call
+        # that returns every segment at once, so there's no within-file
+        # heartbeat to surface (per-file progress still ticks in the caller).
         # mlx-whisper uses HuggingFace model names
         model_name = _mlx_model_name(settings.whisper_model)
 
@@ -414,6 +435,7 @@ def _init_faster_whisper_backend(
     def transcribe_faster_whisper(
         audio_path: Path,
         settings: BristlenoseSettings,
+        on_segment: object | None = None,
     ) -> list[TranscriptSegment]:
         segments_iter, info = model.transcribe(
             str(audio_path),
@@ -454,6 +476,12 @@ def _init_faster_whisper_backend(
                     source="faster-whisper",
                 )
             )
+
+            # Within-file heartbeat: how far through this file's audio we are.
+            # info.duration is the total audio length; segment.end is the
+            # timestamp of the segment just decoded.
+            if on_segment is not None and info.duration:
+                on_segment(segment.end, info.duration)
 
         return transcript_segments
 

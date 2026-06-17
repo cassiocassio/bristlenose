@@ -92,7 +92,11 @@ struct ProjectRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 6) {
+        // Baseline-align the identity icon to the *title* (not centred across
+        // the two-line row), so it reads as belonging to the project name
+        // rather than floating between the title and the status line. SF
+        // Symbols baseline-align with adjacent text by design.
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
             leadingIcon
             VStack(alignment: .leading, spacing: 1) {
                 titleLine
@@ -444,10 +448,16 @@ struct ProjectRow: View {
         case .completedPartial:
             return .diagnostic(kind: .warning, text: i18n.t("desktop.pipeline.diagnostic.header.completed_partial"))
         case .running:
-            let key = isStoppingProgress
-                ? "desktop.chrome.pipeline.stopping"
-                : "desktop.chrome.pipeline.analysing"
-            return .pipelineText(i18n.t(key))
+            // Stopping outranks progress — the user clicked Stop, acknowledge it.
+            if isStoppingProgress {
+                return .pipelineText(i18n.t("desktop.chrome.pipeline.stopping"))
+            }
+            // Otherwise surface the live ladder — stage · N of M · ETA — instead
+            // of the bare "Analysing…". Degrades to "Analysing…" until the first
+            // measured signal lands. Routes through `.pipelineText` (lineLimit 1),
+            // so the full form truncates with an ellipsis on a narrow row; the
+            // untruncated string lives in the row tooltip.
+            return .pipelineText(runningSubtitle(separator: " · "))
         case .queued(let position):
             return .pipelineText(i18n.t(
                 "desktop.chrome.pipeline.queuedPosition",
@@ -492,6 +502,22 @@ struct ProjectRow: View {
             }
             return .placeholder
         }
+    }
+
+    /// Compose the in-flight progress subtitle from the live `run_progress`
+    /// ladder (stage · N of M · ETA), via the pure `RunProgressSubtitle` helper.
+    /// `separator` is " · " for the visible row, ", " for the VoiceOver phrase.
+    /// Callers handle the stopping case first (it outranks progress).
+    private func runningSubtitle(separator: String) -> String {
+        let p = liveData.progress[project.id]
+        return RunProgressSubtitle.compose(
+            stage: p?.stage,
+            sessionsComplete: p?.sessionsComplete,
+            sessionsTotal: p?.sessionsTotal,
+            etaRemainingSeconds: p?.etaRemainingSeconds,
+            separator: separator,
+            localize: { i18n.t($0, $1) }
+        )
     }
 
     /// Per precedence: pick ONE delta. Missing wins over unanalysed
@@ -594,6 +620,14 @@ struct ProjectRow: View {
     // invariant means rendered text only, no .help() / .accessibilityLabel.
     private var rowTooltip: String {
         var parts: [String] = []
+        // While a run is in flight, lead with the full (untruncated) progress
+        // ladder so the one-line subtitle — which truncates the full form on a
+        // narrow column — is recoverable on hover. Progress fields are
+        // counts/timings only (RunProgressEvent is PII-free), so this keeps the
+        // tooltip's "counts only, never filenames" invariant.
+        if case .running = pipelineState, !isStoppingProgress {
+            parts.append(runningSubtitle(separator: " · "))
+        }
         if let count = unanalysed?.sessionCount {
             parts.append(interviewCountText(count))
         }
@@ -625,9 +659,12 @@ struct ProjectRow: View {
     private var pipelineStateAccessibilityPhrase: String? {
         switch pipelineState {
         case .running:
-            return i18n.t(isStoppingProgress
-                ? "desktop.chrome.pipeline.stopping"
-                : "desktop.chrome.pipeline.analysing")
+            if isStoppingProgress {
+                return i18n.t("desktop.chrome.pipeline.stopping")
+            }
+            // Same ladder as the visible subtitle, comma-joined — VoiceOver reads
+            // commas as pauses ("Transcribing, 7 of 8, ~1 min left"); "·" doesn't.
+            return runningSubtitle(separator: ", ")
         case .queued(let position):
             return i18n.t("desktop.chrome.pipeline.queuedPosition",
                           ["position": String(position)])

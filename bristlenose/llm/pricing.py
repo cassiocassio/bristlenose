@@ -34,6 +34,7 @@ CURRENCY = "USD"
 PRICING: dict[str, tuple[float, float]] = {
     # Anthropic (Claude)
     "claude-sonnet-4-20250514": (3.0, 15.0),
+    "claude-sonnet-4-6": (3.0, 15.0),
     "claude-haiku-3-5-20241022": (0.80, 4.0),
     # OpenAI (ChatGPT)
     "gpt-4o": (2.50, 10.0),
@@ -46,6 +47,7 @@ PRICING: dict[str, tuple[float, float]] = {
 # Mirrors PRICING — provider lookup for cohort key resolution.
 _MODEL_PROVIDER: dict[str, str] = {
     "claude-sonnet-4-20250514": "anthropic",
+    "claude-sonnet-4-6": "anthropic",
     "claude-haiku-3-5-20241022": "anthropic",
     "gpt-4o": "openai",
     "gpt-4o-mini": "openai",

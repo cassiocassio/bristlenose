@@ -106,7 +106,7 @@ class BristlenoseSettings(BaseSettings):
     llm_provider: str = "anthropic"  # "anthropic", "openai", "azure", "google", or "local"
     anthropic_api_key: str = ""
     openai_api_key: str = ""
-    llm_model: str = "claude-sonnet-4-20250514"
+    llm_model: str = "claude-sonnet-4-6"
     llm_max_tokens: int = 64000
     llm_temperature: float = 0.1
 

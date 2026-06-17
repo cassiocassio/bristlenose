@@ -162,7 +162,7 @@ class TestOrphanModelGuard:
         monkeypatch.delenv("BRISTLENOSE_LLM_PROVIDER", raising=False)
         s = config.load_settings()
         assert s.llm_provider == "anthropic"
-        assert s.llm_model == "claude-sonnet-4-20250514"  # NOT gpt-4o
+        assert s.llm_model == "claude-sonnet-4-6"  # NOT gpt-4o
 
     def test_coherent_pair_untouched(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)

@@ -952,7 +952,13 @@ struct ContentView: View {
                 // CLI run, removed-then-re-dropped.
                 pipelineRunner.scan(project: project)
             } else {
-                renamingProjectID = project.id
+                // Adopt the folder's own name — no inline rename. A researcher
+                // who dropped a folder of interviews organised + named it
+                // deliberately (often after hours of conducting and fishing
+                // files out of Downloads), so it's already the name they want.
+                // Contrast "+ New Project", which DOES open rename because its
+                // placeholder name is never the intended one. Mirrors the
+                // analysed-folder adoption path above (also rename-free).
                 // Folder-drop is the explicit signal to analyse — auto-run.
                 // Plan §Phase 3 point 2 (the ~90% happy path).
                 pipelineRunner.start(project: project)
@@ -979,7 +985,8 @@ struct ContentView: View {
                 intoFolder: folderID
             )
             selection = [.project(project.id)]
-            renamingProjectID = project.id
+            // Adopt the dropped item's name (folder, else first file) — no
+            // inline rename on drag; see the single-folder branch above.
         }
     }
 

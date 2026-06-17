@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 16 Jun 2026 (`determinate-progress` started — Phase 0b determinate ETA ring. Active: determinate-progress, gemini-provider, llm-provider-default-model, responsive-signal-cards, tower-of-hanoi)
+**Updated:** 17 Jun 2026 (`progress-text-surfacing` started — Phase 0b carry-forward: surface a run's progress as text. Active: progress-text-surfacing, gemini-provider, llm-provider-default-model, responsive-signal-cards, tower-of-hanoi)
 
 ---
 
@@ -42,6 +42,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 | `bristlenose_branch llm-provider-default-model/` | `llm-provider-default-model` | bugfix | CLI `--llm <provider>` applies that provider's default model (fixes cross-provider 404) |
 | `bristlenose_branch determinate-progress/` | `determinate-progress` | feature | Phase 0b: determinate ETA ring in the sidebar — emit the Welford ETA through the event channel to the Swift indicator (wire-up, not build-the-estimator) |
+| `bristlenose_branch progress-text-surfacing/` | `progress-text-surfacing` | feature | Phase 0b carry-forward: surface a run's progress as *text* — sidebar subtitle copy (stage/sessions/ETA, not bare "Analysing…") + detail-pane during-run state |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -145,6 +146,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `background-runs-view-switch` _(merged)_ | `bristlenose_branch background-runs-view-switch/` _(detached, on disk)_ | local only — merged to main 16 Jun 2026 (`bf03d55`) |
 | `llm-provider-default-model` | `bristlenose_branch llm-provider-default-model/` | local only |
 | `determinate-progress` | `bristlenose_branch determinate-progress/` | local only |
+| `progress-text-surfacing` | `bristlenose_branch progress-text-surfacing/` | local only |
 
 
 
@@ -154,6 +156,26 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ## Active Branches
 
 ---
+
+### `progress-text-surfacing`
+
+**Kind:** feature (desktop — Swift; + a locale-string touch) — Phase 0b carry-forward. 0b shipped the determinate ETA *ring* (the visual fill); this branch surfaces the *words* — what a run is actually doing — in the two places 0b deferred.
+**Status:** Just started
+**Started:** 17 Jun 2026 (off `main` / `a1fa49a`, the `determinate-progress` merge)
+**Worktree:** `/Users/cassio/Code/bristlenose_branch progress-text-surfacing/`
+**Remote:** local only (push when ready)
+
+**What it does:** Two text surfaces deferred from 0b. (1) **Sidebar subtitle:** while a run is in flight the project-row subtitle reads stage + N-of-M sessions + ETA — sourced from the same `run_progress` ladder the ring already consumes (don't recompute) — instead of the indeterminate-era bare "Analysing…". Rendered via the existing MessageKind subtitle vocabulary. Copy / abbreviation / narrow-row truncation is a **human design call** — surface options via a `visualize` mockup, don't pre-solve the wording (memory `feedback_visualize_ux_changes_human_designs`). (2) **Detail pane during a first run:** selecting a project mid-first-analysis shows the progress ladder (room for a richer phase itinerary) instead of `BootView` → the empty "Nothing to see here, yet" status page; completion still auto-reloads to the report (0b's `scheduleReportReloadOnCompletion`, unregressed). Reuse the ring's ladder + MessageKind / diagnostic vocabulary — no new chrome system. Spec + cold-read context in `HANDOFF.md`; design-doc home is `docs/design-sidebar-activity-indicators.md` (the 0b plan). **Handoffs aren't specs** — `git log -3 -p` the named files + re-grep the anchors before drafting the plan (0b just merged; the subtitle may already render more than the handoff assumes).
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/ProjectRow.swift` (running-state subtitle / `subtitleRightSlot` — owns the text)
+- `desktop/Bristlenose/Bristlenose/ProjectRowActivityIndicator.swift` (ring + ladder data — reuse, don't duplicate)
+- `desktop/Bristlenose/Bristlenose/RunProgressMath.swift` (ladder fraction / ETA — read-only source)
+- `desktop/Bristlenose/Bristlenose/EventLogReader.swift` (the `run_progress` event the ladder reads)
+- `desktop/Bristlenose/Bristlenose/ContentView.swift` (`detail` ~:1769, `BootView`, `emptyStateHint` ~:1412, `isAnalysing` ~:1551 — detail-pane during-run surfacing)
+- Any new subtitle copy → keys in all 7 locale files + `desktop.json` (CLAUDE.md i18n rule)
+
+**Potential conflicts with other branches:** low. Forks from `a1fa49a` (the `determinate-progress` merge), so it inherits 0b's ring + event-channel work — **no live conflict with 0b** (merged). The desktop files it touches are not touched by any other *active* branch: `gemini-provider` / `llm-provider-default-model` are provider/config (`providers.py` / `config.py` / `cli.py` / `LLMProvider.swift`); `responsive-signal-cards` is React; `tower-of-hanoi` is `experiments/`. **Out of scope (next branch — don't absorb):** A2 rapid-switching / warm-sidecar pool + the sidecar-crash-on-rapid-switch — see memory `project_multiproject_roadmap_phases` and the `determinate-progress` handoff §"NOT in 0b scope".
 
 ### `determinate-progress`
 

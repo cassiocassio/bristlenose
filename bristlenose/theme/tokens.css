@@ -137,6 +137,10 @@
     --bn-max-width: 52rem;
     --bn-quote-max-width: 23rem;   /* card reading measure — ~5 words/line */
     --bn-grid-gap: 1.25rem;        /* gap between grid columns */
+    --bn-flow-tolerance: 5em;      /* grid-lanes masonry: how much height imbalance
+                                      to tolerate before breaking reading order.
+                                      Safari 26.4+ only. Provisional — tuned on the
+                                      Phase-1 mockup, pending real-corpus validation. */
     --bn-toolbar-height: 3rem;
 
     /* Sidebar layout (serve-mode dual-sidebar with resizable panels) */

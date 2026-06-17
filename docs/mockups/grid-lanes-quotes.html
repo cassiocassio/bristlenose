@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+
+<!-- Inter Variable — same load as frontend/index.html. Required: the quote-card
+     height test depends on the real 420/490/520 weights; system-font fallback
+     would render wrong heights and corrupt a *height-packing* comparison. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet">
+
+<!-- The LIVE design-system theme, re-concatenated from bristlenose/theme/ on every
+     request in dev mode (serve_live_theme_css, app.py). This is what makes the
+     stress test valid: real .quote-card / .badge / .bn-person-badge styling AND the
+     already-active rectangular grid (organisms/responsive-grid.css) come from here.
+     Only works under `bristlenose serve --dev`, not file://. -->
+<link rel="stylesheet" href="/report/assets/bristlenose-theme.css">
+
+<title>Grid Lanes — quotes-page masonry bake-off</title>
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     THE ONLY BESPOKE CSS. Everything below is either (a) the genuinely-new
+     grid-lanes enhancement that has no theme equivalent yet, or (b) dev-tool
+     chrome for the bake-off (control panel) — not part of the report surface.
+     The rectangular grid + all card styling come from the linked live theme.
+     This <style> MUST stay after the <link> above: the masonry override rides
+     on source order, not specificity.
+     ════════════════════════════════════════════════════════════════════════ -->
+<style>
+/* ── TIER 1: native masonry, Safari/WebKit 26.4+ ──────────────────────────
+   Layered on top of the live rectangular grid. In non-supporting engines this
+   block is inert and the linked theme's `display: grid` stands. */
+@supports (display: grid-lanes) {
+  .quote-group:not(.force-grid) {
+    display: grid-lanes;
+    /* Dev knob — un-prefixed for the throwaway mockup. If this survives to
+       Phase 2 it becomes --bn-flow-tolerance in tokens.css. Default 1em. */
+    flow-tolerance: var(--flow-tolerance, 1em);
+  }
+}
+
+/* ── Bake-off control: force the rectangular incumbent even in Safari, so you
+   can A/B masonry vs rectangular in ONE browser. (0,2,0) beats the @supports
+   rule's (0,1,0) regardless of source order. ─────────────────────────────── */
+.quote-group.force-grid { display: grid; }
+
+/* ── content-visibility A/B: the linked theme sets
+   `.quote-group .quote-card { content-visibility: auto; contain-intrinsic-size: auto 250px }`.
+   Masonry needs *real* heights to pack; content-visibility withholds them for
+   off-screen cards. Toggle it off to isolate that interaction. (0,2,1) wins. ─ */
+.quote-group.cv-off .quote-card {
+  content-visibility: visible;
+  contain-intrinsic-size: auto;
+}
+
+/* ── Dev-tool chrome (not the report surface) ─────────────────────────────── */
+.bn-mockup-main { padding: 1.5rem 1.5rem 6rem; }
+
+/* Sequence overlay — numbers each card by its reading position within its
+   cluster (DOM/time order). Reveals how masonry reorders vs rectangular.
+   Positive offsets keep it inside the card so content-visibility's paint
+   containment doesn't clip it. */
+.bn-seq {
+  position: absolute; top: 0.3rem; left: 0.3rem; z-index: 2;
+  min-width: 1.15rem; height: 1.15rem; padding: 0 0.25rem;
+  display: none; align-items: center; justify-content: center;
+  font-family: var(--bn-font-mono); font-size: var(--bn-text-micro);
+  font-weight: var(--bn-weight-strong);
+  color: #fff; background: var(--bn-colour-accent);
+  border-radius: var(--bn-radius-pill);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+}
+.bn-mockup.show-seq .bn-seq { display: inline-flex; }
+
+#bn-controls {
+  position: fixed; top: 0; right: 0; z-index: 9999;
+  display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
+  max-width: min(100%, 720px);
+  padding: 0.5rem 0.75rem;
+  background: var(--bn-colour-bg);
+  border: 1px solid var(--bn-colour-border);
+  border-top: none; border-right: none;
+  border-bottom-left-radius: var(--bn-radius-md);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  font-family: var(--bn-font-body);
+  font-size: var(--bn-text-caption);
+}
+#bn-controls .grp { display: flex; align-items: center; gap: 0.25rem; }
+#bn-controls button {
+  font: inherit; cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--bn-colour-border);
+  border-radius: var(--bn-radius-sm);
+  background: transparent; color: var(--bn-colour-text);
+}
+#bn-controls button[aria-pressed="true"] {
+  border-color: var(--bn-colour-accent); color: var(--bn-colour-accent);
+  font-weight: var(--bn-weight-emphasis);
+}
+#bn-controls label { color: var(--bn-colour-muted); }
+#bn-controls .readout {
+  font-family: var(--bn-font-mono); font-size: var(--bn-text-micro);
+  color: var(--bn-colour-muted); white-space: nowrap;
+}
+#bn-controls .native-yes { color: var(--bn-sentiment-satisfaction, #16a34a); font-weight: var(--bn-weight-strong); }
+#bn-controls .native-no  { color: var(--bn-colour-muted); }
+#bn-controls input[type="range"] { vertical-align: middle; }
+
+/* Stress-group label so it's obvious which group is the scaled one. */
+.bn-mockup-main .bn-group-header h3 .stress-tag {
+  font-family: var(--bn-font-mono); font-size: var(--bn-text-caption);
+  color: var(--bn-colour-muted); font-weight: var(--bn-weight-normal);
+}
+</style>
+</head>
+<body class="bn-mockup">
+
+<div id="bn-controls" aria-label="Bake-off controls">
+  <div class="grp">
+    <label>Layout</label>
+    <button id="t-layout" aria-pressed="false" title="Masonry (grid-lanes) vs rectangular grid. Masonry only renders natively in Safari 26.4+ / STP.">Masonry</button>
+  </div>
+  <div class="grp">
+    <label>content-visibility</label>
+    <button id="t-cv" aria-pressed="true" title="Toggle the live content-visibility:auto optimisation. Masonry packs against the 250px estimate when this is ON.">auto</button>
+  </div>
+  <div class="grp">
+    <label>flow-tolerance</label>
+    <input id="r-flow" type="range" min="0" max="8" step="0.25" value="5">
+    <span class="readout" id="o-flow">5.00em</span>
+  </div>
+  <div class="grp">
+    <button id="t-seq" aria-pressed="true" title="Number each card by its reading position within its cluster (DOM/time order).">Seq #</button>
+  </div>
+  <div class="grp">
+    <button id="t-theme" aria-pressed="false" title="Force dark / light / auto">Dark</button>
+  </div>
+  <div class="grp">
+    <span class="readout" id="o-meta">…</span>
+  </div>
+  <div class="grp">
+    <span class="readout">native grid-lanes:&nbsp;<span id="o-native">?</span></span>
+  </div>
+</div>
+
+<main class="bn-mockup-main" id="bn-main"></main>
+
+<script>
+/* ── Static stress data → real .quote-card DOM (replicated from QuoteCard.tsx).
+   No interactivity — heights are an approximation (no live tag wrap/edit). ── */
+
+const SENTIMENTS = ["frustration","confusion","doubt","surprise","satisfaction","delight","confidence"];
+const TAG_COLOURS = ["", "", "#7c3aed33", "#0891b233", "#ca8a0433", "#be185d33"]; // a few codebook-style washes, rest default
+
+const SHORT = [
+  "ah it worked that time",
+  "some things up with this",
+  "Reload. Something’s up.",
+  "Yes. Okay.",
+  "That’s quite cheap.",
+  "I’m clicking. Why is that not working?",
+];
+const MED = [
+  "Beds and mattresses. That’s easy. That’s in the top navigation.",
+  "And I’m looking for a bed. Beds and mattresses. Beds. Double beds, but I don’t see king size.",
+  "They come in different sizes. Yes. Okay. Strongest stand. 179. That’s quite cheap.",
+  "Reload. Something’s up. Something with the mouse or the keyboard? No.",
+];
+const LONG = [
+  "So I went to the top navigation first because that’s where I’d normally expect categories to live, and I clicked through to beds, and then I got a bit lost because the filters reset every time I went back — which made me think the site had logged me out or something, but it hadn’t.",
+  "Honestly the whole flow felt fine until the very end. I had everything in the basket, I was ready to pay, and then the king-size option just wasn’t there even though the listing said it came in different sizes. So now I don’t trust the size guide at all and I’d probably go and measure again before buying anything.",
+];
+
+function speaker(code, name) {
+  const inner =
+    '<span class="bn-person-badge"><span class="bn-speaker-badge--split">' +
+      '<span class="bn-speaker-badge-code">' + code + '</span>' +
+      (name ? '<span class="bn-speaker-badge-name">' + name + '</span>' : '') +
+    '</span></span>';
+  // Participant speaker is a transcript link in production.
+  return '<span class="speaker"><a href="#" class="speaker-link">' + inner + '</a></span>';
+}
+
+function badges(sentiment, tags, proposed) {
+  let h = '<div class="badges">';
+  if (sentiment) {
+    h += '<span class="badge badge-ai badge-' + sentiment + '">' + sentiment + '</span>';
+  }
+  (tags || []).forEach(t => {
+    const style = t.colour ? ' style="background-color:' + t.colour + '"' : '';
+    h += '<span class="badge badge-user"' + style + '>' + t.name + '</span>';
+  });
+  (proposed || []).forEach(p => {
+    h += '<span class="badge badge-proposed has-tooltip">' + p +
+      '<span class="badge-action-pill"><span class="badge-action-deny" role="button">×</span>' +
+      '<span class="badge-action-accept" role="button">✓</span></span>' +
+      '<span class="tooltip">Suggested because the quote mentions sizing.</span></span>';
+  });
+  h += '<span class="badge badge-add" role="button" aria-label="Add tag">+</span>';
+  h += '</div>';
+  return h;
+}
+
+function card(o) {
+  const cls = "quote-card" + (o.starred ? " starred" : "");
+  let h = '<blockquote class="' + cls + '" data-timecode="' + (o.tc || "00:00") + '">';
+  if (o.context) h += '<span class="context">[' + o.context + ']</span>';
+  if (o.modQ) {
+    h += '<div class="quote-row moderator-question-row">' +
+           '<span class="timecode" aria-hidden="true" style="visibility:hidden">[' + (o.tc || "00:00") + ']</span>' +
+           '<div class="moderator-question">' +
+             '<span class="moderator-question-badge">' +
+               '<span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">' + (o.modQ.code || "m1") + '</span></span></span>' +
+               '<button class="moderator-question-dismiss" aria-label="Dismiss">×</button>' +
+             '</span>' +
+             '<span class="moderator-question-text">' + o.modQ.text + '</span>' +
+           '</div>' +
+         '</div>';
+  }
+  h += '<div class="quote-row">' +
+         '<span class="timecode">[' + (o.tc || "00:00") + ']</span>' +
+         '<div class="quote-body">' +
+           '<span class="quote-text-wrapper"><span class="smart-quote">“</span>' +
+             '<span class="quote-text">' + o.text + '</span>' +
+           '<span class="smart-quote">”</span></span> ' +
+           speaker(o.code || "p1", o.name) +
+           badges(o.sentiment, o.tags, o.proposed) +
+         '</div>' +
+       '</div>';
+  // Absolutely-positioned action affordances (don't affect card height).
+  h += '<button class="hide-btn" aria-label="Hide quote"></button>';
+  h += '<button class="star-btn" aria-label="Star quote">★</button>';
+  h += '</blockquote>';
+  return h;
+}
+
+function group(title, desc, cardsHtml, stressTag) {
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  return (
+    '<div class="bn-group-header"><h3 id="' + slug + '">' +
+      '<span class="editable-text">' + title + '</span>' +
+      (stressTag ? ' <span class="stress-tag">' + stressTag + '</span>' : '') +
+      ' <button class="edit-pencil edit-pencil-inline" aria-label="Edit title">✎</button>' +
+    '</h3></div>' +
+    (desc ? '<p class="description"><span class="editable-text">' + desc + '</span>' +
+      ' <button class="edit-pencil edit-pencil-inline" aria-label="Edit description">✎</button></p>' : '') +
+    '<div class="quote-group">' + cardsHtml + '</div>'
+  );
+}
+
+const out = [];
+
+/* 1. Two "normal" groups mirroring the real screenshot. */
+out.push(group("Top Navigation", "Navigation bar for accessing main product categories.",
+  card({tc:"00:12", text:"Beds and mattresses. That’s easy. That’s in the top navigation.", sentiment:"satisfaction", tags:[{name:"nav"}]}) +
+  card({tc:"00:19", text:"And I’m clicking. Why is that not working?", sentiment:"frustration"}) +
+  card({tc:"00:26", text:"some things up with this", sentiment:"frustration"}) +
+  card({tc:"00:37", text:"ah it worked that time", sentiment:"satisfaction", tags:[{name:"recovery", colour:"#0891b233"}]}) +
+  card({tc:"00:57", text:"Reload. Something’s up. Something with the mouse or the keyboard? No.", sentiment:"frustration"})
+));
+
+out.push(group("Product Search", "Search for specific products like beds and mattresses.",
+  card({tc:"00:45", text:"And I’m looking for a bed. Beds and mattresses. Beds. Double beds, but I don’t see king size.", sentiment:"confusion", code:"p2", name:"Fred"}) +
+  card({tc:"01:00", text:"They come in different sizes. Yes. Okay. Strongest stand. 179. That’s quite cheap.", sentiment:"surprise", code:"p2", name:"Fred", tags:[{name:"pricing", colour:"#ca8a0433"}]})
+));
+
+/* 2. Engineered edge cases. */
+out.push(group("Near-equal heights", "Pairs crafted to render almost the same height — the only way to actually SEE flow-tolerance and the visual-vs-DOM-order zigzag.",
+  card({tc:"02:01", text:"I tried the filter on the left side panel and nothing happened at first.", sentiment:"confusion"}) +
+  card({tc:"02:08", text:"I tried the filter on the left side panel and then it worked fine.", sentiment:"satisfaction"}) +
+  card({tc:"02:15", text:"The price looked right to me so I added it straight to the basket.", sentiment:"confidence"}) +
+  card({tc:"02:22", text:"The price looked wrong to me so I went back to check it twice.", sentiment:"doubt"}) +
+  card({tc:"02:30", text:"It loaded quickly the second time which made me trust it more.", sentiment:"satisfaction"}) +
+  card({tc:"02:38", text:"It loaded slowly the second time which made me trust it less here.", sentiment:"frustration"})
+));
+
+out.push(group("Overflow & i18n", "Long unbroken token (1.4.10 reflow check at 320px / 400% zoom) plus per-locale wrapping.",
+  card({tc:"03:00", text:"I copied the link to send to my partner: https://example.com/catalogue/beds/double-divan-storage-base?variant=king-size-natural-oak&utm_source=usability-test", sentiment:"doubt"}) +
+  card({tc:"03:20", text:"ベッドとマットレス。それは簡単です。上部のナビゲーションにあります。", sentiment:"satisfaction", code:"p3", name:"ユキ"}) +
+  card({tc:"03:35", text:"침대와 매트리스. 쉽네요. 상단 데스크크크크에 있습니다.", sentiment:"confidence", code:"p4", name:"민"})
+));
+
+out.push(group("Tall variants", "Real height contributors the simple cards miss — starred (520-weight), proposed badge + many tags, open moderator-question row, researcher context note.",
+  card({tc:"04:00", text:"This is the single most important thing for me — if I can’t trust the size guide I won’t buy.", sentiment:"frustration", starred:true, tags:[{name:"trust", colour:"#be185d33"}]}) +
+  card({tc:"04:10", text:"179 for the stand felt cheap, almost suspiciously so.", sentiment:"surprise", tags:[{name:"pricing", colour:"#ca8a0433"},{name:"trust", colour:"#be185d33"},{name:"value"},{name:"hesitation"}], proposed:["sizing"]}) +
+  card({tc:"04:25", text:"No, I’d go back and measure first.", sentiment:"doubt", modQ:{code:"m1", text:"So tell me, how did you find looking for the right size today?"}}) +
+  card({tc:"04:40", text:"And I don’t see king size.", sentiment:"confusion", context:"participant was shown the filtered results page"})
+));
+
+/* 3. The scaled stress group — ~300 cards so content-visibility:auto actually
+   engages (off-screen cards report the 250px estimate, not real heights). */
+const N = 300;
+let stress = "";
+for (let i = 0; i < N; i++) {
+  const bucket = i % 7;
+  let text;
+  if (bucket < 3) text = SHORT[i % SHORT.length];
+  else if (bucket < 6) text = MED[i % MED.length];
+  else text = LONG[i % LONG.length];
+  // Occasionally lengthen to widen the height distribution.
+  if (i % 11 === 0) text = text + " " + MED[(i + 2) % MED.length];
+  const tagCount = i % 6;            // 0..5 tags → badge-wrap height variance
+  const tags = [];
+  for (let k = 0; k < tagCount; k++) tags.push({ name: ["nav","pricing","trust","value","sizing","recovery"][k], colour: TAG_COLOURS[(i + k) % TAG_COLOURS.length] });
+  const mm = String(5 + Math.floor(i / 60)).padStart(2, "0");
+  const ss = String(i % 60).padStart(2, "0");
+  stress += card({
+    tc: mm + ":" + ss,
+    text,
+    sentiment: SENTIMENTS[i % SENTIMENTS.length],
+    code: "p" + (1 + (i % 6)),
+    name: (i % 4 === 0) ? ["Fred","Yuki","Min","Sam","Ana","Lee"][i % 6] : undefined,
+    tags,
+    starred: (i % 13 === 0),
+    proposed: (i % 17 === 0) ? ["sizing"] : undefined,
+  });
+}
+out.push(group("Product Detail", "Scaled to " + N + " cards so the content-visibility / masonry interaction is observable.", stress, "stress ×" + N));
+
+document.getElementById("bn-main").innerHTML = out.join("");
+
+/* ── Dev controls ─────────────────────────────────────────────────────────── */
+const groups = () => Array.from(document.querySelectorAll(".quote-group"));
+
+/* Sequence overlay: number each card by its reading position WITHIN its group
+   (DOM/time order). Watch how masonry vs rectangular reorders these. */
+groups().forEach(g => {
+  Array.from(g.querySelectorAll(".quote-card")).forEach((c, i) => {
+    const s = document.createElement("span");
+    s.className = "bn-seq";
+    s.setAttribute("aria-hidden", "true");
+    s.textContent = String(i + 1);
+    c.insertBefore(s, c.firstChild);
+  });
+});
+document.body.classList.add("show-seq");
+const btnSeq = document.getElementById("t-seq");
+btnSeq.addEventListener("click", () => {
+  const on = btnSeq.getAttribute("aria-pressed") === "true";
+  btnSeq.setAttribute("aria-pressed", String(!on));
+  document.body.classList.toggle("show-seq", !on);
+});
+
+const nativeSupported = CSS.supports("display: grid-lanes");
+document.getElementById("o-native").outerHTML =
+  '<span id="o-native" class="' + (nativeSupported ? "native-yes" : "native-no") + '">' +
+  (nativeSupported ? "yes ✓" : "no — fallback grid") + "</span>";
+
+const btnLayout = document.getElementById("t-layout");
+btnLayout.addEventListener("click", () => {
+  const masonry = btnLayout.getAttribute("aria-pressed") === "true";
+  const next = !masonry;
+  btnLayout.setAttribute("aria-pressed", String(next));
+  btnLayout.textContent = next ? "Masonry" : "Rectangular";
+  groups().forEach(g => g.classList.toggle("force-grid", !next)); // force-grid = rectangular
+  updateMeta();
+});
+// Start in masonry intent (force-grid off).
+btnLayout.setAttribute("aria-pressed", "true"); btnLayout.textContent = "Masonry";
+
+const btnCv = document.getElementById("t-cv");
+btnCv.addEventListener("click", () => {
+  const on = btnCv.getAttribute("aria-pressed") === "true";
+  const next = !on;
+  btnCv.setAttribute("aria-pressed", String(next));
+  btnCv.textContent = next ? "auto" : "off";
+  groups().forEach(g => g.classList.toggle("cv-off", !next));
+});
+
+const rFlow = document.getElementById("r-flow");
+const oFlow = document.getElementById("o-flow");
+rFlow.addEventListener("input", () => {
+  const v = parseFloat(rFlow.value).toFixed(2) + "em";
+  oFlow.textContent = v;
+  document.documentElement.style.setProperty("--flow-tolerance", v);
+});
+rFlow.dispatchEvent(new Event("input"));   // apply the 5em default on load
+
+const btnTheme = document.getElementById("t-theme");
+const themes = ["auto","dark","light"];
+let ti = 0;
+btnTheme.addEventListener("click", () => {
+  ti = (ti + 1) % themes.length;
+  const m = themes[ti];
+  if (m === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", m);
+  btnTheme.textContent = m.charAt(0).toUpperCase() + m.slice(1);
+  btnTheme.setAttribute("aria-pressed", String(m !== "auto"));
+});
+
+const oMeta = document.getElementById("o-meta");
+function updateMeta() {
+  const g = groups()[groups().length - 1]; // the stress group
+  const cols = getComputedStyle(g).gridTemplateColumns.split(" ").length;
+  const cards = document.querySelectorAll(".quote-card").length;
+  oMeta.textContent = window.innerWidth + "px · " + cols + " cols · " + cards + " cards";
+}
+window.addEventListener("resize", updateMeta);
+updateMeta();
+</script>
+</body>
+</html>

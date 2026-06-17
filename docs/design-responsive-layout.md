@@ -1,8 +1,26 @@
 # Responsive Quote Grid — Design & Implementation Notes
 
-**Status:** Mockup complete, not yet implemented.
-**Mockup:** `docs/mockups/responsive-quote-grid.html`
+**Status:** ✅ Shipped — responsive multi-column grid is live, plus CSS Grid Lanes masonry for Safari/WebKit 26.4+ (see Update, 14 Jun 2026).
+**Mockup:** `docs/mockups/responsive-quote-grid.html` (original grid), `docs/mockups/grid-lanes-quotes.html` (masonry bake-off)
 **Date:** 19 Feb 2026
+
+---
+
+## Update — shipped, plus CSS Grid Lanes masonry (14 Jun 2026)
+
+The responsive multi-column grid described below is **shipped** — `organisms/responsive-grid.css` is live in `_THEME_FILES`. The "Implementation plan" sections are kept as historical record. Since then, native CSS masonry was layered on top.
+
+**What shipped:** an `@supports (display: grid-lanes)` block in `responsive-grid.css` swaps the rectangular grid for native masonry (`display: grid-lanes`) on engines that support it, reusing the same `grid-template-columns` and `gap`. New token `--bn-flow-tolerance: 5em` in `tokens.css` biases packing toward source order. Delete the `@supports` block to revert every surface to the rectangular grid — no other change.
+
+**Why:** a bake-off mockup (`docs/mockups/grid-lanes-quotes.html`) showed masonry clearly tighter for varying-length quotes; validated on real long-form oral-history data (~284 quotes). The rectangular grid leaves ragged gaps under short cards (row height = tallest card in that row); masonry packs those away.
+
+**The reading-order tradeoff (deliberate).** The rectangular grid places **row-major**, so it reads comic-strip — left-to-right-then-down = the quotes' time/sequence order (often a participant's train of thought or the product flow). Masonry places each card in the shortest column (**column-major**), so visual order diverges from source order. `flow-tolerance: 5em` means "only break reading order when a card is more than ~5 lines taller than its in-order neighbour" — it preserves sequence for ordinary quotes and lets only big outliers reflow to fill gaps. 5em is **provisional**, tuned by eye on the mockup + real long-form data; revisit per corpus (masonry's benefit scales with length variance).
+
+**Accessibility.** Quote cards aren't tabbable; keyboard `j`/`k` walk DOM order (`FocusContext.moveFocus`), and DOM order is preserved (CSS reorders pixels only — WCAG 1.3.2 / 2.4.3 hold, screen-reader order unchanged). But under masonry the focused card can be visually non-local — "strange but workable" in QA; trackpad/scroll is unaffected. Possible future polish: geometry-aware `moveFocus`. Build only if it proves annoying.
+
+**Browser support.** Native in Safari/WebKit 26.4+ — including the desktop app's WKWebView on macOS 26.4+ (gated on the host's Safari version; nothing is bundled). Chrome/Edge/Firefox are flagged, expected to ship later in 2026. The `@supports` query auto-upgrades each engine the day it ships stable — zero code change, no redeploy. Until then those engines get the rectangular grid. A polyfill to close that interim gap for non-Safari is tracked as a future follow-up.
+
+**Files:** `bristlenose/theme/organisms/responsive-grid.css` (the `@supports` block) and `bristlenose/theme/tokens.css` (`--bn-flow-tolerance`). No React change, no `_THEME_FILES` change, no HTML change — same `.quote-group` selector, rendered only by `QuoteGroup.tsx`.
 
 ---
 

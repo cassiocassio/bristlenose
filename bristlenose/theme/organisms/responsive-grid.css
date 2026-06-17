@@ -13,6 +13,19 @@
     align-items: start;
 }
 
+/* Native CSS masonry (Safari/WebKit 26.4+; flagged in Chromium/Firefox, stable
+   later in 2026). Progressive enhancement: engines without grid-lanes ignore
+   this block and keep the rectangular grid above — no fallback code, no JS.
+   Reuses the same columns/gap; only the placement algorithm changes. Lights up
+   per-engine automatically via @supports as each ships. Delete this block to
+   revert every surface to the rectangular grid. */
+@supports (display: grid-lanes) {
+    .quote-group {
+        display: grid-lanes;
+        flow-tolerance: var(--bn-flow-tolerance);
+    }
+}
+
 /* In grid mode, quotes don't need vertical margin — gap handles it */
 .quote-group .quote-card {
     margin: 0;

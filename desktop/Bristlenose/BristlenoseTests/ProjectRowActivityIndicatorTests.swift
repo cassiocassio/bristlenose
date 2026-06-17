@@ -9,9 +9,11 @@ import XCTest
 final class ProjectRowActivityIndicatorTests: XCTestCase {
 
     func testRunningMapsToRunning() {
+        // No progress yet → spinner (fraction nil); the determinate fraction is
+        // covered by RunProgressMathTests.
         XCTAssertEqual(
             ProjectRowActivityIndicator.Kind.from(pipelineState: .running),
-            .running
+            .running(fraction: nil)
         )
     }
 

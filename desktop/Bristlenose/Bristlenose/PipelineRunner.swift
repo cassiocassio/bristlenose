@@ -44,6 +44,18 @@ struct PipelineProgress: Equatable {
     var stageName: String = ""
     var sessionsComplete: Int?
     var sessionsTotal: Int?
+    /// Determinate ring fill in [0, asymptote cap], or nil for the
+    /// indeterminate spinner (uncalibrated first run before any measured
+    /// signal). Populated from `run_progress` events via `RunProgressMath`,
+    /// already monotonic + asymptote-clamped so the view renders it directly.
+    var ringFraction: Double?
+    /// Stage id + ETA from the event. `predictedTotalSeconds` feeds the
+    /// time-based ring fill; `stage` / `etaRemainingSeconds` are stored for the
+    /// deferred subtitle text ("Transcribing · 7 of 8 · ~1 min left" — the text
+    /// tier is the next piece). Not yet rendered.
+    var stage: String?
+    var etaRemainingSeconds: Double?
+    var predictedTotalSeconds: Double?
     var elapsed: TimeInterval = 0
     var lastLine: String = ""
     var startedAt: Date = Date()
@@ -276,6 +288,14 @@ final class PipelineRunner: ObservableObject {
     /// Cancelled when the orphan finishes or the user clicks Stop.
     private var orphanPollTasks: [UUID: Task<Void, Never>] = [:]
 
+    /// Phase 0b: per-project task polling `pipeline-events.jsonl` for
+    /// `run_progress` while a run is live, so the determinate ring updates
+    /// during quiet stages (a long transcription emits little stdout).
+    /// Populates the ring only — run *exit* is detected by
+    /// `terminationHandler` / the orphan `kill` poll, so this task never
+    /// decides liveness (which is why no separate "liveness floor" is needed).
+    private var progressPollTasks: [UUID: Task<Void, Never>] = [:]
+
     /// Byte offset into `<output>/.bristlenose/bristlenose.log` for each
     /// orphan-attached project. The poll task seeks here and reads new
     /// bytes only — avoids re-streaming the whole log on every 2s tick.
@@ -470,6 +490,60 @@ final class PipelineRunner: ObservableObject {
     /// freshly-spawned run, but drive progress from manifest polling rather
     /// than stdout. Atomic stage commits make this safe — see
     /// `docs/design-pipeline-resilience.md`.
+    /// Start the events-file progress poll for a spawned run (Phase 0b). Reads
+    /// the newest `run_progress` off-main every ~1s and folds it into the ring
+    /// via `RunProgressMath`. Guarded by `generation` so a superseded run's
+    /// poll exits; cancelled in `handleTermination`.
+    private func startProgressPoll(for project: Project, generation gen: Int) {
+        let projectID = project.id
+        let eventsURL = Self.eventsURL(for: project)
+        progressPollTasks[projectID]?.cancel()
+        progressPollTasks[projectID] = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard let self, self.generation == gen else { return }
+                await self.applyEventProgress(from: eventsURL, for: projectID)
+            }
+        }
+    }
+
+    /// Read the newest `run_progress` event off-main and fold it into the
+    /// project's `PipelineProgress` (ring fill + counts + ETA). No-op until the
+    /// first progress line lands (→ the indicator keeps the spinner). Shared by
+    /// the spawned-run poll and the orphan poll.
+    private func applyEventProgress(from eventsURL: URL, for projectID: UUID) async {
+        // Read the newest progress AND the current run's id (the newest
+        // run_started) in one detached hop. The events file is append-only —
+        // NOT truncated on resume — so the newest progress line could belong to
+        // the *previous* run (e.g. during the new run's 30–60s model load before
+        // it emits anything). Gate on run_id so a stale prior-run line can't
+        // drive the ring (it would otherwise jump it to ~97%). Works for both
+        // spawned and orphan-attach paths — the current run's run_started is
+        // always the newest lifecycle event while the run is live.
+        let (event, currentRunId) = await Task.detached {
+            (EventLogReader.latestProgress(at: eventsURL),
+             EventLogReader.tailEvent(at: eventsURL)?.runId)
+        }.value
+        guard let event, event.runId == currentRunId,
+              let current = liveData.progress[projectID] else { return }
+        let updated = RunProgressMath.apply(
+            stage: event.stage,
+            sessionsComplete: event.sessionsComplete,
+            sessionsTotal: event.sessionsTotal,
+            stageFraction: event.stageFraction,
+            etaRemainingSeconds: event.etaRemainingSeconds,
+            predictedTotalSeconds: event.predictedTotalSeconds,
+            to: current,
+            startedAt: current.startedAt,
+            now: Date()
+        )
+        // Only publish on a real change — avoids waking every observing sidebar
+        // row at 1 Hz when nothing moved (Finding 10).
+        if updated != current {
+            liveData.setProgress(updated, for: projectID)
+        }
+    }
+
     private func attachOrphan(project: Project, pid: pid_t) {
         guard attachedOrphanPIDs[project.id] == nil else { return }
         Self.logger.info(
@@ -543,6 +617,11 @@ final class PipelineRunner: ObservableObject {
                         p.lastLine = last
                     }
                 }
+
+                // Phase 0b: fold the newest run_progress into the ring too.
+                await self.applyEventProgress(
+                    from: Self.eventsURL(for: project), for: projectID
+                )
             }
         }
         orphanPollTasks[project.id] = task
@@ -655,6 +734,15 @@ final class PipelineRunner: ObservableObject {
             .appendingPathComponent("bristlenose-output")
             .appendingPathComponent(".bristlenose")
             .appendingPathComponent("bristlenose.log")
+    }
+
+    /// Location of a project's run-event log (`pipeline-events.jsonl`). The
+    /// `run_progress` lines here drive the determinate ring (Phase 0b).
+    static func eventsURL(for project: Project) -> URL {
+        URL(fileURLWithPath: project.path)
+            .appendingPathComponent("bristlenose-output")
+            .appendingPathComponent(".bristlenose")
+            .appendingPathComponent(EventLogReader.filename)
     }
 
     /// Read new bytes from `url` starting at `offset`, return `(lines,
@@ -1036,6 +1124,7 @@ final class PipelineRunner: ObservableObject {
         state[project.id] = .running
         liveData.setProgress(PipelineProgress(startedAt: Date()), for: project.id)
         liveData.clearOutput(for: project.id)
+        startProgressPoll(for: project, generation: gen)
 
         let proc = Process()
         proc.executableURL = binary
@@ -1161,6 +1250,8 @@ final class PipelineRunner: ObservableObject {
         currentProcess = nil
         currentReadTask?.cancel()
         currentReadTask = nil
+        progressPollTasks[projectID]?.cancel()
+        progressPollTasks[projectID] = nil
         currentlyRunning = nil
         currentProject = nil
         // NOTE: state[projectID] stays `.running` until the manifest-read

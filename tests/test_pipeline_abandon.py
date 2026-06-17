@@ -312,7 +312,7 @@ def test_pipeline_run_abandons_when_all_transcribe_fail(tmp_path: Path) -> None:
         for i in range(1, 4)
     ]
 
-    def _fake_transcribe_sessions(needs, _settings, *, on_progress=None):
+    def _fake_transcribe_sessions(needs, _settings, *, on_progress=None, on_segment=None):
         return (
             {s.session_id: [] for s in needs},
             StageOutcome(

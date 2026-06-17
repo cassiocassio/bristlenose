@@ -45,6 +45,19 @@ enum EventLogReader {
         /// state derivations. See `tests/fixtures/pipeline-summary-contract.json`.
         let summary: PipelineSummary?
 
+        // Phase 0b `run_progress` fields — present only on progress lines, all
+        // optional (schema-additive; lifecycle events decode them as nil). The
+        // current-run gate keys off the existing `runId`. These feed the ring
+        // (`stageFraction` / `predictedTotalSeconds`) and the deferred subtitle
+        // text (`stage` / `sessionsComplete` / `sessionsTotal` /
+        // `etaRemainingSeconds`).
+        let stage: String?
+        let sessionsComplete: Int?
+        let sessionsTotal: Int?
+        let stageFraction: Double?
+        let etaRemainingSeconds: Double?
+        let predictedTotalSeconds: Double?
+
         enum CodingKeys: String, CodingKey {
             case event, kind
             case runId = "run_id"
@@ -53,6 +66,12 @@ enum EventLogReader {
             case outcome
             case cause
             case summary
+            case stage
+            case sessionsComplete = "sessions_complete"
+            case sessionsTotal = "sessions_total"
+            case stageFraction = "stage_fraction"
+            case etaRemainingSeconds = "eta_remaining_seconds"
+            case predictedTotalSeconds = "predicted_total_seconds"
         }
     }
 
@@ -81,9 +100,27 @@ enum EventLogReader {
         }
     }
 
-    /// Read the most recent `run_*` event. Returns `nil` when the file is
-    /// missing, empty, or contains no parseable events. Bounded read.
+    /// Read the most recent *lifecycle* event (`run_started` / terminus).
+    /// Returns `nil` when the file is missing, empty, or has no parseable
+    /// lifecycle event. Bounded read. **Skips `run_progress` lines** — those
+    /// are in-flight telemetry, not state; a trailing progress line must not
+    /// shadow the real terminus or mark a live run as ended (Finding 1). Use
+    /// `latestProgress` for the ring.
     static func tailEvent(at url: URL) -> Event? {
+        tailMatching(at: url) { $0.event != "run_progress" }
+    }
+
+    /// Read the most recent `run_progress` event — the live ring/text signal.
+    /// Returns `nil` when no progress line exists yet in the bounded tail.
+    static func latestProgress(at url: URL) -> Event? {
+        tailMatching(at: url) { $0.event == "run_progress" }
+    }
+
+    /// Read from the tail and return the newest decodable event satisfying
+    /// `predicate`. Bounded 64 KB read; drops a chopped first slice.
+    private static func tailMatching(
+        at url: URL, where predicate: (Event) -> Bool
+    ) -> Event? {
         let maxBytes = 65_536
         guard let (data, wasTruncated) = readBoundedTail(url: url, maxBytes: maxBytes) else {
             return nil
@@ -104,7 +141,8 @@ enum EventLogReader {
             let cleaned = line.trimmingCharacters(in: CharacterSet(charactersIn: "\0\r"))
             guard !cleaned.isEmpty,
                   let lineData = cleaned.data(using: .utf8),
-                  let event = try? decoder.decode(Event.self, from: lineData) else {
+                  let event = try? decoder.decode(Event.self, from: lineData),
+                  predicate(event) else {
                 continue
             }
             return event

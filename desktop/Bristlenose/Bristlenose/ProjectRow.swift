@@ -240,7 +240,10 @@ struct ProjectRow: View {
     /// on evicted sources), but the precedence keeps it honest either way.
     @ViewBuilder
     private var subtitleRightSlot: some View {
-        let activity = ProjectRowActivityIndicator.Kind.from(pipelineState: pipelineState)
+        let activity = ProjectRowActivityIndicator.Kind.from(
+            pipelineState: pipelineState,
+            progress: liveData.progress[project.id]
+        )
         if activity != .none {
             ProjectRowActivityIndicator(
                 kind: activity,

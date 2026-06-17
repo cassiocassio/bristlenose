@@ -14,6 +14,7 @@ the full design.
 from __future__ import annotations
 
 import json
+import math
 import os
 import secrets
 import time
@@ -92,6 +93,7 @@ class CauseCategoryEnum(str, Enum):
 
 class EventTypeEnum(str, Enum):
     RUN_STARTED = "run_started"
+    RUN_PROGRESS = "run_progress"
     RUN_COMPLETED = "run_completed"
     RUN_CANCELLED = "run_cancelled"
     RUN_FAILED = "run_failed"
@@ -238,6 +240,51 @@ class RunStartedEvent(_EventBase):
     process: Process
 
 
+class RunProgressEvent(_EventBase):
+    """In-flight progress — NOT a lifecycle/terminus event.
+
+    Emitted per-stage and (for transcription) within-file. Carries counts
+    and timings ONLY — never an id, filename, speaker label, or any
+    transcript-derived string, so it never becomes a re-identification
+    surface (sibling rule to ``pii_summary.txt`` / ``llm-calls.jsonl``).
+    Readers that derive run *state* (in-flight vs terminus) MUST skip these
+    — see ``tail_run_state`` / ``_reconcile_stranded_run`` and the Swift
+    ``EventLogReader``. A trailing progress line is not a terminus.
+    """
+
+    event: EventTypeEnum = EventTypeEnum.RUN_PROGRESS
+    stage: str | None = None
+    sessions_complete: int | None = None
+    sessions_total: int | None = None
+    # 0..1 measured within-stage progress where the backend exposes it
+    # (e.g. within-file audio fraction on faster-whisper); None otherwise.
+    stage_fraction: float | None = None
+    eta_remaining_seconds: float | None = None
+    predicted_total_seconds: float | None = None
+    # Python-measured elapsed; reserved for the orphan-attach elapsed baseline
+    # (Swift can't measure it from a mid-run attach). Not yet read Swift-side.
+    elapsed_seconds: float | None = None
+
+    @field_validator(
+        "stage_fraction",
+        "eta_remaining_seconds",
+        "predicted_total_seconds",
+        "elapsed_seconds",
+        mode="before",
+    )
+    @classmethod
+    def _finite_or_none(cls, v: object) -> object:
+        """Coerce non-finite floats (inf/nan) to None.
+
+        A degenerate Welford profile can yield inf/nan; pydantic would emit
+        bare ``Infinity`` / ``NaN`` (invalid JSON) which Swift's JSONDecoder
+        silently rejects. None makes "no estimate" explicit instead.
+        """
+        if isinstance(v, float) and not math.isfinite(v):
+            return None
+        return v
+
+
 class _TerminusEvent(_EventBase):
     ended_at: str
     outcome: OutcomeEnum
@@ -283,7 +330,11 @@ class RunFailedEvent(_TerminusEvent):
 
 # Convenience union — discriminate by `event` field on read.
 AnyEvent = (
-    RunStartedEvent | RunCompletedEvent | RunCancelledEvent | RunFailedEvent
+    RunStartedEvent
+    | RunProgressEvent
+    | RunCompletedEvent
+    | RunCancelledEvent
+    | RunFailedEvent
 )
 
 
@@ -443,6 +494,8 @@ def _parse_event_line(line: str) -> AnyEvent | None:
     try:
         if event_type == EventTypeEnum.RUN_STARTED.value:
             return RunStartedEvent.model_validate(obj)
+        if event_type == EventTypeEnum.RUN_PROGRESS.value:
+            return RunProgressEvent.model_validate(obj)
         if event_type == EventTypeEnum.RUN_COMPLETED.value:
             return RunCompletedEvent.model_validate(obj)
         if event_type == EventTypeEnum.RUN_CANCELLED.value:
@@ -497,8 +550,13 @@ def tail_run_state(events_file: Path, manifest_file: Path | None = None) -> RunS
     last_event: AnyEvent | None = None
     in_flight = False
 
-    # Walk from the tail to find the most recent run_* event.
+    # Walk from the tail to find the most recent *lifecycle* event.
+    # run_progress lines are in-flight telemetry, not state — skip them, or
+    # a trailing progress line would mask the real terminus and mark a live
+    # run as "not in flight" (Finding 1).
     for ev in reversed(events):
+        if isinstance(ev, RunProgressEvent):
+            continue
         last_event = ev
         in_flight = isinstance(ev, RunStartedEvent)
         break

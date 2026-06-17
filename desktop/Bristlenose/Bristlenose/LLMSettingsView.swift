@@ -391,7 +391,7 @@ struct LLMSettingsView: View {
 
     // MARK: - Model section
 
-    @AppStorage("llmModel") private var globalModel: String = "claude-sonnet-4-20250514"
+    @AppStorage("llmModel") private var globalModel: String = "claude-sonnet-4-6"
     @State private var useCustomModel: Bool = false
     @State private var customModelText: String = ""
     @FocusState private var customModelFocused: Bool

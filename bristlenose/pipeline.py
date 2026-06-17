@@ -397,6 +397,11 @@ class Pipeline:
         # TimingEstimator — typed as object for the same reason.
         self._estimator = estimator
         self._skip_confirm = skip_confirm
+        # Structured progress sink (RunHandle.progress) — set inside the
+        # run_lifecycle block by the CLI. None on no-lifecycle paths.
+        self._progress_sink: object | None = None
+        # perf_counter at run() entry, for elapsed/predicted-total emit.
+        self._run_start_perf: float | None = None
 
         # Per-stage outcome accumulator. Reset at the top of run / analyze /
         # transcribe-only; populated as each stage finishes; stamped onto
@@ -437,6 +442,45 @@ class Pipeline:
                 kind="remaining", stage=stage, elapsed=elapsed,
                 estimate=remaining,
             ))
+            total_elapsed = self._elapsed_seconds()
+            predicted = (
+                total_elapsed + remaining.total_seconds
+                if total_elapsed is not None else None
+            )
+            self._emit_progress(
+                stage=stage,
+                eta_remaining_seconds=remaining.total_seconds,
+                predicted_total_seconds=predicted,
+            )
+
+    def set_progress_sink(self, sink: object | None) -> None:
+        """Register the structured progress sink (``RunHandle.progress``).
+
+        Set inside the ``run_lifecycle`` block in the CLI, after the handle
+        (and thus the run_id envelope) exists. The pipeline computes the
+        numbers; the handle writes the ``run_progress`` event. None on paths
+        with no lifecycle (tests / render-only) — emits become no-ops.
+        """
+        self._progress_sink = sink
+
+    def _elapsed_seconds(self) -> float | None:
+        """Seconds since run() started, or None if not started."""
+        if self._run_start_perf is None:
+            return None
+        import time
+
+        return time.perf_counter() - self._run_start_perf
+
+    def _emit_progress(self, **fields: object) -> None:
+        """Best-effort structured progress emit to the registered sink.
+
+        No-op when no sink is registered. The sink (RunHandle.progress) is
+        itself best-effort against I/O errors — see run_lifecycle.py.
+        """
+        if self._progress_sink is None:
+            return
+        fields.setdefault("elapsed_seconds", self._elapsed_seconds())
+        self._progress_sink(**fields)  # type: ignore[operator]
 
     def _confirm_large_session_count(self, count: int, source_dir: Path) -> bool:
         """Prompt for confirmation when session count exceeds threshold.
@@ -498,6 +542,7 @@ class Pipeline:
         )
 
         pipeline_start = time.perf_counter()
+        self._run_start_perf = pipeline_start
         _printed_warnings.clear()
         # Reset the per-stage summary accumulator at the start of each run.
         self._summary = PipelineSummary()
@@ -571,6 +616,10 @@ class Pipeline:
                     self._emit(PipelineEvent(
                         kind="estimate", estimate=_est,
                     ))
+                    self._emit_progress(
+                        predicted_total_seconds=_est.total_seconds,
+                        eta_remaining_seconds=_est.total_seconds,
+                    )
 
             _stage_actuals: dict[str, StageActual] = {}
             _n_sessions = float(len(sessions))
@@ -720,11 +769,41 @@ class Pipeline:
                             f"[dim]Transcribing..."
                             f" ({current}/{total} {word})[/dim]"
                         )
+                        self._emit_progress(
+                            stage=STAGE_TRANSCRIBE,
+                            sessions_complete=current,
+                            sessions_total=total,
+                            stage_fraction=(current / total if total else None),
+                        )
+
+                    def _on_transcribe_segment(
+                        file_index: int, file_total: int,
+                        seconds_done: float, file_seconds: float,
+                    ) -> None:
+                        # Within-file heartbeat (faster-whisper only; mlx is a
+                        # single blocking call). stage_fraction is the whole
+                        # transcription-stage 0..1: completed files plus this
+                        # file's audio fraction.
+                        file_frac = (
+                            seconds_done / file_seconds if file_seconds else 0.0
+                        )
+                        file_frac = max(0.0, min(1.0, file_frac))
+                        stage_frac = (
+                            (file_index - 1 + file_frac) / file_total
+                            if file_total else None
+                        )
+                        self._emit_progress(
+                            stage=STAGE_TRANSCRIBE,
+                            sessions_complete=file_index - 1,
+                            sessions_total=file_total,
+                            stage_fraction=stage_frac,
+                        )
 
                     _fresh_segments, _fresh_transcript_outcome = (
                         await self._gather_all_segments(
                             _remaining_sessions,
                             on_progress=_on_transcribe_progress,
+                            on_segment=_on_transcribe_segment,
                         )
                     )
                     for sid in _fresh_segments:
@@ -1873,6 +1952,7 @@ class Pipeline:
         )
 
         pipeline_start = time.perf_counter()
+        self._run_start_perf = pipeline_start
         _printed_warnings.clear()
         self._summary = PipelineSummary()
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -2137,6 +2217,7 @@ class Pipeline:
         sessions: list[InputSession],
         *,
         on_progress: object | None = None,
+        on_segment: object | None = None,
     ) -> tuple[dict[str, list[TranscriptSegment]], StageOutcome]:
         """Gather transcript segments from all sources (subtitle, docx, whisper).
 
@@ -2221,6 +2302,7 @@ class Pipeline:
                     needs_transcription,
                     self.settings,
                     on_progress=on_progress,
+                    on_segment=on_segment,
                 )
                 session_segments.update(whisper_results)
                 transcript_outcome.attempted += whisper_outcome.attempted

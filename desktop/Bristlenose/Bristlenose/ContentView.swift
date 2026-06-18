@@ -351,6 +351,14 @@ struct ContentView: View {
         .onChange(of: pipelineRunner.state) { old, new in
             updateSelectedProjectRunState()
             scheduleReportReloadOnCompletion(old: old, new: new)
+            // A finished run's session count is written by the serve importer,
+            // which lands ~1s+ after the pipeline-exit signal that fires here
+            // (and lives under bristlenose-output/, outside the folder watcher's
+            // source-file scope). Ride out that import with a few spaced rescans
+            // so the sidebar count refreshes in place — no relaunch needed.
+            for id in CompletionRescan.projectsLeavingAnalysis(old: old, new: new) {
+                scheduleCountRescan(projectID: id)
+            }
         }
         .onAppear {
             // Restore last-selected project from persisted ID.
@@ -952,7 +960,13 @@ struct ContentView: View {
                 // CLI run, removed-then-re-dropped.
                 pipelineRunner.scan(project: project)
             } else {
-                renamingProjectID = project.id
+                // Adopt the folder's own name — no inline rename. A researcher
+                // who dropped a folder of interviews organised + named it
+                // deliberately (often after hours of conducting and fishing
+                // files out of Downloads), so it's already the name they want.
+                // Contrast "+ New Project", which DOES open rename because its
+                // placeholder name is never the intended one. Mirrors the
+                // analysed-folder adoption path above (also rename-free).
                 // Folder-drop is the explicit signal to analyse — auto-run.
                 // Plan §Phase 3 point 2 (the ~90% happy path).
                 pipelineRunner.start(project: project)
@@ -979,7 +993,8 @@ struct ContentView: View {
                 intoFolder: folderID
             )
             selection = [.project(project.id)]
-            renamingProjectID = project.id
+            // Adopt the dropped item's name (folder, else first file) — no
+            // inline rename on drag; see the single-folder branch above.
         }
     }
 
@@ -1609,6 +1624,28 @@ struct ContentView: View {
                 if didReload { return }
             }
             Self.reloadLog.info("reload gave up")
+        }
+    }
+
+    /// Refresh a project's sidebar session count after its run finishes.
+    ///
+    /// The count (sessions in `bristlenose.db`) is written by the serve
+    /// sidecar's importer, which polls the events log (~1s) then imports and
+    /// checkpoints the WAL — so it lands ~1s+ AFTER the pipeline-exit signal
+    /// that set this project `.ready` and drove the caller here. A single
+    /// rescan fired now would read the pre-import count. So ride out the import
+    /// with a few spaced rescans, exactly as `scheduleReportReloadOnCompletion`
+    /// rides out the same re-import for the report WebView. `performScanLocked`'s
+    /// `lastPublished` dedup makes the redundant scans free once the count
+    /// settles — so, unlike the report reload, these need no cancellation: a
+    /// late or duplicate rescan is a harmless idempotent no-op, never a
+    /// stale-content write.
+    private func scheduleCountRescan(projectID id: UUID) {
+        Task { @MainActor in
+            for _ in 0..<5 {
+                try? await Task.sleep(for: .seconds(1.5))
+                projectIndex.rescan(projectID: id)
+            }
         }
     }
 

@@ -184,7 +184,18 @@
       "analysedRelative": "Analysed {{when}}",
       "transcribed": "Transcribed",
       "partialRun": "Partial run",
-      "stopped": "Stopped"
+      "stopped": "Stopped",
+      "sessionsCount": "{{complete}} of {{total}}",
+      "etaMinutes": "~{{count}} min left",
+      "etaUnderMinute": "<1 min left",
+      "stage": {
+        "transcribe": "Transcribing",
+        "speakers": "Identifying speakers",
+        "topics": "Finding topics",
+        "quotes": "Finding quotes",
+        "cluster": "Grouping themes",
+        "render": "Building report"
+      }
     }
   },
   "pipeline": {

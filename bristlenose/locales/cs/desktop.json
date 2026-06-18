@@ -190,7 +190,18 @@
       "analysedRelative": "Analyzováno {{when}}",
       "transcribed": "Přepsáno",
       "partialRun": "Částečný běh",
-      "stopped": "Zastaveno"
+      "stopped": "Zastaveno",
+      "sessionsCount": "{{complete}} z {{total}}",
+      "etaMinutes": "zb\u00fdv\u00e1 ~{{count}} min",
+      "etaUnderMinute": "zb\u00fdv\u00e1 <1 min",
+      "stage": {
+        "transcribe": "P\u0159epis",
+        "speakers": "Rozpozn\u00e1v\u00e1n\u00ed mluv\u010d\u00edch",
+        "topics": "Hled\u00e1n\u00ed t\u00e9mat",
+        "quotes": "Hled\u00e1n\u00ed citac\u00ed",
+        "cluster": "Seskupov\u00e1n\u00ed t\u00e9mat",
+        "render": "Vytv\u00e1\u0159en\u00ed zpr\u00e1vy"
+      }
     }
   },
   "pipeline": {

@@ -18,6 +18,7 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
+from sqlalchemy import text as sa_text  # `text` clashes with a loop var below
 from sqlalchemy.orm import Session
 
 from bristlenose.server.models import (
@@ -129,6 +130,28 @@ def _find_transcripts_dir(project_dir: Path, output_dir: Path) -> Path:
 # ---------------------------------------------------------------------------
 # Import logic
 # ---------------------------------------------------------------------------
+
+
+def _checkpoint_wal(db: Session) -> None:
+    """Flush the WAL into the main DB file after an import.
+
+    The serve holds a long-lived WAL connection, so committed rows stay
+    WAL-resident until the connection closes (the default auto-checkpoint only
+    fires at ~1000 pages, which a small import never reaches). Out-of-process
+    readers that open the DB with ``?immutable=1`` — notably the sandboxed
+    macOS desktop sidecar's session-count read, which deliberately *ignores*
+    the WAL — would otherwise read the stale main file and miss the
+    just-imported sessions. A PASSIVE checkpoint copies the committed frames
+    into the main file so those readers see them.
+
+    Best-effort: the import is already committed and durable; a failed
+    checkpoint is logged (not silently swallowed), never raised.
+    """
+    try:
+        db.execute(sa_text("PRAGMA wal_checkpoint(PASSIVE)"))
+        db.commit()
+    except Exception:
+        logger.warning("post-import WAL checkpoint failed", exc_info=True)
 
 
 def import_project(db: Session, project_dir: Path) -> Project:
@@ -273,6 +296,9 @@ def import_project(db: Session, project_dir: Path) -> Project:
     # --- Mark project as imported ----------------------------------------
     project.imported_at = now
     db.commit()
+    # Flush the WAL so out-of-process `immutable=1` readers (the desktop
+    # sidebar's session-count read) see the just-imported rows immediately.
+    _checkpoint_wal(db)
 
     logger.info(
         "Imported project id=%d: %d sessions, %d quotes, %d clusters, %d themes.",

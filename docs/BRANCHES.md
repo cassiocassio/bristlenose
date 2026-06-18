@@ -41,6 +41,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 | `bristlenose_branch llm-provider-default-model/` | `llm-provider-default-model` | bugfix | CLI `--llm <provider>` applies that provider's default model (fixes cross-provider 404) |
+| `bristlenose_branch project-status-line/` | `project-status-line` | feature | Surface bucket-1 per-project messages on the sidebar status line; extract the precedence resolver out of ProjectRow |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -125,6 +126,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
+| `project-status-line` | `bristlenose_branch project-status-line/` | local only |
 | `multi-project-drag-onto` _(merged)_ | `bristlenose_branch multi-project-drag-onto/` _(detached, on disk)_ | local only — merged to main 15 May 2026 |
 | `multi-project-switch` _(merged)_ | `bristlenose_branch multi-project-switch/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`baf1896`) |
 | `ci-version-pinning` _(merged)_ | `bristlenose_branch ci-version-pinning/` _(detached, on disk)_ | local + remote deleted — merged to main 14 May 2026 (`e1c8083`) |
@@ -151,6 +153,29 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `project-status-line`
+
+**Kind:** feature — surface the bucket-1 per-project messages on the sidebar status line, fitted to the settled `MessageKind` + `run_progress` grammar; extract the precedence resolver out of `ProjectRow` into a pure, testable `resolve(...)`.
+**Status:** Just started
+**Started:** 19 Jun 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch project-status-line/`
+**Remote:** local only (push when ready)
+
+**What it does:** Surfaces per-project messages that already have the data but never reach the sidebar subtitle — Copying (N of M), Downloading-from-iCloud (%), Starting (only if slow), mid-run health — each fitted to the settled grammar. Lifts `ProjectRow.subtitleVariant` (a private view-computed precedence chain) into a pure `resolve(...) -> SubtitleVariant`. Plus one small new Python `health` field on `run_progress`. Spec: `docs/design-desktop-project-status.md` (settled — don't relitigate kinds/precedence). Reviewed by `/usual-suspects` 18 Jun — 3 pins captured in `HANDOFF.md` (the gitignored review log kept alongside it has the full detail); the `cantFind`-first precedence ruling is now in the spec.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/ProjectRow.swift` (extract `subtitleVariant` → pure `resolve`)
+- `desktop/Bristlenose/Bristlenose/ProjectAvailability.swift` (`inCloud(downloading:)` %)
+- `desktop/Bristlenose/Bristlenose/CopyMachinery.swift` (`inFlight` — use byte-% for "Copying"; no new count source, per review)
+- `desktop/Bristlenose/Bristlenose/ServeManager.swift` (read `.starting` only — keep touch read-only/minimal; do **not** touch the `generation` token)
+- `bristlenose/events.py` + `bristlenose/run_lifecycle.py` (the `health` field — needs the event field **and** the `progress()` signature, per review pin 2)
+
+**Potential conflicts with other branches:**
+- **`warm-sidecar-pool`** (planned Phase A2, not yet created) — **SHARED FILE: `ServeManager.swift`.** This branch only *reads* `ServeManager.starting`; warm-sidecar-pool does the heavy ServeManager lifecycle rewrite (warm pool, eviction, the `generation` token). Semantic coupling too: the warm pool redefines "starting" (a switch becomes a hand-off, not a start), so the "Starting…" message this branch surfaces must be reconciled with the pool. **Merge order: land `project-status-line` first** (smaller ServeManager footprint), then warm-sidecar-pool rebases and reconciles "Starting…". See the branch's `HANDOFF.md` Review pins for the full merge plan.
+- No other active branch touches these Swift files or `events.py`/`run_lifecycle.py` (`chunked-quote-extraction`, which touched `run_lifecycle.py`, is merged).
 
 ---
 

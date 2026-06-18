@@ -181,7 +181,18 @@
       "analysedRelative": "\ubd84\uc11d\ub428 {{when}}",
       "transcribed": "\uc804\uc0ac\ub428",
       "partialRun": "\ubd80\ubd84 \uc2e4\ud589",
-      "stopped": "\uc911\uc9c0\ub428"
+      "stopped": "\uc911\uc9c0\ub428",
+      "sessionsCount": "{{total}}\uac1c \uc911 {{complete}}\uac1c",
+      "etaMinutes": "~{{count}}\ubd84 \ub0a8\uc74c",
+      "etaUnderMinute": "1\ubd84 \ubbf8\ub9cc \ub0a8\uc74c",
+      "stage": {
+        "transcribe": "\uc804\uc0ac \uc911",
+        "speakers": "\ud654\uc790 \uc2dd\ubcc4 \uc911",
+        "topics": "\uc8fc\uc81c \ucc3e\ub294 \uc911",
+        "quotes": "\uc778\uc6a9 \ucc3e\ub294 \uc911",
+        "cluster": "\ud14c\ub9c8 \uadf8\ub8f9\ud654 \uc911",
+        "render": "\ubcf4\uace0\uc11c \uc791\uc131 \uc911"
+      }
     }
   },
   "pipeline": {

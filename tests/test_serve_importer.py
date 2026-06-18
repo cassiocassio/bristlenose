@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -66,6 +67,33 @@ class TestImportProject:
         assert s.session_number == 1
         assert s.session_date is not None
         assert s.duration_seconds == 78.0  # 00:01:18
+
+    def test_checkpoints_wal_so_immutable_readers_see_sessions(
+        self, tmp_path: Path
+    ) -> None:
+        """After import, sessions must be visible to an out-of-process reader
+        that opens the DB with ``?immutable=1`` — the sandboxed desktop
+        sidecar's session-count read, which ignores the WAL. Without the
+        post-import PASSIVE checkpoint the rows stay WAL-resident and an
+        immutable read sees zero (the desktop sidebar count bug). Uses a
+        file-backed WAL DB; the in-memory ``db`` fixture has no WAL."""
+        db_path = tmp_path / "bristlenose.db"
+        engine = get_engine(f"sqlite:///{db_path}")
+        init_db(engine)
+        session = create_session_factory(engine)()
+        try:
+            import_project(session, _FIXTURE_DIR)
+        finally:
+            session.close()
+
+        # Fresh immutable connection: reads only the main DB file, ignoring the
+        # WAL. Seeing the session proves the checkpoint flushed WAL -> main.
+        conn = sqlite3.connect(f"file:{db_path}?immutable=1", uri=True)
+        try:
+            count = conn.execute("SELECT COUNT(*) FROM sessions").fetchone()[0]
+        finally:
+            conn.close()
+        assert count == 1
 
     def test_creates_source_file(self, db: Session) -> None:
         import_project(db, _FIXTURE_DIR)

@@ -256,6 +256,10 @@ The sidebar is active only on the Quotes tab — other tabs have full-width cont
 
 _See also: `docs/design-codebook-autocomplete.md`_
 
+### Project creation naming: drag adopts, "+ New Project" prompts
+
+**A folder dropped onto the sidebar becomes a project with the folder's own name and no inline-rename field; only "+ New Project" opens inline rename.** A researcher organises interviews into a deliberately-named folder (hours of conducting, fishing files out of Downloads) — that name is already the one they want, so popping a rename field over a freshly-queued run is a papercut. "+ New Project"'s placeholder ("New Project") is never the intended name, so that path keeps the rename. Loose-file drops adopt the first file's name (defensible — the first interview has a meaningful, unique name; revisit on user feedback). Mirrors the pre-existing analysed-folder adoption path, which already skipped rename for the same reason. (`09f8625`, 18 Jun 2026; `ContentView.createProjectFromURLs`.)
+
 ---
 
 ## Data and privacy

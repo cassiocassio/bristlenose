@@ -6,6 +6,8 @@ last-updated: 2026-05-15
 
 > **Status:** Stub. Captures the V2-shaped problems deferred out of [`design-sidebar-drop-behaviour.md`](design-sidebar-drop-behaviour.md). Not designed in detail; surfaces the questions that V2 will have to answer, with rough tentative directions from the V1 design conversation.
 
+> **Separate known issue (18 Jun 2026), NOT V2 bulk-import scope:** dragging a *project* out of a folder to top level, or between folders, does not work by drag (the Move-To menu covers it). It's structural — the sidebar's per-container `.onMove` reorder islands don't release a drag across a folder boundary, and there's no internal-move drop target at root. This is distinct from "cross-project drag" below (moving *interviews* between projects). Full forensic inventory + fix: the **Sidebar Apocalypse** doc, [`private/handoffs/sidebar-apocalypse.md`](private/handoffs/sidebar-apocalypse.md) § FORENSIC. POST-TF, not a blocker.
+
 # Sidebar Drop Behaviour — V2
 
 ## Vocabulary

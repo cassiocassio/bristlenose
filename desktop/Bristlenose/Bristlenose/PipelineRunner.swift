@@ -50,9 +50,10 @@ struct PipelineProgress: Equatable {
     /// already monotonic + asymptote-clamped so the view renders it directly.
     var ringFraction: Double?
     /// Stage id + ETA from the event. `predictedTotalSeconds` feeds the
-    /// time-based ring fill; `stage` / `etaRemainingSeconds` are stored for the
-    /// deferred subtitle text ("Transcribing · 7 of 8 · ~1 min left" — the text
-    /// tier is the next piece). Not yet rendered.
+    /// time-based ring fill; `stage` / `sessionsComplete` / `sessionsTotal` /
+    /// `etaRemainingSeconds` feed the in-flight subtitle text
+    /// ("Transcribing · 7 of 8 · ~1 min left"), composed by `RunProgressSubtitle`
+    /// and rendered in `ProjectRow`.
     var stage: String?
     var etaRemainingSeconds: Double?
     var predictedTotalSeconds: Double?

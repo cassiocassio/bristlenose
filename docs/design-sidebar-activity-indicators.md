@@ -1,24 +1,29 @@
 ---
 status: partial
-last-trued: 2026-06-15
-trued-against: HEAD@per-project-activity (518e6d3) on 2026-06-15
+last-trued: 2026-06-18
+trued-against: HEAD@progress-text-surfacing on 2026-06-18
 ---
 
 # Per-project activity indicators (sidebar) — design
 
-> **Trued 2026-06-15** against `per-project-activity` @ `518e6d3` (Phase 0a, commits
-> `b3bbaab..518e6d3`). **One key divergence from this plan: 0a shipped the indeterminate
-> *spinner*, not the determinate ring.** The determinate ETA pie/ring (and its Welford
-> channel) is deferred to Phase 0b, which is unbuilt. Sections describing the determinate
-> ring, ladder rungs 1–3, and the 0b events-channel are preserved below as the **0b plan**,
-> now banner-marked — not shipped reality. "Shipped in Phase 0a" (below) is the ground truth;
-> Controls, the visual-vocabulary table, and Acceptance are updated to what shipped.
+> **Trued 2026-06-18** against `progress-text-surfacing`. **Phase 0b shipped** — the
+> determinate ETA ring landed in `010910a` ("desktop: determinate ETA progress ring in the
+> sidebar (phase 0b)"), and its deferred **progress-text tier** shipped on this branch: the
+> running-row subtitle now reads e.g. "Transcribing · 2 of 3 · <1 min left" via the pure
+> `RunProgressSubtitle` composer (`desktop/Bristlenose/Bristlenose/RunProgressSubtitle.swift`),
+> degrading to "Analysing · <1 min left" then "Analysing…". The earlier (2026-06-15) truing
+> described 0a's spinner-only state and banner-marked the ring + events-channel as "0b,
+> unbuilt"; **those banners are flipped to shipped reality below.** The 0b *plan* prose is
+> preserved (it's still the design rationale) — what changed is "built", not the design.
+> **Still aspirational:** Phases 1–3 (concurrent execution, multi-window, global-concern
+> unification) and the collapsed-folder aggregate.
 
-**Status:** Phase 0a shipped 15 Jun 2026 (`b3bbaab..518e6d3`); Phase 0b + Phases 1–3
-aspirational. TestFlight scope = the visual layer only.
+**Status:** Phase 0a shipped 15 Jun 2026 (`b3bbaab..518e6d3`); Phase 0b shipped (ring
+`010910a`, 17 Jun; progress-text tier 18 Jun); Phases 1–3 aspirational. TestFlight scope =
+the visual layer only.
 
 Mockup: `docs/mockups/sidebar-activity-indicators.html` (animated timeline — small + large run on a
-sped-up clock). The mockup shows the *0b* determinate ring; 0a shipped the spinner.
+sped-up clock). The mockup's determinate ring + ticking progress text now match shipped 0b.
 
 ## Shipped in Phase 0a (ground truth, `b3bbaab..518e6d3`)
 
@@ -45,8 +50,17 @@ surrounding plan, parts of which are deferred (see banners):
   **deleted** (commit `8ffa470`); the per-project glance now lives on the row. Only
   `OllamaDownloadPill` + `CopyProgressPill` remain in the toolbar (app-global concerns).
 
-**Not shipped in 0a (deferred):** the determinate ETA ring/pie + Welford channel (Phase 0b),
-the collapsed-folder aggregate indicator, copy-on-row, and everything in Phases 1–3.
+**Shipped in Phase 0b (`010910a` + `progress-text-surfacing`):** the determinate ETA ring
+(`ProjectRowActivityIndicator` → `ProgressView(value:)`, monotonic + asymptote-clamped by
+`RunProgressMath`), the `run_progress` events channel (Python `RunProgressEvent` →
+`EventLogReader.latestProgress` → 1 Hz poll in `PipelineRunner`), and the **progress-text
+tier** (`RunProgressSubtitle` composes stage · N-of-M · ETA into the row subtitle +
+VoiceOver phrase + tooltip). Report auto-reload-on-completion also landed (`d277017`,
+`c11f68c`).
+
+**Still deferred:** the collapsed-folder aggregate indicator, copy-on-row, the during-run
+*detail-pane* surface (the detail pane still shows the server "Nothing to see here, yet."
+page on a first run), and everything in Phases 1–3.
 
 ## Problem
 
@@ -92,11 +106,12 @@ concurrent execution**, not concurrent serve.
 
 The sidebar inherits the toolbar/popover vocabulary that already ships:
 
-Shipped 0a unless marked _(0b)_:
+Shipped 0a, or 0b where marked _(0b, now built)_:
 
 | State | Sidebar element | Shipped as | Source |
 |---|---|---|---|
-| running / scanning | **indeterminate spinner** (0a). _(0b: determinate ETA ring — see banner below.)_ | `ProgressView().controlSize(.small)` | `ProjectRowActivityIndicator.swift` |
+| running | _(0b)_ **determinate ETA ring** + subtitle progress text ("Transcribing · 2 of 3 · <1 min left"), spinner only until the first measured signal | `ProgressView(value:)` + `RunProgressSubtitle` | `ProjectRowActivityIndicator.swift`, `ProjectRow.swift` |
+| scanning | transient indeterminate spinner (pre-run, after 250 ms) | `ProgressView().controlSize(.small)` | `ProjectRow.swift` |
 | running, hovered | spinner swaps → grey `xmark.circle.fill` (×) in fixed 16pt frame; click → `cancel(project:)` | `Button(.plain)`, crossfade, Reduce-Motion-aware | `ProjectRowActivityIndicator.swift` |
 | copying | determinate ring (byte ratio) — _toolbar pill only; copy-on-row is post-TF_ | `ProgressView(value:)` | `CopyProgressPill.swift` |
 | failed | red `xmark.circle.fill`, clickable → diagnostic popover | `MessageKind.error` | `MessageKind.swift`, `ProjectRow.swift` |
@@ -115,10 +130,18 @@ detail-of-this-row segments)._
 
 ## Determinate progress — surface what's measured, don't re-measure
 
-> **Deferred to Phase 0b — NOT shipped (as of `518e6d3`).** Phase 0a shipped the indeterminate
-> spinner instead. This whole section (the ETA-weighted pie, the honesty rules, the ladder, the
-> two-render-sites claim) is the **0b plan**, preserved as written. `grep run_progress|ProgressView(value`
-> in `ProjectRowActivityIndicator.swift` → zero hits today.
+> **Shipped in Phase 0b (`010910a` + `progress-text-surfacing`).** This section is now built,
+> not plan: the ETA-weighted ring (`RunProgressMath`), the honesty rules (monotonic +
+> asymptote), the best-available ladder, and the two-render-sites claim (ring + subtitle text)
+> all ship. **One correction from the plan:** the `run_progress.stage` field carries
+> `timing.py ALL_STAGES` — the estimator's six *coarse* ids (`transcribe`, `speakers`,
+> `topics`, `quotes`, `cluster`, `render`) — NOT the finer `manifest.py STAGE_ORDER` the plan
+> implied; `RunProgressSubtitle.knownStages` mirrors the six (a unit test pins them). The
+> within-stage **session fraction** ("N of M") is emitted per-file during transcription
+> (`pipeline.py` `_on_transcribe_progress`, not estimator-gated); the **ETA** comes from the
+> Welford estimator at stage boundaries (gated on calibration). A *cached* run that skips
+> transcription emits only the initial post-ingest estimate (`stage=None`) → the text reads
+> "Analysing · <1 min left".
 
 The measurement layer is built and calibrated; the gap is the channel + render, not the maths.
 
@@ -159,14 +182,21 @@ text ticking over is itself a liveness signal. Same `PipelineProgress` + ETA fee
   **indeterminate spinner** for running/scanning, with hover-× Stop and the clickable failure-glyph
   popover. Pure display, no channel change. _(The plan originally proposed a coarse `stageIndex/10`
   determinate ring here; that was dropped — see the correction above.)_
-- **Phase 0b (not built):** surface Welford ETA + session fraction (rungs 1–2) + the coarse
-  `stageIndex/10` ring (rung 3) via the structured events file — plumbing over existing computation,
-  no re-measurement. This is where the determinate ring actually lands.
+- **Phase 0b (shipped — `010910a` ring + `progress-text-surfacing` text):** surfaces Welford ETA
+  + session fraction (rungs 1–2) via the structured `run_progress` events file — plumbing over
+  existing computation, no re-measurement. The ring fills by time (`predictedTotalSeconds`) or
+  within-stage fraction; the coarse `stageIndex/10` ring (rung 3) was **not** needed and not
+  built. The text tier (`RunProgressSubtitle`) renders the same ladder as words.
 
 ### Phase 0b spec — events-channel widening
 
-> **Not built (as of `518e6d3`).** Forward-looking spec; preserved as the 0b implementation plan.
-> `grep run_progress|RunProgressEvent` is zero across `bristlenose/` and `desktop/`.
+> **Shipped (`010910a` + `progress-text-surfacing`).** The spec below landed largely as
+> written: `RunProgressEvent` in `bristlenose/events.py`, emitted via `RunHandle.progress`
+> (`run_lifecycle.py`) from `pipeline.py` hooks; consumed by `EventLogReader.latestProgress`
+> + the 1 Hz poll in `PipelineRunner`, folded into the ring by `RunProgressMath` and into the
+> subtitle by `RunProgressSubtitle`. Deltas from the spec: the `stage` field uses the
+> estimator's six coarse ids (see the correction above), and the localised stage verb lives
+> Swift-side under `desktop.chrome.pipeline.stage.<id>` (not `desktop.pipeline.stage.<id>`).
 
 Plumbing + render, not new measurement. The writer (`append_event`, O_APPEND+fsync) and reader
 (`EventLogReader`) exist; `timing.py`'s docstring already anticipates it ("a future visual UI can
@@ -261,9 +291,14 @@ for a status banner etc.) — not built; the glyph popover is the shipped failur
 ## Acceptance / verification (Phase 0)
 
 - Debug gallery renders each indicator; motion-vs-static legible at a glance.
-- A real Cmd+R run shows idle → scanning → running (**indeterminate spinner** + "Analysing…" text;
-  determinate ring is 0b) → ready; failure → red glyph; partial → orange glyph. Hovering the running
-  spinner reveals the × (Stop); clicking a failure glyph opens the diagnostic popover.
+- A real Cmd+R run (fresh transcription) shows idle → scanning → running with the **determinate
+  ETA ring** + the **progress-text ladder** ("Transcribing · 2 of 3 · <1 min left" → "Identifying
+  speakers · …" → "Finding topics · …") → ready; failure → red glyph; partial → orange glyph.
+  Hovering the running ring reveals the × (Stop); clicking a failure glyph opens the diagnostic
+  popover. **Caveat:** a *cached* run (transcripts already present) emits only the initial estimate,
+  so it reads "Analysing · <1 min left" throughout — and the **bundled sidecar must be rebuilt**
+  (`build-sidecar.sh`) to a version that emits `run_progress`, or both ring and text stay at their
+  indeterminate floor (the whole 0b channel was latent on desktop until the sidecar was rebuilt).
 - Idle/ready/cloud rows visually unchanged; whole-sidebar collapse adds no compensating chrome.
 - VoiceOver announces state via the subtitle path; the ring is `accessibilityHidden`. The
   `accessibilityLabel` is extended to include pipeline state (name → state → counts).

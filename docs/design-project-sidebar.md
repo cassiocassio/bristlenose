@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-06-15
-trued-against: HEAD@per-project-activity (518e6d3) on 2026-06-15
+last-trued: 2026-06-18
+trued-against: main (bcb4187) on 2026-06-18
 ---
 
 > **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`):** the per-project run glance **moved onto the
@@ -11,10 +11,18 @@ trued-against: HEAD@per-project-activity (518e6d3) on 2026-06-15
 > row and lived in the toolbar pill — that is **now reversed**: the row-spinner vision they dismissed is
 > what shipped. The banners are re-flipped inline. See `docs/design-sidebar-activity-indicators.md`.
 
+> **Trued 2026-06-18 (`main` @ `bcb4187`, post `progress-text-surfacing` merge):** the running row's
+> **subtitle** now shows the live progress ladder (stage · N of M · ETA, e.g. "Transcribing · 2 of 3 ·
+> <1 min left"), not just a trailing spinner; drag-create **adopts the folder / first-item name with no
+> inline rename** ("+ New Project" still prompts); and the title-line **session count refreshes on run
+> completion** (was stale until relaunch). New "Row anatomy (two-line)" section below is the doc home for
+> all three. Progress-ladder + ring details: `docs/design-sidebar-activity-indicators.md`.
+
 > **Truing status:** Trued. Phases 1–3 shipped; remaining drift carries inline banners. Project-menu and context-menu ASCII art trued (phantom Add Interviews / Analyse / Get Info removed). Drop matrix duplicate row clarified. Phase 2 "not shipped" list updated with strikethrough on items that did ship. Pipeline-state × run-trigger matrix at end of doc.
 
 ## Changelog
 
+- _2026-06-18_ — Trued against `main` @ `bcb4187` after the `progress-text-surfacing` merge. Running-row subtitle now shows the live progress ladder via `RunProgressSubtitle` (states table L81 updated); drag-create adopts the folder/first-item name with no inline rename (drop matrix + Phase 2 list updated, commit `09f8625`); added a "Row anatomy (two-line)" section documenting the title-line session count + its refresh-on-completion (commit `1e1d608`) and the subtitle progress ladder, cross-referencing `desktop/CLAUDE.md` + `bristlenose/server/CLAUDE.md` for the WAL-checkpoint mechanics rather than duplicating them.
 - _2026-05-01_ — §"Empty state" status banner flipped from `partial` to `shipped` after `WelcomeView` landed on `first-run` (commit `816ab65`). Drop-target affordance and New Project CTA now ship via the welcome detail-pane (not via the sidebar `ContentUnavailableView` shape originally designed in this doc); see `WelcomeView.swift` and `design-desktop-app.md` §"Loading and transition states" empty-state row. The four downstream "ContentUnavailableView empty state" mentions in this doc were not rewritten — the original sidebar-level vision is preserved as planning history; the actual empty surface lives in the detail pane. TipKit first-project hint remains parked.
 - _2026-04-24 (evening)_ — Sidebar row subtitle now switches "Analysing…" → "Stopping…" the moment the user clicks Stop on the toolbar pill, in lockstep with the pill itself. `ProjectRow` takes `liveData: PipelineLiveData` and reads `progress[id].isStopping` (commit `da5cc45`). See `design-subprocess-lifecycle.md` §Cancellation for the full chain.
 - _2026-04-24_ — Tier 1 truing follow-up (post `design-doc-review` audit): Project menu ASCII art corrected to match `MenuCommands.swift:317-415` shipped reality (phantom `Add Interviews… ⇧⌘I`, `Analyse… ⇧⌘A`, `Get Info ⌘I` removed; Locate, Move to submenu, ⌘⌫ shortcut added); right-click context menu ASCII corrected and `Choose Icon…` added (`ContentView.swift:967-969`); drop-matrix "Drop on empty area" column nuanced to call out `duplicateDropAlert` flow (`ContentView.swift:301-323`); Phase 2 "not shipped" list updated with strikethrough markers for items that the override banner already noted as shipped (multi-select, drop-on-row, duplicate alert, addedInterviews toast, extension allow-list).
@@ -78,7 +86,7 @@ Mental model: **Mail sidebar** — curated list of items you've placed, not a li
 |-------|---------------|---------------|
 | Available | Normal text | — |
 | Selected/Open | System highlight | — |
-| Analysing | Normal text | ◐ spinner |
+| Analysing | Subtitle shows progress ladder (stage · N of M · ETA) | ◐ progress ring |
 | Unavailable | Grey text + secondary line with `display_hint` | — |
 | Unavailable — moved/deleted | Grey text + "Locate…" | `questionmark.folder` (actionable) |
 | Read-only | Normal text | `lock` |
@@ -87,6 +95,15 @@ Mental model: **Mail sidebar** — curated list of items you've placed, not a li
 Unavailable projects use one grey treatment regardless of cause (external drive, network, cloud). The `display_hint` text explains why ("Samsung T7", "Acme VPN", "Syncing…"). Only moved/deleted gets a distinct icon because it's actionable (click to relocate). "Needs analysis" and "Stale version" are surfaced in Get Info, not the sidebar row.
 
 All trailing icons and status text must have `.accessibilityLabel()` / `.accessibilityValue()` so VoiceOver reads e.g. "Onboarding Pilot, unavailable, external drive Samsung T7".
+
+### Row anatomy (two-line)
+
+The canonical spec is the `ProjectRow.swift` doc-comment; this is its design home.
+
+- **Title line** — identity icon · project name · *(right)* **session count** (the interview count — Finder's right-column treatment; empty when the analysis DB isn't readable).
+- **Subtitle line** — status text · *(right)* storage/activity qualifier (iCloud arrow, or the activity indicator while a run is in flight). During a run the subtitle shows the **live progress ladder** — stage · N of M · ETA (e.g. "Transcribing · 2 of 3 · <1 min left"), degrading to "Analysing · <1 min left" then "Analysing…" — composed by the pure `RunProgressSubtitle` helper (stage vocabulary = `timing.py ALL_STAGES`, six coarse ids, **not** `manifest.STAGE_ORDER`). Ring / spinner / Stop-× / failure-glyph details: `docs/design-sidebar-activity-indicators.md`.
+
+**The session count refreshes on run completion** (it used to go stale until relaunch). It's read from the project's analysis DB (`SELECT COUNT(*) FROM sessions`) via a sandbox-mandated `immutable=1` open that can't see WAL-resident rows — and the count is written by the *serve importer*, not the pipeline run, so a finished run wouldn't refresh it on its own. Two-part fix: the importer PASSIVE-checkpoints the WAL after import, and the desktop rescans the watcher on the analysing→terminal transition (`ContentView.scheduleCountRescan`). The cross-process WAL trap + mechanics live in `bristlenose/server/CLAUDE.md` and `desktop/CLAUDE.md` (immutable-read gotcha) — not duplicated here.
 
 ### "New Project" placement
 
@@ -293,7 +310,7 @@ All items disabled when nothing is selected.
 
 | Drag source | Drop target | Result |
 |-------------|-------------|--------|
-| Files/folder from Finder | Empty sidebar area | Create new project, name from folder/parent, inline rename selected |
+| Files/folder from Finder | Empty sidebar area | Create new project, name adopted from folder/first item (no inline rename; "+ New Project" still prompts) |
 | Files/folder from Finder | Existing project row | Add interviews, toast: "Added 3 interviews to Mobile Banking Pilot" with Undo button |
 
 ### Native affordances
@@ -390,7 +407,7 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
   - Single/multiple files → one project, `inputFiles` = exactly the dropped files (never siblings)
   - Mixed files + folders → one project, all paths in `inputFiles`
   - No dedup — same folder dropped twice creates two projects (user may analyse differently)
-  - Project named after first item (folder name or filename stem), inline rename activated
+  - Project named after first item (folder name or filename stem) — drag-create adopts it with no inline rename ("+ New Project" still prompts; commit `09f8625`)
 - `Project.inputFiles` (`input_files` in JSON) — optional `[String]?`. nil = scan whole directory (backward compatible). Populated = process only listed files/directories. Follows Logic Pro / Final Cut precedent: project is a logical container, files are references
 - Right-click context menu on project rows: Show in Finder, Rename, Delete (destructive role)
 - Context menu actions scoped to right-clicked row (not necessarily the selected row)

@@ -232,11 +232,15 @@ jobs:
         # CDN socket hangs forever (it stalled 6h on 2026-06-03). Bound each
         # attempt with `timeout` — a healthy download finishes in seconds, so
         # 5m is generous — and retry to ride out a transient CDN stall.
+        # `--with-deps` also shells to apt-get, which fails *fast* (exit 100, not a
+        # hang, so `timeout` can't catch it) when the runner's background apt /
+        # unattended-upgrades holds the dpkg lock — so wait the lock out first.
         # See docs/design-ci.md § Timeouts and external-download resilience.
         timeout-minutes: 18
         run: |
           n=0
           until [ "$n" -ge 3 ]; do
+            sudo bash -c 'w=0; while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 && [ "$w" -lt 36 ]; do echo "dpkg lock held — waiting"; sleep 5; w=$((w+1)); done'
             timeout 5m npx playwright install chromium webkit --with-deps && exit 0
             n=$((n + 1))
             echo "::warning::playwright browser install attempt $n stalled or failed; retrying in 15s"

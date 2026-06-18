@@ -371,6 +371,7 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 - **Default Claude runs no longer break when Anthropic retires a model.** The built-in Claude default pointed at `claude-sonnet-4-20250514`, retired by Anthropic on 15 June — so a plain `bristlenose run` on Claude (no `--model`) failed at topic segmentation with a `404 model_not_found`. Defaults now track current aliases (`claude-sonnet-4-6`, plus `claude-opus-4-8` where Opus is offered), so the next retirement is a one-line change. Pin a model with `--model` and nothing changes. Ships on PyPI.
 - **Quote cards pack tighter on the report, where the browser supports it.** The quote grid uses CSS Grid Lanes masonry (Safari 26.4+ / the desktop WebKit) so variable-height cards settle into the shortest column — a progressive enhancement that falls back cleanly elsewhere, with reading order intact for keyboard and screen-reader users.
+- **The desktop sidebar shows real progress on cached and first-time runs, not a frozen "Analysing…".** The per-stage verb ladder was driven only by the timing estimator, so cache-verified / transcript-only runs and every new user's first few runs (the estimator needs ~4 runs of history) never advanced it. An estimator-independent signal now fires at each stage entry, carrying the last-known ETA so warm runs are unchanged and cached / cold-start runs advance the verb with the ETA simply absent. Python-only — ships on PyPI and in the desktop sidecar.
 
 **0.15.16** — _10 Jun 2026_
 

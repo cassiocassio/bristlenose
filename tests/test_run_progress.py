@@ -7,8 +7,8 @@ trailing progress line (so a live/crashed run is still detected); a
 progress-write I/O failure never fails the run; and the stage-entry emit puts
 the timing verb vocabulary on the wire (never a manifest name that the Swift
 RunProgressSubtitle.knownStages silently drops) while carrying the last-known
-ETA so warm-run ring fill can't regress. We deliberately do NOT assert emit
-cadence — that is implementation detail.
+ETA — and clearing it when the estimate goes cold — so warm-run ring fill can't
+regress. We deliberately do NOT assert emit cadence — that is implementation detail.
 """
 
 from __future__ import annotations
@@ -221,3 +221,41 @@ def test_emit_stage_entry_carries_last_known_eta():
     assert emitted["stage"] == "quotes"
     assert emitted["eta_remaining_seconds"] == 90.0
     assert emitted["predicted_total_seconds"] == 300.0
+
+
+class _ColdEstimator:
+    """Estimator whose stage_completed always returns None — the cold-start
+    (<4 history) / late-run (remaining<10s) condition that drives HIGH-3."""
+
+    def stage_completed(self, stage: str, elapsed: float) -> None:
+        return None
+
+
+def test_emit_remaining_clears_carried_eta_when_estimate_goes_cold():
+    # HIGH-3 regression guard. When the estimator returns None (cold start, or
+    # late-run remaining<10s), _emit_remaining must CLEAR the carried ETA so a
+    # stale, too-large estimate from an earlier stage isn't propagated onto the
+    # next stage-entry emit. This drives the real _emit_remaining clear branch
+    # (not just asserting pass-through), so deleting the `= None` lines in that
+    # branch fails this test — which the carry test alone would not catch.
+    collected: list[dict[str, object]] = []
+    pipeline = Pipeline(
+        BristlenoseSettings(), skip_confirm=True, estimator=_ColdEstimator(),
+    )
+    pipeline.set_progress_sink(lambda **fields: collected.append(fields))
+    # An earlier stage left a carried ETA in place:
+    pipeline._last_eta_remaining = 90.0
+    pipeline._last_predicted_total = 300.0
+
+    # A stage completes but the estimator has no usable estimate → must clear,
+    # and must not emit a progress event on the cold path:
+    pipeline._emit_remaining(STAGE_QUOTES, elapsed=12.0)
+    assert collected == []
+
+    # The next stage entry must NOT carry the stale 90/300:
+    pipeline._emit_stage_entry(STAGE_CLUSTER)
+    assert len(collected) == 1
+    emitted = collected[0]
+    assert emitted["stage"] == "cluster"
+    assert emitted["eta_remaining_seconds"] is None
+    assert emitted["predicted_total_seconds"] is None

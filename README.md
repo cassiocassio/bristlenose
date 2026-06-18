@@ -367,6 +367,11 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.17** — _18 Jun 2026_
+
+- **Default Claude runs no longer break when Anthropic retires a model.** The built-in Claude default pointed at `claude-sonnet-4-20250514`, retired by Anthropic on 15 June — so a plain `bristlenose run` on Claude (no `--model`) failed at topic segmentation with a `404 model_not_found`. Defaults now track current aliases (`claude-sonnet-4-6`, plus `claude-opus-4-8` where Opus is offered), so the next retirement is a one-line change. Pin a model with `--model` and nothing changes. Ships on PyPI.
+- **Quote cards pack tighter on the report, where the browser supports it.** The quote grid uses CSS Grid Lanes masonry (Safari 26.4+ / the desktop WebKit) so variable-height cards settle into the shortest column — a progressive enhancement that falls back cleanly elsewhere, with reading order intact for keyboard and screen-reader users.
+
 **0.15.16** — _10 Jun 2026_
 
 - **Quote extraction no longer fails on dense interviews when the model has a small output limit.** Some models cap a single response (ChatGPT's gpt-4o at 16,384 tokens; small local models far less), and on a long, quote-rich transcript the quote-extraction stage could hit that ceiling mid-response — the reply came back truncated and the whole run failed, on roughly one dense ChatGPT run in three. Bristlenose now detects the truncation, splits the transcript at a natural topic boundary (or even halves when there's no confident one), extracts each piece separately, and merges — recursing up to three levels deep (≤8 chunks). Duplicate quotes straddling a split are de-duplicated by verbatim text, and the split is all-or-nothing per interview so a partial failure never leaves a half-analysed session. New typed `TruncatedResponseError` / `OUTPUT_TRUNCATED` cause (mirrored on desktop), plus up-to-six retries on rate-limit bursts. Every quote still lands in exactly one report section. Ships on PyPI — benefits every provider with a tight output cap.

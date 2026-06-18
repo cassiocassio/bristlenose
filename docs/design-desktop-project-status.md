@@ -63,12 +63,17 @@ Worked rulings (the precedents):
 
 When several conditions are true, the row shows one winner (never composed), most-demanding first:
 
-`failed › running` *(the verb ladder; retries ride it as info)* `› stopped / partial › copying ›
-drive-unplugged (cantFind) › downloading-from-iCloud › files-missing › unanalysed › starting ›
+`drive-unplugged (cantFind) › failed › running` *(the verb ladder; retries ride it as info)* `›
+stopped / partial › copying › downloading-from-iCloud › files-missing › unanalysed › starting ›
 ready`
 
-Baked-in ruling: **drive-unplugged outranks files-missing** (whole project gone vs source drift —
-user, 18 Jun 2026). Everything here is a *starting* order, to be tuned once it's seen live.
+Baked-in rulings (user, 18 Jun 2026): **`cantFind` / drive-unplugged outranks ALL activity states**
+(failed, running, copying) — you can't open the report if the folder's gone, `copying` ⊥ `cantFind` by
+construction (you can't copy media into a folder you can't find, so that pairing never co-occurs), and a
+run against a vanished folder is already doomed, so "can't reach the folder" is the only honest line.
+This matches the shipped `subtitleVariant` early-return. And **drive-unplugged outranks files-missing**
+(whole project gone vs source drift). The self-resolving states below activity (`downloading-from-iCloud`
+is "weather", not a dead end) keep a *starting* order, to be tuned once it's seen live.
 
 ### Decided — keep the health signal; UX by empirical play
 
@@ -175,10 +180,14 @@ downloading.)
 One subtitle line, one trailing slot — but several conditions can be true at once. Pick one, never
 compose. Three tiers, in order:
 
-1. **Severity** — most severe wins. The shipped order:
-   `failed → running / stopped / partial → cantFind → ready+missing → ready+unanalysed → ready`.
-2. **Causation** — at comparable severity, the *cause* beats the *effect* (a volume eject mid-run
-   surfaces as `.unreachable` "can't reach the folder", not a generic `.failed`).
+1. **Severity** — most severe wins, and an unreachable project tops it. The order:
+   `cantFind → failed → running / stopped / partial → ready+missing → ready+unanalysed → ready`.
+   (Ruling, user 18 Jun 2026: `cantFind` / availability beats ALL activity — you can't open the report,
+   can't copy into a folder you can't find, and a run against a vanished folder is doomed. Matches the
+   shipped `subtitleVariant` early-return.)
+2. **Causation** — at comparable severity, the *cause* beats the *effect*. (The volume-eject-mid-run
+   case that first motivated this now resolves one tier up, since `cantFind` tops severity — but the
+   principle still governs any future same-severity cause/effect pair.)
 3. **Recency** — last resort, when severity and causation can't separate two events.
 
 **Hard rule:** never put two conditions on one line. The detail pane is where the *non-winners*

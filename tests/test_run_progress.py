@@ -1,10 +1,14 @@
-"""Tests for the run_progress event (Phase 0b determinate progress).
+"""Tests for the run_progress event (Phase 0b determinate progress) and the
+estimator-independent stage-entry emit (cached-run-progress-emit).
 
 Invariants worth pinning (per the Bach review): the new event round-trips;
 non-finite ETAs never produce invalid JSON; lifecycle-state readers skip a
-trailing progress line (so a live/crashed run is still detected); and a
-progress-write I/O failure never fails the run. We deliberately do NOT assert
-emit cadence or exact field sets — those are implementation detail.
+trailing progress line (so a live/crashed run is still detected); a
+progress-write I/O failure never fails the run; and the stage-entry emit puts
+the timing verb vocabulary on the wire (never a manifest name that the Swift
+RunProgressSubtitle.knownStages silently drops) while carrying the last-known
+ETA so warm-run ring fill can't regress. We deliberately do NOT assert emit
+cadence — that is implementation detail.
 """
 
 from __future__ import annotations
@@ -12,6 +16,7 @@ from __future__ import annotations
 import json
 import math
 
+from bristlenose.config import BristlenoseSettings
 from bristlenose.events import (
     KindEnum,
     Process,
@@ -24,7 +29,21 @@ from bristlenose.events import (
     read_events,
     tail_run_state,
 )
+from bristlenose.manifest import (
+    STAGE_CLUSTER_AND_GROUP,
+    STAGE_IDENTIFY_SPEAKERS,
+    STAGE_QUOTE_EXTRACTION,
+    STAGE_TOPIC_SEGMENTATION,
+)
+from bristlenose.pipeline import Pipeline
 from bristlenose.run_lifecycle import RunHandle, _reconcile_stranded_run
+from bristlenose.timing import (
+    STAGE_CLUSTER,
+    STAGE_QUOTES,
+    STAGE_RENDER,
+    STAGE_SPEAKERS,
+    STAGE_TOPICS,
+)
 
 
 def _started(run_id: str = "RUN0001") -> RunStartedEvent:
@@ -155,3 +174,50 @@ def test_progress_sink_noop_without_events_file():
     # No envelope → no-op (test/render-only paths that never set a sink).
     handle = RunHandle("RUN0001")
     handle.progress(stage="transcribe")  # must not raise
+
+
+def test_emit_stage_entry_emits_verb_vocabulary_not_manifest_names():
+    # The estimator-independent stage-entry emit is the ONLY per-stage signal
+    # on cache-verified / cold-estimator runs (_emit_remaining never fires
+    # there). It must put the timing verb on the wire ("speakers"), not the
+    # manifest name ("identify_speakers") — RunProgressSubtitle.knownStages
+    # silently drops the latter (no verb, no error). Real sink, not a stub,
+    # so a zero-emit regression can't pass vacuously (silent-failure-hunter).
+    collected: list[dict[str, object]] = []
+    pipeline = Pipeline(BristlenoseSettings(), skip_confirm=True)
+    pipeline.set_progress_sink(lambda **fields: collected.append(fields))
+
+    for stage in (STAGE_SPEAKERS, STAGE_TOPICS, STAGE_QUOTES, STAGE_CLUSTER, STAGE_RENDER):
+        pipeline._emit_stage_entry(stage)
+
+    emitted = {c.get("stage") for c in collected}
+    # Set membership — not count, ordering, or "eta is None" (Bach: detail).
+    assert emitted == {"speakers", "topics", "quotes", "cluster", "render"}
+    # Negative: no manifest name reached the wire. render's manifest name IS
+    # "render" (shared and correct), so it is excluded from the trap set.
+    manifest_names = {
+        STAGE_IDENTIFY_SPEAKERS,
+        STAGE_TOPIC_SEGMENTATION,
+        STAGE_QUOTE_EXTRACTION,
+        STAGE_CLUSTER_AND_GROUP,
+    }
+    assert emitted.isdisjoint(manifest_names)
+
+
+def test_emit_stage_entry_carries_last_known_eta():
+    # Warm path: a last-known ETA must be re-emitted on stage entry so the
+    # determinate ring keeps its fill (no backward jump, no blank) as the verb
+    # advances. The only warm-path coverage needed — _emit_remaining unchanged.
+    collected: list[dict[str, object]] = []
+    pipeline = Pipeline(BristlenoseSettings(), skip_confirm=True)
+    pipeline.set_progress_sink(lambda **fields: collected.append(fields))
+    pipeline._last_eta_remaining = 90.0
+    pipeline._last_predicted_total = 300.0
+
+    pipeline._emit_stage_entry(STAGE_QUOTES)
+
+    assert len(collected) == 1
+    emitted = collected[0]
+    assert emitted["stage"] == "quotes"
+    assert emitted["eta_remaining_seconds"] == 90.0
+    assert emitted["predicted_total_seconds"] == 300.0

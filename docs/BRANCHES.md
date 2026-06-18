@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 18 Jun 2026 (`determinate-progress` merge recorded + closed — merged to main 17 Jun via `a1fa49a`, close ritual completed after the fact. `progress-text-surfacing` merged and closed. Active: gemini-provider, llm-provider-default-model, responsive-signal-cards, tower-of-hanoi)
+**Updated:** 19 Jun 2026 (`warm-sidecar-pool` created — multi-project Phase A2, ServeManager warm pool; shares `ServeManager.swift` with `project-status-line` and lands *second*, per that branch's recorded merge plan. 18 Jun: `determinate-progress` + `progress-text-surfacing` merged + closed.)
 
 ---
 
@@ -42,6 +42,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 | `bristlenose_branch llm-provider-default-model/` | `llm-provider-default-model` | bugfix | CLI `--llm <provider>` applies that provider's default model (fixes cross-provider 404) |
 | `bristlenose_branch project-status-line/` | `project-status-line` | feature | Surface bucket-1 per-project messages on the sidebar status line; extract the precedence resolver out of ProjectRow |
+| `bristlenose_branch warm-sidecar-pool/` | `warm-sidecar-pool` | feature | Multi-project Phase A2: warm-sidecar pool so project-switching is instant + crash-free (no teardown+restart-per-switch race) |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -127,6 +128,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `project-status-line` | `bristlenose_branch project-status-line/` | local only |
+| `warm-sidecar-pool` | `bristlenose_branch warm-sidecar-pool/` | local only |
 | `multi-project-drag-onto` _(merged)_ | `bristlenose_branch multi-project-drag-onto/` _(detached, on disk)_ | local only — merged to main 15 May 2026 |
 | `multi-project-switch` _(merged)_ | `bristlenose_branch multi-project-switch/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`baf1896`) |
 | `ci-version-pinning` _(merged)_ | `bristlenose_branch ci-version-pinning/` _(detached, on disk)_ | local + remote deleted — merged to main 14 May 2026 (`e1c8083`) |
@@ -153,6 +155,27 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `warm-sidecar-pool`
+
+**Kind:** feature — multi-project Phase A2: a warm-sidecar pool so switching the selected project is a near-instant hand-off (point the WebView at an already-running serve for the target project) rather than a teardown+restart, dissolving both the switch latency and the rapid-switch crash (`Server exited before becoming ready (code 1)`).
+**Status:** Just started
+**Started:** 19 Jun 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch warm-sidecar-pool/`
+**Remote:** local only (push when ready)
+
+**What it does:** Phase A2 of the multi-project roadmap (0 sidebar indicators → A1 `background-runs-view-switch` → **A2 this** → B cap-2 concurrent exec → C multi-window). Keeps one or more sidecars warm so a project switch hands off to an already-running serve instead of going through `ServeManager.switchProject`'s restart-per-switch. The crash dissolves because there's no restart-race to lose. **Problem + constraints are settled in the handoff** (`HANDOFF.md` → `.claude/plans/warm-sidecar-pool.md`); pool size / eviction / exact model are the deferred solution plan. Constraints the plan MUST honour: reuse the single `generation` ownership token (no second epoch counter), keep `bind(0)` kernel-assigned ports + the sidecar's parent-death watcher contract, don't re-add the (A1-removed) cancel-on-switch modal, and keep scope to the serve hand-off (concurrent execution is Phase B). **Handoffs aren't specs** — when planning the solution, `git log -p ServeManager.swift` + re-grep first; the problem definition is fixed, the lifecycle may have moved.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/ServeManager.swift` (the heart of A2 — `start` / `shutdown(timeout:)` / `switchProject(to:)` / the `generation` counter / readiness + idle polls)
+- `desktop/Bristlenose/Bristlenose/ContentView.swift` (drives `switchProject` on selection change)
+- `bristlenose/server/lifecycle.py` (the sidecar's parent-death watcher — the pool must preserve this contract)
+
+**Potential conflicts with other branches:**
+- **`project-status-line`** (feature, active) — **SHARED FILE: `ServeManager.swift`.** That branch only *reads* `ServeManager.starting`; this branch does the heavy lifecycle rewrite (warm pool, eviction, the `generation` token). Semantic coupling too: the warm pool redefines "starting" (a switch becomes a hand-off, not a start), so the "Starting…" subtitle that branch surfaces must be reconciled here. **Merge order: `project-status-line` lands first** (smaller ServeManager footprint), then `warm-sidecar-pool` rebases onto main and reconciles "Starting…". (Mirrors the plan already recorded in `project-status-line`'s entry.)
+- No other active branch touches `ContentView.swift` or `bristlenose/server/lifecycle.py` (`background-runs-view-switch`, which touched both `ContentView.swift` and `ServeManager.swift`, is merged).
 
 ---
 

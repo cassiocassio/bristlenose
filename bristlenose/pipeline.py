@@ -402,6 +402,13 @@ class Pipeline:
         self._progress_sink: object | None = None
         # perf_counter at run() entry, for elapsed/predicted-total emit.
         self._run_start_perf: float | None = None
+        # Last-known ETA, carried onto estimator-independent stage-entry
+        # emits (_emit_stage_entry) so cache-verified / cold-start runs still
+        # advance the sidebar verb. None when no estimate is in effect (cold
+        # estimator, or late-run remaining<10s) so a stale, too-large ETA from
+        # an earlier stage isn't propagated to every later stage entry.
+        self._last_eta_remaining: float | None = None
+        self._last_predicted_total: float | None = None
 
         # Per-stage outcome accumulator. Reset at the top of run / analyze /
         # transcribe-only; populated as each stage finishes; stamped onto
@@ -437,21 +444,29 @@ class Pipeline:
         from bristlenose.timing import PipelineEvent
 
         remaining = self._estimator.stage_completed(stage, elapsed)  # type: ignore[union-attr]
-        if remaining is not None:
-            self._emit(PipelineEvent(
-                kind="remaining", stage=stage, elapsed=elapsed,
-                estimate=remaining,
-            ))
-            total_elapsed = self._elapsed_seconds()
-            predicted = (
-                total_elapsed + remaining.total_seconds
-                if total_elapsed is not None else None
-            )
-            self._emit_progress(
-                stage=stage,
-                eta_remaining_seconds=remaining.total_seconds,
-                predicted_total_seconds=predicted,
-            )
+        if remaining is None:
+            # Cold estimator (<4 history) or late-run remaining<10s →
+            # stage_completed returns None. Clear the carried ETA so a stale,
+            # too-large estimate isn't propagated to later stage-entry emits.
+            self._last_eta_remaining = None
+            self._last_predicted_total = None
+            return
+        self._emit(PipelineEvent(
+            kind="remaining", stage=stage, elapsed=elapsed,
+            estimate=remaining,
+        ))
+        total_elapsed = self._elapsed_seconds()
+        predicted = (
+            total_elapsed + remaining.total_seconds
+            if total_elapsed is not None else None
+        )
+        self._last_eta_remaining = remaining.total_seconds
+        self._last_predicted_total = predicted
+        self._emit_progress(
+            stage=stage,
+            eta_remaining_seconds=remaining.total_seconds,
+            predicted_total_seconds=predicted,
+        )
 
     def set_progress_sink(self, sink: object | None) -> None:
         """Register the structured progress sink (``RunHandle.progress``).
@@ -481,6 +496,23 @@ class Pipeline:
             return
         fields.setdefault("elapsed_seconds", self._elapsed_seconds())
         self._progress_sink(**fields)  # type: ignore[operator]
+
+    def _emit_stage_entry(self, stage: str) -> None:
+        """Emit an estimator-independent "entering stage X" progress event.
+
+        Carries the last-known ETA so warm runs keep their ring fill and ETA
+        unchanged (re-emits the in-effect predicted_total — no backward jump,
+        no blanking); cold/cached runs advance the verb with the ETA simply
+        absent. This is the only per-stage signal on cache-verified and
+        cold-estimator paths, where ``_emit_remaining`` never fires. Use the
+        timing.py stage names (STAGE_SPEAKERS…STAGE_RENDER) — the Swift
+        RunProgressSubtitle.knownStages silently drops the manifest names.
+        """
+        self._emit_progress(
+            stage=stage,
+            eta_remaining_seconds=self._last_eta_remaining,
+            predicted_total_seconds=self._last_predicted_total,
+        )
 
     def _confirm_large_session_count(self, count: int, source_dir: Path) -> bool:
         """Prompt for confirmation when session count exceeds threshold.
@@ -616,6 +648,8 @@ class Pipeline:
                     self._emit(PipelineEvent(
                         kind="estimate", estimate=_est,
                     ))
+                    self._last_eta_remaining = _est.total_seconds
+                    self._last_predicted_total = _est.total_seconds
                     self._emit_progress(
                         predicted_total_seconds=_est.total_seconds,
                         eta_remaining_seconds=_est.total_seconds,
@@ -935,6 +969,10 @@ class Pipeline:
                 if s.session_id in session_segments
             }
             _si_input_hashes = {"upstream": _tx_hash or _MISSING_HASH}
+            # Verb-advance: both the cached and fresh paths flow from the
+            # check below (no enable-gate), so this is the one site that fires
+            # on every run including cache-verified / transcript-only.
+            self._emit_stage_entry(STAGE_SPEAKERS)
             if _is_speaker_stage_verified(
                 _prev_manifest, STAGE_IDENTIFY_SPEAKERS, _si_session_files,
                 current_input_hashes=_si_input_hashes,
@@ -1205,6 +1243,7 @@ class Pipeline:
                 "upstream": _tx_hash or _MISSING_HASH,
                 "pii_enabled": str(self.settings.pii_enabled),
             }
+            self._emit_stage_entry(STAGE_TOPICS)
             if _is_stage_verified(
                 _prev_manifest, STAGE_TOPIC_SEGMENTATION, [_tb_path],
                 current_input_hashes=_topic_input_hashes,
@@ -1372,6 +1411,7 @@ class Pipeline:
             _fresh_quote_outcome = StageOutcome()
             _cached_q_count = 0
             _quotes_elapsed: float | None = None
+            self._emit_stage_entry(STAGE_QUOTES)
             if _is_stage_verified(
                 _prev_manifest, STAGE_QUOTE_EXTRACTION, [_eq_path],
                 current_input_hashes=_qe_input_hashes,
@@ -1539,6 +1579,7 @@ class Pipeline:
             _cluster_outcome = StageOutcome()
             _theme_outcome = StageOutcome()
             _cluster_elapsed: float | None = None
+            self._emit_stage_entry(STAGE_CLUSTER)
             if _is_stage_verified(
                 _prev_manifest, STAGE_CLUSTER_AND_GROUP,
                 [_sc_path, _tg_path],
@@ -1681,6 +1722,10 @@ class Pipeline:
 
             # ── Stage 12: Render output ──────────────────────────────
             mark_stage_running(manifest, _M_STAGE_RENDER)
+            # Render is unconditional (no cached branch, no _emit_remaining),
+            # so this entry-emit is the only event that advances the verb to
+            # "Rendering". ETA is the carried cluster-completion estimate.
+            self._emit_stage_entry(STAGE_RENDER)
             status.update("[dim]Rendering output...[/dim]")
             t0 = time.perf_counter()
             analysis = _compute_analysis(

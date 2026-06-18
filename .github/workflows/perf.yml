@@ -67,6 +67,7 @@ jobs:
         run: |
           n=0
           until [ "$n" -ge 3 ]; do
+            sudo bash -c 'w=0; while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 && [ "$w" -lt 36 ]; do echo "dpkg lock held — waiting"; sleep 5; w=$((w+1)); done'
             timeout 5m npx playwright install chromium --with-deps && exit 0
             n=$((n + 1))
             echo "::warning::playwright chromium install attempt $n stalled or failed; retrying in 15s"

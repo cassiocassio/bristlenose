@@ -351,6 +351,14 @@ struct ContentView: View {
         .onChange(of: pipelineRunner.state) { old, new in
             updateSelectedProjectRunState()
             scheduleReportReloadOnCompletion(old: old, new: new)
+            // A finished run's session count is written by the serve importer,
+            // which lands ~1s+ after the pipeline-exit signal that fires here
+            // (and lives under bristlenose-output/, outside the folder watcher's
+            // source-file scope). Ride out that import with a few spaced rescans
+            // so the sidebar count refreshes in place — no relaunch needed.
+            for id in CompletionRescan.projectsLeavingAnalysis(old: old, new: new) {
+                scheduleCountRescan(projectID: id)
+            }
         }
         .onAppear {
             // Restore last-selected project from persisted ID.
@@ -1616,6 +1624,28 @@ struct ContentView: View {
                 if didReload { return }
             }
             Self.reloadLog.info("reload gave up")
+        }
+    }
+
+    /// Refresh a project's sidebar session count after its run finishes.
+    ///
+    /// The count (sessions in `bristlenose.db`) is written by the serve
+    /// sidecar's importer, which polls the events log (~1s) then imports and
+    /// checkpoints the WAL — so it lands ~1s+ AFTER the pipeline-exit signal
+    /// that set this project `.ready` and drove the caller here. A single
+    /// rescan fired now would read the pre-import count. So ride out the import
+    /// with a few spaced rescans, exactly as `scheduleReportReloadOnCompletion`
+    /// rides out the same re-import for the report WebView. `performScanLocked`'s
+    /// `lastPublished` dedup makes the redundant scans free once the count
+    /// settles — so, unlike the report reload, these need no cancellation: a
+    /// late or duplicate rescan is a harmless idempotent no-op, never a
+    /// stale-content write.
+    private func scheduleCountRescan(projectID id: UUID) {
+        Task { @MainActor in
+            for _ in 0..<5 {
+                try? await Task.sleep(for: .seconds(1.5))
+                projectIndex.rescan(projectID: id)
+            }
         }
     }
 

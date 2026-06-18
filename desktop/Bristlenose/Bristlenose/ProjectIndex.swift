@@ -801,6 +801,15 @@ final class ProjectIndex: ObservableObject {
         watchers[projectID]?.seedKnown(basenames: basenames)
     }
 
+    /// Force a fresh watcher scan — re-reads the analysis DB (session count +
+    /// file deltas) for a project whose DB changed without a source-file event,
+    /// e.g. a run just finished. The DB lives under `bristlenose-output/`, which
+    /// the watcher's NSFilePresenter scope excludes, so completion can't be
+    /// picked up passively. No-op if the project has no live watcher.
+    func rescan(projectID: UUID) {
+        watchers[projectID]?.refresh()
+    }
+
     private func releaseLeaseAndWatcher(for id: UUID) {
         if let watcher = watchers.removeValue(forKey: id) {
             // NSFilePresenter is removed in deinit; explicit nil-out drops

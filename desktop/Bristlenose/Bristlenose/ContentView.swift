@@ -1683,6 +1683,13 @@ struct ContentView: View {
             isDropTarget: dropTargetProjectID == project.id,
             liveData: pipelineRunner.liveData,
             unanalysed: projectIndex.unanalysed[project.id],
+            // Computed inline (not captured once) so the row re-renders as the
+            // byte fraction ticks. Matched to THIS project; only while actively
+            // copying — during `.cancelling` the row drops back to its resting
+            // state and the toolbar pill owns the cancel-ack.
+            copyFraction: copyMachinery.inFlight.flatMap {
+                $0.projectID == project.id && $0.phase == .copying ? $0.progress : nil
+            },
             onRename: { newName in
                 projectIndex.renameProject(id: project.id, newName: newName)
             },

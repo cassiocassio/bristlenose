@@ -188,6 +188,7 @@
       "sessionsCount": "{{complete}} von {{total}}",
       "etaMinutes": "noch ~{{count}} Min",
       "etaUnderMinute": "noch <1 Min",
+      "copying": "Wird kopiert \u00b7 {{percent}} %",
       "stage": {
         "transcribe": "Wird transkribiert",
         "speakers": "Sprecher werden erkannt",

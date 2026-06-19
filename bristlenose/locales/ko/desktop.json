@@ -185,6 +185,7 @@
       "sessionsCount": "{{total}}\uac1c \uc911 {{complete}}\uac1c",
       "etaMinutes": "~{{count}}\ubd84 \ub0a8\uc74c",
       "etaUnderMinute": "1\ubd84 \ubbf8\ub9cc \ub0a8\uc74c",
+      "copying": "\ubcf5\uc0ac \uc911 \u00b7 {{percent}}%",
       "stage": {
         "transcribe": "\uc804\uc0ac \uc911",
         "speakers": "\ud654\uc790 \uc2dd\ubcc4 \uc911",

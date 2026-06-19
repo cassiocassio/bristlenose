@@ -35,6 +35,19 @@ everything else is wiring data that already exists.
 Routing: the Python-sourced ones ride `run_progress`; the Swift-sourced ones (copying, iCloud,
 starting) need only that the subtitle resolver *read existing `@Published` state* — no new channel.
 
+**Shipped (19 Jun 2026, `project-status-line`).** The cached/cold ladder shipped earlier (`78acbf6`).
+This branch (a) lifted the precedence chain into a pure, unit-tested `ProjectSubtitle.resolve`
+(§7 point 2, realised for the subtitle), and (b) surfaced **Copying** on the row — `"Copying · N%"`,
+byte fraction from `CopyMachinery.inFlight` matched by `projectID` (byte-%, not "N of M" — no
+file-item source exists). Of the other three: **Starting…** was evaluated and **dropped** — one serve
+follows the selected project, so the only row that could show it is the selected one, whose detail
+pane already shows the BootView (always-redundant; the table's "open" hedge resolved to "no").
+**iCloud download** was **skipped** — `inCloud(downloading:)` is always nil (no observer), and a
+download affordance was rejected (F49); the `Progress?` field stays vestigial. **Mid-run health** is
+**deferred** — it needs cross-layer plumbing (retry signal → pipeline emit) plus a render the brief
+defers to empirical play. So the shipped row vocabulary is: cantFind › failed › running ›
+stopped/partial › **copying** › missing › unanalysed › ready.
+
 ### The kinds — operational rule (user, 18 Jun 2026)
 
 Defined empirically, case by case ("I know it when I see it"), not by abstract rule:
@@ -197,13 +210,16 @@ would get room — that's its reason to exist. (Memory: `feedback_exception_prec
 
 Bucket 2 has *two* disciplines bucket 1 has **neither** of:
 
-**(a) No unified status model / contract.** There's no `ProjectStatus` type and no reporter
-protocol. Each source publishes independently (`PipelineRunner`, the project's computed
-`availability`, the watcher's count, `CopyMachinery`, `ServeManager`), and the **view** arbitrates:
-`ProjectRow.subtitleVariant` — a *private computed property on the view* running the precedence
-chain by hand. Tellingly, the bucket-2 *leaf* (`RunProgressSubtitle.compose`) is a pure testable
-helper, but the cross-source *precedence* wrapping it is not — which quietly violates the house rule
-"a decision a view makes belongs in a testable helper, not the view" (`desktop/CLAUDE.md`).
+**(a) No unified status model / contract.** ~~Each source publishes independently and the **view**
+arbitrates by hand~~ — **partly resolved (19 Jun 2026).** The cross-source *precedence* is now a pure,
+unit-tested helper, `ProjectSubtitle.resolve(...) -> SubtitleVariant` (file-scope, no `i18n`/
+`DateFormatter`/SwiftUI); `ProjectRow.subtitleVariant` is a thin marshaller and `subtitleContent`
+renders the winner. That closes the house-rule violation ("a decision a view makes belongs in a
+testable helper", `desktop/CLAUDE.md`) — the bucket-2 leaf (`RunProgressSubtitle.compose`) and the
+cross-source precedence wrapping it are now *both* pure helpers. **Still missing:** a single
+per-project **`ProjectStatus` value** aggregating the sources (availability + run + count + copy +
+sidecar) — today `resolve` takes the already-separate inputs; there's no one aggregate type, and no
+reporter protocol.
 
 **(b) No append-only event log.** Bucket 2 has `pipeline-events.jsonl`; Swift is a *reader* of it
 (`EventLogReader`), never a writer — there is **no `EventLogWriter`**. Bucket-1 transitions live in
@@ -222,16 +238,18 @@ If bucket 1 is to earn bucket 2's discipline, the shape is:
 
 1. a single per-project **`ProjectStatus` value** aggregating the sources (availability + run +
    count + copy + sidecar);
-2. a **pure resolver** — `ProjectStatus.resolve(...) -> RowState` — running the precedence *outside*
-   the view, mirroring `RunProgressSubtitle.compose` (so it's testable and the view just renders);
+2. ~~a **pure resolver** — running the precedence *outside* the view~~ — **DONE (19 Jun 2026):**
+   `ProjectSubtitle.resolve(...) -> SubtitleVariant`, mirroring `RunProgressSubtitle.compose`
+   (pure, testable, view just renders). It takes the separate source inputs directly; folding them
+   into the point-1 `ProjectStatus` aggregate is the remaining step.
 3. optionally a **redacted append-only event log** as its companion (replayable / debuggable like
    the pipeline events, the obvious substrate for a pane-side timeline).
 
 **The payoff** (and why it matters for the detail-pane work): a resolver outside the view lets the
 **sidebar row (compact)** and the **detail pane (spacious)** render the *same* arbitrated state at
-two fidelities. Today they couldn't share it even if you wanted them to — the arbitration is trapped
-in `ProjectRow`'s body. This is the substrate the "design the detail-pane states as a set" project
-would build on.
+two fidelities. As of 19 Jun the subtitle's arbitration is no longer trapped in `ProjectRow`'s body
+(point 2 above) — a detail pane could call the same `resolve` today. The remaining substrate for the
+"design the detail-pane states as a set" project is the point-1 aggregate + point-3 event log.
 
 ## 8. What this is NOT
 
@@ -246,10 +264,11 @@ would build on.
 
 ## 9. Anchors
 
-- **Code:** `ProjectRow.swift` (`subtitleVariant`, `SubtitleVariant`), `RunProgressSubtitle.swift`,
-  `EventLogReader.swift`, `ProjectAvailability.swift`, `SourceFilesReader.swift`,
-  `PipelineRunner.swift` (`PipelineState`, `categoriseFailure`), `ServeManager.swift`,
-  `CopyMachinery.swift`; Python `bristlenose/events.py`, `bristlenose/timing.py`.
+- **Code:** `ProjectSubtitle.swift` (`resolve`, `SubtitleVariant`, `SubtitleDelta` — the pure
+  precedence resolver + its tests `ProjectSubtitleTests.swift`), `ProjectRow.swift` (marshals inputs,
+  renders the winner), `RunProgressSubtitle.swift`, `EventLogReader.swift`, `ProjectAvailability.swift`,
+  `SourceFilesReader.swift`, `PipelineRunner.swift` (`PipelineState`, `categoriseFailure`),
+  `ServeManager.swift`, `CopyMachinery.swift`; Python `bristlenose/events.py`, `bristlenose/timing.py`.
 - **Handoffs (internal):** `cached-run-progress-emit` (bucket-2 coverage, ready), `warm-sidecar-pool`
   (Phase A2 fast switching), `progress-text-detail-pane` (the demoted during-run pane item, folded
   into the detail-pane-set design).

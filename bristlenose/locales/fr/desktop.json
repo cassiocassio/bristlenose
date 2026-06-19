@@ -188,6 +188,7 @@
       "sessionsCount": "{{complete}} sur {{total}}",
       "etaMinutes": "~{{count}} min restantes",
       "etaUnderMinute": "<1 min restante",
+      "copying": "Copie \u00b7 {{percent}} %",
       "stage": {
         "transcribe": "Transcription",
         "speakers": "Identification des intervenants",

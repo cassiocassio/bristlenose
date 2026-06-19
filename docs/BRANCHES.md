@@ -174,8 +174,29 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/events.py` + `bristlenose/run_lifecycle.py` (the `health` field — needs the event field **and** the `progress()` signature, per review pin 2)
 
 **Potential conflicts with other branches:**
-- **`warm-sidecar-pool`** (planned Phase A2, not yet created) — **SHARED FILE: `ServeManager.swift`.** This branch only *reads* `ServeManager.starting`; warm-sidecar-pool does the heavy ServeManager lifecycle rewrite (warm pool, eviction, the `generation` token). Semantic coupling too: the warm pool redefines "starting" (a switch becomes a hand-off, not a start), so the "Starting…" message this branch surfaces must be reconciled with the pool. **Merge order: land `project-status-line` first** (smaller ServeManager footprint), then warm-sidecar-pool rebases and reconciles "Starting…". See the branch's `HANDOFF.md` Review pins for the full merge plan.
+- **`warm-sidecar-pool`** (Phase A2 — **implemented on its branch 19 Jun**, see its own entry below) — **SHARED FILE: `ServeManager.swift`.** This branch only *reads* `ServeManager.starting`; warm-sidecar-pool did the heavy ServeManager lifecycle rewrite (single parked slot — re-point vs cold-start; reuses the `generation` token, adds no second epoch). Semantic coupling: a warm switch is now a hand-off that skips `.starting` entirely (the re-point sets `.running` directly after a brief liveness probe), so the "Starting…" message this branch surfaces shows on cold switches but NOT warm re-points — reconcile at merge. **Merge order: land `project-status-line` first** (smaller ServeManager footprint), then warm-sidecar-pool rebases and reconciles "Starting…". See both branches' `HANDOFF.md` / review logs for detail.
 - No other active branch touches these Swift files or `events.py`/`run_lifecycle.py` (`chunked-quote-extraction`, which touched `run_lifecycle.py`, is merged).
+
+---
+
+### `warm-sidecar-pool`
+
+**Kind:** feature (desktop — Swift, `ServeManager` lifecycle) — Phase A2: make project-switching instant + crash-free by keeping the previously-fronted sidecar warm instead of teardown+restart-per-switch.
+**Status:** Implemented + unit-tested + reviewed (usual-suspects plan pass + William impl pass, both clean); pending human GUI QA + merge.
+**Started:** 19 Jun 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch warm-sidecar-pool/`
+**Remote:** local only (push when ready)
+
+**What it does:** `switchProject` now *parks* the outgoing serve sidecar (no signal) and re-points to it on switch-back (`state = .running(warmPort)` after a `/api/health` liveness probe) instead of teardown+restart — so rapid A↔B switching is an instant hand-off and the restart-race crash dissolves. **Option B: a single parked slot, not a dict+LRU pool** (only the A↔B repro is observed; `feedback_present_failure_over_speculation`). Reuses the single `generation` token (no second epoch — identity-routing via `ObjectIdentifier` actually retired the old termination epoch capture). Plan: `.claude/plans/warm-sidecar-pool-implementation.md` (the gitignored review log alongside it has the full finding detail).
+
+**Files this branch touches:**
+- `desktop/Bristlenose/Bristlenose/ParkedSidecar.swift` (new — struct + pure `RepointDecision`)
+- `desktop/Bristlenose/Bristlenose/ServeManager.swift` (the lifecycle rewrite — heart of A2)
+- `desktop/Bristlenose/Bristlenose/ContentView.swift` (WebView `.id` keyed on `project.id` + port; `dropParked` on removal)
+- `desktop/Bristlenose/BristlenoseTests/RepointDecisionTests.swift` (new — pure decision tests)
+
+**Potential conflicts with other branches:**
+- **`project-status-line`** — **SHARED FILE: `ServeManager.swift`.** Merge order: that branch lands first; this one rebases and reconciles the "Starting…" subtitle (a warm re-point skips `.starting`, so the subtitle shows on cold switches only). See that branch's entry above.
 
 ---
 

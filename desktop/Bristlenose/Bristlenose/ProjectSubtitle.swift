@@ -44,15 +44,17 @@ enum SubtitleVariant: Equatable {
     /// Python-supplied string (not a localisation key) — rendered verbatim.
     case unreachable(reason: String)
     /// A drag-import copy is landing files in THIS project. Carries the 0…1
-    /// byte fraction; the view renders "Copying · N%".
-    ///
-    /// Copying *speaks in the subtitle* (per the spec's message table) even
-    /// though run-motion and the iCloud glyph ride the right slot — it's a
-    /// progress *statement*, not an ambient glyph. The toolbar `CopyProgressPill`
-    /// carries the same operation at window level; this puts it on the row the
-    /// bytes are landing in (the spatial link the pill's text can't make). Both
-    /// read the one `CopyMachinery.inFlight`, so they can never disagree.
+    /// byte fraction; the view renders "Copying · N%" + a determinate ring
+    /// (with hover-cancel) in the trailing slot — the row's *only* copy surface
+    /// (the toolbar copy pill was removed: copy is a per-project op, so it lives
+    /// on the row; the title-bar pill is reserved for app-global ops — §4
+    /// placement axis). Mac direct manipulation: feedback appears on the row you
+    /// dropped onto.
     case copying(fraction: Double)
+    /// A copy into THIS project is being cancelled (rollback in flight). Renders
+    /// "Cancelling…" + an indeterminate spinner — the immediate ack for the
+    /// row's hover-cancel, mirroring what the removed toolbar pill showed.
+    case copyCancelling
     /// `.ready` / `.inCloud` / idle with analysis history — the bare last-run
     /// date, with an optional single delta segment. The cloud arrow (if any)
     /// renders in the right slot independently of this.
@@ -70,6 +72,15 @@ enum SubtitleVariant: Equatable {
 enum SubtitleDelta: Equatable {
     case unanalysed(count: Int)
     case missing(count: Int)
+}
+
+/// Display state of an in-flight drag-import copy into a project, fed to
+/// `resolve`. Decoupled from `CopyMachinery.InFlight` (the actor type) so the
+/// resolver stays pure and testable. `.copying` carries the 0…1 byte fraction;
+/// `.cancelling` is the rollback window after the user hits cancel.
+enum CopyDisplay: Equatable {
+    case copying(fraction: Double)
+    case cancelling
 }
 
 /// Pure resolver for the sidebar row's subtitle — the cross-source precedence
@@ -103,7 +114,7 @@ enum ProjectSubtitle {
         availability: ProjectAvailability,
         pipelineState: PipelineState?,
         isStopping: Bool,
-        copyFraction: Double?,
+        copy: CopyDisplay?,
         lastRunAt: Date?,
         missingCount: Int,
         unanalysedCount: Int
@@ -140,7 +151,7 @@ enum ProjectSubtitle {
             // spinner lives in the title-line right slot, not the subtitle, so
             // it resolves the same as idle here.
             return resolveIdle(
-                copyFraction: copyFraction,
+                copy: copy,
                 lastRunAt: lastRunAt,
                 missingCount: missingCount,
                 unanalysedCount: unanalysedCount
@@ -153,14 +164,17 @@ enum ProjectSubtitle {
     /// persisted project model), so a `.ready` PipelineState and the
     /// `.idle`/`.none` fall-through agree on one truth-source.
     private static func resolveIdle(
-        copyFraction: Double?,
+        copy: CopyDisplay?,
         lastRunAt: Date?,
         missingCount: Int,
         unanalysedCount: Int
     ) -> SubtitleVariant {
-        // An active import outranks the resting date/delta.
-        if let copyFraction {
-            return .copying(fraction: copyFraction)
+        // An active import (or its cancellation) outranks the resting date/delta.
+        if let copy {
+            switch copy {
+            case .copying(let fraction): return .copying(fraction: fraction)
+            case .cancelling: return .copyCancelling
+            }
         }
         let delta = pickDelta(missingCount: missingCount, unanalysedCount: unanalysedCount)
         if let lastRunAt {

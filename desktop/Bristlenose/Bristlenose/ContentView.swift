@@ -1368,16 +1368,14 @@ struct ContentView: View {
         // (Export + contextual toggles + Search) — otherwise macOS 26's unified
         // trailing-actions capsule absorbs them into the search-shaped chrome.
         //
-        // Per-project pipeline activity used to have a pill here; it now lives on
-        // the project's sidebar row (status lives where its subject lives — the
-        // spinner with hover-× Stop, and the failure glyph that opens the
-        // diagnostic popover). The toolbar keeps only genuinely app-wide
-        // concerns: the copy-in-flight pill (interim — moves to the row when
-        // copy-on-row lands) and the Ollama model-download pill.
-        ToolbarItem(placement: .status) {
-            CopyProgressPill(copyMachinery: copyMachinery)
-        }
-
+        // Per-project activity lives on the project's sidebar row, not here —
+        // status lives where its subject lives. Both pipeline progress (the
+        // determinate ring + hover-× Stop, the failure glyph → diagnostic
+        // popover) AND copy-in-flight (ring + hover-× Cancel, "Copying · N%")
+        // are per-project, so they ride the row. The toolbar `.status` zone is
+        // reserved for genuinely app-global concerns — currently just the Ollama
+        // model-download pill. (Per-project vs app-global is the placement axis:
+        // `docs/design-desktop-project-status.md` §4.)
         ToolbarItem(placement: .status) {
             OllamaDownloadPill(model: ollamaDownload)
         }
@@ -1684,12 +1682,17 @@ struct ContentView: View {
             liveData: pipelineRunner.liveData,
             unanalysed: projectIndex.unanalysed[project.id],
             // Computed inline (not captured once) so the row re-renders as the
-            // byte fraction ticks. Matched to THIS project; only while actively
-            // copying — during `.cancelling` the row drops back to its resting
-            // state and the toolbar pill owns the cancel-ack.
-            copyFraction: copyMachinery.inFlight.flatMap {
-                $0.projectID == project.id && $0.phase == .copying ? $0.progress : nil
+            // byte fraction ticks. Matched to THIS project, both phases — the
+            // row is copy's only progress + cancel surface now (the toolbar copy
+            // pill was removed; per-project ops live on the row).
+            copyState: copyMachinery.inFlight.flatMap { f -> CopyDisplay? in
+                guard f.projectID == project.id else { return nil }
+                switch f.phase {
+                case .copying: return .copying(fraction: f.progress)
+                case .cancelling: return .cancelling
+                }
             },
+            onCancelCopy: { copyMachinery.cancel() },
             onRename: { newName in
                 projectIndex.renameProject(id: project.id, newName: newName)
             },
@@ -1726,11 +1729,19 @@ struct ContentView: View {
         .tag(SidebarSelection.project(project.id))
         .draggable(ProjectDragID(id: project.id))
         .contextMenu {
-            // Run lifecycle, most contextually-relevant first. Hidden (not
-            // dimmed) when N/A — context-menu HIG.
+            // Run / copy lifecycle, most contextually-relevant first. Hidden
+            // (not dimmed) when N/A — context-menu HIG.
             if isRunningOrQueued(pipelineRunner.state[project.id]) {
                 Button(i18n.t("desktop.menu.project.stopAnalysis")) {
                     pipelineRunner.cancel(project: project)
+                }
+                Divider()
+            }
+            // Copy cancel — the keyboard/VoiceOver path for the row ring's
+            // hover-× (which is mouse-only), mirroring Stop Analysis above.
+            if let f = copyMachinery.inFlight, f.projectID == project.id, f.phase == .copying {
+                Button(i18n.t("desktop.menu.project.cancelCopy")) {
+                    copyMachinery.cancel()
                 }
                 Divider()
             }

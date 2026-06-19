@@ -37,13 +37,19 @@ struct ProjectRow: View {
     /// watcher entry). An in-flight copy is surfaced via `copyFraction` + the
     /// resolver's precedence (copying outranks the deltas), not by nil-ing this.
     let unanalysed: UnanalysedState?
-    /// 0…1 byte fraction of a drag-import copy landing files in THIS project,
-    /// or nil when no copy targets it. Computed at the call site from
-    /// `CopyMachinery.inFlight` (matched by `projectID`, `phase == .copying`)
-    /// so the row re-renders as the fraction ticks. Drives the "Copying · N%"
-    /// subtitle. The toolbar `CopyProgressPill` reads the same `inFlight`, so
-    /// the two surfaces can't disagree.
-    let copyFraction: Double?
+    /// Display state of a drag-import copy landing files in THIS project, or nil
+    /// when no copy targets it. Computed at the call site from
+    /// `CopyMachinery.inFlight` (matched by `projectID`) so the row re-renders as
+    /// the byte fraction ticks. Drives the "Copying · N%" / "Cancelling…"
+    /// subtitle *and* the trailing determinate ring — the row is copy's only
+    /// surface (the toolbar copy pill was removed; per-project ops live on the
+    /// row, app-global ops in the title-bar pill — §4 placement axis).
+    let copyState: CopyDisplay?
+    /// Cancels the in-flight copy into this project. Wired to the trailing ring's
+    /// hover-× and the row's "Cancel copy" context-menu item (the latter keeps
+    /// cancel reachable for keyboard / VoiceOver, mirroring run-Stop). Nil when
+    /// no cancellable copy is in flight.
+    let onCancelCopy: (() -> Void)?
     /// Called when the user taps the `+N unanalysed` subtitle segment. Caller
     /// opens the `NewFilesSheet` in watcher mode.
     let onOpenUnanalysed: (() -> Void)?
@@ -79,7 +85,8 @@ struct ProjectRow: View {
         isDropTarget: Bool = false,
         liveData: PipelineLiveData,
         unanalysed: UnanalysedState? = nil,
-        copyFraction: Double? = nil,
+        copyState: CopyDisplay? = nil,
+        onCancelCopy: (() -> Void)? = nil,
         onRename: @escaping (String) -> Void,
         onShowInFinder: @escaping () -> Void,
         onDelete: @escaping () -> Void,
@@ -92,7 +99,8 @@ struct ProjectRow: View {
         self._isRenaming = isRenaming
         self.isDropTarget = isDropTarget
         self.unanalysed = unanalysed
-        self.copyFraction = copyFraction
+        self.copyState = copyState
+        self.onCancelCopy = onCancelCopy
         self.onRename = onRename
         self.onShowInFinder = onShowInFinder
         self.onDelete = onDelete
@@ -244,7 +252,8 @@ struct ProjectRow: View {
         case .completedPartial:
             diagnosticSubtitle(kind: .warning,
                                text: i18n.t("desktop.pipeline.diagnostic.header.completed_partial"))
-        case .stopping, .running, .queued, .stopped, .partial, .unreachable, .copying:
+        case .stopping, .running, .queued, .stopped, .partial, .unreachable,
+             .copying, .copyCancelling:
             subtitleText(prefix: nil,
                          text: pipelineActivityText(subtitleVariant, separator: " · ") ?? "",
                          style: .secondary)
@@ -295,6 +304,8 @@ struct ProjectRow: View {
             // below 1000, so no locale formatting needed).
             let percent = min(100, max(0, Int((fraction * 100).rounded())))
             return i18n.t("desktop.chrome.pipeline.copying", ["percent": String(percent)])
+        case .copyCancelling:
+            return i18n.t("desktop.chrome.copyCancelling")
         case .cantFind, .failed, .failedDiagnostic, .completedPartial,
              .ready, .deltaOnly, .placeholder:
             return nil
@@ -302,16 +313,17 @@ struct ProjectRow: View {
     }
 
     /// Right-aligned subtitle slot. Precedence: per-project run activity wins,
-    /// otherwise the iCloud status glyph, otherwise empty.
+    /// then an in-flight copy (the determinate ring + hover-cancel — copy's home
+    /// now that the toolbar pill is gone), then the iCloud status glyph, then
+    /// empty.
     ///
     /// The activity indicator carries the *motion* signal for an in-flight run
-    /// (its determinate, time-weighted form lands with the events channel in a
-    /// later increment). The cloud glyph is the outline `icloud` (not `.fill`,
-    /// not `.and.arrow.down`): status-only, no action attached — Finder's
-    /// treatment for cloud-managed locations. macOS fetches evicted files
-    /// transparently on open; no explicit download affordance for TF. A run and
-    /// iCloud-eviction are mutually exclusive in practice (a run can't proceed
-    /// on evicted sources), but the precedence keeps it honest either way.
+    /// or copy (the determinate ring; hover swaps it for a cancel ×). The cloud
+    /// glyph is the outline `icloud` (not `.fill`, not `.and.arrow.down`):
+    /// status-only, no action attached — Finder's treatment for cloud-managed
+    /// locations. macOS fetches evicted files transparently on open; no explicit
+    /// download affordance for TF. Run, copy, and iCloud-eviction are mutually
+    /// exclusive in practice, but the precedence keeps it honest either way.
     @ViewBuilder
     private var subtitleRightSlot: some View {
         let activity = ProjectRowActivityIndicator.Kind.from(
@@ -323,6 +335,23 @@ struct ProjectRow: View {
                 kind: activity,
                 onStop: { pipelineRunner.cancel(project: project) }
             )
+        } else if let copyState {
+            // Copy is a per-project op, so its progress + cancel live on the row
+            // (not a global title-bar pill). Determinate ring + hover-cancel
+            // while copying; an indeterminate spinner during the cancel rollback
+            // (the × is gone — you can't cancel a cancel).
+            switch copyState {
+            case .copying(let fraction):
+                ProjectRowActivityIndicator(
+                    kind: .copying(fraction: fraction),
+                    onStop: onCancelCopy
+                )
+            case .cancelling:
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(width: 16, height: 16)
+                    .accessibilityHidden(true)
+            }
         } else if case .inCloud = availability {
             Image(systemName: "icloud")
                 .foregroundStyle(.secondary)
@@ -464,7 +493,7 @@ struct ProjectRow: View {
             availability: availability,
             pipelineState: pipelineState,
             isStopping: isStoppingProgress,
-            copyFraction: copyFraction,
+            copy: copyState,
             lastRunAt: project.lastPipelineRunAt,
             missingCount: unanalysed?.missingFiles.count ?? 0,
             unanalysedCount: unanalysed?.newFiles.count ?? 0
@@ -622,7 +651,8 @@ struct ProjectRow: View {
             return i18n.t("desktop.pipeline.diagnostic.header.failed")
         case .completedPartial:
             return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")
-        case .stopping, .running, .queued, .stopped, .partial, .unreachable, .copying:
+        case .stopping, .running, .queued, .stopped, .partial, .unreachable,
+             .copying, .copyCancelling:
             // Comma separator: VoiceOver reads commas as pauses
             // ("Transcribing, 7 of 8, ~1 min left"); "·" doesn't.
             return pipelineActivityText(variant, separator: ", ")

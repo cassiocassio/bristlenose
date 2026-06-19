@@ -19,7 +19,7 @@ import Testing
         availability: ProjectAvailability = .ready,
         pipelineState: PipelineState? = nil,
         isStopping: Bool = false,
-        copyFraction: Double? = nil,
+        copy: CopyDisplay? = nil,
         lastRunAt: Date? = nil,
         missingCount: Int = 0,
         unanalysedCount: Int = 0
@@ -28,7 +28,7 @@ import Testing
             availability: availability,
             pipelineState: pipelineState,
             isStopping: isStopping,
-            copyFraction: copyFraction,
+            copy: copy,
             lastRunAt: lastRunAt,
             missingCount: missingCount,
             unanalysedCount: unanalysedCount
@@ -163,31 +163,38 @@ import Testing
     // MARK: - Copying (idle tier: copying > deltas > date)
 
     @Test func copyingShownWhenFractionPresent() {
-        #expect(resolve(copyFraction: 0.6, lastRunAt: aDate) == .copying(fraction: 0.6))
+        #expect(resolve(copy: .copying(fraction: 0.6), lastRunAt: aDate) == .copying(fraction: 0.6))
     }
 
     @Test func copyingBeatsMissingDelta() {
         // The one delta that can co-occur with an active copy on an analysed
         // project — copying must win (it's the active operation).
-        #expect(resolve(copyFraction: 0.4, lastRunAt: aDate, missingCount: 3)
+        #expect(resolve(copy: .copying(fraction: 0.4), lastRunAt: aDate, missingCount: 3)
             == .copying(fraction: 0.4))
     }
 
     @Test func copyingBeatsUnanalysedAndBareDate() {
-        #expect(resolve(copyFraction: 0.1, lastRunAt: aDate, unanalysedCount: 2)
+        #expect(resolve(copy: .copying(fraction: 0.1), lastRunAt: aDate, unanalysedCount: 2)
             == .copying(fraction: 0.1))
         // No date anchor either — still copying.
-        #expect(resolve(copyFraction: 0.9) == .copying(fraction: 0.9))
+        #expect(resolve(copy: .copying(fraction: 0.9)) == .copying(fraction: 0.9))
+    }
+
+    @Test func cancellingCopyShownAsCancelVariant() {
+        // The rollback window after the user hits cancel — outranks the resting
+        // date the same way copying does.
+        #expect(resolve(copy: .cancelling, lastRunAt: aDate) == .copyCancelling)
     }
 
     @Test func runningOutranksCopying() {
         // A run and a copy don't co-occur in practice, but the precedence keeps
         // it honest: verb-led activity wins over an import.
-        #expect(resolve(pipelineState: .running, copyFraction: 0.5) == .running)
+        #expect(resolve(pipelineState: .running, copy: .copying(fraction: 0.5)) == .running)
     }
 
     @Test func stoppedOutranksCopying() {
-        #expect(resolve(pipelineState: .stopped(stagesComplete: []), copyFraction: 0.5) == .stopped)
+        #expect(resolve(pipelineState: .stopped(stagesComplete: []),
+                        copy: .copying(fraction: 0.5)) == .stopped)
     }
 
     // (cantFind-outranks-copying is covered structurally: copying is only reached

@@ -180,10 +180,13 @@ follows the same logic, which is *why* it belongs on the row and not (only) in t
 
 App-global / cross-project concerns go in the **title-bar status pill** instead: provider
 online/offline (an unavailable provider blocks *every* project, so it's not a per-row signal), an
-**Ollama model download**, and future bristlenose-global operations. The toolbar *copy* pill coexists
-for now, but by this axis copy is a per-project op — the row is its home and the pill is the off-axis
-one, tolerated for the moment. This axis is the resolution to the review concern that copying-in-pill
-*and* on the row is "redundant" (it isn't — it's a scope convention being half-applied).
+**Ollama model download**, and future bristlenose-global operations. The toolbar *copy* pill was
+**removed** (19 Jun 2026): copy is a per-project op, so its progress *and* cancel now live on the row —
+a determinate ring + hover-cancel + "Copying · N%", exactly like a run's ring + Stop (cancel is also
+in the row's "Cancel copy" context-menu item, the keyboard/VoiceOver path). The `.status` pill zone is
+now app-global only (the Ollama download). This is the resolution to the review concern that
+copying-in-pill *and* on the row was "redundant" — it wasn't a duplicate to keep, it was a scope
+convention to *finish*: one indicator, on the row the bytes land in.
 
 Also deliberately *off* the row, different-surface: export (toolbar chip), AI-consent (global gate).
 

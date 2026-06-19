@@ -39,7 +39,8 @@ starting) need only that the subtitle resolver *read existing `@Published` state
 This branch (a) lifted the precedence chain into a pure, unit-tested `ProjectSubtitle.resolve`
 (§7 point 2, realised for the subtitle), and (b) surfaced **Copying** on the row — `"Copying · N%"`,
 byte fraction from `CopyMachinery.inFlight` matched by `projectID` (byte-%, not "N of M" — no
-file-item source exists). Of the other three: **Starting…** was evaluated and **dropped** — one serve
+file-item source exists) — on the row because copy is a per-project op (the placement axis, §4). Of
+the other three: **Starting…** was evaluated and **dropped** — one serve
 follows the selected project, so the only row that could show it is the selected one, whose detail
 pane already shows the BootView (always-redundant; the table's "open" hedge resolved to "no").
 **iCloud download** was **skipped** — `inCloud(downloading:)` is always nil (no observer), and a
@@ -170,9 +171,21 @@ architecture, not a string reference):
 | **File import / copy** | drag-import byte progress, disk-space precheck · `CopyMachinery` | **toolbar pill + sheet + toast — not the row** | progress on the **target project's row** |
 | **Source watch / count** | # interviews, unanalysed/missing delta · `ProjectFolderWatcher`, `SourceFilesReader` | title-right count + subtitle delta + tooltip | a "scanning…" tick; evicted-vs-deleted split in "missing" |
 
-Borderline, deliberately *off* the row (different surface): export (toolbar chip), AI-consent
-(global gate), provider online/offline (global Settings badge — an unavailable provider blocks
-*every* project, so it's not a per-row signal).
+### The placement axis — per-project on the row, app-global in the title-bar pill (settled, user 19 Jun 2026)
+
+What surfaces on a project's row is what's *scoped to that project*: its run progress (already moved
+there) and a drag-import **copy into** it ("Copying · N%"). You dragged onto *that* row, so the
+feedback appears on *that* row — Mac **direct manipulation**. Run progress set the pattern; copying
+follows the same logic, which is *why* it belongs on the row and not (only) in the toolbar pill.
+
+App-global / cross-project concerns go in the **title-bar status pill** instead: provider
+online/offline (an unavailable provider blocks *every* project, so it's not a per-row signal), an
+**Ollama model download**, and future bristlenose-global operations. The toolbar *copy* pill coexists
+for now, but by this axis copy is a per-project op — the row is its home and the pill is the off-axis
+one, tolerated for the moment. This axis is the resolution to the review concern that copying-in-pill
+*and* on the row is "redundant" (it isn't — it's a scope convention being half-applied).
+
+Also deliberately *off* the row, different-surface: export (toolbar chip), AI-consent (global gate).
 
 ### The availability split that matters
 

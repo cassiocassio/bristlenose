@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bristlenose — desktop nav + toolbar rearrangement (mockup)</title>
+<!-- Icons are Tabler stand-ins for the chosen SF Symbols (a web page can't render SF Symbols). See the spec for the real symbol names. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+<style>
+  body{margin:0;background:#e9e9ec;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui;color:#1d1d1f;-webkit-font-smoothing:antialiased}
+  .page{max-width:860px;margin:0 auto;padding:28px 20px 48px}
+  .cap{font-size:13px;color:#6e6e73;line-height:1.5;margin:0 4px 18px}
+  .cap b{color:#1d1d1f;font-weight:600}
+  .cap a{color:#0a66c2}
+  .mwin{font-size:13px;background:#fff;border:.5px solid rgba(0,0,0,.16);border-radius:10px;overflow:hidden;height:472px;display:flex;box-shadow:0 18px 50px rgba(0,0,0,.18)}
+  .side{width:214px;flex:0 0 214px;background:#f3f3f4;border-right:.5px solid rgba(0,0,0,.09);display:flex;flex-direction:column}
+  .stop{height:46px;flex:0 0 46px;display:flex;align-items:center;padding:0 11px}
+  .lights{display:flex;gap:6px}.lights span{width:11px;height:11px;border-radius:50%}
+  .satop{margin-left:auto;display:flex;align-items:center;gap:13px;color:#5a5a5f}
+  .satop i{font-size:16px}.satop .tog{font-size:18px}
+  .snav{padding:0 8px;display:flex;flex-direction:column}
+  .row{display:flex;align-items:center;gap:9px;padding:5px 8px;border-radius:6px;color:#3a3a3c;cursor:default;white-space:nowrap}
+  .row i{font-size:16px;color:#6e6e73;width:18px;text-align:center;flex:0 0 18px}
+  .row .nm{overflow:hidden;text-overflow:ellipsis}
+  .row .ct{margin-left:auto;color:#aeaeb2;font-size:12px}
+  .on-lens,.on-proj{background:rgba(0,0,0,.08);color:#1d1d1f;font-weight:500}
+  .phdr{font-size:11px;color:#86868b;padding:13px 8px 4px}
+  .plist{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:1px;min-height:0;padding:0 8px 8px}
+  .kids{padding-left:18px}
+  .sub{font-size:11px;color:#9b9ba0;padding:0 8px 4px 35px;margin-top:-2px}
+  .detail{flex:1;display:flex;flex-direction:column;background:#fff;min-width:0}
+  .ctop{height:46px;flex:0 0 46px;display:flex;align-items:center;gap:11px;padding:0 14px}
+  .navpair{display:flex;align-items:center;background:rgba(0,0,0,.05);border-radius:8px;padding:3px 3px;flex:0 0 auto}
+  .navpair i{font-size:16px;color:#3a3a3c;padding:1px 7px}
+  .navpair .fwd{color:#c0c0c5}
+  .navpair .dv{width:.5px;height:15px;background:rgba(0,0,0,.14)}
+  .ptog{font-size:17px;color:#5a5a5f;flex:0 0 auto}
+  .ttl{display:flex;flex-direction:column;justify-content:center;line-height:1.18;min-width:0}
+  .t1{font-size:14px;font-weight:500;color:#1d1d1f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+  .t2{font-size:11px;color:#86868b;white-space:nowrap}
+  .cact{margin-left:auto;display:flex;align-items:center;gap:15px;color:#6e6e73;font-size:16px}
+  .report{flex:1;overflow-y:auto;padding:10px 22px 20px}
+  .dlens{font-size:20px;font-weight:500;margin:0}
+  .dfil{display:flex;gap:6px;margin:13px 0}
+  .chip{padding:3px 11px;border-radius:12px;font-size:12px;color:#86868b;cursor:default}
+  .chip.on{background:#e8e8ea;color:#1d1d1f;font-weight:500}
+  .qc{border:.5px solid rgba(0,0,0,.1);border-radius:8px;padding:11px 14px;margin-bottom:10px}
+  .qt{font-size:14px;line-height:1.5;color:#1d1d1f}
+  .qm{margin-top:8px;display:flex;align-items:center;gap:8px;font-size:12px;color:#86868b}
+  .tag{font-size:11px;padding:1px 8px;border-radius:10px}
+  .ph{height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aeaeb2;gap:8px}.ph i{font-size:30px}.ph-sub{font-size:12px;color:#c2c2c6}
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="cap"><b>Desktop nav + toolbar rearrangement</b> — Phase 1 mockup. The five tabs move from the toolbar into the sidebar (lenses, top); back/forward grouped pair + title-subtitle lead the content; <code>tags · export · search</code> trail, search rightmost. Glyphs are Tabler stand-ins for the chosen SF Symbols. Click lenses / projects to switch; the project list scrolls. Spec: <a href="../design-desktop-nav-toolbar-rearrangement.md">design-desktop-nav-toolbar-rearrangement.md</a>.</p>
+
+  <div class="mwin">
+    <aside class="side">
+      <div class="stop">
+        <div class="lights"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div>
+        <div class="satop">
+          <i class="ti ti-layout-sidebar tog" title="Hide sidebar"></i>
+        </div>
+      </div>
+      <div class="snav">
+        <div class="row" data-lens="Project"><i class="ti ti-target"></i><span class="nm">Project</span></div>
+        <div class="row" data-lens="Sessions"><i class="ti ti-users"></i><span class="nm">Sessions</span></div>
+        <div class="row on-lens" data-lens="Quotes"><i class="ti ti-blockquote"></i><span class="nm">Quotes</span></div>
+        <div class="row" data-lens="Codebook"><i class="ti ti-tag"></i><span class="nm">Codebook</span></div>
+        <div class="row" data-lens="Analysis"><i class="ti ti-grid-dots"></i><span class="nm">Analysis</span></div>
+      </div>
+      <div class="phdr">Projects</div>
+      <div class="plist">
+        <div class="row" style="color:#3a3a3c"><i class="ti ti-plus"></i><span class="nm">New project</span></div>
+        <div class="row on-proj" data-proj="IKEA Study" data-sub="24 participants · 14h 08m"><i class="ti ti-circle"></i><span class="nm">IKEA Study</span><span class="ct">24</span></div>
+        <div class="row" data-proj="FOSSDA Archive" data-sub="58 participants · 39h 30m"><i class="ti ti-circle"></i><span class="nm">FOSSDA Archive</span><span class="ct">58</span></div>
+        <div class="row" id="folder"><i class="ti ti-chevron-down fchev"></i><i class="ti ti-folder" style="width:auto;flex:0 0 auto"></i><span class="nm" style="margin-left:2px">Acme Corp</span></div>
+        <div class="kids" id="folderKids">
+          <div class="row" data-proj="Mobile Banking Pilot" data-sub="12 participants · 7h 45m"><i class="ti ti-circle"></i><span class="nm">Mobile Banking Pilot</span><span class="ct">12</span></div>
+          <div class="row" data-proj="Onboarding Flow" data-sub="9 participants · 5h 12m"><i class="ti ti-loader"></i><span class="nm">Onboarding Flow</span></div>
+        </div>
+        <div class="sub">Transcribing · 2 of 3 · &lt;1 min</div>
+        <div class="row" data-proj="Checkout Redesign" data-sub="16 participants · 9h 58m"><i class="ti ti-circle"></i><span class="nm">Checkout Redesign</span><span class="ct">16</span></div>
+        <div class="row" data-proj="Pricing Interviews" data-sub="7 participants · 4h 02m"><i class="ti ti-circle"></i><span class="nm">Pricing Interviews</span><span class="ct">7</span></div>
+        <div class="row" data-proj="Support Calls Q2" data-sub="31 participants · 18h 20m"><i class="ti ti-circle"></i><span class="nm">Support Calls Q2</span><span class="ct">31</span></div>
+      </div>
+    </aside>
+
+    <main class="detail">
+      <div class="ctop">
+        <div class="navpair">
+          <i class="ti ti-chevron-left" title="Back"></i>
+          <span class="dv"></span>
+          <i class="ti ti-chevron-right fwd" title="Forward"></i>
+        </div>
+        <i class="ti ti-list ptog" title="Show Contents"></i>
+        <div class="ttl">
+          <div class="t1" id="t1">IKEA Study</div>
+          <div class="t2" id="t2">24 participants · 14h 08m</div>
+        </div>
+        <div class="cact">
+          <i class="ti ti-layout-sidebar-right" title="Tags"></i>
+          <i class="ti ti-share" title="Export"></i>
+          <i class="ti ti-search" title="Search"></i>
+        </div>
+      </div>
+      <div class="report">
+        <div class="dlens" id="dLens">Quotes</div>
+        <div class="dfil" id="dFilters">
+          <span class="chip on">All</span><span class="chip">Positive</span><span class="chip">Friction</span><span class="chip">Journey</span>
+        </div>
+        <div id="detailBody">
+          <div class="qc"><div class="qt">"The flat-pack instructions had no words, just pictures — I loved that I didn't have to read anything."</div><div class="qm">P04<span class="tag" style="background:#e1f5ee;color:#0f6e56">Positive</span></div></div>
+          <div class="qc"><div class="qt">"I drove forty minutes and they were out of stock on the one thing I came for."</div><div class="qm">P11<span class="tag" style="background:#faece7;color:#993c1d">Friction</span></div></div>
+          <div class="qc"><div class="qt">"The little pencils and the showroom path make it feel like a day out, not a chore."</div><div class="qm">P02<span class="tag" style="background:#e1f5ee;color:#0f6e56">Positive</span></div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+(function(){
+  var lensIcon={Project:'ti-target',Sessions:'ti-users',Quotes:'ti-blockquote',Codebook:'ti-tag',Analysis:'ti-grid-dots'};
+  var activeLens='Quotes',activeProj='IKEA Study';
+  var quotesHTML=document.getElementById('detailBody').innerHTML;
+  function renderLens(){
+    document.getElementById('dLens').textContent=activeLens;
+    var body=document.getElementById('detailBody'),fil=document.getElementById('dFilters');
+    if(activeLens==='Quotes'){fil.style.display='flex';body.innerHTML=quotesHTML;}
+    else{fil.style.display='none';body.innerHTML='<div class="ph"><i class="ti '+(lensIcon[activeLens]||'ti-app-window')+'"></i><div>'+activeLens+' · '+activeProj+'</div><div class="ph-sub">native lens — the embedded report itself is unchanged</div></div>';}
+  }
+  document.querySelectorAll('[data-lens]').forEach(function(el){el.addEventListener('click',function(){document.querySelectorAll('[data-lens]').forEach(function(x){x.classList.remove('on-lens');});el.classList.add('on-lens');activeLens=el.getAttribute('data-lens');renderLens();});});
+  document.querySelectorAll('[data-proj]').forEach(function(el){el.addEventListener('click',function(){document.querySelectorAll('[data-proj]').forEach(function(x){x.classList.remove('on-proj');});el.classList.add('on-proj');activeProj=el.getAttribute('data-proj');document.getElementById('t1').textContent=activeProj;document.getElementById('t2').textContent=el.getAttribute('data-sub');renderLens();});});
+  document.querySelectorAll('.chip').forEach(function(c){c.addEventListener('click',function(){document.querySelectorAll('.chip').forEach(function(x){x.classList.remove('on');});c.classList.add('on');});});
+  var fld=document.getElementById('folder');fld.addEventListener('click',function(){var k=document.getElementById('folderKids'),ch=fld.querySelector('.fchev');var hide=k.style.display!=='none';k.style.display=hide?'none':'block';ch.classList.toggle('ti-chevron-down',!hide);ch.classList.toggle('ti-chevron-right',hide);});
+})();
+</script>
+</body>
+</html>

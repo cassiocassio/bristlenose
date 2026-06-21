@@ -5,9 +5,11 @@ import os
 /// physically land alongside existing source media; researcher's originals
 /// stay where they were (Photos-app model).
 ///
-/// One in-flight copy at a time. The toolbar pill (`CopyProgressPill`)
-/// observes `inFlight` and exposes Cancel; cancellation triggers a full
-/// rollback of any partial destination files.
+/// One in-flight copy at a time. The target project's sidebar row observes
+/// `inFlight` (matched by `projectID`) and shows the determinate ring +
+/// hover-cancel + "Copying · N%" subtitle; cancellation (ring hover-× or the
+/// row's "Cancel copy" context-menu item) triggers a full rollback of any
+/// partial destination files.
 ///
 /// Same-volume copies on APFS use `clonefile(2)` automatically (via
 /// `FileManager.copyItem`) — instant and zero bytes. Cross-volume copies

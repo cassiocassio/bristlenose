@@ -158,22 +158,22 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ### `warm-sidecar-pool`
 
-**Kind:** feature — multi-project Phase A2: a warm-sidecar pool so switching the selected project is a near-instant hand-off (point the WebView at an already-running serve for the target project) rather than a teardown+restart, dissolving both the switch latency and the rapid-switch crash (`Server exited before becoming ready (code 1)`).
-**Status:** Just started
+**Kind:** feature (desktop — Swift, `ServeManager` lifecycle) — Phase A2: make project-switching instant + crash-free by keeping the previously-fronted sidecar warm instead of teardown+restart-per-switch.
+**Status:** Implemented + unit-tested + reviewed (usual-suspects plan pass + William impl pass, both clean); pending human GUI QA + merge.
 **Started:** 19 Jun 2026
 **Worktree:** `/Users/cassio/Code/bristlenose_branch warm-sidecar-pool/`
 **Remote:** local only (push when ready)
 
-**What it does:** Phase A2 of the multi-project roadmap (0 sidebar indicators → A1 `background-runs-view-switch` → **A2 this** → B cap-2 concurrent exec → C multi-window). Keeps one or more sidecars warm so a project switch hands off to an already-running serve instead of going through `ServeManager.switchProject`'s restart-per-switch. The crash dissolves because there's no restart-race to lose. **Problem + constraints are settled in the handoff** (`HANDOFF.md` → `.claude/plans/warm-sidecar-pool.md`); pool size / eviction / exact model are the deferred solution plan. Constraints the plan MUST honour: reuse the single `generation` ownership token (no second epoch counter), keep `bind(0)` kernel-assigned ports + the sidecar's parent-death watcher contract, don't re-add the (A1-removed) cancel-on-switch modal, and keep scope to the serve hand-off (concurrent execution is Phase B). **Handoffs aren't specs** — when planning the solution, `git log -p ServeManager.swift` + re-grep first; the problem definition is fixed, the lifecycle may have moved.
+**What it does:** `switchProject` now *parks* the outgoing serve sidecar (no signal) and re-points to it on switch-back (`state = .running(warmPort)` after a `/api/health` liveness probe) instead of teardown+restart — so rapid A↔B switching is an instant hand-off and the restart-race crash dissolves. **Option B: a single parked slot, not a dict+LRU pool** (only the A↔B repro is observed; `feedback_present_failure_over_speculation`). Reuses the single `generation` token (no second epoch — identity-routing via `ObjectIdentifier` actually retired the old termination epoch capture). Plan: `.claude/plans/warm-sidecar-pool-implementation.md` (the gitignored review log alongside it has the full finding detail).
 
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/ServeManager.swift` (the heart of A2 — `start` / `shutdown(timeout:)` / `switchProject(to:)` / the `generation` counter / readiness + idle polls)
-- `desktop/Bristlenose/Bristlenose/ContentView.swift` (drives `switchProject` on selection change)
-- `bristlenose/server/lifecycle.py` (the sidecar's parent-death watcher — the pool must preserve this contract)
+**Files this branch touches:**
+- `desktop/Bristlenose/Bristlenose/ParkedSidecar.swift` (new — struct + pure `RepointDecision`)
+- `desktop/Bristlenose/Bristlenose/ServeManager.swift` (the lifecycle rewrite — heart of A2)
+- `desktop/Bristlenose/Bristlenose/ContentView.swift` (WebView `.id` keyed on `project.id` + port; `dropParked` on removal)
+- `desktop/Bristlenose/BristlenoseTests/RepointDecisionTests.swift` (new — pure decision tests)
 
 **Potential conflicts with other branches:**
-- **`project-status-line`** (feature, **merged to main 21 Jun 2026** as `f74961b`) — **SHARED FILE: `ServeManager.swift`.** It only *read* `ServeManager.starting` and lifted the sidebar subtitle precedence into a pure `ProjectSubtitle.resolve(...)`. Per the recorded merge plan it landed first; `warm-sidecar-pool` now rebases onto main (which carries the resolver + the "Starting…" subtitle) and reconciles "Starting…" against the warm pool — a switch becomes a hand-off, not a start, so the `.starting` semantics the resolver consumes must be re-examined. `git log -p ServeManager.swift ProjectSubtitle.swift` before planning.
-- No other active branch touches `ContentView.swift` or `bristlenose/server/lifecycle.py` (`background-runs-view-switch`, which touched both `ContentView.swift` and `ServeManager.swift`, is merged).
+- **`project-status-line`** — **SHARED FILE: `ServeManager.swift`.** Merge order: that branch lands first; this one rebases and reconciles the "Starting…" subtitle (a warm re-point skips `.starting`, so the subtitle shows on cold switches only). See that branch's entry above.
 
 ---
 

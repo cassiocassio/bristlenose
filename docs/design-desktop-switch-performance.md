@@ -227,10 +227,15 @@ pages stay alive. So on this axis **the free CLI+Safari workaround currently
 beats the desktop app** (which is at Tier 1).
 
 That sets a floor, not an aspiration: **the paid desktop product must at least
-match what the free path already does.** A paid app that switches *slower* than
-"open it in two Safari windows" is a hard sell to exactly the power users who'd
-notice. This is why Tier 2 / multi-window is not a someday-nice-to-have — it's the
-bar the free path has already set.
+match what the free path already does.** Slowness isn't noticed only by people who
+understand the cache machinery — the response-time thresholds above are *human
+perception*, not technical sophistication, so every user feels the lag equally.
+If anything the non-technical researcher (our actual user) is *less* forgiving,
+not more: they have no engineering mental model to excuse it with — they just see
+that the paid app is slower than the free one. So this isn't about a niche
+audience; it's that a paid product slower than its own free workaround fails all
+its users. That's why Tier 2 / multi-window is not a someday-nice-to-have — it's
+the bar the free path has already set.
 
 ## Recommendation / sequencing
 

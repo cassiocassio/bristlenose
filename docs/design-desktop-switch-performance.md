@@ -129,27 +129,39 @@ defeats shared-session caching.
 ⚠️ **This is NOT "kill the spinner."** Naively removing the overlay is wrong,
 because the right treatment depends on how long the warm re-point actually takes,
 and that's **report-size-dependent** — small reports are under the line, big ones
-are over it. The governing psychology (the maintainer's prior, from the MAAS
-progress-UX battles — "a simple progress bar is the most expensive UI"):
+are over it.
 
-- **≤ ~250 ms ("almost instant"):** a progress indicator *itself* feels janky —
-  the eye catches a flash that's gone before it's parsed. Here the **flash is the
-  bug**; show nothing, hold the prior frame, let the new content paint in.
-- **> ~250 ms ("it's doing something"):** the *absence* of progress feels broken.
-  Here you DO need an affordance — but **probably not the current full
-  detail-pane `BootView(.loadingReport)` flash**. Something lighter, to be
-  designed (designer's call — do not prescribe here).
+**Grounded in the response-time literature** (checked 21 Jun 2026, not eyeballed).
+The established constants — Miller 1968, popularised by Nielsen 1993; Doherty &
+Thadani, IBM 1982 — are **100 ms / 400 ms / 1 s / 10 s**, not a single 250 ms line:
 
-So warm re-point has two regimes across one threshold, and for larger reports we
-are **over the line** today. The current single treatment (always show the boot
-overlay) is wrong for *both* regimes — it flashes under the line and is too heavy
-over it.
+- **< ~100 ms** — feels instantaneous (Miller/Nielsen). Show nothing, ever.
+- **~100 ms – ~1 s** — Doherty "in-flow" band (sub-400 ms is where productivity
+  peaks). A loading indicator here is the **flicker bug** — it appears and
+  vanishes before the eye resolves it ("what flashed?"). Suppress it; hold the
+  prior frame and let content paint in. *(This is the maintainer's "≤250 ms feels
+  janky" instinct, correctly generalised up to ~1 s — and 250–500 ms is exactly
+  the practitioner "delay-before-showing-a-spinner" band.)*
+- **> ~1 s** — flow of thought starts to break (Nielsen). Now the *absence* of
+  feedback feels broken → you DO want an affordance — but **probably not the
+  current full detail-pane `BootView(.loadingReport)` flash**. Something lighter,
+  to be designed (designer's call — do not prescribe here).
+- **> ~10 s** — determinate / percent-done; the user will multitask.
+
+**Two thresholds, not one** (the key correction): a *delay-before-showing*
+(~250–500 ms) AND a *minimum-display-once-shown* (~1 s). The jank isn't "it was
+quick" — it's a **minimum-display-time violation** (a spinner shown for <~1 s
+flickers). The established implementation is the **spin-delay pattern**: delay the
+onset so quick ops never show a spinner, and enforce a min display so a shown one
+never flashes. So the current single treatment (always show the boot overlay) is
+wrong at *both* ends — it flickers under ~1 s and is too heavy over it.
 
 **Prerequisite — instrument first.** Before designing, measure the actual Tier-1
 re-point→`ready` time across a range of report sizes (small / medium / large), so
-we know *which* reports cross ~250 ms and how far over they go. Don't design the
-treatment against a guessed threshold. (The probe + state transitions already log;
-add timing around the `.starting`→`.running`→SPA-`ready` span for the warm path.)
+we know *which* reports stay under ~1 s (suppress any indicator) versus cross it
+(need the designed treatment) — and how far the big ones go. Don't design against
+a guessed threshold. (The probe + state transitions already log; add timing around
+the `.starting`→`.running`→SPA-`ready` span for the warm path.)
 
 **Then design** (designer-owned): the sub-threshold "show nothing" path is cheap
 (a "this switch was warm" flag gates the overlay); the over-threshold affordance

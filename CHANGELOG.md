@@ -2,6 +2,10 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.15.18** — _21 Jun 2026_
+
+- **Desktop: copy progress moved onto the project row, and switching back to a recent project is now near-instant.** Two macOS-app refinements landed since 0.15.17. (1) When you drag files into a project, the copy progress — a determinate ring, a "Copying · N%" subtitle, and hover-to-cancel — now rides that project's sidebar row instead of a separate toolbar pill, so per-project status lives where the project lives (the standalone copy pill is gone). (2) Switching *back* to the immediately-previous project re-points to its still-running ("parked") server instead of tearing it down and restarting, so the boot wait disappears for the common back-and-forth switch — the "warm-sidecar pool." These are changes in the desktop app; the PyPI / Homebrew / Snap package carries only the two supporting interface strings ("Cancel Copy" and "Copying · N%", across all seven languages). No CLI-visible behaviour changes in this release.
+
 **0.15.17** — _18 Jun 2026_
 
 - **Default Claude runs no longer break when Anthropic retires a model.** Bristlenose's built-in Claude default pointed at `claude-sonnet-4-20250514`, which Anthropic retired on 15 June — so from that day a plain `bristlenose run` on the Claude provider (with no `--model` set) failed at the topic-segmentation stage with a `404 model_not_found`. The defaults now track current aliases (`claude-sonnet-4-6`, plus `claude-opus-4-8` where Opus is offered), updated across every place a model id is named — provider registry, config, and pricing — so the next retirement is a one-line change rather than a forty-file hunt. Pin a model with `--model` or `BRISTLENOSE_LLM_MODEL` and nothing changes. Ships on PyPI.

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 21 Jun 2026 (parked-branch sweep — trashed 8 merged/closed worktrees: `highlighter` (worktree + local + `origin/highlighter` deleted), `s3-papercut-sweep` (local deleted), and the already-detached husks `sidebar` (`origin/sidebar` deleted), `sentiment-tags`, `responsive-playground`, `react-router`, `stabilise-ci`, `sandbox-debug`. Kept `living-fish` + `symbology` — parked work with unmerged commits, backed up on origin. Earlier today: `warm-sidecar-pool` merged to main (`78b2d40`) + closed — desktop Phase A2 warm-sidecar pool (instant, crash-free project switching) is now on main; `project-status-line` merged (`f74961b`) + closed.)
+**Updated:** 21 Jun 2026 (`llm-provider-default-model` merged to main + closed; parked-branch sweep — trashed 8 merged/closed worktrees: `highlighter` (worktree + local + `origin/highlighter` deleted), `s3-papercut-sweep` (local deleted), and the already-detached husks `sidebar` (`origin/sidebar` deleted), `sentiment-tags`, `responsive-playground`, `react-router`, `stabilise-ci`, `sandbox-debug`. Kept `living-fish` + `symbology` — parked work with unmerged commits, backed up on origin. Earlier today: `warm-sidecar-pool` merged to main (`78b2d40`) + closed — desktop Phase A2 warm-sidecar pool (instant, crash-free project switching) is now on main; `project-status-line` merged (`f74961b`) + closed.)
 
 ---
 
@@ -39,7 +39,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
-| `bristlenose_branch llm-provider-default-model/` | `llm-provider-default-model` | bugfix | CLI `--llm <provider>` applies that provider's default model (fixes cross-provider 404) |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -141,7 +140,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `desktop-provider-resolution` _(merged)_ | `bristlenose_branch desktop-provider-resolution/` _(detached, on disk)_ | local only — merged to main 7 Jun 2026 (`5292802`) |
 | `chunked-quote-extraction` _(merged)_ | `bristlenose_branch chunked-quote-extraction/` _(detached, on disk)_ | local only — merged to main 9 Jun 2026 (`927fa63`) |
 | `background-runs-view-switch` _(merged)_ | `bristlenose_branch background-runs-view-switch/` _(detached, on disk)_ | local only — merged to main 16 Jun 2026 (`bf03d55`) |
-| `llm-provider-default-model` | `bristlenose_branch llm-provider-default-model/` | local only |
 | `determinate-progress` _(merged)_ | `bristlenose_branch determinate-progress/` _(detached, on disk)_ | local only — merged to main 17 Jun 2026 (`a1fa49a`) |
 
 
@@ -150,29 +148,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `llm-provider-default-model`
-
-**Kind:** bugfix — on the CLI, `--llm <provider>` (or `BRISTLENOSE_LLM_PROVIDER`) does not switch the model to that provider's `default_model`. The Claude code-default model name (`claude-sonnet-4-20250514`) rides along to a non-Anthropic provider → cross-provider `404 model_not_found`, surfacing as `PipelineAbandonedError: All topic segmentation calls failed` at s08.
-**Status:** Just started
-**Started:** 9 Jun 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch llm-provider-default-model/`
-**Remote:** local only (push when ready)
-
-**What it does:** When the resolved provider differs from the model's provider *and* the user set no explicit model (no `--model`, no `BRISTLENOSE_LLM_MODEL`), fill in the resolved provider's `default_model` from the `PROVIDERS` registry. An existing coherence helper in `config.py` already does this but is gated `if not hosted_by_desktop()` and restricted to the desktop orphan-model case, so the CLI path never fires it. The fix moves the fill into the CLI-reachable path. Constraints: explicit user model always wins; existing `--llm`-vs-env precedence unchanged (only the *model* default-fill is new); desktop is a no-op (host injects an explicit model); Azure left alone (deployment names, no fixed default). Adds a `step=3-provider-default` line to the `llm_resolve` ledger when the fill fires. Found during `chunked-quote-extraction` gpt-4o testing; deliberately not fixed there. Full plan: `HANDOFF.md`.
-
-**Files this branch will touch:**
-- `bristlenose/config.py` (`load_settings` + the `hosted_by_desktop`-gated coherence-snap helper ~lines 373–395; `llm_model` code-default at line 109)
-- `bristlenose/providers.py` (read-only: `PROVIDERS[*].default_model` source of truth)
-- `bristlenose/cli.py` (`analyze` / `run` option decls — possibly add `--model` to `analyze`)
-- `tests/test_desktop_config_resolution.py` (new regression test)
-
-**Potential conflicts with other branches:**
-- `gemini-provider` (feature, active) edits `bristlenose/providers.py` for the `gemini-2.0-flash`→`gemini-2.5-flash` `default_model` fix. This branch only *reads* `providers.py`, so the overlap is low-risk — but if gemini lands first, rebase to pick up the corrected Gemini default before asserting on it in the regression test.
-- `chunked-quote-extraction` (feature, active) is the branch this bug was found on, but it touches s09 / `llm/client.py` / `run_lifecycle.py` — no overlap with `config.py` / `cli.py`.
-- No other active branch touches `config.py` provider/model resolution.
 
 ---
 
@@ -274,6 +249,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `llm-provider-default-model` — merged 21 Jun 2026
+
+Bugfix — on the CLI, `--llm <provider>` (or `BRISTLENOSE_LLM_PROVIDER`) now switches the model to that provider's `default_model` instead of riding the Claude code-default model name forward to a non-Anthropic provider (which caused cross-provider `404 model_not_found` errors). When the resolved provider differs from the model's provider and the user set no explicit model (no `--model`, no `BRISTLENOSE_LLM_MODEL`), the fix fills in the resolved provider's `default_model` from the `PROVIDERS` registry. Explicit user model always wins; existing `--llm`-vs-env precedence unchanged; desktop is a no-op (host injects explicit model); Azure untouched. Adds a `step=3-provider-default` ledger line when the fill fires. Single commit (`b6b7d95`) merged direct to main. Worktree detached and tagged orange on disk; local branch deleted; remote was never pushed.
 
 ### `warm-sidecar-pool` — merged 21 Jun 2026
 

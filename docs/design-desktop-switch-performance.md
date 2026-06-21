@@ -148,13 +148,34 @@ Thadani, IBM 1982 — are **100 ms / 400 ms / 1 s / 10 s**, not a single 250 ms 
   to be designed (designer's call — do not prescribe here).
 - **> ~10 s** — determinate / percent-done; the user will multitask.
 
-**Two thresholds, not one** (the key correction): a *delay-before-showing*
-(~250–500 ms) AND a *minimum-display-once-shown* (~1 s). The jank isn't "it was
-quick" — it's a **minimum-display-time violation** (a spinner shown for <~1 s
-flickers). The established implementation is the **spin-delay pattern**: delay the
-onset so quick ops never show a spinner, and enforce a min display so a shown one
-never flashes. So the current single treatment (always show the boot overlay) is
-wrong at *both* ends — it flickers under ~1 s and is too heavy over it.
+**The two practitioner numbers don't survive scrutiny as stated — the real model
+is three feedback channels:**
+
+1. **Instant action-ack (< ~100 ms) — non-negotiable, and NOT the spinner's job.**
+   The click must register *immediately*: selection highlights, cursor/active
+   state, prior frame stays put. "Click → nothing for 250 ms" is **not** the
+   delay convention working — it's a *missing ack*, and it reads as "is my network
+   down?" because nothing answered the click. (A browser never goes dead on a link
+   click: the tab spinner / stop-button chrome flips instantly, *before* the page
+   paints. That's the ack channel, separate from render.) Get this right and the
+   "delay-before-spinner" window stops feeling broken — something already replied.
+2. **No heavy indicator at all for sub-~1 s ops.** Hold the prior frame, let
+   content swap in. The ~250–500 ms "delay-before-showing" number is *only* the
+   guard that stops a spinner ever appearing for these — not a dead zone.
+3. **A designed, *fading* affordance only for genuinely long ops (> ~1 s).**
+
+**Reject the "≥ 1 s minimum-display" rule as usually stated** — "show a page, then
+hold it back for a second" is as daft as it sounds. It only bites in one narrow
+window (the op finishes just *after* the spinner appeared), and there it trades a
+~40 ms flicker for ~950 ms of *deliberately withheld, already-ready content* —
+quadrupling perceived latency to dodge a blink. Bad deal. The blink has two better
+fixes: (a) don't show the indicator for sub-threshold ops at all (channel 2), and
+(b) if one is up, **fade it out** as content arrives — continuity without
+hostage-taking. **Never hold ready content to satisfy a minimum.** (The "1 s" was
+likely a misapplied borrow of Nielsen's 1 s-flow limit — which argues *against*
+showing anything sub-1 s, not for parking a spinner there.) So the current single
+treatment (always show the boot overlay) is wrong at *both* ends — it flickers
+under ~1 s and is too heavy, and potentially content-withholding, over it.
 
 **Prerequisite — instrument first.** Before designing, measure the actual Tier-1
 re-point→`ready` time across a range of report sizes (small / medium / large), so

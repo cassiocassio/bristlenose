@@ -46,13 +46,47 @@ The two failure modes the audit catches — both have repeatedly cost plan-cycle
 
 #### Shared engine
 
-**Window** — what range of commits constitutes "this branch":
-- On a feature branch: `git merge-base main HEAD`..HEAD
-- On direct-on-main: HEAD~N where N = commits since last `/end-session` (from `.claude/last-end-session.json`'s `head_sha`). If no prior sentinel, fall back to HEAD~10 and note this in the prompt so the user can see the audit isn't anchored.
+**Window** — what range of commits constitutes "the work to audit":
+- On a feature branch: `git merge-base main HEAD`..HEAD by default. **But honour the sentinel on a repeat end-session** — if `.claude/last-end-session.json` exists, its `head_sha` is an ancestor of HEAD (clean continuation, not rewritten history), AND the most-recent `.claude/audit-log.jsonl` entry for this branch shows **no pending defers** (`scan_a.defer == 0 && scan_b.defer == 0`, or no entry at all), narrow the base to that `head_sha` — audit only work since the last sign-off. The pre-sentinel commits were already audited last run; re-scanning them is the duplication this avoids. When narrowed, note it in the consolidated prompt (`audit windowed to <short-sha>..HEAD — N pre-sentinel commits already audited, no defers pending`).
+- On direct-on-main: HEAD~N where N = commits since last `/end-session` (from the sentinel's `head_sha`). If no prior sentinel, fall back to HEAD~10 and note this in the prompt so the user can see the audit isn't anchored.
+
+**Why the defer guard (don't narrow blindly):** a `defer`red finding lives in a *pre-sentinel* commit and is meant to **re-surface next session** — narrowing past it would silently bury it. So narrow ONLY when the last audit deferred nothing; if it deferred anything, keep the full `merge-base` window so the deferred items re-surface. Re-scanning the wide window is cheap-of-*output* even so: the finding-level filters (Scan A already-recorded check, Scan B struck-bullet filter) drop everything already actioned. **This refinement does NOT bump `audit_version`** — the matcher + doc set are unchanged, and a first/never-sentineled audit behaves identically; it only de-dups repeat scans, so existing sentinels stay current (no spurious `/close-branch` re-prompts).
 
 **Inputs**:
 ```bash
+# Window base: full branch by default; narrow to the last sentinel ONLY on a repeat
+# end-session with no deferred findings pending (defers must re-surface, so they
+# force the full window). Finding-level filters de-dup output either way.
 WINDOW_BASE=$(git merge-base main HEAD 2>/dev/null || echo HEAD~10)
+SENTINEL=.claude/last-end-session.json
+if [ -f "$SENTINEL" ]; then
+  SENT_SHA=$(python3 -c "import json;print(json.load(open('$SENTINEL')).get('head_sha',''))" 2>/dev/null)
+  if [ -n "$SENT_SHA" ] && git merge-base --is-ancestor "$SENT_SHA" HEAD 2>/dev/null; then
+    PENDING=$(python3 - "$(git branch --show-current)" <<'PY'
+import json, sys, os
+br = sys.argv[1]; last = None
+p = ".claude/audit-log.jsonl"
+if os.path.exists(p):
+    for line in open(p):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            d = json.loads(line)
+        except Exception:
+            continue
+        if d.get("branch") == br:
+            last = d
+# "none" = never audited (nothing was deferred); else the last run's total defers
+print("none" if last is None
+      else last.get("scan_a", {}).get("defer", 0) + last.get("scan_b", {}).get("defer", 0))
+PY
+)
+    if [ "$PENDING" = "none" ] || [ "$PENDING" = "0" ]; then
+      WINDOW_BASE="$SENT_SHA"   # incremental: only work since last sign-off
+    fi
+  fi
+fi
 git log "$WINDOW_BASE"..HEAD --format="%H%n%B%n---END---"     # commit bodies — Scan A
 git log "$WINDOW_BASE"..HEAD --pretty=%s                       # commit subjects — Scan B keywords
 git diff "$WINDOW_BASE"..HEAD --name-only                      # files touched — Scan B keywords

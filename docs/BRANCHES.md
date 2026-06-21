@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 19 Jun 2026 (`warm-sidecar-pool` created — multi-project Phase A2, ServeManager warm pool; shares `ServeManager.swift` with `project-status-line` and lands *second*, per that branch's recorded merge plan. 18 Jun: `determinate-progress` + `progress-text-surfacing` merged + closed.)
+**Updated:** 21 Jun 2026 (`project-status-line` merged to main (`f74961b`) + closed — its sidebar subtitle-precedence resolver + copy-on-row work is now on main; `warm-sidecar-pool` rebases onto main next and reconciles "Starting…" against the warm pool. 19 Jun: `warm-sidecar-pool` created — multi-project Phase A2, ServeManager warm pool.)
 
 ---
 
@@ -41,7 +41,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 | `bristlenose_branch llm-provider-default-model/` | `llm-provider-default-model` | bugfix | CLI `--llm <provider>` applies that provider's default model (fixes cross-provider 404) |
-| `bristlenose_branch project-status-line/` | `project-status-line` | feature | Surface bucket-1 per-project messages on the sidebar status line; extract the precedence resolver out of ProjectRow |
 | `bristlenose_branch warm-sidecar-pool/` | `warm-sidecar-pool` | feature | Multi-project Phase A2: warm-sidecar pool so project-switching is instant + crash-free (no teardown+restart-per-switch race) |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
@@ -127,7 +126,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
-| `project-status-line` | `bristlenose_branch project-status-line/` | local only |
 | `warm-sidecar-pool` | `bristlenose_branch warm-sidecar-pool/` | local only |
 | `multi-project-drag-onto` _(merged)_ | `bristlenose_branch multi-project-drag-onto/` _(detached, on disk)_ | local only — merged to main 15 May 2026 |
 | `multi-project-switch` _(merged)_ | `bristlenose_branch multi-project-switch/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`baf1896`) |
@@ -174,31 +172,8 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 - `bristlenose/server/lifecycle.py` (the sidecar's parent-death watcher — the pool must preserve this contract)
 
 **Potential conflicts with other branches:**
-- **`project-status-line`** (feature, active) — **SHARED FILE: `ServeManager.swift`.** That branch only *reads* `ServeManager.starting`; this branch does the heavy lifecycle rewrite (warm pool, eviction, the `generation` token). Semantic coupling too: the warm pool redefines "starting" (a switch becomes a hand-off, not a start), so the "Starting…" subtitle that branch surfaces must be reconciled here. **Merge order: `project-status-line` lands first** (smaller ServeManager footprint), then `warm-sidecar-pool` rebases onto main and reconciles "Starting…". (Mirrors the plan already recorded in `project-status-line`'s entry.)
+- **`project-status-line`** (feature, **merged to main 21 Jun 2026** as `f74961b`) — **SHARED FILE: `ServeManager.swift`.** It only *read* `ServeManager.starting` and lifted the sidebar subtitle precedence into a pure `ProjectSubtitle.resolve(...)`. Per the recorded merge plan it landed first; `warm-sidecar-pool` now rebases onto main (which carries the resolver + the "Starting…" subtitle) and reconciles "Starting…" against the warm pool — a switch becomes a hand-off, not a start, so the `.starting` semantics the resolver consumes must be re-examined. `git log -p ServeManager.swift ProjectSubtitle.swift` before planning.
 - No other active branch touches `ContentView.swift` or `bristlenose/server/lifecycle.py` (`background-runs-view-switch`, which touched both `ContentView.swift` and `ServeManager.swift`, is merged).
-
----
-
-### `project-status-line`
-
-**Kind:** feature — surface the bucket-1 per-project messages on the sidebar status line, fitted to the settled `MessageKind` + `run_progress` grammar; extract the precedence resolver out of `ProjectRow` into a pure, testable `resolve(...)`.
-**Status:** Just started
-**Started:** 19 Jun 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch project-status-line/`
-**Remote:** local only (push when ready)
-
-**What it does:** Surfaces per-project messages that already have the data but never reach the sidebar subtitle — Copying (N of M), Downloading-from-iCloud (%), Starting (only if slow), mid-run health — each fitted to the settled grammar. Lifts `ProjectRow.subtitleVariant` (a private view-computed precedence chain) into a pure `resolve(...) -> SubtitleVariant`. Plus one small new Python `health` field on `run_progress`. Spec: `docs/design-desktop-project-status.md` (settled — don't relitigate kinds/precedence). Reviewed by `/usual-suspects` 18 Jun — 3 pins captured in `HANDOFF.md` (the gitignored review log kept alongside it has the full detail); the `cantFind`-first precedence ruling is now in the spec.
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/ProjectRow.swift` (extract `subtitleVariant` → pure `resolve`)
-- `desktop/Bristlenose/Bristlenose/ProjectAvailability.swift` (`inCloud(downloading:)` %)
-- `desktop/Bristlenose/Bristlenose/CopyMachinery.swift` (`inFlight` — use byte-% for "Copying"; no new count source, per review)
-- `desktop/Bristlenose/Bristlenose/ServeManager.swift` (read `.starting` only — keep touch read-only/minimal; do **not** touch the `generation` token)
-- `bristlenose/events.py` + `bristlenose/run_lifecycle.py` (the `health` field — needs the event field **and** the `progress()` signature, per review pin 2)
-
-**Potential conflicts with other branches:**
-- **`warm-sidecar-pool`** (planned Phase A2, not yet created) — **SHARED FILE: `ServeManager.swift`.** This branch only *reads* `ServeManager.starting`; warm-sidecar-pool does the heavy ServeManager lifecycle rewrite (warm pool, eviction, the `generation` token). Semantic coupling too: the warm pool redefines "starting" (a switch becomes a hand-off, not a start), so the "Starting…" message this branch surfaces must be reconciled with the pool. **Merge order: land `project-status-line` first** (smaller ServeManager footprint), then warm-sidecar-pool rebases and reconciles "Starting…". See the branch's `HANDOFF.md` Review pins for the full merge plan.
-- No other active branch touches these Swift files or `events.py`/`run_lifecycle.py` (`chunked-quote-extraction`, which touched `run_lifecycle.py`, is merged).
 
 ---
 
@@ -323,6 +298,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `project-status-line` — merged 21 Jun 2026
+
+Feature — surfaced bucket-1 per-project messages on the sidebar status line, fitted to the settled `MessageKind` + `run_progress` grammar. Lifted `ProjectRow.subtitleVariant` (a private view-computed precedence chain) into a pure, testable `resolve(...) -> SubtitleVariant` (new `ProjectSubtitle.swift` + `ProjectSubtitleTests.swift`). Moved copy progress onto the project row (progress ring + hover-to-cancel) and removed the standalone toolbar copy pill (`CopyProgressPill.swift` deleted). Settled the per-project-row vs app-global-pill placement axis and pinned it into `docs/design-desktop-project-status.md` + `desktop/CLAUDE.md`. (The originally-planned Python `health` field on `run_progress` was descoped — `events.py`/`run_lifecycle.py` untouched.) Five commits (`0842081`, `fd94529`, `4313bff`, `55caf2a`, `7b32c5c`) merged via `f74961b`. Landed first per the recorded merge plan (smaller ServeManager footprint); `warm-sidecar-pool` rebases onto main next and reconciles "Starting…". Worktree detached and tagged orange on disk; local branch deleted; remote was never pushed.
 
 ### `progress-text-surfacing` — merged 18 Jun 2026
 

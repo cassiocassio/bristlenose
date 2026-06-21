@@ -367,6 +367,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.18** — _21 Jun 2026_
+
+- **Desktop: copy progress moved onto the project row, and switching back to a recent project is near-instant.** Copy progress (a determinate ring + "Copying · N%" + hover-to-cancel) now rides the project's sidebar row instead of a separate toolbar pill; and switching back to the immediately-previous project re-points to its still-running ("parked") server instead of restarting it (the "warm-sidecar pool"). Desktop-app changes; the PyPI / Homebrew package carries only the two supporting interface strings. No CLI-visible change.
+
 **0.15.17** — _18 Jun 2026_
 
 - **Default Claude runs no longer break when Anthropic retires a model.** The built-in Claude default pointed at `claude-sonnet-4-20250514`, retired by Anthropic on 15 June — so a plain `bristlenose run` on Claude (no `--model`) failed at topic segmentation with a `404 model_not_found`. Defaults now track current aliases (`claude-sonnet-4-6`, plus `claude-opus-4-8` where Opus is offered), so the next retirement is a one-line change. Pin a model with `--model` and nothing changes. Ships on PyPI.

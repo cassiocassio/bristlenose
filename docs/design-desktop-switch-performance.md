@@ -124,16 +124,40 @@ defeats shared-session caching.
 
 ## Future optimisations (cheap → expensive)
 
-### 1. Kill the spinner flash on a warm re-point — *perception, LOW cost*
+### 1. Fix the warm-switch progress treatment — *perception; design problem, not a one-liner*
 
-Don't make it faster; make it *feel* like a content swap instead of a mini-load.
-On a warm re-point we know the server is up and the SPA will paint quickly, so
-suppress (or ~250 ms-grace) the `BootView(.loadingReport)` overlay — the user
-sees the previous frame held a beat longer, then the new content paints in, with
-no spinner. **Complexity:** low — thread a "this switch was warm" flag to the
-detail pane. **Risk:** hides a genuinely slow paint; the grace window mitigates.
-This is the best feel-per-effort win and the natural next step. (Deferred from A2
-as gruber's "Option 1".)
+⚠️ **This is NOT "kill the spinner."** Naively removing the overlay is wrong,
+because the right treatment depends on how long the warm re-point actually takes,
+and that's **report-size-dependent** — small reports are under the line, big ones
+are over it. The governing psychology (the maintainer's prior, from the MAAS
+progress-UX battles — "a simple progress bar is the most expensive UI"):
+
+- **≤ ~250 ms ("almost instant"):** a progress indicator *itself* feels janky —
+  the eye catches a flash that's gone before it's parsed. Here the **flash is the
+  bug**; show nothing, hold the prior frame, let the new content paint in.
+- **> ~250 ms ("it's doing something"):** the *absence* of progress feels broken.
+  Here you DO need an affordance — but **probably not the current full
+  detail-pane `BootView(.loadingReport)` flash**. Something lighter, to be
+  designed (designer's call — do not prescribe here).
+
+So warm re-point has two regimes across one threshold, and for larger reports we
+are **over the line** today. The current single treatment (always show the boot
+overlay) is wrong for *both* regimes — it flashes under the line and is too heavy
+over it.
+
+**Prerequisite — instrument first.** Before designing, measure the actual Tier-1
+re-point→`ready` time across a range of report sizes (small / medium / large), so
+we know *which* reports cross ~250 ms and how far over they go. Don't design the
+treatment against a guessed threshold. (The probe + state transitions already log;
+add timing around the `.starting`→`.running`→SPA-`ready` span for the warm path.)
+
+**Then design** (designer-owned): the sub-threshold "show nothing" path is cheap
+(a "this switch was warm" flag gates the overlay); the over-threshold affordance
+is a real little UX problem — what, where, how light — open for design, NOT the
+current flash. **Complexity:** low to *build* once designed; the design is the
+work. This is the best feel-per-effort near-term win, and it does not block TF.
+(Originated as gruber's deferred "Option 1"; sharpened by the 250 ms-threshold
+point, 21 Jun 2026.)
 
 ### 2. Shared static-bundle cache / process pool — *MEDIUM cost, marginal gain*
 
@@ -180,16 +204,37 @@ Code-split, defer non-critical tabs, cache rendered state in `sessionStorage`.
 Helps Tier 0 **and** Tier 1, independent of the desktop shell. Mostly a
 `frontend/` concern; noted here for completeness, owned elsewhere.
 
+## The benchmark: the free CLI path already delivers Tier 2 today
+
+The decisive product framing (maintainer, 21 Jun 2026): **a CLI user who runs
+`bristlenose serve` per project and opens each in its own Safari window/tab gets
+all of Tier 2 — instant switching — for free, right now.** Real Safari is the
+whole browser: persistent partitioned cache, back-forward page cache, tab
+snapshots, session continuity. Switching tabs is instant because the rendered
+pages stay alive. So on this axis **the free CLI+Safari workaround currently
+beats the desktop app** (which is at Tier 1).
+
+That sets a floor, not an aspiration: **the paid desktop product must at least
+match what the free path already does.** A paid app that switches *slower* than
+"open it in two Safari windows" is a hard sell to exactly the power users who'd
+notice. This is why Tier 2 / multi-window is not a someday-nice-to-have — it's the
+bar the free path has already set.
+
 ## Recommendation / sequencing
 
-- **Now / cheap:** optimisation 1 (kill the spinner flash) is the obvious
-  feel-win whenever switch polish gets attention — low risk, no architecture
-  change. It does not block TF.
-- **The destination:** optimisation 3 (retained WebViews) is what delivers the
-  browser-back feel the expectation is reaching for — but it is **Phase-C-scale**
-  (memory tradeoff on entry-tier Macs, SwiftUI-lifecycle rework, staleness
-  handling) and should ride with Phase C (multi-window), which needs the same
-  infrastructure. Not now.
-- **A2 as shipped is the right TF line:** it removes the multi-second boot and
-  the crash. "Fast but not instant" is a correct, honest place to ship from;
-  instant is a later, larger tier, not a bug in A2.
+- **Near-term (careful, designer-owned):** optimisation 1 — but as a *measured,
+  threshold-aware* fix, not a spinner-removal. Instrument the warm-switch timing
+  first, then design the sub-/over-250 ms treatments. Low build cost once
+  designed; does not block TF.
+- **The destination — non-negotiable for the paid product:** optimisation 3
+  (retained WebViews = Tier 2) delivers the browser-back feel, and it **rides
+  Phase C (multi-window)**, which the maintainer has called non-negotiable for the
+  paid product (21 Jun 2026). The two share all the infrastructure (multiple live
+  WebViews + a view-pool manager + shared eviction with the sidecar pool). Phase C
+  is where the paid product matches the CLI+Safari benchmark above. It is
+  **Phase-C-scale** (memory on the 8 GB floor, SwiftUI-lifecycle rework, staleness
+  handling) — not now, but committed.
+- **A2 as shipped is the right TF line:** it removes the multi-second boot and the
+  crash. "Fast but not instant" is a correct, honest place to ship *alpha/TF*
+  from. It is **not** the bar for the paid product — that bar is Tier 2, set by
+  the free CLI+Safari path. Instant is a later, larger tier, not a bug in A2.

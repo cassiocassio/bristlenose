@@ -77,6 +77,51 @@ requires a re-mount to re-inject (skipping this was the original silent-401 bug)
 `.nonPersistent()` store per project. Tier 1 accepts the re-mount; Tier 2 changes
 the model so a re-mount isn't needed at all.
 
+## WebKit ≠ Safari: which cache benefits we forfeit, and why
+
+A reasonable expectation: "we embed WebKit, Safari is WebKit, so we should get
+Safari's instant Back." *A browser is more than a rendering engine* — and that
+"more" is exactly the part we don't inherit. Three layers to separate:
+
+- **The engine** — WebCore (layout/DOM) + JavaScriptCore. We get this.
+- **The framework** — WebKit2's multi-process model + networking + caching APIs,
+  surfaced through `WKWebView`. We get this too: a crashed web-content process
+  can't take the app down, and `WKWebView` *does* support an HTTP resource cache
+  and a back-forward page cache. So yes — we get more than a rendering engine.
+- **The browser app** — Safari adds history/session restore, tab *snapshots* for
+  instant visual switch, tuned cache eviction, persistent partitioned storage,
+  profiles. **None of that is in the `WKWebView` embedding surface.** It's Safari,
+  the application, built on top of WebKit.
+
+Then two of *our own* decisions opt out of the WebKit-level caching we'd
+otherwise get:
+
+1. **We recreate the `WKWebView` on every switch** (`.id` re-mount). WebKit's
+   back-forward page cache — the thing that makes Safari's *Back* instant — lives
+   on a **single web view's own session history** (`backForwardList`). It restores
+   a page you navigated *away from within that instance*. A brand-new instance has
+   an empty history and an empty page cache: nothing to restore. Safari's instant
+   Back is *intra-instance* back/forward; our switch is a *cross-instance* swap, so
+   the page cache never even applies.
+2. **We use `.nonPersistent()`, fresh per project** (security rule 4). That's an
+   ephemeral store — no persistent HTTP cache, wiped with the instance — so even
+   the ordinary resource cache (bundle, assets) starts empty every mount. A
+   deliberate isolation choice, but it forecloses the cheap caching too.
+
+The one path that *would* use Safari's actual page cache — keep one `WKWebView`
+and navigate between projects via back/forward — is ruled out by our security
+model: each project's page needs *its* sidecar's token injected (can't, without a
+re-mount) and its own isolated store (can't, in a shared instance). So we can't
+borrow WebKit's automatic "keep the page around"; we'd have to do it manually.
+
+**That manual version is Tier 2.** Retaining a live `WKWebView` per project and
+swapping visibility is, in effect, us re-implementing the slice of "a browser"
+that isn't the rendering engine — the session/tab/cache-continuity layer. The gap
+between `WKWebView` and Safari *is* the Tier-2 work. We weren't handed it for free
+because our token + isolation model is stricter than a browser's (every project is
+its own origin with its own credential), and stricter isolation is precisely what
+defeats shared-session caching.
+
 ## Future optimisations (cheap → expensive)
 
 ### 1. Kill the spinner flash on a warm re-point — *perception, LOW cost*

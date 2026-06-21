@@ -53,6 +53,7 @@
       "noFolder": "フォルダなし",
       "reAnalyse": "再分析…",
       "stopAnalysis": "分析を停止",
+      "cancelCopy": "\u30b3\u30d4\u30fc\u3092\u4e2d\u6b62",
       "showDiagnostics": "診断を表示…",
       "archive": "アーカイブ…",
       "delete": "削除…",
@@ -185,6 +186,7 @@
       "sessionsCount": "{{total}} \u4ef6\u4e2d {{complete}} \u4ef6",
       "etaMinutes": "\u6b8b\u308a\u7d04 {{count}} \u5206",
       "etaUnderMinute": "\u6b8b\u308a1\u5206\u672a\u6e80",
+      "copying": "\u30b3\u30d4\u30fc\u4e2d \u00b7 {{percent}}%",
       "stage": {
         "transcribe": "\u6587\u5b57\u8d77\u3053\u3057\u4e2d",
         "speakers": "\u8a71\u8005\u3092\u8b58\u5225\u4e2d",

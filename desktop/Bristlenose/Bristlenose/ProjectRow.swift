@@ -13,9 +13,12 @@ import SwiftUI
 ///   iCloud download arrow). Finder-esque, only appears when the project's
 ///   sources live in iCloud.
 ///
-/// **Precedence chain for the subtitle (see memory `feedback_exception_precedence_chain`):**
-/// failed > running/stopped/partial > cantFind > ready+missing > ready+unanalysed > ready (bare date).
-/// One state per row; we don't stack errors. Tooltips carry the full picture.
+/// **Precedence chain for the subtitle** lives in the pure, testable
+/// `ProjectSubtitle.resolve` (see memory `feedback_exception_precedence_chain`
+/// and `docs/design-desktop-project-status.md` §5): cantFind (availability) >
+/// failed > running > stopped/partial > ready+missing > ready+unanalysed >
+/// ready (bare date). One state per row; we don't stack errors. Tooltips carry
+/// the full picture.
 ///
 /// Slow-double-click rename is parked — `simultaneousGesture(TapGesture())` and
 /// `onTapGesture` both break List selection on macOS 26.
@@ -29,11 +32,24 @@ struct ProjectRow: View {
     let onShowInFinder: () -> Void
     let onDelete: () -> Void
     let onLocate: (() -> Void)?
-    /// Data state for this project (session count, unanalysed delta, missing
-    /// delta). Nil while a drag-onto copy sheet is up for this project — the
-    /// row falls back to "no deltas, no count" so the copy flow's own sheet
-    /// is the user's focus (handoff §Stacking rule).
+    /// Per-project watcher state — session count + unanalysed/missing deltas.
+    /// Nil before the first folder scan resolves (or when the project has no
+    /// watcher entry). An in-flight copy is surfaced via `copyFraction` + the
+    /// resolver's precedence (copying outranks the deltas), not by nil-ing this.
     let unanalysed: UnanalysedState?
+    /// Display state of a drag-import copy landing files in THIS project, or nil
+    /// when no copy targets it. Computed at the call site from
+    /// `CopyMachinery.inFlight` (matched by `projectID`) so the row re-renders as
+    /// the byte fraction ticks. Drives the "Copying · N%" / "Cancelling…"
+    /// subtitle *and* the trailing determinate ring — the row is copy's only
+    /// surface (the toolbar copy pill was removed; per-project ops live on the
+    /// row, app-global ops in the title-bar pill — §4 placement axis).
+    let copyState: CopyDisplay?
+    /// Cancels the in-flight copy into this project. Wired to the trailing ring's
+    /// hover-× and the row's "Cancel copy" context-menu item (the latter keeps
+    /// cancel reachable for keyboard / VoiceOver, mirroring run-Stop). Nil when
+    /// no cancellable copy is in flight.
+    let onCancelCopy: (() -> Void)?
     /// Called when the user taps the `+N unanalysed` subtitle segment. Caller
     /// opens the `NewFilesSheet` in watcher mode.
     let onOpenUnanalysed: (() -> Void)?
@@ -69,6 +85,8 @@ struct ProjectRow: View {
         isDropTarget: Bool = false,
         liveData: PipelineLiveData,
         unanalysed: UnanalysedState? = nil,
+        copyState: CopyDisplay? = nil,
+        onCancelCopy: (() -> Void)? = nil,
         onRename: @escaping (String) -> Void,
         onShowInFinder: @escaping () -> Void,
         onDelete: @escaping () -> Void,
@@ -81,6 +99,8 @@ struct ProjectRow: View {
         self._isRenaming = isRenaming
         self.isDropTarget = isDropTarget
         self.unanalysed = unanalysed
+        self.copyState = copyState
+        self.onCancelCopy = onCancelCopy
         self.onRename = onRename
         self.onShowInFinder = onShowInFinder
         self.onDelete = onDelete
@@ -202,19 +222,44 @@ struct ProjectRow: View {
         // information." State is communicated by the prefix glyph and
         // its semantic colour (.red for failed, .orange for cantFind
         // warning) — not by graduating the text colour.
+        //
+        // `resolve` arbitrates the precedence; this switch only *renders* the
+        // winner — i18n + date formatting live here, not in the resolver.
         switch subtitleVariant {
-        case .diagnostic(let kind, let text):
-            diagnosticSubtitle(kind: kind, text: text)
-        case .pipelineText(let text):
-            subtitleText(prefix: nil, text: text, style: .secondary)
-        case .cantFind(let prefix, let text):
-            subtitleText(prefix: prefix,
-                         prefixColor: .orange,
-                         text: text,
+        case .cantFind:
+            // `resolve` returns `.cantFind` exactly when `availability` is
+            // `.cantFind`, so we derive the reason-aware glyph + factual text
+            // from `availability` directly. cantFind's subtitle is always
+            // non-nil; the placeholder arm is defensive.
+            if let text = availability.subtitle(using: i18n) {
+                subtitleText(prefix: availability.sfSymbolName ?? "questionmark.folder",
+                             prefixColor: .orange,
+                             text: text,
+                             style: .secondary)
+            } else {
+                Text(" ").font(.caption).hidden()
+            }
+        case .failed(let summary):
+            diagnosticSubtitle(kind: .error, text: summary)
+        case .failedDiagnostic:
+            // Sidebar is the attention surface, not the detail surface —
+            // budget is ~22 EN chars before DE/ES/FR swell truncates. The
+            // toolbar pill carries the dominant category + count; the sidebar
+            // row just says "row needs your eyes". Per
+            // `feedback_sidebar_is_attention_not_affordance`.
+            diagnosticSubtitle(kind: .error,
+                               text: i18n.t("desktop.pipeline.diagnostic.header.failed"))
+        case .completedPartial:
+            diagnosticSubtitle(kind: .warning,
+                               text: i18n.t("desktop.pipeline.diagnostic.header.completed_partial"))
+        case .stopping, .running, .queued, .stopped, .partial, .unreachable,
+             .copying, .copyCancelling:
+            subtitleText(prefix: nil,
+                         text: pipelineActivityText(subtitleVariant, separator: " · ") ?? "",
                          style: .secondary)
-        case .ready(let dateText, let delta):
+        case .ready(let date, let delta):
             HStack(spacing: 4) {
-                Text(dateText).font(.caption).foregroundStyle(.secondary)
+                Text(formatBareDate(date)).font(.caption).foregroundStyle(.secondary)
                 if let delta {
                     Text("·").font(.caption).foregroundStyle(.tertiary)
                     deltaSegment(delta)
@@ -231,17 +276,54 @@ struct ProjectRow: View {
         }
     }
 
+    /// Localised visible text for the verb-led pipeline-activity variants.
+    /// `separator` is " · " for the row, ", " for VoiceOver (commas read as
+    /// pauses). Returns nil for non-activity variants — those are rendered
+    /// (and voiced) through other paths. Single source for both the visible
+    /// subtitle and the accessibility phrase, so their wording can't drift.
+    private func pipelineActivityText(_ variant: SubtitleVariant, separator: String) -> String? {
+        switch variant {
+        case .stopping:
+            return i18n.t("desktop.chrome.pipeline.stopping")
+        case .running:
+            return runningSubtitle(separator: separator)
+        case .queued(let position):
+            return i18n.t("desktop.chrome.pipeline.queuedPosition",
+                          ["position": String(position)])
+        case .stopped:
+            return i18n.t("desktop.chrome.pipeline.stopped")
+        case .partial(let transcribeOnly):
+            return i18n.t(transcribeOnly
+                ? "desktop.chrome.pipeline.transcribed"
+                : "desktop.chrome.pipeline.partialRun")
+        case .unreachable(let reason):
+            return reason
+        case .copying(let fraction):
+            // Byte-% (no file-item "N of M" source exists). "%" placement is
+            // per-locale in the string; the number is a 0…100 int (no grouping
+            // below 1000, so no locale formatting needed).
+            let percent = min(100, max(0, Int((fraction * 100).rounded())))
+            return i18n.t("desktop.chrome.pipeline.copying", ["percent": String(percent)])
+        case .copyCancelling:
+            return i18n.t("desktop.chrome.copyCancelling")
+        case .cantFind, .failed, .failedDiagnostic, .completedPartial,
+             .ready, .deltaOnly, .placeholder:
+            return nil
+        }
+    }
+
     /// Right-aligned subtitle slot. Precedence: per-project run activity wins,
-    /// otherwise the iCloud status glyph, otherwise empty.
+    /// then an in-flight copy (the determinate ring + hover-cancel — copy's home
+    /// now that the toolbar pill is gone), then the iCloud status glyph, then
+    /// empty.
     ///
     /// The activity indicator carries the *motion* signal for an in-flight run
-    /// (its determinate, time-weighted form lands with the events channel in a
-    /// later increment). The cloud glyph is the outline `icloud` (not `.fill`,
-    /// not `.and.arrow.down`): status-only, no action attached — Finder's
-    /// treatment for cloud-managed locations. macOS fetches evicted files
-    /// transparently on open; no explicit download affordance for TF. A run and
-    /// iCloud-eviction are mutually exclusive in practice (a run can't proceed
-    /// on evicted sources), but the precedence keeps it honest either way.
+    /// or copy (the determinate ring; hover swaps it for a cancel ×). The cloud
+    /// glyph is the outline `icloud` (not `.fill`, not `.and.arrow.down`):
+    /// status-only, no action attached — Finder's treatment for cloud-managed
+    /// locations. macOS fetches evicted files transparently on open; no explicit
+    /// download affordance for TF. Run, copy, and iCloud-eviction are mutually
+    /// exclusive in practice, but the precedence keeps it honest either way.
     @ViewBuilder
     private var subtitleRightSlot: some View {
         let activity = ProjectRowActivityIndicator.Kind.from(
@@ -253,6 +335,23 @@ struct ProjectRow: View {
                 kind: activity,
                 onStop: { pipelineRunner.cancel(project: project) }
             )
+        } else if let copyState {
+            // Copy is a per-project op, so its progress + cancel live on the row
+            // (not a global title-bar pill). Determinate ring + hover-cancel
+            // while copying; an indeterminate spinner during the cancel rollback
+            // (the × is gone — you can't cancel a cancel).
+            switch copyState {
+            case .copying(let fraction):
+                ProjectRowActivityIndicator(
+                    kind: .copying(fraction: fraction),
+                    onStop: onCancelCopy
+                )
+            case .cancelling:
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(width: 16, height: 16)
+                    .accessibilityHidden(true)
+            }
         } else if case .inCloud = availability {
             Image(systemName: "icloud")
                 .foregroundStyle(.secondary)
@@ -385,123 +484,20 @@ struct ProjectRow: View {
 
     // MARK: - Subtitle variant + precedence
 
-    /// One-of variants of the subtitle composition. The precedence chain
-    /// collapses concurrent conditions into a single variant before we render.
-    private enum SubtitleVariant {
-        /// A failure-shaped state (`.failed` / `.failedWithDiagnostic` /
-        /// `.completedPartial`) — a clickable `MessageKind` glyph that opens the
-        /// diagnostic popover, plus a one-line summary. No delta composition.
-        case diagnostic(kind: MessageKind, text: String)
-        /// Verb-led pipeline state (running / stopped / partial / queued /
-        /// unreachable) — text speaks; no prefix, no delta.
-        case pipelineText(String)
-        /// `.cantFind` availability — reason-aware prefix glyph + factual subtitle.
-        case cantFind(prefix: String, text: String)
-        /// `.ready` or `.inCloud` (or idle when project has analysis history) —
-        /// bare date with optional single delta segment. Cloud arrow renders
-        /// in the right slot independently.
-        case ready(dateText: String, delta: SubtitleDelta?)
-        /// Project with no `lastPipelineRunAt` (analysed via CLI / imported /
-        /// pre-this-build) but the data layer surfaced a missingFiles delta
-        /// that should still render. No date prefix; the delta is the whole
-        /// subtitle.
-        case deltaOnly(SubtitleDelta)
-        /// Nothing to say — render a hidden placeholder to reserve height.
-        case placeholder
-    }
-
-    private enum SubtitleDelta {
-        case unanalysed(count: Int)
-        case missing(count: Int)
-    }
-
-    /// Apply the precedence chain to the concurrent conditions to produce a
-    /// single subtitle variant. The chain:
-    /// 1. cantFind availability (volume issues — row is otherwise content-less)
-    /// 2. failed pipeline state (surprising; needs visibility)
-    /// 3. Other verb-led pipeline states (running / stopped / partial / queued)
-    /// 4. ready + missing delta (data drift wins over feature gap)
-    /// 5. ready + unanalysed delta
-    /// 6. ready alone (bare date)
-    /// 7. placeholder
+    /// The arbitrated subtitle state for this row. The cross-source precedence
+    /// chain lives in the pure, unit-tested `ProjectSubtitle.resolve`; this
+    /// property only marshals the row's inputs. (`subtitleContent` renders the
+    /// winner — i18n + date formatting happen there, not in the resolver.)
     private var subtitleVariant: SubtitleVariant {
-        // Availability beats everything when the project can't be reached.
-        if case .cantFind = availability {
-            if let text = availability.subtitle(using: i18n) {
-                let prefix = availability.sfSymbolName ?? "questionmark.folder"
-                return .cantFind(prefix: prefix, text: text)
-            }
-            return .placeholder
-        }
-
-        // Pipeline-state subtitles.
-        switch pipelineState {
-        case .failed(let summary, _):
-            return .diagnostic(kind: .error, text: summary)
-        case .failedWithDiagnostic:
-            // Sidebar is the attention surface, not the detail surface —
-            // budget is ~22 EN chars before DE/ES/FR swell truncates. The
-            // toolbar pill carries the dominant category + count; the
-            // sidebar row just says "row needs your eyes". Per
-            // `feedback_sidebar_is_attention_not_affordance`.
-            return .diagnostic(kind: .error, text: i18n.t("desktop.pipeline.diagnostic.header.failed"))
-        case .completedPartial:
-            return .diagnostic(kind: .warning, text: i18n.t("desktop.pipeline.diagnostic.header.completed_partial"))
-        case .running:
-            // Stopping outranks progress — the user clicked Stop, acknowledge it.
-            if isStoppingProgress {
-                return .pipelineText(i18n.t("desktop.chrome.pipeline.stopping"))
-            }
-            // Otherwise surface the live ladder — stage · N of M · ETA — instead
-            // of the bare "Analysing…". Degrades to "Analysing…" until the first
-            // measured signal lands. Routes through `.pipelineText` (lineLimit 1),
-            // so the full form truncates with an ellipsis on a narrow row; the
-            // untruncated string lives in the row tooltip.
-            return .pipelineText(runningSubtitle(separator: " · "))
-        case .queued(let position):
-            return .pipelineText(i18n.t(
-                "desktop.chrome.pipeline.queuedPosition",
-                ["position": String(position)]
-            ))
-        case .stopped:
-            return .pipelineText(i18n.t("desktop.chrome.pipeline.stopped"))
-        case .partial(let kind, _):
-            let key = kind == "transcribe-only"
-                ? "desktop.chrome.pipeline.transcribed"
-                : "desktop.chrome.pipeline.partialRun"
-            return .pipelineText(i18n.t(key))
-        case .unreachable(let reason):
-            return .pipelineText(reason)
-        case .ready:
-            // Source the date from `project.lastPipelineRunAt` rather than
-            // the embedded PipelineState date so this arm and the
-            // `.none/.scanning/.idle` fall-through arm agree on the
-            // truth-source (the persisted project model).
-            if let lastRun = project.lastPipelineRunAt {
-                return .ready(dateText: formatBareDate(lastRun), delta: pickDelta())
-            }
-            // No `lastPipelineRunAt` (CLI-analysed / imported project) — F14
-            // gates `newFiles` out at the ProjectIndex level, so `pickDelta()`
-            // here only surfaces `.missing`. Render the missing delta even
-            // without a date anchor; otherwise data-drift signal is silently
-            // dropped for legacy projects.
-            if let delta = pickDelta() {
-                return .deltaOnly(delta)
-            }
-            return .placeholder
-        case .none, .scanning, .idle:
-            // No pipeline subtitle. If we have a last-run timestamp, render
-            // the ready-style subtitle anchored on that date.
-            if let lastRun = project.lastPipelineRunAt {
-                return .ready(dateText: formatBareDate(lastRun), delta: pickDelta())
-            }
-            // No `lastPipelineRunAt` but possibly a delta — same reasoning
-            // as the `.ready` arm above.
-            if let delta = pickDelta() {
-                return .deltaOnly(delta)
-            }
-            return .placeholder
-        }
+        ProjectSubtitle.resolve(
+            availability: availability,
+            pipelineState: pipelineState,
+            isStopping: isStoppingProgress,
+            copy: copyState,
+            lastRunAt: project.lastPipelineRunAt,
+            missingCount: unanalysed?.missingFiles.count ?? 0,
+            unanalysedCount: unanalysed?.newFiles.count ?? 0
+        )
     }
 
     /// Compose the in-flight progress subtitle from the live `run_progress`
@@ -518,19 +514,6 @@ struct ProjectRow: View {
             separator: separator,
             localize: { i18n.t($0, $1) }
         )
-    }
-
-    /// Per precedence: pick ONE delta. Missing wins over unanalysed
-    /// (data drift > feature gap).
-    private func pickDelta() -> SubtitleDelta? {
-        guard let state = unanalysed else { return nil }
-        if !state.missingFiles.isEmpty {
-            return .missing(count: state.missingFiles.count)
-        }
-        if !state.newFiles.isEmpty {
-            return .unanalysed(count: state.newFiles.count)
-        }
-        return nil
     }
 
     // MARK: - Date formatting (Schema A)
@@ -653,36 +636,27 @@ struct ProjectRow: View {
 
     // MARK: - Accessibility
 
-    /// Pipeline state rendered as words for VoiceOver. Reuses the same locale
-    /// keys as the visible subtitle so wording can't drift. Exhaustive (no
-    /// `default:`) so a new `PipelineState` case forces a decision here too.
+    /// The arbitrated subtitle, rendered as words for VoiceOver — derived from
+    /// the *same* `subtitleVariant` the sighted row shows, so the spoken and
+    /// visible states can't drift (and can't compose two conditions onto one
+    /// line). Returns nil for `.cantFind` / `.ready` / `.deltaOnly` /
+    /// `.placeholder`: availability and the count/delta segments are voiced
+    /// separately in `accessibilityLabel`.
     private var pipelineStateAccessibilityPhrase: String? {
-        switch pipelineState {
-        case .running:
-            if isStoppingProgress {
-                return i18n.t("desktop.chrome.pipeline.stopping")
-            }
-            // Same ladder as the visible subtitle, comma-joined — VoiceOver reads
-            // commas as pauses ("Transcribing, 7 of 8, ~1 min left"); "·" doesn't.
-            return runningSubtitle(separator: ", ")
-        case .queued(let position):
-            return i18n.t("desktop.chrome.pipeline.queuedPosition",
-                          ["position": String(position)])
-        case .stopped:
-            return i18n.t("desktop.chrome.pipeline.stopped")
-        case .partial(let kind, _):
-            return i18n.t(kind == "transcribe-only"
-                ? "desktop.chrome.pipeline.transcribed"
-                : "desktop.chrome.pipeline.partialRun")
-        case .failed(let summary, _):
+        let variant = subtitleVariant
+        switch variant {
+        case .failed(let summary):
             return summary
-        case .failedWithDiagnostic:
+        case .failedDiagnostic:
             return i18n.t("desktop.pipeline.diagnostic.header.failed")
         case .completedPartial:
             return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")
-        case .unreachable(let reason):
-            return reason
-        case .scanning, .ready, .idle, .none:
+        case .stopping, .running, .queued, .stopped, .partial, .unreachable,
+             .copying, .copyCancelling:
+            // Comma separator: VoiceOver reads commas as pauses
+            // ("Transcribing, 7 of 8, ~1 min left"); "·" doesn't.
+            return pipelineActivityText(variant, separator: ", ")
+        case .cantFind, .ready, .deltaOnly, .placeholder:
             return nil
         }
     }

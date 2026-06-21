@@ -53,6 +53,7 @@
       "noFolder": "Žádná složka",
       "reAnalyse": "Znovu analyzovat…",
       "stopAnalysis": "Zastavit analýzu",
+      "cancelCopy": "Zru\u0161it kop\u00edrov\u00e1n\u00ed",
       "showDiagnostics": "Zobrazit diagnostiku…",
       "archive": "Archivovat…",
       "delete": "Smazat…",
@@ -194,6 +195,7 @@
       "sessionsCount": "{{complete}} z {{total}}",
       "etaMinutes": "zb\u00fdv\u00e1 ~{{count}} min",
       "etaUnderMinute": "zb\u00fdv\u00e1 <1 min",
+      "copying": "Kop\u00edrov\u00e1n\u00ed \u00b7 {{percent}} %",
       "stage": {
         "transcribe": "P\u0159epis",
         "speakers": "Rozpozn\u00e1v\u00e1n\u00ed mluv\u010d\u00edch",

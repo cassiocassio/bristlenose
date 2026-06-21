@@ -53,6 +53,7 @@
       "noFolder": "No Folder",
       "reAnalyse": "Re-analyse…",
       "stopAnalysis": "Stop Analysis",
+      "cancelCopy": "Cancel Copy",
       "showDiagnostics": "Show Diagnostics…",
       "archive": "Archive…",
       "delete": "Delete…",
@@ -188,6 +189,7 @@
       "sessionsCount": "{{complete}} of {{total}}",
       "etaMinutes": "~{{count}} min left",
       "etaUnderMinute": "<1 min left",
+      "copying": "Copying \u00b7 {{percent}}%",
       "stage": {
         "transcribe": "Transcribing",
         "speakers": "Identifying speakers",

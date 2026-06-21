@@ -1,9 +1,11 @@
 import SwiftUI
 
 /// Toolbar pill + popovers for the on-device model setup flow (flow B,
-/// model-first). Self-hides when the `OllamaDownloadModel` is idle. Mirrors
-/// `CopyProgressPill`'s visual envelope (Capsule + secondary stroke) so the
-/// two pills read as the same surface.
+/// model-first). Self-hides when the `OllamaDownloadModel` is idle. The
+/// `.status`-zone toolbar pill is now reserved for app-global concerns like
+/// this one (per-project copy/run progress moved to the sidebar row — see the
+/// placement axis in `docs/design-desktop-project-status.md` §4); its visual
+/// envelope is a Capsule + secondary stroke.
 ///
 /// The pill is a click target; the popover it opens is phase-driven, so a
 /// single presentation walks the user through `choosingModel` → `needsOllama`

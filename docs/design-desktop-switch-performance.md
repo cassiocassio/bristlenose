@@ -229,7 +229,9 @@ Complexities:
   finishes" machinery.
 - **Pairs with Phase C.** Multi-window already implies multiple live WebViews, so
   the retention infrastructure is shared. Tier 2 is most natural **with or after
-  Phase C**, not before.
+  Phase C**, not before. This doc is the switch-*latency* slice; the broader
+  multi-project + multi-window architecture and its open options (the family A/B/C
+  serve-model call) live in the umbrella doc `docs/design-workspace.md`.
 
 ### 4. (Adjacent, frontend lane) Cheaper SPA cold-mount
 

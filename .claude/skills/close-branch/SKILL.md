@@ -17,6 +17,25 @@ If no branch name was provided (`$0` is empty), run `git worktree list` and show
 
 **Idempotency:** If this skill was partially run before (e.g. stale marker exists but BRANCHES.md wasn't updated), detect what's already done and skip to the first incomplete step.
 
+**Instrumentation:** logs via `bash /Users/cassio/Code/bristlenose/.claude/skills/_shared/wflog.sh close-branch <step> "<detail>"` (appends to `.claude/workflow-log.jsonl`; `BRISTLENOSE_WORKFLOW_DEBUG=1` echoes to stderr). Non-fatal.
+
+## Step 0: Forgiving route check
+
+```bash
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:$PATH"; hash -r 2>/dev/null || true
+bash /Users/cassio/Code/bristlenose/.claude/skills/_shared/wflog.sh close-branch start "$0"
+```
+
+```bash
+git worktree list
+```
+
+Routing is read from **git reality** (the live worktree list), not a state file. If `git worktree list` shows no linked worktrees — only the main checkout at `/Users/cassio/Code/bristlenose` — there's no branch to close; the work was trunk:
+
+> "No worktree branches to close — your work is on `main`. Did you mean `/close-feature`? `/close-branch` merges and tears down a worktree branch."
+
+Tell the user to run `/close-feature` and stop, unless they confirm they really do have a worktree branch `$0` to close. (The real safety gate is Step 1, which hard-stops unless you're on `main` in the main repo — Step 0 is only a wrong-skill nudge.)
+
 ## Step 1: Verify location (CRITICAL SAFETY CHECK)
 
 Check that:
@@ -29,7 +48,7 @@ If ANY of these checks fail, **stop immediately** with:
 
 ## Step 2: Check merge status
 
-**First, determine the merge-back target.** Most branches fork from `main` and merge back to `main`. Stacked branches (created via `/new-feature --base=<other>`) fork from another in-flight branch and typically merge back to that branch first, riding into main as part of the parent's eventual merge.
+**First, determine the merge-back target.** Most branches fork from `main` and merge back to `main`. Stacked branches (created via `/new-branch --base=<other>`) fork from another in-flight branch and typically merge back to that branch first, riding into main as part of the parent's eventual merge.
 
 Read `docs/BRANCHES.md` and look for a `**Forked from:**` line in `$0`'s Active Branches section. If present, that's the base. If absent, the base is `main`. Call this `$BASE`.
 
@@ -316,6 +335,10 @@ git commit -m "close $0 branch, update BRANCHES.md"
 ```
 
 ## Step 11: Report
+
+```bash
+bash /Users/cassio/Code/bristlenose/.claude/skills/_shared/wflog.sh close-branch done "$0"
+```
 
 Print a summary of everything that was done:
 

@@ -9,7 +9,13 @@ End the current session. "Verify, document for humans and for robots, commit, cl
 
 This skill has three phases: **verify**, **document**, **commit + close out**. Run all three unless the user says to skip one.
 
+**Instrumentation:** logs milestones to the shared workflow log alongside the bookend skills — `bash .claude/skills/_shared/wflog.sh end-session <step> "<detail>"` appends to `.claude/workflow-log.jsonl`; `BRISTLENOSE_WORKFLOW_DEBUG=1` echoes each to stderr. Milestones: `start`, `verify`, `done`. Non-fatal — a logging failure must never stop the close-out. (Uniform observability across the workflow family; end-session also keeps its own `last-end-session.json` sentinel + `audit-log.jsonl` telemetry.)
+
 ## Phase 1: Verify (green before documenting)
+
+```bash
+bash .claude/skills/_shared/wflog.sh end-session start
+```
 
 **Skip condition:** if the only changes since the last commit are documentation files (`.md`, `.txt`, locale `.json`, `CLAUDE.md`, `TODO.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `MEMORY.md`, `SKILL.md`), skip Phase 1 entirely — there's nothing to break. Check with `git diff --name-only` and `git diff --cached --name-only` and `git ls-files --others --exclude-standard`.
 
@@ -22,6 +28,10 @@ If code files were changed:
 If anything fails, **stop and fix before documenting**. Don't document a broken state.
 
 ## Phase 2: Document
+
+```bash
+bash .claude/skills/_shared/wflog.sh end-session verify "<pass|skipped-docs-only>"
+```
 
 Two audiences, done in parallel where possible.
 
@@ -295,11 +305,11 @@ If this session did not work off a HANDOFF, skip this step.
 
 If this session was a diagnostic / sandpit / planning walk that identified one or more follow-up branches the next session should pick up — **write a handoff prompt for each** before closing out. Do not assume the next session will reverse-engineer it from your logs.
 
-Path: `~/Code/bristlenose/docs/private/handoffs/<branch>.md` (gitignored, lives in main repo, picked up automatically by `/new-feature <branch>`).
+Path: `~/Code/bristlenose/docs/private/handoffs/<branch>.md` (gitignored, lives in main repo, picked up automatically by `/new-branch <branch>`).
 
 Required shape: see `docs/private/handoffs/README.md` in that directory. Sections — Purpose / Context (cold-read) / Spec / Call sites / Acceptance / Out of scope / Open questions. Self-contained — readable cold by a fresh session.
 
-**`/new-feature` invocation line — `--kind` is a closed enum.** When you draft the recommended `/new-feature <branch> --plan=… --kind=… --purpose=… --files=…` line at the bottom of the handoff, `--kind` MUST be one of the values in `docs/BRANCHES.md` § "Branch Kinds" — the single source of truth. Currently: `feature | bugfix | refactor | docs | ci | chore | spike | diagnostic | parked`. Pick the one that best matches the work shape. Kind is descriptive metadata for human readers of BRANCHES.md, not control flow. `/new-feature` rejects anything outside the enum and stops before creating the branch — so if you're unsure, check `docs/BRANCHES.md` rather than guessing.
+**`/new-branch` invocation line — `--kind` is a closed enum.** When you draft the recommended `/new-branch <branch> --plan=… --kind=… --purpose=… --files=…` line at the bottom of the handoff, `--kind` MUST be one of the values in `docs/BRANCHES.md` § "Branch Kinds" — the single source of truth. Currently: `feature | bugfix | refactor | docs | ci | chore | spike | diagnostic | parked`. Pick the one that best matches the work shape. Kind is descriptive metadata for human readers of BRANCHES.md, not control flow. `/new-branch` rejects anything outside the enum and stops before creating the branch — so if you're unsure, check `docs/BRANCHES.md` rather than guessing.
 
 **The test:** "If a future Claude session opened the new branch and read only this file, would they know exactly what to do?" If no, expand the handoff before closing the session. The cost of writing it now is a few minutes; the cost of skipping it is the next session re-doing the diagnostic walk to figure out its own purpose.
 
@@ -348,6 +358,10 @@ If this session did **not** identify follow-up branches, skip this step.
    `audit_version` records which version of the Durable-artefact audit (Scan A + B) ran during this end-session. Bump when the matcher or doc set changes materially. `/close-branch`'s Step 3.5 reads it to distinguish "sentinel current with current audit" from "sentinel from before audit feature / from old audit_version" — both treated as stale and re-prompted. Current `audit_version`: `1`.
 
    Timestamp via `date -u +"%Y-%m-%dT%H:%M:%SZ"`. Write only on successful completion of Phase 3 commit (or successful no-op skip). If `/end-session` aborts mid-phase, leave any prior sentinel in place — stale-but-truthful beats absent. Re-running `/end-session` overwrites with the new timestamp; that's fine.
+
+   ```bash
+   bash .claude/skills/_shared/wflog.sh end-session done
+   ```
 
 14. **Maintenance schedule check** — read the "Dependency maintenance" section of `TODO.md`. If today's date is past any unchecked quarterly/annual item, remind the user it's due.
 

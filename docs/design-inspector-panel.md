@@ -112,7 +112,7 @@ Paste this into a new Claude Code session to start the build:
 
 There's a plan file at `/Users/cassio/.claude/plans/vectorized-zooming-puddle.md` — read it first, it has the full design spec. Also read the design doc at `docs/design-inspector-panel.md` for problem context and design exploration history. Read the v3 mockup at `docs/mockups/analysis-inspector-panel-v3.html` for visual reference (the plan supersedes the mockup where they differ).
 
-Start by creating a feature branch with `/new-feature inspector-panel`.
+Start by recording the task with `/new-feature inspector-panel` (trunk — work on `main`; use `/new-branch inspector-panel` only if you need an isolated env).
 
 **Implementation order:**
 

@@ -65,7 +65,7 @@ The `multi-project-drag-onto` branch shipped (in tree, awaiting QA) a substantia
 
 - **`.dropDestination(for:action:isTargeted:)` per-row.** Replaces the previous SidebarDropDelegate + GeometryReader + custom hit-test machinery. Sidesteps macOS Cocoa-vs-SwiftUI coordinate-space bugs around `DropInfo.location` ([Apple Forums thread 732076](https://developer.apple.com/forums/thread/732076), [thread 667994](https://developer.apple.com/forums/thread/667994)). This is the modern Apple pattern; V1's drag-enter evaluator plugs into it as the `action`/`isTargeted` closure logic.
 - **`CopyMachinery.swift`** — same-volume `clonefile` via `FileManager.copyItem`, cross-volume real copy with `Progress`, Cancel + rollback, disk-space precheck. Drop-onto-row's "add files to this project" workflow now actually moves bytes. V1 doesn't touch this; it's the cohort-1 capability that V1's polish pass leaves alone.
-- **`CopyProgressPill.swift`** — toolbar pill mirroring `PipelineActivityItem` visual envelope; shows label + progress + Cancel.
+- **Copy progress on the project row** — copy progress rides the project's sidebar row (determinate ring + `"Copying · N%"` + hover-cancel; `ProjectRow.swift`, `ProjectSubtitle.swift`). The standalone `CopyProgressPill.swift` toolbar pill it originally used was deleted (19 Jun 2026 — copy is a per-project op, so it lives on the row).
 - **`NewFilesSheet.swift`** — stub for [#14](https://github.com/cassiocassio/bristlenose/issues/14) (folder watcher); replaced when that lands.
 - **`containedAnalysedProjectName(in:)`** helper for detecting parent-folder-contains-BN-project shape. V1 generalises this from "return first" to "return list of all nested" but the scan logic is in place.
 - **Self-drop accent flash** (0.4s, [ContentView.swift:942-948](../desktop/Bristlenose/Bristlenose/ContentView.swift#L942)). Matches V1 rule 6 exactly — keep as-is.
@@ -270,7 +270,7 @@ All platform-specific intelligence (Teams/Zoom/Meet naming, session grouping, pa
 ### Keep (cohort 1 work V1 builds on)
 
 - **Per-row `.dropDestination(for:action:isTargeted:)`.** Modern Apple pattern; V1's evaluator plugs in as the action/isTargeted logic.
-- **`CopyMachinery` + `CopyProgressPill` + `NewFilesSheet` stub.** Unchanged. The drop-onto-row workflow they implement is orthogonal to V1's empty-sidebar concerns.
+- **`CopyMachinery` + copy-on-row (`ProjectRow` / `ProjectSubtitle`) + `NewFilesSheet` stub.** Unchanged by V1. The drop-onto-row workflow they implement is orthogonal to V1's empty-sidebar concerns. (`CopyProgressPill` was deleted 19 Jun 2026 — copy progress moved onto the row.)
 - **`LocateFlow.folderLooksAnalysed(url:)`.** Reused as rule 2a / 2b detector.
 - **`containedAnalysedProjectName(in:)` scan logic.** Generalised to return a list (see Add); the directory-walking is already correct.
 - **`s01_ingest.discover_files()` + `group_into_sessions()`.** Unchanged. The post-drop pipeline runs these exactly as the CLI does today.

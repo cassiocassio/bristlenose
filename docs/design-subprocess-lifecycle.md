@@ -10,6 +10,7 @@ trued-against: HEAD@port-v01-ingestion on 2026-04-24 (post Stop fixes)
 
 ## Changelog
 
+- _2026-06-21_ — repointed the "user-task progress surfaces" reference off the deleted `PipelineActivityItem` onto the shipped sidebar-row surfaces (`ProjectRowActivityIndicator` / `ProjectRow`); per-project progress now lives on the row.
 - _2026-04-24 (evening)_ — Stop-is-a-lie + stale-pill alpha blockers fixed and documented. Bug banners replaced with "Fixed" content citing commits `896c074` (kill fix), `c0eb709` (escalation), `2b5475f` (`.running` transition), `da5cc45` (log tail + `isStopping`). Inline body updated with new flags (`attachedFromOrphan`, `isStopping`) and helpers (`logFileURL`, `readLogTail`, `scheduleOrphanCancelEscalation`, `orphanLogOffsets`).
 - _2026-04-24 (afternoon)_ — Tier 2 truing follow-up: cite commit `49930e4` for the owned-process cancel-flag fix (was "this branch, working-tree"); add corner-case notes for the `projectIndex`-lookup PID-file leak (`PipelineRunner.swift:776-778`) and the spawn-vs-`writePIDFile` race (`:737-742`).
 - _2026-04-23_ — trued up during port-v01-ingestion QA: PID file naming correction (shipped is `<uuid>.pid` without `<role>-` prefix); `atexit` ownership correction (Swift side removes, not Python); sandbox-compat scoped (`/bin/ps` exec in `aliveOwnedRunPID` is also incompatible, not just `lsof`); ServeManager port range corrected (`:5173,8150-9149`); Stop-is-a-lie bug called out in §Cancellation; attached-orphan visibility gap (stale "Starting up" pill) called out in §The design; `stopAll()` marked as planned. Anchors: `PipelineRunner.swift:341-358, 626-660, 690`, `ServeManager.swift:305-334`. Commits: 6d08f3f, 5e254cd.
@@ -31,7 +32,7 @@ trued-against: HEAD@port-v01-ingestion on 2026-04-24 (post Stop fixes)
 
 The line between the two: did the user explicitly ask for this thing to happen? `run` yes (they dropped a folder), `serve` no (it's how the report gets to the WebView). Autocode yes (they clicked Apply), the SQLite WAL writer no.
 
-This design is about the **infrastructure** half. User-task progress surfaces (`PipelineActivityItem`, `ActivityChipStack`) are already in place and stay as they are. What changes here is the part the user shouldn't see — orphan reconciliation, port cleanup, sandbox-compat probes.
+This design is about the **infrastructure** half. User-task progress surfaces (the sidebar row's progress ring + subtitle — `ProjectRowActivityIndicator`, `ProjectRow`; `ActivityChipStack` in the report SPA) are already in place and stay as they are. What changes here is the part the user shouldn't see — orphan reconciliation, port cleanup, sandbox-compat probes.
 
 The question this design answers: when an attached orphan from a previous launch shows progress in the toolbar pill, the user should see exactly what they'd see if we'd just spawned it. Same surface. Same affordances. They should never know it was an orphan. That's the test.
 

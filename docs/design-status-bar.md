@@ -20,10 +20,12 @@ Move the pipeline status pill out of the window **toolbar** and into an
 the owner: *"less at the top eye level."* The bottom strip could also carry
 secondary chrome (zoom level, view state) that doesn't earn a toolbar slot.
 
-The pill currently lives at `ToolbarItem(placement: .status)` in
-`desktop/Bristlenose/Bristlenose/ContentView.swift` (`PipelineActivityItem`),
-competing with Export, Tags, Heatmap, Search, Back/Forward, and the tab picker
-for the top strip.
+Until June 2026 the per-project pipeline pill (`PipelineActivityItem`) lived at
+`ToolbarItem(placement: .status)`, competing with Export, Tags, Heatmap, Search,
+Back/Forward, and the tab picker for the top strip. That per-project pill was
+**deleted** (commit `8ffa470`) — per-project status moved onto the sidebar row, and
+`.status` is now reserved for app-global pills (`OllamaDownloadPill`). The
+exploration below predates that move.
 
 ## Context research — macOS conventions
 
@@ -222,8 +224,8 @@ controls migrating downward).
 ## References
 
 - Code: `desktop/Bristlenose/Bristlenose/ContentView.swift` (toolbar),
-  `PipelineActivityItem.swift`, `PipelineSummary.swift`,
-  `ProjectAvailability.swift`, `ProjectRow.swift`.
+  `ProjectDiagnosticPopover.swift`, `ProjectRowActivityIndicator.swift`,
+  `PipelineSummary.swift`, `ProjectAvailability.swift`, `ProjectRow.swift`.
 - SPA chrome: `frontend/src/components/` — `NavBar`, `ViewSwitcher`,
   `SearchBox`, `TagFilterDropdown`, `Footer`, `MicroBar`, `RefreshButton`.
 - Related docs: `docs/design-pipeline-diagnostic-popover.md` (pill states,

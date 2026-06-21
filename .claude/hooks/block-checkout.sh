@@ -30,7 +30,7 @@ if echo "$COMMAND" | grep -qE '(^|\s*&&\s*|;\s*)git\s+(checkout|switch)\s'; then
   fi
 
   # Block everything else — this is a feature branch checkout in the main repo
-  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Blocked: do not check out feature branches in the main bristlenose/ directory. Use git worktrees instead. Run /new-feature <name> to create a new worktree, or cd to an existing one at /Users/cassio/Code/bristlenose_branch <name>/"}}'
+  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Blocked: do not check out feature branches in the main bristlenose/ directory. Use git worktrees instead. Run /new-branch <name> to create a new worktree, or cd to an existing one at /Users/cassio/Code/bristlenose_branch <name>/"}}'
   exit 0
 fi
 

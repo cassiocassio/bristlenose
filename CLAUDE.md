@@ -152,10 +152,10 @@ See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check
 - **Transitive bare-name shellouts from PyPI deps break under macOS App Sandbox.** `bundled_binary_path("ffmpeg")` only helps callers we control — but PyPI deps like `mlx_whisper.audio.load_audio` shell out to bare `"ffmpeg"` via `subprocess.run(["ffmpeg", …])`, bypassing our helper. Under the sandbox the inherited PATH excludes Homebrew, so the bare lookup fails with `[Errno 2] No such file or directory: 'ffmpeg'` and transcription silently produces empty transcripts. Fix: `prepend_bundled_to_path()` in `bristlenose/utils/bundled_binary.py` is called from `bristlenose/__init__.py` before any submodule loads. No-op outside the bundle. Same fix transparently covers `faster_whisper` and any other transitive bare-name shellout. **When adding a new PyPI dep that processes media files, audit it for bare-name shellouts** — `grep -r 'subprocess.*\["ffmpeg"\|"sox"\|"mediainfo"' .venv/lib/python*/site-packages/<dep>` will catch the common ones. The PATH-prepend already handles ffmpeg/ffprobe; for other binaries you'd need to add them to the bundle datas list and extend `bundled_binaries_dir()`.
 - **Python 3.12+ `mimetypes.init([])` doesn't skip system files.** Intuition says "pass empty list = skip system walk." Wrong. CPython 3.12.13 `mimetypes.py:378` does `files = knownfiles + list(files)` when `files` is non-None — so `init([])` reads `knownfiles + []` = the full system list. Under macOS App Sandbox those reads raise `PermissionError`, which `init()` doesn't catch — `mimetypes._db` stays poisoned and every subsequent `guess_type()` raises, surfacing as HTTP 500 on `/static/*.js`. The reliable escape hatch is `mimetypes.knownfiles = []` *before* any init (lazy or explicit) fires. Done in `bristlenose/__init__.py:8-22` so it lands before any submodule import. See `docs/design-desktop-asset-serving.md` "Shipped upstream fix" subsection
 - **In a worktree, double-check absolute paths in Edit/Write calls.** When the worktree's path looks like `/Users/cassio/Code/bristlenose_branch <name>/<file>` and the main repo's path is `/Users/cassio/Code/bristlenose/<file>`, an Edit call to the latter silently lands the change on `main`'s working tree, NOT this worktree. Symptom: `git status` in the worktree shows nothing changed; `git status` in main shows an unwanted modification. Particularly easy to trip when grep output uses relative paths (`../bristlenose/...` from `frontend/`) and you mentally translate to an absolute path. Always start absolute paths with the current `pwd` prefix; if in doubt run `pwd` first. Recovery: `cd /Users/cassio/Code/bristlenose && git checkout -- <file>` (safe if main is clean), then redo with the right worktree path.
-- **Worktrees don't inherit gitignored binaries.** `desktop/Bristlenose/Resources/{ffmpeg,ffprobe,models/}` are large static binaries fetched once into the main repo via `desktop/scripts/fetch-ffmpeg.sh` (gitignored, won't follow worktrees). If you open a worktree's `Bristlenose.xcodeproj` and Cmd+R, Xcode's Copy Resources phase finds nothing to copy — the resulting `.app` ships *without* ffprobe and the pipeline silently can't probe video files (analysis surfaces "Failed" with no obvious cause). `/new-feature` Step 9 now symlinks these from main; if you set up a worktree by hand, do the same or run `desktop/scripts/fetch-ffmpeg.sh` from inside the worktree
+- **Worktrees don't inherit gitignored binaries.** `desktop/Bristlenose/Resources/{ffmpeg,ffprobe,models/}` are large static binaries fetched once into the main repo via `desktop/scripts/fetch-ffmpeg.sh` (gitignored, won't follow worktrees). If you open a worktree's `Bristlenose.xcodeproj` and Cmd+R, Xcode's Copy Resources phase finds nothing to copy — the resulting `.app` ships *without* ffprobe and the pipeline silently can't probe video files (analysis surfaces "Failed" with no obvious cause). `/new-branch` Step 9 now symlinks these from main; if you set up a worktree by hand, do the same or run `desktop/scripts/fetch-ffmpeg.sh` from inside the worktree
 - **Status-bar `-dirty` ≠ source dirty.** `desktop/Bristlenose/Bristlenose/GeneratedBuildInfo.swift` is regenerated every Xcode compile, so `git describe`-style status strings show `<sha>-dirty` even on a clean source tree. Don't use the `-dirty` suffix as evidence of "build is from uncommitted source"; check `git status --porcelain | grep -v GeneratedBuildInfo` if you need to know whether the bundle reflects committed code
 - **Building bundled sidecar in a worktree only updates *that* worktree's bundle.** `desktop/scripts/build-sidecar.sh` resolves `ROOT="$DESKTOP_DIR/.."` — i.e. whatever repo holds the script you ran. If the active `.app` is launching from the main-repo's Xcode project but you ran `build-sidecar.sh` from a worktree, the active bundle is stale relative to your edits. Open the worktree's `desktop/Bristlenose.xcodeproj` (not main's) so Xcode picks up the worktree's freshly-built sidecar
-- **Python 3.14's `ensurepip` is broken for `python -m venv` on some macOS installs.** If default `python3` points at 3.14 (brew-installed), `/new-feature` (or plain `python3 -m venv .venv`) fails with `ensurepip --upgrade --default-pip returned non-zero exit status 1`. Fix: use `python3.12 -m venv .venv` explicitly — 3.12 is what CI uses and what every other worktree uses. This will shake out when 3.14 tooling stabilises, but as of April 2026 it's a real papercut on fresh worktree setup
+- **Python 3.14's `ensurepip` is broken for `python -m venv` on some macOS installs.** If default `python3` points at 3.14 (brew-installed), `/new-branch` (or plain `python3 -m venv .venv`) fails with `ensurepip --upgrade --default-pip returned non-zero exit status 1`. Fix: use `python3.12 -m venv .venv` explicitly — 3.12 is what CI uses and what every other worktree uses. This will shake out when 3.14 tooling stabilises, but as of April 2026 it's a real papercut on fresh worktree setup
 - **Stale `__pycache__` can serve old CSS after theme edits.** Stage 12's static-render code reads CSS files at runtime, but stale `.pyc` bytecode can interfere with the import chain. If theme CSS changes aren't appearing in the byproduct HTML on disk (or in `bristlenose serve`'s auto-rendered output), run `find . -name __pycache__ -exec rm -rf {} +` before re-running. For daily dev, set `export PYTHONDONTWRITEBYTECODE=1` in your shell profile to prevent `.pyc` creation entirely
 - **`Console(width=min(80, Console().width))`** — the `Console()` inside `min()` is a throwaway instance that auto-detects the real terminal width. This is the intended pattern; don't cache it
 - **Homebrew tap repo must be named `homebrew-bristlenose`** (not `bristlenose-homebrew`). See `docs/design-homebrew-packaging.md`
@@ -247,54 +247,45 @@ See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check
 
 ## Working preferences
 
-### Worktree check (do this first!)
+### Branch workflow (solo — trunk by default)
 
-Feature branches live in **separate git worktrees** — each is a full working copy in its own directory. This lets multiple Claude sessions work on different features simultaneously.
+**This is a solo project; the default is trunk.** Work directly on `main`, in the main repo, in the env that's already built. Commit at every green checkpoint. **Do not spin a branch/worktree per feature** — the cost is the worktree's env build (`.[dev,serve]` venv + frontend build + ffmpeg/model symlinks + smoke test), paid on creation *and* teardown, routinely out of proportion to the work. GitHub's branch-per-feature + PR flow is built for teams across timezones; for one person it's pure ceremony. (5 → 50 → 500 devs need it; a team of one does not.)
 
-**Directory convention:** `/Users/cassio/Code/bristlenose_branch <name>`
+**A branch is free; a worktree costs an env.** `git branch foo` is a 40-byte pointer — instant, no env. `git worktree add` is a second working copy that must be built and proven. Your safety net is git *history*, not worktree *isolation*:
+- **Commit often** — every green checkpoint is a rollback point.
+- **Checkpoint before risky surgery:** `git branch -f checkpoint` (free pointer); roll back with `git reset --hard checkpoint`.
+- **Undo something already committed:** `git revert <sha>` — safe, never loses history. This is the "plausible rollback".
+- **Rescue one file from a bad session:** `git restore -s <good-sha> -- <path>`.
+- **Panic button:** `git reflog` → `git reset --hard HEAD@{n}`. Nothing is lost for 90 days.
+- **Safe remote backup, no CI/release:** `git push origin main:wip`.
 
-| Directory | Branch | Purpose |
-|-----------|--------|---------|
-| `bristlenose/` | `main` | Main repo — always stays on main |
-| `bristlenose_branch codebook/` | `codebook` | Codebook feature |
+`main` is not "released" until *you* push + tag (evening rule), so a half-done change on local `main` is fine — just don't push it. Trunk is also *safer* for this repo: the two worst recorded incidents (edits landing on the wrong working copy; stale `__pycache__` after an in-place switch) were both *caused by* the multi-worktree pattern. Fewer working copies = fewer feet to shoot.
 
-**At the start of every session**, check which worktree you're in and whether it's correct for the task:
+**Don't default to offering a new branch.** When a handoff/plan is written, the default next step is to do the work on `main`, NOT to hand back a `/new-branch` invocation. Only propose a worktree when the exception below genuinely applies, and say *why*. (Defaulting-to-branch is exactly how the retired "short-lived branches / one-branch-plus-nudges" rules accreted — don't regrow them. See memory `feedback_solo_trunk_default.md`.)
+
+**The worktree is the rare exception — only when two envs must be live at once:** a long pipeline run going while you code something else, or a genuine second parallel Claude session that would clobber the working tree. Then — and only then — use **`/new-branch`** (never hand-roll a worktree; DIY ones produce broken envs: missing extras, unbuilt frontend, missing symlinks). Checkpoint *pointers* (`git branch -f`) are not worktrees and need no skill.
+
+**Session-start check** (cheap, still worth it):
 
 ```bash
 pwd
 git branch --show-current
-cat docs/BRANCHES.md
 test -f .claude/setup-incomplete && cat .claude/setup-incomplete
-ls .claude/plans/$(git branch --show-current).md 2>/dev/null
 ```
 
-If `.claude/setup-incomplete` exists, the worktree's environment isn't fully prepped (`/new-feature` either aborted or hasn't finished). **Do not start real work until the user re-runs `/new-feature` or completes setup manually** (frontend build, venv, smoke test). Tell the user the sentinel is present and wait. The file is removed only when the smoke test passes — its absence means the env is ready.
+If you're in a worktree (rare) and `.claude/setup-incomplete` exists, its env isn't prepped — don't start real work until `/new-branch` finishes or setup is done manually (frontend build, venv, smoke test). A `PreToolUse` hook in `.claude/settings.json` blocks `git checkout`/`git switch` to feature branches from the main repo — harmless under trunk (you stay on `main`) and it still guards against accidental in-place checkouts.
 
-**Session-handoff sentinels:** `.claude/setup-incomplete` (negative — `/new-feature` setup didn't finish) and `.claude/last-end-session.json` (positive — `/end-session` signed off; carries `head_sha` for drift detection). Both gitignored. `/close-branch` reads the latter and prompts before archiving a branch that was never end-sessioned or has drifted since.
+**Session-handoff sentinels:** `.claude/setup-incomplete` (negative — `/new-branch` setup didn't finish) and `.claude/last-end-session.json` (positive — `/end-session` signed off; carries `head_sha` for drift detection). Both gitignored.
 
-**Branch handoff plan:** if `HANDOFF.md` exists at the worktree root (a gitignored symlink to `.claude/plans/<current-branch>.md`), that file is the **starting brief** for this branch — written by the prior diagnostic / sandpit / planning session that identified this work. **Read it first. Don't synthesise from sandpit logs.** Canonical home is `~/Code/bristlenose/docs/private/handoffs/<branch>.md` in the main repo (gitignored, backed up by `backup.sh`); `/new-feature` copies it into `.claude/plans/` and creates the `HANDOFF.md` symlink automatically. If absent, the branch was hand-typed without a prior session — ask the user for a brief. **Conversely:** when ending a diagnostic / sandpit / planning session that identifies follow-up branches, write the handoff for each before closing — `/end-session` enforces this.
+**Branch handoff plan:** if `HANDOFF.md` exists at a worktree root (gitignored symlink to `.claude/plans/<branch>.md`), it's the **starting brief** — read it first, don't synthesise from sandpit logs. Canonical home is `docs/private/handoffs/<branch>.md` (gitignored, backed up by `backup.sh`). **Handoffs are NOT specs** — before drafting a plan, run `git log -3 -p <files-the-handoff-names>` and grep commit bodies for decision-shapes ("not Y", "deferred to", "rejected", "chose X over Y", "post-TF", "status-only"). If a recent commit chose against an affordance the handoff proposes, raise it as a question BEFORE planning. Recent commits win unless the user overrides. (Memory `feedback_handoff_not_a_spec.md`.)
 
-**Handoffs are NOT specs — cross-check them before drafting a plan.** A handoff can be days old and unaware of commits that landed on the same surface in the interim. Before writing the plan, **always run `git log -3 -p <files-the-handoff-names>` and grep commit bodies for decision-shapes** ("not Y", "deferred to", "explicitly rejected", "chose X over Y", "post-TF", "v2 only", "status-only", "never wire"). If a recent commit on the same surface explicitly chose against an affordance the handoff proposes, surface it in a clarifying question BEFORE writing the plan — don't let it appear during implementation. **The handoff doesn't automatically win** — recent commits do, unless the user explicitly overrides. Worked example: multi-project-cloud-evicted (18 May 2026) — handoff proposed `icloud.and.arrow.down` + Download button, F49 (`e4037d5`, 15 May) had explicitly rejected both. Cost: a wasted plan-cycle the user had to push back on twice. See memory `feedback_handoff_not_a_spec.md`.
+**Skills for the worktree exception (not the default path):**
+- **`/new-branch <name>`** — creates branch + worktree + venv + symlinks + `docs/BRANCHES.md` entry. Use only for genuine parallel-env work; never hand-roll a worktree (DIY ones ship broken envs). If `disable-model-invocation` blocks auto-invocation, read `.claude/skills/new-branch/SKILL.md` and follow every step manually.
+- **`/new-feature <name>`** / **`/close-feature`** — the trunk default: start / finish work on `main`, no worktree. See `.claude/skills/WORKFLOW.md`.
+- **`/close-branch <name>`** — archives a merged worktree branch; reads `.claude/last-end-session.json` and prompts before archiving an un-end-sessioned or drifted branch.
+- **Reverting a merge:** `git revert -m 1 <merge-commit-hash>`.
 
-If the user starts asking about a feature without specifying, **remind them to check** which worktree they want to work in. Never check out a feature branch inside the main `bristlenose/` directory — use the worktree instead. A `PreToolUse` hook in `.claude/settings.json` blocks `git checkout`/`git switch` to feature branches when CWD is the main repo.
-
-**Skills for branch lifecycle:**
-- **`/new-feature <name>`** — creates branch, worktree, venv, pushes to origin, updates `docs/BRANCHES.md`, pauses for Finder labelling
-- **`/close-branch <name>`** — archives a merged branch: drops a `_Stale - Merged by Claude DD-Mon-YY.txt` marker in the worktree directory, detaches worktree from git (directory stays on disk), asks before deleting local/remote branches, updates `docs/BRANCHES.md`
-- **Reverting a merge:** `git revert -m 1 <merge-commit-hash>` — creates a new commit that undoes the merge. The worktree directory is still on disk for further work
-
-**If `/new-feature` cannot be invoked** (e.g. `disable-model-invocation` blocks auto-invocation), read `.claude/skills/new-feature/SKILL.md` and follow every step manually. Do not improvise — the skill contains critical setup steps (venv with `.[dev,serve]` extras, symlinks, BRANCHES.md entry) that are easy to miss.
-
-**Creating a new feature branch worktree manually** (or use `/new-feature`):
-```bash
-cd /Users/cassio/Code/bristlenose
-git branch my-feature main
-git worktree add "/Users/cassio/Code/bristlenose_branch my-feature" my-feature
-```
-
-Each worktree needs its own `.venv` to run tests. Commits are shared instantly across all worktrees.
-
-See `docs/BRANCHES.md` for active branches, worktree paths, what files they touch, and conflict resolution strategies.
+See `docs/BRANCHES.md` for any active worktrees and the parked set.
 
 ### General
 

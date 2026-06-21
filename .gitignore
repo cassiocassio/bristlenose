@@ -113,6 +113,13 @@ HANDOFF.md
 # End-session Durable-artefact audit telemetry (per-worktree, gitignored)
 .claude/audit-log.jsonl
 
+# Workflow-skill runtime state (per-working-dir; the bookend skills write these)
+.claude/workflow-log.jsonl
+.claude/current-task.json
+
+# Pre-bookend skill backups (local insurance; git history is the real backup)
+.claude/skills-backup-*/
+
 # Local backups of agent prompts (e.g. .bak-pre-hig-corpus-YYYY-MM-DD)
 .claude/agents/*.bak-*
 

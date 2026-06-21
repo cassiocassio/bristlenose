@@ -39,6 +39,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
+| `bristlenose_branch mac-app-layout-reorg/` | `mac-app-layout-reorg` | feature | Phase 1 macOS desktop nav + toolbar rearrangement — 5 tabs → sidebar lens rail, toolbar rebuilt to Tahoe HIG, Liquid Glass (macOS-26 gated); native shell only |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -141,6 +142,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `chunked-quote-extraction` _(merged)_ | `bristlenose_branch chunked-quote-extraction/` _(detached, on disk)_ | local only — merged to main 9 Jun 2026 (`927fa63`) |
 | `background-runs-view-switch` _(merged)_ | `bristlenose_branch background-runs-view-switch/` _(detached, on disk)_ | local only — merged to main 16 Jun 2026 (`bf03d55`) |
 | `determinate-progress` _(merged)_ | `bristlenose_branch determinate-progress/` _(detached, on disk)_ | local only — merged to main 17 Jun 2026 (`a1fa49a`) |
+| `mac-app-layout-reorg` | `bristlenose_branch mac-app-layout-reorg/` | local only |
 
 
 
@@ -197,6 +199,31 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Potential conflicts with other branches:**
 - `symbology` — low risk (touches render/template files, not signal card layout)
 - `drag-push` — low risk (sidebar CSS, not signal cards)
+
+---
+
+### `mac-app-layout-reorg`
+
+**Kind:** feature — Phase 1 of the macOS desktop nav + toolbar rearrangement (implements `docs/design-desktop-nav-toolbar-rearrangement.md`, rev 2)
+**Status:** Just started
+**Started:** 21 Jun 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch mac-app-layout-reorg/`
+**Remote:** local only (push when ready)
+
+**What it does:** Relocates the five report tabs (Project · Sessions · Quotes · Codebook · Analysis) out of the toolbar segmented `Picker` and into a fixed "lens" band at the top of the project sidebar, then rebuilds the freed toolbar to the Tahoe toolbar HIG (visible Export menu, spatially-split inspector toggles near the panels they control, search trailing-rightmost, back/forward history capsule). Adds a `.lens(Tab)` case to `SidebarSelection` so one `List` carries both project selection and the lens mode-rail, riding the native `List(selection:)` path (no `.onTapGesture` — the macOS-26 tap-breaks-selection class). Adopts Liquid Glass on macOS 26+ (`#available`-gated; Sequoia 15 floor shows ordinary native chrome — graceful, not broken), including content-slides-under-the-floating-toolbar and a `themeColor`-driven chrome tint. **Native shell (`desktop/`) only — ~zero frontend change**: the lens rows fire the same `switchToTab` bridge the `Picker` does today. **Out of scope (hard guard, per spec + commit `fdd09e7`):** project-list drag-drop / drag-reorder — reuse the shipped behaviour, don't reopen it (folder-drag AppKit surgery is recorded post-TF).
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/ContentView.swift` — `SidebarSelection` + `.lens(Tab)`, sidebar `List` lens band, toolbar rebuild, `switchToTab` bridge, single explicit title `ToolbarItem` (not `.navigationTitle` — the documented duplicate-item trap, `desktop/CLAUDE.md:409`)
+- `desktop/` SwiftUI sidebar/toolbar surfaces — new `LensRow` view struct + pure `LensItem.tab` mapping helper (the one automated test seam, §6.4), inspector toggles, Export `Menu`
+- `desktop/CLAUDE.md` — toolbar morphing / lens-rail notes
+- `docs/design-project-sidebar.md` — row-anatomy trailing-order update + supersede the "New Project placement" section (§3.2–3.3)
+- `frontend/` — *conditional, minimal* embedded-mode top content inset for content-under-toolbar (§4.6), only if not settable natively on the WKWebView scroll
+- `docs/design-desktop-nav-toolbar-rearrangement.md` — spec updates as spec→code decisions resolve (§4.4 search port, §7 open decisions)
+
+**Potential conflicts with other branches:**
+- `drag-push` _(parked)_ — conceptually adjacent ("sidebar"), but it's the **web** sidebar (`theme/organisms/sidebar.css` + `frontend/src/hooks/useDragResize.ts`); this branch is the **desktop Swift** sidebar (`ContentView.swift`). Different surface, different files — no real overlap (and project-list drag is out of scope here anyway).
+- `living-fish`, `symbology` _(parked)_ — serve/render/theme surfaces; no desktop Swift overlap.
+- No live branch currently touches `desktop/` Swift — conflict surface is clean.
 
 ---
 

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 21 Jun 2026 (`warm-sidecar-pool` merged to main (`78b2d40`) + closed — desktop Phase A2 warm-sidecar pool (instant, crash-free project switching) is now on main. Earlier today: `project-status-line` merged (`f74961b`) + closed.)
+**Updated:** 21 Jun 2026 (parked-branch sweep — trashed 8 merged/closed worktrees: `highlighter` (worktree + local + `origin/highlighter` deleted), `s3-papercut-sweep` (local deleted), and the already-detached husks `sidebar` (`origin/sidebar` deleted), `sentiment-tags`, `responsive-playground`, `react-router`, `stabilise-ci`, `sandbox-debug`. Kept `living-fish` + `symbology` — parked work with unmerged commits, backed up on origin. Earlier today: `warm-sidecar-pool` merged to main (`78b2d40`) + closed — desktop Phase A2 warm-sidecar pool (instant, crash-free project switching) is now on main; `project-status-line` merged (`f74961b`) + closed.)
 
 ---
 
@@ -36,7 +36,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
-| `bristlenose_branch highlighter/` | `highlighter` | parked | Highlighter feature (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
@@ -135,7 +134,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `cz` _(merged)_ | `bristlenose_branch cz/` _(detached, on disk)_ | local only — merged to main 8 Jun 2026 (`ec4b849`) |
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
-| `highlighter` _(parked)_ | `bristlenose_branch highlighter/` | `origin/highlighter` |
+| `highlighter` _(closed)_ | _removed 21 Jun 2026_ | local + remote deleted — tip was an ancestor of main (nothing unmerged) |
 | `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
 | `drag-push` _(parked)_ | `bristlenose_branch drag-push/` | local only |
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
@@ -239,12 +238,12 @@ Marked parked: 1 May 2026.
 
 **Idea:** Consistent Unicode prefix symbols (§ Section, ¶ Quote, ❋ Theme) across all user-facing surfaces — navigation, headings, dashboards, analysis, tooltips, text output. Likely touches `render_html.py`, `s12_render_output.py`, `theme/templates/*`, `theme/js/{analysis,transcript-annotations,codebook}.js`.
 
-### `highlighter` — started 13 Feb 2026
+### `highlighter` — started 13 Feb 2026, closed 21 Jun 2026
 
-**Worktree:** `/Users/cassio/Code/bristlenose_branch highlighter`
-**Remote:** `origin/highlighter`
+**Worktree:** _removed 21 Jun 2026_
+**Remote:** _`origin/highlighter` deleted 21 Jun 2026_
 
-**Idea:** Highlighter feature (scope was never fully defined).
+**Idea:** Highlighter feature (scope was never fully defined). Closed in the 21 Jun parked-branch sweep — its tip (`ebef865`) was an ancestor of `main`, so nothing was unmerged; worktree, local branch, and remote all deleted.
 
 ### `living-fish` — started 26 Feb 2026
 

@@ -28,7 +28,9 @@ git branch --show-current
 
 ## Step 2: Tests + lint gate (critical)
 
-Run the gate — nothing else in this block, so the exit status is the checks', not a logger's:
+**Skip condition (docs-only):** if every file this task touched is documentation (`.md`, `.txt`, locale `.json`, `CLAUDE.md`, `TODO.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `MEMORY.md`, `SKILL.md`), there's nothing pytest or ruff can catch — skip the gate. Check this task's files with `git diff --name-only`, `git diff --cached --name-only`, and `git ls-files --others --exclude-standard`. If all are docs, log `bash .claude/skills/_shared/wflog.sh close-feature gate skipped-docs-only` and go to Step 3. (Mirrors end-session's Phase 1 docs-only skip — same rationale: a `.md`/`.txt`/locale change can't break the Python suite.)
+
+Otherwise, run the gate — nothing else in this block, so the exit status is the checks', not a logger's:
 
 ```bash
 .venv/bin/python -m pytest tests/

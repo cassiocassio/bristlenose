@@ -324,8 +324,10 @@ state.
 ## 8. Surface: the toolbar pill
 
 Lives at `placement: .status` (per `desktop/CLAUDE.md`). Self-hides when `idle`.
-Mirrors `CopyProgressPill`'s Capsule + secondary-stroke envelope so the two
-pills read as one surface. The pill is the **only** persistent control; clicking
+Uses a Capsule + secondary-stroke envelope. (It originally mirrored the toolbar
+`CopyProgressPill`; that pill was deleted 19 Jun 2026 when copy progress moved onto
+the project row, so `OllamaDownloadPill` is now the sole toolbar pill.) The pill is
+the **only** persistent control; clicking
 it opens the phase-appropriate popover. No inline buttons on the pill itself.
 
 | Phase | Icon | Label | Accessory |

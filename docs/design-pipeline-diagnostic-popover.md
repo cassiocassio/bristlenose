@@ -13,10 +13,15 @@ trued-against: HEAD@per-project-activity (518e6d3) on 2026-06-15
 > .trailing`) or via row context-menu / Project-menu "Show Diagnostics…". Throughout this doc, read
 > any reference to **"the toolbar pill"**, **`PipelineActivityItem.swift`**, **`unifiedPopoverBody`**,
 > or **`runningPopoverBody`** as the per-project surface as *superseded* — the popover taxonomy and
-> MessageKind content are unchanged, only the owning view + invocation moved. The surviving toolbar
-> pills are `OllamaDownloadPill` + `CopyProgressPill` only. The running popover (`runningPopoverBody`)
-> was deleted with the pill — running state is now the sidebar spinner, no running popover. See
-> `docs/design-sidebar-activity-indicators.md` for the new home.
+> MessageKind content are unchanged, only the owning view + invocation moved. The running popover
+> (`runningPopoverBody`) was deleted with the pill — running state is now the sidebar spinner, no
+> running popover. See `docs/design-sidebar-activity-indicators.md` for the new home.
+>
+> **Update 2026-06-21 — `CopyProgressPill` deleted too.** Copy progress later moved onto the project
+> row (determinate ring + `"Copying · N%"` + hover-cancel; `ProjectRowActivityIndicator.swift`,
+> `ProjectSubtitle.swift`), and the standalone `CopyProgressPill` was deleted (commit `4313bff`). So
+> `OllamaDownloadPill` is now the **only** surviving toolbar pill; read the `CopyProgressPill` mentions
+> in the tables below as the row's copy indicator. See `design-desktop-project-status.md` §4.
 
 > **Truing status:** Current — schema (v5), IA, message-kind taxonomy,
 > fixture contract, CLI vocabulary, Swift popover, and pass-4 cleanup all
@@ -31,6 +36,7 @@ trued-against: HEAD@per-project-activity (518e6d3) on 2026-06-15
 
 ## Changelog
 
+- _2026-06-21_ — extended the top banner to note `CopyProgressPill` was also deleted (copy progress moved onto the project row, commit `4313bff`); updated the determinate-progress + copying rows in the state-catalog tables to point at the row indicator (`ProjectRowActivityIndicator` / `ProjectSubtitle`) instead of the deleted pill. `OllamaDownloadPill` is now the only surviving toolbar pill.
 - _2026-06-05_ — **Popover & status-surface state catalog + display-kind
   taxonomy added.** New "Popover & status-surface state catalog" section
   enumerates every state the desktop app can show (with real data and its
@@ -211,7 +217,7 @@ different form when that's more appropriate and natural to the moment.
 | **Live status line** | one updating line + spinner/elapsed | running popover (`runningPopoverBody`); LLM-settings dot/spinner | shipped |
 | **Phase progression** (one popover, walks named phases, no re-anchor) | step through named phases in a single popover | **`OllamaDownloadPill`** (choosing → needsOllama → waiting → downloading → finishing → failed) | shipped (Ollama) |
 | **Accumulating rows / log** | per-bucket grid of `MessageKind` rows | diagnostic `bucketsBody`; boot-failure "last 40 lines" disclosure | shipped |
-| **Determinate progress** | 0–100% bar + Cancel | `CopyProgressPill`; `OllamaDownloadPill` when byte-total known | shipped |
+| **Determinate progress** | 0–100% bar + Cancel | copy-on-row ring (`ProjectRowActivityIndicator`); `OllamaDownloadPill` when byte-total known | shipped |
 | **Indeterminate progress** | spinner + short status line | copy-cancelling; project scan; Ollama start/finish; boot "Starting sidecar" | shipped |
 | **Choice / picker** | grid or radio list of options | `IconPickerPopover` (symbol grid); Ollama model picker (radio list) | shipped |
 | **Dialog / confirmation** (blocking on the user) | prompt + action button(s) | 4 `.alert` sites; AI & Privacy consent sheet; OllamaDownloadPill needs-Ollama phase | shipped |
@@ -285,7 +291,7 @@ is no live picker.
 
 | Surface | State(s) | Display-kind | Invocation |
 |---|---|---|---|
-| `CopyProgressPill` | copying / cancelling | Determinate progress / Indeterminate progress | real-condition-only (drag files onto a project) |
+| copy-on-row (`ProjectRowActivityIndicator` / `ProjectSubtitle`) | copying / cancelling | Determinate progress / Indeterminate progress | real-condition-only (drag files onto a project) |
 | `IconPickerPopover` | symbol grid | Choice / picker | real-condition-only (row context menu "Choose Icon…") |
 | AI & Privacy consent sheet | first-run (non-dismissable) / re-access (Done) | Dialog / choice (blocking) | real-condition-only (first launch / Bristlenose ▸ AI & Privacy…) |
 | Alerts (`.alert`, 4 sites) | duplicate-project drop; disk-space precheck; locate error; in-flight pipeline switch (destructive) | Dialog / confirmation (blocking) | real-condition-only |

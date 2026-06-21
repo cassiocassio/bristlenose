@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-06-15
-trued-against: HEAD@per-project-activity (518e6d3) on 2026-06-15
+last-trued: 2026-06-21
+trued-against: HEAD@main on 2026-06-21
 ---
 
 > **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`):** the Project menu + row context menu
@@ -13,6 +13,7 @@ trued-against: HEAD@per-project-activity (518e6d3) on 2026-06-15
 
 ## Changelog
 
+- _2026-06-21_ — re-confirmed fresh: the `project-status-line` + `warm-sidecar-pool` work (19–21 Jun) did **not** touch menu actions / `BridgeHandler.menuAction` — the catalogue still matches `MenuCommands.swift`. One new row-level affordance landed: a "Cancel copy" item on the project **row context menu** (`ProjectRow.swift`, `onCancelCopy`) — a context-menu action, not a `menuAction()` bridge dispatch, so it sits outside this catalogue's scope (noted for completeness).
 - _2026-04-24_ — Tier 1 truing follow-up (post `design-doc-review` audit): deleted the stale Future-only project-ops table that contradicted the rewritten one above it; added Shortcut column to the rewritten project-ops table (⇧⌘R, ⌘N, ⇧⌘N, ⌘⌫, ⇧⌘O); corrected `openInNewWindow` from Future to Shipped (bridge); added `chooseIcon` and `aiPrivacy` rows; added new sub-sections for View menu (Cmd+1–5, toggleSidebar, heatmap toggle), Help menu (6 actions), and Codes menu (6 wired actions, `mergeCode` moved out of project-ops); added inline alpha-gap callout for missing Analyse/Resume/Retry in the project context menu; noted `playPause` triple-dispatch (Video / Quotes / kbd). Section heading count corrected from "(8)" to "(17)".
 - _2026-04-23_ — trued up during port-v01-ingestion QA: rewrote §"Project operations — native-only or future" to reflect shipped NotificationCenter-based project ops (newProject, renameProject, deleteProject, locateProject, createNewFolder, renameFolder, deleteFolder, moveSelectedProject); kept `reAnalyse` (`.disabled(true)` per `MenuCommands.swift:397-400`) and `archive` (Phase 5) as Future; added missing entries (`openBlog`, `showAcknowledgements`, `mergeCode`); flagged `revealInFinder` label drift vs shipped `showInFinder`. Anchors: `MenuCommands.swift:355-360, 397-405, 433-466, 692-698`, `ContentView.swift:279-292, 1118-1176`. Commit: 3d9f43c.
 

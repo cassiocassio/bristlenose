@@ -1,3 +1,13 @@
+---
+status: current
+last-trued: 2026-06-21
+trued-against: HEAD@main on 2026-06-21
+---
+
+## Changelog
+
+- _2026-06-21_ — trued up, no material changes. Every load-bearing claim verified against shipped Swift: the Tier 0/1 cold-vs-warm split (`ServeManager.switchProject`), the single warm slot (`ServeManager.parked`, `ParkedSidecar.swift`), `.id("\(project.id)-\(port)")` WebView keying (`ContentView.swift`), `.nonPersistent()` per-project store (`WebView.swift`), `Cache-Control: no-store` (`app.py`). Tier 2 + the four future optimisations are correctly fenced as not-built. Added front-matter.
+
 # Desktop project-switch performance — tiers, gains, and the road to instant
 
 **Status:** A2 (warm-sidecar pool) shipped 19 Jun 2026. This doc catalogues the

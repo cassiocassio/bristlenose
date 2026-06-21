@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-06-18
-trued-against: main (bcb4187) on 2026-06-18
+last-trued: 2026-06-21
+trued-against: HEAD@main on 2026-06-21
 ---
 
 > **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`):** the per-project run glance **moved onto the
@@ -18,10 +18,20 @@ trued-against: main (bcb4187) on 2026-06-18
 > completion** (was stale until relaunch). New "Row anatomy (two-line)" section below is the doc home for
 > all three. Progress-ladder + ring details: `docs/design-sidebar-activity-indicators.md`.
 
+> **Trued 2026-06-21 (`main`, post `project-status-line` + `warm-sidecar-pool`):** the 18 Jun truing
+> above predated two same-week landings (its `bcb4187` SHA is an ancestor of the rewrite). (1) The row's
+> subtitle precedence chain was lifted out of the view into a pure, unit-tested `ProjectSubtitle.resolve`
+> (`ProjectSubtitle.swift` + `ProjectSubtitleTests.swift`), and **copy progress moved onto the row** —
+> `"Copying · N%"` + determinate ring + hover-cancel + a "Cancel copy" context-menu item (the standalone
+> `CopyProgressPill` was deleted). See "Row anatomy" below + `design-desktop-project-status.md` §4 (the
+> placement axis). (2) Switching *back* to the previous project now re-points to a parked warm sidecar
+> instead of teardown+restart — "Click behaviour" updated; see `design-desktop-switch-performance.md`.
+
 > **Truing status:** Trued. Phases 1–3 shipped; remaining drift carries inline banners. Project-menu and context-menu ASCII art trued (phantom Add Interviews / Analyse / Get Info removed). Drop matrix duplicate row clarified. Phase 2 "not shipped" list updated with strikethrough on items that did ship. Pipeline-state × run-trigger matrix at end of doc.
 
 ## Changelog
 
+- _2026-06-21_ — re-trued against `main` after the `project-status-line` + `warm-sidecar-pool` merges, which landed the day *after* the 18 Jun truing (its front-matter SHA `bcb4187` is an ancestor of the rewrite — false-fresh). Added copy-on-row to §"Row anatomy" (`"Copying · N%"` ring + hover-cancel + context-menu; standalone `CopyProgressPill` deleted); flipped §"Click behaviour" — switch-back now re-points to a parked warm sidecar (Phase A2). Anchors: `ProjectSubtitle.swift`, `ProjectRow.swift`, `ParkedSidecar.swift`, `ServeManager.swift`; commits `0842081`, `4313bff`, `beaac38`.
 - _2026-06-18_ — Trued against `main` @ `bcb4187` after the `progress-text-surfacing` merge. Running-row subtitle now shows the live progress ladder via `RunProgressSubtitle` (states table L81 updated); drag-create adopts the folder/first-item name with no inline rename (drop matrix + Phase 2 list updated, commit `09f8625`); added a "Row anatomy (two-line)" section documenting the title-line session count + its refresh-on-completion (commit `1e1d608`) and the subtitle progress ladder, cross-referencing `desktop/CLAUDE.md` + `bristlenose/server/CLAUDE.md` for the WAL-checkpoint mechanics rather than duplicating them.
 - _2026-05-01_ — §"Empty state" status banner flipped from `partial` to `shipped` after `WelcomeView` landed on `first-run` (commit `816ab65`). Drop-target affordance and New Project CTA now ship via the welcome detail-pane (not via the sidebar `ContentUnavailableView` shape originally designed in this doc); see `WelcomeView.swift` and `design-desktop-app.md` §"Loading and transition states" empty-state row. The four downstream "ContentUnavailableView empty state" mentions in this doc were not rewritten — the original sidebar-level vision is preserved as planning history; the actual empty surface lives in the detail pane. TipKit first-project hint remains parked.
 - _2026-04-24 (evening)_ — Sidebar row subtitle now switches "Analysing…" → "Stopping…" the moment the user clicks Stop on the toolbar pill, in lockstep with the pill itself. `ProjectRow` takes `liveData: PipelineLiveData` and reads `progress[id].isStopping` (commit `da5cc45`). See `design-subprocess-lifecycle.md` §Cancellation for the full chain.
@@ -102,6 +112,7 @@ The canonical spec is the `ProjectRow.swift` doc-comment; this is its design hom
 
 - **Title line** — identity icon · project name · *(right)* **session count** (the interview count — Finder's right-column treatment; empty when the analysis DB isn't readable).
 - **Subtitle line** — status text · *(right)* storage/activity qualifier (iCloud arrow, or the activity indicator while a run is in flight). During a run the subtitle shows the **live progress ladder** — stage · N of M · ETA (e.g. "Transcribing · 2 of 3 · <1 min left"), degrading to "Analysing · <1 min left" then "Analysing…" — composed by the pure `RunProgressSubtitle` helper (stage vocabulary = `timing.py ALL_STAGES`, six coarse ids, **not** `manifest.STAGE_ORDER`). Ring / spinner / Stop-× / failure-glyph details: `docs/design-sidebar-activity-indicators.md`.
+- **Copy progress on the row** — when files are being copied into a project (drag-drop import), the trailing slot shows a determinate ring (byte fraction) with the subtitle `"Copying · N%"` / `"Cancelling…"`, hover-to-cancel on the ring, and a "Cancel copy" context-menu item. Copy is a per-project op so it lives on the row, **not** a toolbar pill — the standalone `CopyProgressPill` was deleted (19 Jun 2026; the placement axis, `design-desktop-project-status.md` §4). Byte-% not "N of M" (no file-item source exists). Source: `CopyMachinery.inFlight` matched by `projectID`; `ProjectSubtitle.swift` (`.copying` / `.copyCancelling`); `ProjectRow.swift`.
 
 **The session count refreshes on run completion** (it used to go stale until relaunch). It's read from the project's analysis DB (`SELECT COUNT(*) FROM sessions`) via a sandbox-mandated `immutable=1` open that can't see WAL-resident rows — and the count is written by the *serve importer*, not the pipeline run, so a finished run wouldn't refresh it on its own. Two-part fix: the importer PASSIVE-checkpoints the WAL after import, and the desktop rescans the watcher on the analysing→terminal transition (`ContentView.scheduleCountRescan`). The cross-process WAL trap + mechanics live in `bristlenose/server/CLAUDE.md` and `desktop/CLAUDE.md` (immutable-read gotcha) — not duplicated here.
 
@@ -338,7 +349,7 @@ All items disabled when nothing is selected.
 - **Double click**: open in new window (Notes pattern — future, multi-window)
 - **Slow double-click on name**: inline rename
 
-Note: switching projects stops and restarts the serve process (5-15 second delay). The target project row should show a loading indicator during startup. May need to cache recently-served projects for faster switching later.
+Note: switching to a *new* project starts a serve process (the target row shows a loading indicator during startup). Switching **back** to the immediately-previous project is now fast — it re-points to a parked, still-running sidecar instead of teardown+restart (warm-sidecar pool, Phase A2, shipped 19 Jun 2026 — `ServeManager.swift`, `ParkedSidecar.swift`). The "cache recently-served projects" idea below is what shipped, for a single warm slot; broader caching (warm *WebView*, N-pool) is future work. See `design-desktop-switch-performance.md`.
 
 ## Get Info
 

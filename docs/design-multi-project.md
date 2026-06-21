@@ -9,6 +9,7 @@ split-candidate: true
 
 ## Changelog
 
+- 2026-06-21 — added a `design-workspace.md` cross-reference (the post-TF genuine multi-project + multi-window doc now owns the forward architecture for the single-project-per-process constraint named in §Context). Light touch only — the Phase-1 body was not re-verified this pass; the 2026-05-16 truing still holds, so front-matter `last-trued` is unchanged. The `/api/projects/1/` hardcoded-ID inventory now also appears in `design-workspace.md`; reconciling the two into one canonical count is deferred (self-flagged stale snapshot, §4).
 - 2026-05-16 — §"Lifecycle states" remount path: pre-fix, a re-inserted volume race-regressed the row's `CantFindReason` from `.unmountedVolume` to `.moved`, losing the volume-name subtitle. Layer 1 (bounded backoff ladder on `didMountNotification`) + Layer 2 (sticky `.unmountedVolume` in `Project.availability` while `lastSeenPath` carries the volume prefix) on `cantfind-remount-recovery` close the gap so the documented "resumes normally on remount" behaviour now holds in practice. Anchors: `VolumeWatcher.swift` `runRemountLadder`, `ProjectAvailability.swift` `.volume` arm.
 - 2026-05-01 — §"Status" updated: the detail-pane welcome placeholder from commit `4772c3a` was replaced by `WelcomeView` (commit `816ab65` on `first-run`) with `.firstRun` and `.noSelection` variants. The "parked for full design post-alpha" framing carried over from the placeholder is no longer accurate — a minimum-viable home view has shipped; what remains parked is the recents / community-codebooks expansion and window-frame restoration.
 - 2026-04-30 — Trued against shipped reality. Phase 1 (Project Index, Folders, VolumeWatcher / availability) shipped via `port-v01-ingestion` (commit `e781ebe`, merged to v0.15.0 on 26 Apr 2026); per-section `status:current` markers added. Person identity (§2), Archive (§3a), cross-project search (§3b), `bristlenose forget` (§3c), CLI `bristlenose projects` / `--recent` / `--all` all stay pending.
@@ -35,6 +36,7 @@ split-candidate: true
 **Cross-references:**
 - [`design-project-sidebar.md`](design-project-sidebar.md) — sidebar UX + phasing (this doc owns data-model + policy)
 - [`design-desktop-app.md`](design-desktop-app.md) — `BootView` + `WelcomeView` empty-state composition
+- [`design-workspace.md`](design-workspace.md) — post-TestFlight genuine multi-project + multi-window (concurrency, window, serve architecture); the forward home for the single-project-per-process constraint this doc names in §Context
 - `desktop/Bristlenose/Bristlenose/{ProjectIndex,VolumeWatcher,FolderRow,WelcomeView}.swift` — shipped surface
 
 (Original draft and earlier truing-pass changelog entries appear at the top of this file under the canonical `## Changelog` section.)

@@ -1,3 +1,14 @@
+---
+status: pending
+last-trued: 2026-06-21
+---
+
+> **Pending / aspirational.** Forward-looking design (post-TestFlight multi-project + multi-window) — problem definition + option range, nothing decided. The "What shipped" section names the A1/A2 increments already on the path (verified against shipped Swift); the rest is not built. Last confirmed aspirational 2026-06-21. Check `TODO.md` / `docs/ROADMAP.md` for status.
+
+## Changelog
+
+- _2026-06-21_ — added front-matter (`status: pending`) + pending banner on the day the doc was created; confirmed the "What shipped" A1/A2 increments verify against shipped Swift (`ServeManager.swift` single `parked` slot, `generation` token reused; A1 cancel-on-switch modal gone). Currency fix: §"What shipped" called `warm-sidecar-pool` "pending merge" — it merged the same day (`78b2d40`). Body otherwise unaltered (aspirational by design).
+
 # Workspace — genuine multi-project + multi-window (post-TF)
 
 **Status:** Problem definition + option range. Nothing here is decided — this is the
@@ -38,7 +49,7 @@ by engineering judgement, not cohort feedback.
   the background while you switch to view another project; the cancel-on-switch
   modal is gone. Pipelines are independent `--no-serve` subprocesses with
   per-project WAL DBs.
-- **Phase A2 — warm-sidecar pool** (`warm-sidecar-pool`, pending merge): switching
+- **Phase A2 — warm-sidecar pool** (`warm-sidecar-pool`, merged 21 Jun 2026): switching
   *back* to the previous project re-points to a parked, still-running sidecar
   instead of teardown+restart — kills the boot wait and the rapid-switch crash.
   **Single parked slot** (current + most-recent-previous), not an N-pool.

@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-06-18
-trued-against: HEAD@progress-text-surfacing on 2026-06-18
+last-trued: 2026-06-21
+trued-against: HEAD@main on 2026-06-21
 ---
 
 # Per-project activity indicators (sidebar) — design
@@ -17,6 +17,10 @@ trued-against: HEAD@progress-text-surfacing on 2026-06-18
 > preserved (it's still the design rationale) — what changed is "built", not the design.
 > **Still aspirational:** Phases 1–3 (concurrent execution, multi-window, global-concern
 > unification) and the collapsed-folder aggregate.
+>
+> **Update 2026-06-21:** copy progress also moved **onto the row** on 19 Jun (determinate ring +
+> `"Copying · N%"` + hover-cancel; the standalone `CopyProgressPill` was deleted) — the rows below
+> that called copy-on-row "post-TF" or listed `CopyProgressPill` in the toolbar are corrected.
 
 **Status:** Phase 0a shipped 15 Jun 2026 (`b3bbaab..518e6d3`); Phase 0b shipped (ring
 `010910a`, 17 Jun; progress-text tier 18 Jun); Phases 1–3 aspirational. TestFlight scope =
@@ -47,8 +51,9 @@ surrounding plan, parts of which are deferred (see banners):
   (`ContentView.swift`), and **Project-menu "Stop Analysis" with ⌘.** (`MenuCommands.swift`,
   gated by `BridgeHandler.selectedProjectIsRunning`).
 - **Toolbar pill removed:** the per-project pipeline pill (`PipelineActivityItem.swift`) was
-  **deleted** (commit `8ffa470`); the per-project glance now lives on the row. Only
-  `OllamaDownloadPill` + `CopyProgressPill` remain in the toolbar (app-global concerns).
+  **deleted** (commit `8ffa470`); the per-project glance now lives on the row. Copy progress
+  later moved to the row too (`CopyProgressPill` deleted, 19 Jun 2026). Only
+  `OllamaDownloadPill` remains in the toolbar (an app-global concern).
 
 **Shipped in Phase 0b (`010910a` + `progress-text-surfacing`):** the determinate ETA ring
 (`ProjectRowActivityIndicator` → `ProgressView(value:)`, monotonic + asymptote-clamped by
@@ -58,9 +63,10 @@ tier** (`RunProgressSubtitle` composes stage · N-of-M · ETA into the row subti
 VoiceOver phrase + tooltip). Report auto-reload-on-completion also landed (`d277017`,
 `c11f68c`).
 
-**Still deferred:** the collapsed-folder aggregate indicator, copy-on-row, the during-run
+**Still deferred:** the collapsed-folder aggregate indicator, the during-run
 *detail-pane* surface (the detail pane still shows the server "Nothing to see here, yet."
-page on a first run), and everything in Phases 1–3.
+page on a first run), and everything in Phases 1–3. _(Copy-on-row, previously listed here, shipped
+19 Jun 2026 — see the "copying" row below.)_
 
 ## Problem
 
@@ -113,7 +119,7 @@ Shipped 0a, or 0b where marked _(0b, now built)_:
 | running | _(0b)_ **determinate ETA ring** + subtitle progress text ("Transcribing · 2 of 3 · <1 min left"), spinner only until the first measured signal | `ProgressView(value:)` + `RunProgressSubtitle` | `ProjectRowActivityIndicator.swift`, `ProjectRow.swift` |
 | scanning | transient indeterminate spinner (pre-run, after 250 ms) | `ProgressView().controlSize(.small)` | `ProjectRow.swift` |
 | running, hovered | spinner swaps → grey `xmark.circle.fill` (×) in fixed 16pt frame; click → `cancel(project:)` | `Button(.plain)`, crossfade, Reduce-Motion-aware | `ProjectRowActivityIndicator.swift` |
-| copying | determinate ring (byte ratio) — _toolbar pill only; copy-on-row is post-TF_ | `ProgressView(value:)` | `CopyProgressPill.swift` |
+| copying | determinate ring (byte ratio) on the **row** + `"Copying · N%"` subtitle + hover-cancel (shipped 19 Jun 2026; standalone `CopyProgressPill` deleted) | `ProgressView(value:)` | `ProjectRowActivityIndicator.swift`, `ProjectSubtitle.swift`, `ProjectRow.swift` |
 | failed | red `xmark.circle.fill`, clickable → diagnostic popover | `MessageKind.error` | `MessageKind.swift`, `ProjectRow.swift` |
 | finished with failures (`.completedPartial`) | orange `exclamationmark.triangle.fill`, clickable → diagnostic popover | `MessageKind.warning` | `MessageKind.swift`, `ProjectRow.swift` |
 | failure glyph clicked | selects row + opens `ProjectDiagnosticPopover` anchored to glyph (`arrowEdge: .trailing`) | `Button(.plain)` + `.popover` | `ProjectRow.swift`, `ProjectDiagnosticPopover.swift` |

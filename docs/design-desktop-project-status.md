@@ -1,3 +1,13 @@
+---
+status: current
+last-trued: 2026-06-21
+trued-against: HEAD@main on 2026-06-21
+---
+
+## Changelog
+
+- _2026-06-21_ — trued up, no material changes. The §"Shipped (19 Jun 2026)" block + §4 placement axis verified against `ProjectSubtitle.resolve` precedence (`ProjectSubtitle.swift`, `ProjectSubtitleTests.swift`) and copy-on-row (`ProjectRow.swift`; standalone `CopyProgressPill` deleted). Added front-matter + an inline marker on the pre-decision proposal table so a cold reader doesn't read its projected strings ("Copying · 3 of 5 files", "toolbar pill") as current.
+
 # Desktop project status — the two streams behind the sidebar row and detail pane
 
 **Status:** captured understanding, **not a build plan.** §7's consolidation is a *direction*
@@ -23,6 +33,8 @@ the view (§7). The *only* genuinely-new emission is a mid-run `health` signal �
 everything else is wiring data that already exists.
 
 **The five (data exists; only the routing is missing):**
+
+> **Note (superseded by "Shipped" below, 2026-06-21):** this table is the *pre-decision projection*. Its "On the row" strings are illustrative — shipped reality differs (copy renders as a byte-`"Copying · N%"`, not "3 of 5 files"; the toolbar pill was removed). See the "Shipped (19 Jun 2026)" block below for what actually landed.
 
 | Message | Source (already there) | Kind | Today | On the row |
 |---|---|---|---|---|

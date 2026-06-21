@@ -1,9 +1,21 @@
+---
+status: partial
+last-trued: 2026-06-21
+trued-against: HEAD@main on 2026-06-21
+---
+
+> **Truing status:** Partial — the "What we've built (re-import)" section is current and matches shipped code (trued 2026-06-21). The "Future:" sections (session enable/disable, delete-from-UI, `POST /rerun`) are **aspirational and unshipped** — no `is_disabled` column, no `session_sets` table, no `rerun` route exists in `bristlenose/server/`. See the inline banner there.
+
+## Changelog
+
+- _2026-06-21_ — trued: added front-matter; verified the re-import section against shipped code (`importer.py` always-reimport + stale cleanup; the five preserved-state classes at `models.py:408-454`). Corrected the test count (29 → 50, `tests/test_serve_importer.py`); decoupled the stale "v0.10.2" stamp from the still-current re-import behaviour; banner-marked the three "Future:" sections as aspirational (none shipped). Anchors: `bristlenose/server/importer.py`, `bristlenose/server/models.py`.
+
 # Session management — re-runs, filtering, and selective analysis
 
 ## Status
 
-**Implemented (v0.10.2):** Re-import on every serve startup.
-**Future:** Session enable/disable toggle, live analysis recalculation.
+**Re-import on every serve startup — current.** Shipped v0.10.2; behaviour unchanged since. The importer always re-imports and cleans stale entities on each `bristlenose serve` startup, preserving researcher state on surviving quotes.
+**Aspirational (not shipped):** session enable/disable toggle, delete-session-from-UI, live analysis recalculation, `POST /rerun`. The "Future:" sections below describe options, not shipped behaviour.
 
 ## Problem statement
 
@@ -44,7 +56,7 @@ Researcher state on **surviving quotes** is fully preserved:
 
 ### Test coverage
 
-29 tests in `tests/test_serve_importer.py` cover:
+`tests/test_serve_importer.py` has **50 tests** (as of 2026-06-21). The indicative breakdown below predates later additions — see the file for the current set:
 
 - Basic import (13 tests)
 - Idempotent re-import without duplicates (2 tests)
@@ -58,6 +70,8 @@ Researcher state on **surviving quotes** is fully preserved:
 ---
 
 ## Future: session enable/disable toggle
+
+> **Aspirational — not shipped as of 2026-06-21.** No `is_disabled` column and no `session_sets` table exist in `bristlenose/server/models.py`; the options below (A/B/C) are design exploration, not a record of shipped behaviour.
 
 ### The idea
 
@@ -133,6 +147,8 @@ This is exactly the researcher's workflow: "I thought the main finding was frust
 ---
 
 ## Future: delete session from UI
+
+> **Aspirational — not shipped as of 2026-06-21.** No `POST /api/projects/{id}/rerun` route exists in `bristlenose/server/`; the delete-and-rerun flow below is design exploration, not shipped behaviour.
 
 ### The idea
 

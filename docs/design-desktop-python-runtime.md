@@ -1,8 +1,19 @@
+---
+status: current
+last-trued: 2026-06-21
+trued-against: HEAD@main on 2026-06-21
+---
+
 # Desktop Python Runtime — sidecar mechanics
 
 _Written 18 Apr 2026 as Track C C0 spike output; updated through C3 (21 Apr 2026) with post-smoke-test bundle-data requirements, validation gates, and fail-loud contracts. Trued 28 Apr 2026 against the empty-ents retest (RED), the App-Store-flow `build-all.sh` end-to-end fixes, and the App-Store-only / Developer-ID-deferred distribution decision. Covers entitlements, signing, bundling, and runtime resource resolution for the bundled PyInstaller sidecar on macOS. Cross-channel component decisions (what ships where, and why) live in [`design-modularity.md`](./design-modularity.md) — this doc is strictly Mac-specific mechanics._
 
 > **Trued 28 Apr 2026 against `sidecar-signing` HEAD `8cfd2ee`.** Status block, entitlement-table justification, and verification battery updated to reflect: empty-ents retest result (RED — Python.framework's nested `_CodeSignature/` seal is the empirical reason DLV stays); `build-all.sh` end-to-end working for App Store flow (Mac Installer Distribution cert added; notarisation + stapling + spctl correctly skipped because notarytool only accepts Developer ID); SECURITY #5/#8 unblocker shipped; libproc-only zombie cleanup. New §"App Store distribution flow" section. §"Notarisation + stapling" preserved verbatim under a "Deferred — Developer ID flow" header (revisit at ~10k paying users per memory `project_developer_id_revisit.md`).
+
+## Changelog
+
+- _2026-06-21_ — trued against `main` (warm-sidecar-pool merge `78b2d40`): added a "Warm-sidecar pool (Phase A2)" lifecycle addendum to the SidecarMode contract (park-on-switch + synchronous re-point; spawn / port / credential mechanics unchanged and still accurate). Cross-refs `design-desktop-switch-performance.md` rather than duplicating the perf model. Anchors: `ServeManager.swift`, `ParkedSidecar.swift`.
+- _2026-04-28_ — see the "Trued 28 Apr 2026" banner above (Track C C0–C3 spike + App-Store distribution flow; entitlement-table empirical result).
 
 ## Scope
 
@@ -221,6 +232,10 @@ Three Xcode shared schemes wrap the env vars so developers see the choice in the
 | Bristlenose (External Server) | `BRISTLENOSE_DEV_EXTERNAL_PORT` | `.external` |
 
 Both env vars set at once → `SidecarResolveError.bothDevEnvVarsSet` → `.failed` state at init (no fatalError; the app renders a SwiftUI error card via `LocalizedError.errorDescription`).
+
+### Warm-sidecar pool (Phase A2) — lifecycle addendum
+
+> Added 2026-06-21. `ServeManager` no longer always tears down the outgoing sidecar on a project switch. It keeps a **single parked slot** (`ParkedSidecar.swift`): switching *away* parks the current sidecar (still running, no signal), and switching *back* re-points to it synchronously instead of spawning a fresh one. Cold spawn (first visit, a third distinct project, or an evicted slot) is unchanged from the contract above. This doc owns the *spawn / port / credential* mechanics, which the A2 rewrite did **not** change (`bind(0)` kernel-assigned port, `Report:` stdout parse, per-run token injection all intact); the parking / re-point *lifecycle* and its perf rationale live in `design-desktop-switch-performance.md` and `desktop/CLAUDE.md` → "Warm-sidecar pool (Phase A2)" — not duplicated here. Code: `ServeManager.swift` (`switchProject`, `parked`, `drainParked`), `ParkedSidecar.swift`, `RepointDecisionTests.swift`.
 
 ## Signing strategy (C2, 19 Apr 2026)
 

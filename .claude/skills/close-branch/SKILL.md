@@ -52,12 +52,14 @@ Then check merged status. Three states matter:
 2. **Merged to `$BASE` but not main** (only possible if `$BASE` != main) — branch landed on the parent; parent hasn't reached main yet. Run `git branch --merged $BASE` and look for `$0`.
 3. **Not merged anywhere** — fail-loud.
 
+> The greps accept a leading `+` as well as `*`/space: `git branch --merged` prints `+ <branch>` for a branch checked out in a linked worktree — the normal state at close time, since the worktree isn't detached until Step 7. `^[* ]*` alone would false-negative on a freshly-merged branch and wrongly fail-loud.
+
 ```bash
-MERGED_MAIN=$(git branch --merged main | grep -E "^[* ]*$0\$" || true)
+MERGED_MAIN=$(git branch --merged main | grep -E "^[*+ ]*$0\$" || true)
 if [ -n "$MERGED_MAIN" ]; then
   STATE="merged-main"
 elif [ "$BASE" != "main" ] && git show-ref --verify --quiet "refs/heads/$BASE"; then
-  MERGED_BASE=$(git branch --merged "$BASE" | grep -E "^[* ]*$0\$" || true)
+  MERGED_BASE=$(git branch --merged "$BASE" | grep -E "^[*+ ]*$0\$" || true)
   if [ -n "$MERGED_BASE" ]; then
     STATE="merged-base"
   else

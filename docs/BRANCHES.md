@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 21 Jun 2026 (`project-status-line` merged to main (`f74961b`) + closed — its sidebar subtitle-precedence resolver + copy-on-row work is now on main; `warm-sidecar-pool` rebases onto main next and reconciles "Starting…" against the warm pool. 19 Jun: `warm-sidecar-pool` created — multi-project Phase A2, ServeManager warm pool.)
+**Updated:** 21 Jun 2026 (`warm-sidecar-pool` merged to main (`78b2d40`) + closed — desktop Phase A2 warm-sidecar pool (instant, crash-free project switching) is now on main. Earlier today: `project-status-line` merged (`f74961b`) + closed.)
 
 ---
 
@@ -41,7 +41,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 | `bristlenose_branch llm-provider-default-model/` | `llm-provider-default-model` | bugfix | CLI `--llm <provider>` applies that provider's default model (fixes cross-provider 404) |
-| `bristlenose_branch warm-sidecar-pool/` | `warm-sidecar-pool` | feature | Multi-project Phase A2: warm-sidecar pool so project-switching is instant + crash-free (no teardown+restart-per-switch race) |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -126,7 +125,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
-| `warm-sidecar-pool` | `bristlenose_branch warm-sidecar-pool/` | local only |
 | `multi-project-drag-onto` _(merged)_ | `bristlenose_branch multi-project-drag-onto/` _(detached, on disk)_ | local only — merged to main 15 May 2026 |
 | `multi-project-switch` _(merged)_ | `bristlenose_branch multi-project-switch/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`baf1896`) |
 | `ci-version-pinning` _(merged)_ | `bristlenose_branch ci-version-pinning/` _(detached, on disk)_ | local + remote deleted — merged to main 14 May 2026 (`e1c8083`) |
@@ -153,27 +151,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `warm-sidecar-pool`
-
-**Kind:** feature (desktop — Swift, `ServeManager` lifecycle) — Phase A2: make project-switching instant + crash-free by keeping the previously-fronted sidecar warm instead of teardown+restart-per-switch.
-**Status:** Implemented + unit-tested + reviewed (usual-suspects plan pass + William impl pass, both clean); pending human GUI QA + merge.
-**Started:** 19 Jun 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch warm-sidecar-pool/`
-**Remote:** local only (push when ready)
-
-**What it does:** `switchProject` now *parks* the outgoing serve sidecar (no signal) and re-points to it on switch-back (`state = .running(warmPort)` after a `/api/health` liveness probe) instead of teardown+restart — so rapid A↔B switching is an instant hand-off and the restart-race crash dissolves. **Option B: a single parked slot, not a dict+LRU pool** (only the A↔B repro is observed; `feedback_present_failure_over_speculation`). Reuses the single `generation` token (no second epoch — identity-routing via `ObjectIdentifier` actually retired the old termination epoch capture). Plan: `.claude/plans/warm-sidecar-pool-implementation.md` (the gitignored review log alongside it has the full finding detail).
-
-**Files this branch touches:**
-- `desktop/Bristlenose/Bristlenose/ParkedSidecar.swift` (new — struct + pure `RepointDecision`)
-- `desktop/Bristlenose/Bristlenose/ServeManager.swift` (the lifecycle rewrite — heart of A2)
-- `desktop/Bristlenose/Bristlenose/ContentView.swift` (WebView `.id` keyed on `project.id` + port; `dropParked` on removal)
-- `desktop/Bristlenose/BristlenoseTests/RepointDecisionTests.swift` (new — pure decision tests)
-
-**Potential conflicts with other branches:**
-- **`project-status-line`** — **SHARED FILE: `ServeManager.swift`.** Merge order: that branch lands first; this one rebases and reconciles the "Starting…" subtitle (a warm re-point skips `.starting`, so the subtitle shows on cold switches only). See that branch's entry above.
 
 ---
 
@@ -298,6 +275,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `warm-sidecar-pool` — merged 21 Jun 2026
+
+Feature (desktop — Swift, `ServeManager` lifecycle) — Phase A2: instant + crash-free project switching. `switchProject` parks the outgoing serve sidecar and re-points to it on switch-back (`state = .running(warmPort)` after a `/api/health` liveness probe) instead of teardown+restart, so rapid A↔B is an instant hand-off and the restart-race crash ("Server exited before becoming ready") dissolves. Single parked slot, not a dict+LRU pool; reuses the single `generation` token (no second epoch — `ObjectIdentifier` identity-routing retired the old termination epoch capture); detail-pane WebView keyed on `project.id` + serve port to avoid stale-token 401s. New `ParkedSidecar.swift` (+ pure `RepointDecision`) + `RepointDecisionTests.swift`. 11 commits (`beaac38`…`a596843`) merged via `78b2d40`. Worktree detached and tagged orange on disk; local branch kept (merged to main, deletable anytime); remote was never pushed.
 
 ### `project-status-line` — merged 21 Jun 2026
 

@@ -720,6 +720,8 @@ struct ContentView: View {
             ))
         }
         guard !removable.isEmpty else { return }
+        // Don't leave a warm sidecar serving a project the user just removed.
+        serveManager.dropParked(forPaths: Set(removable.map(\.path)))
         let priorSelection = selection
         for project in removable {
             selection.remove(.project(project.id))
@@ -745,6 +747,7 @@ struct ContentView: View {
             return
         }
         guard !removable.isEmpty else { return }
+        serveManager.dropParked(forPaths: Set(removable.map(\.path)))
         removalStore.removeFromSidebar(removable, priorSelection: selection)
     }
 
@@ -1852,9 +1855,16 @@ struct ContentView: View {
                     case .idle, .starting:
                         BootView(phase: .startingSidecar)
 
-                    case .running:
+                    case .running(let port):
+                        // Key on project id AND serve port. A warm-pool re-point
+                        // (Phase A2) keeps the same project id but hands off to a
+                        // sidecar on a different port — keying on id alone would
+                        // NOT re-mount, so updateNSView would reload the new port
+                        // while reusing the previous sidecar's injected auth token
+                        // → silent 401s / blank report. The port in the key forces
+                        // a fresh makeNSView that re-injects the right token.
                         WebView(url: serveURLWithLocale, bridgeHandler: bridgeHandler, authToken: serveManager.authToken)
-                            .id(project.id)
+                            .id("\(project.id.uuidString)-\(port)")
                             .accessibilityLabel(i18n.t("desktop.chrome.reportContent"))
                             .accessibilityHidden(!bridgeHandler.isReady)
                             .focusSection()

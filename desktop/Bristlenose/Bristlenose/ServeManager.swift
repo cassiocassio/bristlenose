@@ -107,12 +107,17 @@ final class ServeManager: ObservableObject {
     private var process: Process?
     private var readTask: Task<Void, Never>?
     private var timeoutTask: Task<Void, Never>?
-    /// Incremented on each start() — termination handlers from previous
-    /// runs check this to avoid overwriting the new run's state.
+    /// Incremented on each start() AND on each warm re-point — late completions
+    /// (a superseded readiness wait) check this before writing terminal state.
     private var generation: Int = 0
 
     /// Last project path passed to start() — used by restartIfRunning().
     private var currentProjectPath: String?
+
+    /// The most-recently-fronted project's sidecar, kept warm so switching
+    /// back is an instant hand-off (Phase A2 warm-sidecar pool, single-slot).
+    /// At most one. See `ParkedSidecar.swift` for the design + why one slot.
+    private var parked: ParkedSidecar?
 
     /// Observer for preference changes that require a serve restart.
     private var prefsObserver: Any?
@@ -147,8 +152,6 @@ final class ServeManager: ObservableObject {
             return
         }
 
-        let currentGeneration = generation
-
         let executableURL: URL
         switch mode {
         case .bundled(let path), .devSidecar(let path):
@@ -175,6 +178,12 @@ final class ServeManager: ObservableObject {
         proc.standardError = pipe
 
         let handle = pipe.fileHandleForReading
+        // Identity token for routing this process's stdout/termination. Stays
+        // valid when the process later moves to the parked slot — handleLine
+        // and handleTermination compare it against the *current* fronted vs
+        // parked process to decide the role dynamically. ObjectIdentifier is
+        // Sendable (Process is not), so it's safe to carry into the detached read.
+        let procID = ObjectIdentifier(proc)
 
         // Read pipe on a detached task to avoid Sendable/actor-isolation issues.
         readTask = Task.detached { [weak self] in
@@ -186,23 +195,19 @@ final class ServeManager: ObservableObject {
                 if let chunk = String(data: data, encoding: .utf8) {
                     let lines = chunk.components(separatedBy: "\n")
                     for line in lines where !line.isEmpty {
-                        await self?.handleLine(line)
+                        await self?.handleLine(line, fromProcessID: procID)
                     }
                 }
             }
         }
 
         proc.terminationHandler = { [weak self] p in
+            // Runs off-main. Carry only Sendable values across to MainActor
+            // (status + the process identity) — never the non-Sendable Process.
             let status = p.terminationStatus
+            let terminatedID = ObjectIdentifier(p)
             Task { @MainActor in
-                guard let self, self.generation == currentGeneration else { return }
-                self.timeoutTask?.cancel()
-                let lastLines = self.outputLines.suffix(5).joined(separator: "\n")
-                if case .running = self.state {
-                    self.state = .failed(error: "Server exited with code \(status)\n\(lastLines)")
-                } else if case .starting = self.state {
-                    self.state = .failed(error: "Server exited before becoming ready (code \(status))\n\(lastLines)")
-                }
+                self?.handleTermination(processID: terminatedID, status: status)
             }
         }
 
@@ -248,6 +253,7 @@ final class ServeManager: ObservableObject {
     func stop() {
         timeoutTask?.cancel()
         timeoutTask = nil
+        drainParked()  // tear down any warm sidecar (Cmd+Q, folder/empty selection)
 
         // External mode: no subprocess was spawned — just reset state.
         if case .external = mode, process == nil {
@@ -275,6 +281,12 @@ final class ServeManager: ObservableObject {
     /// Uses the same escalating teardown as `switchProject(to:)` so a Whisper-wedged
     /// sidecar doesn't survive a prefs save (William's parsimony pass, Finding 32).
     func restartIfRunning() {
+        // A parked sidecar baked its provider/model/API-key/prefs env at spawn
+        // time (BristlenoseShared.childEnvironment). A prefs OR consent change
+        // (both post .bristlenosePrefsChanged) makes that env stale, so the
+        // warm slot must be invalidated — otherwise switching back would
+        // re-point to a sidecar serving with the old config (review F6/F7).
+        drainParked()
         guard case .running = state, let path = currentProjectPath else { return }
         log.info("preferences changed — restarting serve")
         Task { @MainActor in
@@ -296,6 +308,7 @@ final class ServeManager: ObservableObject {
     func shutdown(timeout: Duration) async {
         timeoutTask?.cancel()
         timeoutTask = nil
+        drainParked()  // a full teardown reclaims the warm slot too
 
         // Ownership token captured at entry. If a newer start() (a superseding
         // switch, or restartIfRunning) bumps `generation` while we await teardown
@@ -370,67 +383,248 @@ final class ServeManager: ObservableObject {
         currentProjectPath = nil
     }
 
-    /// Switch the loaded project. Tears down the current sidecar with signal
-    /// escalation, starts a new one pointed at `path`, and resolves when the
-    /// new sidecar reports ready (or fails).
+    /// Switch the loaded project. **Warm-pool fast path (Phase A2):** if the
+    /// most-recently-fronted project is still parked + alive, this is a near
+    /// hand-off — park the outgoing sidecar, re-point to the warm one, no
+    /// teardown+restart. Otherwise it parks the outgoing sidecar and cold-starts
+    /// a fresh one (the previous behaviour, minus the teardown of the project
+    /// you might switch straight back to).
+    ///
+    /// Crucially the fast path does **no teardown on the hot path** — that is
+    /// what dissolves the rapid-switch crash race (a switch-N teardown racing a
+    /// switch-N+1 boot). The race survives ONLY for cold starts (a 3rd distinct
+    /// project, or one whose warm slot was evicted), where the existing
+    /// `generation`-guarded supersession (A1) still applies. So the reliability
+    /// win is total for warm hits, partial for cold — see the review log F13.
     ///
     /// **Choreography:**
-    /// 1. (caller) UI skeleton — sidebar selection updates immediately;
-    ///    detail pane shows `BootView(phase: .startingSidecar)` while
-    ///    `state == .starting`. This is the SwiftUI `.id(project.id)` reset
-    ///    on `WebView`, which fully tears down the old WKWebView.
-    /// 2. (here) Tear down current sidecar — `shutdown(timeout:)` above.
-    /// 3. (caller) Resolve new bookmark + acquire `ProjectBookmarkLease` —
-    ///    if it throws, mark project `cantFind` and don't call this.
-    /// 4. (here) Spawn new sidecar via existing `start(projectPath:)`.
-    /// 5. (automatic) WKWebView reload — when `selectedProject.id` changes,
-    ///    SwiftUI rebuilds `WebView` with a fresh `WKWebsiteDataStore`
-    ///    (`.nonPersistent()` returns a new partition every call). This
-    ///    drops all `localStorage`, `sessionStorage`, cookies, and HTTP
-    ///    cache from the previous project. No explicit `resetDataStore()`
-    ///    call is required.
+    /// 1. (caller) UI skeleton — sidebar selection updates immediately.
+    /// 2. (here) `detachFronted()` parks the outgoing sidecar (no signal).
+    /// 3. (caller) Resolve new bookmark + `ProjectBookmarkLease` — if it throws,
+    ///    mark project `cantFind` and don't call this.
+    /// 4. (here) Re-point to the warm slot, or `start()` a fresh sidecar.
+    /// 5. (automatic) WKWebView re-mount — `ContentView` keys the WebView on
+    ///    `project.id` + serve port, so a re-point (port change) forces a fresh
+    ///    `makeNSView` with a fresh `WKWebsiteDataStore.nonPersistent()` AND
+    ///    re-injects the warm sidecar's own bearer token. Keying on id alone
+    ///    would NOT re-mount on a same-project switch-back at a new port, which
+    ///    would reuse the previous project's token → silent 401s (review F1).
     ///
     /// **Cache leak defence:** the server adds `Cache-Control: no-store` to
-    /// every `/api/projects/*` response (see `bristlenose/server/app.py`).
-    /// Belt-and-braces against any cache layer between WKWebView and the
-    /// sidecar that the data-store reset doesn't cover.
+    /// every `/api/projects/*` response (`bristlenose/server/app.py`).
     ///
     /// - Parameter path: filesystem path to the project root.
-    /// - Returns: when the new sidecar reaches `.running` or `.failed`.
-    ///   Does NOT throw — callers inspect `state` (`@Published`) afterwards;
-    ///   the `.failed` case flows through SwiftUI to `BootView(.failed)` in
-    ///   `ContentView.detail`. No explicit caller-side error handling needed.
+    /// - Returns: when the sidecar reaches `.running` or `.failed`. Does NOT
+    ///   throw — callers inspect `state`; `.failed` flows to `BootView(.failed)`.
     ///
     /// **Security-scoped bookmark lifecycle.** `ProjectIndex.syncWatchers()`
-    /// holds a `ProjectBookmarkLease` for every `.ready` project across the
-    /// app's lifetime, so the sidecar inherits an already-open security
-    /// scope on the project's folder for as long as it runs. No explicit
-    /// lease handoff is needed here.
+    /// holds a `ProjectBookmarkLease` for every `.ready` project for the app's
+    /// lifetime, so every (fronted or parked) sidecar inherits an already-open
+    /// security scope. No explicit lease handoff is needed here.
     func switchProject(to path: String) async {
-        log.info("switching project — shutting down current sidecar")
-        await shutdown(timeout: .seconds(2))
-        // A newer switch may have superseded us while we awaited teardown. The
-        // caller (applySelectionChange) cancels the prior switch Task before
-        // spawning the next, so bail HERE — before start() — when cancelled.
-        // Without this guard the superseded switch would still call start(),
-        // whose defensive `if process != nil { stop() }` would SIGINT the
-        // winning switch's freshly-spawned sidecar (the rapid-switch fail-open).
-        // shutdown()'s `try? await Task.sleep` swallows CancellationError, so
-        // the explicit Task.isCancelled check is what actually honours the cancel.
-        guard !Task.isCancelled else {
-            log.info("switchProject superseded — abandoning before start()")
-            return
+        let decision = RepointDecision.evaluate(
+            target: path,
+            parkedPath: parked?.projectPath,
+            parkedAlive: parked?.isAlive ?? false
+        )
+
+        if case .repoint = decision, let incoming = parked {
+            // Warm fast path. Take the warm entry out of the slot, park the
+            // outgoing sidecar in its place (instant A↔B keeps both warm), and
+            // hand off. Bump `generation` FIRST: the re-point is a fronted-state
+            // write, so a late in-flight cold-start readiness completion (gated
+            // on `generation`, handleLine) must not be able to land afterward
+            // and clobber us with its stale port (review F2).
+            parked = nil
+            let outgoing = detachFronted()
+            generation += 1
+            state = .starting  // brief — the liveness probe is a sub-100ms localhost round-trip
+
+            // Liveness backstop: `isRunning` (already checked by .evaluate) does
+            // not catch a wedged-but-alive or about-to-die sidecar. A short
+            // /api/health probe does (connection-refused = dead, timeout =
+            // wedged). On failure, drop the stale entry and cold-start so the
+            // user sees a real boot, never a silent blank pane (review F1/F3).
+            let alive = await probeHealth(port: incoming.port, token: incoming.authToken)
+            guard !Task.isCancelled else {
+                // Superseded mid-probe — don't leak either candidate's process.
+                tearDownEntry(incoming)
+                if let outgoing { tearDownEntry(outgoing) }
+                return
+            }
+            if alive {
+                adoptFronted(incoming, path: path)
+                parked = outgoing  // the project we just left stays warm
+                log.info("sidecar_repointed project=\(path, privacy: .public) port=\(incoming.port, privacy: .public) health=ok")
+                Task { await self.fetchServerVersion(port: incoming.port) }
+                return
+            }
+            log.info("sidecar_repointed project=\(path, privacy: .public) health=failed — cold starting")
+            tearDownEntry(incoming)
+            parked = outgoing
+            start(projectPath: path)
+        } else {
+            // Cold start. Park the outgoing sidecar (evicting any *other* warm
+            // entry — single slot), then spawn fresh. detachFronted() clears
+            // `process` first, so start()'s defensive stop() won't fire and the
+            // freshly-parked slot survives.
+            guard !Task.isCancelled else {
+                log.info("switchProject superseded — abandoning before start()")
+                return
+            }
+            if let outgoing = detachFronted() {
+                if let existing = parked {
+                    log.info("sidecar_evicted project=\(existing.projectPath, privacy: .public) reason=park")
+                    tearDownEntry(existing)
+                }
+                parked = outgoing
+            }
+            log.info("starting new sidecar")
+            start(projectPath: path)
         }
-        log.info("starting new sidecar")
-        start(projectPath: path)
+
         // Wait for transition out of .starting (to .running or .failed) so
-        // callers can await the switch completing. Bounded by start()'s own
-        // 15s timeout — it transitions to .failed if the sidecar never prints
-        // the Report line. Also bail if a newer switch cancels us mid-wait.
+        // callers can await the switch. Bounded by start()'s 15s timeout (cold)
+        // or the probe (warm-failed→cold). Bail if a newer switch cancels us.
         let deadline = ContinuousClock.now.advanced(by: .seconds(20))
         while case .starting = state, !Task.isCancelled, ContinuousClock.now < deadline {
             try? await Task.sleep(for: .milliseconds(50))
         }
+    }
+
+    // MARK: - Warm-sidecar pool (single parked slot, Phase A2)
+
+    /// Detach the current fronted sidecar so it can be parked WITHOUT signalling
+    /// it. Returns a `ParkedSidecar` when the fronted sidecar was `.running`
+    /// (worth keeping warm); otherwise tears down any half-started process and
+    /// returns nil. Does not write `state` — the caller transitions it.
+    private func detachFronted() -> ParkedSidecar? {
+        timeoutTask?.cancel()
+        timeoutTask = nil
+        if case .running(let port) = state, let proc = process, let path = currentProjectPath {
+            let entry = ParkedSidecar(
+                projectPath: path, port: port, authToken: authToken,
+                serverVersion: serverVersion, process: proc, readTask: readTask, buffer: outputLines
+            )
+            log.info("sidecar_parked project=\(path, privacy: .public) port=\(port, privacy: .public)")
+            process = nil
+            readTask = nil  // ownership moves to the entry; the task keeps draining
+            return entry
+        }
+        // Not running (idle / starting / failed) — not worth keeping warm.
+        if let proc = process {
+            tearDownProcess(proc, readTask: readTask, label: currentProjectPath ?? "")
+        }
+        process = nil
+        readTask = nil
+        return nil
+    }
+
+    /// Promote a parked sidecar back to fronted, restoring its port, token, and
+    /// version atomically before the WebView re-mounts. `generation` is bumped
+    /// by the caller before the liveness probe.
+    private func adoptFronted(_ entry: ParkedSidecar, path: String) {
+        process = entry.process
+        readTask = entry.readTask
+        authToken = entry.authToken
+        serverVersion = entry.serverVersion
+        currentProjectPath = path
+        outputLines = entry.buffer
+        state = .running(port: entry.port)
+    }
+
+    /// Tear down a parked entry: cancel its read task, SIGINT → (bounded wait)
+    /// → SIGKILL. Silent to the user — never writes `state`, never surfaces
+    /// `.failed`, never a toast (it's housekeeping for a project the user isn't
+    /// looking at, review F12). The host-side `sidecar_evicted` log line is
+    /// emitted by the caller *before* this, so even the SIGKILL branch — which
+    /// produces no Python `sidecar_exit` line — leaves a trace (review F8).
+    private func tearDownEntry(_ entry: ParkedSidecar) {
+        tearDownProcess(entry.process, readTask: entry.readTask, label: entry.projectPath)
+    }
+
+    private func tearDownProcess(_ proc: Process, readTask: Task<Void, Never>?, label: String) {
+        readTask?.cancel()
+        guard proc.isRunning else { return }
+        proc.interrupt()  // SIGINT — Uvicorn graceful shutdown
+        // Escalate to SIGKILL off the hot path. A GIL-wedged sidecar
+        // (whisper/torch mid-call) ignores SIGINT; without escalation it would
+        // leak as an orphan the sandboxed host can never enumerate (review F5).
+        // Runs on MainActor (sleeps yield) but switchProject does not await it.
+        Task { @MainActor in
+            for _ in 0..<40 {  // up to ~2s, polling every 50ms
+                if !proc.isRunning { return }
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+            if proc.isRunning {
+                log.warning("parked sidecar didn't exit; SIGKILL project=\(label, privacy: .public)")
+                kill(proc.processIdentifier, SIGKILL)
+            }
+        }
+    }
+
+    /// Tear down the warm slot, if any. Used by stop()/shutdown() (Cmd+Q,
+    /// folder selection) and restartIfRunning() (prefs/consent change — parked
+    /// env is stale, review F6/F7). Silent.
+    func drainParked() {
+        guard let entry = parked else { return }
+        log.info("sidecar_evicted project=\(entry.projectPath, privacy: .public) reason=drain")
+        tearDownEntry(entry)
+        parked = nil
+    }
+
+    /// Tear down the warm slot iff it serves one of `paths`. Called when a
+    /// project is removed from the sidebar so a warm sidecar isn't left serving
+    /// an explicitly-deleted project (review F16).
+    func dropParked(forPaths paths: Set<String>) {
+        guard let entry = parked, paths.contains(entry.projectPath) else { return }
+        log.info("sidecar_evicted project=\(entry.projectPath, privacy: .public) reason=removed")
+        tearDownEntry(entry)
+        parked = nil
+    }
+
+    /// Liveness probe for a re-point: confirm the warm sidecar is actually
+    /// serving (not dead, not wedged) before handing the WebView to it. NOTE:
+    /// `/api/health` is auth-EXEMPT (`bristlenose/server/middleware.py`), so this
+    /// validates *liveness*, not the token — token correctness on re-point is
+    /// guaranteed structurally (the WebView re-mounts on the port change and
+    /// re-injects the restored per-instance token; pinned by RepointDecision
+    /// tests). The bearer header is attached anyway so the probe upgrades for
+    /// free if /api/health ever becomes auth-required.
+    private func probeHealth(port: Int, token: String?, timeout: TimeInterval = 3) async -> Bool {
+        guard let url = URL(string: "http://127.0.0.1:\(port)/api/health") else { return false }
+        var req = URLRequest(url: url, timeoutInterval: timeout)
+        if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        do {
+            let (_, resp) = try await URLSession.shared.data(for: req)
+            guard let http = resp as? HTTPURLResponse else { return false }
+            return (200..<300).contains(http.statusCode)
+        } catch {
+            return false  // connection refused (dead) or timeout (wedged)
+        }
+    }
+
+    /// Route a process's termination by identity to the fronted-death path
+    /// (transition `state` to `.failed`) or the parked-death path (drop the warm
+    /// slot silently, review F9). A process that is neither (already superseded
+    /// and torn down) is a no-op — identity subsumes the old generation guard.
+    private func handleTermination(processID procID: ObjectIdentifier, status: Int32) {
+        if let fronted = process, ObjectIdentifier(fronted) == procID {
+            timeoutTask?.cancel()
+            let lastLines = outputLines.suffix(5).joined(separator: "\n")
+            if case .running = state {
+                state = .failed(error: "Server exited with code \(status)\n\(lastLines)")
+            } else if case .starting = state {
+                state = .failed(error: "Server exited before becoming ready (code \(status))\n\(lastLines)")
+            }
+        } else if let entry = parked, ObjectIdentifier(entry.process) == procID {
+            // Death-while-parked: drop the stale slot so a later switch-back
+            // cold-starts instead of re-pointing into a dead port.
+            log.info("sidecar_parked_died project=\(entry.projectPath, privacy: .public) port=\(entry.port, privacy: .public)")
+            entry.readTask?.cancel()
+            parked = nil
+        }
+        // else: stale process from a superseded run — nothing to do.
     }
 
     // MARK: - Private
@@ -468,12 +662,28 @@ final class ServeManager: ObservableObject {
         options: [.anchorsMatchLines]
     )
 
-    private func handleLine(_ line: String) {
+    private func handleLine(_ line: String, fromProcessID procID: ObjectIdentifier) {
         let clean = Self.ansiRegex.stringByReplacingMatches(
             in: line,
             range: NSRange(line.startIndex..., in: line),
             withTemplate: ""
         )
+
+        // Route by identity. A line from a PARKED (or already-superseded)
+        // process must NOT run any fronted logic — not token capture, not the
+        // published `outputLines`, not readiness/state. Otherwise a late stdout
+        // line from the parked sidecar could overwrite the fronted instance's
+        // auth token (the same 401 class as the re-point token bug, review F10).
+        // Parked lines are buffered on their own entry (capped) so the pipe
+        // keeps draining and can't block the writer.
+        guard let fronted = process, ObjectIdentifier(fronted) == procID else {
+            if var entry = parked, ObjectIdentifier(entry.process) == procID {
+                entry.buffer.append(BristlenoseShared.redactKeys(in: clean))
+                if entry.buffer.count > 50 { entry.buffer.removeFirst(entry.buffer.count - 50) }
+                parked = entry
+            }
+            return
+        }
 
         // Parse auth token FIRST — before redaction. The token format is
         // base64url (secrets.token_urlsafe), extremely unlikely to match the

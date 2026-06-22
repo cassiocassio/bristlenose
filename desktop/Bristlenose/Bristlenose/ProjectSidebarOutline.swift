@@ -439,11 +439,23 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             let name = projectIndex?.folders.first { $0.id == id }?.name ?? "Folder"
             return iconCell(symbol: "folder", text: name)
         case .project(let id):
-            let project = projectIndex?.projects.first { $0.id == id }
-            let count = projectIndex?.unanalysed[id]?.sessionCount
-            return iconCell(symbol: project?.icon ?? "circle",
-                            text: project?.name ?? "Project",
-                            trailing: count.map { String($0) })
+            guard let project = projectIndex?.projects.first(where: { $0.id == id }) else {
+                return iconCell(symbol: "circle", text: "Project")
+            }
+            let symbol = project.icon ?? IconPickerPopover.defaultIcon
+            let count = projectIndex?.unanalysed[id]?.sessionCount.map { String($0) }
+            let variant = subtitleVariant(for: project)
+            let subtitle = i18n.flatMap {
+                SidebarSubtitleText.text(for: variant, availability: project.availability,
+                                         progress: liveData?.progress[id], i18n: $0)
+            }
+            // No subtitle (`.placeholder`, or a defensive nil) → single-line collapse,
+            // the deliberate divergence (ProjectCellSpec). Reuse the single-line iconCell.
+            guard let subtitle else {
+                return iconCell(symbol: symbol, text: project.name, trailing: count)
+            }
+            return projectTwoLineCell(symbol: symbol, name: project.name, count: count,
+                                      subtitle: subtitle, available: project.availability.isReady)
         }
     }
 
@@ -499,6 +511,122 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             ]
         } else {
             constraints.append(textField.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -4))
+        }
+        NSLayoutConstraint.activate(constraints)
+        return cell
+    }
+
+    // MARK: - Project cell (rich, two-line) — Phase 1+
+
+    /// Variable row height: a project shows two lines unless its state collapses
+    /// to `.placeholder` (the deliberate divergence). Non-project rows + the
+    /// collapsed case use the single-line height. Uses the same nil-subtitle
+    /// criterion as `viewFor` so height + content can't disagree.
+    func outlineView(_ outlineView: NSOutlineView, heightOfRowByItem item: Any) -> CGFloat {
+        guard let node = item as? OutlineNode, case .project(let id) = node.kind,
+              let project = projectIndex?.projects.first(where: { $0.id == id }), let i18n
+        else {
+            return ProjectCellSpec.rowHeight(twoLine: false)
+        }
+        let variant = subtitleVariant(for: project)
+        let twoLine = SidebarSubtitleText.text(for: variant, availability: project.availability,
+                                               progress: liveData?.progress[id], i18n: i18n) != nil
+        return ProjectCellSpec.rowHeight(twoLine: twoLine)
+    }
+
+    /// The arbitrated subtitle state — mirrors `ProjectRow.subtitleVariant`
+    /// (`ProjectRow.swift:491-501`), pulling the same inputs from the controller's
+    /// observed sources.
+    private func subtitleVariant(for project: Project) -> SubtitleVariant {
+        let id = project.id
+        return ProjectSubtitle.resolve(
+            availability: project.availability,
+            pipelineState: pipelineRunner?.state[id],
+            isStopping: liveData?.progress[id]?.isStopping ?? false,
+            copy: copyDisplay(for: project),
+            lastRunAt: project.lastPipelineRunAt,
+            missingCount: projectIndex?.unanalysed[id]?.missingFiles.count ?? 0,
+            unanalysedCount: projectIndex?.unanalysed[id]?.newFiles.count ?? 0
+        )
+    }
+
+    /// Per-project copy display — mirrors `ContentView.swift:1784-1790`.
+    private func copyDisplay(for project: Project) -> CopyDisplay? {
+        guard let f = copyMachinery?.inFlight, f.projectID == project.id else { return nil }
+        switch f.phase {
+        case .copying: return .copying(fraction: f.progress)
+        case .cancelling: return .cancelling
+        }
+    }
+
+    /// The two-line project cell: icon (baseline-aligned to the title line) · name
+    /// · session count on the title line; status text on the subtitle line. Layout
+    /// constants per `ProjectCellSpec` (traceable to `ProjectRow`). Prefix/failure
+    /// glyphs + the trailing ring + buttons land in Phases 2–4. `.placeholder` rows
+    /// never reach here (collapsed to the single-line `iconCell` in `viewFor`).
+    private func projectTwoLineCell(symbol: String, name: String, count: String?,
+                                    subtitle: String, available: Bool) -> NSTableCellView {
+        let cell = NSTableCellView()
+        let imageView = NSImageView()
+        imageView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        imageView.symbolConfiguration = NSImage.SymbolConfiguration(scale: .medium)
+        imageView.contentTintColor = available ? nil : .secondaryLabelColor
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+
+        let nameField = NSTextField(labelWithString: name)
+        nameField.font = ProjectCellSpec.titleFont
+        nameField.textColor = available ? .labelColor : .secondaryLabelColor
+        nameField.lineBreakMode = .byTruncatingTail
+        nameField.translatesAutoresizingMaskIntoConstraints = false
+        // Name yields before the count under pressure (count stays visible).
+        nameField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        let subtitleField = NSTextField(labelWithString: subtitle)
+        subtitleField.font = ProjectCellSpec.subtitleFont
+        subtitleField.textColor = .secondaryLabelColor
+        subtitleField.lineBreakMode = .byTruncatingTail
+        subtitleField.translatesAutoresizingMaskIntoConstraints = false
+
+        cell.imageView = imageView
+        cell.textField = nameField
+        cell.addSubview(imageView)
+        cell.addSubview(nameField)
+        cell.addSubview(subtitleField)
+
+        var constraints: [NSLayoutConstraint] = [
+            imageView.leadingAnchor.constraint(equalTo: cell.leadingAnchor),
+            imageView.widthAnchor.constraint(equalToConstant: ProjectCellSpec.iconWidth),
+            // Icon sits on the TITLE line (centred on the name), not the whole row —
+            // ProjectRow's `.firstTextBaseline` ("belongs to the project name", :115-119).
+            imageView.centerYAnchor.constraint(equalTo: nameField.centerYAnchor),
+            nameField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor,
+                                               constant: ProjectCellSpec.iconToText),
+            nameField.topAnchor.constraint(equalTo: cell.topAnchor,
+                                           constant: ProjectCellSpec.verticalInset),
+            subtitleField.topAnchor.constraint(equalTo: nameField.bottomAnchor,
+                                               constant: ProjectCellSpec.titleToSubtitle),
+            subtitleField.leadingAnchor.constraint(equalTo: nameField.leadingAnchor),
+            subtitleField.trailingAnchor.constraint(equalTo: cell.trailingAnchor,
+                                                    constant: -ProjectCellSpec.trailingInset),
+        ]
+        if let count {
+            let countField = NSTextField(labelWithString: count)
+            countField.font = ProjectCellSpec.countFont
+            countField.textColor = .tertiaryLabelColor
+            countField.translatesAutoresizingMaskIntoConstraints = false
+            countField.setContentHuggingPriority(.required, for: .horizontal)
+            countField.setContentCompressionResistancePriority(.required, for: .horizontal)
+            cell.addSubview(countField)
+            constraints += [
+                nameField.trailingAnchor.constraint(lessThanOrEqualTo: countField.leadingAnchor,
+                                                    constant: -ProjectCellSpec.titleInternal),
+                countField.trailingAnchor.constraint(equalTo: cell.trailingAnchor,
+                                                     constant: -ProjectCellSpec.trailingInset),
+                countField.firstBaselineAnchor.constraint(equalTo: nameField.firstBaselineAnchor),
+            ]
+        } else {
+            constraints.append(nameField.trailingAnchor.constraint(
+                lessThanOrEqualTo: cell.trailingAnchor, constant: -ProjectCellSpec.trailingInset))
         }
         NSLayoutConstraint.activate(constraints)
         return cell

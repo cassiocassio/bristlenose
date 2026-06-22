@@ -1452,7 +1452,10 @@ struct ContentView: View {
                 lenses: LensItem.all,
                 activeTab: bridgeHandler.activeTab,
                 lensesEnabled: selectedProjectShowsReport,
-                onActivateLens: { bridgeHandler.switchToTab($0) }
+                onActivateLens: { bridgeHandler.switchToTab($0) },
+                pipelineRunner: pipelineRunner,
+                liveData: pipelineRunner.liveData,
+                copyMachinery: copyMachinery
             )
             .navigationTitle(i18n.t("desktop.chrome.projects"))
         } else {

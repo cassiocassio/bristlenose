@@ -23,6 +23,16 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     let activeTab: Tab?
     let lensesEnabled: Bool
     let onActivateLens: (Tab) -> Void
+    /// Live per-project run/copy data for the rich cell port. Plain refs — the
+    /// controller reads current state from these reference types, and ContentView's
+    /// own `pipelineRunner` observation re-creates this representable on state
+    /// transitions (→ `updateNSViewController` → reload). High-frequency progress
+    /// *ticking* (ring fraction / ETA) gets explicit `@ObservedObject` observation
+    /// when the ring lands (Phase 3) — deferred so we don't reload-churn before a
+    /// cell actually renders the live signal.
+    let pipelineRunner: PipelineRunner
+    let liveData: PipelineLiveData
+    let copyMachinery: CopyMachinery
 
     func makeNSViewController(context: Context) -> SidebarOutlineController {
         let controller = SidebarOutlineController()
@@ -35,6 +45,9 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.projectIndex = projectIndex
         controller.i18n = i18n
         controller.lensItems = lenses
+        controller.pipelineRunner = pipelineRunner
+        controller.liveData = liveData
+        controller.copyMachinery = copyMachinery
         // Refresh the callbacks each update so they capture the live binding —
         // the AppKit delegate does not fire for programmatic selection, so the
         // funnel is the SwiftUI binding itself (§2.5).
@@ -70,6 +83,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
     weak var projectIndex: ProjectIndex?
     weak var i18n: I18n?
+    weak var pipelineRunner: PipelineRunner?
+    weak var liveData: PipelineLiveData?
+    weak var copyMachinery: CopyMachinery?
     var lensItems: [LensItem] = LensItem.all
     var onSelectionChange: (Set<SidebarSelection>) -> Void = { _ in }
     var onActivateLens: (Tab) -> Void = { _ in }

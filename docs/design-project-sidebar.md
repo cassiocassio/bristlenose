@@ -31,6 +31,7 @@ trued-against: HEAD@main on 2026-06-21
 
 ## Changelog
 
+- _2026-06-22_ — added a **"Substrate + ownership"** banner after §Context delineating this doc (sidebar behaviour/content) from the two newer docs that now own slices of the surface: `design-desktop-nav-toolbar-rearrangement.md` (the relocated lens rail) and `design-desktop-sidebar-appkit.md` (the SwiftUI `List` → AppKit `NSOutlineView` migration, alpha default at cutover). Cross-ref'd §"Row anatomy" to the appkit §2.4 cell port. **No behaviour claims changed** — the SwiftUI content here is accurate for the flag-OFF default build; the banner closes the cross-doc drift risk (those mechanics are deleted at cutover). Anchors: `ProjectSidebarOutline.swift`, `OutlineNode.swift`, `LensRail.swift`, `BristlenoseFlags.swift`.
 - _2026-06-21_ — re-trued against `main` after the `project-status-line` + `warm-sidecar-pool` merges, which landed the day *after* the 18 Jun truing (its front-matter SHA `bcb4187` is an ancestor of the rewrite — false-fresh). Added copy-on-row to §"Row anatomy" (`"Copying · N%"` ring + hover-cancel + context-menu; standalone `CopyProgressPill` deleted); flipped §"Click behaviour" — switch-back now re-points to a parked warm sidecar (Phase A2). Anchors: `ProjectSubtitle.swift`, `ProjectRow.swift`, `ParkedSidecar.swift`, `ServeManager.swift`; commits `0842081`, `4313bff`, `beaac38`.
 - _2026-06-18_ — Trued against `main` @ `bcb4187` after the `progress-text-surfacing` merge. Running-row subtitle now shows the live progress ladder via `RunProgressSubtitle` (states table L81 updated); drag-create adopts the folder/first-item name with no inline rename (drop matrix + Phase 2 list updated, commit `09f8625`); added a "Row anatomy (two-line)" section documenting the title-line session count + its refresh-on-completion (commit `1e1d608`) and the subtitle progress ladder, cross-referencing `desktop/CLAUDE.md` + `bristlenose/server/CLAUDE.md` for the WAL-checkpoint mechanics rather than duplicating them.
 - _2026-05-01_ — §"Empty state" status banner flipped from `partial` to `shipped` after `WelcomeView` landed on `first-run` (commit `816ab65`). Drop-target affordance and New Project CTA now ship via the welcome detail-pane (not via the sidebar `ContentUnavailableView` shape originally designed in this doc); see `WelcomeView.swift` and `design-desktop-app.md` §"Loading and transition states" empty-state row. The four downstream "ContentUnavailableView empty state" mentions in this doc were not rewritten — the original sidebar-level vision is preserved as planning history; the actual empty surface lives in the detail pane. TipKit first-project hint remains parked.
@@ -46,6 +47,12 @@ trued-against: HEAD@main on 2026-06-21
 The desktop app (`desktop/Bristlenose/`) currently has a hardcoded `ProjectStub` array in `ContentView.swift` and a `Project` menu in `MenuCommands.swift` with 5 unimplemented items. The design doc (`docs/design-multi-project.md`) covers the data model, project index, folder grouping, and security review — but doesn't specify the sidebar UX, menu hierarchy, or interaction details. This plan fills that gap.
 
 Existing design doc: `docs/design-multi-project.md`
+
+> **Substrate + ownership (trued 22 Jun 2026 — read first).** This doc is canonical for the project sidebar's **behaviour and content**: states, row anatomy, project-index storage, on-disk drag semantics, menus, Get Info, the pipeline-state matrix. Two newer docs now own slices of the same surface — keep one-canonical-per-concern:
+> - **`design-desktop-nav-toolbar-rearrangement.md`** owns the **lens rail** — the five Project/Sessions/Quotes/Codebook/Analysis *mode* rows relocated to the **top** of the sidebar (above the project list; **not** shown in the §"Sidebar structure" diagram below, which predates them).
+> - **`design-desktop-sidebar-appkit.md`** owns the **rendering substrate** — the project list is migrating from SwiftUI `List` to a native AppKit `NSOutlineView` source list (flag-gated `BristlenoseAppKitSidebar`, **the alpha default at cutover**).
+>
+> So the SwiftUI mechanics named throughout (`List(selection:)`, `SidebarDropDelegate`, `DisclosureGroup`, `ProjectRow`/`FolderRow`) describe the **flag-OFF default build** and are **deleted at cutover** — their *behaviour* is ported verbatim to the outline, but the *how* moves to the appkit doc. Read here for **what the sidebar does**; read the appkit doc for **how the native list renders it**.
 
 ## Sidebar structure
 
@@ -108,7 +115,7 @@ All trailing icons and status text must have `.accessibilityLabel()` / `.accessi
 
 ### Row anatomy (two-line)
 
-The canonical spec is the `ProjectRow.swift` doc-comment; this is its design home.
+The canonical spec is the `ProjectRow.swift` doc-comment; this is its design home. **(The AppKit `NSTableCellView` port of this same anatomy is `design-desktop-sidebar-appkit.md` §2.4 — that doc owns the substrate rendering; the content + precedence rules stay canonical here. At cutover the SwiftUI `ProjectRow` retires; what the port preserves is the *behaviour* described below.)**
 
 - **Title line** — identity icon · project name · *(right)* **session count** (the interview count — Finder's right-column treatment; empty when the analysis DB isn't readable).
 - **Subtitle line** — status text · *(right)* storage/activity qualifier (iCloud arrow, or the activity indicator while a run is in flight). During a run the subtitle shows the **live progress ladder** — stage · N of M · ETA (e.g. "Transcribing · 2 of 3 · <1 min left"), degrading to "Analysing · <1 min left" then "Analysing…" — composed by the pure `RunProgressSubtitle` helper (stage vocabulary = `timing.py ALL_STAGES`, six coarse ids, **not** `manifest.STAGE_ORDER`). Ring / spinner / Stop-× / failure-glyph details: `docs/design-sidebar-activity-indicators.md`.

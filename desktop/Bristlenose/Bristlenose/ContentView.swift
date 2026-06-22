@@ -2016,32 +2016,59 @@ private struct ProjectNotificationReceivers: ViewModifier {
     }
 }
 
-/// Toolbar export button with per-tab dropdown contents.
-/// "Export Report..." is always first (universal). Tab-specific exports below a divider.
+/// Toolbar export button — the macOS surface of the canonical export list,
+/// at parity with the SPA dropdown (see docs/mockups/export-menu-comparison.html).
+///
+/// Order: a global Anonymise toggle, then "Export Report…" (universal), then
+/// the quote-specific actions (Copy Quotes · Save as Spreadsheet · Extract
+/// Video Clips) under a section header — shown only on the Quotes tab.
+///
+/// Every item dispatches through `bridgeHandler.menuAction(_:payload:)`, which
+/// the web layer (`AppLayout` `bn:menu-action`) routes into `utils/exportActions`
+/// — the single source of truth shared with the SPA dropdown. The `anonymise`
+/// flag rides the payload so it applies to whichever export the user picks.
+///
+/// Parked (future ideas, not shown): Miro board push, PowerPoint quote slides.
 struct ExportMenuButton: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
 
+    /// Global Anonymise — strips participant *names* (display names) from every
+    /// export; participant codes (p1, p2) are kept. Deliberately not persisted:
+    /// resets to off on view recreation (e.g. project switch) so a researcher
+    /// never ships an unexpectedly-anonymised export.
+    @State private var anonymise = false
+
+    private var payload: [String: Any] { ["anonymise": anonymise] }
+
     var body: some View {
         Menu {
-            // Shortcut (Cmd+Shift+E) lives on the File > Export Report… item
-            // in MenuCommands.swift — single source so re-binding only touches
-            // one place. The toolbar Menu item invokes the same bridge action.
+            // Global toggle — applies to whichever export the user picks next.
+            Toggle(isOn: $anonymise) {
+                Text(i18n.t("desktop.menu.quotes.anonymise"))
+            }
+
+            Divider()
+
+            // Universal: shareable HTML report. Cmd+Shift+E lives on the
+            // File > Export Report… item in MenuCommands.swift (single source).
             Button(i18n.t("desktop.menu.file.exportReport")) {
-                bridgeHandler.menuAction("exportReport")
+                bridgeHandler.menuAction("exportReport", payload: payload)
             }
 
             if bridgeHandler.activeTab == .quotes {
-                Divider()
-
-                Button(i18n.t("desktop.menu.quotes.copyAsCSV")) {
-                    bridgeHandler.menuAction("exportQuotesCSV")
+                Section(i18n.t("desktop.menu.quotes.sectionTitle")) {
+                    Button(i18n.t("desktop.menu.quotes.copyQuotes")) {
+                        bridgeHandler.menuAction("copyQuotes", payload: payload)
+                    }
+                    Button(i18n.t("desktop.menu.quotes.saveSpreadsheet")) {
+                        bridgeHandler.menuAction("saveSpreadsheet", payload: payload)
+                    }
+                    Button(i18n.t("desktop.menu.quotes.extractClips")) {
+                        bridgeHandler.menuAction("extractClips", payload: payload)
+                    }
                 }
-
-                // Future: "Export Starred Quotes as CSV" when starred filter active
             }
-
-            // Future: Analysis tab → "Export Signal Cards as PPTX"
         } label: {
             Label(i18n.t("desktop.toolbar.export"), systemImage: "square.and.arrow.up")
         }

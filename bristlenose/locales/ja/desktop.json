@@ -90,7 +90,12 @@
       "extendSelectionUp": "選択範囲を上に拡張",
       "toggleSelection": "選択を切り替え",
       "clearSelection": "選択を解除",
-      "copyAsCSV": "CSV としてコピー"
+      "copyAsCSV": "CSV としてコピー",
+      "copyQuotes": "引用をコピー",
+      "saveSpreadsheet": "スプレッドシートとして保存…",
+      "extractClips": "ビデオクリップを抽出…",
+      "sectionTitle": "引用",
+      "anonymise": "匿名化（名前を削除）"
     },
     "video": {
       "play": "再生",

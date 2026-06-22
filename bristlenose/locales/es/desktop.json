@@ -90,7 +90,12 @@
       "extendSelectionUp": "Extender selección hacia arriba",
       "toggleSelection": "Alternar selección",
       "clearSelection": "Borrar selección",
-      "copyAsCSV": "Copiar como CSV"
+      "copyAsCSV": "Copiar como CSV",
+      "copyQuotes": "Copiar citas",
+      "saveSpreadsheet": "Guardar como hoja de cálculo…",
+      "extractClips": "Extraer clips de vídeo…",
+      "sectionTitle": "Citas",
+      "anonymise": "Anonimizar (quitar nombres)"
     },
     "video": {
       "play": "Reproducir",

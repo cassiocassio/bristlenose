@@ -104,7 +104,9 @@
       "formatXLSX": "XLSX",
       "copyScopeAll": "Tous ({{count}})",
       "copyScopeSelected": "S\u00e9lectionn\u00e9s ({{count}})",
-      "copyScopeStarred": "Favoris ({{count}})"
+      "copyScopeStarred": "Favoris ({{count}})",
+      "revealTranscripts": "Afficher les transcriptions dans le Finder",
+      "revealTranscriptsHint": "Les fichiers de transcription sur le disque"
     },
     "video": {
       "play": "Lecture",

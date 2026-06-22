@@ -104,7 +104,9 @@
       "formatXLSX": "XLSX",
       "copyScopeAll": "\uc804\uccb4 ({{count}})",
       "copyScopeSelected": "\uc120\ud0dd ({{count}})",
-      "copyScopeStarred": "\ubcc4\ud45c ({{count}})"
+      "copyScopeStarred": "\ubcc4\ud45c ({{count}})",
+      "revealTranscripts": "Finder\uc5d0\uc11c \uc804\uc0ac\ubcf8 \ubcf4\uae30",
+      "revealTranscriptsHint": "\ub514\uc2a4\ud06c\uc758 \uc804\uc0ac\ubcf8 \ud30c\uc77c"
     },
     "video": {
       "play": "재생",

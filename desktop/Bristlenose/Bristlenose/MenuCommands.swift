@@ -699,6 +699,47 @@ private struct QuotesMenuContent: View {
 
         Divider()
 
+        // Export — mirrors the toolbar export popover so every export action has
+        // a keyboard- and VoiceOver-reachable path (the popover is a convenience;
+        // the menu bar is the canonical, accessible surface). Native submenus
+        // give scope/format pickers proper keyboard nav + VoiceOver for free.
+        // TODO: surface the global Anonymise toggle here too (needs a shared
+        // persisted-flag decision) and retire the legacy copyAsCSV item below.
+        Menu(i18n.t("desktop.menu.quotes.copyQuotes")) {
+            Button(i18n.t("desktop.menu.quotes.copyScopeAll",
+                          ["count": String(bridgeHandler.totalQuoteCount)])) {
+                bridgeHandler.menuAction("copyQuotes", payload: ["scope": "all"])
+            }
+            Button(i18n.t("desktop.menu.quotes.copyScopeSelected",
+                          ["count": String(bridgeHandler.selectedQuoteCount)])) {
+                bridgeHandler.menuAction("copyQuotes", payload: ["scope": "selected"])
+            }
+            .disabled(bridgeHandler.selectedQuoteCount == 0)
+            Button(i18n.t("desktop.menu.quotes.copyScopeStarred",
+                          ["count": String(bridgeHandler.starredQuoteCount)])) {
+                bridgeHandler.menuAction("copyQuotes", payload: ["scope": "starred"])
+            }
+            .disabled(bridgeHandler.starredQuoteCount == 0)
+        }
+        .disabled(!onQuotesTab)
+
+        Menu(i18n.t("desktop.menu.quotes.saveSpreadsheet")) {
+            Button(i18n.t("desktop.menu.quotes.formatCSV")) {
+                bridgeHandler.menuAction("saveSpreadsheet", payload: ["format": "csv"])
+            }
+            Button(i18n.t("desktop.menu.quotes.formatXLSX")) {
+                bridgeHandler.menuAction("saveSpreadsheet", payload: ["format": "xlsx"])
+            }
+        }
+        .disabled(!onQuotesTab)
+
+        Button(i18n.t("desktop.menu.quotes.extractClips")) {
+            bridgeHandler.menuAction("extractClips")
+        }
+        .disabled(!onQuotesTab)
+
+        Divider()
+
         Button(i18n.t("desktop.menu.quotes.copyAsCSV")) {
             bridgeHandler.menuAction("copyAsCSV")
         }

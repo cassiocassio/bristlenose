@@ -102,9 +102,9 @@
       "clipsHint": "\u5f15\u7528\u3054\u3068\u306b\u30c8\u30ea\u30df\u30f3\u30b0\u3055\u308c\u305f\u30af\u30ea\u30c3\u30d7",
       "formatCSV": "CSV",
       "formatXLSX": "XLSX",
-      "copyScopeAll": "\u5168{{count}}\u4ef6\u306e\u5f15\u7528",
-      "copyScopeSelected": "\u9078\u629e\u4e2d\u306e{{count}}\u4ef6\u306e\u5f15\u7528",
-      "copyScopeStarred": "\u30b9\u30bf\u30fc\u4ed8\u304d{{count}}\u4ef6\u306e\u5f15\u7528"
+      "copyScopeAll": "\u3059\u3079\u3066 ({{count}})",
+      "copyScopeSelected": "\u9078\u629e ({{count}})",
+      "copyScopeStarred": "\u30b9\u30bf\u30fc\u4ed8\u304d ({{count}})"
     },
     "video": {
       "play": "再生",

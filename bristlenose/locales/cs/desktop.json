@@ -102,9 +102,9 @@
       "clipsHint": "O\u0159\u00edznut\u00fd klip na citaci",
       "formatCSV": "CSV",
       "formatXLSX": "XLSX",
-      "copyScopeAll": "V\u0161ech {{count}} citac\u00ed",
-      "copyScopeSelected": "{{count}} vybran\u00fdch citac\u00ed",
-      "copyScopeStarred": "{{count}} ozna\u010den\u00fdch citac\u00ed"
+      "copyScopeAll": "V\u0161e ({{count}})",
+      "copyScopeSelected": "Vybran\u00e9 ({{count}})",
+      "copyScopeStarred": "Ozna\u010den\u00e9 ({{count}})"
     },
     "video": {
       "play": "Přehrát",

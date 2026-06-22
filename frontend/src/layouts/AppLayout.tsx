@@ -52,6 +52,7 @@ import {
   setViewMode,
   setTagFilter,
   getQuotesSnapshot,
+  getVisibleQuotes,
   useQuoteCounts,
 } from "../contexts/QuotesContext";
 import { EMPTY_TAG_FILTER } from "../utils/filter";
@@ -335,15 +336,6 @@ function AppShell() {
       }
     };
 
-    // Export scope: explicit selection wins, else the focused quote, else all.
-    const exportSelectionIds = (snap: ReturnType<typeof getQuotesSnapshot>): string[] => {
-      const selected = selectedIdsBridgeRef.current;
-      if (selected.size > 0) return Array.from(selected);
-      const focused = focusedIdBridgeRef.current;
-      if (focused) return [focused];
-      return snap.quotes.map((q) => q.dom_id);
-    };
-
     const handler = (e: Event) => {
       const { action, payload } = (e as CustomEvent).detail;
       switch (action) {
@@ -425,23 +417,27 @@ function AppShell() {
             | { anonymise?: boolean; scope?: "all" | "selected" | "starred" }
             | undefined;
           const anon = p?.anonymise ?? false;
-          // scope picks the id set explicitly (popover disclosure); absent it
-          // falls back to the canonical selection → focused → all.
+          // Scopes operate within the *visible* set ("all" = quotes on screen,
+          // excluding hidden/filtered). "selected" uses the live selection;
+          // "starred" = visible & starred. Default (no scope) = all visible.
+          const visible = getVisibleQuotes(snap);
           let ids: string[];
-          if (p?.scope === "all") ids = snap.quotes.map((q) => q.dom_id);
-          else if (p?.scope === "selected") ids = Array.from(selectedIdsBridgeRef.current);
+          if (p?.scope === "selected") ids = Array.from(selectedIdsBridgeRef.current);
           else if (p?.scope === "starred")
-            ids = snap.quotes.filter((q) => snap.starred[q.dom_id]).map((q) => q.dom_id);
-          else ids = exportSelectionIds(snap);
+            ids = visible.filter((q) => snap.starred[q.dom_id]).map((q) => q.dom_id);
+          else ids = visible.map((q) => q.dom_id);
           void copyQuotesToClipboard(snap, ids, i18n.t, anon);
           break;
         }
         case "saveSpreadsheet": {
+          // Spreadsheet exports everything on screen (all visible quotes), not
+          // the current selection — the rich sheet is the full-dataset export.
           const snap = getQuotesSnapshot();
           const p = payload as { anonymise?: boolean; format?: "csv" | "xlsx" } | undefined;
           const anon = p?.anonymise ?? false;
           const format = p?.format === "csv" ? "csv" : "xlsx";
-          saveQuotesSpreadsheet(projectId, exportSelectionIds(snap), i18n.t, anon, format);
+          const ids = getVisibleQuotes(snap).map((q) => q.dom_id);
+          saveQuotesSpreadsheet(projectId, ids, i18n.t, anon, format);
           break;
         }
         case "extractClips": {

@@ -118,7 +118,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // tinted content, focus-stable). Keep both; the deprecation is accepted.
         outlineView.selectionHighlightStyle = .sourceList
         outlineView.floatsGroupRows = true
-        outlineView.rowSizeStyle = .default
+        // `.custom` is REQUIRED for `heightOfRowByItem` to be consulted — any other
+        // rowSizeStyle (.default/.small/.medium/.large) pins a fixed style height and
+        // ignores the delegate, which silently made the variable-height + native-pitch
+        // work inert (rows stayed cramped). We size icons explicitly (`iconSymbolConfig`),
+        // so we don't need the style's automatic icon sizing.
+        outlineView.rowSizeStyle = .custom
         outlineView.allowsMultipleSelection = true
         outlineView.allowsEmptySelection = true
         outlineView.indentationPerLevel = 14
@@ -470,7 +475,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         let cell = NSTableCellView()
         let imageView = NSImageView()
         imageView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
-        imageView.symbolConfiguration = NSImage.SymbolConfiguration(scale: .medium)
+        imageView.symbolConfiguration = ProjectCellSpec.iconSymbolConfig
         // Normally no explicit tint: SF Symbols are template images, so the system
         // tints icon + label via `backgroundStyle` (selected → accent, else label) —
         // identical for a selected project and the genuinely-selected active lens.
@@ -489,7 +494,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         var constraints: [NSLayoutConstraint] = [
             imageView.leadingAnchor.constraint(equalTo: cell.leadingAnchor),
             imageView.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
-            imageView.widthAnchor.constraint(equalToConstant: 18),
+            imageView.widthAnchor.constraint(equalToConstant: ProjectCellSpec.iconWidth),
             textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
             textField.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
         ]
@@ -569,7 +574,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         let cell = NSTableCellView()
         let imageView = NSImageView()
         imageView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
-        imageView.symbolConfiguration = NSImage.SymbolConfiguration(scale: .medium)
+        imageView.symbolConfiguration = ProjectCellSpec.iconSymbolConfig
         imageView.contentTintColor = available ? nil : .secondaryLabelColor
         imageView.translatesAutoresizingMaskIntoConstraints = false
 

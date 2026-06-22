@@ -215,14 +215,19 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
     func outlineView(_ outlineView: NSOutlineView, shouldSelectItem item: Any) -> Bool {
         guard let node = item as? OutlineNode else { return false }
-        // Lens *activation* is handled in selectionIndexesForProposedSelection — the one
-        // delegate reliably called with the clicked lens in the proposal. When that
-        // method overrides the proposal to keep the project, shouldSelectItem is NOT
-        // consulted for the lens row (proven by the live trace: no shouldSelect line on
-        // a lens click), so firing activation here was dead code. Here we only report
-        // selectability: lenses + group headers aren't part of the project selection
-        // set, so they're not click-selectable on their own; the active lens's genuine
-        // source-list capsule is composed programmatically in applySelection.
+        // This method ONLY reports selectability. Lens + group rows aren't part of the
+        // project selection set, so they're not click-selectable on their own; the
+        // active lens's genuine source-list capsule is composed programmatically in
+        // applySelection (programmatic selectRowIndexes bypasses this method anyway).
+        //
+        // DEAD END — do NOT fire lens activation (onActivateLens / switchToTab) from
+        // here. It's the obvious-looking home for a row-click side effect, and it WAS
+        // here first — but on a lens click it is NEVER CALLED once
+        // selectionIndexesForProposedSelection overrides the proposal to keep the
+        // project: AppKit doesn't consult shouldSelectItem for a row that won't end up
+        // selected. The activation silently never ran (zero `shouldSelect` lines in the
+        // live os_log trace on a lens click). Activation lives in the proposal handler
+        // below, the one delegate reliably called with the clicked lens.
         return node.isSelectable
     }
 
@@ -248,7 +253,27 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     ///    EMPTY selection (the clicked row is unselectable), dropping the project →
     ///    "No Project Selected" — the bug.
     ///  - click a project / arrow-nav / empty-space → honour the proposed project rows.
-    /// Then always pin the active lens (when enabled) so its capsule stays drawn.
+    /// Then always pin the active lens (when enabled) so its capsule stays drawn. This is
+    /// also the ONE place lens activation fires — the only delegate reliably called with
+    /// the clicked lens (see the DEAD END note on `shouldSelectItem`).
+    ///
+    /// TWO MORE DEAD ENDS — both looked right, both shipped a bug; do not re-introduce:
+    ///  1. Using `clickedRow` + `NSApp.currentEvent` to tell a lens-click from
+    ///     empty-space. Seductive (it's how you'd disambiguate a click elsewhere) and it
+    ///     was tried — but at the instant THIS delegate runs, `currentEvent` is NOT a
+    ///     `.leftMouseDown` on a genuine lens click, so the event-gate read
+    ///     `clickedRow == -1` and fell through to *deselect* → dropped the project. The
+    ///     reliable signal is the **proposed set itself**: AppKit puts the clicked (even
+    ///     unselectable) lens row INTO `proposedSelectionIndexes`, so we read the
+    ///     mode-click from that — no event introspection. (gruber suggested the
+    ///     event-gate as keyboard safety; it turned out to BE the bug. Read the table's
+    ///     own truth; don't reconstruct intent from `NSApp.currentEvent`.)
+    ///  2. Optimistically selecting the clicked lens row for instant capsule feedback.
+    ///     `update()` re-runs `applySelection` many times/sec, recomposing the capsule
+    ///     from the *current* `activeTab` — which hasn't caught up to the just-clicked
+    ///     lens yet → the optimistic capsule snaps back to the old lens for a frame, then
+    ///     forward → flicker. So the capsule follows `activeTab` HONESTLY (one-cycle lag,
+    ///     no flicker). Revisit only if `reloadData`-on-every-`update` churn is gated.
     func outlineView(_ outlineView: NSOutlineView,
                      selectionIndexesForProposedSelection proposedSelectionIndexes: IndexSet) -> IndexSet {
         if isApplyingProgrammatic { return proposedSelectionIndexes }

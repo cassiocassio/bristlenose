@@ -95,13 +95,12 @@
       "saveSpreadsheet": "Save as Spreadsheet…",
       "extractClips": "Extract Video Clips…",
       "sectionTitle": "Quotes",
-      "anonymise": "Anonymise (remove names)",
-      "anonymiseHint": "Remove participant names from every export",
-      "reportGroupTitle": "Report",
-      "reportHint": "Self-contained HTML — view & search, no edit",
-      "copyHint": "Lean set for Miro / slides — quote, code, name, timecode",
-      "spreadsheetHint": "Rich 11-column CSV / XLSX for sorting & processing",
-      "clipsHint": "One trimmed clip per quote via ffmpeg"
+      "anonymise": "Anonymise",
+      "anonymiseHint": "Remove participant names",
+      "reportHint": "Self contained HTML",
+      "copyHint": "Lean \u2014 quote, code, name, timecode",
+      "spreadsheetHint": "Rich \u2014 11-columns for sorting and analysis",
+      "clipsHint": "Trimmed clip per quote"
     },
     "video": {
       "play": "Play",

@@ -95,13 +95,12 @@
       "saveSpreadsheet": "スプレッドシートとして保存…",
       "extractClips": "ビデオクリップを抽出…",
       "sectionTitle": "引用",
-      "anonymise": "匿名化（名前を削除）",
-      "anonymiseHint": "すべてのエクスポートから参加者名を削除",
-      "reportGroupTitle": "レポート",
-      "reportHint": "自己完結型HTML — 表示と検索のみ、編集不可",
-      "copyHint": "Miro / スライド向けの簡易セット — 引用、コード、名前、タイムコード",
-      "spreadsheetHint": "並べ替えと処理のための11列のCSV / XLSX",
-      "clipsHint": "ffmpeg で引用ごとに1つのトリミングクリップ"
+      "anonymise": "\u533f\u540d\u5316",
+      "anonymiseHint": "\u53c2\u52a0\u8005\u540d\u3092\u524a\u9664",
+      "reportHint": "\u81ea\u5df1\u5b8c\u7d50\u578bHTML",
+      "copyHint": "\u7c21\u6613 \u2014 \u5f15\u7528\u3001\u30b3\u30fc\u30c9\u3001\u540d\u524d\u3001\u30bf\u30a4\u30e0\u30b3\u30fc\u30c9",
+      "spreadsheetHint": "\u8a73\u7d30 \u2014 \u4e26\u3079\u66ff\u3048\u3068\u5206\u6790\u306e\u305f\u3081\u306e11\u5217",
+      "clipsHint": "\u5f15\u7528\u3054\u3068\u306b\u30c8\u30ea\u30df\u30f3\u30b0\u3055\u308c\u305f\u30af\u30ea\u30c3\u30d7"
     },
     "video": {
       "play": "再生",

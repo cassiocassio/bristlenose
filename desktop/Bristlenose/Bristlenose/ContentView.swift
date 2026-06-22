@@ -2021,9 +2021,10 @@ private struct ProjectNotificationReceivers: ViewModifier {
 ///
 /// Rendered as a **richer popover** (Variant Ⓑ) rather than a plain `NSMenu`,
 /// so each action carries a descriptive subtitle — matching the SPA dropdown's
-/// information density. Layout: a global Anonymise pill toggle, then a "Report"
-/// group with "Export Report…", then a "Quotes" group (Copy Quotes · Save as
-/// Spreadsheet · Extract Video Clips) shown only on the Quotes tab.
+/// information density. Layout: a global Anonymise pill toggle, a divider, then
+/// "Export Report…" followed by the quote actions (Copy Quotes · Save as
+/// Spreadsheet · Extract Video Clips) shown only on the Quotes tab. No group
+/// headers — the subtitles carry the grouping.
 ///
 /// Every item dispatches through `bridgeHandler.menuAction(_:payload:)`, which
 /// the web layer (`AppLayout` `bn:menu-action`) routes into `utils/exportActions`
@@ -2089,7 +2090,6 @@ private struct ExportPopoverContent: View {
 
             Divider().padding(.horizontal, 10)
 
-            ExportPopoverGroupTitle(text: i18n.t("desktop.menu.quotes.reportGroupTitle"))
             ExportPopoverRow(
                 icon: "square.and.arrow.up",
                 title: i18n.t("desktop.menu.file.exportReport"),
@@ -2097,7 +2097,6 @@ private struct ExportPopoverContent: View {
             ) { dispatch("exportReport") }
 
             if bridgeHandler.activeTab == .quotes {
-                ExportPopoverGroupTitle(text: i18n.t("desktop.menu.quotes.sectionTitle"))
                 ExportPopoverRow(
                     icon: "doc.on.clipboard",
                     title: i18n.t("desktop.menu.quotes.copyQuotes"),
@@ -2117,20 +2116,6 @@ private struct ExportPopoverContent: View {
         }
         .frame(width: 308)
         .padding(.vertical, 6)
-    }
-}
-
-/// Small-caps section header inside the export popover.
-private struct ExportPopoverGroupTitle: View {
-    let text: String
-    var body: some View {
-        Text(text.uppercased())
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 14)
-            .padding(.top, 8)
-            .padding(.bottom, 2)
-            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

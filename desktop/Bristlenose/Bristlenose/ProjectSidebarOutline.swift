@@ -23,15 +23,16 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     let activeTab: Tab?
     let lensesEnabled: Bool
     let onActivateLens: (Tab) -> Void
-    /// Live per-project run/copy data for the rich cell port. Plain refs — the
-    /// controller reads current state from these reference types, and ContentView's
-    /// own `pipelineRunner` observation re-creates this representable on state
-    /// transitions (→ `updateNSViewController` → reload). High-frequency progress
-    /// *ticking* (ring fraction / ETA) gets explicit `@ObservedObject` observation
-    /// when the ring lands (Phase 3) — deferred so we don't reload-churn before a
-    /// cell actually renders the live signal.
+    /// Live per-project run/copy data for the rich cell. `liveData` is
+    /// `@ObservedObject` (Phase 3) so high-frequency progress ticks (ring fraction /
+    /// ETA) re-render this representable → `updateNSViewController` → `reloadData`,
+    /// advancing the ring + subtitle ladder during a run. (Full-reload churn is the
+    /// §6-accepted Phase-A cost; targeted `reloadItem` is the deferred optimisation —
+    /// evaluate at QA whether the per-tick reload reads janky.) `pipelineRunner` /
+    /// `copyMachinery` stay plain refs — ContentView observes `pipelineRunner` for
+    /// state transitions, and copy state is read live.
     let pipelineRunner: PipelineRunner
-    let liveData: PipelineLiveData
+    @ObservedObject var liveData: PipelineLiveData
     let copyMachinery: CopyMachinery
 
     func makeNSViewController(context: Context) -> SidebarOutlineController {
@@ -460,11 +461,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 return iconCell(symbol: symbol, text: project.name, trailing: count)
             }
             let prefix = subtitlePrefixGlyph(for: variant, availability: project.availability)
-            var inCloud = false
-            if case .inCloud = project.availability { inCloud = true }
             return projectTwoLineCell(symbol: symbol, name: project.name, count: count,
                                       subtitle: subtitle, available: project.availability.isReady,
-                                      prefixGlyph: prefix, inCloud: inCloud)
+                                      prefixGlyph: prefix, rightSlot: cellRightSlot(for: project))
         }
     }
 
@@ -587,6 +586,33 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
     }
 
+    /// What the subtitle-right slot shows, by `ProjectRow.subtitleRightSlot`'s
+    /// precedence (`:327-360`): run activity > in-flight copy > iCloud glyph > empty.
+    private enum RightSlot {
+        case ring(fraction: Double?)   // determinate arc (fraction) or spinner (nil)
+        case cloud
+        case none
+    }
+
+    private func cellRightSlot(for project: Project) -> RightSlot {
+        let id = project.id
+        let activity = ProjectRowActivityIndicator.Kind.from(
+            pipelineState: pipelineRunner?.state[id], progress: liveData?.progress[id])
+        switch activity {
+        case .running(let fraction): return .ring(fraction: fraction)
+        case .copying(let fraction): return .ring(fraction: fraction)
+        case .none: break
+        }
+        if let copy = copyDisplay(for: project) {
+            switch copy {
+            case .copying(let fraction): return .ring(fraction: fraction)
+            case .cancelling:            return .ring(fraction: nil)   // spinner during rollback
+            }
+        }
+        if case .inCloud = project.availability { return .cloud }
+        return .none
+    }
+
     /// The two-line project cell: icon (baseline-aligned to the title line) · name
     /// · session count on the title line; status text on the subtitle line. Layout
     /// constants per `ProjectCellSpec` (traceable to `ProjectRow`). Prefix/failure
@@ -595,7 +621,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     private func projectTwoLineCell(symbol: String, name: String, count: String?,
                                     subtitle: String, available: Bool,
                                     prefixGlyph: (symbol: String, color: NSColor)?,
-                                    inCloud: Bool) -> NSTableCellView {
+                                    rightSlot: RightSlot) -> NSTableCellView {
         let cell = NSTableCellView()
         let imageView = NSImageView()
         imageView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
@@ -658,10 +684,25 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             constraints.append(subtitleField.leadingAnchor.constraint(equalTo: nameField.leadingAnchor))
         }
 
-        // Subtitle-right — the iCloud status glyph when sources live in iCloud
-        // (ProjectRow.subtitleRightSlot :355-358). The activity/copy ring takes
-        // precedence in this slot in Phase 3.
-        if inCloud {
+        // Subtitle-right — run/copy ring (Phase 3) takes precedence, then the iCloud
+        // status glyph, then nothing (ProjectRow.subtitleRightSlot :327-360). The
+        // ring's hover-× cancel swap is Phase 4.
+        switch rightSlot {
+        case .ring(let fraction):
+            let ring = SidebarActivityRing(fraction: fraction)
+            ring.setContentHuggingPriority(.required, for: .horizontal)
+            ring.setContentCompressionResistancePriority(.required, for: .horizontal)
+            cell.addSubview(ring)
+            constraints += [
+                ring.trailingAnchor.constraint(equalTo: cell.trailingAnchor,
+                                               constant: -ProjectCellSpec.trailingInset),
+                ring.centerYAnchor.constraint(equalTo: subtitleField.centerYAnchor),
+                ring.widthAnchor.constraint(equalToConstant: SidebarActivityRing.side),
+                ring.heightAnchor.constraint(equalToConstant: SidebarActivityRing.side),
+                subtitleField.trailingAnchor.constraint(lessThanOrEqualTo: ring.leadingAnchor,
+                                                        constant: -ProjectCellSpec.subtitleInternal),
+            ]
+        case .cloud:
             let cloud = NSImageView()
             cloud.image = NSImage(systemSymbolName: "icloud", accessibilityDescription: nil)
             cloud.symbolConfiguration = ProjectCellSpec.subtitleGlyphConfig
@@ -677,7 +718,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 subtitleField.trailingAnchor.constraint(lessThanOrEqualTo: cloud.leadingAnchor,
                                                         constant: -ProjectCellSpec.subtitleInternal),
             ]
-        } else {
+        case .none:
             constraints.append(subtitleField.trailingAnchor.constraint(equalTo: cell.trailingAnchor,
                                                                        constant: -ProjectCellSpec.trailingInset))
         }

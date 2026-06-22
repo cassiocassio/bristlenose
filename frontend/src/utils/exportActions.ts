@@ -116,17 +116,23 @@ export async function copyQuotesToClipboard(
   }
 }
 
+/** Spreadsheet download formats. Both endpoints exist server-side. */
+export type SpreadsheetFormat = "csv" | "xlsx";
+
 /**
- * Trigger a download of the rich quotes spreadsheet (XLSX). Direct anchor
- * navigation — the auth cookie carries the bearer; the server's
- * Content-Disposition supplies the filename. The sandboxed WKWebView routes
- * this through an NSSavePanel; browsers use the native download UI.
+ * Trigger a download of the rich quotes spreadsheet. `format` selects the
+ * endpoint (`quotes.csv` / `quotes.xlsx`); defaults to XLSX for back-compat
+ * with callers that don't pass one. Direct anchor navigation — the auth cookie
+ * carries the bearer; the server's Content-Disposition supplies the filename.
+ * The sandboxed WKWebView routes this through an NSSavePanel; browsers use the
+ * native download UI.
  */
 export function saveQuotesSpreadsheet(
   projectId: number | string,
   ids: string[],
   t: TFunction,
   anonymise = false,
+  format: SpreadsheetFormat = "xlsx",
 ): void {
   if (ids.length === 0) {
     toast(t("export.noQuotesMatch"));
@@ -138,7 +144,7 @@ export function saveQuotesSpreadsheet(
   });
   if (anonymise) params.set("anonymise", "true");
   const a = document.createElement("a");
-  a.href = `/api/projects/${projectId}/export/quotes.xlsx?${params.toString()}`;
+  a.href = `/api/projects/${projectId}/export/quotes.${format}?${params.toString()}`;
   a.download = "";
   document.body.appendChild(a);
   a.click();

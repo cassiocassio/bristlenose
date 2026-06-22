@@ -100,7 +100,9 @@
       "reportHint": "Self contained HTML",
       "copyHint": "Lean \u2014 quote, code, name, timecode",
       "spreadsheetHint": "Rich \u2014 11-columns for sorting and analysis",
-      "clipsHint": "Trimmed clip per quote"
+      "clipsHint": "Trimmed clip per quote",
+      "formatCSV": "CSV",
+      "formatXLSX": "XLSX"
     },
     "video": {
       "play": "Play",

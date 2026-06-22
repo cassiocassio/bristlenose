@@ -100,7 +100,9 @@
       "reportHint": "HTML autonome",
       "copyHint": "R\u00e9duit \u2014 citation, code, nom, horodatage",
       "spreadsheetHint": "Riche \u2014 11 colonnes pour trier et analyser",
-      "clipsHint": "Un clip d\u00e9coup\u00e9 par citation"
+      "clipsHint": "Un clip d\u00e9coup\u00e9 par citation",
+      "formatCSV": "CSV",
+      "formatXLSX": "XLSX"
     },
     "video": {
       "play": "Lecture",

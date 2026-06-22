@@ -100,7 +100,9 @@
       "reportHint": "\ub3c5\ub9bd\ud615 HTML",
       "copyHint": "\uac04\uc18c\ud654 \u2014 \uc778\uc6a9, \ucf54\ub4dc, \uc774\ub984, \ud0c0\uc784\ucf54\ub4dc",
       "spreadsheetHint": "\uc0c1\uc138 \u2014 \uc815\ub82c \ubc0f \ubd84\uc11d\uc744 \uc704\ud55c 11\uac1c \uc5f4",
-      "clipsHint": "\uc778\uc6a9\ub2f9 \uc798\ub77c\ub0b8 \ud074\ub9bd \ud558\ub098"
+      "clipsHint": "\uc778\uc6a9\ub2f9 \uc798\ub77c\ub0b8 \ud074\ub9bd \ud558\ub098",
+      "formatCSV": "CSV",
+      "formatXLSX": "XLSX"
     },
     "video": {
       "play": "재생",

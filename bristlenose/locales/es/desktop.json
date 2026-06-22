@@ -100,7 +100,9 @@
       "reportHint": "HTML aut\u00f3nomo",
       "copyHint": "Reducido \u2014 cita, c\u00f3digo, nombre, c\u00f3digo de tiempo",
       "spreadsheetHint": "Completo \u2014 11 columnas para ordenar y analizar",
-      "clipsHint": "Un clip recortado por cita"
+      "clipsHint": "Un clip recortado por cita",
+      "formatCSV": "CSV",
+      "formatXLSX": "XLSX"
     },
     "video": {
       "play": "Reproducir",

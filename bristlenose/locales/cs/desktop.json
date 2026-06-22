@@ -95,13 +95,12 @@
       "saveSpreadsheet": "Uložit jako tabulku…",
       "extractClips": "Extrahovat videoklipy…",
       "sectionTitle": "Citace",
-      "anonymise": "Anonymizovat (odebrat jména)",
-      "anonymiseHint": "Odebrat jména účastníků ze všech exportů",
-      "reportGroupTitle": "Zpráva",
-      "reportHint": "Samostatné HTML — prohlížení a hledání, bez úprav",
-      "copyHint": "Úsporná sada pro Miro / snímky — citace, kód, jméno, časový kód",
-      "spreadsheetHint": "Bohaté CSV / XLSX s 11 sloupci pro řazení a zpracování",
-      "clipsHint": "Jeden oříznutý klip na citaci přes ffmpeg"
+      "anonymise": "Anonymizovat",
+      "anonymiseHint": "Odebrat jm\u00e9na \u00fa\u010dastn\u00edk\u016f",
+      "reportHint": "Samostatn\u00e9 HTML",
+      "copyHint": "\u00dasporn\u00e9 \u2014 citace, k\u00f3d, jm\u00e9no, \u010dasov\u00fd k\u00f3d",
+      "spreadsheetHint": "Bohat\u00e9 \u2014 11 sloupc\u016f pro \u0159azen\u00ed a anal\u00fdzu",
+      "clipsHint": "O\u0159\u00edznut\u00fd klip na citaci"
     },
     "video": {
       "play": "Přehrát",

@@ -102,9 +102,9 @@
       "clipsHint": "Un clip recortado por cita",
       "formatCSV": "CSV",
       "formatXLSX": "XLSX",
-      "copyScopeAll": "Todas las {{count}} citas",
-      "copyScopeSelected": "{{count}} citas seleccionadas",
-      "copyScopeStarred": "{{count}} citas destacadas"
+      "copyScopeAll": "Todas ({{count}})",
+      "copyScopeSelected": "Seleccionadas ({{count}})",
+      "copyScopeStarred": "Destacadas ({{count}})"
     },
     "video": {
       "play": "Reproducir",

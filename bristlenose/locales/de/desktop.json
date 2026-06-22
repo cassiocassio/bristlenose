@@ -102,9 +102,9 @@
       "clipsHint": "Ein zugeschnittener Clip pro Zitat",
       "formatCSV": "CSV",
       "formatXLSX": "XLSX",
-      "copyScopeAll": "Alle {{count}} Zitate",
-      "copyScopeSelected": "{{count}} ausgew\u00e4hlte Zitate",
-      "copyScopeStarred": "{{count}} markierte Zitate"
+      "copyScopeAll": "Alle ({{count}})",
+      "copyScopeSelected": "Ausgew\u00e4hlte ({{count}})",
+      "copyScopeStarred": "Markiert ({{count}})"
     },
     "video": {
       "play": "Wiedergabe",

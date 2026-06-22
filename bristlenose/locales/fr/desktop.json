@@ -102,9 +102,9 @@
       "clipsHint": "Un clip d\u00e9coup\u00e9 par verbatim",
       "formatCSV": "CSV",
       "formatXLSX": "XLSX",
-      "copyScopeAll": "Tous les {{count}} verbatim",
-      "copyScopeSelected": "{{count}} verbatim s\u00e9lectionn\u00e9s",
-      "copyScopeStarred": "{{count}} verbatim favoris"
+      "copyScopeAll": "Tous ({{count}})",
+      "copyScopeSelected": "S\u00e9lectionn\u00e9s ({{count}})",
+      "copyScopeStarred": "Favoris ({{count}})"
     },
     "video": {
       "play": "Lecture",

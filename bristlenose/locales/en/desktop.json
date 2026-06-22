@@ -102,9 +102,9 @@
       "clipsHint": "Trimmed clip per quote",
       "formatCSV": "CSV",
       "formatXLSX": "XLSX",
-      "copyScopeAll": "All {{count}} quotes",
-      "copyScopeSelected": "{{count}} Selected quotes",
-      "copyScopeStarred": "{{count}} Starred quotes"
+      "copyScopeAll": "All ({{count}})",
+      "copyScopeSelected": "Selected ({{count}})",
+      "copyScopeStarred": "Starred ({{count}})"
     },
     "video": {
       "play": "Play",

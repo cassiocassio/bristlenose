@@ -102,9 +102,9 @@
       "clipsHint": "\uc778\uc6a9\ub2f9 \uc798\ub77c\ub0b8 \ud074\ub9bd \ud558\ub098",
       "formatCSV": "CSV",
       "formatXLSX": "XLSX",
-      "copyScopeAll": "\uc804\uccb4 {{count}}\uac1c \uc778\uc6a9",
-      "copyScopeSelected": "\uc120\ud0dd\ud55c {{count}}\uac1c \uc778\uc6a9",
-      "copyScopeStarred": "\ubcc4\ud45c {{count}}\uac1c \uc778\uc6a9"
+      "copyScopeAll": "\uc804\uccb4 ({{count}})",
+      "copyScopeSelected": "\uc120\ud0dd ({{count}})",
+      "copyScopeStarred": "\ubcc4\ud45c ({{count}})"
     },
     "video": {
       "play": "재생",

@@ -104,7 +104,9 @@
       "formatXLSX": "XLSX",
       "copyScopeAll": "Alle ({{count}})",
       "copyScopeSelected": "Ausgew\u00e4hlte ({{count}})",
-      "copyScopeStarred": "Markiert ({{count}})"
+      "copyScopeStarred": "Markiert ({{count}})",
+      "revealTranscripts": "Transkripte im Finder zeigen",
+      "revealTranscriptsHint": "Die Transkriptdateien auf der Festplatte"
     },
     "video": {
       "play": "Wiedergabe",

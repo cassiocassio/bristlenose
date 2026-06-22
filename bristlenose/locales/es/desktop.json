@@ -104,7 +104,9 @@
       "formatXLSX": "XLSX",
       "copyScopeAll": "Todas ({{count}})",
       "copyScopeSelected": "Seleccionadas ({{count}})",
-      "copyScopeStarred": "Destacadas ({{count}})"
+      "copyScopeStarred": "Destacadas ({{count}})",
+      "revealTranscripts": "Mostrar transcripciones en Finder",
+      "revealTranscriptsHint": "Los archivos de transcripci\u00f3n en el disco"
     },
     "video": {
       "play": "Reproducir",

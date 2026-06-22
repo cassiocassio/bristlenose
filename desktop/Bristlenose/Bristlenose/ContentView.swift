@@ -2161,9 +2161,44 @@ private struct ExportPopoverContent: View {
                     subtitle: i18n.t("desktop.menu.quotes.clipsHint")
                 ) { dispatch("extractClips") }
             }
+
+            // Sessions lens: the transcripts already live on disk in the
+            // project's bristlenose-output/ — reveal them in Finder rather than
+            // re-exporting what's already a folder of files (local-first). The
+            // drag-to-sidebar affordance hides where the folder lives, so the
+            // macOS surface needs a way back to it (CLI users are already there).
+            if bridgeHandler.activeTab == .sessions {
+                ExportPopoverRow(
+                    icon: "folder",
+                    title: i18n.t("desktop.menu.quotes.revealTranscripts"),
+                    subtitle: i18n.t("desktop.menu.quotes.revealTranscriptsHint")
+                ) { revealTranscripts() }
+            }
         }
         .frame(width: 308)
         .padding(.vertical, 6)
+    }
+
+    /// Open a Finder window on the project's transcripts. Prefers the
+    /// PII-redacted `transcripts-cooked/` (present only when `--redact-pii`
+    /// ran), else `transcripts-raw/`, else the output / project folder. This is
+    /// a native action — it reveals files already on disk, so it does NOT honour
+    /// the Anonymise toggle (an anonymised transcript bundle is a separate,
+    /// deferred export). Output lives at `<project>/bristlenose-output/`.
+    private func revealTranscripts() {
+        dismiss()
+        let base = bridgeHandler.selectedProjectPath
+        guard !base.isEmpty else { return }
+        let output = (base as NSString).appendingPathComponent("bristlenose-output")
+        let candidates = [
+            (output as NSString).appendingPathComponent("transcripts-cooked"),
+            (output as NSString).appendingPathComponent("transcripts-raw"),
+            output,
+            base,
+        ]
+        let fm = FileManager.default
+        let target = candidates.first { fm.fileExists(atPath: $0) } ?? base
+        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: target)
     }
 }
 

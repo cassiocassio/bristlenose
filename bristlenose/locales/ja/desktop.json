@@ -104,7 +104,9 @@
       "formatXLSX": "XLSX",
       "copyScopeAll": "\u3059\u3079\u3066 ({{count}})",
       "copyScopeSelected": "\u9078\u629e ({{count}})",
-      "copyScopeStarred": "\u30b9\u30bf\u30fc\u4ed8\u304d ({{count}})"
+      "copyScopeStarred": "\u30b9\u30bf\u30fc\u4ed8\u304d ({{count}})",
+      "revealTranscripts": "Finder \u306b\u30c8\u30e9\u30f3\u30b9\u30af\u30ea\u30d7\u30c8\u3092\u8868\u793a",
+      "revealTranscriptsHint": "\u30c7\u30a3\u30b9\u30af\u4e0a\u306e\u30c8\u30e9\u30f3\u30b9\u30af\u30ea\u30d7\u30c8\u30d5\u30a1\u30a4\u30eb"
     },
     "video": {
       "play": "再生",

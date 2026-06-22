@@ -104,7 +104,9 @@
       "formatXLSX": "XLSX",
       "copyScopeAll": "V\u0161e ({{count}})",
       "copyScopeSelected": "Vybran\u00e9 ({{count}})",
-      "copyScopeStarred": "Ozna\u010den\u00e9 ({{count}})"
+      "copyScopeStarred": "Ozna\u010den\u00e9 ({{count}})",
+      "revealTranscripts": "Zobrazit p\u0159episy ve Finderu",
+      "revealTranscriptsHint": "Soubory p\u0159epis\u016f na disku"
     },
     "video": {
       "play": "Přehrát",

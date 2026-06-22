@@ -214,12 +214,19 @@
                 <span class="pop-ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v9"/><path d="M5.5 5L9 1.5 12.5 5"/><path d="M3 9.5H2v6.5h14V9.5h-1"/></svg></span>
                 <span class="pop-txt"><span class="pop-title">Export Report…</span><span class="pop-sub">Self contained HTML</span></span>
               </div>
-              <div class="pop-row mac-quote">
+              <!-- Copy Quotes is a disclosure: pick scope (All / Selected / Starred) with live counts -->
+              <div class="pop-row mac-quote" onclick="this.nextElementSibling.classList.toggle('hidden')">
                 <span class="pop-ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2.5" width="9" height="12" rx="1.5"/><path d="M6 14.5v1A1.5 1.5 0 007.5 17h6A1.5 1.5 0 0015 15.5v-9A1.5 1.5 0 0013.5 5H12"/></svg></span>
                 <span class="pop-txt"><span class="pop-title">Copy Quotes</span><span class="pop-sub">Lean — quote, code, name, timecode</span></span>
+                <span class="pop-chevron">⌄</span>
+              </div>
+              <div class="pop-more pop-scope mac-quote">
+                <div class="pop-subrow">All 34 quotes</div>
+                <div class="pop-subrow">16 Selected quotes</div>
+                <div class="pop-subrow">8 Starred quotes</div>
               </div>
               <!-- Spreadsheet row is a disclosure: pick CSV or XLSX (both ship) -->
-              <div class="pop-row mac-quote" onclick="this.parentNode.querySelector('.pop-fmt').classList.toggle('hidden')">
+              <div class="pop-row mac-quote" onclick="this.nextElementSibling.classList.toggle('hidden')">
                 <span class="pop-ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="13" height="11" rx="1.5"/><path d="M2.5 7.5h13M7 3.5v11"/></svg></span>
                 <span class="pop-txt"><span class="pop-title">Save as Spreadsheet…</span><span class="pop-sub">Rich — 11-columns for sorting and analysis</span></span>
                 <span class="pop-chevron">⌄</span>

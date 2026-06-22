@@ -102,7 +102,10 @@
       "spreadsheetHint": "Bohat\u00e9 \u2014 11 sloupc\u016f pro \u0159azen\u00ed a anal\u00fdzu",
       "clipsHint": "O\u0159\u00edznut\u00fd klip na citaci",
       "formatCSV": "CSV",
-      "formatXLSX": "XLSX"
+      "formatXLSX": "XLSX",
+      "copyScopeAll": "V\u0161ech {{count}} citac\u00ed",
+      "copyScopeSelected": "{{count}} vybran\u00fdch citac\u00ed",
+      "copyScopeStarred": "{{count}} ozna\u010den\u00fdch citac\u00ed"
     },
     "video": {
       "play": "Přehrát",

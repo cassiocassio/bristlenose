@@ -102,7 +102,10 @@
       "spreadsheetHint": "\uc0c1\uc138 \u2014 \uc815\ub82c \ubc0f \ubd84\uc11d\uc744 \uc704\ud55c 11\uac1c \uc5f4",
       "clipsHint": "\uc778\uc6a9\ub2f9 \uc798\ub77c\ub0b8 \ud074\ub9bd \ud558\ub098",
       "formatCSV": "CSV",
-      "formatXLSX": "XLSX"
+      "formatXLSX": "XLSX",
+      "copyScopeAll": "\uc804\uccb4 {{count}}\uac1c \uc778\uc6a9",
+      "copyScopeSelected": "\uc120\ud0dd\ud55c {{count}}\uac1c \uc778\uc6a9",
+      "copyScopeStarred": "\ubcc4\ud45c {{count}}\uac1c \uc778\uc6a9"
     },
     "video": {
       "play": "재생",

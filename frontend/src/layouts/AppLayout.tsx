@@ -36,6 +36,7 @@ import {
   postReady,
   postProjectAction,
   postFindPasteboardWrite,
+  postExportCounts,
 } from "../shims/bridge";
 import { getPlayerOpen, getPlayerPlaying } from "../contexts/PlayerContext";
 import { cancelAutoCode, getClipExtractionStatus, revealClips } from "../utils/api";
@@ -46,7 +47,13 @@ import {
 } from "../utils/exportActions";
 import type { NormalisedJobStatus } from "../components/ActivityChipStack";
 import { toggleInspector } from "../contexts/InspectorStore";
-import { setSearchQuery, setViewMode, setTagFilter, getQuotesSnapshot } from "../contexts/QuotesContext";
+import {
+  setSearchQuery,
+  setViewMode,
+  setTagFilter,
+  getQuotesSnapshot,
+  useQuotesStore,
+} from "../contexts/QuotesContext";
 import { EMPTY_TAG_FILTER } from "../utils/filter";
 import { toast } from "../utils/toast";
 import { announce } from "../utils/announce";
@@ -229,6 +236,19 @@ function AppShell() {
   selectedIdsBridgeRef.current = selectedIds;
   const locationBridgeRef = useRef(location);
   locationBridgeRef.current = location;
+
+  // Live export scope counts → native popover (All / Selected / Starred).
+  // Reactive: re-posts whenever quotes load, stars toggle, or selection changes.
+  const quotesStore = useQuotesStore();
+  const totalQuoteCount = quotesStore.quotes.length;
+  const starredQuoteCount = quotesStore.quotes.filter(
+    (q) => quotesStore.starred[q.dom_id],
+  ).length;
+  const selectedQuoteCount = selectedIds.size;
+  useEffect(() => {
+    if (!embedded) return;
+    postExportCounts(totalQuoteCount, selectedQuoteCount, starredQuoteCount);
+  }, [embedded, totalQuoteCount, selectedQuoteCount, starredQuoteCount]);
 
   useEffect(() => {
     const exportData = getExportData();
@@ -417,8 +437,18 @@ function AppShell() {
         //    identically). Selection → focused → all quotes. ──────────────
         case "copyQuotes": {
           const snap = getQuotesSnapshot();
-          const anon = (payload as { anonymise?: boolean } | undefined)?.anonymise ?? false;
-          const ids = exportSelectionIds(snap);
+          const p = payload as
+            | { anonymise?: boolean; scope?: "all" | "selected" | "starred" }
+            | undefined;
+          const anon = p?.anonymise ?? false;
+          // scope picks the id set explicitly (popover disclosure); absent it
+          // falls back to the canonical selection → focused → all.
+          let ids: string[];
+          if (p?.scope === "all") ids = snap.quotes.map((q) => q.dom_id);
+          else if (p?.scope === "selected") ids = Array.from(selectedIdsBridgeRef.current);
+          else if (p?.scope === "starred")
+            ids = snap.quotes.filter((q) => snap.starred[q.dom_id]).map((q) => q.dom_id);
+          else ids = exportSelectionIds(snap);
           void copyQuotesToClipboard(snap, ids, i18n.t, anon);
           break;
         }

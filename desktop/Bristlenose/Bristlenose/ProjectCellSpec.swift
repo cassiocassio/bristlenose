@@ -46,11 +46,20 @@ enum ProjectCellSpec {
     /// as the existing `iconCell`.
     static let iconWidth: CGFloat = 18
 
-    /// Symmetric top/bottom inset inside the row. **The one carpentry number not
-    /// derivable from `ProjectRow` alone** (SwiftUI folds in `List` row insets +
-    /// `.padding(.vertical, 2)` at `:135`). Reasoned default; TUNE AT REVIEW
-    /// against the live `ProjectRow` in the gallery.
-    static let verticalInset: CGFloat = 4
+    /// Native source-list row pitch (single-line, baseline-to-baseline) — MEASURED
+    /// 22 Jun against Finder / Notes / Mail = 64px @2x = **32pt**. The fonts already
+    /// matched; only the spacing was tight. The earlier font-derived height (~25pt)
+    /// overrode the table's natural source-list pitch and cramped every row — pin to
+    /// the platform value. (Tracks the user's measurement, not the icon-size setting;
+    /// revisit if Dynamic-Type / sidebar-icon-size scaling becomes a concern.)
+    static let singleLineHeight: CGFloat = 32
+
+    /// Top inset for the two-line cell — places the title at the SAME vertical centre
+    /// as a single-line row, so the title line never shifts when a subtitle appears
+    /// or leaves: `(singleLineHeight − titleHeight) / 2`.
+    static var verticalInset: CGFloat {
+        max(2, (singleLineHeight - ceil(titleFont.boundingRectForFont.height)) / 2)
+    }
 
     // MARK: - Typography (SwiftUI text-style → AppKit preferred font)
 
@@ -78,9 +87,10 @@ enum ProjectCellSpec {
     /// tracks Dynamic Type rather than hard-coding pixels. `twoLine == false`
     /// (placeholder) → single-line — the divergence above.
     static func rowHeight(twoLine: Bool) -> CGFloat {
-        let title = ceil(titleFont.boundingRectForFont.height)
-        if !twoLine { return title + verticalInset * 2 }
-        let subtitle = ceil(subtitleFont.boundingRectForFont.height)
-        return title + titleToSubtitle + subtitle + verticalInset * 2
+        if !twoLine { return singleLineHeight }
+        // No native two-line source-list reference (Finder / Notes / Mail are
+        // single-line); grow the single-line pitch by the subtitle line + the
+        // title↔subtitle gap, keeping the same top/bottom breathing room.
+        return singleLineHeight + titleToSubtitle + ceil(subtitleFont.boundingRectForFont.height)
     }
 }

@@ -2,7 +2,7 @@
 
 One-way export from Bristlenose to Miro boards. Creates spatial boards with grouped sticky notes from analysis data.
 
-**Status:** M1 complete (token management, 47 tests). M2-M7 planned for post-beta (v1.0).
+**Status:** 🅿️ **Parked (future idea).** M1 token management is wired (connect/disconnect/status + 47 tests), but there is **no board-push export** — Miro is not offered as an export option in the CLI/SPA or macOS menus. M2–M7 are a future idea, not on the alpha path. The `bristlenose configure miro` token store is retained for when this is picked up; it does not yet drive any export.
 
 ---
 

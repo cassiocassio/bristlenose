@@ -40,11 +40,20 @@ enum ProjectCellSpec {
     /// Matches the existing `iconCell` (`-4`) and `ProjectRow`'s `Spacer(minLength: 4)`.
     static let trailingInset: CGFloat = 4
 
-    /// Uniform icon-column width. Kept consistent across lens / folder / project
-    /// rows — the sidebar's "uniform icon column" (`design-project-sidebar.md`
-    /// §1.2), NOT `ProjectRow`'s standalone default size. 18pt + `.medium` scale,
-    /// as the existing `iconCell`.
-    static let iconWidth: CGFloat = 18
+    /// Uniform icon-column width — kept consistent across lens / folder / project
+    /// rows (the sidebar's "uniform icon column", `design-project-sidebar.md` §1.2).
+    /// Wide enough to render `iconSymbolConfig` WITHOUT down-scaling (the folder
+    /// glyph is wider than tall); bumped 18→20 with the icon-size fix — the 18pt
+    /// frame was shrinking the bigger symbol back down.
+    static let iconWidth: CGFloat = 20
+
+    /// SF Symbol configuration for ALL sidebar icons. The bare `.medium` scale
+    /// rendered smaller than native source-list icons (Finder / Notes / Mail) —
+    /// pin an explicit point size to match. MEASURE/tune against the native
+    /// folder-glyph height; one place so lens/folder/project stay identical.
+    static var iconSymbolConfig: NSImage.SymbolConfiguration {
+        NSImage.SymbolConfiguration(pointSize: 16, weight: .regular)
+    }
 
     /// Native source-list row pitch (single-line, baseline-to-baseline) — MEASURED
     /// 22 Jun against Finder / Notes / Mail = 64px @2x = **32pt**. The fonts already

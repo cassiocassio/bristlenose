@@ -180,18 +180,13 @@ describe("ExportDropdown", () => {
     expect(screen.queryByTestId("export-dropdown-menu")).toBeNull();
   });
 
-  it("Copy Quotes calls fetch with auth header", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve("csv,data"),
-    });
-    vi.stubGlobal("fetch", mockFetch);
-
-    // Mock clipboard — jsdom doesn't have ClipboardItem
+  it("Copy Quotes writes the lean set (quote · code · name · timecode) to the clipboard", async () => {
+    // Lean copy builds the payload client-side from the store — no fetch,
+    // so the clipboard write stays in the gesture stack (Safari-safe).
     const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, { clipboard: { writeText, write: undefined } });
+    Object.assign(navigator, { clipboard: { writeText } });
 
-    initFromQuotes([makeQuote()]);
+    initFromQuotes([makeQuote()]); // text "Test quote", p1, "Alice", 10s
     renderDropdown("/report/quotes/");
     fireEvent.click(screen.getByRole("button", { name: "Export" }));
 
@@ -199,12 +194,10 @@ describe("ExportDropdown", () => {
     fireEvent.click(items[0]); // Copy Quotes
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledOnce();
-      const [url, opts] = mockFetch.mock.calls[0];
-      expect(url).toContain("/export/quotes.csv");
-      expect(opts.headers).toHaveProperty("Authorization");
+      expect(writeText).toHaveBeenCalledOnce();
+      const written = writeText.mock.calls[0][0] as string;
+      // Tab-separated: quote, participant code, display name, timecode
+      expect(written).toBe("Test quote\tp1\tAlice\t0:10");
     });
-
-    vi.unstubAllGlobals();
   });
 });

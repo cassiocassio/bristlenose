@@ -39,6 +39,11 @@ import {
 } from "../shims/bridge";
 import { getPlayerOpen, getPlayerPlaying } from "../contexts/PlayerContext";
 import { cancelAutoCode, getClipExtractionStatus, revealClips } from "../utils/api";
+import {
+  copyQuotesToClipboard,
+  saveQuotesSpreadsheet,
+  extractVideoClips,
+} from "../utils/exportActions";
 import type { NormalisedJobStatus } from "../components/ActivityChipStack";
 import { toggleInspector } from "../contexts/InspectorStore";
 import { setSearchQuery, setViewMode, setTagFilter, getQuotesSnapshot } from "../contexts/QuotesContext";
@@ -313,6 +318,15 @@ function AppShell() {
       }
     };
 
+    // Export scope: explicit selection wins, else the focused quote, else all.
+    const exportSelectionIds = (snap: ReturnType<typeof getQuotesSnapshot>): string[] => {
+      const selected = selectedIdsBridgeRef.current;
+      if (selected.size > 0) return Array.from(selected);
+      const focused = focusedIdBridgeRef.current;
+      if (focused) return [focused];
+      return snap.quotes.map((q) => q.dom_id);
+    };
+
     const handler = (e: Event) => {
       const { action, payload } = (e as CustomEvent).detail;
       switch (action) {
@@ -349,14 +363,18 @@ function AppShell() {
           break;
 
         // ── Tier 2: export, filter, help, zoom, dark mode ──────────────
-        case "exportReport":
+        case "exportReport": {
+          // Global Anonymise toggle (macOS menu) rides the payload; the web
+          // dropdown sends no payload and surfaces anonymise via the modal.
+          const anon = (payload as { anonymise?: boolean } | undefined)?.anonymise ?? false;
           if (isEmbeddedDesktop()) {
-            triggerReportDownload(false);
+            triggerReportDownload(anon);
           } else {
-            setExportAnonymise(false);
+            setExportAnonymise(anon);
             setExportOpen(true);
           }
           break;
+        }
         case "exportAnonymised":
           if (isEmbeddedDesktop()) {
             triggerReportDownload(true);
@@ -392,6 +410,27 @@ function AppShell() {
             .writeText(csv2)
             .then(() => toast(i18n.t("toolbar.csvCopied", { count: ids.length })))
             .catch(() => toast(i18n.t("toolbar.csvFailed")));
+          break;
+        }
+        // ── Canonical quote-export actions (shared with the SPA dropdown via
+        //    utils/exportActions, so the macOS native menu and web behave
+        //    identically). Selection → focused → all quotes. ──────────────
+        case "copyQuotes": {
+          const snap = getQuotesSnapshot();
+          const anon = (payload as { anonymise?: boolean } | undefined)?.anonymise ?? false;
+          const ids = exportSelectionIds(snap);
+          void copyQuotesToClipboard(snap, ids, i18n.t, anon);
+          break;
+        }
+        case "saveSpreadsheet": {
+          const snap = getQuotesSnapshot();
+          const anon = (payload as { anonymise?: boolean } | undefined)?.anonymise ?? false;
+          saveQuotesSpreadsheet(projectId, exportSelectionIds(snap), i18n.t, anon);
+          break;
+        }
+        case "extractClips": {
+          const anon = (payload as { anonymise?: boolean } | undefined)?.anonymise ?? false;
+          void extractVideoClips(i18n.t, anon);
           break;
         }
         case "allQuotes":

@@ -237,6 +237,40 @@ struct ContentView: View {
         return projectIndex.projects.first { $0.id == id }
     }
 
+    private static let focusLog = Logger(subsystem: "app.bristlenose", category: "focus")
+
+    /// View ▸ Move Focus to Projects (⌘0) — the §10.1 keyboard no-trap return.
+    /// A keyboard user inside the web report is never trapped: this always moves
+    /// first responder back to native chrome. Logs via `os.Logger` and falls back
+    /// to the window content view when the sidebar table can't be found (e.g. the
+    /// sidebar is collapsed) so a no-op is observable, not silent (review F1).
+    private func focusProjectsList() {
+        guard let window = NSApp.keyWindow else {
+            Self.focusLog.warning("focusProjects: no key window")
+            return
+        }
+        guard let tableView = Self.firstSidebarTableView(in: window) else {
+            Self.focusLog.warning("focusProjects: no sidebar table view (collapsed?) — focusing content view")
+            window.makeFirstResponder(window.contentView)
+            return
+        }
+        let ok = window.makeFirstResponder(tableView)
+        Self.focusLog.info("focusProjects: makeFirstResponder=\(ok)")
+    }
+
+    /// Finds the first NSTableView in the window — the project list. (The detail
+    /// pane is a WKWebView with no NSTableViews.) Mirrors the locator in
+    /// `SidebarDeselectMonitor`; duplicated rather than shared to avoid touching
+    /// the fragile sidebar monitor (§2.2). Revisit when the project List becomes
+    /// an NSOutlineView (review F20).
+    private static func firstSidebarTableView(in window: NSWindow) -> NSTableView? {
+        func find(in view: NSView) -> NSTableView? {
+            if let tv = view as? NSTableView { return tv }
+            return view.subviews.lazy.compactMap { find(in: $0) }.first
+        }
+        return window.contentView.flatMap { find(in: $0) }
+    }
+
     /// The currently selected folder (when exactly one folder is selected).
     private var selectedFolder: Folder? {
         guard case .folder(let id) = soleSelection else { return nil }
@@ -286,7 +320,6 @@ struct ContentView: View {
             detail
                 .toolbar {
                     toolbarLeading
-                    toolbarCenter
                     toolbarTrailing
                 }
         // No .navigationTitle on the detail view — that would add a visible
@@ -436,6 +469,10 @@ struct ContentView: View {
         // File > New Folder (⇧⌘N) and sidebar folder.badge.plus button.
         .onReceive(NotificationCenter.default.publisher(for: .createNewFolder)) { _ in
             createNewFolder()
+        }
+        // View > Move Focus to Projects (⌘0) — the §10.1 keyboard no-trap return.
+        .onReceive(NotificationCenter.default.publisher(for: .focusProjects)) { _ in
+            focusProjectsList()
         }
         .modifier(ProjectNotificationReceivers(
             selection: $selection,
@@ -1230,15 +1267,6 @@ struct ContentView: View {
 
     // MARK: - Toolbar
 
-    /// Two-way binding: reads activeTab from bridge, writes via switchToTab.
-    /// Maps nil to .project since segmented Picker requires non-optional selection.
-    private var tabBinding: Binding<Tab> {
-        Binding(
-            get: { bridgeHandler.activeTab ?? .project },
-            set: { bridgeHandler.switchToTab($0) }
-        )
-    }
-
     /// Per-tab label for the left-panel toolbar button.
     private var leftPanelToolbarLabel: String {
         switch bridgeHandler.activeTab {
@@ -1311,59 +1339,83 @@ struct ContentView: View {
             .controlGroupStyle(.navigation)
         }
 
-    }
-
-    private var toolbarCenter: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            Picker("Tab", selection: tabBinding) {
-                ForEach(Tab.allCases) { tab in
-                    Text(tab.localizedLabel(i18n)).tag(tab)
-                }
+        // Project name — a single explicit ToolbarItem, NOT `.navigationTitle`
+        // (which injects a duplicate title item; see WindowTitleManager above /
+        // desktop CLAUDE.md §409). Sits to the right of back/forward + the
+        // contextual left-panel toggle, never where the system back affordance
+        // lives. Name-only for now; the `participants · duration` subtitle is
+        // deferred — no duration field is surfaced in the model (spec §4.5).
+        if let project = selectedProject {
+            ToolbarItem(placement: .navigation) {
+                Text(project.name)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
             }
-            .pickerStyle(.segmented)
-            .disabled(selectedProject == nil || !bridgeHandler.isReady)
         }
     }
 
     // MARK: - Toolbar trailing (contextual — menus dim, toolbars morph)
 
+    /// Whether the detail pane is showing an actual report (vs an empty /
+    /// unavailable / unsupported state). Mirrors `detail`'s report branch, so the
+    /// report-only toolbar actions (Export, Search, the per-tab panel toggles) hide
+    /// when there's nothing to act on — e.g. a new project with no interviews that
+    /// has never run. (They used to show unconditionally — a Search field + Export
+    /// button over a "Drag Interviews Here" empty state.)
+    private var selectedProjectShowsReport: Bool {
+        guard let project = selectedProject else { return false }
+        if !project.isAvailable { return false }
+        if project.path.isEmpty { return false }
+        if project.inputFiles != nil
+            && !Self.pipelineHasViewableData(pipelineRunner.state[project.id]) {
+            return false
+        }
+        return true
+    }
+
     @ToolbarContentBuilder
     private var toolbarTrailing: some ToolbarContent {
-        // Universal — Export menu (contents morph per tab)
-        ToolbarItem(placement: .primaryAction) {
-            ExportMenuButton(bridgeHandler: bridgeHandler, i18n: i18n)
-        }
-
-        // Contextual — Quotes tab: tag sidebar toggle
-        if bridgeHandler.activeTab == .quotes {
+        // Report-only actions — hidden when the detail pane has no report to act
+        // on (new / never-run / unavailable / unsupported-subset project), so a
+        // never-run project no longer shows a Search field + Export button with
+        // nothing behind them. Mirrors `detail`'s report branch.
+        if selectedProjectShowsReport {
+            // Universal — Export menu (contents morph per tab)
             ToolbarItem(placement: .primaryAction) {
-                Button { bridgeHandler.menuAction("toggleRightPanel") } label: {
-                    Label(i18n.t("desktop.toolbar.tags"), systemImage: "sidebar.right")
-                }
-                .help(i18n.t("desktop.toolbar.showTags"))
+                ExportMenuButton(bridgeHandler: bridgeHandler, i18n: i18n)
             }
-        }
 
-        // Contextual — Analysis tab: heatmap inspector toggle
-        if bridgeHandler.activeTab == .analysis {
+            // Contextual — Quotes tab: tag sidebar toggle
+            if bridgeHandler.activeTab == .quotes {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { bridgeHandler.menuAction("toggleRightPanel") } label: {
+                        Label(i18n.t("desktop.toolbar.tags"), systemImage: "sidebar.right")
+                    }
+                    .help(i18n.t("desktop.toolbar.showTags"))
+                }
+            }
+
+            // Contextual — Analysis tab: heatmap inspector toggle
+            if bridgeHandler.activeTab == .analysis {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { bridgeHandler.menuAction("toggleInspectorPanel") } label: {
+                        Label(i18n.t("desktop.toolbar.heatmap"), systemImage: "square.grid.2x2")
+                    }
+                    .help(i18n.t("desktop.toolbar.showHeatmap"))
+                }
+            }
+
+            // Search — rightmost in `.primaryAction`, always active. Declared last
+            // so it sits at the trailing edge of the capsule (Notes / Mail / Finder
+            // convention). The web layer routes per tab: Quotes → search bar,
+            // Sessions → transcript search, Codebook → filter codes, Analysis →
+            // filter signals.
             ToolbarItem(placement: .primaryAction) {
-                Button { bridgeHandler.menuAction("toggleInspectorPanel") } label: {
-                    Label(i18n.t("desktop.toolbar.heatmap"), systemImage: "square.grid.2x2")
+                Button { bridgeHandler.menuAction("find") } label: {
+                    Label(i18n.t("desktop.toolbar.search"), systemImage: "magnifyingglass")
                 }
-                .help(i18n.t("desktop.toolbar.showHeatmap"))
+                .help(i18n.t("desktop.toolbar.searchShortcut"))
             }
-        }
-
-        // Search — rightmost in `.primaryAction`, always active. Declared last
-        // so it sits at the trailing edge of the capsule (Notes / Mail / Finder
-        // convention). The web layer routes per tab: Quotes → search bar,
-        // Sessions → transcript search, Codebook → filter codes, Analysis →
-        // filter signals.
-        ToolbarItem(placement: .primaryAction) {
-            Button { bridgeHandler.menuAction("find") } label: {
-                Label(i18n.t("desktop.toolbar.search"), systemImage: "magnifyingglass")
-            }
-            .help(i18n.t("desktop.toolbar.searchShortcut"))
         }
 
         // App-wide ambient pills share `placement: .status` (macOS-only) so they
@@ -1386,7 +1438,43 @@ struct ContentView: View {
 
     // MARK: - Sidebar
 
+    @ViewBuilder
     private var sidebar: some View {
+        if BristlenoseFlags.appKitSidebar {
+            // Native AppKit NSOutlineView source-list sidebar (flag-gated, in
+            // progress). Selection state stays in SwiftUI so the existing serve
+            // wiring is reused. design-desktop-sidebar-appkit.md.
+            ProjectSidebarOutline(
+                projectIndex: projectIndex,
+                i18n: i18n,
+                selection: $selection,
+                lenses: LensItem.all,
+                activeTab: bridgeHandler.activeTab,
+                lensesEnabled: selectedProjectShowsReport,
+                onActivateLens: { bridgeHandler.switchToTab($0) }
+            )
+            .navigationTitle(i18n.t("desktop.chrome.projects"))
+        } else {
+            swiftUISidebar
+        }
+    }
+
+    private var swiftUISidebar: some View {
+        VStack(spacing: 0) {
+        // Lens rail — relocates the former toolbar tab Picker into the top of the
+        // sidebar (spec §2, §3.1). Dimmed until a project is ready, exactly as the
+        // Picker's `.disabled(...)` was. All List modifiers below stay ON the List,
+        // unchanged — only this wrap is new (review F3; the project List is reused
+        // verbatim per §2.2).
+        LensRail(
+            bridgeHandler: bridgeHandler,
+            i18n: i18n,
+            isEnabled: selectedProject != nil && bridgeHandler.isReady
+        )
+        .padding(.horizontal, 8)
+        .padding(.top, 6)
+        .padding(.bottom, 2)
+
         List(selection: $selection) {
             // "+ New Project" lives outside the Section. Per desktop/CLAUDE.md:
             // `Section + Button + ForEach.onMove + conditional Text` drops
@@ -1458,6 +1546,7 @@ struct ContentView: View {
             }
         }
         .navigationTitle(i18n.t("desktop.chrome.projects"))
+        }
     }
 
     // MARK: - Sidebar rows

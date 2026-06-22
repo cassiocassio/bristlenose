@@ -26,6 +26,7 @@
     },
     "view": {
       "toggleSidebar": "Toggle Sidebar",
+      "moveFocusToProjects": "Move Focus to Projects",
       "showContents": "Show Contents",
       "hideContents": "Hide Contents",
       "showCodes": "Show Codes",

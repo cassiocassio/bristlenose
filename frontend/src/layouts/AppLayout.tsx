@@ -424,8 +424,10 @@ function AppShell() {
         }
         case "saveSpreadsheet": {
           const snap = getQuotesSnapshot();
-          const anon = (payload as { anonymise?: boolean } | undefined)?.anonymise ?? false;
-          saveQuotesSpreadsheet(projectId, exportSelectionIds(snap), i18n.t, anon);
+          const p = payload as { anonymise?: boolean; format?: "csv" | "xlsx" } | undefined;
+          const anon = p?.anonymise ?? false;
+          const format = p?.format === "csv" ? "csv" : "xlsx";
+          saveQuotesSpreadsheet(projectId, exportSelectionIds(snap), i18n.t, anon, format);
           break;
         }
         case "extractClips": {

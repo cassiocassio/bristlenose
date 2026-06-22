@@ -2068,8 +2068,12 @@ private struct ExportPopoverContent: View {
 
     private var payload: [String: Any] { ["anonymise": anonymise] }
 
-    private func dispatch(_ action: String) {
-        bridgeHandler.menuAction(action, payload: payload)
+    /// Dispatch a canonical export action, merging any per-action extras (e.g.
+    /// the spreadsheet `format`) onto the global payload (currently `anonymise`).
+    private func dispatch(_ action: String, _ extra: [String: Any] = [:]) {
+        var p = payload
+        for (key, value) in extra { p[key] = value }
+        bridgeHandler.menuAction(action, payload: p)
         dismiss()
     }
 
@@ -2102,11 +2106,20 @@ private struct ExportPopoverContent: View {
                     title: i18n.t("desktop.menu.quotes.copyQuotes"),
                     subtitle: i18n.t("desktop.menu.quotes.copyHint")
                 ) { dispatch("copyQuotes") }
-                ExportPopoverRow(
+                // Spreadsheet is a disclosure: pick CSV or XLSX. Both endpoints
+                // exist server-side; the `format` extra selects which.
+                ExportPopoverDisclosureRow(
                     icon: "tablecells",
                     title: i18n.t("desktop.menu.quotes.saveSpreadsheet"),
                     subtitle: i18n.t("desktop.menu.quotes.spreadsheetHint")
-                ) { dispatch("saveSpreadsheet") }
+                ) {
+                    ExportPopoverSubRow(title: i18n.t("desktop.menu.quotes.formatCSV")) {
+                        dispatch("saveSpreadsheet", ["format": "csv"])
+                    }
+                    ExportPopoverSubRow(title: i18n.t("desktop.menu.quotes.formatXLSX")) {
+                        dispatch("saveSpreadsheet", ["format": "xlsx"])
+                    }
+                }
                 ExportPopoverRow(
                     icon: "film",
                     title: i18n.t("desktop.menu.quotes.extractClips"),
@@ -2155,6 +2168,86 @@ private struct ExportPopoverRow: View {
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
         .padding(.horizontal, 6)
+    }
+}
+
+/// An export row that expands in place to reveal sub-options (e.g. the
+/// spreadsheet format chooser). Same visual language as `ExportPopoverRow`
+/// plus a trailing chevron that rotates when expanded. Tapping the row toggles
+/// the disclosure rather than dispatching — the leaf `ExportPopoverSubRow`s do.
+private struct ExportPopoverDisclosureRow<Content: View>: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    @ViewBuilder let content: () -> Content
+
+    @State private var expanded = false
+    @State private var hovered = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                expanded.toggle()
+            } label: {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: icon)
+                        .font(.body)
+                        .foregroundStyle(.tint)
+                        .frame(width: 18)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(title)
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(expanded ? 90 : 0))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .background(hovered ? Color.primary.opacity(0.06) : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+            .onHover { hovered = $0 }
+
+            if expanded {
+                content()
+            }
+        }
+        .padding(.horizontal, 6)
+    }
+}
+
+/// A leaf option inside an `ExportPopoverDisclosureRow` — indented under the
+/// parent's icon column, no icon of its own.
+private struct ExportPopoverSubRow: View {
+    let title: String
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 0) {
+                Spacer().frame(width: 28)
+                Text(title)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .background(hovered ? Color.primary.opacity(0.06) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
     }
 }
 

@@ -152,7 +152,7 @@
 
   <!-- ───────────── macOS, two variants ───────────── -->
   <h2 class="scene">macOS · two ways to reach parity</h2>
-  <p class="scene-sub">Pick one (or a hybrid). Both carry the Anonymise toggle, group titles, and a submenu.</p>
+  <p class="scene-sub">Pick one (or a hybrid). Both carry the Anonymise toggle and the CSV / XLSX format submenu; Ⓐ groups with titles, Ⓑ leads with subtitles.</p>
   <div class="twoup">
 
     <!-- Variant A: basic NSMenu -->
@@ -218,24 +218,19 @@
                 <span class="pop-ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2.5" width="9" height="12" rx="1.5"/><path d="M6 14.5v1A1.5 1.5 0 007.5 17h6A1.5 1.5 0 0015 15.5v-9A1.5 1.5 0 0013.5 5H12"/></svg></span>
                 <span class="pop-txt"><span class="pop-title">Copy Quotes</span><span class="pop-sub">Lean — quote, code, name, timecode</span></span>
               </div>
-              <div class="pop-row mac-quote">
+              <!-- Spreadsheet row is a disclosure: pick CSV or XLSX (both ship) -->
+              <div class="pop-row mac-quote" onclick="this.parentNode.querySelector('.pop-fmt').classList.toggle('hidden')">
                 <span class="pop-ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="13" height="11" rx="1.5"/><path d="M2.5 7.5h13M7 3.5v11"/></svg></span>
                 <span class="pop-txt"><span class="pop-title">Save as Spreadsheet…</span><span class="pop-sub">Rich — 11-columns for sorting and analysis</span></span>
+                <span class="pop-chevron">⌄</span>
+              </div>
+              <div class="pop-more pop-fmt mac-quote">
+                <div class="pop-subrow">CSV</div>
+                <div class="pop-subrow">XLSX</div>
               </div>
               <div class="pop-row mac-quote">
                 <span class="pop-ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="13" height="10" rx="1.5"/><path d="M2.5 7h13M5 4v3M9 4v3M13 4v3"/></svg></span>
                 <span class="pop-txt"><span class="pop-title">Extract Video Clips…</span><span class="pop-sub">Trimmed clip per quote</span></span>
-              </div>
-              <div class="mac-sep mac-quote"></div>
-              <!-- expanding submenu = inline disclosure -->
-              <div class="pop-row mac-quote" onclick="this.parentNode.querySelector('.pop-more').classList.toggle('hidden')">
-                <span class="pop-txt" style="padding-left:2px;"><span class="pop-title" style="font-weight:500;">Quotes to include</span></span>
-                <span class="pop-chevron">⌄</span>
-              </div>
-              <div class="pop-more mac-quote">
-                <div class="pop-subrow on"><span class="ck">✓</span>All quotes</div>
-                <div class="pop-subrow"><span class="ck">✓</span>Starred only</div>
-                <div class="pop-subrow"><span class="ck">✓</span>Selected only</div>
               </div>
             </div>
           </div>

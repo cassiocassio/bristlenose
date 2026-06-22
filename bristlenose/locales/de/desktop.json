@@ -100,7 +100,9 @@
       "reportHint": "Eigenst\u00e4ndiges HTML",
       "copyHint": "Schlank \u2014 Zitat, Code, Name, Zeitcode",
       "spreadsheetHint": "Umfangreich \u2014 11 Spalten zum Sortieren und Analysieren",
-      "clipsHint": "Ein zugeschnittener Clip pro Zitat"
+      "clipsHint": "Ein zugeschnittener Clip pro Zitat",
+      "formatCSV": "CSV",
+      "formatXLSX": "XLSX"
     },
     "video": {
       "play": "Wiedergabe",

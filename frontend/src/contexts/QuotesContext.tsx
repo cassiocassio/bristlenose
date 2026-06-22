@@ -295,3 +295,23 @@ export function setTagFilter(filter: TagFilterState): void {
 export function useQuotesStore(): QuotesState {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
+
+/** Derived export counts. Cached so the snapshot is referentially stable
+ *  unless total/starred actually change — `useSyncExternalStore` then bails
+ *  out of re-render, so subscribing this in a layout doesn't re-render the
+ *  shell on every unrelated store mutation (tag add, edit, search…). */
+let cachedCounts: { total: number; starred: number } = { total: 0, starred: 0 };
+function getCountsSnapshot(): { total: number; starred: number } {
+  let starred = 0;
+  for (const q of state.quotes) if (state.starred[q.dom_id]) starred++;
+  const total = state.quotes.length;
+  if (total !== cachedCounts.total || starred !== cachedCounts.starred) {
+    cachedCounts = { total, starred };
+  }
+  return cachedCounts;
+}
+
+/** Reactive {total, starred} quote counts. Stable across unrelated mutations. */
+export function useQuoteCounts(): { total: number; starred: number } {
+  return useSyncExternalStore(subscribe, getCountsSnapshot);
+}

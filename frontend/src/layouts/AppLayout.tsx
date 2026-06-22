@@ -52,7 +52,7 @@ import {
   setViewMode,
   setTagFilter,
   getQuotesSnapshot,
-  useQuotesStore,
+  useQuoteCounts,
 } from "../contexts/QuotesContext";
 import { EMPTY_TAG_FILTER } from "../utils/filter";
 import { toast } from "../utils/toast";
@@ -238,12 +238,9 @@ function AppShell() {
   locationBridgeRef.current = location;
 
   // Live export scope counts → native popover (All / Selected / Starred).
-  // Reactive: re-posts whenever quotes load, stars toggle, or selection changes.
-  const quotesStore = useQuotesStore();
-  const totalQuoteCount = quotesStore.quotes.length;
-  const starredQuoteCount = quotesStore.quotes.filter(
-    (q) => quotesStore.starred[q.dom_id],
-  ).length;
+  // useQuoteCounts() returns a stable {total,starred} ref unless those change,
+  // so the shell doesn't re-render on unrelated store mutations (tag/edit/search).
+  const { total: totalQuoteCount, starred: starredQuoteCount } = useQuoteCounts();
   const selectedQuoteCount = selectedIds.size;
   useEffect(() => {
     if (!embedded) return;
@@ -403,19 +400,6 @@ function AppShell() {
             setExportOpen(true);
           }
           break;
-        case "exportQuotesCSV": {
-          const snap = getQuotesSnapshot();
-          const csv = buildCsvString(null, snap);
-          const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "bristlenose-quotes.csv";
-          a.click();
-          URL.revokeObjectURL(url);
-          toast(i18n.t("toolbar.quotesExported", { count: snap.quotes.length }));
-          break;
-        }
         case "copyAsCSV": {
           const snap2 = getQuotesSnapshot();
           const focused = focusedIdBridgeRef.current;

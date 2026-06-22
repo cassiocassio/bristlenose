@@ -265,9 +265,9 @@ final class BridgeHandler: ObservableObject {
 
         case "focus-change":
             focusedQuoteId = body["quoteId"] as? String
-            if let ids = body["selectedIds"] as? [String] {
-                selectedQuoteCount = ids.count
-            }
+            // `selectedQuoteCount` is owned solely by `export-counts` (below) —
+            // do not also write it here, or the two sources can drift if the
+            // web ever starts posting focus-change.
 
         case "undo-state":
             canUndo = body["canUndo"] as? Bool ?? false

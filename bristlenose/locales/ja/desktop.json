@@ -95,7 +95,13 @@
       "saveSpreadsheet": "スプレッドシートとして保存…",
       "extractClips": "ビデオクリップを抽出…",
       "sectionTitle": "引用",
-      "anonymise": "匿名化（名前を削除）"
+      "anonymise": "匿名化（名前を削除）",
+      "anonymiseHint": "すべてのエクスポートから参加者名を削除",
+      "reportGroupTitle": "レポート",
+      "reportHint": "自己完結型HTML — 表示と検索のみ、編集不可",
+      "copyHint": "Miro / スライド向けの簡易セット — 引用、コード、名前、タイムコード",
+      "spreadsheetHint": "並べ替えと処理のための11列のCSV / XLSX",
+      "clipsHint": "ffmpeg で引用ごとに1つのトリミングクリップ"
     },
     "video": {
       "play": "再生",

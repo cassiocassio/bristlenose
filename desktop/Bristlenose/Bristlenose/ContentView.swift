@@ -2019,9 +2019,11 @@ private struct ProjectNotificationReceivers: ViewModifier {
 /// Toolbar export button — the macOS surface of the canonical export list,
 /// at parity with the SPA dropdown (see docs/mockups/export-menu-comparison.html).
 ///
-/// Order: a global Anonymise toggle, then "Export Report…" (universal), then
-/// the quote-specific actions (Copy Quotes · Save as Spreadsheet · Extract
-/// Video Clips) under a section header — shown only on the Quotes tab.
+/// Rendered as a **richer popover** (Variant Ⓑ) rather than a plain `NSMenu`,
+/// so each action carries a descriptive subtitle — matching the SPA dropdown's
+/// information density. Layout: a global Anonymise pill toggle, then a "Report"
+/// group with "Export Report…", then a "Quotes" group (Copy Quotes · Save as
+/// Spreadsheet · Extract Video Clips) shown only on the Quotes tab.
 ///
 /// Every item dispatches through `bridgeHandler.menuAction(_:payload:)`, which
 /// the web layer (`AppLayout` `bn:menu-action`) routes into `utils/exportActions`
@@ -2033,46 +2035,141 @@ struct ExportMenuButton: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
 
+    @State private var isPresented = false
+
+    var body: some View {
+        Button {
+            isPresented.toggle()
+        } label: {
+            Label(i18n.t("desktop.toolbar.export"), systemImage: "square.and.arrow.up")
+        }
+        .help(i18n.t("desktop.toolbar.exportShortcut"))
+        .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+            ExportPopoverContent(bridgeHandler: bridgeHandler, i18n: i18n) {
+                isPresented = false
+            }
+        }
+    }
+}
+
+/// Contents of the export popover. Holds the (non-persisted) Anonymise state,
+/// renders the grouped action rows, and dismisses the popover after a pick.
+private struct ExportPopoverContent: View {
+    @ObservedObject var bridgeHandler: BridgeHandler
+    @ObservedObject var i18n: I18n
+    let dismiss: () -> Void
+
     /// Global Anonymise — strips participant *names* (display names) from every
     /// export; participant codes (p1, p2) are kept. Deliberately not persisted:
-    /// resets to off on view recreation (e.g. project switch) so a researcher
+    /// the popover is recreated each open, so it defaults off and a researcher
     /// never ships an unexpectedly-anonymised export.
     @State private var anonymise = false
 
     private var payload: [String: Any] { ["anonymise": anonymise] }
 
+    private func dispatch(_ action: String) {
+        bridgeHandler.menuAction(action, payload: payload)
+        dismiss()
+    }
+
     var body: some View {
-        Menu {
+        VStack(alignment: .leading, spacing: 0) {
             // Global toggle — applies to whichever export the user picks next.
             Toggle(isOn: $anonymise) {
-                Text(i18n.t("desktop.menu.quotes.anonymise"))
-            }
-
-            Divider()
-
-            // Universal: shareable HTML report. Cmd+Shift+E lives on the
-            // File > Export Report… item in MenuCommands.swift (single source).
-            Button(i18n.t("desktop.menu.file.exportReport")) {
-                bridgeHandler.menuAction("exportReport", payload: payload)
-            }
-
-            if bridgeHandler.activeTab == .quotes {
-                Section(i18n.t("desktop.menu.quotes.sectionTitle")) {
-                    Button(i18n.t("desktop.menu.quotes.copyQuotes")) {
-                        bridgeHandler.menuAction("copyQuotes", payload: payload)
-                    }
-                    Button(i18n.t("desktop.menu.quotes.saveSpreadsheet")) {
-                        bridgeHandler.menuAction("saveSpreadsheet", payload: payload)
-                    }
-                    Button(i18n.t("desktop.menu.quotes.extractClips")) {
-                        bridgeHandler.menuAction("extractClips", payload: payload)
-                    }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(i18n.t("desktop.menu.quotes.anonymise"))
+                    Text(i18n.t("desktop.menu.quotes.anonymiseHint"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
-        } label: {
-            Label(i18n.t("desktop.toolbar.export"), systemImage: "square.and.arrow.up")
+            .toggleStyle(.switch)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+
+            Divider().padding(.horizontal, 10)
+
+            ExportPopoverGroupTitle(text: i18n.t("desktop.menu.quotes.reportGroupTitle"))
+            ExportPopoverRow(
+                icon: "square.and.arrow.up",
+                title: i18n.t("desktop.menu.file.exportReport"),
+                subtitle: i18n.t("desktop.menu.quotes.reportHint")
+            ) { dispatch("exportReport") }
+
+            if bridgeHandler.activeTab == .quotes {
+                ExportPopoverGroupTitle(text: i18n.t("desktop.menu.quotes.sectionTitle"))
+                ExportPopoverRow(
+                    icon: "doc.on.clipboard",
+                    title: i18n.t("desktop.menu.quotes.copyQuotes"),
+                    subtitle: i18n.t("desktop.menu.quotes.copyHint")
+                ) { dispatch("copyQuotes") }
+                ExportPopoverRow(
+                    icon: "tablecells",
+                    title: i18n.t("desktop.menu.quotes.saveSpreadsheet"),
+                    subtitle: i18n.t("desktop.menu.quotes.spreadsheetHint")
+                ) { dispatch("saveSpreadsheet") }
+                ExportPopoverRow(
+                    icon: "film",
+                    title: i18n.t("desktop.menu.quotes.extractClips"),
+                    subtitle: i18n.t("desktop.menu.quotes.clipsHint")
+                ) { dispatch("extractClips") }
+            }
         }
-        .help(i18n.t("desktop.toolbar.exportShortcut"))
+        .frame(width: 308)
+        .padding(.vertical, 6)
+    }
+}
+
+/// Small-caps section header inside the export popover.
+private struct ExportPopoverGroupTitle: View {
+    let text: String
+    var body: some View {
+        Text(text.uppercased())
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 14)
+            .padding(.top, 8)
+            .padding(.bottom, 2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// A single action row in the export popover: leading SF Symbol, title, and a
+/// muted subtitle. Highlights on hover (the popover is not a system menu, so
+/// the hover affordance is hand-rolled).
+private struct ExportPopoverRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: icon)
+                    .font(.body)
+                    .foregroundStyle(.tint)
+                    .frame(width: 18)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .background(hovered ? Color.primary.opacity(0.06) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+        .padding(.horizontal, 6)
     }
 }
 

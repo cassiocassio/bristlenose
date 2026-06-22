@@ -95,7 +95,13 @@
       "saveSpreadsheet": "Als Tabelle speichern…",
       "extractClips": "Videoclips extrahieren…",
       "sectionTitle": "Zitate",
-      "anonymise": "Anonymisieren (Namen entfernen)"
+      "anonymise": "Anonymisieren (Namen entfernen)",
+      "anonymiseHint": "Teilnehmernamen aus jedem Export entfernen",
+      "reportGroupTitle": "Bericht",
+      "reportHint": "Eigenständiges HTML — ansehen & suchen, nicht bearbeiten",
+      "copyHint": "Schlanker Satz für Miro / Folien — Zitat, Code, Name, Zeitcode",
+      "spreadsheetHint": "Umfangreiches CSV / XLSX mit 11 Spalten zum Sortieren & Verarbeiten",
+      "clipsHint": "Ein zugeschnittener Clip pro Zitat via ffmpeg"
     },
     "video": {
       "play": "Wiedergabe",

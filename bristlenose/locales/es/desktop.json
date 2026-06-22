@@ -95,7 +95,13 @@
       "saveSpreadsheet": "Guardar como hoja de cálculo…",
       "extractClips": "Extraer clips de vídeo…",
       "sectionTitle": "Citas",
-      "anonymise": "Anonimizar (quitar nombres)"
+      "anonymise": "Anonimizar (quitar nombres)",
+      "anonymiseHint": "Quitar los nombres de participantes de cada exportación",
+      "reportGroupTitle": "Informe",
+      "reportHint": "HTML autónomo: ver y buscar, sin editar",
+      "copyHint": "Conjunto reducido para Miro / diapositivas: cita, código, nombre, tiempo",
+      "spreadsheetHint": "CSV / XLSX completo de 11 columnas para ordenar y procesar",
+      "clipsHint": "Un clip recortado por cita con ffmpeg"
     },
     "video": {
       "play": "Reproducir",

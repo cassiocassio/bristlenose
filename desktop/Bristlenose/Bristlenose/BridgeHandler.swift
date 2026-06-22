@@ -47,6 +47,13 @@ final class BridgeHandler: ObservableObject {
     /// (Clear Selection, Copy as CSV).
     @Published var selectedQuoteCount: Int = 0
 
+    /// Total number of quotes currently in the report. Labels the export
+    /// popover's "All N quotes" scope choice. Pushed via `export-counts`.
+    @Published var totalQuoteCount: Int = 0
+
+    /// Number of starred quotes. Labels the "N Starred quotes" scope choice.
+    @Published var starredQuoteCount: Int = 0
+
     /// Whether a video/audio player is open. Enables the Video menu.
     @Published var hasPlayer = false
 
@@ -267,6 +274,11 @@ final class BridgeHandler: ObservableObject {
             canRedo = body["canRedo"] as? Bool ?? false
             undoLabel = body["undoLabel"] as? String
 
+        case "export-counts":
+            if let n = body["total"] as? Int { totalQuoteCount = n }
+            if let n = body["selected"] as? Int { selectedQuoteCount = n }
+            if let n = body["starred"] as? Int { starredQuoteCount = n }
+
         case "player-state":
             hasPlayer = body["hasPlayer"] as? Bool ?? false
             playerPlaying = body["playing"] as? Bool ?? false
@@ -298,6 +310,8 @@ final class BridgeHandler: ObservableObject {
         canGoForward = false
         focusedQuoteId = nil
         selectedQuoteCount = 0
+        totalQuoteCount = 0
+        starredQuoteCount = 0
         hasPlayer = false
         playerPlaying = false
         canUndo = false

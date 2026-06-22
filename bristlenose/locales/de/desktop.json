@@ -102,7 +102,10 @@
       "spreadsheetHint": "Umfangreich \u2014 11 Spalten zum Sortieren und Analysieren",
       "clipsHint": "Ein zugeschnittener Clip pro Zitat",
       "formatCSV": "CSV",
-      "formatXLSX": "XLSX"
+      "formatXLSX": "XLSX",
+      "copyScopeAll": "Alle {{count}} Zitate",
+      "copyScopeSelected": "{{count}} ausgew\u00e4hlte Zitate",
+      "copyScopeStarred": "{{count}} markierte Zitate"
     },
     "video": {
       "play": "Wiedergabe",

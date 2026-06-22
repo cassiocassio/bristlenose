@@ -102,7 +102,10 @@
       "spreadsheetHint": "\u8a73\u7d30 \u2014 \u4e26\u3079\u66ff\u3048\u3068\u5206\u6790\u306e\u305f\u3081\u306e11\u5217",
       "clipsHint": "\u5f15\u7528\u3054\u3068\u306b\u30c8\u30ea\u30df\u30f3\u30b0\u3055\u308c\u305f\u30af\u30ea\u30c3\u30d7",
       "formatCSV": "CSV",
-      "formatXLSX": "XLSX"
+      "formatXLSX": "XLSX",
+      "copyScopeAll": "\u5168{{count}}\u4ef6\u306e\u5f15\u7528",
+      "copyScopeSelected": "\u9078\u629e\u4e2d\u306e{{count}}\u4ef6\u306e\u5f15\u7528",
+      "copyScopeStarred": "\u30b9\u30bf\u30fc\u4ed8\u304d{{count}}\u4ef6\u306e\u5f15\u7528"
     },
     "video": {
       "play": "再生",

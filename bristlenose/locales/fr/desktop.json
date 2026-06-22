@@ -102,7 +102,10 @@
       "spreadsheetHint": "Riche \u2014 11 colonnes pour trier et analyser",
       "clipsHint": "Un clip d\u00e9coup\u00e9 par citation",
       "formatCSV": "CSV",
-      "formatXLSX": "XLSX"
+      "formatXLSX": "XLSX",
+      "copyScopeAll": "Toutes les {{count}} citations",
+      "copyScopeSelected": "{{count}} citations s\u00e9lectionn\u00e9es",
+      "copyScopeStarred": "{{count}} citations favorites"
     },
     "video": {
       "play": "Lecture",

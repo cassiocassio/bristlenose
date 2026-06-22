@@ -102,7 +102,10 @@
       "spreadsheetHint": "Completo \u2014 11 columnas para ordenar y analizar",
       "clipsHint": "Un clip recortado por cita",
       "formatCSV": "CSV",
-      "formatXLSX": "XLSX"
+      "formatXLSX": "XLSX",
+      "copyScopeAll": "Todas las {{count}} citas",
+      "copyScopeSelected": "{{count}} citas seleccionadas",
+      "copyScopeStarred": "{{count}} citas destacadas"
     },
     "video": {
       "play": "Reproducir",

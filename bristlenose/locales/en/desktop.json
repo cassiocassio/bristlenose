@@ -102,7 +102,10 @@
       "spreadsheetHint": "Rich \u2014 11-columns for sorting and analysis",
       "clipsHint": "Trimmed clip per quote",
       "formatCSV": "CSV",
-      "formatXLSX": "XLSX"
+      "formatXLSX": "XLSX",
+      "copyScopeAll": "All {{count}} quotes",
+      "copyScopeSelected": "{{count}} Selected quotes",
+      "copyScopeStarred": "{{count}} Starred quotes"
     },
     "video": {
       "play": "Play",

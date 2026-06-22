@@ -2101,33 +2101,45 @@ private struct ExportPopoverContent: View {
             ) { dispatch("exportReport") }
 
             if bridgeHandler.activeTab == .quotes {
-                // Copy Quotes is a disclosure: pick the scope (All / Selected /
-                // Starred) with live counts pushed from the web via export-counts.
-                ExportPopoverDisclosureRow(
-                    icon: "doc.on.clipboard",
-                    title: i18n.t("desktop.menu.quotes.copyQuotes"),
-                    subtitle: i18n.t("desktop.menu.quotes.copyHint")
-                ) {
-                    ExportPopoverSubRow(
-                        title: i18n.t(
-                            "desktop.menu.quotes.copyScopeAll",
-                            ["count": String(bridgeHandler.totalQuoteCount)]
-                        )
+                // Copy Quotes: a plain "copy all visible" action by default; it
+                // grows into a scope disclosure only when there's something to
+                // narrow to (a selection or starred quotes). Zero-count scopes
+                // are hidden here (toolbar morphs); the menu bar keeps them dimmed.
+                if bridgeHandler.selectedQuoteCount > 0 || bridgeHandler.starredQuoteCount > 0 {
+                    ExportPopoverDisclosureRow(
+                        icon: "doc.on.clipboard",
+                        title: i18n.t("desktop.menu.quotes.copyQuotes"),
+                        subtitle: i18n.t("desktop.menu.quotes.copyHint")
+                    ) {
+                        ExportPopoverSubRow(
+                            title: i18n.t(
+                                "desktop.menu.quotes.copyScopeAll",
+                                ["count": String(bridgeHandler.totalQuoteCount)]
+                            )
+                        ) { dispatch("copyQuotes", ["scope": "all"]) }
+                        if bridgeHandler.selectedQuoteCount > 0 {
+                            ExportPopoverSubRow(
+                                title: i18n.t(
+                                    "desktop.menu.quotes.copyScopeSelected",
+                                    ["count": String(bridgeHandler.selectedQuoteCount)]
+                                )
+                            ) { dispatch("copyQuotes", ["scope": "selected"]) }
+                        }
+                        if bridgeHandler.starredQuoteCount > 0 {
+                            ExportPopoverSubRow(
+                                title: i18n.t(
+                                    "desktop.menu.quotes.copyScopeStarred",
+                                    ["count": String(bridgeHandler.starredQuoteCount)]
+                                )
+                            ) { dispatch("copyQuotes", ["scope": "starred"]) }
+                        }
+                    }
+                } else {
+                    ExportPopoverRow(
+                        icon: "doc.on.clipboard",
+                        title: i18n.t("desktop.menu.quotes.copyQuotes"),
+                        subtitle: i18n.t("desktop.menu.quotes.copyHint")
                     ) { dispatch("copyQuotes", ["scope": "all"]) }
-                    ExportPopoverSubRow(
-                        title: i18n.t(
-                            "desktop.menu.quotes.copyScopeSelected",
-                            ["count": String(bridgeHandler.selectedQuoteCount)]
-                        ),
-                        enabled: bridgeHandler.selectedQuoteCount > 0
-                    ) { dispatch("copyQuotes", ["scope": "selected"]) }
-                    ExportPopoverSubRow(
-                        title: i18n.t(
-                            "desktop.menu.quotes.copyScopeStarred",
-                            ["count": String(bridgeHandler.starredQuoteCount)]
-                        ),
-                        enabled: bridgeHandler.starredQuoteCount > 0
-                    ) { dispatch("copyQuotes", ["scope": "starred"]) }
                 }
                 // Spreadsheet is a disclosure: pick CSV or XLSX. Both endpoints
                 // exist server-side; the `format` extra selects which.
@@ -2253,7 +2265,6 @@ private struct ExportPopoverDisclosureRow<Content: View>: View {
 /// parent's icon column, no icon of its own.
 private struct ExportPopoverSubRow: View {
     let title: String
-    var enabled: Bool = true
     let action: () -> Void
 
     @State private var hovered = false
@@ -2269,13 +2280,11 @@ private struct ExportPopoverSubRow: View {
             .padding(.vertical, 5)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
-            .background(hovered && enabled ? Color.primary.opacity(0.06) : Color.clear)
+            .background(hovered ? Color.primary.opacity(0.06) : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 6))
         }
         .buttonStyle(.plain)
-        .disabled(!enabled)
-        .foregroundStyle(enabled ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
-        .onHover { hovered = enabled ? $0 : false }
+        .onHover { hovered = $0 }
     }
 }
 

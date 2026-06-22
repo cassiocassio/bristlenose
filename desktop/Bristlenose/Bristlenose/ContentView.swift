@@ -2206,6 +2206,7 @@ private struct ExportPopoverDisclosureRow<Content: View>: View {
 
     @State private var expanded = false
     @State private var hovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -2244,6 +2245,7 @@ private struct ExportPopoverDisclosureRow<Content: View>: View {
             }
         }
         .padding(.horizontal, 6)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: expanded)
     }
 }
 

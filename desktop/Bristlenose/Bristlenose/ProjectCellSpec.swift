@@ -55,6 +55,13 @@ enum ProjectCellSpec {
         NSImage.SymbolConfiguration(pointSize: 16, weight: .regular)
     }
 
+    /// Inline subtitle-glyph config (prefix ⚠/❓/failure glyph + trailing iCloud) —
+    /// `.imageScale(.small)` on a caption in `ProjectRow`. Sized to sit inline with
+    /// the caption subtitle text; smaller than the leading identity icon.
+    static var subtitleGlyphConfig: NSImage.SymbolConfiguration {
+        NSImage.SymbolConfiguration(pointSize: subtitleFont.pointSize, weight: .regular)
+    }
+
     /// Native source-list row pitch (single-line, baseline-to-baseline) — MEASURED
     /// 22 Jun against Finder / Notes / Mail = 64px @2x = **32pt**. The fonts already
     /// matched; only the spacing was tight. The earlier font-derived height (~25pt)

@@ -459,8 +459,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             guard let subtitle else {
                 return iconCell(symbol: symbol, text: project.name, trailing: count)
             }
+            let prefix = subtitlePrefixGlyph(for: variant, availability: project.availability)
+            var inCloud = false
+            if case .inCloud = project.availability { inCloud = true }
             return projectTwoLineCell(symbol: symbol, name: project.name, count: count,
-                                      subtitle: subtitle, available: project.availability.isReady)
+                                      subtitle: subtitle, available: project.availability.isReady,
+                                      prefixGlyph: prefix, inCloud: inCloud)
         }
     }
 
@@ -564,13 +568,34 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
     }
 
+    /// Subtitle PREFIX glyph (symbol + tint) for a variant, or nil. Mirrors the glyph
+    /// choices in `ProjectRow.subtitleContent` (`:229-254`): cantFind → reason-aware
+    /// glyph in orange; failed/diagnostic → the `MessageKind.error` glyph; partial →
+    /// `MessageKind.warning`. The failure glyph's clickability (→ diagnostics) is
+    /// Phase 4 — here it renders static.
+    private func subtitlePrefixGlyph(for variant: SubtitleVariant,
+                                     availability: ProjectAvailability) -> (symbol: String, color: NSColor)? {
+        switch variant {
+        case .cantFind:
+            return (availability.sfSymbolName ?? "questionmark.folder", NSColor(Color.orange))
+        case .failed, .failedDiagnostic:
+            return (MessageKind.error.symbolName, NSColor(MessageKind.error.tint))
+        case .completedPartial:
+            return (MessageKind.warning.symbolName, NSColor(MessageKind.warning.tint))
+        default:
+            return nil
+        }
+    }
+
     /// The two-line project cell: icon (baseline-aligned to the title line) · name
     /// · session count on the title line; status text on the subtitle line. Layout
     /// constants per `ProjectCellSpec` (traceable to `ProjectRow`). Prefix/failure
     /// glyphs + the trailing ring + buttons land in Phases 2–4. `.placeholder` rows
     /// never reach here (collapsed to the single-line `iconCell` in `viewFor`).
     private func projectTwoLineCell(symbol: String, name: String, count: String?,
-                                    subtitle: String, available: Bool) -> NSTableCellView {
+                                    subtitle: String, available: Bool,
+                                    prefixGlyph: (symbol: String, color: NSColor)?,
+                                    inCloud: Bool) -> NSTableCellView {
         let cell = NSTableCellView()
         let imageView = NSImageView()
         imageView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
@@ -610,10 +635,52 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                                            constant: ProjectCellSpec.verticalInset),
             subtitleField.topAnchor.constraint(equalTo: nameField.bottomAnchor,
                                                constant: ProjectCellSpec.titleToSubtitle),
-            subtitleField.leadingAnchor.constraint(equalTo: nameField.leadingAnchor),
-            subtitleField.trailingAnchor.constraint(equalTo: cell.trailingAnchor,
-                                                    constant: -ProjectCellSpec.trailingInset),
         ]
+
+        // Subtitle leading — after the prefix glyph (cantFind ⚠/❓, failure/partial)
+        // when present, else aligned with the name. Failure-glyph clickability is Phase 4.
+        if let prefixGlyph {
+            let glyph = NSImageView()
+            glyph.image = NSImage(systemSymbolName: prefixGlyph.symbol, accessibilityDescription: nil)
+            glyph.symbolConfiguration = ProjectCellSpec.subtitleGlyphConfig
+            glyph.contentTintColor = prefixGlyph.color
+            glyph.translatesAutoresizingMaskIntoConstraints = false
+            glyph.setContentHuggingPriority(.required, for: .horizontal)
+            glyph.setContentCompressionResistancePriority(.required, for: .horizontal)
+            cell.addSubview(glyph)
+            constraints += [
+                glyph.leadingAnchor.constraint(equalTo: nameField.leadingAnchor),
+                glyph.centerYAnchor.constraint(equalTo: subtitleField.centerYAnchor),
+                subtitleField.leadingAnchor.constraint(equalTo: glyph.trailingAnchor,
+                                                        constant: ProjectCellSpec.subtitleInternal),
+            ]
+        } else {
+            constraints.append(subtitleField.leadingAnchor.constraint(equalTo: nameField.leadingAnchor))
+        }
+
+        // Subtitle-right — the iCloud status glyph when sources live in iCloud
+        // (ProjectRow.subtitleRightSlot :355-358). The activity/copy ring takes
+        // precedence in this slot in Phase 3.
+        if inCloud {
+            let cloud = NSImageView()
+            cloud.image = NSImage(systemSymbolName: "icloud", accessibilityDescription: nil)
+            cloud.symbolConfiguration = ProjectCellSpec.subtitleGlyphConfig
+            cloud.contentTintColor = .secondaryLabelColor
+            cloud.translatesAutoresizingMaskIntoConstraints = false
+            cloud.setContentHuggingPriority(.required, for: .horizontal)
+            cloud.setContentCompressionResistancePriority(.required, for: .horizontal)
+            cell.addSubview(cloud)
+            constraints += [
+                cloud.trailingAnchor.constraint(equalTo: cell.trailingAnchor,
+                                                constant: -ProjectCellSpec.trailingInset),
+                cloud.centerYAnchor.constraint(equalTo: subtitleField.centerYAnchor),
+                subtitleField.trailingAnchor.constraint(lessThanOrEqualTo: cloud.leadingAnchor,
+                                                        constant: -ProjectCellSpec.subtitleInternal),
+            ]
+        } else {
+            constraints.append(subtitleField.trailingAnchor.constraint(equalTo: cell.trailingAnchor,
+                                                                       constant: -ProjectCellSpec.trailingInset))
+        }
         if let count {
             let countField = NSTextField(labelWithString: count)
             countField.font = ProjectCellSpec.countFont

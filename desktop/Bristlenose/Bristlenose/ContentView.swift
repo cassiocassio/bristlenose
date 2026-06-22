@@ -139,10 +139,11 @@ struct LocateErrorState: Identifiable {
 /// in embedded mode. The WKWebView is recreated on project switch (via .id)
 /// to get a fresh ephemeral data store per project.
 ///
-/// The toolbar provides three zones:
-/// - Leading: back/forward buttons (Cmd+[/Cmd+])
-/// - Centre: tab segmented control (Cmd+1-5)
-/// - Trailing: project name as window title
+/// The toolbar provides:
+/// - Leading: back/forward buttons (Cmd+[/Cmd+]) + project title (explicit ToolbarItem)
+/// - Trailing: Export menu + per-tab actions; Ollama status pill (.status)
+/// The five tab lenses moved OUT of the toolbar into the sidebar LensRail
+/// (Cmd+1-5 still switch tabs) — see design-desktop-nav-toolbar-rearrangement.md.
 struct ContentView: View {
 
     @EnvironmentObject var serveManager: ServeManager

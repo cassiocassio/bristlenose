@@ -35,7 +35,7 @@ Apple's own flagship apps keep their sidebars in **AppKit `NSOutlineView`** for 
 - **Uniform icon column** — every row's icon occupies the same leading column; labels align regardless of glyph width. *(This is today's wonky-alignment bug — `person.2` shoving "Sessions" right — gone for free with a cell template.)*
 - **Row size tracks General ▸ Sidebar icon size** (Small / Medium / Large): row height, glyph size, text size all follow the system setting. Keeps `macos-ux-checklist.md`'s "row-height follows icon-size ✓" true after the rewrite.
 - Metrics (row height ≈24pt medium, icon ≈16pt, icon→text gap, leading inset) are **system-provided — we do not set them.**
-- **Free native behaviours the SwiftUI `List` lacked, all system-drawn — retired from our code:** **type-to-select** ("ik" → IKEA — the headline win), **keyboard expand/collapse** (←/→ on folders) + arrow nav, **no row separators** (hairlines read as "settings table"), **per-level icon-column alignment** (`indentationPerLevel`, default — leave it), **right-click highlight ring**, **select-all-on-rename**, and the **blue insertion-line** drop affordance (which *deletes* today's hand-drawn `RoundedRectangle.stroke` highlight).
+- **Free native behaviours the SwiftUI `List` lacked, all system-drawn — retired from our code:** **type-to-select** ("ik" → IKEA — the headline win), **keyboard expand/collapse** (←/→ on folders) + arrow nav, **no row separators** (hairlines read as "settings table"), **per-level icon-column alignment** (`indentationPerLevel` — code sets 14pt, `ProjectSidebarOutline.swift:108`), **right-click highlight ring**, **select-all-on-rename**, and the **blue insertion-line** drop affordance (which *deletes* today's hand-drawn `RoundedRectangle.stroke` highlight).
 
 ### 1.3 Structure
 - **Multi-group source list** (Finder-style): a **lenses** group (the 5 mode rows, §3.1) · a **"Projects"** group (mixed case, Finder-style — *not* all-caps) holding project + folder rows · **built for more groups** (more headers are coming). ≤2 levels of project hierarchy (HIG); one folder level today, deeper nesting becomes free.
@@ -50,12 +50,12 @@ Apple's own flagship apps keep their sidebars in **AppKit `NSOutlineView`** for 
 ## 2. The least-bespoke AppKit recipe
 
 ```
-NavigationSplitView { ProjectSidebarView() } detail: { … }
+NavigationSplitView { ProjectSidebarOutline() } detail: { … }
 
-struct ProjectSidebarView: NSViewControllerRepresentable {   // controller, not view — real lifecycle
-    func makeNSViewController(context:) -> ProjectSidebarController
-    func updateNSViewController(_:context:)                    // push model snapshot in
-    func makeCoordinator() -> Coordinator                      // dataSource + delegate + selection bridge
+struct ProjectSidebarOutline: NSViewControllerRepresentable {  // controller, not view — real lifecycle
+    func makeNSViewController(context:) -> SidebarOutlineController
+    func updateNSViewController(_:context:)                     // push model snapshot + @Binding in
+    // the controller IS the dataSource + delegate (no separate Coordinator)
 }
 
 // Inside the controller:
@@ -69,7 +69,7 @@ NSScrollView(hasVerticalScroller: true)
      allowsMultipleSelection = true              // preserve today's Cmd/Shift multi-select
 ```
 
-`NSViewControllerRepresentable` (not `…ViewRepresentable`) — the outline owns real lifecycle: scroll view, data-source/delegate objects, selection state, menu + first-responder wiring, initial-selection restore timing. The **Coordinator** bridges selection both ways.
+`NSViewControllerRepresentable` (not `…ViewRepresentable`) — the outline owns real lifecycle: scroll view, data-source/delegate objects, menu + first-responder wiring. The controller (itself the dataSource + delegate — **no separate Coordinator**) reports user selection out via the `@Binding`; selection state + restore stay in SwiftUI (§2.5).
 
 ### 2.1 What AppKit draws — DO NOT reimplement
 | Behaviour | Mechanism |
@@ -85,7 +85,7 @@ NSScrollView(hasVerticalScroller: true)
 ### 2.2 What we must provide (unavoidable content)
 - **Data source** — `numberOfChildrenOfItem` / `child:ofItem:` / `isItemExpandable`.
 - **Delegate `viewFor:`** — a configured `NSTableCellView` per row (set `imageView.image`, `textField.stringValue`).
-- **Selection bridge** (Coordinator) — push selection out as the `SidebarSelection` set; apply external selection changes in.
+- **Selection bridge** (the controller) — push user selection out by writing the `@Binding` (`onSelectionChange`); render external/programmatic selection in via `applySelection` (§2.5).
 - **Drag / drop + reorder** — `NSOutlineViewDataSource` pasteboard methods. *This is also the apocalypse fix (§3.3 Phase B).*
 - **Context menu** (`NSMenu` via `menu(for:)`) + **inline rename** (editable `textField`).
 
@@ -106,45 +106,36 @@ NSScrollView(hasVerticalScroller: true)
 
 ### 2.5 Selection funnel + reload contract — the spine (read before §3.4)
 
-> **The load-bearing asymmetry the rest of this doc is built on.** SwiftUI's `List(selection:)` is a *value binding* — assigning to it **is** the side-effect channel, so serve-switch / persist / bridge ride it for free, for programmatic writes *and* user clicks alike. **AppKit has no binding.** `outlineViewSelectionDidChange(_:)` fires on user clicks but **NOT** on `selectRowIndexes(_:)`, and a `@Published var projects` reassignment doesn't touch the outline at all. So every cell in §3.4 that reads "unchanged" is really *"rebuild this mechanism by hand — here's the trap."* This section is that mechanism; §3.4's spine rows point here.
+> **The load-bearing asymmetry — and how Phase A sidestepped it.** SwiftUI's `List(selection:)` is a *value binding* — assigning to it **is** the side-effect channel, so serve-switch / persist / bridge ride it for free, for programmatic writes *and* user clicks alike. A raw `NSOutlineView` has **no binding** (`outlineViewSelectionDidChange(_:)` fires on user clicks but **not** on `selectRowIndexes(_:)`). The original plan in this section was to rebuild that side-effect channel by hand in AppKit; **what shipped keeps the SwiftUI binding instead.** Selection STATE stays in a SwiftUI `@Binding var selection` (`ProjectSidebarOutline.swift:22`); the controller only *renders* it and *reports* user changes back. So the existing serve/persist/consent wiring (`ContentView.applySelectionChange`, `:365-370,572-632`) is **reused untouched**, and the programmatic-selection trap is sidestepped, not paid (`ProjectSidebarOutline.swift:5-9`).
 
-**Item identity (the foundation).** `Project`/`Folder` are value types; `NSOutlineView` holds items **by reference**, and `@Published var projects` is wholesale-reassigned on every `save()`. Feed `Project` values directly → the outline drops selection and collapses folders on every mutation. **Use a UUID-keyed reference item** (a stable `final class OutlineNode { let id: UUID }` keyed off `ProjectIndex`), so identity survives array swaps — the AppKit manifestation of the `Identifiable`/UUID-stability the SwiftUI `List` got free (`ContentView.swift:232-238`). This decides the data-source shape; it's a foundation, not a refinement.
+**Item identity (the foundation).** `Project`/`Folder` are value types; `NSOutlineView` holds items **by reference**, and `@Published var projects` is wholesale-reassigned on every `save()`. Feed `Project` values directly → the outline drops selection and collapses folders on every mutation. **A UUID-keyed reference node** (`final class OutlineNode` with `isEqual`/`hash` off a stable `id` string keyed on the model UUID — `OutlineNode.swift:35-49`) makes identity survive array swaps — the AppKit manifestation of the `Identifiable`/UUID-stability the SwiftUI `List` got free. Foundation, not refinement.
 
-**One selection funnel.** Every selection change — user OR programmatic — routes through one Coordinator method that fires the existing ordered side-effects (`bridgeHandler.reset()` → branch on sole-selection → `persistedProjectID` → `updateLastOpened` → **consent+availability gate** → `switchTask.cancel()`/`switchProject`, preserving the single `switchTask`+`generation` discipline, `ContentView.swift:572-632`). Because the delegate is silent for programmatic selection:
-
-```swift
-func select(_ sel: Set<SidebarSelection>, fromUser: Bool) {
-    isApplyingProgrammatic = true; applyToOutline(sel); isApplyingProgrammatic = false
-    if !fromUser { fireSideEffects(sel) }            // delegate won't — we must
-}
-func outlineViewSelectionDidChange(_:) {              // user clicks only
-    guard !isApplyingProgrammatic else { return }     // re-entrancy guard
-    fireSideEffects(currentSelection())
-}
-```
+**The funnel IS the binding.** Two directions, both through `@Binding var selection`:
+- **User click →** `outlineViewSelectionDidChange` builds the `SidebarSelection` set from `selectedRowIndexes` (lens/group rows map to `nil`, filtered out) and calls `onSelectionChange`, which writes the binding (`ProjectSidebarOutline.swift:346-361`, closure set at `:42-44`). SwiftUI then fires `.onChange(of: selection)` → `ContentView.applySelectionChange` → the existing ordered side-effects (`bridgeHandler.reset()` → sole-selection branch → `persistedProjectID` → `updateLastOpened` → **consent+availability gate** → `switchProject`, single `switchTask`+`generation` discipline, `ContentView.swift:572-632`).
+- **Programmatic →** set the binding; SwiftUI pushes it in via `updateNSViewController` → `applySelection`, which wraps `selectRowIndexes` in `isApplyingProgrammatic = true` (`:158-160`) so the delegate's echo is suppressed (the `outlineViewSelectionDidChange` guard, `:347`).
 
 - **Re-entrancy guard (`isApplyingProgrammatic`) is mandatory** — without it `selectRowIndexes` re-enters the delegate → loop / double serve-start.
-- **Suppress the funnel during `reloadData`/`reloadItem`** — AppKit may drop+re-emit selection mid-reload; an un-suppressed funnel spuriously stop/restarts the serve for the wrong/no project. Keep the consent+availability gate co-located with `switchProject` (never split into `shouldSelectItem`).
-- **Every programmatic `selection =` site routes through `select(_, fromUser: false)`** — there are **~15** (new-project, drop-onto-existing, undo-restore, locate-success, context-menu navigate, deselect-to-empty, the diagnostic-glyph row-select). **Phase-A acceptance gate:** enumerate all of them; none writes the outline directly. A missed site ships a row that highlights but serves nothing — the BUG-3 "looks selected, wrong report served" class, silent.
+- **No "~15 programmatic sites to enumerate" gate** (the original plan here) — because state lives in the binding, every `selection =` site (new-project, drop-onto-existing, undo-restore, locate-success, context-menu navigate, deselect-to-empty) already rides `.onChange` exactly as under the SwiftUI `List`. That is the *point* of keeping the binding: the BUG-3 "highlights but serves nothing" class can't reappear per-site, because no site writes the outline directly.
+- **Consent+availability gate stays in `applySelectionChange`** (co-located with `switchProject`), **never** in `shouldSelectItem` — that delegate only reports selectability (`:216-230`, see its DEAD-END note).
 
-**`@AppStorage("selectedProjectID")` restore.** Once, after the first `reloadData` populates the outline (a `hasRestored` flag — **not** `viewWillAppear`, which can fire before the data source has rows → opens on no project, or repeatedly → serve storm), gated `selection.isEmpty && projects.contains(id)` (carry the stale-deleted-ID guard from `:396-402`), and routed **through the funnel** so the restored project actually serves (else: highlighted, blank report).
+**`@AppStorage("selectedProjectID")` restore** is the existing SwiftUI `.onAppear` path (`ContentView.swift:396-402`), gated `selection.isEmpty && projects.contains(id)` with the stale-deleted-ID guard — unchanged by this migration (it writes the binding; the outline renders it). No AppKit `hasRestored`-after-`reloadData` dance was needed.
 
-**Reload contract.** `NSOutlineView` re-renders nothing until told. Each mutation → its reload; each live `@Published` change → a Combine sink → a *targeted* `reloadItem`:
+**Reload contract — Phase A is deliberately blunt.** `update()` calls full `reloadData()` on **every** model push (`ProjectSidebarOutline.swift:130`), then re-expands groups/folders and re-applies selection. Simple and correct; the cost is churn (§6 "Deferred: `reloadData` on every `update`"). The targeted-`reloadItem` contract below is the **Phase-B-or-later optimisation, not shipped:**
 
-| Mutation / live signal | Reload call |
+| Mutation / live signal | Targeted reload (future) |
 |---|---|
 | rename | `reloadItem(node)` |
-| move project | `reloadItem(oldParent, reloadChildren: true)` + `reloadItem(newParent, reloadChildren: true)` |
+| move project | `reloadItem(oldParent, reloadChildren: true)` + new parent |
 | remove / restore | animated `removeItems`/`insertItems`, else `reloadData()` (avoid dangling-item crash) |
-| live `unanalysed` / `pipelineRunner.state` / copy fraction | Combine sink → `reloadItem(node(forProjectID:))` — **else the activity ring silently freezes as a spinner and the session count goes stale** (the same no-event-fired class as the WAL count-blank bug) |
-| folder collapse | try `autosaveExpandedItems` + `autosaveName` first; manual persist to `folder.collapsed` only if item identity can't be archived |
+| live `unanalysed` / `pipelineRunner.state` / copy fraction | sink → `reloadItem(node(forProjectID:))` — else the activity ring freezes + count goes stale (the WAL count-blank class) |
+| folder collapse | `autosaveExpandedItems` + `autosaveName`, else manual `folder.collapsed` |
 
 ---
 
 ## 3. Scope, phasing, what stays
 
 ### 3.1 The lens rail — folded into the outline as group rows (DECIDED 22 Jun)
-The 5 lenses become **non-selectable rows in the same `NSOutlineView`** — a group at the top, above the "Projects" group. They fire `switchToTab` (mode); they do **not** join the project selection set. One real source list, no SwiftUI/AppKit seam. The active lens shows the source-list selected-state **system-drawn** — it's kept genuinely in the table's `selectedRowIndexes` (`applySelection` + `selectionIndexesForProposedSelection`) but carries no `SidebarSelection` (lens nodes return `nil`, filtered in `outlineViewSelectionDidChange`, so **serve never sees it**), so the table renders its capsule **identically** to a selected project — exact colour / margin / radius. The selection colour is internal to the table and matches **no public UI-element-colour token** (verified 22 Jun by sampling every token — `/tmp/bn-colordemo.swift`), which is *why* genuine selection, not a hand-placed capsule, is the only exact path (the earlier flat-fill / `NSVisualEffectView` attempts are retired). Mode-vs-selection is the orthogonal split: lens rows switch mode (and are **dimmed + inert when no report is showing** — `lensesEnabled`, restoring the old LensRail's `isEnabled` gating), project rows drive serve.
+The 5 lenses become **non-selectable rows in the same `NSOutlineView`** — a group at the top, above the "Projects" group. They fire `switchToTab` (mode); they do **not** join the project selection set. One real source list, no SwiftUI/AppKit seam. The active lens shows the source-list selected-state **system-drawn** — it's kept genuinely in the table's `selectedRowIndexes` (`applySelection` + `selectionIndexesForProposedSelection`) but carries no `SidebarSelection` (lens nodes return `nil`, filtered in `outlineViewSelectionDidChange`, so **serve never sees it**), so the table renders its capsule **identically** to a selected project — exact colour / margin / radius. The selection colour is internal to the table and matches **no public UI-element-colour token** (verified 22 Jun by sampling every token via a throwaway probe, not retained), which is *why* genuine selection, not a hand-placed capsule, is the only exact path (the earlier flat-fill / `NSVisualEffectView` attempts are retired). Mode-vs-selection is the orthogonal split: lens rows switch mode (and are **dimmed + inert when no report is showing** — `lensesEnabled`, restoring the old LensRail's `isEnabled` gating), project rows drive serve.
   - **Future enhancement (user, 22 Jun — post-TF): remember per-project view state.** Switching projects loads the new report at its overview route, so the lens resets to **Project** each time (fine for TF). Post-TF: remember **each project's last-selected lens** *and* **the scroll position within each lens**, so returning to a project restores exactly where you were (per-project × per-lens state). Ties into the retained-WebView work (`design-desktop-switch-performance.md` Phase C). The outline is a multi-group source list (lenses · Projects · future groups, §1.3). The `VStack`-not-a-`List` constraint that previously forced the rail out of the list is **removed by this migration** (the positional finders retire, §3.2).
 
 ### 3.2 The project list — the migration
@@ -158,26 +149,26 @@ The whole migration in one effort:
 - The lenses ride the **same** outline (§3.1) — no separate rail.
 
 ### 3.4 Integration mapping — every behaviour → AppKit equivalent
-*(Source: the full sidebar inventory. This table is the Phase-A acceptance checklist. The spine rows — selection→serve, restore, live indicators — point at §2.5: **"unchanged" is a lie in AppKit**, there is no selection binding.)*
+*(Source: the full sidebar inventory. This table is the Phase-A acceptance checklist. The spine rows — selection→serve, restore, live indicators — point at §2.5: Phase A **keeps the SwiftUI selection binding**, so the existing `applySelectionChange` / `.onAppear` wiring is reused and most "unchanged" cells genuinely hold. "Coordinator" below = the controller; "funnel" = the binding's `.onChange`.)*
 
 | Current (SwiftUI) | file:line | AppKit equivalent |
 |---|---|---|
-| `@State selection: Set<SidebarSelection>` + `List(selection:)` | `ContentView.swift:164,1434` | `NSOutlineView` selection ↔ Coordinator bridge → same `Set<SidebarSelection>` out |
+| `@State selection: Set<SidebarSelection>` + `List(selection:)` | `ContentView.swift:164,1434` | `NSOutlineView` selection ↔ controller, written back to the **same `@Binding`** → `Set<SidebarSelection>` |
 | Multi-select (Cmd/Shift) | native | `allowsMultipleSelection = true` |
-| Selection → serve start/switch/stop + consent gate | `ContentView.swift:572-632` | **§2.5 funnel** — the delegate is silent for programmatic selection; all ~15 programmatic sites call the funnel by hand |
-| `@AppStorage("selectedProjectID")` restore | `:159,398-402` | **§2.5** — once after first `reloadData`, `hasRestored` flag, gated `selection.isEmpty && projects.contains(id)`, through the funnel (NOT bare `viewWillAppear`) |
+| Selection → serve start/switch/stop + consent gate | `ContentView.swift:572-632` | **reused unchanged** — the binding's `.onChange` → `applySelectionChange` (§2.5); no per-site rewiring |
+| `@AppStorage("selectedProjectID")` restore | `:159,398-402` | **reused unchanged** — existing `.onAppear` restore writes the binding; the outline renders it (§2.5). No AppKit `hasRestored` dance |
 | `selectedProject`/`soleSelection` derivations | `:228-238` | **unchanged** (pure computed) |
 | `ProjectRow` content (icon/name/count/subtitle/activity/copy/availability) | `ProjectRow.swift:82-244` | `NSTableCellView` subclass (§2.4); `ProjectSubtitle.resolve` stays pure |
 | `FolderRow` (collapsible, rename) | `FolderRow.swift:9-78` | outline item + native disclosure; editable `textField` |
 | Inline rename (project/folder) | `:171`, `FolderRow:22-44` | editable `textField`, Return commits / Esc cancels / blur commits |
 | Context menu (8 project / 3 folder items, conditional visibility) | `ContentView.swift:1570-1851` | `NSMenu` built per clicked row; same conditional items |
-| 11 menu/undo notifications (`.createNewProject`…`.focusProjects`) | `:446-485,1959+` | drive the Coordinator; **undo-restore writes selection INTO the outline** (external-apply via the §2.5 funnel) |
+| 11 menu/undo notifications (`.createNewProject`…`.focusProjects`) | `:446-485,1959+` | drive the controller; **undo-restore writes the `selection` binding** → the outline renders it (§2.5) |
 | Finder-file drops on rows / empty | `:1485,1549,1767` | `NSOutlineViewDataSource` pasteboard (validateDrop/acceptDrop) |
 | Internal project drag → folder; root + per-folder reorder | `:1457,1522,SidebarDrop.swift` | unified insertion model (Phase B fixes the gaps) |
 | Empty-click deselect (`SidebarDeselectMonitor`) | `:36-80` | **native** — monitor retired; but **keep the deselect → §2.5 funnel → `serveManager.stop()` side effect** (verify auto-deselect on both floors) |
 | ⌘0 focus (`focusProjectsList`, positional finder) | `:247-259` | `makeFirstResponder(outlineView)` directly — **no positional finder** |
 | Folder collapse state (`folder.collapsed`) | `ProjectIndex` | `outlineView(shouldExpandItem:)` + persist on expand/collapse |
-| Activity / copy / failure indicators, session-count refresh | `ProjectRow*`, `:1779+` | cell subviews redrawn via the **§2.5 reload contract** (Combine → targeted `reloadItem`); in-row **buttons** (diagnostic glyph, unanalysed-delta, copy-×) re-targeted to Coordinator callbacks — a dead glyph = no failure cause |
+| Activity / copy / failure indicators, session-count refresh | `ProjectRow*`, `:1779+` | **future (only session-count shipped)** — Phase A reloads via full `reloadData()`; the §2.5 targeted-`reloadItem` contract is the later optimisation. In-row **buttons** re-target to controller callbacks — a dead glyph = no failure cause |
 | Icon-picker + diagnostic **popovers** | `:1821-1863,400-408` | anchored to the row via the **controller** (`NSPopover.show(relativeTo:of:)`), torn down on reload — NOT welded to a recycled cell |
 | Cmd+Delete remove + plain-Delete reserved | `MenuCommands.swift:470,552` | the outline becomes a new first responder — decide responder vs menu-notification routing; keep plain Delete free (`feedback_delete_key_layering`) |
 | Type-to-select ("ik" → IKEA) | — | **free native win** the SwiftUI `List` lacked — `textField.stringValue` makes it work; acceptance check |
@@ -199,12 +190,12 @@ The whole migration in one effort:
 The project's rule fits — but the pure mappings below **cover none of the §2.5 silent failures** (a round-trip test asserting indexes↔set passes whether or not the funnel fired serve). So the gate is two tiers:
 
 **Pure helpers (necessary, not sufficient):**
-- **Data-source tree mapping** as a *pure function of `ProjectIndex` state* — `OutlineNode.children(of:in:) -> [OutlineNode]`, `isGroupItem`, expandability. Assert the **output** (`[.folder(f1), .project(p1)]`), NOT that the `NSOutlineViewDataSource` delegate was *called* (don't lock AppKit protocol shape, or a future agent cargo-cults call-count tests).
+- **Data-source tree mapping** as a *pure function of `ProjectIndex` state* — `OutlineTree.build(lenses:projects:folders:) -> [OutlineNode]` (`OutlineNode.swift:90`), `isGroup`, expandability. Assert the **output** (`[.folder(f1), .project(p1)]`), NOT that the `NSOutlineViewDataSource` delegate was *called* (don't lock AppKit protocol shape, or a future agent cargo-cults call-count tests).
 - **`@AppStorage` restore** lookup for a stored UUID, incl. the stale-deleted-ID case → no selection.
 - `ProjectSubtitle.resolve` + existing pure helpers stay.
 
 **Side-effecting round-trip — the real Phase-A acceptance gate** (with a `ServeManager` spy; replaces "verifiable by eyeball"):
-- **Push:** programmatic `select(B, fromUser:false)` → outline's `selectedRowIndexes` resolves to B **and** spy recorded `switchProject(to: B.path)` once. *(Catches the §2.5 spine: highlight without serve.)*
+- **Push:** set the `selection` binding to B → outline's `selectedRowIndexes` resolves to B **and** the `.onChange`→`applySelectionChange` spy recorded `switchProject(to: B.path)` once. *(Catches the §2.5 spine: highlight without serve.)*
 - **Pull:** simulated user click → `selection` updated **and** `persistedProjectID == id` **and** spy fired once. *(Catches stale `selectedProject`.)*
 - **Idempotence:** re-applying the same selection / a `reloadItem`-triggering rename → spy fires **zero** extra times. *(Catches double-start + reload re-fire.)*
 
@@ -223,7 +214,7 @@ The project's rule fits — but the pure mappings below **cover none of the §2.
 ### Selection-machinery review findings (22 Jun — code-review + gruber)
 Genuine-selection (active lens forced into `selectedRowIndexes` for the pixel-exact capsule) is sound for exactness but **overloads one selection set with two orthogonal meanings** (project selection ∪ active-lens decoration) — the standing source of the "knife-fight" (capsule itself stayed perfect throughout). The 22 Jun fixes **consolidated** the machinery: the **proposed-selection set is the single source of truth** for what was clicked (it carries the clicked lens row even though it's unselectable), so `selectionIndexesForProposedSelection` alone routes every click (project → honour · lens → keep project + activate · empty → deselect), and `composedSelection` alone owns the lens-injection invariant. **Fewer interception points than the original four** → lower knife-fight risk.
 
-**Fixed (22 Jun):** (1) type-select excludes lens/group rows (typing "c" jumped to the **Codebook** lens); (2) **lens click no longer drops the project** — the original `clickedRow`/`currentEvent` gate misfired (on a real lens click `currentEvent` isn't a mouse-down, so it read −1 and the proposal resolved to *deselect*, leaving "No Project Selected"); replaced by reading the **proposed-selection set directly** (it already contains the clicked lens row — the table's own truth, no event-gating); (3) **lens click now switches mode** — activation moved out of `shouldSelectItem` (which is **not consulted** once `selectionIndexesForProposedSelection` overrides the proposal — proven by live `os_log` trace) into the proposal handler, the one delegate reliably called with the clicked lens; deferred off its call stack + `!isApplyingProgrammatic` guard (re-entrancy); (4) lens-injection deduped into `composedSelection`. Capsule follows the route **honestly** (`activeTab` → `applySelection`), not optimistically (see below). Tests **398/0**; the temporary `sidebar-sel` `os_log` instrumentation has been **removed** (it earned its keep — the trace pinned bugs 2 & 3 exactly).
+**Fixed (22 Jun):** (1) type-select excludes lens/group rows (typing "c" jumped to the **Codebook** lens); (2) **lens click no longer drops the project** — the original `clickedRow`/`currentEvent` gate misfired (on a real lens click `currentEvent` isn't a mouse-down, so it read −1 and the proposal resolved to *deselect*, leaving "No Project Selected"); replaced by reading the **proposed-selection set directly** (it already contains the clicked lens row — the table's own truth, no event-gating); (3) **lens click now switches mode** — activation moved out of `shouldSelectItem` (which is **not consulted** once `selectionIndexesForProposedSelection` overrides the proposal — proven by live `os_log` trace) into the proposal handler, the one delegate reliably called with the clicked lens; deferred off its call stack + `!isApplyingProgrammatic` guard (re-entrancy); (4) lens-injection deduped into `composedSelection`. Capsule follows the route **honestly** (`activeTab` → `applySelection`), not optimistically (see below). Tests **398/0** (as of `6ce71f7`, 22 Jun — the three new files `OutlineNodeTests`/`LensItemTests`/`DropRoutingTests` add ~17 cases, so the live count runs higher; treat 398 as a point-in-time figure); the temporary `sidebar-sel` `os_log` instrumentation has been **removed** (it earned its keep — the trace pinned bugs 2 & 3 exactly).
 
 **Deferred — decisions for the user / before TestFlight:**
 - **Capsule-follows-async-route lag — RESOLVED 22 Jun: honest.** The active-lens capsule pins to `activeTab`, which updates only after `switchToTab`'s JS round-trip, so on a lens click it lags one cycle. Shipped the **honest** path (single source = `activeTab`); the **optimistic** alternative (pre-select the clicked lens row) was rejected because `update()` re-runs `applySelection` many times/sec and would snap an optimistic capsule back to the *stale* `activeTab`'s lens before the route lands — a flicker. Coupled to "`reloadData` on every `update`" below: if that churn is gated, optimistic pinning becomes viable again. Reconsider only if the one-cycle lag reads as sluggish in TF feedback.

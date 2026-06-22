@@ -195,6 +195,10 @@ struct ContentView: View {
     /// the accent-stroke overlay on the folder row.
     @State private var dropTargetFolderID: UUID?
 
+    /// Whether a Finder drag is hovering the empty-project content pane ("Drag
+    /// interviews here"). Drives the accent-ring drop affordance on that pane.
+    @State private var emptyProjectDropTargeted = false
+
     /// Alert state for duplicate folder drop warning.
 
     /// "Added N files to X" sheet shown after a copy completes (Plan §11).
@@ -1453,6 +1457,16 @@ struct ContentView: View {
                 activeTab: bridgeHandler.activeTab,
                 lensesEnabled: selectedProjectShowsReport,
                 onActivateLens: { bridgeHandler.switchToTab($0) },
+                onExternalDrop: { target, urls in
+                    // Route to the same substrate-independent handlers the SwiftUI
+                    // sidebar's `.dropDestination` closures use — drop policy lives
+                    // there, not in the AppKit view.
+                    switch target {
+                    case .root:               handleDrop(urls: urls)
+                    case .folder(let id):     handleDropOnFolder(id: id, urls: urls)
+                    case .project(let id):    handleDropOnProject(id: id, urls: urls)
+                    }
+                },
                 pipelineRunner: pipelineRunner,
                 liveData: pipelineRunner.liveData,
                 copyMachinery: copyMachinery
@@ -1923,12 +1937,28 @@ struct ContentView: View {
                 // Project directory is not accessible — volume ejected or folder moved.
                 unavailableProjectView(project)
             } else if project.path.isEmpty {
-                // New project with no files yet — prompt user to add interviews.
+                // New project with no files yet — prompt user to add interviews,
+                // and accept a Finder drop right here. Routes through the same
+                // `handleDropOnProject` as the project's sidebar row (→
+                // `establishEmptyProject` for the empty case), so the "Drag
+                // interviews here" copy is a promise the pane can actually keep.
                 ContentUnavailableView(
                     i18n.t("desktop.chrome.dragInterviews"),
                     systemImage: "square.and.arrow.down",
                     description: Text(i18n.t("desktop.chrome.dragInterviewsDescription"))
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay {
+                    if emptyProjectDropTargeted {
+                        RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(Color.accentColor, lineWidth: 2)
+                            .padding(12)
+                    }
+                }
+                .dropDestination(for: URL.self) { urls, _ in
+                    handleDropOnProject(id: project.id, urls: urls)
+                    return true
+                } isTargeted: { emptyProjectDropTargeted = $0 }
             } else if project.inputFiles != nil
                         && !Self.pipelineHasViewableData(pipelineRunner.state[project.id]) {
                 // File-subset project with no prior analysis — CLI can't

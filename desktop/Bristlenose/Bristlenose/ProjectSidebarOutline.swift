@@ -11,10 +11,24 @@ import AppKit
 /// **Status (22 Jun 2026):** flag-gated parallel component — SwiftUI sidebar is
 /// the default; flip `BristlenoseFlags.appKitSidebar` to render this. Renders the
 /// tree (lenses group · Projects group · folders) with source-list selection,
-/// lens rows that fire `switchToTab`, and folder expand/collapse. The rich cell
-/// content (activity ring · copy progress · subtitle precedence · diagnostic
-/// popover), drag-and-drop (the `DropRouting` apocalypse fix), context menus, and
-/// inline rename are the remaining work — see the QA / TODO notes.
+/// lens rows that fire `switchToTab`, folder expand/collapse, the rich cell
+/// content (activity ring · copy progress · subtitle precedence), internal
+/// project reorder (the `DropRouting` apocalypse fix), and Finder folder-of-videos
+/// import onto root / a folder / a project (routed to ContentView's drop handlers).
+/// The diagnostic popover, context menus, and inline rename are the remaining work
+/// — see the QA / TODO notes.
+/// Where a Finder folder-of-videos drop landed in the outline. Routes to the
+/// existing substrate-independent `ContentView` handlers (drop = analyse-unless-
+/// done): `.root` → new project at root, `.folder` → new project inside it,
+/// `.project` → add interviews to that project. The SwiftUI sidebar wires the
+/// same three handlers via `.dropDestination`; this carries them to the AppKit
+/// substrate so external drops work with the flag on.
+enum SidebarExternalDrop: Equatable {
+    case root
+    case folder(UUID)
+    case project(UUID)
+}
+
 struct ProjectSidebarOutline: NSViewControllerRepresentable {
     @ObservedObject var projectIndex: ProjectIndex
     @ObservedObject var i18n: I18n
@@ -23,6 +37,10 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     let activeTab: Tab?
     let lensesEnabled: Bool
     let onActivateLens: (Tab) -> Void
+    /// Finder folder/file drop landed on the outline — routed by target to the
+    /// existing `ContentView` drop handlers. Internal project-reorder drags are
+    /// handled entirely inside the controller and never reach this.
+    let onExternalDrop: (SidebarExternalDrop, [URL]) -> Void
     /// Live per-project run/copy data for the rich cell. `liveData` is
     /// `@ObservedObject` (Phase 3) so high-frequency progress ticks (ring fraction /
     /// ETA) re-render this representable → `updateNSViewController` → `reloadData`,
@@ -56,6 +74,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
             if selection != newSelection { selection = newSelection }
         }
         controller.onActivateLens = onActivateLens
+        controller.onExternalDrop = onExternalDrop
         controller.update(
             roots: OutlineTree.build(
                 lenses: lenses,
@@ -90,6 +109,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     var lensItems: [LensItem] = LensItem.all
     var onSelectionChange: (Set<SidebarSelection>) -> Void = { _ in }
     var onActivateLens: (Tab) -> Void = { _ in }
+    var onExternalDrop: (SidebarExternalDrop, [URL]) -> Void = { _, _ in }
 
     /// Re-entrancy guard (spec §2.5): suppress the selection callback while we
     /// apply selection programmatically, so `selectRowIndexes` doesn't echo back.
@@ -131,7 +151,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         outlineView.dataSource = self
         outlineView.delegate = self
         outlineView.autoresizingMask = [.width, .height]
-        outlineView.registerForDraggedTypes([Self.projectDragType])
+        // Two distinct destination types: `projectDragType` (internal reorder,
+        // `.move`) and `.fileURL` (Finder folder-of-videos import, `.copy`). The
+        // payload class disambiguates them at validate/accept time — a Finder drag
+        // can't read as `projectDragType` and a project drag can't read as a file
+        // URL — so the two never collide.
+        outlineView.registerForDraggedTypes([Self.projectDragType, .fileURL])
         outlineView.setDraggingSourceOperationMask(.move, forLocal: true)
 
         scrollView.documentView = outlineView
@@ -383,11 +408,38 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
     func outlineView(_ outlineView: NSOutlineView, validateDrop info: NSDraggingInfo,
                      proposedItem item: Any?, proposedChildIndex index: Int) -> NSDragOperation {
-        decideDrop(info: info, item: item, index: index) == nil ? [] : .move
+        // Finder folder/file import takes precedence over the internal-reorder
+        // path (the two payload types are mutually exclusive on the pasteboard).
+        if pasteboardHasFileURLs(info.draggingPasteboard) {
+            guard let target = externalDropTarget(item: item) else { return [] }
+            // Retarget the highlight to match where the drop will actually land:
+            // a project/folder row (drop-on) or the whole list (root). Without
+            // this the outline draws an insertion line mid-list for a drop that
+            // semantically means "new project at root".
+            switch target {
+            case .root:
+                outlineView.setDropItem(nil, dropChildIndex: NSOutlineViewDropOnItemIndex)
+            case .folder, .project:
+                outlineView.setDropItem(item, dropChildIndex: NSOutlineViewDropOnItemIndex)
+            }
+            return .copy
+        }
+        return decideDrop(info: info, item: item, index: index) == nil ? [] : .move
     }
 
     func outlineView(_ outlineView: NSOutlineView, acceptDrop info: NSDraggingInfo,
                      item: Any?, childIndex index: Int) -> Bool {
+        // Finder folder/file import — route by target to the substrate-independent
+        // ContentView handlers (which own all the drop policy: dedupe, analyse-
+        // unless-done, state guards). The AppKit side just collects URLs + target.
+        if pasteboardHasFileURLs(info.draggingPasteboard) {
+            guard let target = externalDropTarget(item: item) else { return false }
+            let urls = readFileURLs(from: info.draggingPasteboard)
+            guard !urls.isEmpty else { return false }
+            onExternalDrop(target, urls)
+            return true
+        }
+
         guard let moves = decideDrop(info: info, item: item, index: index),
               let projectIndex else { return false }
         // Folder membership is the structural Phase-B fix (out-of-folder,
@@ -397,6 +449,35 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             projectIndex.moveProject(projectId: move.projectID, toFolder: move.toFolder)
         }
         return true
+    }
+
+    // MARK: - External (Finder) drop routing
+
+    /// Whether the drag carries Finder file URLs (vs an internal project drag).
+    private func pasteboardHasFileURLs(_ pasteboard: NSPasteboard) -> Bool {
+        pasteboard.canReadObject(forClasses: [NSURL.self],
+                                 options: [.urlReadingFileURLsOnly: true])
+    }
+
+    /// Read the dragged Finder file URLs. Filtering (accepted media types, OS
+    /// metadata sidecars, analysed-folder guards) is the ContentView handlers' job.
+    private func readFileURLs(from pasteboard: NSPasteboard) -> [URL] {
+        (pasteboard.readObjects(forClasses: [NSURL.self],
+                                options: [.urlReadingFileURLsOnly: true]) as? [URL]) ?? []
+    }
+
+    /// Resolve where an external drop lands. `nil` = reject (a folder of videos has
+    /// no meaning dropped on a lens). Drop on a project adds interviews to it; on a
+    /// folder creates a project inside it; anywhere else (root, the Projects group,
+    /// the empty area below the rows) creates a new project at root.
+    private func externalDropTarget(item: Any?) -> SidebarExternalDrop? {
+        guard let node = item as? OutlineNode else { return .root }
+        switch node.kind {
+        case .project(let id): return .project(id)
+        case .folder(let id):  return .folder(id)
+        case .group(let key):  return key == "Projects" ? .root : nil  // Lenses group → reject
+        case .lens:            return nil
+        }
     }
 
     private func decideDrop(info: NSDraggingInfo, item: Any?, index: Int) -> [ProjectMove]? {

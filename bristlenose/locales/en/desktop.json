@@ -90,7 +90,12 @@
       "extendSelectionUp": "Extend Selection Up",
       "toggleSelection": "Toggle Selection",
       "clearSelection": "Clear Selection",
-      "copyAsCSV": "Copy as CSV"
+      "copyAsCSV": "Copy as CSV",
+      "copyQuotes": "Copy Quotes",
+      "saveSpreadsheet": "Save as Spreadsheet…",
+      "extractClips": "Extract Video Clips…",
+      "sectionTitle": "Quotes",
+      "anonymise": "Anonymise (remove names)"
     },
     "video": {
       "play": "Play",

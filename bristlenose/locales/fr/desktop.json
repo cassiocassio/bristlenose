@@ -90,7 +90,12 @@
       "extendSelectionUp": "Étendre la sélection vers le haut",
       "toggleSelection": "Inverser la sélection",
       "clearSelection": "Effacer la sélection",
-      "copyAsCSV": "Copier en CSV"
+      "copyAsCSV": "Copier en CSV",
+      "copyQuotes": "Copier les citations",
+      "saveSpreadsheet": "Enregistrer en feuille de calcul…",
+      "extractClips": "Extraire les clips vidéo…",
+      "sectionTitle": "Citations",
+      "anonymise": "Anonymiser (retirer les noms)"
     },
     "video": {
       "play": "Lecture",

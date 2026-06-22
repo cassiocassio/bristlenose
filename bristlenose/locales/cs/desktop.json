@@ -90,7 +90,12 @@
       "extendSelectionUp": "Rozšířit výběr nahoru",
       "toggleSelection": "Přepnout výběr",
       "clearSelection": "Zrušit výběr",
-      "copyAsCSV": "Kopírovat jako CSV"
+      "copyAsCSV": "Kopírovat jako CSV",
+      "copyQuotes": "Kopírovat citace",
+      "saveSpreadsheet": "Uložit jako tabulku…",
+      "extractClips": "Extrahovat videoklipy…",
+      "sectionTitle": "Citace",
+      "anonymise": "Anonymizovat (odebrat jména)"
     },
     "video": {
       "play": "Přehrát",

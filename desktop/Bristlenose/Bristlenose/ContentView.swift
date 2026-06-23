@@ -217,14 +217,34 @@ struct ContentView: View {
         return projectIndex.projects.first { $0.id == id }
     }
 
-    /// Native window subtitle (drives `NSWindow.subtitle`): "<N> Sessions ·
-    /// <total time>", e.g. "16 Sessions · 18h 23m". Session count + summed
-    /// session duration, both from the project's analysis DB — the same figures
-    /// the Project dashboard shows. Empty when no project is selected or the DB
-    /// isn't readable yet (pre-analysis); an empty subtitle renders as none, the
-    /// title centring on its own. Recomputes reactively when the watcher
-    /// republishes `unanalysed` after a run.
+    /// Native window subtitle (drives `NSWindow.subtitle`), per active lens.
+    /// Sessions/Project show the session count + total time from the local
+    /// analysis DB — stable, and painted instantly before the report loads. The
+    /// report-derived lenses (Quotes/Codebook/Analysis) carry *live* counts only
+    /// the SPA can compute (Signals don't exist in the DB; visible-quote/tag
+    /// counts shift as the researcher edits), so they arrive over the bridge as
+    /// `lensSubtitle`. Empty renders as no subtitle, the title centring on its
+    /// own. Recomputes reactively: `activeTab`/`lensSubtitle` are `@Published`,
+    /// as is `unanalysed`.
     private var navigationSubtitle: String {
+        switch bridgeHandler.activeTab {
+        case .quotes?, .codebook?, .analysis?:
+            // Honour the bridged subtitle only when it's for the lens we're on,
+            // so a tab switch never momentarily shows the previous lens's count.
+            guard bridgeHandler.lensSubtitleTab == bridgeHandler.activeTab?.rawValue else {
+                return ""
+            }
+            return bridgeHandler.lensSubtitle
+        default:
+            return sessionsSubtitle
+        }
+    }
+
+    /// "16 Sessions · 18h 23m" — session count + summed duration from the
+    /// project's analysis DB (the same figures the Project dashboard shows).
+    /// Empty when no project is selected or the DB isn't readable yet
+    /// (pre-analysis). Recomputes when the watcher republishes `unanalysed`.
+    private var sessionsSubtitle: String {
         guard let project = selectedProject,
               let state = projectIndex.unanalysed[project.id],
               let count = state.sessionCount, count > 0

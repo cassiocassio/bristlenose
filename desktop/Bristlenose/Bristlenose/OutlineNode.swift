@@ -84,6 +84,13 @@ final class OutlineNode: NSObject {
 /// `OutlineNodeTests` (the spec §5 tree-mapping seam). Mirrors
 /// `ProjectIndex.sidebarItems` + `projectsInFolder`.
 enum OutlineTree {
+    /// Group-row keys. Code-internal (the "Projects" header's *display* string is
+    /// localised separately in the cell). Shared by the producer (`build`) and the
+    /// consumers (group-cell title + `SidebarExternalDrop.resolve`) so a rename
+    /// can't silently desync drop-routing from the tree (review F36).
+    static let lensesGroupKey = "Lenses"
+    static let projectsGroupKey = "Projects"
+
     /// Root layout (spec §1.3 / §3.1): a **lenses** group (the mode rows) then a
     /// **"Projects"** group (mixed case) holding root projects + folders; folders
     /// disclose to their child projects. Built for more groups later.
@@ -94,7 +101,7 @@ enum OutlineTree {
 
         if !lenses.isEmpty {
             let lensRows = lenses.map { OutlineNode(.lens($0.tab)) }
-            roots.append(OutlineNode(.group("Lenses"), children: lensRows))
+            roots.append(OutlineNode(.group(Self.lensesGroupKey), children: lensRows))
         }
 
         let rootProjectItems: [(pos: Int, node: OutlineNode)] = projects
@@ -110,7 +117,7 @@ enum OutlineTree {
         let projectChildren = (rootProjectItems + folderItems)
             .sorted { $0.pos < $1.pos }
             .map(\.node)
-        roots.append(OutlineNode(.group("Projects"), children: projectChildren))
+        roots.append(OutlineNode(.group(Self.projectsGroupKey), children: projectChildren))
 
         return roots
     }

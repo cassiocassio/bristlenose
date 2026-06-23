@@ -56,4 +56,32 @@ import Foundation
         #expect(node.selection == .project(p.id))
         #expect(node.isSelectable)
     }
+
+    // MARK: - SidebarExternalDrop.resolve (Finder-import drop routing, review F34)
+
+    @Test func externalDrop_nilKind_createsAtRoot() {
+        #expect(SidebarExternalDrop.resolve(droppedOn: nil) == .root)
+    }
+
+    @Test func externalDrop_onProject_addsToThatProject() {
+        let id = UUID()
+        #expect(SidebarExternalDrop.resolve(droppedOn: .project(id)) == .project(id))
+    }
+
+    @Test func externalDrop_onFolder_createsInsideThatFolder() {
+        let id = UUID()
+        #expect(SidebarExternalDrop.resolve(droppedOn: .folder(id)) == .folder(id))
+    }
+
+    @Test func externalDrop_onProjectsGroup_createsAtRoot() {
+        #expect(SidebarExternalDrop.resolve(droppedOn: .group(OutlineTree.projectsGroupKey)) == .root)
+    }
+
+    @Test func externalDrop_onLensesGroup_isRejected() {
+        #expect(SidebarExternalDrop.resolve(droppedOn: .group(OutlineTree.lensesGroupKey)) == nil)
+    }
+
+    @Test func externalDrop_onLens_isRejected() {
+        #expect(SidebarExternalDrop.resolve(droppedOn: .lens(.project)) == nil)
+    }
 }

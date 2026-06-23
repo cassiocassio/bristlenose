@@ -19,6 +19,11 @@ import type {
   TagAnalysisResponse,
   TemplateListResponse,
   TranscriptPageResponse,
+  MiroStatusResponse,
+  MiroExportRequest,
+  MiroExportResponse,
+  MiroPreviewResponse,
+  MiroAuthUrlResponse,
 } from "./types";
 import { isExportMode, resolveFromExport } from "./exportData";
 
@@ -352,4 +357,32 @@ export function getClipExtractionStatus(): Promise<ClipJobStatus> {
 
 export function revealClips(): Promise<{ revealed: boolean; path: string }> {
   return apiPost<{ revealed: boolean; path: string }>("/export/clips/reveal", {});
+}
+
+// ---------------------------------------------------------------------------
+// Miro export (experimental)
+// ---------------------------------------------------------------------------
+
+export function getMiroStatus(): Promise<MiroStatusResponse> {
+  return apiGet<MiroStatusResponse>("/miro/status");
+}
+
+export function postMiroConnect(token: string): Promise<MiroStatusResponse> {
+  return apiPost<MiroStatusResponse>("/miro/connect", { token });
+}
+
+export function postMiroDisconnect(): Promise<MiroStatusResponse> {
+  return apiPost<MiroStatusResponse>("/miro/disconnect", {});
+}
+
+export function getMiroAuthUrl(): Promise<MiroAuthUrlResponse> {
+  return apiGet<MiroAuthUrlResponse>("/miro/auth-url");
+}
+
+export function postMiroPreview(req: MiroExportRequest): Promise<MiroPreviewResponse> {
+  return apiPost<MiroPreviewResponse>("/miro/preview", req);
+}
+
+export function postMiroExport(req: MiroExportRequest): Promise<MiroExportResponse> {
+  return apiPost<MiroExportResponse>("/miro/export", req);
 }

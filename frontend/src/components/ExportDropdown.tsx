@@ -8,7 +8,7 @@
  * navigation per WAI-ARIA menu button pattern.
  */
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useDropdown } from "../hooks/useDropdown";
@@ -18,11 +18,12 @@ import { useFocus } from "../contexts/FocusContext";
 import { useQuotesStore } from "../contexts/QuotesContext";
 import { filterQuotes } from "../utils/filter";
 import type { FilterState } from "../utils/filter";
-import { authHeaders, startClipExtraction } from "../utils/api";
+import { authHeaders, getMiroStatus, startClipExtraction } from "../utils/api";
 import { addJob } from "../contexts/ActivityStore";
 import { toast } from "../utils/toast";
 import { announce } from "../utils/announce";
 import { isExportMode } from "../utils/exportData";
+import { MiroExportPanel } from "./MiroExportPanel";
 
 // ── Icon ──────────────────────────────────────────────────────────────────
 
@@ -72,6 +73,20 @@ export function ExportDropdown({ onExportReport }: ExportDropdownProps) {
     onClose: () => setOpen(false),
     triggerRef,
   });
+
+  // Miro export (experimental) — own the panel here to avoid prop threading.
+  const [miroOpen, setMiroOpen] = useState(false);
+  const [miroConnected, setMiroConnected] = useState(false);
+  useEffect(() => {
+    if (isExportMode() || miroOpen) return;
+    getMiroStatus()
+      .then((s) => setMiroConnected(s.connected))
+      .catch(() => setMiroConnected(false));
+  }, [miroOpen]);
+  const handleMiro = useCallback(() => {
+    setOpen(false);
+    setMiroOpen(true);
+  }, [setOpen]);
 
   const onQuotes = isQuotesTab(location.pathname);
 
@@ -292,8 +307,18 @@ export function ExportDropdown({ onExportReport }: ExportDropdownProps) {
           >
             {t("export.exportReport")}
           </li>
+          <li role="separator" className="export-dropdown-separator" />
+          <li
+            role="menuitem"
+            tabIndex={-1}
+            className="export-dropdown-item"
+            onClick={handleMiro}
+          >
+            {miroConnected ? "Send to Miro board…" : "Connect to Miro…"}
+          </li>
         </ul>
       )}
+      <MiroExportPanel open={miroOpen} onClose={() => setMiroOpen(false)} />
     </div>
   );
 }

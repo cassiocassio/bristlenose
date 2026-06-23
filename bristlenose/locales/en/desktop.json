@@ -159,6 +159,8 @@
     "interviewCount_other": "{{count}} interviews",
     "unanalysedSubtitle_one": "+1 unanalysed",
     "unanalysedSubtitle_other": "+{{count}} unanalysed",
+    "titleSessions_one": "{{count}} Session",
+    "titleSessions_other": "{{count}} Sessions",
     "missingSubtitle_one": "1 missing",
     "missingSubtitle_other": "{{count}} missing",
     "tooltipWaiting": "{{count}} waiting",

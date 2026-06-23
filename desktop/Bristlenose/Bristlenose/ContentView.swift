@@ -2,31 +2,6 @@ import SwiftUI
 import UniformTypeIdentifiers
 import os
 
-// MARK: - Window title manager
-
-/// Sets NSWindow.title for Cmd+Tab / Mission Control without using
-/// `.navigationTitle()` on the detail view (which adds a visible toolbar title
-/// item that duplicates the custom icon+name ToolbarItem).
-/// Also hides the title bar text via `titleVisibility = .hidden` as belt-and-
-/// suspenders in case any navigation layer restores it.
-private struct WindowTitleManager: NSViewRepresentable {
-    let title: String
-
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async { Self.apply(title: title, to: view) }
-        return view
-    }
-    func updateNSView(_ view: NSView, context: Context) {
-        DispatchQueue.main.async { Self.apply(title: title, to: view) }
-    }
-    private static func apply(title: String, to view: NSView) {
-        guard let window = view.window else { return }
-        window.title = title
-        window.titleVisibility = .hidden
-    }
-}
-
 // MARK: - Sidebar empty-click deselection monitor
 
 /// Clears the sidebar selection when the user clicks in the empty area below
@@ -242,6 +217,36 @@ struct ContentView: View {
         return projectIndex.projects.first { $0.id == id }
     }
 
+    /// Native window subtitle (drives `NSWindow.subtitle`): "<N> Sessions ·
+    /// <total time>", e.g. "16 Sessions · 18h 23m". Session count + summed
+    /// session duration, both from the project's analysis DB — the same figures
+    /// the Project dashboard shows. Empty when no project is selected or the DB
+    /// isn't readable yet (pre-analysis); an empty subtitle renders as none, the
+    /// title centring on its own. Recomputes reactively when the watcher
+    /// republishes `unanalysed` after a run.
+    private var navigationSubtitle: String {
+        guard let project = selectedProject,
+              let state = projectIndex.unanalysed[project.id],
+              let count = state.sessionCount, count > 0
+        else { return "" }
+        let sessions = sessionCountPhrase(count)
+        guard let seconds = state.totalDurationSeconds, seconds > 0 else { return sessions }
+        return "\(sessions) · \(DurationFormat.human(seconds: seconds))"
+    }
+
+    /// Localised "<N> Sessions" using the active locale's CLDR plural form,
+    /// mirroring `ProjectRow.deltaText` (one/few/many/other + `_other` fallback
+    /// for single-form locales like ja/ko).
+    private func sessionCountPhrase(_ count: Int) -> String {
+        let base = "desktop.chrome.titleSessions"
+        let key = "\(base)_\(i18n.pluralCategory(count))"
+        let rendered = i18n.t(key, ["count": String(count)])
+        if rendered == key {
+            return i18n.t("\(base)_other", ["count": String(count)])
+        }
+        return rendered
+    }
+
     private static let focusLog = Logger(subsystem: "app.bristlenose", category: "focus")
 
     /// View ▸ Move Focus to Projects (⌘0) — the §10.1 keyboard no-trap return.
@@ -327,11 +332,17 @@ struct ContentView: View {
                     toolbarLeading
                     toolbarTrailing
                 }
-        // No .navigationTitle on the detail view — that would add a visible
-        // toolbar title item that duplicates the custom icon+name ToolbarItem.
-        // NSWindow.title is managed by WindowTitleManager below.
+                // Native window title + subtitle (Mail/Notes pattern): title =
+                // the project (scope), subtitle = session count · total time.
+                // `.navigationTitle` on the detail column drives NSWindow.title;
+                // `.navigationSubtitle` drives NSWindow.subtitle. The old custom
+                // `.navigation` ToolbarItem + `WindowTitleManager` workaround is
+                // gone — the duplicate title item it dodged no longer exists,
+                // and forcing `titleVisibility = .hidden` was what suppressed
+                // the native subtitle.
+                .navigationTitle(selectedProject?.name ?? "Bristlenose")
+                .navigationSubtitle(navigationSubtitle)
         }
-        .background(WindowTitleManager(title: selectedProject?.name ?? "Bristlenose"))
         .background(SidebarDeselectMonitor { selection = [] })
         .overlay(alignment: .bottomTrailing) {
             // Compact build-info diagnostic — Debug only by default; Release
@@ -1344,19 +1355,11 @@ struct ContentView: View {
             .controlGroupStyle(.navigation)
         }
 
-        // Project name — a single explicit ToolbarItem, NOT `.navigationTitle`
-        // (which injects a duplicate title item; see WindowTitleManager above /
-        // desktop CLAUDE.md §409). Sits to the right of back/forward + the
-        // contextual left-panel toggle, never where the system back affordance
-        // lives. Name-only for now; the `participants · duration` subtitle is
-        // deferred — no duration field is surfaced in the model (spec §4.5).
-        if let project = selectedProject {
-            ToolbarItem(placement: .navigation) {
-                Text(project.name)
-                    .fontWeight(.medium)
-                    .lineLimit(1)
-            }
-        }
+        // Project name + subtitle render natively now — `.navigationTitle` /
+        // `.navigationSubtitle` on the detail view (see `body`), NOT a custom
+        // `.navigation` ToolbarItem. The old pill put the title "in a button",
+        // off the Mac grain; the convention is window title = scope (project) +
+        // subtitle = count ("16 Sessions · 18h 23m"). See desktop CLAUDE.md.
     }
 
     // MARK: - Toolbar trailing (contextual — menus dim, toolbars morph)

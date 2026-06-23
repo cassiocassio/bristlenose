@@ -5,9 +5,9 @@ sticky notes, grouped by section and theme, that a team rearranges to do
 synthesis. Bristlenose is the preprocessor; Miro is where the conversation
 happens.
 
-**Status:** M1 shipped (token validation + connect/disconnect, paste-token only).
-Layout engine + cross-app flow designed and prototyped this cycle (see
-_Artefacts_). M2 onward not yet built.
+**Status:** M1 shipped. **Experimental end-to-end vertical slice built (23 Jun
+2026)** — see _Implementation status_ at the foot of this doc. Backend +
+frontend present on branch, not yet validated against a real Miro account.
 
 ---
 
@@ -438,3 +438,58 @@ Nothing to "remember" beyond, optionally, the last-used base as a convenience.
 - `SECURITY.md` — Miro as sub-processor
 - `experiments/board-layout-poc/` — the layout prototype
 - `docs/mockups/miro-flow.html`, `miro-setup-help.html` — flow + setup UX
+
+---
+
+## Implementation status (experimental, 23 Jun 2026)
+
+An end-to-end slice was built in one session to be playable on a Mac. **Built in
+the cloud without a venv / Miro creds**, so: pure layout + preview verified;
+server + real Miro push are syntax-checked + typechecked but unrun. Treat as a
+first draft for review, not shippable.
+
+### What's built
+| Piece | File | Verified |
+|---|---|---|
+| Layout engine (IR + trivial layout) | `bristlenose/miro_board.py` | ✅ 7 unit tests pass (`tests/test_miro_board.py`) |
+| Creds-free SVG/HTML preview | `bristlenose/miro_render_svg.py` | ✅ rendered vs smoke fixture |
+| REST client (OAuth/PKCE + board/frame/sticky/text) | `bristlenose/miro_client.py` | ⚠️ syntax only (no httpx in cloud) |
+| Export orchestration (quotes→columns→push/preview) | `bristlenose/server/miro_export.py` | ⚠️ syntax only |
+| Routes (preview, export, oauth auth-url+callback) | `bristlenose/server/routes/miro.py` | ⚠️ syntax only |
+| React panel + state-dependent menu | `frontend/src/components/MiroExportPanel.tsx`, `ExportDropdown.tsx` | ✅ `tsc -b` + `vite build` clean |
+| config `miro_client_id`, api.ts, types.ts | — | ✅ typecheck |
+
+### Assumptions (review later)
+- **A2** — hand-rolled httpx instead of the `miro_api` SDK (dependency-light;
+  swap later).
+- **A7** — **synchronous** export, no `MiroExportJob` table/migration (seconds
+  for hundreds of stickies). Revisit for very large boards.
+- **A9** — stickies placed at **absolute board coords, not parented into
+  frames** (frame-relative coord math is the untestable footgun). Frames are
+  visual containers; proper parenting once testable.
+- **A4** — panel strings hardcoded English; i18n (7 locales) deferred — must do
+  before merge (size gate).
+- **A11** — scope UI is **all visible quotes** only in v0; the backend already
+  takes `quote_ids`, so wiring the current star/tag/section filter → ids is a
+  small frontend follow-up.
+- **A5** — clip-link filename convention is a guess
+  (`{session}-{participant}-{secs}.mp4`); verify against `design-export-clips`.
+- **A10** — no token auto-refresh in the export path; if an OAuth token expired,
+  reconnect. Paste-token (non-expiring) sidesteps this.
+- Miro request shapes (frame `type:freeform`/`format:custom`, sticky
+  `shape:square` + named `fillColor`, text `style.fontSize` string, bulk array
+  body) are from the verified REST facts but **unrun** — first real push may
+  need a tweak.
+
+### Mac QA (play tonight)
+```sh
+.venv/bin/python -m pytest tests/test_miro_board.py   # layout engine
+cd frontend && npm run build                           # SPA (rebuilds static)
+.venv/bin/bristlenose serve --dev trial-runs/<project> # open http://localhost:8150/report/
+```
+Then: Quotes tab → Export ▾ → **Connect to Miro…**. Fastest path = paste a token
+(Miro dev dashboard → app → install → copy token); OAuth needs `MIRO_CLIENT_ID`
+set + redirect `http://localhost:8150/api/miro/callback` registered. **Preview
+needs no token** — Configure → Preview opens the would-be board in a new tab.
+Then **Create board** → **Open in Miro**. Expect first-push rough edges per the
+unrun shapes above.

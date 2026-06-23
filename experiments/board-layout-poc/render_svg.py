@@ -17,7 +17,14 @@ HEADER_STROKE = "#E8B7C0"
 PAD_IN = 16.0  # inner text padding
 BODY_FONT = 14.0
 BODY_LH = 18.0
-META_FONT = 13.0
+META_FONT = 12.0
+META_INK = "#8a8a90"  # muted grey for supporting attribution
+BODY_INK = "#2B2B2B"
+
+
+def _fmt_timecode(seconds: float) -> str:
+    total = int(round(seconds))
+    return f"{total // 60}:{total % 60:02d}"
 
 
 def _wrap(text: str, max_chars: int) -> list[str]:
@@ -41,6 +48,14 @@ def _wrap(text: str, max_chars: int) -> list[str]:
     return lines
 
 
+def _text_svg(x: float, y: float, line: str, *, size: float, weight: str, ink: str) -> str:
+    return (
+        f'<text x="{x:.1f}" y="{y:.1f}" font-family="Inter, Helvetica, Arial, '
+        f'sans-serif" font-size="{size:.0f}" font-weight="{weight}" fill="{ink}" '
+        f'xml:space="preserve">{escape(line)}</text>'
+    )
+
+
 def _sticky_svg(s: Sticky) -> str:
     usable_w = s.width - 2 * PAD_IN
     max_chars = max(8, int(usable_w / (BODY_FONT * 0.52)))
@@ -51,30 +66,42 @@ def _sticky_svg(s: Sticky) -> str:
     rx = 10
 
     parts = [
-        f'<g>',
+        '<g>',
         f'<rect x="{s.x:.1f}" y="{s.y:.1f}" width="{s.width:.1f}" '
         f'height="{s.height:.1f}" rx="{rx}" ry="{rx}" fill="{s.fill}" '
         f'stroke="{stroke}" stroke-width="1.5" filter="url(#shadow)"/>',
     ]
-
-    lines = _wrap(s.text, max_chars)
-    if len(lines) > max_lines:
-        lines = lines[:max_lines]
-        lines[-1] = lines[-1][: max_chars - 1].rstrip() + "…"
-
     tx = s.x + PAD_IN
-    ty = s.y + PAD_IN + BODY_FONT
-    for i, line in enumerate(lines):
-        # first line of any sticky is the label/meta line — render it bolder
-        is_meta = i == 0
-        weight = "700" if is_meta else "400"
-        size = META_FONT if (is_meta and not is_header) else BODY_FONT
-        parts.append(
-            f'<text x="{tx:.1f}" y="{ty:.1f}" font-family="Inter, Helvetica, '
-            f'Arial, sans-serif" font-size="{size:.0f}" font-weight="{weight}" '
-            f'fill="#2B2B2B" xml:space="preserve">{escape(line)}</text>'
-        )
-        ty += BODY_LH
+
+    if is_header:
+        # Header: label prominent (first line bold), supporting line muted.
+        lines = _wrap(s.text, max_chars)
+        ty = s.y + PAD_IN + BODY_FONT
+        for i, line in enumerate(lines[:max_lines]):
+            if i == 0:
+                parts.append(_text_svg(tx, ty, line, size=BODY_FONT, weight="700", ink=BODY_INK))
+            else:
+                parts.append(_text_svg(tx, ty, line, size=META_FONT, weight="400", ink=META_INK))
+            ty += BODY_LH
+    else:
+        # Quote: body leads (normal weight); attribution trails as muted metadata.
+        # Reserve the bottom line for the "— P1 · 0:10" supporting line so the
+        # meaning is read first and the who/when never overlaps it.
+        body_lines = _wrap(s.text, max_chars)
+        body_budget = max(1, max_lines - 1)
+        if len(body_lines) > body_budget:
+            body_lines = body_lines[:body_budget]
+            body_lines[-1] = body_lines[-1][: max_chars - 1].rstrip() + "…"
+
+        ty = s.y + PAD_IN + BODY_FONT
+        for line in body_lines:
+            parts.append(_text_svg(tx, ty, line, size=BODY_FONT, weight="400", ink=BODY_INK))
+            ty += BODY_LH
+
+        meta = f"— {s.participant_id.upper()} · {_fmt_timecode(s.timecode)}"
+        meta_y = s.y + s.height - PAD_IN + 2
+        parts.append(_text_svg(tx, meta_y, meta, size=META_FONT, weight="400", ink=META_INK))
+
     parts.append("</g>")
     return "\n".join(parts)
 

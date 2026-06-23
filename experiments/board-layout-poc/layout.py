@@ -54,10 +54,11 @@ def _fmt_timecode(seconds: float) -> str:
 
 
 def _compose_quote_text(q: dict) -> str:
-    pid = str(q.get("participant_id", "?")).upper()
-    tc = _fmt_timecode(float(q.get("start_timecode", 0.0)))
+    """The quote body only. Attribution (participant + timecode) is carried as
+    metadata on the Sticky and rendered after the quote as muted supporting text —
+    the meaning leads, the who/when trails."""
     body = str(q.get("text", "")).strip()
-    return f"{pid} · {tc}\n“{body}”"
+    return f"“{body}”"
 
 
 def load_columns(intermediate_dir: Path) -> list[Column]:

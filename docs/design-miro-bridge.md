@@ -1,288 +1,295 @@
 # Miro Bridge — Design Document
 
-One-way export from Bristlenose to Miro boards. Creates spatial boards with grouped sticky notes from analysis data.
+One-way export from Bristlenose to a Miro board: a first-draft research wall of
+sticky notes, grouped by section and theme, that a team rearranges to do
+synthesis. Bristlenose is the preprocessor; Miro is where the conversation
+happens.
 
-**Status:** M1 complete (token management, 47 tests). M2-M7 planned for post-beta (v1.0).
+**Status:** M1 shipped (token validation + connect/disconnect, paste-token only).
+Layout engine + cross-app flow designed and prototyped this cycle (see
+_Artefacts_). M2 onward not yet built.
 
 ---
 
 ## Context
 
-Bristlenose is the preprocessor. It chews through 10 hours of interview recordings and hands the researcher structured, tagged, timestamped quotes. The researcher takes those into Miro where the actual synthesis happens with the team — arranging evidence, building insights, having the conversations that turn data into decisions.
+Bristlenose chews through hours of interview recordings and hands the researcher
+structured, tagged, timestamped quotes. Today the researcher rebuilds a Miro
+board by hand, every project, every time. Automating that first draft is a
+genuine differentiator: nobody does the Bristlenose→Miro handoff well.
 
-Nobody does the Miro bridge well. Researchers build their Miro boards by hand, every time, for every project. Automating this would genuinely differentiate Bristlenose.
+**Why Miro, and why first.** The market read this cycle (market research, this
+design cycle — not yet a standalone doc) is consistent: among _dedicated user
+researchers_ — the people who systematically analyse
+quotes — Miro is the incumbent synthesis surface (research-specific templates,
+affinity/clustering features, the "research hub" positioning). FigJam leads the
+_designer_ population, riding Figma's installed base, and treats research as
+adjacent to design. Our market is the researcher, not the designer who wings
+analysis — so Miro-first is not just preference, it's where the users are.
 
-**Product positioning:**
-- **Near-term:** Bristlenose is the preprocessor. The HTML report is the researcher's private workbench. The deliverable lives in Miro. The bridge serves this story.
-- **Further-out:** The Bristlenose report itself becomes rich enough to be the shareable deliverable (video clips, charts, curated quotes). The bridge remains valuable for team synthesis.
+It's also where the API cooperates. Miro has a clean external-push REST API and
+an official Python client; FigJam has no equivalent (REST is read-only for file
+content; authoring needs an in-editor plugin or the beta MCP write-to-canvas
+path). See _Reference: platform facts_.
 
-**Competitive context:** Dovetail costs ~$20,000/year for a team. Everyone can live-tag the same research session. But the output still gets arranged in Miro for stakeholder synthesis. Bristlenose can't match real-time collaboration, but it can match (or beat) the speed of going from recordings to arranged evidence in Miro — and do it for free.
-
-**Launch story:** Tier 1 (Miro-shaped CSV) ships for free with the quotes export feature. The full API integration (M2-M7) is the "rabbit out of the hat" for v1.0 — designed, M1 shipped, impressive when it lands.
-
----
-
-## Three tiers of integration
-
-### Tier 1: Miro-shaped CSV (ships with quotes export, no API)
-
-A CSV formatted so that when dragged onto a Miro board, the sticky notes land with useful structure. Miro imports CSV as sticky notes with configurable field mapping.
-
-This ships for free with the quotes CSV export (see `docs/design-export-quotes.md`). Same 11 columns, same data. The researcher drags the CSV onto a Miro board and maps fields to sticky note properties.
-
-**No separate implementation needed.** The quotes export IS Tier 1.
-
-### Tier 2: OAuth API integration (M2-M7)
-
-`bristlenose export --miro` or a button in the serve-mode UI that pushes curated quotes directly to a Miro board via the Miro REST API.
-
-**What it creates:**
-- Sticky notes for quotes (text, colour-coded by sentiment or theme)
-- Frames for themes/sections
-- Tags mapped from Bristlenose tags
-- A legend frame explaining the colour scheme
-
-### Tier 3: Intelligent layout engine (aspirational)
-
-Not just placing stickies on a board, but laying them out with the spatial intelligence of an experienced researcher:
-- Stacking similar quotes (overlapping stickies for redundant evidence)
-- Variable sizing by text volume
-- Colour semantics consistent across sentiment, participant, or theme
-- Proximity = relatedness (co-occurring quotes sit closer)
-- Evidence density visualisation (themes with more quotes take more board space)
-
-This is essentially a data visualisation problem — mapping structured research data to 2D spatial layout. Warrants its own prototyping phase with 3-5 hand-crafted gold-standard boards.
+**Product arc.**
+- _Near-term:_ Bristlenose is the preprocessor; the HTML report is the private
+  workbench; the deliverable lives in Miro. The bridge serves this story.
+- _Further-out:_ the Bristlenose report itself becomes rich enough to be the
+  shareable deliverable (clips, charts, curated quotes). The bridge stays
+  valuable for team synthesis.
 
 ---
 
-## What exists today (M1 — DONE)
+## Architecture: a target-agnostic layout IR
 
-- `bristlenose/miro_client.py` — token validation via `GET /v2/boards?limit=1`
-- `bristlenose/server/routes/miro.py` — status/connect/disconnect endpoints
-- `bristlenose/credentials.py` + `credentials_macos.py` — keychain storage
-- `bristlenose/config.py` — `miro_access_token` field
-- `bristlenose/cli.py` — `bristlenose configure miro` with validation
-- 47 tests passing
-- OAuth app registered in Miro (Draft status) with `boards:read`, `boards:write`, `identity:read` scopes
+The central decision. The hard, valuable part is **layout** — turning grouped
+quotes into a spatial arrangement a researcher would actually keep — not the API
+plumbing. So we separate them:
+
+```
+quotes + clusters (sections, themes; scoped: all / starred / section)
+        │
+        ▼
+   Layout engine          ← the project. pure function, no network.
+        │                   decides frames, sticky positions, colour
+        ▼
+   Board IR               ← frames + stickies + text items, in board coords
+        │
+        ├──► SVG renderer  ← fast local iteration (the POC)
+        └──► Miro renderer ← thin IR→REST translator (miro_api)
+            (└──► FigJam renderer — only if demand; a second thin adapter)
+```
+
+Consequences:
+- We iterate "is this board useful?" against the SVG in milliseconds, never
+  burning Miro API calls or dev-team boards.
+- The Miro renderer is a dumb translator once the IR is right.
+- **"Support both" becomes a renderer swap, not a second project** — the layout
+  engine and IR are shared; only the per-target adapter differs. This is the
+  honest answer to the recurring FigJam question.
+
+Three conceptual tiers still hold: **Tier 1** = Miro-shaped CSV (ships free with
+quotes export — the user drags it onto a board); **Tier 2** = this API push;
+**Tier 3** = intelligent spatial layout (endgame).
 
 ---
 
-## Design
+## Plan
 
-### OAuth flow (M2)
+### So far (done)
 
-**Use PKCE instead of client_secret.** More secure, better for local apps.
+- **M1 — token plumbing.** `validate_miro_token()` (a `GET /v2/boards?limit=1`
+  probe), `status`/`connect`/`disconnect` routes (paste-token model, _not_ OAuth
+  yet), keychain storage, `miro_access_token` config. ~17 tests across two files.
+  An app is registered in Miro (Draft) with `boards:read`/`boards:write`. **No
+  board has ever been created** — everything below M1 is design, not code.
+- **Research + design (this cycle).** Market read (Miro is the researcher
+  surface); API feasibility (Miro REST + official `miro_api` Python client is the
+  right surface; _not_ the MCP server; FigJam structurally awkward); the platform
+  facts in _Reference_ below; the sticky-formatting limits.
+- **Layout POC.** A target-agnostic board IR, a trivial v0 layout engine, and an
+  SVG/HTML renderer (`experiments/board-layout-poc/`). Produces two named frames
+  (Sections, Themes), each column led by a pale-pink header sticky over yellow
+  quote stickies in session→time order, attribution italic. Phone-friendly HTML
+  output. Judged "good enough as a POC — even at 500 stickies a real time-saving
+  head start."
+- **Flow + setup UX.** Storyboard of the cross-app journey and the first-run
+  "key dance" (`docs/mockups/miro-flow.html`), and a setup help page
+  (`docs/mockups/miro-setup-help.html`).
 
-**Auth model:** OAuth 2.0. Access tokens expire in 1 hour; refresh tokens last 60 days. The serve-mode UI handles the OAuth flow; CLI `configure miro` accepts a pasted token as fallback.
+### Next (the build, in order)
 
-**Flow:**
+The ordering is deliberate: **OAuth first**, because first-run auth friction (the
+"key dance") is the biggest adoption barrier, not the layout.
 
-1. Frontend calls `GET /api/miro/auth-url` — gets the Miro authorization URL
-2. Browser opens Miro OAuth page
-3. User authorises
-4. Miro redirects to `http://localhost:{port}/api/miro/callback`
-5. Callback exchanges code for tokens (`POST https://api.miro.com/v1/oauth/token`)
-6. Access + refresh token stored in keychain
-7. Redirect to report with success indicator
-8. Frontend polls `/api/projects/{id}/miro/status` to detect new connection
+| Milestone | What | Why this order |
+|---|---|---|
+| **M2 — OAuth Connect** | Browser-based OAuth 2.0 + PKCE, keychain refresh, state-dependent Export menu (`Connect to Miro…` → `Send to Miro board…`). Paste-token demoted to fallback. | Collapses the key dance from a 6-step developer detour to one click. Highest leverage. |
+| **M3 — API client** | Via `miro_api`: `create_board`, `create_frame` (named Sections/Themes), bulk `create_stickies` (parented into frames), `create_text` (title/legend), `create_tag`/attach. Rate-limit backoff. | The thin IR→REST translator. |
+| **M4 — Export service** | Port the POC IR + layout engine into `bristlenose/`. Scope = **all / starred / section** (reuses `export_core` `quote_ids` + `is_starred`). Background job (AutoCode async pattern), consent step. | The layout value, wired to real data + selection. |
+| **M5 — React panel** | The flow states: not-connected → connecting → configure/consent → exporting → done (`Open in Miro`). | Surfaces M2–M4 in the report UI. |
+| **M6 — Content + metadata** | Rich sticky content (participant + timecode italic), legend text item, edited-quote handling, hidden-quote exclusion. | Polish. |
 
-**Security:**
-- State parameter: random UUID stored in-memory, validated on callback (CSRF protection)
-- Token refresh: automatic before each API call (if token age > 50 min)
-- Disconnect deletes both access and refresh tokens
-- Client ID is build-time config (`.env`), not user-facing. **No client_secret** — PKCE replaces the shared secret at token exchange with a per-session `code_verifier`/`code_challenge`
-- **Document Miro as sub-processor in `SECURITY.md`** — data leaves the user's machine when pushing to Miro
+### Endgame (aspirational)
 
-### Board creation and stickies (M3)
+- **Tier 3 — intelligent layout.** Spatial intelligence of an experienced
+  researcher: evidence density → frame size, stacking redundant quotes, variable
+  sticky sizing by intensity, proximity = relatedness, soft sentiment spatial
+  bias. A data-viz problem; warrants its own prototyping phase against 3–5
+  hand-crafted gold-standard boards.
+- **FigJam as a second renderer** — only if researcher demand appears. Two
+  shapes, both worse than Miro's clean push: (A) a published FigJam plugin that
+  consumes a JSON manifest Bristlenose exports (stable, but a human runs it
+  in-editor); (B) the remote MCP `use_figma` write-to-canvas (beta, future-paid,
+  Full-seat, OAuth-only, generates Plugin-API JS). Shared layout engine; thin
+  adapter either way.
+- **Report-as-deliverable.** As the Bristlenose report grows richer, the bridge
+  shifts from "the deliverable" to "team synthesis accelerator."
 
-**Miro API v2 endpoints used:**
+### Artefacts
 
-| Endpoint | Purpose |
-|----------|---------|
-| `POST /boards` | Create a board |
-| `POST /boards/{id}/sticky_notes` | Create sticky notes (bulk: 20 per call) |
-| `POST /boards/{id}/frames` | Create frames (containers) |
-| `POST /boards/{id}/tags` | Create tags |
-| `POST /boards/{id}/connectors` | Create connectors (future) |
+| Artefact | Path | State |
+|---|---|---|
+| Token client | `bristlenose/miro_client.py` | M1 (validation only) |
+| Server routes | `bristlenose/server/routes/miro.py` | M1 (status/connect/disconnect) |
+| Config / keychain | `bristlenose/config.py`, `credentials*.py` | M1 |
+| Tests | `tests/test_miro_client.py`, `tests/test_serve_miro_api.py` | ~17 |
+| **Layout POC** | `experiments/board-layout-poc/` | this cycle |
+| — board IR | `board_model.py` | Frame / Sticky / TextItem / Board |
+| — layout engine | `layout.py` | trivial v0 |
+| — SVG/HTML renderer | `render_svg.py` | + phone wrapper |
+| — runner + sample | `run.py`, `sample-board.svg/.html` | smoke-fixture render |
+| Flow storyboard | `docs/mockups/miro-flow.html` | mockup |
+| Setup help | `docs/mockups/miro-setup-help.html` | mockup |
 
-**Sticky note properties:**
-- `data.content` — text (supports `<b>`, `<i>`, `<a>`)
-- `style.fillColor` — background colour
-- `position.x`, `position.y` — board coordinates
-- `geometry.width`, `geometry.height` — sticky size
+---
 
-**Rate limits:** 1,000 creates/minute. Bulk create: 20 items per call. Exponential backoff on 429 responses.
+## Reference: platform facts (verified this cycle)
 
-### Colour mapping
+The hard-won constraints. Build against these.
 
-Miro's 16 fixed colours mapped to Bristlenose sentiments:
+### Auth & client
+- **OAuth 2.0 + PKCE, no Marketplace publishing.** Create an app, install it to a
+  Developer team directly. One-time browser consent on first run is the only
+  irreducible friction; refresh tokens keep it headless after.
+- **Official Python client `miro_api`** (PyPI, Python 3.9+ — fits Bristlenose).
+  Stateless `MiroApi` (token in) is the right fit for a batch exporter; it
+  auto-refreshes. Add as optional extra `bristlenose[miro]`.
+- **Use REST, not the MCP server.** Miro's MCP server (public beta, Dec 2025) is
+  a remote OAuth-2.1, AI-assistant-oriented surface exposing a REST _subset_. The
+  REST API is the deterministic, scriptable batch surface we want. Revisit MCP
+  only for a future "chat with your board" feature.
+- Free Developer team keeps only the **3 most-recent boards editable** — use a
+  paid team or don't auto-spawn many boards.
+
+### Positioning, frames, text
+- **Stickies:** absolute `position` x/y + `geometry` w/h. A sticky can be
+  `parent`-ed into a frame — then its x/y are **relative to the frame's top-left
+  and mark the sticky's centre**. No server-side auto-layout (we compute it).
+- **Frames are named containers** (`data.title` = the label, shown as a tab),
+  positionable + sizable, with a `style.fillColor`. **Frames don't nest**, and an
+  item belongs to **at most one** frame — so "a Sections frame and a Themes
+  frame" with columns inside is correct; per-column sub-frames are impossible.
+  Frames don't auto-grow — size to the computed grid.
+- **Text items are richer than stickies:** `style.fontSize`, `style.color`,
+  `<span style>`. Use them for the board title / legend, where real typographic
+  hierarchy is wanted.
+
+### Sticky text formatting (all-or-nothing)
+- `data.content` supports only: `<p> <a> <strong>/<b> <em>/<i> <u> <s> <br>`.
+- **`<span>` is NOT supported** — silently escaped and rendered as literal
+  `<span…>` text on the board. Silent-failure trap; stay in the allowlist.
+- **No per-span font size or colour.** No `style.fontSize`; font is **auto-fit**
+  (Miro scales the whole note to its box). Only colour control is
+  `style.fillColor` (background, 16 named colours) — there is no text-colour field.
+- `style` has exactly three fields: `fillColor`, `textAlign`, `textAlignVertical`.
+- Content cap **< 6000 chars** (failure mode at the boundary undocumented).
+- **Implication:** a prominent quote + a smaller/greyer attribution _inside one
+  sticky_ is impossible. The only de-emphasis a sticky affords is `<i>`. For true
+  hierarchy you'd need a separate text item (costs a second item per quote). v0
+  uses italic attribution — pragmatic, keeps one item per quote.
+
+### Rate limits
+- Credit-based, 100k credits/min account ceiling; mutations are heavy-weight
+  calls. **Bulk create: 20 items/call, mixed types, but no connectors** (and tag
+  attach is a separate call). 429 → exponential backoff via `X-RateLimit-*`
+  headers. A few-hundred-sticky board is trivially within limits.
+- Recommended soft cap ≤ 10,000 items/board.
+
+---
+
+## Layout mapping (IR → Miro)
+
+| IR element | Miro primitive | Notes |
+|---|---|---|
+| Sections / Themes group | **Frame**, `title` = "Sections" / "Themes" | two big named containers, sections left, themes right |
+| Column (one section or theme) | column of stickies inside the frame | led by a header sticky (no sub-frame — frames don't nest) |
+| Column title | **pale-pink header sticky** | the natural Miro affordance; label + count |
+| Quote | **yellow sticky**, parented into the frame | body leads; `— P1 · 0:10` trails in italic |
+| Board title / colour legend | **text item** | real fontSize/colour |
+
+- **Order:** sections (by `display_order`) then themes — same as the Quotes page.
+- **Within a column:** session→time (`session_id` natural sort, then
+  `start_timecode`).
+- **Scope:** `all` (non-hidden) / `starred only` / `this section` — reuses the
+  existing `export_core` `quote_ids` selection and `QuoteState.is_starred`.
+- **Colour:** sentiment by default (Bristlenose's 7 sentiments → Miro's 16 named
+  colours); participant/theme optional.
+
+### Sentiment → Miro colour
 
 | Sentiment | Miro colour |
 |-----------|-------------|
-| positive | light_green |
-| negative | light_pink |
+| positive / delight | light_green / green |
+| negative / frustration | light_pink / red |
 | neutral | light_gray |
 | mixed | light_yellow |
-| frustrated | red |
-| delighted | green |
-| confused | light_blue |
+| confusion | light_blue |
 
-For codebook groups (tag colouring), cycle through remaining colours.
-
-### Sticky content format
-
-```html
-<b>P1</b> 01:23<br>"Quote text here"
-```
-
-- Participant code (bold) + timecode + quote text
-- Tags shown via Miro tags feature (not in sticky text)
-- Edited quotes: export the edited version
-- Hidden quotes: excluded (respect `.bn-hidden` flag)
-- Long quotes: truncated at 300 chars with "..."
-
-### Layout algorithm (M4 grid-by-group, M7 refinements)
-
-**M4 — basic grid:**
-
-```
-Board
-├── Legend frame (top-left) — colour key, project name, export date
-├── Section/Theme 1 frame
-│   ├── Sticky (row 0, col 0) — highest intensity
-│   ├── Sticky (row 0, col 1)
-│   └── ...
-├── Section/Theme 2 frame
-│   └── ...
-└── ...
-```
-
-- Frames: 2-column layout, N/2 rows
-- Frame width: 1200px, height auto (based on sticky count)
-- Stickies: 4-column grid inside each frame, 20px gap
-- Sticky size: 199x228 (Miro default)
-- Sort within frame: by intensity (highest first) then participant
-
-**M7 — spatial refinements:**
-- Variable frame sizing based on quote count
-- Within-frame sub-clusters by tag group
-- Sentiment spatial hints (positive top-left, negative bottom-right — soft bias)
-- Intensity sizing (high-intensity quotes get 228x228 vs 199x199)
-- Cross-participant alignment across frames
-
-**Will NOT do:** auto-rearranging existing board content, AI-driven clustering (pipeline clusters already exist), automatic connections/arrows.
-
-### Export config
-
-```python
-class MiroExportConfig(BaseModel):
-    board_name: str | None = None          # Default: project name + timestamp
-    scope: Literal["all", "section", "theme"] = "all"
-    section_filter: str | None = None
-    theme_filter: str | None = None
-    colour_by: Literal["sentiment", "participant"] = "sentiment"
-    include_tags: bool = True
-    include_legend: bool = True
-```
-
-### Consent UI
-
-Before pushing to Miro, show a consent step with:
-- Quote count being exported
-- Destination (new board name)
-- Reminder that data will leave the user's machine
-- "Export to Miro" confirmation button
-
-### React export panel (M5)
-
-Modal triggered from the export dropdown. States:
-
-1. **Not connected:** "Connect to Miro" button (opens OAuth)
-2. **Connected:** Config form (board name, scope, colour by, tags, legend)
-3. **Exporting:** Progress bar + cancel button
-4. **Done:** Board link + "Open in Miro" button
-5. **Error:** Error message + retry button
-
-### Background job
-
-Uses `asyncio.create_task` pattern (same as AutoCode):
-- Progress: `(items_created, total_items)`
-- Job state: in-memory (not DB — ephemeral)
-- Cancel support via `asyncio.Event`
+(Quote stickies default to yellow when not colouring by sentiment; header
+stickies are pale pink.)
 
 ---
 
-## Implementation milestones
+## Cross-app flow & setup (the adoption surface)
 
-### M1: Token management — DONE
+The make-or-break is the journey across two apps and getting past first-run
+setup, not sticky detail. Design goals: **cross the app boundary as few times as
+possible; never make someone do setup twice.**
 
-Already shipped. 47 tests passing.
+- **The menu encodes state.** Export popover shows `Connect to Miro…` when
+  disconnected (routes to consent) and `Send to Miro board…` once connected
+  (jumps to configure).
+- **First run** crosses the boundary twice (consent out + auto-return). **Every
+  run after** crosses once (the final `Open in Miro`). Consent never reappears —
+  token + refresh live in the keychain.
+- **No dead-ends:** the browser handoff sets the expectation ("come back here"),
+  the return is automatic via localhost callback, the finish gives one obvious
+  `Open in Miro` button.
+- **Consent + privacy** stated at the moment of action: quote count shown, data
+  leaves the machine, hidden quotes excluded. Miro is a sub-processor — document
+  in `SECURITY.md`.
 
-### M2: OAuth 2.0 flow
+See `docs/mockups/miro-flow.html` and `miro-setup-help.html`.
 
-| File | Change |
-|------|--------|
-| `bristlenose/server/routes/miro.py` | Add `auth-url`, `callback`, `refresh` endpoints |
-| `bristlenose/miro_client.py` | Add `exchange_code_for_tokens()`, `refresh_access_token()`, `get_user_info()` |
-| `bristlenose/credentials.py` | Add `"miro_refresh"` key |
-| `bristlenose/config.py` | Add `miro_client_id` (from `.env`). No `client_secret` — PKCE eliminates it |
-| `tests/test_miro_client.py` | Token exchange, refresh, user info tests |
-| `tests/test_serve_miro_api.py` | Auth-url, callback, CSRF state validation tests |
+---
 
-### M3: API client — boards, frames, stickies
+## OAuth flow (M2 detail)
 
-| File | Change |
-|------|--------|
-| `bristlenose/miro_client.py` | `create_board()`, `create_frame()`, `create_stickies()` (bulk), `create_tag()`, `attach_tags()` |
-| `tests/test_miro_client.py` | Board/frame/sticky creation, bulk batching, rate limit retry, colour mapping (~15 tests) |
+1. Frontend gets the authorize URL (`GET /api/miro/auth-url`).
+2. System browser opens Miro's consent page.
+3. User clicks **Allow**.
+4. Miro redirects to `http://localhost:{port}/api/miro/callback`.
+5. Callback exchanges the code for tokens (PKCE — no client secret).
+6. Access + refresh tokens stored in keychain.
+7. Report shows Connected; menu flips to `Send to Miro board…`.
 
-### M4: Export service — quote selection, layout, background job
-
-| File | Change |
-|------|--------|
-| `bristlenose/server/miro_export.py` | **New.** `export_to_miro()` orchestration + layout computation |
-| `bristlenose/server/routes/miro.py` | `POST/GET /export`, `POST /export/cancel` endpoints |
-| `tests/test_miro_export.py` | **New.** Layout, sticky content, batch sizing, progress (~25 tests) |
-
-### M5: React export panel
-
-| File | Change |
-|------|--------|
-| `frontend/src/islands/MiroExportPanel.tsx` | **New.** Modal with 5 states |
-| `frontend/src/islands/MiroExportPanel.test.tsx` | **New.** Render states, API mock (~12 tests) |
-| `frontend/src/utils/api.ts` | Miro API functions |
-| `frontend/src/utils/types.ts` | Miro types |
-
-### M6: Content formatting and metadata
-
-- Rich sticky content (participant code bold, timecode, topic label)
-- Legend frame (colour key, project name, date, version, total quotes)
-- Edited quote handling, hidden quote exclusion
-- ~10 tests
-
-### M7: Layout refinement
-
-- Variable frame sizing, within-frame sub-clusters, sentiment spatial hints
-- Intensity sizing, cross-participant alignment
-- ~8 tests
-
-**Estimated total: ~70 new tests across M2-M7.**
+Security: random-UUID `state` validated on callback (CSRF); auto-refresh before
+calls when token age > 50 min; disconnect deletes both tokens; client ID is
+build-time `.env`, not user-facing. Paste-token remains a fallback for orgs that
+block third-party app authorisation.
 
 ---
 
 ## Decisions
 
-1. **OAuth 2.0 with PKCE, not personal access tokens only.** Smoother UX, token refresh, future distribution.
-2. **One-way push only.** Miro killed webhooks Dec 2025. Sync back is neither possible nor desirable. The spatial arrangement IS the analysis — the researcher controls it.
-3. **New board per export.** Never modify existing boards. Learned from "magic organize" horror stories.
-4. **No auto-rearranging.** The spatial arrangement is the analysis; researcher controls it.
-5. **Sentiment colouring default.** 7 sentiments map cleanly to Miro's 16 colours.
-6. **Grid-by-theme layout.** One frame per section/theme, stickies in grid inside. Simple and useful.
-7. **Client ID in `.env`.** Build-time config, not user-facing. No client_secret needed (PKCE).
-8. **Refresh token in keychain.** Separate from access token for independent lifecycle.
-9. **HTML in stickies.** Miro supports `<b>`, `<i>`, `<a>` — enough for participant + timecode formatting.
-10. **Background job, not synchronous.** Export takes 10-30s; follows AutoCode async pattern.
-11. **Document as sub-processor.** Data leaves the user's machine — this must be clear in `SECURITY.md` and the consent UI.
+1. **Layout IR decoupled from target.** The engine produces a renderer-agnostic
+   board model; Miro/FigJam/SVG are thin renderers. Makes "support both" cheap.
+2. **Miro first, structurally** — it's where researchers synthesise _and_ the
+   only target with a clean external-push API. FigJam is endgame, demand-gated.
+3. **REST, not MCP**, for the deterministic batch export.
+4. **OAuth before layout polish** — first-run friction is the real barrier.
+5. **One-way push only.** Miro retired webhooks (Dec 2025); the spatial
+   arrangement _is_ the researcher's analysis. Never sync back.
+6. **New board per export.** Never modify existing boards.
+7. **Two named frames** (Sections, Themes); columns inside; **pink header
+   stickies** for column titles (frames can't nest).
+8. **Italic attribution** inside the quote sticky — the only de-emphasis a sticky
+   affords (no per-span size/colour).
+9. **Scope reuses starred/filter** — `quote_ids` + `is_starred`, no new machinery.
+10. **Background job**, not synchronous (10–30s export).
+11. **Document Miro as sub-processor** — data leaves the machine.
 
 ---
 
@@ -290,45 +297,79 @@ Already shipped. 47 tests passing.
 
 | Risk | Mitigation |
 |------|-----------|
-| Miro API rate limiting | Bulk create (20/call), exponential backoff |
-| Token expiry mid-export | Refresh before starting, check during long exports |
-| Board sluggish with >5K items | Warn user, suggest section-scoped export |
-| OAuth redirect URI mismatch | Exact match required — use consistent port |
-| Miro kills more APIs | One-way push is minimal surface area |
-| Sticky content too long | Truncate at 300 chars |
+| First-run auth friction (the key dance) | OAuth one-click (M2); paste-token fallback |
+| Rate limiting | bulk 20/call, exponential backoff |
+| Token expiry mid-export | refresh before start + during long exports |
+| Board sluggish > 5k items | warn; suggest scoped (starred/section) export |
+| OAuth redirect URI mismatch | exact-match localhost port |
+| Sticky content > 6000 chars | truncate (~300 chars for readability anyway) |
+| `<span>`/style silently escaped | stay in the tag allowlist; never inject CSS |
+| Miro deprecates more APIs | one-way push = minimal surface |
 
 ---
 
+## Enhancement: clip links in stickies
+
+The obvious win — each quote sticky links straight to its video clip. **Stickies
+support `<a href>`, so the link is trivial.** The hard part is _where the clip
+lives_, because a Miro board is viewed by the whole team from the cloud, not from
+the researcher's laptop.
+
+- **`file://` local disk — effectively no.** The link only resolves on the
+  author's own machine, and browsers block `file://` links clicked from a cloud
+  page (security). Fine for a solo author reviewing their own board; useless for
+  the team. (`localhost:PORT` to the serve server is worse — it dies when the
+  server stops.)
+- **Cloud-hosted clip + shareable link — the real answer.** Bristlenose already
+  exports clips (`docs/design-export-clips.md`); the new piece is getting each
+  clip to a URL the team can open, then embedding `<a href>` in the sticky.
+  - _Low-friction (no second OAuth):_ the researcher uploads the exported clips
+    folder to Google Drive / OneDrive / Dropbox themselves, pastes the **folder
+    share link**, and Bristlenose constructs per-clip URLs from the filename
+    convention. One paste, no new auth dance.
+  - _Full integration (later):_ a Drive/OneDrive API upload step — but that's a
+    _second_ key dance on top of Miro's, so only if demand justifies it.
+
+**This crosses the local-first boundary.** Uploading participant video (faces,
+voices, names) to a third-party cloud is a real data-governance escalation — a
+deliberate, opt-in, consented step, governed like the Miro upload itself. See
+`docs/methodology/consent-gradient.md`. Default stays timecode-as-text (zero
+config, no upload); clip-links are an explicit opt-in.
+
+_Open: does Miro REST let us attach/embed an uploaded clip as a board item next
+to the sticky (richer than a text link)? Worth a focused check before building._
+
 ## Open questions
 
-1. **Colour by: sentiment vs participant vs theme?** Sentiment is the default. Researchers have strong preferences. The config exposes the choice. May need user research.
-2. **FigJam support?** Miro is dominant in UX research. FigJam is growing. Layout logic would be similar but APIs differ. Start with Miro, add FigJam if there's demand.
-3. **Video links on stickies?** Miro supports `<a>` tags. Could link to timecoded video — but `file://` only works on the researcher's machine, and `localhost:PORT` dies when the server stops. For now: timecodes as text, not links.
-4. **Board layout strategy refinements?** Grid-by-theme is the M4 default. Radial, force-directed, and other layouts are Tier 3 territory.
+1. **Colour-by default:** sentiment (current default) vs participant vs theme.
+   Config exposes the choice; may need user research.
+2. **Attribution hierarchy:** accept italic-only (v0), or spend a second text
+   item per quote for true smaller/greyer attribution? Decide from tester feel.
+3. **Tier 3 layout strategy:** grid-by-column (v0) vs density/force-directed.
 
 ---
 
 ## Verification
 
-1. Connect to Miro via OAuth — verify token stored, status shows connected
-2. Disconnect — verify both tokens removed
-3. Export to Miro with default settings — verify board created with frames and stickies
-4. Verify sticky content: participant code bold, timecode, quote text
-5. Verify colour mapping: sentiments get correct Miro colours
-6. Verify frame layout: one frame per section/theme, stickies in grid
-7. Verify legend frame: colour key, project name, date
-8. Test with >200 quotes — verify rate limiting handled (no 429 errors)
-9. Test cancel during export — verify job stops, partial board left in Miro
-10. Test token refresh — verify automatic refresh before API calls
-11. Test consent UI — verify quote count and destination shown before export
-12. `pytest tests/` + `ruff check .`
+1. Connect via OAuth — token stored, status Connected, menu flips.
+2. Disconnect — both tokens removed.
+3. Export (default) — new board: two frames, pink headers, yellow quotes.
+4. Sticky content — quote leads, italic `— P1 · 0:10` trails.
+5. Colour mapping — sentiments → correct Miro colours.
+6. Scope — `starred only` exports just starred quotes; `all` excludes hidden.
+7. Frame layout — Sections left, Themes right; columns session→time.
+8. > 200 quotes — rate-limit backoff, no 429 surfaced.
+9. Cancel mid-export — job stops, partial board left.
+10. Consent UI — quote count + destination shown before upload.
+11. `pytest tests/` + `ruff check .`.
 
 ---
 
 ## Related docs
 
 - `docs/design-export-quotes.md` — CSV/XLS export (Tier 1 = Miro-shaped CSV)
-- `docs/design-export-html.md` — HTML report export
+- `docs/design-export-html.md` — HTML report export (anonymisation)
 - `docs/design-export-clips.md` — video clip extraction
-- `docs/design-export-sharing.md` — original monolith (superseded, kept for git history)
-- `SECURITY.md` — document Miro as sub-processor
+- `SECURITY.md` — Miro as sub-processor
+- `experiments/board-layout-poc/` — the layout prototype
+- `docs/mockups/miro-flow.html`, `miro-setup-help.html` — flow + setup UX

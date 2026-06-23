@@ -843,7 +843,8 @@ final class ProjectIndex: ObservableObject {
             gated = UnanalysedState(
                 newFiles: [],
                 missingFiles: state.missingFiles,
-                sessionCount: state.sessionCount
+                sessionCount: state.sessionCount,
+                totalDurationSeconds: state.totalDurationSeconds
             )
         } else {
             gated = state

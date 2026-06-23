@@ -244,6 +244,10 @@ extension Notification.Name {
     /// Posted by File > New Folder (⇧⌘N) and the sidebar folder.badge.plus button.
     static let createNewFolder = Notification.Name("bristlenoseCreateNewFolder")
 
+    /// Posted by View > Move Focus to Projects (⌘0) — returns keyboard focus
+    /// from the web report to the project list (the §10.1 no-trap command).
+    static let focusProjects = Notification.Name("bristlenoseFocusProjects")
+
     /// Posted by Project > Rename to trigger inline rename in the sidebar.
     static let renameSelectedProject = Notification.Name("bristlenoseRenameSelectedProject")
 
@@ -839,7 +843,8 @@ final class ProjectIndex: ObservableObject {
             gated = UnanalysedState(
                 newFiles: [],
                 missingFiles: state.missingFiles,
-                sessionCount: state.sessionCount
+                sessionCount: state.sessionCount,
+                totalDurationSeconds: state.totalDurationSeconds
             )
         } else {
             gated = state

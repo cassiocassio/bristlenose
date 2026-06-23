@@ -35,6 +35,16 @@
     "noResults": "Aucun résultat",
     "error": "Erreur"
   },
+  "titlebar": {
+    "quotes_one": "{{count}}\u00a0Verbatim",
+    "quotes_other": "{{count}}\u00a0Verbatim",
+    "signals_one": "{{count}}\u00a0Signal",
+    "signals_other": "{{count}}\u00a0Signaux",
+    "codebooks_one": "{{count}}\u00a0Grille de codage",
+    "codebooks_other": "{{count}}\u00a0Grilles de codage",
+    "tags_one": "{{count}}\u00a0\u00c9tiquette",
+    "tags_other": "{{count}}\u00a0\u00c9tiquettes"
+  },
   "search": {
     "ariaLabel": "Rechercher des verbatim",
     "placeholder": "Filtrer les verbatim…",

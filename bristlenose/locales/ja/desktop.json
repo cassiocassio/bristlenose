@@ -62,7 +62,7 @@
     "folder": {
       "rename": "フォルダ名を変更",
       "archive": "フォルダをアーカイブ",
-      "delete": "フォルダを削除…"
+      "delete": "フォルダを削除"
     },
     "codes": {
       "createCodeGroup": "コードグループを作成",
@@ -156,6 +156,7 @@
     "addedInterviews": "%@ に %d 件のインタビューを追加しました",
     "interviewCount_other": "\u30a4\u30f3\u30bf\u30d3\u30e5\u30fc {{count}} \u4ef6",
     "unanalysedSubtitle_other": "\u672a\u5206\u6790 +{{count}} \u4ef6",
+    "titleSessions_other": "{{count}} \u30bb\u30c3\u30b7\u30e7\u30f3",
     "missingSubtitle_other": "{{count}} \u4ef6\u4e0d\u8db3",
     "tooltipWaiting": "{{count}} \u4ef6\u5f85\u6a5f\u4e2d",
     "dateRelativeJustNow": "\u305f\u3063\u305f\u4eca",

@@ -42,6 +42,16 @@
     "participant_one": "{{count}} participant",
     "participant_other": "{{count}} participants"
   },
+  "titlebar": {
+    "quotes_one": "{{count}} Quote",
+    "quotes_other": "{{count}} Quotes",
+    "signals_one": "{{count}} Signal",
+    "signals_other": "{{count}} Signals",
+    "codebooks_one": "{{count}} Codebook",
+    "codebooks_other": "{{count}} Codebooks",
+    "tags_one": "{{count}} Tag",
+    "tags_other": "{{count}} Tags"
+  },
   "search": {
     "ariaLabel": "Search quotes",
     "placeholder": "Filter quotes…",

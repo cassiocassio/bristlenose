@@ -67,6 +67,25 @@ enum SubtitleVariant: Equatable {
     case placeholder
 }
 
+extension SubtitleVariant {
+    /// Whether this is a failure/partial "distress" state whose prefix glyph is a
+    /// clickable diagnostic glyph (opens `ProjectDiagnosticPopover`) — vs a
+    /// cantFind/locate glyph or a non-glyph state. **Exhaustive, no `default`** so a
+    /// new variant forces an explicit diagnostic-or-not decision here rather than
+    /// silently rendering no glyph (review F35/Bach; same convention as
+    /// `ProjectRowActivityIndicator.Kind.from`). Table-tested in `ProjectSubtitleTests`.
+    var isDiagnostic: Bool {
+        switch self {
+        case .failed, .failedDiagnostic, .completedPartial:
+            return true
+        case .cantFind, .stopping, .running, .queued, .stopped, .partial,
+             .unreachable, .copying, .copyCancelling, .ready, .deltaOnly,
+             .placeholder:
+            return false
+        }
+    }
+}
+
 /// The single data-drift segment a row may surface (it shows at most one;
 /// `ProjectSubtitle.pickDelta` arbitrates "missing wins over unanalysed").
 enum SubtitleDelta: Equatable {

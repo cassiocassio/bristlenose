@@ -28,6 +28,21 @@ enum SidebarExternalDrop: Equatable {
     case root
     case folder(UUID)
     case project(UUID)
+
+    /// Resolve where a Finder folder/file drop lands, from the dropped-on outline
+    /// node's kind. `nil` kind (empty area / non-node) → root; a project → that
+    /// project (add interviews); a folder → that folder (new project inside); the
+    /// Projects group → root; the Lenses group or a lens → **reject** (`nil`). Pure —
+    /// table-tested in `OutlineNodeTests` (review F34: was nested + untestable).
+    static func resolve(droppedOn kind: OutlineNode.Kind?) -> SidebarExternalDrop? {
+        guard let kind else { return .root }
+        switch kind {
+        case .project(let id): return .project(id)
+        case .folder(let id):  return .folder(id)
+        case .group(let key):  return key == OutlineTree.projectsGroupKey ? .root : nil
+        case .lens:            return nil
+        }
+    }
 }
 
 /// A clickable failure/partial subtitle glyph that opens the diagnostic popover
@@ -101,7 +116,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
 
 /// Owns the `NSScrollView` + `NSOutlineView` and acts as data source + delegate.
 @MainActor
-final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource, NSOutlineViewDelegate {
+final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource, NSOutlineViewDelegate, NSPopoverDelegate {
     let outlineView = NSOutlineView()
     private let scrollView = NSScrollView()
     private var roots: [OutlineNode] = []
@@ -485,18 +500,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                                 options: [.urlReadingFileURLsOnly: true]) as? [URL]) ?? []
     }
 
-    /// Resolve where an external drop lands. `nil` = reject (a folder of videos has
-    /// no meaning dropped on a lens). Drop on a project adds interviews to it; on a
-    /// folder creates a project inside it; anywhere else (root, the Projects group,
-    /// the empty area below the rows) creates a new project at root.
+    /// Resolve where an external drop lands (pure logic in `SidebarExternalDrop.resolve`).
     private func externalDropTarget(item: Any?) -> SidebarExternalDrop? {
-        guard let node = item as? OutlineNode else { return .root }
-        switch node.kind {
-        case .project(let id): return .project(id)
-        case .folder(let id):  return .folder(id)
-        case .group(let key):  return key == "Projects" ? .root : nil  // Lenses group → reject
-        case .lens:            return nil
-        }
+        SidebarExternalDrop.resolve(droppedOn: (item as? OutlineNode)?.kind)
     }
 
     private func decideDrop(info: NSDraggingInfo, item: Any?, index: Int) -> [ProjectMove]? {
@@ -532,8 +538,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             // other groups show their mixed-case title via i18n (chrome convention).
             let title: String
             switch key {
-            case "Lenses":   title = ""
-            case "Projects": title = i18n?.t("desktop.chrome.projects") ?? key
+            case OutlineTree.lensesGroupKey:   title = ""
+            case OutlineTree.projectsGroupKey: title = i18n?.t("desktop.chrome.projects") ?? key
             default:         title = key
             }
             return groupCell(text: title)
@@ -561,7 +567,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 return iconCell(symbol: symbol, text: project.name, trailing: count)
             }
             let prefix = subtitlePrefixGlyph(for: variant, availability: project.availability)
-            let diagnosticsID = isDiagnosticVariant(variant) ? id : nil
+            let diagnosticsID = variant.isDiagnostic ? id : nil
             return projectTwoLineCell(symbol: symbol, name: project.name, count: count,
                                       subtitle: subtitle, available: project.availability.isReady,
                                       prefixGlyph: prefix, diagnosticsProjectID: diagnosticsID,
@@ -688,15 +694,6 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
     }
 
-    /// Whether this variant's prefix glyph is a clickable *diagnostic* glyph
-    /// (failure / partial → opens the popover), vs a static cantFind/locate glyph.
-    private func isDiagnosticVariant(_ variant: SubtitleVariant) -> Bool {
-        switch variant {
-        case .failed, .failedDiagnostic, .completedPartial: return true
-        default: return false
-        }
-    }
-
     /// Present the read-only diagnostic popover for `sender`'s project (status
     /// headline + per-stage breakdown + Show Log / Copy), mirroring `ProjectRow`'s
     /// failure-glyph affordance. Anchored to the OUTLINE VIEW at the glyph's frame —
@@ -710,6 +707,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         diagnosticPopover?.close()
         let popover = NSPopover()
         popover.behavior = .transient
+        popover.delegate = self
         let content = ProjectDiagnosticPopover(project: project, state: state, liveData: liveData)
             .environmentObject(i18n)
             .padding(16)
@@ -718,6 +716,14 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         diagnosticPopover = popover
         let anchor = sender.convert(sender.bounds, to: outlineView)
         popover.show(relativeTo: anchor, of: outlineView, preferredEdge: .maxY)
+    }
+
+    /// Drop the strong `diagnosticPopover` ref on transient dismissal, so the
+    /// `NSHostingController` (which observes `liveData` at ~1 Hz) is torn down at
+    /// close rather than lingering as a stale progress-observer until the next
+    /// glyph click. (Review F30 — code-review/gruber/perf.)
+    func popoverDidClose(_ notification: Notification) {
+        diagnosticPopover = nil
     }
 
     /// What the subtitle-right slot shows, by `ProjectRow.subtitleRightSlot`'s

@@ -62,7 +62,7 @@
     "folder": {
       "rename": "Přejmenovat složku",
       "archive": "Archivovat složku",
-      "delete": "Smazat složku…"
+      "delete": "Smazat složku"
     },
     "codes": {
       "createCodeGroup": "Vytvořit skupinu kódů",

@@ -63,7 +63,7 @@
     "folder": {
       "rename": "Rename Folder",
       "archive": "Archive Folder",
-      "delete": "Delete Folder…"
+      "delete": "Delete Folder"
     },
     "codes": {
       "createCodeGroup": "Create Code Group",

@@ -62,7 +62,7 @@
     "folder": {
       "rename": "Ordner umbenennen",
       "archive": "Ordner archivieren",
-      "delete": "Ordner löschen…"
+      "delete": "Ordner löschen"
     },
     "codes": {
       "createCodeGroup": "Kode-Gruppe erstellen",

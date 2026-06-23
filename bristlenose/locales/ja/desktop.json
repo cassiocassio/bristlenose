@@ -62,7 +62,7 @@
     "folder": {
       "rename": "フォルダ名を変更",
       "archive": "フォルダをアーカイブ",
-      "delete": "フォルダを削除…"
+      "delete": "フォルダを削除"
     },
     "codes": {
       "createCodeGroup": "コードグループを作成",

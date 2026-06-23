@@ -62,7 +62,7 @@
     "folder": {
       "rename": "Renombrar carpeta",
       "archive": "Archivar carpeta",
-      "delete": "Eliminar carpeta…"
+      "delete": "Eliminar carpeta"
     },
     "codes": {
       "createCodeGroup": "Crear grupo de códigos",

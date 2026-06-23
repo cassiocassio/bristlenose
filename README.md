@@ -367,6 +367,11 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.15.19** — _24 Jun 2026_
+
+- **Desktop: the macOS project sidebar is rebuilt on native AppKit.** Off SwiftUI's `List` (which hit selection/tap dead-ends on macOS 26) onto a native `NSOutlineView`, bringing two-line project rows (icon · name · session count + a live status subtitle), activity/copy rings with hover-to-cancel on the row, can't-find and iCloud status glyphs, the failure → diagnostic popover, project/folder context menus, and Finder folder drops into the sidebar.
+- **Desktop: the five report views become a lens rail, with a native window title + session subtitle.** Project · Sessions · Quotes · Codebook · Analysis move from the toolbar picker into a lens rail; switching lens updates a native window title and session subtitle (the toolbar title pill is gone). Desktop-only — ships to the alpha cohort with the next bundled-sidecar build; the package gains the supporting interface strings in all seven languages.
+
 **0.15.18** — _21 Jun 2026_
 
 - **Desktop: copy progress moved onto the project row, and switching back to a recent project is near-instant.** Copy progress (a determinate ring + "Copying · N%" + hover-to-cancel) now rides the project's sidebar row instead of a separate toolbar pill; and switching back to the immediately-previous project re-points to its still-running ("parked") server instead of restarting it (the "warm-sidecar pool").

@@ -34,6 +34,16 @@
     "noResults": "Keine Ergebnisse",
     "error": "Fehler"
   },
+  "titlebar": {
+    "quotes_one": "{{count}} Zitat",
+    "quotes_other": "{{count}} Zitate",
+    "signals_one": "{{count}} Signal",
+    "signals_other": "{{count}} Signale",
+    "codebooks_one": "{{count}} Codebuch",
+    "codebooks_other": "{{count}} Codebücher",
+    "tags_one": "{{count}} Tag",
+    "tags_other": "{{count}} Tags"
+  },
   "search": {
     "ariaLabel": "Zitate durchsuchen",
     "placeholder": "Zitate filtern…",

@@ -290,6 +290,10 @@ block third-party app authorisation.
 9. **Scope reuses starred/filter** — `quote_ids` + `is_starred`, no new machinery.
 10. **Background job**, not synchronous (10–30s export).
 11. **Document Miro as sub-processor** — data leaves the machine.
+12. **Video links (opt-in):** stickies deep-link to the _original recording at a
+    timecode_, not per-quote clips (dozens of quotes, ~5 clips ever). Bristlenose
+    references a user-supplied base location; never hosts/moves video. Place
+    videos first, then make the board; v1 never updates an existing board's links.
 
 ---
 
@@ -308,13 +312,13 @@ block third-party app authorisation.
 
 ---
 
-## Enhancement: clip links in stickies
+## Enhancement: video links in stickies
 
-The obvious win — each quote sticky links straight to its video clip. Stickies
-support `<a href>`, so the link itself is trivial. The only real question is
-_where the clip already lives_ — and the answer is **wherever the researcher put
-it. Bristlenose references; it never hosts, uploads, or moves participant
-video.**
+The obvious win — each quote sticky links straight to its moment in the
+recording. Stickies support `<a href>`, so the link itself is trivial. Two design
+questions: _what_ we link to, and _where the video already lives_ — and on the
+second, the answer is **wherever the researcher put it. Bristlenose references;
+it never hosts, uploads, or moves participant video.**
 
 **The real workflow.** A researcher makes meaning out of _dozens_ of clips and
 _shares_ maybe five; the handful that matter usually end up embedded in a deck
@@ -333,12 +337,32 @@ Two intents follow:
   control stays the client's, enforced by their drive — which is more
   privacy-respecting than Bristlenose hosting anything.
 
+**Link target — the original recording at a timecode, not per-quote clips.** The
+board carries _dozens_ of quotes; you only ever cut ~5 clips (for the deck). So a
+clip per sticky would mean exporting and placing dozens of files nobody watches.
+Instead, each sticky deep-links into the **full session recording at the quote's
+start timecode** (`{base}/{session-file}#t={start_seconds}`) — the recordings
+already exist and are already placed, so this scales to every sticky with zero
+export. Clips stay a _separate_ feature for the curated few. _Verify per host:_
+the `#t=` media fragment works for raw file URLs in browsers; Drive / OneDrive /
+Stream have their own start-time params and can be flaky.
+
+**Opt-in, not on by default.** Default is timecode-as-text (no links, zero
+config). The configure step gets a **"Link stickies to video"** toggle; when on,
+it reveals a "where are the videos?" base-location field.
+
+**Nothing to "remember" about an export.** We make no clips, so there's no clip
+location to track. We already know session→original-filename from ingest; the
+only missing piece is _where the shareable copies live_, which the user supplies
+as the base location at export time. We may remember the last-used base per
+project as a convenience — but since v1 makes a new board per export and never
+updates an existing one, that's a nicety, not state we depend on.
+
 **Sequencing discipline (the v1 rule):** put the videos in the right place
-_first_, then generate the board. Bristlenose constructs per-clip links at
-board-creation time from the location you give it (a base folder link / path) +
-the clip filename convention. **v1 does not update links in an already-made
-board** — consistent with "new board per export, never modify existing boards."
-If the videos move, you make a new board.
+_first_, then generate the board. Links are constructed at board-creation time.
+**v1 does not update links in an already-made board** — consistent with "new
+board per export, never modify existing boards." If the videos move, make a new
+board.
 
 **Bristlenose doesn't gatekeep this.** The researcher already knows — from the
 client contract, the team's culture, and the infosec rules they work under — what

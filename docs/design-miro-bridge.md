@@ -290,10 +290,12 @@ block third-party app authorisation.
 9. **Scope reuses starred/filter** — `quote_ids` + `is_starred`, no new machinery.
 10. **Background job**, not synchronous (10–30s export).
 11. **Document Miro as sub-processor** — data leaves the machine.
-12. **Video links (opt-in):** stickies deep-link to the _original recording at a
-    timecode_, not per-quote clips (dozens of quotes, ~5 clips ever). Bristlenose
-    references a user-supplied base location; never hosts/moves video. Place
-    videos first, then make the board; v1 never updates an existing board's links.
+12. **Clip links (opt-in):** shared stickies link to _exported, snipped-out
+    clips_ of the curated/starred quotes — never to the original recording at a
+    timecode (which would expose the whole tape). The clip is the researcher's
+    disclosure boundary: raw video stays proprietary, the interpretation is the
+    value, "no you can't have the whole video." Export clips → place them → make
+    the board; v1 never updates an existing board's links.
 
 ---
 
@@ -312,66 +314,58 @@ block third-party app authorisation.
 
 ---
 
-## Enhancement: video links in stickies
+## Enhancement: clip links in stickies
 
-The obvious win — each quote sticky links straight to its moment in the
-recording. Stickies support `<a href>`, so the link itself is trivial. Two design
-questions: _what_ we link to, and _where the video already lives_ — and on the
-second, the answer is **wherever the researcher put it. Bristlenose references;
-it never hosts, uploads, or moves participant video.**
+The obvious win — each _shared_ sticky links to a short exported **clip**: the
+curated, snipped-out moment, never the whole recording. Stickies support
+`<a href>`, so the link is trivial. The whole design is about _what_ we link to.
 
-**The real workflow.** A researcher makes meaning out of _dozens_ of clips and
-_shares_ maybe five; the handful that matter usually end up embedded in a deck
-later, not in Miro. Where the source videos sit is the researcher's / client's
-call, driven by access control — Teams/Zoom recordings land in Google Drive,
-OneDrive, a corporate network drive, local disk, or iCloud, "depends." Modern
-WiFi makes network-drive playback natural.
+**Why clips, not the raw recording — the researcher's value and control.** The
+raw session is proprietary to the researcher. It holds chitchat, unguarded
+humanity, off-the-record asides — things you'd never put in front of the boss or
+the wider team. The clip is the unit of _curated disclosure_: the researcher
+snips exactly the moment worth sharing, nothing before or after, no scrubbing
+into the rest. And the researcher's value _is_ the interpretation, not the tape:
+"I ran 600 minutes of interviews; these ten clips are emblematic of the challenge
+you face; here's my board with the analysis and links to the starred quotes that
+define the issue. No, you can't have the whole video — trust me." Handing over
+raw footage both leaks the honest bits _and_ invites the boss/team to
+re-interpret around the researcher. **The board + the clips + the framing is the
+deliverable.** The raw videos stay in the researcher's archive; the research repo
+holds the _meaning the team chooses to carry forward_, not the unedited source.
 
-Two intents follow:
-- **Private analysis** (local / iCloud / personal Drive): the videos are for the
-  researcher's own sense-making. They don't care about shareable links in Miro —
-  the key clips go to the deck later. Clip-links are optional / for their own use.
-- **Collaboration** (team shared space with access control): the team has already
-  put the videos in a permissioned shared drive. _Those_ are the URLs that belong
-  in the board. Bristlenose embeds links pointing into that location; access
-  control stays the client's, enforced by their drive — which is more
-  privacy-respecting than Bristlenose hosting anything.
+**So: link to exported clips, never to the original at a timecode.** A timecode
+deep-link into the full recording exposes the whole tape (scrub anywhere) — the
+exact opposite of what's wanted. (This reverses an earlier draft of this doc.)
+Bonus: a clip is just a file URL — no `#t=` media-fragment / host start-time
+fragility to chase.
 
-**Link target — the original recording at a timecode, not per-quote clips.** The
-board carries _dozens_ of quotes; you only ever cut ~5 clips (for the deck). So a
-clip per sticky would mean exporting and placing dozens of files nobody watches.
-Instead, each sticky deep-links into the **full session recording at the quote's
-start timecode** (`{base}/{session-file}#t={start_seconds}`) — the recordings
-already exist and are already placed, so this scales to every sticky with zero
-export. Clips stay a _separate_ feature for the curated few. _Verify per host:_
-the `#t=` media fragment works for raw file URLs in browsers; Drive / OneDrive /
-Stream have their own start-time params and can be flaky.
+**Only the curated set gets clips + links.** The board's analysis is dozens of
+(text) stickies; the _linked_ ones are the emblematic handful you chose to share
+— in practice the **starred** quotes. That's why "dozens analysed, ~5 shared"
+holds and clip counts stay small: you export clips only for what you share, and
+the link set _is_ the starred scope.
 
-**Opt-in, not on by default.** Default is timecode-as-text (no links, zero
-config). The configure step gets a **"Link stickies to video"** toggle; when on,
-it reveals a "where are the videos?" base-location field.
+**Flow.** Export clips for the starred quotes (Bristlenose does this locally —
+see `docs/design-export-clips.md`) → place the clips folder wherever the team's
+access rules say it belongs → make the board. Bristlenose knows
+quote→clip-filename (it generated them); the user supplies the **clips-folder base
+location** at board time, and each starred sticky links to `{clips_base}/{clip}`.
+Bristlenose never uploads or hosts — it exports clips locally and references the
+location the user places them in.
 
-**Nothing to "remember" about an export.** We make no clips, so there's no clip
-location to track. We already know session→original-filename from ingest; the
-only missing piece is _where the shareable copies live_, which the user supplies
-as the base location at export time. We may remember the last-used base per
-project as a convenience — but since v1 makes a new board per export and never
-updates an existing one, that's a nicety, not state we depend on.
+**Bristlenose doesn't gatekeep placement.** Where the clips folder goes and who
+may see it is the researcher's call — governed by their client contract, team
+culture, and infosec rules (the footage came off Zoom in the first place; they
+already know what's allowed). We don't second-guess a professional's governance;
+we link to the location they point us at.
 
-**Sequencing discipline (the v1 rule):** put the videos in the right place
-_first_, then generate the board. Links are constructed at board-creation time.
-**v1 does not update links in an already-made board** — consistent with "new
-board per export, never modify existing boards." If the videos move, make a new
-board.
-
-**Bristlenose doesn't gatekeep this.** The researcher already knows — from the
-client contract, the team's culture, and the infosec rules they work under — what
-may and may not be done with these recordings, which came off Zoom in the first
-place. Our job isn't to second-guess a professional's governance; it's to link to
-the location they point us at. We never host or move the video — placement and
-permissions are theirs, and Bristlenose never becomes a hosting sub-processor.
-Default stays timecode-as-text — no links, zero config — for when clip links
-aren't wanted.
+**Opt-in + sequencing (the v1 rule).** Default is timecode-as-text — no links,
+zero config. A **"Link starred quotes to clips"** toggle reveals the
+clips-folder base field (which implies you've already exported and placed the
+clips). Links are built at board-creation time; **v1 never updates an
+already-made board** — new board per export. If the clips move, make a new board.
+Nothing to "remember" beyond, optionally, the last-used base as a convenience.
 
 ## Open questions
 

@@ -34,6 +34,12 @@
     "noResults": "결과 없음",
     "error": "오류"
   },
+  "titlebar": {
+    "quotes_other": "{{count}}\uac1c\u00a0\uc778\uc6a9\ubb38",
+    "signals_other": "{{count}}\uac1c\u00a0\uc2dc\uadf8\ub110",
+    "codebooks_other": "{{count}}\uac1c\u00a0\ucf54\ub4dc\ubd81",
+    "tags_other": "{{count}}\uac1c\u00a0\ud0dc\uadf8"
+  },
   "search": {
     "ariaLabel": "인용문 검색",
     "placeholder": "인용문 필터…",

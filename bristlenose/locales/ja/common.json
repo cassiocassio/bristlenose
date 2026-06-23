@@ -42,6 +42,12 @@
     "participant_one": "{{count}} 名の参加者",
     "participant_other": "{{count}} 名の参加者"
   },
+  "titlebar": {
+    "quotes_other": "{{count}}\u00a0\u767a\u8a00",
+    "signals_other": "{{count}}\u00a0\u30b7\u30b0\u30ca\u30eb",
+    "codebooks_other": "{{count}}\u00a0\u30b3\u30fc\u30c9\u30d6\u30c3\u30af",
+    "tags_other": "{{count}}\u00a0\u30bf\u30b0"
+  },
   "search": {
     "ariaLabel": "発言を検索",
     "placeholder": "発言をフィルタ…",

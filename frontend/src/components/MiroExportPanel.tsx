@@ -119,9 +119,17 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
     try {
       const { url } = await getMiroAuthUrl();
       window.open(url, "_blank", "noopener,width=600,height=760");
-      // Poll for the callback to store the token.
+      // Poll for the callback to store the token — capped so it can't spin
+      // forever if the user dismisses the consent window.
       stopPoll();
+      let attempts = 0;
       pollRef.current = window.setInterval(async () => {
+        attempts += 1;
+        if (attempts > 60) {
+          stopPoll();
+          setError("Didn't hear back from Miro. Try again, or paste a token.");
+          return;
+        }
         try {
           const s = await getMiroStatus();
           if (s.connected) {
@@ -129,7 +137,7 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
             setView("configure");
           }
         } catch {
-          /* keep polling */
+          /* transient; keep polling until the cap */
         }
       }, 2000);
     } catch {
@@ -139,9 +147,12 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
 
   const handleDisconnect = useCallback(async () => {
     setBusy(true);
+    setError(null);
     try {
       await postMiroDisconnect();
       setView("connect");
+    } catch {
+      setError("Couldn't disconnect. Try again.");
     } finally {
       setBusy(false);
     }

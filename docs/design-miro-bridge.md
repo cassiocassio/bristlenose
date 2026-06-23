@@ -212,8 +212,10 @@ The hard-won constraints. Build against these.
 - **Order:** sections (by `display_order`) then themes — same as the Quotes page.
 - **Within a column:** session→time (`session_id` natural sort, then
   `start_timecode`).
-- **Scope:** `all` (non-hidden) / `starred only` / `this section` — reuses the
-  existing `export_core` `quote_ids` selection and `QuoteState.is_starred`.
+- **Scope:** whatever the current view resolves to — `all` (non-hidden),
+  `starred`, a tag slice, or `this section`. Reuses the existing `export_core`
+  `quote_ids` selection (starred / tag filter / hidden-exclusion all collapse to
+  a quote-id set).
 - **Colour:** sentiment by default (Bristlenose's 7 sentiments → Miro's 16 named
   colours); participant/theme optional.
 
@@ -290,9 +292,12 @@ block third-party app authorisation.
 9. **Scope reuses starred/filter** — `quote_ids` + `is_starred`, no new machinery.
 10. **Background job**, not synchronous (10–30s export).
 11. **Document Miro as sub-processor** — data leaves the machine.
-12. **Clip links (opt-in):** shared stickies link to _exported, snipped-out
-    clips_ of the curated/starred quotes — never to the original recording at a
-    timecode (which would expose the whole tape). The clip is the researcher's
+12. **Clip links (opt-in):** linked stickies point to _exported, snipped-out
+    clips_ of the quotes on the board — never to the original recording at a
+    timecode (which would expose the whole tape). **The board's contents are the
+    disclosure boundary**, curated by whatever mechanism (star / hide / tag slice
+    / section / all) — Miro consumers reach only those clips, not the video
+    between them or what didn't make the cut. The clip is the researcher's
     disclosure boundary: raw video stays proprietary, the interpretation is the
     value, "no you can't have the whole video." Export clips → place them → make
     the board; v1 never updates an existing board's links.
@@ -340,19 +345,34 @@ exact opposite of what's wanted. (This reverses an earlier draft of this doc.)
 Bonus: a clip is just a file URL — no `#t=` media-fragment / host start-time
 fragility to chase.
 
-**Only the curated set gets clips + links.** The board's analysis is dozens of
-(text) stickies; the _linked_ ones are the emblematic handful you chose to share
-— in practice the **starred** quotes. That's why "dozens analysed, ~5 shared"
-holds and clip counts stay small: you export clips only for what you share, and
-the link set _is_ the starred scope.
+**The board's contents are the disclosure boundary — by whatever mechanism.**
+Which quotes land on the board is the researcher's curation, and it's
+mechanism-agnostic: starring, hiding, a tag slice ("pain from onboarding"), a
+section, or all of them. Whatever the board ends up showing, the clips linked
+from Miro are _exactly those quotes — and nothing between them_. The researcher
+might have exported 1 or 1,000 clips into their own archive; what's reachable
+from Miro is only the set they chose to put on the board. That's the whole point:
+Miro consumers get the chosen moments, not the connective tissue, not the quotes
+that didn't make the cut, not the raw tape. The clip count stays small because
+you only link what's on the board, not because "starred" is special.
 
-**Flow.** Export clips for the starred quotes (Bristlenose does this locally —
-see `docs/design-export-clips.md`) → place the clips folder wherever the team's
-access rules say it belongs → make the board. Bristlenose knows
-quote→clip-filename (it generated them); the user supplies the **clips-folder base
-location** at board time, and each starred sticky links to `{clips_base}/{clip}`.
-Bristlenose never uploads or hosts — it exports clips locally and references the
-location the user places them in.
+**Flow.** Curate the board's quote set (any mechanism) → export clips for those
+quotes (Bristlenose does this locally — see `docs/design-export-clips.md`) →
+place the clips folder wherever the team's access rules say it belongs → make the
+board. Bristlenose knows quote→clip-filename (it generated them); the user
+supplies the **clips-folder base location** at board time, and each linked sticky
+points to `{clips_base}/{clip}`. Bristlenose never uploads or hosts — it exports
+clips locally and references the location the user places them in.
+
+**Links are only _live_ with team-accessible, stable URLs.** A clip link works
+for the team only if the clips sit at permanent, permissioned URLs — a shared
+Drive / OneDrive / SharePoint folder where access is controlled by team
+membership and the file IDs don't expire. That's a common corporate setup, so
+it's a fair expectation, not a blocker. If the clips stay local/private, the
+links resolve only for the author — which is fine, because that mode isn't about
+sharing (the key clips go to the deck instead). Bristlenose builds the link from
+the base the user gives it; whether that base is genuinely team-reachable is the
+researcher's setup to get right.
 
 **Bristlenose doesn't gatekeep placement.** Where the clips folder goes and who
 may see it is the researcher's call — governed by their client contract, team
@@ -361,9 +381,9 @@ already know what's allowed). We don't second-guess a professional's governance;
 we link to the location they point us at.
 
 **Opt-in + sequencing (the v1 rule).** Default is timecode-as-text — no links,
-zero config. A **"Link starred quotes to clips"** toggle reveals the
-clips-folder base field (which implies you've already exported and placed the
-clips). Links are built at board-creation time; **v1 never updates an
+zero config. A **"Link quotes to clips"** toggle reveals the clips-folder base
+field (which implies you've already exported and placed the clips). Links are
+built at board-creation time; **v1 never updates an
 already-made board** — new board per export. If the clips move, make a new board.
 Nothing to "remember" beyond, optionally, the last-used base as a convenience.
 

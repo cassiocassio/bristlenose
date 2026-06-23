@@ -13,10 +13,11 @@ import AppKit
 /// tree (lenses group · Projects group · folders) with source-list selection,
 /// lens rows that fire `switchToTab`, folder expand/collapse, the rich cell
 /// content (activity ring · copy progress · subtitle precedence), internal
-/// project reorder (the `DropRouting` apocalypse fix), and Finder folder-of-videos
-/// import onto root / a folder / a project (routed to ContentView's drop handlers).
-/// The diagnostic popover, context menus, and inline rename are the remaining work
-/// — see the QA / TODO notes.
+/// project reorder (the `DropRouting` apocalypse fix), Finder folder-of-videos
+/// import onto root / a folder / a project (routed to ContentView's drop handlers),
+/// the hover-× run/copy cancel, and the failure-glyph → diagnostic popover. The
+/// cell port (Phases 0–4) is complete; the controller track — context menu, inline
+/// rename, icon-picker popover — is the remaining work. See the QA / TODO notes.
 /// Where a Finder folder-of-videos drop landed in the outline. Routes to the
 /// existing substrate-independent `ContentView` handlers (drop = analyse-unless-
 /// done): `.root` → new project at root, `.folder` → new project inside it,
@@ -27,6 +28,16 @@ enum SidebarExternalDrop: Equatable {
     case root
     case folder(UUID)
     case project(UUID)
+}
+
+/// A clickable failure/partial subtitle glyph that opens the diagnostic popover
+/// anchored to itself. Carries the project id so the controller's action resolves
+/// the project + state. `cantFind` ("missing") glyphs are NOT this — that glyph is a
+/// Locate affordance, rendered as a static image.
+private final class DiagnosticGlyphButton: NSButton {
+    var projectID: UUID?
+    // Clickable inline chrome → pointing hand on hover (native idiom, no underline).
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
 }
 
 struct ProjectSidebarOutline: NSViewControllerRepresentable {
@@ -114,6 +125,14 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// Re-entrancy guard (spec §2.5): suppress the selection callback while we
     /// apply selection programmatically, so `selectRowIndexes` doesn't echo back.
     private var isApplyingProgrammatic = false
+
+    /// The open diagnostic popover (failure glyph → `ProjectDiagnosticPopover`). Held
+    /// so a second glyph click closes the prior one. Anchored to the *outline view*
+    /// (not the per-cell button), so a progress-tick `reloadData` — which rebuilds
+    /// cells but keeps the outline view in the window — doesn't snap it shut. (A row
+    /// moving under it via a structural change is the rare residual; transient
+    /// dismissal covers it. The §2.5 targeted-`reloadItem` contract is the full fix.)
+    private var diagnosticPopover: NSPopover?
 
     /// The current mode/lens. Drives which lens row is genuinely selected (so the
     /// table draws its capsule) — stored on each `update`. Mode, not selection (§3.1).
@@ -542,9 +561,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 return iconCell(symbol: symbol, text: project.name, trailing: count)
             }
             let prefix = subtitlePrefixGlyph(for: variant, availability: project.availability)
+            let diagnosticsID = isDiagnosticVariant(variant) ? id : nil
             return projectTwoLineCell(symbol: symbol, name: project.name, count: count,
                                       subtitle: subtitle, available: project.availability.isReady,
-                                      prefixGlyph: prefix, rightSlot: cellRightSlot(for: project))
+                                      prefixGlyph: prefix, diagnosticsProjectID: diagnosticsID,
+                                      rightSlot: cellRightSlot(for: project))
         }
     }
 
@@ -667,6 +688,38 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
     }
 
+    /// Whether this variant's prefix glyph is a clickable *diagnostic* glyph
+    /// (failure / partial → opens the popover), vs a static cantFind/locate glyph.
+    private func isDiagnosticVariant(_ variant: SubtitleVariant) -> Bool {
+        switch variant {
+        case .failed, .failedDiagnostic, .completedPartial: return true
+        default: return false
+        }
+    }
+
+    /// Present the read-only diagnostic popover for `sender`'s project (status
+    /// headline + per-stage breakdown + Show Log / Copy), mirroring `ProjectRow`'s
+    /// failure-glyph affordance. Anchored to the OUTLINE VIEW at the glyph's frame —
+    /// not the per-cell button — so a progress-tick `reloadData` (which rebuilds
+    /// cells but keeps the outline view) doesn't dismiss it.
+    @objc private func diagnosticGlyphClicked(_ sender: DiagnosticGlyphButton) {
+        guard let id = sender.projectID,
+              let project = projectIndex?.projects.first(where: { $0.id == id }),
+              let state = pipelineRunner?.state[id],
+              let liveData, let i18n else { return }
+        diagnosticPopover?.close()
+        let popover = NSPopover()
+        popover.behavior = .transient
+        let content = ProjectDiagnosticPopover(project: project, state: state, liveData: liveData)
+            .environmentObject(i18n)
+            .padding(16)
+            .frame(width: 360, height: 320)
+        popover.contentViewController = NSHostingController(rootView: content)
+        diagnosticPopover = popover
+        let anchor = sender.convert(sender.bounds, to: outlineView)
+        popover.show(relativeTo: anchor, of: outlineView, preferredEdge: .maxY)
+    }
+
     /// What the subtitle-right slot shows, by `ProjectRow.subtitleRightSlot`'s
     /// precedence (`:327-360`): run activity > in-flight copy > iCloud glyph > empty.
     /// `onStop` (Phase 4) is the hover-× cancel — run cancel / copy cancel; nil
@@ -716,6 +769,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     private func projectTwoLineCell(symbol: String, name: String, count: String?,
                                     subtitle: String, available: Bool,
                                     prefixGlyph: (symbol: String, color: NSColor)?,
+                                    diagnosticsProjectID: UUID?,
                                     rightSlot: RightSlot) -> NSTableCellView {
         let cell = NSTableCellView()
         let imageView = NSImageView()
@@ -759,12 +813,30 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         ]
 
         // Subtitle leading — after the prefix glyph (cantFind ⚠/❓, failure/partial)
-        // when present, else aligned with the name. Failure-glyph clickability is Phase 4.
+        // when present, else aligned with the name. A failure/partial glyph
+        // (`diagnosticsProjectID != nil`) is a clickable button → diagnostic popover;
+        // cantFind stays a static image (its action is Locate, a separate door).
         if let prefixGlyph {
-            let glyph = NSImageView()
-            glyph.image = NSImage(systemSymbolName: prefixGlyph.symbol, accessibilityDescription: nil)
-            glyph.symbolConfiguration = ProjectCellSpec.subtitleGlyphConfig
-            glyph.contentTintColor = prefixGlyph.color
+            let glyphImage = NSImage(systemSymbolName: prefixGlyph.symbol, accessibilityDescription: nil)?
+                .withSymbolConfiguration(ProjectCellSpec.subtitleGlyphConfig)
+            let glyph: NSView
+            if let diagnosticsProjectID {
+                let button = DiagnosticGlyphButton(image: glyphImage ?? NSImage(),
+                                                   target: self,
+                                                   action: #selector(diagnosticGlyphClicked(_:)))
+                button.projectID = diagnosticsProjectID
+                button.isBordered = false
+                button.bezelStyle = .regularSquare
+                button.imagePosition = .imageOnly
+                button.contentTintColor = prefixGlyph.color
+                button.setAccessibilityLabel(i18n?.t("desktop.menu.project.showDiagnostics"))
+                glyph = button
+            } else {
+                let imageView = NSImageView()
+                imageView.image = glyphImage
+                imageView.contentTintColor = prefixGlyph.color
+                glyph = imageView
+            }
             glyph.translatesAutoresizingMaskIntoConstraints = false
             glyph.setContentHuggingPriority(.required, for: .horizontal)
             glyph.setContentCompressionResistancePriority(.required, for: .horizontal)

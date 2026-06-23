@@ -1467,6 +1467,17 @@ struct ContentView: View {
                     case .project(let id):    handleDropOnProject(id: id, urls: urls)
                     }
                 },
+                onLocate: { id in
+                    if let p = projectIndex.projects.first(where: { $0.id == id }) { locateProject(p) }
+                },
+                onShowInFinder: { id in
+                    if let p = projectIndex.projects.first(where: { $0.id == id }) { revealInFinder(p) }
+                },
+                canShowInFinder: { id in
+                    projectIndex.projects.first(where: { $0.id == id }).map(canRevealInFinder) ?? false
+                },
+                onRemoveProject: { id in removeFromSidebarContextMenu(targetingProject: id) },
+                onRemoveFolder: { id in deleteFromContextMenu(targetingFolder: id) },
                 pipelineRunner: pipelineRunner,
                 liveData: pipelineRunner.liveData,
                 copyMachinery: copyMachinery

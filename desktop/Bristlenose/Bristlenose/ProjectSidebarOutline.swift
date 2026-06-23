@@ -15,9 +15,11 @@ import AppKit
 /// content (activity ring · copy progress · subtitle precedence), internal
 /// project reorder (the `DropRouting` apocalypse fix), Finder folder-of-videos
 /// import onto root / a folder / a project (routed to ContentView's drop handlers),
-/// the hover-× run/copy cancel, and the failure-glyph → diagnostic popover. The
-/// cell port (Phases 0–4) is complete; the controller track — context menu, inline
-/// rename, icon-picker popover — is the remaining work. See the QA / TODO notes.
+/// the hover-× run/copy cancel, the failure-glyph → diagnostic popover, the
+/// right-click context menu (project + folder, ports `ProjectRow`/`FolderRow`
+/// `.contextMenu`), and the Choose-Icon popover. The cell port (Phases 0–4) is
+/// complete; **inline rename** (cell-edit + reload-guard) is the one remaining
+/// controller-track item — the context-menu "Rename" lands with it. See QA / TODO.
 /// Where a Finder folder-of-videos drop landed in the outline. Routes to the
 /// existing substrate-independent `ContentView` handlers (drop = analyse-unless-
 /// done): `.root` → new project at root, `.folder` → new project inside it,
@@ -67,6 +69,14 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// existing `ContentView` drop handlers. Internal project-reorder drags are
     /// handled entirely inside the controller and never reach this.
     let onExternalDrop: (SidebarExternalDrop, [URL]) -> Void
+    /// Right-click context-menu actions that live in `ContentView` (the controller
+    /// owns the in-`projectIndex` ones — rename / move / icon / cancel — directly).
+    /// Mirror the SwiftUI `ProjectRow`/`FolderRow` `.contextMenu` items.
+    let onLocate: (UUID) -> Void
+    let onShowInFinder: (UUID) -> Void
+    let canShowInFinder: (UUID) -> Bool
+    let onRemoveProject: (UUID) -> Void
+    let onRemoveFolder: (UUID) -> Void
     /// Live per-project run/copy data for the rich cell. `liveData` is
     /// `@ObservedObject` (Phase 3) so high-frequency progress ticks (ring fraction /
     /// ETA) re-render this representable → `updateNSViewController` → `reloadData`,
@@ -101,6 +111,11 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         }
         controller.onActivateLens = onActivateLens
         controller.onExternalDrop = onExternalDrop
+        controller.onLocate = onLocate
+        controller.onShowInFinder = onShowInFinder
+        controller.canShowInFinder = canShowInFinder
+        controller.onRemoveProject = onRemoveProject
+        controller.onRemoveFolder = onRemoveFolder
         controller.update(
             roots: OutlineTree.build(
                 lenses: lenses,
@@ -116,7 +131,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
 
 /// Owns the `NSScrollView` + `NSOutlineView` and acts as data source + delegate.
 @MainActor
-final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource, NSOutlineViewDelegate, NSPopoverDelegate {
+final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource, NSOutlineViewDelegate, NSPopoverDelegate, NSMenuDelegate {
     let outlineView = NSOutlineView()
     private let scrollView = NSScrollView()
     private var roots: [OutlineNode] = []
@@ -136,18 +151,28 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     var onSelectionChange: (Set<SidebarSelection>) -> Void = { _ in }
     var onActivateLens: (Tab) -> Void = { _ in }
     var onExternalDrop: (SidebarExternalDrop, [URL]) -> Void = { _, _ in }
+    var onLocate: (UUID) -> Void = { _ in }
+    var onShowInFinder: (UUID) -> Void = { _ in }
+    var canShowInFinder: (UUID) -> Bool = { _ in false }
+    var onRemoveProject: (UUID) -> Void = { _ in }
+    var onRemoveFolder: (UUID) -> Void = { _ in }
 
     /// Re-entrancy guard (spec §2.5): suppress the selection callback while we
     /// apply selection programmatically, so `selectRowIndexes` doesn't echo back.
     private var isApplyingProgrammatic = false
 
-    /// The open diagnostic popover (failure glyph → `ProjectDiagnosticPopover`). Held
-    /// so a second glyph click closes the prior one. Anchored to the *outline view*
-    /// (not the per-cell button), so a progress-tick `reloadData` — which rebuilds
-    /// cells but keeps the outline view in the window — doesn't snap it shut. (A row
-    /// moving under it via a structural change is the rare residual; transient
-    /// dismissal covers it. The §2.5 targeted-`reloadItem` contract is the full fix.)
-    private var diagnosticPopover: NSPopover?
+    /// The open row popover — diagnostic (failure glyph / menu) or icon-picker
+    /// (menu). One at a time; held so opening another closes the prior. Anchored to
+    /// the *outline view* (not the per-cell view), so a progress-tick `reloadData` —
+    /// which rebuilds cells but keeps the outline view in the window — doesn't snap it
+    /// shut. (A row moving under it via a structural change is the rare residual;
+    /// transient dismissal covers it. The §2.5 targeted-`reloadItem` is the full fix.)
+    private var activePopover: NSPopover?
+
+    /// The project/folder id of the right-clicked row, captured in `menuNeedsUpdate`
+    /// and read by the menu actions (stable while the menu is open — you can't
+    /// right-click a new row while a menu is up).
+    private var menuClickedNodeID: UUID?
 
     /// The current mode/lens. Drives which lens row is genuinely selected (so the
     /// table draws its capsule) — stored on each `update`. Mode, not selection (§3.1).
@@ -192,6 +217,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // URL — so the two never collide.
         outlineView.registerForDraggedTypes([Self.projectDragType, .fileURL])
         outlineView.setDraggingSourceOperationMask(.move, forLocal: true)
+        // Right-click context menu — rebuilt per click for the `clickedRow`'s node
+        // (`menuNeedsUpdate`). Ports the SwiftUI `ProjectRow`/`FolderRow` `.contextMenu`.
+        let contextMenu = NSMenu()
+        contextMenu.delegate = self
+        contextMenu.autoenablesItems = false   // honour our explicit `isEnabled`
+        outlineView.menu = contextMenu
 
         scrollView.documentView = outlineView
         scrollView.hasVerticalScroller = true
@@ -694,37 +725,208 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
     }
 
-    /// Present the read-only diagnostic popover for `sender`'s project (status
-    /// headline + per-stage breakdown + Show Log / Copy), mirroring `ProjectRow`'s
-    /// failure-glyph affordance. Anchored to the OUTLINE VIEW at the glyph's frame —
-    /// not the per-cell button — so a progress-tick `reloadData` (which rebuilds
-    /// cells but keeps the outline view) doesn't dismiss it.
+    /// The subtitle failure glyph → diagnostic popover, anchored to the glyph's frame.
     @objc private func diagnosticGlyphClicked(_ sender: DiagnosticGlyphButton) {
-        guard let id = sender.projectID,
-              let project = projectIndex?.projects.first(where: { $0.id == id }),
+        guard let id = sender.projectID else { return }
+        presentDiagnosticPopover(projectID: id, anchorRect: sender.convert(sender.bounds, to: outlineView))
+    }
+
+    /// Build + show the read-only diagnostic popover (status headline + per-stage
+    /// breakdown + Show Log / Copy), mirroring `ProjectRow`'s failure-glyph affordance.
+    /// `rect` is in outline-view coords (the glyph frame for a click, the row frame
+    /// for the context-menu item).
+    private func presentDiagnosticPopover(projectID id: UUID, anchorRect rect: NSRect) {
+        guard let project = projectIndex?.projects.first(where: { $0.id == id }),
               let state = pipelineRunner?.state[id],
               let liveData, let i18n else { return }
-        diagnosticPopover?.close()
-        let popover = NSPopover()
-        popover.behavior = .transient
-        popover.delegate = self
         let content = ProjectDiagnosticPopover(project: project, state: state, liveData: liveData)
             .environmentObject(i18n)
             .padding(16)
             .frame(width: 360, height: 320)
-        popover.contentViewController = NSHostingController(rootView: content)
-        diagnosticPopover = popover
-        let anchor = sender.convert(sender.bounds, to: outlineView)
-        popover.show(relativeTo: anchor, of: outlineView, preferredEdge: .maxY)
+        showRowPopover(NSHostingController(rootView: content), at: rect)
     }
 
-    /// Drop the strong `diagnosticPopover` ref on transient dismissal, so the
-    /// `NSHostingController` (which observes `liveData` at ~1 Hz) is torn down at
-    /// close rather than lingering as a stale progress-observer until the next
-    /// glyph click. (Review F30 — code-review/gruber/perf.)
-    func popoverDidClose(_ notification: Notification) {
-        diagnosticPopover = nil
+    /// Build + show the icon-picker popover (context-menu "Choose Icon…"); a pick
+    /// writes through `projectIndex.setIcon` and dismisses.
+    private func presentIconPopover(projectID id: UUID, anchorRect rect: NSRect) {
+        guard let project = projectIndex?.projects.first(where: { $0.id == id }),
+              let projectIndex else { return }
+        let content = IconPickerPopover(selectedIcon: project.icon) { [weak self] icon in
+            projectIndex.setIcon(id: id, icon: icon)
+            self?.activePopover?.close()
+        }
+        showRowPopover(NSHostingController(rootView: content), at: rect)
     }
+
+    /// Show a popover anchored to the OUTLINE VIEW at `rect` (survives the per-tick
+    /// `reloadData`), replacing any currently-open one.
+    private func showRowPopover(_ content: NSViewController, at rect: NSRect) {
+        activePopover?.close()
+        let popover = NSPopover()
+        popover.behavior = .transient
+        popover.delegate = self
+        popover.contentViewController = content
+        activePopover = popover
+        popover.show(relativeTo: rect, of: outlineView, preferredEdge: .maxY)
+    }
+
+    /// Drop the strong `activePopover` ref on transient dismissal, so the hosting
+    /// controller (the diagnostic one observes `liveData` at ~1 Hz) is torn down at
+    /// close rather than lingering until the next open. (Review F30.)
+    func popoverDidClose(_ notification: Notification) {
+        activePopover = nil
+    }
+
+    // MARK: - Context menu (right-click) — ports ProjectRow / FolderRow `.contextMenu`
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.removeAllItems()
+        let row = outlineView.clickedRow
+        guard row >= 0, let node = outlineView.item(atRow: row) as? OutlineNode else {
+            menuClickedNodeID = nil
+            return
+        }
+        switch node.kind {
+        case .project(let id): menuClickedNodeID = id; buildProjectMenu(menu, projectID: id)
+        case .folder(let id):  menuClickedNodeID = id; buildFolderMenu(menu, folderID: id)
+        case .group, .lens:    menuClickedNodeID = nil   // no menu on group headers / lens rows
+        }
+    }
+
+    private func menuItem(_ key: String, _ action: Selector, enabled: Bool = true) -> NSMenuItem {
+        let mi = NSMenuItem(title: i18n?.t(key) ?? key, action: action, keyEquivalent: "")
+        mi.target = self
+        mi.isEnabled = enabled
+        return mi
+    }
+
+    private func buildProjectMenu(_ menu: NSMenu, projectID id: UUID) {
+        let state = pipelineRunner?.state[id]
+        let availability = projectIndex?.projects.first { $0.id == id }?.availability
+
+        // Run / copy lifecycle first (ProjectRow order). Hidden, not dimmed, when N/A.
+        if isRunningOrQueued(state) {
+            menu.addItem(menuItem("desktop.menu.project.stopAnalysis", #selector(menuStopAnalysis(_:))))
+            menu.addItem(.separator())
+        }
+        if let f = copyMachinery?.inFlight, f.projectID == id, f.phase == .copying {
+            menu.addItem(menuItem("desktop.menu.project.cancelCopy", #selector(menuCancelCopy(_:))))
+            menu.addItem(.separator())
+        }
+        if isFailureState(state) {
+            menu.addItem(menuItem("desktop.menu.project.showDiagnostics", #selector(menuShowDiagnostics(_:))))
+            menu.addItem(.separator())
+        }
+        if case .cantFind = availability {
+            menu.addItem(menuItem("desktop.chrome.locate", #selector(menuLocate(_:))))
+            menu.addItem(.separator())
+        }
+        menu.addItem(menuItem("desktop.menu.project.showInFinder", #selector(menuShowInFinder(_:)),
+                              enabled: canShowInFinder(id)))
+        menu.addItem(menuItem("desktop.menu.project.chooseIcon", #selector(menuChooseIcon(_:))))
+
+        // "Move to" → submenu (No Folder + each folder), mirroring ProjectRow.
+        if let folders = projectIndex?.folders, !folders.isEmpty {
+            let project = projectIndex?.projects.first { $0.id == id }
+            let moveItem = NSMenuItem(
+                title: i18n?.t("desktop.menu.project.moveTo") ?? "Move to", action: nil, keyEquivalent: "")
+            let sub = NSMenu()
+            sub.autoenablesItems = false
+            let noFolder = menuItem("desktop.menu.project.noFolder", #selector(menuMoveToRoot(_:)),
+                                    enabled: project?.folderId != nil)
+            sub.addItem(noFolder)
+            sub.addItem(.separator())
+            for folder in folders {
+                let fi = NSMenuItem(title: folder.name, action: #selector(menuMoveToFolder(_:)), keyEquivalent: "")
+                fi.target = self
+                fi.representedObject = folder.id
+                fi.isEnabled = project?.folderId != folder.id
+                sub.addItem(fi)
+            }
+            moveItem.submenu = sub
+            menu.addItem(moveItem)
+        }
+
+        menu.addItem(.separator())
+        menu.addItem(menuItem("desktop.menu.project.removeFromSidebar", #selector(menuRemoveProject(_:))))
+    }
+
+    private func buildFolderMenu(_ menu: NSMenu, folderID id: UUID) {
+        menu.addItem(menuItem("desktop.menu.folder.archive", #selector(menuNoop(_:)), enabled: false))  // Phase 5
+        menu.addItem(.separator())
+        menu.addItem(menuItem("desktop.menu.folder.delete", #selector(menuRemoveFolder(_:))))
+    }
+
+    private func isRunningOrQueued(_ state: PipelineState?) -> Bool {
+        switch state { case .running, .queued: return true; default: return false }
+    }
+
+    private func isFailureState(_ state: PipelineState?) -> Bool {
+        switch state { case .failed, .failedWithDiagnostic, .completedPartial: return true; default: return false }
+    }
+
+    /// The row rect (outline-view coords) of the project/folder node with `id`, for
+    /// anchoring a popover opened from the context menu. `.zero` if not displayed.
+    private func rowRect(forNodeID id: UUID) -> NSRect {
+        for r in 0..<outlineView.numberOfRows {
+            guard let node = outlineView.item(atRow: r) as? OutlineNode else { continue }
+            switch node.kind {
+            case .project(let pid) where pid == id: return outlineView.rect(ofRow: r)
+            case .folder(let fid) where fid == id:  return outlineView.rect(ofRow: r)
+            default: continue
+            }
+        }
+        return .zero
+    }
+
+    // MARK: - Context-menu actions (read `menuClickedNodeID`)
+
+    @objc private func menuStopAnalysis(_ sender: NSMenuItem) {
+        guard let id = menuClickedNodeID,
+              let project = projectIndex?.projects.first(where: { $0.id == id }) else { return }
+        pipelineRunner?.cancel(project: project)
+    }
+
+    @objc private func menuCancelCopy(_ sender: NSMenuItem) {
+        copyMachinery?.cancel()
+    }
+
+    @objc private func menuShowDiagnostics(_ sender: NSMenuItem) {
+        guard let id = menuClickedNodeID else { return }
+        presentDiagnosticPopover(projectID: id, anchorRect: rowRect(forNodeID: id))
+    }
+
+    @objc private func menuLocate(_ sender: NSMenuItem) {
+        if let id = menuClickedNodeID { onLocate(id) }
+    }
+
+    @objc private func menuShowInFinder(_ sender: NSMenuItem) {
+        if let id = menuClickedNodeID { onShowInFinder(id) }
+    }
+
+    @objc private func menuChooseIcon(_ sender: NSMenuItem) {
+        guard let id = menuClickedNodeID else { return }
+        presentIconPopover(projectID: id, anchorRect: rowRect(forNodeID: id))
+    }
+
+    @objc private func menuMoveToRoot(_ sender: NSMenuItem) {
+        if let id = menuClickedNodeID { projectIndex?.moveProject(projectId: id, toFolder: nil) }
+    }
+
+    @objc private func menuMoveToFolder(_ sender: NSMenuItem) {
+        guard let id = menuClickedNodeID, let folderID = sender.representedObject as? UUID else { return }
+        projectIndex?.moveProject(projectId: id, toFolder: folderID)
+    }
+
+    @objc private func menuRemoveProject(_ sender: NSMenuItem) {
+        if let id = menuClickedNodeID { onRemoveProject(id) }
+    }
+
+    @objc private func menuRemoveFolder(_ sender: NSMenuItem) {
+        if let id = menuClickedNodeID { onRemoveFolder(id) }
+    }
+
+    @objc private func menuNoop(_ sender: NSMenuItem) {}   // disabled Archive (Phase 5)
 
     /// What the subtitle-right slot shows, by `ProjectRow.subtitleRightSlot`'s
     /// precedence (`:327-360`): run activity > in-flight copy > iCloud glyph > empty.

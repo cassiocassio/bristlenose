@@ -48,10 +48,13 @@ def _wrap(text: str, max_chars: int) -> list[str]:
     return lines
 
 
-def _text_svg(x: float, y: float, line: str, *, size: float, weight: str, ink: str) -> str:
+def _text_svg(
+    x: float, y: float, line: str, *, size: float, weight: str, ink: str, italic: bool = False
+) -> str:
+    style = ' font-style="italic"' if italic else ""
     return (
         f'<text x="{x:.1f}" y="{y:.1f}" font-family="Inter, Helvetica, Arial, '
-        f'sans-serif" font-size="{size:.0f}" font-weight="{weight}" fill="{ink}" '
+        f'sans-serif" font-size="{size:.0f}" font-weight="{weight}" fill="{ink}"{style} '
         f'xml:space="preserve">{escape(line)}</text>'
     )
 
@@ -98,9 +101,14 @@ def _sticky_svg(s: Sticky) -> str:
             parts.append(_text_svg(tx, ty, line, size=BODY_FONT, weight="400", ink=BODY_INK))
             ty += BODY_LH
 
+        # Attribution: italic, SAME size/colour as the quote — this mirrors what a
+        # real Miro sticky can render (auto-fit font, no per-span size or colour;
+        # <i> is the only de-emphasis lever the sticky API affords).
         meta = f"— {s.participant_id.upper()} · {_fmt_timecode(s.timecode)}"
         meta_y = s.y + s.height - PAD_IN + 2
-        parts.append(_text_svg(tx, meta_y, meta, size=META_FONT, weight="400", ink=META_INK))
+        parts.append(
+            _text_svg(tx, meta_y, meta, size=BODY_FONT, weight="400", ink=BODY_INK, italic=True)
+        )
 
     parts.append("</g>")
     return "\n".join(parts)

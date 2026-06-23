@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 from layout import layout_board, load_columns
-from render_svg import render_svg
+from render_svg import render_html, render_svg
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
@@ -25,16 +25,19 @@ DEFAULT_OUT = HERE / "sample-board.svg"
 def main() -> None:
     intermediate = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_INTERMEDIATE
     out = Path(sys.argv[2]) if len(sys.argv) > 2 else DEFAULT_OUT
+    out_html = out.with_suffix(".html")
 
     columns = load_columns(intermediate)
     n_quotes = sum(len(c.quotes) for c in columns)
     board = layout_board(columns, title=f"Research board — first draft ({n_quotes} quotes)")
     out.write_text(render_svg(board), encoding="utf-8")
+    out_html.write_text(render_html(board), encoding="utf-8")
 
     print(f"columns: {len(columns)}  ({', '.join(c.label for c in columns)})")
     print(f"quotes:  {n_quotes}")
     print(f"board:   {board.width:.0f} × {board.height:.0f} px")
     print(f"wrote:   {out}")
+    print(f"wrote:   {out_html}  (phone-friendly)")
 
 
 if __name__ == "__main__":

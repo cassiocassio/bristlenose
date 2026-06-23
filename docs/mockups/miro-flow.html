@@ -124,16 +124,33 @@
 
     <!-- 1 entry -->
     <div class="scene">
-      <span class="step-tag">1 · Entry</span>
-      <h3>Same Export menu they already use</h3>
-      <div class="menu">
-        <div class="mi-item">Copy quotes</div>
-        <div class="mi-item">Save as spreadsheet</div>
-        <div class="mi-item">Export report…</div>
-        <div class="sep"></div>
-        <div class="mi-item new">Send to Miro…</div>
+      <span class="step-tag">1 · Entry — the menu encodes the state</span>
+      <h3>The Export popover item changes by connection state</h3>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <div>
+          <div class="faint" style="margin-bottom:6px">Not connected yet</div>
+          <div class="menu">
+            <div class="mi-item">Copy quotes</div>
+            <div class="mi-item">Save as spreadsheet</div>
+            <div class="mi-item">Export report…</div>
+            <div class="sep"></div>
+            <div class="mi-item new">Connect to Miro…</div>
+          </div>
+        </div>
+        <div>
+          <div class="faint" style="margin-bottom:6px">Once connected</div>
+          <div class="menu">
+            <div class="mi-item">Copy quotes</div>
+            <div class="mi-item">Save as spreadsheet</div>
+            <div class="mi-item">Export report…</div>
+            <div class="sep"></div>
+            <div class="mi-item new">Send to Miro board…</div>
+          </div>
+        </div>
       </div>
-      <div class="anno">No new surface to discover — it lives in the dropdown on the Quotes tab.</div>
+      <div class="anno"><strong>Connect to Miro…</strong> (disconnected) routes to consent (step 2–3);
+      <strong>Send to Miro board…</strong> (connected) jumps straight to Configure (step 4). The menu
+      never hides which state you're in.</div>
     </div>
 
     <!-- 2 first-run connect -->

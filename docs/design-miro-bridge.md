@@ -481,6 +481,30 @@ first draft for review, not shippable.
   body) are from the verified REST facts but **unrun** — first real push may
   need a tweak.
 
+### Review findings — deferred (flagged, not fixed tonight)
+A usual-suspects pass (correctness/security/silent-failure/parsimony) ran against
+the slice. Non-contentious fixes applied (see commit "apply non-contentious
+review fixes"). Deferred, needing your call:
+- **OAuth callback auth wiring.** The callback is under `/api` (bearer-gated) and
+  the auth cookie is `SameSite=Strict`, which a browser withholds on the
+  cross-site redirect back from `miro.com` — so OAuth likely 401s today. Fix is a
+  decision: exempt `/api/miro/callback` from bearer auth (rely on `state`) or move
+  the cookie to `SameSite=Lax`. **Not a tonight blocker — paste-token is the
+  path.** Don't change auth posture without review.
+- **OAuth `state` hardening.** In-memory map has no TTL/size cap; `project_id` is
+  captured then discarded (token stored globally). Fine for single-project; revisit
+  with multi-project + the callback decision above.
+- **Egress governance (pre-ship, not pre-play).** Miro export has no anonymise
+  toggle (the HTML export does) and only a one-line consent. Boundary still holds
+  (stickies carry speaker codes, not names). Before leaving experimental: add a
+  redaction option, an explicit consent checkbox, and a `SECURITY.md` Miro
+  sub-processor note.
+- **First-push reshaping.** Miro request bodies (bulk array response, frame/sticky
+  field names, text position centring) are unrun; expect to tweak on first real
+  push. Frontend export error currently shows a generic message and drops the
+  server detail (incl. the partial-board URL) — surfacing it needs `apiPost` to
+  expose the response body.
+
 ### Mac QA (play tonight)
 ```sh
 .venv/bin/python -m pytest tests/test_miro_board.py   # layout engine

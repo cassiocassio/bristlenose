@@ -1,8 +1,15 @@
 # Desktop sidebar — native AppKit source list (`NSOutlineView`)
 
-**Status:** Active · **Alpha / TestFlight** — AppKit becomes the default sidebar (cutover confirmed 22 Jun; supersedes the original Post-TestFlight scoping) · 22 Jun 2026
+**Status:** Active · **Alpha / TestFlight** — AppKit ships behind the opt-in `BristlenoseAppKitSidebar` flag, **default-off** through soak (the SwiftUI `List` is still the live default). The cutover — AppKit → default, SwiftUI path deleted — is the **confirmed direction** (22 Jun, supersedes the original Post-TestFlight scoping) but **not yet done**. · updated 23 Jun 2026
 **Extends / closes:** `design-desktop-nav-toolbar-rearrangement.md` §2.2 (the parked "AppKit `NSOutlineView` rewrite") · the drag-drop "sidebar apocalypse" forensic (commit `7bf0e96`; gitignored handoff notes)
 **Scope:** the macOS desktop **sidebar** — the project list **and** the lens rail (folded into the same `NSOutlineView` as group rows, §3.1). The toolbar (nav/toolbar spec) is untouched. **This is a framework switch, not a redesign:** every existing affordance is rescued verbatim — no UX is rethought.
+
+**Shipped since (23 Jun 2026, `mac-app-layout-reorg`).** The body below predates these commits — its `*.swift:NN` line refs trail (the file grew ~40–130 lines), but the architecture in §2.5 / §3.1 / §6 is still accurate verbatim. What landed:
+
+- **Cell port (Phase 4) complete** — `ProjectRow` ported to an AppKit cell verbatim (`28dae0d`, `52768b1`).
+- **Context menus** (project + folder) shipped via `NSMenuDelegate.menuNeedsUpdate` per `clickedRow` — **not** the speculative `menu(for:)` §2.2/§6 anticipated. Project menu is conditional (Stop Analysis · Cancel Copy · Show Diagnostics · Locate, all state-gated · Show in Finder · Choose Icon · Move to → · Remove from Sidebar); folder menu is **2** items (Archive disabled · Delete). §6's "when menus land" is now closed (`96c31eb`).
+- **Inline rename DEFERRED** — listed below as Phase-A parity, but explicitly not built this pass (`ProjectSidebarOutline.swift` header records the deferral).
+- Failure/partial glyph → clickable `DiagnosticGlyphButton` (opens the diagnostic popover); default project icon `circle.fill` → open `circle` (`4e0c584`); Finder folder-of-videos drops wired via `SidebarExternalDrop` (3 cases — root/folder/project; empty-area folds to root, not a 4th case).
 
 ---
 

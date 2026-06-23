@@ -374,6 +374,15 @@ sharing (the key clips go to the deck instead). Bristlenose builds the link from
 the base the user gives it; whether that base is genuinely team-reachable is the
 researcher's setup to get right.
 
+**In the common case the precondition is already met.** Research wraps up as a
+_delivery bundle_ — the board, the deck, the Copilot/playback meeting summary,
+and the video-clips folder — dropped into the team Google Drive that every member
+(and every day-1 joiner, alongside Slack and Miro) already has. The clips folder
+living there _is_ the team-accessible permissioned store; the Miro board simply
+links into it. So the perm-URL requirement is usually satisfied by default, not
+extra work — the board takes its place in a bundle the team already knows how to
+consume.
+
 **Bristlenose doesn't gatekeep placement.** Where the clips folder goes and who
 may see it is the researcher's call — governed by their client contract, team
 culture, and infosec rules (the footage came off Zoom in the first place; they

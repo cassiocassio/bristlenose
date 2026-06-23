@@ -310,34 +310,44 @@ block third-party app authorisation.
 
 ## Enhancement: clip links in stickies
 
-The obvious win — each quote sticky links straight to its video clip. **Stickies
-support `<a href>`, so the link is trivial.** The hard part is _where the clip
-lives_, because a Miro board is viewed by the whole team from the cloud, not from
-the researcher's laptop.
+The obvious win — each quote sticky links straight to its video clip. Stickies
+support `<a href>`, so the link itself is trivial. The only real question is
+_where the clip already lives_ — and the answer is **wherever the researcher put
+it. Bristlenose references; it never hosts, uploads, or moves participant
+video.**
 
-- **`file://` local disk — effectively no.** The link only resolves on the
-  author's own machine, and browsers block `file://` links clicked from a cloud
-  page (security). Fine for a solo author reviewing their own board; useless for
-  the team. (`localhost:PORT` to the serve server is worse — it dies when the
-  server stops.)
-- **Cloud-hosted clip + shareable link — the real answer.** Bristlenose already
-  exports clips (`docs/design-export-clips.md`); the new piece is getting each
-  clip to a URL the team can open, then embedding `<a href>` in the sticky.
-  - _Low-friction (no second OAuth):_ the researcher uploads the exported clips
-    folder to Google Drive / OneDrive / Dropbox themselves, pastes the **folder
-    share link**, and Bristlenose constructs per-clip URLs from the filename
-    convention. One paste, no new auth dance.
-  - _Full integration (later):_ a Drive/OneDrive API upload step — but that's a
-    _second_ key dance on top of Miro's, so only if demand justifies it.
+**The real workflow.** A researcher makes meaning out of _dozens_ of clips and
+_shares_ maybe five; the handful that matter usually end up embedded in a deck
+later, not in Miro. Where the source videos sit is the researcher's / client's
+call, driven by access control — Teams/Zoom recordings land in Google Drive,
+OneDrive, a corporate network drive, local disk, or iCloud, "depends." Modern
+WiFi makes network-drive playback natural.
 
-**This crosses the local-first boundary.** Uploading participant video (faces,
-voices, names) to a third-party cloud is a real data-governance escalation — a
-deliberate, opt-in, consented step, governed like the Miro upload itself. See
-`docs/methodology/consent-gradient.md`. Default stays timecode-as-text (zero
-config, no upload); clip-links are an explicit opt-in.
+Two intents follow:
+- **Private analysis** (local / iCloud / personal Drive): the videos are for the
+  researcher's own sense-making. They don't care about shareable links in Miro —
+  the key clips go to the deck later. Clip-links are optional / for their own use.
+- **Collaboration** (team shared space with access control): the team has already
+  put the videos in a permissioned shared drive. _Those_ are the URLs that belong
+  in the board. Bristlenose embeds links pointing into that location; access
+  control stays the client's, enforced by their drive — which is more
+  privacy-respecting than Bristlenose hosting anything.
 
-_Open: does Miro REST let us attach/embed an uploaded clip as a board item next
-to the sticky (richer than a text link)? Worth a focused check before building._
+**Sequencing discipline (the v1 rule):** put the videos in the right place
+_first_, then generate the board. Bristlenose constructs per-clip links at
+board-creation time from the location you give it (a base folder link / path) +
+the clip filename convention. **v1 does not update links in an already-made
+board** — consistent with "new board per export, never modify existing boards."
+If the videos move, you make a new board.
+
+**Bristlenose doesn't gatekeep this.** The researcher already knows — from the
+client contract, the team's culture, and the infosec rules they work under — what
+may and may not be done with these recordings, which came off Zoom in the first
+place. Our job isn't to second-guess a professional's governance; it's to link to
+the location they point us at. We never host or move the video — placement and
+permissions are theirs, and Bristlenose never becomes a hosting sub-processor.
+Default stays timecode-as-text — no links, zero config — for when clip links
+aren't wanted.
 
 ## Open questions
 

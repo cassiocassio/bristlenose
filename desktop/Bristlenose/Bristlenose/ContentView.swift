@@ -1325,13 +1325,13 @@ struct ContentView: View {
 
     @ToolbarContentBuilder
     private var toolbarLeading: some ToolbarContent {
-        // Project name / icon intentionally NOT in the toolbar. The chip
-        // previously here sat where the system back affordance lives, which
-        // is the wrong real estate for a per-project title indicator.
-        // `WindowTitleManager` still sets the NSWindow title to the project
-        // name so it shows in Mission Control / window-menu / Cmd+~ switcher.
-        // A correct in-toolbar project surface will return via a separate
-        // design pass — placeholder removed by user request.
+        // Project name + subtitle render NATIVELY — `.navigationTitle` /
+        // `.navigationSubtitle` on the detail view (see `body`), not a toolbar
+        // item (the old chip sat where the system back affordance lives, the
+        // wrong real estate). `.navigationTitle` drives NSWindow.title too, so
+        // Mission Control / window-menu / Cmd+~ still show the project name.
+        // The old `WindowTitleManager` is gone — its forced
+        // `titleVisibility = .hidden` was what had suppressed the subtitle.
 
         // Contextual — Quotes/Codebook/Analysis: left panel toggle
         // The native sidebar toggle (for the project list) is provided by

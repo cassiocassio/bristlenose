@@ -62,7 +62,7 @@
     "folder": {
       "rename": "Renommer le dossier",
       "archive": "Archiver le dossier",
-      "delete": "Supprimer le dossier…"
+      "delete": "Supprimer le dossier"
     },
     "codes": {
       "createCodeGroup": "Créer un groupe de codes",
@@ -158,6 +158,8 @@
     "interviewCount_other": "{{count}} entretiens",
     "unanalysedSubtitle_one": "+1 non analys\u00e9",
     "unanalysedSubtitle_other": "+{{count}} non analys\u00e9s",
+    "titleSessions_one": "{{count}} Entretien",
+    "titleSessions_other": "{{count}} Entretiens",
     "missingSubtitle_one": "1 manquant",
     "missingSubtitle_other": "{{count}} manquants",
     "tooltipWaiting": "{{count}} en attente",

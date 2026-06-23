@@ -103,8 +103,10 @@ experiments/thematic-spike/**/__pycache__/
 # Stray frontend trial-run output (should never live here)
 frontend/trial-runs/
 
-# Per-worktree branch handoff symlink (points into .claude/plans/<branch>.md)
+# Per-worktree branch handoff: the symlink + the local working copy it points at.
+# Canonical home is docs/private/handoffs/<branch>.md (gitignored, backed up); this is a derived copy.
 HANDOFF.md
+.claude/plans/
 
 # Session-handoff sentinels (per-worktree state, not for the repo)
 .claude/setup-incomplete

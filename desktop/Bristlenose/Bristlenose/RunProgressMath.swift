@@ -10,7 +10,14 @@ enum RunProgressMath {
     /// estimate, so it reads "nearly there" rather than a stalled 100%. Real
     /// completion is rendered by replacing the ring with the ready/failure
     /// state — never by this fill reaching 1.0.
-    static let asymptoteCap = 0.97
+    ///
+    /// **0.92, not 0.97** (23 Jun, QA): at 16pt with round line-caps a 0.97 arc
+    /// read as a *closed* circle — the ~3% gap (~11°) was swallowed by the caps,
+    /// so "nearly there, not done" looked like "done." 0.92 opens the gap to ~29°
+    /// so it stays legible. Trade-off accepted: the ring tops out a touch lower
+    /// near the end. (Round caps kept — the gap-visibility comes from the cap, not
+    /// a cap-style change.)
+    static let asymptoteCap = 0.92
 
     /// Monotonic + asymptote clamp. Never runs backwards (`max(previous, …)`)
     /// and never reaches 1.0 (`min(cap, …)`). `raw` may be any value; it is

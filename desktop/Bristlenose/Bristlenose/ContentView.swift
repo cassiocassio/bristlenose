@@ -2,31 +2,6 @@ import SwiftUI
 import UniformTypeIdentifiers
 import os
 
-// MARK: - Window title manager
-
-/// Sets NSWindow.title for Cmd+Tab / Mission Control without using
-/// `.navigationTitle()` on the detail view (which adds a visible toolbar title
-/// item that duplicates the custom icon+name ToolbarItem).
-/// Also hides the title bar text via `titleVisibility = .hidden` as belt-and-
-/// suspenders in case any navigation layer restores it.
-private struct WindowTitleManager: NSViewRepresentable {
-    let title: String
-
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async { Self.apply(title: title, to: view) }
-        return view
-    }
-    func updateNSView(_ view: NSView, context: Context) {
-        DispatchQueue.main.async { Self.apply(title: title, to: view) }
-    }
-    private static func apply(title: String, to view: NSView) {
-        guard let window = view.window else { return }
-        window.title = title
-        window.titleVisibility = .hidden
-    }
-}
-
 // MARK: - Sidebar empty-click deselection monitor
 
 /// Clears the sidebar selection when the user clicks in the empty area below
@@ -139,10 +114,11 @@ struct LocateErrorState: Identifiable {
 /// in embedded mode. The WKWebView is recreated on project switch (via .id)
 /// to get a fresh ephemeral data store per project.
 ///
-/// The toolbar provides three zones:
-/// - Leading: back/forward buttons (Cmd+[/Cmd+])
-/// - Centre: tab segmented control (Cmd+1-5)
-/// - Trailing: project name as window title
+/// The toolbar provides:
+/// - Leading: back/forward buttons (Cmd+[/Cmd+]) + project title (explicit ToolbarItem)
+/// - Trailing: Export menu + per-tab actions; Ollama status pill (.status)
+/// The five tab lenses moved OUT of the toolbar into the sidebar LensRail
+/// (Cmd+1-5 still switch tabs) — see design-desktop-nav-toolbar-rearrangement.md.
 struct ContentView: View {
 
     @EnvironmentObject var serveManager: ServeManager
@@ -194,6 +170,10 @@ struct ContentView: View {
     /// the accent-stroke overlay on the folder row.
     @State private var dropTargetFolderID: UUID?
 
+    /// Whether a Finder drag is hovering the empty-project content pane ("Drag
+    /// interviews here"). Drives the accent-ring drop affordance on that pane.
+    @State private var emptyProjectDropTargeted = false
+
     /// Alert state for duplicate folder drop warning.
 
     /// "Added N files to X" sheet shown after a copy completes (Plan §11).
@@ -235,6 +215,90 @@ struct ContentView: View {
     private var selectedProject: Project? {
         guard case .project(let id) = soleSelection else { return nil }
         return projectIndex.projects.first { $0.id == id }
+    }
+
+    /// Native window subtitle (drives `NSWindow.subtitle`), per active lens.
+    /// Sessions/Project show the session count + total time from the local
+    /// analysis DB — stable, and painted instantly before the report loads. The
+    /// report-derived lenses (Quotes/Codebook/Analysis) carry *live* counts only
+    /// the SPA can compute (Signals don't exist in the DB; visible-quote/tag
+    /// counts shift as the researcher edits), so they arrive over the bridge as
+    /// `lensSubtitle`. Empty renders as no subtitle, the title centring on its
+    /// own. Recomputes reactively: `activeTab`/`lensSubtitle` are `@Published`,
+    /// as is `unanalysed`.
+    private var navigationSubtitle: String {
+        switch bridgeHandler.activeTab {
+        case .quotes?, .codebook?, .analysis?:
+            // Honour the bridged subtitle only when it's for the lens we're on,
+            // so a tab switch never momentarily shows the previous lens's count.
+            guard bridgeHandler.lensSubtitleTab == bridgeHandler.activeTab?.rawValue else {
+                return ""
+            }
+            return bridgeHandler.lensSubtitle
+        default:
+            return sessionsSubtitle
+        }
+    }
+
+    /// "16 Sessions · 18h 23m" — session count + summed duration from the
+    /// project's analysis DB (the same figures the Project dashboard shows).
+    /// Empty when no project is selected or the DB isn't readable yet
+    /// (pre-analysis). Recomputes when the watcher republishes `unanalysed`.
+    private var sessionsSubtitle: String {
+        guard let project = selectedProject,
+              let state = projectIndex.unanalysed[project.id],
+              let count = state.sessionCount, count > 0
+        else { return "" }
+        let sessions = sessionCountPhrase(count)
+        guard let seconds = state.totalDurationSeconds, seconds > 0 else { return sessions }
+        return "\(sessions) · \(DurationFormat.human(seconds: seconds))"
+    }
+
+    /// Localised "<N> Sessions" using the active locale's CLDR plural form,
+    /// mirroring `ProjectRow.deltaText` (one/few/many/other + `_other` fallback
+    /// for single-form locales like ja/ko).
+    private func sessionCountPhrase(_ count: Int) -> String {
+        let base = "desktop.chrome.titleSessions"
+        let key = "\(base)_\(i18n.pluralCategory(count))"
+        let rendered = i18n.t(key, ["count": String(count)])
+        if rendered == key {
+            return i18n.t("\(base)_other", ["count": String(count)])
+        }
+        return rendered
+    }
+
+    private static let focusLog = Logger(subsystem: "app.bristlenose", category: "focus")
+
+    /// View ▸ Move Focus to Projects (⌘0) — the §10.1 keyboard no-trap return.
+    /// A keyboard user inside the web report is never trapped: this always moves
+    /// first responder back to native chrome. Logs via `os.Logger` and falls back
+    /// to the window content view when the sidebar table can't be found (e.g. the
+    /// sidebar is collapsed) so a no-op is observable, not silent (review F1).
+    private func focusProjectsList() {
+        guard let window = NSApp.keyWindow else {
+            Self.focusLog.warning("focusProjects: no key window")
+            return
+        }
+        guard let tableView = Self.firstSidebarTableView(in: window) else {
+            Self.focusLog.warning("focusProjects: no sidebar table view (collapsed?) — focusing content view")
+            window.makeFirstResponder(window.contentView)
+            return
+        }
+        let ok = window.makeFirstResponder(tableView)
+        Self.focusLog.info("focusProjects: makeFirstResponder=\(ok)")
+    }
+
+    /// Finds the first NSTableView in the window — the project list. (The detail
+    /// pane is a WKWebView with no NSTableViews.) Mirrors the locator in
+    /// `SidebarDeselectMonitor`; duplicated rather than shared to avoid touching
+    /// the fragile sidebar monitor (§2.2). Revisit when the project List becomes
+    /// an NSOutlineView (review F20).
+    private static func firstSidebarTableView(in window: NSWindow) -> NSTableView? {
+        func find(in view: NSView) -> NSTableView? {
+            if let tv = view as? NSTableView { return tv }
+            return view.subviews.lazy.compactMap { find(in: $0) }.first
+        }
+        return window.contentView.flatMap { find(in: $0) }
     }
 
     /// The currently selected folder (when exactly one folder is selected).
@@ -286,14 +350,19 @@ struct ContentView: View {
             detail
                 .toolbar {
                     toolbarLeading
-                    toolbarCenter
                     toolbarTrailing
                 }
-        // No .navigationTitle on the detail view — that would add a visible
-        // toolbar title item that duplicates the custom icon+name ToolbarItem.
-        // NSWindow.title is managed by WindowTitleManager below.
+                // Native window title + subtitle (Mail/Notes pattern): title =
+                // the project (scope), subtitle = session count · total time.
+                // `.navigationTitle` on the detail column drives NSWindow.title;
+                // `.navigationSubtitle` drives NSWindow.subtitle. The old custom
+                // `.navigation` ToolbarItem + `WindowTitleManager` workaround is
+                // gone — the duplicate title item it dodged no longer exists,
+                // and forcing `titleVisibility = .hidden` was what suppressed
+                // the native subtitle.
+                .navigationTitle(selectedProject?.name ?? "Bristlenose")
+                .navigationSubtitle(navigationSubtitle)
         }
-        .background(WindowTitleManager(title: selectedProject?.name ?? "Bristlenose"))
         .background(SidebarDeselectMonitor { selection = [] })
         .overlay(alignment: .bottomTrailing) {
             // Compact build-info diagnostic — Debug only by default; Release
@@ -436,6 +505,10 @@ struct ContentView: View {
         // File > New Folder (⇧⌘N) and sidebar folder.badge.plus button.
         .onReceive(NotificationCenter.default.publisher(for: .createNewFolder)) { _ in
             createNewFolder()
+        }
+        // View > Move Focus to Projects (⌘0) — the §10.1 keyboard no-trap return.
+        .onReceive(NotificationCenter.default.publisher(for: .focusProjects)) { _ in
+            focusProjectsList()
         }
         .modifier(ProjectNotificationReceivers(
             selection: $selection,
@@ -1230,15 +1303,6 @@ struct ContentView: View {
 
     // MARK: - Toolbar
 
-    /// Two-way binding: reads activeTab from bridge, writes via switchToTab.
-    /// Maps nil to .project since segmented Picker requires non-optional selection.
-    private var tabBinding: Binding<Tab> {
-        Binding(
-            get: { bridgeHandler.activeTab ?? .project },
-            set: { bridgeHandler.switchToTab($0) }
-        )
-    }
-
     /// Per-tab label for the left-panel toolbar button.
     private var leftPanelToolbarLabel: String {
         switch bridgeHandler.activeTab {
@@ -1261,13 +1325,13 @@ struct ContentView: View {
 
     @ToolbarContentBuilder
     private var toolbarLeading: some ToolbarContent {
-        // Project name / icon intentionally NOT in the toolbar. The chip
-        // previously here sat where the system back affordance lives, which
-        // is the wrong real estate for a per-project title indicator.
-        // `WindowTitleManager` still sets the NSWindow title to the project
-        // name so it shows in Mission Control / window-menu / Cmd+~ switcher.
-        // A correct in-toolbar project surface will return via a separate
-        // design pass — placeholder removed by user request.
+        // Project name + subtitle render NATIVELY — `.navigationTitle` /
+        // `.navigationSubtitle` on the detail view (see `body`), not a toolbar
+        // item (the old chip sat where the system back affordance lives, the
+        // wrong real estate). `.navigationTitle` drives NSWindow.title too, so
+        // Mission Control / window-menu / Cmd+~ still show the project name.
+        // The old `WindowTitleManager` is gone — its forced
+        // `titleVisibility = .hidden` was what had suppressed the subtitle.
 
         // Contextual — Quotes/Codebook/Analysis: left panel toggle
         // The native sidebar toggle (for the project list) is provided by
@@ -1311,59 +1375,75 @@ struct ContentView: View {
             .controlGroupStyle(.navigation)
         }
 
-    }
-
-    private var toolbarCenter: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            Picker("Tab", selection: tabBinding) {
-                ForEach(Tab.allCases) { tab in
-                    Text(tab.localizedLabel(i18n)).tag(tab)
-                }
-            }
-            .pickerStyle(.segmented)
-            .disabled(selectedProject == nil || !bridgeHandler.isReady)
-        }
+        // Project name + subtitle render natively now — `.navigationTitle` /
+        // `.navigationSubtitle` on the detail view (see `body`), NOT a custom
+        // `.navigation` ToolbarItem. The old pill put the title "in a button",
+        // off the Mac grain; the convention is window title = scope (project) +
+        // subtitle = count ("16 Sessions · 18h 23m"). See desktop CLAUDE.md.
     }
 
     // MARK: - Toolbar trailing (contextual — menus dim, toolbars morph)
 
+    /// Whether the detail pane is showing an actual report (vs an empty /
+    /// unavailable / unsupported state). Mirrors `detail`'s report branch, so the
+    /// report-only toolbar actions (Export, Search, the per-tab panel toggles) hide
+    /// when there's nothing to act on — e.g. a new project with no interviews that
+    /// has never run. (They used to show unconditionally — a Search field + Export
+    /// button over a "Drag Interviews Here" empty state.)
+    private var selectedProjectShowsReport: Bool {
+        guard let project = selectedProject else { return false }
+        if !project.isAvailable { return false }
+        if project.path.isEmpty { return false }
+        if project.inputFiles != nil
+            && !Self.pipelineHasViewableData(pipelineRunner.state[project.id]) {
+            return false
+        }
+        return true
+    }
+
     @ToolbarContentBuilder
     private var toolbarTrailing: some ToolbarContent {
-        // Universal — Export menu (contents morph per tab)
-        ToolbarItem(placement: .primaryAction) {
-            ExportMenuButton(bridgeHandler: bridgeHandler, i18n: i18n)
-        }
-
-        // Contextual — Quotes tab: tag sidebar toggle
-        if bridgeHandler.activeTab == .quotes {
+        // Report-only actions — hidden when the detail pane has no report to act
+        // on (new / never-run / unavailable / unsupported-subset project), so a
+        // never-run project no longer shows a Search field + Export button with
+        // nothing behind them. Mirrors `detail`'s report branch.
+        if selectedProjectShowsReport {
+            // Universal — Export menu (contents morph per tab)
             ToolbarItem(placement: .primaryAction) {
-                Button { bridgeHandler.menuAction("toggleRightPanel") } label: {
-                    Label(i18n.t("desktop.toolbar.tags"), systemImage: "sidebar.right")
-                }
-                .help(i18n.t("desktop.toolbar.showTags"))
+                ExportMenuButton(bridgeHandler: bridgeHandler, i18n: i18n)
             }
-        }
 
-        // Contextual — Analysis tab: heatmap inspector toggle
-        if bridgeHandler.activeTab == .analysis {
+            // Contextual — Quotes tab: tag sidebar toggle
+            if bridgeHandler.activeTab == .quotes {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { bridgeHandler.menuAction("toggleRightPanel") } label: {
+                        Label(i18n.t("desktop.toolbar.tags"), systemImage: "sidebar.right")
+                    }
+                    .help(i18n.t("desktop.toolbar.showTags"))
+                }
+            }
+
+            // Contextual — Analysis tab: heatmap inspector toggle
+            if bridgeHandler.activeTab == .analysis {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { bridgeHandler.menuAction("toggleInspectorPanel") } label: {
+                        Label(i18n.t("desktop.toolbar.heatmap"), systemImage: "square.grid.2x2")
+                    }
+                    .help(i18n.t("desktop.toolbar.showHeatmap"))
+                }
+            }
+
+            // Search — rightmost in `.primaryAction`, always active. Declared last
+            // so it sits at the trailing edge of the capsule (Notes / Mail / Finder
+            // convention). The web layer routes per tab: Quotes → search bar,
+            // Sessions → transcript search, Codebook → filter codes, Analysis →
+            // filter signals.
             ToolbarItem(placement: .primaryAction) {
-                Button { bridgeHandler.menuAction("toggleInspectorPanel") } label: {
-                    Label(i18n.t("desktop.toolbar.heatmap"), systemImage: "square.grid.2x2")
+                Button { bridgeHandler.menuAction("find") } label: {
+                    Label(i18n.t("desktop.toolbar.search"), systemImage: "magnifyingglass")
                 }
-                .help(i18n.t("desktop.toolbar.showHeatmap"))
+                .help(i18n.t("desktop.toolbar.searchShortcut"))
             }
-        }
-
-        // Search — rightmost in `.primaryAction`, always active. Declared last
-        // so it sits at the trailing edge of the capsule (Notes / Mail / Finder
-        // convention). The web layer routes per tab: Quotes → search bar,
-        // Sessions → transcript search, Codebook → filter codes, Analysis →
-        // filter signals.
-        ToolbarItem(placement: .primaryAction) {
-            Button { bridgeHandler.menuAction("find") } label: {
-                Label(i18n.t("desktop.toolbar.search"), systemImage: "magnifyingglass")
-            }
-            .help(i18n.t("desktop.toolbar.searchShortcut"))
         }
 
         // App-wide ambient pills share `placement: .status` (macOS-only) so they
@@ -1386,7 +1466,67 @@ struct ContentView: View {
 
     // MARK: - Sidebar
 
+    @ViewBuilder
     private var sidebar: some View {
+        if BristlenoseFlags.appKitSidebar {
+            // Native AppKit NSOutlineView source-list sidebar (flag-gated, in
+            // progress). Selection state stays in SwiftUI so the existing serve
+            // wiring is reused. design-desktop-sidebar-appkit.md.
+            ProjectSidebarOutline(
+                projectIndex: projectIndex,
+                i18n: i18n,
+                selection: $selection,
+                lenses: LensItem.all,
+                activeTab: bridgeHandler.activeTab,
+                lensesEnabled: selectedProjectShowsReport,
+                onActivateLens: { bridgeHandler.switchToTab($0) },
+                onExternalDrop: { target, urls in
+                    // Route to the same substrate-independent handlers the SwiftUI
+                    // sidebar's `.dropDestination` closures use — drop policy lives
+                    // there, not in the AppKit view.
+                    switch target {
+                    case .root:               handleDrop(urls: urls)
+                    case .folder(let id):     handleDropOnFolder(id: id, urls: urls)
+                    case .project(let id):    handleDropOnProject(id: id, urls: urls)
+                    }
+                },
+                onLocate: { id in
+                    if let p = projectIndex.projects.first(where: { $0.id == id }) { locateProject(p) }
+                },
+                onShowInFinder: { id in
+                    if let p = projectIndex.projects.first(where: { $0.id == id }) { revealInFinder(p) }
+                },
+                canShowInFinder: { id in
+                    projectIndex.projects.first(where: { $0.id == id }).map(canRevealInFinder) ?? false
+                },
+                onRemoveProject: { id in removeFromSidebarContextMenu(targetingProject: id) },
+                onRemoveFolder: { id in deleteFromContextMenu(targetingFolder: id) },
+                pipelineRunner: pipelineRunner,
+                liveData: pipelineRunner.liveData,
+                copyMachinery: copyMachinery
+            )
+            .navigationTitle(i18n.t("desktop.chrome.projects"))
+        } else {
+            swiftUISidebar
+        }
+    }
+
+    private var swiftUISidebar: some View {
+        VStack(spacing: 0) {
+        // Lens rail — relocates the former toolbar tab Picker into the top of the
+        // sidebar (spec §2, §3.1). Dimmed until a project is ready, exactly as the
+        // Picker's `.disabled(...)` was. All List modifiers below stay ON the List,
+        // unchanged — only this wrap is new (review F3; the project List is reused
+        // verbatim per §2.2).
+        LensRail(
+            bridgeHandler: bridgeHandler,
+            i18n: i18n,
+            isEnabled: selectedProject != nil && bridgeHandler.isReady
+        )
+        .padding(.horizontal, 8)
+        .padding(.top, 6)
+        .padding(.bottom, 2)
+
         List(selection: $selection) {
             // "+ New Project" lives outside the Section. Per desktop/CLAUDE.md:
             // `Section + Button + ForEach.onMove + conditional Text` drops
@@ -1458,6 +1598,7 @@ struct ContentView: View {
             }
         }
         .navigationTitle(i18n.t("desktop.chrome.projects"))
+        }
     }
 
     // MARK: - Sidebar rows
@@ -1830,12 +1971,28 @@ struct ContentView: View {
                 // Project directory is not accessible — volume ejected or folder moved.
                 unavailableProjectView(project)
             } else if project.path.isEmpty {
-                // New project with no files yet — prompt user to add interviews.
+                // New project with no files yet — prompt user to add interviews,
+                // and accept a Finder drop right here. Routes through the same
+                // `handleDropOnProject` as the project's sidebar row (→
+                // `establishEmptyProject` for the empty case), so the "Drag
+                // interviews here" copy is a promise the pane can actually keep.
                 ContentUnavailableView(
                     i18n.t("desktop.chrome.dragInterviews"),
                     systemImage: "square.and.arrow.down",
                     description: Text(i18n.t("desktop.chrome.dragInterviewsDescription"))
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay {
+                    if emptyProjectDropTargeted {
+                        RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(Color.accentColor, lineWidth: 2)
+                            .padding(12)
+                    }
+                }
+                .dropDestination(for: URL.self) { urls, _ in
+                    handleDropOnProject(id: project.id, urls: urls)
+                    return true
+                } isTargeted: { emptyProjectDropTargeted = $0 }
             } else if project.inputFiles != nil
                         && !Self.pipelineHasViewableData(pipelineRunner.state[project.id]) {
                 // File-subset project with no prior analysis — CLI can't

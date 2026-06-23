@@ -62,7 +62,7 @@
     "folder": {
       "rename": "Přejmenovat složku",
       "archive": "Archivovat složku",
-      "delete": "Smazat složku…"
+      "delete": "Smazat složku"
     },
     "codes": {
       "createCodeGroup": "Vytvořit skupinu kódů",
@@ -162,6 +162,9 @@
     "unanalysedSubtitle_few": "+{{count}} neanalyzované",
     "unanalysedSubtitle_many": "+{{count}} neanalyzovaných",
     "unanalysedSubtitle_other": "+{{count}} neanalyzovaných",
+    "titleSessions_one": "{{count}} Sezení",
+    "titleSessions_few": "{{count}} Sezení",
+    "titleSessions_other": "{{count}} Sezení",
     "missingSubtitle_one": "1 chybí",
     "missingSubtitle_few": "{{count}} chybí",
     "missingSubtitle_many": "{{count}} chybí",

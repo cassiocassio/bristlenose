@@ -46,6 +46,20 @@
     "participant_many": "{{count}} účastníka",
     "participant_other": "{{count}} účastníků"
   },
+  "titlebar": {
+    "quotes_one": "{{count}} Citát",
+    "quotes_few": "{{count}} Citáty",
+    "quotes_other": "{{count}} Citátů",
+    "signals_one": "{{count}} Signál",
+    "signals_few": "{{count}} Signály",
+    "signals_other": "{{count}} Signálů",
+    "codebooks_one": "{{count}} Kniha kódů",
+    "codebooks_few": "{{count}} Knihy kódů",
+    "codebooks_other": "{{count}} Knih kódů",
+    "tags_one": "{{count}} Štítek",
+    "tags_few": "{{count}} Štítky",
+    "tags_other": "{{count}} Štítků"
+  },
   "search": {
     "ariaLabel": "Hledat v citátech",
     "placeholder": "Filtrovat citáty…",

@@ -20,8 +20,17 @@ struct ProjectDBSnapshot: Equatable {
     /// (pre-analysis project, locked database, etc.). Renderers should
     /// treat nil as "no count to show," not "zero."
     let sessionCount: Int?
+    /// Sum of `sessions.duration_seconds` — total interview time across the
+    /// study, the same figure the Project dashboard reports as its "Total"
+    /// stat (`_format_duration_human(total_duration_s)` in
+    /// `server/routes/dashboard.py`, which sums the per-session durations).
+    /// Nil when the DB isn't readable or the column is absent; 0 when the
+    /// sessions table is empty. Read in the same open as `sessionCount`.
+    let totalDurationSeconds: Double?
 
-    static let empty = ProjectDBSnapshot(ingestedBasenames: [], sessionCount: nil)
+    static let empty = ProjectDBSnapshot(
+        ingestedBasenames: [], sessionCount: nil, totalDurationSeconds: nil
+    )
 }
 
 /// Read the analysis database for a project. Reads are bundled into a single
@@ -85,8 +94,13 @@ enum SourceFilesReader {
 
         let basenames = readBasenames(db: db)
         let sessions = readSessionCount(db: db)
+        let totalDuration = readTotalDuration(db: db)
         log.info("readSnapshot: ingested=\(basenames.count), sessions=\(sessions.map { String($0) } ?? "nil", privacy: .public)")
-        return ProjectDBSnapshot(ingestedBasenames: basenames, sessionCount: sessions)
+        return ProjectDBSnapshot(
+            ingestedBasenames: basenames,
+            sessionCount: sessions,
+            totalDurationSeconds: totalDuration
+        )
     }
 
     /// Convenience wrapper preserving the prior call shape — returns only
@@ -139,6 +153,28 @@ enum SourceFilesReader {
         let rc = sqlite3_step(stmt)
         if rc == SQLITE_ROW {
             return Int(sqlite3_column_int64(stmt, 0))
+        }
+        return nil
+    }
+
+    private static func readTotalDuration(db: OpaquePointer?) -> Double? {
+        var stmt: OpaquePointer?
+        let sql = "SELECT SUM(duration_seconds) FROM sessions"
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            // Prepare fails if the column/table is absent (older schema) —
+            // nil so the subtitle falls back to the count alone.
+            return nil
+        }
+        defer { sqlite3_finalize(stmt) }
+
+        let rc = sqlite3_step(stmt)
+        if rc == SQLITE_ROW {
+            // SUM over an empty table is SQL NULL → 0 (no sessions, no
+            // duration), kept distinct from nil (query/schema failure).
+            if sqlite3_column_type(stmt, 0) == SQLITE_NULL {
+                return 0
+            }
+            return sqlite3_column_double(stmt, 0)
         }
         return nil
     }

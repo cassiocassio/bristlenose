@@ -62,7 +62,7 @@
     "folder": {
       "rename": "Renombrar carpeta",
       "archive": "Archivar carpeta",
-      "delete": "Eliminar carpeta…"
+      "delete": "Eliminar carpeta"
     },
     "codes": {
       "createCodeGroup": "Crear grupo de códigos",
@@ -158,6 +158,8 @@
     "interviewCount_other": "{{count}} entrevistas",
     "unanalysedSubtitle_one": "+1 sin analizar",
     "unanalysedSubtitle_other": "+{{count}} sin analizar",
+    "titleSessions_one": "{{count}} Sesión",
+    "titleSessions_other": "{{count}} Sesiones",
     "missingSubtitle_one": "1 falta",
     "missingSubtitle_other": "{{count}} faltan",
     "tooltipWaiting": "{{count}} en espera",

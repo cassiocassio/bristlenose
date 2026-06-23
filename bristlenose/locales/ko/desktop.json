@@ -62,7 +62,7 @@
     "folder": {
       "rename": "폴더 이름 변경",
       "archive": "폴더 보관",
-      "delete": "폴더 삭제…"
+      "delete": "폴더 삭제"
     },
     "codes": {
       "createCodeGroup": "코드 그룹 생성",

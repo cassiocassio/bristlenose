@@ -669,8 +669,10 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
     /// What the subtitle-right slot shows, by `ProjectRow.subtitleRightSlot`'s
     /// precedence (`:327-360`): run activity > in-flight copy > iCloud glyph > empty.
+    /// `onStop` (Phase 4) is the hover-× cancel — run cancel / copy cancel; nil
+    /// during the cancel-rollback spinner (you can't cancel a cancel).
     private enum RightSlot {
-        case ring(fraction: Double?)   // determinate arc (fraction) or spinner (nil)
+        case ring(fraction: Double?, onStop: (() -> Void)?)  // arc/spinner + hover-× cancel
         case cloud
         case none
     }
@@ -680,14 +682,26 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         let activity = ProjectRowActivityIndicator.Kind.from(
             pipelineState: pipelineRunner?.state[id], progress: liveData?.progress[id])
         switch activity {
-        case .running(let fraction): return .ring(fraction: fraction)
-        case .copying(let fraction): return .ring(fraction: fraction)
-        case .none: break
+        case .running(let fraction):
+            // `pipelineRunner.cancel` is idempotent + acks immediately (sets
+            // isStopping → "Stopping…"); the × stays through stopping since the
+            // run is `.running` until the process exits (ProjectRow parity).
+            return .ring(fraction: fraction,
+                         onStop: { [weak self] in self?.pipelineRunner?.cancel(project: project) })
+        case .copying(let fraction):
+            // `Kind.from` never produces `.copying` (copy isn't a PipelineState);
+            // the real copy ring is the `copyDisplay` path below. Defensive.
+            return .ring(fraction: fraction, onStop: nil)
+        case .none:
+            break
         }
         if let copy = copyDisplay(for: project) {
             switch copy {
-            case .copying(let fraction): return .ring(fraction: fraction)
-            case .cancelling:            return .ring(fraction: nil)   // spinner during rollback
+            case .copying(let fraction):
+                return .ring(fraction: fraction,
+                             onStop: { [weak self] in self?.copyMachinery?.cancel() })
+            case .cancelling:
+                return .ring(fraction: nil, onStop: nil)   // spinner during rollback, no ×
             }
         }
         if case .inCloud = project.availability { return .cloud }
@@ -767,10 +781,10 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
         // Subtitle-right — run/copy ring (Phase 3) takes precedence, then the iCloud
         // status glyph, then nothing (ProjectRow.subtitleRightSlot :327-360). The
-        // ring's hover-× cancel swap is Phase 4.
+        // ring carries its Phase-4 hover-× cancel via `onStop`.
         switch rightSlot {
-        case .ring(let fraction):
-            let ring = SidebarActivityRing(fraction: fraction)
+        case .ring(let fraction, let onStop):
+            let ring = SidebarActivityRing(fraction: fraction, onStop: onStop)
             ring.setContentHuggingPriority(.required, for: .horizontal)
             ring.setContentCompressionResistancePriority(.required, for: .horizontal)
             cell.addSubview(ring)

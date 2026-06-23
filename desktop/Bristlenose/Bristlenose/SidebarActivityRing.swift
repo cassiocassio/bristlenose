@@ -2,31 +2,53 @@ import AppKit
 
 /// Native activity/copy ring for the sidebar cell's subtitle-right slot — the
 /// AppKit equivalent of `ProjectRowActivityIndicator`'s determinate ring +
-/// indeterminate spinner (Phase 3 of the cell port).
+/// indeterminate spinner, with the Phase-4 hover-× cancel.
 ///
 /// `fraction == nil` → indeterminate spinner (uncalibrated first run, or a copy
 /// cancel-rollback). `fraction != nil` → a determinate arc (run progress / copy
-/// byte ratio). The hover-× cancel swap is Phase 4.
+/// byte ratio).
 ///
-/// **The one bespoke visual of the cell port.** There is no stock determinate-
-/// *circular* `NSProgressIndicator` (it only does bars + indeterminate spin), so
-/// the arc is a `CAShapeLayer` (faint track + accent fill, `strokeEnd = fraction`).
-/// `ProjectRowActivityIndicator.swift` stays in the tree as the dormant SwiftUI
-/// template / spec.
+/// **Hover-× (Phase 4).** When `onStop != nil`, hovering swaps the ring for a
+/// grey `xmark.circle.fill` in the SAME 16pt frame (no reflow); clicking it calls
+/// `onStop` (cancel the run / cancel the copy). Grey, not red — red reads as
+/// "error" (Finder / App Store download-ring idiom). Mouse-only + accessibility-
+/// hidden: keyboard / VoiceOver reach Stop via the Project menu (⌘.) and the row
+/// context menu. `onStop == nil` → no × (the cancel-rollback spinner: you can't
+/// cancel a cancel). Mirrors `ProjectRowActivityIndicator.ring(fraction:)`.
 ///
-/// **QA (not visually verified overnight):** the arc is built to fill **clockwise
-/// from 12 o'clock**. If it reads reversed or starts at the wrong clock position,
-/// the fix is local — flip the `clockwise:` flag or negate the angles in
-/// `buildRing` (the CALayer geometry-flip state depends on the host view and
-/// wasn't confirmed against a live render). Size (16pt) + colours (accent fill,
-/// tertiary track) are also tune-against-`ProjectRow` carpentry.
+/// **The reload-contention trap.** Live progress rebuilds this view ~1×/s
+/// (full `reloadData` per tick, the §6 Phase-A cost). A naive hover swap would
+/// flicker every tick while the pointer sits on the ring. Fix: `updateTrackingAreas`
+/// re-derives the hover state from the *live* pointer position on every rebuild
+/// (`reconcileHover`), so a view rebuilt under the cursor paints the × from frame
+/// one. A cursor *rect* (not `NSCursor.push/pop`) avoids an unbalanced cursor
+/// stack when a hovered view is destroyed mid-hover.
+///
+/// **QA (not visually verified):** arc fill direction (clockwise-from-12 — flip
+/// `clockwise:`/angles in `buildRing` if reversed); the × size/grey vs `ProjectRow`;
+/// that the swap is flicker-free across progress ticks; that clicking × cancels
+/// without selecting the row.
 final class SidebarActivityRing: NSView {
 
     /// Matches `ProjectRowActivityIndicator`'s 16×16 box.
     static let side: CGFloat = 16
     private let lineWidth: CGFloat = 2
 
-    init(fraction: Double?) {
+    /// When non-nil, hovering shows the cancel ×; clicking it calls this. nil →
+    /// no × (cancel-rollback spinner). Set at build time by `cellRightSlot`.
+    var onStop: (() -> Void)? {
+        didSet { window?.invalidateCursorRects(for: self) }
+    }
+
+    /// The ring's drawn content — hidden while the × shows. Layers for the
+    /// determinate arc, or the indeterminate spinner subview.
+    private var ringLayers: [CAShapeLayer] = []
+    private var spinner: NSProgressIndicator?
+    private lazy var stopButton: NSButton = makeStopButton()
+    private var hovering = false
+
+    init(fraction: Double?, onStop: (() -> Void)? = nil) {
+        self.onStop = onStop
         super.init(frame: NSRect(x: 0, y: 0, width: Self.side, height: Self.side))
         translatesAutoresizingMaskIntoConstraints = false
         wantsLayer = true
@@ -35,12 +57,79 @@ final class SidebarActivityRing: NSView {
         } else {
             buildSpinner()
         }
+        addSubview(stopButton)
+        NSLayoutConstraint.activate([
+            stopButton.centerXAnchor.constraint(equalTo: centerXAnchor),
+            stopButton.centerYAnchor.constraint(equalTo: centerYAnchor),
+            stopButton.widthAnchor.constraint(equalToConstant: Self.side),
+            stopButton.heightAnchor.constraint(equalToConstant: Self.side),
+        ])
+        // Mouse-only, like ProjectRow's `.accessibilityHidden(true)`.
+        setAccessibilityElement(false)
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) unavailable") }
 
     override var intrinsicContentSize: NSSize { NSSize(width: Self.side, height: Self.side) }
+
+    // MARK: - Hover swap
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(
+            rect: .zero,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self, userInfo: nil))
+        // Reconcile after a rebuild: if the pointer is already inside (a reload
+        // tick rebuilt this view mid-hover), show the × from the first paint.
+        reconcileHover()
+    }
+
+    private func reconcileHover() {
+        guard let window else { return }
+        let local = convert(window.mouseLocationOutsideOfEventStream, from: nil)
+        setHovering(bounds.contains(local))
+    }
+
+    override func mouseEntered(with event: NSEvent) { setHovering(true) }
+    override func mouseExited(with event: NSEvent) { setHovering(false) }
+
+    private func setHovering(_ value: Bool) {
+        hovering = value
+        let showStop = value && onStop != nil
+        stopButton.isHidden = !showStop
+        ringLayers.forEach { $0.isHidden = showStop }
+        spinner?.isHidden = showStop
+    }
+
+    /// Pointing-hand whenever the ring is cancellable — the native inline-click
+    /// affordance (no underline). A cursor *rect* is balanced across the view's
+    /// lifecycle, unlike `NSCursor.push/pop` which leaks if the view dies hovered.
+    override func resetCursorRects() {
+        if onStop != nil { addCursorRect(bounds, cursor: .pointingHand) }
+    }
+
+    private func makeStopButton() -> NSButton {
+        // Sized to sit inside the 16pt box like the ring; grey, not red.
+        let cfg = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
+        let image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: nil)?
+            .withSymbolConfiguration(cfg)
+        let button = NSButton(image: image ?? NSImage(), target: self, action: #selector(stopTapped))
+        button.isBordered = false
+        button.bezelStyle = .regularSquare
+        button.imagePosition = .imageOnly
+        button.contentTintColor = .secondaryLabelColor
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.isHidden = true
+        button.setAccessibilityElement(false)
+        return button
+    }
+
+    @objc private func stopTapped() { onStop?() }
+
+    // MARK: - Build
 
     private func buildRing(fraction: Double) {
         let inset = lineWidth / 2 + 0.5
@@ -70,6 +159,7 @@ final class SidebarActivityRing: NSView {
 
         layer?.addSublayer(track)
         layer?.addSublayer(fill)
+        ringLayers = [track, fill]
     }
 
     private func buildSpinner() {
@@ -86,5 +176,6 @@ final class SidebarActivityRing: NSView {
             spinner.heightAnchor.constraint(equalToConstant: Self.side),
         ])
         spinner.startAnimation(nil)
+        self.spinner = spinner
     }
 }

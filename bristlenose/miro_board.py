@@ -123,7 +123,9 @@ def fmt_timecode(seconds: float) -> str:
 
 
 def _quote_colour(q: QuoteCard, colour_by: str) -> str:
-    if colour_by == "sentiment" and q.sentiment:
+    if colour_by != "sentiment":  # "none" (or anything else) -> single colour
+        return DEFAULT_QUOTE_TOKEN
+    if q.sentiment:
         return SENTIMENT_TOKEN.get(q.sentiment, DEFAULT_QUOTE_TOKEN)
     return DEFAULT_QUOTE_TOKEN
 

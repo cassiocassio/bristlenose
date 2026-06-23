@@ -89,14 +89,12 @@ def _check_project(db: Session, project_id: int) -> Project:
 def miro_status(project_id: int, request: Request) -> MiroStatusResponse:
     """Check whether a Miro access token is configured and valid."""
     db = _get_db(request)
-    _check_project(db, project_id)
-
-    token = get_credential("miro")
-    if not token:
-        return MiroStatusResponse(connected=False)
-
-    # Token exists — optionally validate (cached, not on every poll)
-    return MiroStatusResponse(connected=True)
+    try:
+        _check_project(db, project_id)
+        token = get_credential("miro")
+        return MiroStatusResponse(connected=bool(token))
+    finally:
+        db.close()
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +110,10 @@ def miro_connect(
 ) -> MiroStatusResponse:
     """Validate a Miro access token and store it in the system credential store."""
     db = _get_db(request)
-    _check_project(db, project_id)
+    try:
+        _check_project(db, project_id)
+    finally:
+        db.close()
 
     token = body.token.strip()
     if not token:
@@ -148,7 +149,10 @@ def miro_connect(
 def miro_disconnect(project_id: int, request: Request) -> MiroStatusResponse:
     """Remove the stored Miro access token."""
     db = _get_db(request)
-    _check_project(db, project_id)
+    try:
+        _check_project(db, project_id)
+    finally:
+        db.close()
 
     store = get_credential_store()
     try:

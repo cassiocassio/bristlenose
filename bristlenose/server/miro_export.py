@@ -11,7 +11,9 @@ stickies) — no background-job table yet. See design-miro-bridge.md.
 
 from __future__ import annotations
 
+import logging
 from html import escape
+from urllib.parse import urlparse
 
 from sqlalchemy.orm import Session
 
@@ -26,6 +28,8 @@ from bristlenose.miro_board import (
 )
 from bristlenose.miro_render_svg import render_html
 from bristlenose.server.export_core import extract_quotes_for_export
+
+logger = logging.getLogger(__name__)
 
 MAX_QUOTE_CHARS = 300  # keep stickies readable (Miro hard cap is 6000)
 
@@ -45,9 +49,15 @@ def _parse_timecode(s: str) -> float:
 def _clip_url(base: str, q) -> str | None:
     """Best-effort clip URL from a user-supplied folder base + filename convention.
 
-    ASSUMPTION (A5): filename convention mirrors export-clips; verify on Mac.
+    Only http(s) bases are accepted — `html.escape` does NOT neutralise a
+    `javascript:`/`data:` scheme, and this URL egresses into a shareable Miro
+    board's `<a href>`. ASSUMPTION (A5): filename convention mirrors export-clips.
     """
     if not base:
+        return None
+    parsed = urlparse(base)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        logger.warning("Ignoring non-http(s) clips_base for Miro links: %r", base[:60])
         return None
     fname = f"{q.session}-{q.participant_code}-{int(_parse_timecode(q.timecode))}.mp4"
     return f"{base.rstrip('/')}/{fname}"
@@ -133,25 +143,33 @@ def push_to_miro(token: str, db: Session, project_id: int, project_name: str,
     """Create a new Miro board from the layout IR. Returns {board_id, board_url, stickies}."""
     board = build_board(db, project_id, project_name, quote_ids,
                         colour_by=colour_by, clips_base=clips_base)
+    n_quotes = sum(1 for s in board.stickies if s.kind == "quote")
+    if n_quotes == 0:
+        raise miro_client.MiroError("No quotes match the current selection — nothing to export.")
 
     created = miro_client.create_board(token, board.title)
-    board_id = created["id"]
-
-    # frames (position = centre)
-    for f in board.frames:
-        miro_client.create_frame(token, board_id, f.title,
-                                 f.x + f.width / 2, f.y + f.height / 2, f.width, f.height)
-
-    # stickies in bulk batches of 20
-    items = [_sticky_item(s) for s in board.stickies]
-    for i in range(0, len(items), 20):
-        miro_client.bulk_create_items(token, board_id, items[i:i + 20])
-
-    # board title as a real text item
-    for t in board.texts:
-        miro_client.create_text(token, board_id, escape(t.text),
-                                t.x + 300, t.y, 600, int(t.size))
-
+    board_id = created.get("id")
+    if not board_id:
+        raise miro_client.MiroError("Miro did not return a board id")
     view = created.get("viewLink") or f"https://miro.com/app/board/{board_id}/"
-    n_quotes = sum(1 for s in board.stickies if s.kind == "quote")
+    logger.info("Miro board %s created (%s) — populating %d stickies", board_id, view, n_quotes)
+
+    # Board exists from here — if a later call fails, surface the URL so the
+    # researcher can find (or delete) the partially-built board.
+    try:
+        for f in board.frames:  # frames (position = centre)
+            miro_client.create_frame(token, board_id, f.title,
+                                     f.x + f.width / 2, f.y + f.height / 2, f.width, f.height)
+        items = [_sticky_item(s) for s in board.stickies]  # stickies, 20/bulk
+        for i in range(0, len(items), 20):
+            miro_client.bulk_create_items(token, board_id, items[i:i + 20])
+        for t in board.texts:  # board title as a real text item
+            miro_client.create_text(token, board_id, escape(t.text),
+                                    t.x + 300, t.y, 600, int(t.size))
+    except miro_client.MiroError as exc:
+        logger.warning("Miro board %s partially populated: %s", board_id, exc)
+        raise miro_client.MiroError(
+            f"Board created but incomplete — open it: {view} ({exc})"
+        ) from exc
+
     return {"board_id": board_id, "board_url": view, "stickies": n_quotes}

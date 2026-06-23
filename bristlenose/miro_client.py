@@ -112,28 +112,31 @@ def refresh_access_token(client_id: str, refresh_token: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def _request(method: str, token: str, path: str, json: dict | None = None,
-             *, retries: int = 4) -> dict:
-    """Call the Miro REST API with exponential backoff on 429/5xx."""
+def _request(method: str, token: str, path: str, json: dict | list | None = None,
+             *, retries: int = 4) -> dict | list:
+    """Call the Miro REST API with exponential backoff on 429 only.
+
+    We retry ONLY on 429 (rate limit). Creation POSTs (board/frame/sticky) are
+    not idempotent and have no idempotency key, so retrying a 5xx or a dropped
+    response could create a duplicate board or batch. 5xx and network errors
+    fail fast — the caller surfaces the error (and any partial board URL).
+    """
     url = path if path.startswith("http") else f"{BASE_URL}{path}"
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     delay = 1.0
-    last = ""
     for attempt in range(retries + 1):
         try:
             resp = httpx.request(method, url, headers=headers, json=json, timeout=30)
         except httpx.HTTPError as exc:
-            last = f"network error: {exc}"
-        else:
-            if resp.status_code < 300:
-                return resp.json() if resp.content else {}
-            if resp.status_code not in (429, 500, 502, 503, 504):
-                raise MiroError(f"{method} {path} -> {resp.status_code} {resp.text[:300]}")
-            last = f"{resp.status_code} {resp.text[:120]}"
+            raise MiroError(f"{method} {path} network error: {exc}") from exc
+        if resp.status_code < 300:
+            return resp.json() if resp.content else {}
+        if resp.status_code != 429:
+            raise MiroError(f"{method} {path} -> {resp.status_code} {resp.text[:300]}")
         if attempt < retries:
             time.sleep(delay)
             delay *= 2
-    raise MiroError(f"{method} {path} failed after retries: {last}")
+    raise MiroError(f"{method} {path} failed after rate-limit retries")
 
 
 def create_board(token: str, name: str, description: str = "") -> dict:
@@ -170,29 +173,3 @@ def create_text(token: str, board_id: str, content: str, x: float, y: float,
         "geometry": {"width": width},
         "style": {"fontSize": str(font_size)},
     })
-
-
-def validate_miro_token(token: str) -> tuple[bool | None, str | None]:
-    """Validate a Miro access token by calling GET /v2/boards?limit=1.
-
-    Returns:
-        (True, None) if valid
-        (False, error_message) if invalid
-        (None, error_message) if network/other error
-    """
-    try:
-        resp = httpx.get(
-            f"{BASE_URL}/boards",
-            params={"limit": "1"},
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=10,
-        )
-        if resp.status_code == 200:
-            return True, None
-        if resp.status_code == 401:
-            return False, "invalid or expired token"
-        if resp.status_code == 403:
-            return False, "token lacks required scopes (needs boards:read)"
-        return None, f"unexpected status {resp.status_code}"
-    except httpx.HTTPError as exc:
-        return None, f"network error: {exc}"

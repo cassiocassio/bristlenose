@@ -37,7 +37,8 @@ export type BridgeMessage =
   | { type: "editing-ended" }
   | { type: "project-action"; action: string; data?: object }
   | { type: "find-pasteboard-write"; text: string }
-  | { type: "player-state"; hasPlayer: boolean; playing: boolean };
+  | { type: "player-state"; hasPlayer: boolean; playing: boolean }
+  | { type: "lens-subtitle"; tab: string; subtitle: string };
 
 // ---------------------------------------------------------------------------
 // Native message posting
@@ -81,6 +82,17 @@ export function postFindPasteboardWrite(text: string): void {
 /** Notify native shell of player open/close and play/pause state changes. */
 export function postPlayerState(hasPlayer: boolean, playing: boolean): void {
   postNativeMessage({ type: "player-state", hasPlayer, playing });
+}
+
+/**
+ * Push the active lens's subtitle to the native window subtitle — e.g.
+ * "163 Quotes", "3 Codebooks · 47 Tags". The SPA owns the count + formatting
+ * (live as quotes hide and tags/signals change); native chrome just renders
+ * the string. `tab` lets the receiver ignore a subtitle for a lens it has
+ * already navigated away from.
+ */
+export function postLensSubtitle(tab: string, subtitle: string): void {
+  postNativeMessage({ type: "lens-subtitle", tab, subtitle });
 }
 
 // ---------------------------------------------------------------------------

@@ -23,6 +23,7 @@ import { ExportDialog } from "../components/ExportDialog";
 import { ActivityChipStack } from "../components/ActivityChipStack";
 import type { ActivityJob } from "../components/ActivityChipStack";
 import { AnnounceRegion } from "../components/AnnounceRegion";
+import { LensSubtitleSync } from "../components/LensSubtitleSync";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider, useFocus } from "../contexts/FocusContext";
 import { useActivityJobs, removeJob } from "../contexts/ActivityStore";
@@ -571,6 +572,7 @@ function AppShell() {
       <SettingsModal open={settingsOpen} onClose={toggleSettings} />
       <ActivityChipStack jobs={chipJobs} onDismiss={removeJob} />
       <AnnounceRegion />
+      <LensSubtitleSync />
       {IS_DEV && (
         <Suspense fallback={null}>
           <PlaygroundHUD />

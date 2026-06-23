@@ -153,6 +153,11 @@ The hard-won constraints. Build against these.
 - **OAuth 2.0 + PKCE, no Marketplace publishing.** Create an app, install it to a
   Developer team directly. One-time browser consent on first run is the only
   irreducible friction; refresh tokens keep it headless after.
+- **Not enterprise-gated.** OAuth + PKCE + expiring/refresh tokens are the
+  standard auth for _all_ Miro apps on _every_ plan (incl. free). Only specific
+  scopes need Enterprise (`auditlogs:read`, `organizations:*`). Bristlenose uses
+  only `boards:read` + `boards:write` — both **standard scopes**, available on
+  free accounts; you can even build/test on a free Developer team.
 - **Official Python client `miro_api`** (PyPI, Python 3.9+ — fits Bristlenose).
   Stateless `MiroApi` (token in) is the right fit for a batch exporter; it
   auto-refreshes. Add as optional extra `bristlenose[miro]`.
@@ -184,7 +189,10 @@ The hard-won constraints. Build against these.
   (Miro scales the whole note to its box). Only colour control is
   `style.fillColor` (background, 16 named colours) — there is no text-colour field.
 - `style` has exactly three fields: `fillColor`, `textAlign`, `textAlignVertical`.
-- Content cap **< 6000 chars** (failure mode at the boundary undocumented).
+- Content cap **< 6000 chars _per sticky_** (not cumulative across the board) —
+  a single quote would need ~1,000 words to hit it; never a real constraint (we
+  truncate long quotes ~300 chars anyway). The board-level limit that matters at
+  scale is **item count** (~10k soft cap), not characters.
 - **Implication:** a prominent quote + a smaller/greyer attribution _inside one
   sticky_ is impossible. The only de-emphasis a sticky affords is `<i>`. For true
   hierarchy you'd need a separate text item (costs a second item per quote). v0

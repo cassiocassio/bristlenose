@@ -41,12 +41,13 @@ enum TypeParityHTML {
     background: Canvas; border-bottom: 1px solid color-mix(in srgb, GrayText 30%, transparent);
   }
   .row {
-    padding: 10px 0; border-bottom: 1px solid color-mix(in srgb, GrayText 18%, transparent);
+    padding: 22px 0; border-bottom: 1px solid color-mix(in srgb, GrayText 18%, transparent);
   }
   .meta { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-bottom: 4px; }
   .meta .name { font-weight: 600; min-width: 130px; }
   select { font: inherit; }
   .spec { font-size: 11px; color: GrayText; font-variant-numeric: tabular-nums; }
+  .sample { display: inline-block; white-space: nowrap; margin-top: 10px; }
   .spec .field {
     display: inline-block; min-width: 3.5em; padding: 0 3px;
     border-bottom: 1px dashed color-mix(in srgb, GrayText 50%, transparent);
@@ -58,7 +59,6 @@ enum TypeParityHTML {
   #toolbar { padding: 6px 0; display: flex; gap: 10px; align-items: baseline; }
   button { font: inherit; }
   .fit { margin-left: 8px; font-size: 10px; }
-  .sample { display: inline-block; white-space: nowrap; }
   .hint { font-size: 11px; color: GrayText; margin: 6px 0 0; }
 </style>
 </head>

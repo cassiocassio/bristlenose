@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import os
 import secrets
-from html import escape
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
@@ -266,8 +265,10 @@ def miro_callback(request: Request, code: str = "", state: str = "") -> HTMLResp
             _client_id(), code, _redirect_uri(request), verifier,
         )
     except miro_client.MiroError as exc:
+        logger.warning("Miro OAuth token exchange failed: %s", exc)
         return HTMLResponse(
-            f"<h2>Miro connection failed</h2><p>{escape(str(exc))}</p>", status_code=502,
+            "<h2>Miro connection failed</h2><p>Could not complete the connection. "
+            "Close this tab and try again.</p>", status_code=502,
         )
     store = get_credential_store()
     try:

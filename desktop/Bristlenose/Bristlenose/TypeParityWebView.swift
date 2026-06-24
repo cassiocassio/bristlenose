@@ -56,15 +56,27 @@ final class TypeParityController: ObservableObject {
                     "return window.__typeParityCollect();",
                     arguments: [:], in: nil, in: .page
                 )
-                guard let json = value as? String,
-                      let data = json.data(using: .utf8),
-                      let export = try? JSONDecoder().decode(TypeParityExport.self, from: data) else {
-                    log.error("collect returned unexpected payload")
+                // Accept either a JSON string or a bridged JSON object (WebKit
+                // bridges a returned JS object to NSDictionary/NSArray).
+                let data: Data
+                if let s = value as? String {
+                    data = Data(s.utf8)
+                } else if let obj = value, JSONSerialization.isValidJSONObject(obj) {
+                    data = try JSONSerialization.data(withJSONObject: obj)
+                } else {
+                    log.error("collect: unexpected payload type \(String(describing: type(of: value)), privacy: .public)")
                     return
                 }
-                deliver(export: export)
+                do {
+                    let export = try JSONDecoder().decode(TypeParityExport.self, from: data)
+                    deliver(export: export)
+                } catch {
+                    // Don't swallow the decode error — name it, with a payload preview.
+                    let preview = String(data: data, encoding: .utf8)?.prefix(400) ?? ""
+                    log.error("collect: decode failed: \(error.localizedDescription, privacy: .public) — raw: \(String(preview), privacy: .public)")
+                }
             } catch {
-                log.error("collect failed: \(error.localizedDescription, privacy: .public)")
+                log.error("collect: call failed: \(error.localizedDescription, privacy: .public)")
             }
         }
     }

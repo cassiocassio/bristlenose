@@ -112,6 +112,60 @@ this consolidation pays down:
 After this doc lands, `true-the-docs` should mark the font-token rename in
 `design-fonts.md` as deferred, and point its typography mechanics at this doc.
 
+## Calibration tool — Type Parity Inspector (debug-only)
+
+Cross-engine font matching is an eyeball problem that numbers under-determine:
+Core Text (native chrome) and WebKit render the *same* SF Pro differently
+(smoothing, subpixel, tracking). To tune the desktop CSS against the real native
+ladder, there's a debug-menu tool in the Mac app — **Debug ▸ Type Parity
+Inspector…** (⌃⌘T), DEBUG-only (the whole `TypeParity*` file set is `#if DEBUG`,
+absent from Release/TestFlight).
+
+What it does:
+- **Left column:** the 11 macOS AppKit/HIG text styles (`NSFont.preferredFont(
+  forTextStyle:)`, largeTitle…caption2) rendered natively, with live metrics
+  introspected from Core Text (point size, weight, line box, cap/x-height, and
+  the rendered advance width of the sample). Sizes are *measured*, never
+  hardcoded — they shift by macOS version, which is the drift we're guarding.
+- **Right column (WebKit):** the bn token ladder (display…micro). Each row has a
+  pulldown to assign the macOS style it should match (pre-filled with the
+  nearest-size best guess), an **old/new** toggle (old = current
+  `tokens-desktop.css` value; new = the assigned native style's measured metrics
+  as the first guess), and **content-editable size / line-height / letter-spacing
+  / weight**. Each row shows native width vs measured web width with a Δ — you
+  width-match (Δ→0) to recover Apple's automatic tracking in CSS, then trust your
+  eye.
+- **Eyeball aids:** shared sample across both engines (a real quote, a UI label,
+  a mixed alphanumeric); a `-webkit-font-smoothing` toggle (auto vs antialiased —
+  the classic too-thin tell); and a **capture-native → overlay → blink** path
+  (snapshot the native column, superimpose over the web column at adjustable
+  opacity with x/y nudge, and blink) — a 0.5px baseline shift is invisible
+  side-by-side but jumps when blinked. Overlay needs a nudge on first use (the
+  columns lay out independently); that's expected.
+- **Environment fingerprint:** every export records macOS version, backing scale
+  (@1x/@2x), and colour profile — the calibrated numbers are only valid for that
+  display class. Calibrate at @2x; sanity-check @1x.
+- **Export (⌘E):** emits a paste-ready `[data-platform="desktop"]` token block
+  (size, `-lh` ratio, and a new `--bn-track-*` tracking token per stop) plus a
+  JSON record of every decision + the fingerprint. Copied to the clipboard and
+  offered as a save panel. The JSON is the artefact that flows back into this doc
+  and `tokens-desktop.css`.
+
+Files: `desktop/Bristlenose/Bristlenose/TypeParity{Ladder,WebView,HTML,View}.swift`,
+test `BristlenoseTests/TypeParityLadderTests.swift`. Launched via a Debug-menu
+item (`MenuCommands.swift`) opening a `Window(id: "type-parity")` scene
+(`BristlenoseApp.swift`). The pure helpers (weight bucketing, metric resolution
+shape, CSS/JSON serialisation) are unit-tested; the view/webview are not (they
+need a live window + WebKit).
+
+**Note:** the bn token ladder's "old" values + nearest-style mapping live in
+`BNTokenLadder.rows` (a Swift mirror of `tokens-desktop.css`). The existing CSS
+comments label, e.g., 15px as "Apple callout" — that's wrong against the real
+macOS ladder (callout ≈ 12pt); the tool maps by *measured* size at runtime, and
+surfacing that mislabel is part of the point. When the desktop scale is retuned
+from a tool export, update `BNTokenLadder.rows` too so the next session's "old"
+column reflects reality.
+
 ## Typography fidelity — where "believable" actually lives
 
 These are the details that separate "native" from "webby" and are **not yet** in

@@ -92,5 +92,14 @@ struct BristlenoseApp: App {
             SettingsView()
                 .environmentObject(i18n)
         }
+
+        #if DEBUG
+        // DEBUG-only calibration tool — launched from the Debug menu. Not a
+        // shipping surface; the whole TypeParity* file set is #if DEBUG.
+        Window("Type Parity Inspector", id: "type-parity") {
+            TypeParityView()
+        }
+        .defaultSize(width: 1200, height: 820)
+        #endif
     }
 }

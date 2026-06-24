@@ -55,12 +55,19 @@ enum TypeParityHTML {
   .spec .field:focus { background: color-mix(in srgb, Highlight 25%, transparent); }
   .delta.ok { color: green; }
   .delta.warn { color: #c60; }
+  #toolbar { padding: 6px 0; display: flex; gap: 10px; align-items: baseline; }
+  button { font: inherit; }
+  .fit { margin-left: 8px; font-size: 10px; }
   .sample { white-space: nowrap; overflow: hidden; }
   .hint { font-size: 11px; color: GrayText; margin: 6px 0 0; }
 </style>
 </head>
 <body>
   <div id="env">Type Parity Inspector — waiting for native metrics…</div>
+  <div id="toolbar">
+    <button id="fitall" type="button">Fit all widths</button>
+    <span class="hint">solves letter-spacing so each web width matches its native target (Δ→0)</span>
+  </div>
   <div id="rows"></div>
   <p class="hint">size / line-height / letter-spacing are editable. Match the
      <b>web width</b> to the <b>native width</b> (Δ→0) and trust your eye, then
@@ -145,8 +152,11 @@ function buildRows() {
       `tracking <span class="field" contenteditable data-k="ls">${seed.ls}</span>em · ` +
       `weight <span class="field" contenteditable data-k="weight">${seed.weight}</span> · ` +
       `native <span class="nativew">–</span>px · web <span class="webw">–</span>px · ` +
-      `<span class="delta">Δ –</span>`;
+      `<span class="delta">Δ –</span>` +
+      `<button class="fit" type="button">fit</button>`;
     row.appendChild(spec);
+
+    spec.querySelector(".fit").addEventListener("click", () => fitRow(row));
 
     // sample line — the thing being judged
     const sample = document.createElement("div");
@@ -186,6 +196,41 @@ function applyRow(row) {
   deltaEl.className = "delta " + (Math.abs(d) <= 0.75 ? "ok" : "warn");
 }
 
+// Auto-fit: solve letter-spacing so web width matches the native target.
+// width(ls) is linear in ls, so a 2-sample secant step lands it in ~1-2 passes.
+// This recovers Apple's automatic per-size tracking (which CSS doesn't apply) by
+// width-matching, in the real WebKit engine — no screenshots, no pixel diffing.
+function fitRow(row) {
+  const sample = row.querySelector(".sample");
+  const nativeW = (STATE.native[row.dataset.macStyle] || {}).sampleWidth ?? 0;
+  if (!nativeW) return;                 // no target (e.g. unmapped) — skip
+  let ls = num(getField(row, "ls"));
+  for (let i = 0; i < 8; i++) {
+    const w0 = widthAt(sample, ls);
+    const d = nativeW - w0;
+    if (Math.abs(d) <= 0.4) break;      // within sub-pixel tolerance
+    const probe = 0.01;                 // em
+    const slope = (widthAt(sample, ls + probe) - w0) / probe;  // px per em
+    if (Math.abs(slope) < 1e-6) break;  // degenerate (1-char sample) — bail
+    const next = ls + d / slope;
+    if (!isFinite(next)) break;
+    ls = Math.max(-0.2, Math.min(0.4, next));  // sane tracking bounds
+  }
+  setField(row, "ls", round3(ls));
+  applyRow(row);                        // re-applies all fields + recomputes Δ
+}
+
+function widthAt(sample, ls) {
+  sample.style.letterSpacing = ls + "em";
+  return sample.getBoundingClientRect().width;   // sync layout flush on read
+}
+
+function fitAll() {
+  document.querySelectorAll(".row").forEach(fitRow);
+}
+
+function round3(v) { return Math.round(v * 1000) / 1000; }
+
 window.__typeParityCollect = function () {
   const rows = [...document.querySelectorAll(".row")].map(row => {
     const macStyle = row.dataset.macStyle;
@@ -211,6 +256,8 @@ function setField(row, k, v) { row.querySelector(`.field[data-k="${k}"]`).textCo
 function num(s) { const v = parseFloat(s); return isFinite(v) ? v : 0; }
 function round1(v) { return Math.round(v * 10) / 10; }
 function round2(v) { return Math.round(v * 100) / 100; }
+
+document.getElementById("fitall").addEventListener("click", fitAll);
 </script>
 </body>
 </html>

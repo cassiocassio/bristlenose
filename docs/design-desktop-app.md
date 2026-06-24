@@ -435,6 +435,9 @@ Studied: Slack (sidebar pattern), Claude macOS (back/forward, sidebar-top `+ New
 
 - **Left column:** Native SwiftUI sidebar — project list with one-level folders, `+ Add Project` at top (Claude pattern), settings gear pinned at bottom-left (Slack/Claude/Apple Music pattern)
 - **Right column:** WKWebView detail — the React SPA in embedded mode
+
+> **Superseded 2026-06-23** — the toolbar zone diagram + bullets below are the Mar 2026 v1 exploration and no longer match shipped chrome. Two changes: (1) the title is now a native `.navigationTitle` + `.navigationSubtitle` on the detail view (Mail/Notes pattern: title = project, subtitle = a lens-contextual count), **not** a trailing window-title toolbar item — the custom `.navigation` pill + `WindowTitleManager` were removed; (2) the five lenses **moved out of the toolbar centre into the sidebar LensRail** (`Cmd+1-5` still switch). Current authority: `desktop/CLAUDE.md` §Toolbar (four zones + native title/subtitle) and `docs/design-desktop-nav-toolbar-rearrangement.md`. Preserved below as planning history — don't read the zone diagram as current.
+
 - **Toolbar:** Unified with title bar, three zones per HIG (Mario Guzman toolbar guidelines):
 
 ```

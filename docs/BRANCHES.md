@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 21 Jun 2026 (`llm-provider-default-model` merged to main + closed; parked-branch sweep — trashed 8 merged/closed worktrees: `highlighter` (worktree + local + `origin/highlighter` deleted), `s3-papercut-sweep` (local deleted), and the already-detached husks `sidebar` (`origin/sidebar` deleted), `sentiment-tags`, `responsive-playground`, `react-router`, `stabilise-ci`, `sandbox-debug`. Kept `living-fish` + `symbology` — parked work with unmerged commits, backed up on origin. Earlier today: `warm-sidecar-pool` merged to main (`78b2d40`) + closed — desktop Phase A2 warm-sidecar pool (instant, crash-free project switching) is now on main; `project-status-line` merged (`f74961b`) + closed.)
+**Updated:** 24 Jun 2026 (`mac-app-layout-reorg` merged to main via `b2c15f6` + closed — Phase 1 macOS AppKit sidebar + lens-rail nav is now on main; worktree detached + tagged orange on disk, local + remote branches deleted.)
 
 ---
 
@@ -249,6 +249,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `mac-app-layout-reorg` — merged 24 Jun 2026
+
+Feature (desktop — Swift) — Phase 1 macOS nav/toolbar rearrangement that evolved into an AppKit `NSOutlineView` sidebar migration. Relocated the five report tabs (Project · Sessions · Quotes · Codebook · Analysis) into a fixed "lens" rail and rebuilt the project sidebar as a native outline: two-line project cells (icon · name · count + subtitle) with variable row heights, native activity/copy rings with hover-× stop, subtitle prefix glyphs (incl. iCloud), the failure → diagnostic popover ported to the cell, Finder folder-of-videos drop routing, project + folder context menus, and a lens-contextual native window title/subtitle pushed over the WKWebView bridge. New Swift surfaces (`ProjectSidebarOutline.swift`, `LensRail.swift`, `SidebarActivityRing.swift`, `ProjectCellSpec.swift`, `OutlineNode.swift`, `DropRouting.swift`, `SidebarSubtitleText.swift`, …) with pure-logic unit tests; a minimal frontend lens-subtitle sync (`lensSubtitle.ts` + `LensSubtitleSync.tsx`); 7-locale titlebar lens-count keys. Project-list drag-reorder stayed out of scope (reuse, don't reopen — spec + `fdd09e7`). Design docs trued against shipped code; new `docs/design-desktop-sidebar-appkit.md` + `docs/design-undo-debt.md`. 29 commits (`d16b9a0`…`b78d986`) merged via `b2c15f6` (`--no-ff` — main had diverged by the BRANCHES.md entry, so no fast-forward). Worktree detached and tagged orange on disk; local + remote branches deleted.
 
 ### `llm-provider-default-model` — merged 21 Jun 2026
 

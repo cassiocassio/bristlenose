@@ -216,4 +216,20 @@ import Testing
     @Test func pickDeltaNilWhenNeither() {
         #expect(ProjectSubtitle.pickDelta(missingCount: 0, unanalysedCount: 0) == nil)
     }
+
+    // MARK: - SubtitleVariant.isDiagnostic (failure-glyph clickability, review F35)
+
+    @Test func isDiagnostic_trueForFailureAndPartial() {
+        #expect(SubtitleVariant.failed(summary: "boom").isDiagnostic)
+        #expect(SubtitleVariant.failedDiagnostic.isDiagnostic)
+        #expect(SubtitleVariant.completedPartial.isDiagnostic)
+    }
+
+    @Test func isDiagnostic_falseForNonDistressStates() {
+        #expect(!SubtitleVariant.running.isDiagnostic)
+        #expect(!SubtitleVariant.stopping.isDiagnostic)
+        #expect(!SubtitleVariant.ready(date: aDate, delta: nil).isDiagnostic)
+        #expect(!SubtitleVariant.copying(fraction: 0.5).isDiagnostic)
+        #expect(!SubtitleVariant.placeholder.isDiagnostic)
+    }
 }

@@ -58,7 +58,7 @@ enum TypeParityHTML {
   #toolbar { padding: 6px 0; display: flex; gap: 10px; align-items: baseline; }
   button { font: inherit; }
   .fit { margin-left: 8px; font-size: 10px; }
-  .sample { white-space: nowrap; overflow: hidden; }
+  .sample { display: inline-block; white-space: nowrap; }
   .hint { font-size: 11px; color: GrayText; margin: 6px 0 0; }
 </style>
 </head>

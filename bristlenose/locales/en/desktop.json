@@ -26,6 +26,7 @@
     },
     "view": {
       "toggleSidebar": "Toggle Sidebar",
+      "moveFocusToProjects": "Move Focus to Projects",
       "showContents": "Show Contents",
       "hideContents": "Hide Contents",
       "showCodes": "Show Codes",
@@ -62,7 +63,7 @@
     "folder": {
       "rename": "Rename Folder",
       "archive": "Archive Folder",
-      "delete": "Delete Folder…"
+      "delete": "Delete Folder"
     },
     "codes": {
       "createCodeGroup": "Create Code Group",
@@ -174,6 +175,8 @@
     "interviewCount_other": "{{count}} interviews",
     "unanalysedSubtitle_one": "+1 unanalysed",
     "unanalysedSubtitle_other": "+{{count}} unanalysed",
+    "titleSessions_one": "{{count}} Session",
+    "titleSessions_other": "{{count}} Sessions",
     "missingSubtitle_one": "1 missing",
     "missingSubtitle_other": "{{count}} missing",
     "tooltipWaiting": "{{count}} waiting",

@@ -38,7 +38,8 @@ export type BridgeMessage =
   | { type: "project-action"; action: string; data?: object }
   | { type: "find-pasteboard-write"; text: string }
   | { type: "player-state"; hasPlayer: boolean; playing: boolean }
-  | { type: "export-counts"; total: number; selected: number; starred: number };
+  | { type: "export-counts"; total: number; selected: number; starred: number }
+  | { type: "lens-subtitle"; tab: string; subtitle: string };
 
 // ---------------------------------------------------------------------------
 // Native message posting
@@ -85,12 +86,23 @@ export function postPlayerState(hasPlayer: boolean, playing: boolean): void {
 }
 
 /**
- * Push live export scope counts to the native shell so the macOS export
+  * Push live export scope counts to the native shell so the macOS export
  * popover can label its "Copy Quotes" scope choices (All / Selected / Starred)
  * with current totals. No-ops outside WKWebView.
  */
 export function postExportCounts(total: number, selected: number, starred: number): void {
   postNativeMessage({ type: "export-counts", total, selected, starred });
+}
+
+/**
+ * Push the active lens's subtitle to the native window subtitle — e.g.
+ * "163 Quotes", "3 Codebooks · 47 Tags". The SPA owns the count + formatting
+ * (live as quotes hide and tags/signals change); native chrome just renders
+ * the string. `tab` lets the receiver ignore a subtitle for a lens it has
+ * already navigated away from.
+ */
+export function postLensSubtitle(tab: string, subtitle: string): void {
+  postNativeMessage({ type: "lens-subtitle", tab, subtitle });
 }
 
 // ---------------------------------------------------------------------------

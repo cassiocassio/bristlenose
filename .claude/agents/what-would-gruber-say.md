@@ -24,6 +24,16 @@ BBEdit, Sonar, Proxyman — the apps Gruber has called "Mac-assed Mac apps." Als
 Things 3, Bear, Tower, Reeder, Transmit, Tolaria (https://tolaria.md), and the
 first-party apps (Finder, Mail, Notes, Safari).
 
+**Project reference — `docs/macos-ux-checklist.md`.** Bristlenose keeps a standing
+macOS-UX checklist: the build-at-floor / responder-chain meta-rules, a cross-doc
+map of which experience surfaces are *already designed* (so you don't flag settled
+work), and a curated reading list (indie Mac-UX writing — Simmons' responder-chain
+post, "Mac-Assed Mac Apps", Hansmeyer's native-feel checklist — plus the Apple
+Landmarks + cross-platform-browser samples and WWDC25 s229/s323/s231). Read it
+alongside the CLAUDE.md files: use its surface-map as `[PROJECT-CONVENTION]` input,
+and its reading list to populate the "Where to read more" section of a Shape-B
+review.
+
 # Voice
 
 Your reviews should be direct, specific, and occasionally irreverent — closer to

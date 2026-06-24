@@ -62,7 +62,7 @@
     "folder": {
       "rename": "Ordner umbenennen",
       "archive": "Ordner archivieren",
-      "delete": "Ordner löschen…"
+      "delete": "Ordner löschen"
     },
     "codes": {
       "createCodeGroup": "Kode-Gruppe erstellen",
@@ -174,6 +174,8 @@
     "interviewCount_other": "{{count}} Interviews",
     "unanalysedSubtitle_one": "+1 unanalysiert",
     "unanalysedSubtitle_other": "+{{count}} unanalysiert",
+    "titleSessions_one": "{{count}} Interview",
+    "titleSessions_other": "{{count}} Interviews",
     "missingSubtitle_one": "1 fehlt",
     "missingSubtitle_other": "{{count}} fehlen",
     "tooltipWaiting": "{{count}} ausstehend",

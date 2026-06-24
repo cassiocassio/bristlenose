@@ -62,7 +62,7 @@
     "folder": {
       "rename": "폴더 이름 변경",
       "archive": "폴더 보관",
-      "delete": "폴더 삭제…"
+      "delete": "폴더 삭제"
     },
     "codes": {
       "createCodeGroup": "코드 그룹 생성",
@@ -172,6 +172,7 @@
     "addedInterviews": "%@에 %d개 인터뷰 추가됨",
     "interviewCount_other": "\uc778\ud130\ubdf0 {{count}}\uac1c",
     "unanalysedSubtitle_other": "\ubbf8\ubd84\uc11d +{{count}}\uac1c",
+    "titleSessions_other": "{{count}}\uac1c \uc138\uc158",
     "missingSubtitle_other": "{{count}}\uac1c \ub204\ub77d",
     "tooltipWaiting": "{{count}}\uac1c \ub300\uae30 \uc911",
     "dateRelativeJustNow": "\ubc29\uae08",

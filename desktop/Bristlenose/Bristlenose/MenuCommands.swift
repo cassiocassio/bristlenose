@@ -360,6 +360,14 @@ private struct ViewMenuContent: View {
             )
         }
 
+        // Move keyboard focus from the web report back to the project list
+        // (⌘0). The §10.1 no-trap guarantee: a ⌘-shortcut is intercepted natively
+        // before the web view, so the keyboard user is never trapped in WebKit.
+        Button(i18n.t("desktop.menu.view.moveFocusToProjects")) {
+            NotificationCenter.default.post(name: .focusProjects, object: nil)
+        }
+        .keyboardShortcut("0", modifiers: .command)
+
         Divider()
 
         Button(i18n.t("desktop.menu.view.toggleSidebar")) {

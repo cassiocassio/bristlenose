@@ -35,6 +35,16 @@
     "noResults": "Sin resultados",
     "error": "Error"
   },
+  "titlebar": {
+    "quotes_one": "{{count}} Cita",
+    "quotes_other": "{{count}} Citas",
+    "signals_one": "{{count}} Señal",
+    "signals_other": "{{count}} Señales",
+    "codebooks_one": "{{count}} Libro de códigos",
+    "codebooks_other": "{{count}} Libros de códigos",
+    "tags_one": "{{count}} Etiqueta",
+    "tags_other": "{{count}} Etiquetas"
+  },
   "search": {
     "ariaLabel": "Buscar citas",
     "placeholder": "Filtrar citas…",

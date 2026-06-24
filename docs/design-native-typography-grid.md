@@ -134,7 +134,12 @@ What it does:
   as the first guess), and **content-editable size / line-height / letter-spacing
   / weight**. Each row shows native width vs measured web width with a Δ — you
   width-match (Δ→0) to recover Apple's automatic tracking in CSS, then trust your
-  eye.
+  eye. A per-row **fit** button + **Fit all widths** auto-solves this: width(ls)
+  is linear in letter-spacing, so a 2-sample secant step drives Δ→0 in ~1–2
+  passes — in the real WebKit engine, no screenshots, no pixel-diffing (which
+  never zeroes between two antialiasing engines anyway). Letter-spacing is the
+  only genuine search variable; size/line-height/weight are copied from the
+  measured native metrics.
 - **Eyeball aids:** shared sample across both engines (a real quote, a UI label,
   a mixed alphanumeric); a `-webkit-font-smoothing` toggle (auto vs antialiased —
   the classic too-thin tell); and a **capture-native → overlay → blink** path

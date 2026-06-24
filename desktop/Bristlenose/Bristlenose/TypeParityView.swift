@@ -132,7 +132,7 @@ private struct NativeLadderColumn: View {
             ForEach(MacTypeLadder.styles, id: \.id) { entry in
                 let font = NSFont.preferredFont(forTextStyle: entry.style)
                 let rung = MacTypeLadder.resolve(sample: sample).first { $0.id == entry.id }
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 8) {
                         Text(entry.name).fontWeight(.semibold)
                         if let r = rung {
@@ -145,7 +145,7 @@ private struct NativeLadderColumn: View {
                         .font(Font(font as CTFont))
                         .lineLimit(1)
                 }
-                .padding(.vertical, 10)
+                .padding(.vertical, 18)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Divider()
             }

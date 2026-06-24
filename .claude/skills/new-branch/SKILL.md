@@ -74,7 +74,16 @@ MATCHES=$(git branch -r --list "origin/claude/*${FRAG}*" | sed 's#origin/##;s/^[
 - **Exactly one match** → that's `$CLOUD` (the full ref, e.g. `claude/figjam-miro-market-share-px52tg`).
 - **Zero or many** → list all `origin/claude/*` with their last-commit subject + date and ask the user via `AskUserQuestion`. Never guess.
 
-Derive the **clean name** = `$CLOUD` minus the `claude/` prefix and the trailing `-XXXXXX` cloud suffix (e.g. `figjam-miro-market-share`). The clean name drives the worktree dir and the BRANCHES.md entry; **`$0` is set to `$CLOUD`** for the rest of the skill (so Step 11's branch references and the local branch name stay the cloud ref — see naming note below).
+Derive the **clean name** = `$CLOUD` minus the `claude/` prefix and the trailing `-XXXXXX` cloud suffix. The suffix is the last `-`-delimited segment and is always present on cloud refs, but only strip it when it *looks* like a random token (contains a digit or uppercase) so a manually-named ref like `claude/my-feature` keeps its last word:
+
+```bash
+CLEAN=$(printf '%s' "$CLOUD" | sed -E 's#^claude/##' | sed -E 's/-([a-z]*[A-Z0-9][A-Za-z0-9]*)$//')
+# verified across all 10 live origin/claude/* refs 24 Jun 2026: e.g.
+#   claude/figjam-miro-market-share-px52tg -> figjam-miro-market-share
+#   claude/opus-4-8-transcript-eval-7QpEY  -> opus-4-8-transcript-eval  (mid-name 4-8 preserved)
+```
+
+The clean name drives the worktree dir and the BRANCHES.md entry; **`$0` is set to `$CLOUD`** for the rest of the skill (so Step 11's branch references and the local branch name stay the cloud ref — see naming note below).
 
 **Naming policy (deliberate).** Keep the **local branch = the full cloud ref** so a bare `git push` updates the existing PR with zero upstream gymnastics, and provenance is preserved (per `feedback_cloud_branches_trust_git.md`: prefer normal git flow, don't copy files around). The **worktree dir uses the clean name** (`bristlenose_branch <clean-name>`) for human friendliness. Consequence: the dir basename ≠ the branch name, so `/close-branch <clean-name>` can't auto-derive this worktree's path from the name — Step 11 records the exact dir + branch in BRANCHES.md so close-out can read them. (Known seam — see the WORKFLOW.md note.)
 

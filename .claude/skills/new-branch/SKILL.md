@@ -1,6 +1,6 @@
 ---
 name: new-branch
-description: Start work in an ISOLATED git worktree (the exception path — use only when two envs must be live at once, the work is multi-day and main must stay shippable meanwhile, or it's a throwaway spike). Creates the branch + worktree + venv + frontend build + smoke test + BRANCHES.md entry. For ordinary work, use /new-feature (trunk) instead. Any Kind — captured in Step 3.5.
+description: Start work in an ISOLATED git worktree (the exception path — use only when two envs must be live at once, the work is multi-day and main must stay shippable meanwhile, or it's a throwaway spike). Creates the branch + worktree + venv + frontend build + smoke test + BRANCHES.md entry. For ordinary work, use /new-feature (trunk) instead. Any Kind — captured in Step 3.5. The `--from-cloud` flag instead ADOPTS an existing `origin/claude/*` cloud branch (built on phone/cloud, never compiled): fetch → build the Mac env → run the tests the cloud couldn't → preview the merge against main.
 disable-model-invocation: true
 user-invocable: true
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion
@@ -43,6 +43,8 @@ The Claude Code Bash tool inherits PATH from the harness, which has occasionally
 | `--purpose="<one line>"` | "What it does" line for BRANCHES.md | Step 11 question |
 | `--files="<comma,separated,paths>"` | Files this branch will touch | Step 11 question |
 | `--print-launch-url` | Print a `claude://code/new?folder=…` URL the user can click to open a new desktop-app session | Step 14 |
+| `--from-cloud[=<ref-or-fragment>]` | **Adopt an existing `origin/claude/*` branch** instead of forking a new one from main. Inverts Step 4 (fetch + checkout, not fork) and adds Steps 8.6 (run tests) + 9.5 (merge preview). See Step 0.6. | Changes Step 4; the name token becomes optional |
+| `--no-tests` | In `--from-cloud` mode, skip the full pytest run (Step 8.6). Default is to RUN it — catching unrun-in-cloud defects is the whole point. | Step 8.6 |
 
 **All flags are optional.** Bare `/new-branch my-branch` works exactly as before — interactive prompts for Kind, purpose, files. Flags exist so a parent Claude session that already knows these answers can pass them in and avoid re-asking.
 
@@ -56,11 +58,37 @@ Validation:
 
 If a `--plan` path is provided, copy it now (before any branch creation) to `~/Code/bristlenose/docs/private/handoffs/<name>.md`. If a handoff file already exists at that target, **stop and ask the user** before overwriting — handoffs from prior sessions are precious. The existing Step 4b will pick the file up automatically once the worktree exists.
 
+## Step 0.6: From-cloud mode (adopt an existing cloud branch)
+
+**Only when `--from-cloud` is present.** This is a fundamentally different shape from the default. The default *creates* a new branch off main; from-cloud *adopts* an existing `origin/claude/*` branch that was built in a phone/cloud session and **never compiled or tested** (no venv, no Miro creds, no Xcode — see `feedback_spawn_task_prefers_local.md`). The job is to reconstruct the Mac build environment around someone else's already-written commits, run the tests the cloud could not, and report honestly how far it is from mergeable.
+
+**Resolve which cloud branch.** `git fetch origin` first, then resolve `--from-cloud`'s value (or the bare name token) against `origin/claude/*`:
+
+```bash
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:$PATH"; hash -r 2>/dev/null || true
+cd /Users/cassio/Code/bristlenose && git fetch origin --quiet
+FRAG="<value of --from-cloud, or the bare name token, possibly empty>"
+MATCHES=$(git branch -r --list "origin/claude/*${FRAG}*" | sed 's#origin/##;s/^[* ]*//')
+```
+
+- **Exactly one match** → that's `$CLOUD` (the full ref, e.g. `claude/figjam-miro-market-share-px52tg`).
+- **Zero or many** → list all `origin/claude/*` with their last-commit subject + date and ask the user via `AskUserQuestion`. Never guess.
+
+Derive the **clean name** = `$CLOUD` minus the `claude/` prefix and the trailing `-XXXXXX` cloud suffix (e.g. `figjam-miro-market-share`). The clean name drives the worktree dir and the BRANCHES.md entry; **`$0` is set to `$CLOUD`** for the rest of the skill (so Step 11's branch references and the local branch name stay the cloud ref — see naming note below).
+
+**Naming policy (deliberate).** Keep the **local branch = the full cloud ref** so a bare `git push` updates the existing PR with zero upstream gymnastics, and provenance is preserved (per `feedback_cloud_branches_trust_git.md`: prefer normal git flow, don't copy files around). The **worktree dir uses the clean name** (`bristlenose_branch <clean-name>`) for human friendliness. Consequence: the dir basename ≠ the branch name, so `/close-branch <clean-name>` can't auto-derive this worktree's path from the name — Step 11 records the exact dir + branch in BRANCHES.md so close-out can read them. (Known seam — see the WORKFLOW.md note.)
+
+**Skip Step 3.5's Kind question** unless `--kind` is given: adopted cloud branches are almost always `feature` or `spike`. Default to `feature` if the branch has an open PR targeting main, else ask.
+
+The remaining steps run with these from-cloud deltas: **Step 4** fetches + checks out the cloud ref instead of forking; **Step 4a** (new) inspects the diff; **Step 8.6** (new) runs the full suite; **Step 9.5** (new) previews the merge against main; **Steps 6–9** (env setup) and **Step 14** (handoff) are unchanged.
+
 ## Step 1: Validate branch name
 
 After Step 0 has parsed flags out of `$0`, the remaining first token is the branch name. It must be lowercase letters, numbers, and hyphens only. No spaces, no leading hyphens, no underscores. If invalid, tell the user and stop.
 
 Throughout the rest of this skill, `$0` refers to **just the branch name** (flags already extracted in Step 0).
+
+**In `--from-cloud` mode this step is skipped** — there is no user-supplied branch name to validate. `$0` was set to the resolved cloud ref (`$CLOUD`) in Step 0.6, and the worktree dir uses the derived clean name. The clean name is already constrained to the validity rules above because cloud refs are themselves lowercase-hyphen.
 
 ## Step 2: Verify location
 
@@ -92,7 +120,24 @@ Record the answer; it gets written into BRANCHES.md in Step 11. Kind is descript
 
 ## Step 4: Create branch and worktree
 
-The effective base from Step 0 is the value of `--base`, or `main` if absent. Call this `$BASE` below.
+**From-cloud mode — fetch + checkout, do NOT fork.** When `--from-cloud` is set, the branch already exists on the remote with real commits; the worktree must check it out, not create a fresh branch off main. The placeholder dir may already exist (the user often `mkdir`s it in advance) — `git worktree add` refuses an existing path, so `rmdir` it first **only if empty**:
+
+```bash
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:$PATH"; hash -r 2>/dev/null || true
+cd /Users/cassio/Code/bristlenose
+CLOUD="$0"                                   # full cloud ref, set in Step 0.6
+CLEAN="<clean name from Step 0.6>"
+DIR="/Users/cassio/Code/bristlenose_branch $CLEAN"
+# git worktree add refuses an existing path; remove the empty placeholder if present
+[ -d "$DIR" ] && rmdir "$DIR" 2>/dev/null
+git worktree add --track -b "$CLOUD" "$DIR" "origin/$CLOUD"
+```
+
+`--track -b "$CLOUD"` creates a local branch with the cloud ref's name tracking `origin/$CLOUD`, so a later bare `git push` updates the existing PR. If `rmdir` fails (dir non-empty), stop and ask — something unexpected is there. **Then skip the rest of Step 4** (the fork logic below is default-mode only) and continue at Step 4a. Drop the setup-incomplete sentinel as in default mode.
+
+---
+
+*Default mode (no `--from-cloud`):* The effective base from Step 0 is the value of `--base`, or `main` if absent. Call this `$BASE` below.
 
 First, check current state to handle partial previous runs:
 
@@ -128,6 +173,24 @@ date -u +"setup started at %Y-%m-%dT%H:%M:%SZ" \
 ```
 
 The file's presence tells future Claude sessions (and the user) that the worktree environment isn't fully prepped yet. It gets removed in Step 8 only after the smoke test confirms the environment works. If setup aborts halfway, the flag survives and the next attempt knows.
+
+## Step 4a: Inspect the cloud diff (from-cloud only, non-critical)
+
+Before building, look at what you're adopting — per `feedback_cloud_branches_trust_git.md` (inspect first; prefer normal git flow) and `feedback_cloud_local_divergence_warning.md` (catch twin-build divergence early):
+
+```bash
+cd /Users/cassio/Code/bristlenose
+git log --oneline main..$CLOUD                 # what the branch adds
+echo "ahead $(git rev-list --count main..$CLOUD) / behind $(git rev-list --count $CLOUD..main)"
+git diff --stat main...$CLOUD                   # the surface area
+# Divergence check: matching commit subjects = the same work built twice (cloud + local)
+comm -12 <(git log --format='%s' main | sort -u) <(git log --format='%s' main..$CLOUD | sort -u)
+```
+
+Report to the user, and adapt:
+- **Divergence detected** (matching subjects, different SHAs) → warn: the work was built twice. Do NOT `git reset --hard` or `git merge`; reach for `git pull --rebase` (patch-id dedupe) at merge time. (See the memory.)
+- **Messy diff** (staging dirs, rogue installs to `~/`, mixed concerns) → flag it; cherry-pick may beat a full merge. **Clean diff is the default and the happy path** — treat it like any other branch.
+- Note whether the diff touches `desktop/` — if not, Step 9's desktop sidecar/ffmpeg setup is irrelevant (this is a server/frontend branch; the "run" target is `bristlenose serve`, not the Xcode app) and can be skipped.
 
 ## Step 4b: Seed handoff plan from prior diagnostic session (non-critical)
 
@@ -264,6 +327,31 @@ rm -f "/Users/cassio/Code/bristlenose_branch $0/.claude/setup-incomplete"
 
 If any check failed, leave the sentinel in place — the next Claude session entering this worktree will see it and know the environment isn't fully prepped.
 
+**From-cloud:** do NOT remove the sentinel here — defer it to Step 8.6, so it clears only after the test suite is also green.
+
+## Step 8.6: Run the test suite (from-cloud only; the whole point)
+
+**Only when `--from-cloud` is set and `--no-tests` is absent.** This is the single highest-value step in from-cloud mode: the cloud session had no venv, so the suite never ran there. Running it on the Mac is the only thing that catches "handler changed, test not updated" defects that sail past syntax-check and typecheck.
+
+Run the suite **exactly as CI does** — deselect the real-LLM `slow` tests (no API key needed), so "green here" means "green in CI":
+
+```bash
+cd "/Users/cassio/Code/bristlenose_branch $CLEAN"
+.venv/bin/python -m pytest --tb=short -q -m "not slow" -p no:cacheprovider
+```
+
+(~3 min for the full suite. Also run `cd frontend && npx tsc -b` to confirm the frontend typechecks on this machine.)
+
+**Report failures; do NOT auto-fix them.** A flag that rewrites tests until they pass is an anti-pattern — it manufactures green. Surface each failure to the user with the raw traceback (per `feedback_dont_trust_failure_label_get_stderr.md`) and your read on whether it's (a) a genuine branch defect, (b) a stale test that the branch's intended behaviour outgrew, or (c) an environment-version difference (the Mac venv is often newer than the cloud assumed — e.g. a newer FastAPI uses lazy router inclusion, so introspecting `app.routes` for paths gives false negatives; probe routes with a TestClient request instead). Fix only with the user's nod, reproduce-first (`feedback_bug_reproduces_first.md`), and re-run to confirm.
+
+**Only after the suite is green (and the Step 8 smoke checks passed), remove the sentinel:**
+
+```bash
+rm -f "/Users/cassio/Code/bristlenose_branch $CLEAN/.claude/setup-incomplete"
+```
+
+If `--no-tests` was passed, leave the sentinel in place and say so — the env is built but unverified.
+
 ## Step 9: Symlink trial-runs (non-critical)
 
 Skip if the symlink already exists, **or if the worktree already has a real `trial-runs/` directory** (the path is partially tracked — `trial-runs/fossda-opensource/perf-baselines/...` is in git, so every worktree starts with a real `trial-runs/` dir, and naively running `ln -s …` produces a broken nested layout: `trial-runs/trial-runs -> /…/main/trial-runs`).
@@ -347,15 +435,41 @@ else
 fi
 ```
 
+## Step 9.5: Merge-readiness preview (from-cloud only, non-critical)
+
+**Only when `--from-cloud` is set.** "Ready to merge" is the goal, but a cloud branch that sat while main moved is usually behind and conflicting. Characterise the gap **read-only** — never auto-resolve conflicts or rebase here (that's design-laden human work; doing it silently is how you corrupt a PR):
+
+```bash
+cd /Users/cassio/Code/bristlenose
+# Read-only in-memory merge — lists conflicting files without touching any working tree
+git merge-tree --write-tree --name-only main $CLOUD > /tmp/nb-merge.out 2>&1
+echo "merge vs main: $([ $? -eq 0 ] && echo CLEAN || echo CONFLICTS)"
+tail -n +2 /tmp/nb-merge.out          # conflicting paths (line 1 is the tree OID)
+gh pr list --head $CLOUD --state all --json number,state,mergeable,url 2>/dev/null
+```
+
+Also scan for the branch's own self-declared blockers — cloud sessions often leave a build-status / "before merge" section in a design doc (grep the changed `docs/*.md` for `before merge`, `size gate`, `i18n`, `TODO`, `assumption`). Report a **merge-readiness verdict**, not a green light:
+
+- builds + tests: ✅/❌ (from Steps 8 / 8.6)
+- conflicts with main: list the files (1 doc + 1 code file is tractable; many code files is a real reconciliation)
+- pre-merge blockers the branch flagged (e.g. i18n / size-gate, security posture decisions)
+
+Make clear what's left: typically a rebase/merge onto local main + the flagged blockers. The flag gets it **built, tested, and characterised** — it does not make it mergeable on its own.
+
 ## Step 10: Stay local (do NOT push)
 
 **Do NOT push to origin.** The branch stays local until the user explicitly asks to push. This avoids cluttering the remote with branches that may be short-lived or experimental.
 
-Tell the user: "Branch is local only. Push with `git push -u origin $0` when you're ready."
+Tell the user: "Branch is local only. Push with `git push -u origin $0` when you're ready." **From-cloud:** the branch already has a remote + PR; a bare `git push` from the worktree updates that PR (the local branch tracks the cloud ref). Don't push without the user asking — updating a PR is outward-facing.
 
 ## Step 11: Update docs/BRANCHES.md
 
 Read `docs/BRANCHES.md` to understand the current format. Check if `$0` already has an entry (partial previous run) — if so, skip this step.
+
+**From-cloud — record the seam explicitly.** Because the worktree dir uses the clean name but the local branch keeps the cloud ref, the name→dir derivation `/close-branch` relies on won't work. So the entry MUST carry both, plus the PR and the Step 9.5 verdict, so close-out can read them rather than guess:
+- Worktree Convention row: dir = `bristlenose_branch <clean-name>/`, Branch = the full cloud ref.
+- Backup Strategy row: remote = `origin/<cloud-ref>` (PR #N).
+- Active Branches section: add a `**Local branch:**` line (the cloud ref) distinct from `**Worktree:**`, a `**Remote:**` line naming the PR, a one-line pointer to the worktree's `.claude/from-cloud-import-notes.md`, and a `**Blockers before merge:**` list from Step 9.5. Mark the heading `(imported from cloud)`.
 
 Then:
 
@@ -410,6 +524,13 @@ Print a summary:
 - Venv: ready (or note if it failed)
 - BRANCHES.md: updated and committed
 - Handoff plan: copied from prior diagnostic to `.claude/plans/$0.md` (or note "no prior handoff — next session will need a brief from you")
+
+**From-cloud — report the verdict, not just "done".** The user needs to know how far from mergeable it is:
+- Imported: `<cloud ref>` (PR #N) → worktree `bristlenose_branch <clean-name>/`
+- Build: ✅ venv + frontend + CLI · Tests: ✅ N passed (CI-equivalent) / ❌ list failures + your fix-or-surface call
+- Defects found by running what the cloud couldn't: <one line each, or "none">
+- Merge readiness: conflicts with main (`<files>`) + flagged blockers (`<i18n/size-gate/…>`) → **not mergeable yet; remaining work = rebase onto local main + blockers**
+- Notes file: `.claude/from-cloud-import-notes.md` in the worktree
 
 Then record the task route in the worktree (so `/close-branch` knows this was the branch path) and log completion:
 

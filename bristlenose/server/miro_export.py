@@ -57,7 +57,8 @@ def _clip_url(base: str, q) -> str | None:
         return None
     parsed = urlparse(base)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
-        logger.warning("Ignoring non-http(s) clips_base for Miro links: %r", base[:60])
+        # Don't echo the user-supplied value into the log (log-injection guard).
+        logger.warning("Ignoring clips_base for Miro links: scheme is not http(s)")
         return None
     fname = f"{q.session}-{q.participant_code}-{int(_parse_timecode(q.timecode))}.mp4"
     return f"{base.rstrip('/')}/{fname}"

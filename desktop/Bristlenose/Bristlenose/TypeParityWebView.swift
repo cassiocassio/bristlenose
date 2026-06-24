@@ -38,7 +38,7 @@ final class TypeParityController: ObservableObject {
                 _ = try await webView.callAsyncJavaScript(
                     "window.__typeParityInit(JSON.parse(payload));",
                     arguments: ["payload": json],
-                    in: nil, in: .page
+                    in: nil, contentWorld: .page
                 )
             } catch {
                 log.error("inject failed: \(error.localizedDescription, privacy: .public)")
@@ -54,7 +54,7 @@ final class TypeParityController: ObservableObject {
             do {
                 let value = try await webView.callAsyncJavaScript(
                     "return window.__typeParityCollect();",
-                    arguments: [:], in: nil, in: .page
+                    arguments: [:], in: nil, contentWorld: .page
                 )
                 // Accept either a JSON string or a bridged JSON object (WebKit
                 // bridges a returned JS object to NSDictionary/NSArray).
@@ -125,6 +125,11 @@ struct TypeParityWebView: NSViewRepresentable {
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
+        // Ephemeral store — under App Sandbox the default persistent store wedges
+        // the WebContent renderer (JS eval + pasteboard XPC denials), which made
+        // callAsyncJavaScript("collect") fail. The main app's WebView works under
+        // sandbox for exactly this reason. No persistence needed for a debug tool.
+        config.websiteDataStore = .nonPersistent()
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.isInspectable = true   // DEBUG-only file; always inspectable here

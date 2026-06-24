@@ -247,7 +247,9 @@ window.__typeParityCollect = function () {
       webWidth: row.querySelector(".sample").getBoundingClientRect().width
     };
   });
-  return JSON.stringify({ rows, fingerprint: STATE.fingerprint });
+  // Return a structured object — WebKit bridges it to NSDictionary for the
+  // Swift side (more reliable than round-tripping a JSON string).
+  return { rows: rows, fingerprint: STATE.fingerprint };
 };
 
 // helpers

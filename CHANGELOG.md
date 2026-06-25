@@ -2,6 +2,11 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.15.19** — _24 Jun 2026_
+
+- **Desktop: the macOS project sidebar is rebuilt on native AppKit.** The sidebar moved off SwiftUI's `List` — which had hit selection and tap dead-ends on macOS 26 — onto a native `NSOutlineView`, bringing the row affordances the old list couldn't carry: two-line project rows (icon · name · session count, with a live status subtitle beneath), native activity and copy rings with hover-to-cancel on the row itself, status glyphs for can't-find and iCloud-evicted projects, the failure → diagnostic popover opened from the row, project and folder context menus, and Finder folder-of-videos drops wired into the sidebar. The migration came with its own test seams — pure `ProjectCellSpec`, `OutlineNode`, and `DropRouting` helpers with unit coverage — so the AppKit layer isn't an untested blind spot.
+- **Desktop: the five report views become a lens rail, with a native window title + session subtitle.** Project · Sessions · Quotes · Codebook · Analysis move out of the toolbar picker into a lens rail at the top of the sidebar; switching lens updates a native window title and a lens-contextual session subtitle (the old toolbar title pill is gone). Desktop-only (Swift) — both land in the alpha cohort with the next bundled-sidecar build; the PyPI / Homebrew / Snap package gains the supporting interface strings across all seven languages.
+
 **0.15.18** — _21 Jun 2026_
 
 - **Desktop: copy progress moved onto the project row, and switching back to a recent project is now near-instant.** Two macOS-app refinements. (1) When you drag files into a project, the copy progress — a determinate ring, a "Copying · N%" subtitle, and hover-to-cancel — now rides that project's sidebar row instead of a separate toolbar pill, so per-project status lives where the project lives (the standalone copy pill is gone). (2) Switching *back* to the immediately-previous project re-points to its still-running ("parked") server instead of tearing it down and restarting, so the boot wait disappears for the common back-and-forth switch — the "warm-sidecar pool." Localised across all seven languages.

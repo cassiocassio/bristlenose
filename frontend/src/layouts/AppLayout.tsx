@@ -20,9 +20,11 @@ import { SessionsSidebar } from "../components/SessionsSidebar";
 import { CodebookSidebar } from "../components/CodebookSidebar";
 import { AnalysisSidebar } from "../components/AnalysisSidebar";
 import { ExportDialog } from "../components/ExportDialog";
+import { MiroExportPanel } from "../components/MiroExportPanel";
 import { ActivityChipStack } from "../components/ActivityChipStack";
 import type { ActivityJob } from "../components/ActivityChipStack";
 import { AnnounceRegion } from "../components/AnnounceRegion";
+import { LensSubtitleSync } from "../components/LensSubtitleSync";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider, useFocus } from "../contexts/FocusContext";
 import { useActivityJobs, removeJob } from "../contexts/ActivityStore";
@@ -36,12 +38,25 @@ import {
   postReady,
   postProjectAction,
   postFindPasteboardWrite,
+  postExportCounts,
 } from "../shims/bridge";
 import { getPlayerOpen, getPlayerPlaying } from "../contexts/PlayerContext";
 import { cancelAutoCode, getClipExtractionStatus, revealClips } from "../utils/api";
+import {
+  copyQuotesToClipboard,
+  saveQuotesSpreadsheet,
+  extractVideoClips,
+} from "../utils/exportActions";
 import type { NormalisedJobStatus } from "../components/ActivityChipStack";
 import { toggleInspector } from "../contexts/InspectorStore";
-import { setSearchQuery, setViewMode, setTagFilter, getQuotesSnapshot } from "../contexts/QuotesContext";
+import {
+  setSearchQuery,
+  setViewMode,
+  setTagFilter,
+  getQuotesSnapshot,
+  getVisibleQuotes,
+  useQuoteCounts,
+} from "../contexts/QuotesContext";
 import { EMPTY_TAG_FILTER } from "../utils/filter";
 import { toast } from "../utils/toast";
 import { announce } from "../utils/announce";
@@ -160,6 +175,7 @@ function AppShell() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportAnonymise, setExportAnonymise] = useState(false);
+  const [miroOpen, setMiroOpen] = useState(false);
   const projectId = useProjectId();
   const isEmbeddedDesktop = useCallback(
     () => Boolean((window as unknown as { __BRISTLENOSE_EMBEDDED__?: boolean }).__BRISTLENOSE_EMBEDDED__),
@@ -209,6 +225,7 @@ function AppShell() {
   const showSidebar = !!(isQuotes || isSessions || isTranscript || isCodebook || isAnalysis);
   const isSessionsRoute = !!(isSessions || isTranscript);
   const toggleExport = useCallback(() => setExportOpen((prev) => !prev), []);
+  const toggleMiro = useCallback(() => setMiroOpen((prev) => !prev), []);
   const navigate = useNavigate();
   const activityJobs = useActivityJobs();
 
@@ -224,6 +241,16 @@ function AppShell() {
   selectedIdsBridgeRef.current = selectedIds;
   const locationBridgeRef = useRef(location);
   locationBridgeRef.current = location;
+
+  // Live export scope counts → native popover (All / Selected / Starred).
+  // useQuoteCounts() returns a stable {total,starred} ref unless those change,
+  // so the shell doesn't re-render on unrelated store mutations (tag/edit/search).
+  const { total: totalQuoteCount, starred: starredQuoteCount } = useQuoteCounts();
+  const selectedQuoteCount = selectedIds.size;
+  useEffect(() => {
+    if (!embedded) return;
+    postExportCounts(totalQuoteCount, selectedQuoteCount, starredQuoteCount);
+  }, [embedded, totalQuoteCount, selectedQuoteCount, starredQuoteCount]);
 
   useEffect(() => {
     const exportData = getExportData();
@@ -349,13 +376,22 @@ function AppShell() {
           break;
 
         // ── Tier 2: export, filter, help, zoom, dark mode ──────────────
-        case "exportReport":
+        case "exportReport": {
+          // Global Anonymise toggle (macOS menu) rides the payload; the web
+          // dropdown sends no payload and surfaces anonymise via the modal.
+          const anon = (payload as { anonymise?: boolean } | undefined)?.anonymise ?? false;
           if (isEmbeddedDesktop()) {
-            triggerReportDownload(false);
+            triggerReportDownload(anon);
           } else {
-            setExportAnonymise(false);
+            setExportAnonymise(anon);
             setExportOpen(true);
           }
+          break;
+        }
+        case "sendToMiro":
+          // Modal action, like exportReport — opens the Miro export panel.
+          // Dispatched by the macOS native menu for parity with the web dropdown.
+          setMiroOpen(true);
           break;
         case "exportAnonymised":
           if (isEmbeddedDesktop()) {
@@ -365,19 +401,6 @@ function AppShell() {
             setExportOpen(true);
           }
           break;
-        case "exportQuotesCSV": {
-          const snap = getQuotesSnapshot();
-          const csv = buildCsvString(null, snap);
-          const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "bristlenose-quotes.csv";
-          a.click();
-          URL.revokeObjectURL(url);
-          toast(i18n.t("toolbar.quotesExported", { count: snap.quotes.length }));
-          break;
-        }
         case "copyAsCSV": {
           const snap2 = getQuotesSnapshot();
           const focused = focusedIdBridgeRef.current;
@@ -392,6 +415,43 @@ function AppShell() {
             .writeText(csv2)
             .then(() => toast(i18n.t("toolbar.csvCopied", { count: ids.length })))
             .catch(() => toast(i18n.t("toolbar.csvFailed")));
+          break;
+        }
+        // ── Canonical quote-export actions (shared with the SPA dropdown via
+        //    utils/exportActions, so the macOS native menu and web behave
+        //    identically). Selection → focused → all quotes. ──────────────
+        case "copyQuotes": {
+          const snap = getQuotesSnapshot();
+          const p = payload as
+            | { anonymise?: boolean; scope?: "all" | "selected" | "starred" }
+            | undefined;
+          const anon = p?.anonymise ?? false;
+          // Scopes operate within the *visible* set ("all" = quotes on screen,
+          // excluding hidden/filtered). "selected" uses the live selection;
+          // "starred" = visible & starred. Default (no scope) = all visible.
+          const visible = getVisibleQuotes(snap);
+          let ids: string[];
+          if (p?.scope === "selected") ids = Array.from(selectedIdsBridgeRef.current);
+          else if (p?.scope === "starred")
+            ids = visible.filter((q) => snap.starred[q.dom_id]).map((q) => q.dom_id);
+          else ids = visible.map((q) => q.dom_id);
+          void copyQuotesToClipboard(snap, ids, i18n.t, anon);
+          break;
+        }
+        case "saveSpreadsheet": {
+          // Spreadsheet exports everything on screen (all visible quotes), not
+          // the current selection — the rich sheet is the full-dataset export.
+          const snap = getQuotesSnapshot();
+          const p = payload as { anonymise?: boolean; format?: "csv" | "xlsx" } | undefined;
+          const anon = p?.anonymise ?? false;
+          const format = p?.format === "csv" ? "csv" : "xlsx";
+          const ids = getVisibleQuotes(snap).map((q) => q.dom_id);
+          saveQuotesSpreadsheet(projectId, ids, i18n.t, anon, format);
+          break;
+        }
+        case "extractClips": {
+          const anon = (payload as { anonymise?: boolean } | undefined)?.anonymise ?? false;
+          void extractVideoClips(i18n.t, anon);
           break;
         }
         case "allQuotes":
@@ -556,7 +616,7 @@ function AppShell() {
       showRightSidebar={!!isQuotes}
     >
       {!embedded && <Header />}
-      {!embedded && <NavBar onExportReport={toggleExport} onSettings={toggleSettings} onHelp={openHelp} />}
+      {!embedded && <NavBar onExportReport={toggleExport} onSendToMiro={toggleMiro} onSettings={toggleSettings} onHelp={openHelp} />}
       <Outlet />
       {!embedded && (
         <Footer
@@ -568,9 +628,11 @@ function AppShell() {
       <FeedbackModal open={feedbackOpen} onClose={closeFeedback} health={health} />
       <HelpModal open={helpOpen} onClose={toggleHelp} initialSection={helpSection} health={health} />
       <ExportDialog open={exportOpen} onClose={toggleExport} initialAnonymise={exportAnonymise} />
+      <MiroExportPanel open={miroOpen} onClose={toggleMiro} />
       <SettingsModal open={settingsOpen} onClose={toggleSettings} />
       <ActivityChipStack jobs={chipJobs} onDismiss={removeJob} />
       <AnnounceRegion />
+      <LensSubtitleSync />
       {IS_DEV && (
         <Suspense fallback={null}>
           <PlaygroundHUD />

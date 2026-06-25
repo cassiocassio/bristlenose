@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bristlenose — Export popover per lens</title>
+<style>
+  :root { --accent:#2f6fed; }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 15px/1.5 -apple-system, "SF Pro Text", system-ui, sans-serif;
+         color:#1d1d1f; background:#eceef1; -webkit-font-smoothing:antialiased; padding:18px 14px 60px; }
+  h1 { font-size:21px; margin:6px 4px 2px; }
+  .lede { color:#6b6b70; margin:0 4px 18px; max-width:680px; }
+  .lede b { color:#1d1d1f; }
+  .legend { background:#fff; border:1px solid #e2e2e6; border-radius:12px; padding:12px 14px; margin:0 4px 22px; max-width:680px; }
+  .legend ul { margin:6px 0 0; padding-left:18px; } .legend li { margin:3px 0; }
+  .grid { display:grid; gap:22px 20px; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); align-items:start; }
+  .lens { }
+  .lens-head { display:flex; align-items:baseline; gap:8px; margin:0 2px 8px; }
+  .tab { font-size:12px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:#fff;
+         background:var(--accent); padding:3px 9px; border-radius:6px; }
+  .lens-sub { color:#6b6b70; font-size:13px; }
+  .cap { color:#6b6b70; font-size:12.5px; margin:8px 4px 0; }
+
+  /* macOS popover */
+  .pop { width:308px; max-width:100%; background:rgba(250,250,252,.96); border:1px solid #d4d4d9;
+         border-radius:12px; box-shadow:0 10px 34px rgba(0,0,0,.18); padding:6px 0; backdrop-filter:saturate(180%) blur(20px); }
+  .pop-toggle { display:flex; align-items:center; gap:10px; padding:8px 12px; }
+  .pt-txt { display:flex; flex-direction:column; line-height:1.25; }
+  .pt-title { font-weight:500; } .pt-sub { font-size:12px; color:#86868b; }
+  .mac-switch { margin-left:auto; width:34px; height:20px; border-radius:11px; background:var(--accent); position:relative; flex:none; }
+  .mac-switch::after { content:""; position:absolute; top:2px; left:16px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.3); }
+  .mac-switch.off { background:#c9c9ce; } .mac-switch.off::after { left:2px; }
+  .sep { height:1px; background:#e0e0e4; margin:5px 10px; }
+  .row { display:flex; align-items:flex-start; gap:10px; padding:7px 12px; margin:0 6px; border-radius:6px; }
+  .row:hover { background:rgba(0,0,0,.05); }
+  .row .ic { width:18px; flex:none; color:var(--accent); margin-top:1px; }
+  .row .txt { display:flex; flex-direction:column; line-height:1.25; }
+  .row .title { } .row .sub { font-size:12px; color:#86868b; }
+  .chev { margin-left:auto; color:#b0b0b6; align-self:center; font-size:13px; }
+  .more { padding:0 6px 3px; }
+  .subrow { padding:5px 10px 5px 40px; font-size:13px; border-radius:6px; color:#2c2c2e; }
+  .subrow:hover { background:rgba(0,0,0,.05); }
+  .gt { font-size:11px; font-weight:600; color:#9a9aa0; padding:6px 14px 2px; letter-spacing:.02em; }
+  svg { display:block; }
+</style>
+</head>
+<body>
+  <h1>Export — one popover, five lenses</h1>
+  <p class="lede">The toolbar <b>Export ↑</b> popover keeps a fixed frame — <b>Anonymise</b> + <b>Export Report</b> are on every tab — and morphs only the middle block to fit the lens you're on. Static approximation of the SwiftUI; real build differs slightly.</p>
+
+  <div class="legend">
+    <strong>Decisions baked in</strong>
+    <ul>
+      <li><b>Project / Analysis / Codebook</b> → just <b>Export Report</b> for TF (the dashboard <em>is</em> the whole report; analysis signal-cards ride the self-contained HTML; codebook export is post-TF).</li>
+      <li><b>Sessions</b> → <b>Reveal Transcripts in Finder</b> — the transcripts are already files on disk; the Mac just opens the folder (local-first). CLI users are already there.</li>
+      <li><b>Quotes</b> → Copy / Spreadsheet / Clips. <b>Copy Quotes</b> is a plain action by default and grows a scope picker only when you have a selection or stars (Option B).</li>
+      <li><b>Anonymise</b> is global (strips participant <em>names</em>). It does <em>not</em> apply to Reveal-in-Finder (that opens the real on-disk files) — an anonymised transcript bundle is a separate, post-TF export.</li>
+    </ul>
+  </div>
+
+  <div class="grid">
+
+    <!-- PROJECT -->
+    <div class="lens">
+      <div class="lens-head"><span class="tab">Project</span><span class="lens-sub">dashboard / overview</span></div>
+      <div class="pop">
+        <div class="pop-toggle"><span class="pt-txt"><span class="pt-title">Anonymise</span><span class="pt-sub">Remove participant names</span></span><span class="mac-switch off"></span></div>
+        <div class="sep"></div>
+        <div class="row"><span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v9"/><path d="M5.5 5 9 1.5 12.5 5"/><path d="M3 9.5H2v6.5h14V9.5h-1"/></svg></span><span class="txt"><span class="title">Export Report…</span><span class="sub">Self contained HTML</span></span></div>
+      </div>
+      <p class="cap">The overview <em>is</em> the report — nothing to add.</p>
+    </div>
+
+    <!-- SESSIONS -->
+    <div class="lens">
+      <div class="lens-head"><span class="tab">Sessions</span><span class="lens-sub">participants &amp; transcripts</span></div>
+      <div class="pop">
+        <div class="pop-toggle"><span class="pt-txt"><span class="pt-title">Anonymise</span><span class="pt-sub">Remove participant names</span></span><span class="mac-switch off"></span></div>
+        <div class="sep"></div>
+        <div class="row"><span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v9"/><path d="M5.5 5 9 1.5 12.5 5"/><path d="M3 9.5H2v6.5h14V9.5h-1"/></svg></span><span class="txt"><span class="title">Export Report…</span><span class="sub">Self contained HTML</span></span></div>
+        <div class="row"><span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 5.5a1 1 0 0 1 1-1h3l1.5 1.5h5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1z"/></svg></span><span class="txt"><span class="title">Reveal Transcripts in Finder</span><span class="sub">The transcript files on disk</span></span></div>
+      </div>
+      <p class="cap">Opens <code>bristlenose-output/transcripts-…/</code> — native, no re-export. (No anonymise: it's the real files.)</p>
+    </div>
+
+    <!-- QUOTES (default) -->
+    <div class="lens">
+      <div class="lens-head"><span class="tab">Quotes</span><span class="lens-sub">nothing selected</span></div>
+      <div class="pop">
+        <div class="pop-toggle"><span class="pt-txt"><span class="pt-title">Anonymise</span><span class="pt-sub">Remove participant names</span></span><span class="mac-switch off"></span></div>
+        <div class="sep"></div>
+        <div class="row"><span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v9"/><path d="M5.5 5 9 1.5 12.5 5"/><path d="M3 9.5H2v6.5h14V9.5h-1"/></svg></span><span class="txt"><span class="title">Export Report…</span><span class="sub">Self contained HTML</span></span></div>
+        <div class="row"><span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2.5" width="9" height="12" rx="1.5"/><path d="M6 14.5v1A1.5 1.5 0 0 0 7.5 17h6A1.5 1.5 0 0 0 15 15.5v-9A1.5 1.5 0 0 0 13.5 5H12"/></svg></span><span class="txt"><span class="title">Copy Quotes</span><span class="sub">Lean — quote, code, name, timecode</span></span></div>
+        <div class="row"><span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="13" height="11" rx="1.5"/><path d="M2.5 7.5h13M7 3.5v11"/></svg></span><span class="txt"><span class="title">Save as Spreadsheet…</span><span class="sub">Rich — 11 columns for sorting and analysis</span></span><span class="chev">⌄</span></div>
+        <div class="more">
+          <div class="subrow">CSV</div><div class="subrow">XLSX</div>
+        </div>
+        <div class="row"><span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="13" height="10" rx="1.5"/><path d="M2.5 7h13M5 4v3M9 4v3M13 4v3"/></svg></span><span class="txt"><span class="title">Extract Video Clips…</span><span class="sub">Trimmed clip per quote</span></span></div>
+      </div>
+      <p class="cap">No selection → <b>Copy Quotes</b> is a plain action (copies all visible). No pointless 1-item submenu.</p>
+    </div>
+
+    <!-- QUOTES (selection) -->
+    <div class="lens">
+      <div class="lens-head"><span class="tab">Quotes</span><span class="lens-sub">16 selected · 8 starred</span></div>
+      <div class="pop">
+        <div class="pop-toggle"><span class="pt-txt"><span class="pt-title">Anonymise</span><span class="pt-sub">Remove participant names</span></span><span class="mac-switch off"></span></div>
+        <div class="sep"></div>
+        <div class="row"><span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v9"/><path d="M5.5 5 9 1.5 12.5 5"/><path d="M3 9.5H2v6.5h14V9.5h-1"/></svg></span><span class="txt"><span class="title">Export Report…</span><span class="sub">Self contained HTML</span></span></div>
+        <div class="row"><span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2.5" width="9" height="12" rx="1.5"/><path d="M6 14.5v1A1.5 1.5 0 0 0 7.5 17h6A1.5 1.5 0 0 0 15 15.5v-9A1.5 1.5 0 0 0 13.5 5H12"/></svg></span><span class="txt"><span class="title">Copy Quotes</span><span class="sub">Lean — quote, code, name, timecode</span></span><span class="chev">⌄</span></div>
+        <div class="more">
+          <div class="subrow">All (34)</div><div class="subrow">Selected (16)</div><div class="subrow">Starred (8)</div>
+        </div>
+        <div class="row"><span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="13" height="11" rx="1.5"/><path d="M2.5 7.5h13M7 3.5v11"/></svg></span><span class="txt"><span class="title">Save as Spreadsheet…</span><span class="sub">Rich — 11 columns for sorting and analysis</span></span><span class="chev">⌄</span></div>
+        <div class="more"><div class="subrow">CSV</div><div class="subrow">XLSX</div></div>
+        <div class="row"><span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="13" height="10" rx="1.5"/><path d="M2.5 7h13M5 4v3M9 4v3M13 4v3"/></svg></span><span class="txt"><span class="title">Extract Video Clips…</span><span class="sub">Trimmed clip per quote</span></span></div>
+      </div>
+      <p class="cap">Selection/stars exist → <b>Copy Quotes</b> grows a scope picker. Zero-count scopes stay hidden in the popover (menu bar keeps them, dimmed).</p>
+    </div>
+
+    <!-- CODEBOOK -->
+    <div class="lens">
+      <div class="lens-head"><span class="tab">Codebook</span><span class="lens-sub">tag taxonomy</span></div>
+      <div class="pop">
+        <div class="pop-toggle"><span class="pt-txt"><span class="pt-title">Anonymise</span><span class="pt-sub">Remove participant names</span></span><span class="mac-switch off"></span></div>
+        <div class="sep"></div>
+        <div class="row"><span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v9"/><path d="M5.5 5 9 1.5 12.5 5"/><path d="M3 9.5H2v6.5h14V9.5h-1"/></svg></span><span class="txt"><span class="title">Export Report…</span><span class="sub">Self contained HTML</span></span></div>
+      </div>
+      <p class="cap">TF: report only. <em>Future:</em> Export Codebook (YAML, re-importable into another study).</p>
+    </div>
+
+    <!-- ANALYSIS -->
+    <div class="lens">
+      <div class="lens-head"><span class="tab">Analysis</span><span class="lens-sub">signal concentration</span></div>
+      <div class="pop">
+        <div class="pop-toggle"><span class="pt-txt"><span class="pt-title">Anonymise</span><span class="pt-sub">Remove participant names</span></span><span class="mac-switch off"></span></div>
+        <div class="sep"></div>
+        <div class="row"><span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v9"/><path d="M5.5 5 9 1.5 12.5 5"/><path d="M3 9.5H2v6.5h14V9.5h-1"/></svg></span><span class="txt"><span class="title">Export Report…</span><span class="sub">Self contained HTML</span></span></div>
+      </div>
+      <p class="cap">TF: signal cards ship inside the self-contained report. <em>Future:</em> Save Analysis as Spreadsheet.</p>
+    </div>
+
+  </div>
+</body>
+</html>

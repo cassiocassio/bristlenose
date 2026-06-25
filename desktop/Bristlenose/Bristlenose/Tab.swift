@@ -33,6 +33,16 @@ enum Tab: String, CaseIterable, Identifiable {
         return fullValue != fullKey ? fullValue : label
     }
 
+    /// Full translated label (no `_short` preference) — for surfaces with room,
+    /// e.g. the sidebar lens rail ("Codebook", not the toolbar Picker's "Codes").
+    /// Shares the English `label` fallback so the i18n resolution lives in one
+    /// place rather than being re-implemented per call site.
+    @MainActor func fullLocalizedLabel(_ i18n: I18n) -> String {
+        let key = "common.nav.\(rawValue)"
+        let value = i18n.t(key)
+        return value != key ? value : label
+    }
+
     var route: String {
         switch self {
         case .project:   "/report/"

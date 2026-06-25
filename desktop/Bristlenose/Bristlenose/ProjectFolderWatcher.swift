@@ -21,9 +21,14 @@ struct UnanalysedState: Equatable {
     /// study" metric rendered on the row's title line. Nil when the DB
     /// isn't readable (pre-analysis, locked, etc.).
     let sessionCount: Int?
+    /// Sum of `sessions.duration_seconds` — total interview time across the
+    /// study, matching the Project dashboard's "Total" stat. Feeds the native
+    /// window subtitle ("16 Sessions · 18h 23m"). Nil when the DB isn't
+    /// readable; 0 when there are no sessions yet. Mirrors `sessionCount`.
+    let totalDurationSeconds: Double?
 
     static let empty = UnanalysedState(
-        newFiles: [], missingFiles: [], sessionCount: nil
+        newFiles: [], missingFiles: [], sessionCount: nil, totalDurationSeconds: nil
     )
 
     /// True when there's nothing to render for the data-state deltas (no
@@ -228,7 +233,8 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
         let state = UnanalysedState(
             newFiles: newFiles,
             missingFiles: missingFiles,
-            sessionCount: snapshot.sessionCount
+            sessionCount: snapshot.sessionCount,
+            totalDurationSeconds: snapshot.totalDurationSeconds
         )
         if state == lastPublished { return }
         lastPublished = state

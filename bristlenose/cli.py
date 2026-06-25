@@ -2033,7 +2033,10 @@ def configure(
 
     console.print()
     if canonical == "miro":
-        console.print("You can now export to Miro from: [bold]bristlenose serve[/bold]")
+        console.print(
+            "Miro access token saved. [dim]Miro board export is a parked feature "
+            "(future idea) — not yet available.[/dim]"
+        )
     else:
         console.print("You can now run: [bold]bristlenose run interviews[/bold]")
 

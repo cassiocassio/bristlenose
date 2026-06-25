@@ -62,7 +62,7 @@
     "folder": {
       "rename": "폴더 이름 변경",
       "archive": "폴더 보관",
-      "delete": "폴더 삭제…"
+      "delete": "폴더 삭제"
     },
     "codes": {
       "createCodeGroup": "코드 그룹 생성",
@@ -90,7 +90,23 @@
       "extendSelectionUp": "선택 위로 확장",
       "toggleSelection": "선택 전환",
       "clearSelection": "선택 해제",
-      "copyAsCSV": "CSV로 복사"
+      "copyAsCSV": "CSV로 복사",
+      "copyQuotes": "인용 복사",
+      "saveSpreadsheet": "스프레드시트로 저장…",
+      "extractClips": "비디오 클립 추출…",
+      "anonymise": "\uc775\uba85\ud654",
+      "anonymiseHint": "\ucc38\uac00\uc790 \uc774\ub984 \uc81c\uac70",
+      "reportHint": "\ub3c5\ub9bd\ud615 HTML",
+      "copyHint": "\uac04\uc18c\ud654 \u2014 \uc778\uc6a9, \ucf54\ub4dc, \uc774\ub984, \ud0c0\uc784\ucf54\ub4dc",
+      "spreadsheetHint": "\uc0c1\uc138 \u2014 \uc815\ub82c \ubc0f \ubd84\uc11d\uc744 \uc704\ud55c 11\uac1c \uc5f4",
+      "clipsHint": "\uc778\uc6a9\ub2f9 \uc798\ub77c\ub0b8 \ud074\ub9bd \ud558\ub098",
+      "formatCSV": "CSV",
+      "formatXLSX": "XLSX",
+      "copyScopeAll": "\uc804\uccb4 ({{count}})",
+      "copyScopeSelected": "\uc120\ud0dd ({{count}})",
+      "copyScopeStarred": "\ubcc4\ud45c ({{count}})",
+      "revealTranscripts": "Finder\uc5d0\uc11c \uc804\uc0ac\ubcf8 \ubcf4\uae30",
+      "revealTranscriptsHint": "\ub514\uc2a4\ud06c\uc758 \uc804\uc0ac\ubcf8 \ud30c\uc77c"
     },
     "video": {
       "play": "재생",
@@ -156,6 +172,7 @@
     "addedInterviews": "%@에 %d개 인터뷰 추가됨",
     "interviewCount_other": "\uc778\ud130\ubdf0 {{count}}\uac1c",
     "unanalysedSubtitle_other": "\ubbf8\ubd84\uc11d +{{count}}\uac1c",
+    "titleSessions_other": "{{count}}\uac1c \uc138\uc158",
     "missingSubtitle_other": "{{count}}\uac1c \ub204\ub77d",
     "tooltipWaiting": "{{count}}\uac1c \ub300\uae30 \uc911",
     "dateRelativeJustNow": "\ubc29\uae08",

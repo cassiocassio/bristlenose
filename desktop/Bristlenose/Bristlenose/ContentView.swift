@@ -2,31 +2,6 @@ import SwiftUI
 import UniformTypeIdentifiers
 import os
 
-// MARK: - Window title manager
-
-/// Sets NSWindow.title for Cmd+Tab / Mission Control without using
-/// `.navigationTitle()` on the detail view (which adds a visible toolbar title
-/// item that duplicates the custom icon+name ToolbarItem).
-/// Also hides the title bar text via `titleVisibility = .hidden` as belt-and-
-/// suspenders in case any navigation layer restores it.
-private struct WindowTitleManager: NSViewRepresentable {
-    let title: String
-
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async { Self.apply(title: title, to: view) }
-        return view
-    }
-    func updateNSView(_ view: NSView, context: Context) {
-        DispatchQueue.main.async { Self.apply(title: title, to: view) }
-    }
-    private static func apply(title: String, to view: NSView) {
-        guard let window = view.window else { return }
-        window.title = title
-        window.titleVisibility = .hidden
-    }
-}
-
 // MARK: - Sidebar empty-click deselection monitor
 
 /// Clears the sidebar selection when the user clicks in the empty area below
@@ -139,10 +114,11 @@ struct LocateErrorState: Identifiable {
 /// in embedded mode. The WKWebView is recreated on project switch (via .id)
 /// to get a fresh ephemeral data store per project.
 ///
-/// The toolbar provides three zones:
-/// - Leading: back/forward buttons (Cmd+[/Cmd+])
-/// - Centre: tab segmented control (Cmd+1-5)
-/// - Trailing: project name as window title
+/// The toolbar provides:
+/// - Leading: back/forward buttons (Cmd+[/Cmd+]) + project title (explicit ToolbarItem)
+/// - Trailing: Export menu + per-tab actions; Ollama status pill (.status)
+/// The five tab lenses moved OUT of the toolbar into the sidebar LensRail
+/// (Cmd+1-5 still switch tabs) — see design-desktop-nav-toolbar-rearrangement.md.
 struct ContentView: View {
 
     @EnvironmentObject var serveManager: ServeManager
@@ -194,6 +170,10 @@ struct ContentView: View {
     /// the accent-stroke overlay on the folder row.
     @State private var dropTargetFolderID: UUID?
 
+    /// Whether a Finder drag is hovering the empty-project content pane ("Drag
+    /// interviews here"). Drives the accent-ring drop affordance on that pane.
+    @State private var emptyProjectDropTargeted = false
+
     /// Alert state for duplicate folder drop warning.
 
     /// "Added N files to X" sheet shown after a copy completes (Plan §11).
@@ -235,6 +215,90 @@ struct ContentView: View {
     private var selectedProject: Project? {
         guard case .project(let id) = soleSelection else { return nil }
         return projectIndex.projects.first { $0.id == id }
+    }
+
+    /// Native window subtitle (drives `NSWindow.subtitle`), per active lens.
+    /// Sessions/Project show the session count + total time from the local
+    /// analysis DB — stable, and painted instantly before the report loads. The
+    /// report-derived lenses (Quotes/Codebook/Analysis) carry *live* counts only
+    /// the SPA can compute (Signals don't exist in the DB; visible-quote/tag
+    /// counts shift as the researcher edits), so they arrive over the bridge as
+    /// `lensSubtitle`. Empty renders as no subtitle, the title centring on its
+    /// own. Recomputes reactively: `activeTab`/`lensSubtitle` are `@Published`,
+    /// as is `unanalysed`.
+    private var navigationSubtitle: String {
+        switch bridgeHandler.activeTab {
+        case .quotes?, .codebook?, .analysis?:
+            // Honour the bridged subtitle only when it's for the lens we're on,
+            // so a tab switch never momentarily shows the previous lens's count.
+            guard bridgeHandler.lensSubtitleTab == bridgeHandler.activeTab?.rawValue else {
+                return ""
+            }
+            return bridgeHandler.lensSubtitle
+        default:
+            return sessionsSubtitle
+        }
+    }
+
+    /// "16 Sessions · 18h 23m" — session count + summed duration from the
+    /// project's analysis DB (the same figures the Project dashboard shows).
+    /// Empty when no project is selected or the DB isn't readable yet
+    /// (pre-analysis). Recomputes when the watcher republishes `unanalysed`.
+    private var sessionsSubtitle: String {
+        guard let project = selectedProject,
+              let state = projectIndex.unanalysed[project.id],
+              let count = state.sessionCount, count > 0
+        else { return "" }
+        let sessions = sessionCountPhrase(count)
+        guard let seconds = state.totalDurationSeconds, seconds > 0 else { return sessions }
+        return "\(sessions) · \(DurationFormat.human(seconds: seconds))"
+    }
+
+    /// Localised "<N> Sessions" using the active locale's CLDR plural form,
+    /// mirroring `ProjectRow.deltaText` (one/few/many/other + `_other` fallback
+    /// for single-form locales like ja/ko).
+    private func sessionCountPhrase(_ count: Int) -> String {
+        let base = "desktop.chrome.titleSessions"
+        let key = "\(base)_\(i18n.pluralCategory(count))"
+        let rendered = i18n.t(key, ["count": String(count)])
+        if rendered == key {
+            return i18n.t("\(base)_other", ["count": String(count)])
+        }
+        return rendered
+    }
+
+    private static let focusLog = Logger(subsystem: "app.bristlenose", category: "focus")
+
+    /// View ▸ Move Focus to Projects (⌘0) — the §10.1 keyboard no-trap return.
+    /// A keyboard user inside the web report is never trapped: this always moves
+    /// first responder back to native chrome. Logs via `os.Logger` and falls back
+    /// to the window content view when the sidebar table can't be found (e.g. the
+    /// sidebar is collapsed) so a no-op is observable, not silent (review F1).
+    private func focusProjectsList() {
+        guard let window = NSApp.keyWindow else {
+            Self.focusLog.warning("focusProjects: no key window")
+            return
+        }
+        guard let tableView = Self.firstSidebarTableView(in: window) else {
+            Self.focusLog.warning("focusProjects: no sidebar table view (collapsed?) — focusing content view")
+            window.makeFirstResponder(window.contentView)
+            return
+        }
+        let ok = window.makeFirstResponder(tableView)
+        Self.focusLog.info("focusProjects: makeFirstResponder=\(ok)")
+    }
+
+    /// Finds the first NSTableView in the window — the project list. (The detail
+    /// pane is a WKWebView with no NSTableViews.) Mirrors the locator in
+    /// `SidebarDeselectMonitor`; duplicated rather than shared to avoid touching
+    /// the fragile sidebar monitor (§2.2). Revisit when the project List becomes
+    /// an NSOutlineView (review F20).
+    private static func firstSidebarTableView(in window: NSWindow) -> NSTableView? {
+        func find(in view: NSView) -> NSTableView? {
+            if let tv = view as? NSTableView { return tv }
+            return view.subviews.lazy.compactMap { find(in: $0) }.first
+        }
+        return window.contentView.flatMap { find(in: $0) }
     }
 
     /// The currently selected folder (when exactly one folder is selected).
@@ -286,14 +350,19 @@ struct ContentView: View {
             detail
                 .toolbar {
                     toolbarLeading
-                    toolbarCenter
                     toolbarTrailing
                 }
-        // No .navigationTitle on the detail view — that would add a visible
-        // toolbar title item that duplicates the custom icon+name ToolbarItem.
-        // NSWindow.title is managed by WindowTitleManager below.
+                // Native window title + subtitle (Mail/Notes pattern): title =
+                // the project (scope), subtitle = session count · total time.
+                // `.navigationTitle` on the detail column drives NSWindow.title;
+                // `.navigationSubtitle` drives NSWindow.subtitle. The old custom
+                // `.navigation` ToolbarItem + `WindowTitleManager` workaround is
+                // gone — the duplicate title item it dodged no longer exists,
+                // and forcing `titleVisibility = .hidden` was what suppressed
+                // the native subtitle.
+                .navigationTitle(selectedProject?.name ?? "Bristlenose")
+                .navigationSubtitle(navigationSubtitle)
         }
-        .background(WindowTitleManager(title: selectedProject?.name ?? "Bristlenose"))
         .background(SidebarDeselectMonitor { selection = [] })
         .overlay(alignment: .bottomTrailing) {
             // Compact build-info diagnostic — Debug only by default; Release
@@ -436,6 +505,10 @@ struct ContentView: View {
         // File > New Folder (⇧⌘N) and sidebar folder.badge.plus button.
         .onReceive(NotificationCenter.default.publisher(for: .createNewFolder)) { _ in
             createNewFolder()
+        }
+        // View > Move Focus to Projects (⌘0) — the §10.1 keyboard no-trap return.
+        .onReceive(NotificationCenter.default.publisher(for: .focusProjects)) { _ in
+            focusProjectsList()
         }
         .modifier(ProjectNotificationReceivers(
             selection: $selection,
@@ -1230,15 +1303,6 @@ struct ContentView: View {
 
     // MARK: - Toolbar
 
-    /// Two-way binding: reads activeTab from bridge, writes via switchToTab.
-    /// Maps nil to .project since segmented Picker requires non-optional selection.
-    private var tabBinding: Binding<Tab> {
-        Binding(
-            get: { bridgeHandler.activeTab ?? .project },
-            set: { bridgeHandler.switchToTab($0) }
-        )
-    }
-
     /// Per-tab label for the left-panel toolbar button.
     private var leftPanelToolbarLabel: String {
         switch bridgeHandler.activeTab {
@@ -1261,13 +1325,13 @@ struct ContentView: View {
 
     @ToolbarContentBuilder
     private var toolbarLeading: some ToolbarContent {
-        // Project name / icon intentionally NOT in the toolbar. The chip
-        // previously here sat where the system back affordance lives, which
-        // is the wrong real estate for a per-project title indicator.
-        // `WindowTitleManager` still sets the NSWindow title to the project
-        // name so it shows in Mission Control / window-menu / Cmd+~ switcher.
-        // A correct in-toolbar project surface will return via a separate
-        // design pass — placeholder removed by user request.
+        // Project name + subtitle render NATIVELY — `.navigationTitle` /
+        // `.navigationSubtitle` on the detail view (see `body`), not a toolbar
+        // item (the old chip sat where the system back affordance lives, the
+        // wrong real estate). `.navigationTitle` drives NSWindow.title too, so
+        // Mission Control / window-menu / Cmd+~ still show the project name.
+        // The old `WindowTitleManager` is gone — its forced
+        // `titleVisibility = .hidden` was what had suppressed the subtitle.
 
         // Contextual — Quotes/Codebook/Analysis: left panel toggle
         // The native sidebar toggle (for the project list) is provided by
@@ -1311,59 +1375,75 @@ struct ContentView: View {
             .controlGroupStyle(.navigation)
         }
 
-    }
-
-    private var toolbarCenter: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            Picker("Tab", selection: tabBinding) {
-                ForEach(Tab.allCases) { tab in
-                    Text(tab.localizedLabel(i18n)).tag(tab)
-                }
-            }
-            .pickerStyle(.segmented)
-            .disabled(selectedProject == nil || !bridgeHandler.isReady)
-        }
+        // Project name + subtitle render natively now — `.navigationTitle` /
+        // `.navigationSubtitle` on the detail view (see `body`), NOT a custom
+        // `.navigation` ToolbarItem. The old pill put the title "in a button",
+        // off the Mac grain; the convention is window title = scope (project) +
+        // subtitle = count ("16 Sessions · 18h 23m"). See desktop CLAUDE.md.
     }
 
     // MARK: - Toolbar trailing (contextual — menus dim, toolbars morph)
 
+    /// Whether the detail pane is showing an actual report (vs an empty /
+    /// unavailable / unsupported state). Mirrors `detail`'s report branch, so the
+    /// report-only toolbar actions (Export, Search, the per-tab panel toggles) hide
+    /// when there's nothing to act on — e.g. a new project with no interviews that
+    /// has never run. (They used to show unconditionally — a Search field + Export
+    /// button over a "Drag Interviews Here" empty state.)
+    private var selectedProjectShowsReport: Bool {
+        guard let project = selectedProject else { return false }
+        if !project.isAvailable { return false }
+        if project.path.isEmpty { return false }
+        if project.inputFiles != nil
+            && !Self.pipelineHasViewableData(pipelineRunner.state[project.id]) {
+            return false
+        }
+        return true
+    }
+
     @ToolbarContentBuilder
     private var toolbarTrailing: some ToolbarContent {
-        // Universal — Export menu (contents morph per tab)
-        ToolbarItem(placement: .primaryAction) {
-            ExportMenuButton(bridgeHandler: bridgeHandler, i18n: i18n)
-        }
-
-        // Contextual — Quotes tab: tag sidebar toggle
-        if bridgeHandler.activeTab == .quotes {
+        // Report-only actions — hidden when the detail pane has no report to act
+        // on (new / never-run / unavailable / unsupported-subset project), so a
+        // never-run project no longer shows a Search field + Export button with
+        // nothing behind them. Mirrors `detail`'s report branch.
+        if selectedProjectShowsReport {
+            // Universal — Export menu (contents morph per tab)
             ToolbarItem(placement: .primaryAction) {
-                Button { bridgeHandler.menuAction("toggleRightPanel") } label: {
-                    Label(i18n.t("desktop.toolbar.tags"), systemImage: "sidebar.right")
-                }
-                .help(i18n.t("desktop.toolbar.showTags"))
+                ExportMenuButton(bridgeHandler: bridgeHandler, i18n: i18n)
             }
-        }
 
-        // Contextual — Analysis tab: heatmap inspector toggle
-        if bridgeHandler.activeTab == .analysis {
+            // Contextual — Quotes tab: tag sidebar toggle
+            if bridgeHandler.activeTab == .quotes {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { bridgeHandler.menuAction("toggleRightPanel") } label: {
+                        Label(i18n.t("desktop.toolbar.tags"), systemImage: "sidebar.right")
+                    }
+                    .help(i18n.t("desktop.toolbar.showTags"))
+                }
+            }
+
+            // Contextual — Analysis tab: heatmap inspector toggle
+            if bridgeHandler.activeTab == .analysis {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { bridgeHandler.menuAction("toggleInspectorPanel") } label: {
+                        Label(i18n.t("desktop.toolbar.heatmap"), systemImage: "square.grid.2x2")
+                    }
+                    .help(i18n.t("desktop.toolbar.showHeatmap"))
+                }
+            }
+
+            // Search — rightmost in `.primaryAction`, always active. Declared last
+            // so it sits at the trailing edge of the capsule (Notes / Mail / Finder
+            // convention). The web layer routes per tab: Quotes → search bar,
+            // Sessions → transcript search, Codebook → filter codes, Analysis →
+            // filter signals.
             ToolbarItem(placement: .primaryAction) {
-                Button { bridgeHandler.menuAction("toggleInspectorPanel") } label: {
-                    Label(i18n.t("desktop.toolbar.heatmap"), systemImage: "square.grid.2x2")
+                Button { bridgeHandler.menuAction("find") } label: {
+                    Label(i18n.t("desktop.toolbar.search"), systemImage: "magnifyingglass")
                 }
-                .help(i18n.t("desktop.toolbar.showHeatmap"))
+                .help(i18n.t("desktop.toolbar.searchShortcut"))
             }
-        }
-
-        // Search — rightmost in `.primaryAction`, always active. Declared last
-        // so it sits at the trailing edge of the capsule (Notes / Mail / Finder
-        // convention). The web layer routes per tab: Quotes → search bar,
-        // Sessions → transcript search, Codebook → filter codes, Analysis →
-        // filter signals.
-        ToolbarItem(placement: .primaryAction) {
-            Button { bridgeHandler.menuAction("find") } label: {
-                Label(i18n.t("desktop.toolbar.search"), systemImage: "magnifyingglass")
-            }
-            .help(i18n.t("desktop.toolbar.searchShortcut"))
         }
 
         // App-wide ambient pills share `placement: .status` (macOS-only) so they
@@ -1386,7 +1466,67 @@ struct ContentView: View {
 
     // MARK: - Sidebar
 
+    @ViewBuilder
     private var sidebar: some View {
+        if BristlenoseFlags.appKitSidebar {
+            // Native AppKit NSOutlineView source-list sidebar (flag-gated, in
+            // progress). Selection state stays in SwiftUI so the existing serve
+            // wiring is reused. design-desktop-sidebar-appkit.md.
+            ProjectSidebarOutline(
+                projectIndex: projectIndex,
+                i18n: i18n,
+                selection: $selection,
+                lenses: LensItem.all,
+                activeTab: bridgeHandler.activeTab,
+                lensesEnabled: selectedProjectShowsReport,
+                onActivateLens: { bridgeHandler.switchToTab($0) },
+                onExternalDrop: { target, urls in
+                    // Route to the same substrate-independent handlers the SwiftUI
+                    // sidebar's `.dropDestination` closures use — drop policy lives
+                    // there, not in the AppKit view.
+                    switch target {
+                    case .root:               handleDrop(urls: urls)
+                    case .folder(let id):     handleDropOnFolder(id: id, urls: urls)
+                    case .project(let id):    handleDropOnProject(id: id, urls: urls)
+                    }
+                },
+                onLocate: { id in
+                    if let p = projectIndex.projects.first(where: { $0.id == id }) { locateProject(p) }
+                },
+                onShowInFinder: { id in
+                    if let p = projectIndex.projects.first(where: { $0.id == id }) { revealInFinder(p) }
+                },
+                canShowInFinder: { id in
+                    projectIndex.projects.first(where: { $0.id == id }).map(canRevealInFinder) ?? false
+                },
+                onRemoveProject: { id in removeFromSidebarContextMenu(targetingProject: id) },
+                onRemoveFolder: { id in deleteFromContextMenu(targetingFolder: id) },
+                pipelineRunner: pipelineRunner,
+                liveData: pipelineRunner.liveData,
+                copyMachinery: copyMachinery
+            )
+            .navigationTitle(i18n.t("desktop.chrome.projects"))
+        } else {
+            swiftUISidebar
+        }
+    }
+
+    private var swiftUISidebar: some View {
+        VStack(spacing: 0) {
+        // Lens rail — relocates the former toolbar tab Picker into the top of the
+        // sidebar (spec §2, §3.1). Dimmed until a project is ready, exactly as the
+        // Picker's `.disabled(...)` was. All List modifiers below stay ON the List,
+        // unchanged — only this wrap is new (review F3; the project List is reused
+        // verbatim per §2.2).
+        LensRail(
+            bridgeHandler: bridgeHandler,
+            i18n: i18n,
+            isEnabled: selectedProject != nil && bridgeHandler.isReady
+        )
+        .padding(.horizontal, 8)
+        .padding(.top, 6)
+        .padding(.bottom, 2)
+
         List(selection: $selection) {
             // "+ New Project" lives outside the Section. Per desktop/CLAUDE.md:
             // `Section + Button + ForEach.onMove + conditional Text` drops
@@ -1458,6 +1598,7 @@ struct ContentView: View {
             }
         }
         .navigationTitle(i18n.t("desktop.chrome.projects"))
+        }
     }
 
     // MARK: - Sidebar rows
@@ -1830,12 +1971,28 @@ struct ContentView: View {
                 // Project directory is not accessible — volume ejected or folder moved.
                 unavailableProjectView(project)
             } else if project.path.isEmpty {
-                // New project with no files yet — prompt user to add interviews.
+                // New project with no files yet — prompt user to add interviews,
+                // and accept a Finder drop right here. Routes through the same
+                // `handleDropOnProject` as the project's sidebar row (→
+                // `establishEmptyProject` for the empty case), so the "Drag
+                // interviews here" copy is a promise the pane can actually keep.
                 ContentUnavailableView(
                     i18n.t("desktop.chrome.dragInterviews"),
                     systemImage: "square.and.arrow.down",
                     description: Text(i18n.t("desktop.chrome.dragInterviewsDescription"))
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay {
+                    if emptyProjectDropTargeted {
+                        RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(Color.accentColor, lineWidth: 2)
+                            .padding(12)
+                    }
+                }
+                .dropDestination(for: URL.self) { urls, _ in
+                    handleDropOnProject(id: project.id, urls: urls)
+                    return true
+                } isTargeted: { emptyProjectDropTargeted = $0 }
             } else if project.inputFiles != nil
                         && !Self.pipelineHasViewableData(pipelineRunner.state[project.id]) {
                 // File-subset project with no prior analysis — CLI can't
@@ -2016,36 +2173,310 @@ private struct ProjectNotificationReceivers: ViewModifier {
     }
 }
 
-/// Toolbar export button with per-tab dropdown contents.
-/// "Export Report..." is always first (universal). Tab-specific exports below a divider.
+/// Toolbar export button — the macOS surface of the canonical export list,
+/// at parity with the SPA dropdown (see docs/mockups/export-menu-comparison.html).
+///
+/// Rendered as a **richer popover** (Variant Ⓑ) rather than a plain `NSMenu`,
+/// so each action carries a descriptive subtitle — matching the SPA dropdown's
+/// information density. Layout: a global Anonymise pill toggle, a divider, then
+/// "Export Report…" followed by the quote actions (Copy Quotes · Save as
+/// Spreadsheet · Extract Video Clips) shown only on the Quotes tab. No group
+/// headers — the subtitles carry the grouping.
+///
+/// Every item dispatches through `bridgeHandler.menuAction(_:payload:)`, which
+/// the web layer (`AppLayout` `bn:menu-action`) routes into `utils/exportActions`
+/// — the single source of truth shared with the SPA dropdown. The `anonymise`
+/// flag rides the payload so it applies to whichever export the user picks.
+///
+/// Parked (future ideas, not shown): Miro board push, PowerPoint quote slides.
 struct ExportMenuButton: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
 
+    @State private var isPresented = false
+
     var body: some View {
-        Menu {
-            // Shortcut (Cmd+Shift+E) lives on the File > Export Report… item
-            // in MenuCommands.swift — single source so re-binding only touches
-            // one place. The toolbar Menu item invokes the same bridge action.
-            Button(i18n.t("desktop.menu.file.exportReport")) {
-                bridgeHandler.menuAction("exportReport")
-            }
-
-            if bridgeHandler.activeTab == .quotes {
-                Divider()
-
-                Button(i18n.t("desktop.menu.quotes.copyAsCSV")) {
-                    bridgeHandler.menuAction("exportQuotesCSV")
-                }
-
-                // Future: "Export Starred Quotes as CSV" when starred filter active
-            }
-
-            // Future: Analysis tab → "Export Signal Cards as PPTX"
+        Button {
+            isPresented.toggle()
         } label: {
             Label(i18n.t("desktop.toolbar.export"), systemImage: "square.and.arrow.up")
         }
         .help(i18n.t("desktop.toolbar.exportShortcut"))
+        .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+            ExportPopoverContent(bridgeHandler: bridgeHandler, i18n: i18n) {
+                isPresented = false
+            }
+        }
+    }
+}
+
+/// Contents of the export popover. Holds the (non-persisted) Anonymise state,
+/// renders the grouped action rows, and dismisses the popover after a pick.
+private struct ExportPopoverContent: View {
+    @ObservedObject var bridgeHandler: BridgeHandler
+    @ObservedObject var i18n: I18n
+    let dismiss: () -> Void
+
+    /// Global Anonymise — strips participant *names* (display names) from every
+    /// export; participant codes (p1, p2) are kept. Deliberately not persisted:
+    /// the popover is recreated each open, so it defaults off and a researcher
+    /// never ships an unexpectedly-anonymised export.
+    @State private var anonymise = false
+
+    private var payload: [String: Any] { ["anonymise": anonymise] }
+
+    /// Dispatch a canonical export action, merging any per-action extras (e.g.
+    /// the spreadsheet `format`) onto the global payload (currently `anonymise`).
+    private func dispatch(_ action: String, _ extra: [String: Any] = [:]) {
+        var p = payload
+        for (key, value) in extra { p[key] = value }
+        bridgeHandler.menuAction(action, payload: p)
+        dismiss()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Global toggle — applies to whichever export the user picks next.
+            Toggle(isOn: $anonymise) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(i18n.t("desktop.menu.quotes.anonymise"))
+                    Text(i18n.t("desktop.menu.quotes.anonymiseHint"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .toggleStyle(.switch)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+
+            Divider().padding(.horizontal, 10)
+
+            ExportPopoverRow(
+                icon: "square.and.arrow.up",
+                title: i18n.t("desktop.menu.file.exportReport"),
+                subtitle: i18n.t("desktop.menu.quotes.reportHint")
+            ) { dispatch("exportReport") }
+
+            if bridgeHandler.activeTab == .quotes {
+                // Copy Quotes: a plain "copy all visible" action by default; it
+                // grows into a scope disclosure only when there's something to
+                // narrow to (a selection or starred quotes). Zero-count scopes
+                // are hidden here (toolbar morphs); the menu bar keeps them dimmed.
+                if bridgeHandler.selectedQuoteCount > 0 || bridgeHandler.starredQuoteCount > 0 {
+                    ExportPopoverDisclosureRow(
+                        icon: "doc.on.clipboard",
+                        title: i18n.t("desktop.menu.quotes.copyQuotes"),
+                        subtitle: i18n.t("desktop.menu.quotes.copyHint")
+                    ) {
+                        ExportPopoverSubRow(
+                            title: i18n.t(
+                                "desktop.menu.quotes.copyScopeAll",
+                                ["count": String(bridgeHandler.totalQuoteCount)]
+                            )
+                        ) { dispatch("copyQuotes", ["scope": "all"]) }
+                        if bridgeHandler.selectedQuoteCount > 0 {
+                            ExportPopoverSubRow(
+                                title: i18n.t(
+                                    "desktop.menu.quotes.copyScopeSelected",
+                                    ["count": String(bridgeHandler.selectedQuoteCount)]
+                                )
+                            ) { dispatch("copyQuotes", ["scope": "selected"]) }
+                        }
+                        if bridgeHandler.starredQuoteCount > 0 {
+                            ExportPopoverSubRow(
+                                title: i18n.t(
+                                    "desktop.menu.quotes.copyScopeStarred",
+                                    ["count": String(bridgeHandler.starredQuoteCount)]
+                                )
+                            ) { dispatch("copyQuotes", ["scope": "starred"]) }
+                        }
+                    }
+                } else {
+                    ExportPopoverRow(
+                        icon: "doc.on.clipboard",
+                        title: i18n.t("desktop.menu.quotes.copyQuotes"),
+                        subtitle: i18n.t("desktop.menu.quotes.copyHint")
+                    ) { dispatch("copyQuotes", ["scope": "all"]) }
+                }
+                // Spreadsheet is a disclosure: pick CSV or XLSX. Both endpoints
+                // exist server-side; the `format` extra selects which.
+                ExportPopoverDisclosureRow(
+                    icon: "tablecells",
+                    title: i18n.t("desktop.menu.quotes.saveSpreadsheet"),
+                    subtitle: i18n.t("desktop.menu.quotes.spreadsheetHint")
+                ) {
+                    ExportPopoverSubRow(title: i18n.t("desktop.menu.quotes.formatCSV")) {
+                        dispatch("saveSpreadsheet", ["format": "csv"])
+                    }
+                    ExportPopoverSubRow(title: i18n.t("desktop.menu.quotes.formatXLSX")) {
+                        dispatch("saveSpreadsheet", ["format": "xlsx"])
+                    }
+                }
+                ExportPopoverRow(
+                    icon: "film",
+                    title: i18n.t("desktop.menu.quotes.extractClips"),
+                    subtitle: i18n.t("desktop.menu.quotes.clipsHint")
+                ) { dispatch("extractClips") }
+            }
+
+            // Sessions lens: the transcripts already live on disk in the
+            // project's bristlenose-output/ — reveal them in Finder rather than
+            // re-exporting what's already a folder of files (local-first). The
+            // drag-to-sidebar affordance hides where the folder lives, so the
+            // macOS surface needs a way back to it (CLI users are already there).
+            if bridgeHandler.activeTab == .sessions {
+                ExportPopoverRow(
+                    icon: "folder",
+                    title: i18n.t("desktop.menu.quotes.revealTranscripts"),
+                    subtitle: i18n.t("desktop.menu.quotes.revealTranscriptsHint")
+                ) { revealTranscripts() }
+            }
+        }
+        .frame(width: 308)
+        .padding(.vertical, 6)
+    }
+
+    /// Open a Finder window on the project's transcripts. Prefers the
+    /// PII-redacted `transcripts-cooked/` (present only when `--redact-pii`
+    /// ran), else `transcripts-raw/`, else the output / project folder. This is
+    /// a native action — it reveals files already on disk, so it does NOT honour
+    /// the Anonymise toggle (an anonymised transcript bundle is a separate,
+    /// deferred export). Output lives at `<project>/bristlenose-output/`.
+    private func revealTranscripts() {
+        dismiss()
+        let base = bridgeHandler.selectedProjectPath
+        guard !base.isEmpty else { return }
+        let output = (base as NSString).appendingPathComponent("bristlenose-output")
+        let candidates = [
+            (output as NSString).appendingPathComponent("transcripts-cooked"),
+            (output as NSString).appendingPathComponent("transcripts-raw"),
+            output,
+            base,
+        ]
+        let fm = FileManager.default
+        let target = candidates.first { fm.fileExists(atPath: $0) } ?? base
+        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: target)
+    }
+}
+
+/// A single action row in the export popover: leading SF Symbol, title, and a
+/// muted subtitle. Highlights on hover (the popover is not a system menu, so
+/// the hover affordance is hand-rolled).
+private struct ExportPopoverRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: icon)
+                    .font(.body)
+                    .foregroundStyle(.tint)
+                    .frame(width: 18)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .background(hovered ? Color.primary.opacity(0.06) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+        .padding(.horizontal, 6)
+    }
+}
+
+/// An export row that expands in place to reveal sub-options (e.g. the
+/// spreadsheet format chooser). Same visual language as `ExportPopoverRow`
+/// plus a trailing chevron that rotates when expanded. Tapping the row toggles
+/// the disclosure rather than dispatching — the leaf `ExportPopoverSubRow`s do.
+private struct ExportPopoverDisclosureRow<Content: View>: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    @ViewBuilder let content: () -> Content
+
+    @State private var expanded = false
+    @State private var hovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                expanded.toggle()
+            } label: {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: icon)
+                        .font(.body)
+                        .foregroundStyle(.tint)
+                        .frame(width: 18)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(title)
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(expanded ? 90 : 0))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .background(hovered ? Color.primary.opacity(0.06) : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+            .onHover { hovered = $0 }
+
+            if expanded {
+                content()
+            }
+        }
+        .padding(.horizontal, 6)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: expanded)
+    }
+}
+
+/// A leaf option inside an `ExportPopoverDisclosureRow` — indented under the
+/// parent's icon column, no icon of its own.
+private struct ExportPopoverSubRow: View {
+    let title: String
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 0) {
+                Spacer().frame(width: 28)
+                Text(title)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .background(hovered ? Color.primary.opacity(0.06) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
     }
 }
 

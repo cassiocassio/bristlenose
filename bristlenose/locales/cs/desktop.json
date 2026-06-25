@@ -62,7 +62,7 @@
     "folder": {
       "rename": "Přejmenovat složku",
       "archive": "Archivovat složku",
-      "delete": "Smazat složku…"
+      "delete": "Smazat složku"
     },
     "codes": {
       "createCodeGroup": "Vytvořit skupinu kódů",
@@ -90,7 +90,23 @@
       "extendSelectionUp": "Rozšířit výběr nahoru",
       "toggleSelection": "Přepnout výběr",
       "clearSelection": "Zrušit výběr",
-      "copyAsCSV": "Kopírovat jako CSV"
+      "copyAsCSV": "Kopírovat jako CSV",
+      "copyQuotes": "Kopírovat citace",
+      "saveSpreadsheet": "Uložit jako tabulku…",
+      "extractClips": "Extrahovat videoklipy…",
+      "anonymise": "Anonymizovat",
+      "anonymiseHint": "Odebrat jm\u00e9na \u00fa\u010dastn\u00edk\u016f",
+      "reportHint": "Samostatn\u00e9 HTML",
+      "copyHint": "\u00dasporn\u00e9 \u2014 citace, k\u00f3d, jm\u00e9no, \u010dasov\u00fd k\u00f3d",
+      "spreadsheetHint": "Bohat\u00e9 \u2014 11 sloupc\u016f pro \u0159azen\u00ed a anal\u00fdzu",
+      "clipsHint": "O\u0159\u00edznut\u00fd klip na citaci",
+      "formatCSV": "CSV",
+      "formatXLSX": "XLSX",
+      "copyScopeAll": "V\u0161e ({{count}})",
+      "copyScopeSelected": "Vybran\u00e9 ({{count}})",
+      "copyScopeStarred": "Ozna\u010den\u00e9 ({{count}})",
+      "revealTranscripts": "Zobrazit p\u0159episy ve Finderu",
+      "revealTranscriptsHint": "Soubory p\u0159epis\u016f na disku"
     },
     "video": {
       "play": "Přehrát",
@@ -162,6 +178,9 @@
     "unanalysedSubtitle_few": "+{{count}} neanalyzované",
     "unanalysedSubtitle_many": "+{{count}} neanalyzovaných",
     "unanalysedSubtitle_other": "+{{count}} neanalyzovaných",
+    "titleSessions_one": "{{count}} Sezení",
+    "titleSessions_few": "{{count}} Sezení",
+    "titleSessions_other": "{{count}} Sezení",
     "missingSubtitle_one": "1 chybí",
     "missingSubtitle_few": "{{count}} chybí",
     "missingSubtitle_many": "{{count}} chybí",

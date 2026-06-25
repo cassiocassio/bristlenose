@@ -62,7 +62,7 @@
     "folder": {
       "rename": "Renommer le dossier",
       "archive": "Archiver le dossier",
-      "delete": "Supprimer le dossier…"
+      "delete": "Supprimer le dossier"
     },
     "codes": {
       "createCodeGroup": "Créer un groupe de codes",
@@ -90,7 +90,23 @@
       "extendSelectionUp": "Étendre la sélection vers le haut",
       "toggleSelection": "Inverser la sélection",
       "clearSelection": "Effacer la sélection",
-      "copyAsCSV": "Copier en CSV"
+      "copyAsCSV": "Copier en CSV",
+      "copyQuotes": "Copier les verbatim",
+      "saveSpreadsheet": "Enregistrer en feuille de calcul…",
+      "extractClips": "Extraire les clips vidéo…",
+      "anonymise": "Anonymiser",
+      "anonymiseHint": "Retirer les noms des participants",
+      "reportHint": "HTML autonome",
+      "copyHint": "R\u00e9duit \u2014 verbatim, code, nom, horodatage",
+      "spreadsheetHint": "Riche \u2014 11 colonnes pour trier et analyser",
+      "clipsHint": "Un clip d\u00e9coup\u00e9 par verbatim",
+      "formatCSV": "CSV",
+      "formatXLSX": "XLSX",
+      "copyScopeAll": "Tous ({{count}})",
+      "copyScopeSelected": "S\u00e9lectionn\u00e9s ({{count}})",
+      "copyScopeStarred": "Favoris ({{count}})",
+      "revealTranscripts": "Afficher les transcriptions dans le Finder",
+      "revealTranscriptsHint": "Les fichiers de transcription sur le disque"
     },
     "video": {
       "play": "Lecture",
@@ -158,6 +174,8 @@
     "interviewCount_other": "{{count}} entretiens",
     "unanalysedSubtitle_one": "+1 non analys\u00e9",
     "unanalysedSubtitle_other": "+{{count}} non analys\u00e9s",
+    "titleSessions_one": "{{count}} Entretien",
+    "titleSessions_other": "{{count}} Entretiens",
     "missingSubtitle_one": "1 manquant",
     "missingSubtitle_other": "{{count}} manquants",
     "tooltipWaiting": "{{count}} en attente",

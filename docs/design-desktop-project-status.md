@@ -1,11 +1,12 @@
 ---
 status: current
-last-trued: 2026-06-21
-trued-against: HEAD@main on 2026-06-21
+last-trued: 2026-06-23
+trued-against: HEAD@mac-app-layout-reorg on 2026-06-23
 ---
 
 ## Changelog
 
+- _2026-06-23_ — added the **native window title + subtitle** as a third per-project status surface (project identity + a lens-contextual count), shipped on `mac-app-layout-reorg`. Updated the Shipped block + the §4 placement axis; the old toolbar-pill title + `WindowTitleManager` are gone (see `desktop/CLAUDE.md` "Native window title + subtitle live on the DETAIL view"). The two-streams framing (row + detail pane) is now three (+ window chrome).
 - _2026-06-21_ — trued up, no material changes. The §"Shipped (19 Jun 2026)" block + §4 placement axis verified against `ProjectSubtitle.resolve` precedence (`ProjectSubtitle.swift`, `ProjectSubtitleTests.swift`) and copy-on-row (`ProjectRow.swift`; standalone `CopyProgressPill` deleted). Added front-matter + an inline marker on the pre-decision proposal table so a cold reader doesn't read its projected strings ("Copying · 3 of 5 files", "toolbar pill") as current.
 
 # Desktop project status — the two streams behind the sidebar row and detail pane
@@ -60,6 +61,29 @@ download affordance was rejected (F49); the `Progress?` field stays vestigial. *
 **deferred** — it needs cross-layer plumbing (retry signal → pipeline emit) plus a render the brief
 defers to empirical play. So the shipped row vocabulary is: cantFind › failed › running ›
 stopped/partial › **copying** › missing › unanalysed › ready.
+
+**Shipped (23 Jun 2026, `mac-app-layout-reorg`).** A **third** per-project status surface
+landed — the **native window title + subtitle** (Mail/Notes pattern), distinct from the row
+(activity) and the detail pane (report/empty states). The project *name* is the window title
+(`.navigationTitle`); a **lens-contextual count** is the subtitle (`.navigationSubtitle`,
+keyed on `bridgeHandler.activeTab`):
+
+- **Sessions/Project** — `"16 Sessions · 18h 23m"`: session count + summed
+  `sessions.duration_seconds`, read Swift-side from the project DB (`SourceFilesReader` →
+  `DurationFormat.human`, mirroring the dashboard's `_format_duration_human`). Stable, painted
+  instantly before the report loads.
+- **Quotes/Codebook/Analysis** — `"163 Quotes"` / `"3 Codebooks · 47 Tags"` / `"13 Signals"`:
+  **live** counts (Signals don't exist in the DB; visible-quote/tag counts shift as the
+  researcher edits), computed by the React SPA (`LensSubtitleSync`, `lensSubtitle.ts`) and
+  pushed over a new `lens-subtitle` bridge message → `BridgeHandler.lensSubtitle`, rendered
+  only when `lensSubtitleTab == activeTab` (so a tab switch never flashes the prior count — a
+  cross-process SPA→bridge→Swift timing guard, not unit-testable from either side alone).
+
+This **removed** the old custom `.navigation` title `ToolbarItem` (icon+name pill) and the
+`WindowTitleManager` NSViewRepresentable. So the project's *identity + count* now lives in the
+window chrome; the **row** keeps *activity* (run progress + copy), the **detail pane** keeps the
+report/empty states. Placement axis (§4): per-project *identity + count* → window title/subtitle;
+per-project *activity* → row; app-global → the `.status` pill. (`63c731a`, `73b85a6`, `0ac06bf`.)
 
 ### The kinds — operational rule (user, 18 Jun 2026)
 

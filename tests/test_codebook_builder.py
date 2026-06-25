@@ -456,3 +456,66 @@ class TestDecisions:
             json={"decisions": [{"quote_id": "q-p1-10", "decision": "maybe"}]},
         )
         assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Dev sandbox (codebook-lab) — throwaway experiment surface, smoke only
+# ---------------------------------------------------------------------------
+
+
+class TestCodebookLab:
+    def _dev_client(self) -> TestClient:
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        return AuthTestClient(app)
+
+    def test_page_served_without_auth(self) -> None:
+        from fastapi.testclient import TestClient as RawClient
+
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        bare = RawClient(app)  # no bearer token
+        r = bare.get("/codebook-lab")
+        assert r.status_code == 200
+        assert "Codebook lab" in r.text
+
+    def test_synthesize_from_pasted_quotes(self) -> None:
+        client = self._dev_client()
+        with _patch_llm(AsyncMock(return_value=_synth_result())):
+            r = client.post(
+                "/api/dev/codebook-lab/synthesize",
+                json={"tag_name": "cost", "example_texts": ["too pricey", "can't afford"]},
+            )
+        assert r.status_code == 200
+        assert r.json()["apply_when"]
+        assert len(r.json()["version"]) == 8
+
+    def test_synthesize_needs_two_examples(self) -> None:
+        client = self._dev_client()
+        r = client.post(
+            "/api/dev/codebook-lab/synthesize",
+            json={"tag_name": "cost", "example_texts": ["only one"]},
+        )
+        assert r.status_code == 400
+
+    def test_candidates_scans_project_quotes(self) -> None:
+        client = self._dev_client()
+        with _patch_llm(AsyncMock(return_value=_candidate_result_all_match(4, 0.8))):
+            r = client.post(
+                "/api/dev/codebook-lab/candidates",
+                json={
+                    "tag_name": "cost",
+                    "prompt": {"definition": "about money", "apply_when": "names price"},
+                    "min_confidence": 0.5,
+                },
+            )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["scanned"] == 4  # smoke fixture has 4 quotes
+        assert len(body["candidates"]) >= 1
+
+    def test_candidates_requires_prompt(self) -> None:
+        client = self._dev_client()
+        r = client.post(
+            "/api/dev/codebook-lab/candidates",
+            json={"tag_name": "cost", "prompt": {}},
+        )
+        assert r.status_code == 400

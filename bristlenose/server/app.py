@@ -201,6 +201,15 @@ def create_app(
 
         app.include_router(dev_router)
 
+        # Ugly throwaway sandbox for the dynamic-codebook-builder experiment.
+        # Served outside /api so a plain browser navigation isn't blocked by the
+        # bearer-token middleware; the page embeds the token for its own fetches.
+        from bristlenose.server.routes.dev import build_codebook_lab_html
+
+        @app.get("/codebook-lab", include_in_schema=False)
+        def _codebook_lab() -> HTMLResponse:
+            return HTMLResponse(build_codebook_lab_html(app.state.auth_token))
+
         # SQLAdmin database browser (dev-only)
         from sqladmin import Admin as SQLAdmin
 

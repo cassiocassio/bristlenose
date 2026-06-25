@@ -435,3 +435,360 @@ def dev_telemetry_delete() -> dict[str, object]:
     if out_path.exists():
         out_path.unlink()
     return {"ok": True, "path": str(out_path)}
+
+
+# ---------------------------------------------------------------------------
+# Codebook-lab — throwaway sandbox for the dynamic codebook builder experiment
+# ---------------------------------------------------------------------------
+#
+# This is deliberately ugly and dev-only. It hangs the builder engine
+# (server/codebook_builder.py) off a bare HTML page so we can PLAY with real
+# project data — synthesise a prompt from a few quotes, hand-write one instead,
+# scan for more like it, edit, re-scan — before committing to any UX. None of
+# this writes to the DB; it operates on pasted text + the project's quotes.
+#
+# The point of the experiment (per the product conversation): from 50-word
+# fragments the machine can only ever guess surface commonalities. So the lab
+# makes BOTH paths first-class — "synthesise a draft" and "I'll write it myself"
+# — so we can judge whether synthesis-from-fragments earns its keep against the
+# researcher just writing the inclusion criteria in their own words.
+
+
+class _LabPrompt(BaseModel):
+    summary: str = ""
+    definition: str = ""
+    apply_when: str = ""
+    not_this: str = ""
+
+
+class _LabSynthRequest(BaseModel):
+    tag_name: str = "untitled"
+    example_texts: list[str] = Field(default_factory=list)
+
+
+class _LabDecision(BaseModel):
+    text: str
+    reason: str = ""
+
+
+class _LabRefineRequest(BaseModel):
+    tag_name: str = "untitled"
+    example_texts: list[str] = Field(default_factory=list)
+    prompt: _LabPrompt = Field(default_factory=_LabPrompt)
+    accepted: list[_LabDecision] = Field(default_factory=list)
+    rejected: list[_LabDecision] = Field(default_factory=list)
+
+
+class _LabCandidatesRequest(BaseModel):
+    tag_name: str = "untitled"
+    prompt: _LabPrompt = Field(default_factory=_LabPrompt)
+    min_confidence: float = 0.5
+    limit: int = 30
+    exclude_texts: list[str] = Field(default_factory=list)
+
+
+def _lab_settings():
+    from bristlenose.config import load_settings
+
+    return load_settings()
+
+
+@router.get("/codebook-lab/tags")
+def codebook_lab_tags(request: Request, project_id: int = 1) -> dict[str, object]:
+    """List the project's tags with their coded quote texts (for picking exemplars)."""
+    from bristlenose.server.models import QuoteTag, TagDefinition
+
+    db = _get_db(request)
+    try:
+        rows = (
+            db.query(TagDefinition.id, TagDefinition.name, Quote.text)
+            .join(QuoteTag, QuoteTag.tag_definition_id == TagDefinition.id)
+            .join(Quote, Quote.id == QuoteTag.quote_id)
+            .filter(Quote.project_id == project_id)
+            .all()
+        )
+        by_tag: dict[int, dict[str, object]] = {}
+        for tid, name, text in rows:
+            entry = by_tag.setdefault(tid, {"id": tid, "name": name, "quotes": []})
+            entry["quotes"].append(text)  # type: ignore[union-attr]
+        tags = sorted(by_tag.values(), key=lambda t: t["name"])  # type: ignore[index,arg-type]
+        return {"tags": tags}
+    finally:
+        db.close()
+
+
+@router.post("/codebook-lab/synthesize")
+async def codebook_lab_synthesize(request: Request, body: _LabSynthRequest) -> dict[str, object]:
+    """Synthesise a draft prompt from pasted example quotes (no DB writes)."""
+    from bristlenose.server import codebook_builder as cb
+
+    examples = [cb.ExampleQuote(text=t) for t in body.example_texts if t.strip()]
+    if len(examples) < 2:
+        raise HTTPException(status_code=400, detail="Paste at least 2 example quotes")
+    draft = await cb.synthesize_prompt(body.tag_name, examples, _lab_settings())
+    return {
+        "summary": draft.summary, "definition": draft.definition,
+        "apply_when": draft.apply_when, "not_this": draft.not_this,
+        "version": draft.version,
+    }
+
+
+@router.post("/codebook-lab/refine")
+async def codebook_lab_refine(request: Request, body: _LabRefineRequest) -> dict[str, object]:
+    """Refine the prompt from accept/reject-with-reasons (no DB writes)."""
+    from bristlenose.server import codebook_builder as cb
+
+    examples = [cb.ExampleQuote(text=t) for t in body.example_texts if t.strip()]
+    current = cb.PromptDraft(
+        summary=body.prompt.summary, definition=body.prompt.definition,
+        apply_when=body.prompt.apply_when, not_this=body.prompt.not_this,
+    )
+    draft = await cb.synthesize_prompt(
+        body.tag_name, examples, _lab_settings(),
+        current=current,
+        accepted=[cb.DecisionFeedback(text=d.text, reason=d.reason) for d in body.accepted],
+        rejected=[cb.DecisionFeedback(text=d.text, reason=d.reason) for d in body.rejected],
+    )
+    return {
+        "summary": draft.summary, "definition": draft.definition,
+        "apply_when": draft.apply_when, "not_this": draft.not_this,
+        "version": draft.version,
+    }
+
+
+@router.post("/codebook-lab/candidates")
+async def codebook_lab_candidates(
+    request: Request, body: _LabCandidatesRequest, project_id: int = 1,
+) -> dict[str, object]:
+    """Scan the project's quotes against the (synthesised or hand-written) prompt."""
+    from bristlenose.server import codebook_builder as cb
+
+    draft = cb.PromptDraft(
+        summary=body.prompt.summary, definition=body.prompt.definition,
+        apply_when=body.prompt.apply_when, not_this=body.prompt.not_this,
+    )
+    if not (draft.definition or draft.apply_when):
+        raise HTTPException(status_code=400, detail="Write or synthesise a prompt first")
+    excluded = {t.strip() for t in body.exclude_texts if t.strip()}
+
+    db = _get_db(request)
+    try:
+        pool = [
+            cb.CandidateQuote(
+                db_id=q.id, text=q.text, session_id=q.session_id,
+                participant_id=q.participant_id, topic_label=q.topic_label or "",
+                sentiment=q.sentiment or "",
+            )
+            for q in db.query(Quote).filter_by(project_id=project_id).all()
+            if q.text.strip() not in excluded
+        ]
+    finally:
+        db.close()
+
+    scan = await cb.find_candidates(
+        body.tag_name, draft, pool, _lab_settings(),
+        min_confidence=body.min_confidence,
+    )
+    return {
+        "scanned": scan.scanned,
+        "errors": scan.errors,
+        "candidates": [
+            {"text": c.text, "confidence": round(c.confidence, 3), "rationale": c.rationale}
+            for c in scan.candidates[: max(0, body.limit)]
+        ],
+    }
+
+
+@router.get("/codebook-lab", include_in_schema=False)
+def codebook_lab_page() -> HTMLResponse:
+    """Redirect helper — the page itself lives at /codebook-lab (auth-exempt)."""
+    raise HTTPException(status_code=404, detail="Page is served at /codebook-lab")
+
+
+def build_codebook_lab_html(auth_token: str = "") -> str:
+    """Return the bare codebook-lab experiment page (dev-only, ugly on purpose).
+
+    Served at ``/codebook-lab`` (outside ``/api`` so a plain browser navigation
+    isn't blocked by the bearer-token middleware); the embedded token lets the
+    page's own fetch() calls authenticate against the ``/api/dev`` endpoints.
+    """
+    token_js = json.dumps(auth_token)
+    return (
+        _CODEBOOK_LAB_HTML.replace("__TOKEN__", token_js)
+    )
+
+
+_CODEBOOK_LAB_HTML = r"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codebook lab (experiment)</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 0; padding: 16px; color: #111; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .muted { color: #666; font-size: 12px; }
+  .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  fieldset { border: 1px solid #ccc; border-radius: 6px; margin: 0 0 12px; padding: 10px 12px; }
+  legend { font-weight: 600; padding: 0 6px; }
+  label { display: block; font-size: 12px; color: #444; margin: 8px 0 2px; }
+  textarea, input, select { width: 100%; box-sizing: border-box; font: inherit; padding: 6px; border: 1px solid #bbb; border-radius: 4px; }
+  textarea { resize: vertical; }
+  button { font: inherit; padding: 6px 12px; border: 1px solid #888; border-radius: 4px; background: #f3f3f3; cursor: pointer; }
+  button.primary { background: #1f6feb; color: #fff; border-color: #1f6feb; }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .cand { border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px; margin: 8px 0; }
+  .cand .q { font-weight: 500; }
+  .cand .r { font-size: 12px; color: #555; margin: 4px 0; }
+  .conf { font-variant-numeric: tabular-nums; color: #1f6feb; font-weight: 600; }
+  .acc { background: #e6ffed; } .rej { background: #ffeef0; }
+  pre { background: #0d1117; color: #c9d1d9; padding: 10px; border-radius: 6px; overflow: auto; font-size: 12px; }
+  .pill { display:inline-block; font-size: 11px; background:#eee; border-radius: 10px; padding: 1px 8px; }
+  .warn { background: #fff8c5; border: 1px solid #d4a72c; padding: 6px 10px; border-radius: 6px; font-size: 12px; margin: 8px 0; }
+</style>
+</head>
+<body>
+<h1>Codebook lab <span class="pill">experiment</span></h1>
+<div class="muted">Ugly throwaway sandbox for the dynamic-codebook-builder idea. Nothing here is saved. Real workflow/UX is TBD (Figma). Uses your configured LLM provider.</div>
+<div class="warn">From a few short fragments the machine can only guess <em>surface</em> commonalities — it can't know what the tag means to you. Try both: let it <b>synthesise a draft</b>, and <b>write the criteria yourself</b>, then compare whose "find more like this" set is better.</div>
+
+<div class="wrap">
+  <div>
+    <fieldset>
+      <legend>1 · Exemplars</legend>
+      <label>Pick a tag from this project (fills examples), or just paste below</label>
+      <select id="tagPick"><option value="">— loading tags —</option></select>
+      <label>Tag name</label>
+      <input id="tagName" value="prescription cost">
+      <label>Example quotes (one per line) — the quotes you'd code with this tag</label>
+      <textarea id="examples" rows="6" placeholder="It's just too expensive to keep filling it every month..."></textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="primary" id="btnSynth">Synthesise draft →</button>
+        <span class="muted">or skip this and write the prompt yourself ↓</span>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>2 · The prompt <span id="ver" class="pill"></span></legend>
+      <label>Summary (what these share)</label>
+      <textarea id="f_summary" rows="2"></textarea>
+      <label>Definition</label>
+      <textarea id="f_definition" rows="2"></textarea>
+      <label>Apply when (inclusion)</label>
+      <textarea id="f_apply" rows="3"></textarea>
+      <label>Not this (exclusion)</label>
+      <textarea id="f_not" rows="3"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="primary" id="btnScan">Find candidates →</button>
+        <label style="margin:0">min conf</label>
+        <input id="minConf" type="number" step="0.05" min="0" max="1" value="0.5" style="width:80px">
+        <label style="margin:0"><input type="checkbox" id="excl" checked style="width:auto"> exclude my examples</label>
+      </div>
+    </fieldset>
+  </div>
+
+  <div>
+    <fieldset>
+      <legend>3 · Candidates <span id="scanInfo" class="muted"></span></legend>
+      <div id="cands"></div>
+      <div class="row">
+        <button id="btnRefine">Refine prompt from my accept/reject reasons →</button>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Raw / log</legend>
+      <pre id="log">ready.</pre>
+    </fieldset>
+  </div>
+</div>
+
+<script>
+const TOKEN = __TOKEN__;
+const H = { "Content-Type": "application/json", "Authorization": "Bearer " + TOKEN };
+const $ = id => document.getElementById(id);
+const log = (x) => { $("log").textContent = (typeof x === "string" ? x : JSON.stringify(x, null, 2)); };
+function setBusy(b){ document.querySelectorAll("button").forEach(x=>x.disabled=b); }
+function getPrompt(){ return { summary:$("f_summary").value, definition:$("f_definition").value, apply_when:$("f_apply").value, not_this:$("f_not").value }; }
+function setPrompt(p){ $("f_summary").value=p.summary||""; $("f_definition").value=p.definition||""; $("f_apply").value=p.apply_when||""; $("f_not").value=p.not_this||""; $("ver").textContent = p.version ? ("v "+p.version) : ""; }
+function examples(){ return $("examples").value.split("\n").map(s=>s.trim()).filter(Boolean); }
+async function post(path, body){
+  const r = await fetch(path, { method:"POST", headers:H, body: JSON.stringify(body) });
+  const j = await r.json().catch(()=>({detail:"(no json)"}));
+  if(!r.ok) throw new Error(j.detail || r.status);
+  return j;
+}
+
+let TAGS = [];
+async function loadTags(){
+  try {
+    const r = await fetch("/api/dev/codebook-lab/tags", { headers: H });
+    const j = await r.json();
+    TAGS = j.tags || [];
+    const sel = $("tagPick");
+    sel.innerHTML = '<option value="">— '+TAGS.length+' tags in project —</option>';
+    TAGS.forEach((t,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=t.name+" ("+t.quotes.length+")"; sel.appendChild(o); });
+  } catch(e){ $("tagPick").innerHTML = '<option>— no project / '+e.message+' —</option>'; }
+}
+$("tagPick").onchange = () => {
+  const i = $("tagPick").value; if(i==="") return;
+  const t = TAGS[i]; $("tagName").value = t.name; $("examples").value = t.quotes.join("\n");
+};
+
+$("btnSynth").onclick = async () => {
+  setBusy(true); log("synthesising…");
+  try { const p = await post("/api/dev/codebook-lab/synthesize", { tag_name:$("tagName").value, example_texts: examples() }); setPrompt(p); log(p); }
+  catch(e){ log("ERROR: "+e.message); } finally { setBusy(false); }
+};
+
+$("btnScan").onclick = async () => {
+  setBusy(true); log("scanning project quotes…");
+  try {
+    const j = await post("/api/dev/codebook-lab/candidates", {
+      tag_name:$("tagName").value, prompt:getPrompt(),
+      min_confidence: parseFloat($("minConf").value), limit: 50,
+      exclude_texts: $("excl").checked ? examples() : []
+    });
+    renderCands(j); log(j);
+  } catch(e){ log("ERROR: "+e.message); } finally { setBusy(false); }
+};
+
+function renderCands(j){
+  $("scanInfo").textContent = "scanned "+j.scanned+", "+j.candidates.length+" matched"+(j.errors?(", "+j.errors+" batch errors"):"");
+  const box = $("cands"); box.innerHTML = "";
+  if(!j.candidates.length){ box.innerHTML = '<div class="muted">no matches at this threshold.</div>'; return; }
+  j.candidates.forEach((c,i)=>{
+    const d = document.createElement("div"); d.className="cand"; d.dataset.idx=i; d.dataset.text=c.text;
+    d.innerHTML = '<div class="q">“'+esc(c.text)+'”</div>'
+      + '<div class="r"><span class="conf">'+c.confidence+'</span> · '+esc(c.rationale)+'</div>'
+      + '<div class="row"><button data-v="accept">✓ great</button><button data-v="reject">✗ no</button>'
+      + '<input placeholder="why? (the gold — your reason)" data-reason style="flex:1"></div>';
+    d.querySelectorAll("button").forEach(b=> b.onclick = ()=>{ d.dataset.v=b.dataset.v; d.className="cand "+(b.dataset.v==="accept"?"acc":"rej"); });
+    box.appendChild(d);
+  });
+}
+function esc(s){ return (s||"").replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+$("btnRefine").onclick = async () => {
+  const acc=[], rej=[];
+  document.querySelectorAll(".cand").forEach(d=>{
+    if(!d.dataset.v) return;
+    const item = { text: d.dataset.text, reason: d.querySelector("[data-reason]").value };
+    (d.dataset.v==="accept"?acc:rej).push(item);
+  });
+  if(!acc.length && !rej.length){ log("mark some candidates ✓/✗ first (reasons optional but valuable)"); return; }
+  setBusy(true); log("refining from "+acc.length+" accepted / "+rej.length+" rejected…");
+  try {
+    const p = await post("/api/dev/codebook-lab/refine", {
+      tag_name:$("tagName").value, example_texts: examples(),
+      prompt: getPrompt(), accepted: acc, rejected: rej
+    });
+    setPrompt(p); log(p);
+  } catch(e){ log("ERROR: "+e.message); } finally { setBusy(false); }
+};
+
+loadTags();
+</script>
+</body>
+</html>
+"""

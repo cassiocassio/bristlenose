@@ -254,7 +254,7 @@
     "linkClipsLabel": "Link quotes to clips",
     "linkClipsHint": "Point at the folder where you placed the exported clips.",
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
-    "uploadNotice": "Exports all visible quotes. Data will be uploaded to Miro.",
+    "uploadNotice": "Uploads all quotes in this project to Miro — hidden quotes are excluded.",
     "preview": "Preview",
     "createBoard": "Create board",
     "creatingBoard": "Creating board…",

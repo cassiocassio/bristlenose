@@ -255,7 +255,7 @@
     "linkClipsLabel": "Lier les citations aux clips",
     "linkClipsHint": "Indiquez le dossier o\u00f9 vous avez plac\u00e9 les clips export\u00e9s.",
     "clipsBasePlaceholder": "https://drive.google.com/\u2026/clips",
-    "uploadNotice": "Exporte toutes les citations visibles. Les donn\u00e9es seront envoy\u00e9es vers Miro.",
+    "uploadNotice": "Envoie toutes les citations de ce projet vers Miro \u2014 les citations masqu\u00e9es sont exclues.",
     "preview": "Aper\u00e7u",
     "createBoard": "Cr\u00e9er le tableau",
     "creatingBoard": "Cr\u00e9ation du tableau\u2026",

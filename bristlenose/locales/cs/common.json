@@ -284,7 +284,7 @@
     "linkClipsLabel": "Propojit citace s klipy",
     "linkClipsHint": "Zadejte slo\u017eku, kam jste um\u00edstili exportovan\u00e9 klipy.",
     "clipsBasePlaceholder": "https://drive.google.com/\u2026/clips",
-    "uploadNotice": "Exportuje v\u0161echny viditeln\u00e9 citace. Data budou nahr\u00e1na do Mira.",
+    "uploadNotice": "Nahraje v\u0161echny citace z tohoto projektu do Mira \u2014 skryt\u00e9 citace jsou vylou\u010deny.",
     "preview": "N\u00e1hled",
     "createBoard": "Vytvo\u0159it tabuli",
     "creatingBoard": "Vytv\u00e1\u0159\u00ed se tabule\u2026",

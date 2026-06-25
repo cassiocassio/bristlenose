@@ -148,8 +148,9 @@ describe("ExportDropdown", () => {
   it("Send to Miro calls onSendToMiro callback", () => {
     const { onSendToMiro } = renderDropdown("/report/sessions/");
     fireEvent.click(screen.getByRole("button", { name: "Export" }));
-    const items = screen.getAllByRole("menuitem");
-    fireEvent.click(items[items.length - 1]); // Send to Miro (last item)
+    // By accessible name, not position — survives a menu reorder ("Miro" is a
+    // product name, stable across locales).
+    fireEvent.click(screen.getByRole("menuitem", { name: /miro/i }));
     expect(onSendToMiro).toHaveBeenCalledOnce();
   });
 

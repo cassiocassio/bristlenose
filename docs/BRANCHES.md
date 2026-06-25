@@ -40,6 +40,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 | `bristlenose_branch_figjam-miro-market-share/` | `claude/figjam-miro-market-share-px52tg` | feature | Miro bridge (imported from cloud, PR #120) — quotes → Miro board export |
+| `bristlenose_branch dynamic-codebook-builder/` | `claude/dynamic-codebook-builder-67r2fa` | feature | Dynamic codebook builder (imported from cloud) — cultivate a tag into a learned "code"; backend-first, React surface unbuilt |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -125,6 +126,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `claude/figjam-miro-market-share-px52tg` | `bristlenose_branch_figjam-miro-market-share/` | `origin/claude/figjam-miro-market-share-px52tg` (PR #120) |
+| `claude/dynamic-codebook-builder-67r2fa` | `bristlenose_branch dynamic-codebook-builder/` | `origin/claude/dynamic-codebook-builder-67r2fa` (no PR yet) |
 | `multi-project-drag-onto` _(merged)_ | `bristlenose_branch multi-project-drag-onto/` _(detached, on disk)_ | local only — merged to main 15 May 2026 |
 | `multi-project-switch` _(merged)_ | `bristlenose_branch multi-project-switch/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`baf1896`) |
 | `ci-version-pinning` _(merged)_ | `bristlenose_branch ci-version-pinning/` _(detached, on disk)_ | local + remote deleted — merged to main 14 May 2026 (`e1c8083`) |
@@ -150,6 +152,31 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `dynamic-codebook-builder` (imported from cloud)
+
+**Kind:** feature — dynamic codebook builder: cultivate a single tag into a learned "code" (a `TagPrompt` with summary / definition / apply_when / not_this), scan uncoded quotes for candidates with confidence + rationale, accept/reject each with a reason, refine. Backend-first (the AutoCode pattern); React surface designed but unbuilt. Built in the cloud.
+**Status:** Imported from cloud + brought up on Mac 25 Jun 2026 — venv + frontend + CLI build clean, full test suite green (3113 passed, tsc + ruff clean), merges cleanly to main. Backend + dev-sandbox only; not a complete user-facing feature yet (React surface staged-but-unbuilt).
+**Started:** 25 Jun 2026 (cloud) · imported to Mac 25 Jun 2026
+**Local branch:** `claude/dynamic-codebook-builder-67r2fa` (keeps the cloud ref so a bare push opens/updates the PR)
+**Worktree:** `/Users/cassio/Code/bristlenose_branch dynamic-codebook-builder/`
+**Remote:** `origin/claude/dynamic-codebook-builder-67r2fa` — no PR yet (push to open one)
+
+**What it does:** Adds a per-tag server-side "Build" loop: synthesize a `TagPrompt` from ≥3 coded exemplars (`MIN_EXAMPLES_FOR_SYNTHESIS = 3`), rank uncoded quotes as candidates, log each accept/reject decision with its reason (`TagPromptDecision`), and recompute a version on direct prompt edits. New engine `bristlenose/server/codebook_builder.py`, routes `routes/codebook_builder.py` + `routes/dev.py` (the ugly dev-only `/codebook-lab` sandbox, served outside `/api`), 2 LLM prompts (`codebook-candidates.md`, `codebook-synthesize.md`), alembic migration `002_tag_prompts.py`, and a 238-line design doc. Built in the cloud without a venv, so the server modules were syntax-only until this Mac import ran the suite.
+
+**Brought-up-on-Mac notes:** `.claude/from-cloud-import-notes.md` in the worktree. **No defects found** — full suite (3113 passed), `tsc -b`, and `ruff check .` all green on first run; `git merge-tree` reports a CLEAN merge to main (zero conflicts).
+
+**QA:** backend-only, so the run target is `bristlenose serve --dev <a project with analysis data>` → open `http://localhost:8150/codebook-lab` (the dev-only sandbox). See the worktree's import notes for the data-reachability caveat.
+
+**Blockers before merge:**
+- **React surface unbuilt** — the "Build" panel (prompt editor / candidate list / provenance strip), `data-testid`s, and i18n keys in all 7 locales (flagged as a size-gate concern in the design doc) are designed but not implemented. Shipping the backend first is a legitimate product call, but as-is the feature is reachable only via the dev sandbox.
+- **Behind main by 3 commits** (skill/docs/BRANCHES.md only) — merges clean, but rebase/merge onto local main before opening a PR.
+- **Migration revision `002`** — no collision today (main has only `001_baseline.py`); low-risk watch-point if another branch also adds a `002_*` migration.
+
+**Potential conflicts with other branches:**
+- Low. Touches `bristlenose/server/` (mostly new files), `bristlenose/llm/prompts/` (2 new files), and a new migration. No active branch currently touches the codebook builder, server models, or alembic versions. `gemini-provider` / `figjam-miro-market-share` touch frontend/locales, not this server surface.
 
 ---
 

@@ -14,12 +14,14 @@ bristlenose/server/
   importer.py     — Pipeline JSON → SQLite on startup (idempotent upsert)
   admin.py        — SQLAdmin browser (dev-only, /admin/)
   autocode.py     — AutoCode engine (taxonomy, batching, async job runner)
+  codebook_builder.py — Dynamic codebook builder engine (synthesize/scan/refine)
   routes/
     health.py     — GET /api/health (status/version + footer links/feedback config)
     sessions.py   — GET /api/projects/{id}/sessions (React sessions table, includes source_folder_uri)
     quotes.py     — GET /api/projects/{id}/quotes (quotes grouped by section/theme)
     data.py       — 12 data API endpoints (Phase 1 researcher state sync)
     autocode.py   — 7 AutoCode endpoints (start, status, proposals, accept/deny)
+    codebook_builder.py — 5 dynamic-codebook-builder endpoints (per-tag prompt cultivation)
     dev.py        — Dev-only endpoints (visual diff, system info)
   codebook/       — YAML codebook templates (garrett, norman, uxr, plato)
   static/         — Vite build output (React Router SPA bundle)
@@ -287,6 +289,21 @@ Migration complete through M5 (Feb 2026): 14 primitives + 2 infrastructure, 8 is
 **Gotcha:** `LLMClient(settings)` takes only settings, not an LLMUsageTracker — creates its own internally.
 
 See `docs/design-autocode.md` for the 7-step workflow, API endpoints, and testing notes.
+
+## Dynamic codebook builder (cultivate a tag into a code)
+
+`codebook_builder.py` engine + `routes/codebook_builder.py` (5 endpoints) + two ORM tables (`TagPrompt`, `TagPromptDecision`). Where AutoCode *applies* a fixed framework's discrimination prompts to all quotes, this *builds* those prompts for the researcher's **own** tags — synthesised from the quotes they coded by hand, then refined through accept/reject-**with-reasons** review.
+
+Loop: `synthesize` (≥3 coded exemplars → `definition`/`apply_when`/`not_this`) → `candidates` (non-destructive ranked scan of the uncoded pool) → `decisions` (accept applies the tag + becomes an exemplar; reject + reason tightens the boundary; both refine the prompt in the same call). `PUT …/builder/prompt` lets the researcher edit the prompt directly; re-running `candidates` shows the set move.
+
+Gotchas:
+- **`TagPrompt` is instance-scoped** (mirrors `TagDefinition`) — a code's boundary is a property of the concept, reusable across projects. **`TagPromptDecision` is project-scoped** via `quote_id`.
+- **Decision reasons are LOCAL ONLY** — free-text reasons + quote content never leave the device. Consistent with `docs/methodology/tag-rejections-are-great.md` (only opt-in aggregate *rates* go off-device). Don't add these to any export/telemetry.
+- **`version` is a content hash** (`sha256(definition\napply_when\nnot_this)[:8]`) — same discipline AutoCode/telemetry use; decisions record the exact version judged.
+- **`default=""` applies at INSERT, not attribute access** — a freshly-constructed `TagPrompt` has `None` text fields before flush. `edit_prompt` sets them explicitly so `prompt_version()` never sees `None`.
+- **Test LLM override**: routes read `app.state.settings` if set (tests inject a mock), else `load_settings()`. Mirror `tests/test_codebook_builder.py`.
+
+See `docs/design-dynamic-codebook-builder.md`.
 
 ## Reference docs
 

@@ -152,21 +152,21 @@ struct BNTokenRow: Codable, Equatable {
 }
 
 enum BNTokenLadder {
-    /// Mirrors `bristlenose/theme/tokens-desktop.css` (the "old" SF Pro scale)
-    /// plus my nearest-size mapping to the macOS ladder ("new" seed). Note: the
-    /// existing CSS comments label 15px as "Apple callout" etc.; those labels are
-    /// wrong against the real macOS ladder (callout ≈ 12) — surfacing that is the
-    /// whole point. We map by nearest *measured* size at runtime, not by the
-    /// stale comment.
+    /// Mirrors `bristlenose/theme/tokens-desktop.css` (the shipped SF Pro scale)
+    /// plus the nearest-size mapping to the macOS ladder ("new" seed). Re-trued
+    /// from a Type Parity Inspector export (macOS 26.4.1 @2x): every stop is now
+    /// width-matched to its measured native style, and the macStyle names are the
+    /// correct ones (body = title3, caption = callout — the old "callout" label on
+    /// body is fixed). Keep in sync when tokens-desktop.css is retuned.
     static let rows: [BNTokenRow] = [
-        BNTokenRow(token: "display", label: "Display — report h1",            oldPx: 28,   oldLineHeight: 1.15, bestMacStyle: "largeTitle"),
-        BNTokenRow(token: "title",   label: "Title — page titles, h2",        oldPx: 22,   oldLineHeight: 1.2,  bestMacStyle: "title1"),
-        BNTokenRow(token: "heading", label: "Heading — section headings, h3", oldPx: 17,   oldLineHeight: 1.3,  bestMacStyle: "title2"),
-        BNTokenRow(token: "body",    label: "Body — participant voice",       oldPx: 15,   oldLineHeight: 1.45, bestMacStyle: "title3"),
-        BNTokenRow(token: "label",   label: "Label — app voice (chrome)",     oldPx: 13,   oldLineHeight: 1.4,  bestMacStyle: "body"),
-        BNTokenRow(token: "caption", label: "Caption — footnotes, footer",    oldPx: 12,   oldLineHeight: 1.35, bestMacStyle: "callout"),
-        BNTokenRow(token: "badge",   label: "Badge — chips, counts",          oldPx: 11,   oldLineHeight: 1.3,  bestMacStyle: "subheadline"),
-        BNTokenRow(token: "micro",   label: "Micro — delete ×, conf. badges", oldPx: 9.6,  oldLineHeight: 1.2,  bestMacStyle: "caption2"),
+        BNTokenRow(token: "display", label: "Display — report h1",            oldPx: 26,   oldLineHeight: 1.231, bestMacStyle: "largeTitle"),
+        BNTokenRow(token: "title",   label: "Title — page titles, h2",        oldPx: 22,   oldLineHeight: 1.182, bestMacStyle: "title1"),
+        BNTokenRow(token: "heading", label: "Heading — section headings, h3", oldPx: 17,   oldLineHeight: 1.294, bestMacStyle: "title2"),
+        BNTokenRow(token: "body",    label: "Body — participant voice",       oldPx: 15,   oldLineHeight: 1.333, bestMacStyle: "title3"),
+        BNTokenRow(token: "label",   label: "Label — app voice (chrome)",     oldPx: 13,   oldLineHeight: 1.231, bestMacStyle: "body"),
+        BNTokenRow(token: "caption", label: "Caption — footnotes, footer",    oldPx: 12,   oldLineHeight: 1.250, bestMacStyle: "callout"),
+        BNTokenRow(token: "badge",   label: "Badge — chips, counts",          oldPx: 11,   oldLineHeight: 1.273, bestMacStyle: "subheadline"),
+        BNTokenRow(token: "micro",   label: "Micro — delete ×, conf. badges", oldPx: 10,   oldLineHeight: 1.300, bestMacStyle: "caption2"),
     ]
 }
 

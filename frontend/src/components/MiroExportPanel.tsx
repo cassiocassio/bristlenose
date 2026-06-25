@@ -14,6 +14,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
 import { isExportMode } from "../utils/exportData";
+import { announce } from "../utils/announce";
 import {
   getMiroStatus,
   postMiroConnect,
@@ -51,6 +52,7 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
   const [boardUrl, setBoardUrl] = useState<string | null>(null);
   const [stickies, setStickies] = useState(0);
   const triggerRef = useRef<Element | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   // On open: remember trigger, fetch connection status.
   useEffect(() => {
@@ -71,6 +73,21 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
       triggerRef.current = null;
     }
   }, [open]);
+
+  // Move focus into the dialog on open — the trigger is now inert (useInert),
+  // so without this the keyboard/SR user is stranded on document.body behind
+  // the inert wall.
+  useEffect(() => {
+    if (open) requestAnimationFrame(() => headingRef.current?.focus());
+  }, [open]);
+
+  // Announce async status transitions — the view swaps the subtitle text with
+  // no live region, so a screen-reader user otherwise hears nothing.
+  useEffect(() => {
+    if (!open) return;
+    if (view === "exporting") announce(t("miro.creatingBoard"));
+    else if (view === "done") announce(t("miro.boardReady", { count: stickies }));
+  }, [open, view, stickies, t]);
 
   // Escape closes.
   useEffect(() => {
@@ -165,8 +182,17 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
       aria-hidden={!open}
       data-testid="bn-miro-overlay"
     >
-      <div className="bn-modal" data-testid="bn-miro-modal" style={{ maxWidth: 460 }}>
-        <h2>{t("miro.title")}</h2>
+      <div
+        className="bn-modal"
+        data-testid="bn-miro-modal"
+        style={{ maxWidth: 460 }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bn-miro-title"
+      >
+        <h2 id="bn-miro-title" ref={headingRef} tabIndex={-1}>
+          {t("miro.title")}
+        </h2>
 
         {view === "loading" && (
           <p className="bn-modal-subtitle">{t("miro.checkingConnection")}</p>
@@ -189,6 +215,7 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
               type="password"
               value={token}
               placeholder={t("miro.tokenPlaceholder")}
+              aria-label={t("miro.tokenPlaceholder")}
               onChange={(e) => setToken(e.target.value)}
               style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
             />
@@ -220,18 +247,25 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
                 {t("miro.disconnect")}
               </button>
             </p>
-            <label className="bn-export-hint">{t("miro.boardNameLabel")}</label>
+            <label className="bn-export-hint" htmlFor="bn-miro-board-name">
+              {t("miro.boardNameLabel")}
+            </label>
             <input
+              id="bn-miro-board-name"
               type="text"
               value={boardName}
               placeholder={t("miro.boardNamePlaceholder")}
               onChange={(e) => setBoardName(e.target.value)}
               style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
             />
-            <label className="bn-export-hint" style={{ marginTop: 10 }}>
+            <label className="bn-export-hint" style={{ marginTop: 10 }} htmlFor="bn-miro-colour-by">
               {t("miro.colourByLabel")}
             </label>
-            <select value={colourBy} onChange={(e) => setColourBy(e.target.value)}>
+            <select
+              id="bn-miro-colour-by"
+              value={colourBy}
+              onChange={(e) => setColourBy(e.target.value)}
+            >
               <option value="sentiment">{t("miro.colourBySentiment")}</option>
               <option value="none">{t("miro.colourByNone")}</option>
             </select>
@@ -251,6 +285,7 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
                 type="text"
                 value={clipsBase}
                 placeholder={t("miro.clipsBasePlaceholder")}
+                aria-label={t("miro.linkClipsLabel")}
                 onChange={(e) => setClipsBase(e.target.value)}
                 style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
               />

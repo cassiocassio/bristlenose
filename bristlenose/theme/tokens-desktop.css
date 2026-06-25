@@ -19,8 +19,8 @@
    - title:   title1       (22px)
    - display: largeTitle   (26px)
 
-   Line-heights are the native absolute leadings (32/26/22/20/16/15/14/13 px),
-   expressed as size-relative ratios. --bn-track-* carries Apple's per-size
+   Line-heights are Apple's absolute leadings expressed as size-relative ratios,
+   except body — loosened slightly by eye (1.4) for reading comfort. --bn-track-* carries Apple's per-size
    tracking — empirically ≈0 across this range (only micro is non-zero), and
    currently unconsumed (no letter-spacing wired yet). Sizes are kept in rem so
    they still honour the user's root font-size; the px in each comment is the
@@ -47,7 +47,7 @@
     --bn-text-label-lh:    1.231;
     --bn-track-label:      0;
     --bn-text-body:        0.9375rem;   /* 15px  — macOS title3 */
-    --bn-text-body-lh:     1.333;
+    --bn-text-body-lh:     1.4;         /* looser than title3's 1.333 — tuned by eye in the stress-bench for reading comfort (participant voice) */
     --bn-track-body:       0;
     --bn-text-heading:     1.0625rem;   /* 17px  — macOS title2 */
     --bn-text-heading-lh:  1.294;

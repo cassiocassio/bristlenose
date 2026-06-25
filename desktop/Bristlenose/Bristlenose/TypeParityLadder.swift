@@ -162,7 +162,7 @@ enum BNTokenLadder {
         BNTokenRow(token: "display", label: "Display — report h1",            oldPx: 26,   oldLineHeight: 1.231, bestMacStyle: "largeTitle"),
         BNTokenRow(token: "title",   label: "Title — page titles, h2",        oldPx: 22,   oldLineHeight: 1.182, bestMacStyle: "title1"),
         BNTokenRow(token: "heading", label: "Heading — section headings, h3", oldPx: 17,   oldLineHeight: 1.294, bestMacStyle: "title2"),
-        BNTokenRow(token: "body",    label: "Body — participant voice",       oldPx: 15,   oldLineHeight: 1.333, bestMacStyle: "title3"),
+        BNTokenRow(token: "body",    label: "Body — participant voice",       oldPx: 15,   oldLineHeight: 1.4,   bestMacStyle: "title3"),
         BNTokenRow(token: "label",   label: "Label — app voice (chrome)",     oldPx: 13,   oldLineHeight: 1.231, bestMacStyle: "body"),
         BNTokenRow(token: "caption", label: "Caption — footnotes, footer",    oldPx: 12,   oldLineHeight: 1.250, bestMacStyle: "callout"),
         BNTokenRow(token: "badge",   label: "Badge — chips, counts",          oldPx: 11,   oldLineHeight: 1.273, bestMacStyle: "subheadline"),

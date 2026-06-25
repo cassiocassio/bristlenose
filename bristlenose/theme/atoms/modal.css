@@ -187,3 +187,20 @@
 .confirm-delete-modal {
     max-width: 24rem;
 }
+
+/* Inline link-style button — e.g. the Miro "Disconnect" action inside a
+   sentence. Web-report context, so the accent affordance + underline is fine;
+   keyboard focus uses the standard focus-visible ring (the global
+   :focus:not(:focus-visible) suppressor handles the mouse case). */
+.bn-linkish {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: var(--bn-colour-accent);
+    cursor: pointer;
+    text-decoration: underline;
+}
+.bn-linkish:hover { text-decoration: none; }
+.bn-linkish:disabled { color: var(--bn-colour-muted); cursor: default; text-decoration: none; }
+.bn-linkish:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 2px; }

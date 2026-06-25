@@ -15,7 +15,6 @@ import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
 import { isExportMode } from "../utils/exportData";
 import {
-  getMiroAuthUrl,
   getMiroStatus,
   postMiroConnect,
   postMiroDisconnect,
@@ -51,22 +50,11 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [boardUrl, setBoardUrl] = useState<string | null>(null);
   const [stickies, setStickies] = useState(0);
-  const pollRef = useRef<number | null>(null);
   const triggerRef = useRef<Element | null>(null);
-
-  const stopPoll = useCallback(() => {
-    if (pollRef.current !== null) {
-      window.clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-  }, []);
 
   // On open: remember trigger, fetch connection status.
   useEffect(() => {
-    if (!open) {
-      stopPoll();
-      return;
-    }
+    if (!open) return;
     triggerRef.current = document.activeElement;
     setError(null);
     setBoardUrl(null);
@@ -74,8 +62,7 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
     getMiroStatus()
       .then((s) => setView(s.connected ? "configure" : "connect"))
       .catch(() => setView("connect"));
-    return stopPoll;
-  }, [open, stopPoll]);
+  }, [open]);
 
   // Restore focus on close.
   useEffect(() => {
@@ -122,37 +109,6 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
       setBusy(false);
     }
   }, [token, t]);
-
-  const handleOAuthConnect = useCallback(async () => {
-    setError(null);
-    try {
-      const { url } = await getMiroAuthUrl();
-      window.open(url, "_blank", "noopener,width=600,height=760");
-      // Poll for the callback to store the token — capped so it can't spin
-      // forever if the user dismisses the consent window.
-      stopPoll();
-      let attempts = 0;
-      pollRef.current = window.setInterval(async () => {
-        attempts += 1;
-        if (attempts > 60) {
-          stopPoll();
-          setError(t("miro.oauthTimeout"));
-          return;
-        }
-        try {
-          const s = await getMiroStatus();
-          if (s.connected) {
-            stopPoll();
-            setView("configure");
-          }
-        } catch {
-          /* transient; keep polling until the cap */
-        }
-      }, 2000);
-    } catch {
-      setError(t("miro.oauthUnconfigured"));
-    }
-  }, [stopPoll, t]);
 
   const handleDisconnect = useCallback(async () => {
     setBusy(true);
@@ -219,13 +175,15 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
         {view === "connect" && (
           <>
             <p className="bn-modal-subtitle">{t("miro.connectIntro")}</p>
-            <div className="bn-modal-actions" style={{ justifyContent: "flex-start" }}>
-              <button className="bn-btn bn-btn-primary" onClick={handleOAuthConnect}>
-                {t("miro.connectWithBrowser")}
-              </button>
-            </div>
             <p className="bn-export-hint" style={{ marginTop: 14 }}>
-              {t("miro.orPasteToken")}
+              {t("miro.orPasteToken")}{" "}
+              <a
+                href="https://bristlenose.app/docs/how-to/miro-setup.html"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t("miro.howToGetToken")}
+              </a>
             </p>
             <input
               type="password"

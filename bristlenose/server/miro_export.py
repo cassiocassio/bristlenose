@@ -162,6 +162,10 @@ def push_to_miro(token: str, db: Session, project_id: int, project_name: str,
             miro_client.create_frame(token, board_id, f.title,
                                      f.x + f.width / 2, f.y + f.height / 2, f.width, f.height)
         items = [_sticky_item(s) for s in board.stickies]  # stickies, 20/bulk
+        # The `stickies` count returned below is the *intended* count — Miro's
+        # bulk endpoint can partially succeed, and we don't yet reconcile the
+        # created-count against its response (deferred until a real multi-batch
+        # push shows whether that count is clean enough to trust).
         for i in range(0, len(items), 20):
             miro_client.bulk_create_items(token, board_id, items[i:i + 20])
         for t in board.texts:  # board title as a real text item

@@ -271,8 +271,17 @@ def miro_callback(request: Request, code: str = "", state: str = "") -> HTMLResp
             "Close this tab and try again.</p>", status_code=502,
         )
     store = get_credential_store()
+    access = tokens.get("access_token")
+    if not access:
+        # A malformed 200 (no access_token) would otherwise KeyError → 500.
+        logger.warning("Miro token exchange returned no access_token")
+        return HTMLResponse(
+            "<h2>Miro connection failed</h2><p>Could not complete the connection. "
+            "Close this tab and try again.</p>",
+            status_code=502,
+        )
     try:
-        store.set("miro", tokens["access_token"])
+        store.set("miro", access)
         if tokens.get("refresh_token"):
             store.set("miro_refresh", tokens["refresh_token"])
     except NotImplementedError:

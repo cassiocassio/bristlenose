@@ -178,7 +178,7 @@
 }
 
 .bn-export-error {
-    color: var(--bn-sentiment-frustration);
+    color: var(--bn-colour-error-text);
     font-size: var(--bn-text-label);
     margin: var(--bn-space-sm) 0;
 }

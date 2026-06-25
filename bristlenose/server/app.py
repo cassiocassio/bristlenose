@@ -26,6 +26,9 @@ from bristlenose.server.routes.analysis import router as analysis_router
 from bristlenose.server.routes.autocode import router as autocode_router
 from bristlenose.server.routes.clips_export import router as clips_export_router
 from bristlenose.server.routes.codebook import router as codebook_router
+from bristlenose.server.routes.codebook_builder import (
+    router as codebook_builder_router,
+)
 from bristlenose.server.routes.dashboard import router as dashboard_router
 from bristlenose.server.routes.data import router as data_router
 from bristlenose.server.routes.export import router as export_router
@@ -181,6 +184,7 @@ def create_app(
     app.include_router(autocode_router)
     app.include_router(clips_export_router)
     app.include_router(codebook_router)
+    app.include_router(codebook_builder_router)
     app.include_router(dashboard_router)
     app.include_router(export_router)
     app.include_router(quotes_export_router)

@@ -33,6 +33,8 @@ PROMPTS_WITH_BOUNDARY: list[str] = [
     "thematic-grouping",
     "signal-elaboration",
     "autocode",
+    "codebook-synthesize",
+    "codebook-candidates",
     "speaker-identification",
     "speaker-splitting",
 ]
@@ -151,6 +153,8 @@ CALL_SITES: list[tuple[str, str]] = [
     ("bristlenose/stages/s05b_identify_speakers.py", "transcript_sample"),
     ("bristlenose/server/elaboration.py", "signals_text"),
     ("bristlenose/server/autocode.py", "formatted_quotes"),
+    ("bristlenose/server/codebook_builder.py", "example_block"),
+    ("bristlenose/server/codebook_builder.py", "formatted_quotes"),
 ]
 
 

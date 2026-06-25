@@ -230,7 +230,7 @@ See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check
 
 **i18n:** `docs/design-i18n.md` — terminology table, implementation gotchas
 
-**Codebook:** `docs/design-codebook-island.md`, `docs/design-moderator-question-pill.md`
+**Codebook:** `docs/design-codebook-island.md`, `docs/design-moderator-question-pill.md`, `docs/design-dynamic-codebook-builder.md`
 
 **HTML report / dashboard / auth:**
 - `docs/design-html-report.md`, `docs/design-dashboard-navigation.md`

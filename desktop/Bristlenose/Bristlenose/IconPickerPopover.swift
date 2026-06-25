@@ -2,7 +2,7 @@ import SwiftUI
 
 /// A 10x10 grid of curated SF Symbols for choosing a project icon.
 ///
-/// The top-left icon is the default (`circle.fill`). Icons flow from abstract/geometric
+/// The top-left icon is the default (`circle`, an open ring). Icons flow from abstract/geometric
 /// through nature, animals, objects, creative, sport, to science/learning.
 /// All symbols are from SF Symbols 6 (macOS 15.0+, our deployment target).
 ///
@@ -13,14 +13,16 @@ struct IconPickerPopover: View {
     let selectedIcon: String?
     let onSelect: (String?) -> Void
 
-    /// The default icon shown when no custom icon is set.
-    static let defaultIcon = "circle.fill"
+    /// The default icon shown when no custom icon is set. An open ring (not the
+    /// filled `circle.fill`) — a quieter default identity mark; the project lens
+    /// keeps `target`.
+    static let defaultIcon = "circle"
 
     /// 100 curated SF Symbols — identity marks, not system chrome.
     /// Position [0] is the default. Grid flows abstract → figurative.
     static let palette: [(name: String, label: String)] = [
         // Row 1 — Geometric / Abstract
-        ("circle.fill", "Circle"),
+        ("circle", "Circle"),
         ("square.fill", "Square"),
         ("triangle.fill", "Triangle"),
         ("diamond.fill", "Diamond"),

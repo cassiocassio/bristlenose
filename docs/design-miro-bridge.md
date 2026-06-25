@@ -5,9 +5,11 @@ sticky notes, grouped by section and theme, that a team rearranges to do
 synthesis. Bristlenose is the preprocessor; Miro is where the conversation
 happens.
 
-**Status:** M1 shipped. **Experimental end-to-end vertical slice built (23 Jun
-2026)** — see _Implementation status_ at the foot of this doc. Backend +
-frontend present on branch, not yet validated against a real Miro account.
+**Status:** Phase 1 in progress. **End-to-end vertical slice built (23 Jun 2026)
+and validated live against a real Miro account (24 Jun)** — board, frames, bulk
+stickies, and text all confirmed against Miro's REST API. Now offered as **Send
+to Miro** in the SPA export menu, connecting via **paste-token**; **one-click
+OAuth is phase 2** (see _Implementation status_ at the foot of this doc).
 
 ---
 

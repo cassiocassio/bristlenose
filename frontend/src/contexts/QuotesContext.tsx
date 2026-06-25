@@ -14,8 +14,8 @@
 
 import { useSyncExternalStore } from "react";
 import type { TagResponse, ProposedTagBrief, QuoteResponse } from "../utils/types";
-import type { TagFilterState } from "../utils/filter";
-import { EMPTY_TAG_FILTER } from "../utils/filter";
+import type { TagFilterState, FilterState } from "../utils/filter";
+import { EMPTY_TAG_FILTER, filterQuotes } from "../utils/filter";
 import {
   putHidden,
   putStarred,
@@ -84,6 +84,22 @@ function getSnapshot(): QuotesState {
 /** Non-hook read of current store state — for imperative event handlers. */
 export function getQuotesSnapshot(): QuotesState {
   return state;
+}
+
+/** The quotes currently visible on the Quotes screen — i.e. after search,
+ *  view-mode, tag-filter and hidden are applied. This is the canonical "all"
+ *  for exports: hidden and filtered-out quotes are excluded. Shared with the
+ *  SPA dropdown (which filters the same way) so both surfaces agree. */
+export function getVisibleQuotes(store: QuotesState): QuoteResponse[] {
+  const f: FilterState = {
+    searchQuery: store.searchQuery,
+    viewMode: store.viewMode,
+    tagFilter: store.tagFilter,
+    hidden: store.hidden,
+    starred: store.starred,
+    tags: store.tags,
+  };
+  return filterQuotes(store.quotes, f);
 }
 
 function subscribe(listener: () => void): () => void {
@@ -294,4 +310,27 @@ export function setTagFilter(filter: TagFilterState): void {
 /** Subscribe to the full quotes store. Re-renders on any mutation. */
 export function useQuotesStore(): QuotesState {
   return useSyncExternalStore(subscribe, getSnapshot);
+}
+
+/** Derived export counts. Cached so the snapshot is referentially stable
+ *  unless total/starred actually change — `useSyncExternalStore` then bails
+ *  out of re-render, so subscribing this in a layout doesn't re-render the
+ *  shell on every unrelated store mutation (tag add, edit, search…). */
+let cachedCounts: { total: number; starred: number } = { total: 0, starred: 0 };
+function getCountsSnapshot(): { total: number; starred: number } {
+  // Counts mirror the export scopes: "All" = visible quotes (excludes
+  // hidden/filtered), "Starred" = visible quotes that are starred.
+  const visible = getVisibleQuotes(state);
+  let starred = 0;
+  for (const q of visible) if (state.starred[q.dom_id]) starred++;
+  const total = visible.length;
+  if (total !== cachedCounts.total || starred !== cachedCounts.starred) {
+    cachedCounts = { total, starred };
+  }
+  return cachedCounts;
+}
+
+/** Reactive {total, starred} quote counts. Stable across unrelated mutations. */
+export function useQuoteCounts(): { total: number; starred: number } {
+  return useSyncExternalStore(subscribe, getCountsSnapshot);
 }

@@ -47,6 +47,13 @@ final class BridgeHandler: ObservableObject {
     /// (Clear Selection, Copy as CSV).
     @Published var selectedQuoteCount: Int = 0
 
+    /// Total number of quotes currently in the report. Labels the export
+    /// popover's "All N quotes" scope choice. Pushed via `export-counts`.
+    @Published var totalQuoteCount: Int = 0
+
+    /// Number of starred quotes. Labels the "N Starred quotes" scope choice.
+    @Published var starredQuoteCount: Int = 0
+
     /// Whether a video/audio player is open. Enables the Video menu.
     @Published var hasPlayer = false
 
@@ -64,6 +71,18 @@ final class BridgeHandler: ObservableObject {
 
     /// Whether the web layer is in dark mode. Swaps View menu label.
     @Published var isDarkMode = false
+
+    /// The active lens's subtitle, pushed by the SPA (e.g. "163 Quotes",
+    /// "3 Codebooks · 47 Tags"). The SPA owns the live count + formatting — only
+    /// it can compute Signals, and the visible-quote / tag counts shift as the
+    /// researcher edits. The window subtitle just renders this; empty off the
+    /// report-derived lenses (Sessions/Project come from the local DB read).
+    @Published var lensSubtitle: String = ""
+
+    /// Which lens `lensSubtitle` is for ("quotes"/"codebook"/"analysis"),
+    /// matched against `activeTab` so a tab switch never momentarily shows the
+    /// previous lens's count.
+    @Published var lensSubtitleTab: String?
 
     /// The filesystem path of the currently selected project.
     /// Set by ContentView on project selection. Used by Project menu actions
@@ -258,18 +277,27 @@ final class BridgeHandler: ObservableObject {
 
         case "focus-change":
             focusedQuoteId = body["quoteId"] as? String
-            if let ids = body["selectedIds"] as? [String] {
-                selectedQuoteCount = ids.count
-            }
+            // `selectedQuoteCount` is owned solely by `export-counts` (below) —
+            // do not also write it here, or the two sources can drift if the
+            // web ever starts posting focus-change.
 
         case "undo-state":
             canUndo = body["canUndo"] as? Bool ?? false
             canRedo = body["canRedo"] as? Bool ?? false
             undoLabel = body["undoLabel"] as? String
 
+        case "export-counts":
+            if let n = body["total"] as? Int { totalQuoteCount = n }
+            if let n = body["selected"] as? Int { selectedQuoteCount = n }
+            if let n = body["starred"] as? Int { starredQuoteCount = n }
+
         case "player-state":
             hasPlayer = body["hasPlayer"] as? Bool ?? false
             playerPlaying = body["playing"] as? Bool ?? false
+
+        case "lens-subtitle":
+            lensSubtitleTab = body["tab"] as? String
+            lensSubtitle = body["subtitle"] as? String ?? ""
 
         case "project-action":
             if let action = body["action"] as? String {
@@ -298,6 +326,8 @@ final class BridgeHandler: ObservableObject {
         canGoForward = false
         focusedQuoteId = nil
         selectedQuoteCount = 0
+        totalQuoteCount = 0
+        starredQuoteCount = 0
         hasPlayer = false
         playerPlaying = false
         canUndo = false

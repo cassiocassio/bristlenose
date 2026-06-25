@@ -4,14 +4,14 @@
  * States: loading → connect (OAuth or paste-token) → configure → exporting →
  * done. A creds-free "Preview" opens the would-be board as HTML in a new tab.
  *
- * Strings are hardcoded English for now (experimental; i18n deferred — see
- * docs/design-miro-bridge.md assumption A4).
+ * Strings live under the `miro.*` namespace in common.json.
  *
  * @module MiroExportPanel
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
 import { isExportMode } from "../utils/exportData";
 import {
@@ -32,6 +32,7 @@ interface MiroExportPanelProps {
 type View = "loading" | "connect" | "configure" | "exporting" | "done";
 
 export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
+  const { t } = useTranslation();
   useInert(open);
   const [view, setView] = useState<View>("loading");
   const [token, setToken] = useState("");
@@ -106,13 +107,13 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
     try {
       const s = await postMiroConnect(token.trim());
       if (s.connected) setView("configure");
-      else setError("Token rejected.");
+      else setError(t("miro.tokenRejected"));
     } catch {
-      setError("Could not connect — check the token and try again.");
+      setError(t("miro.connectError"));
     } finally {
       setBusy(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   const handleOAuthConnect = useCallback(async () => {
     setError(null);
@@ -127,7 +128,7 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
         attempts += 1;
         if (attempts > 60) {
           stopPoll();
-          setError("Didn't hear back from Miro. Try again, or paste a token.");
+          setError(t("miro.oauthTimeout"));
           return;
         }
         try {
@@ -141,9 +142,9 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
         }
       }, 2000);
     } catch {
-      setError("OAuth isn't configured here. Paste an access token instead.");
+      setError(t("miro.oauthUnconfigured"));
     }
-  }, [stopPoll]);
+  }, [stopPoll, t]);
 
   const handleDisconnect = useCallback(async () => {
     setBusy(true);
@@ -152,11 +153,11 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
       await postMiroDisconnect();
       setView("connect");
     } catch {
-      setError("Couldn't disconnect. Try again.");
+      setError(t("miro.disconnectError"));
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [t]);
 
   const handlePreview = useCallback(async () => {
     setBusy(true);
@@ -166,11 +167,11 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
       const blob = new Blob([html], { type: "text/html" });
       window.open(URL.createObjectURL(blob), "_blank", "noopener");
     } catch {
-      setError("Could not build the preview.");
+      setError(t("miro.previewError"));
     } finally {
       setBusy(false);
     }
-  }, [request]);
+  }, [request, t]);
 
   const handleExport = useCallback(async () => {
     setView("exporting");
@@ -181,10 +182,10 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
       setStickies(res.stickies);
       setView("done");
     } catch {
-      setError("Export failed. Check your connection and try again.");
+      setError(t("miro.exportError"));
       setView("configure");
     }
-  }, [request]);
+  }, [request, t]);
 
   if (isExportMode()) return null;
 
@@ -198,28 +199,27 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
       data-testid="bn-miro-overlay"
     >
       <div className="bn-modal" data-testid="bn-miro-modal" style={{ maxWidth: 460 }}>
-        <h2>Send to Miro board</h2>
+        <h2>{t("miro.title")}</h2>
 
-        {view === "loading" && <p className="bn-modal-subtitle">Checking connection…</p>}
+        {view === "loading" && (
+          <p className="bn-modal-subtitle">{t("miro.checkingConnection")}</p>
+        )}
 
         {view === "connect" && (
           <>
-            <p className="bn-modal-subtitle">
-              Push your quotes onto a new Miro board as sticky notes, grouped by section and
-              theme. Connect once — we never touch your existing boards.
-            </p>
+            <p className="bn-modal-subtitle">{t("miro.connectIntro")}</p>
             <div className="bn-modal-actions" style={{ justifyContent: "flex-start" }}>
               <button className="bn-btn bn-btn-primary" onClick={handleOAuthConnect}>
-                Connect with browser
+                {t("miro.connectWithBrowser")}
               </button>
             </div>
             <p className="bn-export-hint" style={{ marginTop: 14 }}>
-              …or paste a Miro access token:
+              {t("miro.orPasteToken")}
             </p>
             <input
               type="password"
               value={token}
-              placeholder="Miro access token"
+              placeholder={t("miro.tokenPlaceholder")}
               onChange={(e) => setToken(e.target.value)}
               style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
             />
@@ -230,14 +230,14 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
             )}
             <div className="bn-modal-actions">
               <button className="bn-btn bn-btn-secondary" onClick={onClose}>
-                Cancel
+                {t("miro.cancel")}
               </button>
               <button
                 className="bn-btn bn-btn-primary"
                 onClick={handlePasteConnect}
                 disabled={busy || !token.trim()}
               >
-                Connect
+                {t("miro.connect")}
               </button>
             </div>
           </>
@@ -246,25 +246,25 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
         {view === "configure" && (
           <>
             <p className="bn-modal-subtitle">
-              Connected ✓ ·{" "}
+              {t("miro.connected")} ·{" "}
               <button className="bn-linkish" onClick={handleDisconnect} disabled={busy}>
-                Disconnect
+                {t("miro.disconnect")}
               </button>
             </p>
-            <label className="bn-export-hint">Board name (optional)</label>
+            <label className="bn-export-hint">{t("miro.boardNameLabel")}</label>
             <input
               type="text"
               value={boardName}
-              placeholder="Defaults to the project name"
+              placeholder={t("miro.boardNamePlaceholder")}
               onChange={(e) => setBoardName(e.target.value)}
               style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
             />
             <label className="bn-export-hint" style={{ marginTop: 10 }}>
-              Colour stickies by
+              {t("miro.colourByLabel")}
             </label>
             <select value={colourBy} onChange={(e) => setColourBy(e.target.value)}>
-              <option value="sentiment">Sentiment</option>
-              <option value="none">Single colour (yellow)</option>
+              <option value="sentiment">{t("miro.colourBySentiment")}</option>
+              <option value="none">{t("miro.colourByNone")}</option>
             </select>
             <label className="bn-export-checkbox" style={{ marginTop: 12 }}>
               <input
@@ -273,23 +273,21 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
                 onChange={(e) => setLinkClips(e.target.checked)}
               />
               <span>
-                Link quotes to clips
-                <small className="bn-export-hint">
-                  Point at the folder where you placed the exported clips.
-                </small>
+                {t("miro.linkClipsLabel")}
+                <small className="bn-export-hint">{t("miro.linkClipsHint")}</small>
               </span>
             </label>
             {linkClips && (
               <input
                 type="text"
                 value={clipsBase}
-                placeholder="https://drive.google.com/…/clips"
+                placeholder={t("miro.clipsBasePlaceholder")}
                 onChange={(e) => setClipsBase(e.target.value)}
                 style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
               />
             )}
             <p className="bn-export-hint" style={{ marginTop: 10 }}>
-              Exports all visible quotes. Data will be uploaded to Miro.
+              {t("miro.uploadNotice")}
             </p>
             {error && (
               <p className="bn-export-error" role="alert">
@@ -298,25 +296,25 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
             )}
             <div className="bn-modal-actions">
               <button className="bn-btn bn-btn-secondary" onClick={handlePreview} disabled={busy}>
-                Preview
+                {t("miro.preview")}
               </button>
               <button className="bn-btn bn-btn-primary" onClick={handleExport} disabled={busy}>
-                Create board
+                {t("miro.createBoard")}
               </button>
             </div>
           </>
         )}
 
-        {view === "exporting" && <p className="bn-modal-subtitle">Creating board…</p>}
+        {view === "exporting" && (
+          <p className="bn-modal-subtitle">{t("miro.creatingBoard")}</p>
+        )}
 
         {view === "done" && (
           <>
-            <p className="bn-modal-subtitle">
-              Board ready — {stickies} quote sticky{stickies === 1 ? "" : "s"} placed.
-            </p>
+            <p className="bn-modal-subtitle">{t("miro.boardReady", { count: stickies })}</p>
             <div className="bn-modal-actions">
               <button className="bn-btn bn-btn-secondary" onClick={onClose}>
-                Done
+                {t("miro.done")}
               </button>
               {boardUrl && (
                 <a
@@ -325,7 +323,7 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Open in Miro ↗
+                  {t("miro.openInMiro")}
                 </a>
               )}
             </div>

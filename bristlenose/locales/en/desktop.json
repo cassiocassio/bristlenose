@@ -26,6 +26,7 @@
     },
     "view": {
       "toggleSidebar": "Toggle Sidebar",
+      "moveFocusToProjects": "Move Focus to Projects",
       "showContents": "Show Contents",
       "hideContents": "Hide Contents",
       "showCodes": "Show Codes",
@@ -62,7 +63,7 @@
     "folder": {
       "rename": "Rename Folder",
       "archive": "Archive Folder",
-      "delete": "Delete Folder…"
+      "delete": "Delete Folder"
     },
     "codes": {
       "createCodeGroup": "Create Code Group",
@@ -90,7 +91,23 @@
       "extendSelectionUp": "Extend Selection Up",
       "toggleSelection": "Toggle Selection",
       "clearSelection": "Clear Selection",
-      "copyAsCSV": "Copy as CSV"
+      "copyAsCSV": "Copy as CSV",
+      "copyQuotes": "Copy Quotes",
+      "saveSpreadsheet": "Save as Spreadsheet…",
+      "extractClips": "Extract Video Clips…",
+      "anonymise": "Anonymise",
+      "anonymiseHint": "Remove participant names",
+      "reportHint": "Self contained HTML",
+      "copyHint": "Lean \u2014 quote, code, name, timecode",
+      "spreadsheetHint": "Rich \u2014 11 columns for sorting and analysis",
+      "clipsHint": "Trimmed clip per quote",
+      "formatCSV": "CSV",
+      "formatXLSX": "XLSX",
+      "copyScopeAll": "All ({{count}})",
+      "copyScopeSelected": "Selected ({{count}})",
+      "copyScopeStarred": "Starred ({{count}})",
+      "revealTranscripts": "Reveal Transcripts in Finder",
+      "revealTranscriptsHint": "The transcript files on disk"
     },
     "video": {
       "play": "Play",
@@ -158,6 +175,8 @@
     "interviewCount_other": "{{count}} interviews",
     "unanalysedSubtitle_one": "+1 unanalysed",
     "unanalysedSubtitle_other": "+{{count}} unanalysed",
+    "titleSessions_one": "{{count}} Session",
+    "titleSessions_other": "{{count}} Sessions",
     "missingSubtitle_one": "1 missing",
     "missingSubtitle_other": "{{count}} missing",
     "tooltipWaiting": "{{count}} waiting",

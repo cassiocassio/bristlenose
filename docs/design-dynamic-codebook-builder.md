@@ -1,6 +1,24 @@
 # Dynamic codebook builder — cultivating a tag into a code
 
-_Design note. Backend foundation shipped; React surface staged. June 2026._
+_Design note. Backend foundation + an ugly dev-only sandbox shipped; product UX
+deferred to Figma. June 2026._
+
+> **Direction (revised after the product conversation).** The near-term surface
+> is deliberately small and **manual**: surface a tag's `definition` /
+> `apply_when` / `not_this` as an **editable, framework-YAML-shaped entry** the
+> researcher sees and edits directly, with a **"Process again"** button that
+> re-scans the corpus. "Rejecting" a proposed quote isn't a primitive — you
+> *edit the entry* (tighten `apply_when`, extend `not_this`) and reprocess to
+> watch the proposal drop out. Manual tags stay the default; the machine never
+> auto-proposes or auto-applies. **Synthesis from exemplars is an optional
+> starting draft, not the headline** — from 50-word fragments it can only guess
+> surface commonalities, and the researcher's own context (boss's meeting, team
+> channel, post-interview chat) is the gold the machine can't see. The
+> **reject-with-reasons → LLM-refine** loop below is the *future automatic
+> ratchet* (`docs/methodology/tag-rejections-are-great.md`), kept out of the
+> near-term surface. The richer `TagPrompt`/`TagPromptDecision` persistence and
+> `/builder` endpoints exist as a staged layer; only the dev sandbox
+> (`/codebook-lab`, `serve --dev`) is live, and it writes nothing.
 
 ## The idea
 

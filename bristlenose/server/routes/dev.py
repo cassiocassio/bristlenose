@@ -466,19 +466,6 @@ class _LabSynthRequest(BaseModel):
     example_texts: list[str] = Field(default_factory=list)
 
 
-class _LabDecision(BaseModel):
-    text: str
-    reason: str = ""
-
-
-class _LabRefineRequest(BaseModel):
-    tag_name: str = "untitled"
-    example_texts: list[str] = Field(default_factory=list)
-    prompt: _LabPrompt = Field(default_factory=_LabPrompt)
-    accepted: list[_LabDecision] = Field(default_factory=list)
-    rejected: list[_LabDecision] = Field(default_factory=list)
-
-
 class _LabCandidatesRequest(BaseModel):
     tag_name: str = "untitled"
     prompt: _LabPrompt = Field(default_factory=_LabPrompt)
@@ -533,29 +520,6 @@ async def codebook_lab_synthesize(request: Request, body: _LabSynthRequest) -> d
     }
 
 
-@router.post("/codebook-lab/refine")
-async def codebook_lab_refine(request: Request, body: _LabRefineRequest) -> dict[str, object]:
-    """Refine the prompt from accept/reject-with-reasons (no DB writes)."""
-    from bristlenose.server import codebook_builder as cb
-
-    examples = [cb.ExampleQuote(text=t) for t in body.example_texts if t.strip()]
-    current = cb.PromptDraft(
-        summary=body.prompt.summary, definition=body.prompt.definition,
-        apply_when=body.prompt.apply_when, not_this=body.prompt.not_this,
-    )
-    draft = await cb.synthesize_prompt(
-        body.tag_name, examples, _lab_settings(),
-        current=current,
-        accepted=[cb.DecisionFeedback(text=d.text, reason=d.reason) for d in body.accepted],
-        rejected=[cb.DecisionFeedback(text=d.text, reason=d.reason) for d in body.rejected],
-    )
-    return {
-        "summary": draft.summary, "definition": draft.definition,
-        "apply_when": draft.apply_when, "not_this": draft.not_this,
-        "version": draft.version,
-    }
-
-
 @router.post("/codebook-lab/candidates")
 async def codebook_lab_candidates(
     request: Request, body: _LabCandidatesRequest, project_id: int = 1,
@@ -599,12 +563,6 @@ async def codebook_lab_candidates(
     }
 
 
-@router.get("/codebook-lab", include_in_schema=False)
-def codebook_lab_page() -> HTMLResponse:
-    """Redirect helper — the page itself lives at /codebook-lab (auth-exempt)."""
-    raise HTTPException(status_code=404, detail="Page is served at /codebook-lab")
-
-
 def build_codebook_lab_html(auth_token: str = "") -> str:
     """Return the bare codebook-lab experiment page (dev-only, ugly on purpose).
 
@@ -639,62 +597,66 @@ _CODEBOOK_LAB_HTML = r"""<!doctype html>
   button:disabled { opacity: .5; cursor: default; }
   .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .cand { border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px; margin: 8px 0; }
+  .cand.new { border-color: #1a7f37; background: #eaffea; }
   .cand .q { font-weight: 500; }
-  .cand .r { font-size: 12px; color: #555; margin: 4px 0; }
+  .cand .r { font-size: 12px; color: #555; margin: 4px 0 0; }
   .conf { font-variant-numeric: tabular-nums; color: #1f6feb; font-weight: 600; }
-  .acc { background: #e6ffed; } .rej { background: #ffeef0; }
-  pre { background: #0d1117; color: #c9d1d9; padding: 10px; border-radius: 6px; overflow: auto; font-size: 12px; }
+  .badge { font-size: 10px; text-transform: uppercase; letter-spacing: .03em; background:#1a7f37; color:#fff; border-radius: 8px; padding: 0 6px; margin-left: 6px; }
+  .dropped { border:1px dashed #cf222e; border-radius:6px; padding:6px 10px; margin:8px 0; background:#fff5f5; }
+  .dropped .q { text-decoration: line-through; color:#a40e26; }
+  pre { background: #0d1117; color: #c9d1d9; padding: 10px; border-radius: 6px; overflow: auto; font-size: 12px; white-space: pre-wrap; }
   .pill { display:inline-block; font-size: 11px; background:#eee; border-radius: 10px; padding: 1px 8px; }
   .warn { background: #fff8c5; border: 1px solid #d4a72c; padding: 6px 10px; border-radius: 6px; font-size: 12px; margin: 8px 0; }
+  .yaml { background:#f6f8fa; border:1px solid #d0d7de; border-radius:6px; padding:8px 10px; font: 12px/1.45 ui-monospace, monospace; white-space: pre-wrap; }
 </style>
 </head>
 <body>
 <h1>Codebook lab <span class="pill">experiment</span></h1>
-<div class="muted">Ugly throwaway sandbox for the dynamic-codebook-builder idea. Nothing here is saved. Real workflow/UX is TBD (Figma). Uses your configured LLM provider.</div>
-<div class="warn">From a few short fragments the machine can only guess <em>surface</em> commonalities — it can't know what the tag means to you. Try both: let it <b>synthesise a draft</b>, and <b>write the criteria yourself</b>, then compare whose "find more like this" set is better.</div>
+<div class="muted">Ugly throwaway sandbox. Nothing is saved. The editable entry below is the same shape as a framework codebook (YAML). Real workflow/UX is TBD (Figma). Uses your configured LLM provider.</div>
+<div class="warn">Manual tags are the default — you know what your tag means; the machine doesn't. <b>Rejecting</b> a proposed quote isn't a button: you <b>edit the entry</b> (tighten <i>apply when</i>, or add to <i>not this</i>) and press <b>Process again</b> to watch it drop out. Synthesise is just an optional starting draft.</div>
 
 <div class="wrap">
   <div>
     <fieldset>
-      <legend>1 · Exemplars</legend>
-      <label>Pick a tag from this project (fills examples), or just paste below</label>
+      <legend>1 · Exemplars (optional)</legend>
+      <label>Pick a tag from this project (fills examples), or paste below</label>
       <select id="tagPick"><option value="">— loading tags —</option></select>
-      <label>Tag name</label>
-      <input id="tagName" value="prescription cost">
-      <label>Example quotes (one per line) — the quotes you'd code with this tag</label>
-      <textarea id="examples" rows="6" placeholder="It's just too expensive to keep filling it every month..."></textarea>
+      <label>Example quotes (one per line)</label>
+      <textarea id="examples" rows="5" placeholder="It's just too expensive to keep filling it every month..."></textarea>
       <div class="row" style="margin-top:8px">
-        <button class="primary" id="btnSynth">Synthesise draft →</button>
-        <span class="muted">or skip this and write the prompt yourself ↓</span>
+        <button id="btnSynth">Synthesise a starting draft →</button>
+        <span class="muted">or skip and write the entry yourself ↓</span>
       </div>
     </fieldset>
 
     <fieldset>
-      <legend>2 · The prompt <span id="ver" class="pill"></span></legend>
-      <label>Summary (what these share)</label>
-      <textarea id="f_summary" rows="2"></textarea>
-      <label>Definition</label>
+      <legend>2 · The codebook entry <span id="ver" class="pill"></span></legend>
+      <label>name</label>
+      <input id="tagName" value="prescription cost">
+      <label>definition</label>
       <textarea id="f_definition" rows="2"></textarea>
-      <label>Apply when (inclusion)</label>
+      <label>apply_when (inclusion — when this code applies)</label>
       <textarea id="f_apply" rows="3"></textarea>
-      <label>Not this (exclusion)</label>
+      <label>not_this (exclusion — adjacent cases to keep out)</label>
       <textarea id="f_not" rows="3"></textarea>
+      <label>summary (optional note to self)</label>
+      <textarea id="f_summary" rows="1"></textarea>
       <div class="row" style="margin-top:8px">
-        <button class="primary" id="btnScan">Find candidates →</button>
+        <button class="primary" id="btnScan">Process again →</button>
         <label style="margin:0">min conf</label>
         <input id="minConf" type="number" step="0.05" min="0" max="1" value="0.5" style="width:80px">
-        <label style="margin:0"><input type="checkbox" id="excl" checked style="width:auto"> exclude my examples</label>
+        <label style="margin:0"><input type="checkbox" id="excl" checked style="width:auto"> hide my examples</label>
       </div>
+      <label style="margin-top:10px">as framework YAML</label>
+      <div id="yaml" class="yaml"></div>
     </fieldset>
   </div>
 
   <div>
     <fieldset>
-      <legend>3 · Candidates <span id="scanInfo" class="muted"></span></legend>
-      <div id="cands"></div>
-      <div class="row">
-        <button id="btnRefine">Refine prompt from my accept/reject reasons →</button>
-      </div>
+      <legend>3 · Proposed quote → tag pairings <span id="scanInfo" class="muted"></span></legend>
+      <div id="dropped"></div>
+      <div id="cands"><div class="muted">edit the entry and press “Process again”.</div></div>
     </fieldset>
     <fieldset>
       <legend>Raw / log</legend>
@@ -710,14 +672,25 @@ const $ = id => document.getElementById(id);
 const log = (x) => { $("log").textContent = (typeof x === "string" ? x : JSON.stringify(x, null, 2)); };
 function setBusy(b){ document.querySelectorAll("button").forEach(x=>x.disabled=b); }
 function getPrompt(){ return { summary:$("f_summary").value, definition:$("f_definition").value, apply_when:$("f_apply").value, not_this:$("f_not").value }; }
-function setPrompt(p){ $("f_summary").value=p.summary||""; $("f_definition").value=p.definition||""; $("f_apply").value=p.apply_when||""; $("f_not").value=p.not_this||""; $("ver").textContent = p.version ? ("v "+p.version) : ""; }
+function setPrompt(p){ $("f_summary").value=p.summary||""; $("f_definition").value=p.definition||""; $("f_apply").value=p.apply_when||""; $("f_not").value=p.not_this||""; $("ver").textContent = p.version ? ("v "+p.version) : ""; renderYaml(); }
 function examples(){ return $("examples").value.split("\n").map(s=>s.trim()).filter(Boolean); }
+function esc(s){ return (s||"").replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 async function post(path, body){
   const r = await fetch(path, { method:"POST", headers:H, body: JSON.stringify(body) });
   const j = await r.json().catch(()=>({detail:"(no json)"}));
   if(!r.ok) throw new Error(j.detail || r.status);
   return j;
 }
+
+// Live YAML mirror so the entry reads as a framework codebook entry.
+function yamlLine(k, v){ if(!v) return ""; const t=(""+v).replace(/\n/g," ").trim(); return "  "+k+": "+t+"\n"; }
+function renderYaml(){
+  const p = getPrompt();
+  const y = "- name: "+($("tagName").value||"untitled")+"\n"
+    + yamlLine("definition", p.definition) + yamlLine("apply_when", p.apply_when) + yamlLine("not_this", p.not_this);
+  $("yaml").textContent = y;
+}
+["tagName","f_definition","f_apply","f_not"].forEach(id=> $(id).addEventListener("input", renderYaml));
 
 let TAGS = [];
 async function loadTags(){
@@ -732,21 +705,22 @@ async function loadTags(){
 }
 $("tagPick").onchange = () => {
   const i = $("tagPick").value; if(i==="") return;
-  const t = TAGS[i]; $("tagName").value = t.name; $("examples").value = t.quotes.join("\n");
+  const t = TAGS[i]; $("tagName").value = t.name; $("examples").value = t.quotes.join("\n"); renderYaml();
 };
 
 $("btnSynth").onclick = async () => {
-  setBusy(true); log("synthesising…");
+  setBusy(true); log("synthesising a starting draft…");
   try { const p = await post("/api/dev/codebook-lab/synthesize", { tag_name:$("tagName").value, example_texts: examples() }); setPrompt(p); log(p); }
   catch(e){ log("ERROR: "+e.message); } finally { setBusy(false); }
 };
 
+let LAST = new Set();   // candidate texts from the previous process, to spot what dropped
 $("btnScan").onclick = async () => {
-  setBusy(true); log("scanning project quotes…");
+  setBusy(true); log("processing project quotes against the entry…");
   try {
     const j = await post("/api/dev/codebook-lab/candidates", {
       tag_name:$("tagName").value, prompt:getPrompt(),
-      min_confidence: parseFloat($("minConf").value), limit: 50,
+      min_confidence: parseFloat($("minConf").value), limit: 80,
       exclude_texts: $("excl").checked ? examples() : []
     });
     renderCands(j); log(j);
@@ -754,40 +728,28 @@ $("btnScan").onclick = async () => {
 };
 
 function renderCands(j){
+  const nowSet = new Set(j.candidates.map(c=>c.text));
   $("scanInfo").textContent = "scanned "+j.scanned+", "+j.candidates.length+" matched"+(j.errors?(", "+j.errors+" batch errors"):"");
+  // Dropped since last process — the "did my edit make it vanish?" check.
+  const dropped = [...LAST].filter(t=> !nowSet.has(t));
+  const dbox = $("dropped"); dbox.innerHTML = "";
+  if(LAST.size && dropped.length){
+    dbox.innerHTML = '<div class="muted">dropped since last process ('+dropped.length+'):</div>'
+      + dropped.map(t=>'<div class="dropped"><span class="q">“'+esc(t)+'”</span></div>').join("");
+  }
   const box = $("cands"); box.innerHTML = "";
-  if(!j.candidates.length){ box.innerHTML = '<div class="muted">no matches at this threshold.</div>'; return; }
-  j.candidates.forEach((c,i)=>{
-    const d = document.createElement("div"); d.className="cand"; d.dataset.idx=i; d.dataset.text=c.text;
-    d.innerHTML = '<div class="q">“'+esc(c.text)+'”</div>'
-      + '<div class="r"><span class="conf">'+c.confidence+'</span> · '+esc(c.rationale)+'</div>'
-      + '<div class="row"><button data-v="accept">✓ great</button><button data-v="reject">✗ no</button>'
-      + '<input placeholder="why? (the gold — your reason)" data-reason style="flex:1"></div>';
-    d.querySelectorAll("button").forEach(b=> b.onclick = ()=>{ d.dataset.v=b.dataset.v; d.className="cand "+(b.dataset.v==="accept"?"acc":"rej"); });
+  if(!j.candidates.length){ box.innerHTML = '<div class="muted">no matches at this threshold.</div>'; LAST = nowSet; return; }
+  j.candidates.forEach(c=>{
+    const isNew = LAST.size && !LAST.has(c.text);
+    const d = document.createElement("div"); d.className = "cand" + (isNew?" new":"");
+    d.innerHTML = '<div class="q">“'+esc(c.text)+'”'+(isNew?'<span class="badge">new</span>':'')+'</div>'
+      + '<div class="r"><span class="conf">'+c.confidence+'</span> · '+esc(c.rationale)+'</div>';
     box.appendChild(d);
   });
+  LAST = nowSet;
 }
-function esc(s){ return (s||"").replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 
-$("btnRefine").onclick = async () => {
-  const acc=[], rej=[];
-  document.querySelectorAll(".cand").forEach(d=>{
-    if(!d.dataset.v) return;
-    const item = { text: d.dataset.text, reason: d.querySelector("[data-reason]").value };
-    (d.dataset.v==="accept"?acc:rej).push(item);
-  });
-  if(!acc.length && !rej.length){ log("mark some candidates ✓/✗ first (reasons optional but valuable)"); return; }
-  setBusy(true); log("refining from "+acc.length+" accepted / "+rej.length+" rejected…");
-  try {
-    const p = await post("/api/dev/codebook-lab/refine", {
-      tag_name:$("tagName").value, example_texts: examples(),
-      prompt: getPrompt(), accepted: acc, rejected: rej
-    });
-    setPrompt(p); log(p);
-  } catch(e){ log("ERROR: "+e.message); } finally { setBusy(false); }
-};
-
-loadTags();
+loadTags(); renderYaml();
 </script>
 </body>
 </html>

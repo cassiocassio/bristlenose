@@ -31,6 +31,13 @@ interface MiroExportPanelProps {
 
 type View = "loading" | "connect" | "configure" | "exporting" | "done";
 
+/** Pull the server `detail` (attached by api.ts httpError) off a caught error. */
+function errDetail(e: unknown): string {
+  return typeof (e as { detail?: unknown })?.detail === "string"
+    ? (e as { detail: string }).detail
+    : "";
+}
+
 export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
   const { t } = useTranslation();
   useInert(open);
@@ -107,9 +114,10 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
     try {
       const s = await postMiroConnect(token.trim());
       if (s.connected) setView("configure");
-      else setError(t("miro.tokenRejected"));
-    } catch {
-      setError(t("miro.connectError"));
+    } catch (e) {
+      // Surface the server's reason (invalid token / missing boards:write scope
+      // / network) rather than one generic message.
+      setError(errDetail(e) || t("miro.connectError"));
     } finally {
       setBusy(false);
     }
@@ -181,8 +189,11 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
       setBoardUrl(res.board_url);
       setStickies(res.stickies);
       setView("done");
-    } catch {
-      setError(t("miro.exportError"));
+    } catch (e) {
+      // On a partial-board 502 the detail carries the recovery URL ("Board
+      // created but incomplete — open it: <url>"); surface it so the half-built
+      // board isn't orphaned behind a generic "try again".
+      setError(errDetail(e) || t("miro.exportError"));
       setView("configure");
     }
   }, [request, t]);

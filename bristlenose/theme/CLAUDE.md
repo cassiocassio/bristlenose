@@ -34,7 +34,7 @@ Tokens → Atoms → Molecules → Organisms → Templates. All visual values vi
 | `--bn-text-title` | 22px | `--bn-text-title-lh` | 1.25 | Page titles, h1 |
 | `--bn-text-display` | 28px | `--bn-text-display-lh` | 1.2 | Dashboard hero numbers |
 
-Desktop overrides (`tokens-desktop.css`, activated by `data-platform="desktop"`): `--bn-text-body` stays 15px (Apple callout), `--bn-text-caption` → 12px, `--bn-text-title` → 22px (Apple title 2), `--bn-text-display` → 28px (Apple title 1). Chrome defaults to `--bn-text-label` (13px) via `body { font-size: var(--bn-text-label) }` in `report.css`.
+Desktop overrides (`tokens-desktop.css`, activated by `data-platform="desktop"`) are calibrated to the live macOS AppKit ladder via the Type Parity Inspector: `--bn-text-body` 15px (macOS title3), `--bn-text-caption` 12px (callout), `--bn-text-title` 22px (title1), `--bn-text-display` 26px (largeTitle), with line-heights set to Apple's absolute leadings and a `--bn-track-*` tracking family (≈0 across the range). Chrome defaults to `--bn-text-label` (13px) via `body { font-size: var(--bn-text-label) }` in `report.css`.
 
 **Known limitation (Windows 10):** Static Segoe UI (pre-Variable) snaps 420→400 and 490→400 when offline (no Google Fonts). Structural cues (font-size, whitespace, borders) still carry hierarchy. Documented as acceptable degradation.
 

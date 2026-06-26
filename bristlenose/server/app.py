@@ -367,21 +367,28 @@ def _print_dev_urls() -> None:
 def _html_root_attrs() -> str:
     """Build extra attributes for the <html> element.
 
-    Reads platform and color theme from environment:
+    Reads platform, color theme, and typography from environment:
     - BRISTLENOSE_PLATFORM: "desktop" when launched from the macOS app
     - BRISTLENOSE_COLOR_THEME: palette name (e.g. "edo", "default")
+    - BRISTLENOSE_TYPOGRAPHY: "inter" opts the desktop app back to the web/Inter
+      type scale. SF Pro is the default and is implied by the attribute's
+      absence (CSS gates on :not([data-typography="inter"])); SF Pro is licensed
+      for Apple platforms only.
 
     Desktop defaults to "edo" color theme if no explicit theme is set.
     """
     parts: list[str] = []
     platform = os.environ.get("BRISTLENOSE_PLATFORM", "")
     color_theme = os.environ.get("BRISTLENOSE_COLOR_THEME", "")
+    typography = os.environ.get("BRISTLENOSE_TYPOGRAPHY", "")
     if platform:
         parts.append(f'data-platform="{platform}"')
     if not color_theme and platform == "desktop":
         color_theme = "edo"
     if color_theme:
         parts.append(f'data-color-theme="{color_theme}"')
+    if typography:
+        parts.append(f'data-typography="{typography}"')
     return " ".join(parts)
 
 

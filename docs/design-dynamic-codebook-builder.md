@@ -1,7 +1,7 @@
 # Dynamic codebook builder — cultivating a tag into a code
 
-_Design note. Backend foundation + an ugly dev-only sandbox shipped; product UX
-deferred to Figma. June 2026._
+_Design note. Backend foundation + an ugly experiment sandbox shipped (flag-gated,
+on by default, reaches the TestFlight cohort); product UX deferred to Figma. June 2026._
 
 > **Direction (revised after the product conversation).** The near-term surface
 > is deliberately small and **manual**: surface a tag's `definition` /
@@ -17,8 +17,10 @@ deferred to Figma. June 2026._
 > **reject-with-reasons → LLM-refine** loop below is the *future automatic
 > ratchet* (`docs/methodology/tag-rejections-are-great.md`), kept out of the
 > near-term surface. The richer `TagPrompt`/`TagPromptDecision` persistence and
-> `/builder` endpoints exist as a staged layer; only the dev sandbox
-> (`/codebook-lab`, `serve --dev`) is live, and it writes nothing.
+> `/builder` endpoints exist as a staged layer; only the experiment sandbox
+> (`/codebook-lab`) is live — now behind the default-on `experimental_codebook_lab`
+> flag (ships in plain `serve` + the desktop sidecar for cohort testing, not just
+> `--dev`), reached from a "Codebook lab" button in the Codebook tab. It writes nothing.
 
 ## The idea
 

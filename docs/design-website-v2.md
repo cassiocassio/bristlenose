@@ -80,6 +80,16 @@ Icebox, not launch gates.
 
 **Phase A — close the deploy-breakage gaps (in staging first).** A naive `rsync --delete`
 deploy would wipe live files v2 doesn't yet carry.
+
+> **Hard URL contract — the shipped SPA links into the docs.** Every `bristlenose.app/…` URL
+> hardcoded in the shipped frontend MUST keep resolving post-cutover. Audit:
+> `grep -rn "bristlenose\.app" frontend/src`. The one this cycle adds is
+> **`…/docs/how-to/miro-setup.html`** — the Miro panel's "How do I get a token?" link
+> (`MiroExportPanel.tsx:207`, ships with PR #120). Its content is already on main
+> (`docs/how-to/miro-setup.md`); the cutover must render it to **that exact path** or the shipped
+> panel 404s. (`feedback.php`/`telemetry.php` are covered by step 2; `blog.bristlenose.app` is a
+> separate subdomain, outside `--delete` scope.)
+
 1. **Port the frozen `privacy.html`** into the new chrome (`.plain` layout + shared topbar/footer),
    content verbatim — as index/support already were. Missing today; `--delete` would remove the
    live privacy page without it.
@@ -89,6 +99,10 @@ deploy would wipe live files v2 doesn't yet carry.
    + templates; v2 uses `build.py`. Pick one: (a) adopt `build.py` as the live docs generator, or
    (b) commit v2's rendered `docs/*.html` static and retire the old templates. Either way the live
    `deploy.sh` must emit the full tree: index/support/privacy + `/docs/` + assets + PHP.
+   **⚠️ Uncommitted wiring lives here:** the live `bristlenose-website` repo's how-to render
+   (`render-howtos.py`, `howto-template.html`, the `deploy.sh` step) has **uncommitted changes**
+   pending review (the miro-setup how-to render). Review/absorb them before reconciling — `build.py`
+   may supersede the mechanism, but don't clobber it blind, and the rendered URL must survive.
 4. **Settle `manual.html`** — retire with a `/manual.html → /docs/` redirect, or keep as a
    Reference section.
 
@@ -96,8 +110,9 @@ deploy would wipe live files v2 doesn't yet carry.
 5. Land the reconciled tree: new chrome, `/docs/`, integrated index/support/privacy, PHP,
    `.htaccess` redirects.
 6. **Archive the current live site** — `git tag v1-final` on `bristlenose-website` (rollback point).
-7. **Extend the deploy verify** — add curl 200-checks for `/docs/`, the `/manual.html` redirect,
-   `/support.html`, `/privacy.html` to `deploy.sh`.
+7. **Extend the deploy verify** — add curl 200-checks for `/docs/`, `/docs/how-to/miro-setup.html`
+   (the shipped-panel contract), the `/manual.html` redirect, `/support.html`, `/privacy.html` to
+   `deploy.sh`.
 
 **Phase C — deploy (maintainer-run; needs SSH-agent access to `dreamhost`).**
 8. `./deploy.sh` dry-run first — eyeball the rsync delta, confirm nothing live is deleted unexpectedly.

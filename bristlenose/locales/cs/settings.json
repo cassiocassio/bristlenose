@@ -6,6 +6,9 @@
     "light": "Světlý",
     "dark": "Tmavý"
   },
+  "typography": {
+    "legend": "Typografie"
+  },
   "language": {
     "legend": "Jazyk",
     "description": "Určuje jazyk zobrazení rozhraní. Obsah reportu se nepřekládá.",

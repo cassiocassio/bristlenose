@@ -6,6 +6,9 @@
     "light": "Hell",
     "dark": "Dunkel"
   },
+  "typography": {
+    "legend": "Typografie"
+  },
   "language": {
     "legend": "Sprache",
     "description": "Legt die Anzeigesprache der Benutzeroberfläche fest. Berichtsinhalte werden nicht übersetzt.",

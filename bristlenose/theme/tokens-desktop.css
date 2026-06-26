@@ -1,5 +1,11 @@
 /* Desktop typography overrides — SF Pro for macOS native feel.
-   Active when data-platform="desktop" is set on <html>.
+   Active when data-platform="desktop" is set on <html> AND the user hasn't
+   opted back to Inter. The macOS app sets data-platform via
+   BRISTLENOSE_PLATFORM=desktop; the Appearance ▸ Typography setting writes
+   BRISTLENOSE_TYPOGRAPHY, and "inter" makes the server emit
+   data-typography="inter" — which this block's :not() excludes, so the cascade
+   falls back to :root (Inter). On web/CLI neither var is set, so this never
+   matches: SF Pro is licensed for Apple platforms only, Inter ships everywhere.
 
    SF Pro is a system font on macOS — no download needed.
    SF Pro Text is optimised for body sizes (<20pt), SF Pro Display for headings (≥20pt).
@@ -27,7 +33,7 @@
    value at the default 16px root (the condition this was calibrated under).
    Re-true on a different scale/colour profile. Archive: tokens-desktop-v1.css */
 
-[data-platform="desktop"] {
+[data-platform="desktop"]:not([data-typography="inter"]) {
     /* Font family — SF Pro via -apple-system, no Google Fonts needed */
     --bn-font-body: -apple-system, "SF Pro Text", "SF Pro", system-ui,
         "Hiragino Kaku Gothic ProN", "Hiragino Sans",

@@ -75,7 +75,15 @@ needs nothing from axis 1.
    therefore the correct cross-platform target for browser/free users, and the split is
    load-bearing, not cosmetic.
 
-## The critical gap: the switch is built but unplugged
+## The critical gap: the switch is built but unplugged — RESOLVED (27 Jun 2026)
+
+> **Resolved.** `BristlenoseShared.childEnvironment(for:)` now sets
+> `BRISTLENOSE_PLATFORM="desktop"` (and pins `BRISTLENOSE_COLOR_THEME="default"` so the
+> Edo palette stays deferred), and a user-facing **Appearance ▸ Typography** picker
+> (SF Pro default / Inter) rides `BRISTLENOSE_TYPOGRAPHY` through the same env pipeline:
+> "inter" makes the server emit `data-typography="inter"`, and the CSS gate
+> `[data-platform="desktop"]:not([data-typography="inter"])` opts back to Inter. The
+> original gap analysis is kept below for context.
 
 `tokens-desktop.css` already contains the full SF Pro + Apple-HIG type scale, gated on
 `[data-platform="desktop"]`. The server already emits that attribute when

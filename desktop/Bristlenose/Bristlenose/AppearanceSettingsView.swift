@@ -9,6 +9,7 @@ struct AppearanceSettingsView: View {
 
     @EnvironmentObject var i18n: I18n
     @AppStorage("appearance") private var appearance: String = "auto"
+    @AppStorage("typography") private var typography: String = "sf"
     @AppStorage("language") private var language: String = "en"
 
     var body: some View {
@@ -20,6 +21,17 @@ struct AppearanceSettingsView: View {
                     Text(i18n.t("settings.appearance.dark")).tag("dark")
                 }
                 .pickerStyle(.radioGroup)
+            }
+
+            Section {
+                // Font names are brand names, shown as-is (like the language
+                // autonyms below) — not translated. SF Pro is the native macOS
+                // type system; Inter matches the web report. Desktop only — the
+                // web app is always Inter (SF Pro is Apple-licensed).
+                Picker(i18n.t("settings.typography.legend"), selection: $typography) {
+                    Text("SF Pro").tag("sf")
+                    Text("Inter").tag("inter")
+                }
             }
 
             Section {
@@ -48,6 +60,13 @@ struct AppearanceSettingsView: View {
         .formStyle(.grouped)
         .frame(width: 660)
         .onChange(of: appearance) { _, _ in
+            NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
+        }
+        .onChange(of: typography) { _, _ in
+            // The server renders data-typography onto <html> from
+            // BRISTLENOSE_TYPOGRAPHY at sidecar start, so the change lands on
+            // restart — same mechanism (and same prefs notification) as the
+            // appearance and language settings in this tab.
             NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
         }
         .onChange(of: language) { _, newValue in

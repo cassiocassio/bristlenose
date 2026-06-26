@@ -519,3 +519,64 @@ class TestCodebookLab:
             json={"tag_name": "cost", "prompt": {}},
         )
         assert r.status_code == 400
+
+    def test_tags_offers_manual_only_including_zero_quote(self) -> None:
+        """The picker offers researcher-created tags only, and keeps 0-quote ones.
+
+        Regression: the endpoint used to inner-join through QuoteTag with no
+        framework filter, so it surfaced AI sentiment tags (framework_id=
+        "sentiment") and imported-framework tags, and silently dropped manual
+        tags that had no coded quotes yet. The builder cultivates the
+        researcher's *own* vocabulary, so only framework_id IS NULL groups
+        should be offered — including thin (0-quote) tags.
+        """
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        db = app.state.db_factory()
+        try:
+            quotes = db.query(Quote).filter_by(project_id=1).order_by(Quote.id).all()
+
+            # Manual group (framework_id=None): one coded tag, one thin tag.
+            manual = CodebookGroup(name="My codes", colour_set="ux", sort_order=0)
+            db.add(manual)
+            db.flush()
+            db.add(ProjectCodebookGroup(project_id=1, codebook_group_id=manual.id, sort_order=0))
+            coded = TagDefinition(name="duvet-fixation", codebook_group_id=manual.id)
+            thin = TagDefinition(name="thin-tag", codebook_group_id=manual.id)
+            db.add_all([coded, thin])
+            db.flush()
+            for q in quotes[:2]:
+                db.add(QuoteTag(quote_id=q.id, tag_definition_id=coded.id))
+
+            # AI sentiment + imported-framework tags — must NOT be offered, even
+            # though they carry quotes (sentinel names avoid clashing with any
+            # importer-created tags). Old behaviour surfaced exactly these.
+            sentiment = CodebookGroup(name="Sentiment", framework_id="sentiment", sort_order=1)
+            fw = CodebookGroup(name="Strategy", framework_id="garrett", sort_order=2)
+            db.add_all([sentiment, fw])
+            db.flush()
+            db.add_all([
+                ProjectCodebookGroup(project_id=1, codebook_group_id=sentiment.id, sort_order=1),
+                ProjectCodebookGroup(project_id=1, codebook_group_id=fw.id, sort_order=2),
+            ])
+            sent_tag = TagDefinition(name="zzz-sentinel-sentiment", codebook_group_id=sentiment.id)
+            fw_tag = TagDefinition(name="zzz-sentinel-framework", codebook_group_id=fw.id)
+            db.add_all([sent_tag, fw_tag])
+            db.flush()
+            db.add_all([
+                QuoteTag(quote_id=quotes[0].id, tag_definition_id=sent_tag.id),
+                QuoteTag(quote_id=quotes[0].id, tag_definition_id=fw_tag.id),
+            ])
+            db.commit()
+        finally:
+            db.close()
+
+        tags = AuthTestClient(app).get("/api/dev/codebook-lab/tags").json()["tags"]
+        by_name = {t["name"]: t for t in tags}
+
+        # Manual tags offered — including the 0-quote one the inner join used to drop.
+        assert {"duvet-fixation", "thin-tag"} <= set(by_name)
+        assert len(by_name["duvet-fixation"]["quotes"]) == 2
+        assert by_name["thin-tag"]["quotes"] == []
+        # Sentiment + framework tags never offered, despite carrying quotes.
+        assert "zzz-sentinel-sentiment" not in by_name
+        assert "zzz-sentinel-framework" not in by_name

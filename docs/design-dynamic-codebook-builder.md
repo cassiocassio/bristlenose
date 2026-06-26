@@ -238,3 +238,22 @@ existing-DB-without-the-tables upgrade path in `tests/test_migrations.py`.
   (the discrimination vocabulary already lines up).
 - **Surfacing decision history** — the `TagPromptDecision` log could show the
   researcher how a code's boundary moved over time. Out of scope for the MVP.
+
+## Lab graduation gates
+
+`/codebook-lab` ships to the cohort as a *flagged experiment*
+(`experimental_codebook_lab`, default-on). To graduate it from experiment to a
+real feature, roughly in order:
+
+- **Build the production Build-panel React UI** (see "Frontend — staged" above)
+  — the lab's bare HTML is a validation stand-in, not the product.
+- **Retire or polish the throwaway page** — it currently ships English-only
+  inline CSS. Until it's on `theme/` + i18n (or replaced by the React UI), flip
+  the flag default → `False` before any *public* (non-cohort) release.
+- **i18n glossary pass on the seed translations** — the non-en `codebookLab` /
+  `projectTagsHeading` values are reasonable seeds (fr/cs aligned to the
+  glossary's canonical "codebook" term; es kept as a defensible shortening) but
+  want a native-reviewer / Weblate pass before the surface is non-experimental.
+  _Confirmed future item, 27 Jun 2026._
+- **Rename the `/api/dev/codebook-lab/*` endpoints** off the `dev` prefix (kept
+  now only to avoid churning the page's fetch URLs + tests).

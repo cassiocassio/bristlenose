@@ -205,7 +205,10 @@ def create_app(
     # (same /api/dev prefix), so only those dev-prefixed paths exist in prod.
     from bristlenose.config import load_settings
 
-    if load_settings().experimental_codebook_lab:
+    # Read through the app.state.settings-or-load_settings seam (per
+    # server/CLAUDE.md) so an injected settings object is honoured.
+    _settings = getattr(app.state, "settings", None) or load_settings()
+    if _settings.experimental_codebook_lab:
         from bristlenose.server.routes.dev import (
             build_codebook_lab_html,
             codebook_lab_router,

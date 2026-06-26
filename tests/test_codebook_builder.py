@@ -604,3 +604,32 @@ class TestCodebookLab:
         app = create_app(project_dir=_FIXTURE_DIR, dev=False, db_url="sqlite://")
         assert RawClient(app).get("/codebook-lab").status_code == 404
         assert AuthTestClient(app).get("/api/dev/codebook-lab/tags").status_code == 404
+
+    def test_lab_tags_heals_unlinked_uncategorised(self) -> None:
+        """Tags in an UNLINKED Uncategorised group are still offered.
+
+        Manual tags created via PUT /tags (which doesn't activate the group) or
+        on a project whose Codebook tab was never opened (GET /codebook is what
+        lazily links Uncategorised) must not silently vanish — the endpoint heals
+        the project link itself. Without the heal this returns a lying "0 tags".
+        """
+        from bristlenose.server.routes.codebook import _get_or_create_uncategorised
+
+        app = create_app(project_dir=_FIXTURE_DIR, dev=False, db_url="sqlite://")
+        db = app.state.db_factory()
+        try:
+            grp = _get_or_create_uncategorised(db)
+            db.flush()
+            db.add(TagDefinition(name="unlinked-tag", codebook_group_id=grp.id))
+            # Simulate the unlinked state: drop any auto-created project link.
+            db.query(ProjectCodebookGroup).filter_by(codebook_group_id=grp.id).delete()
+            db.commit()
+            assert (
+                db.query(ProjectCodebookGroup).filter_by(codebook_group_id=grp.id).count()
+                == 0
+            )
+        finally:
+            db.close()
+
+        tags = AuthTestClient(app).get("/api/dev/codebook-lab/tags").json()["tags"]
+        assert "unlinked-tag" in {t["name"] for t in tags}

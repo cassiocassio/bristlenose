@@ -975,9 +975,13 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
           </div>
           <div className="framework-section-actions">
             <button
-              className="bn-btn"
+              className="bn-btn bn-btn-secondary"
               onClick={() =>
-                window.open("/codebook-lab", "_blank", "width=1200,height=920")
+                window.open(
+                  "/codebook-lab",
+                  "_blank",
+                  "width=1200,height=920,resizable=yes",
+                )
               }
               data-testid="bn-codebook-lab-btn"
             >

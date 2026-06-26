@@ -19,7 +19,10 @@ export function CodebookTab() {
   useEffect(() => {
     apiGet<{ project_name: string }>("/info")
       .then((info) => setProjectName(info.project_name))
-      .catch(() => setProjectName(undefined));
+      .catch((e) => {
+        console.warn("CodebookTab: /info failed; header falls back to 'Your tags'", e);
+        setProjectName(undefined);
+      });
   }, [projectId]);
 
   return (

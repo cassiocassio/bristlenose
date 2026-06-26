@@ -5,7 +5,7 @@ sticky notes, grouped by section and theme, that a team rearranges to do
 synthesis. Bristlenose is the preprocessor; Miro is where the conversation
 happens.
 
-**Status:** Phase 1 in progress. **End-to-end vertical slice built (23 Jun 2026)
+**Status:** Phase 1 review-complete; merge-ready (paste-token). **End-to-end vertical slice built (23 Jun 2026)
 and validated live against a real Miro account (24 Jun)** — board, frames, bulk
 stickies, and text all confirmed against Miro's REST API. Now offered as **Send
 to Miro** in the SPA export menu, connecting via **paste-token**; **one-click
@@ -445,19 +445,22 @@ Nothing to "remember" beyond, optionally, the last-used base as a convenience.
 
 ## Implementation status (experimental, 23 Jun 2026)
 
-An end-to-end slice was built in one session to be playable on a Mac. **Built in
-the cloud without a venv / Miro creds**, so: pure layout + preview verified;
-server + real Miro push are syntax-checked + typechecked but unrun. Treat as a
-first draft for review, not shippable.
+An end-to-end slice was built in the cloud (23 Jun), then imported to a Mac,
+**validated live against a real Miro account (24 Jun)** — board, frames, bulk
+stickies, and text all confirmed — reconciled with `main` (merge `8313e291`),
+and taken through a full usual-suspects + security review with a fix pass
+(25 Jun, commits `1c3563c0`…`d76550a4`). Phase 1 (paste-token) is now
+merge-ready pending push + CI. The "syntax only" markers below were the original
+23 Jun cloud state; current verification is noted inline.
 
 ### What's built
 | Piece | File | Verified |
 |---|---|---|
 | Layout engine (IR + trivial layout) | `bristlenose/miro_board.py` | ✅ 7 unit tests pass (`tests/test_miro_board.py`) |
 | Creds-free SVG/HTML preview | `bristlenose/miro_render_svg.py` | ✅ rendered vs smoke fixture |
-| REST client (OAuth/PKCE + board/frame/sticky/text) | `bristlenose/miro_client.py` | ⚠️ syntax only (no httpx in cloud) |
-| Export orchestration (quotes→columns→push/preview) | `bristlenose/server/miro_export.py` | ⚠️ syntax only |
-| Routes (preview, export, oauth auth-url+callback) | `bristlenose/server/routes/miro.py` | ⚠️ syntax only |
+| REST client (OAuth/PKCE + board/frame/sticky/text) | `bristlenose/miro_client.py` | ✅ runs; live push validated 24 Jun (`tests/test_miro_client.py`) |
+| Export orchestration (quotes→columns→push/preview) | `bristlenose/server/miro_export.py` | ✅ runs; egress tests (`tests/test_miro_export.py`) |
+| Routes (preview, export, oauth auth-url+callback) | `bristlenose/server/routes/miro.py` | ✅ runs (`tests/test_serve_miro_api.py`) |
 | React panel + state-dependent menu | `frontend/src/components/MiroExportPanel.tsx`, `ExportDropdown.tsx` | ✅ `tsc -b` + `vite build` clean |
 | config `miro_client_id`, api.ts, types.ts | — | ✅ typecheck |
 
@@ -469,11 +472,13 @@ first draft for review, not shippable.
 - **A9** — stickies placed at **absolute board coords, not parented into
   frames** (frame-relative coord math is the untestable footgun). Frames are
   visual containers; proper parenting once testable.
-- **A4** — panel strings hardcoded English; i18n (7 locales) deferred — must do
-  before merge (size gate).
-- **A11** — scope UI is **all visible quotes** only in v0; the backend already
-  takes `quote_ids`, so wiring the current star/tag/section filter → ids is a
-  small frontend follow-up.
+- **A4** — ✅ RESOLVED. Panel + dropdown strings extracted to the `miro.*` namespace
+  across all 7 locales (correct CLDR plural categories); size gate 219.42/220 kB. cs/de
+  terminology fixed in review; the other 5 want a native-speaker pass (quality polish,
+  not a ship gate — the hardcoded-English blocker is gone).
+- **A11** — export scope is **all non-hidden quotes in the project** (the consent copy
+  now says exactly that — review #2); it ignores the live star/tag/section filter. Wiring
+  the current filter → `quote_ids` is the M4 follow-up (the backend already takes the ids).
 - **A5** — clip-link filename convention is a guess
   (`{session}-{participant}-{secs}.mp4`); verify against `design-export-clips`.
 - **A10** — no token auto-refresh in the export path; if an OAuth token expired,
@@ -483,29 +488,30 @@ first draft for review, not shippable.
   body) are from the verified REST facts but **unrun** — first real push may
   need a tweak.
 
-### Review findings — deferred (flagged, not fixed tonight)
-A usual-suspects pass (correctness/security/silent-failure/parsimony) ran against
-the slice. Non-contentious fixes applied (see commit "apply non-contentious
-review fixes"). Deferred, needing your call:
-- **OAuth callback auth wiring.** The callback is under `/api` (bearer-gated) and
-  the auth cookie is `SameSite=Strict`, which a browser withholds on the
-  cross-site redirect back from `miro.com` — so OAuth likely 401s today. Fix is a
-  decision: exempt `/api/miro/callback` from bearer auth (rely on `state`) or move
-  the cookie to `SameSite=Lax`. **Not a tonight blocker — paste-token is the
-  path.** Don't change auth posture without review.
-- **OAuth `state` hardening.** In-memory map has no TTL/size cap; `project_id` is
-  captured then discarded (token stored globally). Fine for single-project; revisit
-  with multi-project + the callback decision above.
-- **Egress governance (pre-ship, not pre-play).** Miro export has no anonymise
-  toggle (the HTML export does) and only a one-line consent. Boundary still holds
-  (stickies carry speaker codes, not names). Before leaving experimental: add a
-  redaction option, an explicit consent checkbox, and a `SECURITY.md` Miro
-  sub-processor note.
-- **First-push reshaping.** Miro request bodies (bulk array response, frame/sticky
-  field names, text position centring) are unrun; expect to tweak on first real
-  push. Frontend export error currently shows a generic message and drops the
-  server detail (incl. the partial-board URL) — surfacing it needs `apiPost` to
-  expose the response body.
+### Review findings
+
+A first usual-suspects pass (23 Jun) applied non-contentious fixes. A **full
+usual-suspects + security pass ran 25 Jun** (8 review agents + a parsimony
+adjudicator): 16 findings resolved across 10 commits (`1c3563c0`…`d76550a4`),
+3 parked, 3 ignored. Dispositions of the four originally-deferred items:
+
+- **OAuth callback auth wiring → PHASE 2.** The callback 401s on the cross-site
+  redirect (bearer-gated `/api`, `SameSite=Strict` cookie). Phase 1 **hides the
+  "Connect with browser" button entirely** (#5) — paste-token is the sole connect
+  path. The auth-exemption decision (exempt `/api/miro/callback` relying on
+  single-use `state` + PKCE, vs `SameSite=Lax`) lands with the phase-2 OAuth work,
+  through its own security review.
+- **OAuth `state` hardening → PHASE 2** (bundled with the callback). The bare
+  `tokens["access_token"]` subscript that could 500 on a malformed 200 was guarded
+  (#21); the in-memory `_OAUTH_STATES` TTL + size cap rides phase 2.
+- **Egress governance → ✅ RESOLVED for phase 1.** `SECURITY.md` now carries a Miro
+  sub-processor note (#6); the consent copy was corrected to "all non-hidden project
+  quotes" (#2). The anonymisation boundary holds and is now **pinned by tests** —
+  speaker codes egress, never display names (`tests/test_miro_export.py`, #19). The
+  anonymise *toggle* stays deferred (cosmetic: names are already excluded).
+- **First-push reshaping → ✅ RESOLVED.** Live-validated 24 Jun against a real board —
+  no request-shape tweaks were needed. `apiPost` now surfaces the server `detail`
+  (incl. the partial-board recovery URL) instead of a generic message (#1).
 
 ### Mac QA (play tonight)
 ```sh
@@ -513,9 +519,11 @@ review fixes"). Deferred, needing your call:
 cd frontend && npm run build                           # SPA (rebuilds static)
 .venv/bin/bristlenose serve --dev trial-runs/<project> # open http://localhost:8150/report/
 ```
-Then: Quotes tab → Export ▾ → **Connect to Miro…**. Fastest path = paste a token
-(Miro dev dashboard → app → install → copy token); OAuth needs `MIRO_CLIENT_ID`
-set + redirect `http://localhost:8150/api/miro/callback` registered. **Preview
-needs no token** — Configure → Preview opens the would-be board in a new tab.
+Then: Quotes tab → Export ▾ → **Send to Miro…**. Paste a token (Miro dev dashboard
+→ app → install → copy token) — the setup walkthrough is published at
+`bristlenose.app/docs/how-to/miro-setup.html` and linked from the panel. The OAuth
+"Connect with browser" button is **hidden in phase 1** (paste-token only; OAuth is
+phase 2). **Preview needs no token** — Configure → Preview opens the would-be board
+in a new tab.
 Then **Create board** → **Open in Miro**. Expect first-push rough edges per the
 unrun shapes above.

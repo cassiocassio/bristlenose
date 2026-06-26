@@ -363,23 +363,39 @@ If `--no-tests` was passed, leave the sentinel in place and say so — the env i
 
 ## Step 9: Symlink trial-runs (non-critical)
 
-Skip if the symlink already exists, **or if the worktree already has a real `trial-runs/` directory** (the path is partially tracked — `trial-runs/fossda-opensource/perf-baselines/...` is in git, so every worktree starts with a real `trial-runs/` dir, and naively running `ln -s …` produces a broken nested layout: `trial-runs/trial-runs -> /…/main/trial-runs`).
+`trial-runs/` is **partially tracked** — `trial-runs/fossda-opensource/perf-baselines/…` is in git, so every fresh worktree already has a *real* `trial-runs/` dir holding just `fossda-opensource/`. A blanket `ln -s main/trial-runs trial-runs` therefore can't work: the dir already exists, so it would either be refused or nest as `trial-runs/trial-runs`. **So symlink per-entry** — link each of main's `trial-runs/` children into the worktree's real dir, skipping anything already present (the tracked `fossda-opensource`, or links from a previous run). This makes every gitignored project in main reachable from the worktree via the normal relative path (`trial-runs/<project>`), **with no copies** — the whole point is to reuse one set of (large, video-bearing) trial data across worktrees.
 
 ```bash
 WORKTREE="/Users/cassio/Code/bristlenose_branch $0"
+MAIN_TRIAL="/Users/cassio/Code/bristlenose/trial-runs"
 TRIAL="$WORKTREE/trial-runs"
-if [ -L "$TRIAL" ]; then
-  echo "✓ trial-runs symlink already present"
-elif [ -d "$TRIAL" ]; then
-  echo "ℹ trial-runs/ already exists in worktree (tracked content) — skipping symlink. Worktree keeps its own copy of any tracked baselines; gitignored data in main isn't reachable from here."
+mkdir -p "$TRIAL"
+made=0; skipped=0
+if [ -d "$MAIN_TRIAL" ]; then
+  for src in "$MAIN_TRIAL"/*; do
+    [ -e "$src" ] || continue                       # empty-glob guard
+    dst="$TRIAL/$(basename "$src")"
+    if [ -e "$dst" ] || [ -L "$dst" ]; then
+      skipped=$((skipped+1))                        # tracked fossda-opensource, or already linked
+    else
+      ln -s "$src" "$dst" && made=$((made+1)) || echo "✗ failed to link $(basename "$src")"
+    fi
+  done
+  echo "✓ trial-runs: symlinked $made project(s) from main, skipped $skipped (tracked/existing)"
 else
-  ln -s /Users/cassio/Code/bristlenose/trial-runs "$TRIAL" \
-    && echo "✓ symlinked trial-runs/ to main" \
-    || echo "ℹ trial-runs/ symlink failed — main may not have trial data"
+  echo "ℹ no trial-runs/ in main — nothing to symlink"
 fi
 ```
 
-This symlinks the main repo's `trial-runs/` directory (mostly gitignored — contains large video files and rendered reports) so that `./scripts/dev.sh` works in the worktree. Don't copy — the directory contains video files. The "directory already exists" branch is the common case for fresh worktrees due to the partially tracked subtree; we accept the slight loss (gitignored trial data in main isn't reachable from a fresh worktree) rather than the silent broken-nested layout that the naive `ln` produced.
+Per-entry, not a blanket symlink: the tracked `fossda-opensource` real dir is left untouched, every other (gitignored) project becomes reachable via `trial-runs/<project>`, and `./scripts/dev.sh` works. The links match the `trial-runs/*` gitignore, so they never show up as worktree changes. (`*` skips dotfiles, so `.DS_Store` is excluded; loose recordings get linked too, harmlessly — a symlink is a few bytes.)
+
+> ⚠️ **Shared-db caveat — only bites branches that add an Alembic migration.** Each project's serve DB lives *inside* the project at `bristlenose-output/.bristlenose/bristlenose.db`, so a symlinked project shares **one** db across every worktree. For ordinary branches that's exactly what you want. But a branch that adds a migration (a new `bristlenose/server/alembic/versions/NNN_*.py`) will — the first time it runs `bristlenose serve` against a shared project — upgrade that db to *its* head. After that, any worktree/main *without* the migration fails to reopen the project: `CommandError: Can't locate revision 'NNN'` (verified — `bristlenose/server/db.py` runs `alembic upgrade head` on every serve startup). Recovery is one **lossless** command — it resets only the version marker; data and the extra tables are untouched:
+> ```bash
+> # reset to the revision main's code is on (currently 001 — check main's alembic/versions/)
+> sqlite3 "<project>/bristlenose-output/.bristlenose/bristlenose.db" \
+>   "UPDATE alembic_version SET version_num='001';"      # or: alembic stamp <main-head>
+> ```
+> If you're QA-ing a migration-bearing branch and would rather not migrate a shared db at all, serve a project you won't also serve from main, or `ditto` that one project into the worktree as a real dir. Once the branch merges, main carries the migration too and the divergence disappears.
 
 Then symlink the gitignored desktop binaries from main, so Xcode's Copy Resources phase finds them when the user opens the worktree's `Bristlenose.xcodeproj` and Cmd+R's. Without these, the .app builds without ffmpeg/ffprobe and the pipeline can't probe video files. Each link is gated on existence, so worktrees on machines that have never run `desktop/scripts/fetch-ffmpeg.sh` in main don't error.
 

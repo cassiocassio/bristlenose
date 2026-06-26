@@ -509,6 +509,20 @@ def codebook_lab_tags(request: Request, project_id: int = 1) -> dict[str, object
 
     db = _get_db(request)
     try:
+        # Self-heal the Uncategorised project link before reading. Manual tags
+        # created via PUT /tags (which doesn't link) — or any project whose
+        # Codebook tab was never opened (GET /codebook is what lazily links the
+        # group) — would otherwise be silently absent here, surfacing as a lying
+        # "0 tags in project". Same heal get_codebook performs; idempotent.
+        from bristlenose.server.routes.codebook import (
+            _ensure_project_link,
+            _get_or_create_uncategorised,
+        )
+
+        uncategorised = _get_or_create_uncategorised(db)
+        _ensure_project_link(db, project_id, uncategorised.id)
+        db.commit()
+
         # Manual (framework_id IS NULL) groups activated for this project.
         manual_group_ids = [
             gid

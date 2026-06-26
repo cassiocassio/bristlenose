@@ -480,6 +480,8 @@
     "mergeBody": "All quotes tagged <strong>{{source}}</strong> will be retagged <strong>{{target}}</strong>. This cannot be undone.",
     "merge": "Merge",
     "hide": "Hide",
+    "projectTagsHeading": "{{project}} tags",
+    "codebookLab": "Codebook lab",
     "yourTags": "Your tags",
     "builtIn": "Built-in",
     "frameworks": "Frameworks",

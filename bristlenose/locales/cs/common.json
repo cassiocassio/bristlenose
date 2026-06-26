@@ -518,6 +518,8 @@
     "mergeBody": "Všechny citáty označené štítkem <strong>{{source}}</strong> budou přeznačeny na <strong>{{target}}</strong>. Toto nelze vrátit zpět.",
     "merge": "Sloučit",
     "hide": "Skrýt",
+    "projectTagsHeading": "Štítky projektu {{project}}",
+    "codebookLab": "Laboratoř kódů",
     "yourTags": "Vaše štítky",
     "builtIn": "Vestavěné",
     "frameworks": "Rámce",

@@ -104,6 +104,19 @@
     z-index: 10;
 }
 
+/* ── Clip fix: drop paint containment on the card with an open dropdown ─ */
+/* `.quote-group .quote-card` sets `content-visibility: auto` (blockquote.css)
+   to skip off-screen render — which implies `contain: paint` and clips the
+   absolutely-positioned dropdown at the card's bottom edge. Switch the one
+   card with an open dropdown back to `visible` so the dropdown can overflow.
+   Specificity 0,3,0 beats `.quote-group .quote-card` (0,2,0) so it wins
+   regardless of source order; scoped to `.quote-group` because that's the
+   only place content-visibility is set. Only ever one card at a time (tags
+   are edited on one quote), so the render-skip loss is nil. */
+.quote-group .quote-card:has(.tag-suggest) {
+    content-visibility: visible;
+}
+
 /* ── Hidden-group eye icon ─────────────────────────────────────────── */
 
 .tag-suggest-hidden-icon {

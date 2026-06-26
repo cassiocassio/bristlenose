@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bristlenose → Miro — Flow & setup experience</title>
+<style>
+  :root{
+    --ink:#1c1c1e; --soft:#55555a; --faint:#8a8a90; --line:#e4e4e7; --bg:#fbfbfa; --card:#fff;
+    --teal:#2f6f6a; --teal-soft:#e7f1f0; --miro:#4262ff; --miro-soft:#eef1ff;
+    --pink:#fadadd; --yellow:#fff9b1; --warn:#fff6e6; --warn-line:#f2d08a; --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+       color:var(--ink);background:var(--bg);line-height:1.5}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 24px 100px}
+  .kicker{text-transform:uppercase;letter-spacing:.08em;font-size:12px;font-weight:700;color:var(--teal)}
+  h1{font-size:30px;margin:8px 0 6px}
+  h2{font-size:19px;margin:46px 0 6px}
+  p{color:var(--soft);margin:8px 0}
+  p.lead{font-size:17px;color:var(--ink);max-width:760px}
+  code{background:#f4f4f2;padding:2px 6px;border-radius:6px;font-size:12.5px;
+       font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  .faint{color:var(--faint);font-size:13px}
+
+  /* journey strip */
+  .journey{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin:22px 0 8px}
+  .stage{flex:1;min-width:150px;background:var(--card);border:1px solid var(--line);border-radius:10px;
+         padding:12px 14px;position:relative}
+  .stage .app{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--faint)}
+  .stage.bn .app{color:var(--teal)} .stage.mi .app{color:var(--miro)}
+  .stage h4{margin:4px 0 2px;font-size:14px}
+  .stage small{color:var(--soft);font-size:12px}
+  .arrow{display:flex;align-items:center;justify-content:center;padding:0 6px;color:var(--faint);font-size:20px;font-weight:700}
+  .arrow.cross{color:var(--miro)}
+  .arrow .lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
+              writing-mode:initial;display:block;text-align:center;line-height:1.1}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin:6px 0 0}
+  .legend span{font-size:12px;color:var(--soft);display:flex;align-items:center;gap:6px}
+  .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+  /* storyboard */
+  .board{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;margin-top:18px}
+  @media(max-width:760px){.board{grid-template-columns:1fr}}
+  .scene{}
+  .step-tag{display:inline-block;font-size:11px;font-weight:700;color:#fff;background:var(--teal);
+            border-radius:999px;padding:3px 10px;margin-bottom:8px}
+  .step-tag.mi{background:var(--miro)}
+  .scene h3{font-size:15px;margin:0 0 8px}
+  .modal{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;
+         box-shadow:0 6px 22px rgba(0,0,0,.07)}
+  .modal .bar{display:flex;align-items:center;justify-content:space-between;padding:11px 15px;
+              border-bottom:1px solid var(--line);background:#fcfcfc}
+  .modal .bar b{font-size:13.5px}
+  .modal .bar .x{color:var(--faint)}
+  .modal .body{padding:16px 16px 6px}
+  .modal .foot{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--line)}
+  .btn{font-size:13px;font-weight:600;border-radius:8px;padding:8px 14px;border:1px solid var(--line);
+       background:#fff;color:var(--ink);cursor:default}
+  .btn.primary{background:var(--teal);border-color:var(--teal);color:#fff}
+  .btn.miro{background:var(--miro);border-color:var(--miro);color:#fff}
+  .btn.link{border:none;background:none;color:var(--teal);padding:8px 4px}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
+  .row:last-child{border-bottom:none}
+  .row .k{color:var(--soft)} .row .v{font-weight:600}
+  .field{background:#f6f6f5;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--soft);margin:6px 0}
+  .consent{background:var(--teal-soft);border:1px solid #bcd9d6;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#234;margin:6px 0 2px}
+  .progress{height:8px;background:#eee;border-radius:99px;overflow:hidden;margin:10px 0 4px}
+  .progress i{display:block;height:100%;width:62%;background:var(--teal)}
+  .menu{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.08);
+        width:240px;padding:6px;font-size:13px}
+  .menu .mi-item{padding:9px 10px;border-radius:7px;color:var(--ink)}
+  .menu .mi-item.new{background:var(--miro-soft);color:#1c2a86;font-weight:600}
+  .menu .sep{height:1px;background:var(--line);margin:5px 2px}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--miro);
+         background:var(--miro-soft);border-radius:99px;padding:3px 10px}
+  .browser{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .browser .chrome{background:#f0f0f2;padding:8px 12px;font-size:12px;color:var(--faint);border-bottom:1px solid var(--line)}
+  .browser .page{padding:18px 16px;text-align:center}
+  .anno{font-size:12.5px;color:var(--teal);margin-top:8px;padding-left:18px;position:relative}
+  .anno::before{content:"→";position:absolute;left:0;color:var(--teal);font-weight:700}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;margin-left:6px}
+  .pill.now{background:var(--teal-soft);color:var(--teal)} .pill.soon{background:#efe7f6;color:#6b4d97}
+  .killers{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:14px}
+  @media(max-width:760px){.killers{grid-template-columns:1fr}}
+  .killer{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .killer h4{margin:0 0 6px;font-size:14px}
+  .killer .big{font-size:13px;color:var(--soft)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">Export · Integrations · UX</div>
+  <h1>Bristlenose → Miro: the flow & setup experience</h1>
+  <p class="lead">The hard part isn't placing stickies — it's the journey across two apps and getting a
+  researcher past first-run setup. The whole design goal: <strong>cross the app boundary as few times as
+  possible, and never make someone do the setup twice.</strong></p>
+
+  <!-- ───────── journey strip ───────── -->
+  <h2>The journey — two app crossings, that's the budget</h2>
+  <div class="journey">
+    <div class="stage bn"><div class="app">Bristlenose</div><h4>Review quotes</h4><small>Quotes tab, in the report</small></div>
+    <div class="arrow"><span class="lbl">Export ▾<br>Send to Miro</span></div>
+    <div class="stage bn"><div class="app">Bristlenose</div><h4>Send-to-Miro panel</h4><small>Connect (first run only) → configure</small></div>
+    <div class="arrow cross"><span class="lbl">⤴ leaves<br>the app</span></div>
+    <div class="stage mi"><div class="app">Miro · browser</div><h4>Approve access</h4><small>One “Allow”, first run only</small></div>
+    <div class="arrow cross"><span class="lbl">⤵ returns<br>automatically</span></div>
+    <div class="stage bn"><div class="app">Bristlenose</div><h4>Push board</h4><small>Progress → done</small></div>
+    <div class="arrow cross"><span class="lbl">↗ opens<br>the board</span></div>
+    <div class="stage mi"><div class="app">Miro</div><h4>Your board</h4><small>Rearrange with the team</small></div>
+  </div>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--teal)"></i> Bristlenose (on your machine)</span>
+    <span><i class="dot" style="background:var(--miro)"></i> Miro (browser / app)</span>
+    <span><i class="dot" style="background:var(--warn-line)"></i> app-boundary crossing — the risky moments</span>
+  </div>
+  <p class="faint">First run crosses the boundary twice (consent out + back). <strong>Every run after that
+  crosses only once</strong> — the final “open your board” handoff. The consent step never reappears.</p>
+
+  <!-- ───────── storyboard ───────── -->
+  <h2>The setup experience, screen by screen</h2>
+  <div class="board">
+
+    <!-- 1 entry -->
+    <div class="scene">
+      <span class="step-tag">1 · Entry — the menu encodes the state</span>
+      <h3>The Export popover item changes by connection state</h3>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <div>
+          <div class="faint" style="margin-bottom:6px">Not connected yet</div>
+          <div class="menu">
+            <div class="mi-item">Copy quotes</div>
+            <div class="mi-item">Save as spreadsheet</div>
+            <div class="mi-item">Export report…</div>
+            <div class="sep"></div>
+            <div class="mi-item new">Connect to Miro…</div>
+          </div>
+        </div>
+        <div>
+          <div class="faint" style="margin-bottom:6px">Once connected</div>
+          <div class="menu">
+            <div class="mi-item">Copy quotes</div>
+            <div class="mi-item">Save as spreadsheet</div>
+            <div class="mi-item">Export report…</div>
+            <div class="sep"></div>
+            <div class="mi-item new">Send to Miro board…</div>
+          </div>
+        </div>
+      </div>
+      <div class="anno"><strong>Connect to Miro…</strong> (disconnected) routes to consent (step 2–3);
+      <strong>Send to Miro board…</strong> (connected) jumps straight to Configure (step 4). The menu
+      never hides which state you're in.</div>
+    </div>
+
+    <!-- 2 first-run connect -->
+    <div class="scene">
+      <span class="step-tag">2 · First run only — the “key dance”</span>
+      <h3>One button, not a developer setup</h3>
+      <div class="modal">
+        <div class="bar"><b>Send to Miro</b><span class="x">✕</span></div>
+        <div class="body">
+          <p style="margin-top:4px;font-size:13px">Push your quotes onto a new Miro board as sticky notes,
+          grouped by section and theme.</p>
+          <div class="consent">To do this once, Miro needs your permission. We never touch your existing boards.</div>
+        </div>
+        <div class="foot">
+          <button class="btn link">Paste a token instead</button>
+          <button class="btn miro">Connect to Miro</button>
+        </div>
+      </div>
+      <div class="anno">Default path is one-click OAuth. The developer “paste a token” route is demoted to a quiet fallback for locked-down orgs.</div>
+    </div>
+
+    <!-- 3 browser handoff -->
+    <div class="scene">
+      <span class="step-tag mi">3 · Crossing out</span>
+      <h3>Browser opens, expectation set</h3>
+      <div class="browser">
+        <div class="chrome">🔒 miro.com/oauth/authorize</div>
+        <div class="page">
+          <div class="badge" style="margin-bottom:10px">Miro</div>
+          <p style="font-size:13px;color:var(--ink);margin:6px 0">
+            <strong>Bristlenose</strong> wants to create boards in your team.</p>
+          <p class="faint" style="margin:2px 0 12px">boards:read · boards:write</p>
+          <button class="btn miro">Allow</button>
+        </div>
+      </div>
+      <div class="anno">Panel meanwhile shows “Waiting for Miro… approve in your browser, then come back here.” — no dead-end, no guessing.</div>
+    </div>
+
+    <!-- 4 configure -->
+    <div class="scene">
+      <span class="step-tag">4 · Configure & consent</span>
+      <h3>Returns connected — choose and confirm</h3>
+      <div class="modal">
+        <div class="bar"><b>Send to Miro</b><span class="badge">● Connected</span></div>
+        <div class="body">
+          <div class="field">Board name — <em>IKEA study · 23 Jun</em></div>
+          <div class="row"><span class="k">Include</span><span class="v">All sections & themes ▾</span></div>
+          <div class="row"><span class="k">Colour stickies by</span><span class="v">Sentiment ▾</span></div>
+          <div class="consent"><strong>142 quotes</strong> will be uploaded to Miro, where your team can
+          see them. Hidden quotes are excluded.</div>
+        </div>
+        <div class="foot"><button class="btn">Cancel</button><button class="btn primary">Create board</button></div>
+      </div>
+      <div class="anno">The privacy reality (“data leaves your machine”) is stated at the moment of action, not buried.</div>
+    </div>
+
+    <!-- 5 exporting -->
+    <div class="scene">
+      <span class="step-tag">5 · Pushing</span>
+      <h3>Honest progress, cancellable</h3>
+      <div class="modal">
+        <div class="bar"><b>Creating board…</b></div>
+        <div class="body">
+          <div class="progress"><i></i></div>
+          <p class="faint" style="margin:2px 0">88 of 142 stickies placed</p>
+        </div>
+        <div class="foot"><button class="btn">Cancel</button></div>
+      </div>
+      <div class="anno">Runs as a background job (10–30s). Rate-limit backoff is invisible to the user.</div>
+    </div>
+
+    <!-- 6 handoff -->
+    <div class="scene">
+      <span class="step-tag mi">6 · The payoff crossing</span>
+      <h3>One button into the finished board</h3>
+      <div class="modal">
+        <div class="bar"><b>Board ready</b><span class="x">✕</span></div>
+        <div class="body">
+          <p style="font-size:13px;margin:4px 0"><strong>142 stickies</strong> on a new board, grouped into
+          9 columns.</p>
+          <div class="field">miro.com/app/board/uXj… </div>
+        </div>
+        <div class="foot"><button class="btn">Done</button><button class="btn miro">Open in Miro ↗</button></div>
+      </div>
+      <div class="anno">The only crossing on repeat use. Hands off to the Miro app/browser where the actual team synthesis happens.</div>
+    </div>
+
+  </div>
+
+  <!-- ───────── returning user ───────── -->
+  <h2>The returning researcher never sees the dance again</h2>
+  <p>Because the connection is stored once in the system keychain and auto-refreshed, the second export and
+  every one after skips steps 2–3 entirely: <strong>Export ▾ → Send to Miro… → (already Connected) →
+  Configure → Create → Open</strong>. Setup is a one-time tax, paid once per machine.</p>
+
+  <!-- ───────── friction killers ───────── -->
+  <h2>The three friction-killers this flow is built around</h2>
+  <div class="killers">
+    <div class="killer"><h4>Connect once, never again</h4><p class="big">Token + refresh live in the keychain.
+      Step 2 appears exactly once per machine. Returning users land straight on Configure.</p></div>
+    <div class="killer"><h4>One click, not six steps <span class="pill soon">build M2</span></h4><p class="big">
+      OAuth “Connect” replaces create-app → scopes → install → copy-token. The paste path stays only as a
+      fallback for orgs that block third-party apps.</p></div>
+    <div class="killer"><h4>No silent dead-ends</h4><p class="big">The browser handoff sets the expectation
+      (“come back here”); the return is automatic via localhost callback; the finish gives one obvious
+      “Open in Miro” button.</p></div>
+  </div>
+
+  <p class="faint" style="margin-top:34px">One-way only — Bristlenose pushes a new board and never syncs
+  back (Miro retired webhooks; the spatial arrangement <em>is</em> the researcher's analysis). Mockup —
+  not a shipped screen. <span class="pill now">paste-token path available now</span>
+  <span class="pill soon">connect button = M2</span></p>
+
+</div>
+</body>
+</html>

@@ -480,6 +480,8 @@
     "mergeBody": "Alle Zitate mit dem Tag <strong>{{source}}</strong> werden zu <strong>{{target}}</strong> umgetaggt. Dies kann nicht rückgängig gemacht werden.",
     "merge": "Zusammenführen",
     "hide": "Ausblenden",
+    "projectTagsHeading": "Tags von {{project}}",
+    "codebookLab": "Codebuch-Labor",
     "yourTags": "Ihre Tags",
     "builtIn": "Integriert",
     "frameworks": "Frameworks",

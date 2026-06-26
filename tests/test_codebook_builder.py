@@ -580,3 +580,27 @@ class TestCodebookLab:
         # Sentiment + framework tags never offered, despite carrying quotes.
         assert "zzz-sentinel-sentiment" not in by_name
         assert "zzz-sentinel-framework" not in by_name
+
+    def test_lab_mounts_without_dev(self) -> None:
+        """The lab ships in production serve (dev=False), gated on the flag.
+
+        The desktop sidecar and plain `serve` run non-dev; the flag defaults on,
+        so the page + API must be reachable without --dev (the TestFlight path).
+        """
+        from fastapi.testclient import TestClient as RawClient
+
+        app = create_app(project_dir=_FIXTURE_DIR, dev=False, db_url="sqlite://")
+        page = RawClient(app).get("/codebook-lab")  # served outside /api, no auth
+        assert page.status_code == 200
+        assert "Codebook lab" in page.text
+        # API endpoints ride codebook_lab_router — mounted in non-dev too.
+        assert AuthTestClient(app).get("/api/dev/codebook-lab/tags").status_code == 200
+
+    def test_lab_disabled_by_flag(self, monkeypatch) -> None:
+        """Escape hatch: BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB=0 removes it entirely."""
+        from fastapi.testclient import TestClient as RawClient
+
+        monkeypatch.setenv("BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB", "0")
+        app = create_app(project_dir=_FIXTURE_DIR, dev=False, db_url="sqlite://")
+        assert RawClient(app).get("/codebook-lab").status_code == 404
+        assert AuthTestClient(app).get("/api/dev/codebook-lab/tags").status_code == 404

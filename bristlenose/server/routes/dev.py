@@ -441,7 +441,7 @@ def dev_telemetry_delete() -> dict[str, object]:
 # Codebook-lab — throwaway sandbox for the dynamic codebook builder experiment
 # ---------------------------------------------------------------------------
 #
-# This is deliberately ugly and dev-only. It hangs the builder engine
+# This is deliberately ugly and flagged as an experiment. It hangs the builder engine
 # (server/codebook_builder.py) off a bare HTML page so we can PLAY with real
 # project data — synthesise a prompt from a few quotes, hand-write one instead,
 # scan for more like it, edit, re-scan — before committing to any UX. None of
@@ -452,6 +452,12 @@ def dev_telemetry_delete() -> dict[str, object]:
 # makes BOTH paths first-class — "synthesise a draft" and "I'll write it myself"
 # — so we can judge whether synthesis-from-fragments earns its keep against the
 # researcher just writing the inclusion criteria in their own words.
+#
+# Mounted on its OWN router (same /api/dev prefix as the dev router, so the
+# page's fetch URLs and the tests don't churn) and gated in app.py on the
+# `experimental_codebook_lab` flag — NOT on --dev — so it ships in the bundled
+# desktop sidecar and plain `serve` for cohort testing.
+codebook_lab_router = APIRouter(prefix="/api/dev")
 
 
 class _LabPrompt(BaseModel):
@@ -480,7 +486,7 @@ def _lab_settings():
     return load_settings()
 
 
-@router.get("/codebook-lab/tags")
+@codebook_lab_router.get("/codebook-lab/tags")
 def codebook_lab_tags(request: Request, project_id: int = 1) -> dict[str, object]:
     """List the project's *manual* tags with their coded quote texts (for picking exemplars).
 
@@ -551,7 +557,7 @@ def codebook_lab_tags(request: Request, project_id: int = 1) -> dict[str, object
         db.close()
 
 
-@router.post("/codebook-lab/synthesize")
+@codebook_lab_router.post("/codebook-lab/synthesize")
 async def codebook_lab_synthesize(request: Request, body: _LabSynthRequest) -> dict[str, object]:
     """Synthesise a draft prompt from pasted example quotes (no DB writes)."""
     from bristlenose.server import codebook_builder as cb
@@ -567,7 +573,7 @@ async def codebook_lab_synthesize(request: Request, body: _LabSynthRequest) -> d
     }
 
 
-@router.post("/codebook-lab/candidates")
+@codebook_lab_router.post("/codebook-lab/candidates")
 async def codebook_lab_candidates(
     request: Request, body: _LabCandidatesRequest, project_id: int = 1,
 ) -> dict[str, object]:

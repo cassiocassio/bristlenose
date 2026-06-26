@@ -196,19 +196,31 @@ def create_app(
     app.include_router(miro_router)
     app.include_router(pipeline_router)
 
-    if dev:
-        from bristlenose.server.routes.dev import router as dev_router
+    # Codebook lab — the dynamic-codebook-builder experiment. Gated on a feature
+    # flag (default ON) rather than --dev, so it ships in the bundled desktop
+    # sidecar and plain `serve` for cohort testing; disable with
+    # BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB=0. The page is served outside /api so
+    # a plain browser nav isn't blocked by the bearer-token middleware; it embeds
+    # the token for its own fetches. The lab endpoints ride codebook_lab_router
+    # (same /api/dev prefix), so only those dev-prefixed paths exist in prod.
+    from bristlenose.config import load_settings
 
-        app.include_router(dev_router)
+    if load_settings().experimental_codebook_lab:
+        from bristlenose.server.routes.dev import (
+            build_codebook_lab_html,
+            codebook_lab_router,
+        )
 
-        # Ugly throwaway sandbox for the dynamic-codebook-builder experiment.
-        # Served outside /api so a plain browser navigation isn't blocked by the
-        # bearer-token middleware; the page embeds the token for its own fetches.
-        from bristlenose.server.routes.dev import build_codebook_lab_html
+        app.include_router(codebook_lab_router)
 
         @app.get("/codebook-lab", include_in_schema=False)
         def _codebook_lab() -> HTMLResponse:
             return HTMLResponse(build_codebook_lab_html(app.state.auth_token))
+
+    if dev:
+        from bristlenose.server.routes.dev import router as dev_router
+
+        app.include_router(dev_router)
 
         # SQLAdmin database browser (dev-only)
         from sqladmin import Admin as SQLAdmin

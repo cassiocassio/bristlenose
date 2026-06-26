@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bristlenose Docs — design-system + Diátaxis-lite mockup</title>
+<!-- THROWAWAY MOCKUP. Self-contained. Inline CSS/JS + inlined Lucide icons.
+     Shows: front page, 4-group nav, and 1–2 pages of each Diátaxis-lite kind
+     (tutorial / how-to ×2 / reference / explanation), the app↔CLI channel fork,
+     callouts, code-copy, type badges, breadcrumb, prev/next.
+     Tokens mirror bristlenose/theme/ (Inter Variable, --bn-colour-* neutral palette). -->
+<style>
+  :root{
+    /* —— reused from bristlenose/theme/ (neutral palette + Inter) —— */
+    --ink:#1a1a1a;        /* --bn-colour-text  */
+    --muted:#6b7280;      /* --bn-colour-muted */
+    --faint:#9aa3ad;      /* derived, lighter muted */
+    --line:#e5e7eb;       /* --bn-colour-border */
+    --bg:#ffffff;         /* --bn-colour-bg */
+    --accent:#2563eb;     /* --bn-colour-accent */
+    --badge-bg:#f3f4f6;   /* --bn-colour-badge-bg */
+    --badge-text:#374151; /* --bn-colour-badge-text */
+    --code-bg:#f3f4f6;
+    --warn:#c2410c;       /* --bn-colour-error-text */
+    --font:"Inter","Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif; /* --bn-font-body */
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --w-normal:420; --w-emph:490; --w-strong:700; /* --bn-weight-* */
+    /* —— docs-specific additions (flagged in the design doc) —— */
+    --ok:#3a8a55;         /* calm green, callout/✓ glyph only */
+    --info:#2563eb; --tip:#7a6a1f;
+    --r:6px;
+  }
+  *{box-sizing:border-box}
+  html{color-scheme:light}
+  body{margin:0;font-family:var(--font);font-weight:var(--w-normal);color:var(--ink);
+       background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased;font-size:15px}
+  a{color:inherit}
+  [data-icon]{display:inline-flex;align-items:center;justify-content:center;vertical-align:-.125em}
+  [data-icon] svg{width:1em;height:1em;display:block}
+
+  /* —— topbar —— */
+  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:18px;
+          height:54px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--bg)}
+  .brand{font-weight:var(--w-strong);letter-spacing:-.01em;text-decoration:none;font-size:16px}
+  .brand .dot{color:var(--accent)}
+  .topnav{display:flex;gap:18px;margin-left:6px}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:14px}
+  .topnav a:hover,.topnav a.on{color:var(--ink)}
+  .topbar .spacer{flex:1}
+  .ver{font-family:var(--mono);font-size:12px;color:var(--muted);border:1px solid var(--line);
+       border-radius:999px;padding:2px 9px}
+  .searchstub{display:flex;align-items:center;gap:7px;color:var(--faint);font-size:13px;
+       border:1px solid var(--line);border-radius:var(--r);padding:5px 10px;min-width:170px;cursor:text}
+  .menubtn{display:none;background:none;border:0;color:var(--ink);font-size:20px;cursor:pointer;padding:4px}
+
+  /* —— layout —— */
+  .shell{display:grid;grid-template-columns:248px minmax(0,1fr);max-width:1180px;margin:0 auto}
+  .sidebar{border-right:1px solid var(--line);padding:24px 14px 60px;height:calc(100vh - 54px);
+           position:sticky;top:54px;overflow:auto}
+  .navgroup{margin:0 0 20px}
+  .navgroup h4{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);
+               font-weight:var(--w-emph);margin:0 0 7px;padding:0 10px;display:flex;align-items:center;gap:7px}
+  .navlink{display:block;text-decoration:none;color:var(--muted);font-size:14px;padding:5px 10px;
+           border-radius:var(--r);line-height:1.3}
+  .navlink:hover{color:var(--ink);background:var(--badge-bg)}
+  .navlink.active{color:var(--ink);font-weight:var(--w-emph);background:var(--badge-bg)}
+
+  main{min-width:0;padding:30px 40px 80px}
+  .page{max-width:760px;margin:0 auto;display:none}
+  .page.show{display:block}
+
+  /* —— page chrome —— */
+  .crumbs{font-size:12.5px;color:var(--faint);margin:0 0 14px;display:flex;gap:6px;align-items:center}
+  .crumbs a{text-decoration:none;color:var(--muted)} .crumbs a:hover{color:var(--ink)}
+  .typebadge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--badge-text);
+       background:var(--badge-bg);border-radius:999px;padding:3px 10px;margin:0 0 10px;font-weight:var(--w-emph)}
+  h1{font-size:30px;letter-spacing:-.02em;font-weight:var(--w-strong);margin:0 0 10px;line-height:1.15}
+  .lead{font-size:17px;color:var(--muted);margin:0 0 26px;line-height:1.5}
+  h2{font-size:20px;letter-spacing:-.01em;font-weight:var(--w-strong);margin:34px 0 10px}
+  h3{font-size:15.5px;font-weight:var(--w-strong);margin:22px 0 6px}
+  p{margin:0 0 14px} .prose ul,.prose ol{margin:0 0 14px;padding-left:22px} .prose li{margin:6px 0}
+  .muted{color:var(--muted)}
+
+  /* —— inline + block code —— */
+  code{font-family:var(--mono);font-size:.86em;background:var(--code-bg);border-radius:4px;padding:1.5px 5px}
+  .code{position:relative;margin:0 0 16px}
+  .code pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:var(--r);
+       padding:13px 15px;overflow:auto;font-family:var(--mono);font-size:13px;line-height:1.55}
+  .code pre code{background:none;padding:0}
+  .copybtn{position:absolute;top:8px;right:8px;display:inline-flex;align-items:center;gap:5px;
+       font:inherit;font-size:11.5px;color:var(--muted);background:var(--bg);border:1px solid var(--line);
+       border-radius:5px;padding:3px 8px;cursor:pointer}
+  .copybtn:hover{color:var(--ink)} .copybtn.done{color:var(--ok);border-color:var(--ok)}
+
+  /* —— callouts (info / warn / tip) —— */
+  .callout{display:flex;gap:11px;border:1px solid var(--line);border-left:3px solid var(--muted);
+       border-radius:var(--r);padding:12px 14px;margin:0 0 18px;font-size:14px;background:#fcfcfd}
+  .callout .ci{flex:0 0 auto;margin-top:1px}
+  .callout p{margin:0} .callout p+p{margin-top:6px}
+  .callout.info{border-left-color:var(--info)} .callout.info .ci{color:var(--info)}
+  .callout.warn{border-left-color:var(--warn)} .callout.warn .ci{color:var(--warn)}
+  .callout.tip{border-left-color:var(--tip)}  .callout.tip .ci{color:var(--tip)}
+
+  /* —— channel fork (app ↔ CLI) — native independent disclosures —— */
+  .fork{margin:18px 0;border-top:1px solid var(--line)}
+  details.ch{border-bottom:1px solid var(--line)}
+  details.ch>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;
+       padding:10px 2px;font-size:13px;color:var(--muted);user-select:none}
+  details.ch>summary:hover{color:var(--ink)}
+  details.ch>summary::-webkit-details-marker{display:none}
+  details.ch>summary .chev{color:var(--faint);transition:transform .12s;font-size:15px}
+  details.ch[open]>summary .chev{transform:rotate(90deg)}
+  details.ch .body{padding:0 0 6px 22px}
+
+  .sharedline{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);margin:0 0 16px}
+  .sharedline .tick{color:var(--ok)}
+
+  /* —— tables (reference + troubleshooting) —— */
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin:0 0 18px}
+  th,td{text-align:left;padding:8px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-weight:var(--w-emph);color:var(--badge-text);font-size:12px;letter-spacing:.02em}
+  td code{font-size:12px}
+
+  /* —— front-page cards —— */
+  .hero{margin:6px 0 30px}
+  .hero h1{font-size:34px} .hero .lead{max-width:560px}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:0 0 30px}
+  .card{display:block;text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:10px;
+       padding:16px 17px;transition:border-color .12s,background .12s}
+  .card:hover{border-color:#cfd4da;background:#fcfcfd}
+  .card .ch{display:flex;align-items:center;gap:9px;font-weight:var(--w-strong);font-size:15px;margin:0 0 5px}
+  .card .ch [data-icon]{color:var(--accent);font-size:18px}
+  .card p{margin:0;color:var(--muted);font-size:13.5px}
+  .popular h2{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin:0 0 8px}
+  .popular a{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);font-size:14px;
+       padding:7px 0;border-bottom:1px solid var(--line)}
+  .popular a [data-icon]{color:var(--faint);font-size:15px} .popular a:hover [data-icon]{color:var(--accent)}
+
+  /* —— prev/next —— */
+  .prevnext{display:flex;justify-content:space-between;gap:14px;margin:36px 0 0;border-top:1px solid var(--line);padding-top:18px}
+  .pn{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--muted);font-size:14px}
+  .pn:hover{color:var(--ink)} .pn small{display:block;color:var(--faint);font-size:11px}
+  .pn.next{margin-left:auto;text-align:right}
+
+  footer.foot{max-width:760px;margin:40px auto 0;color:var(--faint);font-size:12px}
+
+  /* —— responsive —— */
+  @media(max-width:880px){
+    .shell{grid-template-columns:1fr}
+    .sidebar{position:fixed;left:0;top:54px;width:260px;background:var(--bg);z-index:15;
+             transform:translateX(-100%);transition:transform .18s}
+    .sidebar.open{transform:none;box-shadow:0 10px 40px rgba(0,0,0,.12)}
+    .menubtn{display:inline-flex} .topnav{display:none}
+    .cards{grid-template-columns:1fr} main{padding:24px 20px 70px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════ topbar ════════ -->
+<header class="topbar">
+  <button class="menubtn" id="menubtn" data-icon="menu" aria-label="Menu"></button>
+  <a class="brand" href="#" data-page="home">Bristlenose<span class="dot">.</span></a>
+  <nav class="topnav">
+    <a href="#" data-page="home" class="on">Docs</a>
+    <a href="#" data-page="reference-config">Reference</a>
+    <a href="#" target="_blank">GitHub</a>
+  </nav>
+  <span class="spacer"></span>
+  <span class="ver">v0.15</span>
+  <span class="searchstub"><span data-icon="search"></span> Search the docs…</span>
+</header>
+
+<div class="shell">
+
+  <!-- ════════ sidebar nav ════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="navgroup">
+      <h4><span data-icon="book-open"></span> Get started</h4>
+      <a class="navlink" href="#" data-page="tutorial-first">Your first analysis</a>
+      <a class="navlink" href="#" data-page="home">Install</a>
+    </div>
+    <div class="navgroup">
+      <h4><span data-icon="wrench"></span> How-to guides</h4>
+      <a class="navlink" href="#" data-page="howto-claude">Set up Claude</a>
+      <a class="navlink" href="#" data-page="howto-clips">Export video clips</a>
+      <a class="navlink" href="#" data-page="home">Set up Ollama (local)</a>
+      <a class="navlink" href="#" data-page="home">Share a report</a>
+    </div>
+    <div class="navgroup">
+      <h4><span data-icon="list"></span> Reference</h4>
+      <a class="navlink" href="#" data-page="reference-config">Configuration</a>
+      <a class="navlink" href="#" data-page="home">CLI commands</a>
+      <a class="navlink" href="#" data-page="home">Keyboard shortcuts</a>
+    </div>
+    <div class="navgroup">
+      <h4><span data-icon="compass"></span> Understand</h4>
+      <a class="navlink" href="#" data-page="explain-local">How your data stays on your laptop</a>
+      <a class="navlink" href="#" data-page="home">What signals mean</a>
+    </div>
+  </aside>
+
+  <main>
+
+    <!-- ════════ HOME ════════ -->
+    <article class="page show" id="home">
+      <div class="hero">
+        <h1>Bristlenose documentation</h1>
+        <p class="lead">Turn a folder of interviews into a browsable report of quotes, themes and signals — entirely on your laptop. Pick where to start.</p>
+      </div>
+      <div class="cards">
+        <a class="card" href="#" data-page="tutorial-first">
+          <span class="ch"><span data-icon="book-open"></span> Get started</span>
+          <p>New to Bristlenose? Run your first analysis end-to-end on sample data.</p>
+        </a>
+        <a class="card" href="#" data-page="howto-claude">
+          <span class="ch"><span data-icon="wrench"></span> How-to guides</span>
+          <p>Short recipes for a specific task — set up a provider, export clips, share a report.</p>
+        </a>
+        <a class="card" href="#" data-page="reference-config">
+          <span class="ch"><span data-icon="list"></span> Reference</span>
+          <p>Every command, setting and environment variable, described plainly.</p>
+        </a>
+        <a class="card" href="#" data-page="explain-local">
+          <span class="ch"><span data-icon="compass"></span> Understand</span>
+          <p>Why Bristlenose works the way it does — privacy, signals, methodology.</p>
+        </a>
+      </div>
+      <div class="popular">
+        <h2>Popular guides</h2>
+        <a href="#" data-page="howto-claude"><span data-icon="chevron-right"></span> Set up Claude</a>
+        <a href="#" data-page="howto-clips"><span data-icon="chevron-right"></span> Export video clips</a>
+        <a href="#" data-page="explain-local"><span data-icon="chevron-right"></span> How your data stays on your laptop</a>
+        <a href="#" data-page="reference-config"><span data-icon="chevron-right"></span> Configuration reference</a>
+      </div>
+    </article>
+
+    <!-- ════════ TUTORIAL ════════ -->
+    <article class="page" id="tutorial-first">
+      <div class="crumbs"><a href="#" data-page="home">Docs</a> / <span>Get started</span></div>
+      <span class="typebadge"><span data-icon="book-open"></span> Tutorial</span>
+      <h1>Your first analysis</h1>
+      <p class="lead">In about ten minutes you'll go from a folder of recordings to a report you can click through. We'll use a sample so it works the first time, every time.</p>
+
+      <div class="callout info"><span class="ci" data-icon="info"></span>
+        <p>Everything here runs on your machine. Nothing is uploaded — the sample recordings never leave your laptop.</p></div>
+
+      <h2>1. Get the sample folder</h2>
+      <p>Download <a href="#">sample-interviews.zip</a> and unzip it anywhere. Inside are three short recordings and their transcripts.</p>
+
+      <h2>2. Point Bristlenose at the folder</h2>
+      <p>Drop the folder onto the Bristlenose app, or from a terminal run:</p>
+      <div class="code"><pre><code>bristlenose sample-interviews/</code></pre></div>
+      <p>Bristlenose transcribes, finds quotes, and groups them into themes. The first run takes a few minutes — you'll see each step tick by.</p>
+
+      <h2>3. Open the report</h2>
+      <p>When it finishes, the report opens in your browser. You're looking at the <strong>Quotes</strong> page: every notable thing a participant said, grouped into sections.</p>
+
+      <h2>4. Try one thing</h2>
+      <p>Click the star on any quote. That's how you mark findings worth keeping — you'll use stars later to export just the quotes that matter.</p>
+
+      <div class="callout tip"><span class="ci" data-icon="lightbulb"></span>
+        <p>Stuck on a step? Every page in Bristlenose has a <strong>?</strong> for the in-app help, and this site has the full guides.</p></div>
+
+      <h2>What you just did</h2>
+      <p>You ran the whole pipeline, opened a report, and made your first finding. That's the loop — point at a folder, read the analysis, mark what matters.</p>
+
+      <div class="prevnext">
+        <span></span>
+        <a class="pn next" href="#" data-page="howto-claude"><span><small>Next</small> Set up Claude</span> <span data-icon="arrow-right"></span></a>
+      </div>
+    </article>
+
+    <!-- ════════ HOW-TO (forked) ════════ -->
+    <article class="page" id="howto-claude">
+      <div class="crumbs"><a href="#" data-page="home">Docs</a> / <span>How-to guides</span></div>
+      <span class="typebadge"><span data-icon="wrench"></span> How-to guide</span>
+      <h1>Set up Claude</h1>
+      <p class="lead">Connect Bristlenose to Claude so it can analyse your interviews.</p>
+      <p class="muted" style="font-size:14px"><strong>Before you start:</strong> a Claude account with billing enabled — your API key is created at <code>console.anthropic.com</code>.</p>
+
+      <div class="fork">
+        <details class="ch" data-channel="app" open>
+          <summary><span class="chev" data-icon="chevron-right"></span> macOS</summary>
+          <div class="body prose">
+            <ol>
+              <li>Open <strong>Settings</strong> (⌘,) and choose <strong>AI Providers</strong>.</li>
+              <li>Select <strong>Claude</strong> and paste a key from <code>console.anthropic.com</code>.</li>
+              <li>Bristlenose checks the key and saves it in your macOS Keychain. Done.</li>
+            </ol>
+          </div>
+        </details>
+        <details class="ch" data-channel="cli" open>
+          <summary><span class="chev" data-icon="chevron-right"></span> CLI</summary>
+          <div class="body prose">
+            <ol>
+              <li>Get a key from <code>console.anthropic.com</code>.</li>
+              <li>Run <code>bristlenose configure claude</code> and paste the key when prompted.</li>
+              <li>It validates the key and stores it in your system credential store. Done.</li>
+            </ol>
+          </div>
+        </details>
+      </div>
+
+      <div class="callout info"><span class="ci" data-icon="info"></span>
+        <p>Open or close either section — they're independent, and your choice is remembered across guides.</p></div>
+
+      <h2>Troubleshooting</h2>
+      <table>
+        <tr><th>Symptom</th><th>Fix</th></tr>
+        <tr><td>"Invalid API key"</td><td>Re-copy the key from <code>console.anthropic.com/settings/keys</code> — they can't be viewed twice.</td></tr>
+        <tr><td>Run fails with a billing error</td><td>Claude needs billing enabled even for small usage. Add a payment method in the console.</td></tr>
+      </table>
+
+      <p class="muted" style="font-size:13.5px">See also: <a href="#" data-page="explain-local">How your data stays on your laptop</a> · <a href="#" data-page="reference-config">Configuration reference</a></p>
+
+      <div class="prevnext">
+        <a class="pn" href="#" data-page="tutorial-first"><span data-icon="arrow-left"></span> <span><small>Previous</small> Your first analysis</span></a>
+        <a class="pn next" href="#" data-page="howto-clips"><span><small>Next</small> Export video clips</span> <span data-icon="arrow-right"></span></a>
+      </div>
+    </article>
+
+    <!-- ════════ HOW-TO (shared) ════════ -->
+    <article class="page" id="howto-clips">
+      <div class="crumbs"><a href="#" data-page="home">Docs</a> / <span>How-to guides</span></div>
+      <span class="typebadge"><span data-icon="wrench"></span> How-to guide</span>
+      <h1>Export video clips</h1>
+      <p class="lead">Cut a short video clip for each starred quote, to drop into a deck or share with your team.</p>
+      <p class="sharedline"><span class="tick" data-icon="check"></span> Same steps in the app and in your browser.</p>
+
+      <div class="prose">
+        <ol>
+          <li>In the report, <strong>star</strong> the quotes you want as clips.</li>
+          <li>Open <strong>Export → Extract video clips</strong>.</li>
+          <li>Choose a folder. Bristlenose cuts one clip per starred quote, named by participant and timecode.</li>
+        </ol>
+      </div>
+
+      <div class="callout warn"><span class="ci" data-icon="triangle-alert"></span>
+        <p><strong>Clips contain the original audio and video</strong> — including any names spoken aloud. Anonymisation doesn't apply to clips. Share them as carefully as the recordings themselves.</p></div>
+
+      <div class="callout tip"><span class="ci" data-icon="lightbulb"></span>
+        <p>Clips need <code>ffmpeg</code>. The desktop app already bundles it; on the CLI, install it once (<code>brew install ffmpeg</code>) — <code>bristlenose doctor</code> will tell you if it's missing.</p></div>
+
+      <div class="prevnext">
+        <a class="pn" href="#" data-page="howto-claude"><span data-icon="arrow-left"></span> <span><small>Previous</small> Set up Claude</span></a>
+        <a class="pn next" href="#" data-page="reference-config"><span><small>Next</small> Configuration reference</span> <span data-icon="arrow-right"></span></a>
+      </div>
+    </article>
+
+    <!-- ════════ REFERENCE ════════ -->
+    <article class="page" id="reference-config">
+      <div class="crumbs"><a href="#" data-page="home">Docs</a> / <span>Reference</span></div>
+      <span class="typebadge"><span data-icon="list"></span> Reference</span>
+      <h1>Configuration</h1>
+      <p class="lead">Every setting Bristlenose reads, in precedence order: command-line flag, then environment variable, then <code>.env</code> file, then the default.</p>
+
+      <h2>Environment variables</h2>
+      <table>
+        <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+        <tr><td><code>BRISTLENOSE_LLM_PROVIDER</code></td><td><code>claude</code></td><td>Which AI provider to use: <code>claude</code>, <code>chatgpt</code>, <code>azure</code>, <code>gemini</code>, <code>local</code>.</td></tr>
+        <tr><td><code>BRISTLENOSE_ANTHROPIC_API_KEY</code></td><td><em>none</em></td><td>API key for Claude. Read from the system credential store if unset.</td></tr>
+        <tr><td><code>BRISTLENOSE_OPENAI_API_KEY</code></td><td><em>none</em></td><td>API key for ChatGPT.</td></tr>
+        <tr><td><code>BRISTLENOSE_LOCAL_URL</code></td><td><code>localhost:11434</code></td><td>Ollama server address for local models.</td></tr>
+        <tr><td><code>BRISTLENOSE_LOCAL_MODEL</code></td><td><code>llama3.2</code></td><td>Which local model to run.</td></tr>
+        <tr><td><code>BRISTLENOSE_WHISPER_MODEL</code></td><td><code>large-v3-turbo</code></td><td>Transcription model size. Smaller is faster and less accurate.</td></tr>
+        <tr><td><code>BRISTLENOSE_LOG_LEVEL</code></td><td><code>INFO</code></td><td>Log file verbosity. Independent of terminal <code>-v</code>.</td></tr>
+      </table>
+
+      <div class="callout info"><span class="ci" data-icon="info"></span>
+        <p>This page <em>describes</em> the settings. To <em>set</em> a key, follow <a href="#" data-page="howto-claude">Set up Claude</a> (or the guide for your provider).</p></div>
+
+      <div class="prevnext">
+        <a class="pn" href="#" data-page="howto-clips"><span data-icon="arrow-left"></span> <span><small>Previous</small> Export video clips</span></a>
+        <a class="pn next" href="#" data-page="explain-local"><span><small>Next</small> How your data stays on your laptop</span> <span data-icon="arrow-right"></span></a>
+      </div>
+    </article>
+
+    <!-- ════════ EXPLANATION ════════ -->
+    <article class="page" id="explain-local">
+      <div class="crumbs"><a href="#" data-page="home">Docs</a> / <span>Understand</span></div>
+      <span class="typebadge"><span data-icon="compass"></span> Explanation</span>
+      <h1>How your data stays on your laptop</h1>
+      <p class="lead">Bristlenose is local-first by design. This is what that means in practice — and where the one exception is.</p>
+
+      <div class="prose">
+        <p>When you analyse a folder, the recordings, the transcripts, and the finished report all live on your machine. Transcription runs locally. The only thing that ever leaves your laptop is the text Bristlenose sends to an AI provider to extract quotes and themes — and only if you've chosen a cloud provider.</p>
+
+        <h2>What's sent, and what isn't</h2>
+        <p>With a cloud provider (Claude, ChatGPT, Gemini), Bristlenose sends the <em>transcript text</em> for analysis. It does not send the audio or video, and the provider doesn't use your data for training. Participant names in the transcript are sent as-is unless you turn on redaction.</p>
+
+        <h2>The fully-local option</h2>
+        <p>If even the transcript text shouldn't leave the machine, run a local model with Ollama. Then nothing is uploaded at all — the trade-off is that local models are slower and, in 2026, less sharp than the cloud ones. It's the right choice for sensitive studies.</p>
+
+        <div class="callout info"><span class="ci" data-icon="info"></span>
+          <p>This page explains the <em>why</em>. For the steps, see <a href="#" data-page="howto-claude">Set up Claude</a> or the Ollama guide; for the exact boundary, see the security reference.</p></div>
+
+        <h2>Why we drew the line here</h2>
+        <p>Sending the transcript (and nothing heavier) is the smallest amount of data that still lets a capable model do the analysis. We could send less and accept worse results, or send more and gain little. Transcript-only is the point where quality and privacy are both well served — and the local option exists for when "well served" isn't enough.</p>
+      </div>
+
+      <div class="prevnext">
+        <a class="pn" href="#" data-page="reference-config"><span data-icon="arrow-left"></span> <span><small>Previous</small> Configuration</span></a>
+        <span></span>
+      </div>
+    </article>
+
+    <footer class="foot">Mockup for review · <code>docs/mockups/docs-site-mockup.html</code> · tokens mirror <code>bristlenose/theme/</code> · icons: Lucide</footer>
+  </main>
+</div>
+
+<script>
+/* ───────── inlined Lucide icons (real paths; ISC licence) ───────── */
+const ICONS = {
+  'chevron-right':'<path d="m9 18 6-6-6-6"/>',
+  'check':'<path d="M20 6 9 17l-5-5"/>',
+  'copy':'<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  'info':'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+  'triangle-alert':'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  'lightbulb':'<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
+  'terminal':'<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>',
+  'monitor':'<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>',
+  'book-open':'<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
+  'wrench':'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/>',
+  'list':'<line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/>',
+  'compass':'<circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"/>',
+  'search':'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  'arrow-right':'<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  'arrow-left':'<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+  'menu':'<line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>'
+};
+function paintIcons(root){
+  (root||document).querySelectorAll('[data-icon]').forEach(el=>{
+    if(el.firstElementChild) return;
+    const n=el.getAttribute('data-icon'); if(!ICONS[n]) return;
+    el.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ICONS[n]+'</svg>';
+  });
+}
+
+/* ───────── page router (sidebar/card/crumb/prevnext links) ───────── */
+function showPage(id){
+  const target=document.getElementById(id)||document.getElementById('home');
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('show',p===target));
+  document.querySelectorAll('.navlink').forEach(a=>a.classList.toggle('active',a.dataset.page===id));
+  applyChannel();                 // re-assert the app/CLI default on the freshly shown page
+  window.scrollTo({top:0});
+  document.getElementById('sidebar').classList.remove('open');
+}
+document.addEventListener('click',e=>{
+  const a=e.target.closest('[data-page]');
+  if(a){ e.preventDefault(); showPage(a.dataset.page); }
+});
+
+/* ───────── channel fork: native, independent, OS-default, per-page memory ───────── */
+const CH_KEY='bn-docs-open';
+const isMac=/mac/i.test((navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||'');
+const osDefault=()=>isMac?{app:true,cli:false}:{app:false,cli:true};
+const chSaved=()=>{try{return JSON.parse(localStorage.getItem(CH_KEY))}catch(e){return null}};
+const chLayout=()=>chSaved()||osDefault();
+function applyChannel(){
+  const L=chLayout();
+  document.querySelectorAll('details.ch[data-channel]').forEach(d=>{d.open=!!L[d.dataset.channel];});
+}
+document.addEventListener('click',e=>{
+  const s=e.target.closest('details.ch[data-channel] > summary'); if(!s) return;
+  const snap={};
+  document.querySelectorAll('details.ch[data-channel]').forEach(d=>{
+    snap[d.dataset.channel]=(d===s.parentElement)?!d.open:d.open;
+  });
+  localStorage.setItem(CH_KEY,JSON.stringify(snap));
+});
+
+/* ───────── code-copy buttons ───────── */
+document.querySelectorAll('.code').forEach(block=>{
+  const btn=document.createElement('button');
+  btn.className='copybtn'; btn.innerHTML='<span data-icon="copy"></span> Copy';
+  btn.addEventListener('click',()=>{
+    navigator.clipboard&&navigator.clipboard.writeText(block.querySelector('code').textContent.trim());
+    btn.innerHTML='<span data-icon="check"></span> Copied'; btn.classList.add('done'); paintIcons(btn);
+    setTimeout(()=>{btn.innerHTML='<span data-icon="copy"></span> Copy';btn.classList.remove('done');paintIcons(btn);},1400);
+  });
+  block.appendChild(btn);
+});
+
+/* ───────── mobile sidebar ───────── */
+document.getElementById('menubtn').addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('open'));
+
+paintIcons(); applyChannel();
+</script>
+</body>
+</html>

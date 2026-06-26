@@ -482,23 +482,70 @@ def _lab_settings():
 
 @router.get("/codebook-lab/tags")
 def codebook_lab_tags(request: Request, project_id: int = 1) -> dict[str, object]:
-    """List the project's tags with their coded quote texts (for picking exemplars)."""
-    from bristlenose.server.models import QuoteTag, TagDefinition
+    """List the project's *manual* tags with their coded quote texts (for picking exemplars).
+
+    Only researcher-created tags are offered for cultivation. Groups with a
+    ``framework_id`` are excluded: the AI sentiment group (``framework_id ==
+    "sentiment"`` — shown as "Emotional & Cognitive Signals") is AI-managed and
+    reserved, and imported frameworks (garrett / uxr / …) already carry their own
+    YAML definitions. The builder turns the researcher's *own* tags into codes.
+
+    Manual tags with zero coded quotes are included too (left-join semantics) so
+    every hand-created tag is pickable — synthesis itself still needs ≥2 exemplars,
+    but the user can pick a thin tag and paste/write examples by hand.
+    """
+    from bristlenose.server.models import (
+        CodebookGroup,
+        ProjectCodebookGroup,
+        QuoteTag,
+        TagDefinition,
+    )
 
     db = _get_db(request)
     try:
-        rows = (
-            db.query(TagDefinition.id, TagDefinition.name, Quote.text)
-            .join(QuoteTag, QuoteTag.tag_definition_id == TagDefinition.id)
-            .join(Quote, Quote.id == QuoteTag.quote_id)
-            .filter(Quote.project_id == project_id)
+        # Manual (framework_id IS NULL) groups activated for this project.
+        manual_group_ids = [
+            gid
+            for (gid,) in db.query(CodebookGroup.id)
+            .join(
+                ProjectCodebookGroup,
+                ProjectCodebookGroup.codebook_group_id == CodebookGroup.id,
+            )
+            .filter(
+                ProjectCodebookGroup.project_id == project_id,
+                CodebookGroup.framework_id.is_(None),
+            )
+            .all()
+        ]
+        if not manual_group_ids:
+            return {"tags": []}
+
+        tag_defs = (
+            db.query(TagDefinition.id, TagDefinition.name)
+            .filter(TagDefinition.codebook_group_id.in_(manual_group_ids))
+            .order_by(TagDefinition.name)
             .all()
         )
-        by_tag: dict[int, dict[str, object]] = {}
-        for tid, name, text in rows:
-            entry = by_tag.setdefault(tid, {"id": tid, "name": name, "quotes": []})
-            entry["quotes"].append(text)  # type: ignore[union-attr]
-        tags = sorted(by_tag.values(), key=lambda t: t["name"])  # type: ignore[index,arg-type]
+        tag_ids = [tid for tid, _ in tag_defs]
+
+        # Exemplar quote texts per tag (project-scoped); 0-quote tags keep [].
+        quotes_by_tag: dict[int, list[str]] = {tid: [] for tid in tag_ids}
+        if tag_ids:
+            for tid, text in (
+                db.query(QuoteTag.tag_definition_id, Quote.text)
+                .join(Quote, Quote.id == QuoteTag.quote_id)
+                .filter(
+                    QuoteTag.tag_definition_id.in_(tag_ids),
+                    Quote.project_id == project_id,
+                )
+                .all()
+            ):
+                quotes_by_tag[tid].append(text)
+
+        tags: list[dict[str, object]] = [
+            {"id": tid, "name": name, "quotes": quotes_by_tag.get(tid, [])}
+            for tid, name in tag_defs
+        ]
         return {"tags": tags}
     finally:
         db.close()

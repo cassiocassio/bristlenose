@@ -30,6 +30,9 @@ When asked to audit docs (with or without a specific scope):
    - `docs/glossary.md` — canonical terminology, tone guide, spelling rules
    - `docs/platform-text-map.md` — which text is shared/desktop/CLI/forked
    - `docs/design-i18n.md` — cross-language terminology table (lines 35–42)
+   - `docs/design-docs-system.md` Part B — voice + structure for the website
+     docs (non-hectoring, channel posture, link roles, Diátaxis-lite); Part C
+     maps every doc surface and the sync ripple
    - Root `CLAUDE.md` — i18n gotchas section, provider naming convention
 
 2. **Read the text surfaces** — scope depends on what was requested:
@@ -42,6 +45,11 @@ When asked to audit docs (with or without a specific scope):
    - `docs/manual.md` — user manual (rendered to bristlenose.app/manual.html at deploy time)
    - `bristlenose/data/bristlenose.1` — man page
    - `bristlenose/cli.py` — `--help` flag descriptions
+   - **Website docs** — the Diátaxis-lite set (`content/*.md` in the website
+     repo; `bristlenose-website-v2/` while staging). Out-of-tree, so audit only
+     when that tree is in scope; the standard is `docs/design-docs-system.md`
+     Part B. With the in-app Help modal removed, these are now the sole home
+     for help text.
 
 3. **Run the 7 checks below** in order.
 
@@ -85,6 +93,14 @@ Flag:
 - Superlatives: "best", "powerful", "revolutionary", "amazing"
 - Minimisers: "simply", "just", "easily", "merely"
 - Marketing language: "unlock", "supercharge", "seamless", "leverage"
+- Hectoring / moralising: value-laden claims about the work — "keeps the
+  analysis honest", "real patterns", "do it properly". Prefer a neutral
+  consequence ("easier to compare")
+- Research-practice overreach: telling researchers how to do their job, or
+  asserting universal truths about research ("that revision is the analysis",
+  "expect to revise…"). Explain the tool and its vocabulary; the method is the
+  reader's. Genuine safety imperatives (re-identification, false confidence in
+  redaction) are exempt. See `docs/design-docs-system.md` B5
 - Passive voice in instructions (prefer "you can" over "it can be")
 - Missing "why" before "how" — procedural text without research context
 - Jargon without explanation (technical terms need inline context on

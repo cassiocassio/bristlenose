@@ -57,11 +57,12 @@ function isQuotesTab(pathname: string): boolean {
 
 interface ExportDropdownProps {
   onExportReport: () => void;
+  onSendToMiro: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
 
-export function ExportDropdown({ onExportReport }: ExportDropdownProps) {
+export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownProps) {
   const { t } = useTranslation();
   const location = useLocation();
   const projectId = useProjectId();
@@ -125,6 +126,14 @@ export function ExportDropdown({ onExportReport }: ExportDropdownProps) {
     setOpen(false);
     onExportReport();
   }, [setOpen, onExportReport]);
+
+  // Miro export — opens the multi-step modal (connect → configure → push),
+  // mirroring Export Report. The panel lives in AppLayout; the macOS native
+  // menu reaches it via the bridge's `sendToMiro` case.
+  const handleSendToMiro = useCallback(() => {
+    setOpen(false);
+    onSendToMiro();
+  }, [setOpen, onSendToMiro]);
 
   const handleExtractClips = useCallback(() => {
     setOpen(false);
@@ -197,6 +206,15 @@ export function ExportDropdown({ onExportReport }: ExportDropdownProps) {
             onClick={handleExportReport}
           >
             {t("export.exportReport")}
+          </li>
+          <li role="separator" className="export-dropdown-separator" />
+          <li
+            role="menuitem"
+            tabIndex={-1}
+            className="export-dropdown-item"
+            onClick={handleSendToMiro}
+          >
+            {t("miro.menuLabel")}
           </li>
         </ul>
       )}

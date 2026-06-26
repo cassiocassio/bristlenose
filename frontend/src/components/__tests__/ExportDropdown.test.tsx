@@ -63,13 +63,14 @@ function makeQuote(overrides: Partial<QuoteResponse> = {}): QuoteResponse {
 
 function renderDropdown(initialEntry = "/report/quotes/") {
   const onExportReport = vi.fn();
+  const onSendToMiro = vi.fn();
   const router = createMemoryRouter(
     [
       {
         path: "/report/*",
         element: (
           <FocusProvider>
-            <ExportDropdown onExportReport={onExportReport} />
+            <ExportDropdown onExportReport={onExportReport} onSendToMiro={onSendToMiro} />
           </FocusProvider>
         ),
       },
@@ -77,7 +78,7 @@ function renderDropdown(initialEntry = "/report/quotes/") {
     { initialEntries: [initialEntry] },
   );
   const result = render(<RouterProvider router={router} />);
-  return { ...result, onExportReport };
+  return { ...result, onExportReport, onSendToMiro };
 }
 
 beforeEach(() => {
@@ -97,21 +98,23 @@ describe("ExportDropdown", () => {
     expect(screen.getByTestId("export-dropdown-menu")).toBeInTheDocument();
   });
 
-  it("shows 4 items on Quotes tab", () => {
+  it("shows 5 items on Quotes tab (incl. Send to Miro)", () => {
     initFromQuotes([makeQuote()]);
     renderDropdown("/report/quotes/");
     fireEvent.click(screen.getByRole("button", { name: "Export" }));
 
     const items = screen.getAllByRole("menuitem");
-    expect(items).toHaveLength(4);
+    expect(items).toHaveLength(5);
   });
 
-  it("shows only Export Report on non-Quotes tabs", () => {
+  it("shows Export Report and Send to Miro on non-Quotes tabs", () => {
     renderDropdown("/report/sessions/");
     fireEvent.click(screen.getByRole("button", { name: "Export" }));
 
+    // Both are whole-project export actions, shown on every tab (unlike the
+    // quote-context actions Copy / Spreadsheet / Clips).
     const items = screen.getAllByRole("menuitem");
-    expect(items).toHaveLength(1);
+    expect(items).toHaveLength(2);
     expect(items[0].textContent).toContain("Export Report");
   });
 
@@ -138,8 +141,17 @@ describe("ExportDropdown", () => {
   it("Export Report calls onExportReport callback", () => {
     const { onExportReport } = renderDropdown("/report/sessions/");
     fireEvent.click(screen.getByRole("button", { name: "Export" }));
-    fireEvent.click(screen.getByRole("menuitem"));
+    fireEvent.click(screen.getAllByRole("menuitem")[0]); // Export Report
     expect(onExportReport).toHaveBeenCalledOnce();
+  });
+
+  it("Send to Miro calls onSendToMiro callback", () => {
+    const { onSendToMiro } = renderDropdown("/report/sessions/");
+    fireEvent.click(screen.getByRole("button", { name: "Export" }));
+    // By accessible name, not position — survives a menu reorder ("Miro" is a
+    // product name, stable across locales).
+    fireEvent.click(screen.getByRole("menuitem", { name: /miro/i }));
+    expect(onSendToMiro).toHaveBeenCalledOnce();
   });
 
   it("closes dropdown after action", () => {
@@ -147,7 +159,7 @@ describe("ExportDropdown", () => {
     fireEvent.click(screen.getByRole("button", { name: "Export" }));
     expect(screen.getByTestId("export-dropdown-menu")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("menuitem"));
+    fireEvent.click(screen.getAllByRole("menuitem")[0]);
     expect(screen.queryByTestId("export-dropdown-menu")).toBeNull();
   });
 

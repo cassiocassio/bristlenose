@@ -552,3 +552,33 @@ export interface UnifiedQuote {
   tagColourIndices: Record<string, number>;
   segmentIndex: number;
 }
+
+// ---------------------------------------------------------------------------
+// Miro Export API (experimental — see docs/design-miro-bridge.md)
+// ---------------------------------------------------------------------------
+
+export interface MiroStatusResponse {
+  connected: boolean;
+  user_name?: string | null;
+}
+
+export interface MiroExportRequest {
+  board_name?: string | null;
+  quote_ids?: string[] | null;
+  colour_by?: string;
+  clips_base?: string;
+}
+
+export interface MiroExportResponse {
+  board_id: string;
+  board_url: string;
+  stickies: number;
+}
+
+export interface MiroPreviewResponse {
+  html: string;
+}
+
+export interface MiroAuthUrlResponse {
+  url: string;
+}

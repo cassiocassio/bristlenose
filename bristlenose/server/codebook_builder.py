@@ -6,13 +6,14 @@ from the quotes they coded by hand, and *refines* them from accept/reject
 review. It is the engine behind turning a manual tag (a name) into a cultivated
 code (a framework entry with operational boundaries).
 
-Three moves, mirroring the researcher's loop:
+Two entry points, covering the researcher's loop:
 
-    synthesize_prompt(...)  → infer definition / apply_when / not_this from
-                              the quotes already coded with the tag
+    synthesize_prompt(...)  → infer definition / apply_when / not_this from the
+                              quotes already coded with the tag. Passing
+                              ``current`` + accept/reject feedback turns the *same*
+                              call into a refinement pass (fold judgements back in
+                              so the next pass is sharper — one template handles both)
     find_candidates(...)    → score uncoded quotes against that prompt, ranked
-    refine_prompt(...)      → fold accept/reject-with-reasons back into the
-                              prompt so the next pass is sharper
 
 The pure formatting / ranking / hashing helpers carry no LLM dependency and are
 unit-tested directly; the three ``async`` functions orchestrate the LLM calls.

@@ -1,3 +1,16 @@
+---
+status: partial
+last-trued: 2026-06-27
+trued-against: HEAD@claude/dynamic-codebook-builder-67r2fa on 2026-06-27
+---
+
+> **Status: Partial (trued 2026-06-27)** — the backend engine + API + the flag-gated codebook-lab are shipped; the production Build-panel React UI is **not yet built** (only the lab entry point + "<project> tags" header). See "Lab graduation gates".
+
+## Changelog
+
+- _2026-06-27_ — trued up: verified data-model / engine / API / testing sections current against the branch code; marked "Frontend — staged" as not-yet-built (only the lab button + project-tags header shipped); confirmed the lab is now flag-gated (`experimental_codebook_lab`, default-on) with a Codebook-tab entry point. Anchors: `frontend/src/islands/CodebookPanel.tsx:976`, `bristlenose/server/routes/dev.py` `codebook_lab_tags`, commits "ship behind … flag", "add entry point", "apply /usual-suspects review fixes".
+- _25 Jun 2026 (cloud)_ — initial draft (backend engine + API + lab sandbox).
+
 # Dynamic codebook builder — cultivating a tag into a code
 
 _Design note. Backend foundation + an ugly experiment sandbox shipped (flag-gated,
@@ -190,6 +203,11 @@ Candidates and decisions speak the same DOM quote-id (`q-{participant}-{tc}`)
 the rest of the data API uses, resolved via `routes/data.py` helpers.
 
 ## Frontend — staged
+
+> **Not yet built (2026-06-27).** This is the *intended* design, not shipped code.
+> The only React surface that exists today is the lab entry point — a "Codebook lab"
+> button + "<project> tags" header on the Codebook tab (`CodebookPanel.tsx`). The
+> per-tag Build panel below is unbuilt; see "Lab graduation gates".
 
 Backend-first, exactly as AutoCode shipped. The React surface is a per-tag
 "Build" affordance on a codebook tag, opening a panel with three zones:

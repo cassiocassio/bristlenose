@@ -90,6 +90,76 @@ class TagDefinition(Base):
     name: Mapped[str] = mapped_column(String(200))
 
     codebook_group: Mapped[CodebookGroup] = relationship(back_populates="tag_definitions")
+    prompt: Mapped[TagPrompt | None] = relationship(
+        back_populates="tag_definition",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+
+class TagPrompt(Base):
+    """A learned inclusion/exclusion prompt for a researcher-built tag.
+
+    This is what turns a manual tag (just a name) into a cultivated *code* —
+    a framework entry with operational boundaries. The prompt is synthesised
+    from the quotes the researcher coded by hand, then refined through
+    accept/reject-with-reasons review. It mirrors the discrimination-prompt
+    fields (``definition`` / ``apply_when`` / ``not_this``) that pre-built
+    YAML frameworks carry, but for the researcher's *own* vocabulary.
+
+    Instance-scoped, like ``TagDefinition`` — a code's boundaries are a
+    property of the concept, reusable across projects. One row per tag.
+
+    ``version`` is the sha256[:8] content hash of the prompt text (the same
+    derivation the rejection-telemetry methodology mandates), so a decision
+    can be tied to the exact prompt wording that produced it.
+    """
+
+    __tablename__ = "tag_prompts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tag_definition_id: Mapped[int] = mapped_column(
+        ForeignKey("tag_definitions.id"), unique=True, index=True
+    )
+    summary: Mapped[str] = mapped_column(Text, default="")
+    definition: Mapped[str] = mapped_column(Text, default="")
+    apply_when: Mapped[str] = mapped_column(Text, default="")  # inclusion criteria
+    not_this: Mapped[str] = mapped_column(Text, default="")  # exclusion criteria
+    version: Mapped[str] = mapped_column(String(16), default="")
+    status: Mapped[str] = mapped_column(String(20), default="draft")  # draft | active
+    example_count: Mapped[int] = mapped_column(default=0)
+    created_at: Mapped[datetime] = mapped_column(default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(default=func.now(), onupdate=func.now())
+
+    tag_definition: Mapped[TagDefinition] = relationship(back_populates="prompt")
+
+
+class TagPromptDecision(Base):
+    """One accept/reject judgement made while cultivating a tag's prompt.
+
+    Records that the researcher reviewed a candidate quote for a tag and
+    accepted or rejected it, with a free-text reason. These reasons feed the
+    *local* prompt-refinement loop — they are the per-researcher seed of the
+    documented ten-year "cultivation ratchet" (``docs/methodology/
+    tag-rejections-are-great.md``).
+
+    Local-only by design: the free-text ``reason`` and the quote it refers to
+    never leave the device. The rejection-telemetry methodology only ever
+    permits opt-in *aggregate rates* off-device — never reasons, never quote
+    content. Project-scoped via ``quote_id``.
+    """
+
+    __tablename__ = "tag_prompt_decisions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tag_definition_id: Mapped[int] = mapped_column(
+        ForeignKey("tag_definitions.id"), index=True
+    )
+    quote_id: Mapped[int] = mapped_column(ForeignKey("quotes.id"), index=True)
+    decision: Mapped[str] = mapped_column(String(10))  # accept | reject
+    reason: Mapped[str] = mapped_column(Text, default="")
+    prompt_version: Mapped[str] = mapped_column(String(16), default="")
+    created_at: Mapped[datetime] = mapped_column(default=func.now())
 
 
 # ---------------------------------------------------------------------------

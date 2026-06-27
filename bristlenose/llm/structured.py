@@ -320,3 +320,78 @@ class SignalElaborationResult(BaseModel):
         if isinstance(v, str):
             return json.loads(v)
         return v
+
+
+# ---------------------------------------------------------------------------
+# Dynamic codebook builder (serve mode — codebook cultivation loop)
+# ---------------------------------------------------------------------------
+
+
+class SynthesizedTagPrompt(BaseModel):
+    """LLM output: an inclusion/exclusion prompt inferred from coded exemplars.
+
+    Produced both for the initial synthesis (from the researcher's first few
+    coded quotes) and for each refinement pass (folding in accept/reject
+    judgements with their reasons).
+    """
+
+    summary: str = Field(
+        description=(
+            "One plain-language sentence naming the shared idea behind the "
+            "exemplar quotes — what this code is really about. Researcher-facing."
+        )
+    )
+    definition: str = Field(
+        description=(
+            "A one-to-two sentence definition of the concept this tag captures, "
+            "written in the researcher's analytical vocabulary, not raw quote words."
+        )
+    )
+    apply_when: str = Field(
+        description=(
+            "Inclusion criteria: when a quote SHOULD get this tag. Concrete and "
+            "operational — the signals a reader can check a quote against."
+        )
+    )
+    not_this: str = Field(
+        description=(
+            "Exclusion criteria: adjacent cases that look similar but should NOT "
+            "get this tag, and why. Empty string only if no boundary is yet clear."
+        )
+    )
+
+
+class CandidateMatch(BaseModel):
+    """LLM verdict on whether one quote matches a single tag's prompt."""
+
+    quote_index: int = Field(description="0-based index of the quote in the batch")
+    matches: bool = Field(
+        description="True if this quote satisfies the inclusion criteria and is not excluded"
+    )
+    confidence: float = Field(
+        description="Confidence 0.0-1.0 that the quote belongs to this tag",
+        ge=0.0,
+        le=1.0,
+    )
+    rationale: str = Field(
+        description=(
+            "Brief 1-sentence reason, referencing specific words in the quote and "
+            "the inclusion/exclusion criteria that decided the verdict"
+        )
+    )
+
+
+class CandidateMatchResult(BaseModel):
+    """LLM output: per-quote match verdicts for one tag's prompt over a batch."""
+
+    matches: list[CandidateMatch] = Field(
+        description="One verdict per quote in the batch, in order"
+    )
+
+    @field_validator("matches", mode="before")
+    @classmethod
+    def _parse_stringified_json(cls, v: object) -> object:
+        """Some LLM providers double-serialize nested arrays as JSON strings."""
+        if isinstance(v, str):
+            return json.loads(v)
+        return v

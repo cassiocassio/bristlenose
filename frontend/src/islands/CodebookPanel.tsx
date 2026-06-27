@@ -508,9 +508,13 @@ interface CodebookPanelProps {
   projectId: string;
   /** Bumped by LastRunStore on pipeline completion → re-fetches codebook. */
   refreshKey?: number;
+  /** Human project name for the "<project> tags" section header. The page
+      (CodebookTab) fetches it from /info and passes it down; absent in the
+      legacy island path, where the header falls back to "Your tags". */
+  projectName?: string;
 }
 
-export function CodebookPanel({ projectId, refreshKey = 0 }: CodebookPanelProps) {
+export function CodebookPanel({ projectId, refreshKey = 0, projectName }: CodebookPanelProps) {
   const { t } = useTranslation();
   const [data, setData] = useState<CodebookResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -958,6 +962,33 @@ export function CodebookPanel({ projectId, refreshKey = 0 }: CodebookPanelProps)
       <div className="codebook-grid" id="codebook-grid">
         {/* Anchor for sidebar "Your tags" scroll — must be a real box (not display:contents) */}
         <div id="codebook-project" />
+        {/* "<project> tags" section header — reuses the framework-section-header
+            layout for the symmetric title-left / action-right slot. The action
+            is the Codebook lab experiment (opens in a new window/popout). */}
+        <div className="framework-section-header">
+          <div>
+            <div className="framework-section-title">
+              {projectName
+                ? t("codebook.projectTagsHeading", { project: projectName })
+                : t("codebook.yourTags")}
+            </div>
+          </div>
+          <div className="framework-section-actions">
+            <button
+              className="bn-btn bn-btn-secondary"
+              onClick={() =>
+                window.open(
+                  "/codebook-lab",
+                  "_blank",
+                  "width=1200,height=920,resizable=yes",
+                )
+              }
+              data-testid="bn-codebook-lab-btn"
+            >
+              {t("codebook.codebookLab")}
+            </button>
+          </div>
+        </div>
         {researcherGroups.map((group) => (
           <CodebookGroupColumn
             key={group.id}

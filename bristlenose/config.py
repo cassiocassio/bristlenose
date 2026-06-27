@@ -147,6 +147,13 @@ class BristlenoseSettings(BaseSettings):
     # None = no preference; user picks in the report UI.
     codebook: str | None = None
 
+    # Codebook lab — the dynamic-codebook-builder experiment surface. On by
+    # default so it ships in the desktop sidecar + plain `serve` for cohort
+    # testing; set BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB=0 to disable (escape
+    # hatch to turn off post-TestFlight if it causes trouble). Stays an
+    # "experiment" until validated with real data by real researchers.
+    experimental_codebook_lab: bool = True
+
     # Miro
     miro_access_token: str = ""
 

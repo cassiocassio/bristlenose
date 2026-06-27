@@ -476,6 +476,8 @@
     "mergeBody": "<strong>{{source}}</strong> がタグ付けされたすべての発言は <strong>{{target}}</strong> に再タグ付けされます。これは元に戻せません。",
     "merge": "統合",
     "hide": "非表示",
+    "projectTagsHeading": "{{project}} のタグ",
+    "codebookLab": "コードブックラボ",
     "yourTags": "あなたのタグ",
     "builtIn": "ビルトイン",
     "frameworks": "フレームワーク",

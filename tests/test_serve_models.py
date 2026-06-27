@@ -96,6 +96,8 @@ class TestTableCreation:
         "import_conflicts",
         "autocode_jobs",
         "proposed_tags",
+        "tag_prompts",
+        "tag_prompt_decisions",
         "alembic_version",
     }
 

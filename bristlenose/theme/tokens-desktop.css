@@ -1,45 +1,69 @@
 /* Desktop typography overrides — SF Pro for macOS native feel.
-   Active when data-platform="desktop" is set on <html>.
+   Active when data-platform="desktop" is set on <html> AND the user hasn't
+   opted back to Inter. The macOS app sets data-platform via
+   BRISTLENOSE_PLATFORM=desktop; the Appearance ▸ Typography setting writes
+   BRISTLENOSE_TYPOGRAPHY, and "inter" makes the server emit
+   data-typography="inter" — which this block's :not() excludes, so the cascade
+   falls back to :root (Inter). On web/CLI neither var is set, so this never
+   matches: SF Pro is licensed for Apple platforms only, Inter ships everywhere.
 
    SF Pro is a system font on macOS — no download needed.
    SF Pro Text is optimised for body sizes (<20pt), SF Pro Display for headings (≥20pt).
    -apple-system resolves to SF Pro automatically on macOS.
 
-   Scale D — Apple HIG mapping:
-   - micro:   (custom, below footnote)
-   - badge:   footnote (11px)
-   - caption: caption 2 (12px)
-   - label:   body / subheadline (13px) — app voice
-   - body:    callout (15px)           — participant voice (quotes + transcript)
-   - heading: headline (17px)
-   - title:   title 2 (22px)
-   - display: title 1 (28px)
+   Scale — calibrated against the live macOS AppKit ladder via the Type Parity
+   Inspector (Debug ▸ Type Parity Inspector), macOS 26.4.1 @2x, Color LCD. Each
+   bn stop is width-matched to its measured native style (Δ ≈ 0px), so the labels
+   below are the *real* macOS styles (the old "Apple callout = 15px" label was
+   wrong — callout is 12pt):
+   - micro:   caption2     (10px)
+   - badge:   subheadline  (11px)
+   - caption: callout      (12px)
+   - label:   body         (13px)  — app voice
+   - body:    title3       (15px)  — participant voice (quotes + transcript)
+   - heading: title2       (17px)
+   - title:   title1       (22px)
+   - display: largeTitle   (26px)
 
-   Archive of previous scale: tokens-desktop-v1.css */
+   Line-heights are Apple's absolute leadings expressed as size-relative ratios,
+   except body — loosened slightly by eye (1.4) for reading comfort. --bn-track-* carries Apple's per-size
+   tracking — empirically ≈0 across this range (only micro is non-zero), and
+   currently unconsumed (no letter-spacing wired yet). Sizes are kept in rem so
+   they still honour the user's root font-size; the px in each comment is the
+   value at the default 16px root (the condition this was calibrated under).
+   Re-true on a different scale/colour profile. Archive: tokens-desktop-v1.css */
 
-[data-platform="desktop"] {
+[data-platform="desktop"]:not([data-typography="inter"]) {
     /* Font family — SF Pro via -apple-system, no Google Fonts needed */
     --bn-font-body: -apple-system, "SF Pro Text", "SF Pro", system-ui,
         "Hiragino Kaku Gothic ProN", "Hiragino Sans",
         sans-serif;
     --bn-font-mono: "SF Mono", ui-monospace, monospace;
 
-    --bn-text-micro:       0.6rem;      /* 9.6px  */
-    --bn-text-micro-lh:    1.2;
-    --bn-text-badge:       0.6875rem;   /* 11px   — Apple footnote */
-    --bn-text-badge-lh:    1.3;
-    --bn-text-caption:     0.75rem;     /* 12px   — Apple caption 2 */
-    --bn-text-caption-lh:  1.35;
-    --bn-text-label:       0.8125rem;   /* 13px   — Apple body / subheadline */
-    --bn-text-label-lh:    1.4;
-    --bn-text-body:        0.9375rem;   /* 15px   — Apple callout */
-    --bn-text-body-lh:     1.45;
-    --bn-text-heading:     1.0625rem;   /* 17px   — Apple headline */
-    --bn-text-heading-lh:  1.3;
-    --bn-text-title:       1.375rem;    /* 22px   — Apple title 2 */
-    --bn-text-title-lh:    1.2;
-    --bn-text-display:     1.75rem;     /* 28px   — Apple title 1 */
-    --bn-text-display-lh:  1.15;
+    --bn-text-micro:       0.625rem;    /* 10px  — macOS caption2 */
+    --bn-text-micro-lh:    1.300;
+    --bn-track-micro:      0.013em;
+    --bn-text-badge:       0.6875rem;   /* 11px  — macOS subheadline */
+    --bn-text-badge-lh:    1.273;
+    --bn-track-badge:      0;
+    --bn-text-caption:     0.75rem;     /* 12px  — macOS callout */
+    --bn-text-caption-lh:  1.250;
+    --bn-track-caption:    0;
+    --bn-text-label:       0.8125rem;   /* 13px  — macOS body */
+    --bn-text-label-lh:    1.231;
+    --bn-track-label:      0;
+    --bn-text-body:        0.9375rem;   /* 15px  — macOS title3 */
+    --bn-text-body-lh:     1.4;         /* looser than title3's 1.333 — tuned by eye in the stress-bench for reading comfort (participant voice) */
+    --bn-track-body:       0;
+    --bn-text-heading:     1.0625rem;   /* 17px  — macOS title2 */
+    --bn-text-heading-lh:  1.294;
+    --bn-track-heading:    0;
+    --bn-text-title:       1.375rem;    /* 22px  — macOS title1 */
+    --bn-text-title-lh:    1.182;
+    --bn-track-title:      0;
+    --bn-text-display:     1.625rem;    /* 26px  — macOS largeTitle */
+    --bn-text-display-lh:  1.231;
+    --bn-track-display:    0;
 
     /* Weight scale — SF Pro optical weights at same numeric values.
        No change needed — Inter and SF Pro share the weight axis range. */

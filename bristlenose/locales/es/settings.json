@@ -6,6 +6,9 @@
     "light": "Claro",
     "dark": "Oscuro"
   },
+  "typography": {
+    "legend": "Tipograf\u00eda"
+  },
   "language": {
     "legend": "Idioma",
     "description": "Controla el idioma de la interfaz. El contenido del informe no se traduce.",

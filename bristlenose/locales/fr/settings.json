@@ -6,6 +6,9 @@
     "light": "Clair",
     "dark": "Sombre"
   },
+  "typography": {
+    "legend": "Typographie"
+  },
   "language": {
     "legend": "Langue",
     "description": "Contrôle la langue d'affichage de l'interface. Le contenu des rapports n'est pas traduit.",

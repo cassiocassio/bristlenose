@@ -156,6 +156,7 @@ class BristlenoseSettings(BaseSettings):
 
     # Miro
     miro_access_token: str = ""
+    miro_client_id: str = ""  # OAuth app client id (PKCE, no secret); empty = paste-token only
 
     # Theme
     color_scheme: str = "auto"  # "auto", "light", or "dark"

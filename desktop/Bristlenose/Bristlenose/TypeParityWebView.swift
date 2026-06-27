@@ -1,0 +1,168 @@
+#if DEBUG
+import AppKit
+import OSLog
+import SwiftUI
+import WebKit
+
+private let log = Logger(subsystem: "app.bristlenose", category: "typeparity")
+
+// MARK: - Controller
+//
+// Owns the WKWebView for the parity tool, injects the live native metrics after
+// load, and pulls the pixel-tuned spec back out for export. Mirrors the
+// BridgeHandler ownership pattern (weak webView, callAsyncJavaScript with
+// structured args). No localhost / auth — this view loads trusted local HTML.
+
+@MainActor
+final class TypeParityController: ObservableObject {
+    weak var webView: WKWebView?
+
+    /// Re-inject native metrics + sample + mode whenever they change. Called on
+    /// load finish and on any control change in the SwiftUI top bar.
+    func inject(rungs: [MacTypeRung], fingerprint: TypeParityFingerprint,
+                sample: String, mode: String, smoothing: String) {
+        guard let webView else { return }
+        let payload = InjectPayload(
+            native: Dictionary(uniqueKeysWithValues: rungs.map { ($0.id, $0) }),
+            tokens: BNTokenLadder.rows,
+            fingerprint: fingerprint,
+            sample: sample,
+            mode: mode,
+            smoothing: smoothing
+        )
+        guard let data = try? JSONEncoder().encode(payload),
+              let json = String(data: data, encoding: .utf8) else { return }
+        // Structured argument (security rule 3) — no string interpolation into JS.
+        Task { @MainActor in
+            do {
+                _ = try await webView.callAsyncJavaScript(
+                    "window.__typeParityInit(JSON.parse(payload));",
+                    arguments: ["payload": json],
+                    in: nil, contentWorld: .page
+                )
+            } catch {
+                log.error("inject failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+
+    /// Pull the current (edited) spec out of the page, build CSS + JSON, and
+    /// offer to save + copy to clipboard.
+    func exportSpec() {
+        guard let webView else { return }
+        Task { @MainActor in
+            do {
+                let value = try await webView.callAsyncJavaScript(
+                    "return window.__typeParityCollect();",
+                    arguments: [:], in: nil, contentWorld: .page
+                )
+                // Accept either a JSON string or a bridged JSON object (WebKit
+                // bridges a returned JS object to NSDictionary/NSArray).
+                let data: Data
+                if let s = value as? String {
+                    data = Data(s.utf8)
+                } else if let obj = value, JSONSerialization.isValidJSONObject(obj) {
+                    data = try JSONSerialization.data(withJSONObject: obj)
+                } else {
+                    log.error("collect: unexpected payload type \(String(describing: type(of: value)), privacy: .public)")
+                    return
+                }
+                do {
+                    let export = try JSONDecoder().decode(TypeParityExport.self, from: data)
+                    deliver(export: export)
+                } catch {
+                    // Don't swallow the decode error — name it, with a payload preview.
+                    let preview = String(data: data, encoding: .utf8)?.prefix(400) ?? ""
+                    log.error("collect: decode failed: \(error.localizedDescription, privacy: .public) — raw: \(String(preview), privacy: .public)")
+                }
+            } catch {
+                log.error("collect: call failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+
+    private func deliver(export: TypeParityExport) {
+        let css = TypeParitySpecBuilder.css(export)
+        let json = TypeParitySpecBuilder.json(export)
+        let combined = css + "\n\n/* --- JSON record --- */\n" + json
+
+        // Clipboard always (cheapest path back into the editor / design doc).
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(combined, forType: .string)
+        log.notice("type-parity spec copied to clipboard (\(export.rows.count) rows)")
+
+        // Plus an explicit save panel for the two artefacts.
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "tokens-desktop-tuned.css"
+        panel.allowedContentTypes = [.plainText]
+        panel.message = "CSS block + JSON record (also copied to clipboard)"
+        if panel.runModal() == .OK, let url = panel.url {
+            try? combined.write(to: url, atomically: true, encoding: .utf8)
+        }
+    }
+
+    private struct InjectPayload: Codable {
+        let native: [String: MacTypeRung]
+        let tokens: [BNTokenRow]
+        let fingerprint: TypeParityFingerprint
+        let sample: String
+        let mode: String
+        let smoothing: String
+    }
+}
+
+// MARK: - NSViewRepresentable
+
+struct TypeParityWebView: NSViewRepresentable {
+    @ObservedObject var controller: TypeParityController
+    let rungs: [MacTypeRung]
+    let fingerprint: TypeParityFingerprint
+    let sample: String
+    let mode: String
+    let smoothing: String
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        // Ephemeral store — under App Sandbox the default persistent store wedges
+        // the WebContent renderer (JS eval + pasteboard XPC denials), which made
+        // callAsyncJavaScript("collect") fail. The main app's WebView works under
+        // sandbox for exactly this reason. No persistence needed for a debug tool.
+        config.websiteDataStore = .nonPersistent()
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = context.coordinator
+        webView.isInspectable = true   // DEBUG-only file; always inspectable here
+        controller.webView = webView
+        webView.loadHTMLString(TypeParityHTML.page, baseURL: nil)
+        return webView
+    }
+
+    func updateNSView(_ webView: WKWebView, context: Context) {
+        // Re-inject on any control change. The page is already loaded; init is
+        // idempotent (it rebuilds rows from the payload each call).
+        controller.inject(rungs: rungs, fingerprint: fingerprint,
+                          sample: sample, mode: mode, smoothing: smoothing)
+    }
+
+    final class Coordinator: NSObject, WKNavigationDelegate {
+        let parent: TypeParityWebView
+        init(_ parent: TypeParityWebView) { self.parent = parent }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            // Capture only Sendable values + the @MainActor controller reference,
+            // not the whole representable struct (which holds a property wrapper).
+            let controller = parent.controller
+            let rungs = parent.rungs
+            let fingerprint = parent.fingerprint
+            let sample = parent.sample
+            let mode = parent.mode
+            let smoothing = parent.smoothing
+            Task { @MainActor in
+                controller.inject(rungs: rungs, fingerprint: fingerprint,
+                                  sample: sample, mode: mode, smoothing: smoothing)
+            }
+        }
+    }
+}
+#endif

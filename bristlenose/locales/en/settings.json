@@ -6,6 +6,9 @@
     "light": "Light",
     "dark": "Dark"
   },
+  "typography": {
+    "legend": "Typography"
+  },
   "language": {
     "legend": "Language",
     "description": "Controls the display language of the interface. Report content is not translated.",

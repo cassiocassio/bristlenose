@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Typography Stress-Test Bench — Bristlenose</title>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     REAL theme CSS, in cascade order (tokens → typography → desktop →
+     palettes → atoms → molecules → organisms). This page renders real
+     components against the live stylesheet, so a token edit ripples for
+     real. index.css is a comment-only manifest, so each file is linked.
+     Paths are relative to docs/design-system/.
+
+     ⚠ This link list mirrors `_THEME_FILES` in render/theme_assets.py (the
+       canonical cascade order). Re-sync if that list is reordered, or the
+       bench stress-tests a cascade that doesn't match production.
+     ════════════════════════════════════════════════════════════════════ -->
+<link rel="stylesheet" href="../../bristlenose/theme/tokens.css">
+<link rel="stylesheet" href="../../bristlenose/theme/tokens-typography.css">
+<link rel="stylesheet" href="../../bristlenose/theme/tokens-desktop.css">
+<link rel="stylesheet" href="../../bristlenose/theme/colors/palette-default.css">
+<link rel="stylesheet" href="../../bristlenose/theme/colors/palette-edo.css">
+<link rel="stylesheet" href="../../bristlenose/theme/atoms/badge.css">
+<link rel="stylesheet" href="../../bristlenose/theme/atoms/button.css">
+<link rel="stylesheet" href="../../bristlenose/theme/atoms/toggle.css">
+<link rel="stylesheet" href="../../bristlenose/theme/atoms/modal.css">
+<link rel="stylesheet" href="../../bristlenose/theme/atoms/timecode.css">
+<link rel="stylesheet" href="../../bristlenose/theme/atoms/bar.css">
+<link rel="stylesheet" href="../../bristlenose/theme/atoms/interactive.css">
+<link rel="stylesheet" href="../../bristlenose/theme/molecules/person-badge.css">
+<link rel="stylesheet" href="../../bristlenose/theme/molecules/badge-row.css">
+<link rel="stylesheet" href="../../bristlenose/theme/molecules/bar-group.css">
+<link rel="stylesheet" href="../../bristlenose/theme/organisms/blockquote.css">
+<link rel="stylesheet" href="../../bristlenose/theme/organisms/sentiment-chart.css">
+<link rel="stylesheet" href="../../bristlenose/theme/organisms/analysis.css">
+<link rel="stylesheet" href="../../bristlenose/theme/organisms/toolbar.css">
+<link rel="stylesheet" href="../../bristlenose/theme/organisms/global-nav.css">
+<link rel="stylesheet" href="../../bristlenose/theme/organisms/sidebar.css">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap">
+
+<style>
+/* ── Bench chrome — deliberately on system-ui so it never moves when you
+      edit the type tokens (only the cell content is themed). ───────────── */
+:root{
+  --bench-chrome-font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --bench-ink: #1d1d1f; --bench-ink-mute: #5a5a5f;
+  --bench-line: #d2d2d7; --bench-bg: #f5f5f7; --bench-surface: #ffffff;
+  --bench-accent: #0a84ff; --bench-warn: #e8513b;
+}
+*{ box-sizing: border-box; }
+html,body{ margin:0; }
+body{
+  font-family: var(--bench-chrome-font);
+  color: var(--bench-ink);
+  background: var(--bench-bg);
+  -webkit-font-smoothing: auto;
+}
+.bench-wrap{ max-width: 1400px; margin: 0 auto; padding: 0 16px; }
+
+/* ── Sticky control zone ─────────────────────────────────────────────── */
+.bench-toolbar{
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(245,245,247,.92);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--bench-line);
+}
+.bench-global{
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 8px 0;
+}
+.bench-global h1{ font-size: 14px; font-weight: 600; margin: 0 8px 0 0; letter-spacing: -.01em; }
+.bench-global .spacer{ flex: 1; }
+.bench-ctrl{ display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--bench-ink-mute); }
+.bench-btn{
+  font: inherit; font-size: 12px; line-height: 1; cursor: pointer;
+  background: var(--bench-surface); color: var(--bench-ink);
+  border: 1px solid var(--bench-line); border-radius: 7px; padding: 7px 11px;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.bench-btn:hover{ border-color: #8a8a8f; }
+.bench-btn.is-on{ background: var(--bench-accent); border-color: var(--bench-accent); color: #fff; }
+.bench-btn--warn:hover{ border-color: var(--bench-warn); color: var(--bench-warn); }
+.bench-kbd{ font: 11px/1 var(--bench-chrome-font); color: var(--bench-ink-mute);
+  background: var(--bench-surface); border: 1px solid var(--bench-line);
+  border-bottom-width: 2px; border-radius: 4px; padding: 2px 5px; }
+select.bench-sel{ font: inherit; font-size: 12px; padding: 5px 6px; border: 1px solid var(--bench-line);
+  border-radius: 6px; background: var(--bench-surface); color: var(--bench-ink); }
+/* Focus ring — interactive.css ships a global :focus:not(:focus-visible){outline:none}
+   suppressor that strips the default ring; restore one for the bench's own controls. */
+.bench-btn:focus-visible, .bench-sel:focus-visible,
+.bench-tok-row input:focus-visible, .bench-modal textarea:focus-visible{
+  outline: 2px solid var(--bench-accent); outline-offset: 1px;
+}
+
+/* Column-config header (aligned 50/50 over the two grid columns) */
+.bench-colheads{ display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding-bottom: 8px; }
+.bench-colhead{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 7px 10px; border-radius: 8px; border: 1px solid var(--bench-line); background: var(--bench-surface); }
+.bench-colhead .role{ font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.bench-colhead .sub{ font-size: 10px; color: var(--bench-ink-mute); }
+.bench-colhead--ref .role{ color: var(--bench-ink-mute); }
+.bench-colhead--edit .role{ color: var(--bench-accent); }
+.bench-state{ margin-left: auto; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+.bench-state.baseline{ background: #ffece0; color: #b5471d; }
+.bench-state.edited{ background: #e3f0ff; color: #0a5bd6; }
+
+/* Token editor drawer (editing column only) */
+.bench-editor{ display: none; padding: 10px 0 12px; border-top: 1px dashed var(--bench-line); }
+.bench-editor.is-open{ display: block; }
+.bench-editor-note{ font-size: 10.5px; color: var(--bench-ink-mute); margin: 0 0 8px; }
+.bench-editor-grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 8px; }
+.bench-tok{ border: 1px solid var(--bench-line); border-radius: 8px; padding: 7px 9px; background: var(--bench-surface); }
+.bench-tok-name{ font-size: 11px; font-weight: 600; display: flex; justify-content: space-between; align-items: baseline; }
+.bench-tok-name .delta{ font-size: 10px; font-weight: 600; color: var(--bench-accent); }
+.bench-tok-row{ display: flex; gap: 6px; margin-top: 5px; }
+.bench-tok-row label{ font-size: 9.5px; color: var(--bench-ink-mute); display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.bench-tok-row input{ font: inherit; font-size: 12px; width: 100%; padding: 3px 4px;
+  border: 1px solid var(--bench-line); border-radius: 5px; background: #fff; color: var(--bench-ink); }
+
+/* ── The grid: config columns × component rows ───────────────────────── */
+.bench-grid{ position: relative; display: grid; grid-template-columns: 1fr 1fr;
+  column-gap: 24px; row-gap: 4px; padding: 18px 0 40vh; }
+.bench-rowlabel{ grid-column: 1 / -1; display: flex; align-items: baseline; gap: 10px;
+  margin: 22px 0 2px; padding-bottom: 4px; border-bottom: 1px solid var(--bench-line); }
+.bench-rowlabel .name{ font-size: 12px; font-weight: 700; letter-spacing: -.01em; }
+.bench-rowlabel .tier{ font-size: 10px; text-transform: uppercase; letter-spacing: .07em; color: var(--bench-ink-mute); }
+/* Cell = a faithful "body" context: real font + the report.css body base size
+   (var(--bn-text-label)), so inherited-size components (e.g. nav tabs, which set
+   no font-size of their own) render correctly AND ripple when the token moves. */
+.bench-cell{ min-width: 0; padding: 14px 16px; border-radius: 10px;
+  background: var(--bn-colour-bg, #fff); color: var(--bn-colour-text, #1d1d1f);
+  border: 1px solid var(--bench-line); overflow: visible;
+  font-family: var(--bn-font-body); font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); }
+.bench-cell--edit{ box-shadow: 0 0 0 1px rgba(10,132,255,.10) inset; }
+/* Louder "you're looking at the original" cue during peek / before-state. */
+body.is-baseline .bench-cell--edit{ box-shadow: inset 0 0 0 2px rgba(181,71,29,.5); }
+/* Force normally-hover-only quote affordances visible — their glyph type
+   (×, ★, ✎, ✓/✗) is part of what the bench is judging. */
+.bench-cell .star-btn, .bench-cell .hide-btn, .bench-cell .edit-pencil,
+.bench-cell .badge-delete, .bench-cell .badge-action-pill{ opacity: 1 !important; }
+
+/* Grid overlay (4/8pt spacing rhythm). position:absolute so it scrolls with content. */
+.bench-overlay{ position: absolute; inset: 0; pointer-events: none; z-index: 5; display: none; }
+body.show-grid .bench-overlay{ display: block; }
+.bench-overlay::before{ content:""; position:absolute; inset:0;
+  background-image:
+    linear-gradient(to bottom, rgba(10,132,255,.16) 0 1px, transparent 1px 8px),
+    linear-gradient(to bottom, rgba(10,132,255,.06) 0 1px, transparent 1px 4px),
+    linear-gradient(to right,  rgba(10,132,255,.16) 0 1px, transparent 1px 8px),
+    linear-gradient(to right,  rgba(10,132,255,.06) 0 1px, transparent 1px 4px);
+  background-size: 100% 8px, 100% 4px, 8px 100%, 4px 100%; }
+
+/* Dependency highlight */
+body.hl-on .bench-cell [data-token]{ opacity:.28; transition: opacity .12s; }
+body.hl-on .bench-cell .hl-match{ opacity:1; outline: 2px solid var(--bench-warn); outline-offset: 1px; border-radius: 2px; }
+
+.bench-help{ font-size: 11px; color: var(--bench-ink-mute); padding: 6px 0 0; }
+.bench-help .bench-kbd{ margin: 0 1px; }
+.specimen-ladder > div{ margin: 0 0 .35em; }
+
+/* Export modal */
+.bench-modal-bg{ position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; display: none; align-items: center; justify-content: center; }
+.bench-modal-bg.is-open{ display: flex; }
+.bench-modal{ background: #fff; color: var(--bench-ink); border-radius: 12px; padding: 18px; width: min(720px, 92vw); max-height: 84vh; overflow: auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.bench-modal h2{ font-size: 14px; margin: 0 0 10px; }
+.bench-modal textarea{ width: 100%; height: 320px; font: 12px/1.5 ui-monospace, "SF Mono", monospace;
+  border: 1px solid var(--bench-line); border-radius: 8px; padding: 10px; resize: vertical; }
+</style>
+</head>
+<body>
+
+<div class="bench-toolbar">
+  <div class="bench-wrap">
+    <div class="bench-global">
+      <h1>Type Stress-Bench</h1>
+      <button class="bench-btn" id="flip" title="Flip the editing column between its baseline and your edits">⇄ Edit: before ↔ after</button>
+      <button class="bench-btn" id="toggle-grid" title="4/8-pt spacing grid overlay">▦ Grid</button>
+      <span class="bench-ctrl">Highlight token
+        <select class="bench-sel" id="hl-token" aria-label="Highlight all elements using a type token">
+          <option value="">— none —</option>
+          <option value="display">display</option><option value="title">title</option>
+          <option value="heading">heading</option><option value="body">body</option>
+          <option value="label">label</option><option value="caption">caption</option>
+          <option value="badge">badge</option><option value="micro">micro</option>
+        </select>
+        <span id="hl-count"></span>
+      </span>
+      <span class="spacer"></span>
+      <button class="bench-btn" id="toggle-editor">✎ Edit tokens</button>
+      <button class="bench-btn" id="undo" title="Undo last edit (⌘Z)">↺ Undo</button>
+      <button class="bench-btn bench-btn--warn" id="reset" title="Reset the editing column to its baseline">⊘ Reset</button>
+      <button class="bench-btn" id="export">⤓ Export</button>
+    </div>
+
+    <div class="bench-colheads">
+      <div class="bench-colhead bench-colhead--ref">
+        <span class="role">Reference</span><span class="sub">known-good</span>
+        <select class="bench-sel" data-col="ref" data-axis="platform" aria-label="Reference type theme">
+          <option value="">Web · Inter</option><option value="desktop">Desktop · SF Pro</option>
+        </select>
+        <select class="bench-sel" data-col="ref" data-axis="color" aria-label="Reference colour scheme">
+          <option value="default">Default</option><option value="edo">Edo</option>
+        </select>
+        <select class="bench-sel" data-col="ref" data-axis="theme" aria-label="Reference light/dark">
+          <option value="light">Light</option><option value="dark">Dark</option>
+        </select>
+      </div>
+      <div class="bench-colhead bench-colhead--edit">
+        <span class="role">Editing</span><span class="sub">judge this</span>
+        <select class="bench-sel" data-col="edit" data-axis="platform" aria-label="Editing type theme">
+          <option value="desktop">Desktop · SF Pro</option><option value="">Web · Inter</option>
+        </select>
+        <select class="bench-sel" data-col="edit" data-axis="color" aria-label="Editing colour scheme">
+          <option value="default">Default</option><option value="edo">Edo</option>
+        </select>
+        <select class="bench-sel" data-col="edit" data-axis="theme" aria-label="Editing light/dark">
+          <option value="light">Light</option><option value="dark">Dark</option>
+        </select>
+        <span class="bench-state edited" id="state-pill">edited</span>
+      </div>
+    </div>
+
+    <div class="bench-editor" id="editor">
+      <p class="bench-editor-note">Edits drive the <b>Editing</b> (right) column only. Tracking (<code>--bn-track-*</code>) is omitted — it exists in <code>tokens-desktop.css</code> but no component consumes <code>letter-spacing</code> yet, so it would be a dead knob here.</p>
+      <div class="bench-editor-grid" id="editor-grid"></div>
+    </div>
+
+    <div class="bench-help">
+      Hold <span class="bench-kbd">Space</span> to peek the original · <span class="bench-kbd">⌘Z</span> undo ·
+      left column is the <b>reference</b> (known-good), right is the <b>editing</b> space — judge whether the right feels as <i>resolved</i>, not whether it matches.
+    </div>
+  </div>
+</div>
+
+<main class="bench-wrap">
+  <div class="bench-grid" id="grid">
+    <!-- NOTE: components that theme via a [data-theme] *ancestor* selector
+         (toast, logo, tag-suggest dropdown) won't dark-theme per-cell here —
+         current specimens use light-dark()/attr tokens, which do. Out of scope. -->
+    <div class="bench-overlay"></div>
+  </div>
+</main>
+
+<div class="bench-modal-bg" id="modal-bg">
+  <div class="bench-modal">
+    <h2>Export — paste-ready token block + JSON</h2>
+    <p id="copy-note" style="font-size:12px;color:var(--bench-ink-mute);margin:.2em 0 .8em">Paste to Claude: "make tokens-desktop.css like this" (or "save as version 3").</p>
+    <textarea id="export-text" readonly></textarea>
+    <div style="margin-top:10px;text-align:right"><button class="bench-btn" id="modal-close">Close</button></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ════════════════════════════════════════════════════════════════════════
+   Typography Stress-Test Bench
+   Two-column CSS grid (reference | editing) on the REAL theme cascade.
+   Each component is one grid row spanning both columns, so the left and
+   right cells share a grid row and stay top-aligned (no scroll drift).
+   Each cell carries its own config (data-platform/color-theme/theme +
+   inline color-scheme) so the live stylesheet themes it; the editing cells
+   also carry inline --bn-text-* overrides so a token bump ripples through
+   every real component instantly.
+   ════════════════════════════════════════════════════════════════════════ */
+
+const STOPS = ["display","title","heading","body","label","caption","badge","micro"];
+
+// Baseline token sets (size px @16-root, line-height unitless, tracking em — track
+// is carried for export fidelity with tokens-desktop.css but is not editable here).
+const WEB_BASELINE = {
+  display:{px:28,  lh:1.20, tr:0}, title:{px:22, lh:1.25, tr:0},
+  heading:{px:18,  lh:1.30, tr:0}, body:{px:15,  lh:1.50, tr:0},
+  label:{px:13,    lh:1.45, tr:0}, caption:{px:12, lh:1.40, tr:0},
+  badge:{px:11.5,  lh:1.30, tr:0}, micro:{px:9.6, lh:1.20, tr:0},
+};
+const DESKTOP_BASELINE = {
+  display:{px:26,  lh:1.231, tr:0},     title:{px:22, lh:1.182, tr:0},
+  heading:{px:17,  lh:1.294, tr:0},     body:{px:15,  lh:1.4,   tr:0},
+  label:{px:13,    lh:1.231, tr:0},     caption:{px:12, lh:1.250, tr:0},
+  badge:{px:11,    lh:1.273, tr:0},     micro:{px:10,  lh:1.300, tr:0.013},
+};
+const clone = o => JSON.parse(JSON.stringify(o));
+const baselineFor = platform => clone(platform === "desktop" ? DESKTOP_BASELINE : WEB_BASELINE);
+
+// ── State ────────────────────────────────────────────────────────────────
+const refCfg  = { platform:"",        color:"default", theme:"light" };
+const editCfg = { platform:"desktop", color:"default", theme:"light" };
+let editBaseline = baselineFor(editCfg.platform); // editing column's "before" (for the flick)
+let editValues   = clone(editBaseline);            // editing column's current edits ("after")
+let showingEdited = true;
+let peeking = false;
+const undoStack = [];
+
+// ── Content (climbing-study sample — varied lengths + deliberate extremes) ─
+const C = {
+  qLong:  "I think what keeps me coming back is that every session feels different. Even if I'm projecting the same route, my body feels different, the conditions change, and I have to solve it fresh each time. It never gets boring because there's always another puzzle waiting, another move I haven't figured out yet, and that constant sense of progression is honestly what's kept me hooked for years now.",
+  qMed:   "I started maybe six years ago at a local indoor gym. A friend dragged me along and I was honestly terrible at first, but there was something about the problem-solving aspect that really hooked me.",
+  qShort: "It just worked, which was refreshing.",
+  qFrust: "Because I thought the way I was treated wasn't right — that I wasn't able to see anyone again unless something went wrong a second time.",
+  nameShort: "Alex Chen", nameLong: "Lena Hoffmann-Bergström", nameMod: "Sarah Chen",
+  tagShort: "onboarding", tagLong: "risk management and safety",
+  headShort: "Onboarding", headLong: "Community and Social Connection",
+};
+
+const ESC = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+function quoteCard(text, code, name, sentiment, tag, starred){
+  const w = starred ? "var(--bn-weight-starred)" : "var(--bn-weight-normal)";
+  return `
+  <div class="quote-group">
+    <blockquote class="quote-card bn-focused">
+      <div class="quote-row">
+        <a class="timecode" href="#" data-token="label"><span class="timecode-bracket">[</span>00:35<span class="timecode-bracket">]</span></a>
+        <div class="quote-body">
+          <span class="quote-text" data-token="body" style="font-weight:${w}">${ESC(text)}</span>
+          <span class="speaker"><a class="speaker-link" href="#"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code" data-token="badge">${code}</span><span class="bn-speaker-badge-name" data-token="badge">${ESC(name)}</span></span></span></a></span>
+          <div class="badges">
+            <span class="badge badge-ai badge-${sentiment}" data-token="badge">${sentiment}</span>
+            <span class="badge badge-user" data-token="badge" style="background:var(--bn-ux-3-bg)">${ESC(tag)}<button class="badge-delete" aria-label="Delete tag">&times;</button></span>
+            <span class="badge badge-add" aria-label="Add tag">+</span>
+          </div>
+        </div>
+      </div>
+      <button class="hide-btn" aria-label="Hide">✖</button>
+      <button class="edit-pencil" aria-label="Edit">✎</button>
+      <button class="star-btn" aria-label="Star">★</button>
+    </blockquote>
+  </div>`;
+}
+
+// data-token annotates the type role each text element consumes, for the highlight.
+const SPECIMENS = [
+  { tier:"foundation", name:"Type scale (all 8 stops)", html: `
+    <div class="specimen-ladder">
+      <div data-token="display" style="font-size:var(--bn-text-display);line-height:var(--bn-text-display-lh);font-weight:var(--bn-weight-strong)">${ESC(C.headShort)}</div>
+      <div data-token="title" style="font-size:var(--bn-text-title);line-height:var(--bn-text-title-lh);font-weight:var(--bn-weight-emphasis)">${ESC(C.headLong)}</div>
+      <div data-token="heading" style="font-size:var(--bn-text-heading);line-height:var(--bn-text-heading-lh);font-weight:var(--bn-weight-emphasis)">Training and Progression</div>
+      <div data-token="body" style="font-size:var(--bn-text-body);line-height:var(--bn-text-body-lh);font-weight:var(--bn-weight-normal)">${ESC(C.qMed)}</div>
+      <div data-token="label" style="font-size:var(--bn-text-label);line-height:var(--bn-text-label-lh)">Navigation · sidebar · table cells · app voice</div>
+      <div data-token="caption" style="font-size:var(--bn-text-caption);line-height:var(--bn-text-caption-lh)">12 Feb · 47:00 · footnotes &amp; timestamps</div>
+      <div data-token="badge" style="font-size:var(--bn-text-badge);line-height:var(--bn-text-badge-lh);font-weight:var(--bn-weight-emphasis)">SATISFACTION · badge text</div>
+      <div data-token="micro" style="font-size:var(--bn-text-micro);line-height:var(--bn-text-micro-lh);font-weight:var(--bn-weight-emphasis)">micro · confidence · ×</div>
+    </div>` },
+
+  { tier:"organism", name:"Quote card — long (participant voice)", html: quoteCard(C.qLong, "p2", "Jordan Rivera", "satisfaction", "motivation", false) },
+  { tier:"organism", name:"Quote card — starred, frustration", html: quoteCard(C.qFrust, "p1", C.nameShort, "frustration", "peer-support", true) },
+
+  { tier:"composition", name:"Quote cluster (margins in context)", html:
+      quoteCard(C.qShort, "p3", C.nameLong, "delight", C.tagShort, false) +
+      quoteCard(C.qMed, "p1", C.nameShort, "confidence", "retention", false) +
+      quoteCard(C.qLong, "p2", "Jordan Rivera", "satisfaction", C.tagLong, false) },
+
+  { tier:"atom", name:"Sentiment badges (all 7)", html: `<div class="badge-row" style="display:flex;flex-wrap:wrap;gap:6px">
+      <span class="badge badge-ai badge-frustration" data-token="badge">frustration</span>
+      <span class="badge badge-ai badge-confusion" data-token="badge">confusion</span>
+      <span class="badge badge-ai badge-doubt" data-token="badge">doubt</span>
+      <span class="badge badge-ai badge-surprise" data-token="badge">surprise</span>
+      <span class="badge badge-ai badge-satisfaction" data-token="badge">satisfaction</span>
+      <span class="badge badge-ai badge-delight" data-token="badge">delight</span>
+      <span class="badge badge-ai badge-confidence" data-token="badge">confidence</span>
+    </div>` },
+
+  { tier:"atom", name:"User tags (incl. long) + proposed", html: `<div class="badge-row" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <span class="badge badge-user" data-token="badge" style="background:var(--bn-ux-2-bg)">${ESC(C.tagShort)}<button class="badge-delete" aria-label="Delete">&times;</button></span>
+      <span class="badge badge-user" data-token="badge" style="background:var(--bn-emo-3-bg)">interaction design<button class="badge-delete" aria-label="Delete">&times;</button></span>
+      <span class="badge badge-user" data-token="badge" style="background:var(--bn-task-2-bg)">${ESC(C.tagLong)}<button class="badge-delete" aria-label="Delete">&times;</button></span>
+      <span class="badge badge-add" aria-label="Add">+</span>
+      <span class="badge badge-proposed" data-token="badge" style="background:var(--bn-opp-1-bg);color:var(--bn-colour-text)">wireframe issue<span class="badge-action-pill"><button class="badge-action-deny" aria-label="Deny">✗</button><button class="badge-action-accept" aria-label="Accept">✓</button></span></span>
+    </div>` },
+
+  { tier:"organism", name:"Signal card (analysis)", html: `
+    <div class="signal-card" style="--card-accent:var(--bn-sentiment-frustration)">
+      <div class="signal-card-top">
+        <div class="signal-card-identity">
+          <span class="signal-card-source" data-token="badge">Theme</span>
+          <div class="signal-card-location"><a class="signal-card-location-link" href="#" data-token="heading">${ESC(C.headLong)}</a></div>
+          <div class="signal-elaboration" data-token="label"><strong>Onboarding friction concentrates early.</strong> Most negative signal lands in the first session before habits form.</div>
+        </div>
+        <div class="signal-card-right">
+          <div class="signal-card-badges">
+            <span class="badge signal-group-badge badge-frustration" data-token="badge">frustration</span>
+            <span class="pattern-label pattern-gap" data-token="badge">gap</span>
+          </div>
+          <div class="signal-card-metrics">
+            <span class="metric-label" data-token="caption">Concentration</span>
+            <span class="metric-value" data-token="label">0.68</span>
+            <span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:68%"></span></span></span>
+          </div>
+        </div>
+      </div>
+      <div class="signal-card-quotes"><blockquote><div class="quote-row">
+        <a class="timecode" href="#" data-token="label"><span class="timecode-bracket">[</span>02:08<span class="timecode-bracket">]</span></a>
+        <div class="quote-body"><span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code" data-token="badge">p1</span><span class="bn-speaker-badge-name" data-token="badge">${ESC(C.nameShort)}</span></span></span></span>
+        <span class="quote-text" data-token="body">${ESC(C.qFrust)}</span></div>
+      </div></blockquote></div>
+      <div class="signal-card-footer" data-token="caption"><span>4 quotes · 3 participants</span></div>
+    </div>` },
+
+  { tier:"organism", name:"Sidebar session rows (vertical rhythm)", html: `
+    <div style="max-width:280px;background:var(--bn-colour-bg);color:var(--bn-colour-text)">
+      <div class="toc-heading" data-token="label">Sessions</div>
+      ${[["#1","m1",C.nameMod,"p1",C.nameShort,"12 Feb","47:00",true],
+         ["#2","m1",C.nameMod,"p3",C.nameLong,"14 Feb","52:10",false],
+         ["#3","m1",C.nameMod,"p2","Jordan Rivera","19 Feb","41:33",false]]
+        .map(([id,mc,mn,pc,pn,d,dur,active])=>`
+      <a href="#" class="session-entry${active?' active':''}">
+        <div class="session-entry-row">
+          <span class="badge session-id-badge" data-token="badge">${id}</span>
+          <div class="session-entry-speakers">
+            <div class="session-entry-speaker-row"><span class="badge" data-token="badge">${mc}</span><span class="session-entry-name" data-token="label">${ESC(mn)}</span></div>
+            <div class="session-entry-speaker-row"><span class="badge" data-token="badge">${pc}</span><span class="session-entry-name" data-token="label">${ESC(pn)}</span></div>
+          </div>
+        </div>
+        <div class="session-entry-row"><span class="session-entry-date" data-token="caption">${d}</span><span class="session-entry-sep">·</span><span class="session-entry-duration" data-token="caption">${dur}</span></div>
+      </a>`).join("")}
+    </div>` },
+
+  { tier:"organism", name:"Nav tabs", html: `
+    <nav class="bn-global-nav" role="tablist" style="font-size:var(--bn-text-label);line-height:var(--bn-text-label-lh)">
+      <button class="bn-tab active" data-token="label" role="tab" aria-selected="true">Project</button>
+      <button class="bn-tab" data-token="label" role="tab">Sessions</button>
+      <button class="bn-tab" data-token="label" role="tab">Quotes</button>
+      <button class="bn-tab" data-token="label" role="tab">Codebook</button>
+      <button class="bn-tab" data-token="label" role="tab">Analysis</button>
+    </nav>` },
+
+  { tier:"organism", name:"Toolbar + modal buttons", html: `
+    <div class="toolbar">
+      <button type="button" class="toolbar-btn" data-token="label">☰ Copy CSV</button>
+      <button type="button" class="toolbar-btn tag-filter-btn"><span class="tag-filter-label" data-token="label">Tags</span></button>
+      <button type="button" class="toolbar-btn view-switcher-btn"><span class="view-switcher-label" data-token="label">All quotes</span></button>
+      <button type="button" class="toolbar-btn toolbar-btn-toggle active" data-token="label">Starred</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button type="button" class="bn-btn bn-btn-primary">Export</button>
+      <button type="button" class="bn-btn bn-btn-secondary">Browse codebooks</button>
+      <button type="button" class="bn-btn bn-btn-cancel">Cancel</button>
+      <button type="button" class="bn-btn bn-btn-danger">Delete</button>
+    </div>` },
+
+  { tier:"organism", name:"Dashboard stat cards", html: `
+    <div class="bn-project-stats">
+      <div class="bn-project-stat"><span class="bn-project-stat-value" data-token="display">6</span><span class="bn-project-stat-label" data-token="label">sessions</span></div>
+      <div class="bn-project-stat bn-project-stat--pair">
+        <div class="bn-project-stat--pair-half"><span class="bn-project-stat-value" data-token="display">2:14:38</span><span class="bn-project-stat-label" data-token="label">of video</span></div>
+        <div class="bn-project-stat--pair-half"><span class="bn-project-stat-value" data-token="display">18,204</span><span class="bn-project-stat-label" data-token="label">words</span></div>
+      </div>
+      <div class="bn-project-stat bn-project-stat--pair">
+        <div class="bn-project-stat--pair-half"><span class="bn-project-stat-value" data-token="display">42</span><span class="bn-project-stat-label" data-token="label">quotes</span></div>
+        <div class="bn-project-stat--pair-half"><span class="bn-project-stat-value" data-token="display">7</span><span class="bn-project-stat-label" data-token="label">themes</span></div>
+      </div>
+    </div>` },
+
+  { tier:"organism", name:"Sentiment bar chart", html: `
+    <div class="sentiment-row" data-max-count="12">
+      <div class="sentiment-chart">
+        <div class="sentiment-chart-title" data-token="label">AI sentiment</div>
+        <div class="sentiment-bar-group"><span class="sentiment-bar-label badge badge-satisfaction" data-token="badge">satisfaction</span><div class="sentiment-bar" style="width:120px;background:var(--bn-sentiment-satisfaction)"></div><span class="sentiment-bar-count" data-token="caption" style="color:var(--bn-sentiment-satisfaction)">8</span></div>
+        <div class="sentiment-bar-group"><span class="sentiment-bar-label badge badge-delight" data-token="badge">delight</span><div class="sentiment-bar" style="width:75px;background:var(--bn-sentiment-delight)"></div><span class="sentiment-bar-count" data-token="caption" style="color:var(--bn-sentiment-delight)">5</span></div>
+        <div class="sentiment-divider"></div>
+        <div class="sentiment-bar-group"><span class="sentiment-bar-label badge badge-frustration" data-token="badge">frustration</span><div class="sentiment-bar" style="width:180px;background:var(--bn-sentiment-frustration)"></div><span class="sentiment-bar-count" data-token="caption" style="color:var(--bn-sentiment-frustration)">12</span></div>
+      </div>
+    </div>` },
+];
+
+// ── Build the grid ─────────────────────────────────────────────────────────
+const grid = document.getElementById("grid");
+const refCells = [], editCells = [];
+function buildGrid(){
+  const overlay = grid.querySelector(".bench-overlay");
+  for (const spec of SPECIMENS){
+    const label = document.createElement("div");
+    label.className = "bench-rowlabel";
+    label.innerHTML = `<span class="name">${spec.name}</span><span class="tier">${spec.tier}</span>`;
+    grid.appendChild(label);
+
+    const ref = document.createElement("div");
+    ref.className = "bench-cell bench-cell--ref"; ref.innerHTML = spec.html; refCells.push(ref);
+    const edit = document.createElement("div");
+    edit.className = "bench-cell bench-cell--edit"; edit.innerHTML = spec.html; editCells.push(edit);
+    grid.appendChild(ref); grid.appendChild(edit);
+  }
+  grid.appendChild(overlay); // keep overlay last so it spans the full grid box
+}
+
+// ── Config + token application ─────────────────────────────────────────────
+function applyConfig(cell, cfg){
+  if (cfg.platform) cell.setAttribute("data-platform", cfg.platform);
+  else cell.removeAttribute("data-platform");
+  cell.setAttribute("data-color-theme", cfg.color);
+  cell.setAttribute("data-theme", cfg.theme);
+  cell.style.colorScheme = cfg.theme; // makes light-dark() resolve per cell
+}
+function applyTokens(cell, vals){
+  for (const s of STOPS){
+    const v = vals[s];
+    cell.style.setProperty(`--bn-text-${s}`, (v.px/16)+"rem");
+    cell.style.setProperty(`--bn-text-${s}-lh`, String(v.lh));
+    cell.style.setProperty(`--bn-track-${s}`, v.tr ? v.tr+"em" : "0");
+  }
+}
+function refreshRef(){ refCells.forEach(c => applyConfig(c, refCfg)); }
+function refreshEdit(){
+  const showingBaseline = !(showingEdited && !peeking);
+  const vals = showingBaseline ? editBaseline : editValues;
+  editCells.forEach(c => { applyConfig(c, editCfg); applyTokens(c, vals); });
+  const pill = document.getElementById("state-pill");
+  pill.textContent = showingBaseline ? "baseline" : "edited";
+  pill.className = "bench-state " + (showingBaseline ? "baseline" : "edited");
+  document.body.classList.toggle("is-baseline", showingBaseline);
+}
+
+// ── Before/after flick, scroll-anchored to the component under focus ───────
+function withAnchor(fn){
+  const mid = window.innerHeight * 0.4;
+  const anchor = editCells.find(r => r.getBoundingClientRect().bottom > mid) || editCells[0];
+  const before = anchor ? anchor.getBoundingClientRect().top : 0;
+  fn();
+  if (anchor){ const after = anchor.getBoundingClientRect().top; window.scrollBy(0, after - before); }
+}
+
+// ── Token editor (size + line-height; tracking intentionally omitted) ──────
+const editorGrid = document.getElementById("editor-grid");
+let pendingSnapshot = null; // captured on focus, pushed on first edit → one undo step per field session
+function buildEditor(){
+  editorGrid.innerHTML = STOPS.map(s => `
+    <div class="bench-tok" data-stop="${s}">
+      <div class="bench-tok-name"><span>${s}</span><span class="delta" data-delta></span></div>
+      <div class="bench-tok-row">
+        <label>size px<input type="number" step="0.5" min="1" data-field="px"></label>
+        <label>line-h<input type="number" step="0.01" min="0.5" data-field="lh"></label>
+      </div>
+    </div>`).join("");
+  syncEditorInputs();
+  editorGrid.querySelectorAll("input").forEach(inp => {
+    inp.addEventListener("focus", () => { pendingSnapshot = clone(editValues); });
+    inp.addEventListener("input", () => {
+      const stop = inp.closest("[data-stop]").dataset.stop;
+      const field = inp.dataset.field;
+      const val = parseFloat(inp.value);
+      if (Number.isNaN(val) || val <= 0) return;          // empty / 0 / negative → no-op (never collapse a stop)
+      if (field === "px" && val < 1) return;
+      if (pendingSnapshot){ undoStack.push(pendingSnapshot); pendingSnapshot = null; } // one snapshot per focus session
+      editValues[stop][field] = val;
+      showingEdited = true;
+      refreshEdit(); syncDeltas();
+    });
+  });
+}
+function syncEditorInputs(){
+  editorGrid.querySelectorAll("[data-stop]").forEach(box => {
+    const s = box.dataset.stop;
+    box.querySelector('[data-field="px"]').value = editValues[s].px;
+    box.querySelector('[data-field="lh"]').value = editValues[s].lh;
+  });
+  syncDeltas();
+}
+function syncDeltas(){
+  editorGrid.querySelectorAll("[data-stop]").forEach(box => {
+    const s = box.dataset.stop, d = editValues[s].px - editBaseline[s].px;
+    box.querySelector("[data-delta]").textContent = d ? (d>0?"+":"")+(+d.toFixed(2))+"px" : "";
+  });
+}
+
+// ── Undo / Reset ────────────────────────────────────────────────────────────
+function pushUndo(){ undoStack.push(clone(editValues)); if (undoStack.length>200) undoStack.shift(); }
+function undo(){
+  pendingSnapshot = null;
+  if (!undoStack.length) return;
+  editValues = undoStack.pop();
+  refreshEdit(); syncEditorInputs();
+}
+function resetEdits(){
+  pushUndo();
+  editValues = clone(editBaseline);
+  showingEdited = true;
+  refreshEdit(); syncEditorInputs();
+}
+
+// ── Reseed when the editing column's platform changes ──────────────────────
+function reseedEdit(){
+  editBaseline = baselineFor(editCfg.platform);
+  editValues = clone(editBaseline);
+  undoStack.length = 0; pendingSnapshot = null;
+  showingEdited = true;
+  refreshEdit(); syncEditorInputs();
+}
+
+// ── Export (paste-ready token block + JSON), matching tokens-desktop.css ───
+function fmtRem(px){ const r = px/16; return (Number.isInteger(r) ? r : +r.toFixed(4)) + "rem"; }
+function buildExport(){
+  const selector = editCfg.platform ? '[data-platform="desktop"]' : ':root';
+  let css = `${selector} {\n`;
+  for (const s of STOPS){
+    const v = editValues[s];
+    css += `    --bn-text-${s}:`.padEnd(28) + `${fmtRem(v.px)};`.padEnd(12) + `/* ${(+v.px.toFixed(2))}px */\n`;
+    css += `    --bn-text-${s}-lh:`.padEnd(28) + `${(+v.lh.toFixed(3))};\n`;
+    css += `    --bn-track-${s}:`.padEnd(28) + `${v.tr ? (+v.tr.toFixed(3))+"em" : "0"};\n`;
+  }
+  css += `}\n`;
+  const json = JSON.stringify({ source:"typography-stress-bench", platform: editCfg.platform || "web",
+    tokens: STOPS.map(s => ({ token:s, px:+editValues[s].px.toFixed(2), lineHeight:+editValues[s].lh.toFixed(3), trackingEm:+editValues[s].tr.toFixed(3) })) }, null, 2);
+  return css + "\n/* --- JSON record --- */\n" + json;
+}
+
+// ── Dependency highlight (guards the no-match false-negative) ──────────────
+const hlCount = document.getElementById("hl-count");
+function highlight(tok){
+  document.querySelectorAll(".hl-match").forEach(e => e.classList.remove("hl-match"));
+  if (!tok){ document.body.classList.remove("hl-on"); hlCount.textContent = ""; return; }
+  const hits = document.querySelectorAll(`.bench-cell [data-token~="${tok}"]`);
+  if (!hits.length){
+    document.body.classList.remove("hl-on");
+    hlCount.textContent = `(no “${tok}” on screen)`;
+    return;
+  }
+  document.body.classList.add("hl-on");
+  hits.forEach(e => e.classList.add("hl-match"));
+  hlCount.textContent = `(${hits.length})`;
+}
+
+// ── Wire controls ──────────────────────────────────────────────────────────
+const modalBg = document.getElementById("modal-bg");
+const closeModal = () => modalBg.classList.remove("is-open");
+
+document.getElementById("flip").addEventListener("click", () => withAnchor(() => { showingEdited = !showingEdited; refreshEdit(); }));
+document.getElementById("toggle-grid").addEventListener("click", e => {
+  document.body.classList.toggle("show-grid"); e.currentTarget.classList.toggle("is-on");
+});
+document.getElementById("toggle-editor").addEventListener("click", e => {
+  withAnchor(() => { document.getElementById("editor").classList.toggle("is-open"); });
+  e.currentTarget.classList.toggle("is-on");
+});
+document.getElementById("undo").addEventListener("click", undo);
+document.getElementById("reset").addEventListener("click", resetEdits);
+document.getElementById("hl-token").addEventListener("change", e => highlight(e.target.value));
+document.getElementById("export").addEventListener("click", () => {
+  const txt = buildExport();
+  const ta = document.getElementById("export-text");
+  ta.value = txt;
+  modalBg.classList.add("is-open");
+  ta.focus(); ta.select(); // manual-copy fallback always armed
+  const note = document.getElementById("copy-note");
+  const fallback = 'Paste to Claude: "make tokens-desktop.css like this" (or "save as version 3").';
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt)
+      .then(() => { note.textContent = "Copied to clipboard. " + fallback; })
+      .catch(() => { note.textContent = "Couldn't auto-copy — text is selected, press ⌘C. " + fallback; });
+  } else {
+    note.textContent = "Auto-copy unavailable (open via `serve`, or press ⌘C — text is selected). " + fallback;
+  }
+});
+document.getElementById("modal-close").addEventListener("click", closeModal);
+modalBg.addEventListener("click", e => { if (e.target.id === "modal-bg") closeModal(); });
+
+document.querySelectorAll("select[data-col]").forEach(sel => {
+  sel.addEventListener("change", () => {
+    const isEdit = sel.dataset.col === "edit";
+    const axis = sel.dataset.axis;
+    if (isEdit && axis === "platform"){
+      const dirty = JSON.stringify(editValues) !== JSON.stringify(editBaseline);
+      if (dirty && !window.confirm("Switching the editing column's platform discards your edits to it. Continue?")){
+        sel.value = editCfg.platform; // restore the dropdown, keep edits
+        return;
+      }
+      editCfg.platform = sel.value;
+      reseedEdit();
+      return;
+    }
+    (isEdit ? editCfg : refCfg)[axis] = sel.value;
+    isEdit ? refreshEdit() : refreshRef();
+  });
+});
+
+// Keyboard: hold Space = peek the original (baseline); ⌘Z / Ctrl+Z = undo;
+// Escape closes the export modal.
+const inField = el => el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+window.addEventListener("keydown", e => {
+  if (e.key === "Escape"){ closeModal(); return; }
+  if (e.code === "Space" && !inField(e.target)){
+    e.preventDefault();
+    if (!peeking){ peeking = true; refreshEdit(); }
+  } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z" && !inField(e.target)){
+    e.preventDefault(); undo();
+  }
+});
+window.addEventListener("keyup", e => {
+  if (e.code === "Space" && peeking){ peeking = false; refreshEdit(); }
+});
+
+// ── Go ─────────────────────────────────────────────────────────────────────
+buildGrid();
+buildEditor();
+refreshRef();
+refreshEdit();
+</script>
+</body>
+</html>

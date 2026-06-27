@@ -6,6 +6,9 @@
     "light": "ライト",
     "dark": "ダーク"
   },
+  "typography": {
+    "legend": "\u30bf\u30a4\u30dd\u30b0\u30e9\u30d5\u30a3"
+  },
   "language": {
     "legend": "言語",
     "description": "インターフェイスの表示言語を切り替えます。レポート内容は翻訳されません。",

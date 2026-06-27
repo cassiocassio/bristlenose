@@ -183,6 +183,34 @@ struct ServeManagerEnvTests {
         #expect(bristlenoseKeys.isEmpty)
     }
 
+    /// The desktop presentation themes are activated through the shared factory:
+    /// `data-platform="desktop"` (rendered from BRISTLENOSE_PLATFORM by app.py)
+    /// gates the SF Pro type scale, and the colour is pinned to the default
+    /// palette so app.py doesn't default desktop → the deferred Edo palette.
+    /// Without the platform var the native type system ships dark.
+    @Test func childEnvironment_activates_desktop_presentation_themes() {
+        let mode = SidecarMode.devSidecar(path: URL(fileURLWithPath: "/tmp/fake-bristlenose"))
+        let env = BristlenoseShared.childEnvironment(for: mode, store: InMemoryKeychain())
+        #expect(env["BRISTLENOSE_PLATFORM"] == "desktop")
+        #expect(env["BRISTLENOSE_COLOR_THEME"] == "default")
+    }
+
+    /// Typography opt-out rides overlayPreferences: default "sf" injects nothing
+    /// (the server's implicit default is SF Pro), "inter" injects the var so
+    /// app.py emits data-typography="inter" and the desktop app shows Inter.
+    @Test func overlayPreferences_injects_typography_only_when_inter() {
+        withIsolatedDefaults { defaults in
+            var env: [String: String] = [:]
+            defaults.set("sf", forKey: "typography")
+            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+            #expect(env["BRISTLENOSE_TYPOGRAPHY"] == nil)
+
+            defaults.set("inter", forKey: "typography")
+            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+            #expect(env["BRISTLENOSE_TYPOGRAPHY"] == "inter")
+        }
+    }
+
     // MARK: - overlayPreferences provider+model coherence (Defect M invariant)
 
     /// Isolated UserDefaults suite for overlayPreferences tests — avoids

@@ -87,8 +87,14 @@ struct MenuCommands: Commands {
 /// launch). View struct per the `@ObservedObject`-in-Commands pattern.
 private struct DebugMenuContent: View {
     @ObservedObject var ollamaDownload: OllamaDownloadModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
+        Button("Type Parity Inspector…") { openWindow(id: "type-parity") }
+            .keyboardShortcut("t", modifiers: [.command, .control])
+
+        Divider()
+
         Section("Ollama setup pill") {
             Button("Cycle ▸ next state") { ollamaDownload.debugCycleNext() }
                 .keyboardShortcut("o", modifiers: [.command, .control])

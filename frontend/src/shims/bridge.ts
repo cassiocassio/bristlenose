@@ -39,7 +39,8 @@ export type BridgeMessage =
   | { type: "find-pasteboard-write"; text: string }
   | { type: "player-state"; hasPlayer: boolean; playing: boolean }
   | { type: "export-counts"; total: number; selected: number; starred: number }
-  | { type: "lens-subtitle"; tab: string; subtitle: string };
+  | { type: "lens-subtitle"; tab: string; subtitle: string }
+  | { type: "quotes-filter"; searchQuery: string; viewMode: string };
 
 // ---------------------------------------------------------------------------
 // Native message posting
@@ -103,6 +104,18 @@ export function postExportCounts(total: number, selected: number, starred: numbe
  */
 export function postLensSubtitle(tab: string, subtitle: string): void {
   postNativeMessage({ type: "lens-subtitle", tab, subtitle });
+}
+
+/**
+ * Push the Quotes-lens filter state to the native shell so the macOS toolbar's
+ * native search field + starred toggle (and the View-menu checkmarks) reflect
+ * the live store. The native field is the sole text input in embedded mode, so
+ * this is a one-way mirror for the few store changes the native side didn't
+ * originate (Cmd+E selection, All Quotes reset). Native echo-guards on value
+ * equality. No-ops outside WKWebView.
+ */
+export function postQuotesFilter(searchQuery: string, viewMode: string): void {
+  postNativeMessage({ type: "quotes-filter", searchQuery, viewMode });
 }
 
 // ---------------------------------------------------------------------------

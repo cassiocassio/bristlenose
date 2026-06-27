@@ -1,35 +1,30 @@
 /**
- * Toolbar — organism island composing search, tag filter, and view switcher.
+ * Toolbar — organism island composing search and the All / Starred view switcher.
  *
  * Connects to QuotesStore for shared filter state.
- * Manages mutual exclusion of dropdowns.
- * Reuses organisms/toolbar.css (.toolbar).
+ *
+ * Embedded (macOS) mode: renders nothing. Search and the starred filter are
+ * native toolbar controls (wired via the bridge); tag filtering is the tag
+ * sidebar. The tag-filter dropdown was removed entirely (v0.16) — superseded by
+ * the tag sidebar on every surface.
  *
  * CSV/XLSX export actions moved to ExportDropdown in NavBar (v0.15).
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { SearchBox } from "../components/SearchBox";
-import { TagFilterDropdown } from "../components/TagFilterDropdown";
 import { ViewSwitcher } from "../components/ViewSwitcher";
-import {
-  useQuotesStore,
-  setSearchQuery,
-  setViewMode,
-  setTagFilter,
-} from "../contexts/QuotesContext";
+import { useQuotesStore, setSearchQuery, setViewMode } from "../contexts/QuotesContext";
 import { filterQuotes } from "../utils/filter";
 import type { FilterState } from "../utils/filter";
+import { isEmbedded } from "../utils/embedded";
 
 // ── Component ─────────────────────────────────────────────────────────
-
-type ActiveDropdown = "none" | "tagFilter" | "viewSwitcher";
 
 export function Toolbar() {
   const { t } = useTranslation();
   const store = useQuotesStore();
-  const [activeDropdown, setActiveDropdown] = useState<ActiveDropdown>("none");
 
   // ── Derived state ─────────────────────────────────────────────────
 
@@ -45,36 +40,10 @@ export function Toolbar() {
     [store.searchQuery, store.viewMode, store.tagFilter, store.hidden, store.starred, store.tags],
   );
 
-  const visibleQuotes = useMemo(
-    () => filterQuotes(store.quotes, filterState),
+  const visibleCount = useMemo(
+    () => filterQuotes(store.quotes, filterState).length,
     [store.quotes, filterState],
   );
-
-  const visibleCount = visibleQuotes.length;
-
-  // Tag counts: how many quotes have each tag (from all quotes, not just visible)
-  const tagCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const q of store.quotes) {
-      if (store.hidden[q.dom_id]) continue;
-      const tags = store.tags[q.dom_id] ?? q.tags;
-      for (const t of tags) {
-        const lower = t.name.toLowerCase();
-        counts[lower] = (counts[lower] || 0) + 1;
-      }
-    }
-    return counts;
-  }, [store.quotes, store.tags, store.hidden]);
-
-  const noTagCount = useMemo(() => {
-    let count = 0;
-    for (const q of store.quotes) {
-      if (store.hidden[q.dom_id]) continue;
-      const tags = store.tags[q.dom_id] ?? q.tags;
-      if (tags.length === 0) count++;
-    }
-    return count;
-  }, [store.quotes, store.tags, store.hidden]);
 
   // View switcher label (matches vanilla: shows count when filtered)
   const viewLabel = useMemo(() => {
@@ -82,19 +51,13 @@ export function Toolbar() {
       return t("toolbar.matching", { count: visibleCount });
     }
     return undefined; // default label from ViewSwitcher
-  }, [store.searchQuery, visibleCount]);
-
-  // ── Dropdown mutual exclusion ─────────────────────────────────────
-
-  const handleTagFilterToggle = useCallback((open: boolean) => {
-    setActiveDropdown(open ? "tagFilter" : "none");
-  }, []);
-
-  const handleViewSwitcherToggle = useCallback((open: boolean) => {
-    setActiveDropdown(open ? "viewSwitcher" : "none");
-  }, []);
+  }, [store.searchQuery, visibleCount, t]);
 
   // ── Render ────────────────────────────────────────────────────────
+
+  // Embedded: search + starred live in the native toolbar, tags in the sidebar.
+  // Nothing left to render in-report.
+  if (isEmbedded()) return null;
 
   return (
     <div className="toolbar" data-testid="bn-toolbar">
@@ -103,20 +66,9 @@ export function Toolbar() {
         onChange={setSearchQuery}
         data-testid="bn-toolbar-search"
       />
-      <TagFilterDropdown
-        tagFilter={store.tagFilter}
-        onTagFilterChange={setTagFilter}
-        tagCounts={tagCounts}
-        noTagCount={noTagCount}
-        isOpen={activeDropdown === "tagFilter"}
-        onToggle={handleTagFilterToggle}
-        data-testid="bn-toolbar-tag-filter"
-      />
       <ViewSwitcher
         viewMode={store.viewMode}
         onViewModeChange={setViewMode}
-        isOpen={activeDropdown === "viewSwitcher"}
-        onToggle={handleViewSwitcherToggle}
         labelOverride={viewLabel}
         data-testid="bn-toolbar-view-switcher"
       />

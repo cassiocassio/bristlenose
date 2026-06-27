@@ -129,3 +129,56 @@ Steps 1–7 are prep-able locally (no SSH); 8–11 are the maintainer's. Deferre
 - ~~Clean URLs / redirects~~ — **non-issue pre-users**: go clean, change freely, add rewrites/redirects when convenient.
 - Search: omit vs Pagefind-later.
 - "manual"→"docs" terminology pass inside the frozen pages' prose — maintainer's call.
+
+## Cutover — refreshed plan (27 Jun 2026)
+
+Supersedes the sketch above where they conflict. Tonight's `bristlenose-website` restructure and the
+Miro-how-to merge changed the starting line and surfaced the serving architecture the original only
+gestured at.
+
+### Starting point (changed 26–27 Jun)
+
+- **The live repo is already on the assemble-then-ship model** v2 wants: `content/` ships,
+  `templates/`/`scripts/`/`notes/` don't, `deploy.sh` assembles `build/site/` and ships only that —
+  no exclude list. So the cutover's old "reconcile two rival build systems" step collapses to
+  "swap `render-*.py` for `build.py`."
+- **The Miro how-to is consolidated.** `bristlenose-website-v2/content/send-to-miro.md` is the
+  code-true source of truth (paste-token reality, Preview + link-clips options, two named frames
+  Sections/Themes, real error strings, the honest "spoken names travel" privacy note). The
+  public-repo `docs/how-to/miro-setup.md` is **superseded — retire at cutover** (no back-port; no
+  live users to justify maintaining a throwaway interim copy).
+
+### Architecture — one source → one renderer → two outputs
+
+The no-drift design the original only sketched ("one markdown source → website + sidecar"):
+
+- **Source of truth:** the Diátaxis markdown lives in the **public bristlenose repo** (e.g.
+  `docs/site/`) with `build.py` + the chrome assets. One home; researchers PR it like `manual.md`.
+  Chosen because the **app builds from this repo** — the only place it can bundle docs from — and the
+  marketing deploy already renders from it (`render-manual.py` reads `$BRISTLENOSE_PUBLIC_REPO`).
+- **One renderer:** `build.py` (→ `render-docs.py`), used by both outputs.
+- **Output 1 — public:** the marketing `deploy.sh` calls the renderer, assembles `build/site/docs/`,
+  ships → `bristlenose.app/docs/`.
+- **Output 2 — bundled/offline:** rendered docs shipped as **`bristlenose` package data** → `bristlenose
+  serve` serves `/docs/` for *every* install (pip · Homebrew · Snap · Mac app), version-matched, offline;
+  PyInstaller `datas` carries it into the `.app`; Help (`?`) opens local `/docs/`, else `bn.app/docs`.
+
+### Gating decisions (recommended — confirm to settle)
+
+1. **Generator = `build.py`**, retiring `render-manual.py`/`render-howtos.py`. _Rec: yes_ — reusing
+   `render-*.py` would mean rebuilding `build.py` inside it.
+2. **Source of truth in the public repo** (`docs/site/`). _Rec: yes_ — required for the app bundle.
+3. **`manual.html` → retire + `/manual.html → /docs/` redirect.** The 29 pages replace the single
+   manual. _Rec: retire._
+4. **Miro URL → redirect `/docs/how-to/miro-setup.html` → the v2 page** (`/docs/send-to-miro`), rather
+   than forcing `build.py` to emit the legacy path. _Rec: redirect_ — the shipped panel link must keep
+   resolving.
+
+### Steps once decisions are settled
+
+Assemble v2 into the live repo (content + `build.py` + assets; frozen index/support/privacy take the
+shared chrome, content verbatim) → re-wire `deploy.sh` to `build.py` → preserve URL contracts (Miro
+redirect, PHP, `/manual.html`) → **truth the remaining 28 pages against the code** (the Reference hard
+gate; `bristlenose-website-v2/NOTES-product-discrepancies.md` is the lead) → `git tag v1-final` → deploy
+(maintainer). The Miro page is the worked example of that page-truthing step — done; the other 28 are the
+bulk of the remaining content work.

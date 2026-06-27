@@ -13,6 +13,7 @@ import { RefreshButton } from "./RefreshButton";
 
 interface NavBarProps {
   onExportReport?: () => void;
+  onSendToMiro?: () => void;
   onSettings?: () => void;
   onHelp?: () => void;
 }
@@ -30,7 +31,7 @@ function tabClassName({ isActive }: { isActive: boolean }): string {
 }
 
 
-export function NavBar({ onExportReport, onSettings, onHelp }: NavBarProps) {
+export function NavBar({ onExportReport, onSendToMiro, onSettings, onHelp }: NavBarProps) {
   const { t } = useTranslation();
   return (
     <nav className="bn-global-nav">
@@ -46,8 +47,8 @@ export function NavBar({ onExportReport, onSettings, onHelp }: NavBarProps) {
       ))}
       <div className="bn-tab-spacer" />
       <RefreshButton iconOnly data-testid="bn-navbar-refresh" />
-      {onExportReport && (
-        <ExportDropdown onExportReport={onExportReport} />
+      {onExportReport && onSendToMiro && (
+        <ExportDropdown onExportReport={onExportReport} onSendToMiro={onSendToMiro} />
       )}
       <button
         className="bn-tab bn-tab-icon"

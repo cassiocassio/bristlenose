@@ -180,7 +180,12 @@ def extract_quotes_for_export(
         source_file = ""
         if speaker_info:
             participant_name = "" if anonymise else speaker_info[0]
-            source_file = os.path.basename(speaker_info[1]) if speaker_info[1] else ""
+            # Blank the source filename too when anonymising — a recording name
+            # like "jane-doe.mov" otherwise re-carries the name we just stripped.
+            if anonymise:
+                source_file = ""
+            else:
+                source_file = os.path.basename(speaker_info[1]) if speaker_info[1] else ""
 
         results.append(
             ExportableQuote(

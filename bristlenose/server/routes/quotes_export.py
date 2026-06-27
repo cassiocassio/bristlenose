@@ -186,10 +186,12 @@ async def export_quotes_xlsx(
             cell = ws.cell(row=1, column=col_idx, value=header)
             cell.font = bold
 
-        # Data rows
+        # Data rows. Apply csv_safe() for parity with the CSV writer — defends
+        # against formula injection (CWE-1236) if the .xlsx is reopened in a
+        # spreadsheet app that evaluates leading =/+/-/@ cells.
         for row_idx, q in enumerate(quotes, start=2):
             for col_idx, value in enumerate(_quote_to_row(q), start=1):
-                ws.cell(row=row_idx, column=col_idx, value=value)
+                ws.cell(row=row_idx, column=col_idx, value=csv_safe(value))
 
         # Freeze header row
         ws.freeze_panes = "A2"

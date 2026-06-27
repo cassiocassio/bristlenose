@@ -1,5 +1,7 @@
 # Design: Export Dropdown + Quote Slides
 
+**Status:** 🅿️ **Quote Slides (`.pptx`) parked (future idea).** The export-dropdown half of this doc shipped (CSV / spreadsheet / clips); the PowerPoint quote-slides format is **not implemented** — no route, no `python-pptx` dependency, and no entry in the SPA or macOS export menus. Kept here as a future idea. The canonical export list is Export Report · Copy Quotes · Save as Spreadsheet · Extract Clips.
+
 ## Context
 
 Two intertwined features:

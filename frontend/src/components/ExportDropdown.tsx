@@ -18,10 +18,11 @@ import { useFocus } from "../contexts/FocusContext";
 import { useQuotesStore } from "../contexts/QuotesContext";
 import { filterQuotes } from "../utils/filter";
 import type { FilterState } from "../utils/filter";
-import { authHeaders, startClipExtraction } from "../utils/api";
-import { addJob } from "../contexts/ActivityStore";
-import { toast } from "../utils/toast";
-import { announce } from "../utils/announce";
+import {
+  copyQuotesToClipboard,
+  saveQuotesSpreadsheet,
+  extractVideoClips,
+} from "../utils/exportActions";
 import { isExportMode } from "../utils/exportData";
 
 // ── Icon ──────────────────────────────────────────────────────────────────
@@ -56,12 +57,13 @@ function isQuotesTab(pathname: string): boolean {
 
 interface ExportDropdownProps {
   onExportReport: () => void;
+  onSendToMiro: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
 
-export function ExportDropdown({ onExportReport }: ExportDropdownProps) {
-  const { t, i18n: i18nInstance } = useTranslation();
+export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownProps) {
+  const { t } = useTranslation();
   const location = useLocation();
   const projectId = useProjectId();
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -105,124 +107,37 @@ export function ExportDropdown({ onExportReport }: ExportDropdownProps) {
 
   const quoteCount = exportIds.length;
 
-  // ── Build column headers from locale ──────────────────────────────────
-
-  const colHeaders = useMemo(() => {
-    const keys = [
-      "export.colQuote",
-      "export.colParticipantCode",
-      "export.colParticipantName",
-      "export.colSection",
-      "export.colTheme",
-      "export.colSentiment",
-      "export.colTags",
-      "export.colStarred",
-      "export.colTimecode",
-      "export.colSession",
-      "export.colSourceFile",
-    ];
-    return keys.map((k) => t(k)).join(",");
-  }, [t, i18nInstance.language]);
-
   // ── Handlers ──────────────────────────────────────────────────────────
+  // Behaviour lives in utils/exportActions so the macOS native menu (via
+  // AppLayout's bridge handlers) invokes the identical logic. Anonymise is
+  // false here — on the web it rides the Export Report modal checkbox.
 
   const handleCopyQuotes = useCallback(() => {
     setOpen(false);
-    if (quoteCount === 0) {
-      toast(t("export.noQuotesMatch"));
-      return;
-    }
-    const idsParam = exportIds.join(",");
-    const url = `/api/projects/${projectId}/export/quotes.csv?quote_ids=${encodeURIComponent(idsParam)}&col_headers=${encodeURIComponent(colHeaders)}`;
+    void copyQuotesToClipboard(store, exportIds, t);
+  }, [setOpen, store, exportIds, t]);
 
-    // ClipboardItem with a Promise<Blob> value reserves the clipboard write
-    // synchronously (preserving the user gesture) while the fetch resolves
-    // asynchronously.  The write() call MUST be in the synchronous call stack
-    // — never inside .then() — or Safari rejects with NotAllowedError.
-    const blobPromise = globalThis
-      .fetch(url, { headers: authHeaders() })
-      .then((resp) => {
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        return resp.text();
-      })
-      .then((text) => new Blob([text], { type: "text/plain" }));
-
-    let copyPromise: Promise<void>;
-    if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
-      // Synchronous write() call — Promise<Blob> resolves inside the browser
-      const item = new ClipboardItem({ "text/plain": blobPromise });
-      copyPromise = navigator.clipboard.write([item]);
-    } else {
-      // Fallback for environments without ClipboardItem (jsdom, old browsers)
-      copyPromise = blobPromise
-        .then((blob) => blob.text())
-        .then((text) => navigator.clipboard.writeText(text));
-    }
-
-    copyPromise
-      .then(() => {
-        const msg = t("export.quotesCopied", { count: quoteCount });
-        toast(msg);
-        announce(msg);
-      })
-      .catch((err) => {
-        console.error("[ExportDropdown] Copy failed:", err);
-        toast(t("export.exportFailed"));
-      });
-  }, [setOpen, quoteCount, exportIds, projectId, colHeaders, t]);
-
-  const handleSaveSpreadsheet = useCallback(async () => {
+  const handleSaveSpreadsheet = useCallback(() => {
     setOpen(false);
-    if (quoteCount === 0) {
-      toast(t("export.noQuotesMatch"));
-      return;
-    }
-    const idsParam = exportIds.join(",");
-    // Direct anchor navigation — auth cookie carries the bearer; server's
-    // Content-Disposition supplies the filename; native side (sandboxed
-    // WKWebView) routes via NSSavePanel, browsers via the native download UI.
-    const url = `/api/projects/${projectId}/export/quotes.xlsx?quote_ids=${encodeURIComponent(idsParam)}&col_headers=${encodeURIComponent(colHeaders)}`;
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }, [setOpen, quoteCount, exportIds, projectId, colHeaders, t]);
+    saveQuotesSpreadsheet(projectId, exportIds, t);
+  }, [setOpen, projectId, exportIds, t]);
 
   const handleExportReport = useCallback(() => {
     setOpen(false);
     onExportReport();
   }, [setOpen, onExportReport]);
 
-  const handleExtractClips = useCallback(async () => {
+  // Miro export — opens the multi-step modal (connect → configure → push),
+  // mirroring Export Report. The panel lives in AppLayout; the macOS native
+  // menu reaches it via the bridge's `sendToMiro` case.
+  const handleSendToMiro = useCallback(() => {
     setOpen(false);
-    try {
-      const result = await startClipExtraction();
-      if (result.total === 0) {
-        toast(t("export.clips.noClips"));
-        return;
-      }
-      addJob("clips", {
-        type: "clips",
-        frameworkId: "",
-        frameworkTitle: "",
-        total: result.total,
-      });
-      if (result.pii_warning) {
-        toast(t("export.clips.piiWarning"));
-      }
-      announce(t("export.clips.progress", { progress: 0, total: result.total }));
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "";
-      if (msg.includes("422")) {
-        toast(t("export.clips.ffmpegMissing"));
-      } else if (msg.includes("409")) {
-        toast(t("export.clips.inProgress"));
-      } else {
-        toast(t("export.clips.failed"));
-      }
-    }
+    onSendToMiro();
+  }, [setOpen, onSendToMiro]);
+
+  const handleExtractClips = useCallback(() => {
+    setOpen(false);
+    void extractVideoClips(t);
   }, [setOpen, t]);
 
   // ── Render ────────────────────────────────────────────────────────────
@@ -291,6 +206,15 @@ export function ExportDropdown({ onExportReport }: ExportDropdownProps) {
             onClick={handleExportReport}
           >
             {t("export.exportReport")}
+          </li>
+          <li role="separator" className="export-dropdown-separator" />
+          <li
+            role="menuitem"
+            tabIndex={-1}
+            className="export-dropdown-item"
+            onClick={handleSendToMiro}
+          >
+            {t("miro.menuLabel")}
           </li>
         </ul>
       )}

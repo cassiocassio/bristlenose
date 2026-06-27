@@ -38,6 +38,7 @@ export type BridgeMessage =
   | { type: "project-action"; action: string; data?: object }
   | { type: "find-pasteboard-write"; text: string }
   | { type: "player-state"; hasPlayer: boolean; playing: boolean }
+  | { type: "export-counts"; total: number; selected: number; starred: number }
   | { type: "lens-subtitle"; tab: string; subtitle: string };
 
 // ---------------------------------------------------------------------------
@@ -82,6 +83,15 @@ export function postFindPasteboardWrite(text: string): void {
 /** Notify native shell of player open/close and play/pause state changes. */
 export function postPlayerState(hasPlayer: boolean, playing: boolean): void {
   postNativeMessage({ type: "player-state", hasPlayer, playing });
+}
+
+/**
+  * Push live export scope counts to the native shell so the macOS export
+ * popover can label its "Copy Quotes" scope choices (All / Selected / Starred)
+ * with current totals. No-ops outside WKWebView.
+ */
+export function postExportCounts(total: number, selected: number, starred: number): void {
+  postNativeMessage({ type: "export-counts", total, selected, starred });
 }
 
 /**

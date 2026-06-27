@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connect Bristlenose to Miro — Setup</title>
+<style>
+  :root {
+    --ink: #1c1c1e;
+    --ink-soft: #55555a;
+    --line: #e4e4e7;
+    --bg: #fbfbfa;
+    --card: #ffffff;
+    --accent: #2f6f6a;        /* bristlenose teal */
+    --accent-soft: #e7f1f0;
+    --warn-bg: #fff6e6;
+    --warn-line: #f2d08a;
+    --pink: #fadadd;
+    --yellow: #fff9b1;
+    --code-bg: #f4f4f2;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.55;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 56px 24px 96px; }
+  header.page { margin-bottom: 8px; }
+  .kicker { text-transform: uppercase; letter-spacing: .08em; font-size: 12px; font-weight: 700; color: var(--accent); }
+  h1 { font-size: 32px; line-height: 1.15; margin: 8px 0 12px; }
+  h2 { font-size: 21px; margin: 44px 0 12px; padding-top: 8px; }
+  h3 { font-size: 16px; margin: 24px 0 6px; }
+  p { margin: 10px 0; color: var(--ink-soft); }
+  p.lead { font-size: 18px; color: var(--ink); }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent-soft); }
+  a:hover { border-bottom-color: var(--accent); }
+  code { background: var(--code-bg); padding: 2px 6px; border-radius: 6px; font-size: 13px;
+         font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; }
+  pre { background: var(--code-bg); padding: 14px 16px; border-radius: 10px; overflow-x: auto;
+        font-size: 13px; font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+          padding: 20px 22px; margin: 18px 0; }
+  .callout { border-radius: var(--radius); padding: 18px 20px; margin: 22px 0; border: 1px solid var(--warn-line);
+             background: var(--warn-bg); }
+  .callout strong { color: var(--ink); }
+  .callout.privacy { background: var(--accent-soft); border-color: #bcd9d6; }
+  .req { display: grid; grid-template-columns: 28px 1fr; gap: 10px 12px; margin: 14px 0; }
+  .req .ic { font-size: 18px; line-height: 1.4; }
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li { counter-increment: step; position: relative; padding: 0 0 22px 52px; margin: 0; }
+  ol.steps > li::before {
+    content: counter(step); position: absolute; left: 0; top: -2px;
+    width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff;
+    font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 15px;
+  }
+  ol.steps > li::after {
+    content: ""; position: absolute; left: 16px; top: 34px; bottom: 4px; width: 2px; background: var(--line);
+  }
+  ol.steps > li:last-child::after { display: none; }
+  ol.steps h3 { margin-top: 2px; }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px;
+          vertical-align: middle; margin-left: 8px; }
+  .pill.now { background: var(--accent-soft); color: var(--accent); }
+  .pill.soon { background: #efe7f6; color: #6b4d97; }
+  .swatch { display: inline-block; width: 13px; height: 13px; border-radius: 3px; vertical-align: middle;
+            margin-right: 6px; border: 1px solid rgba(0,0,0,.12); }
+  .mini-board { display: flex; gap: 10px; margin: 8px 0 2px; }
+  .mini-col { flex: 1; }
+  .mini-head { background: var(--pink); border-radius: 6px; padding: 6px 8px; font-size: 11px; font-weight: 700; }
+  .mini-note { background: var(--yellow); border-radius: 6px; padding: 8px; font-size: 11px; margin-top: 6px; color: #444; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--ink); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  td { color: var(--ink-soft); }
+  .faint { color: #8a8a90; font-size: 13px; }
+  footer.page { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <div class="kicker">Export · Integrations</div>
+    <h1>Connect Bristlenose to Miro</h1>
+    <p class="lead">Push your analysed quotes straight onto a Miro board — a first-draft
+    research wall you can rearrange with your team, instead of building it sticky by sticky.</p>
+  </header>
+
+  <div class="card">
+    <strong>What you get.</strong>
+    <div class="mini-board" aria-hidden="true">
+      <div class="mini-col">
+        <div class="mini-head">Dashboard · section</div>
+        <div class="mini-note">P1 · 0:10 — "I found the dashboard confusing…"</div>
+        <div class="mini-note">P1 · 0:26 — "The navigation was hidden…"</div>
+      </div>
+      <div class="mini-col">
+        <div class="mini-head">Search · section</div>
+        <div class="mini-note">P1 · 0:46 — "The search was great actually…"</div>
+      </div>
+      <div class="mini-col">
+        <div class="mini-head">Onboarding · theme</div>
+        <div class="mini-note">P1 · 1:06 — "The onboarding could be better…"</div>
+      </div>
+    </div>
+    <p class="faint">One column per section, then one per theme — the same left-to-right order as
+    the report's Quotes page. <span class="swatch" style="background:var(--pink)"></span>Pink headers,
+    <span class="swatch" style="background:var(--yellow)"></span>yellow quote stickies, stacked in
+    session-then-time order. Bristlenose creates a <em>new</em> board every time and never touches your
+    existing ones.</p>
+  </div>
+
+  <!-- ───────────────────────── The honest bit ───────────────────────── -->
+  <div class="callout">
+    <strong>The one-time hurdle: getting a Miro “key”.</strong>
+    <p style="margin-bottom:0">Miro won't let an outside app write to your boards until you grant it
+    permission. There are two ways to do that. The <strong>Connect button</strong> is one click and
+    needs no setup — use it if you can. The <strong>manual key</strong> route involves creating a small
+    Miro “app” and copying a token; it's a five-minute developer detour, and it's the part most
+    researchers find fiddly. We've written it out step by step below so you don't have to guess.</p>
+  </div>
+
+  <!-- ───────────────────────── Requirements ───────────────────────── -->
+  <h2>Before you start</h2>
+  <div class="req"><div class="ic">①</div><div><strong>A Miro account.</strong> A free plan works for
+    trying this out. Note Miro's free plan limits how many editable boards you can keep
+    (<a href="https://help.miro.com/hc/en-us/articles/360017730373-Free-Plan" target="_blank" rel="noopener">Free plan limits</a>) —
+    a paid plan removes the cap.</div></div>
+  <div class="req"><div class="ic">②</div><div><strong>A team where you can create boards.</strong> If
+    you're on a company Miro, some organisations restrict who may install apps or create developer
+    tokens — you may need an admin's help.</div></div>
+  <div class="req"><div class="ic">③</div><div><strong>Two permissions (“scopes”):</strong>
+    <code>boards:read</code> and <code>boards:write</code>. The setup screen asks for these; that's all
+    Bristlenose needs.</div></div>
+  <div class="req"><div class="ic">④</div><div><strong>About a minute of comfort with copy-paste.</strong>
+    The manual route asks you to copy one token from Miro and paste it into Bristlenose. That's the whole
+    “key dance”.</div></div>
+
+  <!-- ───────────────────────── Path A: Connect ───────────────────────── -->
+  <h2>Option A — Connect button <span class="pill soon">recommended · coming in v1</span></h2>
+  <p>In the report toolbar, choose <strong>Export → Send to Miro → Connect to Miro</strong>. Your browser
+  opens Miro's permission screen, you click <strong>Allow</strong>, and you're returned to Bristlenose —
+  done. No app to create, no token to copy. Bristlenose stores the connection securely in your system
+  keychain and refreshes it automatically.</p>
+  <p class="faint">This uses Miro's standard OAuth 2.0 sign-in (with PKCE — no shared secret). If your org
+  blocks third-party app authorisation, fall back to Option B.
+  <a href="https://developers.miro.com/docs/getting-started-with-oauth" target="_blank" rel="noopener">How Miro OAuth works ↗</a></p>
+
+  <!-- ───────────────────────── Path B: manual token ───────────────────────── -->
+  <h2>Option B — Paste a token (the manual key dance) <span class="pill now">available now</span></h2>
+  <p>If you can't use the Connect button, create a personal Miro app once and paste its token. You only
+  do this a single time.</p>
+
+  <ol class="steps">
+    <li>
+      <h3>Open your Miro apps page</h3>
+      <p>Go to <a href="https://miro.com/app/settings/user-profile/apps" target="_blank" rel="noopener">miro.com/app/settings/user-profile/apps</a>
+      (Profile settings → <strong>Your apps</strong>), or the
+      <a href="https://developers.miro.com/" target="_blank" rel="noopener">Miro Developer dashboard</a>.</p>
+    </li>
+    <li>
+      <h3>Create a new app</h3>
+      <p>Click <strong>Create new app</strong>. Give it a name like <em>“Bristlenose export”</em> and
+      associate it with the team whose boards you'll write to.
+      <a href="https://developers.miro.com/docs/rest-api-build-your-first-hello-world-app" target="_blank" rel="noopener">Miro: build your first app ↗</a></p>
+    </li>
+    <li>
+      <h3>Tick the two permissions</h3>
+      <p>In the app's <strong>Permissions</strong>, enable <code>boards:read</code> and
+      <code>boards:write</code>. Leave everything else off — Bristlenose needs nothing more.</p>
+    </li>
+    <li>
+      <h3>Install the app and copy the token</h3>
+      <p>Click <strong>Install app and get OAuth token</strong>, choose your team, and confirm. Miro shows
+      you an <strong>access token</strong> — a long string. Copy it.
+      <a href="https://developers.miro.com/docs/getting-started-with-oauth" target="_blank" rel="noopener">Miro: access tokens ↗</a></p>
+      <p class="faint">Treat this token like a password — it can read and write your boards. Don't paste it
+      into chats or commit it to a repo.</p>
+    </li>
+    <li>
+      <h3>Paste it into Bristlenose</h3>
+      <p>Either paste it into <strong>Export → Send to Miro → Paste token</strong> in the report, or from
+      a terminal:</p>
+      <pre>bristlenose configure miro</pre>
+      <p>Bristlenose validates the token immediately (a harmless read of one board) and stores it in your
+      system keychain. If it's wrong or missing a scope, you'll be told exactly which.</p>
+    </li>
+  </ol>
+
+  <!-- ───────────────────────── Privacy ───────────────────────── -->
+  <div class="callout privacy">
+    <strong>Where your data goes.</strong>
+    <p style="margin-bottom:0">Bristlenose runs entirely on your machine — but sending a board to Miro
+    <em>uploads the selected quotes to Miro's servers</em>, where your team can see them. Miro becomes a
+    data sub-processor for that content. Bristlenose shows you exactly how many quotes will be sent and
+    asks you to confirm before anything leaves your laptop. Hidden quotes are never included. See
+    <code>SECURITY.md</code> for the sub-processor note.</p>
+  </div>
+
+  <!-- ───────────────────────── Troubleshooting ───────────────────────── -->
+  <h2>If something goes wrong</h2>
+  <table>
+    <thead><tr><th>You see</th><th>What it means</th></tr></thead>
+    <tbody>
+      <tr><td><em>Invalid or expired token</em></td><td>The token was mistyped, or it expired. Create a
+        fresh one (Option B) or reconnect (Option A).</td></tr>
+      <tr><td><em>Token lacks required scopes</em></td><td>The app is missing <code>boards:write</code>.
+        Re-open the app's Permissions, enable it, reinstall, and copy the new token.</td></tr>
+      <tr><td><em>Only 3 boards editable</em></td><td>A free <em>developer</em> team keeps just the three
+        most recent boards editable. Use a paid team, or delete old test boards.
+        <a href="https://help.miro.com/hc/en-us/articles/360017730373-Free-Plan" target="_blank" rel="noopener">Free plan limits ↗</a></td></tr>
+      <tr><td><em>Export paused / retrying</em></td><td>Large boards can hit Miro's rate limit; Bristlenose
+        backs off and resumes automatically.
+        <a href="https://developers.miro.com/reference/rate-limiting" target="_blank" rel="noopener">Miro rate limits ↗</a></td></tr>
+    </tbody>
+  </table>
+
+  <footer class="page">
+    <p class="faint">Miro is a trademark of Miro (RealtimeBoard, Inc.). Bristlenose is not affiliated with
+    Miro. Reference docs:
+    <a href="https://developers.miro.com/docs/getting-started-with-oauth" target="_blank" rel="noopener">OAuth setup</a> ·
+    <a href="https://developers.miro.com/docs/working-with-sticky-notes-and-tags-with-the-rest-api" target="_blank" rel="noopener">Sticky notes API</a> ·
+    <a href="https://developers.miro.com/reference/rate-limiting" target="_blank" rel="noopener">Rate limits</a> ·
+    <a href="https://help.miro.com/hc/en-us/articles/360017730373-Free-Plan" target="_blank" rel="noopener">Free plan</a></p>
+  </footer>
+
+</div>
+</body>
+</html>

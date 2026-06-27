@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bristlenose — Dev Run Inspector (mockup)</title>
+<!--
+  ROUGH MOCKUP — non-functional. Discussion artifact for the debug-menu /
+  instrumentation work (docs/design-debug-menu.md, items #9–#11).
+  Purpose: try infoviz layers on top of data the pipeline already captures
+  (pipeline-events.jsonl, llm-calls.jsonl, timing.py Welford stats).
+  All numbers are plausible-fiction for a single FOSSDA-style run.
+-->
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1c2029; --border:#272d3a;
+    --ink:#d8dde6; --muted:#828c9c; --faint:#5a6373;
+    --ran:#4c8dff; --llm:#b07cff; --cached:#4b5363; --skip:#363d4c;
+    --fail:#ff5d5d; --good:#46c98b; --warn:#ffb454; --cache:#2bb6c4;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Inter",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13px;line-height:1.45}
+  a{color:var(--ran);text-decoration:none}
+  code,.mono{font-family:var(--mono)}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 22px 60px}
+
+  /* provenance header */
+  header.prov{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;
+    background:linear-gradient(180deg,#1a1e27,#14171f);border:1px solid var(--border);
+    border-radius:10px;padding:14px 18px;margin-bottom:14px}
+  header.prov h1{font-size:14px;margin:0 18px 0 0;font-weight:600;letter-spacing:.2px}
+  header.prov .tag{display:inline-block;background:#222838;border:1px solid var(--border);
+    border-radius:6px;padding:1px 7px;font-family:var(--mono);font-size:11px;color:var(--ink)}
+  .kv{display:flex;flex-direction:column;gap:1px}
+  .kv .k{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--faint)}
+  .kv .v{font-family:var(--mono);font-size:12px}
+  .pill{padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600}
+  .pill.ok{background:rgba(70,201,139,.16);color:var(--good)}
+
+  /* tabs */
+  nav.tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--border)}
+  nav.tabs button{appearance:none;background:none;border:0;color:var(--muted);
+    font:inherit;font-weight:600;padding:9px 14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  nav.tabs button:hover{color:var(--ink)}
+  nav.tabs button.active{color:var(--ink);border-bottom-color:var(--llm)}
+
+  .view{display:none}
+  .view.active{display:block}
+
+  /* layout */
+  .grid{display:grid;gap:14px}
+  .g-2{grid-template-columns:1fr 320px}
+  .g-3{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:920px){.g-2,.g-3{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .card h2{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:0 0 12px;font-weight:600}
+  .card h2 .sub{text-transform:none;letter-spacing:0;color:var(--faint);font-weight:400;margin-left:8px}
+
+  /* stat cards */
+  .stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px}
+  @media(max-width:920px){.stats{grid-template-columns:repeat(3,1fr)}}
+  .stat{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:11px 13px}
+  .stat .n{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.5px}
+  .stat .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+  .stat .d{font-size:11px;margin-top:4px;color:var(--faint)}
+
+  /* gantt */
+  .gantt-axis{position:relative;height:16px;margin:0 0 4px 150px;color:var(--faint);font-family:var(--mono);font-size:10px}
+  .gantt-axis span{position:absolute;transform:translateX(-50%)}
+  .grow{display:flex;align-items:center;height:24px}
+  .grow .lab{width:150px;flex:0 0 150px;font-size:11.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px}
+  .grow .lab .sid{color:var(--faint);font-family:var(--mono);font-size:10px;margin-right:5px}
+  .track{position:relative;flex:1;height:14px;background:repeating-linear-gradient(90deg,transparent,transparent 9.9%,#20252f 10%,#20252f 10%)}
+  .bar{position:absolute;top:0;height:14px;border-radius:3px;cursor:default}
+  .bar.ran{background:var(--ran)}
+  .bar.llm{background:linear-gradient(90deg,var(--llm),#8e5cff)}
+  .bar.cached{background:var(--cached);background-image:repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(255,255,255,.07) 3px,rgba(255,255,255,.07) 6px)}
+  .bar.skipped{background:var(--skip)}
+  .bar.failed{background:var(--fail)}
+  .bar .dur{position:absolute;left:calc(100% + 5px);top:-1px;font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--muted)}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+  /* donut */
+  .donut-wrap{display:flex;align-items:center;gap:16px}
+  .donut{width:118px;height:118px;border-radius:50%;flex:0 0 118px;position:relative}
+  .donut::after{content:"";position:absolute;inset:21px;background:var(--panel);border-radius:50%}
+  .donut .ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1}
+  .donut .ctr b{font-family:var(--mono);font-size:17px}
+  .donut .ctr span{font-size:10px;color:var(--muted)}
+  .dleg{font-size:11px;display:flex;flex-direction:column;gap:5px}
+  .dleg div{display:flex;align-items:center;gap:6px}
+  .dleg i{width:9px;height:9px;border-radius:2px}
+  .dleg .amt{margin-left:auto;font-family:var(--mono);color:var(--muted)}
+
+  /* event stream */
+  .ev{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid #1f2530;font-family:var(--mono);font-size:11.5px}
+  .ev:last-child{border-bottom:0}
+  .ev .t{color:var(--faint);flex:0 0 78px}
+  .ev .g{flex:0 0 16px;text-align:center}
+  .ev .m{color:var(--ink)}
+  .ev .m em{color:var(--muted);font-style:normal}
+  .g-ok{color:var(--good)} .g-info{color:var(--ran)} .g-warn{color:var(--warn)} .g-run{color:var(--llm)}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:11.5px}
+  th{text-align:left;color:var(--faint);font-weight:600;text-transform:uppercase;letter-spacing:.5px;font-size:10px;padding:6px 8px;border-bottom:1px solid var(--border)}
+  td{padding:6px 8px;border-bottom:1px solid #1d222c;font-family:var(--mono);font-size:11px}
+  tr:hover td{background:#1b202a}
+  td.num{text-align:right}
+  .chip{font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:5px;background:#222838;border:1px solid var(--border)}
+  .chip.s09{color:#c8a8ff} .chip.s10{color:#9ec1ff} .chip.s11{color:#7fe0ea} .chip.s12{color:#ffd08a}
+  .retry{color:var(--warn)} .miss{color:var(--faint)} .cache-hit{color:var(--cache)}
+
+  /* svg viz holders */
+  .viz{width:100%;overflow:visible}
+  .axislbl{fill:var(--faint);font-family:var(--mono);font-size:9px}
+  .stagelbl{fill:var(--ink);font-size:10.5px}
+  .gridline{stroke:#222834;stroke-width:1}
+  .dot-r{fill:none;stroke:var(--warn);stroke-width:1.5}
+
+  /* infoviz notes */
+  .notes{margin-top:14px;background:#15110a;border:1px solid #3a2f17;border-radius:10px;padding:12px 15px}
+  .notes h3{margin:0 0 7px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--warn)}
+  .notes ul{margin:0;padding-left:18px;color:#d9cbb0}
+  .notes li{margin:3px 0}
+  .notes b{color:#ffe2b0}
+  .banner{font-size:11px;color:var(--faint);margin-bottom:12px}
+  .banner b{color:var(--warn)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="banner"><b>ROUGH MOCKUP</b> — non-functional. Infoviz spike for the <code>/api/dev/run</code> inspector (debug-menu items #9–#11). Data is plausible-fiction for one run. Amber boxes = candidate infoviz layers to discuss.</div>
+
+  <header class="prov">
+    <h1>Run Inspector</h1>
+    <div class="kv"><span class="k">project</span><span class="v">FOSSDA · oral-history</span></div>
+    <div class="kv"><span class="k">version</span><span class="v">0.15.16 <span class="tag">e93e079 @06-27T14:22Z</span></span></div>
+    <div class="kv"><span class="k">sidecar</span><span class="v">bundled</span></div>
+    <div class="kv"><span class="k">provider</span><span class="v">Claude · opus-4-8</span></div>
+    <div class="kv"><span class="k">hardware</span><span class="v">M3 Max · 64 GB</span></div>
+    <div class="kv"><span class="k">run_id</span><span class="v">r-7f3a…b1</span></div>
+    <div class="kv"><span class="k">db</span><span class="v">…/.bristlenose/bristlenose.db</span></div>
+    <div class="kv"><span class="k">status</span><span class="v"><span class="pill ok">completed · 4m 12s</span></span></div>
+  </header>
+
+  <nav class="tabs">
+    <button data-v="run" class="active">Run overview</button>
+    <button data-v="llm">LLM calls</button>
+    <button data-v="timing">Timing &amp; forecast</button>
+  </nav>
+
+  <!-- ============ RUN OVERVIEW ============ -->
+  <section class="view active" id="v-run">
+    <div class="grid g-2">
+      <div class="card">
+        <h2>Pipeline <span class="sub">13 stages · wall-clock gantt · ⌫ cached, ▦ LLM</span></h2>
+        <div class="gantt-axis" id="ganttAxis"></div>
+        <div id="ganttRows"></div>
+        <div class="legend">
+          <span><i style="background:var(--ran)"></i>ran (local)</span>
+          <span><i style="background:var(--llm)"></i>ran (LLM)</span>
+          <span><i style="background:var(--cached)"></i>cached</span>
+          <span><i style="background:var(--skip)"></i>skipped</span>
+          <span><i style="background:var(--fail)"></i>failed</span>
+        </div>
+      </div>
+
+      <div class="grid" style="gap:14px">
+        <div class="card">
+          <h2>Cost by stage</h2>
+          <div class="donut-wrap">
+            <div class="donut" id="costDonut"><div class="ctr"><b>$0.184</b><span>16 calls</span></div></div>
+            <div class="dleg" id="costLegend"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Tokens</h2>
+          <div id="tokenBar"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>Event stream <span class="sub">pipeline-events.jsonl · last 9</span></h2>
+      <div id="eventStream"></div>
+    </div>
+
+    <div class="notes">
+      <h3>Infoviz layers to consider — overview</h3>
+      <ul>
+        <li><b>Critical-path overlay:</b> highlight the stage chain that actually set wall-clock (transcribe → quote-extraction), grey the rest. Answers "what do I optimise?"</li>
+        <li><b>Cost ↔ time tension:</b> dual-encode each gantt bar — width = seconds, saturation/height = $ — so the cheap-but-slow (whisper) vs fast-but-pricey (LLM) split is visible in one glance.</li>
+        <li><b>Cache provenance:</b> on hover, a cached bar shows which prior run it was reused from (run_id + age) — turns "why instant?" into a fact.</li>
+        <li><b>This-run vs typical:</b> ghost bar behind each stage = its rolling median duration, so an anomaly stage pops without leaving the gantt.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ LLM CALLS ============ -->
+  <section class="view" id="v-llm">
+    <div class="stats" id="llmStats"></div>
+
+    <div class="grid g-2">
+      <div class="card">
+        <h2>Latency × tokens <span class="sub">each call · y = latency · ◯ = retried · colour = stage</span></h2>
+        <div id="latencyPlot"></div>
+      </div>
+      <div class="card">
+        <h2>Cache hit ratio</h2>
+        <div class="donut-wrap">
+          <div class="donut" id="cacheDonut"><div class="ctr"><b>38%</b><span>cached in</span></div></div>
+          <div class="dleg" id="cacheLegend"></div>
+        </div>
+        <p style="color:var(--muted);font-size:11px;margin:12px 0 0">Cached input tokens are billed ~10× cheaper. The ratio is the single biggest cost lever on re-runs.</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>Cost by stage <span class="sub">stacked: input · output · cache</span></h2>
+      <div id="stageCostBars"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>Calls <span class="sub">llm-calls.jsonl · 16 rows</span></h2>
+      <div style="overflow:auto">
+        <table id="callsTable">
+          <thead><tr>
+            <th>time</th><th>stage</th><th>model</th>
+            <th class="num">in</th><th class="num">out</th><th class="num">cache</th>
+            <th class="num">latency</th><th>retry</th><th>finish</th><th class="num">cost</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h3>Infoviz layers to consider — LLM calls</h3>
+      <ul>
+        <li><b>Retry storms in time:</b> the latency plot already rings retries — add a faint vertical band where ≥2 retries cluster (the 429-burst signature). Greppable becomes glanceable.</li>
+        <li><b>Token waterfall per stage:</b> cumulative in/out/cache so you see a runaway prompt (the quote-extraction fan-out) vs a tight one.</li>
+        <li><b>Finish-reason strip:</b> a thin colour bar per call (stop / length / tool) — a wall of "length" is the truncation-then-split path firing, worth surfacing.</li>
+        <li><b>$/insight, not $/call:</b> divide stage cost by quotes/themes produced → "$0.004 per accepted quote." The number a researcher actually feels.</li>
+        <li><b>Provider A/B ghost:</b> overlay what the same run <i>would</i> have cost on Sonnet / gpt-4o from the live pricing table — decision support, not just telemetry.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ TIMING ============ -->
+  <section class="view" id="v-timing">
+    <div class="grid g-2">
+      <div class="card">
+        <h2>Estimate vs actual <span class="sub">Welford μ ± σ over 14 runs · ● estimate ▎ actual</span></h2>
+        <div id="dumbbell"></div>
+      </div>
+      <div class="card">
+        <h2>Forecast error by stage <span class="sub">(actual − μ) / σ</span></h2>
+        <div id="errorBars"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>Estimate convergence <span class="sub">|error| shrinking as Welford learns this machine — quote extraction</span></h2>
+      <div id="convergence"></div>
+    </div>
+
+    <div class="notes">
+      <h3>Infoviz layers to consider — timing</h3>
+      <ul>
+        <li><b>σ as a trust signal:</b> wide band = "we can't predict this stage yet." Drives whether the progress ETA shows a number or a spinner — a direct product hook into the determinate ring.</li>
+        <li><b>Per-hardware facets:</b> small-multiple the dumbbell across M3 Max / Intel / CI-x86 — the model is keyed on hardware, so the spread is the story.</li>
+        <li><b>Anomaly flag:</b> mark any stage where this run is >2σ off; link straight to that stage's log slice + LLM calls.</li>
+        <li><b>Cold vs warm:</b> separate first-run (model load, no cache) from steady-state so the convergence curve isn't muddied by the cold start.</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ---------- data (plausible-fiction, internally consistent) ---------- */
+const stages=[
+ {id:'s01',name:'Ingest',start:0,dur:0.4,status:'ran'},
+ {id:'s02',name:'Extract audio',start:0.4,dur:6.2,status:'ran'},
+ {id:'s03',name:'Parse subtitles',start:6.6,dur:0.1,status:'skipped'},
+ {id:'s04',name:'Parse docx',start:6.7,dur:0.1,status:'skipped'},
+ {id:'s05',name:'Transcribe',start:6.7,dur:142.0,status:'ran',note:'whisper'},
+ {id:'s06',name:'Identify speakers',start:148.7,dur:3.1,status:'ran'},
+ {id:'s07',name:'Merge transcript',start:151.8,dur:0.6,status:'ran'},
+ {id:'s08',name:'PII removal',start:152.4,dur:4.8,status:'cached'},
+ {id:'s09',name:'Topic segmentation',start:157.2,dur:18.3,status:'llm'},
+ {id:'s10',name:'Quote extraction',start:175.5,dur:47.6,status:'llm'},
+ {id:'s11',name:'Quote clustering',start:223.1,dur:12.4,status:'llm'},
+ {id:'s12',name:'Thematic grouping',start:235.5,dur:9.2,status:'llm'},
+ {id:'s13',name:'Render',start:244.7,dur:7.1,status:'ran'},
+];
+// per-call: stage, model, tin, tout, tcache, ms, retries, finish (cost computed)
+const calls=[
+ {ts:'14:22:39',st:'s09',m:'opus-4-8',tin:8120,tout:1240,tc:0,ms:4310,r:0,f:'stop'},
+ {ts:'14:22:44',st:'s09',m:'opus-4-8',tin:7980,tout:1190,tc:6400,ms:3980,r:0,f:'stop'},
+ {ts:'14:22:48',st:'s09',m:'opus-4-8',tin:8050,tout:1330,tc:6400,ms:4620,r:1,f:'stop'},
+ {ts:'14:22:53',st:'s09',m:'opus-4-8',tin:7610,tout:980,tc:6400,ms:3540,r:0,f:'stop'},
+ {ts:'14:22:58',st:'s10',m:'opus-4-8',tin:11200,tout:2980,tc:0,ms:7820,r:0,f:'stop'},
+ {ts:'14:23:06',st:'s10',m:'opus-4-8',tin:10940,tout:3210,tc:9600,ms:8110,r:0,f:'length'},
+ {ts:'14:23:15',st:'s10',m:'opus-4-8',tin:6300,tout:2740,tc:9600,ms:5990,r:0,f:'stop'},
+ {ts:'14:23:21',st:'s10',m:'opus-4-8',tin:11050,tout:3040,tc:9600,ms:9240,r:2,f:'stop'},
+ {ts:'14:23:31',st:'s10',m:'opus-4-8',tin:10800,tout:2890,tc:9600,ms:7650,r:0,f:'stop'},
+ {ts:'14:23:39',st:'s10',m:'opus-4-8',tin:9870,tout:2610,tc:9600,ms:6980,r:0,f:'stop'},
+ {ts:'14:23:46',st:'s10',m:'opus-4-8',tin:8240,tout:2180,tc:9600,ms:5510,r:0,f:'stop'},
+ {ts:'14:23:52',st:'s11',m:'sonnet-4-6',tin:5400,tout:1620,tc:0,ms:2980,r:0,f:'stop'},
+ {ts:'14:23:55',st:'s11',m:'sonnet-4-6',tin:5210,tout:1490,tc:4200,ms:2740,r:0,f:'stop'},
+ {ts:'14:23:58',st:'s11',m:'sonnet-4-6',tin:5320,tout:1550,tc:4200,ms:2860,r:1,f:'stop'},
+ {ts:'14:24:02',st:'s12',m:'opus-4-8',tin:6840,tout:1980,tc:0,ms:4980,r:0,f:'stop'},
+ {ts:'14:24:08',st:'s12',m:'opus-4-8',tin:6610,tout:1870,tc:5400,ms:4210,r:0,f:'stop'},
+];
+const PRICE={'opus-4-8':{in:15,out:75,cache:1.5},'sonnet-4-6':{in:3,out:15,cache:.3}};
+const cost=c=>{const p=PRICE[c.m];return (c.tin/1e6*p.in)+(c.tout/1e6*p.out)+(c.tc/1e6*p.cache);};
+const TOTAL=calls.reduce((a,c)=>a+cost(c),0);
+const STCOL={s09:'#b07cff',s10:'#5fa0ff',s11:'#2bb6c4',s12:'#ffb454'};
+const STNAME={s09:'Topic seg.',s10:'Quote extract',s11:'Clustering',s12:'Thematic'};
+
+// timing: Welford mean/sigma over prior runs + this run's actual
+const timing=[
+ {id:'s05',name:'Transcribe',mu:138.0,sig:11.0,act:142.0},
+ {id:'s09',name:'Topic segmentation',mu:15.4,sig:3.2,act:18.3},
+ {id:'s10',name:'Quote extraction',mu:39.1,sig:6.8,act:47.6},
+ {id:'s11',name:'Quote clustering',mu:11.8,sig:2.1,act:12.4},
+ {id:'s12',name:'Thematic grouping',mu:9.6,sig:1.4,act:9.2},
+ {id:'s13',name:'Render',mu:6.4,sig:0.9,act:7.1},
+];
+// convergence: |estimate error| across runs for quote extraction
+const conv=[58,41,46,33,29,24,19,22,15,12,14,9,8,8];
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+const fmtS=s=>s>=60?`${Math.floor(s/60)}m ${Math.round(s%60)}s`:`${s.toFixed(s<10?1:0)}s`;
+const fmtK=n=>n>=1000?(n/1000).toFixed(1)+'k':n;
+
+/* ---------- gantt ---------- */
+(function(){
+  const total=251.8, axis=$('#ganttAxis'), rows=$('#ganttRows');
+  [0,60,120,180,240].forEach(t=>{const s=el('span',null,fmtS(t));s.style.left=(t/total*100)+'%';axis.appendChild(s);});
+  stages.forEach(s=>{
+    const r=el('div','grow');
+    r.appendChild(el('div','lab',`<span class="sid">${s.id}</span>${s.name}`));
+    const tr=el('div','track');
+    const b=el('div','bar '+s.status);
+    b.style.left=(s.start/total*100)+'%';
+    b.style.width=Math.max(s.dur/total*100,0.5)+'%';
+    b.title=`${s.name} — ${fmtS(s.dur)} (${s.status})`;
+    if(s.dur>4){const d=el('span','dur',fmtS(s.dur));b.appendChild(d);}
+    tr.appendChild(b);r.appendChild(tr);rows.appendChild(r);
+  });
+})();
+
+/* ---------- cost donut + legend ---------- */
+(function(){
+  const byStage={};
+  calls.forEach(c=>byStage[c.st]=(byStage[c.st]||0)+cost(c));
+  const total=Object.values(byStage).reduce((a,b)=>a+b,0);
+  let acc=0,stops=[];
+  const leg=$('#costLegend');
+  Object.entries(byStage).sort((a,b)=>b[1]-a[1]).forEach(([st,v])=>{
+    const p0=acc/total*360, p1=(acc+v)/total*360;acc+=v;
+    stops.push(`${STCOL[st]} ${p0}deg ${p1}deg`);
+    leg.appendChild(el('div',null,`<i style="background:${STCOL[st]}"></i>${STNAME[st]}<span class="amt">$${v.toFixed(3)}</span>`));
+  });
+  $('#costDonut').style.background=`conic-gradient(${stops.join(',')})`;
+  $('#costDonut').querySelector('b').textContent='$'+total.toFixed(2);
+})();
+
+/* ---------- token bar (stacked horizontal) ---------- */
+(function(){
+  const tin=calls.reduce((a,c)=>a+c.tin,0), tout=calls.reduce((a,c)=>a+c.tout,0), tc=calls.reduce((a,c)=>a+c.tc,0);
+  const tot=tin+tout+tc, host=$('#tokenBar');
+  const seg=(w,col,lbl,val)=>`<div style="width:${w}%;background:${col};height:26px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:#0b0d11;font-weight:600">${w>9?lbl:''}</div>`;
+  host.innerHTML=`<div style="display:flex;border-radius:6px;overflow:hidden;border:1px solid var(--border)">
+    ${seg(tin/tot*100,'#5fa0ff','in '+fmtK(tin))}
+    ${seg(tout/tot*100,'#b07cff','out '+fmtK(tout))}
+    ${seg(tc/tot*100,'#2bb6c4','cache '+fmtK(tc))}
+  </div>
+  <div style="display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:8px">
+    <span>total ${fmtK(tot)} tokens</span><span>${(tc/(tin+tc)*100).toFixed(0)}% of input cached</span></div>`;
+})();
+
+/* ---------- event stream ---------- */
+(function(){
+  const evs=[
+    ['14:22:27','g-info','info','run_started <em>· provider=claude model=opus-4-8</em>'],
+    ['14:22:34','g-ok','ok','stage <em>transcribe</em> — 1 of 3 sessions'],
+    ['14:24:49','g-ok','ok','stage <em>quote extraction</em> — 163 quotes'],
+    ['14:23:21','g-warn','warn','llm retry <em>· 429 · backoff 2.0s · s10</em>'],
+    ['14:24:06','g-run','run','run_progress <em>· thematic grouping · 0.92</em>'],
+    ['14:24:11','g-ok','ok','stage <em>render</em> — report written'],
+    ['14:24:11','g-ok','ok',`run_completed <em>· 16 calls · $${TOTAL.toFixed(2)} · 4m 12s</em>`],
+  ];
+  const host=$('#eventStream'), gl={ok:'✓',info:'ℹ',warn:'⚠',run:'◐'};
+  evs.forEach(([t,gc,g,m])=>{
+    const e=el('div','ev');
+    e.innerHTML=`<span class="t">${t}</span><span class="g ${gc}">${gl[g]}</span><span class="m">${m}</span>`;
+    host.appendChild(e);
+  });
+})();
+
+/* ---------- llm stat cards ---------- */
+(function(){
+  const n=calls.length, totCost=calls.reduce((a,c)=>a+cost(c),0);
+  const lat=calls.map(c=>c.ms).sort((a,b)=>a-b);
+  const p=q=>lat[Math.floor(q*(lat.length-1))];
+  const retries=calls.reduce((a,c)=>a+c.r,0);
+  const tin=calls.reduce((a,c)=>a+c.tin,0), tc=calls.reduce((a,c)=>a+c.tc,0);
+  const cards=[
+    ['16','calls','4 stages'],
+    ['$'+totCost.toFixed(2),'total cost','forecast $'+(totCost*0.91).toFixed(2)],
+    [(p(.5)/1000).toFixed(1)+'s','p50 latency','p95 '+(p(.95)/1000).toFixed(1)+'s'],
+    [fmtK(tin+tc),'input tokens',fmtK(tc)+' cached'],
+    [retries+'','retries','1×429 burst'],
+    [(tc/(tin+tc)*100).toFixed(0)+'%','cache hit','re-run lever'],
+  ];
+  const host=$('#llmStats');
+  cards.forEach(([n,l,d])=>host.appendChild(el('div','stat',`<div class="n">${n}</div><div class="l">${l}</div><div class="d">${d}</div>`)));
+})();
+
+/* ---------- latency plot (SVG strip) ---------- */
+(function(){
+  const W=560,H=210,pl=42,pb=24,pt=8,pr=10;
+  const maxMs=Math.max(...calls.map(c=>c.ms))*1.1;
+  const maxTok=Math.max(...calls.map(c=>c.tout));
+  const x=i=>pl+(i/(calls.length-1))*(W-pl-pr);
+  const y=ms=>pt+(1-ms/maxMs)*(H-pt-pb);
+  let s=`<svg class="viz" viewBox="0 0 ${W} ${H}">`;
+  [0,.25,.5,.75,1].forEach(f=>{const ms=f*maxMs,yy=y(ms);
+    s+=`<line class="gridline" x1="${pl}" y1="${yy}" x2="${W-pr}" y2="${yy}"/>`;
+    s+=`<text class="axislbl" x="${pl-6}" y="${yy+3}" text-anchor="end">${(ms/1000).toFixed(0)}s</text>`;});
+  calls.forEach((c,i)=>{
+    const r=4+(c.tout/maxTok)*7;
+    s+=`<circle cx="${x(i)}" cy="${y(c.ms)}" r="${r}" fill="${STCOL[c.st]}" fill-opacity="0.85"><title>${STNAME[c.st]} · ${(c.ms/1000).toFixed(1)}s · out ${c.tout} tok · ${c.r} retries</title></circle>`;
+    if(c.r>0)s+=`<circle class="dot-r" cx="${x(i)}" cy="${y(c.ms)}" r="${r+4}"/>`;
+  });
+  s+=`<text class="axislbl" x="${pl}" y="${H-6}">call order →</text></svg>`;
+  $('#latencyPlot').innerHTML=s;
+})();
+
+/* ---------- cache donut ---------- */
+(function(){
+  const tin=calls.reduce((a,c)=>a+c.tin,0), tc=calls.reduce((a,c)=>a+c.tc,0);
+  const pct=tc/(tin+tc)*100;
+  $('#cacheDonut').style.background=`conic-gradient(var(--cache) 0deg ${pct/100*360}deg,#2a3038 ${pct/100*360}deg 360deg)`;
+  $('#cacheDonut').querySelector('b').textContent=pct.toFixed(0)+'%';
+  $('#cacheLegend').innerHTML=
+    `<div><i style="background:var(--cache)"></i>cached input<span class="amt">${fmtK(tc)}</span></div>
+     <div><i style="background:#2a3038"></i>fresh input<span class="amt">${fmtK(tin)}</span></div>`;
+})();
+
+/* ---------- stage cost bars (stacked) ---------- */
+(function(){
+  const agg={};
+  calls.forEach(c=>{const p=PRICE[c.m];(agg[c.st]=agg[c.st]||{in:0,out:0,cache:0});
+    agg[c.st].in+=c.tin/1e6*p.in;agg[c.st].out+=c.tout/1e6*p.out;agg[c.st].cache+=c.tc/1e6*p.cache;});
+  const max=Math.max(...Object.values(agg).map(a=>a.in+a.out+a.cache));
+  const host=$('#stageCostBars');
+  Object.entries(agg).sort((a,b)=>(b[1].in+b[1].out+b[1].cache)-(a[1].in+a[1].out+a[1].cache)).forEach(([st,a])=>{
+    const tot=a.in+a.out+a.cache, w=v=>v/max*100;
+    const row=el('div',null,
+      `<div style="display:flex;align-items:center;gap:10px;margin:7px 0">
+        <span style="flex:0 0 110px;font-size:11.5px">${STNAME[st]}</span>
+        <div style="flex:1;display:flex;height:18px;border-radius:4px;overflow:hidden;background:#10131a">
+          <div style="width:${w(a.in)}%;background:#5fa0ff" title="input $${a.in.toFixed(3)}"></div>
+          <div style="width:${w(a.out)}%;background:#b07cff" title="output $${a.out.toFixed(3)}"></div>
+          <div style="width:${w(a.cache)}%;background:#2bb6c4" title="cache $${a.cache.toFixed(3)}"></div>
+        </div>
+        <span class="mono" style="flex:0 0 56px;text-align:right;color:var(--muted);font-size:11px">$${tot.toFixed(3)}</span>
+      </div>`);
+    host.appendChild(row);
+  });
+  host.appendChild(el('div',null,`<div style="margin-top:8px;font-size:11px;color:var(--muted)"><span style="color:#5fa0ff">█</span> input <span style="color:#b07cff">█</span> output <span style="color:#2bb6c4">█</span> cache</div>`));
+})();
+
+/* ---------- calls table ---------- */
+(function(){
+  const tb=$('#callsTable tbody');
+  calls.forEach(c=>{
+    const tr=el('tr');
+    tr.innerHTML=`<td>${c.ts}</td>
+      <td><span class="chip ${c.st}">${STNAME[c.st]}</span></td>
+      <td>${c.m}</td>
+      <td class="num">${c.tin}</td>
+      <td class="num">${c.tout}</td>
+      <td class="num ${c.tc?'cache-hit':'miss'}">${c.tc||'—'}</td>
+      <td class="num">${(c.ms/1000).toFixed(1)}s</td>
+      <td class="${c.r?'retry':'miss'}">${c.r?('×'+c.r):'—'}</td>
+      <td class="${c.f==='length'?'retry':''}">${c.f}</td>
+      <td class="num">$${cost(c).toFixed(4)}</td>`;
+    tb.appendChild(tr);
+  });
+})();
+
+/* ---------- dumbbell (estimate vs actual) ---------- */
+(function(){
+  const W=560,rowH=34,pl=120,pr=58,H=timing.length*rowH+24;
+  const max=Math.max(...timing.map(t=>Math.max(t.act,t.mu+t.sig)))*1.08;
+  const x=v=>pl+v/max*(W-pl-pr);
+  let s=`<svg class="viz" viewBox="0 0 ${W} ${H}">`;
+  timing.forEach((t,i)=>{
+    const cy=18+i*rowH;
+    s+=`<text class="stagelbl" x="0" y="${cy+4}">${t.name}</text>`;
+    // sigma band
+    s+=`<rect x="${x(t.mu-t.sig)}" y="${cy-7}" width="${x(t.mu+t.sig)-x(t.mu-t.sig)}" height="14" rx="3" fill="#2a3142" fill-opacity="0.7"/>`;
+    // connector
+    s+=`<line x1="${x(t.mu)}" y1="${cy}" x2="${x(t.act)}" y2="${cy}" stroke="${t.act>t.mu?'#ffb454':'#46c98b'}" stroke-width="2"/>`;
+    // estimate (mean) dot
+    s+=`<circle cx="${x(t.mu)}" cy="${cy}" r="5" fill="#7d8694"><title>μ ${fmtS(t.mu)} ± ${t.sig.toFixed(1)}s</title></circle>`;
+    // actual tick
+    s+=`<rect x="${x(t.act)-1.5}" y="${cy-8}" width="3" height="16" fill="${t.act>t.mu?'#ffb454':'#46c98b'}"><title>actual ${fmtS(t.act)}</title></rect>`;
+    s+=`<text class="axislbl" x="${W-pr+6}" y="${cy+3}">${fmtS(t.act)}</text>`;
+  });
+  s+=`</svg>`;
+  $('#dumbbell').innerHTML=s;
+})();
+
+/* ---------- error bars (z-score, diverging) ---------- */
+(function(){
+  const W=560,rowH=30,pl=120,H=timing.length*rowH+10,mid=pl+(W-pl)/2,half=(W-pl)/2-10;
+  const maxZ=3;
+  let s=`<svg class="viz" viewBox="0 0 ${W} ${H}">`;
+  s+=`<line class="gridline" x1="${mid}" y1="0" x2="${mid}" y2="${H}"/>`;
+  [-2,-1,1,2].forEach(z=>{const xx=mid+z/maxZ*half;
+    s+=`<line class="gridline" x1="${xx}" y1="0" x2="${xx}" y2="${H}" stroke-dasharray="2 3"/>
+        <text class="axislbl" x="${xx}" y="${H-1}" text-anchor="middle">${z>0?'+':''}${z}σ</text>`;});
+  timing.forEach((t,i)=>{
+    const z=(t.act-t.mu)/t.sig, cy=14+i*rowH, w=z/maxZ*half;
+    const col=Math.abs(z)>2?'#ff5d5d':(z>0?'#ffb454':'#46c98b');
+    s+=`<text class="stagelbl" x="0" y="${cy+4}">${t.name}</text>`;
+    s+=`<rect x="${z>0?mid:mid+w}" y="${cy-7}" width="${Math.abs(w)}" height="14" rx="3" fill="${col}"><title>${z>0?'+':''}${z.toFixed(1)}σ</title></rect>`;
+    s+=`<text class="axislbl" x="${mid+w+(z>0?5:-5)}" y="${cy+3}" text-anchor="${z>0?'start':'end'}" fill="${col}">${z>0?'+':''}${z.toFixed(1)}σ</text>`;
+  });
+  s+=`</svg>`;
+  $('#errorBars').innerHTML=s;
+})();
+
+/* ---------- convergence sparkline ---------- */
+(function(){
+  const W=900,H=140,pl=30,pb=22,pt=10,pr=10;
+  const max=Math.max(...conv),x=i=>pl+i/(conv.length-1)*(W-pl-pr),y=v=>pt+(1-v/max)*(H-pt-pb);
+  let s=`<svg class="viz" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:150px">`;
+  [0,25,50].forEach(v=>{s+=`<line class="gridline" x1="${pl}" y1="${y(v)}" x2="${W-pr}" y2="${y(v)}"/>
+    <text class="axislbl" x="${pl-5}" y="${y(v)+3}" text-anchor="end">${v}%</text>`;});
+  let path=conv.map((v,i)=>`${i?'L':'M'}${x(i)} ${y(v)}`).join(' ');
+  s+=`<path d="${path} L${x(conv.length-1)} ${y(0)} L${x(0)} ${y(0)} Z" fill="#b07cff" fill-opacity="0.08"/>`;
+  s+=`<path d="${path}" fill="none" stroke="#b07cff" stroke-width="2"/>`;
+  conv.forEach((v,i)=>s+=`<circle cx="${x(i)}" cy="${y(v)}" r="2.5" fill="#b07cff"><title>run ${i+1}: ${v}% error</title></circle>`);
+  s+=`<text class="axislbl" x="${x(0)}" y="${H-6}">run 1</text>
+      <text class="axislbl" x="${x(conv.length-1)}" y="${H-6}" text-anchor="end">run 14 (this)</text></svg>`;
+  $('#convergence').innerHTML=s;
+})();
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');$('#v-'+b.dataset.v).classList.add('active');
+}));
+</script>
+</body>
+</html>

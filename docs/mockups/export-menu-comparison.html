@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Export — bringing macOS to parity (SPA reference + 2 native variants)</title>
+<style>
+  /* ───── Resolved Bristlenose warm-paper theme tokens (bristlenose/theme/) ───── */
+  :root {
+    --bn-colour-bg: #f5f0e6; --bn-colour-text: #1a1a1a; --bn-colour-border: #d4c9a8;
+    --bn-colour-muted: #5a7d9b; --bn-colour-accent: #1e3a5f; --bn-colour-quote-bg: #f0e9d8;
+    --bn-colour-shadow: rgba(30,20,10,0.12);
+    --bn-radius-md: 6px; --bn-space-sm: 0.35rem;
+    --bn-text-label: 0.8125rem; --bn-text-caption: 0.75rem;
+    --bn-font-body: -apple-system,"SF Pro Text","SF Pro",system-ui,"Inter","Segoe UI",sans-serif;
+    --bn-transition-fast: 120ms ease;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 2.5rem 2rem 4rem; background: #ece6da; font-family: var(--bn-font-body); color: #2a2a2a; -webkit-font-smoothing: antialiased; }
+  h1 { font-size: 1.35rem; margin: 0 0 0.35rem; }
+  .lede { color: #5b5b5b; max-width: 64rem; line-height: 1.5; margin: 0 0 1.25rem; font-size: 0.93rem; }
+  code { font-family: "SF Mono",ui-monospace,monospace; font-size: 0.85em; background: rgba(0,0,0,0.05); padding: 0.05rem 0.3rem; border-radius: 4px; }
+  h2.scene { font-size: 1.02rem; margin: 2.25rem 0 0.2rem; }
+  .scene-sub { color: #777; font-size: 0.85rem; margin: 0 0 1rem; }
+
+  .controls { display: flex; align-items: center; gap: 0.75rem; margin: 0.5rem 0 1.25rem; }
+  .seg { display: inline-flex; border: 1px solid #c9bfa6; border-radius: 8px; overflow: hidden; background: #fff; }
+  .seg button { appearance: none; border: 0; background: transparent; cursor: pointer; font: inherit; font-size: 0.85rem; padding: 0.45rem 1rem; color: #444; }
+  .seg button.active { background: var(--bn-colour-accent); color: #fff; }
+  .controls .hint { font-size: 0.82rem; color: #6b6b6b; }
+
+  .panel > .cap { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: #7a7060; margin-bottom: 0.5rem; }
+  .panel > .sub { font-size: 0.78rem; color: #888; margin: 0 0 0.85rem; }
+
+  /* window chrome */
+  .spa-window { background: var(--bn-colour-bg); border: 1px solid var(--bn-colour-border); border-radius: 10px; box-shadow: 0 8px 26px rgba(30,20,10,0.10); }
+  .mac-window { background: linear-gradient(#fcfcfc,#f3f3f3); border: 1px solid #d7d7d7; border-radius: 10px; box-shadow: 0 8px 26px rgba(0,0,0,0.13); font-family: -apple-system,"SF Pro Text",system-ui,sans-serif; }
+  .mac-titlebar { height: 30px; display: flex; align-items: center; gap: 7px; padding: 0 12px; border-bottom: 1px solid #e2e2e2; background: linear-gradient(#f6f6f6,#ececec); border-radius: 10px 10px 0 0; }
+  .traffic { width: 11px; height: 11px; border-radius: 50%; } .traffic.r{background:#ff5f57}.traffic.y{background:#febc2e}.traffic.g{background:#28c840}
+  .toolbar { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.7rem; }
+  .spa-toolbar { border-bottom: 1px solid var(--bn-colour-border); }
+  .mac-toolbar { border-bottom: 1px solid #e6e6e6; }
+  .tabs { margin-right: auto; display: flex; gap: 2px; }
+  .spa-tabs span { font-size: var(--bn-text-label); color: var(--bn-colour-muted); padding: 0.3rem 0.55rem; border-radius: 6px; }
+  .spa-tabs span.on { color: var(--bn-colour-text); background: var(--bn-colour-quote-bg); font-weight: 600; }
+  .mac-tabs span { font-size: 13px; color: #555; padding: 3px 8px; border-radius: 6px; }
+  .mac-tabs span.on { background: #e3e3e3; color: #111; font-weight: 590; }
+  .bn-tab-icon { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--bn-colour-border); background: #fff; color: var(--bn-colour-text); }
+  .bn-tab-icon.active { background: var(--bn-colour-quote-bg); }
+  .mac-tbtn { width: 30px; height: 26px; border-radius: 6px; border: 1px solid #dcdcdc; background: linear-gradient(#fff,#f4f4f4); display: inline-flex; align-items: center; justify-content: center; color: #3a3a3a; }
+  .anchor { position: relative; }
+  .win-body { min-height: 70px; }
+
+  /* ───────── SPA dropdown — REAL classes, unchanged ───────── */
+  .export-dropdown-menu { position: absolute; top: 100%; right: 0; margin: 0.25rem 0 0; padding: 0.25rem 0; list-style: none; background: #fffdf8; border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); box-shadow: 0 4px 12px var(--bn-colour-shadow); min-width: 15rem; z-index: 50; }
+  .export-dropdown-item { display: flex; align-items: center; gap: var(--bn-space-sm); padding: 0.4rem 0.85rem; font-size: var(--bn-text-label); color: var(--bn-colour-text); cursor: default; transition: background var(--bn-transition-fast); white-space: nowrap; }
+  .export-dropdown-item:hover { background: var(--bn-colour-quote-bg); }
+  .export-dropdown-hint { padding: 0 0.85rem 0.25rem; font-size: var(--bn-text-caption); color: var(--bn-colour-muted); list-style: none; }
+  .export-dropdown-separator { height: 0; margin: 0.25rem 0; border-top: 1px solid var(--bn-colour-border); list-style: none; }
+
+  /* ───────── macOS shared bits ───────── */
+  .mac-switch { width: 30px; height: 18px; border-radius: 9px; background: #2c6cf0; position: relative; flex: 0 0 auto; transition: background .15s; }
+  .mac-switch.off { background: #c9c9cd; }
+  .mac-switch::after { content:""; position: absolute; top: 2px; left: 14px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: left .15s; }
+  .mac-switch.off::after { left: 2px; }
+  .mac-grouptitle { font-size: 11px; font-weight: 600; color: #8d8d92; padding: 6px 12px 2px; letter-spacing: .02em; }
+  .mac-sep { height: 0; border-top: 0.5px solid rgba(0,0,0,0.13); margin: 5px 8px; }
+
+  /* Variant A — basic NSMenu */
+  .mac-menu { position: absolute; top: 100%; right: 0; margin-top: 7px; background: rgba(248,248,248,0.98); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); border: 0.5px solid rgba(0,0,0,0.14); border-radius: 9px; box-shadow: 0 12px 34px rgba(0,0,0,0.22); padding: 5px 6px; min-width: 16rem; z-index: 50; }
+  .mac-item { display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 12px; font-size: 13.5px; line-height: 1.5; color: #1d1d1f; border-radius: 5px; white-space: nowrap; }
+  .mac-item:hover { background: #2c6cf0; color: #fff; }
+  .mac-item .check { width: 14px; text-align: center; opacity: 0; }
+  .mac-item.checked .check { opacity: 1; }
+  .mac-item .grow { flex: 1; }
+  .mac-item .ell { opacity: .55; } .mac-item:hover .ell { opacity: .85; }
+  .mac-item .chev { opacity: .5; } .mac-item:hover .chev { opacity: .9; }
+  .mac-item.open { background: #2c6cf0; color: #fff; } .mac-item.open .chev { opacity: .9; }
+  /* submenu flyout */
+  .mac-flyout { position: absolute; top: 142px; right: -188px; background: rgba(248,248,248,0.98); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); border: 0.5px solid rgba(0,0,0,0.14); border-radius: 9px; box-shadow: 0 12px 34px rgba(0,0,0,0.22); padding: 5px 6px; min-width: 12rem; z-index: 60; }
+
+  /* Variant B — richer popover */
+  .mac-pop { position: absolute; top: 100%; right: 0; margin-top: 7px; background: rgba(252,252,252,0.98); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); border: 0.5px solid rgba(0,0,0,0.14); border-radius: 11px; box-shadow: 0 14px 38px rgba(0,0,0,0.24); padding: 6px; min-width: 19rem; z-index: 50; }
+  .pop-toggle { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; }
+  .pop-toggle .pt-txt { display: flex; flex-direction: column; flex: 1; line-height: 1.25; }
+  .pop-toggle .pt-title { font-size: 13.5px; font-weight: 560; color: #1d1d1f; }
+  .pop-toggle .pt-sub { font-size: 11px; color: #8a8a8a; margin-top: 1px; }
+  .pop-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 10px; border-radius: 7px; cursor: default; }
+  .pop-row:hover { background: rgba(0,0,0,0.055); }
+  .pop-ic { flex: 0 0 18px; margin-top: 1px; color: var(--bn-colour-accent); }
+  .pop-txt { display: flex; flex-direction: column; line-height: 1.25; flex: 1; }
+  .pop-title { font-size: 13.5px; font-weight: 530; color: #1d1d1f; }
+  .pop-sub { font-size: 11px; color: #8a8a8a; margin-top: 1px; }
+  .pop-chevron { margin-left: auto; color: #b0b0b0; align-self: center; }
+  /* inline disclosure (more options) */
+  .pop-more { padding: 2px 6px 4px; }
+  .pop-subrow { display: flex; align-items: center; gap: 8px; padding: 5px 10px 5px 30px; font-size: 12.5px; color: #3a3a3a; border-radius: 6px; }
+  .pop-subrow:hover { background: rgba(0,0,0,0.05); }
+  .pop-subrow .ck { width: 13px; opacity: 0; color: var(--bn-colour-accent); } .pop-subrow.on .ck { opacity: 1; }
+
+  .twoup { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: start; max-width: 72rem; }
+  @media (max-width: 860px) { .twoup { grid-template-columns: 1fr; } }
+
+  .legend { margin-top: 2.5rem; max-width: 72rem; background: #fffdf8; border: 1px solid var(--bn-colour-border); border-radius: 10px; padding: 1.1rem 1.4rem; }
+  .legend h2 { font-size: 0.95rem; margin: 0 0 0.6rem; }
+  .legend ul { margin: 0; padding-left: 1.1rem; font-size: 0.86rem; line-height: 1.7; }
+  .tag { display:inline-block; font-size: 0.7rem; padding: 0.05rem 0.4rem; border-radius: 4px; background:#eadfc6; color:#6b5f44; }
+</style>
+</head>
+<body>
+  <h1>Export — bringing macOS to parity</h1>
+  <p class="lede">
+    The <strong>SPA dropdown stays as the reference</strong> (real <code>.export-dropdown-*</code> classes, unchanged).
+    The job is the <strong>macOS</strong> affordance. Two variants below, both at feature parity and both adopting the
+    macOS-Tahoe patterns from your Wi-Fi-menu reference: a global <strong>Anonymise</strong> control (strips participant
+    names from <em>every</em> export — report, copy, spreadsheet, clips), <strong>group titles</strong>, and an
+    <strong>expanding submenu</strong> for secondary options. Canonical order: <strong>Export Report first</strong>, quote
+    actions under a group title (Quotes tab only).
+  </p>
+
+  <div class="controls">
+    <div class="seg">
+      <button id="tab-quotes" class="active" onclick="setTab('quotes')">Quotes tab</button>
+      <button id="tab-other" onclick="setTab('other')">Other tab</button>
+    </div>
+    <span class="hint">Quote actions show only on Quotes; <strong>Export Report</strong> + <strong>Anonymise</strong> are universal.</span>
+  </div>
+
+  <!-- ───────────── Reference: SPA (unchanged) ───────────── -->
+  <h2 class="scene">Reference · SPA dropdown (stays as-is)</h2>
+  <p class="scene-sub">Anonymise remains the checkbox inside the Export Report modal on the web side.</p>
+  <div class="panel" style="max-width: 34rem;">
+    <div class="spa-window">
+      <div class="toolbar spa-toolbar">
+        <div class="tabs spa-tabs"><span class="spa-q on">Quotes</span><span>Codebook</span><span>Analysis</span></div>
+        <div class="bn-tab-icon">🔍</div>
+        <div class="anchor">
+          <div class="bn-tab-icon active" title="Export">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3.5h12V10"/><path d="M8 2v8"/><path d="M4.5 6.5L8 10l3.5-3.5"/></svg>
+          </div>
+          <ul class="export-dropdown-menu">
+            <li><div class="export-dropdown-item">Export Report...</div><li class="export-dropdown-separator spa-quote"></li></li>
+            <li class="spa-quote"><div class="export-dropdown-item">Copy 12 Quotes</div><div class="export-dropdown-hint">Paste into Miro, Excel, or Google Sheets</div><li class="export-dropdown-separator"></li></li>
+            <li class="spa-quote"><div class="export-dropdown-item">Save as Spreadsheet</div><li class="export-dropdown-separator"></li></li>
+            <li class="spa-quote"><div class="export-dropdown-item">Extract Video Clips…</div></li>
+          </ul>
+        </div>
+      </div>
+      <div class="win-body"></div>
+    </div>
+  </div>
+
+  <!-- ───────────── macOS, two variants ───────────── -->
+  <h2 class="scene">macOS · two ways to reach parity</h2>
+  <p class="scene-sub">Pick one (or a hybrid). Both carry the Anonymise toggle and the CSV / XLSX format submenu; Ⓐ groups with titles, Ⓑ leads with subtitles.</p>
+  <div class="twoup">
+
+    <!-- Variant A: basic NSMenu -->
+    <div class="panel">
+      <div class="cap">Ⓐ Basic menu (NSMenu)</div>
+      <div class="sub">Native, minimal. Anonymise = checkable item. Submenu = flyout.</div>
+      <div class="mac-window">
+        <div class="mac-titlebar"><span class="traffic r"></span><span class="traffic y"></span><span class="traffic g"></span></div>
+        <div class="toolbar mac-toolbar">
+          <div class="tabs mac-tabs"><span class="mac-q on">Quotes</span><span>Codebook</span><span>Analysis</span></div>
+          <div class="mac-tbtn" title="Search">🔍</div>
+          <div class="anchor">
+            <div class="mac-tbtn" title="Export">
+              <svg width="15" height="16" viewBox="0 0 16 17" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5v9"/><path d="M5 4l3-3 3 3"/><path d="M3 8.5H2v6.5h12V8.5h-1"/></svg>
+            </div>
+            <div class="mac-menu">
+              <div class="mac-item checked"><span class="check">✓</span><span class="grow">Anonymise (remove names)</span></div>
+              <div class="mac-sep"></div>
+              <div class="mac-item"><span class="check"></span><span class="grow">Export Report</span><span class="ell">…</span></div>
+              <div class="mac-grouptitle mac-quote">Quotes</div>
+              <div class="mac-item mac-quote"><span class="check"></span><span class="grow">Copy Quotes</span></div>
+              <div class="mac-item mac-quote"><span class="check"></span><span class="grow">Save as Spreadsheet</span><span class="ell">…</span></div>
+              <div class="mac-item mac-quote"><span class="check"></span><span class="grow">Extract Video Clips</span><span class="ell">…</span></div>
+              <div class="mac-sep mac-quote"></div>
+              <div class="mac-item mac-quote open"><span class="check"></span><span class="grow">Quotes to include</span><span class="chev">›</span></div>
+            </div>
+            <!-- submenu flyout (shown expanded) -->
+            <div class="mac-flyout mac-quote">
+              <div class="mac-item checked"><span class="check">✓</span><span class="grow">All quotes</span></div>
+              <div class="mac-item"><span class="check"></span><span class="grow">Starred only</span></div>
+              <div class="mac-item"><span class="check"></span><span class="grow">Selected only</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="win-body" style="min-height: 120px;"></div>
+      </div>
+    </div>
+
+    <!-- Variant B: richer popover -->
+    <div class="panel">
+      <div class="cap">Ⓑ Richer popover</div>
+      <div class="sub">Custom SwiftUI popover. Anonymise = pill switch. Subtitles + inline disclosure.</div>
+      <div class="mac-window">
+        <div class="mac-titlebar"><span class="traffic r"></span><span class="traffic y"></span><span class="traffic g"></span></div>
+        <div class="toolbar mac-toolbar">
+          <div class="tabs mac-tabs"><span class="mac-q on">Quotes</span><span>Codebook</span><span>Analysis</span></div>
+          <div class="mac-tbtn" title="Search">🔍</div>
+          <div class="anchor">
+            <div class="mac-tbtn" title="Export">
+              <svg width="15" height="16" viewBox="0 0 16 17" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5v9"/><path d="M5 4l3-3 3 3"/><path d="M3 8.5H2v6.5h12V8.5h-1"/></svg>
+            </div>
+            <div class="mac-pop">
+              <div class="pop-toggle">
+                <span class="pt-txt"><span class="pt-title">Anonymise</span><span class="pt-sub">Remove participant names</span></span>
+                <span class="mac-switch"></span>
+              </div>
+              <div class="mac-sep"></div>
+              <div class="pop-row">
+                <span class="pop-ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v9"/><path d="M5.5 5L9 1.5 12.5 5"/><path d="M3 9.5H2v6.5h14V9.5h-1"/></svg></span>
+                <span class="pop-txt"><span class="pop-title">Export Report…</span><span class="pop-sub">Self contained HTML</span></span>
+              </div>
+              <!-- Copy Quotes is a disclosure: pick scope (All / Selected / Starred) with live counts -->
+              <div class="pop-row mac-quote" onclick="this.nextElementSibling.classList.toggle('hidden')">
+                <span class="pop-ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2.5" width="9" height="12" rx="1.5"/><path d="M6 14.5v1A1.5 1.5 0 007.5 17h6A1.5 1.5 0 0015 15.5v-9A1.5 1.5 0 0013.5 5H12"/></svg></span>
+                <span class="pop-txt"><span class="pop-title">Copy Quotes</span><span class="pop-sub">Lean — quote, code, name, timecode</span></span>
+                <span class="pop-chevron">⌄</span>
+              </div>
+              <div class="pop-more pop-scope mac-quote">
+                <div class="pop-subrow">All (34)</div>
+                <div class="pop-subrow">Selected (16)</div>
+                <div class="pop-subrow">Starred (8)</div>
+              </div>
+              <!-- Spreadsheet row is a disclosure: pick CSV or XLSX (both ship) -->
+              <div class="pop-row mac-quote" onclick="this.nextElementSibling.classList.toggle('hidden')">
+                <span class="pop-ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="13" height="11" rx="1.5"/><path d="M2.5 7.5h13M7 3.5v11"/></svg></span>
+                <span class="pop-txt"><span class="pop-title">Save as Spreadsheet…</span><span class="pop-sub">Rich — 11 columns for sorting and analysis</span></span>
+                <span class="pop-chevron">⌄</span>
+              </div>
+              <div class="pop-more pop-fmt mac-quote">
+                <div class="pop-subrow">CSV</div>
+                <div class="pop-subrow">XLSX</div>
+              </div>
+              <div class="pop-row mac-quote">
+                <span class="pop-ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="13" height="10" rx="1.5"/><path d="M2.5 7h13M5 4v3M9 4v3M13 4v3"/></svg></span>
+                <span class="pop-txt"><span class="pop-title">Extract Video Clips…</span><span class="pop-sub">Trimmed clip per quote</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="win-body" style="min-height: 120px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <h2>What each variant gives you</h2>
+    <ul>
+      <li><strong>Ⓐ Basic menu</strong> — fastest to build (pure SwiftUI <code>Menu</code> / <code>NSMenu</code>), fully native, keyboard + VoiceOver for free. Anonymise is a checkmark toggle; "more options" is a real submenu flyout. Cost: no descriptive subtitles (one line per row).</li>
+      <li><strong>Ⓑ Richer popover</strong> — custom SwiftUI popover (same family as the diagnostic popover). Carries subtitles, a pill switch, and inline disclosure — closest to the SPA's information density. Cost: more code, hand-rolled keyboard/AX, must track macOS menu metrics by hand.</li>
+      <li><strong>Anonymise is global</strong> in both — strips participant names from report, copy, spreadsheet, and clips alike. (Confirmed: "don't put user names in the export of whatever kind.") This means the per-export endpoints all gain an <code>anonymise</code> pass-through; today only the report + quotes endpoints honour it.</li>
+      <li><strong>SPA unchanged</strong> — anonymise stays the checkbox in the Export Report modal there. <span class="tag">parked: Miro push · PowerPoint slides</span></li>
+    </ul>
+  </div>
+
+<script>
+  function setTab(which) {
+    var q = which === 'quotes';
+    document.querySelectorAll('.spa-quote, .mac-quote').forEach(function (el) { el.style.display = q ? '' : 'none'; });
+    document.getElementById('tab-quotes').classList.toggle('active', q);
+    document.getElementById('tab-other').classList.toggle('active', !q);
+    document.querySelectorAll('.spa-q, .mac-q').forEach(function (el) { el.classList.toggle('on', q); });
+  }
+  // simple .hidden helper
+  var s = document.createElement('style'); s.textContent = '.hidden{display:none!important}'; document.head.appendChild(s);
+</script>
+</body>
+</html>

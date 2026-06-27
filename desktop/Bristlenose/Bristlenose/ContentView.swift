@@ -2173,36 +2173,310 @@ private struct ProjectNotificationReceivers: ViewModifier {
     }
 }
 
-/// Toolbar export button with per-tab dropdown contents.
-/// "Export Report..." is always first (universal). Tab-specific exports below a divider.
+/// Toolbar export button — the macOS surface of the canonical export list,
+/// at parity with the SPA dropdown (see docs/mockups/export-menu-comparison.html).
+///
+/// Rendered as a **richer popover** (Variant Ⓑ) rather than a plain `NSMenu`,
+/// so each action carries a descriptive subtitle — matching the SPA dropdown's
+/// information density. Layout: a global Anonymise pill toggle, a divider, then
+/// "Export Report…" followed by the quote actions (Copy Quotes · Save as
+/// Spreadsheet · Extract Video Clips) shown only on the Quotes tab. No group
+/// headers — the subtitles carry the grouping.
+///
+/// Every item dispatches through `bridgeHandler.menuAction(_:payload:)`, which
+/// the web layer (`AppLayout` `bn:menu-action`) routes into `utils/exportActions`
+/// — the single source of truth shared with the SPA dropdown. The `anonymise`
+/// flag rides the payload so it applies to whichever export the user picks.
+///
+/// Parked (future ideas, not shown): Miro board push, PowerPoint quote slides.
 struct ExportMenuButton: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
 
+    @State private var isPresented = false
+
     var body: some View {
-        Menu {
-            // Shortcut (Cmd+Shift+E) lives on the File > Export Report… item
-            // in MenuCommands.swift — single source so re-binding only touches
-            // one place. The toolbar Menu item invokes the same bridge action.
-            Button(i18n.t("desktop.menu.file.exportReport")) {
-                bridgeHandler.menuAction("exportReport")
-            }
-
-            if bridgeHandler.activeTab == .quotes {
-                Divider()
-
-                Button(i18n.t("desktop.menu.quotes.copyAsCSV")) {
-                    bridgeHandler.menuAction("exportQuotesCSV")
-                }
-
-                // Future: "Export Starred Quotes as CSV" when starred filter active
-            }
-
-            // Future: Analysis tab → "Export Signal Cards as PPTX"
+        Button {
+            isPresented.toggle()
         } label: {
             Label(i18n.t("desktop.toolbar.export"), systemImage: "square.and.arrow.up")
         }
         .help(i18n.t("desktop.toolbar.exportShortcut"))
+        .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+            ExportPopoverContent(bridgeHandler: bridgeHandler, i18n: i18n) {
+                isPresented = false
+            }
+        }
+    }
+}
+
+/// Contents of the export popover. Holds the (non-persisted) Anonymise state,
+/// renders the grouped action rows, and dismisses the popover after a pick.
+private struct ExportPopoverContent: View {
+    @ObservedObject var bridgeHandler: BridgeHandler
+    @ObservedObject var i18n: I18n
+    let dismiss: () -> Void
+
+    /// Global Anonymise — strips participant *names* (display names) from every
+    /// export; participant codes (p1, p2) are kept. Deliberately not persisted:
+    /// the popover is recreated each open, so it defaults off and a researcher
+    /// never ships an unexpectedly-anonymised export.
+    @State private var anonymise = false
+
+    private var payload: [String: Any] { ["anonymise": anonymise] }
+
+    /// Dispatch a canonical export action, merging any per-action extras (e.g.
+    /// the spreadsheet `format`) onto the global payload (currently `anonymise`).
+    private func dispatch(_ action: String, _ extra: [String: Any] = [:]) {
+        var p = payload
+        for (key, value) in extra { p[key] = value }
+        bridgeHandler.menuAction(action, payload: p)
+        dismiss()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Global toggle — applies to whichever export the user picks next.
+            Toggle(isOn: $anonymise) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(i18n.t("desktop.menu.quotes.anonymise"))
+                    Text(i18n.t("desktop.menu.quotes.anonymiseHint"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .toggleStyle(.switch)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+
+            Divider().padding(.horizontal, 10)
+
+            ExportPopoverRow(
+                icon: "square.and.arrow.up",
+                title: i18n.t("desktop.menu.file.exportReport"),
+                subtitle: i18n.t("desktop.menu.quotes.reportHint")
+            ) { dispatch("exportReport") }
+
+            if bridgeHandler.activeTab == .quotes {
+                // Copy Quotes: a plain "copy all visible" action by default; it
+                // grows into a scope disclosure only when there's something to
+                // narrow to (a selection or starred quotes). Zero-count scopes
+                // are hidden here (toolbar morphs); the menu bar keeps them dimmed.
+                if bridgeHandler.selectedQuoteCount > 0 || bridgeHandler.starredQuoteCount > 0 {
+                    ExportPopoverDisclosureRow(
+                        icon: "doc.on.clipboard",
+                        title: i18n.t("desktop.menu.quotes.copyQuotes"),
+                        subtitle: i18n.t("desktop.menu.quotes.copyHint")
+                    ) {
+                        ExportPopoverSubRow(
+                            title: i18n.t(
+                                "desktop.menu.quotes.copyScopeAll",
+                                ["count": String(bridgeHandler.totalQuoteCount)]
+                            )
+                        ) { dispatch("copyQuotes", ["scope": "all"]) }
+                        if bridgeHandler.selectedQuoteCount > 0 {
+                            ExportPopoverSubRow(
+                                title: i18n.t(
+                                    "desktop.menu.quotes.copyScopeSelected",
+                                    ["count": String(bridgeHandler.selectedQuoteCount)]
+                                )
+                            ) { dispatch("copyQuotes", ["scope": "selected"]) }
+                        }
+                        if bridgeHandler.starredQuoteCount > 0 {
+                            ExportPopoverSubRow(
+                                title: i18n.t(
+                                    "desktop.menu.quotes.copyScopeStarred",
+                                    ["count": String(bridgeHandler.starredQuoteCount)]
+                                )
+                            ) { dispatch("copyQuotes", ["scope": "starred"]) }
+                        }
+                    }
+                } else {
+                    ExportPopoverRow(
+                        icon: "doc.on.clipboard",
+                        title: i18n.t("desktop.menu.quotes.copyQuotes"),
+                        subtitle: i18n.t("desktop.menu.quotes.copyHint")
+                    ) { dispatch("copyQuotes", ["scope": "all"]) }
+                }
+                // Spreadsheet is a disclosure: pick CSV or XLSX. Both endpoints
+                // exist server-side; the `format` extra selects which.
+                ExportPopoverDisclosureRow(
+                    icon: "tablecells",
+                    title: i18n.t("desktop.menu.quotes.saveSpreadsheet"),
+                    subtitle: i18n.t("desktop.menu.quotes.spreadsheetHint")
+                ) {
+                    ExportPopoverSubRow(title: i18n.t("desktop.menu.quotes.formatCSV")) {
+                        dispatch("saveSpreadsheet", ["format": "csv"])
+                    }
+                    ExportPopoverSubRow(title: i18n.t("desktop.menu.quotes.formatXLSX")) {
+                        dispatch("saveSpreadsheet", ["format": "xlsx"])
+                    }
+                }
+                ExportPopoverRow(
+                    icon: "film",
+                    title: i18n.t("desktop.menu.quotes.extractClips"),
+                    subtitle: i18n.t("desktop.menu.quotes.clipsHint")
+                ) { dispatch("extractClips") }
+            }
+
+            // Sessions lens: the transcripts already live on disk in the
+            // project's bristlenose-output/ — reveal them in Finder rather than
+            // re-exporting what's already a folder of files (local-first). The
+            // drag-to-sidebar affordance hides where the folder lives, so the
+            // macOS surface needs a way back to it (CLI users are already there).
+            if bridgeHandler.activeTab == .sessions {
+                ExportPopoverRow(
+                    icon: "folder",
+                    title: i18n.t("desktop.menu.quotes.revealTranscripts"),
+                    subtitle: i18n.t("desktop.menu.quotes.revealTranscriptsHint")
+                ) { revealTranscripts() }
+            }
+        }
+        .frame(width: 308)
+        .padding(.vertical, 6)
+    }
+
+    /// Open a Finder window on the project's transcripts. Prefers the
+    /// PII-redacted `transcripts-cooked/` (present only when `--redact-pii`
+    /// ran), else `transcripts-raw/`, else the output / project folder. This is
+    /// a native action — it reveals files already on disk, so it does NOT honour
+    /// the Anonymise toggle (an anonymised transcript bundle is a separate,
+    /// deferred export). Output lives at `<project>/bristlenose-output/`.
+    private func revealTranscripts() {
+        dismiss()
+        let base = bridgeHandler.selectedProjectPath
+        guard !base.isEmpty else { return }
+        let output = (base as NSString).appendingPathComponent("bristlenose-output")
+        let candidates = [
+            (output as NSString).appendingPathComponent("transcripts-cooked"),
+            (output as NSString).appendingPathComponent("transcripts-raw"),
+            output,
+            base,
+        ]
+        let fm = FileManager.default
+        let target = candidates.first { fm.fileExists(atPath: $0) } ?? base
+        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: target)
+    }
+}
+
+/// A single action row in the export popover: leading SF Symbol, title, and a
+/// muted subtitle. Highlights on hover (the popover is not a system menu, so
+/// the hover affordance is hand-rolled).
+private struct ExportPopoverRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: icon)
+                    .font(.body)
+                    .foregroundStyle(.tint)
+                    .frame(width: 18)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .background(hovered ? Color.primary.opacity(0.06) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+        .padding(.horizontal, 6)
+    }
+}
+
+/// An export row that expands in place to reveal sub-options (e.g. the
+/// spreadsheet format chooser). Same visual language as `ExportPopoverRow`
+/// plus a trailing chevron that rotates when expanded. Tapping the row toggles
+/// the disclosure rather than dispatching — the leaf `ExportPopoverSubRow`s do.
+private struct ExportPopoverDisclosureRow<Content: View>: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    @ViewBuilder let content: () -> Content
+
+    @State private var expanded = false
+    @State private var hovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                expanded.toggle()
+            } label: {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: icon)
+                        .font(.body)
+                        .foregroundStyle(.tint)
+                        .frame(width: 18)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(title)
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(expanded ? 90 : 0))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .background(hovered ? Color.primary.opacity(0.06) : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+            .onHover { hovered = $0 }
+
+            if expanded {
+                content()
+            }
+        }
+        .padding(.horizontal, 6)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: expanded)
+    }
+}
+
+/// A leaf option inside an `ExportPopoverDisclosureRow` — indented under the
+/// parent's icon column, no icon of its own.
+private struct ExportPopoverSubRow: View {
+    let title: String
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 0) {
+                Spacer().frame(width: 28)
+                Text(title)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .background(hovered ? Color.primary.opacity(0.06) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
     }
 }
 

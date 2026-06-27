@@ -148,7 +148,12 @@ class TestMiroDisconnect:
             assert resp.status_code == 200
             data = resp.json()
             assert data["connected"] is False
-            mock_store.return_value.delete.assert_called_once_with("miro")
+            # disconnect clears BOTH the access token and the OAuth refresh token
+            # (the refresh token is stored on the OAuth callback path) — leaving a
+            # live refresh token behind after disconnect would defeat the disconnect.
+            assert mock_store.return_value.delete.call_count == 2
+            mock_store.return_value.delete.assert_any_call("miro")
+            mock_store.return_value.delete.assert_any_call("miro_refresh")
 
     def test_disconnect_project_not_found(self, client: TestClient) -> None:
         """Should return 404 for non-existent project."""

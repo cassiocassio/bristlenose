@@ -17,6 +17,9 @@
     --bn-sentiment-frustration: #ea580c;
     --bn-sentiment-frustration-bg: #fff7ed;
     --bn-sentiment-confusion: #dc2626;
+    /* Error text — sentiment-frustration (#ea580c) is a fill hue, only 3.56:1
+       on white as body text; this darker shade clears WCAG AA (4.5:1). */
+    --bn-colour-error-text: #c2410c;
     --bn-sentiment-confusion-bg: #fef2f2;
     --bn-sentiment-doubt: #7c3aed;
     --bn-sentiment-doubt-bg: #f5f3ff;
@@ -218,6 +221,7 @@
         --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);
         --bn-sentiment-frustration-bg:   light-dark(#fff7ed, #2d1d0e);
         --bn-sentiment-confusion:        light-dark(#dc2626, #f87171);
+        --bn-colour-error-text:          light-dark(#c2410c, #fb923c);
         --bn-sentiment-confusion-bg:     light-dark(#fef2f2, #2d1515);
         --bn-sentiment-doubt:            light-dark(#7c3aed, #a78bfa);
         --bn-sentiment-doubt-bg:         light-dark(#f5f3ff, #1e1533);

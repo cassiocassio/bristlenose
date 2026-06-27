@@ -180,8 +180,18 @@ The no-drift design the original only sketched ("one markdown source → website
 ### Steps once decisions are settled
 
 Assemble v2 into the live repo (content + `build.py` + assets; frozen index/support/privacy take the
-shared chrome, content verbatim) → re-wire `deploy.sh` to `build.py` → preserve URL contracts (Miro
-redirect, PHP, `/manual.html`) → **truth the remaining 28 pages against the code** (the Reference hard
-gate; `bristlenose-website-v2/NOTES-product-discrepancies.md` is the lead) → `git tag v1-final` → deploy
-(maintainer). The Miro page is the worked example of that page-truthing step — done; the other 28 are the
-bulk of the remaining content work.
+shared chrome, content verbatim) → re-wire `deploy.sh` to `build.py` → update the Miro panel href
+(`MiroExportPanel.tsx:207` → `/docs/send-to-miro`) and carry the PHP endpoints → `git tag v1-final` →
+deploy (maintainer).
+
+**Page content is already code-true — this is NOT a from-scratch truthing pass.** The 25 Jun overnight
+build ran *two* truthing passes (`bristlenose-website-v2/NOTES-product-discrepancies.md`, 21 logged
+discrepancies against the shipped code) and all 29 pages were written code-true. The cutover only needs to
+**re-check pages whose features changed _after_ 25 Jun** — a short window. Miro was the one that did (the
+panel gained Preview + link-clips), and re-checking it for the merge surfaced a still-live code bug to fix
+first:
+
+- **`bristlenose configure miro` stale message** (`cli.py:2035-2039`): the command validates + stores the
+  token, then prints *"Miro board export is a parked feature (future idea) — not yet available"* — which
+  contradicts the shipped Send-to-Miro panel (this is NOTES #11, **not** fixed by #120). Remove the line;
+  then the merged `send-to-miro.md` is fully accurate.

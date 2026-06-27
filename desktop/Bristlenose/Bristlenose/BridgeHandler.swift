@@ -84,6 +84,17 @@ final class BridgeHandler: ObservableObject {
     /// previous lens's count.
     @Published var lensSubtitleTab: String?
 
+    /// Live Quotes-lens search text, mirrored from the SPA via `quotes-filter`.
+    /// The native search field reads this so it reflects store changes it didn't
+    /// originate (All Quotes reset, Cmd+E selection). The native field is the
+    /// sole search input in embedded mode; web has no SearchBox there.
+    @Published var quotesSearchQuery: String = ""
+
+    /// Live Quotes-lens view mode ("all" / "starred"), mirrored from the SPA via
+    /// `quotes-filter`. Drives the toolbar starred toggle's active state and the
+    /// View-menu All Quotes / Starred Quotes Only checkmarks.
+    @Published var quotesViewMode: String = "all"
+
     /// The filesystem path of the currently selected project.
     /// Set by ContentView on project selection. Used by Project menu actions
     /// (Show in Finder) and disable guards.
@@ -172,6 +183,17 @@ final class BridgeHandler: ObservableObject {
                 print("[BridgeHandler] switchToTab(\(tab)) FAILED: \(error)")
             }
         }
+    }
+
+    /// Push the Quotes-lens search text from the native search field into the
+    /// SPA store (`setSearchQuery` action → live filtering). One-way native→web
+    /// per keystroke; the echo back arrives as a `quotes-filter` message which
+    /// the field ignores when the value is unchanged. Skips the round-trip when
+    /// the text already matches what the SPA last reported.
+    func setQuotesSearch(_ text: String) {
+        guard text != quotesSearchQuery else { return }
+        quotesSearchQuery = text
+        menuAction("setSearchQuery", payload: ["text": text])
     }
 
     // MARK: - Window active state
@@ -299,6 +321,10 @@ final class BridgeHandler: ObservableObject {
             lensSubtitleTab = body["tab"] as? String
             lensSubtitle = body["subtitle"] as? String ?? ""
 
+        case "quotes-filter":
+            quotesSearchQuery = body["searchQuery"] as? String ?? ""
+            quotesViewMode = body["viewMode"] as? String ?? "all"
+
         case "project-action":
             if let action = body["action"] as? String {
                 handleProjectAction(action, data: body["data"] as? [String: Any])
@@ -334,6 +360,8 @@ final class BridgeHandler: ObservableObject {
         canRedo = false
         undoLabel = nil
         isDarkMode = false
+        quotesSearchQuery = ""
+        quotesViewMode = "all"
         selectedProjectPath = ""
         selectedProjectRevealablePath = ""
         selectedFolderName = ""

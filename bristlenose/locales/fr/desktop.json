@@ -318,6 +318,8 @@
     "showHeatmap": "Afficher la carte thermique (m)",
     "search": "Rechercher",
     "searchShortcut": "Rechercher (⌘F)",
+    "searchClear": "Effacer la recherche",
+    "searchComingSoon": "La recherche n’est pas encore disponible dans cette vue",
     "export": "Exporter",
     "exportShortcut": "Exporter (⌘⇧E)"
   },

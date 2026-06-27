@@ -1413,8 +1413,11 @@ struct ContentView: View {
                 ExportMenuButton(bridgeHandler: bridgeHandler, i18n: i18n)
             }
 
-            // Contextual — Quotes tab: tag sidebar toggle
+            // Contextual — Quotes tab: starred filter toggle + tag sidebar toggle
             if bridgeHandler.activeTab == .quotes {
+                ToolbarItem(placement: .primaryAction) {
+                    QuotesStarredToggle(bridgeHandler: bridgeHandler, i18n: i18n)
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button { bridgeHandler.menuAction("toggleRightPanel") } label: {
                         Label(i18n.t("desktop.toolbar.tags"), systemImage: "sidebar.right")
@@ -1433,16 +1436,21 @@ struct ContentView: View {
                 }
             }
 
-            // Search — rightmost in `.primaryAction`, always active. Declared last
-            // so it sits at the trailing edge of the capsule (Notes / Mail / Finder
-            // convention). The web layer routes per tab: Quotes → search bar,
-            // Sessions → transcript search, Codebook → filter codes, Analysis →
-            // filter signals.
+            // Search — rightmost in `.primaryAction` (Notes / Mail / Finder
+            // convention). Quotes has a native expanding search field wired to
+            // the SPA store; the other lenses show a disabled button that
+            // reserves the slot until per-lens search lands (Sessions →
+            // transcript, Codebook → codes, Analysis → signals). The Project
+            // dashboard has nothing to search, so no item there.
             ToolbarItem(placement: .primaryAction) {
-                Button { bridgeHandler.menuAction("find") } label: {
-                    Label(i18n.t("desktop.toolbar.search"), systemImage: "magnifyingglass")
+                switch bridgeHandler.activeTab {
+                case .quotes:
+                    QuotesSearchToolbarControl(bridgeHandler: bridgeHandler, i18n: i18n)
+                case .sessions, .codebook, .analysis:
+                    QuotesSearchDisabledButton(i18n: i18n)
+                default:
+                    EmptyView()
                 }
-                .help(i18n.t("desktop.toolbar.searchShortcut"))
             }
         }
 

@@ -318,6 +318,8 @@
     "showHeatmap": "Mostrar mapa de calor (m)",
     "search": "Buscar",
     "searchShortcut": "Buscar (⌘F)",
+    "searchClear": "Borrar búsqueda",
+    "searchComingSoon": "La búsqueda aún no está disponible en esta vista",
     "export": "Exportar",
     "exportShortcut": "Exportar (⌘⇧E)"
   },

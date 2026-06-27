@@ -231,6 +231,8 @@
     "showHeatmap": "ヒートマップを表示 (m)",
     "search": "検索",
     "searchShortcut": "検索 (⌘F)",
+    "searchClear": "検索をクリア",
+    "searchComingSoon": "このビューではまだ検索を利用できません",
     "export": "書き出す",
     "exportShortcut": "書き出す (⌘⇧E)"
   },

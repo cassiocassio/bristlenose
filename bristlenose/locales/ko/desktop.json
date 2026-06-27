@@ -313,6 +313,8 @@
     "showHeatmap": "히트맵 보기 (m)",
     "search": "검색",
     "searchShortcut": "검색 (⌘F)",
+    "searchClear": "검색 지우기",
+    "searchComingSoon": "이 화면에서는 아직 검색을 사용할 수 없습니다",
     "export": "내보내기",
     "exportShortcut": "내보내기 (⌘⇧E)"
   },

@@ -403,19 +403,21 @@ private struct ViewMenuContent: View {
 
         Divider()
 
-        Button(i18n.t("desktop.menu.view.allQuotes")) {
-            bridgeHandler.menuAction("allQuotes")
-        }
+        // Radio-style pair: the active view mode carries a checkmark. A Toggle
+        // inside a menu is the native idiom for "this option is on"; the set
+        // closure ignores the new value and dispatches the action (the SPA owns
+        // the state, mirrored back via `quotes-filter`). Tag filtering moved to
+        // the tag sidebar (View ▸ Show Tags) — the old Filter by Tag item is gone.
+        Toggle(i18n.t("desktop.menu.view.allQuotes"), isOn: Binding(
+            get: { bridgeHandler.quotesViewMode == "all" },
+            set: { _ in bridgeHandler.menuAction("allQuotes") }
+        ))
         .disabled(bridgeHandler.activeTab != .quotes)
 
-        Button(i18n.t("desktop.menu.view.starredQuotesOnly")) {
-            bridgeHandler.menuAction("starredQuotesOnly")
-        }
-        .disabled(bridgeHandler.activeTab != .quotes)
-
-        Button(i18n.t("desktop.menu.view.filterByTag")) {
-            bridgeHandler.menuAction("filterByTag")
-        }
+        Toggle(i18n.t("desktop.menu.view.starredQuotesOnly"), isOn: Binding(
+            get: { bridgeHandler.quotesViewMode == "starred" },
+            set: { _ in bridgeHandler.menuAction("starredQuotesOnly") }
+        ))
         .disabled(bridgeHandler.activeTab != .quotes)
 
         Divider()

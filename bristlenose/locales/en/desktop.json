@@ -319,6 +319,8 @@
     "showHeatmap": "Show Heatmap (m)",
     "search": "Search",
     "searchShortcut": "Search (⌘F)",
+    "searchClear": "Clear search",
+    "searchComingSoon": "Search isn’t available in this view yet",
     "export": "Export",
     "exportShortcut": "Export (⌘⇧E)"
   },

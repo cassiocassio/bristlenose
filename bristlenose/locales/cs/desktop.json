@@ -327,6 +327,8 @@
     "showHeatmap": "Zobrazit teplotní mapu (m)",
     "search": "Hledat",
     "searchShortcut": "Hledat (⌘F)",
+    "searchClear": "Vymazat hledání",
+    "searchComingSoon": "Hledání v tomto zobrazení zatím není k dispozici",
     "export": "Exportovat",
     "exportShortcut": "Exportovat (⌘⇧E)"
   },

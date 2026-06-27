@@ -318,6 +318,8 @@
     "showHeatmap": "Heatmap einblenden (m)",
     "search": "Suchen",
     "searchShortcut": "Suchen (⌘F)",
+    "searchClear": "Suche löschen",
+    "searchComingSoon": "Die Suche ist in dieser Ansicht noch nicht verfügbar",
     "export": "Exportieren",
     "exportShortcut": "Exportieren (⌘⇧E)"
   },

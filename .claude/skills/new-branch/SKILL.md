@@ -29,6 +29,8 @@ The Claude Code Bash tool inherits PATH from the harness, which has occasionally
 
 `hash -r` is required because zsh caches "command → path" lookups at shell start. If the harness shell came up with a degraded PATH and zsh cached `mkdir` as not-found, a later `export PATH` doesn't invalidate that cache — bare `mkdir`/`ln` would still hit the cached miss. Clearing the hash table after the PATH fix ensures fresh lookups. (Observed 2026-05-08: silent `mkdir`/`ln` "command not found" inside Step 9 despite a corrected PATH.)
 
+**`export PATH` + `hash -r` is necessary but NOT sufficient — call system binaries by absolute path.** Observed again 2026-06-28 in a from-cloud run: `mkdir` reported "command not found" *mid-script*, in a block that had already run `hash -r` at the top **and** had successfully run `mkdir` + 30 `ln -s` calls seconds earlier in the same shell. A shell-start hash-miss cannot explain a failure that appears *after* the same binary resolved fine — so the hash-cache story is at best incomplete and the `hash -r` incantation demonstrably did not prevent it. The root trigger is not fully understood, so don't rely on resolution working: invoke the handful of critical system binaries by absolute path, which can't be shadowed by PATH state or a stale hash table whatever the cause — `/bin/mkdir`, `/bin/ln`, `/bin/rmdir`, `/bin/rm`, `/usr/bin/ditto`, `/bin/date`. The PATH export + `hash -r` still belongs at the top of every block (for `git`, `python3.12`, `npm`, `osascript`, `gh` etc. that you won't path-qualify); absolute paths are the belt-and-braces for the few commands whose silent failure corrupts setup. The bash blocks below already use absolute paths for these — keep it that way.
+
 **Instrumentation:** this skill logs via `bash /Users/cassio/Code/bristlenose/.claude/skills/_shared/wflog.sh new-branch <step> "<detail>"` — appends a JSON line to `.claude/workflow-log.jsonl`; `BRISTLENOSE_WORKFLOW_DEBUG=1` echoes each step to stderr. At minimum it logs `done` and writes the task route at Step 13; add `start` (Step 2) / `worktree-created` (Step 4) calls if you want fuller traces. Log calls are non-fatal — a logging failure must never stop the skill.
 
 ## Step 0: Parse optional flags
@@ -138,7 +140,7 @@ CLOUD="$0"                                   # full cloud ref, set in Step 0.6
 CLEAN="<clean name from Step 0.6>"
 DIR="/Users/cassio/Code/bristlenose_branch $CLEAN"
 # git worktree add refuses an existing path; remove the empty placeholder if present
-[ -d "$DIR" ] && rmdir "$DIR" 2>/dev/null
+[ -d "$DIR" ] && /bin/rmdir "$DIR" 2>/dev/null
 git worktree add --track -b "$CLOUD" "$DIR" "origin/$CLOUD"
 ```
 
@@ -176,8 +178,8 @@ If the git commands fail for any other reason, tell the user and stop.
 **After the worktree directory exists, drop a setup-incomplete sentinel:**
 
 ```bash
-mkdir -p "/Users/cassio/Code/bristlenose_branch $0/.claude"
-date -u +"setup started at %Y-%m-%dT%H:%M:%SZ" \
+/bin/mkdir -p "/Users/cassio/Code/bristlenose_branch $0/.claude"
+/bin/date -u +"setup started at %Y-%m-%dT%H:%M:%SZ" \
   > "/Users/cassio/Code/bristlenose_branch $0/.claude/setup-incomplete"
 ```
 
@@ -210,12 +212,12 @@ HANDOFF="/Users/cassio/Code/bristlenose/docs/private/handoffs/$0.md"
 WORKTREE="/Users/cassio/Code/bristlenose_branch $0"
 PLAN_DIR="$WORKTREE/.claude/plans"
 if [ -f "$HANDOFF" ]; then
-  mkdir -p "$PLAN_DIR"
-  cp "$HANDOFF" "$PLAN_DIR/$0.md"
+  /bin/mkdir -p "$PLAN_DIR"
+  /bin/cp "$HANDOFF" "$PLAN_DIR/$0.md"
   # Visible alias at worktree root — .claude/ is hidden, so users miss the
   # plan unless we surface it. Symlink shows up in Finder, IDE file trees,
   # and `ls`. HANDOFF.md is gitignored.
-  ln -sf ".claude/plans/$0.md" "$WORKTREE/HANDOFF.md"
+  /bin/ln -sf ".claude/plans/$0.md" "$WORKTREE/HANDOFF.md"
   echo "✓ Seeded plan: $PLAN_DIR/$0.md (visible at $WORKTREE/HANDOFF.md)"
 else
   echo "ℹ No prior handoff at $HANDOFF — new session will need a brief from the user."
@@ -369,7 +371,7 @@ If `--no-tests` was passed, leave the sentinel in place and say so — the env i
 WORKTREE="/Users/cassio/Code/bristlenose_branch $0"
 MAIN_TRIAL="/Users/cassio/Code/bristlenose/trial-runs"
 TRIAL="$WORKTREE/trial-runs"
-mkdir -p "$TRIAL"
+/bin/mkdir -p "$TRIAL"
 made=0; skipped=0
 if [ -d "$MAIN_TRIAL" ]; then
   for src in "$MAIN_TRIAL"/*; do
@@ -378,7 +380,7 @@ if [ -d "$MAIN_TRIAL" ]; then
     if [ -e "$dst" ] || [ -L "$dst" ]; then
       skipped=$((skipped+1))                        # tracked fossda-opensource, or already linked
     else
-      ln -s "$src" "$dst" && made=$((made+1)) || echo "✗ failed to link $(basename "$src")"
+      /bin/ln -s "$src" "$dst" && made=$((made+1)) || echo "✗ failed to link $(basename "$src")"
     fi
   done
   echo "✓ trial-runs: symlinked $made project(s) from main, skipped $skipped (tracked/existing)"
@@ -405,8 +407,8 @@ for path in ffmpeg ffprobe models; do
   src="/Users/cassio/Code/bristlenose/desktop/Bristlenose/Resources/$path"
   dst="$WORKTREE/desktop/Bristlenose/Resources/$path"
   if [ -e "$src" ] && [ ! -e "$dst" ]; then
-    mkdir -p "$WORKTREE/desktop/Bristlenose/Resources" \
-      && ln -s "$src" "$dst" \
+    /bin/mkdir -p "$WORKTREE/desktop/Bristlenose/Resources" \
+      && /bin/ln -s "$src" "$dst" \
       && echo "✓ symlinked $path from main" \
       || echo "✗ failed to symlink $path"
   elif [ -e "$dst" ]; then
@@ -417,7 +419,7 @@ for path in ffmpeg ffprobe models; do
 done
 ```
 
-Chain `mkdir`/`ln`/`echo` with `&&` (not separate lines): a bare `echo` after a failed `mkdir`/`ln` would still fire, falsely reporting "✓ symlinked" while `Resources/` doesn't exist. (Observed 2026-05-08 alongside the `hash -r` issue — three "✓ symlinked" lines printed despite `mkdir`/`ln` failing with "command not found".)
+Chain `/bin/mkdir`/`/bin/ln`/`echo` with `&&` (not separate lines): a bare `echo` after a failed `mkdir`/`ln` would still fire, falsely reporting "✓ symlinked" while `Resources/` doesn't exist. (Observed 2026-05-08 alongside the `hash -r` issue — three "✓ symlinked" lines printed despite `mkdir`/`ln` failing with "command not found".) The absolute-path forms (`/bin/mkdir`, `/bin/ln`) are why this block now resolves regardless of PATH/hash state — it was exactly this block that failed again on 2026-06-28 with bare names *after* `hash -r`; see the PATH note at the top of the skill.
 
 Then copy main's PyInstaller sidecar bundle into the worktree using `ditto`. Without it, Cmd+R on the default Bristlenose scheme fails with "Bundled sidecar missing at …" — and the bundled scheme is the only TestFlight-honest path; the v0.2-launcher fallbacks (External Server / Dev Sidecar) are deprecated scaffolding. The sidecar is ~428 MB per worktree, disk-cheap. If you're iterating on `bristlenose/server/` or signing, run `desktop/scripts/build-sidecar.sh` in this worktree afterwards to replace the copy with a locally-built bundle.
 
@@ -428,8 +430,8 @@ WORKTREE="/Users/cassio/Code/bristlenose_branch $0"
 src="/Users/cassio/Code/bristlenose/desktop/Bristlenose/Resources/bristlenose-sidecar"
 dst="$WORKTREE/desktop/Bristlenose/Resources/bristlenose-sidecar"
 if [ -d "$src" ] && [ ! -e "$dst" ]; then
-  mkdir -p "$WORKTREE/desktop/Bristlenose/Resources" \
-    && ditto "$src" "$dst" \
+  /bin/mkdir -p "$WORKTREE/desktop/Bristlenose/Resources" \
+    && /usr/bin/ditto "$src" "$dst" \
     && echo "✓ copied sidecar bundle from main (~428 MB)" \
     || echo "✗ failed to copy sidecar bundle"
 elif [ -e "$dst" ]; then
@@ -562,8 +564,8 @@ Then record the task route in the worktree (so `/close-branch` knows this was th
 ```bash
 export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:$PATH"; hash -r 2>/dev/null || true
 WT="/Users/cassio/Code/bristlenose_branch $0"
-mkdir -p "$WT/.claude"
-printf '{"route":"branch","branch":"%s","started":"%s"}\n' "$0" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$WT/.claude/current-task.json"
+/bin/mkdir -p "$WT/.claude"
+printf '{"route":"branch","branch":"%s","started":"%s"}\n' "$0" "$(/bin/date -u +%Y-%m-%dT%H:%M:%SZ)" > "$WT/.claude/current-task.json"
 bash /Users/cassio/Code/bristlenose/.claude/skills/_shared/wflog.sh new-branch done "$0"
 ```
 

@@ -139,6 +139,16 @@ enum BristlenoseShared {
         // leaving an orphan holding a port). CLI users don't get this — they
         // may legitimately nohup the server.
         env["_BRISTLENOSE_HOSTED_BY_DESKTOP"] = "1"
+        // Activate the desktop presentation themes on the served <html>.
+        // data-platform="desktop" gates the SF Pro type scale (tokens-desktop.css);
+        // without this the native type system ships dark (built-but-unplugged).
+        // Colour is pinned to the default palette for now — app.py would
+        // otherwise default desktop → the Edo palette, which is deferred (not for
+        // TestFlight). Flip COLOR_THEME to "edo" (or make it a preference) when
+        // those colours are finalised. Typography (sf/inter) rides
+        // overlayPreferences as BRISTLENOSE_TYPOGRAPHY.
+        env["BRISTLENOSE_PLATFORM"] = "desktop"
+        env["BRISTLENOSE_COLOR_THEME"] = "default"
         for (key, value) in sslEnvironment(for: mode) { env[key] = value }
         for (key, value) in bundledBinaryEnvironment(for: mode) { env[key] = value }
         overlayAPIKeys(into: &env, using: store)
@@ -213,6 +223,12 @@ enum BristlenoseShared {
         }
         if let lang = defaults.string(forKey: "language"), lang != "en" {
             env["BRISTLENOSE_WHISPER_LANGUAGE"] = lang
+        }
+        // Typography (Appearance ▸ Typography). Default "sf" is the server's
+        // implicit default (no attr → SF Pro), so only inject when the user
+        // opted back to Inter — app.py then emits data-typography="inter".
+        if let typography = defaults.string(forKey: "typography"), typography != "sf" {
+            env["BRISTLENOSE_TYPOGRAPHY"] = typography
         }
         if let endpoint = defaults.string(forKey: "azureEndpoint"), !endpoint.isEmpty {
             env["BRISTLENOSE_AZURE_ENDPOINT"] = endpoint

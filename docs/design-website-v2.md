@@ -1,8 +1,11 @@
 # Website v2 — integration, iteration, release & infra plan
 
-> **Status:** plan / working spec. Pairs with [`docs/design-docs-system.md`](design-docs-system.md)
-> (design system + writing style) and the help-delivery thread. Local staging tree:
-> `/Users/cassio/Code/bristlenose-website-v2/`. _Drafted 25 Jun 2026._
+> **Status:** ✅ **SHIPPED 27 Jun 2026 — v2 docs live on bristlenose.app.** Executed in the live
+> `bristlenose-website` repo via `build.py` (`ec22ff0` → `197b59a` → `497ddfb`, deployed by `./deploy.sh`);
+> this doc is the plan it was built from. What shipped + the follow-up leg (offline app-bundle, Miro
+> href, `configure-miro` fix) are in memory `project_website_v2_docs_cutover_pending`. Pairs with
+> [`docs/design-docs-system.md`](design-docs-system.md). Staging prototype:
+> `/Users/cassio/Code/bristlenose-website-v2/`. _Drafted 25 Jun; shipped 27 Jun 2026._
 
 v2 = the **existing site** (index, support, privacy) **integrated into the new docs
 design system**, plus the **new docs framework** (Diátaxis-lite). One look, one nav,

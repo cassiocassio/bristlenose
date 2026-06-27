@@ -231,6 +231,22 @@ class TestRenderPage:
         )
         assert 'data-platform="desktop"' in html
 
+    def test_html_root_attrs_typography(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from bristlenose.server.app import _html_root_attrs
+
+        # Desktop default: SF Pro is implied by the ABSENCE of data-typography
+        # (CSS gate is [data-platform="desktop"]:not([data-typography="inter"])).
+        monkeypatch.setenv("BRISTLENOSE_PLATFORM", "desktop")
+        monkeypatch.setenv("BRISTLENOSE_COLOR_THEME", "default")
+        monkeypatch.delenv("BRISTLENOSE_TYPOGRAPHY", raising=False)
+        attrs = _html_root_attrs()
+        assert 'data-platform="desktop"' in attrs
+        assert "data-typography" not in attrs
+
+        # Opt the desktop app back to Inter.
+        monkeypatch.setenv("BRISTLENOSE_TYPOGRAPHY", "inter")
+        assert 'data-typography="inter"' in _html_root_attrs()
+
 
 # ---------------------------------------------------------------------------
 # Integration: intercept fires from /report/* in prod and dev mounts

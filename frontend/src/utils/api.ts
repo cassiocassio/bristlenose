@@ -19,6 +19,11 @@ import type {
   TagAnalysisResponse,
   TemplateListResponse,
   TranscriptPageResponse,
+  MiroStatusResponse,
+  MiroExportRequest,
+  MiroExportResponse,
+  MiroPreviewResponse,
+  MiroAuthUrlResponse,
 } from "./types";
 import { isExportMode, resolveFromExport } from "./exportData";
 
@@ -41,11 +46,31 @@ export function authHeaders(extra?: Record<string, string>): Record<string, stri
 // Generic request helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Build an Error from a non-ok response, surfacing the server's `detail` field
+ * (FastAPI's HTTPException body) when present and attaching it as `.detail` so
+ * callers can render it. Without this, the helpers threw only
+ * "POST <path> <status>" and dropped the body — burying actionable messages
+ * like the Miro partial-board recovery URL carried in a 502 `detail`.
+ */
+async function httpError(method: string, path: string, resp: Response): Promise<Error> {
+  let detail = "";
+  try {
+    const body = (await resp.json()) as { detail?: unknown };
+    if (typeof body?.detail === "string") detail = body.detail;
+  } catch {
+    /* non-JSON error body — fall back to the status-only message */
+  }
+  const err = new Error(`${method} ${path} ${resp.status}${detail ? `: ${detail}` : ""}`);
+  (err as Error & { detail?: string }).detail = detail;
+  return err;
+}
+
 export async function apiGet<T>(path: string): Promise<T> {
   const embedded = resolveFromExport<T>(path);
   if (embedded !== null) return embedded;
   const resp = await fetch(`${apiBase()}${path}`, { headers: authHeaders() });
-  if (!resp.ok) throw new Error(`GET ${path} ${resp.status}`);
+  if (!resp.ok) throw await httpError("GET", path, resp);
   return resp.json() as Promise<T>;
 }
 
@@ -55,7 +80,7 @@ async function apiPost<T>(path: string, body: unknown): Promise<T> {
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   });
-  if (!resp.ok) throw new Error(`POST ${path} ${resp.status}`);
+  if (!resp.ok) throw await httpError("POST", path, resp);
   return resp.json() as Promise<T>;
 }
 
@@ -352,4 +377,32 @@ export function getClipExtractionStatus(): Promise<ClipJobStatus> {
 
 export function revealClips(): Promise<{ revealed: boolean; path: string }> {
   return apiPost<{ revealed: boolean; path: string }>("/export/clips/reveal", {});
+}
+
+// ---------------------------------------------------------------------------
+// Miro export (experimental)
+// ---------------------------------------------------------------------------
+
+export function getMiroStatus(): Promise<MiroStatusResponse> {
+  return apiGet<MiroStatusResponse>("/miro/status");
+}
+
+export function postMiroConnect(token: string): Promise<MiroStatusResponse> {
+  return apiPost<MiroStatusResponse>("/miro/connect", { token });
+}
+
+export function postMiroDisconnect(): Promise<MiroStatusResponse> {
+  return apiPost<MiroStatusResponse>("/miro/disconnect", {});
+}
+
+export function getMiroAuthUrl(): Promise<MiroAuthUrlResponse> {
+  return apiGet<MiroAuthUrlResponse>("/miro/auth-url");
+}
+
+export function postMiroPreview(req: MiroExportRequest): Promise<MiroPreviewResponse> {
+  return apiPost<MiroPreviewResponse>("/miro/preview", req);
+}
+
+export function postMiroExport(req: MiroExportRequest): Promise<MiroExportResponse> {
+  return apiPost<MiroExportResponse>("/miro/export", req);
 }

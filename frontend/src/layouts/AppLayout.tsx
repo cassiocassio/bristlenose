@@ -20,6 +20,7 @@ import { SessionsSidebar } from "../components/SessionsSidebar";
 import { CodebookSidebar } from "../components/CodebookSidebar";
 import { AnalysisSidebar } from "../components/AnalysisSidebar";
 import { ExportDialog } from "../components/ExportDialog";
+import { MiroExportPanel } from "../components/MiroExportPanel";
 import { ActivityChipStack } from "../components/ActivityChipStack";
 import type { ActivityJob } from "../components/ActivityChipStack";
 import { AnnounceRegion } from "../components/AnnounceRegion";
@@ -174,6 +175,7 @@ function AppShell() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportAnonymise, setExportAnonymise] = useState(false);
+  const [miroOpen, setMiroOpen] = useState(false);
   const projectId = useProjectId();
   const isEmbeddedDesktop = useCallback(
     () => Boolean((window as unknown as { __BRISTLENOSE_EMBEDDED__?: boolean }).__BRISTLENOSE_EMBEDDED__),
@@ -223,6 +225,7 @@ function AppShell() {
   const showSidebar = !!(isQuotes || isSessions || isTranscript || isCodebook || isAnalysis);
   const isSessionsRoute = !!(isSessions || isTranscript);
   const toggleExport = useCallback(() => setExportOpen((prev) => !prev), []);
+  const toggleMiro = useCallback(() => setMiroOpen((prev) => !prev), []);
   const navigate = useNavigate();
   const activityJobs = useActivityJobs();
 
@@ -385,6 +388,11 @@ function AppShell() {
           }
           break;
         }
+        case "sendToMiro":
+          // Modal action, like exportReport — opens the Miro export panel.
+          // Dispatched by the macOS native menu for parity with the web dropdown.
+          setMiroOpen(true);
+          break;
         case "exportAnonymised":
           if (isEmbeddedDesktop()) {
             triggerReportDownload(true);
@@ -608,7 +616,7 @@ function AppShell() {
       showRightSidebar={!!isQuotes}
     >
       {!embedded && <Header />}
-      {!embedded && <NavBar onExportReport={toggleExport} onSettings={toggleSettings} onHelp={openHelp} />}
+      {!embedded && <NavBar onExportReport={toggleExport} onSendToMiro={toggleMiro} onSettings={toggleSettings} onHelp={openHelp} />}
       <Outlet />
       {!embedded && (
         <Footer
@@ -620,6 +628,7 @@ function AppShell() {
       <FeedbackModal open={feedbackOpen} onClose={closeFeedback} health={health} />
       <HelpModal open={helpOpen} onClose={toggleHelp} initialSection={helpSection} health={health} />
       <ExportDialog open={exportOpen} onClose={toggleExport} initialAnonymise={exportAnonymise} />
+      <MiroExportPanel open={miroOpen} onClose={toggleMiro} />
       <SettingsModal open={settingsOpen} onClose={toggleSettings} />
       <ActivityChipStack jobs={chipJobs} onDismiss={removeJob} />
       <AnnounceRegion />

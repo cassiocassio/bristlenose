@@ -103,3 +103,44 @@ whole sessions.
 **Env note:** the desktop (Swift) items can't be compiled or verified in the
 Linux cloud env — they need a Mac. The `serve --dev` items (#9–#11) are
 Python/HTML and testable here with pytest.
+
+## Implementation (shipped — items #9–#11)
+
+Built as a standalone, dev-only, server-rendered page. No React, no npm dep, no
+CDN — buildable and testable without the frontend toolchain.
+
+- **`bristlenose/server/run_inspector.py`** (NEW, stdlib-only) — pure readers +
+  shapers + `build_run_inspector_html()`. Imports nothing from FastAPI /
+  SQLAlchemy / the heavy pipeline, so it unit-tests in isolation. This is the
+  testable seam; the endpoint is a thin wrapper.
+- **`bristlenose/server/routes/dev.py`** (EDIT) — `GET /api/dev/run` (HTML) and
+  `GET /api/dev/run.json` (raw payload), plus a "Run Inspector" link in
+  `dev_info`. Dev-router only → 404 without `--dev`.
+- **Tests:** `tests/test_run_inspector.py` (18 pure-function tests, run anywhere)
+  + `tests/test_serve_dev_run.py` (endpoint tests, run in CI/Mac — need fastapi).
+
+### Three tabs, all real-data-backed
+- **Run overview** — gantt reconstructed from the `run_progress` `elapsed_seconds`
+  stream; cost-by-stage donut + token bar + event stream from `llm-calls.jsonl`.
+- **LLM calls** — latency×tokens scatter (retry rings), cache-hit donut, stacked
+  per-stage cost bars, full calls table. All from `llm-calls.jsonl`.
+- **Timing & forecast** — Welford μ±σ-vs-actual dumbbell (from `timing.json`) and
+  a **forecast-calibration scatter** (predicted vs actual cost per call).
+
+### Honesty decisions (from the review)
+- **Dropped the mockup's "convergence over runs" curve** — `timing.json` stores
+  only aggregate Welford `{mean,m2,n}`, not a per-run series, so it had no
+  backing data. Replaced with the predicted-vs-actual cost calibration, which is
+  genuinely recorded (`cost_usd_predicted` / `cost_usd_actual_estimate`).
+- **XSS:** JSON injected into the `<script>` block is escaped `<`/`>`/`&` →
+  `\uXXXX` (ensure_ascii handles non-ASCII + the U+2028/9 separators). NB —
+  `ensure_ascii=True` alone does **not** escape `<`; **`routes/export.py:222`
+  relies on exactly that and is a latent `</script>`-breakout vector** if any
+  embedded project string contains `</script>`. Flagged, not fixed here.
+- **Gantt is reconstructed, not stored** — `PipelineSummary` only carries 4
+  coarse rollups; the per-stage timeline comes from the progress stream. Stages
+  with no progress events degrade to an empty-state rather than faking bars.
+
+### Follow-ups
+- Native desktop **Debug ▸ Open Run Inspector** menu entry (Swift, needs a Mac).
+- A timing-history store would re-enable the convergence curve honestly.

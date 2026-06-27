@@ -40,6 +40,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 | `bristlenose_branch_figjam-miro-market-share/` | `claude/figjam-miro-market-share-px52tg` | feature | Miro bridge (imported from cloud, PR #120) — quotes → Miro board export |
+| `bristlenose_branch debug-menu-instrumentation/` | `claude/debug-menu-instrumentation-4r9npy` | feature | Dev Run Inspector (imported from cloud) — infoviz over llm-calls / pipeline-events / timing at `/api/dev/run` |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -125,6 +126,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `claude/figjam-miro-market-share-px52tg` | `bristlenose_branch_figjam-miro-market-share/` | `origin/claude/figjam-miro-market-share-px52tg` (PR #120) |
+| `claude/debug-menu-instrumentation-4r9npy` | `bristlenose_branch debug-menu-instrumentation/` | `origin/claude/debug-menu-instrumentation-4r9npy` (no PR yet) |
 | `claude/dynamic-codebook-builder-67r2fa` _(merged)_ | `bristlenose_branch dynamic-codebook-builder/` _(detached, on disk)_ | local + remote deleted — merged to main 27 Jun 2026 (c4189047) |
 | `multi-project-drag-onto` _(merged)_ | `bristlenose_branch multi-project-drag-onto/` _(detached, on disk)_ | local only — merged to main 15 May 2026 |
 | `multi-project-switch` _(merged)_ | `bristlenose_branch multi-project-switch/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`baf1896`) |
@@ -174,6 +176,30 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - `frontend/src/components/ExportDropdown.tsx` is a hotspot — any branch touching the export menu will collide.
+
+---
+
+### `debug-menu-instrumentation` (imported from cloud)
+
+**Kind:** feature — Dev Run Inspector: a dev-only `/api/dev/run` infoviz page over instrumentation the pipeline already captures (`llm-calls.jsonl` / `pipeline-events.jsonl` / timing), plus a `.json` sibling. Pure-stdlib data shaping in `run_inspector.py`; thin FastAPI wrappers in `routes/dev.py`.
+**Status:** Imported from cloud + brought up on Mac 28 Jun 2026 — venv + frontend + CLI all green; full suite **3161 passed, 1 failed**. The one failure is a brittle test, not a code defect (see notes). NOT yet merge-ready.
+**Started:** cloud session · imported to Mac 28 Jun 2026
+**Local branch:** `claude/debug-menu-instrumentation-4r9npy` (keeps the cloud ref so push updates a future PR)
+**Worktree:** `/Users/cassio/Code/bristlenose_branch debug-menu-instrumentation/`
+**Remote:** `origin/claude/debug-menu-instrumentation-4r9npy` — no PR yet
+
+**What it does:** Adds a developer Run Inspector page rendering the cost/timing/LLM-call story of the last pipeline run, self-contained HTML (no React) with an injected JSON blob, dev-gated behind `--dev`. Built in the cloud without a venv, so the server modules were syntax-only until this Mac import ran the suite.
+
+**Brought-up-on-Mac notes:** `.claude/from-cloud-import-notes.md` in the worktree. One test failed — `test_serve_dev_run.py::test_run_html_renders_and_escapes` — but it's a **test defect, not a code defect**: the assertion tries to prove XSS escaping by checking `<` appears in the output, while its fixture seeds clean data with no escapable chars. Production escaping verified safe directly against a hostile `</script>` payload (`run_inspector.py:513-514`). Recommended one-line fixture fix pending the user's nod.
+
+**Blockers before merge:**
+- **Brittle test** — fix `test_run_html_renders_and_escapes` to seed an escapable char (one-line, no production change).
+- **Conflict with main** (1 file): `TODO.md` only — trivial concurrent-edit, resolve on merge onto local main.
+- **Stale design-doc status** — `docs/design-debug-menu.md` still says "proposal / not yet built"; refresh now that the inspector is built.
+- Follow-ups (not blockers): native Debug ▸ Open Run Inspector Swift menu entry; timing-history store for an honest convergence curve.
+
+**Potential conflicts with other branches:**
+- `bristlenose/server/routes/dev.py` — any branch adding dev endpoints collides (low risk; new routes append).
 
 ---
 

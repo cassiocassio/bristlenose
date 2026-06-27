@@ -367,6 +367,11 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.16.0** — _27 Jun 2026_
+
+- **Send to Miro — push your analysed quotes onto a Miro board.** A new export builds a first-draft research wall: a fresh board per export, one column per section then per theme, pink section headers and yellow quote stickies coloured by sentiment. Connect by pasting a Miro access token (guided setup at `bristlenose.app/docs/send-to-miro.html`), preview credential-free, then push. Participant display names never leave your machine — codes only; hidden quotes excluded. Experimental, phase 1 (paste-token). SPA export menu now; macOS native menu next build.
+- **Desktop: native SF Pro typography, with a Typography setting (SF Pro / Inter).** The macOS app renders on a calibrated SF Pro type scale aligned to Apple's text styles, with a setting to switch fonts. Includes WKWebView type-parity fixes so the in-app report matches.
+
 **0.15.19** — _24 Jun 2026_
 
 - **Desktop: the macOS project sidebar is rebuilt on native AppKit.** Off SwiftUI's `List` (which hit selection/tap dead-ends on macOS 26) onto a native `NSOutlineView`, bringing two-line project rows (icon · name · session count + a live status subtitle), activity/copy rings with hover-to-cancel on the row, can't-find and iCloud status glyphs, the failure → diagnostic popover, project/folder context menus, and Finder folder drops into the sidebar.

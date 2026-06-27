@@ -2,6 +2,11 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.16.0** — _27 Jun 2026_
+
+- **Send to Miro — push your analysed quotes onto a Miro board.** A new export builds a first-draft research wall: a fresh board each time, one column per section then per theme (the report's left-to-right order), pink section headers and yellow quote stickies stacked session-then-time, coloured by sentiment. Connect once by pasting a Miro access token (guided setup at `bristlenose.app/docs/send-to-miro.html`), name the board, choose colour-by, optionally link quotes to hosted clips, and preview the whole board credential-free before pushing. Participant display names never leave your machine — stickies carry speaker codes (p1, p2) only, and hidden quotes are excluded. Experimental, phase 1 (paste-token; one-click browser connect comes later). In the SPA export menu now; the macOS native menu arrives with the next bundled build. `SECURITY.md` documents Miro as an opt-in sub-processor.
+- **Desktop: native SF Pro typography, with a Typography setting.** The macOS app now renders on a calibrated SF Pro type scale aligned to Apple's text styles, and a new Typography setting switches between SF Pro and Inter. The type scale ships in the theme (so the in-app report matches, via WKWebView type-parity fixes); the setting is the macOS app.
+
 **0.15.19** — _24 Jun 2026_
 
 - **Desktop: the macOS project sidebar is rebuilt on native AppKit.** The sidebar moved off SwiftUI's `List` — which had hit selection and tap dead-ends on macOS 26 — onto a native `NSOutlineView`, bringing the row affordances the old list couldn't carry: two-line project rows (icon · name · session count, with a live status subtitle beneath), native activity and copy rings with hover-to-cancel on the row itself, status glyphs for can't-find and iCloud-evicted projects, the failure → diagnostic popover opened from the row, project and folder context menus, and Finder folder-of-videos drops wired into the sidebar. The migration came with its own test seams — pure `ProjectCellSpec`, `OutlineNode`, and `DropRouting` helpers with unit coverage — so the AppKit layer isn't an untested blind spot.

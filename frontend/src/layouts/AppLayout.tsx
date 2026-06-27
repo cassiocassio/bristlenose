@@ -355,6 +355,14 @@ function AppShell() {
         case "find":
           focusSearchInput();
           break;
+        case "setSearchQuery": {
+          // Native macOS search field → store (live as the user types). In
+          // embedded mode the native field is the sole search input; the web
+          // SearchBox isn't rendered, so this drives filtering directly.
+          const text = (payload as { text?: string } | undefined)?.text ?? "";
+          setSearchQuery(text);
+          break;
+        }
         case "useSelectionForFind": {
           const sel = window.getSelection()?.toString().trim() ?? "";
           if (sel) {
@@ -462,13 +470,6 @@ function AppShell() {
         case "starredQuotesOnly":
           setViewMode("starred");
           break;
-        case "filterByTag": {
-          const btn = document.querySelector<HTMLButtonElement>(
-            '[data-testid="bn-toolbar-tag-filter"] button',
-          );
-          if (btn) btn.click();
-          break;
-        }
         case "showHelp":
           setHelpSection("help");
           setHelpOpen(true);

@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 
 import { useAnalysisSignalStore } from "../contexts/AnalysisSignalStore";
 import { useQuotesStore } from "../contexts/QuotesContext";
-import { postLensSubtitle } from "../shims/bridge";
+import { postLensSubtitle, postQuotesFilter } from "../shims/bridge";
 import { getCodebook } from "../utils/api";
 import { isEmbedded } from "../utils/embedded";
 import { filterQuotes } from "../utils/filter";
@@ -82,7 +82,13 @@ export function LensSubtitleSync(): null {
     }
 
     document.title = subtitle || "Bristlenose";
-    if (isEmbedded()) postLensSubtitle(tab, subtitle);
+    if (isEmbedded()) {
+      postLensSubtitle(tab, subtitle);
+      // Mirror the Quotes filter state to the native toolbar (search field +
+      // starred toggle). Cheap to post on every store change; native skips
+      // when the value is unchanged.
+      postQuotesFilter(store.searchQuery, store.viewMode);
+    }
   }, [tab, store, signals, codebook]);
 
   return null;

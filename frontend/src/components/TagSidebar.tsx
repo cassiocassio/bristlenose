@@ -2,9 +2,9 @@
  * TagSidebar — tag filter tree for the Quotes tab right sidebar.
  *
  * Fetches the codebook API, groups tags by framework, renders
- * disclosure trees with eye toggles and tag checkboxes. Shares
- * QuotesStore.tagFilter with the toolbar TagFilterDropdown — changes
- * in either are immediately reflected in both.
+ * disclosure trees with eye toggles and tag checkboxes. Owns
+ * QuotesStore.tagFilter — the sole tag-filtering surface since the
+ * toolbar tag-filter dropdown was removed (v0.16).
  *
  * Eye toggle state (hiddenTagGroups) is persisted to SQLite via
  * SidebarStore. Framework-level hidden is derived: a framework is

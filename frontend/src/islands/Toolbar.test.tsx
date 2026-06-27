@@ -1,6 +1,7 @@
 import { render, fireEvent, act } from "@testing-library/react";
 import { Toolbar } from "./Toolbar";
 import { initFromQuotes, resetStore } from "../contexts/QuotesContext";
+import { _resetEmbeddedCache } from "../utils/embedded";
 import type { QuoteResponse } from "../utils/types";
 
 // Mock API
@@ -53,20 +54,33 @@ function makeQuote(overrides: Partial<QuoteResponse> = {}): QuoteResponse {
 
 beforeEach(() => {
   resetStore();
+  delete (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__;
+  _resetEmbeddedCache();
   vi.useFakeTimers();
 });
 
 afterEach(() => {
   vi.useRealTimers();
+  delete (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__;
+  _resetEmbeddedCache();
 });
 
 describe("Toolbar", () => {
-  it("renders toolbar sections", () => {
-    const { getByTestId } = render(<Toolbar />);
+  it("renders toolbar sections (search + view switcher, no tag filter)", () => {
+    const { getByTestId, queryByTestId } = render(<Toolbar />);
     expect(getByTestId("bn-toolbar")).toBeDefined();
     expect(getByTestId("bn-toolbar-search")).toBeDefined();
-    expect(getByTestId("bn-toolbar-tag-filter")).toBeDefined();
     expect(getByTestId("bn-toolbar-view-switcher")).toBeDefined();
+    // Tag-filter dropdown removed (v0.16) — superseded by the tag sidebar.
+    expect(queryByTestId("bn-toolbar-tag-filter")).toBeNull();
+  });
+
+  it("renders nothing in embedded (macOS) mode", () => {
+    (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
+    _resetEmbeddedCache();
+    const { queryByTestId } = render(<Toolbar />);
+    // Search + starred are native toolbar controls; tags are the sidebar.
+    expect(queryByTestId("bn-toolbar")).toBeNull();
   });
 
   it("applies .toolbar CSS class", () => {
@@ -100,21 +114,5 @@ describe("Toolbar", () => {
 
     // Label should now say "Starred quotes"
     expect(getByTestId("bn-toolbar-view-switcher-btn").textContent).toContain("Starred quotes");
-  });
-
-  it("mutual dropdown exclusion — opening one closes the other", () => {
-    const { getByTestId, queryByTestId } = render(<Toolbar />);
-
-    // Open tag filter
-    fireEvent.click(getByTestId("bn-toolbar-tag-filter-btn"));
-    // Tag filter should request open — but we need to wait for async codebook fetch
-
-    // Open view switcher
-    fireEvent.click(getByTestId("bn-toolbar-view-switcher-btn"));
-    expect(queryByTestId("bn-toolbar-view-switcher-menu")).not.toBeNull();
-
-    // Now open tag filter — view switcher should close
-    fireEvent.click(getByTestId("bn-toolbar-tag-filter-btn"));
-    expect(queryByTestId("bn-toolbar-view-switcher-menu")).toBeNull();
   });
 });

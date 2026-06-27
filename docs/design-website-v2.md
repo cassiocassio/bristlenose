@@ -85,10 +85,10 @@ deploy would wipe live files v2 doesn't yet carry.
 > hardcoded in the shipped frontend MUST keep resolving post-cutover. Audit:
 > `grep -rn "bristlenose\.app" frontend/src`. The one this cycle adds is
 > **`…/docs/how-to/miro-setup.html`** — the Miro panel's "How do I get a token?" link
-> (`MiroExportPanel.tsx:207`, ships with PR #120). Its content is already on main
-> (`docs/how-to/miro-setup.md`); the cutover must render it to **that exact path** or the shipped
-> panel 404s. (`feedback.php`/`telemetry.php` are covered by step 2; `blog.bristlenose.app` is a
-> separate subdomain, outside `--delete` scope.)
+> (`MiroExportPanel.tsx:207`, ships with PR #120). Handled per the 27 Jun
+> decision below: **no redirect — update the panel's href to the new `/docs/send-to-miro` URL** rather
+> than pin the legacy path. (`feedback.php`/`telemetry.php` are covered by step 2; `blog.bristlenose.app`
+> is a separate subdomain, outside `--delete` scope.)
 
 1. **Port the frozen `privacy.html`** into the new chrome (`.plain` layout + shared topbar/footer),
    content verbatim — as index/support already were. Missing today; `--delete` would remove the
@@ -163,16 +163,19 @@ The no-drift design the original only sketched ("one markdown source → website
   serve` serves `/docs/` for *every* install (pip · Homebrew · Snap · Mac app), version-matched, offline;
   PyInstaller `datas` carries it into the `.app`; Help (`?`) opens local `/docs/`, else `bn.app/docs`.
 
-### Gating decisions (recommended — confirm to settle)
+### Gating decisions (settled 27 Jun)
 
-1. **Generator = `build.py`**, retiring `render-manual.py`/`render-howtos.py`. _Rec: yes_ — reusing
-   `render-*.py` would mean rebuilding `build.py` inside it.
-2. **Source of truth in the public repo** (`docs/site/`). _Rec: yes_ — required for the app bundle.
-3. **`manual.html` → retire + `/manual.html → /docs/` redirect.** The 29 pages replace the single
-   manual. _Rec: retire._
-4. **Miro URL → redirect `/docs/how-to/miro-setup.html` → the v2 page** (`/docs/send-to-miro`), rather
-   than forcing `build.py` to emit the legacy path. _Rec: redirect_ — the shipped panel link must keep
-   resolving.
+1. **Generator = `build.py`**, retiring `render-manual.py`/`render-howtos.py`. ✓
+2. **Source of truth in the public repo** (`docs/site/`). ✓ — required for the app bundle.
+3. **`manual.html` retires — no redirect.** Its content is already migrated: the manual was passed over
+   in full and incorporated / rewritten / confirmed-superseded across the 29 pages, so there's nothing to
+   carry and nothing bookmarked worth a redirect (no users). _Coverage is closed; the page-truthing pass
+   below is about code-accuracy, not whether manual content survived._
+4. **Miro URL — no redirect.** No users to have bookmarked the legacy path. The one real dependency is
+   the *shipped* panel's hardcoded link (`MiroExportPanel.tsx:207` → `/docs/how-to/miro-setup.html`) —
+   handled at the source, not with a server redirect: **update that href to `/docs/send-to-miro` in the
+   product, shipped around the cutover.** Cleaner than a redirect, and with no users the interim gap is
+   irrelevant. (Redirects are the right tool once there's traffic worth protecting — not yet.)
 
 ### Steps once decisions are settled
 

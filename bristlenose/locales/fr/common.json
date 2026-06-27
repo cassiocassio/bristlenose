@@ -481,6 +481,8 @@
     "mergeBody": "Tous les verbatim étiquetés <strong>{{source}}</strong> seront réétiquetés <strong>{{target}}</strong>. Cette action est irréversible.",
     "merge": "Fusionner",
     "hide": "Masquer",
+    "projectTagsHeading": "Étiquettes de {{project}}",
+    "codebookLab": "Labo de la grille de codage",
     "yourTags": "Vos étiquettes",
     "builtIn": "Intégré",
     "frameworks": "Cadres théoriques",

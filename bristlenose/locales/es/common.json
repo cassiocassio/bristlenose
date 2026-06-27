@@ -481,6 +481,8 @@
     "mergeBody": "Todas las citas etiquetadas con <strong>{{source}}</strong> serán reetiquetadas como <strong>{{target}}</strong>. Esta acción no se puede deshacer.",
     "merge": "Fusionar",
     "hide": "Ocultar",
+    "projectTagsHeading": "Etiquetas de {{project}}",
+    "codebookLab": "Laboratorio de códigos",
     "yourTags": "Tus etiquetas",
     "builtIn": "Integrado",
     "frameworks": "Marcos teóricos",

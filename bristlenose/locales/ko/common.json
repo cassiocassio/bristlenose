@@ -459,6 +459,8 @@
     "mergeBody": "<strong>{{source}}</strong> 태그가 지정된 모든 인용문이 <strong>{{target}}</strong>로 재태그됩니다. 이 작업은 취소할 수 없습니다.",
     "merge": "병합",
     "hide": "숨기기",
+    "projectTagsHeading": "{{project}} 태그",
+    "codebookLab": "코드북 랩",
     "yourTags": "내 태그",
     "builtIn": "기본 제공",
     "frameworks": "프레임워크",

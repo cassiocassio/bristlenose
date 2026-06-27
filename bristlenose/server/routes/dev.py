@@ -435,3 +435,389 @@ def dev_telemetry_delete() -> dict[str, object]:
     if out_path.exists():
         out_path.unlink()
     return {"ok": True, "path": str(out_path)}
+
+
+# ---------------------------------------------------------------------------
+# Codebook-lab — throwaway sandbox for the dynamic codebook builder experiment
+# ---------------------------------------------------------------------------
+#
+# This is deliberately ugly and flagged as an experiment. It hangs the builder engine
+# (server/codebook_builder.py) off a bare HTML page so we can PLAY with real
+# project data — synthesise a prompt from a few quotes, hand-write one instead,
+# scan for more like it, edit, re-scan — before committing to any UX. None of
+# this writes to the DB; it operates on pasted text + the project's quotes.
+#
+# The point of the experiment (per the product conversation): from 50-word
+# fragments the machine can only ever guess surface commonalities. So the lab
+# makes BOTH paths first-class — "synthesise a draft" and "I'll write it myself"
+# — so we can judge whether synthesis-from-fragments earns its keep against the
+# researcher just writing the inclusion criteria in their own words.
+#
+# Mounted on its OWN router (same /api/dev prefix as the dev router, so the
+# page's fetch URLs and the tests don't churn) and gated in app.py on the
+# `experimental_codebook_lab` flag — NOT on --dev — so it ships in the bundled
+# desktop sidecar and plain `serve` for cohort testing.
+codebook_lab_router = APIRouter(prefix="/api/dev")
+
+
+class _LabPrompt(BaseModel):
+    summary: str = ""
+    definition: str = ""
+    apply_when: str = ""
+    not_this: str = ""
+
+
+class _LabSynthRequest(BaseModel):
+    tag_name: str = "untitled"
+    example_texts: list[str] = Field(default_factory=list)
+
+
+class _LabCandidatesRequest(BaseModel):
+    tag_name: str = "untitled"
+    prompt: _LabPrompt = Field(default_factory=_LabPrompt)
+    min_confidence: float = 0.5
+    limit: int = 30
+    exclude_texts: list[str] = Field(default_factory=list)
+
+
+def _lab_settings():
+    from bristlenose.config import load_settings
+
+    return load_settings()
+
+
+@codebook_lab_router.get("/codebook-lab/tags")
+def codebook_lab_tags(request: Request, project_id: int = 1) -> dict[str, object]:
+    """List the project's *manual* tags with their coded quote texts (for picking exemplars).
+
+    Only researcher-created tags are offered for cultivation. Groups with a
+    ``framework_id`` are excluded: the AI sentiment group (``framework_id ==
+    "sentiment"`` — shown as "Emotional & Cognitive Signals") is AI-managed and
+    reserved, and imported frameworks (garrett / uxr / …) already carry their own
+    YAML definitions. The builder turns the researcher's *own* tags into codes.
+
+    Manual tags with zero coded quotes are included too (left-join semantics) so
+    every hand-created tag is pickable — synthesis itself still needs ≥2 exemplars,
+    but the user can pick a thin tag and paste/write examples by hand.
+    """
+    from bristlenose.server.models import (
+        CodebookGroup,
+        ProjectCodebookGroup,
+        QuoteTag,
+        TagDefinition,
+    )
+
+    db = _get_db(request)
+    try:
+        # Self-heal the Uncategorised project link before reading. Manual tags
+        # created via PUT /tags (which doesn't link) — or any project whose
+        # Codebook tab was never opened (GET /codebook is what lazily links the
+        # group) — would otherwise be silently absent here, surfacing as a lying
+        # "0 tags in project". Same heal get_codebook performs; idempotent.
+        from bristlenose.server.routes.codebook import (
+            _ensure_project_link,
+            _get_or_create_uncategorised,
+        )
+
+        uncategorised = _get_or_create_uncategorised(db)
+        _ensure_project_link(db, project_id, uncategorised.id)
+        db.commit()
+
+        # Manual (framework_id IS NULL) groups activated for this project.
+        manual_group_ids = [
+            gid
+            for (gid,) in db.query(CodebookGroup.id)
+            .join(
+                ProjectCodebookGroup,
+                ProjectCodebookGroup.codebook_group_id == CodebookGroup.id,
+            )
+            .filter(
+                ProjectCodebookGroup.project_id == project_id,
+                CodebookGroup.framework_id.is_(None),
+            )
+            .all()
+        ]
+        if not manual_group_ids:
+            return {"tags": []}
+
+        tag_defs = (
+            db.query(TagDefinition.id, TagDefinition.name)
+            .filter(TagDefinition.codebook_group_id.in_(manual_group_ids))
+            .order_by(TagDefinition.name)
+            .all()
+        )
+        tag_ids = [tid for tid, _ in tag_defs]
+
+        # Exemplar quote texts per tag (project-scoped); 0-quote tags keep [].
+        quotes_by_tag: dict[int, list[str]] = {tid: [] for tid in tag_ids}
+        if tag_ids:
+            for tid, text in (
+                db.query(QuoteTag.tag_definition_id, Quote.text)
+                .join(Quote, Quote.id == QuoteTag.quote_id)
+                .filter(
+                    QuoteTag.tag_definition_id.in_(tag_ids),
+                    Quote.project_id == project_id,
+                )
+                .all()
+            ):
+                quotes_by_tag[tid].append(text)
+
+        tags: list[dict[str, object]] = [
+            {"id": tid, "name": name, "quotes": quotes_by_tag.get(tid, [])}
+            for tid, name in tag_defs
+        ]
+        return {"tags": tags}
+    finally:
+        db.close()
+
+
+@codebook_lab_router.post("/codebook-lab/synthesize")
+async def codebook_lab_synthesize(request: Request, body: _LabSynthRequest) -> dict[str, object]:
+    """Synthesise a draft prompt from pasted example quotes (no DB writes)."""
+    from bristlenose.server import codebook_builder as cb
+
+    examples = [cb.ExampleQuote(text=t) for t in body.example_texts if t.strip()]
+    if len(examples) < 2:
+        raise HTTPException(status_code=400, detail="Paste at least 2 example quotes")
+    draft = await cb.synthesize_prompt(body.tag_name, examples, _lab_settings())
+    return {
+        "summary": draft.summary, "definition": draft.definition,
+        "apply_when": draft.apply_when, "not_this": draft.not_this,
+        "version": draft.version,
+    }
+
+
+@codebook_lab_router.post("/codebook-lab/candidates")
+async def codebook_lab_candidates(
+    request: Request, body: _LabCandidatesRequest, project_id: int = 1,
+) -> dict[str, object]:
+    """Scan the project's quotes against the (synthesised or hand-written) prompt."""
+    from bristlenose.server import codebook_builder as cb
+
+    draft = cb.PromptDraft(
+        summary=body.prompt.summary, definition=body.prompt.definition,
+        apply_when=body.prompt.apply_when, not_this=body.prompt.not_this,
+    )
+    if not (draft.definition or draft.apply_when):
+        raise HTTPException(status_code=400, detail="Write or synthesise a prompt first")
+    excluded = {t.strip() for t in body.exclude_texts if t.strip()}
+
+    db = _get_db(request)
+    try:
+        pool = [
+            cb.CandidateQuote(
+                db_id=q.id, text=q.text, session_id=q.session_id,
+                participant_id=q.participant_id, topic_label=q.topic_label or "",
+                sentiment=q.sentiment or "",
+            )
+            for q in db.query(Quote).filter_by(project_id=project_id).all()
+            if q.text.strip() not in excluded
+        ]
+    finally:
+        db.close()
+
+    scan = await cb.find_candidates(
+        body.tag_name, draft, pool, _lab_settings(),
+        min_confidence=body.min_confidence,
+    )
+    return {
+        "scanned": scan.scanned,
+        "errors": scan.errors,
+        "candidates": [
+            {"text": c.text, "confidence": round(c.confidence, 3), "rationale": c.rationale}
+            for c in scan.candidates[: max(0, body.limit)]
+        ],
+    }
+
+
+def build_codebook_lab_html(auth_token: str = "") -> str:
+    """Return the bare codebook-lab experiment page (dev-only, ugly on purpose).
+
+    Served at ``/codebook-lab`` (outside ``/api`` so a plain browser navigation
+    isn't blocked by the bearer-token middleware); the embedded token lets the
+    page's own fetch() calls authenticate against the ``/api/dev`` endpoints.
+    """
+    token_js = json.dumps(auth_token)
+    return (
+        _CODEBOOK_LAB_HTML.replace("__TOKEN__", token_js)
+    )
+
+
+_CODEBOOK_LAB_HTML = r"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codebook lab (experiment)</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 0; padding: 16px; color: #111; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .muted { color: #666; font-size: 12px; }
+  .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  fieldset { border: 1px solid #ccc; border-radius: 6px; margin: 0 0 12px; padding: 10px 12px; }
+  legend { font-weight: 600; padding: 0 6px; }
+  label { display: block; font-size: 12px; color: #444; margin: 8px 0 2px; }
+  textarea, input, select { width: 100%; box-sizing: border-box; font: inherit; padding: 6px; border: 1px solid #bbb; border-radius: 4px; }
+  textarea { resize: vertical; }
+  button { font: inherit; padding: 6px 12px; border: 1px solid #888; border-radius: 4px; background: #f3f3f3; cursor: pointer; }
+  button.primary { background: #1f6feb; color: #fff; border-color: #1f6feb; }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .cand { border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px; margin: 8px 0; }
+  .cand.new { border-color: #1a7f37; background: #eaffea; }
+  .cand .q { font-weight: 500; }
+  .cand .r { font-size: 12px; color: #555; margin: 4px 0 0; }
+  .conf { font-variant-numeric: tabular-nums; color: #1f6feb; font-weight: 600; }
+  .badge { font-size: 10px; text-transform: uppercase; letter-spacing: .03em; background:#1a7f37; color:#fff; border-radius: 8px; padding: 0 6px; margin-left: 6px; }
+  .dropped { border:1px dashed #cf222e; border-radius:6px; padding:6px 10px; margin:8px 0; background:#fff5f5; }
+  .dropped .q { text-decoration: line-through; color:#a40e26; }
+  pre { background: #0d1117; color: #c9d1d9; padding: 10px; border-radius: 6px; overflow: auto; font-size: 12px; white-space: pre-wrap; }
+  .pill { display:inline-block; font-size: 11px; background:#eee; border-radius: 10px; padding: 1px 8px; }
+  .warn { background: #fff8c5; border: 1px solid #d4a72c; padding: 6px 10px; border-radius: 6px; font-size: 12px; margin: 8px 0; }
+  .yaml { background:#f6f8fa; border:1px solid #d0d7de; border-radius:6px; padding:8px 10px; font: 12px/1.45 ui-monospace, monospace; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>Codebook lab <span class="pill">experiment</span></h1>
+<div class="muted">Ugly throwaway sandbox. Nothing is saved. The editable entry below is the same shape as a framework codebook (YAML). Real workflow/UX is TBD (Figma). Uses your configured LLM provider.</div>
+<div class="warn">Manual tags are the default — you know what your tag means; the machine doesn't. <b>Rejecting</b> a proposed quote isn't a button: you <b>edit the entry</b> (tighten <i>apply when</i>, or add to <i>not this</i>) and press <b>Process again</b> to watch it drop out. Synthesise is just an optional starting draft.</div>
+
+<div class="wrap">
+  <div>
+    <fieldset>
+      <legend>1 · Exemplars (optional)</legend>
+      <label>Pick a tag from this project (fills examples), or paste below</label>
+      <select id="tagPick"><option value="">— loading tags —</option></select>
+      <label>Example quotes (one per line)</label>
+      <textarea id="examples" rows="5" placeholder="It's just too expensive to keep filling it every month..."></textarea>
+      <div class="row" style="margin-top:8px">
+        <button id="btnSynth">Synthesise a starting draft →</button>
+        <span class="muted">or skip and write the entry yourself ↓</span>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>2 · The codebook entry <span id="ver" class="pill"></span></legend>
+      <label>name</label>
+      <input id="tagName" value="prescription cost">
+      <label>definition</label>
+      <textarea id="f_definition" rows="2"></textarea>
+      <label>apply_when (inclusion — when this code applies)</label>
+      <textarea id="f_apply" rows="3"></textarea>
+      <label>not_this (exclusion — adjacent cases to keep out)</label>
+      <textarea id="f_not" rows="3"></textarea>
+      <label>summary (optional note to self)</label>
+      <textarea id="f_summary" rows="1"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="primary" id="btnScan">Process again →</button>
+        <label style="margin:0">min conf</label>
+        <input id="minConf" type="number" step="0.05" min="0" max="1" value="0.5" style="width:80px">
+        <label style="margin:0"><input type="checkbox" id="excl" checked style="width:auto"> hide my examples</label>
+      </div>
+      <label style="margin-top:10px">as framework YAML</label>
+      <div id="yaml" class="yaml"></div>
+    </fieldset>
+  </div>
+
+  <div>
+    <fieldset>
+      <legend>3 · Proposed quote → tag pairings <span id="scanInfo" class="muted"></span></legend>
+      <div id="dropped"></div>
+      <div id="cands"><div class="muted">edit the entry and press “Process again”.</div></div>
+    </fieldset>
+    <fieldset>
+      <legend>Raw / log</legend>
+      <pre id="log">ready.</pre>
+    </fieldset>
+  </div>
+</div>
+
+<script>
+const TOKEN = __TOKEN__;
+const H = { "Content-Type": "application/json", "Authorization": "Bearer " + TOKEN };
+const $ = id => document.getElementById(id);
+const log = (x) => { $("log").textContent = (typeof x === "string" ? x : JSON.stringify(x, null, 2)); };
+function setBusy(b){ document.querySelectorAll("button").forEach(x=>x.disabled=b); }
+function getPrompt(){ return { summary:$("f_summary").value, definition:$("f_definition").value, apply_when:$("f_apply").value, not_this:$("f_not").value }; }
+function setPrompt(p){ $("f_summary").value=p.summary||""; $("f_definition").value=p.definition||""; $("f_apply").value=p.apply_when||""; $("f_not").value=p.not_this||""; $("ver").textContent = p.version ? ("v "+p.version) : ""; renderYaml(); }
+function examples(){ return $("examples").value.split("\n").map(s=>s.trim()).filter(Boolean); }
+function esc(s){ return (s||"").replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+async function post(path, body){
+  const r = await fetch(path, { method:"POST", headers:H, body: JSON.stringify(body) });
+  const j = await r.json().catch(()=>({detail:"(no json)"}));
+  if(!r.ok) throw new Error(j.detail || r.status);
+  return j;
+}
+
+// Live YAML mirror so the entry reads as a framework codebook entry.
+function yamlLine(k, v){ if(!v) return ""; const t=(""+v).replace(/\n/g," ").trim(); return "  "+k+": "+t+"\n"; }
+function renderYaml(){
+  const p = getPrompt();
+  const y = "- name: "+($("tagName").value||"untitled")+"\n"
+    + yamlLine("definition", p.definition) + yamlLine("apply_when", p.apply_when) + yamlLine("not_this", p.not_this);
+  $("yaml").textContent = y;
+}
+["tagName","f_definition","f_apply","f_not"].forEach(id=> $(id).addEventListener("input", renderYaml));
+
+let TAGS = [];
+async function loadTags(){
+  try {
+    const r = await fetch("/api/dev/codebook-lab/tags", { headers: H });
+    const j = await r.json();
+    TAGS = j.tags || [];
+    const sel = $("tagPick");
+    sel.innerHTML = '<option value="">— '+TAGS.length+' tags in project —</option>';
+    TAGS.forEach((t,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=t.name+" ("+t.quotes.length+")"; sel.appendChild(o); });
+  } catch(e){ $("tagPick").innerHTML = '<option>— no project / '+e.message+' —</option>'; }
+}
+$("tagPick").onchange = () => {
+  const i = $("tagPick").value; if(i==="") return;
+  const t = TAGS[i]; $("tagName").value = t.name; $("examples").value = t.quotes.join("\n"); renderYaml();
+};
+
+$("btnSynth").onclick = async () => {
+  setBusy(true); log("synthesising a starting draft…");
+  try { const p = await post("/api/dev/codebook-lab/synthesize", { tag_name:$("tagName").value, example_texts: examples() }); setPrompt(p); log(p); }
+  catch(e){ log("ERROR: "+e.message); } finally { setBusy(false); }
+};
+
+let LAST = new Set();   // candidate texts from the previous process, to spot what dropped
+$("btnScan").onclick = async () => {
+  setBusy(true); log("processing project quotes against the entry…");
+  try {
+    const j = await post("/api/dev/codebook-lab/candidates", {
+      tag_name:$("tagName").value, prompt:getPrompt(),
+      min_confidence: parseFloat($("minConf").value), limit: 80,
+      exclude_texts: $("excl").checked ? examples() : []
+    });
+    renderCands(j); log(j);
+  } catch(e){ log("ERROR: "+e.message); } finally { setBusy(false); }
+};
+
+function renderCands(j){
+  const nowSet = new Set(j.candidates.map(c=>c.text));
+  $("scanInfo").textContent = "scanned "+j.scanned+", "+j.candidates.length+" matched"+(j.errors?(", "+j.errors+" batch errors"):"");
+  // Dropped since last process — the "did my edit make it vanish?" check.
+  const dropped = [...LAST].filter(t=> !nowSet.has(t));
+  const dbox = $("dropped"); dbox.innerHTML = "";
+  if(LAST.size && dropped.length){
+    dbox.innerHTML = '<div class="muted">dropped since last process ('+dropped.length+'):</div>'
+      + dropped.map(t=>'<div class="dropped"><span class="q">“'+esc(t)+'”</span></div>').join("");
+  }
+  const box = $("cands"); box.innerHTML = "";
+  if(!j.candidates.length){ box.innerHTML = '<div class="muted">no matches at this threshold.</div>'; LAST = nowSet; return; }
+  j.candidates.forEach(c=>{
+    const isNew = LAST.size && !LAST.has(c.text);
+    const d = document.createElement("div"); d.className = "cand" + (isNew?" new":"");
+    d.innerHTML = '<div class="q">“'+esc(c.text)+'”'+(isNew?'<span class="badge">new</span>':'')+'</div>'
+      + '<div class="r"><span class="conf">'+c.confidence+'</span> · '+esc(c.rationale)+'</div>';
+    box.appendChild(d);
+  });
+  LAST = nowSet;
+}
+
+loadTags(); renderYaml();
+</script>
+</body>
+</html>
+"""

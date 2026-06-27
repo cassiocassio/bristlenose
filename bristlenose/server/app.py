@@ -26,6 +26,9 @@ from bristlenose.server.routes.analysis import router as analysis_router
 from bristlenose.server.routes.autocode import router as autocode_router
 from bristlenose.server.routes.clips_export import router as clips_export_router
 from bristlenose.server.routes.codebook import router as codebook_router
+from bristlenose.server.routes.codebook_builder import (
+    router as codebook_builder_router,
+)
 from bristlenose.server.routes.dashboard import router as dashboard_router
 from bristlenose.server.routes.data import router as data_router
 from bristlenose.server.routes.export import router as export_router
@@ -181,6 +184,7 @@ def create_app(
     app.include_router(autocode_router)
     app.include_router(clips_export_router)
     app.include_router(codebook_router)
+    app.include_router(codebook_builder_router)
     app.include_router(dashboard_router)
     app.include_router(export_router)
     app.include_router(quotes_export_router)
@@ -191,6 +195,30 @@ def create_app(
     app.include_router(data_router)
     app.include_router(miro_router)
     app.include_router(pipeline_router)
+
+    # Codebook lab — the dynamic-codebook-builder experiment. Gated on a feature
+    # flag (default ON) rather than --dev, so it ships in the bundled desktop
+    # sidecar and plain `serve` for cohort testing; disable with
+    # BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB=0. The page is served outside /api so
+    # a plain browser nav isn't blocked by the bearer-token middleware; it embeds
+    # the token for its own fetches. The lab endpoints ride codebook_lab_router
+    # (same /api/dev prefix), so only those dev-prefixed paths exist in prod.
+    from bristlenose.config import load_settings
+
+    # Read through the app.state.settings-or-load_settings seam (per
+    # server/CLAUDE.md) so an injected settings object is honoured.
+    _settings = getattr(app.state, "settings", None) or load_settings()
+    if _settings.experimental_codebook_lab:
+        from bristlenose.server.routes.dev import (
+            build_codebook_lab_html,
+            codebook_lab_router,
+        )
+
+        app.include_router(codebook_lab_router)
+
+        @app.get("/codebook-lab", include_in_schema=False)
+        def _codebook_lab() -> HTMLResponse:
+            return HTMLResponse(build_codebook_lab_html(app.state.auth_token))
 
     if dev:
         from bristlenose.server.routes.dev import router as dev_router

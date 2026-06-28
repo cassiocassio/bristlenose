@@ -52,6 +52,38 @@ def validate_miro_token(token: str) -> tuple[bool | None, str | None]:
         return None, f"network error: {exc}"
 
 
+def get_token_info(token: str) -> dict[str, str | None]:
+    """Fetch the account/workspace identity for a token (best-effort).
+
+    Calls Miro's token-introspection endpoint GET /v1/oauth-token, which needs
+    NO specific scope (so our boards:read+write token can call it). Returns the
+    account holder's display name and the team (workspace) new boards land in —
+    so the user can confirm WHICH of several Miro accounts they're about to
+    create a board in. Identity is a safety nicety, never a gate: any failure
+    returns {user_name: None, team_name: None} rather than raising.
+
+    Response shape (relevant fields):
+        {"user": {"name": "..."}, "team": {"id": "...", "name": "..."}, ...}
+    """
+    try:
+        resp = httpx.get(
+            "https://api.miro.com/v1/oauth-token",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return {"user_name": None, "team_name": None}
+        data = resp.json()
+        user = data.get("user") or data.get("createdBy") or {}
+        team = data.get("team") or {}
+        return {
+            "user_name": user.get("name") or None,
+            "team_name": team.get("name") or None,
+        }
+    except (httpx.HTTPError, ValueError):
+        return {"user_name": None, "team_name": None}
+
+
 # ---------------------------------------------------------------------------
 # OAuth 2.0 + PKCE
 # ---------------------------------------------------------------------------

@@ -27,6 +27,11 @@ final class MiroSheetModel: ObservableObject {
     @Published var error: String?
     @Published private(set) var boardURL: String?
     @Published private(set) var stickies = 0
+    // Connected-account identity (from /v1/oauth-token via the server). userName =
+    // account holder; teamName = the workspace new boards land in. Both nil if the
+    // sidecar predates the feature or Miro identity couldn't be fetched.
+    @Published private(set) var userName: String?
+    @Published private(set) var teamName: String?
 
     private let api: MiroAPI
     private let i18n: I18n
@@ -44,6 +49,25 @@ final class MiroSheetModel: ObservableObject {
     /// must drop a web idiom the shared `common.miro` string carries (the `↗` /
     /// `✓` glyphs, the "Open in Miro…" ellipsis). Lives in `desktop.miro.*`.
     func dt(_ key: String) -> String { i18n.t("desktop.miro.\(key)") }
+    func dt(_ key: String, _ vars: [String: String]) -> String { i18n.t("desktop.miro.\(key)", vars) }
+
+    /// "Account holder · Workspace" for the configure screen — whichever parts the
+    /// server returned. nil when neither is known (older sidecar / fetch failed),
+    /// so the Account row hides entirely rather than showing an empty label.
+    func accountText() -> String? {
+        let parts = [userName, teamName].compactMap { $0 }.filter { !$0.isEmpty }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// Upload notice — names the destination workspace when known ("Creates a new
+    /// board in <team>. …") so the safety-critical fact sits right above Create
+    /// board; falls back to the plain notice when the team isn't known.
+    func noticeText() -> String {
+        if let team = teamName, !team.isEmpty {
+            return dt("boardDestination", ["team": team]) + " " + t("uploadNotice")
+        }
+        return t("uploadNotice")
+    }
 
     /// "Board ready — N quote stickies placed", count-correct, with a fallback to
     /// the `_other` form for plural categories a locale doesn't define (e.g. cs `few`).
@@ -60,7 +84,10 @@ final class MiroSheetModel: ObservableObject {
     func load() async {
         step = .loading
         error = nil
-        step = await api.status() ? .configure : .connect
+        let conn = await api.status()
+        userName = conn.userName
+        teamName = conn.teamName
+        step = conn.connected ? .configure : .connect
     }
 
     func connect() async {
@@ -69,7 +96,9 @@ final class MiroSheetModel: ObservableObject {
         busy = true
         error = nil
         do {
-            _ = try await api.connect(token: pasted)
+            let conn = try await api.connect(token: pasted)
+            userName = conn.userName
+            teamName = conn.teamName
             // Persist natively so it survives relaunch under the sandbox (Python
             // can't write the Keychain). Read back on launch by overlayMiroToken.
             // The session is live regardless, so a failed write warns (non-blocking)
@@ -91,6 +120,8 @@ final class MiroSheetModel: ObservableObject {
         await api.disconnect()
         KeychainHelper.delete(provider: "miro")  // also clear the Swift-stored copy
         token = ""
+        userName = nil
+        teamName = nil
         step = .connect
         busy = false
     }
@@ -217,24 +248,34 @@ struct MiroSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(model.t("title")).font(.headline)
                 .frame(maxWidth: .infinity, alignment: .center)
-            HStack(spacing: 5) {
-                Text(model.dt("connected")).font(.subheadline).foregroundStyle(.secondary)
-                Text(verbatim: "·").font(.subheadline).foregroundStyle(.secondary)
-                Button(model.t("disconnect")) { Task { await model.disconnect() } }
-                    .buttonStyle(.plain).font(.subheadline).foregroundStyle(.secondary)
-                    .inlineLinkCursor().disabled(model.busy)
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
             // Right-aligned colon labels + left-aligned controls (Pages Export-
             // dialog form). `.gridColumnAlignment(.trailing)` on the first cell
-            // right-aligns the whole label column; the stand-alone Link-clips
-            // checkbox gets an empty label cell so it indents to the control column
-            // (matching Pages' "Include comments" rows).
+            // right-aligns the whole label column. Status + account lead so the
+            // user confirms WHICH Miro account/workspace before creating a board.
+            // The stand-alone Link-clips checkbox gets an empty label cell so it
+            // indents to the control column (Pages' "Include comments" rows).
             Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 12) {
+                GridRow(alignment: .firstTextBaseline) {
+                    Text(model.dt("miroStatusLabel"))
+                        .foregroundStyle(.secondary)
+                        .gridColumnAlignment(.trailing)
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle").foregroundStyle(.green)
+                        Text(model.dt("connected"))
+                        Spacer()
+                        Button(model.t("disconnect")) { Task { await model.disconnect() } }
+                            .controlSize(.small).disabled(model.busy)
+                    }
+                }
+                if let account = model.accountText() {
+                    GridRow(alignment: .firstTextBaseline) {
+                        Text(model.dt("accountLabel")).foregroundStyle(.secondary)
+                        Text(account)
+                    }
+                }
                 GridRow(alignment: .firstTextBaseline) {
                     Text(model.dt("boardNameLabel"))
                         .foregroundStyle(.secondary)
-                        .gridColumnAlignment(.trailing)
                     TextField(model.t("boardNamePlaceholder"), text: $model.boardName)
                         .textFieldStyle(.roundedBorder)
                 }
@@ -255,7 +296,7 @@ struct MiroSheet: View {
                     }
                 }
             }
-            Text(model.t("uploadNotice")).font(.subheadline).foregroundStyle(.secondary)
+            Text(model.noticeText()).font(.subheadline).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if let error = model.error {
                 Text(error).font(.callout).foregroundStyle(.red)

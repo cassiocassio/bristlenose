@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desktop rail removal — geometry &amp; choreography study</title>
+<style>
+  /* Real token values lifted from bristlenose/theme/tokens.css + sidebar.css */
+  :root {
+    --rail: 36px;          /* --bn-rail-width */
+    --minimap: 80px;       /* --bn-minimap-width (5rem) */
+    --panel: 280px;        /* --bn-sidebar-width */
+    --gutter-l: 32px;      /* --bn-gutter-left (2rem) */
+    --gutter-r: 8px;       /* --bn-gutter-right (0.5rem) */
+    --keyline: #c9ced6;    /* --bn-colour-border-ish */
+    --native-divider: #9aa3b2;
+
+    --c-rail:    #ffe9c7;  /* rails (web chrome to remove) */
+    --c-panel:   #d6e8ff;  /* web sidebar panels */
+    --c-center:  #eef1f5;  /* center content */
+    --c-minimap: #e6dcff;  /* minimap */
+    --c-native-sb: #d8f0e4;/* native macOS sidebar */
+    --c-native-chrome: #cfd6e0;
+    --c-reclaim: #c9f7d4;  /* space reclaimed */
+    --c-issue:   #ffd6d6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font: 13px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif;
+    margin: 0; padding: 28px 28px 80px; background: #f7f8fa; color: #1c2430;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 32px 0 10px; border-bottom: 2px solid #1c2430; padding-bottom: 4px; }
+  .sub { color: #5a6473; margin: 0 0 20px; max-width: 70ch; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 12px 0 24px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+  .sw { width: 16px; height: 12px; border: 1px solid #00000022; border-radius: 2px; display: inline-block; }
+
+  .frame {
+    background: #fff; border: 1px solid #d2d7df; border-radius: 8px;
+    margin: 0 0 26px; overflow: hidden; box-shadow: 0 1px 3px #00000010;
+  }
+  .frame > .caption {
+    padding: 10px 14px; background: #1c2430; color: #fff; font-weight: 600; font-size: 13px;
+  }
+  .frame > .caption small { font-weight: 400; opacity: .75; }
+
+  /* The macOS window: titlebar + (optional) native sidebar + webview */
+  .win { display: flex; flex-direction: column; }
+  .titlebar {
+    height: 30px; background: var(--c-native-chrome);
+    display: flex; align-items: center; gap: 7px; padding: 0 12px;
+    border-bottom: 1px solid var(--native-divider); font-size: 11px; color: #5a6473;
+  }
+  .traffic { width: 11px; height: 11px; border-radius: 50%; }
+  .body { display: flex; min-height: 300px; }
+
+  .native-sidebar {
+    width: 190px; flex: 0 0 190px; background: var(--c-native-sb);
+    border-right: 1px solid var(--native-divider);
+    padding: 10px 12px; font-size: 12px;
+  }
+  .native-sidebar .grp { font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: #5a6473; margin: 8px 0 4px; }
+  .native-sidebar .row { padding: 3px 6px; border-radius: 4px; }
+  .native-sidebar .row.sel { background: #ffffffcc; box-shadow: inset 0 0 0 1px #00000010; }
+  .native-tag { font-size: 10px; color: #1f8a4d; font-weight: 700; }
+
+  /* The webview = the SPA grid */
+  .webview { flex: 1; position: relative; }
+  .grid { display: grid; min-height: 300px; height: 100%; }
+
+  /* columns rendered as labelled bands */
+  .col { position: relative; padding: 8px 6px; font-size: 10.5px; overflow: hidden; }
+  .col .lab { position: absolute; top: 4px; left: 0; right: 0; text-align: center; font-weight: 700; font-size: 9.5px; opacity: .8; }
+  .col .w { position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font-size: 9px; color: #44505f; font-variant-numeric: tabular-nums; }
+  .rail    { background: var(--c-rail); }
+  .panel   { background: var(--c-panel); }
+  .center  { background: var(--c-center); }
+  .minimap { background: var(--c-minimap); }
+  .reclaim { background: var(--c-reclaim); }
+  .keyline-r { box-shadow: inset -1px 0 0 0 var(--keyline); }
+  .keyline-l { box-shadow: inset 1px 0 0 0 var(--keyline); }
+
+  .center .demo { margin-top: 22px; }
+  .center .demo .bar { height: 9px; background: #c3cad4; border-radius: 3px; margin: 6px 0; }
+  .center .demo .bar.s { width: 55%; }
+
+  .icon { width: 18px; height: 18px; margin: 2px auto; border: 1.5px solid #9a7b3e; border-radius: 3px; display: block; }
+
+  .ann {
+    background: var(--c-issue); border-left: 3px solid #d24a4a; padding: 8px 12px;
+    margin: 0; font-size: 12px;
+  }
+  .grids-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .grids-2 > .frame { margin: 0; border-radius: 0; }
+  .grids-2 > .frame:first-child { border-right: none; }
+
+  .keyline-marker { position: absolute; top: 30px; bottom: 0; width: 0; border-left: 2px dashed #d24a4a; z-index: 5; }
+  .keyline-marker::after { content: attr(data-l); position: absolute; top: 2px; left: 4px; font-size: 9px; color: #d24a4a; font-weight: 700; white-space: nowrap; background: #fff8; padding: 0 2px; }
+
+  ul.tight { margin: 6px 0; padding-left: 20px; }
+  ul.tight li { margin: 3px 0; }
+  code { background: #eceff3; padding: 1px 4px; border-radius: 3px; font-size: 11.5px; }
+</style>
+</head>
+<body>
+
+<h1>Desktop rail removal — geometry &amp; choreography study</h1>
+<p class="sub">
+  Pale bands = the SPA's 6-column grid (real token widths). Goal: in the macOS embedded
+  webview, drop the orange <b>rails</b> (and their close-X / drag affordances) so the
+  webview content reclaims the full width, while keeping every <b>keyline</b> that a panel
+  legitimately needs when open. Browser keeps everything as-is.
+</p>
+
+<div class="legend">
+  <span><i class="sw" style="background:var(--c-rail)"></i> Web rail (remove in desktop)</span>
+  <span><i class="sw" style="background:var(--c-panel)"></i> Web sidebar panel</span>
+  <span><i class="sw" style="background:var(--c-center)"></i> Center content</span>
+  <span><i class="sw" style="background:var(--c-minimap)"></i> Minimap (keep)</span>
+  <span><i class="sw" style="background:var(--c-native-sb)"></i> Native macOS sidebar</span>
+  <span><i class="sw" style="background:var(--c-reclaim)"></i> Space reclaimed</span>
+  <span><i class="sw" style="border-left:2px dashed #d24a4a;height:12px;width:0"></i> Keyline (1px border)</span>
+</div>
+
+<!-- ============================================================ -->
+<h2>A · Browser today — Quotes tab, both sidebars CLOSED</h2>
+<div class="frame">
+  <div class="caption">Browser · Quotes · closed <small>— rails own the visible edges; minimap + tag-rail eat 116px on the right even when tags are closed</small></div>
+  <div class="webview" style="border:none">
+    <div class="grid" style="grid-template-columns: var(--rail) 0px 1fr var(--minimap) 0px var(--rail);">
+      <div class="col rail keyline-r"><span class="lab">toc-rail</span><span class="icon"></span><span class="w">36px</span></div>
+      <div class="col panel"><span class="w">0</span></div>
+      <div class="col center"><span class="lab">center (1fr)</span>
+        <div class="demo" style="padding:0 var(--gutter-r) 0 var(--gutter-l)">
+          <div class="bar"></div><div class="bar s"></div><div class="bar"></div>
+        </div>
+      </div>
+      <div class="col minimap"><span class="lab">minimap</span><span class="w">80px</span></div>
+      <div class="col panel"><span class="w">0</span></div>
+      <div class="col rail keyline-l"><span class="lab">tag-rail</span><span class="icon"></span><span class="w">36px</span></div>
+    </div>
+  </div>
+</div>
+<p class="ann"><b>Keyline ownership (closed):</b> the left keyline is the <code>toc-rail</code>'s
+<code>border-right</code> at x≈36; the right keyline is the <code>tag-rail</code>'s
+<code>border-left</code>. Both lines exist <i>only because the rail exists</i>. Remove the rail and these lines vanish — which is what we want, since native chrome draws the edge.</p>
+
+<!-- ============================================================ -->
+<h2>B · Browser today — TOC pushed OPEN (the keyline travels)</h2>
+<div class="frame">
+  <div class="caption">Browser · Quotes · TOC push-open <small>— rail is display:none; the keyline is now the panel's right border at x≈280</small></div>
+  <div class="webview" style="border:none">
+    <div class="grid" style="grid-template-columns: 0px var(--panel) 1fr var(--minimap) 0px var(--rail);">
+      <div class="col panel"><span class="w">0</span></div>
+      <div class="col panel keyline-r"><span class="lab">toc-sidebar</span>
+        <div style="margin-top:20px;font-size:11px">× Contents<br><br>· Friction<br>· Journeys<br>· Delight</div>
+        <span class="w">280px</span></div>
+      <div class="col center"><span class="lab">center</span>
+        <div class="demo" style="padding:0 var(--gutter-r) 0 var(--gutter-l)"><div class="bar"></div><div class="bar s"></div></div>
+      </div>
+      <div class="col minimap"><span class="lab">minimap</span><span class="w">80px</span></div>
+      <div class="col panel"><span class="w">0</span></div>
+      <div class="col rail keyline-l"><span class="lab">tag-rail</span><span class="icon"></span><span class="w">36px</span></div>
+    </div>
+  </div>
+</div>
+<p class="ann"><b>The travelling keyline:</b> opening animates <code>grid-template-columns</code>
+(rail 36→0, panel 0→280) over 75ms. The panel's own <code>border-right</code> rides its
+growing right edge — the keyline slides from x≈0 to x≈280 like a curtain rod. <b>No separate
+keyline element exists</b>; each panel carries its own. This is why removal is clean: a closed
+0-width panel shows no line; an open panel brings its line with it.</p>
+
+<!-- ============================================================ -->
+<h2>C · Desktop proposed — both CLOSED (rails gone, width reclaimed)</h2>
+<div class="frame">
+  <div class="caption">macOS app · Quotes · closed <small>— native sidebar to the left; webview reclaims 36px each side</small></div>
+  <div class="win">
+    <div class="titlebar">
+      <span class="traffic" style="background:#ff5f57"></span>
+      <span class="traffic" style="background:#febc2e"></span>
+      <span class="traffic" style="background:#28c840"></span>
+      &nbsp; Bristlenose — unified toolbar &nbsp;·&nbsp; [☰ Contents] [Tags ▦] live in NATIVE toolbar
+    </div>
+    <div class="body">
+      <div class="native-sidebar">
+        <div class="grp">Lenses</div>
+        <div class="row">Project</div>
+        <div class="row sel">Quotes</div>
+        <div class="row">Analysis</div>
+        <div class="grp">Projects</div>
+        <div class="row">IKEA study <span class="native-tag">●</span></div>
+        <div class="row">Acme research</div>
+      </div>
+      <div class="webview">
+        <div class="grid" style="grid-template-columns: 0px 0px 1fr var(--minimap) 0px 0px;">
+          <div class="col reclaim" style="flex:0 0 4px"><span class="w" style="writing-mode:vertical-rl">+36</span></div>
+          <div class="col center keyline-l" style="box-shadow:none">
+            <span class="lab">center (full width)</span>
+            <div class="demo" style="padding:0 var(--gutter-r) 0 var(--gutter-l)">
+              <div class="bar"></div><div class="bar s"></div><div class="bar"></div><div class="bar s"></div>
+            </div>
+          </div>
+          <div class="col minimap"><span class="lab">minimap</span><span class="w">80px</span></div>
+          <div class="col reclaim" style="flex:0 0 4px"><span class="w" style="writing-mode:vertical-rl">+36</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="ann"><b>Issue ① — left edge:</b> the native <code>NSSplitView</code> divider (grey) is now
+the only left edge. The webview content starts at its own x=0 + <code>--bn-gutter-left: 2rem</code>.
+No web keyline needed — good. But verify there's no <i>double</i> divider (native divider + a stray
+web border).</p>
+<p class="ann"><b>Issue ② — right edge:</b> with the tag-rail gone, the <b>minimap</b> becomes the
+rightmost element. Its only margin from the window edge is <code>padding: 0 0.75rem</code>. And on
+non-Quotes tabs (no minimap) the center's right margin is just <code>--bn-gutter-right: 0.5rem</code>
+(≈8px) — that gutter was sized assuming a 36px rail sat beyond it. The webview fills the pane to the
+window edge (macOS adds <b>no</b> inset), so content would sit ~8px off the glass. Likely want to bump
+<code>--bn-gutter-right</code> in embedded mode for symmetric breathing room.</p>
+<p class="ann"><b>Issue ③ — scrollbar gutter:</b> <code>tag-rail</code> carried <code>margin-right:8px</code>
+and <code>tag-sidebar</code> <code>padding-bottom:2rem</code> "to clear the macOS auto-hiding scrollbar".
+Those hacks disappear with the rail; confirm the overlay scrollbar (now floating over the minimap /
+content edge) auto-hides cleanly and doesn't clip the last row.</p>
+
+<!-- ============================================================ -->
+<h2>D · Desktop proposed — TOC pushed OPEN (nested-list pattern)</h2>
+<div class="frame">
+  <div class="caption">macOS app · Quotes · TOC push-open <small>— native project list + web Contents list, Mail-style</small></div>
+  <div class="win">
+    <div class="titlebar">
+      <span class="traffic" style="background:#ff5f57"></span>
+      <span class="traffic" style="background:#febc2e"></span>
+      <span class="traffic" style="background:#28c840"></span>
+      &nbsp; [☰ Contents ✓ pressed] toolbar toggle drives the panel — no web rail, no close-X
+    </div>
+    <div class="body">
+      <div class="native-sidebar">
+        <div class="grp">Lenses</div>
+        <div class="row sel">Quotes</div>
+        <div class="grp">Projects</div>
+        <div class="row">IKEA study</div>
+      </div>
+      <div class="webview">
+        <div class="grid" style="grid-template-columns: 0px var(--panel) 1fr var(--minimap) 0px 0px;">
+          <div class="col panel"><span class="w">0</span></div>
+          <div class="col panel keyline-r"><span class="lab">toc-sidebar</span>
+            <div style="margin-top:20px;font-size:11px">Contents<br><br>· Friction<br>· Journeys<br>· Delight</div>
+            <span class="w">280px · NO close-X</span></div>
+          <div class="col center"><span class="lab">center</span>
+            <div class="demo" style="padding:0 var(--gutter-r) 0 var(--gutter-l)"><div class="bar"></div><div class="bar s"></div></div>
+          </div>
+          <div class="col minimap"><span class="lab">minimap</span><span class="w">80px</span></div>
+          <div class="col reclaim" style="flex:0 0 4px"><span class="w" style="writing-mode:vertical-rl">+36</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="ann"><b>Keyline (open):</b> the <code>toc-sidebar</code> brings its <code>border-right</code>
+(at x≈280) — needed, separates the in-report Contents list from the quotes. Its <i>left</i> edge sits
+at webview x=0 against the native split divider. Result is a legit macOS three-pane: <b>native project
+list → divider → web Contents → keyline → quotes</b> (Mail / Notes idiom). The web panel's left edge
+must not draw its own border or you double the divider.</p>
+<p class="ann"><b>Removed affordances:</b> no rail icon (toolbar replaces it), no close-X
+(toolbar toggle + <code>[</code> key close it), no rail drag-to-open, and <b>overlay/hover-peek mode
+disappears entirely</b> — it was reachable only through the rail. Desktop TOC becomes a clean two-state
+closed↔push, matching the tag side and native <code>NSSplitView</code> semantics.</p>
+
+</body>
+</html>

@@ -145,6 +145,8 @@ Keyboard shortcuts: Cmd+1-5 (tabs) and Cmd+Opt+S (sidebar) live in the View menu
 - **Analysis**: Heatmap inspector toggle (`square.grid.2x2` icon)
 - **Project/Sessions**: no extra items
 
+**The toolbar is the *only* surface for the web nav/tag sidebars in embedded mode.** The SPA hides its own icon rails + close-× when `isEmbedded()` (`.layout.embedded` in `bristlenose/theme/organisms/sidebar.css`) — that web chrome is a non-Mac idiom and the two 36px rails wasted width the WKWebView (zero-inset, fills the detail pane) gives back to content. So the `toggleLeftPanel` / `toggleRightPanel` ControlGroup buttons + `[`/`]` keys are the user's only way to open/close them; there's no in-pane affordance to fall back on. Overlay/hover-peek mode is also gone in embedded (it was rail-triggered) — the web TOC is closed↔push only. If you ever remove these toolbar toggles, the web sidebars become unreachable in the app. See `docs/design-sidebar.md` § Desktop embedded mode.
+
 `ExportMenuButton` is a `View` struct in `ContentView.swift` that observes `bridgeHandler.activeTab` to render the correct menu items.
 
 ### Menu bar

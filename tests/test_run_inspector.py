@@ -86,6 +86,17 @@ def test_summarise_calls_aggregates():
     assert round(s["cache_ratio"], 3) == round(100 / 500, 3)
 
 
+def test_summarise_calls_cost_none_when_unrecorded_not_zero():
+    # No call recorded a cost → cost is None ("—" / not recorded in the UI),
+    # NOT 0.0 (which reads as a genuinely-free run, e.g. local Ollama).
+    base = {"ms": 1000, "in": 100, "out": 10, "cache": 0, "retries": 0, "stage": "a"}
+    unrecorded = ri.summarise_calls([{**base, "cost": None, "cost_pred": None}])
+    assert unrecorded["cost"] is None and unrecorded["cost_pred"] is None
+    # A genuine zero (free model) stays 0.0, distinct from None.
+    free = ri.summarise_calls([{**base, "cost": 0.0, "cost_pred": 0.0}])
+    assert free["cost"] == 0.0 and free["cost_pred"] == 0.0
+
+
 def test_cost_by_stage_sorted_desc():
     calls = [
         {"stage": "cheap", "cost": 0.01, "in": 10, "out": 1, "cache": 0},

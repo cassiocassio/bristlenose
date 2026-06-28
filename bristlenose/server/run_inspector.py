@@ -181,15 +181,20 @@ def summarise_calls(calls: list[dict[str, Any]]) -> dict[str, Any]:
     tin = sum(c["in"] for c in calls)
     tout = sum(c["out"] for c in calls)
     tcache = sum(c["cache"] for c in calls)
-    cost = sum(c["cost"] for c in calls if c["cost"] is not None)
-    cost_pred = sum(c["cost_pred"] for c in calls if c["cost_pred"] is not None)
+    # None (no call recorded a cost) is distinct from 0.0 (a genuinely free run,
+    # e.g. local Ollama): the former renders "—" / not-recorded, the latter
+    # "$0.00". Summing an empty list would conflate them into a misleading $0.00.
+    costs = [c["cost"] for c in calls if c["cost"] is not None]
+    preds = [c["cost_pred"] for c in calls if c["cost_pred"] is not None]
+    cost = round(sum(costs), 4) if costs else None
+    cost_pred = round(sum(preds), 4) if preds else None
     stages = sorted({c["stage"] for c in calls})
     fresh_in = tin  # input_tokens excludes cache reads in the OTel schema
     cache_ratio = (tcache / (fresh_in + tcache)) if (fresh_in + tcache) else 0.0
     return {
         "n": n,
-        "cost": round(cost, 4),
-        "cost_pred": round(cost_pred, 4),
+        "cost": cost,
+        "cost_pred": cost_pred,
         "in": tin,
         "out": tout,
         "cache": tcache,
@@ -668,7 +673,7 @@ function renderLLM(){
   const host=$('#v-llm');const calls=DATA.calls||[];const s=DATA.summary;
   if(!calls.length){host.innerHTML='<div class="card"><div class="empty">No LLM calls recorded for this run.</div></div>';return;}
   const cards=[[String(s.n),'calls',s.stage_count+' stages'],
-    ['$'+s.cost.toFixed(2),'total cost',s.cost_pred?('forecast $'+s.cost_pred.toFixed(2)):''],
+    [s.cost==null?'—':'$'+s.cost.toFixed(2),'total cost',s.cost==null?'not recorded':(s.cost_pred!=null?('forecast $'+s.cost_pred.toFixed(2)):'')],
     [(s.p50_ms/1000).toFixed(1)+'s','p50 latency','p95 '+(s.p95_ms/1000).toFixed(1)+'s'],
     [fmtK(s.in+s.cache),'input tokens',fmtK(s.cache)+' cached'],
     [String(s.retries),'retries',''],[(s.cache_ratio*100).toFixed(0)+'%','cache hit','re-run lever']];

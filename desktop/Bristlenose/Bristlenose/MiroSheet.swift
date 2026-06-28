@@ -56,7 +56,13 @@ final class MiroSheetModel: ObservableObject {
     /// server returned. nil when neither is known (older sidecar / fetch failed),
     /// so the Account row hides entirely rather than showing an empty label.
     func accountText() -> String? {
-        let parts = [userName, teamName, orgName].compactMap { $0 }.filter { !$0.isEmpty }
+        // De-dupe: a personal/free account returns organization.name == team.name
+        // ("martin · Dev team · Dev team"), so drop a part already shown
+        // (case-insensitive, order preserved).
+        var seen = Set<String>()
+        let parts = [userName, teamName, orgName]
+            .compactMap { $0?.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 

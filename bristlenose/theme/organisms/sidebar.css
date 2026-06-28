@@ -87,6 +87,31 @@
     grid-column: 2;
 }
 
+/* ── Desktop embedded: drop the icon rails ────────────────────────
+   In the macOS app the sidebars are toggled from the NATIVE toolbar
+   (and keyboard `[` / `]`), so the web icon rails + their close-× are
+   redundant chrome. One token override collapses every rail track in
+   every grid-template-columns variant (closed, toc-open, tags-open,
+   both, no-right, inert); `display: none` on the rail divs stops the
+   0-width box still painting its 1px border. The native NSSplitView
+   divider draws the left edge, the window edge bounds the right.
+   Overlay/hover-peek mode is unreachable here (it was rail-only) — TOC
+   becomes closed↔push only, like the tag side. Browser is untouched:
+   `.embedded` is set from isEmbedded() (SidebarLayout.tsx). */
+.layout.embedded { --bn-rail-width: 0px; }
+
+.layout.embedded .toc-rail,
+.layout.embedded .tag-rail { display: none; }
+
+/* The right gutter (--bn-gutter-right: 0.5rem) was sized assuming a
+   36px rail sat beyond it. On tabs without a minimap the webview now
+   butts the window edge, so restore a comfortable inset matching the
+   left. (Quotes keeps 0.5rem — its minimap supplies the separation.) */
+.layout.embedded.layout-no-right > .center,
+.layout.embedded.layout-inert > .center {
+    padding-right: var(--bn-gutter-left);
+}
+
 /* Animated slide — added before state change, removed on transitionend */
 .layout.animating {
     transition: grid-template-columns 75ms ease;

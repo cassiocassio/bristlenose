@@ -254,6 +254,23 @@ The `.layout` wrapper exists only in the React tree (SPA mode). The stage-12 sta
 
 ---
 
+## Desktop embedded mode — rails removed
+
+In the macOS app the SPA runs inside a WKWebView and `isEmbedded()` is true (`window.__BRISTLENOSE_EMBEDDED__`, injected at document-start; `?embedded` also works for browser QA). The sidebars are toggled from the **native toolbar** (`toggleLeftPanel` / `toggleRightPanel` → `sidebarAnimations.toggleToc` / `toggleTags`, already wired in `AppLayout.tsx`) and the `[` / `]` keys — so the web icon rails, their drag-to-open handles, and the close-× are redundant web chrome. They're an alien idiom in a Mac window, and the two 36px rails waste horizontal space the WKWebView (which fills the detail pane with **zero inset** — `ContentView.swift:2023`) could give to content.
+
+**What changes** (all gated on `.layout.embedded` / `isEmbedded()`, browser untouched):
+- `SidebarLayout.tsx` adds the `embedded` class to the active grid and the inert branch; gates both close-× buttons behind `!embedded`; and, because the now-hidden rail button can't receive focus, redirects focus-on-close to the `.center` region (made programmatically focusable with `tabIndex={-1}` in embedded only).
+- `sidebar.css`: `.layout.embedded { --bn-rail-width: 0 }` — one token override collapses the rail track in **every** `grid-template-columns` variant (closed, `toc-open`, `tags-open`, both, `layout-no-right`, `layout-inert`). `display: none` on `.toc-rail` / `.tag-rail` stops the 0-width box still painting its 1px border. The native `NSSplitView` divider draws the left edge; the window edge bounds the right.
+- The right gutter (`--bn-gutter-right: 0.5rem`) was sized assuming a 36px rail sat beyond it. On minimap-less tabs (`layout-no-right` / `layout-inert`) the webview now butts the window edge, so embedded restores a symmetric inset matching the left (`--bn-gutter-left`, 2rem).
+
+**Consequence:** overlay/hover-peek mode is unreachable in embedded (it was only ever triggered from the rail), so the TOC collapses to a clean **closed ↔ push** model like the tag side — matching native split-view semantics.
+
+**Verified geometry** (Playwright against `bristlenose serve`, 1440px viewport, Quotes tab): browser grid `36 0 1240 80 0 36`; embedded grid `0 0 1312 80 0 0` — center reclaims exactly 72px (1240 → 1312), rails `display:none`, 0 close buttons, center `tabindex=-1`. On the Analysis (no-right) tab, embedded `padding-right` is bumped 8px → 32px so content clears the window edge.
+
+**Reference mockup:** `docs/mockups/mockup-desktop-rail-removal.html` (pale-banded geometry study, browser vs desktop, states A–D).
+
+---
+
 ## Responsive Behaviour
 
 When the TOC sidebar is open, the center column narrows. To compensate:

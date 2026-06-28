@@ -28,6 +28,12 @@ If your shell is *inside* this folder, prefix with `./` — the folder isn't on 
 > Python/theme come from the editable install regardless.)
 >
 > **Prereq:** `python3.12` on `PATH` (`brew install python@3.12`).
+>
+> **No more "Directory not empty" on the first run.** Deleting the prior 400 MB+
+> `.venv-sidecar`/bundle on a Spotlight-indexed volume used to race `mdworker`/`fseventsd`
+> (rm's `rmdir` hit `ENOTEMPTY`, `set -e` aborted, the *second* run worked). `robust_rmrf()`
+> now renames-then-deletes with retries, so a single invocation is reliable. Trash dirs
+> (`*.delete-<pid>`) are gitignored and swept on the next run.
 
 ## Verification gates
 

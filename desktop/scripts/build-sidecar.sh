@@ -30,6 +30,31 @@ DIST="$DESKTOP_DIR/Bristlenose/Resources"
 WORK="$DESKTOP_DIR/build/pyinstaller"
 BUNDLE="$DIST/bristlenose-sidecar"
 
+# Robust recursive delete for large trees on a Spotlight-indexed volume.
+# `rm -rf` on a 400 MB+ bundle races mdworker/fseventsd: while rm unlinks
+# entries, the indexer re-creates directory entries, so rm's final rmdir hits
+# ENOTEMPTY ("Directory not empty") and `set -e` aborts the build — the papercut
+# where the *second* invocation succeeds because the tree is mostly gone by then.
+# Fix: rename out of the way first (atomic, frees the canonical path instantly so
+# the rebuild proceeds regardless), then rm the renamed trash with retries. Sweep
+# any trash orphans a prior failed run left behind.
+robust_rmrf() {
+    local target="$1"
+    # Clear leftovers from an earlier interrupted delete (best-effort).
+    rm -rf "${target}".delete-* 2>/dev/null || true
+    [ -e "$target" ] || return 0
+    local trash="${target}.delete-$$"
+    mv "$target" "$trash" 2>/dev/null || trash="$target"
+    local n
+    for n in 1 2 3 4 5; do
+        rm -rf "$trash" 2>/dev/null && return 0
+        sleep 1
+    done
+    # Final attempt surfaces the real error if it still fails. The canonical
+    # path is already free (renamed), so the build can proceed even on failure.
+    rm -rf "$trash" || echo "warning: could not fully remove $trash (left for next run)" >&2
+}
+
 # Fingerprint the Python source NOW — before pip/PyInstaller run — so the stamp
 # reflects exactly what gets bundled, uncontaminated by any transient .py a build
 # step might drop under bristlenose/ (which would otherwise make the stamp
@@ -49,7 +74,7 @@ fi
 # bundle whose contents are deterministic — keep the contributor's `.venv`
 # (with dev extras and any spike packages) out of PyInstaller's analysis.
 echo "==> Recreating sidecar venv at $SIDECAR_VENV"
-rm -rf "$SIDECAR_VENV"
+robust_rmrf "$SIDECAR_VENV"
 python3.12 -m venv "$SIDECAR_VENV"
 "$SIDECAR_VENV/bin/pip" install --no-cache-dir --quiet --upgrade pip
 "$SIDECAR_VENV/bin/pip" install --no-cache-dir -e "$ROOT[serve,apple,desktop]"
@@ -64,7 +89,7 @@ mkdir -p "$DIST"
 
 # Fresh-slate the bundle. Repeated C1 runs appended stale Mach-Os into
 # the old tree, which then failed verification without a clear cause.
-rm -rf "$BUNDLE"
+robust_rmrf "$BUNDLE"
 
 # Bake build provenance into the sidecar so any run / failure log can
 # self-identify the source it was built from (mirrors the Swift host's

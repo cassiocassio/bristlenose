@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Send to Miro — real SPA vs proposed macOS-native, screen by screen</title>
+<style>
+  :root {
+    /* SPA (resolved default theme — palette-default.css + modal.css) */
+    --spa-bg:#ffffff; --spa-text:#1a1a1a; --spa-muted:#6b7280; --spa-border:#e5e7eb;
+    --spa-accent:#2563eb; --spa-quote-bg:#f9fafb; --spa-error:#c2410c;
+    --spa-font:"Inter","Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif;
+    /* macOS native-ish */
+    --mac-blue:#2c6cf0; --mac-ink:#1d1d1f; --mac-sub:#8a8a8a; --mac-hair:rgba(0,0,0,0.13);
+    --mac-green:#34c759; --mac-font:-apple-system,"SF Pro Text","SF Pro",system-ui,sans-serif;
+    --miro:#4262ff; --miro-soft:#eef1ff; --teal:#2f6f6a;
+    --pagefont:-apple-system,"SF Pro Text",system-ui,"Inter","Segoe UI",sans-serif;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:2.5rem 2rem 5rem; background:#ece6da; font-family:var(--pagefont); color:#2a2a2a; -webkit-font-smoothing:antialiased; }
+  h1 { font-size:1.4rem; margin:0 0 .35rem; }
+  .lede { color:#5b5b5b; max-width:68rem; line-height:1.55; margin:0 0 1rem; font-size:.92rem; }
+  h2.scene { font-size:1.05rem; margin:2.4rem 0 .2rem; }
+  .scene-sub { color:#777; font-size:.85rem; margin:0 0 1rem; max-width:64rem; line-height:1.5; }
+  code { font-family:"SF Mono",ui-monospace,monospace; font-size:.84em; background:rgba(0,0,0,.055); padding:.05rem .3rem; border-radius:4px; }
+  .pill { display:inline-block; font-size:.68rem; font-weight:700; padding:.08rem .45rem; border-radius:999px; vertical-align:middle; }
+  .pill.now { background:#dcece2; color:#2f6f6a; } .pill.soon { background:#efe7f6; color:#6b4d97; }
+  .pill.ship { background:#e7eeff; color:#2a44a8; } .pill.warn { background:#fbe7cf; color:#8a5a1a; }
+
+  /* ───────── two-column comparison grid ───────── */
+  .cmp { max-width:80rem; border:1px solid #d8cdae; border-radius:14px; overflow:hidden; background:#fffdf8; box-shadow:0 8px 26px rgba(30,20,10,.08); }
+  .cmp-head { display:grid; grid-template-columns:1fr 1fr; }
+  .cmp-head > div { padding:.7rem 1.2rem; font-size:.82rem; font-weight:700; }
+  .cmp-head .lh { background:#eef3ee; color:#2c6f3a; border-right:1px solid #e3d8ba; }
+  .cmp-head .rh { background:#eef1ff; color:#2a44a8; }
+  .cmp-head small { display:block; font-weight:500; font-size:.72rem; opacity:.8; margin-top:1px; }
+  .cmp-row { display:grid; grid-template-columns:1fr 1fr; border-top:1px solid #e3d8ba; }
+  .cmp-row .rowlabel { grid-column:1 / -1; background:#f6efde; padding:.45rem 1.2rem; font-size:.76rem; font-weight:700; letter-spacing:.02em; text-transform:uppercase; color:#7a6f50; }
+  .cell { padding:1.5rem 1.4rem; display:flex; align-items:flex-start; justify-content:center; min-height:0; }
+  .cell.l { border-right:1px solid #e3d8ba; background:#faf7f0; }
+  .cell.r { background:#f4f0e8; }
+  @media (max-width:880px){ .cmp-head, .cmp-row { grid-template-columns:1fr; } .cell.l { border-right:0; border-bottom:1px solid #e3d8ba; } }
+  .cell-note { grid-column:1 / -1; font-size:.8rem; color:#6a6256; line-height:1.55; padding:.2rem 1.4rem 1.1rem; background:#f4f0e8; }
+  .cell-note.split { display:grid; grid-template-columns:1fr 1fr; gap:1.4rem; }
+  @media (max-width:880px){ .cell-note.split { grid-template-columns:1fr; } }
+  .cell-note b { color:#4a4438; }
+
+  /* ───────── LEFT: faithful SPA modal (resolved values, unchanged baseline) ───────── */
+  .spa-overlay { width:100%; background:rgba(0,0,0,.5); border-radius:10px; padding:26px 20px; display:flex; justify-content:center; }
+  .spa-modal { background:var(--spa-bg); border-radius:8px; padding:1.6rem; width:100%; max-width:340px; box-shadow:0 25px 50px -12px rgba(0,0,0,.25); font-family:var(--spa-font); color:var(--spa-text); }
+  .spa-modal h2 { margin:0 0 1.1rem; font-weight:490; font-size:1.35rem; color:var(--spa-text); line-height:1.2; }
+  .spa-sub { margin:0 0 1.1rem; font-size:.8125rem; color:var(--spa-muted); line-height:1.5; }
+  .spa-hint { display:block; font-size:.75rem; color:var(--spa-muted); margin-top:.5rem; line-height:1.45; }
+  .spa-hint a { color:#0000ee; text-decoration:underline; }   /* UNSTYLED — browser default (a real gap) */
+  .spa-input { width:100%; padding:8px 10px; font-family:var(--spa-font); font-size:13px; border:1px solid #8a8a8a; border-radius:2px; background:#fff; color:#1a1a1a; margin-top:6px; }
+  .spa-input.ph { color:#a6a6a6; }
+  .spa-select { width:100%; padding:6px 8px; font-size:13px; border:1px solid #8a8a8a; border-radius:2px; background:#fff; margin-top:6px; appearance:auto; }
+  .spa-check { display:flex; gap:.35rem; align-items:flex-start; font-size:.8125rem; cursor:pointer; margin:.75rem 0; }
+  .spa-check input { margin-top:.15rem; }
+  .spa-check small { display:block; font-size:.75rem; color:var(--spa-muted); }
+  .spa-actions { display:flex; justify-content:flex-end; gap:.35rem; margin-top:1.5rem; }
+  .spa-btn { font-family:inherit; font-size:.8125rem; padding:.4rem 1rem; border-radius:3px; border:1px solid var(--spa-border); cursor:default; }
+  .spa-btn.primary { background:var(--spa-accent); color:#fff; border-color:var(--spa-accent); }
+  .spa-btn.secondary { background:#fff; color:var(--spa-text); }
+  .spa-linkish { background:none; border:0; padding:0; font:inherit; color:var(--spa-accent); text-decoration:underline; cursor:default; }
+  .spa-connected { font-size:.8125rem; color:var(--spa-muted); margin:0 0 1.1rem; }
+  .spa-spin { width:26px; height:26px; border:3px solid #e5e7eb; border-top-color:var(--spa-accent); border-radius:50%; margin:4px 0 2px; }
+
+  /* ───────── RIGHT: modern macOS sheet — centred, fully-rounded card over a dimmed window ───────── */
+  /* per HIG: "a sheet is a cardlike view with rounded corners that floats on top of its parent window;
+     the parent window is dimmed." Constant size across all steps (sized for the largest = configure). */
+  .mac-backdrop { position:relative; width:100%; max-width:392px; background:#e6e0d4; border:1px solid #cfc6b2; border-radius:11px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.13); }
+  .mac-tbar { height:30px; display:flex; align-items:center; gap:7px; padding:0 12px; background:#ebe6dc; border-bottom:1px solid #d8d0bf; }
+  .traffic { width:11px; height:11px; border-radius:50%; opacity:.55; } .traffic.r{background:#ff5f57}.traffic.y{background:#febc2e}.traffic.g{background:#28c840}
+  .tbar-title { margin-left:7px; font-size:12px; color:#7a7363; font-weight:560; }
+  .stage { position:relative; padding:12px; min-height:330px; }   /* constant frame for every step */
+  .stage .ghost { height:8px; border-radius:5px; background:#d8cfbb; margin:0 0 9px; }
+  .stage .dim { position:absolute; inset:0; background:rgba(0,0,0,.12); }
+  .sheet { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:318px; z-index:3;
+    background:#f5f4f2; border:.5px solid rgba(0,0,0,.14); border-radius:12px; box-shadow:0 24px 60px rgba(0,0,0,.34); overflow:hidden; }
+  .s-body { padding:18px 20px 6px; }
+  .s-title { font-size:13.5px; font-weight:590; color:var(--mac-ink); margin:0 0 9px; }      /* leading, regular-ish */
+  .s-intro { font-size:12px; color:#56565a; line-height:1.5; margin:0 0 13px; }                /* leading */
+  .s-foot { display:flex; align-items:center; gap:7px; padding:12px 18px; border-top:.5px solid rgba(0,0,0,.07); }
+  .s-foot .spacer { flex:1; }
+  .ns-btn { font:inherit; font-size:12.5px; font-weight:500; border-radius:7px; padding:5px 14px; border:.5px solid #c4c4c4; background:linear-gradient(#fff,#f1f1f1); color:#1d1d1f; cursor:default; }
+  .ns-btn.default { background:linear-gradient(var(--mac-blue),#1f5fe0); border-color:#1f5fe0; color:#fff; }
+  .ns-btn.help { width:21px; height:21px; padding:0; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#666; }
+  .ns-field { width:100%; background:#fff; border:.5px solid #b9b9b9; border-radius:6px; padding:6px 9px; font:inherit; font-size:12.5px; color:#1d1d1f; box-shadow:inset 0 1px 1px rgba(0,0,0,.04); }
+  .ns-row { display:grid; grid-template-columns:96px 1fr; gap:9px; align-items:center; margin:0 0 11px; }
+  .ns-row > label { text-align:right; font-size:12px; color:#3a3a3a; }
+  .ns-check { display:flex; gap:7px; align-items:flex-start; font-size:12.5px; color:#1d1d1f; margin:0 0 9px; }
+  .ns-check .box { width:14px; height:14px; border-radius:3px; border:.5px solid #b9b9b9; background:#fff; flex:0 0 auto; margin-top:1px; position:relative; }
+  .ns-check .box.on { background:var(--mac-blue); border-color:var(--mac-blue); }
+  .ns-check .box.on::after { content:"✓"; position:absolute; inset:0; color:#fff; font-size:10px; line-height:14px; text-align:center; }
+  .ns-check small { display:block; color:#8a8a8e; font-size:11px; margin-top:1px; }
+  .ns-note { font-size:11px; color:#86868b; line-height:1.45; margin:2px 0 4px; }              /* plain secondary — NO coloured box */
+  .ns-connected { display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:500; color:#86868b; }
+  .ns-link { color:var(--mac-blue); font-size:12px; text-decoration:none; }
+  .ns-prog { height:6px; background:#dcdcdc; border-radius:99px; overflow:hidden; margin:13px 0 7px; }
+  .ns-prog i { display:block; height:100%; width:62%; background:var(--mac-blue); border-radius:99px; }
+  .ns-spin { width:28px; height:28px; border:3px solid #d6d6d6; border-top-color:var(--mac-blue); border-radius:50%; margin:4px auto 9px; }
+  .done-row { display:flex; align-items:center; gap:10px; }
+  .done-row .txt { font-size:13px; font-weight:400; color:var(--mac-ink); line-height:1.35; }  /* regular weight */
+
+  /* discussion blocks */
+  .doc { max-width:80rem; background:#fffdf8; border:1px solid #d4c9a8; border-radius:12px; padding:1.2rem 1.5rem; margin-top:1.1rem; }
+  .doc h3 { font-size:.98rem; margin:0 0 .5rem; } .doc p { font-size:.88rem; line-height:1.6; color:#3b3b3b; margin:.4rem 0; }
+  blockquote { margin:.5rem 0; padding:.5rem .9rem; border-left:3px solid #cdbf9a; background:#faf5e8; font-size:.85rem; color:#5a513c; line-height:1.5; border-radius:0 6px 6px 0; }
+  table.opts { width:100%; border-collapse:collapse; margin:.6rem 0 .2rem; font-size:.82rem; }
+  table.opts th, table.opts td { text-align:left; vertical-align:top; padding:.55rem .7rem; border-bottom:1px solid #eadfc6; line-height:1.45; }
+  table.opts th { font-size:.72rem; text-transform:uppercase; letter-spacing:.03em; color:#7a7060; }
+  table.opts td.good { color:#2c6f3a; } table.opts td.bad { color:#9a4b3a; }
+  table.opts tr.best td { background:#f1f8f1; }
+  .rec { background:#eef6ee; border:1px solid #cfe6cf; border-radius:8px; padding:.7rem .9rem; font-size:.86rem; line-height:1.55; margin-top:.7rem; } .rec b { color:#256b30; }
+  ul.tight { margin:.3rem 0; padding-left:1.15rem; font-size:.86rem; line-height:1.65; }
+  .changed { background:#fbf7ec; border:1px solid #e6dcc0; border-radius:10px; padding:1rem 1.3rem; max-width:80rem; margin-top:1.1rem; }
+  .changed h3 { margin:0 0 .5rem; font-size:.92rem; }
+  .changed li { font-size:.85rem; line-height:1.6; }
+</style>
+</head>
+<body>
+
+  <h1>Send to Miro — shipped SPA flow vs the native Swift build to approve</h1>
+  <p class="lede">
+    <strong>Left = what ships today</strong> — the React <code>MiroExportPanel</code> (faithful to
+    <code>MiroExportPanel.tsx</code>). On desktop this same panel is reached via a <em>native entry</em> (toolbar
+    "Send to Miro…" row + Quotes menu) with token persistence in the Keychain — <strong>built &amp; verified 28 Jun</strong>
+    (board created end-to-end; token survives relaunch via iCloud Keychain). <strong>Right = the proposed native-Swift
+    build</strong> to approve — the <em>same flow</em> rendered as a modern macOS sheet (centred rounded card over the
+    dimmed window, one constant size, leading-aligned, our SF glyphs). The build details are spec'd at the bottom:
+    <em>"Native Swift build — decisions to approve."</em>
+  </p>
+
+  <!-- ═══════════ THE PARALLEL TABLE ═══════════ -->
+  <div class="cmp">
+    <div class="cmp-head">
+      <div class="lh">Ships today — React panel<small>What desktop shows now (native entry → this panel in the WKWebView). The flow to match.</small></div>
+      <div class="rh">To build — native Swift sheet<small>Same flow, rendered in SwiftUI. The proposal to approve (spec below).</small></div>
+    </div>
+
+    <!-- ENTRY -->
+    <div class="cmp-row">
+      <div class="rowlabel">Entry · the Export affordance gains a Miro item</div>
+      <div class="cell l">
+        <div class="spa-overlay" style="background:#f3eee2;padding:18px">
+          <div style="background:#fffdf8;border:1px solid #e0d7c0;border-radius:6px;padding:6px 0;width:100%;max-width:300px;font-family:var(--spa-font);box-shadow:0 4px 12px rgba(30,20,10,.12)">
+            <div style="padding:.4rem .85rem;font-size:.8125rem;color:#1a1a1a">Export Report…</div>
+            <div style="padding:.4rem .85rem;font-size:.8125rem;color:#1a1a1a">Copy 11 Quotes</div>
+            <div style="padding:.4rem .85rem;font-size:.8125rem;color:#1a1a1a">Save as Spreadsheet</div>
+            <div style="padding:.4rem .85rem;font-size:.8125rem;color:#1a1a1a">Extract Video Clips…</div>
+            <div style="border-top:1px solid #e0d7c0;margin:.25rem 0"></div>
+            <div style="padding:.4rem .85rem;font-size:.8125rem;color:#1a1a1a">Send to Miro…</div>
+          </div>
+        </div>
+      </div>
+      <div class="cell r">
+        <div class="mac-backdrop" style="max-width:360px">
+          <div class="mac-tbar"><span class="traffic r"></span><span class="traffic y"></span><span class="traffic g"></span><span class="tbar-title">Ikea tom · 11 Quotes</span><span style="margin-left:auto;font-size:13px;color:#2c6cf0">↑</span></div>
+          <div style="position:relative">
+            <div style="padding:10px 12px"><div class="ghost" style="width:35%"></div><div class="ghost" style="width:80%"></div></div>
+            <div style="position:absolute;top:6px;right:8px;background:rgba(252,252,252,.985);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);border:.5px solid var(--mac-hair);border-radius:10px;box-shadow:0 14px 38px rgba(0,0,0,.24);padding:5px;width:222px;font-size:12.5px">
+              <div style="padding:6px 9px;border-radius:7px;color:#1d1d1f">Export Report…</div>
+              <div style="padding:6px 9px;border-radius:7px;color:#1d1d1f">Copy Quotes</div>
+              <div style="padding:6px 9px;border-radius:7px;color:#1d1d1f">Save as Spreadsheet…</div>
+              <div style="padding:6px 9px;border-radius:7px;color:#1d1d1f">Extract Video Clips…</div>
+              <div style="border-top:.5px solid var(--mac-hair);margin:4px 6px"></div>
+              <div style="padding:6px 9px;border-radius:7px;color:#1d1d1f;display:flex;gap:7px;align-items:center"><span style="color:var(--miro)">◈</span>Send to Miro…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cell-note split">
+        <div><b>Built:</b> the SPA <code>ExportDropdown</code> already has the <em>Send to Miro…</em> row → <code>onSendToMiro</code>. But in the desktop app the SPA NavBar is hidden, so this dropdown never shows.</div>
+        <div><b>Proposed:</b> one row added to the native <code>ExportPopoverContent</code>; click dispatches <code>menuAction("sendToMiro")</code>, which the SPA’s <code>case "sendToMiro"</code> handler (AppLayout.tsx:399) already catches. (Popover is correct here — it’s a transient toolbar menu, not a sheet.)</div>
+      </div>
+    </div>
+
+    <!-- LOADING -->
+    <div class="cmp-row">
+      <div class="rowlabel">a · checking connection</div>
+      <div class="cell l">
+        <div class="spa-overlay">
+          <div class="spa-modal" style="text-align:center">
+            <h2 style="text-align:left">Send to Miro board</h2>
+            <div class="spa-spin" style="margin:0 auto"></div>
+            <p class="spa-sub" style="margin-top:8px">Checking connection…</p>
+          </div>
+        </div>
+      </div>
+      <div class="cell r">
+        <div class="mac-backdrop">
+          <div class="mac-tbar"><span class="traffic r"></span><span class="traffic y"></span><span class="traffic g"></span><span class="tbar-title">Ikea tom</span></div>
+          <div class="stage"><div class="ghost" style="width:35%"></div><div class="ghost" style="width:80%"></div><div class="ghost" style="width:70%"></div><div class="dim"></div>
+            <div class="sheet"><div class="s-body" style="text-align:center;padding-bottom:18px"><div class="ns-spin"></div><div class="s-title" style="font-weight:400;font-size:12.5px;margin:0">Checking connection…</div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="cell-note">Both resolve <code>getMiroStatus()</code> then route to <em>Connect</em> or <em>Configure</em>. (If connection moves to Settings ▸ Accounts — see discussion — this transient step disappears entirely: the sheet opens straight on Configure.)</div>
+    </div>
+
+    <!-- CONNECT -->
+    <div class="cmp-row">
+      <div class="rowlabel">b · connect (first run only) — paste-token</div>
+      <div class="cell l">
+        <div class="spa-overlay">
+          <div class="spa-modal">
+            <h2>Send to Miro board</h2>
+            <p class="spa-sub">Push your quotes onto a new Miro board as sticky notes, grouped by section and theme. Connect once — we never touch your existing boards.</p>
+            <p class="spa-hint">Paste a Miro access token to connect. <a href="#">How do I get a token? ↗</a></p>
+            <input class="spa-input ph" value="Miro access token" readonly />
+            <div class="spa-actions"><button class="spa-btn secondary">Cancel</button><button class="spa-btn primary">Connect</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="cell r">
+        <div class="mac-backdrop">
+          <div class="mac-tbar"><span class="traffic r"></span><span class="traffic y"></span><span class="traffic g"></span><span class="tbar-title">Ikea tom</span></div>
+          <div class="stage"><div class="ghost" style="width:35%"></div><div class="ghost" style="width:80%"></div><div class="dim"></div>
+            <div class="sheet"><div class="s-body">
+              <div class="s-title">Send to Miro board</div>
+              <p class="s-intro">Push your quotes onto a new Miro board as sticky notes, grouped by section and theme. Connect once — we never touch your existing boards.</p>
+              <input class="ns-field ph" value="Miro access token" />
+              <p style="margin:7px 0 0"><a class="ns-link" href="#">How do I get a token?</a></p>
+            </div>
+            <div class="s-foot"><button class="ns-btn help" title="Open setup help in browser">?</button><span class="spacer"></span><button class="ns-btn">Cancel</button><button class="ns-btn default">Connect</button></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="cell-note split">
+        <div><b>Built:</b> token-only. <b>Finding:</b> the “How do I get a token?” link is <em>unstyled</em> — browser-default blue-underline (no theme rule targets it). A real polish gap, visible left.</div>
+        <div><b>Proposed:</b> OAuth button <em>removed</em> — no UX for a feature that doesn’t exist yet. Leading-aligned. Help shown two equivalent ways (you’d pick one): the round “?” Help button (HIG-canonical for a sheet) and an inline <code>Link</code> — both open the same docs URL via <code>NSWorkspace</code>.</div>
+      </div>
+    </div>
+
+    <!-- CONFIGURE / SEND -->
+    <div class="cmp-row">
+      <div class="rowlabel">c · configure &amp; send — the main screen</div>
+      <div class="cell l">
+        <div class="spa-overlay">
+          <div class="spa-modal">
+            <h2>Send to Miro board</h2>
+            <p class="spa-connected">Connected ✓ · <button class="spa-linkish">Disconnect</button></p>
+            <label class="spa-hint">Board name (optional)</label>
+            <input class="spa-input ph" value="Defaults to the project name" readonly />
+            <label class="spa-hint" style="margin-top:10px">Colour stickies by</label>
+            <select class="spa-select"><option>Sentiment</option></select>
+            <label class="spa-check" style="margin-top:12px"><input type="checkbox" /><span>Link quotes to clips<small>Point at the folder where you placed the exported clips.</small></span></label>
+            <p class="spa-hint" style="margin-top:10px">Uploads all quotes in this project to Miro — hidden quotes are excluded.</p>
+            <div class="spa-actions"><button class="spa-btn primary">Create board</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="cell r">
+        <div class="mac-backdrop">
+          <div class="mac-tbar"><span class="traffic r"></span><span class="traffic y"></span><span class="traffic g"></span><span class="tbar-title">Ikea tom</span></div>
+          <div class="stage"><div class="ghost" style="width:35%"></div><div class="ghost" style="width:80%"></div><div class="dim"></div>
+            <div class="sheet"><div class="s-body">
+              <div class="s-title">Send to Miro board</div>
+              <div class="ns-row"><label>Board name</label><input class="ns-field" value="Ikea tom" /></div>
+              <label class="ns-check"><span class="box on"></span><span>Colour stickies by sentiment</span></label>
+              <label class="ns-check"><span class="box"></span><span>Link quotes to clips<small>Point at the folder where you placed the exported clips.</small></span></label>
+              <p class="ns-note">Uploads all quotes in this project to Miro — hidden quotes are excluded.</p>
+            </div>
+            <div class="s-foot"><button class="ns-btn help" title="Open Miro help in browser">?</button><span class="spacer"></span><button class="ns-btn">Cancel</button><button class="ns-btn default">Create board</button></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="cell-note split">
+        <div><b>Built:</b> stacked labels + UA-default <code>&lt;select&gt;</code> for a binary choice; name field shows a placeholder; <em>Disconnect</em> sits inline in the subtitle.</div>
+        <div><b>Proposed (your notes applied):</b> binary colour choice → a <b>checkbox</b>; board name <b>prefilled</b> with the project name (editable); the <b>Disconnect</b> affordance is gone (connection belongs in Settings ▸ Accounts); the yellow notice → <b>plain secondary text</b> (no coloured box exists in our Swift UI); right-aligned aligned-form label, as in the Finder/Pixelmator save sheet.</div>
+      </div>
+    </div>
+
+    <!-- EXPORTING -->
+    <div class="cmp-row">
+      <div class="rowlabel">d · pushing</div>
+      <div class="cell l">
+        <div class="spa-overlay">
+          <div class="spa-modal">
+            <h2>Send to Miro board</h2>
+            <p class="spa-sub">Creating board…</p>
+          </div>
+        </div>
+      </div>
+      <div class="cell r">
+        <div class="mac-backdrop">
+          <div class="mac-tbar"><span class="traffic r"></span><span class="traffic y"></span><span class="traffic g"></span><span class="tbar-title">Ikea tom</span></div>
+          <div class="stage"><div class="ghost" style="width:35%"></div><div class="ghost" style="width:80%"></div><div class="dim"></div>
+            <div class="sheet"><div class="s-body" style="padding-bottom:6px"><div class="s-title" style="margin-bottom:2px">Creating board…</div><div class="ns-prog"><i></i></div><p class="ns-note" style="margin:0">88 of 142 stickies placed</p></div>
+            <div class="s-foot"><span class="spacer"></span><button class="ns-btn">Cancel</button></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="cell-note split">
+        <div><b>Built:</b> just a “Creating board…” subtitle — no progress, count, or cancel.</div>
+        <div><b>Proposed:</b> determinate progress + count + Cancel. But a modal sheet blocks the window 10–30s — the discussion argues this should be a <em>background job on the sidebar row</em> (BN convention), with the sheet dismissable.</div>
+      </div>
+    </div>
+
+    <!-- DONE -->
+    <div class="cmp-row">
+      <div class="rowlabel">e · done — the payoff crossing</div>
+      <div class="cell l">
+        <div class="spa-overlay">
+          <div class="spa-modal">
+            <h2>Send to Miro board</h2>
+            <p class="spa-sub">Board ready — 142 quote stickies placed.</p>
+            <div class="spa-actions"><button class="spa-btn secondary">Done</button><a class="spa-btn primary" href="#">Open in Miro ↗</a></div>
+          </div>
+        </div>
+      </div>
+      <div class="cell r">
+        <div class="mac-backdrop">
+          <div class="mac-tbar"><span class="traffic r"></span><span class="traffic y"></span><span class="traffic g"></span><span class="tbar-title">Ikea tom</span></div>
+          <div class="stage"><div class="ghost" style="width:35%"></div><div class="ghost" style="width:80%"></div><div class="dim"></div>
+            <div class="sheet"><div class="s-body" style="text-align:center;padding:20px 20px 8px">
+              <svg width="34" height="34" viewBox="0 0 40 40" fill="none" stroke="#34c759" stroke-width="2" style="margin-bottom:8px"><circle cx="20" cy="20" r="17"/><path d="M13 20.5l5 5 9-10.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="s-title" style="margin:0 0 2px">Board ready</div>
+              <div class="ns-note" style="font-size:12px;margin:0">142 quote stickies placed</div>
+            </div>
+            <div class="s-foot"><span class="spacer"></span><button class="ns-btn">Done</button><button class="ns-btn default">Open in Miro…</button></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="cell-note split">
+        <div><b>Built (web):</b> one line — "Board ready — N quote stickies placed." (the <code>boardReady</code> string).</div>
+        <div><b>Proposed (native):</b> HIG title+subtitle — green outline <code>checkmark.circle</code> (MessageKind) + <b>title</b> "Board ready" + <b>subtitle</b> "{count} quote stickies placed" + Done / Open in Miro… (HIG: title + informative text + buttons.) Native button is <em>"Open in Miro…"</em> — a trailing <b>ellipsis</b>, not the web's ↗: HIG says a push button that opens another window/view/app takes a trailing ellipsis. → <code>NSWorkspace.shared.open</code>. If the push runs as a background job (see Progress decision), this sheet can be skipped entirely — the row returns to idle and surfaces "Open in Miro".</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ what changed ═══════════ -->
+  <div class="changed">
+    <h3>What changed from the last version (your notes)</h3>
+    <ul class="tight">
+      <li><b>Rendered as a modern sheet</b> — centred, fully-rounded card over the dimmed window, not the dated title-bar-glued style. This is the “modern modal popup” you saw in Pixelmator (it <em>is</em> a sheet).</li>
+      <li><b>Leading-aligned</b> — centred text was an <em>alert</em> idiom, not a sheet one. Only the spinner/success glyph centre.</li>
+      <li><b>One constant size</b> for every step (sized for Configure) — sheets don’t resize per step.</li>
+      <li><b>OAuth button removed</b> — no UX for a feature that isn’t built.</li>
+      <li><b>Colour-by → checkbox</b> (binary choice). Web left as-built for now.</li>
+      <li><b>Board name prefilled</b> with the project name, editable — no “Defaults to…” placeholder.</li>
+      <li><b>Disconnect removed</b> from the sheet — it belongs in Settings ▸ Accounts.</li>
+      <li><b>Yellow notice → plain secondary text</b> — no coloured callout boxes exist in our Swift UI.</li>
+      <li><b>Success</b> = outline <code>checkmark.circle</code>, green, regular weight (our <code>MessageKind</code> convention).</li>
+    </ul>
+  </div>
+
+  <!-- ═══════════ should this be a sheet? ═══════════ -->
+  <h2 class="scene">Should this be a sheet? (yes — and the modern look <em>is</em> a sheet)</h2>
+  <div class="doc" style="margin-top:.4rem">
+    <p>Apple leaned on title-bar-glued sheets for years; since Big Sur the sheet <em>itself</em> changed — it’s now a
+      centred rounded card. So the “modern modal popup” in Pixelmator isn’t a different control; it’s today’s sheet.</p>
+    <blockquote>“In macOS, a sheet is a cardlike view with rounded corners that floats on top of its parent window.
+      The parent window is dimmed while the sheet is onscreen.” — HIG, <em>Sheets</em></blockquote>
+    <blockquote>“Present a sheet in a reasonable default size. People don’t generally expect to resize sheets.” — HIG
+      (→ one size for all steps, not per-step resizing).</blockquote>
+    <p>And a sheet beats the alternatives <em>by HIG definition</em> for this “scoped task closely related to the
+      current context”:</p>
+    <table class="opts">
+      <tr><th style="width:11rem">Container</th><th>HIG says</th><th>Fit here</th></tr>
+      <tr class="best"><td><b>Sheet</b> <span class="pill now">use this</span></td><td>“A scoped task… requesting specific information… a simple task they can complete before returning.”</td><td class="good">Exactly the Send/Configure step. Modern centred card, parent dimmed, constant size.</td></tr>
+      <tr><td><b>Alert</b></td><td>“Critical information… <em>avoid using an alert merely to provide information.</em>” Centred icon+title+message, ≤3 buttons.</td><td class="bad">Wrong for a form. Right only for an <em>error</em> (partial-board recovery). The centred text idiom is an alert thing — don’t borrow it for the form.</td></tr>
+      <tr><td><b>Panel</b></td><td>“Supplementary controls/inspector… <em>avoid controls that require typing text.</em>”</td><td class="bad">It’s a text-entry form; panel is for sliders/inspectors. No.</td></tr>
+      <tr><td><b>Separate window</b></td><td>“A self-contained task like editing a document works well in a separate window.”</td><td class="bad">Overkill for a short scoped action.</td></tr>
+      <tr><td><b>Popover</b></td><td>Transient, anchored, dismiss-on-outside-click.</td><td class="bad">Fine for the <em>entry menu</em> (it is one), but it dismisses on focus loss — bad for a multi-field form or any OAuth round-trip.</td></tr>
+    </table>
+    <div class="rec">
+      <b>So:</b> the <em>send/configure</em> step is a <b>sheet</b> (modern centred card). The native-idiomatic
+      decomposition still holds for the rest: <b>connect-once → Settings ▸ Accounts</b> (mirrors our shipped
+      LLM-provider pane; means the sheet opens straight on Configure with no connect/disconnect at all);
+      <b>progress → background job on the sidebar row</b>; <b>errors → an alert</b> (the one correct alert use).
+      OAuth gets designed when it’s actually built — likely <code>ASWebAuthenticationSession</code>, but no UI for it now.
+    </div>
+  </div>
+
+  <!-- ═══════════ help links ═══════════ -->
+  <h2 class="scene">Carrying the web UI’s help link into the native world</h2>
+  <p class="scene-sub">One outbound help link — <code>miro.howToGetToken</code>. Principle: the help content is single-sourced
+    in the docs site; every surface just opens that URL.</p>
+  <div class="doc" style="margin-top:0">
+    <ul class="tight">
+      <li><b>Web (today):</b> an <code>&lt;a href&gt;</code>. In the desktop WKWebView the nav policy (security rule 1) routes the off-host URL to <code>NSWorkspace.shared.open()</code> — already opens in the system browser. (But it’s unstyled — worth fixing regardless of platform.)</li>
+      <li><b>Native:</b> the round <b>“?” Help button</b> (HIG-canonical for a sheet — “Include a Help button that opens your help documentation”) or an inline <b>Link</b>, both calling <code>NSWorkspace.shared.open(docsURL)</code>. Never copy the help <em>text</em> into Swift — only the link + destination.</li>
+      <li><b>URL contract:</b> repoint post website-v2 (<code>/docs/how-to/miro-setup.html</code> → <code>/docs/send-to-miro.html</code>) — affects web and native equally.</li>
+    </ul>
+  </div>
+
+  <!-- ═══════════ where this stands ═══════════ -->
+  <h2 class="scene">Where this stands (28 Jun 2026)</h2>
+  <div class="doc" style="margin-top:.4rem">
+    <p><b>Shipped &amp; working on desktop today (the "native entry + web panel" path):</b></p>
+    <ul class="tight">
+      <li>Native <b>entry</b> — toolbar "Send to Miro…" popover row (<code>ContentView.swift</code>) + Quotes-menu item (<code>MenuCommands.swift</code>) → open the React panel (left column) in the WKWebView.</li>
+      <li>Native <b>Keychain persistence</b> — paste → bridge <code>store-miro-token</code> → <code>KeychainHelper.set</code> (iCloud/synchronizable); <code>overlayMiroToken</code> env-injects on launch. <b>Verified end-to-end 28 Jun</b> (board built, token survives relaunch, syncs across Macs).</li>
+    </ul>
+    <p>So the flow already works — but on desktop the dialog is the <em>web panel</em> in a web overlay, not a native sheet. This doc now specs replacing that rendering with the <b>native Swift sheet</b> (right column). The entry + Keychain layer are reused as-is.</p>
+  </div>
+
+  <!-- ═══════════ build plan to approve ═══════════ -->
+  <h2 class="scene">Native Swift build — decisions to approve</h2>
+  <div class="doc" style="margin-top:.4rem">
+    <table class="opts">
+      <tr><th style="width:11rem">Decision</th><th>Proposal (approve / change)</th></tr>
+      <tr class="best"><td><b>Data path</b> <span class="pill now">✓ APPROVED</span></td><td>Native SwiftUI sheets call the <b>existing Python REST endpoints</b> over localhost — <code>/api/projects/{id}/miro/{status,connect,disconnect,export}</code> with the app's bearer token. <b>Zero backend duplication</b> — Swift is a presentation layer; logic/data/flow stay in Python (the agnostic IR, shared with the future FigJam/Lucid/Mural renderers). Holding this pattern non-dogmatically even where a Swift reimplementation would be simpler.</td></tr>
+      <tr><td><b>Token storage</b></td><td>Reuse what's built: connect → <code>KeychainHelper.set("miro")</code> directly (no bridge needed once native) + <code>overlayMiroToken</code> env-inject. <b>Disconnect → <code>KeychainHelper.delete("miro")</code></b> — fixes the current "Disconnect doesn't clear the Swift copy" gap for free.</td></tr>
+      <tr><td><b>Screens</b></td><td>Mirror the shipped flow (right column): checking → connect → configure → creating → done.</td></tr>
+      <tr><td><b>Preview — removed (UX only)</b></td><td>Drop the "Preview" <em>button</em> from configure (both native <em>and</em> the web panel): the SVG ≠ the real board, and it's a needless decision point. <b>Keep the machinery under it</b> — the agnostic Board IR (<code>miro_board.py</code>) and the SVG renderer (<code>miro_render_svg.py</code>) are the <em>multi-board scaffolding + dev-iteration tool</em> (IR → {SVG, Miro, FigJam, Lucidspark, Mural}), not preview cruft. Only the user-facing Preview affordance goes; the <code>/miro/preview</code> route stays for dev/test.</td></tr>
+      <tr><td><b>Done screen</b></td><td>Green <code>checkmark.circle</code> + <b>title</b> "Board ready" + <b>subtitle</b> "{count} quote stickies placed" + Done / Open in Miro. Title+informative-text+buttons is the HIG alert/dialog convention. (Needs a title/subtitle i18n split from the current single <code>boardReady</code> string.)</td></tr>
+      <tr><td><b>Container</b></td><td>Modern macOS <b>sheet</b> (centred rounded card, parent dimmed), <b>one constant size</b>, leading-aligned. Per HIG.</td></tr>
+      <tr><td><b>Colour control</b></td><td><b>Checkbox</b> "Colour stickies by sentiment" (binary), not the web <code>&lt;select&gt;</code>.</td></tr>
+      <tr><td><b>Board name</b></td><td><b>Prefilled</b> with the project name, editable (vs the web placeholder).</td></tr>
+      <tr><td><b>Glyphs / type</b></td><td>Our <code>MessageKind</code> set (success = outline <code>checkmark.circle</code>, green) · SF Pro · native buttons.</td></tr>
+      <tr><td><b>Help link</b></td><td>"?" Help button or inline <code>Link</code> → <code>NSWorkspace.open(/docs/send-to-miro.html)</code>.</td></tr>
+      <tr><td><b>Progress</b> <span class="pill now">✓ APPROVED</span></td><td><b>Modal sheet</b> — "Creating board…" + Cancel, blocks the window until done. Accepted because the push is fast; <b>stress-test gate: ~3000 stickies</b> — if it exceeds ~30s, revisit and move the push to a dismissable background job on the sidebar row. (The export endpoint is synchronous, so the sheet shows an indeterminate "Creating board…", no live count — same as the web.)</td></tr>
+      <tr><td><b>Open in Miro</b></td><td>Label is <b>"Open in Miro…"</b> — a trailing <b>ellipsis</b>, not the web's ↗ (HIG: a push button that opens another window/view/app takes an ellipsis). → <code>NSWorkspace.open(board_url)</code> (minor: opens Miro.app if installed — universal-link routing; documented, parked).</td></tr>
+      <tr><td><b>Anonymise</b></td><td>Carry the export popover's global Anonymise toggle into the export request. (Backend honour of <code>anonymise</code> for Miro is a separate small task.)</td></tr>
+    </table>
+    <div class="rec">
+      <b>Scope:</b> ~5 SwiftUI sheet views + a small Swift Miro-API client (localhost calls) + present-sheet wiring from
+      the popover/menu (replacing the <code>menuAction("sendToMiro")</code> → web-panel dispatch). <b>Backend, Keychain,
+      and i18n strings all reused.</b> What's retired: only the web-panel <em>rendering</em> on desktop (the web panel
+      stays for browser/serve mode). <b>Approve the rows above (esp. Data path + Progress) and I'll build it.</b>
+    </div>
+  </div>
+
+  <p class="lede" style="margin-top:2rem;color:#8a8a8a">
+    Auto-discovered by <code>bristlenose serve --dev</code> (About → Design). Siblings:
+    <code>export-menu-comparison.html</code>, <code>export-popover-lenses.html</code>, <code>miro-flow.html</code>,
+    <code>miro-setup-help.html</code>. HIG quotes pulled from the DocC JSON for <em>Sheets</em>/<em>Alerts</em>/<em>Panels</em> (28 Jun 2026).
+  </p>
+
+</body>
+</html>

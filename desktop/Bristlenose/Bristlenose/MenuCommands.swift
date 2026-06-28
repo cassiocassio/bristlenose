@@ -754,6 +754,13 @@ private struct QuotesMenuContent: View {
         }
         .disabled(!onQuotesTab)
 
+        // Send to Miro — mirrors the toolbar popover's Miro row. Always enabled
+        // (uploads the project's quotes regardless of the active tab), matching
+        // the popover. Opens the existing React MiroExportPanel via the bridge.
+        Button(i18n.t("common.miro.menuLabel")) {
+            bridgeHandler.menuAction("sendToMiro")
+        }
+
         Divider()
 
         Button(i18n.t("desktop.menu.quotes.copyAsCSV")) {

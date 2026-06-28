@@ -36,6 +36,7 @@ enum KeychainHelper {
         "openai": "Bristlenose OpenAI API Key",
         "azure": "Bristlenose Azure API Key",
         "google": "Bristlenose Google Gemini API Key",
+        "miro": "Bristlenose Miro Access Token",
     ]
 
     /// A `KeychainStore` backed by the real macOS Keychain.

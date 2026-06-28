@@ -152,6 +152,7 @@ enum BristlenoseShared {
         for (key, value) in sslEnvironment(for: mode) { env[key] = value }
         for (key, value) in bundledBinaryEnvironment(for: mode) { env[key] = value }
         overlayAPIKeys(into: &env, using: store)
+        overlayMiroToken(into: &env, using: store)
         // Cross-seam resolution ledger: describe the provider/model/key decision
         // this host just made so it leads Python's own ledger in the run log.
         // Set last so it observes the same `store`/defaults overlayAPIKeys did.
@@ -284,7 +285,8 @@ enum BristlenoseShared {
         // keys (sandbox walk #7) caused 3× Keychain prompts the moment a
         // local-only user dropped a project — the loudest possible "I chose
         // local-only" failure. Ollama is keyless: nothing to inject; bail.
-        // Miro descoped from alpha (see c3 plan).
+        // Miro is not an LLM provider key — it's injected separately by
+        // overlayMiroToken (called from childEnvironment), so it's absent here.
         // Nil-case coupling: `overlayPreferences` injects NO
         // `BRISTLENOSE_LLM_PROVIDER` when `activeProvider` is unset, so Python
         // falls back to its own default (`config.py` `llm_provider`). This key
@@ -305,6 +307,24 @@ enum BristlenoseShared {
         let envKey = "BRISTLENOSE_\(active.uppercased())_API_KEY"
         env[envKey] = value
         log.info("injected API key for active provider=\(active, privacy: .public)")
+    }
+
+    /// Overlay the Miro access token (if connected) as
+    /// `BRISTLENOSE_MIRO_ACCESS_TOKEN` so the sandboxed sidecar can reach Miro
+    /// without a Python Keychain call.
+    ///
+    /// Parallel to `overlayAPIKeys` but UNCONDITIONAL — Miro is orthogonal to the
+    /// active LLM provider, so a token is injected whenever one is in the
+    /// Keychain. The Send-to-Miro panel writes it there via the `store-miro-token`
+    /// bridge message (`BridgeHandler`); this carries it to the next sidecar
+    /// launch. The env var name matches `EnvCredentialStore.ENV_VAR_MAP["miro"]`
+    /// in `bristlenose/credentials.py` (read as `BRISTLENOSE_MIRO_ACCESS_TOKEN`).
+    static func overlayMiroToken(
+        into env: inout [String: String], using store: any KeychainStore
+    ) {
+        guard let token = store.get(provider: "miro"), !token.isEmpty else { return }
+        env["BRISTLENOSE_MIRO_ACCESS_TOKEN"] = token
+        log.info("injected Miro access token from Keychain")
     }
 
     /// Cloud (key-bearing) providers. Single source shared by `overlayAPIKeys`

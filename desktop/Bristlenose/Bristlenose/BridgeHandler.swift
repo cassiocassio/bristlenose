@@ -342,6 +342,15 @@ final class BridgeHandler: ObservableObject {
                 pb.setString(text, forType: .string)
             }
 
+        case "store-miro-token":
+            // The Send-to-Miro panel hands the validated paste-token to the host
+            // so it persists in the Keychain — the sandboxed Python sidecar can't
+            // write the Keychain itself. Carried to the next sidecar launch as
+            // BRISTLENOSE_MIRO_ACCESS_TOKEN by BristlenoseShared.overlayMiroToken.
+            if let token = body["token"] as? String, !token.isEmpty {
+                KeychainHelper.set(provider: "miro", value: token)
+            }
+
         default:
             break
         }

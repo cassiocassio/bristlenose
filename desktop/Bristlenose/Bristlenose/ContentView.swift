@@ -2196,7 +2196,8 @@ private struct ProjectNotificationReceivers: ViewModifier {
 /// — the single source of truth shared with the SPA dropdown. The `anonymise`
 /// flag rides the payload so it applies to whichever export the user picks.
 ///
-/// Parked (future ideas, not shown): Miro board push, PowerPoint quote slides.
+/// Parked (future ideas, not shown): PowerPoint quote slides. (Send to Miro is
+/// now shipped — the "Send to Miro…" row below; see docs/design-miro-bridge.md.)
 struct ExportMenuButton: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n

@@ -8,6 +8,7 @@ build/
 *.egg
 .venv/
 .venv-sidecar/
+.venv-sidecar.delete-*
 venv/
 env/
 .env
@@ -79,6 +80,7 @@ e2e/stress-results.json
 
 # Desktop app — bundled binaries and Xcode build artifacts
 desktop/Bristlenose/Resources/bristlenose-sidecar/
+desktop/Bristlenose/Resources/bristlenose-sidecar.delete-*
 desktop/Bristlenose/Resources/ffmpeg
 desktop/Bristlenose/Resources/ffprobe
 # No trailing slash: in the main repo `models` is a directory, but /new-feature

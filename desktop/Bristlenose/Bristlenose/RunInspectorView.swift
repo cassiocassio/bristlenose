@@ -8,11 +8,14 @@ import WebKit
 // timing / LLM-call story of the last pipeline run) in a WKWebView. Opened from
 // the Debug menu; the whole file is `#if DEBUG`, like the TypeParity* set.
 //
-// Auth: `/api/dev/run` rides under `/api/`, so it's bearer-protected. The page
-// is self-contained — it embeds its data and makes no further authenticated
-// fetches — so a single authenticated top-level navigation suffices. We set the
-// Authorization header on the initial `URLRequest` rather than relying on the
-// SPA's auth cookie (this window never loads `/report/`, so no cookie is set).
+// Auth: `/api/dev/run` rides under `/api/`, so it's bearer-protected. WKWebView
+// is unreliable here — it drops a custom `Authorization` header on a top-level
+// navigation, and a cookie set via `httpCookieStore.setCookie` races the network
+// process on the immediate next load (both observed as 401s in the window). So we
+// take WKWebView out of the auth path entirely: fetch the page with `URLSession`
+// (which honours the Bearer header), then render the returned self-contained HTML
+// via `loadHTMLString`. The page embeds its own data and makes no further
+// authenticated fetches, so a one-shot fetch is sufficient.
 
 struct RunInspectorView: View {
     @EnvironmentObject private var serveManager: ServeManager
@@ -58,47 +61,60 @@ private struct RunInspectorWebView: NSViewRepresentable {
         // window, instead of hunting the view in a detached Safari. Matches the
         // main report WebView (WebView.swift). DEBUG-only — the whole file is too.
         webView.isInspectable = true
-        loadAuthed(into: webView)
+        context.coordinator.fetchAndRender(into: webView, url: url, token: authToken)
         return webView
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
-        // Reload only when the target changes (the port shifts across serve
-        // restarts), to avoid SwiftUI re-render reload loops.
-        if webView.url?.absoluteString != url.absoluteString {
-            loadAuthed(into: webView)
+        // Re-fetch only when the target changes (the port shifts across serve
+        // restarts), to avoid SwiftUI re-render loops.
+        if context.coordinator.renderedURL?.absoluteString != url.absoluteString {
+            context.coordinator.fetchAndRender(into: webView, url: url, token: authToken)
         }
     }
 
-    /// `/api/dev/run` is bearer-protected. WKWebView does NOT reliably forward a
-    /// custom `Authorization` header on a top-level document load, so we
-    /// authenticate the navigation the way the server's middleware intends for
-    /// plain browser navigations: the `bristlenose_auth` cookie (the same cookie
-    /// the server sets when it serves `/report/`; this window never loads that,
-    /// so we seed it ourselves). Cookie store writes are async — load only after
-    /// it lands, or the first request races in uncredentialled. The Bearer header
-    /// stays as belt-and-braces in case a future WebKit honours it.
-    private func loadAuthed(into webView: WKWebView) {
-        guard let cookie = authCookie else { webView.load(authedRequest); return }
-        let store = webView.configuration.websiteDataStore.httpCookieStore
-        store.setCookie(cookie) { webView.load(authedRequest) }
-    }
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
-    /// Matches `middleware.AUTH_COOKIE_NAME` / `app.py`'s `set_cookie`.
-    private var authCookie: HTTPCookie? {
-        guard let host = url.host else { return nil }
-        return HTTPCookie(properties: [
-            .name: "bristlenose_auth",
-            .value: authToken,
-            .domain: host,   // 127.0.0.1
-            .path: "/",
-        ])
-    }
+    @MainActor
+    final class Coordinator {
+        var renderedURL: URL?
 
-    private var authedRequest: URLRequest {
-        var req = URLRequest(url: url)
-        req.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
-        return req
+        /// Fetch `/api/dev/run` with the Bearer header (URLSession honours it),
+        /// then render the self-contained HTML string. `baseURL` is the request
+        /// URL so the page's origin is the server (harmless — it makes no further
+        /// requests). Non-200 / transport errors render a plain message instead.
+        func fetchAndRender(into webView: WKWebView, url: URL, token: String) {
+            renderedURL = url
+            var req = URLRequest(url: url)
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            Task { @MainActor in
+                do {
+                    let (data, response) = try await URLSession.shared.data(for: req)
+                    let body = String(data: data, encoding: .utf8) ?? ""
+                    let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                    if code == 200 {
+                        webView.loadHTMLString(body, baseURL: url)
+                    } else {
+                        webView.loadHTMLString(Self.message("HTTP \(code)", body), baseURL: url)
+                    }
+                } catch {
+                    webView.loadHTMLString(
+                        Self.message("Request failed", error.localizedDescription), baseURL: url
+                    )
+                }
+            }
+        }
+
+        private static func message(_ title: String, _ detail: String) -> String {
+            let safe = detail
+                .replacingOccurrences(of: "&", with: "&amp;")
+                .replacingOccurrences(of: "<", with: "&lt;")
+            return """
+            <!doctype html><meta charset="utf-8">
+            <body style="font:13px ui-monospace,monospace;background:#1a1a1c;color:#bbb;padding:24px">
+            <b style="color:#eee">\(title)</b><pre style="white-space:pre-wrap">\(safe)</pre></body>
+            """
+        }
     }
 }
 #endif

@@ -461,6 +461,14 @@ struct ContentView: View {
             try? await Task.sleep(for: .milliseconds(500))
             pipelineRunner._applyDebugFixture(to: id)
         }
+        // Debug ▸ Diagnostic fixtures submenu — apply a named scenario live to
+        // the selected project (no relaunch). The menu owns no selection, so it
+        // posts here, where the sidebar selection lives.
+        .onReceive(NotificationCenter.default.publisher(for: .applyDebugFixture)) { note in
+            guard let name = note.userInfo?["scenario"] as? String,
+                  let id = selectedProjectID else { return }
+            pipelineRunner.applyDebugFixture(named: name, to: id)
+        }
         // Debug-only: if BRISTLENOSE_DEBUG_OLLAMA_PHASE is set, open the
         // local-model pill in that state at launch (no consent dance) so the
         // popover/pill UX can be QA'd without a real daemon. No-op when unset.

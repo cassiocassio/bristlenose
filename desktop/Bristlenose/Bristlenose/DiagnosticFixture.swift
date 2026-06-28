@@ -57,13 +57,19 @@ enum DiagnosticFixture {
             return .none
         }
         logger.info("env var = \(name, privacy: .public)")
+        return load(name: name)
+    }
 
+    /// Resolve a scenario by name → `Result`. Shared by the launch-time env-var
+    /// path (`loadIfEnabled`) and the live Debug-menu "Diagnostic fixtures"
+    /// submenu, which applies whichever the user picks to the selected project.
+    static func load(name: String) -> Result {
         // `failed_no_summary` is a sentinel scenario — no `PipelineSummary` is
         // available on this path; the caller injects `.failed(message, category)`
         // directly. Short-circuit before the scenario-table lookup so we don't
         // need to fabricate a synthetic summary for an enum case that exists
         // precisely for the no-summary path.
-        if name == "failed_no_summary" {
+        if name == noSummaryScenarioName {
             logger.info(
                 "injecting failed_no_summary; .failed(message, category: .unknown)"
             )
@@ -83,7 +89,7 @@ enum DiagnosticFixture {
 
         guard let scenario = scenarios[name] else {
             logger.warning(
-                "scenario '\(name, privacy: .public)' not found; valid names: \(scenarios.keys.sorted().joined(separator: ", ") + ", failed_no_summary", privacy: .public)"
+                "scenario '\(name, privacy: .public)' not found; valid names: \(scenarios.keys.sorted().joined(separator: ", ") + ", \(noSummaryScenarioName)", privacy: .public)"
             )
             return .none
         }
@@ -101,6 +107,16 @@ enum DiagnosticFixture {
         case .runCompleted: return .partial(summary)
         }
     }
+
+    /// Sentinel scenario name with no `PipelineSummary` on the wire.
+    static let noSummaryScenarioName = "failed_no_summary"
+
+    /// Summary-backed scenario names (partial / failed), alphabetised — for the
+    /// Debug-menu submenu.
+    static var summaryScenarioNames: [String] { scenarios.keys.sorted() }
+
+    /// Verb-led state scenario names (running / queued / stopped).
+    static var simpleStateNames: [String] { simpleStates.keys.sorted() }
     #else
     static func loadIfEnabled() -> Result { .none }
     #endif

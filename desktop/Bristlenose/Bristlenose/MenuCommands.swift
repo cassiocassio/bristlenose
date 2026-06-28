@@ -111,6 +111,23 @@ private struct DebugMenuContent: View {
             DebugMenuActions.copyBuildProvenance(serveManager: serveManager)
         }
 
+        // Inject a synthesized diagnostic state into the SELECTED project's
+        // sidebar row — flip popover/indicator scenes live, no relaunch. Posts
+        // to ContentView, which owns the selection. (Previously env-var-only.)
+        Menu("Diagnostic fixtures ▸ selected project") {
+            ForEach(DiagnosticFixture.summaryScenarioNames, id: \.self) { name in
+                Button(name) { postFixture(name) }
+            }
+            Divider()
+            ForEach(DiagnosticFixture.simpleStateNames, id: \.self) { name in
+                Button(name) { postFixture(name) }
+            }
+            Divider()
+            Button(DiagnosticFixture.noSummaryScenarioName) {
+                postFixture(DiagnosticFixture.noSummaryScenarioName)
+            }
+        }
+
         Divider()
 
         // Flyout submenu — the pill state harness is a deep but rarely-needed
@@ -126,6 +143,20 @@ private struct DebugMenuContent: View {
             Button("Hide pill (idle)") { ollamaDownload.cancel() }
         }
     }
+
+    /// Ask ContentView (which owns the sidebar selection) to inject `name` into
+    /// the selected project. Mirrors the `.createNewProject` notification idiom.
+    private func postFixture(_ name: String) {
+        NotificationCenter.default.post(
+            name: .applyDebugFixture, object: nil, userInfo: ["scenario": name]
+        )
+    }
+}
+
+extension Notification.Name {
+    /// DEBUG only — posted by Debug ▸ Diagnostic fixtures; observed by
+    /// ContentView, which applies the named fixture to the selected project.
+    static let applyDebugFixture = Notification.Name("bristlenoseApplyDebugFixture")
 }
 #endif
 

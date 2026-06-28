@@ -39,6 +39,7 @@ import { Minimap } from "./Minimap";
 import { useDragResize, MIN_WIDTH, MAX_WIDTH } from "../hooks/useDragResize";
 import { useTocOverlay } from "../hooks/useTocOverlay";
 import { Tooltip } from "./Tooltip";
+import { isEmbedded } from "../utils/embedded";
 
 // ── SVG icons (inline, 18×18) ─────────────────────────────────────────────
 
@@ -129,7 +130,14 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
   const { t } = useTranslation();
   const { tocMode, tagsOpen, tocWidth, tagsWidth } = useSidebarStore();
   const pg = usePlaygroundStore();
+  // Desktop embedded mode (macOS WKWebView): the sidebars are toggled from
+  // the native toolbar + keyboard, so the web icon rails and close-× are
+  // redundant chrome. Hidden via the `embedded` class + CSS; close-× gated
+  // out below; focus-on-close redirected to .center (the hidden rail button
+  // can't take focus). Browser keeps all affordances.
+  const embedded = isEmbedded();
   const layoutRef = useRef<HTMLDivElement>(null);
+  const centerRef = useRef<HTMLDivElement>(null);
   const tocRailRef = useRef<HTMLDivElement>(null);
   const tocRailBtnRef = useRef<HTMLButtonElement>(null);
   const tagRailBtnRef = useRef<HTMLButtonElement>(null);
@@ -238,13 +246,17 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
           ".sidebar-close, .toc-link",
         );
         target?.focus();
+      } else if (embedded) {
+        // Rail button is hidden in embedded mode — move focus to the content
+        // region so it isn't orphaned on body when the panel becomes inert.
+        centerRef.current?.focus();
       } else {
         // Just closed — return focus to rail button.
         tocRailBtnRef.current?.focus();
       }
       prevTocOpen.current = tocOpen;
     }
-  }, [tocOpen]);
+  }, [tocOpen, embedded]);
 
   useEffect(() => {
     if (prevTagsOpen.current !== tagsOpen) {
@@ -253,12 +265,14 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
           ".sidebar-close",
         );
         target?.focus();
+      } else if (embedded) {
+        centerRef.current?.focus();
       } else {
         tagRailBtnRef.current?.focus();
       }
       prevTagsOpen.current = tagsOpen;
     }
-  }, [tagsOpen]);
+  }, [tagsOpen, embedded]);
 
   // Populate animation registry so keyboard shortcuts can animate.
   // Reads tocMode at call time to pick overlay-close vs grid-transition.
@@ -292,7 +306,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
 
   if (!active) {
     return (
-      <div className="layout layout-inert">
+      <div className={`layout layout-inert${embedded ? " embedded" : ""}`}>
         <div className="toc-rail toc-rail-inert" />
         <div className="center">{children}</div>
       </div>
@@ -300,6 +314,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
   }
 
   const classes = ["layout"];
+  if (embedded) classes.push("embedded");
   if (!showRightSidebar) classes.push("layout-no-right");
   if (tocMode === "push") classes.push("toc-open");
   if (tocMode === "overlay") {
@@ -356,14 +371,16 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
       >
         <div className="sidebar-header toc-sidebar-header">
           <span className="sidebar-title">{leftPanelTitle ?? t("quotes.contents")}</span>
-          <button
-            className="sidebar-close"
-            onClick={handleCloseToc}
-            title={t("buttons.close")}
-            aria-label={t("nav.closeTableOfContents")}
-          >
-            ×
-          </button>
+          {!embedded && (
+            <button
+              className="sidebar-close"
+              onClick={handleCloseToc}
+              title={t("buttons.close")}
+              aria-label={t("nav.closeTableOfContents")}
+            >
+              ×
+            </button>
+          )}
         </div>
         <div className="toc-sidebar-body">
           {leftPanel ?? <TocSidebar onOverlayClose={closeTocOverlayAnimated} />}
@@ -387,7 +404,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
       </div>
 
       {/* Column 3: Center — header, nav, content, footer */}
-      <div className="center">
+      <div ref={centerRef} className="center" tabIndex={embedded ? -1 : undefined}>
         {children}
       </div>
 
@@ -404,14 +421,16 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
           >
             <div className="sidebar-header tag-sidebar-header">
               <span className="sidebar-title">{t("tags.tags")}</span>
-              <button
-                className="sidebar-close"
-                onClick={handleCloseTags}
-                title={t("tags.close")}
-                aria-label={t("tags.closeAriaLabel")}
-              >
-                ×
-              </button>
+              {!embedded && (
+                <button
+                  className="sidebar-close"
+                  onClick={handleCloseTags}
+                  title={t("tags.close")}
+                  aria-label={t("tags.closeAriaLabel")}
+                >
+                  ×
+                </button>
+              )}
             </div>
             <TagSidebar />
             {tagsOpen && (

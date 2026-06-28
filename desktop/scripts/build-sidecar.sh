@@ -98,5 +98,19 @@ fi
 cp "$PRIVACY_SRC" "$PRIVACY_DST"
 echo "==> Privacy manifest: $PRIVACY_DST"
 
+# Stamp the bundle with a fingerprint of the Python it was built from. The Xcode
+# "Copy Sidecar Resources" phase recomputes this (check-sidecar-freshness.sh) and
+# fails the build if a later Python change left the bundle stale — the desktop
+# app runs the bundled sidecar, not live Python, so a missed rebuild silently
+# ships old code. Written BEFORE sign-sidecar.sh so it's covered by the seal.
+# shellcheck source=sidecar-source-hash.sh
+. "$SCRIPT_DIR/sidecar-source-hash.sh"
+{
+    sidecar_source_hash "$ROOT"
+    echo "version=$("$PYTHON" -c 'import bristlenose; print(bristlenose.__version__)' 2>/dev/null || echo unknown)"
+    echo "note=fingerprint of bristlenose/**/*.py; see check-sidecar-freshness.sh"
+} > "$BUNDLE/.source-stamp"
+echo "==> Stamped .source-stamp: $(head -1 "$BUNDLE/.source-stamp" | cut -c1-12)…"
+
 echo "==> Done. Bundle: $BUNDLE"
 echo "    Next: desktop/scripts/sign-sidecar.sh"

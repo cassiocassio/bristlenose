@@ -186,13 +186,13 @@ final class BridgeHandler: ObservableObject {
     }
 
     /// Push the Quotes-lens search text from the native search field into the
-    /// SPA store (`setSearchQuery` action → live filtering). One-way native→web
-    /// per keystroke; the echo back arrives as a `quotes-filter` message which
-    /// the field ignores when the value is unchanged. Skips the round-trip when
-    /// the text already matches what the SPA last reported.
+    /// SPA store (`setSearchQuery` action → live filtering). Fire-and-forget;
+    /// the SPA is the single source of truth for `quotesSearchQuery` — it's
+    /// written ONLY by the inbound `quotes-filter` echo, never optimistically
+    /// here, so native state can't claim a value the SPA never applied (a
+    /// dropped JS dispatch then self-heals on the next keystroke rather than
+    /// wedging). The control debounces before calling this.
     func setQuotesSearch(_ text: String) {
-        guard text != quotesSearchQuery else { return }
-        quotesSearchQuery = text
         menuAction("setSearchQuery", payload: ["text": text])
     }
 
@@ -322,8 +322,13 @@ final class BridgeHandler: ObservableObject {
             lensSubtitle = body["subtitle"] as? String ?? ""
 
         case "quotes-filter":
-            quotesSearchQuery = body["searchQuery"] as? String ?? ""
-            quotesViewMode = body["viewMode"] as? String ?? "all"
+            // Sole writer of these mirrored fields. Equality-guard the assigns so
+            // an unchanged re-post (the SPA posts on every quotes-store change)
+            // doesn't churn @Published and re-render the toolbar/menu needlessly.
+            let q = body["searchQuery"] as? String ?? ""
+            let vm = body["viewMode"] as? String ?? "all"
+            if q != quotesSearchQuery { quotesSearchQuery = q }
+            if vm != quotesViewMode { quotesViewMode = vm }
 
         case "project-action":
             if let action = body["action"] as? String {

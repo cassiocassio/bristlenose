@@ -71,7 +71,7 @@ export function LensSubtitleSync(): null {
         starred: store.starred,
         tags: store.tags,
       }).length;
-      subtitle = quotesSubtitle(visible);
+      subtitle = quotesSubtitle(visible, store.viewMode === "starred");
     } else if (tab === "analysis") {
       subtitle = signalsSubtitle(
         signals.sentimentSignals.length + signals.tagSignals.length,
@@ -85,9 +85,10 @@ export function LensSubtitleSync(): null {
     if (isEmbedded()) {
       postLensSubtitle(tab, subtitle);
       // Mirror the Quotes filter state to the native toolbar (search field +
-      // starred toggle). Cheap to post on every store change; native skips
-      // when the value is unchanged.
-      postQuotesFilter(store.searchQuery, store.viewMode);
+      // starred toggle) — only on the Quotes lens, where those controls live.
+      // Native equality-guards the assigns, so the occasional same-value post
+      // (this effect also fires on signals/codebook changes) is a no-op.
+      if (tab === "quotes") postQuotesFilter(store.searchQuery, store.viewMode);
     }
   }, [tab, store, signals, codebook]);
 

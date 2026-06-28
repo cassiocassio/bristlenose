@@ -1447,7 +1447,7 @@ struct ContentView: View {
                 case .quotes:
                     QuotesSearchToolbarControl(bridgeHandler: bridgeHandler, i18n: i18n)
                 case .sessions, .codebook, .analysis:
-                    QuotesSearchDisabledButton(i18n: i18n)
+                    SearchComingSoonButton(i18n: i18n)
                 default:
                     EmptyView()
                 }
@@ -2339,6 +2339,18 @@ private struct ExportPopoverContent: View {
                     subtitle: i18n.t("desktop.menu.quotes.revealTranscriptsHint")
                 ) { revealTranscripts() }
             }
+
+            // Send to Miro — always available (uploads the project's quotes as a
+            // new board of sticky notes). Opens the existing React MiroExportPanel
+            // via the bridge; connect / configure / push all live web-side. The
+            // `dispatch` anonymise payload is currently ignored by the Miro panel
+            // (see the anonymise-and-Miro note in docs/design-miro-bridge.md).
+            Divider().padding(.horizontal, 10)
+            ExportPopoverRow(
+                icon: "square.grid.2x2",
+                title: i18n.t("common.miro.menuLabel"),
+                subtitle: i18n.t("common.miro.popoverSubtitle")
+            ) { dispatch("sendToMiro") }
         }
         .frame(width: 308)
         .padding(.vertical, 6)

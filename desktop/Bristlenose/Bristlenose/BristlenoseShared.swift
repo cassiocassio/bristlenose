@@ -149,6 +149,13 @@ enum BristlenoseShared {
         // overlayPreferences as BRISTLENOSE_TYPOGRAPHY.
         env["BRISTLENOSE_PLATFORM"] = "desktop"
         env["BRISTLENOSE_COLOR_THEME"] = "default"
+        #if DEBUG
+        // Mount the dev API router (/api/dev/*, incl. the Run Inspector) in the
+        // sidecar. Distinct from `_BRISTLENOSE_DEV` (which flips the report mount
+        // to Vite/HMR — wrong for the bundled sidecar). DEBUG builds only, so the
+        // shipped Release app never exposes these endpoints.
+        env["_BRISTLENOSE_DEV_ENDPOINTS"] = "1"
+        #endif
         for (key, value) in sslEnvironment(for: mode) { env[key] = value }
         for (key, value) in bundledBinaryEnvironment(for: mode) { env[key] = value }
         overlayAPIKeys(into: &env, using: store)

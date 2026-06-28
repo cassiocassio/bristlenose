@@ -119,11 +119,27 @@ def test_run_empty_project_does_not_500(tmp_path: Path) -> None:
     assert j.status_code == 200 and j.json()["ok"] is False
 
 
-def test_run_endpoints_absent_without_dev(tmp_path: Path) -> None:
+def test_run_endpoints_absent_without_dev(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Production posture: no --dev and no opt-in env → dev router unmounted.
+    monkeypatch.delenv("_BRISTLENOSE_DEV_ENDPOINTS", raising=False)
     app = create_app(project_dir=tmp_path, dev=False, db_url="sqlite://")
     client = AuthTestClient(app)
     assert client.get("/api/dev/run").status_code == 404
     assert client.get("/api/dev/run.json").status_code == 404
+
+
+def test_run_endpoints_present_with_dev_endpoints_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The DEBUG desktop sidecar sets _BRISTLENOSE_DEV_ENDPOINTS=1 so its native
+    # Run Inspector window reaches /api/dev/run WITHOUT full --dev (which would
+    # flip the report mount to Vite/HMR — wrong for the bundled sidecar).
+    _seed(tmp_path / "bristlenose-output" / ".bristlenose")
+    monkeypatch.setenv("_BRISTLENOSE_DEV_ENDPOINTS", "1")
+    app = create_app(project_dir=tmp_path, dev=False, db_url="sqlite://")
+    client = AuthTestClient(app)
+    assert client.get("/api/dev/run").status_code == 200
+    assert client.get("/api/dev/run.json").status_code == 200
 
 
 def test_run_listed_in_dev_info(dev_client: TestClient) -> None:

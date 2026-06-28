@@ -145,6 +145,7 @@ struct ContentView: View {
     @State private var showingAIConsent = false
     @State private var aiConsentReviewMode = false
     @State private var showingBuildInfo = false
+    @State private var showingMiroSheet = false
 
     /// The ID of the project currently in inline rename mode, or nil.
     @State private var renamingProjectID: UUID?
@@ -491,6 +492,22 @@ struct ContentView: View {
                 sidecar: serveManager.mode?.shortSummary ?? "?",
                 onDismiss: { showingBuildInfo = false }
             )
+        }
+        // Send to Miro — native sheet over the same Python REST endpoints the web
+        // panel uses. Only present when serve is running (the entry is only
+        // reachable with a project open).
+        .onReceive(NotificationCenter.default.publisher(for: .showMiroSheet)) { _ in
+            if serveManager.runningPort != nil { showingMiroSheet = true }
+        }
+        .sheet(isPresented: $showingMiroSheet) {
+            if let port = serveManager.runningPort {
+                MiroSheet(
+                    port: port,
+                    token: serveManager.authToken,
+                    projectName: selectedProject?.name ?? "",
+                    i18n: i18n
+                )
+            }
         }
         // File > New Project (Cmd+N) and sidebar [+] button.
         .onReceive(NotificationCenter.default.publisher(for: .createNewProject)) { _ in
@@ -2342,16 +2359,18 @@ private struct ExportPopoverContent: View {
             }
 
             // Send to Miro — always available (uploads the project's quotes as a
-            // new board of sticky notes). Opens the existing React MiroExportPanel
-            // via the bridge; connect / configure / push all live web-side. The
-            // `dispatch` anonymise payload is currently ignored by the Miro panel
-            // (see the anonymise-and-Miro note in docs/design-miro-bridge.md).
+            // new board of sticky notes). Presents the native MiroSheet, which
+            // drives the same Python REST endpoints the web panel uses; ContentView
+            // owns the .sheet (via the .showMiroSheet notification).
             Divider().padding(.horizontal, 10)
             ExportPopoverRow(
                 icon: "square.grid.2x2",
                 title: i18n.t("common.miro.menuLabel"),
                 subtitle: i18n.t("common.miro.popoverSubtitle")
-            ) { dispatch("sendToMiro") }
+            ) {
+                dismiss()
+                NotificationCenter.default.post(name: .showMiroSheet, object: nil)
+            }
         }
         .frame(width: 308)
         .padding(.vertical, 6)

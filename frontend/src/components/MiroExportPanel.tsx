@@ -2,7 +2,8 @@
  * MiroExportPanel — experimental "Send to Miro board" modal.
  *
  * States: loading → connect (OAuth or paste-token) → configure → exporting →
- * done. A creds-free "Preview" opens the would-be board as HTML in a new tab.
+ * done. (Preview was removed — the SVG ≠ the real board and it added a needless
+ * decision point; the agnostic board IR + SVG renderer stay for dev/iteration.)
  *
  * Strings live under the `miro.*` namespace in common.json.
  *
@@ -21,7 +22,6 @@ import {
   postMiroConnect,
   postMiroDisconnect,
   postMiroExport,
-  postMiroPreview,
 } from "../utils/api";
 import type { MiroExportRequest } from "../utils/types";
 
@@ -146,20 +146,6 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
       setBusy(false);
     }
   }, [t]);
-
-  const handlePreview = useCallback(async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const { html } = await postMiroPreview(request());
-      const blob = new Blob([html], { type: "text/html" });
-      window.open(URL.createObjectURL(blob), "_blank", "noopener");
-    } catch {
-      setError(t("miro.previewError"));
-    } finally {
-      setBusy(false);
-    }
-  }, [request, t]);
 
   const handleExport = useCallback(async () => {
     setView("exporting");
@@ -306,9 +292,6 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
               </p>
             )}
             <div className="bn-modal-actions">
-              <button className="bn-btn bn-btn-secondary" onClick={handlePreview} disabled={busy}>
-                {t("miro.preview")}
-              </button>
               <button className="bn-btn bn-btn-primary" onClick={handleExport} disabled={busy}>
                 {t("miro.createBoard")}
               </button>

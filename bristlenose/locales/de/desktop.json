@@ -1,4 +1,10 @@
 {
+  "miro": {
+    "howToGetToken": "Wie erhalte ich ein Token?",
+    "connected": "Verbunden",
+    "openInMiro": "In Miro \u00f6ffnen\u2026",
+    "connectPersistWarning": "Verbunden, aber das Token konnte nicht im Schl\u00fcsselbund gespeichert werden \u2014 nach einem Neustart musst du dich m\u00f6glicherweise erneut verbinden."
+  },
   "menu": {
     "app": {
       "about": "Über Bristlenose",

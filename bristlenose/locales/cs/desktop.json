@@ -1,4 +1,10 @@
 {
+  "miro": {
+    "howToGetToken": "Jak z\u00edsk\u00e1m token?",
+    "connected": "P\u0159ipojeno",
+    "openInMiro": "Otev\u0159\u00edt v Miru\u2026",
+    "connectPersistWarning": "P\u0159ipojeno, ale token se nepoda\u0159ilo ulo\u017eit do Kl\u00ed\u010denky \u2014 po restartu se mo\u017en\u00e1 budete muset p\u0159ipojit znovu."
+  },
   "menu": {
     "app": {
       "about": "O aplikaci Bristlenose",

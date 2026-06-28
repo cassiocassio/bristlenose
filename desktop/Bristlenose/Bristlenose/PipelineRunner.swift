@@ -231,12 +231,10 @@ final class PipelineRunner: ObservableObject {
         self.state[projectID] = state
     }
 
-    /// Debug-only: apply fixture override for one project (called from
-    /// ContentView when the selection changes). Idempotent per project.
-    private var _debugFixtureApplied = Set<UUID>()
-    func _applyDebugFixture(to projectID: UUID) {
-        guard !_debugFixtureApplied.contains(projectID) else { return }
-        let result = DiagnosticFixture.loadIfEnabled()
+    /// Map a fixture `Result` onto a project's state. Shared by the launch-time
+    /// env-var path and the live Debug-menu submenu. `.none`/`.clean` leave the
+    /// state untouched.
+    private func _applyFixtureResult(_ result: DiagnosticFixture.Result, to projectID: UUID) {
         switch result {
         case .none, .clean:
             return
@@ -255,7 +253,25 @@ final class PipelineRunner: ObservableObject {
         case .simpleState(let injected):
             self.state[projectID] = injected
         }
+    }
+
+    /// Debug-only: apply the env-var fixture override for one project (called
+    /// from ContentView when the selection changes). Idempotent per project.
+    private var _debugFixtureApplied = Set<UUID>()
+    func _applyDebugFixture(to projectID: UUID) {
+        guard !_debugFixtureApplied.contains(projectID) else { return }
+        let result = DiagnosticFixture.loadIfEnabled()
+        if case .none = result { return }   // don't mark applied; nothing injected
+        if case .clean = result { return }
+        _applyFixtureResult(result, to: projectID)
         _debugFixtureApplied.insert(projectID)
+    }
+
+    /// Debug-only: apply a named fixture live, from the Debug-menu submenu. An
+    /// explicit user action, so it bypasses the once-per-project idempotency
+    /// guard and re-applies on every pick (lets you flip scenes with no relaunch).
+    func applyDebugFixture(named name: String, to projectID: UUID) {
+        _applyFixtureResult(DiagnosticFixture.load(name: name), to: projectID)
     }
     #endif
 

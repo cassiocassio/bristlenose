@@ -194,19 +194,22 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
   }, [request, t]);
 
   // Notice naming the destination workspace, with the team picked out (matches
-  // the macOS sheet). Plain interpolation + indexOf split — no <Trans> (keeps the
-  // bundle under budget); the split positions the <strong> per locale word order.
+  // the macOS sheet). Split the RAW template on the {{team}} placeholder (no
+  // interpolation) so the <strong> lands on the slot regardless of the team's
+  // text — a team literally named "board"/"new" can't mis-split. Same approach as
+  // MiroSheet.swift's range(of: "{{team}}"); no <Trans> (keeps the bundle under
+  // the size gate). The placeholder slot positions the emphasis per locale order.
   const renderNotice = () => {
     const upload = t("miro.uploadNotice");
     if (!teamName) return upload;
-    const dest = t("miro.boardDestination", { team: teamName });
-    const idx = dest.indexOf(teamName);
-    if (idx < 0) return `${dest} ${upload}`;
+    const template = t("miro.boardDestination"); // raw, contains "{{team}}"
+    const slot = template.indexOf("{{team}}");
+    if (slot < 0) return `${template} ${upload}`;
     return (
       <>
-        {dest.slice(0, idx)}
+        {template.slice(0, slot)}
         <strong>{teamName}</strong>
-        {dest.slice(idx + teamName.length)} {upload}
+        {template.slice(slot + "{{team}}".length)} {upload}
       </>
     );
   };

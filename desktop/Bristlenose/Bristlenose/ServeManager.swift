@@ -111,8 +111,10 @@ final class ServeManager: ObservableObject {
     /// (a superseded readiness wait) check this before writing terminal state.
     private var generation: Int = 0
 
-    /// Last project path passed to start() — used by restartIfRunning().
-    private var currentProjectPath: String?
+    /// Last project path passed to start() — used by restartIfRunning() and the
+    /// DEBUG menu's reveal/log/provenance actions (the served project is the one
+    /// whose report is on screen). Read-only outside ServeManager.
+    private(set) var currentProjectPath: String?
 
     /// The most-recently-fronted project's sidecar, kept warm so switching
     /// back is an instant hand-off (Phase A2 warm-sidecar pool, single-slot).

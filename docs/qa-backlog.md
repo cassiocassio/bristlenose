@@ -44,3 +44,17 @@ Manual QA steps waiting to be confirmed. Per-item — say "QA done for X" to che
 - [ ] **Project removal drops its warm slot** (F16): switch to A then B (A parked), remove A from sidebar → A's sidecar is torn down, not left serving a removed project
 - [ ] **Dead/wedged parked sidecar falls back to cold start, never blank** (F1/F3): if a parked sidecar dies while parked, switching back shows a real boot (`.starting`→`.running`) or failure, never a silent blank pane
 - [ ] **Lifecycle log lines present**: `log stream --predicate 'subsystem == "app.bristlenose"'` shows `sidecar_parked` / `sidecar_repointed` / `sidecar_evicted` (+ `sidecar_parked_died` if one dies parked) at the matching moments
+
+---
+
+## Dev Run Inspector — visual render (run / llm / timing)
+
+**Date:** 28 Jun 2026
+**Branch:** `claude/debug-menu-instrumentation-4r9npy` (merge `252c1ce3`)
+**Context:** Dev-only Run Inspector (`/api/dev/run`) is client-rendered (JS `JSON.parse` + DOM build), so the pytest/curl coverage only proves data + template are sound — the rendered surfaces need a real browser. Data + escaping + endpoint gating already verified against a real analysed project (≈18 captured LLM calls, OpenAI/gpt-4o). Native entry: **Debug ▸ Run Inspector** (⌃⌘R) in the DEBUG desktop build. Browser path: load `http://localhost:8150/report/` FIRST (sets the `bristlenose_auth` cookie), then `http://localhost:8150/api/dev/run`.
+
+- [ ] **Run tab** renders the provenance header with real values (run_id ULID, status=completed, true wall-clock duration — NOT the stage-sum fallback) and the cost donut shows `—` for a null-cost run (an OpenAI run captures no cost), not a misleading `$0.00`
+- [ ] **LLM tab** lists the per-call rows (provider/model/elapsed) for a run with a real `llm-calls.jsonl` (≈18 calls)
+- [ ] **Timing tab** chart renders (calibration curve empty on real data today is expected — no timing-history store yet)
+- [ ] **Native window** (Debug ▸ Run Inspector, ⌃⌘R) loads the same page authenticated via cookie — no 401, no blank pane
+- [ ] **Live Diagnostic-fixtures submenu** applies a scenario to the selected project without relaunch

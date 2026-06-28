@@ -98,9 +98,12 @@ private struct DebugMenuContent: View {
 
         Divider()
 
-        Section("Ollama setup pill") {
-            Button("Cycle ▸ next state") { ollamaDownload.debugCycleNext() }
-                .keyboardShortcut("o", modifiers: [.command, .control])
+        // Flyout submenu — the pill state harness is a deep but rarely-needed
+        // list; keep the top-level Debug menu to the inspectors + a Cycle
+        // shortcut, and tuck the per-scene buttons behind one hover.
+        Button("Cycle Ollama pill ▸ next state") { ollamaDownload.debugCycleNext() }
+            .keyboardShortcut("o", modifiers: [.command, .control])
+        Menu("Ollama setup pill") {
             ForEach(OllamaDownloadModel.DebugScene.allCases, id: \.self) { scene in
                 Button(scene.label) { ollamaDownload.debugApply(scene) }
             }

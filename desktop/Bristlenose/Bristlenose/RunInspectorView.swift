@@ -54,6 +54,10 @@ private struct RunInspectorWebView: NSViewRepresentable {
         // Ephemeral — no cross-window cookie/storage leakage.
         config.websiteDataStore = .nonPersistent()
         let webView = WKWebView(frame: .zero, configuration: config)
+        // Web Inspector for free: right-click → Inspect Element on the in-app
+        // window, instead of hunting the view in a detached Safari. Matches the
+        // main report WebView (WebView.swift). DEBUG-only — the whole file is too.
+        webView.isInspectable = true
         webView.load(authedRequest)
         return webView
     }

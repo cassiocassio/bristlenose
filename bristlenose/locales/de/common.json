@@ -255,6 +255,7 @@
     "linkClipsLabel": "Zitate mit Clips verkn\u00fcpfen",
     "linkClipsHint": "Geben Sie den Ordner an, in dem Sie die exportierten Clips abgelegt haben.",
     "clipsBasePlaceholder": "https://drive.google.com/\u2026/clips",
+    "boardDestination": "Erstellt ein neues Board in {{team}}.",
     "uploadNotice": "L\u00e4dt alle Zitate dieses Projekts zu Miro hoch \u2014 ausgeblendete Zitate werden ausgeschlossen.",
     "createBoard": "Board erstellen",
     "creatingBoard": "Board wird erstellt\u2026",

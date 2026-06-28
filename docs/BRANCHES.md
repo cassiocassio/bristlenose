@@ -41,6 +41,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 | `bristlenose_branch_figjam-miro-market-share/` | `claude/figjam-miro-market-share-px52tg` | feature | Miro bridge (imported from cloud, PR #120) — quotes → Miro board export |
 | `bristlenose_branch debug-menu-instrumentation/` | `claude/debug-menu-instrumentation-4r9npy` | feature | Dev Run Inspector (imported from cloud) — infoviz over llm-calls / pipeline-events / timing at `/api/dev/run` |
+| `bristlenose_branch spa-sidebar-layout/` | `claude/spa-sidebar-layout-9mlndt` | feature | Desktop embedded mode: hide SPA sidebar rails + close-× (imported from cloud, PR #121) — native toolbar/keys are the only sidebar toggle in the app |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -127,6 +128,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `claude/figjam-miro-market-share-px52tg` | `bristlenose_branch_figjam-miro-market-share/` | `origin/claude/figjam-miro-market-share-px52tg` (PR #120) |
 | `claude/debug-menu-instrumentation-4r9npy` | `bristlenose_branch debug-menu-instrumentation/` | `origin/claude/debug-menu-instrumentation-4r9npy` (no PR yet) |
+| `claude/spa-sidebar-layout-9mlndt` | `bristlenose_branch spa-sidebar-layout/` | `origin/claude/spa-sidebar-layout-9mlndt` (PR #121) |
 | `claude/dynamic-codebook-builder-67r2fa` _(merged)_ | `bristlenose_branch dynamic-codebook-builder/` _(detached, on disk)_ | local + remote deleted — merged to main 27 Jun 2026 (c4189047) |
 | `multi-project-drag-onto` _(merged)_ | `bristlenose_branch multi-project-drag-onto/` _(detached, on disk)_ | local only — merged to main 15 May 2026 |
 | `multi-project-switch` _(merged)_ | `bristlenose_branch multi-project-switch/` _(detached, on disk)_ | local only — merged to main 14 May 2026 (`baf1896`) |
@@ -176,6 +178,27 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - `frontend/src/components/ExportDropdown.tsx` is a hotspot — any branch touching the export menu will collide.
+
+---
+
+### `spa-sidebar-layout` (imported from cloud)
+
+**Kind:** feature — Desktop embedded mode: hide the SPA's web sidebar icon rails + close-× buttons (`isEmbedded()` / `.layout.embedded`), so the native toolbar toggles + `[`/`]` keys are the only way to open/close the web nav/tag sidebars in the macOS app. Reclaims two 36px rails of width for content; browser keeps all affordances.
+**Status:** Imported from cloud + brought up on Mac 28 Jun 2026 — venv + frontend + CLI all green; full suite **3139 passed**, `tsc -b` clean, ruff clean, new `SidebarLayout.test.tsx` 27/27. **No defects found.** Merges CLEAN against main; PR MERGEABLE.
+**Started:** cloud session · imported to Mac 28 Jun 2026
+**Local branch:** `claude/spa-sidebar-layout-9mlndt` (keeps the cloud ref so push updates the PR)
+**Worktree:** `/Users/cassio/Code/bristlenose_branch spa-sidebar-layout/`
+**Remote:** `origin/claude/spa-sidebar-layout-9mlndt` — **PR [#121](https://github.com/cassiocassio/bristlenose/pull/121)** (OPEN, base main, MERGEABLE)
+
+**What it does:** Two-commit, frontend/CSS-only change gated entirely on embedded mode. `SidebarLayout.tsx` adds the `embedded` class, gates both close-× behind `!embedded`, and redirects focus-on-close to `.center` (the hidden rail button can't take focus). `sidebar.css` collapses the rail track via `--bn-rail-width: 0` + `display:none` and restores a symmetric right gutter on minimap-less tabs. Docs + a geometry mockup round it out.
+
+**Brought-up-on-Mac notes:** `.claude/from-cloud-import-notes.md` in the worktree. Unusually, running the suite the cloud couldn't surfaced **no** defects.
+
+**Blockers before merge:**
+- None substantive. No conflicts with main (clean merge-tree), no new i18n strings (only gates out existing translated buttons). Remaining work is a human visual QA pass in the actual macOS app + a `git merge origin/main` (mechanical — branch is behind 9 but conflict-free).
+
+**Potential conflicts with other branches:**
+- `frontend/src/components/SidebarLayout.tsx` and `bristlenose/theme/organisms/sidebar.css` — any branch touching sidebar layout/rails would collide; none of the other active branches do.
 
 ---
 

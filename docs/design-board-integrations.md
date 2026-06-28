@@ -22,9 +22,19 @@ server write path, so it can only be reached by a **published in-editor plugin t
 consumes that manifest**; building toward it reshapes the engine so the other boards
 fall out cheaply. **Lucidspark** consumes a whole-board document too, so it's the
 **free dress rehearsal** that proves the manifest model against a live API.
-**Mural** (per-item REST, needs OAuth) advances FigJam by nothing and is deferred.
-Multi-board is still a real wedge — orgs mandate a board — but FigJam is the prize
-that justifies the engine; the rest are picked off along the way.
+**Mural** (per-item REST, needs OAuth) advances the FigJam *engine* by nothing, so
+it's sequenced late — **but it is not a rounding error**: it's a genuine
+enterprise/government-procurement wedge (a large public-sector org standardised on
+Mural; strategic rationale in the private planner), so once the generic path has
+delivered the OAuth pickup, Mural is a high-value cheap add. **By raw user count
+FigJam dwarfs the rest** (everyone not on Miro is effectively on FigJam); the others
+are picked off along the way — Lucidspark as the near-free dress rehearsal, Mural as
+the strategically-valuable late pickup.
+
+Note the engine is deliberately built to support **both directions**: *send to Miro*
+(server-side REST push) **and** *fetch from inside FigJam* (the in-editor plugin
+pulls the manifest). That two-direction generality is what makes OAuth and the other
+boards fall out cheaply.
 
 ---
 
@@ -448,9 +458,12 @@ and, counter-intuitively, **drops OAuth off the critical path.** The reasoning:
   document model end-to-end against a real API, with the cheapest auth (a paste-key),
   before any cost goes into the plugin. That is the free pickup, and it de-risks FigJam.
 - **The FigJam plugin authenticates in-editor** (it runs as the user, in their Figma
-  session) and Lucid uses an **API key** — so **neither needs BN-server OAuth.** OAuth
-  was only ever forced by **Mural**, which is the one board that advances FigJam by
-  nothing. So under this north star, **Mural and the whole OAuth build are deferred.**
+  session) and Lucid uses an **API key** — so **neither needs BN-server OAuth**, and
+  OAuth comes off the *critical path*. It's not abandoned, though: OAuth is a
+  deliberate **low-hanging-fruit pickup** the generic, layered engine makes cheap to
+  swipe along the way — it also delivers Miro's own deferred one-click M2 *and*
+  unlocks the Mural enterprise wedge. So **Mural + OAuth are sequenced late, not
+  dropped** — taken as a cheap add once the engine is in place, not a prerequisite.
 
 Parsimony still holds: the rename / `BoardRenderer` Protocol trail the second real
 consumer (the manifest), they aren't front-loaded.
@@ -461,7 +474,7 @@ consumer (the manifest), they aren't front-loaded.
 | **F1 — IR → Manifest** | `board_manifest.py`: serialize the Board IR to **versioned JSON** (`ensure_ascii=True`, build-dict-once, schema `version` field). Do the `miro_board`→`board_layout` rename here — the manifest is the 2nd real consumer, so the name now describes two things. | **This *is* the FigJam plugin's input contract.** Version from day one (a published plugin lags BN releases). The SVG preview already renders the IR, so it's the creds-free way to eyeball a manifest. |
 | **F2 — Lucidspark renderer (dress rehearsal)** | IR → `.lucid` package (wrap the serialized board) → `POST /documents` via API key; `routes/lucid.py`; `lucid` keychain+env; SECURITY note; serialized-payload anonymisation test. Extract the renderer seam (Miro REST + Lucid package = two real shapes → hoist `build_board`, extract `BoardRenderer`). | Proves **whole-board-as-document** against a live API, cheapest auth, before the plugin. The free product win. |
 | **F3 — FigJam plugin (the prize)** | Published Figma/FigJam plugin (separate TS repo): reads a BN manifest → loops `createSticky()` + sections + text in-editor. BN side: a "Download FigJam manifest" export + the handoff UX (download → open FigJam → run plugin → pick file). **Re-verify Figma's API here** — if a server write path has shipped by then, FigJam collapses into a normal renderer (upside). | The goal. Note: the *plugin* is a real, separate project (TS, store review, distribution, in-editor UX) — only F1–F2 are shared/free. |
-| **— Mural (deferred sidetrack)** | `mural_client.py` (port the Miro item-loop), `routes/mural.py`, and the **shared OAuth build** it forces (15-min rotating tokens; `ASWebAuthenticationSession`). | **Nothing.** Per-item REST, consumes no manifest, needs the OAuth the FigJam road skips. Pick off only if the ~Sept-2026 Mural-friends test specifically requires it — that test is the *only* thing that pulls Mural + OAuth back onto the path. |
+| **— Mural (deferred, but strategically valuable)** | `mural_client.py` (port the Miro item-loop), `routes/mural.py`, on top of the **shared OAuth pickup** (15-min rotating tokens; `ASWebAuthenticationSession`). | Architecturally advances FigJam by **nothing** (per-item REST, consumes no manifest) — so it's late, not on the engine's critical path. **But it's a real enterprise/government-procurement wedge** (private planner), so it's a high-value *cheap* add once OAuth exists, not a rounding error. The ~Sept-2026 Mural test rides this. |
 | **— Picker UX (deferred)** | One "Send to a whiteboard…" entry + remembered board — only once 2+ boards are genuinely connectable. Until then ship each as a concrete row. | Orthogonal to FigJam. |
 
 **Security disciplines for the Lucid renderer (F2):**

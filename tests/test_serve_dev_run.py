@@ -42,13 +42,22 @@ def _seed(internal: Path) -> None:
         + "\n",
         encoding="utf-8",
     )
+    # Canonical event schema (bristlenose/events.py): discriminator is the
+    # `event` field (run_started/run_progress/run_completed); `kind` is the
+    # LEVEL ("run"), not the event name. An earlier fixture put the event name
+    # in `kind` — a shape the pipeline never writes — which let the schema bug
+    # in run_inspector.py pass undetected. Keep this in sync with events.py.
     (internal / ri.JSONL_EVENTS).write_text(
         "\n".join(
             json.dumps(e)
             for e in [
-                {"kind": "started", "run_id": "r1", "started_at": "2026-06-27T14:18:30Z"},
-                {"kind": "progress", "stage": "quote_extraction", "elapsed_seconds": 0.0, "stage_fraction": 0.5},
-                {"kind": "completed", "run_id": "r1", "ended_at": "2026-06-27T14:22:42Z"},
+                {"kind": "run", "event": "run_started", "run_id": "r1",
+                 "started_at": "2026-06-27T14:18:30Z",
+                 "process": {"os": "darwin-arm64"}},
+                {"kind": "run", "event": "run_progress", "run_id": "r1",
+                 "stage": "quote_extraction", "elapsed_seconds": 0.0, "stage_fraction": 0.5},
+                {"kind": "run", "event": "run_completed", "run_id": "r1",
+                 "ended_at": "2026-06-27T14:22:42Z"},
             ]
         )
         + "\n",
@@ -71,6 +80,12 @@ def test_run_json_returns_payload(dev_client: TestClient) -> None:
     assert data["summary"]["n"] == 1
     assert data["prov"]["provider"] == "Claude"
     assert len(data["stages"]) == 1
+    # Lifecycle fields are derived from the `event` discriminator, not `kind`.
+    # These three pin the schema-mismatch regression (all were "—" when the
+    # detector read the wrong field).
+    assert data["prov"]["run_id"] == "r1"
+    assert data["prov"]["status"] == "completed"
+    assert data["prov"]["hardware"] == "darwin-arm64"
 
 
 def test_run_html_renders_and_escapes(dev_client: TestClient) -> None:
@@ -80,8 +95,18 @@ def test_run_html_renders_and_escapes(dev_client: TestClient) -> None:
     body = r.text
     assert "Run Inspector" in body
     assert "</script>" in body  # the page's own closing tag exists
-    # injected JSON must not contain a raw breakout
-    assert 'stage": "quote_extraction' not in body.replace("\\u0022", '"') or "\\u003c" in body
+
+    # XSS: a hostile value in the data must not break out of the JSON <script>.
+    # `ensure_ascii=True` alone does NOT escape '<' (it's ASCII), so the builder
+    # also rewrites <,>,& to \uXXXX. The seeded fixture carries nothing
+    # escapable, so the old assertion (looking for < in `body`) could never
+    # pass — assert the escaping directly against a payload that has a real
+    # </script> breakout attempt.
+    hostile = ri.build_run_inspector_html(
+        {"ok": True, "evil": "</script><script>alert(1)</script>"}
+    )
+    assert "</script><script>alert(1)" not in hostile  # no raw breakout
+    assert "\\u003c" in hostile  # the '<' was escaped to <
 
 
 def test_run_empty_project_does_not_500(tmp_path: Path) -> None:

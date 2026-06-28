@@ -250,6 +250,28 @@ def calibration(calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
+def _event_type(e: dict[str, Any]) -> str:
+    """Canonical event-type string for one event record, e.g. ``"run_completed"``.
+
+    The pipeline (``bristlenose/events.py``) writes the discriminator in the
+    ``event`` field (``EventTypeEnum``: ``run_started`` / ``run_progress`` /
+    ``run_completed`` / ``run_cancelled`` / ``run_failed``); ``kind`` is the
+    *level* (``KindEnum``: ``run`` / ``analyze`` / ``transcribe-only``), NOT the
+    event name. Earlier code here read a non-existent ``event_type`` field and
+    matched ``kind`` against event names, so on real data every lifecycle lookup
+    silently missed. Accept the legacy shapes too — an ``event_type`` field, or a
+    bare event name in ``kind`` (``"started"``) as the synthetic fixtures used —
+    so this is robust to both.
+    """
+    et = e.get("event") or e.get("event_type") or ""
+    if et:
+        return et
+    k = e.get("kind", "")
+    if k and k not in ("run", "analyze", "transcribe-only"):
+        return k if k.startswith("run_") else f"run_{k}"
+    return ""
+
+
 def reconstruct_stages(events: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], float]:
     """Rebuild a stage timeline from the RunProgress ``elapsed_seconds`` stream.
 
@@ -260,7 +282,7 @@ def reconstruct_stages(events: list[dict[str, Any]]) -> tuple[list[dict[str, Any
     marks: list[tuple[str, float]] = []
     end_elapsed = 0.0
     for e in events:
-        if e.get("kind") == "progress" or e.get("event_type") == "run_progress" or "stage_fraction" in e:
+        if _event_type(e) == "run_progress" or "stage_fraction" in e:
             stage = e.get("stage")
             el = _float(e.get("elapsed_seconds"))
             if stage and el is not None:
@@ -293,20 +315,14 @@ def reconstruct_stages(events: list[dict[str, Any]]) -> tuple[list[dict[str, Any
 
 def _terminus(events: list[dict[str, Any]]) -> dict[str, Any] | None:
     for e in reversed(events):
-        if e.get("kind") in ("completed", "cancelled", "failed") or e.get("event_type", "").startswith("run_"):
-            et = e.get("event_type", "")
-            if e.get("kind") in ("completed", "cancelled", "failed") or et in (
-                "run_completed",
-                "run_cancelled",
-                "run_failed",
-            ):
-                return e
+        if _event_type(e) in ("run_completed", "run_cancelled", "run_failed"):
+            return e
     return None
 
 
 def _run_started(events: list[dict[str, Any]]) -> dict[str, Any] | None:
     for e in events:
-        if e.get("kind") == "started" or e.get("event_type") == "run_started":
+        if _event_type(e) == "run_started":
             return e
     return None
 
@@ -329,7 +345,7 @@ def event_stream(events: list[dict[str, Any]], limit: int = 12) -> list[dict[str
     glyphs = {"started": ("ℹ", "info"), "progress": ("◐", "run"), "completed": ("✓", "ok"), "cancelled": ("⚠", "warn"), "failed": ("✗", "fail")}
     out = []
     for e in events[-limit:]:
-        kind = e.get("kind") or e.get("event_type", "").replace("run_", "") or "?"
+        kind = _event_type(e).replace("run_", "") or "?"
         glyph, cls = glyphs.get(kind, ("·", "info"))
         ts = (e.get("ts") or "").split("T")[-1][:8]
         if kind == "progress":
@@ -436,7 +452,7 @@ def build_run_data(
     duration = _duration_seconds(started, terminus) or (total or None)
     status = "—"
     if terminus:
-        status = (terminus.get("kind") or terminus.get("event_type", "").replace("run_", "")) or "—"
+        status = _event_type(terminus).replace("run_", "") or "—"
     elif started:
         status = "running"
 

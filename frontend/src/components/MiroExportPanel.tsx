@@ -23,7 +23,7 @@ import {
   postMiroDisconnect,
   postMiroExport,
 } from "../utils/api";
-import type { MiroExportRequest } from "../utils/types";
+import type { MiroExportRequest, MiroStatusResponse } from "../utils/types";
 
 interface MiroExportPanelProps {
   open: boolean;
@@ -39,6 +39,25 @@ function errDetail(e: unknown): string {
     : "";
 }
 
+/**
+ * Account holder · team · org, de-duped — lets the user confirm WHICH Miro
+ * account/workspace a board will land in (people have personal + client accounts).
+ * Personal/free accounts return organization.name == team.name, so drop repeats
+ * (case-insensitive, order preserved). Mirrors the macOS sheet's accountText().
+ */
+function accountLine(s: MiroStatusResponse): string | null {
+  const seen = new Set<string>();
+  const parts: string[] = [];
+  for (const raw of [s.user_name, s.team_name, s.org_name]) {
+    const p = raw?.trim();
+    if (p && !seen.has(p.toLowerCase())) {
+      seen.add(p.toLowerCase());
+      parts.push(p);
+    }
+  }
+  return parts.length ? parts.join(" · ") : null;
+}
+
 export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
   const { t } = useTranslation();
   useInert(open);
@@ -52,6 +71,8 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [boardUrl, setBoardUrl] = useState<string | null>(null);
   const [stickies, setStickies] = useState(0);
+  const [account, setAccount] = useState<string | null>(null);
+  const [teamName, setTeamName] = useState<string | null>(null);
   const triggerRef = useRef<Element | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -63,7 +84,11 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
     setBoardUrl(null);
     setView("loading");
     getMiroStatus()
-      .then((s) => setView(s.connected ? "configure" : "connect"))
+      .then((s) => {
+        setAccount(accountLine(s));
+        setTeamName(s.team_name?.trim() || null);
+        setView(s.connected ? "configure" : "connect");
+      })
       .catch(() => setView("connect"));
   }, [open]);
 
@@ -123,6 +148,8 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
         // the sandboxed sidecar can't write the Keychain, so hand it to the
         // macOS host. No-op in browser/serve mode (Python persists it there).
         postStoreMiroToken(token.trim());
+        setAccount(accountLine(s));
+        setTeamName(s.team_name?.trim() || null);
         setView("configure");
       }
     } catch (e) {
@@ -139,6 +166,8 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
     setError(null);
     try {
       await postMiroDisconnect();
+      setAccount(null);
+      setTeamName(null);
       setView("connect");
     } catch {
       setError(t("miro.disconnectError"));
@@ -163,6 +192,24 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
       setView("configure");
     }
   }, [request, t]);
+
+  // Notice naming the destination workspace, with the team picked out (matches
+  // the macOS sheet). Plain interpolation + indexOf split — no <Trans> (keeps the
+  // bundle under budget); the split positions the <strong> per locale word order.
+  const renderNotice = () => {
+    const upload = t("miro.uploadNotice");
+    if (!teamName) return upload;
+    const dest = t("miro.boardDestination", { team: teamName });
+    const idx = dest.indexOf(teamName);
+    if (idx < 0) return `${dest} ${upload}`;
+    return (
+      <>
+        {dest.slice(0, idx)}
+        <strong>{teamName}</strong>
+        {dest.slice(idx + teamName.length)} {upload}
+      </>
+    );
+  };
 
   if (isExportMode()) return null;
 
@@ -240,6 +287,7 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
                 {t("miro.disconnect")}
               </button>
             </p>
+            {account && <p className="bn-export-hint">{account}</p>}
             <label className="bn-export-hint" htmlFor="bn-miro-board-name">
               {t("miro.boardNameLabel")}
             </label>
@@ -284,7 +332,7 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
               />
             )}
             <p className="bn-export-hint" style={{ marginTop: 10 }}>
-              {t("miro.uploadNotice")}
+              {renderNotice()}
             </p>
             {error && (
               <p className="bn-export-error" role="alert">

@@ -256,6 +256,7 @@
     "linkClipsLabel": "Enlazar las citas con los clips",
     "linkClipsHint": "Indica la carpeta donde colocaste los clips exportados.",
     "clipsBasePlaceholder": "https://drive.google.com/\u2026/clips",
+    "boardDestination": "Crea un tablero nuevo en {{team}}.",
     "uploadNotice": "Sube todas las citas de este proyecto a Miro; las citas ocultas no se incluyen.",
     "createBoard": "Crear tablero",
     "creatingBoard": "Creando el tablero\u2026",

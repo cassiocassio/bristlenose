@@ -560,6 +560,8 @@ export interface UnifiedQuote {
 export interface MiroStatusResponse {
   connected: boolean;
   user_name?: string | null;
+  team_name?: string | null; // workspace new boards are created in
+  org_name?: string | null; // company/organization (Enterprise only)
 }
 
 export interface MiroExportRequest {

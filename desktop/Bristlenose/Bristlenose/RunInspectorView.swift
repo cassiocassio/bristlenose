@@ -85,6 +85,12 @@ private struct RunInspectorWebView: NSViewRepresentable {
         /// requests). Non-200 / transport errors render a plain message instead.
         func fetchAndRender(into webView: WKWebView, url: URL, token: String) {
             renderedURL = url
+            // Never blank: show what we're about to do, so even a hung fetch is
+            // legible on screen.
+            webView.loadHTMLString(
+                Self.message("Loading…", "GET \(url.absoluteString)\ntoken present: \(!token.isEmpty)"),
+                baseURL: nil
+            )
             var req = URLRequest(url: url)
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             Task { @MainActor in
@@ -95,11 +101,14 @@ private struct RunInspectorWebView: NSViewRepresentable {
                     if code == 200 {
                         webView.loadHTMLString(body, baseURL: url)
                     } else {
-                        webView.loadHTMLString(Self.message("HTTP \(code)", body), baseURL: url)
+                        // Surface status + body so a future failure is legible in
+                        // the window itself (404 = sidecar missing the dev router,
+                        // 401 = bad/empty token).
+                        webView.loadHTMLString(Self.message("HTTP \(code)", body), baseURL: nil)
                     }
                 } catch {
                     webView.loadHTMLString(
-                        Self.message("Request failed", error.localizedDescription), baseURL: url
+                        Self.message("Request failed", error.localizedDescription), baseURL: nil
                     )
                 }
             }

@@ -126,8 +126,16 @@ Flag:
 - Claims about feature counts that may have changed ("7 sentiment
   categories" — verify against enums.json)
 - Version numbers that may be stale
-- "Coming soon" / "will be available" text — check if the feature
-  shipped
+- **Promises of unshipped features (blocker).** User-facing docs document
+  only what ships today. Flag any "coming soon", "is planned", "will be
+  available", "in a future version", or forward reference to an unbuilt
+  feature — *regardless of whether the feature later ships*. The fix is to
+  delete the promise and describe the current way to do the task, not to
+  wait for the feature. Future plans live in `docs/design-*.md`, never in
+  instructional pages. (The sole exception is an explicit maintainer
+  instruction to mention a specific forthcoming feature.) See
+  `docs/design-docs-system.md` B5. Separately, also flag any "coming soon"
+  text for a feature that *has* now shipped — that's a stale claim.
 - Links: verify GitHub URLs are not 404 (check path structure, don't
   fetch)
 - PII redaction description must match what the test suite tests

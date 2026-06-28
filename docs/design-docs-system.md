@@ -141,6 +141,7 @@ don't turn reference chatty.
 
 ### B5. Voice checklist (before publishing a page)
 
+- **Document only what ships today — no promises, no "coming soon".** User-facing docs describe the software as it is, never as it's planned to be. No "is planned", "coming soon", "will be available", "in a future version", or any forward reference to an unbuilt feature. Where a capability doesn't exist yet, describe the current way to do the task and stop — don't apologise for the gap or trail it with the better thing that's coming. *We don't write cheques we might not be able to cash:* a "soon" can turn out to be years, and the reader holds us to it. Future ideas and engineering aspirations belong in the **public design docs** (`docs/design-*.md`), where a contributor digging through the tree is the right audience for them — not in instructional pages a researcher reads to get work done. (Marketing and pricing have their own privacy rules; that's a separate boundary.) The **only** exception is an explicit instruction from the maintainer to mention a specific forthcoming feature.
 - **Neutral and non-hectoring.** State facts and consequences, not morals. "Consistent codes are easier to compare across participants", not "…keeps the analysis honest". Cut value-laden adjectives — *honest, rigorous, proper, real, disciplined*.
 - **Don't tell researchers how to do their job.** Explain what the tool does and the vocabulary it uses; the method is theirs. No universal claims about what research *is* ("that revision *is* the analysis"), no assuming their workflow ("expect to revise…"). A reader may have a fixed scheme, iterate, or be time-boxed — all valid.
 - **Offer, don't insist.** "There is no single correct framework" beats "you should…". Conditional imperatives, not commands. Keep genuine safety imperatives (re-identification risk, false confidence in redaction) — those are about the tool, not their method.
@@ -192,7 +193,7 @@ Two things shrink it:
 - ✅ Classic user surfaces (README, man, locales, manual) audited by `user-documentation-review`.
 - ◻️ **Gap, now closing:** the website docs live in a separate repo (staging `bristlenose-website-v2/` now; the website repo post-cutover), so no agent reaches them yet. `user-documentation-review` now names them as a surface and points here for the standard; wiring it to the website tree is a follow-up.
 - ◻️ **Candidate:** a per-page channel-posture declaration the generator can lint (every page must declare fork / shared / single-channel / none).
-- ◻️ **Candidate:** a voice-linter — greppable anti-patterns (`honest`, `rigorous`, "the point is", "expect to", "is the analysis") flagged at build.
+- ◻️ **Candidate:** a voice-linter — greppable anti-patterns (`honest`, `rigorous`, "the point is", "expect to", "is the analysis", and the promissory set "coming soon" / "is planned" / "will be available" / "in a future version") flagged at build.
 
 ---
 

@@ -189,7 +189,7 @@ struct MiroSheet: View {
 
     private var connect: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(model.t("title")).font(.title2).fontWeight(.bold)
+            Text(model.t("title")).font(.headline)
                 .frame(maxWidth: .infinity, alignment: .center)
             Text(model.t("connectIntro")).font(.callout).foregroundStyle(.secondary)
             SecureField(model.t("tokenPlaceholder"), text: $model.token)
@@ -215,7 +215,7 @@ struct MiroSheet: View {
 
     private var configure: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(model.t("title")).font(.title2).fontWeight(.bold)
+            Text(model.t("title")).font(.headline)
                 .frame(maxWidth: .infinity, alignment: .center)
             HStack(spacing: 5) {
                 Text(model.dt("connected")).font(.subheadline).foregroundStyle(.secondary)

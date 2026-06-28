@@ -63,8 +63,15 @@ def get_token_info(token: str) -> dict[str, str | None]:
     returns {user_name: None, team_name: None} rather than raising.
 
     Response shape (relevant fields):
-        {"user": {"name": "..."}, "team": {"id": "...", "name": "..."}, ...}
+        {"user": {"name": "..."}, "team": {"id": "...", "name": "..."},
+         "organization": {"id": "...", "name": "..."}, ...}
+
+    `organization` is Enterprise-plan only — absent for personal/free accounts, so
+    `org_name` is None there and the caller collapses to "user · team". For
+    Enterprise it disambiguates a team within a company ("Design team · BigCorp").
+    Parsed defensively; an unexpected shape just yields None, never raises.
     """
+    none = {"user_name": None, "team_name": None, "org_name": None}
     try:
         resp = httpx.get(
             "https://api.miro.com/v1/oauth-token",
@@ -72,16 +79,18 @@ def get_token_info(token: str) -> dict[str, str | None]:
             timeout=10,
         )
         if resp.status_code != 200:
-            return {"user_name": None, "team_name": None}
+            return none
         data = resp.json()
         user = data.get("user") or data.get("createdBy") or {}
         team = data.get("team") or {}
+        org = data.get("organization") or {}
         return {
             "user_name": user.get("name") or None,
             "team_name": team.get("name") or None,
+            "org_name": org.get("name") or None,
         }
     except (httpx.HTTPError, ValueError):
-        return {"user_name": None, "team_name": None}
+        return none
 
 
 # ---------------------------------------------------------------------------

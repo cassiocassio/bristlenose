@@ -32,6 +32,7 @@ final class MiroSheetModel: ObservableObject {
     // sidecar predates the feature or Miro identity couldn't be fetched.
     @Published private(set) var userName: String?
     @Published private(set) var teamName: String?
+    @Published private(set) var orgName: String?  // company — Enterprise only
 
     private let api: MiroAPI
     private let i18n: I18n
@@ -55,7 +56,7 @@ final class MiroSheetModel: ObservableObject {
     /// server returned. nil when neither is known (older sidecar / fetch failed),
     /// so the Account row hides entirely rather than showing an empty label.
     func accountText() -> String? {
-        let parts = [userName, teamName].compactMap { $0 }.filter { !$0.isEmpty }
+        let parts = [userName, teamName, orgName].compactMap { $0 }.filter { !$0.isEmpty }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
@@ -87,6 +88,7 @@ final class MiroSheetModel: ObservableObject {
         let conn = await api.status()
         userName = conn.userName
         teamName = conn.teamName
+        orgName = conn.orgName
         step = conn.connected ? .configure : .connect
     }
 
@@ -99,6 +101,7 @@ final class MiroSheetModel: ObservableObject {
             let conn = try await api.connect(token: pasted)
             userName = conn.userName
             teamName = conn.teamName
+            orgName = conn.orgName
             // Persist natively so it survives relaunch under the sandbox (Python
             // can't write the Keychain). Read back on launch by overlayMiroToken.
             // The session is live regardless, so a failed write warns (non-blocking)
@@ -122,6 +125,7 @@ final class MiroSheetModel: ObservableObject {
         token = ""
         userName = nil
         teamName = nil
+        orgName = nil
         step = .connect
         busy = false
     }

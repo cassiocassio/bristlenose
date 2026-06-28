@@ -41,6 +41,7 @@ class MiroStatusResponse(BaseModel):
     connected: bool
     user_name: str | None = None
     team_name: str | None = None  # the workspace new boards are created in
+    org_name: str | None = None  # company/organization (Enterprise only)
 
 
 class MiroConnectRequest(BaseModel):
@@ -123,6 +124,7 @@ def miro_status(project_id: int, request: Request) -> MiroStatusResponse:
             connected=True,
             user_name=account.get("user_name"),
             team_name=account.get("team_name"),
+            org_name=account.get("org_name"),
         )
     finally:
         db.close()
@@ -195,6 +197,7 @@ def miro_connect(
         connected=True,
         user_name=account.get("user_name"),
         team_name=account.get("team_name"),
+        org_name=account.get("org_name"),
     )
 
 

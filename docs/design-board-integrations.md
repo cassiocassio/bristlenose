@@ -6,7 +6,10 @@ targets — **Mural**, **Lucidspark (Lucid)**, **FigJam (Figma)** — decides go
 per board, and specifies the small IR changes the second board forces out.
 
 **Status:** Research-complete (28 Jun 2026), no code; plan revised after a
-correctness + parsimony + security review pass. Feeds the build behind
+correctness + parsimony + security review pass. **Direction approved: proceed with
+Mural + Lucidspark reusing the Miro scaffold (IR + layout + palette + anonymisation +
+auth layer); FigJam deferred to a future plugin on the same IR.** Feeds the build
+behind
 `docs/design-miro-bridge.md` (read that first — the IR, layout engine, SVG
 renderer, anonymisation boundary, and cross-app flow are all defined there and are
 **shared, not re-litigated here**).
@@ -69,68 +72,63 @@ is automatically safe everywhere else.
 
 | Spec axis | Common platform (lowest safe denominator) | Who exceeds it |
 |---|---|---|
-| **Colour** | one background colour per sticky, from a **semantic** palette | Miro is the constraint (16 named); Mural/Lucid/FigJam take arbitrary hex |
+| **Colour** | **two fixed colours: pink headers, yellow quotes** (Miro's `light_pink` / `light_yellow`) | everyone *can* do hex, but we deliberately don't — see below |
 | **Geometry** | absolute `x/y/w/h` in board px (the layout engine already emits this) | all four accept absolute coords; parenting is an optional per-renderer nicety |
 | **Text** | whole-sticky text + **bold/italic** + a link; **no per-span size/colour** | Lucid alone allows per-span size — *not* worth forking the IR for |
 | **Container** | a named box (`x/y/w/h` + title) drawn around its columns | Mural/Lucid can also *parent* members; the box-by-geometry form works for all |
 | **Attribution hierarchy** | italic `— P1 · 0:10` inside the quote sticky (the v0 decision) | impossible to improve on Miro **and** Mural; possible on Lucid only |
 
 **Implication:** the existing IR's sticky/frame/text shapes are already the right
-common platform. The only genuine Miro-ism that leaked into the IR is **colour**.
+common platform. Colour, which earlier drafts treated as the load-bearing IR
+problem, is deliberately **not** — see the next section.
 
-### The one IR change the second board forces: semantic colour tokens
+### Colour: pink headers + yellow quotes everywhere (product decision)
 
-Today the IR's colour tokens *are* Miro's named-palette strings
-(`bristlenose/miro_board.py`: `HEADER_TOKEN = "light_pink"`,
-`SENTIMENT_TOKEN = {"positive": "light_green", …}`). That makes the Miro renderer
-an identity map but every other renderer a translation *away from a Miro
-vocabulary* — backwards. The SVG renderer already pays this tax with a
-`TOKEN_HEX = {"light_pink": "#FADADD", …}` reverse-map (`miro_render_svg.py`).
+**The cross-board baseline is two flat colours — pink header stickies, yellow quote
+stickies — exactly as Miro renders them today.** Reproduce that on every board and
+stop. The other boards take arbitrary hex, but we use the **same two colours Miro's
+named `light_pink` / `light_yellow` produce** (assume enterprise Miro custom
+palettes aren't API-exposed, so the standard named subset is the source of truth).
+A whiteboard that's the *same* on Miro, Mural and Lucidspark is the goal; cross-board
+colour cleverness is anti-goal.
 
-**Fix:** make tokens semantic, define one canonical hex per token in a shared
-palette, and let each renderer own the *outbound* mapping. The mapping below is
-the **actual** `SENTIMENT_TOKEN` from `miro_board.py` (all 7 sentiments), not an
-illustrative sketch — implement against these exact values:
+**Why so plain — what colour is actually *for* in research.** Colour-by-sentiment
+(the current `colour_by="sentiment"` path) is a **party trick**: auto-tinting quotes
+positive/negative reads well in a demo but is of little use to a working researcher.
+The genuinely useful colour dimensions come from **the researcher's own context and
+manual tags** — persona, free vs paid, arrived-via-email-campaign vs organic,
+A/B-variant-A vs B — none of which Bristlenose can infer; they come from product
+knowledge and the research brief. So:
+
+- **Default (and the only cross-board guarantee): flat — pink headers, yellow
+  quotes.** No auto-colouring.
+- **Colour-by-sentiment stays in the engine but is demoted** from default to an
+  optional, lower-priority path — *not* a reason to design the IR around a sentiment
+  palette, and not a cross-board priority.
+- **Colour-by-custom-tag is the genuinely valuable version — and it's deferred**
+  (later; may relate to signal cards — a separate project). When it lands it's a
+  quote→tag→colour map the researcher drives, rendered through the same two-then-N
+  colour slot the baseline already uses.
+
+**What this means for the IR.** The earlier "semantic sentiment palette" refactor is
+**over-built for this baseline** and is dropped. The minimal, honest change is still
+worth making because the SVG renderer already duplicates the colour vocabulary
+(`TOKEN_HEX` reverse-map, `miro_render_svg.py`): extract a tiny `board_palette.py`
+with just the two baseline tokens —
 
 ```
-Semantic token (IR)        Miro named (today)   Canonical hex   Miro (quantise→named)
-sentiment.positive   ───►  light_green     ───► #CDEBC5   ───►  light_green
-sentiment.delight    ───►  green           ───► #9BD7A0   ───►  green
-sentiment.negative   ───►  light_pink      ───► #FADADD   ───►  light_pink
-sentiment.frustration ──►  red             ───► #F4A6A6   ───►  red
-sentiment.confusion  ───►  light_blue      ───► #BEE0F2   ───►  light_blue
-sentiment.neutral    ───►  gray            ───► #E2E2E2   ───►  gray
-sentiment.mixed      ───►  light_yellow    ───► #FFF9B1   ───►  light_yellow
-quote.default        ───►  light_yellow    ───► #FFF9B1   ───►  light_yellow
-header               ───►  light_pink      ───► #FADADD   ───►  light_pink
+header        ───►  Miro light_pink   ───►  #FADADD
+quote.default ───►  Miro light_yellow ───►  #FFF9B1
 ```
 
-**Watch the `header` / `sentiment.negative` collision.** Both are `light_pink`
-(`#FADADD`) today — a header sticky and a negative-sentiment quote are the *same*
-colour by accident of the named palette. The palette extraction must **decide**:
-keep them identical (pure no-op refactor — B0 stays "no behaviour change"), or give
-`header` its own hex (arguably better — a header shouldn't read as negative — but a
-*visible behaviour change* on the Miro board, so it is **not** a no-op). **Recommend:
-keep identical in the extraction commit; raise the header-colour fix as a separate,
-visible change** so the refactor stays reviewable. (Mural/Lucid colour by sentiment,
-so the collision only bites if a future board tints headers distinctly.)
-
-- **IR**: `SENTIMENT_TOKEN` keys become semantic (`sentiment.positive`), not Miro
-  colours. A new `board_palette.py` holds `TOKEN_HEX` (the canonical hex, lifted
-  from the SVG renderer) as the single source of truth.
-- **SVG renderer**: drop its private `TOKEN_HEX`; import the shared one. Net simpler.
-  Preserve its unknown-token fallback (`#FFF9B1`) verbatim.
-- **Miro renderer**: gains a small `TOKEN_TO_MIRO_NAMED` quantiser — the *only*
-  Miro-specific colour code. ~16 lines.
-- **Mural / Lucid renderers**: consume the canonical hex directly. Zero colour code.
-
-This is the test of the abstraction: it pushes the Miro vocabulary *out* of the IR
-and into the Miro renderer where it belongs. **Not purely mechanical:**
-`tests/test_miro_board.py:59-60` asserts on *literal Miro strings* (`"green"`,
-`"red"`), so the token rename **requires test edits** — B0 stays green only after
-those assertions move to the semantic tokens. Grep `SENTIMENT_TOKEN`,
-`HEADER_TOKEN`, `DEFAULT_QUOTE_TOKEN`, `TOKEN_HEX` first
-(`miro_board.py`, `miro_render_svg.py`, `tests/test_miro_board.py`).
+— delete the SVG renderer's private copy, and let each non-Miro renderer map those
+two tokens to the same hex. That's the whole colour story for v1. (The existing
+`SENTIMENT_TOKEN` map stays where it is for the optional sentiment path; it doesn't
+need to become "semantic tokens" and the `header`/`negative` `light_pink` overlap is
+a non-issue while the default is flat.) **BN is a jump-start, not a finished
+analysis:** the value the researcher keeps is *headings + all the quotes about the
+homepage from every user*, then the star/section/tag scope to surface the good ones
+— they bring the interpretation. The board's two colours are scaffolding, not signal.
 
 ---
 
@@ -170,7 +168,7 @@ The reuse point is large; the per-board delta is small and shaped like Miro's.
 |---|---|---|---|
 | **Renderer shape** | **per-item REST** (port `miro_client.py`: create-mural → areas → bulk stickies, 1000/call) | **one-shot package**: serialize IR → `document.json` → ZIP → `POST /documents` | publish a plugin (not a renderer) |
 | **New file** | `mural_client.py` | `lucid_client.py` + `lucid_package.py` (JSON+ZIP builder) | a Figma plugin repo |
-| **Colour** | semantic hex → identity | semantic hex → identity | n/a |
+| **Colour** | two fixed (pink/yellow) → hex | two fixed (pink/yellow) → hex | n/a |
 | **Container** | areas + `parentId` (or absolute box) | container box, membership by bbox overlap | n/a |
 | **Auth** | OAuth (15-min access + rotating refresh) — paste-token only demo-grade | **API key** paste-token first; OAuth later | n/a |
 | **Routes** | `routes/mural.py` | `routes/lucid.py` | n/a |
@@ -235,15 +233,15 @@ Lucid's per-span sizing later — deferred; not worth it for v1.)
 
 ### Mural — GO. Effort: **Same as Miro.**
 Widget model is near-identical (create-mural → areas → stickies with x/y/size/parent).
-Renderer ports ~1:1; **arbitrary hex is *easier* than Miro's named palette** (no
-quantisation). Only net-extra work is auth: **15-min access tokens with rotating
+Renderer ports ~1:1; colour is trivial — just reproduce Miro's pink/yellow as hex.
+Only net-extra work is auth: **15-min access tokens with rotating
 refresh** force a real refresh loop sooner than Miro's longer-lived tokens, so a
 paste-token cut is demo-grade and OAuth arrives early. Bulk 1000/call (vs Miro's 20)
 makes large boards cheaper.
 
 ### Lucidspark — GO. Effort: **Same / slightly larger.**
-Board-modelling work (coords, sentiment→hex, containers, rich text) is identical to
-Miro. The difference is *architectural, not harder*: a **package serializer + ZIP
+Board-modelling work (coords, the two fixed colours, containers, rich text) is
+identical to Miro. The difference is *architectural, not harder*: a **package serializer + ZIP
 builder** replaces the item loop. That actually *simplifies* rate-limit/retry (one
 call) but adds the package step and a coordinate-driven container model (membership
 by bounding-box overlap — free, since the layout engine already emits absolute
@@ -277,12 +275,20 @@ node/sticky write, no `file_content:write` scope. Creation exists only via:
 
 There is **no authenticated, deterministic, server-side way** for Bristlenose's
 backend to end up with a FigJam board of stickies. FigJam does **not slot into the
-IR→renderer architecture.** If designer-demand appears, the only honest path is a
-**published FigJam plugin** that consumes the **same IR serialized as a JSON
-manifest** (the IR→manifest serializer is reusable; the plugin runtime + in-editor
-human step + store review/distribution is the new, larger surface). This confirms
-`design-miro-bridge.md`'s existing "FigJam is endgame, demand-gated" stance —
-research now makes the *why* concrete rather than a hunch.
+IR→renderer architecture** *as a server renderer*.
+
+**But the scaffold is not wasted on FigJam — it front-loads it.** FigJam has by far
+the largest user base of the four (it rides Figma's installed base), so the door
+stays open deliberately. The honest path, if/when designer-demand appears, is a
+**published FigJam plugin** that consumes the **same Board IR serialized as a JSON
+manifest** — the layout engine, the IR, the two-colour palette, the anonymisation
+boundary, and the manifest serializer are all **the same shared pieces** we build for
+Mural and Lucidspark. Only the delivery runtime is new and larger (an in-editor
+plugin + a human-run step + store review/distribution). So building the agnostic
+scaffold now for the two GO boards is *also* the groundwork a FigJam plugin would
+stand on later — FigJam is deferred, not abandoned. This sharpens
+`design-miro-bridge.md`'s existing "FigJam is endgame, demand-gated" stance with a
+concrete *why* and a concrete reuse path.
 
 ### Recommended order: **Lucidspark → Mural**
 
@@ -351,8 +357,10 @@ set up twice) is unchanged.
   for consultants juggling clients. *Lean: per-install default, overridable.*
 - Does the picker show **all three always**, or only **connected** boards once one is
   set up? *Lean: show the connected one prominently, others under "change board".*
-- Colour-by default (sentiment / participant / theme) — inherited from Miro's open
-  question, unchanged.
+- Colour-by default — **resolved: flat (pink headers, yellow quotes) on every
+  board.** Sentiment-colouring demoted to optional; custom-tag colouring (persona /
+  cohort / campaign source / A/B) is the genuinely useful version, deferred. (See
+  *Colour* above.)
 
 ---
 
@@ -382,11 +390,11 @@ import-site grep done first.
 
 1. **Mural and Lucidspark are GO; FigJam is NO-GO for server push** — research-confirmed
    against current vendor docs.
-2. **Semantic colour tokens** — the IR stops speaking Miro's named palette; a shared
-   `board_palette.py` holds canonical hex; each renderer maps outbound (Miro
-   quantises to named; others use hex directly). The single real IR change, and the
-   **only** generalisation worth doing *before* a second board (B0) — the SVG
-   renderer is already a second consumer paying the tax.
+2. **Colour is flat: pink headers, yellow quotes, everywhere** (Miro's `light_pink`
+   / `light_yellow` reproduced on every board). Sentiment-colouring is a party trick,
+   demoted to optional; custom-tag colouring is the real future win, deferred. The
+   only colour work is a tiny two-token `board_palette.py` that deletes the SVG
+   renderer's duplicate hex map — no semantic-sentiment-palette refactor.
 3. **Defer the `BoardRenderer` Protocol, the rename, and the picker** until the
    second renderer exists — extract the Protocol from two real `push()` signatures
    (B2), do the `miro_board`→`board_layout` rename in that same commit, and build the
@@ -421,7 +429,7 @@ the Miro-vocabulary tax.
 
 | Milestone | What | Notes |
 |---|---|---|
-| **B0 — Palette only** | Extract `board_palette.py` (semantic tokens + canonical hex); repoint the Miro renderer's `TOKEN_TO_MIRO_NAMED` quantiser; **delete** the SVG renderer's private `TOKEN_HEX` duplication. Fix the `test_miro_board.py` literal-string assertions. **Keep `miro_board.py` named `miro_board.py`.** | The one change that pays for itself now — two real consumers, deletes a live duplication. No rename, no Protocol. |
+| **B0 — Palette only** | Extract a tiny `board_palette.py` holding the two baseline tokens (`header`→`#FADADD`, `quote.default`→`#FFF9B1`) + their Miro named equivalents; **delete** the SVG renderer's private `TOKEN_HEX` duplication. Leave `SENTIMENT_TOKEN` where it is (optional path). **Keep `miro_board.py` named `miro_board.py`.** | The one change that pays for itself now — deletes a live duplication. No semantic refactor, no rename, no Protocol. |
 | **B1 — Lucidspark spike** | 30-min live spike: free-tier Dev-Portal API key? create a `lucidspark` document via `.lucid` package? `editUrl` back? does a sticky support a clickable link (and in what escaping context)? Confirm/kill the GO. | **Gate.** If key access is paid-only → reorder to Mural-first (which pulls B4/B5 OAuth forward). This fork inverts the whole sequence; decide here, surface it. |
 | **B2 — Lucidspark renderer (+ rename + Protocol, same commit)** | `lucid_client.py` + `lucid_package.py` (IR → `document.json` → ZIP → `POST /documents`); `routes/lucid.py`; `lucid` keychain+env; API-key connect; SECURITY note; serialized-payload anonymisation test. **Now that a 2nd `push()` exists:** hoist `build_board` out of `push_to_miro`, extract the `BoardRenderer` Protocol from the two real signatures, and do the `miro_board`→`board_layout` etc. rename — all in this commit (the names finally describe two things). | The rename/Protocol ride here, not in B0. See *security disciplines* below. |
 | **B3 — Mural spike** | 30-min live spike: free-account dev app + create-mural? shareable-URL field? sticky char cap? `<a>` link support in `htmlText`? | Gate before B4. |
@@ -455,7 +463,8 @@ on demand; report-as-deliverable.
 3. Export (default) — new board: two containers (Sections / Themes), header
    stickies, quote stickies.
 4. Sticky content — quote leads, italic `— P1 · 0:10` trails.
-5. Colour mapping — sentiments → correct hex/named on that board.
+5. Colour — pink headers + yellow quotes render correctly on that board (flat
+   baseline; no sentiment tinting).
 6. Scope — `starred only` exports just starred; `all` excludes hidden.
 7. Container layout — Sections left, Themes right; columns session→time.
 8. > 200 quotes — bulk + backoff (or package size), no error surfaced.

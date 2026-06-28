@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from html import escape
 
+from bristlenose.board_palette import hex_for
 from bristlenose.miro_board import Board, Frame, Sticky, TextItem, fmt_timecode
 
 BOARD_BG = "#F4F4F2"
@@ -19,17 +20,6 @@ BODY_INK = "#2B2B2B"
 HEADER_STROKE = "#E8B7C0"
 QUOTE_STROKE = "#E3D9A6"
 
-# colour token -> SVG hex fill
-TOKEN_HEX = {
-    "light_pink": "#FADADD",
-    "light_yellow": "#FFF9B1",
-    "light_green": "#CDEBC5",
-    "green": "#9BD7A0",
-    "red": "#F4A6A6",
-    "light_blue": "#BEE0F2",
-    "gray": "#E2E2E2",
-}
-
 FRAME_CHROME = {
     "section": {"fill": "#ECEFF5", "stroke": "#C3CEE2", "tab": "#D7DEEC", "ink": "#33415C"},
     "theme": {"fill": "#F2ECF6", "stroke": "#D8C9E6", "tab": "#E4D7EF", "ink": "#553F72"},
@@ -37,7 +27,7 @@ FRAME_CHROME = {
 
 
 def _hex(token: str) -> str:
-    return TOKEN_HEX.get(token, "#FFF9B1")
+    return hex_for(token)
 
 
 def _text(x: float, y: float, line: str, *, size: float, weight: str, ink: str,

@@ -119,10 +119,12 @@ struct SearchComingSoonButton: View {
     }
 }
 
-/// Starred filter: a button-style toggle (the macOS-26 recessed/tinted selected
-/// background carries the active state). Flips between `starredQuotesOnly` and
-/// the view-mode-only `showAllQuotes` action — turning the filter off preserves
-/// a typed search query (star and search are orthogonal filters that compose).
+/// Starred filter: a button-style toggle whose active state is a quiet
+/// monochrome recessed background (`.tint(.secondary)`), not the accent-blue
+/// default — chrome stays neutral; the star glyph carries the meaning (per the
+/// colour-discipline rule). Flips between `starredQuotesOnly` and the
+/// view-mode-only `showAllQuotes` action — turning the filter off preserves a
+/// typed search query (star and search are orthogonal filters that compose).
 /// Active state mirrors `bridgeHandler.quotesViewMode` (SPA owns the truth).
 struct QuotesStarredToggle: View {
     @ObservedObject var bridgeHandler: BridgeHandler
@@ -136,6 +138,7 @@ struct QuotesStarredToggle: View {
             Label(i18n.t("desktop.menu.view.starredQuotesOnly"), systemImage: "star")
         }
         .toggleStyle(.button)
+        .tint(.secondary)
         .help(i18n.t(
             bridgeHandler.quotesViewMode == "starred"
                 ? "desktop.menu.view.allQuotes"

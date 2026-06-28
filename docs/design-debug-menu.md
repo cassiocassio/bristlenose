@@ -1,10 +1,12 @@
 # Debug menu & instrumentation — candidate additions
 
-Status: **proposal / candidate list** (not yet built). Captures a survey of the
-existing debug surface, the instrumentation that already exists but isn't
-reachable from a menu, the prior art worth borrowing, and a ranked set of
-additions. The branch `claude/debug-menu-instrumentation-4r9npy` is the home for
-any implementation that follows.
+Status: **largely shipped** (28 Jun 2026, branch `claude/debug-menu-instrumentation-4r9npy`).
+Began as a survey of the existing debug surface + a ranked candidate list; the
+recommended first cut (#1–#4 + #9) plus the native Run Inspector window, the live
+diagnostic-fixtures submenu (#6), and a build-time sidecar-staleness gate are now
+built. The survey and ranked list below are preserved for context (they record
+the reasoning and the not-yet-built remainder); **see "Implementation" at the
+foot for exactly what shipped.**
 
 The guiding principle is **reveal, don't reinvent**: most of the high-value
 items below expose data that the pipeline/serve layers *already capture* — they
@@ -67,20 +69,19 @@ Two items only:
 ★ = high value, cheap (reveals data that already exists).
 
 ### Desktop `Debug` menu (`#if DEBUG`)
-1. **★ Open Log** — open the selected project's `bristlenose.log` in Console.app.
-   (Promote the popover's existing "Show Log", make it project-aware.)
-2. **★ Reveal `.bristlenose/` in Finder** — one click to logs/events/llm-calls/db/last-failure.
-3. **★ Copy Build Provenance** — sidecar SHA/`@time`/`-dirty` + `GeneratedBuildInfo`
-   + active `SidecarMode` + events-file `bristlenose_version`. Automates the
-   recurring "is the bundled sidecar stale?" check (see `desktop/CLAUDE.md`).
-4. **★ Show Web Inspector** — surface the WKWebView in Safari's Develop menu
-   programmatically (today it's a manual hunt).
-5. **Run Doctor…** — invoke `doctor` against the active sidecar, results in a sheet.
-6. **Diagnostic fixture submenu** — promote the 13 `…DIAGNOSTIC_FIXTURE`
-   scenarios to live menu buttons (no restart to flip scenes).
-7. **Sidecar controls** — Restart sidecar / Copy serve URL+port / show `SidecarMode`.
+1. **✅ ★ Open Log** — open the served project's `bristlenose.log` in Console.app. *(shipped)*
+2. **✅ ★ Reveal `.bristlenose/` in Finder** — one click to logs/events/llm-calls/db/last-failure. *(shipped)*
+3. **✅ ★ Copy Build Provenance** — `GeneratedBuildInfo` SHA/`@time`/`-dirty`
+   + active `SidecarMode` + live sidecar version + events-file `bristlenose_version`.
+   Automates the recurring "is the bundled sidecar stale?" check. *(shipped)*
+4. **✅ ★ Web Inspector** — `webView.isInspectable = true` (DEBUG) on the report
+   WebView + the Run Inspector window → right-click → Inspect Element in-app. *(shipped)*
+5. **Run Doctor…** — invoke `doctor` against the active sidecar, results in a sheet. *(not built)*
+6. **✅ Diagnostic-fixtures submenu** — the `…DIAGNOSTIC_FIXTURE` scenarios as live
+   menu buttons that inject into the selected project (no relaunch). *(shipped)*
+7. **Sidecar controls** — Restart sidecar / Copy serve URL+port / show `SidecarMode`. *(not built)*
 8. **Reset onboarding / consent** — re-show `AIConsentView` + first-run states
-   (without touching the keychain).
+   (without touching the keychain). *(not built)*
 
 ### `serve --dev` (browser-side)
 9. **★ `/api/dev/run` inspector page** — extend `/api/dev/info`: versions, DB
@@ -141,6 +142,44 @@ CDN — buildable and testable without the frontend toolchain.
   coarse rollups; the per-stage timeline comes from the progress stream. Stages
   with no progress events degrade to an empty-state rather than faking bars.
 
+## Implementation (shipped — desktop, 28 Jun 2026)
+
+Brought up on a Mac after the cloud authored #9–#11. Corrections + the desktop
+surfaces:
+
+- **Event-schema fix** (`run_inspector.py`) — the lifecycle readers keyed off a
+  non-existent `event_type` field and matched `kind` against event names; the
+  canonical schema (`events.py`) is the `event` field (`run_started`/`…`) with
+  `kind` = the level (`"run"`). On real data `run_id`/`status`/`duration` were all
+  `—`. Now read via one `_event_type()` helper; fixtures rebuilt to the real
+  schema + regression-pinned. (The XSS-escaping test was also brittle — rewritten
+  to assert against a hostile `</script>` payload.)
+- **Cost unavailable vs free** — `summarise_calls` returns `cost = None` when *no*
+  call recorded a cost (renders "—" / "not recorded"), distinct from `0.0` (a
+  genuinely free run, e.g. local Ollama → "$0.00"). Prevents the donut/stat
+  reading "free" when cost simply wasn't captured.
+- **Native Debug ▸ Run Inspector** (⌃⌘R) — `RunInspectorView.swift`, a DEBUG-only
+  window hosting `/api/dev/run`. Auth: the page is bearer-protected and WKWebView
+  drops a top-level `Authorization` header (and a cookie raced), so it fetches via
+  `URLSession` (Bearer) and renders the self-contained HTML with `loadHTMLString`.
+- **Dev API in the bundled sidecar** — `/api/dev/*` is `--dev`-gated, but the
+  desktop runs a production serve. The DEBUG build sets `_BRISTLENOSE_DEV_ENDPOINTS=1`
+  (`BristlenoseShared.childEnvironment`) to mount just the dev router (not SQLAdmin
+  / Vite). Release never sets it.
+- **#1/#2/#3/#4/#6** — reveal `.bristlenose/`, open log, copy provenance, web
+  inspector, live diagnostic-fixtures submenu. Ollama pill scenes moved to a
+  flyout submenu to declutter the top level.
+- **Build-time sidecar-staleness gate** — the desktop runs the *bundled* sidecar,
+  not live Python, so a Python change without a `build-sidecar.sh` rerun silently
+  ships old code (this cost a multi-hour debugging session — the very symptom this
+  whole branch exists to surface). `build-sidecar.sh` now stamps the bundle with a
+  fingerprint of `bristlenose/**/*.py`; the Xcode "Copy Sidecar Resources" phase
+  recomputes it (`check-sidecar-freshness.sh`) and **fails the build** on drift.
+  Shared recipe in `sidecar-source-hash.sh` (writer + checker can't diverge);
+  bypass with `BRISTLENOSE_ALLOW_STALE_SIDECAR=1`.
+
 ### Follow-ups
-- Native desktop **Debug ▸ Open Run Inspector** menu entry (Swift, needs a Mac).
+- #5 **Run Doctor…**, #7 **Sidecar controls**, #8 **Reset onboarding/consent** — not built.
 - A timing-history store would re-enable the convergence curve honestly.
+- The native window needs a `build-sidecar.sh` rerun to reflect Python changes
+  (the staleness gate now enforces this rather than letting it pass silently).

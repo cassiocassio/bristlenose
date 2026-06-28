@@ -1,6 +1,8 @@
 {
   "miro": {
     "howToGetToken": "\u00bfC\u00f3mo consigo un token?",
+    "boardNameLabel": "Nombre del tablero:",
+    "stickyColoursLabel": "Color de las notas:",
     "connected": "Conectado",
     "openInMiro": "Abrir en Miro\u2026",
     "connectPersistWarning": "Conectado, pero no se pudo guardar el token en tu Llavero; quiz\u00e1 tengas que volver a conectarte tras reiniciar."

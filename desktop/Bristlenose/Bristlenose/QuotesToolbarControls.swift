@@ -5,76 +5,90 @@ import SwiftUI
 /// ViewSwitcher are not rendered in embedded mode). Tag filtering is the tag
 /// sidebar, so there is no tag control here.
 ///
-/// REVIEW TARGETS (gruber / swiftui-pro + GUI QA):
-///  - Search uses a SwiftUI capsule + TextField rather than a true NSSearchField
-///    (NSSearchToolbarItem isn't directly reachable from a SwiftUI-hosted
-///    toolbar). Decide whether the native NSSearchField look is worth an
-///    NSViewRepresentable.
-///  - Focus-on-expand uses `.task` (not `.onAppear`, which is unreliable on
-///    toolbar-hosted views per desktop/CLAUDE.md). Verify it actually focuses.
-///  - Cmd+F currently still routes to the web `find` action (a no-op on the
-///    embedded Quotes field) — wiring Cmd+F to expand+focus this control needs
-///    shared state with the Find menu item; deferred, flagged.
+/// Search is a SwiftUI capsule + TextField rather than a true NSSearchField
+/// (NSSearchToolbarItem isn't directly reachable from a SwiftUI-hosted toolbar).
+/// Three reviewers converged on keeping the capsule — see
+/// docs/private/reviews/native-quotes-toolbar.md (consensus note).
 
 /// Expanding search: a magnifier button that reveals an inline search field.
+/// The field auto-expands when the store pushes a non-empty query (Cmd+E "Use
+/// Selection for Find", findNext) so the user always sees what the report is
+/// filtered by. Input is debounced 150ms before crossing the bridge, matching
+/// the SPA SearchBox the native field replaced.
 struct QuotesSearchToolbarControl: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
 
     @State private var expanded = false
     @State private var text = ""
+    @State private var debounce: Task<Void, Never>?
     @FocusState private var focused: Bool
 
     var body: some View {
-        if expanded {
-            HStack(spacing: 4) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                    .font(.system(size: 12))
-                TextField(i18n.t("desktop.toolbar.search"), text: $text)
-                    .textFieldStyle(.plain)
-                    .frame(width: 150)
-                    .focused($focused)
-                    .onChange(of: text) { _, newValue in
-                        bridgeHandler.setQuotesSearch(newValue)
+        Group {
+            if expanded {
+                HStack(spacing: 4) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                        .font(.system(size: 12))
+                    TextField(i18n.t("desktop.toolbar.search"), text: $text)
+                        .textFieldStyle(.plain)
+                        .frame(width: 150)
+                        .focused($focused)
+                        .onChange(of: text) { _, newValue in scheduleSearch(newValue) }
+                        .onSubmit { collapseIfEmpty() }
+                        .onExitCommand { clearAndCollapse() }
+                    if !text.isEmpty {
+                        Button(action: clear) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                                .font(.system(size: 12))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(i18n.t("desktop.toolbar.searchClear"))
                     }
-                    .onSubmit { collapseIfEmpty() }
-                    .onExitCommand { clearAndCollapse() }
-                if !text.isEmpty {
-                    Button(action: clear) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
-                            .font(.system(size: 12))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(i18n.t("desktop.toolbar.searchClear"))
                 }
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(.quaternary, in: Capsule())
+                // `.task` (not `.onAppear`) — toolbar-hosted views fire `.onAppear`
+                // unreliably on macOS 26 (desktop/CLAUDE.md). Seed only when empty
+                // so a re-expand mid-typing can't clobber an in-flight keystroke.
+                .task {
+                    if text.isEmpty { text = bridgeHandler.quotesSearchQuery }
+                    focused = true
+                }
+            } else {
+                Button { expanded = true } label: {
+                    Label(i18n.t("desktop.toolbar.search"), systemImage: "magnifyingglass")
+                }
+                // Tooltip says "Search", not "Search (⌘F)" — Cmd+F isn't wired to
+                // expand the native field yet, so don't advertise a dead shortcut.
+                .help(i18n.t("desktop.toolbar.search"))
             }
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(.quaternary, in: Capsule())
-            // `.task` (not `.onAppear`) — toolbar-hosted views fire `.onAppear`
-            // unreliably on macOS 26 (desktop/CLAUDE.md).
-            .task {
-                text = bridgeHandler.quotesSearchQuery
-                focused = true
-            }
-            // Mirror store-originated changes (All Quotes reset, Cmd+E selection)
-            // back into the field. Echo-guarded on value to avoid clobbering the
-            // user's in-flight typing.
-            .onChange(of: bridgeHandler.quotesSearchQuery) { _, newValue in
-                if newValue != text { text = newValue }
-            }
-        } else {
-            Button { expanded = true } label: {
-                Label(i18n.t("desktop.toolbar.search"), systemImage: "magnifyingglass")
-            }
-            .help(i18n.t("desktop.toolbar.searchShortcut"))
+        }
+        // Surface store-originated query changes (Cmd+E, findNext, All Quotes
+        // reset): expand the field and mirror the text so the user sees the term.
+        // Guarded so the SPA echo of the user's own typing never clobbers it.
+        .onChange(of: bridgeHandler.quotesSearchQuery) { _, newValue in
+            if !newValue.isEmpty { expanded = true }
+            if newValue != text { text = newValue }
+        }
+    }
+
+    /// Debounce 150ms before crossing the bridge (the SPA SearchBox did the same).
+    private func scheduleSearch(_ value: String) {
+        debounce?.cancel()
+        debounce = Task {
+            try? await Task.sleep(for: .milliseconds(150))
+            if Task.isCancelled { return }
+            bridgeHandler.setQuotesSearch(value)
         }
     }
 
     private func clear() {
         text = ""
+        debounce?.cancel()
         bridgeHandler.setQuotesSearch("")
     }
 
@@ -93,7 +107,7 @@ struct QuotesSearchToolbarControl: View {
 /// expectation; a self-explaining tooltip says why it's dim. Deliberate
 /// exception to the "toolbars morph" rule — search is conceptually universal,
 /// so a stable disabled slot reads better than a button that pops in and out.
-struct QuotesSearchDisabledButton: View {
+struct SearchComingSoonButton: View {
     @ObservedObject var i18n: I18n
 
     var body: some View {
@@ -105,24 +119,27 @@ struct QuotesSearchDisabledButton: View {
     }
 }
 
-/// Starred filter: a single star toggle (active when the lens is showing
-/// starred-only). Flips between the existing `allQuotes` / `starredQuotesOnly`
-/// SPA actions; active state mirrors `bridgeHandler.quotesViewMode`.
+/// Starred filter: a button-style toggle (the macOS-26 recessed/tinted selected
+/// background carries the active state). Flips between `starredQuotesOnly` and
+/// the view-mode-only `showAllQuotes` action — turning the filter off preserves
+/// a typed search query (star and search are orthogonal filters that compose).
+/// Active state mirrors `bridgeHandler.quotesViewMode` (SPA owns the truth).
 struct QuotesStarredToggle: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
 
-    private var isStarred: Bool { bridgeHandler.quotesViewMode == "starred" }
-
     var body: some View {
-        Button {
-            bridgeHandler.menuAction(isStarred ? "allQuotes" : "starredQuotesOnly")
-        } label: {
-            Label(
-                i18n.t("desktop.menu.view.starredQuotesOnly"),
-                systemImage: isStarred ? "star.fill" : "star"
-            )
+        Toggle(isOn: Binding(
+            get: { bridgeHandler.quotesViewMode == "starred" },
+            set: { on in bridgeHandler.menuAction(on ? "starredQuotesOnly" : "showAllQuotes") }
+        )) {
+            Label(i18n.t("desktop.menu.view.starredQuotesOnly"), systemImage: "star")
         }
-        .help(i18n.t(isStarred ? "desktop.menu.view.allQuotes" : "desktop.menu.view.starredQuotesOnly"))
+        .toggleStyle(.button)
+        .help(i18n.t(
+            bridgeHandler.quotesViewMode == "starred"
+                ? "desktop.menu.view.allQuotes"
+                : "desktop.menu.view.starredQuotesOnly"
+        ))
     }
 }

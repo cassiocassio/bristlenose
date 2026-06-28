@@ -15,8 +15,16 @@ import type { CodebookResponse } from "./types";
  * uses, and what Mail uses. */
 const SEP = " · ";
 
-/** "163 Quotes" — the count of currently-visible quotes (hidden excluded). */
-export function quotesSubtitle(visibleCount: number): string {
+/**
+ * "163 Quotes" — the count of currently-visible quotes (hidden excluded).
+ * When the starred filter is on, names the scope instead ("Starred quotes · 12")
+ * so the active filter is legible — embedded mode has no in-content view-mode
+ * label, so this subtitle is the scope cue.
+ */
+export function quotesSubtitle(visibleCount: number, starred = false): string {
+  if (starred) {
+    return `${i18n.t("quotes.starredQuotes")}${SEP}${visibleCount}`;
+  }
   return i18n.t("titlebar.quotes", { count: visibleCount });
 }
 

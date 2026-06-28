@@ -463,8 +463,14 @@ function AppShell() {
           break;
         }
         case "allQuotes":
+          // Explicit "All Quotes" command — full reset (search + tags + mode).
           setSearchQuery("");
           setTagFilter(EMPTY_TAG_FILTER);
+          setViewMode("all");
+          break;
+        case "showAllQuotes":
+          // Star toggle off — view mode only, preserves a typed search query
+          // (star and search are orthogonal filters that compose).
           setViewMode("all");
           break;
         case "starredQuotesOnly":

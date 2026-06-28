@@ -618,6 +618,31 @@ the speaker-code boundary). And the CLI is contradictory:
 (future idea) — not yet available."* — fix that message when un-parking (tracked as
 discrepancy #11 in the website repo's `NOTES-product-discrepancies.md`).
 
+**Account / workspace identity (29 Jun).** Both surfaces now show *which* Miro account a
+board will land in — a safety feature (researchers have personal + client accounts; a board
+in the wrong workspace is a real foot-gun). `miro_client.get_token_info()` calls Miro's
+token-introspection `GET /v1/oauth-token` (needs **no extra scope**) → account-holder name +
+team (the workspace new boards are created in) + organization (**Enterprise only**;
+personal/free accounts return `organization.name == team.name`). `routes/miro.py` `connect`
+fetches + caches on `app.state.miro_account`; `status` returns it (cached, stays cheap);
+`disconnect` clears it. `MiroStatusResponse` carries `user_name` / `team_name` / `org_name`.
+Email is deliberately **not** used (needs `identity:read` re-consent and is a weak
+disambiguator — reused across accounts, SSO).
+- **macOS** (`MiroSheet.swift`): "Miro status: ✓ Connected  [Disconnect]" + "Account:
+  martin · Dev team [· Org]" (`accountText()` de-dupes, case-insensitive, order-preserved)
+  + the notice names the destination ("Creates a new board in **{team}**", team picked out
+  semibold+primary, split on the `{{team}}` slot for word order). Nil parts hide.
+- **Web** (`MiroExportPanel.tsx`, 29 Jun backport): **information + behaviour parity** — the
+  same account line (`accountLine()`, identical lowercased de-dupe) and the same
+  destination notice (`renderNotice()` splits on the `{{team}}` placeholder, team in
+  `<strong>`). Rendered in the web's own modal idiom (stacked, "Connected · Disconnect"
+  link). The **visual chrome redesign** (colon-grid / glyph / real button to match macOS) is
+  a deliberately **deferred web-design pass** — not drift; keep the same status→account→
+  destination information architecture when it lands. Identity strings are **render-only**:
+  never logged, persisted, or in the HTML export (security-reviewed CLEAN). The web
+  `common.miro.boardDestination` and desktop `desktop.miro.boardDestination` are separate
+  keys (i18next vs `I18n.swift`) with byte-identical values across all 7 locales.
+
 **Truth table — where Send to Miro works:**
 
 | Channel | Reachable? | Connect (this session) | Survives restart |

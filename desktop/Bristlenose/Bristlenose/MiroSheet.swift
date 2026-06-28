@@ -225,21 +225,38 @@ struct MiroSheet: View {
                     .inlineLinkCursor().disabled(model.busy)
             }
             .frame(maxWidth: .infinity, alignment: .center)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(model.t("boardNameLabel")).font(.subheadline).foregroundStyle(.secondary)
-                TextField(model.t("boardNamePlaceholder"), text: $model.boardName)
-                    .textFieldStyle(.roundedBorder)
-            }
-            Toggle(model.t("colourBySentiment"), isOn: $model.colourBySentiment)
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle(model.t("linkClipsLabel"), isOn: $model.linkClips)
-                Text(model.t("linkClipsHint")).font(.subheadline).foregroundStyle(.secondary)
-                if model.linkClips {
-                    TextField(model.t("clipsBasePlaceholder"), text: $model.clipsBase)
+            // Right-aligned colon labels + left-aligned controls (Pages Export-
+            // dialog form). `.gridColumnAlignment(.trailing)` on the first cell
+            // right-aligns the whole label column; the stand-alone Link-clips
+            // checkbox gets an empty label cell so it indents to the control column
+            // (matching Pages' "Include comments" rows).
+            Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 12) {
+                GridRow(alignment: .firstTextBaseline) {
+                    Text(model.dt("boardNameLabel"))
+                        .foregroundStyle(.secondary)
+                        .gridColumnAlignment(.trailing)
+                    TextField(model.t("boardNamePlaceholder"), text: $model.boardName)
                         .textFieldStyle(.roundedBorder)
+                }
+                GridRow(alignment: .firstTextBaseline) {
+                    Text(model.dt("stickyColoursLabel"))
+                        .foregroundStyle(.secondary)
+                    Toggle(model.t("colourBySentiment"), isOn: $model.colourBySentiment)
+                }
+                GridRow(alignment: .top) {
+                    Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                    VStack(alignment: .leading, spacing: 4) {
+                        Toggle(model.t("linkClipsLabel"), isOn: $model.linkClips)
+                        Text(model.t("linkClipsHint")).font(.subheadline).foregroundStyle(.secondary)
+                        if model.linkClips {
+                            TextField(model.t("clipsBasePlaceholder"), text: $model.clipsBase)
+                                .textFieldStyle(.roundedBorder)
+                        }
+                    }
                 }
             }
             Text(model.t("uploadNotice")).font(.subheadline).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
             if let error = model.error {
                 Text(error).font(.callout).foregroundStyle(.red)
             }

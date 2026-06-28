@@ -74,7 +74,7 @@ struct MenuCommands: Commands {
         // (not a toolbar context menu, which macOS swallows for "Customize
         // Toolbar") so it's reliable, and reachable even when the pill is idle.
         CommandMenu("Debug") {
-            DebugMenuContent(ollamaDownload: ollamaDownload)
+            DebugMenuContent(ollamaDownload: ollamaDownload, serveManager: serveManager)
         }
         #endif
     }
@@ -87,6 +87,7 @@ struct MenuCommands: Commands {
 /// launch). View struct per the `@ObservedObject`-in-Commands pattern.
 private struct DebugMenuContent: View {
     @ObservedObject var ollamaDownload: OllamaDownloadModel
+    @ObservedObject var serveManager: ServeManager
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -95,6 +96,20 @@ private struct DebugMenuContent: View {
 
         Button("Run Inspector…") { openWindow(id: "run-inspector") }
             .keyboardShortcut("r", modifiers: [.command, .control])
+
+        Divider()
+
+        // Reveal-existing-data actions for the served project (the one whose
+        // report is on screen). See DebugMenuActions.
+        Button("Reveal .bristlenose/ in Finder") {
+            DebugMenuActions.revealInternalDir(serveManager: serveManager)
+        }
+        Button("Open Log in Console") {
+            DebugMenuActions.openLog(serveManager: serveManager)
+        }
+        Button("Copy Build Provenance") {
+            DebugMenuActions.copyBuildProvenance(serveManager: serveManager)
+        }
 
         Divider()
 

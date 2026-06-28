@@ -367,6 +367,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.16.1** — _28 Jun 2026_
+
+- **Send to Miro becomes a native macOS sheet, and shows exactly where the board will land.** On the desktop app the export moves into a native sheet with its own Keychain-held Miro connection, and names the connected account, workspace, and organisation plus the destination team before you push. The web report's Miro panel gains the same connected-account / workspace identity — `serve` users see it too. Desktop sheet next bundled-sidecar build; Miro-panel changes ship on PyPI.
+- **Desktop Quotes toolbar: a native search field and a starred-only toggle.** The Quotes search and "starred only" filter are now native macOS toolbar controls (the tag dropdown is gone). Desktop-only — next bundled-sidecar build.
+- **Fix: the native Miro export no longer 401s after switching projects.** The serve process resets its bearer token on a cold start, so the desktop app's token stays in sync with the freshly-booted server. The `serve` change ships on PyPI; the symptom was desktop-only.
+- **Desktop embedded report hides the web sidebar rails and close-×**, since the native sidebar owns navigation. Ships on PyPI; only takes effect embedded in the app.
+- **Contributor tooling:** a dev-only Run Inspector (`serve --dev`) over instrumentation the pipeline already captures, a native Debug menu (⌃⌘R), and a build-time sidecar-staleness gate. Developer-facing; no change to the report or exports.
+
 **0.16.0** — _27 Jun 2026_
 
 - **Send to Miro — push your analysed quotes onto a Miro board.** A new export builds a first-draft research wall: a fresh board per export, one column per section then per theme, pink section headers and yellow quote stickies coloured by sentiment. Connect by pasting a Miro access token (guided setup at `bristlenose.app/docs/send-to-miro.html`), preview credential-free, then push. Participant display names never leave your machine — codes only; hidden quotes excluded. Experimental, phase 1 (paste-token). SPA export menu now; macOS native menu next build.

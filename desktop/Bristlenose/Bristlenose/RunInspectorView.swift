@@ -58,7 +58,7 @@ private struct RunInspectorWebView: NSViewRepresentable {
         // window, instead of hunting the view in a detached Safari. Matches the
         // main report WebView (WebView.swift). DEBUG-only — the whole file is too.
         webView.isInspectable = true
-        webView.load(authedRequest)
+        loadAuthed(into: webView)
         return webView
     }
 
@@ -66,8 +66,33 @@ private struct RunInspectorWebView: NSViewRepresentable {
         // Reload only when the target changes (the port shifts across serve
         // restarts), to avoid SwiftUI re-render reload loops.
         if webView.url?.absoluteString != url.absoluteString {
-            webView.load(authedRequest)
+            loadAuthed(into: webView)
         }
+    }
+
+    /// `/api/dev/run` is bearer-protected. WKWebView does NOT reliably forward a
+    /// custom `Authorization` header on a top-level document load, so we
+    /// authenticate the navigation the way the server's middleware intends for
+    /// plain browser navigations: the `bristlenose_auth` cookie (the same cookie
+    /// the server sets when it serves `/report/`; this window never loads that,
+    /// so we seed it ourselves). Cookie store writes are async — load only after
+    /// it lands, or the first request races in uncredentialled. The Bearer header
+    /// stays as belt-and-braces in case a future WebKit honours it.
+    private func loadAuthed(into webView: WKWebView) {
+        guard let cookie = authCookie else { webView.load(authedRequest); return }
+        let store = webView.configuration.websiteDataStore.httpCookieStore
+        store.setCookie(cookie) { webView.load(authedRequest) }
+    }
+
+    /// Matches `middleware.AUTH_COOKIE_NAME` / `app.py`'s `set_cookie`.
+    private var authCookie: HTTPCookie? {
+        guard let host = url.host else { return nil }
+        return HTTPCookie(properties: [
+            .name: "bristlenose_auth",
+            .value: authToken,
+            .domain: host,   // 127.0.0.1
+            .path: "/",
+        ])
     }
 
     private var authedRequest: URLRequest {

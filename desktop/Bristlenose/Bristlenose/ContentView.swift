@@ -344,7 +344,12 @@ struct ContentView: View {
         }
     }
 
-    var body: some View {
+    /// The NavigationSplitView plus structural modifiers and the first cluster
+    /// of lifecycle / state-sync handlers. Split out of `body` so each modifier
+    /// chain type-checks within the Swift compiler's per-expression budget — the
+    /// merged chain tripped "unable to type-check this expression in reasonable
+    /// time". Pure refactor; no behaviour change.
+    private var splitViewCore: some View {
         NavigationSplitView {
             sidebar
         } detail: {
@@ -487,6 +492,10 @@ struct ContentView: View {
             dropTargetProjectID = nil
             dropTargetFolderID = nil
         }
+    }
+
+    var body: some View {
+        splitViewCore
         // AI & Privacy... re-access from app menu.
         .onReceive(NotificationCenter.default.publisher(for: .showAIConsentSheet)) { _ in
             aiConsentReviewMode = true

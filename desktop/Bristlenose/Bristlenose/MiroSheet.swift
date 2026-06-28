@@ -68,12 +68,29 @@ final class MiroSheetModel: ObservableObject {
 
     /// Upload notice — names the destination workspace when known ("Creates a new
     /// board in <team>. …") so the safety-critical fact sits right above Create
-    /// board; falls back to the plain notice when the team isn't known.
-    func noticeText() -> String {
-        if let team = teamName, !team.isEmpty {
-            return dt("boardDestination", ["team": team]) + " " + t("uploadNotice")
+    /// board; falls back to the plain notice when the team isn't known. The team
+    /// is picked out (semibold + primary) against the secondary notice. Built as
+    /// an AttributedString so the emphasis lands only on the team run and honours
+    /// each locale's word order (the {{team}} slot moves: "… dans {{team}}." /
+    /// "{{team}}に…").
+    func noticeText() -> AttributedString {
+        let upload = AttributedString(t("uploadNotice"))
+        guard let team = teamName, !team.isEmpty else { return upload }
+        let template = dt("boardDestination")  // localised, contains "{{team}}"
+        var line = AttributedString()
+        if let r = template.range(of: "{{team}}") {
+            line += AttributedString(String(template[..<r.lowerBound]))
+            var teamRun = AttributedString(team)
+            teamRun.font = .subheadline.weight(.semibold)
+            teamRun.foregroundColor = .primary
+            line += teamRun
+            line += AttributedString(String(template[r.upperBound...]))
+        } else {
+            line += AttributedString(template.replacingOccurrences(of: "{{team}}", with: team))
         }
-        return t("uploadNotice")
+        line += AttributedString(" ")
+        line += upload
+        return line
     }
 
     /// "Board ready — N quote stickies placed", count-correct, with a fallback to

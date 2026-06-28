@@ -93,6 +93,9 @@ private struct DebugMenuContent: View {
         Button("Type Parity Inspector…") { openWindow(id: "type-parity") }
             .keyboardShortcut("t", modifiers: [.command, .control])
 
+        Button("Run Inspector…") { openWindow(id: "run-inspector") }
+            .keyboardShortcut("r", modifiers: [.command, .control])
+
         Divider()
 
         Section("Ollama setup pill") {

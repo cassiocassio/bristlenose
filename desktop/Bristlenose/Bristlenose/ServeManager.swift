@@ -151,6 +151,17 @@ final class ServeManager: ObservableObject {
         generation += 1
         state = .starting
         outputLines = []
+        // Clean slate for this sidecar's stdout captures. Critical for the cold
+        // path of switchProject(to:), which *parks* the outgoing sidecar rather
+        // than stop()-ing it — so `process` is nil here, the defensive stop()
+        // above doesn't fire, and a non-nil authToken from the previous sidecar
+        // would make handleLine's `if authToken == nil` guard SKIP the new
+        // sidecar's `[bristlenose] auth-token:` line. The native MiroAPI then
+        // sends the stale bearer to the fresh sidecar → 401 Unauthorized (the
+        // WebView survives on cookie auth, masking it). The warm re-point path
+        // sets authToken directly via adoptFronted and never reaches here.
+        authToken = nil
+        serverVersion = nil
 
         // External mode: no subprocess. Just point at the existing server.
         if case .external(let port) = mode {

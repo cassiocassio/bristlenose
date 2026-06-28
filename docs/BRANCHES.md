@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 28 Jun 2026 (`spa-sidebar-layout` merged to main + closed — desktop embedded mode shipped; worktree detached + tagged orange on disk, local branch deleted, remote was never pushed.)
+**Updated:** 28 Jun 2026 (`figjam-miro-market-share` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
 
 ---
 
@@ -39,7 +39,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
-| `bristlenose_branch_figjam-miro-market-share/` | `claude/figjam-miro-market-share-px52tg` | feature | Miro bridge (imported from cloud, PR #120) — quotes → Miro board export |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -124,8 +123,8 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
-| `claude/figjam-miro-market-share-px52tg` | `bristlenose_branch_figjam-miro-market-share/` | `origin/claude/figjam-miro-market-share-px52tg` (PR #120) |
 | `claude/debug-menu-instrumentation-4r9npy` _(merged)_ | _(worktree removed)_ | `origin/...` — merged to main 28 Jun 2026 (`252c1ce3`) |
+| `claude/figjam-miro-market-share-px52tg` _(merged)_ | `bristlenose_branch_figjam-miro-market-share/` _(detached, on disk)_ | local deleted — merged to main 28 Jun 2026 (66bc28c4) |
 | `claude/spa-sidebar-layout-9mlndt` _(merged)_ | `bristlenose_branch spa-sidebar-layout/` _(detached, on disk)_ | local only — merged to main 28 Jun 2026 (97c4fb42) |
 | `claude/dynamic-codebook-builder-67r2fa` _(merged)_ | `bristlenose_branch dynamic-codebook-builder/` _(detached, on disk)_ | local + remote deleted — merged to main 27 Jun 2026 (c4189047) |
 | `multi-project-drag-onto` _(merged)_ | `bristlenose_branch multi-project-drag-onto/` _(detached, on disk)_ | local only — merged to main 15 May 2026 |
@@ -153,29 +152,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `figjam-miro-market-share` (imported from cloud)
-
-**Kind:** feature — Miro bridge: export quotes → a Miro board (layout engine, creds-free preview, REST client, export service, routes, React panel). Experimental first-draft slice, built in the cloud.
-**Status:** Imported from cloud + brought up on Mac 24 Jun 2026 — compiles, runs, full test suite green (3080 passed). NOT yet merge-ready (see blockers).
-**Started:** 23 Jun 2026 (cloud) · imported to Mac 24 Jun 2026
-**Local branch:** `claude/figjam-miro-market-share-px52tg` (keeps the cloud ref so push updates the PR)
-**Worktree:** `/Users/cassio/Code/bristlenose_branch_figjam-miro-market-share/`
-**Remote:** `origin/claude/figjam-miro-market-share-px52tg` — **PR [#120](https://github.com/cassiocassio/bristlenose/pull/120)** (OPEN, base main, CONFLICTING)
-
-**What it does:** Adds a "Send to Miro" path to the Quotes export menu. Backend layout engine + preview renderer + httpx Miro REST client (OAuth/PKCE + paste-token) + synchronous export service. Built in the cloud without a venv, so the server-side modules were syntax-only until this Mac import verified them.
-
-**Brought-up-on-Mac notes:** `.claude/from-cloud-import-notes.md` in the worktree. One real defect found by running the suite (cloud couldn't): `disconnect` now clears the OAuth refresh token too, but its test still expected one delete — fixed the test (handler behaviour is correct).
-
-**Blockers before merge:**
-- **Conflicts with main** (2 files): `docs/design-miro-bridge.md` (doc), `frontend/src/components/ExportDropdown.tsx` (main has its own earlier miro slice). Resolve via rebase/merge onto local main.
-- **i18n (A4):** panel strings are hardcoded English; 7-locale extraction is a pre-merge size-gate blocker the cloud flagged.
-- OAuth callback auth posture is a deferred decision (paste-token works today).
-
-**Potential conflicts with other branches:**
-- `frontend/src/components/ExportDropdown.tsx` is a hotspot — any branch touching the export menu will collide.
 
 ---
 
@@ -285,6 +261,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `figjam-miro-market-share` — merged 28 Jun 2026
+
+Feature (backend) — Miro bridge: export quotes to a Miro board. Backend layout engine + preview renderer + httpx Miro REST client (OAuth/PKCE + paste-token) + synchronous export service. Built in the cloud; brought up on Mac 24 Jun 2026 with one defect (test expectation mismatch on OAuth disconnect, fixed). Full test suite green (3080 passed on import, 3191 passed post-merge). Adds a "Send to Miro" path to the Quotes export menu. Merges cleanly to main. i18n panel strings remain English-only in shipped code (deferred for post-experiment localization). Worktree detached and tagged orange on disk; local branch deleted, remote never pushed.
 
 ### `spa-sidebar-layout` — merged 28 Jun 2026
 

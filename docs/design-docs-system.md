@@ -2,7 +2,10 @@
 
 > **Status:** proposal / working spec. Pairs with the mockup at
 > [`docs/mockups/docs-site-mockup.html`](mockups/docs-site-mockup.html) and the
-> integration plan in [`design-website-v2.md`](design-website-v2.md).
+> integration plan in [`design-website-v2.md`](design-website-v2.md). The
+> *versioning* axis (current / pre-release / archived-by-minor; path not dropdown;
+> in-package docs as a free per-version archive) is split into
+> [`design-docs-versioning.md`](design-docs-versioning.md).
 > Read alongside the help-delivery thread (universal markdown → web + in-package
 > sidecar `/docs/`, system-browser viewer, channel-fork, i18n boundary).
 > Part B (writing style) is the standard the **`user-documentation-review`** agent

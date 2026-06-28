@@ -74,7 +74,7 @@ struct MenuCommands: Commands {
         // (not a toolbar context menu, which macOS swallows for "Customize
         // Toolbar") so it's reliable, and reachable even when the pill is idle.
         CommandMenu("Debug") {
-            DebugMenuContent(ollamaDownload: ollamaDownload)
+            DebugMenuContent(ollamaDownload: ollamaDownload, serveManager: serveManager)
         }
         #endif
     }
@@ -87,17 +87,55 @@ struct MenuCommands: Commands {
 /// launch). View struct per the `@ObservedObject`-in-Commands pattern.
 private struct DebugMenuContent: View {
     @ObservedObject var ollamaDownload: OllamaDownloadModel
+    @ObservedObject var serveManager: ServeManager
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Button("Type Parity Inspector…") { openWindow(id: "type-parity") }
             .keyboardShortcut("t", modifiers: [.command, .control])
 
+        Button("Run Inspector…") { openWindow(id: "run-inspector") }
+            .keyboardShortcut("r", modifiers: [.command, .control])
+
         Divider()
 
-        Section("Ollama setup pill") {
-            Button("Cycle ▸ next state") { ollamaDownload.debugCycleNext() }
-                .keyboardShortcut("o", modifiers: [.command, .control])
+        // Reveal-existing-data actions for the served project (the one whose
+        // report is on screen). See DebugMenuActions.
+        Button("Reveal .bristlenose/ in Finder") {
+            DebugMenuActions.revealInternalDir(serveManager: serveManager)
+        }
+        Button("Open Log in Console") {
+            DebugMenuActions.openLog(serveManager: serveManager)
+        }
+        Button("Copy Build Provenance") {
+            DebugMenuActions.copyBuildProvenance(serveManager: serveManager)
+        }
+
+        // Inject a synthesized diagnostic state into the SELECTED project's
+        // sidebar row — flip popover/indicator scenes live, no relaunch. Posts
+        // to ContentView, which owns the selection. (Previously env-var-only.)
+        Menu("Diagnostic fixtures ▸ selected project") {
+            ForEach(DiagnosticFixture.summaryScenarioNames, id: \.self) { name in
+                Button(name) { postFixture(name) }
+            }
+            Divider()
+            ForEach(DiagnosticFixture.simpleStateNames, id: \.self) { name in
+                Button(name) { postFixture(name) }
+            }
+            Divider()
+            Button(DiagnosticFixture.noSummaryScenarioName) {
+                postFixture(DiagnosticFixture.noSummaryScenarioName)
+            }
+        }
+
+        Divider()
+
+        // Flyout submenu — the pill state harness is a deep but rarely-needed
+        // list; keep the top-level Debug menu to the inspectors + a Cycle
+        // shortcut, and tuck the per-scene buttons behind one hover.
+        Button("Cycle Ollama pill ▸ next state") { ollamaDownload.debugCycleNext() }
+            .keyboardShortcut("o", modifiers: [.command, .control])
+        Menu("Ollama setup pill") {
             ForEach(OllamaDownloadModel.DebugScene.allCases, id: \.self) { scene in
                 Button(scene.label) { ollamaDownload.debugApply(scene) }
             }
@@ -105,6 +143,20 @@ private struct DebugMenuContent: View {
             Button("Hide pill (idle)") { ollamaDownload.cancel() }
         }
     }
+
+    /// Ask ContentView (which owns the sidebar selection) to inject `name` into
+    /// the selected project. Mirrors the `.createNewProject` notification idiom.
+    private func postFixture(_ name: String) {
+        NotificationCenter.default.post(
+            name: .applyDebugFixture, object: nil, userInfo: ["scenario": name]
+        )
+    }
+}
+
+extension Notification.Name {
+    /// DEBUG only — posted by Debug ▸ Diagnostic fixtures; observed by
+    /// ContentView, which applies the named fixture to the selected project.
+    static let applyDebugFixture = Notification.Name("bristlenoseApplyDebugFixture")
 }
 #endif
 

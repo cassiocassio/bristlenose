@@ -220,11 +220,18 @@ def create_app(
         def _codebook_lab() -> HTMLResponse:
             return HTMLResponse(build_codebook_lab_html(app.state.auth_token))
 
-    if dev:
+    # Dev API router (/api/dev/*, incl. the Run Inspector). Mounted under
+    # `serve --dev` OR when `_BRISTLENOSE_DEV_ENDPOINTS=1` — the latter is set
+    # by the DEBUG desktop build's sidecar so its native Run Inspector window
+    # can reach /api/dev/run without flipping the whole app into Vite/HMR dev
+    # mode. The Release desktop build never sets it, so production stays clean.
+    # Heavier dev surfaces (SQLAdmin, playground) stay gated on real `dev`.
+    if dev or os.environ.get("_BRISTLENOSE_DEV_ENDPOINTS") == "1":
         from bristlenose.server.routes.dev import router as dev_router
 
         app.include_router(dev_router)
 
+    if dev:
         # SQLAdmin database browser (dev-only)
         from sqladmin import Admin as SQLAdmin
 

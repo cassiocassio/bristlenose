@@ -30,6 +30,15 @@ DIST="$DESKTOP_DIR/Bristlenose/Resources"
 WORK="$DESKTOP_DIR/build/pyinstaller"
 BUNDLE="$DIST/bristlenose-sidecar"
 
+# Fingerprint the Python source NOW — before pip/PyInstaller run — so the stamp
+# reflects exactly what gets bundled, uncontaminated by any transient .py a build
+# step might drop under bristlenose/ (which would otherwise make the stamp
+# disagree with check-sidecar-freshness.sh's clean-tree recompute). Written to
+# the bundle near the end. See sidecar-source-hash.sh for the shared recipe.
+# shellcheck source=sidecar-source-hash.sh
+. "$SCRIPT_DIR/sidecar-source-hash.sh"
+SOURCE_HASH="$(sidecar_source_hash "$ROOT")"
+
 if ! command -v python3.12 >/dev/null; then
     echo "error: python3.12 not found on PATH" >&2
     echo "run: brew install python@3.12" >&2
@@ -97,6 +106,18 @@ if [ ! -f "$PRIVACY_SRC" ]; then
 fi
 cp "$PRIVACY_SRC" "$PRIVACY_DST"
 echo "==> Privacy manifest: $PRIVACY_DST"
+
+# Stamp the bundle with the source fingerprint captured at build START (above).
+# The Xcode "Copy Sidecar Resources" phase recomputes it (check-sidecar-freshness.sh)
+# and fails the build if a later Python change left the bundle stale — the desktop
+# app runs the bundled sidecar, not live Python, so a missed rebuild silently
+# ships old code. Written BEFORE sign-sidecar.sh so it's covered by the seal.
+{
+    echo "$SOURCE_HASH"
+    echo "version=$("$PYTHON" -c 'import bristlenose; print(bristlenose.__version__)' 2>/dev/null || echo unknown)"
+    echo "note=fingerprint of bristlenose/**/*.py; see check-sidecar-freshness.sh"
+} > "$BUNDLE/.source-stamp"
+echo "==> Stamped .source-stamp: $(head -1 "$BUNDLE/.source-stamp" | cut -c1-12)…"
 
 echo "==> Done. Bundle: $BUNDLE"
 echo "    Next: desktop/scripts/sign-sidecar.sh"

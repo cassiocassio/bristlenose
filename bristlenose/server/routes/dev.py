@@ -327,6 +327,11 @@ def dev_info(request: Request) -> dict[str, object]:
                 "description": "Jinja2-rendered sessions table (visual diff)",
             },
             {
+                "label": "Run Inspector",
+                "url": "/api/dev/run",
+                "description": "Infoviz over llm-calls / pipeline-events / timing",
+            },
+            {
                 "label": "Visual Diff",
                 "url": "http://localhost:5173/visual-diff.html",
                 "description": "Side-by-side React vs Jinja2 comparison",
@@ -339,6 +344,63 @@ def dev_info(request: Request) -> dict[str, object]:
         ],
         "design_sections": _discover_design_files(),
     }
+
+
+# ---------------------------------------------------------------------------
+# Run Inspector — infoviz over instrumentation the pipeline already captures.
+# Data shaping + HTML live in run_inspector.py (pure, stdlib-only); these
+# endpoints are thin wrappers. See docs/design-debug-menu.md.
+# ---------------------------------------------------------------------------
+
+
+def _build_run_payload(request: Request) -> dict[str, object]:
+    from bristlenose import __version__
+    from bristlenose._build import build_date, build_sha
+    from bristlenose.server import run_inspector
+
+    project_dir = getattr(request.app.state, "project_dir", None) or _Path.cwd()
+    internal_dir = run_inspector.resolve_internal_dir(_Path(project_dir))
+    config_dir = _Path.home() / ".config" / "bristlenose"
+
+    db_url: str = getattr(request.app.state, "db_url", "")
+    db_path = db_url.removeprefix("sqlite:///") if db_url else "(in-memory)"
+
+    # Best-effort project name from the DB; fall back to the folder name.
+    project_name = _Path(project_dir).name
+    try:
+        db = _get_db(request)
+        try:
+            proj = db.query(Project).filter(Project.id == 1).first()
+            if proj is not None and proj.name:
+                project_name = proj.name
+        finally:
+            db.close()
+    except Exception:  # noqa: BLE001 — name is cosmetic; never fail the page
+        pass
+
+    return run_inspector.build_run_data(
+        internal_dir,
+        config_dir,
+        version=__version__,
+        sha=build_sha(),
+        build_date=build_date(),
+        project_name=project_name,
+        db_path=db_path,
+    )
+
+
+@router.get("/run.json")
+def dev_run_json(request: Request) -> dict[str, object]:
+    """Raw Run Inspector payload (the same data the HTML page renders)."""
+    return _build_run_payload(request)
+
+
+@router.get("/run", response_class=HTMLResponse)
+def dev_run_html(request: Request) -> HTMLResponse:
+    """Self-contained dev Run Inspector page (infoviz over run instrumentation)."""
+    from bristlenose.server.run_inspector import build_run_inspector_html
+
+    return HTMLResponse(build_run_inspector_html(_build_run_payload(request)))
 
 
 def _oxford_list(parts: list[str]) -> str:

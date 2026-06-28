@@ -100,6 +100,15 @@ struct BristlenoseApp: App {
             TypeParityView()
         }
         .defaultSize(width: 1200, height: 820)
+
+        // DEBUG-only Run Inspector — infoviz over the last run's instrumentation,
+        // served from `/api/dev/run`. Needs the serve URL + token, so inject the
+        // shared ServeManager.
+        Window("Run Inspector", id: "run-inspector") {
+            RunInspectorView()
+                .environmentObject(serveManager)
+        }
+        .defaultSize(width: 1000, height: 720)
         #endif
     }
 }

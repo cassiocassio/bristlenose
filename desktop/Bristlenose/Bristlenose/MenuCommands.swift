@@ -756,9 +756,9 @@ private struct QuotesMenuContent: View {
 
         // Send to Miro — mirrors the toolbar popover's Miro row. Always enabled
         // (uploads the project's quotes regardless of the active tab), matching
-        // the popover. Opens the existing React MiroExportPanel via the bridge.
+        // the popover. Presents the native MiroSheet (ContentView owns the .sheet).
         Button(i18n.t("common.miro.menuLabel")) {
-            bridgeHandler.menuAction("sendToMiro")
+            NotificationCenter.default.post(name: .showMiroSheet, object: nil)
         }
 
         Divider()

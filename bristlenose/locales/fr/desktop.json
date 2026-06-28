@@ -1,4 +1,10 @@
 {
+  "miro": {
+    "howToGetToken": "Comment obtenir un jeton ?",
+    "connected": "Connect\u00e9",
+    "openInMiro": "Ouvrir dans Miro\u2026",
+    "connectPersistWarning": "Connect\u00e9, mais le jeton n\u2019a pas pu \u00eatre enregistr\u00e9 dans votre trousseau \u2014 vous devrez peut-\u00eatre vous reconnecter apr\u00e8s le red\u00e9marrage."
+  },
   "menu": {
     "app": {
       "about": "À propos de Bristlenose",

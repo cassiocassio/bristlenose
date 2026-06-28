@@ -104,6 +104,13 @@ final class ServeManager: ObservableObject {
         return URL(string: "http://127.0.0.1:\(port)/report/")
     }
 
+    /// The kernel-assigned port when serve is running (nil otherwise). Used by
+    /// native localhost API clients (e.g. `MiroAPI`) alongside `authToken`.
+    var runningPort: Int? {
+        guard case .running(let port) = state else { return nil }
+        return port
+    }
+
     private var process: Process?
     private var readTask: Task<Void, Never>?
     private var timeoutTask: Task<Void, Never>?

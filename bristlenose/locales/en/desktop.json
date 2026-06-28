@@ -1,4 +1,10 @@
 {
+  "miro": {
+    "howToGetToken": "How do I get a token?",
+    "connected": "Connected",
+    "openInMiro": "Open in Miro\u2026",
+    "connectPersistWarning": "Connected, but couldn\u2019t save the token to your Keychain \u2014 you may need to reconnect after restarting."
+  },
   "menu": {
     "app": {
       "about": "About Bristlenose",

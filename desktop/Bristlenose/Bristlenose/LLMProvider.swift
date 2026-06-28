@@ -281,6 +281,9 @@ extension Notification.Name {
     static let showAIConsentSheet = Notification.Name("showAIConsentSheet")
     /// Posted by the app menu to show the Build Info diagnostic sheet.
     static let showBuildInfoSheet = Notification.Name("showBuildInfoSheet")
+    /// Posted by the Export popover row + Quotes-menu item to present the native
+    /// Send-to-Miro sheet (ContentView owns the `.sheet`).
+    static let showMiroSheet = Notification.Name("showMiroSheet")
 }
 
 // MARK: - Ollama catalog

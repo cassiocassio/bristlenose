@@ -54,6 +54,12 @@ vi.mock("../contexts/PlaygroundStore", () => ({
   usePlaygroundStore: () => mockPlayground,
 }));
 
+// Mock embedded detection — default false (browser); flip per-test.
+let mockEmbedded = false;
+vi.mock("../utils/embedded", () => ({
+  isEmbedded: () => mockEmbedded,
+}));
+
 // Mock SidebarStore — we control state via mockState.
 const mockOpenTocPush = vi.fn();
 const mockToggleTags = vi.fn();
@@ -98,6 +104,7 @@ beforeEach(() => {
     hiddenTagGroups: new Set(),
   };
   mockPlayground = { hoverDelay: null, leaveGrace: null, overlayStyle: null };
+  mockEmbedded = false;
 });
 
 // ── Tests ────────────────────────────────────────────────────────────────
@@ -336,5 +343,72 @@ describe("overlay animation", () => {
     );
     const stub = screen.getByTestId("toc-sidebar-stub");
     expect(stub.getAttribute("data-has-overlay-close")).toBe("true");
+  });
+});
+
+describe("embedded mode (macOS desktop)", () => {
+  it("adds .embedded class to the active grid", () => {
+    mockEmbedded = true;
+    const { container } = render(
+      <SidebarLayout active={true}>
+        <div>Content</div>
+      </SidebarLayout>,
+    );
+    expect(container.querySelector(".layout.embedded")).toBeTruthy();
+  });
+
+  it("adds .embedded class to the inert layout (active=false)", () => {
+    mockEmbedded = true;
+    const { container } = render(
+      <SidebarLayout active={false}>
+        <div>Content</div>
+      </SidebarLayout>,
+    );
+    expect(container.querySelector(".layout.layout-inert.embedded")).toBeTruthy();
+  });
+
+  it("hides the TOC close-× when the sidebar is open in push mode", () => {
+    mockEmbedded = true;
+    mockState = { ...mockState, tocMode: "push" };
+    render(
+      <SidebarLayout active={true}>
+        <div>Content</div>
+      </SidebarLayout>,
+    );
+    expect(screen.queryByLabelText("Close table of contents")).toBeNull();
+  });
+
+  it("hides the tag close-× when the tag sidebar is open", () => {
+    mockEmbedded = true;
+    mockState = { ...mockState, tagsOpen: true };
+    render(
+      <SidebarLayout active={true}>
+        <div>Content</div>
+      </SidebarLayout>,
+    );
+    expect(screen.queryByLabelText("Close tag sidebar")).toBeNull();
+  });
+
+  it("makes the center region programmatically focusable (tabIndex -1)", () => {
+    mockEmbedded = true;
+    const { container } = render(
+      <SidebarLayout active={true}>
+        <div>Content</div>
+      </SidebarLayout>,
+    );
+    const center = container.querySelector(".center") as HTMLElement;
+    expect(center.getAttribute("tabindex")).toBe("-1");
+  });
+
+  it("keeps both close-× buttons in the browser (not embedded)", () => {
+    mockEmbedded = false;
+    mockState = { ...mockState, tocMode: "push", tagsOpen: true };
+    render(
+      <SidebarLayout active={true}>
+        <div>Content</div>
+      </SidebarLayout>,
+    );
+    expect(screen.getByLabelText("Close table of contents")).toBeTruthy();
+    expect(screen.getByLabelText("Close tag sidebar")).toBeTruthy();
   });
 });

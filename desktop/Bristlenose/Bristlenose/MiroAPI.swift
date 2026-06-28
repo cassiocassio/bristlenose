@@ -27,16 +27,23 @@ struct MiroAPI {
         let connected: Bool
         let user_name: String?
         let team_name: String?
+        let org_name: String?
     }
     private struct ExportResponse: Decodable { let board_url: String; let stickies: Int }
     private struct ErrorBody: Decodable { let detail: String? }
 
     /// Connection state + account identity surfaced to the configure screen.
     /// `userName` is the account holder; `teamName` is the workspace new boards
-    /// land in (the disambiguator for users with several Miro accounts). Both nil
+    /// land in; `orgName` is the company (Enterprise only — nil for personal
+    /// accounts). The trio disambiguates users with several Miro accounts. All nil
     /// when identity couldn't be fetched (older sidecar / network) — the sheet
     /// degrades to a plain "Connected".
-    struct Connection { let connected: Bool; let userName: String?; let teamName: String? }
+    struct Connection {
+        let connected: Bool
+        let userName: String?
+        let teamName: String?
+        let orgName: String?
+    }
 
     /// Board-creation result surfaced to the done screen.
     struct ExportResult { let boardURL: String; let stickies: Int }
@@ -75,14 +82,15 @@ struct MiroAPI {
     /// this to a context where "no token" and "couldn't tell" must be distinguished.
     func status() async -> Connection {
         guard let req = request("/status", method: "GET") else {
-            return Connection(connected: false, userName: nil, teamName: nil)
+            return Connection(connected: false, userName: nil, teamName: nil, orgName: nil)
         }
         guard let (data, resp) = try? await URLSession.shared.data(for: req),
               let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode),
               let parsed = try? JSONDecoder().decode(StatusResponse.self, from: data) else {
-            return Connection(connected: false, userName: nil, teamName: nil)
+            return Connection(connected: false, userName: nil, teamName: nil, orgName: nil)
         }
-        return Connection(connected: parsed.connected, userName: parsed.user_name, teamName: parsed.team_name)
+        return Connection(connected: parsed.connected, userName: parsed.user_name,
+                          teamName: parsed.team_name, orgName: parsed.org_name)
     }
 
     /// POST connect — validate + store a pasted token. Throws `APIError` with the
@@ -101,7 +109,8 @@ struct MiroAPI {
         }
         let parsed = try? JSONDecoder().decode(StatusResponse.self, from: data)
         return Connection(connected: parsed?.connected ?? true,
-                          userName: parsed?.user_name, teamName: parsed?.team_name)
+                          userName: parsed?.user_name, teamName: parsed?.team_name,
+                          orgName: parsed?.org_name)
     }
 
     /// POST disconnect — remove the stored token. Best-effort: the meaningful act

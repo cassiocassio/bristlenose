@@ -3,6 +3,9 @@
     "howToGetToken": "Comment obtenir un jeton ?",
     "boardNameLabel": "Nom du tableau :",
     "stickyColoursLabel": "Couleur des pense-b\u00eates :",
+    "miroStatusLabel": "\u00c9tat Miro :",
+    "accountLabel": "Compte :",
+    "boardDestination": "Cr\u00e9e un nouveau tableau dans {team}.",
     "connected": "Connect\u00e9",
     "openInMiro": "Ouvrir dans Miro\u2026",
     "connectPersistWarning": "Connect\u00e9, mais le jeton n\u2019a pas pu \u00eatre enregistr\u00e9 dans votre trousseau \u2014 vous devrez peut-\u00eatre vous reconnecter apr\u00e8s le red\u00e9marrage."

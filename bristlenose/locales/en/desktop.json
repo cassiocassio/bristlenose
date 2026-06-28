@@ -3,6 +3,9 @@
     "howToGetToken": "How do I get a token?",
     "boardNameLabel": "Board name:",
     "stickyColoursLabel": "Sticky colours:",
+    "miroStatusLabel": "Miro status:",
+    "accountLabel": "Account:",
+    "boardDestination": "Creates a new board in {team}.",
     "connected": "Connected",
     "openInMiro": "Open in Miro\u2026",
     "connectPersistWarning": "Connected, but couldn\u2019t save the token to your Keychain \u2014 you may need to reconnect after restarting."

@@ -23,9 +23,20 @@ struct MiroAPI {
         var errorDescription: String? { message }
     }
 
-    private struct StatusResponse: Decodable { let connected: Bool }
+    private struct StatusResponse: Decodable {
+        let connected: Bool
+        let user_name: String?
+        let team_name: String?
+    }
     private struct ExportResponse: Decodable { let board_url: String; let stickies: Int }
     private struct ErrorBody: Decodable { let detail: String? }
+
+    /// Connection state + account identity surfaced to the configure screen.
+    /// `userName` is the account holder; `teamName` is the workspace new boards
+    /// land in (the disambiguator for users with several Miro accounts). Both nil
+    /// when identity couldn't be fetched (older sidecar / network) — the sheet
+    /// degrades to a plain "Connected".
+    struct Connection { let connected: Bool; let userName: String?; let teamName: String? }
 
     /// Board-creation result surfaced to the done screen.
     struct ExportResult { let boardURL: String; let stickies: Int }
@@ -62,20 +73,22 @@ struct MiroAPI {
     /// idempotent — re-pasting a token just re-runs `/connect`; a transient server
     /// error at worst costs the user one extra paste, never wrong data. Don't widen
     /// this to a context where "no token" and "couldn't tell" must be distinguished.
-    func status() async -> Bool {
-        guard let req = request("/status", method: "GET") else { return false }
+    func status() async -> Connection {
+        guard let req = request("/status", method: "GET") else {
+            return Connection(connected: false, userName: nil, teamName: nil)
+        }
         guard let (data, resp) = try? await URLSession.shared.data(for: req),
               let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode),
               let parsed = try? JSONDecoder().decode(StatusResponse.self, from: data) else {
-            return false
+            return Connection(connected: false, userName: nil, teamName: nil)
         }
-        return parsed.connected
+        return Connection(connected: parsed.connected, userName: parsed.user_name, teamName: parsed.team_name)
     }
 
     /// POST connect — validate + store a pasted token. Throws `APIError` with the
     /// server reason (invalid token / missing scope / network) on failure.
     @discardableResult
-    func connect(token miroToken: String) async throws -> Bool {
+    func connect(token miroToken: String) async throws -> Connection {
         guard let req = request("/connect", method: "POST", body: ["token": miroToken]) else {
             throw APIError(message: "Could not reach the local server.")
         }
@@ -86,7 +99,9 @@ struct MiroAPI {
         guard (200..<300).contains(http.statusCode) else {
             throw APIError(message: detail(from: data, status: http.statusCode))
         }
-        return (try? JSONDecoder().decode(StatusResponse.self, from: data))?.connected ?? true
+        let parsed = try? JSONDecoder().decode(StatusResponse.self, from: data)
+        return Connection(connected: parsed?.connected ?? true,
+                          userName: parsed?.user_name, teamName: parsed?.team_name)
     }
 
     /// POST disconnect — remove the stored token. Best-effort: the meaningful act

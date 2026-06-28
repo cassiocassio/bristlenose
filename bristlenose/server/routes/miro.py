@@ -40,6 +40,7 @@ _OAUTH_STATES: dict[str, tuple[str, int]] = {}
 class MiroStatusResponse(BaseModel):
     connected: bool
     user_name: str | None = None
+    team_name: str | None = None  # the workspace new boards are created in
 
 
 class MiroConnectRequest(BaseModel):
@@ -109,7 +110,20 @@ def miro_status(project_id: int, request: Request) -> MiroStatusResponse:
         _check_project(db, project_id)
         token = _miro_token(request)
         logger.info("miro_token_trace event=status persisted_source=%s", get_credential_source("miro"))
-        return MiroStatusResponse(connected=bool(token))
+        if not token:
+            return MiroStatusResponse(connected=False)
+        # Identity (account holder + destination team) — cached on app.state so
+        # status stays cheap. Cold (env-injected token after restart, never
+        # connected this session) fetches once. Best-effort: nil on any failure.
+        account = getattr(request.app.state, "miro_account", None)
+        if account is None:
+            account = miro_client.get_token_info(token)
+            request.app.state.miro_account = account
+        return MiroStatusResponse(
+            connected=True,
+            user_name=account.get("user_name"),
+            team_name=account.get("team_name"),
+        )
     finally:
         db.close()
 
@@ -162,6 +176,12 @@ def miro_connect(
     # naturally gone on restart (the Keychain/env path takes over by then).
     request.app.state.miro_session_token = token
 
+    # Fetch + cache the account/workspace identity so the sheet can show which
+    # Miro account this token belongs to (and where boards will land). Cleared
+    # on disconnect. Best-effort — never blocks a valid connect.
+    account = miro_client.get_token_info(token)
+    request.app.state.miro_account = account
+
     # token-trace (temporary): persisted_source reflects PERSISTENCE only
     # (keychain/env/none) — the in-session cache is separate. Source only; never
     # the token value. "keychain"/"env" = survives restart; "none" = relies on
@@ -171,7 +191,11 @@ def miro_connect(
         type(store).__name__, get_credential_source("miro"),
     )
 
-    return MiroStatusResponse(connected=True)
+    return MiroStatusResponse(
+        connected=True,
+        user_name=account.get("user_name"),
+        team_name=account.get("team_name"),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -199,6 +223,7 @@ def miro_disconnect(project_id: int, request: Request) -> MiroStatusResponse:
     # natively — disconnect from the panel does not reach Swift's KeychainHelper;
     # that's the parallel to LLM-key removal living in Settings. See design doc.)
     request.app.state.miro_session_token = None
+    request.app.state.miro_account = None
 
     return MiroStatusResponse(connected=False)
 

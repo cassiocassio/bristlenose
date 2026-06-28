@@ -157,7 +157,7 @@ struct MiroSheet: View {
     // within it and pin their buttons to the bottom. minHeight (not fixed) so an
     // unusually long localisation grows rather than clips.
     private let sheetWidth: CGFloat = 460
-    private let sheetMinHeight: CGFloat = 380
+    private let sheetMinHeight: CGFloat = 400
 
     var body: some View {
         Group {
@@ -189,18 +189,20 @@ struct MiroSheet: View {
 
     private var connect: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(model.t("title")).font(.headline)
+            Text(model.t("title")).font(.title2).fontWeight(.bold)
+                .frame(maxWidth: .infinity, alignment: .center)
             Text(model.t("connectIntro")).font(.callout).foregroundStyle(.secondary)
             SecureField(model.t("tokenPlaceholder"), text: $model.token)
                 .textFieldStyle(.roundedBorder)
-            Button(model.dt("howToGetToken")) { model.openTokenHelp() }
-                .buttonStyle(.plain).font(.callout).foregroundStyle(.secondary)
-                .inlineLinkCursor()
             if let error = model.error {
                 Text(error).font(.callout).foregroundStyle(.red)
             }
             Spacer(minLength: 16)
             HStack {
+                // Footer help (Pages Export-dialog pattern) — opens the token docs;
+                // the old inline link's text becomes the hover tooltip.
+                HelpLink { model.openTokenHelp() }
+                    .help(model.dt("howToGetToken"))
                 Spacer()
                 Button(model.t("cancel")) { dismiss() }.keyboardShortcut(.cancelAction)
                 Button(model.t("connect")) { Task { await model.connect() } }
@@ -213,16 +215,16 @@ struct MiroSheet: View {
 
     private var configure: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(model.t("title")).font(.headline)
-                Spacer()
-                HStack(spacing: 5) {
-                    Text(model.dt("connected")).font(.subheadline).foregroundStyle(.secondary)
-                    Button(model.t("disconnect")) { Task { await model.disconnect() } }
-                        .buttonStyle(.plain).font(.subheadline).foregroundStyle(.secondary)
-                        .inlineLinkCursor().disabled(model.busy)
-                }
+            Text(model.t("title")).font(.title2).fontWeight(.bold)
+                .frame(maxWidth: .infinity, alignment: .center)
+            HStack(spacing: 5) {
+                Text(model.dt("connected")).font(.subheadline).foregroundStyle(.secondary)
+                Text(verbatim: "·").font(.subheadline).foregroundStyle(.secondary)
+                Button(model.t("disconnect")) { Task { await model.disconnect() } }
+                    .buttonStyle(.plain).font(.subheadline).foregroundStyle(.secondary)
+                    .inlineLinkCursor().disabled(model.busy)
             }
+            .frame(maxWidth: .infinity, alignment: .center)
             VStack(alignment: .leading, spacing: 4) {
                 Text(model.t("boardNameLabel")).font(.subheadline).foregroundStyle(.secondary)
                 TextField(model.t("boardNamePlaceholder"), text: $model.boardName)
@@ -243,6 +245,8 @@ struct MiroSheet: View {
             }
             Spacer(minLength: 16)
             HStack {
+                HelpLink { model.openTokenHelp() }
+                    .help(model.dt("howToGetToken"))
                 Spacer()
                 Button(model.t("cancel")) { dismiss() }.keyboardShortcut(.cancelAction)
                 Button(model.t("createBoard")) { model.createBoard() }

@@ -40,7 +40,8 @@ export type BridgeMessage =
   | { type: "player-state"; hasPlayer: boolean; playing: boolean }
   | { type: "export-counts"; total: number; selected: number; starred: number }
   | { type: "lens-subtitle"; tab: string; subtitle: string }
-  | { type: "quotes-filter"; searchQuery: string; viewMode: string };
+  | { type: "quotes-filter"; searchQuery: string; viewMode: string }
+  | { type: "store-miro-token"; token: string };
 
 // ---------------------------------------------------------------------------
 // Native message posting
@@ -116,6 +117,17 @@ export function postLensSubtitle(tab: string, subtitle: string): void {
  */
 export function postQuotesFilter(searchQuery: string, viewMode: string): void {
   postNativeMessage({ type: "quotes-filter", searchQuery, viewMode });
+}
+
+/**
+ * Hand a validated Miro access token to the native host so it persists in the
+ * macOS Keychain — the sandboxed Python sidecar can't write the Keychain itself,
+ * so without this the token is lost on app restart. The host injects it to the
+ * next sidecar launch as `BRISTLENOSE_MIRO_ACCESS_TOKEN`. No-ops outside the
+ * desktop WKWebView (browser/serve mode persists via the Python keychain path).
+ */
+export function postStoreMiroToken(token: string): void {
+  postNativeMessage({ type: "store-miro-token", token });
 }
 
 // ---------------------------------------------------------------------------

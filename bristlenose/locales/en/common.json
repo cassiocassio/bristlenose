@@ -229,6 +229,7 @@
   },
   "miro": {
     "menuLabel": "Send to Miro…",
+    "popoverSubtitle": "Quotes as stickies on a new board",
     "title": "Send to Miro board",
     "checkingConnection": "Checking connection…",
     "connectIntro": "Push your quotes onto a new Miro board as sticky notes, grouped by section and theme. Connect once — we never touch your existing boards.",

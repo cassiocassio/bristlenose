@@ -230,6 +230,7 @@
   },
   "miro": {
     "menuLabel": "Envoyer vers Miro\u2026",
+    "popoverSubtitle": "Citations en pense-b\u00eates sur un nouveau tableau",
     "title": "Envoyer vers un tableau Miro",
     "checkingConnection": "V\u00e9rification de la connexion\u2026",
     "connectIntro": "Envoyez vos citations vers un nouveau tableau Miro sous forme de pense-b\u00eates, regroup\u00e9s par section et par th\u00e8me. Connectez-vous une seule fois \u2014 nous ne touchons jamais \u00e0 vos tableaux existants.",

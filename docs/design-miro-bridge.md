@@ -521,9 +521,90 @@ cd frontend && npm run build                           # SPA (rebuilds static)
 ```
 Then: Quotes tab → Export ▾ → **Send to Miro…**. Paste a token (Miro dev dashboard
 → app → install → copy token) — the setup walkthrough is published at
-`bristlenose.app/docs/how-to/miro-setup.html` and linked from the panel. The OAuth
+`bristlenose.app/docs/send-to-miro.html` and linked from the panel. The OAuth
 "Connect with browser" button is **hidden in phase 1** (paste-token only; OAuth is
 phase 2). **Preview needs no token** — Configure → Preview opens the would-be board
 in a new tab.
 Then **Create board** → **Open in Miro**. Expect first-push rough edges per the
 unrun shapes above.
+
+### macOS native entry (28 Jun 2026 — built + tested; shipping for TestFlight with a manual token)
+
+**Status.** Tested end-to-end on macOS — paste-token "dance" → real board created.
+For TestFlight it ships **as-is with the manual paste-token flow**: the maintainer
+hand-holds researchers through token setup in a call, which doubles as the feedback
+channel for the feature. Keychain *persistence* is now **implemented** (below) so the
+token survives restarts; one-click OAuth remains the real solution and reuses the same
+Keychain+env layer.
+
+**The gap.** In the desktop app the SPA `NavBar` (and its web **Export** dropdown,
+which carries the SPA's own Send-to-Miro row) is suppressed in embedded mode —
+`{!embedded && <NavBar onSendToMiro={toggleMiro} …>}` (`frontend/src/layouts/AppLayout.tsx:620`).
+So the report's web Send-to-Miro affordance **never renders in the Mac app**; the
+only export surface is the *native* toolbar popover (`ExportPopoverContent`) + the
+**Quotes** menu, neither of which had a Miro entry (Miro was descoped from alpha —
+`ContentView.swift` "Parked…" comment, `BristlenoseShared.swift` "Miro descoped").
+
+**What was built (Option A — native entry, web panel).** A native entry that opens
+the *existing* React `MiroExportPanel` via the bridge — no native Miro logic:
+- `ContentView.swift` `ExportPopoverContent` — a "Send to Miro…" `ExportPopoverRow`
+  (always visible, `square.grid.2x2` glyph) → `dispatch("sendToMiro")`.
+- `MenuCommands.swift` `QuotesMenuContent` — a mirroring `Button` →
+  `menuAction("sendToMiro")` (keyboard/VoiceOver-reachable, always enabled).
+- Strings reuse `common.miro.menuLabel` (already in all 7 locales) for the title;
+  one new key `common.miro.popoverSubtitle` added to all 7 (en authored, 6 first-pass
+  translations vetted by `i18n-review`, de/ko aligned to the block's sticky-note term).
+- The SPA already handles the action: `AppLayout.tsx` `case "sendToMiro": setMiroOpen(true)`.
+- Builds clean (`xcodebuild … Debug`); the entry-point design is mocked in
+  `docs/mockups/miro-native-flow.html` (real-SPA vs proposed-native, sheet/HIG notes).
+
+**Keychain persistence — IMPLEMENTED + VERIFIED (28 Jun 2026).** Python's `store.set("miro")`
+shells out to `/usr/bin/security`, which App Sandbox blocks (the reason LLM keys moved
+to Swift-store + `childEnvironment` injection in C3). The fix mirrors that C3 pattern,
+keeping the paste in the panel (chosen over a native Settings pane — it's where the
+future OAuth button lives, and the Keychain+env layer below is reused by OAuth):
+- **Store** — on a successful paste-connect the panel hands the validated token to the
+  host: `MiroExportPanel.handlePasteConnect` → `postStoreMiroToken` (`shims/bridge.ts`)
+  → bridge `store-miro-token` case (`BridgeHandler`) → `KeychainHelper.set("miro", …)`
+  (Security.framework; works under sandbox). `KeychainHelper.serviceNames["miro"]`
+  matches Python's `MacOSCredentialStore` (pinned by
+  `KeychainHelperTests/serviceNames_matchPythonMapping`).
+- **Inject** — `BristlenoseShared.overlayMiroToken` (called from `childEnvironment`,
+  unconditional — Miro is orthogonal to the active LLM provider) reads the Keychain and
+  sets `BRISTLENOSE_MIRO_ACCESS_TOKEN` on the next sidecar launch; Python reads it via
+  `EnvCredentialStore`.
+- **First-session bridge** — the env var only lands on the *next* launch, so
+  `routes/miro.py` caches the validated token on `request.app.state.miro_session_token`
+  (helper `_miro_token`), cleared on disconnect. This makes the very first paste's
+  status/export work before the Keychain token is env-injected.
+- **Verify** — the `miro_token_trace` log line on a *relaunched* sandboxed `.app`
+  should read `persisted_source=env` (was `none` pre-fix). Browser/serve keeps the
+  non-sandboxed `keychain` path; the panel paste no-ops the bridge there.
+
+OAuth (the real solution) reuses this same Keychain+env layer for its access/refresh
+tokens — only the *acquisition* (ASWebAuthenticationSession) and the token-handoff
+trigger change. Disconnect-from-panel removes the in-session cache + the Python-side
+store, but NOT the Swift Keychain copy (parallel to LLM-key removal living natively);
+a native "remove Miro account" affordance is the small follow-up.
+
+**Also note:** the native `dispatch("sendToMiro")` carries the global Anonymise
+payload, which the panel currently ignores (anonymise→Miro is deferred — names are
+already excluded by the speaker-code boundary). And the CLI is contradictory:
+`configure miro` (`cli.py:2035`) stores the token but prints *"…a parked feature
+(future idea) — not yet available."* — fix that message when un-parking (tracked as
+discrepancy #11 in the website repo's `NOTES-product-discrepancies.md`).
+
+**Truth table — where Send to Miro works:**
+
+| Channel | Reachable? | Connect (this session) | Survives restart |
+|---|---|---|---|
+| Browser / `bristlenose serve` (web Export menu) | ✅ | ✅ paste-token | ✅ (non-sandboxed keychain write) |
+| CLI `bristlenose configure miro` | n/a (stores token) | ✅ stores | ✅ (⚠️ prints "parked" — fix message) |
+| macOS app (native entry) | ✅ | ✅ tested (board created) | ✅ VERIFIED 28 Jun — fresh paste wrote an **iCloud** (synchronizable) Keychain item, read back via env, board built; syncs across Macs |
+
+**Open-in-Miro handoff (minor, parked):** with the Miro **desktop app** installed, "Open in
+Miro" also opens Miro.app (macOS universal-link routing of the board URL via `NSWorkspace`),
+alongside the browser — only affects users with Miro.app installed; arguably correct OS
+behaviour, not worth overriding the user's URL handler. Related: panel **Disconnect** clears the
+Python/login + in-session copies but NOT the Swift iCloud-Keychain token — a native "remove Miro
+account" affordance is the small follow-up.

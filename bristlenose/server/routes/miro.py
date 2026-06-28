@@ -13,7 +13,11 @@ from sqlalchemy.orm import Session
 
 from bristlenose import miro_client
 from bristlenose.config import load_settings
-from bristlenose.credentials import get_credential, get_credential_store
+from bristlenose.credentials import (
+    get_credential,
+    get_credential_source,
+    get_credential_store,
+)
 from bristlenose.miro_client import validate_miro_token
 from bristlenose.server import miro_export
 from bristlenose.server.models import Project
@@ -84,13 +88,27 @@ def _check_project(db: Session, project_id: int) -> Project:
 # ---------------------------------------------------------------------------
 
 
+def _miro_token(request: Request) -> str | None:
+    """The active Miro token.
+
+    Persisted store first (Keychain on CLI Mac; on the sandboxed desktop the
+    Swift host writes Keychain via the `store-miro-token` bridge message and
+    injects it as `BRISTLENOSE_MIRO_ACCESS_TOKEN` on the NEXT sidecar launch,
+    read here via env). Falls back to the in-session cache that `connect` sets,
+    which covers the very first paste under App Sandbox — before that env-injected
+    token exists. See docs/design-miro-bridge.md "macOS native entry".
+    """
+    return get_credential("miro") or getattr(request.app.state, "miro_session_token", None)
+
+
 @router.get("/projects/{project_id}/miro/status")
 def miro_status(project_id: int, request: Request) -> MiroStatusResponse:
     """Check whether a Miro access token is configured and valid."""
     db = _get_db(request)
     try:
         _check_project(db, project_id)
-        token = get_credential("miro")
+        token = _miro_token(request)
+        logger.info("miro_token_trace event=status persisted_source=%s", get_credential_source("miro"))
         return MiroStatusResponse(connected=bool(token))
     finally:
         db.close()
@@ -136,6 +154,23 @@ def miro_connect(
         # EnvCredentialStore — can't persist, but token is valid
         logger.warning("No system credential store available — token not persisted")
 
+    # In-session fallback: under App Sandbox the Python keychain write above is a
+    # silent no-op, and the durable token (Swift writes Keychain via the
+    # `store-miro-token` bridge message) is only env-injected on the NEXT sidecar
+    # launch. Cache the validated token on app.state so THIS session's
+    # status/export work right after a fresh paste. Cleared on disconnect and
+    # naturally gone on restart (the Keychain/env path takes over by then).
+    request.app.state.miro_session_token = token
+
+    # token-trace (temporary): persisted_source reflects PERSISTENCE only
+    # (keychain/env/none) — the in-session cache is separate. Source only; never
+    # the token value. "keychain"/"env" = survives restart; "none" = relies on
+    # the desktop Keychain (bridge) for cross-restart persistence.
+    logger.info(
+        "miro_token_trace event=connect_stored store=%s persisted_source=%s session_cache=set",
+        type(store).__name__, get_credential_source("miro"),
+    )
+
     return MiroStatusResponse(connected=True)
 
 
@@ -159,6 +194,11 @@ def miro_disconnect(project_id: int, request: Request) -> MiroStatusResponse:
         store.delete("miro_refresh")
     except NotImplementedError:
         pass
+    # Clear the in-session cache too, else status would still read "connected"
+    # from memory after a disconnect. (The durable Keychain copy is removed
+    # natively — disconnect from the panel does not reach Swift's KeychainHelper;
+    # that's the parallel to LLM-key removal living in Settings. See design doc.)
+    request.app.state.miro_session_token = None
 
     return MiroStatusResponse(connected=False)
 
@@ -200,7 +240,8 @@ def miro_export_board(project_id: int, body: MiroExportRequest,
     db = _get_db(request)
     try:
         project = _check_project(db, project_id)
-        token = get_credential("miro")
+        token = _miro_token(request)
+        logger.info("miro_token_trace event=export persisted_source=%s", get_credential_source("miro"))
         if not token:
             raise HTTPException(status_code=400, detail="Not connected to Miro")
         name = body.board_name or _project_name(project)

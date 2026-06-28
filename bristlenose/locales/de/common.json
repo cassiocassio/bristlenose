@@ -229,6 +229,7 @@
   },
   "miro": {
     "menuLabel": "An Miro senden\u2026",
+    "popoverSubtitle": "Zitate als Haftnotizen auf einem neuen Board",
     "title": "An ein Miro-Board senden",
     "checkingConnection": "Verbindung wird gepr\u00fcft\u2026",
     "connectIntro": "\u00dcbertragen Sie Ihre Zitate als Haftnotizen auf ein neues Miro-Board, gruppiert nach Abschnitt und Thema. Einmal verbinden \u2014 wir r\u00fchren Ihre bestehenden Boards nie an.",

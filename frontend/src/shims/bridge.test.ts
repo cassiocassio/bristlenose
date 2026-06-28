@@ -8,6 +8,7 @@ import {
   postEditingEnded,
   postProjectAction,
   postPlayerState,
+  postStoreMiroToken,
 } from "./bridge";
 
 // ---------------------------------------------------------------------------
@@ -245,5 +246,20 @@ describe("postPlayerState", () => {
 
   it("no-ops gracefully when webkit is absent", () => {
     expect(() => postPlayerState(false, false)).not.toThrow();
+  });
+});
+
+describe("postStoreMiroToken", () => {
+  it("posts store-miro-token message with the token", () => {
+    const post = installMockWebkit();
+    postStoreMiroToken("miro-tok-abc");
+    expect(post).toHaveBeenCalledWith({
+      type: "store-miro-token",
+      token: "miro-tok-abc",
+    });
+  });
+
+  it("no-ops gracefully when webkit is absent (browser/serve mode)", () => {
+    expect(() => postStoreMiroToken("miro-tok-abc")).not.toThrow();
   });
 });

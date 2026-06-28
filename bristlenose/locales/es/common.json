@@ -230,6 +230,7 @@
   },
   "miro": {
     "menuLabel": "Enviar a Miro\u2026",
+    "popoverSubtitle": "Citas como notas en un tablero nuevo",
     "title": "Enviar a un tablero de Miro",
     "checkingConnection": "Comprobando la conexi\u00f3n\u2026",
     "connectIntro": "Env\u00eda tus citas a un nuevo tablero de Miro como notas adhesivas, agrupadas por secci\u00f3n y tema. Con\u00e9ctate una vez: nunca tocamos tus tableros existentes.",

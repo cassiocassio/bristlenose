@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
 import { isExportMode } from "../utils/exportData";
 import { announce } from "../utils/announce";
+import { postStoreMiroToken } from "../shims/bridge";
 import {
   getMiroStatus,
   postMiroConnect,
@@ -117,7 +118,13 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
     setError(null);
     try {
       const s = await postMiroConnect(token.trim());
-      if (s.connected) setView("configure");
+      if (s.connected) {
+        // Persist the validated token natively so it survives an app restart:
+        // the sandboxed sidecar can't write the Keychain, so hand it to the
+        // macOS host. No-op in browser/serve mode (Python persists it there).
+        postStoreMiroToken(token.trim());
+        setView("configure");
+      }
     } catch (e) {
       // Surface the server's reason (invalid token / missing boards:write scope
       // / network) rather than one generic message.
@@ -204,7 +211,7 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
             <p className="bn-export-hint" style={{ marginTop: 14 }}>
               {t("miro.orPasteToken")}{" "}
               <a
-                href="https://bristlenose.app/docs/how-to/miro-setup.html"
+                href="https://bristlenose.app/docs/send-to-miro.html"
                 target="_blank"
                 rel="noopener noreferrer"
               >

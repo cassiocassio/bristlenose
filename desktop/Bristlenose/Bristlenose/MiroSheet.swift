@@ -150,8 +150,17 @@ struct MiroSheet: View {
         ))
     }
 
+    // Constant size across every step (HIG: sheets keep one size through a flow —
+    // cf. Pages' Export dialog, which stays fixed across all 7 tabs and lets the
+    // sparse tabs show whitespace). Sized to the tallest step (configure with the
+    // clips field + an error line, longest locale); shorter steps centre/​top-align
+    // within it and pin their buttons to the bottom. minHeight (not fixed) so an
+    // unusually long localisation grows rather than clips.
+    private let sheetWidth: CGFloat = 460
+    private let sheetMinHeight: CGFloat = 380
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        Group {
             switch model.step {
             case .loading: loading
             case .connect: connect
@@ -161,7 +170,8 @@ struct MiroSheet: View {
             }
         }
         .padding(20)
-        .frame(width: 420)
+        .frame(width: sheetWidth)
+        .frame(minHeight: sheetMinHeight)
         .task { await model.load() }
     }
 
@@ -169,11 +179,12 @@ struct MiroSheet: View {
 
     private var loading: some View {
         VStack(spacing: 10) {
+            Spacer()
             ProgressView()
-            Text(model.t("checkingConnection")).foregroundStyle(.secondary)
+            Text(model.t("checkingConnection")).font(.subheadline).foregroundStyle(.secondary)
+            Spacer()
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
     }
 
     private var connect: some View {
@@ -188,6 +199,7 @@ struct MiroSheet: View {
             if let error = model.error {
                 Text(error).font(.callout).foregroundStyle(.red)
             }
+            Spacer(minLength: 16)
             HStack {
                 Spacer()
                 Button(model.t("cancel")) { dismiss() }.keyboardShortcut(.cancelAction)
@@ -196,6 +208,7 @@ struct MiroSheet: View {
                     .disabled(model.busy || model.token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var configure: some View {
@@ -204,30 +217,31 @@ struct MiroSheet: View {
                 Text(model.t("title")).font(.headline)
                 Spacer()
                 HStack(spacing: 5) {
-                    Text(model.dt("connected")).font(.caption).foregroundStyle(.secondary)
+                    Text(model.dt("connected")).font(.subheadline).foregroundStyle(.secondary)
                     Button(model.t("disconnect")) { Task { await model.disconnect() } }
-                        .buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
+                        .buttonStyle(.plain).font(.subheadline).foregroundStyle(.secondary)
                         .inlineLinkCursor().disabled(model.busy)
                 }
             }
             VStack(alignment: .leading, spacing: 4) {
-                Text(model.t("boardNameLabel")).font(.caption).foregroundStyle(.secondary)
+                Text(model.t("boardNameLabel")).font(.subheadline).foregroundStyle(.secondary)
                 TextField(model.t("boardNamePlaceholder"), text: $model.boardName)
                     .textFieldStyle(.roundedBorder)
             }
             Toggle(model.t("colourBySentiment"), isOn: $model.colourBySentiment)
             VStack(alignment: .leading, spacing: 4) {
                 Toggle(model.t("linkClipsLabel"), isOn: $model.linkClips)
-                Text(model.t("linkClipsHint")).font(.caption).foregroundStyle(.secondary)
+                Text(model.t("linkClipsHint")).font(.subheadline).foregroundStyle(.secondary)
                 if model.linkClips {
                     TextField(model.t("clipsBasePlaceholder"), text: $model.clipsBase)
                         .textFieldStyle(.roundedBorder)
                 }
             }
-            Text(model.t("uploadNotice")).font(.caption).foregroundStyle(.secondary)
+            Text(model.t("uploadNotice")).font(.subheadline).foregroundStyle(.secondary)
             if let error = model.error {
                 Text(error).font(.callout).foregroundStyle(.red)
             }
+            Spacer(minLength: 16)
             HStack {
                 Spacer()
                 Button(model.t("cancel")) { dismiss() }.keyboardShortcut(.cancelAction)
@@ -235,28 +249,34 @@ struct MiroSheet: View {
                     .keyboardShortcut(.defaultAction).disabled(model.busy)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var creating: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(model.t("creatingBoard")).font(.headline)
+            Spacer()
             ProgressView().frame(maxWidth: .infinity)
+            Spacer()
             HStack {
                 Spacer()
                 Button(model.t("cancel")) { model.cancelExport(); dismiss() }
                     .keyboardShortcut(.cancelAction)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var done: some View {
         VStack(spacing: 12) {
+            Spacer()
             Image(systemName: "checkmark.circle")
                 .font(.system(size: 34))
                 .foregroundStyle(.green)
             Text(model.boardReadyText())
                 .font(.headline).fontWeight(.regular)
                 .multilineTextAlignment(.center)
+            Spacer()
             HStack {
                 Spacer()
                 Button(model.t("done")) { dismiss() }.keyboardShortcut(.cancelAction)

@@ -5,7 +5,7 @@
     "stickyColoursLabel": "Color de las notas:",
     "miroStatusLabel": "Estado de Miro:",
     "accountLabel": "Cuenta:",
-    "boardDestination": "Crea un tablero nuevo en {team}.",
+    "boardDestination": "Crea un tablero nuevo en {{team}}.",
     "connected": "Conectado",
     "openInMiro": "Abrir en Miro\u2026",
     "connectPersistWarning": "Conectado, pero no se pudo guardar el token en tu Llavero; quiz\u00e1 tengas que volver a conectarte tras reiniciar."

@@ -5,7 +5,7 @@
     "stickyColoursLabel": "Barva l\u00edstk\u016f:",
     "miroStatusLabel": "Stav Miro:",
     "accountLabel": "\u00da\u010det:",
-    "boardDestination": "Vytvo\u0159\u00ed novou tabuli v t\u00fdmu {team}.",
+    "boardDestination": "Vytvo\u0159\u00ed novou tabuli v t\u00fdmu {{team}}.",
     "connected": "P\u0159ipojeno",
     "openInMiro": "Otev\u0159\u00edt v Miru\u2026",
     "connectPersistWarning": "P\u0159ipojeno, ale token se nepoda\u0159ilo ulo\u017eit do Kl\u00ed\u010denky \u2014 po restartu se mo\u017en\u00e1 budete muset p\u0159ipojit znovu."

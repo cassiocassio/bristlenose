@@ -215,7 +215,18 @@ enum BristlenoseShared {
             env["BRISTLENOSE_LLM_PROVIDER"] = provider
         }
         if let model {
-            env["BRISTLENOSE_LLM_MODEL"] = model
+            // Ollama execution reads `local_model` (BRISTLENOSE_LOCAL_MODEL) — a
+            // SEPARATE config axis from cloud `llm_model` (BRISTLENOSE_LLM_MODEL).
+            // See bristlenose/config.py: for the local provider `llm_model` is
+            // cosmetic and execution reads `local_model`. Route the resolved
+            // model to the axis the active provider actually reads, or the
+            // user's Ollama model choice is silently ignored and the pipeline
+            // falls back to the `local_model` default (llama3.2:3b).
+            if provider == "local" {
+                env["BRISTLENOSE_LOCAL_MODEL"] = model
+            } else {
+                env["BRISTLENOSE_LLM_MODEL"] = model
+            }
         }
         if defaults.object(forKey: "llmTemperature") != nil {
             env["BRISTLENOSE_LLM_TEMPERATURE"] = String(defaults.double(forKey: "llmTemperature"))

@@ -265,6 +265,25 @@ struct ServeManagerEnvTests {
         }
     }
 
+    /// Ollama (`local`) execution reads `local_model` (BRISTLENOSE_LOCAL_MODEL),
+    /// NOT cloud `llm_model` (BRISTLENOSE_LLM_MODEL) — see bristlenose/config.py.
+    /// The resolved model must land on the local axis, or the user's picked
+    /// Ollama model is silently dropped and the pipeline falls back to the
+    /// `local_model` default (llama3.2:3b), which is too small for structured
+    /// output and 100%-fails topic segmentation.
+    @Test func overlayPreferences_local_provider_routes_model_to_local_axis() {
+        withIsolatedDefaults { defaults in
+            defaults.set("local", forKey: "activeProvider")
+            defaults.set("gemma4:31b", forKey: "llmModel_local")
+            var env: [String: String] = [:]
+            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+            #expect(env["BRISTLENOSE_LLM_PROVIDER"] == "local")
+            #expect(env["BRISTLENOSE_LOCAL_MODEL"] == "gemma4:31b")
+            // The cloud axis must NOT carry the Ollama model.
+            #expect(env["BRISTLENOSE_LLM_MODEL"] == nil)
+        }
+    }
+
     // MARK: - resolvedProviderModel (shared source of truth)
 
     /// `resolvedProviderModel` is the single source overlayPreferences and

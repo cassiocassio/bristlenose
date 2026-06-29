@@ -124,6 +124,7 @@
 				DFF545002F466A4A00A539C4 /* Sources */,
 				DFF545012F466A4A00A539C4 /* Frameworks */,
 				DFF545022F466A4A00A539C4 /* Resources */,
+				499FD919EA7B4611AE10AE6A /* Ensure Sidecar Fresh */,
 				DFF545202F466A4A00A539C4 /* Copy Sidecar Resources */,
 			);
 			buildRules = (
@@ -218,6 +219,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
 			shellScript = "# Regenerate GeneratedBuildInfo.swift before Compile Sources runs.\n# alwaysOutOfDate=1 ensures this fires every build (so a fresh commit\n# is picked up); the script itself is idempotent — it only rewrites the\n# .swift file when contents change, so Xcode's Compile Sources step\n# stays incremental.\n\"${SRCROOT}/../scripts/generate-build-info.sh\"\n";
+		};
+		499FD919EA7B4611AE10AE6A /* Ensure Sidecar Fresh */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Ensure Sidecar Fresh";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "# Rebuild + sign the PyInstaller sidecar bundle when any of its inputs\n# (frontend, venv, Python) are stale, then deep-verify, so a plain Cmd+R\n# self-heals the bundle that Copy Sidecar Resources is about to embed.\n# alwaysOutOfDate=1 makes this fire every build; ensure-sidecar.sh's own\n# per-layer fingerprints make it ~instant (F/V/P all-skip) when fresh.\n# Set BRISTLENOSE_SKIP_SIDECAR_ENSURE=1 to opt out (fast schemes with a\n# known-fresh bundle); the loud check-sidecar-freshness.sh gate in Copy\n# Sidecar Resources stays as the independent backstop either way.\n\"${SRCROOT}/../scripts/ensure-sidecar.sh\"\n";
 		};
 		DFF545202F466A4A00A539C4 /* Copy Sidecar Resources */ = {
 			isa = PBXShellScriptBuildPhase;

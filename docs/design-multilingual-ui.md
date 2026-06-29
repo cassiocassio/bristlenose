@@ -271,7 +271,9 @@ The release bar is **native-speaker review before release** (design-i18n.md §St
   download (baixar/transferir) — plus formality and gerund use. Apple ships both as
   separate localizations; that's the deciding signal. A single `pt` reads as foreign to one
   side. **Intra-pair leverage:** translate the dominant variant, then *fork the vocabulary
-  deltas* with a second reviewer — "both" is ~1.4× the cost of "one," not 2×.
+  deltas* with a second reviewer — "both" is ~1.4× the cost of "one," not 2×. Decision +
+  full evidence (Apple/Microsoft/Mozilla/CLDR): `docs/design-i18n.md` §Future locales,
+  resolved 29 Jun 2026.
 - **Chinese:** zh-Hans (Simplified — mainland, Singapore) vs zh-Hant (Traditional — Taiwan,
   HK, Macau). The Simplified→Traditional script conversion is semi-mechanical (OpenCC), but
   terminology still diverges (軟體/软件 for "software") and needs a native pass. Across the

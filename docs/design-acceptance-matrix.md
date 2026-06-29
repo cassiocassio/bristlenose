@@ -164,6 +164,37 @@ invariants that hold across providers and across re-runs:
    (`DropDecision`, `RevealAvailability`, `ProjectSubtitle`, …), leaving GUI
    drive for the few true integration paths.
 
+## Desktop acceptance — the commercial surface gets an early end-to-end
+
+The macOS app is the commercial target, so it gets a minimal end-to-end *early*,
+not relegated to "GUI, later." Crucially, **the engine being green does not prove
+the native surface is green** — Playwright proves the SPA renders in a *browser*,
+but the WKWebView bridge, auth-token injection, and report-auto-reload are
+app-only and have silently broken before (the blank-report-rendered-as-success
+class). So "display the result" needs a real `.app` launch, not just a served
+report.
+
+Three sub-steps, two of them headless and key-free (all use `--llm local`, so no
+API key and no spend — and they re-exercise the exact Ollama path that the
+motivating bug broke):
+
+1. **Build (headless).** `build-sidecar.sh` → `sign-sidecar.sh` (ad-hoc `-`) →
+   `xcodebuild build` → assert bundled `bristlenose_version == __version__`.
+   Proven to work headlessly (used for `build-for-testing` already).
+2. **"Process a run" — headless engine cell (Phase 1).** A Swift integration
+   test that builds the env via the *real* `BristlenoseShared.childEnvironment`
+   (the seam the motivating bug lived in), spawns the *bundled* sidecar (proves
+   the PyInstaller bundle executes — datas, ffmpeg, JIT entitlements), runs the
+   tiny `.vtt` fixture, and asserts a `RunCompletedEvent` terminus. No window, no
+   TCC, no key.
+3. **"Display the result" — GUI smoke (Phase 2).** XCUITest: launch `.app` → pick
+   the smoke project → Run → wait for terminus → assert the result is *shown*.
+   Robust assertion = screenshot (for the dashboard) + the WebView is not on the
+   empty/status page (known DOM/AX element, or shape-check the served port) —
+   because the failure mode is "blank report rendered as success," which only a
+   look-at-the-rendered-surface test catches. One-time TCC grant for the test
+   runner (see gate 1).
+
 ## Overnight execution model — the four hard gates
 
 "Wake up to greens" has four sharp edges. The runner must handle each explicitly.
@@ -210,12 +241,23 @@ through to its log + the report it produced.
 
 ## Phased plan
 
-- **Phase 1** — bash CLI provider matrix: 5 providers × representative fixtures,
-  JSON-invariant assertions, one summary file. Unattended, no TCC. *Highest ROI;
-  catches the motivating bug class.*
-- **Phase 2** — real-`serve` + Playwright-on-fresh-run + export checks.
-- **Phase 3** — one thin XCUITest GUI smoke for the app-only seam; the `launchd`
-  nightly; the HTML dashboard; the pre-grant / halt-on-gate discipline.
+Both the CLI iceberg *and* the commercial surface's engine land in Phase 1 —
+because the desktop is what people pay for and the headless engine cell is nearly
+free once we're already building the sidecar.
+
+- **Phase 1** — (a) bash CLI provider matrix: 5 providers × representative
+  fixtures, JSON-invariant assertions, one summary file; (b) the **headless
+  desktop engine cell** (sidecar+app build → Swift integration test:
+  `childEnvironment` → bundled sidecar → run on fixture → `RunCompletedEvent`).
+  Both unattended, no TCC, no keys (desktop uses `--llm local`). *Highest ROI;
+  catches the motivating bug class on both surfaces.*
+- **Phase 2** — the **desktop GUI smoke** ("display the result": XCUITest launch
+  → pick smoke project → Run → assert rendered, via screenshot + shape) +
+  real-`serve` + Playwright-on-fresh-run + export checks. Runs interactively
+  first (one-time TCC grant); unattended scheduling comes in Phase 3.
+- **Phase 3** — the `launchd` nightly orchestration; the HTML dashboard; the
+  pre-grant / halt-on-gate discipline that lets the GUI smoke run unattended;
+  broaden cells.
 
 ## Open questions (decide as we build)
 

@@ -31,6 +31,36 @@ export interface LocaleState {
 
 // ── Module-level store ───────────────────────────────────────────────────
 
+/**
+ * Resolve a BCP 47 browser language tag to a supported locale.
+ *
+ * Chinese needs script/region awareness, not a naive prefix strip: `zh-TW`
+ * must map to `zh-Hant` (Taiwan Traditional) and `zh-HK`/`zh-MO` to
+ * `zh-Hant-HK`. A plain `lang.split("-")[0]` yields `zh`, which matches no
+ * supported locale. Simplified tags (`zh-Hans`/`zh-CN`/`zh-SG`) and bare `zh`
+ * have no supported locale yet, so they fall through rather than being forced
+ * into a Traditional variant. Non-Chinese tags keep exact-or-prefix behaviour
+ * (`fr-FR` → `fr`).
+ */
+export function resolveBrowserLang(lang: string): Locale | null {
+  // Exact match first (browser may send "zh-Hant" / "zh-Hant-HK" verbatim).
+  if (isSupportedLocale(lang)) return lang;
+
+  const lower = lang.toLowerCase();
+  if (lower.startsWith("zh")) {
+    if (lower.includes("hans") || lower.includes("-cn") || lower.includes("-sg")) {
+      return null; // Simplified — no supported locale yet
+    }
+    if (lower.includes("hk") || lower.includes("mo")) return "zh-Hant-HK";
+    if (lower.includes("hant") || lower.includes("tw")) return "zh-Hant";
+    return null; // bare "zh" is ambiguous (CLDR default is Simplified) → fall through
+  }
+
+  // Non-Chinese: exact ("ja") or prefix ("fr-FR" → "fr").
+  const prefix = lang.split("-")[0];
+  return isSupportedLocale(prefix) ? prefix : null;
+}
+
 function detectLocale(): Locale {
   // 0. URL query param — set by native macOS shell for synchronous detection.
   // Prevents language flash on first render (native locale pushed before
@@ -55,9 +85,8 @@ function detectLocale(): Locale {
   try {
     const langs = navigator.languages ?? [navigator.language];
     for (const lang of langs) {
-      // Match exact ("ja") or prefix ("fr-FR" → "fr")
-      const code = lang.split("-")[0];
-      if (isSupportedLocale(code)) return code;
+      const resolved = resolveBrowserLang(lang);
+      if (resolved) return resolved;
     }
   } catch {
     // navigator.languages unavailable (e.g. SSR)

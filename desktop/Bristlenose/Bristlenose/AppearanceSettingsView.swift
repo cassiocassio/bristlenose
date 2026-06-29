@@ -55,6 +55,8 @@ struct AppearanceSettingsView: View {
                     Text("한국어").tag("ko")
                     Text("Čeština").tag("cs")
                     Text("Italiano").tag("it")
+                    Text("繁體中文").tag("zh-Hant")
+                    Text("繁體中文（香港）").tag("zh-Hant-HK")
                 }
 
                 HStack(spacing: 4) {

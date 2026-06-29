@@ -45,6 +45,8 @@ const LOCALE_LABELS: Record<Locale, string> = {
   ko: "한국어",
   cs: "Čeština",
   it: "Italiano",
+  "zh-Hant": "繁體中文",
+  "zh-Hant-HK": "繁體中文（香港）",
 };
 
 // ── Appearance helpers ────────────────────────────────────────────────────

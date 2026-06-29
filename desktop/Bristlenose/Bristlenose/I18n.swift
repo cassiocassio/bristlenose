@@ -19,6 +19,9 @@ final class I18n: ObservableObject {
 
     /// Loaded translations keyed by namespace, then nested JSON structure.
     private var strings: [String: Any] = [:]
+    /// Fallback base for region/script variants (e.g. zh-Hant for zh-Hant-HK).
+    /// Empty unless the active locale has a `fallbackBase` entry.
+    private var baseStrings: [String: Any] = [:]
     private var englishStrings: [String: Any] = [:]
 
     /// Locale directory on disk — set once via `configure(localesDirectory:)`.
@@ -26,7 +29,15 @@ final class I18n: ObservableObject {
 
     // MARK: - Locale allowlist (security: prevents path traversal)
 
-    static let supportedLocales: Set<String> = ["en", "es", "ja", "fr", "de", "ko", "cs", "it"]
+    static let supportedLocales: Set<String> = [
+        "en", "es", "ja", "fr", "de", "ko", "cs", "it", "zh-Hant", "zh-Hant-HK",
+    ]
+
+    /// Region/script variants borrow missing keys from a base locale before
+    /// English. zh-Hant-HK (Hong Kong) → zh-Hant (Taiwan Traditional) → en.
+    /// TW/HK Traditional Chinese are mutually intelligible, so this is correct,
+    /// not lossy — lets zh-Hant-HK ship as a thin override of HK-specific terms.
+    private static let fallbackBase: [String: String] = ["zh-Hant-HK": "zh-Hant"]
 
     /// Namespaces to load — must match the JSON filenames in bristlenose/locales/.
     private static let namespaces = ["common", "settings", "enums", "desktop"]
@@ -50,6 +61,9 @@ final class I18n: ObservableObject {
         } else {
             strings = englishStrings
         }
+        baseStrings = Self.fallbackBase[safe].map {
+            Self.loadAllNamespaces(locale: $0, from: localesDirectory)
+        } ?? [:]
     }
 
     /// Change the active locale. Reloads JSON from disk.
@@ -64,6 +78,9 @@ final class I18n: ObservableObject {
         } else {
             strings = englishStrings
         }
+        baseStrings = Self.fallbackBase[safe].map {
+            Self.loadAllNamespaces(locale: $0, from: dir)
+        } ?? [:]
     }
 
     // MARK: - Translation
@@ -79,17 +96,18 @@ final class I18n: ObservableObject {
         let parts = remainder.split(separator: ".").map(String.init)
 
         // Try current locale
-        if let ns = strings[namespace] {
-            if let value = Self.resolve(ns, parts: parts) {
-                return value
-            }
+        if let ns = strings[namespace], let value = Self.resolve(ns, parts: parts) {
+            return value
+        }
+
+        // Fallback to the base locale (region/script variants, e.g. zh-Hant-HK → zh-Hant)
+        if let ns = baseStrings[namespace], let value = Self.resolve(ns, parts: parts) {
+            return value
         }
 
         // Fallback to English
-        if locale != "en", let ns = englishStrings[namespace] {
-            if let value = Self.resolve(ns, parts: parts) {
-                return value
-            }
+        if locale != "en", let ns = englishStrings[namespace], let value = Self.resolve(ns, parts: parts) {
+            return value
         }
 
         return key
@@ -137,7 +155,7 @@ final class I18n: ObservableObject {
         case "fr":
             // French: 0 and 1 are both "one".
             return n <= 1 ? "one" : "other"
-        case "ja", "ko":
+        case "ja", "ko", "zh-Hant", "zh-Hant-HK":
             // Single-form locales — always "other".
             return "other"
         default:

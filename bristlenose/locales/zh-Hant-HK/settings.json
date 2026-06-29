@@ -1,0 +1,22 @@
+{
+  "configReference": {
+    "settings": {
+      "thumbnails": {
+        "jpegQuality": "JPEG 質素"
+      }
+    }
+  },
+  "pipeline": {
+    "column": {
+      "quality": "質素"
+    },
+    "quality": {
+      "glyph": {
+        "excellent": "質素優異",
+        "good": "質素良好",
+        "marginal": "質素勉強",
+        "avoid": "避免—質素過低"
+      }
+    }
+  }
+}

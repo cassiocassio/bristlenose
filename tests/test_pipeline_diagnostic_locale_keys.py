@@ -20,9 +20,13 @@ import pytest
 
 _LOCALES_DIR = Path(__file__).resolve().parents[1] / "bristlenose" / "locales"
 
-_ALL_LOCALES = ("en", "es", "fr", "de", "ko", "ja", "cs")
+# zh-Hant is a full locale (single-form, like ja/ko). zh-Hant-HK is a thin
+# override that ships only HK term deltas and resolves the rest via the
+# fallback chain — so it is NOT listed here (these tests read each locale's
+# desktop.json directly, with no fallback).
+_ALL_LOCALES = ("en", "es", "fr", "de", "ko", "ja", "cs", "zh-Hant")
 _PLURAL_LOCALES = ("en", "es", "fr", "de", "cs")
-_SINGLE_FORM_LOCALES = ("ko", "ja")
+_SINGLE_FORM_LOCALES = ("ko", "ja", "zh-Hant")
 
 _REQUIRED_PILL_CATEGORIES = (
     "auth",

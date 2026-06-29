@@ -1,0 +1,13 @@
+{
+  "help": {
+    "contributing": {
+      "licence": "Bristlenose 是依 AGPL-3.0 授權並附帶貢獻者授權合約（CLA）的免費開放原始碼軟件。"
+    },
+    "privacy": {
+      "localOllama": "使用 Ollama（本機模型）時，任何內容都不會離開你的機器——連逐字稿文字也不會。這是最具隱私性的選項，但在 2026 年其質素低於雲端模型。"
+    },
+    "signals": {
+      "citHassenzahl2003": "兩種使用者經驗質素維度：實用（易用性）與享樂（刺激、認同）。"
+    }
+  }
+}

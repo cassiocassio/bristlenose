@@ -295,16 +295,28 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             return
         }
 
+        // Force layout BEFORE reading the icon's frame — right after reloadData the
+        // cell exists but Auto Layout hasn't resolved, so iconView.frame is still
+        // .zero and the overlay would be 0×0 (invisible). Without this the real icon
+        // is hidden, the overlay shows nothing, then the icon "pops" in at the end.
+        outlineView.layoutSubtreeIfNeeded()
+        let iconRect = iconView.convert(iconView.bounds, to: outlineView)
+        guard iconRect.width > 1, iconRect.height > 1 else {
+            // Still no usable frame — fall back to a static reveal rather than a blank.
+            index.consumeIconReveal(id)
+            return
+        }
+
         animatingRevealID = id
         revealedIDs.insert(id)
         iconView.alphaValue = 0   // hide the real icon; viewFor keeps it hidden on rebuilds
 
-        let overlay = NSImageView(frame: iconView.convert(iconView.bounds, to: outlineView))
+        let overlay = NSImageView(frame: iconRect)
         overlay.imageScaling = .scaleProportionallyUpOrDown
         overlay.symbolConfiguration = ProjectCellSpec.iconSymbolConfig
         overlay.contentTintColor = project.availability.isReady ? .labelColor : .secondaryLabelColor
         overlay.wantsLayer = true
-        outlineView.addSubview(overlay)
+        outlineView.addSubview(overlay)   // appended → top of z-order, above the rows
         revealOverlay = overlay
 
         Task { @MainActor [weak self] in

@@ -211,6 +211,7 @@
       "queuedPosition": "Queued \u00b7 position {{position}}",
       "stopping": "Stopping\u2026",
       "analysing": "Analysing\u2026",
+      "resuming": "Resuming\u2026",
       "analysedRelative": "Analysed {{when}}",
       "transcribed": "Transcribed",
       "partialRun": "Partial run",

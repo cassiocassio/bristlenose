@@ -217,6 +217,7 @@
       "queuedPosition": "Ve frontě · pozice {{position}}",
       "stopping": "Zastavování…",
       "analysing": "Analýza…",
+      "resuming": "Pokračování…",
       "analysedRelative": "Analyzováno {{when}}",
       "transcribed": "Přepsáno",
       "partialRun": "Částečný běh",

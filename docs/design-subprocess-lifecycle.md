@@ -109,6 +109,10 @@ There is no global "kill all" surface. If the user wants to nuke everything, the
 - **PID-file leak via `projectIndex` lookup.** `handleTermination` at `PipelineRunner.swift:776-778` removes the PID file by looking the project up from `projectIndex`. If `projectIndex` is unwired (logged at `:826`) or the project was deleted between spawn and termination, the PID file is leaked. Next launch's orphan-attach scan will find a dead PID and the `kill(pid, 0)` sweep removes it harmlessly — but worth being explicit so a future refactor doesn't assume the cleanup path is bulletproof.
 - **Spawn-vs-`writePIDFile` race.** `PipelineRunner.swift:737-742` carries an in-source comment acknowledging a window where an app crash between `proc.run()` and `writePIDFile` leaves an unattachable orphan (subprocess running, no PID file). Accepted trade-off; documenting it here so the design intent survives.
 
+### Idle-sleep prevention during a run (Jun 2026)
+
+A long unattended analysis on AC power used to freeze at the macOS idle-sleep timer — the run didn't fail, it *stalled* until the user woke the Mac. `PipelineRunner` now holds a `RunSleepAssertion` (`ProcessInfo.beginActivity(options: .userInitiated)`) whenever any project's `PipelineState` is `.running`, driven off `state.didSet` (single source of truth; `setHeld` is idempotent so coarse-transition churn can't thrash or leak). `.userInitiated` disables idle *system* sleep but leaves *display* sleep enabled (the screen still dims — no reason to burn the backlight for an unwatched job). It deliberately does **not** prevent *forced* sleep: lid-close on battery sleeps the Mac regardless (OS guarantee), and recovery from that is the orphan-attach/resume path above, not the assertion. `beginActivity` is sandbox-clean (process-local power hint, no entitlement). See `desktop/CLAUDE.md` for the design-choice rationale; edge machine unit-tested in `RunSleepAssertionTests.swift`.
+
 ### Quit propagation: kill children when the .app exits
 
 Today's `.onReceive(NSApplication.willTerminateNotification)` calls `serveManager.stop()`. Extend to:

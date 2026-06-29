@@ -210,6 +210,7 @@
       "queuedPosition": "En cola \u00b7 posici\u00f3n {{position}}",
       "stopping": "Deteniendo\u2026",
       "analysing": "Analizando\u2026",
+      "resuming": "Reanudando\u2026",
       "analysedRelative": "Analizado {{when}}",
       "transcribed": "Transcrito",
       "partialRun": "Ejecuci\u00f3n parcial",

@@ -1,0 +1,10 @@
+{
+  "heading": "Diagnóstico",
+  "checkOk": "{label}",
+  "checkFail": "{label}",
+  "checkWarn": "{label}",
+  "summary": {
+    "allPassed": "Todas as verificações passaram.",
+    "issuesFound": "{count} problema(s) encontrado(s)."
+  }
+}

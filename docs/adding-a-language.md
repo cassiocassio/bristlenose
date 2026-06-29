@@ -310,3 +310,30 @@ verify.
 That's the playbook. design-i18n.md is where you go for *why* any single
 step looks the way it does; here's where you find out *which* step is
 next.
+
+## Region-subtagged locales + parity drift (pt/zh wave, 29 Jun 2026)
+
+Two things the single-bare-code playbook above doesn't cover — learned adding
+pt-BR/pt-PT, and they apply to zh-Hant/zh-Hant-HK.
+
+**Weblate language code style (region/script subtags).** Bare codes (`cs`, `it`)
+never exposed this; `pt-BR` / `zh-Hant-HK` do. Hosted Weblate's default code
+style for our nested-JSON components is POSIX underscore → it writes `pt_BR/`.
+The loaders (i18next glob, Vite `@locales`, Swift) resolve the code straight to
+the dir name, so an underscore dir silently fails to load. Fix once at the
+**project** level (Settings → Language code style → "BCP style using a hyphen as
+a separator" — the *plain* one, NOT "…including country code", which would
+rename `cs`→`cs-CZ` and break every existing locale). Set it BEFORE adding the
+languages; if files were already created underscored, delete + re-add. Note
+`preflight` is not a Weblate component — hand-seed it in-branch.
+
+**Parity drift — a seed is a snapshot.** `main` keeps moving; keys added to `en`
+after you branch fall back to `en` in your locale → English in a build that
+looks complete. Before landing: **rebase onto current `main`, then run
+`scripts/check-locales.py`** — the `missing key(s)` warnings are your drift list.
+Classify each English-in-locale string first: a **seed gap** (wired via `t()`,
+key exists in `en`, missing in your locale → you seed it) vs a **wiring gap**
+(hardcoded literal or generated string → English in *every* locale → not
+fixable by seeding; needs i18n-ification first). Do NOT preemptively add the
+drift keys to your branch's `en` before rebasing — it breaks internal parity and
+risks a merge conflict. Rebase first, then seed your locale only.

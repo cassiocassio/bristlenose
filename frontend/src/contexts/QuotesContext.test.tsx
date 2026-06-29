@@ -333,6 +333,44 @@ describe("QuotesStore", () => {
       expect(result.current.quotes).toHaveLength(2);
     });
 
+    // Regression: both islands (QuoteSections + QuoteThemes) call
+    // initFromQuotes with the *full* set on mount. A plain concat made
+    // store.quotes contain every quote twice, doubling every tag count in
+    // the sidebar. The merge must dedup by dom_id.
+    it("does not duplicate quotes when the full set is init'd twice", () => {
+      const fullSet = [
+        makeQuote({ dom_id: "q-P1-100" }),
+        makeQuote({ dom_id: "q-P2-200" }),
+        makeQuote({ dom_id: "q-P3-300" }),
+      ];
+      initFromQuotes(fullSet); // QuoteSections mount
+      initFromQuotes(fullSet); // QuoteThemes mount — same full set
+      const { result } = renderHook(() => useQuotesStore());
+      expect(result.current.quotes).toHaveLength(3);
+      expect(result.current.quotes.map((q) => q.dom_id)).toEqual([
+        "q-P1-100",
+        "q-P2-200",
+        "q-P3-300",
+      ]);
+    });
+
+    it("tag counts are not doubled when the full set is init'd twice", () => {
+      const tagged = (dom_id: string) => makeQuote({ dom_id, tags: [TAG_FRUSTRATION] });
+      const fullSet = [tagged("q-P1-100"), tagged("q-P2-200")];
+      initFromQuotes(fullSet);
+      initFromQuotes(fullSet);
+      const { result } = renderHook(() => useQuotesStore());
+      // Mirror the sidebar's count logic: one tally per (non-hidden) quote.
+      const counts: Record<string, number> = {};
+      for (const q of result.current.quotes) {
+        if (result.current.hidden[q.dom_id]) continue;
+        for (const t of result.current.tags[q.dom_id] ?? q.tags) {
+          counts[t.name.toLowerCase()] = (counts[t.name.toLowerCase()] || 0) + 1;
+        }
+      }
+      expect(counts["frustration"]).toBe(2);
+    });
+
     it("replace mode resets quotes to only the new set", () => {
       initFromQuotes([makeQuote({ dom_id: "q-P1-100" })]);
       initFromQuotes([makeQuote({ dom_id: "q-P2-200" })], true);

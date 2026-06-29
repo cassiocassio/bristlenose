@@ -27,6 +27,7 @@ from bristlenose.events import (
     events_path,
     read_events,
 )
+from bristlenose.i18n import t
 from bristlenose.ui_kinds import CLI_GLYPH, MessageKind
 
 logger = logging.getLogger(__name__)
@@ -102,7 +103,7 @@ def _build_details(cause: Cause | None, log_tail: str) -> str | None:
     if cause_text:
         sections.append(cause_text)
     if log_tail.strip():
-        sections.append("Recent log:\n" + log_tail.strip())
+        sections.append(t("server.statusPage.recentLog") + "\n" + log_tail.strip())
     return "\n\n".join(sections) if sections else None
 
 
@@ -131,14 +132,14 @@ def detect_status(
         if desktop:
             return StatusInfo(
                 kind=MessageKind.INFO,
-                short="No interviews to analyse yet.",
-                long="Drop a folder of interviews here to start.",
+                short=t("server.statusPage.noRunDesktopShort"),
+                long=t("server.statusPage.noRunDesktopLong"),
                 details=None,
             )
         return StatusInfo(
             kind=MessageKind.INFO,
-            short="Nothing to see here, yet.",
-            long="$ bristlenose run interviews/",
+            short=t("server.statusPage.noRunCliShort"),
+            long="$ bristlenose run interviews/",  # literal command, not localised
             details=None,
             long_is_mono=True,
         )
@@ -158,8 +159,8 @@ def detect_status(
     if outcome == OutcomeEnum.CANCELLED.value:
         return StatusInfo(
             kind=MessageKind.WARNING,
-            short="Last run was cancelled.",
-            long="Re-run when ready.",
+            short=t("server.statusPage.cancelledShort"),
+            long=t("server.statusPage.cancelledLong"),
             details=details,
         )
 
@@ -167,7 +168,7 @@ def detect_status(
         long_msg = cause.message if (cause and cause.message) else None
         return StatusInfo(
             kind=MessageKind.ERROR,
-            short="Last run failed.",
+            short=t("server.statusPage.failedShort"),
             long=long_msg,
             details=details,
         )
@@ -191,8 +192,8 @@ _PAGE_TEMPLATE = """<!doctype html>
     {long_block}
     {details_block}
     <nav class="bn-status-footer">
-      <a href="{feedback_url}" target="_blank" rel="noopener noreferrer">Send feedback</a>
-      <a href="{help_url}" target="_blank" rel="noopener noreferrer">Help</a>
+      <a href="{feedback_url}" target="_blank" rel="noopener noreferrer">{send_feedback}</a>
+      <a href="{help_url}" target="_blank" rel="noopener noreferrer">{help}</a>
     </nav>
   </main>
 </body>
@@ -218,7 +219,7 @@ def render_page(
     if status.details:
         details_block = (
             '<details class="bn-status-details">'
-            '<summary>Show details</summary>'
+            f'<summary>{html.escape(t("server.statusPage.showDetails"))}</summary>'
             f'<pre>{html.escape(status.details)}</pre>'
             '</details>'
         )
@@ -233,4 +234,6 @@ def render_page(
         glyph=html.escape(CLI_GLYPH[status.kind]),
         feedback_url=html.escape(feedback_url, quote=True),
         help_url=html.escape(help_url, quote=True),
+        send_feedback=html.escape(t("server.statusPage.sendFeedback")),
+        help=html.escape(t("server.statusPage.help")),
     )

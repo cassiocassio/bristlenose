@@ -7,5 +7,18 @@
   "status": {
     "healthy": "Healthy",
     "degraded": "Degraded"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "No interviews to analyse yet.",
+    "noRunDesktopLong": "Drop a folder of interviews here to start.",
+    "noRunCliShort": "Nothing to see here, yet.",
+    "cancelledShort": "Last run was cancelled.",
+    "cancelledLong": "Re-run when ready.",
+    "failedShort": "Last run failed.",
+    "recentLog": "Recent log:",
+    "showDetails": "Show details",
+    "sendFeedback": "Send feedback",
+    "help": "Help",
+    "cliExitedWithCode": "CLI exited with code {code}"
   }
 }

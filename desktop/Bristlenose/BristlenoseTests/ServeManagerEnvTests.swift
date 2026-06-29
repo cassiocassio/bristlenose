@@ -211,6 +211,31 @@ struct ServeManagerEnvTests {
         }
     }
 
+    /// UI locale rides overlayPreferences: default "en" (or unset) injects
+    /// nothing (the server defaults to English), any other locale injects
+    /// BRISTLENOSE_LANG so the Python-rendered status page calls set_locale and
+    /// the failed-run surface matches the app's chosen language.
+    @Test func overlayPreferences_injects_lang_only_when_not_english() {
+        withIsolatedDefaults { defaults in
+            var env: [String: String] = [:]
+            // Unset → no injection
+            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+            #expect(env["BRISTLENOSE_LANG"] == nil)
+
+            // Explicit English → no injection
+            defaults.set("en", forKey: "language")
+            env = [:]
+            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+            #expect(env["BRISTLENOSE_LANG"] == nil)
+
+            // Non-English → injected
+            defaults.set("pt-BR", forKey: "language")
+            env = [:]
+            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+            #expect(env["BRISTLENOSE_LANG"] == "pt-BR")
+        }
+    }
+
     // MARK: - overlayPreferences provider+model coherence (Defect M invariant)
 
     /// Isolated UserDefaults suite for overlayPreferences tests — avoids

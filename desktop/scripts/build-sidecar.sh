@@ -79,6 +79,17 @@ robust_rmrf() {
 # Preconditions — run UNCONDITIONALLY, before any skip decision (a missing tool
 # must be a loud error, never a quiet skip). Per review finding 6.
 # ---------------------------------------------------------------------------
+# Xcode build phases run with a stripped PATH (/usr/bin:/bin:/usr/sbin:/sbin +
+# the developer dir) that omits the Homebrew prefix — so python3.12 (and any
+# other brew tool) won't resolve when ensure-sidecar.sh calls us from the
+# "Ensure Sidecar Fresh" build phase, even though it's fine in a login shell.
+# Prepend the Homebrew prefix bin (arm64 first, Intel fallback) before the
+# tool checks below. node@24 is keg-only so it still needs its own keg prepend.
+for _brew_bin in /opt/homebrew/bin /usr/local/bin; do
+    if [ -d "$_brew_bin" ]; then
+        PATH="$_brew_bin:$PATH"
+    fi
+done
 if [ -d /opt/homebrew/opt/node@24/bin ]; then
     PATH="/opt/homebrew/opt/node@24/bin:$PATH"
 fi

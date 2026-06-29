@@ -146,6 +146,33 @@ final class I18n: ObservableObject {
         }
     }
 
+    /// Resolve a CLDR-pluralised string. Appends the active locale's plural
+    /// category for `count` to `base` (`<base>_one` / `_few` / `_many` /
+    /// `_other`), substitutes `{{count}}` plus any extra `vars`, and degrades to
+    /// the `_other` form when the selected category's stem is absent.
+    ///
+    /// The `_other` fallback covers two real cases: single-form locales (ja/ko
+    /// carry only `_other`), and a locale that simply lacks a `_many` stem for a
+    /// given key. A locale whose `pluralCategory` returns `many` for integers
+    /// (pl/ru/uk — unlike cs, where `many` is decimals-only) is the first to
+    /// exercise the latter, so this is the single home for the pattern that
+    /// ContentView, ProjectRow, SidebarSubtitleText, ProjectDiagnosticPopover
+    /// and MiroSheet each used to inline. Keeping it in one place means a new
+    /// call site can't forget the guard and ship a raw `<base>_many` key.
+    func plural(_ base: String, count: Int, _ vars: [String: String] = [:]) -> String {
+        var merged = vars
+        merged["count"] = String(count)
+        let key = "\(base)_\(pluralCategory(count))"
+        let rendered = t(key, merged)
+        // `t` returns the raw key on a miss (the `_<category>` stem has no
+        // `{{count}}` placeholder, so substitution is a no-op) — that's the
+        // signal to retry the always-present `_other` form.
+        if rendered == key {
+            return t("\(base)_other", merged)
+        }
+        return rendered
+    }
+
     // MARK: - Private
 
     private static func sanitized(_ code: String) -> String {

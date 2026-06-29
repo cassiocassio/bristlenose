@@ -105,16 +105,11 @@ enum SidebarSubtitleText {
         }
     }
 
-    /// CLDR-plural count phrase. Verbatim `ProjectRow.deltaText` (`:449-463`) —
-    /// Czech needs one/few/many/other; ko/ja carry only `_other` (defensive fallback).
+    /// CLDR-plural count phrase. Mirrors `ProjectRow.deltaText` — Czech needs
+    /// one/few/many/other; ko/ja carry only `_other`. Selection + `_other`
+    /// fallback both live in `I18n.plural`.
     static func deltaText(prefix: String, count: Int, i18n: I18n) -> String {
-        let base = "desktop.chrome.\(prefix)"
-        let key = "\(base)_\(i18n.pluralCategory(count))"
-        let rendered = i18n.t(key, ["count": String(count)])
-        if rendered == key {
-            return i18n.t("\(base)_other", ["count": String(count)])
-        }
-        return rendered
+        i18n.plural("desktop.chrome.\(prefix)", count: count)
     }
 
     /// Bare progressive-coarsen date. Verbatim `ProjectRow.formatBareDate`

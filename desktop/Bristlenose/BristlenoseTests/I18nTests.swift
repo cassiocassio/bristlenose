@@ -166,6 +166,43 @@ struct I18nTests {
         // binary split would render two of these identically.
         #expect(Set(rendered).count == 3, "cs one/few/other should be distinct: \(rendered)")
     }
+
+    // MARK: - I18n.plural (centralised CLDR selection + _other fallback)
+
+    /// `plural` must select the active locale's CLDR form, byte-identical to the
+    /// hand-rolled `t("\(base)_\(category)")` the five call sites used to inline.
+    /// Czech exercises one/few/other against a fixture key that carries all
+    /// forms, with `{{count}}` interpolated.
+    @MainActor @Test func plural_selectsCldrForm_matchesDirectResolution() {
+        let i18n = I18n()
+        i18n.configure(localesDirectory: Self.fixturesURL)
+        i18n.setLocale("cs")
+        let base = "common.pluralFixture.full"
+        for (count, form) in [(1, "one"), (3, "few"), (7, "other")] {
+            let out = i18n.plural(base, count: count)
+            #expect(out == i18n.t("\(base)_\(form)", ["count": String(count)]),
+                    "cs count=\(count) should resolve full_\(form)")
+            #expect(out.contains(String(count)), "plural dropped {{count}} for \(form)")
+        }
+    }
+
+    /// The future-proofing guarantee for pl/ru/uk: when the selected category's
+    /// stem is absent, `plural` degrades to `_other` rather than leaking the raw
+    /// `<base>_<category>` key into chrome. `sparse` carries only `_one`/`_other`,
+    /// so a Czech `few` (count 3) request misses and must fall back. This is the
+    /// exact code path a `many` miss would take once those locales return `many`
+    /// for integers — category-agnostic, so cs's `few` proves it today.
+    @MainActor @Test func plural_missingStem_fallsBackToOther() {
+        let i18n = I18n()
+        i18n.configure(localesDirectory: Self.fixturesURL)
+        i18n.setLocale("cs")
+        let base = "common.pluralFixture.sparse"
+        let out = i18n.plural(base, count: 3)  // cs(3) → "few", sparse_few absent
+        #expect(out == i18n.t("\(base)_other", ["count": "3"]),
+                "missing sparse_few should fall back to sparse_other")
+        #expect(out != "\(base)_few", "must not leak the raw _few key")
+        #expect(out.contains("3"), "fallback should still interpolate {{count}}")
+    }
 }
 
 /// Anchor class for finding the test bundle at runtime.

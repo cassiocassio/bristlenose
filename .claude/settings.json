@@ -33,6 +33,15 @@
             "command": "jq -r '.tool_input.file_path' | xargs -I {} bash -c 'if [[ \"{}\" == *.py ]]; then .venv/bin/ruff check --fix \"{}\" || true; fi'"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/frontend-stale-reminder.sh"
+          }
+        ]
       }
     ]
   }

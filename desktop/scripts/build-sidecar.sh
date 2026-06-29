@@ -55,11 +55,42 @@ robust_rmrf() {
     rm -rf "$trash" || echo "warning: could not fully remove $trash (left for next run)" >&2
 }
 
-# Fingerprint the Python source NOW — before pip/PyInstaller run — so the stamp
-# reflects exactly what gets bundled, uncontaminated by any transient .py a build
-# step might drop under bristlenose/ (which would otherwise make the stamp
-# disagree with check-sidecar-freshness.sh's clean-tree recompute). Written to
-# the bundle near the end. See sidecar-source-hash.sh for the shared recipe.
+# ---------------------------------------------------------------------------
+# Build the React SPA into bristlenose/server/static FIRST — before fingerprint,
+# venv recreate, and PyInstaller analysis. The bundle ships server/static/ (the
+# SPA: gitignored, NOT produced by PyInstaller), so without this a missed
+# `npm run build` silently ships a STALE frontend. Doing it here makes every
+# sidecar build self-heal the SPA — standalone or via build-all.sh — and the
+# source fingerprint (sidecar-source-hash.sh) now covers frontend src + locales,
+# so the Xcode freshness gate fails loudly if this is ever skipped. Fail-fast
+# (cheap) before the ~100 s PyInstaller work. Mirrors release.yml's build.
+# ---------------------------------------------------------------------------
+FRONTEND_DIR="$ROOT/frontend"
+# Prefer the repo-pinned Node (.tool-versions: node 24). mise/asdf aren't
+# installed locally, so add the Homebrew keg to PATH when it's present.
+if [ -d /opt/homebrew/opt/node@24/bin ]; then
+    PATH="/opt/homebrew/opt/node@24/bin:$PATH"
+fi
+if ! command -v npm >/dev/null 2>&1; then
+    echo "error: npm not found on PATH — install Node 24 (see .tool-versions):" >&2
+    echo "  brew install node@24" >&2
+    exit 1
+fi
+if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
+    echo "error: frontend/node_modules missing — install deps first:" >&2
+    echo "  (cd frontend && npm ci --legacy-peer-deps)" >&2
+    exit 1
+fi
+echo "==> Building React SPA (npm run build) into bristlenose/server/static..."
+( cd "$FRONTEND_DIR" && npm run build )
+
+# Fingerprint the source (Python + frontend src + locales) NOW — before pip/
+# PyInstaller run — so the stamp reflects exactly what gets bundled, uncontaminated
+# by any transient file a build step might drop under bristlenose/ (which would
+# otherwise make the stamp disagree with check-sidecar-freshness.sh's clean-tree
+# recompute). The frontend was built just above, so server/static/ already matches
+# this fingerprint's frontend inputs. Written to the bundle near the end. See
+# sidecar-source-hash.sh for the shared recipe.
 # shellcheck source=sidecar-source-hash.sh
 . "$SCRIPT_DIR/sidecar-source-hash.sh"
 SOURCE_HASH="$(sidecar_source_hash "$ROOT")"
@@ -134,13 +165,14 @@ echo "==> Privacy manifest: $PRIVACY_DST"
 
 # Stamp the bundle with the source fingerprint captured at build START (above).
 # The Xcode "Copy Sidecar Resources" phase recomputes it (check-sidecar-freshness.sh)
-# and fails the build if a later Python change left the bundle stale — the desktop
-# app runs the bundled sidecar, not live Python, so a missed rebuild silently
-# ships old code. Written BEFORE sign-sidecar.sh so it's covered by the seal.
+# and fails the build if a later Python OR frontend change left the bundle stale —
+# the desktop app runs the bundled sidecar (and the SPA baked into it), not live
+# source, so a missed rebuild silently ships old code. Written BEFORE
+# sign-sidecar.sh so it's covered by the seal.
 {
     echo "$SOURCE_HASH"
     echo "version=$("$PYTHON" -c 'import bristlenose; print(bristlenose.__version__)' 2>/dev/null || echo unknown)"
-    echo "note=fingerprint of bristlenose/**/*.py; see check-sidecar-freshness.sh"
+    echo "note=fingerprint of bristlenose/**/*.py + locales + frontend src; see check-sidecar-freshness.sh"
 } > "$BUNDLE/.source-stamp"
 echo "==> Stamped .source-stamp: $(head -1 "$BUNDLE/.source-stamp" | cut -c1-12)…"
 

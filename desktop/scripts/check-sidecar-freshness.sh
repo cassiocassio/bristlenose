@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 # Fail the Xcode build if the bundled PyInstaller sidecar is STALE relative to
-# the Python under bristlenose/.
+# the source it serves — the Python under bristlenose/ OR the React frontend.
 #
-# WHY: the desktop app runs the *bundled* sidecar binary, not the worktree's
-# live Python. A Python change that isn't followed by `build-sidecar.sh` silently
-# ships old behaviour — the app serves stale code with no signal. This class of
-# bug ate a multi-hour debugging session (Run Inspector 404/401, 28 Jun 2026:
-# the endpoint+schema fixes were in the source but not in the bundle the app ran).
-# This turns "silent stale" into a loud, one-line build error.
+# WHY: the desktop app runs the *bundled* sidecar binary (and the SPA baked into
+# it), not the worktree's live source. A Python OR frontend change that isn't
+# followed by `build-sidecar.sh` silently ships old behaviour — the app serves
+# stale code with no signal. This class of bug ate a multi-hour debugging session
+# (Run Inspector 404/401, 28 Jun 2026: the endpoint+schema fixes were in the
+# source but not in the bundle the app ran) and recurs at the frontend layer
+# every time a new SPA feature renders blank because the bundled static/ predates
+# it. This turns "silent stale" into a loud, one-line build error.
 #
-# HOW: build-sidecar.sh stamps the bundle with a fingerprint over all
-# bristlenose/**/*.py (see sidecar-source-hash.sh — the shared recipe). Here we
-# recompute it and compare. Because the fingerprint only changes when Python
-# actually changes, pure-Swift builds never trip this.
+# HOW: build-sidecar.sh runs `npm run build` (so server/static/ matches the
+# frontend source) then stamps the bundle with a fingerprint over all
+# bristlenose/**/*.py + bristlenose/locales/** + frontend build inputs (see
+# sidecar-source-hash.sh — the shared recipe). Here we recompute it and compare.
+# Because the fingerprint only changes when that source actually changes,
+# pure-Swift builds never trip this.
 #
 # BYPASS: BRISTLENOSE_ALLOW_STALE_SIDECAR=1 (downgrades to a warning) — for
 # deliberately running a stale sidecar while iterating on Swift only.
@@ -51,8 +55,8 @@ fi
 stamped="$(head -1 "$STAMP")"
 
 if [ "$current" != "$stamped" ]; then
-    echo "error: bundled sidecar is STALE — Python under bristlenose/ changed since the last build-sidecar.sh (bundle ${stamped:0:12} vs source ${current:0:12}). The desktop app runs the bundled sidecar, so this build would serve OLD Python. Rebuild: desktop/scripts/build-sidecar.sh && desktop/scripts/sign-sidecar.sh. Bypass (Swift-only work): BRISTLENOSE_ALLOW_STALE_SIDECAR=1."
+    echo "error: bundled sidecar is STALE — Python or frontend source under bristlenose/ / frontend/ changed since the last build-sidecar.sh (bundle ${stamped:0:12} vs source ${current:0:12}). The desktop app runs the bundled sidecar + baked SPA, so this build would serve OLD code. Rebuild: desktop/scripts/build-sidecar.sh && desktop/scripts/sign-sidecar.sh (build-sidecar.sh runs npm build for you). Bypass (Swift-only work): BRISTLENOSE_ALLOW_STALE_SIDECAR=1."
     exit 1
 fi
 
-echo "✓ bundled sidecar matches Python source (${current:0:12})"
+echo "✓ bundled sidecar matches source — Python + frontend (${current:0:12})"

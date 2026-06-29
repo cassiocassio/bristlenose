@@ -159,7 +159,9 @@ Tags are your own codes, applied to quotes as you review them. A **codebook** or
 
 Bristlenose runs a 12-stage pipeline: ingest → extract audio → parse subtitles → parse `.docx` transcripts → transcribe (with speaker identification) → merge transcript → PII removal → topic segmentation → quote extraction → quote clustering → thematic grouping → render.
 
-If a run is interrupted, re-running the same command resumes where it left off. Completed sessions are loaded from cache in milliseconds. From v0.15.0, every run writes an append-only `pipeline-events.jsonl` with structured cause-of-end metadata; if a previous run died mid-flight, the next one notices and reconciles it. Per-run cost is shown as an honest estimate (e.g. `~$0.46 (est.)`).
+If a run is interrupted, re-running the same command resumes where it left off. Completed sessions are loaded from cache in milliseconds, and a half-written interim file from an abrupt power loss is detected and recomputed rather than failing the resume. From v0.15.0, every run writes an append-only `pipeline-events.jsonl` with structured cause-of-end metadata; if a previous run died mid-flight, the next one notices and reconciles it. Per-run cost is shown as an honest estimate (e.g. `~$0.46 (est.)`).
+
+In the **macOS app**, this is automatic: your Mac won't go to idle sleep while an analysis is running (the display can still dim), so an unattended run on mains power finishes on its own. If a run is still going when you quit and reopen the app, it reconnects and the sidebar shows "Resuming…". Closing the lid on battery still sleeps the Mac — when you reopen it, the analysis picks up from the last completed interview.
 
 ## Serve mode {#serve-mode}
 

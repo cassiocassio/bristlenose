@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "Motor de transcrição e extração de citações para investigação com utilizadores.",
+  "stage": {
+    "ingest": "Ingestão",
+    "extractAudio": "Extrair áudio",
+    "transcribe": "Transcrever",
+    "identifySpeakers": "Identificar intervenientes",
+    "mergeTranscript": "Unir transcrição",
+    "piiRemoval": "Remoção de PII",
+    "topicSegmentation": "Segmentação por tópicos",
+    "quoteExtraction": "Extração de citações",
+    "quoteClustering": "Agrupamento de citações",
+    "thematicGrouping": "Agrupamento temático",
+    "render": "Compor"
+  },
+  "error": {
+    "noInput": "Nenhum diretório de entrada especificado.",
+    "notFound": "Diretório não encontrado: {path}",
+    "noFiles": "Nenhum ficheiro de áudio, vídeo ou transcrição encontrado em {path}"
+  },
+  "progress": {
+    "complete": "Concluído",
+    "failed": "Falhou",
+    "skipped": "Ignorado"
+  }
+}

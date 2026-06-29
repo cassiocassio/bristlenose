@@ -199,14 +199,37 @@ motivating bug broke):
 
 "Wake up to greens" has four sharp edges. The runner must handle each explicitly.
 
-1. **TCC / permission prompts will wedge an unattended GUI run.** AppleScript UI
-   scripting needs Accessibility + Automation grants; XCUITest, Keychain reads,
-   and the consent dialog (Apple 5.1.2(i)) can all prompt. Per the project rule
-   that *an overnight goal whose gate needs a physical gesture or live TCC grant
-   must halt loudly, not stall silently*: pre-grant everything once,
-   interactively; the nightly run **asserts the grants exist and halts with a
-   clear message if not.** Tiers 1–2 have no TCC surface — another reason
-   they're the backbone.
+1. **TCC / permission prompts will wedge an unattended GUI run — so front-load
+   every human gate before the unattended window.** This is the operational key
+   to the whole overnight ambition, and it works: the gates are one-time and
+   sticky. Bedtime checklist clears them all: TCC Accessibility + Automation (for
+   the test runner), the consent dialog (5.1.2(i), persisted in `@AppStorage`),
+   Gatekeeper / first-launch ("app differs"), the folder-access bookmark for the
+   fixture projects, the firewall "accept incoming connections" prompt, Ollama
+   model pulled + daemon running, plugged in. Desktop cells use `--llm local`, so
+   there are **no API keys or Keychain prompts at all**.
+
+   **The ordering that bites: do not rebuild inside the unattended window.** A
+   fresh binary re-triggers Gatekeeper / "app differs" / first-launch, which
+   invalidates the grants you just cleared. So: **build as the last bedtime step
+   → launch once and clear all prompts against *that exact* `.app` → the nightly
+   RUNS it, it does not rebuild.** The headless cells may rebuild freely (they
+   never prompt); only the GUI smoke needs the blessed build — and a fresh
+   bedtime build already satisfies the stale-sidecar gate. (Keychain survives
+   rebuilds via the data-protection keychain; local-provider sidesteps it
+   anyway.)
+
+   **What front-loading cannot fix — keep the session alive.** GUI automation
+   needs a live WindowServer; sleep/lock stalls XCUITest. Wrap the run in
+   `caffeinate -dimsu`, set auto-lock off, stay logged in (display may be dark,
+   session must stay live).
+
+   **Safety net regardless:** per the project rule that *an overnight goal whose
+   gate needs a live gesture must halt loudly, not stall silently*, the runner
+   still **asserts each grant exists up front and halts with a clear message** on
+   a missing grant or an unexpected prompt — morning shows "needs TCC for X," not
+   a silent hang. Tiers 1–2 (CLI, headless engine cell) have no TCC surface —
+   another reason they're the backbone.
 
 2. **The stale-sidecar trap is lethal here.** A desktop cell that doesn't
    rebuild + sign the sidecar first tests *yesterday's* Python (documented

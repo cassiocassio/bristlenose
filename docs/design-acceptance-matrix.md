@@ -63,10 +63,34 @@ thousands). Axes:
   app**, exports (HTML / CSV / clips / Miro).
 
 **Fixtures.** Two sources: the committed smoke fixture
-(`tests/fixtures/smoke-test/`) for hermetic shape checks, plus a **local-only,
-gitignored** set of representative interview folders (one per input type) for the
-real provider runs. Real interview data stays out of git — fixture selection is a
-governance call (see Open questions), not just a storage one.
+(`tests/fixtures/smoke-test/`) — a synthetic single-session `.vtt`, ~4 quotes,
+already trusted by Playwright — plus a **local-only, gitignored** set of
+representative *media* folders (audio/video) for the transcription path. Real
+interview data stays out of git — fixture selection is a governance call (see
+Open questions), not just a storage one.
+
+**Transcription is provider-independent; only analysis is provider-specific.**
+This single fact shapes the whole matrix. Whisper runs locally and produces the
+same text regardless of which LLM later analyses it, so a cloud provider is only
+ever exercised by the analysis stages (s08–s11). Two consequences:
+
+- **The per-provider column uses text, not media.** Run
+  `analyze <text-fixture> --llm <provider>` (the committed `.vtt` needs no
+  Whisper — subtitle parse, not transcription) so the cell goes straight to the
+  provider's wire path (auth, request/response format, model-name resolution,
+  schema handling) — the only thing it uniquely tests. Feeding media to a cloud
+  cell would pay Whisper time to test nothing cloud-specific. The fixture must be
+  big enough to produce a *non-empty* report (≥1 boundary/quote/theme) or the
+  shape invariants go vacuous — but it need not be real or large; the smoke
+  fixture's ~4 quotes is the right size.
+- **The media path is one cell, not a column.** A small media fixture → `run`,
+  executed **once on local**, covers Whisper + the transcription→analysis
+  handoff. Running it per cloud provider would re-test provider-independent
+  transcription N times for no gain.
+
+So the matrix is not "every fixture × every provider." It is a **wire-path
+column** (text → `analyze` × all 5 providers — where the motivating bug class
+lives) plus a **full-chain cell** (media → `run` × 1, local).
 
 **Scoping insight that bounds the fragile part:** the desktop app is a thin
 shell over the Python sidecar — ~80% of "out-of-box behaviour" *is* CLI/serve
@@ -185,8 +209,11 @@ through to its log + the report it produced.
 
 ## Open questions (decide as we build)
 
-- **Cloud spend ceiling per night** — cap which fixtures run against paid
-  providers (e.g. smallest fixture for cloud, full for local).
+- ~~**Cloud spend ceiling per night**~~ — _resolved 29 Jun 2026:_ the
+  per-provider column runs the small synthetic text fixture via `analyze`
+  (~a dozen small calls × 5 providers ≈ pennies/night); the media path is a
+  single local `run` cell. No real cap needed at this scale; revisit only if the
+  fixture set grows.
 - **Where artifacts live** — a gitignored `acceptance-runs/` dir vs. a temp dir
   wiped each run. Reports may carry real interview content, so this is a
   governance call, not just storage.

@@ -448,21 +448,10 @@ struct ProjectRow: View {
 
     /// Render a count-bearing chrome phrase using the active locale's CLDR
     /// plural category (one/few/many/other). Czech needs all four; en/es/fr/de
-    /// carry one+other; ko/ja carry only other.
+    /// carry one+other; ko/ja carry only other. The `_other` fallback for an
+    /// absent stem lives in `I18n.plural`.
     private func deltaText(prefix: String, count: Int) -> String {
-        // Select the CLDR plural form for the active locale (Czech needs
-        // one/few/many/other — the old `count == 1 ? One : Other` ternary
-        // rendered the `_other` form for Czech counts 2–4). Mirrors
-        // ProjectDiagnosticPopover.localisedOverflowText.
-        let base = "desktop.chrome.\(prefix)"
-        let key = "\(base)_\(i18n.pluralCategory(count))"
-        let rendered = i18n.t(key, ["count": String(count)])
-        // Defensive: a locale lacking the selected form (ko/ja carry only
-        // `_other`) falls back to `_other` rather than showing the raw key.
-        if rendered == key {
-            return i18n.t("\(base)_other", ["count": String(count)])
-        }
-        return rendered
+        i18n.plural("desktop.chrome.\(prefix)", count: count)
     }
 
     // MARK: - Rename field (unchanged from prior shape)

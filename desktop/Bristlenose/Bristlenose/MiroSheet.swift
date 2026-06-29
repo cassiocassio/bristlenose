@@ -93,16 +93,10 @@ final class MiroSheetModel: ObservableObject {
         return line
     }
 
-    /// "Board ready — N quote stickies placed", count-correct, with a fallback to
-    /// the `_other` form for plural categories a locale doesn't define (e.g. cs `few`).
+    /// "Board ready — N quote stickies placed", count-correct. Plural selection
+    /// and the `_other` fallback for an absent stem both live in `I18n.plural`.
     func boardReadyText() -> String {
-        let cat = i18n.pluralCategory(stickies)
-        let key = "common.miro.boardReady_\(cat)"
-        let s = i18n.t(key, ["count": String(stickies)])
-        if s == key {
-            return i18n.t("common.miro.boardReady_other", ["count": String(stickies)])
-        }
-        return s
+        i18n.plural("common.miro.boardReady", count: stickies)
     }
 
     func load() async {

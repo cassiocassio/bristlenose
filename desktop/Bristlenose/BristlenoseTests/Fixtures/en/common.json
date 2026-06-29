@@ -7,5 +7,13 @@
   "actions": {
     "save": "Save",
     "cancel": "Cancel"
+  },
+  "pluralFixture": {
+    "full_one": "{{count}} full-one",
+    "full_few": "{{count}} full-few",
+    "full_many": "{{count}} full-many",
+    "full_other": "{{count}} full-other",
+    "sparse_one": "{{count}} sparse-one",
+    "sparse_other": "{{count}} sparse-other"
   }
 }

@@ -259,13 +259,7 @@ struct ContentView: View {
     /// mirroring `ProjectRow.deltaText` (one/few/many/other + `_other` fallback
     /// for single-form locales like ja/ko).
     private func sessionCountPhrase(_ count: Int) -> String {
-        let base = "desktop.chrome.titleSessions"
-        let key = "\(base)_\(i18n.pluralCategory(count))"
-        let rendered = i18n.t(key, ["count": String(count)])
-        if rendered == key {
-            return i18n.t("\(base)_other", ["count": String(count)])
-        }
-        return rendered
+        i18n.plural("desktop.chrome.titleSessions", count: count)
     }
 
     private static let focusLog = Logger(subsystem: "app.bristlenose", category: "focus")

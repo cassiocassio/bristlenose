@@ -328,13 +328,7 @@ struct ProjectDiagnosticPopover: View {
         guard let count = parseOverflowCount(from: message) else {
             return message
         }
-        let base = "desktop.pipeline.diagnostic.overflow"
-        let key = "\(base)_\(i18n.pluralCategory(count))"
-        let rendered = i18n.t(key, ["count": String(count)])
-        if rendered == key {
-            return i18n.t("\(base)_other", ["count": String(count)])
-        }
-        return rendered
+        return i18n.plural("desktop.pipeline.diagnostic.overflow", count: count)
     }
 
     /// Parse `N` out of `"... and N more failures truncated"`. Returns nil for

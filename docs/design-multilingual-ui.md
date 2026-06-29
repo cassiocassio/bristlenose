@@ -274,14 +274,16 @@ The release bar is **native-speaker review before release** (design-i18n.md §St
   deltas* with a second reviewer — "both" is ~1.4× the cost of "one," not 2×. Decision +
   full evidence (Apple/Microsoft/Mozilla/CLDR): `docs/design-i18n.md` §Future locales,
   resolved 29 Jun 2026.
-- **Chinese:** zh-Hant (Traditional — Taiwan, HK, Macau) is the **commercial driver** — HK +
-  Taiwan App Store `.app` + CLI, gated on a Taiwan-native reviewer (idiom diverges beyond
-  OpenCC glyph conversion: 軟體/軟件 for "software"). HK practitioners largely work in business
-  English, so the Taiwan revenue case carries zh-Hant; HK may simply ride the `.app` in
-  English. zh-Hans (Simplified — Singapore, diaspora, mainland) is the **cheap fork** off
-  zh-Hant (~1.4×), shipping in the same `.app` + CLI; it serves Singapore/diaspora and is the
-  passive ride-along for mainland developers who find the OSS CLI via GitHub. **Mainland China
-  is out of scope as a commercial/build target** — see below.
+- **Chinese:** the commercial unit is a **Traditional pair** — zh-Hant (Taiwan) + zh-Hant-HK
+  (Hong Kong), one natively idiomatic per App Store storefront. They diverge in high-frequency
+  UI vocab beyond OpenCC glyph conversion (軟體/軟件 software, 網路/互聯網 Internet, 解析度/解像度
+  resolution), and the l10n industry treats zh-TW/zh-HK as separate locales — so HK and Taiwan
+  each need their own reviewer. zh-Hant (Taiwan) is the full-weight primary, gated on a
+  **Taiwan-native** reviewer; zh-Hant-HK is a **thin override fork** (OpenCC `t2hk`-seeded,
+  ~1.25–1.3× the pair) whose reviewer is naturally the **London HK diaspora** (correct HK
+  idiom, reachable). zh-Hans (Simplified) is **parked** — forked later off whichever
+  Traditional variant is mature, for Singapore/diaspora + passive mainland GitHub-finders.
+  **Mainland China is out of scope as a commercial/build target** — see below.
 
 ### Mainland China: a passive ride-along, not a target
 
@@ -312,8 +314,9 @@ keeping it reviewed, or it costs more than not having it.
 | Opportunistic | `cs` Czech | In-flight (`cz` branch) — community-initiated |
 | Proactive | `pt-PT` Portuguese (Portugal) | Next, after `cz` merges — MT-seed + preview; cold-but-friendly Lisbon UR contact |
 | Proactive | `pt-BR` Portuguese (Brazil) | Next, after `cz` merges — largest non-Anglo UR community; needs a Brazilian reviewer (Lisbon contact may bridge) |
-| Proactive | `zh-Hant` Chinese (Traditional) | **Commercial driver:** HK + Taiwan, App Store `.app` + CLI. Gated on a Taiwan-native reviewer (idiom, e.g. `軟體` not `軟件`) |
-| Proactive | `zh-Hans` Chinese (Simplified) | Cheap fork off `zh-Hant` (~1.4×); ships same `.app` + CLI; serves Singapore/diaspora + passive mainland GitHub-finders. Mainland out of scope as a target |
+| Proactive | `zh-Hant` Chinese (Traditional, Taiwan) | **Commercial primary:** Taiwan App Store `.app` + CLI. Full-weight locale; gated on a Taiwan-native reviewer (UXTW / HPX / 悠識). |
+| Proactive | `zh-Hant-HK` Chinese (Traditional, Hong Kong) | **Commercial pair-mate:** HK storefront. Thin OpenCC-`t2hk` override fork off `zh-Hant` (~1.25–1.3× the pair); reviewer = London HK diaspora / UXHK. Falls back to `zh-Hant`. |
+| Parked | `zh-Hans` Chinese (Simplified) | Out of commercial path. Later OpenCC `t2s` fork for Singapore/diaspora + passive mainland GitHub. Mainland out of scope as a target. |
 
 ## File map
 

@@ -10,8 +10,13 @@
 #   → deep-verify → atomic .sign-stamp → run-log line.
 #
 # bash-3.2-SAFE on purpose: it runs as an Xcode build phase under /bin/bash (3.2).
-# It shells out to sign-sidecar.sh (which requires bash 4.3+ via its own
-# env-bash shebang) as a CHILD process, so the version requirement is isolated.
+# It shells out to sign-sidecar.sh (which requires bash 4.3+) as a CHILD process.
+# Note those children are launched via bare `bash <script>` below (114/135/136),
+# which picks the FIRST `bash` on PATH and overrides their `#!/usr/bin/env bash`
+# shebang — so the 4.3+ requirement is satisfied by the Homebrew-prefix PATH
+# prepend just below (Xcode's stripped build-phase PATH omits Homebrew, leaving
+# only /bin/bash 3.2). The same prepend makes python3.12 resolvable for
+# build-sidecar.sh. Both were dead in-phase until this was added (29 Jun 2026).
 #
 # Usage:   ensure-sidecar.sh [--force] [--dry-run]
 # Env:
@@ -24,6 +29,17 @@
 #   BRISTLENOSE_SKIP_SIDECAR_ENSURE=1   skip (fast schemes: Dev Sidecar / External).
 
 set -euo pipefail
+
+# Xcode build phases run with a stripped PATH that omits the Homebrew prefix.
+# Prepend it (arm64 first, Intel fallback) so the bare `bash <child>` calls
+# below resolve to Homebrew bash 5.x (sign-sidecar.sh needs 4.3+) and so
+# build-sidecar.sh finds python3.12. 3.2-safe: plain string assignment.
+for _brew_bin in /opt/homebrew/bin /usr/local/bin; do
+    if [ -d "$_brew_bin" ]; then
+        PATH="$_brew_bin:$PATH"
+    fi
+done
+export PATH
 
 FORCE=0
 DRY_RUN=0

@@ -274,24 +274,28 @@ The release bar is **native-speaker review before release** (design-i18n.md §St
   deltas* with a second reviewer — "both" is ~1.4× the cost of "one," not 2×. Decision +
   full evidence (Apple/Microsoft/Mozilla/CLDR): `docs/design-i18n.md` §Future locales,
   resolved 29 Jun 2026.
-- **Chinese:** zh-Hans (Simplified — mainland, Singapore) vs zh-Hant (Traditional — Taiwan,
-  HK, Macau). The Simplified→Traditional script conversion is semi-mechanical (OpenCC), but
-  terminology still diverges (軟體/软件 for "software") and needs a native pass. Across the
-  Sinophone professional world, **zh-Hant rests on Taiwan alone** — HK and Singapore work in
-  English. So zh-Hant is the speculative variant: fork it cheaply off zh-Hans, float it as a
-  preview, add it only if a Taiwanese reviewer materialises.
+- **Chinese:** zh-Hant (Traditional — Taiwan, HK, Macau) is the **commercial driver** — HK +
+  Taiwan App Store `.app` + CLI, gated on a Taiwan-native reviewer (idiom diverges beyond
+  OpenCC glyph conversion: 軟體/軟件 for "software"). HK practitioners largely work in business
+  English, so the Taiwan revenue case carries zh-Hant; HK may simply ride the `.app` in
+  English. zh-Hans (Simplified — Singapore, diaspora, mainland) is the **cheap fork** off
+  zh-Hant (~1.4×), shipping in the same `.app` + CLI; it serves Singapore/diaspora and is the
+  passive ride-along for mainland developers who find the OSS CLI via GitHub. **Mainland China
+  is out of scope as a commercial/build target** — see below.
 
-### China: product-fit and commercial-fit are decoupled
+### Mainland China: a passive ride-along, not a target
 
-A useful distinction for the zh-Hans decision. The *product* fit for the mainland is
-arguably the strongest you have anywhere: the mainland open-weight models (DeepSeek, Qwen,
-GLM/Zhipu, Kimi) are frontier-competitive, run through Bristlenose's **Local/Ollama path**,
-give in-language analysis, and never upload data — which is exactly the posture the
-regulatory regime rewards. But the *commercial* fit is hard: ICP licensing, no cloud
-providers, and the support/marketing burden on a solo non-Chinese dev. **These don't have
-to be solved together.** Shipping the zh-Hans localization has value (diaspora, Singapore,
-the open-model crowd) without any China commercial-market entry — which is a separate,
-boots-on-the-ground decision, not a localization one.
+Mainland China is **out of scope** as a commercial or engineering target — no App Store (ICP
+licensing, no resolving cloud providers, in-China hosting expectations), no mainland-specific
+build, no domestic-mirror project, no mainland reviewer. The mainland *product*-fit is
+genuinely strong — the open-weight models (DeepSeek, Qwen, GLM/Zhipu, Kimi) are
+frontier-competitive, run through Bristlenose's **Local/Ollama path**, give in-language
+analysis, and never upload data — but *commercial*-fit is hard and **the two don't have to be
+solved together.** So the posture is passive: developers who discover the OSS CLI via GitHub
+are served by `zh-Hans` (or `zh-Hant`, or English), and that's enough. The `zh-Hans`
+localization earns its place on Singapore/diaspora reach **plus** that free passive mainland
+reach — not on any mainland market entry, which stays a separate, deferred,
+boots-on-the-ground decision.
 
 ### The standing tax — why this isn't free
 
@@ -308,8 +312,8 @@ keeping it reviewed, or it costs more than not having it.
 | Opportunistic | `cs` Czech | In-flight (`cz` branch) — community-initiated |
 | Proactive | `pt-PT` Portuguese (Portugal) | Next, after `cz` merges — MT-seed + preview; cold-but-friendly Lisbon UR contact |
 | Proactive | `pt-BR` Portuguese (Brazil) | Next, after `cz` merges — largest non-Anglo UR community; needs a Brazilian reviewer (Lisbon contact may bridge) |
-| Proactive | `zh-Hans` Chinese (Simplified) | Strong product-fit (local open-weights); MT-seed + preview to recruit reviewer |
-| Speculative | `zh-Hant` Chinese (Traditional) | Taiwan-only justification; fork off zh-Hans, add only if a Taiwan reviewer appears |
+| Proactive | `zh-Hant` Chinese (Traditional) | **Commercial driver:** HK + Taiwan, App Store `.app` + CLI. Gated on a Taiwan-native reviewer (idiom, e.g. `軟體` not `軟件`) |
+| Proactive | `zh-Hans` Chinese (Simplified) | Cheap fork off `zh-Hant` (~1.4×); ships same `.app` + CLI; serves Singapore/diaspora + passive mainland GitHub-finders. Mainland out of scope as a target |
 
 ## File map
 

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 28 Jun 2026 (`figjam-miro-market-share` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
+**Updated:** 30 Jun 2026 (`pt` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
 
 ---
 
@@ -39,7 +39,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
-| `bristlenose_branch pt/` | `pt` | feature | Portuguese (pt-BR + pt-PT) across CLI/desktop/React — MT-seed both as labelled community previews, fork pt-PT deltas |
 | `bristlenose_branch zh-hant-pair/` | `zh-hant-pair` | feature | Chinese Traditional pair (zh-Hant Taiwan + zh-Hant-HK) — registry script+region subtag plumbing, BCP 47 lookup fix, OpenCC-seeded locales (review-gated) |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
@@ -125,7 +124,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
-| `pt` | `bristlenose_branch pt/` | local only |
 | `zh-hant-pair` | `bristlenose_branch zh-hant-pair/` | local only |
 | `claude/debug-menu-instrumentation-4r9npy` _(merged)_ | _(worktree removed)_ | `origin/...` — merged to main 28 Jun 2026 (`252c1ce3`) |
 | `claude/figjam-miro-market-share-px52tg` _(merged)_ | `bristlenose_branch_figjam-miro-market-share/` _(detached, on disk)_ | local deleted — merged to main 28 Jun 2026 (66bc28c4) |
@@ -156,30 +154,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `pt`
-
-**Kind:** feature — Portuguese localisation, both variants (`pt-BR` Brazilian + `pt-PT` European) across CLI, desktop, and React SPA
-**Status:** Just started
-**Started:** 29 Jun 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch pt/`
-**Remote:** local only (push when ready)
-
-**What it does:** MT-seed both Portuguese variants as labelled community previews, then promote to "reviewed" before release. Mirrors the merged `cs` (Czech) enablement pattern. Decision settled (two full locales, not `pt` base + override) with Apple/Microsoft/Mozilla/CLDR evidence — see `docs/design-i18n.md` §Future locales and the branch handoff (`HANDOFF.md` in the worktree). Production is delta-driven: MT-seed `pt-BR` fully, fork `pt-PT` by the vocabulary deltas (`arquivo`/`ficheiro`, `usuário`/`utilizador`, `tela`/`ecrã`). Bare-`pt` fallback resolves to `pt-BR`.
-
-**Files this branch will touch:**
-- `bristlenose/locales/` (new `pt-BR/` + `pt-PT/` dirs)
-- `frontend/src/i18n/index.ts` (`SUPPORTED_LOCALES`)
-- `bristlenose/i18n.py` (`SUPPORTED_LOCALES`)
-- `desktop/Bristlenose/Bristlenose/I18n.swift` (`supportedLocales`)
-- `bristlenose/doctor.py` (expected locale-dir set)
-- picker labels (SettingsPanel.tsx, SettingsModal.tsx, AppearanceSettingsView.swift)
-- `bristlenose/locales/glossary.csv`, `tests/test_pipeline_diagnostic_locale_keys.py`
-
-**Potential conflicts with other branches:**
-- ⚠️ **Concurrent `zh` (Chinese) language work on `main`** (commit `e4fb380b`, Jun 2026): pt and zh edit the **identical** `SUPPORTED_LOCALES` lines in `i18n.py`/`index.ts`/`I18n.swift`, the `doctor.py` expected set, the 3 picker-label sites, and `glossary.csv`. The zh session commits to main directly; this worktree is isolated precisely to avoid working-tree clobber. **Mechanical to merge** (different list entries / different keys), but rebase pt onto main before merging so the locale-list additions interleave rather than conflict. `design-i18n.md` §Future locales has adjacent pt + zh blocks — both already coexist cleanly as of `e4fb380b`.
 
 ---
 
@@ -314,6 +288,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `pt` — merged 30 Jun 2026
+
+Feature — Portuguese localisation across CLI, desktop, and React SPA: MT-seed both pt-BR (Brazilian) and pt-PT (European) as labelled community previews. Mirrors the merged `cs` (Czech) enablement pattern. Decision settled (two full locales, not `pt` base + override) with Apple/Microsoft/Mozilla/CLDR evidence. Production is delta-driven: MT-seed `pt-BR` fully, fork `pt-PT` by vocabulary deltas. Bare-`pt` fallback resolves to `pt-BR`. Single commit merged to main; worktree detached and tagged orange on disk, local branch deleted.
 
 ### `figjam-miro-market-share` — merged 28 Jun 2026
 

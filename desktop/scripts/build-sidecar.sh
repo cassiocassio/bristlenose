@@ -80,21 +80,28 @@ robust_rmrf() {
 # must be a loud error, never a quiet skip). Per review finding 6.
 # ---------------------------------------------------------------------------
 # Xcode build phases run with a stripped PATH (/usr/bin:/bin:/usr/sbin:/sbin +
-# the developer dir) that omits the Homebrew prefix — so python3.12 (and any
-# other brew tool) won't resolve when ensure-sidecar.sh calls us from the
-# "Ensure Sidecar Fresh" build phase, even though it's fine in a login shell.
-# Prepend the Homebrew prefix bin (arm64 first, Intel fallback) before the
-# tool checks below. node@24 is keg-only so it still needs its own keg prepend.
-for _brew_bin in /opt/homebrew/bin /usr/local/bin; do
-    if [ -d "$_brew_bin" ]; then
-        PATH="$_brew_bin:$PATH"
-    fi
-done
-if [ -d /opt/homebrew/opt/node@24/bin ]; then
+# the developer dir) that omits whatever toolchain installs python3.12 / node —
+# so these resolve in a login shell but not when ensure-sidecar.sh calls us from
+# the "Ensure Sidecar Fresh" build phase. We RESPECT an already-resolvable tool
+# (a correctly-configured PATH wins untouched) and only fall back to this
+# project's documented Mac toolchain — the Homebrew prefix (.tool-versions /
+# desktop/CLAUDE.md) — when the tool is missing. A contributor on a different
+# toolchain (mise/asdf/pyenv/python.org) just needs their python3.12 + node on
+# the build's PATH; we never override it. Not a universal resolver by design —
+# the loud errors below tell a non-Homebrew setup exactly what to do.
+if ! command -v python3.12 >/dev/null 2>&1; then
+    for _brew_bin in /opt/homebrew/bin /usr/local/bin; do
+        [ -d "$_brew_bin" ] && PATH="$_brew_bin:$PATH"
+    done
+fi
+# node@24 is keg-only on Homebrew (never in the prefix bin above), so it needs
+# its own keg prepend — again only when npm isn't already resolvable.
+if ! command -v npm >/dev/null 2>&1 && [ -d /opt/homebrew/opt/node@24/bin ]; then
     PATH="/opt/homebrew/opt/node@24/bin:$PATH"
 fi
 if ! command -v npm >/dev/null 2>&1; then
-    echo "error: npm not found on PATH — install Node 24 (see .tool-versions): brew install node@24" >&2
+    echo "error: npm/node not found on PATH. This project pins node 24 (.tool-versions)." >&2
+    echo "       Install it (brew install node@24) or put your node 24 bin on the build's PATH." >&2
     exit 1
 fi
 if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
@@ -102,7 +109,9 @@ if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
     exit 1
 fi
 if ! command -v python3.12 >/dev/null; then
-    echo "error: python3.12 not found on PATH — brew install python@3.12" >&2
+    echo "error: python3.12 not found on PATH. This project pins python 3.12 (.tool-versions)." >&2
+    echo "       Install it (brew install python@3.12) or put your python3.12 on the build's PATH." >&2
+    echo "       (Xcode build phases use a stripped PATH; this script falls back to the Homebrew prefix.)" >&2
     exit 1
 fi
 

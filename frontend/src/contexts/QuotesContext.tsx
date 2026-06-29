@@ -119,9 +119,12 @@ function setState(updater: (prev: QuotesState) => QuotesState): void {
 /**
  * Populate the store from an API quotes response.
  *
- * On initial mount both islands call this independently (quotes are
- * exclusive — a dom_id appears in sections OR themes, never both).
- * Default behaviour merges into existing state.
+ * On initial mount both islands (QuoteSections + QuoteThemes) call this
+ * independently, each with the *full* quote set (sections + themes). The
+ * merge therefore dedups by dom_id — a plain concat would double every
+ * quote (and so double every tag count in the sidebar). Last writer wins
+ * per dom_id; the two islands fetch identical data, so copies are
+ * equivalent. The dom_id-keyed state maps below are already idempotent.
  *
  * Pass `replace: true` on re-fetch (bn:tags-changed) to atomically
  * clear-and-set, avoiding race conditions between the two islands.
@@ -145,8 +148,13 @@ export function initFromQuotes(quotes: QuoteResponse[], replace = false): void {
       if (q.proposed_tags.length > 0) proposedTags[q.dom_id] = [...q.proposed_tags];
     }
 
-    // Merge quotes arrays (or replace)
-    const mergedQuotes = replace ? [...quotes] : [...base.quotes, ...quotes];
+    // Merge quotes by dom_id (idempotent): both islands call this with the
+    // full set on mount, so a plain concat would double-count. Last writer
+    // wins per dom_id.
+    const byId = new Map<string, QuoteResponse>();
+    if (!replace) for (const q of base.quotes) byId.set(q.dom_id, q);
+    for (const q of quotes) byId.set(q.dom_id, q);
+    const mergedQuotes = [...byId.values()];
 
     return {
       ...base,

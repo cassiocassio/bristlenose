@@ -20,7 +20,7 @@ from pathlib import Path
 
 _LOCALE_DIR = Path(__file__).parent / "locales"
 
-SUPPORTED_LOCALES = ("en", "es", "ja", "fr", "de", "ko", "cs")
+SUPPORTED_LOCALES = ("en", "es", "ja", "fr", "de", "ko", "cs", "it")
 
 _current_locale = "en"
 

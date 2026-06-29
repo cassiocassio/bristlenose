@@ -88,9 +88,19 @@ ever exercised by the analysis stages (s08–s11). Two consequences:
   handoff. Running it per cloud provider would re-test provider-independent
   transcription N times for no gain.
 
-So the matrix is not "every fixture × every provider." It is a **wire-path
-column** (text → `analyze` × all 5 providers — where the motivating bug class
-lives) plus a **full-chain cell** (media → `run` × 1, local).
+So the matrix is not "every fixture × every provider." Three groups:
+
+- **Wire-path column** — text → `analyze` × all 5 providers. Where the motivating
+  bug class lives.
+- **Transcription cell** — a media fixture (video or audio) → `run` × 1, local.
+  Covers extract-audio (s02) + Whisper (s05) + the handoff to analysis.
+- **Input-format cells** — the non-media parsers (`.vtt` s03, `.docx` s04, `.txt`
+  s01) as fast **local-only** `analyze` runs. Each format hits a different ingest
+  stage, so span them — but they're all provider-independent and never multiply
+  across the provider column.
+
+The whole input funnel (video → audio → words) sits *upstream* of any provider;
+the cloud columns are purely downstream of it.
 
 **Scoping insight that bounds the fragile part:** the desktop app is a thin
 shell over the Python sidecar — ~80% of "out-of-box behaviour" *is* CLI/serve

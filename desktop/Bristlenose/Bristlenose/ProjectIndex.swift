@@ -293,6 +293,11 @@ final class ProjectIndex: ObservableObject {
     /// `sessionCount` and `missingFiles` are unaffected.
     @Published var unanalysed: [UUID: UnanalysedState] = [:]
 
+    /// Transient (not persisted) one-shot signal: the id of a just-created
+    /// project that was auto-assigned a random icon and should play the reveal
+    /// animation once. The sidebar row consumes it via `consumeIconReveal`.
+    @Published var pendingIconReveal: UUID?
+
     /// Bookmark leases held while a project is `.ready`. Released on
     /// transition to `.cantFind` / `.inCloud` or when the project is removed.
     /// Co-terminous with the watcher in `watchers`.
@@ -357,11 +362,19 @@ final class ProjectIndex: ObservableObject {
                 folders[i].position += 1
             }
         }
+        // Auto-assign a distinctive identity icon (seeded off the name,
+        // collision-avoided against icons already in use). Nil when the
+        // Appearance toggle is off — the project then keeps the default ring.
+        let assignedIcon = RandomProjectIcon.iconForNewProject(
+            name: finalName,
+            existing: Set(projects.compactMap(\.icon))
+        )
         let project = Project(
             id: UUID(),
             name: finalName,
             path: path,
             inputFiles: inputFiles,
+            icon: assignedIcon,
             location: location,
             bookmarkData: bookmark,
             folderId: folderID,
@@ -375,7 +388,15 @@ final class ProjectIndex: ObservableObject {
         projects.insert(project, at: 0)
         save()
         syncWatchers()
+        // Flag the just-assigned icon for its one-shot reveal. Only when an icon
+        // was actually assigned — an opted-out project (nil) plays nothing.
+        if assignedIcon != nil { pendingIconReveal = project.id }
         return project
+    }
+
+    /// Clear the one-shot icon-reveal trigger after the row has played it.
+    func consumeIconReveal(_ id: UUID) {
+        if pendingIconReveal == id { pendingIconReveal = nil }
     }
 
     /// Remove a project by ID.

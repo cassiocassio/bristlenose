@@ -389,4 +389,4 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 ## Current status
 
-Alpha pre-TestFlight (v0.16.x line). React migration complete (Steps 1–10); bundled-sidecar desktop is the primary distribution path; CLI ships on PyPI + Homebrew + Snap. Static render is a sealed byproduct, not a user-facing product. See [CHANGELOG.md](CHANGELOG.md) for version history, [TODO.md](TODO.md) for active work, and `git log` for the unabridged story.
+Alpha pre-TestFlight (v0.17.x line). React migration complete (Steps 1–10); bundled-sidecar desktop is the primary distribution path; CLI ships on PyPI + Homebrew + Snap. Static render is a sealed byproduct, not a user-facing product. See [CHANGELOG.md](CHANGELOG.md) for version history, [TODO.md](TODO.md) for active work, and `git log` for the unabridged story.

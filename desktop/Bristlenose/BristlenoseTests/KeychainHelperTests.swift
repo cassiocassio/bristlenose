@@ -71,9 +71,11 @@ struct KeychainHelperTests {
         #expect(KeychainHelper.serviceNames["miro"] == "Bristlenose Miro Access Token")
     }
 
-    @Test func serviceNames_coverAllProviders() {
-        // Pin the exact provider set so adding/removing one fails loudly with a clear diff.
-        // Update this set (and serviceNames_matchPythonMapping) when a provider changes.
+    @Test func serviceNames_pinAllCredentialKeys() {
+        // The full credential service-name map: core LLM provider keys, plus
+        // integration/collaboration access tokens (Miro today; the set will grow).
+        // Pin it exactly so adding/removing a key fails loudly with a clear diff and
+        // forces a matching update to MacOSCredentialStore.SERVICE_NAMES (credentials_macos.py).
         let expected: Set<String> = ["anthropic", "openai", "azure", "google", "miro"]
         #expect(Set(KeychainHelper.serviceNames.keys) == expected)
     }

@@ -558,19 +558,31 @@ but production is still delta-driven (MT-seed `pt-BR`, fork the `pt-PT` deltas �
 bare-`pt` fallback resolves to `pt-BR` (answers the handoff's region-subtag audit Q6); never let
 one variant borrow the other's strings at runtime — gate each to "reviewed" independently.
 
-**Chinese (`zh-Hant` + `zh-Hans`) — don't touch before autumn/winter 2026.** Split by
-distribution channel, not just script:
+**Chinese (`zh-Hant` + `zh-Hans`) — don't touch before autumn/winter 2026.** Ship **both**
+scripts in **both** the App Store `.app` and the CLI package (PyPI / Homebrew → `serve` +
+SPA). Scope is set by *commercial target*, not by script:
 
-- **`zh-Hant` (Traditional) = Taiwan, via the App Store.** Normal storefront;
-  Claude/ChatGPT/Gemini all resolve. The work is translation quality → wants a
-  **Taiwan-native** reviewer (Taiwan vocabulary, e.g. `軟體` not mainland `軟件`); an auto
-  Simplified→Traditional convert gets glyphs but not idiom. This is the gated piece.
-- **`zh-Hans` (Simplified) = mainland, CLI / serve only.** No App Store, no mainland
-  commercialisation planned near-term — the local-first OSS CLI is the access route, so no
-  firewall / ICP / provider entanglement (users self-configure Ollama/local). Note the **CLI
-  is English-only in alpha**, so a Chinese experience there appears only via `bristlenose
-  serve` + the SPA *if* `zh-Hans` exists. It's just repo JSON → a free ride-along whenever
-  someone translates it; gates nothing.
+- **`zh-Hant` (Traditional) — the commercial driver. Hong Kong + Taiwan, App Store `.app`
+  + CLI.** Both are ordinary international storefronts (none of the mainland ICP / firewall /
+  hosting friction); Claude/ChatGPT/Gemini all resolve. The gating work is translation
+  quality → wants a **Taiwan-native** reviewer (Taiwan vocabulary, e.g. `軟體` not mainland
+  `軟件`); an auto Simplified→Traditional convert gets glyphs but not idiom. **An
+  easy-to-reach HK / London-HK-diaspora reviewer is not a substitute** — HK Traditional
+  carries Cantonese/HK vocabulary that itself diverges from Taiwan idiom, so convenience (the
+  diaspora you'll meet first) and correctness (the Taiwan market) pull apart; recruit a
+  Taiwan-native, not whoever's nearest. HK UR practitioners largely work in business English,
+  so HK may ride the `.app` in English — `zh-Hant` rests on the **Taiwan** revenue case, not
+  HK.
+- **`zh-Hans` (Simplified) — the cheap fork ride-along. Singapore / diaspora + passive
+  mainland.** Forked off `zh-Hant` (~1.4× not 2×), shipping in the same `.app` + CLI.
+  **Mainland China is out of scope as a target** — no App Store, no ICP, no mainland-specific
+  build, no domestic mirror, no mainland reviewer. Mainland is a passive hope: developers who
+  find the OSS CLI via GitHub are served by `zh-Hans` (or `zh-Hant`, or English). Note the
+  **CLI terminal chrome is English-only in alpha**, so the localised Chinese experience
+  appears via `bristlenose serve` + the SPA (shipped inside the CLI package and the `.app`).
+  It's just repo JSON → a free ride-along; gates nothing. _(Fork direction — translate
+  `zh-Hant` first with the Taiwan reviewer then derive `zh-Hans`, vs the reverse — is an open
+  question pending the locale research.)_
 - **First locale with a script subtag.** `zh-Hant`/`zh-Hans` forces the flat two-letter
   registry (hand-duplicated across React `LOCALE_LABELS`, Swift `supportedLocales`, Python
   `_ALL_LOCALES`) to learn script tags — a plumbing change, not a flat-locale copy-paste.

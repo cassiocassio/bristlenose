@@ -63,6 +63,7 @@ enum SidebarSubtitleText {
                 sessionsComplete: progress?.sessionsComplete,
                 sessionsTotal: progress?.sessionsTotal,
                 etaRemainingSeconds: progress?.etaRemainingSeconds,
+                resuming: progress?.attachedFromOrphan ?? false,
                 separator: separator,
                 localize: { i18n.t($0, $1) }
             )

@@ -114,6 +114,23 @@ enum PipelineState: Equatable {
     case failedWithDiagnostic(summary: PipelineSummary)
 }
 
+extension PipelineState {
+    /// True while the run is actively executing — the window during which the
+    /// machine must not idle-sleep (`RunSleepAssertion`). Only `.running`
+    /// qualifies. `.queued` is deliberately excluded: the gap between one run's
+    /// terminal write and the next dequeuing to `.running` is sub-second, far
+    /// below any idle-system-sleep timer (minutes), so holding the assertion
+    /// across queued work buys no real protection while risking a stuck-queued
+    /// run holding it indefinitely. (Reviewers split here; this is the call —
+    /// idle-sleep cadence makes the dequeue gap a non-issue.) The Stop window
+    /// stays `.running` (stopping is a `PipelineProgress` sub-state), so the
+    /// machine stays awake until the subprocess actually exits.
+    var keepsMachineAwake: Bool {
+        if case .running = self { return true }
+        return false
+    }
+}
+
 // MARK: - Progress parser protocol
 
 /// Populates a `PipelineProgress` from some input source. Two impls planned:
@@ -221,7 +238,20 @@ final class PipelineRunner: ObservableObject {
         subsystem: "app.bristlenose", category: "pipeline"
     )
 
-    @Published private(set) var state: [UUID: PipelineState] = [:]
+    @Published private(set) var state: [UUID: PipelineState] = [:] {
+        didSet { syncSleepAssertion() }
+    }
+
+    /// Keeps the system awake while any run is executing — see `RunSleepAssertion`.
+    /// Driven off `state` (the single source of truth) rather than instrumented
+    /// at every start/attach/exit site: `state` only mutates on coarse
+    /// transitions (idle→running→terminal), and `setHeld` is idempotent, so this
+    /// can't thrash on progress churn (progress lives in `liveData`, not `state`).
+    private let sleepAssertion = RunSleepAssertion()
+
+    private func syncSleepAssertion() {
+        sleepAssertion.setHeld(state.values.contains(where: \.keepsMachineAwake))
+    }
 
     #if DEBUG
     /// Debug-only state override for the diagnostic-popover fixture harness.

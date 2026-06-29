@@ -206,6 +206,7 @@
       "queuedPosition": "\u5f85\u6a5f\u4e2d \u00b7 {{position}} \u756a\u76ee",
       "stopping": "\u505c\u6b62\u4e2d\u2026",
       "analysing": "\u5206\u6790\u4e2d\u2026",
+      "resuming": "\u518d\u958b\u4e2d\u2026",
       "analysedRelative": "\u5206\u6790\u6e08\u307f {{when}}",
       "transcribed": "\u6587\u5b57\u8d77\u3053\u3057\u6e08\u307f",
       "partialRun": "\u90e8\u5206\u5b9f\u884c",

@@ -162,6 +162,11 @@ structured event stream and consumed by Swift:
 - **Prediction:** Welford per-stage estimator → ETA (`timing.py`), gated on ≥4 prior runs.
 - **Render:** `RunProgressSubtitle.compose` — a *pure, unit-tested* function: a bare stage id → the
   verb; appends session-count + ETA when present; degrades to "Analysing…" with no signal.
+  - **Resume variant (Jun 2026):** `compose(resuming:)` — when the row's run was reconnected from a
+    live subprocess at app launch (`PipelineProgress.attachedFromOrphan`), the *generic* lead verb
+    becomes "Resuming…" instead of "Analysing…", but only in the indeterminate gap; a known stage
+    still leads with its own verb. Silent inline recovery (no banner/toast), per `absence is
+    information` + HIG passive-status. Locale `chrome.pipeline.resuming`, all 7 `desktop.json`.
 - **Parity:** this is ≈ the set the CLI surfaces as checkmark lines, coarsened for one row. One
   contract, CLI ≡ desktop.
 

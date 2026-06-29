@@ -210,6 +210,7 @@
       "queuedPosition": "En file d\u2019attente \u00b7 position {{position}}",
       "stopping": "Arr\u00eat\u2026",
       "analysing": "Analyse\u2026",
+      "resuming": "Reprise\u2026",
       "analysedRelative": "Analys\u00e9 {{when}}",
       "transcribed": "Transcrit",
       "partialRun": "Ex\u00e9cution partielle",

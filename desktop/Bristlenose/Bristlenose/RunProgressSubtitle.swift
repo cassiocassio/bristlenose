@@ -52,11 +52,20 @@ enum RunProgressSubtitle {
     /// Compose the in-flight subtitle from the progress fields. Returns the
     /// "Analysing…" floor when no marker is available. `localize` is the
     /// caller's `i18n.t` (key + interpolation args → resolved string).
+    /// - Parameter resuming: true when this run was reconnected from a live
+    ///   subprocess at app launch (`PipelineProgress.attachedFromOrphan`). It
+    ///   swaps the generic lead verb "Analysing" → "Resuming" so a recovered
+    ///   run reads honestly ("Resuming…", "Resuming · <1 min left") during the
+    ///   reconnection moment and any indeterminate gap. A *known* stage still
+    ///   leads with its own verb ("Transcribing · 7 of 8 · …") — the resume is
+    ///   self-evident from live progress, and the active stage is the more
+    ///   useful signal once events flow.
     static func compose(
         stage: String?,
         sessionsComplete: Int?,
         sessionsTotal: Int?,
         etaRemainingSeconds: Double?,
+        resuming: Bool = false,
         separator: String,
         localize: (String, [String: String]) -> String
     ) -> String {
@@ -76,16 +85,21 @@ enum RunProgressSubtitle {
             return ([localize(verbKey, [:])] + detail).joined(separator: separator)
         }
         // No specific stage (the initial post-ingest estimate, a cached run that
-        // only emits that, or an unknown id). If there's nothing measured yet,
-        // show the indeterminate floor verbatim ("Analysing…", ellipsis intact).
+        // only emits that, or an unknown id). The generic lead verb is "Resuming"
+        // for a reconnected run, "Analysing" otherwise.
+        let genericKey = resuming
+            ? "desktop.chrome.pipeline.resuming"
+            : "desktop.chrome.pipeline.analysing"
+        // If there's nothing measured yet, show the indeterminate floor verbatim
+        // ("Analysing…" / "Resuming…", ellipsis intact).
         guard !detail.isEmpty else {
-            return localize("desktop.chrome.pipeline.analysing", [:])
+            return localize(genericKey, [:])
         }
         // Otherwise lead with the generic running label so the row always says
         // *what* is happening, never a bare "<1 min left". Drop the floor
         // label's trailing ellipsis so it reads "Analysing · <1 min left", not
         // "Analysing… · <1 min left".
-        let generic = localize("desktop.chrome.pipeline.analysing", [:])
+        let generic = localize(genericKey, [:])
             .replacingOccurrences(of: "\u{2026}", with: "")
             .trimmingCharacters(in: .whitespaces)
         return ([generic] + detail).joined(separator: separator)

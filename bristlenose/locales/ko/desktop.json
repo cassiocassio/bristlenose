@@ -206,6 +206,7 @@
       "queuedPosition": "\ub300\uae30\uc5f4 \u00b7 {{position}}\ubc88\uc9f8",
       "stopping": "\uc911\uc9c0 \uc911\u2026",
       "analysing": "\ubd84\uc11d \uc911\u2026",
+      "resuming": "\uc7ac\uac1c \uc911\u2026",
       "analysedRelative": "\ubd84\uc11d\ub428 {{when}}",
       "transcribed": "\uc804\uc0ac\ub428",
       "partialRun": "\ubd80\ubd84 \uc2e4\ud589",

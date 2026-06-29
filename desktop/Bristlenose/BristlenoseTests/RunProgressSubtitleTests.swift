@@ -19,6 +19,7 @@ import Testing
             "desktop.chrome.pipeline.etaMinutes": "~{{count}} min left",
             "desktop.chrome.pipeline.etaUnderMinute": "<1 min left",
             "desktop.chrome.pipeline.analysing": "Analysing…",
+            "desktop.chrome.pipeline.resuming": "Resuming…",
         ]
         var s = templates[key] ?? key
         for (k, v) in args { s = s.replacingOccurrences(of: "{{\(k)}}", with: v) }
@@ -30,11 +31,13 @@ import Testing
         complete: Int? = nil,
         total: Int? = nil,
         eta: Double? = nil,
+        resuming: Bool = false,
         separator: String = " · "
     ) -> String {
         RunProgressSubtitle.compose(
             stage: stage, sessionsComplete: complete, sessionsTotal: total,
-            etaRemainingSeconds: eta, separator: separator, localize: localize
+            etaRemainingSeconds: eta, resuming: resuming, separator: separator,
+            localize: localize
         )
     }
 
@@ -62,6 +65,35 @@ import Testing
         // Uncalibrated first run, before any measured signal — reads as it did
         // pre-text-tier. No regression.
         #expect(compose() == "Analysing…")
+    }
+
+    // MARK: - Resume (orphan reattach after app restart)
+
+    @Test func resumingFloorWhenNothingKnown() {
+        // The reconnection moment: attached to a live run but no fresh
+        // run_progress event yet. Reads "Resuming…", not "Analysing…".
+        #expect(compose(resuming: true) == "Resuming…")
+    }
+
+    @Test func resumingGenericVerbWithDetail() {
+        // No known stage yet, but an ETA is in hand → "Resuming · <1 min left",
+        // mirroring the Analysing path but signalling the recovery.
+        #expect(compose(eta: 45, resuming: true) == "Resuming · <1 min left")
+        #expect(compose(stage: "bogus", complete: 7, total: 8, resuming: true)
+            == "Resuming · 7 of 8")
+    }
+
+    @Test func resumingDefersToKnownStageVerb() {
+        // Once live progress names a stage, the stage verb leads — the resume is
+        // self-evident from motion and the active stage is the more useful word.
+        #expect(compose(stage: "transcribe", complete: 7, total: 8, eta: 62, resuming: true)
+            == "Transcribing · 7 of 8 · ~1 min left")
+    }
+
+    @Test func notResumingKeepsAnalysingFloor() {
+        // A spawned (non-attached) run is unchanged by the new parameter.
+        #expect(compose(resuming: false) == "Analysing…")
+        #expect(compose(eta: 45, resuming: false) == "Analysing · <1 min left")
     }
 
     // MARK: - Edge cases

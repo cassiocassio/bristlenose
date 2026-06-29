@@ -40,6 +40,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
 | `bristlenose_branch pt/` | `pt` | feature | Portuguese (pt-BR + pt-PT) across CLI/desktop/React — MT-seed both as labelled community previews, fork pt-PT deltas |
+| `bristlenose_branch zh-hant-pair/` | `zh-hant-pair` | feature | Chinese Traditional pair (zh-Hant Taiwan + zh-Hant-HK) — registry script+region subtag plumbing, BCP 47 lookup fix, OpenCC-seeded locales (review-gated) |
 
 > ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
 > `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
@@ -125,6 +126,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `pt` | `bristlenose_branch pt/` | local only |
+| `zh-hant-pair` | `bristlenose_branch zh-hant-pair/` | local only |
 | `claude/debug-menu-instrumentation-4r9npy` _(merged)_ | _(worktree removed)_ | `origin/...` — merged to main 28 Jun 2026 (`252c1ce3`) |
 | `claude/figjam-miro-market-share-px52tg` _(merged)_ | `bristlenose_branch_figjam-miro-market-share/` _(detached, on disk)_ | local deleted — merged to main 28 Jun 2026 (66bc28c4) |
 | `claude/spa-sidebar-layout-9mlndt` _(merged)_ | `bristlenose_branch spa-sidebar-layout/` _(detached, on disk)_ | local only — merged to main 28 Jun 2026 (97c4fb42) |
@@ -178,6 +180,31 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 **Potential conflicts with other branches:**
 - ⚠️ **Concurrent `zh` (Chinese) language work on `main`** (commit `e4fb380b`, Jun 2026): pt and zh edit the **identical** `SUPPORTED_LOCALES` lines in `i18n.py`/`index.ts`/`I18n.swift`, the `doctor.py` expected set, the 3 picker-label sites, and `glossary.csv`. The zh session commits to main directly; this worktree is isolated precisely to avoid working-tree clobber. **Mechanical to merge** (different list entries / different keys), but rebase pt onto main before merging so the locale-list additions interleave rather than conflict. `design-i18n.md` §Future locales has adjacent pt + zh blocks — both already coexist cleanly as of `e4fb380b`.
+
+---
+
+### `zh-hant-pair`
+
+**Kind:** feature — Chinese Traditional commercial pair (`zh-Hant` Taiwan + `zh-Hant-HK` Hong Kong) across the locale registry, React SPA, and desktop
+**Status:** Just started
+**Started:** 29 Jun 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch zh-hant-pair/`
+**Remote:** local only (push when ready)
+
+**What it does:** The reviewer-independent **plumbing + machine-seed scaffold** for the Traditional pair. Ships: `zh-Hant` (Taiwan, full-weight primary) + `zh-Hant-HK` (Hong Kong, thin OpenCC-`t2hk` override fork that falls back to `zh-Hant` — mutually intelligible, deliberately unlike the pt no-cross-borrow rule); the **first locales with script (`Hant`) + region (`HK`) subtags**, forcing the flat registry + `.lproj` + App Store Connect to learn them; and closes the parked **BCP 47 lookup audit** (`LocaleStore.ts` naive prefix-strip — see the i18n planning notes). Both locales land **review-gated** (machine-seeded, behind a preview flag) — translation *quality* (Taiwan-native + HK-diaspora reviewers) is explicitly out of scope, a follow-on once reviewers are recruited. Decision + rationale: `docs/design-i18n.md` §Chinese pair (`4ebd8bf3`); full brief in the worktree's `HANDOFF.md`. `zh-Hans` (Simplified) is parked, not in this branch.
+
+**Files this branch will touch:**
+- `bristlenose/locales/` (new `zh-Hant/` + `zh-Hant-HK/` dirs, 9 JSON files each)
+- `bristlenose/i18n.py` (`SUPPORTED_LOCALES`)
+- `frontend/src/i18n/index.ts` (`SUPPORTED_LOCALES`, `type Locale`, `fallbackLng` → map)
+- `frontend/src/i18n/LocaleStore.ts` (BCP 47 lookup fix)
+- `desktop/Bristlenose/Bristlenose/I18n.swift` (`supportedLocales`) + `BristlenoseTests/I18nTests.swift`
+- picker labels (`SettingsPanel.tsx`, `SettingsModal.tsx`)
+- OpenCC seed script (under `scripts/` or `experiments/`)
+- `.lproj` names + `bristlenose/doctor.py` expected locale-dir set
+
+**Potential conflicts with other branches:**
+- ⚠️ **Concurrent `pt` worktree** edits the **identical** registry lines (`SUPPORTED_LOCALES` ×3, `doctor.py` set, picker labels, `glossary.csv`) and both branches must teach the same subtag-aware fallback machinery. Mechanical to merge (different list entries), but **align on one `fallbackLng`-map shape + the BCP 47 lookup rewrite** rather than each inventing one — check whether `pt` already landed the BCP 47 fix before redoing it. Land registry edits as small isolated commits to keep the merge surface tiny. See the `pt` entry's mirror of this note.
 
 ---
 

@@ -1,0 +1,11 @@
+{
+  "error": {
+    "notFound": "找不到資源。",
+    "badRequest": "錯誤的請求：{detail}",
+    "internal": "內部伺服器錯誤。"
+  },
+  "status": {
+    "healthy": "正常",
+    "degraded": "效能降低"
+  }
+}

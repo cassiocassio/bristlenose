@@ -1,0 +1,22 @@
+{
+  "pipeline": {
+    "diagnostic": {
+      "pill": {
+        "network": "網絡錯誤"
+      }
+    }
+  },
+  "welcome": {
+    "subtitle": "將一個裝有訪談的檔案夾變成可分享的報告 — 全在你的手提電腦上，不上傳任何內容。"
+  },
+  "help": {
+    "contributing": {
+      "beforeBody": "請參閱 GitHub 上的<a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">貢獻指南</a>，了解開發環境設定與程式碼質素檢查。"
+    }
+  },
+  "ollamaSetup": {
+    "tagBest": "最佳質素",
+    "foreshadow": "這些模型透過 **Ollama** 執行，這是你接下來要設定的免費軟件。",
+    "failNoInternet": "沒有網際網絡連線。請檢查你的網絡後再試一次。"
+  }
+}

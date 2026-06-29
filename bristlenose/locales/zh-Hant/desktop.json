@@ -1,0 +1,479 @@
+{
+  "miro": {
+    "howToGetToken": "如何取得權杖？",
+    "boardNameLabel": "看板名稱：",
+    "stickyColoursLabel": "便利貼顏色：",
+    "miroStatusLabel": "Miro 狀態：",
+    "accountLabel": "帳號：",
+    "boardDestination": "在 {{team}} 中建立新看板。",
+    "connected": "已連線",
+    "openInMiro": "在 Miro 中打開…",
+    "connectPersistWarning": "已連線，但無法將權杖儲存到你的鑰匙圈 — 重新啟動後你可能需要重新連線。"
+  },
+  "menu": {
+    "app": {
+      "about": "關於 Bristlenose",
+      "aiPrivacy": "AI 與隱私…",
+      "checkHealth": "檢查系統健康狀態…"
+    },
+    "file": {
+      "newProject": "新增專案…",
+      "newFolder": "新增檔案夾…",
+      "openInNewWindow": "在新視窗中打開",
+      "exportReport": "輸出報告…",
+      "exportAnonymised": "輸出匿名版本…",
+      "pageSetup": "頁面設定…",
+      "print": "列印…"
+    },
+    "edit": {
+      "undoRemove": "還原移除「%@」",
+      "undo": "還原",
+      "redo": "重做",
+      "find": "尋找…",
+      "findNext": "尋找下一個",
+      "findPrevious": "尋找上一個",
+      "useSelectionForFind": "以所選範圍尋找",
+      "jumpToSelection": "跳至所選範圍"
+    },
+    "view": {
+      "toggleSidebar": "切換側邊欄",
+      "moveFocusToProjects": "將焦點移至專案",
+      "showContents": "顯示內容",
+      "hideContents": "隱藏內容",
+      "showCodes": "顯示編碼",
+      "hideCodes": "隱藏編碼",
+      "showSignals": "顯示訊號",
+      "hideSignals": "隱藏訊號",
+      "showTags": "顯示標籤",
+      "hideTags": "隱藏標籤",
+      "showHeatmap": "顯示熱度圖",
+      "hideHeatmap": "隱藏熱度圖",
+      "allQuotes": "所有引述",
+      "starredQuotesOnly": "僅限標星引述",
+      "zoomIn": "放大",
+      "zoomOut": "縮小",
+      "actualSize": "實際大小",
+      "switchToLightMode": "切換至淺色模式",
+      "switchToDarkMode": "切換至深色模式"
+    },
+    "project": {
+      "removeFromSidebar": "從側邊欄移除",
+      "showInFinder": "在 Finder 中顯示",
+      "rename": "重新命名…",
+      "moveTo": "移動到",
+      "noFolder": "無檔案夾",
+      "reAnalyse": "重新分析…",
+      "stopAnalysis": "停止分析",
+      "cancelCopy": "取消拷貝",
+      "showDiagnostics": "顯示診斷資訊…",
+      "archive": "封存…",
+      "delete": "刪除…",
+      "chooseIcon": "選擇圖像"
+    },
+    "folder": {
+      "rename": "重新命名檔案夾",
+      "archive": "封存檔案夾",
+      "delete": "刪除檔案夾"
+    },
+    "codes": {
+      "createCodeGroup": "建立編碼群組",
+      "renameCodeGroup": "重新命名編碼群組…",
+      "deleteCodeGroup": "刪除編碼群組",
+      "showHideCodeGroup": "顯示/隱藏編碼群組",
+      "createCode": "建立編碼",
+      "renameCode": "重新命名編碼…",
+      "deleteCode": "刪除編碼",
+      "mergeCodes": "合併編碼…",
+      "browseCodebooks": "瀏覽編碼簿…",
+      "importFramework": "輸入框架…",
+      "removeFramework": "移除框架"
+    },
+    "quotes": {
+      "star": "標星",
+      "hide": "隱藏",
+      "addTag": "加入標籤…",
+      "applyLastTag": "套用上一個標籤",
+      "revealInTranscript": "在逐字稿中顯示",
+      "playPause": "播放/暫停",
+      "nextQuote": "下一則引述",
+      "previousQuote": "上一則引述",
+      "extendSelectionDown": "向下延伸選取範圍",
+      "extendSelectionUp": "向上延伸選取範圍",
+      "toggleSelection": "切換選取狀態",
+      "clearSelection": "清除選取範圍",
+      "copyAsCSV": "拷貝為 CSV",
+      "copyQuotes": "拷貝引述",
+      "saveSpreadsheet": "儲存為試算表…",
+      "extractClips": "擷取影片片段…",
+      "anonymise": "匿名化",
+      "anonymiseHint": "移除參與者姓名",
+      "reportHint": "獨立完整的 HTML",
+      "copyHint": "精簡 — 引述、編碼、姓名、時間碼",
+      "spreadsheetHint": "豐富 — 11 欄供排序與分析",
+      "clipsHint": "每則引述一段裁剪片段",
+      "formatCSV": "CSV",
+      "formatXLSX": "XLSX",
+      "copyScopeAll": "全部（{{count}}）",
+      "copyScopeSelected": "已選取（{{count}}）",
+      "copyScopeStarred": "已標星（{{count}}）",
+      "revealTranscripts": "在 Finder 中顯示逐字稿",
+      "revealTranscriptsHint": "磁碟上的逐字稿檔案"
+    },
+    "video": {
+      "play": "播放",
+      "pause": "暫停",
+      "skipForward5": "向前跳 5 秒",
+      "skipBack5": "向後跳 5 秒",
+      "skipForward30": "向前跳 30 秒",
+      "skipBack30": "向後跳 30 秒",
+      "speedUp": "加快速度",
+      "slowDown": "放慢速度",
+      "normalSpeed": "正常速度",
+      "volumeUp": "提高音量",
+      "volumeDown": "降低音量",
+      "mute": "靜音",
+      "pictureInPicture": "子母畫面",
+      "fullscreen": "全螢幕"
+    },
+    "help": {
+      "bristlenoseHelp": "Bristlenose 輔助說明",
+      "keyboardShortcuts": "鍵盤快速鍵",
+      "releaseNotes": "版本說明",
+      "sendFeedback": "傳送意見回饋…",
+      "blog": "Substack 上的 Bristlenose",
+      "acknowledgements": "致謝"
+    }
+  },
+  "chrome": {
+    "spotlight": {
+      "breadcrumbA11y": "檔案夾路徑：%@",
+      "chooseDifferent": "選擇其他…",
+      "useThisFolder": "使用此檔案夾",
+      "title": "找到一個可能是「%@」的檔案夾。"
+    },
+    "locateError": {
+      "message": "該檔案夾看起來不像是已分析的專案。請選擇執行分析時所用的檔案夾，或從歡迎畫面重新分析一個檔案夾。",
+      "title": "無法打開該檔案夾"
+    },
+    "startingServer": "正在啟動伺服器…",
+    "loadingReport": "正在載入報告…",
+    "noProjectSelected": "未選取任何專案",
+    "selectProject": "請從側邊欄選擇一個專案。",
+    "serverError": "伺服器錯誤",
+    "retry": "重試",
+    "projects": "專案",
+    "reportContent": "報告內容",
+    "newFolder": "新增檔案夾",
+    "newProject": "新增專案",
+    "dragInterviews": "將訪談拖移至此",
+    "dragInterviewsDescription": "加入訪談錄音或逐字稿即可開始。",
+    "projectUnavailable": "專案無法使用",
+    "projectUnavailableHint": "連接磁碟機以存取此專案。",
+    "projectMoved": "專案已移動或刪除",
+    "projectMovedDescription": "找不到該專案檔案夾。它可能已被移動或刪除。",
+    "locate": "尋找位置…",
+    "locateMessage": "尋找「%@」的新位置",
+    "onThisMac": "在這部 Mac 上",
+    "projectIcon": "專案圖像",
+    "duplicateProject": "專案已存在",
+    "duplicateProjectMessage": "此檔案夾的專案已存在：「%@」。你可以打開現有專案或建立新專案。",
+    "openExisting": "打開現有專案",
+    "createAnyway": "仍要建立",
+    "emptyStateHint": "將檔案夾拖移至此，或按 ⌘N",
+    "addedInterviews": "已將 %d 則訪談加入 %@",
+    "interviewCount_other": "{{count}} 則訪談",
+    "unanalysedSubtitle_other": "+{{count}} 則未分析",
+    "titleSessions_other": "{{count}} 個工作階段",
+    "missingSubtitle_other": "{{count}} 則遺失",
+    "tooltipWaiting": "{{count}} 則等待中",
+    "dateRelativeJustNow": "剛剛",
+    "unanalysedSheetTitle": "{{project}} 中的未分析檔案",
+    "unanalysedSheetFooter": "這些檔案是在上次分析之後加入的。",
+    "multipleSelected": "已選取 %d 個項目",
+    "multipleSelectedHint": "選擇單一專案以檢視其報告。",
+    "welcomeTitle": "歡迎使用 Bristlenose",
+    "welcomeBody": "將一個裝有訪談錄音的檔案夾拖移到側邊欄，或按一下「+ 新增專案」開始。",
+    "dropProjectOntoProjectToast": "「%@」已是 Bristlenose 專案 — 請改為拖移其來源檔案。",
+    "dropOntoRunningProject": "在加入更多項目之前，請先完成或停止目前的執行。",
+    "dropOntoAnalysedProject": "尚不支援將額外訪談加入已分析的專案。",
+    "dropOntoFailedProject": "請使用工具列上的「重試」再次執行。",
+    "dropOntoUnreachableProject": "此專案的檔案夾目前無法存取。",
+    "dropFolderContainsProject": "此檔案夾包含 Bristlenose 專案「%@」。請拖移專案本身，或分開拖移其來源檔案。",
+    "copyingPill": "正在拷貝到 %@",
+    "copyCancelling": "正在取消…",
+    "copyDiskSpaceTitle": "磁碟空間不足",
+    "copyDiskSpaceMessage": "此拷貝需要 %@ 可用空間，但目標儲存裝置上只有 %@ 可用。",
+    "pipeline": {
+      "queuedPosition": "已排入佇列 · 位置 {{position}}",
+      "stopping": "正在停止…",
+      "analysing": "正在分析…",
+      "resuming": "正在繼續…",
+      "analysedRelative": "已於 {{when}} 分析",
+      "transcribed": "已轉錄逐字稿",
+      "partialRun": "部分執行",
+      "stopped": "已停止",
+      "sessionsCount": "{{total}} 個中的 {{complete}} 個",
+      "etaMinutes": "約剩 {{count}} 分鐘",
+      "etaUnderMinute": "剩不到 1 分鐘",
+      "copying": "正在拷貝 · {{percent}}%",
+      "stage": {
+        "transcribe": "正在轉錄逐字稿",
+        "speakers": "正在辨識說話者",
+        "topics": "正在尋找主題",
+        "quotes": "正在尋找引述",
+        "cluster": "正在分組歸納主軸",
+        "render": "正在建立報告"
+      }
+    }
+  },
+  "pipeline": {
+    "status": {
+      "stopping": "正在停止…",
+      "starting": "正在啟動…",
+      "analysing": "正在分析…",
+      "working": "處理中…",
+      "stage": "第 {{index}} 階段 · {{stage}}",
+      "stageShort": "第 {{index}} 階段",
+      "queued": "已排入佇列 · {{position}}",
+      "waitingSubprocess": "正在等待分析子程序結束。",
+      "resuming": "正在繼續分析（App 重新啟動後重新連接）。",
+      "startingUp": "正在啟動 — 載入模型並驗證憑證。",
+      "elapsed": "已經過：{{time}}",
+      "waitingInQueue": "正在等待另一個專案完成（佇列中第 {{position}} 位）。",
+      "stop": "停止",
+      "headline": {
+        "running": "執行中",
+        "stopping": "正在停止",
+        "queued": "已排入佇列",
+        "failed": "失敗"
+      },
+      "help": {
+        "running": "顯示 {{project}} 的分析進度",
+        "queued": "{{project}} 的分析已排入佇列",
+        "failed": "{{project}} 的分析失敗"
+      }
+    },
+    "diagnostic": {
+      "pill": {
+        "auth": "供應商金鑰問題",
+        "missing_binary": "缺少工具",
+        "quota": "已達速率上限",
+        "network": "網路錯誤",
+        "unknown": "執行時發生失敗"
+      },
+      "header": {
+        "completed_partial": "部分完成",
+        "failed": "執行失敗"
+      },
+      "action": {
+        "copy": "拷貝詳細資訊",
+        "showLog": "顯示記錄",
+        "showLogTooltip": "顯示分析記錄檔案"
+      },
+      "tooltip": {
+        "completed_partial": "{{project}} 的分析已完成，但有失敗"
+      },
+      "noStructuredCause": "未擷取到詳細原因。",
+      "overflow_other": "…另有 {{count}} 則失敗被截斷"
+    }
+  },
+  "availability": {
+    "unmountedVolume": "{{name}} · 遺失",
+    "networkUnreachable": "{{host}} · 無法連線",
+    "missing": "遺失",
+    "inCloud": "在 iCloud 中"
+  },
+  "boot": {
+    "tagline": "為使用者研究賦予意義",
+    "startingSidecar": "正在啟動 Bristlenose…",
+    "loadingReport": "正在載入報告…",
+    "failedTitle": "無法啟動 Bristlenose",
+    "retry": "重試",
+    "showDetails": "顯示詳細資訊",
+    "hideDetails": "隱藏詳細資訊"
+  },
+  "welcome": {
+    "subtitle": "將一個裝有訪談的檔案夾變成可分享的報告 — 全在你的筆記型電腦上，不上傳任何內容。",
+    "newProject": "新增專案",
+    "newProjectHint": "選擇一個裝有錄音或逐字稿的檔案夾，從頭開始。",
+    "dropFolderTitle": "放入檔案夾",
+    "dropFolderHint": "將一個裝有錄音或逐字稿的檔案夾拖移到此處，即可加為專案。",
+    "aiPrivacyLink": "查看 AI 與隱私設定…",
+    "steps": {
+      "ingestTitle": "加入訪談",
+      "ingestDetail": "音訊、影片或現有逐字稿。",
+      "processTitle": "Bristlenose 進行分析",
+      "processDetail": "轉錄逐字稿、尋找引述、歸納主軸。",
+      "exportTitle": "瀏覽與輸出",
+      "exportDetail": "閱讀研究發現，輸出 HTML 或 CSV。"
+    }
+  },
+  "toolbar": {
+    "back": "返回（⌘[）",
+    "forward": "前往（⌘]）",
+    "tab": "標籤頁",
+    "sidebar": "側邊欄",
+    "contents": "內容",
+    "showContents": "顯示內容（⌘⌥L）",
+    "codes": "編碼",
+    "showCodes": "顯示編碼（⌘⌥L）",
+    "signals": "訊號",
+    "showSignals": "顯示訊號（⌘⌥L）",
+    "tags": "標籤",
+    "showTags": "顯示標籤（⌘⌥T）",
+    "heatmap": "熱度圖",
+    "showHeatmap": "顯示熱度圖（m）",
+    "search": "搜尋",
+    "searchShortcut": "搜尋（⌘F）",
+    "searchClear": "清除搜尋",
+    "searchComingSoon": "此檢視畫面尚無法使用搜尋",
+    "export": "輸出",
+    "exportShortcut": "輸出（⌘⇧E）"
+  },
+  "settingsTabs": {
+    "appearance": "外觀",
+    "llm": "LLM",
+    "transcription": "逐字稿轉錄"
+  },
+  "help": {
+    "privacy": {
+      "redactionIntro": "個人識別資訊（PII）的遮蔽為選擇加入。預設為關閉，因為誤判（遮蔽到研究相關的文字）會損害資料準確性。此功能使用 Microsoft Presidio（一款開放原始碼的文字掃描工具），並具備可調整的信賴門檻（預設為 0.7）。",
+      "actionThreshold": "對於敏感資料，可調低信賴門檻（試試 0.5）以攔截更多內容，但代價是更多誤判。"
+    },
+    "contributing": {
+      "beforeBody": "請參閱 GitHub 上的<a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">貢獻指南</a>，了解開發環境設定與程式碼品質檢查。"
+    }
+  },
+  "configReference": {
+    "intro": "大多數設定位於「設定」視窗（⌘,）中。下方列出環境變數名稱，供進階配置使用。"
+  },
+  "aiConsent": {
+    "title": "AI 智慧分析",
+    "intro": "Bristlenose 使用 AI 分析你的訪談逐字稿。當你使用雲端供應商時，逐字稿資料會傳送到該供應商的伺服器進行處理。",
+    "notUsedForTraining": "你的資料不會用於訓練 AI 模型。各供應商的資料保留政策請參閱其使用條款。",
+    "sentToCloudLabel": "傳送到你所選的雲端供應商",
+    "sentItem1": "處理後的訪談逐字稿（若已啟用，則先套用 PII 遮蔽）",
+    "sentItem2": "說話者編碼與時間碼",
+    "sentItem3": "分析請求（主題分段、引述擷取、主軸歸納）",
+    "sentSummary": "傳送到雲端供應商的資料：處理後的逐字稿、說話者編碼與分析請求",
+    "staysLocalLabel": "始終保留在你的裝置上",
+    "localItem1": "原始音訊與影片錄音",
+    "localItem2": "參與者姓名、聯絡資訊與個人詳細資料",
+    "localItem3": "你的編輯、標籤與報告自訂內容",
+    "localSummary": "保留在你裝置上的資料：錄音、個人詳細資料與你的編輯",
+    "providersIntro": "可能會處理你資料的雲端供應商：",
+    "researcherResponsibility": "依規定告知參與者，其訪談資料可能會由第三方 AI 服務處理。",
+    "continue": "繼續",
+    "useOllama": "在裝置上使用 Ollama 模型",
+    "ollamaDownloadSize": "約 %@ 下載量",
+    "done": "完成"
+  },
+  "llmSettings": {
+    "statusSection": "狀態",
+    "apiKeySection": "API 金鑰",
+    "apiKeyPlaceholder": "API 金鑰",
+    "showApiKey": "顯示 API 金鑰",
+    "hideApiKey": "隱藏 API 金鑰",
+    "clearApiKey": "清除 API 金鑰",
+    "serverSection": "伺服器",
+    "serverURL": "URL",
+    "modelSection": "模型",
+    "customModelOption": "自訂…",
+    "customModelPlaceholder": "自訂模型名稱",
+    "temperatureLabel": "Temperature",
+    "temperatureHint": "低 = 聚焦，高 = 有創意",
+    "concurrencyLabel": "並行數",
+    "concurrencyHint": "並行的 LLM 呼叫數",
+    "azureSection": "Azure 設定",
+    "azureEndpoint": "端點 URL",
+    "azureDeployment": "部署名稱",
+    "azureAPIVersion": "API 版本",
+    "pricingLink": "定價",
+    "lastVerified": "上次驗證於 %@",
+    "revalidating": "上次驗證遭拒 — 正在重新檢查…",
+    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
+    "activate": {
+      "generic": "使用此供應商",
+      "ollama": "使用本機 Ollama 模型"
+    },
+    "status": {
+      "online": "連線中",
+      "notSetUp": "尚未設定",
+      "invalid": "金鑰無效",
+      "unavailable": "無法使用",
+      "checking": "正在檢查…",
+      "outOfCredit": "額度用盡",
+      "local": "本機"
+    },
+    "copyCommand": "拷貝指令",
+    "console": {
+      "keys": "金鑰",
+      "portal": "入口網站"
+    },
+    "providers": {
+      "ollama": {
+        "description": "免費，於本機執行。不需要 API 金鑰。"
+      }
+    }
+  },
+  "transcriptionSettings": {
+    "backendLabel": "後端",
+    "modelLabel": "模型",
+    "backendAuto": "自動",
+    "backendHint": "自動偵測最適合你 Mac 的引擎。",
+    "modelRecommended": "{{model}}（建議）"
+  },
+  "ollamaSetup": {
+    "pillChoosingModel": "設定裝置端 AI",
+    "pillNeedsOllama": "取得 Ollama",
+    "pillWaiting": "正在等待 Ollama",
+    "pillDownloading": "正在下載 %@",
+    "pillDownloadingNoModel": "正在下載…",
+    "pillFinishing": "正在收尾",
+    "pillFailed": "無法取得模型",
+    "chooseTitle": "選擇你的裝置端模型",
+    "chooseBody": "已依你的 Mac 調整（%@ RAM）。較大的模型更聰明，但需要更多記憶體；所有模型的下載量都相當可觀。",
+    "chooseBodyHasInstalled": "已依你的 Mac 調整（%@ RAM）。這部 Mac 上已有一個模型。",
+    "tagSmallest": "最小",
+    "tagBalanced": "均衡",
+    "tagBest": "最佳品質",
+    "tagFastest": "最快",
+    "tagRecommended": "建議",
+    "tagReady": "就緒 · 無需下載",
+    "rowNeedsRam": "需要 %@ GB",
+    "rowDownloadSize": "約 %@ 下載量",
+    "rowOnDisk": "磁碟上有 %@",
+    "groupInstalled": "已在這部 Mac 上",
+    "groupDownload": "下載",
+    "foreshadow": "這些模型透過 **Ollama** 執行，這是你接下來要設定的免費軟體。",
+    "lowDisk": "磁碟空間不足",
+    "useModel": "使用 %@",
+    "chooseInstalledCaption": "已安裝 — 立即開始。",
+    "needsTitle": "取得 Ollama 以執行 %@",
+    "needsBody": "Bristlenose 透過 Ollama 在本機執行模型 — 免費。將開啟 ollama.com 以下載並安裝。",
+    "getOllamaButton": "取得 Ollama…",
+    "waitingTitle": "完成安裝 Ollama",
+    "waitingBody": "[ollama.com](https://ollama.com/download) 已在你的瀏覽器中開啟。",
+    "waitingStep1": "下載適用於 macOS 的 Ollama",
+    "waitingStep2": "打開下載項目，安裝並啟動 Ollama",
+    "waitingFootnote": "Ollama 開始執行後，Bristlenose 會自動下載 %@。",
+    "waitingStatusLabel": "正在等待 Ollama 安裝",
+    "bytesProgress": "%@，共 %@",
+    "downloadingTitle": "正在下載 %@",
+    "finishingTitle": "正在收尾",
+    "finishingBody": "正在準備 %@…",
+    "failedTitle": "無法取得模型",
+    "failNoInternet": "沒有網際網路連線。請檢查你的網路後再試一次。",
+    "failTimedOut": "下載逾時。請檢查你的連線後再試一次。",
+    "failCantReach": "與 Ollama 的連線中斷。請確認它正在執行，然後再試一次。",
+    "failGeneric": "下載無法完成。%@"
+  },
+  "toast": {
+    "removedBatchAnnouncement": "已移除 %d 個專案。按 Command-Z 還原。",
+    "removedAnnouncement": "已移除「%@」。按 Command-Z 還原。",
+    "removeBlockedByRun": "在移除「%@」之前，請先停止其執行。",
+    "removedBatch": "已移除 %d 個專案。",
+    "undo": "還原",
+    "removed": "已移除專案。"
+  }
+}

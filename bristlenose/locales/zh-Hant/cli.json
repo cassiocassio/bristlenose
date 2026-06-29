@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "使用者研究的轉錄與引述擷取引擎。",
+  "stage": {
+    "ingest": "匯入",
+    "extractAudio": "擷取音訊",
+    "transcribe": "轉錄",
+    "identifySpeakers": "識別發言者",
+    "mergeTranscript": "合併逐字稿",
+    "piiRemoval": "移除個人識別資訊",
+    "topicSegmentation": "主題切分",
+    "quoteExtraction": "引述擷取",
+    "quoteClustering": "引述分群",
+    "thematicGrouping": "主題歸類",
+    "render": "產生報告"
+  },
+  "error": {
+    "noInput": "未指定輸入目錄。",
+    "notFound": "找不到目錄：{path}",
+    "noFiles": "在 {path} 中找不到音訊、影片或逐字稿檔案"
+  },
+  "progress": {
+    "complete": "完成",
+    "failed": "失敗",
+    "skipped": "已略過"
+  }
+}

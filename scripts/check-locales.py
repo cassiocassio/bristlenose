@@ -3,17 +3,32 @@
 
 Checks:
 1. All locale JSON files are valid JSON
-2. Every key in English exists in all other locales (warns for missing)
+2. Every key in English exists in each locale — accounting for two things the
+   runtime does at lookup time, so the report reflects what users actually see:
+     - Fallback chains: a thin-override locale (e.g. ``zh-Hant-HK``) borrows
+       missing keys from its base (``zh-Hant``) before English, so a key present
+       in the base is NOT a gap. Mirrors i18next ``fallbackLng`` / Python
+       ``_FALLBACK_CHAINS`` / Swift ``fallbackBase``.
+     - CLDR plurals: single-form locales (ja/ko/zh) legitimately omit ``_one`` /
+       ``_few`` / … and keep only ``_other``, so a missing plural-suffix key is
+       not a genuine gap. (Multi-form plural completeness for the diagnostic
+       namespace is enforced separately by
+       ``tests/test_pipeline_diagnostic_locale_keys.py``.)
 3. No orphan keys in non-English locales (keys English doesn't have)
 4. No empty string values
 5. Interpolation placeholders ({{ var }}) in English exist in translations
 
-Exit code 0: all checks pass (warnings are OK)
-Exit code 1: errors found (invalid JSON, orphan keys, placeholder mismatch)
+A *genuine* missing key — non-plural and not covered by a fallback base — renders
+English silently. It is a WARNING by default and an ERROR under ``--strict``.
+Placeholder mismatch and invalid JSON are always errors.
+
+Exit code 0: all checks pass (warnings are OK unless --strict)
+Exit code 1: errors found
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -22,6 +37,15 @@ from pathlib import Path
 LOCALES_DIR = Path(__file__).resolve().parent.parent / "bristlenose" / "locales"
 SOURCE_LANG = "en"
 PLACEHOLDER_RE = re.compile(r"\{\{.*?\}\}")
+
+# Mirror of the runtime fallback chains. A locale here borrows missing keys from
+# its base before English; keep in lockstep with i18next/Python/Swift.
+FALLBACK_BASE = {"zh-Hant-HK": "zh-Hant"}
+
+# CLDR plural-form suffixes. ``_other`` is the base form (always required); the
+# rest are conditional on the locale's plural rules, so a single-form locale
+# (ja/ko/zh) legitimately omits them.
+PLURAL_SUFFIXES = ("_one", "_two", "_few", "_many", "_zero")
 
 
 def flatten(obj: dict, prefix: str = "") -> dict[str, str]:
@@ -36,8 +60,8 @@ def flatten(obj: dict, prefix: str = "") -> dict[str, str]:
     return result
 
 
-def load_locale(lang: str, namespace: str) -> dict[str, str] | None:
-    """Load and flatten a locale file. Returns None if file doesn't exist."""
+def load_locale(lang: str, namespace: str):
+    """Load and flatten a locale file. None if missing; the error if invalid."""
     path = LOCALES_DIR / lang / f"{namespace}.json"
     if not path.exists():
         return None
@@ -45,15 +69,26 @@ def load_locale(lang: str, namespace: str) -> dict[str, str] | None:
         with open(path) as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
-        return e  # type: ignore[return-value]
+        return e
     return flatten(data)
 
 
+def _is_plural_suffix(key: str) -> bool:
+    return key.endswith(PLURAL_SUFFIXES)
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Validate Bristlenose locale files.")
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="treat genuine (non-plural, non-fallback-covered) missing keys as errors",
+    )
+    args = parser.parse_args()
+
     errors: list[str] = []
     warnings: list[str] = []
 
-    # Discover languages and namespaces
     en_dir = LOCALES_DIR / SOURCE_LANG
     if not en_dir.is_dir():
         print(f"ERROR: English locale directory not found: {en_dir}")
@@ -71,6 +106,8 @@ def main() -> int:
     print(f"Namespaces: {', '.join(namespaces)}")
     print()
 
+    genuine_total = 0
+
     for ns in namespaces:
         en_keys = load_locale(SOURCE_LANG, ns)
         if en_keys is None:
@@ -84,6 +121,9 @@ def main() -> int:
             tr_keys = load_locale(lang, ns)
 
             if tr_keys is None:
+                # A fallback locale legitimately ships only some namespaces.
+                if lang in FALLBACK_BASE:
+                    continue
                 warnings.append(f"{lang}/{ns}.json: file not found (skipping)")
                 continue
 
@@ -91,17 +131,29 @@ def main() -> int:
                 errors.append(f"{lang}/{ns}.json: invalid JSON — {tr_keys}")
                 continue
 
-            # Check for missing keys (warn)
-            missing = set(en_keys) - set(tr_keys)
-            if missing:
+            # Effective coverage = the locale's own keys plus its fallback base's.
+            effective = set(tr_keys)
+            base = FALLBACK_BASE.get(lang)
+            if base:
+                base_keys = load_locale(base, ns)
+                if isinstance(base_keys, dict):
+                    effective |= set(base_keys)
+
+            missing = set(en_keys) - effective
+            genuine = sorted(k for k in missing if not _is_plural_suffix(k))
+            # Plural-suffix misses are informational: single-form locales omit
+            # them legitimately, and multi-form completeness is tested elsewhere.
+
+            if genuine:
+                genuine_total += len(genuine)
                 warnings.append(
-                    f"{lang}/{ns}.json: {len(missing)} missing key(s): "
-                    + ", ".join(sorted(missing)[:5])
-                    + ("..." if len(missing) > 5 else "")
+                    f"{lang}/{ns}.json: {len(genuine)} genuine missing key(s): "
+                    + ", ".join(genuine[:5])
+                    + ("..." if len(genuine) > 5 else "")
                 )
 
-            # Check for orphan keys (warn — some are legitimate, e.g. _short
-            # variants that only exist in languages where the full label overflows)
+            # Orphan keys (warn — some are legitimate, e.g. `_short` overflow
+            # variants that only exist where the full label is too long).
             orphans = set(tr_keys) - set(en_keys)
             if orphans:
                 warnings.append(
@@ -110,7 +162,7 @@ def main() -> int:
                     + ("..." if len(orphans) > 5 else "")
                 )
 
-            # Check for empty values (warn)
+            # Empty values (warn)
             empty = [k for k in tr_keys if tr_keys[k].strip() == ""]
             if empty:
                 warnings.append(
@@ -119,7 +171,7 @@ def main() -> int:
                     + ("..." if len(empty) > 5 else "")
                 )
 
-            # Check interpolation placeholders (error) — skip empty stubs
+            # Interpolation placeholders (error) — skip empty stubs
             for key in set(en_keys) & set(tr_keys):
                 if tr_keys[key].strip() == "":
                     continue  # empty stub — Weblate will fill it
@@ -130,6 +182,13 @@ def main() -> int:
                         f"{lang}/{ns}.json: placeholder mismatch in '{key}': "
                         f"en={en_placeholders} vs {lang}={tr_placeholders}"
                     )
+
+    if args.strict and genuine_total:
+        errors.append(
+            f"{genuine_total} genuine missing key(s) across locales (--strict). "
+            "Each renders English silently — seed the key or give the locale a "
+            "fallback base."
+        )
 
     # Report
     if warnings:

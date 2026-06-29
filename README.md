@@ -367,6 +367,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.17.0** — _30 Jun 2026_
+
+- **Five new locales — Portuguese, Italian, and Traditional Chinese.** Brazilian & European Portuguese (`pt-BR` / `pt-PT`), Italian (`it`), and Traditional Chinese for Taiwan and Hong Kong (`zh-Hant` / `zh-Hant-HK`) across the desktop app, web report, and CLI (Settings → Language) — twelve locales in all. Portuguese and Chinese each ship as a deliberate *pair* (a single code reads as foreign to one side — arquivo / ficheiro, _salvando_ vs. _a guardar_; Chinese is Traditional only, not Simplified). Each is a machine-seeded **community preview** for native speakers to refine on [Weblate](https://hosted.weblate.org/projects/bristlenose/); the seed is _fill-empty-only_, so contributed translations always win. Apple-HIG verbs + the research glossary seeded per language; new guard tests pin key parity, placeholders, and plural completeness.
+
 **0.16.1** — _28 Jun 2026_
 
 - **Send to Miro becomes a native macOS sheet, and shows exactly where the board will land.** On the desktop app the export moves into a native sheet with its own Keychain-held Miro connection, and names the connected account, workspace, and organisation plus the destination team before you push. The web report's Miro panel gains the same connected-account / workspace identity — `serve` users see it too. Desktop sheet next bundled-sidecar build; Miro-panel changes ship on PyPI.

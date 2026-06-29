@@ -36,12 +36,8 @@ struct AppearanceSettingsView: View {
             }
 
             Section {
-                // TODO(i18n): move to settings.appearance.randomIcons{Legend,Help}
-                // across all 7 common.json before shipping (literals here for the
-                // first-cut mock). New projects get a distinctive random icon,
-                // revealed with a one-shot tumble; off → the plain default ring.
-                Toggle("Assign a random icon to new projects", isOn: $randomProjectIcons)
-                Text("Each new project gets a distinctive icon so it's easy to recognise in the sidebar. Turn this off to keep the plain ring and choose icons yourself.")
+                Toggle(i18n.t("settings.appearance.randomIconsLegend"), isOn: $randomProjectIcons)
+                Text(i18n.t("settings.appearance.randomIconsHelp"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }

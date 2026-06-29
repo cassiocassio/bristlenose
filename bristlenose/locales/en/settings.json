@@ -1,6 +1,8 @@
 {
   "heading": "Settings",
   "appearance": {
+    "randomIconsLegend": "Assign a random icon to new projects",
+    "randomIconsHelp": "Each new project gets a distinctive icon so it's easy to recognise in the sidebar. Turn this off to keep the plain ring and choose icons yourself.",
     "legend": "Application appearance",
     "auto": "Use system appearance",
     "light": "Light",

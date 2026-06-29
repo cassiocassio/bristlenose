@@ -1,0 +1,222 @@
+{
+  "heading": "Ajustes",
+  "appearance": {
+    "legend": "Aparência do aplicativo",
+    "auto": "Usar aparência do sistema",
+    "light": "Clara",
+    "dark": "Escura",
+    "randomIconsLegend": "Atribuir um ícone aleatório a novos projetos",
+    "randomIconsHelp": "Cada novo projeto recebe um ícone distinto para que seja fácil reconhecê-lo na barra lateral. Desative para manter o círculo simples e escolher os ícones você mesmo."
+  },
+  "typography": {
+    "legend": "Tipografia"
+  },
+  "language": {
+    "legend": "Idioma",
+    "description": "Controla o idioma de exibição da interface. O conteúdo do relatório não é traduzido.",
+    "helpTranslate": "Ajude a traduzir o Bristlenose para o seu idioma em"
+  },
+  "settingsNav": {
+    "general": "Geral",
+    "project": "Projeto",
+    "profile": "Perfil",
+    "apiKeys": "Chaves de API",
+    "config": "Configuração",
+    "projectStub": "Os ajustes por projeto aparecerão aqui. Em breve.",
+    "profileStub": "Os ajustes de perfil (nome, e-mail, backend do Whisper) aparecerão aqui. Em breve.",
+    "apiKeysStub": "O gerenciamento de chaves de API aparecerá aqui. Em breve.",
+    "pipeline": "Pipeline"
+  },
+  "configReference": {
+    "heading": "Referência de configuração",
+    "intro": "Todos os ajustes abaixo são configurados por variáveis de ambiente ou por um arquivo <code>.env</code>. São mostrados aqui apenas para referência — para alterar um valor, edite o arquivo indicado em cada linha.",
+    "clickToCopy": "Clique para copiar",
+    "copied": "Copiado",
+    "categories": {
+      "llm": "Provedor e modelo de LLM",
+      "transcription": "Transcrição",
+      "privacy": "Privacidade",
+      "quotes": "Citações",
+      "analysis": "Análise",
+      "autocode": "AutoCode",
+      "display": "Exibição",
+      "pipeline": "Pipeline",
+      "thumbnails": "Miniaturas",
+      "server": "Servidor",
+      "logging": "Registro de logs",
+      "timing": "Tempo"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Provedor",
+        "model": "Modelo",
+        "temperature": "Temperatura",
+        "maxTokens": "Máx. de tokens de saída",
+        "concurrency": "Concorrência",
+        "claudeKey": "Chave de API do Claude",
+        "chatgptKey": "Chave de API do ChatGPT",
+        "geminiKey": "Chave de API do Gemini",
+        "azureKey": "Chave de API do Azure",
+        "azureEndpoint": "Endpoint do Azure",
+        "azureDeployment": "Implantação do Azure",
+        "azureApiVersion": "Versão da API do Azure",
+        "ollamaUrl": "URL do Ollama",
+        "ollamaModel": "Modelo do Ollama"
+      },
+      "transcription": {
+        "backend": "Backend",
+        "model": "Modelo",
+        "language": "Idioma",
+        "device": "Dispositivo",
+        "computeType": "Tipo de computação",
+        "audioConcurrency": "Concorrência de extração de áudio"
+      },
+      "privacy": {
+        "piiRedaction": "Remoção de PII",
+        "piiLlmPass": "Passagem de PII por LLM",
+        "customNames": "Nomes personalizados a remover"
+      },
+      "quotes": {
+        "minQuoteWords": "Mín. de palavras por citação",
+        "speakerMergeGap": "Intervalo de mesclagem de falantes",
+        "quoteSequenceGap": "Intervalo de sequência de citações",
+        "llmFailureThreshold": "Limite de falhas de LLM",
+        "autocodeBatchSize": "Tamanho de lote do AutoCode"
+      },
+      "analysis": {
+        "topNSignals": "Top N sinais",
+        "topNSignalsGeneric": "Top N sinais (genérico)",
+        "topNElaboration": "Top N para elaboração",
+        "minQuotesPerCell": "Mín. de citações por célula",
+        "strongConcentration": "Forte: concentração >",
+        "strongParticipants": "Forte: participantes ≥",
+        "strongQuotes": "Forte: citações ≥",
+        "moderateConcentration": "Moderado: concentração >",
+        "moderateParticipants": "Moderado: participantes ≥",
+        "moderateQuotes": "Moderado: citações ≥"
+      },
+      "autocode": {
+        "defaultLower": "Limite inferior padrão",
+        "defaultUpper": "Limite superior padrão",
+        "sliderStep": "Passo do controle deslizante",
+        "sliderMinGap": "Intervalo mínimo do controle deslizante",
+        "histogramBins": "Faixas do histograma"
+      },
+      "display": {
+        "searchMinChars": "Mín. de caracteres de busca",
+        "activityPollInterval": "Intervalo de consulta de atividade"
+      },
+      "pipeline": {
+        "projectName": "Nome do projeto",
+        "writeIntermediate": "Gravar arquivos intermediários",
+        "skipTranscription": "Pular transcrição",
+        "maxSessionsBeforeConfirm": "Máx. de sessões antes de confirmar"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Janela de busca de keyframe",
+        "fallbackFrameTime": "Tempo de frame alternativo",
+        "thumbnailWidth": "Largura da miniatura",
+        "jpegQuality": "Qualidade JPEG"
+      },
+      "server": {
+        "serverPort": "Porta do servidor",
+        "miroAccessToken": "Token de acesso do Miro"
+      },
+      "logging": {
+        "logLevel": "Nível de log (arquivo)",
+        "logFileMaxSize": "Tamanho máx. do arquivo de log",
+        "logBackupCount": "Quantidade de backups de log"
+      },
+      "timing": {
+        "minRunsEstimate": "Mín. de execuções antes da estimativa",
+        "minRunsRange": "Mín. de execuções antes da faixa ±"
+      }
+    }
+  },
+  "pipeline": {
+    "intro": "Visualização somente leitura dos modelos que o Bristlenose usa atualmente em cada etapa do pipeline. Para alterar um backend, edite seus ajustes (variáveis de ambiente ou arquivo .env).",
+    "loading": "Carregando visualização do pipeline…",
+    "error": "Não foi possível carregar a visualização do pipeline",
+    "keys": "chaves",
+    "keysNone": "nenhuma",
+    "ollama": "ollama",
+    "running": "em execução",
+    "notDetected": "não detectado",
+    "available": "disponível",
+    "unavailable": "indisponível",
+    "alternatives": {
+      "summaryHeading": "Backends de LLM neste host",
+      "available": "Disponível",
+      "unavailable": "Indisponível",
+      "none": "nenhum"
+    },
+    "backends": {
+      "local_ollama": "Local (Ollama)",
+      "builtin_anonymiser": "Anonimizador integrado"
+    },
+    "glyph": {
+      "available": "disponível",
+      "unavailable": "indisponível",
+      "skipped": "não aplicável neste host"
+    },
+    "column": {
+      "model": "Modelo",
+      "availability": "Disponibilidade",
+      "quality": "Qualidade",
+      "notes": "Notas"
+    },
+    "key": {
+      "italic_label": "itálico",
+      "synthesised": "dos seus ajustes, não do nosso catálogo"
+    },
+    "qualifier": {
+      "default": "padrão",
+      "current": "atual",
+      "your_deployment": "sua implantação do Azure"
+    },
+    "quality": {
+      "glyph": {
+        "excellent": "excelente qualidade",
+        "good": "boa qualidade",
+        "marginal": "qualidade marginal",
+        "avoid": "evite — qualidade muito baixa",
+        "untested": "não testado"
+      },
+      "untested": "não testado",
+      "local_speaker_id_acceptable": "Modelos locais lidam bem com a identificação de falantes",
+      "local_topic_segmentation_acceptable": "Modelos locais lidam bem com a segmentação de tópicos",
+      "local_quote_extraction_miss_rate": "modelos pequenos perdem citações com várias orações",
+      "local_quote_clustering_drift": "modelos pequenos agrupam citações de forma inconsistente",
+      "local_thematic_grouping_drift": "modelos pequenos desviam na síntese temática",
+      "mlx_whisper_apple_silicon_optimal": "ótimo no Apple Silicon",
+      "faster_whisper_cpu_baseline": "base sólida em CPU; não requer GPU"
+    },
+    "actions": {
+      "obtain_anthropic_key": "obtenha uma chave de API em console.anthropic.com e defina ANTHROPIC_API_KEY ou cole em Ajustes → Chaves",
+      "obtain_openai_key": "obtenha uma chave de API em platform.openai.com e defina OPENAI_API_KEY ou cole em Ajustes → Chaves",
+      "obtain_google_key": "obtenha uma chave de API em aistudio.google.com e defina GOOGLE_API_KEY ou cole em Ajustes → Chaves",
+      "configure_azure": "defina a chave, o endpoint e a implantação do Azure em Ajustes → Chaves",
+      "start_ollama": "inicie o serviço do Ollama (ollama serve)",
+      "install_mlx_whisper": "pip install mlx-whisper (requer Apple Silicon)",
+      "install_ctranslate2": "pip install ctranslate2",
+      "install_presidio": "pip install bristlenose[redact-pii] para ativar o anonimizador integrado",
+      "enable_pii_redaction": "execute com --redact-pii ou defina pii_enabled=true"
+    },
+    "reasons": {
+      "no_anthropic_key": "nenhuma chave de API do Claude definida",
+      "no_openai_key": "nenhuma chave de API do ChatGPT definida",
+      "no_azure_key": "nenhuma chave do Azure OpenAI definida",
+      "no_azure_endpoint": "endpoint do Azure não definido",
+      "no_azure_deployment": "implantação do Azure não definida",
+      "no_google_key": "nenhuma chave de API do Gemini definida",
+      "ollama_not_running": "Ollama não está em execução",
+      "apple_fm_check_desktop": "verifique no aplicativo de desktop",
+      "requires_apple_silicon": "requer Apple Silicon",
+      "mlx_whisper_not_installed": "MLX Whisper não instalado",
+      "ctranslate2_not_installed": "ctranslate2 não instalado",
+      "presidio_not_installed": "Anonimizador integrado não instalado",
+      "spacy_model_missing": "modelo de linguagem não instalado",
+      "pii_disabled": "A remoção de PII está desativada"
+    }
+  }
+}

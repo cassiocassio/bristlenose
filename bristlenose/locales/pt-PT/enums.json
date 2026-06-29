@@ -1,0 +1,17 @@
+{
+  "sentiment": {
+    "frustration": "Frustração",
+    "confusion": "Confusão",
+    "doubt": "Dúvida",
+    "surprise": "Surpresa",
+    "satisfaction": "Satisfação",
+    "delight": "Encantamento",
+    "confidence": "Confiança"
+  },
+  "speakerRole": {
+    "researcher": "Investigador",
+    "participant": "Participante",
+    "observer": "Observador",
+    "unknown": "Desconhecido"
+  }
+}

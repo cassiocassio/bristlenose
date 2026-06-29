@@ -969,7 +969,7 @@ def check_bundle_locales() -> CheckResult:
             detail=f"missing: {locales_root}",
             fix_key="bundle_dir_missing",
         )
-    expected = {"en", "es", "fr", "de", "ja", "ko", "cs", "it"}
+    expected = {"en", "es", "fr", "de", "ja", "ko", "cs", "it", "pt-BR", "pt-PT"}
     present = {p.name for p in locales_root.iterdir() if p.is_dir()}
     missing = expected - present
     if missing:

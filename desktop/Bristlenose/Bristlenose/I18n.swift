@@ -26,7 +26,7 @@ final class I18n: ObservableObject {
 
     // MARK: - Locale allowlist (security: prevents path traversal)
 
-    static let supportedLocales: Set<String> = ["en", "es", "ja", "fr", "de", "ko", "cs", "it"]
+    static let supportedLocales: Set<String> = ["en", "es", "ja", "fr", "de", "ko", "cs", "it", "pt-BR", "pt-PT"]
 
     /// Namespaces to load — must match the JSON filenames in bristlenose/locales/.
     private static let namespaces = ["common", "settings", "enums", "desktop"]

@@ -538,8 +538,25 @@ script (no script subtag), `one`/`other` plurals — same shape as `es`/`fr`/`de
 quality is high and mechanical cost is low. Two locales though: lexical divergence
 (`ecrã`/`utilizador` PT vs `tela`/`usuário` BR) → two native reviews eventually. `pt-BR`
 (Brazil) is the larger market (reach); `pt-PT` is more completeness. Normal App Store
-regions, providers reachable. `pt` base + `pt-BR` override, or two full locales — decide at
-seed time.
+regions, providers reachable.
+
+**Decided: two full locales, not `pt` base + `pt-BR` override.** Every controlled-vocabulary
+exemplar ships two independent variants; none ships a neutral `pt` base with deltas. (1) **CLDR**
+makes `pt-BR` the *default-content locale* for `pt` — bare `pt` has no data of its own and
+resolves to Brazilian content, so a "neutral base" doesn't exist; "`pt` base + override" would
+really be "`pt`(=BR) + `pt-PT` override" under a misleading name. (2) **Apple**: *"use `pt` …
+for Portuguese as it is used in Brazil and `pt-PT` … as it is used in Portugal"* — no neutral
+Portuguese; best practice is shipping both, and because both share the language code `pt`, a
+half-populated shared locale can serve *pt-PT strings to a pt-BR user* instead of falling back to
+English (QA1828). (3) **Microsoft** maintains two separate style guides + terminology sets
+(`por-bra-StyleGuide.pdf` / `por-prt-StyleGuide.pdf`). (4) **Mozilla** runs `pt-BR` and `pt-PT`
+as fully independent Pontoon teams — no `pt` team, no base+override. The Acordo Ortográfico (1990)
+harmonised some *spelling* but the load-bearing UI divergence (`ficheiro`/`arquivo`,
+`utilizador`/`usuário`, `ecrã`/`tela`) is *lexical*, untouched — and it lands on exactly the
+high-frequency words in every menu. **Implications:** two locale artifacts + two native reviewers,
+but production is still delta-driven (MT-seed `pt-BR`, fork the `pt-PT` deltas — ~1.2× not 2×);
+bare-`pt` fallback resolves to `pt-BR` (answers the handoff's region-subtag audit Q6); never let
+one variant borrow the other's strings at runtime — gate each to "reviewed" independently.
 
 **Chinese (`zh-Hant` + `zh-Hans`) — don't touch before autumn/winter 2026.** Split by
 distribution channel, not just script:

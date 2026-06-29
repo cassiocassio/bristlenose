@@ -12,9 +12,9 @@ vi.mock("./index", () => {
   const addResourceBundle = vi.fn();
   return {
     default: { changeLanguage, hasResourceBundle, addResourceBundle },
-    SUPPORTED_LOCALES: ["en", "es", "ja", "fr", "de", "ko"],
+    SUPPORTED_LOCALES: ["en", "es", "ja", "fr", "de", "ko", "it"],
     isSupportedLocale: (v: unknown) =>
-      typeof v === "string" && ["en", "es", "ja", "fr", "de", "ko"].includes(v),
+      typeof v === "string" && ["en", "es", "ja", "fr", "de", "ko", "it"].includes(v),
     ensureLocaleLoaded: vi.fn().mockResolvedValue(undefined),
   };
 });

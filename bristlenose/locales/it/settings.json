@@ -1,0 +1,222 @@
+{
+  "heading": "Impostazioni",
+  "appearance": {
+    "randomIconsLegend": "Assegna un'icona casuale ai nuovi progetti",
+    "randomIconsHelp": "Ogni nuovo progetto riceve un'icona distintiva, così è facile riconoscerlo nella barra laterale. Disattivare questa opzione per mantenere l'anello semplice e scegliere le icone manualmente.",
+    "legend": "Aspetto dell'applicazione",
+    "auto": "Usa l'aspetto di sistema",
+    "light": "Chiaro",
+    "dark": "Scuro"
+  },
+  "typography": {
+    "legend": "Tipografia"
+  },
+  "language": {
+    "legend": "Lingua",
+    "description": "Controlla la lingua di visualizzazione dell'interfaccia. Il contenuto del report non viene tradotto.",
+    "helpTranslate": "Contribuisci a tradurre Bristlenose nella tua lingua su"
+  },
+  "settingsNav": {
+    "general": "Generale",
+    "project": "Progetto",
+    "profile": "Profilo",
+    "apiKeys": "Chiavi API",
+    "config": "Configurazione",
+    "projectStub": "Le impostazioni per progetto appariranno qui. Prossimamente.",
+    "profileStub": "Le impostazioni del profilo (nome, email, backend di Whisper) appariranno qui. Prossimamente.",
+    "apiKeysStub": "La gestione delle chiavi API apparirà qui. Prossimamente.",
+    "pipeline": "Pipeline"
+  },
+  "configReference": {
+    "heading": "Riferimento di configurazione",
+    "intro": "Tutte le impostazioni seguenti si configurano tramite variabili d'ambiente o un file <code>.env</code>. Sono mostrate qui per riferimento — per modificare un valore, modificare il file indicato in ciascuna riga.",
+    "clickToCopy": "Fai clic per copiare",
+    "copied": "Copiato",
+    "categories": {
+      "llm": "Provider e modello LLM",
+      "transcription": "Trascrizione",
+      "privacy": "Privacy",
+      "quotes": "Citazioni",
+      "analysis": "Analisi",
+      "autocode": "AutoCode",
+      "display": "Visualizzazione",
+      "pipeline": "Pipeline",
+      "thumbnails": "Miniature",
+      "server": "Server",
+      "logging": "Registro",
+      "timing": "Tempistica"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Provider",
+        "model": "Modello",
+        "temperature": "Temperatura",
+        "maxTokens": "Numero massimo di token in output",
+        "concurrency": "Concorrenza",
+        "claudeKey": "Chiave API di Claude",
+        "chatgptKey": "Chiave API di ChatGPT",
+        "geminiKey": "Chiave API di Gemini",
+        "azureKey": "Chiave API di Azure",
+        "azureEndpoint": "Endpoint di Azure",
+        "azureDeployment": "Distribuzione di Azure",
+        "azureApiVersion": "Versione API di Azure",
+        "ollamaUrl": "URL di Ollama",
+        "ollamaModel": "Modello di Ollama"
+      },
+      "transcription": {
+        "backend": "Backend",
+        "model": "Modello",
+        "language": "Lingua",
+        "device": "Dispositivo",
+        "computeType": "Tipo di calcolo",
+        "audioConcurrency": "Concorrenza di estrazione audio"
+      },
+      "privacy": {
+        "piiRedaction": "Oscuramento dei dati personali",
+        "piiLlmPass": "Passaggio LLM sui dati personali",
+        "customNames": "Nomi personalizzati da oscurare"
+      },
+      "quotes": {
+        "minQuoteWords": "Numero minimo di parole per citazione",
+        "speakerMergeGap": "Intervallo di unione interlocutori",
+        "quoteSequenceGap": "Intervallo di sequenza citazioni",
+        "llmFailureThreshold": "Soglia di errore LLM",
+        "autocodeBatchSize": "Dimensione del batch di AutoCode"
+      },
+      "analysis": {
+        "topNSignals": "Primi N segnali",
+        "topNSignalsGeneric": "Primi N segnali (generici)",
+        "topNElaboration": "Primi N per l'elaborazione",
+        "minQuotesPerCell": "Numero minimo di citazioni per cella",
+        "strongConcentration": "Forte: concentrazione >",
+        "strongParticipants": "Forte: partecipanti ≥",
+        "strongQuotes": "Forte: citazioni ≥",
+        "moderateConcentration": "Moderato: concentrazione >",
+        "moderateParticipants": "Moderato: partecipanti ≥",
+        "moderateQuotes": "Moderato: citazioni ≥"
+      },
+      "autocode": {
+        "defaultLower": "Soglia inferiore predefinita",
+        "defaultUpper": "Soglia superiore predefinita",
+        "sliderStep": "Passo del cursore",
+        "sliderMinGap": "Intervallo minimo del cursore",
+        "histogramBins": "Intervalli dell'istogramma"
+      },
+      "display": {
+        "searchMinChars": "Numero minimo di caratteri per la ricerca",
+        "activityPollInterval": "Intervallo di interrogazione dell'attività"
+      },
+      "pipeline": {
+        "projectName": "Nome del progetto",
+        "writeIntermediate": "Scrivi file intermedi",
+        "skipTranscription": "Salta la trascrizione",
+        "maxSessionsBeforeConfirm": "Numero massimo di sessioni prima della conferma"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Finestra di ricerca dei fotogrammi chiave",
+        "fallbackFrameTime": "Tempo del fotogramma di riserva",
+        "thumbnailWidth": "Larghezza della miniatura",
+        "jpegQuality": "Qualità JPEG"
+      },
+      "server": {
+        "serverPort": "Porta del server",
+        "miroAccessToken": "Token di accesso a Miro"
+      },
+      "logging": {
+        "logLevel": "Livello di registro (file)",
+        "logFileMaxSize": "Dimensione massima del file di registro",
+        "logBackupCount": "Numero di copie di backup del registro"
+      },
+      "timing": {
+        "minRunsEstimate": "Numero minimo di esecuzioni prima della stima",
+        "minRunsRange": "Numero minimo di esecuzioni prima dell'intervallo ±"
+      }
+    }
+  },
+    "pipeline": {
+      "intro": "Vista in sola lettura dei modelli che Bristlenose utilizza attualmente per ciascuna fase della pipeline. Per cambiare un backend, modificare le impostazioni (variabili d'ambiente o file .env).",
+      "loading": "Caricamento della vista pipeline…",
+      "error": "Impossibile caricare la vista pipeline",
+      "keys": "chiavi",
+      "keysNone": "nessuna",
+      "ollama": "ollama",
+      "running": "in esecuzione",
+      "notDetected": "non rilevato",
+      "available": "disponibile",
+      "unavailable": "non disponibile",
+      "alternatives": {
+        "summaryHeading": "Backend LLM su questo host",
+        "available": "Disponibile",
+        "unavailable": "Non disponibile",
+        "none": "nessuno"
+      },
+      "backends": {
+        "local_ollama": "Locale (Ollama)",
+        "builtin_anonymiser": "Anonimizzatore integrato"
+      },
+      "glyph": {
+        "available": "disponibile",
+        "unavailable": "non disponibile",
+        "skipped": "non applicabile su questo host"
+      },
+      "column": {
+        "model": "Modello",
+        "availability": "Disponibilità",
+        "quality": "Qualità",
+        "notes": "Note"
+      },
+      "key": {
+        "italic_label": "corsivo",
+        "synthesised": "dalle tue impostazioni, non dal nostro catalogo"
+      },
+      "qualifier": {
+        "default": "predefinito",
+        "current": "attuale",
+        "your_deployment": "la tua distribuzione di Azure"
+      },
+      "quality": {
+        "glyph": {
+          "excellent": "qualità eccellente",
+          "good": "buona qualità",
+          "marginal": "qualità marginale",
+          "avoid": "da evitare — qualità troppo bassa",
+          "untested": "non testato"
+        },
+        "untested": "non testato",
+        "local_speaker_id_acceptable": "I modelli locali gestiscono bene l'identificazione degli interlocutori",
+        "local_topic_segmentation_acceptable": "I modelli locali gestiscono bene la segmentazione degli argomenti",
+        "local_quote_extraction_miss_rate": "i modelli piccoli omettono le citazioni con più proposizioni",
+        "local_quote_clustering_drift": "i modelli piccoli raggruppano le citazioni in modo incoerente",
+        "local_thematic_grouping_drift": "i modelli piccoli derivano nella sintesi tematica",
+        "mlx_whisper_apple_silicon_optimal": "ottimale su Apple Silicon",
+        "faster_whisper_cpu_baseline": "solida base su CPU; nessuna GPU richiesta"
+      },
+      "actions": {
+        "obtain_anthropic_key": "ottenere una chiave API su console.anthropic.com e impostare ANTHROPIC_API_KEY oppure incollarla in Impostazioni → Chiavi",
+        "obtain_openai_key": "ottenere una chiave API su platform.openai.com e impostare OPENAI_API_KEY oppure incollarla in Impostazioni → Chiavi",
+        "obtain_google_key": "ottenere una chiave API su aistudio.google.com e impostare GOOGLE_API_KEY oppure incollarla in Impostazioni → Chiavi",
+        "configure_azure": "impostare chiave, endpoint e distribuzione di Azure in Impostazioni → Chiavi",
+        "start_ollama": "avviare il servizio Ollama (ollama serve)",
+        "install_mlx_whisper": "pip install mlx-whisper (richiede Apple Silicon)",
+        "install_ctranslate2": "pip install ctranslate2",
+        "install_presidio": "pip install bristlenose[redact-pii] per abilitare l'anonimizzatore integrato",
+        "enable_pii_redaction": "eseguire con --redact-pii oppure impostare pii_enabled=true"
+      },
+      "reasons": {
+        "no_anthropic_key": "nessuna chiave API di Claude impostata",
+        "no_openai_key": "nessuna chiave API di ChatGPT impostata",
+        "no_azure_key": "nessuna chiave Azure OpenAI impostata",
+        "no_azure_endpoint": "endpoint di Azure non impostato",
+        "no_azure_deployment": "distribuzione di Azure non impostata",
+        "no_google_key": "nessuna chiave API di Gemini impostata",
+        "ollama_not_running": "Ollama non in esecuzione",
+        "apple_fm_check_desktop": "verificare nell'app desktop",
+        "requires_apple_silicon": "richiede Apple Silicon",
+        "mlx_whisper_not_installed": "MLX Whisper non installato",
+        "ctranslate2_not_installed": "ctranslate2 non installato",
+        "presidio_not_installed": "Anonimizzatore integrato non installato",
+        "spacy_model_missing": "modello linguistico non installato",
+        "pii_disabled": "L'oscuramento dei dati personali è disattivato"
+      }
+    }
+}

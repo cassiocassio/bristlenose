@@ -27,6 +27,14 @@ If code files were changed:
 
 If anything fails, **stop and fix before documenting**. Don't document a broken state.
 
+**Desktop-bundle freshness (informational, not a gate).** If this session touched `frontend/` or `bristlenose/locales/`, the bundled `.app`'s baked SPA is now stale until the sidecar is rebuilt. This does NOT block the close-out and is NOT a release concern (PyPI/Homebrew/Snap build the frontend on a clean CI checkout). It only matters for the next local `.app` QA. Check and note it in the human summary:
+
+```bash
+desktop/scripts/check-sidecar-freshness.sh 2>&1 | tail -1   # "STALE" / "no .source-stamp" → rebuild before next .app QA
+```
+
+If it reports stale, mention in the summary: "bundled sidecar is stale vs frontend — `desktop/scripts/build-sidecar.sh` (runs npm build) before next `.app` QA." Don't rebuild it automatically — it's a ~2-min step the user may not need this session.
+
 ## Phase 2: Document
 
 ```bash

@@ -103,40 +103,25 @@ fi
 echo "    OK"
 
 # ------------------------------------------------------------
-# 2. Parallel: fetch ffmpeg + build sidecar (no dependency)
+# 2. Ensure the sidecar is fresh + signed (fetch ffmpeg + build + sign)
 # ------------------------------------------------------------
-# PyInstaller build is ~100 s CPU; FFmpeg fetch is ~10-30 s network.
-# Running them concurrently trims the longer of (T_pyi, T_ff) off the
-# wall clock.
+# Collapsed onto the single orchestrator (replaces the old steps 2-4):
+# ensure-sidecar.sh does fetch-ffmpeg + build-sidecar (--force = full clean
+# rebuild for release) + sign BOTH ffmpeg/ffprobe AND the sidecar bundle under
+# one identity, then deep-verifies. `_BRISTLENOSE_RELEASE=1` authorises the real
+# identity (the IDE inner loop is refused one). Self-test (2a) + inventory (2b)
+# run AFTER, against the freshly built+signed tree.
+#
+# (Trade-off, finding 19: this serialises the old fetch||build concurrency —
+# ~10-30s of network fetch that used to hide under PyInstaller. Negligible on a
+# ~25-minute release; kept simple. ensure can background the fetch later if it
+# ever matters.)
 
 echo
-echo "==> 2. Parallel: fetch-ffmpeg + build-sidecar..."
-rm -f "$DESKTOP_DIR/build/fetch-ffmpeg.log" "$DESKTOP_DIR/build/build-sidecar.log"
-mkdir -p "$DESKTOP_DIR/build"
-
-"$SCRIPT_DIR/fetch-ffmpeg.sh" > "$DESKTOP_DIR/build/fetch-ffmpeg.log" 2>&1 &
-FETCH_PID=$!
-"$SCRIPT_DIR/build-sidecar.sh" > "$DESKTOP_DIR/build/build-sidecar.log" 2>&1 &
-BUILD_PID=$!
-
-FETCH_FAILED=0
-BUILD_FAILED=0
-if ! wait "$FETCH_PID"; then FETCH_FAILED=1; fi
-if ! wait "$BUILD_PID"; then BUILD_FAILED=1; fi
-
-if [ "$FETCH_FAILED" = "1" ]; then
-    echo "error: fetch-ffmpeg failed. tail of log:" >&2
-    tail -30 "$DESKTOP_DIR/build/fetch-ffmpeg.log" >&2
-fi
-if [ "$BUILD_FAILED" = "1" ]; then
-    echo "error: build-sidecar failed. tail of log:" >&2
-    tail -30 "$DESKTOP_DIR/build/build-sidecar.log" >&2
-fi
-if [ "$FETCH_FAILED" = "1" ] || [ "$BUILD_FAILED" = "1" ]; then
-    exit 1
-fi
-
-echo "    OK (fetch-ffmpeg + build-sidecar)"
+echo "==> 2. ensure-sidecar (fetch + build + sign, --force)..."
+export SIGN_IDENTITY
+_BRISTLENOSE_RELEASE=1 "$SCRIPT_DIR/ensure-sidecar.sh" --force
+echo "    OK (ensure-sidecar: built + signed under $SIGN_IDENTITY)"
 
 # ------------------------------------------------------------
 # 2a. Bundle integrity self-test
@@ -187,24 +172,11 @@ else
 fi
 
 # ------------------------------------------------------------
-# 3. Sign bundled FFmpeg + ffprobe
+# 3-4. Signing — now performed inside ensure-sidecar (step 2)
 # ------------------------------------------------------------
-# Child scripts inherit SIGN_IDENTITY (+ optional SIGN_JOBS,
-# ALLOW_RESIGN) from the parent environment.
-
-export SIGN_IDENTITY
-
-echo
-echo "==> 3. Signing FFmpeg + ffprobe..."
-"$SCRIPT_DIR/sign-ffmpeg.sh"
-
-# ------------------------------------------------------------
-# 4. Sign PyInstaller sidecar bundle (parallel inner loop)
-# ------------------------------------------------------------
-
-echo
-echo "==> 4. Signing sidecar bundle..."
-"$SCRIPT_DIR/sign-sidecar.sh"
+# Both sign-ffmpeg.sh and sign-sidecar.sh are invoked by ensure-sidecar.sh under
+# a single identity, with a post-sign `codesign --verify --deep --strict`. No
+# separate sign steps here.
 
 # Ad-hoc runs stop here — xcodebuild with the manual-signing Release
 # config requires a real Apple Distribution identity.

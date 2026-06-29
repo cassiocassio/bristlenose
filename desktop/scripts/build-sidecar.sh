@@ -1,24 +1,43 @@
 #!/usr/bin/env bash
-# Build the bristlenose desktop sidecar via PyInstaller (Track C).
+# Build the bristlenose desktop sidecar via PyInstaller (Track C), PER-LAYER
+# INCREMENTAL: each layer (Frontend / Venv / PyInstaller) rebuilds only when its
+# own inputs changed, so a Swift-only or one-line-Python iteration doesn't pay the
+# from-scratch venv-recreate cost. `--force` reproduces the original always-full
+# behaviour (and is what build-all.sh / release uses).
 #
-# Produces a --onedir bundle at
-#   desktop/Bristlenose/Resources/bristlenose-sidecar/
+# Produces a --onedir bundle at desktop/Bristlenose/Resources/bristlenose-sidecar/.
+# Signing is a separate step (sign-sidecar.sh / sign-ffmpeg.sh); the orchestrator
+# is ensure-sidecar.sh. See docs/design-desktop-build-orchestration.md.
 #
-# Signing is a separate step: desktop/scripts/sign-sidecar.sh. Splitting
-# build from sign (C2) lets CI re-sign cached PyInstaller output without
-# paying the ~60 s rebuild cost on every signing-identity change.
+# CORE PRINCIPLE (from review): stamps attest INPUTS; every skip path also makes
+# an OUTPUT-side check the stamp can't fake (built artefact present + non-empty).
+# A frontend rebuild forces a PyInstaller rebuild (the bundle's baked static/ is a
+# copy, not a live reference) — closing the "static/ wiped, stamp still green" hole.
 #
-# Xcode's "Copy Sidecar Resources" build phase picks the bundle up from
-# the Resources directory at archive time.
+# Layers + their stamps:
+#   F  frontend   → bristlenose/server/static/.frontend-stamp   (frontend_source_hash)
+#   V  venv       → .venv-sidecar/.deps-stamp + .deps-ok         (pyproject + pip freeze)
+#   P  pyinstaller→ <bundle>/.source-stamp                       (sidecar_source_hash)
 #
-# Prerequisites:
-#   - python3.12 on PATH. The script builds its own dedicated venv at
-#     $ROOT/.venv-sidecar, recreated from scratch on every run, with only
-#     `.[serve,apple,desktop]` extras — keeping contributor-installed
-#     packages (BERTopic spike deps, dev-only tools) out of the bundle.
-#     The contributor's `.venv` (with `dev` extras) is left alone.
+# Usage: build-sidecar.sh [--force] [--dry-run]
+#   --force    rebuild every layer from scratch (original behaviour; release uses this)
+#   --dry-run  report what WOULD rebuild and why; do no work; exit 0
+#
+# Prerequisites: python3.12 + Node 24 on PATH; frontend deps installed.
+# The dedicated .venv-sidecar carries only .[serve,apple,desktop] so contributor
+# packages never reach PyInstaller's analysis.
 
 set -euo pipefail
+
+FORCE=0
+DRY_RUN=0
+for arg in "$@"; do
+    case "$arg" in
+        --force)   FORCE=1 ;;
+        --dry-run) DRY_RUN=1 ;;
+        *) echo "error: unknown argument: $arg (expected --force / --dry-run)" >&2; exit 2 ;;
+    esac
+done
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DESKTOP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -29,18 +48,21 @@ SPEC="$DESKTOP_DIR/bristlenose-sidecar.spec"
 DIST="$DESKTOP_DIR/Bristlenose/Resources"
 WORK="$DESKTOP_DIR/build/pyinstaller"
 BUNDLE="$DIST/bristlenose-sidecar"
+FRONTEND_DIR="$ROOT/frontend"
+STATIC_DIR="$ROOT/bristlenose/server/static"
 
-# Robust recursive delete for large trees on a Spotlight-indexed volume.
-# `rm -rf` on a 400 MB+ bundle races mdworker/fseventsd: while rm unlinks
-# entries, the indexer re-creates directory entries, so rm's final rmdir hits
-# ENOTEMPTY ("Directory not empty") and `set -e` aborts the build — the papercut
-# where the *second* invocation succeeds because the tree is mostly gone by then.
-# Fix: rename out of the way first (atomic, frees the canonical path instantly so
-# the rebuild proceeds regardless), then rm the renamed trash with retries. Sweep
-# any trash orphans a prior failed run left behind.
+FRONTEND_STAMP="$STATIC_DIR/.frontend-stamp"
+DEPS_STAMP="$SIDECAR_VENV/.deps-stamp"
+DEPS_OK="$SIDECAR_VENV/.deps-ok"
+
+_say() { echo "==> $*"; }
+_layer() { echo "    [$1] $2"; }   # e.g. _layer F "REBUILD — frontend source moved"
+
+# Robust recursive delete for large trees on a Spotlight-indexed volume (rm races
+# mdworker/fseventsd → ENOTEMPTY). Rename out of the way (atomic), then rm with
+# retries; sweep orphans a prior failed run left.
 robust_rmrf() {
     local target="$1"
-    # Clear leftovers from an earlier interrupted delete (best-effort).
     rm -rf "${target}".delete-* 2>/dev/null || true
     [ -e "$target" ] || return 0
     local trash="${target}.delete-$$"
@@ -50,131 +72,179 @@ robust_rmrf() {
         rm -rf "$trash" 2>/dev/null && return 0
         sleep 1
     done
-    # Final attempt surfaces the real error if it still fails. The canonical
-    # path is already free (renamed), so the build can proceed even on failure.
     rm -rf "$trash" || echo "warning: could not fully remove $trash (left for next run)" >&2
 }
 
 # ---------------------------------------------------------------------------
-# Build the React SPA into bristlenose/server/static FIRST — before fingerprint,
-# venv recreate, and PyInstaller analysis. The bundle ships server/static/ (the
-# SPA: gitignored, NOT produced by PyInstaller), so without this a missed
-# `npm run build` silently ships a STALE frontend. Doing it here makes every
-# sidecar build self-heal the SPA — standalone or via build-all.sh — and the
-# source fingerprint (sidecar-source-hash.sh) now covers frontend src + locales,
-# so the Xcode freshness gate fails loudly if this is ever skipped. Fail-fast
-# (cheap) before the ~100 s PyInstaller work. Mirrors release.yml's build.
+# Preconditions — run UNCONDITIONALLY, before any skip decision (a missing tool
+# must be a loud error, never a quiet skip). Per review finding 6.
 # ---------------------------------------------------------------------------
-FRONTEND_DIR="$ROOT/frontend"
-# Prefer the repo-pinned Node (.tool-versions: node 24). mise/asdf aren't
-# installed locally, so add the Homebrew keg to PATH when it's present.
 if [ -d /opt/homebrew/opt/node@24/bin ]; then
     PATH="/opt/homebrew/opt/node@24/bin:$PATH"
 fi
 if ! command -v npm >/dev/null 2>&1; then
-    echo "error: npm not found on PATH — install Node 24 (see .tool-versions):" >&2
-    echo "  brew install node@24" >&2
+    echo "error: npm not found on PATH — install Node 24 (see .tool-versions): brew install node@24" >&2
     exit 1
 fi
 if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
-    echo "error: frontend/node_modules missing — install deps first:" >&2
-    echo "  (cd frontend && npm ci --legacy-peer-deps)" >&2
+    echo "error: frontend/node_modules missing — (cd frontend && npm ci --legacy-peer-deps)" >&2
     exit 1
 fi
-echo "==> Building React SPA (npm run build) into bristlenose/server/static..."
-( cd "$FRONTEND_DIR" && npm run build )
+if ! command -v python3.12 >/dev/null; then
+    echo "error: python3.12 not found on PATH — brew install python@3.12" >&2
+    exit 1
+fi
 
-# Fingerprint the source (Python + frontend src + locales) NOW — before pip/
-# PyInstaller run — so the stamp reflects exactly what gets bundled, uncontaminated
-# by any transient file a build step might drop under bristlenose/ (which would
-# otherwise make the stamp disagree with check-sidecar-freshness.sh's clean-tree
-# recompute). The frontend was built just above, so server/static/ already matches
-# this fingerprint's frontend inputs. Written to the bundle near the end. See
-# sidecar-source-hash.sh for the shared recipe.
 # shellcheck source=sidecar-source-hash.sh
 . "$SCRIPT_DIR/sidecar-source-hash.sh"
+
+FRONTEND_HASH="$(frontend_source_hash "$ROOT")"
 SOURCE_HASH="$(sidecar_source_hash "$ROOT")"
+# An empty/malformed hash must NEVER resolve to "skip" — fail loud (finding 6).
+for h in "$FRONTEND_HASH" "$SOURCE_HASH"; do
+    case "$h" in
+        [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) : ;;
+        *) echo "error: empty/malformed source fingerprint ('$h') — aborting rather than skipping" >&2; exit 1 ;;
+    esac
+done
 
-if ! command -v python3.12 >/dev/null; then
-    echo "error: python3.12 not found on PATH" >&2
-    echo "run: brew install python@3.12" >&2
-    exit 1
+# Deps fingerprint for the V gate: pyproject content + the ACTUALLY-installed
+# package set. Catches a half-installed venv and a manual change; a transitive
+# republish within the same >= floor is the documented residual that release
+# --force covers. Only called when the venv exists.
+_deps_fingerprint() {
+    { shasum -a 256 "$ROOT/pyproject.toml"; "$PYTHON" -m pip freeze; } \
+        | shasum -a 256 | cut -d ' ' -f1
+}
+
+# ---------------------------------------------------------------------------
+# Layer F — frontend (npm run build → bristlenose/server/static/)
+# ---------------------------------------------------------------------------
+frontend_rebuilt=0
+need_f=0; f_reason=""
+if [ "$FORCE" = 1 ]; then need_f=1; f_reason="forced"
+elif [ ! -s "$STATIC_DIR/index.html" ]; then need_f=1; f_reason="output missing (static/index.html absent)"
+elif [ "$FRONTEND_HASH" != "$(cat "$FRONTEND_STAMP" 2>/dev/null || true)" ]; then need_f=1; f_reason="frontend source moved"
 fi
 
-# Recreate the sidecar venv from scratch every build. The whole point is a
-# bundle whose contents are deterministic — keep the contributor's `.venv`
-# (with dev extras and any spike packages) out of PyInstaller's analysis.
-echo "==> Recreating sidecar venv at $SIDECAR_VENV"
-robust_rmrf "$SIDECAR_VENV"
-python3.12 -m venv "$SIDECAR_VENV"
-"$SIDECAR_VENV/bin/pip" install --no-cache-dir --quiet --upgrade pip
-"$SIDECAR_VENV/bin/pip" install --no-cache-dir -e "$ROOT[serve,apple,desktop]"
-
-if ! "$PYTHON" -m PyInstaller --version >/dev/null 2>&1; then
-    echo "error: PyInstaller not installed in fresh sidecar venv." >&2
-    echo "(the 'desktop' extra in pyproject.toml should carry pyinstaller — check it.)" >&2
-    exit 1
+if [ "$need_f" = 1 ]; then
+    _layer F "REBUILD — $f_reason"
+    frontend_rebuilt=1          # intent — drives the P cascade even under --dry-run
+    if [ "$DRY_RUN" = 0 ]; then
+        ( cd "$FRONTEND_DIR" && npm run build )
+        mkdir -p "$STATIC_DIR"
+        printf '%s\n' "$FRONTEND_HASH" > "$FRONTEND_STAMP"
+    fi
+else
+    _layer F "skip (${FRONTEND_HASH:0:12} matches; output present)"
 fi
 
-mkdir -p "$DIST"
+# ---------------------------------------------------------------------------
+# Layer V — sidecar venv (.venv-sidecar, .[serve,apple,desktop])
+# ---------------------------------------------------------------------------
+venv_rebuilt=0
+need_v=0; v_reason=""
+if [ "$FORCE" = 1 ]; then need_v=1; v_reason="forced"
+elif [ ! -x "$PYTHON" ]; then need_v=1; v_reason="venv missing"
+elif [ ! -f "$DEPS_OK" ]; then need_v=1; v_reason="no .deps-ok sentinel (half-install?)"
+elif [ "$(_deps_fingerprint)" != "$(cat "$DEPS_STAMP" 2>/dev/null || true)" ]; then need_v=1; v_reason="deps changed (pyproject or installed set)"
+fi
 
-# Fresh-slate the bundle. Repeated C1 runs appended stale Mach-Os into
-# the old tree, which then failed verification without a clear cause.
-robust_rmrf "$BUNDLE"
+if [ "$need_v" = 1 ]; then
+    _layer V "REBUILD — $v_reason"
+    venv_rebuilt=1              # intent — drives the P cascade even under --dry-run
+    if [ "$DRY_RUN" = 0 ]; then
+        rm -f "$DEPS_OK"                 # clear sentinel BEFORE mutating — a crash mid-install leaves no false-OK
+        _say "Recreating sidecar venv at $SIDECAR_VENV"
+        robust_rmrf "$SIDECAR_VENV"
+        python3.12 -m venv "$SIDECAR_VENV"
+        "$SIDECAR_VENV/bin/pip" install --no-cache-dir --quiet --upgrade pip
+        "$SIDECAR_VENV/bin/pip" install --no-cache-dir -e "$ROOT[serve,apple,desktop]"
+        if ! "$PYTHON" -m PyInstaller --version >/dev/null 2>&1; then
+            echo "error: PyInstaller not installed in fresh sidecar venv (check the 'desktop' extra)." >&2
+            exit 1
+        fi
+        # Stamp + sentinel LAST, only after a fully successful install + tool check.
+        _deps_fingerprint > "$DEPS_STAMP"
+        date -u +%Y-%m-%dT%H:%M:%SZ > "$DEPS_OK"
+    fi
+else
+    _layer V "skip (deps unchanged; .deps-ok present)"
+fi
 
-# Bake build provenance into the sidecar so any run / failure log can
-# self-identify the source it was built from (mirrors the Swift host's
-# GeneratedBuildInfo.swift). The bundled sidecar has no git repo at runtime,
-# so the SHA must be frozen here. Written into the editable-installed package
-# source (PyInstaller analyses it from there), then removed afterwards so
-# subsequent dev runs fall back to live git instead of this frozen value.
-BUILD_INFO="$ROOT/bristlenose/_build_info.py"
-GIT_SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
-BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-cleanup_build_info() { rm -f "$BUILD_INFO"; }
-trap cleanup_build_info EXIT
-cat > "$BUILD_INFO" <<EOF
+# ---------------------------------------------------------------------------
+# Layer P — PyInstaller bundle. ALWAYS --clean on rebuild (warm workpath
+# reintroduces the stale-Mach-O class). A frontend rebuild forces P (the bundle's
+# baked static/ is a copy). Source move / venv rebuild / missing bundle also force.
+# ---------------------------------------------------------------------------
+SOURCE_STAMP="$BUNDLE/.source-stamp"
+need_p=0; p_reason=""
+if [ "$FORCE" = 1 ]; then need_p=1; p_reason="forced"
+elif [ ! -x "$BUNDLE/bristlenose-sidecar" ]; then need_p=1; p_reason="bundle missing"
+elif [ "$venv_rebuilt" = 1 ]; then need_p=1; p_reason="venv rebuilt"
+elif [ "$frontend_rebuilt" = 1 ]; then need_p=1; p_reason="frontend rebuilt (rebundle static/)"
+elif [ "$SOURCE_HASH" != "$(head -1 "$SOURCE_STAMP" 2>/dev/null || true)" ]; then need_p=1; p_reason="python/locale/frontend source moved"
+fi
+
+if [ "$need_p" = 1 ]; then
+    _layer P "REBUILD — $p_reason"
+    if [ "$DRY_RUN" = 0 ]; then
+        mkdir -p "$DIST"
+
+        # Bake build provenance (git SHA + UTC date) into the package source so a
+        # run/failure log self-identifies. git runs here in whatever env invoked us
+        # (Xcode's build phase is stripped — warn if the SHA can't resolve).
+        BUILD_INFO="$ROOT/bristlenose/_build_info.py"
+        GIT_SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+        [ "$GIT_SHA" = "unknown" ] && echo "warning: git SHA unresolved (stripped build-phase env?) — provenance will read 'unknown'" >&2
+        BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        trap 'rm -f "$BUILD_INFO"' EXIT
+        cat > "$BUILD_INFO" <<EOF
 # Generated by desktop/scripts/build-sidecar.sh — do not edit, do not commit.
 GIT_SHA = "$GIT_SHA"
 BUILD_DATE = "$BUILD_DATE"
 EOF
-echo "==> Baked build provenance: $GIT_SHA ($BUILD_DATE)"
+        _say "Baked build provenance: $GIT_SHA ($BUILD_DATE)"
 
-echo "==> Building sidecar with PyInstaller..."
-"$PYTHON" -m PyInstaller \
-    --distpath "$DIST" \
-    --workpath "$WORK" \
-    --clean --noconfirm \
-    "$SPEC"
+        # Fresh-slate the bundle (repeated runs appended stale Mach-Os otherwise).
+        robust_rmrf "$BUNDLE"
+        _say "Building sidecar with PyInstaller (--clean)..."
+        "$PYTHON" -m PyInstaller --distpath "$DIST" --workpath "$WORK" --clean --noconfirm "$SPEC"
+        _say "Bundle size: $(du -sh "$BUNDLE" | cut -f1)"
 
-echo "==> Bundle size:"
-du -sh "$BUNDLE"
+        # Privacy manifest (Apple required-reason API coverage) — under the seal.
+        PRIVACY_SRC="$DESKTOP_DIR/bristlenose-sidecar.PrivacyInfo.xcprivacy"
+        if [ ! -f "$PRIVACY_SRC" ]; then
+            echo "error: privacy manifest source missing at $PRIVACY_SRC" >&2; exit 1
+        fi
+        cp "$PRIVACY_SRC" "$BUNDLE/PrivacyInfo.xcprivacy"
 
-# Privacy manifest. Apple requires a PrivacyInfo.xcprivacy at the bundle
-# root covering required-reason API usage by the embedded Python interpreter
-# and vendored packages. Source kept at desktop/bristlenose-sidecar.PrivacyInfo.xcprivacy
-# so it travels with the spec. C4 (28 Apr 2026).
-PRIVACY_SRC="$DESKTOP_DIR/bristlenose-sidecar.PrivacyInfo.xcprivacy"
-PRIVACY_DST="$BUNDLE/PrivacyInfo.xcprivacy"
-if [ ! -f "$PRIVACY_SRC" ]; then
-    echo "error: privacy manifest source missing at $PRIVACY_SRC" >&2
+        # Stamp the bundle with the full source fingerprint (the freshness gate
+        # recomputes + compares; the gate ALSO checks output presence the stamp
+        # can't fake). Written before signing so it's sealed.
+        {
+            echo "$SOURCE_HASH"
+            echo "version=$("$PYTHON" -c 'import bristlenose; print(bristlenose.__version__)' 2>/dev/null || echo unknown)"
+            echo "note=fingerprint of bristlenose/**/*.py + locales + frontend src; see check-sidecar-freshness.sh"
+        } > "$SOURCE_STAMP"
+        _say "Stamped .source-stamp: ${SOURCE_HASH:0:12}…"
+    fi
+else
+    _layer P "skip (${SOURCE_HASH:0:12} matches; bundle present)"
+fi
+
+# ---------------------------------------------------------------------------
+# Output-side assertion (real runs only) — the bundle binary must exist. The
+# in-bundle static/ assertion lives in the freshness gate (it knows the bundle
+# layout); here we guard the thing this script directly produces.
+# ---------------------------------------------------------------------------
+if [ "$DRY_RUN" = 0 ] && [ ! -x "$BUNDLE/bristlenose-sidecar" ]; then
+    echo "error: post-build output check failed — $BUNDLE/bristlenose-sidecar absent/not executable" >&2
     exit 1
 fi
-cp "$PRIVACY_SRC" "$PRIVACY_DST"
-echo "==> Privacy manifest: $PRIVACY_DST"
 
-# Stamp the bundle with the source fingerprint captured at build START (above).
-# The Xcode "Copy Sidecar Resources" phase recomputes it (check-sidecar-freshness.sh)
-# and fails the build if a later Python OR frontend change left the bundle stale —
-# the desktop app runs the bundled sidecar (and the SPA baked into it), not live
-# source, so a missed rebuild silently ships old code. Written BEFORE
-# sign-sidecar.sh so it's covered by the seal.
-{
-    echo "$SOURCE_HASH"
-    echo "version=$("$PYTHON" -c 'import bristlenose; print(bristlenose.__version__)' 2>/dev/null || echo unknown)"
-    echo "note=fingerprint of bristlenose/**/*.py + locales + frontend src; see check-sidecar-freshness.sh"
-} > "$BUNDLE/.source-stamp"
-echo "==> Stamped .source-stamp: $(head -1 "$BUNDLE/.source-stamp" | cut -c1-12)…"
-
-echo "==> Done. Bundle: $BUNDLE"
-echo "    Next: desktop/scripts/sign-sidecar.sh"
+if [ "$DRY_RUN" = 1 ]; then
+    _say "dry-run: no work performed."
+else
+    _say "Done. Bundle: $BUNDLE   (next: sign via ensure-sidecar.sh / sign-sidecar.sh)"
+fi

@@ -81,6 +81,9 @@ e2e/stress-results.json
 # Desktop app — bundled binaries and Xcode build artifacts
 desktop/Bristlenose/Resources/bristlenose-sidecar/
 desktop/Bristlenose/Resources/bristlenose-sidecar.delete-*
+# Atomic sign-stamp written outside the bundle by ensure-sidecar.sh on every
+# Cmd+R (Ensure Sidecar Fresh build phase) — per-machine build state, not source.
+desktop/Bristlenose/Resources/.bristlenose-sidecar.sign-stamp
 desktop/Bristlenose/Resources/ffmpeg
 desktop/Bristlenose/Resources/ffprobe
 # No trailing slash: in the main repo `models` is a directory, but /new-feature

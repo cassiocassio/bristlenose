@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from pathlib import Path
+from typing import Any
 
 from rich.console import Console
 
@@ -294,6 +296,34 @@ def _is_speaker_stage_verified(
 def _print_hash_mismatch(stage: str, path: Path) -> None:
     """Log a warning when a cached file fails hash verification."""
     _print_warn(f"{stage}: {path.name} changed on disk — re-running stage")
+
+
+def _load_cached_json(path: Path) -> Any | None:
+    """Parse an intermediate-cache JSON file, tolerating a corrupt/truncated one.
+
+    Returns the parsed object, or ``None`` if the file is missing, truncated,
+    or otherwise unreadable — e.g. a power cut mid-write leaving a half-written
+    ``extracted_quotes.json``. Callers treat ``None`` as a cache miss and
+    recompute that stage/session, rather than crashing the resume on
+    ``json.JSONDecodeError``.
+
+    Defence-in-depth over Phase 2b hash verification (``_is_stage_verified``),
+    which does *not* protect every read: the per-session resume path runs while
+    the stage status is still RUNNING, so ``_is_stage_verified`` short-circuits
+    before the hash check; and backward-compat manifests with
+    ``content_hash=None`` pass verification unconditionally. Both reach a raw
+    parse of a file that a power loss may have truncated.
+    """
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        # ValueError covers json.JSONDecodeError and UnicodeDecodeError — the
+        # two ways a half-written/encoding-mangled file fails to parse.
+        _print_warn(
+            f"{path.name}: cache unreadable ({type(exc).__name__}) — recomputing",
+        )
+        logger.warning("Discarding corrupt intermediate cache %s: %s", path, exc)
+        return None
 
 
 _printed_warnings: set[str] = set()
@@ -756,16 +786,20 @@ class Pipeline:
                 )
                 _cached_segments: dict[str, list[TranscriptSegment]] = {}
                 if _cached_tx_sids and _ss_path.exists():
-                    _ss_raw = _json.loads(
-                        _ss_path.read_text(encoding="utf-8"),
-                    )
-                    _cached_segments = {
-                        sid: [
-                            TranscriptSegment.model_validate(s) for s in segs
-                        ]
-                        for sid, segs in _ss_raw.items()
-                        if sid in _cached_tx_sids
-                    }
+                    _ss_raw = _load_cached_json(_ss_path)
+                    if _ss_raw is None:
+                        # Corrupt/truncated cache (e.g. power loss mid-write):
+                        # drop the cached set so every session is re-transcribed
+                        # rather than silently skipped from _remaining_sessions.
+                        _cached_tx_sids = set()
+                    else:
+                        _cached_segments = {
+                            sid: [
+                                TranscriptSegment.model_validate(s) for s in segs
+                            ]
+                            for sid, segs in _ss_raw.items()
+                            if sid in _cached_tx_sids
+                        }
 
                 _remaining_sessions = [
                     s for s in sessions
@@ -1004,21 +1038,30 @@ class Pipeline:
                 )
                 all_speaker_infos = {}
                 if _cached_si_sids and _si_dir.is_dir():
+                    _usable_si_sids: set[str] = set()
                     for sid in _cached_si_sids:
                         _si_file = _si_dir / f"{sid}.json"
-                        if _si_file.exists():
-                            _si_data = _json.loads(
-                                _si_file.read_text(encoding="utf-8"),
-                            )
-                            all_speaker_infos[sid] = [
-                                speaker_info_from_dict(d)
-                                for d in _si_data["speaker_infos"]
-                            ]
-                            # Restore segments with speaker roles
-                            session_segments[sid] = [
-                                TranscriptSegment.model_validate(seg)
-                                for seg in _si_data["segments_with_roles"]
-                            ]
+                        _si_data = (
+                            _load_cached_json(_si_file)
+                            if _si_file.exists() else None
+                        )
+                        if _si_data is None:
+                            # Missing or corrupt per-session cache (e.g. power
+                            # loss mid-write): leave this sid out of the cached
+                            # set so it falls into _remaining_si_sids and is
+                            # recomputed, rather than silently dropped.
+                            continue
+                        _usable_si_sids.add(sid)
+                        all_speaker_infos[sid] = [
+                            speaker_info_from_dict(d)
+                            for d in _si_data["speaker_infos"]
+                        ]
+                        # Restore segments with speaker roles
+                        session_segments[sid] = [
+                            TranscriptSegment.model_validate(seg)
+                            for seg in _si_data["segments_with_roles"]
+                        ]
+                    _cached_si_sids = _usable_si_sids
 
                 _remaining_si_sids = {
                     sid for sid in session_segments
@@ -1262,20 +1305,22 @@ class Pipeline:
             else:
                 # Per-session resume: load cached topic maps for completed
                 # sessions and only run LLM on the remaining ones.
-                import json as _json
-
                 _cached_topic_sids = get_completed_session_ids(
                     _prev_manifest, STAGE_TOPIC_SEGMENTATION,
                 )
                 _cached_topic_maps: list[SessionTopicMap] = []
                 if _cached_topic_sids and _tb_path.exists():
-                    _cached_topic_maps = [
-                        SessionTopicMap.model_validate(obj)
-                        for obj in _json.loads(
-                            _tb_path.read_text(encoding="utf-8")
-                        )
-                        if obj.get("session_id") in _cached_topic_sids
-                    ]
+                    _tb_raw = _load_cached_json(_tb_path)
+                    if _tb_raw is None:
+                        # Corrupt/truncated cache (e.g. power loss mid-write):
+                        # recompute every session rather than drop them.
+                        _cached_topic_sids = set()
+                    else:
+                        _cached_topic_maps = [
+                            SessionTopicMap.model_validate(obj)
+                            for obj in _tb_raw
+                            if obj.get("session_id") in _cached_topic_sids
+                        ]
 
                 _cached_topic_count = len(_cached_topic_maps)
                 _remaining_transcripts = [
@@ -1430,21 +1475,23 @@ class Pipeline:
             else:
                 # Per-session resume: load cached quotes for completed
                 # sessions and only run LLM on the remaining ones.
-                import json as _json
-
                 _cached_quote_sids = get_completed_session_ids(
                     _prev_manifest, STAGE_QUOTE_EXTRACTION,
                 )
-                _cached_q_count = len(_cached_quote_sids)
                 _cached_quotes: list[ExtractedQuote] = []
                 if _cached_quote_sids and _eq_path.exists():
-                    _cached_quotes = [
-                        ExtractedQuote.model_validate(obj)
-                        for obj in _json.loads(
-                            _eq_path.read_text(encoding="utf-8")
-                        )
-                        if obj.get("session_id") in _cached_quote_sids
-                    ]
+                    _eq_raw = _load_cached_json(_eq_path)
+                    if _eq_raw is None:
+                        # Corrupt/truncated cache (e.g. power loss mid-write):
+                        # recompute every session rather than drop them.
+                        _cached_quote_sids = set()
+                    else:
+                        _cached_quotes = [
+                            ExtractedQuote.model_validate(obj)
+                            for obj in _eq_raw
+                            if obj.get("session_id") in _cached_quote_sids
+                        ]
+                _cached_q_count = len(_cached_quote_sids)
 
                 _remaining_transcripts_q = [
                     t for t in clean_transcripts

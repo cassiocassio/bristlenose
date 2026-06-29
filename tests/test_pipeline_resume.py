@@ -30,11 +30,50 @@ from bristlenose.models import (
     TranscriptSegment,
     TransitionType,
 )
-from bristlenose.pipeline import _is_stage_cached, _print_cached_step
+from bristlenose.pipeline import (
+    _is_stage_cached,
+    _load_cached_json,
+    _print_cached_step,
+)
 
 # ---------------------------------------------------------------------------
 # _is_stage_cached
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# _load_cached_json — corruption-tolerant intermediate-cache reads
+#
+# Defence-in-depth over Phase 2b hash verification: the per-session resume
+# path reads while a stage is still RUNNING (so _is_stage_verified short-
+# circuits before hashing), and backward-compat manifests carry no
+# content_hash. A power loss mid-write can leave a truncated file at exactly
+# these read sites. The resume must recompute, not crash on JSONDecodeError.
+# ---------------------------------------------------------------------------
+
+
+def test_load_cached_json_valid(tmp_path):
+    p = tmp_path / "x.json"
+    p.write_text(json.dumps([{"session_id": "s1"}]), encoding="utf-8")
+    assert _load_cached_json(p) == [{"session_id": "s1"}]
+
+
+def test_load_cached_json_truncated_returns_none(tmp_path):
+    # Power cut mid-write: valid JSON sliced off partway through.
+    p = tmp_path / "extracted_quotes.json"
+    p.write_text('[{"session_id": "s1", "verbatim_exce', encoding="utf-8")
+    assert _load_cached_json(p) is None
+
+
+def test_load_cached_json_missing_returns_none(tmp_path):
+    assert _load_cached_json(tmp_path / "nope.json") is None
+
+
+def test_load_cached_json_invalid_utf8_returns_none(tmp_path):
+    # A byte stream that isn't valid UTF-8 (the 0xb0 class of decode errors).
+    p = tmp_path / "session_segments.json"
+    p.write_bytes(b"\xb0\xff not valid utf-8")
+    assert _load_cached_json(p) is None
 
 
 def test_is_stage_cached_none_manifest():

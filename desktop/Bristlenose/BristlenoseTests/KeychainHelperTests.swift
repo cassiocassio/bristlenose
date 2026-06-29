@@ -68,9 +68,13 @@ struct KeychainHelperTests {
         #expect(KeychainHelper.serviceNames["openai"] == "Bristlenose OpenAI API Key")
         #expect(KeychainHelper.serviceNames["azure"] == "Bristlenose Azure API Key")
         #expect(KeychainHelper.serviceNames["google"] == "Bristlenose Google Gemini API Key")
+        #expect(KeychainHelper.serviceNames["miro"] == "Bristlenose Miro Access Token")
     }
 
-    @Test func serviceNames_hasFourProviders() {
-        #expect(KeychainHelper.serviceNames.count == 4)
+    @Test func serviceNames_coverAllProviders() {
+        // Pin the exact provider set so adding/removing one fails loudly with a clear diff.
+        // Update this set (and serviceNames_matchPythonMapping) when a provider changes.
+        let expected: Set<String> = ["anthropic", "openai", "azure", "google", "miro"]
+        #expect(Set(KeychainHelper.serviceNames.keys) == expected)
     }
 }

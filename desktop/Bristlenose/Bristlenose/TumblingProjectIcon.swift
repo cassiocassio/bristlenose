@@ -83,7 +83,8 @@ struct TumblingProjectIcon: View {
         for i in 0..<steps {
             let isLast = i == steps - 1
             let frac = Double(i) / Double(steps - 1)
-            let interval = 0.06 + (0.26 - 0.06) * frac * frac
+            // Mirror SidebarIconFlip: higher floor (legible opening) + ceiling.
+            let interval = 0.10 + (0.30 - 0.10) * frac * frac
 
             display = isLast ? symbol : (RandomProjectIcon.pool.randomElement() ?? symbol)
             flipAngle = 90
@@ -93,7 +94,7 @@ struct TumblingProjectIcon: View {
             withAnimation(
                 isLast
                     ? .spring(response: 0.4, dampingFraction: 0.62)
-                    : .easeOut(duration: min(0.16, interval))
+                    : .easeOut(duration: min(0.20, interval))
             ) {
                 flipAngle = 0
                 flipOpacity = 1

@@ -18,7 +18,9 @@ enum SidebarIconFlip {
         for i in 0..<steps {
             let isLast = i == steps - 1
             let frac = Double(i) / Double(steps - 1)
-            let interval = 0.06 + (0.26 - 0.06) * frac * frac
+            // Floor raised (0.06→0.10) so the opening steps read legibly instead of
+            // a burst; ceiling raised (0.26→0.30) for a slightly longer settle.
+            let interval = 0.10 + (0.30 - 0.10) * frac * frac
             let glyph = isLast ? finalSymbol : (pool.randomElement() ?? finalSymbol)
 
             imageView.image = NSImage(systemSymbolName: glyph, accessibilityDescription: nil)
@@ -32,7 +34,7 @@ enum SidebarIconFlip {
                 let flip = CABasicAnimation(keyPath: "transform.rotation.x")
                 flip.fromValue = CGFloat.pi / 2
                 flip.toValue = 0
-                flip.duration = isLast ? 0.30 : min(0.18, interval)
+                flip.duration = isLast ? 0.34 : min(0.20, interval)
                 flip.timingFunction = CAMediaTimingFunction(name: .easeOut)
                 layer.add(flip, forKey: "bn-icon-flip")
             }

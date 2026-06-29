@@ -30,13 +30,21 @@
 
 set -euo pipefail
 
-# Xcode build phases run with a stripped PATH that omits the Homebrew prefix.
-# Prepend it (arm64 first, Intel fallback) so the bare `bash <child>` calls
-# below resolve to Homebrew bash 5.x (sign-sidecar.sh needs 4.3+) and so
-# build-sidecar.sh finds python3.12. 3.2-safe: plain string assignment.
+# Xcode build phases run with a stripped PATH that omits this project's Mac
+# toolchain (the Homebrew prefix — see .tool-versions / desktop/CLAUDE.md).
+# Augment PATH with it ONLY when absent (don't reorder a PATH a contributor
+# already configured) so the bare `bash <child>` calls below resolve to
+# Homebrew bash 5.x (sign-sidecar.sh needs 4.3+) and build-sidecar.sh finds
+# python3.12. A contributor on a different toolchain (mise/asdf/pyenv) with no
+# Homebrew puts their python3.12 + bash 4.3+ on the build's PATH instead — this
+# adds nothing and their tools win; build-sidecar.sh then errors loudly if the
+# tools are still unreachable. 3.2-safe: string assignment + case glob only.
 for _brew_bin in /opt/homebrew/bin /usr/local/bin; do
     if [ -d "$_brew_bin" ]; then
-        PATH="$_brew_bin:$PATH"
+        case ":$PATH:" in
+            *":$_brew_bin:"*) : ;;                 # already present — leave order
+            *) PATH="$_brew_bin:$PATH" ;;          # stripped env — add as fallback
+        esac
     fi
 done
 export PATH

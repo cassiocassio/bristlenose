@@ -1,0 +1,222 @@
+{
+  "heading": "設定",
+  "appearance": {
+    "randomIconsLegend": "為新專案指定隨機圖示",
+    "randomIconsHelp": "每個新專案都會獲得一個獨特的圖示，方便在側邊欄中辨識。關閉此選項可保留純色圓環，並自行選擇圖示。",
+    "legend": "應用程式外觀",
+    "auto": "使用系統外觀",
+    "light": "淺色",
+    "dark": "深色"
+  },
+  "typography": {
+    "legend": "字體排印"
+  },
+  "language": {
+    "legend": "語言",
+    "description": "控制介面的顯示語言。報告內容不會翻譯。",
+    "helpTranslate": "協助將 Bristlenose 翻譯成你的語言，網址："
+  },
+  "settingsNav": {
+    "general": "一般",
+    "project": "專案",
+    "profile": "個人資料",
+    "apiKeys": "API 金鑰",
+    "config": "設定檔",
+    "projectStub": "個別專案的設定將顯示於此。即將推出。",
+    "profileStub": "個人資料設定（名稱、電子郵件、whisper 後端）將顯示於此。即將推出。",
+    "apiKeysStub": "API 金鑰管理將顯示於此。即將推出。",
+    "pipeline": "處理流程"
+  },
+  "configReference": {
+    "heading": "設定參考",
+    "intro": "以下所有設定皆透過環境變數或 <code>.env</code> 檔案進行設定。此處僅供參考——若要變更數值，請編輯各列所示的檔案。",
+    "clickToCopy": "點按以拷貝",
+    "copied": "已拷貝",
+    "categories": {
+      "llm": "LLM 供應商與模型",
+      "transcription": "轉錄",
+      "privacy": "隱私",
+      "quotes": "引述",
+      "analysis": "分析",
+      "autocode": "AutoCode",
+      "display": "顯示",
+      "pipeline": "處理流程",
+      "thumbnails": "縮圖",
+      "server": "伺服器",
+      "logging": "記錄",
+      "timing": "計時"
+    },
+    "settings": {
+      "llm": {
+        "provider": "供應商",
+        "model": "模型",
+        "temperature": "溫度",
+        "maxTokens": "最大輸出 token 數",
+        "concurrency": "並行數",
+        "claudeKey": "Claude API 金鑰",
+        "chatgptKey": "ChatGPT API 金鑰",
+        "geminiKey": "Gemini API 金鑰",
+        "azureKey": "Azure API 金鑰",
+        "azureEndpoint": "Azure 端點",
+        "azureDeployment": "Azure 部署",
+        "azureApiVersion": "Azure API 版本",
+        "ollamaUrl": "Ollama URL",
+        "ollamaModel": "Ollama 模型"
+      },
+      "transcription": {
+        "backend": "後端",
+        "model": "模型",
+        "language": "語言",
+        "device": "裝置",
+        "computeType": "運算類型",
+        "audioConcurrency": "音訊擷取並行數"
+      },
+      "privacy": {
+        "piiRedaction": "PII 遮蔽",
+        "piiLlmPass": "PII LLM 處理",
+        "customNames": "要遮蔽的自訂名稱"
+      },
+      "quotes": {
+        "minQuoteWords": "引述最少字數",
+        "speakerMergeGap": "說話者合併間隔",
+        "quoteSequenceGap": "引述序列間隔",
+        "llmFailureThreshold": "LLM 失敗閾值",
+        "autocodeBatchSize": "AutoCode 批次大小"
+      },
+      "analysis": {
+        "topNSignals": "前 N 個訊號",
+        "topNSignalsGeneric": "前 N 個訊號（通用）",
+        "topNElaboration": "用於闡述的前 N 個",
+        "minQuotesPerCell": "每格最少引述數",
+        "strongConcentration": "強：集中度 >",
+        "strongParticipants": "強：參與者 ≥",
+        "strongQuotes": "強：引述數 ≥",
+        "moderateConcentration": "中等：集中度 >",
+        "moderateParticipants": "中等：參與者 ≥",
+        "moderateQuotes": "中等：引述數 ≥"
+      },
+      "autocode": {
+        "defaultLower": "預設下限閾值",
+        "defaultUpper": "預設上限閾值",
+        "sliderStep": "滑桿級距",
+        "sliderMinGap": "滑桿最小間隔",
+        "histogramBins": "長條圖區間數"
+      },
+      "display": {
+        "searchMinChars": "搜尋最少字元數",
+        "activityPollInterval": "活動輪詢間隔"
+      },
+      "pipeline": {
+        "projectName": "專案名稱",
+        "writeIntermediate": "寫入中繼檔案",
+        "skipTranscription": "略過轉錄",
+        "maxSessionsBeforeConfirm": "確認前的最大工作階段數"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "關鍵影格搜尋範圍",
+        "fallbackFrameTime": "備用影格時間",
+        "thumbnailWidth": "縮圖寬度",
+        "jpegQuality": "JPEG 品質"
+      },
+      "server": {
+        "serverPort": "伺服器埠",
+        "miroAccessToken": "Miro 存取權杖"
+      },
+      "logging": {
+        "logLevel": "記錄層級（檔案）",
+        "logFileMaxSize": "記錄檔最大大小",
+        "logBackupCount": "記錄備份數量"
+      },
+      "timing": {
+        "minRunsEstimate": "估算前的最少執行次數",
+        "minRunsRange": "顯示 ±範圍前的最少執行次數"
+      }
+    }
+  },
+    "pipeline": {
+      "intro": "唯讀檢視 Bristlenose 目前在各處理流程階段所使用的模型。若要變更後端，請編輯你的設定（環境變數或 .env 檔案）。",
+      "loading": "正在載入處理流程檢視…",
+      "error": "無法載入處理流程檢視",
+      "keys": "金鑰",
+      "keysNone": "無",
+      "ollama": "ollama",
+      "running": "執行中",
+      "notDetected": "未偵測到",
+      "available": "可用",
+      "unavailable": "無法使用",
+      "alternatives": {
+        "summaryHeading": "此主機上的 LLM 後端",
+        "available": "可用",
+        "unavailable": "無法使用",
+        "none": "無"
+      },
+      "backends": {
+        "local_ollama": "本機（Ollama）",
+        "builtin_anonymiser": "內建匿名工具"
+      },
+      "glyph": {
+        "available": "可用",
+        "unavailable": "無法使用",
+        "skipped": "不適用於此主機"
+      },
+      "column": {
+        "model": "模型",
+        "availability": "可用性",
+        "quality": "品質",
+        "notes": "備註"
+      },
+      "key": {
+        "italic_label": "斜體",
+        "synthesised": "來自你的設定，而非我們的目錄"
+      },
+      "qualifier": {
+        "default": "預設值",
+        "current": "目前",
+        "your_deployment": "你的 Azure 部署"
+      },
+      "quality": {
+        "glyph": {
+          "excellent": "品質優異",
+          "good": "品質良好",
+          "marginal": "品質勉強",
+          "avoid": "避免—品質過低",
+          "untested": "未測試"
+        },
+        "untested": "未測試",
+        "local_speaker_id_acceptable": "本機模型能妥善處理說話者辨識",
+        "local_topic_segmentation_acceptable": "本機模型能妥善處理主題分段",
+        "local_quote_extraction_miss_rate": "小型模型會遺漏多子句引述",
+        "local_quote_clustering_drift": "小型模型分群引述時不一致",
+        "local_thematic_grouping_drift": "小型模型在主題綜整上會偏移",
+        "mlx_whisper_apple_silicon_optimal": "在 Apple 晶片上表現最佳",
+        "faster_whisper_cpu_baseline": "穩固的 CPU 基準；不需 GPU"
+      },
+      "actions": {
+        "obtain_anthropic_key": "於 console.anthropic.com 取得 API 金鑰，並設定 ANTHROPIC_API_KEY 或貼入「設定 → 金鑰」",
+        "obtain_openai_key": "於 platform.openai.com 取得 API 金鑰，並設定 OPENAI_API_KEY 或貼入「設定 → 金鑰」",
+        "obtain_google_key": "於 aistudio.google.com 取得 API 金鑰，並設定 GOOGLE_API_KEY 或貼入「設定 → 金鑰」",
+        "configure_azure": "在「設定 → 金鑰」中設定 Azure 金鑰、端點與部署",
+        "start_ollama": "啟動 Ollama 服務（ollama serve）",
+        "install_mlx_whisper": "pip install mlx-whisper（需要 Apple 晶片）",
+        "install_ctranslate2": "pip install ctranslate2",
+        "install_presidio": "pip install bristlenose[redact-pii] 以啟用內建匿名工具",
+        "enable_pii_redaction": "以 --redact-pii 執行或設定 pii_enabled=true"
+      },
+      "reasons": {
+        "no_anthropic_key": "未設定 Claude API 金鑰",
+        "no_openai_key": "未設定 ChatGPT API 金鑰",
+        "no_azure_key": "未設定 Azure OpenAI 金鑰",
+        "no_azure_endpoint": "未設定 Azure 端點",
+        "no_azure_deployment": "未設定 Azure 部署",
+        "no_google_key": "未設定 Gemini API 金鑰",
+        "ollama_not_running": "Ollama 未執行",
+        "apple_fm_check_desktop": "請在桌面應用程式中檢查",
+        "requires_apple_silicon": "需要 Apple 晶片",
+        "mlx_whisper_not_installed": "未安裝 MLX Whisper",
+        "ctranslate2_not_installed": "未安裝 ctranslate2",
+        "presidio_not_installed": "未安裝內建匿名工具",
+        "spacy_model_missing": "未安裝語言模型",
+        "pii_disabled": "PII 遮蔽已關閉"
+      }
+    }
+}

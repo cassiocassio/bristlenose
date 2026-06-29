@@ -1,0 +1,10 @@
+{
+  "heading": "診斷",
+  "checkOk": "{label}",
+  "checkFail": "{label}",
+  "checkWarn": "{label}",
+  "summary": {
+    "allPassed": "所有檢查皆通過。",
+    "issuesFound": "發現 {count} 個問題。"
+  }
+}

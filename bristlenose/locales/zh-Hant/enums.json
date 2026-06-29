@@ -1,0 +1,17 @@
+{
+  "sentiment": {
+    "frustration": "挫折",
+    "confusion": "困惑",
+    "doubt": "懷疑",
+    "surprise": "驚訝",
+    "satisfaction": "滿意",
+    "delight": "欣喜",
+    "confidence": "信心"
+  },
+  "speakerRole": {
+    "researcher": "研究員",
+    "participant": "參與者",
+    "observer": "觀察員",
+    "unknown": "未知"
+  }
+}

@@ -7,5 +7,18 @@
   "status": {
     "healthy": "Saudável",
     "degraded": "Degradado"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "Ainda não há entrevistas para analisar.",
+    "noRunDesktopLong": "Arraste uma pasta de entrevistas para cá para começar.",
+    "noRunCliShort": "Ainda não há nada para ver aqui.",
+    "cancelledShort": "A última execução foi cancelada.",
+    "cancelledLong": "Execute novamente quando quiser.",
+    "failedShort": "A última execução falhou.",
+    "recentLog": "Registro recente:",
+    "showDetails": "Mostrar detalhes",
+    "sendFeedback": "Enviar feedback",
+    "help": "Ajuda",
+    "cliExitedWithCode": "A CLI encerrou com o código {code}"
   }
 }

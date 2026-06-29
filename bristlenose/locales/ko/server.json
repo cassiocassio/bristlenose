@@ -7,5 +7,18 @@
   "status": {
     "healthy": "정상",
     "degraded": "저하됨"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "아직 분석할 인터뷰가 없습니다.",
+    "noRunDesktopLong": "여기에 인터뷰 폴더를 드래그하여 시작하세요.",
+    "noRunCliShort": "아직 여기에는 아무것도 없습니다.",
+    "cancelledShort": "마지막 실행이 취소되었습니다.",
+    "cancelledLong": "준비되면 다시 실행하세요.",
+    "failedShort": "마지막 실행이 실패했습니다.",
+    "recentLog": "최근 로그:",
+    "showDetails": "세부 정보 보기",
+    "sendFeedback": "피드백 보내기",
+    "help": "도움말",
+    "cliExitedWithCode": "CLI가 코드 {code}(으)로 종료되었습니다"
   }
 }

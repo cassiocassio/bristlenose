@@ -114,6 +114,7 @@ def main(
         str | None,
         typer.Option(
             "--lang",
+            envvar="BRISTLENOSE_LANG",
             help=f"UI language ({', '.join(_I18N_LOCALES)}).",
             callback=_lang_callback,
             is_eager=True,

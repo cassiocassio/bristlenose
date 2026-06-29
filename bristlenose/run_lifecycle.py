@@ -62,6 +62,7 @@ from bristlenose.events import (
     new_run_id,
     read_events,
 )
+from bristlenose.i18n import t
 from bristlenose.llm import telemetry
 
 PID_FILENAME = "run.pid"
@@ -725,7 +726,7 @@ def run_lifecycle(
                     ended_at=ended,
                     cause=Cause(
                         category=CauseCategoryEnum.UNKNOWN,
-                        message=f"CLI exited with code {code}",
+                        message=t("server.statusPage.cliExitedWithCode", code=code),
                         exit_code=code,
                     ),
                     **_terminus_kwargs(),

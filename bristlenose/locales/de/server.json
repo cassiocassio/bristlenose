@@ -7,5 +7,18 @@
   "status": {
     "healthy": "Funktionsfähig",
     "degraded": "Eingeschränkt"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "Noch keine Interviews zum Analysieren.",
+    "noRunDesktopLong": "Ziehen Sie einen Ordner mit Interviews hierher, um zu beginnen.",
+    "noRunCliShort": "Hier gibt es noch nichts zu sehen.",
+    "cancelledShort": "Letzter Lauf wurde abgebrochen.",
+    "cancelledLong": "Bei Bedarf erneut ausführen.",
+    "failedShort": "Letzter Lauf fehlgeschlagen.",
+    "recentLog": "Aktuelles Protokoll:",
+    "showDetails": "Details anzeigen",
+    "sendFeedback": "Feedback senden",
+    "help": "Hilfe",
+    "cliExitedWithCode": "CLI mit Code {code} beendet"
   }
 }

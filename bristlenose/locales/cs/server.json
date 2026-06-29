@@ -7,5 +7,18 @@
   "status": {
     "healthy": "V pořádku",
     "degraded": "Omezený provoz"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "Zatím žádné rozhovory k analýze.",
+    "noRunDesktopLong": "Začněte přetažením složky s rozhovory sem.",
+    "noRunCliShort": "Tady zatím nic není.",
+    "cancelledShort": "Poslední běh byl zrušen.",
+    "cancelledLong": "Až budete připraveni, spusťte znovu.",
+    "failedShort": "Poslední běh selhal.",
+    "recentLog": "Nedávný protokol:",
+    "showDetails": "Zobrazit podrobnosti",
+    "sendFeedback": "Odeslat zpětnou vazbu",
+    "help": "Nápověda",
+    "cliExitedWithCode": "CLI skončilo s kódem {code}"
   }
 }

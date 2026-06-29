@@ -7,5 +7,18 @@
   "status": {
     "healthy": "Opérationnel",
     "degraded": "Dégradé"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "Aucun entretien à analyser pour l’instant.",
+    "noRunDesktopLong": "Glissez ici un dossier d’entretiens pour commencer.",
+    "noRunCliShort": "Rien à voir ici pour l’instant.",
+    "cancelledShort": "La dernière exécution a été annulée.",
+    "cancelledLong": "Relancez quand vous serez prêt.",
+    "failedShort": "La dernière exécution a échoué.",
+    "recentLog": "Journal récent :",
+    "showDetails": "Afficher les détails",
+    "sendFeedback": "Envoyer des commentaires",
+    "help": "Aide",
+    "cliExitedWithCode": "La CLI s’est arrêtée avec le code {code}"
   }
 }

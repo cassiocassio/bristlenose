@@ -242,6 +242,10 @@ enum BristlenoseShared {
         }
         if let lang = defaults.string(forKey: "language"), lang != "en" {
             env["BRISTLENOSE_WHISPER_LANGUAGE"] = lang
+            // UI locale for server-rendered surfaces (e.g. the failed-run
+            // status page). The SPA localises client-side via the bridge, but
+            // the Python-rendered status page reads BRISTLENOSE_LANG → set_locale.
+            env["BRISTLENOSE_LANG"] = lang
         }
         // Typography (Appearance ▸ Typography). Default "sf" is the server's
         // implicit default (no attr → SF Pro), so only inject when the user

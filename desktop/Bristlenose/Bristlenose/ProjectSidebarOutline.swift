@@ -184,6 +184,17 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// LensRail's `isEnabled` gating that the AppKit port initially dropped.
     private var lensesEnabled = false
 
+    // MARK: - Icon reveal (one-shot split-flap on project creation)
+
+    /// The project currently playing its icon reveal, or nil. While set, `viewFor`
+    /// hides that row's real icon so it doesn't double up with the overlay.
+    private var animatingRevealID: UUID?
+    /// Reveals already played this session — guards against replaying when the
+    /// outline reloads during the ~2s animation (`reloadData` fires per progress tick).
+    private var revealedIDs: Set<UUID> = []
+    /// The live overlay image view (a subview of `outlineView`, document coords), or nil.
+    private weak var revealOverlay: NSImageView?
+
     override func loadView() {
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("main"))
         column.resizingMask = .autoresizingMask
@@ -250,6 +261,78 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
 
         applySelection(selection)
+
+        // Kick off the one-shot icon reveal for a freshly-created project, if any.
+        maybeStartIconReveal()
+    }
+
+    // MARK: - Icon reveal
+
+    /// Start the split-flap reveal for `projectIndex.pendingIconReveal`, if there is
+    /// one we haven't played. The overlay is a subview of `outlineView` (document
+    /// coords) so it scrolls with the row and survives the per-tick `reloadData` that
+    /// would destroy a cell-level animation. Falls back to a static reveal (just
+    /// consume the trigger) under Reduce Motion or when the row is offscreen.
+    private func maybeStartIconReveal() {
+        guard animatingRevealID == nil,
+              let index = projectIndex,
+              let id = index.pendingIconReveal,
+              !revealedIDs.contains(id),
+              let project = index.projects.first(where: { $0.id == id }),
+              let symbol = project.icon else { return }
+
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            revealedIDs.insert(id)
+            index.consumeIconReveal(id)
+            return
+        }
+
+        guard let row = projectRow(forID: id),
+              let cell = outlineView.view(atColumn: 0, row: row, makeIfNecessary: true) as? NSTableCellView,
+              let iconView = cell.imageView else {
+            revealedIDs.insert(id)
+            index.consumeIconReveal(id)
+            return
+        }
+
+        animatingRevealID = id
+        revealedIDs.insert(id)
+        iconView.alphaValue = 0   // hide the real icon; viewFor keeps it hidden on rebuilds
+
+        let overlay = NSImageView(frame: iconView.convert(iconView.bounds, to: outlineView))
+        overlay.imageScaling = .scaleProportionallyUpOrDown
+        overlay.symbolConfiguration = ProjectCellSpec.iconSymbolConfig
+        overlay.contentTintColor = project.availability.isReady ? .labelColor : .secondaryLabelColor
+        overlay.wantsLayer = true
+        outlineView.addSubview(overlay)
+        revealOverlay = overlay
+
+        Task { @MainActor [weak self] in
+            await SidebarIconFlip.play(on: overlay, settlingOn: symbol, tint: overlay.contentTintColor)
+            guard let self else { overlay.removeFromSuperview(); return }
+            self.animatingRevealID = nil
+            self.outlineView.reloadData()   // rebuild the cell with its icon visible (alpha 1)
+            overlay.removeFromSuperview()    // reveal the identical static icon underneath
+            if self.revealOverlay === overlay { self.revealOverlay = nil }
+            index.consumeIconReveal(id)
+        }
+    }
+
+    /// The outline row currently displaying project `id`, or nil if absent/offscreen.
+    private func projectRow(forID id: UUID) -> Int? {
+        for r in 0..<outlineView.numberOfRows {
+            if case .project(let pid)? = (outlineView.item(atRow: r) as? OutlineNode)?.kind, pid == id {
+                return r
+            }
+        }
+        return nil
+    }
+
+    /// Hide a project cell's icon while its reveal overlay is animating, so the two
+    /// don't double up. No-op for every other project / when nothing is revealing.
+    private func hideIconIfRevealing(_ cell: NSTableCellView, id: UUID) -> NSTableCellView {
+        if animatingRevealID == id { cell.imageView?.alphaValue = 0 }
+        return cell
     }
 
     private func isFolderExpanded(_ node: OutlineNode) -> Bool {
@@ -595,14 +678,17 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             // No subtitle (`.placeholder`, or a defensive nil) → single-line collapse,
             // the deliberate divergence (ProjectCellSpec). Reuse the single-line iconCell.
             guard let subtitle else {
-                return iconCell(symbol: symbol, text: project.name, trailing: count)
+                return hideIconIfRevealing(
+                    iconCell(symbol: symbol, text: project.name, trailing: count), id: id)
             }
             let prefix = subtitlePrefixGlyph(for: variant, availability: project.availability)
             let diagnosticsID = variant.isDiagnostic ? id : nil
-            return projectTwoLineCell(symbol: symbol, name: project.name, count: count,
-                                      subtitle: subtitle, available: project.availability.isReady,
-                                      prefixGlyph: prefix, diagnosticsProjectID: diagnosticsID,
-                                      rightSlot: cellRightSlot(for: project))
+            return hideIconIfRevealing(
+                projectTwoLineCell(symbol: symbol, name: project.name, count: count,
+                                   subtitle: subtitle, available: project.availability.isReady,
+                                   prefixGlyph: prefix, diagnosticsProjectID: diagnosticsID,
+                                   rightSlot: cellRightSlot(for: project)),
+                id: id)
         }
     }
 

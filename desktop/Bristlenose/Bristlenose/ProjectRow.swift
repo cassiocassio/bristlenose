@@ -63,6 +63,7 @@ struct ProjectRow: View {
 
     @EnvironmentObject var i18n: I18n
     @EnvironmentObject var pipelineRunner: PipelineRunner
+    @EnvironmentObject var projectIndex: ProjectIndex
     @State private var editText: String = ""
     /// Spinner appears only after a short delay so the steady-state case
     /// (manifests already on disk, scan resolves in a few ms) shows no
@@ -154,13 +155,15 @@ struct ProjectRow: View {
     private var leadingIcon: some View {
         // Identity icon — the project's chosen SF Symbol. Availability state
         // is signalled by dimming the name + a subtitle prefix glyph, never
-        // by overwriting the chosen icon.
+        // by overwriting the chosen icon. A just-created project that was
+        // auto-assigned a random icon plays a one-shot tumble reveal.
         let name = project.icon ?? IconPickerPopover.defaultIcon
-        if available {
-            Image(systemName: name)
-        } else {
-            Image(systemName: name).foregroundStyle(.secondary)
-        }
+        TumblingProjectIcon(
+            symbol: name,
+            dimmed: !available,
+            reveal: projectIndex.pendingIconReveal == project.id,
+            onRevealComplete: { projectIndex.consumeIconReveal(project.id) }
+        )
     }
 
     // MARK: - Title line
@@ -511,6 +514,7 @@ struct ProjectRow: View {
             sessionsComplete: p?.sessionsComplete,
             sessionsTotal: p?.sessionsTotal,
             etaRemainingSeconds: p?.etaRemainingSeconds,
+            resuming: p?.attachedFromOrphan ?? false,
             separator: separator,
             localize: { i18n.t($0, $1) }
         )

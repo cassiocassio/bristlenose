@@ -11,6 +11,7 @@ struct AppearanceSettingsView: View {
     @AppStorage("appearance") private var appearance: String = "auto"
     @AppStorage("typography") private var typography: String = "sf"
     @AppStorage("language") private var language: String = "en"
+    @AppStorage(RandomProjectIcon.defaultsKey) private var randomProjectIcons: Bool = true
 
     var body: some View {
         Form {
@@ -32,6 +33,17 @@ struct AppearanceSettingsView: View {
                     Text("SF Pro").tag("sf")
                     Text("Inter").tag("inter")
                 }
+            }
+
+            Section {
+                // TODO(i18n): move to settings.appearance.randomIcons{Legend,Help}
+                // across all 7 common.json before shipping (literals here for the
+                // first-cut mock). New projects get a distinctive random icon,
+                // revealed with a one-shot tumble; off → the plain default ring.
+                Toggle("Assign a random icon to new projects", isOn: $randomProjectIcons)
+                Text("Each new project gets a distinctive icon so it's easy to recognise in the sidebar. Turn this off to keep the plain ring and choose icons yourself.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
             }
 
             Section {

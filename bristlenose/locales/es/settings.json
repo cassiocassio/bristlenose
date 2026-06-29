@@ -1,6 +1,8 @@
 {
   "heading": "Ajustes",
   "appearance": {
+    "randomIconsLegend": "Asignar un icono aleatorio a los proyectos nuevos",
+    "randomIconsHelp": "Cada proyecto nuevo recibe un icono distintivo para reconocerlo f\u00e1cilmente en la barra lateral. Desact\u00edvalo para mantener el c\u00edrculo simple y elegir los iconos t\u00fa mismo.",
     "legend": "Apariencia de la aplicación",
     "auto": "Usar apariencia del sistema",
     "light": "Claro",

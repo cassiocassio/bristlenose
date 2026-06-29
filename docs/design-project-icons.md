@@ -80,9 +80,9 @@ flip and the run's per-tick refresh from clashing.
 
 ## Known follow-ups
 
-- **i18n**: the Appearance toggle strings are English literals with a
-  `TODO(i18n)` — they need `settings.appearance.randomIcons{Legend,Help}` across
-  all 7 `common.json` before shipping.
+- **i18n** — done: the Appearance toggle uses
+  `settings.appearance.randomIconsLegend` / `…Help` (in `settings.json`, the
+  `settings` namespace) across all 7 locales.
 - **AppKit overlay frame**: the overlay must read the icon's frame *after*
   layout — `maybeStartIconReveal` forces `outlineView.layoutSubtreeIfNeeded()`
   first, else the overlay is 0×0 (invisible: blank, then the icon pops in).

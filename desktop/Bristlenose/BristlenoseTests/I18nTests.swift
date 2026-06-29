@@ -88,7 +88,9 @@ struct I18nTests {
     // MARK: - Locale allowlist
 
     @Test func supportedLocales_containsExpected() {
-        let expected: Set<String> = ["en", "es", "ja", "fr", "de", "ko", "cs", "it", "pt-BR", "pt-PT"]
+        let expected: Set<String> = [
+            "en", "es", "ja", "fr", "de", "ko", "cs", "it", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK",
+        ]
         #expect(I18n.supportedLocales == expected)
     }
 

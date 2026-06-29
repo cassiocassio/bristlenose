@@ -12,14 +12,20 @@ vi.mock("./index", () => {
   const addResourceBundle = vi.fn();
   return {
     default: { changeLanguage, hasResourceBundle, addResourceBundle },
-    SUPPORTED_LOCALES: ["en", "es", "ja", "fr", "de", "ko", "it", "pt-BR", "pt-PT"],
+    SUPPORTED_LOCALES: ["en", "es", "ja", "fr", "de", "ko", "it", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK"],
     isSupportedLocale: (v: unknown) =>
-      typeof v === "string" && ["en", "es", "ja", "fr", "de", "ko", "it", "pt-BR", "pt-PT"].includes(v),
+      typeof v === "string" &&
+      ["en", "es", "ja", "fr", "de", "ko", "it", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK"].includes(v),
     ensureLocaleLoaded: vi.fn().mockResolvedValue(undefined),
   };
 });
 
-import { useLocaleStore, setLocale, resetLocaleStore } from "./LocaleStore";
+import {
+  useLocaleStore,
+  setLocale,
+  resetLocaleStore,
+  resolveBrowserLang,
+} from "./LocaleStore";
 
 beforeEach(() => {
   resetLocaleStore();
@@ -63,5 +69,34 @@ describe("LocaleStore", () => {
     // load only happens once. The persistence test above covers the write path.
     const { result } = renderHook(() => useLocaleStore());
     expect(result.current.locale).toBe("en");
+  });
+});
+
+describe("resolveBrowserLang (BCP 47 script/region awareness)", () => {
+  it("maps Taiwan region to zh-Hant", () => {
+    expect(resolveBrowserLang("zh-TW")).toBe("zh-Hant");
+  });
+
+  it("maps Hong Kong + Macau regions to zh-Hant-HK", () => {
+    expect(resolveBrowserLang("zh-HK")).toBe("zh-Hant-HK");
+    expect(resolveBrowserLang("zh-MO")).toBe("zh-Hant-HK");
+  });
+
+  it("accepts the script-subtag forms verbatim", () => {
+    expect(resolveBrowserLang("zh-Hant")).toBe("zh-Hant");
+    expect(resolveBrowserLang("zh-Hant-HK")).toBe("zh-Hant-HK");
+  });
+
+  it("does NOT force Simplified or bare zh into a Traditional variant", () => {
+    expect(resolveBrowserLang("zh-CN")).toBeNull();
+    expect(resolveBrowserLang("zh-Hans")).toBeNull();
+    expect(resolveBrowserLang("zh-SG")).toBeNull();
+    expect(resolveBrowserLang("zh")).toBeNull();
+  });
+
+  it("keeps exact + prefix behaviour for non-Chinese tags", () => {
+    expect(resolveBrowserLang("ja")).toBe("ja");
+    expect(resolveBrowserLang("fr-FR")).toBe("fr");
+    expect(resolveBrowserLang("pt-BR")).toBeNull(); // not a supported locale here
   });
 });

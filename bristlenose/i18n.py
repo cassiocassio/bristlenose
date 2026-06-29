@@ -20,20 +20,36 @@ from pathlib import Path
 
 _LOCALE_DIR = Path(__file__).parent / "locales"
 
-SUPPORTED_LOCALES = ("en", "es", "ja", "fr", "de", "ko", "cs", "it", "pt-BR", "pt-PT")
+SUPPORTED_LOCALES = ("en", "es", "ja", "fr", "de", "ko", "cs", "it", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK")
+
+# Region/script variants borrow missing keys from a base locale before falling
+# back to English. zh-Hant-HK (Hong Kong) → zh-Hant (Taiwan Traditional) → en.
+# TW/HK Traditional Chinese are mutually intelligible, so borrowing is correct,
+# not lossy — a missing HK string resolving to the Taiwan one beats English.
+_FALLBACK_CHAINS: dict[str, tuple[str, ...]] = {
+    "zh-Hant-HK": ("zh-Hant",),
+}
 
 _current_locale = "en"
 
 
 @lru_cache(maxsize=64)
 def _load_namespace(locale: str, namespace: str) -> dict[str, object]:
-    """Load a single namespace JSON file. Falls back to English if missing."""
+    """Load a single namespace JSON file. Returns {} if missing — the caller
+    (`t`) walks the fallback chain, so a thin-override locale that ships only
+    some namespaces resolves the rest through its base, not straight to en."""
     path = _LOCALE_DIR / locale / f"{namespace}.json"
     if not path.exists():
-        if locale != "en":
-            return _load_namespace("en", namespace)
         return {}
     return json.loads(path.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
+
+
+def _resolution_order(locale: str) -> tuple[str, ...]:
+    """Lookup order for a locale: itself, its fallback base(s), then English."""
+    order = [locale, *_FALLBACK_CHAINS.get(locale, ())]
+    if "en" not in order:
+        order.append("en")
+    return tuple(order)
 
 
 def _resolve(data: object, parts: list[str]) -> str | None:
@@ -65,14 +81,12 @@ def t(key: str, **kwargs: object) -> str:
 
     parts = dotted.split(".")
 
-    # Try current locale first
-    strings = _load_namespace(_current_locale, namespace)
-    value = _resolve(strings, parts)
-
-    # Fallback to English
-    if value is None and _current_locale != "en":
-        strings = _load_namespace("en", namespace)
-        value = _resolve(strings, parts)
+    # Resolve through the locale's fallback chain: current → base(s) → en.
+    value = None
+    for loc in _resolution_order(_current_locale):
+        value = _resolve(_load_namespace(loc, namespace), parts)
+        if value is not None:
+            break
 
     if value is None:
         return key  # Last resort — return raw key

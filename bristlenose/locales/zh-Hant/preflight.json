@@ -1,0 +1,45 @@
+{
+  "whisper": {
+    "banner_intro": "Bristlenose 需要 Whisper 轉錄模型（{size}）。",
+    "verb_downloading": "正在下載",
+    "verb_resuming": "正在繼續下載",
+    "fetching": "{verb} {repo_id}…",
+    "ready": "Whisper 模型已就緒",
+    "aborted_no_fetch": "Whisper 模型 {repo_id} 不在快取中，且已設定 --no-fetch。請執行 `bristlenose doctor --fetch` 預先下載，或在不使用 --no-fetch 的情況下重新執行。"
+  },
+  "ffmpeg": {
+    "banner_missing": "讀取影片檔案需要 ffmpeg，但在 PATH 中找不到。",
+    "prompt_brew_install": "立即執行 `brew install ffmpeg`？",
+    "installed": "ffmpeg 已安裝",
+    "aborted": "需要 ffmpeg，但找不到。請使用上方指令安裝後重新執行。",
+    "label_macos": "macOS",
+    "label_ubuntu": "Ubuntu / Debian",
+    "label_fedora": "Fedora / RHEL",
+    "label_arch": "Arch / Manjaro",
+    "label_other": "其他",
+    "cmd_macos": "brew install ffmpeg",
+    "cmd_ubuntu": "sudo apt install ffmpeg",
+    "cmd_fedora": "sudo dnf install ffmpeg",
+    "cmd_arch": "sudo pacman -S ffmpeg",
+    "cmd_other": "https://ffmpeg.org/download.html"
+  },
+  "api_key": {
+    "source_attribution": "正在使用來自 {source} 的 {provider_display} API 金鑰。驗證中：約 $0.0001，不含逐字稿內容。",
+    "rejected_invalid_key": "您的 {provider_display} API 金鑰遭拒（HTTP 401）。\n請在 {keys_url} 檢查金鑰\n後重新執行。",
+    "no_credit": "您的 {provider_display} 帳戶沒有可用的 API 額度。\n請在 {billing_url} 加值\n（{minimum_note}）\n後重新執行。",
+    "model_unavailable": "您的 {provider_display} 帳戶無法使用所要求的模型。請在 {console_url} 查看可用模型，並啟用該模型或將 `--llm-model` 改為您帳戶可使用的模型。",
+    "rate_limit": "{provider_display} 正在對此帳戶進行速率限制。請稍候一分鐘後重新執行，或在您的 bristlenose.toml 中降低 `llm_concurrency`。",
+    "generic": "供應商回應：{message}。\n若此情形看似額度餘額問題，請在供應商的帳務主控台加值後重新執行。",
+    "network": "無法連線到供應商：{message}。\n請檢查 DNS／VPN／Proxy 設定後重新執行。",
+    "azure_deployment_unavailable": "找不到 Azure 部署。這是您 Azure 入口網站中的**部署名稱**，而非模型 id — 請在 Azure 入口網站的 Azure OpenAI → Deployments 中確認。更新 BRISTLENOSE_AZURE_DEPLOYMENT（或 bristlenose.toml 中的 azure_deployment）後重新執行。底層錯誤：{message}。",
+    "google_model_unavailable": "Gemini 拒絕存取所要求的模型。這通常是方案層級限制、地區限制，或未啟用帳務 — 請在 {console_url} 的 Google Cloud Console 中確認。若已設定帳務，請透過 --llm-model 嘗試其他模型。底層錯誤：{message}。",
+    "local_server_down": "Ollama 似乎未在執行中。請以 `ollama serve` 啟動（或在 macOS 上開啟 Ollama 應用程式）後重新執行。底層錯誤：{message}。",
+    "local_model_not_pulled": "所要求的本機模型尚未下載。請執行 `ollama pull <model>` 下載（請在 bristlenose.toml 或 --llm-model 中確認模型名稱）後重新執行。底層錯誤：{message}。"
+  },
+  "pii": {
+    "downloading": "正在下載個人識別資訊偵測器（約 12 MB，僅一次）…"
+  },
+  "closing": {
+    "no_more_questions": "沒有其他問題了。{estimate_suffix} 可隨時按 Ctrl+C。"
+  }
+}

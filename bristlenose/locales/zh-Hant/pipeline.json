@@ -1,0 +1,6 @@
+{
+  "start": "正在啟動 {path} 的流程",
+  "stageStart": "正在執行 {stage}…",
+  "stageComplete": "{stage} 完成（{duration}）",
+  "done": "流程完成。輸出：{output}"
+}

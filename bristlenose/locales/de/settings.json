@@ -110,7 +110,7 @@
         "projectName": "Projektname",
         "writeIntermediate": "Zwischendateien schreiben",
         "skipTranscription": "Transkription überspringen",
-        "maxSessionsBeforeConfirm": "Max. Sitzungen vor Bestätigung"
+        "maxSessionsBeforeConfirm": "Max. Interviews vor Bestätigung"
       },
       "thumbnails": {
         "keyframeSearchWindow": "Keyframe-Suchfenster",
@@ -134,7 +134,7 @@
     }
   },
     "pipeline": {
-      "intro": "Schreibgesch\u00fctzte Ansicht der Modelle, die Bristlenose derzeit f\u00fcr jede Pipeline-Stufe verwendet. Um ein Backend zu \u00e4ndern, bearbeite deine Einstellungen (Umgebungsvariablen oder .env-Datei).",
+      "intro": "Schreibgesch\u00fctzte Ansicht der Modelle, die Bristlenose derzeit f\u00fcr jede Pipeline-Stufe verwendet. Um ein Backend zu \u00e4ndern, bearbeiten Sie Ihre Einstellungen (Umgebungsvariablen oder .env-Datei).",
       "loading": "Pipeline-Ansicht wird geladen\u2026",
       "error": "Pipeline-Ansicht konnte nicht geladen werden",
       "keys": "Schl\u00fcssel",

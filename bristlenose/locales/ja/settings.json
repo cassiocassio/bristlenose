@@ -36,7 +36,7 @@
       "llm": "LLM プロバイダーとモデル",
       "transcription": "文字起こし",
       "privacy": "プライバシー",
-      "quotes": "引用",
+      "quotes": "発言",
       "analysis": "分析",
       "autocode": "AutoCode",
       "display": "表示",
@@ -77,9 +77,9 @@
         "customNames": "墨消しするカスタム名"
       },
       "quotes": {
-        "minQuoteWords": "引用の最小単語数",
+        "minQuoteWords": "発言の最小単語数",
         "speakerMergeGap": "話者マージ間隔",
-        "quoteSequenceGap": "引用シーケンス間隔",
+        "quoteSequenceGap": "発言シーケンス間隔",
         "llmFailureThreshold": "LLM 失敗しきい値",
         "autocodeBatchSize": "AutoCode バッチサイズ"
       },
@@ -87,13 +87,13 @@
         "topNSignals": "上位 N シグナル",
         "topNSignalsGeneric": "上位 N シグナル（汎用）",
         "topNElaboration": "詳細化の上位 N",
-        "minQuotesPerCell": "セルあたりの最小引用数",
+        "minQuotesPerCell": "セルあたりの最小発言数",
         "strongConcentration": "強い：集中度 >",
         "strongParticipants": "強い：参加者 ≥",
-        "strongQuotes": "強い：引用 ≥",
+        "strongQuotes": "強い：発言 ≥",
         "moderateConcentration": "中程度：集中度 >",
         "moderateParticipants": "中程度：参加者 ≥",
-        "moderateQuotes": "中程度：引用 ≥"
+        "moderateQuotes": "中程度：発言 ≥"
       },
       "autocode": {
         "defaultLower": "デフォルト下限しきい値",
@@ -185,8 +185,8 @@
         "untested": "\u672a\u691c\u8a3c",
         "local_speaker_id_acceptable": "\u30ed\u30fc\u30ab\u30eb\u30e2\u30c7\u30eb\u306f\u8a71\u8005\u8b58\u5225\u3092\u9069\u5207\u306b\u51e6\u7406\u3057\u307e\u3059",
         "local_topic_segmentation_acceptable": "\u30ed\u30fc\u30ab\u30eb\u30e2\u30c7\u30eb\u306f\u30c8\u30d4\u30c3\u30af\u5206\u5272\u3092\u9069\u5207\u306b\u51e6\u7406\u3057\u307e\u3059",
-        "local_quote_extraction_miss_rate": "\u5c0f\u3055\u306a\u30e2\u30c7\u30eb\u306f\u8907\u6570\u7bc0\u306e\u5f15\u7528\u3092\u898b\u843d\u3068\u3057\u307e\u3059",
-        "local_quote_clustering_drift": "\u5c0f\u3055\u306a\u30e2\u30c7\u30eb\u306f\u5f15\u7528\u306e\u30af\u30e9\u30b9\u30bf\u30ea\u30f3\u30b0\u304c\u4e00\u8cab\u3057\u307e\u305b\u3093",
+        "local_quote_extraction_miss_rate": "\u5c0f\u3055\u306a\u30e2\u30c7\u30eb\u306f\u8907\u6570\u7bc0\u306e\u767a\u8a00\u3092\u898b\u843d\u3068\u3057\u307e\u3059",
+        "local_quote_clustering_drift": "\u5c0f\u3055\u306a\u30e2\u30c7\u30eb\u306f\u767a\u8a00\u306e\u30af\u30e9\u30b9\u30bf\u30ea\u30f3\u30b0\u304c\u4e00\u8cab\u3057\u307e\u305b\u3093",
         "local_thematic_grouping_drift": "\u5c0f\u3055\u306a\u30e2\u30c7\u30eb\u306f\u30c6\u30fc\u30de\u306e\u7d71\u5408\u3067\u3076\u308c\u307e\u3059",
         "mlx_whisper_apple_silicon_optimal": "Apple Silicon \u3067\u6700\u9069",
         "faster_whisper_cpu_baseline": "\u5805\u5b9f\u306a CPU \u30d9\u30fc\u30b9\u30e9\u30a4\u30f3\u3002GPU \u306f\u4e0d\u8981"

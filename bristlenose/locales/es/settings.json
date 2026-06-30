@@ -25,7 +25,7 @@
     "projectStub": "Los ajustes del proyecto aparecerán aquí. Próximamente.",
     "profileStub": "Los ajustes de perfil (nombre, correo, backend de whisper) aparecerán aquí. Próximamente.",
     "apiKeysStub": "La gestión de claves API aparecerá aquí. Próximamente.",
-    "pipeline": "Tubería"
+    "pipeline": "Pipeline"
   },
   "configReference": {
     "heading": "Referencia de configuración",
@@ -40,7 +40,7 @@
       "analysis": "Análisis",
       "autocode": "AutoCode",
       "display": "Visualización",
-      "pipeline": "Tubería",
+      "pipeline": "Pipeline",
       "thumbnails": "Miniaturas",
       "server": "Servidor",
       "logging": "Registro",

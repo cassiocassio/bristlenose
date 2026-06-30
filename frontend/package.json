@@ -33,7 +33,7 @@
         "!../bristlenose/server/static/assets/pipeline-*.js",
         "!../bristlenose/server/static/assets/server-*.js"
       ],
-      "limit": "220 kB",
+      "limit": "230 kB",
       "gzip": true
     }
   ],

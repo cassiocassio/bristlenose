@@ -97,6 +97,6 @@ describe("resolveBrowserLang (BCP 47 script/region awareness)", () => {
   it("keeps exact + prefix behaviour for non-Chinese tags", () => {
     expect(resolveBrowserLang("ja")).toBe("ja");
     expect(resolveBrowserLang("fr-FR")).toBe("fr");
-    expect(resolveBrowserLang("pt-BR")).toBeNull(); // not a supported locale here
+    expect(resolveBrowserLang("pt-BR")).toBe("pt-BR"); // now a supported region locale (exact match)
   });
 });

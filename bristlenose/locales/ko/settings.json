@@ -84,8 +84,8 @@
         "autocodeBatchSize": "AutoCode 배치 크기"
       },
       "analysis": {
-        "topNSignals": "상위 N개 신호",
-        "topNSignalsGeneric": "상위 N개 신호 (일반)",
+        "topNSignals": "상위 N개 시그널",
+        "topNSignalsGeneric": "상위 N개 시그널 (일반)",
         "topNElaboration": "상세 분석용 상위 N개",
         "minQuotesPerCell": "셀당 최소 인용 수",
         "strongConcentration": "강함: 집중도 >",

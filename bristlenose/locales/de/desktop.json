@@ -8,7 +8,7 @@
     "boardDestination": "Erstellt ein neues Board in {{team}}.",
     "connected": "Verbunden",
     "openInMiro": "In Miro \u00f6ffnen\u2026",
-    "connectPersistWarning": "Verbunden, aber das Token konnte nicht im Schl\u00fcsselbund gespeichert werden \u2014 nach einem Neustart musst du dich m\u00f6glicherweise erneut verbinden."
+    "connectPersistWarning": "Verbunden, aber das Token konnte nicht im Schl\u00fcsselbund gespeichert werden \u2014 nach einem Neustart m\u00fcssen Sie sich m\u00f6glicherweise erneut verbinden."
   },
   "menu": {
     "app": {
@@ -424,7 +424,7 @@
     "backendLabel": "Backend",
     "modelLabel": "Modell",
     "backendAuto": "Auto",
-    "backendHint": "Auto erkennt die beste Engine für deinen Mac.",
+    "backendHint": "Auto erkennt die beste Engine für Ihren Mac.",
     "modelRecommended": "{{model}} (empfohlen)"
   },
   "ollamaSetup": {
@@ -477,7 +477,7 @@
     "removedAnnouncement": "\u201e%@\u201c entfernt. Dr\u00fccken Sie Befehl-Z, um den Vorgang r\u00fcckg\u00e4ngig zu machen.",
     "removeBlockedByRun": "Beenden Sie den Lauf von \u201e%@\u201c, bevor Sie ihn entfernen.",
     "removedBatch": "%d Projekte entfernt.",
-    "undo": "R\u00fcckg\u00e4ngig",
+    "undo": "Widerrufen",
     "removed": "Projekt entfernt."
   }
 }

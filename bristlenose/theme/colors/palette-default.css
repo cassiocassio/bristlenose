@@ -70,6 +70,8 @@
     /* Selection state */
     --bn-selection-bg: #eef4fc;
     --bn-selection-border: #2563eb;
+    --bn-selection-bg-inactive: #e5e7eb;
+    --bn-selection-border-inactive: #9ca3af;
 
     /* Sidebar overlay */
     --bn-overlay-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
@@ -142,6 +144,8 @@
         --bn-focus-ring:              light-dark(0 0 0 2px rgba(37, 99, 235, 0.12), 0 0 0 2px rgba(96, 165, 250, 0.2));
         --bn-selection-bg:            light-dark(#eef4fc, #1a2838);
         --bn-selection-border:        light-dark(#2563eb, #60a5fa);
+        --bn-selection-bg-inactive:     light-dark(#e5e7eb, #262626);
+        --bn-selection-border-inactive: light-dark(#9ca3af, #4b5563);
 
         /* Hover backgrounds */
         --bn-hover-bg:                light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06));

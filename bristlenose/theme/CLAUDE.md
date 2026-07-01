@@ -52,7 +52,7 @@ Reference values in `tokens.css` — CSS `@media` can't use `var()`, so these do
 
 When the macOS app window loses focus, `.bn-window-inactive` is added to `<html>`. CSS rules in `atoms/interactive.css` dim the *chrome* (selections → grey, focus shadow → none) while keeping *content* at full contrast. This matches the macOS convention: "recede the affordances, preserve the data."
 
-- **Tokens**: `--bn-selection-bg-inactive`, `--bn-selection-border-inactive` in `tokens.css`
+- **Tokens**: `--bn-selection-bg-inactive`, `--bn-selection-border-inactive` in the palette files (`colors/palette-*.css` — part of the colour contract, see `colors/_contract.css`)
 - **Trigger**: Swift bridge (`BridgeHandler.setWindowActive`) on `NSWindow.didBecomeKeyNotification`/`didResignKeyNotification`. Browser fallback: `window.blur`/`window.focus` in `AppLayout.tsx`
 - **Design rule**: never dim body text, images, tags, or data. Only dim interactive state indicators (selection highlight, focus shadow)
 

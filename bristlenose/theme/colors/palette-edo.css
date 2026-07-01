@@ -72,6 +72,8 @@
     /* Selection state — Prussian Blue */
     --bn-selection-bg: #e0e8f0;
     --bn-selection-border: #1e3a5f;
+    --bn-selection-bg-inactive: #e8e2d4;
+    --bn-selection-border-inactive: #b8ad91;
 
     /* Sidebar overlay */
     --bn-overlay-shadow: 4px 0 16px rgba(30, 20, 10, 0.10);
@@ -141,6 +143,8 @@
         --bn-focus-ring:              light-dark(0 0 0 2px rgba(30, 58, 95, 0.15), 0 0 0 2px rgba(123, 168, 160, 0.2));
         --bn-selection-bg:            light-dark(#e0e8f0, #1e2830);
         --bn-selection-border:        light-dark(#1e3a5f, #7ba8a0);
+        --bn-selection-bg-inactive:     light-dark(#e8e2d4, #26231d);
+        --bn-selection-border-inactive: light-dark(#b8ad91, #4a4030);
 
         /* Hover backgrounds */
         --bn-hover-bg:                light-dark(rgba(30,20,10,0.05), rgba(212,201,168,0.06));

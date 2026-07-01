@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Native colour alignment — Bristlenose</title>
+
+<!-- Google Fonts: Inter (web default). Desktop uses SF Pro via -apple-system. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+
+<style>
+/* =====================================================================
+   Native colour alignment — side-by-side comparison
+   Companion to docs/design-native-colour-alignment.md
+
+   Both columns render IDENTICAL component markup. The only difference is
+   the token values scoped to each column — which is the whole argument:
+   Tier-1 alignment is a token change, not a component rewrite.
+   ===================================================================== */
+
+/* ── Design tokens (copied from colors/palette-default.css) ──
+   Light values in :root as fallback; light-dark() pairs in @supports. */
+:root {
+    --bn-font-body: "Inter", system-ui, -apple-system, sans-serif;
+
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-negative: #dc2626;
+
+    --bn-selection-bg: #eef4fc;
+    --bn-selection-border: #2563eb;
+    --bn-selection-bg-inactive: #e5e7eb;
+    --bn-selection-border-inactive: #9ca3af;
+
+    --bn-focus-ring: 0 0 0 2px rgba(37, 99, 235, 0.12);
+    --bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    --bn-weight-normal: 420;
+    --bn-weight-emphasis: 490;
+    --bn-weight-strong: 700;
+}
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+        --bn-colour-bg:               light-dark(#ffffff, #111111);
+        --bn-colour-text:             light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:            light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:           light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);
+        --bn-colour-accent:           light-dark(#2563eb, #60a5fa);
+        --bn-colour-hover:            light-dark(#e8f0fe, #1e293b);
+        --bn-colour-quote-bg:         light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-negative:         light-dark(#dc2626, #ef4444);
+        --bn-selection-bg:            light-dark(#eef4fc, #1a2838);
+        --bn-selection-border:        light-dark(#2563eb, #60a5fa);
+        --bn-selection-bg-inactive:     light-dark(#e5e7eb, #262626);
+        --bn-selection-border-inactive: light-dark(#9ca3af, #4b5563);
+        --bn-focus-ring:              light-dark(0 0 0 2px rgba(37,99,235,0.12), 0 0 0 2px rgba(96,165,250,0.2));
+    }
+}
+[data-theme="light"] { color-scheme: light; }
+[data-theme="dark"]  { color-scheme: dark; }
+
+/* ── Comparison plumbing ──────────────────────────────────────────────
+   These indirection tokens are what the two columns diverge on. In the
+   real change they'd map onto --bn-colour-accent (desktop-only override)
+   and two new slots (--bn-nav-selection-*, --bn-btn-radius). */
+.panel {
+    --demo-accent:        var(--bn-colour-accent);
+    --demo-nav-sel-bg:    var(--bn-selection-bg);        /* current: blue tint */
+    --demo-nav-sel-fg:    var(--bn-colour-accent);
+    --demo-nav-sel-radius: var(--bn-radius-sm);          /* current: 3px */
+    --demo-btn-radius:    var(--bn-radius-sm);           /* current: 3px */
+    --demo-focus-ring:    var(--bn-focus-ring);
+}
+.panel-proposed {
+    /* macOS-aligned. Sample exact values from the running app with
+       Digital Color Meter before shipping — these are close approximations. */
+    --demo-accent:        light-dark(#007AFF, #0A84FF);  /* system blue */
+    --demo-nav-sel-bg:    light-dark(#dcdcdc, #464646);  /* unemphasized grey */
+    --demo-nav-sel-fg:    var(--bn-colour-text);
+    --demo-nav-sel-radius: 6px;                          /* native pill vocabulary */
+    --demo-btn-radius:    6px;
+    --demo-focus-ring:    light-dark(0 0 0 3.5px rgba(0,122,255,0.28), 0 0 0 3.5px rgba(10,132,255,0.36));
+}
+
+/* ── Page chrome ── */
+* { box-sizing: border-box; }
+body {
+    font-family: var(--bn-font-body);
+    font-weight: var(--bn-weight-normal);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    margin: 0;
+    padding: 2rem clamp(1rem, 4vw, 3rem) 5rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+header.page { max-width: 60rem; margin: 0 auto 2rem; }
+h1 { font-size: 1.6rem; font-weight: var(--bn-weight-strong); margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+.lede { color: var(--bn-colour-muted); font-size: 0.95rem; max-width: 46rem; }
+.lede a { color: var(--bn-colour-accent); }
+
+.toolbar {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;
+    background: color-mix(in srgb, var(--bn-colour-bg) 88%, transparent);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding: 0.7rem clamp(1rem, 4vw, 3rem);
+    margin: 0 calc(-1 * clamp(1rem, 4vw, 3rem)) 2rem;
+}
+.toolbar .group { display: flex; gap: 0.3rem; align-items: center; }
+.toolbar .group-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--bn-colour-muted); margin-right: 0.2rem; }
+.seg-btn {
+    font: inherit; font-size: 0.8rem;
+    padding: 0.25rem 0.7rem;
+    border: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg); color: var(--bn-colour-text);
+    cursor: pointer;
+}
+.seg-btn:first-of-type { border-radius: var(--bn-radius-md) 0 0 var(--bn-radius-md); }
+.seg-btn:last-of-type  { border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0; }
+.seg-btn + .seg-btn { border-left: none; }
+.seg-btn.active { background: var(--bn-colour-accent); color: #fff; border-color: var(--bn-colour-accent); }
+
+/* ── Finding layout ── */
+main { max-width: 72rem; margin: 0 auto; }
+.finding { margin: 0 0 3.5rem; }
+.finding-head { max-width: 60rem; margin-bottom: 1rem; }
+.finding-tier {
+    display: inline-block; font-size: 0.68rem; font-weight: var(--bn-weight-emphasis);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 0.12rem 0.5rem; border-radius: var(--bn-radius-pill);
+    background: var(--bn-colour-accent); color: #fff; margin-bottom: 0.5rem;
+}
+.finding-tier.tier-hold { background: var(--bn-colour-muted); }
+.finding-tier.tier-dont { background: transparent; color: var(--bn-colour-muted); border: 1px solid var(--bn-colour-border); }
+.finding h2 { font-size: 1.15rem; font-weight: var(--bn-weight-emphasis); margin: 0 0 0.35rem; }
+.finding .discussion { color: var(--bn-colour-muted); font-size: 0.9rem; margin: 0.35rem 0 0; }
+.finding .discussion strong { color: var(--bn-colour-text); font-weight: var(--bn-weight-emphasis); }
+.finding .discussion code {
+    font-family: "SF Mono", ui-monospace, monospace; font-size: 0.82em;
+    background: var(--bn-colour-quote-bg); border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm); padding: 0.05rem 0.3rem;
+}
+
+.compare {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+    margin-top: 1rem;
+}
+@media (max-width: 720px) { .compare { grid-template-columns: 1fr; } }
+.panel {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    background: var(--bn-colour-bg);
+    padding: 1.25rem;
+    position: relative;
+}
+.panel-head {
+    display: flex; align-items: baseline; gap: 0.5rem;
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--bn-colour-muted); margin-bottom: 1rem;
+    font-weight: var(--bn-weight-emphasis);
+}
+.panel-proposed .panel-head { color: var(--demo-accent); }
+.panel-head .swatch {
+    width: 0.85rem; height: 0.85rem; border-radius: var(--bn-radius-pill);
+    display: inline-block; align-self: center;
+}
+.panel-current .swatch  { background: var(--bn-colour-accent); }
+.panel-proposed .swatch { background: var(--demo-accent); }
+.panel-note { font-size: 0.78rem; color: var(--bn-colour-muted); margin-top: 1rem; font-style: italic; }
+
+/* =====================================================================
+   Real component styles — reused from the theme (organisms/atoms).
+   Every declaration below reads a --demo-* token so both panels share
+   markup and only the scoped token differs.
+   ===================================================================== */
+
+/* Text link (organisms/blockquote.css .speaker-link, toc-link:hover) */
+.demo-prose { font-size: 0.9rem; margin: 0 0 1rem; }
+.demo-link { color: var(--demo-accent); text-decoration: none; border-bottom: 1px solid transparent; }
+.demo-link:hover { border-bottom-color: var(--demo-accent); }
+
+/* Primary / secondary buttons (atoms/modal.css .bn-btn) */
+.demo-btn-row { display: flex; gap: 0.5rem; margin: 0 0 1rem; flex-wrap: wrap; }
+.demo-btn {
+    font: inherit; font-size: 0.85rem; font-weight: var(--bn-weight-emphasis);
+    padding: 0.35rem 0.9rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--demo-btn-radius);
+    background: var(--bn-colour-bg); color: var(--bn-colour-text);
+    cursor: pointer;
+}
+.demo-btn-primary { background: var(--demo-accent); color: #fff; border-color: var(--demo-accent); }
+.demo-btn-danger  { background: var(--bn-colour-negative); color: #fff; border-color: var(--bn-colour-negative); }
+
+/* Tab bar (organisms/global-nav.css .bn-tab) */
+.demo-tabs { display: flex; gap: 1.2rem; border-bottom: 1px solid var(--bn-colour-border); margin: 0 0 1rem; }
+.demo-tab {
+    font: inherit; font-size: 0.85rem; padding: 0.4rem 0.1rem;
+    background: none; border: none; border-bottom: 3px solid transparent;
+    color: var(--bn-colour-muted); cursor: pointer; margin-bottom: -1px;
+}
+.demo-tab.active { color: var(--bn-colour-text); border-bottom-color: var(--demo-accent); }
+
+/* Focus ring (atoms/interactive.css :focus-visible / input focus) */
+.demo-input {
+    font: inherit; font-size: 0.85rem; width: 100%;
+    padding: 0.4rem 0.6rem; margin: 0;
+    border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-bg); color: var(--bn-colour-text);
+}
+.demo-input.is-focused { border-color: var(--demo-accent); box-shadow: var(--demo-focus-ring); outline: none; }
+
+/* Sidebar nav rows (organisms/sidebar.css .toc-link / .session-entry) */
+.demo-nav { display: flex; flex-direction: column; gap: 2px; }
+.demo-nav-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.82rem; padding: 0.32rem 0.6rem;
+    border-radius: var(--demo-nav-sel-radius);
+    color: var(--bn-colour-text); cursor: pointer;
+    border-left: 2px solid transparent;
+}
+.demo-nav-row:hover { background: var(--bn-colour-hover); }
+.demo-nav-row.active {
+    background: var(--demo-nav-sel-bg);
+    color: var(--demo-nav-sel-fg);
+    font-weight: var(--bn-weight-emphasis);
+}
+.demo-nav-row .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.5; flex-shrink: 0; }
+
+/* Quote card selection (organisms/blockquote.css + atoms/interactive.css .bn-selected) */
+.demo-quote {
+    border: 1px solid var(--bn-colour-border);
+    border-left: 3px solid var(--bn-colour-border);
+    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+    background: var(--bn-colour-quote-bg);
+    padding: 0.7rem 0.9rem; font-size: 0.85rem; margin: 0;
+}
+.demo-quote.selected {
+    background: var(--bn-selection-bg);
+    border-left-color: var(--bn-selection-border);
+}
+.demo-quote.selected.inactive {
+    background: var(--bn-selection-bg-inactive);
+    border-left-color: var(--bn-selection-border-inactive);
+}
+.demo-quote cite { display: block; color: var(--bn-colour-muted); font-size: 0.75rem; margin-top: 0.4rem; font-style: normal; }
+
+.spec-label { font-size: 0.72rem; color: var(--bn-colour-muted); margin: 0 0 0.35rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.spec + .spec { margin-top: 1.1rem; }
+</style>
+</head>
+<body>
+
+<header class="page">
+    <h1>Native colour alignment</h1>
+    <p class="lede">
+        Where the webview's chrome could gently follow macOS — colour and shape, default palette only.
+        Left is what ships today; right is the proposed alignment. Both columns render the
+        <em>same</em> component markup: only the scoped design tokens differ, which is the point —
+        Tier&nbsp;1 is a token change, not a rewrite. Full write-up in
+        <a href="../design-native-colour-alignment.md">design-native-colour-alignment.md</a>.
+    </p>
+</header>
+
+<div class="toolbar">
+    <div class="group">
+        <span class="group-label">Appearance</span>
+        <button class="seg-btn active" data-theme="auto">Auto</button>
+        <button class="seg-btn" data-theme="light">Light</button>
+        <button class="seg-btn" data-theme="dark">Dark</button>
+    </div>
+    <div class="group">
+        <span class="group-label">Window</span>
+        <button class="seg-btn active" data-window="active">Active</button>
+        <button class="seg-btn" data-window="inactive">Inactive</button>
+    </div>
+</div>
+
+<main>
+
+    <!-- FINDING 1 — Accent blue -->
+    <section class="finding">
+        <div class="finding-head">
+            <span class="finding-tier">Tier 1 · align now · desktop-only</span>
+            <h2>1 · Accent blue</h2>
+            <p class="discussion">
+                One token — <code>--bn-colour-accent</code> — feeds links, primary buttons, the active
+                tab underline, focus rings and selection borders. Today it's Tailwind
+                <code>#2563eb</code>/<code>#60a5fa</code>; macOS system blue is ≈<code>#007AFF</code>/<code>#0A84FF</code>.
+                <strong>Desktop-only:</strong> <code>#007AFF</code> on white is ≈4.0:1 contrast, which fails
+                WCAG AA for body-size text, so the web default must stay <code>#2563eb</code> (≈5.2:1). A single
+                desktop override aligns all five affordances at once — native-consistent, because they share a colour on macOS too.
+            </p>
+        </div>
+        <div class="compare">
+            <div class="panel panel-current">
+                <div class="panel-head"><span class="swatch"></span> Current · #2563eb</div>
+                <p class="demo-prose">Researchers know the products — see <a href="#" class="demo-link">the methodology notes</a> for detail.</p>
+                <div class="demo-btn-row">
+                    <button class="demo-btn demo-btn-primary">Analyse</button>
+                    <button class="demo-btn">Cancel</button>
+                </div>
+                <div class="demo-tabs">
+                    <button class="demo-tab active">Report</button>
+                    <button class="demo-tab">Analysis</button>
+                    <button class="demo-tab">Codebook</button>
+                </div>
+                <input class="demo-input is-focused" value="Focused input — keyboard ring">
+            </div>
+            <div class="panel panel-proposed">
+                <div class="panel-head"><span class="swatch"></span> macOS-aligned · #007AFF</div>
+                <p class="demo-prose">Researchers know the products — see <a href="#" class="demo-link">the methodology notes</a> for detail.</p>
+                <div class="demo-btn-row">
+                    <button class="demo-btn demo-btn-primary">Analyse</button>
+                    <button class="demo-btn">Cancel</button>
+                </div>
+                <div class="demo-tabs">
+                    <button class="demo-tab active">Report</button>
+                    <button class="demo-tab">Analysis</button>
+                    <button class="demo-tab">Codebook</button>
+                </div>
+                <input class="demo-input is-focused" value="Focused input — keyboard ring">
+                <p class="panel-note">Focus ring also shown wider/softer (Tier 2, §7) — the accent swap is the Tier-1 part.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FINDING 2 — Sidebar nav selection -->
+    <section class="finding">
+        <div class="finding-head">
+            <span class="finding-tier">Tier 1 · align now · desktop-only</span>
+            <h2>2 · Sidebar navigation selection</h2>
+            <p class="discussion">
+                Active nav rows (<code>.toc-link.active</code>, <code>.session-entry.active</code>,
+                <code>.signal-entry.active</code>) use a blue tint; the native sidebar one pane to the left
+                deliberately pins the <strong>unemphasized grey</strong> capsule in every focus state.
+                Repoint the three selectors at a new <code>--bn-nav-selection-bg</code> slot — grey on desktop,
+                current blue tint as the shared web default. <strong>Note the boundary:</strong> this is
+                <em>nav</em> selection. <em>Content</em> selection (Finding&nbsp;5) stays blue — macOS content selection is blue.
+            </p>
+        </div>
+        <div class="compare">
+            <div class="panel panel-current">
+                <div class="panel-head">Current · blue tint</div>
+                <div class="demo-nav">
+                    <div class="demo-nav-row"><span class="dot"></span> Onboarding friction</div>
+                    <div class="demo-nav-row active"><span class="dot"></span> Trust &amp; privacy</div>
+                    <div class="demo-nav-row"><span class="dot"></span> Pricing confusion</div>
+                    <div class="demo-nav-row"><span class="dot"></span> Feature requests</div>
+                </div>
+            </div>
+            <div class="panel panel-proposed">
+                <div class="panel-head">macOS-aligned · unemphasized grey</div>
+                <div class="demo-nav">
+                    <div class="demo-nav-row"><span class="dot"></span> Onboarding friction</div>
+                    <div class="demo-nav-row active"><span class="dot"></span> Trust &amp; privacy</div>
+                    <div class="demo-nav-row"><span class="dot"></span> Pricing confusion</div>
+                    <div class="demo-nav-row"><span class="dot"></span> Feature requests</div>
+                </div>
+                <p class="panel-note">Radius here is already the Finding-3 6px, so this row shows both changes together.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FINDING 3 — Selection lozenge radius -->
+    <section class="finding">
+        <div class="finding-head">
+            <span class="finding-tier">Tier 1 · align now · shared</span>
+            <h2>3 · Selection-lozenge radius</h2>
+            <p class="discussion">
+                Nav entries round at <code>--bn-radius-sm</code> (3px); the native pill vocabulary starts at
+                6pt (lens rail, icon picker). <strong>Shared change:</strong> repoint the consuming selectors from
+                <code>radius-sm</code> to <code>radius-md</code> — achromatic and subtle, fine on web too. Don't touch
+                <code>--bn-radius-sm</code> itself (badges and inputs use it correctly at 3px).
+            </p>
+        </div>
+        <div class="compare">
+            <div class="panel panel-current">
+                <div class="panel-head">Current · 3px corners</div>
+                <div class="demo-nav">
+                    <div class="demo-nav-row active" style="--demo-nav-sel-bg: var(--bn-selection-bg); --demo-nav-sel-fg: var(--bn-colour-accent);"><span class="dot"></span> Trust &amp; privacy</div>
+                </div>
+            </div>
+            <div class="panel panel-proposed">
+                <div class="panel-head">macOS-aligned · 6px corners</div>
+                <div class="demo-nav">
+                    <div class="demo-nav-row active" style="--demo-nav-sel-bg: var(--bn-selection-bg); --demo-nav-sel-fg: var(--bn-colour-accent);"><span class="dot"></span> Trust &amp; privacy</div>
+                </div>
+                <p class="panel-note">Colour held at the current blue tint here to isolate the radius change.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FINDING 4 — Primary button radius -->
+    <section class="finding">
+        <div class="finding-head">
+            <span class="finding-tier">Tier 1 · align now · shared</span>
+            <h2>4 · Primary-button radius</h2>
+            <p class="discussion">
+                Modal buttons (<code>.bn-btn</code>) round at 3px while the toolbar buttons are already 6px —
+                an internal inconsistency. macOS push buttons sit at ≈5–6pt. <strong>Shared:</strong> move modal
+                buttons <code>radius-sm</code> → <code>radius-md</code>, which fixes native fidelity and the internal disagreement in one edit.
+            </p>
+        </div>
+        <div class="compare">
+            <div class="panel panel-current">
+                <div class="panel-head">Current · 3px buttons</div>
+                <div class="demo-btn-row">
+                    <button class="demo-btn demo-btn-primary" style="--demo-accent: var(--bn-colour-accent);">Save changes</button>
+                    <button class="demo-btn">Cancel</button>
+                    <button class="demo-btn demo-btn-danger">Delete</button>
+                </div>
+            </div>
+            <div class="panel panel-proposed">
+                <div class="panel-head">macOS-aligned · 6px buttons</div>
+                <div class="demo-btn-row">
+                    <button class="demo-btn demo-btn-primary" style="--demo-accent: var(--bn-colour-accent);">Save changes</button>
+                    <button class="demo-btn">Cancel</button>
+                    <button class="demo-btn demo-btn-danger">Delete</button>
+                </div>
+                <p class="panel-note">Accent held at current blue here to isolate the radius change.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FINDING 5 — Deliberately unchanged: content selection + inactive dimming -->
+    <section class="finding">
+        <div class="finding-head">
+            <span class="finding-tier tier-dont">Tier 3 · deliberately unchanged</span>
+            <h2>5 · Content selection stays blue — but inactive-window dimming now works</h2>
+            <p class="discussion">
+                macOS <em>content</em> selection is blue, so selected quote cards are already native-correct —
+                don't grey them. What was broken: the inactive-window dim referenced
+                <code>--bn-selection-bg-inactive</code> / <code>--bn-selection-border-inactive</code>, which were
+                <strong>never defined</strong>, so <code>var()</code> was invalid and the dim never rendered. Those two tokens
+                are now defined in both palettes. Toggle <strong>Window → Inactive</strong> above to see the selected card recede to grey.
+            </p>
+        </div>
+        <div class="compare">
+            <div class="panel panel-current">
+                <div class="panel-head">Selected · window active</div>
+                <blockquote class="demo-quote selected" data-quote>
+                    "I almost gave up at the sign-in step — it wasn't clear my work account would even work."
+                    <cite>p3 · Onboarding friction</cite>
+                </blockquote>
+            </div>
+            <div class="panel panel-proposed">
+                <div class="panel-head">Same card · reads the same token set</div>
+                <blockquote class="demo-quote selected" data-quote>
+                    "I almost gave up at the sign-in step — it wasn't clear my work account would even work."
+                    <cite>p3 · Onboarding friction</cite>
+                </blockquote>
+                <p class="panel-note">Blue when active (correct); greys via the newly-defined tokens when the window blurs.</p>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<script>
+// ── Appearance toggle (matches the type-comparison engine's affordance) ──
+document.querySelector('.toolbar').addEventListener('click', (e) => {
+    const btn = e.target.closest('.seg-btn');
+    if (!btn) return;
+
+    if (btn.dataset.theme) {
+        document.querySelectorAll('[data-theme]').forEach(b => b === btn && b.classList.add('active'));
+        btn.parentElement.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+        const t = btn.dataset.theme;
+        if (t === 'auto') document.documentElement.removeAttribute('data-theme');
+        else document.documentElement.setAttribute('data-theme', t);
+    }
+
+    if (btn.dataset.window) {
+        btn.parentElement.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+        const inactive = btn.dataset.window === 'inactive';
+        document.querySelectorAll('[data-quote]').forEach(q => q.classList.toggle('inactive', inactive));
+    }
+});
+</script>
+
+</body>
+</html>

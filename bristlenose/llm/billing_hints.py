@@ -81,8 +81,12 @@ _BILLING: dict[str, ProviderBilling] = {
         billing_url="https://console.cloud.google.com/billing",
         minimum_usd=0.0,
         minimum_note=(
-            "Gemini is billed through Google Cloud (post-paid), not a "
-            "credit balance. Manage billing in the Google Cloud Console."
+            "Gemini offers a free tier (Flash models only, rate-limited). "
+            "Paid usage is billed through Google Cloud — either via Prepay "
+            "($10 minimum credit purchase, required for new accounts since "
+            "March 2026) or post-paid GCP billing. Google AI Pro/Ultra "
+            "subscription credits can fund API usage; Google One, Workspace, "
+            "and Gemini Advanced subscriptions cannot."
         ),
     ),
     "local": ProviderBilling(

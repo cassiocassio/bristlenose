@@ -87,15 +87,18 @@
     --demo-focus-ring:    var(--bn-focus-ring);
 }
 .panel-proposed {
-    /* DECIDED: KISS single accent token = #0068D6 / #0A84FF (hue-matched to system
-       blue, clears 4.5:1 everywhere). One token drives buttons, links, focus,
-       selection text + tab underline. One shared palette, no web/desktop fork. */
-    --demo-accent:        light-dark(#0068D6, #0A84FF);  /* single accent — decided */
+    /* DECIDED: copy Apple's system blue verbatim — #007AFF / #0A84FF. Goal is an
+       invisible seam (a webview button beside an AppKit sheet button must read as the
+       same control); at this pixel scale the eye clocks even a hue-matched near-miss
+       (#0068D6) as "not the OS blue". Single token for now (buttons, links, focus,
+       selection, tab). One shared palette, no fork. Link text on white = 4.02:1 is
+       accepted; a webbier link blue can split off later at low cost. */
+    --demo-accent:        light-dark(#007AFF, #0A84FF);  /* Apple system blue — decided */
     --demo-nav-sel-bg:    light-dark(#efefef, #2b2b2b);  /* NSColor unemphasizedSelectedContentBackgroundColor — sampled: #EFEFEF light, #2B2B2B dark (bn.app's own sidebar). No canonical Apple hex; re-sample at OS bumps or bridge the live NSColor. */
-    --demo-nav-sel-fg:    light-dark(#0068D6, #0A84FF);   /* selection icon + label use the one accent */
+    --demo-nav-sel-fg:    light-dark(#007AFF, #0A84FF);   /* selection icon + label = system blue */
     --demo-nav-sel-radius: 6px;                          /* native pill vocabulary */
     --demo-btn-radius:    6px;
-    --demo-focus-ring:    light-dark(0 0 0 3.5px rgba(0,104,214,0.28), 0 0 0 3.5px rgba(10,132,255,0.36));
+    --demo-focus-ring:    light-dark(0 0 0 3.5px rgba(0,122,255,0.28), 0 0 0 3.5px rgba(10,132,255,0.36));
 }
 
 /* ── Page chrome ── */
@@ -317,10 +320,12 @@ main { max-width: 72rem; margin: 0 auto; }
     <p class="lede">
         Where the webview's chrome gently follows macOS — colour and shape, default palette only.
         <strong>Decided:</strong> one shared palette (no web/desktop fork); a single accent token
-        <code>#0068D6</code>/<code>#0A84FF</code> (KISS — one blue for buttons, links, focus, selection
-        &amp; tab underline; the two-token chrome/link split is deferred until dynamic system-accent ships);
-        sidebar selection = <code>#EFEFEF</code> grey capsule with accent icon&nbsp;+&nbsp;label; nav lozenge
-        &amp; primary-button radii → 6px. Finding&nbsp;1 keeps the full blue lab as reference; the rest render
+        <code>#007AFF</code>/<code>#0A84FF</code> — <strong>Apple's system blue, copied verbatim</strong>
+        (the seam has to be invisible, and at button scale the eye reads even a hue-matched near-miss like
+        <code>#0068D6</code> as "not the OS blue"); one blue for buttons, links, focus, selection &amp; tab
+        underline; link text lands at 4.02:1 on white — accepted, a webbier link blue can split off later at
+        low cost. Sidebar selection = <code>#EFEFEF</code>/<code>#2B2B2B</code> grey capsule with accent
+        icon&nbsp;+&nbsp;label; nav lozenge &amp; primary-button radii → 6px. Finding&nbsp;1 keeps the full blue lab as reference; the rest render
         the <em>same</em> markup twice, diverging only on scoped tokens — alignment is a token change, not a
         rewrite. Full write-up in
         <a href="../design-native-colour-alignment.md">design-native-colour-alignment.md</a>.
@@ -361,16 +366,15 @@ main { max-width: 72rem; margin: 0 auto; }
         </div>
         <div class="blue-lab" id="blue-lab"></div>
         <p class="discussion" style="margin-top:0.9rem; max-width:60rem;">
-            <strong>Decided — <code>#0068D6</code> / <code>#0A84FF</code>, single token (KISS).</strong>
-            It's hue-matched to the OS blue (211 vs today's indigo 221), clears 4.5:1 in both modes, and
-            actually beats today's blue on contrast while reading more native — so one value serves buttons,
-            links, focus, selection text and tab underline, on both CLI-web and the embedded Swift shell
-            (no fork). The two-token chrome/link split (true system <code>#007AFF</code> for chrome + a
-            webbier link blue) is <em>deferred</em>: its only real trigger is shipping dynamic
-            system-accent, at which point links must pin to a fixed safe blue. Apple web <code>#0071E3</code>
-            is kept here as the runner-up. Note the one accepted trade: KISS buttons sit a hair darker than
-            a native <code>#007AFF</code> sheet button beside them — same hue, marginal lightness, judged
-            worth it against the cost of a second token.
+            <strong>Decided — <code>#007AFF</code> / <code>#0A84FF</code>: copy Apple's system blue
+            verbatim, single token.</strong> The north star is an invisible seam — a webview button beside
+            an AppKit sheet button must read as the <em>same control</em> — and at this pixel scale the eye
+            clocks even a hue-matched near-miss (<code>#0068D6</code>) as "not the OS blue". Apple is already
+            telling us the right blue; we take it. The wrinkle — a user who sets an exotic system accent — is
+            on them; a default modern-OS Mac shouldn't be able to tell CSS from AppKit. Link text on white
+            lands at 4.02:1 (Apple's own tradeoff — colour isn't the sole affordance); if it bites, splitting
+            a webbier link blue (e.g. <code>#0071E3</code>) is cheap given the tokens. Dynamic system-accent
+            (match whatever accent the user actually picked) is the fuller finish, deferred.
         </p>
     </section>
 
@@ -414,7 +418,7 @@ main { max-width: 72rem; margin: 0 auto; }
                     <div class="demo-nav-row active"><span class="dot"></span> Trust &amp; privacy</div>
                     <div class="demo-nav-row"><span class="dot"></span> Pricing confusion</div>
                 </div>
-                <p class="panel-note">Capsule = <code>NSColor.unemphasizedSelectedContentBackgroundColor</code>. No canonical Apple hex (dynamic, and a vibrant material — so sampled values are composites); sampled <code>#EFEFEF</code> light / <code>#2B2B2B</code> dark (bn.app's own sidebar). Accent on it clears the 3:1 UI bar both modes (light <code>#0068D6</code> = 4.6:1; dark <code>#0A84FF</code> = 3.9:1). Truly canonical route = bridge the live NSColor from Swift. Radius here is the Finding-3 6px.</p>
+                <p class="panel-note">Capsule = <code>NSColor.unemphasizedSelectedContentBackgroundColor</code>. No canonical Apple hex (dynamic, and a vibrant material — so sampled values are composites); sampled <code>#EFEFEF</code> light / <code>#2B2B2B</code> dark (bn.app's own sidebar). Accent on it clears the 3:1 UI bar both modes (light <code>#007AFF</code> = 3.5:1; dark <code>#0A84FF</code> = 3.9:1). Truly canonical route = bridge the live NSColor from Swift. Radius here is the Finding-3 6px.</p>
             </div>
         </div>
     </section>
@@ -517,10 +521,10 @@ main { max-width: 72rem; margin: 0 auto; }
 <script>
 // ── Blue lab — data-driven columns, live-computed WCAG contrast ──
 const BLUES = [
-    { name: "Current",           sub: "ships today · Tailwind",  light: "#2563EB", dark: "#60A5FA" },
-    { name: "Apple system blue", sub: "macOS systemBlue (OS)",   light: "#007AFF", dark: "#0A84FF" },
-    { name: "Apple web blue",    sub: "apple.com",               light: "#0071E3", dark: "#0A84FF" },
-    { name: "Chosen",            sub: "decided · single accent",  light: "#0068D6", dark: "#0A84FF", rec: true },
+    { name: "Current",           sub: "was · Tailwind indigo",       light: "#2563EB", dark: "#60A5FA" },
+    { name: "Apple system blue", sub: "CHOSEN · copy the OS",        light: "#007AFF", dark: "#0A84FF", rec: true },
+    { name: "Apple web blue",    sub: "runner-up · if links split",  light: "#0071E3", dark: "#0A84FF" },
+    { name: "#0068D6 (KISS)",    sub: "rejected · reads too far",    light: "#0068D6", dark: "#0A84FF" },
 ];
 
 function lin(c) { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }

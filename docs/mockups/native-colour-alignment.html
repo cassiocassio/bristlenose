@@ -91,7 +91,7 @@
        blue, clears 4.5:1 everywhere). One token drives buttons, links, focus,
        selection text + tab underline. One shared palette, no web/desktop fork. */
     --demo-accent:        light-dark(#0068D6, #0A84FF);  /* single accent — decided */
-    --demo-nav-sel-bg:    light-dark(#efefef, #464646);  /* native unemphasized grey capsule — #EFEFEF sampled (light); dark still to sample */
+    --demo-nav-sel-bg:    light-dark(#efefef, #2b2b2b);  /* NSColor unemphasizedSelectedContentBackgroundColor — sampled: #EFEFEF light, #2B2B2B dark (bn.app's own sidebar). No canonical Apple hex; re-sample at OS bumps or bridge the live NSColor. */
     --demo-nav-sel-fg:    light-dark(#0068D6, #0A84FF);   /* selection icon + label use the one accent */
     --demo-nav-sel-radius: 6px;                          /* native pill vocabulary */
     --demo-btn-radius:    6px;
@@ -414,7 +414,7 @@ main { max-width: 72rem; margin: 0 auto; }
                     <div class="demo-nav-row active"><span class="dot"></span> Trust &amp; privacy</div>
                     <div class="demo-nav-row"><span class="dot"></span> Pricing confusion</div>
                 </div>
-                <p class="panel-note">Grey capsule = <code>#EFEFEF</code>, sampled from macOS (light; dark still to sample). System blue on it is ≈3.5:1 — clears the 3:1 UI-component bar, so the lighter sampled grey resolves the earlier sub-3 worry; the KISS <code>#0068D6</code> accent gets 4.6:1. Radius here is the Finding-3 6px.</p>
+                <p class="panel-note">Capsule = <code>NSColor.unemphasizedSelectedContentBackgroundColor</code>. No canonical Apple hex (dynamic, and a vibrant material — so sampled values are composites); sampled <code>#EFEFEF</code> light / <code>#2B2B2B</code> dark (bn.app's own sidebar). Accent on it clears the 3:1 UI bar both modes (light <code>#0068D6</code> = 4.6:1; dark <code>#0A84FF</code> = 3.9:1). Truly canonical route = bridge the live NSColor from Swift. Radius here is the Finding-3 6px.</p>
             </div>
         </div>
     </section>

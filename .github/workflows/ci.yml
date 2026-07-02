@@ -139,9 +139,9 @@ jobs:
         run: npm ci
 
       - name: Frontend lint
-        # Informational — 84 pre-existing problems (jsx-a11y plugin missing,
-        # react-hooks strict rules). Fix incrementally; don't block CI yet.
-        continue-on-error: true
+        # Blocking gate. Cleared to zero errors on 30 Jun 2026 (jsx-a11y
+        # plugin registered, react-compiler lints triaged). Errors fail CI;
+        # warnings (exhaustive-deps, react-compiler advisories) don't.
         working-directory: frontend
         run: npm run lint
 

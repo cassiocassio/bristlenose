@@ -270,6 +270,8 @@ export function InspectorPanel({ sources, shimmerTrigger }: InspectorPanelProps)
           {t("analysis.heatmap")}
         </span>
 
+        {/* Drag-resize grip; pointer-driven separator, keyboard-resizable via tabIndex/onKeyDown. */}
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
         <span
           className="inspector-handle-grip"
           role="separator"

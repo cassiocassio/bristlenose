@@ -29,8 +29,6 @@ export function JourneyChain({
   activeIndex,
   onIndexClick,
 }: JourneyChainProps) {
-  if (labels.length === 0) return null;
-
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const labelRefs = useRef<Map<number, HTMLElement>>(new Map());
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -78,6 +76,8 @@ export function JourneyChain({
       labelEl.scrollIntoView({ inline: "center", behavior: "smooth", block: "nearest" });
     }
   }, [activeIndex, activeLabel, stickyOverflow, labels]);
+
+  if (labels.length === 0) return null;
 
   // Build container classes
   const containerClasses = [

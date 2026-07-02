@@ -145,7 +145,6 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
     }, POLL_INTERVAL);
 
     return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobs, pollJob]);
 
   // Fire onComplete once per job.
@@ -175,7 +174,15 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
         <div
           className="activity-chip activity-chip-summary"
           data-testid="bn-activity-chip-summary"
+          role="button"
+          tabIndex={0}
           onClick={() => setExpanded(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setExpanded(true);
+            }
+          }}
         >
           <div className="chip-spinner" />
           <span>

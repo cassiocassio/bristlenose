@@ -131,6 +131,8 @@ function SignalEntry({ signal, active, onClick }: SignalEntryProps) {
     : `badge badge-${signal.columnLabel}`;
 
   return (
+    // Link-styled action; keyboard-accessible via role/tabIndex/onKeyDown.
+    // eslint-disable-next-line jsx-a11y/anchor-is-valid
     <a
       className={`signal-entry${active ? " active" : ""}`}
       role="button"

@@ -107,12 +107,16 @@ export function TagRow({
             className="bn-checkbox"
             checked={checked}
             onChange={handleChange}
+            aria-label={name}
           />
         </label>
         <span
           className={badgeClassName}
           style={{ backgroundColor: badgeBg }}
           role={onAssign ? "button" : undefined}
+          // role + tabIndex are conditional; the rule can't statically prove
+          // role="button" makes this interactive.
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
           tabIndex={onAssign && assignActive ? 0 : -1}
           onClick={handleBadgeClick}
           onKeyDown={handleBadgeKeyDown}
@@ -126,6 +130,9 @@ export function TagRow({
         onClick={onSoloClick ? handleBarClick : undefined}
         onKeyDown={onSoloClick ? handleBarKeyDown : undefined}
         role={onSoloClick ? "button" : undefined}
+        // role + tabIndex are conditional; the rule can't statically prove
+        // role="button" makes this interactive.
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
         tabIndex={onSoloClick ? 0 : undefined}
         aria-label={onSoloClick ? `Focus on ${name} quotes` : undefined}
       >

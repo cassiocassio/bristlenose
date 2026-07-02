@@ -175,7 +175,18 @@ export function Badge({
       <span
         className={classes}
         style={style}
+        role={onDelete ? "button" : undefined}
+        // role + tabIndex are conditional; rule can't statically prove
+        // role="button" makes this interactive.
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+        tabIndex={onDelete ? 0 : undefined}
         onClick={onDelete}
+        onKeyDown={onDelete ? (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onDelete();
+          }
+        } : undefined}
         data-testid={testId}
       >
         {displayText}
@@ -185,7 +196,23 @@ export function Badge({
 
   if (variant === "user" || variant === "deletable") {
     return (
-      <span className={classes} style={style} onClick={onClick} data-testid={testId}>
+      <span
+        className={classes}
+        style={style}
+        role={onClick ? "button" : undefined}
+        // role + tabIndex are conditional; rule can't statically prove
+        // role="button" makes this interactive.
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+        tabIndex={onClick ? 0 : undefined}
+        onClick={onClick}
+        onKeyDown={onClick ? (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+          }
+        } : undefined}
+        data-testid={testId}
+      >
         {text}
         {onDelete && (
           <button
@@ -202,7 +229,23 @@ export function Badge({
 
   // readonly
   return (
-    <span className={classes} style={style} onClick={onClick} data-testid={testId}>
+    <span
+      className={classes}
+      style={style}
+      role={onClick ? "button" : undefined}
+      // role + tabIndex are conditional; rule can't statically prove
+      // role="button" makes this interactive.
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      } : undefined}
+      data-testid={testId}
+    >
       {text}
     </span>
   );

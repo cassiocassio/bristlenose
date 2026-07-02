@@ -451,7 +451,18 @@ function CodebookGroupColumn({
           />
         </div>
       ) : (
-        <div className="tag-add-row" onClick={() => setIsAddingTag(true)}>
+        <div
+          className="tag-add-row"
+          role="button"
+          tabIndex={0}
+          onClick={() => setIsAddingTag(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setIsAddingTag(true);
+            }
+          }}
+        >
           <span className="tag-add-badge">{t("codebook.addTag")}</span>
         </div>
       ))}
@@ -1009,7 +1020,15 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
         {/* New group placeholder */}
         <div
           className="codebook-group new-group-placeholder"
+          role="button"
+          tabIndex={0}
           onClick={handleCreateGroup}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleCreateGroup();
+            }
+          }}
           onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
           onDrop={handleDropNewGroup}
         >
@@ -1226,7 +1245,18 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                         <span className="picker-section-title">{t("codebook.yourCodebooksHeader")}</span>
                       </div>
                       <div className="picker-row">
-                        <div className="picker-card picker-card-create" onClick={handleCloseModal}>
+                        <div
+                          className="picker-card picker-card-create"
+                          role="button"
+                          tabIndex={0}
+                          onClick={handleCloseModal}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleCloseModal();
+                            }
+                          }}
+                        >
                           <span className="new-icon">+</span>
                           <span className="new-label">{t("codebook.createNew")}</span>
                         </div>

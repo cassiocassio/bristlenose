@@ -111,8 +111,8 @@ export function useCropEdit({
       if (mode === "idle") return;
 
       let newText: string;
-      let leftCrop = false;
-      let rightCrop = false;
+      let leftCrop: boolean;
+      let rightCrop: boolean;
 
       if (mode === "crop") {
         // In word-span mode — use word boundaries

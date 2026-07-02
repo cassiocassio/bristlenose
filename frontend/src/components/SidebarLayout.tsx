@@ -332,6 +332,8 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
   return (
     <div ref={layoutRef} className={classes.join(" ")} style={style}>
       {/* Column 1: TOC rail (visible when TOC is closed or in overlay mode) */}
+      {/* Rail wrapper forwards clicks to the inner rail button; supplementary overlay trigger. */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div
         ref={tocRailRef}
         className="toc-rail"
@@ -386,6 +388,8 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
           {leftPanel ?? <TocSidebar onOverlayClose={closeTocOverlayAnimated} />}
         </div>
         {(tocMode === "push" || tocMode === "overlay") && (
+          // Drag-resize handle; pointer-driven separator, keyboard-resizable via tabIndex/onKeyDown.
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
           <div
             className={`drag-handle toc-drag-handle${tocEdge.isDragging ? " active" : ""}`}
             role="separator"
@@ -394,6 +398,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
             aria-valuemin={MIN_WIDTH}
             aria-valuemax={MAX_WIDTH}
             aria-label={t("nav.resizeTableOfContents")}
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
             tabIndex={0}
             onPointerDown={tocEdge.handlePointerDown}
             onKeyDown={tocEdge.handleKeyDown}
@@ -434,6 +439,8 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
             </div>
             <TagSidebar />
             {tagsOpen && (
+              // Drag-resize handle; pointer-driven separator, keyboard-resizable via tabIndex/onKeyDown.
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
               <div
                 className={`drag-handle tag-drag-handle${tagEdge.isDragging ? " active" : ""}`}
                 role="separator"
@@ -442,6 +449,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
                 aria-valuemin={MIN_WIDTH}
                 aria-valuemax={MAX_WIDTH}
                 aria-label={t("nav.resizeTagSidebar")}
+                // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
                 tabIndex={0}
                 onPointerDown={tagEdge.handlePointerDown}
                 onKeyDown={tagEdge.handleKeyDown}

@@ -181,6 +181,9 @@ export function CodebookSidebar() {
                 {entry.label}
               </a>
             ) : (
+              // <a href="#"> is a JS action, not navigation; native Enter
+              // activation on the anchor handles keyboard.
+              // eslint-disable-next-line jsx-a11y/anchor-is-valid
               <a
                 key={entry.id}
                 href="#"
@@ -210,6 +213,9 @@ export function CodebookSidebar() {
                 {entry.label}
               </a>
             ) : (
+              // <a href="#"> is a JS action, not navigation; native Enter
+              // activation on the anchor handles keyboard.
+              // eslint-disable-next-line jsx-a11y/anchor-is-valid
               <a
                 key={entry.id}
                 href="#"

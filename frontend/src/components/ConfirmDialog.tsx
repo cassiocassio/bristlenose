@@ -61,6 +61,8 @@ export function ConfirmDialog({
     .join(" ");
 
   return (
+    // Enter-to-confirm convenience; real affordances are the inner <button>s.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       className="confirm-dialog"
       style={cardStyle}

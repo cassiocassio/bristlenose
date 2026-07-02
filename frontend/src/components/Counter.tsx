@@ -71,12 +71,22 @@ export function Counter({
           <div className="bn-hidden-header">
             <span>{t("quotes.unhideHeader")}</span>
             {count > 1 && (
+              // Link-styled action; keyboard-accessible via role/tabIndex/onKeyDown.
+              // eslint-disable-next-line jsx-a11y/anchor-is-valid
               <a
                 href="#"
                 className="bn-unhide-all"
+                role="button"
+                tabIndex={0}
                 onClick={(e) => {
                   e.preventDefault();
                   onUnhideAll();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onUnhideAll();
+                  }
                 }}
                 data-testid={testId ? `${testId}-unhide-all` : undefined}
               >
@@ -92,15 +102,25 @@ export function Counter({
                 data-quote-id={item.domId}
               >
                 {item.hasMedia ? (
+                  // Link-styled seek action; activated via delegated click, keyboard-accessible via role/tabIndex/onKeyDown.
+                  // eslint-disable-next-line jsx-a11y/anchor-is-valid
                   <a
                     className="timecode"
                     href="#"
+                    role="button"
+                    tabIndex={0}
                     data-participant={item.participantId}
                     data-seconds={item.seconds}
                     {...(item.endSeconds !== undefined && {
                       "data-end-seconds": item.endSeconds,
                     })}
                     title={t("quotes.playVideo")}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.currentTarget.click();
+                      }
+                    }}
                   >
                     [{item.timecode}]
                   </a>

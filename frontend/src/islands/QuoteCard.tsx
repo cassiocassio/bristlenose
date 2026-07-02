@@ -477,6 +477,9 @@ export function QuoteCard({
           {/* Contenteditable included text */}
           <span
             className="crop-editable"
+            role="textbox"
+            aria-multiline="false"
+            tabIndex={0}
             contentEditable
             suppressContentEditableWarning
             onKeyDown={handleEditKeyDown}
@@ -536,6 +539,9 @@ export function QuoteCard({
       }
 
       return (
+        // Click-to-edit quote text; card-level keyboard activation lives on
+        // the parent <blockquote> (handleCardKeyDown).
+        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
         <span
           className="quote-text"
           ref={textSpanRef}
@@ -549,6 +555,9 @@ export function QuoteCard({
 
     // Idle mode — plain text with optional ellipsis and search highlighting
     return (
+      // Click-to-edit quote text; card-level keyboard activation lives on
+      // the parent <blockquote> (handleCardKeyDown).
+      // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
       <span
         className="quote-text"
         ref={textSpanRef}
@@ -565,6 +574,9 @@ export function QuoteCard({
   }
 
   return (
+    // Quote card; <blockquote> semantics preserved. Card-level click +
+    // keyboard handlers wire selection, star, hide, tag-add shortcuts.
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <blockquote
       id={domId}
       data-timecode={timecodeStr}
@@ -742,8 +754,16 @@ export function QuoteCard({
             ) : (
               <span
                 className="badge badge-add"
+                role="button"
+                tabIndex={0}
                 aria-label={t("quotes.addTag")}
                 onClick={() => setIsTagInputOpen(true)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setIsTagInputOpen(true);
+                  }
+                }}
                 data-testid={`bn-quote-${domId}-add-tag`}
               >
                 +

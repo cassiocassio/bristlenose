@@ -15,33 +15,6 @@ import {
   SNAP_CLOSE_THRESHOLD,
 } from "./InspectorStore";
 
-// ── Helpers ───────────────────────────────────────────────────────────────
-
-/** Read the store snapshot without React (call getSnapshot via subscribe trick). */
-function readStore() {
-  let snap: ReturnType<typeof useInspectorStore> | undefined;
-  const unsub = (globalThis as Record<string, unknown>).__inspectorSub as
-    | (() => void)
-    | undefined;
-  void unsub;
-
-  // We can't call the hook outside React, but we can trigger a listener.
-  // Instead, just read the exported action side-effects by toggling + reading.
-  // The simplest approach: render a tiny component. But for unit tests of
-  // a plain store, we rely on the fact that each action returns deterministic
-  // state. We test actions by calling them and reading localStorage + calling
-  // resetInspectorStore to get fresh state.
-
-  // Actually — since the module exposes resetInspectorStore which resets
-  // the internal state, and each action persists to localStorage, we can
-  // verify correctness by checking localStorage after actions.
-  // But we also need to verify the React hook returns correct state.
-  // For that we use renderHook.
-
-  return snap;
-}
-void readStore; // suppress unused — we use renderHook below
-
 // ── Setup ─────────────────────────────────────────────────────────────────
 
 beforeEach(() => {

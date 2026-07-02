@@ -76,9 +76,16 @@ export function ViewSwitcher({
             <li
               key={opt.value}
               role="menuitem"
+              tabIndex={0}
               data-view={opt.value}
               className={viewMode === opt.value ? "active" : ""}
               onClick={() => handleSelect(opt.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleSelect(opt.value);
+                }
+              }}
             >
               <span className="menu-icon">{opt.icon}</span> {opt.label}
             </li>

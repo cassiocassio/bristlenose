@@ -502,7 +502,6 @@ export function QuoteGroup({
       }
       index++;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unhideVersion]);
 
   // Cleanup: remove orphaned ghost divs on unmount.

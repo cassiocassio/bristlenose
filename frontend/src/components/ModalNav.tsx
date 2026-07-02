@@ -189,6 +189,8 @@ export function ModalNav({
       ?.label ?? "";
 
   return createPortal(
+    // Modal backdrop; click-outside-to-close. Escape handled by the modal's keydown elsewhere.
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       className={`bn-overlay modal-nav-overlay${open ? " visible" : ""}`}
       onClick={handleOverlayClick}

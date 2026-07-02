@@ -134,10 +134,19 @@ export function AutoCodeToast({
                 : "",
             })}
           </span>
+          {/* Link-styled action; keyboard-accessible via role/tabIndex/onKeyDown. */}
           {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
           <a
             className="toast-link"
+            role="button"
+            tabIndex={0}
             onClick={onOpenReport}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onOpenReport();
+              }
+            }}
             data-testid="bn-autocode-toast-report"
           >
             {t("autocode.toast.report")}

@@ -190,13 +190,26 @@ export function SessionsTable({
   // Pre-pipeline / no-sessions cases are server-failure-page territory,
   // not SPA territory — see docs/private/handoffs/generic-failure-surface.md.
 
+  const copyFolderPath = () => {
+    if (source_folder_uri) navigator.clipboard.writeText(source_folder_uri);
+  };
   const interviewsHeader = source_folder_uri ? (
+    // Link-styled action; keyboard-accessible via role/tabIndex/onKeyDown.
+    // eslint-disable-next-line jsx-a11y/anchor-is-valid
     <a
       className="bn-interviews-link"
       href="#"
+      role="button"
+      tabIndex={0}
       onClick={(e: React.MouseEvent) => {
         e.preventDefault();
-        navigator.clipboard.writeText(source_folder_uri);
+        copyFolderPath();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          copyFolderPath();
+        }
       }}
       title={t("sessions.copyFolderPath")}
     >

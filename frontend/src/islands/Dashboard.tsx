@@ -396,7 +396,15 @@ function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
       className="bn-featured-quote"
       data-quote-id={quote.dom_id}
       data-rank={quote.rank}
+      role="button"
+      tabIndex={0}
       onClick={handleCardClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleCardClick(e as unknown as React.MouseEvent);
+        }
+      }}
     >
       {quote.researcher_context && (
         <span className="context">[{quote.researcher_context}]</span>

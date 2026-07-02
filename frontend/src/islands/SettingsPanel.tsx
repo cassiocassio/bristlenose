@@ -730,9 +730,19 @@ function ConfigReference() {
                 {s.file}
               </span>
               <span className="bn-config-ref-meta">
+                {/* <code> preserves the monospace env-var styling; role=button + keyboard handler make it operable. */}
                 <code
                   className={`bn-config-ref-envvar${copied === s.envVar ? " copied" : ""}`}
+                  // eslint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role
+                  role="button"
+                  tabIndex={0}
                   onClick={() => handleCopy(s.envVar)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleCopy(s.envVar);
+                    }
+                  }}
                   title={t("configReference.clickToCopy")}
                 >
                   {s.envVar}

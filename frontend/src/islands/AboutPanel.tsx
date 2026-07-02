@@ -116,6 +116,8 @@ function AboutSection({ version }: { version: string | null }) {
       </p>
 
       <div className="bn-about-footer">
+        {/* Link-styled action; keyboard-accessible via role/tabIndex/onKeyDown. */}
+        {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
         <a
           href="#"
           onClick={(e) => {

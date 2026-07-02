@@ -83,6 +83,8 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
   if (isExportMode()) return null;
 
   return createPortal(
+    // Backdrop click-outside-to-close; Escape handled by the document keydown listener above.
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       className={`bn-overlay${open ? " visible" : ""}`}
       onClick={handleOverlayClick}

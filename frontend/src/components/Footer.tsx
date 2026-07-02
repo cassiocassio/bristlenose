@@ -65,6 +65,8 @@ export function Footer({ health, onOpenFeedback, onToggleHelp }: FooterProps) {
         {feedbackEnabled && onOpenFeedback && (
           <>
             <span className="footer-link-sep">&middot;</span>
+            {/* Link-styled action; keyboard-accessible via role/tabIndex/onKeyDown. */}
+            {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
             <a
               className="footer-link feedback-trigger"
               role="button"
@@ -80,6 +82,8 @@ export function Footer({ health, onOpenFeedback, onToggleHelp }: FooterProps) {
         )}
       </div>
       {onToggleHelp && (
+        // Link-styled action; keyboard-accessible via role/tabIndex/onKeyDown.
+        // eslint-disable-next-line jsx-a11y/anchor-is-valid
         <a
           className="footer-keyboard-hint"
           role="button"

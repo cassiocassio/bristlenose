@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { TFunction } from "i18next";
 import { _resetPlatformCache } from "./platform";
 
 // Mock i18n module — must be before import of dt/ct
@@ -18,7 +19,7 @@ import { dt, ct } from "./platformTranslation";
 const mockExists = vi.mocked(i18n.exists);
 
 /** Stub TFunction that returns the key as the "translation". */
-const stubT = ((key: string) => `translated:${key}`) as any;
+const stubT = ((key: string) => `translated:${key}`) as unknown as TFunction;
 
 beforeEach(() => {
   _resetPlatformCache();
@@ -40,7 +41,7 @@ describe("dt", () => {
     mockExists.mockReturnValue(true);
 
     const t = vi.fn().mockImplementation((key: string) => `translated:${key}`);
-    const result = dt(t as any, "help.privacy.redactionIntro");
+    const result = dt(t as unknown as TFunction, "help.privacy.redactionIntro");
 
     expect(mockExists).toHaveBeenCalledWith("desktop:help.privacy.redactionIntro");
     expect(result).toBe("translated:desktop:help.privacy.redactionIntro");
@@ -63,7 +64,7 @@ describe("dt", () => {
     mockExists.mockReturnValue(true);
 
     const t = vi.fn().mockImplementation((key: string) => `translated:${key}`);
-    const result = dt(t as any, "configReference.intro");
+    const result = dt(t as unknown as TFunction, "configReference.intro");
 
     expect(mockExists).toHaveBeenCalledWith("desktop:configReference.intro");
     expect(result).toBe("translated:desktop:configReference.intro");

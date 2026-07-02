@@ -230,15 +230,16 @@ function Toolbar({
 
       {mode === "overlay" && (
         <div className="vd-toolbar-group">
-          <label>Jinja2</label>
+          <span>Jinja2</span>
           <input
             type="range"
             min={0}
             max={100}
             value={opacity}
+            aria-label="Overlay opacity (Jinja2 ↔ React)"
             onChange={(e) => onOpacityChange(Number(e.target.value))}
           />
-          <label>React</label>
+          <span>React</span>
         </div>
       )}
 

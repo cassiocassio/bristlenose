@@ -72,11 +72,21 @@ export function AboutSection({ version }: { version: string | null }) {
       </p>
 
       <div className="bn-about-footer">
+        {/* Link-styled action; keyboard-accessible via role/tabIndex/onKeyDown. */}
+        {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
         <a
           href="#"
+          role="button"
+          tabIndex={0}
           onClick={(e) => {
             e.preventDefault();
             document.dispatchEvent(new KeyboardEvent("keydown", { key: "?" }));
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              document.dispatchEvent(new KeyboardEvent("keydown", { key: "?" }));
+            }
           }}
         >
           Keyboard shortcuts

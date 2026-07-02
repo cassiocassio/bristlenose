@@ -345,6 +345,8 @@ export function TagInput({
               ? getTagBg(row.colourSet, row.colourIndex ?? 0)
               : undefined;
             return (
+              // Pointer-select path for an autocomplete suggestion; keyboard selection is handled on the input via handleKeyDown.
+              // eslint-disable-next-line jsx-a11y/no-static-element-interactions
               <div
                 key={`${row.groupName}:${tagName}`}
                 className={`tag-suggest-item${isActive ? " active" : ""}`}

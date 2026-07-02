@@ -364,7 +364,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     return () => {
       window.removeEventListener("message", handleMessage);
-      if (bc) { try { bc.close(); } catch {} }
+      if (bc) { try { bc.close(); } catch { /* already closed */ } }
       clearInterval(pollInterval);
       _hasPlayer = false;
       _playerPlaying = false;

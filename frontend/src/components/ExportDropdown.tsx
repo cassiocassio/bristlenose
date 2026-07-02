@@ -172,6 +172,12 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
                 tabIndex={-1}
                 className="export-dropdown-item"
                 onClick={handleCopyQuotes}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleCopyQuotes();
+                  }
+                }}
               >
                 {t("export.copyQuotesCount", { count: quoteCount })}
               </li>
@@ -184,6 +190,12 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
                 tabIndex={-1}
                 className="export-dropdown-item"
                 onClick={handleSaveSpreadsheet}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleSaveSpreadsheet();
+                  }
+                }}
               >
                 {t("export.saveAsSpreadsheet")}
               </li>
@@ -193,6 +205,12 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
                 tabIndex={-1}
                 className="export-dropdown-item"
                 onClick={handleExtractClips}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleExtractClips();
+                  }
+                }}
               >
                 {t("export.extractClips")}
               </li>
@@ -204,6 +222,12 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
             tabIndex={-1}
             className="export-dropdown-item"
             onClick={handleExportReport}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleExportReport();
+              }
+            }}
           >
             {t("export.exportReport")}
           </li>
@@ -213,6 +237,12 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
             tabIndex={-1}
             className="export-dropdown-item"
             onClick={handleSendToMiro}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleSendToMiro();
+              }
+            }}
           >
             {t("miro.menuLabel")}
           </li>

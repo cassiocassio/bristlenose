@@ -44,6 +44,7 @@ function writeDraft(draft: DraftData): void {
   try {
     localStorage.setItem(FEEDBACK_DRAFT_KEY, JSON.stringify(draft));
   } catch {
+    /* storage unavailable (private mode / quota) — draft is best-effort */
   }
 }
 
@@ -158,6 +159,8 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
   );
 
   return createPortal(
+    // Backdrop click-outside-to-close; Escape handled by the document keydown listener above.
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       className={`bn-overlay feedback-overlay${open ? " visible" : ""}`}
       onClick={handleOverlayClick}

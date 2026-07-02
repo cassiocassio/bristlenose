@@ -217,6 +217,8 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
   if (isExportMode()) return null;
 
   return createPortal(
+    // Modal backdrop; click-outside-to-close. Escape handled by the modal's keydown elsewhere.
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       className={`bn-overlay${open ? " visible" : ""}`}
       onClick={(e) => {

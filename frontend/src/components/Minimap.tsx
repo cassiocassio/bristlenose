@@ -162,6 +162,8 @@ export function Minimap() {
   if (!data) return <div className="minimap-slot" />;
 
   return (
+    // Minimap track; click maps to scroll position. Supplementary nav, content keyboard-scrollable elsewhere.
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div className="minimap-slot" ref={slotRef} onClick={handleClick}>
       <div className="bn-minimap-content" ref={contentRef}>
         {/* Sections group */}

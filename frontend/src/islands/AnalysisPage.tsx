@@ -409,7 +409,15 @@ function SignalCard({
       style={{ "--card-accent": accentVar } as React.CSSProperties}
       data-testid="bn-signal-card"
       ref={cardRef ?? undefined}
+      role="button"
+      tabIndex={0}
       onClick={() => onFocus?.(signal)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onFocus?.(signal);
+        }
+      }}
     >
       <div className="signal-card-top">
         <div className="signal-card-identity">
@@ -687,7 +695,6 @@ function Heatmap({
 }) {
   const { t } = useTranslation();
   const grandTotal = matrix.grand_total;
-  if (grandTotal === 0 || matrix.row_labels.length === 0) return null;
 
   // Tooltip hover state
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
@@ -740,6 +747,8 @@ function Heatmap({
   }, []);
 
   const hoveredSignal = hoveredKey ? signalMap.get(hoveredKey) ?? null : null;
+
+  if (grandTotal === 0 || matrix.row_labels.length === 0) return null;
 
   return (
     <div ref={wrapperRef} style={{ position: "relative" }}>
@@ -1027,7 +1036,6 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
       setFocusedSignalKey(signal.key);
       // Determine which source key this signal belongs to
       let sourceKey: string;
-      let dim: InspectorDimension;
       if (signal.codebookName === "" || signal.codebookName === "Sentiment") {
         sourceKey = "sentiment";
       } else {
@@ -1035,7 +1043,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
         const cb = cbData?.codebooks.find((c) => c.codebook_name === signal.codebookName);
         sourceKey = cb ? `cb-${cb.codebook_id}` : "sentiment";
       }
-      dim = signal.sourceType === "theme" ? "theme" : "section";
+      const dim: InspectorDimension = signal.sourceType === "theme" ? "theme" : "section";
       setInspectorSourceAndDimension(sourceKey, dim);
       setShimmerTrigger((n) => n + 1);
     },

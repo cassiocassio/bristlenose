@@ -394,9 +394,19 @@ function ConfigSection({ categoryId }: { categoryId: string }) {
             {s.file}
           </span>
           <span className="bn-config-ref-meta">
+            {/* Click-to-copy env var; keyboard-accessible via tabIndex/onKeyDown, kept as <code> for styling. */}
+            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
             <code
               className={`bn-config-ref-envvar${copied === s.envVar ? " copied" : ""}`}
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+              tabIndex={0}
               onClick={() => handleCopy(s.envVar)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleCopy(s.envVar);
+                }
+              }}
               title={t("configReference.clickToCopy")}
             >
               {s.envVar}

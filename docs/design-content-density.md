@@ -4,6 +4,19 @@
 research + live-codebase calibration. No code written yet. Pick up from "Decisions" and
 "Open questions" below.
 
+**Update (3 Jul 2026):** Home confirmed — density is a **Settings ▸ General / Appearance**
+preset sitting beside Appearance (light/dark), Colour palette (Default/Edo), and Typography
+(SF Pro/Inter). The §9 note about palette/typography living off-`main` is now **stale**: the
+Edo palette (`PALETTES = ["default", "edo"]`, `data-color-theme`) is on `main` and wired into
+`SettingsModal.tsx`, so density joins an existing Appearance surface. **Open Q1 resolved:**
+density is the macOS size control; `⌘±` / `WKWebView.pageZoom` stays the *browser / off-Mac*
+path — acceptable there, wrong on macOS (it scales the web chrome and mismatches native
+AppKit, which is the whole problem in §1). Ship the density preset first; defer the continuous
+`⌘±` content-zoom axis. The §4 spacing-grid rebase is **bundled into the same piece of work**
+(density's compact/normal/spacious spacing columns presuppose the `--bn-space-*` ladder is
+grid-snapped), tracked as one item in the launch inventory under Quality of Life. Mockups
+already validated the mechanism — treat as scoped, not speculative.
+
 **Scope:** A user-facing **content density** control for the report surface — quotes,
 transcripts, signal cards — that scales the *reading content* independently of the chrome
 (sidebar, toolbar, headings), which stays at system scale. Primarily a macOS-desktop

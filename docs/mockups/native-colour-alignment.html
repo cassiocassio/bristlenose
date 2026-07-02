@@ -90,8 +90,8 @@
     /* macOS-aligned. Sample exact values from the running app with
        Digital Color Meter before shipping — these are close approximations. */
     --demo-accent:        light-dark(#007AFF, #0A84FF);  /* system blue */
-    --demo-nav-sel-bg:    light-dark(#dcdcdc, #464646);  /* unemphasized grey */
-    --demo-nav-sel-fg:    var(--bn-colour-text);
+    --demo-nav-sel-bg:    light-dark(#dcdcdc, #464646);  /* native unemphasized grey capsule (sample w/ Digital Color Meter) */
+    --demo-nav-sel-fg:    light-dark(#007AFF, #0A84FF);   /* icon + label in accent (system blue), as Finder/bn.app do */
     --demo-nav-sel-radius: 6px;                          /* native pill vocabulary */
     --demo-btn-radius:    6px;
     --demo-focus-ring:    light-dark(0 0 0 3.5px rgba(0,122,255,0.28), 0 0 0 3.5px rgba(10,132,255,0.36));
@@ -243,6 +243,10 @@ main { max-width: 72rem; margin: 0 auto; }
     font-weight: var(--bn-weight-emphasis);
 }
 .demo-nav-row .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.5; flex-shrink: 0; }
+.demo-nav-row.active .dot { opacity: 1; }  /* selected icon reads at full accent, like the native SF Symbol */
+.demo-nav-row .count { margin-left: auto; font-size: 0.72rem; color: var(--bn-colour-muted); font-weight: var(--bn-weight-normal); }
+.demo-nav-sublabel { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--bn-colour-muted); margin: 0 0 0.35rem; }
+.demo-nav-sublabel + .demo-nav { margin-bottom: 0.9rem; }
 
 /* Quote card selection (organisms/blockquote.css + atoms/interactive.css .bn-selected) */
 .demo-quote {
@@ -371,32 +375,40 @@ main { max-width: 72rem; margin: 0 auto; }
             <h2>2 · Sidebar navigation selection</h2>
             <p class="discussion">
                 Active nav rows (<code>.toc-link.active</code>, <code>.session-entry.active</code>,
-                <code>.signal-entry.active</code>) use a blue tint; the native sidebar one pane to the left
-                deliberately pins the <strong>unemphasized grey</strong> capsule in every focus state.
-                Repoint the three selectors at a new shared <code>--bn-nav-selection-bg</code> slot — grey
-                everywhere (no fork; grey has no contrast constraint). <strong>Note the boundary:</strong> this is
-                <em>nav</em> selection. <em>Content</em> selection (Finding&nbsp;5) stays blue — macOS content selection is blue.
+                <code>.signal-entry.active</code>) sit on a blue-tinted background today. But both Finder and the
+                <em>real</em> bn.app AppKit project sidebar render the selected row as a <strong>pale grey capsule
+                with the icon and label in accent blue</strong> — the pinned unemphasized source-list look. So the
+                change isn't "go grey", it's: move the <strong>background</strong> from blue-wash to the native pale
+                grey, and keep the <strong>text&nbsp;+&nbsp;icon</strong> in accent (the same system blue as the
+                Finding&nbsp;1 chrome accent). The native project sidebar and the webview's own nav are on screen
+                <strong>in the same window, side by side</strong> — so they must read as one selection language.
+                <strong>Boundary:</strong> this is <em>nav</em> selection; <em>content</em> selection (Finding&nbsp;5)
+                is a different treatment.
             </p>
         </div>
         <div class="compare">
             <div class="panel panel-current">
-                <div class="panel-head">Current · blue tint</div>
+                <div class="panel-head">Current webview · blue text on blue wash</div>
                 <div class="demo-nav">
                     <div class="demo-nav-row"><span class="dot"></span> Onboarding friction</div>
-                    <div class="demo-nav-row active"><span class="dot"></span> Trust &amp; privacy</div>
+                    <div class="demo-nav-row active" style="--demo-nav-sel-bg: var(--bn-selection-bg); --demo-nav-sel-fg: var(--bn-colour-accent);"><span class="dot"></span> Trust &amp; privacy</div>
                     <div class="demo-nav-row"><span class="dot"></span> Pricing confusion</div>
                     <div class="demo-nav-row"><span class="dot"></span> Feature requests</div>
                 </div>
             </div>
             <div class="panel panel-proposed">
-                <div class="panel-head">macOS-aligned · unemphasized grey</div>
+                <div class="panel-head">Native + webview aligned · accent text on pale grey</div>
+                <p class="demo-nav-sublabel">Native project sidebar (Finder / bn.app)</p>
+                <div class="demo-nav">
+                    <div class="demo-nav-row active"><span class="dot"></span> Ikea tom <span class="count">1</span></div>
+                </div>
+                <p class="demo-nav-sublabel">Webview nav — matches</p>
                 <div class="demo-nav">
                     <div class="demo-nav-row"><span class="dot"></span> Onboarding friction</div>
                     <div class="demo-nav-row active"><span class="dot"></span> Trust &amp; privacy</div>
                     <div class="demo-nav-row"><span class="dot"></span> Pricing confusion</div>
-                    <div class="demo-nav-row"><span class="dot"></span> Feature requests</div>
                 </div>
-                <p class="panel-note">Radius here is already the Finding-3 6px, so this row shows both changes together.</p>
+                <p class="panel-note">Grey capsule sampled approximately — verify with Digital Color Meter. Accent-on-grey is ≈2.9:1 (below 3:1), but it's exactly Finder's own choice: the capsule + position carry the selection, the blue is a secondary cue. Same co-presence-beats-the-rule call as the button. Radius here is the Finding-3 6px.</p>
             </div>
         </div>
     </section>

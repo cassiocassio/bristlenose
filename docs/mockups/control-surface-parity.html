@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control-surface parity — appearance · palette · typography</title>
+<style>
+  :root { --bg:#f4f4f5; --panel:#fff; --line:#e0e0e2; --ink:#1f1f22; --muted:#6b6b70; --accent:#3a3a3e;
+          --term-bg:#1e1e22; --term-ink:#e6e6e6; --term-flag:#7cc4ff; --term-val:#b5e88f;
+          --ok:#2e7d32; --prop:#1560a8; --warn:#b45309; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:13px/1.5 -apple-system,"SF Pro Text",system-ui,sans-serif; color:var(--ink); background:var(--bg); }
+  header { position:sticky; top:0; z-index:10; background:var(--panel); border-bottom:1px solid var(--line); padding:12px 20px; }
+  header h1 { margin:0 0 3px; font-size:15px; }
+  header .lede { color:var(--muted); font-size:12px; max-width:900px; }
+  .localebar { display:flex; gap:5px; flex-wrap:wrap; margin-top:10px; align-items:center; }
+  .localebar .lbl { color:var(--muted); font-size:11px; font-weight:600; margin-right:4px; }
+  .localebar button { border:1px solid var(--line); background:var(--panel); border-radius:7px; padding:4px 9px; font:inherit; font-size:12px; cursor:pointer; color:var(--muted); }
+  .localebar button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+  main { padding:20px; max-width:1180px; margin:0 auto; }
+  .axis { background:var(--panel); border:1px solid var(--line); border-radius:12px; margin-bottom:22px; overflow:hidden; }
+  .axis-head { padding:13px 18px; border-bottom:1px solid var(--line); }
+  .axis-head h2 { margin:0 0 2px; font-size:14px; }
+  .axis-head .one { color:var(--muted); font-size:12px; }
+  .axis-head code { background:#ececee; padding:1px 5px; border-radius:4px; font-size:11px; }
+
+  .surfaces { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; padding:16px 18px; }
+  @media (max-width:900px){ .surfaces { grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:560px){ .surfaces { grid-template-columns:1fr; } }
+  .surface { border:1px solid var(--line); border-radius:9px; padding:11px; display:flex; flex-direction:column; gap:8px; min-height:118px; }
+  .surface .cap { font-size:10.5px; letter-spacing:.03em; text-transform:uppercase; color:var(--muted); font-weight:700; display:flex; justify-content:space-between; }
+  .surface .cap .en-only { color:var(--warn); font-weight:600; text-transform:none; letter-spacing:0; }
+  .surface .cap .loc { color:var(--prop); font-weight:600; text-transform:none; letter-spacing:0; }
+
+  /* terminal look for CLI + env */
+  .term { background:var(--term-bg); color:var(--term-ink); border-radius:7px; padding:9px 10px; font:12px/1.5 "SF Mono",ui-monospace,monospace; flex:1; display:flex; align-items:center; overflow-x:auto; }
+  .term .flag { color:var(--term-flag); }
+  .term .val { color:var(--term-val); }
+  .term .dim { color:#8a8a92; }
+
+  /* web SPA select */
+  .spa-field { flex:1; display:flex; flex-direction:column; gap:5px; justify-content:center; }
+  .spa-field label { font-size:12px; font-weight:600; }
+  .spa-select { position:relative; border:1px solid #c7c7cc; border-radius:6px; padding:6px 26px 6px 9px; background:#fff; font-size:13px; }
+  .spa-select::after { content:"⌄"; position:absolute; right:9px; top:4px; color:var(--muted); }
+
+  /* macOS popup button */
+  .mac-field { flex:1; display:flex; flex-direction:column; gap:5px; justify-content:center; }
+  .mac-field label { font-size:12px; font-weight:600; }
+  .mac-popup { position:relative; border:1px solid #b9b9be; border-radius:6px; padding:5px 30px 5px 10px; font-size:13px;
+    background:linear-gradient(#ffffff,#f3f3f5); box-shadow:0 1px 1px rgba(0,0,0,.05); }
+  .mac-popup .chev { position:absolute; right:4px; top:2px; bottom:2px; width:20px; border-radius:4px;
+    background:linear-gradient(#3a6fd8,#2b5fce); color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; }
+
+  /* per-locale reference strip */
+  .ref { padding:0 18px 16px; }
+  .ref summary { cursor:pointer; color:var(--muted); font-size:12px; font-weight:600; padding:6px 0; }
+  table.loc { width:100%; border-collapse:collapse; font-size:12px; margin-top:4px; }
+  table.loc th, table.loc td { text-align:left; padding:5px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.loc th { color:var(--muted); font-size:11px; font-weight:600; }
+  table.loc .code { color:var(--muted); font:11px "SF Mono",ui-monospace,monospace; }
+  table.loc .label { font-weight:600; }
+  table.loc .opts { color:#333; }
+  table.loc .clash { color:var(--warn); }
+  table.loc tr.cjk td { background:#fff8ec; }
+  .warnpill { display:inline-block; font-size:10px; color:var(--warn); border:1px solid #e7c98f; background:#fff6e6; border-radius:4px; padding:0 5px; margin-left:4px; }
+
+  .callout { background:#fff8ec; border:1px solid #eddcb4; border-radius:10px; padding:14px 16px; margin:22px 0; }
+  .callout h3 { margin:0 0 6px; font-size:13px; color:var(--warn); }
+  .callout p { margin:0 0 8px; font-size:12.5px; }
+  .callout .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; }
+  .callout .cjk-chip { border:1px solid #e7c98f; background:#fff; border-radius:7px; padding:7px 10px; font-size:12px; }
+  .callout .cjk-chip b { color:var(--warn); }
+
+  .key { display:flex; gap:16px; flex-wrap:wrap; font-size:11.5px; color:var(--muted); margin:6px 0 18px; }
+  .key span::before { content:"●"; margin-right:5px; }
+  .key .k-ok::before { color:var(--ok); }
+  .key .k-prop::before { color:var(--prop); }
+  .key .k-ind::before { color:var(--muted); }
+  footer { color:var(--muted); font-size:11.5px; line-height:1.7; padding:0 20px 40px; max-width:1180px; margin:0 auto; }
+  footer code { background:#ececee; padding:1px 4px; border-radius:3px; }
+  .tag { font-size:10px; border-radius:4px; padding:1px 5px; margin-left:6px; }
+  .tag.ok { background:#e6f4ea; color:var(--ok); }
+  .tag.prop { background:#e7f0fb; color:var(--prop); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Control-surface parity — the three display axes</h1>
+  <div class="lede">One user-facing word per axis, identical across CLI · env · SPA · Mac app. <b>"theme" is banished from every user surface</b> (it means <i>research findings</i> — the Themes tab); internal <code>data-color-theme</code>/<code>color_scheme</code> stay as-is. CLI &amp; env are English-only; the SPA &amp; Mac columns re-render in the locale you pick.</div>
+  <div class="localebar" id="localebar"><span class="lbl">Locale</span></div>
+</header>
+
+<main id="axes"></main>
+
+<div class="callout" style="max-width:1180px;margin:0 auto 22px;">
+  <h3>⚠ Why "palette" and never "theme" — the CJK collision</h3>
+  <p>In Latin-script locales, <b>appearance / palette / theme</b> are three unrelated everyday words, so there's no clash. But in Japanese, Korean, and (proposed) Traditional Chinese, the software word for a colour "theme" is <b>the same loanword already shipped for research findings</b> — so a "colour theme" picker would read identically to the <i>Themes</i> report tab. The escape is the "palette" word:</p>
+  <div class="row">
+    <div class="cjk-chip"><b>ja</b> — research テーマ &nbsp;=&nbsp; software "theme" テーマ &nbsp;→&nbsp; palette must be <b>カラーパレット</b> (or 配色)</div>
+    <div class="cjk-chip"><b>ko</b> — research 테마 &nbsp;=&nbsp; software "theme" 테마 &nbsp;→&nbsp; palette must be <b>색상 팔레트</b></div>
+    <div class="cjk-chip"><b>zh-Hant</b> — research 主題 &nbsp;=&nbsp; software "theme" 主題 &nbsp;→&nbsp; palette must be <b>調色盤</b> (or 配色). Never 主題 / 佈景主題.</div>
+  </div>
+</div>
+
+<div class="key" style="max-width:1180px;margin:0 auto;padding:0 20px;">
+  <span class="k-ok">Legend verified in the shipped locale files</span>
+  <span class="k-prop">Proposed by i18n review (new "palette" keys + Default/Edo)</span>
+  <span class="k-ind">Indicative option values — gate CJK on native reviewers</span>
+</div>
+
+<footer>
+  <p><b>Current → proposed env/CLI (migration).</b> Today only env vars exist, and they fight the UI: <code>BRISTLENOSE_COLOR_SCHEME</code> (light/dark) vs <code>BRISTLENOSE_COLOR_THEME</code> (palette) are near-homophones for different axes, and "theme" is the banished word. Proposal renames the <i>user-typed</i> surfaces to <code>--appearance</code>/<code>BRISTLENOSE_APPEARANCE</code>, <code>--palette</code>/<code>BRISTLENOSE_PALETTE</code>, <code>--typography</code>/<code>BRISTLENOSE_TYPOGRAPHY</code>; keep old env names as deprecated aliases for the desktop Swift sidecar (<code>grep desktop/</code> before renaming). No <code>--color-theme</code> CLI flag exists today.</p>
+  <p><b>"Edo" &amp; "Default".</b> "Edo" is a proper noun → keep as a name: Latin "Edo" in en/es/fr/de/cs/pt; native script for CJK (ja/zh-Hant <b>江戸</b>, ko <b>에도</b>) — a light branding call, flag for native reviewers. "Default" is ordinary chrome → translate via each platform's Apple term (es Predeterminada, pt-PT Predefinida, ko 기본값, zh-Hant 預設).</p>
+  <p><b>Appearance is already Apple-aligned</b> in every shipped locale (Erscheinungsbild / 外観 / 외관 / Vzhled / Apparence …) — leave axis 1 untouched. zh-Hant would use macOS <b>外觀</b>. Locales: 9 shipping (en, es, fr, de, ko, ja, cs, pt-BR, pt-PT) + zh-Hant to come. When adding keys, use targeted text-replace with per-value <code>ensure_ascii=True</code> — don't round-trip CJK JSON through <code>json.dump</code>.</p>
+</footer>
+
+<script>
+const LOCALES = [
+  ["en","English"],["es","Español"],["fr","Français"],["de","Deutsch"],["ko","한국어"],
+  ["ja","日本語"],["cs","Čeština"],["pt-BR","Português BR"],["pt-PT","Português PT"],
+  ["zh-Hant","繁體中文 ⚠"],
+];
+const CJK = new Set(["ko","ja","zh-Hant"]);
+
+// label = the pulldown legend; opts = the option values; theme = the research-"themes" word (collision ref)
+const D = {
+  appearance: {
+    en:      {label:"Application appearance",      opts:["Auto","Light","Dark"]},
+    es:      {label:"Apariencia de la aplicación", opts:["Automático","Claro","Oscuro"]},
+    fr:      {label:"Apparence de l'application",  opts:["Automatique","Clair","Sombre"]},
+    de:      {label:"Erscheinungsbild",            opts:["Automatisch","Hell","Dunkel"]},
+    ko:      {label:"앱 외관",                       opts:["자동","라이트","다크"]},
+    ja:      {label:"アプリケーションの外観",          opts:["自動","ライト","ダーク"]},
+    cs:      {label:"Vzhled aplikace",             opts:["Automaticky","Světlý","Tmavý"]},
+    "pt-BR": {label:"Aparência do aplicativo",     opts:["Automático","Claro","Escuro"]},
+    "pt-PT": {label:"Aspeto da aplicação",         opts:["Automático","Claro","Escuro"]},
+    "zh-Hant":{label:"外觀",                        opts:["自動","淺色","深色"]},
+  },
+  palette: {
+    en:      {label:"Colour palette",     opts:["Default","Edo"]},
+    es:      {label:"Paleta de colores",  opts:["Predeterminada","Edo"]},
+    fr:      {label:"Palette de couleurs",opts:["Par défaut","Edo"]},
+    de:      {label:"Farbpalette",        opts:["Standard","Edo"]},
+    ko:      {label:"색상 팔레트",          opts:["기본값","에도"]},
+    ja:      {label:"カラーパレット",        opts:["デフォルト","江戸"]},
+    cs:      {label:"Barevná paleta",     opts:["Výchozí","Edo"]},
+    "pt-BR": {label:"Paleta de cores",    opts:["Padrão","Edo"]},
+    "pt-PT": {label:"Paleta de cores",    opts:["Predefinida","Edo"]},
+    "zh-Hant":{label:"調色盤",             opts:["預設","江戸"]},
+  },
+  typography: {
+    en:      {label:"Typography",   opts:["System (SF Pro)","Inter"]},
+    es:      {label:"Tipografía",   opts:["Sistema (SF Pro)","Inter"]},
+    fr:      {label:"Typographie",  opts:["Système (SF Pro)","Inter"]},
+    de:      {label:"Typografie",   opts:["System (SF Pro)","Inter"]},
+    ko:      {label:"타이포그래피",    opts:["시스템 (SF Pro)","Inter"]},
+    ja:      {label:"タイポグラフィ",  opts:["システム (SF Pro)","Inter"]},
+    cs:      {label:"Typografie",   opts:["Systém (SF Pro)","Inter"]},
+    "pt-BR": {label:"Tipografia",   opts:["Sistema (SF Pro)","Inter"]},
+    "pt-PT": {label:"Tipografia",   opts:["Sistema (SF Pro)","Inter"]},
+    "zh-Hant":{label:"字體",         opts:["系統 (SF Pro)","Inter"]},
+  },
+};
+const THEME_WORD = { en:"Themes", es:"Temas", fr:"Thèmes", de:"Themen", ko:"테마", ja:"テーマ",
+  cs:"Témata", "pt-BR":"Temas", "pt-PT":"Temas", "zh-Hant":"主題" };
+
+const AXES = [
+  { key:"appearance", title:"1 · Appearance (light / dark)",
+    word:"appearance", cli:"--appearance", env:"BRISTLENOSE_APPEARANCE", cliVal:"dark",
+    legendVerified:true },
+  { key:"palette", title:"2 · Colour palette (Default / Edo)",
+    word:"palette", cli:"--palette", env:"BRISTLENOSE_PALETTE", cliVal:"edo",
+    legendVerified:false },
+  { key:"typography", title:"3 · Typography (SF Pro / Inter)",
+    word:"typography", cli:"--typography", env:"BRISTLENOSE_TYPOGRAPHY", cliVal:"inter",
+    legendVerified:true },
+];
+
+let locale = "en";
+
+function surfacesHTML(ax){
+  const d = D[ax.key][locale];
+  const label = d.label, val = d.opts[d.opts.length-1]; // show the non-default (Edo/Dark/Inter) selected
+  return `
+  <div class="surfaces">
+    <div class="surface">
+      <div class="cap">CLI flag <span class="en-only">English only</span></div>
+      <div class="term"><span class="cmd">bristlenose serve <span class="flag">${ax.cli}</span> <span class="val">${ax.cliVal}</span></span></div>
+    </div>
+    <div class="surface">
+      <div class="cap">Env var <span class="en-only">English only</span></div>
+      <div class="term"><span class="cmd"><span class="flag">${ax.env}</span><span class="dim">=</span><span class="val">${ax.cliVal}</span></span></div>
+    </div>
+    <div class="surface">
+      <div class="cap">CLI-driven SPA <span class="loc">${locale}</span></div>
+      <div class="spa-field"><label>${label}</label><div class="spa-select">${val}</div></div>
+    </div>
+    <div class="surface">
+      <div class="cap">Mac .app <span class="loc">${locale}</span></div>
+      <div class="mac-field"><label>${label}</label><div class="mac-popup">${val}<span class="chev">⌄</span></div></div>
+    </div>
+  </div>`;
+}
+
+function refHTML(ax){
+  const showTheme = ax.key === "palette";
+  const rows = LOCALES.map(([lc,name]) => {
+    const d = D[ax.key][lc];
+    const cjk = CJK.has(lc);
+    const themeCell = showTheme ? `<td class="clash">${THEME_WORD[lc]}${cjk?'<span class="warnpill">= software "theme"</span>':''}</td>` : "";
+    return `<tr class="${cjk?'cjk':''}">
+      <td class="code">${lc}</td>
+      <td>${name}</td>
+      <td class="label">${d.label}${lc==="zh-Hant"?'<span class="warnpill">proposed</span>':''}</td>
+      <td class="opts">${d.opts.join(" · ")}</td>
+      ${themeCell}
+    </tr>`;
+  }).join("");
+  const themeHead = showTheme ? `<th>research "Themes" — must differ ⚠</th>` : "";
+  return `<details class="ref" open>
+    <summary>All ${LOCALES.length} locales — ${ax.word} label &amp; options</summary>
+    <table class="loc"><thead><tr><th>code</th><th>locale</th><th>Pulldown label</th><th>Options</th>${themeHead}</tr></thead>
+    <tbody>${rows}</tbody></table>
+  </details>`;
+}
+
+function render(){
+  document.getElementById("axes").innerHTML = AXES.map(ax => `
+    <section class="axis">
+      <div class="axis-head">
+        <h2>${ax.title}<span class="tag ${ax.legendVerified?'ok':'prop'}">${ax.legendVerified?'label verified in locales':'label proposed'}</span></h2>
+        <div class="one">One word — <code>${ax.cli} ${ax.cliVal}</code> · <code>${ax.env}=${ax.cliVal}</code> · pulldown "${D[ax.key].en.label}"</div>
+      </div>
+      ${surfacesHTML(ax)}
+      ${refHTML(ax)}
+    </section>`).join("");
+}
+
+const bar = document.getElementById("localebar");
+LOCALES.forEach(([lc,name]) => {
+  const b = document.createElement("button");
+  b.textContent = lc; b.title = name; if(lc==="en") b.classList.add("on");
+  b.addEventListener("click", () => { locale = lc; [...bar.querySelectorAll("button")].forEach(x=>x.classList.toggle("on", x===b)); render(); });
+  bar.appendChild(b);
+});
+render();
+</script>
+</body>
+</html>

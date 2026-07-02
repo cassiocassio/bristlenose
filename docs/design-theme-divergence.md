@@ -232,9 +232,21 @@ Each palette file defines all `--bn-colour-*` tokens under a scoped selector:
 ### Phase E: Edo color theme + theme picker
 1. Create `_contract.css` documenting all required color tokens
 2. Write `test_color_contract.py` — validates every palette defines all tokens
-3. Map the Edo palette to tokens — **already designed** in `docs/mockups/edo-colour-palette.html` (15 sampled colors from 3 Edo-period artworks, British Museum visit 1 Mar 2026). Token mapping table is in the mockup. Key decision: accent = Prussian Blue (`#1E3A5F`) or Verdigris (`#7BA8A0`). Dark mode variants need deriving from the same source hues
+3. Map the Edo palette to tokens — **already designed** in `docs/mockups/edo-colour-palette.html` (15 sampled colors from 3 Edo-period artworks, British Museum visit 1 Mar 2026; now also carries the Prussian-blue pigment-provenance narrative). Token mapping table is in the mockup.
+   - **Interactive tool:** `docs/mockups/edo-theme-studio.html` — self-contained tabbed app (Theme Picker with live preview + Copy-CSS export; Accent & Paper Lab; About tab documenting current decisions). Use it to dial values and paste into `palette-edo.css`.
+   - **Current decisions (Jul 2026) — committed to `palette-edo.css` (v1):** accent = **Vivid Prussian `#0f5c9e`** light / `#4d9fe0` dark — the pigment's brilliant *undertone*, not the dull masstone `#1E3A5F` sampled off aged prints (too low-chroma for links/icons/selection). Background = **Paper White `#fdfbf7`** (bright near-white). Body ink = passport navy `#1b2230` light / `#e8e3d6` dark. Accent-derived tokens (selection-border, suggestion, glow/focus/minimap rgba) track the new accent. **Alternatives** kept for future edo2/edo3 (warmer washi papers, masstone/midpoint/electric accents, verdigris dark accent) are recorded in the `palette-edo.css` header note and explorable in `edo-theme-studio.html`. **Known follow-up:** warm surfaces (quote-bg, hover, badge) now read warmer against the brighter paper — surface-harmony pass deferred. Full rationale + takeover scope in the gitignored Edo theme handoff note (see the handoffs directory)
 4. Create `palette-edo.css`
-5. Add `--color-theme` CLI flag and `BRISTLENOSE_COLOR_THEME` env var
+5. **Control-surface naming — APPROVED (Jul 2026).** One user-facing word per axis, identical across CLI flag, env var, and the SPA/Mac pulldown label; "theme" banished from every user surface (internal `data-color-theme`/`color_scheme` untouched). Canonical terms — glossary §Display settings; cross-surface × cross-locale mockup `docs/mockups/control-surface-parity.html`.
+
+   | Axis | Public label | CLI flag | Env var | Values |
+   |---|---|---|---|---|
+   | Appearance (light/dark) | Application appearance | `--appearance` | `BRISTLENOSE_APPEARANCE` | auto / light / dark |
+   | Colour palette | Colour palette | `--palette` | `BRISTLENOSE_PALETTE` | default / edo |
+   | Typography | Typography | `--typography` | `BRISTLENOSE_TYPOGRAPHY` | system / inter |
+
+   - **No CLI flags exist yet** — this is greenfield; name them right the first time (do NOT ship `--color-theme`). Env vars today are `BRISTLENOSE_COLOR_SCHEME` (appearance) + `BRISTLENOSE_COLOR_THEME` (palette) — near-homophones; rename to the above and keep the old names as deprecated aliases (desktop Swift sidecar sets them — `grep desktop/` first).
+   - **i18n:** palette label uses the "palette" loanword per locale (カラーパレット / 색상 팔레트 / 調色盤 …) — never テーマ / 테마 / 主題 (collides with the research Themes tab in ja/ko/zh-Hant). Appearance reuses the OS term per locale. "Edo" is a proper noun; "Default" via each platform's Apple term. `palette.{legend,default,edo,description}` keys live under their own `palette.*` group (not nested in `appearance.*`), added across all 12 shipping locales (en, es, fr, de, ko, ja, cs, it, pt-BR, pt-PT, zh-Hant, zh-Hant-HK). Gate the CJK + de/it/cs strings on native reviewers.
+   - UI persistence mirrors the light/dark control: **localStorage + boot-apply** (`frontend/index.html` pre-React script + `frontend/src/utils/bootPalette.ts`), no `config.py` field, no server round-trip. The picker lives in `SettingsModal.tsx` (the live SPA modal), radios Default/Edo.
 6. Generate SwiftUI color export via `scripts/export-palette-swiftui.py`
 7. Apply Edo to desktop by default, test both themes
 8. (Future) Add theme picker to Settings modal

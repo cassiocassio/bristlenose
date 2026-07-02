@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
+**Updated:** 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
 
 ---
 
@@ -38,10 +38,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
-| `bristlenose_branch gemini-provider/` | `gemini-provider` | feature | Finish Gemini (Google) provider: sandboxed-app QA, dead-model fix (`gemini-2.0-flash`→`gemini-2.5-flash`), uniform per-provider "Data use" links (fairness, not a Gemini callout) |
-
-> ℹ️ **`gemini-provider` rebase note** (was a `beat3-provider-activation` coordination block; beat3 merged to main 4 Jun 2026)
-> `beat3-provider-activation` owned the locale churn and merged first, as planned. `gemini-provider` now rebases onto **main** (which already carries beat3's locale + `LLMProvider.swift` changes) and adds its one "Data use" key + the `gemini-2.0-flash`→`gemini-2.5-flash` enum fix. The overlap on `LLMProvider.swift` (different regions) and the 6 `common.json` locale files (different keys) is mechanical. Full analysis is in the gemini-provider branch handoff (`HANDOFF.md` in that worktree) § Merge sequencing.
 
 
 
@@ -145,6 +141,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `chunked-quote-extraction` _(merged)_ | `bristlenose_branch chunked-quote-extraction/` _(detached, on disk)_ | local only — merged to main 9 Jun 2026 (`927fa63`) |
 | `background-runs-view-switch` _(merged)_ | `bristlenose_branch background-runs-view-switch/` _(detached, on disk)_ | local only — merged to main 16 Jun 2026 (`bf03d55`) |
 | `determinate-progress` _(merged)_ | `bristlenose_branch determinate-progress/` _(detached, on disk)_ | local only — merged to main 17 Jun 2026 (`a1fa49a`) |
+| `gemini-provider` _(closed)_ | _removed 2 Jul 2026_ | `origin/gemini-provider` still on remote (local + worktree deleted; unique commit `3413e1c` was content-duplicate of main's `c73259b8`; branch was 17 days stale so a real merge would have regressed retired-Claude bumps + `.outOfCredit` provider status. Residual "Data use" links deliverable captured in the private planning notes as post-TF) |
 
 
 
@@ -261,6 +258,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `gemini-provider` — closed 2 Jul 2026
+
+Feature — intended to finish the Gemini (Google) provider (sandboxed-app QA + dead-model default fix + uniform per-provider "Data use" links). Ran aground on staleness. Only unique commit was `3413e1c` (5 Jun) flipping `LLMProvider.swift` default from the retired `gemini-2.0-flash` → `gemini-2.5-flash`. Same fix landed on main independently as `c73259b8` (same content, same message word-for-word) — surfaced 2 Jul during a `/close-branch` cherry-pick that reported "the previous cherry-pick is now empty." Meanwhile main moved on ~17 days: `f159feca` bumped retired Claude Sonnet 4/Opus 4 → 4.6 / 4.8, and a new `.outOfCredit` HTTP-402 provider status was added — both of which a naive merge of this branch would have regressed. Closed as fully superseded. Residual "Data use" link deliverable captured in the private planning notes as post-TF beta-polish (no user-facing bug — the per-provider row already carries homepage + pricing + console; "Data use" would round out the privacy-diligence path). Worktree removed, local branch force-deleted (unmerged from git's POV, content-superseded in reality); `origin/gemini-provider` still on remote pending explicit push-delete.
 
 ### `zh-hant-pair` — merged 30 Jun 2026
 

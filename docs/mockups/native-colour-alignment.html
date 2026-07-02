@@ -90,7 +90,7 @@
     /* macOS-aligned. Sample exact values from the running app with
        Digital Color Meter before shipping — these are close approximations. */
     --demo-accent:        light-dark(#007AFF, #0A84FF);  /* system blue */
-    --demo-nav-sel-bg:    light-dark(#dcdcdc, #464646);  /* native unemphasized grey capsule (sample w/ Digital Color Meter) */
+    --demo-nav-sel-bg:    light-dark(#efefef, #464646);  /* native unemphasized grey capsule — #EFEFEF sampled (light); dark still to sample */
     --demo-nav-sel-fg:    light-dark(#007AFF, #0A84FF);   /* icon + label in accent (system blue), as Finder/bn.app do */
     --demo-nav-sel-radius: 6px;                          /* native pill vocabulary */
     --demo-btn-radius:    6px;
@@ -408,7 +408,7 @@ main { max-width: 72rem; margin: 0 auto; }
                     <div class="demo-nav-row active"><span class="dot"></span> Trust &amp; privacy</div>
                     <div class="demo-nav-row"><span class="dot"></span> Pricing confusion</div>
                 </div>
-                <p class="panel-note">Grey capsule sampled approximately — verify with Digital Color Meter. Accent-on-grey is ≈2.9:1 (below 3:1), but it's exactly Finder's own choice: the capsule + position carry the selection, the blue is a secondary cue. Same co-presence-beats-the-rule call as the button. Radius here is the Finding-3 6px.</p>
+                <p class="panel-note">Grey capsule = <code>#EFEFEF</code>, sampled from macOS (light; dark still to sample). System blue on it is ≈3.5:1 — clears the 3:1 UI-component bar, so the lighter sampled grey resolves the earlier sub-3 worry; the KISS <code>#0068D6</code> accent gets 4.6:1. Radius here is the Finding-3 6px.</p>
             </div>
         </div>
     </section>

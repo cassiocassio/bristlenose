@@ -367,6 +367,12 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.18.0** — _2 Jul 2026_
+
+- **Choose your colours — a palette picker, and a Default that matches the Mac.** Settings → Display offers **Default** or **Edo**. The Default palette is re-grounded on Apple's system values — system-blue accent (`#007AFF` / `#0A84FF`), the neutral-grey AppKit selection capsule (`#EFEFEF` / `#2B2B2B`), 6 px corners, native inactive-window dimming — so it closes the seam with the desktop app's native chrome and reads calmer on the web. **Edo** is the warm alternative: Prussian-blue accent, paper-white paper, passport-navy ink. Your choice persists locally, paints before first render (no flash), and the picker is translated across all twelve locales (some provisional, pending native review). Ships on PyPI and in the desktop app.
+- **Terminology fixes across four locales.** A glossary-consistency pass corrected drift in Japanese (Quotes 引用 → 発言), Korean (a typo, Accept 승인, Signals 시그널), German (Sessions → Interview, undo → Widerrufen, three _du_ → formal _Sie_), and Spanish (dropping the over-literal _Tubería_). Values only, verified against the locale-key tests. Ships on PyPI.
+- **Lighter first paint.** The report's tab views (Dashboard, Quotes, Transcript, Codebook, Analysis) now code-split into lazy per-tab chunks instead of folding into one bundle; the landing bundle drops to ~213 kB. Noticeable on a cold load. Ships on PyPI.
+
 **0.17.0** — _30 Jun 2026_
 
 - **Five new locales — Portuguese, Italian, and Traditional Chinese.** Brazilian & European Portuguese (`pt-BR` / `pt-PT`), Italian (`it`), and Traditional Chinese for Taiwan and Hong Kong (`zh-Hant` / `zh-Hant-HK`) across the desktop app, web report, and CLI (Settings → Language) — twelve locales in all. Portuguese and Chinese each ship as a deliberate *pair* (a single code reads as foreign to one side — arquivo / ficheiro, _salvando_ vs. _a guardar_; Chinese is Traditional only, not Simplified). Each is a machine-seeded **community preview** for native speakers to refine on [Weblate](https://hosted.weblate.org/projects/bristlenose/); the seed is _fill-empty-only_, so contributed translations always win. Apple-HIG verbs + the research glossary seeded per language; new guard tests pin key parity, placeholders, and plural completeness.

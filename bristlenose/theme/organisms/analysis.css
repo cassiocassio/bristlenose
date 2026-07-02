@@ -2,11 +2,12 @@
 
 /* Signal card list — responsive grid.
    Cards fill available width; a second column appears when the container
-   is wide enough (~900px+ in the center column). */
+   is wide enough (~900px+ in the center column). Shares the quote grid's
+   card rhythm (--bn-grid-gap, 20px) so cards space identically across lenses. */
 .signal-cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
-    gap: var(--bn-space-md);
+    gap: var(--bn-grid-gap);
 }
 
 .signal-card {

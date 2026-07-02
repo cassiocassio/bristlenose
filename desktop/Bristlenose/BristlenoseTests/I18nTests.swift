@@ -125,6 +125,57 @@ struct I18nTests {
         #expect(i18n.pluralCategory(3) == "other")
     }
 
+    // MARK: - Slavic plural rules (Phase 0 — branches ship before the locales)
+    //
+    // These call the pure static `I18n.pluralCategory(_:locale:)` directly: pl/ru/uk
+    // are not in `supportedLocales` yet, so `setLocale("pl")` would sanitise to "en".
+    // The boundaries pinned here are exactly where the rules diverge from a naïve
+    // one/few/other and from each other (notably 21).
+
+    /// Polish: one=1; few=mod10∈2–4 except teens; many=everything else.
+    /// Unlike cs, `many` is a live *integer* category (5+).
+    @Test func pluralCategory_polish_integerRule() {
+        let cases: [(Int, String)] = [
+            (0, "many"), (1, "one"), (2, "few"), (4, "few"), (5, "many"),
+            (11, "many"), (12, "many"), (14, "many"), (21, "many"),  // 21 → many (pl ≠ ru/uk)
+            (22, "few"), (24, "few"), (25, "many"), (112, "many"),    // 112%100=12 → not few
+        ]
+        for (n, expected) in cases {
+            #expect(I18n.pluralCategory(n, locale: "pl") == expected,
+                    "pl count=\(n) should be \(expected)")
+        }
+    }
+
+    /// Russian and Ukrainian share an identical integer rule. Test both codes
+    /// against the same table so a future divergence in one branch is caught.
+    @Test func pluralCategory_russianUkrainian_shareIntegerRule() {
+        let cases: [(Int, String)] = [
+            (0, "many"), (1, "one"), (2, "few"), (4, "few"), (5, "many"),
+            (11, "many"), (12, "many"), (14, "many"),
+            (21, "one"),   // 21 → one (ru/uk ≠ pl)
+            (22, "few"), (25, "many"), (101, "one"), (111, "many"), (112, "many"),
+        ]
+        for locale in ["ru", "uk"] {
+            for (n, expected) in cases {
+                #expect(I18n.pluralCategory(n, locale: locale) == expected,
+                        "\(locale) count=\(n) should be \(expected)")
+            }
+        }
+    }
+
+    /// The instance method must delegate to the static unchanged for the
+    /// already-registered locales (regression guard on the refactor).
+    @MainActor @Test func pluralCategory_instanceDelegatesToStatic() {
+        let i18n = I18n()
+        for locale in ["en", "cs", "fr", "ja"] {
+            i18n.setLocale(locale)
+            for n in [0, 1, 2, 3, 5, 11, 22] {
+                #expect(i18n.pluralCategory(n) == I18n.pluralCategory(n, locale: locale),
+                        "\(locale) count=\(n): instance vs static mismatch")
+            }
+        }
+    }
+
     /// End-to-end: `localisedOverflowText` must select the `overflow_<category>`
     /// form, not the binary one. Asserts equality with the directly-resolved
     /// form (no hardcoded Czech string) so it survives copy revisions.

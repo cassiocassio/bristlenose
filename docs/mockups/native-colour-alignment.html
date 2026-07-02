@@ -264,6 +264,45 @@ main { max-width: 72rem; margin: 0 auto; }
 
 .spec-label { font-size: 0.72rem; color: var(--bn-colour-muted); margin: 0 0 0.35rem; text-transform: uppercase; letter-spacing: 0.05em; }
 .spec + .spec { margin-top: 1.1rem; }
+
+/* ── Blue lab — every candidate accent, light + dark in forced context ──
+   Each context card forces its own color-scheme + neutral --c-* values, so
+   light and dark render side-by-side regardless of the page Appearance toggle.
+   Only --demo-accent varies per card. Contrast ratios are computed live in JS. */
+.blue-lab { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-top: 1rem; }
+@media (max-width: 900px) { .blue-lab { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .blue-lab { grid-template-columns: 1fr; } }
+.blue-col { border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-lg); overflow: hidden; background: var(--bn-colour-bg); }
+.blue-col.rec { border-color: var(--bn-colour-accent); box-shadow: 0 0 0 1px var(--bn-colour-accent); }
+.blue-col-head { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--bn-colour-border); }
+.blue-col-head .nm { display: block; font-weight: var(--bn-weight-emphasis); font-size: 0.85rem; }
+.blue-col-head .sub { display: block; font-size: 0.72rem; color: var(--bn-colour-muted); }
+.blue-col.rec .blue-col-head .nm::after { content: " ★"; color: var(--bn-colour-accent); }
+
+.ctx { padding: 0.75rem; --demo-focus-ring: 0 0 0 3px color-mix(in srgb, var(--demo-accent) 30%, transparent); }
+.ctx-light { color-scheme: light; background: #ffffff; color: #1a1a1a; --c-text:#1a1a1a; --c-muted:#6b7280; --c-border:#e5e7eb; --c-quote:#f9fafb; }
+.ctx-dark  { color-scheme: dark;  background: #111111; color: #e5e7eb; --c-text:#e5e7eb; --c-muted:#9ca3af; --c-border:#2d2d2d; --c-quote:#1a1a1a; border-top: 1px solid #2d2d2d; }
+.ctx-label { font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-muted); margin-bottom: 0.4rem; font-family: "SF Mono", ui-monospace, monospace; }
+
+.cr { display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.6rem; }
+.cr-num { font-family: "SF Mono", ui-monospace, monospace; font-size: 0.75rem; font-weight: var(--bn-weight-emphasis); color: var(--c-text); }
+.cr-pill { font-size: 0.62rem; padding: 0.05rem 0.35rem; border-radius: var(--bn-radius-pill); font-weight: var(--bn-weight-emphasis); letter-spacing: 0.02em; }
+.cr-pill.ok { background: color-mix(in srgb, #16a34a 20%, transparent); color: #15803d; }
+.cr-pill.no { background: color-mix(in srgb, #dc2626 22%, transparent); color: #b91c1c; }
+.ctx-dark .cr-pill.ok { color: #4ade80; }
+.ctx-dark .cr-pill.no { color: #f87171; }
+
+.ctx .s-prose { font-size: 0.8rem; margin: 0 0 0.55rem; color: var(--c-text); line-height: 1.45; }
+.ctx .s-link { color: var(--demo-accent); text-decoration: none; border-bottom: 1px solid transparent; }
+.ctx .s-link:hover { border-bottom-color: var(--demo-accent); }
+.ctx .s-btns { display: flex; gap: 0.35rem; margin-bottom: 0.55rem; }
+.ctx .s-btn { font: inherit; font-size: 0.72rem; font-weight: var(--bn-weight-emphasis); padding: 0.28rem 0.6rem; border-radius: 6px; border: 1px solid var(--c-border); background: transparent; color: var(--c-text); cursor: default; }
+.ctx .s-btn-primary { background: var(--demo-accent); color: #fff; border-color: var(--demo-accent); }
+.ctx .s-tabs { display: flex; gap: 0.7rem; border-bottom: 1px solid var(--c-border); margin-bottom: 0.6rem; }
+.ctx .s-tab { font-size: 0.72rem; padding: 0.25rem 0.05rem; border-bottom: 2px solid transparent; color: var(--c-muted); margin-bottom: -1px; }
+.ctx .s-tab.active { color: var(--c-text); border-bottom-color: var(--demo-accent); }
+.ctx .s-input { font-size: 0.72rem; padding: 0.28rem 0.45rem; border: 1px solid var(--demo-accent); border-radius: 3px; background: var(--c-quote); color: var(--c-text); box-shadow: var(--demo-focus-ring); margin-bottom: 0.55rem; }
+.ctx .s-sel { font-size: 0.72rem; padding: 0.3rem 0.5rem; border-left: 3px solid var(--demo-accent); background: color-mix(in srgb, var(--demo-accent) 10%, var(--c-quote)); border-radius: 0 3px 3px 0; color: var(--c-text); }
 </style>
 </head>
 <body>
@@ -272,9 +311,10 @@ main { max-width: 72rem; margin: 0 auto; }
     <h1>Native colour alignment</h1>
     <p class="lede">
         Where the webview's chrome could gently follow macOS — colour and shape, default palette only.
-        Left is what ships today; right is the proposed alignment. Both columns render the
-        <em>same</em> component markup: only the scoped design tokens differ, which is the point —
-        Tier&nbsp;1 is a token change, not a rewrite. Full write-up in
+        Finding&nbsp;1 is a candidate lab (every blue, light + dark at once); the rest render the
+        <em>same</em> component markup twice, diverging only on scoped tokens — the point being that
+        alignment is a token change, not a rewrite. The conclusion is <strong>one shared palette</strong>,
+        no web/desktop fork. Full write-up in
         <a href="../design-native-colour-alignment.md">design-native-colour-alignment.md</a>.
     </p>
 </header>
@@ -295,64 +335,46 @@ main { max-width: 72rem; margin: 0 auto; }
 
 <main>
 
-    <!-- FINDING 1 — Accent blue -->
+    <!-- FINDING 1 — Accent blue lab -->
     <section class="finding">
         <div class="finding-head">
-            <span class="finding-tier">Tier 1 · align now · desktop-only</span>
-            <h2>1 · Accent blue</h2>
+            <span class="finding-tier">Tier 1 · align now · shared</span>
+            <h2>1 · Accent blue — the candidates, light + dark in context</h2>
             <p class="discussion">
-                One token — <code>--bn-colour-accent</code> — feeds links, primary buttons, the active
-                tab underline, focus rings and selection borders. Today it's Tailwind
-                <code>#2563eb</code>/<code>#60a5fa</code>; macOS system blue is ≈<code>#007AFF</code>/<code>#0A84FF</code>.
-                <strong>Desktop-only:</strong> <code>#007AFF</code> on white is ≈4.0:1 contrast, which fails
-                WCAG AA for body-size text, so the web default must stay <code>#2563eb</code> (≈5.2:1). A single
-                desktop override aligns all five affordances at once — native-consistent, because they share a colour on macOS too.
+                One token — <code>--bn-colour-accent</code> — drives links, primary buttons, the active tab
+                underline, focus rings and selection borders. Each column is a candidate, rendered as real
+                chrome in <strong>forced</strong> light and dark context (independent of the Appearance toggle
+                above) with its live WCAG contrast ratio. The <strong>link</strong> pill tests the strict
+                4.5:1 body-text bar (blue-as-text on the background); the <strong>UI</strong> pill tests the
+                3:1 bar that actually governs buttons, rings, borders and underlines. Everything here clears
+                UI 3:1 — the <em>only</em> value that misses link 4.5:1 is Apple's raw system blue on white,
+                and only in light mode.
             </p>
         </div>
-        <div class="compare">
-            <div class="panel panel-current">
-                <div class="panel-head"><span class="swatch"></span> Current · #2563eb</div>
-                <p class="demo-prose">Researchers know the products — see <a href="#" class="demo-link">the methodology notes</a> for detail.</p>
-                <div class="demo-btn-row">
-                    <button class="demo-btn demo-btn-primary">Analyse</button>
-                    <button class="demo-btn">Cancel</button>
-                </div>
-                <div class="demo-tabs">
-                    <button class="demo-tab active">Report</button>
-                    <button class="demo-tab">Analysis</button>
-                    <button class="demo-tab">Codebook</button>
-                </div>
-                <input class="demo-input is-focused" value="Focused input — keyboard ring">
-            </div>
-            <div class="panel panel-proposed">
-                <div class="panel-head"><span class="swatch"></span> macOS-aligned · #007AFF</div>
-                <p class="demo-prose">Researchers know the products — see <a href="#" class="demo-link">the methodology notes</a> for detail.</p>
-                <div class="demo-btn-row">
-                    <button class="demo-btn demo-btn-primary">Analyse</button>
-                    <button class="demo-btn">Cancel</button>
-                </div>
-                <div class="demo-tabs">
-                    <button class="demo-tab active">Report</button>
-                    <button class="demo-tab">Analysis</button>
-                    <button class="demo-tab">Codebook</button>
-                </div>
-                <input class="demo-input is-focused" value="Focused input — keyboard ring">
-                <p class="panel-note">Focus ring also shown wider/softer (Tier 2, §7) — the accent swap is the Tier-1 part.</p>
-            </div>
-        </div>
+        <div class="blue-lab" id="blue-lab"></div>
+        <p class="discussion" style="margin-top:0.9rem; max-width:60rem;">
+            <strong>Reading it:</strong> dark mode converges — the three Apple-derived columns all use
+            <code>#0A84FF</code> and pass comfortably, so the real decision is the <em>light</em> value.
+            <strong>Apple web blue</strong> (<code>#0071E3</code>, what apple.com ships) and
+            <strong>Proposed</strong> (<code>#0068D6</code>) both clear 4.5:1 and are hue-matched to the OS
+            blue (210–211 vs today's indigo 221); <code>#0068D6</code> is a hair darker and so beats even
+            today's blue on contrast while looking more native. Because a single value works on both
+            surfaces, <strong>no web/desktop fork is needed</strong> — one palette carries CLI-web and the
+            embedded Swift shell alike.
+        </p>
     </section>
 
     <!-- FINDING 2 — Sidebar nav selection -->
     <section class="finding">
         <div class="finding-head">
-            <span class="finding-tier">Tier 1 · align now · desktop-only</span>
+            <span class="finding-tier">Tier 1 · align now · shared</span>
             <h2>2 · Sidebar navigation selection</h2>
             <p class="discussion">
                 Active nav rows (<code>.toc-link.active</code>, <code>.session-entry.active</code>,
                 <code>.signal-entry.active</code>) use a blue tint; the native sidebar one pane to the left
                 deliberately pins the <strong>unemphasized grey</strong> capsule in every focus state.
-                Repoint the three selectors at a new <code>--bn-nav-selection-bg</code> slot — grey on desktop,
-                current blue tint as the shared web default. <strong>Note the boundary:</strong> this is
+                Repoint the three selectors at a new shared <code>--bn-nav-selection-bg</code> slot — grey
+                everywhere (no fork; grey has no contrast constraint). <strong>Note the boundary:</strong> this is
                 <em>nav</em> selection. <em>Content</em> selection (Finding&nbsp;5) stays blue — macOS content selection is blue.
             </p>
         </div>
@@ -475,6 +497,47 @@ main { max-width: 72rem; margin: 0 auto; }
 </main>
 
 <script>
+// ── Blue lab — data-driven columns, live-computed WCAG contrast ──
+const BLUES = [
+    { name: "Current",           sub: "ships today · Tailwind",  light: "#2563EB", dark: "#60A5FA" },
+    { name: "Apple system blue", sub: "macOS systemBlue (OS)",   light: "#007AFF", dark: "#0A84FF" },
+    { name: "Apple web blue",    sub: "apple.com",               light: "#0071E3", dark: "#0A84FF" },
+    { name: "Proposed",          sub: "recommended",             light: "#0068D6", dark: "#0A84FF", rec: true },
+];
+
+function lin(c) { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+function relL(hex) {
+    const h = hex.replace("#", "");
+    const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+function cratio(fg, bg) {
+    const a = relL(fg), b = relL(bg), hi = Math.max(a, b), lo = Math.min(a, b);
+    return (hi + 0.05) / (lo + 0.05);
+}
+function crBadge(accent, bg) {
+    const r = cratio(accent, bg), body = r >= 4.5, ui = r >= 3;
+    return `<div class="cr"><span class="cr-num">${r.toFixed(2)}:1</span>`
+        + `<span class="cr-pill ${body ? "ok" : "no"}">link ${body ? "✓" : "✗"}</span>`
+        + `<span class="cr-pill ${ui ? "ok" : "no"}">UI ${ui ? "✓" : "✗"}</span></div>`;
+}
+const SPECIMEN = `
+    <p class="s-prose">Body copy with an <a class="s-link" href="#" onclick="return false">inline link</a>.</p>
+    <div class="s-btns"><button class="s-btn s-btn-primary">Analyse</button><button class="s-btn">Cancel</button></div>
+    <div class="s-tabs"><span class="s-tab active">Report</span><span class="s-tab">Analysis</span></div>
+    <div class="s-input">Focused field</div>
+    <div class="s-sel">Selected item</div>`;
+function ctxCard(mode, accent, bg) {
+    return `<div class="ctx ctx-${mode}" style="--demo-accent:${accent}">`
+        + `<div class="ctx-label">${mode} · ${accent}</div>${crBadge(accent, bg)}${SPECIMEN}</div>`;
+}
+document.getElementById("blue-lab").innerHTML = BLUES.map(b =>
+    `<div class="blue-col ${b.rec ? "rec" : ""}">
+        <div class="blue-col-head"><span class="nm">${b.name}</span><span class="sub">${b.sub}</span></div>
+        ${ctxCard("light", b.light, "#ffffff")}
+        ${ctxCard("dark", b.dark, "#111111")}
+    </div>`).join("");
+
 // ── Appearance toggle (matches the type-comparison engine's affordance) ──
 document.querySelector('.toolbar').addEventListener('click', (e) => {
     const btn = e.target.closest('.seg-btn');

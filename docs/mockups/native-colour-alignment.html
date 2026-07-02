@@ -87,14 +87,15 @@
     --demo-focus-ring:    var(--bn-focus-ring);
 }
 .panel-proposed {
-    /* macOS-aligned. Sample exact values from the running app with
-       Digital Color Meter before shipping — these are close approximations. */
-    --demo-accent:        light-dark(#007AFF, #0A84FF);  /* system blue */
+    /* DECIDED: KISS single accent token = #0068D6 / #0A84FF (hue-matched to system
+       blue, clears 4.5:1 everywhere). One token drives buttons, links, focus,
+       selection text + tab underline. One shared palette, no web/desktop fork. */
+    --demo-accent:        light-dark(#0068D6, #0A84FF);  /* single accent — decided */
     --demo-nav-sel-bg:    light-dark(#efefef, #464646);  /* native unemphasized grey capsule — #EFEFEF sampled (light); dark still to sample */
-    --demo-nav-sel-fg:    light-dark(#007AFF, #0A84FF);   /* icon + label in accent (system blue), as Finder/bn.app do */
+    --demo-nav-sel-fg:    light-dark(#0068D6, #0A84FF);   /* selection icon + label use the one accent */
     --demo-nav-sel-radius: 6px;                          /* native pill vocabulary */
     --demo-btn-radius:    6px;
-    --demo-focus-ring:    light-dark(0 0 0 3.5px rgba(0,122,255,0.28), 0 0 0 3.5px rgba(10,132,255,0.36));
+    --demo-focus-ring:    light-dark(0 0 0 3.5px rgba(0,104,214,0.28), 0 0 0 3.5px rgba(10,132,255,0.36));
 }
 
 /* ── Page chrome ── */
@@ -314,11 +315,14 @@ main { max-width: 72rem; margin: 0 auto; }
 <header class="page">
     <h1>Native colour alignment</h1>
     <p class="lede">
-        Where the webview's chrome could gently follow macOS — colour and shape, default palette only.
-        Finding&nbsp;1 is a candidate lab (every blue, light + dark at once); the rest render the
-        <em>same</em> component markup twice, diverging only on scoped tokens — the point being that
-        alignment is a token change, not a rewrite. The conclusion is <strong>one shared palette</strong>,
-        no web/desktop fork. Full write-up in
+        Where the webview's chrome gently follows macOS — colour and shape, default palette only.
+        <strong>Decided:</strong> one shared palette (no web/desktop fork); a single accent token
+        <code>#0068D6</code>/<code>#0A84FF</code> (KISS — one blue for buttons, links, focus, selection
+        &amp; tab underline; the two-token chrome/link split is deferred until dynamic system-accent ships);
+        sidebar selection = <code>#EFEFEF</code> grey capsule with accent icon&nbsp;+&nbsp;label; nav lozenge
+        &amp; primary-button radii → 6px. Finding&nbsp;1 keeps the full blue lab as reference; the rest render
+        the <em>same</em> markup twice, diverging only on scoped tokens — alignment is a token change, not a
+        rewrite. Full write-up in
         <a href="../design-native-colour-alignment.md">design-native-colour-alignment.md</a>.
     </p>
 </header>
@@ -357,14 +361,16 @@ main { max-width: 72rem; margin: 0 auto; }
         </div>
         <div class="blue-lab" id="blue-lab"></div>
         <p class="discussion" style="margin-top:0.9rem; max-width:60rem;">
-            <strong>Reading it:</strong> dark mode converges — the three Apple-derived columns all use
-            <code>#0A84FF</code> and pass comfortably, so the real decision is the <em>light</em> value.
-            <strong>Apple web blue</strong> (<code>#0071E3</code>, what apple.com ships) and
-            <strong>Proposed</strong> (<code>#0068D6</code>) both clear 4.5:1 and are hue-matched to the OS
-            blue (210–211 vs today's indigo 221); <code>#0068D6</code> is a hair darker and so beats even
-            today's blue on contrast while looking more native. Because a single value works on both
-            surfaces, <strong>no web/desktop fork is needed</strong> — one palette carries CLI-web and the
-            embedded Swift shell alike.
+            <strong>Decided — <code>#0068D6</code> / <code>#0A84FF</code>, single token (KISS).</strong>
+            It's hue-matched to the OS blue (211 vs today's indigo 221), clears 4.5:1 in both modes, and
+            actually beats today's blue on contrast while reading more native — so one value serves buttons,
+            links, focus, selection text and tab underline, on both CLI-web and the embedded Swift shell
+            (no fork). The two-token chrome/link split (true system <code>#007AFF</code> for chrome + a
+            webbier link blue) is <em>deferred</em>: its only real trigger is shipping dynamic
+            system-accent, at which point links must pin to a fixed safe blue. Apple web <code>#0071E3</code>
+            is kept here as the runner-up. Note the one accepted trade: KISS buttons sit a hair darker than
+            a native <code>#007AFF</code> sheet button beside them — same hue, marginal lightness, judged
+            worth it against the cost of a second token.
         </p>
     </section>
 
@@ -514,7 +520,7 @@ const BLUES = [
     { name: "Current",           sub: "ships today · Tailwind",  light: "#2563EB", dark: "#60A5FA" },
     { name: "Apple system blue", sub: "macOS systemBlue (OS)",   light: "#007AFF", dark: "#0A84FF" },
     { name: "Apple web blue",    sub: "apple.com",               light: "#0071E3", dark: "#0A84FF" },
-    { name: "Proposed",          sub: "recommended",             light: "#0068D6", dark: "#0A84FF", rec: true },
+    { name: "Chosen",            sub: "decided · single accent",  light: "#0068D6", dark: "#0A84FF", rec: true },
 ];
 
 function lin(c) { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }

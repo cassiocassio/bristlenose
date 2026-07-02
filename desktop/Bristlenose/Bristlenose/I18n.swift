@@ -139,19 +139,46 @@ final class I18n: ObservableObject {
     /// Apple `.stringsdict`), so the category is computed here and the caller
     /// selects the `<key>_<category>` form (e.g. `overflow_few`).
     ///
-    /// Integer rules for the supported locales only. `many` is the Czech
-    /// decimals-only category, so it is intentionally never returned for an
-    /// integer `count`; whole-number Czech overflow counts resolve to
-    /// one / few / other. A locale not handled here falls through to the
-    /// English rule (one = 1, other = else), which is the safe default.
+    /// Delegates to the pure static so the rule is testable without registering
+    /// the locale in `supportedLocales` (`setLocale` would otherwise sanitise an
+    /// unregistered code to `en`). Tests call `I18n.pluralCategory(_:locale:)`
+    /// directly; production reads the active `locale`.
     func pluralCategory(_ count: Int) -> String {
+        Self.pluralCategory(count, locale: locale)
+    }
+
+    /// Pure integer CLDR plural rule. `count` is always an `Int`, so the decimal
+    /// fraction `v` is 0 and the `other` category (decimals-only for the Slavic
+    /// family) never fires for these locales — the helper falls back to `_other`
+    /// if a stem is missing, so that's harmless.
+    ///
+    /// Verified against the CLDR plural-rules chart. Note `many`: it is the
+    /// Czech *decimals-only* category (so cs never returns it for an integer),
+    /// but for pl/ru/uk it is a live *integer* category (5+, with the teens
+    /// exception). Do NOT copy the `cs` branch when adding a Slavic locale — its
+    /// "no many for integers" shape is cs-specific and wrong for the others.
+    static func pluralCategory(_ count: Int, locale: String) -> String {
         let n = abs(count)
+        let mod10 = n % 10
+        let mod100 = n % 100
         switch locale {
         case "cs":
-            // Czech: one = 1; few = 2–4; other = 0, 5+.
+            // Czech: one = 1; few = 2–4; other = 0, 5+ (many is decimals-only).
             if n == 1 { return "one" }
             if (2...4).contains(n) { return "few" }
             return "other"
+        case "pl":
+            // Polish: one = 1; few = mod10 2–4 except teens; many = the rest
+            // (0, 5–21, …). 21 → many (≠ ru/uk, where 21 → one).
+            if n == 1 { return "one" }
+            if (2...4).contains(mod10) && !(12...14).contains(mod100) { return "few" }
+            return "many"
+        case "ru", "uk":
+            // Russian + Ukrainian share an identical integer rule:
+            // one = mod10 1 except 11; few = mod10 2–4 except teens; many = rest.
+            if mod10 == 1 && mod100 != 11 { return "one" }
+            if (2...4).contains(mod10) && !(12...14).contains(mod100) { return "few" }
+            return "many"
         case "fr":
             // French: 0 and 1 are both "one".
             return n <= 1 ? "one" : "other"

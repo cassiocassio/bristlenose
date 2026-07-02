@@ -8,6 +8,12 @@
     "light": "라이트",
     "dark": "다크"
   },
+  "palette": {
+    "legend": "\uc0c9\uc0c1 \ud314\ub808\ud2b8",
+    "default": "\uae30\ubcf8\uac12",
+    "edo": "\uc5d0\ub3c4",
+    "description": "\uc571 \uc804\uccb4\uc758 \uc0c9\uc0c1\uc744 \ubc14\uafc9\ub2c8\ub2e4. \uc5d0\ub3c4\ub294 \ub530\ub73b\ud55c \uc6cc\uc2dc \uc885\uc774\uc640 \ud504\ub7ec\uc2dc\uc548 \ube14\ub8e8 \uc789\ud06c\ub97c \uc0ac\uc6a9\ud569\ub2c8\ub2e4."
+  },
   "typography": {
     "legend": "\ud0c0\uc774\ud3ec\uadf8\ub798\ud53c"
   },

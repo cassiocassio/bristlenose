@@ -8,6 +8,12 @@
     "light": "Claro",
     "dark": "Oscuro"
   },
+  "palette": {
+    "legend": "Paleta de colores",
+    "default": "Predeterminada",
+    "edo": "Edo",
+    "description": "Cambia los colores de toda la aplicaci\u00f3n. Edo usa papel washi c\u00e1lido y tinta azul de Prusia."
+  },
   "typography": {
     "legend": "Tipograf\u00eda"
   },

@@ -8,6 +8,12 @@
     "light": "Světlý",
     "dark": "Tmavý"
   },
+  "palette": {
+    "legend": "Barevná paleta",
+    "default": "Výchozí",
+    "edo": "Edo",
+    "description": "Přebarví celou aplikaci. Edo používá teplý papír washi a pruskou modř."
+  },
   "typography": {
     "legend": "Typografie"
   },

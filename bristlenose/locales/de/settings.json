@@ -8,6 +8,12 @@
     "light": "Hell",
     "dark": "Dunkel"
   },
+  "palette": {
+    "legend": "Farbpalette",
+    "default": "Standard",
+    "edo": "Edo",
+    "description": "Färbt die gesamte App neu. Edo nutzt warmes Washi-Papier und preußischblaue Tinte."
+  },
   "typography": {
     "legend": "Typografie"
   },

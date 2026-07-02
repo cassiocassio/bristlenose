@@ -21,6 +21,7 @@ import { setLocale, useLocaleStore } from "../i18n/LocaleStore";
 import { ModalNav, type NavItem } from "./ModalNav";
 import { isEmbedded } from "../utils/embedded";
 import { dt } from "../utils/platformTranslation";
+import { PALETTES, isPalette, readSavedPalette, type Palette } from "../utils/bootPalette";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,12 @@ const APPEARANCE_KEYS: { value: Appearance; labelKey: string }[] = [
   { value: "light", labelKey: "appearance.light" },
   { value: "dark", labelKey: "appearance.dark" },
 ];
+
+// Colour palette — orthogonal to appearance (light/dark). Radios like appearance
+// while the set is small; derive from PALETTES so it extends automatically.
+const PALETTE_KEY = "bristlenose-palette";
+const PALETTE_ATTR = "data-color-theme";
+const PALETTE_KEYS = PALETTES.map((value) => ({ value, labelKey: `palette.${value}` }));
 
 /** Display labels for supported locales. Always in the locale's own language. */
 const LOCALE_LABELS: Record<Locale, string> = {
@@ -301,6 +308,35 @@ function GeneralSection() {
     }
   }, []);
 
+  // Colour palette. Initial = saved pref, else the server-injected attribute
+  // (desktop → edo), else "default".
+  const [palette, setPaletteState] = useState<Palette>(() => {
+    const saved = readSavedPalette(localStorage);
+    if (saved) return saved;
+    const attr = document.documentElement.getAttribute(PALETTE_ATTR);
+    return isPalette(attr) ? attr : "default";
+  });
+  // Only (re)apply once the user has actively chosen — never clobber the server
+  // default for a user who hasn't touched the control.
+  const paletteChosen = useRef(readSavedPalette(localStorage) !== null);
+  useEffect(() => {
+    if (paletteChosen.current) {
+      document.documentElement.setAttribute(PALETTE_ATTR, palette);
+    }
+  }, [palette]);
+
+  const handlePalette = useCallback((value: Palette) => {
+    paletteChosen.current = true;
+    setPaletteState(value);
+    document.documentElement.setAttribute(PALETTE_ATTR, value);
+    try {
+      localStorage.setItem(PALETTE_KEY, JSON.stringify(value));
+    } catch (err) {
+      // Applied for the session but not persisted (private mode / quota).
+      console.warn("bristlenose: could not persist palette preference", err);
+    }
+  }, []);
+
   const handleLocaleChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     if (SUPPORTED_LOCALES.includes(value as Locale)) {
@@ -320,6 +356,23 @@ function GeneralSection() {
               value={opt.value}
               checked={appearance === opt.value}
               onChange={() => handleAppearance(opt.value)}
+            />
+            {" "}{t(opt.labelKey)}
+          </label>
+        ))}
+      </fieldset>
+
+      <fieldset className="bn-setting-group">
+        <legend>{t("palette.legend")}</legend>
+        <p className="bn-setting-description">{t("palette.description")}</p>
+        {PALETTE_KEYS.map((opt) => (
+          <label key={opt.value} className="bn-radio-label">
+            <input
+              type="radio"
+              name="bn-settings-palette"
+              value={opt.value}
+              checked={palette === opt.value}
+              onChange={() => handlePalette(opt.value)}
             />
             {" "}{t(opt.labelKey)}
           </label>

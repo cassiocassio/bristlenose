@@ -1,0 +1,30 @@
+title = "Bristlenose gitleaks config"
+
+# Start from gitleaks' built-in rule set, then allowlist this repo's known-safe
+# placeholders and synthetic fixtures. The Feb-2026 secret audit confirmed the
+# tree and full history are clean of live secrets — every match below is a
+# documented format example, a redactor regex, or a deliberately-fake fixture.
+# Keep this list TIGHT: allowlist specific dummy strings, not whole source dirs,
+# so a genuinely new secret still trips the scan.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Documented / dummy / test-fixture key strings (none are live)"
+regexes = [
+  '''sk-ant-api03-A{20,}''',                              # walkthrough dummy (all-A padding)
+  '''sk-ant-(xxx|test|example|BROKEN|INVALID|placeholder)[-A-Za-z0-9]*''',
+  '''sk-ant-test-key''',
+  '''sk-fromenv''',
+  '''AIzaSy[AX]{2,}''',                                   # AIzaSyXXX… doc placeholder
+  '''env-injected-key''',
+]
+
+[[allowlists]]
+description = "Paths that only ever hold placeholders or synthetic fixtures"
+paths = [
+  '''(^|/)\.env\.example$''',
+  '''(^|/)tests/fixtures/pii_horror_[^/]*$''',            # Presidio stress-test PII (declared fiction)
+  '''(^|/)docs/walkthroughs/c3-smoke-test\.md$''',
+]

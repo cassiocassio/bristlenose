@@ -11,7 +11,7 @@
 
    ── v1 decisions (Jul 2026) ──
    Accent uses Prussian blue's vivid UNDERTONE (#0f5c9e), not the dull masstone
-   (#0f5c9e) sampled off aged prints — too low-chroma for links/icons/selection.
+   sampled off aged prints — that masstone reads too low-chroma for links/icons/selection.
    Dark accent is vivid blue (#4d9fe0), not verdigris. Background is bright Paper
    White (#fdfbf7). Body ink is passport navy (#1b2230 / #e8e3d6 dark).
 
@@ -27,7 +27,7 @@
     /* Colour palette — warm paper with indigo/verdigris accents */
     --bn-colour-bg: #fdfbf7;                    /* Paper White — bright near-white */
     --bn-colour-text: #1b2230;                   /* Passport navy — near-black, indigo whisper */
-    --bn-colour-muted: #5a7d9b;                  /* Storm Slate — atmospheric grey-blue */
+    --bn-colour-muted: #4a698a;                  /* Storm Slate — atmospheric grey-blue (AA 4.5:1 on paper + quote-bg) */
     --bn-colour-border: #d4c9a8;                 /* Sail Parchment — warm border */
     --bn-colour-accent: #0f5c9e;                 /* Vivid Prussian — bero-ai undertone */
     --bn-colour-hover: #ede5d1;                  /* Washi Cream tint — warm hover */
@@ -106,7 +106,7 @@
         /* Colour palette */
         --bn-colour-bg:               light-dark(#fdfbf7, #1a1816);
         --bn-colour-text:             light-dark(#1b2230, #e8e3d6);
-        --bn-colour-muted:            light-dark(#5a7d9b, #7ba8a0);
+        --bn-colour-muted:            light-dark(#4a698a, #7ba8a0);
         --bn-colour-border:           light-dark(#d4c9a8, #2d2820);
         --bn-colour-accent:           light-dark(#0f5c9e, #4d9fe0);
         --bn-colour-hover:            light-dark(#ede5d1, #252118);

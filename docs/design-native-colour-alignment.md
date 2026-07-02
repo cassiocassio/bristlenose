@@ -1,82 +1,82 @@
-# Native colour alignment — audit (default palette)
+# Native colour alignment (default palette)
 
-_1 Jul 2026. Audit only — nothing in this doc has been implemented. Companion to the SF Pro typography alignment already shipped in `tokens-desktop.css`._
+_Started as an audit 1 Jul 2026; trued to shipped reality 2 Jul 2026. Companion to the SF Pro typography alignment in `tokens-desktop.css`. Interactive side-by-side: [`docs/mockups/native-colour-alignment.html`](mockups/native-colour-alignment.html)._
 
-## Scope and method
+## What this is for
 
-The typography work aligned the webview's type to the macOS AppKit ladder. This audit asks which **other** graphical elements could gently follow — colour and shape, default palette only (`colors/palette-default.css`; edo is out of scope). The reference is not the HIG in the abstract but what the app's own native chrome actually does: the SwiftUI/AppKit sidebar, settings window, and toasts were read for their real values, and the SPA theme was read for its current ones.
+The desktop app hosts the React SPA in a `WKWebView` next to native AppKit chrome (project sidebar, settings window, sheets, toasts). The goal is an **invisible seam**: a user on a default, modern-OS Mac running default Bristlenose should not be able to tell what's CSS and what's AppKit. This doc records the colour/shape decisions that serve that goal, what shipped, and — most importantly — the **principles future colour work must keep** (§Principles).
 
-The goal is *gentle* alignment. The report is a document-like content surface, not a control panel; most of it should keep reading as content. The candidates below are the places where the webview renders **chrome** — navigation, selection, buttons, focus — and where a mismatched blue or radius reads as "web page" inside a native window.
+## Principles for future colour work (read this first)
 
-## The mechanism (already exists)
+Two durable rules govern every future change to the default (non-edo) palette. They outrank any local cleverness (this doc's own history is the cautionary tale — see the decision log).
 
-`tokens-desktop.css` activates under `[data-platform="desktop"]:not([data-typography="inter"])`, set via `BRISTLENOSE_PLATFORM=desktop` → server emits the attribute on `<html>`. Any desktop-only *colour* value would ride the same gate — but note the current selector couples the gate to the typography opt-out. If colour overrides land, they should sit in a block gated on `[data-platform="desktop"]` alone (or a new `tokens-desktop-colour.css`), so a user who opts back to Inter doesn't silently lose native colours too.
+1. **Align across the seam.** Credible-native comes from *ruthless* alignment of the things the eye compares across the AppKit↔webview boundary: **semantic text colours, the grid, corner radii, and selected-capsule foreground + background.** This is the central discipline and it holds *regardless of palette* — it's what makes even a branded colour-set (edo) read as one app. Colour identity sits on top; seam alignment underneath is what earns "plausibly macOS."
+
+2. **Track the OS colours pragmatically, via ground truth.** The default palette **copies the system colours that ship in the current OS** — not a hand-tuned approximation. Apple publishes **no canonical hex** for these (they're dynamic: light/dark, accent, Increase Contrast, desktop tint, and they shift across releases; sidebar greys are drawn on vibrant materials, so a sample is a *composite*). So "keep it aligned" means a **ground-truth mechanism**, in order of preference:
+   - **Best (bitrot-proof):** bridge the live `NSColor` from Swift into CSS variables at runtime — same mechanism as the appearance/typography bridge. Then the webview tracks *this* machine's OS automatically. This is also what makes **dynamic system-accent** work (match whatever accent the user actually set). Do accent + selection-grey together when this lands.
+   - **Pragmatic (today):** sample with Digital Color Meter against the running app and hardcode the hex, with a comment saying so, and **re-sample at OS bumps.** Every sampled value in the palette carries that caveat.
+
+   Corollary: perceptual truth beats the contrast math when they conflict. At button scale the eye reads even a hue-matched near-miss (`#0068D6`) as "not the OS blue" — so we copy Apple's blue verbatim and accept its tradeoffs (see decision log), rather than substitute a "more accessible" blue that breaks the seam.
+
+## Decisions & status
+
+| # | Decision | Scope | Status |
+|---|---|---|---|
+| 1 | **Accent = Apple system blue**, copied verbatim: `--bn-colour-accent` = `#007AFF`/`#0A84FF`. Whole accent-blue family moved with it (selection-border, focus-ring, glow, minimap, suggestion). Single token for now (buttons, links, focus, selection text, tab underline). | Shared palette, no web/desktop fork | ✅ Shipped `de788028` |
+| 2 | **Sidebar nav selection = grey capsule + accent text/icon.** New shared token `--bn-nav-selection-bg` (`#EFEFEF`/`#2B2B2B`, sampled); `.toc-link.active` / `.session-entry.active` / `.signal-entry.active` backgrounds repointed off `--bn-colour-hover` onto it. Text/icon already ride `--bn-colour-accent`. | Shared (both palettes; edo gets a warm-grey analogue) | ✅ Shipped (this change) |
+| 3 | **Nav-lozenge radius → 6px** (`--bn-radius-sm` → `--bn-radius-md` on `.toc-link`, `.session-entry`, `.signal-entry`). | Shared | ✅ Shipped (this change) |
+| 4 | **Primary-button radius → 6px** (`.bn-btn` in `atoms/modal.css`). Also fixes an internal inconsistency — `.toolbar-btn` was already 6px. | Shared | ✅ Shipped (this change) |
+| 5 | **Content selection stays blue** (`.bn-selected` quote cards). macOS content selection is blue, so this is already native-correct — do *not* grey it (that's nav selection only). | — | ✅ Correct as-is; inactive-dim fixed `85bb41bd` |
+
+**No web/desktop fork.** The typography fork (`tokens-desktop.css`) exists only because SF Pro is Apple-licensed and the web can't ship it — colour has no such forcing function, so a single shared palette carries CLI-web and the embedded shell alike. (This reverses the original audit's desktop-only recommendation.) The one accepted cost: system-blue link text on white is 4.02:1 — below the 4.5:1 body-text bar, but it's Apple's own tradeoff (colour isn't the sole affordance) and buttons/rings/borders are UI components governed by 3:1, which it clears. If the link case ever bites, splitting a webbier `--bn-colour-link` (e.g. `#0071E3`, 4.70:1) off the accent is a cheap, one-token addition given the structure.
+
+### Decision log (why, so it isn't relitigated)
+
+- **Blue: `#2563eb` (Tailwind indigo) → `#007AFF` (Apple system).** An interim `#0068D6` (hue-matched, WCAG-safe, KISS single token) was considered and **rejected on perceptual grounds** — at button scale, beside a native `.borderedProminent` sheet button, the eye clocks even a same-hue near-miss as "not the OS blue." Apple is already telling us the right blue; the seam goal means copying it, not out-clevering it. Two-token chrome/link split deferred (trigger: shipping dynamic system-accent).
+- **Selection grey: sampled, not guessed.** `unemphasizedSelectedContentBackgroundColor` sampled `#EFEFEF` light (Finder) / `#2B2B2B` dark (bn.app's own sidebar; Mail read `#2A2929` — same value, vibrancy composite). An earlier `#DCDCDC`/`#464646` guess was both wrong and put dark accent-on-capsule under 3:1; the sampled values clear it (light `#007AFF` on `#EFEFEF` = 3.5:1, dark `#0A84FF` on `#2B2B2B` = 3.9:1).
+- **Exotic user accents are "on them."** A default modern-OS Mac shouldn't be able to tell CSS from AppKit; a user who sets a graphite/pink system accent and notices the webview stays blue is the edge case, addressed later by the dynamic-accent bridge, not by hedging the default now.
 
 ## Native reference values
 
-What the Mac app actually uses (file:line in `desktop/Bristlenose/Bristlenose/`):
+What the Mac app actually uses (file:line in `desktop/Bristlenose/Bristlenose/`, captured 1 Jul 2026 — verify against current source):
 
 | Element | Native value | Where |
 |---|---|---|
-| Accent | System accent (empty `AccentColor.colorset` — rides the user's System Settings choice; blue for most users) | `Assets.xcassets` |
-| Accent consumers | `Color.accentColor` at 0.14 opacity (lens pill), 0.2 fill + 1.5pt stroke (icon picker), 2pt stroke (drop target), `controlAccentColor` (activity ring) | `LensRail.swift:64-66`, `IconPickerPopover.swift:168-175`, `ProjectRow.swift:142`, `SidebarActivityRing.swift:155` |
-| Sidebar selection | System-drawn source-list capsule, **pinned unemphasized** (grey, never accent-filled) in all focus states | `ProjectSidebarOutline.swift:204-210, 1240-1260` |
-| Greys | Semantic only: `.secondary`/`.tertiary`/`.quaternary`, `secondaryLabelColor`, `tertiaryLabelColor`, `separatorColor`. No custom greys anywhere | throughout |
-| Buttons | Semantic styles only: `.borderedProminent` (primary), `.bordered` (secondary), `.plain`/`.borderless` (inline). No custom button colours | `AIConsentView.swift:172`, `WelcomeView.swift:96`, etc. |
-| Corner radii | **6pt** small pills (lens rail, icon picker), **8pt** rows/toasts/drop targets, **10pt** empty-state cards | `LensRail.swift:64`, `ToastView.swift:76`, `WelcomeView.swift:209-220` |
-| Materials | `.regularMaterial` toast, `.quaternary` capsule search field | `ToastView.swift:76`, `QuotesToolbarControls.swift:53` |
+| Accent | System accent (empty `AccentColor.colorset` — rides the user's System Settings choice; blue for most) | `Assets.xcassets` |
+| Accent consumers | `Color.accentColor` (lens pill 0.14 opacity, icon-picker 0.2 fill + 1.5pt stroke, drop-target 2pt stroke), `controlAccentColor` (activity ring) | `LensRail.swift:64-66`, `IconPickerPopover.swift:168-175`, `ProjectRow.swift:142`, `SidebarActivityRing.swift:155` |
+| Sidebar selection | Source-list capsule, **pinned unemphasized** grey in all focus states | `ProjectSidebarOutline.swift:204-210, 1240-1260` |
+| Corner radii | **6pt** small pills (lens rail, icon picker), 8pt rows/toasts, 10pt empty-state cards | `LensRail.swift:64`, `ToastView.swift:76`, `WelcomeView.swift:209-220` |
 
-macOS system blue resolves to approximately `#007AFF` light / `#0A84FF` dark; `unemphasizedSelectedContentBackgroundColor` to a mid grey around `#DCDCDC` light / `#464646` dark. **Sample with Digital Color Meter on the running app before implementing** — these shift across macOS releases and the native side uses semantic names, not constants.
+macOS system blue ≈ `#007AFF` light / `#0A84FF` dark; `unemphasizedSelectedContentBackgroundColor` sampled `#EFEFEF` / `#2B2B2B`. No canonical Apple hex — see §Principles.
 
-## Current SPA values (default palette)
+## Deferred (parked, with the predicate that unparks each)
 
-| Slot | Token | Light | Dark | Defined |
-|---|---|---|---|---|
-| Accent / links / primary buttons / focus / selection border | `--bn-colour-accent` | `#2563eb` | `#60a5fa` | `palette-default.css:16,94` |
-| Nav + card selection bg | `--bn-selection-bg` | `#eef4fc` (blue tint) | `#1a2838` | `:71,143` |
-| Nav hover | `--bn-colour-hover` | `#e8f0fe` (blue tint) | `#1e293b` | `:17,95` |
-| Neutral hover overlay | `--bn-hover-bg` | `rgba(0,0,0,0.04)` | `rgba(255,255,255,0.06)` | `:67,147` |
-| Hairlines | `--bn-colour-border` | `#e5e7eb` | `#2d2d2d` | `:15,93` |
-| Radii | `--bn-radius-sm/md/lg/pill` | 3px / 6px / 8px / 999px | same | `tokens.css:175-178` |
+| Element | Gap | Unpark when |
+|---|---|---|
+| **Dynamic user accent** | Static `#007AFF` won't match a non-default system accent | Bridge `controlAccentColor` (+ the selection `NSColor`) — do them together. Cohort tester with a non-blue accent notices, or we commit to the bridge. |
+| **Link-blue split** | System-blue link text on white = 4.02:1 | If the web-export link contrast is flagged. Cheap: add `--bn-colour-link` (`#0071E3`). |
+| **Hover vocabulary** | Nav hover is still blue-tinted `--bn-colour-hover`; native hover is neutral | Opportunistically, when those organisms are next open. Seam-discipline eventually wants neutral hover. |
+| **Focus-ring weight** | 2px accent ring vs macOS's softer ~3.5px halo | If keyboard-nav work reopens `interactive.css`. |
+| **`--bn-focus-shadow` dark variant** | Same `rgba(0,0,0,…)` both modes; dark needs a lighter lift | Low-risk polish. |
 
-Key consumers: `.toc-link.active`, `.session-entry.active`, `.signal-entry.active` (sidebar nav, `organisms/sidebar.css:467-471, 735-736, 888-895`); `.bn-selected` (quote cards, `atoms/interactive.css:51-60`); `.bn-btn-primary` (accent bg, **3px** radius, `atoms/modal.css:128-136`); `.toolbar-btn` (6px radius, `atoms/button.css:57-75`); `.bn-tab.active` underline (`organisms/global-nav.css:35`).
-
-## Findings — tiered
-
-### Tier 1 — align now
-
-| # | Element | Current | Native counterpart | Recommended scope | Notes |
-|---|---|---|---|---|---|
-| 1 | **Accent blue** (links, primary buttons, tab underline, focus, selection border — all one token) | `#2563eb` / `#60a5fa` (Tailwind blues) | system blue ≈ `#007AFF` / `#0A84FF` | **Desktop-only** override of `--bn-colour-accent` | `#007AFF` on white is ≈4.0:1 contrast — fails WCAG AA for body-size text, so it should not become the shared web default; `#2563eb` (≈5.2:1) stays for browsers. Single-token blast radius: one override aligns links, buttons, focus rings and selection borders together — which is also native-consistent, so acceptable. |
-| 2 | **Sidebar nav selection** (`.toc-link.active`, `.session-entry.active`, `.signal-entry.active`) | Blue tint `#eef4fc`/`#1a2838` + accent text | Unemphasized grey capsule (the native sidebar deliberately pins grey in all focus states) | **Desktop-only**: repoint the three nav selectors at a new `--bn-nav-selection-bg` slot; grey on desktop, current blue tint as the shared default | Distinguish **nav selection** (grey, matches the native sidebar one pane to the left) from **content selection** — `.bn-selected` on quote cards should stay accent-tinted; macOS content selection is blue, so the current card behaviour is already the native-correct one. |
-| 3 | **Selection-lozenge radius** | Nav entries use `--bn-radius-sm` (3px) | Native pill vocabulary starts at 6pt (lens rail, icon picker) | **Shared**: change the consuming sites (`sidebar.css:450,728` etc.) from `radius-sm` to `radius-md` | Achromatic and subtle — fine everywhere. Change which token the nav rows consume; do **not** change `--bn-radius-sm` itself (badges and inputs use it correctly at 3px). |
-| 4 | **Primary button radius** | `.bn-btn`/`.bn-btn-primary` at `--bn-radius-sm` (3px) | macOS push buttons ≈5–6pt; the SPA's own `.toolbar-btn` is already 6px | **Shared**: modal buttons `radius-sm` → `radius-md` | Also fixes an internal inconsistency: toolbar buttons and modal buttons currently disagree (6px vs 3px) for no stated reason. |
-
-### Tier 2 — align later (parked, with the predicate that unparks each)
-
-| # | Element | Gap | Why parked |
-|---|---|---|---|
-| 5 | **Dynamic user accent** | A user with a graphite/pink system accent gets blue webview chrome | Needs the bridge to pass `controlAccentColor` (env var → `data-accent` or injected CSS var, same pattern as typography). Static system blue is right for the large majority; unpark if a cohort tester with a non-blue accent notices. |
-| 6 | **Hover vocabulary** | Two competing systems: blue-tinted `--bn-colour-hover` vs neutral `--bn-hover-bg` overlays. Native hovers are neutral (quaternary fills) | Converging nav hovers to the neutral overlay would match native but touches many call sites for a subtle gain. Do it opportunistically when those organisms are next open. |
-| 7 | **Focus-ring weight** | 2px accent outline / 12–20% shadow ring vs macOS's softer, wider (~3.5px halo) keyboard ring | Low payoff; revisit if keyboard-navigation work reopens `interactive.css`. |
-| 8 | **Window-focus selection dimming** | The plumbing exists (`.bn-window-inactive`, toggled from `AppLayout.tsx`) but its tokens are undefined — see Defects | Fix the defect first (spawned as its own task); full emphasized/unemphasized parity is then already achieved for content selection. |
-
-### Tier 3 — deliberately don't
+## Deliberately don't
 
 | Element | Why not |
 |---|---|
-| **Materials / vibrancy** (frosted toasts, translucent sidebars) | A webview can't sample under-window content; `backdrop-filter` only blurs the page itself. A faked material reads as web-trying-too-hard — worse than an honest opaque surface. |
-| **Native control facsimiles** (segmented controls, radio groups, sheets) | The SPA's dropdowns and modals are correct web semantics; rebuilding AppKit controls in CSS is the uncanny valley. The native side keeps real controls. |
-| **Hairline colours** | `#e5e7eb`/`#2d2d2d` already reads as a macOS hairline. Chasing `separatorColor`'s exact value is churn with no perceptible gain. |
-| **Sentiment colours** | Analytical data colours, not chrome. Content owns its colour; never restyle to match window dressing. |
-| **Scrollbars** | WKWebView already renders native overlay scrollbars. Nothing to do. |
+| **Materials / vibrancy** | A webview can't sample under-window content; a faked material reads as web-trying-too-hard — worse than honest opacity. |
+| **Native control facsimiles** | The SPA's dropdowns/modals are correct web semantics; rebuilding AppKit controls in CSS is the uncanny valley. |
+| **Hairline colours** | `#e5e7eb`/`#2d2d2d` already reads as a macOS hairline; chasing `separatorColor` exactly is churn. |
+| **Sentiment / data colours** | Analytical, not chrome. Content owns its colour — never restyle to match window dressing. |
+| **Scrollbars** | WKWebView already renders native overlay scrollbars. |
 
-## Defects found in passing (independent of alignment)
+## Edo (branding — second concern, decided later)
 
-1. **`--bn-selection-bg-inactive` / `--bn-selection-border-inactive` are consumed but never defined** — `atoms/interactive.css:90-107`, `organisms/settings.css:380-384`. Invalid at computed-value time, so the inactive-window dimming never renders as designed. `theme/CLAUDE.md:55` wrongly documents them as defined in `tokens.css`. Spawned as its own task.
-2. **`--bn-focus-shadow` has no dark variant** — same `rgba(0,0,0,…)` values both modes (`palette-default.css`); dark mode needs lighter shadow values for the lift to read.
-3. **`HelloIsland.tsx:16,29`** — hardcoded `#c00` and `borderRadius: "6px"` inline; should be `--bn-colour-danger` and `--bn-radius-md`.
+Colour-sets are identity, not seam alignment. Aspiration: make edo an opinionated, unmistakably-Bristlenose palette (the way Obsidian's purple "could only be Obsidian"), possibly the *default* with "Like macOS" as a fallback — while keeping "like macOS" highly plausible. Either way the §Principles seam discipline still runs underneath edo (it fills the same contract, incl. the new `--bn-nav-selection-bg`). Not scheduled.
 
-## Implementation sketch (non-binding)
+## See also
 
-If Tier 1 proceeds: a small `[data-platform="desktop"]` colour block (decoupled from the typography opt-out, per §Mechanism) overriding `--bn-colour-accent` and a new `--bn-nav-selection-bg` slot; two token-consumption edits for the radii. Add the new slot to `colors/_contract.css` and both palettes. Sample the exact system values from the running app (Digital Color Meter) at implementation time rather than trusting the approximations in this doc. Verify per the bundled-`.app` CSS gotcha in the root `CLAUDE.md` — an already-rendered project serves its stale baked `bristlenose-theme.css`, so test against a freshly-imported project.
+- Side-by-side lab (every candidate, light+dark, ★-marked decisions): [`docs/mockups/native-colour-alignment.html`](mockups/native-colour-alignment.html)
+- Memory: `project_native_seam_alignment_discipline` (the durable principle)
+- Commits: accent `de788028`; inactive-selection tokens `85bb41bd`; radii + selection capsule (this change)
+- `TODO.md` → "Native colour/shape alignment"
+- Precedent: `bristlenose/theme/CLAUDE.md` § "Inactive window dimming", § typography scale; `tokens-desktop.css`

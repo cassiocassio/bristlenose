@@ -74,6 +74,8 @@
     --bn-selection-border: #1e3a5f;
     --bn-selection-bg-inactive: #e8e2d4;
     --bn-selection-border-inactive: #b8ad91;
+    /* Sidebar nav selected-row capsule — warm parchment grey (edo's native-grey analogue) */
+    --bn-nav-selection-bg: #e6ddc9;
 
     /* Sidebar overlay */
     --bn-overlay-shadow: 4px 0 16px rgba(30, 20, 10, 0.10);
@@ -145,6 +147,7 @@
         --bn-selection-border:        light-dark(#1e3a5f, #7ba8a0);
         --bn-selection-bg-inactive:     light-dark(#e8e2d4, #26231d);
         --bn-selection-border-inactive: light-dark(#b8ad91, #4a4030);
+        --bn-nav-selection-bg:          light-dark(#e6ddc9, #2d2922);
 
         /* Hover backgrounds */
         --bn-hover-bg:                light-dark(rgba(30,20,10,0.05), rgba(212,201,168,0.06));

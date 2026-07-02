@@ -93,17 +93,23 @@ describe("Router", () => {
     expect(tab.className).toContain("active");
   });
 
-  it("/report/settings/ redirects to project tab (settings is now a modal)", () => {
+  it("/report/settings/ redirects to project tab (settings is now a modal)", async () => {
     renderRoute("/report/settings/");
-    // The catch-all route redirects unknown paths to /report/
-    const tab = screen.getByRole("link", { name: "Project" });
-    expect(tab.className).toContain("active");
+    // The catch-all route redirects unknown paths to /report/. The redirect is a
+    // router transition; the lazy ProjectTab island holds it pending until the
+    // chunk resolves, so await the active state rather than asserting synchronously.
+    await waitFor(() => {
+      const tab = screen.getByRole("link", { name: "Project" });
+      expect(tab.className).toContain("active");
+    });
   });
 
-  it("/report/about/ redirects to project tab", () => {
+  it("/report/about/ redirects to project tab", async () => {
     renderRoute("/report/about/");
-    const tab = screen.getByRole("link", { name: "Project" });
-    expect(tab.className).toContain("active");
+    await waitFor(() => {
+      const tab = screen.getByRole("link", { name: "Project" });
+      expect(tab.className).toContain("active");
+    });
   });
 
   it("/report/sessions/s1 activates Sessions tab (prefix match)", () => {

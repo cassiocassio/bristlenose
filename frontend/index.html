@@ -4,6 +4,36 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
+    <script>
+      /* Pre-React: apply the user's saved appearance + colour palette before
+         first paint so a choice never flashes default→chosen on load. Mirrors
+         the settings persistence (JSON-encoded values; tested logic lives in
+         src/utils/bootPalette.ts). No-op when unset, leaving the server-injected
+         data-theme / data-color-theme in place.
+         NB: inline for no-flash — it runs before the bundle. When a CSP is
+         added, hash this block (script-src 'sha256-…') not 'unsafe-inline'. */
+      (function () {
+        try {
+          var root = document.documentElement;
+          var read = function (k) {
+            var raw = localStorage.getItem(k);
+            if (!raw) return null;
+            try { return JSON.parse(raw); } catch (e) { return raw; }
+          };
+          var appearance = read("bristlenose-appearance");
+          if (appearance === "light" || appearance === "dark") {
+            root.setAttribute("data-theme", appearance);
+            root.style.colorScheme = appearance;
+          }
+          var palette = read("bristlenose-palette");
+          // Allowlist — keep in sync with PALETTES in src/utils/bootPalette.ts.
+          // (A permissive regex here let a stale value silently apply — Finding 2.)
+          if (palette === "default" || palette === "edo") {
+            root.setAttribute("data-color-theme", palette);
+          }
+        } catch (e) { /* localStorage unavailable — ignore */ }
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet">

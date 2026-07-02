@@ -8,6 +8,12 @@
     "light": "Clair",
     "dark": "Sombre"
   },
+  "palette": {
+    "legend": "Palette de couleurs",
+    "default": "Par défaut",
+    "edo": "Edo",
+    "description": "Recolore toute l'application. Edo utilise du papier washi chaud et une encre bleu de Prusse."
+  },
   "typography": {
     "legend": "Typographie"
   },

@@ -8,6 +8,12 @@
     "light": "Light",
     "dark": "Dark"
   },
+  "palette": {
+    "legend": "Colour palette",
+    "default": "Default",
+    "edo": "Edo",
+    "description": "Recolours the whole app. Edo uses warm washi paper and Prussian-blue ink."
+  },
   "typography": {
     "legend": "Typography"
   },

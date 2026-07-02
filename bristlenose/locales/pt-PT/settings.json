@@ -8,6 +8,12 @@
     "randomIconsLegend": "Atribuir um ícone aleatório a novos projetos",
     "randomIconsHelp": "Cada novo projeto recebe um ícone distinto para que seja fácil reconhecê-lo na barra lateral. Desative esta opção para manter o círculo simples e escolher os ícones manualmente."
   },
+  "palette": {
+    "legend": "Paleta de cores",
+    "default": "Predefinida",
+    "edo": "Edo",
+    "description": "Recolore a aplicação inteira. Edo usa papel washi quente e tinta azul-da-prússia."
+  },
   "typography": {
     "legend": "Tipografia"
   },

@@ -8,6 +8,12 @@
     "light": "Chiaro",
     "dark": "Scuro"
   },
+  "palette": {
+    "legend": "Tavolozza colori",
+    "default": "Predefinito",
+    "edo": "Edo",
+    "description": "Ricolora l'intera app. Edo usa carta washi calda e inchiostro blu di Prussia."
+  },
   "typography": {
     "legend": "Tipografia"
   },

@@ -25,6 +25,7 @@ describe("SettingsModal", () => {
   afterEach(() => {
     cleanup();
     localStorage.clear();
+    document.documentElement.removeAttribute("data-color-theme");
   });
 
   // ── Open / close ──────────────────────────────────────────────────────
@@ -198,6 +199,42 @@ describe("SettingsModal", () => {
     render(<SettingsModal open={true} onClose={vi.fn()} />);
     const light = screen.getByLabelText("Light") as HTMLInputElement;
     expect(light.checked).toBe(true);
+  });
+
+  // ── General section: Colour palette ────────────────────────────────────
+
+  it("renders palette radio buttons (Default / Edo)", () => {
+    render(<SettingsModal open={true} onClose={vi.fn()} />);
+    expect(screen.getByLabelText("Default")).toBeTruthy();
+    expect(screen.getByLabelText("Edo")).toBeTruthy();
+  });
+
+  it("defaults palette to 'default' when nothing saved or injected", () => {
+    render(<SettingsModal open={true} onClose={vi.fn()} />);
+    const def = screen.getByLabelText("Default") as HTMLInputElement;
+    expect(def.checked).toBe(true);
+  });
+
+  it("applies data-color-theme and persists palette on change", () => {
+    render(<SettingsModal open={true} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText("Edo"));
+    expect(document.documentElement.getAttribute("data-color-theme")).toBe("edo");
+    expect(localStorage.getItem("bristlenose-palette")).toBe('"edo"');
+  });
+
+  it("reads saved palette from localStorage", () => {
+    localStorage.setItem("bristlenose-palette", '"edo"');
+    render(<SettingsModal open={true} onClose={vi.fn()} />);
+    const edo = screen.getByLabelText("Edo") as HTMLInputElement;
+    expect(edo.checked).toBe(true);
+  });
+
+  it("does not clobber a server-injected palette when the user hasn't chosen", () => {
+    document.documentElement.setAttribute("data-color-theme", "edo");
+    render(<SettingsModal open={true} onClose={vi.fn()} />);
+    const edo = screen.getByLabelText("Edo") as HTMLInputElement;
+    expect(edo.checked).toBe(true);
+    expect(document.documentElement.getAttribute("data-color-theme")).toBe("edo");
   });
 
   // ── General section: Language ──────────────────────────────────────────

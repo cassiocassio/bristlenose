@@ -18,7 +18,10 @@ regexes = [
   '''sk-ant-test-key''',
   '''sk-fromenv''',
   '''AIzaSy[AX]{2,}''',                                   # AIzaSyXXX… doc placeholder
+  '''AIzaSyTest[0-9]+''',                                 # tests/test_gemini.py synthetic key (19-char, real ones are 39)
   '''env-injected-key''',
+  '''test-integration-key-12345''',                       # docs/design-keychain.md dummy
+  '''Norman/Garrett/Plato/UXR''',                         # CLAUDE.md prose (design-thinker names, not a key)
 ]
 
 [[allowlists]]

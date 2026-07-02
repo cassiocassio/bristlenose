@@ -181,6 +181,13 @@ main { max-width: 72rem; margin: 0 auto; }
     font-weight: var(--bn-weight-emphasis);
 }
 .panel-proposed .panel-head { color: var(--demo-accent); }
+.panel.chosen { border-color: var(--demo-accent); box-shadow: 0 0 0 1px var(--demo-accent); }
+.panel.chosen .panel-head::before {
+    content: "★ Chosen"; flex-shrink: 0;
+    font-size: 0.6rem; letter-spacing: 0.03em; text-transform: none;
+    color: #fff; background: var(--demo-accent);
+    padding: 0.1rem 0.45rem; border-radius: var(--bn-radius-pill);
+}
 .panel-head .swatch {
     width: 0.85rem; height: 0.85rem; border-radius: var(--bn-radius-pill);
     display: inline-block; align-self: center;
@@ -406,7 +413,7 @@ main { max-width: 72rem; margin: 0 auto; }
                     <div class="demo-nav-row"><span class="dot"></span> Feature requests</div>
                 </div>
             </div>
-            <div class="panel panel-proposed">
+            <div class="panel panel-proposed chosen">
                 <div class="panel-head">Native + webview aligned · accent text on pale grey</div>
                 <p class="demo-nav-sublabel">Native project sidebar (Finder / bn.app)</p>
                 <div class="demo-nav">
@@ -442,7 +449,7 @@ main { max-width: 72rem; margin: 0 auto; }
                     <div class="demo-nav-row active" style="--demo-nav-sel-bg: var(--bn-selection-bg); --demo-nav-sel-fg: var(--bn-colour-accent);"><span class="dot"></span> Trust &amp; privacy</div>
                 </div>
             </div>
-            <div class="panel panel-proposed">
+            <div class="panel panel-proposed chosen">
                 <div class="panel-head">macOS-aligned · 6px corners</div>
                 <div class="demo-nav">
                     <div class="demo-nav-row active" style="--demo-nav-sel-bg: var(--bn-selection-bg); --demo-nav-sel-fg: var(--bn-colour-accent);"><span class="dot"></span> Trust &amp; privacy</div>
@@ -472,7 +479,7 @@ main { max-width: 72rem; margin: 0 auto; }
                     <button class="demo-btn demo-btn-danger">Delete</button>
                 </div>
             </div>
-            <div class="panel panel-proposed">
+            <div class="panel panel-proposed chosen">
                 <div class="panel-head">macOS-aligned · 6px buttons</div>
                 <div class="demo-btn-row">
                     <button class="demo-btn demo-btn-primary" style="--demo-accent: var(--bn-colour-accent);">Save changes</button>
@@ -505,8 +512,8 @@ main { max-width: 72rem; margin: 0 auto; }
                     <cite>p3 · Onboarding friction</cite>
                 </blockquote>
             </div>
-            <div class="panel panel-proposed">
-                <div class="panel-head">Same card · reads the same token set</div>
+            <div class="panel panel-proposed chosen">
+                <div class="panel-head">Content stays blue; inactive dim fixed</div>
                 <blockquote class="demo-quote selected" data-quote>
                     "I almost gave up at the sign-in step — it wasn't clear my work account would even work."
                     <cite>p3 · Onboarding friction</cite>

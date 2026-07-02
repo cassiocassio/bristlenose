@@ -69,6 +69,7 @@ Required tokens:
 --bn-selection-border           Multi-select border
 --bn-selection-bg-inactive      Multi-select background, window inactive (grey dim)
 --bn-selection-border-inactive  Multi-select border, window inactive (grey dim)
+--bn-nav-selection-bg           Sidebar nav selected-row capsule — native unemphasized grey (icon+label ride --bn-colour-accent)
 
 --bn-overlay-shadow             Sidebar overlay drop shadow
 

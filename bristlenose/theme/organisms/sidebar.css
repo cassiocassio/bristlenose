@@ -447,7 +447,7 @@
     font-weight: var(--bn-weight-light);
     color: var(--bn-colour-text);
     text-decoration: none;
-    border-radius: var(--bn-radius-sm);
+    border-radius: var(--bn-radius-md);
     transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
     cursor: pointer;
 }
@@ -467,7 +467,7 @@
 .toc-link.active {
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-accent);
-    background: var(--bn-colour-hover);
+    background: var(--bn-nav-selection-bg);
 }
 
 /* ── Column 3: Center ─────────────────────────────────────────── */
@@ -725,7 +725,7 @@ body.dragging * {
 .session-entry {
     display: block;
     padding: var(--bn-space-sm);
-    border-radius: var(--bn-radius-sm);
+    border-radius: var(--bn-radius-md);
     text-decoration: none;
     color: var(--bn-colour-text);
     transition: background var(--bn-transition-fast);
@@ -733,7 +733,7 @@ body.dragging * {
 }
 
 .session-entry:hover { background: var(--bn-colour-hover); }
-.session-entry.active { background: var(--bn-colour-hover); }
+.session-entry.active { background: var(--bn-nav-selection-bg); }
 
 .session-entry + .session-entry {
     border-top: 1px solid var(--bn-colour-border);
@@ -869,7 +869,7 @@ body.dragging * {
     align-items: baseline;
     gap: var(--bn-space-xs);
     padding: 0.2rem var(--bn-space-sm);
-    border-radius: var(--bn-radius-sm);
+    border-radius: var(--bn-radius-md);
     cursor: pointer;
     transition: background var(--bn-transition-fast);
     text-decoration: none;
@@ -886,7 +886,7 @@ body.dragging * {
 }
 
 .signal-entry.active {
-    background: var(--bn-colour-hover);
+    background: var(--bn-nav-selection-bg);
 }
 
 .signal-entry.active .signal-entry-name {

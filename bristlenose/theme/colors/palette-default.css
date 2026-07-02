@@ -72,6 +72,9 @@
     --bn-selection-border: #007aff;
     --bn-selection-bg-inactive: #e5e7eb;
     --bn-selection-border-inactive: #9ca3af;
+    /* Sidebar nav selected-row capsule — NSColor unemphasizedSelectedContentBackgroundColor,
+       sampled (no canonical Apple hex; dynamic + vibrant composite). Re-sample at OS bumps. */
+    --bn-nav-selection-bg: #efefef;
 
     /* Sidebar overlay */
     --bn-overlay-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
@@ -146,6 +149,7 @@
         --bn-selection-border:        light-dark(#007aff, #0a84ff);
         --bn-selection-bg-inactive:     light-dark(#e5e7eb, #262626);
         --bn-selection-border-inactive: light-dark(#9ca3af, #4b5563);
+        --bn-nav-selection-bg:          light-dark(#efefef, #2b2b2b);
 
         /* Hover backgrounds */
         --bn-hover-bg:                light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06));

@@ -6,16 +6,30 @@
    bero-ai (Prussian blue), yellow ochre.
 
    Desktop default. Activate: data-color-theme="edo" on <html>.
-   CLI: bristlenose serve --color-theme edo
-   Env: BRISTLENOSE_COLOR_THEME=edo */
+   Env: BRISTLENOSE_COLOR_THEME=edo  (only working switch today — no CLI flag yet)
+   Approved future naming: --palette edo / BRISTLENOSE_PALETTE=edo (glossary §Display settings)
+
+   ── v1 decisions (Jul 2026) ──
+   Accent uses Prussian blue's vivid UNDERTONE (#0f5c9e), not the dull masstone
+   (#0f5c9e) sampled off aged prints — too low-chroma for links/icons/selection.
+   Dark accent is vivid blue (#4d9fe0), not verdigris. Background is bright Paper
+   White (#fdfbf7). Body ink is passport navy (#1b2230 / #e8e3d6 dark).
+
+   Alternatives considered — for future edo2/edo3 variants (explore in
+   docs/mockups/edo-theme-studio.html):
+     paper  — Snow White #fdfbf7, Warm off-white #f0e9d8, Washi Cream #ede5d1 (warmer/more washi)
+     accent — masstone Prussian #0f5c9e, midpoint #164e80, electric #2a7ac0; dark verdigris #7ba8a0
+     ink    — Sumi Black #1b2230 light / Sail Parchment #d4c9a8 dark; Moonlight #e4e6ea (cool dark ink)
+   Known follow-up: warm surfaces (quote-bg #f0e9d8, hover #ede5d1, badge #e8dfc9)
+   now read warmer against the brighter paper — revisit surface harmony next pass. */
 
 [data-color-theme="edo"] {
     /* Colour palette — warm paper with indigo/verdigris accents */
-    --bn-colour-bg: #f5f0e6;                    /* Snow White — warm paper */
-    --bn-colour-text: #1a1a1a;                   /* Sumi Black — carbon ink */
+    --bn-colour-bg: #fdfbf7;                    /* Paper White — bright near-white */
+    --bn-colour-text: #1b2230;                   /* Passport navy — near-black, indigo whisper */
     --bn-colour-muted: #5a7d9b;                  /* Storm Slate — atmospheric grey-blue */
     --bn-colour-border: #d4c9a8;                 /* Sail Parchment — warm border */
-    --bn-colour-accent: #1e3a5f;                 /* Prussian Blue — bero-ai */
+    --bn-colour-accent: #0f5c9e;                 /* Vivid Prussian — bero-ai undertone */
     --bn-colour-hover: #ede5d1;                  /* Washi Cream tint — warm hover */
 
     /* Semantic surfaces */
@@ -35,14 +49,14 @@
     --bn-colour-negative: #b5432a;
 
     /* Playback-sync glow — Prussian Blue based */
-    --bn-glow-colour: rgba(30, 58, 95, 0.08);
-    --bn-glow-colour-strong: rgba(30, 58, 95, 0.15);
+    --bn-glow-colour: rgba(15, 92, 158, 0.08);
+    --bn-glow-colour-strong: rgba(15, 92, 158, 0.15);
 
     /* Minimap — warm parchment tones */
     --bn-minimap-quote: #d4c9a8;
     --bn-minimap-heading: #9e8b6e;
-    --bn-minimap-viewport-bg: rgba(30, 58, 95, 0.12);
-    --bn-minimap-viewport-border: rgba(30, 58, 95, 0.25);
+    --bn-minimap-viewport-bg: rgba(15, 92, 158, 0.12);
+    --bn-minimap-viewport-border: rgba(15, 92, 158, 0.25);
 
     /* Transcript coverage bar */
     --bn-coverage-report: #5a7d9b;
@@ -63,7 +77,7 @@
 
     /* Focus state */
     --bn-focus-shadow: 0 3px 12px rgba(30, 20, 10, 0.12), 0 0 0 1px rgba(30, 20, 10, 0.06);
-    --bn-focus-ring: 0 0 0 2px rgba(30, 58, 95, 0.15);
+    --bn-focus-ring: 0 0 0 2px rgba(15, 92, 158, 0.15);
 
     /* Hover backgrounds */
     --bn-hover-bg: rgba(30, 20, 10, 0.05);
@@ -71,7 +85,7 @@
 
     /* Selection state — Prussian Blue */
     --bn-selection-bg: #e0e8f0;
-    --bn-selection-border: #1e3a5f;
+    --bn-selection-border: #0f5c9e;
     --bn-selection-bg-inactive: #e8e2d4;
     --bn-selection-border-inactive: #b8ad91;
     /* Sidebar nav selected-row capsule — warm parchment grey (edo's native-grey analogue) */
@@ -81,7 +95,7 @@
     --bn-overlay-shadow: 4px 0 16px rgba(30, 20, 10, 0.10);
 
     /* Legacy aliases */
-    --bn-colour-suggestion: #1e3a5f;
+    --bn-colour-suggestion: #0f5c9e;
     --bn-colour-suggestion-bg: #e0e8f0;
 }
 
@@ -90,11 +104,11 @@
 @supports (color: light-dark(#000, #fff)) {
     [data-color-theme="edo"] {
         /* Colour palette */
-        --bn-colour-bg:               light-dark(#f5f0e6, #1a1816);
-        --bn-colour-text:             light-dark(#1a1a1a, #d4c9a8);
+        --bn-colour-bg:               light-dark(#fdfbf7, #1a1816);
+        --bn-colour-text:             light-dark(#1b2230, #e8e3d6);
         --bn-colour-muted:            light-dark(#5a7d9b, #7ba8a0);
         --bn-colour-border:           light-dark(#d4c9a8, #2d2820);
-        --bn-colour-accent:           light-dark(#1e3a5f, #7ba8a0);
+        --bn-colour-accent:           light-dark(#0f5c9e, #4d9fe0);
         --bn-colour-hover:            light-dark(#ede5d1, #252118);
 
         /* Semantic surfaces */
@@ -112,14 +126,14 @@
         --bn-colour-cited-bg:         light-dark(#f5ecd0, #3b3010);
 
         /* Playback-sync glow */
-        --bn-glow-colour:             light-dark(rgba(30, 58, 95, 0.08), rgba(123, 168, 160, 0.10));
-        --bn-glow-colour-strong:      light-dark(rgba(30, 58, 95, 0.15), rgba(123, 168, 160, 0.18));
+        --bn-glow-colour:             light-dark(rgba(15, 92, 158, 0.08), rgba(77, 159, 224, 0.10));
+        --bn-glow-colour-strong:      light-dark(rgba(15, 92, 158, 0.15), rgba(77, 159, 224, 0.18));
 
         /* Minimap */
         --bn-minimap-quote:           light-dark(#d4c9a8, #2d2820);
         --bn-minimap-heading:         light-dark(#9e8b6e, #4a4030);
-        --bn-minimap-viewport-bg:     light-dark(rgba(30, 58, 95, 0.12), rgba(123, 168, 160, 0.15));
-        --bn-minimap-viewport-border: light-dark(rgba(30, 58, 95, 0.25), rgba(123, 168, 160, 0.3));
+        --bn-minimap-viewport-bg:     light-dark(rgba(15, 92, 158, 0.12), rgba(77, 159, 224, 0.15));
+        --bn-minimap-viewport-border: light-dark(rgba(15, 92, 158, 0.25), rgba(77, 159, 224, 0.3));
 
         /* Transcript coverage bar */
         --bn-coverage-report:    light-dark(#5a7d9b, #4a6a80);
@@ -142,9 +156,9 @@
         --bn-colour-shadow:           light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
 
         /* Focus and selection */
-        --bn-focus-ring:              light-dark(0 0 0 2px rgba(30, 58, 95, 0.15), 0 0 0 2px rgba(123, 168, 160, 0.2));
+        --bn-focus-ring:              light-dark(0 0 0 2px rgba(15, 92, 158, 0.15), 0 0 0 2px rgba(77, 159, 224, 0.2));
         --bn-selection-bg:            light-dark(#e0e8f0, #1e2830);
-        --bn-selection-border:        light-dark(#1e3a5f, #7ba8a0);
+        --bn-selection-border:        light-dark(#0f5c9e, #4d9fe0);
         --bn-selection-bg-inactive:     light-dark(#e8e2d4, #26231d);
         --bn-selection-border-inactive: light-dark(#b8ad91, #4a4030);
         --bn-nav-selection-bg:          light-dark(#e6ddc9, #2d2922);
@@ -154,7 +168,7 @@
         --bn-hover-bg-subtle:         light-dark(rgba(30,20,10,0.03), rgba(212,201,168,0.04));
 
         /* Legacy aliases */
-        --bn-colour-suggestion:       light-dark(#1e3a5f, #7ba8a0);
+        --bn-colour-suggestion:       light-dark(#0f5c9e, #4d9fe0);
         --bn-colour-suggestion-bg:    light-dark(#e0e8f0, #1e2830);
     }
 }

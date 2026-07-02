@@ -25,7 +25,7 @@ Consumers: human writers, translators (Weblate glossary seed), user-documentatio
 | **code** | category, label (when referring to codebook entries) | A code is a named concept in a codebook that can be applied to quotes. Distinct from "tag" (see below). | `design-i18n.md` lines 46–47 |
 | **tag** | code (when referring to user-applied labels on quotes) | A tag is a label applied to a specific quote — either manually ("human") or by AI proposal ("autocode"). Tags come from codebook codes, but "tag" is the applied instance, "code" is the definition. This distinction doesn't exist in academic QDA; it's a Bristlenose UX choice. | `design-i18n.md` line 53 |
 | **session** | interview, recording | A session is one research encounter (one recording, one transcript). "Interview" is the German/French UI term (Interviews/Entretiens) but English uses "session" to cover non-interview formats (diary studies, usability tests). | `design-i18n.md` lines 64–65 |
-| **theme** | category, cluster, group | An emergent pattern requiring at least two quotes. A single quote is an observation, not a theme. Follows Braun & Clarke (2006) thematic analysis. | `design-research-methodology.md` lines 150–175 |
+| **theme** | category, cluster, group; **colour theme** (as a UI setting) | An emergent pattern requiring at least two quotes. A single quote is an observation, not a theme. Follows Braun & Clarke (2006) thematic analysis. **Reserved for research** — never reuse "theme" for a colour/UI setting; that control is **palette** (see Display settings). | `design-research-methodology.md` lines 150–175 |
 | **signal** | pattern, insight, finding | A Bristlenose-specific concept: statistically notable concentration of sentiment or codebook tags within a report section. No equivalent in any QDA tradition — we coined it. | `design-research-methodology.md`; `design-i18n.md` lines 67–68 |
 | **sentiment** | emotion, feeling, affect | One of seven UX-specific categories (see below). "Sentiment" was chosen over "emotion" because it maps to actionable UX insights, not universal affect theory. | `design-research-methodology.md` lines 94–133 |
 
@@ -72,6 +72,22 @@ Fixed taxonomy. Do not add new categories without research justification.
 | **Azure OpenAI** | Azure, Microsoft AI | `"azure"` | The full product name. Researchers using it know it's Azure-specific. |
 | **Gemini** | Google, Google AI | `"gemini"` | Product name. |
 | **Ollama** | Local, local models (as a proper noun) | `"ollama"` / `"local"` | "Ollama" when referring to the tool. "Local models" or "local (Ollama)" when describing the mode. |
+
+---
+
+## Display settings (appearance · palette · typography)
+
+Three orthogonal display axes. Same internal/external split as provider names above: internal identifiers keep "theme"; **user-facing surfaces never say "theme"** — it means research findings (the Themes tab). One public word per axis, identical across CLI flag, env var, and the SPA/Mac pulldown label. Approved Jul 2026 — see `docs/mockups/control-surface-parity.html` for the cross-surface × cross-locale mockup.
+
+| Canonical (user-facing) | Forbidden (in user text) | CLI flag / env var | Internal code value | Values |
+|---|---|---|---|---|
+| **Application appearance** (light/dark) | theme, colour scheme | `--appearance` / `BRISTLENOSE_APPEARANCE` | `data-theme`, `color_scheme` | auto · light · dark |
+| **Colour palette** | theme, colour theme, colour scheme, colour set | `--palette` / `BRISTLENOSE_PALETTE` | `data-color-theme`, `color_theme`, `palette-*.css` | default · Edo |
+| **Typography** | font (as the control name) | `--typography` / `BRISTLENOSE_TYPOGRAPHY` | `data-typography` | system (SF Pro) · Inter |
+
+**Never "theme" for the palette — in any language.** In ja/ko/zh-Hant the software word for a colour "theme" (テーマ / 테마 / 主題) is the *same* word already shipped for research Themes, so the palette label must use the "palette" loanword: カラーパレット / 색상 팔레트 / 調色盤 (never 主題 / 佈景主題). Latin-script locales are collision-free. Appearance reuses the OS term per locale (Erscheinungsbild / 外観 / 外觀 / Vzhled …). "Edo" is a proper noun (native CJK script 江戸 / 에도, Latin "Edo" elsewhere); "Default" translates via each platform's Apple term (Predeterminada / Predefinida / 기본값 / 預設).
+
+**Migration.** Current env vars are `BRISTLENOSE_COLOR_SCHEME` (appearance) and `BRISTLENOSE_COLOR_THEME` (palette) — near-homophones for different axes; no CLI flags exist yet. Rename the user-typed surfaces to the above; keep old env names as deprecated aliases (the desktop Swift sidecar sets them — `grep desktop/` first).
 
 ---
 

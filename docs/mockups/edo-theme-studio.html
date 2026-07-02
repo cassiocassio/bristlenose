@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edo Theme Studio — Bristlenose</title>
+<style>
+  /* ============================================================= SHELL */
+  :root { --ui-bg:#f4f4f5; --ui-panel:#fff; --ui-line:#e0e0e2; --ui-ink:#1f1f22; --ui-muted:#6b6b70;
+          --ui-accent:#3a3a3e; --ui-good:#2e7d32; --ui-bad:#c62828; --ui-warn:#ef6c00; --ui-lock:#8a8a90; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:13px/1.45 -apple-system,"SF Pro Text",system-ui,sans-serif; color:var(--ui-ink); background:var(--ui-bg); }
+  .app-bar { position:sticky; top:0; z-index:20; display:flex; gap:16px; align-items:center; padding:10px 18px; background:var(--ui-panel); border-bottom:1px solid var(--ui-line); }
+  .app-bar h1 { font-size:14px; margin:0; font-weight:700; letter-spacing:.01em; }
+  .app-bar .sub { color:var(--ui-muted); font-size:11.5px; }
+  .app-bar .spacer { flex:1; }
+  .tabbar { display:inline-flex; gap:2px; background:#ececee; border-radius:8px; padding:3px; }
+  .tabbar button { border:0; background:transparent; padding:6px 14px; border-radius:6px; font:inherit; font-weight:600; color:var(--ui-muted); cursor:pointer; }
+  .tabbar button.on { background:var(--ui-panel); color:var(--ui-ink); box-shadow:0 1px 3px rgba(0,0,0,.1); }
+  .tool { display:none; }
+  .tool.on { display:block; }
+
+  /* shared little bits */
+  .hexchip { font:11px/1 "SF Mono",ui-monospace,monospace; background:#ececee; color:#333; padding:4px 7px; border-radius:5px; }
+  .seg { display:inline-flex; border:1px solid var(--ui-line); border-radius:7px; overflow:hidden; }
+  .seg button { border:0; background:var(--ui-panel); padding:6px 13px; font:inherit; cursor:pointer; color:var(--ui-muted); }
+  .seg button.on { background:var(--ui-accent); color:#fff; }
+  .btn { border:1px solid var(--ui-line); background:var(--ui-panel); border-radius:7px; padding:5px 11px; font:inherit; cursor:pointer; color:var(--ui-ink); }
+  .btn:hover { background:#efeff1; }
+  .btn.primary { background:var(--ui-accent); color:#fff; border-color:var(--ui-accent); }
+
+  /* ===================================================== PICKER TOOL */
+  #tool-picker .sub-bar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; padding:9px 18px; background:var(--ui-panel); border-bottom:1px solid var(--ui-line); }
+  #tool-picker .presets { display:inline-flex; gap:6px; align-items:center; }
+  #tool-picker .presets span { color:var(--ui-muted); }
+  #tool-picker input.name { width:70px; font:inherit; padding:4px 7px; border:1px solid var(--ui-line); border-radius:6px; }
+  #tool-picker .wrap { display:grid; grid-template-columns:430px 1fr; align-items:start; }
+  @media (max-width:1000px){ #tool-picker .wrap { grid-template-columns:1fr; } }
+  #tool-picker .controls { padding:14px 16px; }
+  #tool-picker .controls h2 { font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--ui-muted); margin:18px 0 8px; }
+  #tool-picker .controls h2:first-child { margin-top:0; }
+  #tool-picker .slot { display:grid; grid-template-columns:1fr auto; gap:6px 10px; align-items:center; padding:7px 0; border-bottom:1px solid var(--ui-line); }
+  #tool-picker .slot .label { font-weight:600; }
+  #tool-picker .slot .label .lock { font-weight:400; font-size:11px; color:var(--ui-lock); margin-left:6px; }
+  #tool-picker .slot .role { color:var(--ui-muted); font-size:11.5px; }
+  #tool-picker .slot .controls-row { display:flex; gap:6px; align-items:center; }
+  #tool-picker .slot select { font:inherit; padding:4px 6px; border:1px solid var(--ui-line); border-radius:6px; max-width:150px; }
+  #tool-picker .slot input[type=color] { width:34px; height:28px; padding:0; border:1px solid var(--ui-line); border-radius:6px; background:none; cursor:pointer; }
+  #tool-picker .chip { font-size:11px; padding:1px 6px; border-radius:5px; white-space:nowrap; justify-self:end; grid-column:2; }
+  #tool-picker .chip.good { background:#e6f4ea; color:var(--ui-good); }
+  #tool-picker .chip.ok { background:#fff4e5; color:var(--ui-warn); }
+  #tool-picker .chip.bad { background:#fdecea; color:var(--ui-bad); }
+  #tool-picker .preview-shell { padding:18px; background:repeating-conic-gradient(#e9e9ec 0% 25%, #f4f4f5 0% 50%) 50% / 22px 22px; }
+  #tool-picker .preview { border-radius:12px; overflow:hidden; box-shadow:0 6px 30px rgba(0,0,0,.12); background:var(--bn-colour-bg); color:var(--bn-colour-text); display:grid; grid-template-columns:200px 1fr; font:15px/1.5 -apple-system,system-ui,sans-serif; }
+  #tool-picker .pv-side { background:var(--bn-colour-bg); border-right:1px solid var(--bn-colour-border); padding:14px 12px; }
+  #tool-picker .pv-brand { font-weight:700; font-size:17px; color:var(--bn-colour-accent); margin-bottom:14px; }
+  #tool-picker .pv-nav a { display:block; padding:6px 9px; border-radius:6px; color:var(--bn-colour-muted); text-decoration:none; font-size:13px; }
+  #tool-picker .pv-nav a.active { background:var(--bn-colour-active-bg); color:var(--bn-colour-accent); font-weight:600; }
+  #tool-picker .pv-nav a:hover { background:var(--bn-colour-hover); }
+  #tool-picker .pv-main { padding:20px 24px; }
+  #tool-picker .pv-h1 { font-size:22px; font-weight:700; margin:0 0 4px; }
+  #tool-picker .pv-sub { color:var(--bn-colour-muted); margin:0 0 18px; font-size:13px; }
+  #tool-picker .pv-h2 { font-size:18px; font-weight:600; color:var(--bn-colour-accent); margin:22px 0 10px; }
+  #tool-picker .pv-quote { background:var(--bn-colour-quote-bg); border:1px solid var(--bn-colour-border); border-radius:8px; padding:14px 16px; margin:0 0 12px; }
+  #tool-picker .pv-quote p { margin:0 0 10px; }
+  #tool-picker .pv-badges { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  #tool-picker .pv-badge { background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:999px; }
+  #tool-picker .pv-attr { color:var(--bn-colour-muted); font-size:13px; }
+  #tool-picker .pv-link { color:var(--bn-colour-accent); text-decoration:underline; text-underline-offset:2px; }
+  #tool-picker mark.pv-hl { background:var(--bn-colour-highlight); color:inherit; padding:0 2px; border-radius:3px; }
+  #tool-picker .pv-sel { background:var(--bn-colour-selection-bg); border-bottom:2px solid var(--bn-colour-accent); }
+  #tool-picker .pv-actions { display:flex; gap:8px; margin-top:16px; }
+  #tool-picker .pv-btn { border:1px solid var(--bn-colour-accent); color:var(--bn-colour-bg); background:var(--bn-colour-accent); border-radius:7px; padding:6px 13px; font:inherit; font-size:13px; cursor:default; }
+  #tool-picker .pv-btn.ghost { background:transparent; color:var(--bn-colour-accent); }
+  #tool-picker .pv-btn.danger { background:var(--bn-colour-negative); border-color:var(--bn-colour-negative); color:#fff; }
+  #tool-picker .pv-divider { height:1px; background:var(--bn-colour-border); margin:18px 0; }
+  #tool-picker .pv-meta-row { display:flex; gap:18px; font-size:12px; color:var(--bn-colour-muted); }
+
+  /* export modal */
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; align-items:center; justify-content:center; z-index:50; }
+  .modal-bg.show { display:flex; }
+  .modal { background:var(--ui-panel); border-radius:12px; width:min(680px,92vw); max-height:86vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+  .modal .m-head { display:flex; align-items:center; gap:10px; padding:11px 16px; border-bottom:1px solid var(--ui-line); }
+  .modal .m-head h3 { margin:0; font-size:13px; }
+  .modal textarea { border:0; padding:14px 16px; font:12px/1.5 "SF Mono",ui-monospace,monospace; resize:none; min-height:380px; }
+  .modal .m-foot { padding:10px 16px; border-top:1px solid var(--ui-line); display:flex; gap:8px; align-items:center; justify-content:flex-end; }
+  .modal .hint { color:var(--ui-muted); font-size:11.5px; margin-right:auto; max-width:60%; }
+
+  /* ================================================== VIVIDNESS TOOL */
+  #tool-vivid { --paper:#fdfbf7; }
+  #tool-vivid .sub-bar { display:flex; gap:14px; align-items:center; flex-wrap:wrap; padding:9px 18px; background:var(--ui-panel); border-bottom:1px solid var(--ui-line); }
+  #tool-vivid .sub-bar .note { color:var(--ui-muted); font-size:12px; }
+  #tool-vivid .paperbar { display:flex; gap:14px; align-items:center; flex-wrap:wrap; padding:9px 18px; background:var(--ui-panel); border-bottom:1px solid var(--ui-line); font-size:12px; }
+  #tool-vivid .paperbar .lbl { color:var(--ui-muted); font-weight:600; }
+  #tool-vivid .swatches { display:flex; gap:5px; }
+  #tool-vivid .swatches button { width:26px; height:26px; border:1px solid var(--ui-line); border-radius:6px; cursor:pointer; padding:0; }
+  #tool-vivid .swatches button.on { outline:2px solid var(--ui-accent); outline-offset:1px; }
+  #tool-vivid .paperbar label { display:flex; gap:7px; align-items:center; color:var(--ui-muted); }
+  #tool-vivid .paperbar input[type=range] { width:150px; }
+  #tool-vivid .paperbar input[type=color] { width:30px; height:26px; padding:0; border:1px solid var(--ui-line); border-radius:6px; background:none; cursor:pointer; }
+  #tool-vivid.dark .paperbar { opacity:.4; pointer-events:none; }
+  #tool-vivid.dark .paperbar .lbl::after { content:" — light mode only"; font-weight:400; }
+  #tool-vivid .grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; padding:18px; }
+  @media (max-width:1180px){ #tool-vivid .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media (max-width:640px){ #tool-vivid .grid { grid-template-columns:1fr; } }
+  #tool-vivid .panel { --bg:var(--paper); --ink:#1b2230; --border:#d4c9a8; --muted:#5a7d9b; --accent:var(--acc-light);
+    --wash:color-mix(in srgb, var(--accent) 13%, var(--bg)); --wash-soft:color-mix(in srgb, var(--accent) 7%, var(--bg)); }
+  #tool-vivid.dark .panel { --bg:#1a1816; --ink:#e8e3d6; --border:#2d2820; --muted:#7ba8a0; --accent:var(--acc-dark); }
+  #tool-vivid .panel-head { padding:0 2px 8px; }
+  #tool-vivid .panel-head .t { font-weight:600; font-size:12.5px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  #tool-vivid .panel-head .d { color:var(--ui-muted); font-size:11px; }
+  #tool-vivid .panel-head .hexchip { padding:3px 6px; }
+  #tool-vivid .pick { font-size:10.5px; font-weight:600; color:#2e7d32; background:#e6f4ea; padding:2px 6px; border-radius:5px; }
+  #tool-vivid .surface { background:var(--bg); color:var(--ink); border:1px solid var(--border); border-radius:12px; overflow:hidden; box-shadow:0 4px 18px rgba(0,0,0,.08); display:grid; grid-template-columns:112px 1fr; min-height:400px; font:15px/1.5 -apple-system,system-ui,sans-serif; }
+  #tool-vivid .s-side { border-right:1px solid var(--border); padding:11px 7px; }
+  #tool-vivid .s-brand { font-weight:700; font-size:13px; color:var(--accent); margin:0 4px 11px; }
+  #tool-vivid .s-nav-item { display:flex; align-items:center; gap:7px; padding:5px 7px; border-radius:6px; color:var(--muted); text-decoration:none; font-size:12.5px; cursor:default; }
+  #tool-vivid .s-nav-item svg { width:14px; height:14px; flex:none; }
+  #tool-vivid .s-nav-item.active { background:var(--wash); color:var(--accent); font-weight:600; }
+  #tool-vivid .s-main { padding:15px 16px; }
+  #tool-vivid .s-head { font-size:17px; font-weight:600; color:var(--accent); margin:0 0 6px; }
+  #tool-vivid .s-body { margin:0 0 13px; font-size:13.5px; }
+  #tool-vivid .s-link { color:var(--accent); text-decoration:underline; text-underline-offset:2px; cursor:default; }
+  #tool-vivid .s-sel { background:var(--wash); box-shadow:inset 0 -2px 0 var(--accent); border-radius:2px; padding:0 1px; }
+  #tool-vivid .s-quote { background:var(--wash-soft); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:6px; padding:10px 12px; margin:0 0 11px; font-size:13px; }
+  #tool-vivid .s-quote.selected { border-color:var(--accent); background:var(--wash); }
+  #tool-vivid .s-quote .cap { color:var(--muted); font-size:11.5px; margin-top:5px; }
+  #tool-vivid .s-btn { border:1px solid var(--accent); background:var(--accent); color:var(--bg); border-radius:7px; padding:6px 12px; font:inherit; font-size:12.5px; cursor:default; }
+  #tool-vivid .s-btn.ghost { background:transparent; color:var(--accent); }
+  #tool-vivid .s-row { display:flex; gap:7px; align-items:center; margin-top:4px; }
+  #tool-vivid .foot { padding:4px 18px 24px; color:var(--ui-muted); font-size:12px; line-height:1.6; }
+  #tool-vivid .foot code { background:#ececee; padding:1px 5px; border-radius:4px; font-size:11px; }
+
+  /* ======================================================= ABOUT TAB */
+  #tool-about { padding:22px 26px; max-width:760px; line-height:1.6; }
+  #tool-about h2 { font-size:15px; margin:22px 0 8px; }
+  #tool-about h2:first-child { margin-top:0; }
+  #tool-about p, #tool-about li { color:#333; font-size:13px; }
+  #tool-about code { background:#ececee; padding:1px 5px; border-radius:4px; font-size:11.5px; }
+  #tool-about .decisions { border:1px solid var(--ui-line); border-radius:10px; padding:4px 16px; margin:10px 0; }
+  #tool-about .decisions div { display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--ui-line); font-size:13px; }
+  #tool-about .decisions div:last-child { border-bottom:0; }
+  #tool-about .sw { width:22px; height:22px; border-radius:5px; border:1px solid var(--ui-line); flex:none; }
+  #tool-about .k { font-weight:600; width:120px; flex:none; }
+  #tool-about .open { color:var(--ui-warn); font-weight:600; }
+</style>
+</head>
+<body>
+<div class="app-bar">
+  <h1>Edo Theme Studio</h1>
+  <span class="sub">Bristlenose · design tool</span>
+  <div class="spacer"></div>
+  <div class="tabbar" id="tabs">
+    <button data-tab="picker" class="on">Theme Picker</button>
+    <button data-tab="vivid">Accent &amp; Paper Lab</button>
+    <button data-tab="about">About</button>
+  </div>
+</div>
+
+<!-- ============================================ THEME PICKER ============================================ -->
+<section id="tool-picker" class="tool on">
+  <div class="sub-bar">
+    <div class="seg" id="modeToggle"><button data-mode="light" class="on">Light</button><button data-mode="dark">Dark</button></div>
+    <div class="presets"><span>Start from:</span>
+      <button class="btn" data-preset="faithful">Faithful</button>
+      <button class="btn" data-preset="cool">Cool &amp; crisp</button>
+      <button class="btn" data-preset="soft">Soft parchment</button>
+      <button class="btn" data-preset="indigo">Ink &amp; indigo</button>
+    </div>
+    <div class="spacer" style="flex:1"></div>
+    <label>Name <input class="name" id="themeName" value="edo2"></label>
+    <button class="btn primary" id="exportBtn">Copy CSS ↗</button>
+  </div>
+  <div class="wrap">
+    <div class="controls" id="controls"></div>
+    <div class="preview-shell">
+      <div class="preview" id="preview">
+        <aside class="pv-side">
+          <div class="pv-brand">Bristlenose</div>
+          <nav class="pv-nav">
+            <a class="active">Findings</a><a>Quotes</a><a>Themes</a><a>Transcripts</a><a>Analysis</a>
+          </nav>
+          <div class="pv-divider"></div>
+          <div class="pv-meta-row" style="flex-direction:column;gap:6px"><span>12 sessions</span><span>148 quotes</span></div>
+        </aside>
+        <main class="pv-main">
+          <h1 class="pv-h1">Onboarding friction</h1>
+          <p class="pv-sub">Cool ink on warm paper — judged on real chrome, not swatches.</p>
+          <h2 class="pv-h2">What people said</h2>
+          <div class="pv-quote">
+            <p>“I got <mark class="pv-hl">completely stuck</mark> on the import step — I didn't realise the folder had to sit <span class="pv-sel">inside the project</span> first.”</p>
+            <div class="pv-badges"><span class="pv-badge">frustration</span><span class="pv-badge">onboarding</span><span class="pv-attr">— P07, <a class="pv-link" href="#">02:14</a></span></div>
+          </div>
+          <div class="pv-quote">
+            <p>“Once it clicked it was <mark class="pv-hl">genuinely fast</mark>. I'd happily run every interview through this.”</p>
+            <div class="pv-badges"><span class="pv-badge">delight</span><span class="pv-attr">— P03, <a class="pv-link" href="#">11:48</a></span></div>
+          </div>
+          <div class="pv-actions">
+            <button class="pv-btn">Primary action</button><button class="pv-btn ghost">Secondary</button><button class="pv-btn danger">Delete</button>
+          </div>
+          <div class="pv-divider"></div>
+          <p class="pv-attr">Body text at reading size: the quick brown fox jumps over the lazy dog. In clear sunlight you may notice the ink is not quite black — a very dark, classy blue.</p>
+        </main>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================== ACCENT & PAPER LAB ========================================== -->
+<section id="tool-vivid" class="tool">
+  <div class="sub-bar">
+    <span class="note">Ink is locked; only accent (and paper, below) change.</span>
+    <div class="spacer" style="flex:1"></div>
+    <div class="seg" id="vmode"><button data-m="light" class="on">Light</button><button data-m="dark">Dark</button></div>
+  </div>
+  <div class="paperbar">
+    <span class="lbl">Paper</span>
+    <div class="swatches" id="vswatches"></div>
+    <label>Snow ⇄ Washi <input type="range" min="0" max="100" value="0" id="vslider"></label>
+    <input type="color" id="vpaperPicker" value="#fdfbf7">
+    <span class="hexchip" id="vpaperHex">#fdfbf7</span>
+  </div>
+  <div class="grid">
+    <div class="panel" style="--acc-light:#1e3a5f; --acc-dark:#7ba8a0;" data-light="#1e3a5f" data-dark="#7ba8a0">
+      <div class="panel-head"><div class="t">i. Now — masstone <span class="hexchip">#1e3a5f</span></div><div class="d">sampled off aged print — dull</div></div>
+      <div class="surface"></div>
+    </div>
+    <div class="panel" style="--acc-light:#164e80; --acc-dark:#3a86c4;" data-light="#164e80" data-dark="#3a86c4">
+      <div class="panel-head"><div class="t">iii. Midpoint <span class="hexchip">#164e80</span></div><div class="d">deeper, but lifts</div></div>
+      <div class="surface"></div>
+    </div>
+    <div class="panel" style="--acc-light:#0f5c9e; --acc-dark:#4d9fe0;" data-light="#0f5c9e" data-dark="#4d9fe0">
+      <div class="panel-head"><div class="t">ii. Vivid — undertone <span class="hexchip">#0f5c9e</span> <span class="pick">✓ your pick</span></div><div class="d">the pigment's undertone</div></div>
+      <div class="surface"></div>
+    </div>
+    <div class="panel" style="--acc-light:#2a7ac0; --acc-dark:#5cb0f2;" data-light="#2a7ac0" data-dark="#5cb0f2">
+      <div class="panel-head"><div class="t">iv. Electric <span class="hexchip">#2a7ac0</span></div><div class="d">cerulean drift — loudest</div></div>
+      <div class="surface"></div>
+    </div>
+  </div>
+  <div class="foot">
+    Left→right = <strong>Now → Midpoint → Vivid → Electric</strong> (dull to bright). Ink held at <code>#1b2230</code>/<code>#e8e3d6</code>.
+    Active-item &amp; selection washes are auto-mixed from each panel's accent <em>and</em> the paper, so both flow through.
+    The <strong>Paper</strong> bar drives the light-mode background across all four panels. Panel <strong>i</strong>'s dark accent is today's verdigris <code>#7ba8a0</code>; ii–iv keep Prussian blue in dark.
+    Electric <code>#2a7ac0</code> is ~4:1 on paper — fine for icons, borderline for body-size links.
+  </div>
+</section>
+
+<!-- ================================================ ABOUT ================================================ -->
+<section id="tool-about" class="tool">
+  <h2>What this is</h2>
+  <p>A durable design tool for the <strong>Edo</strong> colour theme. Two workspaces: the <strong>Theme Picker</strong> (dial in every semantic token against a live report preview, then Copy CSS) and the <strong>Accent &amp; Paper Lab</strong> (compare accent vividness and light-mode paper). Self-contained — no build, works from <code>file://</code>. Lives in <code>docs/mockups/</code> so it survives session archiving and is auto-discovered by <code>bristlenose serve --dev</code> (About → Design).</p>
+
+  <h2>Current decisions</h2>
+  <div class="decisions">
+    <div><span class="sw" style="background:#0f5c9e"></span><span class="k">Accent</span> Vivid Prussian <code>#0f5c9e</code> light / <code>#4d9fe0</code> dark — the pigment's <em>undertone</em>, not the dull masstone. <strong>Committed to palette-edo.css (v1).</strong></div>
+    <div><span class="sw" style="background:#fdfbf7"></span><span class="k">Paper (bg)</span> Paper White <code>#fdfbf7</code> — bright near-white, chosen over warmer washi papers. <strong>Committed (v1).</strong></div>
+    <div><span class="sw" style="background:#1b2230"></span><span class="k">Body ink</span> Passport navy <code>#1b2230</code> (light) / paper-white <code>#e8e3d6</code> (dark) — near-black with a whisper of indigo.</div>
+  </div>
+
+  <h2>The story behind the accent</h2>
+  <p>Prussian blue (<em>bero-ai</em>) has an unusually wide <strong>masstone → undertone</strong> range: near-black when thick, brilliant azure when thinned. <code>#1e3a5f</code> was sampled off dark, aged, camera-dulled print areas — the masstone. For links, sidebar icons, and selection we use its brilliant <em>undertone</em> instead. Full provenance (first synthetic pigment, the Great Wave, <em>aizuri-e</em>) is in <code>docs/mockups/edo-colour-palette.html</code>.</p>
+
+  <h2>Where the real palette lives</h2>
+  <p>Production source of truth: <code>bristlenose/theme/colors/palette-edo.css</code>. This studio is for <em>deciding</em>; paste its Copy-CSS output there. Design rationale and the takeover architecture: <code>docs/design-theme-divergence.md</code> and the handoff at <code>docs/private/handoffs/edo-theme-system.md</code>.</p>
+</section>
+
+<!-- export modal (picker) -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="m-head"><h3>Paste into <code>palette-edo.css</code></h3><div class="spacer" style="flex:1"></div><button class="btn" id="copyClip">Copy to clipboard</button></div>
+    <textarea id="exportText" spellcheck="false" readonly></textarea>
+    <div class="m-foot"><span class="hint">Primaries (accent, bg, ink) are pre-filled with current decisions but editable. The rgba glow / minimap / coverage tail is derived from the accent — carry it unchanged.</span><button class="btn" id="closeModal">Close</button></div>
+  </div>
+</div>
+
+<script>
+// ============================================================ TABS
+document.getElementById("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  const t = b.dataset.tab;
+  [...document.getElementById("tabs").children].forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".tool").forEach(s => s.classList.toggle("on", s.id === "tool-" + t));
+});
+
+// ============================================================ PICKER
+(function(){
+  const PIGMENTS = [
+    ["Paper White","#fdfbf7"],["Washi (paper)","#f5f0e6"],["Washi Cream","#ede5d1"],["Warm Off-white","#f0e9d8"],
+    ["Gold Ochre Tint","#f5ecd0"],["Pine Green Tint","#e8f0e4"],["Selection Indigo","#e0e8f0"],["Parchment Badge","#e8dfc9"],
+    ["Sail Parchment","#d4c9a8"],["Bar Neutral","#c4b898"],["Border Hover","#b8ad91"],["Starred Tan","#9e8b6e"],
+    ["Gold Ochre","#c4a96a"],["Verdigris","#7ba8a0"],["Storm Slate","#5a7d9b"],["User Slate","#3d4a5c"],
+    ["Court Indigo","#2d3654"],["Vivid Prussian","#0f5c9e"],["Prussian Blue","#1e3a5f"],["Passport Navy","#1b2230"],
+    ["Sumi Black","#1a1a1a"],["Sumi BG (dark)","#1a1816"],["Warm Dark","#2d2820"],["Warm Dark 2","#252118"],
+    ["Vermillion","#b5432a"],["Bengara Red","#8b3a3a"],["Paper-white (dark ink)","#e8e3d6"],["Moonlight (cool ink)","#e4e6ea"],
+    ["Vivid Prussian (dark)","#4d9fe0"],
+  ];
+  const SLOTS = [
+    { key:"bg",          css:"--bn-colour-bg",          label:"Background", role:"Page / paper", group:"Primary (current pick)", locked:"soft", light:"#fdfbf7", dark:"#1a1816" },
+    { key:"text",        css:"--bn-colour-text",        label:"Body ink",   role:"Primary text", group:"Primary (current pick)", locked:"soft", against:"bg", light:"#1b2230", dark:"#e8e3d6" },
+    { key:"accent",      css:"--bn-colour-accent",      label:"Accent",     role:"Links, headings, active", group:"Primary (current pick)", locked:"soft", against:"bg", light:"#0f5c9e", dark:"#4d9fe0" },
+    { key:"muted",       css:"--bn-colour-muted",       label:"Muted text", role:"Secondary / attribution", group:"Text & lines", against:"bg", light:"#5a7d9b", dark:"#7ba8a0" },
+    { key:"border",      css:"--bn-colour-border",      label:"Border",     role:"Lines, dividers, card edges", group:"Text & lines", light:"#d4c9a8", dark:"#2d2820" },
+    { key:"quote-bg",    css:"--bn-colour-quote-bg",    label:"Quote card", role:"Card background", group:"Surfaces", light:"#f0e9d8", dark:"#211e18" },
+    { key:"hover",       css:"--bn-colour-hover",       label:"Hover",      role:"Row / nav hover", group:"Surfaces", light:"#ede5d1", dark:"#252118" },
+    { key:"active-bg",   css:"--bn-colour-active-bg",   label:"Active tab", role:"Selected nav tint", group:"Surfaces", light:"#e8f0e4", dark:"#1a2818" },
+    { key:"selection-bg",css:"--bn-colour-selection-bg",label:"Selection",  role:"Text selection wash", group:"Surfaces", light:"#e0e8f0", dark:"#1e2830" },
+    { key:"badge-bg",    css:"--bn-colour-badge-bg",    label:"Badge bg",   role:"Tag pill background", group:"Badges & marks", light:"#e8dfc9", dark:"#2d2820" },
+    { key:"badge-text",  css:"--bn-colour-badge-text",  label:"Badge text", role:"Tag pill text", group:"Badges & marks", against:"badge-bg", light:"#2d3654", dark:"#c4b898" },
+    { key:"highlight",   css:"--bn-colour-highlight",   label:"Highlight",  role:"Search / anchor flash", group:"Badges & marks", light:"#c4a96a", dark:"#6b5528" },
+    { key:"negative",    css:"--bn-colour-negative",    label:"Negative",   role:"Destructive action", group:"Badges & marks", light:"#b5432a", dark:"#e06a4a" },
+  ];
+  const TAIL = {
+    "--bn-colour-user-tag-bg":["#e8dfc9","#2d2820"],"--bn-colour-user-tag-text":["#3d4a5c","#c4b898"],
+    "--bn-colour-editing-bg":["#f5ecd0","#2d2614"],"--bn-colour-editing-border":["#c4a96a","#4a3d1e"],
+    "--bn-crop-handle-colour":["#b5432a","#e06a4a"],"--bn-crop-handle-hover":["#8b3a3a","#e88a6a"],
+    "--bn-colour-cited-bg":["#f5ecd0","#3b3010"],"--bn-colour-group-none":["#f0e9d8","#211e18"],
+    "--bn-bar-none":["#c4b898","#4a4030"],"--bn-colour-border-hover":["#b8ad91","#4a4030"],
+    "--bn-colour-icon-idle":["#b8ad91","#4a4030"],"--bn-colour-starred":["#9e8b6e","#b8a880"],
+    "--bn-selection-border":["#0f5c9e","#4d9fe0"],"--bn-colour-suggestion":["#0f5c9e","#4d9fe0"],
+    "--bn-colour-suggestion-bg":["#e0e8f0","#1e2830"],
+  };
+  let mode = "light";
+  const state = {};
+  SLOTS.forEach(s => state[s.key] = { light:s.light, dark:s.dark });
+
+  const lin = c => { c/=255; return c<=0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055,2.4); };
+  const lum = hex => { const m = hex.replace('#','').match(/.{2}/g); if(!m) return 0; const [r,g,b]=m.map(h=>parseInt(h,16)); return 0.2126*lin(r)+0.7152*lin(g)+0.0722*lin(b); };
+  const ratio = (a,b) => { const L1=lum(a),L2=lum(b),hi=Math.max(L1,L2),lo=Math.min(L1,L2); return (hi+0.05)/(lo+0.05); };
+  function contrastChip(slot){
+    if(!slot.against) return null;
+    const bg = state[slot.against] ? state[slot.against][mode] : null; if(!bg) return null;
+    const r = ratio(state[slot.key][mode], bg);
+    const cls = r>=7?"good":r>=4.5?"ok":"bad", tag = r>=7?"AAA":r>=4.5?"AA":"fail";
+    return { html:`${r.toFixed(1)}:1 ${tag}`, cls };
+  }
+  function optionList(cur){
+    const known = PIGMENTS.some(p => p[1].toLowerCase()===cur.toLowerCase());
+    let html = PIGMENTS.map(([n,h]) => `<option value="${h}" ${h.toLowerCase()===cur.toLowerCase()?"selected":""}>${n} ${h}</option>`).join("");
+    if(!known) html = `<option value="${cur}" selected>Custom ${cur}</option>` + html;
+    return html;
+  }
+  const root = document.getElementById("controls");
+  function buildControls(){
+    root.innerHTML = ""; let lastGroup = null;
+    SLOTS.forEach(slot => {
+      if(slot.group !== lastGroup){ const h = document.createElement("h2"); h.textContent = slot.group; root.appendChild(h); lastGroup = slot.group; }
+      const val = state[slot.key][mode];
+      const row = document.createElement("div"); row.className = "slot";
+      const lockTag = slot.locked ? `<span class="lock">locked · adjustable</span>` : "";
+      row.innerHTML = `<div class="meta"><div class="label">${slot.label}${lockTag}</div><div class="role">${slot.role}</div></div>
+        <div class="controls-row"><select>${optionList(val)}</select><input type="color" value="${val}"></div>`;
+      row.querySelector("select").addEventListener("change", e => setVal(slot.key, e.target.value));
+      row.querySelector("input").addEventListener("input", e => setVal(slot.key, e.target.value));
+      root.appendChild(row);
+      const chip = contrastChip(slot);
+      if(chip){ const c = document.createElement("div"); c.className = "chip " + chip.cls; c.textContent = chip.html; row.appendChild(c); }
+    });
+  }
+  function setVal(key, hex){ state[key][mode] = hex; applyPreview(); buildControls(); }
+  const pv = document.getElementById("preview");
+  function applyPreview(){ SLOTS.forEach(s => pv.style.setProperty(s.css, state[s.key][mode])); pv.style.setProperty("--bn-selection-border", state.accent[mode]); }
+
+  document.getElementById("modeToggle").addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return; mode = b.dataset.mode;
+    [...e.currentTarget.children].forEach(x => x.classList.toggle("on", x===b)); buildControls(); applyPreview();
+  });
+
+  const PRESETS = {
+    faithful:{},
+    cool:{ muted:["#456178","#8fb8b0"], border:["#c7bfa8","#33302a"], "quote-bg":["#eef2f4","#1c2024"], hover:["#e6ecef","#222a2e"], "active-bg":["#dde9ef","#16242c"], "badge-bg":["#dde6ec","#243038"], "badge-text":["#23344a","#bcd0d8"], highlight:["#cbb06e","#5e5226"] },
+    soft:{ muted:["#7a7058","#a89c80"], border:["#e0d7bf","#2a261d"], "quote-bg":["#f3ecdb","#221f18"], hover:["#f0e8d6","#26221a"], "active-bg":["#efeada","#221f17"], "badge-bg":["#ece2cb","#2c281f"], "badge-text":["#5a4a32","#cdbf9c"], highlight:["#d9c285","#6b5528"] },
+    indigo:{ muted:["#4a5a72","#8aa0bc"], border:["#cdc4ab","#2a2c38"], "quote-bg":["#eeeaf0","#1a1c26"], hover:["#e8e4ee","#20232f"], "active-bg":["#e2e6f0","#1a1e2c"], "badge-bg":["#e0e2ef","#262a3a"], "badge-text":["#2d3654","#b9bfd6"], highlight:["#c4a96a","#6b5528"] },
+  };
+  document.querySelectorAll("#tool-picker [data-preset]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const p = PRESETS[btn.dataset.preset] || {};
+      SLOTS.forEach(s => {
+        if(p[s.key]) state[s.key] = { light:p[s.key][0], dark:p[s.key][1] };
+        else if(btn.dataset.preset==="faithful") state[s.key] = { light:s.light, dark:s.dark };
+      });
+      buildControls(); applyPreview();
+    });
+  });
+
+  function buildCSS(){
+    const name = (document.getElementById("themeName").value || "edo2").trim();
+    const lines = [], fallback = [];
+    SLOTS.forEach(s => { lines.push(`        ${s.css}: light-dark(${state[s.key].light}, ${state[s.key].dark});`); fallback.push(`    ${s.css}: ${state[s.key].light};`); });
+    Object.entries(TAIL).forEach(([css,[l,d]]) => { lines.push(`        ${css}: light-dark(${l}, ${d});`); fallback.push(`    ${css}: ${l};`); });
+    return `/* palette-${name} — variation from edo-theme-studio.html.\n   rgba glow / minimap / coverage / shadow tokens derive from the accent —\n   copy them unchanged from palette-edo.css; omitted here. */\n\n[data-color-theme="${name}"] {\n${fallback.join("\n")}\n}\n\n@supports (color: light-dark(#000, #fff)) {\n    [data-color-theme="${name}"] {\n${lines.join("\n")}\n    }\n}\n`;
+  }
+  const modalBg = document.getElementById("modalBg");
+  document.getElementById("exportBtn").addEventListener("click", () => { document.getElementById("exportText").value = buildCSS(); modalBg.classList.add("show"); });
+  document.getElementById("closeModal").addEventListener("click", () => modalBg.classList.remove("show"));
+  modalBg.addEventListener("click", e => { if(e.target===modalBg) modalBg.classList.remove("show"); });
+  document.getElementById("copyClip").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(document.getElementById("exportText").value); document.getElementById("copyClip").textContent = "Copied ✓"; setTimeout(()=>document.getElementById("copyClip").textContent="Copy to clipboard",1400); }
+    catch { document.getElementById("exportText").select(); }
+  });
+  buildControls(); applyPreview();
+})();
+
+// ============================================================ VIVIDNESS
+(function(){
+  const container = document.getElementById("tool-vivid");
+  const TPL = `<aside class="s-side"><div class="s-brand">Bristlenose</div>
+    <a class="s-nav-item active"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4h10M3 8h10M3 12h6"/></svg>Findings</a>
+    <a class="s-nav-item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 3h8v10l-4-2-4 2z"/></svg>Quotes</a>
+    <a class="s-nav-item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5"/></svg>Themes</a></aside>
+    <main class="s-main"><h3 class="s-head">Onboarding friction</h3>
+    <p class="s-body">Three participants hit the same wall at import. See the <a class="s-link">full transcript</a>, or the <span class="s-sel">selected passage</span> below.</p>
+    <div class="s-quote selected">“I got completely stuck on the import step.”<div class="cap">— P07 · primary selection</div></div>
+    <div class="s-quote">“Once it clicked it was genuinely fast.”<div class="cap">— P03</div></div>
+    <div class="s-row"><button class="s-btn">Primary action</button><button class="s-btn ghost">Secondary</button></div></main>`;
+  container.querySelectorAll(".surface").forEach(s => s.innerHTML = TPL);
+
+  const SNOW = "#f5f0e6", WASHI = "#ede5d1";
+  const PAPERS = [ ["Paper White (lighter than snow)","#fdfbf7"],["Snow White","#f5f0e6"],["Warm off-white","#f0e9d8"],["Washi Cream","#ede5d1"],["Bright Paper","#faf7ef"],["Cool Paper","#f2f1ec"],["Bone","#f6f2e6"] ];
+  const hexToRgb = h => h.replace('#','').match(/.{2}/g).map(x=>parseInt(x,16));
+  const rgbToHex = a => '#' + a.map(x=>Math.round(x).toString(16).padStart(2,'0')).join('');
+  const lerp = (a,b,t) => a.map((v,i)=>v+(b[i]-v)*t);
+
+  const slider = document.getElementById("vslider"), picker = document.getElementById("vpaperPicker"),
+        paperHex = document.getElementById("vpaperHex"), swWrap = document.getElementById("vswatches");
+  function setPaper(hex){
+    container.style.setProperty("--paper", hex);
+    paperHex.textContent = hex.toLowerCase(); picker.value = hex;
+    [...swWrap.children].forEach(b => b.classList.toggle("on", b.dataset.hex.toLowerCase()===hex.toLowerCase()));
+  }
+  PAPERS.forEach(([name,hex]) => { const b = document.createElement("button"); b.style.background = hex; b.dataset.hex = hex; b.title = name + " " + hex; b.addEventListener("click", () => setPaper(hex)); swWrap.appendChild(b); });
+  slider.addEventListener("input", () => setPaper(rgbToHex(lerp(hexToRgb(SNOW), hexToRgb(WASHI), slider.value/100))));
+  picker.addEventListener("input", () => setPaper(picker.value));
+
+  const vmode = document.getElementById("vmode");
+  function refreshChips(m){ container.querySelectorAll(".panel").forEach(p => p.querySelector(".hexchip").textContent = p.dataset[m]); }
+  vmode.addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return; const m = b.dataset.m;
+    container.classList.toggle("dark", m==="dark");
+    [...vmode.children].forEach(x => x.classList.toggle("on", x===b)); refreshChips(m);
+  });
+  setPaper("#fdfbf7");
+})();
+</script>
+</body>
+</html>

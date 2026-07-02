@@ -1,8 +1,13 @@
-import { useEffect, useState } from "react";
-import { CodebookPanel } from "../islands/CodebookPanel";
+import { lazy, useEffect, useState } from "react";
 import { useProjectId } from "../hooks/useProjectId";
 import { startLastRunPolling, useLastRun } from "../contexts/LastRunStore";
 import { apiGet } from "../utils/api";
+
+// Lazy-loaded so the island code-splits into its own chunk (kept out of the
+// main bundle). The AppLayout Outlet provides the Suspense boundary.
+const CodebookPanel = lazy(() =>
+  import("../islands/CodebookPanel").then((m) => ({ default: m.CodebookPanel })),
+);
 
 export function CodebookTab() {
   const projectId = useProjectId();

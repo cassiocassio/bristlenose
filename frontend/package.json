@@ -24,6 +24,12 @@
         "!../bristlenose/server/static/assets/PlaygroundHUD-*.js",
         "!../bristlenose/server/static/assets/devicePresets-*.js",
         "!../bristlenose/server/static/assets/HelloIsland-*.js",
+        "!../bristlenose/server/static/assets/TranscriptPage-*.js",
+        "!../bristlenose/server/static/assets/Toolbar-*.js",
+        "!../bristlenose/server/static/assets/QuoteSections-*.js",
+        "!../bristlenose/server/static/assets/QuoteThemes-*.js",
+        "!../bristlenose/server/static/assets/CodebookPanel-*.js",
+        "!../bristlenose/server/static/assets/AnalysisPage-*.js",
         "!../bristlenose/server/static/assets/common-*.js",
         "!../bristlenose/server/static/assets/settings-*.js",
         "!../bristlenose/server/static/assets/desktop-*.js",
@@ -33,7 +39,7 @@
         "!../bristlenose/server/static/assets/pipeline-*.js",
         "!../bristlenose/server/static/assets/server-*.js"
       ],
-      "limit": "230 kB",
+      "limit": "220 kB",
       "gzip": true
     }
   ],

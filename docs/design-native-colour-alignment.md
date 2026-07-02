@@ -1,3 +1,14 @@
+---
+status: current
+last-trued: 2026-07-02
+trued-against: HEAD (main) on 2026-07-02
+---
+
+## Changelog
+
+- _2026-07-02_ — trued up: rewrote the 1 Jul audit into a shipped-status doc with a §Principles section (seam alignment; pragmatic OS-colour tracking via sampling/live-`NSColor` bridge) and a decision log. All Tier-1 decisions verified shipped (Archetype A); fixed two drifted Swift line-refs (`ProjectRow`, `WelcomeView`). Anchors: commits "default accent = Apple system blue", "implement native seam alignment", "define inactive-window selection tokens"; `palette-default.css`, `sidebar.css`, `modal.css`, `_contract.css`.
+- _2026-07-01_ — initial draft (audit; nothing implemented at the time).
+
 # Native colour alignment (default palette)
 
 _Started as an audit 1 Jul 2026; trued to shipped reality 2 Jul 2026. Companion to the SF Pro typography alignment in `tokens-desktop.css`. Interactive side-by-side: [`docs/mockups/native-colour-alignment.html`](mockups/native-colour-alignment.html)._
@@ -43,9 +54,9 @@ What the Mac app actually uses (file:line in `desktop/Bristlenose/Bristlenose/`,
 | Element | Native value | Where |
 |---|---|---|
 | Accent | System accent (empty `AccentColor.colorset` — rides the user's System Settings choice; blue for most) | `Assets.xcassets` |
-| Accent consumers | `Color.accentColor` (lens pill 0.14 opacity, icon-picker 0.2 fill + 1.5pt stroke, drop-target 2pt stroke), `controlAccentColor` (activity ring) | `LensRail.swift:64-66`, `IconPickerPopover.swift:168-175`, `ProjectRow.swift:142`, `SidebarActivityRing.swift:155` |
+| Accent consumers | `Color.accentColor` (lens pill 0.14 opacity, icon-picker 0.2 fill + 1.5pt stroke, drop-target 2pt stroke), `controlAccentColor` (activity ring) | `LensRail.swift:64-66`, `IconPickerPopover.swift:168-175`, `ProjectRow.swift:143`, `SidebarActivityRing.swift:155` |
 | Sidebar selection | Source-list capsule, **pinned unemphasized** grey in all focus states | `ProjectSidebarOutline.swift:204-210, 1240-1260` |
-| Corner radii | **6pt** small pills (lens rail, icon picker), 8pt rows/toasts, 10pt empty-state cards | `LensRail.swift:64`, `ToastView.swift:76`, `WelcomeView.swift:209-220` |
+| Corner radii | **6pt** small pills (lens rail, icon picker), 8pt rows/toasts, 10pt empty-state cards | `LensRail.swift:64`, `ToastView.swift:76`, `WelcomeView.swift:146-178` |
 
 macOS system blue ≈ `#007AFF` light / `#0A84FF` dark; `unemphasizedSelectedContentBackgroundColor` sampled `#EFEFEF` / `#2B2B2B`. No canonical Apple hex — see §Principles.
 

@@ -247,6 +247,29 @@ class TestRenderPage:
         monkeypatch.setenv("BRISTLENOSE_TYPOGRAPHY", "inter")
         assert 'data-typography="inter"' in _html_root_attrs()
 
+    def test_html_root_attrs_palette_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from bristlenose.server.app import _html_root_attrs
+
+        monkeypatch.delenv("BRISTLENOSE_PLATFORM", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_COLOR_THEME", raising=False)
+        # Canonical BRISTLENOSE_PALETTE renders the (internal) data-color-theme.
+        monkeypatch.setenv("BRISTLENOSE_PALETTE", "edo")
+        assert 'data-color-theme="edo"' in _html_root_attrs()
+
+    def test_html_root_attrs_palette_alias_precedence(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from bristlenose.server.app import _html_root_attrs
+
+        monkeypatch.delenv("BRISTLENOSE_PLATFORM", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_PALETTE", raising=False)
+        # Deprecated alias BRISTLENOSE_COLOR_THEME is still honoured...
+        monkeypatch.setenv("BRISTLENOSE_COLOR_THEME", "default")
+        assert 'data-color-theme="default"' in _html_root_attrs()
+        # ...but the canonical BRISTLENOSE_PALETTE wins when both are set.
+        monkeypatch.setenv("BRISTLENOSE_PALETTE", "edo")
+        assert 'data-color-theme="edo"' in _html_root_attrs()
+
 
 # ---------------------------------------------------------------------------
 # Integration: intercept fires from /report/* in prod and dev mounts

@@ -1633,6 +1633,16 @@ def _auto_render(project_dir: Path) -> None:
 
 
 
+def _available_palettes() -> list[str]:
+    """Colour-palette identifiers, discovered from the theme's palette-*.css files.
+
+    Mirrors the CSS palette files (and the frontend ``PALETTES`` list) so a new
+    ``palette-<name>.css`` is a valid ``--palette`` value with no edit here.
+    """
+    colors_dir = Path(__file__).resolve().parent / "theme" / "colors"
+    return sorted(p.stem.removeprefix("palette-") for p in colors_dir.glob("palette-*.css"))
+
+
 @app.command()
 def serve(
     project_dir: Annotated[
@@ -1649,6 +1659,14 @@ def serve(
         bool,
         typer.Option("--dev", help="Development mode: auto-reload on Python changes."),
     ] = False,
+    palette: Annotated[
+        str | None,
+        typer.Option(
+            "--palette",
+            envvar="BRISTLENOSE_PALETTE",
+            help="Colour palette for the report (e.g. default, edo).",
+        ),
+    ] = None,
     open_browser: Annotated[
         bool,
         typer.Option("--open/--no-open", help="Open the report in the default browser."),
@@ -1659,6 +1677,20 @@ def serve(
     ] = False,
 ) -> None:
     """Open a previous report in your browser (no analysis)."""
+    # --palette / BRISTLENOSE_PALETTE → env for app.py._html_root_attrs, which
+    # renders data-color-theme onto <html>. The internal attribute keeps its
+    # name; only the user-facing --palette / BRISTLENOSE_PALETTE spelling is new.
+    if palette is not None:
+        _allowed = _available_palettes()
+        if palette not in _allowed:
+            from rich.markup import escape
+
+            console.print(
+                f"[red]Unknown palette '{escape(palette)}'.[/red] "
+                f"Available: {', '.join(_allowed)}"
+            )
+            raise typer.Exit(2)
+        os.environ["BRISTLENOSE_PALETTE"] = palette
     settings = load_settings()
     _run_preflight(settings, "serve")
     import uvicorn  # noqa: F401 — needed in the dev-mode branch below
@@ -1687,7 +1719,6 @@ def serve(
 
     if dev:
         import atexit
-        import os
         import signal
         import socket
         import subprocess
@@ -2309,7 +2340,7 @@ def _help_workflows() -> None:
     console.print("  Audio: .wav .mp3 .m4a .flac .ogg .wma .aac")
     console.print("  Video: .mp4 .mov .avi .mkv .webm")
     console.print("  Subtitles: .srt .vtt")
-    console.print("  Transcripts: .docx (Teams exports)")
+    console.print("  Transcripts: .docx (Teams exports), .txt (plain text)")
     console.print("  Files sharing a name stem are treated as one session.")
     console.print()
 

@@ -252,6 +252,10 @@ Enable verbose logging.
 .BR \-p ", " \-\-port " " \fIPORT\fR
 Port to serve on. Default: \fB8150\fR.
 .TP
+.BR \-\-palette " " \fINAME\fR
+Colour palette for the report: \fBdefault\fR or \fBedo\fR.
+Also set by \fBBRISTLENOSE_PALETTE\fR. Default: \fBdefault\fR.
+.TP
 .BR \-\-dev
 Development mode: auto-reload on Python changes, live JS reload, design
 artifact browser.
@@ -401,6 +405,14 @@ sidecar to bypass the runtime cache. Not needed for CLI use.
 .B HF_HUB_CACHE \fR/ \fBHF_HOME
 Hugging Face Hub cache locations \(em respected by the Whisper preflight when
 determining whether the model is cached.
+.SS Display settings
+.TP
+.B BRISTLENOSE_PALETTE
+Colour palette for the report: \fBdefault\fR or \fBedo\fR. Also set by
+\fBserve \-\-palette\fR. Default: \fBdefault\fR.
+.TP
+.B BRISTLENOSE_COLOR_SCHEME
+Report theme: \fBauto\fR, \fBlight\fR, or \fBdark\fR. Default: \fBauto\fR.
 .SH INPUT FILES
 .B bristlenose
 accepts any mix of audio, video, subtitle, and transcript files:

@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "Motor för transkribering och citatutvinning för användarforskning.",
+  "stage": {
+    "ingest": "Inläsning",
+    "extractAudio": "Extrahera ljud",
+    "transcribe": "Transkribera",
+    "identifySpeakers": "Identifiera talare",
+    "mergeTranscript": "Slå samman transkript",
+    "piiRemoval": "Borttagning av PII",
+    "topicSegmentation": "Ämnessegmentering",
+    "quoteExtraction": "Citatutvinning",
+    "quoteClustering": "Citatgruppering",
+    "thematicGrouping": "Tematisk gruppering",
+    "render": "Rendera"
+  },
+  "error": {
+    "noInput": "Ingen indatakatalog angavs.",
+    "notFound": "Katalogen hittades inte: {path}",
+    "noFiles": "Inga ljud-, video- eller transkriptfiler hittades i {path}"
+  },
+  "progress": {
+    "complete": "Klart",
+    "failed": "Misslyckades",
+    "skipped": "Överhoppat"
+  }
+}

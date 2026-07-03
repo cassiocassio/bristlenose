@@ -1,0 +1,17 @@
+{
+  "sentiment": {
+    "frustration": "Frustrasjon",
+    "confusion": "Forvirring",
+    "doubt": "Tvil",
+    "surprise": "Overraskelse",
+    "satisfaction": "Tilfredshet",
+    "delight": "Begeistring",
+    "confidence": "Selvsikkerhet"
+  },
+  "speakerRole": {
+    "researcher": "Forsker",
+    "participant": "Deltaker",
+    "observer": "Observatør",
+    "unknown": "Ukjent"
+  }
+}

@@ -1,6 +1,8 @@
 {
   "heading": "설정",
   "appearance": {
+    "animationLegend": "Show animation while analysing",
+    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "\uc0c8 \ud504\ub85c\uc81d\ud2b8\uc5d0 \ubb34\uc791\uc704 \uc544\uc774\ucf58 \uc9c0\uc815",
     "randomIconsHelp": "\uc0c8 \ud504\ub85c\uc81d\ud2b8\ub9c8\ub2e4 \uace0\uc720\ud55c \uc544\uc774\ucf58\uc774 \uc9c0\uc815\ub418\uc5b4 \uc0ac\uc774\ub4dc\ubc14\uc5d0\uc11c \uc27d\uac8c \uc54c\uc544\ubcfc \uc218 \uc788\uc2b5\ub2c8\ub2e4. \ub044\uba74 \uae30\ubcf8 \uc6d0\ud615\uc774 \uc720\uc9c0\ub418\uba70 \uc544\uc774\ucf58\uc744 \uc9c1\uc811 \uc120\ud0dd\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
     "legend": "앱 외관",

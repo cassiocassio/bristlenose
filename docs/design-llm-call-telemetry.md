@@ -749,6 +749,20 @@ Scope:
 
 Static placeholder graphic in place of shoal. No new instrumentation needed; everything reads from Phase 2's data layer.
 
+### Phase 4 — Shoal revival — ✅ pulled forward to alpha (2026-07-03)
+
+**Status:** shipped to the desktop in-run detail pane — revived AliveV2 flock,
+ring-driven phase, Python `shoal_feed.jsonl` → Swift `ShoalFeed` live words
+(word/theme/sentiment batches), a Settings "Show animation while analysing"
+off-switch + Reduce-Motion gate. Decorative (the real progress signal is the
+sidebar ring). Two deviations from the plan below, both settled on review:
+(1) **no completion/settling end-state** — the mount gate unmounts the flock the
+instant the run ends, so the crossfade to the report *is* the ending (`triumph()`
+deleted); (2) **phase stays ring-driven**, not content-kind-driven (which breaks
+on resumed runs).
+
+_Original plan (kept for the reveal mapping + positioning):_
+
 ### Phase 4 — Shoal revival (post-alpha; the much-later layer)
 
 Done criteria: the static placeholder becomes the Typographic Shoal. Pipeline events drive the progressive narrative reveal (words → sentiment → codes → sections → themes → signals). Cascade startles fire on stage completion.

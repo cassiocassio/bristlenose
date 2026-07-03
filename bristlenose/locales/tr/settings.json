@@ -1,6 +1,8 @@
 {
   "heading": "Ayarlar",
   "appearance": {
+    "animationLegend": "Show animation while analysing",
+    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "Yeni projelere rastgele bir simge ata",
     "randomIconsHelp": "Her yeni proje, kenar çubuğunda kolayca tanınabilmesi için ayırt edici bir simge alır. Sade halkayı korumak ve simgeleri kendiniz seçmek için bunu kapatın.",
     "legend": "Uygulama görünümü",

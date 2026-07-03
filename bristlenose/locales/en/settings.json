@@ -1,6 +1,8 @@
 {
   "heading": "Settings",
   "appearance": {
+    "animationLegend": "Show animation while analysing",
+    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "Assign a random icon to new projects",
     "randomIconsHelp": "Each new project gets a distinctive icon so it's easy to recognise in the sidebar. Turn this off to keep the plain ring and choose icons yourself.",
     "legend": "Application appearance",

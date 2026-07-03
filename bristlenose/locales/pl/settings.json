@@ -1,6 +1,8 @@
 {
   "heading": "Ustawienia",
   "appearance": {
+    "animationLegend": "Show animation while analysing",
+    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "Przypisuj losową ikonę nowym projektom",
     "randomIconsHelp": "Każdy nowy projekt otrzymuje charakterystyczną ikonę, aby łatwo było go rozpoznać na pasku bocznym. Wyłącz tę opcję, aby zachować zwykły pierścień i samodzielnie wybierać ikony.",
     "legend": "Wygląd aplikacji",

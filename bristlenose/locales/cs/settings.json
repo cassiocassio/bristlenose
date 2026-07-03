@@ -1,6 +1,8 @@
 {
   "heading": "Nastavení",
   "appearance": {
+    "animationLegend": "Show animation while analysing",
+    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "P\u0159i\u0159adit nov\u00fdm projekt\u016fm n\u00e1hodnou ikonu",
     "randomIconsHelp": "Ka\u017ed\u00fd nov\u00fd projekt dostane v\u00fdraznou ikonu, tak\u017ee ho v postrann\u00edm panelu snadno pozn\u00e1te. Vypnut\u00edm zachov\u00e1te jednoduch\u00fd krou\u017eek a ikony si zvol\u00edte sami.",
     "legend": "Vzhled aplikace",

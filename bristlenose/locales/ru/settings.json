@@ -1,6 +1,8 @@
 {
   "heading": "Настройки",
   "appearance": {
+    "animationLegend": "Show animation while analysing",
+    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "Назначать новым проектам случайный значок",
     "randomIconsHelp": "Каждый новый проект получает отличительный значок, чтобы его было легко узнать в боковой панели. Отключите этот параметр, чтобы оставить простой кружок и выбирать значки самостоятельно.",
     "legend": "Внешний вид приложения",

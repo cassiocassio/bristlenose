@@ -566,6 +566,50 @@ branch and no four-form seeding; the mechanical cost was low. `nb` (Bokmål) is 
 canonicalizes `no`→`nb`); a `no`→`nb` auto-detection mapping at the three ingress points is an open
 follow-up. The still-deferred set below is the accurate remainder.
 
+#### Prioritisation chart — Mac reach × UR-community depth (3 Jul 2026)
+
+Which locale next is a two-axis question, and population is the *wrong* first axis.
+Bristlenose is Mac-first and sold into the user-research profession, so the two
+axes that actually predict payoff are: **x = Mac-installed reach** (macOS
+penetration × market size) and **y = depth of the local user-research community**.
+Plotting the un-done candidates on those axes (bubble ≈ speaker market):
+
+```
+UR-community depth
+  high │            · he(RTL)
+       │                        ● nl        ← high/high: build first
+       │            · fi
+       │        · hu     · id
+   mid │   · el · ro · th · vi   ○ zh-Hans     · ar(RTL)
+       │        · hi
+       │
+   low │
+       └──────────────────────────────────────────  Mac-installed reach →
+          low                mid               high
+
+  ●  recommended next (build)      ·  long tail / low effective fit
+  ○  parked (consent/market)       (RTL) gated behind one-time bidi lift
+```
+
+Ranked, with the rough per-axis read (0–10; **estimates from macOS-share and
+community priors, not hard data** — treat as a sketch, not a measurement):
+
+| Candidate | Mac reach | UR depth | Verdict |
+|---|---|---|---|
+| **Dutch `nl`** | 7.6 | 9.0 | **Build first.** Only high/high candidate — top EU Mac share + the deepest ResearchOps/UX community in Europe (UXinsight, Amsterdam). No RTL, `one`/`other` plurals. **Branch `nl` opened 3 Jul 2026**, native reviewer lined up. |
+| **Finnish `fi`** | 5.6 | 6.6 | **Completes the Nordics** (da/sv/nb shipped). High Mac share, design heritage; small absolute market → demand-gated. **Branch `fi` opened 3 Jul 2026**, native reviewer lined up. `one`/`other`. |
+| Hebrew `he` | 5.0 | 7.6 | High UR-per-capita (startup-nation), high Mac share, small market. **RTL** — gated behind the one-time bidi engineering checkpoint. |
+| Arabic `ar` | 6.6 | 5.0 | Large Gulf market, high Mac share, fast-growing design investment. **RTL** — same gate as `he`; the two share one bidi lift. |
+| Simplified `zh-Hans` | 6.0 | 5.9 | **Parked** deliberately (consent + mainland out-of-scope) — see the Chinese entry below. Population is large but effective fit is not. |
+| Hindi `hi`, Indonesian `id` | ~3 | ~4 | Large populations, but UR is conducted overwhelmingly in English → localised UI moves few users. Low effective fit. |
+| Hungarian, Romanian, Greek, Thai, Vietnamese | ~3–3.7 | ~3.5–5 | Long tail — volunteer- or demand-driven only (like `ta`). |
+
+**RTL is a checkpoint, not a locale.** Hebrew and Arabic are both gated behind a
+single one-time bidi engineering lift (mirrored chrome across SPA + WKWebView +
+report surfaces); once paid, it unlocks both. Schedule it as its own roadmap
+item rather than slipping one RTL language in beside the LTR ones. Parked as of
+3 Jul 2026.
+
 **Portuguese (`pt-PT` + `pt-BR`) — light; a later-summer-weekend seed.** Romance, Latin
 script (no script subtag), `one`/`other` plurals — same shape as `es`/`fr`/`de`, so MT-seed
 quality is high and mechanical cost is low. Two locales though: lexical divergence

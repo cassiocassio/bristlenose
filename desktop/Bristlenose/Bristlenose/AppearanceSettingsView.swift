@@ -9,6 +9,7 @@ struct AppearanceSettingsView: View {
 
     @EnvironmentObject var i18n: I18n
     @AppStorage("appearance") private var appearance: String = "auto"
+    @AppStorage("palette") private var palette: String = "default"
     @AppStorage("typography") private var typography: String = "sf"
     @AppStorage("language") private var language: String = "en"
     @AppStorage(RandomProjectIcon.defaultsKey) private var randomProjectIcons: Bool = true
@@ -22,6 +23,19 @@ struct AppearanceSettingsView: View {
                     Text(i18n.t("settings.appearance.dark")).tag("dark")
                 }
                 .pickerStyle(.radioGroup)
+            }
+
+            Section {
+                // Colour palette — the two colour axes (appearance = light/dark,
+                // palette = colour set) sit together, above Typography (font).
+                // Bare label like Typography (the audience knows the term); a
+                // pop-up menu (the default Picker style in a Form), not radios,
+                // since the set will grow. Options mirror the frontend PALETTES
+                // list (default/edo) — keep both in sync when a palette lands.
+                Picker(i18n.t("settings.palette.legend"), selection: $palette) {
+                    Text(i18n.t("settings.palette.default")).tag("default")
+                    Text(i18n.t("settings.palette.edo")).tag("edo")
+                }
             }
 
             Section {
@@ -81,6 +95,14 @@ struct AppearanceSettingsView: View {
             // restart — same mechanism (and same prefs notification) as the
             // appearance and language settings in this tab.
             NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
+        }
+        .onChange(of: palette) { _, _ in
+            // Live, NOT a restart (deliberately not .bristlenosePrefsChanged):
+            // post .bristlenosePaletteChanged, which ContentView forwards to the
+            // web layer via bridgeHandler.setColorPalette() — a runtime
+            // data-color-theme CSS swap. The @AppStorage value is also the
+            // cold-start seed (BRISTLENOSE_PALETTE) for the next serve start.
+            NotificationCenter.default.post(name: .bristlenosePaletteChanged, object: nil)
         }
         .onChange(of: language) { _, newValue in
             i18n.setLocale(newValue)

@@ -277,6 +277,10 @@ extension Notification.Name {
     /// Posted when any LLM or transcription preference changes.
     /// ServeManager listens to this to auto-restart the serve process.
     static let bristlenosePrefsChanged = Notification.Name("bristlenosePrefsChanged")
+    /// Posted when the Colour-palette picker changes. ContentView forwards it to
+    /// the web layer via `bridgeHandler.setColorPalette()` — a live runtime
+    /// data-color-theme swap, so (unlike prefs) it does NOT restart the sidecar.
+    static let bristlenosePaletteChanged = Notification.Name("bristlenosePaletteChanged")
     /// Posted by the app menu to re-show the AI data disclosure sheet.
     static let showAIConsentSheet = Notification.Name("showAIConsentSheet")
     /// Posted by the app menu to show the Build Info diagnostic sheet.

@@ -1,0 +1,24 @@
+{
+  "error": {
+    "notFound": "Resursen hittades inte.",
+    "badRequest": "Felaktig begäran: {detail}",
+    "internal": "Internt serverfel."
+  },
+  "status": {
+    "healthy": "Frisk",
+    "degraded": "Försämrad"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "Inga intervjuer att analysera ännu.",
+    "noRunDesktopLong": "Släpp en mapp med intervjuer här för att börja.",
+    "noRunCliShort": "Inget att se här ännu.",
+    "cancelledShort": "Den senaste körningen avbröts.",
+    "cancelledLong": "Kör igen när du är redo.",
+    "failedShort": "Den senaste körningen misslyckades.",
+    "recentLog": "Senaste loggen:",
+    "showDetails": "Visa detaljer",
+    "sendFeedback": "Skicka feedback",
+    "help": "Hjälp",
+    "cliExitedWithCode": "CLI avslutades med kod {code}"
+  }
+}

@@ -1,0 +1,228 @@
+{
+  "heading": "Ayarlar",
+  "appearance": {
+    "randomIconsLegend": "Yeni projelere rastgele bir simge ata",
+    "randomIconsHelp": "Her yeni proje, kenar çubuğunda kolayca tanınabilmesi için ayırt edici bir simge alır. Sade halkayı korumak ve simgeleri kendiniz seçmek için bunu kapatın.",
+    "legend": "Uygulama görünümü",
+    "auto": "Sistem görünümünü kullan",
+    "light": "Açık",
+    "dark": "Koyu"
+  },
+  "palette": {
+    "legend": "Renk paleti",
+    "default": "Varsayılan",
+    "edo": "Edo",
+    "description": "Uygulamanın tamamını yeniden renklendirir. Edo, sıcak washi kâğıdı ve Prusya mavisi mürekkep kullanır."
+  },
+  "typography": {
+    "legend": "Tipografi"
+  },
+  "language": {
+    "legend": "Dil",
+    "description": "Arayüzün görüntüleme dilini denetler. Rapor içeriği çevrilmez.",
+    "helpTranslate": "Bristlenose'u kendi dilinize çevirmeye şurada yardımcı olun:"
+  },
+  "settingsNav": {
+    "general": "Genel",
+    "project": "Proje",
+    "profile": "Profil",
+    "apiKeys": "API Anahtarları",
+    "config": "Yapılandırma",
+    "projectStub": "Projeye özel ayarlar burada görünecek. Yakında.",
+    "profileStub": "Profil ayarları (ad, e-posta, whisper arka ucu) burada görünecek. Yakında.",
+    "apiKeysStub": "API anahtarı yönetimi burada görünecek. Yakında.",
+    "pipeline": "İşlem hattı"
+  },
+  "configReference": {
+    "heading": "Yapılandırma başvurusu",
+    "intro": "Aşağıdaki tüm ayarlar ortam değişkenleri veya bir <code>.env</code> dosyası aracılığıyla yapılandırılır. Burada başvuru amacıyla gösterilmektedir — bir değeri değiştirmek için her satırda gösterilen dosyayı düzenleyin.",
+    "clickToCopy": "Kopyalamak için tıklayın",
+    "copied": "Kopyalandı",
+    "categories": {
+      "llm": "LLM Sağlayıcı ve Model",
+      "transcription": "Transkripsiyon",
+      "privacy": "Gizlilik",
+      "quotes": "Alıntılar",
+      "analysis": "Analiz",
+      "autocode": "AutoCode",
+      "display": "Görüntüleme",
+      "pipeline": "İşlem hattı",
+      "thumbnails": "Küçük resimler",
+      "server": "Sunucu",
+      "logging": "Günlük kaydı",
+      "timing": "Zamanlama"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Sağlayıcı",
+        "model": "Model",
+        "temperature": "Sıcaklık",
+        "maxTokens": "Maksimum çıktı belirteci",
+        "concurrency": "Eşzamanlılık",
+        "claudeKey": "Claude API anahtarı",
+        "chatgptKey": "ChatGPT API anahtarı",
+        "geminiKey": "Gemini API anahtarı",
+        "azureKey": "Azure API anahtarı",
+        "azureEndpoint": "Azure uç noktası",
+        "azureDeployment": "Azure dağıtımı",
+        "azureApiVersion": "Azure API sürümü",
+        "ollamaUrl": "Ollama URL'si",
+        "ollamaModel": "Ollama modeli"
+      },
+      "transcription": {
+        "backend": "Arka uç",
+        "model": "Model",
+        "language": "Dil",
+        "device": "Aygıt",
+        "computeType": "Hesaplama türü",
+        "audioConcurrency": "Ses çıkarma eşzamanlılığı"
+      },
+      "privacy": {
+        "piiRedaction": "PII çıkarma",
+        "piiLlmPass": "PII LLM geçişi",
+        "customNames": "Çıkarılacak özel adlar"
+      },
+      "quotes": {
+        "minQuoteWords": "Minimum alıntı sözcük sayısı",
+        "speakerMergeGap": "Konuşmacı birleştirme aralığı",
+        "quoteSequenceGap": "Alıntı dizisi aralığı",
+        "llmFailureThreshold": "LLM hata eşiği",
+        "autocodeBatchSize": "AutoCode toplu iş boyutu"
+      },
+      "analysis": {
+        "topNSignals": "En iyi N sinyal",
+        "topNSignalsGeneric": "En iyi N sinyal (genel)",
+        "topNElaboration": "Ayrıntılandırma için en iyi N",
+        "minQuotesPerCell": "Hücre başına minimum alıntı",
+        "strongConcentration": "Güçlü: yoğunlaşma >",
+        "strongParticipants": "Güçlü: katılımcı ≥",
+        "strongQuotes": "Güçlü: alıntı ≥",
+        "moderateConcentration": "Orta: yoğunlaşma >",
+        "moderateParticipants": "Orta: katılımcı ≥",
+        "moderateQuotes": "Orta: alıntı ≥"
+      },
+      "autocode": {
+        "defaultLower": "Varsayılan alt eşik",
+        "defaultUpper": "Varsayılan üst eşik",
+        "sliderStep": "Kaydırıcı adımı",
+        "sliderMinGap": "Kaydırıcı minimum aralığı",
+        "histogramBins": "Histogram kutuları"
+      },
+      "display": {
+        "searchMinChars": "Arama minimum karakter sayısı",
+        "activityPollInterval": "Etkinlik yoklama aralığı"
+      },
+      "pipeline": {
+        "projectName": "Proje adı",
+        "writeIntermediate": "Ara dosyaları yaz",
+        "skipTranscription": "Transkripsiyonu atla",
+        "maxSessionsBeforeConfirm": "Onaydan önceki maksimum oturum sayısı"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Anahtar kare arama penceresi",
+        "fallbackFrameTime": "Yedek kare zamanı",
+        "thumbnailWidth": "Küçük resim genişliği",
+        "jpegQuality": "JPEG kalitesi"
+      },
+      "server": {
+        "serverPort": "Sunucu bağlantı noktası",
+        "miroAccessToken": "Miro erişim belirteci"
+      },
+      "logging": {
+        "logLevel": "Günlük düzeyi (dosya)",
+        "logFileMaxSize": "Günlük dosyası maksimum boyutu",
+        "logBackupCount": "Günlük yedekleme sayısı"
+      },
+      "timing": {
+        "minRunsEstimate": "Tahminden önceki minimum çalıştırma sayısı",
+        "minRunsRange": "±aralıktan önceki minimum çalıştırma sayısı"
+      }
+    }
+  },
+    "pipeline": {
+      "intro": "Bristlenose'un her işlem hattı aşamasında şu anda kullandığı modellerin salt okunur görünümü. Bir arka ucu değiştirmek için ayarlarınızı düzenleyin (ortam değişkenleri veya .env dosyası).",
+      "loading": "İşlem hattı görünümü yükleniyor…",
+      "error": "İşlem hattı görünümü yüklenemedi",
+      "keys": "anahtar",
+      "keysNone": "yok",
+      "ollama": "ollama",
+      "running": "çalışıyor",
+      "notDetected": "algılanmadı",
+      "available": "kullanılabilir",
+      "unavailable": "kullanılamıyor",
+      "alternatives": {
+        "summaryHeading": "Bu ana bilgisayardaki LLM arka uçları",
+        "available": "Kullanılabilir",
+        "unavailable": "Kullanılamıyor",
+        "none": "yok"
+      },
+      "backends": {
+        "local_ollama": "Yerel (Ollama)",
+        "builtin_anonymiser": "Yerleşik anonimleştirici"
+      },
+      "glyph": {
+        "available": "kullanılabilir",
+        "unavailable": "kullanılamıyor",
+        "skipped": "bu ana bilgisayarda geçerli değil"
+      },
+      "column": {
+        "model": "Model",
+        "availability": "Kullanılabilirlik",
+        "quality": "Kalite",
+        "notes": "Notlar"
+      },
+      "key": {
+        "italic_label": "italik",
+        "synthesised": "kataloğumuzdan değil, ayarlarınızdan"
+      },
+      "qualifier": {
+        "default": "varsayılan",
+        "current": "geçerli",
+        "your_deployment": "Azure dağıtımınız"
+      },
+      "quality": {
+        "glyph": {
+          "excellent": "mükemmel kalite",
+          "good": "iyi kalite",
+          "marginal": "sınırda kalite",
+          "avoid": "kaçının — kalite çok düşük",
+          "untested": "test edilmedi"
+        },
+        "untested": "test edilmedi",
+        "local_speaker_id_acceptable": "Yerel modeller konuşmacı tanımayı iyi yapar",
+        "local_topic_segmentation_acceptable": "Yerel modeller konu bölümlemeyi iyi yapar",
+        "local_quote_extraction_miss_rate": "küçük modeller çok yan tümceli alıntıları kaçırır",
+        "local_quote_clustering_drift": "küçük modeller alıntıları tutarsız kümeler",
+        "local_thematic_grouping_drift": "küçük modeller tematik sentezde sapar",
+        "mlx_whisper_apple_silicon_optimal": "Apple Silicon'da en iyi",
+        "faster_whisper_cpu_baseline": "sağlam CPU temeli; GPU gerekmez"
+      },
+      "actions": {
+        "obtain_anthropic_key": "console.anthropic.com adresinden bir API anahtarı edinin ve ANTHROPIC_API_KEY olarak ayarlayın veya Ayarlar → Anahtarlar bölümüne yapıştırın",
+        "obtain_openai_key": "platform.openai.com adresinden bir API anahtarı edinin ve OPENAI_API_KEY olarak ayarlayın veya Ayarlar → Anahtarlar bölümüne yapıştırın",
+        "obtain_google_key": "aistudio.google.com adresinden bir API anahtarı edinin ve GOOGLE_API_KEY olarak ayarlayın veya Ayarlar → Anahtarlar bölümüne yapıştırın",
+        "configure_azure": "Azure anahtarını, uç noktasını ve dağıtımını Ayarlar → Anahtarlar bölümünde ayarlayın",
+        "start_ollama": "Ollama hizmetini başlatın (ollama serve)",
+        "install_mlx_whisper": "pip install mlx-whisper (Apple Silicon gerektirir)",
+        "install_ctranslate2": "pip install ctranslate2",
+        "install_presidio": "yerleşik anonimleştiriciyi etkinleştirmek için pip install bristlenose[redact-pii]",
+        "enable_pii_redaction": "--redact-pii ile çalıştırın veya pii_enabled=true olarak ayarlayın"
+      },
+      "reasons": {
+        "no_anthropic_key": "Claude API anahtarı ayarlanmadı",
+        "no_openai_key": "ChatGPT API anahtarı ayarlanmadı",
+        "no_azure_key": "Azure OpenAI anahtarı ayarlanmadı",
+        "no_azure_endpoint": "Azure uç noktası ayarlanmadı",
+        "no_azure_deployment": "Azure dağıtımı ayarlanmadı",
+        "no_google_key": "Gemini API anahtarı ayarlanmadı",
+        "ollama_not_running": "Ollama çalışmıyor",
+        "apple_fm_check_desktop": "masaüstü uygulamasında kontrol edin",
+        "requires_apple_silicon": "Apple Silicon gerektirir",
+        "mlx_whisper_not_installed": "MLX Whisper yüklü değil",
+        "ctranslate2_not_installed": "ctranslate2 yüklü değil",
+        "presidio_not_installed": "Yerleşik anonimleştirici yüklü değil",
+        "spacy_model_missing": "dil modeli yüklü değil",
+        "pii_disabled": "PII çıkarma kapalı"
+      }
+    }
+}

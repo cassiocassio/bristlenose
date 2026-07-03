@@ -1,0 +1,45 @@
+{
+  "whisper": {
+    "banner_intro": "Bristlenose skal bruge Whisper-transskriptionsmodellen ({size}).",
+    "verb_downloading": "Downloader",
+    "verb_resuming": "Genoptager download",
+    "fetching": "{verb} {repo_id}...",
+    "ready": "Whisper-model klar",
+    "aborted_no_fetch": "Whisper-modellen {repo_id} er ikke i cachen, og --no-fetch er angivet. Kør `bristlenose doctor --fetch` for at hente den på forhånd, eller kør igen uden --no-fetch."
+  },
+  "ffmpeg": {
+    "banner_missing": "ffmpeg kræves for at læse videofiler. Ikke fundet i PATH.",
+    "prompt_brew_install": "Kør `brew install ffmpeg` nu?",
+    "installed": "ffmpeg installeret",
+    "aborted": "ffmpeg kræves, men blev ikke fundet. Installer det med kommandoen ovenfor, og kør igen.",
+    "label_macos": "macOS",
+    "label_ubuntu": "Ubuntu / Debian",
+    "label_fedora": "Fedora / RHEL",
+    "label_arch": "Arch / Manjaro",
+    "label_other": "Andet",
+    "cmd_macos": "brew install ffmpeg",
+    "cmd_ubuntu": "sudo apt install ffmpeg",
+    "cmd_fedora": "sudo dnf install ffmpeg",
+    "cmd_arch": "sudo pacman -S ffmpeg",
+    "cmd_other": "https://ffmpeg.org/download.html"
+  },
+  "api_key": {
+    "source_attribution": "Bruger {provider_display}-API-nøgle fra {source}. Verificerer: ~$0,0001, intet transskriptionsindhold.",
+    "rejected_invalid_key": "Din {provider_display}-API-nøgle blev afvist (HTTP 401).\nTjek nøglen på {keys_url}\nog kør igen.",
+    "no_credit": "Din {provider_display}-konto har ingen tilgængelig API-kredit.\nFyld op på {billing_url}\n({minimum_note})\nog kør igen.",
+    "model_unavailable": "Den ønskede model er ikke tilgængelig for din {provider_display}-konto. Tjek de tilgængelige modeller på {console_url}, og aktivér enten modellen eller skift `--llm-model` til en, som din konto kan bruge.",
+    "rate_limit": "{provider_display} hastighedsbegrænser denne konto. Vent et minut og kør igen, eller reducer `llm_concurrency` i din bristlenose.toml.",
+    "generic": "Udbyderen siger: {message}.\nHvis dette ligner et problem med kreditsaldoen, så fyld op i udbyderens faktureringskonsol, og kør igen.",
+    "network": "Kunne ikke nå udbyderen: {message}.\nTjek DNS-/VPN-/proxy-indstillinger, og kør igen.",
+    "azure_deployment_unavailable": "Azure-udrulningen blev ikke fundet. Dette er dit **udrulningsnavn** i Azure-portalen, ikke et model-id — tjek det i Azure-portalen under Azure OpenAI → Deployments. Opdater BRISTLENOSE_AZURE_DEPLOYMENT (eller azure_deployment i bristlenose.toml), og kør igen. Underliggende: {message}.",
+    "google_model_unavailable": "Gemini nægtede adgang til den ønskede model. Dette skyldes normalt en niveaubegrænsning, regionsbegrænsning eller manglende aktiveret fakturering — tjek Google Cloud Console på {console_url}. Hvis fakturering er sat op, så prøv en anden model via --llm-model. Underliggende: {message}.",
+    "local_server_down": "Ollama ser ikke ud til at køre. Start det med `ollama serve` (eller åbn Ollama-appen på macOS), og kør igen. Underliggende: {message}.",
+    "local_model_not_pulled": "Den ønskede lokale model er ikke hentet. Kør `ollama pull <model>` for at downloade den (tjek modelnavnet i bristlenose.toml eller --llm-model), og kør igen. Underliggende: {message}."
+  },
+  "pii": {
+    "downloading": "Downloader detektor for personoplysninger (~12 MB, engangs)..."
+  },
+  "closing": {
+    "no_more_questions": "Ikke flere spørgsmål.{estimate_suffix} Ctrl+C når som helst."
+  }
+}

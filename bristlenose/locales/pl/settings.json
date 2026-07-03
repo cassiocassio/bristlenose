@@ -1,0 +1,228 @@
+{
+  "heading": "Ustawienia",
+  "appearance": {
+    "randomIconsLegend": "Przypisuj losową ikonę nowym projektom",
+    "randomIconsHelp": "Każdy nowy projekt otrzymuje charakterystyczną ikonę, aby łatwo było go rozpoznać na pasku bocznym. Wyłącz tę opcję, aby zachować zwykły pierścień i samodzielnie wybierać ikony.",
+    "legend": "Wygląd aplikacji",
+    "auto": "Wygląd systemowy",
+    "light": "Jasny",
+    "dark": "Ciemny"
+  },
+  "palette": {
+    "legend": "Paleta kolorów",
+    "default": "Domyślna",
+    "edo": "Edo",
+    "description": "Zmienia kolorystykę całej aplikacji. Edo używa ciepłego papieru washi i pruskiego błękitu."
+  },
+  "typography": {
+    "legend": "Typografia"
+  },
+  "language": {
+    "legend": "Język",
+    "description": "Steruje językiem wyświetlania interfejsu. Treść raportu nie jest tłumaczona.",
+    "helpTranslate": "Pomóż przetłumaczyć Bristlenose na Twój język w serwisie"
+  },
+  "settingsNav": {
+    "general": "Ogólne",
+    "project": "Projekt",
+    "profile": "Profil",
+    "apiKeys": "Klucze API",
+    "config": "Konfiguracja",
+    "projectStub": "Ustawienia poszczególnych projektów pojawią się tutaj. Już wkrótce.",
+    "profileStub": "Ustawienia profilu (imię, e-mail, backend Whisper) pojawią się tutaj. Już wkrótce.",
+    "apiKeysStub": "Zarządzanie kluczami API pojawi się tutaj. Już wkrótce.",
+    "pipeline": "Potok"
+  },
+  "configReference": {
+    "heading": "Odniesienie do konfiguracji",
+    "intro": "Wszystkie poniższe ustawienia konfiguruje się za pomocą zmiennych środowiskowych lub pliku <code>.env</code>. Są tu pokazane w celach referencyjnych — aby zmienić wartość, edytuj plik wskazany w każdym wierszu.",
+    "clickToCopy": "Kliknij, aby skopiować",
+    "copied": "Skopiowano",
+    "categories": {
+      "llm": "Dostawca i model LLM",
+      "transcription": "Transkrypcja",
+      "privacy": "Prywatność",
+      "quotes": "Cytaty",
+      "analysis": "Analiza",
+      "autocode": "AutoCode",
+      "display": "Wyświetlanie",
+      "pipeline": "Potok",
+      "thumbnails": "Miniatury",
+      "server": "Serwer",
+      "logging": "Rejestrowanie",
+      "timing": "Pomiar czasu"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Dostawca",
+        "model": "Model",
+        "temperature": "Temperatura",
+        "maxTokens": "Maks. tokenów wyjściowych",
+        "concurrency": "Współbieżność",
+        "claudeKey": "Klucz API Claude",
+        "chatgptKey": "Klucz API ChatGPT",
+        "geminiKey": "Klucz API Gemini",
+        "azureKey": "Klucz API Azure",
+        "azureEndpoint": "Punkt końcowy Azure",
+        "azureDeployment": "Wdrożenie Azure",
+        "azureApiVersion": "Wersja API Azure",
+        "ollamaUrl": "Adres URL Ollama",
+        "ollamaModel": "Model Ollama"
+      },
+      "transcription": {
+        "backend": "Backend",
+        "model": "Model",
+        "language": "Język",
+        "device": "Urządzenie",
+        "computeType": "Typ obliczeń",
+        "audioConcurrency": "Współbieżność ekstrakcji dźwięku"
+      },
+      "privacy": {
+        "piiRedaction": "Usuwanie danych osobowych",
+        "piiLlmPass": "Przebieg LLM dla danych osobowych",
+        "customNames": "Własne nazwy do usunięcia"
+      },
+      "quotes": {
+        "minQuoteWords": "Min. liczba słów cytatu",
+        "speakerMergeGap": "Odstęp scalania mówców",
+        "quoteSequenceGap": "Odstęp sekwencji cytatów",
+        "llmFailureThreshold": "Próg błędów LLM",
+        "autocodeBatchSize": "Rozmiar partii AutoCode"
+      },
+      "analysis": {
+        "topNSignals": "Najważniejsze N sygnałów",
+        "topNSignalsGeneric": "Najważniejsze N sygnałów (ogólne)",
+        "topNElaboration": "Najważniejsze N do rozwinięcia",
+        "minQuotesPerCell": "Min. cytatów na komórkę",
+        "strongConcentration": "Silne: koncentracja >",
+        "strongParticipants": "Silne: uczestnicy ≥",
+        "strongQuotes": "Silne: cytaty ≥",
+        "moderateConcentration": "Umiarkowane: koncentracja >",
+        "moderateParticipants": "Umiarkowane: uczestnicy ≥",
+        "moderateQuotes": "Umiarkowane: cytaty ≥"
+      },
+      "autocode": {
+        "defaultLower": "Domyślny próg dolny",
+        "defaultUpper": "Domyślny próg górny",
+        "sliderStep": "Krok suwaka",
+        "sliderMinGap": "Min. odstęp suwaka",
+        "histogramBins": "Przedziały histogramu"
+      },
+      "display": {
+        "searchMinChars": "Min. znaków wyszukiwania",
+        "activityPollInterval": "Interwał odpytywania aktywności"
+      },
+      "pipeline": {
+        "projectName": "Nazwa projektu",
+        "writeIntermediate": "Zapisuj pliki pośrednie",
+        "skipTranscription": "Pomiń transkrypcję",
+        "maxSessionsBeforeConfirm": "Maks. sesji przed potwierdzeniem"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Okno wyszukiwania klatki kluczowej",
+        "fallbackFrameTime": "Zapasowy czas klatki",
+        "thumbnailWidth": "Szerokość miniatury",
+        "jpegQuality": "Jakość JPEG"
+      },
+      "server": {
+        "serverPort": "Port serwera",
+        "miroAccessToken": "Token dostępu Miro"
+      },
+      "logging": {
+        "logLevel": "Poziom dziennika (plik)",
+        "logFileMaxSize": "Maks. rozmiar pliku dziennika",
+        "logBackupCount": "Liczba kopii zapasowych dziennika"
+      },
+      "timing": {
+        "minRunsEstimate": "Min. przebiegów przed szacowaniem",
+        "minRunsRange": "Min. przebiegów przed zakresem ±"
+      }
+    }
+  },
+    "pipeline": {
+      "intro": "Widok tylko do odczytu modeli, których Bristlenose obecnie używa na każdym etapie potoku. Aby zmienić backend, edytuj swoje ustawienia (zmienne środowiskowe lub plik .env).",
+      "loading": "Wczytywanie widoku potoku…",
+      "error": "Nie udało się wczytać widoku potoku",
+      "keys": "klucze",
+      "keysNone": "brak",
+      "ollama": "ollama",
+      "running": "działa",
+      "notDetected": "nie wykryto",
+      "available": "dostępny",
+      "unavailable": "niedostępny",
+      "alternatives": {
+        "summaryHeading": "Backendy LLM na tym hoście",
+        "available": "Dostępne",
+        "unavailable": "Niedostępne",
+        "none": "brak"
+      },
+      "backends": {
+        "local_ollama": "Lokalny (Ollama)",
+        "builtin_anonymiser": "Wbudowany anonimizator"
+      },
+      "glyph": {
+        "available": "dostępny",
+        "unavailable": "niedostępny",
+        "skipped": "nie dotyczy tego hosta"
+      },
+      "column": {
+        "model": "Model",
+        "availability": "Dostępność",
+        "quality": "Jakość",
+        "notes": "Uwagi"
+      },
+      "key": {
+        "italic_label": "kursywa",
+        "synthesised": "z Twoich ustawień, nie z naszego katalogu"
+      },
+      "qualifier": {
+        "default": "domyślny",
+        "current": "bieżący",
+        "your_deployment": "Twoje wdrożenie Azure"
+      },
+      "quality": {
+        "glyph": {
+          "excellent": "doskonała jakość",
+          "good": "dobra jakość",
+          "marginal": "wątpliwa jakość",
+          "avoid": "unikaj — jakość zbyt niska",
+          "untested": "niesprawdzone"
+        },
+        "untested": "niesprawdzone",
+        "local_speaker_id_acceptable": "Modele lokalne dobrze radzą sobie z identyfikacją mówców",
+        "local_topic_segmentation_acceptable": "Modele lokalne dobrze radzą sobie z segmentacją tematów",
+        "local_quote_extraction_miss_rate": "małe modele pomijają cytaty wieloczłonowe",
+        "local_quote_clustering_drift": "małe modele grupują cytaty niespójnie",
+        "local_thematic_grouping_drift": "małe modele odchodzą od tematu przy syntezie tematycznej",
+        "mlx_whisper_apple_silicon_optimal": "optymalny na Apple Silicon",
+        "faster_whisper_cpu_baseline": "solidna podstawa na CPU; nie wymaga GPU"
+      },
+      "actions": {
+        "obtain_anthropic_key": "uzyskaj klucz API na console.anthropic.com i ustaw ANTHROPIC_API_KEY lub wklej w Ustawienia → Klucze",
+        "obtain_openai_key": "uzyskaj klucz API na platform.openai.com i ustaw OPENAI_API_KEY lub wklej w Ustawienia → Klucze",
+        "obtain_google_key": "uzyskaj klucz API na aistudio.google.com i ustaw GOOGLE_API_KEY lub wklej w Ustawienia → Klucze",
+        "configure_azure": "ustaw klucz, punkt końcowy i wdrożenie Azure w Ustawienia → Klucze",
+        "start_ollama": "uruchom usługę Ollama (ollama serve)",
+        "install_mlx_whisper": "pip install mlx-whisper (wymaga Apple Silicon)",
+        "install_ctranslate2": "pip install ctranslate2",
+        "install_presidio": "pip install bristlenose[redact-pii], aby włączyć wbudowany anonimizator",
+        "enable_pii_redaction": "uruchom z --redact-pii lub ustaw pii_enabled=true"
+      },
+      "reasons": {
+        "no_anthropic_key": "nie ustawiono klucza API Claude",
+        "no_openai_key": "nie ustawiono klucza API ChatGPT",
+        "no_azure_key": "nie ustawiono klucza Azure OpenAI",
+        "no_azure_endpoint": "nie ustawiono punktu końcowego Azure",
+        "no_azure_deployment": "nie ustawiono wdrożenia Azure",
+        "no_google_key": "nie ustawiono klucza API Gemini",
+        "ollama_not_running": "Ollama nie działa",
+        "apple_fm_check_desktop": "sprawdź w aplikacji na komputer",
+        "requires_apple_silicon": "wymaga Apple Silicon",
+        "mlx_whisper_not_installed": "MLX Whisper nie jest zainstalowany",
+        "ctranslate2_not_installed": "ctranslate2 nie jest zainstalowany",
+        "presidio_not_installed": "Wbudowany anonimizator nie jest zainstalowany",
+        "spacy_model_missing": "model językowy nie jest zainstalowany",
+        "pii_disabled": "Usuwanie danych osobowych jest wyłączone"
+      }
+    }
+}

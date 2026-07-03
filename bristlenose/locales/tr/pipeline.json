@@ -1,0 +1,6 @@
+{
+  "start": "{path} için işlem hattı başlatılıyor",
+  "stageStart": "{stage} çalıştırılıyor…",
+  "stageComplete": "{stage} tamamlandı ({duration})",
+  "done": "İşlem hattı tamamlandı. Çıktı: {output}"
+}

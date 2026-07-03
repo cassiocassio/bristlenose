@@ -1,0 +1,45 @@
+{
+  "whisper": {
+    "banner_intro": "Bristlenose, Whisper deşifre modeline ihtiyaç duyuyor ({size}).",
+    "verb_downloading": "İndiriliyor",
+    "verb_resuming": "İndirmeye devam ediliyor",
+    "fetching": "{repo_id} {verb}...",
+    "ready": "Whisper modeli hazır",
+    "aborted_no_fetch": "Whisper modeli {repo_id} önbellekte yok ve --no-fetch ayarlanmış. Önceden getirmek için `bristlenose doctor --fetch` komutunu çalıştırın ya da --no-fetch olmadan yeniden çalıştırın."
+  },
+  "ffmpeg": {
+    "banner_missing": "Video dosyalarını okumak için ffmpeg gerekiyor. PATH üzerinde bulunamadı.",
+    "prompt_brew_install": "`brew install ffmpeg` şimdi çalıştırılsın mı?",
+    "installed": "ffmpeg kuruldu",
+    "aborted": "ffmpeg gerekiyor ancak bulunamadı. Yukarıdaki komutu kullanarak kurun ve yeniden çalıştırın.",
+    "label_macos": "macOS",
+    "label_ubuntu": "Ubuntu / Debian",
+    "label_fedora": "Fedora / RHEL",
+    "label_arch": "Arch / Manjaro",
+    "label_other": "Diğer",
+    "cmd_macos": "brew install ffmpeg",
+    "cmd_ubuntu": "sudo apt install ffmpeg",
+    "cmd_fedora": "sudo dnf install ffmpeg",
+    "cmd_arch": "sudo pacman -S ffmpeg",
+    "cmd_other": "https://ffmpeg.org/download.html"
+  },
+  "api_key": {
+    "source_attribution": "{source} kaynağından {provider_display} API anahtarı kullanılıyor. Doğrulanıyor: ~$0.0001, döküm içeriği yok.",
+    "rejected_invalid_key": "{provider_display} API anahtarınız reddedildi (HTTP 401).\nAnahtarı {keys_url} adresinde denetleyin\nve yeniden çalıştırın.",
+    "no_credit": "{provider_display} hesabınızda kullanılabilir API kredisi yok.\n{billing_url} adresinden yükleyin\n({minimum_note})\nve yeniden çalıştırın.",
+    "model_unavailable": "İstenen model {provider_display} hesabınız için kullanılamıyor. Kullanılabilir modelleri {console_url} adresinde denetleyin ve ya modeli etkinleştirin ya da `--llm-model` değerini hesabınızın kullanabileceği bir modele değiştirin.",
+    "rate_limit": "{provider_display} bu hesabın istek hızını sınırlıyor. Bir dakika bekleyip yeniden çalıştırın ya da bristlenose.toml dosyanızdaki `llm_concurrency` değerini düşürün.",
+    "generic": "Sağlayıcı şunu bildiriyor: {message}.\nBu bir kredi bakiyesi sorunu gibi görünüyorsa, sağlayıcının faturalandırma konsolundan yükleme yapıp yeniden çalıştırın.",
+    "network": "Sağlayıcıya ulaşılamadı: {message}.\nDNS / VPN / proxy ayarlarını denetleyin, ardından yeniden çalıştırın.",
+    "azure_deployment_unavailable": "Azure dağıtımı bulunamadı. Bu, bir model kimliği değil Azure portalınızdaki **dağıtım adıdır** — Azure portalında Azure OpenAI → Deployments altından denetleyin. BRISTLENOSE_AZURE_DEPLOYMENT (ya da bristlenose.toml içindeki azure_deployment) değerini güncelleyip yeniden çalıştırın. Altta yatan neden: {message}.",
+    "google_model_unavailable": "Gemini, istenen modele erişimi reddetti. Bu genellikle bir katman kısıtlaması, bölge kısıtlaması ya da faturalandırmanın etkin olmamasından kaynaklanır — {console_url} adresinden Google Cloud Console'u denetleyin. Faturalandırma ayarlandıysa, --llm-model ile farklı bir model deneyin. Altta yatan neden: {message}.",
+    "local_server_down": "Ollama çalışmıyor gibi görünüyor. `ollama serve` ile başlatın (ya da macOS'ta Ollama uygulamasını açın), ardından yeniden çalıştırın. Altta yatan neden: {message}.",
+    "local_model_not_pulled": "İstenen yerel model çekilmemiş. İndirmek için `ollama pull <model>` komutunu çalıştırın (model adını bristlenose.toml içinde ya da --llm-model ile denetleyin), ardından yeniden çalıştırın. Altta yatan neden: {message}."
+  },
+  "pii": {
+    "downloading": "Kişisel bilgi algılayıcısı indiriliyor (~12 MB, tek seferlik)..."
+  },
+  "closing": {
+    "no_more_questions": "Başka soru yok.{estimate_suffix} İstediğiniz zaman Ctrl+C."
+  }
+}

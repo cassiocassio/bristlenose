@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "Motor for transkribering og sitatuttrekking fra brukerundersøkelser.",
+  "stage": {
+    "ingest": "Innlesing",
+    "extractAudio": "Trekk ut lyd",
+    "transcribe": "Transkriber",
+    "identifySpeakers": "Identifiser talere",
+    "mergeTranscript": "Slå sammen transkripsjon",
+    "piiRemoval": "Fjerning av personopplysninger",
+    "topicSegmentation": "Emnesegmentering",
+    "quoteExtraction": "Sitatuttrekking",
+    "quoteClustering": "Sitatgruppering",
+    "thematicGrouping": "Tematisk gruppering",
+    "render": "Gjengivelse"
+  },
+  "error": {
+    "noInput": "Ingen inndatamappe er angitt.",
+    "notFound": "Fant ikke mappen: {path}",
+    "noFiles": "Fant ingen lyd-, video- eller transkripsjonsfiler i {path}"
+  },
+  "progress": {
+    "complete": "Fullført",
+    "failed": "Mislyktes",
+    "skipped": "Hoppet over"
+  }
+}

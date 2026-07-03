@@ -287,3 +287,150 @@ Sessions,工作階段,zh-Hant,QDA term
 Signals,訊號,zh-Hant,QDA term
 Codes,代碼,zh-Hant,QDA term
 
+Save,Zapisz,pl,Apple HIG
+Cancel,Anuluj,pl,Apple HIG
+Close,Zamknij,pl,Apple HIG
+Copy,Kopiuj,pl,Apple HIG
+Delete,Usuń,pl,Apple HIG (action sense)
+Undo,Cofnij,pl,Apple HIG (macOS Edit menu)
+Redo,Ponów,pl,Apple HIG (macOS Edit menu)
+Search,Szukaj,pl,Apple HIG
+Print,Drukuj,pl,Apple HIG
+Export,Eksportuj,pl,Apple HIG
+Settings,Ustawienia,pl,Apple HIG
+Open,Otwórz,pl,Apple HIG
+Hide,Ukryj,pl,Apple HIG
+Accept,Zaakceptuj,pl,Apple HIG
+Apply,Zastosuj,pl,Apple HIG
+Reset,Resetuj,pl,Apple HIG
+Codebook,Księga kodów,pl,QDA convention
+Quotes,Cytaty,pl,QDA term — countable: cytat
+Sessions,Sesje,pl,QDA term
+Signals,Sygnały,pl,QDA term
+Codes,Kody,pl,QDA term
+Save,Сохранить,ru,Apple HIG
+Cancel,Отмена,ru,Apple HIG (button); Отменить = Undo
+Close,Закрыть,ru,Apple HIG
+Copy,Скопировать,ru,Apple HIG (Edit menu)
+Delete,Удалить,ru,Apple HIG; Убрать = Remove
+Undo,Отменить,ru,Apple HIG (macOS Edit menu)
+Redo,Повторить,ru,Apple HIG (macOS Edit menu)
+Search,Найти,ru,Apple HIG (Find); label = Поиск
+Print,Напечатать,ru,Apple HIG
+Export,Экспортировать,ru,Apple HIG
+Settings,Настройки,ru,Apple HIG; alt Параметры
+Open,Открыть,ru,Apple HIG
+Hide,Скрыть,ru,Apple HIG
+Accept,Принять,ru,Apple HIG
+Apply,Применить,ru,Apple HIG
+Reset,Сбросить,ru,Apple HIG
+Codebook,Книга кодов,ru,QDA convention; alt Кодировочная схема
+Quotes,Цитаты,ru,QDA term — countable: цитата
+Sessions,Сессии,ru,QDA term
+Signals,Сигналы,ru,product term
+Codes,Коды,ru,QDA term
+Save,Зберегти,uk,Apple HIG
+Cancel,Скасувати,uk,Apple HIG
+Close,Закрити,uk,Apple HIG
+Copy,Скопіювати,uk,Apple HIG (Edit menu)
+Delete,Видалити,uk,Apple HIG; Вилучити = Remove
+Undo,Відмінити,uk,disambiguate from Cancel = Скасувати
+Redo,Повторити,uk,Apple HIG (macOS Edit menu)
+Search,Знайти,uk,Apple HIG (Find); label = Пошук
+Print,Надрукувати,uk,Apple HIG
+Export,Експортувати,uk,Apple HIG
+Settings,Параметри,uk,Apple HIG; alt Налаштування
+Open,Відкрити,uk,Apple HIG
+Hide,Сховати,uk,Apple HIG; alt Приховати
+Accept,Прийняти,uk,Apple HIG
+Apply,Застосувати,uk,Apple HIG
+Reset,Скинути,uk,Apple HIG
+Codebook,Книга кодів,uk,QDA convention; alt Схема кодування
+Quotes,Цитати,uk,QDA term — countable: цитата
+Sessions,Сесії,uk,QDA term
+Signals,Сигнали,uk,product term
+Codes,Коди,uk,QDA term
+Save,Gem,da,Apple HIG
+Cancel,Annullér,da,Apple HIG
+Close,Luk,da,Apple HIG
+Copy,Kopiér,da,Apple HIG
+Delete,Slet,da,Apple HIG; Fjern = Remove
+Undo,Fortryd,da,Apple HIG (macOS Edit menu)
+Redo,Gentag,da,Apple HIG (macOS Edit menu)
+Search,Søg,da,Apple HIG
+Print,Udskriv,da,Apple HIG
+Export,Eksportér,da,Apple HIG
+Settings,Indstillinger,da,Apple HIG
+Open,Åbn,da,Apple HIG
+Hide,Skjul,da,Apple HIG
+Accept,Accepter,da,Apple HIG
+Apply,Anvend,da,Apple HIG
+Reset,Nulstil,da,Apple HIG
+Codebook,Kodebog,da,QDA convention
+Quotes,Citater,da,QDA term — countable: citat
+Sessions,Sessioner,da,QDA term
+Signals,Signaler,da,product term
+Codes,Koder,da,QDA term
+Save,Spara,sv,Apple HIG
+Cancel,Avbryt,sv,Apple HIG
+Close,Stäng,sv,Apple HIG
+Copy,Kopiera,sv,Apple HIG
+Delete,Radera,sv,Apple HIG; Ta bort = Remove
+Undo,Ångra,sv,Apple HIG (macOS Edit menu)
+Redo,Gör om,sv,Apple HIG (macOS Edit menu)
+Search,Sök,sv,Apple HIG
+Print,Skriv ut,sv,Apple HIG
+Export,Exportera,sv,Apple HIG
+Settings,Inställningar,sv,Apple HIG
+Open,Öppna,sv,Apple HIG
+Hide,Dölj,sv,Apple HIG
+Accept,Acceptera,sv,Apple HIG
+Apply,Använd,sv,Apple HIG
+Reset,Återställ,sv,Apple HIG
+Codebook,Kodbok,sv,QDA convention
+Quotes,Citat,sv,QDA term — countable: citat
+Sessions,Sessioner,sv,QDA term
+Signals,Signaler,sv,product term
+Codes,Koder,sv,QDA term
+Save,Lagre,nb,Apple HIG
+Cancel,Avbryt,nb,Apple HIG
+Close,Lukk,nb,Apple HIG
+Copy,Kopier,nb,Apple HIG
+Delete,Slett,nb,Apple HIG; Fjern = Remove
+Undo,Angre,nb,Apple HIG (macOS Edit menu)
+Redo,Gjør om,nb,Apple HIG (macOS Edit menu)
+Search,Søk,nb,Apple HIG
+Print,Skriv ut,nb,Apple HIG
+Export,Eksporter,nb,Apple HIG
+Settings,Innstillinger,nb,Apple HIG
+Open,Åpne,nb,Apple HIG
+Hide,Skjul,nb,Apple HIG
+Accept,Godta,nb,Apple HIG
+Apply,Bruk,nb,Apple HIG
+Reset,Tilbakestill,nb,Apple HIG
+Codebook,Kodebok,nb,QDA convention
+Quotes,Sitater,nb,QDA term — countable: sitat (nb spelling)
+Sessions,Økter,nb,QDA term
+Signals,Signaler,nb,product term
+Codes,Koder,nb,QDA term
+Save,Kaydet,tr,Apple HIG
+Cancel,Vazgeç,tr,Apple HIG (Mac idiom); İptal = MS/web alt
+Close,Kapat,tr,Apple HIG
+Copy,Kopyala,tr,Apple HIG
+Delete,Sil,tr,Apple HIG; Kaldır = Remove
+Undo,Geri Al,tr,Apple HIG (macOS Edit menu)
+Redo,Yinele,tr,Apple HIG (macOS Edit menu)
+Search,Ara,tr,Apple HIG; Bul = Find
+Print,Yazdır,tr,Apple HIG
+Export,Dışa Aktar,tr,Apple HIG
+Settings,Ayarlar,tr,Apple HIG
+Open,Aç,tr,Apple HIG
+Hide,Gizle,tr,Apple HIG
+Accept,Kabul Et,tr,Apple HIG
+Apply,Uygula,tr,Apple HIG
+Reset,Sıfırla,tr,Apple HIG
+Codebook,Kod defteri,tr,QDA convention; alt kod kitabı
+Quotes,Alıntılar,tr,QDA term — countable: alıntı
+Sessions,Oturumlar,tr,QDA term
+Signals,Sinyaller,tr,product term
+Codes,Kodlar,tr,QDA term

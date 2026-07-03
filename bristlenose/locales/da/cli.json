@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "Transskriptions- og citatudtrækningsmotor til brugerforskning.",
+  "stage": {
+    "ingest": "Indlæsning",
+    "extractAudio": "Udtræk lyd",
+    "transcribe": "Transskriber",
+    "identifySpeakers": "Identificer talere",
+    "mergeTranscript": "Flet transskription",
+    "piiRemoval": "Fjernelse af personoplysninger",
+    "topicSegmentation": "Emneopdeling",
+    "quoteExtraction": "Citatudtrækning",
+    "quoteClustering": "Citatgruppering",
+    "thematicGrouping": "Tematisk gruppering",
+    "render": "Gengiv"
+  },
+  "error": {
+    "noInput": "Ingen inputmappe angivet.",
+    "notFound": "Mappe ikke fundet: {path}",
+    "noFiles": "Ingen lyd-, video- eller transskriptionsfiler fundet i {path}"
+  },
+  "progress": {
+    "complete": "Fuldført",
+    "failed": "Mislykkedes",
+    "skipped": "Sprunget over"
+  }
+}

@@ -201,7 +201,7 @@ Static inset at bridge-`ready` time is fine for alpha; live re-post on NSWindow 
 ### `nl`
 
 **Kind:** feature — Dutch (`nl`) locale, end-to-end across web + Python + native Swift
-**Status:** Just started (env built; no strings seeded yet)
+**Status:** Merged to main 3 Jul 2026 (`88961b7a`, `--no-ff`) — machine-seeded, native review pending. Local only (not pushed); worktree kept for the review pass. Green at landing: check-locales (no nl warnings), `ruff check .`, pytest locale/i18n/doctor 503, build+size 196.79 kB (size-neutral), Swift `I18nTests`. Included the `settings.appearance.animation*` keys that drifted onto main since the branch was cut (found via a pre-merge `git merge-tree` dry-run; every other locale carried them as English stubs — nl seeded proper Dutch).
 **Started:** 3 Jul 2026
 **Worktree:** `/Users/cassio/Code/bristlenose_branch nl/`
 **Remote:** local only (push when ready)

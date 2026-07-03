@@ -58,6 +58,7 @@ const LOCALE_LABELS: Record<Locale, string> = {
   da: "Dansk",
   sv: "Svenska",
   nb: "Norsk bokmål",
+  tr: "Türkçe",
   "pt-BR": "Português (Brasil)",
   "pt-PT": "Português (Portugal)",
   "zh-Hant": "繁體中文",

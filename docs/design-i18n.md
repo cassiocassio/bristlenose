@@ -556,8 +556,11 @@ boundary rule, no demand signal yet.
 
 Breadcrumbs so the analysis isn't re-derived.
 
-**Status update (3 Jul 2026):** Portuguese (`pt-BR`/`pt-PT`) shipped; the Slavic wave (pl/ru/uk) and the
-Scandinavian wave (`da`/`sv`/`nb`) shipped on branch `slavic` (machine-seeded, pending native review).
+**Status update (3 Jul 2026):** Portuguese (`pt-BR`/`pt-PT`) shipped; the Slavic wave (pl/ru/uk), the
+Scandinavian wave (`da`/`sv`/`nb`), and **Turkish (`tr`)** shipped on branch `slavic` (machine-seeded,
+pending native review). Turkish is also CLDR `one`/`other` binary (no plural branch; note the no-plural-
+after-a-number rule makes `_one`/`_other` count strings identical); register is formal `siz` + imperative;
+the Mac-idiom Cancel is **Vazgeç** (not İptal).
 **Scandinavian are CLDR `one`/`other` binary** — same shape as es/de/it, so no Swift `pluralCategory`
 branch and no four-form seeding; the mechanical cost was low. `nb` (Bokmål) is the correct code (Apple
 canonicalizes `no`→`nb`); a `no`→`nb` auto-detection mapping at the three ingress points is an open

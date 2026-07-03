@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "Kullanıcı araştırması dökümü ve alıntı çıkarma motoru.",
+  "stage": {
+    "ingest": "İçe aktarma",
+    "extractAudio": "Sesi ayıkla",
+    "transcribe": "Deşifre et",
+    "identifySpeakers": "Konuşmacıları belirle",
+    "mergeTranscript": "Dökümü birleştir",
+    "piiRemoval": "Kişisel bilgileri kaldırma",
+    "topicSegmentation": "Konu bölütleme",
+    "quoteExtraction": "Alıntı çıkarma",
+    "quoteClustering": "Alıntı kümeleme",
+    "thematicGrouping": "Tematik gruplama",
+    "render": "Oluştur"
+  },
+  "error": {
+    "noInput": "Girdi dizini belirtilmedi.",
+    "notFound": "Dizin bulunamadı: {path}",
+    "noFiles": "{path} içinde ses, video veya döküm dosyası bulunamadı"
+  },
+  "progress": {
+    "complete": "Tamamlandı",
+    "failed": "Başarısız",
+    "skipped": "Atlandı"
+  }
+}

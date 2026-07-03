@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 3 Jul 2026 (closed `nl` branch — merged to main `88961b7a`; worktree detached + tagged orange on disk, local branch deleted. Review-pending; machine-seeded Dutch locale.) Prior: 3 Jul 2026 (opened `nl` + `fi` locale branches — Dutch (high/high pick) + Finnish (completes the Nordics), each with a native reviewer lined up; both share the 9 enrolment sites with `slavic`, so merge sequentially.) Prior: 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
+**Updated:** 3 Jul 2026 (closed `fi` branch — merged to main `3e193fa8` + registration re-added `92033192`; worktree detached + kept on disk, local branch deleted. Machine-seeded Finnish locale, native review pending.) Prior: 3 Jul 2026 (closed `nl` branch — merged to main `88961b7a`; worktree detached + tagged orange on disk, local branch deleted. Review-pending; machine-seeded Dutch locale.) Prior: 3 Jul 2026 (opened `nl` + `fi` locale branches — Dutch (high/high pick) + Finnish (completes the Nordics), each with a native reviewer lined up; both share the 9 enrolment sites with `slavic`, so merge sequentially.) Prior: 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
 
 ---
 
@@ -39,7 +39,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch slavic/` | `slavic` | feature | Localisation wave — pl/ru/uk + da/sv/nb + tr locales + i18n tooling (machine-seeded, pending native review) |
-| `bristlenose_branch fi/` | `fi` | feature | Finnish (`fi`) locale — 9 namespace files + 9 registration sites, merged to main `--no-ff` after nl; native review by a Finnish contact is the ship gate |
 | `bristlenose_branch spike/` | `spike` | spike | Translucent titlebar/toolbar (Notes/Mail idiom, macOS 26 Tahoe) — transparent WKWebView + safe-area extension under toolbar |
 
 
@@ -123,7 +122,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `slavic` | `bristlenose_branch slavic/` | local only |
-| `fi` | `bristlenose_branch fi/` | local only |
 | `spike` | `bristlenose_branch spike/` | local only |
 | `claude/debug-menu-instrumentation-4r9npy` _(merged)_ | _(worktree removed)_ | `origin/...` — merged to main 28 Jun 2026 (`252c1ce3`) |
 | `claude/figjam-miro-market-share-px52tg` _(merged)_ | `bristlenose_branch_figjam-miro-market-share/` _(detached, on disk)_ | local deleted — merged to main 28 Jun 2026 (66bc28c4) |
@@ -182,7 +180,7 @@ Static inset at bridge-`ready` time is fine for alpha; live re-post on NSWindow 
 - `frontend/src/shims/*` — receive `--bn-toolbar-inset`, apply to `<html>`
 
 **Potential conflicts with other branches:**
-- `slavic`, `nl`, `fi` — locale-only, no overlap
+- `slavic`, `nl` — locale-only, no overlap
 - `tower-of-hanoi` — spike, no overlap
 - No known conflicts on `WebView.swift`, `ContentView.swift`, or SPA CSS files at the time of branching
 
@@ -193,27 +191,6 @@ Static inset at bridge-`ready` time is fine for alpha; live re-post on NSWindow 
 **Kind:** feature — Dev Run Inspector: a dev-only `/api/dev/run` infoviz page over instrumentation the pipeline already captures (`llm-calls.jsonl` / `pipeline-events.jsonl` / timing), plus a `.json` sibling. Pure-stdlib data shaping in `run_inspector.py`; thin FastAPI wrappers in `routes/dev.py`. Also shipped: native **Debug ▸ Run Inspector** window (⌃⌘R), a live Diagnostic-fixtures submenu, reveal/log/provenance Debug actions, and a build-time sidecar-staleness gate.
 **Merged:** 28 Jun 2026 to main (`252c1ce3`, `--no-ff`); worktree removed, branch ref kept as insurance. No version bump (dev/DEBUG-only tooling). Mac adoption caught + fixed two cloud defects (event-schema field mismatch + brittle XSS test) before merge; full suite green (3164 passed), ruff clean, `xcodebuild` BUILD SUCCEEDED.
 **Owed:** human visual QA of the client-rendered inspector tabs (tracked in the QA backlog).
-
----
-
-### `fi`
-
-**Kind:** feature — Finnish (`fi`) locale, end-to-end across web + Python + native Swift
-**Status:** Just started (env built; no strings seeded yet)
-**Started:** 3 Jul 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch fi/`
-**Remote:** local only (push when ready)
-
-**What it does:** Adds the **Finnish (`fi`)** locale — completes the Nordics (da/sv/nb already shipped in the `slavic` wave), high Mac share + real design heritage, demand-gated in the roadmap. CLDR plurals are `one`/`other` (check `I18n.swift`'s `pluralCategory` falls through correctly). Nine namespace JSON files enrolled at all 9 registration sites + glossary rows. **Machine-seeded first, then native review by a Finnish contact — review is the ship gate.**
-
-**Files this branch will touch:**
-- `bristlenose/locales/fi/` (new — 9 namespace files)
-- Registration sites: `frontend/src/i18n/index.ts`, `bristlenose/i18n.py`, `bristlenose/doctor.py`, `frontend/src/islands/SettingsPanel.tsx`, `frontend/src/components/SettingsModal.tsx`, `frontend/src/i18n/LocaleStore.test.ts`
-- Native Swift: `desktop/Bristlenose/Bristlenose/I18n.swift`, `AppearanceSettingsView.swift`, `desktop/Bristlenose/BristlenoseTests/I18nTests.swift`
-- `bristlenose/locales/glossary.csv`
-
-**Potential conflicts with other branches:**
-- Same as `nl`: shares every locale-enrolment site with `nl` and `slavic`. Merge sequentially; locale dirs never collide, only the enrolment lists.
 
 ---
 
@@ -336,6 +313,12 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `fi` — merged 3 Jul 2026
+
+Feature — Finnish (`fi`) locale, the 21st language — 9 namespace files + registration at all enrolment sites + 21 glossary rows; machine-seeded, native review by a Finnish contact (TAUCHI / Aalto / UXHel / FSD orbit) pending. Terminology grounded in Finnish primaries (FSD Tietoarkisto/KvaliMOTV, Mozilla `fi` style guide, TSK, TENK). Landed via `3e193fa8` (`--no-ff` merge; a concurrent merge had dropped the enrolment-list resolutions) + `92033192` (re-registered fi at all sites). Worktree detached and kept on disk, local branch deleted; remote was never pushed. Verified on main: check-locales (no fi warnings), pytest 3425, ruff, build+size 196.93 kB.
+
+---
 
 ### `nl` — merged 3 Jul 2026
 

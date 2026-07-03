@@ -41,6 +41,19 @@ struct BristlenoseApp: App {
         return i
     }()
 
+    /// Active palette (Settings ▸ Appearance ▸ Palette). Read here so a
+    /// palette-aware `.tint` can propagate through every Scene — otherwise
+    /// SwiftUI `.tint` / `.foregroundStyle(.tint)` consumers resolve to
+    /// `AccentColor.colorset` (system blue) even under Edo, producing a
+    /// visible seam between the sidebar chrome accent and the Edo palette.
+    @AppStorage("palette") private var palette: String = "default"
+
+    /// Palette accent as a SwiftUI `Color`, resolved via the asset catalogue
+    /// so Xcode picks the Any/Dark variant per effective appearance.
+    private var paletteAccent: Color {
+        Color("Palette\(palette.capitalized)Accent")
+    }
+
     var body: some Scene {
         // `id` lets the Window > Bristlenose menu item reopen this scene via
         // `openWindow(id:)` after the user has closed the main window but the
@@ -81,6 +94,15 @@ struct BristlenoseApp: App {
                 ) { _ in
                     serveManager.stop()
                 }
+                // Palette-aware SwiftUI accent. Reads `PaletteDefaultAccent` /
+                // `PaletteEdoAccent` (see `SidebarPalette` / Assets.xcassets)
+                // so every SwiftUI `.tint` consumer downstream — tab labels,
+                // toolbar buttons, selection highlights — tracks the palette
+                // instead of falling through to the palette-agnostic
+                // `AccentColor.colorset`. AppKit chrome (title bar, traffic
+                // lights, `NSOutlineView` capsule) still reads system accent —
+                // deliberate, per the seam-alignment discipline.
+                .tint(paletteAccent)
         }
         .defaultSize(width: 1000, height: 700)
         .windowResizability(.contentMinSize)
@@ -91,6 +113,11 @@ struct BristlenoseApp: App {
         Settings {
             SettingsView()
                 .environmentObject(i18n)
+                // Every SwiftUI Scene needs its own `.tint` — the modifier
+                // applied to WindowGroup(id: "main") doesn't propagate across
+                // scene boundaries. Without this, the Settings toggles and tab
+                // icons stay `AccentColor.colorset` system blue even under Edo.
+                .tint(paletteAccent)
         }
 
         #if DEBUG
@@ -98,6 +125,7 @@ struct BristlenoseApp: App {
         // shipping surface; the whole TypeParity* file set is #if DEBUG.
         Window("Type Parity Inspector", id: "type-parity") {
             TypeParityView()
+                .tint(paletteAccent)
         }
         .defaultSize(width: 1200, height: 820)
 
@@ -107,6 +135,7 @@ struct BristlenoseApp: App {
         Window("Run Inspector", id: "run-inspector") {
             RunInspectorView()
                 .environmentObject(serveManager)
+                .tint(paletteAccent)
         }
         .defaultSize(width: 1000, height: 720)
 
@@ -114,6 +143,7 @@ struct BristlenoseApp: App {
         // (v0.1 canned WordPool, no live data). Debug ▸ Shoal Screensaver.
         Window("Shoal Screensaver", id: "shoal") {
             ShoalDebugView()
+                .tint(paletteAccent)
         }
         .defaultSize(width: 800, height: 600)
         #endif

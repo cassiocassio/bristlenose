@@ -243,6 +243,41 @@ final class BridgeHandler: ObservableObject {
         }
     }
 
+    // MARK: - Toolbar inset sync (translucent chrome spike)
+
+    /// Push the unified titlebar+toolbar height (in CSS px) to the SPA so it
+    /// can top-pad its scroll containers, keeping first-of-content out from
+    /// under the frost. The WebView extends behind the toolbar via
+    /// `.ignoresSafeArea(.container, edges: .top)` (ContentView), so without
+    /// this pad the very top of the report is clipped by the frost band.
+    ///
+    /// Fired once on `ready`. NSWindow frame minus contentLayoutRect gives the
+    /// combined titlebar+toolbar height — the same delta an AppKit view would
+    /// see as its top safe-area inset. Static-at-ready is fine for alpha; live
+    /// re-post on window frame changes is a follow-up if the effect earns
+    /// polish (per the spike brief).
+    func syncToolbarInset() {
+        guard let webView, let window = webView.window else { return }
+        let frameDelta = window.frame.height - window.contentLayoutRect.height
+        // Full-screen fallback: in full-screen the frame-minus-contentLayoutRect
+        // delta can collapse (no titlebar chrome to subtract), so on its own it
+        // under-reports the toolbar height and the SPA's cached padding-top
+        // leaves the first row of content tucked under the visible toolbar
+        // band. The contentView's top safeAreaInset is the same value AppKit
+        // hands to SwiftUI's `.ignoresSafeArea` machinery — so whichever mode
+        // we're in, at least one of the two reflects reality. Pick the larger.
+        let safeAreaTop = window.contentView?.safeAreaInsets.top ?? 0
+        let inset = max(0, frameDelta, safeAreaTop)
+        Task {
+            try? await webView.callAsyncJavaScript(
+                "window.__bristlenose?.setToolbarInset?.(inset)",
+                arguments: ["inset": inset],
+                in: nil,
+                in: .page
+            )
+        }
+    }
+
     // MARK: - Colour palette sync
 
     /// Push the native colour-palette choice to the web layer — live, no reload.
@@ -303,6 +338,7 @@ final class BridgeHandler: ObservableObject {
             isReady = true
             syncAppearance()
             syncLocale()
+            syncToolbarInset()
             webView?.window?.makeFirstResponder(webView)
 
         case "route-change":

@@ -21,6 +21,22 @@ body {
     padding: var(--bn-space-xl) var(--bn-space-lg);
 }
 
+/* Translucent chrome (spike): when the SPA runs inside the macOS WKWebView
+   the WebView paints transparent (WebView.swift: drawsBackground=false) and
+   extends behind the unified toolbar, so a solid body background would cover
+   the vibrancy the toolbar frost is trying to sample. main.tsx sets
+   [data-embedded="true"] on <html> before first paint.
+
+   The extended WebView also means the top of `body` sits BEHIND the toolbar;
+   BridgeHandler.syncToolbarInset pushes the titlebar+toolbar delta as
+   `--bn-toolbar-inset` on <html> at `ready`. Add it to the existing top pad
+   so first-of-content is fully out from under the frost. The `, 0px` fallback
+   keeps non-embedded (browser/serve) surfaces on the current spacing. */
+html[data-embedded="true"] body {
+    background: transparent;
+    padding-top: calc(var(--bn-toolbar-inset, 0px) + var(--bn-space-xl));
+}
+
 article {
     max-width: none;
     margin: 0 auto;

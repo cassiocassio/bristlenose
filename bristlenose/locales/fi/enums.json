@@ -1,0 +1,17 @@
+{
+  "sentiment": {
+    "frustration": "Turhautuminen",
+    "confusion": "Hämmennys",
+    "doubt": "Epäily",
+    "surprise": "Yllätys",
+    "satisfaction": "Tyytyväisyys",
+    "delight": "Ilahtuminen",
+    "confidence": "Luottamus"
+  },
+  "speakerRole": {
+    "researcher": "Tutkija",
+    "participant": "Osallistuja",
+    "observer": "Tarkkailija",
+    "unknown": "Tuntematon"
+  }
+}

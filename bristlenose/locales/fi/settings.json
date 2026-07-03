@@ -1,0 +1,230 @@
+{
+  "heading": "Asetukset",
+  "appearance": {
+    "animationLegend": "Näytä animaatio analyysin aikana",
+    "animationHelp": "Toista pääikkunassa parveilevien sanojen animaatio, kun projektia analysoidaan. Poista tämä käytöstä nähdäksesi tavallisen edistymisen sen sijaan.",
+    "randomIconsLegend": "Määritä uusille projekteille satunnainen kuvake",
+    "randomIconsHelp": "Jokainen uusi projekti saa erottuvan kuvakkeen, jotta se on helppo tunnistaa sivupalkissa. Poista tämä käytöstä säilyttääksesi tavallisen renkaan ja valitaksesi kuvakkeet itse.",
+    "legend": "Sovelluksen ulkoasu",
+    "auto": "Käytä järjestelmän ulkoasua",
+    "light": "Vaalea",
+    "dark": "Tumma"
+  },
+  "palette": {
+    "legend": "Väripaletti",
+    "default": "Oletus",
+    "edo": "Edo",
+    "description": "Värittää koko sovelluksen uudelleen. Edo käyttää lämmintä washi-paperia ja preussinsinistä mustetta."
+  },
+  "typography": {
+    "legend": "Typografia"
+  },
+  "language": {
+    "legend": "Kieli",
+    "description": "Ohjaa käyttöliittymän näyttökieltä. Raportin sisältöä ei käännetä.",
+    "helpTranslate": "Auta kääntämään Bristlenose omalle kielellesi palvelussa"
+  },
+  "settingsNav": {
+    "general": "Yleiset",
+    "project": "Projekti",
+    "profile": "Profiili",
+    "apiKeys": "API-avaimet",
+    "config": "Määritykset",
+    "projectStub": "Projektikohtaiset asetukset ilmestyvät tähän. Tulossa pian.",
+    "profileStub": "Profiiliasetukset (nimi, sähköposti, Whisper-taustajärjestelmä) ilmestyvät tähän. Tulossa pian.",
+    "apiKeysStub": "API-avainten hallinta ilmestyy tähän. Tulossa pian.",
+    "pipeline": "Analyysiketju"
+  },
+  "configReference": {
+    "heading": "Määritysten viite",
+    "intro": "Kaikki alla olevat asetukset määritetään ympäristömuuttujilla tai <code>.env</code>-tiedostolla. Ne näytetään tässä viitteeksi — muuta arvoa muokkaamalla kullakin rivillä näkyvää tiedostoa.",
+    "clickToCopy": "Napsauta kopioidaksesi",
+    "copied": "Kopioitu",
+    "categories": {
+      "llm": "LLM-palveluntarjoaja ja -malli",
+      "transcription": "Litterointi",
+      "privacy": "Yksityisyys",
+      "quotes": "Sitaatit",
+      "analysis": "Analyysi",
+      "autocode": "AutoCode",
+      "display": "Näyttö",
+      "pipeline": "Analyysiketju",
+      "thumbnails": "Pikkukuvat",
+      "server": "Palvelin",
+      "logging": "Lokitus",
+      "timing": "Ajoitus"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Palveluntarjoaja",
+        "model": "Malli",
+        "temperature": "Lämpötila",
+        "maxTokens": "Tulosteen enimmäistokenit",
+        "concurrency": "Rinnakkaisuus",
+        "claudeKey": "Claude-API-avain",
+        "chatgptKey": "ChatGPT-API-avain",
+        "geminiKey": "Gemini-API-avain",
+        "azureKey": "Azure-API-avain",
+        "azureEndpoint": "Azure-päätepiste",
+        "azureDeployment": "Azure-käyttöönotto",
+        "azureApiVersion": "Azure-API-versio",
+        "ollamaUrl": "Ollama-URL",
+        "ollamaModel": "Ollama-malli"
+      },
+      "transcription": {
+        "backend": "Taustajärjestelmä",
+        "model": "Malli",
+        "language": "Kieli",
+        "device": "Laite",
+        "computeType": "Laskentatyyppi",
+        "audioConcurrency": "Äänen erotuksen rinnakkaisuus"
+      },
+      "privacy": {
+        "piiRedaction": "Henkilötietojen peittäminen",
+        "piiLlmPass": "Henkilötietojen LLM-vaihe",
+        "customNames": "Mukautetut peitettävät nimet"
+      },
+      "quotes": {
+        "minQuoteWords": "Sitaatin vähimmäissanamäärä",
+        "speakerMergeGap": "Puhujien yhdistämisväli",
+        "quoteSequenceGap": "Sitaattisekvenssin väli",
+        "llmFailureThreshold": "LLM-virhekynnys",
+        "autocodeBatchSize": "AutoCode-eräkoko"
+      },
+      "analysis": {
+        "topNSignals": "Parhaat N signaalia",
+        "topNSignalsGeneric": "Parhaat N signaalia (yleinen)",
+        "topNElaboration": "Parhaat N tarkennukseen",
+        "minQuotesPerCell": "Sitaattien vähimmäismäärä solua kohti",
+        "strongConcentration": "Vahva: keskittymä >",
+        "strongParticipants": "Vahva: osallistujia ≥",
+        "strongQuotes": "Vahva: sitaatteja ≥",
+        "moderateConcentration": "Kohtalainen: keskittymä >",
+        "moderateParticipants": "Kohtalainen: osallistujia ≥",
+        "moderateQuotes": "Kohtalainen: sitaatteja ≥"
+      },
+      "autocode": {
+        "defaultLower": "Oletusarvoinen alempi kynnys",
+        "defaultUpper": "Oletusarvoinen ylempi kynnys",
+        "sliderStep": "Liukusäätimen askel",
+        "sliderMinGap": "Liukusäätimen vähimmäisväli",
+        "histogramBins": "Histogrammin luokat"
+      },
+      "display": {
+        "searchMinChars": "Haun vähimmäismerkkimäärä",
+        "activityPollInterval": "Toimintojen kyselyväli"
+      },
+      "pipeline": {
+        "projectName": "Projektin nimi",
+        "writeIntermediate": "Kirjoita välitiedostot",
+        "skipTranscription": "Ohita litterointi",
+        "maxSessionsBeforeConfirm": "Istuntojen enimmäismäärä ennen vahvistusta"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Avainkuvan hakuikkuna",
+        "fallbackFrameTime": "Varakuvan aika",
+        "thumbnailWidth": "Pikkukuvan leveys",
+        "jpegQuality": "JPEG-laatu"
+      },
+      "server": {
+        "serverPort": "Palvelimen portti",
+        "miroAccessToken": "Miron käyttöoikeustunnus"
+      },
+      "logging": {
+        "logLevel": "Lokitaso (tiedosto)",
+        "logFileMaxSize": "Lokitiedoston enimmäiskoko",
+        "logBackupCount": "Lokin varmuuskopioiden määrä"
+      },
+      "timing": {
+        "minRunsEstimate": "Vähimmäisajot ennen arviota",
+        "minRunsRange": "Vähimmäisajot ennen ±vaihteluväliä"
+      }
+    }
+  },
+  "pipeline": {
+    "intro": "Vain luku -näkymä malleista, joita Bristlenose käyttää tällä hetkellä kussakin analyysiketjun vaiheessa. Vaihtaaksesi taustajärjestelmää muokkaa asetuksiasi (ympäristömuuttujat tai .env-tiedosto).",
+    "loading": "Ladataan analyysiketjun näkymää…",
+    "error": "Analyysiketjun näkymää ei voitu ladata",
+    "keys": "avaimet",
+    "keysNone": "ei mitään",
+    "ollama": "ollama",
+    "running": "käynnissä",
+    "notDetected": "ei havaittu",
+    "available": "käytettävissä",
+    "unavailable": "ei käytettävissä",
+    "alternatives": {
+      "summaryHeading": "LLM-taustajärjestelmät tällä koneella",
+      "available": "Käytettävissä",
+      "unavailable": "Ei käytettävissä",
+      "none": "ei mitään"
+    },
+    "backends": {
+      "local_ollama": "Paikallinen (Ollama)",
+      "builtin_anonymiser": "Sisäänrakennettu anonymisoija"
+    },
+    "glyph": {
+      "available": "käytettävissä",
+      "unavailable": "ei käytettävissä",
+      "skipped": "ei sovellu tällä koneella"
+    },
+    "column": {
+      "model": "Malli",
+      "availability": "Saatavuus",
+      "quality": "Laatu",
+      "notes": "Huomautukset"
+    },
+    "key": {
+      "italic_label": "kursiivi",
+      "synthesised": "asetuksistasi, ei luettelostamme"
+    },
+    "qualifier": {
+      "default": "oletus",
+      "current": "nykyinen",
+      "your_deployment": "Azure-käyttöönottosi"
+    },
+    "quality": {
+      "glyph": {
+        "excellent": "erinomainen laatu",
+        "good": "hyvä laatu",
+        "marginal": "rajallinen laatu",
+        "avoid": "vältä — laatu liian matala",
+        "untested": "testaamaton"
+      },
+      "untested": "testaamaton",
+      "local_speaker_id_acceptable": "Paikalliset mallit hoitavat puhujien tunnistuksen hyvin",
+      "local_topic_segmentation_acceptable": "Paikalliset mallit hoitavat aiheiden jäsentelyn hyvin",
+      "local_quote_extraction_miss_rate": "pienet mallit jättävät monilauseiset sitaatit huomaamatta",
+      "local_quote_clustering_drift": "pienet mallit ryhmittelevät sitaatit epäjohdonmukaisesti",
+      "local_thematic_grouping_drift": "pienet mallit ajautuvat harhaan temaattisessa synteesissä",
+      "mlx_whisper_apple_silicon_optimal": "optimaalinen Apple Siliconilla",
+      "faster_whisper_cpu_baseline": "vankka CPU-perustaso; GPU:ta ei vaadita"
+    },
+    "actions": {
+      "obtain_anthropic_key": "hanki API-avain osoitteesta console.anthropic.com ja aseta ANTHROPIC_API_KEY tai liitä se kohtaan Asetukset → Avaimet",
+      "obtain_openai_key": "hanki API-avain osoitteesta platform.openai.com ja aseta OPENAI_API_KEY tai liitä se kohtaan Asetukset → Avaimet",
+      "obtain_google_key": "hanki API-avain osoitteesta aistudio.google.com ja aseta GOOGLE_API_KEY tai liitä se kohtaan Asetukset → Avaimet",
+      "configure_azure": "aseta Azure-avain, -päätepiste ja -käyttöönotto kohdassa Asetukset → Avaimet",
+      "start_ollama": "käynnistä Ollama-palvelu (ollama serve)",
+      "install_mlx_whisper": "pip install mlx-whisper (vaatii Apple Siliconin)",
+      "install_ctranslate2": "pip install ctranslate2",
+      "install_presidio": "pip install bristlenose[redact-pii] ottaaksesi käyttöön sisäänrakennetun anonymisoijan",
+      "enable_pii_redaction": "aja valitsimella --redact-pii tai aseta pii_enabled=true"
+    },
+    "reasons": {
+      "no_anthropic_key": "Claude-API-avainta ei ole asetettu",
+      "no_openai_key": "ChatGPT-API-avainta ei ole asetettu",
+      "no_azure_key": "Azure OpenAI -avainta ei ole asetettu",
+      "no_azure_endpoint": "Azure-päätepistettä ei ole asetettu",
+      "no_azure_deployment": "Azure-käyttöönottoa ei ole asetettu",
+      "no_google_key": "Gemini-API-avainta ei ole asetettu",
+      "ollama_not_running": "Ollama ei ole käynnissä",
+      "apple_fm_check_desktop": "tarkista työpöytäsovelluksesta",
+      "requires_apple_silicon": "vaatii Apple Siliconin",
+      "mlx_whisper_not_installed": "MLX Whisper ei ole asennettu",
+      "ctranslate2_not_installed": "ctranslate2 ei ole asennettu",
+      "presidio_not_installed": "Sisäänrakennettua anonymisoijaa ei ole asennettu",
+      "spacy_model_missing": "kielimallia ei ole asennettu",
+      "pii_disabled": "Henkilötietojen peittäminen on pois päältä"
+    }
+  }
+}

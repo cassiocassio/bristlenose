@@ -1,0 +1,45 @@
+{
+  "whisper": {
+    "banner_intro": "Bristlenose heeft het Whisper-transcriptiemodel nodig ({size}).",
+    "verb_downloading": "Bezig met downloaden",
+    "verb_resuming": "Download hervatten",
+    "fetching": "{verb} {repo_id}...",
+    "ready": "Whisper-model gereed",
+    "aborted_no_fetch": "Whisper-model {repo_id} staat niet in de cache en --no-fetch is ingesteld. Voer `bristlenose doctor --fetch` uit om het vooraf op te halen, of voer opnieuw uit zonder --no-fetch."
+  },
+  "ffmpeg": {
+    "banner_missing": "ffmpeg is vereist om videobestanden te lezen. Niet gevonden op PATH.",
+    "prompt_brew_install": "Nu `brew install ffmpeg` uitvoeren?",
+    "installed": "ffmpeg geïnstalleerd",
+    "aborted": "ffmpeg is vereist maar werd niet gevonden. Installeer het met de opdracht hierboven en voer opnieuw uit.",
+    "label_macos": "macOS",
+    "label_ubuntu": "Ubuntu / Debian",
+    "label_fedora": "Fedora / RHEL",
+    "label_arch": "Arch / Manjaro",
+    "label_other": "Overige",
+    "cmd_macos": "brew install ffmpeg",
+    "cmd_ubuntu": "sudo apt install ffmpeg",
+    "cmd_fedora": "sudo dnf install ffmpeg",
+    "cmd_arch": "sudo pacman -S ffmpeg",
+    "cmd_other": "https://ffmpeg.org/download.html"
+  },
+  "api_key": {
+    "source_attribution": "{provider_display}-API-sleutel van {source} wordt gebruikt. Verifiëren: ~$0,0001, geen transcriptinhoud.",
+    "rejected_invalid_key": "Je {provider_display}-API-sleutel is geweigerd (HTTP 401).\nControleer de sleutel op {keys_url}\nen voer opnieuw uit.",
+    "no_credit": "Je {provider_display}-account heeft geen API-tegoed beschikbaar.\nVul aan op {billing_url}\n({minimum_note})\nen voer opnieuw uit.",
+    "model_unavailable": "Het gevraagde model is niet beschikbaar voor je {provider_display}-account. Bekijk beschikbare modellen op {console_url} en schakel het model in of wijzig `--llm-model` naar een model dat je account wel kan gebruiken.",
+    "rate_limit": "{provider_display} beperkt de aanvraagsnelheid van dit account. Wacht een minuut en voer opnieuw uit, of verlaag `llm_concurrency` in je bristlenose.toml.",
+    "generic": "Provider meldt: {message}.\nAls dit op een tegoedprobleem lijkt, vul dan je tegoed aan in de facturatieconsole van de provider en voer opnieuw uit.",
+    "network": "Kon de provider niet bereiken: {message}.\nControleer DNS-/VPN-/proxyinstellingen en voer opnieuw uit.",
+    "azure_deployment_unavailable": "De Azure-implementatie werd niet gevonden. Dit is je **implementatienaam** in de Azure-portal, niet een model-id — controleer die in de Azure-portal onder Azure OpenAI → Deployments. Werk BRISTLENOSE_AZURE_DEPLOYMENT (of azure_deployment in bristlenose.toml) bij en voer opnieuw uit. Onderliggend: {message}.",
+    "google_model_unavailable": "Gemini heeft toegang tot het gevraagde model geweigerd. Dit komt meestal door een tiergrens, regiobeperking of niet-ingeschakelde facturatie — controleer de Google Cloud Console op {console_url}. Als facturatie is ingesteld, probeer dan een ander model via --llm-model. Onderliggend: {message}.",
+    "local_server_down": "Ollama lijkt niet te draaien. Start het met `ollama serve` (of open de Ollama-app op macOS) en voer opnieuw uit. Onderliggend: {message}.",
+    "local_model_not_pulled": "Het gevraagde lokale model is niet opgehaald. Voer `ollama pull <model>` uit om het te downloaden (controleer de modelnaam in bristlenose.toml of --llm-model) en voer opnieuw uit. Onderliggend: {message}."
+  },
+  "pii": {
+    "downloading": "PII-detector wordt gedownload (~12 MB, eenmalig)..."
+  },
+  "closing": {
+    "no_more_questions": "Geen vragen meer.{estimate_suffix} Ctrl+C wanneer je wilt."
+  }
+}

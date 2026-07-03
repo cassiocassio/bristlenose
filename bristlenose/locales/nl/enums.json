@@ -1,0 +1,17 @@
+{
+  "sentiment": {
+    "frustration": "Frustratie",
+    "confusion": "Verwarring",
+    "doubt": "Twijfel",
+    "surprise": "Verrassing",
+    "satisfaction": "Tevredenheid",
+    "delight": "Verrukking",
+    "confidence": "Vertrouwen"
+  },
+  "speakerRole": {
+    "researcher": "Onderzoeker",
+    "participant": "Deelnemer",
+    "observer": "Waarnemer",
+    "unknown": "Onbekend"
+  }
+}

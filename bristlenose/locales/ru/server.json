@@ -1,0 +1,24 @@
+{
+  "error": {
+    "notFound": "Ресурс не найден.",
+    "badRequest": "Некорректный запрос: {detail}",
+    "internal": "Внутренняя ошибка сервера."
+  },
+  "status": {
+    "healthy": "Работает",
+    "degraded": "Работает с ограничениями"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "Пока нет интервью для анализа.",
+    "noRunDesktopLong": "Перетащите сюда папку с интервью, чтобы начать.",
+    "noRunCliShort": "Здесь пока пусто.",
+    "cancelledShort": "Последний запуск был отменён.",
+    "cancelledLong": "Запустите снова, когда будете готовы.",
+    "failedShort": "Последний запуск завершился ошибкой.",
+    "recentLog": "Недавний журнал:",
+    "showDetails": "Показать подробности",
+    "sendFeedback": "Отправить отзыв",
+    "help": "Справка",
+    "cliExitedWithCode": "CLI завершился с кодом {code}"
+  }
+}

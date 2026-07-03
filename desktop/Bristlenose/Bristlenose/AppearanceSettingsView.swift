@@ -56,6 +56,8 @@ struct AppearanceSettingsView: View {
                     Text("Čeština").tag("cs")
                     Text("Italiano").tag("it")
                     Text("Polski").tag("pl")
+                    Text("Русский").tag("ru")
+                    Text("Українська").tag("uk")
                     Text("Português (Brasil)").tag("pt-BR")
                     Text("Português (Portugal)").tag("pt-PT")
                     Text("繁體中文").tag("zh-Hant")

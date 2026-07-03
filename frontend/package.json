@@ -37,6 +37,7 @@
         "!../bristlenose/server/static/assets/cli-*.js",
         "!../bristlenose/server/static/assets/doctor-*.js",
         "!../bristlenose/server/static/assets/pipeline-*.js",
+        "!../bristlenose/server/static/assets/preflight-*.js",
         "!../bristlenose/server/static/assets/server-*.js"
       ],
       "limit": "220 kB",

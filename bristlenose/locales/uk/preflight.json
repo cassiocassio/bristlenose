@@ -1,0 +1,45 @@
+{
+  "whisper": {
+    "banner_intro": "Bristlenose потрібна модель транскрибування Whisper ({size}).",
+    "verb_downloading": "Завантаження",
+    "verb_resuming": "Відновлення завантаження",
+    "fetching": "{verb} {repo_id}...",
+    "ready": "Модель Whisper готова",
+    "aborted_no_fetch": "Моделі Whisper {repo_id} немає в кеші, а встановлено параметр --no-fetch. Виконайте `bristlenose doctor --fetch`, щоб завантажити її заздалегідь, або запустіть повторно без --no-fetch."
+  },
+  "ffmpeg": {
+    "banner_missing": "Для читання відеофайлів потрібен ffmpeg. Не знайдено у PATH.",
+    "prompt_brew_install": "Виконати `brew install ffmpeg` зараз?",
+    "installed": "ffmpeg встановлено",
+    "aborted": "Потрібен ffmpeg, але його не знайдено. Установіть його за допомогою наведеної вище команди й запустіть повторно.",
+    "label_macos": "macOS",
+    "label_ubuntu": "Ubuntu / Debian",
+    "label_fedora": "Fedora / RHEL",
+    "label_arch": "Arch / Manjaro",
+    "label_other": "Інша платформа",
+    "cmd_macos": "brew install ffmpeg",
+    "cmd_ubuntu": "sudo apt install ffmpeg",
+    "cmd_fedora": "sudo dnf install ffmpeg",
+    "cmd_arch": "sudo pacman -S ffmpeg",
+    "cmd_other": "https://ffmpeg.org/download.html"
+  },
+  "api_key": {
+    "source_attribution": "Використовується API-ключ {provider_display} із {source}. Перевірка: ~$0,0001, без вмісту транскрипту.",
+    "rejected_invalid_key": "Ваш API-ключ {provider_display} відхилено (HTTP 401).\nПеревірте ключ за адресою {keys_url}\nі запустіть повторно.",
+    "no_credit": "На вашому обліковому записі {provider_display} немає доступного балансу для API.\nПоповніть його за адресою {billing_url}\n({minimum_note})\nі запустіть повторно.",
+    "model_unavailable": "Запитувана модель недоступна для вашого облікового запису {provider_display}. Перевірте доступні моделі за адресою {console_url} і або увімкніть модель, або змініть `--llm-model` на ту, яку може використовувати ваш обліковий запис.",
+    "rate_limit": "{provider_display} обмежує частоту запитів для цього облікового запису. Зачекайте хвилину й запустіть повторно або зменште `llm_concurrency` у файлі bristlenose.toml.",
+    "generic": "Постачальник повідомляє: {message}.\nЯкщо це схоже на проблему з балансом, поповніть його в консолі оплати постачальника й запустіть повторно.",
+    "network": "Не вдалося зв’язатися з постачальником: {message}.\nПеревірте налаштування DNS / VPN / проксі й запустіть повторно.",
+    "azure_deployment_unavailable": "Розгортання Azure не знайдено. Це **назва розгортання** з вашого порталу Azure, а не ідентифікатор моделі — перевірте її на порталі Azure у розділі Azure OpenAI → Deployments. Оновіть BRISTLENOSE_AZURE_DEPLOYMENT (або azure_deployment у bristlenose.toml) і запустіть повторно. Первинна причина: {message}.",
+    "google_model_unavailable": "Gemini відмовив у доступі до запитуваної моделі. Зазвичай це обмеження за тарифним рівнем, регіональне обмеження або не ввімкнено оплату — перевірте це в Google Cloud Console за адресою {console_url}. Якщо оплату налаштовано, спробуйте іншу модель через --llm-model. Первинна причина: {message}.",
+    "local_server_down": "Схоже, Ollama не запущено. Запустіть його командою `ollama serve` (або відкрийте застосунок Ollama на macOS), а потім запустіть повторно. Первинна причина: {message}.",
+    "local_model_not_pulled": "Запитувану локальну модель не завантажено. Виконайте `ollama pull <model>`, щоб завантажити її (перевірте назву моделі у bristlenose.toml або --llm-model), а потім запустіть повторно. Первинна причина: {message}."
+  },
+  "pii": {
+    "downloading": "Завантаження детектора персональних даних (~12 МБ, одноразово)..."
+  },
+  "closing": {
+    "no_more_questions": "Питань більше немає.{estimate_suffix} Ctrl+C будь-коли."
+  }
+}

@@ -1,0 +1,228 @@
+{
+  "heading": "Параметри",
+  "appearance": {
+    "randomIconsLegend": "Призначати новим проєктам випадкову піктограму",
+    "randomIconsHelp": "Кожен новий проєкт отримує характерну піктограму, щоб його було легко впізнати на бічній панелі. Вимкніть це, щоб залишити просте кільце й обирати піктограми самостійно.",
+    "legend": "Вигляд програми",
+    "auto": "Використовувати системний вигляд",
+    "light": "Світла",
+    "dark": "Темна"
+  },
+  "palette": {
+    "legend": "Колірна палітра",
+    "default": "Типова",
+    "edo": "Едо",
+    "description": "Змінює колір усієї програми. Едо використовує теплий папір васі й берлінську блакить."
+  },
+  "typography": {
+    "legend": "Типографіка"
+  },
+  "language": {
+    "legend": "Мова",
+    "description": "Керує мовою відображення інтерфейсу. Вміст звіту не перекладається.",
+    "helpTranslate": "Допоможіть перекласти Bristlenose вашою мовою на"
+  },
+  "settingsNav": {
+    "general": "Загальні",
+    "project": "Проєкт",
+    "profile": "Профіль",
+    "apiKeys": "Ключі API",
+    "config": "Конфігурація",
+    "projectStub": "Тут з’являться параметри окремого проєкту. Незабаром.",
+    "profileStub": "Тут з’являться параметри профілю (ім’я, електронна пошта, бекенд Whisper). Незабаром.",
+    "apiKeysStub": "Тут з’явиться керування ключами API. Незабаром.",
+    "pipeline": "Конвеєр"
+  },
+  "configReference": {
+    "heading": "Довідник з конфігурації",
+    "intro": "Усі наведені нижче параметри налаштовуються через змінні середовища або файл <code>.env</code>. Тут вони показані для довідки — щоб змінити значення, відредагуйте файл, указаний у кожному рядку.",
+    "clickToCopy": "Натисніть, щоб скопіювати",
+    "copied": "Скопійовано",
+    "categories": {
+      "llm": "Провайдер і модель LLM",
+      "transcription": "Транскрипція",
+      "privacy": "Конфіденційність",
+      "quotes": "Цитати",
+      "analysis": "Аналіз",
+      "autocode": "AutoCode",
+      "display": "Відображення",
+      "pipeline": "Конвеєр",
+      "thumbnails": "Мініатюри",
+      "server": "Сервер",
+      "logging": "Журналювання",
+      "timing": "Хронометраж"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Провайдер",
+        "model": "Модель",
+        "temperature": "Температура",
+        "maxTokens": "Максимум вихідних токенів",
+        "concurrency": "Паралелізм",
+        "claudeKey": "Ключ API Claude",
+        "chatgptKey": "Ключ API ChatGPT",
+        "geminiKey": "Ключ API Gemini",
+        "azureKey": "Ключ API Azure",
+        "azureEndpoint": "Кінцева точка Azure",
+        "azureDeployment": "Розгортання Azure",
+        "azureApiVersion": "Версія API Azure",
+        "ollamaUrl": "URL-адреса Ollama",
+        "ollamaModel": "Модель Ollama"
+      },
+      "transcription": {
+        "backend": "Бекенд",
+        "model": "Модель",
+        "language": "Мова",
+        "device": "Пристрій",
+        "computeType": "Тип обчислень",
+        "audioConcurrency": "Паралелізм видобування аудіо"
+      },
+      "privacy": {
+        "piiRedaction": "Редагування PII",
+        "piiLlmPass": "Прохід LLM для PII",
+        "customNames": "Власні імена для редагування"
+      },
+      "quotes": {
+        "minQuoteWords": "Мінімум слів у цитаті",
+        "speakerMergeGap": "Проміжок об’єднання мовця",
+        "quoteSequenceGap": "Проміжок послідовності цитат",
+        "llmFailureThreshold": "Поріг збоїв LLM",
+        "autocodeBatchSize": "Розмір пакета AutoCode"
+      },
+      "analysis": {
+        "topNSignals": "Топ N сигналів",
+        "topNSignalsGeneric": "Топ N сигналів (загальні)",
+        "topNElaboration": "Топ N для деталізації",
+        "minQuotesPerCell": "Мінімум цитат на клітинку",
+        "strongConcentration": "Сильна: концентрація >",
+        "strongParticipants": "Сильна: учасники ≥",
+        "strongQuotes": "Сильна: цитати ≥",
+        "moderateConcentration": "Помірна: концентрація >",
+        "moderateParticipants": "Помірна: учасники ≥",
+        "moderateQuotes": "Помірна: цитати ≥"
+      },
+      "autocode": {
+        "defaultLower": "Типовий нижній поріг",
+        "defaultUpper": "Типовий верхній поріг",
+        "sliderStep": "Крок повзунка",
+        "sliderMinGap": "Мінімальний проміжок повзунка",
+        "histogramBins": "Стовпці гістограми"
+      },
+      "display": {
+        "searchMinChars": "Мінімум символів для пошуку",
+        "activityPollInterval": "Інтервал опитування активності"
+      },
+      "pipeline": {
+        "projectName": "Назва проєкту",
+        "writeIntermediate": "Записувати проміжні файли",
+        "skipTranscription": "Пропустити транскрипцію",
+        "maxSessionsBeforeConfirm": "Максимум сеансів перед підтвердженням"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Вікно пошуку ключового кадру",
+        "fallbackFrameTime": "Резервний час кадру",
+        "thumbnailWidth": "Ширина мініатюри",
+        "jpegQuality": "Якість JPEG"
+      },
+      "server": {
+        "serverPort": "Порт сервера",
+        "miroAccessToken": "Токен доступу Miro"
+      },
+      "logging": {
+        "logLevel": "Рівень журналу (файл)",
+        "logFileMaxSize": "Максимальний розмір файлу журналу",
+        "logBackupCount": "Кількість резервних копій журналу"
+      },
+      "timing": {
+        "minRunsEstimate": "Мінімум запусків до оцінки",
+        "minRunsRange": "Мінімум запусків до діапазону ±"
+      }
+    }
+  },
+    "pipeline": {
+      "intro": "Перегляд лише для читання моделей, які Bristlenose наразі використовує для кожного етапу конвеєра. Щоб змінити бекенд, відредагуйте свої параметри (змінні середовища або файл .env).",
+      "loading": "Завантаження вигляду конвеєра…",
+      "error": "Не вдалося завантажити вигляд конвеєра",
+      "keys": "ключі",
+      "keysNone": "немає",
+      "ollama": "ollama",
+      "running": "працює",
+      "notDetected": "не виявлено",
+      "available": "доступно",
+      "unavailable": "недоступно",
+      "alternatives": {
+        "summaryHeading": "Бекенди LLM на цьому хості",
+        "available": "Доступні",
+        "unavailable": "Недоступні",
+        "none": "немає"
+      },
+      "backends": {
+        "local_ollama": "Локальний (Ollama)",
+        "builtin_anonymiser": "Вбудований анонімізатор"
+      },
+      "glyph": {
+        "available": "доступно",
+        "unavailable": "недоступно",
+        "skipped": "не застосовується на цьому хості"
+      },
+      "column": {
+        "model": "Модель",
+        "availability": "Доступність",
+        "quality": "Якість",
+        "notes": "Примітки"
+      },
+      "key": {
+        "italic_label": "курсив",
+        "synthesised": "з ваших параметрів, а не з нашого каталогу"
+      },
+      "qualifier": {
+        "default": "типове",
+        "current": "поточне",
+        "your_deployment": "ваше розгортання Azure"
+      },
+      "quality": {
+        "glyph": {
+          "excellent": "відмінна якість",
+          "good": "добра якість",
+          "marginal": "гранична якість",
+          "avoid": "уникайте — якість надто низька",
+          "untested": "неперевірено"
+        },
+        "untested": "неперевірено",
+        "local_speaker_id_acceptable": "Локальні моделі добре розпізнають мовців",
+        "local_topic_segmentation_acceptable": "Локальні моделі добре сегментують теми",
+        "local_quote_extraction_miss_rate": "малі моделі пропускають цитати з кількох частин",
+        "local_quote_clustering_drift": "малі моделі непослідовно групують цитати",
+        "local_thematic_grouping_drift": "малі моделі відхиляються під час тематичного синтезу",
+        "mlx_whisper_apple_silicon_optimal": "оптимально на Apple Silicon",
+        "faster_whisper_cpu_baseline": "надійна база на ЦП; GPU не потрібен"
+      },
+      "actions": {
+        "obtain_anthropic_key": "отримайте ключ API на console.anthropic.com і задайте ANTHROPIC_API_KEY або вставте у Параметри → Ключі",
+        "obtain_openai_key": "отримайте ключ API на platform.openai.com і задайте OPENAI_API_KEY або вставте у Параметри → Ключі",
+        "obtain_google_key": "отримайте ключ API на aistudio.google.com і задайте GOOGLE_API_KEY або вставте у Параметри → Ключі",
+        "configure_azure": "задайте ключ, кінцеву точку та розгортання Azure у Параметри → Ключі",
+        "start_ollama": "запустіть службу Ollama (ollama serve)",
+        "install_mlx_whisper": "pip install mlx-whisper (потрібен Apple Silicon)",
+        "install_ctranslate2": "pip install ctranslate2",
+        "install_presidio": "pip install bristlenose[redact-pii], щоб увімкнути вбудований анонімізатор",
+        "enable_pii_redaction": "запустіть із --redact-pii або задайте pii_enabled=true"
+      },
+      "reasons": {
+        "no_anthropic_key": "ключ API Claude не задано",
+        "no_openai_key": "ключ API ChatGPT не задано",
+        "no_azure_key": "ключ Azure OpenAI не задано",
+        "no_azure_endpoint": "кінцеву точку Azure не задано",
+        "no_azure_deployment": "розгортання Azure не задано",
+        "no_google_key": "ключ API Gemini не задано",
+        "ollama_not_running": "Ollama не працює",
+        "apple_fm_check_desktop": "перевірте в застосунку для комп’ютера",
+        "requires_apple_silicon": "потрібен Apple Silicon",
+        "mlx_whisper_not_installed": "MLX Whisper не встановлено",
+        "ctranslate2_not_installed": "ctranslate2 не встановлено",
+        "presidio_not_installed": "Вбудований анонімізатор не встановлено",
+        "spacy_model_missing": "мовну модель не встановлено",
+        "pii_disabled": "Редагування PII вимкнено"
+      }
+    }
+}

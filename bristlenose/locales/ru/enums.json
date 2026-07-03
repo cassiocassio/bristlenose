@@ -1,0 +1,17 @@
+{
+  "sentiment": {
+    "frustration": "Раздражение",
+    "confusion": "Замешательство",
+    "doubt": "Сомнение",
+    "surprise": "Удивление",
+    "satisfaction": "Удовлетворённость",
+    "delight": "Восторг",
+    "confidence": "Уверенность"
+  },
+  "speakerRole": {
+    "researcher": "Исследователь",
+    "participant": "Участник",
+    "observer": "Наблюдатель",
+    "unknown": "Неизвестно"
+  }
+}

@@ -38,7 +38,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
-| `bristlenose_branch slavic/` | `slavic` | feature | Localisation wave — pl/ru/uk + da/sv/nb locales + i18n tooling (machine-seeded, pending native review) |
+| `bristlenose_branch slavic/` | `slavic` | feature | Localisation wave — pl/ru/uk + da/sv/nb + tr locales + i18n tooling (machine-seeded, pending native review) |
 
 
 
@@ -164,8 +164,8 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ### `slavic`
 
-**Kind:** feature — localisation wave (pl/ru/uk + da/sv/nb) + i18n tooling
-**Status:** 6 locales landed (machine-seeded), pending native review
+**Kind:** feature — localisation wave (pl/ru/uk + da/sv/nb + tr) + i18n tooling
+**Status:** 7 locales landed (machine-seeded), pending native review
 **Started:** 3 Jul 2026
 **Worktree:** `/Users/cassio/Code/bristlenose_branch slavic/`
 **Remote:** local only (push when ready)

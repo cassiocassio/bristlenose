@@ -1,0 +1,24 @@
+{
+  "error": {
+    "notFound": "Kaynak bulunamadı.",
+    "badRequest": "Hatalı istek: {detail}",
+    "internal": "Sunucu iç hatası."
+  },
+  "status": {
+    "healthy": "Sağlıklı",
+    "degraded": "Sınırlı çalışıyor"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "Henüz analiz edilecek görüşme yok.",
+    "noRunDesktopLong": "Başlamak için buraya bir görüşme klasörü bırakın.",
+    "noRunCliShort": "Burada henüz görülecek bir şey yok.",
+    "cancelledShort": "Son çalıştırma iptal edildi.",
+    "cancelledLong": "Hazır olduğunuzda yeniden çalıştırın.",
+    "failedShort": "Son çalıştırma başarısız oldu.",
+    "recentLog": "Son günlük:",
+    "showDetails": "Ayrıntıları göster",
+    "sendFeedback": "Geri bildirim gönder",
+    "help": "Yardım",
+    "cliExitedWithCode": "CLI {code} koduyla çıktı"
+  }
+}

@@ -61,6 +61,7 @@ struct AppearanceSettingsView: View {
                     Text("Dansk").tag("da")
                     Text("Svenska").tag("sv")
                     Text("Norsk bokmål").tag("nb")
+                    Text("Türkçe").tag("tr")
                     Text("Português (Brasil)").tag("pt-BR")
                     Text("Português (Portugal)").tag("pt-PT")
                     Text("繁體中文").tag("zh-Hant")

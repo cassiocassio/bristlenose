@@ -413,3 +413,24 @@ Quotes,Sitater,nb,QDA term — countable: sitat (nb spelling)
 Sessions,Økter,nb,QDA term
 Signals,Signaler,nb,product term
 Codes,Koder,nb,QDA term
+Save,Kaydet,tr,Apple HIG
+Cancel,Vazgeç,tr,Apple HIG (Mac idiom); İptal = MS/web alt
+Close,Kapat,tr,Apple HIG
+Copy,Kopyala,tr,Apple HIG
+Delete,Sil,tr,Apple HIG; Kaldır = Remove
+Undo,Geri Al,tr,Apple HIG (macOS Edit menu)
+Redo,Yinele,tr,Apple HIG (macOS Edit menu)
+Search,Ara,tr,Apple HIG; Bul = Find
+Print,Yazdır,tr,Apple HIG
+Export,Dışa Aktar,tr,Apple HIG
+Settings,Ayarlar,tr,Apple HIG
+Open,Aç,tr,Apple HIG
+Hide,Gizle,tr,Apple HIG
+Accept,Kabul Et,tr,Apple HIG
+Apply,Uygula,tr,Apple HIG
+Reset,Sıfırla,tr,Apple HIG
+Codebook,Kod defteri,tr,QDA convention; alt kod kitabı
+Quotes,Alıntılar,tr,QDA term — countable: alıntı
+Sessions,Oturumlar,tr,QDA term
+Signals,Sinyaller,tr,product term
+Codes,Kodlar,tr,QDA term

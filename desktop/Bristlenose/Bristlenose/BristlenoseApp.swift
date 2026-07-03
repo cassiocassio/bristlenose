@@ -113,6 +113,11 @@ struct BristlenoseApp: App {
         Settings {
             SettingsView()
                 .environmentObject(i18n)
+                // Every SwiftUI Scene needs its own `.tint` — the modifier
+                // applied to WindowGroup(id: "main") doesn't propagate across
+                // scene boundaries. Without this, the Settings toggles and tab
+                // icons stay `AccentColor.colorset` system blue even under Edo.
+                .tint(paletteAccent)
         }
 
         #if DEBUG
@@ -120,6 +125,7 @@ struct BristlenoseApp: App {
         // shipping surface; the whole TypeParity* file set is #if DEBUG.
         Window("Type Parity Inspector", id: "type-parity") {
             TypeParityView()
+                .tint(paletteAccent)
         }
         .defaultSize(width: 1200, height: 820)
 
@@ -129,6 +135,7 @@ struct BristlenoseApp: App {
         Window("Run Inspector", id: "run-inspector") {
             RunInspectorView()
                 .environmentObject(serveManager)
+                .tint(paletteAccent)
         }
         .defaultSize(width: 1000, height: 720)
 
@@ -136,6 +143,7 @@ struct BristlenoseApp: App {
         // (v0.1 canned WordPool, no live data). Debug ▸ Shoal Screensaver.
         Window("Shoal Screensaver", id: "shoal") {
             ShoalDebugView()
+                .tint(paletteAccent)
         }
         .defaultSize(width: 800, height: 600)
         #endif

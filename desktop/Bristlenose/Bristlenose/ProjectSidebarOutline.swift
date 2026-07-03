@@ -323,10 +323,17 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // the scrollView, so a parchment overlay shifts the whole sidebar hue
         // toward Edo without blocking the vibrancy signal. Hidden on Default,
         // active on Edo, toggled at runtime by `updatePaletteTint()`.
-        let paletteTint = NSView()
+        let paletteTint = PaletteTintView()
         paletteTint.wantsLayer = true
         paletteTint.frame = container.bounds
         paletteTint.autoresizingMask = [.width, .height]
+        paletteTint.onAppearanceChange = { [weak self] in
+            // NSColor is dynamic and re-resolves per draw, but `.cgColor`
+            // snapshots the current appearance — the CALayer background
+            // otherwise stays stuck on the previous variant across a system
+            // light↔dark toggle.
+            self?.updatePaletteTint()
+        }
         container.addSubview(paletteTint)
         self.paletteTintView = paletteTint
         updatePaletteTint()
@@ -361,16 +368,23 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     }
 
     /// The paper tint layer, held weakly. `nil` after teardown; `updatePaletteTint`
-    /// no-ops in that case.
-    private weak var paletteTintView: NSView?
+    /// no-ops in that case. Its NSView subclass captures the appearance-change
+    /// callback so we can re-snapshot the dynamic `CGColor` on light↔dark.
+    private weak var paletteTintView: PaletteTintView?
 
     /// Paints the Edo paper tint on the sidebar overlay layer, or hides it on
     /// Default. Alpha is a taste value — 0.35 is a first pass; expect dark
-    /// mode to want ≤ 0.20 after eyeballing.
+    /// mode to want ≤ 0.20 after eyeballing. Tune live without rebuilding:
+    ///   defaults write app.bristlenose BristlenoseSidebarTintAlpha -float 0.22
+    /// then post `.bristlenosePaletteChanged` (any palette flip in Settings).
     private func updatePaletteTint() {
         guard let tint = paletteTintView else { return }
         if let color = SidebarPalette.paperTint {
-            tint.layer?.backgroundColor = color.withAlphaComponent(0.35).cgColor
+            let d = UserDefaults.standard
+            let alpha: CGFloat = d.object(forKey: "BristlenoseSidebarTintAlpha") != nil
+                ? CGFloat(d.float(forKey: "BristlenoseSidebarTintAlpha"))
+                : 0.35
+            tint.layer?.backgroundColor = color.withAlphaComponent(alpha).cgColor
             tint.isHidden = false
         } else {
             tint.isHidden = true
@@ -1403,5 +1417,19 @@ private class SourceListSelectionRowView: NSTableRowView {
     override var isEmphasized: Bool {
         get { false }
         set { }
+    }
+}
+
+/// The paper tint overlay view — a plain layer-backed NSView that also
+/// forwards the AppKit `viewDidChangeEffectiveAppearance` callback so the
+/// controller can re-snapshot the dynamic `NSColor` → `CGColor` on a system
+/// light↔dark toggle. Without the callback the CALayer's `backgroundColor`
+/// (which is a static CGColor) sticks on the previous appearance's variant.
+private final class PaletteTintView: NSView {
+    var onAppearanceChange: (() -> Void)?
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        onAppearanceChange?()
     }
 }

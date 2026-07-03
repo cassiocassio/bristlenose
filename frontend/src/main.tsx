@@ -7,6 +7,18 @@ import { redirectHashToPathname } from "./utils/hashRedirect";
 // Initialise i18next — must be imported before any component that uses useTranslation.
 import "./i18n";
 
+// Translucent chrome (spike): mirror __BRISTLENOSE_EMBEDDED__ into an HTML
+// attribute the CSS cascade can gate on. The native WKUserScript sets
+// __BRISTLENOSE_EMBEDDED__ at .atDocumentStart before the page loads; running
+// this at module top-level (before createRoot below) lands the attribute
+// before first paint, so body { background: transparent } takes effect on
+// the first frame and there's no white flash for the toolbar frost to sample.
+if (
+  (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ === true
+) {
+  document.documentElement.setAttribute("data-embedded", "true");
+}
+
 // ── SPA mode (serve) / Export mode ──────────────────────────────────────
 // When #bn-app-root exists, mount the full React Router app.
 // In serve mode: browser router (pathname routes).

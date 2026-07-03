@@ -240,7 +240,94 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         scrollView.drawsBackground = false   // let the column's vibrancy through (§1.4)
         scrollView.automaticallyAdjustsContentInsets = true
 
-        view = scrollView
+        // Container built so we can layer a palette-paper tint under the
+        // scrollView (the Edo half of Plan D "sidebar four"). On Default the
+        // tint layer is hidden, so the sidebar renders as it did with a plain
+        // `view = scrollView` — SwiftUI's NavigationSplitView provides the
+        // sidebar material behind us.
+        //
+        // MERGE NOTE (spike → main, 3 Jul 2026): spike also carried an
+        // `if BristlenoseFlags.shoalSidebar { … }` branch (SKView + frost)
+        // that main had already reverted in 22c92f6f. Dropped at merge —
+        // the shoal-behind-sidebar spike is not being reintroduced. See the
+        // reverted commit + docs/private/design-shoal-ambient-future.md §C
+        // if you want to resurrect it; requires re-adding `import SpriteKit`,
+        // a `shoalSKView` stored property, and the flag in `BristlenoseFlags`.
+        let container = NSView()
+        container.autoresizingMask = [.width, .height]
+
+        // Palette paper tint — plain NSView with a solid layer background at
+        // low alpha. Sits above the material and below the scrollView, so a
+        // parchment overlay shifts the whole sidebar hue toward Edo without
+        // blocking the vibrancy signal. Hidden on Default, active on Edo,
+        // toggled at runtime by `updatePaletteTint()`.
+        let paletteTint = PaletteTintView()
+        paletteTint.wantsLayer = true
+        paletteTint.frame = container.bounds
+        paletteTint.autoresizingMask = [.width, .height]
+        paletteTint.onAppearanceChange = { [weak self] in
+            // NSColor is dynamic and re-resolves per draw, but `.cgColor`
+            // snapshots the current appearance — the CALayer background
+            // otherwise stays stuck on the previous variant across a system
+            // light↔dark toggle.
+            self?.updatePaletteTint()
+        }
+        container.addSubview(paletteTint)
+        self.paletteTintView = paletteTint
+        updatePaletteTint()
+
+        scrollView.frame = container.bounds
+        scrollView.autoresizingMask = [.width, .height]
+        container.addSubview(scrollView)   // front — rows on top
+
+        // Live palette switch (Settings ▸ Appearance ▸ Palette). Rebuilds every
+        // visible row so per-cell text/tint colours pick up the new palette and
+        // updates the paper tint layer's fill in the same tick. Runs on the
+        // main queue (delegate methods are @MainActor).
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(paletteDidChange),
+            name: .bristlenosePaletteChanged,
+            object: nil
+        )
+
+        view = container
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    /// Live palette-change hook. Called on `.bristlenosePaletteChanged` (fired
+    /// by `AppearanceSettingsView`'s `@AppStorage("palette")` `.onChange`).
+    @objc private func paletteDidChange() {
+        updatePaletteTint()
+        outlineView.reloadData()
+    }
+
+    /// The paper tint layer, held weakly. `nil` after teardown; `updatePaletteTint`
+    /// no-ops in that case. Its NSView subclass captures the appearance-change
+    /// callback so we can re-snapshot the dynamic `CGColor` on light↔dark.
+    private weak var paletteTintView: PaletteTintView?
+
+    /// Paints the Edo paper tint on the sidebar overlay layer, or hides it on
+    /// Default. Alpha is a taste value — 0.35 is a first pass; expect dark
+    /// mode to want ≤ 0.20 after eyeballing. Tune live without rebuilding:
+    ///   defaults write app.bristlenose BristlenoseSidebarTintAlpha -float 0.22
+    /// then post `.bristlenosePaletteChanged` (any palette flip in Settings).
+    private func updatePaletteTint() {
+        guard let tint = paletteTintView else { return }
+        if let color = SidebarPalette.paperTint {
+            let d = UserDefaults.standard
+            let alpha: CGFloat = d.object(forKey: "BristlenoseSidebarTintAlpha") != nil
+                ? CGFloat(d.float(forKey: "BristlenoseSidebarTintAlpha"))
+                : 0.35
+            tint.layer?.backgroundColor = color.withAlphaComponent(alpha).cgColor
+            tint.isHidden = false
+        } else {
+            tint.isHidden = true
+            tint.layer?.backgroundColor = nil
+        }
     }
 
     /// Push a fresh tree + selection + active lens. Rebuilds the outline, restores
@@ -721,10 +808,16 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // identical for a selected project and the genuinely-selected active lens.
         // `dimmed` (a disabled lens — no project / no report) paints both secondary
         // so the row reads inactive, restoring the old LensRail's disabled look.
-        imageView.contentTintColor = dimmed ? .secondaryLabelColor : nil
+        // Edo forces Accent (Prussian) on non-dimmed icons for palette consistency;
+        // Default palette leaves it nil so system backgroundStyle tinting still fires.
+        imageView.contentTintColor = dimmed ? .secondaryLabelColor : SidebarPalette.accentOverride
         imageView.translatesAutoresizingMaskIntoConstraints = false
         let textField = NSTextField(labelWithString: text)
-        if dimmed { textField.textColor = .secondaryLabelColor }
+        if dimmed {
+            textField.textColor = .secondaryLabelColor
+        } else if let ink = SidebarPalette.inkOverride {
+            textField.textColor = ink
+        }
         textField.lineBreakMode = .byTruncatingTail
         textField.translatesAutoresizingMaskIntoConstraints = false
         cell.imageView = imageView
@@ -1081,12 +1174,18 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         let imageView = NSImageView()
         imageView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
         imageView.symbolConfiguration = ProjectCellSpec.iconSymbolConfig
-        imageView.contentTintColor = available ? nil : .secondaryLabelColor
+        // Edo forces Accent on available projects (Prussian for palette consistency);
+        // Default leaves nil so system backgroundStyle tinting still fires.
+        imageView.contentTintColor = available ? SidebarPalette.accentOverride : .secondaryLabelColor
         imageView.translatesAutoresizingMaskIntoConstraints = false
 
         let nameField = NSTextField(labelWithString: name)
         nameField.font = ProjectCellSpec.titleFont
-        nameField.textColor = available ? .labelColor : .secondaryLabelColor
+        // `available ? .labelColor` was the existing forced-labelColor baseline —
+        // preserve on Default via the `?? .labelColor` fallback; Edo shifts to Ink.
+        nameField.textColor = available
+            ? (SidebarPalette.inkOverride ?? .labelColor)
+            : .secondaryLabelColor
         nameField.lineBreakMode = .byTruncatingTail
         nameField.translatesAutoresizingMaskIntoConstraints = false
         // Name yields before the count under pressure (count stays visible).
@@ -1256,5 +1355,19 @@ private class SourceListSelectionRowView: NSTableRowView {
     override var isEmphasized: Bool {
         get { false }
         set { }
+    }
+}
+
+/// The paper tint overlay view — a plain layer-backed NSView that also
+/// forwards the AppKit `viewDidChangeEffectiveAppearance` callback so the
+/// controller can re-snapshot the dynamic `NSColor` → `CGColor` on a system
+/// light↔dark toggle. Without the callback the CALayer's `backgroundColor`
+/// (which is a static CGColor) sticks on the previous appearance's variant.
+private final class PaletteTintView: NSView {
+    var onAppearanceChange: (() -> Void)?
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        onAppearanceChange?()
     }
 }

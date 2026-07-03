@@ -142,13 +142,14 @@ enum BristlenoseShared {
         // Activate the desktop presentation themes on the served <html>.
         // data-platform="desktop" gates the SF Pro type scale (tokens-desktop.css);
         // without this the native type system ships dark (built-but-unplugged).
-        // Colour is pinned to the default palette for now — app.py would
-        // otherwise default desktop → the Edo palette, which is deferred (not for
-        // TestFlight). Flip COLOR_THEME to "edo" (or make it a preference) when
-        // those colours are finalised. Typography (sf/inter) rides
-        // overlayPreferences as BRISTLENOSE_TYPOGRAPHY.
+        // Colour palette (Appearance ▸ Colour palette) → canonical BRISTLENOSE_PALETTE,
+        // which app.py renders as data-color-theme at serve start (no-flash first
+        // paint / next-launch default). Defaults to "default" so Edo stays opt-in
+        // (app.py would otherwise default desktop → Edo). Live changes ride the
+        // setColorPalette bridge (no serve restart); this env is the cold-start seed.
+        // Typography (sf/inter) rides overlayPreferences as BRISTLENOSE_TYPOGRAPHY.
         env["BRISTLENOSE_PLATFORM"] = "desktop"
-        env["BRISTLENOSE_COLOR_THEME"] = "default"
+        env["BRISTLENOSE_PALETTE"] = UserDefaults.standard.string(forKey: "palette") ?? "default"
         #if DEBUG
         // Mount the dev API router (/api/dev/*, incl. the Run Inspector) in the
         // sidecar. Distinct from `_BRISTLENOSE_DEV` (which flips the report mount

@@ -243,6 +243,25 @@ final class BridgeHandler: ObservableObject {
         }
     }
 
+    // MARK: - Colour palette sync
+
+    /// Push the native colour-palette choice to the web layer — live, no reload.
+    /// The report is a runtime `data-color-theme` CSS swap, so (unlike the
+    /// prefs/typography path, which restarts the serve sidecar) the picker applies
+    /// the palette in place. Called on `.bristlenosePaletteChanged` from Settings.
+    func setColorPalette() {
+        let palette = UserDefaults.standard.string(forKey: "palette") ?? "default"
+        guard let webView else { return }
+        Task {
+            try? await webView.callAsyncJavaScript(
+                "window.__bristlenose?.setColorPalette?.(palette)",
+                arguments: ["palette": palette],
+                in: nil,
+                in: .page
+            )
+        }
+    }
+
     // MARK: - Menu action dispatch
 
     /// Send a menu action to the web layer via `window.__bristlenose.menuAction()`.

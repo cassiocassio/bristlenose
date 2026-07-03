@@ -1,6 +1,8 @@
 {
   "heading": "Instellingen",
   "appearance": {
+    "animationLegend": "Toon animatie tijdens het analyseren",
+    "animationHelp": "Speelt een animatie van zwermende woorden af in het hoofdvenster terwijl een project wordt geanalyseerd. Schakel dit uit om in plaats daarvan de gewone voortgang te zien.",
     "randomIconsLegend": "Ken nieuwe projecten een willekeurig symbool toe",
     "randomIconsHelp": "Elk nieuw project krijgt een herkenbaar symbool, zodat het makkelijk te herkennen is in de zijbalk. Schakel dit uit om de eenvoudige ring te houden en zelf symbolen te kiezen.",
     "legend": "Weergave van de app",

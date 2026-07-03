@@ -1,0 +1,6 @@
+{
+  "start": "Uruchamianie potoku dla {path}",
+  "stageStart": "Wykonywanie: {stage}…",
+  "stageComplete": "Ukończono: {stage} ({duration})",
+  "done": "Potok ukończony. Wynik: {output}"
+}

@@ -1,0 +1,10 @@
+{
+  "heading": "Diagnostyka",
+  "checkOk": "{label}",
+  "checkFail": "{label}",
+  "checkWarn": "{label}",
+  "summary": {
+    "allPassed": "Wszystkie kontrole zakończone pomyślnie.",
+    "issuesFound": "Znalezione problemy: {count}."
+  }
+}

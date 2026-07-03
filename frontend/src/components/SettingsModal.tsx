@@ -52,6 +52,7 @@ const LOCALE_LABELS: Record<Locale, string> = {
   ko: "한국어",
   cs: "Čeština",
   it: "Italiano",
+  pl: "Polski",
   "pt-BR": "Português (Brasil)",
   "pt-PT": "Português (Portugal)",
   "zh-Hant": "繁體中文",

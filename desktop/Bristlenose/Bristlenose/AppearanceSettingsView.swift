@@ -55,6 +55,7 @@ struct AppearanceSettingsView: View {
                     Text("한국어").tag("ko")
                     Text("Čeština").tag("cs")
                     Text("Italiano").tag("it")
+                    Text("Polski").tag("pl")
                     Text("Português (Brasil)").tag("pt-BR")
                     Text("Português (Portugal)").tag("pt-PT")
                     Text("繁體中文").tag("zh-Hant")

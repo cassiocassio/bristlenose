@@ -1,0 +1,45 @@
+{
+  "whisper": {
+    "banner_intro": "Bristlenose potrzebuje modelu transkrypcji Whisper ({size}).",
+    "verb_downloading": "Pobieranie",
+    "verb_resuming": "Wznawianie pobierania",
+    "fetching": "{verb} {repo_id}...",
+    "ready": "Model Whisper gotowy",
+    "aborted_no_fetch": "Modelu Whisper {repo_id} nie ma w pamięci podręcznej, a ustawiono --no-fetch. Uruchom `bristlenose doctor --fetch`, aby pobrać go z wyprzedzeniem, albo uruchom ponownie bez --no-fetch."
+  },
+  "ffmpeg": {
+    "banner_missing": "Do odczytu plików wideo wymagany jest ffmpeg. Nie znaleziono go w PATH.",
+    "prompt_brew_install": "Uruchomić teraz `brew install ffmpeg`?",
+    "installed": "Zainstalowano ffmpeg",
+    "aborted": "Wymagany jest ffmpeg, ale nie został znaleziony. Zainstaluj go za pomocą powyższego polecenia i uruchom ponownie.",
+    "label_macos": "macOS",
+    "label_ubuntu": "Ubuntu / Debian",
+    "label_fedora": "Fedora / RHEL",
+    "label_arch": "Arch / Manjaro",
+    "label_other": "Inne",
+    "cmd_macos": "brew install ffmpeg",
+    "cmd_ubuntu": "sudo apt install ffmpeg",
+    "cmd_fedora": "sudo dnf install ffmpeg",
+    "cmd_arch": "sudo pacman -S ffmpeg",
+    "cmd_other": "https://ffmpeg.org/download.html"
+  },
+  "api_key": {
+    "source_attribution": "Używany klucz API {provider_display} z {source}. Weryfikacja: ~$0,0001, bez treści transkrypcji.",
+    "rejected_invalid_key": "Twój klucz API {provider_display} został odrzucony (HTTP 401).\nSprawdź klucz pod adresem {keys_url}\ni uruchom ponownie.",
+    "no_credit": "Twoje konto {provider_display} nie ma dostępnego kredytu API.\nDoładuj je pod adresem {billing_url}\n({minimum_note})\ni uruchom ponownie.",
+    "model_unavailable": "Żądany model nie jest dostępny dla Twojego konta {provider_display}. Sprawdź dostępne modele pod adresem {console_url} i włącz model albo zmień `--llm-model` na taki, którego Twoje konto może użyć.",
+    "rate_limit": "{provider_display} ogranicza liczbę żądań tego konta. Odczekaj minutę i uruchom ponownie albo zmniejsz `llm_concurrency` w pliku bristlenose.toml.",
+    "generic": "Dostawca informuje: {message}.\nJeśli wygląda to na problem z saldem kredytu, doładuj konto w konsoli rozliczeniowej dostawcy i uruchom ponownie.",
+    "network": "Nie udało się połączyć z dostawcą: {message}.\nSprawdź ustawienia DNS / VPN / serwera proxy, a następnie uruchom ponownie.",
+    "azure_deployment_unavailable": "Nie znaleziono wdrożenia Azure. To jest **nazwa wdrożenia** z portalu Azure, a nie identyfikator modelu — sprawdź ją w portalu Azure w sekcji Azure OpenAI → Deployments. Zaktualizuj BRISTLENOSE_AZURE_DEPLOYMENT (lub azure_deployment w bristlenose.toml) i uruchom ponownie. Szczegóły: {message}.",
+    "google_model_unavailable": "Gemini odmówił dostępu do żądanego modelu. Zwykle jest to blokada poziomu, ograniczenie regionalne lub brak włączonych rozliczeń — sprawdź konsolę Google Cloud pod adresem {console_url}. Jeśli rozliczenia są skonfigurowane, spróbuj innego modelu za pomocą --llm-model. Szczegóły: {message}.",
+    "local_server_down": "Ollama wygląda na niedziałającą. Uruchom ją poleceniem `ollama serve` (lub otwórz aplikację Ollama na macOS), a następnie uruchom ponownie. Szczegóły: {message}.",
+    "local_model_not_pulled": "Żądany model lokalny nie został pobrany. Uruchom `ollama pull <model>`, aby go pobrać (sprawdź nazwę modelu w bristlenose.toml lub --llm-model), a następnie uruchom ponownie. Szczegóły: {message}."
+  },
+  "pii": {
+    "downloading": "Pobieranie detektora danych osobowych (~12 MB, jednorazowo)..."
+  },
+  "closing": {
+    "no_more_questions": "Brak dalszych pytań.{estimate_suffix} Ctrl+C w dowolnej chwili."
+  }
+}

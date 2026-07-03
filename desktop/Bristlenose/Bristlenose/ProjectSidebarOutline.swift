@@ -246,76 +246,136 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         scrollView.drawsBackground = false   // let the column's vibrancy through (§1.4)
         scrollView.automaticallyAdjustsContentInsets = true
 
-        guard BristlenoseFlags.shoalSidebar else {
-            view = scrollView
-            return
-        }
-
-        // SPIKE — shoal flocking behind the translucent sidebar, Maps-style.
-        // Answers the one empirical unknown: does a `.withinWindow`
-        // NSVisualEffectView actually sample a Metal-backed SKView? Back-to-front
-        // the container is: SKView (flock) → frost (samples it) → transparent
-        // scrollView (rows on top). `drawsBackground = false` above is what lets
-        // the frost show through the rows. Flip on with:
-        //   defaults write app.bristlenose BristlenoseShoalSidebar -bool YES
-        // Deliberately always-on (no run / pref / Reduce-Motion gate yet) — that's
-        // the fastest path to the yes/no. If vibrancy samples the SKView, the
-        // follow-up is to gate it on an active run and feed live words.
-        // Design: docs/private/design-shoal-ambient-future.md §C.
+        // Container is always built (was formerly shoal-only). Stacking order,
+        // back-to-front:
+        //   1. Optional SKView (shoal spike flock)
+        //   2. Optional frost NSVisualEffectView (samples the flock, .withinWindow)
+        //   3. Palette paper tint (hidden on Default; low-alpha parchment on Edo)
+        //   4. Transparent scrollView with the outline (rows on top)
+        //
+        // With shoal off + Default palette, only (4) is materialised — visually
+        // identical to the previous `view = scrollView` early-return (SwiftUI's
+        // NavigationSplitView provides the sidebar material behind us).
         let container = NSView()
         container.autoresizingMask = [.width, .height]
 
-        let skView = SKView()
-        skView.frame = container.bounds
-        skView.autoresizingMask = [.width, .height]
-        skView.allowsTransparency = true
-        let scene = ShoalScene(size: CGSize(width: 220, height: 600))  // resizeFill adapts
-        scene.scaleMode = .resizeFill
-        // PROBE round 2 — the pink probe proved Metal composites into the sidebar
-        // (and the pastel-not-vivid pink showed the frost IS compositing over it),
-        // but a uniform colour can't reveal blur. Feed bold, dark, high-contrast
-        // words so we can actually SEE whether `.withinWindow` blurs non-uniform
-        // Metal content and whether flock text reads through the `.sidebar`
-        // material (the faint grey canned words were why nothing showed before).
-        // Set before present — spawnBoids runs in didMove. Delete after the call.
-        scene.liveWords = ["I mean", "sort of", "honestly", "you know", "actually",
-                           "right so", "it felt", "I guess", "the problem", "at first"]
-            .map { WordPool.Word(text: $0, fontSize: 18, color: .labelColor.withAlphaComponent(0.65)) }
-        skView.presentScene(scene)
+        if BristlenoseFlags.shoalSidebar {
+            // SPIKE — shoal flocking behind the translucent sidebar, Maps-style.
+            // Answers the one empirical unknown: does a `.withinWindow`
+            // NSVisualEffectView actually sample a Metal-backed SKView?
+            // `drawsBackground = false` above is what lets the frost show
+            // through the rows. Flip on with:
+            //   defaults write app.bristlenose BristlenoseShoalSidebar -bool YES
+            // Deliberately always-on (no run / pref / Reduce-Motion gate yet) —
+            // that's the fastest path to the yes/no. If vibrancy samples the
+            // SKView, the follow-up is to gate it on an active run and feed live
+            // words. Design: docs/private/design-shoal-ambient-future.md §C.
+            let skView = SKView()
+            skView.frame = container.bounds
+            skView.autoresizingMask = [.width, .height]
+            skView.allowsTransparency = true
+            let scene = ShoalScene(size: CGSize(width: 220, height: 600))  // resizeFill adapts
+            scene.scaleMode = .resizeFill
+            // PROBE round 2 — the pink probe proved Metal composites into the sidebar
+            // (and the pastel-not-vivid pink showed the frost IS compositing over it),
+            // but a uniform colour can't reveal blur. Feed bold, dark, high-contrast
+            // words so we can actually SEE whether `.withinWindow` blurs non-uniform
+            // Metal content and whether flock text reads through the `.sidebar`
+            // material (the faint grey canned words were why nothing showed before).
+            // Set before present — spawnBoids runs in didMove. Delete after the call.
+            scene.liveWords = ["I mean", "sort of", "honestly", "you know", "actually",
+                               "right so", "it felt", "I guess", "the problem", "at first"]
+                .map { WordPool.Word(text: $0, fontSize: 18, color: .labelColor.withAlphaComponent(0.65)) }
+            skView.presentScene(scene)
 
-        let frost = NSVisualEffectView()
-        frost.frame = container.bounds
-        frost.autoresizingMask = [.width, .height]
-        frost.blendingMode = .withinWindow   // sample the SKView behind it, not the desktop
-        frost.state = .active
-        // FROSTINESS KNOBS (spike) — dial live, then relaunch. Apple exposes no raw
-        // blur radius; frostiness = material recipe × layer opacity.
-        //   material:  defaults write app.bristlenose BristlenoseShoalFrostMaterial underWindow
-        //     (sidebar | underWindow | content | header | windowBg | hud)
-        //   opacity:   defaults write app.bristlenose BristlenoseShoalFrostAlpha -float 0.75
-        //     (1.0 = full frost; lower = thinner, more of the sharp flock bleeds through)
-        let d = UserDefaults.standard
-        switch d.string(forKey: "BristlenoseShoalFrostMaterial") {
-        case "underWindow": frost.material = .underWindowBackground
-        case "content":     frost.material = .contentBackground
-        case "header":      frost.material = .headerView
-        case "windowBg":    frost.material = .windowBackground
-        case "hud":         frost.material = .hudWindow
-        default:            frost.material = .sidebar
+            let frost = NSVisualEffectView()
+            frost.frame = container.bounds
+            frost.autoresizingMask = [.width, .height]
+            frost.blendingMode = .withinWindow   // sample the SKView behind it, not the desktop
+            frost.state = .active
+            // FROSTINESS KNOBS (spike) — dial live, then relaunch. Apple exposes no raw
+            // blur radius; frostiness = material recipe × layer opacity.
+            //   material:  defaults write app.bristlenose BristlenoseShoalFrostMaterial underWindow
+            //     (sidebar | underWindow | content | header | windowBg | hud)
+            //   opacity:   defaults write app.bristlenose BristlenoseShoalFrostAlpha -float 0.75
+            //     (1.0 = full frost; lower = thinner, more of the sharp flock bleeds through)
+            let d = UserDefaults.standard
+            switch d.string(forKey: "BristlenoseShoalFrostMaterial") {
+            case "underWindow": frost.material = .underWindowBackground
+            case "content":     frost.material = .contentBackground
+            case "header":      frost.material = .headerView
+            case "windowBg":    frost.material = .windowBackground
+            case "hud":         frost.material = .hudWindow
+            default:            frost.material = .sidebar
+            }
+            if d.object(forKey: "BristlenoseShoalFrostAlpha") != nil {
+                frost.alphaValue = CGFloat(d.float(forKey: "BristlenoseShoalFrostAlpha"))
+            }
+
+            container.addSubview(skView)   // back — the flock
+            container.addSubview(frost)    // middle — frosts the flock
+            shoalSKView = skView
         }
-        if d.object(forKey: "BristlenoseShoalFrostAlpha") != nil {
-            frost.alphaValue = CGFloat(d.float(forKey: "BristlenoseShoalFrostAlpha"))
-        }
+
+        // Palette paper tint — the Edo half of Plan D "sidebar four". A plain
+        // NSView with a solid layer background at low alpha. Sits above the
+        // material (system-provided on Default, our frost on shoal-on) and below
+        // the scrollView, so a parchment overlay shifts the whole sidebar hue
+        // toward Edo without blocking the vibrancy signal. Hidden on Default,
+        // active on Edo, toggled at runtime by `updatePaletteTint()`.
+        let paletteTint = NSView()
+        paletteTint.wantsLayer = true
+        paletteTint.frame = container.bounds
+        paletteTint.autoresizingMask = [.width, .height]
+        container.addSubview(paletteTint)
+        self.paletteTintView = paletteTint
+        updatePaletteTint()
 
         scrollView.frame = container.bounds
         scrollView.autoresizingMask = [.width, .height]
+        container.addSubview(scrollView)   // front — rows on top
 
-        container.addSubview(skView)      // back — the flock
-        container.addSubview(frost)       // middle — frosts the flock
-        container.addSubview(scrollView)  // front — rows on top
+        // Live palette switch (Settings ▸ Appearance ▸ Palette). Rebuilds every
+        // visible row so per-cell text/tint colours pick up the new palette and
+        // updates the paper tint layer's fill in the same tick. Runs on the
+        // main queue (delegate methods are @MainActor).
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(paletteDidChange),
+            name: .bristlenosePaletteChanged,
+            object: nil
+        )
 
-        shoalSKView = skView
         view = container
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    /// Live palette-change hook. Called on `.bristlenosePaletteChanged` (fired
+    /// by `AppearanceSettingsView`'s `@AppStorage("palette")` `.onChange`).
+    @objc private func paletteDidChange() {
+        updatePaletteTint()
+        outlineView.reloadData()
+    }
+
+    /// The paper tint layer, held weakly. `nil` after teardown; `updatePaletteTint`
+    /// no-ops in that case.
+    private weak var paletteTintView: NSView?
+
+    /// Paints the Edo paper tint on the sidebar overlay layer, or hides it on
+    /// Default. Alpha is a taste value — 0.35 is a first pass; expect dark
+    /// mode to want ≤ 0.20 after eyeballing.
+    private func updatePaletteTint() {
+        guard let tint = paletteTintView else { return }
+        if let color = SidebarPalette.paperTint {
+            tint.layer?.backgroundColor = color.withAlphaComponent(0.35).cgColor
+            tint.isHidden = false
+        } else {
+            tint.isHidden = true
+            tint.layer?.backgroundColor = nil
+        }
     }
 
     /// Push a fresh tree + selection + active lens. Rebuilds the outline, restores
@@ -796,10 +856,16 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // identical for a selected project and the genuinely-selected active lens.
         // `dimmed` (a disabled lens — no project / no report) paints both secondary
         // so the row reads inactive, restoring the old LensRail's disabled look.
-        imageView.contentTintColor = dimmed ? .secondaryLabelColor : nil
+        // Edo forces Accent (Prussian) on non-dimmed icons for palette consistency;
+        // Default palette leaves it nil so system backgroundStyle tinting still fires.
+        imageView.contentTintColor = dimmed ? .secondaryLabelColor : SidebarPalette.accentOverride
         imageView.translatesAutoresizingMaskIntoConstraints = false
         let textField = NSTextField(labelWithString: text)
-        if dimmed { textField.textColor = .secondaryLabelColor }
+        if dimmed {
+            textField.textColor = .secondaryLabelColor
+        } else if let ink = SidebarPalette.inkOverride {
+            textField.textColor = ink
+        }
         textField.lineBreakMode = .byTruncatingTail
         textField.translatesAutoresizingMaskIntoConstraints = false
         cell.imageView = imageView
@@ -1156,12 +1222,18 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         let imageView = NSImageView()
         imageView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
         imageView.symbolConfiguration = ProjectCellSpec.iconSymbolConfig
-        imageView.contentTintColor = available ? nil : .secondaryLabelColor
+        // Edo forces Accent on available projects (Prussian for palette consistency);
+        // Default leaves nil so system backgroundStyle tinting still fires.
+        imageView.contentTintColor = available ? SidebarPalette.accentOverride : .secondaryLabelColor
         imageView.translatesAutoresizingMaskIntoConstraints = false
 
         let nameField = NSTextField(labelWithString: name)
         nameField.font = ProjectCellSpec.titleFont
-        nameField.textColor = available ? .labelColor : .secondaryLabelColor
+        // `available ? .labelColor` was the existing forced-labelColor baseline —
+        // preserve on Default via the `?? .labelColor` fallback; Edo shifts to Ink.
+        nameField.textColor = available
+            ? (SidebarPalette.inkOverride ?? .labelColor)
+            : .secondaryLabelColor
         nameField.lineBreakMode = .byTruncatingTail
         nameField.translatesAutoresizingMaskIntoConstraints = false
         // Name yields before the count under pressure (count stays visible).

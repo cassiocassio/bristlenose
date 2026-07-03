@@ -23,6 +23,16 @@ jobs:
     needs: ci
     runs-on: ubuntu-latest
 
+    # Elevated over the read-only default so this job can mint a signed
+    # SBOM attestation (attest-sbom below). id-token: write is the OIDC
+    # handle Sigstore uses to key the signature to this workflow run;
+    # attestations: write lets it publish to the repo's attestation store.
+    # Supply-chain hardening 2026-07-03.
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -49,11 +59,50 @@ jobs:
       - name: Build sdist and wheel
         run: python -m build
 
+      # SBOMs scoped to what actually ships, not the CI venv. The Python
+      # SBOM is generated from a clean install of the built wheel (runtime
+      # deps only — no pytest/ruff/build tooling), unlike ci.yml's
+      # `environment` SBOM which snapshots the dev+serve superset. The
+      # frontend SBOM intentionally keeps dev deps: Vite et al. execute at
+      # build time and produce the shipped bundle (baked into the wheel).
+      # No continue-on-error here — a release with no bill of materials
+      # should fail loud, not ship silently.
+      - name: Generate SBOMs (CycloneDX)
+        run: |
+          mkdir -p sbom
+          python -m venv /tmp/sbom-venv
+          /tmp/sbom-venv/bin/pip install --upgrade pip
+          /tmp/sbom-venv/bin/pip install dist/*.whl
+          pip install cyclonedx-bom
+          cyclonedx-py environment /tmp/sbom-venv/bin/python -o sbom/sbom-python.json
+          (cd frontend && npm sbom --sbom-format cyclonedx > ../sbom/sbom-frontend.json)
+
+      # Bind the Python SBOM to the built artifacts (wheel + sdist) with a
+      # Sigstore-signed attestation. Verifiable by anyone:
+      #   gh attestation verify dist/<wheel> --repo cassiocassio/bristlenose
+      # This is the step that turns "here's a dependency list" into "here's
+      # a signed bill of materials for this exact artifact." The frontend
+      # SBOM rides in the release assets but isn't separately attested — it's
+      # already inside the attested wheel (bristlenose/server/static).
+      - name: Attest SBOM against built artifacts
+        uses: actions/attest-sbom@v2
+        with:
+          subject-path: 'dist/*'
+          sbom-path: 'sbom/sbom-python.json'
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
+
+      - name: Upload SBOM artifacts
+        # Kept OUT of dist/ on purpose: gh-action-pypi-publish uploads
+        # everything in dist/, and a stray .json would break the PyPI push.
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom/
 
   publish:
     needs: build
@@ -75,6 +124,13 @@ jobs:
           path: dist/
 
       - name: Publish to PyPI
+        # DO NOT SHA-pin this one (cf. the peter-evans pin in notify-homebrew).
+        # PyPA's first-party publisher is the documented exception: the moving
+        # @release/v1 tag has to track PyPI's Trusted-Publishing changes, and
+        # pinning it to a commit strands us on stale OIDC behaviour. With
+        # id-token: write present (above), this action also uploads PEP 740
+        # provenance attestations by default — that's the "Verified" panel on
+        # the PyPI release files. Trusted Publishing (OIDC, no long-lived token).
         uses: pypa/gh-action-pypi-publish@release/v1
 
   github-release:
@@ -87,10 +143,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Download SBOM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom
+          path: sbom/
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" --generate-notes man/bristlenose.1
+        run: >
+          gh release create "${{ github.ref_name }}" --generate-notes
+          man/bristlenose.1
+          sbom/sbom-python.json
+          sbom/sbom-frontend.json
 
   verify-pypi:
     # Independent check that PyPI actually accepted the upload. Runs in

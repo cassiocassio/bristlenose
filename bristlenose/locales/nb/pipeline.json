@@ -1,0 +1,6 @@
+{
+  "start": "Starter arbeidsflyten for {path}",
+  "stageStart": "Kjører {stage} …",
+  "stageComplete": "{stage} fullført ({duration})",
+  "done": "Arbeidsflyten er fullført. Utdata: {output}"
+}

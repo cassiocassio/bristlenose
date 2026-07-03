@@ -20,7 +20,7 @@ from pathlib import Path
 
 _LOCALE_DIR = Path(__file__).parent / "locales"
 
-SUPPORTED_LOCALES = ("en", "es", "ja", "fr", "de", "ko", "cs", "it", "pl", "ru", "uk", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK")
+SUPPORTED_LOCALES = ("en", "es", "ja", "fr", "de", "ko", "cs", "it", "pl", "ru", "uk", "da", "sv", "nb", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK")
 
 # Region/script variants borrow missing keys from a base locale before falling
 # back to English. zh-Hant-HK (Hong Kong) → zh-Hant (Taiwan Traditional) → en.

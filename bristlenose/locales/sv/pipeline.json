@@ -1,0 +1,6 @@
+{
+  "start": "Startar pipeline för {path}",
+  "stageStart": "Kör {stage}…",
+  "stageComplete": "{stage} klart ({duration})",
+  "done": "Pipeline klar. Utdata: {output}"
+}

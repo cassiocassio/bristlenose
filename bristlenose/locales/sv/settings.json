@@ -1,0 +1,228 @@
+{
+  "heading": "Inställningar",
+  "appearance": {
+    "randomIconsLegend": "Tilldela en slumpmässig ikon till nya projekt",
+    "randomIconsHelp": "Varje nytt projekt får en distinkt ikon så att det är lätt att känna igen i sidofältet. Stäng av detta för att behålla den enkla ringen och välja ikoner själv.",
+    "legend": "Programmets utseende",
+    "auto": "Använd systemets utseende",
+    "light": "Ljust",
+    "dark": "Mörkt"
+  },
+  "palette": {
+    "legend": "Färgpalett",
+    "default": "Standard",
+    "edo": "Edo",
+    "description": "Färgar om hela appen. Edo använder varmt washipapper och preusserblått bläck."
+  },
+  "typography": {
+    "legend": "Typografi"
+  },
+  "language": {
+    "legend": "Språk",
+    "description": "Styr gränssnittets visningsspråk. Rapportinnehållet översätts inte.",
+    "helpTranslate": "Hjälp till att översätta Bristlenose till ditt språk på"
+  },
+  "settingsNav": {
+    "general": "Allmänt",
+    "project": "Projekt",
+    "profile": "Profil",
+    "apiKeys": "API-nycklar",
+    "config": "Konfiguration",
+    "projectStub": "Projektspecifika inställningar visas här. Kommer snart.",
+    "profileStub": "Profilinställningar (namn, e-post, Whisper-backend) visas här. Kommer snart.",
+    "apiKeysStub": "Hantering av API-nycklar visas här. Kommer snart.",
+    "pipeline": "Pipeline"
+  },
+  "configReference": {
+    "heading": "Konfigurationsreferens",
+    "intro": "Alla inställningar nedan konfigureras via miljövariabler eller en <code>.env</code>-fil. De visas här som referens — för att ändra ett värde, redigera filen som visas i varje rad.",
+    "clickToCopy": "Klicka för att kopiera",
+    "copied": "Kopierat",
+    "categories": {
+      "llm": "LLM-leverantör och modell",
+      "transcription": "Transkribering",
+      "privacy": "Integritet",
+      "quotes": "Citat",
+      "analysis": "Analys",
+      "autocode": "AutoCode",
+      "display": "Visning",
+      "pipeline": "Pipeline",
+      "thumbnails": "Miniatyrbilder",
+      "server": "Server",
+      "logging": "Loggning",
+      "timing": "Tidtagning"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Leverantör",
+        "model": "Modell",
+        "temperature": "Temperatur",
+        "maxTokens": "Max antal utdata-tokens",
+        "concurrency": "Samtidighet",
+        "claudeKey": "Claude API-nyckel",
+        "chatgptKey": "ChatGPT API-nyckel",
+        "geminiKey": "Gemini API-nyckel",
+        "azureKey": "Azure API-nyckel",
+        "azureEndpoint": "Azure-slutpunkt",
+        "azureDeployment": "Azure-distribution",
+        "azureApiVersion": "Azure API-version",
+        "ollamaUrl": "Ollama-URL",
+        "ollamaModel": "Ollama-modell"
+      },
+      "transcription": {
+        "backend": "Backend",
+        "model": "Modell",
+        "language": "Språk",
+        "device": "Enhet",
+        "computeType": "Beräkningstyp",
+        "audioConcurrency": "Samtidighet för ljudextrahering"
+      },
+      "privacy": {
+        "piiRedaction": "Maskering av personuppgifter",
+        "piiLlmPass": "LLM-genomgång av personuppgifter",
+        "customNames": "Egna namn att maskera"
+      },
+      "quotes": {
+        "minQuoteWords": "Minsta antal ord i citat",
+        "speakerMergeGap": "Sammanslagningsintervall för talare",
+        "quoteSequenceGap": "Intervall för citatsekvens",
+        "llmFailureThreshold": "Tröskel för LLM-fel",
+        "autocodeBatchSize": "AutoCode-batchstorlek"
+      },
+      "analysis": {
+        "topNSignals": "Främsta N signaler",
+        "topNSignalsGeneric": "Främsta N signaler (generiska)",
+        "topNElaboration": "Främsta N för utveckling",
+        "minQuotesPerCell": "Minsta antal citat per cell",
+        "strongConcentration": "Stark: koncentration >",
+        "strongParticipants": "Stark: deltagare ≥",
+        "strongQuotes": "Stark: citat ≥",
+        "moderateConcentration": "Måttlig: koncentration >",
+        "moderateParticipants": "Måttlig: deltagare ≥",
+        "moderateQuotes": "Måttlig: citat ≥"
+      },
+      "autocode": {
+        "defaultLower": "Standard undre tröskel",
+        "defaultUpper": "Standard övre tröskel",
+        "sliderStep": "Reglagesteg",
+        "sliderMinGap": "Minsta reglageintervall",
+        "histogramBins": "Histogramfack"
+      },
+      "display": {
+        "searchMinChars": "Minsta antal söktecken",
+        "activityPollInterval": "Avläsningsintervall för aktivitet"
+      },
+      "pipeline": {
+        "projectName": "Projektnamn",
+        "writeIntermediate": "Skriv mellanfiler",
+        "skipTranscription": "Hoppa över transkribering",
+        "maxSessionsBeforeConfirm": "Max antal sessioner före bekräftelse"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Sökfönster för nyckelbild",
+        "fallbackFrameTime": "Reservtidpunkt för bildruta",
+        "thumbnailWidth": "Miniatyrbildens bredd",
+        "jpegQuality": "JPEG-kvalitet"
+      },
+      "server": {
+        "serverPort": "Serverport",
+        "miroAccessToken": "Miro-åtkomsttoken"
+      },
+      "logging": {
+        "logLevel": "Loggnivå (fil)",
+        "logFileMaxSize": "Maximal storlek på loggfil",
+        "logBackupCount": "Antal säkerhetskopior av loggen"
+      },
+      "timing": {
+        "minRunsEstimate": "Minsta antal körningar före uppskattning",
+        "minRunsRange": "Minsta antal körningar före ±intervall"
+      }
+    }
+  },
+    "pipeline": {
+      "intro": "Skrivskyddad vy över de modeller som Bristlenose för närvarande använder för varje pipeline-steg. För att ändra en backend, redigera dina inställningar (miljövariabler eller .env-fil).",
+      "loading": "Läser in pipeline-vy…",
+      "error": "Kunde inte läsa in pipeline-vyn",
+      "keys": "nycklar",
+      "keysNone": "inga",
+      "ollama": "ollama",
+      "running": "körs",
+      "notDetected": "upptäcktes inte",
+      "available": "tillgänglig",
+      "unavailable": "otillgänglig",
+      "alternatives": {
+        "summaryHeading": "LLM-backends på denna värd",
+        "available": "Tillgänglig",
+        "unavailable": "Otillgänglig",
+        "none": "inga"
+      },
+      "backends": {
+        "local_ollama": "Lokal (Ollama)",
+        "builtin_anonymiser": "Inbyggd anonymiserare"
+      },
+      "glyph": {
+        "available": "tillgänglig",
+        "unavailable": "otillgänglig",
+        "skipped": "inte tillämplig på denna värd"
+      },
+      "column": {
+        "model": "Modell",
+        "availability": "Tillgänglighet",
+        "quality": "Kvalitet",
+        "notes": "Anteckningar"
+      },
+      "key": {
+        "italic_label": "kursiv",
+        "synthesised": "från dina inställningar, inte vår katalog"
+      },
+      "qualifier": {
+        "default": "standard",
+        "current": "aktuell",
+        "your_deployment": "din Azure-distribution"
+      },
+      "quality": {
+        "glyph": {
+          "excellent": "utmärkt kvalitet",
+          "good": "bra kvalitet",
+          "marginal": "marginell kvalitet",
+          "avoid": "undvik — kvaliteten för låg",
+          "untested": "oprövad"
+        },
+        "untested": "oprövad",
+        "local_speaker_id_acceptable": "Lokala modeller hanterar talaridentifiering bra",
+        "local_topic_segmentation_acceptable": "Lokala modeller hanterar ämnessegmentering bra",
+        "local_quote_extraction_miss_rate": "små modeller missar citat med flera satser",
+        "local_quote_clustering_drift": "små modeller klustrar citat inkonsekvent",
+        "local_thematic_grouping_drift": "små modeller driver iväg vid tematisk syntes",
+        "mlx_whisper_apple_silicon_optimal": "optimal på Apple Silicon",
+        "faster_whisper_cpu_baseline": "solid CPU-baslinje; ingen GPU krävs"
+      },
+      "actions": {
+        "obtain_anthropic_key": "skaffa en API-nyckel på console.anthropic.com och ange ANTHROPIC_API_KEY eller klistra in i Inställningar → Nycklar",
+        "obtain_openai_key": "skaffa en API-nyckel på platform.openai.com och ange OPENAI_API_KEY eller klistra in i Inställningar → Nycklar",
+        "obtain_google_key": "skaffa en API-nyckel på aistudio.google.com och ange GOOGLE_API_KEY eller klistra in i Inställningar → Nycklar",
+        "configure_azure": "ange Azure-nyckel, slutpunkt och distribution i Inställningar → Nycklar",
+        "start_ollama": "starta Ollama-tjänsten (ollama serve)",
+        "install_mlx_whisper": "pip install mlx-whisper (kräver Apple Silicon)",
+        "install_ctranslate2": "pip install ctranslate2",
+        "install_presidio": "pip install bristlenose[redact-pii] för att aktivera den inbyggda anonymiseraren",
+        "enable_pii_redaction": "kör med --redact-pii eller ange pii_enabled=true"
+      },
+      "reasons": {
+        "no_anthropic_key": "ingen Claude API-nyckel angiven",
+        "no_openai_key": "ingen ChatGPT API-nyckel angiven",
+        "no_azure_key": "ingen Azure OpenAI-nyckel angiven",
+        "no_azure_endpoint": "Azure-slutpunkt inte angiven",
+        "no_azure_deployment": "Azure-distribution inte angiven",
+        "no_google_key": "ingen Gemini API-nyckel angiven",
+        "ollama_not_running": "Ollama körs inte",
+        "apple_fm_check_desktop": "kontrollera i skrivbordsappen",
+        "requires_apple_silicon": "kräver Apple Silicon",
+        "mlx_whisper_not_installed": "MLX Whisper är inte installerad",
+        "ctranslate2_not_installed": "ctranslate2 är inte installerad",
+        "presidio_not_installed": "Inbyggd anonymiserare är inte installerad",
+        "spacy_model_missing": "språkmodell inte installerad",
+        "pii_disabled": "Maskering av personuppgifter är avstängd"
+      }
+    }
+}

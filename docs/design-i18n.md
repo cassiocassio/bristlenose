@@ -554,7 +554,14 @@ boundary rule, no demand signal yet.
 
 ### Future locales (deferred)
 
-Breadcrumbs so the analysis isn't re-derived. Neither is started.
+Breadcrumbs so the analysis isn't re-derived.
+
+**Status update (3 Jul 2026):** Portuguese (`pt-BR`/`pt-PT`) shipped; the Slavic wave (pl/ru/uk) and the
+Scandinavian wave (`da`/`sv`/`nb`) shipped on branch `slavic` (machine-seeded, pending native review).
+**Scandinavian are CLDR `one`/`other` binary** — same shape as es/de/it, so no Swift `pluralCategory`
+branch and no four-form seeding; the mechanical cost was low. `nb` (Bokmål) is the correct code (Apple
+canonicalizes `no`→`nb`); a `no`→`nb` auto-detection mapping at the three ingress points is an open
+follow-up. The still-deferred set below is the accurate remainder.
 
 **Portuguese (`pt-PT` + `pt-BR`) — light; a later-summer-weekend seed.** Romance, Latin
 script (no script subtag), `one`/`other` plurals — same shape as `es`/`fr`/`de`, so MT-seed

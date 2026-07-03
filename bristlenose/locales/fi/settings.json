@@ -1,6 +1,8 @@
 {
   "heading": "Asetukset",
   "appearance": {
+    "animationLegend": "Näytä animaatio analyysin aikana",
+    "animationHelp": "Toista pääikkunassa parveilevien sanojen animaatio, kun projektia analysoidaan. Poista tämä käytöstä nähdäksesi tavallisen edistymisen sen sijaan.",
     "randomIconsLegend": "Määritä uusille projekteille satunnainen kuvake",
     "randomIconsHelp": "Jokainen uusi projekti saa erottuvan kuvakkeen, jotta se on helppo tunnistaa sivupalkissa. Poista tämä käytöstä säilyttääksesi tavallisen renkaan ja valitaksesi kuvakkeet itse.",
     "legend": "Sovelluksen ulkoasu",

@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 3 Jul 2026 (closed `fi` branch — merged to main `3e193fa8` + registration re-added `92033192`; worktree detached + kept on disk, local branch deleted. Machine-seeded Finnish locale, native review pending.) Prior: 3 Jul 2026 (closed `nl` branch — merged to main `88961b7a`; worktree detached + tagged orange on disk, local branch deleted. Review-pending; machine-seeded Dutch locale.) Prior: 3 Jul 2026 (opened `nl` + `fi` locale branches — Dutch (high/high pick) + Finnish (completes the Nordics), each with a native reviewer lined up; both share the 9 enrolment sites with `slavic`, so merge sequentially.) Prior: 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
+**Updated:** 3 Jul 2026 (closed `spike` branch — merged to main; worktree detached + tagged orange on disk, local branch deleted. Translucent titlebar/toolbar proof-of-concept for macOS 26 Tahoe.) Prior: 3 Jul 2026 (closed `fi` branch — merged to main `3e193fa8` + registration re-added `92033192`; worktree detached + kept on disk, local branch deleted. Machine-seeded Finnish locale, native review pending.) Prior: 3 Jul 2026 (closed `nl` branch — merged to main `88961b7a`; worktree detached + tagged orange on disk, local branch deleted. Review-pending; machine-seeded Dutch locale.) Prior: 3 Jul 2026 (opened `nl` + `fi` locale branches — Dutch (high/high pick) + Finnish (completes the Nordics), each with a native reviewer lined up; both share the 9 enrolment sites with `slavic`, so merge sequentially.) Prior: 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
 
 ---
 
@@ -39,7 +39,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch slavic/` | `slavic` | feature | Localisation wave — pl/ru/uk + da/sv/nb + tr locales + i18n tooling (machine-seeded, pending native review) |
-| `bristlenose_branch spike/` | `spike` | spike | Translucent titlebar/toolbar (Notes/Mail idiom, macOS 26 Tahoe) — transparent WKWebView + safe-area extension under toolbar |
 
 
 
@@ -153,36 +152,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `spike`
-
-**Kind:** spike — translucent titlebar/toolbar (Notes/Mail idiom, modern macOS 26 Tahoe): make the WKWebView transparent, extend it under the toolbar, post the safe-area top inset to the SPA so report content pads/scrolls correctly under the frost. Sidebar is already frosted via `ProjectSidebarOutline.swift`; this completes the detail column.
-**Status:** Spiked — works on first Cmd+R. Windowed mode: toolbar frost samples through moving report content (shoal text visible bleeding through the toolbar band on the empty-state screen); first row of content sits below the frost, not clipped. Full-screen (`f0972cab`): observers on `didEnterFullScreen`/`didExitFullScreen`/`didResize` re-post the inset, with a `contentView.safeAreaInsets.top` fallback for the case where the frame−contentLayoutRect delta collapses; h1 stays fully visible below the toolbar. **Known limitation, parked in the private plan notes:** at scroll-position 0 in full-screen the padding above the h1 leaves nothing behind the toolbar for the frost to sample, so the band renders solid Tahoe grey until the user scrolls. Xcode itself doesn't slide content under its full-screen toolbar either — acceptable spike outcome. Not proposed for merge yet — the spike is the proof, not the ship.
-**Started:** 3 Jul 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch spike/`
-**Remote:** local only (push when ready)
-**Checkpoint on main:** `translucent-webview-checkpoint` → `ed6cd73c` (pointer set before spinning up this worktree; surgical rollback via `git checkout translucent-webview-checkpoint -- <files>`)
-
-**What it does:** Prototype the three-part modern-macOS translucent-chrome look for the detail column:
-1. `webView.setValue(false, forKey: "drawsBackground")` on `BristlenoseWebView` (WKWebView paint transparent)
-2. SPA `body { background: transparent }` gated on `__BRISTLENOSE_EMBEDDED__` (so the frost samples report content, not a solid white)
-3. `.ignoresSafeArea(.container, edges: .top)` on the detail column so the WebView extends behind the unified toolbar; post the safe-area top inset over the bridge as `--bn-toolbar-inset` CSS var; SPA scroll containers apply `padding-top: var(--bn-toolbar-inset)` so first-of-content isn't cropped by the frost.
-
-Static inset at bridge-`ready` time is fine for alpha; live re-post on NSWindow frame changes is a follow-up if the effect earns polish.
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose/WebView.swift` — transparent WKWebView paint
-- `desktop/Bristlenose/Bristlenose/ContentView.swift` — safe-area extension under toolbar
-- `desktop/Bristlenose/Bristlenose/BridgeHandler.swift` — post toolbar inset over bridge
-- `frontend/src/**/*.css` — transparent body + sticky-header inset audit (grep `position: sticky`)
-- `frontend/src/shims/*` — receive `--bn-toolbar-inset`, apply to `<html>`
-
-**Potential conflicts with other branches:**
-- `slavic`, `nl` — locale-only, no overlap
-- `tower-of-hanoi` — spike, no overlap
-- No known conflicts on `WebView.swift`, `ContentView.swift`, or SPA CSS files at the time of branching
 
 ---
 
@@ -313,6 +282,12 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `spike` — merged 3 Jul 2026
+
+Spike — Translucent titlebar/toolbar proof-of-concept (Notes/Mail idiom, macOS 26 Tahoe): WKWebView transparent paint, safe-area extension under toolbar + toolbar inset posting to SPA. Works on first Cmd+R. Acceptable outcome as a spiked exploration — the proof validates the three-part approach, but not proposed for ship in current form (scroll-position 0 limitation + rough edges). Worktree detached and tagged orange on disk, local branch deleted; remote was never pushed.
+
+---
 
 ### `fi` — merged 3 Jul 2026
 

@@ -39,7 +39,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch slavic/` | `slavic` | feature | Localisation wave — pl/ru/uk + da/sv/nb + tr locales + i18n tooling (machine-seeded, pending native review) |
-| `bristlenose_branch fi/` | `fi` | feature | Finnish (`fi`) locale — completes the Nordics (da/sv/nb done); native review by a Finnish contact |
+| `bristlenose_branch fi/` | `fi` | feature | Finnish (`fi`) locale — 9 namespace files + 9 registration sites, merged to main `--no-ff` after nl; native review by a Finnish contact is the ship gate |
 | `bristlenose_branch spike/` | `spike` | spike | Translucent titlebar/toolbar (Notes/Mail idiom, macOS 26 Tahoe) — transparent WKWebView + safe-area extension under toolbar |
 
 

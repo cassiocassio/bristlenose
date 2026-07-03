@@ -1,0 +1,24 @@
+{
+  "error": {
+    "notFound": "Nie znaleziono zasobu.",
+    "badRequest": "Nieprawidłowe żądanie: {detail}",
+    "internal": "Wewnętrzny błąd serwera."
+  },
+  "status": {
+    "healthy": "Sprawny",
+    "degraded": "Ograniczona sprawność"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "Brak wywiadów do analizy.",
+    "noRunDesktopLong": "Przeciągnij tutaj folder z wywiadami, aby rozpocząć.",
+    "noRunCliShort": "Na razie nie ma tu nic do zobaczenia.",
+    "cancelledShort": "Ostatnie uruchomienie zostało anulowane.",
+    "cancelledLong": "Uruchom ponownie, gdy będziesz gotów.",
+    "failedShort": "Ostatnie uruchomienie nie powiodło się.",
+    "recentLog": "Ostatni dziennik:",
+    "showDetails": "Pokaż szczegóły",
+    "sendFeedback": "Wyślij opinię",
+    "help": "Pomoc",
+    "cliExitedWithCode": "CLI zakończył działanie z kodem {code}"
+  }
+}

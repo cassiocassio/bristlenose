@@ -1,0 +1,228 @@
+{
+  "heading": "Innstillinger",
+  "appearance": {
+    "randomIconsLegend": "Tildel et tilfeldig ikon til nye prosjekter",
+    "randomIconsHelp": "Hvert nye prosjekt får et distinkt ikon, så det er lett å kjenne igjen i sidefeltet. Slå av dette for å beholde den enkle ringen og velge ikoner selv.",
+    "legend": "Programutseende",
+    "auto": "Bruk systemutseendet",
+    "light": "Lyst",
+    "dark": "Mørkt"
+  },
+  "palette": {
+    "legend": "Fargepalett",
+    "default": "Standard",
+    "edo": "Edo",
+    "description": "Farger om hele appen. Edo bruker varmt washi-papir og prøysserblått blekk."
+  },
+  "typography": {
+    "legend": "Typografi"
+  },
+  "language": {
+    "legend": "Språk",
+    "description": "Styrer visningsspråket for grensesnittet. Rapportinnholdet oversettes ikke.",
+    "helpTranslate": "Hjelp til med å oversette Bristlenose til språket ditt på"
+  },
+  "settingsNav": {
+    "general": "Generelt",
+    "project": "Prosjekt",
+    "profile": "Profil",
+    "apiKeys": "API-nøkler",
+    "config": "Konfigurasjon",
+    "projectStub": "Innstillinger per prosjekt vises her. Kommer snart.",
+    "profileStub": "Profilinnstillinger (navn, e-post, whisper-backend) vises her. Kommer snart.",
+    "apiKeysStub": "Håndtering av API-nøkler vises her. Kommer snart.",
+    "pipeline": "Rørledning"
+  },
+  "configReference": {
+    "heading": "Konfigurasjonsreferanse",
+    "intro": "Alle innstillingene nedenfor konfigureres via miljøvariabler eller en <code>.env</code>-fil. De vises her som referanse — for å endre en verdi, rediger filen som vises i hver rad.",
+    "clickToCopy": "Klikk for å kopiere",
+    "copied": "Kopiert",
+    "categories": {
+      "llm": "LLM-leverandør og -modell",
+      "transcription": "Transkripsjon",
+      "privacy": "Personvern",
+      "quotes": "Sitater",
+      "analysis": "Analyse",
+      "autocode": "AutoCode",
+      "display": "Visning",
+      "pipeline": "Rørledning",
+      "thumbnails": "Miniatyrbilder",
+      "server": "Tjener",
+      "logging": "Logging",
+      "timing": "Tidsberegning"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Leverandør",
+        "model": "Modell",
+        "temperature": "Temperatur",
+        "maxTokens": "Maks antall utdata-tokener",
+        "concurrency": "Samtidighet",
+        "claudeKey": "Claude API-nøkkel",
+        "chatgptKey": "ChatGPT API-nøkkel",
+        "geminiKey": "Gemini API-nøkkel",
+        "azureKey": "Azure API-nøkkel",
+        "azureEndpoint": "Azure-endepunkt",
+        "azureDeployment": "Azure-distribusjon",
+        "azureApiVersion": "Azure API-versjon",
+        "ollamaUrl": "Ollama-URL",
+        "ollamaModel": "Ollama-modell"
+      },
+      "transcription": {
+        "backend": "Backend",
+        "model": "Modell",
+        "language": "Språk",
+        "device": "Enhet",
+        "computeType": "Beregningstype",
+        "audioConcurrency": "Samtidighet ved lyduttrekk"
+      },
+      "privacy": {
+        "piiRedaction": "Redigering av personopplysninger",
+        "piiLlmPass": "LLM-gjennomgang for personopplysninger",
+        "customNames": "Egne navn som skal redigeres bort"
+      },
+      "quotes": {
+        "minQuoteWords": "Minste antall ord i sitat",
+        "speakerMergeGap": "Sammenslåingsgap for talere",
+        "quoteSequenceGap": "Sekvensgap mellom sitater",
+        "llmFailureThreshold": "Terskel for LLM-feil",
+        "autocodeBatchSize": "AutoCode-batchstørrelse"
+      },
+      "analysis": {
+        "topNSignals": "Topp N-signaler",
+        "topNSignalsGeneric": "Topp N-signaler (generisk)",
+        "topNElaboration": "Topp N for utdyping",
+        "minQuotesPerCell": "Minste antall sitater per celle",
+        "strongConcentration": "Sterk: konsentrasjon >",
+        "strongParticipants": "Sterk: deltakere ≥",
+        "strongQuotes": "Sterk: sitater ≥",
+        "moderateConcentration": "Moderat: konsentrasjon >",
+        "moderateParticipants": "Moderat: deltakere ≥",
+        "moderateQuotes": "Moderat: sitater ≥"
+      },
+      "autocode": {
+        "defaultLower": "Standard nedre terskel",
+        "defaultUpper": "Standard øvre terskel",
+        "sliderStep": "Skyveknappsteg",
+        "sliderMinGap": "Minste skyveknappgap",
+        "histogramBins": "Histogramkolonner"
+      },
+      "display": {
+        "searchMinChars": "Minste antall søketegn",
+        "activityPollInterval": "Intervall for aktivitetssjekk"
+      },
+      "pipeline": {
+        "projectName": "Prosjektnavn",
+        "writeIntermediate": "Skriv mellomfiler",
+        "skipTranscription": "Hopp over transkripsjon",
+        "maxSessionsBeforeConfirm": "Maks antall økter før bekreftelse"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Søkevindu for nøkkelbilde",
+        "fallbackFrameTime": "Reservetidspunkt for bilde",
+        "thumbnailWidth": "Bredde på miniatyrbilde",
+        "jpegQuality": "JPEG-kvalitet"
+      },
+      "server": {
+        "serverPort": "Tjenerport",
+        "miroAccessToken": "Miro-tilgangstoken"
+      },
+      "logging": {
+        "logLevel": "Loggnivå (fil)",
+        "logFileMaxSize": "Maks størrelse på loggfil",
+        "logBackupCount": "Antall loggsikkerhetskopier"
+      },
+      "timing": {
+        "minRunsEstimate": "Minste antall kjøringer før estimat",
+        "minRunsRange": "Minste antall kjøringer før ±intervall"
+      }
+    }
+  },
+    "pipeline": {
+      "intro": "Skrivebeskyttet oversikt over modellene Bristlenose for øyeblikket bruker for hvert trinn i rørledningen. For å endre en backend, rediger innstillingene dine (miljøvariabler eller .env-fil).",
+      "loading": "Laster inn rørledningsvisning…",
+      "error": "Kunne ikke laste inn rørledningsvisning",
+      "keys": "nøkler",
+      "keysNone": "ingen",
+      "ollama": "ollama",
+      "running": "kjører",
+      "notDetected": "ikke oppdaget",
+      "available": "tilgjengelig",
+      "unavailable": "utilgjengelig",
+      "alternatives": {
+        "summaryHeading": "LLM-backender på denne verten",
+        "available": "Tilgjengelig",
+        "unavailable": "Utilgjengelig",
+        "none": "ingen"
+      },
+      "backends": {
+        "local_ollama": "Lokal (Ollama)",
+        "builtin_anonymiser": "Innebygd anonymiserer"
+      },
+      "glyph": {
+        "available": "tilgjengelig",
+        "unavailable": "utilgjengelig",
+        "skipped": "ikke aktuelt på denne verten"
+      },
+      "column": {
+        "model": "Modell",
+        "availability": "Tilgjengelighet",
+        "quality": "Kvalitet",
+        "notes": "Merknader"
+      },
+      "key": {
+        "italic_label": "kursiv",
+        "synthesised": "fra innstillingene dine, ikke katalogen vår"
+      },
+      "qualifier": {
+        "default": "standard",
+        "current": "gjeldende",
+        "your_deployment": "din Azure-distribusjon"
+      },
+      "quality": {
+        "glyph": {
+          "excellent": "utmerket kvalitet",
+          "good": "god kvalitet",
+          "marginal": "marginal kvalitet",
+          "avoid": "unngå — kvaliteten er for lav",
+          "untested": "utestet"
+        },
+        "untested": "utestet",
+        "local_speaker_id_acceptable": "Lokale modeller håndterer identifisering av talere godt",
+        "local_topic_segmentation_acceptable": "Lokale modeller håndterer temasegmentering godt",
+        "local_quote_extraction_miss_rate": "små modeller går glipp av sitater med flere setningsledd",
+        "local_quote_clustering_drift": "små modeller grupperer sitater inkonsekvent",
+        "local_thematic_grouping_drift": "små modeller driver av under tematisk syntese",
+        "mlx_whisper_apple_silicon_optimal": "optimal på Apple Silicon",
+        "faster_whisper_cpu_baseline": "solid CPU-grunnlinje; ingen GPU påkrevd"
+      },
+      "actions": {
+        "obtain_anthropic_key": "skaff en API-nøkkel på console.anthropic.com og angi ANTHROPIC_API_KEY eller lim inn i Innstillinger → Nøkler",
+        "obtain_openai_key": "skaff en API-nøkkel på platform.openai.com og angi OPENAI_API_KEY eller lim inn i Innstillinger → Nøkler",
+        "obtain_google_key": "skaff en API-nøkkel på aistudio.google.com og angi GOOGLE_API_KEY eller lim inn i Innstillinger → Nøkler",
+        "configure_azure": "angi Azure-nøkkel, -endepunkt og -distribusjon i Innstillinger → Nøkler",
+        "start_ollama": "start Ollama-tjenesten (ollama serve)",
+        "install_mlx_whisper": "pip install mlx-whisper (krever Apple Silicon)",
+        "install_ctranslate2": "pip install ctranslate2",
+        "install_presidio": "pip install bristlenose[redact-pii] for å aktivere den innebygde anonymisereren",
+        "enable_pii_redaction": "kjør med --redact-pii eller angi pii_enabled=true"
+      },
+      "reasons": {
+        "no_anthropic_key": "ingen Claude API-nøkkel angitt",
+        "no_openai_key": "ingen ChatGPT API-nøkkel angitt",
+        "no_azure_key": "ingen Azure OpenAI-nøkkel angitt",
+        "no_azure_endpoint": "Azure-endepunkt ikke angitt",
+        "no_azure_deployment": "Azure-distribusjon ikke angitt",
+        "no_google_key": "ingen Gemini API-nøkkel angitt",
+        "ollama_not_running": "Ollama kjører ikke",
+        "apple_fm_check_desktop": "sjekk i skrivebordsappen",
+        "requires_apple_silicon": "krever Apple Silicon",
+        "mlx_whisper_not_installed": "MLX Whisper er ikke installert",
+        "ctranslate2_not_installed": "ctranslate2 er ikke installert",
+        "presidio_not_installed": "Innebygd anonymiserer er ikke installert",
+        "spacy_model_missing": "språkmodell ikke installert",
+        "pii_disabled": "Redigering av personopplysninger er av"
+      }
+    }
+}

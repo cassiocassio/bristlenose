@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "Silnik transkrypcji i wyodrębniania cytatów z badań użytkowników.",
+  "stage": {
+    "ingest": "Wczytywanie",
+    "extractAudio": "Wyodrębnianie dźwięku",
+    "transcribe": "Transkrypcja",
+    "identifySpeakers": "Rozpoznawanie mówców",
+    "mergeTranscript": "Scalanie transkrypcji",
+    "piiRemoval": "Usuwanie danych osobowych",
+    "topicSegmentation": "Segmentacja tematów",
+    "quoteExtraction": "Wyodrębnianie cytatów",
+    "quoteClustering": "Grupowanie cytatów",
+    "thematicGrouping": "Grupowanie tematyczne",
+    "render": "Renderowanie"
+  },
+  "error": {
+    "noInput": "Nie podano katalogu wejściowego.",
+    "notFound": "Nie znaleziono katalogu: {path}",
+    "noFiles": "Nie znaleziono plików audio, wideo ani transkrypcji w {path}"
+  },
+  "progress": {
+    "complete": "Ukończono",
+    "failed": "Niepowodzenie",
+    "skipped": "Pominięto"
+  }
+}

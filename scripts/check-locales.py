@@ -42,6 +42,12 @@ PLACEHOLDER_RE = re.compile(r"\{\{.*?\}\}")
 # its base before English; keep in lockstep with i18next/Python/Swift.
 FALLBACK_BASE = {"zh-Hant-HK": "zh-Hant"}
 
+# Locales whose CLDR `one` category recurs at 21/31/101 (rule n%10==1 ∧ n%100!=11).
+# A count-driven `_one` in these MUST interpolate {{count}} — hardcoding "1" would
+# render "1 …" for count 21. Polish is deliberately NOT here (pl `one` = n==1 only,
+# so its `_one` may hardcode "1" like English). See design-i18n.md § pl/ru/uk plurals.
+RECURRING_ONE_LOCALES = {"ru", "uk"}
+
 # CLDR plural-form suffixes. ``_other`` is the base form (always required); the
 # rest are conditional on the locale's plural rules, so a single-form locale
 # (ja/ko/zh) legitimately omits them.
@@ -75,6 +81,20 @@ def load_locale(lang: str, namespace: str):
 
 def _is_plural_suffix(key: str) -> bool:
     return key.endswith(PLURAL_SUFFIXES)
+
+
+# All CLDR plural-form suffixes including ``_other`` — used to group a plural
+# base for placeholder comparison (distinct from ``_is_plural_suffix``, which
+# excludes ``_other`` for missing-key leniency).
+_PLURAL_FORM_SUFFIXES = ("_one", "_two", "_few", "_many", "_zero", "_other")
+
+
+def _plural_base(key: str):
+    """Return the base of a plural key (``quotes_one`` → ``quotes``), else None."""
+    for suffix in _PLURAL_FORM_SUFFIXES:
+        if key.endswith(suffix):
+            return key[: -len(suffix)]
+    return None
 
 
 def main() -> int:
@@ -155,6 +175,13 @@ def main() -> int:
             # Orphan keys (warn — some are legitimate, e.g. `_short` overflow
             # variants that only exist where the full label is too long).
             orphans = set(tr_keys) - set(en_keys)
+            # CLDR plural enrichment is NOT an orphan: a four-form locale
+            # (pl/ru/uk) legitimately adds `_few`/`_many` to a base en carries
+            # only as `_one`/`_other`. Don't flag those.
+            en_plural_bases = {
+                _plural_base(k) for k in en_keys if _plural_base(k) is not None
+            }
+            orphans = {o for o in orphans if _plural_base(o) not in en_plural_bases}
             if orphans:
                 warnings.append(
                     f"{lang}/{ns}.json: {len(orphans)} orphan key(s): "
@@ -171,17 +198,54 @@ def main() -> int:
                     + ("..." if len(empty) > 5 else "")
                 )
 
-            # Interpolation placeholders (error) — skip empty stubs
+            # Interpolation placeholders (error) — skip empty stubs.
+            # Plural forms are compared against the en GROUP's placeholder union,
+            # not the same-suffix en key: en's `_one` often hardcodes "1" (no
+            # {{count}}) while `_other` carries {{count}}, and a locale whose
+            # `one` category recurs (ru/uk) correctly puts {{count}} in `_one`.
+            # So for plural forms we forbid only UNKNOWN placeholders (must be a
+            # subset of the group union); non-plural keys keep strict equality.
+            en_group_ph: dict[str, set] = {}
+            for k, v in en_keys.items():
+                b = _plural_base(k)
+                if b is not None:
+                    en_group_ph.setdefault(b, set()).update(PLACEHOLDER_RE.findall(v))
             for key in set(en_keys) & set(tr_keys):
                 if tr_keys[key].strip() == "":
                     continue  # empty stub — Weblate will fill it
-                en_placeholders = set(PLACEHOLDER_RE.findall(en_keys[key]))
                 tr_placeholders = set(PLACEHOLDER_RE.findall(tr_keys[key]))
+                base = _plural_base(key)
+                if base is not None:
+                    unknown = tr_placeholders - en_group_ph.get(base, set())
+                    if unknown:
+                        errors.append(
+                            f"{lang}/{ns}.json: unknown placeholder(s) {unknown} in "
+                            f"plural key '{key}' (not in the en '{base}_*' group)"
+                        )
+                    continue
+                en_placeholders = set(PLACEHOLDER_RE.findall(en_keys[key]))
                 if en_placeholders != tr_placeholders:
                     errors.append(
                         f"{lang}/{ns}.json: placeholder mismatch in '{key}': "
                         f"en={en_placeholders} vs {lang}={tr_placeholders}"
                     )
+
+            # Recurring-`one` locales (ru/uk): a count-driven `_one` must
+            # interpolate {{count}} — the `one` category recurs at 21/31/101, so
+            # a hardcoded "1" renders wrong (e.g. "1 …" for count 21). Error.
+            if lang in RECURRING_ONE_LOCALES:
+                for key in tr_keys:
+                    if not key.endswith("_other"):
+                        continue
+                    one_key = f"{key[:-len('_other')]}_one"
+                    if one_key not in tr_keys:
+                        continue
+                    if "{{count}}" in tr_keys[key] and "{{count}}" not in tr_keys[one_key]:
+                        errors.append(
+                            f"{lang}/{ns}.json: '{one_key}' must interpolate "
+                            "{{count}} — in ru/uk the `one` form recurs at 21/31/101, "
+                            "so a hardcoded number renders wrong for those counts."
+                        )
 
     if args.strict and genuine_total:
         errors.append(

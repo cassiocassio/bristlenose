@@ -1,0 +1,24 @@
+{
+  "error": {
+    "notFound": "Ресурс не знайдено.",
+    "badRequest": "Хибний запит: {detail}",
+    "internal": "Внутрішня помилка сервера."
+  },
+  "status": {
+    "healthy": "Справний",
+    "degraded": "Знижена продуктивність"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "Ще немає інтерв’ю для аналізу.",
+    "noRunDesktopLong": "Перетягніть сюди теку з інтерв’ю, щоб почати.",
+    "noRunCliShort": "Тут поки що нічого немає.",
+    "cancelledShort": "Останній запуск скасовано.",
+    "cancelledLong": "Запустіть повторно, коли будете готові.",
+    "failedShort": "Останній запуск завершився помилкою.",
+    "recentLog": "Останній журнал:",
+    "showDetails": "Показати деталі",
+    "sendFeedback": "Надіслати відгук",
+    "help": "Довідка",
+    "cliExitedWithCode": "CLI завершив роботу з кодом {code}"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "sentiment": {
+    "frustration": "Hayal kırıklığı",
+    "confusion": "Kafa karışıklığı",
+    "doubt": "Kuşku",
+    "surprise": "Şaşkınlık",
+    "satisfaction": "Memnuniyet",
+    "delight": "Keyif",
+    "confidence": "Güven"
+  },
+  "speakerRole": {
+    "researcher": "Araştırmacı",
+    "participant": "Katılımcı",
+    "observer": "Gözlemci",
+    "unknown": "Bilinmiyor"
+  }
+}

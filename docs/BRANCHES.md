@@ -38,6 +38,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
+| `bristlenose_branch slavic/` | `slavic` | feature | Slavic plural localisation — Phase 1 (Polish `pl` locale + CLDR plural wiring) |
 
 
 
@@ -119,6 +120,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
+| `slavic` | `bristlenose_branch slavic/` | local only |
 | `claude/debug-menu-instrumentation-4r9npy` _(merged)_ | _(worktree removed)_ | `origin/...` — merged to main 28 Jun 2026 (`252c1ce3`) |
 | `claude/figjam-miro-market-share-px52tg` _(merged)_ | `bristlenose_branch_figjam-miro-market-share/` _(detached, on disk)_ | local deleted — merged to main 28 Jun 2026 (66bc28c4) |
 | `claude/spa-sidebar-layout-9mlndt` _(merged)_ | `bristlenose_branch spa-sidebar-layout/` _(detached, on disk)_ | local only — merged to main 28 Jun 2026 (97c4fb42) |
@@ -157,6 +159,27 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 **Kind:** feature — Dev Run Inspector: a dev-only `/api/dev/run` infoviz page over instrumentation the pipeline already captures (`llm-calls.jsonl` / `pipeline-events.jsonl` / timing), plus a `.json` sibling. Pure-stdlib data shaping in `run_inspector.py`; thin FastAPI wrappers in `routes/dev.py`. Also shipped: native **Debug ▸ Run Inspector** window (⌃⌘R), a live Diagnostic-fixtures submenu, reveal/log/provenance Debug actions, and a build-time sidecar-staleness gate.
 **Merged:** 28 Jun 2026 to main (`252c1ce3`, `--no-ff`); worktree removed, branch ref kept as insurance. No version bump (dev/DEBUG-only tooling). Mac adoption caught + fixed two cloud defects (event-schema field mismatch + brittle XSS test) before merge; full suite green (3164 passed), ruff clean, `xcodebuild` BUILD SUCCEEDED.
 **Owed:** human visual QA of the client-rendered inspector tabs (tracked in the QA backlog).
+
+---
+
+### `slavic`
+
+**Kind:** feature — Slavic plural localisation, Phase 1
+**Status:** Just started
+**Started:** 3 Jul 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch slavic/`
+**Remote:** local only (push when ready)
+
+**What it does:** Slavic plural groundwork Phase 1 — add the Polish (`pl`) locale and wire its CLDR plural rules, following Phase 0 (Swift CLDR selector rules for pl/ru/uk, landed on main 2 Jul 2026). Web gets plurals free via i18next; the Swift desktop selector is the sole hand-rolled path. Lingo cross-check for seeded values. _(Purpose inferred from the `project_slavic_plural_groundwork` memory — confirm/adjust the exact Phase-1 scope with the next session's brief.)_
+
+**Files this branch will touch:**
+- `bristlenose/locales/pl/` (new — 9 namespace files) and the registration sites (`bristlenose/i18n.py`, `frontend/src/i18n/index.ts`, `bristlenose/doctor.py`, both settings pickers, `LocaleStore.test.ts`)
+- `desktop/Bristlenose/Bristlenose/I18n.swift` + `AppearanceSettingsView.swift` + `I18nTests.swift` (native picker + CLDR plural category)
+- `bristlenose/locales/glossary.csv`, `docs/design-i18n.md` (plural rule + reviewer brief)
+- (exact set TBD — refine as work progresses)
+
+**Potential conflicts with other branches:**
+- None expected — no other active branch touches `bristlenose/locales/`. `tower-of-hanoi` keeps its locales under `experiments/`; `responsive-signal-cards` is CSS-only.
 
 ---
 

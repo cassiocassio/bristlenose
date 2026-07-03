@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "Transcriptie- en citaatextractie-engine voor gebruikersonderzoek.",
+  "stage": {
+    "ingest": "Inlezen",
+    "extractAudio": "Audio extraheren",
+    "transcribe": "Transcriberen",
+    "identifySpeakers": "Sprekers identificeren",
+    "mergeTranscript": "Transcript samenvoegen",
+    "piiRemoval": "PII verwijderen",
+    "topicSegmentation": "Onderwerpsegmentatie",
+    "quoteExtraction": "Citaten extraheren",
+    "quoteClustering": "Citaten clusteren",
+    "thematicGrouping": "Thematisch groeperen",
+    "render": "Genereren"
+  },
+  "error": {
+    "noInput": "Geen invoermap opgegeven.",
+    "notFound": "Map niet gevonden: {path}",
+    "noFiles": "Geen audio-, video- of transcriptbestanden gevonden in {path}"
+  },
+  "progress": {
+    "complete": "Voltooid",
+    "failed": "Mislukt",
+    "skipped": "Overgeslagen"
+  }
+}

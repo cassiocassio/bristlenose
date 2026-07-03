@@ -16,7 +16,7 @@ import enSettings from "@locales/en/settings.json";
 import enEnums from "@locales/en/enums.json";
 import enDesktop from "@locales/en/desktop.json";
 
-export const SUPPORTED_LOCALES = ["en", "es", "ja", "fr", "de", "ko", "cs", "it", "pl", "ru", "uk", "da", "sv", "nb", "tr", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK"] as const;
+export const SUPPORTED_LOCALES = ["en", "es", "ja", "fr", "de", "ko", "cs", "it", "pl", "ru", "uk", "da", "sv", "nb", "tr", "nl", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
 export function isSupportedLocale(v: unknown): v is Locale {

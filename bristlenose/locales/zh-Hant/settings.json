@@ -1,6 +1,8 @@
 {
   "heading": "設定",
   "appearance": {
+    "animationLegend": "Show animation while analysing",
+    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "為新專案指定隨機圖示",
     "randomIconsHelp": "每個新專案都會獲得一個獨特的圖示，方便在側邊欄中辨識。關閉此選項可保留純色圓環，並自行選擇圖示。",
     "legend": "應用程式外觀",

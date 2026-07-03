@@ -5,6 +5,8 @@
     "auto": "Usar aspeto do sistema",
     "light": "Clara",
     "dark": "Escura",
+    "animationLegend": "Show animation while analysing",
+    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "Atribuir um ícone aleatório a novos projetos",
     "randomIconsHelp": "Cada novo projeto recebe um ícone distinto para que seja fácil reconhecê-lo na barra lateral. Desative esta opção para manter o círculo simples e escolher os ícones manualmente."
   },

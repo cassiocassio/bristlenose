@@ -1,6 +1,8 @@
 {
   "heading": "Innstillinger",
   "appearance": {
+    "animationLegend": "Show animation while analysing",
+    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "Tildel et tilfeldig ikon til nye prosjekter",
     "randomIconsHelp": "Hvert nye prosjekt får et distinkt ikon, så det er lett å kjenne igjen i sidefeltet. Slå av dette for å beholde den enkle ringen og velge ikoner selv.",
     "legend": "Programutseende",

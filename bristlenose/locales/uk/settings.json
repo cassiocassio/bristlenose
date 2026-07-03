@@ -1,6 +1,8 @@
 {
   "heading": "Параметри",
   "appearance": {
+    "animationLegend": "Show animation while analysing",
+    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "Призначати новим проєктам випадкову піктограму",
     "randomIconsHelp": "Кожен новий проєкт отримує характерну піктограму, щоб його було легко впізнати на бічній панелі. Вимкніть це, щоб залишити просте кільце й обирати піктограми самостійно.",
     "legend": "Вигляд програми",

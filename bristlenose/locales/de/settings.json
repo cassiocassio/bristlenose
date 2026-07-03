@@ -1,6 +1,8 @@
 {
   "heading": "Einstellungen",
   "appearance": {
+    "animationLegend": "Show animation while analysing",
+    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "Neuen Projekten ein zuf\u00e4lliges Symbol zuweisen",
     "randomIconsHelp": "Jedes neue Projekt erh\u00e4lt ein unverwechselbares Symbol, das in der Seitenleiste leicht zu erkennen ist. Deaktivieren Sie diese Option, um den schlichten Ring beizubehalten und Symbole selbst zu w\u00e4hlen.",
     "legend": "Erscheinungsbild",

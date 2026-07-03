@@ -1,6 +1,8 @@
 {
   "heading": "Réglages",
   "appearance": {
+    "animationLegend": "Show animation while analysing",
+    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "Attribuer une ic\u00f4ne al\u00e9atoire aux nouveaux projets",
     "randomIconsHelp": "Chaque nouveau projet re\u00e7oit une ic\u00f4ne distinctive, facile \u00e0 reconna\u00eetre dans la barre lat\u00e9rale. D\u00e9sactivez cette option pour conserver le cercle simple et choisir les ic\u00f4nes vous-m\u00eame.",
     "legend": "Apparence de l'application",

@@ -13,7 +13,7 @@ from rich.console import Console
 # tqdm / huggingface_hub progress-bar suppression lives in
 # `bristlenose/__init__.py` (must be set before any HF import, including
 # the doctor preflight that runs before pipeline.py is reached).
-from bristlenose import __version__
+from bristlenose import __version__, shoal_feed
 from bristlenose.config import BristlenoseSettings
 from bristlenose.events import (
     Cause,
@@ -608,6 +608,9 @@ class Pipeline:
         _printed_warnings.clear()
         # Reset the per-stage summary accumulator at the start of each run.
         self._summary = PipelineSummary()
+        # Truncate any decorative shoal feed left by a prior run (desktop-only,
+        # best-effort — a failure here never affects the run).
+        shoal_feed.start(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         self._configure_logging(output_dir)
         write_pipeline_metadata(output_dir, self.settings.project_name)
@@ -1234,6 +1237,10 @@ class Pipeline:
             raw_dir = output_dir / "transcripts-raw"
             write_raw_transcripts(transcripts, raw_dir)
             write_raw_transcripts_md(transcripts, raw_dir)
+            # Feed the desktop shoal animation a sample of real transcript words.
+            shoal_feed.emit_words(
+                output_dir, (seg.text for t in transcripts for seg in t.segments)
+            )
             _print_step("Merged transcripts", time.perf_counter() - t0)
             mark_stage_complete(manifest, STAGE_MERGE_TRANSCRIPT)
             write_manifest(manifest, output_dir)
@@ -1374,6 +1381,11 @@ class Pipeline:
                     _fresh_topic_maps = []
 
                 topic_maps = _cached_topic_maps + _fresh_topic_maps
+
+                # Feed the shoal the section/topic labels as they resolve.
+                shoal_feed.emit_themes(
+                    output_dir, (b.topic_label for tm in topic_maps for b in tm.boundaries)
+                )
 
                 if self.settings.write_intermediate:
                     write_intermediate_json(
@@ -1544,6 +1556,12 @@ class Pipeline:
                     _fresh_quotes = []
 
                 all_quotes = _cached_quotes + _fresh_quotes
+
+                # Feed the shoal short sentiment-tagged fragments from the quotes.
+                shoal_feed.emit_sentiment(
+                    output_dir,
+                    ((q.text, q.sentiment.value if q.sentiment else None) for q in all_quotes),
+                )
 
                 if self.settings.write_intermediate:
                     write_intermediate_json(
@@ -1826,6 +1844,11 @@ class Pipeline:
             _p_warning, _ = _short_reason(
                 _quote_errors or _seg_errors, self.settings.llm_provider,
             )
+
+        # Delete the decorative shoal feed on success (desktop-only, best-effort).
+        # A failed/abandoned run leaves it in .bristlenose/ for the next run's
+        # start() to truncate — consistent with the pii_summary/llm-calls siblings.
+        shoal_feed.finish(output_dir)
 
         return PipelineResult(
             project_name=self.settings.project_name,

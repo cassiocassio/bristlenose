@@ -30,7 +30,7 @@ final class I18n: ObservableObject {
     // MARK: - Locale allowlist (security: prevents path traversal)
 
     static let supportedLocales: Set<String> = [
-        "en", "es", "ja", "fr", "de", "ko", "cs", "it", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK",
+        "en", "es", "ja", "fr", "de", "ko", "cs", "it", "pl", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK",
     ]
 
     /// Region/script variants borrow missing keys from a base locale before

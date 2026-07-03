@@ -11,4 +11,14 @@ enum BristlenoseFlags {
     static var appKitSidebar: Bool {
         UserDefaults.standard.bool(forKey: "BristlenoseAppKitSidebar")
     }
+
+    /// SPIKE: run the typographic shoal behind the translucent AppKit sidebar,
+    /// Maps-style (`.withinWindow` NSVisualEffectView frosting an SKView). **Default
+    /// off.** Answers one empirical unknown — does vibrancy sample a Metal-backed
+    /// SKView? Requires the AppKit sidebar too. Flip with:
+    /// `defaults write app.bristlenose BristlenoseShoalSidebar -bool YES`.
+    /// Design: `docs/private/design-shoal-ambient-future.md` §C.
+    static var shoalSidebar: Bool {
+        UserDefaults.standard.bool(forKey: "BristlenoseShoalSidebar")
+    }
 }

@@ -131,6 +131,7 @@ struct ContentView: View {
     @EnvironmentObject var ollamaDownload: OllamaDownloadModel
     @EnvironmentObject var i18n: I18n
     @AppStorage("appearance") private var appearance: String = "auto"
+    @AppStorage("showAnalysisAnimation") private var showAnalysisAnimation = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("selectedProjectID") private var persistedProjectID: String = ""
     @AppStorage("aiConsentVersion") private var consentVersion: Int = 0
@@ -878,7 +879,7 @@ struct ContentView: View {
     // MARK: - Drag and drop
 
     /// File extensions accepted by the Bristlenose pipeline.
-    /// Matches `ALL_EXTENSIONS` in `bristlenose/models.py` plus `.txt` (analyze mode).
+    /// Matches `ALL_EXTENSIONS` in `bristlenose/models.py` (includes `.txt` transcripts).
     /// Directories are always accepted (they become project roots).
     private static let acceptedExtensions: Set<String> = [
         // Audio
@@ -1753,6 +1754,16 @@ struct ContentView: View {
         }
     }
 
+    /// Whether the decorative shoal animation takes the detail pane — while
+    /// analysing, when the user hasn't switched it off, and when Reduce Motion
+    /// is off. Falls through to the boot / "drop interviews" screens otherwise
+    /// (the same surfaces it replaces), so the off-switch needs no separate UI.
+    private func shouldShowShoal(_ project: Project) -> Bool {
+        showAnalysisAnimation
+            && !reduceMotion
+            && isAnalysing(pipelineRunner.state[project.id])
+    }
+
     /// Reload the report after a run finishes. The serve re-imports the finished
     /// report on the run_completed terminus within ~1s (verified in
     /// bristlenose.log) and `last_run` is set — but the detail WebView, loaded
@@ -2011,6 +2022,13 @@ struct ContentView: View {
             if !project.isAvailable {
                 // Project directory is not accessible — volume ejected or folder moved.
                 unavailableProjectView(project)
+            } else if shouldShowShoal(project) {
+                // Analysing with nothing to show yet — the typographic shoal
+                // takes the pane in place of the boot / "drop interviews"
+                // screens. Decorative; the real progress signal is the sidebar
+                // row's ring + subtitle. Reduce Motion / the preference fall
+                // back to those same screens (see shouldShowShoal).
+                ShoalRunView(projectID: project.id, liveData: pipelineRunner.liveData)
             } else if project.path.isEmpty {
                 // New project with no files yet — prompt user to add interviews,
                 // and accept a Finder drop right here. Routes through the same

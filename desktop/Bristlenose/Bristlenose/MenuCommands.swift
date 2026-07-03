@@ -97,6 +97,8 @@ private struct DebugMenuContent: View {
         Button("Run Inspector…") { openWindow(id: "run-inspector") }
             .keyboardShortcut("r", modifiers: [.command, .control])
 
+        Button("Shoal Screensaver…") { openWindow(id: "shoal") }
+
         Divider()
 
         // Reveal-existing-data actions for the served project (the one whose

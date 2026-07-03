@@ -76,7 +76,7 @@ enum WordPool {
             candidates = middleWords
                 .filter { !active.contains($0) }
                 .map { Word(text: $0, fontSize: 13, color: .labelColor.withAlphaComponent(0.7)) }
-        case .late, .complete, .settling:
+        case .late:
             candidates = lateThemes
                 .filter { !active.contains($0.0) }
                 .map { Word(text: $0.0, fontSize: 15, color: $0.1.color) }

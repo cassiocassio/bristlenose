@@ -5,10 +5,10 @@ import SwiftUI
 /// isolation — no pipeline, no live data, just the v0.1 canned `WordPool`.
 ///
 /// Launched from Debug ▸ Shoal Screensaver. Lets you step the animation through
-/// its pipeline phases (early → middle → late → complete) and trigger the
-/// failure ("die") path, so the flocking, the per-phase word styling, and the
-/// end-state animations can all be judged by eye. The flocking-algorithm picker
-/// (Classic / Alive / Alive V2) lives inside `ShoalView` itself, top-right.
+/// its pipeline phases (early → middle → late) and trigger the failure ("die")
+/// path, so the flocking, the per-phase word styling, and the death animation
+/// can all be judged by eye. The flocking-algorithm picker (Classic / Alive /
+/// Alive V2) lives inside `ShoalView` itself, top-right.
 ///
 /// This is a viewing harness for the TF "is it worth looking at?" call — NOT the
 /// shipping surface. Wiring the shoal into the detail pane with live transcript
@@ -34,9 +34,6 @@ struct ShoalDebugView: View {
                 .pickerStyle(.segmented)
                 .fixedSize()
                 .disabled(failed)
-
-                Button("Complete (triumph)") { phase = .complete }
-                    .disabled(failed || phase == .complete)
 
                 Spacer()
 

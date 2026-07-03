@@ -258,9 +258,16 @@ final class BridgeHandler: ObservableObject {
     /// polish (per the spike brief).
     func syncToolbarInset() {
         guard let webView, let window = webView.window else { return }
-        let frameHeight = window.frame.height
-        let contentHeight = window.contentLayoutRect.height
-        let inset = max(0, frameHeight - contentHeight)
+        let frameDelta = window.frame.height - window.contentLayoutRect.height
+        // Full-screen fallback: in full-screen the frame-minus-contentLayoutRect
+        // delta can collapse (no titlebar chrome to subtract), so on its own it
+        // under-reports the toolbar height and the SPA's cached padding-top
+        // leaves the first row of content tucked under the visible toolbar
+        // band. The contentView's top safeAreaInset is the same value AppKit
+        // hands to SwiftUI's `.ignoresSafeArea` machinery — so whichever mode
+        // we're in, at least one of the two reflects reality. Pick the larger.
+        let safeAreaTop = window.contentView?.safeAreaInsets.top ?? 0
+        let inset = max(0, frameDelta, safeAreaTop)
         Task {
             try? await webView.callAsyncJavaScript(
                 "window.__bristlenose?.setToolbarInset?.(inset)",

@@ -404,6 +404,28 @@ struct ContentView: View {
             // (runtime data-color-theme swap, no serve restart).
             bridgeHandler.setColorPalette()
         }
+        // Translucent chrome (spike): the toolbar-inset was static-at-ready;
+        // full-screen entry/exit swaps the window styleMask (no titlebar in
+        // full-screen), so the frame-minus-contentLayoutRect delta shrinks
+        // and the SPA's cached padding-top overshoots — top of content ends
+        // up half-tucked under the visible toolbar. Re-post on the transition
+        // notifications; both fire AFTER Apple's animation completes so the
+        // window frame is stable when we read it.
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didEnterFullScreenNotification)) { _ in
+            bridgeHandler.syncToolbarInset()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didExitFullScreenNotification)) { _ in
+            bridgeHandler.syncToolbarInset()
+        }
+        // Belt-and-braces: didResize fires many times during the full-screen
+        // animation as the window frame interpolates, and once more when it
+        // settles. If the fullscreen notifications don't wire the way we
+        // expect, this covers it. Also covers manual resize (harmless — the
+        // toolbar height doesn't change with drag-resize, so the recomputed
+        // inset just re-posts the same value).
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResizeNotification)) { _ in
+            bridgeHandler.syncToolbarInset()
+        }
         .onChange(of: selection) { _, newSelection in
             // Switching the viewed project never cancels a background run — the
             // pipeline runs as an independent subprocess. (The cancel-on-switch

@@ -132,9 +132,16 @@ This is the **ratio rule.** Fluidity is proportional to how much new material th
 | 3 | 3 | 100% | **Negotiation.** Existing themes survive if they still have signal in the combined corpus; new themes welcome. |
 | 2 | 4 | 200% | **Rework.** Treat as a fresh analysis; honour user-declared meaning but let structure re-form. |
 
-The thresholds are illustrative. The principle is real: **the size of the prior commitment determines how much of it should hold.**
+The thresholds are illustrative. The principle *felt* real: the size of the prior commitment determines how much of it should hold.
 
 This is not how the pipeline works today. It's not even a parameter — it's a different mode of operation that needs to be picked at run time.
+
+> **⚠ Update (research pass, Jul 2026): the ratio rule rests on the wrong governing variable.** A deep-research pass against the saturation literature directly tested this heuristic and it fails. Hennink, Kaiser & Marconi (2017) found *no* pattern of saturation by prevalence or interview count: concrete codes reached saturation at 4–9 interviews, conceptual codes at 16–24 *or never*. So there is no single count or count-ratio that governs when structure should hold across code types — a project of mostly-conceptual themes is still fluid at session 15, while one with concrete themes may be effectively locked by session 6. A rule keyed on existing:new **session count** (6:1 vs 3:3) is measuring the variable the evidence says does *not* predict lock-readiness.
+>
+> **What this changes:**
+> - **Keep the ratio rule only as a coarse UX default / prompt** — cheap, makes no methodology claim, fine for guiding the TF cohort toward the right mode. It stays useful as a first-guess ("you've added a lot relative to what's here — want to rework?").
+> - **Before Beta / strangers, gate lock-vs-fluid on a saturation *proxy*, not the count ratio.** The disciplined governor is saturation state, which is code-type-dependent. The literature points to the variable but gives no ready-made operational metric for an automated pipeline — so the design work is to find the cheapest per-re-run proxy Bristlenose can actually compute: e.g. rate of *new codes / new orphan-cluster candidates per added session*, ideally distinguishing concrete from conceptual themes. See [Open design questions](#open-design-questions).
+> - **Don't hard-code the 9 / 16–24 numbers.** They come from a single homogeneous HIV-care dataset. The *code-vs-meaning distinction* generalises; the exact interview counts do not.
 
 ### Why this maps to actual research practice
 
@@ -229,6 +236,12 @@ The architecture this implies: **separate the analytical layer from the presenta
 - **Presentation layer (mutable, researcher-owned):** sub-cluster labels (system can suggest, researcher may edit), theme labels (system suggests, researcher edits and commits), hero quote selections (system picks defaults, researcher overrides), display order. The researcher's edits to this layer override the system's defaults forever.
 
 Labels regenerate from the analytical layer on demand for any cluster/theme the researcher hasn't touched. The researcher's edits are an independent override that survives every re-run.
+
+**Evidence base (research pass, Jul 2026).** This split isn't just an engineering convenience — both halves have independent backing, and they converge on the same seam:
+
+- **The methodology says the codebook stabilises early while meaning keeps moving.** Hennink, Kaiser & Marconi (2017, *Qual Health Research*) separate *code saturation* — the point at which the codebook stops changing — from *meaning saturation* — full interpretive understanding. In their data, code saturation arrived at ~9 interviews (91% of all codes, 92% of high-prevalence codes, 92% of code-definition changes complete) while meaning saturation needed 16–24. That is the exact structural analogue of this split: the analytical layer (which quotes go together, cluster/theme membership) can reasonably be treated as a stable matching target early (Mode B), while the interpretive layer (labels, framing, hero-quote picks) legitimately keeps evolving. "Codebook stable" is *not* "analysis done" — which is precisely why themes stay editorial.
+- **The CS says cheap incremental recompute is only correct when you separate the durable relations from the holistic re-aggregation.** Self-adjusting computation (Acar, CMU-CS-05-129) makes small-input-delta → small-output-delta achievable *only under a stability precondition* you must engineer in; incremental view maintenance (Koch et al., PODS 2016) proves that matching a new quote against a locked codebook is "efficiently incrementalizable" (cheap, delta-proportional) while a whole-corpus re-cluster is a holistic aggregate that *provably cannot* be cheaply incrementalized. That directly validates the decision that pipeline clusters/themes regenerate wholesale (Mode C) while `created_by != 'pipeline'` structures survive — the theory says you couldn't cheaply-and-correctly incrementalize a global re-cluster anyway.
+- **The interpretive layer *should* be fluid — that's the epistemic point, not a defect.** Abductive analysis (Tavory & Timmermans, 2014) treats "analytic surprise" as the valued outcome and keeps theory formation unlocked, tacking between data and theory. The late-breakthrough interview that reframes a theme is the system working. Important qualifier the design already honours: abduction is *open to revision, not commitment-free* — surprise arises against an existing theoretical background, so the fluid layer is structured revision of a held position (surface splits/merges as candidates for explicit promotion), never silent reshuffling.
 
 ---
 
@@ -333,6 +346,8 @@ The user's intuition that *"6+1 is strict, 3+3 is negotiable, 2+4 is rework"* ma
 
 The threshold isn't a number to tune; it's a behavioural pattern to design around. The researcher should rarely have to think about it — the system suggests the right mode based on the ratio, and the researcher accepts or overrides.
 
+**But see the Jul 2026 update under [the ratio rule](#researchers-mental-model-of-fluidity):** the mode-suggestion should be driven by a *saturation proxy* (rate of new codes / orphan-cluster candidates per added session), not raw session count. The ratio survives only as a coarse first-guess default for the TF cohort; the count-to-mode mapping above is illustrative UX, not the committed governor.
+
 ---
 
 ## Two features that fall out of the stickies model
@@ -374,7 +389,7 @@ This is post-post-TF, but the data model should not preclude it. A `Quote` and a
 
 ## Open design questions
 
-1. **When is the codebook "locked"?** Automatic (after N runs?) or explicit (researcher gesture)? Most likely explicit, surfaced when stability is detected.
+1. **When is the codebook "locked"?** Automatic (after N runs?) or explicit (researcher gesture)? Most likely explicit, surfaced when stability is detected. **Post-research-pass sharpening:** the *detection* signal should be a saturation proxy, not a run count or the session-ratio — the saturation literature says count/prevalence doesn't predict lock-readiness. Open sub-question: what is the cheapest per-re-run proxy Bristlenose can actually compute? Candidate: rate of new codes / new orphan-cluster candidates per added session, ideally split concrete-vs-conceptual (concrete themes lock early ~4–9 sessions; conceptual ones stay fluid to 16–24 or never). The literature names the variable but gives no ready-made operational metric — this is design work.
 2. **How do candidate themes get reviewed?** A modal, a sidebar section, a separate "review" mode? Where does the UX live?
 3. **What happens to user tags on quotes that get re-clustered into different themes?** Probably: tags follow the quote, not the theme. The tag is the researcher's annotation of *the quote*, not of *the position in the analysis structure*.
 4. **What does versioning look like?** Should every re-run produce a versioned snapshot, so researchers can roll back? "Show me yesterday's analysis"? This is real complexity but real value for methodological transparency.
@@ -526,7 +541,11 @@ When this work lands, audit also: theme labels (`Theme.label_source`), sub-clust
 
 **Failure mode acknowledged:** if a quote's boundary genuinely changes substantially (re-extraction picks a different chunk), the edit may not carry forward. Acceptable for alpha; document in the confirm dialog (*"In rare cases, edits may not carry forward if a quote's wording changes substantially."*).
 
-**Validation:** run extraction twice on FOSSDA fixture, manually mark which quote pairs are "the same", measure recovery rate. Should be ≥90% for the primary heuristic alone.
+**The approach is theoretically sound — the *thresholds* are the untested risk.** The research pass confirmed the direction: robust set reconciliation (Mitzenmacher & Morgan, PODS 2019) formalises exactly this problem — reconciling two sets of metric-space points so the result is "close under a distance" rather than exact-equal, with "databases with floating-point measurements" as a motivating case. That's the formal warrant for replacing the current fragile exact-float importer key with overlap+embedding matching. What it does *not* tell us is whether >70% / >0.85 are the right numbers for Bristlenose's own re-extraction drift.
+
+**Validation — BLOCKING before Beta / strangers (not merely alpha-nice-to-have):** run extraction twice on the FOSSDA fixture, manually mark which quote pairs are "the same", measure recovery rate. Target ≥90% for the primary heuristic alone. This is the single load-bearing untested assumption in the whole design — if recovery is below target, the curation-preservation contract is broken in exactly the case (added-sessions re-extraction) the feature exists to serve.
+
+**The embedding tiebreaker has its own reproducibility wrinkle** (research pass, Jul 2026). The cosine >0.85 fallback assumes embeddings are stable run-to-run — but embedding models are subject to the *same* batch-invariance nondeterminism as generative inference (Thinking Machines Lab, "Defeating Nondeterminism in LLM Inference", Sep 2025 — `temperature=0` does not make cloud endpoints reproducible because server load varies batch size and standard kernels aren't batch-invariant). So the tiebreaker itself may drift on a cloud embedding endpoint. The validation must therefore measure embedding stability directly (same text, repeated calls, same batch conditions) before relying on cosine as the disambiguator — or pin embeddings to a local/deterministic path. If neither holds, the position-overlap primary key has to carry the contract essentially alone, which raises the stakes on the ≥90% target above.
 
 ### Round-trip test (mandatory before feature unlock)
 

@@ -140,6 +140,21 @@ describe("installBridge", () => {
     expect(typeof ns.getState).toBe("function");
   });
 
+  it("setColorPalette applies + persists a valid palette and ignores a bogus one", () => {
+    setEmbedded(true);
+    document.documentElement.removeAttribute("data-color-theme");
+    localStorage.clear();
+    installBridge(STUB_DEPS);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ns = (window as any).__bristlenose;
+    ns.setColorPalette("edo");
+    expect(document.documentElement.getAttribute("data-color-theme")).toBe("edo");
+    expect(localStorage.getItem("bristlenose-palette")).toBe('"edo"');
+    // A bogus palette is a no-op — the last valid attribute stands.
+    ns.setColorPalette("neon");
+    expect(document.documentElement.getAttribute("data-color-theme")).toBe("edo");
+  });
+
   it("getState returns live values from deps", () => {
     setEmbedded(true);
     let tab = "project";

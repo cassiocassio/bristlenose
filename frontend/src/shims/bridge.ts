@@ -11,6 +11,7 @@
 
 import { isEmbedded } from "../utils/embedded";
 import { setLocale as setStoreLocale } from "../i18n/LocaleStore";
+import { isPalette } from "../utils/bootPalette";
 import { isSupportedLocale } from "../i18n/index";
 
 // ---------------------------------------------------------------------------
@@ -180,6 +181,22 @@ export function installBridge(deps: BridgeDeps): void {
     setLocale(locale: string): void {
       if (isSupportedLocale(locale)) {
         void setStoreLocale(locale);
+      }
+    },
+
+    /**
+     * Called by native shell to push colour-palette changes — live, no reload.
+     * The report is a runtime `data-color-theme` CSS swap, so (unlike typography)
+     * the native picker applies it here instead of restarting the serve sidecar.
+     * Persisted so it agrees with the web store and survives a later reload.
+     */
+    setColorPalette(palette: string): void {
+      if (!isPalette(palette)) return;
+      document.documentElement.setAttribute("data-color-theme", palette);
+      try {
+        localStorage.setItem("bristlenose-palette", JSON.stringify(palette));
+      } catch {
+        // Applied for the session; persistence is best-effort (private mode/quota).
       }
     },
   };

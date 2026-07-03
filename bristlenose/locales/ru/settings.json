@@ -1,0 +1,228 @@
+{
+  "heading": "Настройки",
+  "appearance": {
+    "randomIconsLegend": "Назначать новым проектам случайный значок",
+    "randomIconsHelp": "Каждый новый проект получает отличительный значок, чтобы его было легко узнать в боковой панели. Отключите этот параметр, чтобы оставить простой кружок и выбирать значки самостоятельно.",
+    "legend": "Внешний вид приложения",
+    "auto": "Как в системе",
+    "light": "Светлое",
+    "dark": "Тёмное"
+  },
+  "palette": {
+    "legend": "Цветовая палитра",
+    "default": "По умолчанию",
+    "edo": "Edo",
+    "description": "Перекрашивает всё приложение. Edo использует тёплую бумагу васи и берлинскую лазурь."
+  },
+  "typography": {
+    "legend": "Шрифты"
+  },
+  "language": {
+    "legend": "Язык",
+    "description": "Управляет языком интерфейса. Содержимое отчёта не переводится.",
+    "helpTranslate": "Помогите перевести Bristlenose на ваш язык на"
+  },
+  "settingsNav": {
+    "general": "Основные",
+    "project": "Проект",
+    "profile": "Профиль",
+    "apiKeys": "Ключи API",
+    "config": "Конфигурация",
+    "projectStub": "Настройки отдельного проекта появятся здесь. Скоро.",
+    "profileStub": "Настройки профиля (имя, эл. почта, движок Whisper) появятся здесь. Скоро.",
+    "apiKeysStub": "Управление ключами API появится здесь. Скоро.",
+    "pipeline": "Конвейер"
+  },
+  "configReference": {
+    "heading": "Справка по конфигурации",
+    "intro": "Все указанные ниже настройки задаются через переменные окружения или файл <code>.env</code>. Здесь они показаны для справки — чтобы изменить значение, отредактируйте файл, указанный в каждой строке.",
+    "clickToCopy": "Нажмите, чтобы скопировать",
+    "copied": "Скопировано",
+    "categories": {
+      "llm": "Провайдер и модель LLM",
+      "transcription": "Транскрипция",
+      "privacy": "Конфиденциальность",
+      "quotes": "Цитаты",
+      "analysis": "Анализ",
+      "autocode": "AutoCode",
+      "display": "Отображение",
+      "pipeline": "Конвейер",
+      "thumbnails": "Миниатюры",
+      "server": "Сервер",
+      "logging": "Журналирование",
+      "timing": "Оценка времени"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Провайдер",
+        "model": "Модель",
+        "temperature": "Температура",
+        "maxTokens": "Макс. число выходных токенов",
+        "concurrency": "Параллелизм",
+        "claudeKey": "Ключ API Claude",
+        "chatgptKey": "Ключ API ChatGPT",
+        "geminiKey": "Ключ API Gemini",
+        "azureKey": "Ключ API Azure",
+        "azureEndpoint": "Конечная точка Azure",
+        "azureDeployment": "Развёртывание Azure",
+        "azureApiVersion": "Версия API Azure",
+        "ollamaUrl": "URL-адрес Ollama",
+        "ollamaModel": "Модель Ollama"
+      },
+      "transcription": {
+        "backend": "Движок",
+        "model": "Модель",
+        "language": "Язык",
+        "device": "Устройство",
+        "computeType": "Тип вычислений",
+        "audioConcurrency": "Параллелизм извлечения аудио"
+      },
+      "privacy": {
+        "piiRedaction": "Удаление персональных данных",
+        "piiLlmPass": "Проход LLM для персональных данных",
+        "customNames": "Пользовательские имена для удаления"
+      },
+      "quotes": {
+        "minQuoteWords": "Мин. число слов в цитате",
+        "speakerMergeGap": "Интервал объединения реплик",
+        "quoteSequenceGap": "Интервал последовательности цитат",
+        "llmFailureThreshold": "Порог сбоев LLM",
+        "autocodeBatchSize": "Размер пакета AutoCode"
+      },
+      "analysis": {
+        "topNSignals": "Топ-N сигналов",
+        "topNSignalsGeneric": "Топ-N сигналов (общие)",
+        "topNElaboration": "Топ-N для детализации",
+        "minQuotesPerCell": "Мин. число цитат на ячейку",
+        "strongConcentration": "Сильный: концентрация >",
+        "strongParticipants": "Сильный: участников ≥",
+        "strongQuotes": "Сильный: цитат ≥",
+        "moderateConcentration": "Умеренный: концентрация >",
+        "moderateParticipants": "Умеренный: участников ≥",
+        "moderateQuotes": "Умеренный: цитат ≥"
+      },
+      "autocode": {
+        "defaultLower": "Нижний порог по умолчанию",
+        "defaultUpper": "Верхний порог по умолчанию",
+        "sliderStep": "Шаг ползунка",
+        "sliderMinGap": "Мин. интервал ползунка",
+        "histogramBins": "Столбцы гистограммы"
+      },
+      "display": {
+        "searchMinChars": "Мин. число символов для поиска",
+        "activityPollInterval": "Интервал опроса активности"
+      },
+      "pipeline": {
+        "projectName": "Название проекта",
+        "writeIntermediate": "Записывать промежуточные файлы",
+        "skipTranscription": "Пропустить транскрипцию",
+        "maxSessionsBeforeConfirm": "Макс. число сессий до подтверждения"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Окно поиска ключевого кадра",
+        "fallbackFrameTime": "Резервное время кадра",
+        "thumbnailWidth": "Ширина миниатюры",
+        "jpegQuality": "Качество JPEG"
+      },
+      "server": {
+        "serverPort": "Порт сервера",
+        "miroAccessToken": "Токен доступа Miro"
+      },
+      "logging": {
+        "logLevel": "Уровень журнала (файл)",
+        "logFileMaxSize": "Макс. размер файла журнала",
+        "logBackupCount": "Число резервных копий журнала"
+      },
+      "timing": {
+        "minRunsEstimate": "Мин. число запусков до оценки",
+        "minRunsRange": "Мин. число запусков до ±диапазона"
+      }
+    }
+  },
+    "pipeline": {
+      "intro": "Просмотр моделей, которые Bristlenose сейчас использует для каждого этапа конвейера, только для чтения. Чтобы изменить движок, отредактируйте настройки (переменные окружения или файл .env).",
+      "loading": "Загрузка представления конвейера…",
+      "error": "Не удалось загрузить представление конвейера",
+      "keys": "ключи",
+      "keysNone": "нет",
+      "ollama": "ollama",
+      "running": "запущено",
+      "notDetected": "не обнаружено",
+      "available": "доступно",
+      "unavailable": "недоступно",
+      "alternatives": {
+        "summaryHeading": "Движки LLM на этом хосте",
+        "available": "Доступно",
+        "unavailable": "Недоступно",
+        "none": "нет"
+      },
+      "backends": {
+        "local_ollama": "Локально (Ollama)",
+        "builtin_anonymiser": "Встроенный анонимизатор"
+      },
+      "glyph": {
+        "available": "доступно",
+        "unavailable": "недоступно",
+        "skipped": "неприменимо на этом хосте"
+      },
+      "column": {
+        "model": "Модель",
+        "availability": "Доступность",
+        "quality": "Качество",
+        "notes": "Примечания"
+      },
+      "key": {
+        "italic_label": "курсив",
+        "synthesised": "из ваших настроек, а не из нашего каталога"
+      },
+      "qualifier": {
+        "default": "по умолчанию",
+        "current": "текущая",
+        "your_deployment": "ваше развёртывание Azure"
+      },
+      "quality": {
+        "glyph": {
+          "excellent": "отличное качество",
+          "good": "хорошее качество",
+          "marginal": "приемлемое качество",
+          "avoid": "избегать — качество слишком низкое",
+          "untested": "не проверено"
+        },
+        "untested": "не проверено",
+        "local_speaker_id_acceptable": "Локальные модели хорошо определяют говорящих",
+        "local_topic_segmentation_acceptable": "Локальные модели хорошо разбивают темы",
+        "local_quote_extraction_miss_rate": "малые модели пропускают многосоставные цитаты",
+        "local_quote_clustering_drift": "малые модели кластеризуют цитаты непоследовательно",
+        "local_thematic_grouping_drift": "малые модели отклоняются при тематическом синтезе",
+        "mlx_whisper_apple_silicon_optimal": "оптимально на Apple Silicon",
+        "faster_whisper_cpu_baseline": "надёжный базовый уровень на ЦП; графический процессор не требуется"
+      },
+      "actions": {
+        "obtain_anthropic_key": "получите ключ API на console.anthropic.com и задайте ANTHROPIC_API_KEY или вставьте в Настройки → Ключи",
+        "obtain_openai_key": "получите ключ API на platform.openai.com и задайте OPENAI_API_KEY или вставьте в Настройки → Ключи",
+        "obtain_google_key": "получите ключ API на aistudio.google.com и задайте GOOGLE_API_KEY или вставьте в Настройки → Ключи",
+        "configure_azure": "задайте ключ, конечную точку и развёртывание Azure в Настройки → Ключи",
+        "start_ollama": "запустите службу Ollama (ollama serve)",
+        "install_mlx_whisper": "pip install mlx-whisper (требуется Apple Silicon)",
+        "install_ctranslate2": "pip install ctranslate2",
+        "install_presidio": "pip install bristlenose[redact-pii], чтобы включить встроенный анонимизатор",
+        "enable_pii_redaction": "запустите с --redact-pii или задайте pii_enabled=true"
+      },
+      "reasons": {
+        "no_anthropic_key": "ключ API Claude не задан",
+        "no_openai_key": "ключ API ChatGPT не задан",
+        "no_azure_key": "ключ Azure OpenAI не задан",
+        "no_azure_endpoint": "конечная точка Azure не задана",
+        "no_azure_deployment": "развёртывание Azure не задано",
+        "no_google_key": "ключ API Gemini не задан",
+        "ollama_not_running": "Ollama не запущен",
+        "apple_fm_check_desktop": "проверьте в приложении для настольного компьютера",
+        "requires_apple_silicon": "требуется Apple Silicon",
+        "mlx_whisper_not_installed": "MLX Whisper не установлен",
+        "ctranslate2_not_installed": "ctranslate2 не установлен",
+        "presidio_not_installed": "Встроенный анонимизатор не установлен",
+        "spacy_model_missing": "языковая модель не установлена",
+        "pii_disabled": "удаление персональных данных отключено"
+      }
+    }
+}

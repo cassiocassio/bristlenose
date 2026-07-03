@@ -38,7 +38,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
-| `bristlenose_branch slavic/` | `slavic` | feature | Slavic plural localisation — Phase 1 (Polish `pl` locale + CLDR plural wiring) |
+| `bristlenose_branch slavic/` | `slavic` | feature | Slavic localisation — pl + ru + uk locales (machine-seeded, pending native review) |
 
 
 
@@ -164,13 +164,13 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ### `slavic`
 
-**Kind:** feature — Slavic plural localisation, Phase 1
-**Status:** Just started
+**Kind:** feature — Slavic localisation (pl + ru + uk)
+**Status:** Phases 1 + 2 landed (machine-seeded), pending native review
 **Started:** 3 Jul 2026
 **Worktree:** `/Users/cassio/Code/bristlenose_branch slavic/`
 **Remote:** local only (push when ready)
 
-**What it does:** Slavic plural groundwork Phase 1 — add the Polish (`pl`) locale and wire its CLDR plural rules, following Phase 0 (Swift CLDR selector rules for pl/ru/uk, landed on main 2 Jul 2026). Web gets plurals free via i18next; the Swift desktop selector is the sole hand-rolled path. Lingo cross-check for seeded values. _(Purpose inferred from the `project_slavic_plural_groundwork` memory — confirm/adjust the exact Phase-1 scope with the next session's brief.)_
+**What it does:** Adds the **Polish (`pl`)**, **Russian (`ru`)**, and **Ukrainian (`uk`)** locales end-to-end across web + Python + native Swift, following Phase 0 (Swift CLDR selector rules for pl/ru/uk, landed on main 2 Jul). Each: 9 namespace JSON files with all four CLDR plural forms (pl `one/few/many/other`; ru+uk share the East-Slavic rule where `_one` recurs at 21/31 so it interpolates `{{count}}`), enrolled at all 9 registration sites (6 web/Python + 3 native Swift picker/tests), 21 Apple-HIG + QDA glossary rows each. Web gets plurals free via i18next; the Swift desktop selector is the sole hand-rolled path. Commits: pl `a3995ecb`; ru+uk to follow. Verified: parity, pytest, ruff, frontend build + size gate (also fixed a pre-existing size-gate bug — `preflight-*` locale chunks were never excluded), Swift `I18nTests`. **Machine-seeded — native review is the ship gate.** Deep-research + UX-community terminology + per-language reviewer briefs captured in the branch's gitignored review notes. Weblate enablement + website go-live deferred to the user (respecting the no-promises rule until reviewed + released).
 
 **Files this branch will touch:**
 - `bristlenose/locales/pl/` (new — 9 namespace files) and the registration sites (`bristlenose/i18n.py`, `frontend/src/i18n/index.ts`, `bristlenose/doctor.py`, both settings pickers, `LocaleStore.test.ts`)

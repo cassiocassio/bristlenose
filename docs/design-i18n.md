@@ -404,7 +404,7 @@ The Libre plan carries one condition: attribution. Mention Weblate in the README
 - Monolingual base: `bristlenose/locales/en/{ns}.json` for each component
 - Components share the same repo clone via `weblate://bristlenose/common`
 
-**Glossary:** uploaded from `bristlenose/locales/glossary.csv` — Apple HIG terms + QDA domain terms (Codebook, Quotes, Sessions, etc.) across es/fr/de/ko/ja/cs.
+**Glossary:** uploaded from `bristlenose/locales/glossary.csv` — Apple HIG terms + QDA domain terms (Codebook, Quotes, Sessions, etc.) across es/fr/de/ko/ja/cs/it/pl/ru/uk.
 
 **Translation instructions:** linked to `TRANSLATING.md` in project settings.
 
@@ -519,15 +519,38 @@ directly in `bristlenose/locales/cs/desktop.json` — chrome counts are top-leve
 **You don't need to touch `_many` unless you want to** — it's CLDR-canonical
 shape, never rendered in our UI.
 
-**For future Slavic locales (Polish, Russian, Ukrainian, Slovak).** The
-mechanism extends — add a `case "pl":` (etc.) branch to `pluralCategory` with
-that language's CLDR rules and seed the four-form set across all keys carrying
-`_few`. The boundary rules differ (Polish has its own; Russian/Ukrainian distinguish
-`many` from `other` for integers, unlike Czech). The Python test
-`test_four_form_locales_carry_all_forms` and `test_chrome_count_four_form_locales_carry_all_forms`
-already gate on presence of `_few` — so any new four-form locale auto-acquires
-coverage without a test edit. The Swift `@Test` (`localisedOverflowText_czech_selectsFewForm`)
-should be mirrored per language; the assertion shape is generic.
+#### Polish / Russian / Ukrainian plurals — shipped 3 Jul 2026 (branch `slavic`, machine-seeded)
+
+Polish (Phase 1, `a3995ecb`) then Russian + Ukrainian (Phase 2) extend the same
+four-form mechanism, with **two boundary differences from Czech** that are easy to get
+wrong:
+
+1. **`many` fires for integers.** Unlike Czech (where `many` is decimals-only and never
+   renders in our integer-only UI), pl/ru/uk return `many` for real integer counts —
+   Polish `many` covers 0, 5–21, 25–31…; ru/uk `many` covers 0, 5–20, 11–14, 25–30…. So
+   `_many` is **not** dead CLDR shape here — it renders constantly, and every count-bearing
+   key carries a genuine `_many` form.
+2. **`_one` recurrence differs by language.** Polish `one` = `n == 1` only, so its `_one`
+   may hardcode "1" (like en). **Russian/Ukrainian `one` = `n%10==1 ∧ n%100!=11`** — it
+   recurs at 21, 31, 41, 101… so a ru/uk `_one` string **must interpolate `{{count}}`**,
+   never hardcode "1" (else "21 сесія" would render as "1 сесія"). The parity checker
+   enforces this per-locale (`_one` must carry `{{count}}` for ru/uk count-driven groups).
+
+Russian and Ukrainian share the **identical** integer rule (one shared `case "ru", "uk":`
+branch in `pluralCategory`). Polish is standalone. Both branches + boundary tests
+(`pluralCategory_polish_integerRule`, `pluralCategory_russianUkrainian_shareIntegerRule`)
+landed in Phase 0 (`0aca876b`). The Python tests `test_four_form_locales_carry_all_forms` /
+`test_chrome_count_four_form_locales_carry_all_forms` gate on `_few` presence, so a new
+four-form locale auto-acquires coverage without a test edit.
+
+**Register (Apple-sourced):** pl uses the **imperative** for menu commands (Zapisz, Cofnij);
+ru/uk use the **infinitive** (Сохранить/Зберегти, Отменить/Скасувати), addressing formally
+(вы / ви). Native-reviewer briefs, the cited localization-research terminology table, and the
+UX-community terminology findings are kept in the branch's gitignored review notes. Machine-seeded
+— native review is the gate, not the seed.
+
+**Slovak (`sk`)** remains the one un-started Slavic candidate — same mechanism, its own
+boundary rule, no demand signal yet.
 
 ### Future locales (deferred)
 

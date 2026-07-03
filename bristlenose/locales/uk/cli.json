@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "Рушій транскрибування та вилучення цитат для дослідження користувачів.",
+  "stage": {
+    "ingest": "Приймання",
+    "extractAudio": "Вилучення аудіо",
+    "transcribe": "Транскрибування",
+    "identifySpeakers": "Визначення мовців",
+    "mergeTranscript": "Об’єднання транскрипту",
+    "piiRemoval": "Вилучення персональних даних",
+    "topicSegmentation": "Сегментація за темами",
+    "quoteExtraction": "Вилучення цитат",
+    "quoteClustering": "Кластеризація цитат",
+    "thematicGrouping": "Групування за темами",
+    "render": "Формування"
+  },
+  "error": {
+    "noInput": "Не вказано вхідну теку.",
+    "notFound": "Теку не знайдено: {path}",
+    "noFiles": "У теці {path} не знайдено аудіо-, відеофайлів чи файлів транскрипту"
+  },
+  "progress": {
+    "complete": "Завершено",
+    "failed": "Помилка",
+    "skipped": "Пропущено"
+  }
+}

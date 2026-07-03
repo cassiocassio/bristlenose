@@ -308,3 +308,45 @@ Quotes,Cytaty,pl,QDA term — countable: cytat
 Sessions,Sesje,pl,QDA term
 Signals,Sygnały,pl,QDA term
 Codes,Kody,pl,QDA term
+Save,Сохранить,ru,Apple HIG
+Cancel,Отмена,ru,Apple HIG (button); Отменить = Undo
+Close,Закрыть,ru,Apple HIG
+Copy,Скопировать,ru,Apple HIG (Edit menu)
+Delete,Удалить,ru,Apple HIG; Убрать = Remove
+Undo,Отменить,ru,Apple HIG (macOS Edit menu)
+Redo,Повторить,ru,Apple HIG (macOS Edit menu)
+Search,Найти,ru,Apple HIG (Find); label = Поиск
+Print,Напечатать,ru,Apple HIG
+Export,Экспортировать,ru,Apple HIG
+Settings,Настройки,ru,Apple HIG; alt Параметры
+Open,Открыть,ru,Apple HIG
+Hide,Скрыть,ru,Apple HIG
+Accept,Принять,ru,Apple HIG
+Apply,Применить,ru,Apple HIG
+Reset,Сбросить,ru,Apple HIG
+Codebook,Книга кодов,ru,QDA convention; alt Кодировочная схема
+Quotes,Цитаты,ru,QDA term — countable: цитата
+Sessions,Сессии,ru,QDA term
+Signals,Сигналы,ru,product term
+Codes,Коды,ru,QDA term
+Save,Зберегти,uk,Apple HIG
+Cancel,Скасувати,uk,Apple HIG
+Close,Закрити,uk,Apple HIG
+Copy,Скопіювати,uk,Apple HIG (Edit menu)
+Delete,Видалити,uk,Apple HIG; Вилучити = Remove
+Undo,Відмінити,uk,disambiguate from Cancel = Скасувати
+Redo,Повторити,uk,Apple HIG (macOS Edit menu)
+Search,Знайти,uk,Apple HIG (Find); label = Пошук
+Print,Надрукувати,uk,Apple HIG
+Export,Експортувати,uk,Apple HIG
+Settings,Параметри,uk,Apple HIG; alt Налаштування
+Open,Відкрити,uk,Apple HIG
+Hide,Сховати,uk,Apple HIG; alt Приховати
+Accept,Прийняти,uk,Apple HIG
+Apply,Застосувати,uk,Apple HIG
+Reset,Скинути,uk,Apple HIG
+Codebook,Книга кодів,uk,QDA convention; alt Схема кодування
+Quotes,Цитати,uk,QDA term — countable: цитата
+Sessions,Сесії,uk,QDA term
+Signals,Сигнали,uk,product term
+Codes,Коди,uk,QDA term

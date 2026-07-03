@@ -1,0 +1,6 @@
+{
+  "start": "Запуск конвейера для {path}",
+  "stageStart": "Выполняется {stage}…",
+  "stageComplete": "{stage} — готово ({duration})",
+  "done": "Конвейер завершён. Результат: {output}"
+}

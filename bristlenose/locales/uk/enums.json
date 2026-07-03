@@ -1,0 +1,17 @@
+{
+  "sentiment": {
+    "frustration": "Роздратування",
+    "confusion": "Розгубленість",
+    "doubt": "Сумнів",
+    "surprise": "Здивування",
+    "satisfaction": "Задоволення",
+    "delight": "Захват",
+    "confidence": "Упевненість"
+  },
+  "speakerRole": {
+    "researcher": "Дослідник",
+    "participant": "Учасник",
+    "observer": "Спостерігач",
+    "unknown": "Невідомо"
+  }
+}

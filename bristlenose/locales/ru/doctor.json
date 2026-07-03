@@ -1,0 +1,10 @@
+{
+  "heading": "Диагностика",
+  "checkOk": "{label}",
+  "checkFail": "{label}",
+  "checkWarn": "{label}",
+  "summary": {
+    "allPassed": "Все проверки пройдены.",
+    "issuesFound": "Найдено проблем: {count}."
+  }
+}

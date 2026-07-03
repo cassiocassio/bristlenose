@@ -398,6 +398,11 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
             bridgeHandler.setWindowActive(false)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .bristlenosePaletteChanged)) { _ in
+            // Colour-palette picker changed — apply live to the report webview
+            // (runtime data-color-theme swap, no serve restart).
+            bridgeHandler.setColorPalette()
+        }
         .onChange(of: selection) { _, newSelection in
             // Switching the viewed project never cancels a background run — the
             // pipeline runs as an independent subprocess. (The cancel-on-switch

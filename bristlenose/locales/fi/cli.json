@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "Käyttäjätutkimuksen litterointi- ja sitaattien poimintamoottori.",
+  "stage": {
+    "ingest": "Sisäänluku",
+    "extractAudio": "Äänen erotus",
+    "transcribe": "Litterointi",
+    "identifySpeakers": "Puhujien tunnistus",
+    "mergeTranscript": "Litteroinnin yhdistäminen",
+    "piiRemoval": "Henkilötietojen poisto",
+    "topicSegmentation": "Aiheiden jäsentely",
+    "quoteExtraction": "Sitaattien poiminta",
+    "quoteClustering": "Sitaattien ryhmittely",
+    "thematicGrouping": "Temaattinen ryhmittely",
+    "render": "Renderöinti"
+  },
+  "error": {
+    "noInput": "Syötekansiota ei ole määritetty.",
+    "notFound": "Kansiota ei löytynyt: {path}",
+    "noFiles": "Kansiosta {path} ei löytynyt ääni-, video- tai litterointitiedostoja."
+  },
+  "progress": {
+    "complete": "Valmis",
+    "failed": "Epäonnistui",
+    "skipped": "Ohitettu"
+  }
+}

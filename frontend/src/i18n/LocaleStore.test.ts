@@ -12,10 +12,10 @@ vi.mock("./index", () => {
   const addResourceBundle = vi.fn();
   return {
     default: { changeLanguage, hasResourceBundle, addResourceBundle },
-    SUPPORTED_LOCALES: ["en", "es", "ja", "fr", "de", "ko", "it", "pl", "ru", "uk", "da", "sv", "nb", "tr", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK"],
+    SUPPORTED_LOCALES: ["en", "es", "ja", "fr", "de", "ko", "it", "pl", "ru", "uk", "da", "sv", "nb", "tr", "fi", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK"],
     isSupportedLocale: (v: unknown) =>
       typeof v === "string" &&
-      ["en", "es", "ja", "fr", "de", "ko", "it", "pl", "ru", "uk", "da", "sv", "nb", "tr", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK"].includes(v),
+      ["en", "es", "ja", "fr", "de", "ko", "it", "pl", "ru", "uk", "da", "sv", "nb", "tr", "fi", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK"].includes(v),
     ensureLocaleLoaded: vi.fn().mockResolvedValue(undefined),
   };
 });

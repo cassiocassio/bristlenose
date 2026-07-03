@@ -1,0 +1,45 @@
+{
+  "whisper": {
+    "banner_intro": "Bristlenose tarvitsee Whisper-litterointimallin ({size}).",
+    "verb_downloading": "Ladataan",
+    "verb_resuming": "Jatketaan latausta",
+    "fetching": "{verb} {repo_id}...",
+    "ready": "Whisper-malli valmis",
+    "aborted_no_fetch": "Whisper-mallia {repo_id} ei ole välimuistissa, ja --no-fetch on asetettu. Nouda se etukäteen komennolla `bristlenose doctor --fetch`, tai aja uudelleen ilman --no-fetch-valitsinta."
+  },
+  "ffmpeg": {
+    "banner_missing": "ffmpeg vaaditaan videotiedostojen lukemiseen. Ei löytynyt PATH-polusta.",
+    "prompt_brew_install": "Suoritetaanko `brew install ffmpeg` nyt?",
+    "installed": "ffmpeg asennettu",
+    "aborted": "ffmpeg vaaditaan, mutta sitä ei löytynyt. Asenna se yllä olevalla komennolla ja aja uudelleen.",
+    "label_macos": "macOS",
+    "label_ubuntu": "Ubuntu / Debian",
+    "label_fedora": "Fedora / RHEL",
+    "label_arch": "Arch / Manjaro",
+    "label_other": "Muu",
+    "cmd_macos": "brew install ffmpeg",
+    "cmd_ubuntu": "sudo apt install ffmpeg",
+    "cmd_fedora": "sudo dnf install ffmpeg",
+    "cmd_arch": "sudo pacman -S ffmpeg",
+    "cmd_other": "https://ffmpeg.org/download.html"
+  },
+  "api_key": {
+    "source_attribution": "Käytetään {provider_display}-API-avainta lähteestä {source}. Vahvistetaan: ~0,0001 $, ei litterointisisältöä.",
+    "rejected_invalid_key": "{provider_display}-API-avaimesi hylättiin (HTTP 401).\nTarkista avain osoitteessa {keys_url}\nja aja uudelleen.",
+    "no_credit": "{provider_display}-tililläsi ei ole käytettävissä API-saldoa.\nLisää saldoa osoitteessa {billing_url}\n({minimum_note})\nja aja uudelleen.",
+    "model_unavailable": "Pyydettyä mallia ei ole käytettävissä {provider_display}-tilillesi. Tarkista käytettävissä olevat mallit osoitteessa {console_url} ja joko ota malli käyttöön tai vaihda `--llm-model` malliin, jota tilisi voi käyttää.",
+    "rate_limit": "{provider_display} rajoittaa tämän tilin pyyntötahtia. Odota hetki ja aja uudelleen, tai pienennä `llm_concurrency`-arvoa bristlenose.toml-tiedostossa.",
+    "generic": "Palveluntarjoaja sanoo: {message}.\nJos tämä näyttää saldo-ongelmalta, lisää saldoa palveluntarjoajan laskutuskonsolissa ja aja uudelleen.",
+    "network": "Palveluntarjoajaan ei saatu yhteyttä: {message}.\nTarkista DNS-, VPN- tai välityspalvelinasetukset ja aja uudelleen.",
+    "azure_deployment_unavailable": "Azure-käyttöönottoa ei löytynyt. Tämä on Azure-portaalisi **käyttöönoton nimi**, ei mallin tunnus — tarkista se Azure-portaalista kohdasta Azure OpenAI → Deployments. Päivitä BRISTLENOSE_AZURE_DEPLOYMENT (tai azure_deployment bristlenose.toml-tiedostossa) ja aja uudelleen. Taustalla: {message}.",
+    "google_model_unavailable": "Gemini epäsi pääsyn pyydettyyn malliin. Tämä johtuu yleensä tasorajoituksesta, aluerajoituksesta tai siitä, ettei laskutusta ole otettu käyttöön — tarkista Google Cloud Console osoitteessa {console_url}. Jos laskutus on määritetty, kokeile toista mallia valitsimella --llm-model. Taustalla: {message}.",
+    "local_server_down": "Ollama ei näytä olevan käynnissä. Käynnistä se komennolla `ollama serve` (tai avaa Ollama-sovellus macOS:ssä) ja aja uudelleen. Taustalla: {message}.",
+    "local_model_not_pulled": "Pyydettyä paikallista mallia ei ole noudettu. Nouda se komennolla `ollama pull <model>` (tarkista mallin nimi bristlenose.toml-tiedostosta tai --llm-model-valitsimesta) ja aja uudelleen. Taustalla: {message}."
+  },
+  "pii": {
+    "downloading": "Ladataan henkilötietojen tunnistinta (~12 Mt, kertaluontoinen)..."
+  },
+  "closing": {
+    "no_more_questions": "Ei enää kysymyksiä.{estimate_suffix} Ctrl+C milloin tahansa."
+  }
+}

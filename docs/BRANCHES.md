@@ -39,6 +39,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch slavic/` | `slavic` | feature | Localisation wave — pl/ru/uk + da/sv/nb + tr locales + i18n tooling (machine-seeded, pending native review) |
+| `bristlenose_branch fi/` | `fi` | feature | Finnish (fi) locale — 9 namespaces + 9 registration sites (machine-seeded, pending native review; QDA terms validated against Finnish academic sources, reviewer brief kept locally) |
 
 
 

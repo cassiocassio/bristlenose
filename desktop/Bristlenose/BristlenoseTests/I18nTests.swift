@@ -89,7 +89,7 @@ struct I18nTests {
 
     @Test func supportedLocales_containsExpected() {
         let expected: Set<String> = [
-            "en", "es", "ja", "fr", "de", "ko", "cs", "it", "pl", "ru", "uk", "da", "sv", "nb", "tr", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK",
+            "en", "es", "ja", "fr", "de", "ko", "cs", "it", "pl", "ru", "uk", "da", "sv", "nb", "tr", "fi", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK",
         ]
         #expect(I18n.supportedLocales == expected)
     }

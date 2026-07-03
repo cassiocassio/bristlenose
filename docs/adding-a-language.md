@@ -337,3 +337,60 @@ key exists in `en`, missing in your locale → you seed it) vs a **wiring gap**
 fixable by seeding; needs i18n-ification first). Do NOT preemptively add the
 drift keys to your branch's `en` before rebasing — it breaks internal parity and
 risks a merge conflict. Rebase first, then seed your locale only.
+
+## Multi-form-plural + fan-out seeding (Slavic wave: pl/ru/uk, 3 Jul 2026)
+
+Three locales in one night. What the playbook above didn't yet capture:
+
+**Fan-out seeding is fast and reliable.** Per language, spawn **4 parallel translator
+agents** — one each for the big files (`common` ~522 keys, `desktop` ~390, `settings`
+~160) and one for the six small files (`cli/doctor/enums/pipeline/preflight/server`).
+Give each agent the exact en path, the exact target path, and one shared brief:
+keep keys byte-identical, preserve every `{{placeholder}}`, don't translate product
+names, literal UTF-8 (no `\u`), the register (see below), and the **plural rule as a
+worked example**. Each agent returns a short report: key count, plural groups it
+expanded, and ≤8 terms it's unsure about → that list *is* your reviewer brief seed.
+
+**Terminology: research BEFORE the glossary, not after.** For a family you don't
+speak, a background deep-research pass (Apple/MS/GNOME style guides + localized QDA
+tools + methodology lit) plus a UX-community pass (how practitioners actually talk)
+pays for itself. Highest-leverage findings from this wave: menu-command **register
+differs by language** (Polish imperative `Zapisz`; ru/uk infinitive `Сохранить/Зберегти`);
+UX practitioners use **loanwords** dictionaries miss (insight → инсайт/інсайт); and
+`sentiment`/`codebook`/`Settings` are genuinely contested — pin them per language.
+`applelocalization.com`'s dataset is useless for pl/ru/uk (mostly untranslated 3rd-party
+bundles) — source Apple strings from the localized `support.apple.com/{locale}/guide/`
+Mac Help pages instead.
+
+**Plural gotchas that bite MT and naive checkers** (all now enforced — see below):
+- **`many` fires for integers** in pl/ru/uk (unlike Czech, where `many` is decimals-only).
+  Every count key needs a real `_many` form; it renders constantly.
+- **`_one` recurrence differs.** Polish `one` = `n==1` only, so its `_one` may hardcode
+  "1" (like en). **Russian/Ukrainian `one` = `n%10==1 ∧ n%100!=11`** — recurs at 21/31/101,
+  so a ru/uk `_one` **must interpolate `{{count}}`**, never hardcode "1". ru+uk share one
+  rule; pl is standalone. (Swift `pluralCategory` branches + tests landed in Phase 0.)
+- **en's `_one` hardcodes the number** (`"1 interview"`, no `{{count}}`). So a strict
+  placeholder-equality check *falsely* flags a ru/uk `_one` that correctly adds `{{count}}`.
+  `scripts/check-locales.py` now compares plural forms against the en **group's**
+  placeholder union (forbidding only *unknown* placeholders), not the same-suffix en key.
+- **Platform-suffixed keys are not plurals.** `label_macos` / `cmd_other` (preflight
+  ffmpeg install hints) end in `_other`/`_one`-ish but are keyed by platform, not count.
+  A plural-completeness check keyed on "has `_one`" correctly ignores them; a naive
+  "ends in `_other`" check will false-positive.
+- **Unsuffixed base + `_other`.** `analysis.basedOnTags` is a bare key + `basedOnTags_other`,
+  and the call site passes `count`, so a four-form locale wants all four suffixed forms.
+  Keep the unsuffixed base too (for no-count call safety + parity).
+
+**Enforcement now catches all of the above (fold, don't re-hand-check):**
+- `scripts/check-locales.py` — placeholder union for plural groups; ru/uk `_one` must
+  carry `{{count}}` (hard error); `_few`/`_many` no longer flagged as orphans.
+- `tests/test_pipeline_diagnostic_locale_keys.py` — the hardcoded `_ALL_LOCALES` /
+  `_PLURAL_LOCALES` lists went stale (shipped it/pl/ru/uk untested); now updated **plus**
+  a `test_every_locale_dir_is_classified` guard that fails the moment a new locale dir
+  isn't classified, so this can't silently rot again.
+- **Size gate**: the `size-limit` exclude list must name **every** lazy locale namespace.
+  It was missing `preflight-*`, so each locale's preflight chunk was wrongly counted
+  (219/220 kB near-ceiling was mostly this). When you add a namespace, add its exclude.
+- Verify: `parity` (keys+placeholders+plural forms per locale), `check-locales.py`,
+  `pytest` (confirm the new locale is in the plural test lists), `npm run build && npm run size`,
+  Swift `I18nTests` (`supportedLocales_containsExpected` + any `pluralCategory_*` rule test).

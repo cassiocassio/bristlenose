@@ -24,9 +24,18 @@ _LOCALES_DIR = Path(__file__).resolve().parents[1] / "bristlenose" / "locales"
 # override that ships only HK term deltas and resolves the rest via the
 # fallback chain — so it is NOT listed here (these tests read each locale's
 # desktop.json directly, with no fallback).
-_ALL_LOCALES = ("en", "es", "fr", "de", "ko", "ja", "cs", "pt-BR", "pt-PT", "zh-Hant")
-_PLURAL_LOCALES = ("en", "es", "fr", "de", "cs", "pt-BR", "pt-PT")
+_ALL_LOCALES = (
+    "en", "es", "fr", "de", "ko", "ja", "cs", "it", "pl", "ru", "uk", "pt-BR", "pt-PT", "zh-Hant"
+)
+# Locales that inflect by count. it = one/other (like es/fr/de); pl/ru/uk are
+# four-form (one/few/many/other) but still carry one+other, so they pass the
+# one_and_other check and additionally get four-form coverage below.
+_PLURAL_LOCALES = ("en", "es", "fr", "de", "cs", "it", "pl", "ru", "uk", "pt-BR", "pt-PT")
 _SINGLE_FORM_LOCALES = ("ko", "ja", "zh-Hant")
+# Thin-override locales resolved via the runtime fallback chain — these tests
+# read each locale's desktop.json directly (no fallback), so they're not listed
+# in _ALL_LOCALES. Kept here so the classification guard below knows they exist.
+_FALLBACK_ONLY_LOCALES = ("zh-Hant-HK",)
 
 _REQUIRED_PILL_CATEGORIES = (
     "auth",
@@ -235,4 +244,53 @@ def test_status_and_chrome_pipeline_agree(locale: str) -> None:
         assert status[key] == chrome[key], (
             f"locale={locale} status.{key}={status[key]!r} != "
             f"chrome.pipeline.{key}={chrome[key]!r}"
+        )
+
+
+# ── Guards added after the pl/ru/uk (Slavic) wave, 3 Jul 2026 ────────────────
+
+def test_every_locale_dir_is_classified() -> None:
+    """Every locale directory must be classified in one of the lists above.
+
+    The it/pl/ru/uk locales shipped while these lists still read
+    en/es/fr/de/ko/ja/cs/pt/zh — so their plurals went UNTESTED here and the
+    suite still passed green. This guard fails the moment a new locale dir
+    exists that no test list knows about, forcing whoever adds it to also
+    classify its CLDR plural shape (plural / single-form / fallback-only).
+    """
+    present = {
+        d.name
+        for d in _LOCALES_DIR.iterdir()
+        if d.is_dir() and not d.name.startswith(".")
+    }
+    present.discard("en")  # source language, not a target
+    classified = set(_ALL_LOCALES) | set(_FALLBACK_ONLY_LOCALES)
+    unclassified = present - classified
+    assert not unclassified, (
+        f"locale dir(s) not classified in this test: {sorted(unclassified)} — add "
+        "each to _ALL_LOCALES (+ _PLURAL_LOCALES or _SINGLE_FORM_LOCALES per its "
+        "CLDR rule), or to _FALLBACK_ONLY_LOCALES if it's a thin fallback override."
+    )
+
+
+# Locales whose CLDR `one` category recurs at 21/31/101 (rule: n%10==1 ∧ n%100!=11),
+# so a count-driven `_one` string MUST interpolate {{count}} — hardcoding "1" would
+# render "1 сесія" for count 21. Polish is NOT here: pl `one` = n==1 only, so its
+# `_one` may legitimately hardcode "1" (like English). See design-i18n.md.
+_RECURRING_ONE_LOCALES = ("ru", "uk")
+
+
+@pytest.mark.parametrize("locale", _RECURRING_ONE_LOCALES)
+@pytest.mark.parametrize("prefix", _CHROME_COUNT_PREFIXES)
+def test_recurring_one_locales_interpolate_count(prefix: str, locale: str) -> None:
+    # For ru/uk, if the `_other` form is count-driven ({{count}} present), the
+    # `_one` form must ALSO carry {{count}} — because `one` recurs at 21/31/…
+    chrome = _chrome_count(locale)
+    other = chrome.get(f"{prefix}_other", "")
+    one = chrome.get(f"{prefix}_one", "")
+    if "{{count}}" in other:
+        assert "{{count}}" in one, (
+            f"locale={locale} chrome.{prefix}_one={one!r} must interpolate "
+            "{{count}} — in ru/uk the `one` form recurs at 21/31/101, so a "
+            "hardcoded number renders wrong (e.g. '1 …' for count 21)."
         )

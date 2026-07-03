@@ -192,7 +192,20 @@ export function installBridge(deps: BridgeDeps): void {
      */
     setColorPalette(palette: string): void {
       if (!isPalette(palette)) return;
-      document.documentElement.setAttribute("data-color-theme", palette);
+      const root = document.documentElement;
+      root.setAttribute("data-color-theme", palette);
+      // WKWebView doesn't reliably repaint a style change pushed from Swift's
+      // callAsyncJavaScript (no user gesture / render tick): the tokens update
+      // correctly but the pixels stay stale. Diagnosed 3 Jul 2026 — the computed
+      // accent was already the new palette's value, only paint lagged; a WebKit
+      // repro with the real 281 KB CSS confirmed the cascade itself is fine. An
+      // imperceptible opacity nudge across one frame forces a compositor repaint
+      // without touching layout or scroll position. Browser Settings goes through
+      // handlePalette (real user gesture) and never hits this; harmless there.
+      root.style.opacity = "0.999";
+      requestAnimationFrame(() => {
+        root.style.opacity = "";
+      });
       try {
         localStorage.setItem("bristlenose-palette", JSON.stringify(palette));
       } catch {

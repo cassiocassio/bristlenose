@@ -1,6 +1,5 @@
 import SwiftUI
 import AppKit
-import SpriteKit
 
 /// The native AppKit `NSOutlineView` source-list sidebar (spec
 /// `design-desktop-sidebar-appkit.md`). Hosted in SwiftUI via
@@ -137,11 +136,6 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     private let scrollView = NSScrollView()
     private var roots: [OutlineNode] = []
 
-    /// SPIKE (`BristlenoseFlags.shoalSidebar`): the SKView flocking behind the
-    /// frosted sidebar, retained so it can be paused later. Nil when the spike
-    /// flag is off. See `docs/private/design-shoal-ambient-future.md` §C.
-    private var shoalSKView: SKView?
-
     /// Native `NSPasteboard` type for internal project drags (decision 22 Jun:
     /// native, not `Transferable` — this migration removes the other SwiftUI drag
     /// sites). A distinct UTI so it never collides with `public.file-url` (the
@@ -246,76 +240,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         scrollView.drawsBackground = false   // let the column's vibrancy through (§1.4)
         scrollView.automaticallyAdjustsContentInsets = true
 
-        guard BristlenoseFlags.shoalSidebar else {
-            view = scrollView
-            return
-        }
-
-        // SPIKE — shoal flocking behind the translucent sidebar, Maps-style.
-        // Answers the one empirical unknown: does a `.withinWindow`
-        // NSVisualEffectView actually sample a Metal-backed SKView? Back-to-front
-        // the container is: SKView (flock) → frost (samples it) → transparent
-        // scrollView (rows on top). `drawsBackground = false` above is what lets
-        // the frost show through the rows. Flip on with:
-        //   defaults write app.bristlenose BristlenoseShoalSidebar -bool YES
-        // Deliberately always-on (no run / pref / Reduce-Motion gate yet) — that's
-        // the fastest path to the yes/no. If vibrancy samples the SKView, the
-        // follow-up is to gate it on an active run and feed live words.
-        // Design: docs/private/design-shoal-ambient-future.md §C.
-        let container = NSView()
-        container.autoresizingMask = [.width, .height]
-
-        let skView = SKView()
-        skView.frame = container.bounds
-        skView.autoresizingMask = [.width, .height]
-        skView.allowsTransparency = true
-        let scene = ShoalScene(size: CGSize(width: 220, height: 600))  // resizeFill adapts
-        scene.scaleMode = .resizeFill
-        // PROBE round 2 — the pink probe proved Metal composites into the sidebar
-        // (and the pastel-not-vivid pink showed the frost IS compositing over it),
-        // but a uniform colour can't reveal blur. Feed bold, dark, high-contrast
-        // words so we can actually SEE whether `.withinWindow` blurs non-uniform
-        // Metal content and whether flock text reads through the `.sidebar`
-        // material (the faint grey canned words were why nothing showed before).
-        // Set before present — spawnBoids runs in didMove. Delete after the call.
-        scene.liveWords = ["I mean", "sort of", "honestly", "you know", "actually",
-                           "right so", "it felt", "I guess", "the problem", "at first"]
-            .map { WordPool.Word(text: $0, fontSize: 18, color: .labelColor.withAlphaComponent(0.65)) }
-        skView.presentScene(scene)
-
-        let frost = NSVisualEffectView()
-        frost.frame = container.bounds
-        frost.autoresizingMask = [.width, .height]
-        frost.blendingMode = .withinWindow   // sample the SKView behind it, not the desktop
-        frost.state = .active
-        // FROSTINESS KNOBS (spike) — dial live, then relaunch. Apple exposes no raw
-        // blur radius; frostiness = material recipe × layer opacity.
-        //   material:  defaults write app.bristlenose BristlenoseShoalFrostMaterial underWindow
-        //     (sidebar | underWindow | content | header | windowBg | hud)
-        //   opacity:   defaults write app.bristlenose BristlenoseShoalFrostAlpha -float 0.75
-        //     (1.0 = full frost; lower = thinner, more of the sharp flock bleeds through)
-        let d = UserDefaults.standard
-        switch d.string(forKey: "BristlenoseShoalFrostMaterial") {
-        case "underWindow": frost.material = .underWindowBackground
-        case "content":     frost.material = .contentBackground
-        case "header":      frost.material = .headerView
-        case "windowBg":    frost.material = .windowBackground
-        case "hud":         frost.material = .hudWindow
-        default:            frost.material = .sidebar
-        }
-        if d.object(forKey: "BristlenoseShoalFrostAlpha") != nil {
-            frost.alphaValue = CGFloat(d.float(forKey: "BristlenoseShoalFrostAlpha"))
-        }
-
-        scrollView.frame = container.bounds
-        scrollView.autoresizingMask = [.width, .height]
-
-        container.addSubview(skView)      // back — the flock
-        container.addSubview(frost)       // middle — frosts the flock
-        container.addSubview(scrollView)  // front — rows on top
-
-        shoalSKView = skView
-        view = container
+        view = scrollView
     }
 
     /// Push a fresh tree + selection + active lens. Rebuilds the outline, restores

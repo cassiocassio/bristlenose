@@ -91,6 +91,15 @@ struct WebView: NSViewRepresentable {
         webView.uiDelegate = context.coordinator
         context.coordinator.webView = webView
 
+        // Translucent chrome (spike): let the window's vibrancy show through the
+        // WKWebView so the unified toolbar / titlebar frost samples real report
+        // content behind it, matching the Notes/Mail idiom on macOS 26 Tahoe.
+        // The SPA sets `body { background: transparent }` under
+        // `__BRISTLENOSE_EMBEDDED__`; without this, the WebView's own opaque
+        // paint would still cover the vibrancy. KVC because
+        // `drawsBackground` isn't exposed on the WKWebView Swift API.
+        webView.setValue(false, forKey: "drawsBackground")
+
         // Enable Web Inspector (right-click → Inspect Element) for debugging.
         #if DEBUG
         webView.isInspectable = true

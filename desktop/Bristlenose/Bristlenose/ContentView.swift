@@ -2088,6 +2088,14 @@ struct ContentView: View {
                             .accessibilityLabel(i18n.t("desktop.chrome.reportContent"))
                             .accessibilityHidden(!bridgeHandler.isReady)
                             .focusSection()
+                            // Translucent chrome (spike): extend the WebView
+                            // behind the unified toolbar so the toolbar frost
+                            // samples real report content, matching the
+                            // Notes/Mail idiom on macOS 26 Tahoe. The SPA gets
+                            // the toolbar inset via the bridge on `ready`
+                            // (BridgeHandler.syncToolbarInset) and pads its
+                            // top so first-of-content isn't cropped.
+                            .ignoresSafeArea(.container, edges: .top)
 
                         // Boot surface stays visible until the React SPA posts "ready"
                         // — same icon + tagline as the sidecar-starting phase, just

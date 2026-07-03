@@ -243,6 +243,34 @@ final class BridgeHandler: ObservableObject {
         }
     }
 
+    // MARK: - Toolbar inset sync (translucent chrome spike)
+
+    /// Push the unified titlebar+toolbar height (in CSS px) to the SPA so it
+    /// can top-pad its scroll containers, keeping first-of-content out from
+    /// under the frost. The WebView extends behind the toolbar via
+    /// `.ignoresSafeArea(.container, edges: .top)` (ContentView), so without
+    /// this pad the very top of the report is clipped by the frost band.
+    ///
+    /// Fired once on `ready`. NSWindow frame minus contentLayoutRect gives the
+    /// combined titlebar+toolbar height — the same delta an AppKit view would
+    /// see as its top safe-area inset. Static-at-ready is fine for alpha; live
+    /// re-post on window frame changes is a follow-up if the effect earns
+    /// polish (per the spike brief).
+    func syncToolbarInset() {
+        guard let webView, let window = webView.window else { return }
+        let frameHeight = window.frame.height
+        let contentHeight = window.contentLayoutRect.height
+        let inset = max(0, frameHeight - contentHeight)
+        Task {
+            try? await webView.callAsyncJavaScript(
+                "window.__bristlenose?.setToolbarInset?.(inset)",
+                arguments: ["inset": inset],
+                in: nil,
+                in: .page
+            )
+        }
+    }
+
     // MARK: - Colour palette sync
 
     /// Push the native colour-palette choice to the web layer — live, no reload.
@@ -303,6 +331,7 @@ final class BridgeHandler: ObservableObject {
             isReady = true
             syncAppearance()
             syncLocale()
+            syncToolbarInset()
             webView?.window?.makeFirstResponder(webView)
 
         case "route-change":

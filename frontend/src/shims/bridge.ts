@@ -185,6 +185,21 @@ export function installBridge(deps: BridgeDeps): void {
     },
 
     /**
+     * Called by native shell to push the unified titlebar+toolbar height (CSS
+     * px) so the SPA can top-pad content out from under the translucent frost.
+     * The WKWebView paints transparent and extends behind the toolbar
+     * (ContentView: .ignoresSafeArea(.container, edges: .top)), so without a
+     * pad the first row of content is clipped by the frost band. Rendered as
+     * `--bn-toolbar-inset` on <html>; report.css consumes it in the embedded
+     * body's padding-top calc. Fired once on `ready`; static-at-ready is fine
+     * for alpha per the spike brief.
+     */
+    setToolbarInset(px: unknown): void {
+      const n = typeof px === "number" && Number.isFinite(px) && px >= 0 ? px : 0;
+      document.documentElement.style.setProperty("--bn-toolbar-inset", `${n}px`);
+    },
+
+    /**
      * Called by native shell to push colour-palette changes — live, no reload.
      * The report is a runtime `data-color-theme` CSS swap, so (unlike typography)
      * the native picker applies it here instead of restarting the serve sidecar.

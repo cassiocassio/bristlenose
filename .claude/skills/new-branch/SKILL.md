@@ -376,7 +376,7 @@ made=0; skipped=0
 if [ -d "$MAIN_TRIAL" ]; then
   for src in "$MAIN_TRIAL"/*; do
     [ -e "$src" ] || continue                       # empty-glob guard
-    dst="$TRIAL/$(basename "$src")"
+    dst="$TRIAL/${src##*/}"                         # builtin, not $(basename) — basename hits the PATH/hash gremlin mid-loop (observed 3 Jul 2026: silent "command not found" → empty name → falsely "skipped 34", worktree left without trial-runs)
     if [ -e "$dst" ] || [ -L "$dst" ]; then
       skipped=$((skipped+1))                        # tracked fossda-opensource, or already linked
     else

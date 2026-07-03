@@ -35,7 +35,8 @@
     line-height: var(--bn-text-label-lh);
 }
 
-.bn-locale-select {
+.bn-locale-select,
+.bn-palette-select {
     font-size: var(--bn-text-label);
     padding: var(--bn-space-xs) var(--bn-space-sm);
     border: 1px solid var(--bn-colour-border);
@@ -46,11 +47,13 @@
     min-width: 10rem;
 }
 
-.bn-locale-select:hover {
+.bn-locale-select:hover,
+.bn-palette-select:hover {
     border-color: var(--bn-colour-border-hover);
 }
 
-.bn-locale-select:focus {
+.bn-locale-select:focus,
+.bn-palette-select:focus {
     outline: 2px solid var(--bn-colour-accent);
     outline-offset: 1px;
     border-color: var(--bn-colour-accent);

@@ -203,21 +203,25 @@ describe("SettingsModal", () => {
 
   // ── General section: Colour palette ────────────────────────────────────
 
-  it("renders palette radio buttons (Default / Edo)", () => {
+  const paletteSelect = () =>
+    screen.getByRole("combobox", { name: "Colour palette" }) as HTMLSelectElement;
+
+  it("renders the palette dropdown (Default / Edo)", () => {
     render(<SettingsModal open={true} onClose={vi.fn()} />);
-    expect(screen.getByLabelText("Default")).toBeTruthy();
-    expect(screen.getByLabelText("Edo")).toBeTruthy();
+    expect(Array.from(paletteSelect().options).map((o) => o.textContent)).toEqual([
+      "Default",
+      "Edo",
+    ]);
   });
 
   it("defaults palette to 'default' when nothing saved or injected", () => {
     render(<SettingsModal open={true} onClose={vi.fn()} />);
-    const def = screen.getByLabelText("Default") as HTMLInputElement;
-    expect(def.checked).toBe(true);
+    expect(paletteSelect().value).toBe("default");
   });
 
   it("applies data-color-theme and persists palette on change", () => {
     render(<SettingsModal open={true} onClose={vi.fn()} />);
-    fireEvent.click(screen.getByLabelText("Edo"));
+    fireEvent.change(paletteSelect(), { target: { value: "edo" } });
     expect(document.documentElement.getAttribute("data-color-theme")).toBe("edo");
     expect(localStorage.getItem("bristlenose-palette")).toBe('"edo"');
   });
@@ -225,15 +229,13 @@ describe("SettingsModal", () => {
   it("reads saved palette from localStorage", () => {
     localStorage.setItem("bristlenose-palette", '"edo"');
     render(<SettingsModal open={true} onClose={vi.fn()} />);
-    const edo = screen.getByLabelText("Edo") as HTMLInputElement;
-    expect(edo.checked).toBe(true);
+    expect(paletteSelect().value).toBe("edo");
   });
 
   it("does not clobber a server-injected palette when the user hasn't chosen", () => {
     document.documentElement.setAttribute("data-color-theme", "edo");
     render(<SettingsModal open={true} onClose={vi.fn()} />);
-    const edo = screen.getByLabelText("Edo") as HTMLInputElement;
-    expect(edo.checked).toBe(true);
+    expect(paletteSelect().value).toBe("edo");
     expect(document.documentElement.getAttribute("data-color-theme")).toBe("edo");
   });
 
@@ -279,8 +281,8 @@ describe("SettingsModal", () => {
     render(<SettingsModal open={true} onClose={vi.fn()} />);
     // The dropdown is always rendered (CSS hides it on wide viewports)
     const selects = screen.getAllByRole("combobox");
-    // One is the nav dropdown, one is the language selector
-    expect(selects.length).toBe(2);
+    // Nav dropdown + palette selector + language selector
+    expect(selects.length).toBe(3);
   });
 
   // ── Pipeline matrix (schema v4 — provider→model grain) ────────────────

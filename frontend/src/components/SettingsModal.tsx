@@ -36,8 +36,8 @@ const APPEARANCE_KEYS: { value: Appearance; labelKey: string }[] = [
   { value: "dark", labelKey: "appearance.dark" },
 ];
 
-// Colour palette — orthogonal to appearance (light/dark). Radios like appearance
-// while the set is small; derive from PALETTES so it extends automatically.
+// Colour palette — orthogonal to appearance (light/dark). A dropdown (not radios)
+// since the set will grow; options derive from PALETTES so it extends automatically.
 const PALETTE_KEY = "bristlenose-palette";
 const PALETTE_ATTR = "data-color-theme";
 const PALETTE_KEYS = PALETTES.map((value) => ({ value, labelKey: `palette.${value}` }));
@@ -337,6 +337,14 @@ function GeneralSection() {
     }
   }, []);
 
+  const handlePaletteChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const value = e.target.value;
+      if (isPalette(value)) handlePalette(value);
+    },
+    [handlePalette],
+  );
+
   const handleLocaleChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     if (SUPPORTED_LOCALES.includes(value as Locale)) {
@@ -365,18 +373,18 @@ function GeneralSection() {
       <fieldset className="bn-setting-group">
         <legend>{t("palette.legend")}</legend>
         <p className="bn-setting-description">{t("palette.description")}</p>
-        {PALETTE_KEYS.map((opt) => (
-          <label key={opt.value} className="bn-radio-label">
-            <input
-              type="radio"
-              name="bn-settings-palette"
-              value={opt.value}
-              checked={palette === opt.value}
-              onChange={() => handlePalette(opt.value)}
-            />
-            {" "}{t(opt.labelKey)}
-          </label>
-        ))}
+        <select
+          className="bn-palette-select"
+          value={palette}
+          onChange={handlePaletteChange}
+          aria-label={t("palette.legend")}
+        >
+          {PALETTE_KEYS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {t(opt.labelKey)}
+            </option>
+          ))}
+        </select>
       </fieldset>
 
       {!isEmbedded() && (

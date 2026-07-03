@@ -1,0 +1,6 @@
+{
+  "start": "Käynnistetään analyysi kansiolle {path}",
+  "stageStart": "Suoritetaan: {stage}…",
+  "stageComplete": "{stage} valmis ({duration})",
+  "done": "Analyysi valmis. Tuloste: {output}"
+}

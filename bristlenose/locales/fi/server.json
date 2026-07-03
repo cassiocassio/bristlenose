@@ -1,0 +1,24 @@
+{
+  "error": {
+    "notFound": "Resurssia ei löytynyt.",
+    "badRequest": "Virheellinen pyyntö: {detail}",
+    "internal": "Palvelimen sisäinen virhe."
+  },
+  "status": {
+    "healthy": "Kunnossa",
+    "degraded": "Heikentynyt"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "Ei vielä analysoitavia haastatteluja.",
+    "noRunDesktopLong": "Aloita pudottamalla haastattelukansio tähän.",
+    "noRunCliShort": "Täällä ei ole vielä mitään nähtävää.",
+    "cancelledShort": "Edellinen ajo peruutettiin.",
+    "cancelledLong": "Aja uudelleen, kun olet valmis.",
+    "failedShort": "Edellinen ajo epäonnistui.",
+    "recentLog": "Viimeaikainen loki:",
+    "showDetails": "Näytä tiedot",
+    "sendFeedback": "Lähetä palautetta",
+    "help": "Ohje",
+    "cliExitedWithCode": "Komentorivi päättyi koodilla {code}"
+  }
+}

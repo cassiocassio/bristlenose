@@ -434,3 +434,24 @@ Quotes,Alıntılar,tr,QDA term — countable: alıntı
 Sessions,Oturumlar,tr,QDA term
 Signals,Sinyaller,tr,product term
 Codes,Kodlar,tr,QDA term
+Save,Tallenna,fi,Apple HIG
+Cancel,Peruuta,fi,Apple HIG (dialog); Kumoa = Undo, avoid clash
+Close,Sulje,fi,Apple HIG
+Copy,Kopioi,fi,Apple HIG
+Delete,Poista,fi,Apple HIG; Poista sivupalkista = Remove
+Undo,Kumoa,fi,Apple HIG (Edit menu); Peru = Apple Pages variant
+Redo,Tee uudelleen,fi,Apple HIG; Tee sittenkin = Apple Pages variant
+Search,Etsi,fi,Apple HIG (verb); Haku = noun
+Print,Tulosta,fi,Apple HIG
+Export,Vie,fi,Apple HIG
+Settings,Asetukset,fi,Apple HIG
+Open,Avaa,fi,Apple HIG
+Hide,Kätke,fi,Apple HIG (macOS menus); Piilota = web/MS register
+Accept,Hyväksy,fi,Apple HIG
+Apply,Käytä,fi,Apple HIG
+Reset,Palauta,fi,Apple HIG
+Codebook,Koodikirja,fi,QDA convention
+Quotes,Sitaatit,fi,QDA term (FSD KvaliMOTV) — countable: sitaatti
+Sessions,Istunnot,fi,QDA term; session = istunto
+Signals,Signaalit,fi,product term
+Codes,Koodit,fi,QDA term (FSD): koodi/koodaus

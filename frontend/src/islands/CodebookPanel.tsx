@@ -1045,6 +1045,12 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
           const acStatus = autoCodeStatus[fid];
           const acDisabled = acStatus?.status === "running" || acStatus?.status === "completed";
           const proposedCount = acStatus?.proposed_count ?? 0;
+          // Sentiment is auto-applied during the analysis pipeline — every quote
+          // already carries its sentiment tag by the time the Codebook page
+          // loads, so AutoCode can never produce proposals here. Hide the button
+          // rather than show one that always returns "0 of 0 proposals"
+          // (the fake-success-feedback class from the 7 May quality reset).
+          const isSentimentFramework = fid === "sentiment";
           return (
             <Fragment key={fid}>
               <div className="framework-section-header" id={`codebook-fw-${fid}`}>
@@ -1053,7 +1059,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                   {author && <div className="framework-section-author">{author}</div>}
                 </div>
                 <div className="framework-section-actions">
-                  {acStatus?.status === "completed" && proposedCount > 0 ? (
+                  {!isSentimentFramework && (acStatus?.status === "completed" && proposedCount > 0 ? (
                     <button
                       className="autocode-btn autocode-btn-report"
                       onClick={() => handleOpenReport(fid, title)}
@@ -1076,7 +1082,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                     >
                       {t("codebook.autoCodeQuotes")}
                     </button>
-                  )}
+                  ))}
                   <button
                     className="bn-btn framework-remove-btn"
                     onClick={() => handleAskRemoveFramework(fid, label)}

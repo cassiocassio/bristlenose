@@ -450,6 +450,49 @@ describe("CodebookPanel — per-framework sections", () => {
     expect(removeButtons).toHaveLength(2);
   });
 
+  it("hides the AutoCode button for the auto-applied sentiment framework (395)", async () => {
+    // Sentiment is auto-applied during the pipeline — quotes arrive pre-tagged,
+    // so its AutoCode button can never produce proposals ("0 of 0"). It must be
+    // suppressed while normal frameworks keep theirs.
+    const mock: CodebookResponse = {
+      groups: [
+        {
+          id: 30,
+          name: "Sentiment",
+          subtitle: "Emotional tone",
+          colour_set: "sentiment",
+          order: 0,
+          tags: [{ id: 300, name: "positive", count: 5, colour_index: 0 }],
+          total_quotes: 5,
+          is_default: false,
+          framework_id: "sentiment",
+        },
+        {
+          id: 10,
+          name: "Strategy",
+          subtitle: "Goals and objectives",
+          colour_set: "ux",
+          order: 1,
+          tags: [{ id: 100, name: "user need", count: 3, colour_index: 0 }],
+          total_quotes: 3,
+          is_default: false,
+          framework_id: "garrett",
+        },
+      ],
+      ungrouped: [],
+      all_tag_names: ["positive", "user need"],
+    };
+    mockFetchOk(mock);
+    render(<CodebookPanel projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText("Strategy")).toBeInTheDocument();
+    });
+    // Normal framework keeps its AutoCode button…
+    expect(screen.getByTestId("bn-autocode-btn-garrett")).toBeInTheDocument();
+    // …but the pipeline-auto-applied sentiment framework does not (395).
+    expect(screen.queryByTestId("bn-autocode-btn-sentiment")).not.toBeInTheDocument();
+  });
+
   it("framework groups have no delete/close button", async () => {
     mockFetchOk(MOCK_WITH_FRAMEWORKS);
     render(<CodebookPanel projectId="1" />);

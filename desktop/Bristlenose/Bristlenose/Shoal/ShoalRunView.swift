@@ -6,27 +6,52 @@ import SwiftUI
 /// sidebar row's determinate ring + subtitle. Gated in `ContentView` on the
 /// analysing state, the "show animation" preference, and Reduce Motion.
 ///
-/// Words are the canned v0.1 `WordPool` for now; the live transcript-word feed
-/// is a later slice. The flock's phase is driven loosely off the run's real
+/// Words come live from the run's shoal-feed (`ShoalFeed`, polled ~1.5 s) once
+/// the pipeline emits them, falling back to the canned `WordPool` until then or
+/// if the feed is absent. The flock's phase is driven off the run's real
 /// progress fraction, so it thickens (early → middle → late) as analysis
-/// proceeds rather than sitting static. If no fraction is available yet (cold
-/// estimator), it simply stays in the early phase — still flocking.
+/// proceeds. If no fraction is available yet (cold estimator), it stays early.
 struct ShoalRunView: View {
     let projectID: UUID
     @ObservedObject var liveData: PipelineLiveData
+    let feedURL: URL
 
     @State private var phase: ShoalPhase = .early
+    @State private var feedWords: [WordPool.Word] = []
+    @State private var loggedStale = false
 
     private var ringFraction: Double {
         liveData.progress[projectID]?.ringFraction ?? 0
     }
 
     var body: some View {
-        ShoalView(phase: $phase, failed: .constant(false))
+        ShoalView(phase: $phase, failed: .constant(false), liveWords: feedWords)
             .background(Color(nsColor: .windowBackgroundColor))
             .accessibilityHidden(true)  // decorative — progress lives on the sidebar row
             .onAppear { advance(to: ringFraction) }
             .onChange(of: ringFraction) { _, fraction in advance(to: fraction) }
+            .task(id: projectID) { await pollFeed() }
+    }
+
+    /// Poll the run's shoal-feed ~every 1.5 s while this view is alive, handing
+    /// fresh live words to the scene. Auto-cancelled on disappear / project
+    /// switch (task keyed on `projectID`).
+    private func pollFeed() async {
+        loggedStale = false
+        while !Task.isCancelled {
+            feedWords = ShoalFeed.read(at: feedURL)
+            // Feed still empty *past the run's midpoint* → likely a stale bundled
+            // sidecar predating the emit; log once so canned-fallback isn't a
+            // silent lie. Gated on progress, NOT wall-clock: transcription alone
+            // can legitimately run minutes before the first `word` batch fires at
+            // transcript-merge, so the feed is correctly empty early on.
+            if !loggedStale, feedWords.isEmpty, ringFraction > 0.5,
+               FileManager.default.fileExists(atPath: feedURL.path) {
+                loggedStale = true
+                ShoalFeed.logStaleEmpty(at: feedURL, serverVersion: nil)
+            }
+            try? await Task.sleep(for: .seconds(1.5))
+        }
     }
 
     /// Move the flock forward as the run progresses. Monotonic — never regress

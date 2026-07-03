@@ -83,4 +83,15 @@ enum WordPool {
         }
         return Array(candidates.shuffled().prefix(count))
     }
+
+    #if DEBUG
+    /// Combined pool across all phases for the debug stress-test harness — mixes
+    /// dim / bold / coloured styles so a large flock looks varied. Repeats are
+    /// fine (it's a density + GPU-load rig, not a content test).
+    static var debugStressPool: [Word] {
+        earlyWords.map { Word(text: $0, fontSize: 11, color: .labelColor.withAlphaComponent(0.5)) }
+            + middleWords.map { Word(text: $0, fontSize: 13, color: .labelColor.withAlphaComponent(0.7)) }
+            + lateThemes.map { Word(text: $0.0, fontSize: 15, color: $0.1.color) }
+    }
+    #endif
 }

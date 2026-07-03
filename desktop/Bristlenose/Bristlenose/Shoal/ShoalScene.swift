@@ -22,6 +22,10 @@ final class ShoalScene: SKScene {
     /// The active flocking algorithm. Can be swapped at runtime via the debug menu.
     var behavior: FlockingBehavior = allFlockingBehaviors[0]
 
+    /// Live transcript words from the run's shoal-feed (via `ShoalFeed`). When
+    /// non-empty, spawns draw from these instead of the canned `WordPool`.
+    var liveWords: [WordPool.Word] = []
+
     // Death animation, debug-only: the embedded run view unmounts the scene
     // when a run ends, so there is no completion/settling end-state — only the
     // "Fail" path in the standalone Debug ▸ Shoal Screensaver window reaches this.
@@ -137,17 +141,20 @@ final class ShoalScene: SKScene {
     private func spawnBoids(for phase: ShoalPhase) {
         let targetCount: Int
         switch phase {
-        case .early:    targetCount = ShoalConfig.earlyCount
-        case .middle:   targetCount = ShoalConfig.middleCount
-        case .late:     targetCount = ShoalConfig.lateCount
-        default:        return
+        case .early:  targetCount = ShoalConfig.earlyCount
+        case .middle: targetCount = ShoalConfig.middleCount
+        case .late:   targetCount = ShoalConfig.lateCount
         }
 
         let toSpawn = max(0, targetCount - boids.count)
         guard toSpawn > 0 else { return }
 
         let activeTexts = Set(boids.compactMap { $0.text })
-        let words = WordPool.words(for: phase, count: toSpawn, excluding: activeTexts)
+        // Live transcript words from the run feed take over from the canned pool
+        // once they arrive; an empty pool falls back to the canned words.
+        let words = liveWords.isEmpty
+            ? WordPool.words(for: phase, count: toSpawn, excluding: activeTexts)
+            : liveSample(count: toSpawn, excluding: activeTexts)
 
         for word in words {
             let pos = randomEdgePosition()
@@ -160,6 +167,14 @@ final class ShoalScene: SKScene {
             addChild(boid)
             boids.append(boid)
         }
+    }
+
+    /// Draw from the live feed pool, excluding words already on screen; falls
+    /// back to repeats if the fresh pool is smaller than the requested count.
+    private func liveSample(count: Int, excluding active: Set<String>) -> [WordPool.Word] {
+        let fresh = liveWords.filter { !active.contains($0.text) }
+        let pool = fresh.isEmpty ? liveWords : fresh
+        return Array(pool.shuffled().prefix(count))
     }
 
     private func randomEdgePosition() -> CGPoint {
@@ -185,4 +200,29 @@ final class ShoalScene: SKScene {
             ]))
         }
     }
+
+    #if DEBUG
+    /// DEBUG stress-test: spawn/despawn to `target` boids, cycling a combined
+    /// mixed-style word pool with repeats — for eyeballing density + GPU load
+    /// far above the production cap. Driven by the `ShoalDebugView` slider; not
+    /// a shipping path (production spawns are phase-driven via `spawnBoids`).
+    func debugSetPopulation(_ target: Int) {
+        let target = max(0, target)
+        while boids.count > target {
+            let extra = boids.removeLast()
+            extra.removeAllActions()
+            extra.removeFromParent()
+        }
+        guard boids.count < target else { return }
+        let pool = WordPool.debugStressPool
+        while boids.count < target {
+            let word = pool[boids.count % pool.count]
+            let boid = Boid(word: word, position: randomEdgePosition(), depth: .random(in: 0.1...0.9))
+            boid.alpha = 0
+            boid.run(.fadeAlpha(to: boid.baseAlpha, duration: ShoalConfig.spawnFadeDuration))
+            addChild(boid)
+            boids.append(boid)
+        }
+    }
+    #endif
 }

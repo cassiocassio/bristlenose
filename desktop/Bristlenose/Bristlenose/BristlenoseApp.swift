@@ -41,6 +41,19 @@ struct BristlenoseApp: App {
         return i
     }()
 
+    /// Active palette (Settings ▸ Appearance ▸ Palette). Read here so a
+    /// palette-aware `.tint` can propagate through every Scene — otherwise
+    /// SwiftUI `.tint` / `.foregroundStyle(.tint)` consumers resolve to
+    /// `AccentColor.colorset` (system blue) even under Edo, producing a
+    /// visible seam between the sidebar chrome accent and the Edo palette.
+    @AppStorage("palette") private var palette: String = "default"
+
+    /// Palette accent as a SwiftUI `Color`, resolved via the asset catalogue
+    /// so Xcode picks the Any/Dark variant per effective appearance.
+    private var paletteAccent: Color {
+        Color("Palette\(palette.capitalized)Accent")
+    }
+
     var body: some Scene {
         // `id` lets the Window > Bristlenose menu item reopen this scene via
         // `openWindow(id:)` after the user has closed the main window but the
@@ -81,6 +94,15 @@ struct BristlenoseApp: App {
                 ) { _ in
                     serveManager.stop()
                 }
+                // Palette-aware SwiftUI accent. Reads `PaletteDefaultAccent` /
+                // `PaletteEdoAccent` (see `SidebarPalette` / Assets.xcassets)
+                // so every SwiftUI `.tint` consumer downstream — tab labels,
+                // toolbar buttons, selection highlights — tracks the palette
+                // instead of falling through to the palette-agnostic
+                // `AccentColor.colorset`. AppKit chrome (title bar, traffic
+                // lights, `NSOutlineView` capsule) still reads system accent —
+                // deliberate, per the seam-alignment discipline.
+                .tint(paletteAccent)
         }
         .defaultSize(width: 1000, height: 700)
         .windowResizability(.contentMinSize)

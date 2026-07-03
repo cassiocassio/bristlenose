@@ -5,11 +5,13 @@ import SpriteKit
 
 /// Pipeline progress mapped to visual density and word style.
 enum ShoalPhase: Int, Comparable {
-    case early = 0      // Stages 1-5: transcription — sparse, dim fragments
-    case middle = 1     // Stages 6-8: topics — bolder labels appear
-    case late = 2       // Stages 9-11: quotes, clustering, theming — sentiment colour
-    case complete = 3   // Stage 12: render done — trigger settling
-    case settling = 4   // Post-completion deceleration and fade
+    case early = 0      // transcription — sparse, dim fragments
+    case middle = 1     // topics / sections — bolder labels appear
+    case late = 2       // quotes / themes — sentiment colour
+
+    // No completion/settling end-state: the embedded run view unmounts the
+    // scene the instant the run ends, so the crossfade to the report is the
+    // ending — there is no frame in which a completion animation could render.
 
     static func < (lhs: ShoalPhase, rhs: ShoalPhase) -> Bool {
         lhs.rawValue < rhs.rawValue
@@ -73,12 +75,6 @@ enum ShoalConfig {
     static let alphaAtNear: CGFloat = 1.0
     static let speedAtFar:  CGFloat = 0.7
     static let speedAtNear: CGFloat = 1.0
-
-    // Settling
-    static let settlingDelay:       TimeInterval = 1.0   // seconds after .complete before .settling
-    static let settlingDuration:    TimeInterval = 3.0
-    static let settlingFadeDuration: TimeInterval = 1.0
-    static let settlingCohesionWeight: CGFloat = 3.0
 
     // Wander (Reynolds steering behavior — organic turns)
     static let wanderCircleDistance: CGFloat = 40  // how far ahead the wander circle is projected

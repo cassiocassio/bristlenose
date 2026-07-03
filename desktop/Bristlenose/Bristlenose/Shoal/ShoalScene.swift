@@ -22,12 +22,10 @@ final class ShoalScene: SKScene {
     /// The active flocking algorithm. Can be swapped at runtime via the debug menu.
     var behavior: FlockingBehavior = allFlockingBehaviors[0]
 
-    // End-state flags (mutually exclusive)
-    private var isSettling = false
-    private var settlingStartTime: TimeInterval = 0
+    // Death animation, debug-only: the embedded run view unmounts the scene
+    // when a run ends, so there is no completion/settling end-state — only the
+    // "Fail" path in the standalone Debug ▸ Shoal Screensaver window reaches this.
     private var isDead = false
-    private var isTriumphing = false
-    private var triumphStartTime: TimeInterval = 0
 
     // MARK: - Lifecycle
 
@@ -49,9 +47,7 @@ final class ShoalScene: SKScene {
         }
         boids.removeAll()
         currentPhase = .early
-        isSettling = false
         isDead = false
-        isTriumphing = false
         lastUpdateTime = 0
         elapsedTime = 0
         spawnBoids(for: .early)
@@ -61,15 +57,7 @@ final class ShoalScene: SKScene {
     func advanceToPhase(_ phase: ShoalPhase) {
         guard phase > currentPhase else { return }
         currentPhase = phase
-
-        if phase == .complete {
-            run(.sequence([
-                .wait(forDuration: ShoalConfig.settlingDelay),
-                .run { [weak self] in self?.triumph() },
-            ]))
-        } else {
-            spawnBoids(for: phase)
-        }
+        spawnBoids(for: phase)
     }
 
     // MARK: - Update loop
@@ -96,40 +84,8 @@ final class ShoalScene: SKScene {
             return
         }
 
-        // Triumphing: accelerate toward viewer, scale up, burst outward
-        if isTriumphing {
-            let t = min(CGFloat(currentTime - triumphStartTime) / 1.5, 1.0)
-            let easeIn = t * t
-            let centre = CGPoint(x: size.width / 2, y: size.height / 2)
-            for boid in boids {
-                let scale = 1.0 + easeIn * 4.0
-                boid.xScale = scale
-                boid.yScale = scale
-                let dx = boid.position.x - centre.x
-                let dy = boid.position.y - centre.y
-                let outwardSpeed = 200 + easeIn * 600
-                let dist = sqrt(dx * dx + dy * dy)
-                if dist > 1 {
-                    boid.position.x += (dx / dist) * outwardSpeed * CGFloat(dt)
-                    boid.position.y += (dy / dist) * outwardSpeed * CGFloat(dt)
-                }
-            }
-            return
-        }
-
-        // Settling: decelerate and centre-pull (re-render fallback)
-        var maxSpeed = ShoalConfig.maxSpeed
-        var extraCentrePull: CGFloat = 0
-
-        if isSettling {
-            let t = min(CGFloat(currentTime - settlingStartTime) / CGFloat(ShoalConfig.settlingDuration), 1.0)
-            let easeOut = 1.0 - (1.0 - t) * (1.0 - t)
-            maxSpeed = ShoalConfig.maxSpeed * (1.0 - easeOut * 0.92)
-            extraCentrePull = easeOut * 20
-        }
-
+        let maxSpeed = ShoalConfig.maxSpeed
         let sceneSize = size
-        let centre = CGPoint(x: sceneSize.width / 2, y: sceneSize.height / 2)
 
         for boid in boids {
             // Build neighbour list (depth-filtered)
@@ -145,12 +101,6 @@ final class ShoalScene: SKScene {
                 elapsedTime: elapsedTime,
                 dt: dt
             )
-
-            // Centre pull (settling only)
-            if extraCentrePull > 0 {
-                steer.dx += (centre.x - boid.position.x) * 0.01 * extraCentrePull
-                steer.dy += (centre.y - boid.position.y) * 0.01 * extraCentrePull
-            }
 
             // Clamp steering force
             steer = steer.clamped(to: ShoalConfig.maxForce)
@@ -225,38 +175,13 @@ final class ShoalScene: SKScene {
     // MARK: - End-state animations
 
     func die() {
-        guard !isDead, !isTriumphing else { return }
+        guard !isDead else { return }
         isDead = true
         for boid in boids {
             boid.velocity.dx += CGFloat.random(in: -30...30)
             boid.run(.sequence([
                 .wait(forDuration: 1.5),
                 .fadeOut(withDuration: 0.8),
-            ]))
-        }
-    }
-
-    func triumph() {
-        guard !isDead, !isTriumphing else { return }
-        isTriumphing = true
-        triumphStartTime = lastUpdateTime
-        for boid in boids {
-            boid.run(.sequence([
-                .wait(forDuration: 1.2),
-                .fadeOut(withDuration: 0.3),
-            ]))
-        }
-    }
-
-    private func beginSettling() {
-        guard !isSettling else { return }
-        isSettling = true
-        settlingStartTime = lastUpdateTime
-        let fadeDelay = ShoalConfig.settlingDuration - ShoalConfig.settlingFadeDuration
-        for boid in boids {
-            boid.run(.sequence([
-                .wait(forDuration: fadeDelay),
-                .fadeOut(withDuration: ShoalConfig.settlingFadeDuration),
             ]))
         }
     }

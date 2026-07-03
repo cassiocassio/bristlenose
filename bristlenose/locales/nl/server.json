@@ -1,0 +1,24 @@
+{
+  "error": {
+    "notFound": "Bron niet gevonden.",
+    "badRequest": "Ongeldig verzoek: {detail}",
+    "internal": "Interne serverfout."
+  },
+  "status": {
+    "healthy": "Gezond",
+    "degraded": "Verminderd"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "Nog geen interviews om te analyseren.",
+    "noRunDesktopLong": "Sleep hier een map met interviews om te beginnen.",
+    "noRunCliShort": "Hier is nog niets te zien.",
+    "cancelledShort": "Laatste run is geannuleerd.",
+    "cancelledLong": "Voer opnieuw uit wanneer je klaar bent.",
+    "failedShort": "Laatste run is mislukt.",
+    "recentLog": "Recent logboek:",
+    "showDetails": "Toon details",
+    "sendFeedback": "Stuur feedback",
+    "help": "Help",
+    "cliExitedWithCode": "CLI afgesloten met code {code}"
+  }
+}

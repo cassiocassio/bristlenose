@@ -1,0 +1,228 @@
+{
+  "heading": "Instellingen",
+  "appearance": {
+    "randomIconsLegend": "Ken nieuwe projecten een willekeurig symbool toe",
+    "randomIconsHelp": "Elk nieuw project krijgt een herkenbaar symbool, zodat het makkelijk te herkennen is in de zijbalk. Schakel dit uit om de eenvoudige ring te houden en zelf symbolen te kiezen.",
+    "legend": "Weergave van de app",
+    "auto": "Gebruik systeemweergave",
+    "light": "Licht",
+    "dark": "Donker"
+  },
+  "palette": {
+    "legend": "Kleurenpalet",
+    "default": "Standaard",
+    "edo": "Edo",
+    "description": "Herkleurt de hele app. Edo gebruikt warm washipapier en Pruisisch-blauwe inkt."
+  },
+  "typography": {
+    "legend": "Typografie"
+  },
+  "language": {
+    "legend": "Taal",
+    "description": "Bepaalt de weergavetaal van de interface. De inhoud van het rapport wordt niet vertaald.",
+    "helpTranslate": "Help Bristlenose in jouw taal te vertalen op"
+  },
+  "settingsNav": {
+    "general": "Algemeen",
+    "project": "Project",
+    "profile": "Profiel",
+    "apiKeys": "API-sleutels",
+    "config": "Configuratie",
+    "projectStub": "Instellingen per project verschijnen hier. Binnenkort beschikbaar.",
+    "profileStub": "Profielinstellingen (naam, e-mail, whisper-backend) verschijnen hier. Binnenkort beschikbaar.",
+    "apiKeysStub": "Beheer van API-sleutels verschijnt hier. Binnenkort beschikbaar.",
+    "pipeline": "Pijplijn"
+  },
+  "configReference": {
+    "heading": "Configuratiereferentie",
+    "intro": "Alle onderstaande instellingen worden geconfigureerd via omgevingsvariabelen of een <code>.env</code>-bestand. Ze worden hier ter referentie getoond — bewerk het bestand dat in elke rij wordt getoond om een waarde te wijzigen.",
+    "clickToCopy": "Klik om te kopiëren",
+    "copied": "Gekopieerd",
+    "categories": {
+      "llm": "LLM-provider en -model",
+      "transcription": "Transcriptie",
+      "privacy": "Privacy",
+      "quotes": "Citaten",
+      "analysis": "Analyse",
+      "autocode": "AutoCode",
+      "display": "Weergave",
+      "pipeline": "Pijplijn",
+      "thumbnails": "Miniaturen",
+      "server": "Server",
+      "logging": "Logboek",
+      "timing": "Timing"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Provider",
+        "model": "Model",
+        "temperature": "Temperatuur",
+        "maxTokens": "Max. uitvoertokens",
+        "concurrency": "Gelijktijdigheid",
+        "claudeKey": "Claude-API-sleutel",
+        "chatgptKey": "ChatGPT-API-sleutel",
+        "geminiKey": "Gemini-API-sleutel",
+        "azureKey": "Azure-API-sleutel",
+        "azureEndpoint": "Azure-eindpunt",
+        "azureDeployment": "Azure-implementatie",
+        "azureApiVersion": "Azure-API-versie",
+        "ollamaUrl": "Ollama-URL",
+        "ollamaModel": "Ollama-model"
+      },
+      "transcription": {
+        "backend": "Backend",
+        "model": "Model",
+        "language": "Taal",
+        "device": "Apparaat",
+        "computeType": "Rekentype",
+        "audioConcurrency": "Gelijktijdigheid audio-extractie"
+      },
+      "privacy": {
+        "piiRedaction": "PII-redactie",
+        "piiLlmPass": "PII-LLM-pass",
+        "customNames": "Aangepaste namen om te redigeren"
+      },
+      "quotes": {
+        "minQuoteWords": "Min. aantal woorden per citaat",
+        "speakerMergeGap": "Samenvoeggat sprekers",
+        "quoteSequenceGap": "Gat citaatvolgorde",
+        "llmFailureThreshold": "Drempel voor LLM-fouten",
+        "autocodeBatchSize": "AutoCode-batchgrootte"
+      },
+      "analysis": {
+        "topNSignals": "Top-N signalen",
+        "topNSignalsGeneric": "Top-N signalen (algemeen)",
+        "topNElaboration": "Top-N voor uitwerking",
+        "minQuotesPerCell": "Min. citaten per cel",
+        "strongConcentration": "Sterk: concentratie >",
+        "strongParticipants": "Sterk: deelnemers ≥",
+        "strongQuotes": "Sterk: citaten ≥",
+        "moderateConcentration": "Gematigd: concentratie >",
+        "moderateParticipants": "Gematigd: deelnemers ≥",
+        "moderateQuotes": "Gematigd: citaten ≥"
+      },
+      "autocode": {
+        "defaultLower": "Standaard ondergrens",
+        "defaultUpper": "Standaard bovengrens",
+        "sliderStep": "Schuifregelaarstap",
+        "sliderMinGap": "Min. gat schuifregelaar",
+        "histogramBins": "Histogrambakken"
+      },
+      "display": {
+        "searchMinChars": "Min. tekens voor zoeken",
+        "activityPollInterval": "Pollinterval activiteit"
+      },
+      "pipeline": {
+        "projectName": "Projectnaam",
+        "writeIntermediate": "Tussenbestanden schrijven",
+        "skipTranscription": "Transcriptie overslaan",
+        "maxSessionsBeforeConfirm": "Max. sessies vóór bevestiging"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Zoekvenster keyframe",
+        "fallbackFrameTime": "Terugvaltijd frame",
+        "thumbnailWidth": "Miniatuurbreedte",
+        "jpegQuality": "JPEG-kwaliteit"
+      },
+      "server": {
+        "serverPort": "Serverpoort",
+        "miroAccessToken": "Miro-toegangstoken"
+      },
+      "logging": {
+        "logLevel": "Logniveau (bestand)",
+        "logFileMaxSize": "Max. grootte logbestand",
+        "logBackupCount": "Aantal logback-ups"
+      },
+      "timing": {
+        "minRunsEstimate": "Min. runs vóór schatting",
+        "minRunsRange": "Min. runs vóór ±bereik"
+      }
+    }
+  },
+    "pipeline": {
+      "intro": "Alleen-lezen weergave van de modellen die Bristlenose momenteel voor elke pijplijnfase gebruikt. Bewerk je instellingen (omgevingsvariabelen of .env-bestand) om een backend te wijzigen.",
+      "loading": "Pijplijnweergave laden…",
+      "error": "Kon pijplijnweergave niet laden",
+      "keys": "sleutels",
+      "keysNone": "geen",
+      "ollama": "ollama",
+      "running": "actief",
+      "notDetected": "niet gedetecteerd",
+      "available": "beschikbaar",
+      "unavailable": "niet beschikbaar",
+      "alternatives": {
+        "summaryHeading": "LLM-backends op deze host",
+        "available": "Beschikbaar",
+        "unavailable": "Niet beschikbaar",
+        "none": "geen"
+      },
+      "backends": {
+        "local_ollama": "Lokaal (Ollama)",
+        "builtin_anonymiser": "Ingebouwde anonimiseerder"
+      },
+      "glyph": {
+        "available": "beschikbaar",
+        "unavailable": "niet beschikbaar",
+        "skipped": "niet van toepassing op deze host"
+      },
+      "column": {
+        "model": "Model",
+        "availability": "Beschikbaarheid",
+        "quality": "Kwaliteit",
+        "notes": "Notities"
+      },
+      "key": {
+        "italic_label": "cursief",
+        "synthesised": "uit je instellingen, niet uit onze catalogus"
+      },
+      "qualifier": {
+        "default": "standaard",
+        "current": "huidig",
+        "your_deployment": "je Azure-implementatie"
+      },
+      "quality": {
+        "glyph": {
+          "excellent": "uitstekende kwaliteit",
+          "good": "goede kwaliteit",
+          "marginal": "matige kwaliteit",
+          "avoid": "vermijd — kwaliteit te laag",
+          "untested": "ongetest"
+        },
+        "untested": "ongetest",
+        "local_speaker_id_acceptable": "Lokale modellen doen sprekeridentificatie goed",
+        "local_topic_segmentation_acceptable": "Lokale modellen doen onderwerpsegmentatie goed",
+        "local_quote_extraction_miss_rate": "kleine modellen missen citaten met meerdere zinsdelen",
+        "local_quote_clustering_drift": "kleine modellen clusteren citaten inconsistent",
+        "local_thematic_grouping_drift": "kleine modellen wijken af bij thematische synthese",
+        "mlx_whisper_apple_silicon_optimal": "optimaal op Apple Silicon",
+        "faster_whisper_cpu_baseline": "solide CPU-basis; geen GPU vereist"
+      },
+      "actions": {
+        "obtain_anthropic_key": "vraag een API-sleutel aan op console.anthropic.com en stel ANTHROPIC_API_KEY in of plak in Instellingen → Sleutels",
+        "obtain_openai_key": "vraag een API-sleutel aan op platform.openai.com en stel OPENAI_API_KEY in of plak in Instellingen → Sleutels",
+        "obtain_google_key": "vraag een API-sleutel aan op aistudio.google.com en stel GOOGLE_API_KEY in of plak in Instellingen → Sleutels",
+        "configure_azure": "stel Azure-sleutel, -eindpunt en -implementatie in bij Instellingen → Sleutels",
+        "start_ollama": "start de Ollama-service (ollama serve)",
+        "install_mlx_whisper": "pip install mlx-whisper (vereist Apple Silicon)",
+        "install_ctranslate2": "pip install ctranslate2",
+        "install_presidio": "pip install bristlenose[redact-pii] om de ingebouwde anonimiseerder in te schakelen",
+        "enable_pii_redaction": "voer uit met --redact-pii of stel pii_enabled=true in"
+      },
+      "reasons": {
+        "no_anthropic_key": "geen Claude-API-sleutel ingesteld",
+        "no_openai_key": "geen ChatGPT-API-sleutel ingesteld",
+        "no_azure_key": "geen Azure OpenAI-sleutel ingesteld",
+        "no_azure_endpoint": "Azure-eindpunt niet ingesteld",
+        "no_azure_deployment": "Azure-implementatie niet ingesteld",
+        "no_google_key": "geen Gemini-API-sleutel ingesteld",
+        "ollama_not_running": "Ollama draait niet",
+        "apple_fm_check_desktop": "controleer in de desktop-app",
+        "requires_apple_silicon": "vereist Apple Silicon",
+        "mlx_whisper_not_installed": "MLX Whisper niet geïnstalleerd",
+        "ctranslate2_not_installed": "ctranslate2 niet geïnstalleerd",
+        "presidio_not_installed": "Ingebouwde anonimiseerder niet geïnstalleerd",
+        "spacy_model_missing": "taalmodel niet geïnstalleerd",
+        "pii_disabled": "PII-redactie staat uit"
+      }
+    }
+}

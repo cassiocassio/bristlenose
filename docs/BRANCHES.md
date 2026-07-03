@@ -163,7 +163,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ### `spike`
 
 **Kind:** spike — translucent titlebar/toolbar (Notes/Mail idiom, modern macOS 26 Tahoe): make the WKWebView transparent, extend it under the toolbar, post the safe-area top inset to the SPA so report content pads/scrolls correctly under the frost. Sidebar is already frosted via `ProjectSidebarOutline.swift`; this completes the detail column.
-**Status:** Just started
+**Status:** Spiked — works on first Cmd+R. Toolbar frost samples through moving report content (shoal text visible bleeding through the toolbar band on the empty-state screen); first row of content sits below the frost, not clipped. Static inset at bridge-`ready` fine for alpha; live re-post on window frame changes deferred. Not proposed for merge yet — the spike is the proof, not the ship.
 **Started:** 3 Jul 2026
 **Worktree:** `/Users/cassio/Code/bristlenose_branch spike/`
 **Remote:** local only (push when ready)

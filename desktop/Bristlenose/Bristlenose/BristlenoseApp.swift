@@ -109,6 +109,13 @@ struct BristlenoseApp: App {
                 .environmentObject(serveManager)
         }
         .defaultSize(width: 1000, height: 720)
+
+        // DEBUG-only viewing harness for the resurrected typographic shoal
+        // (v0.1 canned WordPool, no live data). Debug ▸ Shoal Screensaver.
+        Window("Shoal Screensaver", id: "shoal") {
+            ShoalDebugView()
+        }
+        .defaultSize(width: 800, height: 600)
         #endif
     }
 }

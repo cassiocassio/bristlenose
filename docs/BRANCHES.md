@@ -41,6 +41,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch slavic/` | `slavic` | feature | Localisation wave — pl/ru/uk + da/sv/nb + tr locales + i18n tooling (machine-seeded, pending native review) |
 | `bristlenose_branch nl/` | `nl` | feature | Dutch (`nl`) locale — 9 namespace files + 9 registration sites; native review by a Dutch UX/UR contact |
 | `bristlenose_branch fi/` | `fi` | feature | Finnish (`fi`) locale — completes the Nordics (da/sv/nb done); native review by a Finnish contact |
+| `bristlenose_branch spike/` | `spike` | spike | Translucent titlebar/toolbar (Notes/Mail idiom, macOS 26 Tahoe) — transparent WKWebView + safe-area extension under toolbar |
 
 
 
@@ -125,6 +126,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `slavic` | `bristlenose_branch slavic/` | local only |
 | `nl` | `bristlenose_branch nl/` | local only |
 | `fi` | `bristlenose_branch fi/` | local only |
+| `spike` | `bristlenose_branch spike/` | local only |
 | `claude/debug-menu-instrumentation-4r9npy` _(merged)_ | _(worktree removed)_ | `origin/...` — merged to main 28 Jun 2026 (`252c1ce3`) |
 | `claude/figjam-miro-market-share-px52tg` _(merged)_ | `bristlenose_branch_figjam-miro-market-share/` _(detached, on disk)_ | local deleted — merged to main 28 Jun 2026 (66bc28c4) |
 | `claude/spa-sidebar-layout-9mlndt` _(merged)_ | `bristlenose_branch spa-sidebar-layout/` _(detached, on disk)_ | local only — merged to main 28 Jun 2026 (97c4fb42) |
@@ -155,6 +157,36 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `spike`
+
+**Kind:** spike — translucent titlebar/toolbar (Notes/Mail idiom, modern macOS 26 Tahoe): make the WKWebView transparent, extend it under the toolbar, post the safe-area top inset to the SPA so report content pads/scrolls correctly under the frost. Sidebar is already frosted via `ProjectSidebarOutline.swift`; this completes the detail column.
+**Status:** Just started
+**Started:** 3 Jul 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch spike/`
+**Remote:** local only (push when ready)
+**Checkpoint on main:** `translucent-webview-checkpoint` → `ed6cd73c` (pointer set before spinning up this worktree; surgical rollback via `git checkout translucent-webview-checkpoint -- <files>`)
+
+**What it does:** Prototype the three-part modern-macOS translucent-chrome look for the detail column:
+1. `webView.setValue(false, forKey: "drawsBackground")` on `BristlenoseWebView` (WKWebView paint transparent)
+2. SPA `body { background: transparent }` gated on `__BRISTLENOSE_EMBEDDED__` (so the frost samples report content, not a solid white)
+3. `.ignoresSafeArea(.container, edges: .top)` on the detail column so the WebView extends behind the unified toolbar; post the safe-area top inset over the bridge as `--bn-toolbar-inset` CSS var; SPA scroll containers apply `padding-top: var(--bn-toolbar-inset)` so first-of-content isn't cropped by the frost.
+
+Static inset at bridge-`ready` time is fine for alpha; live re-post on NSWindow frame changes is a follow-up if the effect earns polish.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose/WebView.swift` — transparent WKWebView paint
+- `desktop/Bristlenose/Bristlenose/ContentView.swift` — safe-area extension under toolbar
+- `desktop/Bristlenose/Bristlenose/BridgeHandler.swift` — post toolbar inset over bridge
+- `frontend/src/**/*.css` — transparent body + sticky-header inset audit (grep `position: sticky`)
+- `frontend/src/shims/*` — receive `--bn-toolbar-inset`, apply to `<html>`
+
+**Potential conflicts with other branches:**
+- `slavic`, `nl`, `fi` — locale-only, no overlap
+- `tower-of-hanoi` — spike, no overlap
+- No known conflicts on `WebView.swift`, `ContentView.swift`, or SPA CSS files at the time of branching
 
 ---
 

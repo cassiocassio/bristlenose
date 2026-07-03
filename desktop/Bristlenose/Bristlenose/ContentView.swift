@@ -2028,7 +2028,11 @@ struct ContentView: View {
                 // screens. Decorative; the real progress signal is the sidebar
                 // row's ring + subtitle. Reduce Motion / the preference fall
                 // back to those same screens (see shouldShowShoal).
-                ShoalRunView(projectID: project.id, liveData: pipelineRunner.liveData)
+                ShoalRunView(
+                    projectID: project.id,
+                    liveData: pipelineRunner.liveData,
+                    feedURL: ShoalFeed.feedURL(projectPath: project.path)
+                )
             } else if project.path.isEmpty {
                 // New project with no files yet — prompt user to add interviews,
                 // and accept a Finder drop right here. Routes through the same

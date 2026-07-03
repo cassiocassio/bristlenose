@@ -13,6 +13,7 @@ struct AppearanceSettingsView: View {
     @AppStorage("typography") private var typography: String = "sf"
     @AppStorage("language") private var language: String = "en"
     @AppStorage(RandomProjectIcon.defaultsKey) private var randomProjectIcons: Bool = true
+    @AppStorage("showAnalysisAnimation") private var showAnalysisAnimation: Bool = true
 
     var body: some View {
         Form {
@@ -52,6 +53,13 @@ struct AppearanceSettingsView: View {
             Section {
                 Toggle(i18n.t("settings.appearance.randomIconsLegend"), isOn: $randomProjectIcons)
                 Text(i18n.t("settings.appearance.randomIconsHelp"))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle(i18n.t("settings.appearance.animationLegend"), isOn: $showAnalysisAnimation)
+                Text(i18n.t("settings.appearance.animationHelp"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }

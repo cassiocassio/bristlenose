@@ -4,46 +4,44 @@ import SwiftUI
 /// DEBUG-only harness for looking at the resurrected typographic shoal in
 /// isolation — no pipeline, no live data, just the v0.1 canned `WordPool`.
 ///
-/// Launched from Debug ▸ Shoal Screensaver. Lets you step the animation through
-/// its pipeline phases (early → middle → late) and trigger the failure ("die")
-/// path, so the flocking, the per-phase word styling, and the death animation
-/// can all be judged by eye. The flocking-algorithm picker (Classic / Alive /
-/// Alive V2) lives inside `ShoalView` itself, top-right.
+/// Launched from Debug ▸ Shoal Screensaver. Primary use is the **density +
+/// GPU-load experiment**: the Words slider spawns 0–600 flocking words (mixed
+/// styles, repeats allowed) so the right on-screen count can be found by eye on
+/// a large monitor, while the on-screen FPS / node-count counters show the cost.
+/// The flocking-algorithm picker (Classic / Alive / Alive V2) is inside
+/// `ShoalView` top-right; "Fail" triggers the death animation.
 ///
-/// This is a viewing harness for the TF "is it worth looking at?" call — NOT the
-/// shipping surface. Wiring the shoal into the detail pane with live transcript
-/// words is a separate step.
+/// NOT the shipping surface — production spawns are phase-driven and capped far
+/// lower; this rig just finds the number.
 struct ShoalDebugView: View {
     @State private var phase: ShoalPhase = .early
     @State private var failed = false
+    @State private var population: Double = 500
 
     var body: some View {
         VStack(spacing: 0) {
-            ShoalView(phase: $phase, failed: $failed, showsDebugControls: true)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(nsColor: .windowBackgroundColor))
+            ShoalView(
+                phase: $phase,
+                failed: $failed,
+                showsDebugControls: true,
+                debugPopulation: Int(population)
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(nsColor: .windowBackgroundColor))
 
             Divider()
 
             HStack(spacing: 12) {
-                Picker("Phase", selection: $phase) {
-                    Text("Early").tag(ShoalPhase.early)
-                    Text("Middle").tag(ShoalPhase.middle)
-                    Text("Late").tag(ShoalPhase.late)
-                }
-                .pickerStyle(.segmented)
-                .fixedSize()
-                .disabled(failed)
-
-                Spacer()
+                Text("Words: \(Int(population))")
+                    .font(.system(.body, design: .monospaced))
+                    .frame(width: 110, alignment: .leading)
+                Slider(value: $population, in: 0...600, step: 10)
+                    .disabled(failed)
 
                 Button(failed ? "Failed" : "Fail (die)") { failed = true }
                     .disabled(failed)
 
-                Button("Reset") {
-                    failed = false
-                    phase = .early
-                }
+                Button("Reset") { failed = false }
             }
             .padding(10)
         }

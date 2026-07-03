@@ -15,6 +15,15 @@ struct ShoalView: View {
     /// window (`ShoalDebugView`), never in the embedded run view.
     var showsDebugControls: Bool = false
 
+    /// DEBUG stress-test population (the `ShoalDebugView` slider). Applied only
+    /// when `showsDebugControls`; the production embed leaves it 0 and stays
+    /// phase-driven. Lets us eyeball density + GPU load far above the real cap.
+    var debugPopulation: Int = 0
+
+    /// Live transcript words from the run feed (production embed). Applied to the
+    /// scene as they arrive; empty leaves the canned pool in place.
+    var liveWords: [WordPool.Word] = []
+
     @State private var scene: ShoalScene = {
         let s = ShoalScene(size: CGSize(width: 480, height: 300))
         s.scaleMode = .resizeFill
@@ -23,10 +32,20 @@ struct ShoalView: View {
 
     @State private var selectedBehaviorIndex = 0
 
+    /// On-screen FPS + node/draw counters — the live cost probe for the density
+    /// experiment. Debug harness only.
+    private var debugOverlay: SpriteView.DebugOptions {
+        #if DEBUG
+        return showsDebugControls ? [.showsFPS, .showsNodeCount, .showsDrawCount] : []
+        #else
+        return []
+        #endif
+    }
+
     var body: some View {
         ZStack {
             // SpriteKit scene
-            SpriteView(scene: scene, options: [.allowsTransparency])
+            SpriteView(scene: scene, options: [.allowsTransparency], debugOptions: debugOverlay)
 
             // Gradient dissolve at bottom edge
             VStack {
@@ -72,11 +91,22 @@ struct ShoalView: View {
         .onChange(of: failed) { _, hasFailed in
             if hasFailed {
                 scene.die()
+            } else {
+                scene.reset()
+                #if DEBUG
+                if showsDebugControls { scene.debugSetPopulation(debugPopulation) }
+                #endif
             }
+        }
+        .onChange(of: liveWords.count) { _, _ in
+            scene.liveWords = liveWords
         }
         #if DEBUG
         .onChange(of: selectedBehaviorIndex) { _, newIndex in
             scene.behavior = allFlockingBehaviors[newIndex]
+        }
+        .onChange(of: debugPopulation, initial: true) { _, count in
+            if showsDebugControls { scene.debugSetPopulation(count) }
         }
         #endif
     }

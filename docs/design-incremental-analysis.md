@@ -2,6 +2,7 @@
 
 **Status:** Thinking document. Not a spec. Post-TF design problem.
 **Sibling docs:** `docs/methodology/tag-rejections-are-great.md`, `docs/methodology/consent-gradient.md`, `docs/design-research-methodology.md`, `docs/design-analysis-future.md`.
+**Companion (the persistence layer):** [`design-curation-persistence.md`](design-curation-persistence.md) — the full model for *which* human signals survive a re-run and the identity/state machinery that carries them (star-as-freeze, presence-vs-prominence, membership-is-identity, the quote state engine, split-inheritance rules and tie-breakers). This doc frames the problem; that one specifies how curation is preserved.
 **Predecessor:** TF multi-project plan descoped #12 ("add new interviews to existing project") because this is its real shape — not a button to wire up, a methodology to design.
 
 ---

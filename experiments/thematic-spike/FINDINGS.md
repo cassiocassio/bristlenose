@@ -113,15 +113,15 @@ q49, q52, q53, q60):
 | Prototype | True hits | Mis-included | Verdict |
 |---|---|---|---|
 | Baseline | 5/5 | none | Cleanest single-cluster output |
-| Perm-A | 2/3 | q8 (NHS hospitals) | Cross-domain mis-coding |
-| Perm-B | 3/4 | q8 (NHS hospitals) | Cross-domain mis-coding |
+| Perm-A | 2/3 | q8 (off-topic domain) | Cross-domain mis-coding |
+| Perm-B | 3/4 | q8 (off-topic domain) | Cross-domain mis-coding |
 | S11 production | 2/3 | q26 (storage box pref) | Worst — wrong-domain mis-coding |
 | **Perm-C** | **9/9** | none | Distributed across 4 specifically-framed clusters |
 
 Two findings from this case study:
 
 1. **Permission-A and Permission-B made researcher-wincing errors** by
-   pulling q8 (NHS healthcare comparison) into a "Brand Perception"
+   pulling q8 (off-topic domain) into a "Brand Perception"
    cluster. Pattern-matching on structure (comparison-anchoring)
    rather than domain (commercial brand). A researcher would have to
    fix this before showing the output to a stakeholder.
@@ -388,9 +388,9 @@ permission today's prompt withholds. Total cost ~$0.30.
 | fossda | **perm_a** | 12 | 90% | 4/12 | $0.067 | Early Computing · Foundational OSS Tools · Neurodiversity & Computing Comfort *(10 unassigned)* |
 | fossda | perm_b | 27 | 97% | 8/27 | $0.079 | Origins · Neurodiversity · Academic Roots of OSS |
 | fossda | perm_c | 17 | 47% | 1/17 | $0.069 | Computing as refuge for neurodivergent minds · Accidental intensity · Nostalgic materialism |
-| ikea | baseline | 12 | 100% | 6/12 | $0.026 | Clear Scannable Info · Post-Op Comms · Inadequate Aftercare |
-| ikea | **perm_a** | 9 | 90% | 2/9 | $0.025 | Clear Easy-to-Scan Info · Post-Care Comms Gaps · Proactive Patient Support *(7 unassigned)* |
-| ikea | perm_b | 11 | 100% | 3/11 | $0.025 | Clear Digestible Info · Inadequate Post-Treatment Care · Proactive Comms |
+| ikea | baseline | 12 | 100% | 6/12 | $0.026 | Clear Scannable Info · Navigation Confusion · Delivery Expectations |
+| ikea | **perm_a** | 9 | 90% | 2/9 | $0.025 | Clear Easy-to-Scan Info · Search Friction · Proactive Support Prompts *(7 unassigned)* |
+| ikea | perm_b | 11 | 100% | 3/11 | $0.025 | Clear Digestible Info · Checkout Friction · Proactive Comms |
 | ikea | perm_c | 15 | 99% | 5/15 | $0.030 | Scanning headings, not reading everything · Straightforward & appropriately minimal · Proactive reassurance |
 
 ### Verdict — Perm-A most interesting

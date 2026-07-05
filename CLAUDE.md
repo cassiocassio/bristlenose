@@ -102,6 +102,10 @@ macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat
 
 **Rule: when writing shell commands that use regex or platform-specific flags, prefer `gsed`/`ggrep`/`gawk`/`greadlink` (all from `brew install coreutils gnu-sed gawk findutils grep`), or use Python/Perl for portability.** The `g`-prefixed GNU tools are always available on this machine.
 
+### zsh unmatched-glob does NOT abort a multi-command Bash call
+
+The Bash tool runs under zsh. When a glob matches nothing, zsh prints `zsh: no matches found: <pattern>` and — unlike `set -e` or bash's default — **skips that one command but continues to the next line in the same call.** So a "clean up, then run the payload" script whose cleanup glob matched nothing (`rm -f dir/*.json` with no files there) still runs the payload. The trap: you see the `no matches found` error, assume the whole script aborted, and **relaunch — double-running the payload.** This cost a real double-spend of LLM credits on the quote-stability experiment (3 Jul 2026: a background extraction ran twice because a guard `rm -f scratch/run_*.json` "failed" but Python ran anyway, then I relaunched). Fixes: use `find dir -name '*.json' -delete` (no-match-safe, no nomatch error), or guard with `setopt +o nomatch` / `2>/dev/null || true` **on its own line**, or just don't put a bare-glob cleanup ahead of a payload in the same call. When a Bash call errors early, verify what actually ran (check for output files) before relaunching.
+
 ### AppleDouble files on external drives
 
 When macOS copies files to a filesystem that can't store xattrs/resource forks natively (ExFAT, FAT32, SMB shares, some NFS exports), Finder creates a `._<name>` sidecar alongside every user file to carry the metadata. These are **binary blobs that share the user file's extension** — `._foo.mp4` looks like a video to anything that classifies by suffix; `._s1.txt` looks like a transcript and crashes utf-8 decode (`UnicodeDecodeError: byte 0xb0`).

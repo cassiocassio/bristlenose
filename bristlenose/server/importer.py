@@ -814,6 +814,59 @@ def _match_by_membership(
     return matched
 
 
+def _match_by_anchor(
+    anchors: list[tuple[int, set[int]]],
+    incoming: list[tuple[int, set[int]]],
+) -> dict[int, int]:
+    """Match renamed themes to incoming themes by star-anchor overlap (Phase 3).
+
+    ``anchors`` is ``[(theme_id, {pinned_quote_id, ...}), ...]`` — a renamed
+    theme's *frozen* pinned quotes, which survive re-import (Freeze) and so are
+    always present somewhere in ``incoming``; ``incoming`` is
+    ``[(index, {quote_id, ...}), ...]``.  The incoming theme holding the most of
+    a renamed theme's anchor inherits its ``theme_id`` (and therefore its custom
+    name) — "bind-then-stick", stable where fluid membership (ARI ~0.43) is not.
+    Each theme and each incoming index is claimed once, most anchor quotes first.
+    """
+    scored: list[tuple[int, float, int, int]] = []
+    for theme_id, anchor in anchors:
+        if not anchor:
+            continue
+        for idx, members in incoming:
+            overlap = len(anchor & members)
+            if overlap:
+                scored.append((overlap, overlap / len(anchor), idx, theme_id))
+    scored.sort(reverse=True)  # most anchor quotes first, then fraction
+    matched: dict[int, int] = {}
+    claimed_idx: set[int] = set()
+    claimed_theme: set[int] = set()
+    for _overlap, _frac, idx, theme_id in scored:
+        if idx in claimed_idx or theme_id in claimed_theme:
+            continue
+        matched[idx] = theme_id
+        claimed_idx.add(idx)
+        claimed_theme.add(theme_id)
+    return matched
+
+
+def _renamed_theme_ids(db: Session, project_id: int) -> set[int]:
+    """Theme ids carrying a researcher rename (HeadingEdit ``theme-group-{id}:*``)."""
+    ids: set[int] = set()
+    rows = (
+        db.query(HeadingEdit.heading_key)
+        .filter(
+            HeadingEdit.project_id == project_id,
+            HeadingEdit.heading_key.like("theme-group-%"),
+        )
+        .all()
+    )
+    for (key,) in rows:
+        num = key[len("theme-group-"):].split(":", 1)[0]
+        if num.isdigit():
+            ids.add(int(num))
+    return ids
+
+
 def _import_quotes_from_clusters(
     db: Session,
     project: Project,
@@ -938,12 +991,13 @@ def _import_quotes_from_themes(
 ) -> None:
     """Import theme groups and their quotes.
 
-    Upserts each theme by membership (quote overlap), not label — same rule as
-    clusters (see ``_import_quotes_from_clusters``), so a renamed theme keeps
-    its ``theme_id`` across label drift.  Note: themes genuinely diverge across
-    re-runs (ARI ~0.4), so most re-imports won't match and will create fresh
-    themes — that is expected, and is why Phase 3 gives themes only best-effort
-    labels.  The membership upsert simply lets an *unchanged* theme keep its id.
+    Two-tier identity (themes diverge hard across re-runs, ARI ~0.43):
+    - A **renamed** theme is matched by its **star-anchors** — its frozen pinned
+      quotes, which survive re-import and stay findable even as the theme
+      churns — so its custom name persists (Phase 3, ``_match_by_anchor``).
+    - Every other theme matches by **membership** overlap (Phase 2), which lets
+      an *unchanged* theme keep its id; a diverged one gets a fresh id (fine, its
+      label is the machine's and disposable).
 
     Reuses quotes from quote_map if they already exist (from clusters).
     """
@@ -977,13 +1031,35 @@ def _import_quotes_from_themes(
         )
         for t in existing_themes
     ]
-    matched = _match_by_membership(existing_members, incoming_members)
+
+    # Phase 3 — star-anchored theme name persistence.  A *renamed* theme is
+    # matched by its frozen pinned quotes (star-anchors), which survive
+    # re-import and so land in some incoming theme, even as the theme's fluid
+    # membership churns (ARI ~0.43) below the membership threshold.  Anchor
+    # matching takes precedence over membership matching so the custom name
+    # follows its anchors (bind-then-stick); the rest match by membership.
+    pinned_ids = _pinned_quote_ids(db, project.id)
+    existing_by_id = dict(existing_members)
+    renamed_ids = _renamed_theme_ids(db, project.id)
+    anchors = [
+        (tid, existing_by_id.get(tid, set()) & pinned_ids)
+        for tid in renamed_ids
+        if existing_by_id.get(tid, set()) & pinned_ids
+    ]
+    anchor_matched = _match_by_anchor(anchors, incoming_members)
+    claimed_idx = set(anchor_matched)
+    claimed_theme = set(anchor_matched.values())
+    membership_matched = _match_by_membership(
+        [(tid, m) for tid, m in existing_members if tid not in claimed_theme],
+        [(i, m) for i, m in incoming_members if i not in claimed_idx],
+    )
+    matched = {**anchor_matched, **membership_matched}
 
     # Don't strand a pinned quote dropped from every theme this run (see the
     # cluster path); themes have their own incoming union.
     all_incoming: set[int] = set().union(*(m for _, m in incoming_members)) \
         if incoming_members else set()
-    strand_ids = _pinned_quote_ids(db, project.id) - all_incoming
+    strand_ids = pinned_ids - all_incoming
 
     for i, theme_data in enumerate(theme_groups_data):
         label = theme_data.get("theme_label", f"Theme {i + 1}")

@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient
 
 from bristlenose.server.app import create_app
 from bristlenose.server.importer import (
+    _match_by_anchor,
     _match_by_membership,
     _pinned_quote_ids,
     import_project,
@@ -735,3 +736,110 @@ class TestThemeIdentity:
             1 for t in themes for q in t["quotes"] if q["dom_id"] == _dom("p1", 30)
         )
         assert appearances == 1, "a quote moved between reused themes appears once"
+
+
+class TestThemeStarAnchor:
+    """Phase 3 — a renamed theme's custom name follows its frozen star-anchors
+    across the theme churn (ARI ~0.43) that membership matching can't survive."""
+
+    def test_anchor_matcher_follows_plurality(self) -> None:
+        # theme 100 anchored on pinned {1,2,3}; incoming idx 1 holds 2 of them.
+        assert _match_by_anchor([(100, {1, 2, 3})], [(0, {1, 9}), (1, {2, 3, 8})]) == {
+            1: 100
+        }
+
+    def test_anchor_matcher_claims_each_once(self) -> None:
+        # both themes' anchors land in one incoming theme; the bigger overlap wins.
+        assert _match_by_anchor([(100, {1, 2}), (200, {3})], [(0, {1, 2, 3})]) == {
+            0: 100
+        }
+
+    def test_renamed_theme_name_follows_star_anchor_through_divergence(
+        self, tmp_path: Path
+    ) -> None:
+        """The core Phase 3 contract: rename a theme with a starred quote, then
+        re-import with the theme SCATTERED (membership far below the match
+        threshold).  The custom name lands on whichever incoming theme holds the
+        star-anchor — not lost, not on an unrelated theme."""
+        _write_intermediate(
+            tmp_path, [_cluster("Sec", [_quote("p1", 1, "s")])],
+            themes=[_theme("Onboarding", [_quote("p1", 10, "a"), _quote("p1", 20, "b"),
+                                          _quote("p1", 30, "c"), _quote("p1", 40, "d"),
+                                          _quote("p1", 50, "e")])],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        tid = client.get("/api/projects/1/quotes").json()["themes"][0]["theme_id"]
+        client.put("/api/projects/1/starred", json={_dom("p1", 10): True})
+        client.put(
+            "/api/projects/1/edits", json={f"theme-group-{tid}:title": "Early experience"}
+        )
+
+        db = app.state.db_factory()
+        try:
+            # Scatter Onboarding's quotes across 3 unrelated themes (ARI-0.43).
+            # The star-anchor q@10 lands in "Trust".
+            _write_intermediate(
+                tmp_path, [_cluster("Sec", [_quote("p1", 1, "s")])],
+                themes=[
+                    _theme("Trust", [_quote("p1", 10, "a"), _quote("p1", 60, "x")]),
+                    _theme("Navigation", [_quote("p1", 20, "b"), _quote("p1", 30, "c")]),
+                    _theme("Pricing", [_quote("p1", 40, "d"), _quote("p1", 50, "e"),
+                                       _quote("p1", 70, "y")]),
+                ],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        themes = client.get("/api/projects/1/quotes").json()["themes"]
+        named = [t for t in themes if t["edited_label"] == "Early experience"]
+        assert len(named) == 1, "the custom name must survive on exactly one theme"
+        assert named[0]["theme_id"] == tid, "the theme keeps its durable id"
+        assert _dom("p1", 10) in [q["dom_id"] for q in named[0]["quotes"]], (
+            "the name lands on the theme holding the star-anchor"
+        )
+
+    def test_renamed_theme_name_sticks_across_two_reimports(
+        self, tmp_path: Path
+    ) -> None:
+        """Bind-then-stick: the name keeps following the star-anchor over
+        successive churny re-imports, not just the first."""
+        _write_intermediate(
+            tmp_path, [_cluster("Sec", [_quote("p1", 1, "s")])],
+            themes=[_theme("T", [_quote("p1", 10, "a"), _quote("p1", 20, "b")])],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        tid = client.get("/api/projects/1/quotes").json()["themes"][0]["theme_id"]
+        client.put("/api/projects/1/starred", json={_dom("p1", 10): True})
+        client.put("/api/projects/1/edits", json={f"theme-group-{tid}:title": "Named"})
+
+        db = app.state.db_factory()
+        try:
+            # Run 2: anchor q@10 moves into "Alpha".
+            _write_intermediate(
+                tmp_path, [_cluster("Sec", [_quote("p1", 1, "s")])],
+                themes=[_theme("Alpha", [_quote("p1", 10, "a"), _quote("p1", 80, "z")]),
+                        _theme("Beta", [_quote("p1", 20, "b")])],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+            # Run 3: anchor q@10 moves again, into "Gamma".
+            _write_intermediate(
+                tmp_path, [_cluster("Sec", [_quote("p1", 1, "s")])],
+                themes=[_theme("Gamma", [_quote("p1", 10, "a"), _quote("p1", 90, "w")]),
+                        _theme("Delta", [_quote("p1", 80, "z")])],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        themes = client.get("/api/projects/1/quotes").json()["themes"]
+        named = [t for t in themes if t["edited_label"] == "Named"]
+        assert len(named) == 1 and named[0]["theme_id"] == tid, (
+            "the custom name sticks to the star-anchor's theme across re-imports"
+        )
+        assert _dom("p1", 10) in [q["dom_id"] for q in named[0]["quotes"]]

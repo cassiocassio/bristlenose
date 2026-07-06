@@ -2,6 +2,7 @@
 
 **Status:** Design model, post-experiment (Jul 2026). Not yet built.
 **Parent:** [`design-incremental-analysis.md`](design-incremental-analysis.md) — the problem of adding interviews to an already-analysed project without destroying researcher work. That doc frames the problem and the two-layer stance; **this doc specifies the persistence layer**: exactly which human signals survive a re-run, the identity machinery that carries them, and the rules and tie-breakers for when structure shifts underneath them.
+**Implementation plan:** [`design-curation-persistence-plan.md`](design-curation-persistence-plan.md) — the code-grounded phasing (Freeze → Section identity → Themes + "New!" flag), migration steps against the live importer/models, and the build/review process.
 **Grounding:** the quote-stability experiment (Jul 2026 — statistical summary in the parent doc). Numbers used throughout: re-extracting the same interview recovers **~81%** of quotes by single-best-overlap-match and **~95%** by union/split-crediting at ≥70% overlap, with a **~9% genuinely-fragile tail** no matcher recovers; **section** membership is stable run-to-run (**ARI ~0.96**); **theme** membership churns (**ARI ~0.43**, theme counts swinging ~2× on *identical* quotes). Examples below (a "Checkout" section, an "Onboarding friction" theme) are generic UX illustrations, not from any project's data.
 
 ---

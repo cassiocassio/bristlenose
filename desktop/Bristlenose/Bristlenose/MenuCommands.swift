@@ -99,6 +99,8 @@ private struct DebugMenuContent: View {
 
         Button("Shoal Screensaver…") { openWindow(id: "shoal") }
 
+        Button("Component Catalogue…") { openWindow(id: "component-catalogue") }
+
         Divider()
 
         // Reveal-existing-data actions for the served project (the one whose

@@ -146,6 +146,15 @@ struct BristlenoseApp: App {
                 .tint(paletteAccent)
         }
         .defaultSize(width: 800, height: 600)
+
+        // DEBUG-only native component catalogue — the "Design Lens". Each
+        // design-system element rebuilt natively beside the web version in a
+        // WKWebView. Debug ▸ Component Catalogue. Presentation only.
+        Window("Component Catalogue", id: "component-catalogue") {
+            ComponentCatalogView()
+                .tint(paletteAccent)
+        }
+        .defaultSize(width: 900, height: 640)
         #endif
     }
 }

@@ -7,6 +7,7 @@ call PUT after every localStorage write (fire-and-forget background sync).
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request
@@ -113,6 +114,38 @@ def _quote_dom_id(quote: Quote) -> str:
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _effective_text(db: Session, quote: Quote) -> str:
+    """The researcher-facing text of a quote: its latest edit, else the
+    pipeline text.  This is what gets frozen at pin time."""
+    edit = (
+        db.query(QuoteEdit)
+        .filter_by(quote_id=quote.id)
+        .order_by(QuoteEdit.edited_at.desc())
+        .first()
+    )
+    return edit.edited_text if edit else quote.text
+
+
+def _mint_pin(db: Session, quote: Quote, frozen_text: str | None = None) -> None:
+    """Freeze a quote on first human touch (star / edit / human-tag).
+
+    Mints a project-scoped ``durable_id`` and snapshots ``frozen_form`` — the
+    researcher's verbatim words, protected from silent pipeline drift on
+    re-import.  Idempotent and first-touch-wins: once a quote has a
+    ``durable_id`` this is a no-op, so re-pinning after a full un-pin keeps the
+    original frozen words rather than re-capturing drifted text.
+
+    ``frozen_form`` is a re-identification key — never include it in an export
+    or anonymised artefact (see the export/anonymisation boundary).
+    """
+    if quote.durable_id is not None:
+        return
+    quote.durable_id = uuid.uuid4().hex
+    quote.frozen_form = (
+        frozen_text if frozen_text is not None else _effective_text(db, quote)
+    )
 
 
 def _session_ids_for_project(db: Session, project_id: int) -> list[int]:
@@ -374,6 +407,8 @@ def put_edits(
                 if not quote:
                     continue
                 db.add(QuoteEdit(quote_id=quote.id, edited_text=text, edited_at=_now()))
+                # Freeze on first edit: the edited text IS the frozen form.
+                _mint_pin(db, quote, frozen_text=text)
             else:
                 db.add(
                     HeadingEdit(
@@ -474,6 +509,10 @@ def put_tags(
                         tag_definition_id=td_id,
                         source=source,
                     ))
+                    # Freeze on first human tag.  Machine tags (autocode /
+                    # codebook-builder / sentiment "pipeline") don't pin.
+                    if source == "human":
+                        _mint_pin(db, quote)
 
         db.commit()
         return {"status": "ok"}
@@ -608,6 +647,10 @@ def put_starred(
                 qs.starred_at = _now() if should_star else None
             elif should_star:
                 db.add(QuoteState(quote_id=qid, is_starred=True, starred_at=_now()))
+            if should_star:
+                quote = db.get(Quote, qid)
+                if quote:
+                    _mint_pin(db, quote)  # freeze on first human touch
 
         db.commit()
         return {"status": "ok"}

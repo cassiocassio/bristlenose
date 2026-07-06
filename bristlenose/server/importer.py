@@ -1048,7 +1048,11 @@ def _auto_tag_from_sentiment_field(db: Session, project: Project) -> None:
             continue
         if (quote.id, td.id) in existing_quote_tag_pairs:
             continue
-        db.add(QuoteTag(quote_id=quote.id, tag_definition_id=td.id))
+        # source="pipeline": sentiment tags are machine-authored from the
+        # pipeline's sentiment field, NOT researcher effort.  Labelling them
+        # "human" (the column default) would falsely pin every quote with a
+        # sentiment under the Freeze pin predicate (source == "human").
+        db.add(QuoteTag(quote_id=quote.id, tag_definition_id=td.id, source="pipeline"))
         created += 1
 
     if created:
@@ -1058,6 +1062,59 @@ def _auto_tag_from_sentiment_field(db: Session, project: Project) -> None:
             created,
             project.name,
         )
+
+
+def _pinned_quote_ids(db: Session, project_id: int) -> set[int]:
+    """Quote ids carrying durable human work — the derived Freeze pin set.
+
+    ``is_pinned = starred ∨ edited ∨ human-tagged`` and is NEVER stored: it is
+    recomputed from the researcher-state tables on every call, so it falls back
+    to false automatically the moment the last star / edit / tag is removed
+    (object permanence lasts exactly as long as the human's investment does).
+
+    The tag arm counts only genuinely human tags: ``QuoteTag.source == "human"``
+    AND the tag's codebook group is not the machine-authored sentiment
+    framework (sentiment tags carry a real ``source`` now, but the group filter
+    also protects older databases where they were mislabelled "human").
+    """
+    from sqlalchemy import or_
+
+    pinned: set[int] = set()
+
+    # Starred
+    pinned.update(
+        qid
+        for (qid,) in db.query(QuoteState.quote_id)
+        .join(Quote, QuoteState.quote_id == Quote.id)
+        .filter(Quote.project_id == project_id, QuoteState.is_starred.is_(True))
+        .all()
+    )
+    # Edited
+    pinned.update(
+        qid
+        for (qid,) in db.query(QuoteEdit.quote_id)
+        .join(Quote, QuoteEdit.quote_id == Quote.id)
+        .filter(Quote.project_id == project_id)
+        .all()
+    )
+    # Human-tagged, excluding machine sentiment tags
+    pinned.update(
+        qid
+        for (qid,) in db.query(QuoteTag.quote_id)
+        .join(Quote, QuoteTag.quote_id == Quote.id)
+        .join(TagDefinition, QuoteTag.tag_definition_id == TagDefinition.id)
+        .join(CodebookGroup, TagDefinition.codebook_group_id == CodebookGroup.id)
+        .filter(
+            Quote.project_id == project_id,
+            QuoteTag.source == "human",
+            or_(
+                CodebookGroup.framework_id.is_(None),
+                CodebookGroup.framework_id != "sentiment",
+            ),
+        )
+        .all()
+    )
+    return pinned
 
 
 def _cleanup_stale_data(
@@ -1075,13 +1132,38 @@ def _cleanup_stale_data(
     Researcher state (QuoteState, QuoteTag, QuoteEdit, DeletedBadge)
     is preserved for surviving quotes and deleted for stale quotes —
     a quote from a removed session is gone, so its tags are meaningless.
+
+    **Freeze exemption:** a *pinned* quote (see ``_pinned_quote_ids``) is
+    never treated as stale *as long as its session still exists*, even if the
+    pipeline stops re-emitting that specific quote (boundary drift, a quality
+    threshold).  The researcher's star / edit / tag guarantees it continues to
+    exist across re-runs — the matcher no longer governs marked quotes.
+
+    The exemption is deliberately scoped to present sessions.  If a whole
+    session is removed (deleted recording, **consent withdrawal**), its quotes
+    go with it — pinned or not — because the source material is gone and
+    governance requires it.  Freeze protects against re-extraction drift, not
+    against the researcher removing an interview.
     """
-    # --- Stale quotes (not touched in this import) -----------------------
+    # Pinned quotes are protected only while their session is still present.
+    pinned_ids = _pinned_quote_ids(db, project.id)
+    protected_ids: set[int] = set()
+    if pinned_ids:
+        protected_ids = {
+            qid
+            for qid, sid in db.query(Quote.id, Quote.session_id)
+            .filter(Quote.id.in_(pinned_ids))
+            .all()
+            if sid in current_session_ids
+        }
+
+    # --- Stale quotes (not touched in this import, and not protected) ----
     stale_quotes = (
         db.query(Quote)
         .filter(
             Quote.project_id == project.id,
             (Quote.last_imported_at < now) | (Quote.last_imported_at.is_(None)),
+            Quote.id.notin_(protected_ids) if protected_ids else sa_text("1=1"),
         )
         .all()
     )

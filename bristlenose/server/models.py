@@ -329,6 +329,18 @@ class Quote(Base):
     segment_index: Mapped[int] = mapped_column(Integer, default=-1)
     last_imported_at: Mapped[datetime | None] = mapped_column(default=None)
 
+    # --- Curation persistence (Freeze) ----------------------------------
+    # Minted on first human touch (star/edit/human-tag) and never re-derived.
+    # durable_id: project-scoped stable identity that outlives label/text drift.
+    # frozen_form: verbatim display text captured at pin time — the researcher's
+    #   words, protected from silent pipeline drift on re-import.  A
+    #   re-identification key: excluded from the export/anonymisation boundary,
+    #   like pii_summary.  Both are None until the quote is first pinned.
+    # is_pinned is NOT stored — it is derived at query time from the presence of
+    #   researcher state (see importer._pinned_quote_ids).
+    durable_id: Mapped[str | None] = mapped_column(String(32), default=None)
+    frozen_form: Mapped[str | None] = mapped_column(Text, default=None)
+
     project: Mapped[Project] = relationship(back_populates="quotes")
 
     __table_args__ = (

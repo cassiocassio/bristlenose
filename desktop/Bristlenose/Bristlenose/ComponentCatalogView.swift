@@ -21,6 +21,8 @@ import SwiftUI
 // is faithful; dark-mode semantic-colour adaptation is a later slice.
 
 struct ComponentCatalogView: View {
+    @State private var scheme: ColorSchemeChoice = .auto
+
     var body: some View {
         VStack(spacing: 0) {
             header
@@ -36,8 +38,8 @@ struct ComponentCatalogView: View {
                         }
                         Specimen(title: "Sentiment / codebook tag", control: "NSTokenField · SF Mono · ✕ on hover") {
                             HStack(spacing: 6) {
-                                CatalogTag("frustration", fg: 0xEA580C, bg: 0xFFF7ED)
-                                CatalogTag("onboarding", fg: 0x1F4F8A, bg: 0xE3EDFB)
+                                CatalogTag("frustration", sentiment: 0xEA580C)
+                                CatalogTag("onboarding", sentiment: 0x1F4F8A)
                             }
                         }
                         Specimen(title: "Person badge", control: "two-tone split · subtle hover") {
@@ -69,6 +71,7 @@ struct ComponentCatalogView: View {
             }
         }
         .frame(minWidth: 840, minHeight: 560)
+        .preferredColorScheme(scheme.colorScheme)
     }
 
     private var header: some View {
@@ -76,7 +79,11 @@ struct ComponentCatalogView: View {
             Text("Component Catalogue").font(.headline)
             Text("native  ·  vs  ·  web design system").font(.caption).foregroundStyle(.secondary)
             Spacer()
-            Text("DEBUG · presentation only").font(.caption).foregroundStyle(.tertiary)
+            Picker("Appearance", selection: $scheme) {
+                ForEach(ColorSchemeChoice.allCases) { Text($0.label).tag($0) }
+            }
+            .pickerStyle(.segmented).labelsHidden().fixedSize()
+            Text("DEBUG").font(.caption).foregroundStyle(.tertiary)
         }
         .padding(12)
     }
@@ -130,12 +137,11 @@ private struct SpacingRhythm: View {
 /// SF Mono tag, tight 3px radius, existing colour, native ✕ close on hover.
 private struct CatalogTag: View {
     let text: String
-    let fg: UInt
-    let bg: UInt
+    let sentiment: UInt
     @State private var hover = false
 
-    init(_ text: String, fg: UInt, bg: UInt) {
-        self.text = text; self.fg = fg; self.bg = bg
+    init(_ text: String, sentiment: UInt) {
+        self.text = text; self.sentiment = sentiment
     }
 
     var body: some View {
@@ -147,8 +153,8 @@ private struct CatalogTag: View {
         }
         .padding(.horizontal, 7)
         .padding(.vertical, 2)
-        .foregroundStyle(hx(fg))
-        .background(hx(bg), in: RoundedRectangle(cornerRadius: 3))
+        .foregroundStyle(Tok.sentiment(sentiment))
+        .background(Tok.tagFill(sentiment), in: RoundedRectangle(cornerRadius: 3))
         .onHover { hover = $0 }
     }
 }
@@ -181,20 +187,20 @@ private struct CatalogPersonBadge: View {
             // mono box centres as a short box and the code rides high.
             Text(code)
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(hx(0x3C3C43))
+                .foregroundStyle(Tok.ink2)
                 .padding(.horizontal, 6)
                 .frame(maxHeight: .infinity)
-                .background(hx(0xF3F4F6))
+                .background(Tok.codeBg)
             Text(name)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(hx(0x1A1A1A))
+                .foregroundStyle(Tok.ink)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .frame(maxHeight: .infinity)
-                .background(hover ? Color(nsColor: .textBackgroundColor) : hx(0xF9FAFB))
+                .background(hover ? Color(nsColor: .textBackgroundColor) : Tok.surface)
         }
         .fixedSize()
-        .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.black.opacity(0.14)))
+        .overlay(RoundedRectangle(cornerRadius: 3).stroke(Tok.hairline))
         .clipShape(RoundedRectangle(cornerRadius: 3))
         .onHover { hover = $0 }
     }
@@ -210,7 +216,7 @@ private struct NativeQuoteCard: View {
             HStack(alignment: .top, spacing: 6) {
                 HStack(spacing: 0) {
                     Text("Checkout · ").foregroundStyle(.secondary)
-                    Text("frustration").foregroundStyle(hx(0xC2410C))
+                    Text("frustration").foregroundStyle(Tok.sentiment(0xC2410C))
                 }
                 .font(.system(size: 11))
                 Spacer()
@@ -224,13 +230,13 @@ private struct NativeQuoteCard: View {
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
                 CatalogPersonBadge(code: "P3", name: "12:04")
-                CatalogTag("friction", fg: 0x8A2F52, bg: 0xFBE6EC)
+                CatalogTag("friction", sentiment: 0x8A2F52)
             }
         }
         .padding(12)
         .frame(maxWidth: 340, alignment: .leading)
         .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.black.opacity(0.1)))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tok.hairline))
     }
 }
 
@@ -262,7 +268,7 @@ private struct MasonryCard: View {
                 .font(.system(size: 12))
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 5) {
-                Circle().fill(hx(quote.sent)).frame(width: 6, height: 6)
+                Circle().fill(Tok.sentiment(quote.sent)).frame(width: 6, height: 6)
                 Text("\(n) · \(quote.who) · \(quote.time)")
                     .font(.system(size: 9.5, design: .monospaced))
                     .foregroundStyle(.secondary)
@@ -270,8 +276,8 @@ private struct MasonryCard: View {
         }
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(hx(0xF9FAFB))
-        .overlay(alignment: .leading) { Rectangle().fill(hx(quote.sent)).frame(width: 2) }
+        .background(Tok.surface)
+        .overlay(alignment: .leading) { Rectangle().fill(Tok.sentiment(quote.sent)).frame(width: 2) }
         .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 }

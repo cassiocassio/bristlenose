@@ -17,9 +17,13 @@ enum ComponentCatalogHTML {
     <!doctype html><html><head><meta charset="utf-8">
     <style>
       :root{
-        --bg:#ffffff; --text:#1a1a1a; --muted:#6b7280; --border:#e5e7eb;
-        --quote-bg:#f9fafb; --badge-bg:#f3f4f6; --badge-text:#374151;
-        --code-bg:#f3f4f6; --code-text:#374151; --name-bg:#f9fafb;
+        color-scheme: light dark;   /* follow the host WKWebView appearance (toggle) */
+        --bg:light-dark(#ffffff,#1c1c1e); --text:light-dark(#1a1a1a,#e5e7eb);
+        --muted:light-dark(#6b7280,#98989d); --border:light-dark(#e5e7eb,#38383a);
+        --quote-bg:light-dark(#f9fafb,#232325); --badge-bg:light-dark(#f3f4f6,#2a2a2c);
+        --badge-text:light-dark(#374151,#c7c7cc);
+        --code-bg:light-dark(#f3f4f6,#2a2a2c); --code-text:light-dark(#374151,#c7c7cc);
+        --name-bg:light-dark(#f9fafb,#232325);
         --font:"Inter","Segoe UI Variable",system-ui,-apple-system,sans-serif;
         --mono:"SF Mono",ui-monospace,Menlo,monospace;
       }

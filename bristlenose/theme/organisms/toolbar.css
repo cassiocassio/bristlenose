@@ -50,6 +50,12 @@
     line-height: var(--bn-text-body-lh);
 }
 
+/* Route-level error fallback (RouteError.tsx) — reuses the empty-state panel;
+   just adds breathing room above the reload button. */
+.bn-route-error .bn-btn {
+    margin-top: var(--bn-space-md);
+}
+
 /* Refetch overlay — dim existing data while a refetch is in flight.
    `inert` is set on the same element from the React hook to block AT
    and keyboard input; this rule covers visual dim + pointer cursor.

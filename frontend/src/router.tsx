@@ -9,6 +9,7 @@
 
 import { createBrowserRouter, createHashRouter, Navigate } from "react-router-dom";
 import { AppLayout } from "./layouts/AppLayout";
+import { RouteError } from "./components/RouteError";
 import { ProjectTab } from "./pages/ProjectTab";
 import { SessionsTab } from "./pages/SessionsTab";
 import { TranscriptTab } from "./pages/TranscriptTab";
@@ -25,6 +26,10 @@ export const routes = [
   {
     path: "/report",
     element: <AppLayout />,
+    // Single route-level boundary — catches render errors in the layout and
+    // every tab (and loader/action rejections), so a crash shows a calm
+    // fallback instead of a white screen or dev-facing stack trace.
+    errorElement: <RouteError />,
     children: [
       { index: true, element: <ProjectTab /> },
       { path: "sessions", element: <SessionsTab /> },

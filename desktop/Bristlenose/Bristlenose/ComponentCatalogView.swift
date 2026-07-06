@@ -1,5 +1,6 @@
 #if DEBUG
 import AppKit
+import Charts
 import SwiftUI
 
 // MARK: - Component Catalogue — the native "Design Lens"
@@ -34,6 +35,7 @@ struct ComponentCatalogView: View {
                         AtomsSection()
                         MoleculesSection()
                         OrganismsSection()
+                        ChartsSection()
                     }
                     .padding(20)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -532,6 +534,87 @@ private struct SessionsTableDemo: View {
             TableColumn("Duration") { Text($0.dur).monospacedDigit() }
         }
         .frame(width: 320, height: 118)
+    }
+}
+
+// MARK: Phase 4 — charts (Swift Charts)
+
+private struct ChartsSection: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            Specimen(title: "Sentiment bars — Swift Charts", control: "Chart { BarMark }") {
+                SentimentBarsDemo()
+            }
+            Specimen(title: "Sparkline — Swift Charts", control: "Chart { LineMark } · axes hidden") {
+                SparklineDemo()
+            }
+            Specimen(title: "Signal heatmap — Swift Charts", control: "Chart { RectangleMark }") {
+                HeatmapDemo()
+            }
+        }
+    }
+}
+
+private struct SentimentBarsDemo: View {
+    private let data: [(name: String, n: Int, color: Color)] = [
+        ("frustration", 7, Tok.sentiment(0xEA580C)),
+        ("confusion", 4, Tok.sentiment(0xDC2626)),
+        ("satisfaction", 9, Tok.sentiment(0x16A34A)),
+        ("delight", 5, Tok.sentiment(0x059669))
+    ]
+    var body: some View {
+        Chart(data, id: \.name) { d in
+            BarMark(x: .value("count", d.n), y: .value("sentiment", d.name))
+                .foregroundStyle(d.color)
+        }
+        .chartLegend(.hidden)
+        .frame(width: 300, height: 130)
+    }
+}
+
+private struct SparklineDemo: View {
+    private let vals: [Double] = [3, 7, 5, 9, 4, 8, 6, 10]
+    var body: some View {
+        Chart(Array(vals.enumerated()), id: \.offset) { item in
+            LineMark(x: .value("i", item.offset), y: .value("v", item.element))
+                .foregroundStyle(Color.accentColor)
+        }
+        .chartXAxis(.hidden)
+        .chartYAxis(.hidden)
+        .frame(width: 150, height: 40)
+    }
+}
+
+private struct HeatCell: Identifiable {
+    let id = UUID()
+    let row: String
+    let col: String
+    let v: Int
+}
+
+private struct HeatmapDemo: View {
+    private let cells: [HeatCell] = {
+        let rows = ["Checkout", "Search", "Onboard"]
+        let cols = ["neg", "neu", "pos"]
+        let vals = [[2, 7, 11], [1, 5, 9], [4, 3, 8]]
+        var out: [HeatCell] = []
+        for (ri, r) in rows.enumerated() {
+            for (ci, c) in cols.enumerated() {
+                out.append(HeatCell(row: r, col: c, v: vals[ri][ci]))
+            }
+        }
+        return out
+    }()
+    var body: some View {
+        Chart(cells) { cell in
+            RectangleMark(x: .value("col", cell.col), y: .value("row", cell.row))
+                .foregroundStyle(Tok.sentiment(0x16A34A).opacity(Double(cell.v) / 12.0))
+                .annotation(position: .overlay) {
+                    Text("\(cell.v)").font(.system(size: 9)).foregroundStyle(.primary)
+                }
+        }
+        .chartLegend(.hidden)
+        .frame(width: 240, height: 130)
     }
 }
 

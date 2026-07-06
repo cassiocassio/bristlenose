@@ -374,11 +374,11 @@ class ScreenCluster(Base):
 
     project: Mapped[Project] = relationship(back_populates="screen_clusters")
 
-    __table_args__ = (
-        UniqueConstraint(
-            "project_id", "screen_label", name="uq_cluster_project_label"
-        ),
-    )
+    # NB: no unique constraint on screen_label.  Section identity is membership
+    # (which quotes it holds), not the label — the importer upserts by
+    # quote-overlap (see importer._match_by_membership) and the label is free to
+    # drift or collide across re-imports.  A label-unique constraint would crash
+    # the upsert when a new section reuses a retiring section's label.
 
 
 class ThemeGroup(Base):
@@ -400,11 +400,8 @@ class ThemeGroup(Base):
 
     project: Mapped[Project] = relationship(back_populates="theme_groups")
 
-    __table_args__ = (
-        UniqueConstraint(
-            "project_id", "theme_label", name="uq_theme_project_label"
-        ),
-    )
+    # NB: no unique constraint on theme_label — see ScreenCluster above. Theme
+    # identity is membership, not the label; the importer upserts by overlap.
 
 
 class ClusterQuote(Base):
@@ -517,7 +514,13 @@ class QuoteEdit(Base):
 class HeadingEdit(Base):
     """Researcher-renamed section or theme title/description.
 
-    heading_key format: "section-{slug}:title", "theme-{slug}:desc".
+    heading_key is keyed on the durable cluster/theme id, NOT the label slug, so
+    a rename survives pipeline label drift (Phase 2 — section identity):
+    "section-cluster-{cluster_id}:title", "section-cluster-{id}:desc",
+    "theme-group-{theme_id}:title", "theme-group-{id}:desc".  (Pre-Phase-2 rows
+    used the label slug — "section-{slug}:title"; migration 004 re-keys the
+    reconstructable ones.  The distinct "-cluster-"/"-group-" infixes keep the
+    new id keys unambiguous against the old slug keys.)
     """
 
     __tablename__ = "heading_edits"

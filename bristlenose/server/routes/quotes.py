@@ -11,6 +11,7 @@ from bristlenose.server.models import (
     ClusterQuote,
     CodebookGroup,
     DeletedBadge,
+    HeadingEdit,
     Person,
     Project,
     ProposedTag,
@@ -83,21 +84,32 @@ class QuoteResponse(BaseModel):
 
 
 class SectionResponse(BaseModel):
-    """A screen cluster (section) with its quotes."""
+    """A screen cluster (section) with its quotes.
+
+    ``screen_label`` / ``description`` are the pipeline's (for reset-to-original
+    and the "edited" indicator); ``edited_label`` / ``edited_description`` are
+    the researcher's rename resolved from HeadingEdit by the durable cluster id
+    (null = not renamed).  The frontend displays ``edited_label ?? screen_label``
+    — mirrors how quote ``edited_text`` is returned alongside the raw text.
+    """
 
     cluster_id: int
     screen_label: str
     description: str
     display_order: int
+    edited_label: str | None = None
+    edited_description: str | None = None
     quotes: list[QuoteResponse]
 
 
 class ThemeResponse(BaseModel):
-    """A theme group with its quotes."""
+    """A theme group with its quotes (see SectionResponse for the edited_* pair)."""
 
     theme_id: int
     theme_label: str
     description: str
+    edited_label: str | None = None
+    edited_description: str | None = None
     quotes: list[QuoteResponse]
 
 
@@ -375,6 +387,13 @@ def get_quotes(
         # Resolve speaker names
         speaker_map = _resolve_speaker_names(db, project_id)
 
+        # Researcher heading renames, keyed on the durable cluster/theme id
+        # (Phase 2).  Applied as edited_label/edited_description below.
+        heading_edits = {
+            he.heading_key: he.edited_text
+            for he in db.query(HeadingEdit).filter_by(project_id=project_id).all()
+        }
+
         # Build sections (screen clusters ordered by display_order)
         clusters = (
             db.query(ScreenCluster)
@@ -392,6 +411,10 @@ def get_quotes(
                 screen_label=cluster.screen_label,
                 description=cluster.description,
                 display_order=cluster.display_order,
+                edited_label=heading_edits.get(f"section-cluster-{cluster.id}:title"),
+                edited_description=heading_edits.get(
+                    f"section-cluster-{cluster.id}:desc"
+                ),
                 quotes=[
                     _build_quote_response(
                         q, state_map, edit_map, tags_map, badges_map,
@@ -414,6 +437,8 @@ def get_quotes(
                 theme_id=theme.id,
                 theme_label=theme.theme_label,
                 description=theme.description,
+                edited_label=heading_edits.get(f"theme-group-{theme.id}:title"),
+                edited_description=heading_edits.get(f"theme-group-{theme.id}:desc"),
                 quotes=[
                     _build_quote_response(
                         q, state_map, edit_map, tags_map, badges_map,

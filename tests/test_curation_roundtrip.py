@@ -18,7 +18,11 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from bristlenose.server.app import create_app
-from bristlenose.server.importer import _pinned_quote_ids, import_project
+from bristlenose.server.importer import (
+    _match_by_membership,
+    _pinned_quote_ids,
+    import_project,
+)
 from bristlenose.server.models import Quote, QuoteState
 from tests.conftest import AuthTestClient
 from tests.server_fixtures import cluster as _cluster
@@ -363,3 +367,120 @@ class TestFrozenFormStaysOffTheExportBoundary:
             assert key not in body, (
                 f"{key} must not cross the export/serialisation boundary"
             )
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 — Section identity
+# ---------------------------------------------------------------------------
+
+
+class TestMembershipMatcher:
+    """Pure-logic matcher used by the importer to upsert by quote overlap."""
+
+    def test_majority_child_keeps_id_on_split(self) -> None:
+        existing = [(100, {1, 2, 3, 4})]
+        incoming = [(0, {1, 2, 3}), (1, {4, 9, 10})]
+        # 0 overlaps 100 by 3/4=0.75 (kept); 1 by 1/6≈0.17 (new).
+        assert _match_by_membership(existing, incoming) == {0: 100}
+
+    def test_no_match_below_threshold(self) -> None:
+        existing = [(100, {1, 2, 3, 4})]
+        incoming = [(0, {4, 5, 6, 7})]  # jaccard 1/7 < 0.5 → new group
+        assert _match_by_membership(existing, incoming) == {}
+
+    def test_each_existing_claimed_once_best_overlap_wins(self) -> None:
+        existing = [(100, {1, 2, 3})]
+        incoming = [(0, {1, 2, 3}), (1, {1, 2})]  # both overlap; 0 (1.0) wins
+        assert _match_by_membership(existing, incoming) == {0: 100}
+
+
+class TestSectionIdentity:
+    def test_section_rename_survives_label_drift(self, tmp_path: Path) -> None:
+        """The core Phase 2 contract: rename a section, then re-import with the
+        pipeline label drifted (membership unchanged).  The rename still shows
+        on the same durable cluster_id; the raw label tracks the pipeline."""
+        members = [
+            _quote("p1", 10, "A"),
+            _quote("p1", 20, "B"),
+            _quote("p1", 30, "C"),
+        ]
+        _write_intermediate(tmp_path, [_cluster("Dashboard", members)])
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+
+        sections = client.get("/api/projects/1/quotes").json()["sections"]
+        assert len(sections) == 1
+        cid = sections[0]["cluster_id"]
+        assert sections[0]["screen_label"] == "Dashboard"
+        assert sections[0]["edited_label"] is None
+
+        # Rename, keyed on the durable cluster id.
+        assert client.put(
+            "/api/projects/1/edits",
+            json={f"section-cluster-{cid}:title": "Home screen"},
+        ).status_code == 200
+
+        after = client.get("/api/projects/1/quotes").json()["sections"][0]
+        assert after["edited_label"] == "Home screen"
+        assert after["screen_label"] == "Dashboard", "raw label preserved for reset"
+
+        # Re-import: SAME quotes, pipeline label DRIFTED → membership upsert must
+        # keep the cluster id, so the rename still applies.
+        db = app.state.db_factory()
+        try:
+            _write_intermediate(
+                tmp_path,
+                [
+                    _cluster(
+                        "Main dashboard screen",
+                        [_quote("p1", 10, "A"), _quote("p1", 20, "B"),
+                         _quote("p1", 30, "C")],
+                    )
+                ],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        drifted = client.get("/api/projects/1/quotes").json()["sections"]
+        assert len(drifted) == 1
+        assert drifted[0]["cluster_id"] == cid, "membership upsert must keep the id"
+        assert drifted[0]["screen_label"] == "Main dashboard screen", (
+            "raw label tracks the pipeline"
+        )
+        assert drifted[0]["edited_label"] == "Home screen", (
+            "rename survives pipeline label drift"
+        )
+
+    def test_new_section_gets_a_fresh_id_not_a_reused_one(
+        self, tmp_path: Path
+    ) -> None:
+        """A section made of entirely new quotes (no predecessor) is a new
+        group — it must not inherit a retiring section's id or its rename."""
+        _write_intermediate(
+            tmp_path,
+            [_cluster("Login", [_quote("p1", 10, "old-a"), _quote("p1", 20, "old-b")])],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        old_cid = client.get("/api/projects/1/quotes").json()["sections"][0]["cluster_id"]
+
+        db = app.state.db_factory()
+        try:
+            # Re-import: the old section is gone, a brand-new one takes its place
+            # (all-new quotes) — and happens to reuse the label "Login".
+            _write_intermediate(
+                tmp_path,
+                [_cluster("Login", [_quote("p1", 90, "new-a"), _quote("p1", 95, "new-b")])],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        sections = client.get("/api/projects/1/quotes").json()["sections"]
+        assert len(sections) == 1
+        assert sections[0]["cluster_id"] != old_cid, (
+            "no membership overlap → a fresh id, not the retired section's"
+        )

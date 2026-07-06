@@ -42,6 +42,8 @@ const MOCK_DATA: QuotesListResponse = {
       screen_label: "Onboarding",
       description: "First-time user experience",
       display_order: 1,
+      edited_label: null,
+      edited_description: null,
       quotes: [
         {
           dom_id: "q-P1-10",
@@ -94,6 +96,8 @@ const MOCK_DATA: QuotesListResponse = {
       screen_label: "Settings",
       description: "Settings page findings",
       display_order: 2,
+      edited_label: null,
+      edited_description: null,
       quotes: [
         {
           dom_id: "q-P3-30",
@@ -125,6 +129,8 @@ const MOCK_DATA: QuotesListResponse = {
       theme_id: 1,
       theme_label: "Usability",
       description: "Overall usability",
+      edited_label: null,
+      edited_description: null,
       quotes: [
         {
           dom_id: "q-P4-40",

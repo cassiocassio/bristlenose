@@ -429,19 +429,23 @@ class TestScreenCluster:
         assert loaded.assigned_by == "pipeline"
         assert loaded.assigned_at is not None
 
-    def test_unique_cluster_label_per_project(self, db: Session) -> None:
+    def test_duplicate_cluster_label_is_allowed(self, db: Session) -> None:
+        # Phase 2 — section identity is membership, not label, so the label is
+        # free to collide (a new section may reuse a retiring one's label).
         proj = Project(name="Test", input_dir="/tmp/i", output_dir="/tmp/o")
         db.add(proj)
         db.commit()
 
-        c1 = ScreenCluster(project_id=proj.id, screen_label="Dashboard")
-        db.add(c1)
-        db.commit()
+        db.add(ScreenCluster(project_id=proj.id, screen_label="Dashboard"))
+        db.add(ScreenCluster(project_id=proj.id, screen_label="Dashboard"))
+        db.commit()  # must not raise
 
-        c2 = ScreenCluster(project_id=proj.id, screen_label="Dashboard")
-        db.add(c2)
-        with pytest.raises(IntegrityError):
-            db.commit()
+        dups = (
+            db.query(ScreenCluster)
+            .filter_by(project_id=proj.id, screen_label="Dashboard")
+            .count()
+        )
+        assert dups == 2
 
     def test_unique_cluster_quote_pair(self, db: Session) -> None:
         proj = Project(name="Test", input_dir="/tmp/i", output_dir="/tmp/o")
@@ -503,19 +507,22 @@ class TestThemeGroup:
         assert loaded is not None
         assert loaded.assigned_by == "pipeline"
 
-    def test_unique_theme_label_per_project(self, db: Session) -> None:
+    def test_duplicate_theme_label_is_allowed(self, db: Session) -> None:
+        # Phase 2 — theme identity is membership, not label (see ScreenCluster).
         proj = Project(name="Test", input_dir="/tmp/i", output_dir="/tmp/o")
         db.add(proj)
         db.commit()
 
-        t1 = ThemeGroup(project_id=proj.id, theme_label="Onboarding gaps")
-        db.add(t1)
-        db.commit()
+        db.add(ThemeGroup(project_id=proj.id, theme_label="Onboarding gaps"))
+        db.add(ThemeGroup(project_id=proj.id, theme_label="Onboarding gaps"))
+        db.commit()  # must not raise
 
-        t2 = ThemeGroup(project_id=proj.id, theme_label="Onboarding gaps")
-        db.add(t2)
-        with pytest.raises(IntegrityError):
-            db.commit()
+        dups = (
+            db.query(ThemeGroup)
+            .filter_by(project_id=proj.id, theme_label="Onboarding gaps")
+            .count()
+        )
+        assert dups == 2
 
 
 # ---------------------------------------------------------------------------

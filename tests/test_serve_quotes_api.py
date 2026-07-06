@@ -356,13 +356,19 @@ class TestQuotesResponseShape:
     def test_section_has_all_fields(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/quotes").json()
         section = data["sections"][0]
-        expected = {"cluster_id", "screen_label", "description", "display_order", "quotes"}
+        expected = {
+            "cluster_id", "screen_label", "description", "display_order",
+            "edited_label", "edited_description", "quotes",
+        }
         assert set(section.keys()) == expected
 
     def test_theme_has_all_fields(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/quotes").json()
         theme = data["themes"][0]
-        expected = {"theme_id", "theme_label", "description", "quotes"}
+        expected = {
+            "theme_id", "theme_label", "description",
+            "edited_label", "edited_description", "quotes",
+        }
         assert set(theme.keys()) == expected
 
 

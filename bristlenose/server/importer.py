@@ -765,6 +765,51 @@ def _get_or_create_quote(
     return q
 
 
+# Jaccard quote-overlap at or above which an incoming cluster/theme is treated
+# as the *same* section/theme as an existing one, even if its label drifted.
+# Sections converge hard across re-runs (ARI ~1.0), so real matches sit near
+# 1.0 and the exact threshold is not sensitive; 0.5 (majority) is the floor.
+_MEMBERSHIP_MATCH_THRESHOLD = 0.5
+
+
+def _match_by_membership(
+    existing: list[tuple[int, set[int]]],
+    incoming: list[tuple[int, set[int]]],
+    threshold: float = _MEMBERSHIP_MATCH_THRESHOLD,
+) -> dict[int, int]:
+    """Greedily match incoming groups to existing ones by quote-set overlap.
+
+    ``existing`` is ``[(group_id, {quote_id, ...}), ...]`` (current DB
+    membership); ``incoming`` is ``[(index, {quote_id, ...}), ...]``.  Returns
+    ``{incoming_index: matched_group_id}`` for pairs whose Jaccard overlap meets
+    ``threshold``; unmatched incoming indices are absent (→ a new group).  Best
+    overlap wins and each existing group is claimed at most once, so a section
+    that splits keeps its id on the majority child and the minority child
+    becomes a new group.
+    """
+    scored: list[tuple[float, int, int]] = []
+    for inc_idx, inc_set in incoming:
+        if not inc_set:
+            continue
+        for ex_id, ex_set in existing:
+            inter = len(inc_set & ex_set)
+            if inter == 0:
+                continue
+            jaccard = inter / len(inc_set | ex_set)
+            if jaccard >= threshold:
+                scored.append((jaccard, inc_idx, ex_id))
+
+    scored.sort(reverse=True)  # highest overlap first
+    matched: dict[int, int] = {}
+    claimed: set[int] = set()
+    for _jaccard, inc_idx, ex_id in scored:
+        if inc_idx in matched or ex_id in claimed:
+            continue
+        matched[inc_idx] = ex_id
+        claimed.add(ex_id)
+    return matched
+
+
 def _import_quotes_from_clusters(
     db: Session,
     project: Project,
@@ -774,20 +819,60 @@ def _import_quotes_from_clusters(
 ) -> dict[tuple, Quote]:
     """Import screen clusters and their quotes.
 
+    Upserts each cluster by *membership* (quote overlap), not label, so a
+    renamed section keeps its ``cluster_id`` — and therefore any researcher
+    HeadingEdit keyed on that id — across pipeline label drift.
+
     Returns a quote_map keyed by (session_id, participant_id, start_timecode)
     for deduplication when the same quote appears in themes.
     """
     quote_map: dict[tuple, Quote] = {}
 
+    # Resolve incoming quotes first so we can match clusters by membership.
+    incoming_quotes: list[list[Quote]] = []
+    incoming_members: list[tuple[int, set[int]]] = []
     for i, cluster_data in enumerate(screen_clusters_data):
-        # Upsert cluster by label
-        label = cluster_data.get("screen_label", f"Cluster {i + 1}")
-        cluster = (
-            db.query(ScreenCluster)
-            .filter_by(project_id=project.id, screen_label=label)
-            .first()
+        qs: list[Quote] = []
+        member_ids: set[int] = set()
+        for q_data in cluster_data.get("quotes", []):
+            q = _get_or_create_quote(db, project, q_data, now)
+            quote_map[(q.session_id, q.participant_id, q.start_timecode)] = q
+            qs.append(q)
+            member_ids.add(q.id)
+        incoming_quotes.append(qs)
+        incoming_members.append((i, member_ids))
+
+    # Existing pipeline clusters + their current membership.
+    existing_clusters = (
+        db.query(ScreenCluster)
+        .filter_by(project_id=project.id, created_by="pipeline")
+        .all()
+    )
+    cluster_by_id = {c.id: c for c in existing_clusters}
+    existing_members = [
+        (
+            c.id,
+            {
+                cq.quote_id
+                for cq in db.query(ClusterQuote).filter_by(cluster_id=c.id).all()
+            },
         )
-        if cluster is None:
+        for c in existing_clusters
+    ]
+    matched = _match_by_membership(existing_members, incoming_members)
+
+    for i, cluster_data in enumerate(screen_clusters_data):
+        label = cluster_data.get("screen_label", f"Cluster {i + 1}")
+        matched_id = matched.get(i)
+        if matched_id is not None:
+            cluster = cluster_by_id[matched_id]
+            cluster.screen_label = label
+            cluster.description = cluster_data.get("description", cluster.description)
+            cluster.display_order = cluster_data.get(
+                "display_order", cluster.display_order
+            )
+            cluster.last_imported_at = now
+        else:
             cluster = ScreenCluster(
                 project_id=project.id,
                 screen_label=label,
@@ -798,30 +883,21 @@ def _import_quotes_from_clusters(
             )
             db.add(cluster)
             db.flush()
-        else:
-            cluster.description = cluster_data.get("description", cluster.description)
-            cluster.display_order = cluster_data.get("display_order", cluster.display_order)
-            cluster.last_imported_at = now
 
-        # Import quotes
-        for q_data in cluster_data.get("quotes", []):
-            q = _get_or_create_quote(db, project, q_data, now)
-            key = (q.session_id, q.participant_id, q.start_timecode)
-            quote_map[key] = q
-
-            # Create cluster_quote join if not exists
+        for q in incoming_quotes[i]:
             existing_cq = (
                 db.query(ClusterQuote)
                 .filter_by(cluster_id=cluster.id, quote_id=q.id)
                 .first()
             )
             if not existing_cq:
-                cq = ClusterQuote(
-                    cluster_id=cluster.id,
-                    quote_id=q.id,
-                    assigned_by="pipeline",
+                db.add(
+                    ClusterQuote(
+                        cluster_id=cluster.id,
+                        quote_id=q.id,
+                        assigned_by="pipeline",
+                    )
                 )
-                db.add(cq)
 
     return quote_map
 
@@ -836,17 +912,56 @@ def _import_quotes_from_themes(
 ) -> None:
     """Import theme groups and their quotes.
 
+    Upserts each theme by membership (quote overlap), not label — same rule as
+    clusters (see ``_import_quotes_from_clusters``), so a renamed theme keeps
+    its ``theme_id`` across label drift.  Note: themes genuinely diverge across
+    re-runs (ARI ~0.4), so most re-imports won't match and will create fresh
+    themes — that is expected, and is why Phase 3 gives themes only best-effort
+    labels.  The membership upsert simply lets an *unchanged* theme keep its id.
+
     Reuses quotes from quote_map if they already exist (from clusters).
     """
+    # Resolve incoming quotes first so we can match themes by membership.
+    incoming_quotes: list[list[Quote]] = []
+    incoming_members: list[tuple[int, set[int]]] = []
+    for i, theme_data in enumerate(theme_groups_data):
+        qs: list[Quote] = []
+        member_ids: set[int] = set()
+        for q_data in theme_data.get("quotes", []):
+            q = _get_or_create_quote(db, project, q_data, now)
+            quote_map[(q.session_id, q.participant_id, q.start_timecode)] = q
+            qs.append(q)
+            member_ids.add(q.id)
+        incoming_quotes.append(qs)
+        incoming_members.append((i, member_ids))
+
+    existing_themes = (
+        db.query(ThemeGroup)
+        .filter_by(project_id=project.id, created_by="pipeline")
+        .all()
+    )
+    theme_by_id = {t.id: t for t in existing_themes}
+    existing_members = [
+        (
+            t.id,
+            {
+                tq.quote_id
+                for tq in db.query(ThemeQuote).filter_by(theme_id=t.id).all()
+            },
+        )
+        for t in existing_themes
+    ]
+    matched = _match_by_membership(existing_members, incoming_members)
 
     for i, theme_data in enumerate(theme_groups_data):
         label = theme_data.get("theme_label", f"Theme {i + 1}")
-        theme = (
-            db.query(ThemeGroup)
-            .filter_by(project_id=project.id, theme_label=label)
-            .first()
-        )
-        if theme is None:
+        matched_id = matched.get(i)
+        if matched_id is not None:
+            theme = theme_by_id[matched_id]
+            theme.theme_label = label
+            theme.description = theme_data.get("description", theme.description)
+            theme.last_imported_at = now
+        else:
             theme = ThemeGroup(
                 project_id=project.id,
                 theme_label=label,
@@ -856,16 +971,9 @@ def _import_quotes_from_themes(
             )
             db.add(theme)
             db.flush()
-        else:
-            theme.description = theme_data.get("description", theme.description)
-            theme.last_imported_at = now
 
         # Import quotes
-        for q_data in theme_data.get("quotes", []):
-            q = _get_or_create_quote(db, project, q_data, now)
-            key = (q.session_id, q.participant_id, q.start_timecode)
-            quote_map[key] = q
-
+        for q in incoming_quotes[i]:
             # Create theme_quote join if not exists
             existing_tq = (
                 db.query(ThemeQuote)

@@ -17,10 +17,7 @@ import type {
   QuoteResponse,
   TranscriptSegmentResponse,
 } from "../utils/types";
-import {
-  getModeratorQuestion,
-  putEdits,
-} from "../utils/api";
+import { getModeratorQuestion } from "../utils/api";
 import { formatTimecode, stripSmartQuotes } from "../utils/format";
 import { QuoteCard } from "./QuoteCard";
 import { useFocus } from "../contexts/FocusContext";
@@ -29,6 +26,7 @@ import {
   toggleStar,
   toggleHide,
   commitEdit,
+  commitHeadingEdit,
   addTag,
   removeTag,
   deleteBadge,
@@ -100,12 +98,20 @@ const HIDE_DURATION = 300; // ms — matches vanilla JS _HIDE_DURATION
 // ── Props ───────────────────────────────────────────────────────────────
 
 interface QuoteGroupProps {
-  /** Anchor ID for deep-linking (e.g. "section-login" or "theme-trust"). */
+  /** Anchor ID for deep-linking / scroll (label-derived, e.g. "section-login"). */
   anchor: string;
-  /** Display label (e.g. "Login flow" or "Trust & credibility"). */
+  /** Durable-id key base for heading edits: "section-cluster-{id}" /
+   *  "theme-group-{id}". Distinct from `anchor` so a rename survives label
+   *  drift (Phase 2 — section identity). */
+  editKeyBase: string;
+  /** The pipeline's label (raw) — the reset-to-original baseline. */
   label: string;
-  /** Optional description below the heading. */
+  /** The pipeline's description (raw). */
   description: string;
+  /** Researcher's rename resolved from HeadingEdit; null = not renamed.
+   *  Displayed in preference to `label`. */
+  editedLabel?: string | null;
+  editedDescription?: string | null;
   /** Heading edit key prefix ("section" or "theme"). */
   itemType: string;
   /** Visible (filtered) quotes in this group. */
@@ -130,8 +136,11 @@ interface QuoteGroupProps {
 
 export function QuoteGroup({
   anchor,
+  editKeyBase,
   label,
   description,
+  editedLabel = null,
+  editedDescription = null,
   itemType,
   quotes,
   allQuotes,
@@ -154,12 +163,14 @@ export function QuoteGroup({
 
   // ── Local presentation state ───────────────────────────────────────────
 
-  // Heading/description edit state.
-  const [headingText, setHeadingText] = useState(label);
-  const [headingEdited, setHeadingEdited] = useState(false);
+  // Heading/description edit state.  Seed from the researcher's rename
+  // (editedLabel) when present, else the pipeline label; `label`/`description`
+  // stay the raw reset-to-original baseline.
+  const [headingText, setHeadingText] = useState(editedLabel ?? label);
+  const [headingEdited, setHeadingEdited] = useState(editedLabel != null);
   const [isEditingHeading, setIsEditingHeading] = useState(false);
-  const [descText, setDescText] = useState(description);
-  const [descEdited, setDescEdited] = useState(false);
+  const [descText, setDescText] = useState(editedDescription ?? description);
+  const [descEdited, setDescEdited] = useState(editedDescription != null);
   const [isEditingDesc, setIsEditingDesc] = useState(false);
 
   // Counter dropdown state.
@@ -702,10 +713,11 @@ export function QuoteGroup({
       setHeadingText(newText);
       setHeadingEdited(newText !== label);
       setIsEditingHeading(false);
-      // Heading edits use the same edits API with a special key.
-      putEdits({ [`${anchor}:title`]: newText });
+      // Keyed on the durable id (not the label) so the rename survives label
+      // drift; committed through the store so the full edits map is sent.
+      commitHeadingEdit(`${editKeyBase}:title`, newText);
     },
-    [label, anchor],
+    [label, editKeyBase],
   );
 
   const handleDescCommit = useCallback(
@@ -713,9 +725,9 @@ export function QuoteGroup({
       setDescText(newText);
       setDescEdited(newText !== description);
       setIsEditingDesc(false);
-      putEdits({ [`${anchor}:desc`]: newText });
+      commitHeadingEdit(`${editKeyBase}:desc`, newText);
     },
-    [description, anchor],
+    [description, editKeyBase],
   );
 
   // ── Context expansion handlers ───────────────────────────────────────
@@ -800,7 +812,7 @@ export function QuoteGroup({
             trigger="external"
             className="editable-text"
             data-testid={`bn-group-${anchor}-title`}
-            data-edit-key={`${anchor}:title`}
+            data-edit-key={`${editKeyBase}:title`}
           />
           {" "}
           <button
@@ -821,7 +833,7 @@ export function QuoteGroup({
           data-testid={`bn-counter-${anchor}`}
         />
       </div>
-      {description && (
+      {(description || editedDescription) && (
         <p className="description">
           <EditableText
             value={descText}
@@ -833,7 +845,7 @@ export function QuoteGroup({
             trigger="external"
             className="editable-text"
             data-testid={`bn-group-${anchor}-desc`}
-            data-edit-key={`${anchor}:desc`}
+            data-edit-key={`${editKeyBase}:desc`}
           />
           {" "}
           <button

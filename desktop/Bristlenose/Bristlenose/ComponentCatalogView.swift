@@ -30,35 +30,10 @@ struct ComponentCatalogView: View {
             HSplitView {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 28) {
-                        Specimen(title: "Spacing rhythm", control: "4·8·12·16·20·24 · prefer .padding() default") {
-                            SpacingRhythm()
-                        }
-                        Specimen(title: "Quote card", control: ".quote-card") {
-                            NativeQuoteCard()
-                        }
-                        Specimen(title: "Sentiment / codebook tag", control: "NSTokenField · SF Mono · ✕ on hover") {
-                            HStack(spacing: 6) {
-                                CatalogTag("frustration", sentiment: 0xEA580C)
-                                CatalogTag("onboarding", sentiment: 0x1F4F8A)
-                            }
-                        }
-                        Specimen(title: "Person badge", control: "two-tone split · subtle hover") {
-                            CatalogPersonBadge(code: "P1", name: "Rachel")
-                        }
-                        Specimen(title: "Data badge", control: "SF Mono · data-look") {
-                            HStack(spacing: 6) {
-                                CatalogDataBadge("AI")
-                                CatalogDataBadge("0.82")
-                            }
-                        }
-                        Specimen(title: "Masonry — SwiftUI Layout", control: "custom Layout · shortest-column · source order") {
-                            MasonryLayout(columns: 3, spacing: 8) {
-                                ForEach(SAMPLE_QUOTES.indices, id: \.self) { i in
-                                    MasonryCard(quote: SAMPLE_QUOTES[i], n: i + 1)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
+                        FoundationsSection()
+                        AtomsSection()
+                        MoleculesSection()
+                        OrganismsSection()
                     }
                     .padding(20)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -326,6 +301,237 @@ private struct MasonryLayout: Layout {
         var idx = 0
         for i in 1..<heights.count where heights[i] < heights[idx] { idx = i }
         return idx
+    }
+}
+
+// MARK: - Sections (phased native rebuild)
+
+private struct FoundationsSection: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            Specimen(title: "Spacing rhythm", control: "4·8·12·16·20·24 · prefer .padding() default") {
+                SpacingRhythm()
+            }
+            Specimen(title: "Quote card", control: ".quote-card") {
+                NativeQuoteCard()
+            }
+            Specimen(title: "Sentiment / codebook tag", control: "NSTokenField · SF Mono · ✕ on hover") {
+                HStack(spacing: 6) {
+                    CatalogTag("frustration", sentiment: 0xEA580C)
+                    CatalogTag("onboarding", sentiment: 0x1F4F8A)
+                }
+            }
+            Specimen(title: "Person badge", control: "two-tone split · subtle hover") {
+                CatalogPersonBadge(code: "P1", name: "Rachel")
+            }
+            Specimen(title: "Data badge", control: "SF Mono · data-look") {
+                HStack(spacing: 6) {
+                    CatalogDataBadge("AI")
+                    CatalogDataBadge("0.82")
+                }
+            }
+            Specimen(title: "Masonry — SwiftUI Layout", control: "custom Layout · shortest-column · source order") {
+                MasonryLayout(columns: 3, spacing: 8) {
+                    ForEach(SAMPLE_QUOTES.indices, id: \.self) { i in
+                        MasonryCard(quote: SAMPLE_QUOTES[i], n: i + 1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+}
+
+// MARK: Phase 1 — atoms
+
+private struct AtomsSection: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            Specimen(title: "Button", control: "Button · bordered / prominent") {
+                HStack(spacing: 8) {
+                    Button("Export") {}
+                    Button("Star") {}.buttonStyle(.borderedProminent)
+                }
+            }
+            Specimen(title: "Segmented", control: "Picker(.segmented)") {
+                SegmentedDemo()
+            }
+            Specimen(title: "Toggle", control: "Toggle · .switch / .checkbox") {
+                ToggleDemo()
+            }
+            Specimen(title: "Checkbox", control: "Toggle(.checkbox) · .controlSize(.small)") {
+                CheckboxAtomDemo()
+            }
+            Specimen(title: "Search field", control: "NSSearchField (toolbar) — shipped") {
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                    TextField("Search", text: .constant(""))
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 160)
+                }
+            }
+            Specimen(title: "Progress ring", control: "Gauge(.accessoryCircularCapacity)") {
+                Gauge(value: 0.7) {
+                    Text("")
+                } currentValueLabel: {
+                    Text("70%").font(.system(size: 9))
+                }
+                .gaugeStyle(.accessoryCircularCapacity)
+                .tint(.accentColor)
+                .frame(width: 44, height: 44)
+            }
+        }
+    }
+}
+
+private struct SegmentedDemo: View {
+    @State private var sel = 0
+    var body: some View {
+        Picker("", selection: $sel) {
+            Text("All").tag(0)
+            Text("Starred").tag(1)
+        }
+        .pickerStyle(.segmented).labelsHidden().fixedSize()
+    }
+}
+
+private struct ToggleDemo: View {
+    @State private var sw = true
+    @State private var cb = true
+    var body: some View {
+        HStack(spacing: 18) {
+            Toggle("Switch", isOn: $sw).toggleStyle(.switch)
+            Toggle("Checkbox", isOn: $cb).toggleStyle(.checkbox)
+        }
+    }
+}
+
+private struct CheckboxAtomDemo: View {
+    @State private var a = true
+    @State private var b = false
+    var body: some View {
+        HStack(spacing: 14) {
+            Toggle("Included", isOn: $a).toggleStyle(.checkbox)
+            Toggle("Hidden", isOn: $b).toggleStyle(.checkbox)
+        }
+        .controlSize(.small)
+    }
+}
+
+// MARK: Phase 2 — molecules
+
+private struct MoleculesSection: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            Specimen(title: "Tag filter — dense checkbox field", control: "Toggle{Label} · .controlSize(.small) · row target") {
+                TagFilterDemo()
+            }
+            Specimen(title: "Editable text — read-only", control: "Text now · TextField (inline edit) later") {
+                Text("\u{201C}It felt confusing at first, but once I found the menu it was fine.\u{201D}")
+                    .font(.system(size: 14))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 300, alignment: .leading)
+            }
+            Specimen(title: "Star toggle", control: "Image(systemName: star / star.fill)") {
+                StarDemo()
+            }
+        }
+    }
+}
+
+private struct TagFilterDemo: View {
+    @State private var on: Set<Int> = [0, 2]
+    private let tags: [(String, UInt)] = [
+        ("onboarding", 0x1F4F8A), ("friction", 0x8A2F52),
+        ("delight", 0x059669), ("trust signal", 0x5A3A82), ("opportunity", 0x7A5A1F)
+    ]
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            ForEach(tags.indices, id: \.self) { i in
+                Toggle(isOn: Binding(
+                    get: { on.contains(i) },
+                    set: { if $0 { on.insert(i) } else { on.remove(i) } }
+                )) {
+                    HStack(spacing: 5) {
+                        Circle().fill(Tok.sentiment(tags[i].1)).frame(width: 7, height: 7)
+                        Text(tags[i].0).font(.system(size: 12, design: .monospaced))
+                    }
+                }
+            }
+        }
+        .toggleStyle(.checkbox)
+        .controlSize(.small)
+    }
+}
+
+private struct StarDemo: View {
+    @State private var on = false
+    var body: some View {
+        Image(systemName: on ? "star.fill" : "star")
+            .font(.system(size: 15))
+            .foregroundStyle(on ? Color.accentColor : Color.secondary)
+            .onTapGesture { on.toggle() }
+    }
+}
+
+// MARK: Phase 3 — organisms
+
+private struct OrganismsSection: View {
+    private let cols = [GridItem(.adaptive(minimum: 92), spacing: 10)]
+    var body: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            Specimen(title: "Stat cards — LazyVGrid", control: "LazyVGrid(.adaptive) · GroupBox-ish") {
+                LazyVGrid(columns: cols, spacing: 10) {
+                    StatCard(value: "16", label: "Sessions")
+                    StatCard(value: "342", label: "Quotes")
+                    StatCard(value: "18h", label: "Duration")
+                    StatCard(value: "24", label: "Themes")
+                }
+                .frame(maxWidth: 380)
+            }
+            Specimen(title: "Sessions — Table", control: "Table + TableColumn · select") {
+                SessionsTableDemo()
+            }
+        }
+    }
+}
+
+private struct StatCard: View {
+    let value: String
+    let label: String
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(value).font(.system(size: 24, weight: .semibold)).monospacedDigit()
+            Text(label).font(.system(size: 11)).foregroundStyle(.secondary)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Tok.surface, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tok.hairline))
+    }
+}
+
+private struct SessionItem: Identifiable {
+    let id = UUID()
+    let n: Int
+    let who: String
+    let dur: String
+}
+
+private struct SessionsTableDemo: View {
+    @State private var rows = [
+        SessionItem(n: 1, who: "Rachel", dur: "48:12"),
+        SessionItem(n: 2, who: "Kerry", dur: "52:40"),
+        SessionItem(n: 3, who: "Sam", dur: "39:05")
+    ]
+    @State private var selection: SessionItem.ID?
+    var body: some View {
+        Table(rows, selection: $selection) {
+            TableColumn("#") { Text("\($0.n)") }.width(24)
+            TableColumn("Participant") { Text($0.who) }
+            TableColumn("Duration") { Text($0.dur).monospacedDigit() }
+        }
+        .frame(width: 320, height: 118)
     }
 }
 

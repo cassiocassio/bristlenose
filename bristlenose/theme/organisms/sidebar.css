@@ -482,6 +482,16 @@
     padding-right: var(--bn-gutter-right);
 }
 
+/* Main landmark — transparent flex-column pass-through so the routed content
+   keeps the exact flex context it had as a direct child of .center (no
+   margin-collapse; min-width:0 for nested overflow). Adds the sole <main>
+   ARIA landmark without altering layout. */
+.bn-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
 /* ── Column 5: Right sidebar (Tags) ───────────────────────────── */
 
 .tag-sidebar {
@@ -535,9 +545,10 @@ html[data-embedded="true"] .tag-sidebar {
 
 /* Content first heading ("Sections"/"Themes"): pull up out of the body top-inset
    so its baseline meets the datum. box-top = body padding-top (inset + space-xl)
-   + h2 margin; we override the margin. `> section:first-of-type` skips any
-   header/nav siblings and never grabs a mid-page Themes heading. */
-html[data-embedded="true"] .center > section:first-of-type > h2 {
+   + h2 margin; we override the margin. `> main > section:first-of-type` targets
+   the routed content's first heading (header/nav sit outside <main>) and never
+   grabs a mid-page Themes heading. */
+html[data-embedded="true"] .center > main > section:first-of-type > h2 {
     margin-top: calc(var(--bn-first-baseline) - var(--bn-space-xl) - 19px);
 }
 

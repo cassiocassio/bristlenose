@@ -624,9 +624,11 @@ function AppShell() {
     >
       {!embedded && <Header />}
       {!embedded && <NavBar onExportReport={toggleExport} onSendToMiro={toggleMiro} onSettings={toggleSettings} onHelp={openHelp} />}
-      <Suspense fallback={null}>
-        <Outlet />
-      </Suspense>
+      <main className="bn-main">
+        <Suspense fallback={null}>
+          <Outlet />
+        </Suspense>
+      </main>
       {!embedded && (
         <Footer
           health={health}

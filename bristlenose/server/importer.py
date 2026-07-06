@@ -25,6 +25,7 @@ from bristlenose.server.models import (
     ClusterQuote,
     CodebookGroup,
     DeletedBadge,
+    HeadingEdit,
     Person,
     Project,
     ProjectCodebookGroup,
@@ -787,7 +788,10 @@ def _match_by_membership(
     that splits keeps its id on the majority child and the minority child
     becomes a new group.
     """
-    scored: list[tuple[float, int, int]] = []
+    # (jaccard, inter, inc_idx, ex_id): on equal overlap the larger shared-quote
+    # count wins the claim, so the id follows the bulk of the evidence rather
+    # than pipeline output order; inc_idx/ex_id only break exact ties.
+    scored: list[tuple[float, int, int, int]] = []
     for inc_idx, inc_set in incoming:
         if not inc_set:
             continue
@@ -797,12 +801,12 @@ def _match_by_membership(
                 continue
             jaccard = inter / len(inc_set | ex_set)
             if jaccard >= threshold:
-                scored.append((jaccard, inc_idx, ex_id))
+                scored.append((jaccard, inter, inc_idx, ex_id))
 
     scored.sort(reverse=True)  # highest overlap first
     matched: dict[int, int] = {}
     claimed: set[int] = set()
-    for _jaccard, inc_idx, ex_id in scored:
+    for _jaccard, _inter, inc_idx, ex_id in scored:
         if inc_idx in matched or ex_id in claimed:
             continue
         matched[inc_idx] = ex_id
@@ -872,6 +876,14 @@ def _import_quotes_from_clusters(
                 "display_order", cluster.display_order
             )
             cluster.last_imported_at = now
+            # Rebuild the pipeline membership from scratch: the pipeline's
+            # assignment for a reused cluster is *exactly* this run's incoming
+            # set.  Without this, a quote reassigned to another section keeps its
+            # old join and appears in two sections (quote exclusivity).
+            # Researcher-assigned joins (assigned_by != "pipeline") are untouched.
+            db.query(ClusterQuote).filter_by(
+                cluster_id=cluster.id, assigned_by="pipeline"
+            ).delete(synchronize_session="fetch")
         else:
             cluster = ScreenCluster(
                 project_id=project.id,
@@ -961,6 +973,10 @@ def _import_quotes_from_themes(
             theme.theme_label = label
             theme.description = theme_data.get("description", theme.description)
             theme.last_imported_at = now
+            # Rebuild pipeline membership from scratch (see clusters above).
+            db.query(ThemeQuote).filter_by(
+                theme_id=theme.id, assigned_by="pipeline"
+            ).delete(synchronize_session="fetch")
         else:
             theme = ThemeGroup(
                 project_id=project.id,
@@ -1225,6 +1241,23 @@ def _pinned_quote_ids(db: Session, project_id: int) -> set[int]:
     return pinned
 
 
+def _delete_heading_edits(
+    db: Session, project_id: int, prefix: str, ids: list[int]
+) -> None:
+    """Delete HeadingEdit rows keyed on the given cluster/theme ids.
+
+    ``prefix`` is ``"section-cluster-"`` or ``"theme-group-"``; both the
+    ``:title`` and ``:desc`` keys are removed.
+    """
+    if not ids:
+        return
+    keys = [f"{prefix}{i}:title" for i in ids] + [f"{prefix}{i}:desc" for i in ids]
+    db.query(HeadingEdit).filter(
+        HeadingEdit.project_id == project_id,
+        HeadingEdit.heading_key.in_(keys),
+    ).delete(synchronize_session="fetch")
+
+
 def _cleanup_stale_data(
     db: Session,
     project: Project,
@@ -1332,6 +1365,10 @@ def _cleanup_stale_data(
         db.query(ClusterQuote).filter(
             ClusterQuote.cluster_id.in_(stale_cluster_ids)
         ).delete(synchronize_session="fetch")
+        # Drop any HeadingEdit keyed on a retiring cluster id.  Ids are plain
+        # rowids (no AUTOINCREMENT), so a freed id can be reused by a later
+        # new cluster — an orphaned rename would then silently resurface on it.
+        _delete_heading_edits(db, project.id, "section-cluster-", stale_cluster_ids)
         db.query(ScreenCluster).filter(
             ScreenCluster.id.in_(stale_cluster_ids)
         ).delete(synchronize_session="fetch")
@@ -1356,6 +1393,7 @@ def _cleanup_stale_data(
         db.query(ThemeQuote).filter(
             ThemeQuote.theme_id.in_(stale_theme_ids)
         ).delete(synchronize_session="fetch")
+        _delete_heading_edits(db, project.id, "theme-group-", stale_theme_ids)
         db.query(ThemeGroup).filter(
             ThemeGroup.id.in_(stale_theme_ids)
         ).delete(synchronize_session="fetch")
@@ -1418,9 +1456,10 @@ def _cleanup_stale_data(
         ).delete(synchronize_session="fetch")
 
     # --- Clean stale pipeline join rows ----------------------------------
-    # If the pipeline reassigned a quote to a different cluster/theme,
-    # old pipeline-assigned joins for surviving clusters may be stale.
-    # Get all surviving pipeline clusters and their expected quote IDs.
+    # Reassignment (a surviving quote moving between sections/themes) is now
+    # handled at import time, where a reused cluster/theme rebuilds its pipeline
+    # membership from scratch (see _import_quotes_from_clusters).  This is a
+    # defensive belt: drop any pipeline join whose quote no longer exists.
     surviving_clusters = (
         db.query(ScreenCluster)
         .filter_by(project_id=project.id, created_by="pipeline")

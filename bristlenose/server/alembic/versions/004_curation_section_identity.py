@@ -25,6 +25,8 @@ Revises: 003
 Create Date: 2026-07-06
 """
 
+import logging
+
 import sqlalchemy as sa
 from alembic import op
 
@@ -33,10 +35,36 @@ down_revision = "003"
 branch_labels = None
 depends_on = None
 
+logger = logging.getLogger("alembic.runtime.migration")
+
 
 def _slug(label: str) -> str:
     """Match the frontend anchor slug: lowercase, spaces -> hyphens."""
     return label.lower().replace(" ", "-")
+
+
+def _slug_map(rows: list) -> dict:
+    """Build ``(project_id, slug) -> id``, dropping ambiguous slugs.
+
+    Now that the label-unique constraint is gone, two groups can slugify to the
+    same key; a rename on such a slug can't be attributed to one id, so we drop
+    the key (the row falls into the documented "unreconstructable, left as-is"
+    branch) and log it rather than re-keying to an arbitrary winner.
+    """
+    m: dict = {}
+    collided: set = set()
+    for gid, pid, label in rows:
+        key = (pid, _slug(label))
+        if key in m and m[key] != gid:
+            collided.add(key)
+        m[key] = gid
+    for key in collided:
+        del m[key]
+        logger.warning(
+            "004: slug %r is ambiguous (multiple groups); leaving any rename "
+            "on it un-rekeyed (one-time loss).", key[1]
+        )
+    return m
 
 
 def _unique_constraint_names(table: str) -> set[str]:
@@ -62,8 +90,8 @@ def upgrade() -> None:
     themes = bind.execute(
         sa.text("SELECT id, project_id, theme_label FROM theme_groups")
     ).fetchall()
-    cluster_by_slug = {(pid, _slug(label)): cid for cid, pid, label in clusters}
-    theme_by_slug = {(pid, _slug(label)): tid for tid, pid, label in themes}
+    cluster_by_slug = _slug_map(clusters)
+    theme_by_slug = _slug_map(themes)
 
     edits = bind.execute(
         sa.text("SELECT id, project_id, heading_key FROM heading_edits")

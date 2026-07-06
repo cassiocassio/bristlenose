@@ -23,7 +23,7 @@ from bristlenose.server.importer import (
     _pinned_quote_ids,
     import_project,
 )
-from bristlenose.server.models import Quote, QuoteState
+from bristlenose.server.models import HeadingEdit, Quote, QuoteState
 from tests.conftest import AuthTestClient
 from tests.server_fixtures import cluster as _cluster
 from tests.server_fixtures import dom_id as _dom
@@ -484,3 +484,96 @@ class TestSectionIdentity:
         assert sections[0]["cluster_id"] != old_cid, (
             "no membership overlap → a fresh id, not the retired section's"
         )
+
+    def test_quote_moved_between_sections_appears_only_once(
+        self, tmp_path: Path
+    ) -> None:
+        """A quote reassigned to a different section across a re-import must not
+        linger in its old (membership-reused) section — quote exclusivity."""
+        _write_intermediate(
+            tmp_path,
+            [
+                _cluster(
+                    "Login",
+                    [_quote("p1", 10, "a"), _quote("p1", 20, "b"),
+                     _quote("p1", 30, "c")],
+                    order=1,
+                ),
+                _cluster(
+                    "Settings",
+                    [_quote("p1", 40, "d"), _quote("p1", 50, "e")],
+                    order=2,
+                ),
+            ],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+
+        # Re-import: quote at tc=30 moves Login→Settings. Both sections keep
+        # their id (majority overlap), so both are reused, not recreated.
+        db = app.state.db_factory()
+        try:
+            _write_intermediate(
+                tmp_path,
+                [
+                    _cluster(
+                        "Login",
+                        [_quote("p1", 10, "a"), _quote("p1", 20, "b")],
+                        order=1,
+                    ),
+                    _cluster(
+                        "Settings",
+                        [_quote("p1", 40, "d"), _quote("p1", 50, "e"),
+                         _quote("p1", 30, "c")],
+                        order=2,
+                    ),
+                ],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        sections = client.get("/api/projects/1/quotes").json()["sections"]
+        appearances = sum(
+            1
+            for s in sections
+            for q in s["quotes"]
+            if q["dom_id"] == _dom("p1", 30)
+        )
+        assert appearances == 1, "a moved quote must appear in exactly one section"
+
+    def test_retired_section_rename_is_deleted_not_leaked(
+        self, tmp_path: Path
+    ) -> None:
+        """When a section retires, its HeadingEdit is deleted — so a later
+        section that reuses the freed integer id can't inherit the old rename."""
+        _write_intermediate(tmp_path, [_cluster("Login", [_quote("p1", 10, "a")])])
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        cid = client.get("/api/projects/1/quotes").json()["sections"][0]["cluster_id"]
+        client.put(
+            "/api/projects/1/edits",
+            json={f"section-cluster-{cid}:title": "Renamed"},
+        )
+
+        db = app.state.db_factory()
+        try:
+            # Login retires entirely (all-new quotes, no overlap → not matched).
+            _write_intermediate(
+                tmp_path, [_cluster("Onboarding", [_quote("p1", 90, "z")])]
+            )
+            import_project(db, tmp_path)
+            db.commit()
+            leftover = (
+                db.query(HeadingEdit)
+                .filter_by(heading_key=f"section-cluster-{cid}:title")
+                .count()
+            )
+            assert leftover == 0, "a retired section's rename must be deleted"
+        finally:
+            db.close()
+
+        # The replacement section shows its own pipeline label, never "Renamed".
+        new_sections = client.get("/api/projects/1/quotes").json()["sections"]
+        assert all(s["edited_label"] is None for s in new_sections)

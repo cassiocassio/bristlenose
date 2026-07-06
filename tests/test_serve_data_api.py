@@ -245,6 +245,24 @@ class TestEditsPut:
         assert data["q-p1-10"] == "Edited quote"
         assert data["section-search:title"] == "Edited heading"
 
+    def test_put_edits_full_replace_drops_omitted_heading(
+        self, client: TestClient
+    ) -> None:
+        """The server is full-replace (mirrors localStorage): a PUT that omits a
+        previously-stored heading key removes it.  This is *why* the frontend
+        must always send the merged quote+heading map (QuotesContext
+        .commitHeadingEdit); the guard against a partial PUT wiping the other
+        kind lives on the client, not here."""
+        client.put(
+            "/api/projects/1/edits",
+            json={"q-p1-10": "kept quote", "section-cluster-1:title": "My section"},
+        )
+        # A later PUT that omits the heading key drops it (full-replace).
+        client.put("/api/projects/1/edits", json={"q-p1-10": "kept quote"})
+        data = client.get("/api/projects/1/edits").json()
+        assert data["q-p1-10"] == "kept quote"
+        assert "section-cluster-1:title" not in data
+
     def test_put_updates_existing_edit(self, client: TestClient) -> None:
         client.put("/api/projects/1/edits", json={"q-p1-10": "First edit"})
         client.put("/api/projects/1/edits", json={"q-p1-10": "Second edit"})

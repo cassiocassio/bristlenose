@@ -13,7 +13,6 @@ and calling ``import_project`` again against the shared in-memory DB.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -22,56 +21,11 @@ from bristlenose.server.app import create_app
 from bristlenose.server.importer import _pinned_quote_ids, import_project
 from bristlenose.server.models import Quote, QuoteState
 from tests.conftest import AuthTestClient
-
-# ---------------------------------------------------------------------------
-# Synthetic project helpers
-# ---------------------------------------------------------------------------
-
-
-def _quote(pid: str, tc: float, text: str, sentiment: str | None = None) -> dict:
-    q = {
-        "session_id": "s1",
-        "participant_id": pid,
-        "start_timecode": float(tc),
-        "end_timecode": float(tc) + 5.0,
-        "text": text,
-        "topic_label": "Topic",
-        "quote_type": "screen_specific",
-    }
-    if sentiment:
-        q["sentiment"] = sentiment
-    return q
-
-
-def _cluster(label: str, quotes: list[dict], order: int = 1) -> dict:
-    return {
-        "screen_label": label,
-        "description": "",
-        "display_order": order,
-        "quotes": quotes,
-    }
-
-
-def _write_intermediate(
-    project_dir: Path,
-    clusters: list[dict],
-    themes: list[dict] | None = None,
-    project_name: str = "Freeze Test",
-) -> None:
-    inter = project_dir / "bristlenose-output" / ".bristlenose" / "intermediate"
-    inter.mkdir(parents=True, exist_ok=True)
-    (inter / "metadata.json").write_text(json.dumps({"project_name": project_name}))
-    (inter / "screen_clusters.json").write_text(json.dumps(clusters))
-    (inter / "theme_groups.json").write_text(json.dumps(themes or []))
-
-
-def _dom(pid: str, tc: float) -> str:
-    return f"q-{pid}-{int(tc)}"
-
-
-def _quote_at(db, tc: float) -> Quote:
-    return db.query(Quote).filter_by(start_timecode=float(tc)).one()
-
+from tests.server_fixtures import cluster as _cluster
+from tests.server_fixtures import dom_id as _dom
+from tests.server_fixtures import quote as _quote
+from tests.server_fixtures import quote_at as _quote_at
+from tests.server_fixtures import write_intermediate as _write_intermediate
 
 # ---------------------------------------------------------------------------
 # The round-trip
@@ -229,6 +183,41 @@ class TestPinPredicate:
         finally:
             db.close()
 
+    def test_human_tag_colliding_with_a_sentiment_label_does_not_mint(
+        self, tmp_path: Path
+    ) -> None:
+        """Regression (mint/pin drift): a hand-typed tag whose name collides
+        with a sentiment label ("confusion") resolves by name to the sentiment
+        TagDefinition and arrives source="human".  It must NOT mint a
+        durable_id / frozen_form — the mint site mirrors the pin predicate's
+        sentiment exclusion, so minted-and-pinned stay in lockstep."""
+        clusters = [
+            _cluster(
+                "Dashboard",
+                [
+                    # Quote A's sentiment auto-creates the "confusion" sentiment
+                    # TagDefinition.
+                    _quote("p1", 10, "Has sentiment", sentiment="confusion"),
+                    _quote("p1", 20, "Tag me with a colliding name"),
+                ],
+            )
+        ]
+        _write_intermediate(tmp_path, clusters)
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+
+        # Hand-apply that same "confusion" name to quote B (a genuine human PUT).
+        client.put("/api/projects/1/tags", json={_dom("p1", 20): ["confusion"]})
+
+        db = app.state.db_factory()
+        try:
+            b = _quote_at(db, 20)
+            assert b.durable_id is None, "a sentiment-framework tag must not mint"
+            assert b.frozen_form is None
+            assert _pinned_quote_ids(db, 1) == set()
+        finally:
+            db.close()
+
     def test_unpin_lets_the_quote_fall_off_again(self, tmp_path: Path) -> None:
         """Star then unstar (no other work): protection lifts, and a re-import
         that drops the quote deletes it.  Object permanence lasts exactly as
@@ -284,3 +273,93 @@ class TestHidePersistence:
             assert state.is_hidden is True
         finally:
             db.close()
+
+
+class TestMintIdempotency:
+    def test_durable_id_stable_and_frozen_form_not_recaptured(
+        self, tmp_path: Path
+    ) -> None:
+        """First-touch-wins: re-starring (and unstar→restar across a re-import
+        that drifts the pipeline text) keeps the ORIGINAL durable_id and frozen
+        words.  Phase 2 keys section/theme identity on durable_id stability, so
+        a future edit that regenerated the id per toggle, or re-snapshotted
+        drifted text, must fail here rather than ship silently."""
+        clusters = [_cluster("Dashboard", [_quote("p1", 10, "Original words")])]
+        _write_intermediate(tmp_path, clusters)
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+
+        db = app.state.db_factory()
+        try:
+            q_id = _quote_at(db, 10).id
+
+            client.put("/api/projects/1/starred", json={_dom("p1", 10): True})
+            db.expire_all()
+            first = db.get(Quote, q_id)
+            assert first is not None
+            durable = first.durable_id
+            assert durable is not None
+            assert first.frozen_form == "Original words"
+
+            # Re-PUT the same star: a no-op, must not re-mint.
+            client.put("/api/projects/1/starred", json={_dom("p1", 10): True})
+            db.expire_all()
+            again = db.get(Quote, q_id)
+            assert again is not None
+            assert again.durable_id == durable, "durable_id must not change on re-star"
+            assert again.frozen_form == "Original words"
+
+            # Unstar, re-import with the pipeline text DRIFTED (same stable key,
+            # so the row survives and its text is refreshed), then re-star.
+            client.put("/api/projects/1/starred", json={})
+            _write_intermediate(
+                tmp_path,
+                [_cluster("Dashboard", [_quote("p1", 10, "Drifted pipeline text")])],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+            client.put("/api/projects/1/starred", json={_dom("p1", 10): True})
+            db.expire_all()
+
+            restarred = db.get(Quote, q_id)
+            assert restarred is not None
+            assert restarred.durable_id == durable, "durable_id must be stable"
+            assert restarred.frozen_form == "Original words", (
+                "re-pin must keep the original frozen words, not re-capture drift"
+            )
+        finally:
+            db.close()
+
+
+class TestFrozenFormStaysOffTheExportBoundary:
+    def test_quotes_payload_never_serialises_frozen_form_or_durable_id(
+        self, tmp_path: Path
+    ) -> None:
+        """frozen_form is a re-identification key; durable_id is internal.
+        Neither may cross the serialization boundary the HTML export embeds —
+        export_data["quotes"] IS the /quotes payload (export.py:418).  The
+        exclusion is structural today (the response models are field-explicit
+        allowlists), and the deferred 'display frozen_form' work is exactly the
+        temptation to add it to QuoteResponse; this makes the boundary enforced
+        so that regression fails loudly."""
+        clusters = [_cluster("Dashboard", [_quote("p1", 10, "Pin me")])]
+        _write_intermediate(tmp_path, clusters)
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+
+        # Pin the quote so frozen_form / durable_id are populated in the DB.
+        client.put("/api/projects/1/starred", json={_dom("p1", 10): True})
+        db = app.state.db_factory()
+        try:
+            q = _quote_at(db, 10)
+            assert q.frozen_form is not None and q.durable_id is not None
+        finally:
+            db.close()
+
+        resp = client.get("/api/projects/1/quotes")
+        assert resp.status_code == 200
+        body = resp.text
+        for key in ("frozen_form", "frozenForm", "durable_id", "durableId"):
+            assert key not in body, (
+                f"{key} must not cross the export/serialisation boundary"
+            )

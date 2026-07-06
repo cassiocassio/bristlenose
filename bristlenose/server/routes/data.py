@@ -119,12 +119,16 @@ def _now() -> datetime:
 def _effective_text(db: Session, quote: Quote) -> str:
     """The researcher-facing text of a quote: its latest edit, else the
     pipeline text.  This is what gets frozen at pin time."""
-    edit = (
-        db.query(QuoteEdit)
-        .filter_by(quote_id=quote.id)
-        .order_by(QuoteEdit.edited_at.desc())
-        .first()
-    )
+    # no_autoflush: this read runs mid-``put_tags``/``put_starred`` after a
+    # QuoteTag/QuoteState was ``db.add``ed but before flush; letting autoflush
+    # fire here emits a spurious identity-map-replace SAWarning.
+    with db.no_autoflush:
+        edit = (
+            db.query(QuoteEdit)
+            .filter_by(quote_id=quote.id)
+            .order_by(QuoteEdit.edited_at.desc())
+            .first()
+        )
     return edit.edited_text if edit else quote.text
 
 
@@ -146,6 +150,29 @@ def _mint_pin(db: Session, quote: Quote, frozen_text: str | None = None) -> None
     quote.frozen_form = (
         frozen_text if frozen_text is not None else _effective_text(db, quote)
     )
+
+
+def _is_sentiment_tag(db: Session, tag_definition_id: int) -> bool:
+    """True if this tag definition belongs to the machine-authored sentiment
+    framework — the one tag family that never counts as researcher commitment.
+
+    Mirrors the sentiment exclusion in ``importer._pinned_quote_ids`` so the
+    mint site and the pin predicate cannot drift.  Without it, a hand-typed tag
+    whose name collides with a sentiment label ("frustration", "delight")
+    resolves by name to the sentiment ``TagDefinition`` (``put_tags`` matches on
+    lowercased name), arrives as ``source="human"``, and would mint a spurious
+    ``durable_id`` / ``frozen_form`` on a quote the pin predicate refuses to pin.
+    """
+    # no_autoflush: called mid-``put_tags`` after a QuoteTag is ``db.add``ed
+    # but before flush; letting autoflush fire emits a spurious SAWarning.
+    with db.no_autoflush:
+        framework_id = (
+            db.query(CodebookGroup.framework_id)
+            .join(TagDefinition, TagDefinition.codebook_group_id == CodebookGroup.id)
+            .filter(TagDefinition.id == tag_definition_id)
+            .scalar()
+        )
+    return framework_id == "sentiment"
 
 
 def _session_ids_for_project(db: Session, project_id: int) -> list[int]:
@@ -509,9 +536,12 @@ def put_tags(
                         tag_definition_id=td_id,
                         source=source,
                     ))
-                    # Freeze on first human tag.  Machine tags (autocode /
-                    # codebook-builder / sentiment "pipeline") don't pin.
-                    if source == "human":
+                    # Freeze on first genuinely-human tag.  Match the pin
+                    # predicate (importer._pinned_quote_ids) exactly: machine
+                    # tags (autocode / codebook-builder / sentiment "pipeline")
+                    # don't pin, AND a sentiment-framework tag never pins even
+                    # when it carries source="human" — else the two drift.
+                    if source == "human" and not _is_sentiment_tag(db, td_id):
                         _mint_pin(db, quote)
 
         db.commit()

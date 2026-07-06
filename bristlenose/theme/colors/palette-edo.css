@@ -31,6 +31,7 @@
     --bn-colour-border: #d4c9a8;                 /* Sail Parchment — warm border */
     --bn-colour-accent: #0f5c9e;                 /* Vivid Prussian — bero-ai undertone */
     --bn-colour-hover: #ede5d1;                  /* Washi Cream tint — warm hover */
+    --bn-colour-inspector-bg: #f7f2e6;           /* Inspector chrome — warm washi; the mirror of Xcode's #f9f9fa (Apple cools the neutral, Edo warms the paper). One notch off Paper White, lighter than quote-bg so it reads as chrome not content */
 
     /* Semantic surfaces */
     --bn-colour-quote-bg: #f0e9d8;              /* Warm off-white */
@@ -110,6 +111,7 @@
         --bn-colour-border:           light-dark(#d4c9a8, #2d2820);
         --bn-colour-accent:           light-dark(#0f5c9e, #4d9fe0);
         --bn-colour-hover:            light-dark(#ede5d1, #252118);
+        --bn-colour-inspector-bg:     light-dark(#f7f2e6, #211e18);   /* Inspector chrome — warm washi light / one warm step off Sumi dark */
 
         /* Semantic surfaces */
         --bn-colour-quote-bg:         light-dark(#f0e9d8, #211e18);

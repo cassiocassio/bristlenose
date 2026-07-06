@@ -156,6 +156,19 @@
     --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
     --bn-gutter-right: 0.5rem;     /* gap: center content → minimap column */
 
+    /* Cross-seam first-baseline datum (desktop/embedded only).
+       Signed offset from the synced --bn-toolbar-inset line to the native
+       sidebar's first lens-row ("Project") text baseline. NEGATIVE here: the
+       detail pane's toolbar (tall, two-line title) pushes the webview's inset
+       below where the sidebar's shorter top strip draws "Project", so the
+       shared baseline sits ABOVE the inset line. The webview content +
+       inspector headers align their baselines to it; macOS is untouched.
+       Single knob — tune by eye against the "Project" row; each column
+       subtracts its own header ascent-to-baseline (literals in the rules,
+       tunable) so a big heading and a small label still share the line.
+       See organisms/sidebar.css (.tag-sidebar, .center first-heading). */
+    --bn-first-baseline: -25px;
+
     /* Breakpoints — reference values for @media queries across the system.
        CSS @media can't consume var(), so use these values directly in
        media queries and reference the token name in a comment.

@@ -491,12 +491,23 @@
     height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
-    background: var(--bn-colour-bg);
+    background: var(--bn-colour-inspector-bg);
     border-left: 1px solid var(--bn-colour-border);
     display: flex;
     flex-direction: column;
     visibility: hidden;
     opacity: 0;
+    /* Bleed the inspector chrome up under the frosted toolbar (Xcode-style
+       full-height keyline). The grid sits inside body's top-inset, so this
+       column's flow origin is ~inset+xl below y=0 while `top: 0` anchors the
+       sticky at y=0 — that gap is what makes the panel teleport up on first
+       scroll. Cancel the inset with a negative margin (origin → y=0, so the
+       tint + keyline run to the top AND sticky has nothing to snap across),
+       then re-inset the header as inner padding. Value mirrors the
+       html[data-embedded] body padding-top; `, 0px` keeps browser/serve at
+       its plain space-xl inset. box-sizing:border-box keeps height at 100vh. */
+    margin-top: calc(-1 * (var(--bn-toolbar-inset, 0px) + var(--bn-space-xl)));
+    padding-top: calc(var(--bn-toolbar-inset, 0px) + var(--bn-space-xl));
     /* Extra bottom padding so macOS auto-hiding scrollbar doesn't obscure
        the last items when content overflows. */
     padding-bottom: 2rem;
@@ -505,6 +516,29 @@
 .layout.tags-open .tag-sidebar {
     visibility: visible;
     opacity: 1;
+}
+
+/* ── Cross-seam first-baseline alignment (desktop/embedded only) ──────────
+   Lift the content + inspector first line so their text baselines meet the
+   native sidebar's "Project" lens-row baseline (--bn-first-baseline, tokens.css).
+   Scoped to [data-embedded] so browser/serve keeps its own top spacing. macOS
+   is untouched — this is pure webview CSS aligning TO it. The subtracted literals
+   are each header's ascent-to-baseline (plus its own header padding); nudge them
+   if a column reads a hair high or low. Web↔web stays exact (shared token);
+   web↔native is the tuned approximation. */
+
+/* Inspector "Tags": positioned independent of the bg-bleed margin above it.
+   baseline = padding-top + .sidebar-header pad (space-md) + label ascent (~11). */
+html[data-embedded="true"] .tag-sidebar {
+    padding-top: calc(var(--bn-toolbar-inset, 0px) + var(--bn-first-baseline) - 24px);
+}
+
+/* Content first heading ("Sections"/"Themes"): pull up out of the body top-inset
+   so its baseline meets the datum. box-top = body padding-top (inset + space-xl)
+   + h2 margin; we override the margin. `> section:first-of-type` skips any
+   header/nav siblings and never grabs a mid-page Themes heading. */
+html[data-embedded="true"] .center > section:first-of-type > h2 {
+    margin-top: calc(var(--bn-first-baseline) - var(--bn-space-xl) - 19px);
 }
 
 /* Tag header override: no bottom padding (subtitle/actions follow) */
@@ -579,7 +613,11 @@
 .minimap-slot {
     grid-column: 4;
     position: sticky;
-    top: 0;
+    /* Anchor the sticky at the same inset the body already pushes this column
+       down by, so it doesn't teleport up under the frost on first scroll. Unlike
+       the tag sidebar, the minimap is content-overview (no chrome tint), so it
+       should stay clear of the toolbar rather than bleed beneath it. */
+    top: calc(var(--bn-toolbar-inset, 0px) + var(--bn-space-xl));
     height: 100vh;
     align-self: start;
     overflow: hidden;

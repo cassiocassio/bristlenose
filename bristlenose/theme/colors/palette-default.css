@@ -15,6 +15,7 @@
     --bn-colour-border: #e5e7eb;
     --bn-colour-accent: #007aff;
     --bn-colour-hover: #e8f0fe;
+    --bn-colour-inspector-bg: #f9f9fa;          /* Inspector chrome — Xcode Tahoe's flat inspector tint (~2% off white) */
 
     /* Semantic surfaces */
     --bn-colour-quote-bg: #f9fafb;
@@ -98,6 +99,7 @@
         --bn-colour-border:           light-dark(#e5e7eb, #2d2d2d);
         --bn-colour-accent:           light-dark(#007aff, #0a84ff);
         --bn-colour-hover:            light-dark(#e8f0fe, #1e293b);
+        --bn-colour-inspector-bg:     light-dark(#f9f9fa, #1c1c1e);   /* Inspector chrome — one step up from the #111 editor (Apple systemGray6 dark) */
 
         /* Semantic surfaces */
         --bn-colour-quote-bg:         light-dark(#f9fafb, #1a1a1a);

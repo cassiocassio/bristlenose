@@ -24,6 +24,7 @@ Required tokens:
 --bn-colour-border              Lines, separators, card borders
 --bn-colour-accent              Links, active states, primary action
 --bn-colour-hover               Interactive hover background (light tint of accent)
+--bn-colour-inspector-bg        Inspector/right-sidebar chrome tint — a subtle desaturated sibling of --bn-colour-bg (Xcode-style flat inspector; opaque so it reads over the vibrant body in desktop frosted mode)
 
 --bn-colour-quote-bg            Quote card background
 --bn-colour-badge-bg            Badge/chip background

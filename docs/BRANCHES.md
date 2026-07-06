@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 3 Jul 2026 (closed `spike` branch — merged to main; worktree detached + tagged orange on disk, local branch deleted. Translucent titlebar/toolbar proof-of-concept for macOS 26 Tahoe.) Prior: 3 Jul 2026 (closed `fi` branch — merged to main `3e193fa8` + registration re-added `92033192`; worktree detached + kept on disk, local branch deleted. Machine-seeded Finnish locale, native review pending.) Prior: 3 Jul 2026 (closed `nl` branch — merged to main `88961b7a`; worktree detached + tagged orange on disk, local branch deleted. Review-pending; machine-seeded Dutch locale.) Prior: 3 Jul 2026 (opened `nl` + `fi` locale branches — Dutch (high/high pick) + Finnish (completes the Nordics), each with a native reviewer lined up; both share the 9 enrolment sites with `slavic`, so merge sequentially.) Prior: 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
+**Updated:** 6 Jul 2026 (opened `curation-persistence` — feature worktree for the incremental-analysis persistence layer: freeze marked quotes, membership-based section identity, best-effort themes. Plan: `docs/design-curation-persistence-plan.md`.) Prior: 3 Jul 2026 (closed `spike` branch — merged to main; worktree detached + tagged orange on disk, local branch deleted. Translucent titlebar/toolbar proof-of-concept for macOS 26 Tahoe.) Prior: 3 Jul 2026 (closed `fi` branch — merged to main `3e193fa8` + registration re-added `92033192`; worktree detached + kept on disk, local branch deleted. Machine-seeded Finnish locale, native review pending.) Prior: 3 Jul 2026 (closed `nl` branch — merged to main `88961b7a`; worktree detached + tagged orange on disk, local branch deleted. Review-pending; machine-seeded Dutch locale.) Prior: 3 Jul 2026 (opened `nl` + `fi` locale branches — Dutch (high/high pick) + Finnish (completes the Nordics), each with a native reviewer lined up; both share the 9 enrolment sites with `slavic`, so merge sequentially.) Prior: 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
 
 ---
 
@@ -39,6 +39,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch slavic/` | `slavic` | feature | Localisation wave — pl/ru/uk + da/sv/nb + tr locales + i18n tooling (machine-seeded, pending native review) |
+| `bristlenose_branch curation-persistence/` | `curation-persistence` | feature | Curation persistence — freeze human-touched quotes, membership-based section identity, best-effort themes + "New!" flag across incremental re-runs |
 
 
 
@@ -121,6 +122,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `slavic` | `bristlenose_branch slavic/` | local only |
+| `curation-persistence` | `bristlenose_branch curation-persistence/` | local only |
 | `spike` | `bristlenose_branch spike/` | local only |
 | `claude/debug-menu-instrumentation-4r9npy` _(merged)_ | _(worktree removed)_ | `origin/...` — merged to main 28 Jun 2026 (`252c1ce3`) |
 | `claude/figjam-miro-market-share-px52tg` _(merged)_ | `bristlenose_branch_figjam-miro-market-share/` _(detached, on disk)_ | local deleted — merged to main 28 Jun 2026 (66bc28c4) |
@@ -152,6 +154,31 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `curation-persistence`
+
+**Kind:** feature — persistence layer so a researcher's curation survives incremental re-runs (freeze marked quotes, membership-based section identity, best-effort themes with a "New!" flag)
+**Status:** Just started
+**Started:** 6 Jul 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch curation-persistence/`
+**Remote:** local only (push when ready)
+
+**What it does:** Implements `docs/design-curation-persistence-plan.md` (the *how*; model doc `design-curation-persistence.md`, parent `design-incremental-analysis.md`). Phase 1 (Freeze) is the highest-leverage, self-contained, releasable-alone slice: `starred ∨ edited ∨ tagged` → durable project-scoped ID + frozen verbatim form, exempt from stale-cleanup deletion, so a re-run can never lose marked work. Phase 2 (Section identity) re-keys sections/HeadingEdits on membership-derived `cluster_id` instead of the drifting label — the real migration. Phase 3 (Themes) is best-effort labels + snapshot-on-rename + the M3-gate/M1-pass "what's new" summary. Phase 0 (manual re-assignment) is parallelisable. The round-trip test (`tests/test_curation_roundtrip.py`) is the executable contract and per-phase merge gate. Plan seeded as `HANDOFF.md`.
+
+**Files this branch will touch:**
+- `bristlenose/server/models.py` (`durable_id` / `frozen_form` columns; `HeadingEdit` re-key on `cluster_id`/`theme_id`)
+- `bristlenose/server/importer.py` (stale-cleanup pin-exemption `_cleanup_stale_data`; membership-based cluster upsert)
+- `bristlenose/server/routes/data.py` (minting sites — `PUT /starred`, `/edits`, `/tags`) and `routes/quotes.py`
+- `bristlenose/server/alembic/versions/` (additive migration + fresh-DB backfill guard)
+- `frontend/src/.../QuoteSections.tsx`, `QuoteThemes.tsx` (anchor from `cluster_id`/`theme_id`, not label)
+- `tests/test_curation_roundtrip.py` (new — the contract)
+- `bristlenose/llm/prompts/thematic-grouping.md` (separate 7–12 count target)
+- `frozen_form` is a re-identification key — must stay outside the export/anonymisation boundary
+
+**Potential conflicts with other branches:**
+- None expected among active branches — `slavic` is `bristlenose/locales/`-only, `tower-of-hanoi`/`responsive-signal-cards` don't touch the server. Watch for overlap with any in-flight incremental-analysis / importer work at merge time (this is the persistence half of that programme).
 
 ---
 

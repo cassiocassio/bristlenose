@@ -29,6 +29,7 @@ from tests.server_fixtures import cluster as _cluster
 from tests.server_fixtures import dom_id as _dom
 from tests.server_fixtures import quote as _quote
 from tests.server_fixtures import quote_at as _quote_at
+from tests.server_fixtures import theme as _theme
 from tests.server_fixtures import write_intermediate as _write_intermediate
 
 # ---------------------------------------------------------------------------
@@ -577,3 +578,160 @@ class TestSectionIdentity:
         # The replacement section shows its own pipeline label, never "Renamed".
         new_sections = client.get("/api/projects/1/quotes").json()["sections"]
         assert all(s["edited_label"] is None for s in new_sections)
+
+    def test_pinned_quote_dropped_from_reused_section_stays_visible(
+        self, tmp_path: Path
+    ) -> None:
+        """A starred quote the pipeline stops emitting, from a section that is
+        otherwise REUSED (membership majority), must not be orphaned by the
+        membership rebuild — Freeze keeps the row, and it must stay visible in
+        exactly one section (regression: the rebuild deleted its only join)."""
+        _write_intermediate(
+            tmp_path,
+            [_cluster("Dashboard", [_quote("p1", 10, "a"), _quote("p1", 20, "b"),
+                                    _quote("p1", 30, "c"), _quote("p1", 40, "d")])],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        client.put("/api/projects/1/starred", json={_dom("p1", 10): True})
+
+        db = app.state.db_factory()
+        try:
+            # Re-import Dashboard emitting {20,30,40} — drops the starred q@10.
+            # Overlap 3/4 → REUSED (same cluster id), so the rebuild fires.
+            _write_intermediate(
+                tmp_path,
+                [_cluster("Dashboard", [_quote("p1", 20, "b"), _quote("p1", 30, "c"),
+                                        _quote("p1", 40, "d")])],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        sections = client.get("/api/projects/1/quotes").json()["sections"]
+        appearances = [
+            s["screen_label"] for s in sections
+            for q in s["quotes"] if q["dom_id"] == _dom("p1", 10)
+        ]
+        assert appearances == ["Dashboard"], (
+            "a pinned but no-longer-emitted quote must stay visible in its "
+            f"reused section exactly once, got {appearances}"
+        )
+
+    def test_pinned_quote_moved_between_reused_sections_appears_once(
+        self, tmp_path: Path
+    ) -> None:
+        """The exclusivity edge the strand fix must NOT reintroduce: a PINNED
+        quote that MOVES between two reused sections appears in exactly one (its
+        stale source join is still deleted because it IS in an incoming set)."""
+        _write_intermediate(
+            tmp_path,
+            [
+                _cluster("Login", [_quote("p1", 10, "a"), _quote("p1", 20, "b"),
+                                   _quote("p1", 30, "c")], order=1),
+                _cluster("Settings", [_quote("p1", 40, "d"), _quote("p1", 50, "e")],
+                         order=2),
+            ],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        client.put("/api/projects/1/starred", json={_dom("p1", 30): True})  # pin the mover
+
+        db = app.state.db_factory()
+        try:
+            _write_intermediate(
+                tmp_path,
+                [
+                    _cluster("Login", [_quote("p1", 10, "a"), _quote("p1", 20, "b")],
+                             order=1),
+                    _cluster("Settings", [_quote("p1", 40, "d"), _quote("p1", 50, "e"),
+                                          _quote("p1", 30, "c")], order=2),
+                ],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        sections = client.get("/api/projects/1/quotes").json()["sections"]
+        appearances = [
+            s["screen_label"] for s in sections
+            for q in s["quotes"] if q["dom_id"] == _dom("p1", 30)
+        ]
+        assert appearances == ["Settings"], (
+            f"a pinned moved quote must appear once, in its new section; got {appearances}"
+        )
+
+
+class TestThemeIdentity:
+    """The theme arm of Phase 2 is hand-duplicated from clusters; mirror the
+    identity + exclusivity coverage so the two can't silently diverge."""
+
+    def test_theme_rename_survives_label_drift(self, tmp_path: Path) -> None:
+        members = [_quote("p1", 10, "a"), _quote("p1", 20, "b"), _quote("p1", 30, "c")]
+        _write_intermediate(
+            tmp_path, [_cluster("Sec", [_quote("p1", 5, "x")])],
+            themes=[_theme("Trust", members)],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        themes = client.get("/api/projects/1/quotes").json()["themes"]
+        tid = themes[0]["theme_id"]
+        assert client.put(
+            "/api/projects/1/edits",
+            json={f"theme-group-{tid}:title": "Confidence"},
+        ).status_code == 200
+
+        db = app.state.db_factory()
+        try:
+            _write_intermediate(
+                tmp_path, [_cluster("Sec", [_quote("p1", 5, "x")])],
+                themes=[_theme("Trust & safety", [_quote("p1", 10, "a"),
+                                                  _quote("p1", 20, "b"),
+                                                  _quote("p1", 30, "c")])],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        t = client.get("/api/projects/1/quotes").json()["themes"][0]
+        assert t["theme_id"] == tid, "theme id stable across label drift"
+        assert t["theme_label"] == "Trust & safety", "raw label tracks pipeline"
+        assert t["edited_label"] == "Confidence", "rename survives drift"
+
+    def test_quote_moved_between_reused_themes_appears_once(
+        self, tmp_path: Path
+    ) -> None:
+        _write_intermediate(
+            tmp_path, [_cluster("Sec", [_quote("p1", 5, "x")])],
+            themes=[
+                _theme("A", [_quote("p1", 10, "a"), _quote("p1", 20, "b"),
+                             _quote("p1", 30, "c")]),
+                _theme("B", [_quote("p1", 40, "d"), _quote("p1", 50, "e")]),
+            ],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+
+        db = app.state.db_factory()
+        try:
+            _write_intermediate(
+                tmp_path, [_cluster("Sec", [_quote("p1", 5, "x")])],
+                themes=[
+                    _theme("A", [_quote("p1", 10, "a"), _quote("p1", 20, "b")]),
+                    _theme("B", [_quote("p1", 40, "d"), _quote("p1", 50, "e"),
+                                 _quote("p1", 30, "c")]),
+                ],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        themes = client.get("/api/projects/1/quotes").json()["themes"]
+        appearances = sum(
+            1 for t in themes for q in t["quotes"] if q["dom_id"] == _dom("p1", 30)
+        )
+        assert appearances == 1, "a quote moved between reused themes appears once"

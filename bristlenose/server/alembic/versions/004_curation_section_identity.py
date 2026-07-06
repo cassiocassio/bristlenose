@@ -15,10 +15,13 @@ group holds).  Two coordinated changes:
    label can't be reconstructed and is left as-is (a one-time loss, documented
    in the plan) — it simply stops applying.
 
-Guarded per the project's Alembic discipline: on a brand-new DB ``create_all()``
-builds the constraint-free schema (models.py no longer declares the
-constraints) and ``run_migrations`` stamps head *without* calling ``upgrade()``,
-so this only ever runs against real pre-existing data.
+Guarded per the project's Alembic discipline.  Note ``init_db`` runs
+``create_all()`` *then* ``run_migrations``, which stamps 001 and upgrades to
+head — so ``upgrade()`` DOES run on a fresh DB.  It is inert there because the
+guards short-circuit: ``create_all`` built the constraint-free schema (models.py
+no longer declares the constraints) so ``_unique_constraint_names`` is empty and
+the batch drops are skipped, and ``heading_edits`` is empty so the re-key loop
+matches nothing.  Safety comes from those guards, not from a skipped upgrade().
 
 Revision ID: 004
 Revises: 003
@@ -96,26 +99,45 @@ def upgrade() -> None:
     edits = bind.execute(
         sa.text("SELECT id, project_id, heading_key FROM heading_edits")
     ).fetchall()
+    # Live (project_id, heading_key) set, to skip a re-key that would collide
+    # with an existing row.  heading_edits has UNIQUE(project_id, heading_key),
+    # so a colliding UPDATE would raise IntegrityError and abort the whole
+    # migration; instead we leave the source row un-rekeyed (documented loss).
+    live_keys = {(pid, key) for _eid, pid, key in edits}
     for eid, pid, key in edits:
         if ":" not in key:
             continue
         prefix, field = key.rsplit(":", 1)
         new_key = None
-        if prefix.startswith("section-") and not prefix.startswith("section-cluster-"):
+        # Consult the slug map for EVERY section-/theme- key, including ones
+        # already shaped like the durable namespace.  On a rev-003 DB the
+        # frontend never emitted a genuine "section-cluster-{id}" key (that key
+        # form only exists post-Phase-2), so a key like "section-cluster-7"
+        # present here is a *legacy* slug for a section literally labelled
+        # "Cluster 7" (the pipeline's own f"Cluster {i+1}" fallback) and must be
+        # re-keyed to that section's real id, not skipped.
+        if prefix.startswith("section-"):
             cid = cluster_by_slug.get((pid, prefix[len("section-"):]))
             if cid is not None:
                 new_key = f"section-cluster-{cid}:{field}"
-        elif prefix.startswith("theme-") and not prefix.startswith("theme-group-"):
+        elif prefix.startswith("theme-"):
             tid = theme_by_slug.get((pid, prefix[len("theme-"):]))
             if tid is not None:
                 new_key = f"theme-group-{tid}:{field}"
-        if new_key is not None and new_key != key:
-            bind.execute(
-                sa.text(
-                    "UPDATE heading_edits SET heading_key = :k WHERE id = :i"
-                ),
-                {"k": new_key, "i": eid},
+        if new_key is None or new_key == key:
+            continue
+        if (pid, new_key) in live_keys:
+            logger.warning(
+                "004: re-key %r -> %r collides with an existing heading_key; "
+                "leaving un-rekeyed (one-time loss).", key, new_key
             )
+            continue
+        bind.execute(
+            sa.text("UPDATE heading_edits SET heading_key = :k WHERE id = :i"),
+            {"k": new_key, "i": eid},
+        )
+        live_keys.discard((pid, key))
+        live_keys.add((pid, new_key))
 
 
 def downgrade() -> None:

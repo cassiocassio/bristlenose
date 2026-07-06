@@ -16,8 +16,10 @@ now writes them correctly going forward).
 Guarded, per the project's Alembic discipline: ``init_db`` runs
 ``create_all()`` *before* migrations, so on fresh/recent databases the two
 columns already exist by the time we get here — we add them only when absent.
-On a brand-new DB ``run_migrations`` stamps head without calling ``upgrade()``
-at all, so the backfill only ever runs against real pre-existing data.
+``upgrade()`` still runs on a fresh DB (``run_migrations`` stamps 001 then
+upgrades to head), but ``_has_column`` skips the ADD COLUMNs and the relabel /
+backfill SELECTs match no rows, so it is a no-op — safety is the guards, not a
+skipped upgrade().
 
 Revision ID: 003
 Revises: 002

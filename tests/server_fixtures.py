@@ -43,6 +43,10 @@ def cluster(label: str, quotes: list[dict], order: int = 1) -> dict:
     }
 
 
+def theme(label: str, quotes: list[dict]) -> dict:
+    return {"theme_label": label, "description": "", "quotes": quotes}
+
+
 def write_intermediate(
     project_dir: Path,
     clusters: list[dict],

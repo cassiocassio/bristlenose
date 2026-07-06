@@ -865,6 +865,16 @@ def _import_quotes_from_clusters(
     ]
     matched = _match_by_membership(existing_members, incoming_members)
 
+    # Pinned quotes the pipeline stops emitting anywhere this run must NOT lose
+    # their section join in the reuse rebuild below — Freeze keeps the row alive
+    # (exemption), but an orphaned quote has no section and vanishes from the
+    # /quotes report.  Strand = pinned AND absent from every incoming set; a
+    # *moved* pinned quote is in some incoming set, so it is NOT stranded and its
+    # stale source join is still deleted (exclusivity holds).
+    all_incoming: set[int] = set().union(*(m for _, m in incoming_members)) \
+        if incoming_members else set()
+    strand_ids = _pinned_quote_ids(db, project.id) - all_incoming
+
     for i, cluster_data in enumerate(screen_clusters_data):
         label = cluster_data.get("screen_label", f"Cluster {i + 1}")
         matched_id = matched.get(i)
@@ -880,10 +890,14 @@ def _import_quotes_from_clusters(
             # assignment for a reused cluster is *exactly* this run's incoming
             # set.  Without this, a quote reassigned to another section keeps its
             # old join and appears in two sections (quote exclusivity).
-            # Researcher-assigned joins (assigned_by != "pipeline") are untouched.
-            db.query(ClusterQuote).filter_by(
+            # Researcher-assigned joins (assigned_by != "pipeline") are untouched,
+            # and a stranded pinned quote keeps its last join so it stays visible.
+            rebuild = db.query(ClusterQuote).filter_by(
                 cluster_id=cluster.id, assigned_by="pipeline"
-            ).delete(synchronize_session="fetch")
+            )
+            if strand_ids:
+                rebuild = rebuild.filter(ClusterQuote.quote_id.notin_(strand_ids))
+            rebuild.delete(synchronize_session="fetch")
         else:
             cluster = ScreenCluster(
                 project_id=project.id,
@@ -965,6 +979,12 @@ def _import_quotes_from_themes(
     ]
     matched = _match_by_membership(existing_members, incoming_members)
 
+    # Don't strand a pinned quote dropped from every theme this run (see the
+    # cluster path); themes have their own incoming union.
+    all_incoming: set[int] = set().union(*(m for _, m in incoming_members)) \
+        if incoming_members else set()
+    strand_ids = _pinned_quote_ids(db, project.id) - all_incoming
+
     for i, theme_data in enumerate(theme_groups_data):
         label = theme_data.get("theme_label", f"Theme {i + 1}")
         matched_id = matched.get(i)
@@ -974,9 +994,12 @@ def _import_quotes_from_themes(
             theme.description = theme_data.get("description", theme.description)
             theme.last_imported_at = now
             # Rebuild pipeline membership from scratch (see clusters above).
-            db.query(ThemeQuote).filter_by(
+            rebuild = db.query(ThemeQuote).filter_by(
                 theme_id=theme.id, assigned_by="pipeline"
-            ).delete(synchronize_session="fetch")
+            )
+            if strand_ids:
+                rebuild = rebuild.filter(ThemeQuote.quote_id.notin_(strand_ids))
+            rebuild.delete(synchronize_session="fetch")
         else:
             theme = ThemeGroup(
                 project_id=project.id,

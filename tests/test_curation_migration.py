@@ -1,13 +1,15 @@
 """Curation migrations (003 Freeze, 004 Section identity) — data transforms.
 
-The in-memory contract tests stamp head and never run ``upgrade()``.  These
-exercise the real file-based upgrade paths: 003 freezes already-marked quotes
+``upgrade()`` runs even on a fresh DB (init_db create_all()s then upgrades
+001->head), but the per-migration guards make it inert there; these tests
+exercise the real *pre-existing-data* upgrade paths: 003 freezes marked quotes
 and relabels mislabelled sentiment tags; 004 re-keys HeadingEdit rows from the
 label slug to the durable id and drops the now-wrong label-unique constraints.
 """
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 from sqlalchemy import inspect, text
@@ -19,6 +21,7 @@ from bristlenose.server.db import (
     run_migrations,
 )
 from bristlenose.server.models import (
+    ClusterQuote,
     CodebookGroup,
     HeadingEdit,
     Project,
@@ -30,6 +33,35 @@ from bristlenose.server.models import (
     TagDefinition,
     ThemeGroup,
 )
+
+
+def _add_legacy_cluster_constraint(db_path: str, engine) -> None:
+    """Rebuild screen_clusters WITH the pre-Phase-2 label-unique constraint,
+    FK-safely: legacy_alter_table=ON so the RENAME doesn't rewrite child FK
+    references, foreign_keys=OFF so our own rebuild's DROP is allowed.  Set at
+    the raw DBAPI level (outside any transaction) so the pragmas take effect."""
+    cols = inspect(engine).get_columns("screen_clusters")
+    coldefs = [
+        f'"{c["name"]}" {c["type"]}'
+        f'{" PRIMARY KEY" if c.get("primary_key") else ""}'
+        f'{"" if c["nullable"] else " NOT NULL"}'
+        for c in cols
+    ]
+    coldefs.append(
+        "CONSTRAINT uq_cluster_project_label UNIQUE (project_id, screen_label)"
+    )
+    collist = ", ".join(f'"{c["name"]}"' for c in cols)
+    engine.dispose()
+    raw = sqlite3.connect(db_path)
+    raw.isolation_level = None
+    raw.execute("PRAGMA foreign_keys=OFF")
+    raw.execute("PRAGMA legacy_alter_table=ON")
+    raw.execute("ALTER TABLE screen_clusters RENAME TO sc_old")
+    raw.execute(f"CREATE TABLE screen_clusters ({', '.join(coldefs)})")
+    raw.execute(f"INSERT INTO screen_clusters ({collist}) SELECT {collist} FROM sc_old")
+    raw.execute("DROP TABLE sc_old")
+    raw.execute("UPDATE alembic_version SET version_num = '003'")
+    raw.close()
 
 
 def _quote(project_id: int, tc: float, text_: str) -> Quote:
@@ -226,5 +258,89 @@ def test_004_drops_label_unique_constraint_and_permits_collision(
             ScreenCluster(project_id=p.id, screen_label="Dup", created_by="pipeline"),
         ])
         db.commit()  # must not raise
+    finally:
+        db.close()
+
+
+def test_004_batch_drop_survives_child_join_rows(tmp_path: Path) -> None:
+    """Regression (the FK-crash the audit found): migration 004's batch
+    constraint-drop must not abort on a legacy DB that has cluster_quotes child
+    rows — the normal case for any analysed project.  db.py enables FK
+    enforcement (which would abort the batch DROP TABLE of the parent), so
+    run_migrations disables it for the migration and restores it after."""
+    db_path = tmp_path / "bristlenose.db"
+    engine = get_engine(f"sqlite:///{db_path}")
+    init_db(engine)
+    factory = create_session_factory(engine)
+
+    db = factory()
+    p = Project(name="M", slug="m", input_dir="/x", output_dir="/x/o")
+    db.add(p)
+    db.flush()
+    c = ScreenCluster(project_id=p.id, screen_label="Dashboard", created_by="pipeline")
+    q = Quote(
+        project_id=p.id, session_id="s1", participant_id="p1",
+        start_timecode=10.0, end_timecode=15.0, text="t", quote_type="screen_specific",
+    )
+    db.add_all([c, q])
+    db.flush()
+    db.add(ClusterQuote(cluster_id=c.id, quote_id=q.id, assigned_by="pipeline"))
+    db.commit()
+    db.close()
+
+    _add_legacy_cluster_constraint(str(db_path), engine)
+
+    engine2 = get_engine(f"sqlite:///{db_path}")
+    run_migrations(engine2)  # must NOT raise "FOREIGN KEY constraint failed"
+
+    assert "uq_cluster_project_label" not in {
+        u["name"] for u in inspect(engine2).get_unique_constraints("screen_clusters")
+    }
+    db2 = create_session_factory(engine2)()
+    try:
+        assert db2.query(ClusterQuote).count() == 1, "child join row preserved"
+        # FK enforcement restored + no dangling references.
+        orphans = db2.execute(text("PRAGMA foreign_key_check")).fetchall()
+        assert orphans == []
+    finally:
+        db2.close()
+
+
+def test_004_ambiguous_slug_left_unrekeyed(tmp_path: Path) -> None:
+    """Two sections slugifying to the same key: the rename can't be attributed
+    to one cluster id, so _slug_map drops the key and the HeadingEdit is left
+    un-rekeyed (not re-keyed to an arbitrary later-wins winner)."""
+    db_path = tmp_path / "bristlenose.db"
+    engine = get_engine(f"sqlite:///{db_path}")
+    init_db(engine)
+    factory = create_session_factory(engine)
+
+    db = factory()
+    p = Project(name="M", slug="m", input_dir="/x", output_dir="/x/o")
+    db.add(p)
+    db.flush()
+    # Two distinct clusters, identical label → identical slug "dashboard".
+    db.add_all([
+        ScreenCluster(project_id=p.id, screen_label="Dashboard", created_by="pipeline"),
+        ScreenCluster(project_id=p.id, screen_label="Dashboard", created_by="pipeline"),
+    ])
+    db.flush()
+    db.add(HeadingEdit(
+        project_id=p.id, heading_key="section-dashboard:title", edited_text="X"
+    ))
+    db.commit()
+    db.close()
+
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE alembic_version SET version_num = '003'"))
+    run_migrations(engine)
+
+    db = factory()
+    try:
+        keys = {he.heading_key for he in db.query(HeadingEdit).all()}
+        assert keys == {"section-dashboard:title"}, (
+            "an ambiguous slug must be left un-rekeyed, not attributed to a "
+            f"cluster id; got {keys}"
+        )
     finally:
         db.close()

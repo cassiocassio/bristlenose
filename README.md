@@ -40,7 +40,6 @@ The report includes:
 - **Tags** -- your own free-text tags with auto-suggest
 - **Sentiment** -- AI-generated badges per quote
 - **Charts** -- histogram of emotions across all quotes
-- **Friction points** -- confusion, frustration, and error-recovery moments flagged for review
 - **User journeys** -- per-participant stage progression
 - **Per-participant transcripts** -- full transcript pages with clickable timecodes, linked from the participant table
 - **Clickable timecodes** -- jump to the exact moment in a **popout video player**
@@ -55,7 +54,7 @@ The report includes:
 - **Word-level transcript highlighting** -- karaoke-style sync with video playback
 - **Video clip extraction** -- export starred quotes as video clips (FFmpeg stream-copy)
 - **Self-contained HTML export** -- one-click bundle for stakeholders, optional anonymisation
-- **Seven languages** -- en, es, fr, de, ko, ja, cs (`--lang` flag)
+- **21 UI languages** -- en, es, fr, de, ko, ja, cs, it, pt-BR, pt-PT, zh-Hant, zh-Hant-HK, nl, fi, pl, ru, uk, da, sv, nb, tr (`--lang` flag; the nine most recent are machine-seeded community previews awaiting native review on [Weblate](https://hosted.weblate.org/projects/bristlenose/))
 
 
 ## Install
@@ -227,7 +226,7 @@ Open `interviews/bristlenose-output/bristlenose-interviews-report.html` in your 
 
 Any mix of audio, video, subtitles, or transcripts:
 
-`.wav` `.mp3` `.m4a` `.flac` `.ogg` `.wma` `.aac` `.mp4` `.mov` `.avi` `.mkv` `.webm` `.srt` `.vtt` `.docx`
+`.wav` `.mp3` `.m4a` `.flac` `.ogg` `.wma` `.aac` `.mp4` `.m4v` `.mov` `.avi` `.mkv` `.webm` `.srt` `.vtt` `.docx`
 
 Files sharing a name stem (e.g. `p1.mp4` and `p1.srt`) are treated as one session. Existing subtitles skip transcription.
 
@@ -260,7 +259,7 @@ Override the output location with `--output`: `bristlenose run interviews/ -o /e
 ```bash
 bristlenose run interviews -p "Q1 Usability Study"    # name the project
 bristlenose transcribe interviews                        # transcribe, no LLM
-bristlenose analyze interviews/bristlenose-output/       # skip transcription, run LLM analysis
+bristlenose analyze interviews/bristlenose-output/transcripts-raw/   # skip transcription, run LLM analysis
 bristlenose serve interviews                             # open a previous report (no analysis)
 bristlenose status interviews                            # check project status (read-only)
 bristlenose doctor                                       # check dependencies
@@ -335,7 +334,7 @@ On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows
 ### Verify everything works
 
 ```bash
-.venv/bin/python -m pytest tests/    # ~2800 Python tests; frontend has ~1300 Vitest tests (`npm test` in frontend/)
+.venv/bin/python -m pytest tests/    # ~3500 Python tests; frontend has ~1300 Vitest tests (`npm test` in frontend/)
 .venv/bin/ruff check .               # lint
 .venv/bin/mypy bristlenose/          # type check (some third-party SDK errors are expected)
 ```
@@ -353,7 +352,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full project layout, but the shor
 - `bristlenose/server/` -- FastAPI + SQLite + SQLAlchemy data layer behind serve mode
 - `bristlenose/stages/` -- 12-stage pipeline (ingest through render), one module per stage
 - `bristlenose/llm/` -- multi-provider client + prompt templates (Markdown)
-- `bristlenose/locales/` -- seven UI locales (en, es, fr, de, ko, ja, cs)
+- `bristlenose/locales/` -- 21 UI locales (en, es, fr, de, ko, ja, cs, it, pt-BR, pt-PT, zh-Hant, zh-Hant-HK, nl, fi, pl, ru, uk, da, sv, nb, tr)
 - `desktop/` -- SwiftUI macOS shell that bundles a signed PyInstaller sidecar
 - `bristlenose/pipeline.py` -- orchestrator that wires the stages together
 - `bristlenose/cli.py` -- Typer CLI entry point
@@ -369,7 +368,7 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 **0.19.0** — _4 Jul 2026_
 
-- **Nine new locales — nineteen languages in total.** Dutch (`nl`), Finnish (`fi`), Polish (`pl`), Russian (`ru`), Ukrainian (`uk`), Danish (`da`), Swedish (`sv`), Norwegian Bokmål (`nb`), and Turkish (`tr`) join the roster across the desktop app, web report, and CLI. Each is a machine-seeded community preview — complete against all nine namespaces, offered for native speakers to refine on [Weblate](https://hosted.weblate.org/projects/bristlenose/), with `fill-empty-only` seeding so contributed translations always win. Slavic 1/few/many/other plurals, East-Slavic `_one` retaining `{{count}}` because the form recurs at 21/31, Turkish formal register with `Vazgeç` for Cancel. New tooling — placeholder-union check, `_one` gate, pytest classification guard — catches regressions. Norwegian ships as Bokmål only (the `no → nb` fallback is an open follow-up).
+- **Nine new locales — twenty-one languages in total.** Dutch (`nl`), Finnish (`fi`), Polish (`pl`), Russian (`ru`), Ukrainian (`uk`), Danish (`da`), Swedish (`sv`), Norwegian Bokmål (`nb`), and Turkish (`tr`) join the roster across the desktop app, web report, and CLI. Each is a machine-seeded community preview — complete against all nine namespaces, offered for native speakers to refine on [Weblate](https://hosted.weblate.org/projects/bristlenose/), with `fill-empty-only` seeding so contributed translations always win. Slavic 1/few/many/other plurals, East-Slavic `_one` retaining `{{count}}` because the form recurs at 21/31, Turkish formal register with `Vazgeç` for Cancel. New tooling — placeholder-union check, `_one` gate, pytest classification guard — catches regressions. Norwegian ships as Bokmål only (the `no → nb` fallback is an open follow-up).
 - **Shoal — a live word-flock while your interviews are being analysed.** During a run, a SpriteKit flock of the words the pipeline is currently extracting drifts across the detail pane in the desktop app. Colour-graded by sentiment, respects Reduce Motion and a dedicated Appearance toggle. If the sidecar feed stalls it falls back to a canned word pool so the pane's never empty. Desktop-only; the Python-side sampler + i18n strings ship on PyPI.
 - **Palette picker + Edo, end to end.** Settings → Display picks between **Default** (re-grounded on Apple's system values — system-blue accent, the neutral-grey AppKit selection capsule, 6 px corners, native inactive-window dimming) and **Edo** (Prussian-blue accent from the pigment's brilliant undertone, paper-white paper, passport-navy ink, warmer paper in dark mode). Native macOS pulldown, no restart, live switch via WKWebView bridge. Paints before first render (no flash). New `--palette` CLI flag boots straight into your preference. Ships on PyPI and in the desktop app.
 - **Terminology fixes across four locales.** A glossary-consistency pass corrected drift in Japanese (Quotes 引用 → 発言), Korean (a typo, Accept 승인, Signals 시그널), German (Sessions → Interview, undo → Widerrufen, three _du_ → formal _Sie_), and Spanish (dropping the over-literal _Tubería_). Values only, verified against the locale-key tests. Ships on PyPI.

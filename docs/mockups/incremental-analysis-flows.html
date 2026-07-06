@@ -1,0 +1,1333 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Incremental analysis — states & flows</title>
+<!--
+  Storyboard for the UX mechanics of adding an incrementally-processed video / audio / transcript
+  to an already-analysed Bristlenose project.
+
+  SCOPE (locked with user 3 Jul 2026):
+    - Drop targets: sidebar project row + File → Add Files… menu item
+      (NOT: detail pane, Dock icon, Add Folder…)
+    - During-run chrome: existing sidebar ring + verb, unchanged
+    - Status-line copy on the project row: design variants
+    - Report stays live during the run
+    - No shoal, no extra progress surface beyond the ring
+    - Count deltas: phase 2
+
+  OUT OF SCOPE — handled in a parallel session:
+    - Semantic drift, indeterminacy, preservation of user tagging/starring/edits,
+      impermanence of themes/sections. Referenced here only where it collides with UX (mid-edit reflow).
+
+  COPY DISCIPLINE:
+    [current]   = string exists verbatim in codebase today (file:line where possible)
+    [PROPOSED]  = invented for this design, needs decision
+    [?]         = open question, needs answer before spec
+
+  Icons are INDICATIVE — Unicode glyphs, not SF Symbols / macOS native. Layout is schematic.
+-->
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --ink:#1d1f24; --muted:#6b7280; --sub:#8a919c; --line:#dfe3e8;
+    --accent:#0a84ff; --sel:#e6f0ff; --selln:#0a84ff;
+    --idle:#6b7280; --run:#0a84ff; --ok:#1a7f37; --warn:#9a6700; --bad:#cf222e;
+    --okbg:#e7f4ea; --warnbg:#fbf3df; --badbg:#fbe9e8; --propbg:#f0e9fb;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13.5px;line-height:1.5}
+  .wrap{max-width:1400px;margin:0 auto;padding:22px 24px 80px}
+  h1{font-size:20px;margin:0 0 4px;letter-spacing:-0.01em}
+  h2{font-size:15.5px;margin:32px 0 4px;letter-spacing:-0.005em}
+  h2::before{content:"";display:inline-block;width:3px;height:12px;background:var(--accent);border-radius:2px;margin-right:9px;vertical-align:baseline}
+  h3{font-size:13px;margin:0 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600}
+  p.lede{color:var(--muted);font-size:12.5px;margin:0 0 8px;max-width:820px}
+  p.context{color:var(--sub);font-size:12.5px;margin:0 0 12px;max-width:820px;font-style:italic}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px 22px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;font-size:12px;margin:10px 0 20px}
+  .legend b{color:var(--ink);font-weight:600}
+  .legend .swatch{display:inline-block;padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:11px;margin-right:4px}
+  .sw-cur{background:#e6efff;color:#0a4fb5}
+  .sw-prop{background:var(--propbg);color:#5b3ab0}
+  .sw-q{background:#fff3d9;color:#8a5a00}
+
+  .frames{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;margin:6px 0 20px}
+  .frame{flex:0 0 260px;background:var(--panel);border:1px solid var(--line);border-radius:11px;overflow:hidden;display:flex;flex-direction:column}
+  .frame.wide{flex-basis:340px}
+  .frame.xwide{flex-basis:420px}
+  .frame-cap{font-family:var(--mono);font-size:10.5px;color:var(--sub);padding:7px 10px 4px;border-bottom:1px dashed var(--line);letter-spacing:0.02em}
+  .frame-body{padding:0;flex:1;position:relative;min-height:170px}
+  .frame-note{font-size:11.5px;padding:8px 10px 10px;color:var(--muted);border-top:1px dashed var(--line);background:#fbfcfd}
+  .frame-note b{color:var(--ink)}
+  .frame-note .q{background:var(--warnbg);color:#7a5200;padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:10.5px}
+  .arrow{display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--sub);flex:0 0 22px}
+
+  /* Sidebar mock — faithful to ProjectRow.swift structure.
+     Row = HStack (alignment:.firstTextBaseline, spacing:6) [icon | VStack (spacing:1) [titleLine | subtitleLine]]
+     titleLine = HStack (spacing:6) [name Text .body | Spacer(minLength:4) | count Text .footnote .tertiary OR scanning spinner]
+     subtitleLine = HStack (spacing:4) [subtitleContent | Spacer(minLength:4) | subtitleRightSlot (ring/cloud)]
+     Drop target overlay = RoundedRectangle cornerRadius:8 stroke(Color.accentColor lineWidth:2), padded -6/-3 outside row */
+  .sidebar-mock{background:#fafbfc;padding:6px 6px;height:100%}
+  .sidebar-mock .grp{font-size:10px;text-transform:uppercase;color:var(--sub);padding:8px 8px 4px;letter-spacing:0.08em;font-weight:600}
+  .row{display:flex;align-items:flex-start;gap:6px;padding:6px 8px;border-radius:6px;margin:1px 0;position:relative}
+  .row.sel{background:var(--sel)}
+  .row.drop-target::before{content:"";position:absolute;inset:-3px -6px;border:2px solid var(--accent);border-radius:8px;pointer-events:none}
+  .row .glyph{width:20px;text-align:center;flex:0 0 20px;font-size:16px;color:var(--ink);line-height:1.2;padding-top:1px}
+  .row .glyph.dim{color:var(--sub);opacity:0.55}
+  .row .nm{flex:1;min-width:0;overflow:hidden;display:flex;flex-direction:column;gap:1px}
+  .row .titleline{display:flex;align-items:baseline;gap:6px;font-size:13px}
+  .row .titleline .title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+  .row .titleline .title.dim{color:var(--sub)}
+  .row .titleline .count{font-size:11px;color:var(--sub);opacity:0.75;flex:0 0 auto}
+  .row .titleline .titlespin{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px}
+  .row .subline{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--sub);white-space:nowrap;min-height:15px}
+  .row .subline .subprefix{font-size:11px;flex:0 0 auto;display:inline-flex;align-items:center;width:14px;justify-content:center}
+  .row .subline .subtext{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .row .subline .subright{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px}
+  .row .subline .subtext .delta{color:var(--sub);text-decoration:none;cursor:pointer}
+  .row .subline .subtext .delta:hover{text-decoration:underline}
+  .row .subline .midsep{color:var(--sub);opacity:0.5;padding:0 1px}
+  /* MessageKind glyph tints (semantic) */
+  .mk-error{color:var(--bad)}
+  .mk-warning{color:var(--warn)}
+  .mk-success{color:var(--ok)}
+  .mk-info{color:var(--run)}
+  .mk-skipped{color:#0891b2}
+  .mk-availability{color:var(--warn)}
+  /* Diagnostic-clickable button hint */
+  .subprefix.click{cursor:pointer}
+  .subprefix.click:hover{opacity:0.7}
+
+  /* Ring */
+  .ring{width:16px;height:16px;display:inline-block;vertical-align:middle}
+  .ring circle{fill:none;stroke-width:2.4}
+  .ring .track{stroke:#e0e5eb}
+  .ring .fill{stroke:var(--run);transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .3s}
+  .ring.warn .fill{stroke:var(--warn)}
+  .ring.bad .fill{stroke:var(--bad)}
+  .spinner{width:14px;height:14px;border:2.2px solid #e0e5eb;border-top-color:var(--run);border-radius:50%;display:inline-block;vertical-align:middle;animation:sp 1.1s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .dots-throb::after{content:"…";display:inline-block;animation:th 1.4s steps(4,end) infinite}
+  @keyframes th{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+
+  /* Detail pane / report */
+  .detail-mock{padding:12px;font-size:11.5px;color:var(--ink);height:100%;overflow:hidden;background:var(--panel)}
+  .detail-mock .rpthead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  .detail-mock .rpttitle{font-weight:600;font-size:12.5px}
+  .detail-mock .rptmeta{font-size:10.5px;color:var(--sub);font-family:var(--mono)}
+  .detail-mock .sec{margin-bottom:8px}
+  .detail-mock .sech{font-size:10.5px;text-transform:uppercase;color:var(--sub);letter-spacing:0.06em;margin-bottom:3px;font-weight:600}
+  .detail-mock .quote{background:#fafbfc;border:1px solid var(--line);border-radius:6px;padding:5px 7px;margin-bottom:3px;font-size:11px;line-height:1.35;color:#3a3f47}
+  .detail-mock .quote.editing{background:#fff3d9;border-color:#e4c14d;box-shadow:0 0 0 2px #fbf3df}
+  .detail-mock .quote .quotemeta{font-size:9.5px;color:var(--sub);margin-top:2px}
+  .detail-mock .caret{display:inline-block;width:1.2px;height:11px;background:var(--ink);vertical-align:text-bottom;animation:blink 1.06s steps(2,end) infinite;margin:0 1px}
+  @keyframes blink{50%{background:transparent}}
+  .detail-mock .theme-pill{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:10px;background:#eef1f5;color:#3a3f47;margin-right:3px}
+
+  /* Banner */
+  .banner{padding:6px 10px;background:#e6f0ff;border:1px solid #b8d3ff;color:#0a4fb5;font-size:11.5px;border-radius:5px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .banner.warn{background:var(--warnbg);border-color:#e4c14d;color:#7a5200}
+  .banner.ok{background:var(--okbg);border-color:#a8d3b0;color:#16622e}
+  .banner.bad{background:var(--badbg);border-color:#f0b8b3;color:var(--bad)}
+  .banner b{font-weight:600}
+  .banner .btn{background:#fff;color:inherit;border:1px solid currentColor;border-radius:4px;padding:2px 8px;font-size:10.5px;cursor:pointer;font-family:inherit}
+
+  /* Menu drop-down */
+  .menubar{background:#eaedf1;font-size:11px;padding:2px 8px;border-bottom:1px solid var(--line);display:flex;gap:16px;color:#3a3f47}
+  .menubar span.active{background:var(--sel);color:var(--accent);padding:1px 6px;border-radius:3px}
+  .menu-drop{position:absolute;top:22px;left:52px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.10);min-width:220px;padding:4px;z-index:2}
+  .menu-item{font-size:12px;padding:5px 12px;border-radius:4px;display:flex;justify-content:space-between;align-items:baseline}
+  .menu-item:hover{background:var(--sel)}
+  .menu-item.hi{background:var(--sel)}
+  .menu-item .shortcut{font-family:var(--mono);color:var(--sub);font-size:10.5px}
+  .menu-sep{height:1px;background:var(--line);margin:3px 6px}
+
+  /* Toast */
+  .toast{position:absolute;left:12px;right:12px;bottom:12px;background:#2b2f36;color:#fff;border-radius:8px;padding:8px 11px;font-size:11.5px;box-shadow:0 4px 14px rgba(0,0,0,.20)}
+  .toast .btn{color:#8ec5ff;background:transparent;border:0;font-size:11px;padding:0 0 0 8px;cursor:pointer;font-family:inherit}
+
+  /* Modal */
+  .modal-scrim{position:absolute;inset:0;background:rgba(20,25,35,0.28);display:flex;align-items:center;justify-content:center;padding:14px}
+  .modal{background:var(--panel);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.24);width:100%;max-width:280px;padding:14px}
+  .modal h4{margin:0 0 6px;font-size:13px}
+  .modal p{margin:0 0 10px;font-size:11.5px;color:var(--muted);line-height:1.45}
+  .modal .actions{display:flex;gap:6px;justify-content:flex-end}
+  .modal .actions button{font-size:11px;padding:4px 10px;border-radius:5px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-family:inherit}
+  .modal .actions button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  /* Drop-hover overlay */
+  .drop-overlay{position:absolute;inset:6px;border:2px dashed var(--accent);border-radius:8px;background:rgba(10,132,255,0.08);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:12px;font-weight:600;z-index:1;pointer-events:none}
+
+  /* Open questions section */
+  .oq{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-top:26px}
+  .oq h2{margin-top:0}
+  .oq ul{margin:6px 0;padding-left:20px}
+  .oq li{margin-bottom:6px;font-size:12.5px}
+  .oq li b{color:var(--ink)}
+  .oq li .q{background:var(--warnbg);color:#7a5200;padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:10.5px;margin-right:4px}
+
+  .anchor-nav{position:sticky;top:0;background:var(--bg);padding:8px 0 6px;margin:-8px 0 8px;border-bottom:1px solid var(--line);z-index:5;font-size:11.5px;display:flex;gap:8px;flex-wrap:wrap}
+  .anchor-nav a{color:var(--accent);text-decoration:none;padding:2px 6px;border-radius:4px}
+  .anchor-nav a:hover{background:var(--sel)}
+</style>
+
+<div class="wrap">
+  <h1>Incremental analysis — states &amp; flows</h1>
+  <p class="lede">
+    Storyboard for adding an incrementally-processed video / audio / transcript to an already-analysed project. Yesterday: 2 interviews analysed. Today: user tagged, starred, and edited themes. Tomorrow: a 3rd interview arrives.
+  </p>
+  <p class="context">
+    Authored, not simulated. Icons are indicative; layout is schematic. Copy discipline: <span class="swatch sw-cur">[current]</span> exists in codebase · <span class="swatch sw-prop">[PROPOSED]</span> needs decision · <span class="swatch sw-q">[?]</span> open question.
+  </p>
+
+  <div class="legend">
+    <div><b>Ring</b> 16pt, 2pt stroke · track <code>tertiaryLabelColor</code>, fill <code>controlAccentColor</code>, clockwise from 12. Determinate for <code>.running(fraction:)</code>/<code>.copying(fraction:)</code>; hover swaps to <code>xmark.circle.fill</code> secondary-grey (Finder/App Store idiom, not red).</div>
+    <div><b>Leading identity icon</b> — SF Symbol from <code>project.icon</code> (auto-assigned from <code>IconPickerPopover.palette</code>, 99 symbols) or the default <code>circle</code>. Dimmed via <code>.secondary</code> when <code>availability ≠ .ready</code>. Icon column 20pt, symbol pointSize 16.</div>
+    <div><b>Subtitle-prefix glyphs</b> (only when the variant demands one):
+      <span class="mk-error"><b>xmark.circle.fill</b></span> error / <span class="mk-warning"><b>exclamationmark.triangle.fill</b></span> warning (filled = must not miss) · <span class="mk-success"><b>checkmark.circle</b></span> success / <span class="mk-info"><b>info.circle</b></span> info (outline = quiet) · <span class="mk-availability"><b>externaldrive.badge.xmark</b> / <b>network.slash</b> / <b>questionmark.folder</b></span> cantFind (orange).
+      All <code>.imageScale(.small)</code>, tint per <code>MessageKind.tint</code>. Error/warning glyphs are clickable buttons that open <code>ProjectDiagnosticPopover</code>.</div>
+    <div><b>Copy</b> <span class="swatch sw-cur">[current]</span> exists in the codebase / cited i18n key · <span class="swatch sw-prop">[PROPOSED]</span> needs decision · <span class="swatch sw-q">[?]</span> open question.</div>
+  </div>
+
+  <!-- Construction reference — how ProjectRow.swift assembles a row -->
+  <h2 id="construction">0 · Construction reference (from <code>ProjectRow.swift</code>)</h2>
+  <p class="context">Anchor for every frame below. Structure, fonts, and copy are lifted verbatim from <code>ProjectRow.body</code> (SwiftUI) + <code>ProjectCellSpec</code> (the AppKit port spec) + <code>ProjectSubtitle.resolve()</code> + <code>SidebarSubtitleText</code> + <code>RunProgressSubtitle.compose()</code>.</p>
+
+  <div class="frames">
+    <div class="frame xwide">
+      <div class="frame-cap">S0.A · Anatomy of one row</div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◐</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">3</span></div>
+              <div class="subline">
+                <span class="subprefix mk-error click">✕</span>
+                <span class="subtext">Analysing · 1 of 3 · ~2 min left</span>
+                <span class="subright"><svg class="ring" viewBox="0 0 20 20"><circle class="track" cx="10" cy="10" r="8"/><circle class="fill" cx="10" cy="10" r="8" stroke-dasharray="50.3" stroke-dashoffset="35"/></svg></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note"><b>Not a real state</b> — this frame overlays every slot at once for reference. Real rows show at most one prefix glyph AND either error+ring is impossible (state precedence forbids). Font: title <code>.body</code>, count <code>.footnote</code>/<code>.tertiary</code>, subtitle <code>.caption</code>/<code>.secondary</code>.</div>
+    </div>
+
+    <div class="frame xwide">
+      <div class="frame-cap">S0.B · Row anatomy — labelled</div>
+      <div class="frame-body" style="padding:14px;font-size:11.5px;line-height:1.55;color:var(--muted)">
+        <pre style="font-family:var(--mono);font-size:10.5px;line-height:1.4;margin:0;color:var(--ink);white-space:pre-wrap">HStack(.firstTextBaseline, spacing:6) [
+  leadingIcon              // 20pt · SF Symbol · dimmed if !available
+  VStack(.leading, sp:1) [
+    titleLine   HStack(sp:6) [
+      Text(name).body      // .secondary if !available
+      Spacer(minLength:4)
+      titleRightSlot       // scanning spinner OR count(.footnote/.tertiary)
+    ]
+    subtitleLine  HStack(sp:4) [
+      subtitleContent      // prefix glyph? + text (.caption/.secondary)
+      Spacer(minLength:4)
+      subtitleRightSlot    // 16pt ring/spinner OR icloud
+    ]
+  ]
+]
+.overlay(                  // drop-target hairline
+  RoundedRectangle(cr:8)
+    .stroke(accent, lw:2)
+    .opacity(isDropTarget ? 1 : 0)
+    .padding(.horizontal:-6, .vertical:-3)
+)</pre>
+      </div>
+      <div class="frame-note">Two-line height for every non-<code>.placeholder</code> variant. Single-line collapse (32pt) for <code>.placeholder</code>. Native source-list pitch measured 22 Jun. Icon width 20pt, symbolConfig pointSize 16.</div>
+    </div>
+  </div>
+
+  <div class="frames">
+    <div class="frame xwide">
+      <div class="frame-cap">S0.C · <code>SubtitleVariant</code> precedence — the resolver</div>
+      <div class="frame-body" style="padding:12px;font-size:11.5px;line-height:1.55;color:var(--ink)">
+        <p style="margin:0 0 6px"><code>ProjectSubtitle.resolve(availability, pipelineState, isStopping, copy, lastRunAt, missingCount, unanalysedCount) → SubtitleVariant</code></p>
+        <p style="margin:0 0 6px;color:var(--muted)">Order (settled 18 Jun 2026):</p>
+        <pre style="font-family:var(--mono);font-size:10.5px;line-height:1.4;margin:0;background:#f6f7f9;padding:8px 10px;border-radius:5px">cantFind (availability)
+  › failed / failedDiagnostic / completedPartial
+    › running (or .stopping when isStopping)
+      › queued(position) / stopped / partial(transcribeOnly) / unreachable(reason)
+        › (idle: copying › missing › unanalysed › ready)</pre>
+        <p style="margin:8px 0 0;color:var(--muted)">Exhaustive with no <code>default</code> — an unmapped <code>PipelineState</code> is a compile error, not a silent fall-through to "ready".</p>
+      </div>
+      <div class="frame-note">This resolver is the source of truth for every frame below. Copy strings come from <code>SidebarSubtitleText.text(for:)</code>; drift-check the mockup against it if it ever falls out of sync.</div>
+    </div>
+
+    <div class="frame wide">
+      <div class="frame-cap">S0.D · <code>SubtitleDelta</code> — the +N surface already exists</div>
+      <div class="frame-body" style="padding:12px;font-size:11.5px;line-height:1.55">
+        <p style="margin:0 0 6px"><code>enum SubtitleDelta { .unanalysed(count:), .missing(count:) }</code></p>
+        <p style="margin:0 0 6px;color:var(--muted)"><code>pickDelta()</code>: missing (data drift) wins over unanalysed (feature gap).</p>
+        <p style="margin:6px 0"><b>Rendered</b> as a suffix on <code>.ready(date, delta)</code>: "Just now · +3 unanalysed". The <code>.unanalysed</code> segment is a <code>Button(.plain)</code> that opens the unanalysed sheet; <code>.missing</code> is plain text.</p>
+        <p style="margin:6px 0 0"><b>i18n keys:</b> <code>desktop.chrome.unanalysedSubtitle</code>, <code>desktop.chrome.missingSubtitle</code> — CLDR plural (cs/pl/ru have one/few/many/other).</p>
+      </div>
+      <div class="frame-note"><b>Load-bearing finding.</b> "+N is a new run that creates work" isn't a from-scratch UX — the sidebar row already has an <code>.unanalysed(count:)</code> delta segment. The design question is what to do at drop time, not how to render "N unanalysed."</div>
+    </div>
+  </div>
+
+  <div class="anchor-nav">
+    <a href="#construction">0 Construction</a>
+    <a href="#baseline">1 Baseline</a>
+    <a href="#dragdrop">2 Drag-drop</a>
+    <a href="#menu">3 Menu</a>
+    <a href="#cache">4 Scanning</a>
+    <a href="#subtitle">5 Subtitle</a>
+    <a href="#report">6 Report live</a>
+    <a href="#consent">7 +N consent</a>
+    <a href="#success">8 Success</a>
+    <a href="#reflow">9 Idle-flag</a>
+    <a href="#fail-copy">10 Copy fails</a>
+    <a href="#fail-tx">11 Transcribe fails</a>
+    <a href="#fail-quota">12 Quota</a>
+    <a href="#fail-zero">13 Zero quotes</a>
+    <a href="#fail-cluster">14 Cluster fails</a>
+    <a href="#cancel">15 Cancel</a>
+    <a href="#concurrency">16 Concurrent</a>
+    <a href="#changes">Δ Changes</a>
+    <a href="#questions">? Questions</a>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="baseline">1 · Baseline — yesterday's project, today's edits</h2>
+  <p class="context">Two interviews analysed yesterday. Today the user has been renaming themes, starring quotes, editing section titles. No pipeline activity. Resolver returns <code>.ready(date: yesterday, delta: nil)</code>.</p>
+
+  <div class="frames">
+    <div class="frame wide">
+      <div class="frame-cap">S1.A · Sidebar row, <code>.ready</code></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline"><span class="subtext">Yesterday</span></div>
+            </div>
+          </div>
+          <div class="row">
+            <span class="glyph">◔</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">Ikea tom</span><span class="count">1</span></div>
+              <div class="subline"><span class="subtext">3 Jul</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Count = <code>unanalysed?.sessionCount</code> (<code>.footnote</code>/<code>.tertiary</code>, title-line right). Subtitle text is <code>formatBareDate()</code> — Just now / Today / Yesterday / D MMM / MMM yyyy. No prefix glyph, no right-slot glyph (idle). Identity icons are seeded SF Symbols from <code>RandomProjectIcon</code>.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="dragdrop">2 · Drag-drop onto the project row — happy path entry</h2>
+  <p class="context">User drags <code>show-and-tell-40.mov</code> from Finder onto the project row in the sidebar. Handled by <code>ProjectSidebarOutline.acceptDrop()</code> → <code>handleDropOnProject()</code> → <code>CopyMachinery.copy()</code>.</p>
+
+  <div class="frames">
+    <div class="frame">
+      <div class="frame-cap">S2.A · Drag over row · <code>isDropTarget = true</code></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel drop-target">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline"><span class="subtext">Yesterday</span></div>
+            </div>
+          </div>
+          <div class="row">
+            <span class="glyph">◔</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">Ikea tom</span><span class="count">1</span></div>
+              <div class="subline"><span class="subtext">3 Jul</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">2pt accent-blue stroke overlay via <code>RoundedRectangle.stroke(.accentColor, lineWidth:2)</code>, padded -6/-3 to trace the selection pill (<code>ProjectRow.swift:141-147</code>). No subtitle change. <span class="q">[?]</span> Could the subtitle briefly say "Drop to add" [PROPOSED] while hovering — or is the visual stroke enough?</div>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <div class="frame">
+      <div class="frame-cap">S2.B · Drop lands · <code>.copying(fraction:)</code></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline">
+                <span class="subtext">Copying · 42%</span>
+                <span class="subright"><svg class="ring" viewBox="0 0 20 20"><circle class="track" cx="10" cy="10" r="8"/><circle class="fill" cx="10" cy="10" r="8" stroke-dasharray="50.3" stroke-dashoffset="29"/></svg></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Exact copy: <span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[current]</span> <code>desktop.chrome.pipeline.copying</code> "Copying · N%" (<code>ProjectRow.swift:304-309</code>). Ring shows byte fraction (<code>ProjectRowActivityIndicator.Kind.copying</code>). Hover swaps ring for grey <code>xmark.circle.fill</code> = cancel. Count stays "2" — session isn't imported yet.</div>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <div class="frame">
+      <div class="frame-cap">S2.C · <code>.scanning</code> · pre-run</div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="titlespin"><span class="spinner" style="width:12px;height:12px;border-width:1.5px"></span></span></div>
+              <div class="subline"><span class="subtext">Yesterday</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note"><b>Existing state, not new</b> — <code>.scanning</code> in <code>PipelineState</code>. Title-right spinner after 250ms (<code>ProjectRow.swift:194-195</code>, <code>scheduleScanIndicator</code>) — the delay prevents flash for fast scans. The subtitle stays on the resting <code>.ready</code> text. The manifest walk that decides cached-vs-fresh happens here.</div>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <div class="frame">
+      <div class="frame-cap">S2.D · <code>.running</code> (with stage) · see §5 for ladder</div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline">
+                <span class="subtext">Transcribing · 1 of 1 · &lt;1 min left</span>
+                <span class="subright"><svg class="ring" viewBox="0 0 20 20"><circle class="track" cx="10" cy="10" r="8"/><circle class="fill" cx="10" cy="10" r="8" stroke-dasharray="50.3" stroke-dashoffset="35"/></svg></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Exact copy: <span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[current]</span> <code>RunProgressSubtitle.compose()</code> — stage verb <code>desktop.chrome.pipeline.stage.transcribe</code> + <code>desktop.chrome.pipeline.sessionsCount</code> + <code>desktop.chrome.pipeline.etaUnderMinute</code>, joined by " · ". Count remains "2" until the new session lands in the manifest (§8).</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="menu">3 · File → Add Files… — menu-driven entry</h2>
+  <p class="context">User with the project selected picks File → Add Files… <span class="swatch sw-prop">[PROPOSED]</span> — new menu item.</p>
+
+  <div class="frames">
+    <div class="frame wide">
+      <div class="frame-cap">S3.A · Menubar with menu open</div>
+      <div class="frame-body" style="background:#f6f7f9">
+        <div class="menubar">
+          <span>Bristlenose</span><span class="active">File</span><span>Edit</span><span>View</span><span>Window</span><span>Help</span>
+        </div>
+        <div class="menu-drop">
+          <div class="menu-item">New Project… <span class="shortcut">⌘N</span></div>
+          <div class="menu-item">Open… <span class="shortcut">⌘O</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item hi"><span><span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span> Add Files…</span> <span class="shortcut">⌘⇧A</span></div>
+          <div class="menu-item" style="color:var(--sub)"><span><span class="swatch sw-q" style="font-size:9px;padding:0 3px">[?]</span> Add Folder…</span> <span class="shortcut">⌘⌥A</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item">Show in Finder <span class="shortcut">⌘⇧R</span></div>
+        </div>
+      </div>
+      <div class="frame-note"><span class="q">[?]</span> Should "Add Files…" be enabled/disabled based on selection? Grey if no project selected. <span class="q">[?]</span> Include "Add Folder…" or is drag-only enough for folders? <span class="q">[?]</span> Shortcut ⌘⇧A conflicts with system Select-All-Text?</div>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <div class="frame">
+      <div class="frame-cap">S3.B · System file picker</div>
+      <div class="frame-body" style="padding:14px;color:var(--muted);font-size:11.5px;line-height:1.5">
+        <p style="margin:0 0 6px"><b>Standard NSOpenPanel</b></p>
+        <p style="margin:0 0 6px"><span class="swatch sw-q" style="font-size:9px;padding:0 3px">[?]</span> Multi-select: yes (matches drag semantic)</p>
+        <p style="margin:0 0 6px"><span class="swatch sw-q" style="font-size:9px;padding:0 3px">[?]</span> File-type filter: audio + video + transcript (txt/docx/srt/vtt)</p>
+        <p style="margin:0 0 6px"><span class="swatch sw-q" style="font-size:9px;padding:0 3px">[?]</span> Prompt: "Add" or "Open"?</p>
+      </div>
+      <div class="frame-note">After picking → same code path as drag-drop → S2.B (Copying) → S2.C (Cache scan) → S2.D (Analysing).</div>
+    </div>
+
+    <div class="arrow">≡</div>
+
+    <div class="frame">
+      <div class="frame-cap">S3.C · Same as S2.B onward</div>
+      <div class="frame-body" style="padding:14px;color:var(--sub);font-size:11.5px;line-height:1.6">Menu → picker → copy → cache-scan → analyse. Converges with drag-drop after intake.</div>
+      <div class="frame-note">Design decision: menu and drag are the same affordance surfaced two ways. No divergent behaviour beyond intake mechanic.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="cache">4 · <code>.scanning</code> — the existing pre-run state</h2>
+  <p class="context"><b>Correction:</b> this is not a state to invent. <code>PipelineState.scanning</code> exists, and <code>titleRightSlot</code> already shows a small <code>ProgressView</code> after a 250ms debounce (<code>ProjectRow.swift:189-195</code>). The subtitle stays on the resting <code>.ready</code> text — resolver §5 has <code>.scanning</code> falling through to the idle chain. The question isn't "what to invent" but "what to do differently for incremental."</p>
+
+  <div class="frames">
+    <div class="frame">
+      <div class="frame-cap">S4.A · <code>.scanning</code> · current behaviour</div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="titlespin"><span class="spinner" style="width:12px;height:12px;border-width:1.5px"></span></span></div>
+              <div class="subline"><span class="subtext">Yesterday</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Debounced 250ms title-right spinner. Subtitle unchanged (still shows the resting date). Row height stays two-line. This is what ships today. <b>Read carefully:</b> after a drop, this shape holds for the full pre-run window while the manifest walk decides what's cached — the sub-text "Yesterday" is arguably a lie during that window.</div>
+    </div>
+
+    <div class="arrow">vs</div>
+
+    <div class="frame">
+      <div class="frame-cap">S4.B · Scanning-with-verb <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="titlespin"><span class="spinner" style="width:12px;height:12px;border-width:1.5px"></span></span></div>
+              <div class="subline"><span class="subtext">Checking what's new…</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Same <code>.scanning</code> state, but the resolver returns a distinct subtitle when <code>lastRunAt ≠ nil</code> AND there's fresh input pending. Would need a new tier below <code>.running</code>. Copy <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span> <code>desktop.chrome.pipeline.scanning</code> "Checking what's new…". <span class="q">[?]</span> Do we distinguish "cold scan" from "post-drop scan" — or is one verb enough?</div>
+    </div>
+
+    <div class="arrow">vs</div>
+
+    <div class="frame">
+      <div class="frame-cap">S4.C · Indeterminate ring in the subtitle-right <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline">
+                <span class="subtext">Checking what's new…</span>
+                <span class="subright"><span class="spinner"></span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Move the motion to the subtitle-right (16pt) — matches <code>.running</code>/<code>.copying</code> shape, so the row visually "goes to work" the moment scanning starts. Requires promoting <code>.scanning</code> to a subtitleRightSlot activity kind (currently <code>.none</code> per <code>ProjectRowActivityIndicator.Kind.from</code>). <span class="q">[?]</span> Worth the visual continuity, or does the current title-right spinner tell the truth?</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="subtitle">5 · Status-line copy — the <code>SubtitleVariant</code> table</h2>
+  <p class="context">Every subtitle state the resolver can return, with the exact i18n key and the rendered string. Source: <code>SidebarSubtitleText.text(for:)</code> + <code>RunProgressSubtitle.compose()</code> + <code>desktop.chrome.pipeline.*</code>.</p>
+
+  <div class="frames">
+    <div class="frame xwide">
+      <div class="frame-cap">S5.A · Existing variants — all <span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[current]</span></div>
+      <div class="frame-body" style="padding:8px 12px;overflow-x:auto">
+        <table style="width:100%;font-size:11px;border-collapse:collapse">
+          <tr style="color:var(--sub);font-size:10px;text-transform:uppercase;letter-spacing:0.05em">
+            <td style="padding:3px 6px 3px 0">Variant</td><td>i18n key / source</td><td>Rendered</td>
+          </tr>
+          <tr><td><code>.ready(date, nil)</code></td><td><code>formatBareDate(date)</code></td><td>Just now / Today / Yesterday / 2 Jul / Jun 2025</td></tr>
+          <tr><td><code>.ready(date, .unanalysed(3))</code></td><td>+ <code>desktop.chrome.unanalysedSubtitle</code></td><td>Yesterday · +3 unanalysed <span style="color:var(--sub)">(clickable)</span></td></tr>
+          <tr><td><code>.ready(date, .missing(1))</code></td><td>+ <code>desktop.chrome.missingSubtitle</code></td><td>Yesterday · 1 missing</td></tr>
+          <tr><td><code>.deltaOnly(.unanalysed(3))</code></td><td><code>desktop.chrome.unanalysedSubtitle</code></td><td>+3 unanalysed <span style="color:var(--sub)">(no date anchor)</span></td></tr>
+          <tr><td><code>.copying(0.42)</code></td><td><code>desktop.chrome.pipeline.copying</code></td><td>Copying · 42%</td></tr>
+          <tr><td><code>.copyCancelling</code></td><td><code>desktop.chrome.copyCancelling</code></td><td>Cancelling…</td></tr>
+          <tr><td><code>.running</code> (no signal)</td><td><code>desktop.chrome.pipeline.analysing</code></td><td>Analysing…</td></tr>
+          <tr><td><code>.running</code> (attached orphan)</td><td><code>desktop.chrome.pipeline.resuming</code></td><td>Resuming…</td></tr>
+          <tr><td><code>.running</code> (stage, N/M, ETA)</td><td><code>stage.transcribe</code> · <code>sessionsCount</code> · <code>etaMinutes</code></td><td>Transcribing · 7 of 8 · ~1 min left</td></tr>
+          <tr><td><code>.running</code> (stage, sub-minute)</td><td>… + <code>etaUnderMinute</code></td><td>Identifying speakers · 2 of 3 · &lt;1 min left</td></tr>
+          <tr><td><code>.running</code> (ETA only)</td><td><code>analysing</code> · <code>etaMinutes</code></td><td>Analysing · ~2 min left</td></tr>
+          <tr><td><code>.stopping</code></td><td><code>desktop.chrome.pipeline.stopping</code></td><td>Stopping…</td></tr>
+          <tr><td><code>.queued(position: 2)</code></td><td><code>desktop.chrome.pipeline.queuedPosition</code></td><td>Queued · position 2</td></tr>
+          <tr><td><code>.stopped</code></td><td><code>desktop.chrome.pipeline.stopped</code></td><td>Stopped</td></tr>
+          <tr><td><code>.partial(transcribeOnly:true)</code></td><td><code>desktop.chrome.pipeline.transcribed</code></td><td>Transcribed</td></tr>
+          <tr><td><code>.partial(transcribeOnly:false)</code></td><td><code>desktop.chrome.pipeline.partialRun</code></td><td>Partial run</td></tr>
+          <tr><td><code>.unreachable(reason)</code></td><td>Python-supplied verbatim</td><td>&lt;reason&gt;</td></tr>
+          <tr><td class="mk-error"><code>.failed(summary)</code></td><td>Python-supplied verbatim (✕ prefix opens popover)</td><td>&lt;summary&gt;</td></tr>
+          <tr><td class="mk-error"><code>.failedDiagnostic</code></td><td><code>desktop.pipeline.diagnostic.header.failed</code></td><td>Run failed</td></tr>
+          <tr><td class="mk-warning"><code>.completedPartial</code></td><td><code>desktop.pipeline.diagnostic.header.completed_partial</code></td><td>Partial completion</td></tr>
+          <tr><td class="mk-availability"><code>.cantFind(.unmountedVolume)</code></td><td><code>desktop.availability.unmountedVolume</code></td><td>Samsung T7 · unmounted</td></tr>
+          <tr><td class="mk-availability"><code>.cantFind(.networkUnreachable)</code></td><td><code>desktop.availability.networkUnreachable</code></td><td>server.local · unreachable</td></tr>
+          <tr><td class="mk-availability"><code>.cantFind(.moved)</code></td><td><code>desktop.availability.missing</code></td><td>Can't find this project</td></tr>
+        </table>
+      </div>
+      <div class="frame-note">Every string is either an i18n key (localised across 21 locales) or Python-supplied. Column budget is ~22 EN chars before DE/ES swell truncates. <b>The <code>.unanalysed(count:)</code> delta is the load-bearing finding</b> — the "N new files, pending" surface already exists.</div>
+    </div>
+
+    <div class="frame wide">
+      <div class="frame-cap">S5.B · Proposed additions for incremental — <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
+      <div class="frame-body" style="padding:8px 12px">
+        <table style="width:100%;font-size:11px;border-collapse:collapse">
+          <tr style="color:var(--sub);font-size:10px;text-transform:uppercase;letter-spacing:0.05em">
+            <td style="padding:3px 6px 3px 0">Variant</td><td>Proposed key</td><td>Rendered</td>
+          </tr>
+          <tr><td><code>.scanning</code> (with pending)</td><td><code>desktop.chrome.pipeline.scanning</code></td><td>Checking what's new…</td></tr>
+          <tr><td><code>.running</code> (re-cluster hint)</td><td><code>desktop.chrome.pipeline.stage.cluster</code></td><td>Grouping quotes · ~1 min left</td></tr>
+          <tr><td><code>.partial</code> (new session failed)</td><td><code>desktop.chrome.pipeline.newSessionFailed</code></td><td>1 session failed</td></tr>
+          <tr><td><code>.partial</code> (added zero quotes)</td><td><code>desktop.chrome.pipeline.noQuotesAdded</code></td><td>No quotes added</td></tr>
+        </table>
+      </div>
+      <div class="frame-note">Kept intentionally short — the 22-char budget doesn't leave room for "new interview" anthropomorphism. <span class="q">[?]</span> "Grouping quotes" vs bare "Analysing" for the recluster phase — surface or hide? <span class="q">[?]</span> "No quotes added" vs silent — depends on §13 answer.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="report">6 · Report during the run — stays live</h2>
+  <p class="context">Locked decision: existing report stays live during incremental. User keeps reading, tagging, editing. Question: does the report get any signalling that new data is arriving, or does it stay silent until settle?</p>
+
+  <div class="frames">
+    <div class="frame xwide">
+      <div class="frame-cap">S6.A · Report unchanged during run</div>
+      <div class="frame-body">
+        <div class="detail-mock">
+          <div class="rpthead">
+            <div class="rpttitle">IKEA with uxfriends</div>
+            <div class="rptmeta">2 sessions · 47 quotes</div>
+          </div>
+          <div class="sec">
+            <div class="sech">Frustrations</div>
+            <div class="quote">"The instructions are impossible to follow"<div class="quotemeta">Sarah · Session 1 · 04:12 · ★</div></div>
+            <div class="quote">"I gave up and looked it up on YouTube"<div class="quotemeta">Marco · Session 2 · 12:03</div></div>
+          </div>
+          <div class="sec">
+            <div class="sech">Delight</div>
+            <div class="quote">"The end result made it worth it"<div class="quotemeta">Sarah · Session 1 · 22:41</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Report reads as it did yesterday. No banner, no chrome, no hint that a run is in flight. Sidebar carries the only signal. <b>Simple. Confirms report-stays-live.</b></div>
+    </div>
+
+    <div class="frame xwide">
+      <div class="frame-cap">S6.B · Report with subtle "run in flight" note <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
+      <div class="frame-body">
+        <div class="detail-mock">
+          <div class="rpthead">
+            <div class="rpttitle">IKEA with uxfriends</div>
+            <div class="rptmeta"><span class="spinner" style="width:9px;height:9px;border-width:1.5px"></span> analysing · 2 sessions · 47 quotes</div>
+          </div>
+          <div class="sec">
+            <div class="sech">Frustrations</div>
+            <div class="quote">"The instructions are impossible to follow"<div class="quotemeta">Sarah · Session 1 · 04:12 · ★</div></div>
+            <div class="quote">"I gave up and looked it up on YouTube"<div class="quotemeta">Marco · Session 2 · 12:03</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Small spinner + verb in the metadata line. <span class="q">[?]</span> Does this belong here, or is sidebar-only cleaner? <span class="q">[?]</span> Redundancy vs discoverability tradeoff.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="consent">7 · +N consent — the <code>.unanalysed</code> delta is the shape</h2>
+  <p class="context">Existing precedent: <code>SubtitleDelta.unanalysed(count:)</code> already renders a clickable "+N unanalysed" suffix in the idle-tier subtitle. The question is whether we (a) auto-run on drop and never show it, (b) hold at <code>.unanalysed</code> until the user clicks, or (c) require an explicit modal.</p>
+
+  <div class="frames">
+    <div class="frame">
+      <div class="frame-cap">S7.A · Immediate run · today's policy</div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline">
+                <span class="subtext">Analysing 1 new · ~2 min left</span>
+                <span class="subright"><svg class="ring" viewBox="0 0 20 20"><circle class="track" cx="10" cy="10" r="8"/><circle class="fill" cx="10" cy="10" r="8" stroke-dasharray="50.3" stroke-dashoffset="35"/></svg></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Matches today's drop-then-auto-run policy for folder-shaped projects (<code>ContentView.swift:1285</code>). No consent surface. Copy would need a variant of <code>desktop.chrome.pipeline.analysing</code> that carries the "new" hint. <b>Risk:</b> billed run started without an explicit user gesture beyond the drop.</div>
+    </div>
+
+    <div class="arrow">vs</div>
+
+    <div class="frame">
+      <div class="frame-cap">S7.B · Hold at <code>.ready(date, .unanalysed(1))</code></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline"><span class="subtext">Yesterday <span class="midsep">·</span> <span class="delta">+1 unanalysed</span></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note"><b>Reuses the existing shape.</b> Copy is the <span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[current]</span> <code>desktop.chrome.unanalysedSubtitle</code> CLDR plural — clickable button (<code>ProjectRow.swift:427-441</code>). Today it opens the unanalysed sheet; incrementally we'd wire the click to trigger analysis instead. <span class="q">[?]</span> Change the affordance from "open sheet" to "start analysis"? <span class="q">[?]</span> Or keep the sheet + add an "Analyse" button?</div>
+    </div>
+
+    <div class="arrow">vs</div>
+
+    <div class="frame">
+      <div class="frame-cap">S7.C · Consent sheet <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
+      <div class="frame-body" style="background:#eef1f5">
+        <div class="sidebar-mock" style="opacity:0.55">
+          <div class="grp">Projects</div>
+          <div class="row sel"><span class="glyph">◈</span><div class="nm"><div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div><div class="subline"><span class="subtext">Yesterday</span></div></div></div>
+        </div>
+        <div class="modal-scrim">
+          <div class="modal">
+            <h4><span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span> Analyse show-and-tell-40.mov?</h4>
+            <p>~28 min of audio, ~1 min to analyse. Uses Claude · <span class="swatch sw-q" style="font-size:9px;padding:0 3px">[?]</span> ~$0.12. Existing themes may shift.</p>
+            <div class="actions">
+              <button>Later</button>
+              <button class="primary">Analyse</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Explicit consent — sheet, not modal (macOS idiom for per-project decisions). "Later" leaves the row at S7.B state. <span class="q">[?]</span> Suppressible via a preference? <span class="q">[?]</span> Different threshold for small vs large drops (e.g. skip sheet for &lt;5min single file)?</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="success">8 · Success completion — the settle</h2>
+  <p class="context">Analysis finished. Report has quietly updated in place. Sidebar returns to idle. Count-delta signalling is phase 2 — this frame is what phase 1 ships.</p>
+
+  <div class="frames">
+    <div class="frame wide">
+      <div class="frame-cap">S8.A · <code>.ready(date: now, delta: nil)</code></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">3</span></div>
+              <div class="subline"><span class="subtext">Just now</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Count went 2→3. Subtitle is <span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[current]</span> <code>desktop.chrome.dateRelativeJustNow</code> for &lt;5 min; then <code>Today</code>/<code>Yesterday</code>/relative date after. <span class="q">[?]</span> Count flash animation on transition? Phase 2. <span class="q">[?]</span> Any post-completion toast in the report itself?</div>
+    </div>
+
+    <div class="frame xwide">
+      <div class="frame-cap">S8.B · Report has updated in place</div>
+      <div class="frame-body">
+        <div class="detail-mock">
+          <div class="rpthead">
+            <div class="rpttitle">IKEA with uxfriends</div>
+            <div class="rptmeta">3 sessions · 68 quotes</div>
+          </div>
+          <div class="sec">
+            <div class="sech">Frustrations</div>
+            <div class="quote">"The instructions are impossible to follow"<div class="quotemeta">Sarah · Session 1 · 04:12 · ★</div></div>
+            <div class="quote">"I gave up and looked it up on YouTube"<div class="quotemeta">Marco · Session 2 · 12:03</div></div>
+            <div class="quote">"Half the screws weren't labelled"<div class="quotemeta">Priya · Session 3 · 07:55</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">3rd session's quotes now interleaved. User's star (★) on Sarah's quote preserved. <span class="q">[?]</span> If the section was renamed by user, is the rename preserved when re-clustering runs? (Answer lives in other session — mid-edit reflow surface below is the collision case.)</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="reflow">9 · Mid-edit reflow — one flag, no UX surface</h2>
+  <p class="context">Settled 4 Jul 2026. No banner, no modal, no reload button. A single <b>idle flag</b> gates when the report reflow applies. <b>Sidebar updates freely</b> — it's objective run state (ring, count, subtitle). <b>Report reflow waits</b> for the user to be idle. Both things can be true.</p>
+
+  <div class="frames">
+    <div class="frame xwide">
+      <div class="frame-cap">S9.A · The rule</div>
+      <div class="frame-body" style="padding:14px;font-size:12px;line-height:1.55">
+        <p style="margin:0 0 6px"><b>Idle when:</b> no focused editable input AND no keystroke/mousedown/scroll in the report area for <b>8s</b>.</p>
+        <p style="margin:0 0 6px"><b>Active-override:</b> a focused text input is always active, even without keystrokes (catches "user typing slowly / mid-thought").</p>
+        <p style="margin:0 0 6px"><b>Absolute cap:</b> 2–3 min. After that we apply the reflow anyway (guards abandoned focus).</p>
+        <p style="margin:0 0 6px"><b>Scope:</b> app-wide (single-window today; upgrade to per-window when multi-window ships).</p>
+        <p style="margin:0"><b>Sidebar is not gated.</b> Ring, count, subtitle update in real time regardless. The lock is only on the report reflow surface.</p>
+      </div>
+      <div class="frame-note"><b>Not-viewing case:</b> if the user is on Project B and Project A's run finishes, A's data model updates immediately — the user isn't looking at A, nothing to disturb. When they later switch to A, it's already fresh. Free win of the "one visible report at a time" architecture.</div>
+    </div>
+  </div>
+
+  <div class="frames">
+    <div class="frame">
+      <div class="frame-cap">S9.B · Editing, run in flight</div>
+      <div class="frame-body">
+        <div class="sidebar-mock" style="height:auto">
+          <div class="row sel" style="margin-bottom:6px">
+            <span class="glyph" style="font-size:14px">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline">
+                <span class="subtext">Transcribing · &lt;1 min left</span>
+                <span class="subright"><svg class="ring" viewBox="0 0 20 20"><circle class="track" cx="10" cy="10" r="8"/><circle class="fill" cx="10" cy="10" r="8" stroke-dasharray="50.3" stroke-dashoffset="30"/></svg></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="detail-mock" style="border-top:1px solid var(--line);padding-top:8px">
+          <div class="sec">
+            <div class="sech">Frustrations</div>
+            <div class="quote editing">"The instructions are impossible<span class="caret"></span>"<div class="quotemeta">Sarah · S1 · editing</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Sidebar ring active, user editing. No collision yet. Idle flag = <b>active</b> (focused input).</div>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <div class="frame">
+      <div class="frame-cap">S9.C · Run finishes · sidebar updates, report holds</div>
+      <div class="frame-body">
+        <div class="sidebar-mock" style="height:auto">
+          <div class="row sel" style="margin-bottom:6px">
+            <span class="glyph" style="font-size:14px">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count" style="color:var(--ok);font-weight:600">3</span></div>
+              <div class="subline"><span class="subtext">Just now</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="detail-mock" style="border-top:1px solid var(--line);padding-top:8px">
+          <div class="sec">
+            <div class="sech">Frustrations</div>
+            <div class="quote editing">"The instructions are impossible to follow<span class="caret"></span>"<div class="quotemeta">Sarah · S1 · editing</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note"><b>Sidebar told the truth immediately.</b> Ring done, count 2→3, subtitle "Just now." <b>Report is unchanged</b> — still shows the 2-session shape the user is editing against. Idle flag = <b>active</b>, reflow queued.</div>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <div class="frame">
+      <div class="frame-cap">S9.D · User blurs · timer starts · reflow lands</div>
+      <div class="frame-body">
+        <div class="sidebar-mock" style="height:auto">
+          <div class="row sel" style="margin-bottom:6px">
+            <span class="glyph" style="font-size:14px">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">3</span></div>
+              <div class="subline"><span class="subtext">Just now</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="detail-mock" style="border-top:1px solid var(--line);padding-top:8px">
+          <div class="sec">
+            <div class="sech">Frustrations</div>
+            <div class="quote">"The instructions are impossible to follow"<div class="quotemeta">Sarah · S1 · ★</div></div>
+            <div class="quote">"Half the screws weren't labelled"<div class="quotemeta">Priya · S3 · new</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">User blurs the field (their edit saves). 8s of idleness — the reflow lands atomically. New quote from Priya appears. Star preserved. <b>No banner, no button, no announcement.</b> User's next glance at the report sees the fresh shape; the sidebar had already told them it was ready.</div>
+    </div>
+  </div>
+
+  <div class="frames">
+    <div class="frame xwide">
+      <div class="frame-cap">S9.E · Timer heuristic — what resets and what doesn't</div>
+      <div class="frame-body" style="padding:12px;font-size:11.5px;line-height:1.5">
+        <table style="width:100%;border-collapse:collapse;font-size:11.5px">
+          <tr style="color:var(--sub);font-size:10.5px;text-transform:uppercase;letter-spacing:0.05em">
+            <td style="padding:3px 6px 3px 0">Signal</td><td>Effect on flag</td>
+          </tr>
+          <tr><td>Keystroke in editable field</td><td>Reset timer AND mark active</td></tr>
+          <tr><td>Focused text input (no keystrokes)</td><td>Active-override (never idle)</td></tr>
+          <tr><td>Mousedown / mouseup in report area</td><td>Reset timer</td></tr>
+          <tr><td>Wheel / scroll in report container</td><td>Reset timer</td></tr>
+          <tr><td>Drag session (dirty <code>NSDragOperation</code>)</td><td>Active-override</td></tr>
+          <tr><td>Sidebar click, toolbar click, menu bar</td><td>No effect (not report activity)</td></tr>
+          <tr><td>Mousemove alone</td><td>No effect (too twitchy)</td></tr>
+          <tr><td>App loses key window / focus</td><td>No effect (backgrounded ≠ editing)</td></tr>
+          <tr><td>Project switch away</td><td>Apply held reflow to background project immediately</td></tr>
+          <tr><td>Absolute cap reached (2–3 min)</td><td>Apply reflow regardless</td></tr>
+        </table>
+      </div>
+      <div class="frame-note"><span class="q">[?]</span> Exact timer length — 8s is a starting guess. <span class="q">[?]</span> Absolute cap — 2 min conservative, 3 min lenient. <span class="q">[?]</span> Should the report signal "there's a fresh update queued" in any way, or is the sidebar's "Just now" enough? Recommend zero signal for phase 1 and revisit if cohort testers say they missed it.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="fail-copy">10 · Failure — copy fails (disk full / permission)</h2>
+  <p class="context">File never made it into the folder. Pipeline never started.</p>
+
+  <div class="frames">
+    <div class="frame wide">
+      <div class="frame-cap">S10.A · Pre-copy disk-space precheck (existing)</div>
+      <div class="frame-body" style="padding:14px;font-size:11.5px;line-height:1.55">
+        <p style="margin:0 0 6px"><span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[current]</span> <code>CopyMachinery</code> raises an <code>.alert</code> sheet on the project row's window before the copy starts, if free space is insufficient. Never a toast — <code>feedback_native_chrome_vocabulary</code> forbids them.</p>
+        <p style="margin:0;color:var(--muted)">Row state stays at <code>.ready</code> because the copy never started — nothing to say in the subtitle.</p>
+      </div>
+      <div class="frame-note">This handles the "we can tell in advance" case. Failure during copy (fs errors, permission denied, iCloud eviction mid-copy) is the harder case — Swift's <code>Task.checkCancellation</code> raises per-file, so a partial copy leaves the source dir clean-ish. <span class="q">[?]</span> Does a mid-copy failure land in a distinct subtitle state, or does the row silently revert to <code>.ready</code>?</div>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <div class="frame">
+      <div class="frame-cap">S10.B · Mid-copy failure → row-persistent <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline">
+                <span class="subprefix mk-warning click">▲</span>
+                <span class="subtext">Couldn't finish adding files</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Uses <code>MessageKind.warning</code> vocabulary (<code>exclamationmark.triangle.fill</code>, orange) — clickable to open a diagnostic explaining which files landed and which didn't. Same shape as <code>.completedPartial</code>. <b>Would need a new <code>SubtitleVariant</code> case</b> (e.g. <code>.copyFailed(summary:)</code>). <span class="q">[?]</span> Persistence: until user dismisses / next successful action / timeout?</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="fail-tx">11 · Failure — new file fails to transcribe (old data intact)</h2>
+  <p class="context">Copy succeeded. Cache-scan happy. Transcription of the new file fails (Whisper error, corrupt audio). Yesterday's report is fine.</p>
+
+  <div class="frames">
+    <div class="frame">
+      <div class="frame-cap">S11.A · <code>.completedPartial</code> after failure</div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline">
+                <span class="subprefix mk-warning click">▲</span>
+                <span class="subtext">Partial completion</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note"><span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[current]</span> exact copy from <code>desktop.pipeline.diagnostic.header.completed_partial</code>. Prefix glyph <code>exclamationmark.triangle.fill</code> orange, clickable (<code>diagnosticSubtitle(kind: .warning)</code> in <code>ProjectRow.swift:255-257</code>) — opens popover. Count stays "2" — session didn't land. <span class="q">[?]</span> Post-TF, does the subtitle carry a hint like "1 session failed" — or does it stay short and rely on the popover?</div>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <div class="frame xwide">
+      <div class="frame-cap">S11.B · <code>ProjectDiagnosticPopover</code></div>
+      <div class="frame-body" style="padding:12px;font-size:11.5px">
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px">
+          <span class="mk-warning" style="font-size:13px">▲</span>
+          <div style="font-weight:600">Partial completion</div>
+        </div>
+        <div style="color:var(--muted);margin-bottom:8px;font-size:11px">1 session failed · <code>show-and-tell-40.mov</code></div>
+        <div style="background:#f6f7f9;padding:6px 8px;border-radius:5px;font-family:var(--mono);font-size:10.5px;color:#4a3a00;line-height:1.4;max-height:60px;overflow:hidden">whisper: audio decode failed at 00:12:04 · possibly corrupt file</div>
+        <div style="margin-top:8px;display:flex;gap:6px">
+          <button style="font-size:11px;padding:3px 9px;border-radius:4px;border:1px solid var(--line);background:var(--panel)">Show in Finder</button>
+          <button style="font-size:11px;padding:3px 9px;border-radius:4px;border:1px solid var(--line);background:var(--panel)"><span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span> Retry</button>
+          <button style="font-size:11px;padding:3px 9px;border-radius:4px;border:1px solid var(--line);background:var(--panel)"><span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span> Remove file</button>
+        </div>
+      </div>
+      <div class="frame-note">Header + glyph rendered per <code>MessageKind.warning</code> vocabulary — <code>ProjectDiagnosticPopover.swift:172-173</code>. Retry/Remove are per-file additions <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span>. <span class="q">[?]</span> Does "Remove file" delete from disk or just from the manifest?</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="fail-quota">12 · Failure — provider quota hit mid-run</h2>
+  <p class="context">Transcription done. Clustering stage calls Claude, hits quota / rate limit / auth error. Everything upstream is fine.</p>
+
+  <div class="frames">
+    <div class="frame">
+      <div class="frame-cap">S12.A · <code>.failedDiagnostic</code></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline">
+                <span class="subprefix mk-error click">✕</span>
+                <span class="subtext">Run failed</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note"><span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[current]</span> exact copy from <code>desktop.pipeline.diagnostic.header.failed</code>. Glyph <code>xmark.circle.fill</code> red, clickable (<code>diagnosticSubtitle(kind: .error)</code>). Budget is ~22 EN chars — the sidebar row says "eyes needed"; the popover carries the detail. <span class="q">[?]</span> Should <code>.failed</code> (with Python-supplied summary) render differently from <code>.failedDiagnostic</code> for incremental — e.g. "Quotes not grouped" as the summary line?</div>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <div class="frame xwide">
+      <div class="frame-cap">S12.B · Diagnostic — <code>Cause.category = QUOTA</code></div>
+      <div class="frame-body" style="padding:12px;font-size:11.5px">
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px">
+          <span class="mk-error" style="font-size:13px">✕</span>
+          <div style="font-weight:600"><span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[current]</span> Rate-limited by Claude</div>
+        </div>
+        <div style="color:var(--muted);margin-bottom:8px;font-size:11px">Quote clustering couldn't finish.</div>
+        <div style="background:#f6f7f9;padding:6px 8px;border-radius:5px;font-family:var(--mono);font-size:10.5px;color:#4a3a00">Cause: QUOTA · provider: anthropic · stage: cluster</div>
+        <div style="margin-top:8px;padding:6px 8px;background:#eef1f5;border-radius:5px;font-size:11px">
+          <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span> Transcript for the new interview is saved. You can retry when limits reset.
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px">
+          <button style="font-size:11px;padding:3px 9px;border-radius:4px;border:1px solid var(--line);background:var(--panel)">Billing…</button>
+          <button style="font-size:11px;padding:3px 9px;border-radius:4px;border:1px solid var(--line);background:var(--panel)">Retry</button>
+        </div>
+      </div>
+      <div class="frame-note">Existing category vocabulary from <code>Cause.category</code> (<code>events.py:135-157</code>). Recovery links via <code>pipeline.py:332-375</code>. <b>Incremental-specific:</b> a QUOTA hit mid-run may leave the new session transcribed but not clustered — the report is now "3 sessions, 2 clustered." <span class="q">[?]</span> Does the report show the un-grouped quotes in an "Uncategorised" bin, or hide them?</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="fail-zero">13 · Edge — new file adds no quotes</h2>
+  <p class="context">Run succeeds end-to-end. New session transcribed. Quote-extraction found nothing quotable (silent interview, all off-topic, moderator monologue).</p>
+
+  <div class="frames">
+    <div class="frame">
+      <div class="frame-cap">S13.A · Silent success · <code>.ready(date: now, delta: nil)</code></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">3</span></div>
+              <div class="subline"><span class="subtext">Just now</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Count went 2→3 (session added) but report has zero new quotes. Row shows nothing to distinguish "big change" from "nothing extracted." <b>Arguably dishonest.</b></div>
+    </div>
+
+    <div class="arrow">vs</div>
+
+    <div class="frame">
+      <div class="frame-cap">S13.B · Info-noted <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">3</span></div>
+              <div class="subline">
+                <span class="subprefix mk-info">ⓘ</span>
+                <span class="subtext">No quotes added</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Uses <code>MessageKind.info</code> vocabulary (<code>info.circle</code> outline, blue) — not clickable per the existing <code>SubtitleVariant.isDiagnostic</code> gate (info doesn't open the popover). Would need a new resolver leaf. <span class="q">[?]</span> Info-clickable to open the new session? <span class="q">[?]</span> Persist how long — until user opens the new session?</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="fail-cluster">14 · Failure — clustering / thematic re-run fails, report incoherent risk</h2>
+  <p class="context">Transcription of new file succeeded. Re-clustering starts (global, per axis 4) and dies partway. The report was going to change; now it can't.</p>
+
+  <div class="frames">
+    <div class="frame">
+      <div class="frame-cap">S14.A · Rollback · <code>.completedPartial</code></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">3</span></div>
+              <div class="subline">
+                <span class="subprefix mk-warning click">▲</span>
+                <span class="subtext">Partial completion</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Reuses <span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[current]</span> <code>.completedPartial</code> shape. Popover carries the "clustering failed, showing previous themes" detail. Count reflects the new session (transcribed successfully). <span class="q">[?]</span> Do we show the new session's orphan quotes in an "Uncategorised" bin, or hide them?</div>
+    </div>
+
+    <div class="arrow">vs</div>
+
+    <div class="frame">
+      <div class="frame-cap">S14.B · Partial-reflow subtitle <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">3</span></div>
+              <div class="subline">
+                <span class="subprefix mk-warning click">▲</span>
+                <span class="subtext">Some quotes not yet grouped</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Distinct subtitle text; still uses <code>MessageKind.warning</code>. Would need a new key or an override on <code>.completedPartial</code>. <b>Value:</b> more specific hint than the generic header. <span class="q">[?]</span> Belongs in the resolver or as a detail on the popover?</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="cancel">15 · User cancels mid-incremental</h2>
+  <p class="context">Ring showed as a hover-cancel × (Finder idiom, <code>ProjectRowActivityIndicator.swift</code>). User clicks it. What state does the project end in?</p>
+
+  <div class="frames">
+    <div class="frame">
+      <div class="frame-cap">S15.A · Hover · ring → grey ×</div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline">
+                <span class="subtext">Transcribing · 1 of 1 · &lt;1 min left</span>
+                <span class="subright" style="color:var(--sub);font-size:16px;line-height:1">✕</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note"><span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[current]</span> Hover swap: <code>xmark.circle.fill</code> at <code>.secondaryLabelColor</code> (Finder/App Store idiom — not red). Same 16pt frame as the ring, no reflow (<code>ProjectRowActivityIndicator.swift:113-115</code>).</div>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <div class="frame">
+      <div class="frame-cap">S15.B · Click · <code>.stopping</code></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline">
+                <span class="subtext">Stopping…</span>
+                <span class="subright"><span class="spinner"></span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note"><span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[current]</span> <code>desktop.chrome.pipeline.stopping</code>. Immediate ack — outranks progress in the resolver (<code>ProjectSubtitle.swift:157-159</code>). SIGINT→SIGTERM→SIGKILL escalation lives in <code>PipelineRunner.scheduleOrphanCancelEscalation</code>.</div>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <div class="frame">
+      <div class="frame-cap">S15.C · <code>.stopped</code> with <code>.unanalysed</code>?</div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline"><span class="subtext">Stopped</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note"><span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[current]</span> <code>desktop.chrome.pipeline.stopped</code>. But the file is still in the folder — under incremental world, should the resolver instead skip <code>.stopped</code> and go to <code>.ready(date: prev, delta: .unanalysed(1))</code>? <span class="q">[?]</span> Does cancel prompt "keep file / remove file"? <span class="q">[?]</span> Auto-analyse next launch, or wait for the click on "+1 unanalysed"?</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="concurrency">16 · Concurrency — drop while running</h2>
+  <p class="context">Project A analysing. User drags another file onto Project A's row.</p>
+
+  <div class="frames">
+    <div class="frame">
+      <div class="frame-cap">S16.A · Reject · current behaviour</div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel drop-target" style="--accent:var(--bad)">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline">
+                <span class="subtext">Transcribing · 1 of 1 · &lt;1 min left</span>
+                <span class="subright"><svg class="ring" viewBox="0 0 20 20"><circle class="track" cx="10" cy="10" r="8"/><circle class="fill" cx="10" cy="10" r="8" stroke-dasharray="50.3" stroke-dashoffset="30"/></svg></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Today's gate (<code>ContentView.swift:1222-1239</code>) refuses drops on <code>.running</code>. Drop-target stroke rendered red to signal rejection. <span class="q">[?]</span> Does a toast/sheet accompany or is the visual enough? <b>No toast per <code>feedback_native_chrome_vocabulary</code></b> — so probably just the stroke + sheet if anything.</div>
+    </div>
+
+    <div class="arrow">vs</div>
+
+    <div class="frame">
+      <div class="frame-cap">S16.B · <code>.queued(position: 1)</code> · new usage <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline">
+                <span class="subtext">Transcribing · 1 of 1 · +1 queued</span>
+                <span class="subright"><svg class="ring" viewBox="0 0 20 20"><circle class="track" cx="10" cy="10" r="8"/><circle class="fill" cx="10" cy="10" r="8" stroke-dasharray="50.3" stroke-dashoffset="30"/></svg></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note"><code>.queued(position:)</code> already exists (see §5.A) — currently used for the single-slot queue across projects. New usage: intra-project queue for a dropped-during-run file. <span class="q">[?]</span> How is the queued file represented if the current run fails — orphaned, or auto-promoted to <code>.unanalysed</code>?</div>
+    </div>
+
+    <div class="arrow">vs</div>
+
+    <div class="frame">
+      <div class="frame-cap">S16.C · Merge · pipeline extends <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
+              <div class="subline">
+                <span class="subtext">Transcribing · 1 of 2 · ~2 min left</span>
+                <span class="subright"><svg class="ring" viewBox="0 0 20 20"><circle class="track" cx="10" cy="10" r="8"/><circle class="fill" cx="10" cy="10" r="8" stroke-dasharray="50.3" stroke-dashoffset="42"/></svg></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">"N of M" jumped 1/1 → 1/2 and ETA re-calibrated. <b>Risk:</b> ring might rewind (monotonic-clamped math would hold it at max-so-far). <b>Value:</b> single re-cluster pass. <span class="q">[?]</span> Pipeline mid-intake is a Python-side capability question — out of scope here.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <div class="oq" id="changes">
+    <h2>Δ · Changes from the first pass (source-of-truth alignment)</h2>
+    <p style="margin:0 0 8px;color:var(--muted)">Row construction, glyph vocabulary, and copy were reverse-engineered from <code>ProjectRow.swift</code> + <code>ProjectCellSpec</code> + <code>ProjectSubtitle.swift</code> + <code>SidebarSubtitleText</code> + <code>SidebarActivityRing</code> + <code>ProjectRowActivityIndicator</code> + <code>RunProgressSubtitle</code> + <code>MessageKind</code> + <code>ProjectAvailability</code> + <code>RandomProjectIcon</code>.</p>
+    <ul>
+      <li><b>Row structure rebuilt to match SwiftUI body.</b> <code>HStack(.firstTextBaseline, spacing:6)</code> → <code>[leadingIcon | VStack(spacing:1) [titleLine | subtitleLine]]</code>. Icon column 20pt; title <code>.body</code>; count <code>.footnote</code>/<code>.tertiary</code> in the title-line right; subtitle <code>.caption</code>/<code>.secondary</code> with prefix glyph, text, and 16pt right-slot for activity/cloud.</li>
+      <li><b>Row glyph vocabulary corrected.</b> Removed my invented <code>● ◐ ⚠ ✕ ⧗ ⟳</code> alphabet. Real vocabulary: identity SF Symbol from <code>project.icon</code> (dimmed if unavailable); subtitle-prefix glyphs from <code>MessageKind.symbolName</code> (<code>xmark.circle.fill</code>/<code>exclamationmark.triangle.fill</code>/<code>checkmark.circle</code>/<code>info.circle</code>/<code>minus.circle.fill</code>); availability glyphs (<code>externaldrive.badge.xmark</code>/<code>network.slash</code>/<code>questionmark.folder</code>) — all orange.</li>
+      <li><b>Drop-target overlay corrected.</b> Not a background fill — a <code>RoundedRectangle(cornerRadius:8).stroke(.accentColor, lineWidth:2)</code> with <code>padding(.horizontal:-6, .vertical:-3)</code> to trace the selection-pill shape. §16 rejection uses the same shape in red.</li>
+      <li><b>§4 reframed:</b> cache-scan is <code>PipelineState.scanning</code>, an <b>existing state</b> with an existing debounced title-right spinner (<code>ProjectRow.swift:194</code>). Not something to invent. The question is now: does incremental want a subtitle change (S4.B) or a right-slot ring (S4.C) on top of the existing spinner?</li>
+      <li><b>§5 subtitle table rebuilt</b> with exact <code>SubtitleVariant</code> cases, i18n keys, and rendered strings — 22 rows. Split existing from proposed.</li>
+      <li><b>§7 +N consent reframed.</b> The "pending state" I invented in the first pass already exists as <code>SubtitleDelta.unanalysed(count:)</code> rendering "+N unanalysed" (clickable button, opens sheet). The consent question becomes: (a) auto-run, (b) hold at <code>.unanalysed</code> and repurpose the click to trigger analysis, (c) sheet.</li>
+      <li><b>§10 copy fails split.</b> Pre-copy disk-space precheck already exists as an <code>.alert</code> sheet on the row's window (<code>CopyMachinery</code>). "No toasts" per memory rules out toast pattern. Mid-copy failure needs a new <code>SubtitleVariant</code>.</li>
+      <li><b>§11 transcribe fails aligned to <code>.completedPartial</code></b> — an existing variant with <code>MessageKind.warning</code> glyph. Copy is <code>desktop.pipeline.diagnostic.header.completed_partial</code> "Partial completion." Popover header aligned to <code>ProjectDiagnosticPopover</code>.</li>
+      <li><b>§12 quota fails aligned to <code>.failedDiagnostic</code></b> — <code>desktop.pipeline.diagnostic.header.failed</code> "Run failed." Diagnostic popover header rendered per <code>MessageKind.error</code>.</li>
+      <li><b>§13 zero quotes</b> — now uses <code>MessageKind.info</code> vocabulary (blue <code>info.circle</code>, outline, non-clickable per existing <code>isDiagnostic</code> gate).</li>
+      <li><b>§14 cluster fails</b> — both variants use <code>.completedPartial</code>/<code>MessageKind.warning</code> shape.</li>
+      <li><b>§15 cancel · added <code>.stopping</code> intermediate frame</b> (existing state, immediate ack, outranks progress in resolver). S15.C raises whether <code>.stopped</code> should give way to <code>.unanalysed</code> under incremental.</li>
+      <li><b>§16 concurrency · S16.B reuses existing <code>.queued(position:)</code></b> — currently used for the cross-project single-slot queue; intra-project reuse is new.</li>
+      <li><b>Progress subtitle format corrected.</b> <code>RunProgressSubtitle.compose()</code> joins <code>stage-verb · N of M · ~N min left</code> with " · ". No ellipsis on the generic verb once detail present ("Analysing · &lt;1 min left"), only on the indeterminate floor ("Analysing…"). "Resuming…" only when <code>attachedFromOrphan</code> AND no measured signal yet.</li>
+      <li><b>Copy state format corrected.</b> <code>.copying(fraction:)</code> renders "Copying · 42%" (byte fraction, not file count). <code>.copyCancelling</code> is "Cancelling…" + indeterminate spinner.</li>
+      <li><b>Date format uses <code>formatBareDate</code> shape</b> (Just now / Today / Yesterday / D MMM / MMM yyyy) not "Updated 14h ago."</li>
+      <li><b>§9 mid-edit reflow settled (4 Jul 2026).</b> Deleted variants A (reload banner), B (hold-until-idle with save-triggered reflow), C (edit-wins). Replaced with a single <b>idle-flag</b> design: sidebar updates freely, report reflow waits until 8s of idleness, focused input = always active, absolute cap 2–3 min, scope app-wide (upgrade to per-window post-multi-window). Zero user-facing UX surface for the reflow moment. Sidebar carries objective run state; report carries surface stability. Both are true at once.</li>
+    </ul>
+  </div>
+
+  <div class="oq" id="questions">
+    <h2>Open questions</h2>
+
+    <h3>Drop targets (scope 1)</h3>
+    <ul>
+      <li><span class="q">[?]</span> Menu shortcut: <b>⌘⇧A</b> for "Add Files…" conflicts with system Select-All-Text. Alternatives: ⌘⇧O, ⌘I (import), ⌥⌘A.</li>
+      <li><span class="q">[?]</span> Is "Add Files…" enabled with no project selected — creates new project? Grey until one is selected?</li>
+      <li><span class="q">[?]</span> Include "Add Folder…" or is drag-only enough?</li>
+      <li><span class="q">[?]</span> Drop-target subtitle change on hover ("Drop to add") — clarifying or overkill?</li>
+    </ul>
+
+    <h3>Cache-scan warm-up (§4)</h3>
+    <ul>
+      <li><span class="q">[?]</span> Spinner + "Checking what's new" vs fake pre-progress ring vs silence — which is honest and calm?</li>
+      <li><span class="q">[?]</span> If the scan completes in &lt;1s (cache hit), do we show the state at all or skip?</li>
+    </ul>
+
+    <h3>Subtitle copy (§5)</h3>
+    <ul>
+      <li><span class="q">[?]</span> "1 new interview" vs "1 new file" — anthropomorphism vs technical clarity.</li>
+      <li><span class="q">[?]</span> Do we surface "Reclustering across 3 interviews…" or hide it under "Analysing…"?</li>
+      <li><span class="q">[?]</span> Timestamps: "Updated just now" vs "Updated at 14:32" — precision.</li>
+    </ul>
+
+    <h3>Report during run (§6)</h3>
+    <ul>
+      <li><span class="q">[?]</span> Small "analysing" chip in report header — helpful or redundant with sidebar?</li>
+      <li><span class="q">[?]</span> Should the metadata line show current counts (yesterday's) or a hint that they'll change?</li>
+    </ul>
+
+    <h3>+N consent (§7)</h3>
+    <ul>
+      <li><span class="q">[?]</span> Immediate-run vs pending-state vs modal — which balances friction and control?</li>
+      <li><span class="q">[?]</span> Cost estimate: dollar amount, order-of-magnitude, or wall-clock only?</li>
+      <li><span class="q">[?]</span> Different threshold for small (1 file) vs large (10 files) drops?</li>
+      <li><span class="q">[?]</span> Provider matters — Ollama has no cost, others do. Consent copy provider-conditional?</li>
+    </ul>
+
+    <h3>Success completion (§8)</h3>
+    <ul>
+      <li><span class="q">[?]</span> Should the trailing count flash briefly when it changes?</li>
+      <li><span class="q">[?]</span> Phase-2 territory: "here's what changed" summary — count deltas, moved themes, renamed sections.</li>
+    </ul>
+
+    <h3>Mid-edit reflow (§9) — settled shape, remaining knobs</h3>
+    <ul>
+      <li><b>Settled 4 Jul 2026.</b> No banner, no modal, no button. One idle flag, sidebar updates freely, report reflow waits.</li>
+      <li><span class="q">[?]</span> Exact timer length — 8s is the starting guess. Tune on real usage.</li>
+      <li><span class="q">[?]</span> Absolute cap — 2 min conservative, 3 min lenient. Which is right for the first cohort?</li>
+      <li><span class="q">[?]</span> Zero acknowledgment vs subtle "updated" hint in the report metadata line — recommend zero for phase 1, revisit if testers say they missed it.</li>
+      <li><span class="q">[?]</span> Semantic-drift decisions (what happens to a renamed theme that got split, an edited section title that no longer exists) live in the other session; UX just applies whatever policy they pick, on idle.</li>
+      <li><span class="q">[?]</span> Multi-window (post-TF) — upgrade scope from app-wide to per-window then.</li>
+    </ul>
+
+    <h3>Failure modes (§10–§14)</h3>
+    <ul>
+      <li><span class="q">[?]</span> Error subtitle duration — until dismiss, next action, or timeout?</li>
+      <li><span class="q">[?]</span> "Retry" and "Remove file" as diagnostic-popover actions — worth the design surface?</li>
+      <li><span class="q">[?]</span> Copy failures — toast pattern is forbidden ("no toasts" memory); row-level only?</li>
+      <li><span class="q">[?]</span> Cluster-fail rollback vs partial-reflow — analytical decision, but UX has to render it.</li>
+      <li><span class="q">[?]</span> Zero-quotes case — silent success (dishonest) vs subtitle note (noisy) vs "verify audio quality" hint (opinionated).</li>
+    </ul>
+
+    <h3>Cancel (§15)</h3>
+    <ul>
+      <li><span class="q">[?]</span> Does cancel prompt "keep file / delete file"?</li>
+      <li><span class="q">[?]</span> New <code>.pendingAnalyse</code> state — worth adding, or just leave it as an implicit "there's stuff in the folder"?</li>
+    </ul>
+
+    <h3>Concurrency (§16)</h3>
+    <ul>
+      <li><span class="q">[?]</span> Reject / queue / merge — which for phase 1?</li>
+      <li><span class="q">[?]</span> If queue: does the estimate re-calibrate? Sidebar-row shape for "1 running, N queued"?</li>
+    </ul>
+
+    <h3>Cross-cutting</h3>
+    <ul>
+      <li><span class="q">[?]</span> CLI parity — someone <code>cp</code>s and re-runs from terminal. Existing cascade already has "(cached)" and "(N new sessions)" — enough, or does it want a "+N creates work" preamble too?</li>
+      <li><span class="q">[?]</span> Serve mode (report open in browser): does the browser show a "new analysis available" banner analogous to §9.A when the sidecar re-runs?</li>
+      <li><span class="q">[?]</span> Dock-icon drop — deferred or in-scope for phase 1?</li>
+    </ul>
+  </div>
+
+  <footer style="margin-top:34px;color:var(--sub);font-size:11.5px;border-top:1px solid var(--line);padding-top:12px">
+    <p><b>Storyboard is a scoping artefact, not a design spec.</b> Everything <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span> or <span class="swatch sw-q" style="font-size:9px;padding:0 3px">[?]</span> needs a decision before implementation. Copy discipline is per-frame; the file:line refs anchor claims to the current codebase (<code>ContentView.swift</code>, <code>ProjectSubtitle.swift</code>, <code>ProjectSidebarOutline.swift</code>, <code>PipelineDiagnosticPopover.swift</code>, <code>ProjectRowActivityIndicator.swift</code>, <code>CopyMachinery</code>, <code>cli.json</code>, <code>events.py</code>, <code>pipeline.py</code>).</p>
+  </footer>
+</div>

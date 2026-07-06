@@ -36,6 +36,8 @@ struct ComponentCatalogView: View {
                         MoleculesSection()
                         OrganismsSection()
                         ChartsSection()
+                        LensesSection()
+                        AppKitSection()
                     }
                     .padding(20)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -615,6 +617,102 @@ private struct HeatmapDemo: View {
         }
         .chartLegend(.hidden)
         .frame(width: 240, height: 130)
+    }
+}
+
+// MARK: Phase 5 — lenses (composed macro layout)
+
+private struct LensesSection: View {
+    private let statCols = [GridItem(.adaptive(minimum: 92), spacing: 10)]
+    var body: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            Specimen(title: "Dashboard lens — composed", control: "LazyVGrid stats + masonry featured quotes") {
+                VStack(alignment: .leading, spacing: 12) {
+                    LazyVGrid(columns: statCols, spacing: 10) {
+                        StatCard(value: "16", label: "Sessions")
+                        StatCard(value: "342", label: "Quotes")
+                        StatCard(value: "18h", label: "Duration")
+                        StatCard(value: "24", label: "Themes")
+                    }
+                    Text("Featured quotes")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    MasonryLayout(columns: 2, spacing: 8) {
+                        ForEach(SAMPLE_QUOTES.prefix(5).indices, id: \.self) { i in
+                            MasonryCard(quote: SAMPLE_QUOTES[i], n: i + 1)
+                        }
+                    }
+                }
+                .frame(maxWidth: 420)
+            }
+        }
+    }
+}
+
+// MARK: Phase 6 — AppKit engines (structurally-unreachable containers)
+
+/// NSTokenField wrapped for SwiftUI — the native tag/token input SwiftUI can't
+/// express. Proof of the AppKit-in-SwiftUI bridge; production wires per-tag
+/// colour via a custom token cell. The two larger engines (NSOutlineView
+/// source-list sidebar, NSCollectionView masonry-at-scale) are tracked slices.
+private struct TokenFieldRepresentable: NSViewRepresentable {
+    @Binding var tokens: [String]
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> NSTokenField {
+        let field = NSTokenField()
+        field.delegate = context.coordinator
+        field.tokenStyle = .rounded
+        field.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
+        field.objectValue = tokens
+        field.placeholderString = "add tag…"
+        return field
+    }
+
+    func updateNSView(_ field: NSTokenField, context: Context) {
+        if (field.objectValue as? [String]) != tokens {
+            field.objectValue = tokens
+        }
+    }
+
+    final class Coordinator: NSObject, NSTokenFieldDelegate {
+        let parent: TokenFieldRepresentable
+        init(_ parent: TokenFieldRepresentable) { self.parent = parent }
+
+        func controlTextDidChange(_ obj: Notification) {
+            guard let field = obj.object as? NSTokenField,
+                  let value = field.objectValue as? [String] else { return }
+            parent.tokens = value
+        }
+    }
+}
+
+private struct TokenFieldDemo: View {
+    @State private var tokens = ["onboarding", "friction"]
+    var body: some View {
+        TokenFieldRepresentable(tokens: $tokens)
+            .frame(width: 240, height: 26)
+    }
+}
+
+private struct AppKitSection: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            Specimen(title: "Tag input — NSTokenField", control: "AppKit · NSViewRepresentable · works") {
+                TokenFieldDemo()
+            }
+            Specimen(title: "Sidebar / codebook tree", control: "NSOutlineView(.sourceList) — tracked slice") {
+                Text("AppKit engine — source-list migration is a separate committed direction.")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+            }
+            Specimen(title: "Quotes masonry at scale", control: "NSCollectionView waterfall — tracked slice") {
+                Text("Virtualised production lens; the SwiftUI Layout masonry above proves the look/order.")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 320, alignment: .leading)
+            }
+        }
     }
 }
 

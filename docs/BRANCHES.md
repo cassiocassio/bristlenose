@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 6 Jul 2026 (opened `curation-persistence` — feature worktree for the incremental-analysis persistence layer: freeze marked quotes, membership-based section identity, best-effort themes. Plan: `docs/design-curation-persistence-plan.md`.) Prior: 3 Jul 2026 (closed `spike` branch — merged to main; worktree detached + tagged orange on disk, local branch deleted. Translucent titlebar/toolbar proof-of-concept for macOS 26 Tahoe.) Prior: 3 Jul 2026 (closed `fi` branch — merged to main `3e193fa8` + registration re-added `92033192`; worktree detached + kept on disk, local branch deleted. Machine-seeded Finnish locale, native review pending.) Prior: 3 Jul 2026 (closed `nl` branch — merged to main `88961b7a`; worktree detached + tagged orange on disk, local branch deleted. Review-pending; machine-seeded Dutch locale.) Prior: 3 Jul 2026 (opened `nl` + `fi` locale branches — Dutch (high/high pick) + Finnish (completes the Nordics), each with a native reviewer lined up; both share the 9 enrolment sites with `slavic`, so merge sequentially.) Prior: 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
+**Updated:** 6 Jul 2026 (opened `native-experiment` — spike worktree for an experimental, lens-by-lens conversion of the UI to native macOS, inspired by Gruber's 2018 *Electron and the Decline of Native Apps*; a learning exercise, not a committed migration.) Prior: 6 Jul 2026 (opened `curation-persistence` — feature worktree for the incremental-analysis persistence layer: freeze marked quotes, membership-based section identity, best-effort themes. Plan: `docs/design-curation-persistence-plan.md`.) Prior: 3 Jul 2026 (closed `spike` branch — merged to main; worktree detached + tagged orange on disk, local branch deleted. Translucent titlebar/toolbar proof-of-concept for macOS 26 Tahoe.) Prior: 3 Jul 2026 (closed `fi` branch — merged to main `3e193fa8` + registration re-added `92033192`; worktree detached + kept on disk, local branch deleted. Machine-seeded Finnish locale, native review pending.) Prior: 3 Jul 2026 (closed `nl` branch — merged to main `88961b7a`; worktree detached + tagged orange on disk, local branch deleted. Review-pending; machine-seeded Dutch locale.) Prior: 3 Jul 2026 (opened `nl` + `fi` locale branches — Dutch (high/high pick) + Finnish (completes the Nordics), each with a native reviewer lined up; both share the 9 enrolment sites with `slavic`, so merge sequentially.) Prior: 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
 
 ---
 
@@ -40,6 +40,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
 | `bristlenose_branch slavic/` | `slavic` | feature | Localisation wave — pl/ru/uk + da/sv/nb + tr locales + i18n tooling (machine-seeded, pending native review) |
 | `bristlenose_branch curation-persistence/` | `curation-persistence` | feature | Curation persistence — freeze human-touched quotes, membership-based section identity, best-effort themes + "New!" flag across incremental re-runs |
+| `bristlenose_branch native-experiment/` | `native-experiment` | spike | Experimental native-macOS conversion, one "lens" (view/surface) at a time — a learning exercise in the spirit of Gruber's 2018 *Electron and the Decline of Native Apps* |
 
 
 
@@ -123,6 +124,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `slavic` | `bristlenose_branch slavic/` | local only |
 | `curation-persistence` | `bristlenose_branch curation-persistence/` | local only |
+| `native-experiment` | `bristlenose_branch native-experiment/` | local only |
 | `spike` | `bristlenose_branch spike/` | local only |
 | `claude/debug-menu-instrumentation-4r9npy` _(merged)_ | _(worktree removed)_ | `origin/...` — merged to main 28 Jun 2026 (`252c1ce3`) |
 | `claude/figjam-miro-market-share-px52tg` _(merged)_ | `bristlenose_branch_figjam-miro-market-share/` _(detached, on disk)_ | local deleted — merged to main 28 Jun 2026 (66bc28c4) |
@@ -154,6 +156,24 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `native-experiment`
+
+**Kind:** spike — experimental conversion of Bristlenose's UI to native macOS, taken one "lens" (view/surface) at a time as a learning exercise. Inspired by John Gruber's 2018 *Electron and the Decline of Native Apps* (daringfireball.net/2018/12/electron_and_the_decline_of_native_apps). For fun and to see what we learn — not a committed migration; cherry-pick anything worth keeping.
+**Status:** Just started
+**Started:** 6 Jul 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch native-experiment/`
+**Remote:** local only (push when ready)
+
+**What it does:** Walks the app's surfaces one at a time and reimplements each in native macOS (AppKit/SwiftUI) instead of the WKWebView-hosted React SPA, observing what's gained and lost at each step — feel, performance, effort, fidelity. A deliberate spike: the value is the learning and any reusable native patterns, not a wholesale replacement of the SPA. Sits alongside the existing native desktop shell (`desktop/`) which already hosts the SPA; this explores pushing individual "lenses" below the webview seam.
+
+**Files this branch will touch:**
+- TBD — will be filled in as the experiment takes shape (expected: `desktop/Bristlenose/` Swift surfaces; possibly the WKWebView bridge and per-lens native views)
+
+**Potential conflicts with other branches:**
+- Low risk among active branches — `curation-persistence` and `slavic` are server/locale work; `tower-of-hanoi`/`responsive-signal-cards` don't touch `desktop/`. Watch for overlap with any in-flight native-sidebar (AppKit `NSOutlineView`) work at merge time, since that's the same `desktop/` subtree.
 
 ---
 

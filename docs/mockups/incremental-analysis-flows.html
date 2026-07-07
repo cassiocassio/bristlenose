@@ -296,11 +296,11 @@
 
   <!-- ============================================================ -->
   <h2 id="baseline">1 · Baseline — yesterday's project, today's edits</h2>
-  <p class="context">Two interviews analysed yesterday. Today the user has been renaming themes, starring quotes, editing section titles. No pipeline activity. Resolver returns <code>.ready(date: yesterday, delta: nil)</code>.</p>
+  <p class="context">Two interviews analysed yesterday. Today the user has been renaming themes, starring quotes, editing section titles. No pipeline activity. Resolver returns <code>.ready(date: yesterday, delta: nil)</code>, but per user decision <span class="swatch sw-prop">[PROPOSED]</span> the resting date is dropped from the row — too much visual noise. Idle rows collapse to single-line (<code>.placeholder</code>).</p>
 
   <div class="frames">
     <div class="frame wide">
-      <div class="frame-cap">S1.A · Sidebar row, <code>.ready</code></div>
+      <div class="frame-cap">S1.A · Idle row · single-line <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
       <div class="frame-body">
         <div class="sidebar-mock">
           <div class="grp">Projects</div>
@@ -308,19 +308,17 @@
             <span class="glyph">◈</span>
             <div class="nm">
               <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
-              <div class="subline"><span class="subtext">Yesterday</span></div>
             </div>
           </div>
           <div class="row">
             <span class="glyph">◔</span>
             <div class="nm">
               <div class="titleline"><span class="title">Ikea tom</span><span class="count">1</span></div>
-              <div class="subline"><span class="subtext">3 Jul</span></div>
             </div>
           </div>
         </div>
       </div>
-      <div class="frame-note">Count = <code>unanalysed?.sessionCount</code> (<code>.footnote</code>/<code>.tertiary</code>, title-line right). Subtitle text is <code>formatBareDate()</code> — Just now / Today / Yesterday / D MMM / MMM yyyy. No prefix glyph, no right-slot glyph (idle). Identity icons are seeded SF Symbols from <code>RandomProjectIcon</code>.</div>
+      <div class="frame-note"><b>Decision 4 Jul 2026:</b> drop the resting date from idle rows — visual noise. Under the current Swift model this is <code>.ready(date, nil)</code> collapsing to <code>.placeholder</code> (single-line, 32pt). The date returns only when the row genuinely has state to show (running, failed, cantFind, delta). Count = <code>unanalysed?.sessionCount</code>. <span class="q">[?]</span> Do we expose "last analysed …" anywhere else (context menu / detail pane) as a fallback for anyone who wanted the date?</div>
     </div>
   </div>
 
@@ -338,19 +336,17 @@
             <span class="glyph">◈</span>
             <div class="nm">
               <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
-              <div class="subline"><span class="subtext">Yesterday</span></div>
             </div>
           </div>
           <div class="row">
             <span class="glyph">◔</span>
             <div class="nm">
               <div class="titleline"><span class="title">Ikea tom</span><span class="count">1</span></div>
-              <div class="subline"><span class="subtext">3 Jul</span></div>
             </div>
           </div>
         </div>
       </div>
-      <div class="frame-note">2pt accent-blue stroke overlay via <code>RoundedRectangle.stroke(.accentColor, lineWidth:2)</code>, padded -6/-3 to trace the selection pill (<code>ProjectRow.swift:141-147</code>). No subtitle change. <span class="q">[?]</span> Could the subtitle briefly say "Drop to add" [PROPOSED] while hovering — or is the visual stroke enough?</div>
+      <div class="frame-note">2pt accent-blue stroke overlay via <code>RoundedRectangle.stroke(.accentColor, lineWidth:2)</code>, padded -6/-3 to trace the selection pill (<code>ProjectRow.swift:141-147</code>). Rows are single-line at rest (per §1). No subtitle change on hover — the stroke is the affordance.</div>
     </div>
 
     <div class="arrow">→</div>
@@ -444,14 +440,14 @@
     <div class="arrow">→</div>
 
     <div class="frame">
-      <div class="frame-cap">S3.B · System file picker</div>
-      <div class="frame-body" style="padding:14px;color:var(--muted);font-size:11.5px;line-height:1.5">
-        <p style="margin:0 0 6px"><b>Standard NSOpenPanel</b></p>
-        <p style="margin:0 0 6px"><span class="swatch sw-q" style="font-size:9px;padding:0 3px">[?]</span> Multi-select: yes (matches drag semantic)</p>
-        <p style="margin:0 0 6px"><span class="swatch sw-q" style="font-size:9px;padding:0 3px">[?]</span> File-type filter: audio + video + transcript (txt/docx/srt/vtt)</p>
-        <p style="margin:0 0 6px"><span class="swatch sw-q" style="font-size:9px;padding:0 3px">[?]</span> Prompt: "Add" or "Open"?</p>
+      <div class="frame-cap">S3.B · <code>NSOpenPanel</code></div>
+      <div class="frame-body" style="padding:14px;color:var(--muted);font-size:11.5px;line-height:1.55">
+        <p style="margin:0 0 8px;color:var(--ink)"><b>Title (semibold):</b> Add sessions to project <b style="color:var(--ink)">IKEA with uxfriends</b></p>
+        <p style="margin:0 0 6px"><b style="color:var(--ink)">Multi-select:</b> yes <span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[decided]</span></p>
+        <p style="margin:0 0 6px"><b style="color:var(--ink)">File-type filter:</b> audio · video · transcript (<code>.txt/.docx/.srt/.vtt</code>) <span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[decided]</span></p>
+        <p style="margin:0"><b style="color:var(--ink)">Prompt (accept button):</b> Add <span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[decided]</span></p>
       </div>
-      <div class="frame-note">After picking → same code path as drag-drop → S2.B (Copying) → S2.C (Cache scan) → S2.D (Analysing).</div>
+      <div class="frame-note">Title interpolates the project name — semibold so the scope is clear at a glance. After picking → same code path as drag-drop → S2.B (Copying) → S2.C (Scanning) → S2.D (Analysing). <span class="q">[?]</span> Title copy in i18n: <code>desktop.chrome.addFilesTitle</code> — placeholder <code>{project}</code>.</div>
     </div>
 
     <div class="arrow">≡</div>
@@ -488,7 +484,7 @@
     <div class="arrow">vs</div>
 
     <div class="frame">
-      <div class="frame-cap">S4.B · Scanning-with-verb <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
+      <div class="frame-cap">S4.B · One-word verb <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
       <div class="frame-body">
         <div class="sidebar-mock">
           <div class="grp">Projects</div>
@@ -496,18 +492,18 @@
             <span class="glyph">◈</span>
             <div class="nm">
               <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="titlespin"><span class="spinner" style="width:12px;height:12px;border-width:1.5px"></span></span></div>
-              <div class="subline"><span class="subtext">Checking what's new…</span></div>
+              <div class="subline"><span class="subtext">Scanning…</span></div>
             </div>
           </div>
         </div>
       </div>
-      <div class="frame-note">Same <code>.scanning</code> state, but the resolver returns a distinct subtitle when <code>lastRunAt ≠ nil</code> AND there's fresh input pending. Would need a new tier below <code>.running</code>. Copy <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span> <code>desktop.chrome.pipeline.scanning</code> "Checking what's new…". <span class="q">[?]</span> Do we distinguish "cold scan" from "post-drop scan" — or is one verb enough?</div>
+      <div class="frame-note">One-word present participle, matches the state name and the rest of the ladder (Analysing / Transcribing / Copying / Stopping). "Checking what's new…" was three words; "Checking…" alone is arguably more honest — user knows why we're scanning (they just dropped a file). Copy <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span> <code>desktop.chrome.pipeline.scanning</code> = "Scanning…" or "Checking…" — pick one.</div>
     </div>
 
     <div class="arrow">vs</div>
 
     <div class="frame">
-      <div class="frame-cap">S4.C · Indeterminate ring in the subtitle-right <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
+      <div class="frame-cap">S4.C · Indeterminate ring in subtitle-right <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
       <div class="frame-body">
         <div class="sidebar-mock">
           <div class="grp">Projects</div>
@@ -516,14 +512,14 @@
             <div class="nm">
               <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
               <div class="subline">
-                <span class="subtext">Checking what's new…</span>
+                <span class="subtext">Scanning…</span>
                 <span class="subright"><span class="spinner"></span></span>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <div class="frame-note">Move the motion to the subtitle-right (16pt) — matches <code>.running</code>/<code>.copying</code> shape, so the row visually "goes to work" the moment scanning starts. Requires promoting <code>.scanning</code> to a subtitleRightSlot activity kind (currently <code>.none</code> per <code>ProjectRowActivityIndicator.Kind.from</code>). <span class="q">[?]</span> Worth the visual continuity, or does the current title-right spinner tell the truth?</div>
+      <div class="frame-note">Motion in the subtitle-right (16pt) — matches <code>.running</code>/<code>.copying</code> shape, so the row visually "goes to work" the moment scanning starts. Requires promoting <code>.scanning</code> to a subtitleRightSlot activity kind (currently <code>.none</code> per <code>ProjectRowActivityIndicator.Kind.from</code>). <span class="q">[?]</span> Visual continuity vs redundancy with the title-right spinner.</div>
     </div>
   </div>
 
@@ -631,12 +627,12 @@
   </div>
 
   <!-- ============================================================ -->
-  <h2 id="consent">7 · +N consent — the <code>.unanalysed</code> delta is the shape</h2>
-  <p class="context">Existing precedent: <code>SubtitleDelta.unanalysed(count:)</code> already renders a clickable "+N unanalysed" suffix in the idle-tier subtitle. The question is whether we (a) auto-run on drop and never show it, (b) hold at <code>.unanalysed</code> until the user clicks, or (c) require an explicit modal.</p>
+  <h2 id="consent">7 · +N consent — auto-run on drop <span class="swatch sw-cur" style="font-size:11px;padding:1px 6px;background:var(--okbg);color:var(--ok)">[decided]</span></h2>
+  <p class="context"><b>Settled 4 Jul 2026: auto-run on drop, no consent surface.</b> Matches today's drop-then-auto-run policy for folder-shaped projects (<code>ContentView.swift:1285</code>). The drop gesture IS the consent — the user chose which project, which files. Pending-state (variant B) and modal (variant C) both rejected as friction the user doesn't need.</p>
 
   <div class="frames">
-    <div class="frame">
-      <div class="frame-cap">S7.A · Immediate run · today's policy</div>
+    <div class="frame wide">
+      <div class="frame-cap">S7.A · Drop → run · no interstitial</div>
       <div class="frame-body">
         <div class="sidebar-mock">
           <div class="grp">Projects</div>
@@ -645,56 +641,14 @@
             <div class="nm">
               <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
               <div class="subline">
-                <span class="subtext">Analysing 1 new · ~2 min left</span>
+                <span class="subtext">Transcribing · 1 of 1 · &lt;1 min left</span>
                 <span class="subright"><svg class="ring" viewBox="0 0 20 20"><circle class="track" cx="10" cy="10" r="8"/><circle class="fill" cx="10" cy="10" r="8" stroke-dasharray="50.3" stroke-dashoffset="35"/></svg></span>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <div class="frame-note">Matches today's drop-then-auto-run policy for folder-shaped projects (<code>ContentView.swift:1285</code>). No consent surface. Copy would need a variant of <code>desktop.chrome.pipeline.analysing</code> that carries the "new" hint. <b>Risk:</b> billed run started without an explicit user gesture beyond the drop.</div>
-    </div>
-
-    <div class="arrow">vs</div>
-
-    <div class="frame">
-      <div class="frame-cap">S7.B · Hold at <code>.ready(date, .unanalysed(1))</code></div>
-      <div class="frame-body">
-        <div class="sidebar-mock">
-          <div class="grp">Projects</div>
-          <div class="row sel">
-            <span class="glyph">◈</span>
-            <div class="nm">
-              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div>
-              <div class="subline"><span class="subtext">Yesterday <span class="midsep">·</span> <span class="delta">+1 unanalysed</span></span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="frame-note"><b>Reuses the existing shape.</b> Copy is the <span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[current]</span> <code>desktop.chrome.unanalysedSubtitle</code> CLDR plural — clickable button (<code>ProjectRow.swift:427-441</code>). Today it opens the unanalysed sheet; incrementally we'd wire the click to trigger analysis instead. <span class="q">[?]</span> Change the affordance from "open sheet" to "start analysis"? <span class="q">[?]</span> Or keep the sheet + add an "Analyse" button?</div>
-    </div>
-
-    <div class="arrow">vs</div>
-
-    <div class="frame">
-      <div class="frame-cap">S7.C · Consent sheet <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
-      <div class="frame-body" style="background:#eef1f5">
-        <div class="sidebar-mock" style="opacity:0.55">
-          <div class="grp">Projects</div>
-          <div class="row sel"><span class="glyph">◈</span><div class="nm"><div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">2</span></div><div class="subline"><span class="subtext">Yesterday</span></div></div></div>
-        </div>
-        <div class="modal-scrim">
-          <div class="modal">
-            <h4><span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span> Analyse show-and-tell-40.mov?</h4>
-            <p>~28 min of audio, ~1 min to analyse. Uses Claude · <span class="swatch sw-q" style="font-size:9px;padding:0 3px">[?]</span> ~$0.12. Existing themes may shift.</p>
-            <div class="actions">
-              <button>Later</button>
-              <button class="primary">Analyse</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="frame-note">Explicit consent — sheet, not modal (macOS idiom for per-project decisions). "Later" leaves the row at S7.B state. <span class="q">[?]</span> Suppressible via a preference? <span class="q">[?]</span> Different threshold for small vs large drops (e.g. skip sheet for &lt;5min single file)?</div>
+      <div class="frame-note">The run subtitle carries the existing progress ladder from §2.D — no "new interview" anthropomorphism needed in the row (the count going 2→3 on completion carries that signal, see §8). Undo path if the drop was accidental: hover-cancel × (the existing Finder/App Store idiom on the ring).</div>
     </div>
   </div>
 
@@ -703,8 +657,8 @@
   <p class="context">Analysis finished. Report has quietly updated in place. Sidebar returns to idle. Count-delta signalling is phase 2 — this frame is what phase 1 ships.</p>
 
   <div class="frames">
-    <div class="frame wide">
-      <div class="frame-cap">S8.A · <code>.ready(date: now, delta: nil)</code></div>
+    <div class="frame">
+      <div class="frame-cap">S8.A · Fresh success · <code>.new(count: 1)</code> <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span></div>
       <div class="frame-body">
         <div class="sidebar-mock">
           <div class="grp">Projects</div>
@@ -712,16 +666,36 @@
             <span class="glyph">◈</span>
             <div class="nm">
               <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">3</span></div>
-              <div class="subline"><span class="subtext">Just now</span></div>
+              <div class="subline"><span class="subtext" style="color:var(--ink)"><b>+1 new session</b></span></div>
             </div>
           </div>
         </div>
       </div>
-      <div class="frame-note">Count went 2→3. Subtitle is <span class="swatch sw-cur" style="font-size:9px;padding:0 3px">[current]</span> <code>desktop.chrome.dateRelativeJustNow</code> for &lt;5 min; then <code>Today</code>/<code>Yesterday</code>/relative date after. <span class="q">[?]</span> Count flash animation on transition? Phase 2. <span class="q">[?]</span> Any post-completion toast in the report itself?</div>
+      <div class="frame-note"><b>Decision 4 Jul 2026:</b> post-completion subtitle reads <b>"+N new sessions"</b> (not "Just now") — the sidebar carries the news, not the date. Requires a new <code>SubtitleDelta.new(count:)</code> variant [PROPOSED]; siblings <code>.unanalysed</code>/<code>.missing</code>. CLDR plural key <code>desktop.chrome.newSubtitle</code>. Row temporarily two-line while the delta is active.</div>
     </div>
 
+    <div class="arrow">→</div>
+
+    <div class="frame">
+      <div class="frame-cap">S8.B · User engages · fade to placeholder</div>
+      <div class="frame-body">
+        <div class="sidebar-mock">
+          <div class="grp">Projects</div>
+          <div class="row sel">
+            <span class="glyph">◈</span>
+            <div class="nm">
+              <div class="titleline"><span class="title">IKEA with uxfriends</span><span class="count">3</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note"><b>Engagement measure</b> <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span>: user scrolls in Quotes / opens the new session / clicks into any new content → subtitle fades and row collapses back to the §1 single-line resting state. Row height animates from two-line → single. <span class="q">[?]</span> Exact triggers: scroll a threshold N of new quotes into view? Open the new session's transcript? Any interaction inside the project?</div>
+    </div>
+
+    <div class="arrow">·</div>
+
     <div class="frame xwide">
-      <div class="frame-cap">S8.B · Report has updated in place</div>
+      <div class="frame-cap">S8.C · Report has updated in place</div>
       <div class="frame-body">
         <div class="detail-mock">
           <div class="rpthead">
@@ -736,7 +710,7 @@
           </div>
         </div>
       </div>
-      <div class="frame-note">3rd session's quotes now interleaved. User's star (★) on Sarah's quote preserved. <span class="q">[?]</span> If the section was renamed by user, is the rename preserved when re-clustering runs? (Answer lives in other session — mid-edit reflow surface below is the collision case.)</div>
+      <div class="frame-note">3rd session's quotes interleaved (subject to §9 idle-flag hold). User's ★ on Sarah's quote preserved. Together with the sidebar hint in S8.A, this gives "just a little clue there's some new stuff to see" without any modal / banner / toast.</div>
     </div>
   </div>
 
@@ -1241,6 +1215,11 @@
       <li><b>Copy state format corrected.</b> <code>.copying(fraction:)</code> renders "Copying · 42%" (byte fraction, not file count). <code>.copyCancelling</code> is "Cancelling…" + indeterminate spinner.</li>
       <li><b>Date format uses <code>formatBareDate</code> shape</b> (Just now / Today / Yesterday / D MMM / MMM yyyy) not "Updated 14h ago."</li>
       <li><b>§9 mid-edit reflow settled (4 Jul 2026).</b> Deleted variants A (reload banner), B (hold-until-idle with save-triggered reflow), C (edit-wins). Replaced with a single <b>idle-flag</b> design: sidebar updates freely, report reflow waits until 8s of idleness, focused input = always active, absolute cap 2–3 min, scope app-wide (upgrade to per-window post-multi-window). Zero user-facing UX surface for the reflow moment. Sidebar carries objective run state; report carries surface stability. Both are true at once.</li>
+      <li><b>§1/§2 idle rows drop the resting date</b> (4 Jul 2026). <code>.ready(date, nil)</code> collapses to <code>.placeholder</code> (single-line, 32pt) — dates were visual noise. Date returns only when the row genuinely has state to show. <span class="q">[?]</span> Last-analysed exposed elsewhere (context menu / detail pane)?</li>
+      <li><b>§3 NSOpenPanel copy settled.</b> Title semibold interpolates project name: "Add sessions to project <b>IKEA with uxfriends</b>." Multi-select on, filter audio/video/transcript, prompt "Add." Proposed key <code>desktop.chrome.addFilesTitle</code>.</li>
+      <li><b>§4 scanning verb shortened.</b> "Checking what's new…" (3 words) → "Scanning…" or "Checking…" (1 word), matching the rest of the ladder (Analysing / Transcribing / Copying / Stopping). Pick one.</li>
+      <li><b>§7 auto-run decided.</b> Collapsed three variants (auto-run · hold at <code>.unanalysed</code> · consent sheet) to variant A. The drop gesture IS the consent. Undo via the existing hover-cancel × on the ring.</li>
+      <li><b>§8 post-completion is "+N new sessions", not "Just now"</b> (4 Jul 2026). New <code>SubtitleDelta.new(count:)</code> variant [PROPOSED] alongside <code>.unanalysed</code>/<code>.missing</code>. Persists until user engagement (scrolls new quotes, opens new session) — then row fades back to single-line placeholder. "Just a little clue there's some new stuff to see" without any modal/banner/toast.</li>
     </ul>
   </div>
 
@@ -1255,37 +1234,41 @@
       <li><span class="q">[?]</span> Drop-target subtitle change on hover ("Drop to add") — clarifying or overkill?</li>
     </ul>
 
-    <h3>Cache-scan warm-up (§4)</h3>
+    <h3>Baseline & date (§1) — decided, one follow-up</h3>
     <ul>
-      <li><span class="q">[?]</span> Spinner + "Checking what's new" vs fake pre-progress ring vs silence — which is honest and calm?</li>
+      <li><b>Idle rows drop the date</b> (4 Jul 2026). Single-line placeholder unless there's real state.</li>
+      <li><span class="q">[?]</span> Where does "last analysed …" live for anyone who wanted it? Context menu / detail pane / nowhere?</li>
+    </ul>
+
+    <h3>Scanning verb (§4)</h3>
+    <ul>
+      <li><span class="q">[?]</span> "Scanning…" vs "Checking…" — pick one. Both are honest present participles matching the ladder.</li>
       <li><span class="q">[?]</span> If the scan completes in &lt;1s (cache hit), do we show the state at all or skip?</li>
     </ul>
 
     <h3>Subtitle copy (§5)</h3>
     <ul>
-      <li><span class="q">[?]</span> "1 new interview" vs "1 new file" — anthropomorphism vs technical clarity.</li>
-      <li><span class="q">[?]</span> Do we surface "Reclustering across 3 interviews…" or hide it under "Analysing…"?</li>
-      <li><span class="q">[?]</span> Timestamps: "Updated just now" vs "Updated at 14:32" — precision.</li>
+      <li><span class="q">[?]</span> Do we surface "Grouping quotes" (re-cluster hint) or hide it under generic "Analysing…"?</li>
     </ul>
 
     <h3>Report during run (§6)</h3>
     <ul>
       <li><span class="q">[?]</span> Small "analysing" chip in report header — helpful or redundant with sidebar?</li>
-      <li><span class="q">[?]</span> Should the metadata line show current counts (yesterday's) or a hint that they'll change?</li>
     </ul>
 
-    <h3>+N consent (§7)</h3>
+    <h3>+N consent (§7) — decided</h3>
     <ul>
-      <li><span class="q">[?]</span> Immediate-run vs pending-state vs modal — which balances friction and control?</li>
-      <li><span class="q">[?]</span> Cost estimate: dollar amount, order-of-magnitude, or wall-clock only?</li>
-      <li><span class="q">[?]</span> Different threshold for small (1 file) vs large (10 files) drops?</li>
-      <li><span class="q">[?]</span> Provider matters — Ollama has no cost, others do. Consent copy provider-conditional?</li>
+      <li><b>Auto-run on drop</b> (4 Jul 2026). No consent surface. Drop is the consent; undo via hover-cancel ×.</li>
     </ul>
 
-    <h3>Success completion (§8)</h3>
+    <h3>Success completion (§8) — new-sessions-until-engaged pattern</h3>
     <ul>
-      <li><span class="q">[?]</span> Should the trailing count flash briefly when it changes?</li>
-      <li><span class="q">[?]</span> Phase-2 territory: "here's what changed" summary — count deltas, moved themes, renamed sections.</li>
+      <li><b>Subtitle reads "+N new sessions" post-completion</b> (4 Jul 2026), not "Just now." Requires <code>SubtitleDelta.new(count:)</code> — new <span class="swatch sw-prop" style="font-size:9px;padding:0 3px">[PROPOSED]</span> variant.</li>
+      <li><span class="q">[?]</span> Engagement trigger: N new quotes scrolled into view? Opening the new session? Any interaction inside the project? First pass: any of the above.</li>
+      <li><span class="q">[?]</span> Fade transition — animate row height two-line → single, or immediate collapse?</li>
+      <li><span class="q">[?]</span> If user never engages (leaves project idle), does "+N new" persist forever? Or timeout after N days?</li>
+      <li><span class="q">[?]</span> If a second drop lands while "+N new" is still visible, does it accumulate ("+3 new sessions") or reset ("+1 new session")?</li>
+      <li>Phase-2 territory: bigger "here's what changed" summary — count deltas, moved themes, renamed sections.</li>
     </ul>
 
     <h3>Mid-edit reflow (§9) — settled shape, remaining knobs</h3>

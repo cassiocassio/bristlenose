@@ -44,6 +44,7 @@ const MOCK_DATA: QuotesListResponse = {
       display_order: 1,
       edited_label: null,
       edited_description: null,
+      is_new: false,
       quotes: [
         {
           dom_id: "q-P1-10",
@@ -98,6 +99,7 @@ const MOCK_DATA: QuotesListResponse = {
       display_order: 2,
       edited_label: null,
       edited_description: null,
+      is_new: false,
       quotes: [
         {
           dom_id: "q-P3-30",
@@ -131,6 +133,7 @@ const MOCK_DATA: QuotesListResponse = {
       description: "Overall usability",
       edited_label: null,
       edited_description: null,
+      is_new: false,
       quotes: [
         {
           dom_id: "q-P4-40",

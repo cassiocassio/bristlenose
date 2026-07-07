@@ -358,7 +358,7 @@ class TestQuotesResponseShape:
         section = data["sections"][0]
         expected = {
             "cluster_id", "screen_label", "description", "display_order",
-            "edited_label", "edited_description", "quotes",
+            "edited_label", "edited_description", "is_new", "quotes",
         }
         assert set(section.keys()) == expected
 
@@ -367,7 +367,7 @@ class TestQuotesResponseShape:
         theme = data["themes"][0]
         expected = {
             "theme_id", "theme_label", "description",
-            "edited_label", "edited_description", "quotes",
+            "edited_label", "edited_description", "is_new", "quotes",
         }
         assert set(theme.keys()) == expected
 

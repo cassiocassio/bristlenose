@@ -19,9 +19,11 @@ from sqlalchemy.orm import Session
 from bristlenose.server.models import Quote
 
 
-def quote(pid: str, tc: float, text: str, sentiment: str | None = None) -> dict:
+def quote(
+    pid: str, tc: float, text: str, sentiment: str | None = None, session: str = "s1"
+) -> dict:
     q = {
-        "session_id": "s1",
+        "session_id": session,
         "participant_id": pid,
         "start_timecode": float(tc),
         "end_timecode": float(tc) + 5.0,

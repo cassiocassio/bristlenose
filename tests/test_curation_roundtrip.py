@@ -738,6 +738,59 @@ class TestThemeIdentity:
         assert appearances == 1, "a quote moved between reused themes appears once"
 
 
+class TestNewFlag:
+    """Phase 3 (3c) — the M3 'New' gate: a section/theme is New when a majority
+    of its quotes come from an interview added in the latest import."""
+
+    def test_nothing_new_on_first_import(self, tmp_path: Path) -> None:
+        _write_intermediate(
+            tmp_path, [_cluster("Alpha", [_quote("p1", 10, "a", session="s1")])]
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        data = client.get("/api/projects/1/quotes").json()
+        assert data["new_since"] is None
+        assert all(not s["is_new"] for s in data["sections"])
+
+    def test_added_interview_flags_its_new_section_only(self, tmp_path: Path) -> None:
+        _write_intermediate(
+            tmp_path,
+            [
+                _cluster("Alpha", [_quote("p1", 10, "a", session="s1")]),
+                _cluster("Beta", [_quote("p1", 20, "b", session="s1")]),
+            ],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+
+        db = app.state.db_factory()
+        try:
+            # Add interview s2 → a new section made of its quotes; Alpha grows by
+            # a minority (1 new of 3), Beta unchanged.
+            _write_intermediate(
+                tmp_path,
+                [
+                    _cluster("Alpha", [_quote("p1", 10, "a", session="s1"),
+                                       _quote("p1", 11, "a2", session="s1"),
+                                       _quote("p1", 30, "c", session="s2")]),
+                    _cluster("Beta", [_quote("p1", 20, "b", session="s1")]),
+                    _cluster("Gamma", [_quote("p1", 40, "d", session="s2"),
+                                       _quote("p1", 50, "e", session="s2")]),
+                ],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        data = client.get("/api/projects/1/quotes").json()
+        assert data["new_since"] is not None
+        flags = {s["screen_label"]: s["is_new"] for s in data["sections"]}
+        assert flags["Gamma"] is True, "a section made of the new interview is New"
+        assert flags["Alpha"] is False, "minority-new material (1/3) is below the gate"
+        assert flags["Beta"] is False, "unchanged section is not New"
+
+
 class TestThemeStarAnchor:
     """Phase 3 — a renamed theme's custom name follows its frozen star-anchors
     across the theme churn (ARI ~0.43) that membership matching can't survive."""

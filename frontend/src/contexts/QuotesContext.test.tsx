@@ -483,6 +483,7 @@ describe("QuotesStore", () => {
         display_order: 1,
         edited_label: null,
         edited_description: null,
+        is_new: false,
         quotes: [],
         ...overrides,
       };
@@ -494,6 +495,7 @@ describe("QuotesStore", () => {
         description: "",
         edited_label: null,
         edited_description: null,
+        is_new: false,
         quotes: [],
         ...overrides,
       };
@@ -520,7 +522,7 @@ describe("QuotesStore", () => {
       act(() => {
         commitHeadingEdit("section-cluster-5:title", "Home screen");
       });
-      const lastPayload = mockPutEdits.mock.calls.at(-1)?.[0];
+      const lastPayload = mockPutEdits.mock.calls[mockPutEdits.mock.calls.length - 1]?.[0];
       expect(lastPayload).toMatchObject({
         "q-P1-100": "kept quote edit",
         "section-cluster-5:title": "Home screen",
@@ -533,7 +535,7 @@ describe("QuotesStore", () => {
       act(() => {
         commitEdit("q-P1-100", "new quote text");
       });
-      const lastPayload = mockPutEdits.mock.calls.at(-1)?.[0];
+      const lastPayload = mockPutEdits.mock.calls[mockPutEdits.mock.calls.length - 1]?.[0];
       expect(lastPayload).toMatchObject({
         "q-P1-100": "new quote text",
         "section-cluster-5:title": "Home screen",

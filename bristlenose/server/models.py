@@ -216,6 +216,11 @@ class Session(Base):
     has_media: Mapped[bool] = mapped_column(default=False)
     has_video: Mapped[bool] = mapped_column(default=False)
     thumbnail_path: Mapped[str | None] = mapped_column(String(500), default=None)
+    # Set once, when the session is first imported; never updated.  Drives the
+    # "New" flag (Phase 3 — a section/theme is New when its quotes come from a
+    # just-added interview).  The max across sessions is the latest import
+    # generation; a later value than the rest means "added since".
+    first_imported_at: Mapped[datetime | None] = mapped_column(default=None)
 
     project: Mapped[Project] = relationship(back_populates="sessions")
     source_files: Mapped[list[SourceFile]] = relationship(back_populates="session")

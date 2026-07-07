@@ -255,6 +255,7 @@ def import_project(db: Session, project_dir: Path) -> Project:
                 duration_seconds=meta.get("duration_seconds", 0.0),
                 has_media=False,
                 has_video=False,
+                first_imported_at=now,  # never updated; drives the "New" flag
             )
             db.add(sess)
             db.flush()

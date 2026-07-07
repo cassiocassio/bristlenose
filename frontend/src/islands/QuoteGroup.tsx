@@ -19,6 +19,7 @@ import type {
 } from "../utils/types";
 import { getModeratorQuestion } from "../utils/api";
 import { formatTimecode, stripSmartQuotes } from "../utils/format";
+import { NewBadge } from "../components/NewBadge";
 import { QuoteCard } from "./QuoteCard";
 import { useFocus } from "../contexts/FocusContext";
 import {
@@ -112,6 +113,10 @@ interface QuoteGroupProps {
    *  Displayed in preference to `label`. */
   editedLabel?: string | null;
   editedDescription?: string | null;
+  /** Phase 3 "New" flag: this group is predominantly new material. */
+  isNew?: boolean;
+  /** Server token of the latest new-material import (for badge dismissal). */
+  newSince?: string | null;
   /** Heading edit key prefix ("section" or "theme"). */
   itemType: string;
   /** Visible (filtered) quotes in this group. */
@@ -141,6 +146,8 @@ export function QuoteGroup({
   description,
   editedLabel = null,
   editedDescription = null,
+  isNew = false,
+  newSince = null,
   itemType,
   quotes,
   allQuotes,
@@ -822,6 +829,7 @@ export function QuoteGroup({
           >
             &#9998;
           </button>
+          <NewBadge isNew={isNew} dismissKey={editKeyBase} newSince={newSince} />
         </h3>
         <Counter
           count={hiddenQuotes.length}

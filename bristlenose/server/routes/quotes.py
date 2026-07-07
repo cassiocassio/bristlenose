@@ -99,6 +99,9 @@ class SectionResponse(BaseModel):
     display_order: int
     edited_label: str | None = None
     edited_description: str | None = None
+    # True when a majority of this section's quotes come from an interview added
+    # in the latest import (Phase 3 "New" flag / M3 gate).
+    is_new: bool = False
     quotes: list[QuoteResponse]
 
 
@@ -110,6 +113,7 @@ class ThemeResponse(BaseModel):
     description: str
     edited_label: str | None = None
     edited_description: str | None = None
+    is_new: bool = False
     quotes: list[QuoteResponse]
 
 
@@ -122,6 +126,43 @@ class QuotesListResponse(BaseModel):
     total_hidden: int
     total_starred: int
     has_moderator: bool
+    # ISO timestamp of the latest import that added an interview, or null if
+    # none has ever been added past the first.  The frontend keys "New"-badge
+    # dismissal on this so a genuinely-fresh import re-shows a dismissed badge.
+    new_since: str | None = None
+
+
+# A section/theme is flagged "New" when at least this fraction of its quotes
+# come from a just-added interview (Phase 3 M3 gate).  Tunable placeholder.
+_NEW_MATERIAL_FRACTION = 0.5
+
+
+def _new_session_ids(db: Session, project_id: int) -> tuple[set[str], str | None]:
+    """Session-id strings added in the latest import, plus the ISO ``new_since``
+    token.  Returns ``(set(), None)`` unless a session was imported strictly
+    later than the rest (an interview added on a later run) — so nothing is New
+    on a first import or an unchanged re-run."""
+    rows = (
+        db.query(SessionModel.session_id, SessionModel.first_imported_at)
+        .filter_by(project_id=project_id)
+        .all()
+    )
+    stamped = [(sid, t) for sid, t in rows if t is not None]
+    if not stamped:
+        return set(), None
+    latest = max(t for _sid, t in stamped)
+    if all(t == latest for _sid, t in stamped):
+        return set(), None  # no prior generation → nothing is "new"
+    new_ids = {sid for sid, t in stamped if t == latest}
+    return new_ids, latest.isoformat()
+
+
+def _group_is_new(quotes: list[Quote], new_session_ids: set[str]) -> bool:
+    """M3 gate: is a majority of this group's quotes from a just-added session?"""
+    if not new_session_ids or not quotes:
+        return False
+    new_count = sum(1 for q in quotes if q.session_id in new_session_ids)
+    return new_count / len(quotes) >= _NEW_MATERIAL_FRACTION
 
 
 # ---------------------------------------------------------------------------
@@ -394,6 +435,9 @@ def get_quotes(
             for he in db.query(HeadingEdit).filter_by(project_id=project_id).all()
         }
 
+        # "New" flag (Phase 3, M3 gate): interviews added in the latest import.
+        new_session_ids, new_since = _new_session_ids(db, project_id)
+
         # Build sections (screen clusters ordered by display_order)
         clusters = (
             db.query(ScreenCluster)
@@ -415,6 +459,7 @@ def get_quotes(
                 edited_description=heading_edits.get(
                     f"section-cluster-{cluster.id}:desc"
                 ),
+                is_new=_group_is_new(quotes, new_session_ids),
                 quotes=[
                     _build_quote_response(
                         q, state_map, edit_map, tags_map, badges_map,
@@ -439,6 +484,7 @@ def get_quotes(
                 description=theme.description,
                 edited_label=heading_edits.get(f"theme-group-{theme.id}:title"),
                 edited_description=heading_edits.get(f"theme-group-{theme.id}:desc"),
+                is_new=_group_is_new(quotes, new_session_ids),
                 quotes=[
                     _build_quote_response(
                         q, state_map, edit_map, tags_map, badges_map,
@@ -476,6 +522,7 @@ def get_quotes(
             total_hidden=total_hidden,
             total_starred=total_starred,
             has_moderator=has_moderator,
+            new_since=new_since,
         )
     finally:
         db.close()

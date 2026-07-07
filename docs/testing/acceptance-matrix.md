@@ -319,6 +319,16 @@ that shape what actually gets built:
   capture (never let one red cell `set -e`-abort the grid); `find -delete` not glob-rm;
   `pipefail`. First line asserts `bristlenose --version == __version__` (no stale editable
   install). Any serve/export cell needs `frontend/dist` built first (else fail-loud 500).
+- **Runner cell = `run --no-serve`, key via bristlenose's resolver (found live 7 Jul).**
+  Firing the cells for real corrected two wiring assumptions: the provider column uses
+  `run --no-serve` on a subtitle fixture (a `.vtt` skips Whisper anyway, and `run`
+  discovers the input where `analyze` — expecting pre-transcribed text — did not); and
+  `configured()` asks `bristlenose.credentials.get_credential(provider)` (Keychain → env
+  → .env), not a bare `os.environ` check, so a Mac dev's Keychain-stored key counts as
+  configured instead of wrongly SKIPping. Live end-to-end: Claude + ChatGPT cells PASS,
+  Azure + Gemini declared-SKIP. Also: live-firing surfaced a fail-closed bug in the
+  harness itself — an empty run threw a raw `FileNotFoundError` instead of `FAIL_BLOCKING`
+  — now fixed + meta-tested (a conformance harness must never fake-success by crashing).
 - **Dropped / deferred.** The disk-HTML report assertion (F18) — coupled to the
   static render being removed; durable signal is intermediate JSON + served SPA.
   Transcript hallucination-detection (Q3) and the disproportionate clicking-surface

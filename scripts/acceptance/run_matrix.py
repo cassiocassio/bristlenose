@@ -100,9 +100,15 @@ class Cell:
     def configured(self) -> bool:
         if self.provider == "local":
             return _ollama_up()
-        if self.key_env is None:
-            return True
-        return bool(os.environ.get(self.key_env))
+        # Resolve the key the SAME way bristlenose does — Keychain → env → .env — not a
+        # bare os.environ check. A Mac dev's key lives in the Keychain, so an env-only
+        # check would wrongly SKIP a runnable cloud cell (found live, 7 Jul 2026).
+        try:
+            from bristlenose.credentials import get_credential
+
+            return get_credential(self.provider) is not None
+        except Exception:
+            return bool(os.environ.get(self.key_env or ""))
 
 
 def _ollama_up() -> bool:
@@ -115,12 +121,15 @@ def _ollama_up() -> bool:
         return False
 
 
+# The provider column runs a subtitle fixture through `run` (not `analyze`): a `.vtt`
+# skips transcription anyway (no Whisper cost), and `run` discovers the input where
+# `analyze` — which expects pre-transcribed text — did not (found live, 7 Jul 2026).
 PROVIDER_CELLS = [
-    Cell("analyze:local", "local", None, "analyze"),
-    Cell("analyze:anthropic", "anthropic", "BRISTLENOSE_ANTHROPIC_API_KEY", "analyze"),
-    Cell("analyze:openai", "openai", "BRISTLENOSE_OPENAI_API_KEY", "analyze"),
-    Cell("analyze:azure", "azure", "BRISTLENOSE_AZURE_API_KEY", "analyze"),
-    Cell("analyze:google", "google", "BRISTLENOSE_GOOGLE_API_KEY", "analyze"),
+    Cell("run:local", "local", None, "run"),
+    Cell("run:anthropic", "anthropic", "BRISTLENOSE_ANTHROPIC_API_KEY", "run"),
+    Cell("run:openai", "openai", "BRISTLENOSE_OPENAI_API_KEY", "run"),
+    Cell("run:azure", "azure", "BRISTLENOSE_AZURE_API_KEY", "run"),
+    Cell("run:google", "google", "BRISTLENOSE_GOOGLE_API_KEY", "run"),
 ]
 
 
@@ -240,15 +249,14 @@ def run(args: argparse.Namespace) -> int:
                 outcome = CellOutcome.SKIP
                 if require_all:
                     outcome = CellOutcome.ERROR
-                m.record(CellResult(cell.cell_id, outcome, f"prereq unmet ({cell.key_env or 'ollama'})"))
+                prereq = "ollama not running" if cell.provider == "local" else "no key (Keychain/env/.env)"
+                m.record(CellResult(cell.cell_id, outcome, prereq))
                 continue
-            # Real execution is intentionally left to the operator's --input + a follow-up
-            # commit; Phase-1 wires the taxonomy + accounting. A configured cell with no
-            # --input is a declared skip, not a silent pass.
+            # A configured cell with no --input is a declared skip, not a silent pass.
             if not args.input:
                 m.record(CellResult(cell.cell_id, CellOutcome.SKIP, "configured but no --input given"))
                 continue
-            m.record(_run_analyze_cell(cell, Path(args.input), artifact_dir))
+            m.record(_run_provider_cell(cell, Path(args.input), artifact_dir))
 
     post_run_key_grep(artifact_dir)
     ok, msg = m.verdict()
@@ -257,12 +265,14 @@ def run(args: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
-def _run_analyze_cell(cell: Cell, input_dir: Path, artifact_dir: Path) -> CellResult:
+def _run_provider_cell(cell: Cell, input_dir: Path, artifact_dir: Path) -> CellResult:
     out = artifact_dir / cell.cell_id.replace(":", "_")
     exe = bristlenose_exe()
-    # Keys via the environment only — never on argv (ps/history visible).
+    # `run --no-serve`: full pipeline (a subtitle fixture skips Whisper), and `--no-serve`
+    # so the cell exits instead of blocking on the auto-started dev server. Keys resolve
+    # via bristlenose's own Keychain/env cascade — never passed on argv (ps/history visible).
     proc = subprocess.run(
-        [exe, "analyze", str(input_dir), "--llm", cell.provider, "--output", str(out)],
+        [exe, "run", str(input_dir), "--llm", cell.provider, "--output", str(out), "--no-serve"],
         capture_output=True,
         text=True,
         timeout=1800,

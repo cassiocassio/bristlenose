@@ -18,6 +18,9 @@ const MOCK_QUOTES: QuotesListResponse = {
       screen_label: "Login",
       description: "Login screen findings",
       display_order: 1,
+      edited_label: null,
+      edited_description: null,
+      is_new: false,
       quotes: [
         {
           dom_id: "q-P1-120",
@@ -56,6 +59,9 @@ const MOCK_QUOTES_WITH_TAGS: QuotesListResponse = {
   sections: [
     {
       ...MOCK_QUOTES.sections[0],
+      edited_label: null,
+      edited_description: null,
+      is_new: false,
       quotes: [
         {
           ...MOCK_QUOTES.sections[0].quotes[0],

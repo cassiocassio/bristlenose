@@ -11,6 +11,7 @@ from bristlenose.server.models import (
     ClusterQuote,
     CodebookGroup,
     DeletedBadge,
+    HeadingEdit,
     Person,
     Project,
     ProposedTag,
@@ -83,21 +84,36 @@ class QuoteResponse(BaseModel):
 
 
 class SectionResponse(BaseModel):
-    """A screen cluster (section) with its quotes."""
+    """A screen cluster (section) with its quotes.
+
+    ``screen_label`` / ``description`` are the pipeline's (for reset-to-original
+    and the "edited" indicator); ``edited_label`` / ``edited_description`` are
+    the researcher's rename resolved from HeadingEdit by the durable cluster id
+    (null = not renamed).  The frontend displays ``edited_label ?? screen_label``
+    — mirrors how quote ``edited_text`` is returned alongside the raw text.
+    """
 
     cluster_id: int
     screen_label: str
     description: str
     display_order: int
+    edited_label: str | None = None
+    edited_description: str | None = None
+    # True when a majority of this section's quotes come from an interview added
+    # in the latest import (Phase 3 "New" flag / M3 gate).
+    is_new: bool = False
     quotes: list[QuoteResponse]
 
 
 class ThemeResponse(BaseModel):
-    """A theme group with its quotes."""
+    """A theme group with its quotes (see SectionResponse for the edited_* pair)."""
 
     theme_id: int
     theme_label: str
     description: str
+    edited_label: str | None = None
+    edited_description: str | None = None
+    is_new: bool = False
     quotes: list[QuoteResponse]
 
 
@@ -106,10 +122,52 @@ class QuotesListResponse(BaseModel):
 
     sections: list[SectionResponse]
     themes: list[ThemeResponse]
+    # Pinned quotes (starred/edited/tagged) the current analysis leaves in no
+    # section or theme — e.g. an un-named theme drained and retired.  Freeze keeps
+    # the row; this bucket keeps it *visible* until the researcher re-files it
+    # (Phase 0 manual reassignment).  Read-only for now.
+    uncategorised: list[QuoteResponse] = []
     total_quotes: int
     total_hidden: int
     total_starred: int
     has_moderator: bool
+    # ISO timestamp of the latest import that added an interview, or null if
+    # none has ever been added past the first.  The frontend keys "New"-badge
+    # dismissal on this so a genuinely-fresh import re-shows a dismissed badge.
+    new_since: str | None = None
+
+
+# A section/theme is flagged "New" when at least this fraction of its quotes
+# come from a just-added interview (Phase 3 M3 gate).  Tunable placeholder.
+_NEW_MATERIAL_FRACTION = 0.5
+
+
+def _new_session_ids(db: Session, project_id: int) -> tuple[set[str], str | None]:
+    """Session-id strings added in the latest import, plus the ISO ``new_since``
+    token.  Returns ``(set(), None)`` unless a session was imported strictly
+    later than the rest (an interview added on a later run) — so nothing is New
+    on a first import or an unchanged re-run."""
+    rows = (
+        db.query(SessionModel.session_id, SessionModel.first_imported_at)
+        .filter_by(project_id=project_id)
+        .all()
+    )
+    stamped = [(sid, t) for sid, t in rows if t is not None]
+    if not stamped:
+        return set(), None
+    latest = max(t for _sid, t in stamped)
+    if all(t == latest for _sid, t in stamped):
+        return set(), None  # no prior generation → nothing is "new"
+    new_ids = {sid for sid, t in stamped if t == latest}
+    return new_ids, latest.isoformat()
+
+
+def _group_is_new(quotes: list[Quote], new_session_ids: set[str]) -> bool:
+    """M3 gate: is a majority of this group's quotes from a just-added session?"""
+    if not new_session_ids or not quotes:
+        return False
+    new_count = sum(1 for q in quotes if q.session_id in new_session_ids)
+    return new_count / len(quotes) >= _NEW_MATERIAL_FRACTION
 
 
 # ---------------------------------------------------------------------------
@@ -375,6 +433,16 @@ def get_quotes(
         # Resolve speaker names
         speaker_map = _resolve_speaker_names(db, project_id)
 
+        # Researcher heading renames, keyed on the durable cluster/theme id
+        # (Phase 2).  Applied as edited_label/edited_description below.
+        heading_edits = {
+            he.heading_key: he.edited_text
+            for he in db.query(HeadingEdit).filter_by(project_id=project_id).all()
+        }
+
+        # "New" flag (Phase 3, M3 gate): interviews added in the latest import.
+        new_session_ids, new_since = _new_session_ids(db, project_id)
+
         # Build sections (screen clusters ordered by display_order)
         clusters = (
             db.query(ScreenCluster)
@@ -392,6 +460,11 @@ def get_quotes(
                 screen_label=cluster.screen_label,
                 description=cluster.description,
                 display_order=cluster.display_order,
+                edited_label=heading_edits.get(f"section-cluster-{cluster.id}:title"),
+                edited_description=heading_edits.get(
+                    f"section-cluster-{cluster.id}:desc"
+                ),
+                is_new=_group_is_new(quotes, new_session_ids),
                 quotes=[
                     _build_quote_response(
                         q, state_map, edit_map, tags_map, badges_map,
@@ -414,6 +487,9 @@ def get_quotes(
                 theme_id=theme.id,
                 theme_label=theme.theme_label,
                 description=theme.description,
+                edited_label=heading_edits.get(f"theme-group-{theme.id}:title"),
+                edited_description=heading_edits.get(f"theme-group-{theme.id}:desc"),
+                is_new=_group_is_new(quotes, new_session_ids),
                 quotes=[
                     _build_quote_response(
                         q, state_map, edit_map, tags_map, badges_map,
@@ -422,6 +498,28 @@ def get_quotes(
                     for q in quotes
                 ],
             ))
+
+        # Uncategorised floor: pinned quotes with no section/theme join (see the
+        # retire path in importer._cleanup_stale_data).  A join-less quote only
+        # survives the importer if it is pinned, so this is exactly the
+        # researcher's protected quotes that lost their home.  Reuses the
+        # importer's pin predicate so the two never drift.
+        from bristlenose.server.importer import _pinned_quote_ids
+        grouped_ids = {qid for qids in cluster_to_quotes.values() for qid in qids}
+        grouped_ids |= {qid for qids in theme_to_quotes.values() for qid in qids}
+        uncat_quotes = [
+            quote_by_id[qid]
+            for qid in _pinned_quote_ids(db, project_id)
+            if qid in quote_by_id and qid not in grouped_ids
+        ]
+        uncat_quotes.sort(key=lambda q: (q.session_id, q.start_timecode))
+        uncategorised = [
+            _build_quote_response(
+                q, state_map, edit_map, tags_map, badges_map,
+                proposed_map, speaker_map,
+            )
+            for q in uncat_quotes
+        ]
 
         # Summary counts
         total_hidden = sum(
@@ -447,10 +545,12 @@ def get_quotes(
         return QuotesListResponse(
             sections=sections,
             themes=themes,
+            uncategorised=uncategorised,
             total_quotes=len(all_quotes),
             total_hidden=total_hidden,
             total_starred=total_starred,
             has_moderator=has_moderator,
+            new_since=new_since,
         )
     finally:
         db.close()

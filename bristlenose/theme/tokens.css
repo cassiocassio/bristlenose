@@ -184,6 +184,11 @@
     --bn-space-lg: 1.5rem;
     --bn-space-xl: 2rem;
 
+    /* "New"-material highlighter (Phase 3 placeholder) — a fixed marker green,
+       the same in light and dark; the dark text reads on it in both modes. */
+    --bn-colour-new-highlight: #75fb4c;
+    --bn-colour-new-highlight-text: #0f2b08;
+
     /* Radii */
     --bn-radius-sm: 3px;
     --bn-radius-md: 6px;

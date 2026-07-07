@@ -296,3 +296,27 @@ body.hide-ai-tags .badge-ai { display: none; }
 .badge-bulk-flash {
     animation: badge-bulk-flash 0.8s ease-out;
 }
+
+/* "New" material marker — a body-sized highlighter shown inline after a
+   section/theme title (Phase 3, 3c).  Placeholder styling; click to dismiss
+   (it evaporates, no undo — it has served its purpose once noticed). */
+.bn-new-badge {
+    display: inline;
+    margin-left: 0.4rem;
+    padding: 0.05em 0.3em;
+    border: none;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-new-highlight);
+    color: var(--bn-colour-new-highlight-text);
+    font-family: inherit;
+    font-size: var(--bn-text-body);
+    font-weight: var(--bn-weight-emphasis);
+    line-height: 1;
+    cursor: pointer;
+    vertical-align: baseline;
+}
+.bn-new-badge:hover { filter: brightness(0.95); }
+.bn-new-badge:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 1px;
+}

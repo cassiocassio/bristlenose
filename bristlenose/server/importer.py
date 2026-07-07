@@ -25,6 +25,7 @@ from bristlenose.server.models import (
     ClusterQuote,
     CodebookGroup,
     DeletedBadge,
+    HeadingEdit,
     Person,
     Project,
     ProjectCodebookGroup,
@@ -254,6 +255,7 @@ def import_project(db: Session, project_dir: Path) -> Project:
                 duration_seconds=meta.get("duration_seconds", 0.0),
                 has_media=False,
                 has_video=False,
+                first_imported_at=now,  # never updated; drives the "New" flag
             )
             db.add(sess)
             db.flush()
@@ -765,6 +767,122 @@ def _get_or_create_quote(
     return q
 
 
+# Jaccard quote-overlap at or above which an incoming cluster/theme is treated
+# as the *same* section/theme as an existing one, even if its label drifted.
+# Sections converge hard across re-runs (ARI ~1.0), so real matches sit near
+# 1.0 and the exact threshold is not sensitive; 0.5 (majority) is the floor.
+_MEMBERSHIP_MATCH_THRESHOLD = 0.5
+
+
+def _match_by_membership(
+    existing: list[tuple[int, set[int]]],
+    incoming: list[tuple[int, set[int]]],
+    threshold: float = _MEMBERSHIP_MATCH_THRESHOLD,
+) -> dict[int, int]:
+    """Greedily match incoming groups to existing ones by quote-set overlap.
+
+    ``existing`` is ``[(group_id, {quote_id, ...}), ...]`` (current DB
+    membership); ``incoming`` is ``[(index, {quote_id, ...}), ...]``.  Returns
+    ``{incoming_index: matched_group_id}`` for pairs whose Jaccard overlap meets
+    ``threshold``; unmatched incoming indices are absent (→ a new group).  Best
+    overlap wins and each existing group is claimed at most once, so a section
+    that splits keeps its id on the majority child and the minority child
+    becomes a new group.
+    """
+    # (jaccard, inter, inc_idx, ex_id): on equal overlap the larger shared-quote
+    # count wins the claim, so the id follows the bulk of the evidence rather
+    # than pipeline output order; inc_idx/ex_id only break exact ties.
+    scored: list[tuple[float, int, int, int]] = []
+    for inc_idx, inc_set in incoming:
+        if not inc_set:
+            continue
+        for ex_id, ex_set in existing:
+            inter = len(inc_set & ex_set)
+            if inter == 0:
+                continue
+            jaccard = inter / len(inc_set | ex_set)
+            if jaccard >= threshold:
+                scored.append((jaccard, inter, inc_idx, ex_id))
+
+    scored.sort(reverse=True)  # highest overlap first
+    matched: dict[int, int] = {}
+    claimed: set[int] = set()
+    for _jaccard, _inter, inc_idx, ex_id in scored:
+        if inc_idx in matched or ex_id in claimed:
+            continue
+        matched[inc_idx] = ex_id
+        claimed.add(ex_id)
+    return matched
+
+
+def _match_by_anchor(
+    anchors: list[tuple[int, set[int]]],
+    incoming: list[tuple[int, set[int]]],
+) -> dict[int, int]:
+    """Match renamed themes to incoming themes by star-anchor overlap (Phase 3).
+
+    ``anchors`` is ``[(theme_id, {pinned_quote_id, ...}), ...]`` — a renamed
+    theme's *frozen* pinned quotes, which survive re-import (Freeze) and so are
+    always present somewhere in ``incoming``; ``incoming`` is
+    ``[(index, {quote_id, ...}), ...]``.  The incoming theme holding the most of
+    a renamed theme's anchor inherits its ``theme_id`` (and therefore its custom
+    name) — "bind-then-stick", stable where fluid membership (ARI ~0.43) is not.
+    Each theme and each incoming index is claimed once, most anchor quotes first.
+    """
+    scored: list[tuple[int, float, int, int]] = []
+    for theme_id, anchor in anchors:
+        if not anchor:
+            continue
+        for idx, members in incoming:
+            overlap = len(anchor & members)
+            if overlap:
+                scored.append((overlap, overlap / len(anchor), idx, theme_id))
+    scored.sort(reverse=True)  # most anchor quotes first, then fraction
+    matched: dict[int, int] = {}
+    claimed_idx: set[int] = set()
+    claimed_theme: set[int] = set()
+    for _overlap, _frac, idx, theme_id in scored:
+        if idx in claimed_idx or theme_id in claimed_theme:
+            continue
+        matched[idx] = theme_id
+        claimed_idx.add(idx)
+        claimed_theme.add(theme_id)
+    return matched
+
+
+def _renamed_group_ids(db: Session, project_id: int, prefix: str) -> set[int]:
+    """Group ids carrying a researcher rename (HeadingEdit ``{prefix}{id}:*``).
+
+    ``prefix`` is ``"theme-group-"`` or ``"section-cluster-"``.  A rename is the
+    theme-naming commitment signal — the researcher has claimed the container, so
+    it is human-owned (see the ``project_theme_naming_commitment_model`` note).
+    """
+    ids: set[int] = set()
+    rows = (
+        db.query(HeadingEdit.heading_key)
+        .filter(
+            HeadingEdit.project_id == project_id,
+            HeadingEdit.heading_key.like(f"{prefix}%"),
+        )
+        .all()
+    )
+    for (key,) in rows:
+        num = key[len(prefix):].split(":", 1)[0]
+        if num.isdigit():
+            ids.add(int(num))
+    return ids
+
+
+def _renamed_theme_ids(db: Session, project_id: int) -> set[int]:
+    """Theme ids carrying a researcher rename (HeadingEdit ``theme-group-{id}:*``)."""
+    return _renamed_group_ids(db, project_id, "theme-group-")
+
+
+def _renamed_cluster_ids(db: Session, project_id: int) -> set[int]:
+    """Cluster ids carrying a researcher rename (``section-cluster-{id}:*``)."""
+    return _renamed_group_ids(db, project_id, "section-cluster-")
+
+
 def _import_quotes_from_clusters(
     db: Session,
     project: Project,
@@ -774,20 +892,84 @@ def _import_quotes_from_clusters(
 ) -> dict[tuple, Quote]:
     """Import screen clusters and their quotes.
 
+    Upserts each cluster by *membership* (quote overlap), not label, so a
+    renamed section keeps its ``cluster_id`` — and therefore any researcher
+    HeadingEdit keyed on that id — across pipeline label drift.
+
     Returns a quote_map keyed by (session_id, participant_id, start_timecode)
     for deduplication when the same quote appears in themes.
     """
     quote_map: dict[tuple, Quote] = {}
 
+    # Resolve incoming quotes first so we can match clusters by membership.
+    incoming_quotes: list[list[Quote]] = []
+    incoming_members: list[tuple[int, set[int]]] = []
     for i, cluster_data in enumerate(screen_clusters_data):
-        # Upsert cluster by label
-        label = cluster_data.get("screen_label", f"Cluster {i + 1}")
-        cluster = (
-            db.query(ScreenCluster)
-            .filter_by(project_id=project.id, screen_label=label)
-            .first()
+        qs: list[Quote] = []
+        member_ids: set[int] = set()
+        for q_data in cluster_data.get("quotes", []):
+            q = _get_or_create_quote(db, project, q_data, now)
+            quote_map[(q.session_id, q.participant_id, q.start_timecode)] = q
+            qs.append(q)
+            member_ids.add(q.id)
+        incoming_quotes.append(qs)
+        incoming_members.append((i, member_ids))
+
+    # Existing pipeline clusters + their current membership.
+    existing_clusters = (
+        db.query(ScreenCluster)
+        .filter_by(project_id=project.id, created_by="pipeline")
+        .all()
+    )
+    cluster_by_id = {c.id: c for c in existing_clusters}
+    existing_members = [
+        (
+            c.id,
+            {
+                cq.quote_id
+                for cq in db.query(ClusterQuote).filter_by(cluster_id=c.id).all()
+            },
         )
-        if cluster is None:
+        for c in existing_clusters
+    ]
+    matched = _match_by_membership(existing_members, incoming_members)
+
+    # Pinned quotes the pipeline stops emitting anywhere this run must NOT lose
+    # their section join in the reuse rebuild below — Freeze keeps the row alive
+    # (exemption), but an orphaned quote has no section and vanishes from the
+    # /quotes report.  Strand = pinned AND absent from every incoming set; a
+    # *moved* pinned quote is in some incoming set, so it is NOT stranded and its
+    # stale source join is still deleted (exclusivity holds).
+    all_incoming: set[int] = set().union(*(m for _, m in incoming_members)) \
+        if incoming_members else set()
+    strand_ids = _pinned_quote_ids(db, project.id) - all_incoming
+
+    for i, cluster_data in enumerate(screen_clusters_data):
+        if not incoming_quotes[i]:
+            continue  # a quote-less section is degenerate — don't persist a shell
+        label = cluster_data.get("screen_label", f"Cluster {i + 1}")
+        matched_id = matched.get(i)
+        if matched_id is not None:
+            cluster = cluster_by_id[matched_id]
+            cluster.screen_label = label
+            cluster.description = cluster_data.get("description", cluster.description)
+            cluster.display_order = cluster_data.get(
+                "display_order", cluster.display_order
+            )
+            cluster.last_imported_at = now
+            # Rebuild the pipeline membership from scratch: the pipeline's
+            # assignment for a reused cluster is *exactly* this run's incoming
+            # set.  Without this, a quote reassigned to another section keeps its
+            # old join and appears in two sections (quote exclusivity).
+            # Researcher-assigned joins (assigned_by != "pipeline") are untouched,
+            # and a stranded pinned quote keeps its last join so it stays visible.
+            rebuild = db.query(ClusterQuote).filter_by(
+                cluster_id=cluster.id, assigned_by="pipeline"
+            )
+            if strand_ids:
+                rebuild = rebuild.filter(ClusterQuote.quote_id.notin_(strand_ids))
+            rebuild.delete(synchronize_session="fetch")
+        else:
             cluster = ScreenCluster(
                 project_id=project.id,
                 screen_label=label,
@@ -798,30 +980,21 @@ def _import_quotes_from_clusters(
             )
             db.add(cluster)
             db.flush()
-        else:
-            cluster.description = cluster_data.get("description", cluster.description)
-            cluster.display_order = cluster_data.get("display_order", cluster.display_order)
-            cluster.last_imported_at = now
 
-        # Import quotes
-        for q_data in cluster_data.get("quotes", []):
-            q = _get_or_create_quote(db, project, q_data, now)
-            key = (q.session_id, q.participant_id, q.start_timecode)
-            quote_map[key] = q
-
-            # Create cluster_quote join if not exists
+        for q in incoming_quotes[i]:
             existing_cq = (
                 db.query(ClusterQuote)
                 .filter_by(cluster_id=cluster.id, quote_id=q.id)
                 .first()
             )
             if not existing_cq:
-                cq = ClusterQuote(
-                    cluster_id=cluster.id,
-                    quote_id=q.id,
-                    assigned_by="pipeline",
+                db.add(
+                    ClusterQuote(
+                        cluster_id=cluster.id,
+                        quote_id=q.id,
+                        assigned_by="pipeline",
+                    )
                 )
-                db.add(cq)
 
     return quote_map
 
@@ -836,17 +1009,94 @@ def _import_quotes_from_themes(
 ) -> None:
     """Import theme groups and their quotes.
 
+    Two-tier identity (themes diverge hard across re-runs, ARI ~0.43):
+    - A **renamed** theme is matched by its **star-anchors** — its frozen pinned
+      quotes, which survive re-import and stay findable even as the theme
+      churns — so its custom name persists (Phase 3, ``_match_by_anchor``).
+    - Every other theme matches by **membership** overlap (Phase 2), which lets
+      an *unchanged* theme keep its id; a diverged one gets a fresh id (fine, its
+      label is the machine's and disposable).
+
     Reuses quotes from quote_map if they already exist (from clusters).
     """
+    # Resolve incoming quotes first so we can match themes by membership.
+    incoming_quotes: list[list[Quote]] = []
+    incoming_members: list[tuple[int, set[int]]] = []
+    for i, theme_data in enumerate(theme_groups_data):
+        qs: list[Quote] = []
+        member_ids: set[int] = set()
+        for q_data in theme_data.get("quotes", []):
+            q = _get_or_create_quote(db, project, q_data, now)
+            quote_map[(q.session_id, q.participant_id, q.start_timecode)] = q
+            qs.append(q)
+            member_ids.add(q.id)
+        incoming_quotes.append(qs)
+        incoming_members.append((i, member_ids))
+
+    existing_themes = (
+        db.query(ThemeGroup)
+        .filter_by(project_id=project.id, created_by="pipeline")
+        .all()
+    )
+    theme_by_id = {t.id: t for t in existing_themes}
+    existing_members = [
+        (
+            t.id,
+            {
+                tq.quote_id
+                for tq in db.query(ThemeQuote).filter_by(theme_id=t.id).all()
+            },
+        )
+        for t in existing_themes
+    ]
+
+    # Phase 3 — star-anchored theme name persistence.  A *renamed* theme is
+    # matched by its frozen pinned quotes (star-anchors), which survive
+    # re-import and so land in some incoming theme, even as the theme's fluid
+    # membership churns (ARI ~0.43) below the membership threshold.  Anchor
+    # matching takes precedence over membership matching so the custom name
+    # follows its anchors (bind-then-stick); the rest match by membership.
+    pinned_ids = _pinned_quote_ids(db, project.id)
+    existing_by_id = dict(existing_members)
+    renamed_ids = _renamed_theme_ids(db, project.id)
+    anchors = [
+        (tid, existing_by_id.get(tid, set()) & pinned_ids)
+        for tid in renamed_ids
+        if existing_by_id.get(tid, set()) & pinned_ids
+    ]
+    anchor_matched = _match_by_anchor(anchors, incoming_members)
+    claimed_idx = set(anchor_matched)
+    claimed_theme = set(anchor_matched.values())
+    membership_matched = _match_by_membership(
+        [(tid, m) for tid, m in existing_members if tid not in claimed_theme],
+        [(i, m) for i, m in incoming_members if i not in claimed_idx],
+    )
+    matched = {**anchor_matched, **membership_matched}
+
+    # Don't strand a pinned quote dropped from every theme this run (see the
+    # cluster path); themes have their own incoming union.
+    all_incoming: set[int] = set().union(*(m for _, m in incoming_members)) \
+        if incoming_members else set()
+    strand_ids = pinned_ids - all_incoming
 
     for i, theme_data in enumerate(theme_groups_data):
+        if not incoming_quotes[i]:
+            continue  # a quote-less theme is degenerate — don't persist a shell
         label = theme_data.get("theme_label", f"Theme {i + 1}")
-        theme = (
-            db.query(ThemeGroup)
-            .filter_by(project_id=project.id, theme_label=label)
-            .first()
-        )
-        if theme is None:
+        matched_id = matched.get(i)
+        if matched_id is not None:
+            theme = theme_by_id[matched_id]
+            theme.theme_label = label
+            theme.description = theme_data.get("description", theme.description)
+            theme.last_imported_at = now
+            # Rebuild pipeline membership from scratch (see clusters above).
+            rebuild = db.query(ThemeQuote).filter_by(
+                theme_id=theme.id, assigned_by="pipeline"
+            )
+            if strand_ids:
+                rebuild = rebuild.filter(ThemeQuote.quote_id.notin_(strand_ids))
+            rebuild.delete(synchronize_session="fetch")
+        else:
             theme = ThemeGroup(
                 project_id=project.id,
                 theme_label=label,
@@ -856,16 +1106,9 @@ def _import_quotes_from_themes(
             )
             db.add(theme)
             db.flush()
-        else:
-            theme.description = theme_data.get("description", theme.description)
-            theme.last_imported_at = now
 
         # Import quotes
-        for q_data in theme_data.get("quotes", []):
-            q = _get_or_create_quote(db, project, q_data, now)
-            key = (q.session_id, q.participant_id, q.start_timecode)
-            quote_map[key] = q
-
+        for q in incoming_quotes[i]:
             # Create theme_quote join if not exists
             existing_tq = (
                 db.query(ThemeQuote)
@@ -1048,7 +1291,11 @@ def _auto_tag_from_sentiment_field(db: Session, project: Project) -> None:
             continue
         if (quote.id, td.id) in existing_quote_tag_pairs:
             continue
-        db.add(QuoteTag(quote_id=quote.id, tag_definition_id=td.id))
+        # source="pipeline": sentiment tags are machine-authored from the
+        # pipeline's sentiment field, NOT researcher effort.  Labelling them
+        # "human" (the column default) would falsely pin every quote with a
+        # sentiment under the Freeze pin predicate (source == "human").
+        db.add(QuoteTag(quote_id=quote.id, tag_definition_id=td.id, source="pipeline"))
         created += 1
 
     if created:
@@ -1058,6 +1305,76 @@ def _auto_tag_from_sentiment_field(db: Session, project: Project) -> None:
             created,
             project.name,
         )
+
+
+def _pinned_quote_ids(db: Session, project_id: int) -> set[int]:
+    """Quote ids carrying durable human work — the derived Freeze pin set.
+
+    ``is_pinned = starred ∨ edited ∨ human-tagged`` and is NEVER stored: it is
+    recomputed from the researcher-state tables on every call, so it falls back
+    to false automatically the moment the last star / edit / tag is removed
+    (object permanence lasts exactly as long as the human's investment does).
+
+    The tag arm counts only genuinely human tags: ``QuoteTag.source == "human"``
+    AND the tag's codebook group is not the machine-authored sentiment
+    framework (sentiment tags carry a real ``source`` now, but the group filter
+    also protects older databases where they were mislabelled "human").
+    """
+    from sqlalchemy import or_
+
+    pinned: set[int] = set()
+
+    # Starred
+    pinned.update(
+        qid
+        for (qid,) in db.query(QuoteState.quote_id)
+        .join(Quote, QuoteState.quote_id == Quote.id)
+        .filter(Quote.project_id == project_id, QuoteState.is_starred.is_(True))
+        .all()
+    )
+    # Edited
+    pinned.update(
+        qid
+        for (qid,) in db.query(QuoteEdit.quote_id)
+        .join(Quote, QuoteEdit.quote_id == Quote.id)
+        .filter(Quote.project_id == project_id)
+        .all()
+    )
+    # Human-tagged, excluding machine sentiment tags
+    pinned.update(
+        qid
+        for (qid,) in db.query(QuoteTag.quote_id)
+        .join(Quote, QuoteTag.quote_id == Quote.id)
+        .join(TagDefinition, QuoteTag.tag_definition_id == TagDefinition.id)
+        .join(CodebookGroup, TagDefinition.codebook_group_id == CodebookGroup.id)
+        .filter(
+            Quote.project_id == project_id,
+            QuoteTag.source == "human",
+            or_(
+                CodebookGroup.framework_id.is_(None),
+                CodebookGroup.framework_id != "sentiment",
+            ),
+        )
+        .all()
+    )
+    return pinned
+
+
+def _delete_heading_edits(
+    db: Session, project_id: int, prefix: str, ids: list[int]
+) -> None:
+    """Delete HeadingEdit rows keyed on the given cluster/theme ids.
+
+    ``prefix`` is ``"section-cluster-"`` or ``"theme-group-"``; both the
+    ``:title`` and ``:desc`` keys are removed.
+    """
+    if not ids:
+        return
+    keys = [f"{prefix}{i}:title" for i in ids] + [f"{prefix}{i}:desc" for i in ids]
+    db.query(HeadingEdit).filter(
+        HeadingEdit.project_id == project_id,
+        HeadingEdit.heading_key.in_(keys),
+    ).delete(synchronize_session="fetch")
 
 
 def _cleanup_stale_data(
@@ -1075,13 +1392,52 @@ def _cleanup_stale_data(
     Researcher state (QuoteState, QuoteTag, QuoteEdit, DeletedBadge)
     is preserved for surviving quotes and deleted for stale quotes —
     a quote from a removed session is gone, so its tags are meaningless.
+
+    **Freeze exemption:** a *pinned* quote (see ``_pinned_quote_ids``) is
+    never treated as stale *as long as its session still exists*, even if the
+    pipeline stops re-emitting that specific quote (boundary drift, a quality
+    threshold).  The researcher's star / edit / tag guarantees it continues to
+    exist across re-runs — the matcher no longer governs marked quotes.
+
+    The exemption is deliberately scoped to present sessions.  If a whole
+    session is removed (deleted recording, **consent withdrawal**), its quotes
+    go with it — pinned or not — because the source material is gone and
+    governance requires it.  Freeze protects against re-extraction drift, not
+    against the researcher removing an interview.
     """
-    # --- Stale quotes (not touched in this import) -----------------------
+    # Pinned quotes are protected only while their session is still present.
+    pinned_ids = _pinned_quote_ids(db, project.id)
+
+    # Scrub the frozen form + durable id from quotes that are no longer pinned
+    # (the last star/edit/tag was removed).  frozen_form is a re-identification
+    # key — don't leave a frozen copy of the words on a quote the researcher
+    # deliberately un-pinned.  Re-pinning later re-mints from the current text.
+    db.query(Quote).filter(
+        Quote.project_id == project.id,
+        Quote.durable_id.isnot(None),
+        Quote.id.notin_(pinned_ids) if pinned_ids else sa_text("1=1"),
+    ).update(
+        {Quote.durable_id: None, Quote.frozen_form: None},
+        synchronize_session=False,
+    )
+
+    protected_ids: set[int] = set()
+    if pinned_ids:
+        protected_ids = {
+            qid
+            for qid, sid in db.query(Quote.id, Quote.session_id)
+            .filter(Quote.id.in_(pinned_ids))
+            .all()
+            if sid in current_session_ids
+        }
+
+    # --- Stale quotes (not touched in this import, and not protected) ----
     stale_quotes = (
         db.query(Quote)
         .filter(
             Quote.project_id == project.id,
             (Quote.last_imported_at < now) | (Quote.last_imported_at.is_(None)),
+            Quote.id.notin_(protected_ids) if protected_ids else sa_text("1=1"),
         )
         .all()
     )
@@ -1123,6 +1479,13 @@ def _cleanup_stale_data(
         ).delete(synchronize_session="fetch")
 
     # --- Stale pipeline-created clusters ---------------------------------
+    # A *named* group is human-owned (the rename is a claim on the container, per
+    # the theme-naming commitment model): the pipeline may never retire it, even
+    # when it drains to zero members.  Only the researcher deletes a named group
+    # (future UX — a 0-member named group is a valid resting state).  Un-named
+    # groups retire as before; a pinned quote they strand surfaces in the
+    # Uncategorised floor (routes/quotes.py), never silently hidden.
+    named_cluster_ids = _renamed_cluster_ids(db, project.id)
     stale_clusters = (
         db.query(ScreenCluster)
         .filter(
@@ -1130,6 +1493,8 @@ def _cleanup_stale_data(
             ScreenCluster.created_by == "pipeline",
             (ScreenCluster.last_imported_at < now)
             | (ScreenCluster.last_imported_at.is_(None)),
+            ScreenCluster.id.notin_(named_cluster_ids)
+            if named_cluster_ids else sa_text("1=1"),
         )
         .all()
     )
@@ -1142,11 +1507,17 @@ def _cleanup_stale_data(
         db.query(ClusterQuote).filter(
             ClusterQuote.cluster_id.in_(stale_cluster_ids)
         ).delete(synchronize_session="fetch")
+        # Drop any HeadingEdit keyed on a retiring cluster id.  Ids are plain
+        # rowids (no AUTOINCREMENT), so a freed id can be reused by a later
+        # new cluster — an orphaned rename would then silently resurface on it.
+        _delete_heading_edits(db, project.id, "section-cluster-", stale_cluster_ids)
         db.query(ScreenCluster).filter(
             ScreenCluster.id.in_(stale_cluster_ids)
         ).delete(synchronize_session="fetch")
 
     # --- Stale pipeline-created themes -----------------------------------
+    # Named themes are human-owned and exempt from retirement (see clusters).
+    named_theme_ids = _renamed_theme_ids(db, project.id)
     stale_themes = (
         db.query(ThemeGroup)
         .filter(
@@ -1154,6 +1525,8 @@ def _cleanup_stale_data(
             ThemeGroup.created_by == "pipeline",
             (ThemeGroup.last_imported_at < now)
             | (ThemeGroup.last_imported_at.is_(None)),
+            ThemeGroup.id.notin_(named_theme_ids)
+            if named_theme_ids else sa_text("1=1"),
         )
         .all()
     )
@@ -1166,6 +1539,7 @@ def _cleanup_stale_data(
         db.query(ThemeQuote).filter(
             ThemeQuote.theme_id.in_(stale_theme_ids)
         ).delete(synchronize_session="fetch")
+        _delete_heading_edits(db, project.id, "theme-group-", stale_theme_ids)
         db.query(ThemeGroup).filter(
             ThemeGroup.id.in_(stale_theme_ids)
         ).delete(synchronize_session="fetch")
@@ -1228,9 +1602,10 @@ def _cleanup_stale_data(
         ).delete(synchronize_session="fetch")
 
     # --- Clean stale pipeline join rows ----------------------------------
-    # If the pipeline reassigned a quote to a different cluster/theme,
-    # old pipeline-assigned joins for surviving clusters may be stale.
-    # Get all surviving pipeline clusters and their expected quote IDs.
+    # Reassignment (a surviving quote moving between sections/themes) is now
+    # handled at import time, where a reused cluster/theme rebuilds its pipeline
+    # membership from scratch (see _import_quotes_from_clusters).  This is a
+    # defensive belt: drop any pipeline join whose quote no longer exists.
     surviving_clusters = (
         db.query(ScreenCluster)
         .filter_by(project_id=project.id, created_by="pipeline")

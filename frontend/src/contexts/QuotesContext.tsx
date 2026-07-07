@@ -13,7 +13,13 @@
  */
 
 import { useSyncExternalStore } from "react";
-import type { TagResponse, ProposedTagBrief, QuoteResponse } from "../utils/types";
+import type {
+  TagResponse,
+  ProposedTagBrief,
+  QuoteResponse,
+  SectionResponse,
+  ThemeResponse,
+} from "../utils/types";
 import type { TagFilterState, FilterState } from "../utils/filter";
 import { EMPTY_TAG_FILTER, filterQuotes } from "../utils/filter";
 import {
@@ -169,6 +175,39 @@ export function initFromQuotes(quotes: QuoteResponse[], replace = false): void {
   });
 }
 
+/**
+ * Seed researcher heading renames (Phase 2 — section identity) into the same
+ * `edits` map as quote edits, keyed by the durable id
+ * (`section-cluster-{id}:title`, `theme-group-{id}:desc`, ...).
+ *
+ * They MUST share the edits map because `PUT /edits` is a full-replace: a
+ * commit sends the entire map, so if heading edits weren't held here a quote
+ * edit would wipe them (and vice versa). Display still reads the server-
+ * resolved `edited_label`/`edited_description` fields; this seeding is what
+ * keeps the write side whole.
+ */
+export function initHeadingEdits(
+  sections: SectionResponse[],
+  themes: ThemeResponse[],
+): void {
+  setState((prev) => {
+    const edits = { ...prev.edits };
+    for (const s of sections) {
+      if (s.edited_label != null)
+        edits[`section-cluster-${s.cluster_id}:title`] = s.edited_label;
+      if (s.edited_description != null)
+        edits[`section-cluster-${s.cluster_id}:desc`] = s.edited_description;
+    }
+    for (const t of themes) {
+      if (t.edited_label != null)
+        edits[`theme-group-${t.theme_id}:title`] = t.edited_label;
+      if (t.edited_description != null)
+        edits[`theme-group-${t.theme_id}:desc`] = t.edited_description;
+    }
+    return { ...prev, edits };
+  });
+}
+
 /** Clear all state. Used for test isolation and before re-fetch. */
 export function resetStore(): void {
   state = emptyState();
@@ -214,6 +253,21 @@ export function commitEdit(domId: string, newText: string): void {
   setState((prev) => {
     const edits = { ...prev.edits };
     edits[domId] = newText;
+    putEdits(edits);
+    return { ...prev, edits };
+  });
+}
+
+/**
+ * Commit a section/theme heading rename.  Same path as `commitEdit` — updates
+ * the shared edits map and sends the *whole* map (quote + heading edits) so the
+ * full-replace `PUT /edits` never wipes the other kind.  `headingKey` is the
+ * durable-id key (`section-cluster-{id}:title`, `theme-group-{id}:desc`).
+ */
+export function commitHeadingEdit(headingKey: string, newText: string): void {
+  setState((prev) => {
+    const edits = { ...prev.edits };
+    edits[headingKey] = newText;
     putEdits(edits);
     return { ...prev, edits };
   });

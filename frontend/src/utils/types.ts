@@ -146,6 +146,12 @@ export interface SectionResponse {
   screen_label: string;
   description: string;
   display_order: number;
+  /** Researcher rename resolved by durable cluster id; null = not renamed.
+   *  Display edited_label ?? screen_label (mirrors quote edited_text). */
+  edited_label: string | null;
+  edited_description: string | null;
+  /** Majority of quotes come from a just-added interview (Phase 3 "New" gate). */
+  is_new: boolean;
   quotes: QuoteResponse[];
 }
 
@@ -153,6 +159,9 @@ export interface ThemeResponse {
   theme_id: number;
   theme_label: string;
   description: string;
+  edited_label: string | null;
+  edited_description: string | null;
+  is_new: boolean;
   quotes: QuoteResponse[];
 }
 
@@ -163,6 +172,9 @@ export interface QuotesListResponse {
   total_hidden: number;
   total_starred: number;
   has_moderator: boolean;
+  /** ISO token of the latest import that added an interview; keys "New"-badge
+   *  dismissal so a genuinely-fresh import re-shows a dismissed badge. */
+  new_since?: string | null;
 }
 
 // ---------------------------------------------------------------------------

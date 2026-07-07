@@ -89,23 +89,47 @@ def run_migrations(engine: Engine) -> None:
         "script_location", str(Path(__file__).parent / "alembic")
     )
 
-    with engine.begin() as connection:
+    is_sqlite = engine.dialect.name == "sqlite"
+    with engine.connect() as connection:
+        # Migration 004 drops a UNIQUE constraint by rebuilding the table
+        # (Alembic SQLite batch mode: create temp -> copy -> DROP old -> rename).
+        # The connect handler enables foreign keys, so DROPping the parent while
+        # child join rows (cluster_quotes / theme_quotes) still reference it
+        # aborts with "FOREIGN KEY constraint failed". Disable enforcement for
+        # the migration: the pragma only takes effect outside a transaction, so
+        # set it at the DBAPI level (bypassing SQLAlchemy autobegin) before
+        # Alembic opens its transaction, and restore it in the finally. Data is
+        # preserved by batch mode (it copies rows); FK references stay valid.
+        dbapi = connection.connection.dbapi_connection if is_sqlite else None
+        if dbapi is not None:
+            dbapi.execute("PRAGMA foreign_keys=OFF")
+
         alembic_cfg.attributes["connection"] = connection
 
         insp = inspect(engine)
         tables = set(insp.get_table_names())
         has_alembic = "alembic_version" in tables
 
-        if has_alembic:
-            # Already managed — upgrade to head
-            command.upgrade(alembic_cfg, "head")
-        elif tables:
-            # Pre-Alembic DB: tables exist from create_all() + old _migrate_schema()
-            command.stamp(alembic_cfg, "001")
-            command.upgrade(alembic_cfg, "head")
-        else:
-            # Brand-new empty DB: create_all() just ran, stamp at head
-            command.stamp(alembic_cfg, "head")
+        trans = connection.begin()
+        try:
+            if has_alembic:
+                # Already managed — upgrade to head
+                command.upgrade(alembic_cfg, "head")
+            elif tables:
+                # Pre-Alembic DB: tables exist from create_all() + old _migrate_schema()
+                command.stamp(alembic_cfg, "001")
+                command.upgrade(alembic_cfg, "head")
+            else:
+                # Brand-new empty DB: create_all() just ran, stamp at head
+                command.stamp(alembic_cfg, "head")
+            trans.commit()
+        except Exception:
+            trans.rollback()
+            raise
+        finally:
+            if dbapi is not None:
+                # Restore enforcement before the connection returns to the pool.
+                dbapi.execute("PRAGMA foreign_keys=ON")
 
 
 def init_db(engine: Engine) -> None:

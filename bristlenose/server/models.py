@@ -216,6 +216,11 @@ class Session(Base):
     has_media: Mapped[bool] = mapped_column(default=False)
     has_video: Mapped[bool] = mapped_column(default=False)
     thumbnail_path: Mapped[str | None] = mapped_column(String(500), default=None)
+    # Set once, when the session is first imported; never updated.  Drives the
+    # "New" flag (Phase 3 — a section/theme is New when its quotes come from a
+    # just-added interview).  The max across sessions is the latest import
+    # generation; a later value than the rest means "added since".
+    first_imported_at: Mapped[datetime | None] = mapped_column(default=None)
 
     project: Mapped[Project] = relationship(back_populates="sessions")
     source_files: Mapped[list[SourceFile]] = relationship(back_populates="session")
@@ -329,6 +334,18 @@ class Quote(Base):
     segment_index: Mapped[int] = mapped_column(Integer, default=-1)
     last_imported_at: Mapped[datetime | None] = mapped_column(default=None)
 
+    # --- Curation persistence (Freeze) ----------------------------------
+    # Minted on first human touch (star/edit/human-tag) and never re-derived.
+    # durable_id: project-scoped stable identity that outlives label/text drift.
+    # frozen_form: verbatim display text captured at pin time — the researcher's
+    #   words, protected from silent pipeline drift on re-import.  A
+    #   re-identification key: excluded from the export/anonymisation boundary,
+    #   like pii_summary.  Both are None until the quote is first pinned.
+    # is_pinned is NOT stored — it is derived at query time from the presence of
+    #   researcher state (see importer._pinned_quote_ids).
+    durable_id: Mapped[str | None] = mapped_column(String(32), default=None)
+    frozen_form: Mapped[str | None] = mapped_column(Text, default=None)
+
     project: Mapped[Project] = relationship(back_populates="quotes")
 
     __table_args__ = (
@@ -362,11 +379,11 @@ class ScreenCluster(Base):
 
     project: Mapped[Project] = relationship(back_populates="screen_clusters")
 
-    __table_args__ = (
-        UniqueConstraint(
-            "project_id", "screen_label", name="uq_cluster_project_label"
-        ),
-    )
+    # NB: no unique constraint on screen_label.  Section identity is membership
+    # (which quotes it holds), not the label — the importer upserts by
+    # quote-overlap (see importer._match_by_membership) and the label is free to
+    # drift or collide across re-imports.  A label-unique constraint would crash
+    # the upsert when a new section reuses a retiring section's label.
 
 
 class ThemeGroup(Base):
@@ -388,11 +405,8 @@ class ThemeGroup(Base):
 
     project: Mapped[Project] = relationship(back_populates="theme_groups")
 
-    __table_args__ = (
-        UniqueConstraint(
-            "project_id", "theme_label", name="uq_theme_project_label"
-        ),
-    )
+    # NB: no unique constraint on theme_label — see ScreenCluster above. Theme
+    # identity is membership, not the label; the importer upserts by overlap.
 
 
 class ClusterQuote(Base):
@@ -505,7 +519,13 @@ class QuoteEdit(Base):
 class HeadingEdit(Base):
     """Researcher-renamed section or theme title/description.
 
-    heading_key format: "section-{slug}:title", "theme-{slug}:desc".
+    heading_key is keyed on the durable cluster/theme id, NOT the label slug, so
+    a rename survives pipeline label drift (Phase 2 — section identity):
+    "section-cluster-{cluster_id}:title", "section-cluster-{id}:desc",
+    "theme-group-{theme_id}:title", "theme-group-{id}:desc".  (Pre-Phase-2 rows
+    used the label slug — "section-{slug}:title"; migration 004 re-keys the
+    reconstructable ones.  The distinct "-cluster-"/"-group-" infixes keep the
+    new id keys unambiguous against the old slug keys.)
     """
 
     __tablename__ = "heading_edits"

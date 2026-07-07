@@ -15,7 +15,7 @@ import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import type { QuoteResponse, QuotesListResponse } from "../utils/types";
 import type { TagGroupInfo } from "./QuoteGroup";
 import type { TagVocabularyGroup } from "../components";
-import { initFromQuotes, useQuotesStore } from "../contexts/QuotesContext";
+import { initFromQuotes, initHeadingEdits, useQuotesStore } from "../contexts/QuotesContext";
 import { useFocus } from "../contexts/FocusContext";
 import { filterQuotes } from "../utils/filter";
 import { QuoteGroup } from "./QuoteGroup";
@@ -51,6 +51,7 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
           ...json.themes.flatMap((t) => t.quotes),
         ];
         initFromQuotes(allQuotes, replace);
+        initHeadingEdits(json.sections, json.themes);
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => endRefetch());
@@ -209,13 +210,20 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
     <section {...refetchOverlayProps(isRefetching)}>
       <h2 id="sections">{t("quotes.sections")}</h2>
       {filteredSections.map((section) => {
-        const anchor = `section-${section.screen_label.toLowerCase().replace(/ /g, "-")}`;
+        // Scroll anchor tracks the *displayed* label (rename if present).
+        const displayLabel = section.edited_label ?? section.screen_label;
+        const anchor = `section-${displayLabel.toLowerCase().replace(/ /g, "-")}`;
         return (
           <QuoteGroup
             key={section.cluster_id}
             anchor={anchor}
+            editKeyBase={`section-cluster-${section.cluster_id}`}
             label={section.screen_label}
             description={section.description}
+            editedLabel={section.edited_label}
+            editedDescription={section.edited_description}
+            isNew={section.is_new}
+            newSince={data.new_since ?? null}
             itemType="section"
             quotes={section.quotes}
             allQuotes={allQuotesMap.get(section.cluster_id)}

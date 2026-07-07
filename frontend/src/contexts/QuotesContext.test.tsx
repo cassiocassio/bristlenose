@@ -1,11 +1,18 @@
 import { renderHook, act } from "@testing-library/react";
-import type { QuoteResponse, TagResponse } from "../utils/types";
+import type {
+  QuoteResponse,
+  SectionResponse,
+  TagResponse,
+  ThemeResponse,
+} from "../utils/types";
 import {
   initFromQuotes,
+  initHeadingEdits,
   resetStore,
   toggleStar,
   toggleHide,
   commitEdit,
+  commitHeadingEdit,
   addTag,
   removeTag,
   deleteBadge,
@@ -464,6 +471,75 @@ describe("QuotesStore", () => {
       // Visible in both hooks
       expect(hook1.result.current.starred["q-section-1"]).toBe(true);
       expect(hook2.result.current.starred["q-section-1"]).toBe(true);
+    });
+  });
+
+  describe("heading edits (Phase 2 — section identity)", () => {
+    function makeSection(overrides: Partial<SectionResponse> = {}): SectionResponse {
+      return {
+        cluster_id: 5,
+        screen_label: "Dashboard",
+        description: "",
+        display_order: 1,
+        edited_label: null,
+        edited_description: null,
+        is_new: false,
+        quotes: [],
+        ...overrides,
+      };
+    }
+    function makeTheme(overrides: Partial<ThemeResponse> = {}): ThemeResponse {
+      return {
+        theme_id: 7,
+        theme_label: "Trust",
+        description: "",
+        edited_label: null,
+        edited_description: null,
+        is_new: false,
+        quotes: [],
+        ...overrides,
+      };
+    }
+
+    it("seeds renames into the edits map keyed by durable id", () => {
+      const { result } = renderHook(() => useQuotesStore());
+      act(() => {
+        initHeadingEdits(
+          [makeSection({ cluster_id: 5, edited_label: "Home screen" })],
+          [makeTheme({ theme_id: 7, edited_description: "A note" })],
+        );
+      });
+      expect(result.current.edits["section-cluster-5:title"]).toBe("Home screen");
+      expect(result.current.edits["theme-group-7:desc"]).toBe("A note");
+      // Un-renamed fields are not seeded.
+      expect(result.current.edits["section-cluster-5:desc"]).toBeUndefined();
+    });
+
+    it("commitHeadingEdit sends the FULL merged map so a quote edit is not wiped", () => {
+      // The regression guard: PUT /edits is a full-replace, so heading + quote
+      // edits must ride together or one wipes the other.
+      initFromQuotes([makeQuote({ dom_id: "q-P1-100", edited_text: "kept quote edit" })]);
+      act(() => {
+        commitHeadingEdit("section-cluster-5:title", "Home screen");
+      });
+      const lastPayload = mockPutEdits.mock.calls[mockPutEdits.mock.calls.length - 1]?.[0];
+      expect(lastPayload).toMatchObject({
+        "q-P1-100": "kept quote edit",
+        "section-cluster-5:title": "Home screen",
+      });
+    });
+
+    it("a subsequent quote edit preserves the heading edit in the same payload", () => {
+      initHeadingEdits([makeSection({ cluster_id: 5, edited_label: "Home screen" })], []);
+      initFromQuotes([makeQuote({ dom_id: "q-P1-100" })]);
+      act(() => {
+        commitEdit("q-P1-100", "new quote text");
+      });
+      const lastPayload = mockPutEdits.mock.calls[mockPutEdits.mock.calls.length - 1]?.[0];
+      expect(lastPayload).toMatchObject({
+        "q-P1-100": "new quote text",
+        "section-cluster-5:title": "Home screen",
+      });
     });
   });
 });

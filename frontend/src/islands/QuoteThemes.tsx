@@ -14,7 +14,7 @@ import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import type { QuoteResponse, QuotesListResponse } from "../utils/types";
 import type { TagGroupInfo } from "./QuoteGroup";
 import type { TagVocabularyGroup } from "../components";
-import { initFromQuotes, useQuotesStore } from "../contexts/QuotesContext";
+import { initFromQuotes, initHeadingEdits, useQuotesStore } from "../contexts/QuotesContext";
 import { useFocus } from "../contexts/FocusContext";
 import { filterQuotes } from "../utils/filter";
 import { QuoteGroup } from "./QuoteGroup";
@@ -44,6 +44,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
           ...json.themes.flatMap((t) => t.quotes),
         ];
         initFromQuotes(allQuotes, replace);
+        initHeadingEdits(json.sections, json.themes);
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => endRefetch());
@@ -186,13 +187,19 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
     <section {...refetchOverlayProps(isRefetching)}>
       <h2 id="themes">{t("quotes.themes")}</h2>
       {filteredThemes.map((theme) => {
-        const anchor = `theme-${theme.theme_label.toLowerCase().replace(/ /g, "-")}`;
+        const displayLabel = theme.edited_label ?? theme.theme_label;
+        const anchor = `theme-${displayLabel.toLowerCase().replace(/ /g, "-")}`;
         return (
           <QuoteGroup
             key={theme.theme_id}
             anchor={anchor}
+            editKeyBase={`theme-group-${theme.theme_id}`}
             label={theme.theme_label}
             description={theme.description}
+            editedLabel={theme.edited_label}
+            editedDescription={theme.edited_description}
+            isNew={theme.is_new}
+            newSince={data.new_since ?? null}
             itemType="theme"
             quotes={theme.quotes}
             allQuotes={allQuotesMap.get(theme.theme_id)}

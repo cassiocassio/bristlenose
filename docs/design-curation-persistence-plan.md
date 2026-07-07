@@ -1,6 +1,6 @@
 # Curation persistence — implementation plan
 
-**Status:** Implementation plan, evidence-backed (Jul 2026). Not yet built.
+**Status:** Implementation plan, evidence-backed (Jul 2026). _Phases 1–3 (Freeze, Section identity, Themes + "New" flag) plus the named-group retire-exemption + read-only Uncategorised floor are **built and green** on this branch. Remaining: Phase 0 (manual re-assignment) and the Uncategorised **frontend render**._
 **Model doc:** [`design-curation-persistence.md`](design-curation-persistence.md) — the *what/why* (state engine, principles, rules). This doc is the *how*: phasing, code-grounded steps against the live serve stack, and the build/review process.
 **Parent:** [`design-incremental-analysis.md`](design-incremental-analysis.md).
 **Evidence:** the Jul 2026 experiment thread (stats-only summaries in the parent). Load-bearing findings: sections converge (ARI 1.0 under growth), themes diverge (ARI ~0.4, never saturate — not a count artefact), freeze de-scopes the recovery gate, and the incremental "what's new" summary is a *new-material gate + one semantic pass* (below).
@@ -35,15 +35,24 @@ Phases 0 and 1 are independent (parallelisable). 1 delivers the promise on its o
 
 ## Phase 1 — Freeze
 
-**Goal:** any quote the researcher touches is pinned — durable ID, frozen form, guaranteed present — so re-runs can never lose it. This alone delivers the core promise and de-scopes the "≥90% recovery" gate (the matcher stops governing marked quotes).
+**Status: implemented (Jul 2026).** Data model, importer exemption, minting, migration 003, and the round-trip contract are built and green (full suite passes). Two refinements surfaced during the build — see **Build notes** at the end of this section. Deferred (rendering, not the persistence contract): the **frontend render** of the "uncategorised" floor — the read-only API bucket + named-group retire-exemption shipped later on this branch (see model doc §6/§12), so orphans are surfaced by `GET /quotes`; only the React section that displays them remains — and preferring `frozen_form` at display time. Below is the plan as built.
+
+**Goal:** any quote the researcher touches **continues to exist** across re-runs — durable ID, frozen form, guaranteed present. Phase 1 promises *survival*, not *location* (see the boundary note below). This alone delivers the core promise and de-scopes the "≥90% recovery" gate (the matcher stops governing marked quotes).
+
+**Survives ≠ stays where they put it (the phase boundary).** Object permanence has two guarantees, and Phase 1 delivers only the first:
+- **Survives** (Phase 1): a quote with any human work is *present in its frozen form after every re-run*, full stop. This is the cleanup pin-exemption below.
+- **Stays where they put it** (Phases 2 + 3): keeping that quote *in the section/theme the researcher associates it with* is a separate problem. Sections converge, so Phase 2's membership-based identity holds it in place; themes diverge, so a starred quote's theme only persists once the theme itself is committed (Phase 3's snapshot-on-rename). Absent those, Phase 1 still guarantees the quote *exists* — a reshuffled fluid theme may leave it on the quotes page as "uncategorised" (the floor).
+
+Don't let Phase-1-alone read as "my quotes stay in their themes." It keeps them *alive*; staying *in place* is the later work.
 
 **Data model** (`bristlenose/server/models.py`):
 - `Quote.durable_id` — **project-scoped** UUID, minted on first human touch (never cross-project; a project-scoped table per multi-project rules).
 - `Quote.frozen_form` — verbatim text captured at pin time (**a re-identification key** — must be excluded from the export/anonymisation boundary, like `pii_summary`).
-- Pin is *derived*: `is_pinned = is_starred ∨ is_edited ∨ has_tag`. Reuse the existing `source` / `assigned_by = "researcher"` vocabulary — do **not** invent a third discriminator.
+- **`is_pinned` is derived at query time, never stored.** `is_pinned = is_starred ∨ is_edited ∨ has_tag` (human tag: `QuoteTag.source = "human"`, not a proposed tag). The **only** new stored columns are `durable_id` + `frozen_form`; there is no physical `is_pinned` column. Reuse the existing `source` / `assigned_by = "researcher"` vocabulary — do **not** invent a third discriminator.
+- **Why derive, not store:** deriving makes un-pinning automatic and correct. Protection lasts exactly as long as human work exists on the quote — revert the edit, unstar, strip the tags, and the next read computes `is_pinned = false` with no flag to clear. A stored flag that only ever flips *true* would pin an un-starred quote forever. Two keys must turn before a quote is reclaimed: **the human let go** *and* **the machine didn't re-emit it**. Neither alone reclaims it.
 
-**The urgent mechanism — pin-exemption in stale-cleanup** (`importer.py` `_cleanup_stale_data`, ~:1080):
-- Today it deletes any `Quote` with `last_imported_at < now`. A frozen quote the pipeline doesn't re-emit looks stale → **gets deleted with its star.** Add `AND is_pinned = false` to the delete predicate. *This is the first thing to build and the round-trip test's first assertion.*
+**The urgent mechanism — pin-exemption in stale-cleanup** (`importer.py` `_cleanup_stale_data`, ~:1063; delete predicate ~:1084):
+- Today it deletes any `Quote` with `last_imported_at < now`, cascading to `QuoteState`/`QuoteTag`/`QuoteEdit`. A frozen quote the pipeline doesn't re-emit looks stale → **gets deleted with its star.** Exempt pinned quotes from the delete. Since `is_pinned` is derived, this is a `NOT EXISTS`/`LEFT JOIN` against `QuoteState` (`is_starred`), `QuoteEdit`, and human `QuoteTag` — **not** a literal `is_pinned` column compare (don't add one by reflex). *This is the first thing to build and the round-trip test's first assertion.*
 
 **Minting site** (`bristlenose/server/routes/data.py`): the `PUT /starred`, `/edits`, `/tags` handlers mint `durable_id` + snapshot `frozen_form` on first human touch. (Note the current `_resolve_quote` DOM-id range-match — minting must attach to the resolved quote row, then that row becomes matcher-independent.)
 
@@ -51,11 +60,24 @@ Phases 0 and 1 are independent (parallelisable). 1 delivers the promise on its o
 
 **Hide:** best-effort re-match on re-import; accept the ~5% reappearance (documented). No freeze.
 
-**Quotes-page floor:** a pinned quote with no current section/theme surfaces on the quotes page ("uncategorised") — falls out of freeze for free; nothing to build beyond not-filtering-it-out.
+**Quotes-page floor:** a pinned quote with no current section/theme surfaces on the quotes page ("uncategorised") — falls out of freeze for free; nothing to build beyond not-filtering-it-out. *Verify this before trusting it:* confirm the `quotes.py` grouping actually surfaces unassigned quotes rather than dropping them. If it filters them out, that's a small API/frontend touch Phase 1 must include, not assume.
 
-**Migration:** additive columns + backfill (`is_pinned` derivable from existing `QuoteState`/`QuoteEdit`/`QuoteTag`). Mind the Alembic gotcha (server/CLAUDE.md): `create_all()` + `stamp("head")` skips data transforms on fresh DBs — guard the backfill.
+**Migration:** two additive columns only — `durable_id` + `frozen_form` — backfilled for quotes already touched (a `QuoteState.is_starred` / `QuoteEdit` / human `QuoteTag` row exists). No `is_pinned` column to add or backfill — it's derived. Mind the Alembic gotcha (server/CLAUDE.md): `create_all()` + `stamp("head")` skips data transforms on fresh DBs — guard the backfill.
 
-**Test — the round-trip (the executable contract):** star N / edit M / tag K / hide J → re-import with drifted boundaries → assert every pinned quote present in frozen form with its marks; hidden still hidden (documented miss-rate asserted separately). Lives in `tests/test_curation_roundtrip.py`. No "passes most of the time."
+**Test — the round-trip (the executable contract):** star N / edit M / tag K / hide J → re-import with drifted boundaries → assert every pinned quote present in frozen form with its marks; hidden still hidden (documented miss-rate asserted separately). Lives in `tests/test_curation_roundtrip.py`. No "passes most of the time." Migration backfill has its own file-based test in `tests/test_curation_migration.py` (the in-memory path stamps head and never runs `upgrade()`).
+
+### Build notes (what the code does, and two refinements found while building)
+
+1. **The pin tag-arm is "genuinely manual" only — and sentiment tags were a landmine.** Tags come in three provenance tiers, and only the last is researcher commitment:
+   - **Sentiment** — automatic LLM output, on by default, never chosen (`source="pipeline"`). *Doesn't pin.*
+   - **Framework picked + reviewed via the histogram** (AutoCode, codebook-builder) — the researcher chose the framework and ratified applications, but tentatively, machine-proposed (`source="autocode"` / `"codebook-builder"`). *Doesn't pin* — ratifying a suggestion isn't authoring.
+   - **Genuinely manual** — hand-typed/applied (e.g. "User prefers design B"), `source="human"`. *Pins.*
+
+   The predicate is `source == "human"`, so it lands exactly on the manual tier; the middle tier falls out for free because AutoCode/codebook-builder stamp their own source. The landmine: `importer._auto_tag_from_sentiment_field` created sentiment `QuoteTag` rows with the column-default `source="human"`, so a naive predicate would pin *almost every quote*. Fix shipped: (a) the importer now writes sentiment tags as `source="pipeline"`; (b) migration 003 relabels existing mislabelled rows; (c) `_pinned_quote_ids` *also* excludes the sentiment framework by join (`framework_id != "sentiment"` OR NULL) — belt-and-suspenders for old DBs, and it encodes the deliberate call that sentiment is the automatic tier *as a whole* (even a hand-applied sentiment tag doesn't pin). The derived pin set is `starred ∨ edited ∨ human-non-sentiment-tag`.
+
+2. **Freeze protects against re-extraction drift, NOT against session removal (governance boundary).** The exemption is scoped to quotes whose **session is still present** in the import. If a whole interview is removed from the folder (deleted recording, **consent withdrawal**), its quotes — pinned or not — are deleted, because the source is gone and governance requires it. This preserves the existing "removed session → state cleaned" contract *and* the Freeze guarantee: same session + drifted quote → protected; session gone → removed. Asserted by `test_freeze_does_not_survive_session_removal`.
+
+Both refinements are consistent with the model doc's principles (uniform freeze on human-state; consent-gradient governance). The `is_pinned = derived` decision (see Data model) makes un-pin automatic and is what lets #2 be a clean session-membership check rather than a stored-flag reconciliation.
 
 ---
 

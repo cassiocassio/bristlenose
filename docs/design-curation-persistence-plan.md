@@ -1,6 +1,6 @@
 # Curation persistence — implementation plan
 
-**Status:** Implementation plan, evidence-backed (Jul 2026). Not yet built.
+**Status:** Implementation plan, evidence-backed (Jul 2026). _Phases 1–3 (Freeze, Section identity, Themes + "New" flag) plus the named-group retire-exemption + read-only Uncategorised floor are **built and green** on this branch. Remaining: Phase 0 (manual re-assignment) and the Uncategorised **frontend render**._
 **Model doc:** [`design-curation-persistence.md`](design-curation-persistence.md) — the *what/why* (state engine, principles, rules). This doc is the *how*: phasing, code-grounded steps against the live serve stack, and the build/review process.
 **Parent:** [`design-incremental-analysis.md`](design-incremental-analysis.md).
 **Evidence:** the Jul 2026 experiment thread (stats-only summaries in the parent). Load-bearing findings: sections converge (ARI 1.0 under growth), themes diverge (ARI ~0.4, never saturate — not a count artefact), freeze de-scopes the recovery gate, and the incremental "what's new" summary is a *new-material gate + one semantic pass* (below).
@@ -35,7 +35,7 @@ Phases 0 and 1 are independent (parallelisable). 1 delivers the promise on its o
 
 ## Phase 1 — Freeze
 
-**Status: implemented (Jul 2026).** Data model, importer exemption, minting, migration 003, and the round-trip contract are built and green (full suite passes). Two refinements surfaced during the build — see **Build notes** at the end of this section. Deferred (rendering, not the persistence contract): the quotes-page "uncategorised" floor and preferring `frozen_form` at display time. Below is the plan as built.
+**Status: implemented (Jul 2026).** Data model, importer exemption, minting, migration 003, and the round-trip contract are built and green (full suite passes). Two refinements surfaced during the build — see **Build notes** at the end of this section. Deferred (rendering, not the persistence contract): the **frontend render** of the "uncategorised" floor — the read-only API bucket + named-group retire-exemption shipped later on this branch (see model doc §6/§12), so orphans are surfaced by `GET /quotes`; only the React section that displays them remains — and preferring `frozen_form` at display time. Below is the plan as built.
 
 **Goal:** any quote the researcher touches **continues to exist** across re-runs — durable ID, frozen form, guaranteed present. Phase 1 promises *survival*, not *location* (see the boundary note below). This alone delivers the core promise and de-scopes the "≥90% recovery" gate (the matcher stops governing marked quotes).
 

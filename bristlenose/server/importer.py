@@ -850,22 +850,37 @@ def _match_by_anchor(
     return matched
 
 
-def _renamed_theme_ids(db: Session, project_id: int) -> set[int]:
-    """Theme ids carrying a researcher rename (HeadingEdit ``theme-group-{id}:*``)."""
+def _renamed_group_ids(db: Session, project_id: int, prefix: str) -> set[int]:
+    """Group ids carrying a researcher rename (HeadingEdit ``{prefix}{id}:*``).
+
+    ``prefix`` is ``"theme-group-"`` or ``"section-cluster-"``.  A rename is the
+    theme-naming commitment signal — the researcher has claimed the container, so
+    it is human-owned (see the ``project_theme_naming_commitment_model`` note).
+    """
     ids: set[int] = set()
     rows = (
         db.query(HeadingEdit.heading_key)
         .filter(
             HeadingEdit.project_id == project_id,
-            HeadingEdit.heading_key.like("theme-group-%"),
+            HeadingEdit.heading_key.like(f"{prefix}%"),
         )
         .all()
     )
     for (key,) in rows:
-        num = key[len("theme-group-"):].split(":", 1)[0]
+        num = key[len(prefix):].split(":", 1)[0]
         if num.isdigit():
             ids.add(int(num))
     return ids
+
+
+def _renamed_theme_ids(db: Session, project_id: int) -> set[int]:
+    """Theme ids carrying a researcher rename (HeadingEdit ``theme-group-{id}:*``)."""
+    return _renamed_group_ids(db, project_id, "theme-group-")
+
+
+def _renamed_cluster_ids(db: Session, project_id: int) -> set[int]:
+    """Cluster ids carrying a researcher rename (``section-cluster-{id}:*``)."""
+    return _renamed_group_ids(db, project_id, "section-cluster-")
 
 
 def _import_quotes_from_clusters(
@@ -1464,6 +1479,13 @@ def _cleanup_stale_data(
         ).delete(synchronize_session="fetch")
 
     # --- Stale pipeline-created clusters ---------------------------------
+    # A *named* group is human-owned (the rename is a claim on the container, per
+    # the theme-naming commitment model): the pipeline may never retire it, even
+    # when it drains to zero members.  Only the researcher deletes a named group
+    # (future UX — a 0-member named group is a valid resting state).  Un-named
+    # groups retire as before; a pinned quote they strand surfaces in the
+    # Uncategorised floor (routes/quotes.py), never silently hidden.
+    named_cluster_ids = _renamed_cluster_ids(db, project.id)
     stale_clusters = (
         db.query(ScreenCluster)
         .filter(
@@ -1471,6 +1493,8 @@ def _cleanup_stale_data(
             ScreenCluster.created_by == "pipeline",
             (ScreenCluster.last_imported_at < now)
             | (ScreenCluster.last_imported_at.is_(None)),
+            ScreenCluster.id.notin_(named_cluster_ids)
+            if named_cluster_ids else sa_text("1=1"),
         )
         .all()
     )
@@ -1492,6 +1516,8 @@ def _cleanup_stale_data(
         ).delete(synchronize_session="fetch")
 
     # --- Stale pipeline-created themes -----------------------------------
+    # Named themes are human-owned and exempt from retirement (see clusters).
+    named_theme_ids = _renamed_theme_ids(db, project.id)
     stale_themes = (
         db.query(ThemeGroup)
         .filter(
@@ -1499,6 +1525,8 @@ def _cleanup_stale_data(
             ThemeGroup.created_by == "pipeline",
             (ThemeGroup.last_imported_at < now)
             | (ThemeGroup.last_imported_at.is_(None)),
+            ThemeGroup.id.notin_(named_theme_ids)
+            if named_theme_ids else sa_text("1=1"),
         )
         .all()
     )

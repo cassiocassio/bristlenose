@@ -1,6 +1,6 @@
 # Curation persistence across incremental re-runs
 
-**Status:** Design model, post-experiment (Jul 2026). Not yet built.
+**Status:** _Shipped this branch (Jul 2026):_ Freeze (Phase 1), section identity (Phase 2), theme star-anchor + "New" flag (Phase 3b/3c), and the named-group retire-exemption + read-only Uncategorised floor. _Still design-only:_ the §9 surfaced-suggestion / dissent flow and §13 manual re-assignment (Phase 0 — [`design-manual-reassignment.md`](design-manual-reassignment.md)).
 **Parent:** [`design-incremental-analysis.md`](design-incremental-analysis.md) — the problem of adding interviews to an already-analysed project without destroying researcher work. That doc frames the problem and the two-layer stance; **this doc specifies the persistence layer**: exactly which human signals survive a re-run, the identity machinery that carries them, and the rules and tie-breakers for when structure shifts underneath them.
 **Implementation plan:** [`design-curation-persistence-plan.md`](design-curation-persistence-plan.md) — the code-grounded phasing (Freeze → Section identity → Themes + "New!" flag), migration steps against the live importer/models, and the build/review process.
 **Grounding:** the quote-stability experiment (Jul 2026 — statistical summary in the parent doc). Numbers used throughout: re-extracting the same interview recovers **~81%** of quotes by single-best-overlap-match and **~95%** by union/split-crediting at ≥70% overlap, with a **~9% genuinely-fragile tail** no matcher recovers; **section** membership is stable run-to-run (**ARI ~0.96**); **theme** membership churns (**ARI ~0.43**, theme counts swinging ~2× on *identical* quotes). Examples below (a "Checkout" section, an "Onboarding friction" theme) are generic UX illustrations, not from any project's data.
@@ -72,6 +72,8 @@ The key subtlety: signals differ in *what* they commit the researcher to — a q
 
 **Pin trigger = `starred ∨ edited ∨ tagged`.** Hide is *not* a pin (see §10 for why the asymmetry is principled).
 
+**Naming also commits the container's *existence*, not just its label.** A renamed section/theme is human-owned: the pipeline may never auto-retire it, even when re-analysis drains all its quotes — a **0-member named group is a valid resting state**, deleted only by the researcher (a future gesture). An *un-named* (machine-labelled) group still retires when it drains; a pinned quote it leaves behind lands in the **Uncategorised floor** (§12), never silently hidden. The star is a claim about the *quote*; the name is a claim about the *container* — they survive independently. *(Shipped, this branch: the importer exempts named groups from the retire sweep; `GET /quotes` returns a read-only `uncategorised` bucket of pinned, un-homed quotes.)*
+
 ## 7. The state engine
 
 Three marks (`Starred`, `Edited`, `Hidden`) collapse to three observable states plus one rare overlap. **Preservation** (Fluid ↔ Pinned, driven by star/edit/tag) and **visibility** (Visible ↔ Hidden, driven by hide) are orthogonal.
@@ -118,6 +120,8 @@ Two identity problems, solved differently because the failure costs differ.
 
 ## 9. Rules and tie-breakers
 
+> **Build status.** The **continuity defaults** in this section ship today (majority keeps the name, star-anchor decides near-ties, named containers persist, a dropped pin lands in Uncategorised). The **surfaced-suggestion** mechanism they defer to — the dismissible *"move this starred quote?"* / *"the anchors are scattering — you decide"* prompts — is **design, not built** (there is no surfacing code today; see §15). Rules below that say *surface* / *suggest* / *ask* describe intended behaviour, not shipped behaviour; until they're built the silent continuity default is what runs.
+
 - **Quote carry.** Pinned → carried by frozen ID (+ dedup match). Fluid → best-effort match; misses drop to unmarked, which is fine.
 - **Section-name carry.** Majority-membership map A→B: if most of A's quotes land in B (and not scattered), B *is* A under a new auto-label; the custom name displays on B. Splits and merges (below) are the only wrinkles, and they're rare at 0.96.
 - **Theme-name carry.** Majority-membership for a *clear* split; **star-anchor breaks near-ties** (see split rule); **bind-then-stick** — once a custom name is inherited by a lineage, it stays bound to that lineage and does *not* re-compete for majority every run (or the noisy split ratio would make the name flicker between children run to run).
@@ -152,6 +156,8 @@ The genuinely fraught corner — a **custom-named theme with multiple starred qu
 
 ## 12. Edge-case catalogue
 
+_Rows whose resolution says **surface** / **ask** / **dissent** describe the design-only suggestion flow (see the §9 build-status note) — not shipped behaviour. The Uncategorised-floor and named-survival rows are shipped._
+
 | Case | Resolution |
 |---|---|
 | Fluid quote not re-extracted (fragile tail) | acceptable — it carried no human state |
@@ -163,21 +169,24 @@ The genuinely fraught corner — a **custom-named theme with multiple starred qu
 | Custom-named theme splits (near-tie) | star-anchor decides which child keeps the name |
 | Starred quote lands in the offshoot child | stays with majority by default; machine dissent **surfaced** |
 | Custom-named theme's multiple star-anchors scatter | **ask** — the anchor is fracturing |
-| Custom-named theme dissolves entirely | its starred quotes surface on the quotes page as "uncategorised" |
+| **Named** theme drains to empty | **does not dissolve** — the human-owned container survives (to zero members), keeping its starred quotes; deleted only by the researcher |
+| **Un-named** theme dissolves entirely | its pinned quotes surface in the read-only **Uncategorised floor** — never silently hidden |
 | Edited-then-hidden | frozen edit retained; visibility hidden |
 | Star a currently-hidden quote | un-hides + pins |
 
-## 13. Data model — what implementers need (and the bug to fix)
+## 13. Data model — what implementers need
 
-**Per quote:** `durable_id` (minted on first human touch, **run-independent** — so external references like board exports / clip links stay valid), `source` (`human` | `autocode`), `is_starred`, `is_edited` + `frozen_text`, `frozen_form` (verbatim span at pin-time), `is_hidden`, `tags[]`. A quote is **pinned** iff `is_starred ∨ is_edited ∨ tags` present.
+**Per quote:** `durable_id` (minted on first human touch, **run-independent** — so external references like board exports / clip links stay valid), `source` (`human` | `autocode`), `is_starred`, `is_edited` + `frozen_text`, `frozen_form` (verbatim span at pin-time), `is_hidden`, `tags[]`. A quote is **pinned** iff `is_starred ∨ is_edited ∨ tags` present. **`frozen_form` and `durable_id` are re-identification keys — never serialised to the `/quotes` payload or any export** (enforced + regression-pinned: `TestFrozenFormStaysOffTheExportBoundary`).
 
 **Per section/theme:** a **durable identity** (`section#ID` / `theme#ID`) keyed to a **membership signature** (sections) or **star-anchor set + custom name** (human-committed themes) — *not* to the label; `auto_label` (machine, regenerated); `custom_name` (human, bound to the durable ID, `source=human`, sticky).
 
-**The bug to fix (load-bearing):** today the shipped rename (`HeadingEdit`) keys on `heading_key = "section-{slug}:title"` where the slug derives from the *label*, and sections/themes upsert by *label*. So when "Checkout" drifts to "Checkout page", the system sees a **different** group, orphaning the custom name and re-keying researcher state. **Identity must be re-based from the label onto membership signature / star-anchors** — that single change is what makes every "carry the name / carry the placement" rule above actually reliable.
+**The load-bearing fix — shipped (Phase 2).** The original rename (`HeadingEdit`) keyed on `heading_key = "section-{slug}:title"` where the slug derived from the *label*, and sections/themes upserted by *label* — so when "Checkout" drifted to "Checkout page" the system saw a **different** group, orphaning the custom name. Identity is now **re-based from the label onto membership signature (sections) / star-anchors (themes)**: sections upsert by membership (`importer.py` `_import_quotes_from_clusters`), themes by star-anchor + membership (`_match_by_anchor`), and migration `004_curation_section_identity` re-keys the reconstructable `HeadingEdit`s. This is what makes every "carry the name / carry the placement" rule above reliable.
 
 **Matching primitive:** transcript position-overlap (≥70% char span) primary; text-similarity tiebreaker; embeddings optional — but note embedding endpoints share the same batch-invariance non-determinism as generation, so validate stability before relying on cosine.
 
-**Hard dependency — manual re-assignment must exist first.** Every "continuity by default, move on the researcher's gesture" rule in this doc assumes the researcher *can* move things by hand: **drag-and-drop a quote between sections/themes**, and **multi-select → send-to-section / send-to-theme**. This is the landing place for every surfaced suggestion — dismiss keeps it, accept drops it where the researcher chooses. Without direct manual re-assignment, "the machine suggests, the human commits" has no *commit* gesture, and the whole surfacing model is decorative. So this is a **prerequisite**, not a follow-on — it belongs on the near-term roadmap ahead of, or alongside, the incremental-persistence work, and the two should be designed together (the re-assignment UI is also what makes a *fresh* analysis's mis-groupings fixable, so it earns its keep even before incremental lands).
+**Hard dependency — manual re-assignment must exist first** (designed in [`design-manual-reassignment.md`](design-manual-reassignment.md)). Every "continuity by default, move on the researcher's gesture" rule in this doc assumes the researcher *can* move things by hand: **drag-and-drop a quote between sections/themes**, and **multi-select → send-to-section / send-to-theme**. This is the landing place for every surfaced suggestion — dismiss keeps it, accept drops it where the researcher chooses. Without direct manual re-assignment, "the machine suggests, the human commits" has no *commit* gesture. **(Scope correction — see the Update below.** This was originally framed as a hard prerequisite for the *whole* model; the read-only floor + named-exemption have since decoupled the **no-silent-loss** guarantee from it. Manual re-assignment is still required for *acting on* surfaced orphans/suggestions, and still earns its keep by making a *fresh* analysis's mis-groupings fixable — but it no longer blocks correctness.)
+
+> **Update (this branch) — correctness no longer blocks on Phase 0.** The read-only **Uncategorised floor** plus the **named-group retire-exemption** now guarantee *no silent loss* without any manual-reassignment UI: a dropped pinned quote is always either kept in its (named) container or surfaced in Uncategorised. Phase 0 is still required to *re-file* an orphan out of Uncategorised and to *commit* a surfaced suggestion — but it is no longer load-bearing for the "nothing vanishes" guarantee, only for "the researcher can act on what's surfaced." Empirically demonstrated by a forced-orphan repro against the real importer + `/quotes`.
 
 ## 14. Worked example
 
@@ -189,7 +198,7 @@ Adds **3 more interviews**, re-runs:
 - The 3 hidden quotes are **re-matched and stay hidden** (say 3/3 this run; on a larger add, ~1 in 20 might resurface → re-hide).
 - "Checkout" section: new quotes flow in, machine wants to call it "Checkout page" — **suppressed**; the researcher's "Checkout" still shows.
 - "Onboarding friction" theme: the theme layer churns; but the theme is found by its **star-anchors**, keeps the custom name, and its starred quotes stay in it.
-- Edge: the machine splits "Onboarding friction" 30/20. Majority child keeps "Onboarding friction"; offshoot shows a fresh label. One starred quote landed in the offshoot → surfaced: *"move to the new theme?"* — researcher dismisses; it stays.
+- Edge: the machine splits "Onboarding friction" 30/20. Majority child keeps "Onboarding friction"; offshoot shows a fresh label. One starred quote landed in the offshoot → surfaced: *"move to the new theme?"* — researcher dismisses; it stays. *(The surfacing step is design-only — see §9; today the quote silently stays with the majority.)*
 
 Nothing the researcher did vanished or moved without a prompt. New structure appeared around their committed work.
 
@@ -199,7 +208,7 @@ The executable contract (extends the round-trip test in the parent doc):
 
 1. Boot a fixture project. Apply: star N, edit M, tag K, hide J, rename one section, rename one theme.
 2. Add sessions; re-run.
-3. Assert: **every** starred/edited quote present, in frozen form, with tags intact; renamed section shows the custom name; renamed theme shows the custom name and still contains its starred quotes; hidden quotes still hidden (allow the documented best-effort miss rate, asserted separately). Then exercise a forced theme split and assert the inheritance + surfaced-suggestion behaviour of §9.
+3. Assert: **every** starred/edited quote present, in frozen form, with tags intact; renamed section shows the custom name; renamed theme shows the custom name and still contains its starred quotes; hidden quotes still hidden (allow the documented best-effort miss rate, asserted separately). Then exercise a forced theme split and assert the **inheritance** behaviour of §9 — majority child keeps the name; a near-tie is decided by the star-anchor (*asserted today:* `test_majority_child_keeps_id_on_split`, `test_anchor_matcher_follows_plurality`). The **surfaced-suggestion / dissent** behaviour of §9 is design only — **not built and not asserted yet**; this step does not cover it.
 
 If this fails, the persistence contract is broken — there is no "passes most of the time" version of not losing a researcher's work.
 
@@ -208,6 +217,6 @@ If this fails, the persistence contract is broken — there is no "passes most o
 - **Transcript edit vs. freeze.** If the researcher later corrects the transcript under a pinned quote, does the frozen form update? (Lean: freeze holds; correction offers a per-quote re-sync.)
 - **Hide: best-effort vs. suppression-marker.** Ship the accepted-~5%-reappearance best-effort, or the lightweight reliable marker? (Lean: best-effort first; marker if reappearance annoys.)
 - **Surfacing bar.** How confident/stable must a machine "move your starred quote" dissent be before it interrupts?
-- **Durable ID after unpin.** Retain the ID for provenance, or release it?
+- **Durable ID after unpin.** _Resolved (Design-Q1):_ un-pin **scrubs** `durable_id` + `frozen_form` (a `frozen_form` is a re-identification key — don't keep a frozen copy on a deliberately un-pinned quote); re-pin mints fresh. Tested (`test_unpin_scrubs_frozen_form_then_repin_remints`).
 - **Embedding tiebreaker stability** under batch-invariance — un-probed.
 - **Saturation-proxy governor** for lock/unlock lives at the quote layer, not the theme layer (per the parent doc) — how it interacts with pins is unspecified.

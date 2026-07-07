@@ -584,11 +584,15 @@ class TestSectionIdentity:
         )
         assert appearances == 1, "a moved quote must appear in exactly one section"
 
-    def test_retired_section_rename_is_deleted_not_leaked(
+    def test_named_section_survives_when_the_pipeline_drops_it(
         self, tmp_path: Path
     ) -> None:
-        """When a section retires, its HeadingEdit is deleted — so a later
-        section that reuses the freed integer id can't inherit the old rename."""
+        """A *renamed* (human-owned) section is exempt from retirement: even when
+        the pipeline stops emitting it entirely, the section survives — down to
+        zero members — carrying its rename.  (Theme-naming commitment model: the
+        researcher claimed the container; only they delete it.)  A surviving
+        section never frees its integer id, so the old id-reuse rename leak is
+        structurally impossible — no other section can inherit the rename."""
         _write_intermediate(tmp_path, [_cluster("Login", [_quote("p1", 10, "a")])])
         app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
         client: TestClient = AuthTestClient(app)
@@ -600,24 +604,34 @@ class TestSectionIdentity:
 
         db = app.state.db_factory()
         try:
-            # Login retires entirely (all-new quotes, no overlap → not matched).
+            # No overlap with the renamed section → the pipeline drops it entirely.
             _write_intermediate(
                 tmp_path, [_cluster("Onboarding", [_quote("p1", 90, "z")])]
             )
             import_project(db, tmp_path)
             db.commit()
+            # The rename survives — the section was NOT retired.
             leftover = (
                 db.query(HeadingEdit)
                 .filter_by(heading_key=f"section-cluster-{cid}:title")
                 .count()
             )
-            assert leftover == 0, "a retired section's rename must be deleted"
+            assert leftover == 1, "a named section's rename must survive the drop"
         finally:
             db.close()
 
-        # The replacement section shows its own pipeline label, never "Renamed".
-        new_sections = client.get("/api/projects/1/quotes").json()["sections"]
-        assert all(s["edited_label"] is None for s in new_sections)
+        sections = {
+            s["cluster_id"]: s
+            for s in client.get("/api/projects/1/quotes").json()["sections"]
+        }
+        # The named section still exists — now empty — still showing its name.
+        assert cid in sections, "a named section must not be retired"
+        assert sections[cid]["edited_label"] == "Renamed"
+        assert sections[cid]["quotes"] == []
+        # Every other section shows its own pipeline label, never the rename.
+        for scid, s in sections.items():
+            if scid != cid:
+                assert s["edited_label"] is None
 
     def test_pinned_quote_dropped_from_reused_section_stays_visible(
         self, tmp_path: Path
@@ -935,3 +949,128 @@ class TestThemeStarAnchor:
             "the custom name sticks to the star-anchor's theme across re-imports"
         )
         assert _dom("p1", 10) in [q["dom_id"] for q in named[0]["quotes"]]
+
+
+class TestUncategorisedFloor:
+    """When healthier theming drops a pinned quote and its group drains, the
+    quote must never be silently hidden.  Two outcomes, split by the theme-naming
+    commitment model:
+      * un-named (machine) theme retires -> the pinned quote surfaces in the
+        read-only Uncategorised floor (keep the quote, bin the theme);
+      * named (human-owned) theme survives -> the quote stays in it, even down to
+        a single member, and the rename is preserved.
+    All cases keep the quote's session present, so the ONLY variable is the theme
+    retiring (session-removal is a separate, by-design deletion path).
+    """
+
+    def _homed(self, pl: dict) -> set[str]:
+        return {q["dom_id"] for g in pl["sections"] + pl["themes"] for q in g["quotes"]}
+
+    def test_unnamed_theme_drain_surfaces_starred_quote_in_uncategorised(
+        self, tmp_path: Path
+    ) -> None:
+        _write_intermediate(
+            tmp_path,
+            [_cluster("Nav", [_quote("p1", 10, "nav")])],
+            [_theme("Machine theme", [_quote("p2", 5, "valuable", session="s2")])],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        client.put("/api/projects/1/starred", json={_dom("p2", 5): True})
+        pl = client.get("/api/projects/1/quotes").json()
+        assert _dom("p2", 5) in self._homed(pl), "starts homed in its theme"
+        assert pl["uncategorised"] == []
+
+        db = app.state.db_factory()
+        try:
+            # s2 kept alive by p2@40; the star (p2@5) is dropped from all themes;
+            # the un-named theme overlaps nothing incoming -> retires.
+            _write_intermediate(
+                tmp_path,
+                [_cluster("Nav", [_quote("p1", 10, "nav")])],
+                [_theme("Other", [_quote("p2", 40, "other", session="s2")])],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        pl = client.get("/api/projects/1/quotes").json()
+        uncat = {q["dom_id"] for q in pl["uncategorised"]}
+        assert "Machine theme" not in {t["theme_label"] for t in pl["themes"]}, (
+            "an un-named drained theme retires"
+        )
+        assert _dom("p2", 5) not in self._homed(pl), "the star lost its group"
+        assert _dom("p2", 5) in uncat, (
+            "a dropped pinned quote must surface in the Uncategorised floor"
+        )
+
+    def test_named_theme_survives_drain_keeping_its_starred_quote(
+        self, tmp_path: Path
+    ) -> None:
+        _write_intermediate(
+            tmp_path,
+            [_cluster("Nav", [_quote("p1", 10, "nav")])],
+            [_theme("Machine theme", [_quote("p2", 5, "valuable", session="s2")])],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        client.put("/api/projects/1/starred", json={_dom("p2", 5): True})
+        tid = client.get("/api/projects/1/quotes").json()["themes"][0]["theme_id"]
+        client.put("/api/projects/1/edits", json={f"theme-group-{tid}:title": "Mine"})
+
+        db = app.state.db_factory()
+        try:
+            _write_intermediate(
+                tmp_path,
+                [_cluster("Nav", [_quote("p1", 10, "nav")])],
+                [_theme("Other", [_quote("p2", 40, "other", session="s2")])],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        pl = client.get("/api/projects/1/quotes").json()
+        themes = {t["theme_id"]: t for t in pl["themes"]}
+        assert tid in themes, "a named theme must survive the drain"
+        assert themes[tid]["edited_label"] == "Mine", "its rename is preserved"
+        assert _dom("p2", 5) in [q["dom_id"] for q in themes[tid]["quotes"]], (
+            "the starred quote stays in the theme the researcher named"
+        )
+        assert pl["uncategorised"] == [], "nothing is orphaned"
+
+    def test_named_theme_survives_to_zero_members(self, tmp_path: Path) -> None:
+        _write_intermediate(
+            tmp_path,
+            [_cluster("Nav", [_quote("p1", 10, "nav")])],
+            [_theme("Machine theme", [_quote("p2", 5, "x", session="s2")])],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        tid = client.get("/api/projects/1/quotes").json()["themes"][0]["theme_id"]
+        client.put("/api/projects/1/edits", json={f"theme-group-{tid}:title": "Kept"})
+
+        db = app.state.db_factory()
+        try:
+            # The theme's only quote is un-pinned and dropped -> swept.  s2 stays
+            # alive via a section quote, so the named theme drains to zero, not the
+            # quote's session vanishing.
+            _write_intermediate(
+                tmp_path,
+                [_cluster("Nav", [_quote("p1", 10, "nav"),
+                                  _quote("p2", 40, "keeps s2", session="s2")])],
+                [_theme("Other", [_quote("p3", 7, "z", session="s3")])],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        themes = {
+            t["theme_id"]: t
+            for t in client.get("/api/projects/1/quotes").json()["themes"]
+        }
+        assert tid in themes, "a named theme survives even at zero members"
+        assert themes[tid]["edited_label"] == "Kept"
+        assert themes[tid]["quotes"] == [], "a 0-member named theme is a valid state"

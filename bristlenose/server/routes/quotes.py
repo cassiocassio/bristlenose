@@ -122,6 +122,11 @@ class QuotesListResponse(BaseModel):
 
     sections: list[SectionResponse]
     themes: list[ThemeResponse]
+    # Pinned quotes (starred/edited/tagged) the current analysis leaves in no
+    # section or theme — e.g. an un-named theme drained and retired.  Freeze keeps
+    # the row; this bucket keeps it *visible* until the researcher re-files it
+    # (Phase 0 manual reassignment).  Read-only for now.
+    uncategorised: list[QuoteResponse] = []
     total_quotes: int
     total_hidden: int
     total_starred: int
@@ -494,6 +499,28 @@ def get_quotes(
                 ],
             ))
 
+        # Uncategorised floor: pinned quotes with no section/theme join (see the
+        # retire path in importer._cleanup_stale_data).  A join-less quote only
+        # survives the importer if it is pinned, so this is exactly the
+        # researcher's protected quotes that lost their home.  Reuses the
+        # importer's pin predicate so the two never drift.
+        from bristlenose.server.importer import _pinned_quote_ids
+        grouped_ids = {qid for qids in cluster_to_quotes.values() for qid in qids}
+        grouped_ids |= {qid for qids in theme_to_quotes.values() for qid in qids}
+        uncat_quotes = [
+            quote_by_id[qid]
+            for qid in _pinned_quote_ids(db, project_id)
+            if qid in quote_by_id and qid not in grouped_ids
+        ]
+        uncat_quotes.sort(key=lambda q: (q.session_id, q.start_timecode))
+        uncategorised = [
+            _build_quote_response(
+                q, state_map, edit_map, tags_map, badges_map,
+                proposed_map, speaker_map,
+            )
+            for q in uncat_quotes
+        ]
+
         # Summary counts
         total_hidden = sum(
             1 for s in state_map.values() if s.is_hidden
@@ -518,6 +545,7 @@ def get_quotes(
         return QuotesListResponse(
             sections=sections,
             themes=themes,
+            uncategorised=uncategorised,
             total_quotes=len(all_quotes),
             total_hidden=total_hidden,
             total_starred=total_starred,

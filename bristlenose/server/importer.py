@@ -930,6 +930,8 @@ def _import_quotes_from_clusters(
     strand_ids = _pinned_quote_ids(db, project.id) - all_incoming
 
     for i, cluster_data in enumerate(screen_clusters_data):
+        if not incoming_quotes[i]:
+            continue  # a quote-less section is degenerate — don't persist a shell
         label = cluster_data.get("screen_label", f"Cluster {i + 1}")
         matched_id = matched.get(i)
         if matched_id is not None:
@@ -1063,6 +1065,8 @@ def _import_quotes_from_themes(
     strand_ids = pinned_ids - all_incoming
 
     for i, theme_data in enumerate(theme_groups_data):
+        if not incoming_quotes[i]:
+            continue  # a quote-less theme is degenerate — don't persist a shell
         label = theme_data.get("theme_label", f"Theme {i + 1}")
         matched_id = matched.get(i)
         if matched_id is not None:
@@ -1388,6 +1392,20 @@ def _cleanup_stale_data(
     """
     # Pinned quotes are protected only while their session is still present.
     pinned_ids = _pinned_quote_ids(db, project.id)
+
+    # Scrub the frozen form + durable id from quotes that are no longer pinned
+    # (the last star/edit/tag was removed).  frozen_form is a re-identification
+    # key — don't leave a frozen copy of the words on a quote the researcher
+    # deliberately un-pinned.  Re-pinning later re-mints from the current text.
+    db.query(Quote).filter(
+        Quote.project_id == project.id,
+        Quote.durable_id.isnot(None),
+        Quote.id.notin_(pinned_ids) if pinned_ids else sa_text("1=1"),
+    ).update(
+        {Quote.durable_id: None, Quote.frozen_form: None},
+        synchronize_session=False,
+    )
+
     protected_ids: set[int] = set()
     if pinned_ids:
         protected_ids = {

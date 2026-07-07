@@ -282,41 +282,57 @@ class TestHidePersistence:
 
 
 class TestMintIdempotency:
-    def test_durable_id_stable_and_frozen_form_not_recaptured(
+    def test_durable_id_stable_across_repin_within_pin_lifetime(
         self, tmp_path: Path
     ) -> None:
-        """First-touch-wins: re-starring (and unstar→restar across a re-import
-        that drifts the pipeline text) keeps the ORIGINAL durable_id and frozen
-        words.  Phase 2 keys section/theme identity on durable_id stability, so
-        a future edit that regenerated the id per toggle, or re-snapshotted
-        drifted text, must fail here rather than ship silently."""
-        clusters = [_cluster("Dashboard", [_quote("p1", 10, "Original words")])]
-        _write_intermediate(tmp_path, clusters)
+        """First-touch-wins WITHIN a pin lifetime: re-starring an already-pinned
+        quote is a no-op — the durable_id and frozen words don't change.  Phase 2
+        keys section/theme identity on durable_id stability, so a regen-per-toggle
+        must fail here rather than ship silently."""
+        _write_intermediate(
+            tmp_path, [_cluster("Dashboard", [_quote("p1", 10, "Original words")])]
+        )
         app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
         client: TestClient = AuthTestClient(app)
 
         db = app.state.db_factory()
         try:
             q_id = _quote_at(db, 10).id
-
             client.put("/api/projects/1/starred", json={_dom("p1", 10): True})
             db.expire_all()
-            first = db.get(Quote, q_id)
-            assert first is not None
-            durable = first.durable_id
+            durable = db.get(Quote, q_id).durable_id
             assert durable is not None
-            assert first.frozen_form == "Original words"
 
-            # Re-PUT the same star: a no-op, must not re-mint.
             client.put("/api/projects/1/starred", json={_dom("p1", 10): True})
             db.expire_all()
             again = db.get(Quote, q_id)
-            assert again is not None
             assert again.durable_id == durable, "durable_id must not change on re-star"
             assert again.frozen_form == "Original words"
+        finally:
+            db.close()
 
-            # Unstar, re-import with the pipeline text DRIFTED (same stable key,
-            # so the row survives and its text is refreshed), then re-star.
+    def test_unpin_scrubs_frozen_form_then_repin_remints(
+        self, tmp_path: Path
+    ) -> None:
+        """Design decision (frozen_form scrub): un-pinning clears the durable_id +
+        frozen_form (a re-identification key shouldn't linger on a quote the
+        researcher un-pinned), so re-pinning is a *fresh* commitment — a new
+        durable_id and the current (drifted) words, not the originals."""
+        _write_intermediate(
+            tmp_path, [_cluster("Dashboard", [_quote("p1", 10, "Original words")])]
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+
+        db = app.state.db_factory()
+        try:
+            q_id = _quote_at(db, 10).id
+            client.put("/api/projects/1/starred", json={_dom("p1", 10): True})
+            db.expire_all()
+            original_durable = db.get(Quote, q_id).durable_id
+            assert original_durable is not None
+
+            # Unstar, then re-import with drifted text (the row survives).
             client.put("/api/projects/1/starred", json={})
             _write_intermediate(
                 tmp_path,
@@ -324,17 +340,40 @@ class TestMintIdempotency:
             )
             import_project(db, tmp_path)
             db.commit()
-            client.put("/api/projects/1/starred", json={_dom("p1", 10): True})
             db.expire_all()
 
-            restarred = db.get(Quote, q_id)
-            assert restarred is not None
-            assert restarred.durable_id == durable, "durable_id must be stable"
-            assert restarred.frozen_form == "Original words", (
-                "re-pin must keep the original frozen words, not re-capture drift"
+            scrubbed = db.get(Quote, q_id)
+            assert scrubbed.durable_id is None, "un-pin scrubs the durable id"
+            assert scrubbed.frozen_form is None, "un-pin scrubs the frozen re-id key"
+
+            # Re-star → a fresh commitment: new id, current words.
+            client.put("/api/projects/1/starred", json={_dom("p1", 10): True})
+            db.expire_all()
+            repinned = db.get(Quote, q_id)
+            assert repinned.durable_id is not None
+            assert repinned.durable_id != original_durable, "re-pin mints a fresh id"
+            assert repinned.frozen_form == "Drifted pipeline text", (
+                "re-pin freezes the current words, not the scrubbed originals"
             )
         finally:
             db.close()
+
+    def test_empty_incoming_group_is_not_persisted(self, tmp_path: Path) -> None:
+        """A quote-less section/theme from the pipeline must not persist as an
+        empty shell (design decision: retire drained/empty groups)."""
+        _write_intermediate(
+            tmp_path,
+            [
+                _cluster("Real", [_quote("p1", 10, "a")]),
+                _cluster("Empty", []),
+            ],
+            themes=[_theme("EmptyTheme", [])],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        data = client.get("/api/projects/1/quotes").json()
+        assert [s["screen_label"] for s in data["sections"]] == ["Real"]
+        assert data["themes"] == []
 
 
 class TestFrozenFormStaysOffTheExportBoundary:

@@ -184,6 +184,11 @@ def validate_output_dir(cell_id: str, output_dir: Path, *, quote_floor: int) -> 
         assert_reid_keys_not_shareable(output_dir)
     except InvariantError as e:
         return CellResult(cell_id, CellOutcome.FAIL_BLOCKING, redact(str(e)))
+    except (OSError, ValueError) as e:
+        # Fail-closed: any unexpected read/parse error (missing artifact, malformed
+        # JSON) is a blocking failure, never an uncaught crash. A conformance harness
+        # must never itself fake-success by dying mid-check.
+        return CellResult(cell_id, CellOutcome.FAIL_BLOCKING, redact(f"invariant read error: {e}"))
     return CellResult(cell_id, CellOutcome.PASS, "shape invariants held")
 
 

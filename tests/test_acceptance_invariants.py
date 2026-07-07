@@ -162,6 +162,17 @@ def test_report_non_empty_fails_below_floor() -> None:
         assert_report_non_empty(_SMOKE, quote_floor=99)
 
 
+def test_report_non_empty_fails_closed_on_missing_clusters(tmp_path: Path) -> None:
+    # A "completed" run that wrote metadata but no screen_clusters.json (the empty-run
+    # fake-success — seen live from a local model that found no transcripts). Must raise
+    # a clean InvariantError, NOT a raw FileNotFoundError that crashes the runner.
+    inter = tmp_path / ".bristlenose" / "intermediate"
+    inter.mkdir(parents=True)
+    (inter / "metadata.json").write_text("{}")
+    with pytest.raises(InvariantError, match="empty/fake-success"):
+        assert_report_non_empty(tmp_path, quote_floor=1)
+
+
 # ---------------------------------------------------------------------------
 # Governance
 # ---------------------------------------------------------------------------

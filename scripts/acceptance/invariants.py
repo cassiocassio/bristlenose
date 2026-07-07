@@ -138,7 +138,15 @@ def assert_report_non_empty(output_dir: Path, *, quote_floor: int) -> None:
     per-fixture quote floor.
     """
     inter = output_dir / ".bristlenose" / "intermediate"
-    screen = json.loads((inter / "screen_clusters.json").read_text(encoding="utf-8"))
+    screen_path = inter / "screen_clusters.json"
+    if not screen_path.exists():
+        # A "completed" run that wrote no clusters is an empty run — the exact
+        # fake-success class this tier exists to catch. Fail-closed with a clean
+        # InvariantError, never a raw FileNotFoundError.
+        raise InvariantError(
+            "no screen_clusters.json — run produced no analysis output (empty/fake-success)"
+        )
+    screen = json.loads(screen_path.read_text(encoding="utf-8"))
     themes_path = inter / "theme_groups.json"
     themes = json.loads(themes_path.read_text(encoding="utf-8")) if themes_path.exists() else []
     if len(screen) < 1 and len(themes) < 1:

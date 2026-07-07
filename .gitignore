@@ -138,3 +138,6 @@ bristlenose/_build_info.py
 # Regenerated every Xcode build by the "Generate Build Info" run-script phase
 # (generate-build-info.sh) before Compile Sources — never commit (churns -dirty).
 desktop/Bristlenose/Bristlenose/GeneratedBuildInfo.swift
+
+# Acceptance-matrix run artifacts — real reports carry unredacted transcripts + re-id keys
+acceptance-runs/

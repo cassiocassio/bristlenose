@@ -3,6 +3,15 @@
 _Status: proposed (29 Jun 2026). Phase 1 not yet built. This doc pins the model, the
 invariants, and the overnight-execution gates before any runner code lands._
 
+_Moved into `docs/testing/` and consolidated 7 Jul 2026. This is the **mechanical tier**
+of the testing set — start at [README.md](README.md) for the whole map. The surfaces this
+matrix runs against (formats · providers · exports · lenses) are inventoried once in
+[coverage-inventory.md](coverage-inventory.md); don't re-list them here, extend that. The
+**human tier** (by-hand `.app` walk, upload-day steps, fixture-folder mapping) is the
+private walks-fix-walks QA doc — this matrix mechanises its atomic "X works" checks so the
+human walk shrinks to judgment-only. **Mechanical green de-risks the human walk; it does not
+replace it** — see "Desktop acceptance" below._
+
 ## Why this exists
 
 Bristlenose has two automated test layers today, and both are **hermetic by
@@ -262,6 +271,59 @@ A single `scripts/acceptance/nightly.sh` that: rebuilds → runs each matrix cel
 screen may sleep). Morning = open one page, read the grid, click any red cell
 through to its log + the report it produced.
 
+## Phase-1 build decisions (post-review 2026-07-07)
+
+A 4-agent `/usual-suspects` pass (+ William parsimony) reviewed this plan before
+build; the full finding log lives in the gitignored review-log tree. The decisions
+that shape what actually gets built:
+
+- **One harness, not two (Q2 + F15).** The `@pytest.mark.slow` acceptance test and
+  the bash matrix asserted near-identical invariants but only the bash tier got the
+  `RunCompletedEvent` terminus (the events file is written by `run_lifecycle`, i.e.
+  the CLI subprocess — not by the in-process `Pipeline.run()` the pytest used). So
+  the pytest **shells out to the CLI**: one code path, one provenance story, terminus
+  for free. The bash runner is a thin nightly orchestrator over the same cells.
+- **A cell that skips must be a *declared, counted* skip (F1 — CRITICAL).** The whole
+  matrix could green while running zero cells (every case skips absent its key/fixture
+  — indistinguishable from "everything works"). Fix: a **manifest of expected-to-run
+  cells** + `assert executed == expected`; an *undeclared* skip (a promised fixture is
+  missing) is a hard **ERROR**; `BRISTLENOSE_ACCEPTANCE_REQUIRE_ALL=1` flips every
+  `skip → fail` for the nightly. Local dev stays convenient; nightly proves coverage.
+- **Provider-state taxonomy (F7 — resolves a rule contradiction).** "Non-Claude failure
+  = signal, not regression" and "provider failure is fail-stop" pull opposite ways.
+  Reconciled: `unconfigured → SKIP(declared)` · `configured+failed → FAIL(expected,
+  non-blocking)` · `configured+empty-report → FAIL(blocking)` (the `attempted>0 &&
+  succeeded==0` case — the gemma4 class). The summary renders these three distinctly so
+  a rate-limited Gemini key doesn't read as a real breach.
+- **Cloud column defined but not *run* in the free pass (Q1).** The motivating bug was
+  local/Ollama env-var → model-resolution, so the **local + headless-desktop cells are
+  the must** (free, no keys) and run now. The 4 cloud cells are wired and manifest-listed
+  but execute only when keys are present + spend is authorised — a button, not a default.
+- **One shared absence-assertion helper (F4/8/9/10/13).** Eight findings were one bug:
+  *grep-for-absence / read-a-field passes vacuously over an empty / errored / None
+  artifact.* Build **one** helper — **positive control + size floor + fail-closed-on-None**
+  — and apply it to every invariant (PII-boundary, self-contained-HTML, XLS-rows, clip-
+  duration, terminus, abandon-summary). Assert over the *decoded* payload (`ensure_ascii`
+  `\u`-escapes non-ASCII names).
+- **"Zero PII" → "no seeded display name crosses the speaker-code boundary" (F10).** It's
+  a boundary-leak regression check, not a PII scanner — named honestly in
+  `coverage-inventory.md` and never quoted as "zero PII."
+- **Format coverage is a cheap pytest, not LLM legs (F11).** `classify_file` + ffmpeg
+  re-encode/decode per container in `tests/test_format_ingest_coverage.py`. The `.docx`
+  parity leg still needs a *real* export (synthetic parses by construction). See
+  `coverage-inventory.md` §1.
+- **Runner hardening (F2/3/5/16/17).** Artifacts land in a gitignored `acceptance-runs/`
+  (`chmod 700`, per-dir `.gitignore *`) — real reports carry unredacted transcripts +
+  `llm-calls.jsonl` re-id key; a `git add -A` must never stage them. Keys via env only
+  (never argv); stderr redacted; a post-run key-grep fails loud. Per-cell subshell exit
+  capture (never let one red cell `set -e`-abort the grid); `find -delete` not glob-rm;
+  `pipefail`. First line asserts `bristlenose --version == __version__` (no stale editable
+  install). Any serve/export cell needs `frontend/dist` built first (else fail-loud 500).
+- **Dropped / deferred.** The disk-HTML report assertion (F18) — coupled to the
+  static render being removed; durable signal is intermediate JSON + served SPA.
+  Transcript hallucination-detection (Q3) and the disproportionate clicking-surface
+  automation (F14) are written down, not built in Phase 1.
+
 ## Phased plan
 
 Both the CLI iceberg *and* the commercial surface's engine land in Phase 1 —
@@ -298,6 +360,10 @@ free once we're already building the sidecar.
 
 ## See also
 
+- [`README.md`](README.md) — the testing hub: three-tier model, what's built, links to the whole set.
+- [`coverage-inventory.md`](coverage-inventory.md) — the surfaces this matrix runs against (single source; extend it, not this doc).
+- [`test-data-generation.md`](test-data-generation.md) — fixture recipe (closes the format-parity gap the built acceptance test waits on).
+- `tests/test_no_fake_success_acceptance.py` — the built partial-Phase-1 (skips without fixtures).
 - `e2e/` + `docs/design-playwright-testing.md` — tier 2 as it exists today.
 - `docs/design-test-strategy.md`, `docs/design-test-philosophy.md` — the testing
   pyramid this extends.

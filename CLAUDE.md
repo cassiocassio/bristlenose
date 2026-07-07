@@ -249,7 +249,8 @@ See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check
 
 **Ops / release:**
 - `docs/release.md`, `docs/file-map.md`, `CONTRIBUTING.md`, `INSTALL.md`, `SECURITY.md`
-- `docs/design-ci.md`, `docs/design-test-strategy.md`, `docs/design-playwright-testing.md`
+- **`docs/testing/README.md` — the testing & acceptance hub (start here for anything test/QA/acceptance).** Three-tier model (CI · Playwright · acceptance matrix · human walk), `docs/testing/coverage-inventory.md` (the single source of surfaces: 16 formats · 5 exports · 5 lenses · 5 providers), `docs/testing/acceptance-matrix.md` (mechanical tier, Phase-1 plan), `docs/testing/test-data-generation.md` (fixture recipe). Built already: `tests/test_no_fake_success_acceptance.py` (skips without fixtures) + `e2e/`. The by-hand walk lives in the private QA doc.
+- `docs/design-ci.md`, `docs/design-test-strategy.md`, `docs/design-playwright-testing.md`, `docs/design-test-philosophy.md`
 - `docs/design-doctor-and-snap.md`, `docs/design-homebrew-packaging.md`
 - `docs/design-cli-improvements.md`, `docs/design-llm-call-telemetry.md`, `docs/design-performance.md`
 - `docs/design-decisions.md` (why)

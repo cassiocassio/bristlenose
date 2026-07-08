@@ -1289,3 +1289,133 @@ class TestManualReassignment:
         assert self._theme_placements(client, _dom("p2", 5)) == ["Speed"], (
             "a researcher theme placement survives re-analysis"
         )
+
+    def test_section_placement_leaves_theme_grouping_free(
+        self, tmp_path: Path
+    ) -> None:
+        """Suppression is per-axis: moving a quote into a *section* makes it
+        section-owned but leaves the pipeline free to group it in themes.  A
+        move to one axis must never strip the quote off the other."""
+        _write_intermediate(
+            tmp_path,
+            [
+                _cluster("Login", [_quote("p1", 10, "a"), _quote("p1", 20, "b")],
+                         order=1),
+                _cluster("Settings", [_quote("p1", 40, "d")], order=2),
+            ],
+            [_theme("Trust", [_quote("p1", 20, "b")])],  # q@20 is themed too
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        sections = client.get("/api/projects/1/quotes").json()["sections"]
+        settings_id = next(
+            s["cluster_id"] for s in sections if s["screen_label"] == "Settings"
+        )
+        client.post(
+            "/api/projects/1/reassign",
+            json={
+                "quotes": [_dom("p1", 20)],
+                "target_kind": "section",
+                "target_id": settings_id,
+            },
+        )
+        # The section move holds; the theme membership is untouched.
+        assert self._section_placements(client, _dom("p1", 20)) == ["Settings"]
+        assert self._theme_placements(client, _dom("p1", 20)) == ["Trust"]
+
+        db = app.state.db_factory()
+        try:
+            # The pipeline re-emits q@20 in Login (section) AND Trust (theme).
+            _write_intermediate(
+                tmp_path,
+                [
+                    _cluster("Login", [_quote("p1", 10, "a"), _quote("p1", 20, "b")],
+                             order=1),
+                    _cluster("Settings", [_quote("p1", 40, "d")], order=2),
+                ],
+                [_theme("Trust", [_quote("p1", 20, "b")])],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        assert self._section_placements(client, _dom("p1", 20)) == ["Settings"], (
+            "the section move is honoured across re-analysis"
+        )
+        assert self._theme_placements(client, _dom("p1", 20)) == ["Trust"], (
+            "the theme axis is untouched — the pipeline still groups it freely"
+        )
+
+    def test_orphan_is_rescued_from_the_floor_and_the_rescue_sticks(
+        self, tmp_path: Path
+    ) -> None:
+        """The core orphan-rescue job: a pinned quote whose un-named theme drained
+        surfaces on the Uncategorised floor, a move re-homes it into a section (it
+        leaves the floor), and the placement survives a later run that still
+        leaves it grouped nowhere by the pipeline."""
+        _write_intermediate(
+            tmp_path,
+            [_cluster("Nav", [_quote("p1", 10, "nav")])],
+            [_theme("Machine theme", [_quote("p2", 5, "valuable", session="s2")])],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        client.put("/api/projects/1/starred", json={_dom("p2", 5): True})
+
+        db = app.state.db_factory()
+        try:
+            # s2 kept alive by p2@40; the un-named theme overlaps nothing and
+            # retires, so the starred p2@5 falls to the floor.
+            _write_intermediate(
+                tmp_path,
+                [_cluster("Nav", [_quote("p1", 10, "nav")])],
+                [_theme("Other", [_quote("p2", 40, "other", session="s2")])],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        floor = {q["dom_id"] for q in client.get("/api/projects/1/quotes").json()[
+            "uncategorised"]}
+        assert _dom("p2", 5) in floor, "the pinned orphan is on the floor"
+
+        # Rescue: move it into the Nav section.
+        nav_id = next(
+            s["cluster_id"]
+            for s in client.get("/api/projects/1/quotes").json()["sections"]
+            if s["screen_label"] == "Nav"
+        )
+        client.post(
+            "/api/projects/1/reassign",
+            json={
+                "quotes": [_dom("p2", 5)],
+                "target_kind": "section",
+                "target_id": nav_id,
+            },
+        )
+        pl = client.get("/api/projects/1/quotes").json()
+        assert _dom("p2", 5) not in {q["dom_id"] for q in pl["uncategorised"]}, (
+            "the rescued quote leaves the floor"
+        )
+        assert self._section_placements(client, _dom("p2", 5)) == ["Nav"]
+
+        db = app.state.db_factory()
+        try:
+            # A later run still doesn't emit p2@5 anywhere — the rescue must hold.
+            _write_intermediate(
+                tmp_path,
+                [_cluster("Nav", [_quote("p1", 10, "nav")])],
+                [_theme("Other", [_quote("p2", 40, "other", session="s2")])],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        pl2 = client.get("/api/projects/1/quotes").json()
+        assert _dom("p2", 5) not in {q["dom_id"] for q in pl2["uncategorised"]}
+        assert self._section_placements(client, _dom("p2", 5)) == ["Nav"], (
+            "a rescued orphan stays where the researcher put it"
+        )

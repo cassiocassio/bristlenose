@@ -73,6 +73,7 @@ _THEME_FILES: list[str] = [
     "molecules/threshold-review.css",
     "organisms/blockquote.css",
     "organisms/responsive-grid.css",
+    "organisms/uncategorised-floor.css",
     "organisms/coverage.css",
     "organisms/sentiment-chart.css",
     "organisms/toolbar.css",

@@ -168,9 +168,16 @@ export interface ThemeResponse {
 export interface QuotesListResponse {
   sections: SectionResponse[];
   themes: ThemeResponse[];
+  /** Pinned quotes (starred/edited/tagged) the current analysis left in no
+   *  section or theme — surfaced read-only so a re-run can't silently lose
+   *  curated work. Usually empty. Optional so pre-existing response fixtures
+   *  compile; the live API always sends it. */
+  uncategorised?: QuoteResponse[];
   total_quotes: number;
   total_hidden: number;
   total_starred: number;
+  /** Top-level count of the uncategorised floor (mirrors total_starred). */
+  total_uncategorised?: number;
   has_moderator: boolean;
   /** ISO token of the latest import that added an interview; keys "New"-badge
    *  dismissal so a genuinely-fresh import re-shows a dismissed badge. */

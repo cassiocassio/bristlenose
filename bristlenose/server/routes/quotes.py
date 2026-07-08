@@ -130,6 +130,10 @@ class QuotesListResponse(BaseModel):
     total_quotes: int
     total_hidden: int
     total_starred: int
+    # Top-level count of the uncategorised floor, so a consumer (e.g. a
+    # sidebar subtitle or the "need a home" chip) doesn't have to walk the
+    # array.  Mirrors total_hidden/total_starred.
+    total_uncategorised: int = 0
     has_moderator: bool
     # ISO timestamp of the latest import that added an interview, or null if
     # none has ever been added past the first.  The frontend keys "New"-badge
@@ -549,6 +553,7 @@ def get_quotes(
             total_quotes=len(all_quotes),
             total_hidden=total_hidden,
             total_starred=total_starred,
+            total_uncategorised=len(uncategorised),
             has_moderator=has_moderator,
             new_since=new_since,
         )

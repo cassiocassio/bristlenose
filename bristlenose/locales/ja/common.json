@@ -72,7 +72,10 @@
     "failedToLoad": "発言の読み込みに失敗しました: {{error}}",
     "loading": "発言を読み込み中…",
     "contents": "目次",
-    "toggleContents": "目次を表示/非表示"
+    "toggleContents": "目次を表示/非表示",
+    "uncategorisedHeading": "Needs a home",
+    "uncategorisedIntro_one": "1 quote you kept isn\u2019t in any section or theme right now \u2014 but it\u2019s safe here, nothing was lost.",
+    "uncategorisedIntro_other": "{{count}} quotes you kept aren\u2019t in any section or theme right now \u2014 but they\u2019re safe here, nothing was lost."
   },
   "sessions": {
     "moderatedBy": "モデレーター: {{names}}",

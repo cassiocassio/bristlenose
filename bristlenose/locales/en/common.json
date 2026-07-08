@@ -76,7 +76,10 @@
     "failedToLoad": "Failed to load quotes: {{error}}",
     "loading": "Loading quotes…",
     "contents": "Contents",
-    "toggleContents": "Toggle table of contents"
+    "toggleContents": "Toggle table of contents",
+    "uncategorisedHeading": "Needs a home",
+    "uncategorisedIntro_one": "1 quote you kept isn’t in any section or theme right now — but it’s safe here, nothing was lost.",
+    "uncategorisedIntro_other": "{{count}} quotes you kept aren’t in any section or theme right now — but they’re safe here, nothing was lost."
   },
   "sessions": {
     "moderatedBy": "Moderated by {{names}}",

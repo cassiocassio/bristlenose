@@ -88,7 +88,10 @@
     "failedToLoad": "Не вдалося завантажити цитати: {{error}}",
     "loading": "Завантаження цитат…",
     "contents": "Зміст",
-    "toggleContents": "Показати або приховати зміст"
+    "toggleContents": "Показати або приховати зміст",
+    "uncategorisedHeading": "Needs a home",
+    "uncategorisedIntro_one": "1 quote you kept isn\u2019t in any section or theme right now \u2014 but it\u2019s safe here, nothing was lost.",
+    "uncategorisedIntro_other": "{{count}} quotes you kept aren\u2019t in any section or theme right now \u2014 but they\u2019re safe here, nothing was lost."
   },
   "sessions": {
     "moderatedBy": "Модерував {{names}}",

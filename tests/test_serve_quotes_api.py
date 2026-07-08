@@ -48,11 +48,20 @@ class TestQuotesEndpoint:
         assert "total_quotes" in data
         assert "total_hidden" in data
         assert "total_starred" in data
+        assert "uncategorised" in data
+        assert "total_uncategorised" in data
         assert "has_moderator" in data
 
     def test_total_quotes_count(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/quotes").json()
         assert data["total_quotes"] == 4
+
+    def test_total_uncategorised_matches_bucket_length(self, client: TestClient) -> None:
+        # Every quote in the smoke fixture has a section home, so the floor is
+        # empty — and the top-level count must always equal the array length.
+        data = client.get("/api/projects/1/quotes").json()
+        assert data["total_uncategorised"] == len(data["uncategorised"])
+        assert data["total_uncategorised"] == 0
 
     def test_total_hidden_zero_initially(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/quotes").json()

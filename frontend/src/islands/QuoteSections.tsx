@@ -50,7 +50,7 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
           ...json.sections.flatMap((s) => s.quotes),
           ...json.themes.flatMap((t) => t.quotes),
         ];
-        initFromQuotes(allQuotes, replace);
+        initFromQuotes(allQuotes, replace, json.uncategorised);
         initHeadingEdits(json.sections, json.themes);
       })
       .catch((err: Error) => setError(err.message))

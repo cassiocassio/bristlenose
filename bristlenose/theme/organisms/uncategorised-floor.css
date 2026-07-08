@@ -1,0 +1,19 @@
+/* Organism: uncategorised-floor — the read-only safety net for pinned quotes
+   (starred / edited / tagged) the current analysis left in no section or theme.
+   Recessive by design: it must be *findable*, not attention-grabbing. It reads
+   as a quiet coda beneath the report, framed calmly ("nothing was lost"), never
+   as an error. Renders only when the bucket is non-empty. */
+
+.bn-uncategorised-floor {
+    /* A soft separation from the last theme above, without an alarming rule. */
+    margin-top: var(--bn-space-xl);
+    padding-top: var(--bn-space-lg);
+    border-top: 1px solid var(--bn-colour-border);
+}
+
+/* Muted heading — this is an overflow area, not a peer of Sections/Themes.
+   (.description already carries --bn-colour-muted + --bn-max-width from the
+   base report styles, so the intro line needs no extra rules here.) */
+.bn-uncategorised-floor > h2 {
+    color: var(--bn-colour-muted);
+}

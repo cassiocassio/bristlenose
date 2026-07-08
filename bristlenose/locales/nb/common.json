@@ -76,7 +76,10 @@
     "failedToLoad": "Klarte ikke å laste inn sitater: {{error}}",
     "loading": "Laster inn sitater …",
     "contents": "Innhold",
-    "toggleContents": "Vis/skjul innholdsfortegnelsen"
+    "toggleContents": "Vis/skjul innholdsfortegnelsen",
+    "uncategorisedHeading": "Needs a home",
+    "uncategorisedIntro_one": "1 quote you kept isn\u2019t in any section or theme right now \u2014 but it\u2019s safe here, nothing was lost.",
+    "uncategorisedIntro_other": "{{count}} quotes you kept aren\u2019t in any section or theme right now \u2014 but they\u2019re safe here, nothing was lost."
   },
   "sessions": {
     "moderatedBy": "Moderert av {{names}}",

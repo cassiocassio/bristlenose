@@ -45,6 +45,10 @@ export interface QuotesState {
   proposedTags: Record<string, ProposedTagBrief[]>;
   /** All quotes from the API — populated by initFromQuotes. */
   quotes: QuoteResponse[];
+  /** Pinned quotes the analysis left with no section/theme home (the
+   *  read-only "Uncategorised floor"). Kept out of `quotes` so counts and
+   *  exports are unaffected; the floor renders straight from these. */
+  uncategorised: QuoteResponse[];
   /** Current view mode for the quotes tab. */
   viewMode: "all" | "starred";
   /** Current search query (min 3 chars to activate filtering). */
@@ -62,6 +66,7 @@ function emptyState(): QuotesState {
     deletedBadges: {},
     proposedTags: {},
     quotes: [],
+    uncategorised: [],
     viewMode: "all",
     searchQuery: "",
     tagFilter: EMPTY_TAG_FILTER,
@@ -134,8 +139,16 @@ function setState(updater: (prev: QuotesState) => QuotesState): void {
  *
  * Pass `replace: true` on re-fetch (bn:tags-changed) to atomically
  * clear-and-set, avoiding race conditions between the two islands.
+ *
+ * `uncategorised` (the read-only floor) is set in the same atomic update so a
+ * `replace` never leaves a wipe window; omit it to leave the current floor
+ * untouched (e.g. legacy callers / tests).
  */
-export function initFromQuotes(quotes: QuoteResponse[], replace = false): void {
+export function initFromQuotes(
+  quotes: QuoteResponse[],
+  replace = false,
+  uncategorised?: QuoteResponse[],
+): void {
   setState((prev) => {
     const base = replace ? emptyState() : prev;
     const hidden = { ...base.hidden };
@@ -171,6 +184,7 @@ export function initFromQuotes(quotes: QuoteResponse[], replace = false): void {
       deletedBadges,
       proposedTags,
       quotes: mergedQuotes,
+      uncategorised: uncategorised ?? base.uncategorised,
     };
   });
 }

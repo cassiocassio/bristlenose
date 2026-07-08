@@ -1,6 +1,7 @@
 import { lazy, useEffect } from "react";
 import { useProjectId } from "../hooks/useProjectId";
 import { startLastRunPolling, useLastRun } from "../contexts/LastRunStore";
+import { UncategorisedFloor } from "../islands/UncategorisedFloor";
 
 // Lazy-loaded so the islands code-split into their own chunks (kept out of the
 // main bundle). The AppLayout Outlet provides the Suspense boundary.
@@ -27,6 +28,7 @@ export function QuotesTab() {
       <Toolbar />
       <QuoteSections projectId={projectId} refreshKey={refreshKey} />
       <QuoteThemes projectId={projectId} refreshKey={refreshKey} />
+      <UncategorisedFloor />
     </>
   );
 }

@@ -1004,6 +1004,9 @@ class TestUncategorisedFloor:
         assert _dom("p2", 5) in uncat, (
             "a dropped pinned quote must surface in the Uncategorised floor"
         )
+        assert pl["total_uncategorised"] == len(pl["uncategorised"]) == 1, (
+            "the top-level count tracks the populated floor"
+        )
 
     def test_named_theme_survives_drain_keeping_its_starred_quote(
         self, tmp_path: Path

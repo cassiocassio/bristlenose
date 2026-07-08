@@ -43,7 +43,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
           ...json.sections.flatMap((s) => s.quotes),
           ...json.themes.flatMap((t) => t.quotes),
         ];
-        initFromQuotes(allQuotes, replace);
+        initFromQuotes(allQuotes, replace, json.uncategorised);
         initHeadingEdits(json.sections, json.themes);
       })
       .catch((err: Error) => setError(err.message))

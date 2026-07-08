@@ -70,7 +70,10 @@
     "failedToLoad": "無法載入引述：{{error}}",
     "loading": "正在載入引述…",
     "contents": "目錄",
-    "toggleContents": "切換目錄"
+    "toggleContents": "切換目錄",
+    "uncategorisedHeading": "Needs a home",
+    "uncategorisedIntro_one": "1 quote you kept isn\u2019t in any section or theme right now \u2014 but it\u2019s safe here, nothing was lost.",
+    "uncategorisedIntro_other": "{{count}} quotes you kept aren\u2019t in any section or theme right now \u2014 but they\u2019re safe here, nothing was lost."
   },
   "sessions": {
     "moderatedBy": "主持人：{{names}}",

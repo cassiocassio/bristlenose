@@ -25,6 +25,7 @@ from bristlenose.events import (
     RunCancelledEvent,
     RunCompletedEvent,
     RunFailedEvent,
+    RunProgressEvent,
     RunStartedEvent,
     _now_iso,
     append_event,
@@ -392,6 +393,32 @@ def test_lifecycle_started_event_includes_process_envelope(tmp_path: Path):
     assert started.process.python_version
     assert started.process.os
     assert started.kind == KindEnum.ANALYZE
+
+
+def test_progress_event_carries_incremental_session_counts(tmp_path: Path):
+    """RunHandle.progress forwards the new-vs-cached session counts onto the
+    run_progress event (the incremental-UX contract plumbing) — and a plain
+    full-run progress leaves them None. Zero LLM spend: the sink is exercised
+    directly, no pipeline run."""
+    with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False) as handle:
+        handle.progress(
+            stage="transcribe",
+            sessions_complete=1,
+            sessions_total=1,
+            sessions_new=1,
+            sessions_cached=2,
+        )
+        handle.progress(stage="cluster", sessions_complete=1, sessions_total=1)
+    progress = [
+        e
+        for e in read_events(events_path(tmp_path))
+        if isinstance(e, RunProgressEvent)
+    ]
+    assert len(progress) == 2
+    assert (progress[0].sessions_new, progress[0].sessions_cached) == (1, 2)
+    # A stage that doesn't set the counts stays None — backward-compatible.
+    assert progress[1].sessions_new is None
+    assert progress[1].sessions_cached is None
 
 
 # ---------------------------------------------------------------------------

@@ -20,6 +20,7 @@ from bristlenose.events import (
     CauseCategoryEnum,
     PipelineAbandonedError,
     PipelineSummary,
+    ReflowScopeEnum,
     StageOutcome,
 )
 from bristlenose.hashing import hash_bytes, hash_file_metadata, verify_file_hash
@@ -809,6 +810,16 @@ class Pipeline:
                     if s.session_id not in _cached_tx_sids
                 ]
 
+                if _cached_tx_sids and _remaining_sessions:
+                    # Incremental add: new sessions on top of an already-
+                    # analysed corpus. Drives the desktop "+N new sessions"
+                    # post-completion delta. reflow_scope is conservative —
+                    # added material may reshuffle downstream section/theme
+                    # membership, so the UX holds (restructure) until the
+                    # persistence layer can prove a run purely additive.
+                    self._summary.new_sessions = len(_remaining_sessions)
+                    self._summary.reflow_scope = ReflowScopeEnum.RESTRUCTURE
+
                 mark_stage_running(manifest, _M_STAGE_TRANSCRIBE)
                 # Carry forward session records from previous manifest
                 if _cached_tx_sids and _prev_manifest is not None:
@@ -844,6 +855,8 @@ class Pipeline:
                             stage=STAGE_TRANSCRIBE,
                             sessions_complete=current,
                             sessions_total=total,
+                            sessions_new=len(_remaining_sessions),
+                            sessions_cached=len(_cached_tx_sids),
                             stage_fraction=(current / total if total else None),
                         )
 
@@ -867,6 +880,8 @@ class Pipeline:
                             stage=STAGE_TRANSCRIBE,
                             sessions_complete=file_index - 1,
                             sessions_total=file_total,
+                            sessions_new=len(_remaining_sessions),
+                            sessions_cached=len(_cached_tx_sids),
                             stage_fraction=stage_frac,
                         )
 

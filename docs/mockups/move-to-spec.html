@@ -1,0 +1,419 @@
+<title>Move to — reassignment build plan &amp; interaction spec</title>
+
+<style>
+  :root {
+    --bg:#fff; --panel:#fff; --text:#1a1a1a; --muted:#6b7280; --faint:#9ca3af;
+    --border:#e5e7eb; --border2:#d1d5db; --accent:#007aff; --hover:#e8f0fe;
+    --quote:#f9fafb; --badge:#f3f4f6; --badgetx:#374151; --chrome:#f6f7f9;
+    --sugg:#eff6ff; --shadow:rgba(0,0,0,.1); --pop:rgba(0,0,0,.16);
+    --ok:#16a34a; --ok-bg:#f0fdf4; --new:#007aff; --new-bg:#eff6ff;
+    --risk:#c2410c; --risk-bg:#fff7ed; --risk-bd:#fed7aa;
+    --s-frustration:#ea580c; --s-confusion:#dc2626; --s-doubt:#7c3aed;
+    --s-satisfaction:#16a34a; --s-delight:#059669; --s-confidence:#2563eb;
+    --r-sm:3px; --r-md:6px; --r-lg:8px; --r-pill:999px;
+    --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme:dark){ :root{
+    --bg:#0d0d0d; --panel:#161616; --text:#e5e7eb; --muted:#9ca3af; --faint:#6b7280;
+    --border:#2d2d2d; --border2:#4b5563; --accent:#0a84ff; --hover:#1e293b;
+    --quote:#1a1a1a; --badge:#252525; --badgetx:#d1d5db; --chrome:#131313;
+    --sugg:#111d2e; --shadow:rgba(0,0,0,.5); --pop:rgba(0,0,0,.6);
+    --ok:#22c55e; --ok-bg:#0f2918; --new:#0a84ff; --new-bg:#111d2e;
+    --risk:#fb923c; --risk-bg:#2a1a0e; --risk-bd:#5a3a1a; color-scheme:dark; } }
+  :root[data-theme="dark"]{
+    --bg:#0d0d0d; --panel:#161616; --text:#e5e7eb; --muted:#9ca3af; --faint:#6b7280;
+    --border:#2d2d2d; --border2:#4b5563; --accent:#0a84ff; --hover:#1e293b;
+    --quote:#1a1a1a; --badge:#252525; --badgetx:#d1d5db; --chrome:#131313;
+    --sugg:#111d2e; --shadow:rgba(0,0,0,.5); --pop:rgba(0,0,0,.6);
+    --ok:#22c55e; --ok-bg:#0f2918; --new:#0a84ff; --new-bg:#111d2e;
+    --risk:#fb923c; --risk-bg:#2a1a0e; --risk-bd:#5a3a1a; color-scheme:dark; }
+  :root[data-theme="light"]{
+    --bg:#fff; --panel:#fff; --text:#1a1a1a; --muted:#6b7280; --faint:#9ca3af;
+    --border:#e5e7eb; --border2:#d1d5db; --accent:#007aff; --hover:#e8f0fe;
+    --quote:#f9fafb; --badge:#f3f4f6; --badgetx:#374151; --chrome:#f6f7f9;
+    --sugg:#eff6ff; --shadow:rgba(0,0,0,.1); --pop:rgba(0,0,0,.16);
+    --ok:#16a34a; --ok-bg:#f0fdf4; --new:#007aff; --new-bg:#eff6ff;
+    --risk:#c2410c; --risk-bg:#fff7ed; --risk-bd:#fed7aa; color-scheme:light; }
+
+  *{box-sizing:border-box;}
+  .wrap{font-family:var(--font); color:var(--text); background:var(--bg); line-height:1.5;
+    -webkit-font-smoothing:antialiased; padding:clamp(16px,4vw,40px); max-width:1080px; margin:0 auto; font-size:15px;}
+
+  .eyebrow{font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--accent); font-weight:600; margin:0 0 6px;}
+  h1{font-size:clamp(22px,3.4vw,29px); font-weight:640; margin:0 0 8px; letter-spacing:-.015em; text-wrap:balance;}
+  .lede{margin:0; color:var(--muted); max-width:66ch;}
+
+  .legend{display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 4px;}
+  .tag{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:var(--r-pill); border:1px solid transparent; white-space:nowrap;}
+  .tag.ok{color:var(--ok); background:var(--ok-bg); border-color:color-mix(in srgb,var(--ok) 25%,transparent);}
+  .tag.new{color:var(--new); background:var(--new-bg); border-color:color-mix(in srgb,var(--new) 25%,transparent);}
+  .tag.risk{color:var(--risk); background:var(--risk-bg); border-color:var(--risk-bd);}
+  .tag .g{font-size:12px;}
+
+  /* selectors */
+  .controls{display:flex; flex-wrap:wrap; gap:14px; margin:22px 0 18px; align-items:center;}
+  .ctl{display:flex; flex-direction:column; gap:6px;}
+  .ctl .clabel{font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--faint); font-weight:650;}
+  .seg{display:flex; background:var(--quote); border:1px solid var(--border); border-radius:var(--r-md); padding:2px; gap:2px;}
+  .seg button{font:inherit; font-size:13px; font-weight:560; padding:7px 14px; cursor:pointer; border:none; background:transparent; color:var(--muted); border-radius:var(--r-sm); transition:background .12s,color .12s; white-space:nowrap;}
+  .seg button[aria-pressed="true"]{background:var(--panel); color:var(--text); box-shadow:0 1px 2px var(--shadow);}
+  .seg button:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
+
+  .paneltitle{display:flex; align-items:center; gap:10px; margin:0 0 4px; font-size:18px; font-weight:640; letter-spacing:-.01em;}
+  .paneltitle .surf{font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; padding:3px 9px; border-radius:var(--r-pill); background:var(--badge); color:var(--badgetx);}
+  .panelsub{margin:0 0 18px; color:var(--muted); font-size:13.5px; max-width:64ch;}
+
+  /* viz */
+  .viz{border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; margin-bottom:22px; box-shadow:0 1px 3px var(--shadow); background:var(--panel);}
+  .chrome{display:flex; align-items:center; gap:9px; padding:8px 14px; border-bottom:1px solid var(--border); background:var(--chrome); font-size:11.5px; color:var(--muted); min-height:38px;}
+  .traffic{display:flex; gap:6px;} .traffic i{width:10px;height:10px;border-radius:50%;display:block;}
+  .traffic i:nth-child(1){background:#ff5f57;}.traffic i:nth-child(2){background:#febc2e;}.traffic i:nth-child(3){background:#28c840;}
+  .menubar{display:flex; gap:16px; font-size:12px; color:var(--muted);}
+  .menubar .mi{font-weight:500;} .menubar .mi.on{color:var(--text); position:relative;}
+  .toolbar{display:flex; align-items:center; gap:8px; margin-left:auto;}
+  .searchbox{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--faint); background:var(--quote); border:1px solid var(--border); border-radius:var(--r-md); padding:4px 10px; min-width:120px;}
+  .btn{font:inherit; font-size:12px; font-weight:600; padding:5px 12px; border-radius:var(--r-md); border:1px solid var(--border); background:var(--panel); color:var(--text); cursor:pointer; display:inline-flex; align-items:center; gap:6px;}
+  .btn.primary{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .btn.dim{color:var(--faint); opacity:.6;}
+  .vizbody{padding:18px; position:relative; min-height:150px; display:flex; gap:16px;}
+
+  .qcard{background:var(--quote); border:1px solid var(--border); border-radius:var(--r-md); padding:11px 12px; font-size:13px; position:relative; transition:.15s;}
+  .qcard + .qcard{margin-top:9px;}
+  .qcard.sel{border-color:var(--accent); background:var(--sugg);}
+  .qcard.ghost{opacity:.4; border-style:dashed;}
+  .qcard .qt{margin:0 0 6px; line-height:1.5;}
+  .qcard .qm{display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--muted);}
+  .av{width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;font-size:9px;font-weight:700;color:#fff;}
+  .schip{font-size:10.5px; padding:1px 8px; border-radius:var(--r-pill); font-weight:500;}
+  .colcards{flex:1; min-width:0;}
+  .grouphead{font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:650; margin:0 0 8px;}
+  .grouphead.second{margin-top:16px;}
+
+  /* native NSMenu illustration */
+  .nsmenu{width:210px; background:color-mix(in srgb,var(--panel) 82%,transparent); backdrop-filter:blur(20px);
+    border:1px solid var(--border); border-radius:var(--r-md); box-shadow:0 12px 40px var(--pop); padding:4px; font-size:12.5px; align-self:flex-start;}
+  .nsmenu .mrow{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:5px 9px; border-radius:var(--r-sm); color:var(--text);}
+  .nsmenu .mrow.hl{background:var(--accent); color:#fff;}
+  .nsmenu .mrow.dim{color:var(--faint);}
+  .nsmenu .sep{height:1px; background:var(--border); margin:4px 6px;}
+  .nsmenu .chev{opacity:.6; font-size:11px;}
+  .submenu{width:190px; background:color-mix(in srgb,var(--panel) 82%,transparent); backdrop-filter:blur(20px);
+    border:1px solid var(--border); border-radius:var(--r-md); box-shadow:0 12px 40px var(--pop); padding:4px; font-size:12.5px; align-self:flex-start; margin-top:24px;}
+  .submenu .shead{font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:650; padding:6px 9px 3px;}
+  .submenu .mrow .dot{width:7px;height:7px;border-radius:50%;margin-right:2px;}
+  .stack{display:flex; gap:8px; align-items:flex-start;}
+
+  /* web popover illustration */
+  .webpop{width:230px; background:var(--panel); border:1px solid var(--border); border-radius:var(--r-lg); box-shadow:0 10px 30px var(--pop); overflow:hidden; align-self:flex-start;}
+  .webpop .ph{padding:9px 10px; border-bottom:1px solid var(--border);}
+  .webpop .psearch{width:100%; font:inherit; font-size:12px; padding:6px 9px; color:var(--faint); background:var(--quote); border:1px solid var(--border); border-radius:var(--r-md);}
+  .webpop .pl{padding:5px;}
+  .webpop .psec{font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:650; padding:6px 8px 3px;}
+  .webpop .prow{display:flex; align-items:center; gap:9px; padding:6px 8px; border-radius:var(--r-md); font-size:12.5px;}
+  .webpop .prow.hl{background:var(--hover);}
+  .webpop .prow.cur{color:var(--muted);} .webpop .prow.cur .now{margin-left:auto; font-size:9.5px; text-transform:uppercase; color:var(--faint);}
+  .webpop .prow .dot{width:7px;height:7px;border-radius:50%;}
+
+  /* drag illustration */
+  .dragghost{position:absolute; padding:8px 11px; background:var(--panel); border:1px solid var(--accent); border-radius:var(--r-md); box-shadow:0 8px 24px var(--pop); font-size:12px; display:flex; align-items:center; gap:8px; transform:rotate(-2deg); z-index:5;}
+  .dragghost .cnt{background:var(--accent); color:#fff; font-size:10px; font-weight:700; border-radius:var(--r-pill); padding:1px 7px;}
+  .rail{width:150px; background:var(--chrome); border:1px solid var(--border); border-radius:var(--r-md); padding:9px; align-self:stretch;}
+  .rail .rrow{font-size:11.5px; padding:5px 7px; border-radius:var(--r-sm); color:var(--muted); display:flex; align-items:center; gap:6px;}
+  .rail .rrow.drop{background:var(--sugg); color:var(--accent); box-shadow:inset 0 0 0 1.5px var(--accent);}
+  .rail .rrow .dot{width:6px;height:6px;border-radius:50%;}
+  .springnote{position:absolute; right:14px; top:12px; font-size:10.5px; color:var(--faint); text-align:right; max-width:150px; line-height:1.4;}
+  .scrollcue{position:absolute; bottom:8px; left:50%; transform:translateX(-50%); font-size:10.5px; color:var(--accent); display:flex; align-items:center; gap:5px; background:var(--sugg); padding:3px 10px; border-radius:var(--r-pill);}
+
+  .callout{position:absolute; font-size:10.5px; color:var(--accent); font-weight:600; background:var(--sugg); border:1px solid color-mix(in srgb,var(--accent) 25%,transparent); border-radius:var(--r-pill); padding:2px 9px; z-index:6;}
+
+  /* steps / fails / edges */
+  .cols{display:grid; grid-template-columns:1fr; gap:22px;}
+  h3.sh{font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:650; margin:0 0 12px; display:flex; align-items:center; gap:8px;}
+  ol.steps{margin:0; padding:0; list-style:none; counter-reset:s;}
+  ol.steps li{counter-increment:s; position:relative; padding:0 0 14px 40px; }
+  ol.steps li::before{content:counter(s); position:absolute; left:0; top:-1px; width:26px; height:26px; border-radius:50%;
+    background:var(--quote); border:1px solid var(--border); color:var(--muted); font-size:12px; font-weight:700; display:grid; place-items:center;}
+  ol.steps li:not(:last-child)::after{content:""; position:absolute; left:13px; top:27px; bottom:2px; width:1px; background:var(--border);}
+  ol.steps .st{font-size:14px;}
+  ol.steps .sn{display:block; font-size:12.5px; color:var(--muted); margin-top:3px;}
+  ol.steps .mono{font-family:var(--mono); font-size:11.5px; background:var(--badge); color:var(--badgetx); padding:1px 5px; border-radius:var(--r-sm);}
+  .stag{display:inline-block; font-size:10px; font-weight:700; padding:1px 7px; border-radius:var(--r-pill); vertical-align:middle; margin-left:6px;}
+  .stag.ok{color:var(--ok); background:var(--ok-bg);} .stag.new{color:var(--new); background:var(--new-bg);} .stag.risk{color:var(--risk); background:var(--risk-bg);}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+  @media (max-width:720px){ .grid2{grid-template-columns:1fr;} .vizbody{flex-direction:column;} }
+  .box{border:1px solid var(--border); border-radius:var(--r-lg); padding:15px 16px; background:var(--panel);}
+  .box.fail{border-left:3px solid var(--risk);}
+  .box.edge{border-left:3px solid var(--accent);}
+  .box ul{margin:0; padding-left:2px; list-style:none;}
+  .box li{font-size:13px; padding:6px 0 6px 20px; position:relative; border-top:1px solid var(--border);}
+  .box li:first-child{border-top:none;}
+  .box.fail li::before{content:"▲"; position:absolute; left:0; top:6px; font-size:9px; color:var(--risk);}
+  .box.edge li::before{content:"◆"; position:absolute; left:0; top:6px; font-size:9px; color:var(--accent);}
+  .box li b{font-weight:600;}
+  .box .mono{font-family:var(--mono); font-size:11px; background:var(--badge); color:var(--badgetx); padding:1px 4px; border-radius:var(--r-sm);}
+
+  .foot{margin-top:30px; padding-top:18px; border-top:1px solid var(--border); font-size:12.5px; color:var(--muted); line-height:1.7;}
+  .foot b{color:var(--text);}
+  @media (prefers-reduced-motion:reduce){ *{transition-duration:.001ms!important;} }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Manual re-assignment · build plan &amp; interaction spec</p>
+  <h1>“Move to” — reassigning quotes across two apps, in two phases</h1>
+  <p class="lede">Backend is shipped (endpoint + importer suppression + freeze-on-move). Everything below is the UI. Pick an app and a phase; each panel is the step-by-step, the failure modes, and the edge cases — tagged against what already exists in the code.</p>
+
+  <div class="legend">
+    <span class="tag ok"><span class="g">✓</span> already built</span>
+    <span class="tag new"><span class="g">✦</span> new work</span>
+    <span class="tag risk"><span class="g">▲</span> risk / hard</span>
+  </div>
+
+  <div class="controls">
+    <div class="ctl"><span class="clabel">App</span>
+      <div class="seg" role="group" aria-label="App">
+        <button data-set="app" data-val="mac" aria-pressed="true">macOS (embedded)</button>
+        <button data-set="app" data-val="spa" aria-pressed="false">CLI SPA (browser)</button>
+      </div>
+    </div>
+    <div class="ctl"><span class="clabel">Phase</span>
+      <div class="seg" role="group" aria-label="Phase">
+        <button data-set="phase" data-val="1" aria-pressed="true">1 · Send-to</button>
+        <button data-set="phase" data-val="2" aria-pressed="false">2 · Drag</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="paneltitle" id="pt"></div>
+  <p class="panelsub" id="ps"></p>
+
+  <div class="viz" id="viz"></div>
+
+  <div class="cols">
+    <div><h3 class="sh">Step by step</h3><ol class="steps" id="steps"></ol></div>
+    <div class="grid2">
+      <div class="box fail"><h3 class="sh">Failure modes</h3><ul id="fails"></ul></div>
+      <div class="box edge"><h3 class="sh">Edge cases</h3><ul id="edges"></ul></div>
+    </div>
+  </div>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var state={app:"mac",phase:"1"};
+
+  // ── viz illustrations ─────────────────────────────────────────────────
+  function cards(sel){ // sel = array of selected indices
+    var qs=[
+      {t:"I typed the client’s name and got nothing — it was filed under “organisation.”",w:"P2",c:"#7c3aed",s:"confusion",sc:"var(--s-confusion)"},
+      {t:"Knowing it all stays on my machine is the only reason I’d put real transcripts in.",w:"P5",c:"#0891b2",s:"confidence",sc:"var(--s-confidence)"},
+      {t:"The little checklist at the start made me feel like I knew what to do next.",w:"P1",c:"#2563eb",s:"satisfaction",sc:"var(--s-satisfaction)"}
+    ];
+    return '<div class="colcards"><p class="grouphead">Search &amp; filtering — section</p>'+
+      qs.map(function(q,i){return '<div class="qcard'+(sel.indexOf(i)>=0?' sel':'')+'">'+
+        '<p class="qt">“'+q.t+'”</p><span class="qm"><span class="av" style="background:'+q.c+'">'+q.w+
+        '</span>Participant '+q.w.slice(1)+' <span class="schip" style="background:color-mix(in srgb,'+q.sc+' 12%,transparent);color:'+q.sc+'">'+q.s+'</span></span></div>';}).join('')+'</div>';
+  }
+
+  var VIZ={
+    "mac-1":
+      '<div class="chrome"><span class="traffic"><i></i><i></i><i></i></span>'+
+      '<span class="menubar"><span class="mi">Edit</span><span class="mi">View</span><span class="mi on">Quotes</span><span class="mi">Video</span></span>'+
+      '<span style="margin-left:auto;font-size:11px;color:var(--faint)">Native menu bar · no web toolbar</span></div>'+
+      '<div class="vizbody">'+cards([0,1])+
+        '<div class="stack">'+
+          '<div class="nsmenu">'+
+            '<div class="mrow">Star<span class="chev">⌘S</span></div>'+
+            '<div class="mrow">Hide</div>'+
+            '<div class="mrow">Add Tag…</div>'+
+            '<div class="sep"></div>'+
+            '<div class="mrow hl">Move to<span class="chev">▸</span></div>'+
+            '<div class="mrow">Reveal in Transcript</div>'+
+          '</div>'+
+          '<div class="submenu">'+
+            '<div class="shead">Sections</div>'+
+            '<div class="mrow"><span class="dot" style="background:var(--accent)"></span>Onboarding</div>'+
+            '<div class="mrow dim"><span class="dot" style="background:var(--faint)"></span>Search &amp; filtering</div>'+
+            '<div class="shead">Themes</div>'+
+            '<div class="mrow"><span class="dot" style="background:#7c3aed"></span>Trust &amp; privacy</div>'+
+            '<div class="mrow hl"><span class="dot" style="background:#7c3aed"></span>Speed &amp; responsiveness</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>',
+    "spa-1":
+      '<div class="chrome"><span class="traffic"><i></i><i></i><i></i></span><span style="font-weight:600;color:var(--text)">Quotes</span>'+
+      '<span class="toolbar"><span class="searchbox">⌕ Search…</span><span class="btn dim">Starred</span><span class="btn primary">Move to ▾</span></span></div>'+
+      '<div class="vizbody">'+cards([0,1])+
+        '<div class="webpop">'+
+          '<div class="ph"><div class="psearch">Search sections &amp; themes…</div></div>'+
+          '<div class="pl">'+
+            '<div class="psec">Sections</div>'+
+            '<div class="prow"><span class="dot" style="background:var(--accent)"></span>Onboarding</div>'+
+            '<div class="prow cur"><span class="dot" style="background:var(--faint)"></span>Search &amp; filtering<span class="now">current</span></div>'+
+            '<div class="psec">Themes</div>'+
+            '<div class="prow"><span class="dot" style="background:#7c3aed"></span>Trust &amp; privacy</div>'+
+            '<div class="prow hl"><span class="dot" style="background:#7c3aed"></span>Speed &amp; responsiveness</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>',
+    "mac-2":
+      '<div class="chrome"><span class="traffic"><i></i><i></i><i></i></span>'+
+      '<span style="font-size:11px;color:var(--faint)">Native drag · NSDraggingSession across the AppKit ↔ WebView seam</span></div>'+
+      '<div class="vizbody">'+
+        '<div class="rail"><div class="rrow" style="font-weight:650;color:var(--text)">Contents</div>'+
+          '<div class="rrow"><span class="dot" style="background:var(--accent)"></span>Onboarding</div>'+
+          '<div class="rrow"><span class="dot" style="background:var(--accent)"></span>Search…</div>'+
+          '<div class="rrow drop"><span class="dot" style="background:#7c3aed"></span>Trust &amp; privacy</div>'+
+          '<div class="rrow"><span class="dot" style="background:#7c3aed"></span>Speed…</div></div>'+
+        '<div class="colcards" style="position:relative;min-height:120px">'+cards([0])+
+          '<div class="dragghost" style="left:70px;top:40px"><span class="cnt">2</span>“I typed the client’s name…”</div>'+
+          '<div class="springnote">Rail spring-opens on hover (deliberate delay — Finder folders since Jaguar; adjustable in Accessibility)</div>'+
+        '</div>'+
+      '</div>',
+    "spa-2":
+      '<div class="chrome"><span class="traffic"><i></i><i></i><i></i></span>'+
+      '<span style="font-size:11px;color:var(--faint)">All-web drag · Pointer Events + manual autoscroll (not native HTML5 DnD)</span></div>'+
+      '<div class="vizbody" style="position:relative">'+
+        '<div class="rail"><div class="rrow" style="font-weight:650;color:var(--text)">Contents</div>'+
+          '<div class="rrow"><span class="dot" style="background:var(--accent)"></span>Onboarding</div>'+
+          '<div class="rrow"><span class="dot" style="background:var(--accent)"></span>Search…</div>'+
+          '<div class="rrow drop"><span class="dot" style="background:#7c3aed"></span>Speed &amp; responsiveness</div></div>'+
+        '<div class="colcards" style="position:relative;min-height:130px">'+cards([2])+
+          '<div class="dragghost" style="left:40px;top:20px">“The little checklist…”</div>'+
+          '<div class="scrollcue">▲ auto-scrolling to reach an off-screen theme</div>'+
+        '</div>'+
+      '</div>',
+  };
+
+  var DATA={
+    "mac-1":{
+      title:"macOS · Phase 1 — Send-to", surf:"native",
+      sub:"Native NSMenu (right-click) and the existing Quotes menu — no web toolbar re-imported into the embedded shell.",
+      steps:[
+        {t:"Select one or more quotes.",n:"Reuses the existing multi-select; the bridge already publishes <span class='mono'>selectedQuoteCount</span> + <span class='mono'>focusedQuoteId</span>.",g:"ok"},
+        {t:"Invoke — Control-click the selection, or Quotes ▸ Move to in the menu bar.",n:"Menu-bar submenu drops into the existing <span class='mono'>CommandMenu(\"Quotes\")</span>; the right-click NSMenu is new AppKit — WebView has no context-menu handling today.",g:"risk"},
+        {t:"“Move to ▸” fans out to Sections / Themes, built from the live group list.",n:"New <span class='mono'>quote-groups</span> bridge message (JS→Swift), pulled on menu-open so it can’t go stale.",g:"new"},
+        {t:"Current group is checked/disabled (single selection); omitted for a cross-group multi-select.",n:"",g:"new"},
+        {t:"Pick a target → the menu fires a command back to the web layer.",n:"<span class='mono'>bridgeHandler.menuAction(\"moveTo:theme:42\")</span> — the same channel Star/Hide/Tag already use.",g:"ok"},
+        {t:"JS calls the endpoint; the quote moves; VoiceOver announces it.",n:"<span class='mono'>reassignQuotes()</span> → <span class='mono'>POST /reassign</span>, both shipped. Quiet in-place move, no toast.",g:"ok"},
+      ],
+      fails:[
+        "<b>Stale group list.</b> A rename / new theme / incremental run happened after the list was pushed → menu offers a dead target. <b>Fix:</b> pull on menu-open, don’t cache.",
+        "<b>Endpoint fails</b> (500 / offline). Move must revert and surface a native error — never a silent success.",
+        "<b>No selection / not on Quotes tab.</b> “Move to” is disabled (gated on <span class='mono'>hasSelection</span> / <span class='mono'>onQuotesTab</span>).",
+        "<b>Web layer lost first-responder.</b> Menu-bar command still has to reach the report — relies on bridge focus tracking staying correct.",
+      ],
+      edges:[
+        "<b>Many themes (>~15).</b> NSMenu scrolls; no search (type-to-select helps). The menu-structure review is parked in 100days.",
+        "<b>Right-click outside the selection</b> acts on that single quote; inside it acts on all selected — must mirror the existing bulk rule.",
+        "<b>Move to current group</b> → no-op (disabled), or read as “confirm placement”. Decide.",
+        "<b>Orphan from the Uncategorised floor</b> → same menu; it leaves the floor on move.",
+        "<b>Keyboard / VoiceOver</b> → the menu bar is the free accessible path.",
+      ],
+    },
+    "spa-1":{
+      title:"CLI SPA · Phase 1 — Send-to", surf:"web · all frontend",
+      sub:"“Move to” rides the toolbar that already hosts search — no new persistent chrome, and it’s the accessibility baseline for every browser.",
+      steps:[
+        {t:"Select one or more quotes.",n:"Existing <span class='mono'>FocusContext.selectedIds</span> multi-select.",g:"ok"},
+        {t:"Click “Move to” in the toolbar — enabled only when ≥1 quote is selected.",n:"New control in the existing toolbar; nothing added to unselected cards.",g:"new"},
+        {t:"A searchable picker opens: Sections / Themes, displayed labels, current group marked & disabled.",n:"Reuses existing popover primitives; search is the browser’s edge over the native fly-out.",g:"new"},
+        {t:"Pick a target.",n:"<span class='mono'>reassignQuotes(ids, kind, id)</span> — the typed client shipped this session.",g:"ok"},
+        {t:"Optimistic move + refetch; quiet in-place confirm + <span class='mono'>announce()</span>.",n:"Membership lives in the island fetch, so move-locally-then-reconcile, or just refetch.",g:"new"},
+      ],
+      fails:[
+        "<b>Endpoint fails.</b> Revert the optimistic move; inline error. Assert <span class='mono'>res.ok</span> — the codebase has a silent-401 history.",
+        "<b>No selection</b> → button disabled.",
+        "<b>Stale group list</b> → build the picker from a fresh fetch on open.",
+        "<b>401 / network</b> → surfaced, never a fake “moved”.",
+      ],
+      edges:[
+        "<b>Many themes</b> → the search field earns its keep here.",
+        "<b>Cross-group multi-select</b> → omit the “current” marker (it’s undefined).",
+        "<b>Same-group pick</b> → no-op.",
+        "<b>Orphan rescue</b> from the floor via the same picker.",
+        "<b>Keyboard</b> → button focusable, picker arrow-nav + type-to-filter, announce.",
+        "<b>Touch / mobile</b> → tap-target sizing.",
+      ],
+    },
+    "mac-2":{
+      title:"macOS · Phase 2 — Drag", surf:"native · spike",
+      sub:"The peak-Mac gesture, and the hardest thing on the list: a native-quality drag from a webview quote onto the native Contents rail.",
+      steps:[
+        {t:"Pick up the selected quote(s) — a native drag begins.",n:"<span class='mono'>NSDraggingSession</span> initiated from inside the WebView — crosses the AppKit ↔ WebView seam.",g:"risk"},
+        {t:"Drag toward the Contents rail; if collapsed, hovering spring-opens it after a deliberate delay.",n:"Finder-folder precedent (since Jaguar); delay is adjustable under Accessibility → Pointer Control.",g:"new"},
+        {t:"If the target is off-screen, edge proximity autoscrolls the list.",n:"WebKit’s native DnD autoscroll is unreliable → implement it manually.",g:"risk"},
+        {t:"Hover a section/theme row → it highlights as a valid drop target; drop to commit.",n:"Drop → <span class='mono'>POST /reassign</span> (shipped); ghost animates into place.",g:"ok"},
+      ],
+      fails:[
+        "<b>Cross-seam drag can’t reach native quality.</b> The bar is “as good as native” — if it can’t, don’t ship it.",
+        "<b>Spring-load misfire</b> (opens unintentionally) → tune the delay; honour the Accessibility setting.",
+        "<b>Drop on an invalid target</b> (header vs row) → clear reject, snap back.",
+        "<b>Drag cancelled</b> (Esc / drop outside) → snap back, no move, no partial state.",
+      ],
+      edges:[
+        "<b>Off-screen target</b> → autoscroll (only toward the edge, velocity ramp, dead zone).",
+        "<b>Long rail list</b> → autoscroll within the rail too.",
+        "<b>Multi-quote drag</b> → ghost carries a count badge.",
+        "<b>Reduced motion</b> → no fling; instant settle.",
+        "<b>Accessibility</b> → drag is never the only path; Phase 1 menu is the required alternative (WCAG 2.1.1).",
+      ],
+    },
+    "spa-2":{
+      title:"CLI SPA · Phase 2 — Drag", surf:"web · spike",
+      sub:"All-web drag to the Contents rail. Works in Chrome/Firefox; WebKit (Safari + your WKWebView) is the fragile one to prove.",
+      steps:[
+        {t:"Pointer-down on a quote (or a drag handle) — Pointer Events, not native HTML5 DnD.",n:"Native HTML5 DnD autoscroll is absent in WebKit; a pointer-events lib (dnd-kit) behaves consistently across engines.",g:"risk"},
+        {t:"Drag toward the Contents rail; edge proximity autoscrolls to reach an off-screen target.",n:"Autoscroll only when moving toward the edge, with a velocity ramp — the classic bug is scrolling on drag-start.",g:"new"},
+        {t:"A rail row highlights as the drop target; drop to commit.",n:"Drop → <span class='mono'>POST /reassign</span> (shipped) → refetch.",g:"ok"},
+      ],
+      fails:[
+        "<b>WebKit fragility.</b> No native autoscroll; even dnd-kit has a live Safari 26 offset bug (#1825) → test on real WebKit + the WKWebView, not just Chrome.",
+        "<b>Drag vs text-selection conflict</b> → use a handle or a long-press threshold.",
+        "<b>No keyboard path</b> in a drag → Phase 1 is the required alternative.",
+        "<b>Touch devices</b> → drag ergonomics; enhance or disable.",
+      ],
+      edges:[
+        "<b>Off-screen target</b> via autoscroll (toward-edge only, dead zone).",
+        "<b>Bundle-size gate (220 kB)</b> → justify the lib, or hand-roll a tiny pointer-autoscroll.",
+        "<b>Long list / reduced motion / multi-quote ghost.</b>",
+      ],
+    },
+  };
+
+  var FOOT={
+    "mac-1":"<b>Effort:</b> menu bar = small (rides <span style='font-family:var(--mono)'>QuotesMenuContent</span> + <span style='font-family:var(--mono)'>menuAction</span>); bridge group-list = small; native context menu = the one medium AppKit chunk. <b>Ship after</b> the CLI SPA loop is proven.",
+    "spa-1":"<b>Effort:</b> all frontend, zero Swift. <b>Ship first</b> — it proves the endpoint end-to-end and is the accessibility baseline every other trigger leans on.",
+    "mac-2":"<b>Effort:</b> the hardest item. <b>Spike in isolation</b> before committing — cross-seam native drag either reaches native quality or doesn’t ship.",
+    "spa-2":"<b>Effort:</b> medium, gated on a WebKit device-test pass and the bundle budget. <b>Do after</b> Phase 1 lands everywhere.",
+  };
+
+  function esc(){}
+  function render(){
+    var key=state.app+"-"+state.phase, d=DATA[key];
+    document.getElementById("pt").innerHTML=d.title+' <span class="surf">'+d.surf+'</span>';
+    document.getElementById("ps").textContent=d.sub;
+    document.getElementById("viz").innerHTML=VIZ[key];
+    document.getElementById("steps").innerHTML=d.steps.map(function(s){
+      return '<li><span class="st">'+s.t+'<span class="stag '+s.g+'">'+({ok:"built",new:"new",risk:"risk"}[s.g])+'</span></span>'+(s.n?'<span class="sn">'+s.n+'</span>':'')+'</li>';
+    }).join("");
+    document.getElementById("fails").innerHTML=d.fails.map(function(f){return '<li>'+f+'</li>';}).join("");
+    document.getElementById("edges").innerHTML=d.edges.map(function(e){return '<li>'+e+'</li>';}).join("");
+    document.getElementById("foot").innerHTML=FOOT[key];
+  }
+
+  document.querySelectorAll(".seg button").forEach(function(b){
+    b.addEventListener("click",function(){
+      state[b.dataset.set]=b.dataset.val;
+      b.parentElement.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",String(x===b));});
+      render();
+    });
+  });
+  render();
+})();
+</script>

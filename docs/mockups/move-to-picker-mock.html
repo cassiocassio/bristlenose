@@ -1,0 +1,731 @@
+<title>Move to… — send-to picker mock</title>
+
+<style>
+  /* ── Bristlenose tokens (mirrored from theme/colors/palette-default.css
+        + tokens.css so this reads as the real product) ─────────────────── */
+  :root {
+    --bn-bg: #ffffff;
+    --bn-panel: #ffffff;
+    --bn-text: #1a1a1a;
+    --bn-muted: #6b7280;
+    --bn-faint: #9ca3af;
+    --bn-border: #e5e7eb;
+    --bn-border-hover: #d1d5db;
+    --bn-accent: #007aff;
+    --bn-hover: #e8f0fe;
+    --bn-quote-bg: #f9fafb;
+    --bn-badge-bg: #f3f4f6;
+    --bn-badge-text: #374151;
+    --bn-chrome: #f6f7f9;
+    --bn-suggestion-bg: #eff6ff;
+    --bn-starred: #f5a623;
+    --bn-shadow: rgba(0, 0, 0, 0.10);
+    --bn-shadow-pop: rgba(0, 0, 0, 0.16);
+
+    /* sentiment (shipped taxonomy) */
+    --s-frustration: #ea580c; --s-frustration-bg: #fff7ed;
+    --s-confusion:   #dc2626; --s-confusion-bg:   #fef2f2;
+    --s-doubt:       #7c3aed; --s-doubt-bg:       #f5f3ff;
+    --s-satisfaction:#16a34a; --s-satisfaction-bg:#f0fdf4;
+    --s-delight:     #059669; --s-delight-bg:     #ecfdf5;
+    --s-confidence:  #2563eb; --s-confidence-bg:  #eff6ff;
+
+    --r-sm: 3px; --r-md: 6px; --r-lg: 8px; --r-pill: 999px;
+    --sp-xs: 4px; --sp-sm: 8px; --sp-md: 12px; --sp-lg: 20px; --sp-xl: 32px;
+
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+            Helvetica, Arial, sans-serif;
+
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bn-bg: #0d0d0d; --bn-panel: #161616; --bn-text: #e5e7eb;
+      --bn-muted: #9ca3af; --bn-faint: #6b7280; --bn-border: #2d2d2d;
+      --bn-border-hover: #4b5563; --bn-accent: #0a84ff; --bn-hover: #1e293b;
+      --bn-quote-bg: #1a1a1a; --bn-badge-bg: #252525; --bn-badge-text: #d1d5db;
+      --bn-chrome: #131313; --bn-suggestion-bg: #111d2e; --bn-starred: #f5a623;
+      --bn-shadow: rgba(0, 0, 0, 0.5); --bn-shadow-pop: rgba(0, 0, 0, 0.6);
+      --s-frustration-bg:#2a1a0e; --s-confusion-bg:#2a1414; --s-doubt-bg:#1e162e;
+      --s-satisfaction-bg:#0f2918; --s-delight-bg:#0c241a; --s-confidence-bg:#111d2e;
+      color-scheme: dark;
+    }
+  }
+  /* viewer toggle wins over the media query in both directions */
+  :root[data-theme="dark"] {
+    --bn-bg: #0d0d0d; --bn-panel: #161616; --bn-text: #e5e7eb;
+    --bn-muted: #9ca3af; --bn-faint: #6b7280; --bn-border: #2d2d2d;
+    --bn-border-hover: #4b5563; --bn-accent: #0a84ff; --bn-hover: #1e293b;
+    --bn-quote-bg: #1a1a1a; --bn-badge-bg: #252525; --bn-badge-text: #d1d5db;
+    --bn-chrome: #131313; --bn-suggestion-bg: #111d2e; --bn-starred: #f5a623;
+    --bn-shadow: rgba(0, 0, 0, 0.5); --bn-shadow-pop: rgba(0, 0, 0, 0.6);
+    --s-frustration-bg:#2a1a0e; --s-confusion-bg:#2a1414; --s-doubt-bg:#1e162e;
+    --s-satisfaction-bg:#0f2918; --s-delight-bg:#0c241a; --s-confidence-bg:#111d2e;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bn-bg: #ffffff; --bn-panel: #ffffff; --bn-text: #1a1a1a;
+    --bn-muted: #6b7280; --bn-faint: #9ca3af; --bn-border: #e5e7eb;
+    --bn-border-hover: #d1d5db; --bn-accent: #007aff; --bn-hover: #e8f0fe;
+    --bn-quote-bg: #f9fafb; --bn-badge-bg: #f3f4f6; --bn-badge-text: #374151;
+    --bn-chrome: #f6f7f9; --bn-suggestion-bg: #eff6ff; --bn-starred: #f5a623;
+    --bn-shadow: rgba(0,0,0,0.10); --bn-shadow-pop: rgba(0,0,0,0.16);
+    --s-frustration-bg:#fff7ed; --s-confusion-bg:#fef2f2; --s-doubt-bg:#f5f3ff;
+    --s-satisfaction-bg:#f0fdf4; --s-delight-bg:#ecfdf5; --s-confidence-bg:#eff6ff;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+
+  .wrap {
+    font-family: var(--font);
+    color: var(--bn-text);
+    background: var(--bn-bg);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    padding: clamp(16px, 4vw, 40px);
+    max-width: 1180px;
+    margin: 0 auto;
+    font-size: 15px;
+  }
+
+  /* ── Masthead ─────────────────────────────────────────────────────────── */
+  .masthead { margin-bottom: var(--sp-lg); }
+  .eyebrow {
+    font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--bn-accent); font-weight: 600; margin: 0 0 6px;
+  }
+  .masthead h1 {
+    font-size: clamp(22px, 3.4vw, 30px); font-weight: 640; margin: 0 0 8px;
+    letter-spacing: -0.015em; text-wrap: balance;
+  }
+  .masthead p { margin: 0; color: var(--bn-muted); max-width: 62ch; }
+  .built-note {
+    margin-top: var(--sp-md); display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--bn-muted);
+    background: var(--s-satisfaction-bg); border: 1px solid var(--bn-border);
+    border-radius: var(--r-pill); padding: 5px 12px 5px 10px;
+  }
+  .built-note b { color: var(--bn-text); font-weight: 600; }
+  .built-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--s-satisfaction); flex: none; }
+
+  /* ── Layout ───────────────────────────────────────────────────────────── */
+  .grid { display: grid; grid-template-columns: 1fr 300px; gap: var(--sp-lg); align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+  /* ── The stage: a slice of the Quotes tab ─────────────────────────────── */
+  .stage {
+    background: var(--bn-panel); border: 1px solid var(--bn-border);
+    border-radius: var(--r-lg); overflow: hidden; position: relative;
+    box-shadow: 0 1px 2px var(--bn-shadow);
+  }
+  .stage-bar {
+    display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+    border-bottom: 1px solid var(--bn-border); background: var(--bn-chrome);
+    font-size: 12px; color: var(--bn-muted); min-height: 44px;
+  }
+  .traffic { display: flex; gap: 7px; margin-right: 4px; }
+  .traffic i { width: 11px; height: 11px; border-radius: 50%; display: block; }
+  .traffic i:nth-child(1){ background:#ff5f57;} .traffic i:nth-child(2){ background:#febc2e;} .traffic i:nth-child(3){ background:#28c840;}
+  .tabname { font-weight: 600; color: var(--bn-text); }
+  .stage-body { padding: var(--sp-lg); display: flex; flex-direction: column; gap: var(--sp-xl); }
+
+  .grouphead { display: flex; align-items: baseline; gap: 10px; margin-bottom: var(--sp-md); }
+  .grouphead h2 { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bn-faint); font-weight: 650; margin: 0; }
+  .group-label { display: flex; align-items: baseline; gap: 8px; }
+  .group-label .name { font-size: 17px; font-weight: 620; letter-spacing: -0.01em; }
+  .count { font-size: 12px; color: var(--bn-faint); font-variant-numeric: tabular-nums; }
+  .kind-tag {
+    font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600;
+    padding: 2px 7px; border-radius: var(--r-pill); border: 1px solid var(--bn-border); color: var(--bn-muted);
+  }
+  .group { scroll-margin-top: 20px; }
+  .group.drop-flash > .cards { animation: dropflash 0.9s ease; }
+  @keyframes dropflash { 0% { background: var(--bn-suggestion-bg); } 100% { background: transparent; } }
+
+  .cards { display: flex; flex-direction: column; gap: 10px; border-radius: var(--r-md); }
+
+  .floor { border: 1px dashed var(--bn-border-hover); border-radius: var(--r-md); padding: 14px; background: var(--bn-chrome); }
+  .floor .grouphead { margin-bottom: 6px; }
+  .floor .subtitle { font-size: 12.5px; color: var(--bn-muted); margin: 0 0 12px; max-width: 60ch; }
+
+  /* ── Quote card ───────────────────────────────────────────────────────── */
+  .card {
+    position: relative; background: var(--bn-quote-bg); border: 1px solid var(--bn-border);
+    border-radius: var(--r-md); padding: 13px 14px 12px; display: flex; gap: 12px;
+    transition: box-shadow .15s, border-color .15s, background .15s, transform .2s, opacity .2s;
+  }
+  .card:hover { border-color: var(--bn-border-hover); box-shadow: 0 1px 3px var(--bn-shadow); }
+  .card.selected { border-color: var(--bn-accent); background: var(--bn-suggestion-bg); }
+  .card.moving { opacity: 0; transform: translateY(-6px); }
+  .card.landing { animation: land .32s ease; }
+  @keyframes land { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .selbox {
+    flex: none; width: 18px; height: 18px; margin-top: 2px; border-radius: var(--r-sm);
+    border: 1.5px solid var(--bn-border-hover); background: var(--bn-panel); cursor: pointer;
+    display: grid; place-items: center; padding: 0; transition: border-color .12s, background .12s;
+  }
+  .selbox:hover { border-color: var(--bn-accent); }
+  .card.selected .selbox { background: var(--bn-accent); border-color: var(--bn-accent); }
+  .selbox svg { width: 12px; height: 12px; stroke: #fff; opacity: 0; }
+  .card.selected .selbox svg { opacity: 1; }
+
+  .body { flex: 1; min-width: 0; }
+  .qtext { margin: 0 0 8px; font-size: 15px; line-height: 1.55; }
+  .qtext .qm { color: var(--bn-faint); }
+  .meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .speaker { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--bn-muted); }
+  .avatar { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 700; color: #fff; letter-spacing: .01em; }
+  .chip {
+    font-size: 11.5px; padding: 2px 9px; border-radius: var(--r-pill);
+    border: 1px solid transparent; font-weight: 500; white-space: nowrap;
+  }
+
+  /* per-card actions */
+  .actions { flex: none; display: flex; align-items: flex-start; gap: 2px; }
+  .iconbtn {
+    width: 30px; height: 30px; border-radius: var(--r-md); border: 1px solid transparent;
+    background: transparent; color: var(--bn-faint); cursor: pointer; display: grid; place-items: center;
+    transition: background .12s, color .12s, border-color .12s, opacity .12s;
+  }
+  .iconbtn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+  .iconbtn:hover { background: var(--bn-hover); color: var(--bn-accent); border-color: var(--bn-border); }
+  .iconbtn.star.on { color: var(--bn-starred); }
+  .iconbtn.star.on svg { fill: var(--bn-starred); }
+  .iconbtn.move.hoveronly { opacity: 0; }
+  .card:hover .iconbtn.move.hoveronly, .card:focus-within .iconbtn.move.hoveronly { opacity: 1; }
+  .iconbtn:focus-visible { outline: 2px solid var(--bn-accent); outline-offset: 1px; opacity: 1; }
+
+  /* ── Selection action bar ─────────────────────────────────────────────── */
+  .selbar {
+    position: sticky; top: 8px; z-index: 5; margin: 0 auto var(--sp-md);
+    display: none; align-items: center; gap: 12px; width: max-content;
+    background: var(--bn-text); color: var(--bn-bg); padding: 7px 8px 7px 16px;
+    border-radius: var(--r-pill); box-shadow: 0 6px 20px var(--bn-shadow-pop);
+  }
+  .selbar.show { display: flex; }
+  .selbar .n { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .selbar button {
+    font: inherit; font-size: 13px; font-weight: 600; border: none; cursor: pointer;
+    border-radius: var(--r-pill); padding: 6px 14px;
+  }
+  .selbar .primary { background: var(--bn-accent); color: #fff; }
+  .selbar .ghost { background: transparent; color: var(--bn-bg); opacity: .75; padding: 6px 8px; }
+  .selbar .ghost:hover { opacity: 1; }
+
+  /* ── The picker popover ───────────────────────────────────────────────── */
+  .pop {
+    position: fixed; z-index: 40; width: 288px; max-height: 380px;
+    background: var(--bn-panel); border: 1px solid var(--bn-border);
+    border-radius: var(--r-lg); box-shadow: 0 10px 34px var(--bn-shadow-pop);
+    display: flex; flex-direction: column; overflow: hidden;
+    opacity: 0; transform: translateY(-4px) scale(.985); transform-origin: top left;
+    transition: opacity .13s ease, transform .13s ease; pointer-events: none;
+  }
+  .pop.open { opacity: 1; transform: none; pointer-events: auto; }
+  .pop-head { padding: 10px 12px 8px; border-bottom: 1px solid var(--bn-border); }
+  .pop-title { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--bn-faint); font-weight: 650; margin: 0 0 8px; }
+  .pop-search {
+    width: 100%; font: inherit; font-size: 13.5px; padding: 7px 10px; color: var(--bn-text);
+    background: var(--bn-quote-bg); border: 1px solid var(--bn-border); border-radius: var(--r-md);
+  }
+  .pop-search:focus { outline: none; border-color: var(--bn-accent); box-shadow: 0 0 0 3px var(--bn-suggestion-bg); }
+  .pop-list { overflow-y: auto; padding: 6px; }
+  .pop-sec { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--bn-faint); font-weight: 650; padding: 8px 8px 4px; }
+  .opt {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    font: inherit; font-size: 13.5px; color: var(--bn-text); background: transparent;
+    border: none; border-radius: var(--r-md); padding: 8px 9px; cursor: pointer;
+  }
+  .opt:hover, .opt.active { background: var(--bn-hover); }
+  .opt .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--bn-border-hover); }
+  .opt .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .opt .tick { color: var(--bn-accent); font-size: 12px; font-weight: 600; }
+  .opt.current { color: var(--bn-muted); cursor: default; }
+  .opt.current:hover { background: transparent; }
+  .opt.current .now { font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--bn-faint); }
+  .opt.unplace { color: var(--bn-muted); }
+  .opt.unplace .dot { background: transparent; border: 1.5px dashed var(--bn-border-hover); }
+  .pop-div { height: 1px; background: var(--bn-border); margin: 6px 4px; }
+  .pop-empty { padding: 14px 10px; color: var(--bn-faint); font-size: 12.5px; text-align: center; }
+
+  /* ── Confirmation toast (in-panel, quiet) ─────────────────────────────── */
+  .confirm {
+    position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%) translateY(10px);
+    z-index: 30; display: flex; align-items: center; gap: 12px;
+    background: var(--bn-text); color: var(--bn-bg); font-size: 13px; font-weight: 500;
+    padding: 9px 10px 9px 15px; border-radius: var(--r-pill); box-shadow: 0 6px 20px var(--bn-shadow-pop);
+    opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+  }
+  .confirm.show { opacity: 1; transform: translateX(-50%); pointer-events: auto; }
+  .confirm .undo { font: inherit; font-size: 13px; font-weight: 700; color: var(--bn-accent);
+    background: transparent; border: none; cursor: pointer; padding: 3px 8px; border-radius: var(--r-sm); }
+  .confirm .undo:hover { background: rgba(255,255,255,.12); }
+  .confirm .u-hidden { display: none; }
+
+  /* ── Design-questions side panel ──────────────────────────────────────── */
+  .panel { display: flex; flex-direction: column; gap: var(--sp-md); position: sticky; top: 16px; }
+  .card-box { background: var(--bn-panel); border: 1px solid var(--bn-border); border-radius: var(--r-lg); padding: 16px; }
+  .card-box h3 { margin: 0 0 3px; font-size: 13px; font-weight: 650; }
+  .card-box .hint { margin: 0 0 12px; font-size: 12px; color: var(--bn-muted); }
+  .q { border-top: 1px solid var(--bn-border); padding-top: 12px; margin-top: 12px; }
+  .q:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+  .q .qlabel { font-size: 12.5px; font-weight: 620; margin: 0 0 8px; display: flex; align-items: center; gap: 6px; }
+  .q .qnum { color: var(--bn-accent); font-weight: 700; }
+  .seg { display: flex; background: var(--bn-quote-bg); border: 1px solid var(--bn-border); border-radius: var(--r-md); padding: 2px; gap: 2px; }
+  .seg button {
+    flex: 1; font: inherit; font-size: 12px; font-weight: 550; padding: 6px 4px; cursor: pointer;
+    border: none; background: transparent; color: var(--bn-muted); border-radius: var(--r-sm); transition: background .12s, color .12s;
+  }
+  .seg button[aria-pressed="true"] { background: var(--bn-panel); color: var(--bn-text); box-shadow: 0 1px 2px var(--bn-shadow); }
+  .seg button:focus-visible { outline: 2px solid var(--bn-accent); outline-offset: 1px; }
+  .q .rec { font-size: 11px; color: var(--bn-faint); margin: 7px 0 0; }
+  .q .rec b { color: var(--s-satisfaction); font-weight: 600; }
+
+  .legend { font-size: 11.5px; color: var(--bn-muted); line-height: 1.6; }
+  .legend b { color: var(--bn-text); font-weight: 600; }
+  .legend .drag { color: var(--bn-faint); }
+
+  .foot { margin-top: var(--sp-lg); font-size: 12px; color: var(--bn-faint); text-align: center; }
+  .kbd { font: inherit; font-size: 11px; background: var(--bn-badge-bg); color: var(--bn-badge-text);
+    border: 1px solid var(--bn-border); border-radius: var(--r-sm); padding: 1px 5px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">Manual re-assignment · Phase 0 · UX mock</p>
+    <h1>“Move to…” — letting the researcher overrule the machine’s grouping</h1>
+    <p>The pipeline’s sections and themes are a <em>draft</em>. This is the gesture that lets a
+      researcher re-file a quote where it belongs — and, per the write path already shipped, have it
+      stick across every re-analysis. Poke at it, then flip the three open decisions on the right.</p>
+    <span class="built-note"><span class="built-dot"></span>
+      <b>Write path shipped &amp; green</b> — endpoint, importer suppression, freeze-on-move. This mock is only the interaction.</span>
+  </header>
+
+  <div class="grid">
+    <!-- ── STAGE ──────────────────────────────────────────────────────── -->
+    <main class="stage" id="stage">
+      <div class="stage-bar">
+        <span class="traffic"><i></i><i></i><i></i></span>
+        <span class="tabname">Quotes</span>
+        <span>·</span><span>Field study — onboarding &amp; trust</span>
+      </div>
+
+      <div class="stage-body">
+        <div class="selbar" id="selbar" role="region" aria-label="Selection actions">
+          <span class="n" id="selN">0 selected</span>
+          <button class="primary" id="selMove">Move to…</button>
+          <button class="ghost" id="selClear">Clear</button>
+        </div>
+
+        <!-- SECTIONS -->
+        <section>
+          <div class="grouphead"><h2>Sections</h2></div>
+
+          <div class="group" data-group="Onboarding" data-kind="section" id="g-onboarding">
+            <div class="grouphead"><span class="group-label"><span class="name">Onboarding</span>
+              <span class="count"></span></span></div>
+            <div class="cards"></div>
+          </div>
+
+          <div class="group" data-group="Search &amp; filtering" data-kind="section" id="g-search" style="margin-top:24px">
+            <div class="grouphead"><span class="group-label"><span class="name">Search &amp; filtering</span>
+              <span class="count"></span></span></div>
+            <div class="cards"></div>
+          </div>
+        </section>
+
+        <!-- THEMES -->
+        <section>
+          <div class="grouphead"><h2>Themes</h2></div>
+
+          <div class="group" data-group="Trust &amp; privacy" data-kind="theme" id="g-trust">
+            <div class="grouphead"><span class="group-label"><span class="name">Trust &amp; privacy</span>
+              <span class="count"></span></span></div>
+            <div class="cards"></div>
+          </div>
+
+          <div class="group" data-group="Speed &amp; responsiveness" data-kind="theme" id="g-speed" style="margin-top:24px">
+            <div class="grouphead"><span class="group-label"><span class="name">Speed &amp; responsiveness</span>
+              <span class="count"></span></span></div>
+            <div class="cards"></div>
+          </div>
+        </section>
+
+        <!-- UNCATEGORISED FLOOR -->
+        <section class="floor" id="g-floor" data-group="Uncategorised" data-kind="floor">
+          <div class="grouphead"><span class="group-label"><span class="name">Uncategorised</span>
+            <span class="count"></span></span></div>
+          <p class="subtitle">Pinned quotes a re-analysis left with no home (already shipped, read-only).
+            Rescuing one is the same “Move to…” gesture — this mock makes the floor a live source.</p>
+          <div class="cards"></div>
+        </section>
+      </div>
+
+      <div class="confirm" id="confirm" role="status" aria-live="polite">
+        <span id="confirmText">Moved</span>
+        <button class="undo" id="confirmUndo">Undo</button>
+      </div>
+    </main>
+
+    <!-- ── DESIGN QUESTIONS ───────────────────────────────────────────── -->
+    <aside class="panel">
+      <div class="card-box">
+        <h3>Design questions</h3>
+        <p class="hint">The write path is settled; these three UX calls are yours. Flip a switch and the stage updates live.</p>
+
+        <div class="q">
+          <p class="qlabel"><span class="qnum">1.</span> Where the gesture lives</p>
+          <div class="seg" role="group" aria-label="Affordance mode">
+            <button data-set="affordance" data-val="hover" aria-pressed="true">Reveal on hover</button>
+            <button data-set="affordance" data-val="always" aria-pressed="false">Always visible</button>
+          </div>
+          <p class="rec"><b>Lean:</b> reveal on hover — chrome only for the exception. Bulk always uses the selection bar (select a card).</p>
+        </div>
+
+        <div class="q">
+          <p class="qlabel"><span class="qnum">2.</span> How a move confirms</p>
+          <div class="seg" role="group" aria-label="Confirm mode">
+            <button data-set="confirm" data-val="quiet" aria-pressed="true">Quiet move</button>
+            <button data-set="confirm" data-val="undo" aria-pressed="false">+ Undo</button>
+          </div>
+          <p class="rec"><b>Lean:</b> quiet in-place move + a spoken announce, no toast (native idiom). “Undo” shown here for comparison.</p>
+        </div>
+
+        <div class="q">
+          <p class="qlabel"><span class="qnum">3.</span> Can you un-place a quote?</p>
+          <div class="seg" role="group" aria-label="Un-place target">
+            <button data-set="unplace" data-val="off" aria-pressed="true">Section / theme only</button>
+            <button data-set="unplace" data-val="on" aria-pressed="false">Allow “Uncategorised”</button>
+          </div>
+          <p class="rec"><b>Lean:</b> targets only (no backend change). “Allow” adds an Uncategorised row to the picker.</p>
+        </div>
+      </div>
+
+      <div class="card-box">
+        <h3>Not in this cut</h3>
+        <p class="legend">
+          <b>Drag-and-drop</b> <span class="drag">— deferred. Send-to is the accessible baseline and the same path a
+          future “this looks like a better fit — move it?” suggestion would call.</span><br><br>
+          <b>Create / merge / split</b> groups <span class="drag">— V2.</span>
+        </p>
+      </div>
+    </aside>
+  </div>
+
+  <p class="foot">Interactive mock · <span class="kbd">Esc</span> closes the picker · try selecting a couple of cards, or rescue the floor quote.</p>
+</div>
+
+<!-- popover lives at end so it layers above everything -->
+<div class="pop" id="pop" role="dialog" aria-label="Move to">
+  <div class="pop-head">
+    <p class="pop-title" id="popTitle">Move to</p>
+    <input class="pop-search" id="popSearch" type="text" placeholder="Search sections &amp; themes…" autocomplete="off">
+  </div>
+  <div class="pop-list" id="popList"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ── Data ────────────────────────────────────────────────────────────────
+  var GROUPS = [
+    { id: "g-onboarding", name: "Onboarding",              kind: "section" },
+    { id: "g-search",     name: "Search & filtering",      kind: "section" },
+    { id: "g-trust",      name: "Trust & privacy",         kind: "theme"   },
+    { id: "g-speed",      name: "Speed & responsiveness",  kind: "theme"   },
+    { id: "g-floor",      name: "Uncategorised",           kind: "floor"   }
+  ];
+
+  var AVCOL = { p1:"#2563eb", p2:"#7c3aed", p3:"#ea580c", p4:"#059669", p5:"#0891b2" };
+
+  var QUOTES = [
+    { g:"g-onboarding", who:"p3", text:"I didn’t realise I had to verify my email before anything would save — I lost the whole first session.", sent:"frustration", star:false },
+    { g:"g-onboarding", who:"p1", text:"The little checklist at the start actually made me feel like I knew what to do next.", sent:"satisfaction", star:false },
+    { g:"g-search", who:"p2", text:"I typed the client’s name and got nothing — turned out it was filed under “organisation.” That split cost me ten minutes.", sent:"confusion", star:false },
+    { g:"g-search", who:"p4", text:"Once I found the filters I basically lived in them.", sent:"delight", star:false },
+    { g:"g-trust", who:"p2", text:"If it’s uploading my interviews somewhere, I need to know exactly where before I touch it.", sent:"doubt", star:false },
+    { g:"g-trust", who:"p5", text:"Knowing it all stays on my own machine is the only reason I’d put real transcripts in.", sent:"confidence", star:true },
+    { g:"g-speed", who:"p1", text:"The transcript scrubbed instantly — I could jump around without waiting for anything.", sent:"delight", star:false },
+    { g:"g-floor", who:"p3", text:"Honestly, the moment it grouped my privacy quotes together I trusted the whole thing a lot more.", sent:"satisfaction", star:true }
+  ];
+
+  var state = { affordance:"hover", confirm:"quiet", unplace:"off" };
+  var selected = new Set();
+  var idc = 0;
+  var lastMove = null;          // for undo
+  var confirmTimer = null;
+
+  var $ = function (s, r) { return (r||document).querySelector(s); };
+  var esc = function (s) { var d=document.createElement("div"); d.textContent=s; return d.innerHTML; };
+
+  // ── Build cards ─────────────────────────────────────────────────────────
+  function icon(kind) {
+    if (kind === "star") return '<svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.86-4.25 4.14 1 5.87L12 17.1 6.75 19.67l1-5.87L3.5 9.66l5.9-.86z"/></svg>';
+    if (kind === "hide") return '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg>';
+    // move: box with a down-arrow into it
+    return '<svg viewBox="0 0 24 24"><path d="M4 14v4.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V14"/><path d="M12 3.5v10"/><path d="M8.5 10L12 13.5 15.5 10"/></svg>';
+  }
+  function check() { return '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12.5l4.5 4.5L19 6.5"/></svg>'; }
+
+  function makeCard(q) {
+    q._id = "q" + (++idc);
+    var el = document.createElement("article");
+    el.className = "card"; el.dataset.id = q._id; el.tabIndex = 0;
+    el.innerHTML =
+      '<button class="selbox" aria-label="Select quote" title="Select">' + check() + '</button>' +
+      '<div class="body">' +
+        '<p class="qtext"><span class="qm">“</span>' + esc(q.text) + '<span class="qm">”</span></p>' +
+        '<div class="meta">' +
+          '<span class="speaker"><span class="avatar" style="background:'+AVCOL[q.who]+'">'+q.who.toUpperCase()+'</span>Participant '+q.who.slice(1)+'</span>' +
+          '<span class="chip" style="background:var(--s-'+q.sent+'-bg);color:var(--s-'+q.sent+');border-color:var(--s-'+q.sent+')">'+q.sent+'</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="actions">' +
+        '<button class="iconbtn star'+(q.star?" on":"")+'" aria-label="Star" title="Star">'+icon("star")+'</button>' +
+        '<button class="iconbtn hide" aria-label="Hide" title="Hide">'+icon("hide")+'</button>' +
+        '<button class="iconbtn move hoveronly" aria-label="Move to…" title="Move to…">'+icon("move")+'</button>' +
+      '</div>';
+    // wire
+    $(".selbox", el).addEventListener("click", function (e){ e.stopPropagation(); toggleSelect(q._id); });
+    $(".iconbtn.star", el).addEventListener("click", function (e){ e.stopPropagation(); q.star=!q.star; this.classList.toggle("on", q.star); });
+    $(".iconbtn.move", el).addEventListener("click", function (e){ e.stopPropagation(); openPicker([q._id], this); });
+    q._el = el;
+    return el;
+  }
+
+  function groupEl(id){ return document.getElementById(id); }
+  function cardsEl(id){ return $(".cards", groupEl(id)); }
+
+  function render() {
+    GROUPS.forEach(function(g){ cardsEl(g.id).innerHTML = ""; });
+    QUOTES.forEach(function(q){ cardsEl(q.g).appendChild(q._el || makeCard(q)); });
+    refreshCounts();
+    applyAffordance();
+  }
+
+  function refreshCounts() {
+    GROUPS.forEach(function(g){
+      var n = QUOTES.filter(function(q){ return q.g===g.id; }).length;
+      var head = groupEl(g.id).querySelector(".grouphead .count");
+      if (head) head.textContent = n === 1 ? "1 quote" : n + " quotes";
+      if (g.kind === "floor") groupEl(g.id).style.display = n ? "" : "none";
+    });
+  }
+
+  function applyAffordance() {
+    document.querySelectorAll(".iconbtn.move").forEach(function(b){
+      b.classList.toggle("hoveronly", state.affordance === "hover");
+    });
+  }
+
+  // ── Selection ───────────────────────────────────────────────────────────
+  function toggleSelect(id) {
+    if (selected.has(id)) selected.delete(id); else selected.add(id);
+    var q = byId(id);
+    if (q && q._el) q._el.classList.toggle("selected", selected.has(id));
+    updateSelbar();
+  }
+  function clearSel() {
+    selected.forEach(function(id){ var q=byId(id); if(q&&q._el) q._el.classList.remove("selected"); });
+    selected.clear(); updateSelbar();
+  }
+  function updateSelbar() {
+    var bar = $("#selbar"), n = selected.size;
+    $("#selN").textContent = n + (n===1 ? " selected" : " selected");
+    bar.classList.toggle("show", n > 0);
+  }
+  function byId(id){ for (var i=0;i<QUOTES.length;i++) if (QUOTES[i]._id===id) return QUOTES[i]; return null; }
+
+  $("#selClear").addEventListener("click", clearSel);
+  $("#selMove").addEventListener("click", function(){ openPicker(Array.from(selected), this); });
+
+  // ── Picker popover ──────────────────────────────────────────────────────
+  var pop = $("#pop"), popList = $("#popList"), popSearch = $("#popSearch"), popTitle = $("#popTitle");
+  var pickIds = [], pickAnchor = null, activeIdx = -1, optEls = [];
+
+  function currentGroupOf(ids) {
+    // if all share a group, that's "current"; else none
+    var gs = new Set(ids.map(function(id){ return byId(id).g; }));
+    return gs.size === 1 ? Array.from(gs)[0] : null;
+  }
+
+  function openPicker(ids, anchor) {
+    if (!ids.length) return;
+    pickIds = ids.slice(); pickAnchor = anchor;
+    popTitle.textContent = ids.length > 1 ? ("Move " + ids.length + " quotes to") : "Move to";
+    popSearch.value = "";
+    buildOptions("");
+    position(anchor);
+    pop.classList.add("open");
+    document.addEventListener("mousedown", onDocDown, true);
+    document.addEventListener("keydown", onKey, true);
+    setTimeout(function(){ popSearch.focus(); }, 30);
+  }
+  function closePicker() {
+    pop.classList.remove("open");
+    document.removeEventListener("mousedown", onDocDown, true);
+    document.removeEventListener("keydown", onKey, true);
+    if (pickAnchor && pickAnchor.focus) pickAnchor.focus();
+    pickIds = []; activeIdx = -1;
+  }
+
+  function buildOptions(filter) {
+    var cur = currentGroupOf(pickIds);
+    filter = (filter||"").trim().toLowerCase();
+    popList.innerHTML = ""; optEls = []; activeIdx = -1;
+
+    var byKind = { section: [], theme: [] };
+    GROUPS.forEach(function(g){
+      if (g.kind === "floor") return;
+      if (filter && g.name.toLowerCase().indexOf(filter) === -1) return;
+      byKind[g.kind].push(g);
+    });
+
+    var anyResult = byKind.section.length + byKind.theme.length;
+
+    [["Sections","section"],["Themes","theme"]].forEach(function(pair){
+      var list = byKind[pair[1]];
+      if (!list.length) return;
+      var h = document.createElement("div"); h.className="pop-sec"; h.textContent = pair[0];
+      popList.appendChild(h);
+      list.forEach(function(g){ popList.appendChild(makeOpt(g, cur)); });
+    });
+
+    // Uncategorised (un-place) row — only when decision #3 is "on"
+    if (state.unplace === "on" && (!filter || "uncategorised".indexOf(filter) !== -1)) {
+      if (anyResult) { var d=document.createElement("div"); d.className="pop-div"; popList.appendChild(d); }
+      var floor = { id:"g-floor", name:"Uncategorised", kind:"floor" };
+      popList.appendChild(makeOpt(floor, cur, true));
+      anyResult++;
+    }
+
+    if (!anyResult) {
+      var e = document.createElement("div"); e.className="pop-empty"; e.textContent = "No groups match “"+filter+"”.";
+      popList.appendChild(e);
+    }
+  }
+
+  function makeOpt(g, cur, unplace) {
+    var isCur = g.id === cur;
+    var b = document.createElement(isCur ? "div" : "button");
+    b.className = "opt" + (isCur ? " current" : "") + (unplace ? " unplace" : "");
+    var dotColor = g.kind === "section" ? "var(--bn-accent)" : (g.kind === "theme" ? "#7c3aed" : "");
+    b.innerHTML =
+      '<span class="dot"'+(dotColor?(' style="background:'+dotColor+'"'):'')+'></span>' +
+      '<span class="lbl">'+esc(g.name)+'</span>' +
+      (isCur ? '<span class="now">Current</span>' : '');
+    if (!isCur) {
+      optEls.push(b);
+      b.addEventListener("click", function(){ commitMove(g); });
+      b.addEventListener("mousemove", function(){ setActive(optEls.indexOf(b)); });
+    }
+    return b;
+  }
+
+  function setActive(i) {
+    optEls.forEach(function(o,k){ o.classList.toggle("active", k===i); });
+    activeIdx = i;
+    if (optEls[i]) optEls[i].scrollIntoView({ block:"nearest" });
+  }
+
+  function position(anchor) {
+    var r = anchor.getBoundingClientRect();
+    var w = 288, gap = 6;
+    var left = r.left, top = r.bottom + gap;
+    // keep in viewport
+    if (left + w > window.innerWidth - 12) left = Math.max(12, r.right - w);
+    var maxTop = window.innerHeight - 12 - 380;
+    if (top > maxTop) top = Math.max(12, r.top - gap - 340);
+    pop.style.left = Math.round(left) + "px";
+    pop.style.top = Math.round(top) + "px";
+  }
+
+  popSearch.addEventListener("input", function(){ buildOptions(this.value); });
+
+  function onDocDown(e){ if (!pop.contains(e.target)) closePicker(); }
+  function onKey(e){
+    if (e.key === "Escape") { e.preventDefault(); closePicker(); return; }
+    if (e.key === "ArrowDown"){ e.preventDefault(); setActive(Math.min(optEls.length-1, activeIdx+1)); }
+    else if (e.key === "ArrowUp"){ e.preventDefault(); setActive(Math.max(0, activeIdx-1)); }
+    else if (e.key === "Enter" && activeIdx>=0){ e.preventDefault(); optEls[activeIdx].click(); }
+  }
+
+  // ── Commit a move ───────────────────────────────────────────────────────
+  function commitMove(g) {
+    var ids = pickIds.slice();
+    var from = ids.map(function(id){ return { id:id, g:byId(id).g }; });
+    closePicker();
+
+    var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    ids.forEach(function(id){
+      var q = byId(id);
+      if (!q) return;
+      if (reduce) { q.g = g.id; }
+      else {
+        q._el.classList.add("moving");
+        setTimeout(function(){ q.g = g.id; placeMoved(q); }, 190);
+      }
+    });
+    if (reduce) { QUOTES.forEach(function(q){ if(ids.indexOf(q._id)>=0){} }); render(); }
+    else { setTimeout(function(){ refreshCounts(); flash(g.id); }, 210); }
+
+    lastMove = from;
+    clearSel();
+    showConfirm(ids.length, g.name);
+  }
+
+  function placeMoved(q) {
+    cardsEl(q.g).appendChild(q._el);
+    q._el.classList.remove("moving");
+    q._el.classList.add("landing");
+    setTimeout(function(){ q._el.classList.remove("landing"); }, 340);
+  }
+
+  function flash(gid) {
+    var g = groupEl(gid);
+    g.classList.add("drop-flash");
+    setTimeout(function(){ g.classList.remove("drop-flash"); }, 950);
+  }
+
+  // ── Confirmation ────────────────────────────────────────────────────────
+  var confirmEl = $("#confirm"), confirmText = $("#confirmText"), confirmUndo = $("#confirmUndo");
+  function showConfirm(n, name) {
+    confirmText.textContent = (n>1 ? n+" quotes moved to " : "Moved to ") + "“" + name + "”";
+    confirmUndo.classList.toggle("u-hidden", state.confirm !== "undo");
+    confirmEl.classList.add("show");
+    clearTimeout(confirmTimer);
+    confirmTimer = setTimeout(function(){ confirmEl.classList.remove("show"); }, state.confirm==="undo" ? 5200 : 2400);
+  }
+  confirmUndo.addEventListener("click", function(){
+    if (!lastMove) return;
+    lastMove.forEach(function(m){ var q=byId(m.id); if(q){ q.g=m.g; } });
+    render();
+    confirmEl.classList.remove("show");
+    lastMove = null;
+  });
+
+  // ── Decision toggles ────────────────────────────────────────────────────
+  document.querySelectorAll(".seg button").forEach(function(b){
+    b.addEventListener("click", function(){
+      var set = b.dataset.set, val = b.dataset.val;
+      state[set] = val;
+      b.parentElement.querySelectorAll("button").forEach(function(x){
+        x.setAttribute("aria-pressed", String(x === b));
+      });
+      if (set === "affordance") applyAffordance();
+    });
+  });
+
+  // ── Go ──────────────────────────────────────────────────────────────────
+  render();
+  window.addEventListener("resize", function(){ if (pop.classList.contains("open")) closePicker(); });
+})();
+</script>

@@ -109,3 +109,48 @@ Nothing here changes the architecture: it's `move` + `rename` + one "named-and-e
 
 - **In (Phase 0):** move existing quote(s) between existing sections/themes; rescue from uncategorised; researcher placement survives re-analysis; the importer yields to it.
 - **Out (V2+):** create/merge/split groups; move quotes across projects; drag-and-drop polish; the confidence/"surfacing bar" for machine-initiated move suggestions (that's the curation doc's open question).
+
+---
+
+## Implementation plan (settled 8 Jul 2026)
+
+Design settled in a working session. **Backend write path is shipped** (`POST /reassign` + importer researcher-owned suppression + freeze-on-move + `reassignQuotes()` client; contract in `test_curation_roundtrip.TestManualReassignment`). What remains is the UI, across two surfaces and two phases. **Not on the incremental-ingestion or TF critical path — this is Beta-gated curation.**
+
+**Architecture — one action, three triggers, rendered native per surface.** The move operation and its target list are shared; only the *trigger* forks. Selection reuses `FocusContext.selectedIds`; the right-click/act-on rule mirrors the existing bulk star/hide/tag behaviour (act on the selection when the clicked quote is in it, else the single quote).
+
+### Phase 1 — Send-to
+- **CLI SPA (browser) — all frontend.** "Move to" rides the toolbar that already hosts search (no new persistent chrome, no per-card icons — it lights up only on selection). Opens a searchable Sections/Themes picker (current group marked/disabled) → `reassignQuotes()` → optimistic move + refetch + `announce()`. Search is the browser's edge over the native fly-out.
+- **macOS (embedded) — Swift + frontend.** Native **NSMenu** on Control-click, plus a "Move to ▸" submenu in the existing `CommandMenu("Quotes")` menu bar. **No web toolbar re-imported into the embedded shell.** Matches Photos ("Image ▸ Move to") / Mail ("Message ▸ Move to").
+
+**Swift state (surveyed 8 Jul 2026):**
+- ✓ *Exists / on rails:* `CommandMenu("Quotes")` → `QuotesMenuContent` with 6 sibling commands via `bridgeHandler.menuAction(...)`; the bridge already publishes `focusedQuoteId` + `selectedQuoteCount` (so gating is free); precedent Move-to-folder submenu in the Project menu; the endpoint + client shipped.
+- ✦ *New, small:* a `quote-groups` bridge message (JS→Swift, **pulled on menu-open** so it can't go stale) to populate the submenu; the "Move to ▸" submenu itself + `desktop.menu.quotes.moveTo*` locale keys.
+- ▲ *New, medium (the one real AppKit chunk):* native right-click NSMenu — `WebView.swift` has **no** context-menu handling today, so intercepting the webview context menu, resolving the quote/selection target, showing the NSMenu, and routing the pick is genuinely new.
+
+### Phase 2 — Drag (much later)
+Three affordances in play: (i) right-click, (ii) drag to Contents/sidebar, (iii) the menu-bar command. Drag is deferred:
+- **All-web drag-to-Contents** (both surfaces): Pointer Events + a lib's auto-scroll (**not** native HTML5 DnD — WebKit's native autoscroll is unreliable; even dnd-kit has a live Safari 26 offset bug), edge-autoscroll (toward-edge only, velocity ramp) + spring-loaded TOC rows. Off-screen targets *are* reachable via autoscroll. ⚠️ WebKit fragility (Safari + WKWebView), 220 kB bundle gate.
+- **Native-quality drag** (macOS): `NSDraggingSession` crossing the AppKit↔WebView seam — the hardest item; "as good as native or don't ship." Separate spike. Spring-loaded folders (Finder since Jaguar; adjustable delay = accessible) are the precedent.
+
+### Sequencing
+1. CLI SPA send-to (all frontend; ships value; the WCAG-2.1.1 accessible baseline every other trigger leans on; exercises the endpoint end-to-end).
+2. macOS menu-bar send-to (rides existing rails).
+3. macOS native context menu (the medium native piece).
+4. Web drag-to-Contents spike. 5. Native drag spike.
+
+### Critique (self-review of this plan)
+- **The native context menu is the schedule risk, not the menu bar** — the webview→NSMenu path can balloon and is untestable by unit tests. Menu-bar first; context menu as its own milestone.
+- **Pull the group list on menu-open**, don't push-and-cache (rename / new theme / incremental run make a cache stale).
+- **Selection semantics must mirror the existing bulk rule exactly**, or it'll surprise.
+- **"Current group" is undefined for a cross-group multi-select** → omit the marker then.
+- **Optimistic-move vs refetch:** the store holds flat quotes; membership lives in the island fetch → move-locally-then-reconcile, or just refetch (simpler, slight flicker).
+- **Undo: plug into the coming `NSUndoManager`/⌘Z sweep** (100days undo-debt item), don't invent a bespoke one.
+- **Bundle gate (Phase 2):** a DnD lib for a gesture that needs a non-drag path anyway is hard to justify — a hand-rolled pointer-autoscroll may beat pulling dnd-kit.
+- **Scope temptation:** don't build searchable-popover *and* fly-out *and* drag at once — prove the CLI SPA loop first.
+
+### Open decisions still parked
+The three UX calls remain the researcher-designer's (see §5): the send-to picker's target-count ceiling (fly-out vs search past N), the confirm/undo idiom, and whether Uncategorised is a target. Plus a filed 100days note to revisit macOS menu **nomenclature** (Mac apps use the singular — "Quote ▸ Move to", not the current plural `CommandMenu("Quotes")`).
+
+### Mockups
+- `docs/mockups/move-to-picker-mock.html` — interactive send-to picker (one data point for the browser family), with live toggles for the three open UX decisions.
+- `docs/mockups/move-to-spec.html` — the full interaction spec: 2 apps × 2 phases, each with step-by-step (tagged built/new/risk), failure modes, and edge cases.

@@ -279,10 +279,14 @@ class RunProgressEvent(_EventBase):
     stage: str | None = None
     sessions_complete: int | None = None
     sessions_total: int | None = None
-    # How many of ``sessions_total`` are fresh work this run vs cache hits on
-    # already-analysed sessions. Counts only (re-id-safe, per the class rule) —
-    # lets the incremental UX surface "N new" without re-deriving. None on a
-    # full run where the distinction is meaningless.
+    # Corpus-level new-vs-cached session breakdown for the whole run: how many
+    # of the project's sessions are fresh work this run vs carried over from
+    # cache. **Independent of the stage-scoped ``sessions_complete``/
+    # ``sessions_total`` above** — those count only the current stage's batch
+    # (e.g. transcription's batch excludes subtitle/docx sessions, which are
+    # never re-transcribed), so ``sessions_new`` may exceed ``sessions_total``.
+    # Matches ``PipelineSummary.new_sessions`` at completion. Counts only
+    # (re-id-safe). None only on a full cache-hit run, which emits no progress.
     sessions_new: int | None = None
     sessions_cached: int | None = None
     # 0..1 measured within-stage progress where the backend exposes it

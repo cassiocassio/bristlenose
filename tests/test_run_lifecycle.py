@@ -401,6 +401,9 @@ def test_progress_event_carries_incremental_session_counts(tmp_path: Path):
     full-run progress leaves them None. Zero LLM spend: the sink is exercised
     directly, no pipeline run."""
     with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False) as handle:
+        # sessions_new/sessions_cached are corpus-level and independent of the
+        # stage-scoped sessions_total — new (1) + cached (2) need not equal the
+        # transcribe batch total (1). See the RunProgressEvent field docstring.
         handle.progress(
             stage="transcribe",
             sessions_complete=1,

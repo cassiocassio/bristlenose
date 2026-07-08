@@ -1,6 +1,8 @@
 # Manual re-assignment (Phase 0) — design
 
-**Status:** Design, not built (Jul 2026). Crisp-first; expand a section when it's the one being built.
+**Status:** Write path built (Jul 2026); picker UI is the remaining piece. Crisp-first; expand a section when it's the one being built.
+
+**Built so far (server + persistence):** the read-only Uncategorised floor (render + API), and the manual-reassignment **write path** — `POST /projects/{id}/reassign` (move quote(s) into a section/theme as an `assigned_by="researcher"` join, exclusive on that axis, bulk-capable), the importer **suppression rule** (a researcher-owned quote never gets a competing pipeline join re-added → placement survives every re-analysis for free), and **freeze-on-move** (§5.2 decided = **yes**; a move mints durable id + frozen form and extends the pin predicate, so a committed placement isn't swept when a later run drops the quote). Contract: `tests/test_curation_roundtrip.py::TestManualReassignment` + `test_serve_data_api.py::TestReassign`. **Remaining: the picker UI** — its open decisions are §5 below.
 **Parent:** [`design-curation-persistence.md`](design-curation-persistence.md) — the "Hard dependency" paragraph names this as a prerequisite. **Sibling:** [`design-incremental-analysis.md`](design-incremental-analysis.md).
 **Not this doc:** [`design-sidebar-drop-behaviour.md`](design-sidebar-drop-behaviour.md) is Finder→sidebar *project* import — a different gesture on a different surface.
 
@@ -56,7 +58,7 @@ Two gestures were named in the parent doc: **send-to** (multi-select) and **drag
 
 The floor is both a *source* (drag/send an orphan out into a group) and possibly a *target* (send a quote to "uncategorised" = deliberately un-place). Phase 0's orphan-rescue job depends on the floor being rendered.
 
-**Shipped (this branch): the read-only floor exists.** `GET /quotes` now returns an `uncategorised` bucket — pinned quotes the current analysis leaves in no group — and the importer exempts *named* groups from retirement so a human-owned container never dissolves (see [`design-curation-persistence.md`](design-curation-persistence.md) §6/§12). So orphans are already *visible*; Phase 0 adds the gesture that makes them *re-fileable*. The frontend render of the Uncategorised section and the send-to/drag gestures are the remaining pieces.
+**Shipped (this branch): the read-only floor exists, and now the re-file *write path*.** `GET /quotes` returns an `uncategorised` bucket — pinned quotes the current analysis leaves in no group — the `UncategorisedFloor` island renders it, and the importer exempts *named* groups from retirement so a human-owned container never dissolves (see [`design-curation-persistence.md`](design-curation-persistence.md) §6/§12). The `POST /reassign` endpoint now makes any quote — orphan or mis-grouped — *re-fileable*, and the placement sticks (suppression + freeze, above). **The remaining piece is the picker UI** — the affordance that calls `reassign` (per-card "Move to…" + selection action bar, reusing `FocusContext.selectedIds`).
 
 ## 4. Engineering & data issues
 
@@ -82,11 +84,11 @@ Today the rebuild re-adds a pipeline join for whatever group the pipeline emits 
 
 ## 5. Open decisions (for the user)
 
-1. **Send-to first, drag later** — confirm the sequencing (recommended), or build drag up front.
-2. **Move = freeze?** Does a manual placement pin the quote (extend the pin predicate)? (lean: yes.)
-3. **Undo** — quiet in-place confirmation only, a time-boxed undo, or none? (native-idiom caveat in the desktop shell.)
-4. **Uncategorised as a target** — can a researcher deliberately un-place a quote, or is the floor source-only?
-5. **Surfaced-suggestion coupling** — design "accept a suggestion" as literally a send-to call, so the two share one path.
+1. **Send-to first, drag later** — confirm the sequencing (recommended), or build drag up front. _(Still open — gates the picker.)_
+2. ~~**Move = freeze?**~~ **Decided: yes.** A manual placement extends the pin predicate (`importer._pinned_quote_ids` placement arm) and mints durable id + frozen form. Implemented with the write path.
+3. **Undo** — quiet in-place confirmation only, a time-boxed undo, or none? (native-idiom caveat in the desktop shell.) _(Still open — picker behaviour.)_
+4. **Uncategorised as a target** — can a researcher deliberately un-place a quote, or is the floor source-only? _(Still open — the endpoint currently accepts only section/theme targets, so "un-place" is not yet reachable.)_
+5. **Surfaced-suggestion coupling** — design "accept a suggestion" as literally a send-to call, so the two share one path. _(Later — no suggestion surface exists yet.)_
 
 ## 6. Group lifecycle — future (surfaced by the persistence work)
 

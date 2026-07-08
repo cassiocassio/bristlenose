@@ -1,6 +1,6 @@
 # Curation persistence — implementation plan
 
-**Status:** Implementation plan, evidence-backed (Jul 2026). _Phases 1–3 (Freeze, Section identity, Themes + "New" flag) plus the named-group retire-exemption + read-only Uncategorised floor are **built and green** on this branch. Remaining: Phase 0 (manual re-assignment) and the Uncategorised **frontend render**._
+**Status:** Implementation plan, evidence-backed (Jul 2026). _Phases 1–3 (Freeze, Section identity, Themes + "New" flag), the named-group retire-exemption, the read-only Uncategorised floor (render + API), and Phase 0's **write path** (reassign endpoint + importer researcher-owned suppression + freeze-on-move; `test_curation_roundtrip.TestManualReassignment`) are **built and green** on this branch. Remaining: Phase 0's **picker UI** — its UX decisions are `design-manual-reassignment.md` §5._
 **Model doc:** [`design-curation-persistence.md`](design-curation-persistence.md) — the *what/why* (state engine, principles, rules). This doc is the *how*: phasing, code-grounded steps against the live serve stack, and the build/review process.
 **Parent:** [`design-incremental-analysis.md`](design-incremental-analysis.md).
 **Evidence:** the Jul 2026 experiment thread (stats-only summaries in the parent). Load-bearing findings: sections converge (ARI 1.0 under growth), themes diverge (ARI ~0.4, never saturate — not a count artefact), freeze de-scopes the recovery gate, and the incremental "what's new" summary is a *new-material gate + one semantic pass* (below).

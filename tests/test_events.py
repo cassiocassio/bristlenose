@@ -348,6 +348,64 @@ def test_run_failed_event_round_trips_summary():
     assert payload["summary"]["transcripts"]["succeeded"] == 1
 
 
+def test_incremental_event_fields_round_trip():
+    """Incremental telemetry — sessions_new/cached on progress, new_sessions +
+    reflow_scope on the completion summary — serialises and parses back, and is
+    absent-safe on a plain full run (backward-compatible optional fields)."""
+    import json
+
+    from bristlenose.events import (
+        PipelineSummary,
+        ReflowScopeEnum,
+        RunCompletedEvent,
+        RunProgressEvent,
+    )
+
+    prog = RunProgressEvent(
+        ts="2026-07-08T10:00:00Z",
+        run_id="01J0000000000000000000000A",
+        kind="run",
+        started_at="2026-07-08T09:00:00Z",
+        stage="transcribe",
+        sessions_complete=1,
+        sessions_total=3,
+        sessions_new=1,
+        sessions_cached=2,
+    )
+    parsed_prog = RunProgressEvent.model_validate_json(prog.model_dump_json())
+    assert parsed_prog.sessions_new == 1
+    assert parsed_prog.sessions_cached == 2
+
+    completed = RunCompletedEvent(
+        ts="2026-07-08T10:05:00Z",
+        run_id="01J0000000000000000000000A",
+        kind="run",
+        started_at="2026-07-08T09:00:00Z",
+        ended_at="2026-07-08T10:05:00Z",
+        summary=PipelineSummary(new_sessions=1, reflow_scope=ReflowScopeEnum.ADDITIVE),
+    )
+    parsed = RunCompletedEvent.model_validate_json(completed.model_dump_json())
+    assert parsed.summary is not None
+    assert parsed.summary.new_sessions == 1
+    assert parsed.summary.reflow_scope is ReflowScopeEnum.ADDITIVE
+    # Serialised as the bare string value (Swift decodes a String).
+    payload = json.loads(completed.model_dump_json())
+    assert payload["summary"]["reflow_scope"] == "additive"
+
+    # Absent-safe: a full run that sets none of these decodes to None.
+    plain = RunProgressEvent(
+        ts="2026-07-08T10:00:00Z",
+        run_id="01J0000000000000000000000A",
+        kind="run",
+        started_at="2026-07-08T09:00:00Z",
+        stage="transcribe",
+    )
+    assert plain.sessions_new is None and plain.sessions_cached is None
+    empty_summary = PipelineSummary()
+    assert empty_summary.new_sessions is None
+    assert empty_summary.reflow_scope is None
+
+
 # ---------------------------------------------------------------------------
 # ULID generator
 # ---------------------------------------------------------------------------

@@ -68,6 +68,23 @@ class OutcomeEnum(str, Enum):
     FAILED = "failed"
 
 
+class ReflowScopeEnum(str, Enum):
+    """How much the report display must change after an incremental run.
+
+    Drives the desktop idle-flag reflow hold (design-incremental-analysis §9):
+    ``none`` skips the hold entirely (nothing changed downstream of
+    transcription); ``additive`` can reflow immediately (new quotes landed but
+    no pre-existing quote's section/theme membership shifted); ``restructure``
+    waits for the user to be idle (membership may move underneath them). Emit
+    ``restructure`` conservatively when additive-vs-restructure can't be
+    distinguished — the UX just holds longer than strictly necessary.
+    """
+
+    NONE = "none"
+    ADDITIVE = "additive"
+    RESTRUCTURE = "restructure"
+
+
 class CauseCategoryEnum(str, Enum):
     """Dispatch enum for failure / cancellation cause.
 
@@ -197,6 +214,12 @@ class PipelineSummary(BaseModel):
     topics: StageOutcome | None = None
     quotes: StageOutcome | None = None
     themes: StageOutcome | None = None
+    # Incremental-run deltas — None on a first/full run. ``new_sessions`` drives
+    # the desktop "+N new sessions" post-completion subtitle; ``reflow_scope``
+    # drives the idle-flag reflow hold. Counts only (re-id-safe). Contract:
+    # docs/private/handoffs/incremental-ux-glue.md.
+    new_sessions: int | None = None
+    reflow_scope: ReflowScopeEnum | None = None
 
 
 class PipelineAbandonedError(Exception):
@@ -256,6 +279,12 @@ class RunProgressEvent(_EventBase):
     stage: str | None = None
     sessions_complete: int | None = None
     sessions_total: int | None = None
+    # How many of ``sessions_total`` are fresh work this run vs cache hits on
+    # already-analysed sessions. Counts only (re-id-safe, per the class rule) —
+    # lets the incremental UX surface "N new" without re-deriving. None on a
+    # full run where the distinction is meaningless.
+    sessions_new: int | None = None
+    sessions_cached: int | None = None
     # 0..1 measured within-stage progress where the backend exposes it
     # (e.g. within-file audio fraction on faster-whisper); None otherwise.
     stage_fraction: float | None = None

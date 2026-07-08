@@ -1,0 +1,1813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard — 10 Ideas · Bristlenose infoviz mockups</title>
+<style>
+:root {
+  /* Bristlenose-ish tokens, inlined so this file is self-contained */
+  --bn-bg: #fafaf7;
+  --bn-surface: #ffffff;
+  --bn-ink: #1a1a1a;
+  --bn-ink-2: #4a4a4a;
+  --bn-ink-3: #8a8a8a;
+  --bn-rule: #e6e4de;
+  --bn-rule-2: #efede7;
+  --bn-accent: #007AFF;
+
+  /* Sentiment palette (from bristlenose/theme/tokens.css spirit) */
+  --sent-frustration: #c73d3d;    --sent-frustration-bg: #fde8e6;
+  --sent-confusion: #d97b1f;      --sent-confusion-bg: #fdf0dc;
+  --sent-doubt: #a67c00;          --sent-doubt-bg: #fbf3d8;
+  --sent-surprise: #8b5cf6;       --sent-surprise-bg: #efe6fb;
+  --sent-satisfaction: #3e8956;   --sent-satisfaction-bg: #e5f2e6;
+  --sent-delight: #16a34a;        --sent-delight-bg: #dcf3e4;
+  --sent-confidence: #0369a1;     --sent-confidence-bg: #dfeff9;
+  --sent-neutral: #8a8a8a;        --sent-neutral-bg: #eeece6;
+
+  --serif: "Iowan Old Style", "Charter", "Georgia", "Times New Roman", serif;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --mono: "SF Mono", "JetBrains Mono", "Menlo", monospace;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 48px;
+  --space-2xl: 96px;
+
+  --shadow-1: 0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.02);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bn-bg);
+  color: var(--bn-ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* -------- Page shell -------- */
+.page {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+nav.toc {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: var(--space-lg) var(--space-md);
+  border-right: 1px solid var(--bn-rule);
+  overflow-y: auto;
+  background: var(--bn-bg);
+}
+nav.toc h1 {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin: 0 0 4px 0;
+}
+nav.toc .subtitle {
+  font-size: 12px;
+  color: var(--bn-ink-3);
+  margin-bottom: var(--space-lg);
+}
+nav.toc ol { list-style: none; padding: 0; margin: 0; counter-reset: item; }
+nav.toc li { counter-increment: item; margin-bottom: 3px; }
+nav.toc a {
+  display: block;
+  padding: 6px 8px;
+  color: var(--bn-ink-2);
+  text-decoration: none;
+  font-size: 13px;
+  border-radius: 4px;
+  transition: background .12s;
+}
+nav.toc a::before {
+  content: counter(item, decimal-leading-zero);
+  color: var(--bn-ink-3);
+  font-family: var(--mono);
+  font-size: 11px;
+  margin-right: 8px;
+}
+nav.toc a:hover { background: var(--bn-rule-2); color: var(--bn-ink); }
+nav.toc .st {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  margin-left: 4px;
+  vertical-align: 1px;
+}
+
+main { min-width: 0; }
+
+/* -------- Intro -------- */
+.intro {
+  padding: var(--space-2xl) var(--space-xl) var(--space-xl);
+  border-bottom: 1px solid var(--bn-rule);
+}
+.intro h1 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 56px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--space-md) 0;
+  max-width: 800px;
+}
+.intro .lede {
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--bn-ink-2);
+  max-width: 640px;
+  margin-bottom: var(--space-lg);
+}
+.intro .meta {
+  display: flex;
+  gap: var(--space-lg);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--bn-ink-3);
+  border-top: 1px solid var(--bn-rule);
+  padding-top: var(--space-md);
+}
+.intro .meta b { color: var(--bn-ink); font-weight: 500; }
+
+/* -------- Section shell -------- */
+section.idea {
+  padding: var(--space-xl) var(--space-xl);
+  border-bottom: 1px solid var(--bn-rule);
+}
+section.idea > header {
+  margin-bottom: var(--space-lg);
+  max-width: 900px;
+}
+section.idea .num {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--bn-ink-3);
+  letter-spacing: 0.05em;
+}
+section.idea h2 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 34px;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 4px 0 8px 0;
+}
+section.idea .lineage {
+  font-size: 13px;
+  color: var(--bn-ink-3);
+  font-style: italic;
+  margin-bottom: var(--space-md);
+}
+section.idea .lineage b { font-style: normal; color: var(--bn-ink-2); font-weight: 500; }
+section.idea .why {
+  font-size: 15px;
+  color: var(--bn-ink-2);
+  max-width: 640px;
+  margin-bottom: var(--space-lg);
+}
+
+/* Status chips (triage 2026-07-05) */
+.status { margin: 2px 0 10px; font-family: var(--mono); font-size: 11px; }
+.status .chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.chip-promoted   { background: #dcf3e4; color: #166534; }
+.chip-shortlist  { background: #dfeff9; color: #0a5a8a; }
+.chip-discuss    { background: #fdf0dc; color: #92580c; }
+.chip-parked     { background: #eeece6; color: #7a776e; }
+.chip-superseded { background: #eeece6; color: #7a776e; }
+.chip-open       { background: #eeece6; color: #7a776e; }
+.status .note { color: var(--bn-ink-3); margin-left: 8px; font-size: 11px; }
+
+/* -------- Reusable pieces -------- */
+.card {
+  background: var(--bn-surface);
+  border: 1px solid var(--bn-rule);
+  border-radius: 6px;
+  padding: var(--space-md);
+}
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+.badge-frustration { background: var(--sent-frustration-bg); color: var(--sent-frustration); }
+.badge-confusion   { background: var(--sent-confusion-bg);   color: var(--sent-confusion);  }
+.badge-satisfaction{ background: var(--sent-satisfaction-bg);color: var(--sent-satisfaction);}
+.badge-delight     { background: var(--sent-delight-bg);     color: var(--sent-delight);    }
+
+.dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+.dot-frustration { background: var(--sent-frustration); }
+.dot-confusion   { background: var(--sent-confusion); }
+.dot-doubt       { background: var(--sent-doubt); }
+.dot-surprise    { background: var(--sent-surprise); }
+.dot-satisfaction{ background: var(--sent-satisfaction); }
+.dot-delight     { background: var(--sent-delight); }
+.dot-confidence  { background: var(--sent-confidence); }
+.dot-neutral     { background: var(--sent-neutral); }
+
+.mono { font-family: var(--mono); font-size: 12px; }
+.small { font-size: 12px; color: var(--bn-ink-3); }
+
+/* =========================================
+   1. RIDGELINE — superseded, kept for reference
+========================================= */
+.ridge-frame {
+  background: var(--bn-surface);
+  border: 1px solid var(--bn-rule);
+  border-radius: 8px;
+  padding: var(--space-lg);
+  opacity: 0.72;
+}
+.ridge-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--space-md);
+}
+.ridge-title-row .title { font-family: var(--serif); font-size: 22px; }
+.ridge-title-row .caption { font-size: 12px; color: var(--bn-ink-3); }
+.ridge-row {
+  position: relative;
+  height: 72px;
+  border-bottom: 1px solid var(--bn-rule-2);
+  display: flex;
+  align-items: flex-end;
+}
+.ridge-row:last-child { border-bottom: none; }
+.ridge-label {
+  width: 60px;
+  flex-shrink: 0;
+  padding: 0 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--bn-ink-2);
+  align-self: center;
+}
+.ridge-label b { color: var(--bn-ink); font-weight: 600; }
+.ridge-svg { flex: 1; height: 100%; display: block; }
+
+/* =========================================
+   2. SENTIMENT TAPE — promoted
+========================================= */
+.tape-frame {
+  background: #0f0f0e;
+  color: #f2ede4;
+  border-radius: 8px;
+  padding: var(--space-lg);
+  font-family: var(--mono);
+  overflow: hidden;
+}
+.tape-frame .tape-title {
+  font-family: var(--serif);
+  font-size: 13px;
+  color: #d4c99a;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-md);
+}
+.tape-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #232320;
+  font-size: 12px;
+}
+.tape-row:last-child { border-bottom: none; }
+.tape-session {
+  width: 40px;
+  color: #7d7a70;
+  flex-shrink: 0;
+}
+.tape-track { flex: 1; min-width: 0; }
+.tape-topics {
+  position: relative;
+  height: 14px;
+  margin-bottom: 2px;
+}
+.tape-topic-label {
+  position: absolute;
+  top: 0;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a867a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tape-strip {
+  position: relative;
+  height: 24px;
+  background: #1a1a17;
+  border-radius: 2px;
+  overflow: visible;
+}
+.tape-hairline {
+  position: absolute;
+  top: -16px;
+  bottom: 0;
+  width: 0;
+  border-left: 1px dashed rgba(255,255,255,0.18);
+  z-index: 0;
+}
+.tape-tick {
+  position: absolute;
+  bottom: 0;
+  width: 4px;
+  border-radius: 1px;
+  z-index: 1;
+}
+.tape-band {
+  position: relative;
+  height: 14px;
+  margin-top: 2px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.tape-band-seg {
+  position: absolute;
+  top: 0; bottom: 0;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9a968a;
+  display: flex;
+  align-items: center;
+  padding-left: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.tape-band-seg.shade-a { background: #22221f; }
+.tape-band-seg.shade-b { background: #2b2b27; }
+.tape-summary {
+  width: 130px;
+  color: #d4c99a;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+.tape-summary .arrow { font-family: var(--sans); font-size: 14px; }
+.tape-discuss {
+  margin-top: var(--space-md);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+}
+.tape-discuss .rule {
+  border: 1px solid var(--bn-rule);
+  border-radius: 4px;
+  padding: 10px 12px;
+  background: var(--bn-surface);
+  font-size: 12px;
+  color: var(--bn-ink-2);
+}
+.tape-discuss .rule b { display: block; font-family: var(--serif); font-size: 14px; font-weight: 500; margin-bottom: 4px; color: var(--bn-ink); }
+
+/* =========================================
+   3. KUDOS / KVETCH ORDER BOOK
+========================================= */
+.book {
+  display: grid;
+  grid-template-columns: 1fr 60px 1fr;
+  gap: 0;
+  border: 1px solid var(--bn-rule);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bn-surface);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.book-head {
+  padding: 12px 16px;
+  background: #f4f2ec;
+  border-bottom: 1px solid var(--bn-rule);
+  font-weight: 500;
+}
+.book-head.kudos { color: var(--sent-satisfaction); text-align: right; }
+.book-head.kvetch { color: var(--sent-frustration); text-align: left; }
+.book-head.spread { text-align: center; color: var(--bn-ink-3); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; border-left: 1px solid var(--bn-rule); border-right: 1px solid var(--bn-rule); }
+.book-row { display: contents; }
+.book-row > div {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--bn-rule-2);
+}
+.book-row .kudos {
+  text-align: right;
+  border-right: 1px solid var(--bn-rule);
+  background: linear-gradient(to left, var(--sent-satisfaction-bg) 0%, transparent 60%);
+}
+.book-row .kvetch {
+  border-left: 1px solid var(--bn-rule);
+  background: linear-gradient(to right, var(--sent-frustration-bg) 0%, transparent 60%);
+}
+.book-row .spread {
+  text-align: center;
+  color: var(--bn-ink-3);
+  font-weight: 500;
+  background: #fafaf7;
+}
+.book-row .txt { font-family: var(--sans); font-size: 13px; }
+.book-row .meta { color: var(--bn-ink-3); font-size: 10px; margin-top: 4px; }
+.book-int {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  vertical-align: middle;
+  margin: 0 1px;
+  background: currentColor;
+  border-radius: 1px;
+  opacity: 0.3;
+}
+.book-int.on { opacity: 1; }
+
+/* =========================================
+   4. AMBIVALENCE PORTRAITS — parked
+========================================= */
+.portrait-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-md);
+  opacity: 0.72;
+}
+.portrait {
+  background: var(--bn-surface);
+  border: 1px solid var(--bn-rule);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.portrait-head {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--bn-rule);
+  background: linear-gradient(180deg, #fafaf7 0%, #fff 100%);
+}
+.portrait-head .name { font-family: var(--serif); font-size: 18px; font-weight: 500; }
+.portrait-head .theme { font-size: 12px; color: var(--bn-ink-3); font-family: var(--mono); }
+.portrait-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 200px;
+}
+.portrait-side {
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.45;
+  position: relative;
+}
+.portrait-side.positive { background: var(--sent-satisfaction-bg); border-right: 1px dashed rgba(0,0,0,0.15); }
+.portrait-side.negative { background: var(--sent-frustration-bg); }
+.portrait-side .quote-lead {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+  margin-bottom: 6px;
+  font-family: var(--mono);
+}
+.portrait-side .qtext { color: var(--bn-ink); font-style: italic; }
+.portrait-side .tc {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--bn-ink-3);
+  margin-top: 8px;
+  font-style: normal;
+  opacity: 0.6;
+}
+.portrait-verdict {
+  padding: 10px 16px;
+  background: #fbfaf6;
+  border-top: 1px solid var(--bn-rule);
+  font-size: 12px;
+  color: var(--bn-ink-2);
+  font-family: var(--serif);
+  font-style: italic;
+}
+
+/* =========================================
+   5. THEMATIC CO-OCCURRENCE MATRIX
+========================================= */
+.matrix-frame { overflow-x: auto; }
+.matrix {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 100%;
+  font-size: 12px;
+}
+.matrix th, .matrix td {
+  padding: 8px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--bn-rule);
+}
+.matrix th {
+  font-weight: 500;
+  color: var(--bn-ink-2);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  vertical-align: bottom;
+  padding: 12px 4px;
+  font-size: 11px;
+  max-height: 200px;
+  border-left: 1px solid var(--bn-rule-2);
+}
+.matrix th.corner { writing-mode: horizontal-tb; transform: none; text-align: left; border-left: none; }
+.matrix td.pname {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--bn-ink-2);
+  border-right: 1px solid var(--bn-rule);
+  background: #fafaf7;
+  min-width: 100px;
+}
+.matrix td.cell { position: relative; min-width: 40px; }
+.matrix .mk {
+  display: inline-block;
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1;
+}
+.matrix .mk-pos { color: var(--sent-satisfaction); }
+.matrix .mk-neg { color: var(--sent-frustration); }
+.matrix .mk-both { color: var(--sent-doubt); }
+.matrix .mk-strong { font-weight: 700; }
+
+.matrix-legend {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  font-size: 12px;
+}
+.matrix-legend .cont {
+  border: 1px solid var(--bn-rule);
+  border-radius: 4px;
+  padding: 10px 12px;
+  background: var(--bn-surface);
+}
+.matrix-legend .cont b {
+  display: block;
+  font-family: var(--serif);
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.matrix-legend .cont .kind {
+  color: var(--bn-ink-3);
+  font-size: 11px;
+  font-family: var(--mono);
+  margin-bottom: 6px;
+}
+
+/* 5b — GitHub-grid consensus strip */
+.gh-card {
+  background: var(--bn-surface);
+  border: 1px solid var(--bn-rule);
+  border-radius: 6px;
+  padding: var(--space-md) var(--space-lg);
+  display: inline-block;
+}
+.gh-title { font-family: var(--serif); font-size: 16px; margin-bottom: 10px; }
+.gh-grid {
+  display: grid;
+  grid-template-columns: 80px repeat(11, 16px);
+  gap: 3px;
+  align-items: center;
+}
+.gh-grid .rlabel {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--bn-ink-3);
+  padding-right: 6px;
+  text-align: right;
+}
+.gh-grid .clabel {
+  font-size: 8px;
+  font-family: var(--mono);
+  color: var(--bn-ink-3);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  height: 62px;
+  display: flex;
+  align-items: center;
+}
+.gh-cell {
+  width: 16px; height: 16px;
+  border-radius: 3px;
+  background: #f0efe9;
+}
+.gh-note { font-size: 11px; color: var(--bn-ink-3); margin-top: 10px; max-width: 360px; }
+.gh-discuss {
+  display: grid;
+  grid-template-columns: minmax(280px, auto) 1fr;
+  gap: var(--space-lg);
+  align-items: start;
+  margin-top: var(--space-lg);
+}
+.gh-discuss .prose { font-size: 14px; color: var(--bn-ink-2); max-width: 560px; }
+.gh-discuss .prose b { color: var(--bn-ink); }
+
+/* =========================================
+   6. FRICTION HEATMAP
+========================================= */
+.heatmap-frame { border: 1px solid var(--bn-rule); border-radius: 8px; padding: var(--space-lg); background: var(--bn-surface); }
+.heat-grid {
+  display: grid;
+  grid-template-columns: 160px repeat(4, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--bn-rule-2);
+  border-left: 1px solid var(--bn-rule-2);
+}
+.heat-grid > div {
+  border-right: 1px solid var(--bn-rule-2);
+  border-bottom: 1px solid var(--bn-rule-2);
+  padding: 6px 8px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--bn-ink-2);
+  position: relative;
+}
+.heat-grid .topic { justify-content: flex-start; font-family: var(--sans); font-size: 12px; }
+.heat-grid .col-head { font-weight: 500; color: var(--bn-ink); background: #f4f2ec; }
+.heat-grid .heat-0 { background: #fafaf7; color: var(--bn-ink-3); }
+.heat-grid .heat-1 { background: #fde8e6; color: #7a2020; }
+.heat-grid .heat-2 { background: #f4a3a3; color: #5a1616; }
+.heat-grid .heat-3 { background: #c73d3d; color: white; }
+.heat-grid .heat-4 { background: #7a2020; color: white; }
+.heat-grid .cell-tag {
+  position: absolute;
+  bottom: 2px; right: 4px;
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+/* =========================================
+   7. SMALL MULTIPLES
+========================================= */
+.mult-grid {
+  border: 1px solid var(--bn-rule);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bn-surface);
+}
+.mult-row {
+  display: grid;
+  grid-template-columns: 100px repeat(4, 1fr);
+  border-bottom: 1px solid var(--bn-rule);
+  min-height: 78px;
+}
+.mult-row:last-child { border-bottom: none; }
+.mult-row.head { background: #f4f2ec; min-height: 32px; font-size: 11px; color: var(--bn-ink-2); }
+.mult-cell {
+  padding: 8px 12px;
+  border-right: 1px solid var(--bn-rule-2);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.mult-cell:last-child { border-right: none; }
+.mult-cell.session { align-items: flex-start; text-align: left; font-family: var(--mono); font-size: 12px; }
+.mult-cell.session b { display: block; font-size: 14px; color: var(--bn-ink); }
+.mult-cell .cap { font-size: 10px; color: var(--bn-ink-3); font-family: var(--mono); }
+.mini-donut { width: 44px; height: 44px; }
+.mini-bars { display: flex; align-items: flex-end; gap: 3px; height: 30px; }
+.mini-bars .b { width: 8px; border-radius: 1px 1px 0 0; }
+.mini-tape { position: relative; height: 24px; background: #f4f2ec; border-radius: 2px; width: 100%; max-width: 160px; }
+.mini-tape .t { position: absolute; bottom: 0; width: 3px; border-radius: 1px; }
+
+/* =========================================
+   8. HERO QUOTE — editorial
+========================================= */
+.hero-quote {
+  padding: 80px 60px;
+  background: #f8f5ee;
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--bn-rule);
+}
+.hero-quote::before {
+  content: '';
+  position: absolute;
+  top: 12px; left: 20px; right: 20px;
+  border-top: 1px solid #d9d3c1;
+}
+.hero-quote::after {
+  content: '';
+  position: absolute;
+  bottom: 12px; left: 20px; right: 20px;
+  border-bottom: 1px solid #d9d3c1;
+}
+.hero-quote .kicker {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--sent-delight);
+  margin-bottom: var(--space-lg);
+  text-align: center;
+}
+.hero-quote blockquote {
+  font-family: var(--serif);
+  font-size: 42px;
+  line-height: 1.25;
+  font-weight: 400;
+  margin: 0 auto;
+  max-width: 22ch;
+  text-align: center;
+  color: #1a1a1a;
+  quotes: '“' '”';
+}
+.hero-quote blockquote::before {
+  content: open-quote;
+  font-size: 96px;
+  line-height: 0.1;
+  color: var(--sent-delight);
+  vertical-align: -0.3em;
+  margin-right: 4px;
+}
+.hero-quote blockquote::after {
+  content: close-quote;
+  font-size: 96px;
+  line-height: 0.1;
+  color: var(--sent-delight);
+  vertical-align: -0.6em;
+  margin-left: 4px;
+}
+.hero-quote em.emph { font-style: italic; color: var(--sent-delight); }
+.hero-quote .cite {
+  margin-top: var(--space-xl);
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--bn-ink-3);
+  letter-spacing: 0.05em;
+}
+.hero-quote .cite b { color: var(--bn-ink); font-weight: 500; }
+.hero-quote .cite .sep { margin: 0 8px; opacity: 0.4; }
+.hero-alts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+.hero-alt {
+  background: var(--bn-surface);
+  border: 1px solid var(--bn-rule);
+  border-radius: 4px;
+  padding: 12px 14px;
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--bn-ink-2);
+}
+.hero-alt .cap { font-family: var(--mono); font-size: 10px; color: var(--bn-ink-3); margin-bottom: 6px; }
+
+/* =========================================
+   9. KWIC concordance + fingerprint
+========================================= */
+.fp-strip {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bn-surface);
+  border: 1px solid var(--bn-rule);
+  border-radius: 6px;
+  margin-bottom: var(--space-md);
+}
+.fp-chip { display: inline-block; text-align: left; cursor: default; }
+.fp-chip .w { font-family: var(--serif); color: var(--bn-ink); }
+.fp-chip .n { font-family: var(--mono); font-size: 10px; color: var(--bn-ink-3); margin-left: 3px; }
+.fp-chip.active .w { text-decoration: underline; text-underline-offset: 3px; }
+.fp-underline {
+  display: flex;
+  height: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+.fp-underline span { display: block; height: 100%; }
+
+.kwic-table {
+  font-family: var(--serif);
+  border: 1px solid var(--bn-rule);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bn-surface);
+}
+.kwic-row {
+  display: grid;
+  grid-template-columns: 48px 1fr 8px 1fr 90px;
+  align-items: baseline;
+  border-bottom: 1px solid var(--bn-rule-2);
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.kwic-row:last-child { border-bottom: none; }
+.kwic-row .who { font-family: var(--mono); font-size: 11px; color: var(--bn-ink-3); }
+.kwic-row .left { text-align: right; color: var(--bn-ink-2); padding-right: 8px; }
+.kwic-row .kw {
+  font-weight: 700;
+  font-style: italic;
+  padding: 2px 6px;
+  background: #fff3c9;
+  border-radius: 2px;
+  color: #7a5a00;
+  text-align: center;
+}
+.kwic-row .right { text-align: left; color: var(--bn-ink-2); padding-left: 8px; }
+.kwic-row .topic { font-family: var(--mono); font-size: 10px; color: var(--bn-ink-3); text-align: right; }
+
+/* =========================================
+   10. SATURATION CURVE
+========================================= */
+.sat-frame {
+  border: 1px solid var(--bn-rule);
+  border-radius: 8px;
+  padding: var(--space-lg);
+  background: var(--bn-surface);
+  display: grid;
+  grid-template-columns: 1fr 250px;
+  gap: var(--space-lg);
+  align-items: center;
+}
+.sat-plot { position: relative; }
+.sat-plot svg { display: block; width: 100%; height: 280px; }
+.sat-verdict {
+  padding: var(--space-md);
+  background: #f8f5ee;
+  border-left: 3px solid var(--sent-satisfaction);
+  border-radius: 0 4px 4px 0;
+}
+.sat-verdict .headline {
+  font-family: var(--serif);
+  font-size: 20px;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+.sat-verdict .body { font-size: 13px; color: var(--bn-ink-2); line-height: 1.5; }
+.sat-key { display: flex; gap: 16px; font-size: 11px; color: var(--bn-ink-2); margin-top: 8px; font-family: var(--mono); }
+.sat-key .k { display: flex; align-items: center; gap: 5px; }
+.sat-key .swatch { width: 18px; height: 0; border-top: 2.5px solid; display: inline-block; }
+
+/* Footer */
+footer.notes {
+  padding: var(--space-xl);
+  font-size: 12px;
+  color: var(--bn-ink-3);
+  border-top: 1px solid var(--bn-rule);
+}
+footer.notes p { max-width: 640px; }
+footer.notes b { color: var(--bn-ink-2); font-weight: 500; }
+
+/* Small helpers */
+.hr-thin { border: none; border-top: 1px solid var(--bn-rule); margin: var(--space-lg) 0; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+<nav class="toc">
+  <h1>10 dashboard ideas</h1>
+  <div class="subtitle">Bristlenose · project-ikea · 42 quotes, 4 sessions · triaged 5 Jul</div>
+  <ol>
+    <li><a href="#i1">The study's pulse <span class="st chip-superseded">superseded</span></a></li>
+    <li><a href="#i2">Sentiment tape <span class="st chip-promoted">promoted</span></a></li>
+    <li><a href="#i3">Kudos / kvetch book <span class="st chip-shortlist">shortlist</span></a></li>
+    <li><a href="#i4">Ambivalence portraits <span class="st chip-parked">parked</span></a></li>
+    <li><a href="#i5">Co-occurrence matrix <span class="st chip-discuss">discuss</span></a></li>
+    <li><a href="#i6">Friction heatmap <span class="st chip-discuss">discuss</span></a></li>
+    <li><a href="#i7">Session small multiples <span class="st chip-open">open</span></a></li>
+    <li><a href="#i8">Hero quote (editorial) <span class="st chip-shortlist">shortlist</span></a></li>
+    <li><a href="#i9">KWIC + fingerprint <span class="st chip-promoted">pursue</span></a></li>
+    <li><a href="#i10">Saturation curve <span class="st chip-promoted">develop</span></a></li>
+  </ol>
+  <hr class="hr-thin">
+  <div class="small">Not a menu — an ideas space. Statuses reflect the 5 Jul triage; nothing here is shipped.</div>
+</nav>
+
+<main>
+
+<section class="intro">
+  <h1>Ten ways to show what people actually said.</h1>
+  <p class="lede">A dashboard for qualitative research doesn't have to look like a Google Analytics report. Below: ten ideas — some rigorous, some editorial, some stolen from the trading floor or the philologist's index. All rendered against the real <b>project-ikea</b> data (42 quotes, 4 sessions, 7 sentiment types, 16 topics), now carrying triage verdicts.</p>
+  <div class="meta">
+    <div><b>Corpus</b> 42 quotes</div>
+    <div><b>Sessions</b> 4 (s1 healthcare · s2/s3/s4 IKEA beds &amp; bedding)</div>
+    <div><b>Sentiments</b> 8 satisfaction · 7 confusion · 6 frustration · 3 surprise · 3 delight · 1 confidence · 14 neutral</div>
+    <div><b>Range of intensity</b> 28×● · 11×●● · 3×●●●</div>
+  </div>
+</section>
+
+<!-- ============= 1. RIDGELINE — superseded ============= -->
+<section class="idea" id="i1">
+  <header>
+    <div class="num">01 — hero chart</div>
+    <h2>The study's pulse</h2>
+    <div class="status"><span class="chip chip-superseded">SUPERSEDED → 02</span><span class="note">Emotion arrives quantised — sentence to sentence, gear to gear as topics shift. The continuous ridge interpolates feelings <em>between</em> quotes that nobody expressed. The tape (02) shows the same story without fabricating the in-betweens. Kept for reference.</span></div>
+    <p class="lineage"><b>Lineage:</b> Joy Division's "Unknown Pleasures" cover · Wilke's ridgeline / joyplot · seismogram.</p>
+  </header>
+
+  <div class="ridge-frame">
+    <div class="ridge-title-row">
+      <div class="title">Emotional pulse across four interviews</div>
+      <div class="caption">y = quote intensity (1–3) · colour = sentiment · x = session-normalised time</div>
+    </div>
+
+    <div class="ridge-row">
+      <div class="ridge-label"><b>s1</b><br>p1 · 4:22</div>
+      <svg class="ridge-svg" viewBox="0 0 800 72" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="grad-s1" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="4%"  stop-color="#3e8956"/>
+            <stop offset="35%" stop-color="#3e8956"/>
+            <stop offset="49%" stop-color="#c73d3d"/>
+            <stop offset="78%" stop-color="#c73d3d"/>
+            <stop offset="85%" stop-color="#16a34a"/>
+            <stop offset="100%" stop-color="#16a34a"/>
+          </linearGradient>
+        </defs>
+        <path d="M0,68 Q10,60 32,45 T90,54 T130,42 T260,10 T310,8 T380,55 T420,25 T480,52 T580,12 T650,52 T800,64 L800,72 L0,72 Z"
+              fill="url(#grad-s1)" opacity="0.85"/>
+      </svg>
+    </div>
+    <div class="ridge-row">
+      <div class="ridge-label"><b>s3</b><br>p3 · 4:06</div>
+      <svg class="ridge-svg" viewBox="0 0 800 72" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="grad-s3" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="3%"  stop-color="#d97b1f"/>
+            <stop offset="35%" stop-color="#d97b1f"/>
+            <stop offset="47%" stop-color="#16a34a"/>
+            <stop offset="70%" stop-color="#3e8956"/>
+            <stop offset="85%" stop-color="#d97b1f"/>
+            <stop offset="100%" stop-color="#3e8956"/>
+          </linearGradient>
+        </defs>
+        <path d="M0,68 Q20,55 55,52 T160,52 T200,40 T220,50 T290,52 T340,42 T430,55 T510,44 T580,26 T620,52 T680,50 T760,44 L800,68 L800,72 L0,72 Z"
+              fill="url(#grad-s3)" opacity="0.85"/>
+      </svg>
+    </div>
+    <p class="small" style="margin-top:8px">Two of four sessions shown — enough to record why it lost: the smooth curve implies p1 <em>passed through</em> moderate feeling between the satisfaction plateau and the frustration ridge. They didn't. They changed topic.</p>
+  </div>
+</section>
+
+<!-- ============= 2. SENTIMENT TAPE — promoted ============= -->
+<section class="idea" id="i2">
+  <header>
+    <div class="num">02 — hero strip</div>
+    <h2>Sentiment tape, with section boundaries</h2>
+    <div class="status"><span class="chip chip-promoted">PROMOTED — the hero</span><span class="note">Discrete ticks honour quantised emotion. Now with topic boundaries from <span class="mono">topic_boundaries.json</span> (real pipeline output, confidence 0.72–0.95).</span></div>
+    <p class="lineage"><b>Lineage:</b> Bloomberg / Reuters trading tape · Wall-Street sentiment tickers · tube-map interchange bands.</p>
+    <p class="why">Each quote is a tick: colour = sentiment, height = intensity. New in v2: <em>section boundaries</em> show where the participant moved — homepage to checkout, pre-surgery to aftercare. Two alignment treatments below solve the "boundaries vs ticks" overlap worry three ways: labels get their own lane (never in the tick field); hairlines render <em>behind</em> ticks, dashed and dim; narrow zones lose labels before they lose their lines.</p>
+  </header>
+
+  <div class="tape-frame">
+    <div class="tape-title">Variant A — label lane above · Bristlenose · Project IKEA</div>
+
+    <!-- s1: 262s. Boundaries: aftercare @121s=46.2%, notifications @216s=82.4% -->
+    <div class="tape-row">
+      <div class="tape-session">s1</div>
+      <div class="tape-track">
+        <div class="tape-topics">
+          <span class="tape-topic-label" style="left:0%; max-width:44%">Pre-surgery info</span>
+          <span class="tape-topic-label" style="left:47%; max-width:34%">Aftercare</span>
+          <span class="tape-topic-label" style="left:83.2%; max-width:16%">Notifications</span>
+        </div>
+        <div class="tape-strip">
+          <div class="tape-hairline" style="left:46.2%"></div>
+          <div class="tape-hairline" style="left:82.4%"></div>
+          <div class="tape-tick" style="left:4.6%;height:60%;background:#3e8956"></div>
+          <div class="tape-tick" style="left:26.3%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:34.7%;height:60%;background:#3e8956"></div>
+          <div class="tape-tick" style="left:49.2%;height:100%;background:#c73d3d"></div>
+          <div class="tape-tick" style="left:55.3%;height:100%;background:#c73d3d"></div>
+          <div class="tape-tick" style="left:66.7%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:72.8%;height:60%;background:#c73d3d"></div>
+          <div class="tape-tick" style="left:78.9%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:84.9%;height:100%;background:#16a34a"></div>
+          <div class="tape-tick" style="left:99.3%;height:30%;background:#8a8a8a"></div>
+        </div>
+      </div>
+      <div class="tape-summary"><span class="arrow" style="color:#c73d3d">▼</span> aftercare-frustration → <span style="color:#16a34a">△ delight</span></div>
+    </div>
+
+    <!-- s2: 57s. Boundaries: top nav @12s=21.1%, beds category @39s=68.4% -->
+    <div class="tape-row">
+      <div class="tape-session">s2</div>
+      <div class="tape-track">
+        <div class="tape-topics">
+          <span class="tape-topic-label" style="left:0%; max-width:19%">Homepage</span>
+          <span class="tape-topic-label" style="left:22%; max-width:45%">Top nav</span>
+          <span class="tape-topic-label" style="left:69.2%; max-width:30%">Beds category</span>
+        </div>
+        <div class="tape-strip">
+          <div class="tape-hairline" style="left:21.1%"></div>
+          <div class="tape-hairline" style="left:68.4%"></div>
+          <div class="tape-tick" style="left:0%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:21%;height:30%;background:#0369a1"></div>
+          <div class="tape-tick" style="left:33.3%;height:60%;background:#c73d3d"></div>
+          <div class="tape-tick" style="left:68.4%;height:30%;background:#d97b1f"></div>
+          <div class="tape-tick" style="left:100%;height:60%;background:#c73d3d"></div>
+        </div>
+      </div>
+      <div class="tape-summary"><span class="arrow" style="color:#c73d3d">▼</span> beds nav — confidence lost</div>
+    </div>
+
+    <!-- s3: 246s. Boundaries at 45,88,111,135,193,219,246 s -->
+    <div class="tape-row">
+      <div class="tape-session">s3</div>
+      <div class="tape-track">
+        <div class="tape-topics">
+          <span class="tape-topic-label" style="left:0%; max-width:17%">Homepage</span>
+          <span class="tape-topic-label" style="left:19.1%; max-width:16%">Browse</span>
+          <span class="tape-topic-label" style="left:36.6%; max-width:8.5%">PDP</span>
+          <span class="tape-topic-label" style="left:45.9%; max-width:8.5%">Browse</span>
+          <span class="tape-topic-label" style="left:55.7%; max-width:22%">Search</span>
+          <span class="tape-topic-label" style="left:79.3%; max-width:9.5%">Login</span>
+          <span class="tape-topic-label" style="left:89.8%; max-width:10%">Bag</span>
+        </div>
+        <div class="tape-strip">
+          <div class="tape-hairline" style="left:18.3%"></div>
+          <div class="tape-hairline" style="left:35.8%"></div>
+          <div class="tape-hairline" style="left:45.1%"></div>
+          <div class="tape-hairline" style="left:54.9%"></div>
+          <div class="tape-hairline" style="left:78.5%"></div>
+          <div class="tape-hairline" style="left:89%"></div>
+          <div class="tape-tick" style="left:5.3%;height:30%;background:#d97b1f"></div>
+          <div class="tape-tick" style="left:18.3%;height:30%;background:#d97b1f"></div>
+          <div class="tape-tick" style="left:24.4%;height:30%;background:#8b5cf6"></div>
+          <div class="tape-tick" style="left:28.5%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:35.8%;height:30%;background:#d97b1f"></div>
+          <div class="tape-tick" style="left:45.1%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:47.2%;height:30%;background:#16a34a"></div>
+          <div class="tape-tick" style="left:54.9%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:61.4%;height:30%;background:#3e8956"></div>
+          <div class="tape-tick" style="left:66.3%;height:30%;background:#3e8956"></div>
+          <div class="tape-tick" style="left:78.4%;height:60%;background:#16a34a"></div>
+          <div class="tape-tick" style="left:85.4%;height:30%;background:#d97b1f"></div>
+          <div class="tape-tick" style="left:88.6%;height:30%;background:#d97b1f"></div>
+          <div class="tape-tick" style="left:100%;height:30%;background:#3e8956"></div>
+        </div>
+      </div>
+      <div class="tape-summary"><span class="arrow" style="color:#d97b1f">◇</span> mixed, resolves positive</div>
+    </div>
+
+    <!-- s4: 197s. Boundaries: duvets @27s=13.7%, beds @108s=54.8%, checkout @165s=83.8% -->
+    <div class="tape-row">
+      <div class="tape-session">s4</div>
+      <div class="tape-track">
+        <div class="tape-topics">
+          <span class="tape-topic-label" style="left:0%; max-width:12%">Intro</span>
+          <span class="tape-topic-label" style="left:14.7%; max-width:39%">Duvets &amp; bedding</span>
+          <span class="tape-topic-label" style="left:55.8%; max-width:27%">Beds &amp; sofa beds</span>
+          <span class="tape-topic-label" style="left:84.8%; max-width:15%">Checkout</span>
+        </div>
+        <div class="tape-strip">
+          <div class="tape-hairline" style="left:13.7%"></div>
+          <div class="tape-hairline" style="left:54.8%"></div>
+          <div class="tape-hairline" style="left:83.8%"></div>
+          <div class="tape-tick" style="left:9.6%;height:60%;background:#8b5cf6"></div>
+          <div class="tape-tick" style="left:13.7%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:20.3%;height:30%;background:#3e8956"></div>
+          <div class="tape-tick" style="left:24.4%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:35.5%;height:60%;background:#8b5cf6"></div>
+          <div class="tape-tick" style="left:40.1%;height:30%;background:#3e8956"></div>
+          <div class="tape-tick" style="left:54.8%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:66.5%;height:60%;background:#3e8956"></div>
+          <div class="tape-tick" style="left:78.2%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:83.7%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:91.4%;height:60%;background:#d97b1f"></div>
+          <div class="tape-tick" style="left:94.4%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:99.9%;height:60%;background:#c73d3d"></div>
+        </div>
+      </div>
+      <div class="tape-summary"><span class="arrow" style="color:#d97b1f">▼</span> late frustration at checkout</div>
+    </div>
+
+    <div class="tape-title" style="margin-top: var(--space-lg)">Variant B — topic band below (s3 shown for comparison)</div>
+    <div class="tape-row">
+      <div class="tape-session">s3</div>
+      <div class="tape-track">
+        <div class="tape-strip">
+          <div class="tape-tick" style="left:5.3%;height:30%;background:#d97b1f"></div>
+          <div class="tape-tick" style="left:18.3%;height:30%;background:#d97b1f"></div>
+          <div class="tape-tick" style="left:24.4%;height:30%;background:#8b5cf6"></div>
+          <div class="tape-tick" style="left:28.5%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:35.8%;height:30%;background:#d97b1f"></div>
+          <div class="tape-tick" style="left:45.1%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:47.2%;height:30%;background:#16a34a"></div>
+          <div class="tape-tick" style="left:54.9%;height:30%;background:#8a8a8a"></div>
+          <div class="tape-tick" style="left:61.4%;height:30%;background:#3e8956"></div>
+          <div class="tape-tick" style="left:66.3%;height:30%;background:#3e8956"></div>
+          <div class="tape-tick" style="left:78.4%;height:60%;background:#16a34a"></div>
+          <div class="tape-tick" style="left:85.4%;height:30%;background:#d97b1f"></div>
+          <div class="tape-tick" style="left:88.6%;height:30%;background:#d97b1f"></div>
+          <div class="tape-tick" style="left:100%;height:30%;background:#3e8956"></div>
+        </div>
+        <div class="tape-band">
+          <div class="tape-band-seg shade-a" style="left:0%; width:18.3%">Homepage</div>
+          <div class="tape-band-seg shade-b" style="left:18.3%; width:17.5%">Browse</div>
+          <div class="tape-band-seg shade-a" style="left:35.8%; width:9.3%">PDP</div>
+          <div class="tape-band-seg shade-b" style="left:45.1%; width:9.8%">Browse</div>
+          <div class="tape-band-seg shade-a" style="left:54.9%; width:23.6%">Search</div>
+          <div class="tape-band-seg shade-b" style="left:78.5%; width:10.5%">Login</div>
+          <div class="tape-band-seg shade-a" style="left:89%; width:11%">Bag</div>
+        </div>
+      </div>
+      <div class="tape-summary">tube-map band — same data</div>
+    </div>
+  </div>
+
+  <div class="tape-discuss">
+    <div class="rule">
+      <b>Own lane, never the field</b>
+      Labels live above (A) or below (B) the ticks — the tick field stays pure signal. No collision is possible by construction.
+    </div>
+    <div class="rule">
+      <b>Hairlines behind, dashed, dim</b>
+      A tick landing exactly on a boundary is the <em>normal case</em> — boundaries are derived from speech, so the first quote of a zone sits on its line. Rendered behind the tick it reads as "first word on the new screen", which is true.
+    </div>
+    <div class="rule">
+      <b>Narrow zones: line yes, label no</b>
+      s3's checkout zone is seconds wide. It keeps its hairline, loses its label (hover reveals in product). Lines are cheap; text is not.
+    </div>
+  </div>
+  <p class="small" style="margin-top:var(--space-md)"><b>Which variant?</b> A for the dashboard hero — the strip stays clean and the label lane doubles as a skim-read of the journey. B for compact contexts (session cards, sidebar previews) — it's the same idiom as the existing coverage bar, and the band survives shrinking better than floating labels do.</p>
+</section>
+
+<!-- ============= 3. KUDOS / KVETCH BOOK ============= -->
+<section class="idea" id="i3">
+  <header>
+    <div class="num">03 — comparative panel</div>
+    <h2>Kudos &amp; kvetch — the order book</h2>
+    <div class="status"><span class="chip chip-shortlist">SHORTLIST</span><span class="note">Candidate replacement for the featured-quotes row: one kudos, one kvetch, maybe one neutral. Selection logic already exists — <span class="mono">pick_featured_quotes()</span> already scores and diversifies by polarity; this is a re-hang of the same picks, not new plumbing.</span></div>
+    <p class="lineage"><b>Lineage:</b> Financial order books (bids left, asks right, spread in the middle). Recast as <em>what worked</em> vs <em>what broke</em>, sorted by intensity.</p>
+    <p class="why">The single question every stakeholder asks — <em>"is this working or not?"</em> — has a shape. This makes the answer scannable in five seconds, both sides at their real weight.</p>
+  </header>
+
+  <div class="book">
+    <div class="book-head kudos">KUDOS · what worked (11)</div>
+    <div class="book-head spread">spread</div>
+    <div class="book-head kvetch">KVETCH · what broke (13)</div>
+
+    <div class="book-row">
+      <div class="kudos">
+        <div class="txt">"I really like — you should be able to walk around with some pain, but take care not to lift. That is <b>nice to actually say</b> that."</div>
+        <div class="meta">s1 · pre-surgery notification · <span style="color:#16a34a"><span class="book-int on"></span><span class="book-int on"></span><span class="book-int on"></span></span> delight</div>
+      </div>
+      <div class="spread">±3</div>
+      <div class="kvetch">
+        <div class="txt">"There was <b>no aftercare</b>, the aftercare was quite poor."</div>
+        <div class="meta">s1 · post-surgery · <span style="color:#c73d3d"><span class="book-int on"></span><span class="book-int on"></span><span class="book-int on"></span></span> frustration</div>
+      </div>
+    </div>
+
+    <div class="book-row">
+      <div class="kudos">
+        <div class="txt">"It works well for me. It's lovely. It's <b>straightforward</b>."</div>
+        <div class="meta">s1 · pre-surgery info · <span style="color:#3e8956"><span class="book-int on"></span><span class="book-int on"></span><span class="book-int"></span></span> satisfaction</div>
+      </div>
+      <div class="spread">±2</div>
+      <div class="kvetch">
+        <div class="txt">"I rang the secretary asking to make an appointment, <b>they said no</b>. I went back to A&amp;E about four times."</div>
+        <div class="meta">s1 · post-surgery · <span style="color:#c73d3d"><span class="book-int on"></span><span class="book-int on"></span><span class="book-int on"></span></span> frustration</div>
+      </div>
+    </div>
+
+    <div class="book-row">
+      <div class="kudos">
+        <div class="txt">"Beds and mattresses. That's easy. <b>That's in the top navigation.</b>"</div>
+        <div class="meta">s2 · top nav · <span style="color:#0369a1"><span class="book-int on"></span><span class="book-int"></span><span class="book-int"></span></span> confidence</div>
+      </div>
+      <div class="spread">±1</div>
+      <div class="kvetch">
+        <div class="txt">"Beds &amp; mattresses. Beds… <b>Has this gone slow because it's doing screen recording?</b>"</div>
+        <div class="meta">s2 · beds category · <span style="color:#d97b1f"><span class="book-int on"></span><span class="book-int"></span><span class="book-int"></span></span> confusion</div>
+      </div>
+    </div>
+
+    <div class="book-row">
+      <div class="kudos">
+        <div class="txt">"179. <b>That's quite cheap.</b>"</div>
+        <div class="meta">s3 · beds browsing · <span style="color:#8b5cf6"><span class="book-int on"></span><span class="book-int"></span><span class="book-int"></span></span> surprise</div>
+      </div>
+      <div class="spread">±1</div>
+      <div class="kvetch">
+        <div class="txt">"Delivery. Hmm. <b>Why is it £30?</b> That seems a lot."</div>
+        <div class="meta">s4 · checkout · <span style="color:#c73d3d"><span class="book-int on"></span><span class="book-int on"></span><span class="book-int"></span></span> frustration</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============= 4. AMBIVALENCE PORTRAITS — parked ============= -->
+<section class="idea" id="i4">
+  <header>
+    <div class="num">04</div>
+    <h2>Ambivalence portraits</h2>
+    <div class="status"><span class="chip chip-parked">PARKED</span><span class="note">Ambivalence is everywhere at fine grain — you hate the checkout pricing but love the checkout button, and different users voice each differently. Signal cards are designed to draw those distinctions out; a two-cell portrait over-aggregates what is really per-facet nuance. Theory stays interesting (Scharp 2021); the widget doesn't earn dashboard space.</span></div>
+    <p class="lineage"><b>Lineage:</b> Scharp 2021, <i>Thematic Co-occurrence Analysis</i> (Journal of Communication).</p>
+  </header>
+
+  <div class="portrait-grid">
+    <div class="portrait">
+      <div class="portrait-head">
+        <div class="name">Participant 1</div>
+        <div class="theme">Pre-surgery info vs post-surgery aftercare · s1 · 4:22</div>
+      </div>
+      <div class="portrait-split">
+        <div class="portrait-side positive">
+          <div class="quote-lead">Praised (2× satisfaction · 1× delight)</div>
+          <div class="qtext">"It works well for me. It's lovely. It's straightforward."</div>
+          <div class="tc">00:12 · pre-surgery info</div>
+        </div>
+        <div class="portrait-side negative">
+          <div class="quote-lead">Criticised (3× frustration)</div>
+          <div class="qtext">"There was no aftercare. I went back to A&amp;E about four times."</div>
+          <div class="tc">02:08 · post-surgery aftercare</div>
+        </div>
+      </div>
+      <div class="portrait-verdict">One portrait kept as the record of why it parked: the split reads clean here only because s1's two topics happen to be far apart. At real grain the split multiplies per facet.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============= 5. CO-OCCURRENCE MATRIX + 5b GITHUB GRID ============= -->
+<section class="idea" id="i5">
+  <header>
+    <div class="num">05 — rigorous grid · plus 5b, the compact remix</div>
+    <h2>Thematic co-occurrence matrix</h2>
+    <div class="status"><span class="chip chip-discuss">DISCUSS</span><span class="note">05 answers "where do participants agree?" 06 answers "which sections carry the strongest signal?" — see the comparison after 5b. One matrix on the dashboard seems right; the GitHub-grid remix below is the dashboard-scale candidate.</span></div>
+    <p class="lineage"><b>Lineage:</b> Scharp (2021) — participants × themes matrix, cells encode <b>×</b> (present), <b>+</b> (emphatic exemplar), colour (positive/negative/both). Read along three continua: <i>Sporadic ↔ Pervasive</i> (columns), <i>Unilateral ↔ Bilateral</i> (cells), <i>Unbalanced ↔ Balanced</i> (rows).</p>
+  </header>
+
+  <div class="matrix-frame card">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th class="corner">participant · session</th>
+          <th>Pre-surgery info</th>
+          <th>Post-surgery aftercare</th>
+          <th>Post-surgery notifications</th>
+          <th>Top navigation</th>
+          <th>Beds category</th>
+          <th>Search results</th>
+          <th>Login &amp; app</th>
+          <th>Shopping bag</th>
+          <th>Duvets browsing</th>
+          <th>Checkout &amp; delivery</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="pname">p1 · s1</td>
+          <td class="cell"><span class="mk mk-pos mk-strong">×⁺</span></td>
+          <td class="cell"><span class="mk mk-neg mk-strong">×⁺</span></td>
+          <td class="cell"><span class="mk mk-pos mk-strong">×⁺</span></td>
+          <td class="cell">—</td><td class="cell">—</td><td class="cell">—</td><td class="cell">—</td><td class="cell">—</td><td class="cell">—</td><td class="cell">—</td>
+        </tr>
+        <tr>
+          <td class="pname">p2 · s2</td>
+          <td class="cell">—</td><td class="cell">—</td><td class="cell">—</td>
+          <td class="cell"><span class="mk mk-both">×</span></td>
+          <td class="cell"><span class="mk mk-neg">×</span></td>
+          <td class="cell">—</td><td class="cell">—</td><td class="cell">—</td><td class="cell">—</td><td class="cell">—</td>
+        </tr>
+        <tr>
+          <td class="pname">p3 · s3</td>
+          <td class="cell">—</td><td class="cell">—</td><td class="cell">—</td><td class="cell">—</td>
+          <td class="cell"><span class="mk mk-both">×</span></td>
+          <td class="cell"><span class="mk mk-pos">×</span></td>
+          <td class="cell"><span class="mk mk-both">×</span></td>
+          <td class="cell"><span class="mk mk-neg">×</span></td>
+          <td class="cell">—</td>
+          <td class="cell"><span class="mk mk-pos">×</span></td>
+        </tr>
+        <tr>
+          <td class="pname">p4 · s4</td>
+          <td class="cell">—</td><td class="cell">—</td><td class="cell">—</td><td class="cell">—</td>
+          <td class="cell"><span class="mk mk-pos">×</span></td>
+          <td class="cell">—</td><td class="cell">—</td><td class="cell">—</td>
+          <td class="cell"><span class="mk mk-pos mk-strong">×⁺</span></td>
+          <td class="cell"><span class="mk mk-neg">×</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="matrix-legend">
+      <div class="cont">
+        <b>Sporadic ↔ Pervasive</b>
+        <div class="kind">column · how many participants touch this theme</div>
+        <div>Beds category is <b>pervasive</b> (3 of 4). Post-surgery aftercare is <b>sporadic</b> (1 of 4) — but strong.</div>
+      </div>
+      <div class="cont">
+        <b>Unilateral ↔ Bilateral</b>
+        <div class="kind">cell · one sentiment or both</div>
+        <div><span style="color:var(--sent-doubt)">×</span> Bilateral cells (top nav, beds cat, login) — same person, both feelings.</div>
+      </div>
+      <div class="cont">
+        <b>Unbalanced ↔ Balanced</b>
+        <div class="kind">row · does this participant see mostly one thing?</div>
+        <div>p1's row is <b>unbalanced</b> by topic. p4's is <b>balanced</b>. p3 is <b>balanced with high variance</b>.</div>
+      </div>
+    </div>
+
+    <p class="small" style="margin-top: var(--space-md);">Emphasis marker (⁺) = intensity-3 quote in that cell. Method after Scharp, K. (2021), <i>Journal of Communication</i> 71(4).</p>
+  </div>
+
+  <div class="gh-discuss">
+    <div class="gh-card">
+      <div class="gh-title">5b — the same axes, GitHub-contribution clothes</div>
+      <div class="gh-grid">
+        <div></div>
+        <div class="clabel">Pre-surgery</div>
+        <div class="clabel">Aftercare</div>
+        <div class="clabel">Notifications</div>
+        <div class="clabel">Top nav</div>
+        <div class="clabel">Beds browsing</div>
+        <div class="clabel">Duvets</div>
+        <div class="clabel">Product page</div>
+        <div class="clabel">Search</div>
+        <div class="clabel">Login / app</div>
+        <div class="clabel">Bag</div>
+        <div class="clabel">Checkout</div>
+
+        <div class="rlabel">p1</div>
+        <div class="gh-cell" style="background:#93c6a1" title="Pre-surgery · satisfaction ×3"></div>
+        <div class="gh-cell" style="background:#c73d3d" title="Aftercare · frustration, intensity 3"></div>
+        <div class="gh-cell" style="background:#66c68b" title="Notifications · delight"></div>
+        <div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div>
+
+        <div class="rlabel">p2</div>
+        <div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div>
+        <div class="gh-cell" style="background:#ef9a94" title="Top nav · frustration"></div>
+        <div class="gh-cell" style="background:#eab06a" title="Beds browsing · confusion"></div>
+        <div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div>
+
+        <div class="rlabel">p3</div>
+        <div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div>
+        <div class="gh-cell" style="background:#b79bf0" title="Beds browsing · surprise"></div>
+        <div class="gh-cell"></div>
+        <div class="gh-cell" style="background:#fdf0dc" title="Product page · confusion ×1"></div>
+        <div class="gh-cell" style="background:#93c6a1" title="Search · satisfaction ×2"></div>
+        <div class="gh-cell" style="background:#66c68b" title="Login / app · delight"></div>
+        <div class="gh-cell" style="background:#fdf0dc" title="Bag · confusion ×1"></div>
+        <div class="gh-cell" style="background:#e5f2e6" title="Checkout · satisfaction ×1"></div>
+
+        <div class="rlabel">p4</div>
+        <div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div>
+        <div class="gh-cell" style="background:#93c6a1" title="Beds &amp; sofa beds · satisfaction"></div>
+        <div class="gh-cell" style="background:#3e8956" title="Duvets · satisfaction ×3"></div>
+        <div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div><div class="gh-cell"></div>
+        <div class="gh-cell" style="background:#ef9a94" title="Checkout · frustration"></div>
+      </div>
+      <div class="gh-note">Rows = participants, columns = sections, cell hue = dominant sentiment, cell depth = quote count. 11 of 16 sections shown.</div>
+    </div>
+
+    <div class="prose">
+      <p><b>The 05 / 06 / signal-cards triangle.</b> These three matrices carry different questions:</p>
+      <p style="margin-top:8px"><b>05 asks "where do participants agree?"</b> — consensus and coverage. Its empty cells are information (who <em>didn't</em> hit checkout?). Nothing in the product answers this today.</p>
+      <p style="margin-top:8px"><b>06 asks "where is the negative signal densest?"</b> — which is adjacent to what signal cards already compute in the analysis lens (concentration per label|sentiment cell). Shipping 06 on the dashboard would duplicate analysis.</p>
+      <p style="margin-top:8px"><b>So the dashboard slot goes to 05's axes, at 5b's scale.</b> The GitHub grid reads Scharp's continua at a glance: a filled <em>column</em> is pervasive (Beds browsing — 3 of 4 rows, three different hues: everyone went, nobody agrees); a lone saturated cell is sporadic-but-strong (Aftercare, one row, full red); a split column is live disagreement (Checkout: p3 green, p4 red). Click through to the analysis lens for the full-fat version. Compare <span class="mono">docs/mockups/mini-heatmaps-dashboard.html</span> — the earlier GitHub-grid experiment this remixes.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============= 6. FRICTION HEATMAP ============= -->
+<section class="idea" id="i6">
+  <header>
+    <div class="num">06 — where the pain is</div>
+    <h2>Friction heatmap</h2>
+    <div class="status"><span class="chip chip-discuss">DISCUSS</span><span class="note">Pairs with 05 — see the triangle discussion there. Strong chart, but its question ("where is negative signal densest?") is signal-cards territory in the analysis lens. If it ships, it ships there — not as a second dashboard matrix.</span></div>
+    <p class="lineage"><b>Lineage:</b> Sports analytics — soccer xG heatmaps, shot-density charts. Topics × sessions, cell heat = negative-sentiment density.</p>
+  </header>
+
+  <div class="heatmap-frame">
+    <div class="heat-grid">
+      <div class="col-head" style="justify-content:flex-start;">Topic / screen</div>
+      <div class="col-head">s1 healthcare</div>
+      <div class="col-head">s2 beds</div>
+      <div class="col-head">s3 beds</div>
+      <div class="col-head">s4 duvets</div>
+
+      <div class="topic">Post-surgery aftercare</div>
+      <div class="heat-4">3<span class="cell-tag">1 str.</span></div>
+      <div class="heat-0">—</div>
+      <div class="heat-0">—</div>
+      <div class="heat-0">—</div>
+
+      <div class="topic">Top navigation</div>
+      <div class="heat-0">—</div>
+      <div class="heat-2">1</div>
+      <div class="heat-0">—</div>
+      <div class="heat-0">—</div>
+
+      <div class="topic">Beds category page</div>
+      <div class="heat-0">—</div>
+      <div class="heat-3">2</div>
+      <div class="heat-2">2</div>
+      <div class="heat-1">0</div>
+
+      <div class="topic">Login / app</div>
+      <div class="heat-0">—</div>
+      <div class="heat-0">—</div>
+      <div class="heat-2">1</div>
+      <div class="heat-0">—</div>
+
+      <div class="topic">Shopping bag</div>
+      <div class="heat-0">—</div>
+      <div class="heat-0">—</div>
+      <div class="heat-2">1</div>
+      <div class="heat-0">—</div>
+
+      <div class="topic">Checkout &amp; delivery</div>
+      <div class="heat-0">—</div>
+      <div class="heat-0">—</div>
+      <div class="heat-1">0</div>
+      <div class="heat-2">1</div>
+    </div>
+
+    <p class="small" style="margin-top:var(--space-md)">Cell = count of frustration + confusion + doubt quotes on that topic in that session. "str." marks an intensity-3 quote. <b>Reading:</b> beds category is spread across three sessions (product problem); aftercare is one participant, one session, maximum heat (single-voice, still a finding).</p>
+  </div>
+</section>
+
+<!-- ============= 7. SMALL MULTIPLES ============= -->
+<section class="idea" id="i7">
+  <header>
+    <div class="num">07 — dense</div>
+    <h2>Session small multiples</h2>
+    <div class="status"><span class="chip chip-open">OPEN</span><span class="note">No verdict yet. The chronology column overlaps with 02's tape; if 02 ships, this row likely slims to donut + intensity + topics.</span></div>
+    <p class="lineage"><b>Lineage:</b> Tufte, <i>The Visual Display of Quantitative Information</i>. Bertin, <i>Semiology of Graphics</i>. Same thumbnail per session, compared at a glance.</p>
+  </header>
+
+  <div class="mult-grid">
+    <div class="mult-row head">
+      <div class="mult-cell session"><span class="cap">SESSION</span></div>
+      <div class="mult-cell"><span class="cap">SENTIMENT MIX</span></div>
+      <div class="mult-cell"><span class="cap">INTENSITY LADDER</span></div>
+      <div class="mult-cell"><span class="cap">CHRONOLOGY</span></div>
+      <div class="mult-cell"><span class="cap">TOPIC SPREAD</span></div>
+    </div>
+
+    <div class="mult-row">
+      <div class="mult-cell session">
+        <b>s1</b> <span>p1 · 4:22</span>
+        <span class="cap">10 quotes · healthcare</span>
+      </div>
+      <div class="mult-cell">
+        <svg class="mini-donut" viewBox="0 0 44 44">
+          <circle cx="22" cy="22" r="16" fill="none" stroke="#eeece6" stroke-width="8"/>
+          <circle cx="22" cy="22" r="16" fill="none" stroke="#3e8956" stroke-width="8" stroke-dasharray="20 100" stroke-dashoffset="0"/>
+          <circle cx="22" cy="22" r="16" fill="none" stroke="#c73d3d" stroke-width="8" stroke-dasharray="30 100" stroke-dashoffset="-20"/>
+          <circle cx="22" cy="22" r="16" fill="none" stroke="#16a34a" stroke-width="8" stroke-dasharray="10 100" stroke-dashoffset="-50"/>
+        </svg>
+        <span class="cap">2● 3● 1● + 4○</span>
+      </div>
+      <div class="mult-cell">
+        <div class="mini-bars">
+          <div class="b" style="height:14px;background:#8a8a8a"></div>
+          <div class="b" style="height:20px;background:#3e8956"></div>
+          <div class="b" style="height:20px;background:#3e8956"></div>
+          <div class="b" style="height:30px;background:#c73d3d"></div>
+          <div class="b" style="height:30px;background:#c73d3d"></div>
+          <div class="b" style="height:14px;background:#8a8a8a"></div>
+          <div class="b" style="height:20px;background:#c73d3d"></div>
+          <div class="b" style="height:14px;background:#8a8a8a"></div>
+          <div class="b" style="height:30px;background:#16a34a"></div>
+          <div class="b" style="height:14px;background:#8a8a8a"></div>
+        </div>
+        <span class="cap">peak intensity 3× (frust ×2, delight)</span>
+      </div>
+      <div class="mult-cell">
+        <div class="mini-tape">
+          <div class="t" style="left:4.6%;height:60%;background:#3e8956"></div>
+          <div class="t" style="left:26.3%;height:30%;background:#8a8a8a"></div>
+          <div class="t" style="left:34.7%;height:60%;background:#3e8956"></div>
+          <div class="t" style="left:49.2%;height:100%;background:#c73d3d"></div>
+          <div class="t" style="left:55.3%;height:100%;background:#c73d3d"></div>
+          <div class="t" style="left:66.7%;height:30%;background:#8a8a8a"></div>
+          <div class="t" style="left:72.8%;height:60%;background:#c73d3d"></div>
+          <div class="t" style="left:78.9%;height:30%;background:#8a8a8a"></div>
+          <div class="t" style="left:84.9%;height:100%;background:#16a34a"></div>
+          <div class="t" style="left:99.3%;height:30%;background:#8a8a8a"></div>
+        </div>
+        <span class="cap">pos → neg → pos arc</span>
+      </div>
+      <div class="mult-cell">
+        <div class="mini-bars">
+          <div class="b" style="height:20px;background:#3e8956;width:14px"></div>
+          <div class="b" style="height:30px;background:#c73d3d;width:14px"></div>
+          <div class="b" style="height:14px;background:#16a34a;width:14px"></div>
+        </div>
+        <span class="cap">3 topics · aftercare heavy</span>
+      </div>
+    </div>
+
+    <div class="mult-row">
+      <div class="mult-cell session">
+        <b>s3</b> <span>p3 · 4:06</span>
+        <span class="cap">14 quotes · IKEA beds</span>
+      </div>
+      <div class="mult-cell">
+        <svg class="mini-donut" viewBox="0 0 44 44">
+          <circle cx="22" cy="22" r="16" fill="none" stroke="#eeece6" stroke-width="8"/>
+          <circle cx="22" cy="22" r="16" fill="none" stroke="#3e8956" stroke-width="8" stroke-dasharray="21 100"/>
+          <circle cx="22" cy="22" r="16" fill="none" stroke="#d97b1f" stroke-width="8" stroke-dasharray="28 100" stroke-dashoffset="-21"/>
+          <circle cx="22" cy="22" r="16" fill="none" stroke="#16a34a" stroke-width="8" stroke-dasharray="14 100" stroke-dashoffset="-49"/>
+          <circle cx="22" cy="22" r="16" fill="none" stroke="#8b5cf6" stroke-width="8" stroke-dasharray="7 100" stroke-dashoffset="-63"/>
+        </svg>
+        <span class="cap">3● 4● 2● 1● + 4○</span>
+      </div>
+      <div class="mult-cell">
+        <div class="mini-bars">
+          <div class="b" style="height:14px;background:#d97b1f"></div>
+          <div class="b" style="height:14px;background:#d97b1f"></div>
+          <div class="b" style="height:14px;background:#8b5cf6"></div>
+          <div class="b" style="height:14px;background:#8a8a8a"></div>
+          <div class="b" style="height:14px;background:#d97b1f"></div>
+          <div class="b" style="height:14px;background:#8a8a8a"></div>
+          <div class="b" style="height:14px;background:#16a34a"></div>
+          <div class="b" style="height:14px;background:#8a8a8a"></div>
+          <div class="b" style="height:14px;background:#3e8956"></div>
+          <div class="b" style="height:14px;background:#3e8956"></div>
+          <div class="b" style="height:20px;background:#16a34a"></div>
+          <div class="b" style="height:14px;background:#d97b1f"></div>
+          <div class="b" style="height:14px;background:#d97b1f"></div>
+          <div class="b" style="height:14px;background:#3e8956"></div>
+        </div>
+        <span class="cap">shallow but many · 1 spike</span>
+      </div>
+      <div class="mult-cell">
+        <div class="mini-tape">
+          <div class="t" style="left:5.3%;height:30%;background:#d97b1f"></div>
+          <div class="t" style="left:18.3%;height:30%;background:#d97b1f"></div>
+          <div class="t" style="left:24.4%;height:30%;background:#8b5cf6"></div>
+          <div class="t" style="left:28.5%;height:30%;background:#8a8a8a"></div>
+          <div class="t" style="left:35.8%;height:30%;background:#d97b1f"></div>
+          <div class="t" style="left:47.2%;height:30%;background:#16a34a"></div>
+          <div class="t" style="left:61.4%;height:30%;background:#3e8956"></div>
+          <div class="t" style="left:78.4%;height:60%;background:#16a34a"></div>
+          <div class="t" style="left:88.6%;height:30%;background:#d97b1f"></div>
+          <div class="t" style="left:100%;height:30%;background:#3e8956"></div>
+        </div>
+        <span class="cap">confusion → satisfaction</span>
+      </div>
+      <div class="mult-cell">
+        <div class="mini-bars">
+          <div class="b" style="height:14px;background:#d97b1f;width:10px"></div>
+          <div class="b" style="height:14px;background:#8b5cf6;width:10px"></div>
+          <div class="b" style="height:20px;background:#3e8956;width:10px"></div>
+          <div class="b" style="height:14px;background:#16a34a;width:10px"></div>
+          <div class="b" style="height:14px;background:#d97b1f;width:10px"></div>
+          <div class="b" style="height:14px;background:#3e8956;width:10px"></div>
+          <div class="b" style="height:14px;background:#3e8956;width:10px"></div>
+        </div>
+        <span class="cap">7 topics · widest spread</span>
+      </div>
+    </div>
+  </div>
+  <p class="small" style="margin-top:8px">Two of four rows shown (s1, s3 — the two long sessions).</p>
+</section>
+
+<!-- ============= 8. HERO QUOTE ============= -->
+<section class="idea" id="i8">
+  <header>
+    <div class="num">08 — the front page</div>
+    <h2>Hero quote — "quote of the study"</h2>
+    <div class="status"><span class="chip chip-shortlist">SHORTLIST</span><span class="note">The poster frame — open the study and go "oh yeah, that one." Selection already ships: <span class="mono">pick_featured_quotes()</span> (export_core.py) filters to 12–33 words, scores intensity + sentiment + researcher-context, then diversifies across participants and polarities. This idea is the <em>presentation</em> upgrade: rank 1 gets the editorial treatment, runners-up stay small.</span></div>
+    <p class="lineage"><b>Lineage:</b> New Yorker pull quote, FT Weekend leader. One quote, big serif type, air around it. Designed to be screenshotted into a stakeholder deck.</p>
+  </header>
+
+  <div class="hero-quote">
+    <div class="kicker">Quote of the study — p1 · s1 · 03:43</div>
+    <blockquote>
+      That is <em class="emph">nice to actually say</em> that, to send that to someone. I think that's really nice.
+    </blockquote>
+    <div class="cite">
+      <b>Participant 1</b>
+      <span class="sep">·</span>
+      post-surgery notifications
+      <span class="sep">·</span>
+      intensity ●●● delight
+      <span class="sep">·</span>
+      <span class="mono">s1 @ 03:43</span>
+    </div>
+  </div>
+
+  <div class="hero-alts">
+    <div class="hero-alt">
+      <div class="cap">RUNNER-UP · frustration ●●●</div>
+      "There was <b>no aftercare</b>, the aftercare was quite poor."
+    </div>
+    <div class="hero-alt">
+      <div class="cap">RUNNER-UP · surprise ●●</div>
+      "179. That's <b>quite cheap.</b>"
+    </div>
+    <div class="hero-alt">
+      <div class="cap">RUNNER-UP · confidence ●</div>
+      "Beds and mattresses. <b>That's easy.</b> That's in the top navigation."
+    </div>
+  </div>
+</section>
+
+<!-- ============= 9. KWIC + FINGERPRINT ============= -->
+<section class="idea" id="i9">
+  <header>
+    <div class="num">09 — the philologist's index</div>
+    <h2>Study fingerprint + KWIC concordance</h2>
+    <div class="status"><span class="chip chip-promoted">PURSUE</span><span class="note">The word-strip is now the lead: real frequencies from the 42 quotes, each chip carrying a sentiment-mix underline. Twelve words in, you know what kind of study this is — that's the fingerprint. Click a chip, get the concordance.</span></div>
+    <p class="lineage"><b>Lineage:</b> Key-Word-In-Context — philology's standard tool since the 1950s (Voyant, AntConc); classical concordances. Word clouds are decorative; concordances are readable evidence.</p>
+    <p class="why">Every count below is real. The payoff word is <b>back</b> — 7 uses, frustration-leaning: "went <em>back</em> to my GP", "<em>back</em> to A&amp;E", "referred <em>back</em>". The retry word. A researcher sees the red-tinted underline and clicks; the concordance shows the loop the participant was stuck in. Type size follows frequency; the underline splits by the sentiment mix of quotes containing the word.</p>
+  </header>
+
+  <div class="fp-strip">
+    <span class="fp-chip"><span class="w" style="font-size:17px">okay</span><span class="n">15</span>
+      <span class="fp-underline" style="width:44px"><span style="width:17%;background:var(--sent-frustration)"></span><span style="width:8%;background:var(--sent-surprise)"></span><span style="width:33%;background:var(--sent-satisfaction)"></span><span style="width:42%;background:var(--sent-neutral)"></span></span></span>
+    <span class="fp-chip"><span class="w" style="font-size:15px">bed</span><span class="n">12</span>
+      <span class="fp-underline" style="width:38px"><span style="width:23%;background:var(--sent-confusion)"></span><span style="width:31%;background:var(--sent-satisfaction)"></span><span style="width:8%;background:var(--sent-confidence)"></span><span style="width:38%;background:var(--sent-neutral)"></span></span></span>
+    <span class="fp-chip"><span class="w" style="font-size:14px">shopping</span><span class="n">10</span>
+      <span class="fp-underline" style="width:34px"><span style="width:43%;background:var(--sent-confusion)"></span><span style="width:14%;background:var(--sent-delight)"></span><span style="width:14%;background:var(--sent-satisfaction)"></span><span style="width:29%;background:var(--sent-neutral)"></span></span></span>
+    <span class="fp-chip"><span class="w" style="font-size:14px">ikea</span><span class="n">8</span>
+      <span class="fp-underline" style="width:30px"><span style="width:17%;background:var(--sent-frustration)"></span><span style="width:33%;background:var(--sent-confusion)"></span><span style="width:33%;background:var(--sent-delight)"></span><span style="width:17%;background:var(--sent-neutral)"></span></span></span>
+    <span class="fp-chip"><span class="w" style="font-size:14px">beds</span><span class="n">8</span>
+      <span class="fp-underline" style="width:30px"><span style="width:33%;background:var(--sent-confusion)"></span><span style="width:17%;background:var(--sent-satisfaction)"></span><span style="width:17%;background:var(--sent-confidence)"></span><span style="width:33%;background:var(--sent-neutral)"></span></span></span>
+    <span class="fp-chip"><span class="w" style="font-size:14px">bag</span><span class="n">8</span>
+      <span class="fp-underline" style="width:30px"><span style="width:33%;background:var(--sent-confusion)"></span><span style="width:17%;background:var(--sent-delight)"></span><span style="width:17%;background:var(--sent-satisfaction)"></span><span style="width:33%;background:var(--sent-neutral)"></span></span></span>
+    <span class="fp-chip"><span class="w" style="font-size:13px">surgery</span><span class="n">7</span>
+      <span class="fp-underline" style="width:26px"><span style="width:33%;background:var(--sent-satisfaction)"></span><span style="width:33%;background:var(--sent-delight)"></span><span style="width:34%;background:var(--sent-neutral)"></span></span></span>
+    <span class="fp-chip active"><span class="w" style="font-size:13px">back</span><span class="n">7</span>
+      <span class="fp-underline" style="width:26px"><span style="width:40%;background:var(--sent-frustration)"></span><span style="width:60%;background:var(--sent-neutral)"></span></span></span>
+    <span class="fp-chip"><span class="w" style="font-size:12px">read</span><span class="n">5</span>
+      <span class="fp-underline" style="width:22px"><span style="width:20%;background:var(--sent-frustration)"></span><span style="width:40%;background:var(--sent-satisfaction)"></span><span style="width:40%;background:var(--sent-neutral)"></span></span></span>
+    <span class="fp-chip"><span class="w" style="font-size:12px">enough</span><span class="n">5</span>
+      <span class="fp-underline" style="width:22px"><span style="width:25%;background:var(--sent-frustration)"></span><span style="width:75%;background:var(--sent-satisfaction)"></span></span></span>
+    <span class="fp-chip"><span class="w" style="font-size:12px">see</span><span class="n">5</span>
+      <span class="fp-underline" style="width:22px"><span style="width:50%;background:var(--sent-frustration)"></span><span style="width:25%;background:var(--sent-confusion)"></span><span style="width:25%;background:var(--sent-neutral)"></span></span></span>
+    <span class="fp-chip"><span class="w" style="font-size:11px">easy</span><span class="n">2</span>
+      <span class="fp-underline" style="width:18px"><span style="width:100%;background:var(--sent-satisfaction)"></span></span></span>
+  </div>
+
+  <div class="kwic-table">
+    <div class="kwic-row">
+      <div class="who">s1·p1</div>
+      <div class="left">…I felt that it wasn't healing … I went</div>
+      <div class="kw">back</div>
+      <div class="right">to my GP and then they referred me back to North Mid…</div>
+      <div class="topic">aftercare</div>
+    </div>
+    <div class="kwic-row">
+      <div class="who">s1·p1</div>
+      <div class="left">…and I said no, can I go</div>
+      <div class="kw">back</div>
+      <div class="right">to another hospital? So I did.</div>
+      <div class="topic">aftercare</div>
+    </div>
+    <div class="kwic-row">
+      <div class="who">s1·p1</div>
+      <div class="left">…they must be better than North London Hospital. So I just went</div>
+      <div class="kw">back</div>
+      <div class="right">there.</div>
+      <div class="topic">aftercare</div>
+    </div>
+    <div class="kwic-row">
+      <div class="who">s1·p1</div>
+      <div class="left">I went</div>
+      <div class="kw">back</div>
+      <div class="right">to A&amp;E and I showed them my stomach… I went to A&amp;E about four times.</div>
+      <div class="topic">aftercare</div>
+    </div>
+  </div>
+
+  <p class="small" style="margin-top:var(--space-md)"><b>Reading the pattern:</b> four of seven uses of "back" are one participant re-entering a system that discharged them. The word itself is the journey map. This is what a concordance does that a word cloud cannot: it keeps the grammar, and the grammar is the finding.</p>
+</section>
+
+<!-- ============= 10. SATURATION CURVE — developed ============= -->
+<section class="idea" id="i10">
+  <header>
+    <div class="num">10 — the methods reflex</div>
+    <h2>Saturation curves — topics vs themes</h2>
+    <div class="status"><span class="chip chip-promoted">DEVELOP</span><span class="note">Now two curves. Raw topic labels barely repeat across sessions (every topic in this corpus is session-unique), so a topic-level curve over-reads novelty. The honest curve saturates on <em>clustered themes</em>. Verdict logic: 0 new themes across the 2 most recent sessions → saturated.</span></div>
+    <p class="lineage"><b>Lineage:</b> Glaser &amp; Strauss (1967), grounded theory. Guest, Bunce &amp; Johnson (2006), <i>How many interviews are enough?</i> The chart every methods reviewer wants and no commercial competitor ships.</p>
+  </header>
+
+  <div class="sat-frame">
+    <div class="sat-plot">
+      <svg viewBox="0 0 500 280" preserveAspectRatio="xMidYMid meet">
+        <line x1="50" y1="220" x2="480" y2="220" stroke="#ccc" stroke-width="1"/>
+        <line x1="50" y1="20" x2="50" y2="220" stroke="#ccc" stroke-width="1"/>
+
+        <line x1="50" y1="70" x2="480" y2="70" stroke="#eee" stroke-width="1" stroke-dasharray="2 3"/>
+        <line x1="50" y1="120" x2="480" y2="120" stroke="#eee" stroke-width="1" stroke-dasharray="2 3"/>
+        <line x1="50" y1="170" x2="480" y2="170" stroke="#eee" stroke-width="1" stroke-dasharray="2 3"/>
+
+        <text x="45" y="24" text-anchor="end" font-family="SF Mono, monospace" font-size="10" fill="#888">20</text>
+        <text x="45" y="74" text-anchor="end" font-family="SF Mono, monospace" font-size="10" fill="#888">15</text>
+        <text x="45" y="124" text-anchor="end" font-family="SF Mono, monospace" font-size="10" fill="#888">10</text>
+        <text x="45" y="174" text-anchor="end" font-family="SF Mono, monospace" font-size="10" fill="#888">5</text>
+        <text x="45" y="224" text-anchor="end" font-family="SF Mono, monospace" font-size="10" fill="#888">0</text>
+        <text x="10" y="120" text-anchor="middle" font-family="SF Mono, monospace" font-size="10" fill="#666" transform="rotate(-90 10 120)">cumulative count</text>
+
+        <!-- topics curve (naive): 3, 5, 12, 16 -->
+        <polyline points="140,190 240,170 340,100 440,60"
+                  fill="none" stroke="#a5a29a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="440,60 490,45" fill="none" stroke="#a5a29a" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.5"/>
+        <circle cx="140" cy="190" r="3.5" fill="#fff" stroke="#a5a29a" stroke-width="2"/>
+        <circle cx="240" cy="170" r="3.5" fill="#fff" stroke="#a5a29a" stroke-width="2"/>
+        <circle cx="340" cy="100" r="3.5" fill="#fff" stroke="#a5a29a" stroke-width="2"/>
+        <circle cx="440" cy="60" r="3.5" fill="#fff" stroke="#a5a29a" stroke-width="2"/>
+
+        <!-- themes curve (honest): 2, 3, 4, 4 -->
+        <polyline points="140,204 240,196 340,188 440,188"
+                  fill="none" stroke="#3e8956" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="440,188 490,188" fill="none" stroke="#3e8956" stroke-width="2" stroke-dasharray="4 3" opacity="0.5"/>
+        <circle cx="140" cy="204" r="4" fill="#fff" stroke="#3e8956" stroke-width="2"/>
+        <circle cx="240" cy="196" r="4" fill="#fff" stroke="#3e8956" stroke-width="2"/>
+        <circle cx="340" cy="188" r="4" fill="#fff" stroke="#3e8956" stroke-width="2"/>
+        <circle cx="440" cy="188" r="4" fill="#3e8956" stroke="#3e8956" stroke-width="2"/>
+
+        <!-- annotations -->
+        <path d="M 340,100 L 390,60" stroke="#888" stroke-width="0.75" stroke-dasharray="2 2"/>
+        <text x="392" y="56" font-family="Iowan Old Style, Georgia, serif" font-size="11" fill="#666" font-style="italic">topics still climbing —</text>
+        <text x="392" y="69" font-family="Iowan Old Style, Georgia, serif" font-size="11" fill="#666" font-style="italic">+4 in s4 alone</text>
+
+        <path d="M 400,188 L 400,160" stroke="#3e8956" stroke-width="0.75" stroke-dasharray="2 2"/>
+        <text x="398" y="152" text-anchor="middle" font-family="Iowan Old Style, Georgia, serif" font-size="11" fill="#3e8956" font-style="italic">themes flat since s3</text>
+
+        <!-- x labels + per-session deltas -->
+        <text x="140" y="236" text-anchor="middle" font-family="SF Mono, monospace" font-size="10" fill="#666">s1</text>
+        <text x="240" y="236" text-anchor="middle" font-family="SF Mono, monospace" font-size="10" fill="#666">s2</text>
+        <text x="340" y="236" text-anchor="middle" font-family="SF Mono, monospace" font-size="10" fill="#666">s3</text>
+        <text x="440" y="236" text-anchor="middle" font-family="SF Mono, monospace" font-size="10" fill="#666">s4</text>
+        <text x="140" y="250" text-anchor="middle" font-family="SF Mono, monospace" font-size="9" fill="#aaa">+3 · +2</text>
+        <text x="240" y="250" text-anchor="middle" font-family="SF Mono, monospace" font-size="9" fill="#aaa">+2 · +1</text>
+        <text x="340" y="250" text-anchor="middle" font-family="SF Mono, monospace" font-size="9" fill="#aaa">+7 · +1</text>
+        <text x="440" y="250" text-anchor="middle" font-family="SF Mono, monospace" font-size="9" fill="#aaa">+4 · +0</text>
+        <text x="265" y="270" text-anchor="middle" font-family="SF Mono, monospace" font-size="10" fill="#666">sessions processed · deltas: topics · themes</text>
+      </svg>
+      <div class="sat-key">
+        <span class="k"><span class="swatch" style="border-color:#a5a29a"></span> raw topic labels (naive novelty)</span>
+        <span class="k"><span class="swatch" style="border-color:#3e8956"></span> clustered themes (honest saturation)</span>
+      </div>
+    </div>
+
+    <div class="sat-verdict">
+      <div class="headline">Themes saturated; topics still novel.</div>
+      <div class="body">
+        <p>No new theme since s3 — the pattern has stabilised. New sessions are adding <em>colour</em>, not <em>categories</em>.</p>
+        <p style="margin-top:var(--space-sm)"><b>Recommendation:</b> 1–2 more sessions to confirm; expect theme count to hold at 4.</p>
+        <p style="margin-top:var(--space-sm)" class="small">Verdict states: <b>Not yet</b> (curve steepening) · <b>Approaching</b> (last session added ≤1) · <b>Saturated</b> (0 new across last 2 sessions).</p>
+      </div>
+    </div>
+  </div>
+  <p class="small" style="margin-top:var(--space-md)">Topic counts are ground truth (3 → 5 → 12 → 16 cumulative). Theme-per-session attribution is approximated for the mockup; the real implementation keys on theme-cluster membership, which the pipeline already computes at s11.</p>
+</section>
+
+<!-- ============= FOOTER ============= -->
+<footer class="notes">
+  <p><b>Triage (5 Jul):</b> 02 promoted to hero, with section boundaries — variant A (label lane) for the dashboard, variant B (band) for compact contexts. 03 + 08 shortlisted as the featured-quotes evolution (selection logic already ships in <b>pick_featured_quotes()</b>; both are presentation upgrades). 09 pursued — fingerprint strip leads, concordance follows. 10 developed — two curves, verdict logic. 05/06 in discussion: one matrix on the dashboard, and 5b (GitHub-grid remix of 05's axes) is the candidate; 06's question belongs to signal cards in the analysis lens. 04 parked. 01 superseded by 02.</p>
+  <p style="margin-top:var(--space-sm)"><b>Data honesty:</b> all timecodes, sentiments, intensities, topic labels, boundaries, and word frequencies are ground truth from the project-ikea pipeline output. A few short order-book lines are lightly composited (flagged in situ). Theme-per-session attribution in idea 10 is approximated.</p>
+  <p style="margin-top:var(--space-lg);color:var(--bn-ink-3);font-size:11px;">Bristlenose · docs/mockups/dashboard-10-ideas.html · v2, triaged · 2026-07-05</p>
+</footer>
+
+</main>
+</div>
+
+</body>
+</html>

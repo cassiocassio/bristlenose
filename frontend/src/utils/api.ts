@@ -406,3 +406,30 @@ export function postMiroPreview(req: MiroExportRequest): Promise<MiroPreviewResp
 export function postMiroExport(req: MiroExportRequest): Promise<MiroExportResponse> {
   return apiPost<MiroExportResponse>("/miro/export", req);
 }
+
+// ---------------------------------------------------------------------------
+// Manual re-assignment (Phase 0) — move quote(s) into a section or theme
+// ---------------------------------------------------------------------------
+
+export interface ReassignResult {
+  status: string;
+  /** DOM ids actually moved (unknown ids are skipped, not fatal). */
+  moved: string[];
+}
+
+/** Re-file quote(s) into a section or theme as a researcher placement.
+ *  `targetId` is the durable `cluster_id` / `theme_id` the quotes API exposes.
+ *  The server makes the move exclusive on that axis and freezes the quote, so
+ *  the placement survives re-analysis. Awaited (not fire-and-forget) so the
+ *  caller can refetch the affected groups once it resolves. */
+export function reassignQuotes(
+  quotes: string[],
+  targetKind: "section" | "theme",
+  targetId: number,
+): Promise<ReassignResult> {
+  return apiPost<ReassignResult>("/reassign", {
+    quotes,
+    target_kind: targetKind,
+    target_id: targetId,
+  });
+}

@@ -942,7 +942,24 @@ def _import_quotes_from_clusters(
     # stale source join is still deleted (exclusivity holds).
     all_incoming: set[int] = set().union(*(m for _, m in incoming_members)) \
         if incoming_members else set()
-    strand_ids = _pinned_quote_ids(db, project.id) - all_incoming
+
+    # Researcher-owned placements (Phase 0 manual re-assignment): a quote the
+    # researcher filed into a section is *section-owned* — the pipeline must
+    # never add a competing pipeline join for it (that would put it in two
+    # sections, breaking quote exclusivity) nor resurrect a stale one via the
+    # strand path.  The researcher's join already survives the rebuild (it only
+    # deletes ``assigned_by="pipeline"``), so their placement holds for free.
+    researcher_section_ids = {
+        qid
+        for (qid,) in db.query(ClusterQuote.quote_id)
+        .join(Quote, ClusterQuote.quote_id == Quote.id)
+        .filter(
+            Quote.project_id == project.id,
+            ClusterQuote.assigned_by == "researcher",
+        )
+        .all()
+    }
+    strand_ids = _pinned_quote_ids(db, project.id) - all_incoming - researcher_section_ids
 
     for i, cluster_data in enumerate(screen_clusters_data):
         if not incoming_quotes[i]:
@@ -982,6 +999,8 @@ def _import_quotes_from_clusters(
             db.flush()
 
         for q in incoming_quotes[i]:
+            if q.id in researcher_section_ids:
+                continue  # researcher owns this quote's section placement
             existing_cq = (
                 db.query(ClusterQuote)
                 .filter_by(cluster_id=cluster.id, quote_id=q.id)
@@ -1077,7 +1096,20 @@ def _import_quotes_from_themes(
     # cluster path); themes have their own incoming union.
     all_incoming: set[int] = set().union(*(m for _, m in incoming_members)) \
         if incoming_members else set()
-    strand_ids = pinned_ids - all_incoming
+
+    # Researcher-owned theme placements (see the cluster path for the full
+    # rationale) — the pipeline must not add a competing pipeline join.
+    researcher_theme_ids = {
+        qid
+        for (qid,) in db.query(ThemeQuote.quote_id)
+        .join(Quote, ThemeQuote.quote_id == Quote.id)
+        .filter(
+            Quote.project_id == project.id,
+            ThemeQuote.assigned_by == "researcher",
+        )
+        .all()
+    }
+    strand_ids = pinned_ids - all_incoming - researcher_theme_ids
 
     for i, theme_data in enumerate(theme_groups_data):
         if not incoming_quotes[i]:
@@ -1109,6 +1141,8 @@ def _import_quotes_from_themes(
 
         # Import quotes
         for q in incoming_quotes[i]:
+            if q.id in researcher_theme_ids:
+                continue  # researcher owns this quote's theme placement
             # Create theme_quote join if not exists
             existing_tq = (
                 db.query(ThemeQuote)
@@ -1319,6 +1353,13 @@ def _pinned_quote_ids(db: Session, project_id: int) -> set[int]:
     AND the tag's codebook group is not the machine-authored sentiment
     framework (sentiment tags carry a real ``source`` now, but the group filter
     also protects older databases where they were mislabelled "human").
+
+    The **placement arm** (Phase 0 manual re-assignment) counts a quote the
+    researcher deliberately filed into a section or theme (``assigned_by ==
+    "researcher"`` on either join).  Moving a quote is human investment, so it
+    freezes the quote — otherwise a re-run that stops emitting it would clean it
+    up as stale and the committed placement would silently vanish.  This is the
+    quote-level analogue of the theme-naming commitment model.
     """
     from sqlalchemy import or_
 
@@ -1354,6 +1395,27 @@ def _pinned_quote_ids(db: Session, project_id: int) -> set[int]:
                 CodebookGroup.framework_id.is_(None),
                 CodebookGroup.framework_id != "sentiment",
             ),
+        )
+        .all()
+    )
+    # Researcher-placed (manual re-assignment) — section OR theme join.
+    pinned.update(
+        qid
+        for (qid,) in db.query(ClusterQuote.quote_id)
+        .join(Quote, ClusterQuote.quote_id == Quote.id)
+        .filter(
+            Quote.project_id == project_id,
+            ClusterQuote.assigned_by == "researcher",
+        )
+        .all()
+    )
+    pinned.update(
+        qid
+        for (qid,) in db.query(ThemeQuote.quote_id)
+        .join(Quote, ThemeQuote.quote_id == Quote.id)
+        .filter(
+            Quote.project_id == project_id,
+            ThemeQuote.assigned_by == "researcher",
         )
         .all()
     )

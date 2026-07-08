@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -18,6 +19,7 @@ from bristlenose.server.models import (
     _LEGACY_UNGROUPED_NAME,
     UNCATEGORISED_GROUP_NAME,
     UNCATEGORISED_GROUP_SUBTITLE,
+    ClusterQuote,
     CodebookGroup,
     DeletedBadge,
     HeadingEdit,
@@ -28,8 +30,11 @@ from bristlenose.server.models import (
     QuoteEdit,
     QuoteState,
     QuoteTag,
+    ScreenCluster,
     SessionSpeaker,
     TagDefinition,
+    ThemeGroup,
+    ThemeQuote,
 )
 from bristlenose.server.models import Session as SessionModel
 
@@ -684,6 +689,92 @@ def put_starred(
 
         db.commit()
         return {"status": "ok"}
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
+# Manual re-assignment (Phase 0) — move quote(s) into a section or theme
+# ---------------------------------------------------------------------------
+
+
+class ReassignRequest(BaseModel):
+    """Move one or more quotes into a single section or theme.
+
+    ``quotes`` are DOM ids (``q-p1-123``); ``target_kind`` selects the axis
+    (sections and themes are independent groupings); ``target_id`` is the
+    durable ``cluster_id`` / ``theme_id`` the quotes API already exposes.
+    """
+
+    quotes: list[str]
+    target_kind: Literal["section", "theme"]
+    target_id: int
+
+
+@router.post("/projects/{project_id}/reassign")
+def reassign_quotes(
+    project_id: int,
+    request: Request,
+    data: ReassignRequest,
+) -> dict[str, object]:
+    """Re-file quote(s) into a section/theme as a *researcher* placement.
+
+    The researcher is the analyst; the machine's grouping is a draft.  A move
+    (a) removes the quote's existing join **on that axis** (quote exclusivity —
+    one section join, one theme join) and (b) creates a fresh join marked
+    ``assigned_by="researcher"``.  Researcher joins survive every re-import for
+    free (the importer rebuild deletes only ``pipeline`` joins and never re-adds
+    a competing one for a researcher-owned quote), so the placement sticks.
+
+    Moving also **freezes** the quote (mints its durable id + frozen form) —
+    committing a placement is human investment, so a later run that stops
+    emitting the quote can't clean it up as stale.  The pin predicate's
+    placement arm keeps the two in step.
+    """
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+
+        # Validate the target exists and belongs to this project.
+        if data.target_kind == "section":
+            target = db.get(ScreenCluster, data.target_id)
+        else:
+            target = db.get(ThemeGroup, data.target_id)
+        if target is None or target.project_id != project_id:
+            raise HTTPException(status_code=404, detail="Target group not found")
+
+        moved: list[str] = []
+        for dom_id in data.quotes:
+            quote = _resolve_quote(db, project_id, dom_id)
+            if quote is None:
+                continue  # unknown quote id — skip, don't fail the batch
+            if data.target_kind == "section":
+                db.query(ClusterQuote).filter_by(quote_id=quote.id).delete(
+                    synchronize_session="fetch"
+                )
+                db.add(
+                    ClusterQuote(
+                        cluster_id=data.target_id,
+                        quote_id=quote.id,
+                        assigned_by="researcher",
+                    )
+                )
+            else:
+                db.query(ThemeQuote).filter_by(quote_id=quote.id).delete(
+                    synchronize_session="fetch"
+                )
+                db.add(
+                    ThemeQuote(
+                        theme_id=data.target_id,
+                        quote_id=quote.id,
+                        assigned_by="researcher",
+                    )
+                )
+            _mint_pin(db, quote)  # a committed placement is human investment
+            moved.append(dom_id)
+
+        db.commit()
+        return {"status": "ok", "moved": moved}
     finally:
         db.close()
 

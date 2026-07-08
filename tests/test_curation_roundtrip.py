@@ -24,7 +24,7 @@ from bristlenose.server.importer import (
     _pinned_quote_ids,
     import_project,
 )
-from bristlenose.server.models import HeadingEdit, Quote, QuoteState
+from bristlenose.server.models import ClusterQuote, HeadingEdit, Quote, QuoteState
 from tests.conftest import AuthTestClient
 from tests.server_fixtures import cluster as _cluster
 from tests.server_fixtures import dom_id as _dom
@@ -1077,3 +1077,215 @@ class TestUncategorisedFloor:
         assert tid in themes, "a named theme survives even at zero members"
         assert themes[tid]["edited_label"] == "Kept"
         assert themes[tid]["quotes"] == [], "a 0-member named theme is a valid state"
+
+
+class TestManualReassignment:
+    """Phase 0 — a researcher's manual placement is honoured and survives
+    re-analysis.  The machine's grouping is a draft; the researcher overrules it,
+    and the overrule sticks even when the next pipeline run still emits the quote
+    in its old group (suppression) or stops emitting it entirely (freeze).
+    """
+
+    def _section_placements(self, client: TestClient, dom: str) -> list[str]:
+        secs = client.get("/api/projects/1/quotes").json()["sections"]
+        return [
+            s["screen_label"]
+            for s in secs
+            for q in s["quotes"]
+            if q["dom_id"] == dom
+        ]
+
+    def _theme_placements(self, client: TestClient, dom: str) -> list[str]:
+        themes = client.get("/api/projects/1/quotes").json()["themes"]
+        return [
+            t["theme_label"]
+            for t in themes
+            for q in t["quotes"]
+            if q["dom_id"] == dom
+        ]
+
+    def test_move_is_exclusive_and_marked_researcher(self, tmp_path: Path) -> None:
+        """A move removes the old section join and adds one researcher join —
+        the quote is in exactly one section immediately."""
+        _write_intermediate(
+            tmp_path,
+            [
+                _cluster("Login", [_quote("p1", 10, "a"), _quote("p1", 20, "b")],
+                         order=1),
+                _cluster("Settings", [_quote("p1", 40, "d")], order=2),
+            ],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        sections = client.get("/api/projects/1/quotes").json()["sections"]
+        settings_id = next(
+            s["cluster_id"] for s in sections if s["screen_label"] == "Settings"
+        )
+
+        resp = client.post(
+            "/api/projects/1/reassign",
+            json={
+                "quotes": [_dom("p1", 20)],
+                "target_kind": "section",
+                "target_id": settings_id,
+            },
+        )
+        assert resp.status_code == 200
+        assert resp.json()["moved"] == [_dom("p1", 20)]
+        assert self._section_placements(client, _dom("p1", 20)) == ["Settings"], (
+            "the moved quote is in exactly one section"
+        )
+
+        db = app.state.db_factory()
+        try:
+            q20 = _quote_at(db, 20)
+            join = (
+                db.query(ClusterQuote).filter_by(quote_id=q20.id).one()
+            )
+            assert join.assigned_by == "researcher"
+            assert q20.durable_id is not None, "a move freezes the quote"
+        finally:
+            db.close()
+
+    def test_placement_survives_a_reimport_that_re_emits_the_old_group(
+        self, tmp_path: Path
+    ) -> None:
+        """The load-bearing rule: the next pipeline run still emits q@20 in Login
+        (it can't know the researcher moved it).  Suppression must keep the quote
+        in Settings only — never re-add a pipeline join to Login."""
+        _write_intermediate(
+            tmp_path,
+            [
+                _cluster("Login", [_quote("p1", 10, "a"), _quote("p1", 20, "b")],
+                         order=1),
+                _cluster("Settings", [_quote("p1", 40, "d")], order=2),
+            ],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        sections = client.get("/api/projects/1/quotes").json()["sections"]
+        settings_id = next(
+            s["cluster_id"] for s in sections if s["screen_label"] == "Settings"
+        )
+        client.post(
+            "/api/projects/1/reassign",
+            json={
+                "quotes": [_dom("p1", 20)],
+                "target_kind": "section",
+                "target_id": settings_id,
+            },
+        )
+
+        db = app.state.db_factory()
+        try:
+            # Unchanged intermediate: the pipeline STILL puts q@20 in Login.
+            _write_intermediate(
+                tmp_path,
+                [
+                    _cluster("Login", [_quote("p1", 10, "a"), _quote("p1", 20, "b")],
+                             order=1),
+                    _cluster("Settings", [_quote("p1", 40, "d")], order=2),
+                ],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        assert self._section_placements(client, _dom("p1", 20)) == ["Settings"], (
+            "a researcher placement must survive re-analysis, and the pipeline "
+            "must not resurrect the quote in its old section"
+        )
+
+    def test_move_freezes_the_quote_against_a_pipeline_drop(
+        self, tmp_path: Path
+    ) -> None:
+        """A moved-but-unstarred quote the next run stops emitting entirely (its
+        session still present) must not be swept — the move alone freezes it, so
+        a committed placement is never silently lost."""
+        _write_intermediate(
+            tmp_path,
+            [
+                _cluster("Login", [_quote("p1", 10, "a"), _quote("p1", 20, "b")],
+                         order=1),
+                _cluster("Settings", [_quote("p1", 40, "d")], order=2),
+            ],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        sections = client.get("/api/projects/1/quotes").json()["sections"]
+        settings_id = next(
+            s["cluster_id"] for s in sections if s["screen_label"] == "Settings"
+        )
+        client.post(
+            "/api/projects/1/reassign",
+            json={
+                "quotes": [_dom("p1", 20)],
+                "target_kind": "section",
+                "target_id": settings_id,
+            },
+        )
+
+        db = app.state.db_factory()
+        try:
+            # The pipeline drops q@20 completely; its session (s1) stays alive.
+            _write_intermediate(
+                tmp_path,
+                [
+                    _cluster("Login", [_quote("p1", 10, "a")], order=1),
+                    _cluster("Settings", [_quote("p1", 40, "d")], order=2),
+                ],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        assert self._section_placements(client, _dom("p1", 20)) == ["Settings"], (
+            "freeze-on-move keeps the quote alive and in its researcher section"
+        )
+
+    def test_theme_placement_is_exclusive_and_survives(self, tmp_path: Path) -> None:
+        """The theme axis mirrors sections: move q@5 into another theme, and it
+        appears in exactly one theme, surviving a re-import that re-emits it in
+        the old one."""
+        _write_intermediate(
+            tmp_path,
+            [_cluster("Nav", [_quote("p1", 10, "nav")])],
+            [
+                _theme("Trust", [_quote("p2", 5, "x", session="s2")]),
+                _theme("Speed", [_quote("p2", 8, "y", session="s2")]),
+            ],
+        )
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client: TestClient = AuthTestClient(app)
+        themes = client.get("/api/projects/1/quotes").json()["themes"]
+        speed_id = next(t["theme_id"] for t in themes if t["theme_label"] == "Speed")
+        client.post(
+            "/api/projects/1/reassign",
+            json={
+                "quotes": [_dom("p2", 5)],
+                "target_kind": "theme",
+                "target_id": speed_id,
+            },
+        )
+        assert self._theme_placements(client, _dom("p2", 5)) == ["Speed"]
+
+        db = app.state.db_factory()
+        try:
+            _write_intermediate(
+                tmp_path,
+                [_cluster("Nav", [_quote("p1", 10, "nav")])],
+                [
+                    _theme("Trust", [_quote("p2", 5, "x", session="s2")]),
+                    _theme("Speed", [_quote("p2", 8, "y", session="s2")]),
+                ],
+            )
+            import_project(db, tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        assert self._theme_placements(client, _dom("p2", 5)) == ["Speed"], (
+            "a researcher theme placement survives re-analysis"
+        )

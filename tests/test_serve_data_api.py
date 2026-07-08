@@ -626,3 +626,97 @@ class TestHiddenTagGroupsPut:
             "/api/projects/999/hidden-tag-groups", json=["A"]
         )
         assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Manual re-assignment (Phase 0)
+# ---------------------------------------------------------------------------
+
+
+class TestReassign:
+    def _first_section_id(self, client: TestClient) -> int:
+        return client.get("/api/projects/1/quotes").json()["sections"][0]["cluster_id"]
+
+    def test_move_returns_ok_with_moved_list(self, client: TestClient) -> None:
+        target = self._first_section_id(client)
+        resp = client.post(
+            "/api/projects/1/reassign",
+            json={"quotes": ["q-p1-46"], "target_kind": "section", "target_id": target},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["status"] == "ok"
+        assert body["moved"] == ["q-p1-46"]
+
+    def test_move_is_exclusive(self, client: TestClient) -> None:
+        """A moved quote appears in exactly one section afterwards."""
+        target = self._first_section_id(client)
+        client.post(
+            "/api/projects/1/reassign",
+            json={"quotes": ["q-p1-46"], "target_kind": "section", "target_id": target},
+        )
+        sections = client.get("/api/projects/1/quotes").json()["sections"]
+        appearances = [
+            s["cluster_id"]
+            for s in sections
+            for q in s["quotes"]
+            if q["dom_id"] == "q-p1-46"
+        ]
+        assert appearances == [target]
+
+    def test_move_freezes_the_quote(self, client: TestClient) -> None:
+        """A move mints a durable id + frozen form — a committed placement is
+        human investment, so the quote is pinned against a future pipeline drop."""
+        from bristlenose.server.models import Quote
+
+        target = self._first_section_id(client)
+        client.post(
+            "/api/projects/1/reassign",
+            json={"quotes": ["q-p1-46"], "target_kind": "section", "target_id": target},
+        )
+        db = client.app.state.db_factory()  # type: ignore[attr-defined]
+        try:
+            quote = (
+                db.query(Quote)
+                .filter(Quote.participant_id == "p1", Quote.start_timecode >= 46,
+                        Quote.start_timecode < 47)
+                .one()
+            )
+            assert quote.durable_id is not None
+            assert quote.frozen_form is not None
+        finally:
+            db.close()
+
+    def test_unknown_target_is_404(self, client: TestClient) -> None:
+        resp = client.post(
+            "/api/projects/1/reassign",
+            json={"quotes": ["q-p1-46"], "target_kind": "section", "target_id": 99999},
+        )
+        assert resp.status_code == 404
+
+    def test_unknown_quote_is_skipped_not_fatal(self, client: TestClient) -> None:
+        target = self._first_section_id(client)
+        resp = client.post(
+            "/api/projects/1/reassign",
+            json={
+                "quotes": ["q-p1-999", "q-p1-46"],
+                "target_kind": "section",
+                "target_id": target,
+            },
+        )
+        assert resp.status_code == 200
+        assert resp.json()["moved"] == ["q-p1-46"]
+
+    def test_bad_target_kind_is_422(self, client: TestClient) -> None:
+        resp = client.post(
+            "/api/projects/1/reassign",
+            json={"quotes": ["q-p1-46"], "target_kind": "banana", "target_id": 1},
+        )
+        assert resp.status_code == 422
+
+    def test_404_nonexistent_project(self, client: TestClient) -> None:
+        resp = client.post(
+            "/api/projects/999/reassign",
+            json={"quotes": ["q-p1-46"], "target_kind": "section", "target_id": 1},
+        )
+        assert resp.status_code == 404

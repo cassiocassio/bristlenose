@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 6 Jul 2026 (opened `native-experiment` — spike worktree for an experimental, lens-by-lens conversion of the UI to native macOS, inspired by Gruber's 2018 *Electron and the Decline of Native Apps*; a learning exercise, not a committed migration.) Prior: 6 Jul 2026 (opened `curation-persistence` — feature worktree for the incremental-analysis persistence layer: freeze marked quotes, membership-based section identity, best-effort themes. Plan: `docs/design-curation-persistence-plan.md`.) Prior: 3 Jul 2026 (closed `spike` branch — merged to main; worktree detached + tagged orange on disk, local branch deleted. Translucent titlebar/toolbar proof-of-concept for macOS 26 Tahoe.) Prior: 3 Jul 2026 (closed `fi` branch — merged to main `3e193fa8` + registration re-added `92033192`; worktree detached + kept on disk, local branch deleted. Machine-seeded Finnish locale, native review pending.) Prior: 3 Jul 2026 (closed `nl` branch — merged to main `88961b7a`; worktree detached + tagged orange on disk, local branch deleted. Review-pending; machine-seeded Dutch locale.) Prior: 3 Jul 2026 (opened `nl` + `fi` locale branches — Dutch (high/high pick) + Finnish (completes the Nordics), each with a native reviewer lined up; both share the 9 enrolment sites with `slavic`, so merge sequentially.) Prior: 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
+**Updated:** 9 Jul 2026 (closed three worktrees: `slavic` — merged to main 3 Jul `37e6f559`, machine-seeded/native-review-pending is a content gate not a branch one; `curation-persistence` — merged 7 Jul `c4152e13`, post-merge work continued on main; `native-experiment` — spike discarded, "possible but expensive", postmortem + mockup rescued to main `03a260d3`, history at tag `archive/native-experiment`. All worktrees detached + kept on disk with stale markers, local branches deleted, none were on remote.) Prior: 6 Jul 2026 (opened `native-experiment` — spike worktree for an experimental, lens-by-lens conversion of the UI to native macOS, inspired by Gruber's 2018 *Electron and the Decline of Native Apps*; a learning exercise, not a committed migration.) Prior: 6 Jul 2026 (opened `curation-persistence` — feature worktree for the incremental-analysis persistence layer: freeze marked quotes, membership-based section identity, best-effort themes. Plan: `docs/design-curation-persistence-plan.md`.) Prior: 3 Jul 2026 (closed `spike` branch — merged to main; worktree detached + tagged orange on disk, local branch deleted. Translucent titlebar/toolbar proof-of-concept for macOS 26 Tahoe.) Prior: 3 Jul 2026 (closed `fi` branch — merged to main `3e193fa8` + registration re-added `92033192`; worktree detached + kept on disk, local branch deleted. Machine-seeded Finnish locale, native review pending.) Prior: 3 Jul 2026 (closed `nl` branch — merged to main `88961b7a`; worktree detached + tagged orange on disk, local branch deleted. Review-pending; machine-seeded Dutch locale.) Prior: 3 Jul 2026 (opened `nl` + `fi` locale branches — Dutch (high/high pick) + Finnish (completes the Nordics), each with a native reviewer lined up; both share the 9 enrolment sites with `slavic`, so merge sequentially.) Prior: 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
 
 ---
 
@@ -38,9 +38,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
 | `bristlenose_branch living-fish/` | `living-fish` | parked | Animated logo (see Historical experiments) |
 | `bristlenose_branch drag-push/` | `drag-push` | parked | Sidebar push-mode drag (see Historical experiments) |
-| `bristlenose_branch slavic/` | `slavic` | feature | Localisation wave — pl/ru/uk + da/sv/nb + tr locales + i18n tooling (machine-seeded, pending native review) |
-| `bristlenose_branch curation-persistence/` | `curation-persistence` | feature | Curation persistence — freeze human-touched quotes, membership-based section identity, best-effort themes + "New!" flag across incremental re-runs |
-| `bristlenose_branch native-experiment/` | `native-experiment` | spike | Experimental native-macOS conversion, one "lens" (view/surface) at a time — a learning exercise in the spirit of Gruber's 2018 *Electron and the Decline of Native Apps* |
 
 
 
@@ -122,9 +119,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
-| `slavic` | `bristlenose_branch slavic/` | local only |
-| `curation-persistence` | `bristlenose_branch curation-persistence/` | local only |
-| `native-experiment` | `bristlenose_branch native-experiment/` | local only |
 | `spike` | `bristlenose_branch spike/` | local only |
 | `claude/debug-menu-instrumentation-4r9npy` _(merged)_ | _(worktree removed)_ | `origin/...` — merged to main 28 Jun 2026 (`252c1ce3`) |
 | `claude/figjam-miro-market-share-px52tg` _(merged)_ | `bristlenose_branch_figjam-miro-market-share/` _(detached, on disk)_ | local deleted — merged to main 28 Jun 2026 (66bc28c4) |
@@ -159,75 +153,11 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 
 ---
 
-### `native-experiment`
-
-**Kind:** spike — experimental conversion of Bristlenose's UI to native macOS, taken one "lens" (view/surface) at a time as a learning exercise. Inspired by John Gruber's 2018 *Electron and the Decline of Native Apps* (daringfireball.net/2018/12/electron_and_the_decline_of_native_apps). For fun and to see what we learn — not a committed migration; cherry-pick anything worth keeping.
-**Status:** Just started
-**Started:** 6 Jul 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch native-experiment/`
-**Remote:** local only (push when ready)
-
-**What it does:** Walks the app's surfaces one at a time and reimplements each in native macOS (AppKit/SwiftUI) instead of the WKWebView-hosted React SPA, observing what's gained and lost at each step — feel, performance, effort, fidelity. A deliberate spike: the value is the learning and any reusable native patterns, not a wholesale replacement of the SPA. Sits alongside the existing native desktop shell (`desktop/`) which already hosts the SPA; this explores pushing individual "lenses" below the webview seam.
-
-**Files this branch will touch:**
-- TBD — will be filled in as the experiment takes shape (expected: `desktop/Bristlenose/` Swift surfaces; possibly the WKWebView bridge and per-lens native views)
-
-**Potential conflicts with other branches:**
-- Low risk among active branches — `curation-persistence` and `slavic` are server/locale work; `tower-of-hanoi`/`responsive-signal-cards` don't touch `desktop/`. Watch for overlap with any in-flight native-sidebar (AppKit `NSOutlineView`) work at merge time, since that's the same `desktop/` subtree.
-
----
-
-### `curation-persistence`
-
-**Kind:** feature — persistence layer so a researcher's curation survives incremental re-runs (freeze marked quotes, membership-based section identity, best-effort themes with a "New!" flag)
-**Status:** Just started
-**Started:** 6 Jul 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch curation-persistence/`
-**Remote:** local only (push when ready)
-
-**What it does:** Implements `docs/design-curation-persistence-plan.md` (the *how*; model doc `design-curation-persistence.md`, parent `design-incremental-analysis.md`). Phase 1 (Freeze) is the highest-leverage, self-contained, releasable-alone slice: `starred ∨ edited ∨ tagged` → durable project-scoped ID + frozen verbatim form, exempt from stale-cleanup deletion, so a re-run can never lose marked work. Phase 2 (Section identity) re-keys sections/HeadingEdits on membership-derived `cluster_id` instead of the drifting label — the real migration. Phase 3 (Themes) is best-effort labels + snapshot-on-rename + the M3-gate/M1-pass "what's new" summary. Phase 0 (manual re-assignment) is parallelisable. The round-trip test (`tests/test_curation_roundtrip.py`) is the executable contract and per-phase merge gate. Plan seeded as `HANDOFF.md`.
-
-**Files this branch will touch:**
-- `bristlenose/server/models.py` (`durable_id` / `frozen_form` columns; `HeadingEdit` re-key on `cluster_id`/`theme_id`)
-- `bristlenose/server/importer.py` (stale-cleanup pin-exemption `_cleanup_stale_data`; membership-based cluster upsert)
-- `bristlenose/server/routes/data.py` (minting sites — `PUT /starred`, `/edits`, `/tags`) and `routes/quotes.py`
-- `bristlenose/server/alembic/versions/` (additive migration + fresh-DB backfill guard)
-- `frontend/src/.../QuoteSections.tsx`, `QuoteThemes.tsx` (anchor from `cluster_id`/`theme_id`, not label)
-- `tests/test_curation_roundtrip.py` (new — the contract)
-- `bristlenose/llm/prompts/thematic-grouping.md` (separate 7–12 count target)
-- `frozen_form` is a re-identification key — must stay outside the export/anonymisation boundary
-
-**Potential conflicts with other branches:**
-- None expected among active branches — `slavic` is `bristlenose/locales/`-only, `tower-of-hanoi`/`responsive-signal-cards` don't touch the server. Watch for overlap with any in-flight incremental-analysis / importer work at merge time (this is the persistence half of that programme).
-
----
-
 ### `debug-menu-instrumentation` (imported from cloud) — **MERGED 28 Jun 2026 (`252c1ce3`)**
 
 **Kind:** feature — Dev Run Inspector: a dev-only `/api/dev/run` infoviz page over instrumentation the pipeline already captures (`llm-calls.jsonl` / `pipeline-events.jsonl` / timing), plus a `.json` sibling. Pure-stdlib data shaping in `run_inspector.py`; thin FastAPI wrappers in `routes/dev.py`. Also shipped: native **Debug ▸ Run Inspector** window (⌃⌘R), a live Diagnostic-fixtures submenu, reveal/log/provenance Debug actions, and a build-time sidecar-staleness gate.
 **Merged:** 28 Jun 2026 to main (`252c1ce3`, `--no-ff`); worktree removed, branch ref kept as insurance. No version bump (dev/DEBUG-only tooling). Mac adoption caught + fixed two cloud defects (event-schema field mismatch + brittle XSS test) before merge; full suite green (3164 passed), ruff clean, `xcodebuild` BUILD SUCCEEDED.
 **Owed:** human visual QA of the client-rendered inspector tabs (tracked in the QA backlog).
-
----
-
-### `slavic`
-
-**Kind:** feature — localisation wave (pl/ru/uk + da/sv/nb + tr) + i18n tooling
-**Status:** 7 locales landed (machine-seeded), pending native review
-**Started:** 3 Jul 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch slavic/`
-**Remote:** local only (push when ready)
-
-**What it does:** Adds the **Polish (`pl`)**, **Russian (`ru`)**, and **Ukrainian (`uk`)** locales end-to-end across web + Python + native Swift, following Phase 0 (Swift CLDR selector rules for pl/ru/uk, landed on main 2 Jul). Each: 9 namespace JSON files with all four CLDR plural forms (pl `one/few/many/other`; ru+uk share the East-Slavic rule where `_one` recurs at 21/31 so it interpolates `{{count}}`), enrolled at all 9 registration sites (6 web/Python + 3 native Swift picker/tests), 21 Apple-HIG + QDA glossary rows each. Web gets plurals free via i18next; the Swift desktop selector is the sole hand-rolled path. Commits: pl `a3995ecb`; ru+uk to follow. Verified: parity, pytest, ruff, frontend build + size gate (also fixed a pre-existing size-gate bug — `preflight-*` locale chunks were never excluded), Swift `I18nTests`. **Machine-seeded — native review is the ship gate.** Deep-research + UX-community terminology + per-language reviewer briefs captured in the branch's gitignored review notes. Weblate enablement + website go-live deferred to the user (respecting the no-promises rule until reviewed + released).
-
-**Files this branch will touch:**
-- `bristlenose/locales/pl/` (new — 9 namespace files) and the registration sites (`bristlenose/i18n.py`, `frontend/src/i18n/index.ts`, `bristlenose/doctor.py`, both settings pickers, `LocaleStore.test.ts`)
-- `desktop/Bristlenose/Bristlenose/I18n.swift` + `AppearanceSettingsView.swift` + `I18nTests.swift` (native picker + CLDR plural category)
-- `bristlenose/locales/glossary.csv`, `docs/design-i18n.md` (plural rule + reviewer brief)
-- (exact set TBD — refine as work progresses)
-
-**Potential conflicts with other branches:**
-- None expected — no other active branch touches `bristlenose/locales/`. `tower-of-hanoi` keeps its locales under `experiments/`; `responsive-signal-cards` is CSS-only.
 
 ---
 
@@ -329,6 +259,18 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `curation-persistence` — merged 7 Jul 2026 (`c4152e13`)
+
+Feature — curation persistence: freeze human-touched quotes (`starred ∨ edited ∨ tagged` → durable ID + frozen verbatim form), membership-based section identity, best-effort themes + "New!" flag across incremental re-runs. Merged 7 Jul; post-merge reassignment (Phase 0) work continued directly on `main`. Worktree detached + kept on disk (stale marker), local branch deleted; remote never pushed. One uncommitted staged mockup at close (`dashboard-10-ideas.html`) had identical content rescued to main (`03a260d3`) — nothing lost.
+
+### `slavic` — merged 3 Jul 2026 (`37e6f559`)
+
+Feature — localisation wave: pl/ru/uk + da/sv/nb + tr locales (9 namespace files each, machine-seeded) + i18n plural tooling. All landed on main 3 Jul. Translations remain **machine-seeded, pending native review** before the website languages page is deployed (no-promises rule) — that's a *content* gate, not a branch-status one; the code has been on main since 3 Jul. Worktree detached + kept on disk (stale marker), local branch deleted; remote never pushed.
+
+### `native-experiment` — discarded 9 Jul 2026 (spike, NOT merged; tag `archive/native-experiment`)
+
+Spike — experimental fully-native macOS conversion, one lens at a time (Gruber's *Electron and the Decline of Native Apps*). Conclusion: **possible but expensive** — hybrid (native shell + WKWebView React SPA) stays the primary product. Durable artefacts rescued to main before discard (`03a260d3`): `docs/design-native-experiment.md` (postmortem + reusable findings) + `docs/mockups/dashboard-10-ideas.html`. Throwaway Swift catalogue code intentionally not rescued; full history preserved at git tag `archive/native-experiment` and in the frozen worktree. Worktree detached + kept on disk (stale marker), local branch force-deleted; remote never pushed.
 
 ### `spike` — merged 3 Jul 2026
 

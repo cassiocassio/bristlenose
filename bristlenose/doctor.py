@@ -1129,27 +1129,22 @@ def _validate_anthropic_key(key: str) -> tuple[bool | None, str]:
     Returns (True, "") if valid, (False, error) if rejected,
     (None, error) if we couldn't check (network issue).
     """
-    import json
     import urllib.error
     import urllib.request
 
     try:
-        # Use the messages endpoint with a minimal request to validate the key.
-        # The count_tokens endpoint or models list would be lighter, but
-        # the messages endpoint with max_tokens=1 is universally available.
+        # GET /v1/models — a model-agnostic key check (mirrors the OpenAI
+        # validator below).  Avoids POST /v1/messages with a hardcoded model
+        # id, which 404s for *everyone* the moment that model is retired —
+        # `claude-sonnet-4-20250514` did exactly that, misreported as a key
+        # that "could not validate" on every run despite being perfectly good.
         req = urllib.request.Request(
-            "https://api.anthropic.com/v1/messages",
-            method="POST",
+            "https://api.anthropic.com/v1/models",
+            method="GET",
             headers={
                 "x-api-key": key,
                 "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
             },
-            data=json.dumps({
-                "model": "claude-sonnet-4-20250514",
-                "max_tokens": 1,
-                "messages": [{"role": "user", "content": "hi"}],
-            }).encode(),
         )
         with urllib.request.urlopen(req, timeout=10):
             pass
@@ -1159,8 +1154,8 @@ def _validate_anthropic_key(key: str) -> tuple[bool | None, str]:
             return (False, "401 Unauthorized")
         if exc.code == 403:
             return (False, "403 Forbidden")
-        # 400, 429, 500 etc — key is valid, API just returned an error
-        if exc.code in (400, 429, 500, 503, 529):
+        # 429/500/503/529 — key is valid, API is just busy/erroring
+        if exc.code in (429, 500, 503, 529):
             return (True, "")
         return (None, f"HTTP {exc.code}")
     except urllib.error.URLError as exc:

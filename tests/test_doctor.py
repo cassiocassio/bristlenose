@@ -1630,3 +1630,39 @@ class TestMaybeOfferMlxInstall:
             mock_stdout.isatty.return_value = True
             result = _maybe_offer_mlx_install(self._report_with_mlx_warn())
         assert result is True
+
+
+class TestValidateAnthropicKey:
+    """The key validator must be model-agnostic.
+
+    Regression: it POSTed /v1/messages with a hardcoded model id, which 404s
+    once that model is retired (``claude-sonnet-4-20250514`` did), reporting a
+    perfectly valid key as "could not validate: HTTP 404" on every run.
+    """
+
+    def test_valid_key_probes_models_endpoint_with_get(self) -> None:
+        from bristlenose.doctor import _validate_anthropic_key
+
+        captured: dict[str, str] = {}
+
+        def fake_urlopen(req, timeout=10):  # noqa: ANN001, ARG001
+            captured["url"] = req.full_url
+            captured["method"] = req.get_method()
+            return MagicMock()  # context-manager-capable
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            ok, err = _validate_anthropic_key("sk-ant-test")
+
+        assert ok is True and err == ""
+        assert captured["url"] == "https://api.anthropic.com/v1/models"
+        assert captured["method"] == "GET"
+
+    def test_invalid_key_401_is_rejected(self) -> None:
+        import urllib.error
+
+        from bristlenose.doctor import _validate_anthropic_key
+
+        exc = urllib.error.HTTPError("u", 401, "Unauthorized", {}, None)  # type: ignore[arg-type]
+        with patch("urllib.request.urlopen", side_effect=exc):
+            ok, msg = _validate_anthropic_key("bad")
+        assert ok is False and "401" in msg

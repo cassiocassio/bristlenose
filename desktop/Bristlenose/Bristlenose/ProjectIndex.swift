@@ -244,6 +244,11 @@ extension Notification.Name {
     /// Posted by File > New Folder (⇧⌘N) and the sidebar folder.badge.plus button.
     static let createNewFolder = Notification.Name("bristlenoseCreateNewFolder")
 
+    /// Posted by File > Add Files… (⇧⌘A) — presents an open panel and routes the
+    /// chosen files through the same intake path as a drop onto the selected
+    /// project (copy → incremental run for folder-shaped analysed projects).
+    static let addFilesToSelectedProject = Notification.Name("bristlenoseAddFilesToSelectedProject")
+
     /// Posted by View > Move Focus to Projects (⌘0) — returns keyboard focus
     /// from the web report to the project list (the §10.1 no-trap command).
     static let focusProjects = Notification.Name("bristlenoseFocusProjects")

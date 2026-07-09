@@ -19,6 +19,7 @@
     "file": {
       "newProject": "New Project…",
       "newFolder": "New Folder…",
+      "addFiles": "Add Files…",
       "openInNewWindow": "Open in New Window",
       "exportReport": "Export Report…",
       "exportAnonymised": "Export Anonymised…",
@@ -200,6 +201,9 @@
     "dropProjectOntoProjectToast": "“%@” is already a Bristlenose project — drag its source files instead.",
     "dropOntoRunningProject": "Finish or stop the current run before adding more.",
     "dropOntoAnalysedProject": "Adding extra interviews to an analysed project isn't supported yet.",
+    "addFilesPrompt": "Add",
+    "addFilesMessage": "Add sessions to “%@”",
+    "addFilesNoProject": "Select a project first, then add files to it.",
     "dropOntoFailedProject": "Use Retry on the toolbar to try this run again.",
     "dropOntoUnreachableProject": "This project's folder isn't reachable right now.",
     "dropFolderContainsProject": "This folder contains the Bristlenose project \u201c%@\u201d. Drag the project itself, or its source files separately.",

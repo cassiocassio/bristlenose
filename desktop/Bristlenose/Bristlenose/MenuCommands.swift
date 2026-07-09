@@ -279,6 +279,14 @@ private struct FileMenuContent: View {
         }
         .keyboardShortcut("n", modifiers: [.command, .shift])
 
+        // Add Files… — the menu twin of drag-drop. ⇧⌘A mirrors Apple Mail's
+        // File ▸ Attach Files. Posts unconditionally (like New Project/Folder);
+        // ContentView resolves the current selection and toasts if none.
+        Button(i18n.t("desktop.menu.file.addFiles")) {
+            NotificationCenter.default.post(name: .addFilesToSelectedProject, object: nil)
+        }
+        .keyboardShortcut("a", modifiers: [.command, .shift])
+
         Button(i18n.t("desktop.menu.file.openInNewWindow")) {
             bridgeHandler.menuAction("openInNewWindow")
         }

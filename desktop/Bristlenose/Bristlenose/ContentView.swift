@@ -552,6 +552,10 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .createNewProject)) { _ in
             createNewProject()
         }
+        // File > Add Files… (⇧⌘A) — menu twin of drag-drop.
+        .onReceive(NotificationCenter.default.publisher(for: .addFilesToSelectedProject)) { _ in
+            addFilesToSelectedProject()
+        }
         // Undo restored a removal batch — re-apply the prior selection.
         .onReceive(NotificationCenter.default.publisher(for: .undoableRemovalRestoredSelection)) { note in
             if let restored = note.userInfo?["selection"] as? Set<SidebarSelection> {
@@ -650,6 +654,32 @@ struct ContentView: View {
                 } else {
                     locateError = LocateErrorState(project: project, pickedURL: url)
                 }
+            }
+        }
+    }
+
+    /// File ▸ Add Files… — the menu-driven twin of drag-drop. Presents an open
+    /// panel, then routes the chosen files through `handleDropOnProject` (the
+    /// same intake path as a drop: guards → copy → incremental run for
+    /// folder-shaped analysed projects). Toasts if no single project is selected.
+    private func addFilesToSelectedProject() {
+        guard let id = selectedProjectID else {
+            toast.show(i18n.t("desktop.chrome.addFilesNoProject"))
+            return
+        }
+        let projectName = projectIndex.projects.first(where: { $0.id == id })?.name ?? ""
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = true
+        panel.prompt = i18n.t("desktop.chrome.addFilesPrompt")
+        panel.message = String(format: i18n.t("desktop.chrome.addFilesMessage"), projectName)
+        panel.begin { response in
+            Task { @MainActor in
+                guard response == .OK, !panel.urls.isEmpty else { return }
+                // Reuse the drop path — extension filtering, copy, and the
+                // incremental-run wire (Phase 1) all live in handleDropOnProject.
+                handleDropOnProject(id: id, urls: panel.urls)
             }
         }
     }
@@ -1276,13 +1306,22 @@ struct ContentView: View {
                     projectID: id,
                     basenames: Set(copied.map { $0.lastPathComponent })
                 )
-                if alreadyAnalysed {
-                    // Files are now in the folder; analysis won't pick
-                    // them up until re-analysis (#post-TF).
+                if alreadyAnalysed && !wasFolderShaped {
+                    // File-subset project: files are in the folder but the CLI
+                    // can't scope a `--files` run, so it won't pick them up
+                    // until a full re-analysis. Informational only.
                     toast.show(i18n.t("desktop.chrome.dropOntoAnalysedProject"))
                     return
                 }
                 if wasFolderShaped {
+                    // Folder-shaped project (analysed or not): the CLI rescans
+                    // the folder at run time, so the freshly-copied files fold in
+                    // incrementally — the per-session cache re-transcribes only
+                    // the new sessions + re-clusters, and curation is preserved
+                    // on re-import. This is the incremental-add path (Phase 1).
+                    // NB Beta-must: #post-TF gating (destructive re-analyse +
+                    // warning modal is the TF path) is a product decision — see
+                    // docs/private/handoffs/incremental-swift-step4.md.
                     pipelineRunner.start(project: project)
                 }
             } catch is CancellationError {

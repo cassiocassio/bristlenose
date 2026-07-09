@@ -43,6 +43,11 @@ enum SubtitleVariant: Equatable {
     /// Pipeline reported the project unreachable mid-scan. `reason` is a
     /// Python-supplied string (not a localisation key) — rendered verbatim.
     case unreachable(reason: String)
+    /// A drop / Add-Files gesture is landing N interviews in THIS project — the
+    /// pre-copy "Adding N interviews…" acknowledgement, held for a ~2 s floor so
+    /// it can't flash-and-vanish on a near-instant clonefile copy, then it yields
+    /// to the copy/scan states and finally the stage ladder. Phase 2.
+    case addingInterviews(count: Int)
     /// A drag-import copy is landing files in THIS project. Carries the 0…1
     /// byte fraction; the view renders "Copying · N%" + a determinate ring
     /// (with hover-cancel) in the trailing slot — the row's *only* copy surface
@@ -79,8 +84,8 @@ extension SubtitleVariant {
         case .failed, .failedDiagnostic, .completedPartial:
             return true
         case .cantFind, .stopping, .running, .queued, .stopped, .partial,
-             .unreachable, .copying, .copyCancelling, .ready, .deltaOnly,
-             .placeholder:
+             .unreachable, .addingInterviews, .copying, .copyCancelling,
+             .ready, .deltaOnly, .placeholder:
             return false
         }
     }
@@ -133,6 +138,7 @@ enum ProjectSubtitle {
         availability: ProjectAvailability,
         pipelineState: PipelineState?,
         isStopping: Bool,
+        addingCount: Int?,
         copy: CopyDisplay?,
         lastRunAt: Date?,
         missingCount: Int,
@@ -170,6 +176,7 @@ enum ProjectSubtitle {
             // spinner lives in the title-line right slot, not the subtitle, so
             // it resolves the same as idle here.
             return resolveIdle(
+                addingCount: addingCount,
                 copy: copy,
                 lastRunAt: lastRunAt,
                 missingCount: missingCount,
@@ -183,11 +190,17 @@ enum ProjectSubtitle {
     /// persisted project model), so a `.ready` PipelineState and the
     /// `.idle`/`.none` fall-through agree on one truth-source.
     private static func resolveIdle(
+        addingCount: Int?,
         copy: CopyDisplay?,
         lastRunAt: Date?,
         missingCount: Int,
         unanalysedCount: Int
     ) -> SubtitleVariant {
+        // The pre-copy "Adding N interviews…" gesture ack outranks the copy and
+        // the resting date/delta (the ~2 s floor keeps it up briefly). It yields
+        // to `.running` automatically — that's returned by the main switch before
+        // we ever reach the idle tier.
+        if let addingCount { return .addingInterviews(count: addingCount) }
         // An active import (or its cancellation) outranks the resting date/delta.
         if let copy {
             switch copy {

@@ -36,7 +36,7 @@ enum SidebarSubtitleText {
         case .completedPartial:
             return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")  // :252-254
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
-             .copying, .copyCancelling:
+             .addingInterviews, .copying, .copyCancelling:
             return activityText(variant, progress: progress, separator: " · ", i18n: i18n)  // :255-259
         case .ready(let date, let delta):
             return readyText(date: date, delta: delta, i18n: i18n)           // :260-267
@@ -77,6 +77,8 @@ enum SidebarSubtitleText {
                 : "desktop.chrome.pipeline.partialRun")
         case .unreachable(let reason):
             return reason
+        case .addingInterviews(let count):
+            return i18n.plural("desktop.chrome.addingInterviews", count: count)
         case .copying(let fraction):
             let percent = min(100, max(0, Int((fraction * 100).rounded())))
             return i18n.t("desktop.chrome.pipeline.copying", ["percent": String(percent)])

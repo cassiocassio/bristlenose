@@ -242,6 +242,26 @@ final class PipelineRunner: ObservableObject {
         didSet { syncSleepAssertion() }
     }
 
+    /// Transient "Adding N interviews…" gesture counts, keyed by project. Set by
+    /// the drop / Add-Files intake before copy starts and held for a ~2 s floor
+    /// (so the message can't flash-and-vanish on a near-instant clonefile copy),
+    /// then cleared. Read by `ProjectSubtitle.resolve` at the sidebar call sites;
+    /// yields to the stage ladder once a run reaches `.running`. Phase 2.
+    @Published private(set) var addingInterviews: [UUID: Int] = [:]
+
+    /// Show the "Adding N interviews…" ack for `projectID` and clear it no sooner
+    /// than `floor` seconds from now (the visibility floor — the timer only bounds
+    /// the *minimum* on-screen time; a run reaching `.running` overrides the
+    /// message earlier via the resolver precedence).
+    func beginAddingInterviews(projectID id: UUID, count: Int, floor: TimeInterval = 2) {
+        guard count > 0 else { return }
+        addingInterviews[id] = count
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(floor))
+            self?.addingInterviews[id] = nil
+        }
+    }
+
     /// Keeps the system awake while any run is executing — see `RunSleepAssertion`.
     /// Driven off `state` (the single source of truth) rather than instrumented
     /// at every start/attach/exit site: `state` only mutates on coarse

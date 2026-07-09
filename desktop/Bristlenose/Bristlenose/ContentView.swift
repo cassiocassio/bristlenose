@@ -1280,6 +1280,11 @@ struct ContentView: View {
         let wasFolderShaped = (project.inputFiles == nil)
         selection = [.project(id)]
 
+        // Immediate "Adding N interviews…" ack (Phase 2), held for a ~2 s floor
+        // so it can't flash on a near-instant clonefile copy; yields to the
+        // copy/scan states and then the stage ladder once the run starts.
+        pipelineRunner.beginAddingInterviews(projectID: id, count: filteredURLs.count)
+
         // Copy is async (cross-volume runs off the main thread). The
         // toolbar pill self-shows while `copyMachinery.inFlight != nil`.
         Task {
@@ -1872,6 +1877,19 @@ struct ContentView: View {
                 }
                 guard case .running = serveManager.state else {
                     Self.reloadLog.info("reload wait attempt=\(attempt)")
+                    continue
+                }
+                // Phase 6 — idle-flag hold: never reload the report out from
+                // under an in-progress edit. A WKWebView reload destroys unsaved
+                // text in a focused field, the exact collision §9 exists to
+                // prevent. Ride out the edit like we ride out the re-import; if
+                // still editing when attempts run out, skip the reload — a stale
+                // report is recoverable, a clobbered edit is not (it refreshes on
+                // the next selection/run). NB the SPA is assumed authoritative for
+                // applying fresh /quotes once idle; this only stops Swift from
+                // blunt-reloading over the user.
+                if bridgeHandler.isEditing {
+                    Self.reloadLog.info("reload defer (editing) attempt=\(attempt)")
                     continue
                 }
                 let didReload = bridgeHandler.reloadWebView()

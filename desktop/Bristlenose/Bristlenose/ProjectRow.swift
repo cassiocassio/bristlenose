@@ -256,7 +256,7 @@ struct ProjectRow: View {
             diagnosticSubtitle(kind: .warning,
                                text: i18n.t("desktop.pipeline.diagnostic.header.completed_partial"))
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
-             .copying, .copyCancelling:
+             .addingInterviews, .copying, .copyCancelling:
             subtitleText(prefix: nil,
                          text: pipelineActivityText(subtitleVariant, separator: " · ") ?? "",
                          style: .secondary)
@@ -301,6 +301,8 @@ struct ProjectRow: View {
                 : "desktop.chrome.pipeline.partialRun")
         case .unreachable(let reason):
             return reason
+        case .addingInterviews(let count):
+            return i18n.plural("desktop.chrome.addingInterviews", count: count)
         case .copying(let fraction):
             // Byte-% (no file-item "N of M" source exists). "%" placement is
             // per-locale in the string; the number is a 0…100 int (no grouping
@@ -485,6 +487,9 @@ struct ProjectRow: View {
             availability: availability,
             pipelineState: pipelineState,
             isStopping: isStoppingProgress,
+            // The flag-OFF SwiftUI row (being deleted at cutover) doesn't wire the
+            // Adding-interviews gesture store — that lives on the AppKit sidebar.
+            addingCount: nil,
             copy: copyState,
             lastRunAt: project.lastPipelineRunAt,
             missingCount: unanalysed?.missingFiles.count ?? 0,
@@ -645,7 +650,7 @@ struct ProjectRow: View {
         case .completedPartial:
             return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
-             .copying, .copyCancelling:
+             .addingInterviews, .copying, .copyCancelling:
             // Comma separator: VoiceOver reads commas as pauses
             // ("Transcribing, 7 of 8, ~1 min left"); "·" doesn't.
             return pipelineActivityText(variant, separator: ", ")

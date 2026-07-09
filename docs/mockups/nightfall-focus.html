@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightfall — Focus Mode Mockup</title>
+<style>
+/* === Design tokens (from tokens.css) === */
+:root {
+    --bn-font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #2563eb;
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-starred: #e0a41b;
+
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+
+    /* Sentiment colours */
+    --bn-sentiment-frustration: #ea580c;   --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #dc2626;      --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #7c3aed;          --bn-sentiment-doubt-bg: #f5f3ff;
+    --bn-sentiment-satisfaction: #16a34a;   --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-confidence: #2563eb;     --bn-sentiment-confidence-bg: #eff6ff;
+
+    --bn-quote-max-width: 23rem;
+    --bn-grid-gap: 1.25rem;
+
+    /* === Nightfall === */
+    /* How far the receded chrome sinks. 0 = gone, 1 = full day.
+       ~0.14 keeps a faint OUTLINE — the mountain ridge, not a black hole. */
+    --ghost: 0.14;
+    /* Dusk, not a light-switch. Eased both ways, symmetric. */
+    --night-dur: 340ms;
+    --night-ease: cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* Dark theme = the literal reading of the metaphor: village lights on a night sky */
+body.dark {
+    --bn-colour-bg: #14161a;
+    --bn-colour-text: #f3f4f6;
+    --bn-colour-muted: #9199a6;
+    --bn-colour-border: #2b2f37;
+    --bn-colour-accent: #6ea8ff;
+    --bn-colour-quote-bg: #1b1e24;
+    --bn-colour-badge-bg: #232730;
+    --bn-colour-badge-text: #c3c9d4;
+    --bn-colour-icon-idle: #3a3f49;
+    --bn-sentiment-frustration-bg: #2a1b12;
+    --bn-sentiment-confusion-bg: #2a1414;
+    --bn-sentiment-doubt-bg: #201a2e;
+    --bn-sentiment-satisfaction-bg: #12241a;
+    --bn-sentiment-confidence-bg: #14203a;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+body {
+    font-family: var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    line-height: 1.6;
+    margin: 0;
+    padding: 4.5rem var(--bn-space-lg) var(--bn-space-xl);
+    /* Nightfall dims the whole ground; the lit quotes glow relatively brighter. */
+    transition: background var(--night-dur) var(--night-ease),
+                color     var(--night-dur) var(--night-ease);
+}
+
+/* In dark + night, deepen the ground and add a faint vignette — depth, a night sky.
+   Restrained: no literal stars (twee); just the floor falling away at the edges. */
+body.dark.night {
+    --bn-colour-bg: #0d0f13;
+    background:
+        radial-gradient(120% 90% at 50% 22%, #16191f 0%, #0d0f13 62%, #090a0d 100%);
+}
+
+article { margin: 0 auto; max-width: 60rem; }
+
+h1 { font-size: 1.6rem; font-weight: 700; margin: 0 0 0.25rem; letter-spacing: -0.01em; }
+.sub { color: var(--bn-colour-muted); margin: 0 0 2rem; font-size: 0.95rem; }
+
+/* Theme headings = signposts. Wayfinding, not the target.
+   They recede at nightfall too — but a touch less than the chip-noise:
+   you still want to know which valley you're standing in. */
+h2 {
+    font-size: 1.25rem; font-weight: 600;
+    margin: 2.4rem 0 1rem; padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--bn-colour-border);
+    grid-column: 1 / -1;
+    transition: opacity var(--night-dur) var(--night-ease),
+                color var(--night-dur) var(--night-ease),
+                border-color var(--night-dur) var(--night-ease);
+}
+
+/* === Quote group as grid (layout NEVER changes on toggle) === */
+.quote-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(var(--bn-quote-max-width), 100%), 1fr));
+    gap: 0 var(--bn-grid-gap);
+    align-items: start;
+}
+
+/* === Quote card (from blockquote.css) === */
+blockquote {
+    background: var(--bn-colour-quote-bg);
+    border-left: 2px solid var(--bn-colour-border);
+    margin: 0 0 var(--bn-grid-gap) 0;
+    padding: var(--bn-space-md) 1rem;
+    padding-right: 3.5rem;
+    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+    position: relative;
+    break-inside: avoid;
+    /* Card box is chrome. It fades to nothing WITHOUT moving the text:
+       only background + border animate; padding is untouched → zero reflow. */
+    transition: background var(--night-dur) var(--night-ease),
+                border-color var(--night-dur) var(--night-ease);
+}
+
+/* --- SIGNAL: stays lit through the night --- */
+blockquote .quote-body {
+    flex: 1; min-width: 0;
+    font-size: 1rem;
+    color: var(--bn-colour-text);
+    transition: color var(--night-dur) var(--night-ease);
+}
+.speaker {                        /* pN — whose voice. Irreducible. Stays lit. */
+    color: var(--bn-colour-muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: color var(--night-dur) var(--night-ease);
+}
+.quote-row { display: flex; gap: 0.5rem; align-items: baseline; margin-bottom: 0.35rem; }
+
+/* --- NOISE: recedes to a faint outline (opacity only → no reflow) --- */
+.context, .timecode, .badges, .hide-btn {
+    transition: opacity var(--night-dur) var(--night-ease);
+}
+.context {
+    display: block; color: var(--bn-colour-muted);
+    font-size: 0.85rem; margin-bottom: 0.3rem;
+}
+.timecode {
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono); font-size: 0.8rem; flex-shrink: 0;
+}
+.badges {
+    display: flex; gap: var(--bn-space-sm); margin-top: 0.5rem; flex-wrap: wrap;
+}
+.badge {
+    display: inline-block; font-family: var(--bn-font-mono); font-size: 0.72rem;
+    padding: var(--bn-space-xs) 0.45rem; border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text);
+}
+.badge-frustration { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-confusion   { background: var(--bn-sentiment-confusion-bg);   color: var(--bn-sentiment-confusion); }
+.badge-doubt       { background: var(--bn-sentiment-doubt-bg);       color: var(--bn-sentiment-doubt); }
+.badge-satisfaction{ background: var(--bn-sentiment-satisfaction-bg);color: var(--bn-sentiment-satisfaction); }
+.badge-confidence  { background: var(--bn-sentiment-confidence-bg);  color: var(--bn-sentiment-confidence); }
+
+/* --- Star: the researcher's own mark --- */
+.star-btn {
+    position: absolute; top: 0.6rem; right: 0.6rem;
+    background: none; border: none; font-size: 0.9rem;
+    color: var(--bn-colour-icon-idle); cursor: pointer;
+    padding: var(--bn-space-xs); line-height: 1;
+    transition: color var(--night-dur) var(--night-ease),
+                opacity var(--night-dur) var(--night-ease);
+}
+blockquote.starred .star-btn { color: var(--bn-colour-starred); }
+
+.hide-btn {
+    position: absolute; top: 0.6rem; right: 2rem;
+    background: none; border: none; font-size: 0.9rem;
+    color: var(--bn-colour-icon-idle); cursor: pointer;
+    padding: var(--bn-space-xs); line-height: 1; opacity: 0;
+}
+
+/* ============================================================= */
+/* ===================  N I G H T F A L L  ===================== */
+/* ============================================================= */
+
+body.night blockquote {
+    background: transparent;
+    border-left-color: color-mix(in srgb, var(--bn-colour-border) 40%, transparent);
+}
+
+/* Chrome sinks to a faint ridge-line. Present (still in the DOM, still
+   holding its footprint → no reflow) but no longer competing for light. */
+body.night .context,
+body.night .timecode,
+body.night .badges {
+    opacity: var(--ghost);
+    pointer-events: none;   /* faded chrome drops out of hit-testing... */
+}
+body.night .context,
+body.night .timecode,
+body.night .badges,
+body.night .hide-btn { }
+
+/* Headings recede, but stay a little brighter than the chips — wayfinding. */
+body.night h2 {
+    opacity: 0.4;
+    border-bottom-color: color-mix(in srgb, var(--bn-colour-border) 30%, transparent);
+}
+
+/* Unstarred stars: absence is information — they go dark. Only the marks you
+   made stay lit, so the starred quotes read as lanterns across the valley. */
+body.night .star-btn { opacity: 0; }
+body.night blockquote.starred .star-btn { opacity: 1; }
+
+/* Village lights: nudge the quote body to full contrast so it reads as lit. */
+body.night .quote-body { color: var(--bn-colour-text); }
+body.dark.night .quote-body { color: #ffffff; }
+body.dark.night .speaker { color: #b8c0cc; }
+
+/* Reduced motion: snap, don't fade. */
+@media (prefers-reduced-motion: reduce) {
+    :root { --night-dur: 0.001ms; }
+}
+
+/* === Toggle bar (mockup chrome, not part of the design) === */
+.hud {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; gap: 1rem;
+    padding: 0.6rem 1rem;
+    background: rgba(20,22,26,0.92);
+    color: #e5e7eb; font-size: 0.8rem;
+    font-family: var(--bn-font-mono);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid #2b2f37;
+}
+.hud .title { font-weight: 600; color: #fff; }
+.hud .spacer { margin-left: auto; }
+.hud button {
+    font-family: var(--bn-font-mono); font-size: 0.75rem;
+    padding: 0.3rem 0.85rem; border: 1px solid #374151;
+    border-radius: var(--bn-radius-sm); background: transparent;
+    color: #9ca3af; cursor: pointer; transition: all 0.15s ease;
+}
+.hud button:hover { border-color: #6b7280; color: #d1d5db; }
+.hud button.active { background: var(--bn-colour-accent); border-color: var(--bn-colour-accent); color: #fff; }
+.hud .night-btn.active { background: #1e293b; border-color: #475569; color: #e2e8f0; }
+.hud kbd {
+    font-size: 0.68rem; padding: 0.05rem 0.35rem; border-radius: 3px;
+    background: #2b2f37; border: 1px solid #3a3f49; color: #9ca3af;
+}
+</style>
+</head>
+<body class="dark">
+
+<div class="hud">
+    <span class="title">Nightfall</span>
+    <span style="color:#6b7280">focus-mode study — press <kbd>N</kbd></span>
+    <span class="spacer"></span>
+    <button id="themeBtn">Theme: Dark</button>
+    <button id="nightBtn" class="night-btn">Nightfall: off</button>
+</div>
+
+<article>
+    <h1>IKEA planner study — extracted quotes</h1>
+    <p class="sub">8 participants · 214 quotes · toggle Nightfall to read the signal alone.</p>
+
+    <h2>Delivery &amp; assembly anxiety</h2>
+    <div class="quote-group">
+
+        <blockquote class="starred">
+            <button class="star-btn" title="Starred">★</button>
+            <button class="hide-btn" title="Hide">⊘</button>
+            <span class="context">on unboxing the wardrobe</span>
+            <div class="quote-row">
+                <span class="timecode">12:04</span>
+                <div class="quote-body">There were forty-two bags of screws and no way to tell which went where. I just sat on the floor and gave up for the night.</div>
+            </div>
+            <span class="speaker">P3</span>
+            <div class="badges">
+                <span class="badge badge-frustration">frustration</span>
+                <span class="badge">assembly</span>
+                <span class="badge">instructions</span>
+            </div>
+        </blockquote>
+
+        <blockquote>
+            <button class="star-btn" title="Star">☆</button>
+            <button class="hide-btn" title="Hide">⊘</button>
+            <span class="context">delivery window</span>
+            <div class="quote-row">
+                <span class="timecode">03:51</span>
+                <div class="quote-body">They said between eight and six. That's the whole day gone. I can't take a day off work to sit and wait for a flat-pack.</div>
+            </div>
+            <span class="speaker">P1</span>
+            <div class="badges">
+                <span class="badge badge-frustration">frustration</span>
+                <span class="badge">delivery</span>
+            </div>
+        </blockquote>
+
+        <blockquote class="starred">
+            <button class="star-btn" title="Starred">★</button>
+            <button class="hide-btn" title="Hide">⊘</button>
+            <span class="context">missing part</span>
+            <div class="quote-row">
+                <span class="timecode">27:18</span>
+                <div class="quote-body">One dowel short. One. And the whole thing just stops. You can't finish, you can't return it half-built.</div>
+            </div>
+            <span class="speaker">P6</span>
+            <div class="badges">
+                <span class="badge badge-confusion">confusion</span>
+                <span class="badge">parts</span>
+                <span class="badge">returns</span>
+            </div>
+        </blockquote>
+
+        <blockquote>
+            <button class="star-btn" title="Star">☆</button>
+            <button class="hide-btn" title="Hide">⊘</button>
+            <span class="context">after finishing</span>
+            <div class="quote-row">
+                <span class="timecode">41:02</span>
+                <div class="quote-body">Honestly once it was up I felt like I'd built a house. Bit proud of it, actually.</div>
+            </div>
+            <span class="speaker">P2</span>
+            <div class="badges">
+                <span class="badge badge-satisfaction">satisfaction</span>
+                <span class="badge">assembly</span>
+            </div>
+        </blockquote>
+    </div>
+
+    <h2>Planner tool friction</h2>
+    <div class="quote-group">
+
+        <blockquote class="starred">
+            <button class="star-btn" title="Starred">★</button>
+            <button class="hide-btn" title="Hide">⊘</button>
+            <span class="context">first use of the room planner</span>
+            <div class="quote-row">
+                <span class="timecode">08:33</span>
+                <div class="quote-body">I put in my measurements and it just… rotated the whole room. I never found how to undo it. Closed the tab in the end.</div>
+            </div>
+            <span class="speaker">P4</span>
+            <div class="badges">
+                <span class="badge badge-confusion">confusion</span>
+                <span class="badge">planner</span>
+                <span class="badge">undo</span>
+            </div>
+        </blockquote>
+
+        <blockquote>
+            <button class="star-btn" title="Star">☆</button>
+            <button class="hide-btn" title="Hide">⊘</button>
+            <span class="context">saving a design</span>
+            <div class="quote-row">
+                <span class="timecode">15:47</span>
+                <div class="quote-body">I wasn't sure if it saved. There's no little tick, no "saved" anywhere. So I screenshotted everything just in case.</div>
+            </div>
+            <span class="speaker">P7</span>
+            <div class="badges">
+                <span class="badge badge-doubt">doubt</span>
+                <span class="badge">planner</span>
+                <span class="badge">feedback</span>
+            </div>
+        </blockquote>
+
+        <blockquote>
+            <button class="star-btn" title="Star">☆</button>
+            <button class="hide-btn" title="Hide">⊘</button>
+            <span class="context">on price confidence</span>
+            <div class="quote-row">
+                <span class="timecode">22:09</span>
+                <div class="quote-body">The running total at the bottom — that I liked. I always knew what it was going to cost me before I got to the till.</div>
+            </div>
+            <span class="speaker">P5</span>
+            <div class="badges">
+                <span class="badge badge-confidence">confidence</span>
+                <span class="badge">pricing</span>
+            </div>
+        </blockquote>
+
+        <blockquote class="starred">
+            <button class="star-btn" title="Starred">★</button>
+            <button class="hide-btn" title="Hide">⊘</button>
+            <span class="context">switching device mid-task</span>
+            <div class="quote-row">
+                <span class="timecode">33:40</span>
+                <div class="quote-body">I started on my phone on the bus and then it wasn't there on the laptop at home. All that work, gone.</div>
+            </div>
+            <span class="speaker">P8</span>
+            <div class="badges">
+                <span class="badge badge-frustration">frustration</span>
+                <span class="badge">sync</span>
+                <span class="badge">planner</span>
+            </div>
+        </blockquote>
+    </div>
+</article>
+
+<script>
+    const body = document.body;
+    const themeBtn = document.getElementById('themeBtn');
+    const nightBtn = document.getElementById('nightBtn');
+
+    function syncButtons() {
+        const dark = body.classList.contains('dark');
+        const night = body.classList.contains('night');
+        themeBtn.textContent = 'Theme: ' + (dark ? 'Dark' : 'Day');
+        nightBtn.textContent = 'Nightfall: ' + (night ? 'on' : 'off');
+        nightBtn.classList.toggle('active', night);
+    }
+
+    themeBtn.addEventListener('click', () => { body.classList.toggle('dark'); syncButtons(); });
+    nightBtn.addEventListener('click', () => { body.classList.toggle('night'); syncButtons(); });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'n' || e.key === 'N') { body.classList.toggle('night'); syncButtons(); }
+        if (e.key === 't' || e.key === 'T') { body.classList.toggle('dark'); syncButtons(); }
+    });
+
+    syncButtons();
+</script>
+</body>
+</html>

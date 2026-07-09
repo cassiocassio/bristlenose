@@ -1,13 +1,14 @@
 ---
 status: current
-last-trued: 2026-05-12
-trued-against: HEAD@a4-stage-cache-honesty on 2026-05-12
+last-trued: 2026-07-09
+trued-against: HEAD on 2026-07-09
 ---
 
 > **Truing status:** Current — Phase 1f / 4a-pre shipped on `port-v01-ingestion`; failure-taxonomy Phase A shipped via `pipeline-summary-events` (2026-05-07); A4 stage-cache-honesty shipped 2026-05-12 — extends abandon-check coverage to s08 and s10/s11 in both `run()` and `run_analysis_only()`, flips s10/s11 from soft to hard, adds the `topics` bucket to `PipelineSummary`, locks a privacy contract on `cause.message`, and refuses to record `mark_stage_complete` for empty intermediate content. Swift consumer side exists for run-state derivation (`desktop/Bristlenose/Bristlenose/EventLogReader.swift`); the Branch 2 `pipeline-diagnostic-pill` popover is design-only — see [design-pipeline-diagnostic-popover.md](design-pipeline-diagnostic-popover.md). Phase 3+ remain design-only.
 
 ## Changelog
 
+- _2026-07-09_ — **Truing pass (`--doc`).** Reconciled event-log / manifest claims against shipped code. Fixed: PID-file cleanup is `try/finally` (`_remove_pid_file`), not an `atexit` hook (the body contradicted this doc's own 2026-04-26 changelog); the `event` enum now names the shipped `run_progress` event (was described as future Phase-4a); cause-category count corrected 10 → 13 (`missing_input` / `missing_binary` / `output_truncated` shipped since); manifest zombie-field note corrected (the two `total_*_tokens` fields aren't declared on `PipelineManifest` at all). Also added a stage-cache path-invariance note (`hash_file_metadata` resolves paths) and refreshed a retired example model id. **Deferred to a future `--doc` pass** (recorded so they're not lost): full cause-table rows + retryability for the 3 newer categories; a `PipelineSummary` subsection for the incremental `new_sessions` / `reflow_scope` fields + `ReflowScopeEnum`; refresh of stale inline `file:line` anchors (drifted ~35–60 lines).
 - _2026-05-12_ — **`a4-stage-cache-honesty` branch — stage-cache honesty + privacy contract.** Closes the cache-poisoning bug from the 2026-05-09 first-run repro: failed analysis stages (s08/s09/s10+s11) used to stamp the manifest as COMPLETE with empty intermediate JSON, so the next run read `(cached)` and re-rendered an empty report. Transient failures became permanent empty deliverables.
     - **Abandon-check moved BEFORE `mark_stage_complete`** at every analysis-stage site in `run()` (call-order was the bug — abandon raised AFTER manifest write). Four new abandon-checks: s08, s10/s11 in `run()`; s08, s10/s11 in `run_analysis_only()`.
     - **s10/s11 flipped from soft to hard.** A fallback-clustered "degraded" report that looks real is worse than honest abandon. Fallback output still flows to render, but `outcome.failed` is populated at the LLM call site (BEFORE fallback runs) and the orchestrator reads `outcome.succeeded` to abandon.
@@ -122,7 +123,7 @@ StageTrace:
     transcript_s1: "a1b2c3..."
     transcript_s2: "d4e5f6..."
     prompt_version: "7g8h9i..."
-    model: "claude-sonnet-4-20250514"
+    model: "claude-opus-4-8"
   output_hash: "j0k1l2..."
   completed_at: "2026-02-20T14:32:15Z"
   cost_usd_estimate: 1.83
@@ -130,6 +131,8 @@ StageTrace:
 ```
 
 On re-run: compute current input hashes → compare against stored traces → skip stages where inputs haven't changed → re-run stale stages from the first point of divergence.
+
+**Path spelling must not count as a changed input.** `hash_file_metadata` (`bristlenose/hashing.py`) resolves each path (`Path.resolve()`) before hashing name/size/mtime, so the trace reflects file *identity*, not the spelling the caller passed. Without this, invoking the pipeline with a differently-spelled but identical path (relative vs absolute) changed every input hash and re-ran every stage on byte-identical files — needless re-analysis and LLM spend. Same root cause as the serve importer's resolved-path project identity. Regression: `tests/test_hashing.py::test_hash_file_metadata_path_spelling_invariant`.
 
 **Key influence**: Nix (Dolstra, 2006) — treats builds as pure functions where output = f(inputs). The output path includes a hash of all inputs. If inputs haven't changed, the output already exists. This is content-addressable caching.
 
@@ -226,7 +229,7 @@ The merge rule: **if the pipeline didn't produce a quote in the new run, and the
 
 `pipeline-manifest.json` in the output's `.bristlenose/` directory. The manifest is the **source of truth for pipeline state**. It records:
 
-> **Zombie-fields warning.** `total_cost_usd` / `total_input_tokens` / `total_output_tokens` shown below are Phase 1a-declared but **never populated in code** — `PipelineManifest.total_cost_usd: float = 0.0` exists in `bristlenose/manifest.py` and stays at zero. Treat as decorative; lifetime cost is derived from `SessionRecord.cost_usd_estimate` (Phase 1f) and `pipeline-events.jsonl` `run_completed` events (Phase 4a-pre). The zombie fields will be removed in a future cleanup; not load-bearing.
+> **Zombie-fields warning.** Of the `total_*` fields shown below, only `total_cost_usd` is a real attribute (`PipelineManifest.total_cost_usd: float = 0.0` in `bristlenose/manifest.py`, and it stays at zero); `total_input_tokens` / `total_output_tokens` are **not declared on `PipelineManifest` at all** — the JSON example is illustrative only. Treat as decorative; lifetime cost is derived from `SessionRecord.cost_usd_estimate` (Phase 1f) and `pipeline-events.jsonl` `run_completed` events (Phase 4a-pre). The zombie fields will be removed in a future cleanup; not load-bearing.
 
 ```json
 {
@@ -356,7 +359,7 @@ Per-event field semantics:
 |---|---|---|---|
 | `schema_version` | int | every line | Event-line envelope version. Starts at 1. Future Phase 4a extends additively without bumping. |
 | `ts` | ISO8601 | every line | When this event was written. |
-| `event` | `str, Enum` | every line | One of `run_started` / `run_completed` / `run_cancelled` / `run_failed`. (Phase 4a will add stage-level + human-edit events; the four run-level types stay as-is.) |
+| `event` | `str, Enum` | every line | `run_started` / `run_completed` / `run_cancelled` / `run_failed`, plus `run_progress` — a mid-run progress event (shipped) carrying stage + incremental session counts; readers locating the terminus skip it. Human-edit events remain future Phase 4a. |
 | `run_id` | str (ULID) | every line | Stable identifier for this run. ULID for sortability. Stamped on every event so terminus can be correlated back to start (Dagster/Airflow/Prefect convention). |
 | `kind` | `str, Enum` | every line | What was attempted. `KindEnum(str, Enum)`: `run` / `analyze` / `transcribe-only` (same convention as `StageStatus` in `manifest.py:23`). New kinds require code change + migration. **Note:** the `render` command does not write the events log — see "Open decisions" resolution below. |
 | `started_at` | ISO8601 | every line | The run's `started_at` is repeated on each event so terminus events are self-contained — a future reader can reconstruct duration without joining back to `run_started`. |
@@ -409,7 +412,7 @@ Per-event field semantics:
 
 The "retryable" column is the rule the desktop and CLI both apply via `is_retryable(category) -> bool` (Python source, Swift mirrors). It's *not* an on-disk field. Other `cause` fields are best-effort — populated when known, null when not. The desktop reads `category` for verb dispatch (`Fix credentials → Retry` for `auth`, `Switch provider → Retry` for `quota`, etc.) and surfaces `message` + `code` + `provider` + `stage` + `signal_name` in the failure popover for forensics.
 
-**Cross-boundary naming.** Python [`CauseCategoryEnum`](bristlenose/events.py:62) and Swift [`PipelineFailureCategory`](desktop/Bristlenose/Bristlenose/PipelineRunner.swift:9) use the **same snake_case raw values** so JSON round-trips losslessly through the events log. Both enums currently carry the same 10 cases: original 6 (`auth | network | quota | disk | whisper | unknown`) plus the Phase 1f-added 4 (`user_signal | api_request | api_server | missing_dep`). Swift uses `camelCase` Swift names with explicit `String` rawValues (`case userSignal = "user_signal"`) so the language conventions hold on both sides while the wire format stays canonical. No existing case is renamed; pre-pivot drafts proposed renames based on a stale snapshot of the Swift enum and were rejected. Adding a new category requires coordinated changes on both sides (Python first, Swift in the next desktop release); the design doc currently treats this contract as stable, but a "decode unknown category as `.unknown` for forward-compat" question is parked (see round-3 changelog).
+**Cross-boundary naming.** Python [`CauseCategoryEnum`](bristlenose/events.py:62) and Swift [`PipelineFailureCategory`](desktop/Bristlenose/Bristlenose/PipelineRunner.swift:9) use the **same snake_case raw values** so JSON round-trips losslessly through the events log. Both enums currently carry the same 13 cases: original 6 (`auth | network | quota | disk | whisper | unknown`), the Phase 1f-added 4 (`user_signal | api_request | api_server | missing_dep`), and 3 shipped since (`missing_input | missing_binary | output_truncated`) — the table below still lists the original 10; see `CauseCategoryEnum` in `events.py` for the authoritative set. Swift uses `camelCase` Swift names with explicit `String` rawValues (`case userSignal = "user_signal"`) so the language conventions hold on both sides while the wire format stays canonical. No existing case is renamed; pre-pivot drafts proposed renames based on a stale snapshot of the Swift enum and were rejected. Adding a new category requires coordinated changes on both sides (Python first, Swift in the next desktop release); the design doc currently treats this contract as stable, but a "decode unknown category as `.unknown` for forward-compat" question is parked (see round-3 changelog).
 
 **`kind` × terminal-stage matrix.** What constitutes "completed" depends on `kind`:
 
@@ -427,7 +430,7 @@ This replaces the hardcoded `terminalStage = "render"` in Swift `PipelineRunner`
 
 The event log is **append-only**. There is no in-place update of any field, ever. Crash safety: write one full line + `fsync` per event; on read, discard the trailing line if it doesn't end in `\n` or fails to parse (standard JSONL recipe).
 
-1. **`run_started`** — at the top of each CLI command. Generates a new ULID `run_id`. Captures the `process` envelope (`pid`, `start_time` from `psutil.Process(pid).create_time()`, `hostname`, `user`, `bristlenose_version`, `python_version`, `os`). Appends a `run_started` line including the envelope. **Also writes** a Python-side PID file at `<output_dir>/.bristlenose/run.pid` containing `(pid, start_time)` as JSON — this is the canonical PID-liveness record for "is a Python pipeline alive for this project?". Cleaned up by an `atexit` hook on clean exit and overwritten on next `run_started`. Distinct from Swift's `<App Support>/Bristlenose/pids/<UUID>.pid` (which stays for orphan-attach). Emits one INFO log line `run_started run_id=X kind=Y` to `<output_dir>/.bristlenose/bristlenose.log` (per CLAUDE.md "Logging" — desktop tails this for the popover). Per-stage progress continues to land in the manifest as today (Phase 1b/1c, shipped). The manifest does **not** record run-level outcome.
+1. **`run_started`** — at the top of each CLI command. Generates a new ULID `run_id`. Captures the `process` envelope (`pid`, `start_time` from `psutil.Process(pid).create_time()`, `hostname`, `user`, `bristlenose_version`, `python_version`, `os`). Appends a `run_started` line including the envelope. **Also writes** a Python-side PID file at `<output_dir>/.bristlenose/run.pid` containing `(pid, start_time)` as JSON — this is the canonical PID-liveness record for "is a Python pipeline alive for this project?". Cleaned up via `try/finally` (`_remove_pid_file` in `run_lifecycle.py`) on exit and overwritten on next `run_started`. Distinct from Swift's `<App Support>/Bristlenose/pids/<UUID>.pid` (which stays for orphan-attach). Emits one INFO log line `run_started run_id=X kind=Y` to `<output_dir>/.bristlenose/bristlenose.log` (per CLAUDE.md "Logging" — desktop tails this for the popover). Per-stage progress continues to land in the manifest as today (Phase 1b/1c, shipped). The manifest does **not** record run-level outcome.
 2. **`run_completed`** — at successful exit of the CLI command. Appends `run_completed` with `outcome: "completed"`, `cause: null`, `exit_code: 0`, `cost_usd_estimate` and token totals. INFO log line.
 3. **`run_failed`** — top-level try/except wrapping the CLI command body. Appends `run_failed` with `outcome: "failed"`, structured `cause`, `exit_code` from `sys.exit` (or non-zero default), `error_summary`. INFO log line.
 4. **`run_cancelled`** — SIGINT/SIGTERM handler. **Does not write from the handler.** The handler sets a module-level `_cancel_requested = True` flag and captures the signal number; the main loop checks the flag at safe points (between stages, between sessions, between LLM calls — natural break points the pipeline already has) and from there does the regular append with `outcome: "cancelled"`, `cause.category: "user_signal"`, `cause.signal: <num>`. Production pattern (CPython signal docs, Gunicorn arbiter, Sentry SDK). Avoids the re-entrancy hazard of writing from a handler.

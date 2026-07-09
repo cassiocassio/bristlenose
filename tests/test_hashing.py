@@ -64,6 +64,23 @@ def test_hash_file_metadata_missing_file(tmp_path: Path):
     assert len(h) == 64
 
 
+def test_hash_file_metadata_path_spelling_invariant(tmp_path: Path):
+    """Same file via relative vs absolute spelling → same hash.
+
+    Regression: the hash folded the raw path string, so re-running with a
+    differently-spelled-but-identical path reported 'inputs changed' and
+    re-ran every stage on byte-identical files (needless re-analysis + spend).
+    """
+    import os
+
+    f = tmp_path / "interview.mov"
+    f.write_bytes(b"video data")
+    rel = Path(os.path.relpath(f, Path.cwd()))
+    assert str(rel) != str(f)  # genuinely different spellings
+
+    assert hash_file_metadata([f]) == hash_file_metadata([rel])
+
+
 def test_hash_file_metadata_order_independent(tmp_path: Path):
     a = tmp_path / "a.mov"
     b = tmp_path / "b.mov"

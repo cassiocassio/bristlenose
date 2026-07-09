@@ -16,16 +16,33 @@ def hash_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _canonical(path: Path) -> Path:
+    """Best-effort resolved path.
+
+    The hash must reflect file *identity*, not the spelling the caller passed.
+    Without this, ``bristlenose run trial-runs/foo`` (relative) and
+    ``run /abs/trial-runs/foo`` (absolute) produce different hashes for
+    byte-identical inputs, so every stage re-runs (needless re-analysis + LLM
+    spend).  ``resolve(strict=False)`` tolerates a missing leaf; ``OSError`` on
+    an exotic/removed volume falls back to ``absolute()``.
+    """
+    try:
+        return path.resolve()
+    except OSError:
+        return path.absolute()
+
+
 def hash_file_metadata(paths: list[Path]) -> str:
-    """Hash file identity by (name, size, mtime_ns) — no content read.
+    """Hash file identity by (resolved path, size, mtime_ns) — no content read.
 
     Uses the size+mtime fast path from the pipeline resilience design:
-    if size or mtime changed, the file was modified.  Sorted for
-    determinism.  Missing files include a ``MISSING`` sentinel so that
-    file additions/deletions are detected.
+    if size or mtime changed, the file was modified.  Paths are resolved (so
+    the hash is invariant to relative-vs-absolute spelling) and sorted for
+    determinism.  Missing files include a ``MISSING`` sentinel so that file
+    additions/deletions are detected.
     """
     parts: list[str] = []
-    for p in sorted(paths):
+    for p in sorted(_canonical(p) for p in paths):
         if p.exists():
             st = p.stat()
             parts.append(f"{p}:{st.st_size}:{st.st_mtime_ns}")

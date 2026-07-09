@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from bristlenose.server.models import (
     CodebookGroup,
     DeletedBadge,
     Person,
+    Project,
     ProjectCodebookGroup,
     Quote,
     QuoteEdit,
@@ -220,6 +222,111 @@ class TestImportIdempotent:
         assert db.query(Quote).count() == 4
         assert db.query(ScreenCluster).count() == 2
         assert db.query(ThemeGroup).count() == 1
+
+
+class TestImportPathCanonicalisation:
+    """Project identity must survive different spellings of the same path.
+
+    Regression for the incremental-add bug where ``run trial-runs/foo``
+    (relative) and ``run /abs/trial-runs/foo`` (absolute) resolved to the same
+    directory but forked two Project rows — orphaning the researcher's curation
+    (starred/hidden/renames) on the first row so the re-analysis showed none of
+    it.  The importer now matches on the resolved path.
+    """
+
+    @staticmethod
+    def _clusters() -> list[dict]:
+        return [
+            {
+                "screen_label": "Login",
+                "description": "",
+                "display_order": 1,
+                "quotes": [_make_quote("s1", "p1", 10.0, "Login was easy")],
+            },
+        ]
+
+    def test_relative_and_absolute_spelling_match_same_project(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        proj = _write_pipeline_output(tmp_path, self._clusters(), [])
+        rel = Path(os.path.relpath(proj, Path.cwd()))
+        assert str(rel) != str(proj)  # genuinely different spellings
+
+        p_abs = import_project(db, proj)
+        p_rel = import_project(db, rel)
+
+        assert p_abs.id == p_rel.id
+        assert db.query(Project).count() == 1
+
+    def test_stored_input_dir_is_canonical_absolute(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        proj = _write_pipeline_output(tmp_path, self._clusters(), [])
+        rel = Path(os.path.relpath(proj, Path.cwd()))
+        project = import_project(db, rel)
+        assert Path(project.input_dir).is_absolute()
+        assert Path(project.input_dir) == proj.resolve()
+
+    def test_curation_survives_reimport_via_different_spelling(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        proj = _write_pipeline_output(tmp_path, self._clusters(), [])
+        p1 = import_project(db, proj)
+        quote = db.query(Quote).filter_by(project_id=p1.id).first()
+        assert quote is not None
+        db.add(QuoteState(quote_id=quote.id, is_starred=True))
+        db.commit()
+
+        # Re-import via a non-canonical spelling of the same directory.
+        rel = Path(os.path.relpath(proj, Path.cwd()))
+        p2 = import_project(db, rel)
+
+        assert p2.id == p1.id
+        assert db.query(Project).count() == 1
+        state = db.query(QuoteState).filter_by(quote_id=quote.id).first()
+        assert state is not None and state.is_starred is True
+
+    def test_case_variant_spelling_matches_on_case_insensitive_fs(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """On a case-insensitive volume (macOS/Windows) a case-variant spelling
+        is the *same* directory and must not fork a second project.
+
+        Skips on case-sensitive filesystems (Linux CI), where the variant is a
+        genuinely different path and staying distinct is the correct behaviour.
+        """
+        proj = _write_pipeline_output(tmp_path, self._clusters(), [])
+        variant = proj.with_name(proj.name.swapcase())
+        if variant.name == proj.name or not (
+            variant.exists() and os.path.samefile(proj, variant)
+        ):
+            pytest.skip("case-sensitive filesystem (or name has no case to swap)")
+
+        p1 = import_project(db, proj)
+        p2 = import_project(db, variant)
+        assert p1.id == p2.id
+        assert db.query(Project).count() == 1
+
+    def test_legacy_noncanonical_row_is_matched_and_healed(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """A pre-existing row stored with a relative path is matched + healed."""
+        proj = _write_pipeline_output(tmp_path, self._clusters(), [])
+        out = proj / "bristlenose-output"
+        legacy = Project(
+            name="Legacy",
+            slug="legacy",
+            input_dir=os.path.relpath(proj, Path.cwd()),
+            output_dir=os.path.relpath(out, Path.cwd()),
+        )
+        db.add(legacy)
+        db.flush()
+        legacy_id = legacy.id
+
+        project = import_project(db, proj)  # absolute spelling
+        assert project.id == legacy_id  # matched, not forked
+        assert db.query(Project).count() == 1
+        assert Path(project.input_dir) == proj.resolve()  # healed to canonical
 
 
 class TestImportMissing:

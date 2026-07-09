@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -155,6 +156,41 @@ def _checkpoint_wal(db: Session) -> None:
         logger.warning("post-import WAL checkpoint failed", exc_info=True)
 
 
+def _resolve(path: Path) -> Path:
+    """Best-effort canonical absolute path.
+
+    ``resolve(strict=False)`` (the default) tolerates a not-yet-existing
+    leaf.  On exotic/removed volumes ``resolve`` can raise ``OSError`` — fall
+    back to ``absolute()`` so project identity is still CWD-independent.
+    """
+    try:
+        return path.resolve()
+    except OSError:
+        return path.absolute()
+
+
+def _same_path(stored: str, target: Path) -> bool:
+    """True if a stored path string denotes the same location as ``target``.
+
+    Uses ``os.path.samefile`` (``st_dev``/``st_ino`` identity) as the
+    authoritative check when both paths exist: it honours the *volume's own*
+    case sensitivity — ``project-ikea`` == ``Project-Ikea`` on a
+    case-insensitive APFS/Windows volume, but distinct on case-sensitive
+    ext4 — plus symlinks and relative/absolute spelling, none of which a
+    resolved-string ``==`` gets right (``resolve()`` preserves case rather than
+    folding it).  Falls back to a resolved-path comparison only when a side no
+    longer exists (e.g. a project whose folder was deleted); such a path can't
+    be re-imported anyway, so the weaker case-sensitive compare is harmless.
+    """
+    try:
+        return os.path.samefile(stored, target)
+    except OSError:
+        try:
+            return _resolve(Path(stored)) == target
+        except (OSError, ValueError):
+            return stored == str(target)
+
+
 def import_project(db: Session, project_dir: Path) -> Project:
     """Import pipeline output into the database.
 
@@ -172,9 +208,19 @@ def import_project(db: Session, project_dir: Path) -> Project:
     Returns:
         The Project row (created or existing).
     """
+    # Identify a project by its *resolved* location, not the spelling the
+    # caller happened to use.  Without this, ``run trial-runs/foo`` (relative)
+    # and ``run /abs/trial-runs/foo`` (absolute) resolve to the same directory
+    # but were stored as different strings — forking a second Project row and
+    # orphaning the researcher's curation (starred/hidden/renames) on the old
+    # row.  The module docstring's "researcher state is preserved" promise only
+    # holds when the existing row is matched.
+    project_dir = _resolve(project_dir)
+
     output_dir = project_dir / "bristlenose-output"
     if not output_dir.is_dir():
         output_dir = project_dir  # Caller already pointed at the output dir
+    output_dir = _resolve(output_dir)
 
     intermediate = output_dir / ".bristlenose" / "intermediate"
 
@@ -186,10 +232,16 @@ def import_project(db: Session, project_dir: Path) -> Project:
         project_name = meta.get("project_name", "Untitled")
 
     # --- Find or create project ------------------------------------------
-    project = (
-        db.query(Project)
-        .filter_by(input_dir=str(project_dir), output_dir=str(output_dir))
-        .first()
+    # Match on the resolved path so a legacy row stored with a different
+    # spelling (relative vs absolute, symlinked, trailing slash) still matches.
+    project = next(
+        (
+            p
+            for p in db.query(Project).all()
+            if _same_path(p.input_dir, project_dir)
+            and _same_path(p.output_dir, output_dir)
+        ),
+        None,
     )
 
     if project is None:
@@ -201,6 +253,12 @@ def import_project(db: Session, project_dir: Path) -> Project:
         )
         db.add(project)
         db.flush()  # get project.id
+    else:
+        # Heal a legacy row's stored paths to canonical form so future lookups
+        # (and the `_write_through_people_yaml` consumer) get an absolute,
+        # CWD-independent path.
+        project.input_dir = str(project_dir)
+        project.output_dir = str(output_dir)
 
     # --- Import timestamp ------------------------------------------------
     # Every entity touched during this import gets this timestamp.

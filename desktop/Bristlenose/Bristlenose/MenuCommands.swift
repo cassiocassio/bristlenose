@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 // MARK: - Menu bar
@@ -925,8 +926,13 @@ private struct HelpMenuContent: View {
     @ObservedObject var i18n: I18n
 
     var body: some View {
+        // Help opens the browser-based docs (the in-app Help modal is retired —
+        // "Help opens browser docs"). Works regardless of whether the SPA is
+        // mounted, since it doesn't route through the web bridge.
         Button(i18n.t("desktop.menu.help.bristlenoseHelp")) {
-            bridgeHandler.menuAction("showHelp")
+            if let url = URL(string: "https://bristlenose.app/docs/") {
+                NSWorkspace.shared.open(url)
+            }
         }
         .keyboardShortcut("?", modifiers: .command)
 
@@ -940,8 +946,10 @@ private struct HelpMenuContent: View {
             bridgeHandler.menuAction("showReleaseNotes")
         }
 
+        // Probe-then-route: React modal when the SPA is up, native FeedbackSheet
+        // when it isn't (status page). Fixes the previously-dead menu item.
         Button(i18n.t("desktop.menu.help.sendFeedback")) {
-            bridgeHandler.menuAction("sendFeedback")
+            bridgeHandler.openFeedback()
         }
 
         Divider()

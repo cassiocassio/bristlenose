@@ -147,6 +147,7 @@ struct ContentView: View {
     @State private var aiConsentReviewMode = false
     @State private var showingBuildInfo = false
     @State private var showingMiroSheet = false
+    @State private var showingFeedbackSheet = false
 
     /// The ID of the project currently in inline rename mode, or nil.
     @State private var renamingProjectID: UUID?
@@ -546,6 +547,17 @@ struct ContentView: View {
                     projectName: selectedProject?.name ?? "",
                     i18n: i18n
                 )
+            }
+        }
+        // Send Feedback (native) — presented when the SPA isn't mounted (status
+        // page). Both the status-page bridge and Help ▸ Send Feedback's fallback
+        // post `.showFeedbackSheet`. Needs a live serve for the /api/health read.
+        .onReceive(NotificationCenter.default.publisher(for: .showFeedbackSheet)) { _ in
+            if serveManager.runningPort != nil { showingFeedbackSheet = true }
+        }
+        .sheet(isPresented: $showingFeedbackSheet) {
+            if let port = serveManager.runningPort {
+                FeedbackSheet(port: port, i18n: i18n, onToast: { toast.show($0) })
             }
         }
         // File > New Project (Cmd+N) and sidebar [+] button.

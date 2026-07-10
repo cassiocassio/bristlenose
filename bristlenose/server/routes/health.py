@@ -13,6 +13,7 @@ router = APIRouter(prefix="/api")
 
 DEFAULT_GITHUB_ISSUES_URL = "https://github.com/cassiocassio/bristlenose/issues/new"
 DEFAULT_FEEDBACK_URL = "https://bristlenose.app/feedback.php"
+DEFAULT_HELP_URL = "https://bristlenose.app/docs/"
 DEFAULT_TELEMETRY_URL = "https://bristlenose.app/telemetry.php"
 DEV_TELEMETRY_URL = "/api/dev/telemetry"
 

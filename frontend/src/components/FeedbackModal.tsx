@@ -134,12 +134,20 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (resp.ok) {
-          clearAndClose(t("feedback.sent"));
-          return;
+        // Strict success predicate: HTTP 200 + JSON body {ok: true}. A bare
+        // resp.ok (any 2xx) reads a captive-portal / proxy interstitial 200
+        // HTML page as "sent" and silently drops the feedback — so require the
+        // server's own confirmation. Matches the native sheet + status-page form.
+        const contentType = (resp.headers.get("Content-Type") ?? "").toLowerCase();
+        if (resp.status === 200 && contentType.includes("application/json")) {
+          const body = (await resp.json().catch(() => null)) as { ok?: unknown } | null;
+          if (body?.ok === true) {
+            clearAndClose(t("feedback.sent"));
+            return;
+          }
         }
         console.warn(
-          `Bristlenose feedback: POST ${url} returned ${resp.status}; falling back to clipboard`,
+          `Bristlenose feedback: POST ${url} returned ${resp.status} without {ok:true}; falling back to clipboard`,
         );
       } catch (err) {
         console.warn(

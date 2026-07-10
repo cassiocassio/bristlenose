@@ -259,6 +259,13 @@ def import_project(db: Session, project_dir: Path) -> Project:
         # CWD-independent path.
         project.input_dir = str(project_dir)
         project.output_dir = str(output_dir)
+        # Heal the name of a row that was created (at serve-startup import)
+        # before the pipeline wrote metadata.json — it froze at the "Untitled"
+        # default and the match branch above never refreshed it. Scoped to the
+        # default sentinel so this can't clobber an intentionally-set name.
+        if project.name == "Untitled" and project_name != "Untitled":
+            project.name = project_name
+            project.slug = project_name.lower().replace(" ", "-")[:100]
 
     # --- Import timestamp ------------------------------------------------
     # Every entity touched during this import gets this timestamp.

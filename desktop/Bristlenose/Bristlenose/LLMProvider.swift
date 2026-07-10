@@ -288,6 +288,11 @@ extension Notification.Name {
     /// Posted by the Export popover row + Quotes-menu item to present the native
     /// Send-to-Miro sheet (ContentView owns the `.sheet`).
     static let showMiroSheet = Notification.Name("showMiroSheet")
+    /// Posted when feedback is requested but the SPA isn't mounted (the status
+    /// page): the status-page bridge (`project-action: open-feedback`) and Help ▸
+    /// Send Feedback's bridge-probe fallback both post this. ContentView owns the
+    /// `.sheet` that presents the native `FeedbackSheet`.
+    static let showFeedbackSheet = Notification.Name("showFeedbackSheet")
 }
 
 // MARK: - Ollama catalog

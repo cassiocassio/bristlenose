@@ -13,6 +13,7 @@ the canonical ``MessageKind`` taxonomy this page mirrors.
 from __future__ import annotations
 
 import html
+import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -192,20 +193,204 @@ _PAGE_TEMPLATE = """<!doctype html>
     {long_block}
     {details_block}
     <nav class="bn-status-footer">
-      <a href="{feedback_url}" target="_blank" rel="noopener noreferrer">{send_feedback}</a>
+      {feedback_trigger}
       <a href="{help_url}" target="_blank" rel="noopener noreferrer">{help}</a>
     </nav>
   </main>
+  {feedback_overlay}
 </body>
 </html>
 """
+
+
+# value → (emoji, common.feedback.* key). Mirrors the React modal + feedback.js.
+_FEEDBACK_SENTIMENTS = [
+    ("hate", "\U0001F620", "sentimentHate"),
+    ("dislike", "\U0001F615", "sentimentDislike"),
+    ("neutral", "\U0001F610", "sentimentNeutral"),
+    ("like", "\U0001F642", "sentimentLike"),
+    ("love", "\U0001F60A", "sentimentLove"),
+]
+
+# Self-contained, interpolation-free feedback script for the degraded (SPA-down)
+# status page. On desktop (WKWebView) it hands the click to the native feedback
+# sheet via the navigation bridge; in a browser it opens the inline modal and
+# POSTs the same {version, rating, message} payload as the React modal and the
+# native sheet — with the SAME strict success predicate (HTTP 200 + JSON
+# {"ok": true}); anything else falls back to the clipboard. Config (endpoint
+# URL, version, localised strings) arrives via window.__BN_FB__.
+_FEEDBACK_SCRIPT = """<script>
+(function () {
+  var cfg = window.__BN_FB__ || {};
+  var trigger = document.getElementById('bn-fb-trigger');
+  var overlay = document.getElementById('bn-fb-overlay');
+  if (!trigger || !overlay) return;
+  var card = overlay.querySelector('.feedback-modal');
+  var sents = document.getElementById('bn-fb-sentiments');
+  var msg = document.getElementById('bn-fb-message');
+  var sendBtn = document.getElementById('bn-fb-send');
+  var cancelBtn = document.getElementById('bn-fb-cancel');
+  var rating = '';
+
+  function embedded() {
+    return !!(window.webkit && window.webkit.messageHandlers &&
+              window.webkit.messageHandlers.navigation);
+  }
+  function open() {
+    if (embedded()) {
+      try {
+        window.webkit.messageHandlers.navigation.postMessage(
+          { type: 'project-action', action: 'open-feedback' });
+        return;
+      } catch (e) { /* fall through to the web form */ }
+    }
+    overlay.classList.add('visible');
+    overlay.setAttribute('aria-hidden', 'false');
+    setTimeout(function () { if (msg) msg.focus(); }, 50);
+  }
+  function close() {
+    overlay.classList.remove('visible');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+  function finish(text) {
+    if (card) {
+      var h = document.createElement('h2');
+      h.textContent = text;
+      card.innerHTML = '';
+      card.appendChild(h);
+    }
+    setTimeout(close, 1600);
+  }
+  function clipboard() {
+    var body = 'Bristlenose feedback (v' + (cfg.version || 'unknown') + ')\\n' +
+               'Rating: ' + rating + '\\n' +
+               (msg && msg.value.trim() ? 'Message: ' + msg.value.trim() + '\\n' : '');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(body).then(
+        function () { finish(cfg.copied || 'Copied to clipboard.'); },
+        function () { finish(cfg.copyFailed || 'Could not send feedback.'); });
+    } else {
+      finish(cfg.copyFailed || 'Could not send feedback.');
+    }
+  }
+
+  trigger.addEventListener('click', function (e) { e.preventDefault(); open(); });
+  trigger.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+  });
+  if (sents) {
+    sents.addEventListener('click', function (e) {
+      var b = e.target.closest('.feedback-sentiment');
+      if (!b) return;
+      var all = sents.querySelectorAll('.feedback-sentiment');
+      for (var i = 0; i < all.length; i++) all[i].classList.remove('selected');
+      b.classList.add('selected');
+      rating = b.getAttribute('data-value');
+      if (sendBtn) sendBtn.disabled = false;
+    });
+  }
+  if (cancelBtn) cancelBtn.addEventListener('click', close);
+  overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && overlay.classList.contains('visible')) close();
+  });
+  if (sendBtn) {
+    sendBtn.addEventListener('click', function () {
+      if (!rating) return;
+      sendBtn.disabled = true;
+      var payload = { version: cfg.version || 'unknown', rating: rating,
+                      message: msg ? msg.value.trim() : '' };
+      var isHttp = location.protocol === 'http:' || location.protocol === 'https:';
+      if (cfg.url && isHttp) {
+        fetch(cfg.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).then(function (resp) {
+          var ct = (resp.headers.get('Content-Type') || '').toLowerCase();
+          if (resp.status === 200 && ct.indexOf('application/json') !== -1) {
+            resp.json().then(function (j) {
+              if (j && j.ok === true) { finish(cfg.sent || 'Feedback sent \\u2014 thank you!'); }
+              else { clipboard(); }
+            }, function () { clipboard(); });
+          } else { clipboard(); }
+        }).catch(function () { clipboard(); });
+      } else {
+        clipboard();
+      }
+    });
+  }
+})();
+</script>"""
+
+
+def _build_feedback_html(
+    feedback_url: str, feedback_enabled: bool, version: str
+) -> tuple[str, str]:
+    """Build the (footer trigger, hidden overlay + script) HTML for feedback.
+
+    Returns ``("", "")`` when feedback is disabled — absence is information, so
+    no affordance is rendered at all (mirrors the web footer's visibility gate).
+    """
+    if not feedback_enabled:
+        return "", ""
+
+    trigger = (
+        '<a role="button" tabindex="0" id="bn-fb-trigger" class="bn-status-feedback">'
+        f'{html.escape(t("server.statusPage.sendFeedback"))}</a>'
+    )
+
+    sentiments = "".join(
+        f'<button type="button" class="feedback-sentiment" data-value="{value}">'
+        f'<span class="feedback-sentiment-face" aria-hidden="true">{emoji}</span>'
+        f'<span class="feedback-sentiment-label">'
+        f'{html.escape(t(f"common.feedback.{key}"))}</span></button>'
+        for value, emoji, key in _FEEDBACK_SENTIMENTS
+    )
+
+    heading = html.escape(t("common.feedback.heading"))
+    config = json.dumps(
+        {
+            "url": feedback_url,
+            "version": version,
+            "sent": t("common.feedback.sent"),
+            "copied": t("common.feedback.copiedToClipboard"),
+            "copyFailed": t("common.feedback.copyFailed"),
+        },
+        ensure_ascii=True,
+    ).replace("</", "<\\/")
+
+    overlay = (
+        '<div class="bn-overlay feedback-overlay" id="bn-fb-overlay" aria-hidden="true">'
+        f'<div class="bn-modal feedback-modal" role="dialog" aria-label="{heading}">'
+        f"<h2>{heading}</h2>"
+        f'<div class="feedback-sentiments" id="bn-fb-sentiments">{sentiments}</div>'
+        f'<label class="feedback-label" for="bn-fb-message">'
+        f'{html.escape(t("common.feedback.helpUsImprove"))}</label>'
+        '<textarea class="feedback-textarea" id="bn-fb-message" rows="3" '
+        f'placeholder="{html.escape(t("common.feedback.placeholder"), quote=True)}">'
+        "</textarea>"
+        '<div class="feedback-actions">'
+        '<button type="button" class="feedback-btn feedback-btn-cancel" id="bn-fb-cancel">'
+        f'{html.escape(t("common.buttons.cancel"))}</button>'
+        '<button type="button" class="feedback-btn feedback-btn-send" id="bn-fb-send" disabled>'
+        f'{html.escape(t("common.feedback.send"))}</button>'
+        "</div>"
+        f'<p class="bn-modal-footer">{html.escape(t("common.feedback.anonymous"))}</p>'
+        "</div></div>"
+        f"<script>window.__BN_FB__ = {config};</script>"
+        f"{_FEEDBACK_SCRIPT}"
+    )
+    return trigger, overlay
 
 
 def render_page(
     status: StatusInfo,
     *,
     feedback_url: str = "https://bristlenose.app/feedback.php",
-    help_url: str = "https://bristlenose.app/",
+    feedback_enabled: bool = True,
+    help_url: str = "https://bristlenose.app/docs/",
+    version: str = "",
     html_root_attrs: str = "",
 ) -> str:
     """Render the status page to a self-contained HTML string."""
@@ -223,6 +408,9 @@ def render_page(
             f'<pre>{html.escape(status.details)}</pre>'
             '</details>'
         )
+    feedback_trigger, feedback_overlay = _build_feedback_html(
+        feedback_url, feedback_enabled, version
+    )
     html_attrs = f" {html_root_attrs}" if html_root_attrs else ""
     return _PAGE_TEMPLATE.format(
         html_attrs=html_attrs,
@@ -232,8 +420,8 @@ def render_page(
         details_block=details_block,
         kind=status.kind.value,
         glyph=html.escape(CLI_GLYPH[status.kind]),
-        feedback_url=html.escape(feedback_url, quote=True),
+        feedback_trigger=feedback_trigger,
+        feedback_overlay=feedback_overlay,
         help_url=html.escape(help_url, quote=True),
-        send_feedback=html.escape(t("server.statusPage.sendFeedback")),
         help=html.escape(t("server.statusPage.help")),
     )

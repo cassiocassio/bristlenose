@@ -70,7 +70,10 @@ describe("FeedbackModal", () => {
   it("posts feedback to endpoint on success", async () => {
     const onClose = vi.fn();
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("{}", { status: 200 }),
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
     );
     render(<FeedbackModal open={true} onClose={onClose} health={HEALTH} />);
 
@@ -91,6 +94,35 @@ describe("FeedbackModal", () => {
       );
       expect(onClose).toHaveBeenCalledOnce();
       expect(vi.mocked(toast)).toHaveBeenCalledWith("Feedback sent - thank you!");
+    });
+  });
+
+  it("falls back to clipboard on a 200 without {ok:true} (captive-portal / proxy interstitial)", async () => {
+    // A hotel/proxy interstitial returns HTTP 200 with an HTML body; feedback.php
+    // never saw the payload. A bare resp.ok would toast "sent" and drop it — the
+    // strict predicate must treat this as a failure and preserve the message.
+    const onClose = vi.fn();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("<html>Please sign in to the WiFi</html>", {
+        status: 200,
+        headers: { "Content-Type": "text/html" },
+      }),
+    );
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+
+    render(<FeedbackModal open={true} onClose={onClose} health={HEALTH} />);
+    fireEvent.click(screen.getByRole("button", { name: /Good/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledOnce();
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
+        "Copied to clipboard - paste into an email or issue.",
+      );
     });
   });
 

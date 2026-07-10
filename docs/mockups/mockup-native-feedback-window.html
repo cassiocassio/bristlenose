@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Native Feedback Window (degraded case)</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --sf: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Helvetica Neue", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--sf);
+    -webkit-font-smoothing: antialiased;
+    display: grid;
+    place-items: center;
+    /* macOS desktop-ish wallpaper so the vibrancy has something to sample */
+    background:
+      radial-gradient(1200px 800px at 30% 20%, #3a4a63 0%, #223049 45%, #131a29 100%);
+    overflow: hidden;
+  }
+
+  /* ---- Stage: the app window showing the STATUS PAGE behind ---- */
+  .stage {
+    position: relative;
+    width: 880px;
+    height: 620px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,.55), 0 0 0 0.5px rgba(255,255,255,.06);
+    background: #0e0e0f;              /* the cancelled-run status page (dark) */
+  }
+  .stage-toolbar {
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    background: rgba(40,40,42,.9);
+    border-bottom: 0.5px solid rgba(255,255,255,.08);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+            backdrop-filter: saturate(180%) blur(20px);
+  }
+  .traffic { display:flex; gap:8px; }
+  .traffic i { width:12px; height:12px; border-radius:50%; display:block; }
+  .traffic .r{background:#ff5f57;} .traffic .y{background:#febc2e;} .traffic .g{background:#28c840;}
+  .titlebar-title { color: rgba(255,255,255,.55); font-size: 13px; font-weight: 600; margin-left: 8px; }
+
+  /* The failure content — deliberately visible around the floating panel */
+  .status {
+    height: calc(100% - 52px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; color: #ddd; padding-top: 40px;
+  }
+  .status .glyph {
+    width: 46px; height: 46px; border-radius: 10px;
+    display: grid; place-items: center; margin-bottom: 20px;
+  }
+  .status .glyph svg { width: 46px; height: 46px; }
+  .status h1 { font-size: 30px; font-weight: 600; letter-spacing: -0.01em; color: #f2f2f2; }
+  .status .sub { font-size: 19px; color: #9a9a9e; margin-top: 10px; }
+  .status .details { margin-top: 26px; font-size: 15px; color: #8a8a8e; }
+  .status .footer {
+    margin-top: 40px; padding-top: 18px; border-top: 0.5px solid rgba(255,255,255,.12);
+    width: 380px; display: flex; gap: 34px; justify-content: center;
+  }
+  .status .footer a { color: #4a9eff; font-size: 16px; text-decoration: none; }
+
+  /* ---- The FLOATING native feedback panel ---- */
+  .panel-shade {                    /* almost no dimming — failure stays legible */
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,.14);
+    pointer-events: none;
+  }
+  .panel {
+    position: absolute;
+    /* offset LOW + slightly right so the triangle + "Last run was cancelled" peek above it */
+    left: 50%; top: 300px; transform: translateX(-50%);
+    width: 380px;
+    border-radius: 11px;
+    /* macOS Tahoe vibrancy: translucent material sampling the content behind */
+    background: rgba(46,46,48,.82);
+    -webkit-backdrop-filter: saturate(180%) blur(40px);
+            backdrop-filter: saturate(180%) blur(40px);
+    box-shadow:
+      0 0 0 0.5px rgba(0,0,0,.6),
+      0 0.5px 0 0.5px rgba(255,255,255,.10) inset,
+      0 30px 70px rgba(0,0,0,.55);
+    color: #f2f2f4;
+    overflow: hidden;
+  }
+  /* utility-panel titlebar: compact, centered title, close only */
+  .panel-titlebar {
+    position: relative;
+    height: 40px;
+    display: grid; place-items: center;
+    border-bottom: 0.5px solid rgba(255,255,255,.08);
+  }
+  .panel-titlebar .close {
+    position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    width: 12px; height: 12px; border-radius: 50%; background: #ff5f57;
+    border: none; cursor: pointer;
+  }
+  .panel-titlebar .t { font-size: 13px; font-weight: 600; color: #e8e8ea; }
+
+  .panel-body { padding: 18px 20px 16px; }
+  .prompt { font-size: 15px; font-weight: 600; text-align: center; letter-spacing: -.01em; }
+
+  /* Sentiment row — native approximation: 5 momentary buttons, emoji + caption */
+  .sentiments { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 16px 0 4px; }
+  .sentiment {
+    appearance: none; border: none; cursor: pointer;
+    background: transparent; border-radius: 8px;
+    padding: 8px 2px 7px; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    transition: background .12s ease, transform .08s ease;
+  }
+  .sentiment .face { font-size: 26px; line-height: 1; filter: saturate(1.05); }
+  .sentiment .lbl  { font-size: 10.5px; color: #b6b6ba; letter-spacing: -.01em; }
+  .sentiment:hover { background: rgba(255,255,255,.06); }
+  .sentiment.selected { background: rgba(10,132,255,.22); box-shadow: inset 0 0 0 1px rgba(10,132,255,.75); }
+  .sentiment.selected .lbl { color: #eaf3ff; }
+
+  .field-label { font-size: 11px; color: #9a9a9e; margin: 14px 2px 6px; }
+  textarea.field {
+    width: 100%; resize: none; height: 66px;
+    font-family: var(--sf); font-size: 13px; line-height: 1.4;
+    color: #f2f2f4;
+    background: rgba(0,0,0,.28);
+    border: 0.5px solid rgba(255,255,255,.14);
+    border-radius: 6px; padding: 8px 9px;
+    outline: none;
+  }
+  textarea.field::placeholder { color: #7c7c80; }
+  textarea.field:focus { border-color: rgba(10,132,255,.9); box-shadow: 0 0 0 3px rgba(10,132,255,.28); }
+
+  .anon { font-size: 11px; color: #86868a; margin: 12px 2px 0; text-align: center; }
+
+  .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+  .btn {
+    appearance: none; font-family: var(--sf); font-size: 13px; font-weight: 500;
+    height: 28px; padding: 0 15px; border-radius: 6px; cursor: pointer;
+    border: 0.5px solid rgba(255,255,255,.16);
+    background: linear-gradient(rgba(255,255,255,.10), rgba(255,255,255,.05));
+    color: #ececee;
+  }
+  .btn.default {
+    border-color: transparent;
+    background: linear-gradient(#3b9bff, #0a84ff);
+    color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.35), inset 0 0.5px 0 rgba(255,255,255,.4);
+  }
+  .btn.default:disabled { opacity: .4; cursor: default; box-shadow: none; }
+
+  /* caption under the stage */
+  .caption {
+    position: fixed; bottom: 18px; left: 0; right: 0; text-align: center;
+    color: rgba(255,255,255,.5); font-size: 12px; letter-spacing: .01em;
+  }
+  .caption b { color: rgba(255,255,255,.75); font-weight: 600; }
+</style>
+</head>
+<body>
+
+  <div class="stage" aria-label="Bristlenose app window">
+    <!-- app toolbar -->
+    <div class="stage-toolbar">
+      <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+      <span class="titlebar-title">IKEA usability study — Analysis</span>
+    </div>
+
+    <!-- STATUS PAGE (the failure the user is giving feedback about) -->
+    <div class="status" aria-label="status page">
+      <div class="glyph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#febc2e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0Z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <h1>Last run was cancelled.</h1>
+      <div class="sub">Re-run when ready.</div>
+      <div class="details">▶ Show details</div>
+      <div class="footer">
+        <a href="#">Send feedback</a>
+        <a href="#">Help</a>
+      </div>
+    </div>
+
+    <!-- floating panel layer -->
+    <div class="panel-shade"></div>
+    <div class="panel" role="dialog" aria-label="Send Feedback">
+      <div class="panel-titlebar">
+        <button class="close" aria-label="Close"></button>
+        <span class="t">Send Feedback</span>
+      </div>
+      <div class="panel-body">
+        <div class="prompt">How is Bristlenose working for you?</div>
+
+        <div class="sentiments" id="sents">
+          <button class="sentiment" data-v="hate"><span class="face">😠</span><span class="lbl">Frustrating</span></button>
+          <button class="sentiment" data-v="dislike"><span class="face">😕</span><span class="lbl">Needs work</span></button>
+          <button class="sentiment" data-v="neutral"><span class="face">😐</span><span class="lbl">It's okay</span></button>
+          <button class="sentiment selected" data-v="like"><span class="face">🙂</span><span class="lbl">Good</span></button>
+          <button class="sentiment" data-v="love"><span class="face">😊</span><span class="lbl">Excellent</span></button>
+        </div>
+
+        <div class="field-label">Help us improve</div>
+        <textarea class="field" placeholder="Tell us what's useful and what needs fixing…"></textarea>
+
+        <div class="anon">Anonymous — only your rating and message are shared.</div>
+
+        <div class="actions">
+          <button class="btn" id="cancel">Cancel</button>
+          <button class="btn default" id="send">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="caption">
+    Native SwiftUI feedback panel — floats <b>below</b> the failure so “Last run was cancelled” stays visible.
+    Reuses the existing <b>common.feedback.*</b> strings. POSTs the same <b>{version, rating, message}</b> payload.
+  </div>
+
+<script>
+  const sents = document.getElementById('sents');
+  const send = document.getElementById('send');
+  function refresh() { send.disabled = !sents.querySelector('.selected'); }
+  sents.addEventListener('click', e => {
+    const b = e.target.closest('.sentiment'); if (!b) return;
+    sents.querySelectorAll('.sentiment').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected'); refresh();
+  });
+  refresh();
+</script>
+</body>
+</html>

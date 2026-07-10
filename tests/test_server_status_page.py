@@ -224,6 +224,43 @@ class TestRenderPage:
         assert "https://example.com/feedback" in html
         assert "https://example.com/help" in html
 
+    def test_feedback_block_present_when_enabled(self) -> None:
+        html = render_page(
+            StatusInfo(kind=MessageKind.ERROR, short="Last run failed.", long=None, details=None),
+            feedback_url="https://example.com/feedback",
+            feedback_enabled=True,
+            version="9.9.9",
+        )
+        # Trigger + inline modal (reused .feedback-* classes) + config.
+        assert 'id="bn-fb-trigger"' in html
+        assert "feedback-overlay" in html
+        assert 'id="bn-fb-sentiments"' in html
+        assert "window.__BN_FB__" in html
+        assert "https://example.com/feedback" in html
+        assert "9.9.9" in html
+        # Strict success predicate must be enforced client-side.
+        assert "j.ok === true" in html
+        # Desktop hands off to the native sheet via the navigation bridge.
+        assert "open-feedback" in html
+
+    def test_feedback_absent_when_disabled(self) -> None:
+        html = render_page(
+            StatusInfo(kind=MessageKind.ERROR, short="Last run failed.", long=None, details=None),
+            feedback_enabled=False,
+        )
+        # Absence is information — no trigger, no overlay, no script at all.
+        assert "bn-fb-trigger" not in html
+        assert "feedback-overlay" not in html
+        assert "window.__BN_FB__" not in html
+        # Help link is unaffected.
+        assert "docs" in html or "help" in html.lower()
+
+    def test_help_defaults_to_docs(self) -> None:
+        html = render_page(
+            StatusInfo(kind=MessageKind.INFO, short="x", long=None, details=None),
+        )
+        assert "https://bristlenose.app/docs/" in html
+
     def test_html_root_attrs_injected(self) -> None:
         html = render_page(
             StatusInfo(kind=MessageKind.INFO, short="x", long=None, details=None),

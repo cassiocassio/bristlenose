@@ -329,6 +329,44 @@ class TestImportPathCanonicalisation:
         assert Path(project.input_dir) == proj.resolve()  # healed to canonical
 
 
+class TestImportNameHealing:
+    """A row created (at serve-startup import) before the pipeline wrote
+    metadata.json freezes at the "Untitled" default; a later re-import, once
+    metadata.json carries a real project_name, must heal it."""
+
+    def test_untitled_row_heals_name_and_slug_on_reimport(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        # First import mimics the create-before-metadata case: name defaults.
+        _write_pipeline_output(tmp_path, [], [], project_name="Untitled")
+        first = import_project(db, tmp_path)
+        assert first.name == "Untitled"
+
+        # Pipeline has since written a real name into metadata.json.
+        _write_pipeline_output(tmp_path, [], [], project_name="New Project ZZZ")
+        healed = import_project(db, tmp_path)
+
+        assert healed.id == first.id  # matched, not forked
+        assert db.query(Project).count() == 1
+        assert healed.name == "New Project ZZZ"
+        assert healed.slug == "new-project-zzz"
+
+    def test_reimport_does_not_clobber_an_intentional_name(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        # A real name set at create time must survive a differing metadata name
+        # (the heal is scoped to the "Untitled" sentinel).
+        _write_pipeline_output(tmp_path, [], [], project_name="Real Name")
+        first = import_project(db, tmp_path)
+        assert first.name == "Real Name"
+
+        _write_pipeline_output(tmp_path, [], [], project_name="Different")
+        again = import_project(db, tmp_path)
+
+        assert again.id == first.id
+        assert again.name == "Real Name"
+
+
 class TestImportMissing:
     """Test import handles missing files gracefully."""
 

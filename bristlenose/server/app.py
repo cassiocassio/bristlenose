@@ -554,19 +554,24 @@ def _maybe_status_response(app: FastAPI, output_dir: Path) -> HTMLResponse | Non
     if status is None:
         return None
     from bristlenose.server.routes.health import (
-        DEFAULT_FEEDBACK_URL,
-        DEFAULT_GITHUB_ISSUES_URL,
+        DEFAULT_HELP_URL,
+        build_health_payload,
     )
 
-    feedback_url = os.environ.get("BRISTLENOSE_FEEDBACK_URL", DEFAULT_FEEDBACK_URL)
-    help_url = os.environ.get(
-        "BRISTLENOSE_HELP_URL",
-        os.environ.get("BRISTLENOSE_GITHUB_ISSUES_URL", DEFAULT_GITHUB_ISSUES_URL),
-    )
+    # Single source of truth: the status page's feedback config is the same
+    # config /api/health exposes (URL, enabled flag, version) — so the inline
+    # browser form, the native sheet (which reads /api/health), and the React
+    # modal all agree. Help is the docs site; "report a bug" (GitHub) is a
+    # separate footer affordance, not Help.
+    health = build_health_payload(dev=bool(getattr(app.state, "dev", False)))
+    feedback = health["feedback"]  # type: ignore[index]
+    help_url = os.environ.get("BRISTLENOSE_HELP_URL", DEFAULT_HELP_URL)
     html_str = render_page(
         status,
-        feedback_url=feedback_url,
+        feedback_url=str(feedback["url"]),  # type: ignore[index]
+        feedback_enabled=bool(feedback["enabled"]),  # type: ignore[index]
         help_url=help_url,
+        version=str(health["version"]),  # type: ignore[index]
         html_root_attrs=_html_root_attrs(),
     )
     # Match the SPA response's cookie contract — every /report/* HTML response

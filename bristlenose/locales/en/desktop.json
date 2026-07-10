@@ -58,6 +58,7 @@
       "switchToDarkMode": "Switch to Dark Mode"
     },
     "project": {
+      "analyse": "Analyse",
       "removeFromSidebar": "Remove from Sidebar",
       "showInFinder": "Show in Finder",
       "rename": "Rename…",

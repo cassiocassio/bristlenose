@@ -1009,6 +1009,10 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             menu.addItem(menuItem("desktop.menu.project.showDiagnostics", #selector(menuShowDiagnostics(_:))))
             menu.addItem(.separator())
         }
+        if canAnalyse(id, state: state) {
+            menu.addItem(menuItem("desktop.menu.project.analyse", #selector(menuAnalyse(_:))))
+            menu.addItem(.separator())
+        }
         if case .cantFind = availability {
             menu.addItem(menuItem("desktop.chrome.locate", #selector(menuLocate(_:))))
             menu.addItem(.separator())
@@ -1053,6 +1057,21 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         switch state { case .running, .queued: return true; default: return false }
     }
 
+    /// A folder-shaped project with files on disk but no finished report, and
+    /// not currently running — the stopped / failed / never-analysed cases. The
+    /// files belong to the project, so offer "Analyse" rather than dead-end on
+    /// the "No interviews to analyse yet" empty state. Excludes analysed
+    /// projects (`.ready` / `.completedPartial` — Re-analyse is a separate,
+    /// destructive action) and bare "New Project" placeholders (empty path).
+    private func canAnalyse(_ id: UUID, state: PipelineState?) -> Bool {
+        guard let p = projectIndex?.projects.first(where: { $0.id == id }),
+              p.inputFiles == nil, !p.path.isEmpty else { return false }
+        switch state ?? .idle {
+        case .idle, .stopped, .failed, .failedWithDiagnostic: return true
+        default: return false
+        }
+    }
+
     private func isFailureState(_ state: PipelineState?) -> Bool {
         switch state { case .failed, .failedWithDiagnostic, .completedPartial: return true; default: return false }
     }
@@ -1077,6 +1096,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         guard let id = menuClickedNodeID,
               let project = projectIndex?.projects.first(where: { $0.id == id }) else { return }
         pipelineRunner?.cancel(project: project)
+    }
+
+    @objc private func menuAnalyse(_ sender: NSMenuItem) {
+        guard let id = menuClickedNodeID,
+              let project = projectIndex?.projects.first(where: { $0.id == id }) else { return }
+        pipelineRunner?.start(project: project)
     }
 
     @objc private func menuCancelCopy(_ sender: NSMenuItem) {

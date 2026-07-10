@@ -37,11 +37,50 @@ enum ShoalSentiment {
 // MARK: - Constants
 
 enum ShoalConfig {
-    // Boid target counts per phase
-    static let earlyCount  = 15
-    static let middleCount = 30
-    static let lateCount   = 45
-    static let maxCount    = 50
+    // Frame rate — decorative drift, capped below the display refresh so motion
+    // stays fluid rather than straining for 120 Hz ProMotion (which reads as
+    // judder when frames are missed). 30 fps looked janky, 50 fps smooth on a
+    // 16" M2 Max (2026-07 test). SpriteView honours this via preferredFramesPerSecond.
+    static let preferredFPS = 50
+
+    // Boid count is DERIVED FROM THE SCENE'S RENDER AREA (points²), not a fixed
+    // per-phase constant — a bigger canvas (external display, full window) holds
+    // a denser flock before it reads as clutter. ~one boid per `areaPerBoid`
+    // points², clamped to [minCount, maxCount], then scaled by the phase ramp so
+    // the flock still thickens early → late as analysis proceeds.
+    //
+    // Tuning: `areaPerBoid` is an eye call on real hardware — lower = denser.
+    // Calibrated so a full-window 16" detail pane lands ~100; a larger external
+    // display scales up toward the ceiling. Point-area responds to the user's
+    // display-scaling ("More Space") choice; it does NOT know physical DPI, so a
+    // physically bigger screen at the same point-density gets the same count —
+    // add a DPI term here if default-scaled large displays read too sparse.
+    //
+    // Perf note: the old fixed 50-boid cap was what perf-review's PASS rested on.
+    // Raising the ceiling trades that static guarantee for the `preferredFPS` cap
+    // plus real-hardware smoothness testing (the flocking sim is O(n²) on the
+    // main thread — see the spatial-grid follow-up if high counts ever jank).
+    static let areaPerBoid: CGFloat = 15_000
+    static let minCount = 24      // floor: a tiny window / weak hardware still flocks
+    static let maxCount = 200     // ceiling: perf guard (was 50 when the count was fixed)
+
+    // Phase ramp — fractions of the area-derived base (early → middle → late).
+    static let earlyFraction:  CGFloat = 0.4
+    static let middleFraction: CGFloat = 0.7
+    static let lateFraction:   CGFloat = 1.0
+
+    /// Area-derived boid target for a phase. Pure — unit-tested in
+    /// `ShoalConfigTests`. `area` is the scene's `width * height` in points².
+    static func targetCount(forArea area: CGFloat, phase: ShoalPhase) -> Int {
+        let base = min(max(area / areaPerBoid, CGFloat(minCount)), CGFloat(maxCount))
+        let fraction: CGFloat
+        switch phase {
+        case .early:  fraction = earlyFraction
+        case .middle: fraction = middleFraction
+        case .late:   fraction = lateFraction
+        }
+        return max(1, Int((base * fraction).rounded()))
+    }
 
     // Flocking radii (points)
     static let separationRadius: CGFloat = 40

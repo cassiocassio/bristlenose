@@ -45,7 +45,12 @@ struct ShoalView: View {
     var body: some View {
         ZStack {
             // SpriteKit scene
-            SpriteView(scene: scene, options: [.allowsTransparency], debugOptions: debugOverlay)
+            SpriteView(
+                scene: scene,
+                preferredFramesPerSecond: ShoalConfig.preferredFPS,
+                options: [.allowsTransparency],
+                debugOptions: debugOverlay
+            )
 
             // Gradient dissolve at bottom edge
             VStack {

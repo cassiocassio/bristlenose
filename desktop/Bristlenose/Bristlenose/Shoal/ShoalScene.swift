@@ -92,7 +92,11 @@ final class ShoalScene: SKScene {
         let sceneSize = size
 
         for boid in boids {
-            // Build neighbour list (depth-filtered)
+            // Build neighbour list (depth-filtered). NB: this O(n²) filter (a fresh
+            // array per boid, per frame) is the shoal's binding perf constraint —
+            // main-thread, NOT the GPU (150 boids janked on an idle M2 Max until the
+            // 50fps cap). Spatial-grid + no-alloc struct sim is the follow-up if the
+            // count ceiling rises. See docs/design-llm-call-telemetry.md §Engineering risk.
             let neighbours = boids.filter { other in
                 other !== boid && abs(boid.depth - other.depth) < ShoalConfig.depthNeighbourThreshold
             }
@@ -139,12 +143,9 @@ final class ShoalScene: SKScene {
     // MARK: - Spawning
 
     private func spawnBoids(for phase: ShoalPhase) {
-        let targetCount: Int
-        switch phase {
-        case .early:  targetCount = ShoalConfig.earlyCount
-        case .middle: targetCount = ShoalConfig.middleCount
-        case .late:   targetCount = ShoalConfig.lateCount
-        }
+        // Count is derived from the current render area (see ShoalConfig) — a
+        // bigger pane / external display holds a denser flock.
+        let targetCount = ShoalConfig.targetCount(forArea: size.width * size.height, phase: phase)
 
         let toSpawn = max(0, targetCount - boids.count)
         guard toSpawn > 0 else { return }
@@ -167,6 +168,38 @@ final class ShoalScene: SKScene {
             addChild(boid)
             boids.append(boid)
         }
+    }
+
+    // MARK: - Resize
+
+    /// The render area changed (window resized/moved, entered/left full-screen,
+    /// dragged to another display). Re-derive the flock size for the new area and
+    /// grow or shrink toward it — keeps density roughly constant as the pane changes.
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        guard !isDead, size.width > 0, size.height > 0 else { return }
+        let target = ShoalConfig.targetCount(forArea: size.width * size.height, phase: currentPhase)
+        if boids.count < target {
+            spawnBoids(for: currentPhase)   // spawnBoids re-derives the same target and fills up to it
+        } else if boids.count > target {
+            trimBoids(to: target)
+        }
+    }
+
+    /// Remove surplus boids with a fade — used when the render area shrinks. The
+    /// faded boids leave the flock (`boids`) immediately so the sim stops steering
+    /// them; their fade-and-remove action finishes independently.
+    private func trimBoids(to target: Int) {
+        guard boids.count > target else { return }
+        let surplus = boids.count - target
+        for boid in boids.suffix(surplus) {
+            boid.removeAllActions()
+            boid.run(.sequence([
+                .fadeOut(withDuration: ShoalConfig.spawnFadeDuration),
+                .removeFromParent(),
+            ]))
+        }
+        boids.removeLast(surplus)
     }
 
     /// Draw from the live feed pool, excluding words already on screen; falls

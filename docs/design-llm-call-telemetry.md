@@ -534,7 +534,7 @@ Bristlenose's in-run UX has the same structure already (see §Layout):
 What that means concretely:
 
 - The bottom strip's time number can grow slightly more prominent in the last ~60 seconds (visual weight, not blink/animate — calmly assertive).
-- The shoal can begin a slow convergence pattern in the last ~30 seconds, ending with all boids settling into a final formation as the run completes. Maps to Reynolds' `arrive` steering behaviour — already in the v0.1 archive's `AliveFlocking`.
+- The shoal can begin a slow convergence pattern in the last ~30 seconds, ending with all boids settling into a final formation as the run completes. Maps to Reynolds' `arrive` steering behaviour — already in the v0.1 archive's `AliveFlocking`. **[Superseded — no settling end-state shipped; the mount gate unmounts the flock the instant the run ends. See §Phase 4.]**
 - Cascade startles can ramp slightly in the final stretch, telegraphing "almost there" without a modal toast.
 - Resist 10-9-8-style countdown styling — it's twee in a productivity tool and reads as gimmick. The principle is *attention reward*, not *visual countdown*.
 
@@ -761,6 +761,11 @@ instant the run ends, so the crossfade to the report *is* the ending (`triumph()
 deleted); (2) **phase stays ring-driven**, not content-kind-driven (which breaks
 on resumed runs).
 
+_Updated 2026-07-10:_ boid count + frame rate reworked — count is now **area-derived**
+(`ShoalConfig.targetCount`, clamped `[24, 200]`, scaling with the detail-pane size) and
+frame rate capped at **50fps** (`ShoalConfig.preferredFPS`), replacing the fixed
+15/30/45/cap-50 model. Rationale + the M2 Max perf finding are in §"Engineering risk: low".
+
 _Original plan (kept for the reveal mapping + positioning):_
 
 ### Phase 4 — Shoal revival (post-alpha; the much-later layer)
@@ -851,6 +856,8 @@ An indie product survives the cost-benefit conversation differently. The shoal i
 This positioning point matters for sequencing: the shoal is not "polish to add at the end." It's a load-bearing piece of the product's emotional reason-to-exist. Worth getting it back into the desktop app early in the alpha, with a parallel React/Canvas implementation tracking it for serve mode.
 
 ### Engineering risk: low
+
+> **Updated 2026-07-10 — the cost model below is GPU-framed; the binding constraint turned out to be CPU.** The "sub-1% GPU / essentially free" analysis still holds *for GPU render* — but that is not what bounds the flock. The **main-thread O(n²) neighbour search + flocking sim** ([ShoalScene.swift](../desktop/Bristlenose/Bristlenose/Shoal/ShoalScene.swift) — `boids.filter` per boid per frame) is: **150 boids was not smooth on a 16" M2 Max** (2026-07 test), on an otherwise-idle machine. Fix shipped — a **50fps cap** (`ShoalConfig.preferredFPS`) plus an **area-derived count** clamped `[24, 200]` (`ShoalConfig.targetCount`, scaling with the detail-pane size), replacing the old fixed 15/30/45/cap-50. So the "profile-and-throttle (fewer boids / lower frame rate / paused)" mitigation below is now *partly shipped*: the fps cap and the count ceiling exist; the GPU-contention-aware **courtesy** throttle (back off when a local LLM saturates Metal) is still future. Read the GPU-cost prose below as *necessary but not sufficient* — the real perf lever is the main-thread sim (a spatial-grid / no-alloc rewrite is the parked follow-up). Original analysis preserved:
 
 The shoal looks expensive but isn't, because of where the real work happens. In ~99% of alpha-realistic runs:
 

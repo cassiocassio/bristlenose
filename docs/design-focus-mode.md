@@ -130,3 +130,10 @@ Three invariants carry it; don't screenshot every palette × appearance × conte
 - Light-mode ground: **recede-only** (`bg-focus == bg`) — settled.
 - Embedded ground: **drive native to match via the seam bridge** — settled.
 - Report-wide only for v1; per-section Focus (a moon on the section header) deferred until it's demonstrably missed.
+
+## Changelog draft — HELD until ship
+
+Ready to drop into `CHANGELOG.md` under the shipping version **once Phase 0–2 actually land**. Not in the changelog now because the feature is unbuilt — a user-facing entry for something users can't use would be a promise (no-promises rule). Follows the `0da3cb40` precedent (parked launch copy held for ship day). Trim the affordance list to whatever actually shipped before pasting.
+
+> **Focus Mode — quiet everything but the quotes.** A new reading state for the report. Press `z` — or the moon button in the toolbar, or View ▸ Focus Mode (`⌘⌥F`) in the desktop app — and the chrome recedes: tag chips, sentiment badges, timecodes, the card boxes themselves all sink to a faint outline, leaving just the quote, the speaker code, and the stars you set. Nothing moves. The toggle only fades opacity and colour, never layout, so the quote under your eye stays pinned to the pixel while everything around it drops away — you keep your bearings, the target just becomes unmistakable. Unstarred stars fade out entirely, so the quotes you've marked read as lit points across the page. It's a *mode*, not a theme: it composes with Default and Edo, light and dark, and in the desktop app it deepens the ground to match the native window with no seam. Dusk, not a light-switch — a ~320 ms fade that respects Reduce Motion. Ships on PyPI and in the desktop app.
+

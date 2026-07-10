@@ -92,6 +92,7 @@
     "colSentiment": "Sentiment",
     "interviews": "Interviews",
     "copyFolderPath": "Mappad kopiëren",
+    "showInFinder": "Toon in Finder",
     "editName": "Naam bewerken voor {{code}}",
     "failedToLoad": "Kon sessies niet laden: {{error}}",
     "loading": "Sessies laden…"

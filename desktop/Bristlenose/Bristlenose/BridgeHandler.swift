@@ -441,10 +441,51 @@ final class BridgeHandler: ObservableObject {
 
     // MARK: - Private
 
+    /// Present the feedback surface. When the SPA is mounted, hand off to its
+    /// React modal via the in-page bridge (the normal path); when it isn't (the
+    /// server-rendered status page after a cancelled/failed run — where
+    /// `window.__bristlenose` doesn't exist), fall through to the native
+    /// `FeedbackSheet`. Probing the bridge is what keeps Help ▸ Send Feedback
+    /// alive in the degraded case, where it previously dispatched into the void.
+    func openFeedback() {
+        guard let webView else {
+            NotificationCenter.default.post(name: .showFeedbackSheet, object: nil)
+            return
+        }
+        Task { @MainActor in
+            let probe = "typeof window.__bristlenose !== 'undefined' && "
+                + "typeof window.__bristlenose.menuAction === 'function'"
+            let raw = try? await webView.evaluateJavaScript(probe)
+            if (raw as? Bool) == true {
+                self.menuAction("sendFeedback")
+            } else {
+                NotificationCenter.default.post(name: .showFeedbackSheet, object: nil)
+            }
+        }
+    }
+
     private func handleProjectAction(_ action: String, data: [String: Any]?) {
         switch action {
         case "open-settings":
             NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+
+        case "open-feedback":
+            // Status page (SPA absent) asked for the native feedback sheet.
+            NotificationCenter.default.post(name: .showFeedbackSheet, object: nil)
+
+        case "reveal-in-finder":
+            // Reveal a folder (highlighted in its parent) in Finder. Sandbox-safe:
+            // Finder performs the reveal in its own process, so no read access or
+            // security-scoped bookmark is required on our side. The URI comes from
+            // the web layer (`source_folder_uri`, a `file:` URI) — validate the
+            // scheme before handing it to NSWorkspace (defence-in-depth, mirrors
+            // the `openExternal` scheme gate in WebView.swift).
+            guard let uri = data?["uri"] as? String,
+                  let url = URL(string: uri),
+                  url.isFileURL else {
+                break
+            }
+            NSWorkspace.shared.activateFileViewerSelecting([url])
 
         default:
             break

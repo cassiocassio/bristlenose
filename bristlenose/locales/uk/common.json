@@ -106,6 +106,7 @@
     "colSentiment": "Настрій",
     "interviews": "Інтерв’ю",
     "copyFolderPath": "Копіювати шлях до теки",
+    "showInFinder": "\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u0438 \u0443 Finder",
     "editName": "Змінити назву для {{code}}",
     "failedToLoad": "Не вдалося завантажити сесії: {{error}}",
     "loading": "Завантаження сесій…"

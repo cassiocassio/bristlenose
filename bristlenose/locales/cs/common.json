@@ -102,6 +102,7 @@
     "colSentiment": "Nálada",
     "interviews": "Rozhovory",
     "copyFolderPath": "Kopírovat cestu ke složce",
+    "showInFinder": "Zobrazit ve Finderu",
     "editName": "Upravit jméno pro {{code}}",
     "failedToLoad": "Nepodařilo se načíst sezení: {{error}}",
     "loading": "Načítání sezení…"

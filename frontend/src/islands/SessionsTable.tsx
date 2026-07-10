@@ -18,6 +18,8 @@ import type { SparklineItem } from "../components/Sparkline";
 import { PlayerContext } from "../contexts/PlayerContext";
 import { apiGet, getPeople, putPeople } from "../utils/api";
 import type { PersonData } from "../utils/api";
+import { postProjectAction } from "../shims/bridge";
+import { isEmbedded } from "../utils/embedded";
 import { isExportMode } from "../utils/exportData";
 import { formatDuration, formatFinderDate, formatFinderFilename } from "../utils/format";
 import type { SessionResponse, SessionsListResponse } from "../utils/types";
@@ -190,9 +192,21 @@ export function SessionsTable({
   // Pre-pipeline / no-sessions cases are server-failure-page territory,
   // not SPA territory — see docs/private/handoffs/generic-failure-surface.md.
 
-  const copyFolderPath = () => {
-    if (source_folder_uri) navigator.clipboard.writeText(source_folder_uri);
+  // In the macOS app the folder proxy reveals the interviews folder in Finder
+  // (native `reveal-in-finder` project action — sandbox-safe). In the browser
+  // there's no native bridge, so fall back to copying the path to the clipboard.
+  const embedded = isEmbedded();
+  const activateFolder = () => {
+    if (!source_folder_uri) return;
+    if (embedded) {
+      postProjectAction("reveal-in-finder", { uri: source_folder_uri });
+    } else {
+      navigator.clipboard.writeText(source_folder_uri);
+    }
   };
+  const folderActionTitle = embedded
+    ? t("sessions.showInFinder")
+    : t("sessions.copyFolderPath");
   const interviewsHeader = source_folder_uri ? (
     // Link-styled action; keyboard-accessible via role/tabIndex/onKeyDown.
     // eslint-disable-next-line jsx-a11y/anchor-is-valid
@@ -203,15 +217,15 @@ export function SessionsTable({
       tabIndex={0}
       onClick={(e: React.MouseEvent) => {
         e.preventDefault();
-        copyFolderPath();
+        activateFolder();
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          copyFolderPath();
+          activateFolder();
         }
       }}
-      title={t("sessions.copyFolderPath")}
+      title={folderActionTitle}
     >
       <FolderIcon /> {t("sessions.interviews")}
     </a>

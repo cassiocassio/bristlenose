@@ -84,6 +84,7 @@
     "colSentiment": "Stimmung",
     "interviews": "Interviews",
     "copyFolderPath": "Ordnerpfad kopieren",
+    "showInFinder": "Im Finder zeigen",
     "editName": "Name von {{code}} bearbeiten",
     "failedToLoad": "Fehler beim Laden der Interviews: {{error}}",
     "loading": "Interviews werden geladen…"

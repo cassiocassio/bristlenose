@@ -79,6 +79,7 @@
     "colSentiment": "감정",
     "interviews": "인터뷰",
     "copyFolderPath": "폴더 경로 복사",
+    "showInFinder": "Finder\uc5d0\uc11c \ubcf4\uae30",
     "editName": "{{code}} 이름 편집",
     "failedToLoad": "세션 로드 실패: {{error}}",
     "loading": "세션 로드 중…"

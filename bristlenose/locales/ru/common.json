@@ -106,6 +106,7 @@
     "colSentiment": "Настроение",
     "interviews": "Интервью",
     "copyFolderPath": "Скопировать путь к папке",
+    "showInFinder": "\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c \u0432 Finder",
     "editName": "Изменить имя для {{code}}",
     "failedToLoad": "Не удалось загрузить сессии: {{error}}",
     "loading": "Загрузка сессий…"

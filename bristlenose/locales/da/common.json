@@ -92,6 +92,7 @@
     "colSentiment": "Stemning",
     "interviews": "Interviews",
     "copyFolderPath": "Kopiér mappesti",
+    "showInFinder": "Vis i Finder",
     "editName": "Redigér navn for {{code}}",
     "failedToLoad": "Kunne ikke indlæse sessioner: {{error}}",
     "loading": "Indlæser sessioner…"

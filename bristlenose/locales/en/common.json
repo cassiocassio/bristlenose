@@ -92,6 +92,7 @@
     "colSentiment": "Sentiment",
     "interviews": "Interviews",
     "copyFolderPath": "Copy folder path",
+    "showInFinder": "Show in Finder",
     "editName": "Edit name for {{code}}",
     "failedToLoad": "Failed to load sessions: {{error}}",
     "loading": "Loading sessions…"

@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { SessionsTable } from "./SessionsTable";
+import { _resetEmbeddedCache } from "../utils/embedded";
 
 // ---------------------------------------------------------------------------
 // Mock data
@@ -279,5 +280,81 @@ describe("SessionsTable name editing", () => {
     mockFetchResponses();
     render(<SessionsTable projectId="1" />);
     expect(await screen.findByText("Moderated by Sarah")).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Folder proxy (Interviews header) — reveal-in-Finder vs copy-path fork
+// ---------------------------------------------------------------------------
+
+describe("SessionsTable folder proxy", () => {
+  const FOLDER_URI = "file:///Users/x/Interviews";
+
+  function mockFetchWithFolder() {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      (url: string) => {
+        if (url.includes("/sessions")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ ...sessionsResponse, source_folder_uri: FOLDER_URI }),
+          });
+        }
+        if (url.includes("/people")) {
+          return Promise.resolve({ ok: true, json: async () => peopleResponse });
+        }
+        return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+      },
+    );
+  }
+
+  afterEach(() => {
+    delete (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__;
+    delete (window as unknown as Record<string, unknown>).webkit;
+    _resetEmbeddedCache();
+  });
+
+  it("copies the folder path to the clipboard in the browser", async () => {
+    _resetEmbeddedCache(); // ensure not embedded
+    const writeText = vi.fn();
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    mockFetchWithFolder();
+    const { container } = render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+
+    const link = container.querySelector(".bn-interviews-link") as HTMLElement;
+    expect(link).toBeTruthy();
+    fireEvent.click(link);
+
+    expect(writeText).toHaveBeenCalledWith(FOLDER_URI);
+  });
+
+  it("reveals the folder in Finder via the native bridge when embedded", async () => {
+    (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
+    _resetEmbeddedCache();
+    const postMessage = vi.fn();
+    (window as unknown as Record<string, unknown>).webkit = {
+      messageHandlers: { navigation: { postMessage } },
+    };
+    const writeText = vi.fn();
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    mockFetchWithFolder();
+    const { container } = render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+
+    const link = container.querySelector(".bn-interviews-link") as HTMLElement;
+    fireEvent.click(link);
+
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "project-action",
+      action: "reveal-in-finder",
+      data: { uri: FOLDER_URI },
+    });
+    expect(writeText).not.toHaveBeenCalled();
   });
 });

@@ -92,6 +92,7 @@
     "colSentiment": "Duygu durumu",
     "interviews": "Görüşmeler",
     "copyFolderPath": "Klasör yolunu kopyala",
+    "showInFinder": "Finder\u2019da G\u00f6ster",
     "editName": "{{code}} için adı düzenle",
     "failedToLoad": "Oturumlar yüklenemedi: {{error}}",
     "loading": "Oturumlar yükleniyor…"

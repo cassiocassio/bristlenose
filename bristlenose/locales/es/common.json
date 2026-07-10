@@ -85,6 +85,7 @@
     "colSentiment": "Sentimiento",
     "interviews": "Entrevistas",
     "copyFolderPath": "Copiar ruta de carpeta",
+    "showInFinder": "Mostrar en Finder",
     "editName": "Editar nombre de {{code}}",
     "failedToLoad": "Error al cargar las sesiones: {{error}}",
     "loading": "Cargando sesiones…"

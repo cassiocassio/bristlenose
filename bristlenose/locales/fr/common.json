@@ -85,6 +85,7 @@
     "colSentiment": "Sentiment",
     "interviews": "Entretiens",
     "copyFolderPath": "Copier le chemin du dossier",
+    "showInFinder": "Afficher dans le Finder",
     "editName": "Modifier le nom de {{code}}",
     "failedToLoad": "Échec du chargement des entretiens : {{error}}",
     "loading": "Chargement des entretiens…"

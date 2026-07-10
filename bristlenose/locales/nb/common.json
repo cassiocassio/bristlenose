@@ -92,6 +92,7 @@
     "colSentiment": "Sentiment",
     "interviews": "Intervjuer",
     "copyFolderPath": "Kopier mappebane",
+    "showInFinder": "Vis i Finder",
     "editName": "Rediger navn for {{code}}",
     "failedToLoad": "Klarte ikke å laste inn økter: {{error}}",
     "loading": "Laster inn økter …"

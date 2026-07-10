@@ -92,6 +92,7 @@
     "colSentiment": "Tunnesävy",
     "interviews": "Haastattelut",
     "copyFolderPath": "Kopioi kansion polku",
+    "showInFinder": "N\u00e4yt\u00e4 Finderissa",
     "editName": "Muokkaa nimeä: {{code}}",
     "failedToLoad": "Istuntojen lataus epäonnistui: {{error}}",
     "loading": "Ladataan istuntoja…"

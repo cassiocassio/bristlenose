@@ -92,6 +92,7 @@
     "colSentiment": "Sentiment",
     "interviews": "Intervjuer",
     "copyFolderPath": "Kopiera mappsökväg",
+    "showInFinder": "Visa i Finder",
     "editName": "Redigera namn för {{code}}",
     "failedToLoad": "Kunde inte läsa in sessioner: {{error}}",
     "loading": "Läser in sessioner…"

@@ -85,6 +85,7 @@
     "colSentiment": "情緒",
     "interviews": "訪談",
     "copyFolderPath": "拷貝檔案夾路徑",
+    "showInFinder": "\u5728 Finder \u4e2d\u986f\u793a",
     "editName": "編輯 {{code}} 的名稱",
     "failedToLoad": "無法載入場次：{{error}}",
     "loading": "正在載入場次…"

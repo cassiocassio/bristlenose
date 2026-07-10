@@ -12,7 +12,6 @@ import { Outlet, useNavigate, useMatch, useLocation } from "react-router-dom";
 import { Header } from "../components/Header";
 import { NavBar } from "../components/NavBar";
 import { Footer } from "../components/Footer";
-import { HelpModal } from "../components/HelpModal";
 import { FeedbackModal } from "../components/FeedbackModal";
 import { SettingsModal } from "../components/SettingsModal";
 import { SidebarLayout, sidebarAnimations } from "../components/SidebarLayout";
@@ -166,12 +165,18 @@ const IS_DEV =
   (window as unknown as Record<string, unknown>).__BRISTLENOSE_DEV__ === true ||
   location.port === "5173";
 
+// Help is browser-based docs now — the in-app Help modal is retired. Open in a
+// NAMED tab so repeated ? presses reuse one tab instead of spawning a pile.
+const DOCS_URL = "https://bristlenose.app/docs/";
+const SHORTCUTS_DOCS_URL = "https://bristlenose.app/docs/keyboard-shortcuts.html";
+function openDocs(url: string): void {
+  window.open(url, "bristlenose-docs");
+}
+
 /**
  * Inner component that uses hooks requiring PlayerProvider + FocusProvider.
  */
 function AppShell() {
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [helpSection, setHelpSection] = useState<string>("help");
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportAnonymise, setExportAnonymise] = useState(false);
@@ -195,11 +200,6 @@ function AppShell() {
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [health, setHealth] = useState<HealthResponse>(DEFAULT_HEALTH_RESPONSE);
-  const toggleHelp = useCallback(() => setHelpOpen((prev) => !prev), []);
-  const openHelp = useCallback(() => {
-    setHelpSection("help");
-    setHelpOpen(true);
-  }, []);
   const openFeedback = useCallback(() => setFeedbackOpen(true), []);
   const closeFeedback = useCallback(() => setFeedbackOpen(false), []);
   const toggleSettings = useCallback(() => {
@@ -269,14 +269,12 @@ function AppShell() {
       .catch(() => {});
   }, [embedded]);
 
-  const toggleHelpShortcuts = useCallback(() => {
-    setHelpSection("shortcuts");
-    setHelpOpen((prev) => !prev);
-  }, []);
+  // ? opens the keyboard-shortcuts docs page (in the shared named tab).
+  const openShortcutsDocs = useCallback(() => openDocs(SHORTCUTS_DOCS_URL), []);
 
   useKeyboardShortcuts({
-    helpModalOpen: helpOpen,
-    onToggleHelp: toggleHelpShortcuts,
+    helpModalOpen: false,
+    onToggleHelp: openShortcutsDocs,
     settingsModalOpen: settingsOpen,
     onToggleSettings: toggleSettings,
   });
@@ -476,14 +474,9 @@ function AppShell() {
         case "starredQuotesOnly":
           setViewMode("starred");
           break;
-        case "showHelp":
-          setHelpSection("help");
-          setHelpOpen(true);
-          break;
-        case "showKeyboardShortcuts":
-          setHelpSection("shortcuts");
-          setHelpOpen(true);
-          break;
+        // showHelp / showKeyboardShortcuts / showAcknowledgements are handled
+        // natively now (the Help menu opens external docs directly) — no SPA
+        // case needed. The browser SPA reaches docs via the ? key / footer Help.
         case "showReleaseNotes":
           window.open(
             "https://github.com/cassiocassio/bristlenose/blob/main/CHANGELOG.md",
@@ -495,10 +488,6 @@ function AppShell() {
           break;
         case "openBlog":
           window.open("https://blog.bristlenose.app", "_blank");
-          break;
-        case "showAcknowledgements":
-          setHelpSection("acknowledgements");
-          setHelpOpen(true);
           break;
         case "zoomIn":
           applyZoom(getZoom() + ZOOM_STEP);
@@ -623,7 +612,7 @@ function AppShell() {
       showRightSidebar={!!isQuotes}
     >
       {!embedded && <Header />}
-      {!embedded && <NavBar onExportReport={toggleExport} onSendToMiro={toggleMiro} onSettings={toggleSettings} onHelp={openHelp} />}
+      {!embedded && <NavBar onExportReport={toggleExport} onSendToMiro={toggleMiro} onSettings={toggleSettings} onHelp={() => openDocs(DOCS_URL)} />}
       <main className="bn-main">
         <Suspense fallback={null}>
           <Outlet />
@@ -633,11 +622,10 @@ function AppShell() {
         <Footer
           health={health}
           onOpenFeedback={openFeedback}
-          onToggleHelp={openHelp}
+          onToggleHelp={() => openDocs(DOCS_URL)}
         />
       )}
       <FeedbackModal open={feedbackOpen} onClose={closeFeedback} health={health} />
-      <HelpModal open={helpOpen} onClose={toggleHelp} initialSection={helpSection} health={health} />
       <ExportDialog open={exportOpen} onClose={toggleExport} initialAnonymise={exportAnonymise} />
       <MiroExportPanel open={miroOpen} onClose={toggleMiro} />
       <SettingsModal open={settingsOpen} onClose={toggleSettings} />

@@ -2,7 +2,7 @@
  * Tooltip — shortcut hint tooltip for toolbar and nav buttons.
  *
  * Pure CSS hover delay (300ms via transition-delay in atoms/tooltip.css).
- * Renders platform-aware <kbd> badges using the same isMac() logic as HelpModal.
+ * Renders platform-aware <kbd> badges using the shared isMac() logic.
  *
  * Positioned above the trigger by default (suitable for toolbar buttons).
  * Uses aria-describedby for accessibility.

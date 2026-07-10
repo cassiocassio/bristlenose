@@ -10,7 +10,7 @@
  * Each consumer provides a sizing class via `className` prop
  * (e.g. "settings-modal", "help-modal").
  *
- * Used by SettingsModal, HelpModal, and future sidebar-nav modals.
+ * Used by SettingsModal and future sidebar-nav modals.
  *
  * @module ModalNav
  */

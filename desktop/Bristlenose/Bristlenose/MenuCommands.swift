@@ -926,18 +926,17 @@ private struct HelpMenuContent: View {
     @ObservedObject var i18n: I18n
 
     var body: some View {
-        // Help opens the browser-based docs (the in-app Help modal is retired —
-        // "Help opens browser docs"). Works regardless of whether the SPA is
-        // mounted, since it doesn't route through the web bridge.
+        // Help, Keyboard Shortcuts, and Acknowledgements open external pages in
+        // the browser — the in-app Help modal is retired ("Help opens browser
+        // docs"). They don't route through the web bridge, so they work whether
+        // or not the SPA is mounted (e.g. on the status page after a failed run).
         Button(i18n.t("desktop.menu.help.bristlenoseHelp")) {
-            if let url = URL(string: "https://bristlenose.app/docs/") {
-                NSWorkspace.shared.open(url)
-            }
+            Self.open("https://bristlenose.app/docs/")
         }
         .keyboardShortcut("?", modifiers: .command)
 
         Button(i18n.t("desktop.menu.help.keyboardShortcuts")) {
-            bridgeHandler.menuAction("showKeyboardShortcuts")
+            Self.open("https://bristlenose.app/docs/keyboard-shortcuts.html")
         }
 
         Divider()
@@ -959,7 +958,17 @@ private struct HelpMenuContent: View {
         }
 
         Button(i18n.t("desktop.menu.help.acknowledgements")) {
-            bridgeHandler.menuAction("showAcknowledgements")
+            Self.open("https://github.com/cassiocassio/bristlenose/blob/main/ACKNOWLEDGEMENTS.md")
         }
+    }
+
+    /// Open an external URL in the system browser, scheme-guarded (defence in
+    /// depth — this is the native sink, so it doesn't pass through WebView's
+    /// navigation allowlist).
+    private static func open(_ string: String) {
+        guard let url = URL(string: string),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "https" || scheme == "http" else { return }
+        NSWorkspace.shared.open(url)
     }
 }

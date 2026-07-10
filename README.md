@@ -366,7 +366,7 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
-**0.19.1** — _10 Jul 2026_
+**0.20.0** — _11 Jul 2026_
 
 - **Feedback survives a failed run.** When a run is cancelled or fails, the report gives way to a status page whose "Send feedback" link used to dead-end at "Method not allowed." Now the macOS app opens a native feedback sheet and the browser opens an inline form on the page — both sending the same anonymous `{rating, message}`, and both reporting "sent" only when the server confirms receipt, so a captive-portal `200 OK` can't silently swallow it; unconfirmed sends fall back to the clipboard. The reliability fix reaches the in-report form too. Browser form + reliability on PyPI; native sheet with the next bundled build.
 - **Help opens the live docs.** The in-app Help overlay is retired in favour of the online documentation, which supersedes it. Help → Bristlenose Help and Keyboard Shortcuts open `bristlenose.app/docs` in the browser; Acknowledgements opens the open-source credits. Help you read _beside_ the report, not a modal over it (the `?` key reuses a single tab). Ships on PyPI and in the desktop app.

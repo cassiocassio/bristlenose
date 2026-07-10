@@ -1184,7 +1184,9 @@ struct ContentView: View {
         panel.canCreateDirectories = true
         panel.title = i18n.t("desktop.chrome.newProjectSaveTitle")
         panel.prompt = i18n.t("desktop.chrome.newProjectSavePrompt")
-        panel.message = i18n.t("desktop.chrome.newProjectSaveMessage")
+        panel.message = i18n.plural(
+            "desktop.chrome.newProjectSaveMessage", count: looseURLs.count
+        )
         panel.appearance = NSApp.keyWindow?.effectiveAppearance
         // Window-modal sheet: the drop can't complete without a name + location,
         // so block the initiating window until the user decides — the HIG

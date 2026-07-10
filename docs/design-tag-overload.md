@@ -54,6 +54,16 @@ The eye is already fixated on the deck; any reflow/repaint/reorder throws conten
 
 ---
 
+## 2a. Draft launch copy — held for ship day (NOT yet shipped)
+
+> **Not for `CHANGELOG.md` until Phase 1's code lands.** The CHANGELOG documents shipped versions; this is copy held ready so it can be lifted in verbatim the moment the feature ships. Present tense describes the shipped state, not today's.
+
+> **Tags that respect your time.** When the same tag lands on a quote twice — a code you added by hand that a framework also suggests — Bristlenose tucks the duplicates into a single card instead of making you read the same word twice. Click to fan them apart; nothing's hidden, nothing's merged, and hiding a codebook brings its tags right back. Your quotes stop shouting and go back to highlighting.
+>
+> *Short form:* Duplicate tags on a quote now stack into one card — read it once, fan out the rest.
+
+---
+
 ## 3. Principles we nailed down (cross-cutting)
 
 - **Presentation, never destruction.** No merge in this line of work. Manual-code merge already exists separately (drag-and-drop in the codebook); we don't touch it, and we **never merge across frameworks** — combining frameworks (Nielsen + Norman) yields overlap *and* difference, and the difference is signal. The layering is a live derived view; visibility-toggle gives full reversibility for free. (The QDA tools' merge model — NVivo/ATLAS.ti, §8 — is prior art we deliberately don't follow; their confirmation/audit ceremony guards *destructive* merges, which we don't have.)

@@ -366,6 +366,11 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.19.1** — _10 Jul 2026_
+
+- **Feedback survives a failed run.** When a run is cancelled or fails, the report gives way to a status page whose "Send feedback" link used to dead-end at "Method not allowed." Now the macOS app opens a native feedback sheet and the browser opens an inline form on the page — both sending the same anonymous `{rating, message}`, and both reporting "sent" only when the server confirms receipt, so a captive-portal `200 OK` can't silently swallow it; unconfirmed sends fall back to the clipboard. The reliability fix reaches the in-report form too. Browser form + reliability on PyPI; native sheet with the next bundled build.
+- **Help opens the live docs.** The in-app Help overlay is retired in favour of the online documentation, which supersedes it. Help → Bristlenose Help and Keyboard Shortcuts open `bristlenose.app/docs` in the browser; Acknowledgements opens the open-source credits. Help you read _beside_ the report, not a modal over it (the `?` key reuses a single tab). Ships on PyPI and in the desktop app.
+
 **0.19.0** — _4 Jul 2026_
 
 - **Nine new locales — twenty-one languages in total.** Dutch (`nl`), Finnish (`fi`), Polish (`pl`), Russian (`ru`), Ukrainian (`uk`), Danish (`da`), Swedish (`sv`), Norwegian Bokmål (`nb`), and Turkish (`tr`) join the roster across the desktop app, web report, and CLI. Each is a machine-seeded community preview — complete against all nine namespaces, offered for native speakers to refine on [Weblate](https://hosted.weblate.org/projects/bristlenose/), with `fill-empty-only` seeding so contributed translations always win. Slavic 1/few/many/other plurals, East-Slavic `_one` retaining `{{count}}` because the form recurs at 21/31, Turkish formal register with `Vazgeç` for Cancel. New tooling — placeholder-union check, `_one` gate, pytest classification guard — catches regressions. Norwegian ships as Bokmål only (the `no → nb` fallback is an open follow-up).

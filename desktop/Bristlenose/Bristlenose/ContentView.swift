@@ -1187,16 +1187,24 @@ struct ContentView: View {
         panel.message = i18n.plural(
             "desktop.chrome.newProjectSaveMessage", count: looseURLs.count
         )
-        panel.appearance = NSApp.keyWindow?.effectiveAppearance
+        // Resolve the host window for the sheet. A drop-initiated present runs
+        // just after the drag's modal event loop, when keyWindow is momentarily
+        // nil — fall back to mainWindow, then the first main-capable visible
+        // window (canBecomeMain filters out panels/utility windows). Without this
+        // the panel lands via the free-floating `begin` fallback, which follows
+        // the *system* theme (light on a dark app) and isn't window-modal.
+        let host = NSApp.keyWindow ?? NSApp.mainWindow
+            ?? NSApp.windows.first { $0.isVisible && $0.canBecomeMain }
+        panel.appearance = host?.effectiveAppearance
         // Window-modal sheet: the drop can't complete without a name + location,
         // so block the initiating window until the user decides — the HIG
-        // modality for a window-scoped decision (a sheet, not an app-modal
-        // dialog that freezes the whole app). A sheet also inherits the window's
-        // dark appearance; the free-floating panel is the fallback when there's
-        // no key window to attach to.
+        // modality for a window-scoped decision (a sheet, not an app-modal dialog
+        // that freezes the whole app). A sheet also inherits the window's dark
+        // appearance; the free-floating panel is the fallback only when there's
+        // genuinely no window to attach to.
         func present(_ handler: @escaping (NSApplication.ModalResponse) -> Void) {
-            if let window = NSApp.keyWindow {
-                panel.beginSheetModal(for: window, completionHandler: handler)
+            if let host {
+                panel.beginSheetModal(for: host, completionHandler: handler)
             } else {
                 panel.begin(completionHandler: handler)
             }

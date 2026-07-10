@@ -13,6 +13,7 @@
 
 import { useCallback, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { EditableText, JourneyChain, PersonBadge, Sparkline, Thumbnail } from "../components";
 import type { SparklineItem } from "../components/Sparkline";
 import { PlayerContext } from "../contexts/PlayerContext";
@@ -283,6 +284,7 @@ function SessionRow({
   onNameCommit: (code: string, newName: string) => void;
 }) {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const {
     session_id,
     session_number,
@@ -292,16 +294,30 @@ function SessionRow({
     thumbnail_url,
     speakers,
     journey_labels,
+    journey,
     sentiment_counts,
     source_files,
   } = session;
 
-  // Journey arrow chain (now uses JourneyChain primitive)
+  // Journey arrow chain (now uses JourneyChain primitive). Each label deep-links
+  // into this session's transcript at that screen's first moment, reusing the
+  // transcript page's existing #t-<seconds> hash-scroll + highlight.
   const hasJourney = journey_labels.length > 0;
+  const journeyHref = (index: number): string => {
+    const step = journey[index];
+    return step
+      ? `/report/sessions/${session_id}#t-${Math.floor(step.start_seconds)}`
+      : `/report/sessions/${session_id}`;
+  };
 
   // Source file display — media files open the popout player via PlayerContext;
   // non-media files are plain text.
   const playerCtx = useContext(PlayerContext);
+  // Clicking either the filename link or the thumbnail opens the popout player.
+  const openPlayer =
+    has_media && playerCtx ? () => playerCtx.seekTo(session_id, 0) : undefined;
+  const videoTitle =
+    source_files.length > 0 ? formatFinderFilename(source_files[0].filename) : undefined;
   let sourceEl: React.ReactNode = "\u2014";
   if (source_files.length > 0) {
     const sf = source_files[0];
@@ -388,14 +404,25 @@ function SessionRow({
       </td>
       <td className="bn-session-meta">
         <div>{formatFinderDate(session_date, i18n.language)}</div>
-        {hasJourney && <JourneyChain labels={journey_labels} />}
+        {hasJourney && (
+          <JourneyChain
+            labels={journey_labels}
+            hrefForIndex={journeyHref}
+            onIndexClick={(i) => navigate(journeyHref(i))}
+          />
+        )}
       </td>
       <td className="bn-session-duration">
         {formatDuration(duration_seconds)}
       </td>
       <td>{sourceEl}</td>
       <td className="bn-session-thumb">
-        <Thumbnail hasMedia={has_media} thumbnailUrl={thumbnail_url ?? undefined} />
+        <Thumbnail
+          hasMedia={has_media}
+          thumbnailUrl={thumbnail_url ?? undefined}
+          onActivate={openPlayer}
+          title={videoTitle}
+        />
       </td>
       <td className="bn-session-sentiment">
         <Sparkline items={sentimentToSparklineItems(sentiment_counts)} />

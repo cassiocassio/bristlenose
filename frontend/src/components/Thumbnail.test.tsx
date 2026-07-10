@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { Thumbnail } from "./Thumbnail";
 
 describe("Thumbnail", () => {
@@ -57,5 +57,23 @@ describe("Thumbnail", () => {
   it("supports data-testid", () => {
     render(<Thumbnail hasMedia={true} data-testid="my-thumb" />);
     expect(screen.getByTestId("my-thumb")).toBeDefined();
+  });
+
+  it("calls onActivate when clicked", () => {
+    const onActivate = vi.fn();
+    render(
+      <Thumbnail hasMedia={true} onActivate={onActivate} data-testid="thumb" />,
+    );
+    fireEvent.click(screen.getByTestId("thumb"));
+    expect(onActivate).toHaveBeenCalledTimes(1);
+  });
+
+  it("sets the title tooltip", () => {
+    render(
+      <Thumbnail hasMedia={true} title="show and tell.mov" data-testid="thumb" />,
+    );
+    expect(screen.getByTestId("thumb").getAttribute("title")).toBe(
+      "show and tell.mov",
+    );
   });
 });

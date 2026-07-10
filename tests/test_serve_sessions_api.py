@@ -88,6 +88,29 @@ class TestSessionsEndpoint:
         # Dashboard has display_order=1, Search has display_order=2
         assert labels.index("Dashboard") < labels.index("Search")
 
+    def test_journey_steps_carry_anchors(self, client: TestClient) -> None:
+        """Each journey step has a label + start_seconds deep-link anchor."""
+        data = client.get("/api/projects/1/sessions").json()
+        session = data["sessions"][0]
+        journey = session["journey"]
+        # Parallel to journey_labels — same labels, same order.
+        assert [s["label"] for s in journey] == session["journey_labels"]
+        for step in journey:
+            assert isinstance(step["start_seconds"], (int, float))
+            assert step["start_seconds"] >= 0
+
+    def test_journey_anchor_is_earliest_quote(self, client: TestClient) -> None:
+        """A screen's anchor is its earliest quote start-timecode.
+
+        Fixture p1 quotes: Dashboard q-p1-10 (10s) + q-p1-26 (26s),
+        Search q-p1-46 (46s). So Dashboard anchors at 10, Search at 46.
+        """
+        data = client.get("/api/projects/1/sessions").json()
+        session = data["sessions"][0]
+        anchors = {s["label"]: s["start_seconds"] for s in session["journey"]}
+        assert anchors["Dashboard"] == 10
+        assert anchors["Search"] == 46
+
     def test_sentiment_counts(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/sessions").json()
         session = data["sessions"][0]
@@ -145,6 +168,7 @@ class TestSessionsResponseShape:
             "thumbnail_url",
             "speakers",
             "journey_labels",
+            "journey",
             "sentiment_counts",
             "source_files",
         }

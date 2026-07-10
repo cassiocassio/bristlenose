@@ -7,8 +7,11 @@
    Specificity note: the base rule uses `all: unset` which resets background.
    The active rule must match or exceed that specificity (0-1-1) to win. */
 
-/* Base interactive label — reset to inline text, add cursor + transitions */
-button.bn-journey-label--interactive {
+/* Base interactive label — reset to inline text, add cursor + transitions.
+   Matches both the transcript page's <button> (in-page scroll) and the
+   Sessions lens's <a> (deep-link navigation). `:is(button, a)` keeps the
+   0-1-1 specificity the active rule below relies on. */
+:is(button, a).bn-journey-label--interactive {
     all: unset;
     cursor: pointer;
     font: inherit;
@@ -18,21 +21,21 @@ button.bn-journey-label--interactive {
     transition: color 0.15s, text-decoration-color 0.15s, background 0.15s;
 }
 
-button.bn-journey-label--interactive:hover {
+:is(button, a).bn-journey-label--interactive:hover {
     color: var(--bn-colour-accent);
     text-decoration: underline;
     text-decoration-color: var(--bn-colour-muted);
     text-underline-offset: 0.25em;
 }
 
-button.bn-journey-label--interactive:focus-visible {
+:is(button, a).bn-journey-label--interactive:focus-visible {
     outline: 2px solid var(--bn-colour-accent);
     outline-offset: 2px;
 }
 
 /* Active journey step — hover-tint pill background.
-   Selector must beat the base `all: unset` rule (0-1-1). */
-button.bn-journey-label--interactive.bn-journey-label--active {
+   Selector must beat the base `all: unset` rule (0-2-1 > 0-1-1). */
+:is(button, a).bn-journey-label--interactive.bn-journey-label--active {
     font-weight: var(--bn-weight-emphasis);
     background: var(--bn-colour-hover);
     border-radius: var(--bn-radius-sm);

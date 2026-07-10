@@ -16,6 +16,10 @@ interface JourneyChainProps {
   activeIndex?: number | null;
   /** Index-based click handler — takes precedence over onLabelClick. */
   onIndexClick?: (index: number) => void;
+  /** When provided, labels render as navigation links (`<a href>`) instead of
+   *  buttons, so modifier-click opens the target in a new tab. The click
+   *  handler (onIndexClick/onLabelClick) still runs for plain clicks. */
+  hrefForIndex?: (index: number) => string;
 }
 
 export function JourneyChain({
@@ -28,6 +32,7 @@ export function JourneyChain({
   stickyOverflow,
   activeIndex,
   onIndexClick,
+  hrefForIndex,
 }: JourneyChainProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const labelRefs = useRef<Map<number, HTMLElement>>(new Map());
@@ -124,7 +129,27 @@ export function JourneyChain({
                 {separator}
               </span>
             )}
-            {isInteractive ? (
+            {isInteractive && hrefForIndex ? (
+              <a
+                href={hrefForIndex(i)}
+                className={labelClasses}
+                onClick={(e) => {
+                  // Let modifier-clicks fall through to open a new tab.
+                  if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+                  e.preventDefault();
+                  if (onIndexClick) {
+                    onIndexClick(i);
+                  } else if (onLabelClick) {
+                    onLabelClick(label);
+                  }
+                }}
+                ref={(el) => setLabelRef(i, el)}
+                aria-current={isActive ? "step" : undefined}
+                data-testid={testId ? `${testId}-label-${i}` : undefined}
+              >
+                {label}
+              </a>
+            ) : isInteractive ? (
               <button
                 type="button"
                 className={labelClasses}

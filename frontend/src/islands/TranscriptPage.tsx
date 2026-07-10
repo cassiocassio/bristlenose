@@ -187,6 +187,26 @@ function buildWaypoints(
   return waypoints;
 }
 
+/**
+ * Resolve a target time (seconds) to the best transcript segment: the segment
+ * that contains it, else the nearest segment starting at/after it, else the
+ * last segment. Used by the deep-link hash-scroll so a `#t-<seconds>` anchor
+ * that doesn't land exactly on a segment id (e.g. a quote that starts
+ * mid-segment) still scrolls to a real segment. Segments are time-ordered.
+ */
+function resolveSegmentForSeconds(
+  segments: TranscriptSegmentResponse[],
+  target: number,
+): TranscriptSegmentResponse | null {
+  if (segments.length === 0) return null;
+  let nearestAfter: TranscriptSegmentResponse | null = null;
+  for (const seg of segments) {
+    if (seg.start_time <= target && target < seg.end_time) return seg;
+    if (seg.start_time >= target && nearestAfter === null) nearestAfter = seg;
+  }
+  return nearestAfter ?? segments[segments.length - 1];
+}
+
 function useJourneyScrollSync(
   segments: TranscriptSegmentResponse[],
   annotations: Record<string, QuoteAnnotationResponse>,
@@ -403,7 +423,17 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
     const targetId = hash.slice(1); // strip #
     // Defer to next frame so DOM is ready
     requestAnimationFrame(() => {
-      const el = document.getElementById(targetId);
+      let el = document.getElementById(targetId);
+      // Tolerant fallback for #t-<seconds> deep-links (e.g. from the Sessions
+      // lens journey): the target may not land exactly on a segment id, so
+      // resolve to the containing/nearest segment.
+      if (!el) {
+        const m = /^t-(\d+)$/.exec(targetId);
+        if (m) {
+          const seg = resolveSegmentForSeconds(data.segments, Number(m[1]));
+          if (seg) el = document.getElementById(`t-${Math.floor(seg.start_time)}`);
+        }
+      }
       if (el) {
         el.classList.add("anchor-highlight");
         el.scrollIntoView({ behavior: "smooth", block: "center" });

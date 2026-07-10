@@ -206,4 +206,59 @@ describe("JourneyChain", () => {
     expect(buttons).toHaveLength(2);
     expect(buttons[0].classList.contains("bn-journey-label--interactive")).toBe(true);
   });
+
+  it("renders links (not buttons) when hrefForIndex is provided", () => {
+    render(
+      <JourneyChain
+        labels={["A", "B"]}
+        onIndexClick={vi.fn()}
+        hrefForIndex={(i) => `/report/sessions/s1#t-${i * 10}`}
+        data-testid="jc"
+      />,
+    );
+    const links = screen.getByTestId("jc").querySelectorAll("a");
+    expect(links).toHaveLength(2);
+    expect(screen.getByTestId("jc").querySelectorAll("button")).toHaveLength(0);
+    expect(links[0].getAttribute("href")).toBe("/report/sessions/s1#t-0");
+    expect(links[1].getAttribute("href")).toBe("/report/sessions/s1#t-10");
+    expect(links[0].classList.contains("bn-journey-label--interactive")).toBe(true);
+  });
+
+  it("plain click on a link calls onIndexClick and prevents default nav", () => {
+    const onIndexClick = vi.fn();
+    render(
+      <JourneyChain
+        labels={["A", "B"]}
+        onIndexClick={onIndexClick}
+        hrefForIndex={(i) => `/x#t-${i}`}
+        data-testid="jc"
+      />,
+    );
+    const link = screen.getByTestId("jc").querySelectorAll("a")[1];
+    const ev = new MouseEvent("click", { bubbles: true, cancelable: true });
+    link.dispatchEvent(ev);
+    expect(onIndexClick).toHaveBeenCalledWith(1);
+    expect(ev.defaultPrevented).toBe(true);
+  });
+
+  it("modifier-click on a link falls through (no preventDefault, new tab)", () => {
+    const onIndexClick = vi.fn();
+    render(
+      <JourneyChain
+        labels={["A", "B"]}
+        onIndexClick={onIndexClick}
+        hrefForIndex={(i) => `/x#t-${i}`}
+        data-testid="jc"
+      />,
+    );
+    const link = screen.getByTestId("jc").querySelectorAll("a")[0];
+    const ev = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      metaKey: true,
+    });
+    link.dispatchEvent(ev);
+    expect(onIndexClick).not.toHaveBeenCalled();
+    expect(ev.defaultPrevented).toBe(false);
+  });
 });

@@ -262,6 +262,15 @@ td a:hover {
     white-space: nowrap;
 }
 
+.bn-session-meta {
+    /* Start column is the only shrinkable column in the row (all others are
+       nowrap or fixed-width), so auto table-layout dumps all shrink pressure
+       here and the journey path collapses to one word per line at narrow
+       widths. A floor keeps the path readable (a couple of words per line)
+       while the date above it still wraps freely. */
+    min-width: 12rem;
+}
+
 .bn-session-journey {
     font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);

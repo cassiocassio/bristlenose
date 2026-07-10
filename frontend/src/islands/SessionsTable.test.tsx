@@ -1,7 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render as rtlRender,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { SessionsTable } from "./SessionsTable";
 import { _resetEmbeddedCache } from "../utils/embedded";
+
+// SessionsTable uses useNavigate (journey deep-links) — provide a Router.
+const render = (ui: Parameters<typeof rtlRender>[0]) =>
+  rtlRender(ui, { wrapper: MemoryRouter });
 
 // ---------------------------------------------------------------------------
 // Mock data
@@ -22,6 +32,7 @@ const sessionsResponse = {
         { speaker_code: "p1", name: "Alice", role: "participant" },
       ],
       journey_labels: [],
+      journey: [],
       sentiment_counts: {},
       source_files: [],
     },
@@ -38,6 +49,7 @@ const sessionsResponse = {
         { speaker_code: "p2", name: "Bob", role: "participant" },
       ],
       journey_labels: [],
+      journey: [],
       sentiment_counts: {},
       source_files: [],
     },

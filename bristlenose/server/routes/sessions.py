@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from bristlenose.server.journey import derive_journeys
+from bristlenose.server.journey import derive_journeys_with_anchors
 from bristlenose.server.models import (
     Person,
     Project,
@@ -44,6 +44,17 @@ class SourceFileResponse(BaseModel):
     filename: str
 
 
+class JourneyStepResponse(BaseModel):
+    """One screen in the session journey, with its first-moment anchor.
+
+    ``start_seconds`` deep-links to the transcript (``#t-<seconds>``) so the
+    Sessions lens can drill straight into that moment.
+    """
+
+    label: str
+    start_seconds: float
+
+
 class SessionResponse(BaseModel):
     """A single session row for the sessions table."""
 
@@ -56,6 +67,7 @@ class SessionResponse(BaseModel):
     thumbnail_url: str | None = None
     speakers: list[SpeakerResponse]
     journey_labels: list[str]
+    journey: list[JourneyStepResponse]
     sentiment_counts: dict[str, int]
     source_files: list[SourceFileResponse]
 
@@ -109,8 +121,8 @@ def get_sessions(
             .all()
         )
 
-        # --- Build journey labels per participant ---
-        participant_screens = derive_journeys(db, project_id)
+        # --- Build journey steps (label + first-moment anchor) per participant ---
+        participant_journeys = derive_journeys_with_anchors(db, project_id)
 
         # --- Build sentiment counts per session ---
         sentiment_by_session = _aggregate_sentiments(db, project_id)
@@ -157,16 +169,25 @@ def get_sessions(
                     )
                 )
 
-            # Journey: merge all participants' screen labels for this session
+            # Journey: merge all participants' screen steps for this session.
+            # Dedup by label (keep first occurrence + its anchor).
             session_pids = [
                 sp.speaker_code for sp in sess.session_speakers
                 if sp.speaker_code.startswith("p")
             ]
-            journey_labels: list[str] = []
+            journey: list[JourneyStepResponse] = []
+            seen_labels: set[str] = set()
             for pid in session_pids:
-                for label in participant_screens.get(pid, []):
-                    if label not in journey_labels:
-                        journey_labels.append(label)
+                for step in participant_journeys.get(pid, []):
+                    if step.label not in seen_labels:
+                        seen_labels.add(step.label)
+                        journey.append(
+                            JourneyStepResponse(
+                                label=step.label,
+                                start_seconds=step.start_seconds,
+                            )
+                        )
+            journey_labels = [step.label for step in journey]
 
             # Sentiment counts
             sentiment_counts = sentiment_by_session.get(sess.session_id, {})
@@ -189,6 +210,7 @@ def get_sessions(
                     thumbnail_url=thumbnail_url,
                     speakers=speakers_data,
                     journey_labels=journey_labels,
+                    journey=journey,
                     sentiment_counts=sentiment_counts,
                     source_files=source_files,
                 )

@@ -514,6 +514,12 @@ export interface SourceFileResponse {
   filename: string;
 }
 
+export interface JourneyStepResponse {
+  label: string;
+  /** Anchor for a transcript deep-link (`#t-<seconds>`) into this screen. */
+  start_seconds: number;
+}
+
 export interface SessionResponse {
   session_id: string;
   session_number: number;
@@ -524,6 +530,7 @@ export interface SessionResponse {
   thumbnail_url: string | null;
   speakers: SpeakerResponse[];
   journey_labels: string[];
+  journey: JourneyStepResponse[];
   sentiment_counts: Record<string, number>;
   source_files: SourceFileResponse[];
 }

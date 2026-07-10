@@ -17,6 +17,31 @@ this file) win, then macOS idiom (`what-would-gruber-say` / `app-store-police`),
 then swiftui-pro. It beats an agent's untrained SwiftUI hunch; it never overrides
 a documented Mac decision. Details in the skill's `VENDORED.md`.
 
+## Native primitives first — Swift isn't a blank web canvas
+
+**The out-of-the-box system primitive with default settings is the starting
+point, not a fallback.** Before drawing anything, name the stock control that
+already does the job and default to it: `NSSavePanel`/`NSOpenPanel` for
+location/save/create-folder (these are *also what grant sandbox access* — a
+hand-drawn sheet grants nothing), `NSOutlineView` for hierarchical lists, a
+standard sheet for a committed modal task, a popover for a transient
+light-dismiss choice, `NSAlert` for a confirm, SF Symbols / real file icons for
+glyphs. Composing your own is the exception that needs the written sentence "the
+system primitive is X; we depart because Z" — if you can't write it, use X.
+Treating Swift as an arbitrary canvas (any modal, any helper text, any emoji)
+imports web habits into a platform with strong native answers, and produces
+non-Mac-like UI that a `what-would-gruber-say` pass then has to drag back.
+
+This is the level *above* the grid rule: stay-on-the-grid governs **values**
+(fonts/colours/spacing/materials); this governs the whole **primitive** (control,
+panel, sheet, interaction pattern). Brick, not paint.
+
+**Process:** run `what-would-gruber-say` on novel native UI **before** proposing
+a mockup, not after — it's a verification backstop, not a discovery tool. If
+Gruber is dragging the design back to Mac reality, native-first got skipped. The
+recurring panels/dialogs checklist and the origin post-mortem live in the
+`feedback_native_primitives_first.md` memory.
+
 ## Shipping architecture (alpha and beyond)
 
 See `docs/design-desktop-python-runtime.md` for the canonical design. Summary:

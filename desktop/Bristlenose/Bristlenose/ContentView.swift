@@ -674,6 +674,9 @@ struct ContentView: View {
         panel.allowsMultipleSelection = true
         panel.prompt = i18n.t("desktop.chrome.addFilesPrompt")
         panel.message = String(format: i18n.t("desktop.chrome.addFilesMessage"), projectName)
+        // Match the app's appearance (window's forced `.preferredColorScheme`);
+        // a free-floating panel otherwise follows the system theme.
+        panel.appearance = NSApp.keyWindow?.effectiveAppearance
         panel.begin { response in
             Task { @MainActor in
                 guard response == .OK, !panel.urls.isEmpty else { return }
@@ -1134,29 +1137,124 @@ struct ContentView: View {
                 pipelineRunner.start(project: project)
             }
         } else if !directories.isEmpty || !files.isEmpty {
-            // Multiple items — one project with explicit input list.
-            // CLI's `discover_files` doesn't accept a subset list yet
-            // (memory project_inputfiles_model), so we capture the files but
-            // do NOT start the pipeline. The project content area will show
-            // the unsupported-subset state (Slice 6) — for now the project
-            // simply sits in `.idle`.
-            let allPaths = directories.map { $0.path } + files.map { $0.path }
-            let firstName: String
-            let firstPath: String
-            if let firstDir = directories.first {
-                firstName = firstDir.lastPathComponent
-                firstPath = firstDir.path
-            } else {
-                firstName = files[0].deletingPathExtension().lastPathComponent
-                firstPath = files[0].deletingLastPathComponent().path
+            // Loose files / multi-folder / mixed — no single clean folder, so
+            // there's no natural project location. Ask via NSSavePanel (the
+            // sandbox-clean way to a write-granted spot): the user names +
+            // places the project, we create the folder, copy the files in, and
+            // it analyses like any folder-shaped project. Replaces the old
+            // file-subset project the CLI's `discover_files` couldn't run.
+            let looseURLs = directories + files
+            // Prefill the standard "New project" placeholder (what "+ New
+            // Project" gives), deduped against existing sidebar project names so
+            // we don't suggest one that already exists → "New project 2", etc.
+            // The *disk* path can't be pre-checked under App Sandbox (~/Documents
+            // isn't granted until the user picks it), so a folder clash there is
+            // handled by NSSavePanel's own "replace?" prompt at Create.
+            let base = i18n.t("desktop.chrome.newProject")
+            var suggestedName = base
+            var n = 2
+            while projectIndex.projects.contains(where: { $0.name == suggestedName }) {
+                suggestedName = "\(base) \(n)"
+                n += 1
             }
-            let project = projectIndex.addProject(
-                name: firstName, path: firstPath, inputFiles: allPaths,
+            createFolderProjectViaSavePanel(
+                looseURLs: looseURLs, suggestedName: suggestedName,
                 intoFolder: folderID
             )
-            selection = [.project(project.id)]
-            // Adopt the dropped item's name (folder, else first file) — no
-            // inline rename on drag; see the single-folder branch above.
+        }
+    }
+
+    /// Loose files / multi-folder / mixed drops don't resolve to a single
+    /// folder, so there's no natural project location. Under App Sandbox the
+    /// app can't silently create one (Home-root isn't user-selected/entitled),
+    /// so we ask via `NSSavePanel` — the user names + places the project, which
+    /// grants write access to that spot. We create the folder, copy the files
+    /// in, and it becomes a normal folder-shaped project that analyses like any
+    /// other. Cancel → nothing created, nothing moved (copy runs only after
+    /// Create). §7 storyboard + `docs/private/handoffs/incremental-swift-step4.md`.
+    private func createFolderProjectViaSavePanel(
+        looseURLs: [URL], suggestedName: String,
+        intoFolder folderID: UUID? = nil, relocating relocateID: UUID? = nil
+    ) {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = suggestedName
+        panel.directoryURL = FileManager.default.urls(
+            for: .documentDirectory, in: .userDomainMask
+        ).first
+        panel.canCreateDirectories = true
+        panel.title = i18n.t("desktop.chrome.newProjectSaveTitle")
+        panel.prompt = i18n.t("desktop.chrome.newProjectSavePrompt")
+        panel.message = i18n.t("desktop.chrome.newProjectSaveMessage")
+        panel.appearance = NSApp.keyWindow?.effectiveAppearance
+        // Window-modal sheet: the drop can't complete without a name + location,
+        // so block the initiating window until the user decides — the HIG
+        // modality for a window-scoped decision (a sheet, not an app-modal
+        // dialog that freezes the whole app). A sheet also inherits the window's
+        // dark appearance; the free-floating panel is the fallback when there's
+        // no key window to attach to.
+        func present(_ handler: @escaping (NSApplication.ModalResponse) -> Void) {
+            if let window = NSApp.keyWindow {
+                panel.beginSheetModal(for: window, completionHandler: handler)
+            } else {
+                panel.begin(completionHandler: handler)
+            }
+        }
+        present { response in
+            Task { @MainActor in
+                guard response == .OK, let target = panel.url else { return }
+                do {
+                    try FileManager.default.createDirectory(
+                        at: target, withIntermediateDirectories: true
+                    )
+                    // Folder-shaped (inputFiles == nil) → analysable. The project
+                    // name follows the panel filename (single source of truth).
+                    let project: Project
+                    if let relocateID {
+                        // Adopt the existing "New Project" placeholder rather than
+                        // spawn a duplicate — relocate it into the chosen folder and
+                        // take the panel name (keeps its id / position / icon).
+                        projectIndex.relocateProject(id: relocateID, newPath: target.path)
+                        projectIndex.renameProject(
+                            id: relocateID, newName: target.lastPathComponent
+                        )
+                        guard let relocated = projectIndex.projects
+                            .first(where: { $0.id == relocateID }) else { return }
+                        project = relocated
+                    } else {
+                        project = projectIndex.addProject(
+                            name: target.lastPathComponent, path: target.path,
+                            intoFolder: folderID
+                        )
+                    }
+                    selection = [.project(project.id)]
+                    pipelineRunner.beginAddingInterviews(
+                        projectID: project.id, count: looseURLs.count
+                    )
+                    let copied = try await copyMachinery.copy(
+                        urls: looseURLs, into: target,
+                        projectID: project.id, projectName: project.name,
+                        acceptedExtensions: Self.acceptedExtensions
+                    )
+                    projectIndex.seedKnownBasenames(
+                        projectID: project.id,
+                        basenames: Set(copied.map { $0.lastPathComponent })
+                    )
+                    // Folder-shaped: the CLI rescans the folder at run time and
+                    // folds the copied files in — the incremental-add machinery
+                    // on a fresh project.
+                    pipelineRunner.start(project: project)
+                } catch is CancellationError {
+                    // Copy cancelled via the row ring; pill rolled back. No toast.
+                } catch CopyMachinery.CopyError.insufficientDiskSpace(
+                    let needed, let available
+                ) {
+                    copyDiskSpaceAlert = CopyDiskSpaceAlertState(
+                        needed: needed, available: available
+                    )
+                } catch {
+                    toast.show(error.localizedDescription)
+                }
+            }
         }
     }
 
@@ -1298,12 +1396,18 @@ struct ContentView: View {
                 )
                 if !wasFolderShaped {
                     projectIndex.addFiles(to: id, files: copied.map(\.path))
+                    // Only the file-subset path surfaces the "Added N…" sheet — it
+                    // doesn't auto-run, so the sheet is its sole feedback. On the
+                    // folder-shaped auto-run path the sheet is a modal the §7
+                    // storyboard explicitly rejects (the "Adding N interviews…"
+                    // subtitle + the run IS the acknowledgement). See
+                    // docs/mockups/incremental-analysis-flows.html §7.
+                    newFilesSheet = NewFilesSheetState(
+                        projectID: id,
+                        projectName: project.name,
+                        files: copied
+                    )
                 }
-                newFilesSheet = NewFilesSheetState(
-                    projectID: id,
-                    projectName: project.name,
-                    files: copied
-                )
                 // Seed the folder watcher with the copied filenames so the
                 // count pill stays hidden — they're "known," not surprise
                 // drops. Handoff §Watcher lifecycle / Stacking rule.
@@ -1386,18 +1490,18 @@ struct ContentView: View {
                 pipelineRunner.start(project: updated)
             }
         } else {
-            // Multi-item or file(s) — file-subset shape; pick first parent
-            // as the project path. No auto-run (CLI lacks `--files`).
-            let firstPath: String
-            if let firstDir = directories.first {
-                firstPath = firstDir.path
-            } else {
-                firstPath = files[0].deletingLastPathComponent().path
-            }
-            let allPaths = directories.map { $0.path } + files.map { $0.path }
-            projectIndex.relocateProject(id: id, newPath: firstPath)
-            projectIndex.addFiles(to: id, files: allPaths)
-            selection = [.project(id)]
+            // Loose files / multi-folder / mixed dropped onto the "New Project"
+            // placeholder — no single clean folder to adopt. Route to the same
+            // NSSavePanel create flow as a sidebar drop, but *relocate* this
+            // placeholder into the chosen folder instead of spawning a duplicate.
+            // Replaces the old file-subset "can't be analysed" dead-end.
+            let placeholderName = projectIndex.projects
+                .first(where: { $0.id == id })?.name
+                ?? i18n.t("desktop.chrome.newProject")
+            createFolderProjectViaSavePanel(
+                looseURLs: directories + files,
+                suggestedName: placeholderName, relocating: id
+            )
         }
     }
 

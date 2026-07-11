@@ -137,6 +137,30 @@ Our three `FlockingBehavior` implementations represent an evolutionary sequence:
 
 The debug behaviour picker allows runtime comparison between all three.
 
+### Motion tuning + murmuration default (Jul 2026)
+
+The three behaviours above compute the *forces*; a later pass fixed how those
+forces were being **integrated**. A global `maxForce` clamp (30 pt/s²) was
+crushing every dramatic impulse — the cascade startle (Attanasi 2014) and the
+breakaway — to the same gentle nudge as idle flocking, and a low speed ceiling
+made even unclamped motion amble. The flock "floated".
+
+The retune adds a live `ShoalTuning` model (defaults reproduce the old
+constants), a **global attractor** (a slowly-wandering shared point the whole
+flock banks toward and overshoots — the crude analogue of the scale-free
+whole-flock coherence in Cavagna & Giardina 2014), and **event-driven
+disturbance**: the pipeline's three content batches (word → theme → sentiment,
+one per stage) now *drive* the flock — the flock forms, then a seeded startle
+wave, then a predator-swoop of the attractor. The **murmuration** tuning
+(committed speed, snappy turns, flow engaged) is the production default for real
+analysis runs; the pre-murmuration "Floating" motion is preserved on the Debug
+bench. Full design: `docs/design-shoal-motion.md`.
+
+| Layer | Based on | Key features |
+|-------|----------|-------------|
+| `ShoalTuning` + attractor | Cavagna & Giardina 2014 | live knobs, global-flow attractor, murmuration preset |
+| Disturbance mapping | Attanasi 2014, Potts 2022 | stage-boundary startle waves + cohort joins + predator swoop |
+
 ---
 
-*Last updated: Feb 2026*
+*Last updated: Jul 2026*

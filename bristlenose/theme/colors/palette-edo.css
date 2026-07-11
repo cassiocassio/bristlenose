@@ -6,8 +6,8 @@
    bero-ai (Prussian blue), yellow ochre.
 
    Desktop default. Activate: data-color-theme="edo" on <html>.
-   Env: BRISTLENOSE_COLOR_THEME=edo  (only working switch today — no CLI flag yet)
-   Approved future naming: --palette edo / BRISTLENOSE_PALETTE=edo (glossary §Display settings)
+   Env/CLI: BRISTLENOSE_PALETTE=edo or --palette edo (canonical; BRISTLENOSE_COLOR_THEME
+   is the deprecated alias). Internal <html> attribute stays data-color-theme (glossary §Display settings).
 
    ── v1 decisions (Jul 2026) ──
    Accent uses Prussian blue's vivid UNDERTONE (#0f5c9e), not the dull masstone

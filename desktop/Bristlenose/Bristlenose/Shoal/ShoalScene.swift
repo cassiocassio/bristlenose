@@ -7,6 +7,25 @@ let allFlockingBehaviors: [FlockingBehavior] = [
     ClassicFlocking(),
 ]
 
+/// A flock-wide reaction, mapped to the three pipeline content batches. The real
+/// run wires each to a batch arrival (`ShoalFeed`); the Debug bench fires them by
+/// button. See `ShoalScene.disturb(_:)` for the recipe of each.
+enum ShoalDisturbance: Equatable {
+    case wordsArrive       // transcript merge — the flock forms; a cohort streams in
+    case themesLand        // thematic grouping — a startle wave re-organises the flock
+    case sentimentArrives  // quote extraction — the predator swoop + coloured joiners
+
+    /// Map a `ShoalFeed` batch kind to its disturbance. `nil` for unknown kinds.
+    init?(feedKind: String) {
+        switch feedKind {
+        case "word":      self = .wordsArrive
+        case "theme":     self = .themesLand
+        case "sentiment": self = .sentimentArrives
+        default:          return nil
+        }
+    }
+}
+
 /// SpriteKit scene that runs the typographic flocking animation.
 ///
 /// The flocking algorithm is pluggable via `FlockingBehavior` — the scene
@@ -21,6 +40,18 @@ final class ShoalScene: SKScene {
 
     /// The active flocking algorithm. Can be swapped at runtime via the debug menu.
     var behavior: FlockingBehavior = allFlockingBehaviors[0]
+
+    /// Live-tunable knobs (force/speed clamps, flocking scales, murmuration
+    /// attractor). Defaults reproduce the shipping `ShoalConfig` constants — the
+    /// production embed leaves it untouched; the Debug screensaver drives it.
+    var tuning = ShoalTuning()
+
+    // Global attractor drift — the invisible point the flock banks toward when
+    // `tuning.attractorStrength > 0`. Eased toward a target that re-rolls every
+    // `attractorRetargetInterval` seconds. Written to `tuning.attractor` each
+    // frame so the stateless behaviours can read the flock-wide point.
+    private var attractorTarget: CGPoint = .zero
+    private var attractorRetargetAt: TimeInterval = 0
 
     /// Live transcript words from the run's shoal-feed (via `ShoalFeed`). When
     /// non-empty, spawns draw from these instead of the canned `WordPool`.
@@ -88,8 +119,12 @@ final class ShoalScene: SKScene {
             return
         }
 
-        let maxSpeed = ShoalConfig.maxSpeed
+        let maxSpeed = tuning.maxSpeed
         let sceneSize = size
+
+        // Drift the global attractor (murmuration flow). Cheap; skipped visually
+        // by the behaviours when strength is 0.
+        updateAttractor(dt: dt)
 
         for boid in boids {
             // Build neighbour list (depth-filtered). NB: this O(n²) filter (a fresh
@@ -107,11 +142,12 @@ final class ShoalScene: SKScene {
                 neighbours: neighbours,
                 sceneSize: sceneSize,
                 elapsedTime: elapsedTime,
-                dt: dt
+                dt: dt,
+                tuning: tuning
             )
 
             // Clamp steering force
-            steer = steer.clamped(to: ShoalConfig.maxForce)
+            steer = steer.clamped(to: tuning.maxForce)
 
             // Integrate velocity
             let speedMul = boid.speedMultiplier
@@ -121,7 +157,7 @@ final class ShoalScene: SKScene {
             // Clamp speed
             let speed = boid.velocity.magnitude
             let effectiveMax = maxSpeed * speedMul
-            let effectiveMin = ShoalConfig.minSpeed * speedMul
+            let effectiveMin = tuning.minSpeed * speedMul
             if speed > effectiveMax {
                 boid.velocity = boid.velocity.scaled(to: effectiveMax)
             } else if speed < effectiveMin && speed > 0.1 {
@@ -138,6 +174,140 @@ final class ShoalScene: SKScene {
 
             boid.applyDepthEffects()
         }
+    }
+
+    /// Ease the shared attractor toward a target that re-rolls periodically, and
+    /// publish it on `tuning.attractor` for the behaviours to read. The flock's
+    /// momentum makes it overshoot each target, which is what turns a static pull
+    /// into sweeping murmuration passes.
+    private func updateAttractor(dt: TimeInterval) {
+        guard size.width > 0, size.height > 0 else { return }
+
+        // Initialise to centre on first run (or after a resize wiped it).
+        if attractorTarget == .zero {
+            let centre = CGPoint(x: size.width / 2, y: size.height / 2)
+            tuning.attractor = centre
+            attractorTarget = centre
+        }
+
+        // Re-roll to a fresh random point, kept inside a margin.
+        if elapsedTime >= attractorRetargetAt {
+            let m: CGFloat = 80
+            let x = CGFloat.random(in: m...max(m, size.width - m))
+            let y = CGFloat.random(in: m...max(m, size.height - m))
+            attractorTarget = CGPoint(x: x, y: y)
+            attractorRetargetAt = elapsedTime + TimeInterval(max(0.5, tuning.attractorRetargetInterval))
+        }
+
+        // Ease toward the target (frame-rate independent).
+        let rate = min(1, tuning.attractorDriftRate * CGFloat(dt))
+        var p = tuning.attractor
+        p.x += (attractorTarget.x - p.x) * rate
+        p.y += (attractorTarget.y - p.y) * rate
+        tuning.attractor = p
+    }
+
+    // MARK: - Disturbance (event-driven — mapped to pipeline batches)
+
+    /// Fire a flock-wide reaction. In the real run each maps to a `ShoalFeed`
+    /// batch arrival (words → themes → sentiment); the Debug bench fires them by
+    /// hand. The recipes compose three primitives — `spawnCohort` (joiners),
+    /// `seedStartle` (fright wave, visible under Alive V2's cascade), and
+    /// `swoopAttractor` (the predator turn, visible when a global flow is engaged).
+    func disturb(_ kind: ShoalDisturbance) {
+        let cohort = max(0, Int(tuning.cohortSize))
+        switch kind {
+        case .wordsArrive:
+            // The gathering: members stream in, no fright.
+            spawnCohort(count: cohort)
+        case .themesLand:
+            // Structure snaps into place: one bird spooks, the wave ripples out.
+            if let seed = boids.randomElement() {
+                seedStartle(around: seed.position, radius: tuning.startleSeedRadius)
+            }
+            spawnCohort(count: cohort / 2)
+        case .sentimentArrives:
+            // The emotional turn: the flock wheels toward a new point + joiners.
+            swoopAttractor()
+            seedStartle(around: flockCentroid(), radius: tuning.startleSeedRadius * 0.6)
+            spawnCohort(count: cohort / 2)
+        }
+    }
+
+    /// Seed a startle in all boids within `radius` of `point`, fleeing outward.
+    /// Alive V2's cascade propagation then carries it through the flock as a
+    /// manoeuvre wave (Attanasi 2014); Classic/Alive ignore the flag, so the wave
+    /// only reads under Alive V2.
+    private func seedStartle(around point: CGPoint, radius: CGFloat) {
+        let r2 = radius * radius
+        for boid in boids {
+            let dx = boid.position.x - point.x
+            let dy = boid.position.y - point.y
+            if dx * dx + dy * dy <= r2 {
+                boid.isStartled = true
+                boid.startleTime = elapsedTime
+                boid.startleSource = point
+            }
+        }
+    }
+
+    /// A cohort of newcomers streams in from one edge, aimed at the flock's
+    /// centroid at full speed (they visibly *arrive*). To keep the population
+    /// bounded, the oldest few peel off and fade first — birds leave as others
+    /// join, which is itself murmuration-like churn.
+    private func spawnCohort(count: Int) {
+        guard count > 0, size.width > 0, size.height > 0 else { return }
+
+        // Depart: peel off the oldest, but never below the floor.
+        let depart = min(count, max(0, boids.count - ShoalConfig.minCount))
+        if depart > 0 {
+            for boid in boids.prefix(depart) {
+                boid.removeAllActions()
+                let away = CGVector(dx: .random(in: -1...1), dy: .random(in: -1...1))
+                    .scaled(to: tuning.maxSpeed)
+                boid.velocity = away
+                boid.run(.sequence([.fadeOut(withDuration: 0.6), .removeFromParent()]))
+            }
+            boids.removeFirst(depart)
+        }
+
+        // Arrive: newcomers enter off-edge with velocity toward the flock centre.
+        let centroid = flockCentroid()
+        let active = Set(boids.compactMap { $0.text })
+        let words = liveWords.isEmpty
+            ? WordPool.words(for: currentPhase, count: count, excluding: active)
+            : liveSample(count: count, excluding: active)
+
+        for word in words {
+            let pos = randomEdgePosition()
+            let boid = Boid(word: word, position: pos, depth: .random(in: 0.2...0.9))
+            boid.velocity = CGVector(dx: centroid.x - pos.x, dy: centroid.y - pos.y)
+                .scaled(to: tuning.maxSpeed)
+            boid.alpha = 0
+            boid.run(.fadeAlpha(to: boid.baseAlpha, duration: ShoalConfig.spawnFadeDuration))
+            addChild(boid)
+            boids.append(boid)
+        }
+    }
+
+    /// Snap the global attractor's target to a fresh point so the flock wheels
+    /// toward it (the predator swoop). Only visible when `attractorStrength > 0`.
+    private func swoopAttractor() {
+        guard size.width > 0, size.height > 0 else { return }
+        let m: CGFloat = 80
+        attractorTarget = CGPoint(
+            x: .random(in: m...max(m, size.width - m)),
+            y: .random(in: m...max(m, size.height - m))
+        )
+        attractorRetargetAt = elapsedTime + TimeInterval(max(0.5, tuning.attractorRetargetInterval))
+    }
+
+    /// Mean position of the live flock (scene centre when empty).
+    private func flockCentroid() -> CGPoint {
+        guard !boids.isEmpty else { return CGPoint(x: size.width / 2, y: size.height / 2) }
+        var sx: CGFloat = 0, sy: CGFloat = 0
+        for boid in boids { sx += boid.position.x; sy += boid.position.y }
+        return CGPoint(x: sx / CGFloat(boids.count), y: sy / CGFloat(boids.count))
     }
 
     // MARK: - Spawning

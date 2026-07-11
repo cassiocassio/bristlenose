@@ -9,12 +9,15 @@ protocol FlockingBehavior {
     var name: String { get }
 
     /// Compute the steering force for a single boid given its neighbours and the scene context.
+    /// `tuning` carries the live-tunable knobs (weight scales, startle, global
+    /// attractor); at defaults it reproduces the shipping `ShoalConfig` constants.
     func steer(
         boid: Boid,
         neighbours: [Boid],
         sceneSize: CGSize,
         elapsedTime: TimeInterval,
-        dt: TimeInterval
+        dt: TimeInterval,
+        tuning: ShoalTuning
     ) -> CGVector
 }
 
@@ -30,7 +33,8 @@ struct ClassicFlocking: FlockingBehavior {
         neighbours: [Boid],
         sceneSize: CGSize,
         elapsedTime: TimeInterval,
-        dt: TimeInterval
+        dt: TimeInterval,
+        tuning: ShoalTuning
     ) -> CGVector {
         var separation = CGVector.zero
         var alignment  = CGVector.zero
@@ -65,21 +69,24 @@ struct ClassicFlocking: FlockingBehavior {
         var steer = CGVector.zero
 
         if sepCount > 0 {
-            steer.dx += (separation.dx / CGFloat(sepCount)) * ShoalConfig.separationWeight
-            steer.dy += (separation.dy / CGFloat(sepCount)) * ShoalConfig.separationWeight
+            steer.dx += (separation.dx / CGFloat(sepCount)) * ShoalConfig.separationWeight * tuning.separationScale
+            steer.dy += (separation.dy / CGFloat(sepCount)) * ShoalConfig.separationWeight * tuning.separationScale
         }
         if alignCount > 0 {
             let avgDx = alignment.dx / CGFloat(alignCount) - boid.velocity.dx
             let avgDy = alignment.dy / CGFloat(alignCount) - boid.velocity.dy
-            steer.dx += avgDx * ShoalConfig.alignmentWeight
-            steer.dy += avgDy * ShoalConfig.alignmentWeight
+            steer.dx += avgDx * ShoalConfig.alignmentWeight * tuning.alignmentScale
+            steer.dy += avgDy * ShoalConfig.alignmentWeight * tuning.alignmentScale
         }
         if cohCount > 0 {
             let targetDx = cohesion.dx / CGFloat(cohCount) - boid.position.x
             let targetDy = cohesion.dy / CGFloat(cohCount) - boid.position.y
-            steer.dx += targetDx * 0.01 * ShoalConfig.cohesionWeight
-            steer.dy += targetDy * 0.01 * ShoalConfig.cohesionWeight
+            steer.dx += targetDx * 0.01 * ShoalConfig.cohesionWeight * tuning.cohesionScale
+            steer.dy += targetDy * 0.01 * ShoalConfig.cohesionWeight * tuning.cohesionScale
         }
+
+        // Global attractor (murmuration flow) — no-op at strength 0
+        addAttractorForce(to: &steer, boid: boid, tuning: tuning)
 
         // Boundary avoidance
         addBoundaryForce(to: &steer, boid: boid, sceneSize: sceneSize)
@@ -100,7 +107,8 @@ struct AliveFlocking: FlockingBehavior {
         neighbours: [Boid],
         sceneSize: CGSize,
         elapsedTime: TimeInterval,
-        dt: TimeInterval
+        dt: TimeInterval,
+        tuning: ShoalTuning
     ) -> CGVector {
         var separation = CGVector.zero
         var alignment  = CGVector.zero
@@ -137,22 +145,22 @@ struct AliveFlocking: FlockingBehavior {
 
         var steer = CGVector.zero
 
-        // Use per-boid personality weights
+        // Use per-boid personality weights (× live tuning scales)
         if sepCount > 0 {
-            steer.dx += (separation.dx / CGFloat(sepCount)) * boid.separationWeight
-            steer.dy += (separation.dy / CGFloat(sepCount)) * boid.separationWeight
+            steer.dx += (separation.dx / CGFloat(sepCount)) * boid.separationWeight * tuning.separationScale
+            steer.dy += (separation.dy / CGFloat(sepCount)) * boid.separationWeight * tuning.separationScale
         }
         if alignCount > 0 {
             let avgDx = alignment.dx / CGFloat(alignCount) - boid.velocity.dx
             let avgDy = alignment.dy / CGFloat(alignCount) - boid.velocity.dy
-            steer.dx += avgDx * boid.alignmentWeight
-            steer.dy += avgDy * boid.alignmentWeight
+            steer.dx += avgDx * boid.alignmentWeight * tuning.alignmentScale
+            steer.dy += avgDy * boid.alignmentWeight * tuning.alignmentScale
         }
         if cohCount > 0 {
             let targetDx = cohesion.dx / CGFloat(cohCount) - boid.position.x
             let targetDy = cohesion.dy / CGFloat(cohCount) - boid.position.y
-            steer.dx += targetDx * 0.01 * boid.cohesionWeight
-            steer.dy += targetDy * 0.01 * boid.cohesionWeight
+            steer.dx += targetDx * 0.01 * boid.cohesionWeight * tuning.cohesionScale
+            steer.dy += targetDy * 0.01 * boid.cohesionWeight * tuning.cohesionScale
         }
 
         // Wander: Reynolds' circle-based wander for organic turns
@@ -166,8 +174,8 @@ struct AliveFlocking: FlockingBehavior {
             dx: cos(boid.wanderAngle) * ShoalConfig.wanderCircleRadius,
             dy: sin(boid.wanderAngle) * ShoalConfig.wanderCircleRadius
         )
-        steer.dx += (circleCentre.dx + wanderOffset.dx) * ShoalConfig.wanderWeight * boid.wanderStrength
-        steer.dy += (circleCentre.dy + wanderOffset.dy) * ShoalConfig.wanderWeight * boid.wanderStrength
+        steer.dx += (circleCentre.dx + wanderOffset.dx) * ShoalConfig.wanderWeight * boid.wanderStrength * tuning.wanderScale
+        steer.dy += (circleCentre.dy + wanderOffset.dy) * ShoalConfig.wanderWeight * boid.wanderStrength * tuning.wanderScale
 
         // Speed regulation: steer toward preferred speed
         let currentSpeed = boid.velocity.magnitude
@@ -183,6 +191,9 @@ struct AliveFlocking: FlockingBehavior {
             steer.dx += cos(angle) * ShoalConfig.startleForce
             steer.dy += sin(angle) * ShoalConfig.startleForce
         }
+
+        // Global attractor (murmuration flow) — no-op at strength 0
+        addAttractorForce(to: &steer, boid: boid, tuning: tuning)
 
         // Boundary avoidance
         addBoundaryForce(to: &steer, boid: boid, sceneSize: sceneSize)
@@ -214,7 +225,8 @@ struct AliveV2Flocking: FlockingBehavior {
         neighbours: [Boid],
         sceneSize: CGSize,
         elapsedTime: TimeInterval,
-        dt: TimeInterval
+        dt: TimeInterval,
+        tuning: ShoalTuning
     ) -> CGVector {
 
         // ── 1. Topological neighbours: 7 nearest visible ──────────────
@@ -269,20 +281,20 @@ struct AliveV2Flocking: FlockingBehavior {
         }
 
         if sepCount > 0 {
-            steerForce.dx += (separation.dx / CGFloat(sepCount)) * boid.separationWeight
-            steerForce.dy += (separation.dy / CGFloat(sepCount)) * boid.separationWeight
+            steerForce.dx += (separation.dx / CGFloat(sepCount)) * boid.separationWeight * tuning.separationScale
+            steerForce.dy += (separation.dy / CGFloat(sepCount)) * boid.separationWeight * tuning.separationScale
         }
         if alignCount > 0 {
             let avgDx = alignment.dx / CGFloat(alignCount) - boid.velocity.dx
             let avgDy = alignment.dy / CGFloat(alignCount) - boid.velocity.dy
-            steerForce.dx += avgDx * boid.alignmentWeight * curiosityDampen
-            steerForce.dy += avgDy * boid.alignmentWeight * curiosityDampen
+            steerForce.dx += avgDx * boid.alignmentWeight * tuning.alignmentScale * curiosityDampen
+            steerForce.dy += avgDy * boid.alignmentWeight * tuning.alignmentScale * curiosityDampen
         }
         if cohCount > 0 {
             let targetDx = cohesion.dx / CGFloat(cohCount) - boid.position.x
             let targetDy = cohesion.dy / CGFloat(cohCount) - boid.position.y
-            steerForce.dx += targetDx * 0.01 * boid.cohesionWeight * curiosityDampen
-            steerForce.dy += targetDy * 0.01 * boid.cohesionWeight * curiosityDampen
+            steerForce.dx += targetDx * 0.01 * boid.cohesionWeight * tuning.cohesionScale * curiosityDampen
+            steerForce.dy += targetDy * 0.01 * boid.cohesionWeight * tuning.cohesionScale * curiosityDampen
         }
 
         // ── 3. Curiosity / investigate-return cycle ───────────────────
@@ -347,13 +359,13 @@ struct AliveV2Flocking: FlockingBehavior {
             let dy = boid.position.y - boid.startleSource.y
             let dist = sqrt(dx * dx + dy * dy)
             if dist > 1 {
-                steerForce.dx += (dx / dist) * ShoalConfig.cascadeFleeForce
-                steerForce.dy += (dy / dist) * ShoalConfig.cascadeFleeForce
+                steerForce.dx += (dx / dist) * tuning.cascadeFleeForce
+                steerForce.dy += (dy / dist) * tuning.cascadeFleeForce
             } else {
                 // Random escape if right on top of source
                 let angle = CGFloat.random(in: 0 ..< .pi * 2)
-                steerForce.dx += cos(angle) * ShoalConfig.cascadeFleeForce
-                steerForce.dy += sin(angle) * ShoalConfig.cascadeFleeForce
+                steerForce.dx += cos(angle) * tuning.cascadeFleeForce
+                steerForce.dy += sin(angle) * tuning.cascadeFleeForce
             }
 
             // Decay startle
@@ -363,7 +375,7 @@ struct AliveV2Flocking: FlockingBehavior {
         } else {
             // Spontaneous startle — bold boids are less easily startled
             let startleMul = 1.5 - boid.boldness // shy=1.5×, bold=0.5×
-            if Double.random(in: 0...1) < ShoalConfig.cascadeStartleChance * startleMul {
+            if Double.random(in: 0...1) < Double(tuning.cascadeStartleChance) * Double(startleMul) {
                 boid.isStartled = true
                 boid.startleTime = elapsedTime
                 boid.startleSource = boid.position // self-initiated, flee outward
@@ -405,8 +417,8 @@ struct AliveV2Flocking: FlockingBehavior {
                 dx: cos(boid.wanderAngle) * ShoalConfig.wanderCircleRadius,
                 dy: sin(boid.wanderAngle) * ShoalConfig.wanderCircleRadius
             )
-            // Bold boids wander more strongly
-            let wanderMul = boid.wanderStrength * (0.6 + boid.boldness * 0.8)
+            // Bold boids wander more strongly (× live wander scale)
+            let wanderMul = boid.wanderStrength * (0.6 + boid.boldness * 0.8) * tuning.wanderScale
             steerForce.dx += (circleCentre.dx + wanderOffset.dx) * ShoalConfig.wanderWeight * wanderMul
             steerForce.dy += (circleCentre.dy + wanderOffset.dy) * ShoalConfig.wanderWeight * wanderMul
         }
@@ -424,7 +436,11 @@ struct AliveV2Flocking: FlockingBehavior {
             steerForce.dy += (boid.velocity.dy / currentSpeed) * speedDiff * 0.15
         }
 
-        // ── 7. Boundary avoidance ─────────────────────────────────────
+        // ── 7. Global attractor (murmuration flow) — no-op at strength 0 ─
+
+        addAttractorForce(to: &steerForce, boid: boid, tuning: tuning)
+
+        // ── 8. Boundary avoidance ─────────────────────────────────────
 
         addBoundaryForce(to: &steerForce, boid: boid, sceneSize: sceneSize)
 
@@ -440,6 +456,22 @@ private func distSq(_ a: Boid, _ b: Boid) -> CGFloat {
 }
 
 // MARK: - Shared helpers
+
+/// Global attractor — the invisible "predator/goal" the whole flock banks
+/// toward (`tuning.attractor`, drifted by the scene). A constant-magnitude pull
+/// toward the shared point; because it doesn't scale with distance, the flock
+/// overshoots on its momentum and sweeps past, producing the murmuration's
+/// coherent turns and density bands. No-op at `attractorStrength == 0` (the
+/// shipping default), so the classic behaviours are untouched unless engaged.
+func addAttractorForce(to steer: inout CGVector, boid: Boid, tuning: ShoalTuning) {
+    guard tuning.attractorStrength > 0.01 else { return }
+    let dx = tuning.attractor.x - boid.position.x
+    let dy = tuning.attractor.y - boid.position.y
+    let dist = sqrt(dx * dx + dy * dy)
+    guard dist > 0.1 else { return }
+    steer.dx += (dx / dist) * tuning.attractorStrength
+    steer.dy += (dy / dist) * tuning.attractorStrength
+}
 
 /// Boundary avoidance — soft turn force when near scene edges.
 func addBoundaryForce(to steer: inout CGVector, boid: Boid, sceneSize: CGSize) {

@@ -24,6 +24,16 @@ struct ShoalView: View {
     /// scene as they arrive; empty leaves the canned pool in place.
     var liveWords: [WordPool.Word] = []
 
+    /// Live-tunable knobs. The production embed leaves this at defaults (= the
+    /// shipping `ShoalConfig` constants); the Debug screensaver passes its own
+    /// slider-bound instance so tuning is live.
+    var tuning: ShoalTuning = ShoalTuning()
+
+    /// Debug bench: set to fire a one-shot flock disturbance, then auto-cleared.
+    /// Production leaves it `.constant(nil)`; the real run wires batch arrivals
+    /// straight to `scene.disturb(_:)` instead.
+    var disturbanceRequest: Binding<ShoalDisturbance?> = .constant(nil)
+
     @State private var scene: ShoalScene = {
         let s = ShoalScene(size: CGSize(width: 480, height: 300))
         s.scaleMode = .resizeFill
@@ -85,6 +95,12 @@ struct ShoalView: View {
                 }
             }
             #endif
+        }
+        .onAppear { scene.tuning = tuning }
+        .onChange(of: disturbanceRequest.wrappedValue) { _, request in
+            guard let request else { return }
+            scene.disturb(request)
+            disturbanceRequest.wrappedValue = nil
         }
         .onChange(of: phase) { oldPhase, newPhase in
             if newPhase == .early, oldPhase != .early {

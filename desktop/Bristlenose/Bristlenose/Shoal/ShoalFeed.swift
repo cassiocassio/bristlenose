@@ -37,17 +37,32 @@ enum ShoalFeed {
         let sentiment: String?
     }
 
+    /// One poll's view of the feed: the de-duped word pool plus the set of batch
+    /// **kinds** present so far (`"word"` / `"theme"` / `"sentiment"`). The caller
+    /// diffs `kinds` across polls to detect a stage boundary — the first time a
+    /// kind appears is when that pipeline batch landed — and fires the matching
+    /// flock disturbance (`ShoalScene.disturb`). See `ShoalRunView.pollFeed`.
+    struct Snapshot {
+        let words: [WordPool.Word]
+        let kinds: Set<String>
+
+        static let empty = Snapshot(words: [], kinds: [])
+    }
+
     /// Read the whole feed and map every batch to a styled word. Empty on a
     /// missing file or no decodable batches. De-duped by text, preserving
     /// first-seen order (word batches arrive first, then themes, then sentiment).
-    static func read(at url: URL) -> [WordPool.Word] {
+    /// `kinds` records every batch kind decoded, so a stage boundary is
+    /// detectable even if a batch's words all de-dupe away.
+    static func read(at url: URL) -> Snapshot {
         guard let data = try? Data(contentsOf: url), !data.isEmpty,
               let text = String(data: data, encoding: .utf8) else {
-            return []
+            return .empty
         }
         let decoder = JSONDecoder()
         var seen = Set<String>()
         var words: [WordPool.Word] = []
+        var kinds = Set<String>()
         for line in text.split(separator: "\n", omittingEmptySubsequences: true) {
             // Skip a malformed / half-written final line, keep the rest.
             let cleaned = line.trimmingCharacters(in: CharacterSet(charactersIn: "\0\r"))
@@ -55,13 +70,14 @@ enum ShoalFeed {
                   let batch = try? decoder.decode(Batch.self, from: lineData) else {
                 continue
             }
+            kinds.insert(batch.kind)
             for raw in batch.texts {
                 let word = raw.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !word.isEmpty, seen.insert(word).inserted else { continue }
                 words.append(styled(word, kind: batch.kind, sentiment: batch.sentiment))
             }
         }
-        return words
+        return Snapshot(words: words, kinds: kinds)
     }
 
     /// One-shot WARNING when the feed exists but never populates — converts a

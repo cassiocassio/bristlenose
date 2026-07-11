@@ -185,14 +185,23 @@ struct ServeManagerEnvTests {
 
     /// The desktop presentation themes are activated through the shared factory:
     /// `data-platform="desktop"` (rendered from BRISTLENOSE_PLATFORM by app.py)
-    /// gates the SF Pro type scale, and the colour is pinned to the default
-    /// palette so app.py doesn't default desktop → the deferred Edo palette.
+    /// gates the SF Pro type scale, and the colour palette is injected as
+    /// BRISTLENOSE_PALETTE (canonical; was BRISTLENOSE_COLOR_THEME before
+    /// 5b997d26), defaulting to "default" so Edo stays opt-in.
     /// Without the platform var the native type system ships dark.
     @Test func childEnvironment_activates_desktop_presentation_themes() {
+        // childEnvironment reads UserDefaults.standard directly, so isolate the
+        // palette pref to exercise the default path (the test host is the app,
+        // where a pulldown-set palette would otherwise leak in). Restored after.
+        let defaults = UserDefaults.standard
+        let savedPalette = defaults.string(forKey: "palette")
+        defaults.removeObject(forKey: "palette")
+        defer { if let savedPalette { defaults.set(savedPalette, forKey: "palette") } }
+
         let mode = SidecarMode.devSidecar(path: URL(fileURLWithPath: "/tmp/fake-bristlenose"))
         let env = BristlenoseShared.childEnvironment(for: mode, store: InMemoryKeychain())
         #expect(env["BRISTLENOSE_PLATFORM"] == "desktop")
-        #expect(env["BRISTLENOSE_COLOR_THEME"] == "default")
+        #expect(env["BRISTLENOSE_PALETTE"] == "default")
     }
 
     /// Typography opt-out rides overlayPreferences: default "sf" injects nothing

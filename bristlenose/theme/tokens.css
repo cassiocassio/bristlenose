@@ -176,6 +176,7 @@
     --bn-breakpoint-compact:  500px;   /* help overlay, single-column fallback */
     --bn-breakpoint-toolbar:  600px;   /* toolbar collapse (planned) */
     --bn-breakpoint-content:  1100px;  /* transcript annotation margin layout */
+    --bn-breakpoint-wide:     1400px;  /* 16"+ / wide displays — dashboard featured quotes go to 5 across */
 
     /* Spacing scale */
     --bn-space-xs: 0.15rem;

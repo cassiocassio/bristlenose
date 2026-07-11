@@ -43,8 +43,10 @@ article {
     padding: 0 var(--bn-space-lg);
 }
 
-/* Single-column elements keep the reading-width cap on wide screens */
-h1, h2, h3, .description, .bn-dashboard {
+/* Single-column elements keep the reading-width cap on wide screens.
+   The dashboard is deliberately NOT capped — it fills the lens width like every
+   other tab (full-span panes stretch; the two nav lists share a flush 1fr 1fr row). */
+h1, h2, h3, .description {
     max-width: var(--bn-max-width);
 }
 

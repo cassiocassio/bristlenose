@@ -228,11 +228,29 @@
     white-space: nowrap;
 }
 
-/* Featured quotes row — 3 cards across the top of the dashboard */
+/* Featured quotes row — 3 cards across on laptops, up to 5 on wide displays.
+   Default (and the static-render path, which renders 3 + hidden backups
+   reshuffled by global-nav.js) stays at 3. */
 .bn-featured-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: var(--bn-space-md);
+}
+
+/* SPA / serve / export path only (#bn-app-root): Dashboard.tsx renders up to 5
+   featured quotes. Keep 3 visible on laptops, reveal the 4th/5th only at 16"+ so
+   the visible count always matches the column count — never a ragged right edge.
+   Scoped to #bn-app-root so the frozen static/vanilla reshuffle path is untouched. */
+#bn-app-root .bn-featured-quote:nth-child(n+4) {
+    display: none;
+}
+@media (min-width: 1400px) {  /* --bn-breakpoint-wide */
+    #bn-app-root .bn-featured-row {
+        grid-template-columns: repeat(5, 1fr);
+    }
+    #bn-app-root .bn-featured-quote:nth-child(n+4) {
+        display: flex;  /* restore the card's own display (see .bn-featured-quote) */
+    }
 }
 
 .bn-featured-quote {

@@ -457,7 +457,8 @@ function FeaturedQuotesRow({
 }: {
   quotes: FeaturedQuoteResponse[];
 }) {
-  // Reshuffle logic: prefer starred, exclude hidden, show top 3.
+  // Reshuffle logic: prefer starred, exclude hidden. Render up to 5; CSS shows
+  // 3 on laptops and up to 5 at 16"+ (see .bn-featured-row in global-nav.css).
   const visible = useMemo(() => {
     const candidates = quotes.filter((q) => !q.is_hidden);
     // Starred first, then by original rank.
@@ -465,7 +466,7 @@ function FeaturedQuotesRow({
       if (a.is_starred !== b.is_starred) return a.is_starred ? -1 : 1;
       return a.rank - b.rank;
     });
-    return candidates.slice(0, 3);
+    return candidates.slice(0, 5);
   }, [quotes]);
 
   if (visible.length === 0) return null;
@@ -473,7 +474,7 @@ function FeaturedQuotesRow({
   return (
     <div
       className="bn-featured-row bn-dashboard-full"
-      data-visible-count="3"
+      data-visible-count={String(visible.length)}
     >
       {visible.map((q) => (
         <FeaturedQuote key={q.dom_id} quote={q} />

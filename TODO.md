@@ -20,29 +20,7 @@ Immediate ladder: (1) **build + sign the bundled sidecar** so 0.20.0's desktop f
 
 ## Ideas (captured, not triaged)
 
-_Antechamber for untriaged captures. Triaged items move to `docs/private/100days.md`; this list is what's genuinely still raw. Last triaged 11 Jul 2026._
-
-**Promoted to `100days.md` §"Captured for triage" (pointers):**
-- **Focus mode (distraction-free reading)** — spiked, unbuilt, Phase 0 next. Canonical entry is the plan doc.
-- **Tag overload (same-meaning tag overlap)** — design captured (`docs/design-tag-overload.md`). Canonical entry is the plan doc.
-- **Tag-count zero-suppression** — **near-term MUST**, blocked only on Martin picking the tentative-digit glyph (`6` / `6⁺` / `+6` / `·6`) — then ready to build. Canonical entry is the plan doc.
-
-**Recently shipped (follow-ups tracked elsewhere):**
-- **Colour palette picker + Edo v1** — ✅ shipped 0.19.0. Edo-polish follow-ups (muted-text AA-fail at 4.20:1, `--palette`/`BRISTLENOSE_PALETTE` env rename [chunk ②], provisional palette-string native review, surface-harmony pass) live in `docs/private/100days.md` §"Iterate Edo post-TestFlight".
-- **Native colour/shape alignment (Tier-1)** — ✅ shipped 0.19.0 (Apple system-blue accent, grey nav-selection capsule, 6px radii). Deferred items parked in `docs/design-native-colour-alignment.md`.
-- **Localisation — 20 locales shipped** (0.16–0.19). Machine-seeded community previews; **native review is the content gate**. Open engineering follow-up: **`no`→`nb` auto-detection** not wired (3 ingress points; a bare-`no` system won't auto-select nb).
-- **Native Quotes toolbar** — ✅ shipped 0.16.1 (native search field + starred toggle, `QuotesToolbarControls.swift`). **Residual (post-TF):** Sessions / Codebook / Analysis have **no working search** — the toolbar magnifier `focusSearchInput()` finds only the Quotes `.search-input` and silently no-ops there (Edit ▸ Find is dead too). Interim UX keeps a **disabled** search button on those lenses as a reminder; real per-lens search one day (Sessions→transcript, Codebook→codes, Analysis→signals).
-
-**Still raw:**
-- **Export surface — good enough for TF.** Miro, clips, and quotes (copy / CSV / XLSX) all shipped — that's the TF export MVP. Remaining follow-ups are **post-TF-optional**: web-dropdown anonymise parity + scope, clips scoping, Show-Transcripts-in-Finder menu-bar parity, Export-Codebook-as-YAML, download-robustness. Review log `docs/private/reviews/export-menu-parity.md`.
-- **Doctor "(bundled)" ffmpeg annotation** — PARKED (product call): suffix bundled ffmpeg paths so TF users aren't surprised by in-`.app` absolute paths. Revisit only if a tester finds it confusing. `bristlenose/doctor.py:check_ffmpeg`.
-- **Bridge the 1.5 GB Whisper first-run download** — Could / deferred: give the user something to do during the model download (bundled sample project, guided tour, non-modal progress). Near `docs/design-desktop-python-runtime.md` Background Assets.
-- **ASR backend strategy** — autumn / Could: design doc `docs/design-asr-backend-strategy.md` (mlx-on-Apple-Silicon vs faster-whisper-on-x86). What we have now works and the scaffold is good; later phases unscheduled.
-- **Native-vs-web surfaces** — deferred: design note `docs/design-native-vs-web-surfaces.md`. The `native-experiment` spike showed how big a full native port is; meanwhile the sidebar, toolbar, and import/export dialogs are close to all-native. No queue.
-- **Foundation Models corpus + multi-stage LLM routing** — one day. Canonical in `100days.md` §"Captured for triage"; this is the antechamber pointer for sitrep / sync-board.
-- **`mise` / `uv` / `just` dev-env** — far-future: not useful for the macOS build; let the Linux side ask if they want it. Doc `docs/design-dev-environment.md` (Phase 0 symlinks landed).
-- **Collab with [`llmfit`](https://github.com/AlexsJones/llmfit)** — far-future cool idea (~2027): hardware→model-fit lib to replace the hand-rolled `OllamaCatalog.fits()`. Reach out when we have real user-machine data.
-- **Feedback-pipeline dogfooding** — far-future icebox: IMAP-fetch feedback@ → PII-strip → monthly ingest into a private BN project for roadmap themes. Read-only, internal-only.
+_Inbox empty — all captures triaged into `docs/private/100days.md` (11 Jul 2026), each placed in its topic section at the right MoSCoW tier. New raw captures land here; promote to the plan doc once triaged._
 
 ---
 

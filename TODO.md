@@ -20,9 +20,8 @@ Immediate ladder: (1) **build + sign the bundled sidecar** so 0.20.0's desktop f
 
 ## Ideas (captured, not triaged)
 
-- **Focus mode (distraction-free reading)** — design settled, unbuilt (captured 9 Jul). `docs/design-focus-mode.md` + `nightfall` mockup; zero-reflow opacity-only dimming, name/shortcut (`z` + ⌘⌥F)/token settled. A "killer" changelog draft is parked in the doc, **held until built** (Phase 0 is the next build step). Memory: `project_focus_mode_design_settled`.
-
-- **Tag overload — visual overlap of same-meaning tags** — design captured 7 Jul, `docs/design-tag-overload.md`; phase-1 launch copy drafted and **held for ship day**. Sibling to the tag-count zero-suppression item below.
+- **Focus mode (distraction-free reading)** — promoted to `docs/private/100days.md` §"Captured for triage" (spiked, unbuilt, Phase 0 next). Antechamber pointer; canonical entry is the plan doc.
+- **Tag overload (same-meaning tag overlap)** — promoted to `docs/private/100days.md` §"Captured for triage" (design captured, `docs/design-tag-overload.md`). Antechamber pointer; canonical entry is the plan doc.
 
 - **Colour palette picker + Edo v1** — ✅ shipped 0.19.0. Edo-polish follow-ups (muted-text AA-fail at 4.20:1, `--palette`/`BRISTLENOSE_PALETTE` env rename [chunk ②], provisional palette-string native review, surface-harmony pass) live in `docs/private/100days.md` §"Iterate Edo post-TestFlight".
 

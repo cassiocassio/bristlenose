@@ -1,0 +1,251 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bristlenose — Colour Adjudicator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Colour Adjudicator — for every hardcoded colour in the theme, hold the desired
+     chip against the full token menu (name · semantic · hex · chip) and decide by eye:
+     map it to an existing token (by meaning OR by colour), or demand a new brick.
+     No distance math — your eye is the nearest-neighbour engine. Decisions persist
+     locally and export as a worklist. Seeded with the real backlog, 12 Jul 2026. -->
+
+<style>
+:root{
+  color-scheme: light dark;
+  --g:#f4f5f7; --panel:#fff; --panel2:#fafbfc; --ink:#181b22; --mut:#5c6570; --faint:#8b94a1;
+  --hair:#e4e7ec; --hair2:#eef0f3; --accent:#4c62d8; --new:#c8007a; --new-bg:#fbe6f2;
+  --ok:#12996a; --ok-bg:#e7f6ef; --shadow:0 1px 2px rgba(20,24,33,.06),0 8px 24px rgba(20,24,33,.06);
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --g:#0c0e12; --panel:#14171d; --panel2:#171b22; --ink:#e7eaf0; --mut:#8d96a4; --faint:#6b7482;
+  --hair:#242832; --hair2:#1d222b; --accent:#8095ff; --new:#ff64c9; --new-bg:#2c0c22;
+  --ok:#3fd39a; --ok-bg:#0f2a20; --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+}}
+:root[data-theme="light"]{color-scheme:light;--g:#f4f5f7;--panel:#fff;--panel2:#fafbfc;--ink:#181b22;--mut:#5c6570;--faint:#8b94a1;--hair:#e4e7ec;--hair2:#eef0f3;--accent:#4c62d8;--new:#c8007a;--new-bg:#fbe6f2;--ok:#12996a;--ok-bg:#e7f6ef;}
+:root[data-theme="dark"]{color-scheme:dark;--g:#0c0e12;--panel:#14171d;--panel2:#171b22;--ink:#e7eaf0;--mut:#8d96a4;--faint:#6b7482;--hair:#242832;--hair2:#1d222b;--accent:#8095ff;--new:#ff64c9;--new-bg:#2c0c22;--ok:#3fd39a;--ok-bg:#0f2a20;}
+
+*{box-sizing:border-box;}
+body{margin:0;background:var(--g);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased;}
+.bar{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--panel) 90%,transparent);backdrop-filter:blur(10px) saturate(1.4);border-bottom:1px solid var(--hair);}
+.bar-in{max-width:1240px;margin:0 auto;padding:11px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.bar b{font-size:15px;font-weight:650;letter-spacing:-.01em;}
+.eyebrow{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--faint);}
+.prog{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--mut);display:flex;align-items:center;gap:10px;}
+.prog .track{width:120px;height:7px;border-radius:4px;background:var(--hair2);overflow:hidden;border:1px solid var(--hair);}
+.prog .track i{display:block;height:100%;background:var(--ok);width:0;transition:width .25s;}
+.btn{font-family:var(--mono);font-size:11.5px;padding:5px 11px;border-radius:7px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);cursor:pointer;transition:border-color .12s,background .12s;}
+.btn:hover{border-color:var(--accent);}
+
+.wrap{max-width:1240px;margin:0 auto;padding:16px 18px 60px;display:grid;grid-template-columns:300px 1fr;gap:18px;}
+@media(max-width:880px){.wrap{grid-template-columns:1fr;}}
+
+/* ── queue rail ── */
+.queue{align-self:start;position:sticky;top:66px;background:var(--panel);border:1px solid var(--hair);border-radius:13px;box-shadow:var(--shadow);overflow:hidden;max-height:calc(100vh - 84px);display:flex;flex-direction:column;}
+.queue-head{padding:11px 14px;border-bottom:1px solid var(--hair);display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.queue-head .eyebrow{margin-right:auto;}
+.qfilter{font-family:var(--mono);font-size:10px;padding:3px 7px;border-radius:999px;border:1px solid var(--hair);background:var(--panel);color:var(--mut);cursor:pointer;}
+.qfilter[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink);}
+.qlist{overflow-y:auto;padding:6px;}
+.qrow{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:9px;cursor:pointer;border:1px solid transparent;}
+.qrow:hover{background:var(--panel2);}
+.qrow[aria-selected="true"]{background:var(--panel2);border-color:var(--accent);}
+.qrow .sw{width:26px;height:26px;border-radius:6px;border:1px solid var(--hair);flex-shrink:0;background-clip:padding-box;}
+.qrow .meta{min-width:0;flex:1;}
+.qrow .v{font-family:var(--mono);font-size:11.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.qrow .sub{font-size:10.5px;color:var(--faint);}
+.qrow .verdict{font-family:var(--mono);font-size:9px;padding:2px 5px;border-radius:5px;flex-shrink:0;max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.verdict.map{background:var(--ok-bg);color:var(--ok);} .verdict.new{background:var(--new-bg);color:var(--new);} .verdict.skip{background:var(--hair2);color:var(--faint);}
+
+/* ── adjudicator ── */
+.main{min-width:0;}
+.desired{background:var(--panel);border:1px solid var(--hair);border-radius:13px;box-shadow:var(--shadow);padding:18px;margin-bottom:16px;position:sticky;top:66px;z-index:5;}
+.desired-top{display:flex;gap:16px;align-items:center;}
+.desired .bigsw{width:76px;height:76px;border-radius:12px;border:1px solid var(--hair);flex-shrink:0;}
+.desired .val{font-family:var(--mono);font-size:22px;font-weight:600;letter-spacing:-.01em;}
+.desired .ctx{font-size:12.5px;color:var(--mut);margin-top:3px;}
+.desired .ctx b{color:var(--ink);font-weight:600;}
+.desired .q{font-size:13px;color:var(--faint);margin-top:10px;}
+.sites{margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--mut);max-height:0;overflow:hidden;transition:max-height .2s;}
+.sites.open{max-height:240px;overflow-y:auto;}
+.sites div{padding:2px 0;border-bottom:1px solid var(--hair2);}
+.sites .prop{color:var(--accent);} .sites .sel{color:var(--faint);}
+.sites-toggle{font-family:var(--mono);font-size:11px;color:var(--accent);cursor:pointer;background:none;border:0;padding:6px 0 0;}
+.actions{display:flex;gap:9px;margin-top:14px;flex-wrap:wrap;}
+.act-new{font-family:var(--sans);font-size:13px;font-weight:600;padding:9px 16px;border-radius:9px;border:1px solid var(--new);background:var(--new-bg);color:var(--new);cursor:pointer;}
+.act-skip{font-family:var(--sans);font-size:13px;padding:9px 14px;border-radius:9px;border:1px solid var(--hair);background:var(--panel);color:var(--mut);cursor:pointer;}
+
+.menu-head{display:flex;align-items:baseline;gap:10px;margin:4px 2px 10px;}
+.menu-head h2{font-size:15px;font-weight:640;margin:0;}
+.grp{margin-bottom:14px;}
+.grp-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--faint);padding:0 2px 6px;}
+.tokens{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;}
+.tok{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--hair);border-radius:10px;background:var(--panel);cursor:pointer;text-align:left;transition:border-color .1s,background .1s;}
+.tok:hover{border-color:var(--accent);background:var(--panel2);}
+.tok.chosen{border-color:var(--ok);background:var(--ok-bg);}
+.tok .pair{display:flex;flex-shrink:0;border-radius:6px;overflow:hidden;border:1px solid var(--hair);}
+.tok .pair span{width:20px;height:34px;display:block;}
+.tok .info{min-width:0;}
+.tok .name{font-family:var(--mono);font-size:11.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tok .sem{font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tok .hex{font-family:var(--mono);font-size:10px;color:var(--faint);}
+
+.done{background:var(--panel);border:1px dashed var(--hair);border-radius:13px;padding:40px 20px;text-align:center;color:var(--mut);}
+.done b{color:var(--ink);}
+footer{max-width:1240px;margin:0 auto;padding:14px 18px 40px;font-size:12px;color:var(--faint);}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;}
+</style>
+
+<div class="bar"><div class="bar-in">
+  <b>Colour Adjudicator</b><span class="eyebrow">what was this colour meant to be?</span>
+  <div class="prog"><span id="pcount">0 / 0</span><span class="track"><i id="pbar"></i></span>
+    <button class="btn" id="exportBtn">Export decisions</button></div>
+</div></div>
+
+<div class="wrap">
+  <aside class="queue">
+    <div class="queue-head"><span class="eyebrow">Backlog</span>
+      <button class="qfilter" data-f="todo" aria-pressed="true">to&nbsp;do</button>
+      <button class="qfilter" data-f="hex" aria-pressed="false">hex</button>
+      <button class="qfilter" data-f="all" aria-pressed="false">all</button>
+    </div>
+    <div class="qlist" id="qlist"></div>
+  </aside>
+  <main class="main" id="main"></main>
+</div>
+<footer>Seeded with the theme's real hardcoded colours (12 Jul 2026). Your eye picks the meaning or the colour; the tool never guesses. Decisions save in this browser and export as a worklist — advisory only, nothing is enforced.</footer>
+
+<script>
+const DATA = {"menu": [{"token": "--bn-bar-none", "light": "#d1d5db", "dark": "#4b5563", "semantic": "Histogram bar colour (ungrouped)", "group": "Other"}, {"token": "--bn-colour-accent", "light": "#007aff", "dark": "#0a84ff", "semantic": "Links, active states, primary action", "group": "Accent & state"}, {"token": "--bn-colour-active-bg", "light": "#f0fdf4", "dark": "#0f2918", "semantic": "Active/selected item background", "group": "Surfaces"}, {"token": "--bn-colour-badge-bg", "light": "#f3f4f6", "dark": "#252525", "semantic": "Badge/chip background", "group": "Surfaces"}, {"token": "--bn-colour-badge-text", "light": "#374151", "dark": "#d1d5db", "semantic": "Badge/chip text", "group": "Text"}, {"token": "--bn-colour-bg", "light": "#ffffff", "dark": "#111111", "semantic": "Page background", "group": "Surfaces"}, {"token": "--bn-colour-border", "light": "#e5e7eb", "dark": "#2d2d2d", "semantic": "Lines, separators, card borders", "group": "Lines & icons"}, {"token": "--bn-colour-border-hover", "light": "#d1d5db", "dark": "#4b5563", "semantic": "Border hover state", "group": "Lines & icons"}, {"token": "--bn-colour-cited-bg", "light": "#fef9c3", "dark": "#3b2f05", "semantic": "\u2014", "group": "Surfaces"}, {"token": "--bn-colour-danger", "light": "#dc2626", "dark": "#ef4444", "semantic": "Destructive action foreground (delete \u00d7, deny \u2717) \u2014 follows negative", "group": "Semantic action"}, {"token": "--bn-colour-editing-bg", "light": "#fffbe6", "dark": "#2a2614", "semantic": "Inline editing mode highlight", "group": "Surfaces"}, {"token": "--bn-colour-editing-border", "light": "#e5e0c0", "dark": "#4a4528", "semantic": "Inline editing mode border", "group": "Lines & icons"}, {"token": "--bn-colour-highlight", "light": "#fef08a", "dark": "#854d0e", "semantic": "Anchor link flash / search highlight", "group": "Accent & state"}, {"token": "--bn-colour-hover", "light": "#e8f0fe", "dark": "#1e293b", "semantic": "Interactive hover background (light tint of accent)", "group": "Other"}, {"token": "--bn-colour-icon-idle", "light": "#c9ccd1", "dark": "#595959", "semantic": "Disabled/idle icon colour", "group": "Lines & icons"}, {"token": "--bn-colour-inspector-bg", "light": "#f9f9fa", "dark": "#1c1c1e", "semantic": "Inspector/right-sidebar chrome tint \u2014 a subtle desaturated sibling of --bn-colour-bg (Xcode-style flat inspector; opaque so it reads over the vibrant body in desktop frosted mode)", "group": "Surfaces"}, {"token": "--bn-colour-muted", "light": "#6b7280", "dark": "#9ca3af", "semantic": "Secondary text, icons, timestamps", "group": "Text"}, {"token": "--bn-colour-negative", "light": "#dc2626", "dark": "#ef4444", "semantic": "Destructive action (delete, deny)", "group": "Semantic action"}, {"token": "--bn-colour-quote-bg", "light": "#f9fafb", "dark": "#1a1a1a", "semantic": "Quote card background", "group": "Surfaces"}, {"token": "--bn-colour-starred", "light": "#999", "dark": "#ccc", "semantic": "Starred quote indicator", "group": "Accent & state"}, {"token": "--bn-colour-success", "light": "#16a34a", "dark": "#4ade80", "semantic": "Positive action foreground (accept \u2713, confirm)", "group": "Semantic action"}, {"token": "--bn-colour-suggestion", "light": "#007aff", "dark": "#0a84ff", "semantic": "Legacy: suggestion badge colour", "group": "Accent & state"}, {"token": "--bn-colour-suggestion-bg", "light": "#eff6ff", "dark": "#111d2e", "semantic": "Legacy: suggestion badge bg", "group": "Surfaces"}, {"token": "--bn-colour-text", "light": "#1a1a1a", "dark": "#e5e7eb", "semantic": "Primary text", "group": "Text"}, {"token": "--bn-colour-user-tag-bg", "light": "#f3f4f6", "dark": "#252525", "semantic": "User tag badge background", "group": "Surfaces"}, {"token": "--bn-colour-user-tag-text", "light": "#4b5563", "dark": "#d1d5db", "semantic": "User tag badge text", "group": "Text"}, {"token": "--bn-colour-warning", "light": "#d97706", "dark": "#fbbf24", "semantic": "Caution foreground (threshold amber, at-risk)", "group": "Semantic action"}, {"token": "--bn-coverage-moderator", "light": "#d97706", "dark": "#fbbf24", "semantic": "Transcript coverage \u2014 moderator bar", "group": "Data"}, {"token": "--bn-coverage-omitted", "light": "#d1d5db", "dark": "#4b5563", "semantic": "Transcript coverage \u2014 omitted bar", "group": "Data"}, {"token": "--bn-coverage-report", "light": "#93b4f4", "dark": "#4a7ecf", "semantic": "Transcript coverage \u2014 report bar", "group": "Data"}, {"token": "--bn-crop-handle-colour", "light": "#c4850a", "dark": "#f0b830", "semantic": "Crop bracket handle colour", "group": "Accent & state"}, {"token": "--bn-crop-handle-hover", "light": "#a06d08", "dark": "#f5cc60", "semantic": "Crop bracket handle hover colour", "group": "Accent & state"}, {"token": "--bn-group-none", "light": "#f9fafb", "dark": "#1e1e1e", "semantic": "Codebook group card bg (ungrouped)", "group": "Other"}, {"token": "--bn-sentiment-confidence", "light": "#2563eb", "dark": "#60a5fa", "semantic": "Confidence \u00b7 positive", "group": "Sentiment"}, {"token": "--bn-sentiment-confidence-bg", "light": "#eff6ff", "dark": "#111d2e", "semantic": "\u2014", "group": "Sentiment"}, {"token": "--bn-sentiment-confusion", "light": "#dc2626", "dark": "#f87171", "semantic": "Confusion \u00b7 negative", "group": "Sentiment"}, {"token": "--bn-sentiment-confusion-bg", "light": "#fef2f2", "dark": "#2d1515", "semantic": "\u2014", "group": "Sentiment"}, {"token": "--bn-sentiment-delight", "light": "#059669", "dark": "#34d399", "semantic": "Delight \u00b7 positive", "group": "Sentiment"}, {"token": "--bn-sentiment-delight-bg", "light": "#ecfdf5", "dark": "#0d261c", "semantic": "\u2014", "group": "Sentiment"}, {"token": "--bn-sentiment-doubt", "light": "#7c3aed", "dark": "#a78bfa", "semantic": "Doubt \u00b7 negative", "group": "Sentiment"}, {"token": "--bn-sentiment-doubt-bg", "light": "#f5f3ff", "dark": "#1e1533", "semantic": "\u2014", "group": "Sentiment"}, {"token": "--bn-sentiment-frustration", "light": "#ea580c", "dark": "#fb923c", "semantic": "Frustration \u00b7 negative", "group": "Sentiment"}, {"token": "--bn-sentiment-frustration-bg", "light": "#fff7ed", "dark": "#2d1d0e", "semantic": "\u2014", "group": "Sentiment"}, {"token": "--bn-sentiment-satisfaction", "light": "#16a34a", "dark": "#4ade80", "semantic": "Satisfaction \u00b7 positive", "group": "Sentiment"}, {"token": "--bn-sentiment-satisfaction-bg", "light": "#f0fdf4", "dark": "#0f2918", "semantic": "\u2014", "group": "Sentiment"}, {"token": "--bn-sentiment-surprise", "light": "#d97706", "dark": "#fbbf24", "semantic": "Surprise \u00b7 neutral", "group": "Sentiment"}, {"token": "--bn-sentiment-surprise-bg", "light": "#fffbeb", "dark": "#2d2305", "semantic": "\u2014", "group": "Sentiment"}], "backlog": [{"value": "#2563eb", "kind": "hex", "sites": [{"file": "atoms/activity-chip.css", "line": 127, "selector": "[data-theme=\"dark\"] .activity-chip .chip-link", "prop": "color"}, {"file": "atoms/activity-chip.css", "line": 136, "selector": "[data-theme=\"dark\"] .activity-chip .chip-spinner", "prop": "border-top-color"}, {"file": "atoms/activity-chip.css", "line": 144, "selector": ":root:not([data-theme=\"light\"]) .activity-chip .chip-link", "prop": "color"}, {"file": "atoms/activity-chip.css", "line": 153, "selector": ":root:not([data-theme=\"light\"]) .activity-chip .chip-spinner", "prop": "border-top-color"}, {"file": "atoms/autocode-toast.css", "line": 99, "selector": "[data-theme=\"dark\"] .autocode-toast .toast-link", "prop": "color"}, {"file": "atoms/autocode-toast.css", "line": 104, "selector": "[data-theme=\"dark\"] .autocode-toast .toast-spinner", "prop": "border-top-color"}, {"file": "atoms/autocode-toast.css", "line": 110, "selector": "[data-theme=\"dark\"] .autocode-toast .toast-progress-fill", "prop": "background"}, {"file": "atoms/autocode-toast.css", "line": 118, "selector": ":root:not([data-theme=\"light\"]) .autocode-toast .toast-link", "prop": "color"}, {"file": "atoms/autocode-toast.css", "line": 123, "selector": ":root:not([data-theme=\"light\"]) .autocode-toast .toast-spinn", "prop": "border-top-color"}, {"file": "atoms/autocode-toast.css", "line": 129, "selector": ":root:not([data-theme=\"light\"]) .autocode-toast .toast-progr", "prop": "background"}]}, {"value": "rgba(0, 0, 0, 0.3)", "kind": "rgba", "sites": [{"file": "atoms/activity-chip.css", "line": 128, "selector": "[data-theme=\"dark\"] .activity-chip .chip-close", "prop": "color"}, {"file": "atoms/activity-chip.css", "line": 130, "selector": "[data-theme=\"dark\"] .activity-chip .chip-toggle", "prop": "color"}, {"file": "atoms/activity-chip.css", "line": 145, "selector": ":root:not([data-theme=\"light\"]) .activity-chip .chip-close", "prop": "color"}, {"file": "atoms/activity-chip.css", "line": 147, "selector": ":root:not([data-theme=\"light\"]) .activity-chip .chip-toggle", "prop": "color"}, {"file": "atoms/autocode-toast.css", "line": 100, "selector": "[data-theme=\"dark\"] .autocode-toast .toast-close", "prop": "color"}, {"file": "atoms/autocode-toast.css", "line": 119, "selector": ":root:not([data-theme=\"light\"]) .autocode-toast .toast-close", "prop": "color"}, {"file": "molecules/hidden-quotes.css", "line": 69, "selector": ".bn-hidden-dropdown", "prop": "box-shadow"}]}, {"value": "rgba(0, 0, 0, 0.15)", "kind": "rgba", "sites": [{"file": "atoms/activity-chip.css", "line": 135, "selector": "[data-theme=\"dark\"] .activity-chip .chip-spinner", "prop": "border-color"}, {"file": "atoms/activity-chip.css", "line": 152, "selector": ":root:not([data-theme=\"light\"]) .activity-chip .chip-spinner", "prop": "border-color"}, {"file": "atoms/autocode-toast.css", "line": 103, "selector": "[data-theme=\"dark\"] .autocode-toast .toast-spinner", "prop": "border-color"}, {"file": "atoms/autocode-toast.css", "line": 107, "selector": "[data-theme=\"dark\"] .autocode-toast .toast-progress-track", "prop": "background"}, {"file": "atoms/autocode-toast.css", "line": 122, "selector": ":root:not([data-theme=\"light\"]) .autocode-toast .toast-spinn", "prop": "border-color"}, {"file": "atoms/autocode-toast.css", "line": 126, "selector": ":root:not([data-theme=\"light\"]) .autocode-toast .toast-progr", "prop": "background"}, {"file": "molecules/threshold-review.css", "line": 99, "selector": ".threshold-slider-thumb", "prop": "box-shadow"}]}, {"value": "#111", "kind": "hex", "sites": [{"file": "atoms/activity-chip.css", "line": 125, "selector": "[data-theme=\"dark\"] .activity-chip", "prop": "color"}, {"file": "atoms/activity-chip.css", "line": 142, "selector": ":root:not([data-theme=\"light\"]) .activity-chip", "prop": "color"}, {"file": "atoms/autocode-toast.css", "line": 97, "selector": "[data-theme=\"dark\"] .autocode-toast", "prop": "color"}, {"file": "atoms/autocode-toast.css", "line": 116, "selector": ":root:not([data-theme=\"light\"]) .autocode-toast", "prop": "color"}, {"file": "organisms/analysis.css", "line": 240, "selector": ".confidence-strong", "prop": "color"}, {"file": "organisms/analysis.css", "line": 315, "selector": ".heatmap-cell.heat-strong", "prop": "color"}]}, {"value": "rgba(0, 0, 0, 0.7)", "kind": "rgba", "sites": [{"file": "atoms/activity-chip.css", "line": 129, "selector": "[data-theme=\"dark\"] .activity-chip .chip-close:hover", "prop": "color"}, {"file": "atoms/activity-chip.css", "line": 131, "selector": "[data-theme=\"dark\"] .activity-chip .chip-toggle:hover", "prop": "color"}, {"file": "atoms/activity-chip.css", "line": 146, "selector": ":root:not([data-theme=\"light\"]) .activity-chip .chip-close:h", "prop": "color"}, {"file": "atoms/activity-chip.css", "line": 148, "selector": ":root:not([data-theme=\"light\"]) .activity-chip .chip-toggle:", "prop": "color"}, {"file": "atoms/autocode-toast.css", "line": 101, "selector": "[data-theme=\"dark\"] .autocode-toast .toast-close:hover", "prop": "color"}, {"file": "atoms/autocode-toast.css", "line": 120, "selector": ":root:not([data-theme=\"light\"]) .autocode-toast .toast-close", "prop": "color"}]}, {"value": "#fff", "kind": "hex", "sites": [{"file": "atoms/modal.css", "line": 120, "selector": ".bn-btn-danger", "prop": "color"}, {"file": "atoms/modal.css", "line": 130, "selector": ".bn-btn-primary", "prop": "color"}, {"file": "molecules/threshold-review.css", "line": 92, "selector": ".threshold-slider-thumb", "prop": "background"}, {"file": "organisms/analysis.css", "line": 240, "selector": ".confidence-strong", "prop": "color"}, {"file": "organisms/analysis.css", "line": 315, "selector": ".heatmap-cell.heat-strong", "prop": "color"}, {"file": "organisms/codebook-panel.css", "line": 525, "selector": ".autocode-btn", "prop": "color"}]}, {"value": "#9ca3af", "kind": "hex", "sites": [{"file": "molecules/threshold-review.css", "line": 34, "selector": ".threshold-histogram-bar--grey", "prop": "background-color"}, {"file": "molecules/threshold-review.css", "line": 81, "selector": ".threshold-slider-segment--grey", "prop": "background-color"}, {"file": "molecules/threshold-review.css", "line": 144, "selector": ".threshold-zone-counter--exclude", "prop": "border-color"}, {"file": "molecules/threshold-review.css", "line": 255, "selector": ".threshold-action-deny", "prop": "color"}, {"file": "organisms/analysis.css", "line": 240, "selector": ".confidence-strong", "prop": "background"}, {"file": "organisms/analysis.css", "line": 240, "selector": ".confidence-strong", "prop": "background"}]}, {"value": "#60a5fa", "kind": "hex", "sites": [{"file": "atoms/activity-chip.css", "line": 38, "selector": ".chip-spinner", "prop": "border-top-color"}, {"file": "atoms/activity-chip.css", "line": 56, "selector": ".chip-link", "prop": "color"}, {"file": "atoms/autocode-toast.css", "line": 24, "selector": ".toast-spinner", "prop": "border-top-color"}, {"file": "atoms/autocode-toast.css", "line": 42, "selector": ".toast-link", "prop": "color"}, {"file": "atoms/autocode-toast.css", "line": 82, "selector": ".toast-progress-fill", "prop": "background"}]}, {"value": "#e5e7eb", "kind": "hex", "sites": [{"file": "atoms/activity-chip.css", "line": 124, "selector": "[data-theme=\"dark\"] .activity-chip", "prop": "background"}, {"file": "atoms/activity-chip.css", "line": 141, "selector": ":root:not([data-theme=\"light\"]) .activity-chip", "prop": "background"}, {"file": "atoms/autocode-toast.css", "line": 96, "selector": "[data-theme=\"dark\"] .autocode-toast", "prop": "background"}, {"file": "atoms/autocode-toast.css", "line": 115, "selector": ":root:not([data-theme=\"light\"]) .autocode-toast", "prop": "background"}, {"file": "molecules/threshold-review.css", "line": 137, "selector": ".threshold-zone-counter", "prop": "border"}]}, {"value": "rgba(0, 0, 0, 0.16)", "kind": "rgba", "sites": [{"file": "atoms/badge.css", "line": 68, "selector": ".badge-ai::after", "prop": "box-shadow"}, {"file": "atoms/badge.css", "line": 126, "selector": ".badge-user .badge-delete", "prop": "box-shadow"}, {"file": "atoms/badge.css", "line": 180, "selector": ".badge-action-pill", "prop": "box-shadow"}, {"file": "atoms/bar.css", "line": 56, "selector": ".histogram-bar-delete", "prop": "box-shadow"}, {"file": "atoms/moderator-question.css", "line": 107, "selector": ".moderator-question-dismiss", "prop": "box-shadow"}]}, {"value": "rgba(0, 0, 0, 0.06)", "kind": "rgba", "sites": [{"file": "atoms/badge.css", "line": 68, "selector": ".badge-ai::after", "prop": "box-shadow"}, {"file": "atoms/badge.css", "line": 126, "selector": ".badge-user .badge-delete", "prop": "box-shadow"}, {"file": "atoms/badge.css", "line": 180, "selector": ".badge-action-pill", "prop": "box-shadow"}, {"file": "atoms/bar.css", "line": 56, "selector": ".histogram-bar-delete", "prop": "box-shadow"}, {"file": "atoms/moderator-question.css", "line": 107, "selector": ".moderator-question-dismiss", "prop": "box-shadow"}]}, {"value": "#ffffff", "kind": "hex", "sites": [{"file": "atoms/badge.css", "line": 91, "selector": "[data-theme=\"dark\"] .badge-user", "prop": "color"}, {"file": "atoms/badge.css", "line": 96, "selector": ":root:not([data-theme=\"light\"]) .badge-user", "prop": "color"}, {"file": "molecules/feedback.css", "line": 122, "selector": ".feedback-btn-send", "prop": "color"}, {"file": "molecules/tag-input.css", "line": 89, "selector": "[data-theme=\"dark\"] .tag-suggest-item.active .tag-suggest-pi", "prop": "color"}, {"file": "molecules/tag-input.css", "line": 94, "selector": ":root:not([data-theme=\"light\"]) .tag-suggest-item.active .ta", "prop": "color"}]}, {"value": "rgba(0, 0, 0, 0.25)", "kind": "rgba", "sites": [{"file": "atoms/activity-chip.css", "line": 24, "selector": ".activity-chip", "prop": "box-shadow"}, {"file": "atoms/autocode-toast.css", "line": 16, "selector": ".autocode-toast", "prop": "box-shadow"}, {"file": "atoms/modal.css", "line": 52, "selector": ".bn-modal", "prop": "box-shadow"}]}, {"value": "rgba(255, 255, 255, 0.4)", "kind": "rgba", "sites": [{"file": "atoms/activity-chip.css", "line": 68, "selector": ".chip-close", "prop": "color"}, {"file": "atoms/activity-chip.css", "line": 103, "selector": ".chip-toggle", "prop": "color"}, {"file": "atoms/autocode-toast.css", "line": 54, "selector": ".toast-close", "prop": "color"}]}, {"value": "rgba(255, 255, 255, 0.8)", "kind": "rgba", "sites": [{"file": "atoms/activity-chip.css", "line": 75, "selector": ".chip-close:hover", "prop": "color"}, {"file": "atoms/activity-chip.css", "line": 110, "selector": ".chip-toggle:hover", "prop": "color"}, {"file": "atoms/autocode-toast.css", "line": 61, "selector": ".toast-close:hover", "prop": "color"}]}, {"value": "#4ade80", "kind": "hex", "sites": [{"file": "atoms/badge.css", "line": 241, "selector": "[data-theme=\"dark\"] .badge-action-accept:hover", "prop": "color"}, {"file": "atoms/badge.css", "line": 253, "selector": ":root:not([data-theme=\"light\"]) .badge-action-accept:hover", "prop": "color"}, {"file": "organisms/codebook-panel.css", "line": 708, "selector": ".picker-card.imported::after", "prop": "color"}]}, {"value": "rgba(0, 0, 0, 0.08)", "kind": "rgba", "sites": [{"file": "atoms/moderator-question.css", "line": 32, "selector": ".moderator-pill", "prop": "box-shadow"}, {"file": "atoms/tooltip.css", "line": 26, "selector": ".bn-tooltip", "prop": "box-shadow"}, {"file": "molecules/autocode-report.css", "line": 114, "selector": ".has-tooltip .tooltip", "prop": "box-shadow"}]}, {"value": "rgba(0, 0, 0, 0.04)", "kind": "rgba", "sites": [{"file": "atoms/moderator-question.css", "line": 32, "selector": ".moderator-pill", "prop": "box-shadow"}, {"file": "atoms/tooltip.css", "line": 26, "selector": ".bn-tooltip", "prop": "box-shadow"}, {"file": "molecules/autocode-report.css", "line": 114, "selector": ".has-tooltip .tooltip", "prop": "box-shadow"}]}, {"value": "rgba(255, 255, 255, 0.2)", "kind": "rgba", "sites": [{"file": "atoms/activity-chip.css", "line": 37, "selector": ".chip-spinner", "prop": "border"}, {"file": "atoms/autocode-toast.css", "line": 23, "selector": ".toast-spinner", "prop": "border"}]}, {"value": "rgba(0, 0, 0, 0.4)", "kind": "rgba", "sites": [{"file": "atoms/activity-chip.css", "line": 132, "selector": "[data-theme=\"dark\"] .activity-chip .chip-cancel", "prop": "color"}, {"file": "atoms/activity-chip.css", "line": 149, "selector": ":root:not([data-theme=\"light\"]) .activity-chip .chip-cancel", "prop": "color"}]}, {"value": "rgba(0, 0, 0, 0.8)", "kind": "rgba", "sites": [{"file": "atoms/activity-chip.css", "line": 133, "selector": "[data-theme=\"dark\"] .activity-chip .chip-cancel:hover", "prop": "color"}, {"file": "atoms/activity-chip.css", "line": 150, "selector": ":root:not([data-theme=\"light\"]) .activity-chip .chip-cancel:", "prop": "color"}]}, {"value": "#dcfce7", "kind": "hex", "sites": [{"file": "atoms/badge.css", "line": 220, "selector": ".badge-action-accept:hover", "prop": "background"}, {"file": "organisms/analysis.css", "line": 573, "selector": ".pattern-success", "prop": "background"}]}, {"value": "rgba(220, 38, 38, 0.25)", "kind": "rgba", "sites": [{"file": "atoms/badge.css", "line": 236, "selector": "[data-theme=\"dark\"] .badge-action-deny:hover", "prop": "background"}, {"file": "atoms/badge.css", "line": 248, "selector": ":root:not([data-theme=\"light\"]) .badge-action-deny:hover", "prop": "background"}]}, {"value": "#f87171", "kind": "hex", "sites": [{"file": "atoms/badge.css", "line": 237, "selector": "[data-theme=\"dark\"] .badge-action-deny:hover", "prop": "color"}, {"file": "atoms/badge.css", "line": 249, "selector": ":root:not([data-theme=\"light\"]) .badge-action-deny:hover", "prop": "color"}]}, {"value": "rgba(22, 163, 74, 0.25)", "kind": "rgba", "sites": [{"file": "atoms/badge.css", "line": 240, "selector": "[data-theme=\"dark\"] .badge-action-accept:hover", "prop": "background"}, {"file": "atoms/badge.css", "line": 252, "selector": ":root:not([data-theme=\"light\"]) .badge-action-accept:hover", "prop": "background"}]}, {"value": "rgba(0, 0, 0, 0.5)", "kind": "rgba", "sites": [{"file": "atoms/modal.css", "line": 9, "selector": ".bn-overlay", "prop": "background"}, {"file": "organisms/codebook-panel.css", "line": 558, "selector": ".codebook-modal-overlay", "prop": "background"}]}, {"value": "rgba(255,255,255,0.1)", "kind": "rgba", "sites": [{"file": "atoms/tooltip.css", "line": 63, "selector": ".bn-tooltip kbd", "prop": "box-shadow"}, {"file": "molecules/help-overlay.css", "line": 96, "selector": ".help-modal kbd", "prop": "box-shadow"}]}, {"value": "rgba(220, 38, 38, 0.06)", "kind": "rgba", "sites": [{"file": "molecules/autocode-report.css", "line": 79, "selector": ".report-deny-btn:hover", "prop": "background"}, {"file": "molecules/threshold-review.css", "line": 260, "selector": ".threshold-action-deny:hover", "prop": "background"}]}, {"value": "#c9cdd3", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 241, "selector": ".confidence-moderate", "prop": "background"}, {"file": "organisms/analysis.css", "line": 309, "selector": ".heatmap-cell[data-count=\"1\"]", "prop": "color"}]}, {"value": "white", "kind": "keyword", "sites": [{"file": "organisms/codebook-panel.css", "line": 423, "selector": ".confirm-dialog-btn--danger", "prop": "color"}, {"file": "organisms/codebook-panel.css", "line": 430, "selector": ".confirm-dialog-btn--primary", "prop": "color"}]}, {"value": "rgba(255, 255, 255, 0.5)", "kind": "rgba", "sites": [{"file": "atoms/activity-chip.css", "line": 82, "selector": ".chip-cancel", "prop": "color"}]}, {"value": "rgba(255, 255, 255, 0.9)", "kind": "rgba", "sites": [{"file": "atoms/activity-chip.css", "line": 90, "selector": ".chip-cancel:hover", "prop": "color"}]}, {"value": "rgba(255, 255, 255, 0.15)", "kind": "rgba", "sites": [{"file": "atoms/autocode-toast.css", "line": 75, "selector": ".toast-progress-track", "prop": "background"}]}, {"value": "#fef2f2", "kind": "hex", "sites": [{"file": "atoms/badge.css", "line": 219, "selector": ".badge-action-deny:hover", "prop": "background"}]}, {"value": "rgba(0, 0, 0, 0.1)", "kind": "rgba", "sites": [{"file": "molecules/hidden-quotes.css", "line": 69, "selector": ".bn-hidden-dropdown", "prop": "box-shadow"}]}, {"value": "#3b82f6", "kind": "hex", "sites": [{"file": "molecules/threshold-review.css", "line": 93, "selector": ".threshold-slider-thumb", "prop": "border"}]}, {"value": "rgba(34, 197, 94, 0.08)", "kind": "rgba", "sites": [{"file": "molecules/threshold-review.css", "line": 251, "selector": ".threshold-action-accept:hover", "prop": "background"}]}, {"value": "#6b7280", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 241, "selector": ".confidence-moderate", "prop": "background"}]}, {"value": "#4b5563", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 242, "selector": ".confidence-emerging", "prop": "background"}]}, {"value": "#555", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 309, "selector": ".heatmap-cell[data-count=\"1\"]", "prop": "color"}]}, {"value": "rgba(0,0,0,0.10)", "kind": "rgba", "sites": [{"file": "organisms/analysis.css", "line": 402, "selector": ".cell-tooltip", "prop": "box-shadow"}]}, {"value": "rgba(0,0,0,0.06)", "kind": "rgba", "sites": [{"file": "organisms/analysis.css", "line": 402, "selector": ".cell-tooltip", "prop": "box-shadow"}]}, {"value": "#14532d", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 573, "selector": ".pattern-success", "prop": "background"}]}, {"value": "#166534", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 573, "selector": ".pattern-success", "prop": "color"}]}, {"value": "#86efac", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 573, "selector": ".pattern-success", "prop": "color"}]}, {"value": "#fef3c7", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 574, "selector": ".pattern-tension", "prop": "background"}]}, {"value": "#451a03", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 574, "selector": ".pattern-tension", "prop": "background"}]}, {"value": "#92400e", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 574, "selector": ".pattern-tension", "prop": "color"}]}, {"value": "#fcd34d", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 574, "selector": ".pattern-tension", "prop": "color"}]}, {"value": "#fee2e2", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 575, "selector": ".pattern-gap", "prop": "background"}]}, {"value": "#450a0a", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 575, "selector": ".pattern-gap", "prop": "background"}]}, {"value": "#991b1b", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 575, "selector": ".pattern-gap", "prop": "color"}]}, {"value": "#fca5a5", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 575, "selector": ".pattern-gap", "prop": "color"}]}, {"value": "#e0f2fe", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 576, "selector": ".pattern-recovery", "prop": "background"}]}, {"value": "#0c4a6e", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 576, "selector": ".pattern-recovery", "prop": "background"}]}, {"value": "#075985", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 576, "selector": ".pattern-recovery", "prop": "color"}]}, {"value": "#7dd3fc", "kind": "hex", "sites": [{"file": "organisms/analysis.css", "line": 576, "selector": ".pattern-recovery", "prop": "color"}]}, {"value": "rgba(0, 0, 0, 0.12)", "kind": "rgba", "sites": [{"file": "organisms/codebook-panel.css", "line": 384, "selector": ".codebook-group .confirm-dialog", "prop": "box-shadow"}]}, {"value": "rgba(37, 99, 235, 0.08)", "kind": "rgba", "sites": [{"file": "organisms/codebook-panel.css", "line": 547, "selector": ".proposed-count", "prop": "background"}]}, {"value": "#16a34a", "kind": "hex", "sites": [{"file": "organisms/codebook-panel.css", "line": 708, "selector": ".picker-card.imported::after", "prop": "color"}]}, {"value": "rgba(22, 163, 74, 0.08)", "kind": "rgba", "sites": [{"file": "organisms/codebook-panel.css", "line": 709, "selector": ".picker-card.imported::after", "prop": "background"}]}, {"value": "rgba(74, 222, 128, 0.12)", "kind": "rgba", "sites": [{"file": "organisms/codebook-panel.css", "line": 709, "selector": ".picker-card.imported::after", "prop": "background"}]}, {"value": "rgb(0 0 0 / 0.12)", "kind": "rgba", "sites": [{"file": "templates/transcript.css", "line": 97, "selector": ".bn-selector__menu", "prop": "box-shadow"}]}, {"value": "#f0f0f0", "kind": "hex", "sites": [{"file": "templates/transcript.css", "line": 121, "selector": ".bn-selector__item:hover", "prop": "background"}]}]};
+const GROUP_ORDER = ["Surfaces","Text","Accent & state","Semantic action","Sentiment","Lines & icons","Data","Other"];
+const LS = "bn-colour-adjudications-v1";
+let decisions = {};
+try { decisions = JSON.parse(localStorage.getItem(LS)||"{}"); } catch(e){}
+let filter = "todo";
+let selected = null;
+
+const $ = s => document.querySelector(s);
+function save(){ try{ localStorage.setItem(LS, JSON.stringify(decisions)); }catch(e){} }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function isDark(hex){ // rough luminance for chip border contrast only
+  const m=/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex); if(!m) return false;
+  let h=m[1]; if(h.length===3) h=h.split("").map(c=>c+c).join("");
+  const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
+  return (0.2126*r+0.7152*g+0.0722*b) < 128;
+}
+
+function queueItems(){
+  return DATA.backlog.filter(it=>{
+    if(filter==="hex") return it.kind==="hex";
+    if(filter==="todo") return !decisions[it.value.toLowerCase()];
+    return true;
+  });
+}
+function renderQueue(){
+  const list = $("#qlist"); list.innerHTML="";
+  DATA.backlog.forEach((it,i)=>{
+    if(filter==="hex" && it.kind!=="hex") return;
+    if(filter==="todo" && decisions[it.value.toLowerCase()]) return;
+    const d = decisions[it.value.toLowerCase()];
+    const row = document.createElement("div");
+    row.className="qrow"; row.dataset.i=i;
+    row.setAttribute("aria-selected", selected===i ? "true":"false");
+    const vbadge = d ? `<span class="verdict ${d.verdict}">${d.verdict==="map"?esc(d.token.replace("--bn-colour-","").replace("--bn-","")):d.verdict.toUpperCase()}</span>` : "";
+    row.innerHTML = `<span class="sw" style="background:${esc(it.value)}"></span>
+      <span class="meta"><span class="v">${esc(it.value)}</span>
+        <span class="sub">${it.sites.length} site${it.sites.length>1?"s":""} · ${esc(it.sites[0].file.split("/").pop())}</span></span>${vbadge}`;
+    row.onclick=()=>{ selected=i; render(); };
+    list.appendChild(row);
+  });
+  const total = DATA.backlog.length, done = Object.keys(decisions).length;
+  $("#pcount").textContent = `${done} / ${total}`;
+  $("#pbar").style.width = (100*done/total)+"%";
+}
+
+function chipPair(light, dark){
+  return `<span class="pair"><span style="background:${esc(light)}"></span><span style="background:${esc(dark)}"></span></span>`;
+}
+function renderMain(){
+  const main = $("#main");
+  if(selected===null){
+    const first = DATA.backlog.findIndex(it=>!decisions[it.value.toLowerCase()]);
+    selected = first>=0 ? first : 0;
+  }
+  const it = DATA.backlog[selected];
+  const key = it.value.toLowerCase();
+  const d = decisions[key];
+  const sitesHTML = it.sites.map(s=>`<div><b>${esc(s.file)}:${s.line}</b> &nbsp;<span class="prop">${esc(s.prop)}</span> &nbsp;<span class="sel">${esc(s.selector)}</span></div>`).join("");
+
+  // token menu grouped
+  const byGroup = {};
+  DATA.menu.forEach(t=>{ (byGroup[t.group]=byGroup[t.group]||[]).push(t); });
+  const menuHTML = GROUP_ORDER.filter(g=>byGroup[g]).map(g=>`
+    <div class="grp"><div class="grp-label">${esc(g)}</div><div class="tokens">
+      ${byGroup[g].map(t=>`<button class="tok ${d&&d.verdict==="map"&&d.token===t.token?"chosen":""}" data-token="${esc(t.token)}">
+        ${chipPair(t.light,t.dark)}
+        <span class="info"><span class="name">${esc(t.token.replace("--bn-",""))}</span>
+          <span class="sem">${esc(t.semantic)}</span>
+          <span class="hex">${esc(t.light)}${t.dark!==t.light?" / "+esc(t.dark):""}</span></span>
+      </button>`).join("")}
+    </div></div>`).join("");
+
+  main.innerHTML = `
+    <div class="desired">
+      <div class="desired-top">
+        <span class="bigsw" style="background:${esc(it.value)}"></span>
+        <div>
+          <div class="val">${esc(it.value)}</div>
+          <div class="ctx"><b>${esc(it.kind)}</b> · used in <b>${it.sites.length}</b> place${it.sites.length>1?"s":""}
+            · first: ${esc(it.sites[0].file)}:${it.sites[0].line}</div>
+          <div class="q">Pick the token this was meant to be — by <b>meaning</b> or by <b>colour</b> — or demand a new one.</div>
+        </div>
+      </div>
+      <button class="sites-toggle" id="sitesToggle">▸ show all ${it.sites.length} site${it.sites.length>1?"s":""}</button>
+      <div class="sites" id="sites">${sitesHTML}</div>
+      <div class="actions">
+        <button class="act-new" data-verdict="new">⬥ Needs a new colour</button>
+        <button class="act-skip" data-verdict="skip">Not a colour pick (shadow / scrim / skip)</button>
+      </div>
+    </div>
+    <div class="menu-head"><h2>Token menu</h2><span class="eyebrow">${DATA.menu.length} tokens · light / dark chips</span></div>
+    ${menuHTML}
+  `;
+
+  main.querySelectorAll(".tok").forEach(b=> b.onclick=()=> decide(key, {verdict:"map", token:b.dataset.token}));
+  main.querySelectorAll("[data-verdict]").forEach(b=> b.onclick=()=> decide(key, {verdict:b.dataset.verdict}));
+  const st = $("#sitesToggle"); st.onclick=()=>{ $("#sites").classList.toggle("open"); st.textContent = $("#sites").classList.contains("open")?"▾ hide sites":`▸ show all ${it.sites.length} sites`; };
+}
+
+function decide(key, verdict){
+  decisions[key] = verdict; save();
+  // advance to next undecided
+  const next = DATA.backlog.findIndex(it=>!decisions[it.value.toLowerCase()]);
+  selected = next>=0 ? next : selected;
+  render();
+}
+function render(){ renderQueue(); renderMain(); }
+
+document.querySelectorAll(".qfilter").forEach(b=> b.onclick=()=>{
+  filter=b.dataset.f;
+  document.querySelectorAll(".qfilter").forEach(x=>x.setAttribute("aria-pressed", x===b?"true":"false"));
+  renderQueue();
+});
+$("#exportBtn").onclick=()=>{
+  const lines=[]; const byToken={};
+  DATA.backlog.forEach(it=>{
+    const d=decisions[it.value.toLowerCase()]; if(!d) return;
+    it.sites.forEach(s=>{
+      const to = d.verdict==="map" ? `var(${d.token})` : d.verdict==="new" ? "NEW-TOKEN-NEEDED" : "SKIP";
+      lines.push(`${s.file}:${s.line}  ${s.prop}: ${it.value}  ->  ${to}`);
+    });
+    if(d.verdict==="new") (byToken.__new=byToken.__new||[]).push(it.value);
+  });
+  const txt = "# Colour adjudication worklist\n\n"+lines.join("\n")+
+    "\n\n# New bricks demanded:\n"+((byToken.__new||[]).map(v=>"  "+v).join("\n")||"  (none)");
+  navigator.clipboard.writeText(txt).then(()=> $("#exportBtn").textContent="Copied ✓", ()=>{});
+  setTimeout(()=> $("#exportBtn").textContent="Export decisions", 1500);
+};
+
+render();
+</script>

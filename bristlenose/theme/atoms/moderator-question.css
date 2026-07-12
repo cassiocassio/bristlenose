@@ -92,7 +92,7 @@
     background: var(--bn-colour-bg);
     border: none;
     border-radius: 50%;
-    color: var(--bn-colour-danger, #dc2626);
+    color: var(--bn-colour-danger);
     font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-strong);
     line-height: 1;

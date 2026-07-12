@@ -49,6 +49,11 @@
     /* Destructive action — vermillion */
     --bn-colour-negative: #b5432a;
 
+    /* Semantic action colours (reference existing adaptive tokens → dark-mode for free) */
+    --bn-colour-danger: var(--bn-colour-negative);
+    --bn-colour-success: var(--bn-sentiment-satisfaction);
+    --bn-colour-warning: var(--bn-sentiment-surprise);
+
     /* Playback-sync glow — Prussian Blue based */
     --bn-glow-colour: rgba(15, 92, 158, 0.08);
     --bn-glow-colour-strong: rgba(15, 92, 158, 0.15);

@@ -57,7 +57,7 @@
     justify-content: center;
     padding: 0;
     background: var(--bn-colour-bg);
-    color: var(--bn-colour-danger, #dc2626);
+    color: var(--bn-colour-danger);
     border-radius: 50%;
     font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-strong);
@@ -111,7 +111,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     background: var(--bn-colour-bg);
     border: none;
     border-radius: 50%;
-    color: var(--bn-colour-danger, #dc2626);
+    color: var(--bn-colour-danger);
     font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-strong);
     line-height: 1;
@@ -208,11 +208,11 @@ body.hide-ai-tags .badge-ai { display: none; }
 }
 
 .badge-action-deny {
-    color: var(--bn-colour-danger, #dc2626);
+    color: var(--bn-colour-danger);
 }
 
 .badge-action-accept {
-    color: var(--bn-colour-success, #16a34a);
+    color: var(--bn-colour-success);
     border-left: 1px solid var(--bn-colour-border);
 }
 

@@ -39,6 +39,9 @@ Required tokens:
 --bn-colour-highlight           Anchor link flash / search highlight
 
 --bn-colour-negative            Destructive action (delete, deny)
+--bn-colour-danger              Destructive action foreground (delete ×, deny ✗) — follows negative
+--bn-colour-success             Positive action foreground (accept ✓, confirm)
+--bn-colour-warning             Caution foreground (threshold amber, at-risk)
 
 --bn-glow-colour                Playback sync glow (subtle)
 --bn-glow-colour-strong         Playback sync glow (strong)

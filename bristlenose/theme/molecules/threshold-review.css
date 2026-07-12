@@ -29,8 +29,8 @@
     transition: background-color 0.1s ease;
 }
 
-.threshold-histogram-bar--green  { background-color: var(--bn-colour-success, #22c55e); }
-.threshold-histogram-bar--amber  { background-color: var(--bn-colour-warning, #f59e0b); }
+.threshold-histogram-bar--green  { background-color: var(--bn-colour-success); }
+.threshold-histogram-bar--amber  { background-color: var(--bn-colour-warning); }
 .threshold-histogram-bar--grey   { background-color: var(--bn-colour-muted, #9ca3af); opacity: 0.5; }
 
 /* Unit-square mode — tag-coloured squares */
@@ -79,8 +79,8 @@
 }
 
 .threshold-slider-segment--grey   { background-color: var(--bn-colour-muted, #9ca3af); opacity: 0.3; }
-.threshold-slider-segment--amber  { background-color: var(--bn-colour-warning, #f59e0b); opacity: 0.5; }
-.threshold-slider-segment--green  { background-color: var(--bn-colour-success, #22c55e); opacity: 0.5; }
+.threshold-slider-segment--amber  { background-color: var(--bn-colour-warning); opacity: 0.5; }
+.threshold-slider-segment--green  { background-color: var(--bn-colour-success); opacity: 0.5; }
 
 .threshold-slider-thumb {
     position: absolute;
@@ -156,8 +156,8 @@
 }
 
 .threshold-zone-counter--accept {
-    border-color: var(--bn-colour-success, #22c55e);
-    color: var(--bn-colour-success, #22c55e);
+    border-color: var(--bn-colour-success);
+    color: var(--bn-colour-success);
 }
 
 .threshold-zone-counter-count {
@@ -244,7 +244,7 @@
 }
 
 .threshold-action-accept {
-    color: var(--bn-colour-success, #22c55e);
+    color: var(--bn-colour-success);
 }
 
 .threshold-action-accept:hover {
@@ -256,7 +256,7 @@
 }
 
 .threshold-action-deny:hover {
-    color: var(--bn-colour-danger, #dc2626);
+    color: var(--bn-colour-danger);
     background: rgba(220, 38, 38, 0.06);
 }
 

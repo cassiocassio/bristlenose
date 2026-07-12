@@ -33,6 +33,11 @@
     /* Destructive action */
     --bn-colour-negative: #dc2626;
 
+    /* Semantic action colours (reference existing adaptive tokens → dark-mode for free) */
+    --bn-colour-danger: var(--bn-colour-negative);
+    --bn-colour-success: var(--bn-sentiment-satisfaction);
+    --bn-colour-warning: var(--bn-sentiment-surprise);
+
     /* Playback-sync glow */
     --bn-glow-colour: rgba(0, 122, 255, 0.06);
     --bn-glow-colour-strong: rgba(0, 122, 255, 0.11);

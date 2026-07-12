@@ -5824,11 +5824,14 @@ button.signal-card-toggle {
           the whole point: it tells you <em>where</em> the effort should go.</p>
 
         <h4>Roll-up &amp; honest limits</h4>
-        <p>Per-declaration → per-component → per-lens, weighted equally. Two rough edges, stated plainly:
-          (1) the declaration tallies in this snapshot are a <b>hand audit</b>, not a machine count — a
-          <code>scripts/audit-css.py</code> lint pass would make them exact and reproducible; (2) components are
-          weighted equally, whereas the adoption literature weights by <b>render frequency</b> so a workhorse counts
-          more than a one-off. Both are the obvious next iteration.</p>
+        <p>Per-declaration → per-component → per-lens, weighted equally. On reproducibility:
+          the per-component tallies below are a curated <b>hand audit</b> (so each carries an annotated defect + fix),
+          but the metric is now <b>computable from source</b> — <code>✓ scripts/audit-css.py</code> parses the token
+          values and scans every component file, printing per-file and per-lens Coverage/Health with the same formula
+          (it reads live CSS, so it already reflects the danger/success + z-index fixes). Its whole-theme read is
+          <b>81% coverage / 91% health</b> across 55 files — a broader, machine-checkable baseline than these five
+          content lenses. Remaining rough edge: components are weighted equally, whereas the adoption literature weights
+          by <b>render frequency</b> (a workhorse should count more than a one-off) — the obvious next iteration.</p>
 
         <p class="cx-src"><b style="color:var(--cx-ink)">Prior art borrowed —</b>
           <a href="https://github.com/AndyOGo/stylelint-declaration-strict-value">stylelint-declaration-strict-value</a> (the raw coverage signal) ·

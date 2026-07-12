@@ -12,4 +12,11 @@ Reference docs for contributors working on the Bristlenose UI.
   expands to source line + defect + fix. The metric borrows from `stylelint-declaration-strict-value`,
   SonarQube, and the design-system adoption literature (Curtis/Omlet/Mews) — see the "How the score
   works" panel. Lens 1 (Quotes) built; Sessions/Themes/Analysis/Codebook to follow. Compliance data
-  is a static snapshot hand-keyed to `file:line` — a future `scripts/audit-css.py` would compute it.
+  is a curated snapshot hand-keyed to `file:line` (each finding carries a defect + fix); the
+  headline metric is now also **computable from source** — see below.
+- **`scripts/audit-css.py`** — the reproducible auditor behind the catalogue's metric. Parses the
+  token values, scans every component CSS file, and prints per-file + per-lens Coverage/Health with
+  the same formula (reads live CSS, so it reflects fixes automatically). `--json` for machine output,
+  `--fail-under N` as a CI gate. Whole-theme baseline at time of writing: 81% coverage / 91% health
+  across 55 files (`activity-chip` and `autocode-toast` are the worst offenders at ~30% — bespoke
+  raw-hex dark palettes).

@@ -5,7 +5,11 @@ Reference docs for contributors working on the Bristlenose UI.
 - **style-guide.html** — visual inventory of design tokens, typography, colours, spacing
 - **icon-catalog.html** — current icon usage and candidates for the SVG icon set migration
 - **compliance-catalogue.html** — token-compliance X-ray: live specimens in all four theme
-  combinations (default/edo × light/dark), ranked by `--bn-*` adoption, with a magenta toggle
-  that lights up everything outside the system plus per-defect explanations and fixes. Lens 1
-  (Quotes) built; Sessions/Themes/Analysis/Codebook to follow. Compliance data is a static
-  snapshot keyed to `file:line` — re-snapshot after theme CSS changes.
+  combinations (default/edo × light/dark), scored by a two-axis metric — **Coverage** (share of
+  themeable declarations that flow through `--bn-*` tokens; 100% = all tokens, 0% = all literals)
+  and severity-weighted **Health** (SonarQube-style weighting so a missing colour token counts more
+  than an off-scale margin). Magenta toggle lights up everything outside the system; each finding
+  expands to source line + defect + fix. The metric borrows from `stylelint-declaration-strict-value`,
+  SonarQube, and the design-system adoption literature (Curtis/Omlet/Mews) — see the "How the score
+  works" panel. Lens 1 (Quotes) built; Sessions/Themes/Analysis/Codebook to follow. Compliance data
+  is a static snapshot hand-keyed to `file:line` — a future `scripts/audit-css.py` would compute it.

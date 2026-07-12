@@ -171,8 +171,6 @@ body.cx-xray-on .cx-xray-toggle .dot{background:var(--cx-xray);border-color:var(
 .cx-pill.good{background:var(--cx-good-bg);color:var(--cx-good);} .cx-pill.good .d{background:var(--cx-good);}
 .cx-pill.warn{background:var(--cx-warn-bg);color:var(--cx-warn);} .cx-pill.warn .d{background:var(--cx-warn);}
 .cx-pill.bad{background:var(--cx-bad-bg);color:var(--cx-bad);} .cx-pill.bad .d{background:var(--cx-bad);}
-.cx-mini{height:6px;width:130px;border-radius:4px;overflow:hidden;display:flex;flex-shrink:0;border:1px solid var(--cx-hair);}
-.cx-mini i{height:100%;} .cx-mini i.good{background:var(--cx-good);} .cx-mini i.warn{background:var(--cx-warn);} .cx-mini i.bad{background:var(--cx-bad);}
 
 /* specimen grid */
 .cx-specimens{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--cx-hair);
@@ -239,6 +237,44 @@ body.cx-xray-on .cx-code .bad{background:color-mix(in srgb,var(--cx-xray) 22%,tr
 footer.cx-foot{margin:48px 0 40px;padding-top:20px;border-top:1px solid var(--cx-hair);
   font-size:12px;color:var(--cx-faint);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;}
 footer.cx-foot code{font-family:var(--cx-mono);}
+/* headline readouts */
+.cx-headline{display:flex;gap:30px;margin:8px 0 16px;flex-wrap:wrap;}
+.cx-big{display:flex;flex-direction:column;gap:3px;}
+.cx-big .n{font-family:var(--cx-mono);font-size:40px;font-weight:700;line-height:1;letter-spacing:-.03em;color:var(--cx-good);font-variant-numeric:tabular-nums;}
+.cx-big .n em{font-style:normal;font-size:20px;color:var(--cx-faint);margin-left:1px;}
+.cx-big .n.alt{color:var(--cx-ink);}
+.cx-big .l{font-size:12.5px;font-weight:600;color:var(--cx-ink);}
+.cx-big .l em{display:block;font-style:normal;font-weight:400;font-size:11px;color:var(--cx-faint);max-width:24ch;line-height:1.35;margin-top:1px;}
+
+/* per-component two-axis scores */
+.cx-scores{display:flex;gap:16px;flex-shrink:0;}
+.cx-sc{display:flex;align-items:center;gap:6px;}
+.cx-sc .lbl{font-family:var(--cx-mono);font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--cx-faint);width:32px;text-align:right;}
+.cx-sc .bar{width:60px;height:6px;border-radius:4px;background:var(--cx-hair-2);overflow:hidden;border:1px solid var(--cx-hair);}
+.cx-sc .bar i{display:block;height:100%;background:var(--cx-good);}
+.cx-sc .bar i.h{background:var(--cx-accent);}
+.cx-sc b{font-family:var(--cx-mono);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;width:18px;color:var(--cx-ink);}
+@media(max-width:680px){.cx-scores{width:100%;order:5;justify-content:flex-start;}}
+
+/* methodology */
+.cx-method{margin:16px 0 4px;border:1px solid var(--cx-hair);border-radius:12px;background:var(--cx-panel);overflow:hidden;box-shadow:var(--cx-shadow);}
+.cx-method>summary{list-style:none;cursor:pointer;padding:14px 18px;font-size:13.5px;font-weight:600;color:var(--cx-ink);display:flex;align-items:center;gap:10px;user-select:none;}
+.cx-method>summary::-webkit-details-marker{display:none;}
+.cx-method>summary .chev{font-family:var(--cx-mono);transition:transform .15s;color:var(--cx-faint);}
+.cx-method[open]>summary .chev{transform:rotate(90deg);}
+.cx-method-body{padding:2px 18px 20px;font-size:13px;color:var(--cx-muted);line-height:1.62;}
+.cx-method-body p{margin:8px 0;} .cx-method-body em{font-style:italic;}
+.cx-method-body h4{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--cx-faint);font-family:var(--cx-mono);margin:20px 0 6px;font-weight:600;}
+.cx-method-body b{color:var(--cx-ink);font-weight:600;}
+.cx-method-body code{font-family:var(--cx-mono);font-size:11.5px;background:var(--cx-panel-2);border:1px solid var(--cx-hair);padding:1px 5px;border-radius:4px;color:var(--cx-ink);}
+.cx-method-body .good-t{color:var(--cx-good);} .cx-method-body .warn-t{color:var(--cx-warn);} .cx-method-body .bad-t{color:var(--cx-bad);}
+.cx-formula{font-family:var(--cx-mono);font-size:12.5px;background:var(--cx-panel-2);border:1px solid var(--cx-hair);border-left:3px solid var(--cx-accent);border-radius:8px;padding:11px 14px;margin:8px 0;color:var(--cx-ink);overflow-x:auto;white-space:pre-wrap;line-height:1.5;}
+.cx-wtable{width:100%;border-collapse:collapse;margin:8px 0;font-size:12.5px;}
+.cx-wtable th,.cx-wtable td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--cx-hair-2);vertical-align:top;}
+.cx-wtable th{font-family:var(--cx-mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--cx-faint);font-weight:600;}
+.cx-wtable td.w{font-family:var(--cx-mono);font-weight:700;color:var(--cx-ink);width:48px;}
+.cx-src{font-size:12px;color:var(--cx-faint);margin-top:14px;padding-top:12px;border-top:1px solid var(--cx-hair-2);}
+.cx-src a{color:var(--cx-muted);}
 a{color:var(--cx-accent);}
 :focus-visible{outline:2px solid var(--cx-accent);outline-offset:2px;border-radius:3px;}
 </style>
@@ -477,8 +513,12 @@ a.timecode:hover{text-decoration:underline;}
 
     <div class="cx-scorecard">
       <div class="cx-card cx-sc-main">
-        <span class="cx-eyebrow">Lens compliance — declarations that matter</span>
-        <div class="cx-meter" id="lensMeter" aria-label="Compliance distribution"></div>
+        <span class="cx-eyebrow">Lens compliance — themeable declarations</span>
+        <div class="cx-headline">
+          <div class="cx-big"><span class="n" id="stCover">—</span><span class="l">Coverage<em>how much flows through tokens</em></span></div>
+          <div class="cx-big"><span class="n alt" id="stHealth">—</span><span class="l">Health<em>severity-weighted — how bad the gaps are</em></span></div>
+        </div>
+        <div class="cx-meter" id="lensMeter" aria-label="Declaration distribution"></div>
         <div class="cx-legend">
           <div><span class="sw good"></span><div><b>Inside the system</b><span>Value comes from a <code style="font-family:var(--cx-mono)">--bn-*</code> token. Re-themes for free.</span></div></div>
           <div><span class="sw warn"></span><div><b>Fixable drift</b><span>A literal that already has a matching token. A one-line fix, no decision needed.</span></div></div>
@@ -487,8 +527,8 @@ a.timecode:hover{text-decoration:underline;}
       </div>
       <div class="cx-card cx-sc-side">
         <div class="cx-stat-row"><span class="k">Components in lens</span><span class="v" id="stComp">8</span></div>
-        <div class="cx-stat-row"><span class="k">B+ or better</span><span class="v" id="stGood">6<small>/8</small></span></div>
-        <div class="cx-stat-row"><span class="k">Outside-system findings</span><span class="v" id="stBad">—</span></div>
+        <div class="cx-stat-row"><span class="k">≥ 80% coverage</span><span class="v"><span id="stGood">—</span><small>/8</small></span></div>
+        <div class="cx-stat-row"><span class="k">Decls · in / fix / out</span><span class="v" id="stCompDecl" style="font-size:14px">—</span></div>
         <div class="cx-stat-row"><span class="k">Cleanest → weakest</span><span class="v" style="font-size:14px">span-bar → badge</span></div>
       </div>
     </div>
@@ -500,6 +540,61 @@ a.timecode:hover{text-decoration:underline;}
       Platform note: none of the Quotes-lens files fork on <code>[data-embedded]</code>/<code>[data-platform=desktop]</code> —
       embedded differences here are chrome-only (inspector, baselines), out of this lens.
     </div>
+
+    <details class="cx-method">
+      <summary><span class="chev">›</span> How the score works — and the prior art it borrows from</summary>
+      <div class="cx-method-body">
+        <p>Two numbers, side by side rather than blended — because a single figure hides the failure mode the
+          field warns about: a component can be <em>high-coverage but risky</em>, or <em>low-coverage but harmless</em>.</p>
+
+        <h4>The unit — a “themeable declaration”</h4>
+        <p>Only declarations whose property <b>should</b> answer to the design system count toward the denominator:
+          <b>colour / background / border-colour, font family·size·weight·line-height, spacing (margin·padding·gap),
+          radius, box-shadow, z-index, transition/duration.</b> Structural geometry (display, position, flex, grid,
+          layout width/height) is excluded. A small ignore-set is never a violation: <code>0</code>,
+          <code>transparent</code>, <code>currentColor</code>, <code>inherit</code>, 1px hairlines. Each themeable
+          declaration is one of <b class="good-t">inside</b> (a <code>--bn-*</code> token) ·
+          <b class="warn-t">fixable</b> (a literal that already equals an existing token) ·
+          <b class="bad-t">outside</b> (a literal with no token — missing family, off-scale, magic z-index, dangling ref).</p>
+
+        <h4>Coverage — the metric you asked for</h4>
+        <div class="cx-formula">Coverage = (inside + 0.5 × fixable) ÷ themeable declarations × 100
+100% = every themeable value is a token    ·    0% = every value is a raw literal</div>
+        <p>The industry’s de-facto signal: <code>stylelint-declaration-strict-value</code> flags each declaration
+          where a token-worthy property carries a raw literal, so Coverage is just
+          <b>1 − (violations ÷ targeted declarations)</b>, with half-credit for fixable drift — non-compliant today,
+          but a one-line change with no decision to make.</p>
+
+        <h4>Health — the borrowed refinement</h4>
+        <p>Coverage treats a hardcoded brand colour that breaks dark mode the same as an off-scale margin. Health
+          doesn’t. Following SonarQube’s <b>per-rule-weight → normalise → band</b> model, each violation carries a severity:</p>
+        <table class="cx-wtable">
+          <tr><th>weight</th><th>what</th><th>why it hurts</th></tr>
+          <tr><td class="w">3</td><td>missing-token / hardcoded colour, dangling ref</td><td>breaks theming <em>and</em> dark mode</td></tr>
+          <tr><td class="w">1</td><td>off-scale spacing·radius·duration, magic z-index, shadow geometry</td><td>cosmetic drift, no theming risk</td></tr>
+          <tr><td class="w">1</td><td>fixable drift</td><td>trivial, but still off-system</td></tr>
+        </table>
+        <div class="cx-formula">Health = (1 − Σ(weight × violations) ÷ (3 × themeable declarations)) × 100</div>
+        <p>So <b>blockquote</b> and <b>timecode</b> — clean except for off-scale spacing — score moderate Coverage but
+          high Health, while <b>badge</b> (missing danger/success tokens, hardcoded tints) sinks on both. That gap is
+          the whole point: it tells you <em>where</em> the effort should go.</p>
+
+        <h4>Roll-up &amp; honest limits</h4>
+        <p>Per-declaration → per-component → per-lens, weighted equally. Two rough edges, stated plainly:
+          (1) the declaration tallies in this snapshot are a <b>hand audit</b>, not a machine count — a
+          <code>scripts/audit-css.py</code> lint pass would make them exact and reproducible; (2) components are
+          weighted equally, whereas the adoption literature weights by <b>render frequency</b> so a workhorse counts
+          more than a one-off. Both are the obvious next iteration.</p>
+
+        <p class="cx-src"><b style="color:var(--cx-ink)">Prior art borrowed —</b>
+          <a href="https://github.com/AndyOGo/stylelint-declaration-strict-value">stylelint-declaration-strict-value</a> (the raw coverage signal) ·
+          <a href="https://docs.sonarsource.com/sonarqube-server/latest/user-guide/code-metrics/metrics-definition/">SonarQube</a> (severity-weight → letter band) ·
+          <a href="https://eightshapes.com/articles/measuring-design-system-success/">Nathan Curtis / EightShapes</a>,
+          <a href="https://omlet.dev/blog/how-leaders-measure-design-system-adoption/">Omlet</a> and
+          <a href="https://developers.mews.com/design-system-adoption-metric-building/">Mews</a> (coverage ratio + the two-axis, don’t-blend rule) ·
+          <a href="https://developer.salesforce.com/docs/platform/slds-linter/guide/reference-rules.html">Salesforce SLDS Linter</a> (hardcoded-value rule shape).</p>
+      </div>
+    </details>
   </div>
 
   <div id="tiers"></div>
@@ -522,7 +617,7 @@ const COMPONENTS=[
 /* ---------------- ATOMS ---------------- */
 {
   id:"span-bar", name:"span-bar", tier:"atom", file:"atoms/span-bar.css",
-  grade:"A", score:100, counts:{good:5,warn:0,bad:0},
+  counts:{good:5,warn:0,bad:0}, sev:{high:0,low:0},
   does:"Textbook atom. Every one of its five visual declarations — colour, radius, opacity, width — reads from a <code>--bn-span-bar-*</code> token. Nothing to fix.",
   specimen:`<div style="display:flex;gap:12px;align-items:stretch">
       <div style="position:relative;width:8px"><span class="span-bar" style="position:absolute;top:4px;height:64px"></span></div>
@@ -533,7 +628,7 @@ const COMPONENTS=[
 },
 {
   id:"timecode", name:"timecode", tier:"atom", file:"atoms/timecode.css",
-  grade:"A−", score:88, counts:{good:9,warn:0,bad:4},
+  counts:{good:9,warn:0,bad:4}, sev:{high:0,low:4},
   does:"Colour and type are fully tokenised, and — rare in this codebase — every animation is wrapped in a <code>@media (prefers-reduced-motion: reduce)</code> guard. A model for motion accessibility.",
   specimen:`<div style="display:flex;flex-direction:column;gap:9px;font-size:var(--bn-text-body);color:var(--bn-colour-text)">
       <div><a class="timecode cx-xr" data-xr="3" href="#"><span class="timecode-bracket">[</span>02:14<span class="timecode-bracket">]</span></a>
@@ -556,7 +651,7 @@ const COMPONENTS=[
 },
 {
   id:"badge", name:"badge", tier:"atom", file:"atoms/badge.css",
-  grade:"D", score:44, counts:{good:14,warn:1,bad:12},
+  counts:{good:14,warn:1,bad:12}, sev:{high:9,low:3},
   does:"The base badge and all seven sentiment variants are perfectly tokenised. The debt is concentrated in the interactive chrome: delete circles, the accept/deny pill, and dark-mode overrides.",
   specimen:`<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
       <span class="badge badge-frustration">frustration</span>
@@ -596,7 +691,7 @@ const COMPONENTS=[
 /* ---------------- MOLECULES ---------------- */
 {
   id:"quote-actions", name:"quote-actions", tier:"molecule", file:"molecules/quote-actions.css",
-  grade:"A−", score:90, counts:{good:12,warn:0,bad:2},
+  counts:{good:12,warn:0,bad:2}, sev:{high:0,low:2},
   does:"Star, preview and bulk-hover states are entirely token-driven — colour, weight and transition all reference <code>--bn-*</code>. Only a bare z-index breaks the streak.",
   specimen:`<blockquote class="quote-card starred" style="max-width:22rem">
       <span class="context">Onboarding · starred</span>
@@ -613,7 +708,7 @@ const COMPONENTS=[
 },
 {
   id:"editable-text", name:"editable-text", tier:"molecule", file:"molecules/editable-text.css",
-  grade:"B+", score:82, counts:{good:16,warn:0,bad:3},
+  counts:{good:16,warn:0,bad:3}, sev:{high:0,low:3},
   does:"Editing/committed states, crop handles and the undo button all pull colour, background and transition from tokens (including the dedicated <code>--bn-colour-editing-*</code> and <code>--bn-crop-handle-*</code> pairs). Drift is limited to a relative size and a sub-scale radius.",
   specimen:`<div style="font-size:var(--bn-text-body);color:var(--bn-colour-text);display:flex;flex-direction:column;gap:10px">
       <span class="editable-text editing cx-xr" data-xr="1" style="display:inline-block;width:max-content">editing this heading</span>
@@ -633,7 +728,7 @@ const COMPONENTS=[
 },
 {
   id:"person-badge", name:"person-badge", tier:"molecule", file:"molecules/person-badge.css",
-  grade:"B", score:76, counts:{good:14,warn:1,bad:4},
+  counts:{good:14,warn:1,bad:4}, sev:{high:1,low:3},
   does:"The two-tone split speaker badge is almost entirely tokenised — mono font, badge surfaces, borders, radii and transitions all reference tokens. One genuinely broken reference and an !important let it down.",
   specimen:`<div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
       <span class="bn-person-badge"><span class="bn-speaker-badge--split">
@@ -653,7 +748,7 @@ const COMPONENTS=[
 },
 {
   id:"tag-input", name:"tag-input", tier:"molecule", file:"molecules/tag-input.css",
-  grade:"C+", score:68, counts:{good:12,warn:0,bad:5},
+  counts:{good:12,warn:0,bad:5}, sev:{high:2,low:3},
   does:"The suggest dropdown, headers and pills draw surfaces, borders and type from tokens, and the shadow colour is tokenised. The gaps are two hardcoded whites in dark mode and two magic z-indexes.",
   specimen:`<div style="font-size:var(--bn-text-body)">
       <div class="tag-suggest cx-xr" data-xr="2" style="position:static;box-shadow:0 2px 8px var(--bn-colour-shadow);width:max-content">
@@ -676,7 +771,7 @@ const COMPONENTS=[
 /* ---------------- ORGANISMS ---------------- */
 {
   id:"blockquote", name:"blockquote / quote-card", tier:"organism", file:"organisms/blockquote.css",
-  grade:"A−", score:86, counts:{good:16,warn:0,bad:8},
+  counts:{good:16,warn:0,bad:8}, sev:{high:0,low:8},
   does:"The lens's hero organism, and remarkably clean: zero hardcoded colours, weights or transitions — every one references a token. All of its debt is a single category: spacing literals the 5-stop scale can't express.",
   specimen:`<blockquote class="quote-card cx-xr" data-xr="8" style="max-width:23rem">
       <span class="context">Checkout · friction point</span>
@@ -727,19 +822,38 @@ function codeHTML(parts){ // item: "plain" | ["class","text"] (class in prop|tok
   }).join("");
 }
 
-let totalBad=0;
-COMPONENTS.forEach(c=>totalBad+=c.counts.bad);
-document.getElementById("stBad").textContent=totalBad;
+/* ---- the metric (see “How the score works”) ----
+   Coverage = (compliant + 0.5·fixable) / themeable declarations   — stylelint-strict-value ratio
+   Health   = 1 − Σ(severity·violations) / (3·N)                   — SonarQube-style weighting
+   Reported as two axes, not blended (Curtis; usage-vs-coverage literature). */
+const FIX_CREDIT=0.5, S_HIGH=3, S_LOW=1, S_FIX=1, S_MAX=3;
+function metric(c){
+  const N=c.counts.good+c.counts.warn+c.counts.bad;
+  const coverage = N? 100*(c.counts.good+FIX_CREDIT*c.counts.warn)/N : 100;
+  const pen = S_HIGH*c.sev.high + S_LOW*c.sev.low + S_FIX*c.counts.warn;
+  const health = N? 100*(1 - pen/(S_MAX*N)) : 100;
+  return {N,coverage,health};
+}
+function gradeOf(cov){return cov>=90?"A":cov>=85?"A−":cov>=80?"B+":cov>=70?"B":cov>=60?"C+":cov>=50?"C":cov>=40?"D+":"D";}
+function setTxt(id,v){const el=document.getElementById(id); if(el) el.innerHTML=v;}
 
-// lens meter = summed declaration tallies
-let g=0,w=0,b=0; COMPONENTS.forEach(c=>{g+=c.counts.good;w+=c.counts.warn;b+=c.counts.bad;});
+let g=0,w=0,b=0,H=0,L=0;
+COMPONENTS.forEach(c=>{g+=c.counts.good;w+=c.counts.warn;b+=c.counts.bad;H+=c.sev.high;L+=c.sev.low;});
 const tot=g+w+b;
+const lensCov=100*(g+FIX_CREDIT*w)/tot;
+const lensHealth=100*(1-(S_HIGH*H+S_LOW*L+S_FIX*w)/(S_MAX*tot));
+const nGood=COMPONENTS.filter(c=>metric(c).coverage>=80).length;
+
 const lm=document.getElementById("lensMeter");
 lm.innerHTML=`<i class="good" style="width:${g/tot*100}%"></i><i class="warn" style="width:${w/tot*100}%"></i><i class="bad" style="width:${b/tot*100}%"></i>`;
+setTxt("stCover",lensCov.toFixed(0)+"<em>%</em>");
+setTxt("stHealth",lensHealth.toFixed(0)+"<em>%</em>");
+setTxt("stGood",String(nGood));
+setTxt("stCompDecl",`${g} <span style="color:var(--cx-good)">in</span> · ${w} <span style="color:var(--cx-warn)">fix</span> · ${b} <span style="color:var(--cx-bad)">out</span>`);
 
 const tiersEl=document.getElementById("tiers");
 TIER_ORDER.forEach(tier=>{
-  const comps=COMPONENTS.filter(c=>c.tier===tier).sort((a,b)=>b.score-a.score);
+  const comps=COMPONENTS.filter(c=>c.tier===tier).sort((a,b)=>metric(b).coverage-metric(a).coverage);
   if(!comps.length) return;
   const sec=document.createElement("section");
   sec.className="cx-tier";
@@ -755,11 +869,11 @@ function compCard(c,rank){
   el.className="cx-comp"; el.id="c-"+c.id;
   el.dataset.cats=(c.findings||[]).map(f=>f.cat).join(" ");
 
-  const tot=c.counts.good+c.counts.warn+c.counts.bad;
-  const mini=`<span class="cx-mini" title="${c.counts.good} inside · ${c.counts.warn} fixable · ${c.counts.bad} outside">
-    <i class="good" style="width:${c.counts.good/tot*100}%"></i>
-    <i class="warn" style="width:${c.counts.warn/tot*100}%"></i>
-    <i class="bad" style="width:${c.counts.bad/tot*100}%"></i></span>`;
+  const m=metric(c), grade=gradeOf(m.coverage);
+  const scores=`<span class="cx-scores" title="Coverage ${m.coverage.toFixed(0)}% · Health ${m.health.toFixed(0)}% · ${m.N} themeable declarations">
+    <span class="cx-sc"><span class="lbl">cover</span><span class="bar"><i style="width:${m.coverage}%"></i></span><b>${m.coverage.toFixed(0)}</b></span>
+    <span class="cx-sc"><span class="lbl">health</span><span class="bar"><i class="h" style="width:${m.health}%"></i></span><b>${m.health.toFixed(0)}</b></span>
+  </span>`;
   const pills=`<span class="cx-counts">
     ${c.counts.good?`<span class="cx-pill good"><span class="d"></span>${c.counts.good}</span>`:""}
     ${c.counts.warn?`<span class="cx-pill warn"><span class="d"></span>${c.counts.warn}</span>`:""}
@@ -791,10 +905,10 @@ function compCard(c,rank){
   el.innerHTML=`
     <div class="cx-comp-head">
       <span class="cx-rank">#${rank}</span>
-      <span class="cx-grade" data-g="${c.grade}">${c.grade}</span>
+      <span class="cx-grade" data-g="${grade}">${grade}</span>
       <span class="cx-comp-id"><span class="nm">${esc(c.name)}</span> <span class="fl">${esc(c.file)}</span></span>
       <span class="cx-tierchip">${c.tier}</span>
-      ${mini}${pills}
+      ${scores}${pills}
     </div>
     <div class="cx-specimens">${quads}</div>
     <details class="cx-details" ${c.counts.bad?"":"open"}>

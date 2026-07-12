@@ -92,7 +92,7 @@
     background: var(--bn-colour-bg, #fff);
     border: 2px solid var(--bn-colour-accent, #3b82f6);
     cursor: grab;
-    z-index: 10;
+    z-index: var(--bn-z-base);
     display: flex;
     align-items: center;
     justify-content: center;

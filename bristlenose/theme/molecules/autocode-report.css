@@ -109,7 +109,7 @@
     white-space: normal;
     width: max-content;
     max-width: 260px;
-    z-index: 300;
+    z-index: var(--bn-z-popover);
     line-height: 1.4;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
     font-family: var(--bn-font-body);

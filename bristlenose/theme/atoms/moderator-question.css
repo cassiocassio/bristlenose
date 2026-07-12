@@ -11,7 +11,7 @@
     width: 14em;
     height: calc(1.6em + 1.1rem + 1px + 4px);
     cursor: help;
-    z-index: 1;
+    z-index: var(--bn-z-base);
 }
 
 /* "Question?" pill — drops in from above on hover, pins when clicked */
@@ -30,7 +30,7 @@
     cursor: pointer;
     white-space: nowrap;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
-    z-index: 2;
+    z-index: calc(var(--bn-z-base) + 1);
     /* Float-down entrance (matching tooltip system) */
     opacity: 0;
     transform: translateY(-8px);

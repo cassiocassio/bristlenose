@@ -336,7 +336,7 @@
 .drag-ghost {
     position: fixed;
     pointer-events: none;
-    z-index: 200;
+    z-index: var(--bn-z-overlay);
     font-family: var(--bn-font-mono);
     font-size: var(--bn-text-label);
     padding: 0.2rem 0.5rem;
@@ -370,7 +370,7 @@
 /* Confirm dialog covers the entire group card as an opaque overlay */
 .codebook-group .confirm-dialog {
     position: absolute;
-    z-index: 100;
+    z-index: var(--bn-z-modal);
     inset: 0;
     display: flex;
     flex-direction: column;
@@ -438,7 +438,7 @@
 .merge-overlay {
     position: fixed;
     inset: 0;
-    z-index: 150;
+    z-index: var(--bn-z-overlay);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -556,7 +556,7 @@
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
-    z-index: 200;
+    z-index: var(--bn-z-modal);
     display: flex;
     align-items: center;
     justify-content: center;

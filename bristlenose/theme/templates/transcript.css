@@ -11,7 +11,7 @@
 .bn-transcript-journey-header {
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: var(--bn-z-sticky);
     background: var(--bn-colour-bg);
     box-shadow: 0 4px 12px var(--bn-colour-shadow);
     padding: var(--bn-space-xs) var(--bn-space-md) var(--bn-space-xs) 0;
@@ -90,7 +90,7 @@
     position: absolute;
     top: calc(100% + 4px);
     left: -0.75rem;  /* outdent by item padding so menu text aligns with trigger */
-    z-index: 20;
+    z-index: var(--bn-z-dropdown);
     background: var(--bn-colour-bg);
     border: 1px solid var(--bn-colour-border);
     border-radius: var(--bn-radius-sm);

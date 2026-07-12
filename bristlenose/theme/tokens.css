@@ -195,6 +195,19 @@
     --bn-radius-lg: 8px;
     --bn-radius-pill: 999px;
 
+    /* Z-index scale — semantic layers (replaces ~14 ad-hoc values; the old bare
+       200 collided across ~9 unrelated components). Pick the tier that matches a
+       floating element's ROLE so stacking is intentional, not source-order luck.
+       Local "raise above the adjacent sibling / pseudo-element" uses --bn-z-base
+       (add +1 via calc() for a second local level). */
+    --bn-z-base:     1;      /* raise above adjacent siblings / pseudo-elements */
+    --bn-z-sticky:   100;    /* sticky toolbars, sticky table headers, side rail */
+    --bn-z-dropdown: 200;    /* menus, autosuggest, filter / export / view dropdowns */
+    --bn-z-overlay:  300;    /* drag ghosts, resize handles, merge / sidebar overlays */
+    --bn-z-toast:    400;    /* activity chips, clipboard toasts */
+    --bn-z-modal:    1000;   /* modal scrims + dialogs */
+    --bn-z-popover:  1100;   /* tooltips & rationale popovers (sit above modals) */
+
     /* Span bar — vertical extent indicator for ranges (e.g. quote coverage) */
     --bn-span-bar-width: 2px;
     --bn-span-bar-gap: 6px;

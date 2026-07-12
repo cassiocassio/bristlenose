@@ -262,7 +262,7 @@ body.dragging-v .inspector-body {
 .inspector-body .analysis-heatmap thead th {
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: var(--bn-z-base);
     background: var(--bn-colour-bg);
 }
 

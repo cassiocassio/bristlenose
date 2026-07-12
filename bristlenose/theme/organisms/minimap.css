@@ -55,7 +55,7 @@
     border: 1.5px solid var(--bn-minimap-viewport-border);
     border-radius: var(--bn-radius-sm);
     cursor: grab;
-    z-index: 1;
+    z-index: var(--bn-z-base);
     pointer-events: auto;
     min-height: 8px;
 }

@@ -23,7 +23,7 @@
     padding: 0;
     width: 100%;
     min-width: 0;
-    z-index: 1;
+    z-index: var(--bn-z-base);
     caret-color: var(--bn-colour-text);
 }
 

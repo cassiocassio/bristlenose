@@ -35,7 +35,7 @@
 .bn-focused {
     background: var(--bn-colour-bg);
     box-shadow: var(--bn-focus-shadow);
-    z-index: 1;
+    z-index: var(--bn-z-base);
     position: relative;
 }
 

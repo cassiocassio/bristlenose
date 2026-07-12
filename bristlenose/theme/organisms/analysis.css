@@ -391,7 +391,7 @@ button.signal-card-toggle {
 
 .cell-tooltip {
     position: absolute;
-    z-index: 10;
+    z-index: var(--bn-z-popover);
     transform: translateX(-50%);
     pointer-events: none;
     max-width: 270px;

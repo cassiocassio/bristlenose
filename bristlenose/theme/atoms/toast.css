@@ -12,7 +12,7 @@
     opacity: 0;
     transform: translateY(0.5rem);
     transition: opacity 0.25s ease, transform 0.25s ease;
-    z-index: 200;
+    z-index: var(--bn-z-toast);
     pointer-events: none;
 }
 

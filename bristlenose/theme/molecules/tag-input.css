@@ -15,7 +15,7 @@
     border: 1px solid var(--bn-colour-border);
     border-radius: var(--bn-radius-sm);
     box-shadow: 0 2px 8px var(--bn-colour-shadow);
-    z-index: 50;
+    z-index: var(--bn-z-dropdown);
     /* Cap dropdown height: 24rem absolute max, but never more than 50% of
        the dynamic viewport.  Near the bottom of the page the dvh cap kicks
        in; near the top we get up to ~384px (room for ~16 tag rows). */
@@ -101,7 +101,7 @@
 /* Each .quote-card is position:relative — sibling cards paint over the
    dropdown.  Raise the card that contains an open suggest dropdown. */
 .quote-card:has(.tag-suggest) {
-    z-index: 10;
+    z-index: var(--bn-z-base);
 }
 
 /* ── Clip fix: drop paint containment on the card with an open dropdown ─ */

@@ -21,7 +21,7 @@
     padding: 0.35rem 0.55rem;
     border-radius: var(--bn-radius-md);
     white-space: nowrap;
-    z-index: 400;
+    z-index: var(--bn-z-popover);
     font-family: var(--bn-font-body);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
     /* Float-down animation: starts 8px above, settles into place */

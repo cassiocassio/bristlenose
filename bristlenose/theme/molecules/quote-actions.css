@@ -20,7 +20,7 @@
 
 .quote-card.star-animating {
     transition: transform var(--bn-transition-normal);
-    z-index: 1;
+    z-index: var(--bn-z-base);
 }
 
 /* ── Bulk-action hover preview ─────────────────────────────────────────── */

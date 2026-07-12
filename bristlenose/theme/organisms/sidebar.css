@@ -152,7 +152,7 @@
     padding-top: var(--bn-space-md);
     border-right: 1px solid var(--bn-colour-border);
     background: var(--bn-colour-bg);
-    z-index: 50;
+    z-index: var(--bn-z-sticky);
     overflow: hidden;
 }
 
@@ -280,7 +280,7 @@
     height: 100vh;
     visibility: visible;
     opacity: 1;
-    z-index: 110;
+    z-index: var(--bn-z-overlay);
 }
 
 /* ── Overlay open ─────────────────────────────────────────────── */
@@ -365,7 +365,7 @@
     height: 100vh;
     visibility: visible;
     opacity: 1;
-    z-index: 110;
+    z-index: var(--bn-z-overlay);
     box-shadow: none;
     border-left: 1px solid var(--bn-colour-border);
     animation: none;
@@ -647,7 +647,7 @@ html[data-embedded="true"] .center > main > section:first-of-type > h2 {
     width: 6px;
     height: 100%;
     cursor: col-resize;
-    z-index: 120;
+    z-index: calc(var(--bn-z-overlay) + 10);
     background: transparent;
 }
 
@@ -686,7 +686,7 @@ html[data-embedded="true"] .center > main > section:first-of-type > h2 {
 .tag-drag-handle { left: -3px; }
 
 /* Overlay mode: drag handle must beat the overlay panel (z-index: 110) */
-.layout.toc-overlay .toc-drag-handle { z-index: 121; }
+.layout.toc-overlay .toc-drag-handle { z-index: calc(var(--bn-z-overlay) + 11); }
 
 /* Rail edge drag handles (drag-to-open from closed state) */
 .toc-rail-drag  { right: -3px; }

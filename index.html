@@ -1,0 +1,954 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bristlenose — Design-System Compliance X-ray</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- ==========================================================================
+     Bristlenose CSS Design-System Compliance X-ray
+     Lens 1: Quotes.  Snapshot of theme/ source as of 12 Jul 2026.
+
+     HOW IT WORKS
+     - Specimens are REAL components: the embedded <style id="bn-theme"> block is a
+       snapshot of the live bristlenose/theme/ CSS (tokens + typography + both
+       palettes + the eight Quotes-lens component files). Each 2x2 quadrant is a
+       container with data-color-theme="default|edo" + color-scheme:light|dark,
+       so the same component renders in all four theme combinations at once.
+     - Compliance is STATIC data (findings[]), keyed to file:line — the browser
+       cannot tell a token from a literal at runtime (computed styles resolve
+       var() away), so non-compliance is analysed from source and baked in here.
+     - --bn-colour-danger / -success / -text-muted are deliberately left UNDEFINED
+       (as they are in production) so specimens show the real fallback behaviour.
+     To refresh after CSS changes: re-snapshot #bn-theme and update findings[].
+     ========================================================================== -->
+
+<style>
+/* ---- Catalogue chrome tokens (independent of the bn theme; instrument palette) ---- */
+:root{
+  color-scheme: light dark;
+  --cx-ground:#f4f5f7; --cx-panel:#ffffff; --cx-panel-2:#fafbfc;
+  --cx-ink:#181b22; --cx-muted:#5c6570; --cx-faint:#8b94a1;
+  --cx-hair:#e4e7ec; --cx-hair-2:#eef0f3;
+  --cx-accent:#4c62d8;            /* cool slate-indigo, used sparingly */
+  --cx-good:#12996a; --cx-good-bg:#e7f6ef;
+  --cx-warn:#b26a00; --cx-warn-bg:#fbf0dc;
+  --cx-bad:#c8007a;  --cx-bad-bg:#fbe6f2;   /* "outside the system" = magenta family */
+  --cx-xray:#ff00c8;                         /* vivid X-ray magenta */
+  --cx-shadow:0 1px 2px rgba(20,24,33,.06),0 8px 24px rgba(20,24,33,.06);
+  --cx-mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+  --cx-sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --cx-maxw:1180px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --cx-ground:#0c0e12; --cx-panel:#14171d; --cx-panel-2:#171b22;
+    --cx-ink:#e7eaf0; --cx-muted:#8d96a4; --cx-faint:#6b7482;
+    --cx-hair:#242832; --cx-hair-2:#1d222b;
+    --cx-accent:#8095ff;
+    --cx-good:#3fd39a; --cx-good-bg:#0f2a20;
+    --cx-warn:#f0a638; --cx-warn-bg:#2c2110;
+    --cx-bad:#ff64c9;  --cx-bad-bg:#2c0c22;
+    --cx-xray:#ff3ad4;
+    --cx-shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --cx-ground:#f4f5f7; --cx-panel:#ffffff; --cx-panel-2:#fafbfc;
+  --cx-ink:#181b22; --cx-muted:#5c6570; --cx-faint:#8b94a1;
+  --cx-hair:#e4e7ec; --cx-hair-2:#eef0f3; --cx-accent:#4c62d8;
+  --cx-good:#12996a; --cx-good-bg:#e7f6ef; --cx-warn:#b26a00; --cx-warn-bg:#fbf0dc;
+  --cx-bad:#c8007a; --cx-bad-bg:#fbe6f2; --cx-xray:#ff00c8;
+  --cx-shadow:0 1px 2px rgba(20,24,33,.06),0 8px 24px rgba(20,24,33,.06);
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --cx-ground:#0c0e12; --cx-panel:#14171d; --cx-panel-2:#171b22;
+  --cx-ink:#e7eaf0; --cx-muted:#8d96a4; --cx-faint:#6b7482;
+  --cx-hair:#242832; --cx-hair-2:#1d222b; --cx-accent:#8095ff;
+  --cx-good:#3fd39a; --cx-good-bg:#0f2a20; --cx-warn:#f0a638; --cx-warn-bg:#2c2110;
+  --cx-bad:#ff64c9; --cx-bad-bg:#2c0c22; --cx-xray:#ff3ad4;
+  --cx-shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box;}
+body{margin:0;background:var(--cx-ground);color:var(--cx-ink);
+  font-family:var(--cx-sans);line-height:1.5;-webkit-font-smoothing:antialiased;}
+.cx-wrap{max-width:var(--cx-maxw);margin:0 auto;padding:0 20px;}
+
+/* ---- Command bar ---- */
+.cx-bar{position:sticky;top:0;z-index:100;background:color-mix(in srgb,var(--cx-panel) 88%,transparent);
+  backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--cx-hair);}
+.cx-bar-in{max-width:var(--cx-maxw);margin:0 auto;padding:11px 20px;display:flex;align-items:center;
+  gap:16px;flex-wrap:wrap;}
+.cx-brand{display:flex;align-items:baseline;gap:10px;margin-right:auto;}
+.cx-brand b{font-size:15px;font-weight:650;letter-spacing:-.01em;}
+.cx-brand .cx-eyebrow{color:var(--cx-faint);}
+.cx-eyebrow{font-family:var(--cx-mono);font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.13em;color:var(--cx-faint);}
+.cx-lens-tab{font-family:var(--cx-mono);font-size:11px;letter-spacing:.04em;padding:4px 9px;border-radius:999px;
+  background:var(--cx-bad-bg);color:var(--cx-bad);border:1px solid color-mix(in srgb,var(--cx-bad) 30%,transparent);}
+
+/* X-ray toggle */
+.cx-xray-toggle{display:inline-flex;align-items:center;gap:9px;cursor:pointer;user-select:none;
+  font-size:12.5px;font-weight:550;padding:6px 12px 6px 10px;border-radius:999px;
+  border:1px solid var(--cx-hair);background:var(--cx-panel);color:var(--cx-ink);transition:border-color .15s,background .15s;}
+.cx-xray-toggle:hover{border-color:color-mix(in srgb,var(--cx-xray) 55%,var(--cx-hair));}
+.cx-xray-toggle .dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--cx-faint);transition:all .15s;}
+body.cx-xray-on .cx-xray-toggle{border-color:var(--cx-xray);background:color-mix(in srgb,var(--cx-xray) 12%,var(--cx-panel));color:var(--cx-bad);}
+body.cx-xray-on .cx-xray-toggle .dot{background:var(--cx-xray);border-color:var(--cx-xray);box-shadow:0 0 0 3px color-mix(in srgb,var(--cx-xray) 25%,transparent);}
+.cx-xray-toggle kbd{font-family:var(--cx-mono);font-size:10px;color:var(--cx-faint);border:1px solid var(--cx-hair);
+  border-radius:4px;padding:0 4px;}
+
+/* filter chips */
+.cx-filters{display:flex;gap:6px;flex-wrap:wrap;}
+.cx-chip{font-family:var(--cx-mono);font-size:11px;padding:4px 9px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--cx-hair);background:var(--cx-panel);color:var(--cx-muted);transition:all .12s;white-space:nowrap;}
+.cx-chip:hover{color:var(--cx-ink);}
+.cx-chip[aria-pressed="true"]{background:var(--cx-ink);color:var(--cx-panel);border-color:var(--cx-ink);}
+
+/* ---- Hero / summary band ---- */
+.cx-hero{padding:38px 0 20px;}
+.cx-hero h1{font-size:clamp(26px,4.2vw,40px);line-height:1.08;letter-spacing:-.022em;margin:.35em 0 .3em;
+  font-weight:680;text-wrap:balance;max-width:16ch;}
+.cx-hero p.lede{font-size:16px;color:var(--cx-muted);max-width:62ch;margin:0 0 4px;}
+.cx-hero .thin{color:var(--cx-faint);}
+
+.cx-scorecard{display:grid;grid-template-columns:1.15fr 1fr;gap:18px;margin:26px 0 8px;}
+@media(max-width:760px){.cx-scorecard{grid-template-columns:1fr;}}
+.cx-card{background:var(--cx-panel);border:1px solid var(--cx-hair);border-radius:14px;box-shadow:var(--cx-shadow);}
+.cx-sc-main{padding:20px 22px;}
+.cx-sc-main .cx-eyebrow{margin-bottom:14px;display:block;}
+.cx-meter{height:16px;border-radius:6px;overflow:hidden;display:flex;border:1px solid var(--cx-hair);}
+.cx-meter i{display:block;height:100%;}
+.cx-meter i.good{background:var(--cx-good);} .cx-meter i.warn{background:var(--cx-warn);} .cx-meter i.bad{background:var(--cx-bad);}
+.cx-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;}
+.cx-legend div{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;max-width:30ch;}
+.cx-legend .sw{width:12px;height:12px;border-radius:4px;margin-top:2px;flex-shrink:0;}
+.cx-legend .sw.good{background:var(--cx-good);} .cx-legend .sw.warn{background:var(--cx-warn);} .cx-legend .sw.bad{background:var(--cx-bad);}
+.cx-legend b{font-weight:600;} .cx-legend span{color:var(--cx-muted);display:block;font-size:11.5px;}
+
+.cx-sc-side{padding:18px 20px;display:flex;flex-direction:column;gap:12px;}
+.cx-stat-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  padding-bottom:11px;border-bottom:1px solid var(--cx-hair-2);}
+.cx-stat-row:last-child{border-bottom:0;padding-bottom:0;}
+.cx-stat-row .k{font-size:12.5px;color:var(--cx-muted);}
+.cx-stat-row .v{font-family:var(--cx-mono);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
+.cx-stat-row .v small{font-size:12px;color:var(--cx-faint);font-weight:400;margin-left:3px;}
+
+.cx-note{margin:18px 0 6px;padding:13px 16px;border-radius:11px;background:var(--cx-panel-2);
+  border:1px solid var(--cx-hair);border-left:3px solid var(--cx-accent);font-size:13px;color:var(--cx-muted);}
+.cx-note b{color:var(--cx-ink);font-weight:600;}
+.cx-note code{font-family:var(--cx-mono);font-size:12px;background:color-mix(in srgb,var(--cx-accent) 12%,transparent);
+  color:var(--cx-ink);padding:1px 5px;border-radius:4px;}
+
+/* ---- Tier sections ---- */
+.cx-tier{margin:40px 0 0;}
+.cx-tier-head{display:flex;align-items:baseline;gap:12px;padding-bottom:12px;border-bottom:2px solid var(--cx-ink);
+  margin-bottom:4px;}
+.cx-tier-head h2{font-size:20px;font-weight:660;letter-spacing:-.01em;margin:0;}
+.cx-tier-head .cx-eyebrow{margin-left:auto;}
+.cx-tier-sub{font-size:12.5px;color:var(--cx-faint);margin:0 0 2px;}
+
+/* ---- Component card ---- */
+.cx-comp{background:var(--cx-panel);border:1px solid var(--cx-hair);border-radius:14px;box-shadow:var(--cx-shadow);
+  margin:16px 0;overflow:hidden;scroll-margin-top:80px;}
+.cx-comp.dim{display:none;}
+.cx-comp-head{display:flex;align-items:center;gap:14px;padding:15px 18px;flex-wrap:wrap;}
+.cx-rank{font-family:var(--cx-mono);font-size:11px;color:var(--cx-faint);width:26px;flex-shrink:0;}
+.cx-grade{font-family:var(--cx-mono);font-weight:700;font-size:16px;width:44px;height:36px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;letter-spacing:-.02em;}
+.cx-grade[data-g^="A"]{background:var(--cx-good-bg);color:var(--cx-good);}
+.cx-grade[data-g^="B"]{background:var(--cx-good-bg);color:var(--cx-good);}
+.cx-grade[data-g^="C"]{background:var(--cx-warn-bg);color:var(--cx-warn);}
+.cx-grade[data-g^="D"],.cx-grade[data-g^="F"]{background:var(--cx-bad-bg);color:var(--cx-bad);}
+.cx-comp-id{min-width:0;flex:1;}
+.cx-comp-id .nm{font-size:16px;font-weight:640;letter-spacing:-.01em;}
+.cx-comp-id .fl{font-family:var(--cx-mono);font-size:11.5px;color:var(--cx-faint);}
+.cx-tierchip{font-family:var(--cx-mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;
+  padding:3px 7px;border-radius:5px;border:1px solid var(--cx-hair);color:var(--cx-muted);}
+.cx-counts{display:flex;gap:5px;flex-shrink:0;}
+.cx-pill{font-family:var(--cx-mono);font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;
+  font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:4px;}
+.cx-pill .d{width:7px;height:7px;border-radius:50%;}
+.cx-pill.good{background:var(--cx-good-bg);color:var(--cx-good);} .cx-pill.good .d{background:var(--cx-good);}
+.cx-pill.warn{background:var(--cx-warn-bg);color:var(--cx-warn);} .cx-pill.warn .d{background:var(--cx-warn);}
+.cx-pill.bad{background:var(--cx-bad-bg);color:var(--cx-bad);} .cx-pill.bad .d{background:var(--cx-bad);}
+
+/* specimen grid */
+.cx-specimens{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--cx-hair);
+  border-top:1px solid var(--cx-hair);border-bottom:1px solid var(--cx-hair);}
+@media(max-width:680px){.cx-specimens{grid-template-columns:1fr;}}
+.cx-quad{background:var(--cx-panel);position:relative;min-height:96px;}
+.cx-quad-label{position:absolute;top:8px;left:9px;z-index:3;font-family:var(--cx-mono);font-size:9.5px;
+  text-transform:uppercase;letter-spacing:.08em;color:var(--cx-faint);
+  background:color-mix(in srgb,var(--cx-panel) 70%,transparent);padding:2px 6px;border-radius:5px;pointer-events:none;}
+.cx-quad .render{padding:30px 18px 20px;min-height:100%;}
+/* the render subtree carries the bn ground colour so light/dark/edo show */
+.cx-quad .render{background:var(--bn-colour-bg,transparent);color:var(--bn-colour-text,inherit);}
+
+/* X-ray outlines on non-compliant elements */
+.cx-xr{position:relative;}
+body.cx-xray-on .cx-xr{outline:2px dashed var(--cx-xray)!important;outline-offset:2px;border-radius:2px;}
+body.cx-xray-on .cx-xr::after{content:attr(data-xr);position:absolute;top:-9px;right:-6px;z-index:4;
+  font-family:var(--cx-mono);font-size:9px;font-weight:700;line-height:1;color:#fff;background:var(--cx-xray);
+  padding:2px 4px;border-radius:5px;pointer-events:none;}
+@media(prefers-reduced-motion:no-preference){
+  body.cx-xray-on .cx-xr{animation:cx-xpulse 1.8s ease-in-out infinite;}
+  @keyframes cx-xpulse{0%,100%{outline-color:var(--cx-xray);}50%{outline-color:color-mix(in srgb,var(--cx-xray) 40%,transparent);}}
+}
+
+/* ---- Source & fixes (expandable) ---- */
+.cx-details{border-top:0;}
+.cx-details>summary{list-style:none;cursor:pointer;padding:12px 18px;display:flex;align-items:center;gap:10px;
+  font-size:12.5px;font-weight:550;color:var(--cx-muted);user-select:none;}
+.cx-details>summary::-webkit-details-marker{display:none;}
+.cx-details>summary:hover{color:var(--cx-ink);}
+.cx-details>summary .chev{transition:transform .15s;font-family:var(--cx-mono);}
+.cx-details[open]>summary .chev{transform:rotate(90deg);}
+.cx-details>summary .goodnote{margin-left:auto;font-family:var(--cx-mono);font-size:11px;color:var(--cx-good);font-weight:500;}
+.cx-body{padding:4px 18px 20px;}
+
+.cx-does{font-size:12.5px;color:var(--cx-muted);background:var(--cx-good-bg);border:1px solid color-mix(in srgb,var(--cx-good) 25%,transparent);
+  border-radius:9px;padding:10px 13px;margin-bottom:14px;}
+.cx-does b{color:var(--cx-good);}
+
+.cx-finding{border:1px solid var(--cx-hair);border-radius:10px;margin:10px 0;overflow:hidden;}
+.cx-finding-top{display:flex;align-items:center;gap:9px;padding:8px 12px;background:var(--cx-panel-2);flex-wrap:wrap;}
+.cx-sev{font-family:var(--cx-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  padding:3px 7px;border-radius:5px;}
+.cx-sev.bad{background:var(--cx-bad-bg);color:var(--cx-bad);} .cx-sev.warn{background:var(--cx-warn-bg);color:var(--cx-warn);}
+.cx-cat{font-family:var(--cx-mono);font-size:11px;color:var(--cx-muted);}
+.cx-loc{font-family:var(--cx-mono);font-size:11px;color:var(--cx-faint);margin-left:auto;}
+.cx-code{font-family:var(--cx-mono);font-size:12.5px;line-height:1.7;overflow-x:auto;padding:11px 13px;
+  background:var(--cx-panel);border-top:1px solid var(--cx-hair);white-space:pre;}
+.cx-code .prop{color:var(--cx-accent);} .cx-code .tok{color:var(--cx-good);} .cx-code .cmt{color:var(--cx-faint);font-style:italic;}
+.cx-code .sel{color:var(--cx-muted);}
+.cx-code .bad{color:var(--cx-bad);font-weight:650;background:var(--cx-bad-bg);border-radius:3px;padding:0 2px;
+  text-decoration:underline wavy color-mix(in srgb,var(--cx-bad) 60%,transparent);text-underline-offset:3px;}
+body.cx-xray-on .cx-code .bad{background:color-mix(in srgb,var(--cx-xray) 22%,transparent);color:var(--cx-bad);}
+.cx-fix{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;padding:11px 13px;border-top:1px solid var(--cx-hair);
+  font-size:12.5px;}
+.cx-fix dt{font-family:var(--cx-mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--cx-faint);padding-top:2px;}
+.cx-fix dd{margin:0;color:var(--cx-ink);}
+.cx-fix dd code{font-family:var(--cx-mono);font-size:12px;background:var(--cx-panel-2);border:1px solid var(--cx-hair);
+  padding:1px 5px;border-radius:4px;}
+.cx-fix dd.fix{color:var(--cx-good);}
+
+.cx-morespacing{font-size:12px;color:var(--cx-faint);font-family:var(--cx-mono);padding:6px 2px 0;}
+
+footer.cx-foot{margin:48px 0 40px;padding-top:20px;border-top:1px solid var(--cx-hair);
+  font-size:12px;color:var(--cx-faint);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+footer.cx-foot code{font-family:var(--cx-mono);}
+/* headline readouts */
+.cx-headline{display:flex;gap:30px;margin:8px 0 16px;flex-wrap:wrap;}
+.cx-big{display:flex;flex-direction:column;gap:3px;}
+.cx-big .n{font-family:var(--cx-mono);font-size:40px;font-weight:700;line-height:1;letter-spacing:-.03em;color:var(--cx-good);font-variant-numeric:tabular-nums;}
+.cx-big .n em{font-style:normal;font-size:20px;color:var(--cx-faint);margin-left:1px;}
+.cx-big .n.alt{color:var(--cx-ink);}
+.cx-big .l{font-size:12.5px;font-weight:600;color:var(--cx-ink);}
+.cx-big .l em{display:block;font-style:normal;font-weight:400;font-size:11px;color:var(--cx-faint);max-width:24ch;line-height:1.35;margin-top:1px;}
+
+/* per-component two-axis scores */
+.cx-scores{display:flex;gap:16px;flex-shrink:0;}
+.cx-sc{display:flex;align-items:center;gap:6px;}
+.cx-sc .lbl{font-family:var(--cx-mono);font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--cx-faint);width:32px;text-align:right;}
+.cx-sc .bar{width:60px;height:6px;border-radius:4px;background:var(--cx-hair-2);overflow:hidden;border:1px solid var(--cx-hair);}
+.cx-sc .bar i{display:block;height:100%;background:var(--cx-good);}
+.cx-sc .bar i.h{background:var(--cx-accent);}
+.cx-sc b{font-family:var(--cx-mono);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;width:18px;color:var(--cx-ink);}
+@media(max-width:680px){.cx-scores{width:100%;order:5;justify-content:flex-start;}}
+
+/* methodology */
+.cx-method{margin:16px 0 4px;border:1px solid var(--cx-hair);border-radius:12px;background:var(--cx-panel);overflow:hidden;box-shadow:var(--cx-shadow);}
+.cx-method>summary{list-style:none;cursor:pointer;padding:14px 18px;font-size:13.5px;font-weight:600;color:var(--cx-ink);display:flex;align-items:center;gap:10px;user-select:none;}
+.cx-method>summary::-webkit-details-marker{display:none;}
+.cx-method>summary .chev{font-family:var(--cx-mono);transition:transform .15s;color:var(--cx-faint);}
+.cx-method[open]>summary .chev{transform:rotate(90deg);}
+.cx-method-body{padding:2px 18px 20px;font-size:13px;color:var(--cx-muted);line-height:1.62;}
+.cx-method-body p{margin:8px 0;} .cx-method-body em{font-style:italic;}
+.cx-method-body h4{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--cx-faint);font-family:var(--cx-mono);margin:20px 0 6px;font-weight:600;}
+.cx-method-body b{color:var(--cx-ink);font-weight:600;}
+.cx-method-body code{font-family:var(--cx-mono);font-size:11.5px;background:var(--cx-panel-2);border:1px solid var(--cx-hair);padding:1px 5px;border-radius:4px;color:var(--cx-ink);}
+.cx-method-body .good-t{color:var(--cx-good);} .cx-method-body .warn-t{color:var(--cx-warn);} .cx-method-body .bad-t{color:var(--cx-bad);}
+.cx-formula{font-family:var(--cx-mono);font-size:12.5px;background:var(--cx-panel-2);border:1px solid var(--cx-hair);border-left:3px solid var(--cx-accent);border-radius:8px;padding:11px 14px;margin:8px 0;color:var(--cx-ink);overflow-x:auto;white-space:pre-wrap;line-height:1.5;}
+.cx-wtable{width:100%;border-collapse:collapse;margin:8px 0;font-size:12.5px;}
+.cx-wtable th,.cx-wtable td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--cx-hair-2);vertical-align:top;}
+.cx-wtable th{font-family:var(--cx-mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--cx-faint);font-weight:600;}
+.cx-wtable td.w{font-family:var(--cx-mono);font-weight:700;color:var(--cx-ink);width:48px;}
+.cx-src{font-size:12px;color:var(--cx-faint);margin-top:14px;padding-top:12px;border-top:1px solid var(--cx-hair-2);}
+.cx-src a{color:var(--cx-muted);}
+a{color:var(--cx-accent);}
+:focus-visible{outline:2px solid var(--cx-accent);outline-offset:2px;border-radius:3px;}
+</style>
+
+<!-- ==== EMBEDDED SNAPSHOT of bristlenose/theme/ (renders the specimens) ==== -->
+<style id="bn-theme">
+/* --- tokens.css (trimmed to Quotes-lens dependencies) --- */
+:root{
+  --bn-sentiment-frustration:#ea580c; --bn-sentiment-frustration-bg:#fff7ed;
+  --bn-sentiment-confusion:#dc2626; --bn-sentiment-confusion-bg:#fef2f2;
+  --bn-sentiment-doubt:#7c3aed; --bn-sentiment-doubt-bg:#f5f3ff;
+  --bn-sentiment-surprise:#d97706; --bn-sentiment-surprise-bg:#fffbeb;
+  --bn-sentiment-satisfaction:#16a34a; --bn-sentiment-satisfaction-bg:#f0fdf4;
+  --bn-sentiment-delight:#059669; --bn-sentiment-delight-bg:#ecfdf5;
+  --bn-sentiment-confidence:#2563eb; --bn-sentiment-confidence-bg:#eff6ff;
+  --bn-colour-delight:var(--bn-sentiment-delight);
+  --bn-space-xs:0.15rem; --bn-space-sm:0.35rem; --bn-space-md:0.75rem; --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-colour-new-highlight:#75fb4c; --bn-colour-new-highlight-text:#0f2b08;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  --bn-span-bar-width:2px; --bn-span-bar-colour:var(--bn-colour-border); --bn-span-bar-opacity:0.5; --bn-span-bar-radius:1px;
+  --bn-transition-fast:0.15s ease; --bn-transition-normal:0.2s ease; --bn-transition-slow:0.3s ease;
+  --bn-max-width:52rem;
+}
+@supports (color: light-dark(#000,#fff)){
+  :root{
+    --bn-sentiment-frustration:light-dark(#ea580c,#fb923c); --bn-sentiment-frustration-bg:light-dark(#fff7ed,#2d1d0e);
+    --bn-sentiment-confusion:light-dark(#dc2626,#f87171); --bn-sentiment-confusion-bg:light-dark(#fef2f2,#2d1515);
+    --bn-sentiment-doubt:light-dark(#7c3aed,#a78bfa); --bn-sentiment-doubt-bg:light-dark(#f5f3ff,#1e1533);
+    --bn-sentiment-surprise:light-dark(#d97706,#fbbf24); --bn-sentiment-surprise-bg:light-dark(#fffbeb,#2d2305);
+    --bn-sentiment-satisfaction:light-dark(#16a34a,#4ade80); --bn-sentiment-satisfaction-bg:light-dark(#f0fdf4,#0f2918);
+    --bn-sentiment-delight:light-dark(#059669,#34d399); --bn-sentiment-delight-bg:light-dark(#ecfdf5,#0d261c);
+    --bn-sentiment-confidence:light-dark(#2563eb,#60a5fa); --bn-sentiment-confidence-bg:light-dark(#eff6ff,#111d2e);
+  }
+}
+
+/* --- tokens-typography.css --- */
+:root{
+  --bn-font-body:"Inter","Segoe UI Variable","Segoe UI",system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Malgun Gothic","Apple SD Gothic Neo","Noto Sans CJK JP","Noto Sans CJK KR",sans-serif;
+  --bn-font-mono:"SF Mono","Fira Code","Consolas",monospace;
+  --bn-weight-light:370;--bn-weight-normal:420;--bn-weight-emphasis:490;--bn-weight-starred:520;--bn-weight-strong:700;
+  --bn-text-micro:0.6rem;--bn-text-micro-lh:1.2;--bn-text-badge:0.72rem;--bn-text-badge-lh:1.3;
+  --bn-text-caption:0.75rem;--bn-text-caption-lh:1.4;--bn-text-label:0.8125rem;--bn-text-label-lh:1.45;
+  --bn-text-body:0.9375rem;--bn-text-body-lh:1.5;--bn-text-heading:1.125rem;--bn-text-heading-lh:1.3;
+  --bn-text-title:1.375rem;--bn-text-title-lh:1.25;--bn-text-display:1.75rem;--bn-text-display-lh:1.2;
+}
+
+/* --- colors/palette-default.css --- */
+:root,[data-color-theme="default"]{
+  --bn-colour-bg:#ffffff;--bn-colour-text:#1a1a1a;--bn-colour-muted:#6b7280;--bn-colour-border:#e5e7eb;
+  --bn-colour-accent:#007aff;--bn-colour-hover:#e8f0fe;--bn-colour-inspector-bg:#f9f9fa;
+  --bn-colour-quote-bg:#f9fafb;--bn-colour-badge-bg:#f3f4f6;--bn-colour-badge-text:#374151;
+  --bn-colour-user-tag-bg:#f3f4f6;--bn-colour-user-tag-text:#4b5563;--bn-colour-editing-bg:#fffbe6;
+  --bn-colour-editing-border:#e5e0c0;--bn-crop-handle-colour:#c4850a;--bn-crop-handle-hover:#a06d08;
+  --bn-colour-active-bg:#f0fdf4;--bn-colour-highlight:#fef08a;--bn-colour-negative:#dc2626;
+  --bn-glow-colour:rgba(0,122,255,0.06);--bn-glow-colour-strong:rgba(0,122,255,0.11);
+  --bn-colour-border-hover:#d1d5db;--bn-colour-icon-idle:#c9ccd1;--bn-colour-starred:#999;
+  --bn-colour-shadow:rgba(0,0,0,0.1);--bn-focus-shadow:0 3px 12px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.05);
+  --bn-focus-ring:0 0 0 2px rgba(0,122,255,0.12);--bn-hover-bg:rgba(0,0,0,0.04);--bn-hover-bg-subtle:rgba(0,0,0,0.03);
+  --bn-selection-bg:#eef4fc;--bn-selection-border:#007aff;--bn-colour-suggestion:#007aff;--bn-colour-suggestion-bg:#eff6ff;
+}
+@supports (color: light-dark(#000,#fff)){
+  :root,[data-color-theme="default"]{
+    --bn-colour-bg:light-dark(#ffffff,#111111);--bn-colour-text:light-dark(#1a1a1a,#e5e7eb);
+    --bn-colour-muted:light-dark(#6b7280,#9ca3af);--bn-colour-border:light-dark(#e5e7eb,#2d2d2d);
+    --bn-colour-accent:light-dark(#007aff,#0a84ff);--bn-colour-hover:light-dark(#e8f0fe,#1e293b);
+    --bn-colour-inspector-bg:light-dark(#f9f9fa,#1c1c1e);--bn-colour-quote-bg:light-dark(#f9fafb,#1a1a1a);
+    --bn-colour-badge-bg:light-dark(#f3f4f6,#252525);--bn-colour-badge-text:light-dark(#374151,#d1d5db);
+    --bn-colour-user-tag-bg:light-dark(#f3f4f6,#252525);--bn-colour-user-tag-text:light-dark(#4b5563,#d1d5db);
+    --bn-colour-editing-bg:light-dark(#fffbe6,#2a2614);--bn-colour-editing-border:light-dark(#e5e0c0,#4a4528);
+    --bn-crop-handle-colour:light-dark(#c4850a,#f0b830);--bn-crop-handle-hover:light-dark(#a06d08,#f5cc60);
+    --bn-colour-active-bg:light-dark(#f0fdf4,#0f2918);--bn-colour-highlight:light-dark(#fef08a,#854d0e);
+    --bn-glow-colour:light-dark(rgba(0,122,255,0.06),rgba(10,132,255,0.12));
+    --bn-glow-colour-strong:light-dark(rgba(0,122,255,0.11),rgba(10,132,255,0.2));
+    --bn-colour-negative:light-dark(#dc2626,#ef4444);--bn-colour-border-hover:light-dark(#d1d5db,#4b5563);
+    --bn-colour-icon-idle:light-dark(#c9ccd1,#595959);--bn-colour-starred:light-dark(#999,#ccc);
+    --bn-colour-shadow:light-dark(rgba(0,0,0,0.1),rgba(0,0,0,0.4));
+    --bn-focus-ring:light-dark(0 0 0 2px rgba(0,122,255,0.12),0 0 0 2px rgba(10,132,255,0.2));
+    --bn-selection-bg:light-dark(#eef4fc,#1a2838);--bn-selection-border:light-dark(#007aff,#0a84ff);
+    --bn-colour-suggestion:light-dark(#007aff,#0a84ff);--bn-colour-suggestion-bg:light-dark(#eff6ff,#111d2e);
+    --bn-hover-bg:light-dark(rgba(0,0,0,0.04),rgba(255,255,255,0.06));--bn-hover-bg-subtle:light-dark(rgba(0,0,0,0.03),rgba(255,255,255,0.04));
+  }
+}
+
+/* --- colors/palette-edo.css --- */
+[data-color-theme="edo"]{
+  --bn-colour-bg:#fdfbf7;--bn-colour-text:#1b2230;--bn-colour-muted:#4a698a;--bn-colour-border:#d4c9a8;
+  --bn-colour-accent:#0f5c9e;--bn-colour-hover:#ede5d1;--bn-colour-inspector-bg:#f7f2e6;
+  --bn-colour-quote-bg:#f0e9d8;--bn-colour-badge-bg:#e8dfc9;--bn-colour-badge-text:#2d3654;
+  --bn-colour-user-tag-bg:#e8dfc9;--bn-colour-user-tag-text:#3d4a5c;--bn-colour-editing-bg:#f5ecd0;
+  --bn-colour-editing-border:#c4a96a;--bn-crop-handle-colour:#b5432a;--bn-crop-handle-hover:#8b3a3a;
+  --bn-colour-active-bg:#e8f0e4;--bn-colour-highlight:#c4a96a;--bn-colour-negative:#b5432a;
+  --bn-glow-colour:rgba(15,92,158,0.08);--bn-glow-colour-strong:rgba(15,92,158,0.15);
+  --bn-colour-border-hover:#b8ad91;--bn-colour-icon-idle:#b8ad91;--bn-colour-starred:#9e8b6e;
+  --bn-colour-shadow:rgba(30,20,10,0.12);--bn-focus-shadow:0 3px 12px rgba(30,20,10,0.12),0 0 0 1px rgba(30,20,10,0.06);
+  --bn-focus-ring:0 0 0 2px rgba(15,92,158,0.15);--bn-hover-bg:rgba(30,20,10,0.05);--bn-hover-bg-subtle:rgba(30,20,10,0.03);
+  --bn-selection-bg:#e0e8f0;--bn-selection-border:#0f5c9e;--bn-colour-suggestion:#0f5c9e;--bn-colour-suggestion-bg:#e0e8f0;
+}
+@supports (color: light-dark(#000,#fff)){
+  [data-color-theme="edo"]{
+    --bn-colour-bg:light-dark(#fdfbf7,#1a1816);--bn-colour-text:light-dark(#1b2230,#e8e3d6);
+    --bn-colour-muted:light-dark(#4a698a,#7ba8a0);--bn-colour-border:light-dark(#d4c9a8,#2d2820);
+    --bn-colour-accent:light-dark(#0f5c9e,#4d9fe0);--bn-colour-hover:light-dark(#ede5d1,#252118);
+    --bn-colour-inspector-bg:light-dark(#f7f2e6,#211e18);--bn-colour-quote-bg:light-dark(#f0e9d8,#211e18);
+    --bn-colour-badge-bg:light-dark(#e8dfc9,#2d2820);--bn-colour-badge-text:light-dark(#2d3654,#c4b898);
+    --bn-colour-user-tag-bg:light-dark(#e8dfc9,#2d2820);--bn-colour-user-tag-text:light-dark(#3d4a5c,#c4b898);
+    --bn-colour-editing-bg:light-dark(#f5ecd0,#2d2614);--bn-colour-editing-border:light-dark(#c4a96a,#4a3d1e);
+    --bn-crop-handle-colour:light-dark(#b5432a,#e06a4a);--bn-crop-handle-hover:light-dark(#8b3a3a,#e88a6a);
+    --bn-colour-active-bg:light-dark(#e8f0e4,#1a2818);--bn-colour-highlight:light-dark(#c4a96a,#6b5528);
+    --bn-glow-colour:light-dark(rgba(15,92,158,0.08),rgba(77,159,224,0.10));
+    --bn-glow-colour-strong:light-dark(rgba(15,92,158,0.15),rgba(77,159,224,0.18));
+    --bn-colour-negative:light-dark(#b5432a,#e06a4a);--bn-colour-border-hover:light-dark(#b8ad91,#4a4030);
+    --bn-colour-icon-idle:light-dark(#b8ad91,#4a4030);--bn-colour-starred:light-dark(#9e8b6e,#b8a880);
+    --bn-colour-shadow:light-dark(rgba(30,20,10,0.12),rgba(0,0,0,0.4));
+    --bn-focus-ring:light-dark(0 0 0 2px rgba(15,92,158,0.15),0 0 0 2px rgba(77,159,224,0.2));
+    --bn-selection-bg:light-dark(#e0e8f0,#1e2830);--bn-selection-border:light-dark(#0f5c9e,#4d9fe0);
+    --bn-colour-suggestion:light-dark(#0f5c9e,#4d9fe0);--bn-colour-suggestion-bg:light-dark(#e0e8f0,#1e2830);
+    --bn-hover-bg:light-dark(rgba(30,20,10,0.05),rgba(212,201,168,0.06));--bn-hover-bg-subtle:light-dark(rgba(30,20,10,0.03),rgba(212,201,168,0.04));
+  }
+}
+
+/* --- organisms/blockquote.css --- */
+blockquote{margin:0;padding:var(--bn-space-sm) 1rem;}
+blockquote.quote-card{background:var(--bn-colour-quote-bg);border-left:1px solid var(--bn-colour-border);
+  margin:0.8rem 0;padding:var(--bn-space-md) 1rem;border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0;}
+blockquote .context{display:block;color:var(--bn-colour-muted);font-size:var(--bn-text-label);margin-bottom:0.3rem;}
+blockquote .quote-row{display:flex;gap:0.5rem;align-items:baseline;}
+blockquote .quote-row .timecode{flex-shrink:0;}
+blockquote .quote-body{flex:1;min-width:0;font-size:var(--bn-text-body);line-height:var(--bn-text-body-lh);}
+blockquote .timecode{color:var(--bn-colour-accent);font-family:var(--bn-font-mono);font-size:var(--bn-text-label);}
+blockquote .speaker{color:var(--bn-colour-muted);font-size:var(--bn-text-label);white-space:nowrap;display:block;margin-top:.25rem;}
+.quote-card.quote-active{border-left-color:var(--bn-colour-delight);background:var(--bn-colour-active-bg);}
+.quote-group{display:flex;flex-direction:column;}
+
+/* --- atoms/timecode.css --- */
+a.timecode,a.timecode:visited{color:var(--bn-colour-accent);font-family:var(--bn-font-mono);font-size:var(--bn-text-label);text-decoration:none;cursor:pointer;}
+span.timecode{color:var(--bn-colour-accent);font-family:var(--bn-font-mono);font-size:var(--bn-text-label);}
+a.timecode:hover{text-decoration:underline;}
+.timecode-bracket{color:var(--bn-colour-muted);}
+.bn-timecode-glow{box-shadow:0 0 8px 2px var(--bn-glow-colour);border-left-color:var(--bn-colour-accent);
+  background-color:var(--bn-glow-colour);border-radius:var(--bn-radius-sm);}
+
+/* --- atoms/span-bar.css --- */
+.span-bar{background:var(--bn-span-bar-colour);border-radius:var(--bn-span-bar-radius);opacity:var(--bn-span-bar-opacity);width:var(--bn-span-bar-width);pointer-events:none;}
+
+/* --- atoms/badge.css --- */
+.badge{display:inline-block;font-family:var(--bn-font-mono);font-size:var(--bn-text-badge);padding:var(--bn-space-xs) 0.45rem;border-radius:var(--bn-radius-sm);background:var(--bn-colour-badge-bg);color:var(--bn-colour-badge-text);}
+.badge-frustration{background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration);}
+.badge-confusion{background:var(--bn-sentiment-confusion-bg);color:var(--bn-sentiment-confusion);}
+.badge-doubt{background:var(--bn-sentiment-doubt-bg);color:var(--bn-sentiment-doubt);}
+.badge-surprise{background:var(--bn-sentiment-surprise-bg);color:var(--bn-sentiment-surprise);}
+.badge-satisfaction{background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction);}
+.badge-delight{background:var(--bn-sentiment-delight-bg);color:var(--bn-sentiment-delight);}
+.badge-confidence{background:var(--bn-sentiment-confidence-bg);color:var(--bn-sentiment-confidence);}
+.badge-ai{cursor:pointer;position:relative;transition:opacity var(--bn-transition-fast);}
+.badge-ai::after{content:"\00d7";position:absolute;top:calc(-0.3rem - 1px);right:calc(-0.3rem - 1px);
+  width:calc(0.875rem + 0.5px);height:calc(0.875rem + 0.5px);display:flex;align-items:center;justify-content:center;
+  padding:0;background:var(--bn-colour-bg);color:var(--bn-colour-danger,#dc2626);border-radius:50%;
+  font-size:var(--bn-text-micro);font-weight:var(--bn-weight-strong);line-height:1;
+  box-shadow:0 1px 4px rgba(0,0,0,0.16),0 0 1px rgba(0,0,0,0.06);}
+.badge-user{background:var(--bn-colour-user-tag-bg);color:var(--bn-colour-text);font-weight:var(--bn-weight-normal);cursor:default;position:relative;}
+.badge-add{border:1px dashed var(--bn-colour-border);background:transparent;color:var(--bn-colour-muted);cursor:pointer;user-select:none;}
+.badge-add:hover{border-color:var(--bn-colour-accent);color:var(--bn-colour-accent);}
+.badge-proposed{border:1px dashed currentColor;cursor:pointer;position:relative;opacity:.62;}
+.badge-action-pill{position:absolute;top:calc(-0.3rem - 1px);right:calc(-0.3rem - 1px - 1rem);display:flex;gap:0;
+  background:var(--bn-colour-bg);border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.16),0 0 1px rgba(0,0,0,0.06);
+  overflow:hidden;z-index:1;}
+.badge-action-deny,.badge-action-accept{display:flex;align-items:center;justify-content:center;width:1rem;height:1rem;
+  font-size:var(--bn-text-micro);font-weight:var(--bn-weight-strong);cursor:pointer;border:none;background:transparent;padding:0;}
+.badge-action-deny{color:var(--bn-colour-danger,#dc2626);}
+.badge-action-accept{color:var(--bn-colour-success,#16a34a);border-left:1px solid var(--bn-colour-border);}
+.badge-action-deny:hover{background:#fef2f2;}.badge-action-accept:hover{background:#dcfce7;}
+
+/* --- molecules/person-badge.css --- */
+.bn-person-badge{display:inline-flex;align-items:center;gap:0;white-space:nowrap;}
+.bn-speaker-badge--split{display:inline-flex;align-items:center;gap:0;padding:0;border-radius:var(--bn-radius-sm);overflow:hidden;background:none;vertical-align:baseline;}
+.bn-speaker-badge--split .bn-speaker-badge-code{font-family:var(--bn-font-mono);font-size:var(--bn-text-badge);
+  padding:var(--bn-space-xs) 0.4rem;background:var(--bn-colour-badge-bg);color:var(--bn-colour-badge-text);
+  border:1px solid var(--bn-colour-border);border-right:none;border-radius:var(--bn-radius-sm) 0 0 var(--bn-radius-sm);}
+.bn-speaker-badge--split .bn-speaker-badge-name{font-family:var(--bn-font-body);font-size:var(--bn-text-badge);
+  font-weight:var(--bn-weight-emphasis);padding:var(--bn-space-xs) 0.45rem var(--bn-space-xs) 0.35rem;
+  background:var(--bn-colour-quote-bg);color:var(--bn-colour-text);border:1px solid var(--bn-colour-border);
+  border-left:none;border-radius:0 var(--bn-radius-sm) var(--bn-radius-sm) 0;}
+.bn-session-speaker-entry{display:inline-flex;align-items:center;gap:0.35rem;white-space:nowrap;}
+.bn-speaker-editable-name{font-family:var(--bn-font-body);font-size:var(--bn-text-body);font-weight:var(--bn-weight-emphasis);
+  color:var(--bn-colour-text);cursor:text;border-radius:var(--bn-radius-sm);padding:var(--bn-space-xs) 0.2rem;min-width:2rem;}
+.bn-speaker-editable-name:hover{background:var(--bn-colour-quote-bg);}
+
+/* --- molecules/quote-actions.css --- */
+.quote-card.starred{font-weight:var(--bn-weight-starred);border-left-color:var(--bn-colour-starred);}
+.quote-card.starred .context,.quote-card.starred .timecode,.quote-card.starred .speaker,.quote-card.starred .badges{font-weight:var(--bn-weight-normal);}
+
+/* --- molecules/editable-text.css --- */
+.editable-text.editing{background:var(--bn-colour-editing-bg);outline:1px solid var(--bn-colour-editing-border);border-radius:var(--bn-radius-sm);padding:var(--bn-space-xs) 0.3rem;cursor:text;}
+.editable-text.edited{border-bottom:1px dashed var(--bn-colour-muted);}
+.crop-included-region{background:var(--bn-colour-editing-bg);border-radius:2px;padding:1px 0;}
+
+/* --- molecules/tag-input.css --- */
+.tag-suggest{background:var(--bn-colour-bg);border:1px solid var(--bn-colour-border);border-radius:var(--bn-radius-sm);
+  box-shadow:0 2px 8px var(--bn-colour-shadow);min-width:8rem;width:max-content;}
+.tag-suggest-header{padding:0.3rem 0.5rem 0.15rem;font-size:var(--bn-text-label);font-weight:var(--bn-weight-emphasis);
+  color:var(--bn-colour-muted);white-space:nowrap;user-select:none;border-radius:var(--bn-radius-sm);margin:0.15rem 0.2rem 0;}
+.tag-suggest-item{display:flex;align-items:center;gap:0.35rem;padding:0.2rem 0.5rem 0.2rem 0.65rem;cursor:pointer;color:var(--bn-colour-text);white-space:nowrap;}
+.tag-suggest-item:hover,.tag-suggest-item.active{background:var(--bn-colour-quote-bg);}
+.tag-suggest-pill{display:inline-block;font-family:var(--bn-font-mono);font-size:var(--bn-text-badge);
+  padding:var(--bn-space-xs) 0.45rem;border-radius:var(--bn-radius-sm);background:var(--bn-colour-badge-bg);
+  color:var(--bn-colour-badge-text);white-space:nowrap;line-height:1.3;}
+.tag-suggest-item.active .tag-suggest-pill{outline:2px solid var(--bn-colour-accent);outline-offset:1px;}
+</style>
+
+<div class="cx-bar">
+  <div class="cx-bar-in">
+    <div class="cx-brand"><b>Compliance X-ray</b><span class="cx-eyebrow">Bristlenose design system</span></div>
+    <span class="cx-lens-tab">Lens 1 · Quotes</span>
+    <div class="cx-filters" id="filters" role="group" aria-label="Filter by defect category">
+      <button class="cx-chip" data-cat="all" aria-pressed="true">all</button>
+      <button class="cx-chip" data-cat="missing-token" aria-pressed="false">missing-token</button>
+      <button class="cx-chip" data-cat="hardcoded-colour" aria-pressed="false">hardcoded-colour</button>
+      <button class="cx-chip" data-cat="shadow" aria-pressed="false">shadow</button>
+      <button class="cx-chip" data-cat="z-index" aria-pressed="false">z-index</button>
+      <button class="cx-chip" data-cat="scale-gap" aria-pressed="false">scale-gap</button>
+    </div>
+    <button class="cx-xray-toggle" id="xrayBtn" aria-pressed="false" title="Highlight everything outside the token system">
+      <span class="dot"></span> X-ray <kbd>X</kbd>
+    </button>
+  </div>
+</div>
+
+<div class="cx-wrap">
+  <div class="cx-hero">
+    <span class="cx-eyebrow">Where each element sits — inside vs outside the token system</span>
+    <h1>The Quotes lens, x-rayed.</h1>
+    <p class="lede">Every component that builds a quote card, rendered live in all four theme combinations,
+      ranked by how much of its styling flows through <code style="font-family:var(--cx-mono);font-size:.9em">--bn-*</code> tokens.
+      Flip <b>X-ray</b> to light up everything that hardcodes a value the system should own —
+      <span class="thin">the exact line, the defect, and the fix are one expand away.</span></p>
+
+    <div class="cx-scorecard">
+      <div class="cx-card cx-sc-main">
+        <span class="cx-eyebrow">Lens compliance — themeable declarations</span>
+        <div class="cx-headline">
+          <div class="cx-big"><span class="n" id="stCover">—</span><span class="l">Coverage<em>how much flows through tokens</em></span></div>
+          <div class="cx-big"><span class="n alt" id="stHealth">—</span><span class="l">Health<em>severity-weighted — how bad the gaps are</em></span></div>
+        </div>
+        <div class="cx-meter" id="lensMeter" aria-label="Declaration distribution"></div>
+        <div class="cx-legend">
+          <div><span class="sw good"></span><div><b>Inside the system</b><span>Value comes from a <code style="font-family:var(--cx-mono)">--bn-*</code> token. Re-themes for free.</span></div></div>
+          <div><span class="sw warn"></span><div><b>Fixable drift</b><span>A literal that already has a matching token. A one-line fix, no decision needed.</span></div></div>
+          <div><span class="sw bad"></span><div><b>Outside the system</b><span>No token exists yet — blocked on a token/scale decision. This is where magenta points.</span></div></div>
+        </div>
+      </div>
+      <div class="cx-card cx-sc-side">
+        <div class="cx-stat-row"><span class="k">Components in lens</span><span class="v" id="stComp">8</span></div>
+        <div class="cx-stat-row"><span class="k">≥ 80% coverage</span><span class="v"><span id="stGood">—</span><small>/8</small></span></div>
+        <div class="cx-stat-row"><span class="k">Decls · in / fix / out</span><span class="v" id="stCompDecl" style="font-size:14px">—</span></div>
+        <div class="cx-stat-row"><span class="k">Cleanest → weakest</span><span class="v" style="font-size:14px">span-bar → badge</span></div>
+      </div>
+    </div>
+
+    <div class="cx-note">
+      <b>Three systemic gaps drive most of the magenta</b>, not per-component sloppiness:
+      <code>--bn-colour-danger/-success</code> aren't defined (so badges hardcode <code>#dc2626</code>/<code>#16a34a</code> and don't dark-adapt);
+      there's no z-index scale; and no shadow-geometry token. Fix those three and the lens jumps a grade wholesale.
+      Platform note: none of the Quotes-lens files fork on <code>[data-embedded]</code>/<code>[data-platform=desktop]</code> —
+      embedded differences here are chrome-only (inspector, baselines), out of this lens.
+    </div>
+
+    <details class="cx-method">
+      <summary><span class="chev">›</span> How the score works — and the prior art it borrows from</summary>
+      <div class="cx-method-body">
+        <p>Two numbers, side by side rather than blended — because a single figure hides the failure mode the
+          field warns about: a component can be <em>high-coverage but risky</em>, or <em>low-coverage but harmless</em>.</p>
+
+        <h4>The unit — a “themeable declaration”</h4>
+        <p>Only declarations whose property <b>should</b> answer to the design system count toward the denominator:
+          <b>colour / background / border-colour, font family·size·weight·line-height, spacing (margin·padding·gap),
+          radius, box-shadow, z-index, transition/duration.</b> Structural geometry (display, position, flex, grid,
+          layout width/height) is excluded. A small ignore-set is never a violation: <code>0</code>,
+          <code>transparent</code>, <code>currentColor</code>, <code>inherit</code>, 1px hairlines. Each themeable
+          declaration is one of <b class="good-t">inside</b> (a <code>--bn-*</code> token) ·
+          <b class="warn-t">fixable</b> (a literal that already equals an existing token) ·
+          <b class="bad-t">outside</b> (a literal with no token — missing family, off-scale, magic z-index, dangling ref).</p>
+
+        <h4>Coverage — the metric you asked for</h4>
+        <div class="cx-formula">Coverage = (inside + 0.5 × fixable) ÷ themeable declarations × 100
+100% = every themeable value is a token    ·    0% = every value is a raw literal</div>
+        <p>The industry’s de-facto signal: <code>stylelint-declaration-strict-value</code> flags each declaration
+          where a token-worthy property carries a raw literal, so Coverage is just
+          <b>1 − (violations ÷ targeted declarations)</b>, with half-credit for fixable drift — non-compliant today,
+          but a one-line change with no decision to make.</p>
+
+        <h4>Health — the borrowed refinement</h4>
+        <p>Coverage treats a hardcoded brand colour that breaks dark mode the same as an off-scale margin. Health
+          doesn’t. Following SonarQube’s <b>per-rule-weight → normalise → band</b> model, each violation carries a severity:</p>
+        <table class="cx-wtable">
+          <tr><th>weight</th><th>what</th><th>why it hurts</th></tr>
+          <tr><td class="w">3</td><td>missing-token / hardcoded colour, dangling ref</td><td>breaks theming <em>and</em> dark mode</td></tr>
+          <tr><td class="w">1</td><td>off-scale spacing·radius·duration, magic z-index, shadow geometry</td><td>cosmetic drift, no theming risk</td></tr>
+          <tr><td class="w">1</td><td>fixable drift</td><td>trivial, but still off-system</td></tr>
+        </table>
+        <div class="cx-formula">Health = (1 − Σ(weight × violations) ÷ (3 × themeable declarations)) × 100</div>
+        <p>So <b>blockquote</b> and <b>timecode</b> — clean except for off-scale spacing — score moderate Coverage but
+          high Health, while <b>badge</b> (missing danger/success tokens, hardcoded tints) sinks on both. That gap is
+          the whole point: it tells you <em>where</em> the effort should go.</p>
+
+        <h4>Roll-up &amp; honest limits</h4>
+        <p>Per-declaration → per-component → per-lens, weighted equally. Two rough edges, stated plainly:
+          (1) the declaration tallies in this snapshot are a <b>hand audit</b>, not a machine count — a
+          <code>scripts/audit-css.py</code> lint pass would make them exact and reproducible; (2) components are
+          weighted equally, whereas the adoption literature weights by <b>render frequency</b> so a workhorse counts
+          more than a one-off. Both are the obvious next iteration.</p>
+
+        <p class="cx-src"><b style="color:var(--cx-ink)">Prior art borrowed —</b>
+          <a href="https://github.com/AndyOGo/stylelint-declaration-strict-value">stylelint-declaration-strict-value</a> (the raw coverage signal) ·
+          <a href="https://docs.sonarsource.com/sonarqube-server/latest/user-guide/code-metrics/metrics-definition/">SonarQube</a> (severity-weight → letter band) ·
+          <a href="https://eightshapes.com/articles/measuring-design-system-success/">Nathan Curtis / EightShapes</a>,
+          <a href="https://omlet.dev/blog/how-leaders-measure-design-system-adoption/">Omlet</a> and
+          <a href="https://developers.mews.com/design-system-adoption-metric-building/">Mews</a> (coverage ratio + the two-axis, don’t-blend rule) ·
+          <a href="https://developer.salesforce.com/docs/platform/slds-linter/guide/reference-rules.html">Salesforce SLDS Linter</a> (hardcoded-value rule shape).</p>
+      </div>
+    </details>
+  </div>
+
+  <div id="tiers"></div>
+
+  <footer class="cx-foot">
+    <span>Snapshot of <code>bristlenose/theme/</code> — 12 Jul 2026 · Lens 1 of 5 (Quotes). Sessions · Themes · Analysis · Codebook to follow.</span>
+    <span>Specimens are live; compliance data is static (keyed to file:line). Re-snapshot after CSS edits.</span>
+  </footer>
+</div>
+
+<script>
+/* ============================ compliance dataset ============================
+   grade sorts components within a tier. counts = {good, warn, bad} declaration
+   tallies feeding the meters. specimen = real markup rendered in each quadrant.
+   xr = elements to outline under X-ray (data-xr = count shown). findings =
+   curated non-compliant lines (colour/token/shadow/z-index/radius/rep. spacing).
+   ========================================================================== */
+const T=(s)=>s; // identity, keeps template literals tidy
+const COMPONENTS=[
+/* ---------------- ATOMS ---------------- */
+{
+  id:"span-bar", name:"span-bar", tier:"atom", file:"atoms/span-bar.css",
+  counts:{good:5,warn:0,bad:0}, sev:{high:0,low:0},
+  does:"Textbook atom. Every one of its five visual declarations — colour, radius, opacity, width — reads from a <code>--bn-span-bar-*</code> token. Nothing to fix.",
+  specimen:`<div style="display:flex;gap:12px;align-items:stretch">
+      <div style="position:relative;width:8px"><span class="span-bar" style="position:absolute;top:4px;height:64px"></span></div>
+      <div style="font-size:var(--bn-text-label);color:var(--bn-colour-muted);line-height:1.9">
+        <div>“…the checkout kept resetting…”</div><div>“…I lost the whole basket…”</div><div>“…had to start again…”</div></div>
+    </div>`,
+  xr:[], findings:[]
+},
+{
+  id:"timecode", name:"timecode", tier:"atom", file:"atoms/timecode.css",
+  counts:{good:9,warn:0,bad:4}, sev:{high:0,low:4},
+  does:"Colour and type are fully tokenised, and — rare in this codebase — every animation is wrapped in a <code>@media (prefers-reduced-motion: reduce)</code> guard. A model for motion accessibility.",
+  specimen:`<div style="display:flex;flex-direction:column;gap:9px;font-size:var(--bn-text-body);color:var(--bn-colour-text)">
+      <div><a class="timecode cx-xr" data-xr="3" href="#"><span class="timecode-bracket">[</span>02:14<span class="timecode-bracket">]</span></a>
+        &nbsp;a plain clickable timecode</div>
+      <div class="bn-timecode-glow" style="display:inline-block;padding:4px 8px;width:max-content">
+        <span class="timecode"><span class="timecode-bracket">[</span>05:40<span class="timecode-bracket">]</span></span> synced-playback glow</div>
+    </div>`,
+  xr:[{sel:".timecode",n:3}],
+  findings:[
+    {sev:"bad",cat:"scale-gap",loc:":69",code:[["prop","transition"],[":"," "],["bad","height 0.25s linear"]],
+      defect:"0.25s isn't in the transition scale (fast .15 / normal .2 / slow .3) — it's an untokenised in-between value.",
+      fix:"Add a <code>--bn-transition-quick: 0.25s ease</code> stop, or round to <code>--bn-transition-normal</code>."},
+    {sev:"bad",cat:"scale-gap",loc:":86",code:[["prop","border-radius"],[":"," "],["bad","2px"]],
+      defect:"The word-highlight uses 2px; the radius scale starts at sm=3px, so there's no token for it.",
+      fix:"Add <code>--bn-radius-xs: 2px</code> (recurs 7+ times across the theme)."},
+    {sev:"bad",cat:"shadow",loc:":29",code:[["prop","box-shadow"],[":"," 0 0 8px 2px "],["tok","var(--bn-glow-colour)"]],
+      defect:"Shadow colour is a token, but the geometry (0 0 8px 2px) is a literal repeated for the glow states.",
+      fix:"Introduce a <code>--bn-glow-shadow</code> geometry token."}
+  ]
+},
+{
+  id:"badge", name:"badge", tier:"atom", file:"atoms/badge.css",
+  counts:{good:14,warn:1,bad:12}, sev:{high:9,low:3},
+  does:"The base badge and all seven sentiment variants are perfectly tokenised. The debt is concentrated in the interactive chrome: delete circles, the accept/deny pill, and dark-mode overrides.",
+  specimen:`<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+      <span class="badge badge-frustration">frustration</span>
+      <span class="badge badge-confidence">confidence</span>
+      <span class="badge badge-ai cx-xr" data-xr="2" style="background:var(--bn-colour-badge-bg);color:var(--bn-colour-badge-text)">ai&nbsp;tag</span>
+      <span class="badge badge-user cx-xr" data-xr="1">user tag</span>
+      <span class="badge badge-add">+ add</span>
+      <span class="badge badge-proposed cx-xr" data-xr="1" style="background:var(--bn-colour-badge-bg);color:var(--bn-colour-badge-text)">proposed
+        <span class="badge-action-pill" style="opacity:1;pointer-events:auto"><span class="badge-action-deny">✗</span><span class="badge-action-accept">✓</span></span></span>
+    </div>`,
+  xr:[{sel:".badge-ai",n:2},{sel:".badge-user",n:1},{sel:".badge-proposed",n:1}],
+  findings:[
+    {sev:"bad",cat:"missing-token",loc:":60, :114, :211",code:[["prop","color"],[":"," "],["bad","var(--bn-colour-danger, #dc2626)"]],
+      defect:"<code>--bn-colour-danger</code> is never defined, so all delete/deny glyphs fall back to a hardcoded #dc2626 that stays the same red on dark backgrounds — no dark adaptation.",
+      fix:"Define <code>--bn-colour-danger: light-dark(#dc2626,#ef4444)</code> in tokens.css (already flagged “Future” in theme/CLAUDE.md), then drop the fallbacks."},
+    {sev:"bad",cat:"missing-token",loc:":215",code:[["prop","color"],[":"," "],["bad","var(--bn-colour-success, #16a34a)"]],
+      defect:"Same pattern — the accept ✓ resolves to a hardcoded green. Elsewhere the same token carries a different fallback (#22c55e): drift the token would eliminate.",
+      fix:"Define <code>--bn-colour-success: light-dark(#16a34a,#4ade80)</code> and remove all fallbacks."},
+    {sev:"bad",cat:"hardcoded-colour",loc:":219, :220",code:[["sel",".badge-action-deny:hover"],[" { background: "],["bad","#fef2f2"],[" }  "],["cmt","/* + #dcfce7 accept */"]],
+      defect:"Hover tints are raw hex with no dark-mode variant, so they wash out on dark grounds.",
+      fix:"Derive from the semantic token: <code>background: color-mix(in srgb, var(--bn-colour-danger) 10%, transparent)</code>."},
+    {sev:"bad",cat:"hardcoded-colour",loc:":236–:252",code:[["cmt","/* dark-mode pill (4 rules) */ "],["bad","rgba(220,38,38,.25)"],["cmt"," … "],["bad","#f87171"]],
+      defect:"The entire dark-mode pill block is hand-written rgba/hex — the reason these can't just use light-dark() tokens is that the danger/success tokens don't exist.",
+      fix:"Falls out automatically once danger/success are real light-dark() tokens."},
+    {sev:"bad",cat:"shadow",loc:":68, :126, :180",code:[["prop","box-shadow"],[":"," "],["bad","0 1px 4px rgba(0,0,0,.16), 0 0 1px rgba(0,0,0,.06)"]],
+      defect:"The delete-circle shadow is copy-pasted verbatim three times here (five across the theme). No shadow-geometry token exists.",
+      fix:"Introduce <code>--bn-shadow-chip</code> and reference it."},
+    {sev:"warn",cat:"scale-gap",loc:":179",code:[["prop","border-radius"],[":"," "],["bad","8px"]],
+      defect:"A literal 8px where the exact token already exists — pure drift.",
+      fix:"<code>border-radius: var(--bn-radius-lg)</code>."},
+    {sev:"bad",cat:"z-index",loc:":185",code:[["prop","z-index"],[":"," "],["bad","1"]],
+      defect:"Magic z-index with no scale. This value ‘200’ collides across ~9 unrelated components lens-wide.",
+      fix:"Adopt a <code>--bn-z-*</code> ladder (base/dropdown/overlay/toast/modal)."}
+  ],
+  moreSpacing:"+ hardcoded #ffffff badge-user text in dark mode (:91,:96)"
+},
+/* ---------------- MOLECULES ---------------- */
+{
+  id:"quote-actions", name:"quote-actions", tier:"molecule", file:"molecules/quote-actions.css",
+  counts:{good:12,warn:0,bad:2}, sev:{high:0,low:2},
+  does:"Star, preview and bulk-hover states are entirely token-driven — colour, weight and transition all reference <code>--bn-*</code>. Only a bare z-index breaks the streak.",
+  specimen:`<blockquote class="quote-card starred" style="max-width:22rem">
+      <span class="context">Onboarding · starred</span>
+      <div class="quote-row"><span class="timecode">[03:12]</span>
+        <span class="quote-body">“Honestly this is the first tool that just got out of my way.”</span></div>
+      <span class="speaker">— P4, first session</span>
+    </blockquote>`,
+  xr:[{sel:".quote-card",n:1}],
+  findings:[
+    {sev:"bad",cat:"z-index",loc:":24",code:[["sel",".quote-card.star-animating"],[" { "],["prop","z-index"],[":"," "],["bad","1"],[" }"]],
+      defect:"Bare z-index during the star animation — same missing-scale story as everywhere else.",
+      fix:"Reference a <code>--bn-z-raised</code> stop once the ladder exists."}
+  ]
+},
+{
+  id:"editable-text", name:"editable-text", tier:"molecule", file:"molecules/editable-text.css",
+  counts:{good:16,warn:0,bad:3}, sev:{high:0,low:3},
+  does:"Editing/committed states, crop handles and the undo button all pull colour, background and transition from tokens (including the dedicated <code>--bn-colour-editing-*</code> and <code>--bn-crop-handle-*</code> pairs). Drift is limited to a relative size and a sub-scale radius.",
+  specimen:`<div style="font-size:var(--bn-text-body);color:var(--bn-colour-text);display:flex;flex-direction:column;gap:10px">
+      <span class="editable-text editing cx-xr" data-xr="1" style="display:inline-block;width:max-content">editing this heading</span>
+      <span>the price <span class="crop-included-region cx-xr" data-xr="1">was really steep</span> for what you get</span>
+      <span class="editable-text edited" style="display:inline-block;width:max-content">committed edit</span>
+    </div>`,
+  xr:[{sel:".editable-text.editing",n:1},{sel:".crop-included-region",n:1}],
+  findings:[
+    {sev:"bad",cat:"scale-gap",loc:":106",code:[["sel",".crop-included-region"],[" { "],["prop","border-radius"],[":"," "],["bad","2px"],[" }"]],
+      defect:"Sub-scale radius (2px) — no token exists below sm=3px.",
+      fix:"Add <code>--bn-radius-xs: 2px</code>."},
+    {sev:"warn",cat:"scale-gap",loc:":46",code:[["sel",".crop-handle"],[" { "],["prop","font-size"],[":"," "],["bad","1.15em"],[" }"]],
+      defect:"Relative em multiplier bypasses the 8-stop type scale; the bracket size is untracked.",
+      fix:"Anchor to a scale stop or add a bracket size token."}
+  ],
+  moreSpacing:"+ several literal paddings (0.1rem 0.3rem, 1px 0) — scale can't express them"
+},
+{
+  id:"person-badge", name:"person-badge", tier:"molecule", file:"molecules/person-badge.css",
+  counts:{good:14,warn:1,bad:4}, sev:{high:1,low:3},
+  does:"The two-tone split speaker badge is almost entirely tokenised — mono font, badge surfaces, borders, radii and transitions all reference tokens. One genuinely broken reference and an !important let it down.",
+  specimen:`<div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+      <span class="bn-person-badge"><span class="bn-speaker-badge--split">
+        <span class="bn-speaker-badge-code">P3</span><span class="bn-speaker-badge-name">Amara O.</span></span></span>
+      <span class="bn-session-speaker-entry"><span class="bn-speaker-editable-name cx-xr" data-xr="1">editable name</span></span>
+    </div>`,
+  xr:[{sel:".bn-speaker-editable-name",n:1}],
+  findings:[
+    {sev:"bad",cat:"missing-token",loc:":131",code:[["sel",".bn-name-pencil"],[" { "],["prop","color"],[":"," "],["bad","var(--bn-colour-text-muted)"]],
+      defect:"Dangling reference — <code>--bn-colour-text-muted</code> is defined nowhere and has NO fallback, so the declaration is invalid and the pencil inherits its parent colour. A latent bug, not just untidiness. (The real token is <code>--bn-colour-muted</code>.)",
+      fix:"<code>color: var(--bn-colour-muted)</code>."},
+    {sev:"warn",cat:"shadow",loc:":88",code:[["sel",".bn-person-badge-highlighted …"],[" { "],["prop","box-shadow"],[":"," 0 0 0 2px "],["tok","var(--bn-colour-accent)"],[" }"]],
+      defect:"Token colour, literal 0 0 0 2px ring geometry — fine, but the ring geometry recurs uncaptured.",
+      fix:"Optional: a <code>--bn-ring</code> geometry token if focus rings get unified."}
+  ],
+  moreSpacing:"+ opacity:0.8 !important (:141); literal paddings (0.4/0.45/0.35rem)"
+},
+{
+  id:"tag-input", name:"tag-input", tier:"molecule", file:"molecules/tag-input.css",
+  counts:{good:12,warn:0,bad:5}, sev:{high:2,low:3},
+  does:"The suggest dropdown, headers and pills draw surfaces, borders and type from tokens, and the shadow colour is tokenised. The gaps are two hardcoded whites in dark mode and two magic z-indexes.",
+  specimen:`<div style="font-size:var(--bn-text-body)">
+      <div class="tag-suggest cx-xr" data-xr="2" style="position:static;box-shadow:0 2px 8px var(--bn-colour-shadow);width:max-content">
+        <div class="tag-suggest-header">UX friction</div>
+        <div class="tag-suggest-item active"><span class="tag-suggest-pill">checkout</span></div>
+        <div class="tag-suggest-item"><span class="tag-suggest-pill">navigation</span></div>
+      </div>
+    </div>`,
+  xr:[{sel:".tag-suggest",n:2}],
+  findings:[
+    {sev:"bad",cat:"hardcoded-colour",loc:":89, :94",code:[["sel","[data-theme=dark] …active .tag-suggest-pill"],[" { "],["prop","color"],[":"," "],["bad","#ffffff"],[" }"]],
+      defect:"Dark-mode active pill text is a raw white, duplicated for the two dark selectors — the same #ffffff appears in badge.css too.",
+      fix:"Add a <code>--bn-colour-on-accent</code> (or on-emphasis) token and reference it."},
+    {sev:"bad",cat:"z-index",loc:":18, :104",code:[["prop","z-index"],[":"," "],["bad","50"],[" … "],["bad","10"]],
+      defect:"Two magic z-indexes (dropdown 50, card-raise 10) with no scale to relate them.",
+      fix:"Map both onto a <code>--bn-z-*</code> ladder so the dropdown reliably sits above sibling cards."}
+  ],
+  moreSpacing:"+ 12px icon size (:127); literal item paddings"
+},
+/* ---------------- ORGANISMS ---------------- */
+{
+  id:"blockquote", name:"blockquote / quote-card", tier:"organism", file:"organisms/blockquote.css",
+  counts:{good:16,warn:0,bad:8}, sev:{high:0,low:8},
+  does:"The lens's hero organism, and remarkably clean: zero hardcoded colours, weights or transitions — every one references a token. All of its debt is a single category: spacing literals the 5-stop scale can't express.",
+  specimen:`<blockquote class="quote-card cx-xr" data-xr="8" style="max-width:23rem">
+      <span class="context">Checkout · friction point</span>
+      <div class="quote-row"><span class="timecode">[08:03]</span>
+        <span class="quote-body">“It said my card was declined but then charged me twice — I had no idea which one was real.”</span></div>
+      <span class="speaker">— P7, mobile</span>
+      <div class="badges" style="margin-top:.5rem"><span class="badge badge-frustration">frustration</span>
+        <span class="badge badge-confusion">confusion</span></div>
+    </blockquote>`,
+  xr:[{sel:".quote-card",n:8}],
+  findings:[
+    {sev:"bad",cat:"scale-gap",loc:":12",code:[["sel","blockquote.quote-card"],[" { "],["prop","margin"],[":"," "],["bad","0.8rem 0"],[" }"]],
+      defect:"0.8rem isn't a spacing stop. The scale (xs .15 / sm .35 / md .75 / lg 1.5 / xl 2rem) has a wide gap between md and lg, so real layout values keep landing off-grid.",
+      fix:"Widen the spacing scale (e.g. add 0.5 / 1rem stops), then map these on."},
+    {sev:"bad",cat:"scale-gap",loc:":5, :13",code:[["prop","padding"],[":"," "],["tok","var(--bn-space-sm)"],[" "],["bad","1rem"]],
+      defect:"Mixed: vertical padding is tokenised, horizontal is a literal 1rem — the tell that the scale lacks a 1rem stop.",
+      fix:"Add a 1rem stop (or reuse md at 0.75) so both axes tokenise."},
+    {sev:"bad",cat:"scale-gap",loc:":85",code:[["sel",".quote-group .quote-card"],[" { "],["prop","padding-right"],[":"," "],["bad","4.5rem"],[" }"]],
+      defect:"Reserves room for the action buttons — a real magic number tied to button geometry, not a spacing stop.",
+      fix:"Derive from an action-column width token rather than a literal."}
+  ],
+  moreSpacing:"+ margin-bottom .3rem, gap .5rem, width 6.8rem, rewatch margins — all spacing-scale gaps, no colour/type debt"
+}
+];
+
+/* ------------------------------- render ------------------------------- */
+const THEMES=[
+  {palette:"default",scheme:"light",label:"Default · Light"},
+  {palette:"default",scheme:"dark", label:"Default · Dark"},
+  {palette:"edo",    scheme:"light",label:"Edo · Light"},
+  {palette:"edo",    scheme:"dark", label:"Edo · Dark"}
+];
+const TIER_ORDER=["atom","molecule","organism"];
+const TIER_META={
+  atom:{name:"Atoms",sub:"Single-purpose primitives — the smallest themeable units."},
+  molecule:{name:"Molecules",sub:"Small compositions of atoms — inputs, editable fields, split badges."},
+  organism:{name:"Organisms",sub:"Self-contained sections — the quote card itself."}
+};
+
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+const CODE_CLASSES={prop:1,tok:1,bad:1,sel:1,cmt:1};
+function codeHTML(parts){ // item: "plain" | ["class","text"] (class in prop|tok|bad|sel|cmt)
+  return parts.map(p=>{
+    if(typeof p==="string") return esc(p);
+    if(p.length===1) return esc(p[0]);
+    if(CODE_CLASSES[p[0]]) return `<span class="${p[0]}">${esc(p[1])}</span>`;
+    return esc(p.join(""));           // tolerant: renders separators like [":"," "] as plain
+  }).join("");
+}
+
+/* ---- the metric (see “How the score works”) ----
+   Coverage = (compliant + 0.5·fixable) / themeable declarations   — stylelint-strict-value ratio
+   Health   = 1 − Σ(severity·violations) / (3·N)                   — SonarQube-style weighting
+   Reported as two axes, not blended (Curtis; usage-vs-coverage literature). */
+const FIX_CREDIT=0.5, S_HIGH=3, S_LOW=1, S_FIX=1, S_MAX=3;
+function metric(c){
+  const N=c.counts.good+c.counts.warn+c.counts.bad;
+  const coverage = N? 100*(c.counts.good+FIX_CREDIT*c.counts.warn)/N : 100;
+  const pen = S_HIGH*c.sev.high + S_LOW*c.sev.low + S_FIX*c.counts.warn;
+  const health = N? 100*(1 - pen/(S_MAX*N)) : 100;
+  return {N,coverage,health};
+}
+function gradeOf(cov){return cov>=90?"A":cov>=85?"A−":cov>=80?"B+":cov>=70?"B":cov>=60?"C+":cov>=50?"C":cov>=40?"D+":"D";}
+function setTxt(id,v){const el=document.getElementById(id); if(el) el.innerHTML=v;}
+
+let g=0,w=0,b=0,H=0,L=0;
+COMPONENTS.forEach(c=>{g+=c.counts.good;w+=c.counts.warn;b+=c.counts.bad;H+=c.sev.high;L+=c.sev.low;});
+const tot=g+w+b;
+const lensCov=100*(g+FIX_CREDIT*w)/tot;
+const lensHealth=100*(1-(S_HIGH*H+S_LOW*L+S_FIX*w)/(S_MAX*tot));
+const nGood=COMPONENTS.filter(c=>metric(c).coverage>=80).length;
+
+const lm=document.getElementById("lensMeter");
+lm.innerHTML=`<i class="good" style="width:${g/tot*100}%"></i><i class="warn" style="width:${w/tot*100}%"></i><i class="bad" style="width:${b/tot*100}%"></i>`;
+setTxt("stCover",lensCov.toFixed(0)+"<em>%</em>");
+setTxt("stHealth",lensHealth.toFixed(0)+"<em>%</em>");
+setTxt("stGood",String(nGood));
+setTxt("stCompDecl",`${g} <span style="color:var(--cx-good)">in</span> · ${w} <span style="color:var(--cx-warn)">fix</span> · ${b} <span style="color:var(--cx-bad)">out</span>`);
+
+const tiersEl=document.getElementById("tiers");
+TIER_ORDER.forEach(tier=>{
+  const comps=COMPONENTS.filter(c=>c.tier===tier).sort((a,b)=>metric(b).coverage-metric(a).coverage);
+  if(!comps.length) return;
+  const sec=document.createElement("section");
+  sec.className="cx-tier";
+  sec.innerHTML=`<div class="cx-tier-head"><h2>${TIER_META[tier].name}</h2>
+    <span class="cx-eyebrow">${comps.length} · ranked cleanest → weakest</span></div>
+    <p class="cx-tier-sub">${TIER_META[tier].sub}</p>`;
+  comps.forEach((c,i)=>sec.appendChild(compCard(c,i+1)));
+  tiersEl.appendChild(sec);
+});
+
+function compCard(c,rank){
+  const el=document.createElement("article");
+  el.className="cx-comp"; el.id="c-"+c.id;
+  el.dataset.cats=(c.findings||[]).map(f=>f.cat).join(" ");
+
+  const m=metric(c), grade=gradeOf(m.coverage);
+  const scores=`<span class="cx-scores" title="Coverage ${m.coverage.toFixed(0)}% · Health ${m.health.toFixed(0)}% · ${m.N} themeable declarations">
+    <span class="cx-sc"><span class="lbl">cover</span><span class="bar"><i style="width:${m.coverage}%"></i></span><b>${m.coverage.toFixed(0)}</b></span>
+    <span class="cx-sc"><span class="lbl">health</span><span class="bar"><i class="h" style="width:${m.health}%"></i></span><b>${m.health.toFixed(0)}</b></span>
+  </span>`;
+  const pills=`<span class="cx-counts">
+    ${c.counts.good?`<span class="cx-pill good"><span class="d"></span>${c.counts.good}</span>`:""}
+    ${c.counts.warn?`<span class="cx-pill warn"><span class="d"></span>${c.counts.warn}</span>`:""}
+    ${c.counts.bad?`<span class="cx-pill bad"><span class="d"></span>${c.counts.bad}</span>`:""}
+  </span>`;
+
+  const quads=THEMES.map(t=>`<div class="cx-quad" data-color-theme="${t.palette}" style="color-scheme:${t.scheme}">
+      <span class="cx-quad-label">${t.label}</span><div class="render">${c.specimen}</div></div>`).join("");
+
+  const findingsHTML=(c.findings||[]).map(f=>`
+    <div class="cx-finding" data-cat="${f.cat}">
+      <div class="cx-finding-top">
+        <span class="cx-sev ${f.sev}">${f.sev==="bad"?"outside":"fixable"}</span>
+        <span class="cx-cat">${f.cat}</span>
+        <span class="cx-loc">${c.file}${f.loc}</span>
+      </div>
+      <div class="cx-code">${codeHTML(f.code)}</div>
+      <dl class="cx-fix">
+        <dt>defect</dt><dd>${f.defect}</dd>
+        <dt>fix</dt><dd class="fix">${f.fix}</dd>
+      </dl>
+    </div>`).join("");
+
+  const does=c.does?`<div class="cx-does"><b>What it gets right — </b>${c.does}</div>`:"";
+  const more=c.moreSpacing?`<div class="cx-morespacing">${esc(c.moreSpacing)}</div>`:"";
+  const summaryRight = c.counts.bad? `${c.counts.bad} outside-system · ${c.findings.length} shown`
+                                   : `<span class="goodnote">✓ fully inside the system</span>`;
+
+  el.innerHTML=`
+    <div class="cx-comp-head">
+      <span class="cx-rank">#${rank}</span>
+      <span class="cx-grade" data-g="${grade}">${grade}</span>
+      <span class="cx-comp-id"><span class="nm">${esc(c.name)}</span> <span class="fl">${esc(c.file)}</span></span>
+      <span class="cx-tierchip">${c.tier}</span>
+      ${scores}${pills}
+    </div>
+    <div class="cx-specimens">${quads}</div>
+    <details class="cx-details" ${c.counts.bad?"":"open"}>
+      <summary><span class="chev">›</span> Source &amp; fixes <span style="margin-left:2px">${c.counts.bad?`(${c.findings.length})`:""}</span>
+        <span class="goodnote">${c.counts.bad?"":"✓ fully inside the system"}</span></summary>
+      <div class="cx-body">${does}${findingsHTML}${more}</div>
+    </details>`;
+  return el;
+}
+
+/* ---- X-ray toggle ---- */
+const xrayBtn=document.getElementById("xrayBtn");
+function toggleXray(force){
+  const on = force!==undefined? force : !document.body.classList.contains("cx-xray-on");
+  document.body.classList.toggle("cx-xray-on",on);
+  xrayBtn.setAttribute("aria-pressed",on?"true":"false");
+}
+xrayBtn.addEventListener("click",()=>toggleXray());
+document.addEventListener("keydown",e=>{
+  if((e.key==="x"||e.key==="X") && !/input|textarea/i.test(e.target.tagName)) toggleXray();
+});
+
+/* ---- category filter ---- */
+const filters=document.getElementById("filters");
+filters.addEventListener("click",e=>{
+  const btn=e.target.closest(".cx-chip"); if(!btn) return;
+  const cat=btn.dataset.cat;
+  filters.querySelectorAll(".cx-chip").forEach(c=>c.setAttribute("aria-pressed",c===btn?"true":"false"));
+  document.querySelectorAll(".cx-comp").forEach(card=>{
+    const show = cat==="all" || (card.dataset.cats||"").split(" ").includes(cat);
+    card.classList.toggle("dim",!show);
+    if(cat!=="all"){
+      card.querySelectorAll(".cx-finding").forEach(f=>{
+        f.style.display = f.dataset.cat===cat? "" : "none";});
+      const d=card.querySelector(".cx-details"); if(d) d.open=true;
+    } else {
+      card.querySelectorAll(".cx-finding").forEach(f=>f.style.display="");
+    }
+  });
+});
+</script>

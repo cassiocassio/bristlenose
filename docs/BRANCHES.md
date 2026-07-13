@@ -33,6 +33,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | Directory | Branch | Kind | Purpose |
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
+| `bristlenose_branch testflight-prep/` | `testflight-prep` | ci | Release sandbox+HR flip + build-gate for App Store upload; archive walk |
 | `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
@@ -118,6 +119,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | Branch | Local worktree | GitHub remote |
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
+| `testflight-prep` | `bristlenose_branch testflight-prep/` | local only (do NOT push — signals TF timing on public repo) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `spike` | `bristlenose_branch spike/` | local only |
 | `claude/debug-menu-instrumentation-4r9npy` _(merged)_ | _(worktree removed)_ | `origin/...` — merged to main 28 Jun 2026 (`252c1ce3`) |
@@ -150,6 +152,26 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `testflight-prep`
+
+**Kind:** ci — flip the Release build config to sandbox + Hardened Runtime for the App Store Connect upload, plus a build-gate assertion; held off public `main` so the commit doesn't signal TF timing.
+**Status:** Delta applied + committed (`c091478c`); env built; awaiting the Release-archive walk (Xcode + certs).
+**Started:** 13 Jul 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch testflight-prep/`
+**Remote:** local only — **must NOT be pushed** (public-repo TF-timing signal). Merges into the eventual TF build, not origin/main directly.
+
+**What it does:** Release config now mirrors Debug (`ENABLE_APP_SANDBOX=YES`, `ENABLE_HARDENED_RUNTIME=YES`, network + resource-access settings); `build-all.sh` asserts the host binary carries the runtime flag (`[d2]`); design-doc entitlement table trued (one HR exception → three). Companion plan seeded into the worktree as `HANDOFF.md`.
+
+**Files this branch will touch:**
+- `desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj`
+- `desktop/scripts/build-all.sh`
+- `docs/design-desktop-python-runtime.md`
+
+**Potential conflicts with other branches:**
+- Low — the pbxproj Release-config block is not touched by feature work; design-doc is append-mostly.
 
 ---
 

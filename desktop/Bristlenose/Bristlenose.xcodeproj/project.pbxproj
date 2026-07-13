@@ -215,7 +215,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "# Rebuild + sign the PyInstaller sidecar bundle when any of its inputs\n# (frontend, venv, Python) are stale, then deep-verify, so a plain Cmd+R\n# self-heals the bundle that Copy Sidecar Resources is about to embed.\n# alwaysOutOfDate=1 makes this fire every build; ensure-sidecar.sh's own\n# per-layer fingerprints make it ~instant (F/V/P all-skip) when fresh.\n# Set BRISTLENOSE_SKIP_SIDECAR_ENSURE=1 to opt out (fast schemes with a\n# known-fresh bundle); the loud check-sidecar-freshness.sh gate in Copy\n# Sidecar Resources stays as the independent backstop either way.\n\"${SRCROOT}/../scripts/ensure-sidecar.sh\"\n";
+			shellScript = "# Rebuild + sign the PyInstaller sidecar bundle when any of its inputs\n# (frontend, venv, Python) are stale, then deep-verify, so a plain Cmd+R\n# self-heals the bundle that Copy Sidecar Resources is about to embed.\n# alwaysOutOfDate=1 makes this fire every build; ensure-sidecar.sh's own\n# per-layer fingerprints make it ~instant (F/V/P all-skip) when fresh.\n# Set BRISTLENOSE_SKIP_SIDECAR_ENSURE=1 to opt out (fast schemes with a\n# known-fresh bundle); the loud check-sidecar-freshness.sh gate in Copy\n# Sidecar Resources stays as the independent backstop either way.\nif [ \"$CONFIGURATION\" = \"Release\" ]; then echo \"Ensure Sidecar Fresh: skipped for Release (build-all.sh builds + distribution-signs the sidecar before archiving; Copy Sidecar Resources freshness gate is the backstop)\"; exit 0; fi\n\"${SRCROOT}/../scripts/ensure-sidecar.sh\"\n";
 		};
 		DFB14F002F00BD1F00BD1F00 /* Generate Build Info */ = {
 			isa = PBXShellScriptBuildPhase;

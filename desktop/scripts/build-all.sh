@@ -464,6 +464,15 @@ if grep -A1 "get-task-allow" <<< "$OUTER_ENTS" | grep -q "<true/>"; then
     exit 1
 fi
 
+echo "    [d2] outer binary Hardened Runtime flag (App Store requires it)"
+CS_FLAGS=$(codesign -dvvv "$OUTER_BIN" 2>&1 || true)
+if ! grep -qE "flags=.*runtime" <<< "$CS_FLAGS"; then
+    echo "error: outer binary is NOT signed with Hardened Runtime (--options=runtime)" >&2
+    echo "       set ENABLE_HARDENED_RUNTIME = YES in the Release config" >&2
+    grep -E "^(Signature|CodeDirectory)" <<< "$CS_FLAGS" | sed 's/^/    /' >&2
+    exit 1
+fi
+
 echo "    [e] designated requirement (must include Team ID)"
 REQ=$(codesign -d --requirements - "$OUTER_BIN" 2>&1 || true)
 if ! grep -q "$TEAM_ID" <<< "$REQ"; then

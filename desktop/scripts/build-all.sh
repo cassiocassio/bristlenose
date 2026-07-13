@@ -208,6 +208,15 @@ EXPORT_LOG="$DESKTOP_DIR/build/xcodebuild-export.log"
 
 rm -rf "$ARCHIVE_PATH" "$EXPORT_DIR"
 
+# The sidecar was already built + signed with the real identity in step 2
+# (ensure-sidecar --force). Skip the redundant in-archive "Ensure Sidecar Fresh"
+# phase: xcodebuild inherits the exported real SIGN_IDENTITY but NOT the one-shot
+# _BRISTLENOSE_RELEASE=1, so the phase's ensure-sidecar.sh would hit its own guard
+# ("refusing to sign with a real identity outside build-all.sh") and the archive
+# fails. Copy Sidecar Resources' check-sidecar-freshness.sh gate remains the
+# independent backstop that the embedded bundle is current.
+export BRISTLENOSE_SKIP_SIDECAR_ENSURE=1
+
 echo
 echo "==> 5. xcodebuild archive..."
 if ! xcodebuild \

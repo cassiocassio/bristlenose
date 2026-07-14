@@ -441,6 +441,17 @@ else
 fi
 ```
 
+Then **pre-generate `GeneratedBuildInfo.swift`** so it exists *before* the worktree's Xcode project is ever opened. This is gitignored (regenerated every build by a Run Script phase), so a fresh worktree lacks it — and the project uses **Xcode 26 synchronized folder groups** (`PBXFileSystemSynchronizedRootGroup`), which decide target membership by *what's on disk when Xcode scans the folder (at project open)*. If the file is absent then, the first build fails with **`Cannot find 'GeneratedBuildInfo' in scope`** for every consumer (`BuildInfo.swift`, `DebugMenuActions.swift`, …), and a plain rebuild does NOT fix it — Xcode needs a folder re-scan (close+reopen the project). Generating it here means the first ⌘R just works. (Learned 13 Jul 2026 during the testflight-prep archive walk.)
+
+```bash
+WORKTREE="/Users/cassio/Code/bristlenose_branch $0"
+if [ -x "$WORKTREE/desktop/scripts/generate-build-info.sh" ]; then
+  ( cd "$WORKTREE" && bash desktop/scripts/generate-build-info.sh ) \
+    && echo "✓ pre-generated GeneratedBuildInfo.swift (before first Xcode open)" \
+    || echo "✗ generate-build-info.sh failed — first Xcode build may hit 'Cannot find GeneratedBuildInfo in scope' (fix: rerun it, then close+reopen the Xcode project)"
+fi
+```
+
 Then probe the resolution path the app actually uses, so a broken symlink or wrong layout is caught now rather than at Cmd+R time:
 
 ```bash

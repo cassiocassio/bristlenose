@@ -15,6 +15,8 @@ import Testing
         let templates: [String: String] = [
             "desktop.chrome.pipeline.stage.transcribe": "Transcribing",
             "desktop.chrome.pipeline.stage.topics": "Finding topics",
+            "desktop.chrome.pipeline.stage.cluster": "Grouping themes",
+            "desktop.chrome.pipeline.stage.render": "Building report",
             "desktop.chrome.pipeline.sessionsCount": "{{complete}} of {{total}}",
             "desktop.chrome.pipeline.etaMinutes": "~{{count}} min left",
             "desktop.chrome.pipeline.etaUnderMinute": "<1 min left",
@@ -94,6 +96,37 @@ import Testing
         // A spawned (non-attached) run is unchanged by the new parameter.
         #expect(compose(resuming: false) == "Analysing…")
         #expect(compose(eta: 45, resuming: false) == "Analysing · <1 min left")
+    }
+
+    // MARK: - Non-session stages (stale "N of M" suppression)
+
+    @Test func clusterSuppressesStaleSessionCount() {
+        // s10/s11 grouping is one cross-session call — it never emits a fresh
+        // count, so the pair carried forward from transcribe is stale. The verb
+        // (and ETA) compose, but "N of M" is dropped: "Grouping themes · ~1 min
+        // left", NOT "Grouping themes · 4 of 5" (which reads as 4/5 done).
+        #expect(compose(stage: "cluster", complete: 4, total: 5, eta: 62)
+            == "Grouping themes · ~1 min left")
+        #expect(compose(stage: "cluster", complete: 4, total: 5) == "Grouping themes")
+    }
+
+    @Test func renderSuppressesStaleSessionCount() {
+        // s12 render is likewise a single call — same stale-carry-over suppression.
+        #expect(compose(stage: "render", complete: 5, total: 5, eta: 30)
+            == "Building report · <1 min left")
+        #expect(compose(stage: "render", complete: 5, total: 5) == "Building report")
+    }
+
+    @Test func perSessionStagesKeepTheirCount() {
+        // The genuine per-session stages are untouched — the fraction is live there.
+        #expect(compose(stage: "transcribe", complete: 7, total: 8) == "Transcribing · 7 of 8")
+        #expect(compose(stage: "topics", complete: 3, total: 8) == "Finding topics · 3 of 8")
+    }
+
+    @Test func nonSessionStagesAreClusterAndRender() {
+        // Pins the suppression set. If Python ever emits a live count for one of
+        // these, remove it here (and vice-versa for a new count-less stage).
+        #expect(RunProgressSubtitle.nonSessionStages == ["cluster", "render"])
     }
 
     // MARK: - Edge cases

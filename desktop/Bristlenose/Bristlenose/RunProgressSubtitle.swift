@@ -35,6 +35,19 @@ enum RunProgressSubtitle {
         return "desktop.chrome.pipeline.stage.\(stage)"
     }
 
+    /// Stages that are a single cross-session call and carry no per-session
+    /// fraction: theming/cluster (s10/s11) and render (s12). Only `transcribe`
+    /// emits `sessions_complete`/`sessions_total`; `RunProgressMath.apply` then
+    /// carries that pair forward untouched (it only overwrites on an event that
+    /// *has* it), so by these stages the "N of M" is the STALE transcribe file
+    /// count. Trailing it after "Grouping themes"/"Building report" reads as
+    /// "theme-grouping is 4 of 5 done" when it isn't — suppress the fraction
+    /// here (the verb + ETA still compose). Keyed off the stage id so no Python
+    /// sentinel is needed. The per-session stages that *do* carry a live
+    /// fraction (`transcribe` and the `_SESSION_STAGES` speakers/topics/quotes)
+    /// are deliberately absent.
+    static let nonSessionStages: Set<String> = ["cluster", "render"]
+
     /// Localised "~N min left" / "<1 min left", or nil when there's no usable
     /// estimate. Minute granularity (not seconds) so the text doesn't jitter at
     /// the 1 Hz poll rate; "min" is an invariant abbreviation, so no CLDR plural.
@@ -71,7 +84,12 @@ enum RunProgressSubtitle {
     ) -> String {
         // The detail markers (per-session fraction, ETA) that trail the verb.
         var detail: [String] = []
-        if let complete = sessionsComplete, let total = sessionsTotal, total > 0 {
+        // Suppress the "N of M" for stages that carry no live per-session count
+        // (cluster/render) — the value there is a stale carry-over from the last
+        // per-session stage, not this stage's progress.
+        let suppressCount = stage.map(nonSessionStages.contains) ?? false
+        if let complete = sessionsComplete, let total = sessionsTotal, total > 0,
+            !suppressCount {
             detail.append(localize(
                 "desktop.chrome.pipeline.sessionsCount",
                 ["complete": String(complete), "total": String(total)]

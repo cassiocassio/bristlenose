@@ -1167,7 +1167,15 @@ final class PipelineRunner: ObservableObject {
                     "spawn binary resolved: \(mode.logDescription, privacy: .public) project=\(project.id.uuidString, privacy: .public)"
                 )
             case .external:
+                // `.external` is unreachable in Release (the dev env-var reads above
+                // are #if DEBUG-only, so resolve() never yields .external). Keep the
+                // dev env-var NAMES out of the Release Mach-O — check-release-binary.sh
+                // gates on their absence. Full dev advice stays in Debug.
+                #if DEBUG
                 let message = "Pipeline runs can't use the external-server dev mode. Unset BRISTLENOSE_DEV_EXTERNAL_PORT (or use BRISTLENOSE_DEV_SIDECAR_PATH instead) and try again."
+                #else
+                let message = "Pipeline runs can't use the external-server dev mode."
+                #endif
                 Self.logger.error(
                     "spawn refused: external-server scheme has no binary project=\(project.id.uuidString, privacy: .public)"
                 )

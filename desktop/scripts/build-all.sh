@@ -46,6 +46,8 @@ echo "=============================================="
 echo "identity: $SIGN_IDENTITY"
 echo "notary:   $NOTARY_PROFILE"
 echo "team:     $TEAM_ID"
+echo "logs:     $DESKTOP_DIR/build/  (xcodebuild-archive[5] xcodebuild-export[6] ensure-sidecar[2] notarytool-submit[9]).log"
+echo "  watch:  tail -f $DESKTOP_DIR/build/xcodebuild-archive.log"
 echo
 
 # ------------------------------------------------------------

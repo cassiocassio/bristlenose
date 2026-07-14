@@ -4,7 +4,12 @@
 menu in TestFlight and direct betas, while keeping it out of the shipping App
 Store release.*
 
-Status: **planned, not built** (14 Jul 2026).
+Status: **implemented** (14 Jul 2026). Python + Swift landed; needs an Xcode
+build + `doctor --self-test` and a real TestFlight build to close TF-receipt
+detection (see Verification). Files: `DistributionChannel.swift`,
+`AdminPanelAction.swift` (both new), edits to `MenuCommands.swift`,
+`BristlenoseShared.swift`, `bristlenose/server/app.py`,
+`bristlenose/server/admin.py`; tests in `tests/test_serve_admin_panel.py`.
 
 ## Why
 
@@ -45,47 +50,77 @@ The mount gate (below) is a Python env var, so the CLI can flip it too — parit
 is preserved, nothing is reimplemented natively. The only native code is a menu
 item that opens a URL. That's chrome, not a fork.
 
-## The core seam — a distribution-channel check
+## The core seam — a compile-time channel flag (NOT a receipt check)
 
 `#if DEBUG` is stripped from **both** TestFlight and App Store archives (both
-are Release config — see [`BuildInfo.swift:15`](../desktop/Bristlenose/Bristlenose/BuildInfo.swift)),
-so it can't express "beta yes, final no." That needs a **runtime** channel
-check — the standard Apple receipt idiom, which does not yet exist in the tree
-(grep confirms zero `appStoreReceiptURL` / `sandboxReceipt` usage).
+are Release config — see [`BuildInfo.swift`](../desktop/Bristlenose/Bristlenose/BuildInfo.swift)),
+so it can't express "beta yes, final no" on its own.
+
+> **Why not the Apple receipt idiom (the original plan — rejected after review).**
+> The first draft used `Bundle.main.appStoreReceiptURL` + a
+> `lastPathComponent == "sandboxReceipt"` check to return `.testFlight` vs
+> `.appStore`. Both the `app-store-police` and `security-review` passes killed
+> it: **App Review runs under the StoreKit *sandbox*, so the reviewer's build
+> presents a `sandboxReceipt` — identical to TestFlight.** The receipt check
+> would classify the reviewer as `.testFlight`, expose the "Debug" menu + raw
+> PII browser to them, and earn a probable Guideline 2.1 rejection. It also
+> *failed open*: a missing/late receipt fell through to `.developerID`, which
+> also exposed. You cannot safely distinguish a TestFlight tester from an App
+> Store reviewer at runtime — both are sandbox receipts.
+>
+> **Decision (14 Jul 2026):** scope the panel to the **Developer-ID `.dmg`
+> beta channel only**, identified by a *positive build-time flag we control*,
+> and keep it out of **every** App Store *and* TestFlight archive. TestFlight
+> exposure is dropped — the "debug a TF tester's DB on a call" case is not
+> worth the submission risk.
 
 New file `desktop/Bristlenose/Bristlenose/DistributionChannel.swift`:
 
 ```swift
 enum DistributionChannel {
-    case debug         // local Xcode build (#if DEBUG)
-    case developerID   // notarised direct .dmg beta (no MAS receipt)
-    case testFlight    // sandboxReceipt present
-    case appStore      // production receipt present
+    case debug                 // local Xcode build (#if DEBUG)
+    case developerID           // direct notarised .dmg beta (DEVELOPER_ID_BETA flag)
+    case appStoreOrTestFlight  // Release without the beta flag — App Store OR TestFlight
 
     static let current: DistributionChannel = {
         #if DEBUG
         return .debug
+        #elseif DEVELOPER_ID_BETA
+        return .developerID
         #else
-        guard let url = Bundle.main.appStoreReceiptURL,
-              FileManager.default.fileExists(atPath: url.path) else { return .developerID }
-        return url.lastPathComponent == "sandboxReceipt" ? .testFlight : .appStore
+        return .appStoreOrTestFlight
         #endif
     }()
 
-    /// Debug tools show everywhere EXCEPT the shipping App Store build.
-    var exposesDebugTools: Bool { self != .appStore }
+    /// Debug tools show ONLY in local dev and the Developer-ID beta.
+    var exposesDebugTools: Bool {
+        switch self {
+        case .debug, .developerID: return true
+        case .appStoreOrTestFlight: return false
+        }
+    }
 }
 ```
 
-This covers "TestFlight **and other betas**": `.developerID` catches direct
-notarised `.dmg` builds, `.testFlight` catches TF; only `.appStore` returns
-false.
+**Fail-closed by construction.** The App Store / TestFlight path is the `#else`
+default, so the absence of the positive `DEVELOPER_ID_BETA` marker hides the
+tools — no runtime state (missing receipt, sandbox quirk) can flip it open.
+There is zero receipt logic in the tree.
 
-> **Acknowledged tension.** This introduces the first real runtime *build-channel
-> divergence*, which was previously parked ("the TF branch is a timing hold, not
-> a build divergence; no `--test-flight` flag"). This plan reverses that stance
-> deliberately, on explicit request — the debugging value is judged worth the
-> one narrow divergence. Noting it so the reversal is a decision, not a drift.
+**Wiring the beta channel (build-config task, not code):** set
+`SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEVELOPER_ID_BETA` in the Developer-ID
+`.dmg` build configuration **only** — never in the App Store / TestFlight
+archive config. Until that config exists the panel is dormant everywhere except
+local `#if DEBUG` builds, which is the safe state. This is the only remaining
+open build-side task; the Swift/Python code is complete.
+
+> **Resolved tension.** The original plan introduced a runtime *build-channel
+> divergence* (previously parked: "the TF branch is a timing hold, not a build
+> divergence; no `--test-flight` flag"). The reviewed design narrows that to a
+> single **compile-time** flag scoped to the Developer-ID beta — App Store and
+> TestFlight archives are byte-identical to each other w.r.t. this feature
+> (neither defines the flag), so the "no TF/AppStore divergence" stance is in
+> fact *preserved*; only the separate `.dmg` beta pipeline diverges.
 
 ## Phase 1 — Python: decouple the mount from full `dev`
 
@@ -104,12 +139,21 @@ if _admin_enabled:
 
 - `serve --dev` (browser, contributor) keeps full CRUD via the `dev` arm.
 - **Read-only when beta-exposed.** `register_admin_views` grows a `read_only`
-  flag that sets `can_create/can_edit/can_delete = False` on every `ModelView`.
-  On a user call you want to *look* at their data, not fat-finger a `DELETE` on
-  their transcripts. Full CRUD stays only for local `serve --dev`.
+  flag that sets `can_create/can_edit/can_delete = False` **and `can_export =
+  False`** on every `ModelView`. On a user call you want to *look* at their
+  data, not fat-finger a `DELETE` on their transcripts. The `can_export` half
+  is load-bearing per the `security-review` pass: SQLAdmin's
+  `/{identity}/export/csv` is an **unauthenticated GET that dumps a whole table
+  unbounded** — leaving it on would let read-only `/admin` exfiltrate the full
+  transcript + `Person` tables in one request. Full CRUD + export stays only
+  for local `serve --dev`. (Mutation is enforced at the HTTP layer — SQLAdmin's
+  create/edit/delete routes raise 403 when the flag is off, not just a hidden
+  button.)
 - **Dependency:** keep `sqladmin` in the `serve` extra (it must ship in the
-  bundle for TestFlight to serve it). This settles the earlier retire-vs-keep
+  bundle for the beta to serve it). This settles the earlier retire-vs-keep
   fork in favour of **keep** — it earns its ~3 MB by being a real diagnostic.
+  (Shipping it in the App Store bundle with the route never mounted is *not* a
+  review risk — unused dependency code is fine; per `app-store-police`.)
 
 ## Phase 2 — Swift: set the env var by channel
 
@@ -122,9 +166,11 @@ if DistributionChannel.current.exposesDebugTools {
 }
 ```
 
-Scope note: this gates **only the admin panel** to betas. The Run Inspector's
-`_BRISTLENOSE_DEV_ENDPOINTS` stays `#if DEBUG` unless we separately decide the
-inspector is also beta-worthy — not assumed here.
+Scope note: this gates **only the admin panel** to the Developer-ID beta. The
+Run Inspector's `_BRISTLENOSE_DEV_ENDPOINTS` stays `#if DEBUG` unless we
+separately decide the inspector is also beta-worthy — not assumed here. Because
+`exposesDebugTools` is compile-time (App Store / TestFlight → `false`), the env
+var is simply never set in those archives.
 
 ## Phase 3 — Swift: the Debug menu
 
@@ -134,10 +180,10 @@ is **not** an inline set of buttons — it's `CommandMenu("Debug") {
 DebugMenuContent(...) }`, and both the `CommandMenu` block *and* the
 `DebugMenuContent` struct that holds every item (Type Parity, Run Inspector,
 Shoal, reveal actions) are wrapped in `#if DEBUG`. So `DebugMenuContent` does
-not exist at all in a Release build — and TestFlight is a Release build. The
-runtime gate therefore cannot simply wrap the existing struct; it needs a **new
-non-DEBUG view** that compiles in Release and embeds the existing DEBUG-only
-harness behind an inner `#if DEBUG`:
+not exist at all in a Release build — and the Developer-ID `.dmg` beta is a
+Release build. The channel gate therefore cannot simply wrap the existing
+struct; it needs a **new non-DEBUG view** that compiles in Release and embeds
+the existing DEBUG-only harness behind an inner `#if DEBUG`:
 
 ```swift
 // MenuCommands.swift — replace the #if DEBUG CommandMenu block with:
@@ -205,43 +251,85 @@ via the `.disabled(serveManager.runningPort == nil)` modifier above.
 
 ## Security posture
 
-In betas, `/admin` becomes an **unauthenticated-but-localhost-bound, read-only**
-view over transcripts + PII. Read-only removes the mutation risk; localhost
-binding removes the remote risk; it matches the existing SECURITY.md threat
-model (local-process defence-in-depth). In the App Store build the `sqladmin`
-dependency still ships in the bundle but the route is never mounted (the env var
-is never set in the `.appStore` channel) — code present, endpoint absent.
+In the Developer-ID beta, `/admin` becomes an
+**unauthenticated-but-localhost-bound, read-only** view over transcripts + PII.
+Read-only (incl. `can_export=False`) removes the mutation *and* bulk-exfil risk;
+localhost binding removes the remote risk; it matches the existing SECURITY.md
+threat model (local-process defence-in-depth — the bearer token is a
+defence-in-depth speed bump, not the boundary; `/report/*` and `/media/*` are
+already exempt for the same reason). In the App Store *and* TestFlight builds
+the `sqladmin` dependency still ships in the bundle but the route is never
+mounted (the env var is never set in the `.appStoreOrTestFlight` channel) — code
+present, endpoint absent.
+
+Two follow-ups the `security-review` pass flagged for the pre-submission SIG
+story (not code blockers):
+
+- **SECURITY.md paragraph** scoping `/admin` (beta-channel-only, read-only,
+  unauthenticated by the same defence-in-depth rationale as `/report/*`, never
+  mounted in App Store/TestFlight builds) — so the "why is one data endpoint
+  unauthenticated?" question is an *explained* decision.
+- **Support-runbook note + non-PII landing view.** The intended use (screen-
+  share the DB on a cohort call) funnels a maintainer's eyes onto the most
+  re-identifying tables (`Person.full_name`, raw `TranscriptSegment.text` —
+  past the p1/p2 anonymisation boundary). Everything shown is already plaintext
+  on the researcher's own machine (no new egress, Level 0 of the consent
+  gradient), but the runbook should steer diagnostic calls toward structural
+  tables (`ImportConflict`, `Session` counts), and `_ADMIN_VIEWS` could be
+  ordered so a non-PII table is the landing view rather than `Person`.
 
 ## Verification
 
+Python side (done, automated): `tests/test_serve_admin_panel.py` pins the mount
+gate (absent with no env/no dev; present under the env gate; present under
+`dev`) and the read-only flag (`can_create/edit/delete/export = False`, and that
+the flags don't leak across calls).
+
+Swift + build side (needs Xcode / a real build):
+
 - `bristlenose doctor --self-test` — sidecar already carries `sqladmin`.
-- **`.developerID` build** (local notarised): Debug menu present, `/admin`
-  opens, panel is read-only. This is the practical local acceptance test, since
-  it's a real beta channel and testable without TestFlight.
-- **App Store archive**: Debug menu absent, `/admin` returns 404.
-- **`.testFlight`** receipt detection can only be truly confirmed on a real
-  TestFlight build → add one line to the desktop pre-submission checklist:
-  *"confirm Debug menu appears in the TF build and is gone in the App Store
-  validation build."*
+- **Local `#if DEBUG` build** (Cmd+R): Debug menu present, "Open Admin Panel…"
+  opens `/admin`, panel is read-only. This is the practical acceptance test —
+  no receipt or channel plumbing needed, `.debug` exposes.
+- **Developer-ID `.dmg` beta** (once `DEVELOPER_ID_BETA` is wired into that
+  build config): Debug menu present, `/admin` read-only. This is the shipping
+  beta path.
+- **App Store *and* TestFlight archives**: Debug menu absent, `/admin` returns
+  404 — because neither defines `DEVELOPER_ID_BETA`, so `exposesDebugTools`
+  is a compile-time `false`. No receipt build needed to confirm; it's static.
+- Pre-submission checklist line: *"confirm the App Store / TestFlight archive
+  has no Debug menu and `/admin` 404s; confirm the Developer-ID .dmg beta shows
+  it read-only."*
+
+## Remaining work
+
+- **Wire `DEVELOPER_ID_BETA`** into the Developer-ID `.dmg` build configuration
+  (`SWIFT_ACTIVE_COMPILATION_CONDITIONS`), and confirm no App Store / TestFlight
+  config defines it. Until then the panel is dormant outside local DEBUG (safe).
+- **Xcode build + sidecar rebuild** (`doctor --self-test`) — the Python change
+  ships in the sidecar, so a bundled build needs a rebuild before `/admin` loads.
+- **SECURITY.md paragraph + support-runbook note** (see Security posture).
 
 ## Open questions
 
 1. Should the **Run Inspector** (and other `#if DEBUG` diagnostics) also move to
-   the `exposesDebugTools` gate, so betas get the full debug surface, not just
-   the DB browser? Deferred — this plan is scoped to the admin panel.
-2. Should the read-only vs full-CRUD line be `dev`-vs-beta (as planned) or a
-   separate opt-in even in dev? Planned split is the safe default.
+   the `exposesDebugTools` gate, so the Developer-ID beta gets the full debug
+   surface, not just the DB browser? Deferred — this plan is scoped to the
+   admin panel.
+2. Should the read-only vs full-CRUD line be `dev`-vs-beta (as built) or a
+   separate opt-in even in dev? Built split is the safe default.
 
 ## Effort
 
-~half a day. Two new Swift files (`DistributionChannel.swift`,
-`AdminPanelAction.swift`) plus edits to four existing sites (`app.py`,
-`admin.py`, `BristlenoseShared.swift`, `MenuCommands.swift`). Riskiest parts:
-Phase 3 — the existing `CommandMenu("Debug")` *and* its `DebugMenuContent`
-struct are both `#if DEBUG`, so the refactor must introduce a non-DEBUG wrapper
-view (`BetaDebugMenuContent`) that compiles in Release while keeping the
-DEBUG-scene items behind an inner `#if DEBUG`; likewise `openAdminPanel` must
-move out of the fully-`#if DEBUG` `DebugMenuActions` into a non-DEBUG helper.
-And confirming TF-receipt detection, which can only close on a real TestFlight
-build. Touches the sidecar, so it needs a rebuild + `doctor --self-test` before
-the panel loads in a bundled build.
+Landed in ~half a day. Two new Swift files (`DistributionChannel.swift`,
+`AdminPanelAction.swift`) + edits to four existing sites (`app.py`, `admin.py`,
+`BristlenoseShared.swift`, `MenuCommands.swift`) + `tests/test_serve_admin_panel.py`.
+The trickiest part was Phase 3 — the existing `CommandMenu("Debug")` *and* its
+`DebugMenuContent` struct are both `#if DEBUG`, so the refactor introduced a
+non-DEBUG wrapper view (`BetaDebugMenuContent`) that compiles in Release while
+keeping the DEBUG-scene items behind an inner `#if DEBUG`; `openAdminPanel`
+likewise moved out of the fully-`#if DEBUG` `DebugMenuActions` into the new
+non-DEBUG `AdminPanelAction`. The receipt-based channel detection in the first
+draft was dropped after review (see the core-seam section) in favour of the
+compile-time flag — which removed the "confirm on a real TestFlight build"
+uncertainty entirely.

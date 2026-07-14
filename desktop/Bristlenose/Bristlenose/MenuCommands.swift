@@ -70,13 +70,38 @@ struct MenuCommands: Commands {
             HelpMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
         }
 
-        #if DEBUG
-        // DEBUG-only state harness for the Ollama setup pill. A menu-bar menu
-        // (not a toolbar context menu, which macOS swallows for "Customize
-        // Toolbar") so it's reliable, and reachable even when the pill is idle.
-        CommandMenu("Debug") {
-            DebugMenuContent(ollamaDownload: ollamaDownload, serveManager: serveManager)
+        // Debug menu — channel-gated to local dev + the direct-notarised
+        // Developer-ID .dmg beta only, so that channel gets the SQLAdmin DB
+        // browser. Never shown in an App Store OR TestFlight build (both are
+        // the fail-closed `.appStoreOrTestFlight` case). The DEBUG-only harness
+        // (inspectors, fixtures, Ollama pill — each opens a #if DEBUG window
+        // scene) stays compiled out of Release via an inner #if DEBUG inside
+        // BetaDebugMenuContent. See docs/design-desktop-debug-admin-panel.md.
+        if DistributionChannel.current.exposesDebugTools {
+            CommandMenu("Debug") {
+                BetaDebugMenuContent(ollamaDownload: ollamaDownload, serveManager: serveManager)
+            }
         }
+    }
+}
+
+/// Debug-menu content that compiles in **Release** (unlike `DebugMenuContent`,
+/// which is entirely `#if DEBUG`). The runtime channel gate above shows this in
+/// beta builds; the only always-present item is "Open Admin Panel…" (opens the
+/// read-only SQLAdmin browser). The full DEBUG-only harness is embedded behind
+/// an inner `#if DEBUG` so it stays out of the Release binary.
+private struct BetaDebugMenuContent: View {
+    @ObservedObject var ollamaDownload: OllamaDownloadModel
+    @ObservedObject var serveManager: ServeManager
+
+    var body: some View {
+        Button("Open Admin Panel…") {
+            AdminPanelAction.open(serveManager: serveManager)
+        }
+        .disabled(serveManager.runningPort == nil)
+        #if DEBUG
+        Divider()
+        DebugMenuContent(ollamaDownload: ollamaDownload, serveManager: serveManager)
         #endif
     }
 }

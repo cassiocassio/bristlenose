@@ -1,7 +1,9 @@
-"""SQLAdmin model views for database browsing (dev-only).
+"""SQLAdmin model views for database browsing.
 
-Registered when ``bristlenose serve --dev`` is active. Provides a full
-CRUD admin panel at ``/admin/`` for all 22 domain tables.
+Registered when ``bristlenose serve --dev`` is active (full CRUD) or when the
+``_BRISTLENOSE_ADMIN_PANEL`` env gate is set on a bundled desktop beta build
+(read-only — see ``register_admin_views(read_only=...)``). Provides an admin
+panel at ``/admin/`` for all 22 domain tables.
 """
 
 from __future__ import annotations
@@ -263,33 +265,56 @@ class ImportConflictAdmin(ModelView, model=ImportConflict):
 # ---------------------------------------------------------------------------
 
 
-def register_admin_views(admin: Admin) -> None:
-    """Register all model views with the admin instance."""
+# All model views, in display order (grouped by category).
+_ADMIN_VIEWS: list[type[ModelView]] = [
     # Instance-scoped
-    admin.add_view(PersonAdmin)
-    admin.add_view(CodebookGroupAdmin)
-    admin.add_view(TagDefinitionAdmin)
+    PersonAdmin,
+    CodebookGroupAdmin,
+    TagDefinitionAdmin,
     # Project core
-    admin.add_view(ProjectAdmin)
-    admin.add_view(ProjectCodebookGroupAdmin)
+    ProjectAdmin,
+    ProjectCodebookGroupAdmin,
     # Raw material
-    admin.add_view(SessionAdmin)
-    admin.add_view(SourceFileAdmin)
-    admin.add_view(SessionSpeakerAdmin)
-    admin.add_view(TranscriptSegmentAdmin)
+    SessionAdmin,
+    SourceFileAdmin,
+    SessionSpeakerAdmin,
+    TranscriptSegmentAdmin,
     # AI analysis
-    admin.add_view(QuoteAdmin)
-    admin.add_view(ScreenClusterAdmin)
-    admin.add_view(ThemeGroupAdmin)
-    admin.add_view(ClusterQuoteAdmin)
-    admin.add_view(ThemeQuoteAdmin)
-    admin.add_view(TopicBoundaryAdmin)
+    QuoteAdmin,
+    ScreenClusterAdmin,
+    ThemeGroupAdmin,
+    ClusterQuoteAdmin,
+    ThemeQuoteAdmin,
+    TopicBoundaryAdmin,
     # Researcher edits
-    admin.add_view(QuoteTagAdmin)
-    admin.add_view(QuoteStateAdmin)
-    admin.add_view(QuoteEditAdmin)
-    admin.add_view(HeadingEditAdmin)
-    admin.add_view(DeletedBadgeAdmin)
-    admin.add_view(DismissedSignalAdmin)
-    admin.add_view(HiddenTagGroupAdmin)
-    admin.add_view(ImportConflictAdmin)
+    QuoteTagAdmin,
+    QuoteStateAdmin,
+    QuoteEditAdmin,
+    HeadingEditAdmin,
+    DeletedBadgeAdmin,
+    DismissedSignalAdmin,
+    HiddenTagGroupAdmin,
+    ImportConflictAdmin,
+]
+
+
+def register_admin_views(admin: Admin, read_only: bool = False) -> None:
+    """Register all model views with the admin instance.
+
+    When ``read_only`` is True, every view is stripped of create/edit/delete
+    affordances — used on desktop beta builds where ``/admin`` is a look-only
+    diagnostic over a cohort user's data (no fat-fingering a ``DELETE`` on their
+    transcripts). ``serve --dev`` keeps full CRUD (``read_only=False``).
+    """
+    for view in _ADMIN_VIEWS:
+        # Set unconditionally (not just when read_only) so the flags never leak
+        # across calls — the view classes are module-level singletons.
+        # `can_export` matters: SQLAdmin's `/{identity}/export/csv` is an
+        # unauthenticated GET that dumps a whole table (unbounded by default),
+        # so leaving it on would let read-only /admin exfiltrate the full
+        # transcript + Person tables in one request. Disable it with the rest.
+        view.can_create = not read_only
+        view.can_edit = not read_only
+        view.can_delete = not read_only
+        view.can_export = not read_only
+        admin.add_view(view)

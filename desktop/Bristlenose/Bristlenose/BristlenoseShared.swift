@@ -157,6 +157,16 @@ enum BristlenoseShared {
         // shipped Release app never exposes these endpoints.
         env["_BRISTLENOSE_DEV_ENDPOINTS"] = "1"
         #endif
+        // Mount the read-only SQLAdmin DB browser (/admin) ONLY in local dev
+        // and the direct-notarised Developer-ID .dmg beta, so that channel can
+        // debug a cohort user's data from the Debug menu. Never set in an App
+        // Store OR TestFlight build (both are the fail-closed `.appStoreOrTest-
+        // Flight` case). Scope note: this gates ONLY the admin panel — the Run
+        // Inspector's _BRISTLENOSE_DEV_ENDPOINTS stays DEBUG-only.
+        // See docs/design-desktop-debug-admin-panel.md.
+        if DistributionChannel.current.exposesDebugTools {
+            env["_BRISTLENOSE_ADMIN_PANEL"] = "1"
+        }
         for (key, value) in sslEnvironment(for: mode) { env[key] = value }
         for (key, value) in bundledBinaryEnvironment(for: mode) { env[key] = value }
         overlayAPIKeys(into: &env, using: store)

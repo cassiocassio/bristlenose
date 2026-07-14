@@ -231,14 +231,18 @@ def create_app(
 
         app.include_router(dev_router)
 
-    if dev:
-        # SQLAdmin database browser (dev-only)
+    # SQLAdmin database browser. Mounted under full `serve --dev` (browser
+    # contributor, full CRUD) OR when `_BRISTLENOSE_ADMIN_PANEL=1` — the latter
+    # set by the desktop host's non-App-Store beta channels so a bundled
+    # sidecar can serve a *read-only* /admin from the Debug menu. Never mounted
+    # in the App Store build (the env var is never set there).
+    if dev or os.environ.get("_BRISTLENOSE_ADMIN_PANEL") == "1":
         from sqladmin import Admin as SQLAdmin
 
         from bristlenose.server.admin import register_admin_views
 
         sqladmin_app = SQLAdmin(app, engine, base_url="/admin")
-        register_admin_views(sqladmin_app)
+        register_admin_views(sqladmin_app, read_only=not dev)
 
     # Import project data into SQLite on startup
     if project_dir is not None:

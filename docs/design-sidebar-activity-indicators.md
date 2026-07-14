@@ -161,8 +161,18 @@ The measurement layer is built and calibrated; the gap is the channel + render, 
 **The pie fills by Welford ETA-weighted completion (time, not stage-count)** — stages are wildly
 unequal (transcription dominates), so a stage-count pie would lie. Two honesty rules: **monotonic**
 (when the estimate revises up, the ring never runs backwards — only the "~N min left" text updates) and
-**asymptote** (cap ~95–99% until the terminus event, so an over-running estimate reads "nearly there,"
-not a stalled 100%).
+**asymptote** (never fills to a literal 100% until the terminus event; completion is shown by replacing
+the ring with the ready/failure state).
+
+**Overrun creep (13 Jul 2026).** The asymptote alone wasn't enough: mapping the time ratio straight to
+`min(cap, ratio)` meant the ring hit the `0.92` cap the instant elapsed met the Welford estimate, then
+sat **dead-flat** at 0.92 while the 1 Hz poll re-evaluated to the same value — a frozen near-full ring
+through the whole LLM tail (s10/s11 grouping, s12 render, all under-predicted by the crude
+`session_count` proxy in `timing.py`), which reads as "hung at 99%". `RunProgressMath.displayFraction`
+now reserves headroom: the estimate's honest end-point is `expectedCompletionMark = 0.85`, and past it
+the ring **creeps asymptotically** `0.85 → 0.92` (`1 − exp(−overrun/tau)`, `tau = 0.6`) as the run
+over-runs. Always inching, never flat, never 1.0 — a moving 85% over a stalled 99%. Pure + unit-tested
+in `RunProgressMathTests` (`applyRingKeepsMovingWhenRunOverrunsEstimate` is the regression).
 
 **Text vs pie:** the pie encodes *time*; the **text** carries the discrete markers — stage ("Stage 4"
 / stage name), per-session fraction ("Transcribing — 3 of 8"), and the estimate ("~4 min left"). The

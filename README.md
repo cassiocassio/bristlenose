@@ -346,7 +346,10 @@ On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows
 
 ### Architecture
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full project layout, but the short version:
+For how the whole thing fits together — the shared Python core (CLI ≡ the macOS desktop's
+bundled sidecar), the React SPA, the SwiftUI host, and how a release is cut — see
+**[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for the full project layout. The short version:
 
 - `frontend/` -- Vite + React + TypeScript SPA (the product UI in serve mode)
 - `bristlenose/server/` -- FastAPI + SQLite + SQLAlchemy data layer behind serve mode

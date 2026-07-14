@@ -38,6 +38,14 @@ A Windows-native GUI app is a separate, much larger project and is not on the ro
 
 Bristlenose's canonical context for coding agents lives in `CLAUDE.md` at the repo root, plus nested `CLAUDE.md` files under `bristlenose/theme/`, `bristlenose/stages/`, `bristlenose/llm/`, `bristlenose/server/`, `frontend/`, and `desktop/`. Claude Code auto-loads these. If you use a different agent (Cursor, Windsurf, Copilot, Codex, Zed, etc.), point it at these files — they're the source of truth for conventions, architecture, and the design-system token rules, regardless of which tool you use.
 
+## How it all fits together
+
+New to the codebase? Start with **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — a
+human-facing map of the hybrid app: the shared Python pipeline core (CLI ≡ the macOS
+desktop's bundled sidecar), the React SPA, the SwiftUI host, and how a release is cut for
+both PyPI and the Mac App Store. It's an index into the design docs, not a replacement for
+the layout below.
+
 ## Code style
 
 - Python 3.10+, Ruff for linting (config in `pyproject.toml`), type hints everywhere

@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard auto-layout — a way of thinking at all scales · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   Bristlenose tokens (inlined so this file is self-contained).
+   Values mirror bristlenose/theme/tokens.css so the mockup reads true.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+
+  --bn-bg:        light-dark(#fafaf7, #16161a);
+  --bn-surface:   light-dark(#ffffff, #1e1e22);
+  --bn-surface-2: light-dark(#f4f3ee, #26262b);
+  --bn-ink:       light-dark(#1a1a1a, #ededed);
+  --bn-ink-2:     light-dark(#4a4a4a, #b6b6b8);
+  --bn-ink-3:     light-dark(#8a8a8a, #7d7d80);
+  --bn-rule:      light-dark(#e6e4de, #34343a);
+  --bn-rule-2:    light-dark(#efede7, #2b2b30);
+  --bn-accent:    #007AFF;
+  --bn-accent-wash: light-dark(#e8f1ff, #10233d);
+
+  /* Sentiment palette (spirit of tokens.css) */
+  --sent-frustration:#c73d3d; --sent-confusion:#d97b1f; --sent-doubt:#a67c00;
+  --sent-surprise:#8b5cf6;    --sent-satisfaction:#3e8956; --sent-delight:#16a34a;
+  --sent-confidence:#0369a1;  --sent-neutral:#9a9a9a;
+
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --mono: "SF Mono", "JetBrains Mono", "Menlo", monospace;
+
+  /* Space + radius (tokens.css) */
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+
+  /* Typography scale (Scale D) */
+  --t-badge:11.5px; --t-caption:12px; --t-label:13px; --t-body:15px;
+  --t-heading:18px; --t-title:22px; --t-display:28px;
+  --w-normal:420; --w-emph:490; --w-strong:700;
+}
+
+* { box-sizing: border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background: var(--bn-bg); color: var(--bn-ink);
+  font-family: var(--sans); font-size: var(--t-body); line-height:1.5;
+  -webkit-font-smoothing: antialiased;
+}
+h1,h2,h3,h4 { font-weight: var(--w-emph); line-height:1.25; }
+a { color: var(--bn-accent); }
+code, .mono { font-family: var(--mono); font-size:.86em; }
+
+.wrap { max-width: 1120px; margin: 0 auto; padding: clamp(1.25rem, 3vw, 3rem) clamp(1rem,3vw,2rem) 6rem; }
+
+/* ---- Masthead ---- */
+.masthead { border-bottom:1px solid var(--bn-rule); padding-bottom: var(--bn-space-lg); margin-bottom: var(--bn-space-xl); }
+.eyebrow { font-size: var(--t-caption); letter-spacing:.08em; text-transform:uppercase; color: var(--bn-ink-3); font-weight: var(--w-emph); }
+.masthead h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); margin:.35rem 0 .5rem; }
+.masthead p { font-size: var(--t-body); color: var(--bn-ink-2); max-width: 62ch; margin:.4rem 0; }
+.lede strong { color: var(--bn-ink); font-weight: var(--w-emph); }
+
+/* ---- Section shell ---- */
+section.block { margin: 3.25rem 0; }
+section.block > h2 { font-size: var(--t-title); display:flex; align-items:baseline; gap:.6rem; }
+section.block > h2 .n { font-size: var(--t-label); color: var(--bn-accent); font-family: var(--mono); font-weight: var(--w-strong); }
+section.block > .sub { color: var(--bn-ink-2); max-width: 68ch; margin:.4rem 0 1.25rem; }
+
+/* ============================================================================
+   THE LIVE STAGE — resizable container wrapping a real dashboard.
+   ========================================================================= */
+.controls {
+  display:flex; flex-wrap:wrap; gap:.5rem; align-items:center;
+  padding: var(--bn-space-md); margin-bottom: var(--bn-space-md);
+  background: var(--bn-surface-2); border:1px solid var(--bn-rule); border-radius: var(--bn-radius-lg);
+  position: sticky; top: 0; z-index: 20;
+}
+.controls .grp { display:flex; gap:.35rem; align-items:center; }
+.controls .lbl { font-size: var(--t-caption); color: var(--bn-ink-3); font-weight: var(--w-emph); text-transform:uppercase; letter-spacing:.05em; }
+.pbtn {
+  font: inherit; font-size: var(--t-label); font-weight: var(--w-emph);
+  padding:.3rem .7rem; border:1px solid var(--bn-rule); border-radius: var(--bn-radius-pill);
+  background: var(--bn-surface); color: var(--bn-ink); cursor:pointer;
+  transition: background .12s, border-color .12s;
+}
+.pbtn:hover { border-color: var(--bn-ink-3); }
+.pbtn.on { background: var(--bn-accent); border-color: var(--bn-accent); color:#fff; }
+.pbtn.toggle.on { background: var(--bn-accent-wash); color: var(--bn-accent); border-color: var(--bn-accent); }
+.readout { margin-left:auto; font-family: var(--mono); font-size: var(--t-label); color: var(--bn-ink-2); }
+.readout b { color: var(--bn-accent); }
+.readout .cols { color: var(--bn-ink-3); }
+
+.stage-outer { overflow-x:auto; padding-bottom:.5rem; }
+/* Zoom wrapper — JS sizes it to the stage's PAINTED footprint (w·scale × h·scale)
+   so the page below flows correctly with no phantom gap or scrollbar. */
+.stage-scale { overflow: hidden; margin-inline: auto; }
+.stage {
+  /* This box is the responsive context. Its width is the ONLY thing that
+     changes — everything inside reacts to it, never to the browser window.
+     That is the whole point: on half a 14" laptop this box is ~720px even
+     though the window is 1440px.
+     Zoom is a transform — purely visual — so container queries still resolve
+     at the TRUE width: a scaled-down 2240px stage really shows big-monitor
+     faces, just painted smaller. */
+  container: stage / inline-size;
+  width: 100%;
+  min-width: 320px;
+  margin-inline: auto;
+  border:1px dashed var(--bn-rule); border-radius: var(--bn-radius-lg);
+  padding: clamp(.5rem, 1.5cqi, 1.25rem);
+  background: var(--bn-bg);
+  position: relative;
+  resize: horizontal;              /* drag the corner to feel every width in between */
+  overflow: hidden;
+  transform-origin: top left;
+  transform: scale(var(--scale, 1));
+  transition: width .28s cubic-bezier(.4,0,.2,1), transform .18s ease;
+}
+.stage.dragging { transition:none; }
+.stage::after {
+  content:"↔ drag"; position:absolute; right:6px; bottom:2px;
+  font-size:10px; color: var(--bn-ink-3); pointer-events:none;
+}
+
+/* ---------------------------------------------------------------------------
+   AXIS 1 — PLACEMENT.  A RAM auto-fill grid (already Bristlenose's idiom in
+   responsive-grid.css / analysis.css).  Widgets flow into as many columns as
+   fit; dense packing tucks small tiles into gaps.  Fluid gap breathes with
+   the stage.
+   ------------------------------------------------------------------------- */
+.dash {
+  --u: 220px;                                   /* base COLUMN unit */
+  --rowH: 78px;                                 /* base ROW unit — the brick rhythm */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--u), 100%), 1fr));
+  grid-auto-rows: var(--rowH);                  /* fixed rows = clean packing */
+  grid-auto-flow: row dense;
+  gap: clamp(.5rem, 1.1cqi, 1rem);              /* AXIS 3 — fluid proportion */
+}
+
+/* SHAPE = columns × rows of the base grid.  A fixed row height is what turns
+   ragged content-boxes into bricks that tile.  Content fills the brick; it
+   never sets the brick's height.  cX = width in columns, rY = height in rows,
+   cfull = full-bleed strip. */
+.w { grid-column: span 1; grid-row: span 2; }   /* default brick */
+.w.c1{grid-column:span 1} .w.c2{grid-column:span 2} .w.c3{grid-column:span 3} .w.c4{grid-column:span 4}
+.w.cfull{grid-column:1 / -1}
+.w.r1{grid-row:span 1} .w.r2{grid-row:span 2} .w.r3{grid-row:span 3} .w.r4{grid-row:span 4}
+
+/* Guardrails — container tiers on the STAGE, not the viewport.  These clamp only
+   the COLUMN span so a wide brick never overflows a narrow stage (the one thing
+   CSS grid can't do intrinsically).  Row spans stay — a tall brick is simply
+   tall in a single column. */
+@container stage (max-width: 559px) {           /* ½-laptop, portrait, sidebar-open */
+  .w { grid-column: 1 / -1 !important; }
+}
+@container stage (min-width: 560px) and (max-width: 1023px) {
+  .w.c3, .w.c4 { grid-column: span 2; }
+}
+/* ≥1024px: natural shapes apply as declared. */
+
+/* ============================================================================
+   WIDGET CHROME + AXIS 2 (ADAPTATION via container queries).
+   Each widget is its OWN container.  Three faces — compact / default /
+   expanded — chosen by the widget's own width, independent of the grid.
+   ========================================================================= */
+.w {
+  container-type: inline-size;
+  background: var(--bn-surface);
+  border:1px solid var(--bn-rule);
+  border-radius: var(--bn-radius-lg);
+  padding: clamp(.5rem, 1.5cqi, .85rem) clamp(.6rem, 1.8cqi, .95rem);
+  min-width:0; min-height:0; overflow:hidden;
+  display:flex; flex-direction:column; gap:.4rem;
+}
+/* The viz region stretches to fill whatever height the brick leaves under the
+   header — this is what keeps a fixed-height brick from looking empty. */
+.fill { flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center; }
+.w.r1 { justify-content:center; }          /* thin strips centre their single row */
+.w.r1 > header { margin:0; }
+.w > header { display:flex; align-items:baseline; gap:.5rem; justify-content:space-between; }
+.w > header h3 { margin:0; font-size: var(--t-label); color: var(--bn-ink-2); font-weight: var(--w-emph); }
+.w .kicker { font-size: var(--t-caption); color: var(--bn-ink-3); }
+
+/* Face badge — makes AXIS 2 visible.  Only one shows, per the widget's width. */
+.facebadge { font-size:10px; font-weight:var(--w-strong); letter-spacing:.04em; text-transform:uppercase;
+  padding:2px 6px; border-radius: var(--bn-radius-pill); white-space:nowrap; }
+.fb-c { background: var(--bn-rule-2); color: var(--bn-ink-3); }
+.fb-d { background: var(--bn-accent-wash); color: var(--bn-accent); }
+.fb-e { background: #dcf3e4; color: var(--sent-delight); }
+:root:not([data-faces]) .facebadge { display:none; }   /* toggle */
+/* default-first: baseline shows the DEFAULT badge; queries swap it at the edges */
+.facebadge.fb-c, .facebadge.fb-e { display:none; }
+@container (max-width: 299px) {
+  .facebadge.fb-d { display:none; } .facebadge.fb-c { display:inline-block; }
+}
+@container (min-width: 480px) {
+  .facebadge.fb-d { display:none; } .facebadge.fb-e { display:inline-block; }
+}
+:root:not([data-faces]) .facebadge { display:none !important; }
+
+/* Progressive content reveal — DEFAULT-FIRST. The no-container-query baseline is
+   the sensible MIDDLE face (.lvl-mid visible), never the sparse compact one — so
+   an ancient browser lands on something usable at any width. Narrow STRIPS detail;
+   wide ADDS it. .lvl-mid shows via its own natural display (block/list-item/flex),
+   so it needs no revert helper; .lvl-max opts in and re-asserts flex/grid after
+   display:revert discards author display on flex tiles (e.g. .kpi). */
+.lvl-max { display:none; }                                     /* expanded — opt-in when wide */
+@container (max-width: 299px) { .lvl-mid { display:none; } }    /* strip to compact when narrow */
+@container (min-width: 480px) { .lvl-max { display:revert; } .lvl-max.flex { display:flex; } .lvl-max.grid{display:grid;} .kpi.lvl-max{display:flex;} }
+
+/* Track overlay (toggle) — paints the grid columns so placement is legible */
+:root[data-tracks] .dash { background-image:
+  repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--u) - 1px),
+  color-mix(in srgb, var(--bn-accent) 14%, transparent) calc(var(--u) - 1px), color-mix(in srgb,var(--bn-accent) 14%, transparent) var(--u)); }
+
+/* ---- widget mini-visualisations (lightweight, token-true) ---- */
+.hero { font-size: clamp(1.6rem, 22cqi, 3.2rem); line-height:1; font-weight:var(--w-normal); }
+.hero .u { font-size:.42em; color: var(--bn-ink-3); }
+.kpiwrap { display:flex; flex-wrap:wrap; gap:.9rem 1.4rem; }
+.kpi { display:flex; flex-direction:column; }
+.kpi .v { font-size: clamp(1.3rem, 7cqi, 2.2rem); line-height:1; font-weight:var(--w-normal); }
+.kpi .k { font-size: var(--t-caption); color: var(--bn-ink-3); }
+
+.tape { display:flex; flex:1; min-height:14px; max-height:30px; border-radius:4px; overflow:hidden; }
+.tape span { display:block; }
+.spark { display:flex; align-items:flex-end; gap:2px; flex:1; min-height:0; }
+.spark i { flex:1; background: var(--bn-accent); border-radius:1px 1px 0 0; opacity:.85; }
+
+.heat { display:grid; flex:1; min-height:0; gap:3px; grid-auto-rows:1fr; }
+.heat i { border-radius:2px; min-height:0; }
+
+.quote { font-size: clamp(var(--t-label), 3.4cqi, var(--t-heading)); line-height:1.4; color: var(--bn-ink);
+  font-weight:var(--w-normal); border-left:2px solid var(--bn-accent); padding-left:.7rem; }
+.quote .who { display:block; margin-top:.5rem; font-size: var(--t-caption); color: var(--bn-ink-3); }
+
+.list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.25rem; }
+.list li { font-size: var(--t-label); color: var(--bn-accent); }
+.list li .c { color: var(--bn-ink-3); float:right; font-family:var(--mono); font-size:var(--t-caption); }
+
+.bar { height:10px; border-radius:5px; background: var(--bn-rule); overflow:hidden; display:flex; }
+.bar span { height:100%; }
+
+.book { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; }
+.book .col { display:flex; flex-direction:column; gap:.2rem; }
+.book .cell { font-size:var(--t-caption); padding:.2rem .4rem; border-radius:3px; }
+.book .up { background:#e5f2e6; color:var(--sent-satisfaction); }
+.book .dn { background:#fde8e6; color:var(--sent-frustration); }
+
+.muted { color: var(--bn-ink-3); font-size: var(--t-caption); }
+
+/* brick-fitting content */
+.kpi-solo { align-items:flex-start; gap:.05rem; }
+.kpi-k { font-size: var(--t-caption); color: var(--bn-ink-3); }
+.kpi-delta { font-size: var(--t-caption); color: var(--sent-satisfaction); margin-top:.2rem; }
+.striprow { flex-direction:row; align-items:center; gap:.75rem; }
+.striprow .bar { flex:1; }
+/* per-session sentiment micro-chart (echoes the Sessions-lens Sparkline) */
+.rowspark { display:inline-flex; align-items:flex-end; gap:1px; height:26px; width:84px; vertical-align:middle; }
+.rowspark i { width:5px; border-radius:1px; }
+
+/* ── Session cards · stolen from the Sessions lens: 16:9 thumbnail + sentiment
+   sparkline + PersonBadge + JourneyChain.  Each row is a person-card that grows
+   richer as the band widens — the researcher's felt sense of who this was.  It
+   declares its OWN container thresholds (a widget picks the widths that matter
+   to it, not the shared 300/480). ── */
+.sessions-list { display:flex; flex-direction:column; }
+.srow { display:flex; align-items:center; gap: clamp(.5rem,1.3cqi,1rem);
+  padding:.45rem .1rem; border-bottom:1px solid var(--bn-rule-2); }
+.srow:last-child { border-bottom:0; }
+
+.sr-thumb { flex:none; width:58px; aspect-ratio:16/9; border-radius:4px; color: var(--bn-ink-3);
+  background: linear-gradient(135deg, var(--bn-surface-2), var(--bn-rule));
+  display:flex; align-items:center; justify-content:center; font-size:11px; }
+.sr-thumb::after { content:"\25B6"; }                      /* ▶ play glyph, like .bn-play-icon */
+
+.sr-id { display:flex; align-items:center; gap:.5rem; min-width:0; }
+.pill { flex:none; font-size: var(--t-badge); font-weight: var(--w-emph); color:#fff;
+  background: var(--bn-accent); border-radius: var(--bn-radius-pill); padding:1px 7px; }
+.sr-name { display:flex; flex-direction:column; line-height:1.15; min-width:0; }
+.sr-name b { font-weight: var(--w-emph); white-space:nowrap; }
+.sr-dur { font-size: var(--t-caption); color: var(--bn-ink-3); font-variant-numeric:tabular-nums; }
+
+.sr-arc { flex:none; }
+.sr-mid { flex:1; min-width:0; display:flex; align-items:center; gap:1rem; overflow:hidden; }
+.sr-topics { display:none; gap:.3rem; flex-wrap:wrap; }
+.chip { font-size: var(--t-badge); color: var(--bn-ink-2); background: var(--bn-surface-2);
+  border:1px solid var(--bn-rule); border-radius: var(--bn-radius-pill); padding:1px 8px; white-space:nowrap; }
+.sr-journey { display:none; align-items:center; font-size: var(--t-caption); color: var(--bn-ink-3);
+  white-space:nowrap; overflow:hidden; }
+.sr-journey .stg { color: var(--bn-ink-2); }
+.sr-journey .sep { margin:0 .3rem; opacity:.55; }
+
+.sr-quotes { flex:none; margin-left:auto; text-align:right; line-height:1; }
+.sr-quotes b { font-size: var(--t-heading); font-weight: var(--w-normal); }
+.sr-quotes span { display:block; font-size:10px; color: var(--bn-ink-3); }
+
+/* the band's OWN responsive faces */
+@container (max-width: 439px) { .srow .sr-thumb { display:none; } }              /* very tight → drop thumb */
+@container (min-width: 560px) { .srow .sr-topics { display:flex; } }             /* + topic chips */
+@container (min-width: 1000px){ .srow .sr-topics { display:none; }               /* wide → topics UPGRADE to */
+                                .srow .sr-journey { display:flex; } }            /*   the ordered journey map */
+
+/* Top band — numbers fill the row, saturation progress pinned right */
+.fill.topband { flex-direction:row; align-items:center; justify-content:space-between; gap:1.25rem; }
+.kpirow { display:flex; align-items:flex-end; gap: clamp(1.25rem, 4cqi, 3rem); flex:1; flex-wrap:wrap; }
+.kpinum { display:flex; flex-direction:column; }
+.kpinum .hero { font-size: clamp(1.8rem, 7cqi, 3rem); }
+.kpinum .kpi-k { font-size: var(--t-label); }
+.progress { display:flex; flex-direction:column; align-items:flex-end; justify-content:center; gap:.15rem;
+  padding-left: 1.25rem; border-left:1px solid var(--bn-rule); flex:none; }
+.progress .spark { height:34px; width:120px; flex:none; }
+.progress .spark i { background: var(--sent-delight); }
+.progress .pval { font-size: var(--t-heading); font-weight: var(--w-emph); line-height:1; }
+.progress .plabel { font-size: var(--t-caption); color: var(--bn-ink-3); }
+
+/* Tight matrix for the Friction / Co-occurrence grids */
+.heat.tight { gap:1px; }
+
+/* Pair-row: two partner panels sharing one full-width brick, split 1 : 2 so
+   Co-occurrence is exactly twice Friction — and they can never be pulled apart
+   by dense packing (they're one brick). */
+.pairrow { flex-direction:row; align-items:stretch; gap: clamp(.75rem, 2.4cqi, 1.75rem); }
+.subpanel { flex:1; min-width:0; display:flex; flex-direction:column; gap:.35rem; }
+.subpanel.wide { flex:2; }                                 /* co-occurrence = 2× friction */
+.subpanel h4 { margin:0; font-size: var(--t-caption); color: var(--bn-ink-2); font-weight: var(--w-emph); }
+.subpanel h4 small { color: var(--bn-ink-3); font-weight: var(--w-normal); }
+.subpanel .heat { flex:1; }
+
+/* Multi-column list — the longer of a paired list gets internal columns
+   instead of getting taller (keeps a side-by-side pair height-balanced) */
+.list--cols { display:block; column-count:2; column-gap:1.5rem; }
+.list--cols li { break-inside:avoid; }
+
+/* ── Compact signal cards · a QUANTITY query · the count itself is responsive:
+   1 → 3 → 5, odd-preferring, capped at 5 even on a 5K wall.  A single tidy card
+   when tight; a rank of five when there's room. ── */
+.signalgrid { display:grid; gap:.6rem; width:100%;
+  grid-template-columns: minmax(0, 320px); justify-content:center; }   /* 1, centred */
+.sigcard { display:flex; flex-direction:column; gap:.3rem; padding:.55rem .7rem; min-width:0;
+  border:1px solid var(--bn-rule); border-radius: var(--bn-radius-md); background: var(--bn-surface-2); }
+.sig-k { font-size: var(--t-caption); color: var(--bn-ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sig-v { font-size: var(--t-title); font-weight: var(--w-normal); line-height:1; }
+.sig-bar { height:5px; border-radius:3px; background: var(--bn-rule); overflow:hidden; }
+.sig-bar span { display:block; height:100%; }
+.sigcard:nth-child(n+2) { display:none; }                              /* base: show 1 */
+@container (min-width: 780px) {                                        /* ≈14″ up → 3 */
+  .signalgrid { grid-template-columns: repeat(3, minmax(0,1fr)); justify-content:stretch; }
+  .sigcard:nth-child(-n+3) { display:flex; } .sigcard:nth-child(n+4) { display:none; }
+}
+@container (min-width: 1800px) {                                       /* 24″/5K → 5 */
+  .signalgrid { grid-template-columns: repeat(5, minmax(0,1fr)); }
+  .sigcard:nth-child(-n+5) { display:flex; }
+}
+
+/* ── Representative quotes · same quantity-query trick, unit = a quote.
+   1 hero quote when tight → 3 → 5, each new tier SPREADING into another column
+   rather than stacking taller (keeps the fixed-height brick honest). ── */
+.quotegrid { display:grid; gap: 1rem; width:100%; align-items:start;
+  grid-template-columns: minmax(0, 620px); justify-content:center; }     /* 1 hero, centred */
+.quotegrid .quote { margin:0; font-size: var(--t-label); line-height:1.45; overflow:hidden; }
+.quotegrid .quote:nth-child(n+2) { display:none; }
+@container (min-width: 700px) {                                          /* small laptop → 3 across */
+  .quotegrid { grid-template-columns: repeat(3, minmax(0,1fr)); justify-content:stretch; }
+  .quotegrid .quote:nth-child(-n+3) { display:block; } .quotegrid .quote:nth-child(n+4) { display:none; }
+}
+@container (min-width: 1360px) {                                         /* 14″ full & up → 5 across */
+  .quotegrid { grid-template-columns: repeat(5, minmax(0,1fr)); }
+  .quotegrid .quote:nth-child(-n+5) { display:block; }
+}
+
+/* ============================================================================
+   Prior-art cards + taxonomy table
+   ========================================================================= */
+.axes { display:grid; gap:1rem; grid-template-columns: repeat(auto-fit, minmax(min(260px,100%),1fr)); }
+.axis { border:1px solid var(--bn-rule); border-radius: var(--bn-radius-lg); padding: var(--bn-space-lg); background: var(--bn-surface); }
+.axis .an { font-family:var(--mono); font-size:var(--t-caption); color:var(--bn-accent); font-weight:var(--w-strong); }
+.axis h3 { margin:.3rem 0 .5rem; font-size: var(--t-heading); }
+.axis p { margin:.4rem 0; font-size: var(--t-label); color: var(--bn-ink-2); }
+.axis pre { background: var(--bn-surface-2); border:1px solid var(--bn-rule); border-radius: var(--bn-radius-md);
+  padding:.6rem .7rem; overflow-x:auto; font-size:11.5px; margin:.6rem 0 0; }
+
+.art { display:grid; gap:.9rem; grid-template-columns: repeat(auto-fit, minmax(min(280px,100%),1fr)); }
+.card { border:1px solid var(--bn-rule); border-radius: var(--bn-radius-lg); padding: var(--bn-space-md) var(--bn-space-lg); background: var(--bn-surface); }
+.card h4 { margin:0 0 .2rem; font-size: var(--t-label); }
+.card .by { font-size: var(--t-caption); color: var(--bn-ink-3); }
+.card p { font-size: var(--t-label); color: var(--bn-ink-2); margin:.45rem 0 0; }
+.card .tag { display:inline-block; font-size:10px; font-weight:var(--w-strong); text-transform:uppercase; letter-spacing:.04em;
+  color:var(--bn-accent); background:var(--bn-accent-wash); border-radius: var(--bn-radius-pill); padding:1px 7px; margin-top:.5rem; }
+
+table.tax { width:100%; border-collapse:collapse; font-size: var(--t-label); }
+table.tax th, table.tax td { text-align:left; padding:.5rem .6rem; border-bottom:1px solid var(--bn-rule); vertical-align:top; }
+table.tax th { font-size: var(--t-caption); text-transform:uppercase; letter-spacing:.05em; color:var(--bn-ink-3); font-weight:var(--w-emph); }
+table.tax td .span { font-family:var(--mono); font-size:var(--t-caption); color:var(--bn-accent); }
+table.tax td small { color: var(--bn-ink-3); }
+
+.callout { border-left:3px solid var(--bn-accent); background: var(--bn-accent-wash);
+  padding: var(--bn-space-md) var(--bn-space-lg); border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; margin:1.25rem 0; }
+.callout p { margin:.3rem 0; font-size: var(--t-label); }
+
+.foot { margin-top:4rem; padding-top: var(--bn-space-lg); border-top:1px solid var(--bn-rule); font-size: var(--t-caption); color: var(--bn-ink-3); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Bristlenose · infoviz mockups · dashboard</div>
+    <h1>Dashboard auto-layout — a way of thinking at all scales</h1>
+    <p class="lede">Not a redesign of the tiles we have. A <strong>framework</strong> for placing any tile —
+    the six we ship and the ten we've sketched — so the dashboard is genuinely good at
+    <strong>720&nbsp;px</strong> (half a 14″ laptop, slides open in the other half) and genuinely good at
+    <strong>2240&nbsp;px</strong> (24″ iMac), and everything between. Scrolling is allowed. We are not building the
+    “CEO won't scroll” single pane of glass.</p>
+    <p>The move is to stop treating the dashboard as a fixed <code>1fr&nbsp;1fr</code> grid capped at
+    <code>52rem</code> — the <em>only</em> lens that doesn't fill its width — and give each widget three declared
+    properties: a <strong>natural width</strong>, a set of <strong>faces</strong>, and <strong>fluid proportions</strong>.
+    Three orthogonal axes, below. The live stage is real: it uses container queries, so resize it and watch each
+    tile change face on its own.</p>
+  </header>
+
+  <!-- ===================== LIVE STAGE ===================== -->
+  <section class="block">
+    <h2><span class="n">LIVE</span> The stage — drag it, or snap to a target</h2>
+    <p class="sub">The dashed box is the responsive context, not the window. On half a 14″ it's ~720&nbsp;px even
+    though your screen is wider — so everything keys off <em>this box</em>. Snap to a target, or drag the bottom-right
+    corner to feel every width in between.</p>
+
+    <div class="controls">
+      <div class="grp">
+        <span class="lbl">Target</span>
+        <button class="pbtn" data-w="380">sidebar 380</button>
+        <button class="pbtn on" data-w="720">½ 14″ · 720</button>
+        <button class="pbtn" data-w="1024">tablet 1024</button>
+        <button class="pbtn" data-w="1440">14″ full 1440</button>
+        <button class="pbtn" data-w="2240">24″ iMac 2240</button>
+      </div>
+      <div class="grp">
+        <span class="lbl">Show</span>
+        <button class="pbtn toggle" data-toggle="tracks">grid tracks</button>
+        <button class="pbtn toggle on" data-toggle="faces">face state</button>
+      </div>
+      <div class="grp">
+        <span class="lbl">Zoom</span>
+        <button class="pbtn zoom on" data-scale="1">100%</button>
+        <button class="pbtn zoom" data-scale="0.75">75%</button>
+        <button class="pbtn zoom" data-scale="0.5">50%</button>
+        <button class="pbtn" id="fitbtn" title="Scale the current stage width to fit your screen">Fit</button>
+      </div>
+      <div class="readout"><b id="px">720</b>px · <span class="cols" id="cols">~2 cols</span> · <span id="scaleout">100%</span></div>
+    </div>
+
+    <div class="stage-outer">
+     <div class="stage-scale" id="stageScale">
+      <div class="stage" id="stage" style="width:720px">
+        <div class="dash">
+
+          <!-- ── 1 · Top band · cfull r2 · the numbers on ONE row, progress pinned top-right ── -->
+          <div class="w cfull r2"><header><h3>The study at a glance</h3></header>
+            <div class="fill topband">
+              <div class="kpirow">
+                <div class="kpinum"><span class="hero">128</span><span class="kpi-k">quotes</span></div>
+                <div class="kpinum"><span class="hero">9</span><span class="kpi-k">sessions</span></div>
+                <div class="kpinum"><span class="hero">14</span><span class="kpi-k">themes</span></div>
+              </div>
+              <div class="progress" title="Theme saturation — new themes tail off as sessions accrue">
+                <div class="spark" id="sat"></div>
+                <span class="pval">92%</span><span class="plabel">saturation</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 2 · Who we spoke with · cfull r4 · person-cards that grow richer with width ── -->
+          <div class="w cfull r4"><header><h3>Who we spoke with</h3></header>
+            <div class="fill sessions-list" style="justify-content:flex-start">
+
+              <div class="srow">
+                <div class="sr-thumb"></div>
+                <div class="sr-id"><span class="pill">P1</span>
+                  <span class="sr-name"><b>Rachel</b><span class="sr-dur">42:10</span></span></div>
+                <div class="sr-arc"><span class="rowspark" data-seed="1"></span></div>
+                <div class="sr-mid">
+                  <div class="sr-topics"><span class="chip">onboarding</span><span class="chip">pricing</span></div>
+                  <div class="sr-journey"><span class="stg">Onboarding</span><span class="sep">→</span><span class="stg">Core task</span><span class="sep">→</span><span class="stg">Pricing</span><span class="sep">→</span><span class="stg">Wrap-up</span></div>
+                </div>
+                <div class="sr-quotes"><b>18</b><span>quotes</span></div>
+              </div>
+
+              <div class="srow">
+                <div class="sr-thumb"></div>
+                <div class="sr-id"><span class="pill">P2</span>
+                  <span class="sr-name"><b>Dan</b><span class="sr-dur">38:55</span></span></div>
+                <div class="sr-arc"><span class="rowspark" data-seed="2"></span></div>
+                <div class="sr-mid">
+                  <div class="sr-topics"><span class="chip">core task</span><span class="chip">trust</span></div>
+                  <div class="sr-journey"><span class="stg">Onboarding</span><span class="sep">→</span><span class="stg">Core task</span><span class="sep">→</span><span class="stg">Trust &amp; safety</span><span class="sep">→</span><span class="stg">Wrap-up</span></div>
+                </div>
+                <div class="sr-quotes"><b>21</b><span>quotes</span></div>
+              </div>
+
+              <div class="srow">
+                <div class="sr-thumb"></div>
+                <div class="sr-id"><span class="pill">P3</span>
+                  <span class="sr-name"><b>Aiko</b><span class="sr-dur">51:30</span></span></div>
+                <div class="sr-arc"><span class="rowspark" data-seed="3"></span></div>
+                <div class="sr-mid">
+                  <div class="sr-topics"><span class="chip">sharing</span><span class="chip">wrap-up</span></div>
+                  <div class="sr-journey"><span class="stg">Onboarding</span><span class="sep">→</span><span class="stg">Core task</span><span class="sep">→</span><span class="stg">Sharing</span><span class="sep">→</span><span class="stg">Wrap-up</span></div>
+                </div>
+                <div class="sr-quotes"><b>14</b><span>quotes</span></div>
+              </div>
+
+              <div class="srow">
+                <div class="sr-thumb"></div>
+                <div class="sr-id"><span class="pill">P4</span>
+                  <span class="sr-name"><b>Ben</b><span class="sr-dur">29:08</span></span></div>
+                <div class="sr-arc"><span class="rowspark" data-seed="4"></span></div>
+                <div class="sr-mid">
+                  <div class="sr-topics"><span class="chip">core task</span></div>
+                  <div class="sr-journey"><span class="stg">Onboarding</span><span class="sep">→</span><span class="stg">Core task</span><span class="sep">→</span><span class="stg">Wrap-up</span></div>
+                </div>
+                <div class="sr-quotes"><b>27</b><span>quotes</span></div>
+              </div>
+
+              <div class="srow">
+                <div class="sr-thumb"></div>
+                <div class="sr-id"><span class="pill">P5</span>
+                  <span class="sr-name"><b>Mara</b><span class="sr-dur">44:22</span></span></div>
+                <div class="sr-arc"><span class="rowspark" data-seed="5"></span></div>
+                <div class="sr-mid">
+                  <div class="sr-topics"><span class="chip">pricing</span><span class="chip">sharing</span></div>
+                  <div class="sr-journey"><span class="stg">Onboarding</span><span class="sep">→</span><span class="stg">Pricing</span><span class="sep">→</span><span class="stg">Sharing</span><span class="sep">→</span><span class="stg">Wrap-up</span></div>
+                </div>
+                <div class="sr-quotes"><b>19</b><span>quotes</span></div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ── 3 · Sections + Themes · a side-by-side PAIR · longer list → wider + internal columns ── -->
+          <div class="w c1 r3"><header><h3>Sections</h3></header>
+            <div class="fill" style="justify-content:flex-start">
+              <ul class="list">
+                <li>Onboarding <span class="c">21</span></li>
+                <li>Core task <span class="c">44</span></li>
+                <li>Pricing <span class="c">18</span></li>
+                <li>Trust &amp; safety <span class="c">27</span></li>
+                <li>Sharing <span class="c">12</span></li>
+                <li>Wrap-up <span class="c">18</span></li>
+              </ul>
+            </div>
+          </div>
+          <div class="w c2 r3"><header><h3>Themes <span class="kicker">longer, so wider + 2 columns</span></h3></header>
+            <div class="fill" style="justify-content:flex-start">
+              <ul class="list list--cols">
+                <li>Trust &amp; saving <span class="c">31</span></li>
+                <li>Findability <span class="c">24</span></li>
+                <li>Speed <span class="c">22</span></li>
+                <li>Onboarding friction <span class="c">19</span></li>
+                <li>Pricing clarity <span class="c">18</span></li>
+                <li>Undo &amp; safety net <span class="c">16</span></li>
+                <li>Collaboration <span class="c">14</span></li>
+                <li>Export &amp; sharing <span class="c">12</span></li>
+                <li>Mobile parity <span class="c">9</span></li>
+                <li>Notifications <span class="c">7</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- ── 4 · Pro & contra · c2 r3 · bigger — two roomy columns ── -->
+          <div class="w c2 r3"><header><h3>Pro &amp; contra</h3></header>
+            <div class="fill" style="justify-content:flex-start">
+              <div class="book">
+                <div class="col">
+                  <span class="cell up">saved me time +9</span>
+                  <span class="cell up">clear layout +6</span>
+                  <span class="cell up">fast to learn +4</span>
+                  <span class="cell up">felt trustworthy +3</span>
+                </div>
+                <div class="col">
+                  <span class="cell dn">no undo −8</span>
+                  <span class="cell dn">hidden filter −5</span>
+                  <span class="cell dn">slow export −3</span>
+                  <span class="cell dn">unclear pricing −3</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 5 · Friction & Co-occurrence · natural partners sharing ONE full row.
+               A cfull brick split 1 : 2 internally, so dense can never separate them. ── -->
+          <div class="w cfull r3"><header><h3>Friction &amp; co-occurrence</h3></header>
+            <div class="fill pairrow">
+              <div class="subpanel">
+                <h4>Friction <small>section × sentiment</small></h4>
+                <div class="heat tight" id="heat" style="grid-template-columns:repeat(7,1fr)"></div>
+              </div>
+              <div class="subpanel wide">
+                <h4>Co-occurrence <small>theme × theme · 2× the width</small></h4>
+                <div class="heat tight" id="cooc" style="grid-template-columns:repeat(12,1fr)"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 6 · Strongest signals · cfull r2 · responsive COUNT 1·3·5 (odd), near bottom ── -->
+          <div class="w cfull r2"><header><h3>Signals <span class="kicker">1 · 3 · 5 by width</span></h3></header>
+            <div class="fill" style="justify-content:center">
+              <div class="signalgrid">
+                <div class="sigcard"><span class="sig-k">Trust &amp; saving</span><span class="sig-v">31</span><div class="sig-bar"><span style="width:100%;background:var(--sent-frustration)"></span></div></div>
+                <div class="sigcard"><span class="sig-k">Findability</span><span class="sig-v">24</span><div class="sig-bar"><span style="width:77%;background:var(--sent-confusion)"></span></div></div>
+                <div class="sigcard"><span class="sig-k">Speed</span><span class="sig-v">22</span><div class="sig-bar"><span style="width:71%;background:var(--sent-delight)"></span></div></div>
+                <div class="sigcard"><span class="sig-k">Onboarding friction</span><span class="sig-v">19</span><div class="sig-bar"><span style="width:61%;background:var(--sent-doubt)"></span></div></div>
+                <div class="sigcard"><span class="sig-k">Pricing clarity</span><span class="sig-v">18</span><div class="sig-bar"><span style="width:58%;background:var(--sent-confidence)"></span></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 7 · Representative quotes · cfull r3 · count 1·3·5, spread wide or stack ── -->
+          <div class="w cfull r3"><header><h3>Verbatim <span class="kicker">1 · 3 · 5, spread by width</span></h3></header>
+            <div class="fill" style="justify-content:center">
+              <div class="quotegrid">
+                <div class="quote">“I kept waiting for it to tell me it had saved — I never trusted that it had.”<span class="who">P4 · frustration · 12:03</span></div>
+                <div class="quote">“Once I found the filter it was actually fine.”<span class="who">P7 · satisfaction · 08:41</span></div>
+                <div class="quote">“I’d share this with my team tomorrow if the export weren’t so slow.”<span class="who">P2 · doubt · 21:15</span></div>
+                <div class="quote">“The onboarding just got out of my way, which I loved.”<span class="who">P5 · delight · 03:52</span></div>
+                <div class="quote">“I couldn’t tell if pricing was per seat or per project.”<span class="who">P1 · confusion · 17:30</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 8 · Coverage · c3 r1 · LAST · MAX useful width ≈720 (not full-bleed) ── -->
+          <div class="w c3 r1"><header><h3>Transcript coverage</h3></header>
+            <div class="fill striprow">
+              <div class="bar">
+                <span style="width:72%;background:var(--sent-confidence)"></span>
+                <span style="width:15%;background:var(--sent-neutral)"></span>
+                <span style="width:13%;background:var(--bn-rule)"></span>
+              </div>
+              <span class="muted" style="white-space:nowrap">72% report · 15% moderator · 13% omitted</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+     </div>
+    </div>
+
+    <div class="callout">
+      <p><strong>What you're seeing.</strong> A wall of bricks — squares, wide cards, tall columns, full-bleed strips —
+      on a fixed row rhythm, so <code>dense</code> packs them tight instead of leaving ragged gaps. As the stage widens
+      the grid grows more columns and the wide/strip bricks reflow (Axis&nbsp;1); inside each brick the content trades
+      its <em>compact</em> face for <em>default</em> then <em>expanded</em> (Axis&nbsp;2); gaps, padding and hero numbers
+      grow with the space (Axis&nbsp;3). At 720&nbsp;px it's a calm two-column scroll; at 2240&nbsp;px a dense bento wall.
+      Turn on <strong>grid tracks</strong> to see the brick lattice.</p>
+    </div>
+  </section>
+
+  <!-- ===================== THE THREE AXES ===================== -->
+  <section class="block">
+    <h2><span class="n">MODEL</span> Three orthogonal axes</h2>
+    <p class="sub">Any responsive layout problem decomposes into <em>where a thing goes</em>, <em>what it shows</em>, and
+    <em>how big its parts are</em>. Keep them independent and the system stays legible as we add widget #11, #12, #16.</p>
+
+    <div class="axes">
+      <div class="axis">
+        <div class="an">AXIS 1</div>
+        <h3>Placement — the grid fills the lens</h3>
+        <p>Drop the fixed <code>1fr 1fr</code> and the <code>52rem</code> cap. Use the RAM track grid Bristlenose
+        <em>already</em> ships (responsive-grid.css): as many columns as fit, dense packing for the bento. The trick that
+        makes it pack <em>cleanly</em> instead of ragged: a <strong>fixed base row height</strong> — every widget is a
+        <em>brick</em> of <code>columns × rows</code>, and content fills the brick rather than setting its height.</p>
+        <p><code>auto-fill</code>, not <code>auto-fit</code> — at 2240&nbsp;px <code>auto-fit</code> over-stretches a
+        sparse row into a few giant tiles. Brick area ∝ <em>importance</em>, never data volume (the bento rule).
+        Guardrail tiers clamp only the <em>column</em> span so a wide brick never overflows narrow.</p>
+        <pre>.dash {
+  grid-template-columns:
+    repeat(auto-fill,
+      minmax(min(220px,100%), 1fr));
+  grid-auto-rows: 78px;   /* the brick rhythm */
+  grid-auto-flow: row dense;
+}
+.w.c2 { grid-column: span 2 }  /* wide  */
+.w.r3 { grid-row:    span 3 }  /* tall  */
+.w.cfull { grid-column: 1/-1 } /* strip */</pre>
+      </div>
+
+      <div class="axis">
+        <div class="an">AXIS 2</div>
+        <h3>Adaptation — each widget owns three faces</h3>
+        <p>A widget reacts to <em>its own container</em>, not the window (a tile can be narrow in a wide dashboard).
+        Container queries pick <strong>compact → default → expanded</strong>: more detail, more content, or both.
+        <strong>Default-first:</strong> the no-query baseline is the <em>middle</em> face, so a browser without container
+        queries lands on something usable — narrow <em>strips</em> detail, wide <em>adds</em> it.</p>
+        <pre>.w { container-type: inline-size; }
+
+/* baseline = default face */
+.lvl-max { display:none; }        /* wide adds */
+@container (max-width:299px){      /* narrow strips */
+  .lvl-mid { display:none; }
+}
+@container (min-width:480px){
+  .lvl-max { display:revert; }
+}</pre>
+      </div>
+
+      <div class="axis">
+        <div class="an">AXIS 3</div>
+        <h3>Proportion — sizes breathe, they don't just gain whitespace</h3>
+        <p>Gap, padding and hero numbers interpolate between the two anchors with <code>clamp()</code> +
+        container units. A bigger screen means bigger numbers and more air — the Utopia idea — instead of a fixed rig
+        marooned in an ocean of margin.</p>
+        <pre>.hero {
+  font-size: clamp(1.5rem, 9cqi, 3.1rem);
+}
+.w { padding: clamp(.7rem, 2.2cqi, 1.15rem); }
+/* cqi = 1% of the widget's own width */</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== WIDGET SIZE TAXONOMY ===================== -->
+  <section class="block">
+    <h2><span class="n">SPEC</span> The widget size taxonomy</h2>
+    <p class="sub">The contract every widget signs so the next one slots in without a bespoke decision. Author a new
+    tile by filling this row: pick a <em>brick shape</em> (columns × rows), then describe its three faces. No layout code.
+    The shapes come from a small, deliberate kit — that constraint is what keeps the wall clean.</p>
+
+    <table class="tax">
+      <thead><tr><th>Widget</th><th>Brick (c × r)</th><th>Reads as</th><th>Compact</th><th>Default</th><th>Expanded</th></tr></thead>
+      <tbody>
+        <tr><td>1 · Numbers + saturation</td><td><span class="span">cfull × r2</span></td><td>top band</td><td>numbers wrap</td><td>numbers + spark</td><td>+ delta vs last</td></tr>
+        <tr><td>2 · Who we spoke with</td><td><span class="span">cfull × r4</span></td><td>person-cards</td><td>badge · arc · #</td><td>+ thumb · topics</td><td>+ journey map</td></tr>
+        <tr><td>3a · Sections</td><td><span class="span">c1 × r3</span></td><td>column</td><td>counts hidden</td><td>list + counts</td><td>—</td></tr>
+        <tr><td>3b · Themes <small>(longer → wider)</small></td><td><span class="span">c2 × r3</span></td><td>2-col column</td><td>1 col</td><td>2 cols</td><td>—</td></tr>
+        <tr><td>4 · Pro &amp; contra</td><td><span class="span">c2 × r3</span></td><td>two columns</td><td>top 2 ±</td><td>top 3 ±</td><td>top 4 ±</td></tr>
+        <tr><td>5 · Friction &amp; co-occurrence</td><td><span class="span">cfull × r3</span></td><td>pair-row <small>· split 1 : 2</small></td><td colspan="3"><small>two matrices welded into one brick so dense can't separate the partners</small></td></tr>
+        <tr><td>6 · Signals</td><td><span class="span">cfull × r2</span></td><td>count query</td><td>1 card</td><td>3 cards</td><td>5 cards</td></tr>
+        <tr><td>7 · Verbatim <small>(quotes)</small></td><td><span class="span">cfull × r3</span></td><td>count query</td><td>1 quote</td><td>3 spread</td><td>5 spread</td></tr>
+        <tr><td>8 · Coverage <small>(last)</small></td><td><span class="span">c3 × r1</span></td><td>bounded strip <small>· max ≈720</small></td><td>bar</td><td>+ legend</td><td>+ omitted list</td></tr>
+        <tr><td class="muted"><em>your widget #11…</em></td><td><span class="span">? × ?</span></td><td>—</td><td colspan="3"><small>pick a shape from the kit + three faces — done</small></td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <p><strong>The brick kit</strong> (base cell <code>--u ≈ 220px</code> wide × <code>--rowH 78px</code> tall):
+      <b>square</b> c1×r2 · <b>wide</b> c2×r2 · <b>big</b> c2×r3 · <b>tall</b> c1×r3/r4 · <b>panel</b> c3×r3 ·
+      <b>strip</b> cfull×r1 · <b>band</b> cfull×r3.
+      A brick <em>never</em> gets a fixed pixel size — only a shape. The grid resolves the pixels, and the fixed row
+      height is what lets <code>dense</code> pack the wall. The discipline: <em>constrain the kit</em>. Ten free-form
+      aspect ratios is the ragged mess you just fixed; seven named bricks tile forever.</p>
+      <p style="margin-top:.6rem"><strong>Extra width? A brick answers one of three ways:</strong>
+      <b>stretch</b> (full-bleed — the session band, the sentiment strip) ·
+      <b>stop</b> (a max useful width — coverage caps at ≈720 and lets the rest breathe) ·
+      <b>multiply</b> (a quantity query — the signal cards go 1 → 3 → 5, showing <em>more of the same</em> rather than
+      a bigger one). Knowing which a widget wants is half the layout decision.</p>
+    </div>
+  </section>
+
+  <!-- ===================== PRIOR ART ===================== -->
+  <section class="block" id="priorart">
+    <h2><span class="n">SOURCES</span> Prior art — who worked this out already</h2>
+    <p class="sub">The framework above is an assembly of published ideas, not an invention. Each axis stands on named
+    work — verified current as of 2026.</p>
+
+    <div class="art">
+      <div class="card">
+        <h4><a href="https://web.dev/articles/baseline-in-action-container-queries">Intrinsic Web Design</a></h4><div class="by">Jen Simmons · 2018</div>
+        <p>The umbrella idea: let content and available space negotiate layout; media queries become optional
+        refinements, not load-bearing. Mix fluid <code>fr</code> and fixed <code>ch</code>/<code>px</code> tracks;
+        size regions to <code>min-content</code>/<code>fit-content</code>.</p>
+        <span class="tag">Axis 1</span>
+      </div>
+      <div class="card">
+        <h4><a href="https://web.dev/patterns/layout/repeat-auto-minmax/">The RAM technique</a></h4><div class="by">Una Kravets · web.dev</div>
+        <p>Repeat-Auto-Minmax. <code>repeat(auto-fill, minmax(min(X,100%), 1fr))</code> — one line, one column to
+        many, no media query. The <code>min(X,100%)</code> guard (Evan Minto) stops overflow when the container is
+        narrower than the floor. <em>This is line 8 of our own responsive-grid.css.</em></p>
+        <span class="tag">Axis 1</span>
+      </div>
+      <div class="card">
+        <h4><a href="https://every-layout.dev/layouts/switcher/">Every Layout</a></h4><div class="by">Heydon Pickering &amp; Andy Bell</div>
+        <p>Algorithmic primitives, each intrinsically responsive. The <em>Switcher</em> flips row→column at a
+        <em>content</em> threshold via a <code>flex-basis: calc((30rem - 100%) * 999)</code> trick — no breakpoint,
+        reacts to the element's own width. Quantity queries stack once items exceed N.</p>
+        <span class="tag">Axis 1</span>
+      </div>
+      <div class="card">
+        <h4><a href="https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Containment/Container_queries">Container Queries</a></h4><div class="by">CSS WG · Baseline 2023 · ~93% global</div>
+        <p><code>@container</code> + units <code>cqi/cqb</code>. A widget reacts to <em>its</em> box, not the viewport —
+        the exact fix for “same tile, different slot.” shadcn's <code>dashboard-01</code> and Observable's
+        <code>resize()</code> both drive their grids this way, not by media query.</p>
+        <span class="tag">Axis 2</span>
+      </div>
+      <div class="card">
+        <h4><a href="https://utopia.fyi/">Utopia — fluid type &amp; space</a></h4><div class="by">Trys Mudford &amp; James Gilyead</div>
+        <p>Design the two extremes, let <code>clamp(min, intercept + slope·vw, max)</code> interpolate the middle as one
+        continuous curve. Type and space breathe together — density stays coherent at any width. Use <code>cqi</code>
+        when the thing should track its <em>card</em>, not the page.</p>
+        <span class="tag">Axis 3</span>
+      </div>
+      <div class="card">
+        <h4><a href="https://www.deck.gallery/blog/apple-bento-grid-breakdown/">Bento layouts</a></h4><div class="by">Apple keynotes · iOS 16 · visionOS</div>
+        <p>Heterogeneous tiles, one idea each, area ∝ <em>importance</em> (not data volume — that's the cited mistake;
+        too many equal tiles collapses back to a plain card grid). <code>span N</code> + <code>grid-auto-flow: dense</code>
+        packs the gaps.</p>
+        <span class="tag">Axis 1</span>
+      </div>
+      <div class="card">
+        <h4><a href="https://trentwalton.com/2011/07/14/content-choreography/">Content choreography · Priority+</a></h4><div class="by">Trent Walton · Luke Wroblewski · Brad Frost</div>
+        <p>Reflow reorders by <em>priority</em> (Wroblewski's “layout shifter”), it doesn't just stack columns. Dense
+        packing + source order floats important tiles up as the stage narrows. Frost's caveat: never sweep a
+        <em>primary</em> element behind a “more.”</p>
+        <span class="tag">Axis 2</span>
+      </div>
+      <div class="card">
+        <h4><a href="https://en.wikipedia.org/wiki/Small_multiple">Small multiples / data density</a></h4><div class="by">Edward Tufte</div>
+        <p>More space buys more <em>information</em>, not bigger chrome. Expanded faces show all sessions, the full
+        matrix, axis ticks. Tufte's caveat we honour: only render a small multiple when each panel is <em>big enough to
+        read</em> — so the compact face shows four, not forty.</p>
+        <span class="tag">Axis 2</span>
+      </div>
+      <div class="card">
+        <h4><a href="https://developer.chrome.com/blog/masonry-update">Native masonry → <code>grid-lanes</code></a></h4><div class="by">CSS WG resolution · late 2025</div>
+        <p>The <code>display:masonry</code> vs <code>grid-template-rows:masonry</code> war resolved to
+        <strong><code>display: grid-lanes</code></strong> — reuse grid columns, pack down the block axis, keep source
+        order. <em>Our responsive-grid.css already <code>@supports (display: grid-lanes)</code>.</em> One engine ships
+        it in 2026; we progressively enhance, <code>dense</code> is the stable fallback.</p>
+        <span class="tag">Axis 1</span>
+      </div>
+      <div class="card">
+        <h4><a href="https://github.com/DataDog/effective-dashboards/blob/main/guidelines.md">Grafana · Datadog · Observable</a></h4><div class="by">production dashboard grids</div>
+        <p>Concrete floors worth stealing: Datadog won't render a timeseries under <strong>4 of 12 columns</strong> and
+        goes 2×12 high-density on big monitors; Observable auto-reduces 4→2→1 columns with no authored breakpoints.
+        Validates our per-widget <em>min floor</em>. We take the CSS-only subset — no <code>react-grid-layout</code>
+        runtime — because our tiles have <em>known</em> natural sizes.</p>
+        <span class="tag">Axis 1</span>
+      </div>
+    </div>
+
+    <div class="callout">
+      <p><strong>On the “single pane of glass.”</strong> It's a <a href="https://www.checklyhq.com/blog/broken-windows-why-the-single-pane-of-glass-is-imp/">named
+      anti-pattern</a>, not a virtue — the observability crowd documents wall-display dashboards so crammed that
+      “teams walked right past incidents… largely for show.” Anat Sifri's rule (<a href="https://uxdesign.cc/is-scrolling-bad-for-your-dashboard-3f318b291e63">UX
+      Collective</a>): the fix for a busy dashboard is to <em>reduce the information, not the scrolling</em>. A
+      researcher <em>works</em> this surface while writing slides — the defensible shape is <em>progressive</em>: the
+      top band answers “what happened,” scrolling earns depth. We keep density and allow the scroll.</p>
+    </div>
+  </section>
+
+  <footer class="foot">
+    docs/mockups/dashboard-autolayout.html · self-contained · uses container queries + RAM grid + fluid clamp() ·
+    tokens mirror bristlenose/theme/tokens.css · toggle dark mode via OS appearance
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  const stage = document.getElementById('stage');
+  const stageScale = document.getElementById('stageScale');
+  const stageOuter = document.querySelector('.stage-outer');
+  const px = document.getElementById('px');
+  const cols = document.getElementById('cols');
+  const scaleOut = document.getElementById('scaleout');
+  const U = 250, GAPish = 18;
+  let scale = 1;
+
+  function estCols(w){
+    const inner = w - 2*16;               // stage padding approx
+    return Math.max(1, Math.floor((inner + GAPish) / (U + GAPish)));
+  }
+
+  // Size the zoom wrapper to the stage's PAINTED footprint (layout size × scale)
+  // so the page below flows with no phantom gap; stage-outer scrolls if it's
+  // still wider than the screen (i.e. zoomed in too far).
+  function fit(){
+    stageScale.style.width  = (stage.offsetWidth  * scale) + 'px';
+    stageScale.style.height = (stage.offsetHeight * scale) + 'px';
+  }
+
+  function report(){
+    const w = Math.round(stage.offsetWidth);   // offsetWidth is scale-independent
+    px.textContent = w;
+    cols.textContent = '~' + estCols(w) + ' col' + (estCols(w)===1?'':'s');
+    document.querySelectorAll('.pbtn[data-w]').forEach(b=>{
+      b.classList.toggle('on', Math.abs(parseInt(b.dataset.w)-w) < 12);
+    });
+    fit();
+  }
+
+  function applyScale(s, fromFit){
+    scale = s;
+    stage.style.setProperty('--scale', s);
+    scaleOut.textContent = Math.round(s*100) + '%';
+    document.querySelectorAll('.pbtn.zoom').forEach(b=>
+      b.classList.toggle('on', !fromFit && Math.abs(parseFloat(b.dataset.scale)-s) < 0.001));
+    fit();
+  }
+
+  function fitToScreen(){
+    // scale the CURRENT stage width down to fit the available column
+    const avail = stageOuter.clientWidth - 4;
+    applyScale(Math.min(1, avail / stage.offsetWidth), true);
+  }
+
+  // Width preset buttons
+  document.querySelectorAll('.pbtn[data-w]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      stage.style.width = b.dataset.w + 'px';
+      // allow transition, then report after it settles
+      setTimeout(report, 300);
+      report();
+    });
+  });
+
+  // Zoom buttons + Fit
+  document.querySelectorAll('.pbtn.zoom').forEach(b=>{
+    b.addEventListener('click', ()=> applyScale(parseFloat(b.dataset.scale)));
+  });
+  document.getElementById('fitbtn').addEventListener('click', fitToScreen);
+
+  // Toggles
+  document.querySelectorAll('.pbtn[data-toggle]').forEach(b=>{
+    const key = b.dataset.toggle;
+    if(key==='faces') document.documentElement.setAttribute('data-faces','');   // default on
+    b.addEventListener('click', ()=>{
+      const on = b.classList.toggle('on');
+      if(on) document.documentElement.setAttribute('data-'+key,'');
+      else document.documentElement.removeAttribute('data-'+key);
+    });
+  });
+
+  // Live report while dragging the native resizer
+  const ro = new ResizeObserver(report);
+  ro.observe(stage);
+  stage.addEventListener('pointerdown', ()=>stage.classList.add('dragging'));
+  window.addEventListener('pointerup', ()=>stage.classList.remove('dragging'));
+
+  // -------- inject the face badges into every widget header (keeps HTML clean) --------
+  document.querySelectorAll('.w > header').forEach(h=>{
+    h.insertAdjacentHTML('beforeend',
+      '<span class="facebadge fb-c">compact</span><span class="facebadge fb-d">default</span><span class="facebadge fb-e">expanded</span>');
+  });
+
+  // -------- populate mini-visualisations (they FILL their brick) --------
+  function bars(el, vals){ if(!el) return; vals.forEach(v=>{ const i=document.createElement('i');
+    i.style.height = v + '%'; el.appendChild(i); }); }
+
+  bars(document.getElementById('sat'),
+    [28,46,60,71,80,85,88,90,90,92]);                     // rising = sense of progress
+
+  const heat = document.getElementById('heat');           // 7 cols × 4 rows, tight
+  for(let k=0;k<28;k++){ const v=Math.random(); const i=document.createElement('i');
+    i.style.background = `color-mix(in srgb, var(--sent-frustration) ${Math.round(15+v*80)}%, var(--bn-surface))`;
+    heat.appendChild(i); }
+
+  const cooc = document.getElementById('cooc');           // 12 cols × 5 rows · wide (2× friction)
+  for(let k=0;k<60;k++){ const v=Math.random(); const i=document.createElement('i');
+    i.style.background = `color-mix(in srgb, var(--bn-accent) ${Math.round(8+v*80)}%, var(--bn-surface))`;
+    cooc.appendChild(i); }
+
+  // Per-session sentiment micro-chart, folded into each session-log row
+  document.querySelectorAll('.rowspark').forEach(el=>{
+    for(let k=0;k<14;k++){ const v=Math.random(); const i=document.createElement('i');
+      i.style.height = (28 + v*72) + '%';
+      i.style.background = v>0.6 ? 'var(--sent-delight)' : (v>0.38 ? 'var(--sent-neutral)' : 'var(--sent-frustration)');
+      el.appendChild(i); }
+  });
+
+  report();
+})();
+</script>
+</body>
+</html>

@@ -23,8 +23,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DESKTOP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 RESOURCES="$DESKTOP_DIR/Bristlenose/Resources"
+# MAS requires nested executables to declare app-sandbox; ffmpeg/ffprobe get the
+# minimal sandbox+inherit set (no HR exceptions — they don't JIT). Without this,
+# App Store Connect rejects: "App sandbox not enabled … [ffmpeg, ffprobe]".
+ENTITLEMENTS="$DESKTOP_DIR/bristlenose-ffmpeg.entitlements"
 
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+
+if [ ! -f "$ENTITLEMENTS" ]; then
+    echo "error: entitlements not found at $ENTITLEMENTS" >&2
+    exit 1
+fi
 
 if [ -n "${TIMESTAMP_FLAG:-}" ]; then
     TIMESTAMP=("$TIMESTAMP_FLAG")
@@ -44,6 +53,7 @@ for binary in ffmpeg ffprobe; do
 
     echo "==> Signing $binary (identity: $SIGN_IDENTITY)..."
     codesign --force --options=runtime "${TIMESTAMP[@]}" \
+        --entitlements "$ENTITLEMENTS" \
         --sign "$SIGN_IDENTITY" "$target"
 
     if [ "$SIGN_IDENTITY" != "-" ]; then

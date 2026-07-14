@@ -92,6 +92,8 @@ Both signing scripts read it:
 
 ## See also
 
+- [`REPORT-STYLE.md`](REPORT-STYLE.md) — the shared CLI report style + event protocol
+  every script here follows, so the output reads as one system
 - [`desktop/CLAUDE.md`](../CLAUDE.md) — desktop app + sidecar architecture, the three
   dev schemes, and the build/signing gotchas
 - [`docs/design-desktop-python-runtime.md`](../../docs/design-desktop-python-runtime.md) —

@@ -46,6 +46,8 @@ echo "=============================================="
 echo "identity: $SIGN_IDENTITY"
 echo "notary:   $NOTARY_PROFILE"
 echo "team:     $TEAM_ID"
+echo "logs:     $DESKTOP_DIR/build/  (xcodebuild-archive[5] xcodebuild-export[6] ensure-sidecar[2] notarytool-submit[9]).log"
+echo "  watch:  tail -f $DESKTOP_DIR/build/xcodebuild-archive.log"
 echo
 
 # ------------------------------------------------------------
@@ -146,7 +148,19 @@ if [ ! -x "$SIDECAR_BIN" ]; then
     echo "error: sidecar binary not found or not executable: $SIDECAR_BIN" >&2
     exit 1
 fi
-"$SIDECAR_BIN" doctor --self-test
+# A MAS build signs the sidecar with com.apple.security.app-sandbox + inherit, which
+# makes it ABORT when exec'd standalone (no parent .app to inherit the sandbox from —
+# dies in _libsecinit_appsandbox). So the bare `doctor --self-test` below only works on
+# non-sandbox (Debug / ad-hoc) builds. For a sandbox-signed sidecar, skip it: the
+# spec→bundle datas are already gated by check-bundle-manifest.sh (step 1b, no exec)
+# and by App Store Connect's own validation, and the runtime path is exercised via the
+# launched .app. (14 Jul 2026 — added with the nested-sandbox signing fix.)
+if codesign -d --entitlements - "$SIDECAR_BIN" 2>/dev/null | grep -q "app-sandbox"; then
+    echo "    SKIPPED — sidecar is app-sandbox-signed (can't run standalone; MAS build)."
+    echo "    Bundle datas covered by check-bundle-manifest.sh (1b) + ASC validation."
+else
+    "$SIDECAR_BIN" doctor --self-test
+fi
 
 # ------------------------------------------------------------
 # 2b. THIRD-PARTY-BINARIES.md staleness check (C5)
@@ -207,6 +221,15 @@ ARCHIVE_LOG="$DESKTOP_DIR/build/xcodebuild-archive.log"
 EXPORT_LOG="$DESKTOP_DIR/build/xcodebuild-export.log"
 
 rm -rf "$ARCHIVE_PATH" "$EXPORT_DIR"
+
+# The sidecar was already built + signed with the real identity in step 2
+# (ensure-sidecar --force). Skip the redundant in-archive "Ensure Sidecar Fresh"
+# phase: xcodebuild inherits the exported real SIGN_IDENTITY but NOT the one-shot
+# _BRISTLENOSE_RELEASE=1, so the phase's ensure-sidecar.sh would hit its own guard
+# ("refusing to sign with a real identity outside build-all.sh") and the archive
+# fails. Copy Sidecar Resources' check-sidecar-freshness.sh gate remains the
+# independent backstop that the embedded bundle is current.
+export BRISTLENOSE_SKIP_SIDECAR_ENSURE=1
 
 echo
 echo "==> 5. xcodebuild archive..."
@@ -461,6 +484,15 @@ OUTER_ENTS=$(codesign -d --entitlements :- "$OUTER_BIN" 2>/dev/null || true)
 if grep -A1 "get-task-allow" <<< "$OUTER_ENTS" | grep -q "<true/>"; then
     echo "error: outer binary has get-task-allow=TRUE" >&2
     echo "$OUTER_ENTS" | sed 's/^/    /' >&2
+    exit 1
+fi
+
+echo "    [d2] outer binary Hardened Runtime flag (App Store requires it)"
+CS_FLAGS=$(codesign -dvvv "$OUTER_BIN" 2>&1 || true)
+if ! grep -qE "flags=.*runtime" <<< "$CS_FLAGS"; then
+    echo "error: outer binary is NOT signed with Hardened Runtime (--options=runtime)" >&2
+    echo "       set ENABLE_HARDENED_RUNTIME = YES in the Release config" >&2
+    grep -E "^(Signature|CodeDirectory)" <<< "$CS_FLAGS" | sed 's/^/    /' >&2
     exit 1
 fi
 

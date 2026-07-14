@@ -180,6 +180,34 @@ if [ "$FAILED" -gt 0 ]; then
     exit 1
 fi
 
+echo "==> Signing framework binaries with explicit --identifier (before outer)..."
+# PyInstaller ships Python.framework whose main Mach-O is named 'Python' (no
+# .dylib/.so extension) — the inner-pool glob above misses it, so it keeps
+# PyInstaller's ad-hoc signature. codesign would auto-derive 'Python-<hash>',
+# which mismatches the framework's CFBundleIdentifier (org.python.python) →
+# App Store Connect "Invalid Code Signature Identifier". Sign each framework's
+# main binary with --identifier = its CFBundleIdentifier. General-purpose:
+# any future *.framework is handled the same way (only Python.framework today).
+# No --entitlements: these are dlopen'd libraries, not exec'd — the sandbox
+# entitlements belong on the executables (outer sidecar), not the framework.
+while IFS= read -r -d '' plist; do
+    ver_dir="$(dirname "$(dirname "$plist")")"      # .../Versions/<v>
+    fw_dir="$(dirname "$(dirname "$ver_dir")")"     # .../Xxx.framework
+    fw_name="$(basename "$fw_dir" .framework)"      # Xxx
+    fw_bin="$ver_dir/$fw_name"                      # .../Versions/<v>/Xxx
+    [ -f "$fw_bin" ] || continue
+    bid="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist" 2>/dev/null || true)"
+    if [ -z "$bid" ]; then
+        echo "error: no CFBundleIdentifier in $plist — refusing to auto-hash $fw_bin" >&2
+        exit 1
+    fi
+    echo "    $fw_bin  (--identifier $bid)"
+    codesign --force --options=runtime "${TIMESTAMP[@]}" \
+        --identifier "$bid" \
+        --sign "$SIGN_IDENTITY" "$fw_bin"
+    codesign -v --strict "$fw_bin"
+done < <(find "$BUNDLE" -path "*.framework/Versions/*/Resources/Info.plist" -print0)
+
 echo "==> Signing outer bristlenose-sidecar executable..."
 OUTER_LOG="$LOG_DIR/__outer.log"
 {

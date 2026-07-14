@@ -20,6 +20,18 @@ Format:
 The script runs each candidate line through these patterns and skips any
 that match.
 
-Current entries: none.
+Current entries: HYG-1.
 
 <!-- Add new entries below this line. Renumber contiguously. -->
+
+## HYG-1 — provider name, not a credential
+
+`BristlenoseShared.swift` (`overlayAPIKeys` keyless-provider guard) logs the
+*active provider name* — `anthropic` / `openai` / `azure` / `google` / `local`
+— at `privacy: .public` when the provider is keyless (Ollama). The interpolated
+value is `active`, a provider identifier, **not** a credential. The checker
+trips on the literal words "API key" in the *message text*, not on what's
+interpolated; `.public` is correct, since provider names are safe (and useful)
+to log.
+
+<!-- ci-allowlist: HYG-1 --> active provider=.*is keyless.*no API key injection

@@ -148,7 +148,19 @@ if [ ! -x "$SIDECAR_BIN" ]; then
     echo "error: sidecar binary not found or not executable: $SIDECAR_BIN" >&2
     exit 1
 fi
-"$SIDECAR_BIN" doctor --self-test
+# A MAS build signs the sidecar with com.apple.security.app-sandbox + inherit, which
+# makes it ABORT when exec'd standalone (no parent .app to inherit the sandbox from —
+# dies in _libsecinit_appsandbox). So the bare `doctor --self-test` below only works on
+# non-sandbox (Debug / ad-hoc) builds. For a sandbox-signed sidecar, skip it: the
+# spec→bundle datas are already gated by check-bundle-manifest.sh (step 1b, no exec)
+# and by App Store Connect's own validation, and the runtime path is exercised via the
+# launched .app. (14 Jul 2026 — added with the nested-sandbox signing fix.)
+if codesign -d --entitlements - "$SIDECAR_BIN" 2>/dev/null | grep -q "app-sandbox"; then
+    echo "    SKIPPED — sidecar is app-sandbox-signed (can't run standalone; MAS build)."
+    echo "    Bundle datas covered by check-bundle-manifest.sh (1b) + ASC validation."
+else
+    "$SIDECAR_BIN" doctor --self-test
+fi
 
 # ------------------------------------------------------------
 # 2b. THIRD-PARTY-BINARIES.md staleness check (C5)

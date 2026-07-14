@@ -49,12 +49,28 @@ C3 credential path (Apr 2026): sidecar never accesses macOS Keychain.
 Swift host fetches via Security.framework, injects BRISTLENOSE_*_API_KEY
 env vars at subprocess launch. No Keychain entitlements needed here.
 
-App Sandbox + user-facing entitlements (files, network, bookmarks)
-are Track A territory; sidecar will add com.apple.security.inherit
-at that point so the parent sandbox applies.
+App Sandbox (14 Jul 2026, MAS upload gate): the nested sidecar now carries
+com.apple.security.app-sandbox=true + com.apple.security.inherit=true so App
+Store Connect accepts it and it inherits the host .app's sandbox at sublaunch.
+User-facing sandbox resource entitlements (files.*, network.*) stay on the HOST
+app only — never here (they'd trip the _libsecinit_appsandbox abort under inherit).
 -->
 <plist version="1.0">
 <dict>
+    <!-- MAS: every nested executable must declare app-sandbox=true or App Store
+         Connect rejects the upload ("App sandbox not enabled"). -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <!-- Inherit the host .app's sandbox container/profile. MUST accompany
+         app-sandbox on a nested helper; the sidecar is only ever sublaunched
+         by the sandboxed Bristlenose.app, so it has a parent to inherit from. -->
+    <key>com.apple.security.inherit</key>
+    <true/>
+    <!-- Hardened-Runtime exceptions live on THIS binary's own signature and are
+         COMPATIBLE with inherit (Apple forums/thread/706390 — HR exceptions are the
+         inheritance-compatible family; only get-task-allow conflicts, and we don't
+         set it). Do NOT add any App Sandbox resource entitlement (files.*, network.*)
+         here — those would trip the _libsecinit_appsandbox abort under inherit. -->
     <key>com.apple.security.cs.disable-library-validation</key>
     <true/>
     <!-- Run-path transcription: numba/llvmlite JIT. See header comment +
@@ -63,12 +79,6 @@ at that point so the parent sandbox applies.
     <key>com.apple.security.cs.allow-jit</key>
     <true/>
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
-    <true/>
-    <!-- Track A (sandbox-debug branch only): inherit parent sandbox so
-         the sidecar's denials show up in the violation log alongside
-         the host app's. Revert if merging to a non-sandbox-debug branch
-         until Track A's per-violation branches land properly. -->
-    <key>com.apple.security.inherit</key>
     <true/>
 </dict>
 </plist>

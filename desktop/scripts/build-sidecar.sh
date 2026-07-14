@@ -178,8 +178,14 @@ if [ "$need_v" = 1 ]; then
         _say "Recreating sidecar venv at $SIDECAR_VENV"
         robust_rmrf "$SIDECAR_VENV"
         python3.12 -m venv "$SIDECAR_VENV"
-        "$SIDECAR_VENV/bin/pip" install --no-cache-dir --quiet --upgrade pip
-        "$SIDECAR_VENV/bin/pip" install --no-cache-dir -e "$ROOT[serve,apple,desktop]"
+        # Incremental (Xcode/dev) recreates reuse pip's local wheel cache — every
+        # wheel is already on disk, so no network. --force (release) keeps
+        # --no-cache-dir so the closure re-resolves against live PyPI and picks up
+        # a transitive republish within a >= floor (the documented release audit).
+        cache_bypass=""
+        [ "$FORCE" = 1 ] && cache_bypass="--no-cache-dir"
+        "$SIDECAR_VENV/bin/pip" install $cache_bypass --quiet --upgrade pip
+        "$SIDECAR_VENV/bin/pip" install $cache_bypass -e "$ROOT[serve,apple,desktop]"
         if ! "$PYTHON" -m PyInstaller --version >/dev/null 2>&1; then
             echo "error: PyInstaller not installed in fresh sidecar venv (check the 'desktop' extra)." >&2
             exit 1

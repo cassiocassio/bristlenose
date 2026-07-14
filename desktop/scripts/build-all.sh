@@ -40,15 +40,34 @@ TEAM_ID="Z56GZVA2QB"
 PROFILE_NAME="Bristlenose Mac App Store"
 PROFILE_PATH="$HOME/Library/MobileDevice/Provisioning Profiles/Bristlenose_Mac_App_Store.provisionprofile"
 
-echo "=============================================="
-echo " Bristlenose.app — end-to-end build"
-echo "=============================================="
-echo "identity: $SIGN_IDENTITY"
-echo "notary:   $NOTARY_PROFILE"
-echo "team:     $TEAM_ID"
-echo "logs:     $DESKTOP_DIR/build/  (xcodebuild-archive[5] xcodebuild-export[6] ensure-sidecar[2] notarytool-submit[9]).log"
-echo "  watch:  tail -f $DESKTOP_DIR/build/xcodebuild-archive.log"
-echo
+# ------------------------------------------------------------
+# Pretty report (see REPORT-STYLE.md)
+# ------------------------------------------------------------
+# Re-exec ourselves with stdout piped through the Rich renderer, exiting with
+# OUR status (PIPESTATUS[0]), not the renderer's. BN_REPORT=0 — or a missing
+# python / build_report.py — falls back to plain output. The inner run sources
+# report.sh and emits @bn events; noisy tool output still goes to per-step logs.
+REPORT_PYTHON="$ROOT/.venv/bin/python"
+[ -x "$REPORT_PYTHON" ] || REPORT_PYTHON="$(command -v python3 || true)"
+if [ "${BN_REPORT:-1}" != "0" ] && [ -z "${_BN_INNER:-}" ] \
+   && [ -n "$REPORT_PYTHON" ] && [ -f "$SCRIPT_DIR/build_report.py" ]; then
+    set +e
+    _BN_INNER=1 "$0" "$@" | "$REPORT_PYTHON" "$SCRIPT_DIR/build_report.py"
+    _bn_status=${PIPESTATUS[0]}
+    set -e
+    exit "$_bn_status"
+fi
+
+source "$SCRIPT_DIR/report.sh"
+# Any nonzero exit (set -e or explicit) closes the report with a fail footer.
+trap '_bn_ec=$?; [ "$_bn_ec" -ne 0 ] && bn_trap_fail' EXIT
+
+bn_meta \
+    title="Bristlenose.app — release build" \
+    target="macOS · arm64 · App Store Connect" \
+    identity="$SIGN_IDENTITY" \
+    bundle="app.bristlenose  ·  team $TEAM_ID" \
+    logs="$DESKTOP_DIR/build/  ·  tail -f xcodebuild-archive.log"
 
 # ------------------------------------------------------------
 # 1. Pre-flight
@@ -56,21 +75,23 @@ echo
 # Cryptic errors otherwise. Ad-hoc identity skips the Apple-signed
 # checks because those only matter for a shipping archive.
 
-echo "==> 1. Pre-flight..."
+bn_step_start 1 Pre-flight "Pre-flight" \
+    narrative="Fails fast before any expensive work — identities, profiles, hygiene."
+_bn_t1=$SECONDS
 
 # 1a. Source-level logging hygiene — catches credential-shaped interpolations
 # in Swift logger calls without a privacy marker. Complements the runtime
 # redactor in ServeManager.handleLine (Python-side leakage defence). Cheap;
 # runs in <1s; fails fast before expensive archive work.
-echo "==> 1a. check-logging-hygiene.sh..."
-"$SCRIPT_DIR/check-logging-hygiene.sh" "$ROOT"
+"$SCRIPT_DIR/check-logging-hygiene.sh" "$ROOT" >/dev/null
+bn_check 1 ok "logging hygiene" "no credential-shaped log calls"
 
 # 1b. Bundle manifest coverage — asserts every runtime-data dir under
 # bristlenose/ is covered by a datas entry in the spec. Prevents the
 # C3-smoke-test BUG-3/4/5 class (data file in source, missing from bundle).
 # ~60ms; fail-closed on parse errors.
-echo "==> 1b. check-bundle-manifest.sh..."
-"$SCRIPT_DIR/check-bundle-manifest.sh" "$ROOT"
+"$SCRIPT_DIR/check-bundle-manifest.sh" "$ROOT" >/dev/null
+bn_check 1 ok "bundle manifest" "every runtime dir covered by spec"
 
 if [ "$SIGN_IDENTITY" != "-" ]; then
     # Capture output before grepping (SIGPIPE + pipefail trap —
@@ -83,6 +104,7 @@ if [ "$SIGN_IDENTITY" != "-" ]; then
         echo "docs/design-desktop-python-runtime.md §Signing strategy)." >&2
         exit 1
     fi
+    bn_check 1 ok "signing identity" "found in keychain"
 
     if [ ! -f "$PROFILE_PATH" ]; then
         echo "error: provisioning profile not found at:" >&2
@@ -91,6 +113,7 @@ if [ "$SIGN_IDENTITY" != "-" ]; then
         echo "Developer portal." >&2
         exit 1
     fi
+    bn_check 1 ok "provisioning profile" "$PROFILE_NAME"
 
     # Notarytool keychain profile check is gated on commit 4 work.
     # Announce the expectation for now; sign-only runs don't need it.
@@ -102,7 +125,7 @@ if [ "$SIGN_IDENTITY" != "-" ]; then
     fi
 fi
 
-echo "    OK"
+bn_step_ok 1 elapsed=$((SECONDS-_bn_t1))
 
 # ------------------------------------------------------------
 # 2. Ensure the sidecar is fresh + signed (fetch ffmpeg + build + sign)
@@ -119,11 +142,13 @@ echo "    OK"
 # ~25-minute release; kept simple. ensure can background the fetch later if it
 # ever matters.)
 
-echo
-echo "==> 2. ensure-sidecar (fetch + build + sign, --force)..."
+bn_step_start 2 Build "Sidecar — fetch · build · sign" \
+    log="$DESKTOP_DIR/build/ensure-sidecar.log" \
+    narrative="Freezes the Python engine (PyInstaller), bundles FFmpeg, and signs every Mach-O under your identity."
+_bn_t2=$SECONDS
 export SIGN_IDENTITY
 _BRISTLENOSE_RELEASE=1 "$SCRIPT_DIR/ensure-sidecar.sh" --force
-echo "    OK (ensure-sidecar: built + signed under $SIGN_IDENTITY)"
+bn_step_ok 2 elapsed=$((SECONDS-_bn_t2)) detail="built + signed under $SIGN_IDENTITY"
 
 # ------------------------------------------------------------
 # 2a. Bundle integrity self-test
@@ -141,8 +166,9 @@ echo "    OK (ensure-sidecar: built + signed under $SIGN_IDENTITY)"
 # Runs the binary directly (single in-process exec, ~2-3s). No HTTP,
 # no port handling, no subprocess orchestration.
 
-echo
-echo "==> 2a. Bundle integrity self-test..."
+bn_step_start 2a Build "Bundle self-test" \
+    narrative="Spawns the just-built sidecar with doctor --self-test — asserts every runtime-data file is present in the bundle."
+_bn_t2a=$SECONDS
 SIDECAR_BIN="$DESKTOP_DIR/Bristlenose/Resources/bristlenose-sidecar/bristlenose-sidecar"
 if [ ! -x "$SIDECAR_BIN" ]; then
     echo "error: sidecar binary not found or not executable: $SIDECAR_BIN" >&2
@@ -156,10 +182,10 @@ fi
 # and by App Store Connect's own validation, and the runtime path is exercised via the
 # launched .app. (14 Jul 2026 — added with the nested-sandbox signing fix.)
 if codesign -d --entitlements - "$SIDECAR_BIN" 2>/dev/null | grep -q "app-sandbox"; then
-    echo "    SKIPPED — sidecar is app-sandbox-signed (can't run standalone; MAS build)."
-    echo "    Bundle datas covered by check-bundle-manifest.sh (1b) + ASC validation."
+    bn_step_skip 2a detail="app-sandbox-signed sidecar can't run standalone (MAS build); datas covered by 1b + ASC"
 else
-    "$SIDECAR_BIN" doctor --self-test
+    "$SIDECAR_BIN" doctor --self-test >/dev/null
+    bn_step_ok 2a elapsed=$((SECONDS-_bn_t2a)) detail="doctor --self-test: all runtime data present"
 fi
 
 # ------------------------------------------------------------
@@ -175,14 +201,12 @@ fi
 
 PYTHON_BIN="$ROOT/.venv/bin/python"
 if [ -x "$PYTHON_BIN" ] && "$PYTHON_BIN" -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('piplicenses') else 1)" 2>/dev/null; then
-    echo
-    echo "==> 2b. THIRD-PARTY-BINARIES.md staleness check..."
-    "$PYTHON_BIN" "$ROOT/scripts/generate-third-party-binaries.py" --check
-    echo "    OK (THIRD-PARTY-BINARIES.md fresh)"
+    bn_step_start 2b Build "Supply-chain inventory"
+    _bn_t2b=$SECONDS
+    "$PYTHON_BIN" "$ROOT/scripts/generate-third-party-binaries.py" --check >/dev/null
+    bn_step_ok 2b elapsed=$((SECONDS-_bn_t2b)) detail="THIRD-PARTY-BINARIES.md fresh"
 else
-    echo
-    echo "==> 2b. THIRD-PARTY-BINARIES.md staleness check — SKIPPED"
-    echo "    (install pip-licenses with: $ROOT/.venv/bin/pip install -e '$ROOT[release]')"
+    bn_step_skip 2b phase=Build name="Supply-chain inventory" detail="pip-licenses not installed (release extra)"
 fi
 
 # ------------------------------------------------------------
@@ -195,13 +219,10 @@ fi
 # Ad-hoc runs stop here — xcodebuild with the manual-signing Release
 # config requires a real Apple Distribution identity.
 if [ "$SIGN_IDENTITY" = "-" ]; then
-    echo
-    echo "=============================================="
-    echo " Ad-hoc signing stage complete."
-    echo "=============================================="
-    echo "Skipping archive + export (Release config requires a real"
-    echo "Apple Distribution identity). Set SIGN_IDENTITY to exercise"
-    echo "the full pipeline."
+    bn_meta done_title="✓ Ad-hoc signing stage complete"
+    bn_art "note" "skipped archive + export — Release config requires a real Apple Distribution identity"
+    bn_art "next" "set SIGN_IDENTITY to the Apple Distribution cert to exercise the full pipeline"
+    bn_done ok
     exit 0
 fi
 
@@ -231,8 +252,10 @@ rm -rf "$ARCHIVE_PATH" "$EXPORT_DIR"
 # independent backstop that the embedded bundle is current.
 export BRISTLENOSE_SKIP_SIDECAR_ENSURE=1
 
-echo
-echo "==> 5. xcodebuild archive..."
+bn_step_start 5 Build "Xcode archive" \
+    log="$ARCHIVE_LOG" \
+    narrative="Compiles + signs the native app shell. Opaque subprocess — tail the log for the live stream."
+_bn_t5=$SECONDS
 if ! xcodebuild \
     -project "$PROJECT_DIR/Bristlenose.xcodeproj" \
     -scheme Bristlenose \
@@ -241,24 +264,29 @@ if ! xcodebuild \
     -archivePath "$ARCHIVE_PATH" \
     archive \
     > "$ARCHIVE_LOG" 2>&1; then
+    bn_step_fail 5 detail="xcodebuild archive failed"
+    bn_done fail
     echo "error: xcodebuild archive failed. tail:" >&2
     tail -50 "$ARCHIVE_LOG" >&2
     exit 1
 fi
-echo "    OK — $ARCHIVE_PATH"
+bn_step_ok 5 elapsed=$((SECONDS-_bn_t5)) detail="Release · manual-signed · Bristlenose.xcarchive"
 
 # ------------------------------------------------------------
 # 6. xcodebuild -exportArchive
 # ------------------------------------------------------------
 
-echo
-echo "==> 6. xcodebuild -exportArchive..."
+bn_step_start 6 Package "Export → .pkg" \
+    narrative="Wraps the signed app in an App Store installer (method reads ExportOptions.plist)."
+_bn_t6=$SECONDS
 if ! xcodebuild \
     -exportArchive \
     -archivePath "$ARCHIVE_PATH" \
     -exportPath "$EXPORT_DIR" \
     -exportOptionsPlist "$EXPORT_OPTIONS" \
     > "$EXPORT_LOG" 2>&1; then
+    bn_step_fail 6 detail="xcodebuild -exportArchive failed"
+    bn_done fail
     echo "error: xcodebuild -exportArchive failed. tail:" >&2
     tail -50 "$EXPORT_LOG" >&2
     exit 1
@@ -276,14 +304,17 @@ if [ -z "$EXPORTED_APP" ]; then
     ARCHIVE_APP=$(find "$ARCHIVE_PATH/Products/Applications" -maxdepth 1 -name "*.app" -type d | head -1)
     if [ -n "$ARCHIVE_APP" ] && [ -n "$EXPORTED_PKG" ]; then
         EXPORTED_APP="$ARCHIVE_APP"
-        echo "    note: app-store export produced .pkg only — using .app from xcarchive for downstream gates"
+        echo "note: app-store export produced .pkg only — using .app from xcarchive for downstream gates" >&2
     else
+        bn_step_fail 6 detail="no .app found under export dir or xcarchive"
+        bn_done fail
         echo "error: no .app found under $EXPORT_DIR or in $ARCHIVE_PATH/Products/Applications" >&2
         exit 1
     fi
 fi
-echo "    OK — $EXPORTED_APP"
-[ -n "$EXPORTED_PKG" ] && echo "    .pkg: $EXPORTED_PKG"
+_bn_pkg_detail="$(basename "$EXPORTED_APP")"
+[ -n "$EXPORTED_PKG" ] && _bn_pkg_detail="$(basename "$EXPORTED_PKG") · $(du -h "$EXPORTED_PKG" 2>/dev/null | cut -f1)"
+bn_step_ok 6 elapsed=$((SECONDS-_bn_t6)) detail="$_bn_pkg_detail"
 
 # ------------------------------------------------------------
 # 7. check-release-binary.sh post-export
@@ -294,9 +325,18 @@ echo "    OK — $EXPORTED_APP"
 # Skips Contents/Resources/bristlenose-sidecar/* (Python strings
 # expected; no Swift #if DEBUG invariant applies).
 
-echo
-echo "==> 7. check-release-binary.sh (strings + entitlements)..."
-"$SCRIPT_DIR/check-release-binary.sh" "$EXPORTED_APP"
+bn_step_start 7 Verify "Release-binary scan" \
+    narrative="Scans every Mach-O for dev escape-hatch literals + the get-task-allow entitlement."
+_bn_t7=$SECONDS
+_bn_rb_log="$DESKTOP_DIR/build/check-release-binary.log"
+if "$SCRIPT_DIR/check-release-binary.sh" "$EXPORTED_APP" > "$_bn_rb_log" 2>&1; then
+    bn_step_ok 7 elapsed=$((SECONDS-_bn_t7)) detail="no BRISTLENOSE_DEV_* literals · no get-task-allow"
+else
+    bn_step_fail 7 log="$_bn_rb_log" detail="disallowed string or entitlement in a shipping binary"
+    bn_done fail
+    cat "$_bn_rb_log" >&2
+    exit 1
+fi
 
 # ------------------------------------------------------------
 # 8. Provisioning profile sanity check
@@ -305,8 +345,9 @@ echo "==> 7. check-release-binary.sh (strings + entitlements)..."
 # sometimes embeds a stale or wrong profile when manual signing is
 # misconfigured — easier to catch here than at App Store upload time.
 
-echo
-echo "==> 8. Embedded provisioning profile sanity check..."
+bn_step_start 8 Verify "Provisioning profile" \
+    narrative="Asserts the embedded profile matches our bundle ID + team ID."
+_bn_t8=$SECONDS
 EMBEDDED_PROFILE="$EXPORTED_APP/Contents/embedded.provisionprofile"
 if [ ! -f "$EMBEDDED_PROFILE" ]; then
     echo "error: embedded.provisionprofile missing from exported app." >&2
@@ -343,7 +384,7 @@ if [ "$PROFILE_TEAM_ID" != "$TEAM_ID" ]; then
     echo "  found:    $PROFILE_TEAM_ID" >&2
     exit 1
 fi
-echo "    OK — $PROFILE_APP_ID / $PROFILE_TEAM_ID"
+bn_step_ok 8 elapsed=$((SECONDS-_bn_t8)) detail="$PROFILE_APP_ID / $PROFILE_TEAM_ID"
 
 # ------------------------------------------------------------
 # 9. Notarisation + stapling
@@ -363,9 +404,7 @@ echo "    OK — $PROFILE_APP_ID / $PROFILE_TEAM_ID"
 EXPORT_METHOD=$(/usr/libexec/PlistBuddy -c "Print :method" "$EXPORT_OPTIONS" 2>/dev/null || echo "")
 case "$EXPORT_METHOD" in
     app-store|app-store-connect)
-        echo
-        echo "==> 9. Notarisation... SKIPPED (method=$EXPORT_METHOD; App Store Connect handles validation server-side)"
-        echo "    .pkg ready: $EXPORTED_PKG"
+        bn_step_skip 9 phase=Verify name="Notarisation" detail="method=$EXPORT_METHOD (App Store Connect validates server-side)"
         SKIP_NOTARISE=1
         ;;
     *)
@@ -374,8 +413,9 @@ case "$EXPORT_METHOD" in
 esac
 
 if [ "$SKIP_NOTARISE" = "0" ]; then
-echo
-echo "==> 9. Notarisation..."
+bn_step_start 9 Verify "Notarisation" \
+    narrative="Developer-ID path — submit to Apple, wait, then staple. (Skipped for App Store methods.)"
+_bn_t9=$SECONDS
 NOTARY_ZIP="$DESKTOP_DIR/build/$(basename "$EXPORTED_APP").zip"
 rm -f "$NOTARY_ZIP"
 ditto -c -k --sequesterRsrc --keepParent "$EXPORTED_APP" "$NOTARY_ZIP"
@@ -427,24 +467,21 @@ if [ "$STATUS" != "Accepted" ]; then
         "$LOG_JSON" >&2
     exit 1
 fi
-echo "    status: Accepted"
+echo "    status: Accepted" >&2
 
-echo "==> Stapling..."
 xcrun stapler staple "$EXPORTED_APP"
+bn_step_ok 9 elapsed=$((SECONDS-_bn_t9)) detail="notarised + stapled"
 fi  # end SKIP_NOTARISE guard
 
 # ------------------------------------------------------------
 # 10. Final verification battery
 # ------------------------------------------------------------
 
-echo
-echo "==> 10. Final verification..."
-
 if [ "$SKIP_NOTARISE" = "0" ]; then
-echo "    [a] stapler validate"
 xcrun stapler validate "$EXPORTED_APP"
+bn_gate a ok "Notarisation staple" "stapler validate passed"
 else
-echo "    [a] stapler validate — SKIPPED (notarisation skipped above)"
+bn_gate a skip "Notarisation staple" "App Store validates server-side"
 fi
 
 # Local Gatekeeper assessment only makes sense for notarised Developer ID
@@ -454,30 +491,29 @@ fi
 # for standalone exec on this machine. For app-store flow we instead verify
 # the .pkg installer signature with pkgutil.
 if [ "$SKIP_NOTARISE" = "0" ]; then
-    echo "    [b] spctl (Gatekeeper assessment)"
     SPCTL_OUT=$(spctl -a -t exec -vv "$EXPORTED_APP" 2>&1)
-    echo "$SPCTL_OUT" | sed 's/^/        /'
     if ! grep -q "accepted" <<< "$SPCTL_OUT"; then
         echo "error: spctl did not accept the app." >&2
+        echo "$SPCTL_OUT" >&2
         exit 1
     fi
+    bn_gate b ok "Gatekeeper (spctl)" "accepted"
 elif [ -n "$EXPORTED_PKG" ]; then
-    echo "    [b] pkgutil --check-signature (replacement for spctl on app-store flow)"
     PKGUTIL_OUT=$(pkgutil --check-signature "$EXPORTED_PKG" 2>&1)
-    echo "$PKGUTIL_OUT" | sed 's/^/        /'
     if ! grep -q "Status: signed by a developer certificate issued by Apple" <<< "$PKGUTIL_OUT" \
        && ! grep -q "Status: signed by a certificate trusted for current user" <<< "$PKGUTIL_OUT"; then
         echo "error: pkgutil did not accept the .pkg signature." >&2
+        echo "$PKGUTIL_OUT" >&2
         exit 1
     fi
+    bn_gate b ok "Installer signature" "signed, trusted for current user"
 else
-    echo "    [b] spctl/pkgutil — SKIPPED (no .pkg and notarisation skipped)"
+    bn_gate b skip "Installer signature" "no .pkg and notarisation skipped"
 fi
 
-echo "    [c] codesign --verify --deep --strict"
 codesign --verify --deep --strict --verbose=2 "$EXPORTED_APP"
+bn_gate c ok "Code signature" "--deep --strict valid"
 
-echo "    [d] outer binary entitlements (must not contain get-task-allow)"
 OUTER_BIN="$EXPORTED_APP/Contents/MacOS/Bristlenose"
 OUTER_ENTS=$(codesign -d --entitlements :- "$OUTER_BIN" 2>/dev/null || true)
 # Xcode may record the key with <false/>; only flag <true/>.
@@ -486,8 +522,8 @@ if grep -A1 "get-task-allow" <<< "$OUTER_ENTS" | grep -q "<true/>"; then
     echo "$OUTER_ENTS" | sed 's/^/    /' >&2
     exit 1
 fi
+bn_gate d ok "get-task-allow" "absent (debug entitlement)"
 
-echo "    [d2] outer binary Hardened Runtime flag (App Store requires it)"
 CS_FLAGS=$(codesign -dvvv "$OUTER_BIN" 2>&1 || true)
 if ! grep -qE "flags=.*runtime" <<< "$CS_FLAGS"; then
     echo "error: outer binary is NOT signed with Hardened Runtime (--options=runtime)" >&2
@@ -495,26 +531,22 @@ if ! grep -qE "flags=.*runtime" <<< "$CS_FLAGS"; then
     grep -E "^(Signature|CodeDirectory)" <<< "$CS_FLAGS" | sed 's/^/    /' >&2
     exit 1
 fi
+bn_gate d2 ok "Hardened Runtime" "flags include runtime"
 
-echo "    [e] designated requirement (must include Team ID)"
 REQ=$(codesign -d --requirements - "$OUTER_BIN" 2>&1 || true)
 if ! grep -q "$TEAM_ID" <<< "$REQ"; then
     echo "error: designated requirement does not reference $TEAM_ID" >&2
     echo "$REQ" | sed 's/^/    /' >&2
     exit 1
 fi
+bn_gate e ok "Designated requirement" "references Team $TEAM_ID"
 
-echo "    [f] privacy manifests (host + sidecar) present and parseable"
-echo "        Found PrivacyInfo.xcprivacy files in bundle:"
-find "$EXPORTED_APP" -name "PrivacyInfo.xcprivacy" 2>/dev/null | sed 's|^|            |'
 HOST_MANIFEST="$EXPORTED_APP/Contents/Resources/PrivacyInfo.xcprivacy"
 SIDECAR_MANIFEST="$EXPORTED_APP/Contents/Resources/bristlenose-sidecar/PrivacyInfo.xcprivacy"
 for m in "$HOST_MANIFEST" "$SIDECAR_MANIFEST"; do
     if [ ! -f "$m" ]; then
         echo "error: privacy manifest missing at expected path: $m" >&2
-        echo "       (Xcode may have copied the host manifest to a different path —" >&2
-        echo "        check the find output above, then check Copy Bundle Resources" >&2
-        echo "        phase in desktop/Bristlenose/Bristlenose.xcodeproj.)" >&2
+        echo "       (check Copy Bundle Resources phase in the xcodeproj.)" >&2
         exit 1
     fi
     if ! plutil -lint "$m" >/dev/null 2>&1; then
@@ -522,29 +554,21 @@ for m in "$HOST_MANIFEST" "$SIDECAR_MANIFEST"; do
         plutil -lint "$m" >&2 || true
         exit 1
     fi
-    echo "        OK: $m"
 done
+bn_gate f ok "Privacy manifests" "host + sidecar present, lint-clean"
 
 SIGN_MANIFEST="$DESKTOP_DIR/build/sign-manifest.json"
-echo
-echo "=============================================="
 if [ "$SKIP_NOTARISE" = "0" ]; then
-    echo " DONE — Bristlenose.app notarised and stapled"
+    bn_meta done_title="✓ Bristlenose.app notarised and stapled"
+    bn_art "app" "$EXPORTED_APP"
+    bn_art "archive" "$ARCHIVE_PATH"
+    bn_art "sign manifest" "$SIGN_MANIFEST"
+    bn_art "notary log" "$LOG_JSON"
 else
-    echo " DONE — Bristlenose.pkg ready for App Store Connect"
+    _bn_size=$(du -h "$EXPORTED_PKG" 2>/dev/null | cut -f1)
+    bn_art "artifact" "$EXPORTED_PKG"
+    bn_art "size" "${_bn_size:-?} · ready for App Store Connect"
+    bn_art "signed" "$SIGN_IDENTITY"
+    bn_art "next" "drag into Transporter.app, or: xcrun altool --upload-app -f Bristlenose.pkg --type macos --apiKey <KEY_ID> --apiIssuer <ISSUER_ID>"
 fi
-echo "=============================================="
-echo "  app:           $EXPORTED_APP"
-echo "  archive:       $ARCHIVE_PATH"
-echo "  sign manifest: $SIGN_MANIFEST"
-if [ "$SKIP_NOTARISE" = "0" ]; then
-    echo "  notary log:    $LOG_JSON"
-else
-    echo "  pkg:           $EXPORTED_PKG"
-    echo
-    echo "Upload to App Store Connect via Transporter or:"
-    echo "  xcrun altool --upload-app -f \"$EXPORTED_PKG\" --type macos \\"
-    echo "      --apiKey <KEY_ID> --apiIssuer <ISSUER_ID>"
-fi
-echo
-echo "Ready for C3 / Track B: TestFlight upload."
+bn_done ok

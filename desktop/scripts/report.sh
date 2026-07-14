@@ -68,16 +68,28 @@ _bn_plain() {
 bn_meta() { _bn_emit meta "$@"; }
 
 # bn_step_start <tag> <phase> <name> [detail=… narrative=… log=…]
+# _BN_CUR_TAG tracks the currently-open step so bn_trap_fail can mark it failed
+# if the script dies mid-step (set -e / inline exit). _BN_DONE guards the trap
+# from emitting a second footer after a clean bn_done.
 bn_step_start() {
     local tag="$1" phase="$2" name="$3"; shift 3
     _bn_emit step "id=$tag" "phase=$phase" "name=$name" "status=start" "$@"
+    _BN_CUR_TAG="$tag"
 }
 
 # bn_step_ok <tag> [elapsed=… detail=… name=… phase=…]   (name/phase optional if
 # no matching start was emitted — for compact single-line steps)
-bn_step_ok()   { local tag="$1"; shift; _bn_emit step "id=$tag" "status=ok"   "$@"; }
-bn_step_skip() { local tag="$1"; shift; _bn_emit step "id=$tag" "status=skip" "$@"; }
-bn_step_fail() { local tag="$1"; shift; _bn_emit step "id=$tag" "status=fail" "$@"; }
+bn_step_ok()   { local tag="$1"; shift; _bn_emit step "id=$tag" "status=ok"   "$@"; _BN_CUR_TAG=""; }
+bn_step_skip() { local tag="$1"; shift; _bn_emit step "id=$tag" "status=skip" "$@"; _BN_CUR_TAG=""; }
+bn_step_fail() { local tag="$1"; shift; _bn_emit step "id=$tag" "status=fail" "$@"; _BN_CUR_TAG=""; }
+
+# bn_trap_fail — call from an ERR/EXIT trap on nonzero exit. Marks the open step
+# failed (if any) and emits a fail footer (unless bn_done already ran).
+bn_trap_fail() {
+    [ "${BN_REPORT:-1}" = "0" ] && return 0
+    [ -n "${_BN_CUR_TAG:-}" ] && bn_step_fail "$_BN_CUR_TAG" detail="step aborted — see error above"
+    [ "${_BN_DONE:-0}" = "0" ] && bn_done fail
+}
 
 # bn_check <parent-tag> <result> <label> <evidence>
 bn_check() { _bn_emit check "parent=$1" "result=$2" "label=$3" "evidence=$4"; }
@@ -92,4 +104,4 @@ bn_gate() { _bn_emit gate "id=$1" "result=$2" "desc=$3" "evidence=$4"; }
 bn_art() { _bn_emit art "key=$1" "value=$2"; }
 
 # bn_done ok|fail
-bn_done() { _bn_emit done "status=${1:-ok}"; }
+bn_done() { _bn_emit done "status=${1:-ok}"; _BN_DONE=1; }

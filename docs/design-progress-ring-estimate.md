@@ -3,8 +3,12 @@
 Diagnosed 13 Jul 2026 during hands-on desktop QA (Debug build, project-ikea, bundled sidecar). The
 sidebar activity ring reaches near-full and sits there through the analysis tail — around
 "Grouping themes" — well before the run is actually done. This documents the mechanism, why the
-estimate under-counts the tail, the interim display stopgap already in the tree, and the options for
-the proper fix (parked as a post-TestFlight beta optimisation).
+estimate under-counts the tail, the interim display stopgap (lands in the next release), and the
+options for the proper stage-weighted fix (a near-term follow-up enhancement).
+
+**Status (14 Jul 2026):** TF-1 has shipped, so the earlier "park until after TestFlight" framing no
+longer applies. The interim creep stopgap is committed and lands in the next ordinary release; the
+stage-weighted fix below is the follow-up enhancement, no longer release-gated.
 
 Sibling doc: [`design-sidebar-activity-indicators.md`](design-sidebar-activity-indicators.md) (the
 Phase 0b determinate-ring design this refines).
@@ -85,8 +89,9 @@ a bar that stops moving erodes trust in the estimate).
 
 **What it fixes:** the *frozen* read — a moving 85% over a stalled 99%.
 **What it does NOT fix:** the ring still reaches the high-80s/low-90s too early, because the underlying
-`predicted` still under-counts the tail. This is a display stopgap, not the root fix. Decision pending
-on whether to ship it for TF or fold it into the proper fix below.
+`predicted` still under-counts the tail. This is a display stopgap, not the root fix — but it removes
+the "looks hung" read cheaply and honestly, so it lands in the next release. The stage-weighted fix
+below then supersedes it (the overrun-creep is retained, applied per-slice rather than whole-run).
 
 ---
 

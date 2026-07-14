@@ -1,6 +1,8 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 11 Jul 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
+Last updated: 14 Jul 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
+
+**14 Jul 2026 — 🐟 TF-1 DELIVERED.** First TestFlight build accepted by App Store Connect: **0.20.0 (2068)**, 223 MB model-less `.pkg` (large-v3-turbo downloads on first transcribe), "ready for internal testing", now in Apple processing. Cleared ASC validation after three nested-signing fixes (app-sandbox on sidecar/ffmpeg/ffprobe; `org.python.python` framework re-sign; `LSApplicationCategoryType`). Build + signing on the `testflight-prep` worktree (local-only, unpushed — signals TF timing). First tester (Paul) invited. **Next TF work is no longer "upload" — it's add remaining testers + run cohort-feedback calls.** Whisper delivery decided = Background Assets (essential tier); brief at `docs/private/handoffs/background-assets.md` for the parallel branch. PII/Presidio stays post-TF.
 
 **11 Jul 2026 — v0.20.0 shipped (incremental builds).** Curation survives re-analysis (freeze marked quotes, membership-based section identity, star-anchored theme names, dismissible "New" badge); desktop loose-file intake + incremental add (drop / File→Add Files ⇧⌘A) + run recovery; native feedback sheet; sessions-journey deep-links; Shoal adaptive count. Bumped 0.19.0→0.20.0 (feature release = minor bump; convention now in CLAUDE.md). Live on PyPI + brew. **Desktop half reaches the cohort only with the next bundled-sidecar build — not yet done.**
 
@@ -12,9 +14,9 @@ Last updated: 11 Jul 2026. _This file is a capture inbox + session context, not 
 
 ## Next session focus
 
-Sprint schedule (S1–S6) ended 30 Jun; active focus is the **Critical Path to Internal TF** in `docs/private/100days.md` §Critical Path. Internal TF is gated on the **walks-fix-walks** quality bar — 2–3 consecutive end-to-end walks across different scenarios producing zero new snags — plus a mechanical TF-branch upload (#3 sandbox flip re-apply, #10 ASC record, #12 first upload).
+Sprint schedule (S1–S6) ended 30 Jun. **Internal TF is now LIVE — build 0.20.0 (2068) delivered 14 Jul** (#3 sandbox flip, #10 ASC record, #12 first upload all done; see the dated milestone above). Active focus shifts from "get to TF" to **run the cohort**: once Apple finishes processing, add the remaining 4 UXR friends' Apple IDs (Users & Access → Internal group) and schedule the walks-fix-walks cohort calls per `docs/private/100days.md` §cohort-call-protocol.
 
-Immediate ladder: (1) **build + sign the bundled sidecar** so 0.20.0's desktop features (incremental add, loose-file intake, feedback sheet) reach the cohort — nothing to walk without it; (2) **walks-fix-walks** on that build; (3) mechanical TF upload. Orthogonal small win: **Opus 4.8 P2** (price the Opus row, current-gen the picker `"Opus 4"→4.8`) — overdue since ~18 Jun, TF-non-blocking; verify the catalogue still says "Opus 4" first.
+Immediate ladder: (1) **wait for Apple processing** → confirm build appears under TestFlight → Internal; (2) **add remaining testers + invite**; (3) **cohort calls** (Paul first / friendly-CTO track). In parallel, the **Background Assets branch** (whisper essential-tier delivery) can start slow off `docs/private/handoffs/background-assets.md`. Orthogonal small win: **Opus 4.8 P2** (price the Opus row, current-gen the picker `"Opus 4"→4.8`) — overdue since ~18 Jun, TF-non-blocking; verify the catalogue still says "Opus 4" first.
 
 ---
 

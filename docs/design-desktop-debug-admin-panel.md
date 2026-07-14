@@ -128,23 +128,42 @@ inspector is also beta-worthy — not assumed here.
 
 ## Phase 3 — Swift: the Debug menu
 
-The `CommandMenu("Debug")` at
+The current shape at
 [`MenuCommands.swift:73`](../desktop/Bristlenose/Bristlenose/MenuCommands.swift:73)
-is `#if DEBUG`. Make it runtime-gated, keeping the DEBUG-only harnesses wrapped:
+is **not** an inline set of buttons — it's `CommandMenu("Debug") {
+DebugMenuContent(...) }`, and both the `CommandMenu` block *and* the
+`DebugMenuContent` struct that holds every item (Type Parity, Run Inspector,
+Shoal, reveal actions) are wrapped in `#if DEBUG`. So `DebugMenuContent` does
+not exist at all in a Release build — and TestFlight is a Release build. The
+runtime gate therefore cannot simply wrap the existing struct; it needs a **new
+non-DEBUG view** that compiles in Release and embeds the existing DEBUG-only
+harness behind an inner `#if DEBUG`:
 
 ```swift
+// MenuCommands.swift — replace the #if DEBUG CommandMenu block with:
 if DistributionChannel.current.exposesDebugTools {
     CommandMenu("Debug") {
+        BetaDebugMenuContent(ollamaDownload: ollamaDownload,
+                             serveManager: serveManager)
+    }
+}
+
+// New non-DEBUG view (compiles in Release):
+private struct BetaDebugMenuContent: View {
+    @ObservedObject var ollamaDownload: OllamaDownloadModel
+    @ObservedObject var serveManager: ServeManager
+
+    var body: some View {
         Button("Open Admin Panel…") {
-            DebugMenuActions.openAdminPanel(serveManager: serveManager)
+            AdminPanelAction.open(serveManager: serveManager)
         }
-        .disabled(serveManager.servedPort == nil)
+        .disabled(serveManager.runningPort == nil)
         #if DEBUG
         Divider()
-        // Type Parity Inspector, Run Inspector, Shoal, reveal actions —
-        // these open registered windows that are themselves #if DEBUG scenes,
-        // so they must stay behind #if DEBUG even inside a runtime-shown menu.
-        …existing DEBUG-only items…
+        // The existing DEBUG-only harness, unchanged — Type Parity, Run
+        // Inspector, Shoal, reveal actions all open #if DEBUG window scenes,
+        // so they stay compiled out of Release even inside this runtime menu.
+        DebugMenuContent(ollamaDownload: ollamaDownload, serveManager: serveManager)
         #endif
     }
 }
@@ -156,16 +175,33 @@ Run Inspector / Type Parity, whose scenes are DEBUG-only). It composes cleanly.
 
 ## Phase 4 — the action
 
-`DebugMenuActions.openAdminPanel(serveManager:)`: read the port from
-`serveManager`, then
-`NSWorkspace.shared.open(URL(string: "http://127.0.0.1:\(port)/admin/")!)`.
+`DebugMenuActions` ([`DebugMenuActions.swift`](../desktop/Bristlenose/Bristlenose/DebugMenuActions.swift))
+is **itself entirely `#if DEBUG`** (the whole file, lines 1–87). So
+`openAdminPanel` cannot live there — it would be absent in the Release/TestFlight
+build that needs it. Put it in a **new non-DEBUG helper**, e.g.
+`AdminPanelAction`:
+
+```swift
+// New file, no #if DEBUG guard — must compile in Release:
+@MainActor
+enum AdminPanelAction {
+    static func open(serveManager: ServeManager) {
+        guard let port = serveManager.runningPort else { return }
+        NSWorkspace.shared.open(URL(string: "http://127.0.0.1:\(port)/admin/")!)
+    }
+}
+```
+
+Note the port property is `runningPort`
+([`ServeManager.swift:109`](../desktop/Bristlenose/Bristlenose/ServeManager.swift:109)),
+not `servedPort` (which does not exist).
 
 **No auth token needed.** `/admin` is *not* under `/api/`, so it is not behind
-`BearerTokenMiddleware` ([`middleware.py:27`](../bristlenose/server/middleware.py:27)
-guards only `/api/` prefixes). Localhost-binding is its sole protection — which
-is consistent with `SECURITY.md`'s framing of the token as defence-in-depth, not
-an auth boundary. Guard against "no project served yet" via the `.disabled`
-modifier above.
+`BearerTokenMiddleware` ([`middleware.py`](../bristlenose/server/middleware.py)
+guards only the `/api/` prefix). Localhost-binding is its sole protection —
+which is consistent with `SECURITY.md`'s framing of the token as
+defence-in-depth, not an auth boundary. Guard against "no project served yet"
+via the `.disabled(serveManager.runningPort == nil)` modifier above.
 
 ## Security posture
 
@@ -198,7 +234,14 @@ is never set in the `.appStore` channel) — code present, endpoint absent.
 
 ## Effort
 
-~half a day. Riskiest parts: Phase 3 (SwiftUI command-builder gating + keeping
-DEBUG-scene items correctly wrapped) and confirming TF-receipt detection, which
-can only close on a real TestFlight build. Touches the sidecar, so it needs a
-rebuild + `doctor --self-test` before the panel loads in a bundled build.
+~half a day. Two new Swift files (`DistributionChannel.swift`,
+`AdminPanelAction.swift`) plus edits to four existing sites (`app.py`,
+`admin.py`, `BristlenoseShared.swift`, `MenuCommands.swift`). Riskiest parts:
+Phase 3 — the existing `CommandMenu("Debug")` *and* its `DebugMenuContent`
+struct are both `#if DEBUG`, so the refactor must introduce a non-DEBUG wrapper
+view (`BetaDebugMenuContent`) that compiles in Release while keeping the
+DEBUG-scene items behind an inner `#if DEBUG`; likewise `openAdminPanel` must
+move out of the fully-`#if DEBUG` `DebugMenuActions` into a non-DEBUG helper.
+And confirming TF-receipt detection, which can only close on a real TestFlight
+build. Touches the sidecar, so it needs a rebuild + `doctor --self-test` before
+the panel loads in a bundled build.

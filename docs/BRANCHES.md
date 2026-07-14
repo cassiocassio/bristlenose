@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 9 Jul 2026 (closed three worktrees: `slavic` — merged to main 3 Jul `37e6f559`, machine-seeded/native-review-pending is a content gate not a branch one; `curation-persistence` — merged 7 Jul `c4152e13`, post-merge work continued on main; `native-experiment` — spike discarded, "possible but expensive", postmortem + mockup rescued to main `03a260d3`, history at tag `archive/native-experiment`. All worktrees detached + kept on disk with stale markers, local branches deleted, none were on remote.) Prior: 6 Jul 2026 (opened `native-experiment` — spike worktree for an experimental, lens-by-lens conversion of the UI to native macOS, inspired by Gruber's 2018 *Electron and the Decline of Native Apps*; a learning exercise, not a committed migration.) Prior: 6 Jul 2026 (opened `curation-persistence` — feature worktree for the incremental-analysis persistence layer: freeze marked quotes, membership-based section identity, best-effort themes. Plan: `docs/design-curation-persistence-plan.md`.) Prior: 3 Jul 2026 (closed `spike` branch — merged to main; worktree detached + tagged orange on disk, local branch deleted. Translucent titlebar/toolbar proof-of-concept for macOS 26 Tahoe.) Prior: 3 Jul 2026 (closed `fi` branch — merged to main `3e193fa8` + registration re-added `92033192`; worktree detached + kept on disk, local branch deleted. Machine-seeded Finnish locale, native review pending.) Prior: 3 Jul 2026 (closed `nl` branch — merged to main `88961b7a`; worktree detached + tagged orange on disk, local branch deleted. Review-pending; machine-seeded Dutch locale.) Prior: 3 Jul 2026 (opened `nl` + `fi` locale branches — Dutch (high/high pick) + Finnish (completes the Nordics), each with a native reviewer lined up; both share the 9 enrolment sites with `slavic`, so merge sequentially.) Prior: 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
+**Updated:** 14 Jul 2026 (closed `testflight-prep` — merged to main `ed5ef885`; the TF-prep sandbox/HR/arm64/MAS-signing work that DELIVERED Bristlenose 0.20.0 (2068) to TestFlight internal testing on 14 Jul. Worktree detached + tagged orange on disk with a stale marker; local branch ref kept — deletion handled in another session; remote never pushed. Also carried the inert build-script report tooling.) Prior: 9 Jul 2026 (closed three worktrees: `slavic` — merged to main 3 Jul `37e6f559`, machine-seeded/native-review-pending is a content gate not a branch one; `curation-persistence` — merged 7 Jul `c4152e13`, post-merge work continued on main; `native-experiment` — spike discarded, "possible but expensive", postmortem + mockup rescued to main `03a260d3`, history at tag `archive/native-experiment`. All worktrees detached + kept on disk with stale markers, local branches deleted, none were on remote.) Prior: 6 Jul 2026 (opened `native-experiment` — spike worktree for an experimental, lens-by-lens conversion of the UI to native macOS, inspired by Gruber's 2018 *Electron and the Decline of Native Apps*; a learning exercise, not a committed migration.) Prior: 6 Jul 2026 (opened `curation-persistence` — feature worktree for the incremental-analysis persistence layer: freeze marked quotes, membership-based section identity, best-effort themes. Plan: `docs/design-curation-persistence-plan.md`.) Prior: 3 Jul 2026 (closed `spike` branch — merged to main; worktree detached + tagged orange on disk, local branch deleted. Translucent titlebar/toolbar proof-of-concept for macOS 26 Tahoe.) Prior: 3 Jul 2026 (closed `fi` branch — merged to main `3e193fa8` + registration re-added `92033192`; worktree detached + kept on disk, local branch deleted. Machine-seeded Finnish locale, native review pending.) Prior: 3 Jul 2026 (closed `nl` branch — merged to main `88961b7a`; worktree detached + tagged orange on disk, local branch deleted. Review-pending; machine-seeded Dutch locale.) Prior: 3 Jul 2026 (opened `nl` + `fi` locale branches — Dutch (high/high pick) + Finnish (completes the Nordics), each with a native reviewer lined up; both share the 9 enrolment sites with `slavic`, so merge sequentially.) Prior: 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
 
 ---
 
@@ -33,7 +33,6 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | Directory | Branch | Kind | Purpose |
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes |
-| `bristlenose_branch testflight-prep/` | `testflight-prep` | ci | Release sandbox+HR flip + build-gate for App Store upload; archive walk |
 | `bristlenose_branch tower-of-hanoi/` | `tower-of-hanoi` | spike | Bristlenose workflow thought experiment — Tower of Hanoi solver, full /usual-suspects + William-only loop, i18n stipulated |
 | `bristlenose_branch responsive-signal-cards/` | `responsive-signal-cards` | feature | Responsive signal cards (worktree never opened — BRANCHES entry is a placeholder) |
 | `bristlenose_branch symbology/` | `symbology` | parked | § ¶ ❋ Unicode prefix symbols (see Historical experiments) |
@@ -119,7 +118,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | Branch | Local worktree | GitHub remote |
 |--------|---------------|---------------|
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
-| `testflight-prep` | `bristlenose_branch testflight-prep/` | local only (do NOT push — signals TF timing on public repo) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `spike` | `bristlenose_branch spike/` | local only |
 | `claude/debug-menu-instrumentation-4r9npy` _(merged)_ | _(worktree removed)_ | `origin/...` — merged to main 28 Jun 2026 (`252c1ce3`) |
@@ -152,26 +150,6 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
-
----
-
-### `testflight-prep`
-
-**Kind:** ci — flip the Release build config to sandbox + Hardened Runtime for the App Store Connect upload, plus a build-gate assertion; held off public `main` so the commit doesn't signal TF timing.
-**Status:** Delta applied + committed (`c091478c`); env built; awaiting the Release-archive walk (Xcode + certs).
-**Started:** 13 Jul 2026
-**Worktree:** `/Users/cassio/Code/bristlenose_branch testflight-prep/`
-**Remote:** local only — **must NOT be pushed** (public-repo TF-timing signal). Merges into the eventual TF build, not origin/main directly.
-
-**What it does:** Release config now mirrors Debug (`ENABLE_APP_SANDBOX=YES`, `ENABLE_HARDENED_RUNTIME=YES`, network + resource-access settings); `build-all.sh` asserts the host binary carries the runtime flag (`[d2]`); design-doc entitlement table trued (one HR exception → three). Companion plan seeded into the worktree as `HANDOFF.md`.
-
-**Files this branch will touch:**
-- `desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj`
-- `desktop/scripts/build-all.sh`
-- `docs/design-desktop-python-runtime.md`
-
-**Potential conflicts with other branches:**
-- Low — the pbxproj Release-config block is not touched by feature work; design-doc is append-mostly.
 
 ---
 
@@ -281,6 +259,10 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `testflight-prep` — merged 14 Jul 2026 (`ed5ef885`)
+
+CI / TF-prep — flipped the Release build config to App Sandbox + Hardened Runtime for App Store Connect, pinned Release to arm64, kept dev env-var names out of the Release Mach-O, added the `[d2]` Hardened-Runtime build-gate, and fixed the nested-binary MAS signing rejections. **This is the work that got Bristlenose 0.20.0 (2068) DELIVERED to App Store Connect / TestFlight (internal testing) on 14 Jul 2026.** Also carried the build-script report tooling (`REPORT-STYLE.md` + `build_report.py` + `report.sh` + mock — inert until `build-all.sh` is wired to source it). Merged to main `ed5ef885` (`--no-ff`); worktree detached + tagged orange on disk (stale marker), **local branch ref kept** (deletion handled in another session); remote never pushed.
 
 ### `curation-persistence` — merged 7 Jul 2026 (`c4152e13`)
 

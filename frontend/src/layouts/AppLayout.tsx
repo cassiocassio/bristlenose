@@ -474,15 +474,9 @@ function AppShell() {
         case "starredQuotesOnly":
           setViewMode("starred");
           break;
-        // showHelp / showKeyboardShortcuts / showAcknowledgements are handled
-        // natively now (the Help menu opens external docs directly) — no SPA
-        // case needed. The browser SPA reaches docs via the ? key / footer Help.
-        case "showReleaseNotes":
-          window.open(
-            "https://github.com/cassiocassio/bristlenose/blob/main/CHANGELOG.md",
-            "_blank",
-          );
-          break;
+        // showHelp / showKeyboardShortcuts / showAcknowledgements / showReleaseNotes
+        // are handled natively now (the Help menu opens external docs directly) —
+        // no SPA case needed. The browser SPA reaches docs via the ? key / footer Help.
         case "sendFeedback":
           setFeedbackOpen(true);
           break;

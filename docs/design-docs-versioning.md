@@ -135,6 +135,33 @@ Surfaced by a quiet footer line ("viewing latest · other versions") when more t
 one exists — not a topbar selector. The default and canonical URL is always
 `/docs/…` = current; archives are the exception, reached deliberately.
 
+## Shipped-app URLs are a permanent contract (never 404, redirect is fine)
+
+Any docs URL **hardcoded into a shipped app binary** is frozen for the life of that
+build. Old TestFlight / App Store / Homebrew / PyPI versions keep requesting *that
+exact path* forever — the user can't upgrade the URL that's baked into the copy they
+have. So once a build ships referencing a path, that path **must never 404**.
+
+- **A redirect satisfies the contract.** If the docs site reorganises, a `301`/`302`
+  from the old path to the relocated page is fine — the requirement is that the URL
+  keeps *resolving*, not that the file stays put. What breaks the Help menu (and Miro
+  help, etc.) for everyone on an older build is **deleting** the path or letting it
+  fall through to a 404.
+- **Canonical baked paths as of 0.20.0** (grep `bristlenose.app/docs/` + the
+  Acknowledgements/blog links under `desktop/` and `frontend/src/` to refresh):
+  - `/docs/` — Help ▸ Bristlenose Help (`MenuCommands.swift`, `AppLayout.tsx`)
+  - `/docs/keyboard-shortcuts.html` — Help ▸ Keyboard Shortcuts
+  - `/docs/changelog.html` — Help ▸ Release notes (wired 14 Jul 2026)
+  - `/docs/send-to-miro.html` — Miro export help (`MiroSheet.swift`, `MiroExportPanel.tsx`)
+  - plus the `ACKNOWLEDGEMENTS.md` GitHub link and `blog.bristlenose.app`
+- **This is why per-minor archives (above) never rewrite the current path.** `/docs/…`
+  always means "current"; that stability is load-bearing for shipped binaries, not
+  just a UX nicety.
+
+Before renaming or removing any page whose path a shipped build references, add the
+redirect first. The website (deploy) repo owns the redirect rules; this list is the
+consumer-side inventory.
+
 ## Migration, when the trigger fires
 
 When web archives are earned, **move to a standard SSG** (Docusaurus, or MkDocs +

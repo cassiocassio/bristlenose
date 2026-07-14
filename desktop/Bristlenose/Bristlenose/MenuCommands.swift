@@ -942,7 +942,7 @@ private struct HelpMenuContent: View {
         Divider()
 
         Button(i18n.t("desktop.menu.help.releaseNotes")) {
-            bridgeHandler.menuAction("showReleaseNotes")
+            Self.open("https://bristlenose.app/docs/changelog.html")
         }
 
         // Probe-then-route: React modal when the SPA is up, native FeedbackSheet

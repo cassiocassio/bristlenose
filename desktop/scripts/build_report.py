@@ -239,9 +239,16 @@ class Renderer:
             self.meta.update(f)
         elif kind == "step":
             self._on_step(f)
-        elif kind == "check" and self.step is not None:
-            self.step.checks.append(Check(f.get("label", ""), _st(f.get("result", "ok")),
-                                          f.get("evidence", "")))
+        elif kind == "check":
+            ch = Check(f.get("label", ""), _st(f.get("result", "ok")), f.get("evidence", ""))
+            if self.step is not None:
+                self.step.checks.append(ch)
+            else:  # orphan (emitted after its step closed) — render, never drop
+                row = Text(IND)
+                row.append(GLYPH[ch.result.value] + " ", style=STYLE[ch.result.value])
+                row.append(ch.label.ljust(22), style="dim")
+                row.append(ch.evidence, style="dim")
+                self.c.print(row)
         elif kind == "bar" and self.step is not None:
             self.step.bar = (int(f.get("done", 0)), int(f.get("total", 1)))
             self._update_live()
@@ -294,6 +301,11 @@ class Renderer:
 
     def _on_done(self, status: str) -> None:
         self._stop_live()
+        if self.step is not None:  # a step was open when the run ended (e.g. died mid-step)
+            if self.step.status == St.RUN:
+                self.step.status = St.FAIL
+            self._emit_final()
+            self.step = None
         if status == "fail":
             self._footer_fail()
             return

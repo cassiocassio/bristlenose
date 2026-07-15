@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome screen — Fibonacci spiral variants (wireframe)</title>
+<style>
+  :root{
+    --ink:#333; --faint:#8a8a8a; --line:#b8b8b8; --bg:#f4f4f5; --paper:#fff;
+    --tag:#9a9a9a; --accentline:#c9c9c9;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --ink:#ddd; --faint:#999; --line:#555; --bg:#1c1c1e; --paper:#262629; --tag:#888; --accentline:#444; }
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; padding:28px 24px 60px;
+    font:13px/1.45 -apple-system, "SF Pro Text", system-ui, sans-serif;
+    color:var(--ink); background:var(--bg);
+  }
+  header.page{ max-width:1180px; margin:0 auto 22px; }
+  header.page h1{ font-size:18px; margin:0 0 6px; font-weight:600; }
+  header.page p{ margin:0; color:var(--faint); max-width:74ch; }
+  header.page code{ background:rgba(128,128,128,.15); padding:1px 5px; border-radius:4px; }
+
+  .gallery{
+    max-width:1180px; margin:0 auto;
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(470px,1fr));
+    gap:28px 24px;
+  }
+  .card h2{ font-size:14px; margin:0 0 2px; font-weight:600; }
+  .card .principle{ font-size:12px; color:var(--faint); margin:0 0 10px; min-height:32px; }
+
+  /* golden-ish frame */
+  .screen{
+    aspect-ratio:8/5; width:100%;
+    background:var(--paper); border:1px solid var(--line); border-radius:8px;
+    padding:9px; display:flex; position:relative; overflow:hidden;
+  }
+  .flex{ display:flex; gap:6px; flex:1 1 0; min-width:0; min-height:0; }
+  .col{ flex-direction:column; }
+  .b62{ flex:1.618 1 0; }   /* golden major */
+  .b38{ flex:1 1 0; }       /* golden minor */
+
+  .sq{
+    border:1px dashed var(--line); border-radius:6px; padding:6px 7px;
+    display:flex; flex-direction:column; gap:2px; min-width:0; min-height:0;
+    justify-content:center; overflow:hidden;
+  }
+  .sq.center{ align-items:center; text-align:center; }
+  .tag{ font-size:8px; letter-spacing:.08em; text-transform:uppercase; color:var(--tag); font-weight:600; }
+  .hd b{ font-size:12px; }
+  .hd span{ font-size:9.5px; color:var(--faint); line-height:1.4; }
+  .wk .tag{ margin-bottom:2px; }
+  .wk span{ font-size:9.5px; color:var(--faint); line-height:1.4; }
+  .act{ font-size:11px; font-weight:600; }
+  .act small{ font-weight:400; font-size:9px; color:var(--faint); display:block; }
+  .tp{ font-size:9px; color:var(--faint); line-height:1.4; }
+  .tp u{ color:var(--ink); }
+  .ic{ font-size:18px; color:var(--faint); }
+  .spiral{ position:absolute; inset:9px; pointer-events:none; opacity:.5; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Welcome screen — Fibonacci spiral variants</h1>
+  <p>Five ways to nest the same ~80 words into a golden spiral of squares. The 8:5 frame is already ≈φ, so the squares peel cleanly. What changes between them: <b>which atom owns the biggest square</b>, <b>which way the spiral curls</b>, and <b>how deep it cuts</b> before content gets too small. Faint arc shows the spiral path. Wireframe only.</p>
+</header>
+
+<div class="gallery">
+
+  <!-- A: classic, header-hero, curl in from left -->
+  <div class="card">
+    <h2>A · Classic — header hero, curls from left</h2>
+    <p class="principle">Header owns the golden square; how → new → AI → tip → icon spiral inward clockwise. Pure, but inner squares get cramped.</p>
+    <div class="screen">
+      <svg class="spiral" viewBox="0 0 160 100" preserveAspectRatio="none"><path d="M2,98 A96,96 0 0 1 98,2 A59,59 0 0 1 157,61 A37,37 0 0 1 120,98 A22,22 0 0 1 98,76" fill="none" stroke="var(--accentline)" stroke-width="0.7"/></svg>
+      <div class="flex">
+        <div class="sq b62 hd"><span class="tag">Welcome</span><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Nothing leaves your Mac except the transcript text your AI analyses.</span></div>
+        <div class="flex col b38">
+          <div class="sq b62 wk"><span class="tag">How it works</span><span>1 Add — audio, video or transcripts</span><span>2 Analyse — on your Mac</span><span>3 Export — a report to share</span></div>
+          <div class="flex b38">
+            <div class="sq b62 center act">▶ New project<small>drop a folder</small></div>
+            <div class="flex col b38">
+              <div class="sq b62 center act">⚙ AI<small>key/Ollama</small></div>
+              <div class="flex b38">
+                <div class="sq b62 center tp">💡<u>Tip</u></div>
+                <div class="sq b38 center ic">◐</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B: mirrored, curls from right -->
+  <div class="card">
+    <h2>B · Mirrored — hero on the right</h2>
+    <p class="principle">Same spiral, flipped: welcome square anchors the right, spiral unwinds leftward. Puts the reading climax where the eye exits.</p>
+    <div class="screen">
+      <svg class="spiral" viewBox="0 0 160 100" preserveAspectRatio="none"><path d="M158,98 A96,96 0 0 0 62,2 A59,59 0 0 0 3,61 A37,37 0 0 0 40,98 A22,22 0 0 0 62,76" fill="none" stroke="var(--accentline)" stroke-width="0.7"/></svg>
+      <div class="flex">
+        <div class="flex col b38">
+          <div class="sq b62 wk"><span class="tag">How it works</span><span>1 Add — audio, video or transcripts</span><span>2 Analyse — on your Mac</span><span>3 Export — a report to share</span></div>
+          <div class="flex b38">
+            <div class="flex col b38">
+              <div class="sq b62 center act">⚙ AI<small>key/Ollama</small></div>
+              <div class="flex b38">
+                <div class="sq b38 center ic">◐</div>
+                <div class="sq b62 center tp">💡<u>Tip</u></div>
+              </div>
+            </div>
+            <div class="sq b62 center act">▶ New project<small>drop a folder</small></div>
+          </div>
+        </div>
+        <div class="sq b62 hd"><span class="tag">Welcome</span><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Nothing leaves your Mac except the transcript text your AI analyses.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C: top-first, wide header band -->
+  <div class="card">
+    <h2>C · Top-first — wide header band</h2>
+    <p class="principle">First cut is horizontal: header takes a full-width top band, then the spiral peels through the lower strip. Gives the 22-word line room to breathe.</p>
+    <div class="screen">
+      <svg class="spiral" viewBox="0 0 160 100" preserveAspectRatio="none"><path d="M2,2 A96,60 0 0 1 158,62 A44,38 0 0 1 114,100 A27,23 0 0 1 87,77" fill="none" stroke="var(--accentline)" stroke-width="0.7"/></svg>
+      <div class="flex col">
+        <div class="sq b62 hd center"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Nothing leaves your Mac except the transcript text your AI analyses.</span></div>
+        <div class="flex b38">
+          <div class="sq b62 wk"><span class="tag">How it works</span><span>1 Add — audio/video/transcripts · 2 Analyse — on your Mac · 3 Export — a report to share</span></div>
+          <div class="flex col b38">
+            <div class="sq b62 center act">▶ New<small>drop a folder</small></div>
+            <div class="flex b38">
+              <div class="sq b62 center act">⚙ AI</div>
+              <div class="sq b38 center tp">💡</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D: action-hero -->
+  <div class="card">
+    <h2>D · Action-hero — the CTA owns the square</h2>
+    <p class="principle">Flip the emphasis: <b>New project</b> takes the golden square, header demoted to the next square. Tests "make the primary action the visual anchor."</p>
+    <div class="screen">
+      <svg class="spiral" viewBox="0 0 160 100" preserveAspectRatio="none"><path d="M2,98 A96,96 0 0 1 98,2 A59,59 0 0 1 157,61 A37,37 0 0 1 120,98 A22,22 0 0 1 98,76" fill="none" stroke="var(--accentline)" stroke-width="0.7"/></svg>
+      <div class="flex">
+        <div class="sq b62 center act" style="font-size:15px">▶ New project<small style="font-size:10px">pick or drop a folder of sessions</small></div>
+        <div class="flex col b38">
+          <div class="sq b62 hd"><span class="tag">Welcome</span><b>Welcome to Bristlenose</b><span>Turn interviews into a shareable report. Nothing leaves your Mac but transcript text.</span></div>
+          <div class="flex b38">
+            <div class="sq b62 wk"><span class="tag">How</span><span>1 Add</span><span>2 Analyse</span><span>3 Export</span></div>
+            <div class="flex col b38">
+              <div class="sq b62 center act">⚙ AI</div>
+              <div class="flex b38">
+                <div class="sq b62 center tp">💡</div>
+                <div class="sq b38 center ic">◐</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- E: coarse / stop-early -->
+  <div class="card">
+    <h2>E · Coarse — stop the spiral early</h2>
+    <p class="principle">Only two cuts → three big squares (welcome · how · everything-else). Keeps the golden rhythm but stays legible — the pragmatic Fibonacci.</p>
+    <div class="screen">
+      <svg class="spiral" viewBox="0 0 160 100" preserveAspectRatio="none"><path d="M2,98 A96,96 0 0 1 98,2 A59,59 0 0 1 157,61" fill="none" stroke="var(--accentline)" stroke-width="0.7"/></svg>
+      <div class="flex">
+        <div class="sq b62 hd"><span class="tag">Welcome</span><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Nothing leaves your Mac except the transcript text your AI analyses.</span></div>
+        <div class="flex col b38">
+          <div class="sq b62 wk"><span class="tag">How it works</span><span>1 Add — audio, video or transcripts</span><span>2 Analyse — on your Mac; text to your AI</span><span>3 Export — a report to share</span></div>
+          <div class="sq b38">
+            <div class="act">▶ New project · ⚙ Set up your AI</div>
+            <div class="tp" style="margin-top:3px">💡 Have transcripts? Drop .vtt/.srt/.docx — skipped. <u>Learn more →</u></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

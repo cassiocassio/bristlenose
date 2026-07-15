@@ -119,6 +119,11 @@
             value = "choosing"
             isEnabled = "NO">
          </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_ALPHA_DAYS"
+            value = "-1"
+            isEnabled = "YES">
+         </EnvironmentVariable>
       </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction

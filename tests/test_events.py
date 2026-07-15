@@ -137,8 +137,8 @@ def test_cause_category_matches_swift_enum():
     doc round-2 changelog.
     """
     expected = {
-        "user_signal", "auth", "quota", "api_request", "api_server",
-        "network", "whisper", "missing_dep", "missing_input",
+        "user_signal", "auth", "out_of_credit", "quota", "api_request",
+        "api_server", "network", "whisper", "missing_dep", "missing_input",
         "missing_binary", "disk", "output_truncated", "unknown",
     }
     actual = {c.value for c in CauseCategoryEnum}

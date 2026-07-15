@@ -39,6 +39,9 @@ struct BristlenoseApp: App {
     // Ambient local-model pull (Beat 3). Owned at app level so the download
     // survives the consent sheet's dismissal and surfaces in the toolbar pill.
     @StateObject private var ollamaDownload = OllamaDownloadModel()
+    // App-global out-of-credit state for the active provider; drives the
+    // sibling `.status` toolbar pill (OutOfCreditPill).
+    @StateObject private var outOfCredit = OutOfCreditModel()
     @StateObject private var i18n: I18n = {
         let i = I18n()
         if let dir = I18n.findLocalesDirectory() {
@@ -75,6 +78,7 @@ struct BristlenoseApp: App {
                 .environmentObject(removalStore)
                 .environmentObject(copyMachinery)
                 .environmentObject(ollamaDownload)
+                .environmentObject(outOfCredit)
                 .environmentObject(i18n)
                 .overlay { ToastOverlay().environmentObject(toast) }
                 .overlay { RemoveToast().environmentObject(removalStore).environmentObject(i18n) }

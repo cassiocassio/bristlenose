@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en" data-palette="default" data-appearance="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome — palette randomiser + curation</title>
+<style>
+  :root{ --ink:#1a1a1a; --faint:#6b7280; --line:#e5e7eb; --bg:#f4f4f5; --paper:#fff; --card:#f9f9fa; --tag:#9a9a9a; --accent:#007aff; --accent-soft:#e8f0fe; }
+  :root[data-appearance="dark"]{ --ink:#e5e7eb; --faint:#9ca3af; --line:#2d2d2d; --bg:#161618; --paper:#1c1c1e; --card:#232326; --tag:#888; --accent:#0a84ff; --accent-soft:#1e293b; }
+  :root[data-palette="edo"]{ --ink:#1b2230; --faint:#4a698a; --line:#d4c9a8; --bg:#efe9db; --paper:#fdfbf7; --card:#f7f2e6; --tag:#9c8f70; --accent:#0f5c9e; --accent-soft:#e0e8f0; }
+  :root[data-palette="edo"][data-appearance="dark"]{ --ink:#e8e3d6; --faint:#7ba8a0; --line:#2d2820; --bg:#141210; --paper:#1a1816; --card:#211e18; --tag:#7a7060; --accent:#4d9fe0; --accent-soft:#1e2830; }
+
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; } }
+  *{ box-sizing:border-box; }
+  body{ margin:0; padding:24px; font:13px/1.45 -apple-system,"SF Pro Text",system-ui,sans-serif; color:var(--ink); background:var(--bg); }
+  .page{ max-width:940px; margin:0 auto; }
+  .page h1{ font-size:18px; margin:0 0 4px; font-weight:600; }
+  .page .lede{ margin:0 0 14px; color:var(--faint); max-width:80ch; font-size:12px; }
+  .controls{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 0 8px; font-size:12px; }
+  .controls button{ font:inherit; font-weight:600; color:var(--accent); background:var(--accent-soft); border:0; border-radius:7px; padding:6px 11px; cursor:pointer; }
+  .controls button.ghost{ background:transparent; border:1px solid var(--line); color:var(--faint); }
+  .controls label{ color:var(--faint); display:flex; gap:5px; align-items:center; cursor:pointer; }
+  .controls select{ font:inherit; }
+  .nowshowing{ font-size:11px; color:var(--faint); margin:0 0 14px; }
+  .nowshowing b{ color:var(--ink); }
+
+  .screen{ aspect-ratio:8/5; width:100%; background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:20px; display:flex; position:relative; overflow:hidden; }
+  .flex{ display:flex; gap:8px; flex:1 1 0; min-width:0; min-height:0; }
+  .col{ flex-direction:column; }
+  .b62{ flex:1.618 1 0; } .b38{ flex:1 1 0; }
+
+  .sq{ border:0.5px solid var(--line); border-radius:8px; padding:10px 11px; display:flex; flex-direction:column; gap:4px; min-width:0; min-height:0; overflow:hidden; position:relative; transition:background .3s ease; }
+  .sq.lg{ border-radius:10px; padding:16px; }
+  .sq.mid{ justify-content:center; align-items:center; text-align:center; }
+
+  .tag{ font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--tag); font-weight:600; }
+  .em{ color:var(--ink); font-weight:500; }
+  .lnk{ color:var(--accent); text-decoration:none; }
+
+  .body{ font-size:12px; color:var(--faint); line-height:1.45; }
+  .body .t{ font-size:15px; color:var(--ink); font-weight:600; display:block; margin-bottom:2px; }
+  .tipbody{ font-size:11px; color:var(--faint); line-height:1.4; }
+  .tip-bulb{ position:absolute; top:9px; right:9px; color:var(--faint); }
+
+  .drop{ margin-top:auto; border:1.5px dotted var(--line); border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:3px; align-items:flex-start; background:var(--paper); }
+  .drop-ic{ color:var(--faint); margin-bottom:2px; }
+  .drop-title{ font-size:15px; font-weight:600; color:var(--ink); }
+  .drop-sub{ font-size:13px; color:var(--faint); line-height:1.4; max-width:34ch; }
+
+  .ai-icon{ position:relative; width:26px; height:26px; }
+  .ai-icon span{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:18px; color:var(--faint); opacity:0; animation:morph 20s infinite; }
+  .ai-icon span:nth-child(1){animation-delay:0s} .ai-icon span:nth-child(2){animation-delay:4s}
+  .ai-icon span:nth-child(3){animation-delay:8s} .ai-icon span:nth-child(4){animation-delay:12s} .ai-icon span:nth-child(5){animation-delay:16s}
+  @keyframes morph{ 0%{opacity:0;transform:scale(.9)} 4%{opacity:.6;transform:scale(1)} 18%{opacity:.6;transform:scale(1)} 22%{opacity:0;transform:scale(.9)} 100%{opacity:0} }
+  .ai-label{ font-size:12px; font-weight:600; margin-top:4px; } .ai-link{ font-size:11px; color:var(--accent); margin-top:1px; }
+
+  /* saved-preset shelf */
+  .shelf{ margin-top:20px; }
+  .shelf h2{ font-size:13px; margin:0 0 8px; font-weight:600; }
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{ border:1px solid var(--line); border-radius:8px; padding:6px 8px; display:flex; flex-direction:column; gap:5px; background:var(--card); }
+  .chip .nm{ font-size:10px; color:var(--faint); font-weight:600; letter-spacing:.02em; }
+  .chip .sw{ display:flex; gap:2px; }
+  .chip .sw i{ width:16px; height:16px; border-radius:3px; border:0.5px solid rgba(128,128,128,.3); }
+  .chip .row{ display:flex; gap:6px; align-items:center; }
+  .chip button{ font:inherit; font-size:10px; background:transparent; border:0; color:var(--accent); cursor:pointer; padding:0; }
+  .chip button.del{ color:var(--faint); }
+  .chip.seed{ opacity:.85; }
+  details.export{ margin-top:14px; font-size:12px; color:var(--faint); }
+  details.export textarea{ width:100%; height:120px; font:11px/1.4 ui-monospace,Menlo,monospace; margin-top:6px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--ink); padding:8px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Welcome — palette randomiser + curation</h1>
+  <p class="lede">v1 is locked per palette/appearance. <b>Randomise</b> assigns each cell a colour picked only from that palette's defined tokens (bigger cells stay plainer). <b>Save</b> keeps the current set as v2, v3, v4… <b>Reopen</b> shows a random one from your saved-plus-v1 set — fresh but familiar. Saved to your browser; <b>Export</b> to lift the JSON into the source doc.</p>
+
+  <div class="controls">
+    <button id="randomise">🎲 Randomise colours</button>
+    <button id="save">💾 Save palette</button>
+    <button id="reopen" class="ghost">👁 Reopen</button>
+    <button id="shuffleText" class="ghost">↻ Shuffle text</button>
+    <label>Palette <select id="pal"><option value="default">Default</option><option value="edo">Edo</option></select></label>
+    <label>Appearance <select id="app"><option value="light">Light</option><option value="dark">Dark</option></select></label>
+    <label><input type="checkbox" id="aiToggle"> AI configured</label>
+  </div>
+  <p class="nowshowing">Showing: <b id="nowName">v1-default-light</b></p>
+
+  <div class="screen">
+    <div class="flex">
+      <div class="sq lg b62" id="life">
+        <span class="tag">Study tools</span>
+        <div class="body" id="lifeBody"></div>
+        <div class="drop">
+          <svg class="drop-ic" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/><path d="M8 10l4 4 4-4"/><path d="M12 3v11"/></svg>
+          <div class="drop-title">Drop a folder</div>
+          <div class="drop-sub">Drag a folder of recordings or transcripts here to add it as a project.</div>
+        </div>
+      </div>
+
+      <div class="flex col b38">
+        <div class="sq lg b62" id="sci">
+          <span class="tag">Scientific background</span>
+          <div class="body" id="sciBody"></div>
+        </div>
+
+        <div class="flex b38">
+          <div class="sq b62" id="tip">
+            <span class="tag">Tip</span>
+            <svg class="tip-bulb" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.5.5 1 1.5 1 2.5h6c0-1 .5-2 1-2.5A6 6 0 0 0 12 3z"/></svg>
+            <div class="tipbody" id="tipBody"></div>
+          </div>
+
+          <div class="flex col b38">
+            <div class="sq b62" id="ai"></div>
+            <div class="sq mid b38" id="delight">
+              <a class="lnk" href="https://bristlenose.app/docs/privacy.html" style="font-size:13px; line-height:1.35; text-align:center">Review AI &amp; privacy settings…</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="shelf">
+    <h2>Saved palettes</h2>
+    <div class="chips" id="chips"></div>
+    <details class="export"><summary>Export JSON (to paste into design-welcome-screen.md)</summary>
+      <textarea id="exportBox" readonly></textarea>
+    </details>
+  </div>
+</div>
+
+<script>
+/* ============ content pools (rotating text) ============ */
+const D = "https://bristlenose.app/docs/";
+const lifecycle = [
+  {t:"Ingest", d:"Drop a folder of recordings or transcripts — Bristlenose transcribes on your Mac.", href:D+"first-analysis.html"},
+  {t:"Tag", d:"Press t to tag a quote with a code from your codebook.", href:D+"tag-for-meaning.html"},
+  {t:"AutoCode", d:"Let AutoCode propose tags across every quote — you Accept or Deny.", href:D+"use-codebooks.html"},
+  {t:"Star & hide", d:"Press s to keep the quotes that matter, h to hide the rest.", href:D+"keyboard-shortcuts.html"},
+  {t:"Export", d:"Ship an HTML report, a spreadsheet, clips, or send to Miro.", href:D+"share-report.html"},
+];
+const science = [
+  {t:"Emergent themes", d:"Themes emerge from participants’ own words, not a fixed taxonomy (Braun&nbsp;&amp;&nbsp;Clarke, 2006).", href:D+"research-foundations.html"},
+  {t:"Don Norman", d:"The codebook frameworks draw on Don Norman’s principles of human-centred design.", href:D+"research-foundations.html"},
+  {t:"Jakob Nielsen", d:"The UX codebooks build on Nielsen’s usability heuristics.", href:D+"research-foundations.html"},
+  {t:"Seven sentiments", d:"Seven sentiments, grounded in appraisal theory (Scherer) and core affect (Russell).", href:D+"signals.html"},
+  {t:"Signals", d:"A signal marks where sentiment or tags concentrate more than you’d expect — a measure we coined.", href:D+"signals.html"},
+  {t:"Dignity without distortion", d:"Quotes are tidied but never twisted; the participant’s voice is honoured.", href:D+"research-foundations.html"},
+];
+const tips = [
+  {d:"Already have transcripts? Drop <b>.vtt</b>, <b>.srt</b> or <b>.docx</b> — transcription is skipped.", href:D+"supported-files.html"},
+  {d:"No API key? Run <b>Ollama</b> locally — free, no account, nothing uploaded.", href:D+"set-up-ollama.html"},
+  {d:"Name <b>p1.srt</b> next to <b>p1.mp4</b> and they merge into one session.", href:D+"supported-files.html"},
+  {d:"Press <b>s</b> to star, <b>h</b> to hide — then filter to what matters.", href:D+"keyboard-shortcuts.html"},
+  {d:"Click any transcript timecode to jump the video to that moment.", href:D+"run-an-analysis.html"},
+];
+const aiConfigured = [
+  {t:"About local models", d:"Ollama runs entirely on your Mac — no account, nothing uploaded.", href:D+"set-up-ollama.html"},
+  {t:"Switch anytime", d:"Change provider or model whenever you like, in Settings.", href:D+"configuration.html"},
+  {t:"Local or cloud", d:"Local models are free; cloud models are faster and sharper.", href:D+"cloud-or-local.html"},
+];
+const pick = a => a[Math.floor(Math.random()*a.length)];
+
+function render(){
+  const L = pick(lifecycle);
+  document.getElementById("lifeBody").innerHTML = `<span class="t">${L.t}</span>${L.d} <a class="lnk" href="${L.href}">Learn&nbsp;→</a>`;
+  const S = pick(science);
+  document.getElementById("sciBody").innerHTML = `<span class="t">${S.t}</span>${S.d} <a class="lnk" href="${S.href}">Learn&nbsp;more&nbsp;→</a>`;
+  const T = pick(tips);
+  document.getElementById("tipBody").innerHTML = `${T.d} <a class="lnk" href="${T.href}">More&nbsp;→</a>`;
+  const ai = document.getElementById("ai");
+  if(!document.getElementById("aiToggle").checked){
+    ai.innerHTML = `<span class="tag">Your AI</span>
+      <div class="ai-icon"><span>✦</span><span>◍</span><span>✳︎</span><span>❖</span><span>◆</span></div>
+      <div class="ai-label">Set up your AI</div><div class="ai-link">Settings · Docs</div>`;
+  } else {
+    const A = pick(aiConfigured);
+    ai.innerHTML = `<span class="tag">Your AI</span>
+      <div class="body"><span class="t">${A.t}</span>${A.d} <a class="lnk" href="${A.href}">More&nbsp;→</a></div>`;
+  }
+}
+
+/* ============ palette engine ============ */
+// light-on-dark text sets bundled with saturated pigments
+const IND = {bg:'#2d3654', ink:'#f0e9d8', faint:'#c4b898', tag:'#b8ad91', accent:'#8fb8e0', line:'#4a5470'}; // Court Indigo
+const PRU = {bg:'#0f5c9e', ink:'#f0e9d8', faint:'#cbd8e6', tag:'#b8cbe0', accent:'#ffdca8', line:'#3a72ab'}; // Prussian
+const VER = {bg:'#b5432a', ink:'#fdfbf7', faint:'#f2d9c9', tag:'#e8c8b8', accent:'#ffdca8', line:'#c86a52'}; // cinnabar
+const BEN = {bg:'#8b3a3a', ink:'#fdfbf7', faint:'#e8c8c8', tag:'#d8b0b0', accent:'#ffd8a8', line:'#a85a5a'}; // Bengara
+const SLA = {bg:'#4a698a', ink:'#fdfbf7', faint:'#dbe4ee', tag:'#c8d4e2', accent:'#ffe0b0', line:'#6a86a4'}; // Storm Slate
+const BLU = c => ({bg:c, ink:'#fff', faint:'rgba(255,255,255,.82)', tag:'rgba(255,255,255,.7)', accent:'#fff', line:'rgba(255,255,255,.3)'});
+
+// v1 locked seeds
+const V1_DEFAULT = ['3','7','12','18','26'].map(p=>({bg:`color-mix(in srgb,var(--accent) ${p}%,var(--card))`}));
+const SEEDS = {
+  'default-light': {name:'v1-default-light', cells:V1_DEFAULT},
+  'default-dark':  {name:'v1-default-dark',  cells:V1_DEFAULT},
+  'edo-light':     {name:'v1-edo-light',     cells:[{bg:'#f0e9d8'},{bg:'#e8f0e4'},{bg:'#f5ecd0'},IND,VER]},
+  'edo-dark':      {name:'v1-edo-dark',      cells:[{bg:'#211e18'},{bg:'#1a2818'},{bg:'#2d2614'},IND,VER]},
+};
+
+// per-combo assignable colours (calm = background only, inherits palette text; bold = full light-on-dark set)
+const POOLS = {
+  'default-light': {calm:['#ffffff','#f9f9fa','#eef4fc','#e8f0fe'], bold:[BLU('#007aff')]},
+  'default-dark':  {calm:['#1c1c1e','#232326','#1a2838','#1e293b'], bold:[BLU('#0a84ff')]},
+  'edo-light':     {calm:['#f0e9d8','#fdfbf7','#e8dfc9','#e8f0e4','#f5ecd0','#ede5d1'], bold:[IND,PRU,VER,BEN,SLA]},
+  'edo-dark':      {calm:['#211e18','#1a2818','#2d2614','#26231d'], bold:[IND,PRU,VER,BEN,SLA]},
+};
+
+const IDS = ['life','sci','tip','ai','delight'];
+let pal='default', app='light', current=null;
+const keyOf = () => pal+'-'+app;
+
+// bias = probability the cell stays calm (bigger cells → higher)
+function swatch(bias){
+  const p = POOLS[keyOf()];
+  if(Math.random() > bias && p.bold.length) return p.bold[Math.floor(Math.random()*p.bold.length)];
+  return {bg: p.calm[Math.floor(Math.random()*p.calm.length)]};
+}
+function randomPreset(){
+  return {name:'(unsaved)', palette:pal, appearance:app,
+    cells:[swatch(1), swatch(0.9), swatch(0.55), swatch(0.3), swatch(0.2)]};
+}
+function applyPreset(pr){
+  current = pr;
+  IDS.forEach((id,i)=>{
+    const el = document.getElementById(id), s = pr.cells[i]||{};
+    el.style.background = s.bg || '';
+    ['ink','faint','tag','accent','line'].forEach(k=> s[k] ? el.style.setProperty('--'+k,s[k]) : el.style.removeProperty('--'+k));
+  });
+  document.getElementById('nowName').textContent = pr.name;
+}
+
+/* ============ persistence + curation ============ */
+const LS = 'bnWelcomePresets';
+let store = load();
+function load(){ try{ return JSON.parse(localStorage.getItem(LS)) || {nextV:2, saved:[]}; }catch(e){ return {nextV:2, saved:[]}; } }
+function persist(){ localStorage.setItem(LS, JSON.stringify(store)); renderChips(); }
+
+function availablePresets(){ return [SEEDS[keyOf()], ...store.saved.filter(p=>p.palette===pal && p.appearance===app)]; }
+function reopen(){ const a = availablePresets(); applyPreset(a[Math.floor(Math.random()*a.length)]); render(); }
+function saveCurrent(){
+  if(!current) current = randomPreset();
+  const n = store.nextV++;
+  store.saved.push({name:`v${n}-${pal}-${app}`, palette:pal, appearance:app, cells:current.cells});
+  persist();
+  document.getElementById('nowName').textContent = `v${n}-${pal}-${app} (saved)`;
+}
+
+function swatchColor(s){ return s.bg && s.bg.indexOf('var(')<0 ? s.bg : (pal==='edo'?'#e8dfc9':'#e8f0fe'); }
+function renderChips(){
+  const wrap = document.getElementById('chips');
+  const all = [...Object.values(SEEDS), ...store.saved];
+  wrap.innerHTML = all.map((p,idx)=>{
+    const seed = p.name.startsWith('v1-');
+    const sw = p.cells.map(c=>`<i style="background:${swatchColor(c)}"></i>`).join('');
+    const del = seed ? '' : `<button class="del" data-del="${p.name}">delete</button>`;
+    return `<div class="chip ${seed?'seed':''}"><span class="nm">${p.name}</span><div class="sw">${sw}</div>
+      <div class="row"><button data-apply="${p.name}">apply</button>${del}</div></div>`;
+  }).join('');
+  wrap.querySelectorAll('[data-apply]').forEach(b=>b.onclick=()=>{
+    const p = all.find(x=>x.name===b.dataset.apply);
+    pal=p.palette||pal; app=p.appearance||app; syncSelects(); applyPreset(p);
+  });
+  wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    store.saved = store.saved.filter(x=>x.name!==b.dataset.del); persist();
+  });
+  document.getElementById('exportBox').value =
+    JSON.stringify([...Object.values(SEEDS), ...store.saved], null, 2);
+}
+
+/* ============ wiring ============ */
+const root = document.documentElement;
+function setPalApp(){ root.setAttribute('data-palette',pal); root.setAttribute('data-appearance',app); }
+function syncSelects(){ document.getElementById('pal').value=pal; document.getElementById('app').value=app; setPalApp(); }
+
+document.getElementById('randomise').onclick = ()=> applyPreset(Object.assign(randomPreset(), {name:'(unsaved random)'}));
+document.getElementById('save').onclick = saveCurrent;
+document.getElementById('reopen').onclick = reopen;
+document.getElementById('shuffleText').onclick = render;
+document.getElementById('aiToggle').onchange = render;
+document.getElementById('pal').onchange = e=>{ pal=e.target.value; setPalApp(); reopen(); };
+document.getElementById('app').onchange = e=>{ app=e.target.value; setPalApp(); reopen(); };
+
+setPalApp(); renderChips(); reopen();
+</script>
+</body>
+</html>

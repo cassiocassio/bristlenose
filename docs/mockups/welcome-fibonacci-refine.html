@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome — Fibonacci A, wording passes (wireframe)</title>
+<style>
+  :root{ --ink:#333; --faint:#8a8a8a; --line:#b8b8b8; --bg:#f4f4f5; --paper:#fff; --tag:#9a9a9a; --accent:#007aff; }
+  @media (prefers-color-scheme: dark){
+    :root{ --ink:#ddd; --faint:#999; --line:#555; --bg:#1c1c1e; --paper:#262629; --tag:#888; --accent:#0a84ff; }
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; padding:28px 24px 60px; font:13px/1.45 -apple-system,"SF Pro Text",system-ui,sans-serif; color:var(--ink); background:var(--bg); }
+  header.page{ max-width:1120px; margin:0 auto 22px; }
+  header.page h1{ font-size:18px; margin:0 0 6px; font-weight:600; }
+  header.page p{ margin:0; color:var(--faint); max-width:76ch; }
+  header.page code{ background:rgba(128,128,128,.15); padding:1px 5px; border-radius:4px; }
+  .gallery{ max-width:1120px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(490px,1fr)); gap:28px 24px; }
+  .card h2{ font-size:14px; margin:0 0 2px; font-weight:600; }
+  .card .principle{ font-size:12px; color:var(--faint); margin:0 0 10px; min-height:44px; }
+
+  .screen{ aspect-ratio:8/5; width:100%; background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:8px; display:flex; position:relative; overflow:hidden; }
+  .flex{ display:flex; gap:8px; flex:1 1 0; min-width:0; min-height:0; }   /* 8pt gutter */
+  .col{ flex-direction:column; }
+  .b62{ flex:1.618 1 0; } .b38{ flex:1 1 0; }
+
+  .sq{ border:1px dashed var(--line); border-radius:8px; padding:8px 9px; display:flex; flex-direction:column; gap:3px; min-width:0; min-height:0; justify-content:flex-start; overflow:hidden; }
+  .sq.lg{ border-radius:10px; padding:12px 13px; }
+  .sq.mid{ justify-content:center; }
+  .sq.mid.center{ align-items:center; text-align:center; }
+  .tag{ font-size:8px; letter-spacing:.08em; text-transform:uppercase; color:var(--tag); font-weight:600; }
+  .hd b{ font-size:13px; } .hd span{ font-size:10px; color:var(--faint); line-height:1.4; }
+  .wk span{ font-size:10px; color:var(--faint); line-height:1.45; }
+  .wk .n{ color:var(--accent); font-weight:600; }
+  .act{ font-size:11px; font-weight:600; } .act small{ font-weight:400; font-size:9px; color:var(--faint); display:block; }
+  .act.accent{ color:var(--accent); }
+  .tp{ font-size:9px; color:var(--faint); line-height:1.4; } .tp u{ color:var(--ink); }
+  .pill{ font-size:10px; font-weight:600; color:var(--accent); }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Fibonacci A — wording passes</h1>
+  <p>Same 5-square spiral (filler 6th cell dropped). The two text-heavy blocks keep the two biggest squares; actions and tip take the smaller tail. What varies: <b>how many words each square carries</b>, and <b>what the smallest cell is</b>. 8pt gutter, 8/10 radii — same ladder as the Swift. Freeze one and I'll match it exactly.</p>
+</header>
+
+<div class="gallery">
+
+  <!-- A1 · terse -->
+  <div class="card">
+    <h2>A1 · Terse — least words, tail is a “Tips” pill</h2>
+    <p class="principle">Strip to the bone. Steps are one word each; actions are bare labels; the tiny tail cell is just a launcher into the rotating tip deck, not a sentence. Most comfortable at small sizes.</p>
+    <div class="screen">
+      <div class="flex">
+        <div class="sq lg hd b62"><b>Welcome to Bristlenose</b><span>A folder of interviews → a report you can share. Nothing leaves your Mac but the text your AI reads.</span></div>
+        <div class="flex col b38">
+          <div class="sq lg wk b62"><span class="tag">How it works</span><span><span class="n">1</span> Add</span><span><span class="n">2</span> Analyse</span><span><span class="n">3</span> Export</span></div>
+          <div class="flex b38">
+            <div class="sq mid b62 act accent">▶ New project</div>
+            <div class="flex col b38">
+              <div class="sq mid b62 act">⚙ Set up your AI</div>
+              <div class="sq mid center b38 pill">💡 Tips →</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- A2 · generous -->
+  <div class="card">
+    <h2>A2 · Generous — max words the cells take</h2>
+    <p class="principle">Push copy to the limit: steps get dashes + detail, actions get sublabels, the tail holds a full tip sentence. Shows exactly where the small squares start to strain.</p>
+    <div class="screen">
+      <div class="flex">
+        <div class="sq lg hd b62"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Recordings are transcribed on your Mac; only the text is sent to your AI.</span></div>
+        <div class="flex col b38">
+          <div class="sq lg wk b62"><span class="tag">How it works</span><span><span class="n">1</span> Add — audio, video or transcripts</span><span><span class="n">2</span> Analyse — on your Mac; text to your AI</span><span><span class="n">3</span> Export — a report to share anywhere</span></div>
+          <div class="flex b38">
+            <div class="sq b62 act accent">▶ New project<small>pick or drop a folder of sessions</small></div>
+            <div class="flex col b38">
+              <div class="sq b62 act">⚙ Set up your AI<small>a key, or Ollama free</small></div>
+              <div class="sq b38 tp">💡 Have transcripts? Drop .vtt/.srt/.docx — skipped. <u>More →</u></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- A3 · balanced -->
+  <div class="card">
+    <h2>A3 · Balanced — the likely keeper</h2>
+    <p class="principle">Full header sentence (the privacy line earns its space), steps with short detail, actions with one-line sublabels, tail as a compact “Tips” pill. Reads calm without dead cells.</p>
+    <div class="screen">
+      <div class="flex">
+        <div class="sq lg hd b62"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Nothing leaves your Mac except the transcript text your AI analyses.</span></div>
+        <div class="flex col b38">
+          <div class="sq lg wk b62"><span class="tag">How it works</span><span><span class="n">1</span> Add — audio, video or transcripts</span><span><span class="n">2</span> Analyse — on your Mac; text to your AI</span><span><span class="n">3</span> Export — a report to share</span></div>
+          <div class="flex b38">
+            <div class="sq b62 act accent">▶ New project<small>drop a folder</small></div>
+            <div class="flex col b38">
+              <div class="sq b62 act">⚙ Set up your AI<small>key or Ollama</small></div>
+              <div class="sq mid center b38 pill">💡 Tips →</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- A4 · tip as base strip -->
+  <div class="card">
+    <h2>A4 · Tip escapes the spiral</h2>
+    <p class="principle">If the tiniest cell can’t carry a sentence gracefully, pull the tip out of the spiral entirely — a thin dismissible strip under the whole panel. Spiral stays a clean 4 squares; the rotating deck lives below.</p>
+    <div class="screen" style="flex-direction:column">
+      <div class="flex">
+        <div class="sq lg hd b62"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Nothing leaves your Mac except the transcript text your AI analyses.</span></div>
+        <div class="flex col b38">
+          <div class="sq lg wk b62"><span class="tag">How it works</span><span><span class="n">1</span> Add — audio, video or transcripts</span><span><span class="n">2</span> Analyse — on your Mac; text to your AI</span><span><span class="n">3</span> Export — a report to share</span></div>
+          <div class="flex b38">
+            <div class="sq mid b62 act accent">▶ New project</div>
+            <div class="sq mid b38 act">⚙ Set up AI</div>
+          </div>
+        </div>
+      </div>
+      <div class="sq mid center" style="flex:0 0 auto; border-style:solid; border-radius:8px;"><div class="tp">💡 Already have transcripts? Drop .vtt, .srt or .docx and transcription is skipped. <u>Learn more →</u></div></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

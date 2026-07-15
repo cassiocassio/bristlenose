@@ -1,8 +1,19 @@
 # Desktop debug: SQLAdmin panel as a beta-only affordance
 
+> **Re-scoped (14 Jul 2026), gating KEPT.** After sorting all debug affordances
+> by audience (see [`design-diagnostics-menu.md`](design-diagnostics-menu.md)),
+> the read-only SQL `/admin` browser is classified a **developer tool**, not a
+> user diagnostic — so the `DistributionChannel` / `DEVELOPER_ID_BETA` gating
+> below **stays** as the developer-tier gate (Developer-ID `.dmg` beta only,
+> reachable on a fragile-alpha screen-share, absent from App Store/TestFlight).
+> It does **not** move to the user-facing "Show Diagnostics menu" preference —
+> a raw SQL browser is a step too far for a general user. This doc remains
+> current for the Python mount + read-only mechanics and the record of *why the
+> receipt idiom was rejected*; the env var `_BRISTLENOSE_ADMIN_PANEL` will be
+> renamed `_BRISTLENOSE_DEVTOOLS` in Phase 2 of the diagnostics-menu plan.
+
 *Plan for exposing the SQLAdmin database browser (`/admin`) via the macOS Debug
-menu in TestFlight and direct betas, while keeping it out of the shipping App
-Store release.*
+menu, read-only, while keeping developer scaffolding out of shipping builds.*
 
 Status: **implemented** (14 Jul 2026). Python + Swift landed; needs an Xcode
 build + `doctor --self-test` and a real TestFlight build to close TF-receipt
@@ -154,6 +165,55 @@ if _admin_enabled:
   fork in favour of **keep** — it earns its ~3 MB by being a real diagnostic.
   (Shipping it in the App Store bundle with the route never mounted is *not* a
   review risk — unused dependency code is fine; per `app-store-police`.)
+- **Bundle packaging — the 14 Jul 2026 crash + fix.** "Ships in the bundle"
+  means the *module code* AND its **data dirs**. SQLAdmin's `Admin(...)`
+  constructor builds `PackageLoader("sqladmin", "templates")` (and a nested
+  `templates/sqladmin` loader) at construction time. PyInstaller's modulegraph
+  only walks `import` statements, so a bare `sqladmin` hiddenimport bundled the
+  code into the PYZ but left `sqladmin/templates/` and `sqladmin/statics/`
+  behind — and `PackageLoader` then died with `ValueError: PackageLoader could
+  not find a 'templates' directory in the 'sqladmin' package` **the instant
+  `/admin` was mounted**. Because the panel is gated to `exposesDebugTools`
+  channels, the crash surfaced only on the local Debug build (and would on a
+  Developer-ID beta) — the sidecar exited at ~0.2 s with `sidecar_exit
+  reason=uncaught_exception exc=ValueError`, read by the desktop as "Last run
+  failed. CLI exited with code 1." **Never reached TestFlight/App Store** (env
+  var unset there → `/admin` never mounts → loader never constructed). Fix:
+  `collect_all("sqladmin")` in [`desktop/bristlenose-sidecar.spec`](../desktop/bristlenose-sidecar.spec)
+  (datas + binaries + hiddenimports), which mirrors `pip install`'s view and
+  bundles templates + statics + submodules. Verified end-to-end: a rebuilt
+  bundle serves `/admin/` → HTTP 200 (`<title>Admin</title>`) and
+  `/admin/session/list` → HTTP 200 (model view renders from the bundled
+  templates). **Two guards keep it fixed (see below).**
+
+### Guarding the packaging (so this can't recur)
+
+The class of bug is "a bundled third-party package needs data files
+PyInstaller's modulegraph can't see." Unit tests can't catch it — they run
+against `pip install -e .`, where the data lives at its real path. Two
+complementary build-time gates now cover it:
+
+1. **The spec is in the sidecar source fingerprint.**
+   [`sidecar-source-hash.sh`](../desktop/scripts/sidecar-source-hash.sh) now
+   hashes `desktop/bristlenose-sidecar.spec` alongside the Python/locale/frontend
+   inputs. A spec-only edit (like this `collect_all` fix) previously changed
+   bundle *contents* without touching any `.py`, so the per-layer PyInstaller
+   gate skipped the rebuild and re-shipped the stale bundle — the fix silently
+   didn't land on Cmd+R. Now the hash moves, `check-sidecar-freshness.sh` fails
+   the Xcode build until rebuilt, and the P-layer rebuilds.
+2. **A build-time content check inside the bundle.**
+   `check_bundle_admin_panel()` (in [`doctor.py`](../bristlenose/doctor.py),
+   run by `bristlenose doctor --self-test` at `build-all.sh` step 2a)
+   reproduces the exact failing operation — constructing
+   `PackageLoader("sqladmin", "templates")` and `…/templates/sqladmin`, plus a
+   `statics/` dir check. Run *inside the freshly-built bundle*, it fails the
+   build loudly if the data dirs aren't packaged, instead of the crash reaching
+   a user. Regression-locked by `tests/test_doctor.py::TestBundleAdminPanelGuard`.
+
+   Gate #1 answers "did the spec change trigger a rebuild?"; gate #2 answers
+   "does the bundle actually contain the data, however it was built?" Both are
+   needed — the first alone wouldn't catch an *incomplete* `collect_all`, and
+   the second alone wouldn't fire if the bundle never rebuilt.
 
 ## Phase 2 — Swift: set the env var by channel
 

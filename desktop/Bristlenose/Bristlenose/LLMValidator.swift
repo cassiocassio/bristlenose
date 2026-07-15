@@ -68,11 +68,15 @@ enum LLMValidator {
         }
 
         do {
-            let (_, response) = try await urlSession.data(for: request)
+            let (data, response) = try await urlSession.data(for: request)
             guard let http = response as? HTTPURLResponse else {
                 return (.unavailable, "No HTTP response")
             }
-            return classify(provider: provider, status: http.statusCode)
+            // Body is needed for credit detection (Anthropic 400 "credit balance
+            // is too low" / OpenAI insufficient_quota). It's a provider error
+            // string, not user content — safe to inspect, not persisted here.
+            let body = String(data: data, encoding: .utf8)
+            return classify(provider: provider, status: http.statusCode, body: body)
         } catch let urlErr as URLError {
             // URLError code is fine to log publicly (it's an integer code).
             // localizedDescription can in principle echo the failing URL —
@@ -186,8 +190,39 @@ enum LLMValidator {
     /// can drive it without spinning up URLSession.
     static func classify(
         provider: LLMProvider,
-        status: Int
+        status: Int,
+        body: String? = nil
     ) -> (ProviderStatus, String?) {
+        // Body-aware credit detection FIRST (precedence: provider error
+        // code/message before HTTP status — mirrors the shared Python classifier
+        // in bristlenose/llm/failure_classifier.py). This is load-bearing:
+        // Anthropic serves out-of-credit as a **400** carrying "credit balance
+        // is too low" (NOT the 402 the docs imply), and the `case 400..<500
+        // where provider == .claude` arm below would otherwise swallow it as
+        // `.online` — the bug that made an out-of-credit Claude key show green.
+        // OpenAI's is a 429 with `insufficient_quota`. (Note: the OpenAI probe
+        // is GET /v1/models, which is UNBILLED and returns 200 even for a
+        // bankrupt key — so Settings can't detect OpenAI credit-out here; the
+        // run-failure path does. Anthropic's probe is a billed POST /messages,
+        // so it DOES surface the credit 400.)
+        // Provider-scoped to Claude/ChatGPT — the only providers with a
+        // top-up-able "credit" concept (mirrors `failure_classifier._RULES`'
+        // `providers=` frozensets). Azure bills by subscription quota and Gemini
+        // folds billing into RESOURCE_EXHAUSTED, so their bodies must NOT trip
+        // an "out of credit — top up" that doesn't apply to them.
+        if provider == .claude || provider == .chatGPT, let body {
+            let lower = body.lowercased()
+            if lower.contains("credit balance")
+                || lower.contains("insufficient_quota")
+                || lower.contains("billing_error")
+                || lower.contains("exceeded your current quota")
+            {
+                return (
+                    .outOfCredit,
+                    "\(provider.displayName) is out of credit — your key is fine, top up your account to use it."
+                )
+            }
+        }
         // Messages are deliberately phrased to make 401 vs 402 unmistakable
         // — a user staring at "key rejected" will delete and regenerate a
         // perfectly good key if the actual problem was unpaid credit, so the

@@ -128,6 +128,12 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         let homepageLabel: String
         let pricing: URL?
         let console: URL?
+        /// Deep-link to the provider's *add-funds / billing* page (distinct from
+        /// `console`, which is the console home / keys page). Drives the
+        /// out-of-credit pill's "Add funds…" action. Optional — where a provider
+        /// has no single billing page (Gemini bills via Google Cloud, Azure via
+        /// the org portal) it's `nil` and callers fall back to `console`.
+        let billing: URL?
         /// i18n key for the console label — "Keys" for cloud APIs, "Portal" for
         /// Azure. Resolve via `i18n.t(links.consoleLabel)` at the call site.
         let consoleLabel: String
@@ -141,6 +147,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
                 homepageLabel: "anthropic.com",
                 pricing: URL(string: "https://anthropic.com/pricing"),
                 console: URL(string: "https://console.anthropic.com"),
+                billing: URL(string: "https://console.anthropic.com/settings/billing"),
                 consoleLabel: "desktop.llmSettings.console.keys"
             )
         case .chatGPT:
@@ -149,6 +156,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
                 homepageLabel: "openai.com",
                 pricing: URL(string: "https://openai.com/api/pricing"),
                 console: URL(string: "https://platform.openai.com/api-keys"),
+                billing: URL(string: "https://platform.openai.com/settings/organization/billing/overview"),
                 consoleLabel: "desktop.llmSettings.console.keys"
             )
         case .gemini:
@@ -157,6 +165,8 @@ enum LLMProvider: String, CaseIterable, Identifiable {
                 homepageLabel: "ai.google.dev",
                 pricing: URL(string: "https://ai.google.dev/pricing"),
                 console: URL(string: "https://aistudio.google.com/app/apikey"),
+                // Gemini bills through Google Cloud, not a single add-funds page.
+                billing: nil,
                 consoleLabel: "desktop.llmSettings.console.keys"
             )
         case .azure:
@@ -171,6 +181,8 @@ enum LLMProvider: String, CaseIterable, Identifiable {
                         "https://azure.microsoft.com/en-us/pricing/details/cognitive-services/openai-service/"
                 ),
                 console: URL(string: "https://portal.azure.com"),
+                // Azure billing lives inside the org's own portal/subscription.
+                billing: nil,
                 consoleLabel: "desktop.llmSettings.console.portal"
             )
         case .ollama:
@@ -179,6 +191,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
                 homepageLabel: "ollama.com",
                 pricing: nil,
                 console: nil,
+                billing: nil,
                 consoleLabel: ""
             )
         }
@@ -283,8 +296,11 @@ extension Notification.Name {
     static let bristlenosePaletteChanged = Notification.Name("bristlenosePaletteChanged")
     /// Posted by the app menu to re-show the AI data disclosure sheet.
     static let showAIConsentSheet = Notification.Name("showAIConsentSheet")
-    /// Posted by the app menu to show the Build Info diagnostic sheet.
-    static let showBuildInfoSheet = Notification.Name("showBuildInfoSheet")
+    /// Posted when the active provider's out-of-credit state may have changed
+    /// (e.g. a run failed on billing → verdict recorded). `OutOfCreditModel`
+    /// listens and re-reads. Distinct from `bristlenosePrefsChanged` so the
+    /// pill can refresh WITHOUT triggering a serve restart.
+    static let bristlenoseOutOfCreditChanged = Notification.Name("bristlenoseOutOfCreditChanged")
     /// Posted by the Export popover row + Quotes-menu item to present the native
     /// Send-to-Miro sheet (ContentView owns the `.sheet`).
     static let showMiroSheet = Notification.Name("showMiroSheet")

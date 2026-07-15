@@ -46,6 +46,14 @@ live software (React SPA against real project data) is a separate **integration 
   gallery, each in its own container-query sandbox. Placement + running order is a
   separate, later problem (Phase 3). The moment a widget's design bends to "but where does
   it go," the decoupling is lost.
+- **Faces change data QUANTITY, not element SIZE.** Compact → expanded reveals *more data*
+  (rows, columns, annotations) at *constant element size* — never zooms the same content up.
+  Fonts and cells stay the same physical size across faces; density comes from quantity. This
+  is the cardinal responsive rule — see [data-density.md](data-density.md).
+- **Normal first; trim/add is a conversation, not a guess.** Build the normal face fully, then
+  decide compact (trim) and expanded (add) *with Martin*, grounded in how researchers use the
+  widget — essential-vs-luxury is workflow knowledge, not a designer inference. Count for
+  *multiply* widgets is editorial (curated 1/3/5), not `auto-fill`.
 - **Same-face is the default; a distinct face is earned.** A widget only gets a separate
   compact/expanded when there's genuine data tension. Default-first, per the framework's
   existing CQ discipline. — see [data-density.md](data-density.md).
@@ -123,22 +131,35 @@ failure mode this brief exists to prevent.
   against true cardinalities.
 - Seed the ledgers in [data-density.md](data-density.md) and [design-police.md](design-police.md).
 - Confirm the single **design mode** (proposed: default / light).
-- **Confirm what "edo" is** — assumed an alternate *accent* scheme (a token swap that keeps
-  Phase 2 mechanical). If it's a structurally different treatment, Phase 2 stops being
-  free. [OPEN]
+- ~~Confirm what "edo" is~~ **RESOLVED** — edo is a shipped palette
+  (`palette-edo.css`): Prussian-blue / washi-paper chrome swap via `data-color-theme="edo"`.
+  Pure chrome override; sentiment hues are shared. Phase 2 stays mechanical. The gallery
+  already renders it via the real attribute. See [themes-testing-plan.md](themes-testing-plan.md).
 
-### Phase 1 — the loop, per **brick**, novelty-descending
-Sequence by **design-system novelty**, not running order — the system-stressing widgets go
-first so their token deltas amortise across later widgets. The unit is a **brick**, which
-may hold a welded pair (friction + co-occurrence; sections + themes) designed *together*
-because their tradeoffs interact.
+### Phase 1 — the loop, per **brick**, EASIEST-first
+Sequence **least-to-most challenging**. The first job isn't token-delta amortisation — it's
+**settling the gallery mechanism and the responsive principles** on a widget with few hard
+design questions, so the framework is proven before it meets the hard ones. (Superseded the
+earlier "novelty-descending" order, 15 Jul 2026 — Martin's call: get the gallery *right* on
+an easy widget first; the heat-ramp delta can wait for the heatmap family.)
 
 For each brick: (1) content pass → data ladder; (2) faces, driven by the ladder,
-same-face-default; (3) police the union → refactor to atoms or log a delta.
+same-face-default, **constant element size**; (3) police the union → refactor to atoms or log
+a delta. The unit is a **brick**, which may hold a welded pair (friction + co-occurrence;
+sections + themes) designed *together* because their tradeoffs interact.
 
-Proposed novelty order (hardest first): co-occurrence matrix → friction heatmap →
-saturation curves → fingerprint → verbatim/quotes → pro & contra → who-we-spoke-with →
-sections|themes → coverage.
+Order (easiest → hardest):
+1. **Verbatim / quotes** — pure *multiply* (1·3·5 cards); the cleanest demonstration of
+   "more data, constant element size." ← current
+2. Coverage — bounded strip (*stop*).
+3. Signals — *multiply* (1·3·5 cards) with a confidence badge.
+4. Pro & contra — two columns, top-N ± .
+5. Sections | Themes — nav lists + counts.
+6. Who we spoke with — person cards (thumb · arc · journey).
+7. Saturation / study-at-a-glance — curves + numbers.
+8. Fingerprint — aggregate signature.
+9. **Friction & co-occurrence** — PARKED as *hardest* (matrix cardinality, welded-pair
+   question, heat ramp, the "no compact" question). Return once principles are settled.
 
 ### Phase 2 — mechanical proof (rolling)
 Expand each *locked* brick across {edo, default} × {dark, light}. Clean = tokens proven.

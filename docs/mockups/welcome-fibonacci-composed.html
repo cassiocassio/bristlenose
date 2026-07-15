@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome — Fibonacci A, composed (motion)</title>
+<style>
+  :root{
+    --ink:#1a1a1a; --faint:#6b7280; --line:#e5e7eb; --bg:#f4f4f5; --paper:#fff;
+    --card:#f9f9fa; --tag:#9a9a9a; --accent:#007aff; --accent-soft:#e8f0fe;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --ink:#e5e7eb; --faint:#9ca3af; --line:#2d2d2d; --bg:#161618; --paper:#1c1c1e;
+           --card:#232326; --tag:#888; --accent:#0a84ff; --accent-soft:#1e293b; }
+  }
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; } }
+  *{ box-sizing:border-box; }
+  body{ margin:0; padding:30px 24px 64px; font:13px/1.45 -apple-system,"SF Pro Text",system-ui,sans-serif; color:var(--ink); background:var(--bg); }
+  header.page{ max-width:920px; margin:0 auto 20px; }
+  header.page h1{ font-size:18px; margin:0 0 6px; font-weight:600; }
+  header.page p{ margin:0; color:var(--faint); max-width:76ch; }
+
+  .stage{ max-width:920px; margin:0 auto; }
+  /* the window */
+  .screen{ aspect-ratio:8/5; width:100%; background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:20px; display:flex; position:relative; overflow:hidden; }
+  .flex{ display:flex; gap:8px; flex:1 1 0; min-width:0; min-height:0; }
+  .col{ flex-direction:column; }
+  .b62{ flex:1.618 1 0; } .b38{ flex:1 1 0; }
+
+  .sq{ background:var(--card); border:0.5px solid var(--line); border-radius:8px; padding:10px 11px; display:flex; flex-direction:column; gap:4px; min-width:0; min-height:0; overflow:hidden; position:relative; }
+  .sq.lg{ border-radius:10px; padding:16px; }
+  .sq.mid{ justify-content:center; align-items:center; text-align:center; }
+
+  .tag{ font-size:8.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--tag); font-weight:600; }
+
+  /* hero + floating CTA */
+  .hero b{ font-size:18px; font-weight:600; letter-spacing:-.01em; }
+  .hero .sub{ font-size:11.5px; color:var(--faint); line-height:1.45; max-width:34ch; margin-top:2px; }
+  .cta{ position:absolute; left:16px; bottom:16px; display:inline-flex; align-items:center; gap:6px;
+        background:var(--accent); color:#fff; font-size:12px; font-weight:600; padding:7px 13px; border-radius:7px; }
+  .cta .hint{ position:absolute; left:0; bottom:-16px; color:var(--faint); font-weight:400; font-size:9.5px; white-space:nowrap; }
+  .fishmark{ position:absolute; right:16px; top:14px; font-size:15px; color:var(--line); }
+
+  /* science cell */
+  .sci .line{ font-size:11px; color:var(--faint); line-height:1.5; }
+  .sci .em{ color:var(--ink); font-weight:500; }
+  .pipe{ display:flex; align-items:center; gap:5px; margin-top:6px; color:var(--tag); font-size:12px; }
+  .pipe .dot{ opacity:.5; }
+
+  /* tip cell */
+  .tip{ font-size:9.5px; color:var(--faint); line-height:1.4; }
+  .tip u{ color:var(--ink); }
+  .tip .tag{ margin-bottom:2px; }
+
+  /* set-up-AI cell: morphing subdued provider glyph + tiny link */
+  .ai-icon{ position:relative; width:26px; height:26px; }
+  .ai-icon span{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:18px; color:var(--faint); opacity:0; animation:morph 20s infinite; }
+  .ai-icon span:nth-child(1){ animation-delay:0s; }
+  .ai-icon span:nth-child(2){ animation-delay:4s; }
+  .ai-icon span:nth-child(3){ animation-delay:8s; }
+  .ai-icon span:nth-child(4){ animation-delay:12s; }
+  .ai-icon span:nth-child(5){ animation-delay:16s; }
+  @keyframes morph{ 0%{opacity:0;transform:scale(.9)} 4%{opacity:.55;transform:scale(1)} 18%{opacity:.55;transform:scale(1)} 22%{opacity:0;transform:scale(.9)} 100%{opacity:0} }
+  .ai-label{ font-size:10px; font-weight:600; margin-top:4px; }
+  .ai-link{ font-size:9px; color:var(--accent); margin-top:1px; }
+
+  /* surprise cell: gentle murmuration */
+  .murmur{ position:absolute; inset:0; }
+  .murmur i{ position:absolute; width:3px; height:3px; border-radius:50%; background:var(--accent); opacity:.35; }
+  .murmur i:nth-child(1){ left:30%; top:40%; animation:swim1 9s ease-in-out infinite; }
+  .murmur i:nth-child(2){ left:45%; top:55%; animation:swim2 11s ease-in-out infinite; }
+  .murmur i:nth-child(3){ left:55%; top:35%; animation:swim1 10s ease-in-out infinite .6s; }
+  .murmur i:nth-child(4){ left:38%; top:62%; animation:swim2 12s ease-in-out infinite .3s; }
+  .murmur i:nth-child(5){ left:62%; top:58%; animation:swim1 8s ease-in-out infinite .9s; }
+  .murmur i:nth-child(6){ left:50%; top:45%; animation:swim2 10s ease-in-out infinite .5s; }
+  .murmur i:nth-child(7){ left:42%; top:48%; animation:swim1 11s ease-in-out infinite .2s; }
+  @keyframes swim1{ 0%,100%{transform:translate(0,0)} 50%{transform:translate(9px,-6px)} }
+  @keyframes swim2{ 0%,100%{transform:translate(0,0)} 50%{transform:translate(-8px,7px)} }
+  .surprise-label{ position:absolute; bottom:8px; width:100%; text-align:center; font-size:8px; color:var(--tag); letter-spacing:.05em; }
+
+  .opts{ max-width:920px; margin:22px auto 0; }
+  .opts h2{ font-size:13px; margin:0 0 8px; font-weight:600; }
+  .optrow{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .opt{ }
+  .opt .mini{ aspect-ratio:1.4; background:var(--card); border:0.5px solid var(--line); border-radius:8px; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  .opt p{ font-size:11px; color:var(--faint); margin:6px 2px 0; }
+  .opt b{ color:var(--ink); font-weight:600; }
+  .fish{ font-size:20px; color:var(--faint); animation:drift 14s linear infinite; }
+  @keyframes drift{ 0%{transform:translateX(-40px) scaleX(1)} 49%{transform:translateX(40px) scaleX(1)} 50%{transform:translateX(40px) scaleX(-1)} 100%{transform:translateX(-40px) scaleX(-1)} }
+  .ripple{ width:10px; height:10px; border-radius:50%; border:1px solid var(--accent); opacity:.5; animation:rip 4s ease-out infinite; }
+  @keyframes rip{ 0%{transform:scale(.4);opacity:.6} 100%{transform:scale(4);opacity:0} }
+  .aph{ font-size:9px; color:var(--faint); text-align:center; padding:0 10px; font-style:italic; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Fibonacci A — composed, with motion</h1>
+  <p>A1's spiral, re-cast per your notes: the big square carries the welcome <b>and</b> a floating New-project CTA; the second becomes the pipeline’s science; a tip fills the freed third cell; “Set up your AI” shrinks to a tiny link under a subdued icon that gently cross-fades through the LLMs; and the smallest cell is a moment of delight. Motion is deliberately slow. Respects <code>prefers-reduced-motion</code>.</p>
+</header>
+
+<div class="stage">
+  <div class="screen">
+    <div class="flex">
+
+      <!-- 1 · HERO + floating CTA -->
+      <div class="sq lg hero b62">
+        <span class="fishmark">🐟</span>
+        <b>Welcome to Bristlenose</b>
+        <div class="sub">Turn a folder of interviews into a report you can share. Nothing leaves your Mac but the transcript text your AI reads.</div>
+        <div class="cta">▶ New project<span class="hint">…or drop a folder anywhere here</span></div>
+      </div>
+
+      <div class="flex col b38">
+
+        <!-- 2 · THE SCIENCE — real methodology, condensed. Link → bristlenose.app/docs/research-foundations.html -->
+        <div class="sq lg sci b62">
+          <span class="tag">The science</span>
+          <div class="line"><span class="em">Quotes</span> become emergent <span class="em">themes</span> — participants’ own words, not a fixed taxonomy (Braun&nbsp;&amp;&nbsp;Clarke,&nbsp;2006). <span class="em">Codebook frameworks</span> add UX heuristics from Don&nbsp;Norman, Jakob&nbsp;Nielsen and more. <a href="https://bristlenose.app/docs/research-foundations.html" style="color:var(--accent);text-decoration:none">Learn&nbsp;more&nbsp;→</a></div>
+        </div>
+
+        <div class="flex b38">
+
+          <!-- 3 · TIP -->
+          <div class="sq tip b62">
+            <span class="tag">Tip</span>
+            <div>💡 Already have transcripts? Drop <b>.vtt</b>, <b>.srt</b> or <b>.docx</b> — transcription is skipped. <u>More →</u></div>
+          </div>
+
+          <div class="flex col b38">
+
+            <!-- 4 · SET UP AI (tiny CTA + morphing icon) -->
+            <div class="sq mid b62">
+              <div class="ai-icon">
+                <span>✦</span><span>◍</span><span>✳︎</span><span>❖</span><span>◆</span>
+              </div>
+              <div class="ai-label">Set up your AI</div>
+              <div class="ai-link">Settings · Docs</div>
+            </div>
+
+            <!-- 5 · SURPRISE -->
+            <div class="sq mid b38">
+              <div class="murmur"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="surprise-label">a small shoal</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- surprise-cell options -->
+  <div class="opts">
+    <h2>The smallest cell — “something fun and surprising” (undecided)</h2>
+    <div class="optrow">
+      <div class="opt">
+        <div class="mini"><div class="murmur"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+        <p><b>Murmuration / shoal.</b> Ties to the existing motion language and the fish namesake. Abstract, tasteful, no character. Later it could react to real activity.</p>
+      </div>
+      <div class="opt">
+        <div class="mini"><span class="fish">🐟</span></div>
+        <p><b>A drifting bristlenose.</b> A single fish idles across, occasionally. The boldest brand nod — a quiet easter egg, not a mascot. Watch the taste line (you dislike cute guides).</p>
+      </div>
+      <div class="opt">
+        <div class="mini"><span class="aph">“The data is in the room with you.”</span></div>
+        <p><b>A rotating aphorism.</b> A tiny, dry research line that changes each launch. Words, not motion — safest, but less “surprising.”</p>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -56,7 +56,7 @@ What the Mac app actually uses (file:line in `desktop/Bristlenose/Bristlenose/`,
 | Accent | System accent (empty `AccentColor.colorset` — rides the user's System Settings choice; blue for most) | `Assets.xcassets` |
 | Accent consumers | `Color.accentColor` (lens pill 0.14 opacity, icon-picker 0.2 fill + 1.5pt stroke, drop-target 2pt stroke), `controlAccentColor` (activity ring) | `LensRail.swift:64-66`, `IconPickerPopover.swift:168-175`, `ProjectRow.swift:143`, `SidebarActivityRing.swift:155` |
 | Sidebar selection | Source-list capsule, **pinned unemphasized** grey in all focus states | `ProjectSidebarOutline.swift:204-210, 1240-1260` |
-| Corner radii | **6pt** small pills (lens rail, icon picker), 8pt rows/toasts, 10pt empty-state cards | `LensRail.swift:64`, `ToastView.swift:76`, `WelcomeView.swift:146-178` |
+| Corner radii | **6pt** small pills (lens rail, icon picker), 8pt rows/toasts, 10pt empty-state cards | `LensRail.swift:64`, `ToastView.swift:76`, `WelcomeHomeView.swift:195-199` |
 
 macOS system blue ≈ `#007AFF` light / `#0A84FF` dark; `unemphasizedSelectedContentBackgroundColor` sampled `#EFEFEF` / `#2B2B2B`. No canonical Apple hex — see §Principles.
 

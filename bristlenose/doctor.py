@@ -1052,6 +1052,66 @@ def check_bundle_alembic() -> CheckResult:
     )
 
 
+def check_bundle_admin_panel() -> CheckResult:
+    """SQLAdmin's Jinja2 templates + static assets (third-party package data).
+
+    SQLAdmin's ``Admin(...)`` constructor builds ``PackageLoader("sqladmin",
+    "templates")`` (and a nested ``templates/sqladmin`` loader) at
+    construction time. PyInstaller's modulegraph only walks ``import``
+    statements, so a bare ``sqladmin`` hiddenimport bundles the *module code*
+    into the PYZ but leaves its ``templates/`` and ``statics/`` data dirs
+    behind — and then ``PackageLoader`` dies with ``ValueError: PackageLoader
+    could not find a 'templates' directory in the 'sqladmin' package`` the
+    instant ``/admin`` is mounted (``serve --dev`` or ``_BRISTLENOSE_ADMIN_PANEL
+    =1`` on a desktop beta). The spec now fixes this via ``collect_all(
+    "sqladmin")``; this check is the build-time gate that keeps it fixed by
+    reproducing the exact failing operation. Unit tests can't catch the class
+    (they run against ``pip install -e .`` where the data lives at its real
+    path) — only a check that runs *inside the bundle* (build-all.sh step 2a).
+    """
+    try:
+        import sqladmin  # noqa: F401  (import must succeed = module bundled)
+        from jinja2 import PackageLoader
+    except ImportError as exc:
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="Bundle: admin panel",
+            detail=f"sqladmin/jinja2 not importable: {exc}",
+            fix_key="bundle_dir_missing",
+        )
+
+    # The exact loaders SQLAdmin's init_templating_engine() constructs. Each
+    # raises ValueError if its data dir isn't present in the bundle.
+    for pkg, path in (("sqladmin", "templates"), ("sqladmin", "templates/sqladmin")):
+        try:
+            PackageLoader(pkg, path)
+        except ValueError as exc:
+            return CheckResult(
+                status=CheckStatus.FAIL,
+                label="Bundle: admin panel",
+                detail=(
+                    f"PackageLoader({pkg!r}, {path!r}) failed — sqladmin data "
+                    f"dirs not bundled (add collect_all('sqladmin') to the spec): {exc}"
+                ),
+                fix_key="bundle_dir_missing",
+            )
+
+    statics = Path(sqladmin.__file__).parent / "statics"
+    if not statics.is_dir():
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="Bundle: admin panel",
+            detail=f"sqladmin statics/ missing at {statics}",
+            fix_key="bundle_dir_missing",
+        )
+
+    return CheckResult(
+        status=CheckStatus.OK,
+        label="Bundle: admin panel",
+        detail="sqladmin templates + statics present",
+    )
+
+
 def run_bundle_integrity() -> DoctorReport:
     """Run only the bundle-integrity checks.
 
@@ -1066,6 +1126,7 @@ def run_bundle_integrity() -> DoctorReport:
         check_bundle_locales(),
         check_bundle_theme(),
         check_bundle_alembic(),
+        check_bundle_admin_panel(),
     ])
 
 

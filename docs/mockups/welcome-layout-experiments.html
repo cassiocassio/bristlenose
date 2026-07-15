@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome screen — layout experiments (wireframe)</title>
+<style>
+  :root{
+    --ink:#333; --faint:#8a8a8a; --line:#b8b8b8; --bg:#f4f4f5; --paper:#fff;
+    --tag:#9a9a9a; --accentline:#c9c9c9;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --ink:#ddd; --faint:#999; --line:#555; --bg:#1c1c1e; --paper:#262629; --tag:#888; --accentline:#444; }
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; padding:28px 24px 60px;
+    font:13px/1.45 -apple-system, "SF Pro Text", system-ui, sans-serif;
+    color:var(--ink); background:var(--bg);
+  }
+  header.page{ max-width:1200px; margin:0 auto 24px; }
+  header.page h1{ font-size:18px; margin:0 0 6px; font-weight:600; }
+  header.page p{ margin:0; color:var(--faint); max-width:70ch; }
+  header.page .budget{ margin-top:8px; font-size:12px; color:var(--faint); }
+  header.page code{ background:rgba(128,128,128,.15); padding:1px 5px; border-radius:4px; }
+
+  .gallery{
+    max-width:1200px; margin:0 auto;
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(340px,1fr));
+    gap:26px 22px;
+  }
+  .card h2{ font-size:13px; margin:0 0 2px; font-weight:600; }
+  .card .principle{ font-size:11px; color:var(--faint); margin:0 0 8px; min-height:28px; }
+
+  /* the "screen" — a fixed non-scrolling window, 8:5 like the welcome pane */
+  .screen{
+    aspect-ratio:8/5; width:100%;
+    background:var(--paper); border:1px solid var(--line); border-radius:8px;
+    padding:8px; display:grid; gap:6px; position:relative; overflow:hidden;
+  }
+  .cell{
+    border:1px dashed var(--line); border-radius:5px; padding:5px 6px;
+    display:flex; flex-direction:column; gap:3px; min-width:0; min-height:0;
+    justify-content:center;
+  }
+  .cell.center{ align-items:center; text-align:center; }
+  .cell.plain{ border:none; padding:2px; }
+  .cell .tag{
+    font-size:8px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--tag); font-weight:600;
+  }
+  .atom{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+  .atom + .atom{ margin-top:5px; }
+  .hd b{ font-size:11px; }
+  .hd span, .wk span{ font-size:9px; color:var(--faint); line-height:1.35; }
+  .wk em{ font-size:9px; font-style:normal; color:var(--tag); text-transform:uppercase; letter-spacing:.05em; }
+  .act{ font-size:10px; font-weight:600; }
+  .act small{ font-weight:400; font-size:8.5px; color:var(--faint); display:block; }
+  .tp{ font-size:8.5px; color:var(--faint); line-height:1.35; }
+  .tp u{ color:var(--ink); }
+  .ic{ font-size:16px; color:var(--faint); }
+
+  .zline{ position:absolute; inset:0; pointer-events:none; }
+
+  /* ---------- layout templates ---------- */
+  .s-stack{ grid-template-columns:1fr; place-content:center; }
+  .s-stack .row2{ display:flex; gap:6px; }
+  .s-stack .row2 .cell{ flex:1; }
+
+  .s-quad{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
+
+  .s-thirds{ grid-template-columns:1fr 1fr 1fr; }
+
+  .s-golden{ grid-template-columns:1.618fr 1fr; }
+  .s-golden .rail{ display:grid; grid-template-rows:1fr 1fr 1fr; gap:6px; }
+  .s-golden .rail .cell{ min-height:0; }
+
+  /* fibonacci spiral of squares — nested boxes at ~1.618 */
+  .s-fib{ padding:8px; }
+  .s-fib .flex{ display:flex; gap:5px; flex:1; min-width:0; min-height:0; }
+  .s-fib .col{ flex-direction:column; }
+  .s-fib .b62{ flex:1.618; } .s-fib .b38{ flex:1; }
+  .s-fib .cell{ flex:1; }
+
+  .s-swiss{ grid-template-columns:repeat(6,1fr); grid-template-rows:repeat(4,1fr); }
+  .s-dash{ grid-template-columns:repeat(6,1fr); grid-template-rows:auto 1fr 1fr; }
+  .s-hero{ grid-template-columns:1fr 1fr 1fr; grid-template-rows:auto 1fr auto; }
+  .s-side{ grid-template-columns:0.9fr 2fr; }
+  .s-side .rail{ display:grid; grid-template-rows:auto 1fr 1fr; gap:6px; }
+  .s-side .main{ display:grid; grid-template-rows:auto 1fr auto; gap:6px; }
+  .s-hier{ grid-template-columns:2fr 1fr 1fr; grid-template-rows:1.4fr 1fr; }
+  .s-asym{ grid-template-columns:repeat(5,1fr); grid-template-rows:repeat(4,1fr); }
+  .s-z{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr 1fr; }
+
+  .span2c{ grid-column:span 2; } .span3c{ grid-column:span 3; }
+  .span4c{ grid-column:span 4; } .span2r{ grid-row:span 2; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Welcome screen — layout experiments</h1>
+  <p>Wireframe only — no styling or hierarchy intent yet. The same fixed content set is poured into a dozen page divisions from grid theory, so we can feel word balance and whitespace before choosing a direction. Non-scrolling <code>WelcomeView</code> (SwiftUI), ~80 words of content, ≤6 tweets.</p>
+  <p class="budget">Content atoms in every frame: <b>◐ icon</b> · <b>Header</b> (title + 22-word line) · <b>How it works</b> (3 steps) · <b>New project</b> · <b>Set up your AI</b> · <b>Tip</b> (dismissible, links out).</p>
+</header>
+
+<div class="gallery">
+
+  <!-- 1. Centered stack (current) -->
+  <div class="card">
+    <h2>1 · Centered stack <span style="color:var(--faint);font-weight:400">(today)</span></h2>
+    <p class="principle">Single symmetric column, everything centred. The current WelcomeView. Calm, but word-heavy blocks stack tall.</p>
+    <div class="screen s-stack">
+      <div class="cell center plain"><div class="atom ic">◐</div></div>
+      <div class="cell center plain"><div class="atom hd"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Nothing leaves your Mac except the transcript text your AI analyses.</span></div></div>
+      <div class="cell center"><span class="tag">How it works</span><div class="atom wk"><span>1 Add — audio, video or transcripts</span><span>2 Analyse — on your Mac; text to your AI</span><span>3 Export — a report to share</span></div></div>
+      <div class="row2">
+        <div class="cell center"><div class="atom act">▶ New project<small>pick or drop a folder</small></div></div>
+        <div class="cell center"><div class="atom act">⚙ Set up your AI<small>key, or Ollama free</small></div></div>
+      </div>
+      <div class="cell center"><div class="atom tp">💡 Already have transcripts? Drop .vtt/.srt/.docx — skipped. <u>Learn more →</u></div></div>
+    </div>
+  </div>
+
+  <!-- 2. 2x2 quadrant -->
+  <div class="card">
+    <h2>2 · 2×2 quadrant</h2>
+    <p class="principle">Four equal cells. Even, gallery-like. Read order ambiguous, but each block gets room to breathe.</p>
+    <div class="screen s-quad">
+      <div class="cell"><span class="tag">Intro</span><div class="atom ic">◐</div><div class="atom hd"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share.</span></div></div>
+      <div class="cell"><span class="tag">How it works</span><div class="atom wk"><span>1 Add — audio, video or transcripts</span><span>2 Analyse — on your Mac; text to your AI</span><span>3 Export — a report to share</span></div></div>
+      <div class="cell"><span class="tag">Get going</span><div class="atom act">▶ New project<small>pick or drop a folder</small></div><div class="atom act">⚙ Set up your AI<small>key, or Ollama free</small></div></div>
+      <div class="cell"><span class="tag">Tip</span><div class="atom tp">💡 Already have transcripts? Drop .vtt/.srt/.docx — transcription is skipped. <u>Learn more →</u></div></div>
+    </div>
+  </div>
+
+  <!-- 3. Rule of thirds -->
+  <div class="card">
+    <h2>3 · Rule of thirds</h2>
+    <p class="principle">Three vertical columns: identity · explanation · action. Natural left-to-right reading; tip tucks under the actions.</p>
+    <div class="screen s-thirds">
+      <div class="cell center"><div class="atom ic">◐</div><div class="atom hd"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Nothing leaves your Mac but transcript text.</span></div></div>
+      <div class="cell"><span class="tag">How it works</span><div class="atom wk"><span>1 Add — audio, video or transcripts</span><span>2 Analyse — on your Mac; text to your AI</span><span>3 Export — a report to share</span></div></div>
+      <div class="cell"><div class="atom act">▶ New project<small>pick or drop a folder</small></div><div class="atom act">⚙ Set up your AI<small>key, or Ollama free</small></div><div class="atom tp">💡 Have transcripts? Drop .vtt/.srt/.docx. <u>More →</u></div></div>
+    </div>
+  </div>
+
+  <!-- 4. Golden ratio split -->
+  <div class="card">
+    <h2>4 · Golden split + rail</h2>
+    <p class="principle">Big 1.618 pane (welcome + how) with a narrow right rail stacking the two actions and the tip.</p>
+    <div class="screen s-golden">
+      <div class="cell"><div class="atom ic">◐</div><div class="atom hd"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Nothing leaves your Mac except the transcript text your AI analyses.</span></div><span class="tag" style="margin-top:6px">How it works</span><div class="atom wk"><span>1 Add · 2 Analyse · 3 Export</span></div></div>
+      <div class="rail">
+        <div class="cell"><div class="atom act">▶ New project<small>drop a folder</small></div></div>
+        <div class="cell"><div class="atom act">⚙ Set up your AI<small>key or Ollama</small></div></div>
+        <div class="cell"><div class="atom tp">💡 Have transcripts? Skipped. <u>More →</u></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Fibonacci spiral -->
+  <div class="card">
+    <h2>5 · Fibonacci spiral</h2>
+    <p class="principle">Nested squares at ~1.618 spiralling inward: header largest → how → new → AI → tip → icon. Dynamic, unbalanced on purpose.</p>
+    <div class="screen s-fib">
+      <div class="flex">
+        <div class="cell b62"><span class="tag">Header</span><div class="atom hd"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Nothing leaves your Mac but transcript text.</span></div></div>
+        <div class="flex col b38">
+          <div class="cell b62"><span class="tag">How it works</span><div class="atom wk"><span>1 Add</span><span>2 Analyse</span><span>3 Export</span></div></div>
+          <div class="flex b38">
+            <div class="cell b62"><div class="atom act">▶ New</div></div>
+            <div class="flex col b38">
+              <div class="cell b62"><div class="atom act">⚙ AI</div></div>
+              <div class="flex b38">
+                <div class="cell b62"><div class="atom tp">💡</div></div>
+                <div class="cell b38"><div class="atom ic" style="font-size:11px">◐</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Swiss modular -->
+  <div class="card">
+    <h2>6 · Swiss modular (6×4)</h2>
+    <p class="principle">Müller-Brockmann modular grid: content snaps to a fine cell matrix, spanning multiple modules. Ordered, editorial.</p>
+    <div class="screen s-swiss">
+      <div class="cell span2c span2r"><span class="tag">Header</span><div class="atom ic">◐</div><div class="atom hd"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a shareable report.</span></div></div>
+      <div class="cell span4c"><span class="tag">How it works</span><div class="atom wk"><span>1 Add — audio/video/transcripts · 2 Analyse — on your Mac · 3 Export — a report to share</span></div></div>
+      <div class="cell span2c"><div class="atom act">▶ New project</div></div>
+      <div class="cell span2c"><div class="atom act">⚙ Set up your AI</div></div>
+      <div class="cell span2c span2r"><span class="tag">Tip</span><div class="atom tp">💡 Have transcripts? Drop .vtt/.srt/.docx — skipped. <u>Learn more →</u></div></div>
+      <div class="cell span4c"><div class="atom hd"><span>Nothing leaves your Mac except the transcript text your AI analyses.</span></div></div>
+    </div>
+  </div>
+
+  <!-- 7. Dashboard grid -->
+  <div class="card">
+    <h2>7 · Dashboard grid</h2>
+    <p class="principle">Reuse BN's dashboard division: a full-width hero band over a row of widget-like cells. Familiar to anyone who's seen a report.</p>
+    <div class="screen s-dash">
+      <div class="cell span6c center"><div class="atom hd"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Nothing leaves your Mac but transcript text.</span></div></div>
+      <div class="cell span2c"><span class="tag">How it works</span><div class="atom wk"><span>1 Add</span><span>2 Analyse</span><span>3 Export</span></div></div>
+      <div class="cell span2c"><div class="atom act">▶ New project<small>drop a folder</small></div></div>
+      <div class="cell span2c"><div class="atom act">⚙ Set up your AI<small>key or Ollama</small></div></div>
+      <div class="cell span6c"><div class="atom tp">💡 Already have transcripts? Drop .vtt/.srt/.docx and transcription is skipped. <u>Learn more →</u></div></div>
+    </div>
+  </div>
+
+  <!-- 8. Z-pattern -->
+  <div class="card">
+    <h2>8 · Z-pattern flow</h2>
+    <p class="principle">Content placed along the eye's natural Z: icon ↗ header, sweep to how-it-works, ↙ new project, → tip. Guides a first-timer.</p>
+    <div class="screen s-z">
+      <svg class="zline" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M8,14 L92,14 L8,86 L92,86" fill="none" stroke="var(--accentline)" stroke-width="0.6" stroke-dasharray="2 2"/></svg>
+      <div class="cell plain"><div class="atom ic">◐</div></div>
+      <div class="cell"><div class="atom hd"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a shareable report.</span></div></div>
+      <div class="cell span2c center"><span class="tag">How it works</span><div class="atom wk"><span>1 Add — audio/video/transcripts · 2 Analyse — on your Mac · 3 Export — a report to share</span></div></div>
+      <div class="cell"><div class="atom act">▶ New project<small>drop a folder</small></div><div class="atom act">⚙ Set up your AI<small>key or Ollama</small></div></div>
+      <div class="cell"><div class="atom tp">💡 Have transcripts? Drop .vtt/.srt/.docx — skipped. <u>Learn more →</u></div></div>
+    </div>
+  </div>
+
+  <!-- 9. Hero + row -->
+  <div class="card">
+    <h2>9 · Hero + row</h2>
+    <p class="principle">Full-width welcome hero, a row of three below (how · new · AI), tip as a footer strip. Marketing-page cadence.</p>
+    <div class="screen s-hero">
+      <div class="cell span3c center"><div class="atom ic">◐</div><div class="atom hd"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Nothing leaves your Mac but transcript text.</span></div></div>
+      <div class="cell"><span class="tag">How it works</span><div class="atom wk"><span>1 Add</span><span>2 Analyse</span><span>3 Export</span></div></div>
+      <div class="cell center"><div class="atom act">▶ New project<small>drop a folder</small></div></div>
+      <div class="cell center"><div class="atom act">⚙ Set up your AI<small>key or Ollama</small></div></div>
+      <div class="cell span3c center"><div class="atom tp">💡 Already have transcripts? Drop .vtt/.srt/.docx — transcription is skipped. <u>Learn more →</u></div></div>
+    </div>
+  </div>
+
+  <!-- 10. Sidebar + main -->
+  <div class="card">
+    <h2>10 · Sidebar + main</h2>
+    <p class="principle">Left action rail (icon + two buttons), main pane carries welcome, how-it-works and the tip. Echoes the app's own split view.</p>
+    <div class="screen s-side">
+      <div class="rail">
+        <div class="cell center plain"><div class="atom ic">◐</div></div>
+        <div class="cell center"><div class="atom act">▶ New<br>project</div></div>
+        <div class="cell center"><div class="atom act">⚙ Set up<br>your AI</div></div>
+      </div>
+      <div class="main">
+        <div class="cell"><div class="atom hd"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Nothing leaves your Mac except the transcript text your AI analyses.</span></div></div>
+        <div class="cell"><span class="tag">How it works</span><div class="atom wk"><span>1 Add — audio, video or transcripts</span><span>2 Analyse — on your Mac; text to your AI</span><span>3 Export — a report to share</span></div></div>
+        <div class="cell"><div class="atom tp">💡 Have transcripts? Drop .vtt/.srt/.docx — skipped. <u>Learn more →</u></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. Hierarchical 1-2-3 -->
+  <div class="card">
+    <h2>11 · 1 big · 2 medium · 3 little</h2>
+    <p class="principle">Hierarchical grid: one dominant block (welcome), two mediums (how · new), three littles (AI · tip · icon). Clear emphasis.</p>
+    <div class="screen s-hier">
+      <div class="cell span2c"><span class="tag">Big</span><div class="atom hd"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Nothing leaves your Mac except the transcript text your AI analyses.</span></div></div>
+      <div class="cell"><span class="tag">Med</span><div class="atom wk"><span>1 Add</span><span>2 Analyse</span><span>3 Export</span></div></div>
+      <div class="cell"><span class="tag">Med</span><div class="atom act">▶ New project<small>drop a folder</small></div></div>
+      <div class="cell center plain"><div class="atom ic">◐</div></div>
+      <div class="cell"><div class="atom act">⚙ Set up AI<small>key/Ollama</small></div></div>
+      <div class="cell"><div class="atom tp">💡 Transcripts? <u>More →</u></div></div>
+    </div>
+  </div>
+
+  <!-- 12. Asymmetric -->
+  <div class="card">
+    <h2>12 · Asymmetric tension</h2>
+    <p class="principle">Deliberate imbalance with negative space (5×4). Masses offset diagonally; whitespace does the framing, not symmetry.</p>
+    <div class="screen s-asym">
+      <div class="cell span3c span2r"><span class="tag">Header</span><div class="atom ic">◐</div><div class="atom hd"><b>Welcome to Bristlenose</b><span>Turn a folder of interviews into a report you can share. Nothing leaves your Mac but transcript text.</span></div></div>
+      <div class="cell span2c" style="grid-column:4/6"><span class="tag">How</span><div class="atom wk"><span>1 Add · 2 Analyse · 3 Export</span></div></div>
+      <div class="cell" style="grid-column:4/5;grid-row:2"><div class="atom act">▶ New</div></div>
+      <div class="cell" style="grid-column:5/6;grid-row:2"><div class="atom act">⚙ AI</div></div>
+      <div class="cell span4c" style="grid-column:2/6;grid-row:4"><div class="atom tp">💡 Already have transcripts? Drop .vtt/.srt/.docx — transcription is skipped. <u>Learn more →</u></div></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -38,12 +38,15 @@ struct PipelineSummary: Codable, Equatable {
     }
 
     /// Spec-locked precedence chain for pill-label selection
-    /// (`docs/design-pipeline-diagnostic-popover.md` line 164):
-    /// AUTH > MISSING_BINARY > QUOTA > NETWORK > UNKNOWN. Categories not in
-    /// the chain still appear in the popover with their real labels — this
-    /// only selects the single pill string.
+    /// (`docs/design-pipeline-diagnostic-popover.md`):
+    /// AUTH > OUT_OF_CREDIT > MISSING_BINARY > QUOTA > NETWORK > UNKNOWN.
+    /// Ties prefer the non-retryable cause — `outOfCredit` sits beside `auth`
+    /// (both are account-level and terminal until the user acts out-of-band),
+    /// and above `quota`, which is a transient throttle worth retrying.
+    /// Categories not in the chain still appear in the popover with their real
+    /// labels — this only selects the single pill string.
     static let pillPrecedence: [CauseCategory] = [
-        .auth, .missingBinary, .quota, .network, .unknown,
+        .auth, .outOfCredit, .missingBinary, .quota, .network, .unknown,
     ]
 
     /// Returns the dominant category for the pill. Highest failure count
@@ -134,6 +137,10 @@ struct Cause: Codable, Equatable {
 enum CauseCategory: String, Codable, Equatable, CaseIterable {
     case userSignal = "user_signal"
     case auth
+    /// Billing exhausted — terminal until top-up. Distinct from `quota`
+    /// (transient rate-limit). Mirrors Python `CauseCategoryEnum.OUT_OF_CREDIT`.
+    case outOfCredit = "out_of_credit"
+    /// Transient rate-limit / throttling. Billing exhaustion is `outOfCredit`.
     case quota
     case apiRequest = "api_request"
     case apiServer = "api_server"
@@ -143,5 +150,9 @@ enum CauseCategory: String, Codable, Equatable, CaseIterable {
     case missingInput = "missing_input"
     case missingBinary = "missing_binary"
     case disk
+    /// Model output cap hit even after splitting. Mirrors Python
+    /// `CauseCategoryEnum.OUTPUT_TRUNCATED` — was missing here, so an
+    /// `output_truncated` cause failed to decode the whole summary.
+    case outputTruncated = "output_truncated"
     case unknown
 }

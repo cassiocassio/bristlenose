@@ -129,6 +129,7 @@ struct ContentView: View {
     @EnvironmentObject var removalStore: UndoableRemovalStore
     @EnvironmentObject var copyMachinery: CopyMachinery
     @EnvironmentObject var ollamaDownload: OllamaDownloadModel
+    @EnvironmentObject var outOfCredit: OutOfCreditModel
     @EnvironmentObject var i18n: I18n
     @AppStorage("appearance") private var appearance: String = "auto"
     @AppStorage("showAnalysisAnimation") private var showAnalysisAnimation = true
@@ -145,7 +146,6 @@ struct ContentView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var showingAIConsent = false
     @State private var aiConsentReviewMode = false
-    @State private var showingBuildInfo = false
     @State private var showingMiroSheet = false
     @State private var showingFeedbackSheet = false
 
@@ -523,15 +523,6 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .showAIConsentSheet)) { _ in
             aiConsentReviewMode = true
             showingAIConsent = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .showBuildInfoSheet)) { _ in
-            showingBuildInfo = true
-        }
-        .sheet(isPresented: $showingBuildInfo) {
-            BuildInfoSheet(
-                sidecar: serveManager.mode?.shortSummary ?? "?",
-                onDismiss: { showingBuildInfo = false }
-            )
         }
         // Send to Miro — native sheet over the same Python REST endpoints the web
         // panel uses. Only present when serve is running (the entry is only
@@ -1695,11 +1686,23 @@ struct ContentView: View {
         // determinate ring + hover-× Stop, the failure glyph → diagnostic
         // popover) AND copy-in-flight (ring + hover-× Cancel, "Copying · N%")
         // are per-project, so they ride the row. The toolbar `.status` zone is
-        // reserved for genuinely app-global concerns — currently just the Ollama
-        // model-download pill. (Per-project vs app-global is the placement axis:
-        // `docs/design-desktop-project-status.md` §4.)
+        // reserved for genuinely app-global concerns — now a multi-pill shelf
+        // sharing the `StatusPill` envelope: Ollama model-download, provider
+        // out-of-credit, and the alpha-expiry notice. (Per-project vs app-global
+        // is the placement axis: `docs/design-desktop-project-status.md` §4.)
         ToolbarItem(placement: .status) {
             OllamaDownloadPill(model: ollamaDownload)
+        }
+        // Sibling app-global pill: the active cloud provider is out of credit.
+        // Cloud-only, so it never co-occurs with the Ollama (local) pill above.
+        ToolbarItem(placement: .status) {
+            OutOfCreditPill(model: outOfCredit)
+        }
+        // Sibling app-global pill: an expiring `.dmg` alpha build in its final
+        // week. Self-gates (nil off the .developerID channel / outside the last
+        // 7 days), so it renders nothing on App Store / TestFlight / CLI builds.
+        ToolbarItem(placement: .status) {
+            AlphaExpiryPill()
         }
     }
 
@@ -2333,18 +2336,12 @@ struct ContentView: View {
                 description: Text(i18n.t("desktop.chrome.multipleSelectedHint"))
             )
         } else {
-            WelcomeView(
-                variant: projectIndex.projects.isEmpty ? .firstRun : .noSelection,
-                onNewProject: { createNewProject() },
-                onDropFolders: { urls in
-                    let directories = urls.filter { $0.hasDirectoryPath }
-                    let files = urls.filter { !$0.hasDirectoryPath }
-                    createProjectFromURLs(directories: directories, files: files)
-                },
-                onShowAIPrivacy: {
-                    NotificationCenter.default.post(name: .showAIConsentSheet, object: nil)
-                }
-            )
+            // New rotating-slots welcome home (design-welcome-screen.md).
+            WelcomeHomeView(onDropURLs: { urls in
+                let directories = urls.filter { $0.hasDirectoryPath }
+                let files = urls.filter { !$0.hasDirectoryPath }
+                createProjectFromURLs(directories: directories, files: files)
+            })
         }
     }
 

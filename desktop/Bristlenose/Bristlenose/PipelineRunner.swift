@@ -8,7 +8,14 @@ import os
 /// by explicit error codes if the CLI gains structured progress output.
 enum PipelineFailureCategory: String, Codable, Equatable {
     case auth
+    /// Provider account out of credit (billing exhausted). Distinct from
+    /// `quota` (transient rate-limit): re-running before a top-up fails
+    /// identically, and the fix is out-of-band ("Add funds"), like `auth`.
+    /// Mirrors Python `CauseCategoryEnum.OUT_OF_CREDIT`.
+    case outOfCredit = "out_of_credit"
     case network
+    /// Transient rate-limit / throttling ("rate limit reached" — retry).
+    /// Billing exhaustion routes to `outOfCredit`, not here.
     case quota
     case disk
     case whisper
@@ -1486,7 +1493,8 @@ final class PipelineRunner: ObservableObject {
             summary = msg ?? Self.humanSummary(for: cat, provider: activeProvider)
         } else {
             category = Self.categoriseFailure(
-                lines: lines, exitStatus: status, projectName: project?.name
+                lines: lines, exitStatus: status, projectName: project?.name,
+                provider: activeProvider
             )
             summary = Self.humanSummary(for: category, provider: activeProvider)
         }
@@ -1504,6 +1512,14 @@ final class PipelineRunner: ObservableObject {
             Self.captureFailureLog(
                 project: project, status: status, category: category, lines: lines
             )
+        }
+        // Light the app-global out-of-credit pill immediately on a real run
+        // that failed on billing (the pill reads LLMValidator's verdict cache,
+        // which a run 402 wouldn't otherwise touch until Settings re-validates).
+        // Keyed on the distinct billing category, and attributed to the run's
+        // provider — a transient rate-limit (.quota) can't false-alarm.
+        if category == .outOfCredit {
+            OutOfCreditModel.recordActiveProviderOutOfCredit(provider: activeProvider)
         }
         return .failed(summary, category: category)
     }
@@ -1583,7 +1599,8 @@ final class PipelineRunner: ObservableObject {
     /// `PipelineFailureCategory`. Keep heuristics here so display code stays
     /// category-only.
     static func categoriseFailure(
-        lines: [String], exitStatus: Int32, projectName: String? = nil
+        lines: [String], exitStatus: Int32, projectName: String? = nil,
+        provider: LLMProvider? = nil
     ) -> PipelineFailureCategory {
         var tail = lines.suffix(50).joined(separator: "\n").lowercased()
         // Strip the project name so "401-bug-repro" or "Whisper Test" can't
@@ -1597,7 +1614,18 @@ final class PipelineRunner: ObservableObject {
         // "model" / "whisper" matches accidentally fire on unrelated output.
         if matches(tail, #"output directory already exists"#) { return .outputExists }
         if matches(tail, #"401|invalid api key|authentication"#) { return .auth }
-        if matches(tail, #"rate limit|quota|insufficient_quota|429"#) { return .quota }
+        // Out of credit (billing) BEFORE the transient rate-limit bucket —
+        // Anthropic serves it as a 400 + "credit balance is too low", OpenAI as
+        // a 429 with code `insufficient_quota`. Provider-scoped to Claude/ChatGPT
+        // (mirrors the Python classifier): Azure bills by subscription quota and
+        // Gemini folds billing into RESOURCE_EXHAUSTED, so their `insufficient_
+        // quota` stays a transient `.quota`, not a top-up-able credit wall.
+        if provider == .claude || provider == .chatGPT {
+            if matches(tail, #"credit balance|insufficient_quota|billing_error|exceeded your current quota"#) {
+                return .outOfCredit
+            }
+        }
+        if matches(tail, #"rate limit|quota|429"#) { return .quota }
         if matches(tail, #"connection refused|timed out|dns|could not resolve"#) {
             return .network
         }
@@ -1670,6 +1698,7 @@ final class PipelineRunner: ObservableObject {
         let object = provider?.displayName ?? "the LLM provider"
         switch category {
         case .auth:       return "Your \(subject) key isn't working."
+        case .outOfCredit: return "\(subject) is out of credit — add funds to continue."
         case .network:    return "Couldn't reach \(object)."
         case .quota:      return "\(subject) rate limit reached."
         case .disk:       return "Not enough disk space to finish."

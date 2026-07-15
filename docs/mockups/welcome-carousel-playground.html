@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome — content-rotator (in place)</title>
+<style>
+  :root{ --ink:#1a1a1a; --faint:#6b7280; --line:#e5e7eb; --bg:#f4f4f5; --paper:#fff; --card:#f9f9fa; --tag:#9a9a9a; --accent:#007aff; --accent-soft:#e8f0fe; }
+  @media (prefers-color-scheme: dark){
+    :root{ --ink:#e5e7eb; --faint:#9ca3af; --line:#2d2d2d; --bg:#161618; --paper:#1c1c1e; --card:#232326; --tag:#888; --accent:#0a84ff; --accent-soft:#1e293b; }
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; padding:30px 24px 60px; font:13px/1.45 -apple-system,"SF Pro Text",system-ui,sans-serif; color:var(--ink); background:var(--bg); }
+  .page{ max-width:640px; margin:0 auto; }
+  h1{ font-size:18px; margin:0 0 6px; font-weight:600; }
+  .lede{ color:var(--faint); margin:0 0 18px; font-size:12px; }
+  .controls{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:0 0 20px; font-size:12px; }
+  .controls label{ color:var(--faint); display:flex; gap:5px; align-items:center; }
+  .controls button{ font:inherit; font-weight:600; color:var(--accent); background:var(--accent-soft); border:0; border-radius:7px; padding:6px 11px; cursor:pointer; }
+
+  /* the Tip cell — fixed frame; content changes in place */
+  .cell{ position:relative; width:340px; height:150px; background:var(--card); border:0.5px solid var(--line); border-radius:10px; padding:12px 14px; overflow:hidden; margin:0 auto; }
+  .cell .tag{ font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--tag); font-weight:600; }
+  .cell .bulb{ position:absolute; top:11px; right:12px; color:var(--faint); }
+
+  /* content cross-fades in place — the frame never moves */
+  .viewport{ position:absolute; inset:34px 30px 28px 30px; }
+  .slide{ position:absolute; inset:0; opacity:0; transition:opacity .25s ease; font-size:12px; color:var(--faint); line-height:1.45; pointer-events:none; }
+  .slide.on{ opacity:1; pointer-events:auto; }
+  .reduce .slide{ transition:none; }
+  .slide b{ color:var(--ink); font-weight:600; }
+  .lnk{ color:var(--accent); text-decoration:none; }
+
+  /* tiny chevrons — visible icon is small; HIT AREA is a tall edge strip (forgiving) */
+  .chev{ position:absolute; top:18px; bottom:22px; width:30px; display:flex; align-items:center; justify-content:center;
+         border:0; background:transparent; cursor:pointer; padding:0; }
+  .chev.l{ left:0; } .chev.r{ right:0; }
+  .chev svg{ width:12px; height:12px; color:var(--ink); opacity:0; transition:opacity .1s ease; filter:drop-shadow(0 0 1px rgba(0,0,0,.25)); }
+  .cell:hover .chev svg, .chev:focus-visible svg{ opacity:.7; }
+  .chev:hover svg{ opacity:1; }
+  .chev[disabled]{ pointer-events:none; }
+  .chev[disabled] svg{ opacity:0 !important; }
+
+  /* dots — visible dot 5px, but HIT AREA ~17px (pseudo-element trick) */
+  .dots{ position:absolute; left:0; right:0; bottom:6px; display:flex; gap:0; justify-content:center; }
+  .dot{ position:relative; width:17px; height:17px; background:transparent; border:0; padding:0; cursor:pointer; }
+  .dot::before{ content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+                width:5px; height:5px; border-radius:50%; background:var(--line); transition:width .2s, background .2s; }
+  .dot.on::before{ width:10px; border-radius:5px; background:var(--faint); }   /* muted, ~2× width */
+
+  .note{ max-width:640px; margin:22px auto 0; font-size:12px; color:var(--faint); line-height:1.5; }
+  .note b{ color:var(--ink); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Content rotator — the Tip cell (in place)</h1>
+  <p class="lede">The frame stays put; only the <b>content cross-fades</b>. Manual only. Hover for the tiny chevrons (100ms fade). Dots are the sole "there's more" cue — small, low-contrast, active is ~2× width (no big pill).</p>
+
+  <div class="controls">
+    <label><input type="checkbox" id="reduce"> Reduce motion (instant swap)</label>
+    <button id="revisit">↻ Simulate revisit (advance one)</button>
+  </div>
+
+  <div class="cell" id="cell" tabindex="0">
+    <span class="tag">Tip</span>
+    <svg class="bulb" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.5.5 1 1.5 1 2.5h6c0-1 .5-2 1-2.5A6 6 0 0 0 12 3z"/></svg>
+
+    <div class="viewport" id="viewport"></div>
+
+    <button class="chev l" id="prev" aria-label="Previous tip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="chev r" id="next" aria-label="Next tip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+
+    <div class="dots" id="dots"></div>
+  </div>
+
+  <p class="note"><b>Now driven four ways.</b> <b>Swipe</b> (two-finger trackpad / Magic Mouse — one step per gesture), <b>chevrons</b> (tall invisible edge-strip hit areas, so you don't have to spear a 12px icon), <b>dots</b> (17px hit target around the 5px dot), and <b>arrow keys</b>. The dots are really just the <i>indicator</i> — chevrons + swipe are the reliable navigation, which is why their poor click-targetness doesn't matter much. VoiceOver would get an adjustable action. Content cross-fades in place; toggle reduce-motion for instant.</p>
+</div>
+
+<script>
+const D = "https://bristlenose.app/docs/";
+const tips = [
+  {d:'Already have transcripts? Drop <b>.vtt</b>, <b>.srt</b> or <b>.docx</b> — transcription is skipped.', href:D+'supported-files.html'},
+  {d:'No API key? Run <b>Ollama</b> locally — free, no account, nothing uploaded.', href:D+'set-up-ollama.html'},
+  {d:'Name <b>p1.srt</b> next to <b>p1.mp4</b> and they merge into one session.', href:D+'supported-files.html'},
+  {d:'Press <b>s</b> to star, <b>h</b> to hide — then filter to what matters.', href:D+'keyboard-shortcuts.html'},
+  {d:'Click any transcript timecode to jump the video to that moment.', href:D+'run-an-analysis.html'},
+];
+const vp = document.getElementById('viewport');
+const dotsWrap = document.getElementById('dots');
+const cell = document.getElementById('cell');
+let i = 0, start = 0;
+
+vp.innerHTML = tips.map(t=>`<div class="slide">${t.d} <a class="lnk" href="${t.href}">More&nbsp;→</a></div>`).join('');
+dotsWrap.innerHTML = tips.map((_,n)=>`<button class="dot" data-i="${n}" aria-label="Tip ${n+1}"></button>`).join('');
+
+function render(){
+  document.querySelectorAll('.slide').forEach((s,n)=>s.classList.toggle('on', n===i));
+  document.querySelectorAll('.dot').forEach((d,n)=>d.classList.toggle('on', n===i));
+  document.getElementById('prev').disabled = i===0;
+  document.getElementById('next').disabled = i===tips.length-1;
+}
+function go(n){ i = Math.max(0, Math.min(tips.length-1, n)); render(); }
+
+document.getElementById('prev').onclick = ()=>go(i-1);
+document.getElementById('next').onclick = ()=>go(i+1);
+dotsWrap.onclick = e=>{ const b=e.target.closest('.dot'); if(b) go(+b.dataset.i); };
+document.getElementById('reduce').onchange = e=>cell.classList.toggle('reduce', e.target.checked);
+document.getElementById('revisit').onclick = ()=>{ start=(start+1)%tips.length; go(start); };  // next-per-visit
+cell.addEventListener('keydown', e=>{ if(e.key==='ArrowLeft') go(i-1); if(e.key==='ArrowRight') go(i+1); });
+
+// swipe — two-finger trackpad / Magic Mouse horizontal gesture (discrete, one step per swipe)
+let swipeLock = false;
+cell.addEventListener('wheel', e=>{
+  if(Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 18) return;
+  e.preventDefault();
+  if(swipeLock) return;
+  swipeLock = true; setTimeout(()=>swipeLock=false, 450);
+  go(i + (e.deltaX > 0 ? 1 : -1));   // swipe left → next
+}, {passive:false});
+
+render();
+</script>
+</body>
+</html>

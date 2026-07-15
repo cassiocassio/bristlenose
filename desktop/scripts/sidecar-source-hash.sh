@@ -19,6 +19,14 @@
 #                               `npm run build` so the bundled static/ matches
 #                               them; a missed frontend build is caught here
 #                               because this hash moves when frontend src does.
+#   4. the PyInstaller spec    — desktop/bristlenose-sidecar.spec is the recipe
+#                               for WHAT gets packaged (datas/binaries/hidden-
+#                               imports). A spec-only edit changes bundle
+#                               contents without touching any .py, so without
+#                               this input the P-layer gate would skip the
+#                               rebuild and re-ship the stale bundle. (Added
+#                               14 Jul 2026 after a `collect_all("sqladmin")`
+#                               fix silently didn't rebuild on Cmd+R.)
 # Test files are excluded — they don't change the shipped bundle, so editing one
 # must not force a sidecar rebuild. OS metadata (.DS_Store, AppleDouble ._*) is
 # ALSO excluded — Finder touching a hashed dir must not drift the fingerprint
@@ -36,6 +44,7 @@ sidecar_source_hash() {
         find bristlenose/locales -type f \
             -not -name '.DS_Store' -not -name '._*' -print0
         _frontend_inputs_print0
+        find desktop/bristlenose-sidecar.spec -type f -print0
       } | LC_ALL=C sort -z | xargs -0 shasum -a 256 ) | shasum -a 256 | cut -d ' ' -f1
 }
 

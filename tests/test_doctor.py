@@ -27,6 +27,7 @@ from bristlenose.doctor import (
     check_api_key,
     check_auth_token_env,
     check_backend,
+    check_bundle_admin_panel,
     check_disk_space,
     check_ffmpeg,
     check_network,
@@ -34,6 +35,7 @@ from bristlenose.doctor import (
     check_serve_deps,
     check_whisper_model,
     run_all,
+    run_bundle_integrity,
     run_preflight,
 )
 from bristlenose.doctor_fixes import (
@@ -1666,3 +1668,54 @@ class TestValidateAnthropicKey:
         with patch("urllib.request.urlopen", side_effect=exc):
             ok, msg = _validate_anthropic_key("bad")
         assert ok is False and "401" in msg
+
+
+class TestBundleAdminPanelGuard:
+    """Build-time guard for sqladmin's third-party template/static data.
+
+    Regression lock for the 14 Jul 2026 crash: the desktop beta mounts /admin
+    (``_BRISTLENOSE_ADMIN_PANEL=1``), whose ``Admin(...)`` builds
+    ``PackageLoader("sqladmin", "templates")``. PyInstaller bundled the module
+    code but not the ``templates/``/``statics/`` data dirs, so the loader raised
+    ``ValueError`` and the sidecar died at ~0.2s. Fixed via ``collect_all(
+    "sqladmin")`` in the spec; this guard (run by ``doctor --self-test`` inside
+    the bundle) keeps it fixed.
+    """
+
+    def test_passes_when_sqladmin_data_present(self) -> None:
+        # In the test env (pip install -e .) the data lives at its real path.
+        r = check_bundle_admin_panel()
+        assert r.status == CheckStatus.OK
+        assert r.label == "Bundle: admin panel"
+
+    def test_included_in_bundle_integrity_report(self) -> None:
+        labels = [r.label for r in run_bundle_integrity().results]
+        assert "Bundle: admin panel" in labels
+
+    def test_fails_when_packageloader_cannot_find_templates(self) -> None:
+        # Reproduces the bundle-without-datas scenario: PackageLoader raises
+        # exactly as it does in a frozen app missing sqladmin/templates.
+        def boom(pkg: str, path: str = "templates", **kw: object) -> None:
+            raise ValueError(
+                f"PackageLoader could not find a {path!r} directory"
+                f" in the {pkg!r} package."
+            )
+
+        with patch("jinja2.PackageLoader", boom):
+            r = check_bundle_admin_panel()
+        assert r.status == CheckStatus.FAIL
+        assert "collect_all('sqladmin')" in r.detail
+
+    def test_fails_when_sqladmin_not_importable(self) -> None:
+        import builtins
+
+        real_import = builtins.__import__
+
+        def no_sqladmin(name: str, *a: object, **k: object) -> object:
+            if name == "sqladmin":
+                raise ImportError("No module named 'sqladmin'")
+            return real_import(name, *a, **k)  # type: ignore[arg-type]
+
+        with patch("builtins.__import__", side_effect=no_sqladmin):
+            r = check_bundle_admin_panel()
+        assert r.status == CheckStatus.FAIL

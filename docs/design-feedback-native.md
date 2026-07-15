@@ -28,6 +28,79 @@ the Mac app we can do much better than a web modal, so we should.
 
 ---
 
+## Research basis — UR best practice (cited)
+
+_Deep-research pass, 14 Jul 2026: 25 claims verified 3-0 against primary sources
+(CHI papers, J. Academy of Marketing Science, Review of Managerial Science) plus
+Sauro/MeasuringU and NN/g. The load-bearing findings for this design:_
+
+**The number is theatre at cohort scale; the words are the data.** Below ~10
+participants no rating scale (SUS, UMUX-Lite, SEQ, NPS) reliably discriminates
+anything — reliable detection starts ~10–12 (Sauro & Dumas, CHI 2009). The alpha
+cohort is 5–10. So the rating is a valence/triage signal and conversation-opener;
+the **open text is the primary instrument**, and any internal view of feedback is
+qualitative-first. **No cohort-score dashboard** — averaging seven people's rating
+as if it were benchmarkable is the same legibility-theatre we reject in NPS.
+
+**NPS is off the table** (memory `project_feedback_no_nps_ur_audience`). The
+evidence *qualifies rather than debunks* it, but the qualification is enough: NPS
+has real but **not superior** predictive power vs plain satisfaction (Matzler et
+al. 2026 — satisfaction a significantly stronger predictor of future visits;
+Baehre et al. 2022 — transaction NPS doesn't predict growth; Keiningham et al.
+2007 — "performs no better than other measures"). The deciding reason here is
+audience, not statistics: NPS reads as a category error to seasoned UR pros.
+
+**If a validated pulse is ever wanted:** UMUX-Lite (2 items, usefulness + ease,
+TAM-mapped, r≈.81 with SUS — Lewis et al., CHI 2013); SEQ (7-pt, per-task); SUS
+only if a benchmark is needed (avg 68, 10 items — too heavy for an ambient pulse).
+Caveat: UMUX-Lite's agree-format items pull against the wording rule below —
+"validated" ≠ "best-worded".
+
+**Wording:** avoid yes/no and agree/disagree phrasing (most exposed to
+acquiescence bias, ~10% — Krosnick 1999); prefer item-specific/construct-anchored
+questions. Full scale-point labelling is *not* required — endpoint labels are
+statistically fine (Lewis 2019), so labelling every point is a design choice, not
+an obligation. (Our rating labels are frozen for longitudinal continuity
+regardless — memory `project_feedback_scale_labels_frozen`.)
+
+**The anonymity fork (decide before Phase-2 copy).** "Anonymous" is only truthful
+if data is *irreversibly* anonymised. Attaching any stable key to link a person's
+feedback over time is *pseudonymisation* — still personal data (GDPR Recital 26;
+EDPB 2025). That collides with "capture longitudinally":
+
+- **Aggregate-longitudinal** — cohort trend, no per-user linkage → honestly
+  anonymous; the current "only your rating and message are shared" copy holds.
+- **Individual-longitudinal** — per-person trajectory → requires a consented
+  pseudonymous install ID, opt-in, and truthful copy ("linked to your install,
+  never your name").
+
+Lean for alpha: **aggregate-anonymous** (keeps the honest claim, matches the
+ethos); revisit per-user only if the alpha proves trajectories are needed. Opt-in
+beats opt-out for willingness (Cox, Go telemetry) — consistent with the
+consent-gradient.
+
+**Longitudinal only pays off if we analyse change.** Half of reviewed CHI
+longitudinal studies never analysed change over time (Kjaerup et al. 2021) —
+collected longitudinally, treated as one-shot. Commit to the "how did sentiment
+move across the alpha" analysis or don't collect it. The **friction-marker /
+experience-sampling** idea (Ideation, below) is the well-supported capture mode —
+signal at the moment of friction, not reconstructed after.
+
+**Not settled by the research pass:** interaction-design specifics (modal vs
+non-modal, trigger timing, closing-the-loop receipts) were budget-dropped in
+verification; the doc's existing direction (non-modal companion, closed loop)
+stands on design judgment, not cited evidence. A focused follow-up query would
+close that gap.
+
+**→ What this means for the mockups.** (1) Lead with the open text; treat the
+rating as valence/triage, not a metric. (2) No cohort-score dashboard; any
+internal view is qualitative-first, N shown honestly. (3) Resolve the anonymity
+fork — it changes the payload and the copy. (4) Explore 2–3 wordings of the open
+prompt ("what's useful / what needs fixing") for framing/social-desirability. (5)
+Friction-marker as the longitudinal primitive, not repeated surveys.
+
+---
+
 ## Two settled principles (near-term, act on these first)
 
 1. **Native app → native UI, in every state.** The web modal was the best we
@@ -191,3 +264,10 @@ adds *only* opt-in surface — the floor stays "rating + text, anonymous."
   "companion to the content" surface (this is the *inspector/palette* case,
   where a non-activating panel is legitimate — unlike the committed-data-entry
   sheet, where it wasn't).
+- **The anonymity fork** (Research basis, above) — aggregate-anonymous vs
+  individual-pseudonymous longitudinal capture. Changes the `feedback.php`
+  contract *and* the "anonymous" copy; decide before mocking Phase-2 copy. Lean:
+  aggregate for alpha.
+- Interaction-design evidence gap — the research pass didn't cover trigger
+  timing, modal/non-modal placement, or closing-the-loop patterns. Worth a
+  focused follow-up query before those decisions harden.

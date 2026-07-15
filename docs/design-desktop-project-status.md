@@ -1,11 +1,12 @@
 ---
 status: current
-last-trued: 2026-06-23
-trued-against: HEAD@mac-app-layout-reorg on 2026-06-23
+last-trued: 2026-07-15
+trued-against: HEAD@main (a44823c0) + uncommitted out-of-credit work on 2026-07-15
 ---
 
 ## Changelog
 
+- _2026-07-15_ — **Truing pass (`--topic` failure-taxonomy).** Two corrections. (1) **§4: `.status` is a multi-pill shelf, not a single pill.** The 19 Jun "app-global only (the Ollama download)" wording read as *one* pill; three now mount (Ollama download, provider out-of-credit, alpha-expiry), each its own `ToolbarItem(placement: .status)` sharing the new `StatusPill` envelope. The axis is unchanged and still right — only the singular framing was stale. Ordering/contention between co-occurring pills is now an **open question** (only pairwise non-co-occurrence is encoded in code). (2) **§3: "Swift only renders it" is no longer strictly true** — an `out_of_credit` verdict now mutates app-global Swift state (sticky verdict → the pill), and the stderr fallback re-derives a provider-scoped credit/rate split when a crash leaves no structured cause. Also: `quota` narrowed to rate-limit, `out_of_credit` added (see [design-pipeline-resilience.md](design-pipeline-resilience.md)). **Not addressed** (pre-existing, flagged): §4's "File import / copy" catalogue row still says copy surfaces in a toolbar pill — stale since 19 Jun and contradicted by this doc's own §§ above; §9 Anchors omits the new pill/model files.
 - _2026-06-23_ — added the **native window title + subtitle** as a third per-project status surface (project identity + a lens-contextual count), shipped on `mac-app-layout-reorg`. Updated the Shipped block + the §4 placement axis; the old toolbar-pill title + `WindowTitleManager` are gone (see `desktop/CLAUDE.md` "Native window title + subtitle live on the DETAIL view"). The two-streams framing (row + detail pane) is now three (+ window chrome).
 - _2026-06-21_ — trued up, no material changes. The §"Shipped (19 Jun 2026)" block + §4 placement axis verified against `ProjectSubtitle.resolve` precedence (`ProjectSubtitle.swift`, `ProjectSubtitleTests.swift`) and copy-on-row (`ProjectRow.swift`; standalone `CopyProgressPill` deleted). Added front-matter + an inline marker on the pre-decision proposal table so a cold reader doesn't read its projected strings ("Copying · 3 of 5 files", "toolbar pill") as current.
 
@@ -83,7 +84,8 @@ This **removed** the old custom `.navigation` title `ToolbarItem` (icon+name pil
 `WindowTitleManager` NSViewRepresentable. So the project's *identity + count* now lives in the
 window chrome; the **row** keeps *activity* (run progress + copy), the **detail pane** keeps the
 report/empty states. Placement axis (§4): per-project *identity + count* → window title/subtitle;
-per-project *activity* → row; app-global → the `.status` pill. (`63c731a`, `73b85a6`, `0ac06bf`.)
+per-project *activity* → row; app-global → the `.status` zone (a multi-pill shelf as of Jul 2026 —
+see §4). (`63c731a`, `73b85a6`, `0ac06bf`.)
 
 ### The kinds — operational rule (user, 18 Jun 2026)
 
@@ -188,9 +190,21 @@ Not a clean "Swift vs Python" line; it's *who detects/owns the state*:
    `SourceFilesReader` (read-only `?immutable=1`). Python owns the baseline; Swift owns the live
    observation **and the diff** ("there are 2 new files since the last run" is Swift's conclusion;
    Python never makes that comparison).
-3. **Python's verdict, Swift only renders it.** Run outcome (ready / failed / partial) + the failure
-   category — read from `pipeline-events.jsonl` (`cause.category` / `message`). Swift doesn't
-   re-derive *why* it's "quota" vs "auth"; it renders Python's call.
+3. **Python's verdict, Swift renders it — and, since Jul 2026, may act on it.** Run outcome
+   (ready / failed / partial) + the failure category — read from `pipeline-events.jsonl`
+   (`cause.category` / `message`). Swift doesn't re-derive *why* it's "quota" vs "auth"; it renders
+   Python's call.
+
+   Two amendments as of Jul 2026, both worth knowing before you trust the "only renders" framing:
+   - **A verdict can now mutate app-global Swift state.** On `cause.category == out_of_credit`,
+     `PipelineRunner.deriveFailureState` calls `OutOfCreditModel.recordActiveProviderOutOfCredit`,
+     which writes a *sticky* verdict into `LLMValidator`'s cache and lights the app-global pill. Still
+     Python's call — Swift doesn't decide it's a billing failure — but the render is no longer
+     side-effect-free. It's the one place a run's verdict escapes its own project's row.
+   - **The stderr fallback does re-derive.** When a run crashes before writing a terminus event there
+     is no structured cause, so `categoriseFailure` regexes the stderr tail — including a
+     provider-scoped `out_of_credit` vs `quota` split (Claude/ChatGPT only), mirroring
+     `bristlenose/llm/failure_classifier.py`. Fallback only; the structured cause always wins.
 
 On (3): the sidecar is **not a black box** — Swift sees the whole structured stream (every event,
 stdout, the log), just not Python's *decision logic*, and can't introspect or steer (one-way,
@@ -219,15 +233,28 @@ there) and a drag-import **copy into** it ("Copying · N%"). You dragged onto *t
 feedback appears on *that* row — Mac **direct manipulation**. Run progress set the pattern; copying
 follows the same logic, which is *why* it belongs on the row and not (only) in the toolbar pill.
 
-App-global / cross-project concerns go in the **title-bar status pill** instead: provider
+App-global / cross-project concerns go in the **title-bar status zone** instead: provider
 online/offline (an unavailable provider blocks *every* project, so it's not a per-row signal), an
-**Ollama model download**, and future bristlenose-global operations. The toolbar *copy* pill was
+**Ollama model download**, and other bristlenose-global operations. The toolbar *copy* pill was
 **removed** (19 Jun 2026): copy is a per-project op, so its progress *and* cancel now live on the row —
 a determinate ring + hover-cancel + "Copying · N%", exactly like a run's ring + Stop (cancel is also
-in the row's "Cancel copy" context-menu item, the keyboard/VoiceOver path). The `.status` pill zone is
-now app-global only (the Ollama download). This is the resolution to the review concern that
+in the row's "Cancel copy" context-menu item, the keyboard/VoiceOver path). The `.status` zone is
+now app-global **only** — no per-project state. This is the resolution to the review concern that
 copying-in-pill *and* on the row was "redundant" — it wasn't a duplicate to keep, it was a scope
 convention to *finish*: one indicator, on the row the bytes land in.
+
+> **Updated 2026-07-15 — `.status` is a multi-pill shelf, not a single pill.** The 19 Jun wording
+> ("the `.status` pill zone is now app-global only (the Ollama download)") read as *one* pill; three
+> now mount there, each its own `ToolbarItem(placement: .status)` sharing the
+> [`StatusPill`](../desktop/Bristlenose/Bristlenose/StatusPill.swift) envelope (capsule + bottom-anchored
+> light-dismiss popover): **Ollama model-download**, **provider out-of-credit**
+> ([`OutOfCreditPill.swift`](../desktop/Bristlenose/Bristlenose/OutOfCreditPill.swift) — the "provider
+> online/offline" case above, now shipped rather than hypothetical), and **alpha-expiry**. The axis
+> itself is unchanged and still correct: per-project → the row; app-global → `.status`. What's new is
+> that the zone hosts several, so **ordering / contention is now an open question** — only pairwise
+> non-co-occurrence is encoded in code (out-of-credit is cloud-only, the Ollama pill is local-setup, so
+> they can't both be live for one active provider), and alpha-expiry can co-occur with either. No
+> ordering rule is written down yet.
 
 Also deliberately *off* the row, different-surface: export (toolbar chip), AI-consent (global gate).
 

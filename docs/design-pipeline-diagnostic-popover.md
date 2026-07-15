@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-06-15
-trued-against: HEAD@per-project-activity (518e6d3) on 2026-06-15
+last-trued: 2026-07-15
+trued-against: HEAD@main (a44823c0) + uncommitted out-of-credit work on 2026-07-15
 ---
 
 > **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`) — the toolbar pill was deleted.**
@@ -36,6 +36,7 @@ trued-against: HEAD@per-project-activity (518e6d3) on 2026-06-15
 
 ## Changelog
 
+- _2026-07-15_ — **`OUT_OF_CREDIT` added to the failure taxonomy; `QUOTA` narrowed to rate-limit.** Billing exhaustion is now its own non-retryable category (Anthropic serves it as a 400 + "credit balance is too low", OpenAI as a 429 `insufficient_quota`); `QUOTA` means a transient throttle worth retrying. Trued: the pill precedence chain (AUTH > **OUT_OF_CREDIT** > MISSING_BINARY > QUOTA > NETWORK > UNKNOWN), the pill-label locale list, and the failure-category enum row — which now names **both** Swift mirrors. Rewrote step 6 of the "read this before adding a new error" contract into an explicit five-site checklist plus the **two-mirror trap**: this very pass shipped a category that compiled clean while leaving `PipelineSummary::CauseCategory` unable to decode it. The old "the popover renders any registered category automatically" line was the false reassurance that let it through — removed. Classifier lives at `bristlenose/llm/failure_classifier.py`.
 - _2026-06-21_ — extended the top banner to note `CopyProgressPill` was also deleted (copy progress moved onto the project row, commit `4313bff`); updated the determinate-progress + copying rows in the state-catalog tables to point at the row indicator (`ProjectRowActivityIndicator` / `ProjectSubtitle`) instead of the deleted pill. `OllamaDownloadPill` is now the only surviving toolbar pill.
 - _2026-06-05_ — **Popover & status-surface state catalog + display-kind
   taxonomy added.** New "Popover & status-surface state catalog" section
@@ -426,9 +427,15 @@ them; they are domain terminology like "Build" or "Compile" in Xcode.
 
 The pill carries the *distinctive* failure label. Derived from the
 *dominant* `PipelineFailureCategory` among `summary.failed[]`. Tied
-counts prefer non-retryable (AUTH > MISSING_BINARY > QUOTA > NETWORK >
-UNKNOWN). Cap at ~28 chars. Locale-keyed under
+counts prefer non-retryable (AUTH > OUT_OF_CREDIT > MISSING_BINARY >
+QUOTA > NETWORK > UNKNOWN). Cap at ~28 chars. Locale-keyed under
 `desktop.pipeline.diagnostic.pill.<category>`.
+
+`OUT_OF_CREDIT` sits beside `AUTH` — both are account-level and terminal
+until the user acts out-of-band (top up / fix the key) — and above `QUOTA`,
+which since Jul 2026 means a *transient* rate-limit worth retrying. Before
+that split, `QUOTA` conflated billing exhaustion with throttling and
+rendered as "Rate limited", telling a bankrupt account to wait.
 
 The same string is the popover's `.headline` line. Don't drift them.
 
@@ -452,11 +459,36 @@ When you find yourself wanting to surface a new error, status, or note,
 5. **Plural forms?** If your string interpolates a count, plan for the
    four-vs-two CLDR plural rule split (en/es/fr/de have `_one` and
    `_other`; ko/ja have `_other` only).
-6. **Where does it route?** A new failure category needs a row in
-   `dominantCategory()`'s precedence and an entry in the pill-label
-   locale namespace. A new toast surface needs `ToastStore.show(_,
-   kind:)`. The popover renders any registered category automatically
-   if it appears in `summary.failed[].cause.category`.
+6. **Where does it route?** A new failure category is a **five-site**
+   change, and missing any one of them fails silently or loudly:
+   1. `bristlenose/events.py::CauseCategoryEnum` (the single source) **and**
+      its `_RETRYABLE` entry — the dict is indexed directly, so a missing
+      entry is a `KeyError`, not a default.
+   2. `PipelineSummary.swift::CauseCategory` — **the wire decoder.** It's a
+      plain `String, Codable` with no custom `init(from:)`, so an unknown
+      raw value makes the *whole* `PipelineSummary` decode fail — the
+      diagnostic vanishes rather than degrading.
+   3. `PipelineRunner.swift::PipelineFailureCategory` — the *other* Swift
+      mirror (row summary + popover label). Both `humanSummary` and
+      `ProjectDiagnosticPopover.humanCategoryLabel` switch over it
+      exhaustively, so these two at least fail at compile time.
+   4. `dominantCategory()`'s `pillPrecedence` — a category outside the chain
+      silently collapses to `.unknown` in the pill.
+   5. The pill-label locale namespace (`desktop.pipeline.diagnostic.pill.*`).
+
+   A new toast surface needs `ToastStore.show(_, kind:)`.
+
+   > **The two-mirror trap (learned the hard way, Jul 2026).** One Python enum,
+   > *two* Swift mirrors. Adding `out_of_credit` to `events.py` +
+   > `PipelineFailureCategory` compiled clean and looked done — because the
+   > exhaustive switches are on that enum. But `PipelineSummary::CauseCategory`
+   > was untouched, so the first real out-of-credit run would have failed to
+   > decode its summary entirely. Sites 4 and 5 were also missed. The
+   > "renders automatically" claim this step used to make is **false** — it's
+   > only true once all five sites are done. Grep both Swift enums whenever
+   > `CauseCategoryEnum` changes; the Python-side parity test
+   > (`tests/test_events.py::test_cause_category_matches_swift_enum`) pins the
+   > *value set* but can't see either Swift file.
 
 ## Anti-patterns
 
@@ -642,7 +674,7 @@ assessment of the SF Symbol vocabulary.
 
 Shipped on this branch, in all six `desktop.json` locale files:
 
-- `desktop.pipeline.diagnostic.pill.{auth, missing_binary, quota, network, unknown}` — dominant-category pill labels
+- `desktop.pipeline.diagnostic.pill.{auth, out_of_credit, missing_binary, quota, network, unknown}` — dominant-category pill labels (`out_of_credit` added Jul 2026 with the billing/rate-limit split; `en` only so far — the other locales fall back to `en` until the i18n sweep)
 - `desktop.pipeline.diagnostic.header.{completed_partial, failed}` — popover titles
 - `desktop.pipeline.diagnostic.action.copy` — Copy icon tooltip ("Copy details"). `action.copied` and `action.email` were removed in pass-4 cleanup (Finding 31) — the Copy button does silent-copy (no flip), and the Email button was dropped entirely. The locale keys had zero call sites.
 - `desktop.pipeline.diagnostic.action.showLog` — Log button label ("Log" / "Registro" / "Journal" / "Protokoll" / "로그" / "ログ"). Shipped on `unify-failure-popover` (May 2026).
@@ -780,7 +812,7 @@ default.
 | Showcase scenarios (debug-only, visual evaluation) | embedded in `DiagnosticFixture.swift` (sandbox-proof — Swift can't read worktree paths under App Sandbox) |
 | Pipeline summary Pydantic model | `bristlenose/events.py` (`PipelineSummary`, `StageOutcome`, `StageFailure`) |
 | Pipeline summary Swift Codable mirror | `desktop/Bristlenose/Bristlenose/PipelineSummary.swift` |
-| Failure-category enum (single source) | `bristlenose/events.py:CauseCategoryEnum`; Swift mirror at `PipelineSummary.swift::CauseCategory` |
+| Failure-category enum (single source) | `bristlenose/events.py:CauseCategoryEnum` — **mirrored by TWO Swift enums, both of which must be updated together**: `PipelineSummary.swift::CauseCategory` (decodes `cause.category` off the wire) and `PipelineRunner.swift::PipelineFailureCategory` (drives the row summary + popover label). See the two-mirror trap below. |
 | Swift diagnostic popover | `desktop/Bristlenose/Bristlenose/ProjectDiagnosticPopover.swift` (extracted from the deleted `PipelineActivityItem.swift`, commit `02ad258`) |
 | Sidebar run indicator (spinner + hover-× Stop) | `desktop/Bristlenose/Bristlenose/ProjectRowActivityIndicator.swift` |
 | Sidebar subtitle / failure glyph → popover | `desktop/Bristlenose/Bristlenose/ProjectRow.swift` (search for `pipelineStateSubtitle`; glyph `Button` → `.popover`) |

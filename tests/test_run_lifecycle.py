@@ -165,16 +165,53 @@ def test_categorise_auth_real_provider_strings():
         )
 
 
-def test_categorise_quota():
-    """`quota` and `credit` substrings → QUOTA (billing-exhaustion path)."""
+def test_categorise_out_of_credit():
+    """The real Anthropic credit-exhaustion body → OUT_OF_CREDIT (terminal,
+    top-up), NOT the conflated QUOTA that used to render as 'rate limit
+    reached'. This is the classifier fix (Jul 2026)."""
     cause = categorise_exception(RuntimeError("Anthropic credit balance is too low"))
+    assert cause.category == CauseCategoryEnum.OUT_OF_CREDIT
+
+
+def test_categorise_rate_limit_is_quota():
+    """A clean `rate limit` / `429` → QUOTA (transient throttling, retry) —
+    distinct from OUT_OF_CREDIT (billing). QUOTA now means rate-limit."""
+    cause = categorise_exception(RuntimeError("Anthropic 429 rate limit exceeded"))
     assert cause.category == CauseCategoryEnum.QUOTA
 
 
-def test_categorise_api_request():
-    """`rate limit` and `429` → API_REQUEST (throttling, different recovery)."""
-    cause = categorise_exception(RuntimeError("Anthropic 429 rate limit exceeded"))
-    assert cause.category == CauseCategoryEnum.API_REQUEST
+def test_categorise_insufficient_quota_fallback_is_credit_not_rate():
+    """Review finding 1: a bubbled `insufficient_quota` string (OpenAI billing
+    death) must route to OUT_OF_CREDIT, not the retryable QUOTA bucket — the
+    text fallback must not contradict the structured classifier."""
+    cause = categorise_exception(RuntimeError("LLM call failed: insufficient_quota"))
+    assert cause.category == CauseCategoryEnum.OUT_OF_CREDIT
+
+
+def test_categorise_benign_credit_mention_is_not_out_of_credit():
+    """Review finding 2: a tangential 'credit' mention (funded account) must NOT
+    be mislabelled terminal-billing. Only specific signals ('credit balance',
+    'insufficient_quota') mean billing death."""
+    cause = categorise_exception(
+        RuntimeError("request failed; you still have $5 credit remaining")
+    )
+    assert cause.category != CauseCategoryEnum.OUT_OF_CREDIT
+
+
+def test_categorise_non_llm_http_shaped_exception_is_not_llm_category():
+    """Review finding 3: the generic (provider=None) path must not run the
+    status-based LLM rules — a huggingface/httpx 404 during a Whisper download
+    carries a `.status_code` but is NOT an LLM error, so it must fall through to
+    UNKNOWN (letting the s05 WHISPER fallback fire), not BAD_REQUEST/QUOTA."""
+
+    class FakeHTTPError(Exception):
+        status_code = 404
+
+        def __str__(self) -> str:
+            return "404 Client Error: Not Found for url: https://huggingface.co/..."
+
+    cause = categorise_exception(FakeHTTPError())
+    assert cause.category == CauseCategoryEnum.UNKNOWN
 
 
 def test_categorise_network():
@@ -239,10 +276,10 @@ def test_build_cause_redacts_pii_from_exception_body():
     cause = _build_cause(
         exc, stage="cluster_and_group", provider="openai", http_status=429,
     )
-    # Sanity: category should still route via the categoriser substring matchers.
-    # "429 rate limit" → API_REQUEST (post Fix 8 — split from QUOTA so the
-    # CLI banner says "wait a minute" not "top up your account").
-    assert cause.category == CauseCategoryEnum.API_REQUEST
+    # Sanity: category still routes via the shared classifier. A clean
+    # "429 rate limit" → QUOTA (transient throttle, "wait a minute"), distinct
+    # from OUT_OF_CREDIT (billing, "top up"). QUOTA now means rate-limit.
+    assert cause.category == CauseCategoryEnum.QUOTA
     assert cause.code == "429"
 
     # Privacy: no PII tokens anywhere in the persisted Cause.
@@ -261,8 +298,8 @@ def test_build_cause_preserves_category_from_substring_matchers():
     against the raw exception text without exposing PII to disk."""
     cases = [
         (RuntimeError("Anthropic 401 Unauthorized"), CauseCategoryEnum.AUTH),
-        (RuntimeError("credit balance is too low"), CauseCategoryEnum.QUOTA),
-        (RuntimeError("429 rate limit on call"), CauseCategoryEnum.API_REQUEST),
+        (RuntimeError("credit balance is too low"), CauseCategoryEnum.OUT_OF_CREDIT),
+        (RuntimeError("429 rate limit on call"), CauseCategoryEnum.QUOTA),
         (RuntimeError("connection timeout to api"), CauseCategoryEnum.NETWORK),
         (RuntimeError("500 internal server error"), CauseCategoryEnum.API_SERVER),
         (ValueError("something obscure"), CauseCategoryEnum.UNKNOWN),

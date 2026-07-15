@@ -95,7 +95,8 @@ class CauseCategoryEnum(str, Enum):
 
     USER_SIGNAL = "user_signal"
     AUTH = "auth"
-    QUOTA = "quota"
+    OUT_OF_CREDIT = "out_of_credit"  # billing exhausted; terminal until top-up
+    QUOTA = "quota"  # rate-limited / transient quota; back off and retry
     API_REQUEST = "api_request"
     API_SERVER = "api_server"
     NETWORK = "network"
@@ -120,6 +121,8 @@ class EventTypeEnum(str, Enum):
 _RETRYABLE: dict[CauseCategoryEnum, bool] = {
     CauseCategoryEnum.USER_SIGNAL: True,
     CauseCategoryEnum.AUTH: False,
+    # Out of credit — re-running before a top-up fails identically, like AUTH.
+    CauseCategoryEnum.OUT_OF_CREDIT: False,
     CauseCategoryEnum.QUOTA: True,
     CauseCategoryEnum.API_REQUEST: True,  # depends on `code`; default true
     CauseCategoryEnum.API_SERVER: True,

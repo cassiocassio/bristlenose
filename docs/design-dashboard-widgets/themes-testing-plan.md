@@ -12,7 +12,8 @@ You do **not** design 12 states per widget. You design **once**, in a single mod
 **fall out of tokens for free**:
 
 - **Dark** falls out of `light-dark()` on every colour token.
-- **edo** falls out of swapping the accent token (see the [OPEN] below).
+- **edo** falls out of the `data-color-theme="edo"` chrome swap (all `--bn-colour-*`; sentiment
+  hues are shared, so they don't move — see RESOLVED below).
 - Semantic sentiment vars carry their own light/dark pairs.
 
 **Clean output across the matrix is the proof the tokens are right.** If a dark or edo
@@ -41,14 +42,27 @@ So the matrix is cheap by construction, or it reveals a defect. Either outcome i
 - edo is a pure accent swap, not a re-layout.
 - Cardinality stress cases hold in every cell.
 
-## [OPEN] — what is "edo"?
+## RESOLVED — "edo" is a shipped palette, and it IS a clean token swap
 
-Assumed here to be a **second named accent scheme** — i.e. a token swap (change
-`--bn-accent` + its wash), structurally identical layout. If that's right, the whole 2×2
-stays mechanical and free. **If edo is instead a different *treatment*** (different type,
-spacing, or component shapes), then it's not a swap and Phase 2 stops being free — it
-becomes a second design pass. Confirm before Phase 2. Default accent today is Apple system
-blue `#007AFF` (memory `project_native_seam_alignment_discipline`).
+edo already exists end-to-end (`bristlenose/theme/colors/palette-edo.css`; CHANGELOG "Palette
+picker + Edo, end to end"). It's the Edo-period Japanese art palette — **Prussian-blue accent**
+(`#0f5c9e` light / `#4d9fe0` dark, bero-ai undertone), **washi paper-white ground** (`#fdfbf7`),
+**passport-navy ink** (`#1b2230`), warm parchment borders/surfaces, warmer paper in dark. Desktop
+default; web default is `default` (Apple system-blue `#007aff`). Swapped by the
+`data-color-theme="edo"` attribute on `<html>` (CLI `--palette edo`, env `BRISTLENOSE_PALETTE`).
+
+**It's a pure chrome swap — exactly what makes Phase 2 mechanical:**
+- edo overrides only `--bn-colour-*` **chrome** tokens (bg, text, muted, border, accent,
+  surfaces). Layout, type, spacing are untouched.
+- **Sentiment hues are SHARED** — `--bn-sentiment-*` live in `tokens.css`, *not* in the palette
+  files, so a co-occurrence cell's colour is identical in default and edo. edo changes the
+  *frame and ground*, never the signal. (Verify: switching Scheme in the gallery must move the
+  labels/borders/paper but leave the cell hues put.)
+- Dark mode is `light-dark()` on both palettes. So the 2×2 is genuinely free — the gallery
+  proves it by toggling the real attribute, not a placeholder.
+
+Known edo caveat (from the palette file): warm surfaces read slightly warmer against the brighter
+v1 paper — a surface-harmony pass is a noted follow-up in `palette-edo.css`, not our concern here.
 
 ## Where the renders live
 

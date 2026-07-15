@@ -271,6 +271,7 @@
     "diagnostic": {
       "pill": {
         "auth": "Provider key issue",
+        "out_of_credit": "Out of credit",
         "missing_binary": "Missing tool",
         "quota": "Rate limited",
         "network": "Network error",
@@ -483,6 +484,13 @@
     "failTimedOut": "The download timed out. Check your connection and try again.",
     "failCantReach": "Lost connection to Ollama. Make sure it’s running, then try again.",
     "failGeneric": "The download couldn’t finish. %@"
+  },
+  "outOfCredit": {
+    "pill": "%@ · no credit",
+    "title": "%@ is out of credit",
+    "body": "Add credit to run new analysis or coding.",
+    "addFunds": "Add funds…",
+    "switchProvider": "Switch provider…"
   },
   "toast": {
     "removedBatchAnnouncement": "Removed %d projects. Press Command-Z to undo.",

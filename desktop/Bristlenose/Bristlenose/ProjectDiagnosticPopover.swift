@@ -305,6 +305,7 @@ struct ProjectDiagnosticPopover: View {
     static func humanCategoryLabel(_ category: PipelineFailureCategory) -> String {
         switch category {
         case .auth:       return "Provider key issue"
+        case .outOfCredit: return "Out of credit"
         case .network:    return "Network error"
         case .quota:      return "Rate limited"
         case .disk:       return "Out of disk space"

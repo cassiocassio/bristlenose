@@ -1,0 +1,189 @@
+<style>
+  :root{
+    --ink:#1d1d1f; --dim:#6e6e73; --faint:#8e8e93;
+    --line:#d2d2d7; --panel:#f5f5f7; --card:#ffffff;
+    --amber:#b25000; --amber-bg:#fff4e5; --amber-line:#e8b976;
+    --red:#d70015; --blue:#0a66ff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sys:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--ink:#f5f5f7;--dim:#a1a1a6;--faint:#8e8e93;--line:#3a3a3c;
+      --panel:#1c1c1e;--card:#2c2c2e;--amber:#ff9f45;--amber-bg:#3a2a12;--amber-line:#7a5a28;--red:#ff453a;}
+    body{background:#161617;}
+  }
+  *{box-sizing:border-box;}
+  body{font-family:var(--sys);color:var(--ink);max-width:900px;margin:0 auto;padding:32px 24px 80px;line-height:1.5;}
+  h1{font-size:25px;margin:0 0 4px;letter-spacing:-.01em;}
+  h2{font-size:18px;margin:38px 0 4px;letter-spacing:-.01em;}
+  h2 .idx{color:var(--faint);font-weight:600;margin-right:8px;}
+  h3{font-size:13px;margin:0 0 8px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600;}
+  p{margin:5px 0;font-size:14px;}
+  .sub{color:var(--dim);font-size:13.5px;}
+  .lede{font-size:14.5px;color:var(--dim);max-width:72ch;}
+  code{font-family:var(--mono);font-size:12px;background:var(--panel);padding:1px 5px;border-radius:4px;}
+
+  .g{display:inline-flex;align-items:center;justify-content:center;flex:none;}
+  .g.err{width:15px;height:15px;border-radius:50%;background:var(--red);color:#fff;font-size:10px;font-weight:800;}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none;}
+  .dot.g10{width:9px;height:9px;}
+  .dot.grn{background:#28c840;}.dot.amb{background:var(--amber);}.dot.off{background:var(--faint);}
+
+  .legend{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 6px;}
+  @media(max-width:680px){.legend{grid-template-columns:1fr;}}
+  .leg{border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:var(--card);}
+  .leg .top{display:flex;align-items:center;gap:7px;font-weight:700;font-size:12.5px;}
+  .leg .desc{font-size:11.5px;color:var(--dim);margin-top:5px;}
+  .rule{font-size:12.5px;color:var(--dim);margin-top:8px;}
+  .rule b{color:var(--ink);}
+
+  .win{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--card);font-size:12px;margin-top:10px;}
+  .titlebar{display:flex;align-items:center;gap:9px;padding:7px 10px;border-bottom:1px solid var(--line);background:var(--panel);}
+  .lights{display:flex;gap:5px;}
+  .lights i{width:9px;height:9px;border-radius:50%;display:block;}
+  .lights i:nth-child(1){background:#ff5f57;}.lights i:nth-child(2){background:#febc2e;}.lights i:nth-child(3){background:#28c840;}
+  .tbtabs{display:flex;gap:2px;margin-left:4px;}
+  .tbtabs span{padding:2px 8px;border-radius:5px;color:var(--dim);}
+  .tbtabs span.on{background:var(--card);color:var(--ink);border:1px solid var(--line);}
+  .statuszone{margin-left:auto;position:relative;}
+  .body{display:flex;min-height:150px;}
+  .sidebar{width:36%;border-right:1px solid var(--line);padding:8px;background:var(--panel);}
+  .lbl{font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;padding:2px 6px;}
+  .row{display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:6px;color:var(--dim);}
+  .row.sel{background:rgba(10,102,255,.12);color:var(--ink);}
+  .row .stack{display:flex;flex-direction:column;gap:1px;line-height:1.25;}
+  .row .st-sub{font-size:10px;}
+  .row .st-sub.err{color:var(--red);}
+  .ctxmenu{border:1px solid var(--line);border-radius:8px;background:var(--card);box-shadow:0 8px 24px rgba(0,0,0,.16);padding:4px;width:172px;font-size:11.5px;align-self:flex-start;}
+  .ctxmenu .mi{padding:4px 9px;border-radius:5px;color:var(--ink);}
+  .ctxmenu .mi.on{background:var(--blue);color:#fff;}
+  .ctxmenu .sep{height:1px;background:var(--line);margin:4px 6px;}
+  .detail{flex:1;padding:14px;display:flex;flex-direction:column;gap:8px;}
+  .ph{height:8px;border-radius:4px;background:var(--line);opacity:.55;}
+  .ph.w40{width:40%;}.ph.w55{width:55%;}.ph.w70{width:70%;}.ph.w85{width:85%;}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--amber-line);border-radius:20px;padding:3px 10px;}
+  .connector{width:1px;height:8px;background:var(--line);margin:2px auto 0;}
+  .popover{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.14);width:240px;}
+  .btn{font-size:11.5px;font-weight:600;border-radius:6px;padding:3px 10px;border:1px solid var(--line);background:var(--card);color:var(--ink);}
+  .btn.pri{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .cap{font-size:11px;color:var(--faint);margin-top:7px;}
+  .cap b{color:var(--dim);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr;}}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--dim);margin-top:14px;}
+  .note b{color:var(--ink);}
+  ul.tight{margin:6px 0;padding-left:18px;font-size:13px;color:var(--dim);}
+  ul.tight li{margin:3px 0;}
+</style>
+
+<h1>Out-of-credit — surfaces &amp; registers</h1>
+<p class="lede">One condition (provider authenticated, balance empty). Three surfaces, nothing more: the run that stopped, the toolbar pill, and — while browsing — nothing. The pill’s popover is the only resolve surface. Settings and the content area are untouched. Low-fi. Nothing built.</p>
+
+<h2><span class="idx">·</span>The register legend</h2>
+<div class="legend">
+  <div class="leg">
+    <div class="top"><span class="g err">✕</span> Failed run</div>
+    <div class="desc">ERROR — a run that didn’t complete. <code>xmark.circle.fill</code>, red. Once, on the project that stopped.</div>
+  </div>
+  <div class="leg">
+    <div class="top"><span class="dot amb g10"></span> Standing state</div>
+    <div class="desc">The toolbar pill: amber dot, no glyph. Colour + label carry it. Persistent while unresolved.</div>
+  </div>
+  <div class="leg">
+    <div class="top" style="color:var(--faint)">— Browsing</div>
+    <div class="desc">Nothing. Reports are static data; no glyph, no colour. Absence is information.</div>
+  </div>
+</div>
+<p class="rule"><b>Governing rule (already in the code):</b> red is reserved for <i>dead / didn’t-complete</i> (invalid key, failed run); amber is <i>recoverable / needs-action</i>. Out-of-credit is authenticated and <code>canActivate=true</code> — so amber, never red, except at the instant a run fails.</p>
+
+<h2><span class="idx">1</span>The run that stopped → sidebar row <span style="font-size:12px;color:var(--red);font-weight:600;">· red ✕</span></h2>
+<p class="sub">Per-project. The one place red is correct — a run did not complete. Read-only row; the action lives in the right-click menu.</p>
+<div class="grid2">
+  <div>
+    <div class="win">
+      <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="tbtabs"><span class="on">Project</span><span>Sessions</span><span>Quotes</span></div></div>
+      <div class="body">
+        <div class="sidebar">
+          <div class="lbl">Projects</div>
+          <div class="row sel"><span class="g err">✕</span><div class="stack"><span>project-ikea</span><span class="st-sub err">Failed · out of credit</span></div></div>
+          <div class="row"><span class="dot off"></span>fishkeeping</div>
+          <div class="row"><span class="dot off"></span>rock-climbing</div>
+        </div>
+        <div class="detail">
+          <div class="lbl" style="padding:0;">Right-click the project</div>
+          <div class="ctxmenu">
+            <div class="mi on">Reanalyse</div>
+            <div class="sep"></div>
+            <div class="mi">Show diagnostics…</div>
+            <div class="mi">Show in Finder</div>
+            <div class="mi">Remove from Sidebar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap"><b>Register:</b> ERROR. Red ✕ + red reason on the row — read-only. Action is <b>Reanalyse</b> in the right-click menu, not an inline button.</p>
+  </div>
+  <div class="note" style="margin-top:10px;">
+    <b>No content-area takeover.</b> The run fails near-instantly (preflight / first call) — no sustained processing, so no shoal animation, nothing on the canvas. The failure lives on the row; clicking the ✕ opens the diagnostic popover. Menu term: code uses <code>Analyse</code> for the not-yet-succeeded case and reserves <code>Reanalyse</code> for a completed report — pick one.
+  </div>
+</div>
+
+<h2><span class="idx">2</span>The standing condition → toolbar pill + popover <span style="font-size:12px;color:var(--amber);font-weight:600;">· amber dot</span></h2>
+<p class="sub">App-global — blocks LLM work everywhere, so it rides the <code>.status</code> zone (reused from the Ollama pill). Amber dot, no triangle. The popover drops from the pill and is the only place to resolve it — nothing in the content area.</p>
+<div class="grid2">
+  <div>
+    <div class="win">
+      <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="tbtabs"><span class="on">Project</span><span>Quotes</span></div>
+        <div class="statuszone"><span class="chip"><span class="dot amb"></span>Claude · no credit</span></div>
+      </div>
+      <div class="body">
+        <div class="sidebar"><div class="lbl">Projects</div><div class="row sel"><span class="dot off"></span>project-ikea</div><div class="row"><span class="dot off"></span>fishkeeping</div></div>
+        <div class="detail" style="align-items:flex-end;">
+          <div class="connector"></div>
+          <div class="popover">
+            <b style="font-size:12.5px;">Claude is out of credit</b>
+            <p class="sub" style="margin:5px 0 10px;font-size:11.5px;">Add credit to run new analysis or coding.</p>
+            <div style="display:flex;gap:7px;"><span class="btn pri">Add funds…</span><span class="btn">Switch provider…</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap"><b>Register:</b> standing state. Amber dot + label; click → NSPopover (light-dismiss), dropping from the pill. Cloud-only. Clears on top-up or switch.</p>
+    <p class="cap"><b>Icon spec:</b> the dot is <code>Image(systemName:&nbsp;"circle.fill").foregroundStyle(.orange)</code> — the same <code>ProviderStatus.dotColor</code> shown in Settings, so one amber dot reads across both surfaces. (A <code>creditcard</code> glyph is a nicer touch — parked for later.)</p>
+  </div>
+  <div>
+    <h3>Popover actions</h3>
+    <ul class="tight">
+      <li><b>Add funds…</b> → active provider’s billing console (browser): Claude → <code>console.anthropic.com</code>, ChatGPT → <code>platform.openai.com</code>.</li>
+      <li><b>Switch provider…</b> → opens the existing Settings ▸ LLM pane. (Settings unchanged — it already does enough.)</li>
+    </ul>
+    <h3 style="margin-top:14px;">Pill follows the active provider</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span class="chip"><span class="dot amb"></span>Claude · no credit</span>
+      <span class="chip"><span class="dot amb"></span>ChatGPT · no credit</span>
+    </div>
+  </div>
+</div>
+
+<h2><span class="idx">3</span>Browsing, or reaching for AutoCode → nothing new <span style="font-size:12px;color:var(--faint);font-weight:600;">· pill is enough</span></h2>
+<p class="sub">A finished report is static data — it opens, searches, edits, exports with a dead key. The pill already says why LLM work won’t run, so AutoCode / codebook / elaboration get no bespoke inline warning. No extra chrome; the pill carries it.</p>
+<div class="win" style="max-width:540px;">
+  <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="tbtabs"><span>Project</span><span class="on">Codebook</span></div><div class="statuszone"><span class="chip"><span class="dot amb"></span>Claude · no credit</span></div></div>
+  <div class="body">
+    <div class="sidebar"><div class="lbl">Codes</div><div class="row sel"><span class="dot off"></span>Frustration</div><div class="row"><span class="dot off"></span>Delight</div></div>
+    <div class="detail"><div class="ph w85"></div><div class="ph w70"></div><div class="ph w85"></div><div class="ph w55"></div></div>
+  </div>
+</div>
+<p class="cap"><b>Register:</b> none in the content. The pill is the only tell.</p>
+
+<div class="note">
+  <b>Code seams these two surfaces need (flagged, not built).</b>
+  <ul class="tight">
+    <li>The pill needs the 402 / preflight <code>outOfCredit</code> signal to reach the toolbar model.</li>
+    <li><code>categoriseFailure</code> matches <code>rate limit|quota|429</code> but not the 402 <code>credit balance too low</code> — surface 1’s red reason may mis-label. Add the 402 string.</li>
+    <li>AutoCode / codebook / elaboration swallow the 402 into an <code>errors</code> counter — since there’s no inline warning, they should at least fail cleanly (empty result, not a wrong one), reason in the log.</li>
+    <li>Per-provider <code>billing:</code> URL for “Add funds…” (the <code>console:</code> URLs are homes, not add-funds pages).</li>
+    <li>Extract a thin <code>StatusPill</code> shell (capsule + popover plumbing only) that both this and <code>OllamaDownloadPill</code> consume, so the two can’t drift. Content stays per-pill — don’t abstract the phases / progress / popover bodies. If the envelope ever needs to diverge, keep them separate; don’t force it.</li>
+    <li>Coexistence with the Ollama pill in <code>.status</code> is a non-issue — the out-of-credit pill is cloud-only, the Ollama pill is local-setup, so an active-provider gate keeps them mutually exclusive.</li>
+  </ul>
+</div>

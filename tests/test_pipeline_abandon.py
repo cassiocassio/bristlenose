@@ -451,12 +451,13 @@ def test_s08_emits_stage_failure_when_llm_raises() -> None:
     # last is the threshold trigger — all 3 are recorded.
     assert outcome.succeeded == 0
     assert len(outcome.failed) == 3
-    # cause.category is inferred from the substring matcher — API_REQUEST for
-    # "429" / "rate limit". The QUOTA category is reserved for credit-balance
-    # exhaustion ("quota", "credit"); rate-limiting is its own state with a
-    # different recovery action (wait, retry — don't tell the user to top up).
+    # cause.category comes from the shared LLM classifier — a clean "429 rate
+    # limit" is QUOTA (transient throttling; wait and retry). Billing exhaustion
+    # ("credit balance is too low" / insufficient_quota) is the distinct
+    # OUT_OF_CREDIT category ("top up"). QUOTA now means rate-limit; the old
+    # credit→QUOTA / rate→API_REQUEST conflation was fixed Jul 2026.
     assert all(
-        f.cause.category == CauseCategoryEnum.API_REQUEST for f in outcome.failed
+        f.cause.category == CauseCategoryEnum.QUOTA for f in outcome.failed
     )
     # Privacy contract — no raw exception text in the persisted message.
     assert all("rate limit" not in (f.cause.message or "") for f in outcome.failed)

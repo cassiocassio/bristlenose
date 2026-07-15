@@ -828,15 +828,20 @@ def _print_pipeline_failure(cause: object, input_dir: Path, settings: object) ->
     )
 
     console.print()
-    if category == CauseCategoryEnum.QUOTA:
+    if category == CauseCategoryEnum.OUT_OF_CREDIT:
         _say(MessageKind.ERROR, f"Your {provider_display} account ran out of credit.")
         billing = billing_for(provider_key) if provider_key else None
         if billing:
             console.print(f"  Top up at {billing.billing_url}")
         console.print(f"  then run  [bold]{retry_cmd}[/bold]  again.")
-    elif category == CauseCategoryEnum.API_REQUEST:
+    elif category == CauseCategoryEnum.QUOTA:
+        # QUOTA is now the transient rate-limit / throttling bucket (billing
+        # exhaustion routes to OUT_OF_CREDIT above). Waiting helps here.
         _say(MessageKind.ERROR, f"Rate-limited by {provider_display}.")
         console.print(f"  Wait a minute and run  [bold]{retry_cmd}[/bold]  again.")
+    elif category == CauseCategoryEnum.API_REQUEST:
+        _say(MessageKind.ERROR, f"{provider_display} rejected the request.")
+        console.print("  This can happen with an unsupported model or malformed input.")
     elif category == CauseCategoryEnum.API_SERVER:
         _say(MessageKind.ERROR, f"{provider_display} had a server error.")
         console.print("  Try again in a few minutes.")

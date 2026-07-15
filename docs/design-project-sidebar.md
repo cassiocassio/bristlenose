@@ -135,7 +135,9 @@ No full-width button row at the top of the sidebar (that's an iOS pattern).
 
 ### Empty state
 
-> **Status (shipped 2026-05-01):** The drop-target + CTA empty-surface vision in this section moved out of the sidebar and into the detail pane via `WelcomeView` (`WelcomeView.swift`, commit `816ab65` on `first-run`). `WelcomeView.firstRun` ships the affordance with a different SF Symbol pair (`plus.square.dashed` for the New Project card, `tray.and.arrow.down(.fill)` for the drop card) inside dashed-border accent-tinted cards, plus a 3-step rail and an AI privacy link. `WelcomeView.noSelection` keeps closer to the original sidebar-icon-plus-CTA spirit. The sidebar itself still shows only `Text(i18n.t("desktop.chrome.emptyStateHint"))` at `ContentView.swift:833` ("Drag a folder here or press ⌘N") — the full empty UX lives one column over. The four "ContentUnavailableView" mentions later in this doc are preserved as planning history; the shipped surface is `WelcomeView`. TipKit first-project hint remains parked.
+> **Status (shipped 2026-05-01, re-pointed 2026-07-15):** The drop-target + CTA empty-surface vision in this section moved out of the sidebar and into the detail pane. **The conclusion still holds: the full empty UX lives one column over.** The sidebar itself shows only `Text(i18n.t("desktop.chrome.emptyStateHint"))` at `ContentView.swift:1810` ("Drag a folder here or press ⌘N"). The four "ContentUnavailableView" mentions later in this doc are preserved as planning history.
+>
+> The *implementation* has since been replaced: `WelcomeView` (commit `816ab65`, two variants + New-Project card + 3-step rail) → **`WelcomeHomeView`** (2026-07-15) — a single unparameterised view, no variants, no rail, no New-Project button; a golden-spiral of rotating teaching cells with the drop card as the sole action. Canonical spec: [design-welcome-screen.md](design-welcome-screen.md). TipKit first-project hint remains parked.
 
 `ContentUnavailableView` with clear CTA: "Drag a folder of interviews here, or press Cmd+N to create a project" with a `doc.badge.plus` SF Symbol. The placeholder doubles as a drag target.
 

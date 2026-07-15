@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard widget gallery — intrinsic design bench · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system so
+   the theme matrix genuinely FALLS OUT of tokens (that's the whole test).
+     · structural + sentiment  → bristlenose/theme/tokens.css
+     · default chrome           → bristlenose/theme/colors/palette-default.css
+     · edo chrome               → bristlenose/theme/colors/palette-edo.css
+   Palette swaps via the same data-color-theme="edo" attribute the app uses;
+   dark mode via light-dark() + color-scheme. Sentiment hues are SHARED across
+   palettes (edo changes chrome, never sentiment).
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+
+  /* ── Structural tokens (tokens.css) ── */
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-text-badge-lh:1.3; --bn-text-caption-lh:1.4; --bn-text-label-lh:1.45;
+  --bn-text-body-lh:1.5; --bn-text-heading-lh:1.3; --bn-text-title-lh:1.25;
+  /* weights (tokens-typography.css) */
+  --bn-weight-light:370; --bn-weight-normal:420; --bn-weight-emphasis:490;
+  --bn-weight-starred:520; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+
+  /* Sentiment hues — SHARED across palettes (tokens.css), light-dark pairs */
+  --bn-sentiment-frustration:  light-dark(#ea580c, #fb923c);
+  --bn-sentiment-confusion:    light-dark(#dc2626, #f87171);
+  --bn-sentiment-doubt:        light-dark(#7c3aed, #a78bfa);
+  --bn-sentiment-surprise:     light-dark(#d97706, #fbbf24);
+  --bn-sentiment-satisfaction: light-dark(#16a34a, #4ade80);
+  --bn-sentiment-delight:      light-dark(#059669, #34d399);
+  --bn-sentiment-confidence:   light-dark(#2563eb, #60a5fa);
+  /* sentiment badge grounds (tokens.css) */
+  --bn-sentiment-frustration-bg:  light-dark(#fff7ed, #2d1d0e);
+  --bn-sentiment-confusion-bg:    light-dark(#fef2f2, #2d1515);
+  --bn-sentiment-doubt-bg:        light-dark(#f5f3ff, #1e1533);
+  --bn-sentiment-surprise-bg:     light-dark(#fffbeb, #2d2305);
+  --bn-sentiment-satisfaction-bg: light-dark(#f0fdf4, #0f2918);
+  --bn-sentiment-delight-bg:      light-dark(#ecfdf5, #0d261c);
+  --bn-sentiment-confidence-bg:   light-dark(#eff6ff, #111d2e);
+
+  /* ── PROPOSED DELTA (design-police.md): sentiment-intensity ramp weights.
+     NOT a colour — three mix percentages for quote-count depth. Pending
+     promotion to tokens.css as --bn-ramp-*. ── */
+  --bn-ramp-1:30; --bn-ramp-2:56; --bn-ramp-3:84;
+}
+
+/* ── Default chrome (palette-default.css) ── */
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  /* coverage bar — PALETTE-SPECIFIC (differs from edo) */
+  --bn-coverage-report:    light-dark(#93b4f4, #4a7ecf);
+  --bn-coverage-moderator: light-dark(#d97706, #fbbf24);
+  --bn-coverage-omitted:   light-dark(#d1d5db, #4b5563);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+}
+
+/* ── Edo chrome (palette-edo.css) — Prussian blue / washi paper ── */
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  /* coverage bar — edo's warm-toned analogues */
+  --bn-coverage-report:    light-dark(#5a7d9b, #4a6a80);
+  --bn-coverage-moderator: light-dark(#c4a96a, #a08848);
+  --bn-coverage-omitted:   light-dark(#d4c9a8, #3d3830);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+}
+
+* { box-sizing: border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background: var(--bn-colour-bg); color: var(--bn-colour-text);
+  font-family: var(--bn-font-body); font-size: var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing: antialiased;
+}
+h1,h2,h3,h4 { font-weight:600; line-height:1.25; margin:0; }
+a { color: var(--bn-colour-accent); }
+code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
+
+.wrap { max-width:1180px; margin:0 auto; padding: clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:600; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:66ch; margin:.4rem 0; }
+.masthead p strong { color:var(--bn-colour-text); font-weight:600; }
+.masthead .status { display:inline-block; margin-top:.5rem; font-size:var(--bn-text-caption); font-weight:600;
+  color:var(--bn-sentiment-doubt); border:1px solid color-mix(in oklab, var(--bn-sentiment-doubt) 40%, var(--bn-colour-border));
+  border-radius:var(--bn-radius-pill); padding:.15rem .6rem; }
+
+/* ---- Gallery chrome ---- */
+.controls {
+  display:flex; flex-wrap:wrap; gap:.6rem; align-items:center;
+  padding:var(--bn-space-md); margin-bottom:var(--bn-space-xl);
+  background:var(--bn-colour-quote-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  position:sticky; top:0; z-index:20;
+}
+.controls .grp { display:flex; gap:.3rem; align-items:center; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-right:.15rem; }
+.pbtn {
+  font:inherit; font-size:var(--bn-text-label); font-weight:600;
+  padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer;
+  transition:background .12s, border-color .12s, color .12s;
+}
+.pbtn:hover { border-color:var(--bn-colour-border-hover); }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+.bench { margin:2.75rem 0; }
+.bench-head { display:flex; flex-wrap:wrap; align-items:baseline; gap:.6rem; margin-bottom:.5rem; }
+.bench-head h2 { font-size:var(--bn-text-title); display:flex; align-items:baseline; gap:.5rem; }
+.bench-head h2 .n { font-size:var(--bn-text-label); color:var(--bn-colour-accent); font-family:var(--bn-font-mono); font-weight:700; }
+.bench-head .faces { display:flex; gap:.3rem; margin-left:auto; }
+.bench-head .faces .pbtn { font-size:var(--bn-text-caption); padding:.2rem .55rem; }
+.bench .sub { color:var(--bn-colour-muted); max-width:74ch; margin:.1rem 0 .9rem; font-size:var(--bn-text-label); }
+.bench .readout { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.bench .readout b { color:var(--bn-colour-accent); }
+
+.sandbox-outer { overflow-x:auto; padding-bottom:.4rem; }
+.sandbox {
+  container: widget / inline-size;
+  width:100%; min-width:240px;
+  border:1px dashed var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  padding:clamp(.5rem,1.5cqi,1rem); background:var(--bn-colour-bg);
+  resize:horizontal; overflow:hidden;
+  transition:width .28s cubic-bezier(.4,0,.2,1);
+}
+
+/* ============================================================================
+   WIDGET · Verbatim / quotes (brick 7) — MIRRORS .bn-featured-quote exactly
+   (global-nav.css + atoms/badge.css). Quote text is LABEL size (13px), NOT
+   body; footer uses the real .badge atom (mono). Multiply via .bn-featured-row
+   grid — 3-up, 5 when wide — the shipped behaviour (redesign faces pending).
+   ========================================================================= */
+.bn-featured-row { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--bn-space-md); }
+.bn-featured-quote { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  padding:var(--bn-space-md) var(--bn-space-lg); min-width:0; overflow:hidden; display:flex; flex-direction:column;
+  cursor:pointer; transition:background-color .15s ease; }
+.bn-featured-quote:hover { background-color:var(--bn-colour-hover); }
+.bn-featured-quote .context { display:block; font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-bottom:var(--bn-space-xs); }
+.bn-featured-quote .quote-text { font-size:var(--bn-text-label); line-height:1.55; flex:1; }
+.bn-featured-footer { display:flex; align-items:center; gap:1rem; margin-top:var(--bn-space-sm); font-size:var(--bn-text-label); color:var(--bn-colour-muted); flex-wrap:wrap; }
+.bn-featured-footer .timecode { color:var(--bn-colour-accent); font-family:var(--bn-font-mono); font-size:var(--bn-text-label); }
+.bn-featured-footer a.badge { text-decoration:none; color:var(--bn-colour-badge-text); }
+/* .badge atom (atoms/badge.css) — mono, radius-sm, badge-bg */
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) .45rem;
+  border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); }
+.badge-satisfaction { background:var(--bn-sentiment-satisfaction-bg); color:var(--bn-sentiment-satisfaction); }
+.badge-frustration  { background:var(--bn-sentiment-frustration-bg);  color:var(--bn-sentiment-frustration); }
+.badge-confusion    { background:var(--bn-sentiment-confusion-bg);    color:var(--bn-sentiment-confusion); }
+.badge-confidence   { background:var(--bn-sentiment-confidence-bg);   color:var(--bn-sentiment-confidence); }
+.badge-surprise     { background:var(--bn-sentiment-surprise-bg);     color:var(--bn-sentiment-surprise); }
+/* multiply: shipped hides the 4th/5th until a 1400px VIEWPORT width; adapted to a container query here */
+.bn-featured-quote:nth-child(n+4) { display:none; }
+@container widget (min-width:1100px) { .bn-featured-row { grid-template-columns:repeat(5,1fr); } .bn-featured-quote:nth-child(n+4) { display:flex; } }
+
+/* ============================================================================
+   WIDGET · Coverage (brick 8) — MIRRORS .bn-coverage-box exactly (coverage.css).
+   Bar is 8px tall (not 1.6rem); dots are round 8px; palette-specific colours.
+   ========================================================================= */
+.bn-coverage-box { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:var(--bn-space-lg); }
+.bn-coverage-box h3 { margin:0 0 var(--bn-space-md) 0; font-weight:var(--bn-weight-emphasis); font-size:var(--bn-text-label); }
+.bn-coverage-bar { display:flex; height:8px; border-radius:4px; overflow:hidden; margin-bottom:var(--bn-space-md); }
+.bn-coverage-bar-segment { transition:width .2s ease; }
+.bn-coverage-bar-segment--report    { background:var(--bn-coverage-report); }
+.bn-coverage-bar-segment--moderator { background:var(--bn-coverage-moderator); }
+.bn-coverage-bar-segment--omitted   { background:var(--bn-coverage-omitted); }
+.bn-coverage-legend { display:flex; gap:var(--bn-space-lg); font-size:var(--bn-text-label); color:var(--bn-colour-muted); }
+.bn-coverage-legend-item { display:flex; align-items:center; gap:var(--bn-space-sm); }
+.bn-coverage-legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.bn-coverage-legend-dot--report    { background:var(--bn-coverage-report); }
+.bn-coverage-legend-dot--moderator { background:var(--bn-coverage-moderator); }
+.bn-coverage-legend-dot--omitted   { background:var(--bn-coverage-omitted); }
+.bn-coverage-legend-value { font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); }
+
+/* ============================================================================
+   WIDGET · Signals (brick 6) — the analysis-lens signal card, EXACT.
+   Every rule below is copied verbatim from organisms/analysis.css so a click
+   from the dashboard lands on a pixel-identical item. NO confidence badge
+   (hidden in the real UI). pattern-label + colours are hardcoded IN THE SHIPPED
+   CSS — replicated as-is (design-police observation, not our freelance).
+   ========================================================================= */
+.signal-cards { display:flex; flex-direction:column; gap:var(--bn-space-md); }
+.signal-card { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-sm);
+  padding:var(--bn-space-lg); background:var(--bn-colour-bg); transition:box-shadow var(--bn-transition-fast); position:relative; }
+.signal-card:hover { box-shadow:0 2px 8px var(--bn-colour-shadow); }
+.signal-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:var(--bn-space-lg); margin-bottom:var(--bn-space-sm); }
+.signal-card-identity { flex:1; min-width:0; }
+.signal-card-source { display:block; font-size:var(--bn-text-badge); line-height:var(--bn-text-badge-lh);
+  font-weight:var(--bn-weight-normal); text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted); margin-bottom:.1rem; }
+.signal-card-location { font-size:var(--bn-text-heading); line-height:var(--bn-text-heading-lh); font-weight:var(--bn-weight-emphasis); margin-bottom:var(--bn-space-sm); }
+.signal-card-location-link { color:inherit; text-decoration:none; transition:color var(--bn-transition-fast); }
+.signal-card-location-link:hover { color:var(--bn-colour-accent); }
+.signal-elaboration { font-size:var(--bn-text-label); color:var(--bn-colour-text); line-height:var(--bn-text-label-lh); margin-bottom:var(--bn-space-sm); font-weight:var(--bn-weight-normal); }
+.signal-elaboration strong { font-weight:var(--bn-weight-starred); }
+.signal-card-right { flex-shrink:0; display:flex; flex-direction:column; align-items:flex-end; gap:var(--bn-space-sm); }
+.signal-card-badges { display:flex; gap:.35rem; align-items:center; margin-bottom:var(--bn-space-lg); }
+.pattern-label { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); font-weight:var(--bn-weight-starred);
+  text-transform:uppercase; letter-spacing:.06em; padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm); opacity:.9; }
+.pattern-success  { background:light-dark(#dcfce7,#14532d); color:light-dark(#166534,#86efac); }
+.pattern-tension  { background:light-dark(#fef3c7,#451a03); color:light-dark(#92400e,#fcd34d); }
+.pattern-gap      { background:light-dark(#fee2e2,#450a0a); color:light-dark(#991b1b,#fca5a5); }
+.pattern-recovery { background:light-dark(#e0f2fe,#0c4a6e); color:light-dark(#075985,#7dd3fc); }
+.signal-card-metrics { flex-shrink:0; display:grid; grid-template-columns:auto auto auto; gap:.2rem .6rem; align-items:center; font-size:var(--bn-text-label); white-space:nowrap; }
+.metric-label { color:var(--bn-colour-muted); text-align:right; cursor:help; }
+.metric-value { font-family:var(--bn-font-mono); font-size:var(--bn-text-label); color:var(--bn-colour-text); text-align:right; }
+.metric-viz { display:flex; align-items:center; }
+.conc-bar-track { display:block; width:96px; height:6px; background:var(--bn-colour-border); border-radius:var(--bn-radius-sm); overflow:hidden; }
+.conc-bar-fill { display:block; height:100%; border-radius:var(--bn-radius-sm); background:var(--bn-colour-text); opacity:.45; }
+.intensity-dots-svg { display:flex; align-items:center; gap:2px; width:46px; color:var(--bn-colour-text); }
+
+/* ============================================================================
+   WIDGET · Sections | Themes (brick 3) — MIRRORS .bn-dashboard-pane--pair +
+   .bn-dashboard-nav (global-nav.css). Links are ACCENT-coloured, underline on
+   hover. The shipped dashboard shows NO counts (a proposed redesign addition).
+   ========================================================================= */
+.bn-dashboard-pane { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:var(--bn-space-lg); min-width:0; overflow-x:auto; }
+.bn-dashboard-pane h3 { margin:0 0 var(--bn-space-md) 0; font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); }
+.bn-dashboard-pane--pair { display:flex; gap:0; padding:0; }
+.bn-dashboard-pane--pair-half { flex:1; padding:var(--bn-space-lg); min-width:0; }
+.bn-dashboard-nav ul { list-style:none; padding:0; margin:0; }
+.bn-dashboard-nav li { margin:var(--bn-space-xs) 0; font-size:var(--bn-text-label); }
+.bn-dashboard-nav a { color:var(--bn-colour-accent); text-decoration:none; }
+.bn-dashboard-nav a:hover { text-decoration:underline; }
+
+/* ============================================================================
+   WIDGET · Co-occurrence (brick 5, co-occurrence half)
+   One representation (participant × section grid) that ENRICHES in place.
+   Cell hue = sentiment TOKEN; depth = quote count via the color-mix ramp.
+   ========================================================================= */
+.cooc { --cols:8; --cell:1.4rem; font-size:var(--bn-text-label); }
+
+.cooc-grid {
+  display:grid;
+  /* FIXED cell size — the matrix is a constant-size block. Faces reveal more
+     DATA (labels, legend, continua, markers), they never zoom the cells. */
+  grid-template-columns:max-content repeat(var(--cols), var(--cell));
+  gap:3px; align-items:stretch; justify-content:start; width:max-content;
+}
+.cooc-grid .chead {
+  font-size:var(--bn-text-badge); color:var(--bn-colour-muted); font-weight:600;
+  writing-mode:vertical-rl; transform:rotate(180deg);
+  white-space:nowrap; align-self:end; justify-self:center; padding-bottom:2px;
+  max-height:6.5em; overflow:hidden; text-overflow:ellipsis; display:none;   /* hidden in compact */
+}
+.cooc-grid .rhead {
+  font-size:var(--bn-text-caption); color:var(--bn-colour-text); font-weight:600;
+  align-self:center; padding-right:.4rem; white-space:nowrap;
+}
+.cooc-cell {
+  aspect-ratio:1/1; border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg);            /* empty = faint but present (empty is information) */
+  position:relative;
+}
+/* filled: mix the sentiment hue toward the ground by the ramp weight */
+.cooc-cell.on { background:color-mix(in oklab, var(--c) calc(var(--w)*1%), var(--bn-colour-bg)); }
+/* emphasis marker (⁺ = intensity-3 quote) — expanded only */
+.cooc-cell .emph { display:none; position:absolute; top:1px; right:3px;
+  font-size:var(--bn-text-badge); font-weight:700; line-height:1;
+  color:color-mix(in oklab, var(--c) 88%, var(--bn-colour-text)); }
+
+.cooc .legend, .cooc .continua, .cooc .method { display:none; }
+.cooc .legend { margin-top:.7rem; gap:1rem; flex-wrap:wrap; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); align-items:center; }
+.cooc .legend .swatch { display:inline-flex; align-items:center; gap:.3rem; }
+.cooc .legend .chip { width:14px; height:14px; border-radius:3px; }
+.cooc .ramp { display:inline-flex; gap:2px; }
+.cooc .ramp i { width:12px; height:12px; border-radius:2px; background:color-mix(in oklab, var(--bn-colour-muted) calc(var(--w)*1%), var(--bn-colour-bg)); }
+
+.cooc .continua { margin-top:.8rem; grid-template-columns:repeat(3, minmax(0,1fr)); gap:1rem; }
+.cooc .continua .c b { display:block; font-size:var(--bn-text-label); color:var(--bn-colour-text); }
+.cooc .continua .c .k { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin:.1rem 0 .25rem; }
+.cooc .continua .c p { margin:0; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.cooc .method { margin-top:.7rem; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+
+/* ── FACES via container queries (default-first: base = compact) ──────────
+   Element size is CONSTANT across all three; only the amount of data changes.
+   compact  = bare grid
+   normal   = + column labels + legend (below the grid)
+   expanded = matrix caps (stop) and the reading panel flows BESIDE it, so the
+              extra width buys DATA, not whitespace or bigger cells.            */
+@container widget (min-width:380px) {          /* NORMAL */
+  .cooc-grid .chead { display:flex; }
+  .cooc .legend { display:flex; }
+}
+@container widget (min-width:660px) {          /* EXPANDED */
+  .cooc { display:grid; grid-template-columns:max-content minmax(200px,1fr);
+          gap:var(--bn-space-lg); align-items:start; }
+  .cooc .legend { margin-top:0; }
+  .cooc .continua { display:flex; flex-direction:column; gap:.9rem; }
+  .cooc .method { display:block; }
+  .cooc-cell .emph { display:block; }
+}
+
+.foot { margin-top:4rem; border-top:1px solid var(--bn-colour-border); padding-top:1rem; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Bristlenose · dashboard widgets</div>
+    <h1>Widget gallery — the intrinsic design bench</h1>
+    <p>Each widget is designed here <strong>in isolation</strong>, in its own container-query sandbox,
+       decoupled from where it lands on a dashboard. Drag a sandbox's right edge — or hit a face preset —
+       to feel its compact / normal / expanded faces resolve. Colour comes from the <strong>real design-system
+       tokens</strong>; <strong>Scheme</strong> flips the shipped <code>data-color-theme="edo"</code> palette and
+       <strong>Mode</strong> flips <code>color-scheme</code> — so the theme matrix falls out of tokens, not hand-tuning.</p>
+    <span class="status">Phase 0 + first widget · parked exploration (post-TF)</span>
+  </header>
+
+  <div class="controls" role="group" aria-label="Gallery controls">
+    <div class="grp"><span class="lbl">Mode</span>
+      <button class="pbtn on" data-mode="light">Light</button>
+      <button class="pbtn" data-mode="dark">Dark</button>
+    </div>
+    <div class="grp"><span class="lbl">Scheme</span>
+      <button class="pbtn on" data-scheme="default">Default</button>
+      <button class="pbtn" data-scheme="edo">Edo</button>
+    </div>
+    <div class="grp" style="margin-left:auto"><span class="lbl mono" style="text-transform:none">design in default · light — the other three cells are a regression check</span></div>
+  </div>
+
+  <!-- ══ BENCH · Verbatim / quotes ════════════════════════════════════ -->
+  <section class="bench" id="bench-vq">
+    <div class="bench-head">
+      <h2><span class="n">07</span> Verbatim / quotes</h2>
+      <div class="faces" role="group" aria-label="Face presets">
+        <button class="pbtn on" data-w="720">3-up</button>
+        <button class="pbtn" data-w="1160">5-up · 16″+</button>
+      </div>
+    </div>
+    <p class="sub">MIRRORS the shipped <code>.bn-featured-quote</code> — <strong>label-size</strong> quote text, bracketed context,
+       footer of timecode + speaker <code>.badge</code> + sentiment badge. Multiply is the real <code>.bn-featured-row</code> grid (3-up, 5 at 16″+).
+       The redesign faces (a compact 1-up, trim/add) are the pending conversation. <span class="readout">width <b class="w-val">—</b></span></p>
+
+    <div class="sandbox-outer">
+      <div class="sandbox" data-bench="vq" style="width:720px">
+        <div class="bn-featured-row">
+          <div class="bn-featured-quote" role="button" tabindex="0">
+            <span class="context">[On finishing the purchase]</span>
+            <span class="quote-text">“Honestly the checkout was the smoothest part — I was done before I expected to be.”</span>
+            <div class="bn-featured-footer"><span class="timecode">[04:12]</span><a class="badge" href="#">P4</a><span class="badge badge-satisfaction">satisfaction</span></div>
+          </div>
+          <div class="bn-featured-quote" role="button" tabindex="0">
+            <span class="context">[Looking for a bed in stock]</span>
+            <span class="quote-text">“I couldn’t tell which one was actually available. I gave up and searched Google instead.”</span>
+            <div class="bn-featured-footer"><span class="timecode">[11:38]</span><a class="badge" href="#">P2</a><span class="badge badge-frustration">frustration</span></div>
+          </div>
+          <div class="bn-featured-quote" role="button" tabindex="0">
+            <span class="context">[Reading the delivery options]</span>
+            <span class="quote-text">“Wait — is ‘aftercare’ the delivery thing, or is that the returns thing?”</span>
+            <div class="bn-featured-footer"><span class="timecode">[07:05]</span><a class="badge" href="#">P7</a><span class="badge badge-confusion">confusion</span></div>
+          </div>
+          <div class="bn-featured-quote" role="button" tabindex="0">
+            <span class="context">[After filtering search results]</span>
+            <span class="quote-text">“Once I found the filter, I trusted the results completely — it just felt right.”</span>
+            <div class="bn-featured-footer"><span class="timecode">[09:21]</span><a class="badge" href="#">P3</a><span class="badge badge-confidence">confidence</span></div>
+          </div>
+          <div class="bn-featured-quote" role="button" tabindex="0">
+            <span class="context">[Switching from phone to laptop]</span>
+            <span class="quote-text">“I didn’t expect it to remember my basket across devices — that was a nice surprise.”</span>
+            <div class="bn-featured-footer"><span class="timecode">[14:47]</span><a class="badge" href="#">P8</a><span class="badge badge-surprise">surprise</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ BENCH · Signals ══════════════════════════════════════════════ -->
+  <section class="bench" id="bench-sig">
+    <div class="bench-head">
+      <h2><span class="n">06</span> Signals</h2>
+      <span class="readout" style="margin-left:auto">normal · faces pending chat · width <b class="w-val">—</b></span>
+    </div>
+    <p class="sub">The <strong>exact</strong> analysis-lens signal card — source eyebrow · interpretive name (18px heading link) ·
+       one-line finding · <em>pattern</em> label · the metrics grid (label · mono value · viz). Copied verbatim from
+       <code>analysis.css</code> so a click lands on an identical item. <strong>No confidence badge — it’s hidden in the real UI.</strong></p>
+    <div class="sandbox-outer">
+      <div class="sandbox" data-bench="sig" style="width:720px">
+        <div class="signal-cards">
+
+          <div class="signal-card">
+            <div class="signal-card-top">
+              <div class="signal-card-identity">
+                <span class="signal-card-source">Checkout &amp; delivery</span>
+                <div class="signal-card-location"><a class="signal-card-location-link" href="#">Confident to the finish</a></div>
+                <div class="signal-elaboration">Participants completed the purchase without hesitation once they reached checkout.</div>
+              </div>
+              <div class="signal-card-right">
+                <div class="signal-card-badges"><span class="pattern-label pattern-success">SUCCESS</span></div>
+                <div class="signal-card-metrics">
+                  <span class="metric-label" title="Composite signal strength">Signal</span><span class="metric-value">0.82</span><span class="metric-viz"></span>
+                  <span class="metric-label" title="Concentration ratio">Conc.</span><span class="metric-value">2.4×</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:80%"></span></span></span>
+                  <span class="metric-label" title="Agreement breadth (Nₑ_f_f)">Agreement</span><span class="metric-value">4.1</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:68%"></span></span></span>
+                  <span class="metric-label" title="Mean intensity">Intensity</span><span class="metric-value">2.3</span><span class="metric-viz"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="6" cy="6" r="4" fill="currentColor"/><circle cx="23" cy="6" r="4" fill="currentColor"/><circle cx="40" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/></svg></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="signal-card">
+            <div class="signal-card-top">
+              <div class="signal-card-identity">
+                <span class="signal-card-source">Beds category</span>
+                <div class="signal-card-location"><a class="signal-card-location-link" href="#">Stock status stays hidden</a></div>
+                <div class="signal-elaboration">Availability wasn’t visible on category pages; several participants abandoned the task.</div>
+              </div>
+              <div class="signal-card-right">
+                <div class="signal-card-badges"><span class="pattern-label pattern-gap">GAP</span></div>
+                <div class="signal-card-metrics">
+                  <span class="metric-label" title="Composite signal strength">Signal</span><span class="metric-value">0.68</span><span class="metric-viz"></span>
+                  <span class="metric-label" title="Concentration ratio">Conc.</span><span class="metric-value">1.8×</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:60%"></span></span></span>
+                  <span class="metric-label" title="Agreement breadth">Agreement</span><span class="metric-value">3.2</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:53%"></span></span></span>
+                  <span class="metric-label" title="Mean intensity">Intensity</span><span class="metric-value">2.1</span><span class="metric-viz"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="6" cy="6" r="4" fill="currentColor"/><circle cx="23" cy="6" r="4" fill="currentColor"/><circle cx="40" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/></svg></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="signal-card">
+            <div class="signal-card-top">
+              <div class="signal-card-identity">
+                <span class="signal-card-source">Post-surgery aftercare</span>
+                <div class="signal-card-location"><a class="signal-card-location-link" href="#">“Aftercare” cuts two ways</a></div>
+                <div class="signal-elaboration">The label read as both delivery and returns, splitting expectations before the task began.</div>
+              </div>
+              <div class="signal-card-right">
+                <div class="signal-card-badges"><span class="pattern-label pattern-tension">TENSION</span></div>
+                <div class="signal-card-metrics">
+                  <span class="metric-label" title="Composite signal strength">Signal</span><span class="metric-value">0.54</span><span class="metric-viz"></span>
+                  <span class="metric-label" title="Concentration ratio">Conc.</span><span class="metric-value">1.6×</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:53%"></span></span></span>
+                  <span class="metric-label" title="Agreement breadth">Agreement</span><span class="metric-value">2.4</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:40%"></span></span></span>
+                  <span class="metric-label" title="Mean intensity">Intensity</span><span class="metric-value">1.9</span><span class="metric-viz"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="6" cy="6" r="4" fill="currentColor"/><circle cx="23" cy="6" r="4" fill="currentColor"/><circle cx="40" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/></svg></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ BENCH · Sections | Themes ═════════════════════════════════════ -->
+  <section class="bench" id="bench-st">
+    <div class="bench-head">
+      <h2><span class="n">03</span> Sections | Themes</h2>
+      <span class="readout" style="margin-left:auto">normal · faces pending chat · width <b class="w-val">—</b></span>
+    </div>
+    <p class="sub">MIRRORS the shipped <code>.bn-dashboard-pane--pair</code> + <code>.bn-dashboard-nav</code> — accent links, shared border,
+       no divider, <strong>no counts</strong> (the current dashboard shows none; counts are a candidate redesign addition to discuss).</p>
+    <div class="sandbox-outer">
+      <div class="sandbox" data-bench="st" style="width:640px">
+        <div class="bn-dashboard-pane bn-dashboard-pane--pair">
+          <div class="bn-dashboard-pane--pair-half bn-dashboard-nav">
+            <h3>Sections</h3>
+            <ul>
+              <li><a href="#">Beds category</a></li>
+              <li><a href="#">Checkout &amp; delivery</a></li>
+              <li><a href="#">Search results</a></li>
+              <li><a href="#">Pre-surgery info</a></li>
+              <li><a href="#">Login &amp; app</a></li>
+            </ul>
+          </div>
+          <div class="bn-dashboard-pane--pair-half bn-dashboard-nav">
+            <h3>Themes</h3>
+            <ul>
+              <li><a href="#">Trust &amp; credibility</a></li>
+              <li><a href="#">Findability</a></li>
+              <li><a href="#">Delivery clarity</a></li>
+              <li><a href="#">Cross-device continuity</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ BENCH · Coverage ══════════════════════════════════════════════ -->
+  <section class="bench" id="bench-cov">
+    <div class="bench-head">
+      <h2><span class="n">08</span> Transcript coverage</h2>
+      <span class="readout" style="margin-left:auto">normal · faces pending chat · width <b class="w-val">—</b></span>
+    </div>
+    <p class="sub">MIRRORS the shipped <code>.bn-coverage-box</code> — 8px bar, round legend dots. Colours are <strong>palette-specific</strong>:
+       flip Scheme to Edo and the bar re-tones (blue→slate, ochre) while the sentiment widgets stay put.</p>
+    <div class="sandbox-outer">
+      <div class="sandbox" data-bench="cov" style="width:640px">
+        <div class="bn-coverage-box">
+          <h3>Transcript coverage</h3>
+          <div class="bn-coverage-bar">
+            <div class="bn-coverage-bar-segment bn-coverage-bar-segment--report" style="width:68%"></div>
+            <div class="bn-coverage-bar-segment bn-coverage-bar-segment--moderator" style="width:14%"></div>
+            <div class="bn-coverage-bar-segment bn-coverage-bar-segment--omitted" style="width:18%"></div>
+          </div>
+          <div class="bn-coverage-legend">
+            <span class="bn-coverage-legend-item"><span class="bn-coverage-legend-dot bn-coverage-legend-dot--report"></span>In report&nbsp;<span class="bn-coverage-legend-value">68%</span></span>
+            <span class="bn-coverage-legend-item"><span class="bn-coverage-legend-dot bn-coverage-legend-dot--moderator"></span>Moderator&nbsp;<span class="bn-coverage-legend-value">14%</span></span>
+            <span class="bn-coverage-legend-item"><span class="bn-coverage-legend-dot bn-coverage-legend-dot--omitted"></span>Omitted&nbsp;<span class="bn-coverage-legend-value">18%</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ BENCH · Co-occurrence  (PARKED — hardest; return once principles settle) ══ -->
+  <section class="bench" id="bench-cooc">
+    <div class="bench-head">
+      <h2><span class="n">05</span> Co-occurrence <span style="font-size:var(--bn-text-caption);font-weight:400;color:var(--bn-sentiment-doubt);border:1px solid;border-radius:var(--bn-radius-pill);padding:.05rem .5rem">PARKED — hardest</span></h2>
+      <div class="faces" role="group" aria-label="Face presets">
+        <button class="pbtn" data-w="300">Compact</button>
+        <button class="pbtn on" data-w="520">Normal</button>
+        <button class="pbtn" data-w="860">Expanded</button>
+      </div>
+    </div>
+    <p class="sub">“Where do participants agree — and disagree?” Rows = participants, columns = sections,
+       cell hue = dominant sentiment, cell depth = quote count. Reads Scharp’s three continua at a glance.
+       <span class="readout">width <b class="w-val">—</b></span></p>
+
+    <div class="sandbox-outer">
+      <div class="sandbox" data-bench="cooc" style="width:520px">
+        <div class="cooc" style="--cols:8">
+          <div class="cooc-grid">
+            <div class="corner"></div>
+            <div class="chead">Pre-surgery info</div>
+            <div class="chead">Aftercare</div>
+            <div class="chead">Notifications</div>
+            <div class="chead">Top navigation</div>
+            <div class="chead">Beds category</div>
+            <div class="chead">Search results</div>
+            <div class="chead">Login &amp; app</div>
+            <div class="chead">Checkout</div>
+
+            <div class="rhead">p1</div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-satisfaction);--w:var(--bn-ramp-3)"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-frustration);--w:var(--bn-ramp-3)"><span class="emph">⁺</span></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-delight);--w:var(--bn-ramp-2)"></div>
+            <div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div>
+
+            <div class="rhead">p2</div>
+            <div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-frustration);--w:var(--bn-ramp-2)"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-confusion);--w:var(--bn-ramp-2)"></div>
+            <div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div>
+
+            <div class="rhead">p3</div>
+            <div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-surprise);--w:var(--bn-ramp-2)"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-satisfaction);--w:var(--bn-ramp-2)"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-delight);--w:var(--bn-ramp-3)"><span class="emph">⁺</span></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-satisfaction);--w:var(--bn-ramp-1)"></div>
+
+            <div class="rhead">p4</div>
+            <div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-satisfaction);--w:var(--bn-ramp-2)"></div>
+            <div class="cooc-cell"></div><div class="cooc-cell"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-frustration);--w:var(--bn-ramp-2)"></div>
+
+            <div class="rhead">p5</div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-confidence);--w:var(--bn-ramp-1)"></div>
+            <div class="cooc-cell"></div><div class="cooc-cell"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-confusion);--w:var(--bn-ramp-1)"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-frustration);--w:var(--bn-ramp-3)"><span class="emph">⁺</span></div>
+            <div class="cooc-cell"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-doubt);--w:var(--bn-ramp-2)"></div>
+            <div class="cooc-cell"></div>
+
+            <div class="rhead">p6</div>
+            <div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-satisfaction);--w:var(--bn-ramp-2)"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-satisfaction);--w:var(--bn-ramp-1)"></div>
+            <div class="cooc-cell"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-frustration);--w:var(--bn-ramp-1)"></div>
+
+            <div class="rhead">p7</div>
+            <div class="cooc-cell"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-doubt);--w:var(--bn-ramp-1)"></div>
+            <div class="cooc-cell"></div><div class="cooc-cell"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-confusion);--w:var(--bn-ramp-2)"></div>
+            <div class="cooc-cell"></div><div class="cooc-cell"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-satisfaction);--w:var(--bn-ramp-2)"></div>
+
+            <div class="rhead">p8</div>
+            <div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-confusion);--w:var(--bn-ramp-1)"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-surprise);--w:var(--bn-ramp-1)"></div>
+            <div class="cooc-cell"></div>
+            <div class="cooc-cell on" style="--c:var(--bn-sentiment-delight);--w:var(--bn-ramp-2)"></div>
+            <div class="cooc-cell"></div>
+          </div>
+
+          <div class="cooc-read">
+            <div class="legend">
+              <span class="swatch">hue = sentiment</span>
+              <span class="swatch"><span class="chip" style="background:var(--bn-sentiment-satisfaction)"></span>satisfaction</span>
+              <span class="swatch"><span class="chip" style="background:var(--bn-sentiment-frustration)"></span>frustration</span>
+              <span class="swatch"><span class="chip" style="background:var(--bn-sentiment-confusion)"></span>confusion</span>
+              <span class="swatch">depth = quotes
+                <span class="ramp"><i style="--w:var(--bn-ramp-1)"></i><i style="--w:var(--bn-ramp-2)"></i><i style="--w:var(--bn-ramp-3)"></i></span>
+              </span>
+            </div>
+
+            <div class="continua">
+              <div class="c"><b>Sporadic ↔ Pervasive</b><div class="k">column · how many participants</div>
+                <p>Beds category is <b>pervasive</b> (6 of 8) — everyone went, nobody agrees. Aftercare is <b>sporadic</b> (1) but maximum-heat.</p></div>
+              <div class="c"><b>Unbalanced ↔ Balanced</b><div class="k">row · one theme or many</div>
+                <p>p1 is <b>unbalanced</b> (front-loaded, healthcare). p3 is <b>balanced with high variance</b>.</p></div>
+              <div class="c"><b>Consensus ↔ Conflict</b><div class="k">column hues · agree or split</div>
+                <p>Checkout is <b>split</b> (p3 satisfaction, p4/p6 frustration) — live disagreement worth a rewatch.</p></div>
+            </div>
+
+            <p class="method">⁺ marks an intensity-3 quote in the cell. Method after Scharp, K. (2021), <span class="mono">J. Communication</span> 71(4). Empty cells are information — who <em>didn’t</em> reach a section.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot">More benches land here as Phase 1 proceeds (friction heatmap → saturation → fingerprint → …).
+     Gallery lives flat in <span class="mono">docs/mockups/</span> so it stays in the dev About→Design listing.</p>
+
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  root.style.colorScheme = 'light';                 // match the Light button's initial .on state
+
+  document.querySelectorAll('[data-mode]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('[data-mode]').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      root.style.colorScheme = b.dataset.mode;       // 'light' | 'dark' → light-dark() resolves
+    });
+  });
+
+  document.querySelectorAll('[data-scheme]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('[data-scheme]').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      root.setAttribute('data-color-theme', b.dataset.scheme);   // the REAL app mechanism
+    });
+  });
+
+  document.querySelectorAll('.bench-head .faces .pbtn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var faces = b.closest('.faces');
+      faces.querySelectorAll('.pbtn').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      b.closest('.bench').querySelector('.sandbox').style.width = b.dataset.w + 'px';
+    });
+  });
+
+  document.querySelectorAll('.bench').forEach(function (bench) {
+    var sb = bench.querySelector('.sandbox'), out = bench.querySelector('.w-val');
+    if (!sb || !out) return;
+    new ResizeObserver(function (e) { out.textContent = Math.round(e[0].contentRect.width) + 'px'; }).observe(sb);
+  });
+})();
+</script>
+</body>
+</html>

@@ -50,14 +50,28 @@ _MLX_WHISPER_DATAS, _MLX_WHISPER_BINARIES, _MLX_WHISPER_HIDDEN = collect_all(
     "mlx_whisper"
 )
 
+# SQLAdmin ships Jinja2 templates (`sqladmin/templates/`) and static assets
+# (`sqladmin/statics/`) that PyInstaller's modulegraph doesn't see — it only
+# walks `import` statements. A bare `sqladmin` hiddenimport bundles the module
+# code into the PYZ but leaves the data files behind, so `Admin(...)`'s
+# `PackageLoader("sqladmin", "templates")` dies at construction with
+# `ValueError: PackageLoader could not find a 'templates/sqladmin' directory`.
+# Only reached when the admin panel is mounted (`serve --dev` or
+# `_BRISTLENOSE_ADMIN_PANEL=1` from the desktop Debug menu), so it doesn't fire
+# on a normal serve — but a crash-on-mount all the same. `collect_all` mirrors
+# `pip install`'s view (templates + statics + submodules). Found 14 Jul 2026
+# when the Debug-menu admin panel SIGed the bundled sidecar with exit 1.
+_SQLADMIN_DATAS, _SQLADMIN_BINARIES, _SQLADMIN_HIDDEN = collect_all("sqladmin")
+
 a = Analysis(
     # Entry point: run `bristlenose serve` directly.
     [os.path.join(SPECPATH, "sidecar_entry.py")],
     pathex=[PROJECT_ROOT],
-    binaries=[*_MLX_BINARIES, *_MLX_WHISPER_BINARIES],
+    binaries=[*_MLX_BINARIES, *_MLX_WHISPER_BINARIES, *_SQLADMIN_BINARIES],
     datas=[
         *_MLX_DATAS,
         *_MLX_WHISPER_DATAS,
+        *_SQLADMIN_DATAS,
         (
             os.path.join(PROJECT_ROOT, "bristlenose", "theme"),
             os.path.join("bristlenose", "theme"),
@@ -130,6 +144,7 @@ a = Analysis(
         "bristlenose._build_info",
         *_MLX_HIDDEN,
         *_MLX_WHISPER_HIDDEN,
+        *_SQLADMIN_HIDDEN,
         *collect_submodules("rich"),
         # LLM providers (dynamically imported in llm/client.py)
         "anthropic",

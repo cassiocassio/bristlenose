@@ -64,6 +64,7 @@ from bristlenose.events import (
 )
 from bristlenose.i18n import t
 from bristlenose.llm import telemetry
+from bristlenose.llm.failure_classifier import LLMFailureKind as _LLMFailureKind
 
 PID_FILENAME = "run.pid"
 
@@ -296,10 +297,34 @@ _AUTH_RE = re.compile(
     r"invalid (x-)?api[-_ ]key|incorrect api key"
     r")\b"
 )
-_QUOTA_RE = re.compile(r"\b(quota|credit)\b")
-_API_REQUEST_RE = re.compile(r"\b(rate limit|429)\b")
+# Text fallbacks for LLM errors that bubble up as bare strings with no HTTP
+# status for the shared classifier to read. They only fire on the generic
+# (provider-less) path. Credit is split from rate-limit per the OUT_OF_CREDIT
+# vs QUOTA distinction (credit = terminal top-up; quota/rate = transient retry).
+#
+# `_CREDIT_RE` matches the SPECIFIC billing-death signals (not a bare "credit",
+# which false-positives on "you have $5 credit remaining"): Anthropic's "credit
+# balance", OpenAI's `insufficient_quota` / "exceeded your current quota", and
+# the documented `billing_error`. `insufficient_quota` lives HERE, not in
+# `_RATE_RE` — for OpenAI it means terminal billing, matching the structured
+# classifier (a transient rate-limit says "rate limit" / "429" instead).
+_CREDIT_RE = re.compile(
+    r"\b(credit balance|insufficient_quota|exceeded your current quota|billing_error)\b"
+)
+_RATE_RE = re.compile(r"\b(rate limit|429|quota|resource_exhausted)\b")
 _NETWORK_RE = re.compile(r"\b(connection|timeout|dns|unreachable)\b")
 _API_SERVER_RE = re.compile(r"\b(internal server|500|502|503|504)\b")
+
+# Semantic LLM-failure kind → the events-log cause category. The shared
+# classifier owns the "what kind of failure?" decision; this table is just the
+# adapter onto the (Swift-mirrored) CauseCategoryEnum vocabulary.
+_LLM_KIND_TO_CAUSE = {
+    _LLMFailureKind.OUT_OF_CREDIT: CauseCategoryEnum.OUT_OF_CREDIT,
+    _LLMFailureKind.INVALID_KEY: CauseCategoryEnum.AUTH,
+    _LLMFailureKind.RATE_LIMITED: CauseCategoryEnum.QUOTA,
+    _LLMFailureKind.SERVER_ERROR: CauseCategoryEnum.API_SERVER,
+    _LLMFailureKind.BAD_REQUEST: CauseCategoryEnum.API_REQUEST,
+}
 
 # Filesystem path token — any run of non-whitespace, non-quote characters
 # that starts with `/` and has at least one more `/` so we don't eat an
@@ -323,7 +348,7 @@ def _sanitise_message(msg: str) -> str:
     return _PATH_RE.sub("<path>", msg)
 
 
-def categorise_exception(exc: BaseException) -> Cause:
+def categorise_exception(exc: BaseException, *, provider: str | None = None) -> Cause:
     """Best-effort mapping of an exception to a structured Cause.
 
     Conservative: most things land in ``unknown`` with ``str(exc)`` as the
@@ -372,27 +397,40 @@ def categorise_exception(exc: BaseException) -> Cause:
         if isinstance(fn, str) and fn and "/" not in fn:
             return Cause(category=CauseCategoryEnum.MISSING_BINARY, message=msg)
 
+    # Shared LLM-failure detector (single source — also mirrored in the Swift
+    # Settings probe + failed-run row, and used by the CLI banner). Structured
+    # signals first (HTTP status + the provider's error code), so it splits
+    # credit exhaustion (Anthropic 400 "credit balance is too low" / OpenAI 429
+    # `insufficient_quota` → OUT_OF_CREDIT) from a transient rate-limit
+    # (→ QUOTA) — a distinction the old status-blind regexes conflated (they
+    # bucketed every "credit" mention as QUOTA and rendered it "rate limit
+    # reached"). `provider` sharpens it at LLM call sites; the generic path
+    # (provider=None) still matches distinctive message/code signals.
+    # Structured classification runs ONLY when we know the provider (an LLM call
+    # site via `_build_cause`). The generic path (provider=None — the top-level
+    # catch, or a transcription failure in s05) must NOT run the status-based
+    # rules: a non-LLM exception that happens to carry an HTTP-status attribute
+    # (e.g. a huggingface_hub 404 while downloading a Whisper model) would
+    # otherwise be mislabelled BAD_REQUEST/QUOTA and bypass the WHISPER fallback.
+    # The provider-less path relies on the text patterns below, which match only
+    # genuine LLM-error strings.
+    if provider is not None:
+        from bristlenose.llm.failure_classifier import classify_exception
+
+        kind = classify_exception(provider, exc)
+        if (mapped := _LLM_KIND_TO_CAUSE.get(kind)) is not None:
+            return Cause(category=mapped, message=msg)
+
+    # Text fallbacks — LLM errors that bubbled up as bare strings with no HTTP
+    # status for the classifier to read. Credit before rate-limit.
+    if _CREDIT_RE.search(haystack):
+        return Cause(category=CauseCategoryEnum.OUT_OF_CREDIT, message=msg)
     if _AUTH_RE.search(haystack):
         return Cause(category=CauseCategoryEnum.AUTH, message=msg)
-
-    # QUOTA wins over API_REQUEST when both substrings appear (e.g. provider
-    # body "credit balance is too low — rate limit exceeded"). The
-    # billing-exhaustion advice ("top up at …") is correct for that exact
-    # body — the rate-limit *is* a consequence of being out of credit, and
-    # waiting wouldn't help. Clean 429s without credit context fall through
-    # to API_REQUEST below ("wait a minute, retry"). If a fully-funded
-    # account ever hits a per-minute rate limit with a body tangentially
-    # mentioning "credit" (e.g. "you have $X credit remaining"), the user
-    # is mis-routed to billing — accept that trade for now.
-    if _QUOTA_RE.search(haystack):
+    if _RATE_RE.search(haystack):
         return Cause(category=CauseCategoryEnum.QUOTA, message=msg)
-
-    if _API_REQUEST_RE.search(haystack):
-        return Cause(category=CauseCategoryEnum.API_REQUEST, message=msg)
-
     if _NETWORK_RE.search(haystack):
         return Cause(category=CauseCategoryEnum.NETWORK, message=msg)
-
     if _API_SERVER_RE.search(haystack):
         return Cause(category=CauseCategoryEnum.API_SERVER, message=msg)
 
@@ -426,7 +464,7 @@ def _build_cause(
     ``http_status`` lands in ``cause.code`` so the desktop can render the
     HTTP status independently of the message.
     """
-    category = categorise_exception(exc).category
+    category = categorise_exception(exc, provider=provider).category
     if category is CauseCategoryEnum.OUTPUT_TRUNCATED and stage == "quote_extraction":
         # Actionable, bristlenose-authored, re-id-safe (constant string, no
         # provider body). Surfaces only after smart-split exhausts its depth

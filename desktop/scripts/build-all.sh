@@ -557,6 +557,7 @@ if [ "$SKIP_NOTARISE" = "0" ]; then
     bn_art "sign manifest" "$SIGN_MANIFEST"
     bn_art "notary log" "$LOG_JSON"
 else
+    bn_meta done_title="✓ Ready for App Store Connect"
     _bn_size=$(du -h "$EXPORTED_PKG" 2>/dev/null | cut -f1)
     bn_art "artifact" "$EXPORTED_PKG"
     bn_art "size" "${_bn_size:-?} · ready for App Store Connect"

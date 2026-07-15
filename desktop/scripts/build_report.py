@@ -341,7 +341,7 @@ class Renderer:
         t.add_column()
         for k, v in self.arts:
             t.add_row(k, v)
-        title = self.meta.get("done_title", "✓ Ready for App Store Connect")
+        title = self.meta.get("done_title", "✓ Done")
         self.c.print()
         self.c.print(Panel(t, title=f"[bold green]{title}[/bold green]",
                            title_align="left", border_style="green", padding=(1, 2)))

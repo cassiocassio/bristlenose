@@ -33,6 +33,13 @@ if [ -z "$REPO_ROOT" ]; then
     SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
     REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
 fi
+: "${SCRIPT_DIR:=$(cd "$(dirname "$0")" && pwd)}"
+source "$SCRIPT_DIR/report.sh"
+bn_autowrap "$0" "$@"
+trap '_bn_ec=$?; [ "$_bn_ec" -ne 0 ] && bn_trap_fail' EXIT
+bn_meta title="Bundle manifest" done_title="✓ Bundle manifest clean"
+bn_step_start 1 Pre-flight "Bundle manifest" \
+    narrative="Asserts every runtime-data dir under bristlenose/ is covered by a datas entry in the spec."
 
 SOURCE_ROOT="$REPO_ROOT/bristlenose"
 SPEC_FILE="$REPO_ROOT/desktop/bristlenose-sidecar.spec"
@@ -209,4 +216,5 @@ if [ "$violations" -gt 0 ]; then
 fi
 
 file_count=$(echo "$candidate_files" | grep -c . || true)
-echo "bundle-manifest: clean (${#covered_paths[@]} datas entries cover all $file_count runtime-data file(s) in $SOURCE_ROOT)"
+bn_step_ok 1 detail="${#covered_paths[@]} datas entries cover all $file_count runtime-data file(s)"
+bn_done ok

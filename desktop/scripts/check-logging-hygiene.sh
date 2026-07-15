@@ -32,6 +32,13 @@ if [ -z "$REPO_ROOT" ]; then
     SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
     REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
 fi
+: "${SCRIPT_DIR:=$(cd "$(dirname "$0")" && pwd)}"
+source "$SCRIPT_DIR/report.sh"
+bn_autowrap "$0" "$@"
+trap '_bn_ec=$?; [ "$_bn_ec" -ne 0 ] && bn_trap_fail' EXIT
+bn_meta title="Logging hygiene" done_title="✓ Logging hygiene clean"
+bn_step_start 1 Pre-flight "Logging hygiene" \
+    narrative="Scans Swift Logger calls for credential-shaped interpolation without a privacy marker."
 
 SCAN_ROOT="$REPO_ROOT/desktop/Bristlenose/Bristlenose"
 ALLOWLIST="$REPO_ROOT/desktop/scripts/logging-hygiene-allowlist.md"
@@ -125,4 +132,5 @@ if [ "$violations" -gt 0 ]; then
     exit 1
 fi
 
-echo "logging-hygiene: clean (scan root: $SCAN_ROOT)"
+bn_step_ok 1 detail="clean (scan root: $(basename "$SCAN_ROOT"))"
+bn_done ok

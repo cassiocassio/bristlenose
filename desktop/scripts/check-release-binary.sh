@@ -28,6 +28,14 @@ if [ $# -ne 1 ]; then
     exit 2
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/report.sh"
+bn_autowrap "$0" "$@"
+trap '_bn_ec=$?; [ "$_bn_ec" -ne 0 ] && bn_trap_fail' EXIT
+bn_meta title="Release-binary scan" done_title="✓ Release binary clean"
+bn_step_start 1 Verify "Release-binary scan" \
+    narrative="Scans every Swift-shell Mach-O for dev escape-hatch literals + get-task-allow."
+
 TARGET="$1"
 APP=""
 
@@ -161,7 +169,10 @@ if [ "$LEAK_COUNT" -gt 0 ] || [ "$GTA_COUNT" -gt 0 ]; then
     fi
     echo "Note: this script is for Release archives. Debug builds ship both" >&2
     echo "conditions by design; run this against a Release build only." >&2
+    bn_step_fail 1 detail="$LEAK_COUNT dev-literal leak(s) · $GTA_COUNT get-task-allow — see errors above"
+    bn_done fail
     exit 1
 fi
 
-echo "OK: no dev env-var literals and no get-task-allow in any scanned Mach-O."
+bn_step_ok 1 detail="no dev env-var literals · no get-task-allow · ${#TARGETS[@]} Mach-O(s) clean"
+bn_done ok

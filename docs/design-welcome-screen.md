@@ -1,16 +1,22 @@
 ---
 status: partial
 last-trued: 2026-07-15
-trued-against: working tree on main, 2026-07-15
+trued-against: HEAD@main 27647fbf on 2026-07-15
 ---
 
 # Welcome screen — content & design source
+
+## Changelog
+
+- _2026-07-15 (second pass)_ — `§7` supersession line trued: `WelcomeView.swift` is **deleted** (`a310bca6`), not "kept on disk pending a delete decision". Recorded the locale-key retention decision under §Copy & i18n — the retired view's keys are deliberately kept, and three are verbatim-live in `WelcomeHomeView`. Anchors: `WelcomeHomeView.swift:157,189,190`; `ContentView.swift:2340` (mount). Rest of the doc spot-checked fresh (Archetype B).
 
 > **Truing note (2026-07-15).** Authored alongside the Swift build in the same session, and the code moved under it several times. This pass separates **shipped** from **spec**. The content pools are deliberately spec-ahead-of-code (the doc is the source; the Swift carries a subset) — those are marked *shipped subset: N of M*. Everything else now describes what exists. See **§0 Not yet built**.
 
 **Status:** design in flight. Mockups in `docs/mockups/welcome-*.html`; Swift in `desktop/Bristlenose/Bristlenose/WelcomeHomeView.swift`. Single source of truth for the cells and their content.
 
 **Copy & i18n:** copy is hand-tuned **English** while the layout iterates — **do not add locale keys or wire i18n yet.** The localisation pass (German et al., which will stress the fixed geometry — expected, and handled *then* by editorial fit + condense-to-fit) is deliberately deferred to *much* later, post-iteration. No rush.
+
+**The retired view's locale keys are kept on purpose — do not sweep them as orphans.** `desktop.welcome.*` and `desktop.chrome.{welcomeTitle,noProjectSelected,selectProject}` survive in the 20 full locales even though `WelcomeView.swift` is gone (`zh-Hant-HK` carries only its genuine `welcome.subtitle` override and inherits the rest, per the override-fork rule). Two reasons: they are already-translated raw material for the deferred localisation pass above, and three of them are **verbatim-live copy today** — `welcome.dropFolderTitle` ≡ "Drop a folder" (`WelcomeHomeView.swift:189`), `welcome.dropFolderHint` (`:190`), `welcome.aiPrivacyLink` (`:157`). A grep for unreferenced keys will flag all of them; that grep is wrong here. (`chrome.emptyStateHint` is separately live — sidebar chrome, `ContentView.swift:1810`.)
 
 British spelling. Terminology follows `docs/glossary.md` (quote, theme, session, codebook/code/tag, sentiment, signal, speaker code). Only shipped features appear — nothing aspirational (no slides export, no Word export, no Focus Mode).
 
@@ -201,4 +207,4 @@ All choices are sanctioned semantic styles — no custom sizes.
 - Swift: `desktop/Bristlenose/Bristlenose/WelcomeHomeView.swift`. Mounted from `ContentView.swift`'s empty-state branch.
 - Live docs: `https://bristlenose.app/docs/`.
 - Grounding: `docs/glossary.md`, `docs/design-research-methodology.md`, `docs/design-figma-setup.md`, `docs/design-native-colour-alignment.md`.
-- **Superseded:** `WelcomeView.swift` — the previous empty-state pane (card + lifecycle rail). No longer referenced by any Swift file or the pbxproj; kept on disk pending a delete decision.
+- **Superseded and deleted (`a310bca6`, 15 Jul 2026):** `WelcomeView.swift` — the previous empty-state pane (card + lifecycle rail, `.firstRun` / `.noSelection` variants). It had gone orphaned: no Swift references, no `pbxproj` entry — but the target's `PBXFileSystemSynchronizedRootGroup` kept auto-compiling it into the binary, so it was dead weight rather than merely dead source. Its locale keys were **kept** — see §Copy & i18n.

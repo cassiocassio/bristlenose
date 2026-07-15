@@ -48,6 +48,16 @@ enum FeedbackEndpoint {
     /// reject it before handing user-typed text to `URLSession`.
     static let allowedHosts: Set<String> = ["bristlenose.app"]
 
+    /// The canonical feedback endpoint — mirrors `DEFAULT_FEEDBACK_URL` in
+    /// `bristlenose/server/routes/health.py` and `frontend/src/utils/health.ts`.
+    /// Used by serve-free contexts (the expired-alpha `.dmg` flow) that can't
+    /// read `/api/health`. `FeedbackConfig.serverless` assigns this directly
+    /// (NOT through `validate`) — safe because it's a code-signed compile-time
+    /// constant on the allow-listed host, never user/network/config input. If it
+    /// ever becomes non-constant, route it through `validate` so the allow-list
+    /// stays the single gate.
+    static let defaultURL = URL(string: "https://bristlenose.app/feedback.php")!
+
     /// Accept only `https` on an allow-listed host. Rejects `http:`/`javascript:`/
     /// relative values and off-host redirection. Returns nil ⇒ cannot POST (the
     /// sheet falls back to the clipboard).
@@ -79,6 +89,40 @@ enum FeedbackSuccess {
     }
 }
 
+// MARK: - Redirect guard
+
+/// `FeedbackEndpoint.validate` only vets the INITIAL request host — it can't see
+/// where a 3xx sends the follow-up. Default `URLSession` redirect handling would
+/// follow an off-host `Location:` and, for 307/308, re-POST the user-typed
+/// message body cross-host — defeating the allow-list. This decides each redirect
+/// hop by re-running the target through `validate` (the single gate), so the
+/// same https-on-allow-listed-host rule the endpoint already enforces also binds
+/// every redirect. Kept as a pure function so it's unit-testable without
+/// `URLSession` machinery (the "decision belongs in a testable helper" convention).
+enum FeedbackRedirect {
+    /// The request to follow, or nil to cancel the redirect (URLSession then
+    /// returns the 3xx response itself, which `FeedbackSuccess.isSuccess` rejects).
+    static func allow(_ request: URLRequest) -> URLRequest? {
+        guard let raw = request.url?.absoluteString,
+              FeedbackEndpoint.validate(raw) != nil
+        else { return nil }
+        return request
+    }
+}
+
+/// Per-task delegate that funnels every redirect through `FeedbackRedirect.allow`.
+final class FeedbackRedirectGuard: NSObject, URLSessionTaskDelegate {
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        completionHandler(FeedbackRedirect.allow(request))
+    }
+}
+
 // MARK: - Submission client
 
 enum SubmissionResult: Equatable { case sent, failed }
@@ -95,7 +139,11 @@ struct FeedbackClient {
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONEncoder().encode(payload)
-            let (data, response) = try await session.data(for: request)
+            // Per-task delegate blocks cross-host redirects (the shared session
+            // can't carry a session-level delegate). The guard is retained by the
+            // task for the request's lifetime.
+            let (data, response) = try await session.data(
+                for: request, delegate: FeedbackRedirectGuard())
             let http = response as? HTTPURLResponse
             let ok = FeedbackSuccess.isSuccess(
                 status: http?.statusCode ?? 0,
@@ -121,6 +169,11 @@ struct FeedbackConfig: Equatable {
     let version: String
 
     static let unavailable = FeedbackConfig(url: nil, enabled: false, version: "")
+
+    /// Serve-free config for contexts with no running sidecar (the expired-alpha
+    /// `.dmg` flow). Canonical endpoint, enabled; empty version so the sheet's
+    /// bundle-version fallback (`FeedbackSheetModel.version`) supplies it.
+    static let serverless = FeedbackConfig(url: FeedbackEndpoint.defaultURL, enabled: true, version: "")
 }
 
 enum FeedbackHealth {

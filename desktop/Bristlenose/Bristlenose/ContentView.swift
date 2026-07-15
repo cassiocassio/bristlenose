@@ -549,15 +549,20 @@ struct ContentView: View {
                 )
             }
         }
-        // Send Feedback (native) — presented when the SPA isn't mounted (status
-        // page). Both the status-page bridge and Help ▸ Send Feedback's fallback
-        // post `.showFeedbackSheet`. Needs a live serve for the /api/health read.
+        // Send Feedback (native) — Help ▸ Send Feedback and the status-page bridge
+        // both post `.showFeedbackSheet`. Present in EVERY state: with a live serve
+        // the sheet reads its config from `/api/health`; with no serve (the welcome
+        // screen, before any project is selected) it falls back to the serve-free
+        // `.serverless` config (canonical endpoint, enabled — same path the alpha
+        // expiry flow uses), so the menu item is never a dead click.
         .onReceive(NotificationCenter.default.publisher(for: .showFeedbackSheet)) { _ in
-            if serveManager.runningPort != nil { showingFeedbackSheet = true }
+            showingFeedbackSheet = true
         }
         .sheet(isPresented: $showingFeedbackSheet) {
             if let port = serveManager.runningPort {
                 FeedbackSheet(port: port, i18n: i18n, onToast: { toast.show($0) })
+            } else {
+                FeedbackSheet(config: .serverless, i18n: i18n, onToast: { toast.show($0) })
             }
         }
         // File > New Project (Cmd+N) and sidebar [+] button.

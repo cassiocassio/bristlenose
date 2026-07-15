@@ -441,27 +441,18 @@ final class BridgeHandler: ObservableObject {
 
     // MARK: - Private
 
-    /// Present the feedback surface. When the SPA is mounted, hand off to its
-    /// React modal via the in-page bridge (the normal path); when it isn't (the
-    /// server-rendered status page after a cancelled/failed run — where
-    /// `window.__bristlenose` doesn't exist), fall through to the native
-    /// `FeedbackSheet`. Probing the bridge is what keeps Help ▸ Send Feedback
-    /// alive in the degraded case, where it previously dispatched into the void.
+    /// Present the native feedback sheet. Bristlenose is a native Mac app, so
+    /// feedback is native in EVERY state — the normal report lens (SPA mounted)
+    /// AND the degraded status page after a cancelled/failed run. The React
+    /// `FeedbackModal` is browser-only; it must never surface in-app. The sheet
+    /// reads `/api/health` itself, so it doesn't depend on the SPA being mounted.
+    ///
+    /// This replaces the old probe-then-route (SPA-up → web modal), which was
+    /// backwards: it made the browser-only modal the "normal path" and only fell
+    /// through to native when the SPA was absent, so the report lens showed the
+    /// web HTML modal. See `docs/design-feedback-native.md` (Phase 0).
     func openFeedback() {
-        guard let webView else {
-            NotificationCenter.default.post(name: .showFeedbackSheet, object: nil)
-            return
-        }
-        Task { @MainActor in
-            let probe = "typeof window.__bristlenose !== 'undefined' && "
-                + "typeof window.__bristlenose.menuAction === 'function'"
-            let raw = try? await webView.evaluateJavaScript(probe)
-            if (raw as? Bool) == true {
-                self.menuAction("sendFeedback")
-            } else {
-                NotificationCenter.default.post(name: .showFeedbackSheet, object: nil)
-            }
-        }
+        NotificationCenter.default.post(name: .showFeedbackSheet, object: nil)
     }
 
     private func handleProjectAction(_ action: String, data: [String: Any]?) {

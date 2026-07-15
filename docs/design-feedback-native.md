@@ -160,9 +160,10 @@ default, reversible, receipted.
 
 - **v1 (shipped):** rating + text. Native sheet (app) / React modal (browser) /
   status-page form (browser degraded).
-- **Phase 0 (near-term, small):** make the Mac app **always native** (drop the
-  probe-then-route); the web modal is browser-only. — *This is the one settled
-  code change waiting; see Principle 1.*
+- **Phase 0 (shipped, 15 Jul 2026):** the Mac app is now **always native** —
+  `BridgeHandler.openFeedback()` unconditionally posts `.showFeedbackSheet` (the
+  probe-then-route that handed off to the web modal when the SPA was up is gone).
+  The web `FeedbackModal` is browser-only; the report lens no longer shows it.
 - **Phase 1:** move the native surface from sheet → **non-modal companion panel**
   (see the thing you're commenting on). Add anonymise / fuzzy-greek + preview to
   the text field. Ship the review-before-send manifest.

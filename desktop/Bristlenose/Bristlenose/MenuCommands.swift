@@ -970,8 +970,10 @@ private struct HelpMenuContent: View {
             Self.open("https://bristlenose.app/docs/changelog.html")
         }
 
-        // Probe-then-route: React modal when the SPA is up, native FeedbackSheet
-        // when it isn't (status page). Fixes the previously-dead menu item.
+        // Always opens the native FeedbackSheet (report lens, status page, or
+        // welcome screen). `openFeedback` posts `.showFeedbackSheet`; ContentView
+        // presents it with the live-serve config or the serve-free `.serverless`
+        // fallback when no project is selected.
         Button(i18n.t("desktop.menu.help.sendFeedback")) {
             bridgeHandler.openFeedback()
         }

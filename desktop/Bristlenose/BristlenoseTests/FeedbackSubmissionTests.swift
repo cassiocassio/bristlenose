@@ -118,6 +118,29 @@ struct FeedbackHealthParseTests {
     }
 }
 
+@Suite("FeedbackRedirect.allow")
+struct FeedbackRedirectTests {
+    private func req(_ s: String) -> URLRequest { URLRequest(url: URL(string: s)!) }
+
+    @Test("follows a same-host https redirect")
+    func followsSameHost() {
+        #expect(FeedbackRedirect.allow(req("https://bristlenose.app/feedback-2.php")) != nil)
+    }
+
+    @Test(
+        "cancels off-host, scheme-downgrade, and non-https redirects",
+        arguments: [
+            "https://evil.example/collect",   // off-host exfil target
+            "http://bristlenose.app/x",        // https → http downgrade
+            "https://bristlenose.app.evil.co/x", // look-alike host
+            "ftp://bristlenose.app/x",         // wrong scheme
+        ]
+    )
+    func cancelsBadRedirects(target: String) {
+        #expect(FeedbackRedirect.allow(req(target)) == nil)
+    }
+}
+
 @Suite("FeedbackPayload")
 struct FeedbackPayloadTests {
     @Test("encodes exactly {version, rating, message} — no identifiers")

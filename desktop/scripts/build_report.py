@@ -110,6 +110,13 @@ def _st(v: str) -> St:
         return St.INFO
 
 
+def _int(v: str, default: int) -> int:
+    try:
+        return int(v)
+    except (ValueError, TypeError):
+        return default
+
+
 # ── shared rendering (same look as the mock) ───────────────────────────────
 def leader_line(n: int, status: St, name: str, tag: str, right: str) -> Text:
     line = Text()
@@ -251,7 +258,9 @@ class Renderer:
                 row.append(ch.evidence, style="dim")
                 self.c.print(row)
         elif kind == "bar" and self.step is not None:
-            self.step.bar = (int(f.get("done", 0)), int(f.get("total", 1)))
+            # Emitter-supplied counts are untrusted: a bad/empty done= or total=
+            # must not crash the whole report mid-build. Clamp total ≥ 1.
+            self.step.bar = (_int(f.get("done", "0"), 0), max(1, _int(f.get("total", "1"), 1)))
             self._update_live()
         elif kind == "gate":
             self.gates.append(Gate(f.get("id", ""), f.get("desc", ""),
@@ -365,10 +374,12 @@ def run(stream, console: Console) -> int:
                 fail = True
             r.event(kind, f)
     except KeyboardInterrupt:
-        # The build was Ctrl-C'd; the emitter died too. Tidy the live line and
-        # exit quietly (130 = SIGINT) — no traceback.
-        r._stop_live()
+        # The build was Ctrl-C'd; the emitter died too. Exit quietly (130 = SIGINT).
         return 130
+    finally:
+        # Always restore the terminal — a stray exception mid-step must not leave
+        # the transient Rich Live running (hidden cursor, half-drawn line).
+        r._stop_live()
     return 1 if fail else 0
 
 

@@ -43,22 +43,12 @@ PROFILE_PATH="$HOME/Library/MobileDevice/Provisioning Profiles/Bristlenose_Mac_A
 # ------------------------------------------------------------
 # Pretty report (see REPORT-STYLE.md)
 # ------------------------------------------------------------
-# Re-exec ourselves with stdout piped through the Rich renderer, exiting with
-# OUR status (PIPESTATUS[0]), not the renderer's. BN_REPORT=0 — or a missing
-# python / build_report.py — falls back to plain output. The inner run sources
-# report.sh and emits @bn events; noisy tool output still goes to per-step logs.
-REPORT_PYTHON="$ROOT/.venv/bin/python"
-[ -x "$REPORT_PYTHON" ] || REPORT_PYTHON="$(command -v python3 || true)"
-if [ "${BN_REPORT:-1}" != "0" ] && [ -z "${_BN_INNER:-}" ] \
-   && [ -n "$REPORT_PYTHON" ] && [ -f "$SCRIPT_DIR/build_report.py" ]; then
-    set +e
-    _BN_INNER=1 "$0" "$@" | "$REPORT_PYTHON" "$SCRIPT_DIR/build_report.py"
-    _bn_status=${PIPESTATUS[0]}
-    set -e
-    exit "$_bn_status"
-fi
-
+# bn_autowrap re-execs this script with stdout piped through build_report.py
+# (exiting with OUR status), then the inner run emits @bn events. BN_REPORT=0 —
+# or a missing python / build_report.py — falls back to plain output. Noisy tool
+# output still goes to per-step logs.
 source "$SCRIPT_DIR/report.sh"
+bn_autowrap "$0" "$@"
 # Any nonzero exit (set -e or explicit) closes the report with a fail footer.
 trap '_bn_ec=$?; [ "$_bn_ec" -ne 0 ] && bn_trap_fail' EXIT
 

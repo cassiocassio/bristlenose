@@ -3,9 +3,12 @@
 The shared look-and-protocol for build-script CLI output, so every script in this
 folder renders as **one system** and adding a new one raises no design questions.
 
-Prototype: `build-all.sh` first (see the Rich mock referenced at the bottom). The
-rules below are the frozen decisions; siblings (`build-sidecar.sh`, `sign-sidecar.sh`,
-`check-*`, `ensure-sidecar.sh`) **adopt** them without redesign.
+**Status (Jul 2026): shipped.** `report.sh` (emitter helpers) + `build_report.py`
+(Rich renderer) are wired into `build-all.sh` (validated on a real signed build that
+delivered a TestFlight `.pkg`) and the standalone gates `check-release-binary` /
+`check-bundle-manifest` / `check-logging-hygiene`. Remaining siblings
+(`sign-sidecar.sh` — the bar showcase — `build-sidecar.sh`, `ensure-sidecar.sh`,
+`fetch-ffmpeg.sh`, `sign-ffmpeg.sh`) adopt the recipe below without redesign.
 
 ## Split of responsibilities
 
@@ -79,22 +82,65 @@ fail).
 8. **Width** — target 92 cols; wrap narrative to width−indent; right cluster
    (`[tag]  elapsed`) is right-aligned.
 
-## Adopting the style in a new / sibling script
+## Adopting the style in a sibling script (the recipe)
 
-1. `source "$SCRIPT_DIR/report.sh"` (once written) and replace bare `echo "==> …"`
-   lines with `bn_step` / `bn_check` / `bn_bar` calls.
-2. Pick the **phase** and a **`tag`** (reuse the script's existing numeric index).
-3. Redirect the noisy subprocess to `desktop/build/<name>.log`; pass its path in
-   `detail=` so the renderer can tail it on failure.
-4. Add a one-line **narrative** only if the step is slow or opaque.
-5. If the work has a real count, emit `@bn bar`; otherwise let it spin.
-6. Verify the failure path: force a non-zero exit and confirm the red footer names
-   the right step and shows the log tail. Nothing downstream should render.
+`report.sh` centralises the wrapper, so adoption is a fixed preamble — no per-script
+boilerplate to get wrong:
+
+```bash
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"   # many scripts already set this
+source "$SCRIPT_DIR/report.sh"
+bn_autowrap "$0" "$@"      # re-execs self piped through build_report.py if standalone
+trap '_ec=$?; [ "$_ec" -ne 0 ] && bn_trap_fail' EXIT   # any abort → red footer
+bn_meta title="…" done_title="✓ … clean"
+bn_step_start 1 <Phase> "<Step name>" narrative="…" log="$SOME_LOG"
+#   … the script's real work, UNCHANGED …
+bn_step_ok 1 detail="…"    # or the trap fires on a nonzero exit
+bn_done ok
+```
+
+- **Light-touch is fine for gates.** Wrap the whole check as one step; leave the
+  script's internal `echo`s alone — the renderer suppresses them when pretty, and
+  they reappear under `BN_REPORT=0`. Don't convert every line.
+- **`bn_autowrap` handles every mode**: standalone → wraps + renders; nested under a
+  rendering parent → silent (parent narrates); `BN_REPORT=0` or no python → plain
+  `==>` output.
+- **Redirect a noisy/opaque subprocess** to `desktop/build/<name>.log` and pass
+  `log=<path>` on `bn_step_start`; the renderer shows "tail `<basename>`" while it
+  runs and points there on failure.
+- **Numbering**: reuse the script's own step index as the `tag`; the renderer
+  assigns the human `1…N`.
+
+## Portability & nesting (the two traps)
+
+1. **bash 3.2 — `report.sh` MUST stay 3.2-safe.** `ensure-sidecar.sh` and the Xcode
+   "Ensure Sidecar Fresh" build phase run under `/bin/bash` 3.2. So `report.sh` uses
+   NO associative arrays (`local -A`), NO `mapfile`, NO `${var,,}` — only string ops,
+   `case` globs, `printf %q`, `PIPESTATUS`. `_bn_field` replaces the assoc-array
+   lookup. (A script that needs bash 4+ for its OWN logic — `sign-sidecar.sh`'s
+   `wait -n`, `check-bundle-manifest.sh`'s `mapfile` — may require it; it's
+   `report.sh` that must run anywhere. Verified against real `/bin/bash 3.2.57`.)
+2. **Nesting — a child never starts a second renderer.** `bn_autowrap` exports
+   `_BN_ACTIVE=1`; a child seeing it does not wrap, and its `bn_*` calls emit nothing
+   (only the non-exported `_bn_owner=1`, set in the render owner, enables emission).
+   So `build-all.sh` calling `check-*` produces ONE report — the gate's own narration
+   is suppressed and build-all narrates the step.
+
+## Level 2 — determinate bars (next enhancement)
+
+The showcase is a real per-file progress bar. `sign-sidecar.sh` signs ~220 Mach-Os in
+a `wait -n` job pool; emitting `@bn bar parent=<tag> done=<n> total=220` from the
+completion loop renders a determinate bar under that step. Deferred for now
+(instrumenting a parallel-signing loop in the critical signing path is intricate); the
+renderer's `@bn bar` path is ready and its parser is hardened (`_int` clamps untrusted
+counts — a bad `done=`/`total=` must not crash the report). **Never emit a bar for
+work without a real count** — opaque steps spin (rule 6).
 
 ## See also
 
-- Prototype renderer + canned frames: `build_report_mock.py` (run `--frame`,
-  `--fail`, `--svg <path>`; bare in a terminal to see it animate).
+- Implementation: `build_report.py` (renderer — `--demo` / `--demo-fail` self-tests)
+  + `report.sh` (emitter helpers + `bn_autowrap`). `build_report_mock.py` is the
+  original static design mock (`--frame`, `--fail`, `--svg <path>`).
 - Glyph/colour source of truth: [`bristlenose/ui_kinds.py`](../../bristlenose/ui_kinds.py).
 - CLI output canon: [clig.dev](https://clig.dev) — human-first, honest progress,
   colour off when not a TTY.

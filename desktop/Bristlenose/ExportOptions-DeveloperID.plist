@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+Export options for the Developer-ID `.dmg` channel (lifecycle stage 2.5 —
+direct download from bristlenose.app, NOT the App Store). Used by
+desktop/scripts/build-dmg.sh.
+
+Contrast with ExportOptions.plist (the App Store sibling):
+
+  method=developer-id  — targets direct distribution outside the App Store.
+  Output is a standalone `.app` (not a `.pkg`). notarytool ACCEPTS this cert
+  family (Developer ID Application) and REJECTS Apple Distribution — the exact
+  inverse of the App Store path, which is validated server-side and never
+  touches notarytool. build-dmg.sh notarises + staples the exported `.app`,
+  then wraps it in a notarised+stapled `.dmg`.
+
+  signingCertificate=Developer ID Application — signs the `.app` bundle. There
+  is NO installerSigningCertificate here: Developer ID distribution ships a
+  `.dmg`, not a `.pkg`, so no installer-cert step.
+
+  NO provisioningProfiles block — Developer ID apps distributed outside the
+  App Store don't embed a provisioning profile. (The one live risk: this app
+  is sandboxed and carries a keychain-access-groups entitlement, whose
+  $(AppIdentifierPrefix) resolves from the Team ID rather than a profile under
+  Developer ID. build-dmg.sh proves `codesign --verify --deep --strict` on the
+  export before proceeding — that's the gate that catches any profile-required
+  entitlement mismatch.)
+
+  signingStyle=manual — same rationale as the App Store plist: no
+  auto-provisioning surprises on a shared/CI machine.
+
+  teamID Z56GZVA2QB — Bristlenose / Martin Storey.
+
+  uploadSymbols=false — PyInstaller strips the sidecar symbols; Swift dSYMs
+  stay in the .xcarchive.
+-->
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>developer-id</string>
+    <key>teamID</key>
+    <string>Z56GZVA2QB</string>
+    <key>signingStyle</key>
+    <string>manual</string>
+    <key>signingCertificate</key>
+    <string>Developer ID Application</string>
+    <key>destination</key>
+    <string>export</string>
+    <key>uploadSymbols</key>
+    <false/>
+</dict>
+</plist>

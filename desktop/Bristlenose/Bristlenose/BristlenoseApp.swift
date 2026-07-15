@@ -14,6 +14,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // when ServeManager finishes its own resolve, so emit "?" here and
         // let the per-launch ServeManager line carry the sidecar slot.
         appLog.info("BuildInfo: \(BuildInfo.current.oneLine(sidecar: "?"), privacy: .public)")
+
+        // The expired-alpha `.dmg` block is presented by `AlphaExpiryFlow` as
+        // SwiftUI modals over the (serve-less) main window — see ContentView's
+        // `.alphaExpiryFlow(...)`. Serve is refused by `ServeManager.start()`'s
+        // AlphaBuild guard, so nothing runs behind them. No-op off the alpha
+        // channel.
     }
 }
 
@@ -103,6 +109,11 @@ struct BristlenoseApp: App {
                 // lights, `NSOutlineView` capsule) still reads system accent —
                 // deliberate, per the seam-alignment discipline.
                 .tint(paletteAccent)
+                // Expired-alpha `.dmg` modal sequence (Expired → feedback sheet
+                // → Thanks → quit). No-op unless this is an expired alpha build;
+                // i18n + toast passed explicitly (the modifier isn't inside their
+                // .environmentObject scope).
+                .alphaExpiryFlow(i18n: i18n, toast: toast)
         }
         .defaultSize(width: 1000, height: 700)
         .windowResizability(.contentMinSize)

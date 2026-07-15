@@ -140,6 +140,14 @@ final class ServeManager: ObservableObject {
     ///
     /// - Parameter projectPath: Absolute path to the project directory.
     func start(projectPath: String) {
+        // Expired alpha `.dmg` builds never start the sidecar (AlphaBuild is a
+        // no-op on Debug / App Store / TestFlight). The expiry flow blocks the
+        // window with modals, but guard here too so no start path — launch
+        // restore, consent grant, retry — can serve behind them.
+        guard !AlphaBuild.isExpired() else {
+            log.notice("serve start refused — alpha build expired")
+            return
+        }
         if process != nil {
             stop()
         }

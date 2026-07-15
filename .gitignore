@@ -139,5 +139,11 @@ bristlenose/_build_info.py
 # (generate-build-info.sh) before Compile Sources — never commit (churns -dirty).
 desktop/Bristlenose/Bristlenose/GeneratedBuildInfo.swift
 
+# Re-include the Developer-ID export options: the global gitignore ignores
+# ExportOptions-*.plist, but this one is tracked build config (no secrets — just
+# method/team/cert-type), the sibling ExportOptions.plist is tracked too, and
+# build-dmg.sh needs it to follow the repo. Negation overrides the global rule.
+!desktop/Bristlenose/ExportOptions-DeveloperID.plist
+
 # Acceptance-matrix run artifacts — real reports carry unredacted transcripts + re-id keys
 acceptance-runs/

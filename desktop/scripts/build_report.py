@@ -21,6 +21,7 @@ Self-test (no build needed):
 """
 from __future__ import annotations
 
+import os
 import shlex
 import sys
 import textwrap
@@ -132,7 +133,7 @@ def fmt_elapsed(s: float | None) -> str:
 def running_renderable(n: int, st: Step) -> Text:
     right = "running"
     if st.log:
-        right += f" · tail {st.log}"
+        right += f" · tail {os.path.basename(st.log)}"
     return leader_line(n, St.RUN, st.name, st.tag, right)
 
 
@@ -352,16 +353,22 @@ class Renderer:
 def run(stream, console: Console) -> int:
     r = Renderer(console)
     fail = False
-    for raw in stream:
-        ev = parse_event(raw.rstrip("\n"))
-        if ev is None:
-            if "--verbose" in sys.argv and raw.strip():
-                console.print(Text("  " + raw.rstrip("\n"), style="dim"))
-            continue
-        kind, f = ev
-        if kind == "done" and f.get("status") == "fail":
-            fail = True
-        r.event(kind, f)
+    try:
+        for raw in stream:
+            ev = parse_event(raw.rstrip("\n"))
+            if ev is None:
+                if "--verbose" in sys.argv and raw.strip():
+                    console.print(Text("  " + raw.rstrip("\n"), style="dim"))
+                continue
+            kind, f = ev
+            if kind == "done" and f.get("status") == "fail":
+                fail = True
+            r.event(kind, f)
+    except KeyboardInterrupt:
+        # The build was Ctrl-C'd; the emitter died too. Tidy the live line and
+        # exit quietly (130 = SIGINT) — no traceback.
+        r._stop_live()
+        return 130
     return 1 if fail else 0
 
 

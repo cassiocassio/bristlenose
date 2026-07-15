@@ -511,7 +511,9 @@ else
     bn_gate b skip "Installer signature" "no .pkg and notarisation skipped"
 fi
 
-codesign --verify --deep --strict --verbose=2 "$EXPORTED_APP"
+codesign --verify --deep --strict --verbose=2 "$EXPORTED_APP" \
+    2>"$DESKTOP_DIR/build/codesign-verify.log" \
+    || { cat "$DESKTOP_DIR/build/codesign-verify.log" >&2; exit 1; }
 bn_gate c ok "Code signature" "--deep --strict valid"
 
 OUTER_BIN="$EXPORTED_APP/Contents/MacOS/Bristlenose"

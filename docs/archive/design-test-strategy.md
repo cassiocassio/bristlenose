@@ -1,3 +1,16 @@
+---
+status: archived-historical
+last-trued: 2026-07-15
+trued-against: HEAD@main on 2026-07-15
+superseded-by: [design-ci.md, testing/README.md]
+---
+
+> **Archived 15 Jul 2026 — historical interest only; do not consult as a spec.**
+>
+> Feb-2026 gap audit whose premise ("before expanding the design surface area... React component migration") is history; the gap table's top rows (E2E, frontend unit tests, ESLint, TS typecheck in CI) all shipped.
+>
+> Current authority: `design-ci.md`, `testing/README.md`.
+
 # Testing & CI Strategy — Gap Audit
 
 _Feb 2026. Written as Bristlenose evolves from CLI + static HTML to server app + React frontend._

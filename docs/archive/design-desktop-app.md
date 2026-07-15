@@ -1,9 +1,16 @@
 ---
-status: mixed
-last-trued: 2026-05-01
-trued-against: HEAD@first-run on 2026-05-01
+status: archived-reference
+last-trued: 2026-07-15
+trued-against: HEAD@main on 2026-07-15
 split-candidate: true
+superseded-by: [design-project-sidebar.md, design-subprocess-lifecycle.md, desktop/CLAUDE.md]
 ---
+
+> **Archived 15 Jul 2026 — historical interest only; do not consult as a spec.**
+>
+> Body is the v0.1 single-window `.dmg` launcher vision; the shipped app is a multi-project WKWebView shell. The doc's own banner already conceded it was not current UX truth.
+>
+> Current authority: `design-project-sidebar.md`, `design-subprocess-lifecycle.md`, `desktop/CLAUDE.md`.
 
 > **Truing status:** Mixed — the v0.1 single-window launcher Vision / PRD / User Flow / Project Structure sections are superseded by the v0.2 multi-project shell shipping in this branch (3d9f43c port + ongoing). Retained as planning history; do not treat the body as current UX truth. For current authority:
 >

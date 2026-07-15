@@ -405,4 +405,4 @@ Full design rationale in `docs/archive/design-serve-milestone-1.md`.
 
 **FastAPI + React + SQLite scaffolding.** `bristlenose serve` command, FastAPI application factory, SQLite with WAL mode, React + Vite + TypeScript tooling, HelloIsland proof of concept, Vite proxy for `/api/*` to FastAPI, health check endpoint.
 
-Design docs: `docs/design-serve-migration.md` (architecture, tech stack, migration roadmap).
+Design docs: `docs/archive/design-serve-migration.md` (architecture, tech stack, migration roadmap).

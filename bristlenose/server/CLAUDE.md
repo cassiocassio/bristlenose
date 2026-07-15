@@ -284,7 +284,7 @@ After the React migration, Playwright E2E tests will cover the full browser → 
 
 ## React migration status
 
-Migration complete through M5 (Feb 2026): 14 primitives + 2 infrastructure, 8 islands, 330+ Python serve tests. Next islands: transcript page, analysis page. Toast is the only unbuilt infrastructure primitive (build when first consumer needs it). See `docs/design-react-migration-status.md` for the primitive inventory (16 rows), island inventory (8 rows), and CSS alignment summary.
+Migration complete through M5 (Feb 2026): 14 primitives + 2 infrastructure, 8 islands, 330+ Python serve tests. Next islands: transcript page, analysis page. Toast is the only unbuilt infrastructure primitive (build when first consumer needs it). See `docs/archive/design-react-migration-status.md` for the primitive inventory (16 rows), island inventory (8 rows), and CSS alignment summary.
 
 ## AutoCode (LLM-assisted tag application)
 
@@ -312,8 +312,8 @@ See `docs/design-dynamic-codebook-builder.md`.
 ## Reference docs
 
 - **Domain model rationale**: `docs/archive/design-serve-milestone-1.md`
-- **Migration architecture**: `docs/design-serve-migration.md`
+- **Migration architecture**: `docs/archive/design-serve-migration.md`
 - **React component library** (16 primitives, build sequence, coverage matrix): `docs/design-react-component-library.md` — **read this before building any React component**
 - **Codebook island design** (audit, decisions, CSS cleanup): `docs/design-codebook-island.md`
 - **React migration plan**: `docs/archive/design-reactive-ui.md`
-- **Phase-by-phase walkthrough**: `docs/react-migration-walkthrough.md`
+- **Phase-by-phase walkthrough**: `docs/archive/react-migration-walkthrough.md`

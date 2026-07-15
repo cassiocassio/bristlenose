@@ -221,7 +221,7 @@ Given a change, ask in order:
 
 ## Cross-refs
 
-- [`docs/design-test-strategy.md`](design-test-strategy.md) — per-layer audit, tool choices, timeline (counts as of Feb 2026 — superseded by the TL;DR figures here)
+- [`docs/archive/design-test-strategy.md`](design-test-strategy.md) — per-layer audit, tool choices, timeline (counts as of Feb 2026 — superseded by the TL;DR figures here)
 - [`docs/design-playwright-testing.md`](design-playwright-testing.md) — Playwright specifics
 - [`docs/testing/test-data-generation.md`](testing/test-data-generation.md) — fixtures
 - [`docs/testing/README.md`](testing/README.md) — the acceptance-testing hub (three-tier model, coverage inventory, human ↔ mechanical map)

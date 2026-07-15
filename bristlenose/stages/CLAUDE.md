@@ -244,4 +244,4 @@ Stage signatures: `s08_topic_segmentation.segment_topics` returns `tuple[list[Se
 
 `_succeeded_sids` (transcribe stage success derivation) treats Whisper-success-with-zero-segments as SUCCESS — silent recording is valid input. Drive the predicate off `_fresh_transcript_outcome.failed` exclusion, not `session_segments` value-truthiness.
 
-Full design: `docs/design-pipeline-resilience.md` §"Changelog" 2026-05-12 entry. Implementation handoff: `docs/private/handoffs/A4-stage-cache-honesty.md`.
+Full design: `docs/design-pipeline-resilience.md` §"Changelog" 2026-05-12 entry. Implementation handoff: `docs/private/archive/A4-stage-cache-honesty.md`.

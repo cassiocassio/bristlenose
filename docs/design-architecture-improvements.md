@@ -69,7 +69,7 @@ Layers 1–3 (console, links, network) are done. Layer 4 (structural smoke — d
 
 ### 11. Desktop App (.dmg)
 
-Design doc is complete (`docs/design-desktop-app.md`), SwiftUI scaffold designed, PyInstaller sidecar planned. Open blockers: signed static FFmpeg for arm64, PyInstaller + ctranslate2 bundling, App Store sandbox compatibility. This is the #1 adoption barrier for non-technical researchers.
+Design doc is complete (`docs/archive/design-desktop-app.md`), SwiftUI scaffold designed, PyInstaller sidecar planned. Open blockers: signed static FFmpeg for arm64, PyInstaller + ctranslate2 bundling, App Store sandbox compatibility. This is the #1 adoption barrier for non-technical researchers.
 
 ### 12. Snap Store Publication
 

@@ -276,7 +276,7 @@ How the primitives assemble into page-level components:
 
 ## Relationship to milestones
 
-The original milestone roadmap (`docs/design-serve-migration.md`) defined milestones by page:
+The original milestone roadmap (`docs/archive/design-serve-migration.md`) defined milestones by page:
 
 | Original milestone | Becomes |
 |--------------------|---------|

@@ -93,7 +93,7 @@ A second class of checks, distinct from runtime dependency health. Runs via `bri
 | 1 | `check_bundle_react_spa` | `bristlenose/server/static/` contains `index.html` and hashed JS/CSS assets |
 | 2 | `check_bundle_codebooks` | `bristlenose/llm/codebooks/*.yaml` all present |
 | 3 | `check_bundle_prompts` | `bristlenose/llm/prompts/*.md` all present |
-| 4 | `check_bundle_locales` | `bristlenose/locales/*/*.json` all 7 locales present |
+| 4 | `check_bundle_locales` | `bristlenose/locales/*/*.json` all 21 locale dirs present (20 full + `zh-Hant-HK` override) |
 | 5 | `check_bundle_theme` | `bristlenose/theme/` CSS + JS modules present |
 | 6 | `check_bundle_alembic` | `bristlenose/server/migrations/` scripts present |
 

@@ -23,7 +23,7 @@ The **defining split** (the whole reason this set exists): the top two tiers are
 
 **Elsewhere (indexed here, left in place — widely referenced):**
 - [`docs/design-test-philosophy.md`](../design-test-philosophy.md) — the testing pyramid + house position (James Bach / context-driven).
-- [`docs/design-test-strategy.md`](../design-test-strategy.md) — per-layer audit, tool choices.
+- [`docs/archive/design-test-strategy.md`](../design-test-strategy.md) — per-layer audit, tool choices.
 - [`docs/design-playwright-testing.md`](../design-playwright-testing.md) — tier-2 Playwright specifics.
 - [`docs/design-perf-stress-test.md`](../design-perf-stress-test.md) + [`docs/design-perf-regression-gate.md`](../design-perf-regression-gate.md) — performance/stress + CI gate.
 - [`desktop/CLAUDE.md`](../../desktop/CLAUDE.md) §testing — Swift Testing conventions + the testable-helper rule that bounds GUI automation.

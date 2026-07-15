@@ -1,3 +1,16 @@
+---
+status: archived-historical
+last-trued: 2026-07-15
+trued-against: HEAD@main on 2026-07-15
+superseded-by: [design-react-migration.md]
+---
+
+> **Archived 15 Jul 2026 — historical interest only; do not consult as a spec.**
+>
+> Feb-2026 "static HTML -> React islands -> SPA" decision record. The islands pattern was retired and the SPA shipped (`bristlenose/server/app.py::_mount_prod_report`).
+>
+> Current authority: `design-react-migration.md`.
+
 # Serve Migration: Static HTML → React Islands → SPA
 
 ## Decision (Feb 2026)

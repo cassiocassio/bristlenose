@@ -34,7 +34,7 @@ CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcri
 
 Serve mode: FastAPI + SQLite + React SPA. See `bristlenose/server/CLAUDE.md` for architecture.
 
-Desktop app: `desktop/` — SwiftUI macOS shell. Alpha ships a bundled, signed PyInstaller sidecar running `bristlenose serve`, distributed via internal TestFlight. v0.2 currently uses launcher-style scaffolding (dev-only, not shippable). See `docs/design-desktop-app.md` for the overall app design, `docs/design-modularity.md` for cross-channel component decisions (CLI ≡ macOS Python code; packaging differences only), and `docs/private/road-to-app-store.md` for the 14-checkpoint path to TestFlight.
+Desktop app: `desktop/` — SwiftUI macOS shell. Alpha ships a bundled, signed PyInstaller sidecar running `bristlenose serve`, distributed via internal TestFlight. v0.2 currently uses launcher-style scaffolding (dev-only, not shippable). See `docs/archive/design-desktop-app.md` for the overall app design, `docs/design-modularity.md` for cross-channel component decisions (CLI ≡ macOS Python code; packaging differences only), and `docs/private/road-to-app-store.md` for the 14-checkpoint path to TestFlight.
 
 Frontend: `frontend/` — Vite + React + TypeScript + React Router. See `frontend/CLAUDE.md` for gotchas and architecture.
 
@@ -227,7 +227,7 @@ See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check
 - `docs/design-export-html.md` (anonymisation), `docs/design-export-quotes.md` (CSV/XLS), `docs/design-export-clips.md`, `docs/design-export-slides.md`, `docs/design-miro-bridge.md`, `docs/design-footer-feedback-react.md`
 
 **Desktop:**
-- `docs/design-desktop-app.md`, `docs/design-desktop-security-audit.md`
+- `docs/archive/design-desktop-app.md`, `docs/design-desktop-security-audit.md`
 - `docs/design-modularity.md` — **canonical cross-channel component strategy** (CLI + macOS, Background Assets, no-fork principle, trickle-to-full-capability)
 - `docs/design-desktop-python-runtime.md` — Mac sidecar mechanics
 - `docs/private/road-to-app-store.md` — current Apple-side gate sequence (Sprint 2 plan archived; see 100days.md for live plan)
@@ -251,7 +251,7 @@ See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check
 **Ops / release:**
 - `docs/release.md`, `docs/file-map.md`, `CONTRIBUTING.md`, `INSTALL.md`, `SECURITY.md`
 - **`docs/testing/README.md` — the testing & acceptance hub (start here for anything test/QA/acceptance).** Three-tier model (CI · Playwright · acceptance matrix · human walk), `docs/testing/coverage-inventory.md` (the single source of surfaces: 16 formats · 5 exports · 5 lenses · 5 providers), `docs/testing/acceptance-matrix.md` (mechanical tier, Phase-1 plan), `docs/testing/test-data-generation.md` (fixture recipe). Built already: `tests/test_no_fake_success_acceptance.py` (skips without fixtures) + `e2e/`. The by-hand walk lives in the private QA doc.
-- `docs/design-ci.md`, `docs/design-test-strategy.md`, `docs/design-playwright-testing.md`, `docs/design-test-philosophy.md`
+- `docs/design-ci.md`, `docs/archive/design-test-strategy.md`, `docs/design-playwright-testing.md`, `docs/design-test-philosophy.md`
 - `docs/design-doctor-and-snap.md`, `docs/design-homebrew-packaging.md`
 - `docs/design-cli-improvements.md`, `docs/design-llm-call-telemetry.md`, `docs/design-performance.md`
 - `docs/design-decisions.md` (why)
@@ -395,4 +395,4 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 ## Current status
 
-Alpha pre-TestFlight (v0.20.x line). React migration complete (Steps 1–10); bundled-sidecar desktop is the primary distribution path; CLI ships on PyPI + Homebrew + Snap. Static render is a sealed byproduct, not a user-facing product. See [CHANGELOG.md](CHANGELOG.md) for version history, [TODO.md](TODO.md) for active work, and `git log` for the unabridged story.
+**Internal TestFlight since 14 Jul 2026** (v0.20.x line) — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution. React migration complete (Steps 1–10); bundled-sidecar desktop is the primary distribution path; CLI ships on PyPI + Homebrew + Snap. Static render is a sealed byproduct, not a user-facing product. See [CHANGELOG.md](CHANGELOG.md) for version history, [TODO.md](TODO.md) for active work, and `git log` for the unabridged story.

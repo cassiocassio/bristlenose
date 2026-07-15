@@ -1,3 +1,16 @@
+---
+status: archived-historical
+last-trued: 2026-07-15
+trued-against: HEAD@main on 2026-07-15
+superseded-by: [design-react-migration.md]
+---
+
+> **Archived 15 Jul 2026 — historical interest only; do not consult as a spec.**
+>
+> Phase-0 walkthrough ("24 vanilla JS modules concatenated into a script block"); the React migration completed Steps 1-10.
+>
+> Current authority: `design-react-migration.md`.
+
 # React Migration Walkthrough
 
 This is an explanatory walkthrough of the reactive UI migration — what's been done, what each phase involves, and why.

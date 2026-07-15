@@ -267,7 +267,7 @@ Audit of what the project uses vs what CI actually tests (Apr 2026).
 | React/TypeScript frontend | ESLint, tsc, Vitest, build, bundle size gate |
 | E2E integration | Playwright layers 1–3, Chromium + WebKit |
 | Dependency security | pip-audit, npm audit, CodeQL (informational) |
-| Locale parity | `i18n-check.yml` validates key coverage across 7 locales |
+| Locale parity | `i18n-check.yml` validates key coverage across 20 full locales |
 | Install methods (Linux) | pip, pipx smoke tests on push |
 
 ### Known gaps

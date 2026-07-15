@@ -1,3 +1,16 @@
+---
+status: archived-historical
+last-trued: 2026-07-15
+trued-against: HEAD@main on 2026-07-15
+superseded-by: [design-react-migration.md, design-react-component-library.md]
+---
+
+> **Archived 15 Jul 2026 — historical interest only; do not consult as a spec.**
+>
+> Self-labelled "Historical inventory (complete as of Feb 2026)"; its 16-primitive table predates the ~40 components now in `frontend/src/components/`.
+>
+> Current authority: `design-react-migration.md`, `design-react-component-library.md`.
+
 # React Migration — Primitive & Island Inventory
 
 > **Historical inventory** (complete as of Feb 2026). Active migration plan: `docs/design-react-migration.md`. Working context lives in `bristlenose/server/CLAUDE.md`.

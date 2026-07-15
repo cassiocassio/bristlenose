@@ -64,7 +64,7 @@ This shapes: [CLI output style](#cli-output-style), [Doctor command](#doctor-com
 
 The compatibility target covers ~90% of professional Mac users. Intel is ~5-10% of the installed base and falling; Sequoia (macOS 15) will be n-1 by launch. Targeting it avoids SwiftUI contortion for older APIs. The chip floor will bump to M2+ when local inference features arrive (Neural Engine improvements, unified memory bandwidth).
 
-_See also: `docs/design-desktop-app.md`_
+_See also: `docs/archive/design-desktop-app.md`_
 
 ### LLM provider selection
 

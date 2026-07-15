@@ -596,4 +596,4 @@ The Settings UI introduces a third mutation surface for configuration (alongside
 - **Desktop keychain**: `desktop/Bristlenose/Bristlenose/Model/KeychainHelper.swift`
 - **Existing settings panel**: `frontend/src/islands/SettingsPanel.tsx`
 - **Settings CSS**: `bristlenose/theme/organisms/settings.css`
-- **Desktop app design**: `docs/design-desktop-app.md`
+- **Desktop app design**: `docs/archive/design-desktop-app.md`

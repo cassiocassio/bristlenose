@@ -375,7 +375,7 @@ free once we're already building the sidecar.
 - [`test-data-generation.md`](test-data-generation.md) — fixture recipe (closes the format-parity gap the built acceptance test waits on).
 - `tests/test_no_fake_success_acceptance.py` — the built partial-Phase-1 (skips without fixtures).
 - `e2e/` + `docs/design-playwright-testing.md` — tier 2 as it exists today.
-- `docs/design-test-strategy.md`, `docs/design-test-philosophy.md` — the testing
+- `docs/archive/design-test-strategy.md`, `docs/design-test-philosophy.md` — the testing
   pyramid this extends.
 - `desktop/CLAUDE.md` — sidecar-rebuild trap, TCC/sandbox notes, the
   view-logic-into-helpers rule that bounds Phase 3.

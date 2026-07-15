@@ -121,8 +121,8 @@
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "BRISTLENOSE_DEBUG_ALPHA_DAYS"
-            value = "-1"
-            isEnabled = "YES">
+            value = "30"
+            isEnabled = "NO">
          </EnvironmentVariable>
       </EnvironmentVariables>
    </LaunchAction>

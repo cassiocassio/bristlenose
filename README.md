@@ -369,6 +369,11 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.21.0** — _16 Jul 2026_
+
+- **"Out of credit" now says out of credit — not "rate limit reached."** When a provider refused a call because the account had run dry, Bristlenose told you to wait: credit exhaustion and rate-limiting shared one category that rendered as "rate limit reached" — advice that never comes true for a bankrupt key. Billing exhaustion is now its own non-retryable category everywhere a failed LLM call is reported (run cause, CLI banner, desktop row and pill, Settings check). The wire is stranger than the docs admit — Anthropic serves out-of-credit as an HTTP 400 with "credit balance is too low", not the documented 402; OpenAI shares 429 between billing and real rate-limiting — so detection reads the provider's error code first and the HTTP status last. Where a provider genuinely can't distinguish the two (Azure, Gemini), Bristlenose keeps calling it rate-limiting rather than inventing a top-up story.
+- **The dashboard fills the window, and features up to five quotes.** The Project tab shed the 52rem reading-width cap every other tab had already lost, so it no longer sits in a column with the right-hand side empty. Featured quotes go from three to five — three across on a laptop, five from 1400px up.
+
 **0.20.0** — _11 Jul 2026_
 
 - **Feedback survives a failed run.** When a run is cancelled or fails, the report gives way to a status page whose "Send feedback" link used to dead-end at "Method not allowed." Now the macOS app opens a native feedback sheet and the browser opens an inline form on the page — both sending the same anonymous `{rating, message}`, and both reporting "sent" only when the server confirms receipt, so a captive-portal `200 OK` can't silently swallow it; unconfirmed sends fall back to the clipboard. The reliability fix reaches the in-report form too. Browser form + reliability on PyPI; native sheet with the next bundled build.

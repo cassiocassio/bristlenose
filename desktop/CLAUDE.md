@@ -342,6 +342,8 @@ End-to-end orchestration lives in `desktop/scripts/build-all.sh`:
 
 The signing identity comes from `SIGN_IDENTITY` env var (`-` for ad-hoc local iteration; `Apple Distribution: …` for TestFlight uploads once Track A delivers the cert).
 
+**The Developer-ID `.dmg` is a SEPARATE build** — `desktop/scripts/build-dmg.sh` (not `build-all.sh`), a different signing path (Developer ID Application, not Apple Distribution). Full mechanics: `docs/design-dmg-build.md`. The one gotcha to pre-load before touching its signing: this app is sandboxed AND carries the Keychain-Sharing (`keychain-access-groups`) entitlement, which Xcode treats as **provisioning-profile-gated even for Developer ID** — so forcing Developer-ID signing at *archive* time fails "requires a provisioning profile." Don't re-try that dead end (nor hardcoding the team prefix, nor automatic signing which is development-only, nor dropping the entitlement which breaks the data-protection keychain → `-34018`; all verified dead 16 Jul 2026). The working flow is **archive with development signing → export as Developer ID with `xcodebuild -allowProvisioningUpdates`** (Xcode auto-mints the Developer-ID provisioning profile; no portal trip).
+
 ## Frontend build requirement
 
 `bristlenose serve` needs the React bundle built into `bristlenose/server/static/`. If you see "React bundle not found" warnings:

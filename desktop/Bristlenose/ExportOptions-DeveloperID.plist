@@ -14,20 +14,20 @@ Contrast with ExportOptions.plist (the App Store sibling):
   touches notarytool. build-dmg.sh notarises + staples the exported `.app`,
   then wraps it in a notarised+stapled `.dmg`.
 
-  signingCertificate=Developer ID Application — signs the `.app` bundle. There
-  is NO installerSigningCertificate here: Developer ID distribution ships a
-  `.dmg`, not a `.pkg`, so no installer-cert step.
-
-  NO provisioningProfiles block — Developer ID apps distributed outside the
-  App Store don't embed a provisioning profile. (The one live risk: this app
-  is sandboxed and carries a keychain-access-groups entitlement, whose
-  $(AppIdentifierPrefix) resolves from the Team ID rather than a profile under
-  Developer ID. build-dmg.sh proves `codesign --verify --deep --strict` on the
-  export before proceeding — that's the gate that catches any profile-required
-  entitlement mismatch.)
-
-  signingStyle=manual — same rationale as the App Store plist: no
-  auto-provisioning surprises on a shared/CI machine.
+  signingStyle=automatic (+ build-dmg.sh passes -allowProvisioningUpdates) —
+  this app is sandboxed AND carries the Keychain Sharing (keychain-access-groups)
+  entitlement, which Xcode gates behind a provisioning profile. A manual
+  Developer-ID archive with an empty profile fails "requires a provisioning
+  profile" — and it's the *capability* it gates on, not the $(AppIdentifierPrefix)
+  variable (hardcoding the Team-ID prefix doesn't help; automatic signing only
+  does *development*). Both verified dead ends, 16 Jul 2026. Automatic +
+  -allowProvisioningUpdates has Xcode MINT a Developer ID provisioning profile on
+  the fly (no portal trip) and embed it. So there's no signingCertificate key
+  (automatic resolves the Developer ID Application cert from the team) and no
+  installerSigningCertificate (Developer ID ships a `.dmg`, not a `.pkg`).
+  build-dmg.sh archives with development signing first, then this plist re-signs
+  as Developer ID at export; `codesign --verify --deep --strict` on the export is
+  the gate that confirms the result.
 
   teamID Z56GZVA2QB — Bristlenose / Martin Storey.
 
@@ -41,9 +41,7 @@ Contrast with ExportOptions.plist (the App Store sibling):
     <key>teamID</key>
     <string>Z56GZVA2QB</string>
     <key>signingStyle</key>
-    <string>manual</string>
-    <key>signingCertificate</key>
-    <string>Developer ID Application</string>
+    <string>automatic</string>
     <key>destination</key>
     <string>export</string>
     <key>uploadSymbols</key>

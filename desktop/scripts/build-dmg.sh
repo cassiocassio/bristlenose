@@ -139,15 +139,25 @@ _BRISTLENOSE_RELEASE=1 "$SCRIPT_DIR/ensure-sidecar.sh" --force
 ok "sidecar built + signed under $SIGN_IDENTITY"
 
 # ------------------------------------------------------------
-# 3. Archive — Developer-ID signing overrides
+# 3. Archive — development signing (Developer ID is applied at EXPORT)
 # ------------------------------------------------------------
-# The Release config is manual-signing against Apple Distribution + the MAS
-# provisioning profile. Override to Developer ID with NO profile, and switch on
-# the DEVELOPER_ID_BETA compilation flag (gates the .dmg-only debug affordances
-# in DistributionChannel.swift). The sidecar is already fresh+signed from step 2;
-# skip the in-archive ensure phase (it would refuse the real identity — see
-# build-all.sh step 5 for the full story).
-say "Xcode archive (Developer ID)"
+# Do NOT force Developer ID at archive time. This app is sandboxed AND carries
+# the Keychain Sharing (keychain-access-groups) entitlement, which Xcode treats
+# as profile-gated: a manual Developer-ID archive with an empty profile fails
+# "requires a provisioning profile" — and it's the *capability* it gates on, not
+# the $(AppIdentifierPrefix) variable (hardcoding the Team-ID prefix doesn't help;
+# automatic signing only does *development*, never Developer ID). Both were
+# verified dead ends (16 Jul 2026).
+#
+# The working path is Apple's standard archive→export split:
+#   • archive with automatic DEVELOPMENT signing — uses the auto-managed
+#     "Mac Team Provisioning Profile" (which carries the keychain entitlement);
+#   • re-sign as Developer ID at the EXPORT step with -allowProvisioningUpdates,
+#     which has Xcode MINT the Developer ID provisioning profile itself — no
+#     portal trip. The DEVELOPER_ID_BETA flag baked here persists through export
+#     (export re-signs, doesn't recompile). Sidecar is fresh+signed from step 2;
+#     skip the in-archive ensure phase.
+say "Xcode archive (development signing; Developer ID applied at export)"
 rm -rf "$ARCHIVE_PATH" "$EXPORT_DIR"
 export BRISTLENOSE_SKIP_SIDECAR_ENSURE=1
 xcodebuild \
@@ -156,12 +166,12 @@ xcodebuild \
     -configuration Release \
     -destination "generic/platform=macOS" \
     -archivePath "$ARCHIVE_PATH" \
-    CODE_SIGN_STYLE=Manual \
-    CODE_SIGN_IDENTITY="$SIGN_IDENTITY" \
+    CODE_SIGN_STYLE=Automatic \
+    CODE_SIGN_IDENTITY="Apple Development" \
     PROVISIONING_PROFILE_SPECIFIER="" \
     DEVELOPMENT_TEAM="$TEAM_ID" \
-    OTHER_CODE_SIGN_FLAGS="--timestamp" \
     SWIFT_ACTIVE_COMPILATION_CONDITIONS="\$(inherited) DEVELOPER_ID_BETA" \
+    -allowProvisioningUpdates \
     archive \
     > "$ARCHIVE_LOG" 2>&1 \
     || { echo "xcodebuild archive failed. tail:" >&2; tail -50 "$ARCHIVE_LOG" >&2; exit 1; }
@@ -170,12 +180,13 @@ ok "archived: $(basename "$ARCHIVE_PATH")"
 # ------------------------------------------------------------
 # 4. Export → standalone .app
 # ------------------------------------------------------------
-say "Export → .app"
+say "Export → Developer ID .app"
 xcodebuild \
     -exportArchive \
     -archivePath "$ARCHIVE_PATH" \
     -exportPath "$EXPORT_DIR" \
     -exportOptionsPlist "$EXPORT_OPTIONS" \
+    -allowProvisioningUpdates \
     > "$EXPORT_LOG" 2>&1 \
     || { echo "xcodebuild -exportArchive failed. tail:" >&2; tail -50 "$EXPORT_LOG" >&2; exit 1; }
 

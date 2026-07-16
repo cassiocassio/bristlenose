@@ -1,4 +1,23 @@
+---
+status: partial
+last-trued: 2026-07-16
+trued-against: HEAD@main on 2026-07-16
+---
+
 # Release Process
+
+> **Trued 2026-07-16.** Corrected "Cutting a release" to use
+> `scripts/bump-version.py` (the doc described hand-editing, which drifted once
+> the script landed), folded in the two mandatory gates that lived only in
+> `CLAUDE.md` (evening timing, post-push PyPI verification), and added the
+> **Desktop channels** pointer — the `.dmg` and App Store paths were entirely
+> absent, so a reader here would ship a half-release. `status: partial` because
+> this doc is accurate for the CLI channels but deliberately covers only those.
+
+**Scope: PyPI · Homebrew · Snap (the CLI channels).** The desktop app ships
+through separate channels — Developer-ID `.dmg` and App Store / TestFlight —
+each with its own signing and build script. See **[Desktop channels](#desktop-channels)**
+at the end.
 
 ## Version — single source of truth
 
@@ -12,26 +31,65 @@ __version__ = "0.4.0"
 
 ## Cutting a release
 
+**Bump semantics:** minor = feature (`0.20.0 → 0.21.0`), patch = fix
+(`0.20.0 → 0.20.1`). Ask "does this add a capability?" — yes → minor.
+
+**Use `scripts/bump-version.py` — don't hand-edit versions.** It updates
+`bristlenose/__init__.py` (the single source), the man page `.TH` line + ISO
+date, **and** the desktop Xcode `project.pbxproj` (marketing version + build
+number); stages those; and creates the git tag.
+
+**The footgun:** it creates the tag on the *current* HEAD — *before* your bump
+commit exists — so the tag points at the wrong commit until you delete and
+re-create it after committing. The standard flow:
+
 ```bash
-# 1. Bump the version
-#    Edit bristlenose/__init__.py → __version__ = "X.Y.Z"
+# 1. Write the CHANGELOG.md + README.md changelog entries FIRST
+#    Format: **X.Y.Z** — _D Mon YYYY_   (e.g. **0.21.0** — _16 Jul 2026_)
 
-# 2. Update the man page version
-#    Edit man/bristlenose.1 → .TH line → "bristlenose X.Y.Z"
-#    CI will fail if the man page version doesn't match __version__
+# 2. Bump (writes __init__.py + man page + pbxproj, stages them, tags early)
+./scripts/bump-version.py minor        # or: patch / major / an explicit x.y.z
 
-# 3. Add a changelog entry
-#    Edit CHANGELOG.md and README.md
-#    Format: **X.Y.Z** — _D Mon YYYY_  (e.g. **0.8.1** — _7 Feb 2026_)
-
-# 4. Commit and tag
-git add bristlenose/__init__.py man/bristlenose.1 README.md
-git commit -m "vX.Y.Z"
+# 3. Drop the premature tag, stage CHANGELOG+README (bump staged the rest),
+#    commit, then re-tag on the real commit
+git tag -d vX.Y.Z
+git add CHANGELOG.md README.md
+git commit -m "bump to X.Y.Z"
 git tag vX.Y.Z
-git push origin main --tags
+
+# 4. Push branch, then tag separately (see gates below)
+git push origin main
+git push origin vX.Y.Z
 ```
 
-That's it. GitHub Actions handles the rest automatically.
+GitHub Actions handles PyPI / Homebrew / Snap from there.
+
+### Two mandatory gates — do not skip
+
+- **Evening timing (weekdays):** push to `origin/main` only after **21:00
+  London** on weekdays (avoids version churn during client hours). Weekends: any
+  time. Preview remotely without triggering a release via a `wip` branch
+  (`git push origin main:wip`). Override for genuine urgency.
+- **Post-push PyPI verification (mandatory):** a tag reaching GitHub is **not** a
+  release reaching PyPI — the pipeline has silently stalled before (v0.15.5→.9,
+  ~6 days, unnoticed). After pushing the tag, poll until PyPI flips:
+
+  ```sh
+  for i in $(seq 1 20); do sleep 90
+    pypi=$(curl -s https://pypi.org/pypi/bristlenose/json | jq -r .info.version)
+    echo "[$i] PyPI: $pypi"; [ "$pypi" = "X.Y.Z" ] && break
+  done
+  ```
+
+  20×90s ≈ 30 min (recent runs take 23–25 min). If PyPI still shows the old
+  version after 30 min, `gh run view --workflow=release.yml` to check the run
+  fired; a debounced tag push may need redelivery
+  (`git push --delete origin vX.Y.Z && git push origin vX.Y.Z`).
+
+**Test/CI/docs-only fixes reuse the tag** — a change touching only `tests/`,
+`e2e/`, `docs/`, `.claude/`, `.github/`, or fixtures ships a byte-identical
+wheel, so don't bump: force-move the tag to the fix commit and re-push. (Counter:
+once a version has published to PyPI, immutability forces a bump instead.)
 
 ## What happens after you push a tag
 
@@ -194,3 +252,22 @@ sudo snap install --dangerous --classic ./bristlenose_*.snap
 ### Architecture note
 
 CI builds amd64 only (GitHub Actions `ubuntu-latest`). arm64 snaps can be built locally on Apple Silicon via Multipass or on an arm64 Linux box, but are not published to the Store yet. See `docs/design-doctor-and-snap.md` for the full local build workflow.
+
+## Desktop channels
+
+The macOS app ships through **separate** channels — none of the CLI pipeline
+above applies to them, and they're decoupled from the CLI version line (a CLI
+release doesn't imply a desktop build, or vice versa):
+
+- **Developer-ID `.dmg`** — direct download from bristlenose.app (an expiring
+  alpha sampler). Built + notarised by `desktop/scripts/build-dmg.sh`, published
+  by `scp` + the website deploy. Full mechanics:
+  **[design-dmg-build.md](design-dmg-build.md)**.
+- **App Store / TestFlight `.pkg`** — Apple Distribution signed, built by
+  `desktop/scripts/build-all.sh`; uploaded via Transporter / `xcrun altool`. See
+  **[design-desktop-build-orchestration.md](design-desktop-build-orchestration.md)**
+  and `desktop/CLAUDE.md`.
+
+A single doc mapping all five channels (PyPI · Homebrew · Snap · `.dmg` ·
+TestFlight) doesn't exist yet — this doc plus the two linked above are the
+current pieces.

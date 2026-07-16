@@ -200,6 +200,26 @@ else
 fi
 
 # ------------------------------------------------------------
+# 2c. App Store §2.5.2 static-string scan
+# ------------------------------------------------------------
+# App Store Connect's automated scan rejects any binary CONTAINING the
+# literal `itms-services` (CPython ships it in urllib/parse.py; Homebrew's
+# python@3.12 isn't built with --with-app-store-compliance) — even when the
+# code never runs. The spec strips it at freeze time; this gate is the
+# independent backstop that the assembled bundle is clean. The literal is
+# marshalled inside a zlib-compressed PYZ, so this gate decompresses the PYZ
+# and scans code-object constants — a `strings`/`grep` on the bundle is a
+# false negative and would NOT catch it. Runs for ad-hoc builds too (the
+# string is present regardless of signing identity), so a stale strip is
+# caught in the IDE inner loop, not at App Store upload.
+bn_step_start 2c Verify "App Store string scan" \
+    narrative="Decompresses the sidecar PYZ and scans for the itms-services literal (§2.5.2)."
+_bn_t2c=$SECONDS
+"$SCRIPT_DIR/check-sidecar-appstore-strings.sh" \
+    "$DESKTOP_DIR/Bristlenose/Resources/bristlenose-sidecar" >/dev/null
+bn_step_ok 2c elapsed=$((SECONDS-_bn_t2c)) detail="no itms-services literal in PYZ or on disk"
+
+# ------------------------------------------------------------
 # 3-4. Signing — now performed inside ensure-sidecar (step 2)
 # ------------------------------------------------------------
 # Both sign-ffmpeg.sh and sign-sidecar.sh are invoked by ensure-sidecar.sh under

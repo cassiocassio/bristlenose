@@ -268,6 +268,78 @@ a = Analysis(
     },
 )
 
+# --- App Store §2.5.2 compliance: strip the `itms-services` literal ---
+# CPython's Lib/urllib/parse.py lists 'itms-services' among the known URL
+# schemes (uses_relative / uses_netloc / uses_params). App Store Connect's
+# automated static scan rejects any binary that CONTAINS that literal —
+# "the app uses the itms-services URL scheme to install an app" — EVEN when
+# the code is never executed (real bundled-Python rejections in 2024;
+# CPython gh-120522, fixed upstream by the `--with-app-store-compliance`
+# configure flag in gh-120984). Homebrew's python@3.12 is NOT built with
+# that flag (verify: `python3 -c "import sysconfig;
+# print(sysconfig.get_config_var('CONFIG_ARGS'))"` — no app-store-compliance),
+# so the literal survives into the frozen `urllib.parse` inside the PYZ.
+#
+# The literal is marshalled into the module's code object and the PYZ is
+# zlib-compressed, so it is INVISIBLE to `strings`/`grep` on the bundle
+# (which is exactly why the post-build gate,
+# desktop/scripts/check-sidecar-appstore-strings.sh, decompresses the PYZ
+# and scans code-object constants rather than grepping bytes).
+#
+# Fix: recompile `urllib.parse` from a length-preserving-patched copy of its
+# own source ('itms-services' -> 'itmx-services') and replace the cached code
+# object that PYZ.assemble would otherwise freeze. PYZ() copies code objects
+# out of CONF['code_cache'][id(a.pure)] at construction time, so we patch
+# that cache BEFORE constructing the PYZ below. The scheme is never parsed by
+# Bristlenose, so the rename is entirely inert. Belt-and-suspenders: the
+# post-build gate re-verifies the assembled bundle and fails the build if the
+# literal survived (e.g. if PyInstaller internals shift and this patch stops
+# taking effect).
+def _strip_app_store_noncompliant_strings(analysis):
+    from PyInstaller.config import CONF
+
+    needle = "itms-services"
+    replacement = "itmx-services"  # same length — byte offsets preserved
+    module = "urllib.parse"
+
+    code_cache = CONF["code_cache"].get(id(analysis.pure))
+    if code_cache is None or module not in code_cache:
+        raise SystemExit(
+            f"app-store-compliance spec patch: {module!r} not found in the "
+            "PyInstaller code cache — PyInstaller internals changed. Update "
+            "this patch (the post-build gate would otherwise fail the build)."
+        )
+
+    src_path = next(
+        (path for name, path, _tc in analysis.pure if name == module), None
+    )
+    if not src_path or not os.path.isfile(src_path):
+        raise SystemExit(
+            f"app-store-compliance spec patch: could not resolve source for {module!r}."
+        )
+
+    with open(src_path, encoding="utf-8") as fh:
+        original = fh.read()
+    if needle not in original:
+        # Already compliant (e.g. a future --with-app-store-compliance CPython).
+        return
+    patched = original.replace(f"'{needle}'", f"'{replacement}'").replace(
+        f'"{needle}"', f'"{replacement}"'
+    )
+    if needle in patched:
+        raise SystemExit(
+            f"app-store-compliance spec patch: {needle!r} still present after "
+            "quoted replacement — an unquoted occurrence exists. Update the patch."
+        )
+
+    # optimize=0 matches PyInstaller's PYMODULE typecode (plain `python -m
+    # PyInstaller`, no -O). co_filename stays the real stdlib path so
+    # tracebacks are unchanged.
+    code_cache[module] = compile(patched, src_path, "exec", optimize=0)
+
+
+_strip_app_store_noncompliant_strings(a)
+
 pyz = PYZ(a.pure)
 
 exe = EXE(

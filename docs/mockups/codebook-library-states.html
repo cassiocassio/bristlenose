@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Codebook Library — stages, states & text · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css). Palette swap via
+   data-color-theme; dark via light-dark() + color-scheme. See
+   docs/design-codebook-library.md for the plan this mock reviews.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  /* group tints (tokens.css) — shared across palettes */
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:920px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-xl); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:66ch; margin:.4rem 0; }
+.controls { display:flex; gap:.4rem; align-items:center; margin-bottom:var(--bn-space-xl); }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.bench { margin:2.5rem 0; }
+.bench-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.bench-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 1.1rem; max-width:70ch; }
+.stage-label { font-size:var(--bn-text-caption); font-weight:490; color:var(--bn-colour-accent); text-transform:uppercase; letter-spacing:.05em; margin:1.3rem 0 .5rem; font-family:var(--bn-font-mono); }
+
+/* ── shared atoms ─────────────────────────────────────────────────────── */
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; }
+
+/* ── Codebook Library modal ───────────────────────────────────────────── */
+.modal { background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  box-shadow:0 20px 60px var(--bn-colour-shadow); overflow:hidden; max-width:600px; }
+.modal-h { padding:1.1rem 1.35rem; border-bottom:1px solid var(--bn-colour-border); display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; }
+.modal-title { font-size:var(--bn-text-heading); font-weight:490; }
+.modal-sub { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:.2rem; }
+.modal-x { color:var(--bn-colour-muted); cursor:pointer; font-size:var(--bn-text-heading); line-height:1; }
+.modal-b { padding:1.35rem; }
+.sect-h { font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted); font-weight:490; margin:0 0 .8rem; }
+.sect-h:not(:first-child) { margin-top:1.6rem; }
+.lib-tiles { display:flex; flex-direction:column; gap:.75rem; }
+.tile { display:flex; gap:1.1rem; align-items:flex-start; background:var(--bn-colour-bg);
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:1rem 1.1rem; }
+.tile.disabled { opacity:.5; }
+.tile-body { flex:1; min-width:0; }
+.tile-title { font-size:var(--bn-text-label); font-weight:490; }
+.tile-author { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:.05rem; }
+.tile-desc { font-size:var(--bn-text-label); color:var(--bn-colour-muted); line-height:1.5; margin-top:.3rem; }
+.tile-tags { display:flex; flex-wrap:wrap; gap:4px; width:150px; flex-shrink:0; justify-content:flex-end; }
+/* Add / Remove sit TOP-right in the tile corner and share ONE footprint
+   (min-width + centred text) so the control column never shifts between states.
+   Both neutral — Remove is reversible (re-add is free), so no red. */
+.add-btn { flex-shrink:0; align-self:flex-start; min-width:5.25rem; text-align:center; font:inherit; font-size:var(--bn-text-label); font-weight:490;
+  padding:.35rem .9rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.add-btn:hover { background:var(--bn-colour-hover); border-color:var(--bn-colour-accent); color:var(--bn-colour-accent); }
+.add-btn.removeable { color:var(--bn-colour-muted); }
+.add-btn.removeable:hover { color:var(--bn-colour-text); border-color:var(--bn-colour-border-hover); background:var(--bn-colour-hover); }
+.coming { flex-shrink:0; align-self:flex-start; font-size:var(--bn-text-badge); color:var(--bn-colour-muted); font-style:italic; }
+.tile-create { border:1px dashed var(--bn-colour-border); display:flex; align-items:center; justify-content:center; gap:.5rem;
+  color:var(--bn-colour-muted); font-size:var(--bn-text-label); padding:1rem; cursor:pointer; }
+
+/* ── Codebook-page framework section ──────────────────────────────────── */
+.page { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.4rem 1.25rem; background:var(--bn-colour-bg); }
+.sec { border-top:1px solid var(--bn-colour-border); padding:1rem 0; }
+.sec:first-child { border-top:none; }
+.sec-hdr { display:flex; align-items:center; gap:1rem; }
+.sec-title-wrap { flex:1; min-width:0; }
+.sec-title { font-size:var(--bn-text-body); font-weight:490; }
+.sec-meta { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.15rem; height:1.2em; position:relative; }
+.sec-meta .on-m, .sec-meta .off-m { position:absolute; left:0; top:0; transition:opacity .28s ease; }
+.sec-meta .off-m { opacity:0; }
+.sec.off .sec-meta .on-m { opacity:0; }
+.sec.off .sec-meta .off-m { opacity:1; }
+.apply-btn { flex-shrink:0; font:inherit; font-size:var(--bn-text-label); font-weight:490; color:#fff;
+  background:var(--bn-colour-accent); border:none; border-radius:var(--bn-radius-md); padding:.45rem .95rem; cursor:pointer; white-space:nowrap; }
+/* macOS-matched switch (metrics/colour; spring is the accepted gap) */
+.sw { flex-shrink:0; position:relative; width:38px; height:22px; border-radius:11px; cursor:pointer;
+  background:var(--bn-colour-accent); transition:background .28s ease; }
+.sec.off .sw { background:var(--bn-off-track); }
+.sw::after { content:""; position:absolute; top:2px; left:18px; width:18px; height:18px; border-radius:50%;
+  background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.28); transition:left .28s cubic-bezier(.4,0,.2,1); }
+.sec.off .sw::after { left:2px; }
+/* fold */
+.fold { display:grid; grid-template-rows:1fr; transition:grid-template-rows .32s cubic-bezier(.4,0,.2,1); }
+.sec.off .fold { grid-template-rows:0fr; }
+.fold-in { overflow:hidden; }
+.groups { margin-top:.9rem; display:flex; flex-wrap:wrap; gap:1.25rem;
+  transition:opacity .22s ease, transform .3s cubic-bezier(.4,0,.2,1); }
+.sec.off .groups { opacity:0; transform:translateY(-8px); }
+.grp-h { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); font-weight:490; margin-bottom:.4rem; }
+.chips { display:flex; flex-wrap:wrap; gap:4px; max-width:240px; }
+@media (prefers-reduced-motion:reduce) { .fold,.groups,.sw::after,.sw,.sec-meta .on-m,.sec-meta .off-m { transition:none; } }
+
+/* ── Sidebar ──────────────────────────────────────────────────────────── */
+.sb { width:230px; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.6rem; background:var(--bn-colour-quote-bg); }
+.sb-h { font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted); font-weight:490; padding:.3rem .5rem .5rem; }
+/* lone dot, aligned to the FIRST line like a bullet (not centred on the wrapped block) */
+.sb-row { display:flex; align-items:flex-start; gap:.55rem; padding:.4rem .5rem; border-radius:var(--bn-radius-md); font-size:var(--bn-text-label); line-height:1.35; }
+.sb-row .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-top:.42em; }
+.sb-row.active { color:var(--bn-colour-text); } .sb-row.active .dot { background:var(--bn-colour-accent); }
+.sb-row.off { color:var(--bn-colour-muted); } .sb-row.off .dot { background:var(--bn-off-track); }
+.sb-row.avail { color:var(--bn-colour-muted); } .sb-row.avail .dot { background:transparent; }
+.sb-mini { font-size:var(--bn-text-label); color:var(--bn-colour-accent); padding:.5rem .5rem 0; cursor:pointer; }
+
+.note { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); line-height:1.55; margin-top:.6rem; max-width:70ch; }
+.note b { color:var(--bn-colour-text); font-weight:490; }
+.hint { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-bottom:.4rem; }
+.two-col { display:flex; gap:2rem; align-items:flex-start; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="masthead">
+    <div class="eyebrow">Bristlenose · mockup</div>
+    <h1>Codebook Library — stages, states &amp; text</h1>
+    <p>Review artefact for the Library → Add → Apply → enable/disable lifecycle. Every stage, every state, real strings, real tokens. Plan: <code>docs/design-codebook-library.md</code>. Switches below are live — click them to feel the fold.</p>
+  </div>
+
+  <div class="controls">
+    <span class="lbl">Palette</span>
+    <button class="pbtn on" data-pal="default">Default</button>
+    <button class="pbtn" data-pal="edo">Edo</button>
+    <span class="lbl" style="margin-left:1rem">Dark mode follows your OS</span>
+  </div>
+
+  <!-- 1. LIBRARY ------------------------------------------------------------->
+  <div class="bench">
+    <div class="bench-head"><h2>1 · Codebook Library</h2>
+      <p class="sub">The catalogue (install axis). <b>Add ↔ Remove</b> — one toggling button sharing a fixed footprint so the column never shifts. Add is free; Remove uninstalls (re-add later is free, retained). No enable/apply here — that's the codebook page.</p></div>
+
+    <div class="modal">
+      <div class="modal-h">
+        <div><div class="modal-title">Codebook Library</div><div class="modal-sub">Add codebooks to your project, or create your own</div></div>
+        <div class="modal-x">✕</div>
+      </div>
+      <div class="modal-b">
+        <div class="sect-h">Codebook frameworks</div>
+        <div class="lib-tiles">
+
+          <div class="tile">
+            <div class="tile-body">
+              <div class="tile-title">Command-Line UX</div>
+              <div class="tile-author">by Amara Okonkwo · Field Research Lab</div>
+              <div class="tile-desc">Tags for research on command-line tools, developer tools, and sysadmin workflows — flag ergonomics, error-message illegibility, piping mental-models.</div>
+            </div>
+            <div class="tile-tags">
+              <span class="badge" style="background:var(--bn-ux-1-bg)">starting-point-unclear</span>
+              <span class="badge" style="background:var(--bn-trust-1-bg)">--help-reliance</span>
+            </div>
+            <button class="add-btn">Add</button>
+          </div>
+
+          <div class="tile">
+            <div class="tile-body">
+              <div class="tile-title">Emotional &amp; Cognitive Signals</div>
+              <div class="tile-desc">Seven sentiment categories designed for UX research. Auto-applied by the pipeline during quote extraction.</div>
+            </div>
+            <div class="tile-tags">
+              <span class="badge" style="background:var(--bn-emo-1-bg)">frustration</span>
+              <span class="badge" style="background:var(--bn-emo-1-bg)">confusion</span>
+            </div>
+            <button class="add-btn removeable">Remove</button>
+          </div>
+
+          <div class="tile disabled">
+            <div class="tile-body">
+              <div class="tile-title">Accessibility Barriers</div>
+              <div class="tile-desc">WCAG-oriented friction codes for assistive-tech research.</div>
+            </div>
+            <span class="coming">Coming soon</span>
+          </div>
+
+          <div class="sect-h">Your codebooks</div>
+          <div class="tile-create">＋ Create new codebook</div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>States shown:</b> not added (<b>Add</b>) · added (<b>Remove</b>, muted — same footprint as Add, so the right edge holds) · coming soon (greyed) · create new. Remove takes it out of your codebook entirely (back to Add here); the on/off + apply live on the codebook page. <b>Decide later:</b> dim an added tile to ~80% since it's no longer "addable"? <b>Open Q2:</b> "Your codebooks" apart from the frameworks shelf?</p>
+  </div>
+
+  <!-- 2. CODEBOOK PAGE ------------------------------------------------------->
+  <div class="bench">
+    <div class="bench-head"><h2>2 · Your codebook</h2>
+      <p class="sub">The workbench. Trailing control morphs <b>Apply → switch on → switch off (fold)</b>. Title flush left; state on the right.</p></div>
+
+    <p class="note" style="margin-bottom:1rem"><b>Landing:</b> clicking <b>Add</b> in the Library closes the modal immediately and drops you here, <b>anchor-scrolled to the codebook you just added</b>, its <b>Apply to N quotes</b> button sitting at the top of your eyeline.</p>
+    <div class="hint">Click the switches ↓ — watch the groups fold into the line and the rows below slide up</div>
+    <div class="page">
+
+      <div class="stage-label" style="margin-top:.6rem">Added · not yet applied (this is your eyeline on landing)</div>
+      <div class="sec no-fold">
+        <div class="sec-hdr">
+          <div class="sec-title-wrap"><div class="sec-title">Command-Line UX</div><div class="sec-meta"><span class="on-m">214 quotes · not yet applied</span></div></div>
+          <button class="apply-btn">Apply to 214 quotes</button>
+        </div>
+      </div>
+
+      <div class="stage-label">Applied · enabled ⇄ disabled (live — click the switch)</div>
+      <div class="sec" id="secA">
+        <div class="sec-hdr">
+          <div class="sec-title-wrap"><div class="sec-title">Emotional &amp; Cognitive Signals</div>
+            <div class="sec-meta"><span class="on-m">7 tag groups · 142 tags</span><span class="off-m">7 tag groups · off · kept</span></div></div>
+          <div class="sw" data-sec="secA"></div>
+        </div>
+        <div class="fold"><div class="fold-in"><div class="groups">
+          <div><div class="grp-h">Sentiment</div><div class="chips">
+            <span class="badge" style="background:var(--bn-emo-1-bg)">frustration</span>
+            <span class="badge" style="background:var(--bn-emo-1-bg)">confusion</span>
+            <span class="badge" style="background:var(--bn-emo-1-bg)">delight</span></div></div>
+          <div><div class="grp-h">Pain points</div><div class="chips">
+            <span class="badge" style="background:var(--bn-task-1-bg)">friction</span>
+            <span class="badge" style="background:var(--bn-task-1-bg)">dead end</span></div></div>
+        </div></div></div>
+      </div>
+
+      <div class="sec off" id="secB">
+        <div class="sec-hdr">
+          <div class="sec-title-wrap"><div class="sec-title">Command-Line UX</div>
+            <div class="sec-meta"><span class="on-m">6 tag groups · 88 tags</span><span class="off-m">6 tag groups · off · kept</span></div></div>
+          <div class="sw" data-sec="secB"></div>
+        </div>
+        <div class="fold"><div class="fold-in"><div class="groups">
+          <div><div class="grp-h">Ergonomics</div><div class="chips">
+            <span class="badge" style="background:var(--bn-ux-1-bg)">flag-short-vs-long</span>
+            <span class="badge" style="background:var(--bn-ux-1-bg)">verb-noun-mismatch</span></div></div>
+          <div><div class="grp-h">Mental model</div><div class="chips">
+            <span class="badge" style="background:var(--bn-trust-1-bg)">--help-reliance</span>
+            <span class="badge" style="background:var(--bn-trust-1-bg)">exit-code-unaware</span></div></div>
+        </div></div></div>
+      </div>
+
+    </div>
+    <p class="note"><b>secB starts folded</b> to show the disabled resting state: one line, "<b>off · kept</b>", switch ready to bring it back — free, no re-spend. <b>No Remove on this page</b> — the slider is <em>disable</em> (Hide/fold), not removal. <b>Remove lives in the Library</b> (uninstall) — a different axis.</p>
+    <p class="note"><b>Apply progress is out of scope this session.</b> "Auto-coding 214 quotes…" is the <em>existing floating</em> activity indicator (already engineered to stay visible across every lens) — it is <em>not</em> an inline spinner in the codebook. Where it ultimately lives (project-status line / titlebar pill) is a separate session.</p>
+  </div>
+
+  <!-- 3. SIDEBAR ------------------------------------------------------------->
+  <div class="bench">
+    <div class="bench-head"><h2>3 · Sidebar status</h2>
+      <p class="sub">Status only — never a control. Lone dot, <b>blue = on / grey = off</b>, echoing the switch. Aligned to the <b>first line</b> like a bullet, so it holds its place when a long name wraps.</p></div>
+    <div class="two-col">
+      <div class="sb">
+        <div class="sb-h">Your codebook</div>
+        <div class="sb-row active"><span class="dot"></span>Emotional &amp; Cognitive Signals</div>
+        <div class="sb-row active"><span class="dot"></span>Command-Line UX &amp; Developer Ergonomics Framework</div>
+        <div class="sb-row off"><span class="dot"></span>Bristlenose UXR Codebook</div>
+        <div class="sb-mini">Codebook Library →</div>
+      </div>
+      <div style="flex:1; min-width:220px">
+        <p class="note">The second row wraps to two lines — the dot stays pinned to the <b>first</b> line (bullet alignment via <code>flex-start</code> + optical <code>margin-top</code>), not floating in the vertical centre of the wrapped block.</p>
+        <p class="note">Toggle <b>Edo</b> above to check the blue holds in the warm palette.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+document.querySelectorAll('.pbtn[data-pal]').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.documentElement.setAttribute('data-color-theme', b.getAttribute('data-pal'));
+    document.querySelectorAll('.pbtn[data-pal]').forEach(function(x){ x.classList.remove('on'); });
+    b.classList.add('on');
+  });
+});
+document.querySelectorAll('.sw').forEach(function(sw){
+  sw.addEventListener('click',function(){
+    document.getElementById(sw.getAttribute('data-sec')).classList.toggle('off');
+  });
+});
+</script>
+</body>
+</html>

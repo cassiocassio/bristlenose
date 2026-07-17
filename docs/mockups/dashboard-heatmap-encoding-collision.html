@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heatmap encoding collision — dashboard vs analysis lens · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   ISSUE MOCKUP · what "green" means, and why the dashboard can't just mirror
+   the analysis-lens heatmap.
+
+   Same data, same axes (participants × sections), same 5b scale. TWO encodings:
+
+     · RESIDUAL  — the SHIPPED analysis-lens maths (heatCellStyle,
+                   AnalysisPage.tsx:146). Hue = sign of the adjusted
+                   standardised residual: GREEN = over-represented (more quotes
+                   here than expected), RED = under-represented. It is a
+                   chi-square departure statistic, NOT a feeling.
+     · SENTIMENT — 5b's encoding (dashboard-10-ideas.html §5b). Hue = dominant
+                   sentiment token, depth = quote count. GREEN = positive
+                   feeling, RED = negative feeling.
+
+   The residuals below are COMPUTED live from the counts by the exact function
+   the app ships — no hand-painting. Cells where the two encodings DISAGREE in
+   valence are ringed. That disagreement is the issue.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem;
+
+  --bn-space-xs:.25rem; --bn-space-sm:.5rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px;
+
+  /* structural chrome (palette-default.css) */
+  --bn-colour-bg:       light-dark(#ffffff, #111111);
+  --bn-colour-surface:  light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-text:     light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:    light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:   light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-hover:    light-dark(#e8f0fe, #1e293b);
+  --bn-colour-accent:   light-dark(#2563eb, #60a5fa);
+
+  /* SENTIMENT HUES — the ONE canonical map. Source of truth is the built-in
+     sentiment codebook (bristlenose/server/codebook/sentiment.yaml, colour_set
+     "sentiment"), which resolves to these --bn-sentiment-* tokens (tokens.css).
+     Seven tags, this fixed order. Light-dark() pairs verbatim so the chips are
+     correct in both themes. Negative side is FOUR distinct hues, positive THREE
+     — surprise is deliberately neutral. This is a 7-way categorical scale, not
+     a red↔green diverging ramp. */
+  --bn-sentiment-frustration:  light-dark(#ea580c, #fb923c);
+  --bn-sentiment-confusion:    light-dark(#dc2626, #f87171);
+  --bn-sentiment-doubt:        light-dark(#7c3aed, #a78bfa);
+  --bn-sentiment-surprise:     light-dark(#d97706, #fbbf24);
+  --bn-sentiment-satisfaction: light-dark(#16a34a, #4ade80);
+  --bn-sentiment-delight:      light-dark(#059669, #34d399);
+  --bn-sentiment-confidence:   light-dark(#2563eb, #60a5fa);
+  /* -bg pairs — the badge atom fills with these (tokens.css dark overrides) */
+  --bn-sentiment-frustration-bg:  light-dark(#fff7ed, #2d1d0e);
+  --bn-sentiment-confusion-bg:    light-dark(#fef2f2, #2d1515);
+  --bn-sentiment-doubt-bg:        light-dark(#f5f3ff, #1e1533);
+  --bn-sentiment-surprise-bg:     light-dark(#fffbeb, #2d2305);
+  --bn-sentiment-satisfaction-bg: light-dark(#f0fdf4, #0f2918);
+  --bn-sentiment-delight-bg:      light-dark(#ecfdf5, #0d261c);
+  --bn-sentiment-confidence-bg:   light-dark(#eff6ff, #111d2e);
+  --bn-colour-badge-bg:   light-dark(#f3f4f6, #1f2937);
+  --bn-colour-badge-text: light-dark(#374151, #d1d5db);
+
+  --cell: 30px; --gap: 3px; --rail: 92px; --head-h: 78px;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:var(--bn-font-body); background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  line-height:1.5; padding:var(--bn-space-xl); -webkit-font-smoothing:antialiased; }
+
+h1 { font-size:var(--bn-text-title); font-weight:600; margin-bottom:var(--bn-space-xs); }
+.lede { color:var(--bn-colour-muted); font-size:var(--bn-text-body); max-width:64ch; margin-bottom:var(--bn-space-xl); }
+.lede b { color:var(--bn-colour-text); font-weight:600; }
+
+.controls { display:flex; gap:var(--bn-space-sm); margin-bottom:var(--bn-space-xl); align-items:center; }
+.controls button { font-family:inherit; font-size:var(--bn-text-caption); padding:.3rem .7rem;
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.controls button:hover { background:var(--bn-colour-hover); }
+.controls button.on { background:var(--bn-colour-accent); color:#fff; border-color:var(--bn-colour-accent); }
+.controls .spacer { flex:1; }
+
+/* ── side-by-side panels ─────────────────────────────────── */
+.panels { display:grid; grid-template-columns:1fr 1fr; gap:var(--bn-space-xl); align-items:start; }
+@media (max-width:1200px) { .panels { grid-template-columns:1fr; } }
+
+.panel { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  padding:var(--bn-space-lg); background:var(--bn-colour-surface); }
+.panel h2 { font-size:var(--bn-text-heading); font-weight:600; margin-bottom:2px; }
+.panel .tag { font-size:var(--bn-text-badge); font-family:var(--bn-font-mono); color:var(--bn-colour-muted);
+  display:block; margin-bottom:var(--bn-space-md); }
+.panel .means { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-bottom:var(--bn-space-md); }
+.panel .means b { color:var(--bn-colour-text); font-weight:600; }
+
+/* ── the grid ────────────────────────────────────────────── */
+.hm { display:grid; grid-template-columns:var(--rail) repeat(11, var(--cell));
+  gap:var(--gap); align-items:end; }
+.corner { grid-column:1; }
+.chead { height:var(--head-h); display:flex; align-items:flex-end; justify-content:center; }
+.chead span { writing-mode:vertical-rl; transform:rotate(180deg); font-size:var(--bn-text-micro);
+  color:var(--bn-colour-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-height:var(--head-h); }
+.rlabel { grid-column:1; height:var(--cell); display:flex; align-items:center; justify-content:flex-end;
+  padding-right:var(--bn-space-sm); font-size:var(--bn-text-caption); font-family:var(--bn-font-mono);
+  color:var(--bn-colour-muted); }
+.cell { width:var(--cell); height:var(--cell); border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-bg); position:relative; cursor:crosshair; }
+.cell.empty { background:transparent; box-shadow:inset 0 0 0 1px var(--bn-colour-border); opacity:.4; }
+/* collision ring — the two encodings disagree in valence on this cell */
+.cell.collide { box-shadow:0 0 0 2px var(--bn-colour-text), 0 0 0 4px var(--bn-colour-bg); z-index:1; }
+.showRings .cell.collide::after { content:"!"; position:absolute; inset:0; display:flex; align-items:center;
+  justify-content:center; font-size:12px; font-weight:700; font-family:var(--bn-font-mono);
+  color:var(--bn-colour-text); text-shadow:0 0 3px var(--bn-colour-bg),0 0 3px var(--bn-colour-bg); }
+.cell:hover { outline:2px solid var(--bn-colour-accent); outline-offset:1px; z-index:2; }
+
+/* ── the badge atom (atoms/badge.css, verbatim — sans AI delete-×) ────────── */
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  padding:var(--bn-space-xs) 0.45rem; border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); }
+.badge-frustration  { background:var(--bn-sentiment-frustration-bg);  color:var(--bn-sentiment-frustration); }
+.badge-confusion    { background:var(--bn-sentiment-confusion-bg);    color:var(--bn-sentiment-confusion); }
+.badge-doubt        { background:var(--bn-sentiment-doubt-bg);        color:var(--bn-sentiment-doubt); }
+.badge-surprise     { background:var(--bn-sentiment-surprise-bg);     color:var(--bn-sentiment-surprise); }
+.badge-satisfaction { background:var(--bn-sentiment-satisfaction-bg); color:var(--bn-sentiment-satisfaction); }
+.badge-delight      { background:var(--bn-sentiment-delight-bg);      color:var(--bn-sentiment-delight); }
+.badge-confidence   { background:var(--bn-sentiment-confidence-bg);   color:var(--bn-sentiment-confidence); }
+
+/* ── key — STACKED VERTICALLY (not the wide broken-up row) ────────────────── */
+.legend { display:flex; flex-direction:column; align-items:flex-start; gap:var(--bn-space-xs);
+  margin-top:var(--bn-space-lg); }
+.legend .row { display:flex; align-items:center; gap:var(--bn-space-sm);
+  font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.legend .sw { width:var(--bn-text-badge); height:var(--bn-text-badge); border-radius:var(--bn-radius-sm);
+  display:inline-block; flex:none; }
+
+/* ── the callout ─────────────────────────────────────────── */
+.callout { margin-top:var(--bn-space-xl); border:1px solid var(--bn-colour-border);
+  border-left:3px solid var(--bn-sentiment-frustration); border-radius:var(--bn-radius-md);
+  padding:var(--bn-space-lg); background:var(--bn-colour-surface); max-width:80ch; }
+.callout h3 { font-size:var(--bn-text-heading); font-weight:600; margin-bottom:var(--bn-space-sm); }
+.callout p { font-size:var(--bn-text-body); margin-bottom:var(--bn-space-sm); }
+.callout p:last-child { margin-bottom:0; }
+.callout b { font-weight:600; }
+.callout .g { color:var(--bn-sentiment-satisfaction); font-weight:600; }
+.callout .r { color:var(--bn-sentiment-confusion); font-weight:600; }
+.callout code { font-family:var(--bn-font-mono); font-size:.85em; background:var(--bn-colour-hover);
+  padding:1px 5px; border-radius:3px; }
+
+.tip { position:fixed; pointer-events:none; z-index:99; background:var(--bn-colour-text);
+  color:var(--bn-colour-bg); font-size:var(--bn-text-caption); padding:.4rem .6rem; border-radius:var(--bn-radius-sm);
+  max-width:240px; opacity:0; transition:opacity .1s; box-shadow:0 4px 12px rgba(0,0,0,.25); }
+.tip.show { opacity:1; }
+.tip b { font-weight:600; }
+.foot { margin-top:var(--bn-space-xl); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); max-width:80ch; }
+.foot code { font-family:var(--bn-font-mono); }
+</style>
+</head>
+<body>
+
+<h1>What does a green cell mean?</h1>
+<p class="lede">The analysis-lens heatmap and a dashboard mini-grid can show the <b>same data on the
+same axes</b> and still colour the same cell differently — because they encode <b>different questions</b>.
+Both are honest. Only one can be the dashboard's, and the reader can't tell which they're looking at.
+Cells where the two <b>disagree in valence</b> are ringed <b>!</b> — and there are <b>six of them</b>, not
+one. The collision isn't a corner case; it's structural.</p>
+
+<div class="controls">
+  <button class="on" data-rings="1" onclick="toggleRings(this,true)">Show collisions</button>
+  <button data-rings="0" onclick="toggleRings(this,false)">Hide</button>
+  <span class="spacer"></span>
+  <button onclick="document.documentElement.setAttribute('data-force','light')">Light</button>
+  <button onclick="document.documentElement.setAttribute('data-force','dark')">Dark</button>
+</div>
+
+<div class="panels">
+  <div class="panel">
+    <h2>Residual — the shipped lens maths</h2>
+    <span class="tag">heatCellStyle() · AnalysisPage.tsx:146</span>
+    <p class="means"><b>Green</b> = over-represented (more quotes than expected) · <b>Red</b> = under-represented.
+    A chi-square departure statistic. <b>Not a feeling.</b></p>
+    <div class="hm" id="hm-residual"></div>
+    <div class="legend">
+      <div class="row"><span class="sw" style="background:oklch(0.6 0.12 150)"></span>over-represented</div>
+      <div class="row"><span class="sw" style="background:oklch(0.6 0.12 20)"></span>under-represented</div>
+      <div class="row"><span class="sw" style="background:var(--bn-colour-bg);box-shadow:inset 0 0 0 1px var(--bn-colour-border)"></span>absent</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Sentiment — 5b's encoding</h2>
+    <span class="tag">dashboard-10-ideas.html §5b</span>
+    <p class="means"><b>Hue</b> = dominant sentiment · <b>depth</b> = quote count.
+    <b>Green</b> = positive feeling · <b>Red/orange</b> = negative feeling.</p>
+    <div class="hm" id="hm-sentiment"></div>
+    <div class="legend">
+      <span class="badge badge-frustration">frustration</span>
+      <span class="badge badge-confusion">confusion</span>
+      <span class="badge badge-doubt">doubt</span>
+      <span class="badge badge-surprise">surprise</span>
+      <span class="badge badge-satisfaction">satisfaction</span>
+      <span class="badge badge-delight">delight</span>
+      <span class="badge badge-confidence">confidence</span>
+    </div>
+  </div>
+</div>
+
+<div class="callout">
+  <h3>The loudest instance: <code>p1 · Aftercare</code> — and it isn't alone</h3>
+  <p>p1 is the only participant who reached post-surgery aftercare, and they were <b>frustrated</b> —
+  intensity 3, the single most important negative finding in the study.</p>
+  <p>On the <b>sentiment</b> grid it is <span class="r">deep orange</span> — correct, a strong problem.
+  On the <b>residual</b> grid it is <span class="g">saturated green</span> — also correct: one participant
+  monopolising a section nobody else touched is <em>massively</em> over-represented. The statistic is right.
+  The <b>reading</b> is catastrophic: on a glanceable dashboard, green is "good", so the worst finding in the
+  study advertises itself as a win.</p>
+  <p>And it's <b>not one unlucky cell</b>. Every one of the six ringed cells is a negative feeling
+  (frustration, confusion) that is <em>over-represented</em> — so residual paints them all green. In a sparse
+  study, negative sentiment and over-representation coincide constantly; the collision is <b>structural</b>,
+  not accidental. p1·Aftercare only stands out because it's the only cell with a count above 1 — the rest fade
+  to 30% heat exactly as the app does, so the study's problems read as faint-green rather than red.</p>
+  <p>This is why the dashboard <b>cannot silently mirror</b> the lens. Same data, same axes, same maths —
+  but stripped of the lens's legend and context, the residual hue inverts the meaning. Either the dashboard
+  adopts sentiment encoding (and the click-through to the lens is a <b>deliberate, signposted</b> change of
+  colour-language), or it keeps residual and the dashboard needs the lens's full legend riding along — which
+  is no longer glanceable.</p>
+</div>
+
+<p class="foot">Both grids are computed from one dataset (the IKEA 9-session study, 4 participants shown ×
+11 sections). Residual hue is produced live by a JS port of the shipped <code>adjustedResidual()</code> /
+<code>heatCellStyle()</code> — single-occurrence cells faded to 30% exactly as the app does. Nothing is
+hand-painted. Rings mark cells whose residual valence (over/under) and sentiment valence (positive/negative)
+point opposite ways.</p>
+
+<div class="tip" id="tip"></div>
+
+<script>
+(function () {
+  // ── dataset: participant × section, each filled cell {count, sentiment} ──
+  var SECTIONS = ["Pre-surgery","Aftercare","Notifications","Top nav","Beds browsing",
+                  "Duvets","Product page","Search","Login / app","Bag","Checkout"];
+  var PIDS = ["p1","p2","p3","p4"];
+  // sentiment → hue token
+  var SENT = {
+    satisfaction:"--bn-sentiment-satisfaction", delight:"--bn-sentiment-delight",
+    frustration:"--bn-sentiment-frustration", confusion:"--bn-sentiment-confusion",
+    surprise:"--bn-sentiment-surprise", doubt:"--bn-sentiment-doubt", confidence:"--bn-sentiment-confidence"
+  };
+  // rows keyed by pid; each entry: section-index → {c:count, s:sentiment}
+  var DATA = {
+    p1: { 0:{c:3,s:"satisfaction"}, 1:{c:2,s:"frustration"}, 2:{c:1,s:"delight"} },
+    p2: { 3:{c:1,s:"frustration"}, 4:{c:1,s:"confusion"} },
+    p3: { 4:{c:1,s:"surprise"}, 6:{c:1,s:"confusion"}, 7:{c:2,s:"satisfaction"},
+          8:{c:1,s:"delight"}, 9:{c:1,s:"confusion"}, 10:{c:1,s:"satisfaction"} },
+    p4: { 4:{c:1,s:"satisfaction"}, 5:{c:3,s:"satisfaction"}, 10:{c:1,s:"frustration"} }
+  };
+  var POSITIVE = { satisfaction:1, delight:1, confidence:1 };
+
+  // ── totals for the residual maths ──
+  var rowTotals = {}, colTotals = {}, grand = 0;
+  PIDS.forEach(function (p) { rowTotals[p] = 0; });
+  SECTIONS.forEach(function (_, j) { colTotals[j] = 0; });
+  PIDS.forEach(function (p) {
+    Object.keys(DATA[p]).forEach(function (j) {
+      var c = DATA[p][j].c; rowTotals[p] += c; colTotals[j] += c; grand += c;
+    });
+  });
+
+  // ── the SHIPPED maths, ported verbatim ──
+  function adjustedResidual(obs, rowTotal, colTotal, grandTotal) {
+    var expected = (rowTotal * colTotal) / grandTotal;
+    if (expected === 0) return 0;
+    var denom = Math.sqrt(expected * (1 - rowTotal / grandTotal) * (1 - colTotal / grandTotal));
+    return denom === 0 ? 0 : (obs - expected) / denom;
+  }
+  function residualStyle(count, rowTotal, colTotal) {
+    if (count === 0) return { bg:null, r:0 };
+    var r = adjustedResidual(count, rowTotal, colTotal, grand);
+    var absR = Math.abs(r), maxR = 4;
+    var heat = Math.min(1, absR / maxR);
+    if (heat < 0.05) return { bg:null, r:r };
+    if (count === 1) heat *= 0.3;
+    var hue = r > 0 ? 150 : 20;
+    var chroma = 0.12 * heat;
+    var lMin = 0.55, lMax = 0.95;              // light-mode ramp from the shipped code
+    var lightness = lMax - (lMax - lMin) * heat;
+    return { bg:"oklch(" + lightness.toFixed(3) + " " + chroma.toFixed(3) + " " + hue + ")", r:r };
+  }
+
+  // sentiment fill: the cell IS the chip. Both ramp endpoints are the chip's
+  // own two colours — pale badge bg (--bn-sentiment-*-bg) at count 1, full hue
+  // (--bn-sentiment-*) at count 3+. No mixing against page white; every fill is
+  // a design-system chip colour.
+  function sentimentStyle(count, sentiment) {
+    if (count === 0) return { bg:null };
+    var full = SENT[sentiment];            // e.g. --bn-sentiment-frustration
+    var bgTok = full + "-bg";              // e.g. --bn-sentiment-frustration-bg
+    var pct = Math.min(1, 0.5 + 0.25 * (count - 1));   // 1→50%, 2→75%, 3+→100%
+    return { bg:"color-mix(in oklab, var(" + full + ") " + Math.round(pct*100) + "%, var(" + bgTok + "))" };
+  }
+
+  var tip = document.getElementById("tip");
+  function bindTip(el, html) {
+    el.addEventListener("mousemove", function (e) {
+      tip.innerHTML = html; tip.classList.add("show");
+      tip.style.left = (e.clientX + 14) + "px"; tip.style.top = (e.clientY + 14) + "px";
+    });
+    el.addEventListener("mouseleave", function () { tip.classList.remove("show"); });
+  }
+
+  function header(container) {
+    var corner = document.createElement("div"); corner.className = "corner chead"; container.appendChild(corner);
+    SECTIONS.forEach(function (s) {
+      var h = document.createElement("div"); h.className = "chead";
+      var sp = document.createElement("span"); sp.textContent = s; sp.title = s; h.appendChild(sp);
+      container.appendChild(h);
+    });
+  }
+
+  function render(which) {
+    var container = document.getElementById(which === "residual" ? "hm-residual" : "hm-sentiment");
+    container.innerHTML = "";
+    header(container);
+    PIDS.forEach(function (p) {
+      var rl = document.createElement("div"); rl.className = "rlabel"; rl.textContent = p; container.appendChild(rl);
+      SECTIONS.forEach(function (s, j) {
+        var d = DATA[p][j];
+        var cell = document.createElement("div"); cell.className = "cell";
+        if (!d) { cell.classList.add("empty"); container.appendChild(cell); return; }
+
+        var rst = residualStyle(d.c, rowTotals[p], colTotals[j]);
+        var sst = sentimentStyle(d.c, d.s);
+        var bg = which === "residual" ? rst.bg : sst.bg;
+        if (bg) cell.style.background = bg; else cell.classList.add("empty");
+
+        // collision: residual over-rep (r>0) but sentiment negative, OR residual under-rep (r<0) but positive
+        var resPositive = rst.r > 0;               // "green" side of the residual ramp
+        var sentPositive = !!POSITIVE[d.s];
+        if (d.c > 0 && rst.r !== 0 && resPositive !== sentPositive) cell.classList.add("collide");
+
+        var sign = rst.r > 0 ? "over" : "under";
+        bindTip(cell, "<b>" + p + " · " + s + "</b><br>" + d.c + " quote" + (d.c>1?"s":"") +
+          " · " + d.s + "<br>residual " + rst.r.toFixed(2) + " (" + sign + "-represented)");
+        container.appendChild(cell);
+      });
+    });
+  }
+
+  window.toggleRings = function (btn, on) {
+    document.querySelectorAll(".controls [data-rings]").forEach(function (b) { b.classList.remove("on"); });
+    btn.classList.add("on");
+    document.querySelectorAll(".hm").forEach(function (h) { h.parentElement.classList.toggle("showRings", on); });
+    // showRings lives on the panel via cell::after; toggle the "!" render
+    document.querySelectorAll(".panel").forEach(function (pnl) { pnl.classList.toggle("showRings", on); });
+  };
+
+  render("residual");
+  render("sentiment");
+  document.querySelectorAll(".panel").forEach(function (p) { p.classList.add("showRings"); });
+})();
+</script>
+</body>
+</html>

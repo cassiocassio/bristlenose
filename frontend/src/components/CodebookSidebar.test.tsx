@@ -149,10 +149,10 @@ describe("CodebookSidebar", () => {
     expect(link).not.toHaveClass("not-imported");
   });
 
-  it("renders Browse codebooks button", async () => {
+  it("renders Codebook Library button", async () => {
     render(<CodebookSidebar />);
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /browse codebooks/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /codebook library/i })).toBeInTheDocument();
     });
   });
 
@@ -205,16 +205,16 @@ describe("CodebookSidebar", () => {
     window.removeEventListener("bn:codebook-browse", handler);
   });
 
-  it("dispatches bn:codebook-browse on Browse codebooks click", async () => {
+  it("dispatches bn:codebook-browse on Codebook Library click", async () => {
     render(<CodebookSidebar />);
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /browse codebooks/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /codebook library/i })).toBeInTheDocument();
     });
 
     const handler = vi.fn();
     window.addEventListener("bn:codebook-browse", handler);
 
-    fireEvent.click(screen.getByRole("button", { name: /browse codebooks/i }));
+    fireEvent.click(screen.getByRole("button", { name: /codebook library/i }));
 
     expect(handler).toHaveBeenCalledTimes(1);
 

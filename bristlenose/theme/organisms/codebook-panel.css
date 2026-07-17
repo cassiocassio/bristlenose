@@ -657,18 +657,12 @@
     font-weight: var(--bn-weight-emphasis);
 }
 
-/* Picker card row */
+/* Picker card list — vertical, full-width tiles (was a horizontal scroll row) */
 .picker-row {
     display: flex;
-    gap: var(--bn-space-lg);
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
+    flex-direction: column;
+    gap: var(--bn-space-md);
     padding-bottom: var(--bn-space-sm);
-}
-.picker-row::-webkit-scrollbar { height: 6px; }
-.picker-row::-webkit-scrollbar-thumb {
-    background: var(--bn-colour-border);
-    border-radius: 3px;
 }
 
 /* Picker card */
@@ -680,10 +674,6 @@
     cursor: pointer;
     transition: border-color var(--bn-transition-fast),
                 background-color var(--bn-transition-fast);
-    width: 260px;
-    min-width: 260px;
-    flex-shrink: 0;
-    scroll-snap-align: start;
     position: relative;
 }
 .picker-card:hover {
@@ -695,18 +685,15 @@
     cursor: default;
     pointer-events: none;
 }
-.picker-card.imported {
-    border-color: light-dark(var(--bn-colour-positive), var(--bn-colour-positive));
-}
 .picker-card.imported::after {
-    content: "Imported";
+    content: "Added";
     position: absolute;
     top: 8px;
     right: 8px;
     font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-emphasis);
-    color: light-dark(#16a34a, #4ade80);
-    background: light-dark(rgba(22, 163, 74, 0.08), rgba(74, 222, 128, 0.12));
+    color: var(--bn-colour-muted);
+    background: var(--bn-colour-badge-bg);
     padding: 2px 6px;
     border-radius: var(--bn-radius-sm);
 }
@@ -724,6 +711,7 @@
     font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     line-height: 1.5;
+    max-width: 75ch;  /* readability at full width */
 }
 .picker-card-tags {
     display: flex;

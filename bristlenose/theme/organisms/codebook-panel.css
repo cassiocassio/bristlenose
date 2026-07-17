@@ -514,6 +514,44 @@
     margin-top: 0.2rem;
 }
 
+/* Framework enable/disable switch — macOS-matched metrics; blue on / grey off.
+   Off collapses the framework's tag groups (fold); tags on quotes are kept. */
+.framework-toggle {
+    flex-shrink: 0;
+    align-self: center;
+    position: relative;
+    width: 38px;
+    height: 22px;
+    border-radius: 11px;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    background: var(--bn-colour-accent);
+    transition: background var(--bn-transition-fast);
+}
+.framework-toggle.off {
+    background: var(--bn-colour-border-hover);
+}
+.framework-toggle::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 18px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+    transition: left var(--bn-transition-fast);
+}
+.framework-toggle.off::after {
+    left: 2px;
+}
+.framework-toggle:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
 .autocode-btn {
     font-family: var(--bn-font-body);
     font-size: var(--bn-text-caption);

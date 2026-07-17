@@ -548,6 +548,21 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
   const [autoCodeStatus, setAutoCodeStatus] = useState<Record<string, AutoCodeJobStatus | null>>({});
   const [reportModal, setReportModal] = useState<{ frameworkId: string; frameworkTitle: string } | null>(null);
 
+  // --- Framework enable/disable (UI-local fold) ---
+  // The trailing switch on each framework header collapses that framework's tag
+  // groups. Off = folded ("kept"); the applied tags on quotes are untouched. This
+  // is the visual on/off only — functional hide-from-analysis + persistence are a
+  // follow-up (see docs/design-codebook-library.md).
+  const [collapsedFrameworks, setCollapsedFrameworks] = useState<Set<string>>(new Set());
+  const toggleFrameworkFold = useCallback((fid: string) => {
+    setCollapsedFrameworks((prev) => {
+      const next = new Set(prev);
+      if (next.has(fid)) next.delete(fid);
+      else next.add(fid);
+      return next;
+    });
+  }, []);
+
   // Fetch codebook data
   const fetchData = useCallback(() => {
     getCodebook()
@@ -1051,6 +1066,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
           // rather than show one that always returns "0 of 0 proposals"
           // (the fake-success-feedback class from the 7 May quality reset).
           const isSentimentFramework = fid === "sentiment";
+          const isCollapsed = collapsedFrameworks.has(fid);
           return (
             <Fragment key={fid}>
               <div className="framework-section-header" id={`codebook-fw-${fid}`}>
@@ -1089,9 +1105,18 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                   >
                     {t("codebook.removeFromCodebook")}
                   </button>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={!isCollapsed}
+                    aria-label={label}
+                    className={`framework-toggle${isCollapsed ? " off" : ""}`}
+                    onClick={() => toggleFrameworkFold(fid)}
+                    data-testid={`bn-framework-toggle-${fid}`}
+                  />
                 </div>
               </div>
-              {fwGroups.map((group) => (
+              {!isCollapsed && fwGroups.map((group) => (
                 <CodebookGroupColumn
                   key={group.id}
                   group={group}

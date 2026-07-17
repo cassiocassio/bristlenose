@@ -439,6 +439,22 @@ describe("CodebookPanel — per-framework sections", () => {
     expect(screen.getByText("Usability")).toBeInTheDocument();
   });
 
+  it("framework toggle folds that framework's tag groups (others unaffected)", async () => {
+    mockFetchOk(MOCK_WITH_FRAMEWORKS);
+    render(<CodebookPanel projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText("Strategy")).toBeInTheDocument();
+    });
+    // Toggle garrett off → its groups (Strategy, Scope) collapse; uxr (Usability) stays
+    await userEvent.click(screen.getByTestId("bn-framework-toggle-garrett"));
+    expect(screen.queryByText("Strategy")).not.toBeInTheDocument();
+    expect(screen.queryByText("Scope")).not.toBeInTheDocument();
+    expect(screen.getByText("Usability")).toBeInTheDocument();
+    // Toggle back on → groups return
+    await userEvent.click(screen.getByTestId("bn-framework-toggle-garrett"));
+    expect(screen.getByText("Strategy")).toBeInTheDocument();
+  });
+
   it("renders Remove from Codebook button per framework section", async () => {
     mockFetchOk(MOCK_WITH_FRAMEWORKS);
     render(<CodebookPanel projectId="1" />);

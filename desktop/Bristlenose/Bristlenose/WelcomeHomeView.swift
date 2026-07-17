@@ -314,16 +314,20 @@ private struct SlotRotator: View {
     private var count: Int { items.count }
     private var revealed: Bool { hovering }   // mouse affordance only; keyboard uses arrow keys
 
+    // Chevron disk size AND dots-row height. Equal by construction — that's what puts the
+    // disk and dot centres on one line. Changing one without the other breaks the alignment.
+    private static let controlRow: CGFloat = 26
+
     var body: some View {
         VStack(spacing: 6) {
             slotView(items[min(index, max(0, count - 1))])
                 .id(index)
                 .transition(.opacity)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .overlay(alignment: .leading)  { chevron("chevron.left")  { go(index - 1) } }
-                .overlay(alignment: .trailing) { chevron("chevron.right") { go(index + 1) } }
             if count > 1 { dots }
         }
+        .overlay(alignment: .leading)  { chevron("chevron.left")  { go(index - 1) } }
+        .overlay(alignment: .trailing) { chevron("chevron.right") { go(index + 1) } }
         .background(SwipeCatcher { dir in go(index + dir) })
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
@@ -369,24 +373,30 @@ private struct SlotRotator: View {
         }
     }
 
-    // Tall invisible edge-strip; the small icon just floats centred in it.
+    // Tall invisible edge-strip, but the disk sits LOW — bottom-aligned so its centre
+    // lands on the dots' centre line (both are `controlRow` tall), keeping the glyph off
+    // the body text it would otherwise compete with. Strip stays full-height and forgiving.
     private func chevron(_ symbol: String, _ action: @escaping () -> Void) -> some View {
-        // Frosted glass disk so the glyph survives any content underneath with dignity.
-        Image(systemName: symbol)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(.primary)
-            .frame(width: 26, height: 26)
-            .background(.regularMaterial, in: Circle())
-            .overlay(Circle().strokeBorder(.primary.opacity(0.08)))          // hairline definition
-            .shadow(color: .black.opacity(0.15), radius: 1, y: 0.5)
-            .opacity(revealed ? 1 : 0)                                        // disk + glyph fade together
-            .frame(width: 30)                                                 // fixed strip width
-            .frame(maxHeight: .infinity)                                      // tall forgiving hit strip
-            .contentShape(Rectangle())
-            .onTapGesture { action() }
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            // Frosted glass disk so the glyph survives any content underneath with dignity.
+            Image(systemName: symbol)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.primary)
+                .frame(width: Self.controlRow, height: Self.controlRow)
+                .background(.regularMaterial, in: Circle())
+                .overlay(Circle().strokeBorder(.primary.opacity(0.08)))      // hairline definition
+                .shadow(color: .black.opacity(0.15), radius: 1, y: 0.5)
+                .opacity(revealed ? 1 : 0)                                    // disk + glyph fade together
+        }
+        .frame(width: 30)                                                     // fixed strip width
+        .frame(maxHeight: .infinity)                                          // tall forgiving hit strip
+        .contentShape(Rectangle())
+        .onTapGesture { action() }
     }
 
     // Visible dot 5pt; active ~2× width, muted accent; 17pt hit-slop; indicator-first.
+    // Row is `controlRow` tall (not 17) so the dots share a centre line with the chevron disks.
     private var dots: some View {
         HStack(spacing: 0) {
             ForEach(items.indices, id: \.self) { n in
@@ -398,6 +408,7 @@ private struct SlotRotator: View {
                     .onTapGesture { go(n) }
             }
         }
+        .frame(height: Self.controlRow)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: index)
     }
 }

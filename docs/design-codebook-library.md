@@ -1,7 +1,13 @@
 # Codebook Library — design & build plan
 
-**Status:** design settled, unbuilt. Review artefact for the codebook lifecycle
-redesign. Mock: [`docs/mockups/codebook-library-states.html`](mockups/codebook-library-states.html).
+**Status:** design settled; partially built. **Shipped** (commits `7530106e`,
+`c62e611f`): vertical full-width Library tiles + de-greened "Added" badge; the
+Library/Add/Apply string renames (de-sparkled); and the **framework enable/disable
+switch** (trailing macOS-matched switch, off collapses the framework's tag-group
+columns — UI-local fold, tags kept). **Not yet built:** fold *animation*, collapsed
+summary meta, Add↔Remove install toggle, sidebar dots, and the functional
+"hide-from-analysis" + persistence behind the switch (currently visual-only). Mock:
+[`docs/mockups/codebook-library-states.html`](mockups/codebook-library-states.html).
 
 Supersedes the "Import / Remove from Codebook" framing. Related:
 [design-autocode.md](design-autocode.md), [design-codebook-island.md](design-codebook-island.md),

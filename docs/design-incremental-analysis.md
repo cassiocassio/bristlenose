@@ -1,6 +1,6 @@
 # Incremental analysis and codebook lock
 
-**Status:** Thinking document. Not a spec. Post-TF design problem.
+**Status:** Thinking document. Not a spec — and the first cut **shipped without it** (v0.20.0, 11 Jul 2026): curation survives re-analysis via freeze-verbatim + membership-is-identity (see the companion doc below), which routes around the quote-re-matching problem this doc frames rather than solving it. What remains live here is the *methodology* — codebook lock-vs-fluid, the saturation proxy, when a theme should be allowed to move — none of which the ship decided. Read it as the open design question behind a shipped feature, not as a pre-TF plan.
 **Sibling docs:** `docs/methodology/tag-rejections-are-great.md`, `docs/methodology/consent-gradient.md`, `docs/design-research-methodology.md`, `docs/design-analysis-future.md`.
 **Companion (the persistence layer):** [`design-curation-persistence.md`](design-curation-persistence.md) — the full model for *which* human signals survive a re-run and the identity/state machinery that carries them (star-as-freeze, presence-vs-prominence, membership-is-identity, the quote state engine, split-inheritance rules and tie-breakers). This doc frames the problem; that one specifies how curation is preserved.
 **Predecessor:** TF multi-project plan descoped #12 ("add new interviews to existing project") because this is its real shape — not a button to wire up, a methodology to design.

@@ -81,7 +81,7 @@ const ONE_TO_ONE: SessionsListResponse = {
       has_video: false,
       thumbnail_url: null,
       speakers: [
-        { speaker_code: "m1", name: "Sarah", role: "moderator" },
+        { speaker_code: "m1", name: "Sarah", role: "researcher" },
         { speaker_code: "p1", name: "Rachel Chen", role: "participant" },
       ],
       journey_labels: [],
@@ -98,7 +98,7 @@ const ONE_TO_ONE: SessionsListResponse = {
       has_video: false,
       thumbnail_url: null,
       speakers: [
-        { speaker_code: "m1", name: "Sarah", role: "moderator" },
+        { speaker_code: "m1", name: "Sarah", role: "researcher" },
         { speaker_code: "p2", name: "David Kim", role: "participant" },
       ],
       journey_labels: [],
@@ -123,7 +123,7 @@ const MULTI_PARTICIPANT: SessionsListResponse = {
       has_video: true,
       thumbnail_url: "/thumb/s1.jpg",
       speakers: [
-        { speaker_code: "m1", name: "Sarah", role: "moderator" },
+        { speaker_code: "m1", name: "Sarah", role: "researcher" },
         { speaker_code: "p1", name: "Rachel", role: "participant" },
         { speaker_code: "p2", name: "David", role: "participant" },
       ],
@@ -134,6 +134,53 @@ const MULTI_PARTICIPANT: SessionsListResponse = {
     },
   ],
   moderator_names: ["Sarah"],
+  observer_names: [],
+  source_folder_uri: "file:///input",
+};
+
+// Two distinct moderators across sessions → hasMultipleModerators, so the
+// multi-participant variant renders a moderator (m-code) badge on the first
+// participant row. Exercises isModerator() detection: if it were broken and
+// returned no moderators, moderators.size would be 0, isOneToOne would flip
+// true, and neither the #N session badge nor the m-code badge would render.
+const MULTI_MODERATOR: SessionsListResponse = {
+  sessions: [
+    {
+      session_id: "s1",
+      session_number: 1,
+      session_date: "2026-02-15T10:00:00",
+      duration_seconds: 3600,
+      has_media: false,
+      has_video: false,
+      thumbnail_url: null,
+      speakers: [
+        { speaker_code: "m1", name: "Sarah", role: "researcher" },
+        { speaker_code: "p1", name: "Rachel", role: "participant" },
+      ],
+      journey_labels: [],
+      journey: [],
+      sentiment_counts: {},
+      source_files: [],
+    },
+    {
+      session_id: "s2",
+      session_number: 2,
+      session_date: "2026-02-16T10:00:00",
+      duration_seconds: 3600,
+      has_media: false,
+      has_video: false,
+      thumbnail_url: null,
+      speakers: [
+        { speaker_code: "m2", name: "James", role: "researcher" },
+        { speaker_code: "p2", name: "David", role: "participant" },
+      ],
+      journey_labels: [],
+      journey: [],
+      sentiment_counts: {},
+      source_files: [],
+    },
+  ],
+  moderator_names: ["Sarah", "James"],
   observer_names: [],
   source_folder_uri: "file:///input",
 };
@@ -228,6 +275,22 @@ describe("SessionsSidebar", () => {
 
     expect(screen.getByText("Rachel")).toBeDefined();
     expect(screen.getByText("David")).toBeDefined();
+  });
+
+  it("renders moderator badges when multiple moderators are present", async () => {
+    mockApiGet.mockResolvedValue(MULTI_MODERATOR);
+    renderInRouter("/report/sessions");
+
+    await waitFor(() => {
+      expect(screen.getByText("Rachel")).toBeDefined();
+    });
+
+    // Multi-participant variant: session-number badges present…
+    expect(screen.getByText("#1")).toBeDefined();
+    expect(screen.getByText("#2")).toBeDefined();
+    // …and each session's moderator (m-code) badge rendered on the first row.
+    expect(screen.getByText("m1")).toBeDefined();
+    expect(screen.getByText("m2")).toBeDefined();
   });
 
   it("highlights active session on transcript route", async () => {

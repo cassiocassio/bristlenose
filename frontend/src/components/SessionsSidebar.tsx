@@ -19,10 +19,19 @@ import type { SessionsListResponse, SessionResponse, SpeakerResponse } from "../
 
 // ── Data-shape helpers ─────────────────────────────────────────────
 
+/**
+ * The m-code speaker's stored role is "researcher", never "moderator" (see the
+ * SpeakerRole enum in bristlenose/models.py). Key off the badge code prefix the
+ * way TranscriptPage/SessionsTable do — more robust than the role string.
+ */
+function isModerator(sp: SpeakerResponse): boolean {
+  return sp.speaker_code.startsWith("m");
+}
+
 function deriveShape(sessions: SessionResponse[]) {
   const allSpeakers = sessions.flatMap((s) => s.speakers);
   const moderators = new Set(
-    allSpeakers.filter((sp) => sp.role === "moderator").map((sp) => sp.name),
+    allSpeakers.filter(isModerator).map((sp) => sp.name),
   );
   const hasMultipleModerators = moderators.size > 1;
 
@@ -195,7 +204,7 @@ export function SessionsSidebar() {
         const isActive = session.session_id === activeSessionId;
         const path = `/report/sessions/${session.session_id}`;
         const participants = session.speakers.filter((sp) => sp.role === "participant");
-        const moderator = session.speakers.filter((sp) => sp.role === "moderator");
+        const moderator = session.speakers.filter(isModerator);
         const duration = formatCompactDuration(session.duration_seconds);
         const dateStr = formatCompactDate(session.session_date, showDow, i18n.language);
 

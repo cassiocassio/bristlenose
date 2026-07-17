@@ -177,7 +177,7 @@
     "builtWith": "Vytvořeno pomocí Bristlenose",
     "reportIssue": "Nahlásit problém",
     "giveFeedback": "Poskytnout zpětnou vazbu",
-    "version": "verze {{version}}",
+    "version": "{{version}}",
     "reportBug": "Nahlásit chybu",
     "feedback": "Zpětná vazba",
     "helpHint": "pro nápovědu"

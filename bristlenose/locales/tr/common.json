@@ -155,7 +155,7 @@
     "builtWith": "Bristlenose ile oluşturuldu",
     "reportIssue": "Sorun bildir",
     "giveFeedback": "Geri bildirim gönder",
-    "version": "sürüm {{version}}",
+    "version": "{{version}}",
     "reportBug": "Hata bildir",
     "feedback": "Geri bildirim",
     "helpHint": "Yardım için"

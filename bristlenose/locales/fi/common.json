@@ -155,7 +155,7 @@
     "builtWith": "Tehty Bristlenosella",
     "reportIssue": "Ilmoita ongelmasta",
     "giveFeedback": "Anna palautetta",
-    "version": "versio {{version}}",
+    "version": "{{version}}",
     "reportBug": "Ilmoita virheestä",
     "feedback": "Palaute",
     "helpHint": "Ohje"

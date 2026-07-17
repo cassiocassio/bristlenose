@@ -142,7 +142,7 @@
     "builtWith": "以 Bristlenose 製作",
     "reportIssue": "回報問題",
     "giveFeedback": "提供意見回饋",
-    "version": "版本 {{version}}",
+    "version": "{{version}}",
     "reportBug": "回報錯誤",
     "feedback": "意見回饋",
     "helpHint": "以取得輔助說明"

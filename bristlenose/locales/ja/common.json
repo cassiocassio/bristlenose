@@ -151,7 +151,7 @@
     "builtWith": "Bristlenose で作成",
     "reportIssue": "問題を報告",
     "giveFeedback": "フィードバックを送る",
-    "version": "バージョン {{version}}",
+    "version": "{{version}}",
     "reportBug": "バグを報告",
     "feedback": "フィードバック",
     "helpHint": "でヘルプ"

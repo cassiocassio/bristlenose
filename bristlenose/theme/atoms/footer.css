@@ -16,6 +16,9 @@
 }
 
 .footer-version {
+    /* JSX whitespace between logotype and version collapses in the flex
+       row (.footer-left), so restore the word gap explicitly. */
+    margin-left: 0.35rem;
     color: var(--bn-colour-muted);
     text-decoration: none;
 }

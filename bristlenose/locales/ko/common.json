@@ -142,7 +142,7 @@
     "builtWith": "Bristlenose로 제작됨",
     "reportIssue": "문제 신고",
     "giveFeedback": "피드백 보내기",
-    "version": "버전 {{version}}",
+    "version": "{{version}}",
     "reportBug": "버그 신고",
     "feedback": "피드백",
     "helpHint": "도움말 열기"

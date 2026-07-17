@@ -181,7 +181,7 @@
     "builtWith": "Zbudowano z Bristlenose",
     "reportIssue": "Zgłoś problem",
     "giveFeedback": "Prześlij opinię",
-    "version": "wersja {{version}}",
+    "version": "{{version}}",
     "reportBug": "Zgłoś błąd",
     "feedback": "Opinia",
     "helpHint": "aby uzyskać pomoc"

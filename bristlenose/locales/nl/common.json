@@ -155,7 +155,7 @@
     "builtWith": "Gemaakt met Bristlenose",
     "reportIssue": "Probleem melden",
     "giveFeedback": "Feedback geven",
-    "version": "versie {{version}}",
+    "version": "{{version}}",
     "reportBug": "Bug melden",
     "feedback": "Feedback",
     "helpHint": "voor Help"

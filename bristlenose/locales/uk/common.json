@@ -181,7 +181,7 @@
     "builtWith": "Створено з Bristlenose",
     "reportIssue": "Повідомити про проблему",
     "giveFeedback": "Залишити відгук",
-    "version": "версія {{version}}",
+    "version": "{{version}}",
     "reportBug": "Повідомити про ваду",
     "feedback": "Відгук",
     "helpHint": "для довідки"

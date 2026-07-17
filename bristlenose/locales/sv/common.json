@@ -155,7 +155,7 @@
     "builtWith": "Byggt med Bristlenose",
     "reportIssue": "Rapportera ett problem",
     "giveFeedback": "Lämna feedback",
-    "version": "version {{version}}",
+    "version": "{{version}}",
     "reportBug": "Rapportera ett fel",
     "feedback": "Feedback",
     "helpHint": "för Hjälp"

@@ -31,6 +31,8 @@ separate piece of work with its own plan.
 | [data-density.md](data-density.md) | Essential-vs-luxury method + the per-widget **data-ladder** ledger (the responsive drop/expand spec). |
 | [design-police.md](design-police.md) | Mapping every graphical element to the design system + the **delta ledger** (deliberate extensions). |
 | [themes-testing-plan.md](themes-testing-plan.md) | The {edo, default} × {dark, light} × faces proof matrix and what "pass" means. |
+| [featured-quotes.md](featured-quotes.md) | The 3-quotes-for-100k-words job, the shipped selection algorithm + why it doesn't bind, the quote-length measurements, and the proposed post-TF trim prompt. |
+| [signal-grid.md](signal-grid.md) | The participant × section/theme matrix at dashboard scale: the settled encoding (sentiment hue + count depth + **residual dot**), why hue isn't residual (the colour collision), the interaction model, and the design-system reuse ledger. Two mockups. |
 
 ## Where the mockups live (and why not here)
 

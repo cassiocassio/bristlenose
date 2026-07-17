@@ -185,19 +185,33 @@ seam; it gets its own plan when this effort's demo is signed off. The fixture's 
 Loose-end decisions:
 - **Sentiment tape (idea #2)** — per-session *timeline*. Reassigned to the **Session
   lens**, not a dashboard brick.
+- **Who we spoke with — person cards (brick 2) → moved to the Sessions grid (15 Jul 2026).**
+  A per-participant sentiment arc + *their* journey is **session-level** richness — same
+  study-vs-session filter that moved the sentiment tape. The dashboard keeps its **lightweight
+  compact sessions table**; the person-card redesign belongs where you look at one person at a
+  time. So brick 2 is **not a dashboard widget** — the dashboard slot stays the compact table.
+- **Sessions table — design it in the Sessions LENS first, then reduce to the dashboard
+  (15 Jul 2026).** Same lens-first discipline as Signals: build the great full-fidelity table where
+  it has room, then trim down for the dashboard row — not the reverse. For now the dashboard **keeps
+  the shipped compact table as-is** (don't rebuild it in the gallery yet). It is a **full-width
+  `stretch` brick** (`bn-dashboard-full`) — it spans the dashboard, never tiles into a column.
+- **Pro & contra (brick 4) is a CANDIDATE, not committed** — explore, don't assume. Net-new
+  (nothing on the dashboard does it today). Open Q: does pro/contra = positive/negative
+  sentiment (automatic), or curated? And what does it show for an all-friction study?
 - **Fingerprint + KWIC (idea #9)** — likely splits: **fingerprint** (aggregate signature)
   = candidate brick; **KWIC** (a search interaction) = behaviour on the Verbatim/Quotes
   surface. [OPEN — final call pending.]
 - **Out by decision:** ridgeline (#1, superseded), ambivalence portraits (#4, parked).
 
-| Brick (running order) | Absorbs (of the 10) |
-|---|---|
-| 1 · Study at a glance (numbers + saturation band) | #10 saturation |
-| 2 · Who we spoke with (person cards) | #7 small multiples (partial) |
-| 3 · Sections \| Themes (pair) | — |
-| 4 · Pro & contra | #3 kudos/kvetch |
-| 5 · Friction & co-occurrence (welded 1:2) | #5 co-occurrence + #6 friction heatmap |
-| 6 · Signals (1·3·5) | — |
-| 7 · Verbatim (1·3·5) | #8 hero quote |
-| 8 · Coverage (bounded ≈720) | — |
-| (candidate) Fingerprint | #9 fingerprint |
+| Brick (running order) | Status | Absorbs (of the 10) |
+|---|---|---|
+| 1 · Study at a glance (numbers + saturation band) | ✅ built | #10 saturation |
+| 2 · ~~Who we spoke with (person cards)~~ → **Sessions grid** | moved off dashboard | #7 small multiples (partial) |
+| — · Sessions table (dashboard's session row) | **keep shipped as-is for now; full-width `stretch` brick** | — |
+| 3 · Sections \| Themes (pair) | ✅ built | — |
+| 4 · Pro & contra | **candidate** | #3 kudos/kvetch |
+| 5 · Friction & co-occurrence (welded 1:2) | PARKED (hardest) | #5 co-occurrence + #6 friction heatmap |
+| 6 · Signals (1·3·5) | ✅ built (net-new) | — |
+| 7 · Verbatim (1·3·5) | ✅ built | #8 hero quote |
+| 8 · Coverage (bounded) | ✅ built | — |
+| (candidate) Fingerprint | candidate | #9 fingerprint |

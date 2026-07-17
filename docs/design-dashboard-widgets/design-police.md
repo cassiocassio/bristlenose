@@ -42,6 +42,39 @@ grid, top-right, with conc-bars + intensity dots). And it showed a **confidence 
 `.signal-card` verbatim. Lesson: **mirror, don't approximate; and confirm render, not just class
 existence.**
 
+## Icon policy — Lucide, no freelancing (decided 15 Jul 2026)
+
+**The HTML/CSS side of the app uses Lucide. Do not hand-draw or unicode-glyph new icons.**
+Decided after the coverage disclosure surfaced three drifting layers:
+
+- **Website/docs** ship **Lucide literally** — an `ICONS` map in `assets/site.js` (e.g.
+  `chevron-right: <path d="m9 18 6-6-6-6"/>`, Lucide's exact path; `viewBox 0 0 24 24`,
+  `stroke-width 2`, `linecap/linejoin round`). This is the reference.
+- **SPA** uses the Lucide *idiom* hand-rolled (inline SVG, `stroke 1.4`, round caps) but never
+  installed the package.
+- **Theme CSS** uses **unicode geometric glyphs** — the off-standard layer.
+
+Rules for this effort:
+1. **New icons = Lucide**, taken from the website's `ICONS` set (or lucide.dev), inline SVG in
+   the Lucide convention. Never a new unicode geometric glyph (▶ ▼ ▲ ▾ ◀ ►), never a fresh
+   hand-drawn path when Lucide has the glyph.
+2. **Disclosure = `chevron-right` rotating 90° on open** (the gallery's `.bn-disclosure-chevron`).
+   The rotating-SVG-chevron pattern already exists in `threshold-review.css` — that's the model;
+   the unicode-triangle swap in `coverage.css` / `hidden.js` is the anti-pattern.
+3. **The star keeps ★** (per the shipped decision — Lucide's star isn't used for the rating glyph).
+   **The line — glyph vs icon:** if the mark sits *in running text* and should inherit the font's
+   weight/metrics/colour (a JourneyChain `→`, a `↔` in a continua label, the `★` rating, the
+   Settings `✓✗⚠●○` matrix), it's a **typographic glyph — keep it**. A Lucide SVG would sit *on*
+   the text as a foreign object with its own stroke weight and baseline. Migrate to Lucide only the
+   marks that are **chrome** — buttons, toggles, disclosure affordances — not text.
+4. **SF Symbols on the native side are a separate world** — this policy is HTML/CSS only. We
+   can't match SF Symbols across the seam; the goal is internal consistency *within* the web half.
+
+**Shipped unicode glyphs to converge (tech debt, logged — not fixed here):**
+`coverage.css` ▶/▼ disclosure · `hidden.js` ▾ chevron · `journey-sort.js` ▲/▼ sort arrows ·
+`.bn-play-icon` ▶ play triangle (→ Lucide `play`). Root cause / bigger call: **install Lucide as
+one dependency** rather than three hand-maintained idioms — a 100days candidate, not this session.
+
 ## The system to police against (`bristlenose/theme/`)
 
 Five layers (see `bristlenose/theme/CLAUDE.md`):
@@ -74,6 +107,7 @@ Empty = the goal (everything mapped to existing atoms)._
 
 | Delta (proposed token) | Forced by | Justification | Decision |
 |---|---|---|---|
+| **Dashboard card side padding `space-lg` (24px) → `space-md` (12px)** | 1 Study at a glance · 7 Verbatim | **Twice now, the card's side padding — not the breakpoint — has been the deciding lever.** A card tiled N-across spends `2 × 24 + 2 = 50px` on chrome; at a 132px stat unit that's **38% of the card**. **Stats:** the row can't wrap (cards are `[1][2][2][1][2]` in fixed order — a span-2 pair can't start with one slot left, so 6/4/2 columns all leave holes). One row of 8 is the only clean layout ⇒ the narrowest real viewport (13" + sidebar open = 1136px content) is load-bearing. At 24px padding the unit is 132px and leaves 82px for `"104,832"` @28px (~100px) → **overflows**. At 12px it leaves 106px → fits. **Quotes:** 5-up at HD 1920 gives 357px cards → 6.7 w/line at 24px padding; 12px would buy ~7.3. | PENDING — leaning **promote as a dashboard-card convention** rather than two local overrides. Tiled dashboard cards are a different context from a full-width lens card; `space-lg` sides are priced for reading width, not for tiling. Needs Martin + a look at whether the lens cards should follow. |
 | `--ramp-1/2/3` (heat weights 30/56/84) | 5a Co-occurrence | Cell depth = quote count needs a 3-step intensity ramp. The 10-ideas版 hardcoded raw hex (`#93c6a1`…) — a leak. Replaced with `color-mix(in oklab, var(--sent-*) calc(var(--w)*1%), var(--bn-surface))`: theme-aware, uses only existing sentiment + surface tokens. **No new *colour* token.** The three *weights* are the only new values. | PENDING — promote weights to `tokens.css` as `--bn-ramp-*`, or keep widget-local? Any other heat/depth widget (friction heatmap, saturation fill) will want the same ramp → leaning promote. |
 
 **Observation — pre-existing un-tokenised colours in the shipped system (not our delta):**

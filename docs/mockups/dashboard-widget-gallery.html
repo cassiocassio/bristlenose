@@ -26,7 +26,7 @@
   --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
   --bn-text-title:1.375rem; --bn-text-display:1.75rem;
   --bn-text-badge-lh:1.3; --bn-text-caption-lh:1.4; --bn-text-label-lh:1.45;
-  --bn-text-body-lh:1.5; --bn-text-heading-lh:1.3; --bn-text-title-lh:1.25;
+  --bn-text-body-lh:1.5; --bn-text-heading-lh:1.3; --bn-text-title-lh:1.25; --bn-text-display-lh:1.2;
   /* weights (tokens-typography.css) */
   --bn-weight-light:370; --bn-weight-normal:420; --bn-weight-emphasis:490;
   --bn-weight-starred:520; --bn-weight-strong:700;
@@ -148,14 +148,97 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
 .bench .readout b { color:var(--bn-colour-accent); }
 
 .sandbox-outer { overflow-x:auto; padding-bottom:.4rem; }
+/* ZOOM wrapper — JS sizes it to the PAINTED footprint (w×zoom) so the page
+   flows with no phantom gap. transform (not the `zoom` property) is deliberate:
+   transform is visual only, so the sandbox's layout width stays TRUE and the
+   engine measures real content width — a 2560 stage really is 2560, just painted
+   smaller. `zoom` would change the used width and corrupt every measurement. */
+.sandbox-scale { overflow:hidden; }
 .sandbox {
   container: widget / inline-size;
   width:100%; min-width:240px;
   border:1px dashed var(--bn-colour-border); border-radius:var(--bn-radius-lg);
   padding:clamp(.5rem,1.5cqi,1rem); background:var(--bn-colour-bg);
   resize:horizontal; overflow:hidden;
+  transform-origin:top left; transform:scale(var(--zoom,1));
   transition:width .28s cubic-bezier(.4,0,.2,1);
 }
+
+/* ---- Tuner ---- */
+.tuner { display:flex; flex-wrap:wrap; gap:.75rem 1.25rem; align-items:center;
+  padding:var(--bn-space-md); margin-bottom:var(--bn-space-md);
+  background:var(--bn-colour-quote-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); }
+.tuner .grp { display:flex; gap:.3rem; align-items:center; }
+.tuner .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+.tuner input[type=number] { width:4.6rem; font:inherit; font-family:var(--bn-font-mono); font-size:var(--bn-text-label);
+  padding:.2rem .35rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); }
+.tuner input[type=number]:focus { border-color:var(--bn-colour-accent); outline:none; }
+.results { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted);
+  padding:var(--bn-space-md); border:1px dashed var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  margin-bottom:var(--bn-space-xl); line-height:1.7; }
+.results b { color:var(--bn-colour-accent); }
+.results .warn { color:var(--bn-sentiment-frustration); font-weight:600; }
+.results .ok { color:var(--bn-sentiment-satisfaction); font-weight:600; }
+
+/* ============================================================================
+   WIDGET · Study at a glance / stats row (brick 1) — MIRRORS .bn-project-stat
+   exactly (global-nav.css). Card internals are verbatim; only the CONTAINER
+   changes: shipped is `display:flex; flex-wrap:wrap` (content-sized cards,
+   ragged right). REDESIGN = a justified grid — fixed gutters, cards flex.
+
+   The trilemma: fixed gutter + fixed card + justified — you can only have two.
+   Martin picked fixed gutter + justified, so the CARD must flex. That's benign
+   here in a way it wasn't for quotes: a stat card's content is a centred number
+   + label; it doesn't reflow like prose. The 28px number stays 28px — the card
+   just gains air. Constant-element-size is not violated.
+
+   The PAIRING IS SEMANTIC, not decorative — two numbers you'd weigh together
+   share one border, which is what stops the row reading as a wall of figures.
+   Nothing here may split a pair. Both grid altitudes below preserve them.
+
+   Two altitudes, because "how many units?" has two honest answers:
+     · CARD grid  — 5 equal cards; the pair subdivides INSIDE its card.
+                    Regular rhythm of bordered objects. But the widest number
+                    (total_words) then sits in the NARROWEST slot: a pair-half
+                    is ~half a single's content box.
+     · NUMBER grid — singles span 1, pairs span 2 (max 8). Every number gets
+                    equal air; cards come in two sizes.
+   Every card and every half is conditional, so BOTH counts are DATA-DRIVEN —
+   React knows them at render; no measurement needed.
+   ========================================================================= */
+.bn-project-stats { display:grid; gap:var(--bn-space-md);
+  grid-template-columns:repeat(var(--units,8), minmax(0,1fr)); }
+/* CARD altitude — the card is the grid unit; the pair subdivides within it. */
+.bn-project-stats[data-grid="card"] { grid-template-columns:repeat(var(--cards,5), minmax(0,1fr)); }
+.bn-project-stats[data-grid="card"] .bn-project-stat--pair { grid-column:span 1; }
+.bn-project-stat { display:flex; flex-direction:column; align-items:center;
+  padding:var(--bn-space-md);            /* DELTA: shipped is `space-md space-lg`. See note below. */
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  min-width:5.5rem; cursor:pointer; transition:background-color .15s ease;
+  text-decoration:none; color:inherit; }
+.bn-project-stat:hover { background-color:var(--bn-colour-hover); }
+.bn-project-stat-value { font-size:var(--bn-text-display); font-weight:var(--bn-weight-normal);
+  color:var(--bn-colour-text); line-height:var(--bn-text-display-lh); }
+.bn-project-stat-label { font-size:var(--bn-text-label); color:var(--bn-colour-text); margin-top:.15rem; text-align:center; }
+/* Paired stat card — two value/label stacks side-by-side, shared border. Spans 2 units. */
+.bn-project-stat--pair { flex-direction:row; padding:0; gap:0; cursor:default; grid-column:span 2; }
+.bn-project-stat--pair:hover { background-color:transparent; }
+.bn-project-stat--pair-half { display:flex; flex-direction:column; align-items:center; flex:1; min-width:0;
+  padding:var(--bn-space-md);            /* DELTA: shipped is `space-md space-lg` */
+  cursor:pointer; transition:background-color .15s ease;
+  border-radius:var(--bn-radius-md); text-decoration:none; color:inherit; }
+
+/* ── Why the padding delta ────────────────────────────────────────────────
+   The row CANNOT wrap: cards are [1][2][2][1][2] in fixed semantic order, so a
+   span-2 pair can't start where only one slot remains — 6/4/2 columns all leave
+   holes. One row of 8 is the only clean layout, which makes the narrowest real
+   viewport (13" + sidebar open, 1136px content) load-bearing.
+   At shipped 24px side padding the unit is 132px and leaves 82px for
+   "104,832" @28px (~100px) — it overflows. At 12px it leaves 106px and fits.
+   So the padding is what makes "5 units with subdivisions, justified, pairs
+   intact" possible at all. Logged in design-police.md. */
+.bn-project-stat--pair-half:hover { background-color:var(--bn-colour-hover); }
 
 /* ============================================================================
    WIDGET · Verbatim / quotes (brick 7) — MIRRORS .bn-featured-quote exactly
@@ -163,10 +246,15 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
    body; footer uses the real .badge atom (mono). Multiply via .bn-featured-row
    grid — 3-up, 5 when wide — the shipped behaviour (redesign faces pending).
    ========================================================================= */
-.bn-featured-row { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--bn-space-md); }
+.bn-featured-row { display:grid; grid-template-columns:1fr; gap:var(--bn-space-md); }
 .bn-featured-quote { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
   padding:var(--bn-space-md) var(--bn-space-lg); min-width:0; overflow:hidden; display:flex; flex-direction:column;
-  cursor:pointer; transition:background-color .15s ease; }
+  cursor:pointer; transition:background-color .15s ease;
+  /* MEASURE CAP — ~11 words/line max. Calibrated: at 13px label size the text
+     runs ~45.6px per word, so 11 words ≈ 502px of text; +48px padding +2px
+     border ≈ 552px. 34rem (544px) ≈ 10.8 words. Without this the 1-up face
+     stretches to the container and the line hits 14 words. */
+  max-width:34rem; }
 .bn-featured-quote:hover { background-color:var(--bn-colour-hover); }
 .bn-featured-quote .context { display:block; font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-bottom:var(--bn-space-xs); }
 .bn-featured-quote .quote-text { font-size:var(--bn-text-label); line-height:1.55; flex:1; }
@@ -181,9 +269,49 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
 .badge-confusion    { background:var(--bn-sentiment-confusion-bg);    color:var(--bn-sentiment-confusion); }
 .badge-confidence   { background:var(--bn-sentiment-confidence-bg);   color:var(--bn-sentiment-confidence); }
 .badge-surprise     { background:var(--bn-sentiment-surprise-bg);     color:var(--bn-sentiment-surprise); }
-/* multiply: shipped hides the 4th/5th until a 1400px VIEWPORT width; adapted to a container query here */
-.bn-featured-quote:nth-child(n+4) { display:none; }
-@container widget (min-width:1100px) { .bn-featured-row { grid-template-columns:repeat(5,1fr); } .bn-featured-quote:nth-child(n+4) { display:flex; } }
+/* ── MULTIPLY — now driven by the TUNER (JS), not container queries ─────────
+   Container queries can't read CSS variables, so breakpoints can't be live-
+   tunable in pure CSS. The engine computes the column count from the current
+   content width + the min/max params and sets grid-template-columns directly.
+   Whatever numbers win here get baked back into @container rules. */
+
+/* LINE CLAMP — bounds card height regardless of quote length. Measured: a
+   median IKEA quote is 79 words (~11 lines at 7.3 wpl), so without this the
+   card height is dictated by the quote, not the design. 0 = off. */
+.bn-featured-quote .quote-text.clamped {
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:var(--clamp,4);
+  overflow:hidden;
+}
+
+/* ============================================================================
+   WIDGET · Pro & contra (brick 4) — the "kudos/kvetch order book" (idea #3),
+   dragged into design-system conformance.
+
+   DESIGN-POLICE VERDICT on the original demo:
+   1. NOT a new card. It reuses .bn-featured-quote verbatim (the demo says so:
+      "a re-hang of the same pick_featured_quotes() picks"). So this widget adds
+      ZERO new elements — it's the featured row split into two polarity columns.
+   2. Dropped the "spread" (±3) middle column and the row-pairing. FALSE SIGNAL:
+      a real order book's bid/ask on one row are counterparties; here the left
+      kudos and right kvetch are INDEPENDENT picks with no relationship, so "±3"
+      between them is noise dressed as a number. Removing it is a design-police
+      correction, not a loss.
+   3. Raw hex (#16a34a…) + inline .book-int dots → real --bn-sentiment-* + the
+      real .badge atom. Intensity dots dropped (featured cards don't show them).
+   Only new thing: the two-column split + the count headers, which reuse the
+   .signal-card-source uppercase-eyebrow pattern. No new tokens.
+
+   THE BIG CHALLENGE — quote length. Two columns HALVE the width, so a median
+   79-word quote is even more brutal here than in the single featured row. Same
+   answer, same mechanism: the featured pull/clamp. The clamp control drives it.
+   ========================================================================= */
+.bn-procon { display:grid; grid-template-columns:1fr 1fr; gap:var(--bn-space-lg); }
+.bn-procon-col h4 { font-size:var(--bn-text-badge); line-height:var(--bn-text-badge-lh);
+  font-weight:var(--bn-weight-normal); text-transform:uppercase; letter-spacing:.04em;
+  color:var(--bn-colour-muted); margin:0 0 var(--bn-space-sm) 0; }
+.bn-procon-col h4 .n { color:var(--bn-colour-text); font-weight:var(--bn-weight-emphasis); }
+.bn-procon-list { display:flex; flex-direction:column; gap:var(--bn-space-md); }
+.bn-procon-list .bn-featured-quote { max-width:none; }   /* fill the column, not the 34rem measure */
 
 /* ============================================================================
    WIDGET · Coverage (brick 8) — MIRRORS .bn-coverage-box exactly (coverage.css).
@@ -203,6 +331,28 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
 .bn-coverage-legend-dot--moderator { background:var(--bn-coverage-moderator); }
 .bn-coverage-legend-dot--omitted   { background:var(--bn-coverage-omitted); }
 .bn-coverage-legend-value { font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); }
+/* Disclosure for omitted segments.
+   ICON POLICY (15 Jul 2026): use LUCIDE, not unicode geometric glyphs. Shipped
+   coverage.css uses a ▶/▼ ::before — that's off-standard (the website ships
+   Lucide literally; threshold-review.css already uses a rotating SVG chevron).
+   This is the corrected version: Lucide `chevron-right` that rotates 90° on open.
+   Logged as a delta — the shipped unicode triangles are tech debt to converge. */
+.bn-coverage-box details { margin-top:var(--bn-space-md); }
+.bn-coverage-box details summary { cursor:pointer; font-weight:var(--bn-weight-emphasis);
+  font-size:var(--bn-text-label); color:var(--bn-colour-muted); list-style:none;
+  display:flex; align-items:center; gap:.3rem; }
+.bn-coverage-box details summary::-webkit-details-marker { display:none; }
+.bn-disclosure-chevron { width:1em; height:1em; flex-shrink:0; transition:transform .15s ease; }
+.bn-coverage-box details[open] summary .bn-disclosure-chevron { transform:rotate(90deg); }
+.bn-coverage-session-title { font-weight:var(--bn-weight-emphasis); font-size:var(--bn-text-label);
+  margin:var(--bn-space-md) 0 var(--bn-space-xs) 0; }
+.bn-coverage-session-title:first-child { margin-top:var(--bn-space-sm); }
+.bn-coverage-segment { display:flex; align-items:baseline; gap:var(--bn-space-sm); color:var(--bn-colour-muted);
+  font-size:var(--bn-text-label); margin:var(--bn-space-xs) 0; padding-left:var(--bn-space-md); line-height:1.6; }
+.bn-coverage-segment .timecode { font-size:.85em; color:var(--bn-colour-accent); font-family:var(--bn-font-mono); }
+.bn-coverage-segment .badge { font-size:.85em; }
+.bn-coverage-empty { margin:var(--bn-space-md) 0 0; font-size:var(--bn-text-label);
+  color:var(--bn-colour-muted); font-style:italic; }
 
 /* ============================================================================
    WIDGET · Signals (brick 6) — the analysis-lens signal card, EXACT.
@@ -211,7 +361,7 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
    (hidden in the real UI). pattern-label + colours are hardcoded IN THE SHIPPED
    CSS — replicated as-is (design-police observation, not our freelance).
    ========================================================================= */
-.signal-cards { display:flex; flex-direction:column; gap:var(--bn-space-md); }
+.signal-cards { display:grid; grid-template-columns:1fr; gap:var(--bn-space-md); }
 .signal-card { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-sm);
   padding:var(--bn-space-lg); background:var(--bn-colour-bg); transition:box-shadow var(--bn-transition-fast); position:relative; }
 .signal-card:hover { box-shadow:0 2px 8px var(--bn-colour-shadow); }
@@ -240,6 +390,18 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
 .conc-bar-fill { display:block; height:100%; border-radius:var(--bn-radius-sm); background:var(--bn-colour-text); opacity:.45; }
 .intensity-dots-svg { display:flex; align-items:center; gap:2px; width:46px; color:var(--bn-colour-text); }
 
+/* ── DASHBOARD VARIANT — Signal metric only, tucked under the pattern tag ──
+   A deliberate TRIM of the lens card (documented, not a freelance): same
+   typography and classes, but the conc/agreement/intensity rows drop away and
+   the lone Signal value sits right-aligned directly under SUCCESS/GAP/TENSION.
+   .signal-card-right is already column + align-items:flex-end, so zeroing the
+   badge margin is all it takes to "tuck" it under.                            */
+.signal-card--dash .signal-card-badges { margin-bottom:0; }
+.signal-card--dash .signal-card-metrics { grid-template-columns:auto auto; }   /* no viz column */
+
+/* ── MULTIPLY — driven by the TUNER (JS), same reason as the quotes above.
+   Signal cards are wider than quotes, so fewer fit at a given width. ── */
+
 /* ============================================================================
    WIDGET · Sections | Themes (brick 3) — MIRRORS .bn-dashboard-pane--pair +
    .bn-dashboard-nav (global-nav.css). Links are ACCENT-coloured, underline on
@@ -247,12 +409,24 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
    ========================================================================= */
 .bn-dashboard-pane { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:var(--bn-space-lg); min-width:0; overflow-x:auto; }
 .bn-dashboard-pane h3 { margin:0 0 var(--bn-space-md) 0; font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); }
-.bn-dashboard-pane--pair { display:flex; gap:0; padding:0; }
-.bn-dashboard-pane--pair-half { flex:1; padding:var(--bn-space-lg); min-width:0; }
-.bn-dashboard-nav ul { list-style:none; padding:0; margin:0; }
-.bn-dashboard-nav li { margin:var(--bn-space-xs) 0; font-size:var(--bn-text-label); }
+.bn-dashboard-pane--pair { display:flex; gap:0; padding:0;
+  /* REDESIGN — the pair STOPS at its natural width (cols × 200px + gutters +
+     padding) rather than stretching. Without this the box fills the brick and
+     the panes stretch with it, blowing the columns far past COLW. */
+  width:fit-content; max-width:100%; }
+.bn-dashboard-pane--pair-half { padding:var(--bn-space-lg); min-width:0; }   /* width set by JS to cols×COLW + gutters */
+.bn-dashboard-nav ul { list-style:none; padding:0; margin:0; column-gap:var(--bn-space-lg); }
+.bn-dashboard-nav li { margin:var(--bn-space-xs) 0; font-size:var(--bn-text-label); break-inside:avoid; }
 .bn-dashboard-nav a { color:var(--bn-colour-accent); text-decoration:none; }
 .bn-dashboard-nav a:hover { text-decoration:underline; }
+/* REDESIGN — equal-length columns.
+   Column WIDTH is fixed at ~200px: 30 chars × ~6.5px at label size (13px) ≈ 195,
+   so a typical section/theme name doesn't wrap. Total columns N = how many fit.
+   N is then split BETWEEN the groups in proportion to their item counts (JS,
+   largest-remainder, min 1 each) — so items-per-column lands ~equal even when
+   the groups are lopsided (e.g. 25 sections + 13 themes → 4 + 2 columns ≈ 6.3 vs 6.5).
+   Pane flex is set to its column count so every column is the same width. */
+.bn-dashboard-pane--pair-half .st-cols { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); }
 
 /* ============================================================================
    WIDGET · Co-occurrence (brick 5, co-occurrence half)
@@ -351,18 +525,76 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
     <div class="grp" style="margin-left:auto"><span class="lbl mono" style="text-transform:none">design in default · light — the other three cells are a regression check</span></div>
   </div>
 
+  <!-- ══ TUNER ════════════════════════════════════════════════════════ -->
+  <div class="tuner" role="group" aria-label="Layout tuner">
+    <div class="grp"><span class="lbl">Viewport</span>
+      <button class="pbtn" data-vp="1440">13″ 1440</button>
+      <button class="pbtn" data-vp="1470">13.6″ 1470</button>
+      <button class="pbtn" data-vp="1512">14″ 1512</button>
+      <button class="pbtn" data-vp="1710">15″ 1710</button>
+      <button class="pbtn on" data-vp="1728">16″ 1728</button>
+      <button class="pbtn" data-vp="1920">HD 1920</button>
+      <button class="pbtn" data-vp="2240">iMac 2240</button>
+      <button class="pbtn" data-vp="2560">Studio 2560</button>
+    </div>
+    <div class="grp"><span class="lbl">Sidebar</span>
+      <button class="pbtn on" data-sb="0">Closed</button>
+      <button class="pbtn" data-sb="220">Open 220</button>
+    </div>
+    <div class="grp"><span class="lbl">Zoom</span>
+      <button class="pbtn on" data-zoom="1">100%</button>
+      <button class="pbtn" data-zoom="0.75">75%</button>
+      <button class="pbtn" data-zoom="0.5">50%</button>
+      <button class="pbtn" data-zoom="fit">Fit</button>
+    </div>
+  </div>
+
+  <div class="tuner" role="group" aria-label="Parameters">
+    <div class="grp"><span class="lbl">Quote min</span><input type="number" id="p-qmin" value="350" step="10"></div>
+    <div class="grp"><span class="lbl">Quote max</span><input type="number" id="p-qmax" value="544" step="8"></div>
+    <div class="grp"><span class="lbl">Signal min</span><input type="number" id="p-smin" value="480" step="10"></div>
+    <div class="grp"><span class="lbl">Clamp lines</span><input type="number" id="p-clamp" value="4" min="0" max="20" step="1"></div>
+    <div class="grp"><span class="lbl">Quote length</span>
+      <button class="pbtn" data-qlen="short">Short 15w</button>
+      <button class="pbtn on" data-qlen="median">Real median 79w</button>
+      <button class="pbtn" data-qlen="p90">p90 163w</button>
+    </div>
+  </div>
+
+  <div class="results" id="results">—</div>
+
+  <!-- ══ BENCH · Study at a glance (numbers) ══════════════════════════ -->
+  <section class="bench" id="bench-stats">
+    <div class="bench-head">
+      <h2><span class="n">01</span> Study at a glance</h2>
+      <div class="faces" role="group" aria-label="Data density">
+        <button class="pbtn on" data-stats="full">Full · 8 units</button>
+        <button class="pbtn" data-stats="mid">No tags · 5</button>
+        <button class="pbtn" data-stats="sparse">Sparse · 3</button>
+      </div>
+    </div>
+    <p class="sub">Card internals MIRROR <code>.bn-project-stat</code> (28px display value, label, paired cards share one border).
+       <strong>Redesign:</strong> the container goes from <code>flex-wrap</code> (content-sized, ragged right) to a
+       <strong>justified grid</strong> — fixed <code>--bn-space-md</code> gutters, cards flex to fill, flush both edges.
+       Singles span 1 unit, pairs span 2. Every card is conditional, so units are <strong>data-driven (1–8)</strong>.
+       <span class="readout">width <b class="w-val">—</b> · <b id="stats-readout">—</b></span></p>
+    <div class="sandbox-outer">
+      <div class="sandbox" data-bench="stats" style="width:1644px">
+        <div class="bn-project-stats"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ══ BENCH · Verbatim / quotes ════════════════════════════════════ -->
   <section class="bench" id="bench-vq">
     <div class="bench-head">
       <h2><span class="n">07</span> Verbatim / quotes</h2>
-      <div class="faces" role="group" aria-label="Face presets">
-        <button class="pbtn on" data-w="720">3-up</button>
-        <button class="pbtn" data-w="1160">5-up · 16″+</button>
-      </div>
+      <span class="readout" style="margin-left:auto">driven by the tuner ↑</span>
     </div>
-    <p class="sub">MIRRORS the shipped <code>.bn-featured-quote</code> — <strong>label-size</strong> quote text, bracketed context,
-       footer of timecode + speaker <code>.badge</code> + sentiment badge. Multiply is the real <code>.bn-featured-row</code> grid (3-up, 5 at 16″+).
-       The redesign faces (a compact 1-up, trim/add) are the pending conversation. <span class="readout">width <b class="w-val">—</b></span></p>
+    <p class="sub">Card styling MIRRORS <code>.bn-featured-quote</code> (label-size text, bracketed context, real mono <code>.badge</code> footer).
+       <strong>Measure-bound at both ends</strong> — min 390px and max 544px — so a line stays between <strong>7.5 and ~11 words</strong> in every face
+       (calibrated at ~45.6px/word for 13px text). Responsive at <strong>1·2·3·4·5</strong>; text size constant throughout.
+       <span class="readout">width <b class="w-val">—</b></span></p>
 
     <div class="sandbox-outer">
       <div class="sandbox" data-bench="vq" style="width:720px">
@@ -397,20 +629,73 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
     </div>
   </section>
 
+  <!-- ══ BENCH · Pro & contra ═════════════════════════════════════════ -->
+  <section class="bench" id="bench-procon">
+    <div class="bench-head">
+      <h2><span class="n">04</span> Pro &amp; contra <span style="font-size:var(--bn-text-caption);font-weight:400;color:var(--bn-sentiment-doubt);border:1px solid;border-radius:var(--bn-radius-pill);padding:.05rem .5rem">candidate</span></h2>
+      <span class="readout" style="margin-left:auto">drive <b>Quote length</b> + <b>Clamp</b> in the tuner ↑</span>
+    </div>
+    <p class="sub">The kudos/kvetch order book, <strong>conformed</strong>: it’s the real <code>.bn-featured-quote</code> card in two polarity columns
+       — <strong>zero new elements</strong>. Dropped the order-book “spread” (false signal — the paired quotes aren’t counterparties).
+       <strong>Length is the challenge:</strong> two columns halve the width, so a real 79-word quote is worse here than in the single row —
+       same fix, the featured pull/clamp. Toggle <b>Clamp → 0</b> to see the wall. <span class="readout">width <b class="w-val">—</b></span></p>
+    <div class="sandbox-outer">
+      <div class="sandbox" data-bench="procon">
+        <div class="bn-procon">
+          <div class="bn-procon-col">
+            <h4>Pro <span class="n">11</span></h4>
+            <div class="bn-procon-list">
+              <div class="bn-featured-quote" role="button" tabindex="0" data-seed="1">
+                <span class="context">[On finishing the purchase]</span><span class="quote-text"></span>
+                <div class="bn-featured-footer"><span class="timecode">[04:12]</span><a class="badge" href="#">P4</a><span class="badge badge-satisfaction">satisfaction</span></div>
+              </div>
+              <div class="bn-featured-quote" role="button" tabindex="0" data-seed="4">
+                <span class="context">[After filtering results]</span><span class="quote-text"></span>
+                <div class="bn-featured-footer"><span class="timecode">[09:21]</span><a class="badge" href="#">P3</a><span class="badge badge-confidence">confidence</span></div>
+              </div>
+              <div class="bn-featured-quote" role="button" tabindex="0" data-seed="7">
+                <span class="context">[Switching devices]</span><span class="quote-text"></span>
+                <div class="bn-featured-footer"><span class="timecode">[14:47]</span><a class="badge" href="#">P8</a><span class="badge badge-delight">delight</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="bn-procon-col">
+            <h4>Contra <span class="n">13</span></h4>
+            <div class="bn-procon-list">
+              <div class="bn-featured-quote" role="button" tabindex="0" data-seed="0">
+                <span class="context">[Looking for a bed]</span><span class="quote-text"></span>
+                <div class="bn-featured-footer"><span class="timecode">[11:38]</span><a class="badge" href="#">P2</a><span class="badge badge-frustration">frustration</span></div>
+              </div>
+              <div class="bn-featured-quote" role="button" tabindex="0" data-seed="5">
+                <span class="context">[Reading delivery options]</span><span class="quote-text"></span>
+                <div class="bn-featured-footer"><span class="timecode">[07:05]</span><a class="badge" href="#">P7</a><span class="badge badge-confusion">confusion</span></div>
+              </div>
+              <div class="bn-featured-quote" role="button" tabindex="0" data-seed="2">
+                <span class="context">[At checkout]</span><span class="quote-text"></span>
+                <div class="bn-featured-footer"><span class="timecode">[13:02]</span><a class="badge" href="#">P5</a><span class="badge badge-frustration">frustration</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ══ BENCH · Signals ══════════════════════════════════════════════ -->
   <section class="bench" id="bench-sig">
     <div class="bench-head">
       <h2><span class="n">06</span> Signals</h2>
-      <span class="readout" style="margin-left:auto">normal · faces pending chat · width <b class="w-val">—</b></span>
+      <span class="readout" style="margin-left:auto">driven by the tuner ↑</span>
     </div>
-    <p class="sub">The <strong>exact</strong> analysis-lens signal card — source eyebrow · interpretive name (18px heading link) ·
-       one-line finding · <em>pattern</em> label · the metrics grid (label · mono value · viz). Copied verbatim from
-       <code>analysis.css</code> so a click lands on an identical item. <strong>No confidence badge — it’s hidden in the real UI.</strong></p>
+    <p class="sub">Card MIRRORS <code>.signal-card</code> (source eyebrow · 18px heading link · finding · pattern label), but
+       <strong>trimmed to the Signal metric only</strong> — right-aligned, tucked under the tag. <strong>No confidence badge — hidden in the real UI.</strong>
+       Cards are wider than quotes (~480 min), so you get <strong>3 quotes / 2 signals</strong>, or <strong>5 quotes / 3 signals</strong>.
+       <span class="readout">width <b class="w-val">—</b></span></p>
     <div class="sandbox-outer">
-      <div class="sandbox" data-bench="sig" style="width:720px">
+      <div class="sandbox" data-bench="sig" style="width:1000px">
         <div class="signal-cards">
 
-          <div class="signal-card">
+          <div class="signal-card signal-card--dash">
             <div class="signal-card-top">
               <div class="signal-card-identity">
                 <span class="signal-card-source">Checkout &amp; delivery</span>
@@ -420,16 +705,13 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
               <div class="signal-card-right">
                 <div class="signal-card-badges"><span class="pattern-label pattern-success">SUCCESS</span></div>
                 <div class="signal-card-metrics">
-                  <span class="metric-label" title="Composite signal strength">Signal</span><span class="metric-value">0.82</span><span class="metric-viz"></span>
-                  <span class="metric-label" title="Concentration ratio">Conc.</span><span class="metric-value">2.4×</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:80%"></span></span></span>
-                  <span class="metric-label" title="Agreement breadth (Nₑ_f_f)">Agreement</span><span class="metric-value">4.1</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:68%"></span></span></span>
-                  <span class="metric-label" title="Mean intensity">Intensity</span><span class="metric-value">2.3</span><span class="metric-viz"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="6" cy="6" r="4" fill="currentColor"/><circle cx="23" cy="6" r="4" fill="currentColor"/><circle cx="40" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/></svg></span>
+                  <span class="metric-label" title="Composite signal strength">Signal</span><span class="metric-value">0.82</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="signal-card">
+          <div class="signal-card signal-card--dash">
             <div class="signal-card-top">
               <div class="signal-card-identity">
                 <span class="signal-card-source">Beds category</span>
@@ -439,16 +721,13 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
               <div class="signal-card-right">
                 <div class="signal-card-badges"><span class="pattern-label pattern-gap">GAP</span></div>
                 <div class="signal-card-metrics">
-                  <span class="metric-label" title="Composite signal strength">Signal</span><span class="metric-value">0.68</span><span class="metric-viz"></span>
-                  <span class="metric-label" title="Concentration ratio">Conc.</span><span class="metric-value">1.8×</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:60%"></span></span></span>
-                  <span class="metric-label" title="Agreement breadth">Agreement</span><span class="metric-value">3.2</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:53%"></span></span></span>
-                  <span class="metric-label" title="Mean intensity">Intensity</span><span class="metric-value">2.1</span><span class="metric-viz"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="6" cy="6" r="4" fill="currentColor"/><circle cx="23" cy="6" r="4" fill="currentColor"/><circle cx="40" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/></svg></span>
+                  <span class="metric-label" title="Composite signal strength">Signal</span><span class="metric-value">0.68</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="signal-card">
+          <div class="signal-card signal-card--dash">
             <div class="signal-card-top">
               <div class="signal-card-identity">
                 <span class="signal-card-source">Post-surgery aftercare</span>
@@ -458,10 +737,7 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
               <div class="signal-card-right">
                 <div class="signal-card-badges"><span class="pattern-label pattern-tension">TENSION</span></div>
                 <div class="signal-card-metrics">
-                  <span class="metric-label" title="Composite signal strength">Signal</span><span class="metric-value">0.54</span><span class="metric-viz"></span>
-                  <span class="metric-label" title="Concentration ratio">Conc.</span><span class="metric-value">1.6×</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:53%"></span></span></span>
-                  <span class="metric-label" title="Agreement breadth">Agreement</span><span class="metric-value">2.4</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:40%"></span></span></span>
-                  <span class="metric-label" title="Mean intensity">Intensity</span><span class="metric-value">1.9</span><span class="metric-viz"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="6" cy="6" r="4" fill="currentColor"/><circle cx="23" cy="6" r="4" fill="currentColor"/><circle cx="40" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/></svg></span>
+                  <span class="metric-label" title="Composite signal strength">Signal</span><span class="metric-value">0.54</span>
                 </div>
               </div>
             </div>
@@ -475,34 +751,25 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
   <!-- ══ BENCH · Sections | Themes ═════════════════════════════════════ -->
   <section class="bench" id="bench-st">
     <div class="bench-head">
-      <h2><span class="n">03</span> Sections | Themes</h2>
-      <span class="readout" style="margin-left:auto">normal · faces pending chat · width <b class="w-val">—</b></span>
+      <h2><span class="n">03</span> Sections | Themes <span style="font-size:var(--bn-text-caption);font-weight:400;color:var(--bn-sentiment-doubt);border:1px solid;border-radius:var(--bn-radius-pill);padding:.05rem .5rem">= COMPACT face of the Signal grid</span></h2>
+      <div class="faces" role="group" aria-label="Stress test">
+        <button class="pbtn" data-st="5,4">5/4</button>
+        <button class="pbtn on" data-st="8,9">8/9</button>
+        <button class="pbtn" data-st="15,11">15/11</button>
+        <button class="pbtn" data-st="25,13">25/13</button>
+        <button class="pbtn" id="st-uncat">+ Uncategorised</button>
+      </div>
     </div>
-    <p class="sub">MIRRORS the shipped <code>.bn-dashboard-pane--pair</code> + <code>.bn-dashboard-nav</code> — accent links, shared border,
-       no divider, <strong>no counts</strong> (the current dashboard shows none; counts are a candidate redesign addition to discuss).</p>
+    <p class="sub">Card styling MIRRORS <code>.bn-dashboard-pane--pair</code> + <code>.bn-dashboard-nav</code> (accent links, shared border, no divider,
+       no counts — the shipped dashboard has none). <strong>Redesign:</strong> columns are ~200px (≈30 chars, non-wrapping at 13px) and the total is split
+       between the groups <strong>in proportion to their counts</strong>, so columns come out ~equal length even when lopsided. Stress-test the counts above;
+       drag the sandbox to add columns. <span class="readout">width <b class="w-val">—</b> · <b id="st-readout">—</b></span></p>
+    <p class="sub" style="border-left:2px solid var(--bn-sentiment-doubt); padding-left:.6rem;">This nav-list pair is now the <strong>compact face</strong> of the <strong>Signal grid</strong>
+       (<code>dashboard-signal-grid.html</code>, designed in a parallel session, 17 Jul 2026): the rows are the same section/theme labels, and the expanded face reveals a
+       participant × cell matrix (hue = sentiment, depth = count, dot = residual). Same widget, richer with width — not a replacement. See <code>signal-grid.md</code>.</p>
     <div class="sandbox-outer">
-      <div class="sandbox" data-bench="st" style="width:640px">
-        <div class="bn-dashboard-pane bn-dashboard-pane--pair">
-          <div class="bn-dashboard-pane--pair-half bn-dashboard-nav">
-            <h3>Sections</h3>
-            <ul>
-              <li><a href="#">Beds category</a></li>
-              <li><a href="#">Checkout &amp; delivery</a></li>
-              <li><a href="#">Search results</a></li>
-              <li><a href="#">Pre-surgery info</a></li>
-              <li><a href="#">Login &amp; app</a></li>
-            </ul>
-          </div>
-          <div class="bn-dashboard-pane--pair-half bn-dashboard-nav">
-            <h3>Themes</h3>
-            <ul>
-              <li><a href="#">Trust &amp; credibility</a></li>
-              <li><a href="#">Findability</a></li>
-              <li><a href="#">Delivery clarity</a></li>
-              <li><a href="#">Cross-device continuity</a></li>
-            </ul>
-          </div>
-        </div>
+      <div class="sandbox" data-bench="st" style="width:760px">
+        <div class="bn-dashboard-pane bn-dashboard-pane--pair"></div>
       </div>
     </div>
   </section>
@@ -525,10 +792,23 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
             <div class="bn-coverage-bar-segment bn-coverage-bar-segment--omitted" style="width:18%"></div>
           </div>
           <div class="bn-coverage-legend">
-            <span class="bn-coverage-legend-item"><span class="bn-coverage-legend-dot bn-coverage-legend-dot--report"></span>In report&nbsp;<span class="bn-coverage-legend-value">68%</span></span>
-            <span class="bn-coverage-legend-item"><span class="bn-coverage-legend-dot bn-coverage-legend-dot--moderator"></span>Moderator&nbsp;<span class="bn-coverage-legend-value">14%</span></span>
-            <span class="bn-coverage-legend-item"><span class="bn-coverage-legend-dot bn-coverage-legend-dot--omitted"></span>Omitted&nbsp;<span class="bn-coverage-legend-value">18%</span></span>
+            <span class="bn-coverage-legend-item"><span class="bn-coverage-legend-dot bn-coverage-legend-dot--report"></span><span class="bn-coverage-legend-value">68%</span>&nbsp;In report</span>
+            <span class="bn-coverage-legend-item"><span class="bn-coverage-legend-dot bn-coverage-legend-dot--moderator"></span><span class="bn-coverage-legend-value">14%</span>&nbsp;Moderator</span>
+            <span class="bn-coverage-legend-item"><span class="bn-coverage-legend-dot bn-coverage-legend-dot--omitted"></span><span class="bn-coverage-legend-value">18%</span>&nbsp;Omitted</span>
           </div>
+
+          <!-- Omitted segments disclosure. Real logic: pct_omitted === 0 → the
+               italic "nothing omitted" line; else if there are sessions → <details>. -->
+          <details>
+            <summary><svg class="bn-disclosure-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Show omitted</summary>
+            <div>
+              <p class="bn-coverage-session-title">Session 1</p>
+              <div class="bn-coverage-segment"><span class="timecode">[02:41]</span><span class="badge">P1</span>So I&rsquo;m just going to have a look at what&rsquo;s on this page first.</div>
+              <div class="bn-coverage-segment"><span class="timecode">[06:18]</span><span class="badge">P1</span>Sorry, could you say that again? I didn&rsquo;t catch it.</div>
+              <p class="bn-coverage-session-title">Session 3</p>
+              <div class="bn-coverage-segment"><span class="timecode">[11:02]</span><span class="badge">P3</span>Right. Okay. Yeah.</div>
+            </div>
+          </details>
         </div>
       </div>
     </div>
@@ -675,8 +955,9 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
 
   document.querySelectorAll('.bench-head .faces .pbtn').forEach(function (b) {
     b.addEventListener('click', function () {
+      if (!b.dataset.w) return;               // guard: not a width preset (e.g. the ST stress-test buttons)
       var faces = b.closest('.faces');
-      faces.querySelectorAll('.pbtn').forEach(function (x) { x.classList.remove('on'); });
+      faces.querySelectorAll('.pbtn').forEach(function (x) { if (x.dataset.w) x.classList.remove('on'); });
       b.classList.add('on');
       b.closest('.bench').querySelector('.sandbox').style.width = b.dataset.w + 'px';
     });
@@ -687,6 +968,337 @@ code, .mono { font-family: var(--bn-font-mono); font-size:.86em; }
     if (!sb || !out) return;
     new ResizeObserver(function (e) { out.textContent = Math.round(e[0].contentRect.width) + 'px'; }).observe(sb);
   });
+
+  // ══ Sections | Themes — stress test + proportional column allocation ═══════
+  var ST_SECTIONS = [
+    'Beds category page', 'Checkout & delivery', 'Search results', 'Pre-surgery information',
+    'Login & app access', 'Shopping bag', 'Duvets browsing', 'Top navigation',
+    'Product detail page', 'Filters & sorting', 'Delivery options', 'Payment methods',
+    'Order confirmation', 'Returns & refunds', 'Stock availability', 'Customer reviews',
+    'Room planner tool', 'Assembly instructions', 'Click & collect', 'Store locator',
+    'Account settings', 'Wishlist', 'Post-surgery aftercare', 'Gift cards', 'Price comparison'
+  ];
+  var ST_THEMES = [
+    'Trust & credibility', 'Findability', 'Delivery clarity', 'Cross-device continuity',
+    'Price transparency', 'Assembly anxiety', 'Stock confidence', 'Decision paralysis',
+    'Brand expectations', 'Time pressure', 'Comparison behaviour', 'Accessibility needs',
+    'Post-purchase support'
+  ];
+  var ST_UNCAT = ['Ambient room noise', 'Off-topic aside', 'Unclear reference'];
+  var stState = { s: 8, t: 9, uncat: false };
+
+  function stPane(title, items) {
+    var d = document.createElement('div');
+    d.className = 'bn-dashboard-pane--pair-half bn-dashboard-nav';
+    d.dataset.count = items.length;
+    var h = document.createElement('h3');
+    h.textContent = title;
+    d.appendChild(h);
+    var ul = document.createElement('ul');
+    items.forEach(function (t) {
+      var li = document.createElement('li'), a = document.createElement('a');
+      a.href = '#'; a.textContent = t; li.appendChild(a); ul.appendChild(li);
+    });
+    d.appendChild(ul);
+    return d;
+  }
+
+  function renderST() {
+    var wrap = document.querySelector('[data-bench="st"] .bn-dashboard-pane--pair');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    wrap.appendChild(stPane('Sections', ST_SECTIONS.slice(0, stState.s)));
+    wrap.appendChild(stPane('Themes', ST_THEMES.slice(0, stState.t)));
+    if (stState.uncat) wrap.appendChild(stPane('Uncategorised', ST_UNCAT));
+    layoutST();
+  }
+
+  // Split the available columns between groups in proportion to item count
+  // (largest remainder, min 1 each) so items-per-column lands ~equal.
+  function layoutST() {
+    var wrap = document.querySelector('[data-bench="st"] .bn-dashboard-pane--pair');
+    if (!wrap) return;
+    var groups = Array.prototype.slice.call(wrap.querySelectorAll('.bn-dashboard-pane--pair-half'));
+    if (!groups.length) return;
+    var COLW = 200, GAP = 24, PAD = 48, MINPER = 5;     // col width · gutter · pane padding (space-lg ×2) · min items/col
+    var counts = groups.map(function (g) { return +g.dataset.count; });
+    var total = counts.reduce(function (a, b) { return a + b; }, 0);
+    var avail = wrap.clientWidth - groups.length * PAD;
+    var fits = Math.floor((avail + GAP) / (COLW + GAP));  // how many columns the WIDTH allows
+    var useful = Math.ceil(total / MINPER);               // how many the DATA can fill (no 1-item columns)
+    var N = Math.max(groups.length, Math.min(fits, useful));
+
+    var raw = counts.map(function (c) { return c / total * N; });
+    var cols = raw.map(function (r) { return Math.max(1, Math.floor(r)); });
+    var used = cols.reduce(function (a, b) { return a + b; }, 0);
+    var order = raw.map(function (r, i) { return { i: i, f: r - Math.floor(r) }; })
+                   .sort(function (a, b) { return b.f - a.f; });
+    var k = 0;
+    while (used < N && k < 50) {                          // largest-remainder; never more cols than items
+      var t = order[k % order.length].i;
+      if (cols[t] < counts[t]) { cols[t]++; used++; }
+      k++;
+    }
+    while (used > N) {                                    // min-1 can overshoot; trim the biggest
+      var mx = 0;
+      for (var j = 1; j < cols.length; j++) if (cols[j] > cols[mx]) mx = j;
+      if (cols[mx] <= 1) break;
+      cols[mx]--; used--;
+    }
+
+    groups.forEach(function (g, i) {
+      // Size the pane to EXACTLY its columns: cols×COLW + gutters + padding.
+      // Do NOT flex-grow — growing makes column-count divide a too-wide pane, so
+      // each column stretches far past COLW and the slack reads as a huge gutter.
+      var w = cols[i] * COLW + (cols[i] - 1) * GAP + PAD;
+      g.style.flex = '0 0 ' + w + 'px';
+      g.querySelector('ul').style.columnCount = cols[i];  // ul is now exactly cols×COLW + gutters ⇒ columns are COLW
+    });
+    var ro = document.getElementById('st-readout');
+    if (ro) {
+      ro.textContent = groups.map(function (g, i) {
+        return counts[i] + '→' + cols[i] + 'col (' + (counts[i] / cols[i]).toFixed(1) + '/col)';
+      }).join(' · ');
+    }
+  }
+
+  document.querySelectorAll('[data-st]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('[data-st]').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      var p = b.dataset.st.split(',');
+      stState.s = +p[0]; stState.t = +p[1];
+      renderST();
+    });
+  });
+  var uncatBtn = document.getElementById('st-uncat');
+  if (uncatBtn) uncatBtn.addEventListener('click', function () {
+    stState.uncat = !stState.uncat;
+    uncatBtn.classList.toggle('on', stState.uncat);
+    renderST();
+  });
+  var stSandbox = document.querySelector('[data-bench="st"]');
+  if (stSandbox) new ResizeObserver(function () { layoutST(); }).observe(stSandbox);
+
+  // ══ TUNER ENGINE ══════════════════════════════════════════════════════════
+  // Real chrome, measured from the code: report padding = --bn-space-lg ×2 = 48,
+  // collapsed rail = --bn-rail-width = 36, desktop project sidebar = 220 (ideal).
+  var RAIL = 36, PAD = 48, GAP = 12, PXW = 45.6, CHROME = 50;  // CHROME = card padding 48 + border 2
+  var QLEN = { short: 15, median: 79, p90: 163 };               // measured from 761 real quotes
+  var T = { vp: 1728, sb: 0, zoom: 1, qmin: 350, qmax: 544, smin: 480, clamp: 4, qlen: 'median' };
+
+  // Realistic think-aloud sentences, composed to hit an exact word target.
+  var SENTENCES = [
+    'I couldn’t tell which one was actually available.',
+    'So I’m just going to scroll down and see what else there is.',
+    'It says delivery in five to seven days but I’m not sure if that includes assembly.',
+    'Honestly the checkout was the smoothest part of the whole thing.',
+    'I’d expect the filter to be at the top, not hidden behind that little icon.',
+    'Wait — is aftercare the delivery thing, or is that the returns thing?',
+    'I’ve used this before on my phone and it remembered my basket, which was nice.',
+    'There’s a lot going on on this page and I don’t know where to look first.',
+    'I’m going to click continue as guest because I don’t want another account.',
+    'The price is clear but I can’t see whether that’s with or without VAT.',
+    'Home textiles and rugs, bedding, duvets — okay, that’s where I’d go.',
+    'If I’m honest I’d probably just give up here and search on Google instead.',
+    'That’s reassuring actually, it tells me exactly when it’s arriving.',
+    'I don’t trust that review score, it seems too high for something this cheap.',
+    'Add to shopping bag — done. That was easier than I thought it’d be.'
+  ];
+  function composeQuote(target, seed) {
+    var out = [], n = 0, i = seed;
+    while (n < target) {
+      var s = SENTENCES[i % SENTENCES.length];
+      out.push(s); n += s.split(' ').length; i++;
+    }
+    return out.join(' ');
+  }
+
+  function wrapSandboxes() {
+    document.querySelectorAll('.sandbox').forEach(function (sb) {
+      if (sb.parentElement.classList.contains('sandbox-scale')) return;
+      var w = document.createElement('div');
+      w.className = 'sandbox-scale';
+      sb.parentElement.insertBefore(w, sb);
+      w.appendChild(sb);
+    });
+  }
+
+  function contentWidth() { return T.vp - T.sb - RAIL - PAD; }
+  function colsFor(cw, min, cap) { return Math.max(1, Math.min(cap, Math.floor((cw + GAP) / (min + GAP)))); }
+
+  function applyZoom() {
+    document.querySelectorAll('.sandbox').forEach(function (sb) {
+      var scale = T.zoom;
+      if (scale === 'fit') {
+        var outer = sb.closest('.sandbox-outer');
+        scale = outer ? Math.min(1, outer.clientWidth / sb.offsetWidth) : 1;
+      }
+      sb.style.setProperty('--zoom', scale);
+      var wrap = sb.parentElement;
+      if (wrap && wrap.classList.contains('sandbox-scale')) {
+        wrap.style.width = (sb.offsetWidth * scale) + 'px';
+        wrap.style.height = (sb.offsetHeight * scale) + 'px';
+      }
+    });
+  }
+
+  // ── Study at a glance ────────────────────────────────────────────────────
+  // Mirrors the shipped conditionals: every card and every pair-half is
+  // optional, so the unit count is data-driven. React knows this at render —
+  // no measurement. singles = 1 unit, full pairs = 2.
+  var STATS_SETS = {
+    full:   [ {v:'8', l:'sessions'},
+              {pair:[{v:'2h 14m', l:'of sessions'}, {v:'104,832', l:'words'}]},
+              {pair:[{v:'353', l:'quotes'}, {v:'11', l:'themes'}]},
+              {v:'16', l:'sections'},
+              {pair:[{v:'240', l:'AI tags'}, {v:'37', l:'user tags'}]} ],
+    mid:    [ {v:'8', l:'sessions'},
+              {pair:[{v:'2h 14m', l:'of sessions'}, {v:'104,832', l:'words'}]},
+              {pair:[{v:'353', l:'quotes'}, {v:'11', l:'themes'}]} ],
+    sparse: [ {v:'3', l:'sessions'},
+              {pair:[{v:'41m', l:'of sessions'}, null]},      // half missing → 1 unit
+              {v:'27', l:'quotes'} ]
+  };
+  var statsSet = 'full';
+
+  function statHalf(d) {
+    var a = document.createElement('a');
+    a.className = 'bn-project-stat--pair-half'; a.href = '#';
+    a.innerHTML = '<span class="bn-project-stat-value">' + d.v + '</span>' +
+                  '<span class="bn-project-stat-label">' + d.l + '</span>';
+    return a;
+  }
+  function renderStats() {
+    var wrap = document.querySelector('[data-bench="stats"] .bn-project-stats');
+    if (!wrap) return 0;
+    wrap.innerHTML = '';
+    var units = 0;
+    STATS_SETS[statsSet].forEach(function (c) {
+      if (c.pair) {
+        var halves = c.pair.filter(Boolean);
+        var el = document.createElement('div');
+        el.className = 'bn-project-stat bn-project-stat--pair';
+        halves.forEach(function (h) { el.appendChild(statHalf(h)); });
+        if (halves.length === 1) el.style.gridColumn = 'span 1';   // a half-less pair is 1 unit
+        units += halves.length;
+        wrap.appendChild(el);
+      } else {
+        var s = document.createElement('a');
+        s.className = 'bn-project-stat'; s.href = '#';
+        s.innerHTML = '<span class="bn-project-stat-value">' + c.v + '</span>' +
+                      '<span class="bn-project-stat-label">' + c.l + '</span>';
+        units += 1;
+        wrap.appendChild(s);
+      }
+    });
+    wrap.style.setProperty('--units', units);
+    return units;
+  }
+
+  function applyAll() {
+    var cw = contentWidth();
+    document.querySelectorAll('.sandbox').forEach(function (sb) { sb.style.width = cw + 'px'; });
+
+    // — Study at a glance —
+    var units = renderStats();
+    var sro = document.getElementById('stats-readout');
+    if (sro && units) {
+      var unitW = (cw - (units - 1) * GAP) / units;
+      sro.textContent = units + ' units · ' + Math.round(unitW) + 'px each · gutter ' + GAP + 'px (fixed) · justified';
+    }
+
+    // — Quotes —
+    var qcols = colsFor(cw, T.qmin, 5);
+    var row = document.querySelector('.bn-featured-row');
+    if (row) {
+      row.style.gridTemplateColumns = 'repeat(' + qcols + ',1fr)';
+      row.querySelectorAll('.bn-featured-quote').forEach(function (c, i) {
+        c.style.display = (i < qcols) ? 'flex' : 'none';
+        c.style.maxWidth = T.qmax + 'px';
+        var t = c.querySelector('.quote-text');
+        if (!t) return;
+        t.textContent = '“' + composeQuote(QLEN[T.qlen], i * 3) + '”';
+        if (T.clamp > 0) { t.classList.add('clamped'); t.style.setProperty('--clamp', T.clamp); }
+        else { t.classList.remove('clamped'); }
+      });
+    }
+
+    // — Pro & contra — reuses the featured quote card, so it inherits the SAME
+    //   length treatment. Drives home that two columns make length worse.
+    document.querySelectorAll('.bn-procon .bn-featured-quote').forEach(function (c) {
+      var t = c.querySelector('.quote-text');
+      if (!t) return;
+      t.textContent = '“' + composeQuote(QLEN[T.qlen], +(c.dataset.seed || 0)) + '”';
+      if (T.clamp > 0) { t.classList.add('clamped'); t.style.setProperty('--clamp', T.clamp); }
+      else { t.classList.remove('clamped'); }
+    });
+
+    // — Signals —
+    var scols = colsFor(cw, T.smin, 3);
+    var sc = document.querySelector('.signal-cards');
+    if (sc) {
+      sc.style.gridTemplateColumns = 'repeat(' + scols + ',1fr)';
+      sc.querySelectorAll('.signal-card').forEach(function (c, i) {
+        c.style.display = (i < scols) ? 'block' : 'none';
+      });
+    }
+
+    layoutST();
+    applyZoom();
+    renderResults(cw, qcols, scols);
+  }
+
+  function renderResults(cw, qcols, scols) {
+    var qcard = Math.min((cw - (qcols - 1) * GAP) / qcols, T.qmax);
+    var qw = (qcard - CHROME) / PXW;                       // words per line
+    var need = QLEN[T.qlen];
+    var lines = Math.ceil(need / qw);
+    var shown = T.clamp > 0 ? Math.min(lines, T.clamp) : lines;
+    var cut = T.clamp > 0 && lines > T.clamp;
+    var scard = (cw - (scols - 1) * GAP) / scols;
+    var band = (qw >= 7 && qw <= 11);
+    var el = document.getElementById('results');
+    if (!el) return;
+    el.innerHTML =
+      'viewport <b>' + T.vp + '</b> − sidebar ' + T.sb + ' − rail ' + RAIL + ' − padding ' + PAD +
+        ' = content <b>' + cw + 'px</b>' +
+      '<br>quotes: <b>' + qcols + '-up</b> · card ' + Math.round(qcard) + 'px · ' +
+        '<span class="' + (band ? 'ok' : 'warn') + '">' + qw.toFixed(1) + ' words/line</span>' +
+        (band ? '' : ' ← outside 7–11') +
+      '<br>a ' + need + '-word quote = <b>' + lines + ' lines</b>' +
+        (T.clamp > 0
+          ? ' → clamped to <b>' + shown + '</b>' + (cut ? ' <span class="warn">(truncated — ' + Math.round(shown * qw) + ' of ' + need + ' words shown)</span>' : ' <span class="ok">(fits whole)</span>')
+          : ' <span class="warn">(no clamp — card height = quote length)</span>') +
+      '<br>signals: <b>' + scols + '-up</b> · card ' + Math.round(scard) + 'px' +
+      '<br>breakpoints — quotes: ' + [1,2,3,4,5].map(function(n){return n+'@'+(n*T.qmin+(n-1)*GAP);}).join(' · ') +
+      '<br>breakpoints — signals: ' + [1,2,3].map(function(n){return n+'@'+(n*T.smin+(n-1)*GAP);}).join(' · ');
+  }
+
+  function bindBtns(attr, fn) {
+    document.querySelectorAll('[' + attr + ']').forEach(function (b) {
+      b.addEventListener('click', function () {
+        document.querySelectorAll('[' + attr + ']').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+        fn(b.getAttribute(attr));
+        applyAll();
+      });
+    });
+  }
+  bindBtns('data-vp',   function (v) { T.vp = +v; });
+  bindBtns('data-sb',   function (v) { T.sb = +v; });
+  bindBtns('data-zoom', function (v) { T.zoom = (v === 'fit') ? 'fit' : +v; });
+  bindBtns('data-qlen', function (v) { T.qlen = v; });
+  bindBtns('data-stats', function (v) { statsSet = v; });
+
+  [['p-qmin','qmin'],['p-qmax','qmax'],['p-smin','smin'],['p-clamp','clamp']].forEach(function (p) {
+    var el = document.getElementById(p[0]);
+    if (el) el.addEventListener('input', function () { T[p[1]] = +el.value || 0; applyAll(); });
+  });
+
+  wrapSandboxes();
+  renderST();
+  applyAll();
 })();
 </script>
 </body>

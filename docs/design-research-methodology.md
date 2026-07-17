@@ -189,7 +189,7 @@ Takes all `GENERAL_CONTEXT` quotes and identifies emergent themes.
 
 **Exactly one theme per quote.** Even when a quote could fit multiple themes, the LLM picks the strongest fit. This matches researcher expectations: each quote appears once in the report. When further processing the output (Miro boards, affinity diagrams, spreadsheets), duplicates would cause confusion. The researcher can reassign quotes using inline editing.
 
-**Minimum evidence threshold:** A theme must have at least 2 quotes. Themes with fewer are folded into an "Uncategorised observations" bucket. A single quote doesn't constitute a pattern — it's an individual observation. The threshold of 2 is the minimum for "more than one person said this", which is the basic requirement for calling something a theme rather than an anecdote. A higher threshold (3+) would hide emergent patterns in small studies (3–5 participants).
+**Minimum evidence threshold:** A theme must have at least 2 quotes. Themes with fewer are folded into an "Uncategorised" bucket — quotes that don't have a home yet. (The label is deliberately not "observations": an observation is a proto-finding a *human* noticed, whereas these are simply unplaced, and we don't presume whether they'd belong to a theme or a section.) A single quote doesn't constitute a pattern. The threshold of 2 is the minimum for "more than one person said this", which is the basic requirement for calling something a theme rather than an anecdote. A higher threshold (3+) would hide emergent patterns in small studies (3–5 participants).
 
 > **Refinement (30 Apr 2026 spike).** The "≥2 quotes" rule conflates two distinct value-classes of single-participant themes:
 >

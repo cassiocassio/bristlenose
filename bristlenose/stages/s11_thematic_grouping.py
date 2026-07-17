@@ -104,7 +104,9 @@ async def group_by_theme(
         )
 
     # Enforce minimum evidence threshold: themes with fewer than 2 quotes
-    # get folded into an "Uncategorised observations" bucket.
+    # get folded into an "Uncategorised" bucket — quotes that don't have a home
+    # yet. Deliberately NOT "observations": an observation is a proto-finding a
+    # human noticed, whereas these are simply unplaced.
     min_theme_quotes = 2
     strong_themes = [t for t in themes if len(t.quotes) >= min_theme_quotes]
     weak_quotes: list[ExtractedQuote] = []
@@ -125,13 +127,13 @@ async def group_by_theme(
 
         strong_themes.append(
             ThemeGroup(
-                theme_label="Uncategorised observations",
-                description="Individual observations that did not cluster into a broader theme.",
+                theme_label="Uncategorised",
+                description="Quotes that don't have a home yet — they didn't cluster with others into a pattern.",
                 quotes=unique_weak,
             )
         )
         logger.info(
-            "Moved %d quotes from %d thin themes into 'Uncategorised observations'",
+            "Moved %d quotes from %d thin themes into 'Uncategorised'",
             len(unique_weak),
             len(themes) - len(strong_themes) + 1,
         )

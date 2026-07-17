@@ -165,10 +165,10 @@ Keyboard shortcuts: Cmd+1-5 (tabs) and Cmd+Opt+S (sidebar) live in the View menu
 - **Export** (share icon) — dropdown `Menu` whose contents change per tab. Always has "Export Report..." first. Quotes tab adds "Export Quotes as CSV"
 
 **Per-tab contextual items** (appear/disappear):
-- **Quotes/Codebook/Analysis**: `ControlGroup` pill with two buttons — left (`sidebar.left`) toggles native project sidebar via `NSSplitViewController.toggleSidebar`, right (`list.bullet`) toggles web navigation sidebar (sections/themes, codebooks, signals) via `bridgeHandler.menuAction("toggleLeftPanel")`
+- **Sessions/Quotes/Codebook/Analysis**: `list.bullet` button toggling the web left panel via `bridgeHandler.menuAction("toggleLeftPanel")` — the session list on Sessions, sections/themes on Quotes, codebooks on Codebook, signals on Analysis. (The native project-sidebar toggle is provided by `NavigationSplitView` automatically, Mail-style.) Label per lens: Sessions reuses `common.nav.sessions` (the lens's own name — the panel lists the sessions it's named for); the others use `desktop.toolbar.{contents,codes,signals}`. ⌘⌥L in **View ▸ Show …** is the menu twin (`leftPanelKey` in `MenuCommands.swift`).
 - **Quotes**: Tag sidebar toggle (`sidebar.right` icon)
 - **Analysis**: Heatmap inspector toggle (`square.grid.2x2` icon)
-- **Project/Sessions**: no extra items
+- **Project**: no extra items
 
 **The toolbar is the *only* surface for the web nav/tag sidebars in embedded mode.** The SPA hides its own icon rails + close-× when `isEmbedded()` (`.layout.embedded` in `bristlenose/theme/organisms/sidebar.css`) — that web chrome is a non-Mac idiom and the two 36px rails wasted width the WKWebView (zero-inset, fills the detail pane) gives back to content. So the `toggleLeftPanel` / `toggleRightPanel` ControlGroup buttons + `[`/`]` keys are the user's only way to open/close them; there's no in-pane affordance to fall back on. Overlay/hover-peek mode is also gone in embedded (it was rail-triggered) — the web TOC is closed↔push only. If you ever remove these toolbar toggles, the web sidebars become unreachable in the app. See `docs/design-sidebar.md` § Desktop embedded mode.
 

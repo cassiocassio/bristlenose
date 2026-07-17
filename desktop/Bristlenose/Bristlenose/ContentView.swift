@@ -1526,8 +1526,13 @@ struct ContentView: View {
     // MARK: - Toolbar
 
     /// Per-tab label for the left-panel toolbar button.
+    ///
+    /// Sessions reuses the lens's own name rather than a dedicated
+    /// `desktop.toolbar.*` key — the panel lists exactly the sessions the lens
+    /// is named for, so `common.nav.sessions` is the single source for the word.
     private var leftPanelToolbarLabel: String {
         switch bridgeHandler.activeTab {
+        case .sessions: return Tab.sessions.fullLocalizedLabel(i18n)
         case .quotes:   return i18n.t("desktop.toolbar.contents")
         case .codebook: return i18n.t("desktop.toolbar.codes")
         case .analysis: return i18n.t("desktop.toolbar.signals")
@@ -1538,6 +1543,7 @@ struct ContentView: View {
     /// Per-tab tooltip for the left-panel toolbar button.
     private var leftPanelToolbarHelp: String {
         switch bridgeHandler.activeTab {
+        case .sessions: return i18n.t("desktop.toolbar.showSessions")
         case .quotes:   return i18n.t("desktop.toolbar.showContents")
         case .codebook: return i18n.t("desktop.toolbar.showCodes")
         case .analysis: return i18n.t("desktop.toolbar.showSignals")
@@ -1555,14 +1561,16 @@ struct ContentView: View {
         // The old `WindowTitleManager` is gone — its forced
         // `titleVisibility = .hidden` was what had suppressed the subtitle.
 
-        // Contextual — Quotes/Codebook/Analysis: left panel toggle
+        // Contextual — Sessions/Quotes/Codebook/Analysis: left panel toggle
         // The native sidebar toggle (for the project list) is provided by
         // NavigationSplitView automatically — Mail-style: lives inside the
         // sidebar column when open, snaps left to traffic lights when closed.
-        // This standalone button controls the web navigation sidebar
-        // (sections/themes on Quotes, codebooks on Codebook, signals on Analysis).
+        // This standalone button controls the web navigation sidebar (the
+        // session list on Sessions, sections/themes on Quotes, codebooks on
+        // Codebook, signals on Analysis).
         // Gestalt proximity: each toggle is near the thing it controls.
-        if bridgeHandler.activeTab == .quotes ||
+        if bridgeHandler.activeTab == .sessions ||
+           bridgeHandler.activeTab == .quotes ||
            bridgeHandler.activeTab == .codebook ||
            bridgeHandler.activeTab == .analysis {
             ToolbarItem(placement: .navigation) {

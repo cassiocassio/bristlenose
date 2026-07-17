@@ -421,6 +421,7 @@ private struct ViewMenuContent: View {
     /// Locale key suffix for the left-panel label, per tab.
     private var leftPanelKey: String? {
         switch bridgeHandler.activeTab {
+        case .sessions: return "Sessions"
         case .quotes:   return "Contents"
         case .codebook: return "Codes"
         case .analysis: return "Signals"

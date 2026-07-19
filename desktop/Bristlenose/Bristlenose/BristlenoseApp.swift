@@ -143,6 +143,11 @@ struct BristlenoseApp: App {
                 .tint(paletteAccent)
         }
         .defaultSize(width: 1200, height: 820)
+        // Debug/diagnostics windows are launched from the Debug menu. Suppress the
+        // entry SwiftUI auto-adds to the standard Window menu for every titled
+        // `Window` scene — otherwise each doubles up (Window menu + Debug menu).
+        // See desktop/CLAUDE.md "titled Window scenes auto-populate the Window menu".
+        .commandsRemoved()
 
         // DEBUG-only Run Inspector — infoviz over the last run's instrumentation,
         // served from `/api/dev/run`. Needs the serve URL + token, so inject the
@@ -153,6 +158,7 @@ struct BristlenoseApp: App {
                 .tint(paletteAccent)
         }
         .defaultSize(width: 1000, height: 720)
+        .commandsRemoved()   // no auto Window-menu entry — see Type Parity above
 
         // DEBUG-only viewing harness for the resurrected typographic shoal
         // (v0.1 canned WordPool, no live data). Debug ▸ Shoal Screensaver.
@@ -161,6 +167,25 @@ struct BristlenoseApp: App {
                 .tint(paletteAccent)
         }
         .defaultSize(width: 800, height: 600)
+        .commandsRemoved()   // no auto Window-menu entry — see Type Parity above
+
+        // DEBUG-only "thinking" shimmer tuner — native half of the shimmer spike,
+        // mirrors docs/mockups/shimmer-tuner.html. Debug ▸ Shimmer Tuner.
+        Window("Shimmer Tuner", id: "shimmer-tuner") {
+            ShimmerTunerView()
+                .tint(paletteAccent)
+        }
+        .defaultSize(width: 900, height: 620)
+        .commandsRemoved()   // no auto Window-menu entry — see Type Parity above
+
+        // DEBUG-only keycap gallery — native half of "how do we show a key to
+        // press?", mirrors docs/mockups/keycap-gallery.html. Debug ▸ Keycap Gallery.
+        Window("Keycap Gallery", id: "keycap-gallery") {
+            KeycapGalleryView()
+                .tint(paletteAccent)
+        }
+        .defaultSize(width: 680, height: 720)
+        .commandsRemoved()   // no auto Window-menu entry — see Type Parity above
         #endif
     }
 }

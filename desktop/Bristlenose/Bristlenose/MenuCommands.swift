@@ -95,7 +95,8 @@ private struct BetaDebugMenuContent: View {
     @ObservedObject var serveManager: ServeManager
 
     var body: some View {
-        Button("Open Admin Panel…") {
+        // No ellipsis — opens the panel directly in the browser, no further input.
+        Button("Open Admin Panel") {
             AdminPanelAction.open(serveManager: serveManager)
         }
         .disabled(serveManager.runningPort == nil)
@@ -117,13 +118,22 @@ private struct DebugMenuContent: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Button("Type Parity Inspector…") { openWindow(id: "type-parity") }
-            .keyboardShortcut("t", modifiers: [.command, .control])
+        // Diagnostics windows take NO keyboard shortcut — except Run Inspector,
+        // the one tool slated to ship to users (Tier U per design-diagnostics-menu.md),
+        // which keeps ⌃⌘R. Rationale + canonical rule: docs/design-keyboard-shortcuts.md
+        // § "Diagnostics windows".
+        // No ellipsis: opening a window that IS the thing takes no further input
+        // (HIG — ellipsis means "needs more input before it completes").
+        Button("Type Parity Inspector") { openWindow(id: "type-parity") }
 
-        Button("Run Inspector…") { openWindow(id: "run-inspector") }
+        Button("Run Inspector") { openWindow(id: "run-inspector") }
             .keyboardShortcut("r", modifiers: [.command, .control])
 
-        Button("Shoal Screensaver…") { openWindow(id: "shoal") }
+        Button("Shoal Screensaver") { openWindow(id: "shoal") }
+
+        Button("Shimmer Tuner") { openWindow(id: "shimmer-tuner") }
+
+        Button("Keycap Gallery") { openWindow(id: "keycap-gallery") }
 
         Divider()
 

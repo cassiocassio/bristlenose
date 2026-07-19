@@ -126,6 +126,29 @@ gets Section 1 only — the SQL browser is `exposesDebugTools`-gated inside the
 menu, so it cannot appear on their build. Toggle off → no menu at all, every
 channel.
 
+### Menu-item mechanics — mandatory when a diagnostics window is a `Window` scene
+
+_(From the 19 Jul 2026 window-doubling audit —
+`docs/design-debug-window-menu-doubling.md`.)_ Every diagnostics window opened as
+a titled SwiftUI `Window` scene (Run Inspector, the new Shoal animation
+`shoal-view`, Type Parity, Shimmer Tuner) **must** carry `.commandsRemoved()` on
+the scene. SwiftUI auto-adds a Window-menu "open" item for every titled `Window`
+scene, and that entry is gated by *neither* the scene being open *nor* the
+`showDiagnosticsMenu` pref (the pref gates the `CommandMenu`, not the scene). So
+without `.commandsRemoved()`, promoting Run Inspector / Shoal to **non-DEBUG**
+scenes (Phase 2) ships stray "Run Inspector" / "Shoal" rows in the Window menu to
+**every App Store / TestFlight user, even with the Diagnostics toggle off.** This
+is a hard acceptance criterion for Phase 1 and Phase 2, not a polish item.
+
+Two settled sub-decisions from the same audit:
+- **Keyboard shortcuts (settled):** a diagnostics window gets
+  a shortcut only if it ships to users. That is exactly **Run Inspector → `⌃⌘R`**
+  (macOS-only). Type Parity / Shoal / Shimmer Tuner take **none** (`⌃⌘T` was
+  removed from Type Parity). Canonical: `docs/design-keyboard-shortcuts.md`
+  § "Diagnostics windows".
+- **No ellipsis** on the open-window items ("Run Inspector", "Open Admin Panel") —
+  opening a window that *is* the thing takes no further input (HIG).
+
 ## Mechanism
 
 **The preference** — Safari's pattern, one switch:
@@ -172,7 +195,8 @@ Phase-2 split. Never set on App Store / TestFlight.
   `DebugMenuActions` file so they compile in Release (re-guard only the D
   members, or split the file).
 - Gate Web Inspector on the pref (`isInspectable = showDiagnosticsMenu`).
-- Add the `shoal-view` window scene (non-DEBUG, `showsDebugControls: false`).
+- Add the `shoal-view` window scene (non-DEBUG, `showsDebugControls: false`) —
+  **with `.commandsRemoved()`** (it ships → the Window-menu leak is user-visible).
 - Delete the standalone `#if DEBUG CommandMenu("Debug")` — it's now Section 3
   inside the single Diagnostics menu.
 - Confirm live menu-toggle in `Commands` works; fall back to "applies on next
@@ -189,8 +213,10 @@ Three-way split of `routes/dev.py`:
   `_BRISTLENOSE_DEVTOOLS` (Section 2), NOT shipped to App Store.
 - **Playground + telemetry stub → stay `#if DEBUG` / `--dev`.**
 - Move the `run-inspector` window scene + menu item from `#if DEBUG` to
-  **Section 1** (always, pref-gated). Move Shoal tuning (`ShoalDebugView` +
-  `shoal` window) from `#if DEBUG` to **Section 2** (`exposesDebugTools`).
+  **Section 1** (always, pref-gated) — the scene keeps `.commandsRemoved()` (now a
+  user-visible surface) and keeps its `⌃⌘R` shortcut (the one diagnostics window
+  that earns one). Move Shoal tuning (`ShoalDebugView` + `shoal` window) from
+  `#if DEBUG` to **Section 2** (`exposesDebugTools`).
 - Rename `_BRISTLENOSE_ADMIN_PANEL` → `_BRISTLENOSE_DEVTOOLS` (now gates SQL
   admin + `/info`).
 - **`security-review` pass required — at the App Store bar, not just beta.** The

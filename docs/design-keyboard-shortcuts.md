@@ -155,6 +155,29 @@ The macOS desktop app (SwiftUI shell wrapping the React SPA in WKWebView) has ad
 |----------|-------------|-------|
 | `⌘0` | Focus main window | When multi-window ships — BBEdit precedent |
 
+### Diagnostics windows — one keybinding only (canonical rule)
+
+The desktop app has several diagnostics/debug windows opened from the Debug (→
+future Diagnostics) menu: Type Parity Inspector, Run Inspector, Shoal, Shimmer
+Tuner. **Canonical rule (19 Jul 2026): a diagnostics window gets a keyboard
+shortcut only if it ships to end users. Today that's exactly one — Run Inspector,
+`⌃⌘R`.** Every other diagnostics window (Type Parity, Shoal, Shimmer Tuner) is
+`#if DEBUG`-only or developer-tier and takes **no** shortcut — a burned key-slot
+for a window no user can reach is not worth it, and Control-modified combos sit at
+the bottom of the Fn → Control → Option → Shift → Command ladder anyway.
+
+| Window | Shortcut | Tier (`docs/design-diagnostics-menu.md`) | Notes |
+|--------|----------|------------------------------------------|-------|
+| Run Inspector | **`⌃⌘R`** (macOS only) | U — ships to every channel (pref-gated) | The one diagnostics window that reaches users → the one that earns a shortcut |
+| Type Parity Inspector | _(none — was `⌃⌘T`, removed)_ | D — never ships | Internal typography QA |
+| Shoal Screensaver | _(none)_ | V (tuning) / U (animation) | — |
+| Shimmer Tuner | _(none)_ | D — never ships | Animation/typography QA harness |
+
+`⌃⌘R` is **macOS-desktop-only** — it does not apply to browser serve mode or the
+CLI. Menu-item mechanics (ellipsis-free labels, `.commandsRemoved()` on the scene
+so it doesn't double into the Window menu) live in
+`docs/design-debug-window-menu-doubling.md`.
+
 ### Web vs desktop shortcut divergence
 
 The web (browser-based serve mode) and desktop app intentionally handle some shortcuts differently:

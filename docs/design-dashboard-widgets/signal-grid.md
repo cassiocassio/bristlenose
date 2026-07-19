@@ -148,9 +148,14 @@ participant badge (~36px floor** — measured in the size sandbox). Below that (
 for **≤9-participant studies**; 10+ overflow the badge into the gutters. So the wide/narrow choice
 should factor **participant count**, not width alone — many participants push the grid wider or fall
 back to the list sooner. Cell + gutter ship as CSS vars (`--cell`, `--gap`), settled in the size
-sandbox; **default still open** (24px compact, single-digit-only · ~36px two-digit-safe). Circles are
-area-encoded off the cell (`max diameter = cell − 10`), so very small cells also weaken the
-residual read — the size decision trades vertical fit against dot legibility *and* two-digit safety.
+sandbox. **Decision: `--cell: 24px` compact, `--gap: 4px`** — tuned for a typical section/theme count
+in a reasonable vertical space, and it fits **single-digit** participant studies (`p1`–`p9`) — **~99%
+of studies, so it's the correct trade for TestFlight.** The 10+-participant case is genuinely rare,
+which is why two-digit safety is a post-TF deferral rather than a blocker.
+**Two-digit participant safety (~36px, or a cell that tracks a measured two-digit badge) is
+deferred** — captured in the planning backlog. Circles are area-encoded off the cell (`max diameter =
+cell − 10`), so at 24px the residual read is deliberately faint — the trade taken is vertical density
+over dot legibility, to be revisited when two-digit support lands.
 
 ## Open for the total-page mock
 

@@ -374,7 +374,8 @@ fixed-size text is the natural floor. Dot max diameter = <code>cell − 10px</co
 
   // init
   badgeNatural = measureBadgeNatural();
-  cellPx = Math.min(52, Math.max(22, Math.round(badgeNatural + 6)));  // badge + a bit of padding
+  cellPx = 24;   // CHOSEN production default — compact, single-digit studies.
+                 // Two-digit-safe (~36px, = badge natural) is deferred (backlog).
   gapPx = 4;
   var cellR = document.getElementById("cellR"), gapR = document.getElementById("gapR");
   cellR.value = cellPx; gapR.value = gapPx;

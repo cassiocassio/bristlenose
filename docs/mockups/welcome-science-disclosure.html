@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en" data-palette="default" data-appearance="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome — science cell progressive disclosure</title>
+<!--
+  MOCKUP — Tier 2 (system-true). Design exploration for tying the Welcome
+  screen's "Scientific background" cell to the academic sources, as a
+  three-layer progressive-disclosure chain:
+    L1 the cell  →  L2 formal / code-group page section  →  L3 citation + OA link
+  All content is REAL (codebook YAMLs, sentiment enum, smoke-test quotes,
+  recorded DOIs). Behaviour is stubbed (palette/appearance/concept switch only).
+  NOTE: product CSS must consume the --bn-* theme tokens; this mockup uses
+  local palette vars to match the sibling welcome-*.html mockups and keep the
+  Default/Edo × light/dark switching self-contained.
+-->
+<style>
+  :root{ --ink:#1a1a1a; --faint:#6b7280; --line:#e5e7eb; --bg:#f4f4f5; --paper:#fff; --card:#f9f9fa; --tag:#9a9a9a; --accent:#007aff; --accent-soft:#e8f0fe; }
+  :root[data-appearance="dark"]{ --ink:#e5e7eb; --faint:#9ca3af; --line:#2d2d2d; --bg:#161618; --paper:#1c1c1e; --card:#232326; --tag:#888; --accent:#0a84ff; --accent-soft:#1e293b; }
+  :root[data-palette="edo"]{ --ink:#1b2230; --faint:#4a698a; --line:#d4c9a8; --bg:#efe9db; --paper:#fdfbf7; --card:#f7f2e6; --tag:#9c8f70; --accent:#0f5c9e; --accent-soft:#e0e8f0; }
+  :root[data-palette="edo"][data-appearance="dark"]{ --ink:#e8e3d6; --faint:#7ba8a0; --line:#2d2820; --bg:#141210; --paper:#1a1816; --card:#211e18; --tag:#7a7060; --accent:#4d9fe0; --accent-soft:#1e2830; }
+
+  /* ---- REAL design-system tokens, copied verbatim from bristlenose/theme/ ----
+     So the codebook group + tag badges below are the actual thing, not a lookalike.
+     Codebook colour sets + sentiment are palette-independent (analytical), so they
+     track only light/dark, not Default/Edo. Sources: tokens.css, badge.css, codebook-panel.css. */
+  :root{
+    --bn-font-mono:"SF Mono",ui-monospace,"Fira Code",Consolas,monospace;
+    --bn-radius-sm:3px; --bn-radius-lg:8px;
+    --bn-text-badge:0.72rem; --bn-text-label:0.8125rem; --bn-text-caption:0.75rem;
+    --bn-space-xs:0.15rem; --bn-space-sm:0.35rem; --bn-space-md:0.75rem;
+    --bn-weight-emphasis:490;
+    --bn-colour-badge-bg:#f3f4f6; --bn-colour-badge-text:#374151;
+    /* trust colour set (Nielsen H4 → colour_set: trust) */
+    --bn-group-trust:oklch(97% 0.015 300); --bn-bar-trust:oklch(70% 0.07 300);
+    --bn-trust-1-bg:oklch(94% 0.03 275); --bn-trust-2-bg:oklch(94% 0.03 287); --bn-trust-3-bg:oklch(94% 0.03 300); --bn-trust-4-bg:oklch(94% 0.03 313); --bn-trust-5-bg:oklch(94% 0.03 325);
+    /* sentiment set (light) */
+    --bn-sentiment-frustration:#ea580c; --bn-sentiment-frustration-bg:#fff7ed;
+    --bn-sentiment-confusion:#dc2626; --bn-sentiment-confusion-bg:#fef2f2;
+    --bn-sentiment-doubt:#7c3aed; --bn-sentiment-doubt-bg:#f5f3ff;
+    --bn-sentiment-surprise:#d97706; --bn-sentiment-surprise-bg:#fffbeb;
+    --bn-sentiment-satisfaction:#16a34a; --bn-sentiment-satisfaction-bg:#f0fdf4;
+    --bn-sentiment-delight:#059669; --bn-sentiment-delight-bg:#ecfdf5;
+    --bn-sentiment-confidence:#2563eb; --bn-sentiment-confidence-bg:#eff6ff;
+  }
+  :root[data-appearance="dark"]{
+    --bn-colour-badge-bg:#252525; --bn-colour-badge-text:#d1d5db;
+    --bn-group-trust:oklch(22% 0.025 300); --bn-bar-trust:oklch(55% 0.07 300);
+    --bn-trust-1-bg:oklch(50% 0.11 275); --bn-trust-2-bg:oklch(48% 0.10 287); --bn-trust-3-bg:oklch(53% 0.10 300); --bn-trust-4-bg:oklch(49% 0.11 313); --bn-trust-5-bg:oklch(51% 0.10 325);
+    --bn-sentiment-frustration:#fb923c; --bn-sentiment-frustration-bg:#2d1d0e;
+    --bn-sentiment-confusion:#f87171; --bn-sentiment-confusion-bg:#2d1515;
+    --bn-sentiment-doubt:#a78bfa; --bn-sentiment-doubt-bg:#1e1533;
+    --bn-sentiment-surprise:#fbbf24; --bn-sentiment-surprise-bg:#2d2305;
+    --bn-sentiment-satisfaction:#4ade80; --bn-sentiment-satisfaction-bg:#0f2918;
+    --bn-sentiment-delight:#34d399; --bn-sentiment-delight-bg:#0d261c;
+    --bn-sentiment-confidence:#60a5fa; --bn-sentiment-confidence-bg:#111d2e;
+  }
+
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; } }
+  *{ box-sizing:border-box; }
+  body{ margin:0; padding:24px; font:13px/1.45 -apple-system,"SF Pro Text",system-ui,sans-serif; color:var(--ink); background:var(--bg); }
+  .page{ max-width:1040px; margin:0 auto; }
+  .page h1{ font-size:18px; margin:0 0 4px; font-weight:600; }
+  .page .lede{ margin:0 0 14px; color:var(--faint); max-width:82ch; font-size:12px; }
+  .page h2.sec{ font-size:13px; font-weight:600; margin:26px 0 10px; letter-spacing:.01em; }
+  .page h2.sec span{ color:var(--faint); font-weight:400; }
+
+  .controls{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 0 8px; font-size:12px; }
+  .controls label{ color:var(--faint); display:flex; gap:5px; align-items:center; cursor:pointer; }
+  .controls select{ font:inherit; }
+  .controls .seg{ display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .controls .seg button{ font:inherit; font-weight:600; color:var(--faint); background:transparent; border:0; padding:5px 10px; cursor:pointer; border-left:1px solid var(--line); }
+  .controls .seg button:first-child{ border-left:0; }
+  .controls .seg button[aria-pressed="true"]{ color:#fff; background:var(--accent); }
+
+  /* ---- the welcome screen (φ-spiral) ---- */
+  .screen{ aspect-ratio:8/5; width:100%; background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:20px; display:flex; position:relative; overflow:hidden; }
+  .flex{ display:flex; gap:8px; flex:1 1 0; min-width:0; min-height:0; }
+  .col{ flex-direction:column; }
+  .b62{ flex:1.618 1 0; } .b38{ flex:1 1 0; }
+  .sq{ border:0.5px solid var(--line); border-radius:8px; padding:10px 11px; display:flex; flex-direction:column; gap:4px; min-width:0; min-height:0; overflow:hidden; position:relative; transition:background .3s ease; }
+  .sq.lg{ border-radius:10px; padding:16px; }
+  .sq.mid{ justify-content:center; align-items:center; text-align:center; }
+
+  .tag{ font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--tag); font-weight:600; }
+  .lnk{ color:var(--accent); text-decoration:none; font-weight:500; }
+  .lnk:hover{ text-decoration:underline; }
+  .body{ font-size:12px; color:var(--faint); line-height:1.45; }
+  .body .t{ font-size:15px; color:var(--ink); font-weight:600; display:block; margin-bottom:2px; }
+  .tipbody{ font-size:11px; color:var(--faint); line-height:1.4; }
+  .drop{ margin-top:auto; border:1.5px dotted var(--line); border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:3px; align-items:flex-start; background:var(--paper); }
+  .drop-title{ font-size:15px; font-weight:600; color:var(--ink); }
+  .drop-sub{ font-size:13px; color:var(--faint); line-height:1.4; max-width:34ch; }
+
+  /* ---- enriched science cell (L1) ---- */
+  .sci-inner{ display:flex; flex-direction:column; gap:7px; min-height:0; flex:1 1 0; }
+  .sci-title{ font-size:15px; color:var(--ink); font-weight:600; }
+  .example{ border:0.5px solid var(--line); border-radius:8px; background:var(--paper); padding:8px 9px; display:flex; flex-direction:column; gap:6px; }
+  .example .q{ font-size:11.5px; line-height:1.4; color:var(--ink); }
+  .example .q .qm{ color:var(--faint); }
+  .example .meta{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .arrow-mini{ color:var(--faint); font-size:11px; }
+  .sci-summary{ font-size:12px; color:var(--faint); line-height:1.45; }
+  .sci-link{ margin-top:auto; }
+
+  /* pills */
+  .pill{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px; white-space:nowrap; }
+  .pill.code{ color:var(--accent); background:var(--accent-soft); border:0.5px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+  .pill.code .grp{ font-weight:400; opacity:.7; }
+  .pill.sent{ border:0.5px solid transparent; }
+  .dots{ display:inline-flex; gap:2px; }
+  .dots i{ width:5px; height:5px; border-radius:999px; background:currentColor; opacity:.3; }
+  .dots i.on{ opacity:1; }
+
+  /* ---- storyboard (L1 → L2 → L3) ---- */
+  .story{ display:grid; grid-template-columns: 300px 26px 1fr 26px 320px; align-items:stretch; gap:0; }
+  @media (max-width:940px){ .story{ grid-template-columns:1fr; gap:14px; } .story .arrow{ transform:rotate(90deg); height:20px; } }
+  .panel{ border:1px solid var(--line); border-radius:12px; background:var(--paper); padding:0; overflow:hidden; display:flex; flex-direction:column; }
+  .panel .phead{ font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); font-weight:700; padding:9px 13px; border-bottom:1px solid var(--line); background:var(--card); display:flex; justify-content:space-between; align-items:center; }
+  .panel .phead .n{ color:var(--accent); }
+  .panel .pbody{ padding:13px; display:flex; flex-direction:column; gap:9px; }
+  .arrow{ display:flex; align-items:center; justify-content:center; color:var(--faint); font-size:18px; }
+
+  /* L1 panel holds a real-scale cell */
+  .cellframe{ background:var(--paper); border:0.5px solid var(--line); border-radius:10px; padding:16px; background:color-mix(in srgb, var(--accent) 7%, var(--card)); display:flex; flex-direction:column; gap:7px; height:100%; }
+
+  /* L2 doc-section styling */
+  .l2 .h{ font-size:15px; font-weight:600; color:var(--ink); }
+  .l2 .sub{ font-size:11px; color:var(--faint); }
+  .l2 .prose{ font-size:12.5px; line-height:1.5; color:var(--ink); }
+  .l2 .prose.muted{ color:var(--faint); }
+  .l2 .group{ border:1px solid var(--line); border-radius:9px; overflow:hidden; }
+  .l2 .group .gh{ padding:8px 11px; background:var(--card); border-bottom:1px solid var(--line); }
+  .l2 .group .gh .gt{ font-size:12.5px; font-weight:600; }
+  .l2 .group .gh .gsub{ font-size:11px; color:var(--faint); }
+  .l2 .group .gr{ padding:9px 11px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:3px; }
+  .l2 .group .gr:first-of-type{ border-top:0; }
+  .l2 .group .gr .def{ font-size:11.5px; color:var(--faint); line-height:1.4; }
+  .l2 .seven{ display:flex; flex-wrap:wrap; gap:5px; }
+  .url{ font:11px/1.4 ui-monospace,Menlo,monospace; color:var(--faint); background:var(--card); border:1px solid var(--line); border-radius:6px; padding:4px 7px; word-break:break-all; }
+
+  /* L3 citation cards */
+  .cite{ border:1px solid var(--line); border-radius:9px; padding:10px 12px; display:flex; flex-direction:column; gap:7px; }
+  .cite .ref{ font-size:12px; line-height:1.5; color:var(--ink); }
+  .cite .ref em{ font-style:italic; }
+  .cite .links{ display:flex; flex-wrap:wrap; gap:6px; }
+  .srcbtn{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; text-decoration:none; padding:3px 9px; border-radius:999px; border:1px solid var(--line); color:var(--faint); }
+  .srcbtn.open{ color:var(--accent); background:var(--accent-soft); border-color:color-mix(in srgb, var(--accent) 25%, transparent); }
+  .srcbtn .ic{ font-size:10px; }
+  .warn{ font-size:11px; color:var(--faint); line-height:1.4; padding:7px 9px; border:1px dashed var(--line); border-radius:8px; }
+  .note{ font-size:11.5px; color:var(--faint); margin-top:12px; line-height:1.5; }
+  .note code{ font:11px ui-monospace,Menlo,monospace; background:var(--card); padding:1px 4px; border-radius:4px; }
+  .fit{ font-size:11px; font-weight:600; padding:2px 9px; border-radius:999px; }
+  .fit.ok{ color:#16a34a; background:#f0fdf4; border:0.5px solid #bbf7d0; }
+  .fit.clip{ color:#dc2626; background:#fef2f2; border:0.5px solid #fecaca; }
+
+  /* ---- REAL badge atom (atoms/badge.css) ---- */
+  .badge{ display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) 0.45rem; border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); line-height:1.35; }
+  .badge-frustration{ background:var(--bn-sentiment-frustration-bg); color:var(--bn-sentiment-frustration); }
+  .badge-confusion{ background:var(--bn-sentiment-confusion-bg); color:var(--bn-sentiment-confusion); }
+  .badge-doubt{ background:var(--bn-sentiment-doubt-bg); color:var(--bn-sentiment-doubt); }
+  .badge-surprise{ background:var(--bn-sentiment-surprise-bg); color:var(--bn-sentiment-surprise); }
+  .badge-satisfaction{ background:var(--bn-sentiment-satisfaction-bg); color:var(--bn-sentiment-satisfaction); }
+  .badge-delight{ background:var(--bn-sentiment-delight-bg); color:var(--bn-sentiment-delight); }
+  .badge-confidence{ background:var(--bn-sentiment-confidence-bg); color:var(--bn-sentiment-confidence); }
+  .ctx{ font-size:11px; color:var(--faint); }
+
+  /* ---- REAL codebook group card (organisms/codebook-panel.css) ---- */
+  .codebook-group{ border-radius:var(--bn-radius-lg); padding:var(--bn-space-md); position:relative; }
+  .codebook-group .group-header{ margin-bottom:var(--bn-space-sm); }
+  .codebook-group .group-title{ font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); color:var(--ink); }
+  .codebook-group .group-subtitle{ font-size:var(--bn-text-caption); color:var(--faint); margin-top:1px; line-height:1.35; }
+  .codebook-group .tag-list{ display:flex; flex-direction:column; gap:2px; }
+  .codebook-group .tag-row{ display:grid; grid-template-columns:1fr auto; align-items:center; gap:var(--bn-space-sm); padding:3px 4px; border-radius:var(--bn-radius-sm); }
+  .codebook-group .badge{ font-size:var(--bn-text-label); padding:0.2rem 0.5rem; }
+  .codebook-group .tag-name-area{ display:flex; align-items:center; min-width:0; }
+  .codebook-group .tag-bar-area{ display:flex; align-items:center; gap:var(--bn-space-xs); min-width:50px; justify-content:flex-end; }
+  .codebook-group .tag-micro-bar{ height:0.6rem; border-radius:var(--bn-radius-sm); min-width:2px; }
+  .codebook-group .tag-count{ font-size:var(--bn-text-caption); color:var(--faint); min-width:16px; text-align:right; font-variant-numeric:tabular-nums; }
+  .codebook-group .group-total-row{ display:grid; grid-template-columns:1fr auto; align-items:center; gap:var(--bn-space-sm); padding:6px 4px 0; }
+  .codebook-group .group-total-label{ font-size:var(--bn-text-badge); color:var(--faint); text-transform:uppercase; letter-spacing:0.04em; }
+  .codebook-group .group-total-count{ font-size:var(--bn-text-caption); font-weight:var(--bn-weight-emphasis); color:var(--faint); font-variant-numeric:tabular-nums; min-width:16px; text-align:right; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Welcome — science cell, tied to the sources</h1>
+  <p class="lede">The <b>Scientific background</b> cell, redesigned as a three-layer progressive-disclosure chain instead of a bounce to a generic essay. <b>L1</b> (the cell): a concrete example of a real autotag + one plain sentence + a link. <b>L2</b> (linked section): the closer-to-formal description — a whole code group, or the method. <b>L3</b>: the full citation + an honest link to a free copy where one exists.</p>
+
+  <div class="controls">
+    <label>Palette
+      <select id="pal"><option value="default">Default</option><option value="edo">Edo</option></select>
+    </label>
+    <label>Appearance
+      <select id="app"><option value="light">Light</option><option value="dark">Dark</option></select>
+    </label>
+    <label>Concept</label>
+    <span class="seg" id="conceptSeg">
+      <button data-c="A" aria-pressed="true">Usability heuristics</button>
+      <button data-c="B" aria-pressed="false">Seven sentiments</button>
+      <button data-c="C" aria-pressed="false">Emergent themes</button>
+    </span>
+  </div>
+
+  <h2 class="sec">1 · The enriched cell, in context <span>— does the richer content survive the fixed φ-geometry?</span> <span id="fitBadge" class="fit"></span></h2>
+  <div class="screen">
+    <div class="flex">
+      <div class="sq lg b62" id="life">
+        <span class="tag">Study tools</span>
+        <div class="body"><span class="t">AutoCode</span>Let AutoCode propose tags across every quote — you Accept or Deny. <a class="lnk" href="#">Learn&nbsp;→</a></div>
+        <div class="drop">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/><path d="M8 10l4 4 4-4"/><path d="M12 3v11"/></svg>
+          <div class="drop-title">Drop a folder</div>
+          <div class="drop-sub">Drag a folder of recordings or transcripts here to add it as a project.</div>
+        </div>
+      </div>
+
+      <div class="flex col b38">
+        <!-- Cell 2 — enriched science cell -->
+        <div class="sq lg b62" id="sci">
+          <span class="tag">Scientific background</span>
+          <div class="sci-inner">
+            <div class="sci-title" id="sciTitle"></div>
+            <div class="example">
+              <div class="q" id="sciQuote"></div>
+              <div class="meta"><span class="arrow-mini">→</span><span id="sciPill"></span></div>
+            </div>
+            <div class="sci-summary" id="sciSummary"></div>
+            <a class="lnk sci-link" id="sciLink" href="#">Learn&nbsp;more&nbsp;→</a>
+          </div>
+        </div>
+
+        <div class="flex b38">
+          <div class="sq b62" id="tip">
+            <span class="tag">Tip</span>
+            <div class="tipbody">No API key? Run <b>Ollama</b> locally — free, no account, nothing uploaded. <a class="lnk" href="#">More&nbsp;→</a></div>
+          </div>
+          <div class="flex col b38">
+            <div class="sq b62" id="ai">
+              <span class="tag">Your AI</span>
+              <div class="body" style="margin-top:auto"><span class="t" style="font-size:13px">Set up your AI</span><a class="lnk" href="#">Settings&nbsp;→</a></div>
+            </div>
+            <div class="sq mid b38" id="delight">
+              <a class="lnk" href="#" style="font-size:13px; text-align:center">Review AI &amp; privacy…</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="sec">2 · The disclosure chain <span>— L1 → L2 → L3 for the selected concept</span></h2>
+  <div class="story">
+    <div class="panel">
+      <div class="phead"><span><span class="n">L1</span> · The cell</span><span>Welcome screen</span></div>
+      <div class="pbody" style="flex:1">
+        <div class="cellframe">
+          <span class="tag">Scientific background</span>
+          <div class="sci-title" id="s1Title"></div>
+          <div class="example">
+            <div class="q" id="s1Quote"></div>
+            <div class="meta"><span class="arrow-mini">→</span><span id="s1Pill"></span></div>
+          </div>
+          <div class="sci-summary" id="s1Summary"></div>
+          <a class="lnk" id="s1Link" href="#" style="margin-top:auto">Learn&nbsp;more&nbsp;→</a>
+        </div>
+      </div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="panel l2">
+      <div class="phead"><span><span class="n">L2</span> · Closer to formal</span><span id="l2Where"></span></div>
+      <div class="pbody" id="l2Body"></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="panel">
+      <div class="phead"><span><span class="n">L3</span> · The source</span><span>Academic citation</span></div>
+      <div class="pbody" id="l3Body"></div>
+    </div>
+  </div>
+
+  <p class="note"><b>What to eyeball:</b> does Cell 2 stay short-and-snappy and fit the fixed cell without overflow across all four <code>palette × appearance</code> combos and all three concepts? Does the chain read as <em>tied together</em> rather than a bounce? Concept C (Emergent themes) deliberately stress-tests the "example" pattern — it is a <em>grouping</em>, not a single tag.</p>
+</div>
+
+<script>
+/* ============ real content (from the repos) ============ */
+const D = "https://bristlenose.app/docs/";
+
+const CONCEPTS = {
+  A: {
+    title: "Usability heuristics",
+    example: {
+      quote: "The navigation was hidden behind a hamburger menu. I kept looking for a sidebar but there wasn’t one.",
+      pill: { kind:"code", label:"platform convention", varname:"--bn-trust-2-bg", context:"Nielsen · Consistency and standards" }
+    },
+    summary: "Ten research-based rules of thumb for spotting usability problems (Nielsen, 1994).",
+    link: D+"codebook-frameworks.html#design-and-usability-frameworks",
+    l2Where: "codebook-frameworks.html",
+    l2: `
+      <div class="l2">
+        <div class="h">10 Usability Heuristics</div>
+        <div class="sub">Codebook framework · Jakob Nielsen</div>
+        <div class="prose muted">Ten broad rules of thumb for interaction design, refined from a factor analysis of 249 usability problems — adapted here for coding what participants say.</div>
+        <div class="codebook-group" style="background:var(--bn-group-trust)">
+          <div class="group-header"><div class="group-title-area">
+            <div class="group-title">Consistency and standards</div>
+            <div class="group-subtitle">Does the system follow its own rules and platform conventions?</div>
+          </div></div>
+          <div class="tag-list">
+            <div class="tag-row">
+              <span class="tag-name-area"><span class="badge" style="background:var(--bn-trust-1-bg)">internal inconsistency</span></span>
+              <span class="tag-bar-area"><span class="tag-count">0</span></span>
+            </div>
+            <div class="tag-row">
+              <span class="tag-name-area"><span class="badge" style="background:var(--bn-trust-2-bg)">platform convention</span></span>
+              <span class="tag-bar-area"><span class="tag-micro-bar" style="width:22px;background:var(--bn-bar-trust)"></span><span class="tag-count">1</span></span>
+            </div>
+            <div class="tag-row">
+              <span class="tag-name-area"><span class="badge" style="background:var(--bn-trust-3-bg)">terminology inconsistency</span></span>
+              <span class="tag-bar-area"><span class="tag-count">0</span></span>
+            </div>
+          </div>
+          <div class="group-total-row"><span class="group-total-label">Total</span><span class="group-total-count">1</span></div>
+        </div>
+        <div class="prose muted" style="font-size:11px">The real code group — group tint <code style="font-family:var(--bn-font-mono)">--bn-group-trust</code>, each tag <code style="font-family:var(--bn-font-mono)">--bn-trust-{n}-bg</code>, mono badge, micro-bar. Words + colour-set from <code style="font-family:var(--bn-font-mono)">nielsen.yaml</code>.</div>
+      </div>`,
+    l3: [
+      { ref: `Nielsen, J. (1994). Enhancing the explanatory power of usability heuristics. <em>CHI ’94.</em>`,
+        links: [
+          { label:"Free copy · NN/g", url:"https://www.nngroup.com/articles/ten-usability-heuristics/", open:true },
+          { label:"DOI", url:"https://doi.org/10.1145/191666.191729", open:false }
+        ] }
+    ],
+    warn: null
+  },
+
+  B: {
+    title: "Seven sentiments",
+    example: {
+      quote: "I found the dashboard pretty confusing at first. I couldn’t figure out where my settings were.",
+      pill: { kind:"sent", label:"confusion", cls:"badge-confusion", context:"auto-applied · intensity 2 / 3" }
+    },
+    summary: "Seven states, grounded in appraisal theory (Scherer) and core affect (Russell).",
+    link: D+"signals.html#sentiment",
+    l2Where: "signals.html",
+    l2: `
+      <div class="l2">
+        <div class="h">Sentiment</div>
+        <div class="sub">Applied automatically as each quote is extracted</div>
+        <div class="prose muted">Every quote arrives pre-tagged with one of seven states (or none, if purely descriptive), at an intensity of 1–3.</div>
+        <div class="seven">
+          <span class="badge badge-frustration">frustration</span>
+          <span class="badge badge-confusion">confusion</span>
+          <span class="badge badge-doubt">doubt</span>
+          <span class="badge badge-surprise">surprise</span>
+          <span class="badge badge-satisfaction">satisfaction</span>
+          <span class="badge badge-delight">delight</span>
+          <span class="badge badge-confidence">confidence</span>
+        </div>
+        <div class="prose muted" style="font-size:11.5px">Valence: frustration · confusion · doubt are negative; surprise is neutral; satisfaction · delight · confidence are positive.</div>
+      </div>`,
+    l3: [
+      { ref: `Scherer, K. R. (2005). What are emotions? And how can they be measured? <em>Social Science Information, 44</em>(4).`,
+        links: [ { label:"DOI", url:"https://doi.org/10.1177/0539018405058216", open:false } ] },
+      { ref: `Russell, J. A. (2003). Core affect and the psychological construction of emotion. <em>Psychological Review, 110</em>(1).`,
+        links: [ { label:"DOI", url:"https://doi.org/10.1037/0033-295X.110.1.145", open:false } ] }
+    ],
+    warn: "DOI links resolve to the publisher and may sit behind a paywall — no “open access” label is shown where a free copy isn’t verified."
+  },
+
+  C: {
+    title: "Emergent themes",
+    example: {
+      theme: "First steps are unclear",
+      quotes: [
+        "I found the dashboard pretty confusing at first…",
+        "When I first signed up I had no idea what to do."
+      ]
+    },
+    summary: "Themes emerge from participants’ own words, not a fixed taxonomy — inductive thematic analysis (Braun & Clarke, 2006).",
+    link: D+"research-foundations.html#the-analysis-method",
+    l2Where: "research-foundations.html",
+    l2: `
+      <div class="l2">
+        <div class="h">The analysis method</div>
+        <div class="sub">Inductive thematic analysis</div>
+        <div class="prose">Themes are produced <b>inductively</b> — they emerge from the data rather than being matched against a fixed list — following the reflexive thematic-analysis approach of Braun and Clarke. A theme needs at least two quotes: a single quote is an observation, not a pattern.</div>
+        <div class="prose muted">Quotes are edited for readability without changing their meaning, on a principle of <b>dignity without distortion</b>: a participant should sound like themselves on a good day, never different.</div>
+      </div>`,
+    l3: [
+      { ref: `Braun, V. & Clarke, V. (2006). Using thematic analysis in psychology. <em>Qualitative Research in Psychology, 3</em>(2), 77–101.`,
+        links: [ { label:"Read the paper · DOI", url:"https://doi.org/10.1191/1478088706qp063oa", open:false } ] }
+    ],
+    warn: "No verified open-access copy is recorded yet — the real build should source one before promising a free link."
+  }
+};
+
+/* ============ render ============ */
+function pillHTML(p){
+  // Real .badge atom (mono, radius-sm). Code tags carry the codebook colour-set bg;
+  // sentiment tags carry the sentiment variant class. Both from the design system.
+  const ctx = p.context ? ` <span class="ctx">· ${p.context}</span>` : "";
+  if(p.kind === "code")
+    return `<span class="badge" style="background:var(${p.varname})">${p.label}</span>${ctx}`;
+  if(p.kind === "sent")
+    return `<span class="badge ${p.cls}">${p.label}</span>${ctx}`;
+  return `<span class="badge">${p.label}</span>${ctx}`;
+}
+
+function exampleInner(c){
+  if(c.example.theme){
+    // Concept C — a theme emerging from two quotes
+    return {
+      quote: `<b style="color:var(--ink)">“${c.example.theme}”</b> — emerging from:
+        <div style="margin-top:5px;display:flex;flex-direction:column;gap:3px">
+          <span class="qm">“${c.example.quotes[0]}”</span>
+          <span class="qm">“${c.example.quotes[1]}”</span>
+        </div>`,
+      pill: `<span class="badge">theme · 2 quotes</span> <span class="ctx">· not a code tag — a grouping</span>`
+    };
+  }
+  return {
+    quote: `<span class="qm">“</span>${c.example.quote}<span class="qm">”</span>`,
+    pill: pillHTML(c.example.pill)
+  };
+}
+
+function renderCell(c){
+  const ex = exampleInner(c);
+  document.getElementById("sciTitle").textContent = c.title;
+  document.getElementById("sciQuote").innerHTML = ex.quote;
+  document.getElementById("sciPill").innerHTML = ex.pill;
+  document.getElementById("sciSummary").textContent = c.summary;
+  document.getElementById("sciLink").href = c.link;
+}
+
+function renderStory(c){
+  const ex = exampleInner(c);
+  document.getElementById("s1Title").textContent = c.title;
+  document.getElementById("s1Quote").innerHTML = ex.quote;
+  document.getElementById("s1Pill").innerHTML = ex.pill;
+  document.getElementById("s1Summary").textContent = c.summary;
+  document.getElementById("s1Link").href = c.link;
+
+  document.getElementById("l2Where").textContent = c.l2Where;
+  document.getElementById("l2Body").innerHTML = c.l2;
+
+  let l3 = c.l3.map(r=>`
+    <div class="cite">
+      <div class="ref">${r.ref}</div>
+      <div class="links">${r.links.map(l=>`<a class="srcbtn ${l.open?'open':''}" href="${l.url}"><span class="ic">${l.open?'↗':'#'}</span>${l.label}</a>`).join("")}</div>
+    </div>`).join("");
+  if(c.warn) l3 += `<div class="warn">⚠ ${c.warn}</div>`;
+  document.getElementById("l3Body").innerHTML = l3;
+}
+
+function checkFit(){
+  const sci = document.getElementById("sci");
+  const need = sci.scrollHeight, have = sci.clientHeight, over = need - have;
+  const b = document.getElementById("fitBadge");
+  if(over > 1){ b.className = "fit clip"; b.textContent = `⚠ clips at this size · needs +${over}px`; }
+  else { b.className = "fit ok"; b.textContent = `✓ fits · ${have - need}px to spare`; }
+}
+function render(c){ renderCell(CONCEPTS[c]); renderStory(CONCEPTS[c]); checkFit(); }
+window.addEventListener("resize", checkFit);
+
+/* ============ wiring ============ */
+const root = document.documentElement;
+let current = "A";
+document.getElementById("pal").onchange = e=> root.setAttribute("data-palette", e.target.value);
+document.getElementById("app").onchange = e=> root.setAttribute("data-appearance", e.target.value);
+document.getElementById("conceptSeg").addEventListener("click", e=>{
+  const b = e.target.closest("button"); if(!b) return;
+  current = b.dataset.c;
+  [...e.currentTarget.children].forEach(x=>x.setAttribute("aria-pressed", x===b));
+  render(current);
+});
+render(current);
+</script>
+</body>
+</html>

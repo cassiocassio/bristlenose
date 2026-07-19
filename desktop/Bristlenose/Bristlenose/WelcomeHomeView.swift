@@ -22,17 +22,23 @@ private struct SlotItem: Identifiable {
     let text: String       // may contain markdown (**bold**)
     let linkLabel: String
     let href: String
+    var image: String? = nil   // imageset name; nil = text-only slot (Science/Tips, art-pending tools)
 }
 
 private enum WelcomeContent {
     static let docs = "https://bristlenose.app/docs/"
 
+    // Draft PNG screenshots (light-mode captures) while the set is tuned — see design-welcome-screen.md §Cell 1.
+    // image = nil → text-only slot (Ingest + Redact PII art pending). CTA labels are per-tool (doc §Cell 1 pool).
     static let studyTools: [SlotItem] = [
-        .init(title: "Ingest", text: "Drop a folder of recordings or transcripts — Bristlenose transcribes on your Mac.", linkLabel: "Learn →", href: docs + "first-analysis.html"),
-        .init(title: "Tag", text: "Press **t** to tag a quote with a code from your codebook.", linkLabel: "Learn →", href: docs + "tag-for-meaning.html"),
-        .init(title: "AutoCode", text: "Let AutoCode propose tags across every quote — you Accept or Deny.", linkLabel: "Learn →", href: docs + "use-codebooks.html"),
-        .init(title: "Star & hide", text: "Press **s** to keep the quotes that matter, **h** to hide the rest.", linkLabel: "Learn →", href: docs + "keyboard-shortcuts.html"),
-        .init(title: "Export", text: "Ship an HTML report, a spreadsheet, clips, or send to Miro.", linkLabel: "Learn →", href: docs + "share-report.html"),
+        .init(title: "AutoCode", text: "Let AutoCode propose tags across every quote — you Accept or Deny.", linkLabel: "AI helps tag →", href: docs + "use-codebooks.html", image: "welcome-autocoding"),
+        .init(title: "Codebooks", text: "Build a codebook, or start from a ready-made framework.", linkLabel: "Research frameworks →", href: docs + "use-codebooks.html", image: "welcome-codes"),
+        .init(title: "Tag", text: "Select one or more quotes, and press `t` to tag them with a code from your codebook.", linkLabel: "Manual tagging →", href: docs + "tag-for-meaning.html", image: "welcome-tag"),
+        .init(title: "Star & hide", text: "Press `s` to keep the quotes that matter, `h` to hide the rest.", linkLabel: "Keyboard shortcuts →", href: docs + "keyboard-shortcuts.html", image: "welcome-star"),
+        .init(title: "Video clips", text: "Turn selected quotes into video clips.", linkLabel: "Export options →", href: docs + "export-clips.html", image: "welcome-clips"),
+        .init(title: "Send to Miro", text: "Send quotes to a Miro board.", linkLabel: "Connect to Miro →", href: docs + "send-to-miro.html", image: "welcome-miro"),
+        .init(title: "Ingest", text: "Drop a folder of recordings or transcripts — Bristlenose transcribes, analyses and reports back.", linkLabel: "Import options →", href: docs + "first-analysis.html", image: "welcome-ingest"),
+        .init(title: "Redact PII", text: "Remove personal details automatically, before analysis.", linkLabel: "Strip names and more →", href: docs + "redact-pii.html"),
     ]
 
     static let science: [SlotItem] = [
@@ -48,7 +54,7 @@ private enum WelcomeContent {
         .init(title: nil, text: "Already have transcripts? Drop **.vtt**, **.srt** or **.docx** — transcription is skipped.", linkLabel: "More →", href: docs + "supported-files.html"),
         .init(title: nil, text: "No API key? Run **Ollama** locally — free, no account, nothing uploaded.", linkLabel: "More →", href: docs + "set-up-ollama.html"),
         .init(title: nil, text: "Name **p1.srt** next to **p1.mp4** and they merge into one session.", linkLabel: "More →", href: docs + "supported-files.html"),
-        .init(title: nil, text: "Press **s** to star, **h** to hide — then filter to what matters.", linkLabel: "More →", href: docs + "keyboard-shortcuts.html"),
+        .init(title: nil, text: "Press `s` to star, `h` to hide — then filter to what matters.", linkLabel: "More →", href: docs + "keyboard-shortcuts.html"),
         .init(title: nil, text: "Click any transcript timecode to jump the video to that moment.", linkLabel: "More →", href: docs + "run-an-analysis.html"),
     ]
 
@@ -173,7 +179,7 @@ struct WelcomeHomeView: View {
             if let title = item.title {
                 Text(title).font(.title3).fontWeight(.semibold)
             }
-            Text(markdown(item.text)).font(.callout).foregroundStyle(.secondary)
+            Text(markdown(item.text)).font(.body).foregroundStyle(.secondary)
             if !item.href.isEmpty {
                 Link(item.linkLabel, destination: url(item.href))   // discrete control, not inline
                     .font(.callout).padding(.vertical, 2)
@@ -291,6 +297,19 @@ private struct MorphingAIIcon: View {
     }
 }
 
+// Markdown → AttributedString, forcing `code` spans (key references, written as
+// `t` / `s` / `h`) to a same-size monospaced run so a bare key reads unambiguously
+// as a key — the text-only path of docs/design-keycaps.md (lowercase bare keys,
+// glyph-safe font, no drawn cap). Drawn caps can't flow mid-sentence in `Text`.
+private func welcomeKeyMarkdown(_ s: String) -> AttributedString {
+    var attr = (try? AttributedString(markdown: s)) ?? AttributedString(s)
+    let codeRanges = attr.runs
+        .filter { $0.inlinePresentationIntent?.contains(.code) == true }
+        .map(\.range)
+    for r in codeRanges { attr[r].font = .system(.body, design: .monospaced).weight(.medium) }
+    return attr
+}
+
 // MARK: - Slot rotator (manual content carousel, in place)
 //
 // Content cross-fades in the SAME frame (no card slide, so no edge-peek problem).
@@ -365,17 +384,32 @@ private struct SlotRotator: View {
             if let title = item.title {
                 Text(title).font(.title3).fontWeight(.semibold)
             }
-            Text((try? AttributedString(markdown: item.text)) ?? AttributedString(item.text))
-                .font(.callout).foregroundStyle(.secondary)
+            Text(welcomeKeyMarkdown(item.text))
+                .font(.body).foregroundStyle(.secondary)
+            if let name = item.image, let ns = NSImage(named: name) {   // nil-guard = graceful before the PNG lands
+                Image(nsImage: ns)
+                    .resizable().scaledToFit()
+                    // 85% of native size at its own aspect ratio (starting guess); shrinks if the
+                    // cell is narrower, never upscales past 85%. ns.size is points (@2x asset → px/2).
+                    .frame(maxWidth: ns.size.width * 0.85, maxHeight: ns.size.height * 0.85, alignment: .leading)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5))   // faint keyline = illustration, not live UX
+                    .accessibilityLabel(Text("\(item.title ?? "") example"))
+                    .padding(.vertical, 8)   // one macOS grid square top & bottom
+            }
             if !item.href.isEmpty, let url = URL(string: item.href) {
                 Link(item.linkLabel, destination: url).font(.callout).padding(.vertical, 2)
             }
         }
     }
 
-    // Tall invisible edge-strip, but the disk sits LOW — bottom-aligned so its centre
-    // lands on the dots' centre line (both are `controlRow` tall), keeping the glyph off
-    // the body text it would otherwise compete with. Strip stays full-height and forgiving.
+    // Tall strip, but the disk sits LOW — bottom-aligned so its centre lands on the dots'
+    // centre line (both are `controlRow` tall), keeping the glyph off the body text.
+    // The TAP TARGET is the disk only (with slop), NOT the full strip — a full-height
+    // leading strip would sit on top of the leading-aligned `Learn →` link and steal its
+    // clicks. And the strip is inert unless revealed (pointer over the cell), so an
+    // invisible edge column never shadows content.
     private func chevron(_ symbol: String, _ action: @escaping () -> Void) -> some View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
@@ -388,11 +422,13 @@ private struct SlotRotator: View {
                 .overlay(Circle().strokeBorder(.primary.opacity(0.08)))      // hairline definition
                 .shadow(color: .black.opacity(0.15), radius: 1, y: 0.5)
                 .opacity(revealed ? 1 : 0)                                    // disk + glyph fade together
+                .frame(width: 30, height: Self.controlRow)                   // hit area = disk band only (dots row level, clear of the link above)
+                .contentShape(Rectangle())
+                .onTapGesture { action() }
         }
         .frame(width: 30)                                                     // fixed strip width
-        .frame(maxHeight: .infinity)                                          // tall forgiving hit strip
-        .contentShape(Rectangle())
-        .onTapGesture { action() }
+        .frame(maxHeight: .infinity)                                          // spans height so the disk bottom-aligns
+        .allowsHitTesting(revealed)                                          // inert unless revealed → never shadows the link
     }
 
     // Visible dot 5pt; active ~2× width, muted accent; 17pt hit-slop; indicator-first.

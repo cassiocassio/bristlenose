@@ -8,6 +8,7 @@ trued-against: HEAD@main 27647fbf on 2026-07-15
 
 ## Changelog
 
+- _2026-07-19_ — **Study-tools cell gained per-tool illustrations.** Cell 1 is now an 8-tool pool (AutoCode · Codebooks · Tag · Star & hide · Video clips · Send to Miro · Ingest · Redact PII — Export split into clips + Miro), each slot showing a **draft PNG screenshot** between the line and the CTA (85% native, own aspect, faint keyline, 8pt padding, `@2x` imagesets; text-only fallback via `NSImage(named:)` nil-guard). Redact PII art still pending. Per-tool CTA labels replace "Learn". Key references adopt the **text-only path** of `design-keycaps.md` (lowercase bare `t`/`s`/`h` in a mono run). Body line `.callout`→`.body` (13pt). Fixed a pre-existing bug where the chevron hit-strip shadowed the CTA links. i18n still held; draft-art + i18n tracked as an in-flight debt.
 - _2026-07-15 (second pass)_ — `§7` supersession line trued: `WelcomeView.swift` is **deleted** (`a310bca6`), not "kept on disk pending a delete decision". Recorded the locale-key retention decision under §Copy & i18n — the retired view's keys are deliberately kept, and three are verbatim-live in `WelcomeHomeView`. Anchors: `WelcomeHomeView.swift:157,189,190`; `ContentView.swift:2340` (mount). Rest of the doc spot-checked fresh (Archetype B).
 
 > **Truing note (2026-07-15).** Authored alongside the Swift build in the same session, and the code moved under it several times. This pass separates **shipped** from **spec**. The content pools are deliberately spec-ahead-of-code (the doc is the source; the Swift carries a subset) — those are marked *shipped subset: N of M*. Everything else now describes what exists. See **§0 Not yet built**.
@@ -74,21 +75,28 @@ So the rotating content is seen **when you visit home** (first run / after closi
 
 ### Cell 1 — Study tools (biggest)
 - **Tag:** `Study tools`
-- **Content:** one rotating, *ignorable* factoid about a capability. `Learn →`. **Not** a numbered rail / not navigation (an earlier segmented rail was cut for looking like primary nav).
+- **Content:** one rotating capability per visit, each carrying a **concrete screenshot example** between the line and the CTA — the point is to plant the toolset in a first-time user's mind. Slot order: tag → title → line → image → CTA. Still *ignorable* and **not** a numbered rail / not navigation (an earlier segmented rail was cut for looking like primary nav).
 - **Also contains:** the **Drop-a-folder** card — the one real action in this cell. Its **own** `dropCard` view using `.dropDestination(for: URL.self)`, wired to `ContentView.createProjectFromURLs` (directories and loose files split at the call site). It is *not* the sidebar's `dropTargetCard`/`.onDrop` — that one is `List`-coupled. Dotted border, background one notch lighter than the cell (paper). ⚠️ *Open decision:* drop wells traditionally read as recessed/deeper (darker + inner shadow); current treatment is lighter/raised — revisit.
   - Icon: `tray.and.arrow.down` · **Drop a folder** · "Drag a folder of recordings or transcripts here to add it as a project."
 
-**Pool** — *shipped subset: 5 of 7* (Codebooks and Redact PII are spec-only):
+**Pool** — 8 tools, all in the Swift carousel (render order below). Illustrations are **draft PNG screenshots** (light-mode captures) while the set is tuned — each sits between the line and the CTA. Ingest + Redact PII render **text-only** until their art lands (`image` nil → no blank frame).
 
-| Tool | Line | Link | Shipped |
-|---|---|---|---|
-| Ingest | Drop a folder of recordings or transcripts — Bristlenose transcribes on your Mac. | `/docs/first-analysis.html` | ✅ |
-| Tag | Press `t` to tag a quote with a code from your codebook. | `/docs/tag-for-meaning.html` | ✅ |
-| AutoCode | Let AutoCode propose tags across every quote — you Accept or Deny. | `/docs/use-codebooks.html` | ✅ |
-| Star & hide | Press `s` to keep the quotes that matter, `h` to hide the rest. | `/docs/keyboard-shortcuts.html` | ✅ |
-| Export | Ship an HTML report, a spreadsheet, clips, or send to Miro. | `/docs/share-report.html` | ✅ |
-| Codebooks | Build a codebook, or start from a ready-made framework. | `/docs/use-codebooks.html` | — |
-| Redact PII | Remove personal details automatically, before analysis. | `/docs/redact-pii.html` | — |
+**Image treatment (starting guess, 19 Jul 2026):** rendered at **85% of native size** at the shot's own aspect ratio — *not* stretched to the cell width, never upscaled past 85% (shrinks only when the cell is narrower). A faint separator-colour keyline (0.5pt, radius 8) frames each — deliberately reading as *illustration, not live UX*. **8pt** (one macOS grid square) vertical padding top and bottom. `@2x` imagesets (Retina captures). All tunable in `SlotRotator.slotView`. The **CTA** column is "Learn" everywhere for now — fine-tune per tool, then update here (canonical) and in `WelcomeHomeView.swift`'s `studyTools` `linkLabel`. Image = the `Assets.xcassets` imageset name.
+
+| # | Tool | Line | Image | CTA | Link |
+|---|---|---|---|---|---|
+| 1 | AutoCode | Let AutoCode propose tags across every quote — you Accept or Deny. | `welcome-autocoding` | AI helps tag | `/docs/use-codebooks.html` |
+| 2 | Codebooks | Build a codebook, or start from a ready-made framework. | `welcome-codes` | Research frameworks | `/docs/use-codebooks.html` |
+| 3 | Tag | Select one or more quotes, and press `t` to tag them with a code from your codebook. | `welcome-tag` | Manual tagging | `/docs/tag-for-meaning.html` |
+| 4 | Star & hide | Press `s` to keep the quotes that matter, `h` to hide the rest. | `welcome-star` | Keyboard shortcuts | `/docs/keyboard-shortcuts.html` |
+| 5 | Video clips | Turn selected quotes into video clips. | `welcome-clips` | Export options | `/docs/export-clips.html` |
+| 6 | Send to Miro | Send quotes to a Miro board. | `welcome-miro` | Connect to Miro | `/docs/send-to-miro.html` |
+| 7 | Ingest | Drop a folder of recordings or transcripts — Bristlenose transcribes, analyses and reports back. | `welcome-ingest` | Import options | `/docs/first-analysis.html` |
+| 8 | Redact PII | Remove personal details automatically, before analysis. | _pending_ | Strip names and more | `/docs/redact-pii.html` |
+
+_Set change (19 Jul 2026): Export split into **Video clips** + **Send to Miro** (separate illustrated tools). **Tag** kept, with its own screenshot. Copy reuses existing house lines (Tips pool for clips/Miro)._
+
+_Key references follow the **text-only path** of [`design-keycaps.md`](design-keycaps.md) (chosen 19 Jul 2026): **bare keys stay lowercase** (`t` / `s` / `h`, not `T`/`S`/`H` — the unmodified-key rule) and render as a same-size **monospaced** run (markdown backtick → `welcomeKeyMarkdown` in `WelcomeHomeView.swift`), *not* a drawn keycap — a drawn cap can't flow mid-sentence in SwiftUI `Text`. When the shared `Keycap` primitive graduates out of `#if DEBUG` (keycaps §Implementation-plan step 3), revisit whether these want real caps._
 
 ### Cell 2 — Scientific background (2nd)
 - **Tag:** `Scientific background`
@@ -160,7 +168,8 @@ Study tools · Scientific background · Tip are **rotator cells** — a manual, 
 
 - **Content cross-fades in the same frame** — no card slide, so no edge-peek problem. Reduce-motion → instant swap. **Wraps around** (past-last → first): seamless *because* it cross-fades — a wrap on a sliding carousel teleports, a cross-fade wrap is invisible. Chevrons never dim at the ends.
 - **No auto-advance.** (The "carousels are bad UX" critique is aimed at auto-rotation; a manual deck of 3–7 with hover controls is exactly the case it doesn't condemn — see the carousel research pass.)
-- **Four drivers:** two-finger / Magic-Mouse horizontal **swipe** (discrete, one step per gesture — `SwipeCatcher` NSView `scrollWheel`); **hover-revealed edge chevrons** (tiny SF Symbol on a `.regularMaterial` glass disk — survives content underneath — in a tall forgiving hit-strip; hover-only, *not* focus-driven — focus-reveal caused a stuck-always-on bug since focus persists; keyboard uses arrow keys instead); **arrow keys**; and **dots** (indicator-first — small, muted, active ~2× width, 17pt hit-slop; *not* the primary click target — the tiny visible dot is a nightmare to hit, so swipe/chevrons/arrows are the real navigation. Could hover-reveal with the chevrons later — one line, tie dot opacity to `revealed`).
+- **Four drivers:** two-finger / Magic-Mouse horizontal **swipe** (discrete, one step per gesture — `SwipeCatcher` NSView `scrollWheel`); **hover-revealed edge chevrons** (tiny SF Symbol on a `.regularMaterial` glass disk — survives content underneath; hover-only, *not* focus-driven — focus-reveal caused a stuck-always-on bug since focus persists; keyboard uses arrow keys instead); **arrow keys**; and **dots** (indicator-first — small, muted, active ~2× width, 17pt hit-slop; *not* the primary click target — the tiny visible dot is a nightmare to hit, so swipe/chevrons/arrows are the real navigation. Could hover-reveal with the chevrons later — one line, tie dot opacity to `revealed`).
+  - **The chevron TAP TARGET is the disk band, not the full strip (fixed 19 Jul 2026).** The strip stays full-height for *positioning* (so the disk bottom-aligns to the dots line) but is `.allowsHitTesting(revealed)` and only the disk's `controlRow`-tall band takes the tap. A full-height, always-live leading strip sat directly on top of the leading-aligned `Learn →` link and **stole its clicks** (ran "previous" instead of opening the URL). So: tap area = disk only, and the strip is inert unless the pointer is over the cell. Trade-off accepted: the chevron is no longer a "tall forgiving strip" (swipe/arrows/dots cover forgiveness); working content links win.
 - **All nav chrome sits on one line at the bottom.** The chevron disks are *bottom-aligned* within their strips so their centres land on the dots' centre line — the two share the `SlotRotator.controlRow` constant (26pt = disk diameter = dots-row height; equal **by construction**, and the alignment breaks if one moves without the other). Earlier the disks centred on the *content* box, i.e. directly over the body text they had to compete with; the strip stays full-height and forgiving, only the visible disk moved down. Consequence: the dots row is 26pt tall, not 17 — the dots keep their 17pt hit-slop and just centre inside it.
 - **Next-per-visit:** opens one step past where you last left off (`@AppStorage` per cell) — not random (random reads as a slot machine).
 - **VoiceOver:** an `.accessibilityAdjustableAction` (the cell has no selection/focus model and doesn't need one — VO swipe-up/down = prev/next).
@@ -191,8 +200,8 @@ Sizes are **one notch up from the floor** (the floor version felt small in the m
 |---|---|---|
 | Cell tag (uppercase) | `.subheadline` | 11 |
 | Cell title (`.t`) | `.title3` (semibold) | 15 |
-| Body line (study tools / science) | `.callout` | 12 |
-| Tip body | `.callout` | 12 |
+| Body line (study tools / science) | `.body` | 13 |
+| Tip body | `.body` | 13 |
 | Drop-a-folder title | `.title3` | 15 |
 | Drop-a-folder subtitle | `.body` | 13 |
 | Rotator links (`Learn →` / `More →`) | `.callout` | 12 |

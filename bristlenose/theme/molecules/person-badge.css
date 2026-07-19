@@ -123,12 +123,20 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
     font-style: italic;
 }
 
+/* Unidentified speaker: role word shown as a muted-italic placeholder
+   (PowerPoint-title convention) to read as editable, not as a real name. */
+.bn-speaker-editable-name.unnamed {
+    font-weight: var(--bn-weight-normal);
+    font-style: italic;
+    color: var(--bn-colour-muted);
+}
+
 .bn-name-pencil {
     all: unset;
     cursor: pointer;
     font-size: var(--bn-text-micro);
     opacity: 0;
-    color: var(--bn-colour-text-muted);
+    color: var(--bn-colour-muted);
     transition: opacity var(--bn-transition-fast);
     padding: 0 0.1rem;
 }

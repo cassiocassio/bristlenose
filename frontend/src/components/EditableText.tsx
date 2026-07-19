@@ -24,6 +24,14 @@ interface EditableTextProps {
   as?: "span" | "p";
   className?: string;
   committedClassName?: string;
+  /**
+   * Shown (muted/italic via `placeholderClassName`) when the field is empty and
+   * not being edited — a display-only hint, like a PowerPoint title placeholder.
+   * It is never the edit buffer and never the commit baseline: clicking to edit
+   * opens an empty field, and committing an untouched placeholder is a no-op.
+   */
+  placeholder?: string;
+  placeholderClassName?: string;
   "data-testid"?: string;
   "data-edit-key"?: string;
   /** When true (set synchronously by a parent), blur is suppressed. */
@@ -41,6 +49,8 @@ export function EditableText({
   as: Tag = "span",
   className,
   committedClassName = "edited",
+  placeholder,
+  placeholderClassName,
   "data-testid": testId,
   "data-edit-key": editKey,
   suppressBlurRef,
@@ -155,7 +165,13 @@ export function EditableText({
     [trigger, internalEditing],
   );
 
-  const classes = [className, committed && committedClassName]
+  const showPlaceholder = !isEditing && !value && !!placeholder;
+
+  const classes = [
+    className,
+    committed && committedClassName,
+    showPlaceholder && placeholderClassName,
+  ]
     .filter(Boolean)
     .join(" ") || undefined;
 
@@ -179,7 +195,7 @@ export function EditableText({
         role={isEditing ? "textbox" : undefined}
         aria-label={isEditing ? "Edit text" : undefined}
       >
-        {isEditing ? undefined : value}
+        {isEditing ? undefined : showPlaceholder ? placeholder : value}
       </Tag>
       <span aria-live="assertive" aria-atomic="true" style={srOnlyStyle}>
         {announcement}

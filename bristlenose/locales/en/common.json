@@ -94,6 +94,11 @@
     "copyFolderPath": "Copy folder path",
     "showInFinder": "Show in Finder",
     "editName": "Edit name for {{code}}",
+    "speakerPlaceholder": {
+      "moderator": "Moderator",
+      "participant": "Participant",
+      "observer": "Observer"
+    },
     "failedToLoad": "Failed to load sessions: {{error}}",
     "loading": "Loading sessions…"
   },

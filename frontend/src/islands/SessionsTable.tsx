@@ -40,6 +40,18 @@ const SENTIMENT_ORDER = [
   "satisfaction",
 ];
 
+/**
+ * Placeholder role word shown (muted/italic) when a speaker has no identified
+ * name yet — "Moderator" / "Participant" / "Observer", keyed off the badge code
+ * prefix (m/o/…) rather than the stored role string, which is more robust (the
+ * m-code speaker's stored role is "researcher", never "moderator").
+ */
+function speakerRolePlaceholder(code: string, t: (key: string) => string): string {
+  if (code.startsWith("m")) return t("sessions.speakerPlaceholder.moderator");
+  if (code.startsWith("o")) return t("sessions.speakerPlaceholder.observer");
+  return t("sessions.speakerPlaceholder.participant");
+}
+
 function sentimentToSparklineItems(
   counts: Record<string, number>,
 ): SparklineItem[] {
@@ -385,6 +397,8 @@ function SessionRow({
                   onCommit={(newName) => onNameCommit(sp.speaker_code, newName)}
                   onCancel={() => onCancelEdit()}
                   className="bn-speaker-editable-name"
+                  placeholder={speakerRolePlaceholder(sp.speaker_code, t)}
+                  placeholderClassName="unnamed"
                   data-testid={`bn-name-${sp.speaker_code}`}
                 />
               </span>

@@ -76,6 +76,86 @@ describe("EditableText", () => {
     expect(screen.getByTestId("et")).not.toHaveClass("edited");
   });
 
+  it("shows placeholder text + placeholderClassName when value is empty", () => {
+    render(
+      <EditableText
+        value=""
+        onCommit={() => {}}
+        onCancel={() => {}}
+        placeholder="Moderator"
+        placeholderClassName="unnamed"
+        data-testid="et"
+      />,
+    );
+    const el = screen.getByTestId("et");
+    expect(el).toHaveTextContent("Moderator");
+    expect(el).toHaveClass("unnamed");
+  });
+
+  it("shows the real value (not the placeholder) when value is present", () => {
+    render(
+      <EditableText
+        value="Sarah Chen"
+        onCommit={() => {}}
+        onCancel={() => {}}
+        placeholder="Moderator"
+        placeholderClassName="unnamed"
+        data-testid="et"
+      />,
+    );
+    const el = screen.getByTestId("et");
+    expect(el).toHaveTextContent("Sarah Chen");
+    expect(el).not.toHaveClass("unnamed");
+  });
+
+  it("does not apply placeholderClassName while editing", () => {
+    render(
+      <EditableText
+        value=""
+        isEditing={true}
+        onCommit={() => {}}
+        onCancel={() => {}}
+        placeholder="Moderator"
+        placeholderClassName="unnamed"
+        data-testid="et"
+      />,
+    );
+    expect(screen.getByTestId("et")).not.toHaveClass("unnamed");
+  });
+
+  it("committing an untouched placeholder is a no-op (cancels, never commits the role word)", () => {
+    // PowerPoint contract: the placeholder is display-only. Entering edit opens
+    // an empty field; committing it unchanged must NOT persist "Moderator".
+    const onCommit = vi.fn();
+    const onCancel = vi.fn();
+    const { rerender } = render(
+      <EditableText
+        value=""
+        onCommit={onCommit}
+        onCancel={onCancel}
+        placeholder="Moderator"
+        placeholderClassName="unnamed"
+        data-testid="et"
+      />,
+    );
+    rerender(
+      <EditableText
+        value=""
+        isEditing={true}
+        onCommit={onCommit}
+        onCancel={onCancel}
+        placeholder="Moderator"
+        placeholderClassName="unnamed"
+        data-testid="et"
+      />,
+    );
+    const el = screen.getByTestId("et");
+    expect(el.textContent).toBe(""); // empty edit buffer, not "Moderator"
+    fireEvent.keyDown(el, { key: "Enter" });
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalled();
+  });
+
   it("sets contenteditable when isEditing=true", () => {
     render(
       <EditableText

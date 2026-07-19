@@ -118,6 +118,24 @@ The two framework cards point at **`/docs/codebook-frameworks.html`** (the frame
 
 *Candidates (from `academic-sources.html`, add if wanted):* peak-end rule (Kahneman), working-memory limits (Miller), think-aloud as data (Ericsson & Simon).
 
+#### Cell 2 illustrations (built — 19 Jul 2026)
+
+Each science slot carries a tiny looping illustration in the example area (between the line and `Learn →`), one per concept. `SlotItem.illustration: ScienceIllustration` selects it; `slotView` renders it at a **fixed height** so the φ-geometry never reflows; only the current rotator slot is alive, so a webview/animation exists only while shown. All are decorative (`accessibilityHidden`, inert), reduce-motion aware. Impl: `WelcomeIllustrations.swift`. Reference spec: `docs/mockups/welcome-science-animations.html`.
+
+| Slot | Illustration | Build |
+|---|---|---|
+| Seven sentiments | Left-hinged fan of the 7 sentiment chips (SF Mono + sentiment colour tokens) opening with rotation + vertical spread — every word readable, only just overlapping | **native** (`SentimentFanView`) |
+| Don Norman / Jakob Nielsen | One fan of framework book covers, overlap + slide, no rotation (typographic placeholders pending cover art) | **native** (`BookFanView`) |
+| Signals | The real analysis signal card — histogram, four metrics + tooltips, pattern label — ticking through example signals with a split-flap flip | **webview** (`SignalIllustrationView`) |
+| Dignity without distortion | Verbatim quote → strike the filler → collapse to the tidy quote → restore | **webview** (`QuoteIllustrationView`) |
+| Emergent themes | Demo quote-fragments swirl as one flock → swoop into two labelled themes → rejoin | **webview** (`EmergentThemesView`) |
+
+**Native vs webview split (decided with Martin, TF-play).** Native where cheap and clean (fan, books). Webview where reusing the approved mockup verbatim beats re-deriving feel, or where the artefact is a real web component: the signal card **is** the shipped React/CSS card (rebuilding natively would fork a second source of truth vs `AnalysisPage.tsx`); the dignity quote + emergent-themes swoop were "perfect" in the mockup, so we reuse them rather than risk the feel. The **real `ShoalView` (boids) is deliberately NOT used here** — it's the delight/analysing screensaver: it wants a big canvas and is for-fun, whereas a make-a-point cell needs the simple two-theme swoop.
+
+**Webview mechanics.** `IllustrationWebView` (`NSViewRepresentable`): `loadHTMLString` (no external resources — sandbox-clean; system font, slight rendering differences accepted), transparent via `setValue(false, forKey:"drawsBackground")`, `.allowsHitTesting(false)`, reloads on appearance/palette/reduce-motion change (keyed `.id`). The signal card renders at a fixed natural width and is uniformly transform-scaled to fit (max 90%, like the tools-cell images) — a fixed-width **flex item's `min-width:auto` inflated it to min-content and reflowed**, so it's absolute-positioned + transform-scaled instead.
+
+**Open items ("many things to improve", 19 Jul — none blocking, TF-play state):** signal-card cell-height crowding (trimmed 2-metric variant candidate); split-flap glitch on the last char mid-flip; per-illustration timing/size tuning; emergent-themes word set; book cover art (copyright TBD); whether these should also render on the docs pages (would tilt the split further toward web).
+
 ### Cell 3 — Tip (3rd)
 - **Tag:** `Tip` (top-left). **No icon** — a lightbulb was built and cut (cheesy).
 - **Content:** one rotating practical tip. `More →`

@@ -23,6 +23,7 @@ private struct SlotItem: Identifiable {
     let linkLabel: String
     let href: String
     var image: String? = nil   // imageset name; nil = text-only slot (Science/Tips, art-pending tools)
+    var illustration: ScienceIllustration = .none   // science-cell looping illustration (WelcomeIllustrations.swift)
 }
 
 private enum WelcomeContent {
@@ -42,12 +43,12 @@ private enum WelcomeContent {
     ]
 
     static let science: [SlotItem] = [
-        .init(title: "Emergent themes", text: "Themes emerge from participants’ own words, not a fixed taxonomy (Braun & Clarke, 2006).", linkLabel: "Learn more →", href: docs + "research-foundations.html"),
-        .init(title: "Don Norman", text: "The codebook frameworks draw on Don Norman’s principles of human-centred design.", linkLabel: "Learn more →", href: docs + "codebook-frameworks.html"),
-        .init(title: "Jakob Nielsen", text: "The UX codebooks build on Nielsen’s usability heuristics.", linkLabel: "Learn more →", href: docs + "codebook-frameworks.html"),
-        .init(title: "Seven sentiments", text: "Seven sentiments, grounded in appraisal theory (Scherer) and core affect (Russell).", linkLabel: "Learn more →", href: docs + "signals.html"),
-        .init(title: "Signals", text: "A signal marks where sentiment or tags concentrate more than you’d expect — a measure we coined.", linkLabel: "Learn more →", href: docs + "signals.html"),
-        .init(title: "Dignity without distortion", text: "Quotes are tidied but never twisted; the participant’s voice is honoured.", linkLabel: "Learn more →", href: docs + "research-foundations.html"),
+        .init(title: "Emergent themes", text: "Themes emerge from participants’ own words, not a fixed taxonomy (Braun & Clarke, 2006).", linkLabel: "Learn more →", href: docs + "research-foundations.html", illustration: .shoal),
+        .init(title: "Don Norman", text: "The codebook frameworks draw on Don Norman’s principles of human-centred design.", linkLabel: "Learn more →", href: docs + "codebook-frameworks.html", illustration: .bookFan),
+        .init(title: "Jakob Nielsen", text: "The UX codebooks build on Nielsen’s usability heuristics.", linkLabel: "Learn more →", href: docs + "codebook-frameworks.html", illustration: .bookFan),
+        .init(title: "Seven sentiments", text: "Seven sentiments, grounded in appraisal theory (Scherer) and core affect (Russell).", linkLabel: "Learn more →", href: docs + "signals.html", illustration: .sentimentFan),
+        .init(title: "Signals", text: "A signal marks where sentiment or tags concentrate more than you’d expect — a measure we coined.", linkLabel: "Learn more →", href: docs + "signals.html", illustration: .signal),
+        .init(title: "Dignity without distortion", text: "Quotes are tidied but never twisted; the participant’s voice is honoured.", linkLabel: "Learn more →", href: docs + "research-foundations.html", illustration: .quote),
     ]
 
     static let tips: [SlotItem] = [
@@ -398,9 +399,29 @@ private struct SlotRotator: View {
                     .accessibilityLabel(Text("\(item.title ?? "") example"))
                     .padding(.vertical, 8)   // one macOS grid square top & bottom
             }
+            if item.illustration != .none {
+                illustrationView(item.illustration)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 8)
+                    .accessibilityHidden(true)   // decorative — the tag/title/text carry the meaning
+            }
             if !item.href.isEmpty, let url = URL(string: item.href) {
                 Link(item.linkLabel, destination: url).font(.callout).padding(.vertical, 2)
             }
+        }
+    }
+
+    // Science-cell looping illustration (WelcomeIllustrations.swift). Fixed height
+    // so the φ-cell geometry never reflows; only the current slot is alive (the
+    // rotator renders one item), so a webview / shoal exists only while shown.
+    @ViewBuilder private func illustrationView(_ kind: ScienceIllustration) -> some View {
+        switch kind {
+        case .none:         EmptyView()
+        case .sentimentFan: SentimentFanView().frame(height: 128)
+        case .bookFan:      BookFanView().frame(height: 124)
+        case .shoal:        EmergentThemesView().frame(height: 140)
+        case .quote:        QuoteIllustrationView().frame(height: 112)
+        case .signal:       SignalIllustrationView().frame(height: 152)
         }
     }
 

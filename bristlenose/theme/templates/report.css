@@ -65,6 +65,20 @@ h2 {
     border-bottom: 2px solid var(--bn-colour-border);
 }
 
+/* Lens section headings (Quotes · Analysis). The base h2 above welds its
+   divider onto a prose element that's capped at --bn-max-width (52rem), so
+   the rule truncates mid-pane. Section dividers are a *structural* concern,
+   not a *reading-width* one — un-cap the heading so the rule spans the full
+   pane, matching the codebook lens's .framework-section-header. 1px is the
+   canonical section-divider weight (the base h2's 2px is the older, heavier
+   treatment). The two are deliberately left inconsistent for now: retiring
+   border-on-capped-h2 system-wide is the deferred big refactor — see D7 in
+   docs/design-improvement-opportunities.md. */
+.section-heading {
+    max-width: none;
+    border-bottom-width: 1px;
+}
+
 h3 {
     font-size: var(--bn-text-heading);
     font-weight: var(--bn-weight-emphasis);

@@ -164,7 +164,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
   if (error) {
     return (
       <section>
-        <h2 id="themes">{t("quotes.themes")}</h2>
+        <h2 id="themes" className="section-heading">{t("quotes.themes")}</h2>
         <p style={{ color: "var(--bn-colour-danger, #c00)", padding: "1rem" }}>
           {t("quotes.failedToLoad", { error })}
         </p>
@@ -175,7 +175,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
   if (!data) {
     return (
       <section>
-        <h2 id="themes">{t("quotes.themes")}</h2>
+        <h2 id="themes" className="section-heading">{t("quotes.themes")}</h2>
         <p style={{ opacity: 0.5, padding: "1rem" }}>{t("quotes.loading")}</p>
       </section>
     );
@@ -185,7 +185,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
 
   return (
     <section {...refetchOverlayProps(isRefetching)}>
-      <h2 id="themes">{t("quotes.themes")}</h2>
+      <h2 id="themes" className="section-heading">{t("quotes.themes")}</h2>
       {filteredThemes.map((theme) => {
         const displayLabel = theme.edited_label ?? theme.theme_label;
         const anchor = `theme-${displayLabel.toLowerCase().replace(/ /g, "-")}`;

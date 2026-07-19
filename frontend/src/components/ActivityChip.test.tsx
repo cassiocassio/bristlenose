@@ -15,13 +15,14 @@ function makeJob(overrides: Partial<ActivityChipJob> = {}): ActivityChipJob {
 }
 
 describe("ActivityChip", () => {
-  it("renders spinner and progress while running", () => {
+  it("renders shimmering label and progress while running", () => {
     render(<ActivityChip job={makeJob()} />);
 
     const chip = screen.getByTestId("bn-activity-chip");
     expect(chip).toBeInTheDocument();
     expect(chip).toHaveAttribute("data-status", "running");
-    expect(chip.querySelector(".chip-spinner")).toBeInTheDocument();
+    // The shimmering label replaces the old spinner as the activity signal.
+    expect(chip.querySelector(".chip-label.bn-thinking-shimmer")).toBeInTheDocument();
     expect(screen.getByText(/3\/10 transcripts/)).toBeInTheDocument();
   });
 

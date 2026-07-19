@@ -268,8 +268,39 @@ Every state transition in the UI falls into one of these **semantic categories**
 | L2 | **Timecode glow** | idle / playing | Box-shadow pulse | 2s infinite | ✓ Done |
 | L3 | **Timecode progress bar** | 0%→N% | Left-border scaleY fill | 250ms linear | ✓ Done |
 | L4 | **AutoCode spinner** | idle / spinning | Rotation | 800ms linear infinite | ✓ Done |
-| L5 | **Activity chip spinner** | idle / spinning | Rotation | linear infinite | ✓ Done |
+| L5 | **Activity chip spinner** | idle / spinning | Rotation | linear infinite | ⊘ Removed 18 Jul — replaced by the L7 thinking shimmer on the chip label |
 | L6 | **Word-level highlight** (karaoke) | inactive / active | Background highlight | Instant (perf) | ✓ Done |
+| L7 | **Thinking shimmer** (analysing) | idle / thinking | Single-hue brightness sweep on text | 2.7s (1.8s sweep + 0.9s gap) | ● Built 18 Jul — web activity chip (`atoms/shimmer.css`, verified) + native sidebar status line (`SidebarShimmerText.swift` hosted in `ProjectSidebarOutline`, pending Xcode build-verify) |
+
+---
+
+### 4.7.1 The thinking shimmer (spec — locked 18 Jul 2026)
+
+A restrained single-hue sheen travelling across **text** to signal *indeterminate work in progress, no ETA* — the pipeline status line ("Identifying speakers"), the activity chip label. Cross-surface: one spec, rendered natively in **CSS** (web report, `background-clip:text` sweep) and **SwiftUI** (native chrome, `Text.overlay{band}.mask(Text)` via `TimelineView(.animation)`). CLI is out of scope for now (terminal convention is glyph-cycling, and its audience is the most motion-averse — see the Claude Code CLI-shimmer backlash, GH anthropics/claude-code#6038).
+
+**Placement rule:** shimmer = "thinking, no ETA" and **replaces** the indeterminate spinner (it does not stack on it). A determinate progress bar survives only where a real fraction exists — **never run shimmer and a progress bar on the same element** (two contradictory ETA claims).
+
+**Locked parameters** (tuned to the floor in the Debug ▸ Shimmer Tuner harness + `docs/mockups/shimmer-tuner.html`; grounded in the 17 Jul 2026 deep-research pass — 19 verified claims):
+
+| Param | Value | Notes |
+|---|---|---|
+| Hue | single | The text's own colour family. **Not** multi-hue/iridescent (every shipped skeleton lib is single-hue; multi-hue fatigues on repeat exposure). |
+| Contrast (rest → peak) | **5% token default; per-surface** | The key knob, and it is NOT one global number — it depends on the surface's rendering + the resting text's headroom. **The web CSS chip ships 20%, both themes** (`atoms/activity-chip.css` `.chip-label`): the filled-pill `background-clip` sweep needs more travel to read, and near-black dark text brightening toward white is imperceptible at 5% (`#111`→`#484848` at 20%; confirmed 18 Jul against the real chip + tuner). **The native sidebar (`SidebarShimmerText`, an overlay band on mid-grey `.secondaryLabelColor`) reads at the 5% default** — decided 18 Jul: the lower value works on the Swift rendering. So contrast is set per-surface, not globally. |
+| Sweep | 1800 ms | Band-crossing duration. Slow reads calm; our waits are minutes, not the 2–10s spinner window. |
+| Gap | 900 ms | Dark pause between sweeps (band parked off-edge). Intermittent beat continuous on perceived-wait studies. |
+| Period | 2700 ms | sweep + gap. |
+| Band width | 34% | Of the text width, feathered. |
+| Angle | 100° | Slight off-horizontal tilt. **The one param that cannot port to a 1-D terminal** (dropped there — "very similar", not identical). |
+| Easing | ease-in-out | Mixed evidence (react-loading-skeleton uses ease-in-out; wave sweeps often linear) — settled by ear. |
+
+**Two-gate on/off (per §2 principle 5 + the existing `showAnalysisAnimation` toggle):**
+- **Native** — animate iff `showAnalysisAnimation && !accessibilityReduceMotion`.
+- **Web (CSS)** — animate iff `data-analysis-animation != "off"` **and** `@media (prefers-reduced-motion: no-preference)`.
+- Off/reduced → **static resting text** (no sweep). The toggle **is** now bridged into the WKWebView: native `BridgeHandler.syncAnalysisAnimation()` → web `window.__bristlenose.setAnalysisAnimation(on)` → `data-analysis-animation` attr on `<html>` (fired on `ready`, riding the `data-color-theme`-style channel). Remaining rider: the `showAnalysisAnimation` help text is still scoped to the shoal screensaver ("flocking-words animation … plain progress instead") — broaden it to "animations while analysing" when the native sidebar shimmer lands (deferred until then to avoid churning 20 locales for a half-shipped feature).
+
+**What's annoying — avoid** (from the research pass): too fast / no gap; bright or white band (drives involuntary attention capture); multi-hue; abrupt onset / pop-in / looming; **varying or flickering the effect** (resets habituation → re-grabs the eye every loop — keep it dead stable); never-stopping (must terminate when the stage completes).
+
+**Multiple simultaneous shimmers** (rare — chip stack collapses 2+ jobs to one summary; the common concurrent case is two projects analysing): same *character*, **independent phase** — each instance a small random start-offset so they read as individual organisms, not one synchronized strobe. Phase-2, not needed for the single-shimmer common case.
 
 ---
 
@@ -307,7 +338,7 @@ Every state transition in the UI falls into one of these **semantic categories**
 | `bn-glow-pulse` | `atoms/timecode.css` | Continuous | 2s infinite |
 | `autocode-spin` | `atoms/autocode-toast.css` | Continuous | 0.8s |
 | `chip-slide-in` | `atoms/activity-chip.css` | Appear | 0.2s |
-| `chip-spin` | `atoms/activity-chip.css` | Continuous | infinite |
+| `bn-thinking-shimmer` | `atoms/shimmer.css` | Continuous | 2.7s infinite (18 Jul — replaced `chip-spin`) |
 | `bracket-fade-in` | `molecules/editable-text.css` | Reveal | 0.15s |
 | `mod-q-reveal` | `atoms/moderator-question.css` | Reveal | 0.2s |
 | `cell-tooltip-in` | `organisms/analysis.css` | Appear | 0.12s |

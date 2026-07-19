@@ -184,8 +184,7 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
             }
           }}
         >
-          <div className="chip-spinner" />
-          <span>
+          <span className="chip-label bn-thinking-shimmer">
             {runningCount > 0
               ? `${runningCount} task${runningCount !== 1 ? "s" : ""} running`
               : `${jobs.length} task${jobs.length !== 1 ? "s" : ""}`}

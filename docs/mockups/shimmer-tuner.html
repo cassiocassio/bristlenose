@@ -1,0 +1,339 @@
+<!--
+  Shimmer Tuner — Spike A (throwaway) for the "thinking / analysing" text shimmer.
+
+  Purpose: find the FLOOR by ear. Drive the sliders, find the most dialled-back
+  single-hue sweep that still reads "working" (not "frozen"), then copy the JSON
+  spec at the bottom. Those numbers seed Spike B (SwiftUI + the real WKWebView
+  seam test) and eventually design-motion.md §4.7.
+
+  This is the CSS half only. It does NOT test the web↔native colour-space match
+  (that needs the real app window). It DOES test: contrast floor, period, gap,
+  band, easing, single-hue feel, on light + dark, across different backgrounds,
+  and the reduced-motion / animation-off freeze.
+
+  Seeded from the deep-research floor: contrast ~12% (tune DOWN to 3-5%),
+  sweep 1800ms + gap 900ms (~2.7s period), band 34%, 100deg, ease-in-out, single-hue.
+
+  Self-contained — open directly in a browser, or via `serve --dev` → About → Design.
+  Colours are the real palette-default tokens.
+-->
+<style>
+  :root {
+    color-scheme: light dark;
+
+    /* ---- real Bristlenose palette-default tokens ---- */
+    --bg:        light-dark(#ffffff, #111111);
+    --text:      light-dark(#1a1a1a, #e5e7eb);
+    --muted:     light-dark(#6b7280, #9ca3af);
+    --accent:    light-dark(#007aff, #0a84ff);
+    --border:    light-dark(#e5e7eb, #2a2a2a);
+    --panel:     light-dark(#f7f8fa, #191919);
+    --badge-bg:  light-dark(#f3f4f6, #252525);
+    --chip-bg:   light-dark(#1a1a1a, #e5e7eb);   /* chip = inverted (dark pill on light) */
+    --chip-text: light-dark(#f4f4f5, #1a1a1a);
+    --font: "Inter", system-ui, -apple-system, "SF Pro Text", "Segoe UI", sans-serif;
+
+    /* ---- shimmer parameters (driven by the sliders) ---- */
+    --contrast: 12;     /* % white mixed into the peak; the KEY knob */
+    --band: 34%;        /* width of the bright zone in the gradient */
+    --angle: 100deg;    /* slight off-horizontal tilt */
+    --period: 2700ms;   /* sweep + gap */
+    --easing: ease-in-out;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ============ CONTROL PANEL ============ */
+  .controls {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 20px;
+    border-right: 1px solid var(--border);
+    background: var(--panel);
+    font-size: 13px;
+  }
+  .controls h1 { font-size: 15px; margin: 0 0 4px; }
+  .controls .sub { color: var(--muted); font-size: 11px; margin: 0 0 18px; line-height: 1.4; }
+  .ctl { margin-bottom: 16px; }
+  .ctl label { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 500; }
+  .ctl label .val { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .ctl input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .ctl .hint { color: var(--muted); font-size: 10.5px; margin-top: 3px; line-height: 1.35; }
+  .row { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; }
+  .row label { font-weight: 500; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  select { font-family: inherit; font-size: 12px; padding: 3px 6px; }
+
+  /* ============ STAGE ============ */
+  .stage { padding: 36px 44px; display: flex; flex-direction: column; gap: 40px; }
+  .sample { }
+  .sample .caption { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+
+  /* sidebar status-line proxy (native chrome) */
+  .sidebar-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px;
+    background: var(--panel); border: 1px solid var(--border);
+    width: 320px; font-size: 14px;
+  }
+  .sidebar-row .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+
+  /* activity chip proxy (web) — inverted pill */
+  .chip {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 8px 14px; border-radius: 999px;
+    background: var(--chip-bg); color: var(--chip-text);
+    font-size: 13px; box-shadow: 0 4px 20px rgba(0,0,0,0.22);
+    --text: var(--chip-text);   /* shimmer derives from the LOCAL resting colour */
+  }
+  .chip .spin { width: 12px; height: 12px; border-radius: 50%;
+    border: 2px solid color-mix(in srgb, var(--chip-text) 25%, transparent);
+    border-top-color: var(--accent); animation: chip-spin .8s linear infinite; }
+  @keyframes chip-spin { to { transform: rotate(360deg); } }
+
+  .para { max-width: 620px; line-height: 1.6; font-size: 15px; }
+  .big { font-size: 34px; font-weight: 600; }
+
+  /* ============ THE SHIMMER — mirrors the shipped atoms/shimmer.css ============ */
+  .shimmer {
+    /* peak = resting colour moved `contrast`% toward the pole that has headroom
+       (--peak-pole; white where the text is dark, the pill/background where the
+       text is light). Everything else is the resting colour, so the gap (band
+       parked off-window) is pure resting text. Band half-width = band ÷ 6:
+       ÷3 text-fraction→gradient-fraction (gradient is 300% of the text), ÷2 half. */
+    --_base: var(--text);
+    --_peak: color-mix(in srgb, var(--_base), var(--peak-pole, #ffffff) calc(var(--contrast) * 1%));
+    background-image: linear-gradient(
+      var(--angle),
+      var(--_base) 0%,
+      var(--_base) calc(50% - var(--band) / 6),
+      var(--_peak) 50%,
+      var(--_base) calc(50% + var(--band) / 6),
+      var(--_base) 100%
+    );
+    background-size: 300% 100%;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: shimmer-sweep var(--period) var(--easing) infinite;
+  }
+  /* Chip mirrors activity-chip.css: the filled pill flips polarity by theme —
+     light mode dims the light label toward the dark pill; dark mode brightens the
+     dark label toward white. (The other samples are dark-on-light text with white
+     headroom, so they use the default white pole.) */
+  .chip .shimmer { --peak-pole: light-dark(var(--chip-bg), #ffffff); }
+
+  /* multi-hue preview (to confirm we're rejecting it) */
+  body.multi .shimmer {
+    background-image: linear-gradient(
+      var(--angle),
+      var(--text) calc(50% - var(--band)),
+      hsl(280 90% 65%) calc(50% - var(--band) / 2),
+      hsl(190 90% 60%) 50%,
+      hsl(140 80% 55%) calc(50% + var(--band) / 2),
+      var(--text) calc(50% + var(--band))
+    );
+  }
+
+  /* reduced-motion / animation-off freeze → static resting text, no sweep */
+  body.frozen .shimmer {
+    animation: none;
+    background: none;
+    -webkit-text-fill-color: var(--text);
+    color: var(--text);
+  }
+  body.frozen .chip .spin { animation: none; opacity: 0.5; }
+
+  .freeze-note { color: var(--muted); font-size: 11px; font-style: italic; }
+
+  /* ============ SPEC READOUT ============ */
+  .readout { margin-top: 8px; }
+  .readout pre {
+    background: var(--badge-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px; font-size: 12px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  button.copy {
+    font-family: inherit; font-size: 12px; padding: 5px 12px; margin-top: 8px;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--bg);
+    color: var(--text); cursor: pointer;
+  }
+  button.copy:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+
+<div class="controls">
+  <h1>Shimmer Tuner</h1>
+  <p class="sub">Spike A · CSS only. Find the floor: the most dialled-back sweep that still reads <em>working</em>, not <em>frozen</em>. Copy the spec below when it feels right.</p>
+
+  <div class="ctl">
+    <label>Contrast <span class="val" id="v-contrast"></span></label>
+    <input type="range" id="contrast" min="0" max="40" step="1" value="12">
+    <div class="hint">% white mixed into the peak. <b>The key knob.</b> Shipped libs use ~3%. Try tuning down until it nearly disappears, then back off one notch.</div>
+  </div>
+
+  <div class="ctl">
+    <label>Sweep <span class="val" id="v-sweep"></span></label>
+    <input type="range" id="sweep" min="600" max="4000" step="50" value="1800">
+    <div class="hint">How long one band-crossing takes. Slower reads calmer.</div>
+  </div>
+
+  <div class="ctl">
+    <label>Gap <span class="val" id="v-gap"></span></label>
+    <input type="range" id="gap" min="0" max="3000" step="50" value="900">
+    <div class="hint">Dark pause between sweeps. Intermittent beat continuous on perceived-wait studies.</div>
+  </div>
+
+  <div class="ctl">
+    <label>Band width <span class="val" id="v-band"></span></label>
+    <input type="range" id="band" min="8" max="70" step="1" value="34">
+    <div class="hint">Width of the bright zone. Wider = softer, more diffuse.</div>
+  </div>
+
+  <div class="ctl">
+    <label>Angle <span class="val" id="v-angle"></span></label>
+    <input type="range" id="angle" min="70" max="110" step="1" value="100">
+    <div class="hint">Tilt off-horizontal. Note: this is the one param that CANNOT port to a 1-D terminal.</div>
+  </div>
+
+  <div class="ctl">
+    <label>Easing</label>
+    <select id="easing">
+      <option value="ease-in-out" selected>ease-in-out</option>
+      <option value="linear">linear</option>
+      <option value="ease">ease</option>
+      <option value="cubic-bezier(0.4, 0, 0.2, 1)">standard (0.4,0,0.2,1)</option>
+    </select>
+    <div class="hint">react-loading-skeleton uses ease-in-out; wave sweeps often linear. Evidence is mixed.</div>
+  </div>
+
+  <div class="row">
+    <label><input type="checkbox" id="dark"> Dark</label>
+    <label><input type="checkbox" id="multi"> Multi-hue (reject test)</label>
+  </div>
+  <div class="row">
+    <label><input type="checkbox" id="frozen"> Freeze (reduced-motion / toggle off)</label>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="sample">
+    <div class="caption">Native chrome — project sidebar status line</div>
+    <div class="sidebar-row"><span class="dot"></span><span class="shimmer">Identifying speakers</span></div>
+  </div>
+
+  <div class="sample">
+    <div class="caption">Web — activity chip (single job)</div>
+    <div class="chip"><span class="spin"></span><span class="shimmer">Auto-coding “Garrett”</span></div>
+  </div>
+
+  <div class="sample">
+    <div class="caption">Web — activity chip (summary, 2+ jobs)</div>
+    <div class="chip"><span class="spin"></span><span class="shimmer">2 tasks running</span></div>
+  </div>
+
+  <div class="sample">
+    <div class="caption">Stress — long phrase &amp; large weight</div>
+    <p class="para"><span class="shimmer">Merging transcript, removing personal information, and segmenting topics before extraction begins…</span></p>
+    <div class="big"><span class="shimmer">Analysing</span></div>
+  </div>
+
+  <div class="sample">
+    <div class="caption">Spec — copy these numbers into design-motion.md §4.7 / the shared spec</div>
+    <div class="readout">
+      <pre id="spec"></pre>
+      <button class="copy" id="copyBtn">Copy JSON</button>
+    </div>
+    <p class="freeze-note" id="freezeNote"></p>
+  </div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const root = document.documentElement;
+  const body = document.body;
+
+  const els = {
+    contrast: $("contrast"), sweep: $("sweep"), gap: $("gap"),
+    band: $("band"), angle: $("angle"), easing: $("easing"),
+    dark: $("dark"), multi: $("multi"), frozen: $("frozen"),
+  };
+
+  function apply() {
+    const contrast = +els.contrast.value;
+    const sweep = +els.sweep.value;
+    const gap = +els.gap.value;
+    const band = +els.band.value;
+    const angle = +els.angle.value;
+    const easing = els.easing.value;
+    const period = sweep + gap;
+
+    // CSS custom props
+    root.style.setProperty("--contrast", contrast);
+    root.style.setProperty("--band", band + "%");
+    root.style.setProperty("--angle", angle + "deg");
+    root.style.setProperty("--period", period + "ms");
+    root.style.setProperty("--easing", easing);
+
+    // Regenerate keyframes so the gap = a HOLD at the end of the cycle.
+    const sweepPct = (sweep / period) * 100;
+    // Positions stay within [0%,100%] so the 300%-wide gradient always covers
+    // the text (outside that range the no-repeat image slides off → the clipped
+    // glyphs render transparent and vanish). Band sweeps L→R over the sweep
+    // window, then holds off-window (base only) for the gap.
+    const kf = `@keyframes shimmer-sweep {
+      0%   { background-position: 100% 50%; }
+      ${sweepPct.toFixed(2)}% { background-position: 0% 50%; }
+      100% { background-position: 0% 50%; }
+    }`;
+    let s = $("kf-style");
+    if (!s) { s = document.createElement("style"); s.id = "kf-style"; document.head.appendChild(s); }
+    s.textContent = kf;
+
+    // color-scheme + modes
+    root.style.colorScheme = els.dark.checked ? "dark" : "light";
+    body.classList.toggle("multi", els.multi.checked);
+    body.classList.toggle("frozen", els.frozen.checked);
+
+    // labels
+    $("v-contrast").textContent = contrast + "%";
+    $("v-sweep").textContent = sweep + "ms";
+    $("v-gap").textContent = gap + "ms";
+    $("v-band").textContent = band + "%";
+    $("v-angle").textContent = angle + "°";
+
+    // spec readout
+    const spec = {
+      hue: els.multi.checked ? "multi (reject)" : "single",
+      contrastPctWhite: contrast,
+      sweepMs: sweep,
+      gapMs: gap,
+      periodMs: period,
+      bandPct: band,
+      angleDeg: angle,
+      easing: easing,
+    };
+    $("spec").textContent = JSON.stringify(spec, null, 2);
+    $("freezeNote").textContent = els.frozen.checked
+      ? "Frozen: static resting text, no sweep, spinner dimmed — this is the reduced-motion / animation-off state both surfaces degrade to."
+      : "";
+  }
+
+  Object.values(els).forEach((el) => el.addEventListener("input", apply));
+  $("copyBtn").addEventListener("click", () => navigator.clipboard?.writeText($("spec").textContent));
+  apply();
+</script>

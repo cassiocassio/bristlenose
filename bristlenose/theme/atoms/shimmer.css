@@ -1,0 +1,68 @@
+/* Atom: shimmer — the "thinking / work in progress" travelling-sheen for text.
+
+   Single shared cross-surface spec (docs/design-motion.md §4.7.1); this is the
+   web (CSS) rendering. Apply `.bn-thinking-shimmer` to a text element to signal
+   indeterminate work with no ETA. It REPLACES the spinner — never run it
+   alongside a determinate progress bar on the same element (design-motion §4.7).
+
+   Two gates, BOTH must pass to animate (degrade to static plain text otherwise):
+     1. @media (prefers-reduced-motion: no-preference)   — accessibility
+     2. :root:not([data-analysis-animation="off"])       — the app's "Show
+        animation while analysing" toggle, bridged from native chrome.
+
+   The consuming surface MUST set --bn-shimmer-base (its resting text colour) and
+   SHOULD set --bn-shimmer-peak (the pole the band moves toward). The clip-to-text
+   technique forces color:transparent, which would also turn `currentColor`
+   transparent — hence base must be an explicit colour, not currentColor.
+
+     - Dark text (headroom up):  peak = white  → band brightens (the default).
+     - Light text (headroom down): peak = the surface background → band dims.
+
+   Either way the perceptual magnitude is the tuned --bn-shimmer-contrast (5%),
+   so the *character* matches across surfaces even where polarity flips. */
+
+.bn-thinking-shimmer {
+    --_shimmer-base: var(--bn-shimmer-base, currentColor);
+    --_shimmer-peak: color-mix(
+        in srgb,
+        var(--_shimmer-base),
+        var(--bn-shimmer-peak, #fff) var(--bn-shimmer-contrast)
+    );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    :root:not([data-analysis-animation="off"]) .bn-thinking-shimmer {
+        /* Band half-width is `--bn-shimmer-band` (a fraction of the TEXT) ÷ 6:
+           ÷3 converts text-fraction → gradient-fraction (the gradient image is
+           300% of the text width, below), then ÷2 for the half. So the peak
+           spans ~34% of the text. */
+        background-image: linear-gradient(
+            var(--bn-shimmer-angle),
+            var(--_shimmer-base) 0%,
+            var(--_shimmer-base) calc(50% - var(--bn-shimmer-band) / 6),
+            var(--_shimmer-peak) 50%,
+            var(--_shimmer-base) calc(50% + var(--bn-shimmer-band) / 6),
+            var(--_shimmer-base) 100%
+        );
+        background-size: 300% 100%;
+        background-repeat: no-repeat;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+        animation: bn-thinking-shimmer var(--bn-shimmer-period) var(--bn-shimmer-easing) infinite;
+    }
+}
+
+@keyframes bn-thinking-shimmer {
+    /* Positions stay within [0%, 100%] so the 300%-wide no-repeat gradient ALWAYS
+       covers the text — outside that range the image slides off and the clipped
+       glyphs render transparent (they vanish). Over the sweep window (1800/2700 =
+       66.67%) the sampling window travels across the middle of the gradient: the
+       peak band enters from the left, crosses, and exits right. It then parks at
+       0% — where the band sits off-window and only the base colour shows — for the
+       0.9 s gap. Band is off-window at the hold, so the loop restart never pops. */
+    0%     { background-position: 100% 50%; }
+    66.67% { background-position: 0% 50%; }
+    100%   { background-position: 0% 50%; }
+}

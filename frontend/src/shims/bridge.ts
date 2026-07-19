@@ -205,6 +205,24 @@ export function installBridge(deps: BridgeDeps): void {
      * the native picker applies it here instead of restarting the serve sidecar.
      * Persisted so it agrees with the web store and survives a later reload.
      */
+    /**
+     * Called by native shell to push the "Show animation while analysing"
+     * toggle (Appearance settings). The web "thinking shimmer" (activity chip
+     * label — atoms/shimmer.css) gates on `data-analysis-animation`: absent or
+     * anything but "off" animates; "off" freezes to static text. This is the
+     * native twin of the CSS `prefers-reduced-motion` gate — both must pass.
+     * Fired on `ready` (and on the toggle changing). No persistence: the native
+     * AppStorage value is the source of truth, re-pushed every load.
+     */
+    setAnalysisAnimation(on: unknown): void {
+      const root = document.documentElement;
+      if (on === false) {
+        root.setAttribute("data-analysis-animation", "off");
+      } else {
+        root.removeAttribute("data-analysis-animation");
+      }
+    },
+
     setColorPalette(palette: string): void {
       if (!isPalette(palette)) return;
       const root = document.documentElement;

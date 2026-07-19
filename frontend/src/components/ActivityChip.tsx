@@ -45,8 +45,10 @@ export function ActivityChip({ job, onAction, actionLabel, actionHref, onDismiss
     <div className="activity-chip" data-testid="bn-activity-chip" data-status={job.status}>
       {isRunning && (
         <>
-          <div className="chip-spinner" />
-          <span>
+          {/* The shimmering label IS the activity signal — replaces the spinner
+              (design-motion §4.7.1). Degrades to static text under reduced-motion
+              or the "Show animation while analysing" toggle. */}
+          <span className="chip-label bn-thinking-shimmer">
             {job.label}
             {job.progressLabel ? ` ${job.progressLabel}` : ""}
             &hellip;

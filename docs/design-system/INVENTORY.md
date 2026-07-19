@@ -164,8 +164,9 @@ All atom files live in `bristlenose/theme/atoms/`. Twenty files.
 ### Toast / floating notifications
 - `atoms/toast.css`: `.toast-spinner`, `.toast-check`, `.toast-error`, `.toast-link`, `.toast-close`, `.toast-content`, `.toast-elapsed`, `.toast-progress-track`, `.toast-progress-fill`
 - `atoms/autocode-toast.css`: `.autocode-toast` — AutoCode progress chip
+- `atoms/shimmer.css`: `.bn-thinking-shimmer` — the cross-surface "thinking / analysing" travelling-sheen for text (design-motion §4.7.1); two-gate (`prefers-reduced-motion` + `data-analysis-animation`)
 - `atoms/activity-chip.css`: `.activity-chip`, `.activity-chip-stack`, `.activity-chip-summary`, `.activity-chip-collapse` — non-dismissable background-job chips
-- `.chip-spinner`, `.chip-check`, `.chip-error`, `.chip-link`, `.chip-cancel`, `.chip-close`, `.chip-toggle` — chip internals
+- `.chip-label` (running: carries the `.bn-thinking-shimmer` sweep — replaced `.chip-spinner`, 18 Jul), `.chip-check`, `.chip-error`, `.chip-link`, `.chip-cancel`, `.chip-close`, `.chip-toggle` — chip internals
 
 ### Timecode — `atoms/timecode.css` and `atoms/context-expansion.css`
 - `.bn-timecode-glow`, `.timecode-bracket` — timecode rendering

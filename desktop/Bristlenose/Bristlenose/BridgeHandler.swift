@@ -225,6 +225,26 @@ final class BridgeHandler: ObservableObject {
         menuAction("set-appearance", payload: ["value": appearance])
     }
 
+    /// Push the "Show animation while analysing" toggle to the web layer, so the
+    /// web thinking-shimmer (activity chip label) obeys it — the twin of the
+    /// native shimmer's `showAnalysisAnimation && !reduceMotion` gate. The web
+    /// side keys off `data-analysis-animation` (atoms/shimmer.css); "off" freezes
+    /// to static text, absent animates. Default `true` matches the AppStorage
+    /// default. Fired on `ready`; re-push on toggle change is a follow-up (the
+    /// value is also re-pushed on every reload via `ready`).
+    func syncAnalysisAnimation() {
+        let on = UserDefaults.standard.object(forKey: "showAnalysisAnimation") as? Bool ?? true
+        guard let webView else { return }
+        Task {
+            try? await webView.callAsyncJavaScript(
+                "window.__bristlenose?.setAnalysisAnimation?.(on)",
+                arguments: ["on": on],
+                in: nil,
+                in: .page
+            )
+        }
+    }
+
     // MARK: - Locale sync
 
     /// Push the native locale to the web layer.
@@ -337,6 +357,7 @@ final class BridgeHandler: ObservableObject {
         case "ready":
             isReady = true
             syncAppearance()
+            syncAnalysisAnimation()
             syncLocale()
             syncToolbarInset()
             webView?.window?.makeFirstResponder(webView)

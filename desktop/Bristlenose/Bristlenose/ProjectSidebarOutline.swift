@@ -786,7 +786,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 projectTwoLineCell(symbol: symbol, name: project.name, count: count,
                                    subtitle: subtitle, available: project.availability.isReady,
                                    prefixGlyph: prefix, diagnosticsProjectID: diagnosticsID,
-                                   rightSlot: cellRightSlot(for: project)),
+                                   rightSlot: cellRightSlot(for: project),
+                                   shimmer: shimmerSubtitle(for: variant)),
                 id: id)
         }
     }
@@ -870,6 +871,16 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         let twoLine = SidebarSubtitleText.text(for: variant, availability: project.availability,
                                                progress: liveData?.progress[id], i18n: i18n) != nil
         return ProjectCellSpec.rowHeight(twoLine: twoLine)
+    }
+
+    /// Whether the status line should shimmer (design-motion §4.7.1): only a live
+    /// run (`.running`), and only when the "Show animation while analysing" toggle
+    /// is on AND Reduce Motion is off — the native twin of the web CSS two-gate.
+    /// Off → the plain static subtitle label.
+    private func shimmerSubtitle(for variant: SubtitleVariant) -> Bool {
+        guard variant == .running else { return false }
+        let on = UserDefaults.standard.object(forKey: "showAnalysisAnimation") as? Bool ?? true
+        return on && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     }
 
     /// The arbitrated subtitle state — mirrors `ProjectRow.subtitleVariant`
@@ -1195,7 +1206,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                                     subtitle: String, available: Bool,
                                     prefixGlyph: (symbol: String, color: NSColor)?,
                                     diagnosticsProjectID: UUID?,
-                                    rightSlot: RightSlot) -> NSTableCellView {
+                                    rightSlot: RightSlot,
+                                    shimmer: Bool) -> NSTableCellView {
         let cell = NSTableCellView()
         let imageView = NSImageView()
         imageView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
@@ -1217,11 +1229,31 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // Name yields before the count under pressure (count stays visible).
         nameField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        let subtitleField = NSTextField(labelWithString: subtitle)
-        subtitleField.font = ProjectCellSpec.subtitleFont
-        subtitleField.textColor = .secondaryLabelColor
-        subtitleField.lineBreakMode = .byTruncatingTail
-        subtitleField.translatesAutoresizingMaskIntoConstraints = false
+        // Running rows shimmer the status line ("Identifying speakers") — the
+        // native rendering of the thinking spec (design-motion §4.7.1), hosting
+        // the shared SwiftUI `ShimmerText`. `shimmer` is pre-gated by the caller
+        // on `showAnalysisAnimation && !reduceMotion`; off → plain static label.
+        let subtitleField: NSView
+        if shimmer {
+            let host = NSHostingView(rootView: ShimmerText(
+                text: subtitle,
+                rest: Color(nsColor: .secondaryLabelColor),
+                font: Font(ProjectCellSpec.subtitleFont as CTFont),
+                lineLimit: 1))
+            host.translatesAutoresizingMaskIntoConstraints = false
+            // Yield (truncate) before pushing the trailing ring/glyph off-edge —
+            // the plain field does this via lineBreakMode; the host needs it set.
+            host.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+            host.setContentHuggingPriority(.defaultLow, for: .horizontal)
+            subtitleField = host
+        } else {
+            let field = NSTextField(labelWithString: subtitle)
+            field.font = ProjectCellSpec.subtitleFont
+            field.textColor = .secondaryLabelColor
+            field.lineBreakMode = .byTruncatingTail
+            field.translatesAutoresizingMaskIntoConstraints = false
+            subtitleField = field
+        }
 
         cell.imageView = imageView
         cell.textField = nameField

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Signal grid — sizing sandbox · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   VARIANT of dashboard-signal-grid.html — a SIZING SANDBOX.
+
+   The **person badge** (sized for a possibly two-digit code, e.g. p12) + a bit
+   of padding is the UNIT: it sets the square cell's height AND width, and hence
+   the max circle diameter — and hence the **vertical rhythm** (row height =
+   cell), which decides how many sections/themes fit a reasonable vertical space.
+
+   Two live controls, and NOTHING here touches font size — only box geometry:
+     · cell size  — step it down until a typical row-count "just fits" (human eye)
+     · gutter     — gap between cells
+   Readout shows the badge's natural width + the tallest pane's pixel height, so
+   "just fits" has a number to watch. Everything else (encoding, interaction,
+   keyline, tooltip) is identical to the committed signal-grid.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+
+  --bn-space-xs:.25rem; --bn-space-sm:.5rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px;
+  --bn-transition-fast:.15s ease;
+
+  --bn-colour-bg:       light-dark(#ffffff, #111111);
+  --bn-colour-surface:  light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-quote-bg: light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-text:     light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:    light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:   light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-hover:    light-dark(#e8f0fe, #1e293b);
+  --bn-colour-accent:   light-dark(#2563eb, #60a5fa);
+  --bn-colour-badge-bg:   light-dark(#f3f4f6, #1f2937);
+  --bn-colour-badge-text: light-dark(#374151, #d1d5db);
+
+  --bn-selection-border: light-dark(#007aff, #0a84ff);
+  --bn-selection-bg:     light-dark(#e8f0fe, #16324f);
+
+  --bn-sentiment-frustration:  light-dark(#ea580c, #fb923c);
+  --bn-sentiment-confusion:    light-dark(#dc2626, #f87171);
+  --bn-sentiment-doubt:        light-dark(#7c3aed, #a78bfa);
+  --bn-sentiment-surprise:     light-dark(#d97706, #fbbf24);
+  --bn-sentiment-satisfaction: light-dark(#16a34a, #4ade80);
+  --bn-sentiment-delight:      light-dark(#059669, #34d399);
+  --bn-sentiment-confidence:   light-dark(#2563eb, #60a5fa);
+  --bn-sentiment-frustration-bg:  light-dark(#fff7ed, #2d1d0e);
+  --bn-sentiment-confusion-bg:    light-dark(#fef2f2, #2d1515);
+  --bn-sentiment-doubt-bg:        light-dark(#f5f3ff, #1e1533);
+  --bn-sentiment-surprise-bg:     light-dark(#fffbeb, #2d2305);
+  --bn-sentiment-satisfaction-bg: light-dark(#f0fdf4, #0f2918);
+  --bn-sentiment-delight-bg:      light-dark(#ecfdf5, #0d261c);
+  --bn-sentiment-confidence-bg:   light-dark(#eff6ff, #111d2e);
+
+  /* set by JS from the badge measurement + sliders */
+  --cell: 40px; --gap: 4px;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:var(--bn-font-body); background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  line-height:1.5; padding:var(--bn-space-xl); -webkit-font-smoothing:antialiased; }
+
+h1 { font-size:var(--bn-text-title); font-weight:600; margin-bottom:var(--bn-space-xs); }
+.lede { color:var(--bn-colour-muted); font-size:var(--bn-text-body); max-width:66ch; margin-bottom:var(--bn-space-lg); }
+.lede b { color:var(--bn-colour-text); font-weight:600; }
+
+/* ── controls ────────────────────────────────────────────── */
+.controls { display:flex; gap:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); align-items:center; flex-wrap:wrap; }
+.ctl { display:inline-flex; align-items:center; gap:var(--bn-space-sm); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.ctl input[type=range] { width:150px; accent-color:var(--bn-selection-border); }
+.ctl .v { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-text);
+  min-width:34px; }
+.controls .spacer { flex:1; }
+.seg { display:inline-flex; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); overflow:hidden; }
+.seg button { font-family:inherit; font-size:var(--bn-text-caption); padding:.35rem .8rem; border:0;
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.seg button + button { border-left:1px solid var(--bn-colour-border); }
+.seg button.on { background:var(--bn-selection-border); color:#fff; }
+.readout { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.readout b { color:var(--bn-colour-text); font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); }
+
+/* ── panes ───────────────────────────────────────────────── */
+.panes { display:flex; gap:var(--bn-space-lg); align-items:flex-start; flex-wrap:wrap; }
+.pane { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  padding:var(--bn-space-lg); background:var(--bn-colour-surface); }
+.pane h3 { font-size:var(--bn-text-heading); font-weight:600; margin-bottom:var(--bn-space-md); }
+
+.matrix { display:grid; grid-template-columns:150px repeat(4, var(--cell)) 34px;
+  gap:var(--gap); align-items:center; }
+
+/* row-label vertical padding kept tiny so the CELL drives the row height (the
+   label font is the ultimate floor — that's the point where "too small" shows). */
+.rowlabel { font-size:var(--bn-text-label); color:var(--bn-colour-text); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; padding:.1rem var(--bn-space-sm) .1rem .35rem;
+  border-radius:var(--bn-radius-sm); transition:background var(--bn-transition-fast); }
+.rowlabel.head { height:auto; }
+.rowlabel.hl { background:var(--bn-selection-bg); color:var(--bn-selection-border);
+  font-weight:var(--bn-weight-emphasis); }
+.total { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-muted);
+  text-align:right; }
+.total.head { color:transparent; }
+
+/* participant column headers = the split speaker badge. Horizontal padding is
+   the ONLY flexing part — it shrinks with --cell so the fixed-size text stays
+   put and the badge tracks the cell down to its font-floor. */
+.colhead { display:flex; justify-content:center; }
+.bn-person-badge { display:inline-flex; align-items:center; gap:0; white-space:nowrap; }
+.bn-speaker-badge--split { display:inline-flex; align-items:center; gap:0; padding:0;
+  border-radius:var(--bn-radius-sm); overflow:hidden; background:none; }
+.bn-speaker-badge--split .bn-speaker-badge-code { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  padding:var(--bn-space-xs) clamp(1px, calc((var(--cell) - 20px) / 2), 0.4rem);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text);
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-sm);
+  transition:color var(--bn-transition-fast), background var(--bn-transition-fast), border-color var(--bn-transition-fast); }
+.bn-person-badge-highlighted .bn-speaker-badge-code { background:var(--bn-selection-bg);
+  color:var(--bn-selection-border); border-color:var(--bn-selection-border); }
+
+/* cells */
+.cell { width:var(--cell); height:var(--cell); border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-bg); position:relative; cursor:pointer; justify-self:center;
+  transition:background var(--bn-transition-fast), outline .1s; }
+.cell.empty { background:transparent; box-shadow:inset 0 0 0 1px var(--bn-colour-border); opacity:.45; cursor:default; }
+.cell:not(.empty):hover { outline:2px solid var(--bn-selection-border); outline-offset:-1px; z-index:2; }
+.cell.signal { box-shadow:inset 0 0 0 1.5px var(--bn-selection-border); }
+.dot { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  border-radius:50%; box-shadow:0 0 0 1px var(--bn-colour-bg); pointer-events:none; }
+
+/* tooltip (light) — sentiment as its real .badge chip */
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  padding:var(--bn-space-xs) 0.45rem; border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); }
+.badge-frustration  { background:var(--bn-sentiment-frustration-bg);  color:var(--bn-sentiment-frustration); }
+.badge-confusion    { background:var(--bn-sentiment-confusion-bg);    color:var(--bn-sentiment-confusion); }
+.badge-doubt        { background:var(--bn-sentiment-doubt-bg);        color:var(--bn-sentiment-doubt); }
+.badge-surprise     { background:var(--bn-sentiment-surprise-bg);     color:var(--bn-sentiment-surprise); }
+.badge-satisfaction { background:var(--bn-sentiment-satisfaction-bg); color:var(--bn-sentiment-satisfaction); }
+.badge-delight      { background:var(--bn-sentiment-delight-bg);      color:var(--bn-sentiment-delight); }
+.badge-confidence   { background:var(--bn-sentiment-confidence-bg);   color:var(--bn-sentiment-confidence); }
+
+.tip { position:fixed; pointer-events:none; z-index:99; background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  border:1px solid var(--bn-colour-border); font-size:var(--bn-text-caption);
+  padding:var(--bn-space-sm) var(--bn-space-md); border-radius:var(--bn-radius-md); max-width:260px;
+  opacity:0; transition:opacity .1s; box-shadow:0 4px 16px rgba(0,0,0,.10), 0 1px 4px rgba(0,0,0,.06); line-height:1.5; }
+.tip.show { opacity:1; }
+.tip .badge { display:inline-block; margin-bottom:.35rem; }
+.tip .meta { color:var(--bn-colour-muted); }
+
+.foot { margin-top:var(--bn-space-xl); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); max-width:82ch; }
+.foot code { font-family:var(--bn-font-mono); }
+</style>
+</head>
+<body>
+
+<h1>Signal grid — sizing sandbox</h1>
+<p class="lede">The <b>person badge</b> (sized for a two-digit code + padding) is the unit: it sets the
+square cell, the max circle, and the <b>vertical rhythm</b> (row height = cell). Step the cell size
+<b>down</b> until a typical section/theme count fits a reasonable vertical space — <b>fonts never
+change</b>, only the boxes. Watch the tallest-pane height in the readout.</p>
+
+<div class="controls">
+  <label class="ctl">cell <input type="range" id="cellR" min="22" max="52" step="1"><span class="v" id="cellV">—</span></label>
+  <label class="ctl">gutter <input type="range" id="gapR" min="0" max="12" step="1"><span class="v" id="gapV">—</span></label>
+  <span class="spacer"></span>
+  <span class="seg">
+    <button class="on" data-scheme onclick="setScheme('auto',this)">Auto</button>
+    <button data-scheme onclick="setScheme('light',this)">Light</button>
+    <button data-scheme onclick="setScheme('dark',this)">Dark</button>
+  </span>
+</div>
+<p class="readout" id="readout">—</p>
+
+<div class="panes" id="panes"></div>
+
+<p class="foot">Cell size and gutter are the only sliders and they touch <b>geometry only</b> — every
+font stays fixed. The badge's horizontal padding shrinks with the cell (<code>clamp()</code>) so its
+fixed-size text is the natural floor. Dot max diameter = <code>cell − 10px</code>; area (never radius)
+∝ residual. Reference: [dashboard-signal-grid.html](dashboard-signal-grid.html). Sample: IKEA 9-session.</p>
+
+<div class="tip" id="tip"></div>
+
+<script>
+(function () {
+  var PIDS = ["p1","p2","p3","p4"];
+  var CAP = function (s) { return s.charAt(0).toUpperCase() + s.slice(1); };
+
+  var VIEWS = {
+    sections: {
+      title: "Sections",
+      cols: ["Pre-surgery","Aftercare","Notifications","Top nav","Beds browsing",
+             "Duvets","Product page","Search","Login / app","Bag","Checkout"],
+      data: {
+        p1: { 0:{c:3,s:"satisfaction"}, 1:{c:2,s:"frustration"}, 2:{c:1,s:"delight"} },
+        p2: { 3:{c:1,s:"frustration"}, 4:{c:1,s:"confusion"} },
+        p3: { 4:{c:1,s:"surprise"}, 6:{c:1,s:"confusion"}, 7:{c:2,s:"satisfaction"},
+              8:{c:1,s:"delight"}, 9:{c:1,s:"confusion"}, 10:{c:1,s:"satisfaction"} },
+        p4: { 4:{c:1,s:"satisfaction"}, 5:{c:3,s:"satisfaction"}, 10:{c:1,s:"frustration"} }
+      },
+      signals: [["p1",0],["p1",1],["p3",7],["p4",5]]
+    },
+    themes: {
+      title: "Themes",
+      cols: ["Trust & safety","Findability","Aftercare gap","Speed","Reassurance",
+             "Visual clarity","Jargon","Guidance","Control","Error recovery","Confidence"],
+      data: {
+        p1: { 4:{c:3,s:"satisfaction"}, 2:{c:2,s:"frustration"}, 0:{c:1,s:"delight"} },
+        p2: { 6:{c:1,s:"confusion"}, 1:{c:1,s:"frustration"} },
+        p3: { 1:{c:2,s:"satisfaction"}, 5:{c:1,s:"surprise"}, 6:{c:1,s:"confusion"},
+              8:{c:1,s:"delight"}, 3:{c:1,s:"satisfaction"} },
+        p4: { 1:{c:3,s:"satisfaction"}, 9:{c:1,s:"frustration"}, 4:{c:1,s:"satisfaction"} }
+      },
+      signals: [["p1",4],["p1",2],["p3",1],["p4",1]]
+    }
+  };
+
+  var cellPx = 40, gapPx = 4, badgeNatural = 40;
+
+  function isSignal(view, pid, j) {
+    return view.signals.some(function (s) { return s[0] === pid && s[1] === j; });
+  }
+
+  function computeResiduals(view) {
+    var rowT = {}, colT = {}, grand = 0;
+    PIDS.forEach(function (p) { rowT[p] = 0; });
+    view.cols.forEach(function (_, j) { colT[j] = 0; });
+    PIDS.forEach(function (p) {
+      Object.keys(view.data[p]).forEach(function (j) {
+        var c = view.data[p][j].c; rowT[p] += c; colT[j] += c; grand += c;
+      });
+    });
+    var res = {}, maxR = 0;
+    PIDS.forEach(function (p) {
+      Object.keys(view.data[p]).forEach(function (j) {
+        var obs = view.data[p][j].c, exp = (rowT[p] * colT[j]) / grand, r = 0;
+        if (exp > 0) {
+          var denom = Math.sqrt(exp * (1 - rowT[p]/grand) * (1 - colT[j]/grand));
+          r = denom === 0 ? 0 : (obs - exp) / denom;
+        }
+        res[p + "|" + j] = r;
+        if (Math.abs(r) > maxR) maxR = Math.abs(r);
+      });
+    });
+    return { res:res, maxR:maxR, colT:colT };
+  }
+
+  var tip = document.getElementById("tip");
+  function showTip(html, e) { tip.innerHTML = html; tip.classList.add("show");
+    tip.style.left = (e.clientX + 14) + "px"; tip.style.top = (e.clientY + 14) + "px"; }
+  function hideTip() { tip.classList.remove("show"); }
+
+  function highlight(pane, pid, j, on) {
+    var h = pane.querySelector('.colhead[data-p="' + pid + '"] .bn-person-badge');
+    if (h) h.classList.toggle("bn-person-badge-highlighted", on);
+    if (j != null) {
+      var rl = pane.querySelector('.rowlabel[data-row="' + j + '"]');
+      if (rl) rl.classList.toggle("hl", on);
+    }
+  }
+
+  function buildPane(key) {
+    var view = VIEWS[key];
+    var R = computeResiduals(view);
+    var DOT_MAX = Math.max(4, cellPx / 2 - 5);   // radius; diameter = cell − 10
+    var pane = document.createElement("div"); pane.className = "pane"; pane.setAttribute("data-pane", key);
+    var h = document.createElement("h3"); h.textContent = view.title; pane.appendChild(h);
+
+    var m = document.createElement("div"); m.className = "matrix";
+    var lh = document.createElement("div"); lh.className = "rowlabel head"; m.appendChild(lh);
+    PIDS.forEach(function (p) {
+      var ch = document.createElement("div"); ch.className = "colhead"; ch.setAttribute("data-p", p);
+      ch.innerHTML = '<span class="bn-person-badge"><span class="bn-speaker-badge--split">' +
+        '<span class="bn-speaker-badge-code">' + p + '</span></span></span>';
+      ch.addEventListener("mouseenter", function () { highlight(pane, p, null, true); });
+      ch.addEventListener("mouseleave", function () { highlight(pane, p, null, false); });
+      m.appendChild(ch);
+    });
+    var th = document.createElement("div"); th.className = "total head"; th.textContent = "n"; m.appendChild(th);
+
+    view.cols.forEach(function (colName, j) {
+      var rl = document.createElement("div"); rl.className = "rowlabel"; rl.textContent = colName; rl.title = colName;
+      rl.setAttribute("data-row", j);
+      m.appendChild(rl);
+      PIDS.forEach(function (p) {
+        var d = view.data[p][j];
+        var cell = document.createElement("div"); cell.className = "cell";
+        cell.setAttribute("data-p", p); cell.setAttribute("data-row", j);
+        if (!d) { cell.classList.add("empty"); m.appendChild(cell); return; }
+        var full = "--bn-sentiment-" + d.s;
+        var bgPct = Math.min(60, 20 * d.c);
+        cell.style.background = "color-mix(in oklab, var(" + full + ") " + bgPct + "%, var(" + full + "-bg))";
+        if (isSignal(view, p, j)) cell.classList.add("signal");
+
+        var val = Math.abs(R.res[p+"|"+j]), maxVal = R.maxR;
+        var rad = DOT_MAX * Math.sqrt(val / maxVal);
+        var dot = document.createElement("div"); dot.className = "dot";
+        dot.style.width = dot.style.height = (2 * rad) + "px";
+        dot.style.background = "var(" + full + ")";
+        cell.appendChild(dot);
+
+        var resTxt = R.res[p+"|"+j].toFixed(2);
+        cell.addEventListener("mousemove", function (e) {
+          showTip('<span class="badge badge-' + d.s + '">' + CAP(d.s) + '</span>' +
+            '<div class="meta">' + d.c + ' quote' + (d.c>1?'s':'') + ' · residual ' + resTxt + '</div>', e);
+        });
+        cell.addEventListener("mouseenter", function () { highlight(pane, p, j, true); });
+        cell.addEventListener("mouseleave", function () { hideTip(); highlight(pane, p, j, false); });
+        m.appendChild(cell);
+      });
+      var tot = document.createElement("div"); tot.className = "total"; tot.textContent = R.colT[j] || 0;
+      m.appendChild(tot);
+    });
+
+    pane.appendChild(m);
+    return pane;
+  }
+
+  function renderAll() {
+    var panes = document.getElementById("panes"); panes.innerHTML = "";
+    panes.appendChild(buildPane("sections"));
+    panes.appendChild(buildPane("themes"));
+  }
+
+  function updateReadout() {
+    var panes = document.querySelectorAll(".pane"), tallest = 0;
+    panes.forEach(function (p) { tallest = Math.max(tallest, Math.round(p.getBoundingClientRect().height)); });
+    var rows = VIEWS.sections.cols.length;
+    document.getElementById("readout").innerHTML =
+      "badge natural <b>" + Math.round(badgeNatural) + "px</b> &middot; cell <b>" + cellPx +
+      "px</b> &middot; gutter <b>" + gapPx + "px</b> &middot; max circle <b>" + Math.round(cellPx - 10) +
+      "px</b> &middot; tallest pane <b>" + tallest + "px</b> (" + rows + " rows + header)";
+  }
+
+  // Measure the badge's natural width for a 2-digit code (comfortable padding).
+  function measureBadgeNatural() {
+    var probe = document.createElement("span");
+    probe.style.cssText = "position:absolute;visibility:hidden;left:-9999px";
+    probe.innerHTML = '<span class="bn-person-badge"><span class="bn-speaker-badge--split">' +
+      '<span class="bn-speaker-badge-code" style="padding:var(--bn-space-xs) 0.4rem">p12</span></span></span>';
+    document.body.appendChild(probe);
+    var w = probe.getBoundingClientRect().width;
+    probe.remove();
+    return w;
+  }
+
+  function setCell(v) {
+    cellPx = v;
+    document.documentElement.style.setProperty("--cell", cellPx + "px");
+    document.getElementById("cellV").textContent = cellPx + "px";
+    renderAll(); updateReadout();
+  }
+  function setGap(v) {
+    gapPx = v;
+    document.documentElement.style.setProperty("--gap", gapPx + "px");
+    document.getElementById("gapV").textContent = gapPx + "px";
+    updateReadout();
+  }
+
+  window.setScheme = function (mode, btn) {
+    document.querySelectorAll('[data-scheme]').forEach(function (b) { b.classList.remove("on"); });
+    btn.classList.add("on");
+    document.documentElement.style.colorScheme = (mode === "auto") ? "light dark" : mode;
+  };
+
+  // init
+  badgeNatural = measureBadgeNatural();
+  cellPx = Math.min(52, Math.max(22, Math.round(badgeNatural + 6)));  // badge + a bit of padding
+  gapPx = 4;
+  var cellR = document.getElementById("cellR"), gapR = document.getElementById("gapR");
+  cellR.value = cellPx; gapR.value = gapPx;
+  document.documentElement.style.setProperty("--cell", cellPx + "px");
+  document.documentElement.style.setProperty("--gap", gapPx + "px");
+  document.getElementById("cellV").textContent = cellPx + "px";
+  document.getElementById("gapV").textContent = gapPx + "px";
+  cellR.addEventListener("input", function () { setCell(+cellR.value); });
+  gapR.addEventListener("input", function () { setGap(+gapR.value); });
+
+  renderAll();
+  updateReadout();
+})();
+</script>
+</body>
+</html>

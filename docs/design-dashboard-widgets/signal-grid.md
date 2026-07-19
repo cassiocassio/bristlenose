@@ -11,6 +11,9 @@ the total-page dashboard mock. Companions: [data-density.md](data-density.md) ·
 - **[dashboard-heatmap-encoding-collision.html](../mockups/dashboard-heatmap-encoding-collision.html)**
   — the **evidence** for the single biggest decision (hue = sentiment, not residual). Keep it; it's
   the argument, not a throwaway.
+- **[dashboard-signal-grid-sizing.html](../mockups/dashboard-signal-grid-sizing.html)** — the **size
+  sandbox.** The person badge is the unit; live cell/gutter sliders (fonts fixed) + a tallest-pane
+  height readout, for settling the cell size against vertical fit. See §Integration for the floor.
 
 ---
 
@@ -113,6 +116,41 @@ Everything is real tokens / atoms — nothing bespoke:
 - The lens's **-30° rotated column headers** (`.heatmap-col-label`): a horror show at 30–40px cells
   (they need ~56px). **Columns stay label-less** — the row label + speaker-badge cross-highlight *is*
   the legend, exactly as GitHub's contribution grid works.
+
+## Integration & responsive fold
+
+For the total-page / layout session — how this lands in the dashboard.
+
+**What it replaces.** The signal-grid *is* **brick 3** (Sections | Themes), upgraded — **when there's
+width.** Same axis, same `section_matrix` / `theme_matrix`, now expressed per-participant with
+sentiment + count + residual. Nothing new upstream.
+
+**Flip between two implementations — don't morph one.** The responsive model is a **hard switch at a
+width breakpoint**, not one component that reshapes:
+- **Wide** (the brick has room) → the **signal-grid** (two panes; side-by-side → stacked via the
+  grid's own `flex-wrap`).
+- **Narrow** → fall back to the **existing text NavList** (brick 3 as it stands today).
+
+Reason: a matrix and a text list are **different information objects**; a morphing component is
+fragile and would fork both the grid and the nav-list efforts into one tangled thing. As a discrete
+flip, the NavList stays the narrow truth and the grid the wide truth — each stays true to the effort
+already in it. **Don't build a "collapsed grid"** — the plain list is the better narrow form.
+
+**Gate on the brick's width, not the viewport.** Dashboards tessellate, so the brick's allotted width
+≠ the screen width — use a ResizeObserver / container query on the brick, not a media query.
+
+**What the collapse costs (acceptable).** The text-list fallback carries section/theme + totals only;
+it drops the per-participant / sentiment / residual detail. Narrow = orientation-only — graceful
+degradation, not a regression.
+
+**Participant count is a second axis of the fold decision.** The cell is sized to a **two-digit
+participant badge (~36px floor** — measured in the size sandbox). Below that (e.g. 24px) only holds
+for **≤9-participant studies**; 10+ overflow the badge into the gutters. So the wide/narrow choice
+should factor **participant count**, not width alone — many participants push the grid wider or fall
+back to the list sooner. Cell + gutter ship as CSS vars (`--cell`, `--gap`), settled in the size
+sandbox; **default still open** (24px compact, single-digit-only · ~36px two-digit-safe). Circles are
+area-encoded off the cell (`max diameter = cell − 10`), so very small cells also weaken the
+residual read — the size decision trades vertical fit against dot legibility *and* two-digit safety.
 
 ## Open for the total-page mock
 

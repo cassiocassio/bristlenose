@@ -1,0 +1,383 @@
+<!--
+  Keycap Gallery — the canonical exploration for "how do we show a key to press?"
+
+  One problem, solved once: render a keyboard key (⌘, ⌥, S, ↩) in a way that is
+  natural, elegant, and consistent across the SPA, the public web docs, the CLI,
+  and the native macOS app.
+
+  This is the WEB half. The native twin is `KeycapGalleryView.swift` (Debug ▸
+  Keycap Gallery), which mirrors these option names A–F glyph-for-glyph so a
+  SwiftUI cap can be held up against the CSS one. The decisions both halves are
+  built to are frozen in `docs/design-keycaps.md`.
+
+  Self-contained — open directly, or via `serve --dev` → About → Design.
+  Colours are the real palette-default tokens (bristlenose/theme/colors/palette-default.css).
+-->
+<style>
+  :root {
+    color-scheme: light dark;
+
+    /* ---- real Bristlenose palette-default tokens (light / dark) ---- */
+    --bg:            light-dark(#ffffff, #111111);
+    --text:          light-dark(#1a1a1a, #e5e7eb);
+    --muted:         light-dark(#6b7280, #9ca3af);
+    --border:        light-dark(#e5e7eb, #2d2d2d);
+    --border-strong: light-dark(#d1d5db, #4b5563);
+    --accent:        light-dark(#007aff, #0a84ff);
+    --hover:         light-dark(#e8f0fe, #1e293b);
+    --panel:         light-dark(#f9f9fa, #1c1c1e);   /* inspector-bg */
+    --badge-bg:      light-dark(#f3f4f6, #252525);
+    --chip-bg:       light-dark(#1a1a1a, #e5e7eb);   /* inverted */
+    --chip-text:     light-dark(#f4f4f5, #1a1a1a);
+
+    /* raised-key surfaces — a hair lighter than badge-bg, so the top edge reads */
+    --cap-face:      light-dark(#fbfbfc, #2c2c2e);
+    --cap-face-lo:   light-dark(#f0f1f3, #232325);
+    --cap-highlight: light-dark(rgba(255,255,255,0.9), rgba(255,255,255,0.06));
+    --cap-edge:      light-dark(#cfd2d7, #000000);
+
+    /* ---- radius / space (real tokens) ---- */
+    --radius-sm: 3px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+
+    /* ---- fonts ---- */
+    --font-inter:  "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-system: -apple-system, "SF Pro Text", system-ui, sans-serif;
+    --font-mono:   "SF Mono", ui-monospace, "Cascadia Code", "Fira Code", Consolas, monospace;
+
+    /* the body font is switchable to show the web (Inter) vs native (SF Pro) truth */
+    --font-body: var(--font-inter);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 0 0 6rem;
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+  body[data-font="system"] { --font-body: var(--font-system); }
+
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 1.5rem; }
+
+  /* ---- sticky toolbar ---- */
+  .bar {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+    padding: 0.75rem 1.5rem;
+    background: color-mix(in srgb, var(--bg) 86%, transparent);
+    backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+  .bar h1 { font-size: 0.9rem; font-weight: 600; margin: 0; margin-right: auto; letter-spacing: -0.01em; }
+  .bar h1 span { color: var(--muted); font-weight: 400; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+  .seg button {
+    appearance: none; border: 0; background: transparent; color: var(--text);
+    font: inherit; font-size: 0.78rem; padding: 0.28rem 0.7rem; cursor: pointer;
+    border-right: 1px solid var(--border);
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+
+  h2 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; margin: 2.6rem 0 0.3rem; }
+  h2 .n { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: 0.5rem; }
+  h3 { font-size: 0.95rem; font-weight: 600; margin: 1.6rem 0 0.2rem; }
+  .lede { color: var(--muted); font-size: 0.92rem; margin: 0 0 1rem; max-width: 62ch; }
+  p.note { color: var(--muted); font-size: 0.82rem; max-width: 64ch; }
+  p.note code, .inline-code { font-family: var(--font-mono); font-size: 0.85em; background: var(--badge-bg); padding: 0.05em 0.35em; border-radius: var(--radius-sm); }
+  a { color: var(--accent); }
+
+  hr { border: 0; border-top: 1px solid var(--border); margin: 2.4rem 0 0; }
+
+  /* ---- option card ---- */
+  .card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem 1.25rem; margin: 0.9rem 0; background: var(--bg); }
+  .card.rec { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .card-head { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.15rem; }
+  .card-head .tag { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 600; color: #fff; background: var(--accent); padding: 0.08rem 0.4rem; border-radius: var(--radius-sm); }
+  .card-head .name { font-size: 0.98rem; font-weight: 600; }
+  .card-head .pill { margin-left: auto; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 0.08rem 0.5rem; }
+  .card .desc { color: var(--muted); font-size: 0.86rem; margin: 0.1rem 0 0.9rem; max-width: 64ch; }
+  .stage { display: flex; align-items: center; gap: 1.4rem; flex-wrap: wrap; padding: 1rem 1.1rem; border-radius: var(--radius-md); background: var(--panel); }
+  .stage.on-hover { background: var(--hover); }
+  .stage .grp { display: inline-flex; align-items: center; gap: 0.55rem; }
+  .stage .lbl { font-size: 0.8rem; color: var(--muted); }
+  details.impl { margin-top: 0.9rem; }
+  details.impl summary { cursor: pointer; font-size: 0.8rem; color: var(--accent); font-weight: 500; }
+  pre { font-family: var(--font-mono); font-size: 0.76rem; line-height: 1.5; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.8rem 1rem; overflow-x: auto; margin: 0.7rem 0 0; }
+
+  /* =========================================================================
+     THE KEYCAP SYSTEM — every glyph rides the SAME base, options vary the skin.
+     Modifier glyphs are rendered in a font KNOWN to contain them (mono/system),
+     never the proportional body font — Inter's coverage of ⌘⌥⇧⌃ is unreliable.
+     ========================================================================= */
+  .combo { display: inline-flex; align-items: center; }
+  .combo.split { gap: 0.28rem; }         /* teachable: one cap per key */
+  .combo.joined { gap: 0; }              /* menu-bar style: glyphs concatenate */
+  .combo .plus { color: var(--muted); font-size: 0.8em; padding: 0 0.12rem; }
+
+  .cap {
+    display: inline-flex; align-items: center; justify-content: center;
+    box-sizing: border-box;
+    min-width: 1.7em; height: 1.7em;
+    padding: 0 0.42em;
+    font-family: var(--font-mono);        /* glyph-safe font */
+    font-size: 0.8125rem; font-weight: 500; line-height: 1;
+    color: var(--text);
+    border-radius: 5px;
+    vertical-align: middle;
+    user-select: none;
+  }
+  /* letters/words shown with the UI font in the "word" variant only */
+
+  /* --- A · Flat --- */
+  .cap--flat { background: var(--badge-bg); border: 1px solid var(--border); }
+
+  /* --- B · Raised (physical key) --- */
+  .cap--raised {
+    background: linear-gradient(var(--cap-face), var(--cap-face-lo));
+    border: 1px solid var(--border-strong);
+    box-shadow: 0 1.5px 0 0 var(--cap-edge), inset 0 1px 0 0 var(--cap-highlight);
+  }
+
+  /* --- C · Outline (ghost cap) --- */
+  .cap--outline { background: transparent; border: 1px solid var(--border-strong); }
+
+  /* --- D · Solid (inverted chip) --- */
+  .cap--solid { background: var(--chip-bg); color: var(--chip-text); border: 1px solid transparent; font-weight: 600; }
+
+  /* --- E · Mono grid (iA Writer) — uniform ch-width caps for aligned lists --- */
+  .cap--grid { background: var(--badge-bg); border: 1px solid var(--border); min-width: 2.2ch; padding: 0 0.3em; }
+
+  /* --- F · Bare glyph (no cap) — native inline hint / CLI parity --- */
+  .cap--bare { background: transparent; border: 0; color: var(--muted); min-width: 0; padding: 0; font-weight: 500; }
+
+  /* word caps (non-Mac / spelled-out) use the UI font, wider box */
+  .cap--word { font-family: var(--font-body); min-width: 0; padding: 0 0.5em; letter-spacing: 0.01em; }
+
+  /* ---- the iA-Writer aligned help list (context demo) ---- */
+  .helplist { display: grid; grid-template-columns: max-content 1fr; gap: 0.5rem 1.1rem; align-items: center; max-width: 420px; padding: 1rem 1.1rem; background: var(--panel); border-radius: var(--radius-md); }
+  .helplist .keys { justify-self: end; display: inline-flex; gap: 0.2rem; }
+  .helplist .what { font-size: 0.86rem; }
+
+  /* ---- inline prose demo ---- */
+  .prose { max-width: 60ch; font-size: 0.95rem; }
+  .prose .cap { font-size: 0.78rem; }
+
+  /* ---- glyph reference table ---- */
+  table.ref { border-collapse: collapse; width: 100%; font-size: 0.85rem; margin-top: 0.6rem; }
+  table.ref th, table.ref td { text-align: left; padding: 0.4rem 0.7rem; border-bottom: 1px solid var(--border); }
+  table.ref th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
+  table.ref .g { font-family: var(--font-mono); font-size: 1.15rem; }
+  table.ref code { font-family: var(--font-mono); font-size: 0.82em; color: var(--muted); }
+  table.ref .sf { font-family: var(--font-mono); font-size: 0.82em; color: var(--accent); }
+</style>
+
+<div class="bar">
+  <h1>Keycap Gallery <span>· one way to show a key, everywhere</span></h1>
+  <div class="seg" role="group" aria-label="Font">
+    <button data-font="inter" aria-pressed="true">Web · Inter</button>
+    <button data-font="system" aria-pressed="false">Native · SF Pro</button>
+  </div>
+  <div class="seg" role="group" aria-label="Theme">
+    <button data-theme="light" aria-pressed="true">Light</button>
+    <button data-theme="dark" aria-pressed="false">Dark</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <p class="lede">Six ways to draw a keyboard key, from most understated to most emphatic. Every one rides the same base cap and the same glyph rules — the skin is the only variable. Toggle font and theme above; the native twin lives in <span class="inline-code">KeycapGalleryView.swift</span>.</p>
+
+  <!-- ============================== PROBLEM ============================== -->
+  <h2><span class="n">§1</span>The problem</h2>
+  <p class="note">
+    Telling a user “press Option-Command-L” in prose is slow to parse and easy to get wrong across platforms. A <em>keycap</em> — the little rounded box around <span class="combo joined"><span class="cap cap--flat">⌘</span></span> — turns an instruction into something the eye recognises instantly as “a key you press.” We need this in four places that don’t share a rendering engine:
+  </p>
+  <div class="helplist" style="grid-template-columns:max-content 1fr;max-width:520px">
+    <div class="what" style="color:var(--muted)">SPA (React) — help modal, tooltips</div>       <div class="keys"><span class="cap cap--flat">?</span></div>
+    <div class="what" style="color:var(--muted)">Public web docs — manual on bristlenose.app</div><div class="keys"><span class="cap cap--flat">⌘</span><span class="cap cap--flat">S</span></div>
+    <div class="what" style="color:var(--muted)">CLI — terminal help output</div>                <div class="keys"><span class="cap cap--bare">⌘F</span></div>
+    <div class="what" style="color:var(--muted)">Native macOS — custom UI &amp; teaching</div>    <div class="keys"><span class="cap cap--raised">⇧</span><span class="cap cap--raised">⌘</span><span class="cap cap--raised">E</span></div>
+  </div>
+  <p class="note" style="margin-top:1rem">
+    Two rules are already settled and non-negotiable (Apple Style Guide + Gruber, see <span class="inline-code">design-keyboard-shortcuts.md</span>): modifier order is <strong>Fn → Control → Option → Shift → Command</strong>, and <strong>glyphs concatenate with no separator</strong> (<span class="combo joined"><span class="cap cap--bare">⇧⌘S</span></span>) while spelled-out words take a <span class="inline-code">+</span> (<span class="inline-code">Ctrl+Shift+S</span>). This gallery is about the <em>skin</em>, not those rules.
+  </p>
+
+  <!-- ============================== GLYPHS ============================== -->
+  <h2><span class="n">§2</span>The glyphs — nailed down</h2>
+  <p class="lede">The one source of truth for every surface. The Unicode glyph is the cross-platform constant; the SF Symbol is the native upgrade (weight/scale control, optical alignment) with the Unicode glyph as its guaranteed fallback.</p>
+  <table class="ref">
+    <thead><tr><th>Key</th><th>Glyph</th><th>Unicode</th><th>SF Symbol</th><th>Non-Mac word</th></tr></thead>
+    <tbody>
+      <tr><td>Command</td>       <td class="g">⌘</td><td><code>U+2318</code></td><td class="sf">command</td>       <td>—</td></tr>
+      <tr><td>Option / Alt</td>  <td class="g">⌥</td><td><code>U+2325</code></td><td class="sf">option</td>        <td>Alt</td></tr>
+      <tr><td>Shift</td>         <td class="g">⇧</td><td><code>U+21E7</code></td><td class="sf">shift</td>         <td>Shift</td></tr>
+      <tr><td>Control</td>       <td class="g">⌃</td><td><code>U+2303</code></td><td class="sf">control</td>       <td>Ctrl</td></tr>
+      <tr><td>Caps Lock</td>     <td class="g">⇪</td><td><code>U+21EA</code></td><td class="sf">capslock</td>      <td>Caps Lock</td></tr>
+      <tr><td>Return</td>        <td class="g">↩</td><td><code>U+21A9</code></td><td class="sf">return</td>        <td>Enter</td></tr>
+      <tr><td>Enter (numpad)</td><td class="g">⌤</td><td><code>U+2324</code></td><td class="sf">return</td>        <td>Enter</td></tr>
+      <tr><td>Escape</td>        <td class="g">⎋</td><td><code>U+238B</code></td><td class="sf">escape</td>        <td>Esc</td></tr>
+      <tr><td>Delete (back)</td> <td class="g">⌫</td><td><code>U+232B</code></td><td class="sf">delete.left</td>   <td>Backspace</td></tr>
+      <tr><td>Forward delete</td><td class="g">⌦</td><td><code>U+2326</code></td><td class="sf">delete.right</td>  <td>Delete</td></tr>
+      <tr><td>Tab</td>           <td class="g">⇥</td><td><code>U+21E5</code></td><td class="sf">arrow.right.to.line</td><td>Tab</td></tr>
+      <tr><td>Space</td>         <td class="g">␣</td><td><code>U+2423</code></td><td class="sf">space</td>         <td>Space</td></tr>
+      <tr><td>Arrows</td>        <td class="g">↑↓←→</td><td><code>U+2191…</code></td><td class="sf">arrow.up …</td> <td>↑↓←→</td></tr>
+      <tr><td>Fn / Globe</td>    <td class="g">🌐</td><td><code>U+1F310</code></td><td class="sf">globe</td>         <td>Fn</td></tr>
+    </tbody>
+  </table>
+  <p class="note" style="margin-top:0.9rem"><strong>Font gotcha:</strong> render the modifier glyphs in <span class="inline-code">--bn-font-mono</span> (SF Mono) or the system font — <em>never</em> Inter. Inter’s coverage of ⌘⌥⇧⌃ is incomplete, so the body font silently falls back per-glyph to a different face, and your caps end up mismatched. Every cap in this gallery uses the mono stack for the glyph.</p>
+
+  <!-- ============================== OPTIONS ============================== -->
+  <h2><span class="n">§3</span>The six skins</h2>
+
+  <!-- A -->
+  <div class="card">
+    <div class="card-head"><span class="tag">A</span><span class="name">Flat</span></div>
+    <p class="desc">Subtle fill, hairline border, no shadow. The quietest cap. Best for dense inline use where a raised key would be too loud — table cells, filter chips, sidebar hints.</p>
+    <div class="stage">
+      <span class="grp"><span class="lbl">joined</span><span class="combo joined"><span class="cap cap--flat">⇧</span><span class="cap cap--flat">⌘</span><span class="cap cap--flat">S</span></span></span>
+      <span class="grp"><span class="lbl">single</span><span class="cap cap--flat">?</span> <span class="cap cap--flat">s</span> <span class="cap cap--flat">↩</span></span>
+      <span class="grp"><span class="lbl">non-Mac</span><span class="combo split"><span class="cap cap--flat cap--word">Ctrl</span><span class="plus">+</span><span class="cap cap--flat cap--word">S</span></span></span>
+    </div>
+    <details class="impl"><summary>CSS</summary><pre>.cap { display:inline-flex; align-items:center; justify-content:center;
+  min-width:1.7em; height:1.7em; padding:0 .42em;
+  font-family:var(--bn-font-mono); font-size:var(--bn-text-label); font-weight:500;
+  color:var(--bn-colour-text); border-radius:5px; }
+.cap--flat { background:var(--bn-colour-badge-bg); border:1px solid var(--bn-colour-border); }</pre></details>
+  </div>
+
+  <!-- B -->
+  <div class="card rec">
+    <div class="card-head"><span class="tag">B</span><span class="name">Raised</span><span class="pill">Recommended · help &amp; teaching</span></div>
+    <p class="desc">A physical key: soft top-to-bottom gradient face, a darker bottom edge, and an inner top highlight. Reads as tactile without shouting. The right choice when the key <em>is</em> the content — the help modal, onboarding, “press this” moments.</p>
+    <div class="stage">
+      <span class="grp"><span class="lbl">joined</span><span class="combo joined"><span class="cap cap--raised">⇧</span><span class="cap cap--raised">⌘</span><span class="cap cap--raised">S</span></span></span>
+      <span class="grp"><span class="lbl">split</span><span class="combo split"><span class="cap cap--raised">⌥</span><span class="cap cap--raised">⌘</span><span class="cap cap--raised">L</span></span></span>
+      <span class="grp"><span class="lbl">single</span><span class="cap cap--raised">?</span> <span class="cap cap--raised">↩</span> <span class="cap cap--raised">⎋</span></span>
+    </div>
+    <details class="impl"><summary>CSS</summary><pre>.cap--raised {
+  background:linear-gradient(var(--cap-face), var(--cap-face-lo));
+  border:1px solid var(--bn-colour-border-hover);
+  box-shadow:0 1.5px 0 0 var(--cap-edge),          /* bottom edge  */
+             inset 0 1px 0 0 var(--cap-highlight); /* top highlight */
+}
+/* --cap-face / --cap-face-lo / --cap-highlight / --cap-edge:
+   add as light-dark() tokens; face is a hair lighter than badge-bg
+   so the top edge catches light. */</pre></details>
+  </div>
+
+  <!-- C -->
+  <div class="card">
+    <div class="card-head"><span class="tag">C</span><span class="name">Outline</span></div>
+    <p class="desc">Transparent face, border only. Vanishes into tinted panels (the inspector, a coloured callout) where a filled cap would fight the background. Also the lightest option that still reads as “a key.”</p>
+    <div class="stage on-hover">
+      <span class="grp"><span class="lbl">on a tinted panel</span>
+        <span class="combo joined"><span class="cap cap--outline">⌘</span><span class="cap cap--outline">K</span></span>
+        <span class="cap cap--outline">/</span>
+        <span class="combo split"><span class="cap cap--outline cap--word">Shift</span><span class="plus">+</span><span class="cap cap--outline cap--word">Tab</span></span>
+      </span>
+    </div>
+    <details class="impl"><summary>CSS</summary><pre>.cap--outline { background:transparent; border:1px solid var(--bn-colour-border-hover); }</pre></details>
+  </div>
+
+  <!-- D -->
+  <div class="card">
+    <div class="card-head"><span class="tag">D</span><span class="name">Solid (inverted chip)</span></div>
+    <p class="desc">Dark pill on light (and light on dark). Highest emphasis — a single hero shortcut in an empty state or command-palette prompt (“press <span class="combo joined"><span class="cap cap--solid">⌘</span><span class="cap cap--solid">K</span></span>”). Use sparingly; one per screen.</p>
+    <div class="stage">
+      <span class="grp"><span class="lbl">joined</span><span class="combo joined"><span class="cap cap--solid">⌘</span><span class="cap cap--solid">K</span></span></span>
+      <span class="grp"><span class="lbl">single</span><span class="cap cap--solid">/</span></span>
+    </div>
+    <details class="impl"><summary>CSS</summary><pre>.cap--solid { background:var(--chip-bg); color:var(--chip-text);
+  border:1px solid transparent; font-weight:600; }
+/* --chip-bg: light-dark(#1a1a1a, #e5e7eb); --chip-text: light-dark(#f4f4f5, #1a1a1a) */</pre></details>
+  </div>
+
+  <!-- E -->
+  <div class="card">
+    <div class="card-head"><span class="tag">E</span><span class="name">Mono grid</span><span class="pill">Recommended · dense lists</span></div>
+    <p class="desc">iA Writer’s trick: uniform <span class="inline-code">ch</span>-width caps in a monospace face, so single characters form true columns. When ten shortcuts stack in a help list, the letters line up as a scannable vertical index. This is Phase 4 of the shortcuts doc.</p>
+    <div class="helplist">
+      <div class="keys"><span class="cap cap--grid">j</span></div>          <div class="what">Next quote</div>
+      <div class="keys"><span class="cap cap--grid">k</span></div>          <div class="what">Previous quote</div>
+      <div class="keys"><span class="cap cap--grid">s</span></div>          <div class="what">Star</div>
+      <div class="keys"><span class="cap cap--grid">⇧</span><span class="cap cap--grid">K</span></div><div class="what">Extend selection up</div>
+      <div class="keys"><span class="cap cap--grid">⌘</span><span class="cap cap--grid">.</span></div><div class="what">Toggle both sidebars</div>
+      <div class="keys"><span class="cap cap--grid">⎋</span></div>          <div class="what">Close / clear</div>
+    </div>
+    <details class="impl"><summary>CSS</summary><pre>.cap--grid { background:var(--bn-colour-badge-bg); border:1px solid var(--bn-colour-border);
+  font-family:var(--bn-font-mono); min-width:2.2ch; padding:0 .3em; }
+/* right-align the .keys column; monospace makes every single char the same width */</pre></details>
+  </div>
+
+  <!-- F -->
+  <div class="card">
+    <div class="card-head"><span class="tag">F</span><span class="name">Bare glyph</span></div>
+    <p class="desc">No cap at all — just the glyph in muted/secondary colour. This is the <em>native inline-shortcut idiom</em>: menu items and list rows show <span class="cap cap--bare">⌘S</span> right-aligned in grey, no box (macOS draws it this way everywhere). Also the CLI’s only option, since terminals can’t box-draw a cap cleanly.</p>
+    <div class="stage" style="background:var(--bg);border:1px solid var(--border);flex-direction:column;align-items:stretch;gap:0;padding:0.3rem 0">
+      <div style="display:flex;justify-content:space-between;padding:0.35rem 0.9rem"><span style="font-size:0.88rem">Export Report…</span><span class="cap cap--bare">⇧⌘E</span></div>
+      <div style="display:flex;justify-content:space-between;padding:0.35rem 0.9rem;background:var(--accent);color:#fff;border-radius:var(--radius-sm);margin:0 0.3rem"><span style="font-size:0.88rem">Find…</span><span class="cap cap--bare" style="color:rgba(255,255,255,0.85)">⌘F</span></div>
+      <div style="display:flex;justify-content:space-between;padding:0.35rem 0.9rem"><span style="font-size:0.88rem">Settings…</span><span class="cap cap--bare">⌘,</span></div>
+    </div>
+    <details class="impl"><summary>CSS</summary><pre>.cap--bare { background:transparent; border:0; padding:0; min-width:0;
+  color:var(--bn-colour-muted); font-family:var(--bn-font-mono); }
+/* native menus/rows: NEVER draw a cap — the OS shows bare grey glyphs, right-aligned */</pre></details>
+  </div>
+
+  <!-- ============================== COMPOSITION ============================== -->
+  <h2><span class="n">§4</span>Joined vs split</h2>
+  <p class="lede">An orthogonal choice you make per surface, independent of skin: do modifiers fuse into the letter, or does each key get its own cap?</p>
+  <div class="stage" style="gap:2.5rem">
+    <div style="text-align:center">
+      <div style="margin-bottom:0.5rem"><span class="combo joined"><span class="cap cap--raised">⇧</span><span class="cap cap--raised">⌘</span><span class="cap cap--raised">S</span></span></div>
+      <div class="lbl"><strong>Joined</strong> — menu-bar truth, compact.<br>Default for glyphs. Reads as one gesture.</div>
+    </div>
+    <div style="text-align:center">
+      <div style="margin-bottom:0.5rem"><span class="combo split"><span class="cap cap--raised">⇧</span><span class="cap cap--raised">⌘</span><span class="cap cap--raised">S</span></span></div>
+      <div class="lbl"><strong>Split</strong> — teachable, each key discrete.<br>Better for onboarding &amp; non-Mac words.</div>
+    </div>
+  </div>
+  <p class="note" style="margin-top:1rem">Rule of thumb: <strong>joined</strong> for compact reference (menus, tooltips, dense lists — matches how macOS itself renders shortcuts); <strong>split</strong> when teaching a combo for the first time, and always for spelled-out non-Mac words (<span class="inline-code">Ctrl</span> <span class="plus">+</span> <span class="inline-code">S</span>) where fusing would be unreadable.</p>
+
+  <!-- ============================== IN CONTEXT ============================== -->
+  <h2><span class="n">§5</span>In context</h2>
+
+  <h3>Inline in prose (docs &amp; tooltips)</h3>
+  <p class="prose" style="margin-top:0.5rem">
+    To save the current view, press <span class="combo joined"><span class="cap cap--flat">⌘</span><span class="cap cap--flat">S</span></span>. Star a quote with <span class="cap cap--flat">s</span>, or select several and press <span class="cap cap--flat">t</span> to tag them all at once. Press <span class="cap cap--flat">?</span> any time to see every shortcut.
+  </p>
+  <p class="note">Flat (A) at ~0.78rem sits on the text baseline without disturbing line-height. This is what the public docs and tooltips should use.</p>
+
+  <h3>The help modal (what ships today, refined)</h3>
+  <div class="helplist" style="margin-top:0.5rem">
+    <div class="keys"><span class="cap cap--raised">j</span></div><div class="what">Next quote</div>
+    <div class="keys"><span class="cap cap--raised">⇧</span><span class="cap cap--raised">J</span></div><div class="what">Extend selection down</div>
+    <div class="keys"><span class="cap cap--raised">s</span></div><div class="what">Star quote</div>
+    <div class="keys"><span class="cap cap--raised">⌘</span><span class="cap cap--raised">.</span></div><div class="what">Toggle both sidebars</div>
+  </div>
+  <p class="note" style="margin-top:0.8rem">Today’s <span class="inline-code">help-overlay.css</span> is essentially skin B with a flat-bottom shadow. The refinement: gradient face + inner highlight so it reads as a real key in both themes, plus the mono glyph-safe font.</p>
+
+  <hr>
+  <p class="note" style="margin-top:1.4rem">
+    <strong>Recommendation.</strong> Ship <strong>B · Raised</strong> as the default keycap (help, teaching, docs headers), <strong>A · Flat</strong> for inline prose &amp; tooltips, <strong>E · Mono grid</strong> for the aligned help list, and <strong>F · Bare</strong> for native menus and the CLI. C and D are situational (tinted panels; hero prompts). All six are one CSS file and one SwiftUI file, driven by the same glyph map in §2. Decisions frozen in <span class="inline-code">docs/design-keycaps.md</span>.
+  </p>
+</div>
+
+<script>
+  // font + theme toggles
+  document.querySelectorAll('.seg').forEach(seg => {
+    seg.addEventListener('click', e => {
+      const btn = e.target.closest('button'); if (!btn) return;
+      seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b === btn));
+      if (btn.dataset.font)  document.body.setAttribute('data-font', btn.dataset.font);
+      if (btn.dataset.theme) document.documentElement.style.colorScheme = btn.dataset.theme;
+    });
+  });
+</script>

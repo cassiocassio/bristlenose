@@ -37,14 +37,15 @@ API keys are stored securely in the system keychain. Uses native CLI tools — n
 
 - **CLI command**: `bristlenose configure <provider>` — prompts for key, validates with API, stores in keychain. Accepts `--key` option to bypass interactive prompt (useful in scripts or when TTY has issues)
 - **Provider aliases**: `claude` → `anthropic`, `chatgpt`/`gpt` → `openai`, `gemini` → `google`
-- **Priority order**: env var (`BRISTLENOSE_<PROVIDER>_API_KEY` or bare `ANTHROPIC_API_KEY`) → .env file → keychain. On the sandboxed desktop sidecar the env var is always set by Swift before launch, so keychain is effectively bypassed there; CLI Mac users hit the keychain fallback as usual.
+- **Priority order**: env var (`BRISTLENOSE_<PROVIDER>_API_KEY` or bare `ANTHROPIC_API_KEY`) → .env file → keychain. The plain unprefixed names (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `AZURE_API_KEY`, `GOOGLE_API_KEY`) are accepted via `AliasChoices` on the settings fields (prefixed form wins when both are set); `populate_by_name=True` keeps the field name usable for direct construction. On the sandboxed desktop sidecar the env var is always set by Swift before launch, so keychain is effectively bypassed there; CLI Mac users hit the keychain fallback as usual.
 - **macOS**: `bristlenose/credentials_macos.py` — uses `security` CLI (add-generic-password, find-generic-password, delete-generic-password). Service names: "Bristlenose Anthropic API Key", "Bristlenose OpenAI API Key", "Bristlenose Google Gemini API Key"
-- **Linux**: `bristlenose/credentials_linux.py` — uses `secret-tool` (Secret Service API). Falls back to `EnvCredentialStore` if secret-tool unavailable
-- **Fallback**: `bristlenose/credentials.py` — `EnvCredentialStore` reads from env vars (cannot write)
+- **Linux**: `bristlenose/credentials_linux.py` — uses `secret-tool` (Secret Service API). Falls back to `FileCredentialStore` if secret-tool unavailable
+- **Fallback**: `bristlenose/credentials.py` — `FileCredentialStore` persists to a user-level config `.env` (`~/.config/bristlenose/.env`, honours `$SNAP_USER_COMMON`/`$XDG_CONFIG_HOME`), mode `0o600`. Same file is loaded by `config._find_env_files()`, so `configure` on a headless box (no keyring) actually leaves the user configured — no `export …` dead-end. `EnvCredentialStore` (read-only, env vars) remains the base class + a helper for pure reads
 - **Integration**: `_populate_keys_from_keychain()` in `config.py` loads from keychain when settings don't have keys from env/.env
 - **Doctor display**: shows platform-specific suffix when key source is keychain — "(Keychain)" on macOS, "(Secret Service)" on Linux
 - **Validation**: keys are validated before storing — catches typos/truncation
-- **Tests**: `tests/test_credentials.py` — 25 tests (macOS tests run on macOS, Linux tests skipped)
+- **Gotcha — `validation_alias` needs `populate_by_name`**: the API-key fields carry `validation_alias=AliasChoices("BRISTLENOSE_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY")` so the plain name works. But once a field has an explicit `validation_alias`, pydantic **stops** populating it from the field name — so `BristlenoseSettings(anthropic_api_key=…)` and `load_settings(anthropic_api_key=…)` silently no-op (field stays `""`) unless `model_config` sets `populate_by_name=True`. It does. If you add a `validation_alias` to any other field, keep that flag set or direct construction / `**overrides` breaks quietly. First alias listed wins when several are present (prefixed beats bare)
+- **Tests**: `tests/test_credentials.py` — covers env store, `FileCredentialStore` (persist/roundtrip/perms/upsert/delete), unprefixed env aliases, and keychain population (macOS tests run on macOS, Linux tests skipped)
 - **Design doc**: `docs/design-keychain.md`
 
 ## Local LLM provider (Ollama)

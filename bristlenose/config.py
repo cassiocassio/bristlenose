@@ -6,7 +6,7 @@ import logging
 import os
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -88,6 +88,16 @@ def _find_env_files() -> list[Path]:
             candidates.append(env_path)
             break  # stop at first match going upward
 
+    # User-level config .env — where `bristlenose configure` persists keys when no
+    # system keyring is available. Lowest priority (prepended): a project-local or
+    # package .env deliberately overrides the user default. pydantic-settings uses
+    # last-wins across env_files, so front == lowest priority.
+    from bristlenose.credentials import user_config_env_path
+
+    cfg_env = user_config_env_path()
+    if cfg_env.is_file() and cfg_env not in candidates:
+        candidates.insert(0, cfg_env)
+
     return candidates
 
 
@@ -97,6 +107,10 @@ class BristlenoseSettings(BaseSettings):
         env_file=_find_env_files(),
         env_file_encoding="utf-8",
         extra="ignore",
+        # Keep the field name usable for direct construction / **overrides even
+        # though the API-key fields carry a validation_alias (AliasChoices) so
+        # the plain ANTHROPIC_API_KEY / OPENAI_API_KEY names also work.
+        populate_by_name=True,
     )
 
     # Project
@@ -104,20 +118,35 @@ class BristlenoseSettings(BaseSettings):
 
     # LLM
     llm_provider: str = "anthropic"  # "anthropic", "openai", "azure", "google", or "local"
-    anthropic_api_key: str = ""
-    openai_api_key: str = ""
+    # API keys accept both the BRISTLENOSE_-prefixed name and the plain,
+    # industry-standard name every other tool uses (ANTHROPIC_API_KEY, …). The
+    # prefixed form wins when both are set (first alias wins in pydantic-settings).
+    anthropic_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("BRISTLENOSE_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY"),
+    )
+    openai_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("BRISTLENOSE_OPENAI_API_KEY", "OPENAI_API_KEY"),
+    )
     llm_model: str = "claude-sonnet-4-6"
     llm_max_tokens: int = 64000
     llm_temperature: float = 0.1
 
     # Azure OpenAI
-    azure_api_key: str = ""
+    azure_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("BRISTLENOSE_AZURE_API_KEY", "AZURE_API_KEY"),
+    )
     azure_endpoint: str = ""  # e.g. https://my-resource.openai.azure.com/
     azure_deployment: str = ""  # Deployment name from Azure portal
     azure_api_version: str = "2024-10-21"
 
     # Google (Gemini)
-    google_api_key: str = ""
+    google_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("BRISTLENOSE_GOOGLE_API_KEY", "GOOGLE_API_KEY"),
+    )
 
     # Local LLM (Ollama)
     local_url: str = "http://localhost:11434/v1"

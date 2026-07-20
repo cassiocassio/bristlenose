@@ -1,12 +1,14 @@
 """Credential storage abstraction.
 
 Provides secure storage for API keys using native system keychains where available,
-with fallback to environment variables.
+with a persisting file fallback so `bristlenose configure` always leaves the user
+configured — even on a headless box with no keyring.
 
 Priority order:
 1. System keychain (macOS Keychain, Linux Secret Service)
 2. Environment variable (BRISTLENOSE_* prefix or bare)
-3. .env file (loaded into environment by pydantic-settings)
+3. User-level config .env file (~/.config/bristlenose/.env), which is also loaded
+   by pydantic-settings via config._find_env_files()
 """
 
 from __future__ import annotations
@@ -14,10 +16,28 @@ from __future__ import annotations
 import os
 import sys
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from pathlib import Path
 
-if TYPE_CHECKING:
-    pass
+
+def user_config_dir() -> Path:
+    """Directory for Bristlenose's user-level config (the fallback key file lives here).
+
+    Honours ``$SNAP_USER_COMMON`` (the snap's writable, backup-surviving area) and
+    ``$XDG_CONFIG_HOME``; otherwise ``~/.config/bristlenose``. Mirrors the
+    doctor-sentinel directory logic in ``cli.py`` so both land in the same place.
+    """
+    snap_common = os.environ.get("SNAP_USER_COMMON")
+    if snap_common:
+        return Path(snap_common)
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    if xdg:
+        return Path(xdg) / "bristlenose"
+    return Path.home() / ".config" / "bristlenose"
+
+
+def user_config_env_path() -> Path:
+    """Path to the user-level ``.env`` where the file fallback persists keys."""
+    return user_config_dir() / ".env"
 
 
 class CredentialStore(ABC):
@@ -78,13 +98,123 @@ class EnvCredentialStore(CredentialStore):
         raise NotImplementedError("Cannot delete credentials from environment.")
 
 
+class FileCredentialStore(EnvCredentialStore):
+    """Persisting fallback backed by a user-level ``.env`` file.
+
+    Used when no system keyring is available (headless Linux without Secret
+    Service, Windows, etc.). Unlike :class:`EnvCredentialStore` it can *write*, so
+    ``bristlenose configure`` actually leaves the user configured instead of
+    printing an ``export …`` line and punting persistence back to the user.
+
+    Read precedence matches the priority order in the module docstring: a real
+    environment variable wins over the file. The file it writes
+    (``BRISTLENOSE_ANTHROPIC_API_KEY=…`` lines) is the same one pydantic-settings
+    loads via ``config._find_env_files()``, so a key stored here is picked up on
+    the next run with no further action. Written with mode ``0o600`` — it holds
+    secrets.
+    """
+
+    def __init__(self, path: Path | None = None) -> None:
+        self.path = path or user_config_env_path()
+
+    def _var_name(self, key: str) -> str:
+        """Full ``BRISTLENOSE_``-prefixed variable name for a provider key."""
+        bare = self.ENV_VAR_MAP.get(key, key.upper())
+        return f"BRISTLENOSE_{bare}"
+
+    def get(self, key: str) -> str | None:
+        """Environment variable first (bare or prefixed), then the config file."""
+        value = super().get(key)
+        if value:
+            return value
+        return self._read_file().get(self._var_name(key)) or None
+
+    def set(self, key: str, value: str) -> None:
+        """Upsert ``BRISTLENOSE_<KEY>=value`` in the config .env (mode 0o600)."""
+        self._upsert(self._var_name(key), value)
+
+    def delete(self, key: str) -> None:
+        """Remove the key's line from the config .env. No-op if absent."""
+        self._remove(self._var_name(key))
+
+    def has_in_file(self, key: str) -> bool:
+        """True when the key is persisted in the file itself (not just an env var)."""
+        return self._var_name(key) in self._read_file()
+
+    # -- .env file plumbing ------------------------------------------------
+
+    @staticmethod
+    def _parse_line(raw: str) -> tuple[str, str] | None:
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            return None
+        if line.startswith("export "):
+            line = line[len("export ") :]
+        if "=" not in line:
+            return None
+        name, _, val = line.partition("=")
+        name = name.strip()
+        if not name:
+            return None
+        return name, val.strip().strip('"').strip("'")
+
+    def _read_file(self) -> dict[str, str]:
+        if not self.path.is_file():
+            return {}
+        result: dict[str, str] = {}
+        for raw in self.path.read_text(encoding="utf-8").splitlines():
+            parsed = self._parse_line(raw)
+            if parsed:
+                result[parsed[0]] = parsed[1]
+        return result
+
+    def _write(self, lines: list[str]) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        content = "\n".join(lines) + "\n" if lines else ""
+        # O_CREAT|O_TRUNC with 0o600; chmod again in case the file pre-existed
+        # with looser perms (umask only applies to newly-created files).
+        fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(content)
+        os.chmod(self.path, 0o600)
+
+    def _upsert(self, var: str, value: str) -> None:
+        existing = (
+            self.path.read_text(encoding="utf-8").splitlines()
+            if self.path.is_file()
+            else []
+        )
+        out: list[str] = []
+        replaced = False
+        for raw in existing:
+            parsed = self._parse_line(raw)
+            if parsed and parsed[0] == var:
+                out.append(f"{var}={value}")
+                replaced = True
+            else:
+                out.append(raw)
+        if not replaced:
+            out.append(f"{var}={value}")
+        self._write(out)
+
+    def _remove(self, var: str) -> None:
+        if not self.path.is_file():
+            return
+        out = [
+            raw
+            for raw in self.path.read_text(encoding="utf-8").splitlines()
+            if not ((parsed := self._parse_line(raw)) and parsed[0] == var)
+        ]
+        self._write(out)
+
+
 def get_credential_store() -> CredentialStore:
     """Get the appropriate credential store for this platform.
 
     Returns:
         MacOSCredentialStore on macOS
         LinuxCredentialStore on Linux (if Secret Service available)
-        EnvCredentialStore as fallback
+        FileCredentialStore as the persisting fallback (no keyring)
     """
     if sys.platform == "darwin":
         from bristlenose.credentials_macos import MacOSCredentialStore
@@ -95,8 +225,8 @@ def get_credential_store() -> CredentialStore:
 
         return get_linux_store()
     else:
-        # Windows, etc. — env-only for now
-        return EnvCredentialStore()
+        # Windows, etc. — no native keyring wired yet; persist to the config file.
+        return FileCredentialStore()
 
 
 def get_credential(provider: str) -> str | None:
@@ -128,7 +258,7 @@ def get_credential_store_label() -> str:
 
     macOS → "Keychain" (matches Keychain Access app)
     Linux → "Secret Service" (matches GNOME Keyring / KDE Wallet)
-    Other → "environment" (env vars / .env fallback)
+    Other → "config file" (persisting .env fallback)
     """
     if sys.platform == "darwin":
         return "Keychain"
@@ -137,8 +267,8 @@ def get_credential_store_label() -> str:
 
         if _is_secret_service_available():
             return "Secret Service"
-        return "environment"
-    return "environment"
+        return "config file"
+    return "config file"
 
 
 def get_credential_source(provider: str) -> str | None:
@@ -146,20 +276,19 @@ def get_credential_source(provider: str) -> str | None:
 
     Returns:
         "keychain" if in system keychain
-        "env" if in environment variable
+        "file" if in the user-level config .env
+        "env" if in an environment variable
         None if not found
     """
-    # Check keychain
     store = get_credential_store()
     if store.get(provider):
-        # Distinguish between keychain and env-only store
+        # An env var always wins the read, so report it as "env" first.
+        if EnvCredentialStore().get(provider):
+            return "env"
+        if isinstance(store, FileCredentialStore):
+            return "file"
         if isinstance(store, EnvCredentialStore):
             return "env"
         return "keychain"
-
-    # Check environment
-    env_store = EnvCredentialStore()
-    if env_store.get(provider):
-        return "env"
 
     return None

@@ -122,11 +122,13 @@ class TestGetCredentialStore:
                 # Just verify it doesn't crash
                 assert store is not None
 
-    def test_returns_env_store_on_windows(self) -> None:
-        """On Windows, should return EnvCredentialStore."""
+    def test_returns_file_store_on_windows(self) -> None:
+        """On Windows (no keyring wired), should return the persisting FileCredentialStore."""
+        from bristlenose.credentials import FileCredentialStore
+
         with patch("bristlenose.credentials.sys.platform", "win32"):
             store = get_credential_store()
-            assert isinstance(store, EnvCredentialStore)
+            assert isinstance(store, FileCredentialStore)
 
 
 @pytest.mark.skipif(sys.platform != "darwin", reason="macOS only")
@@ -403,3 +405,126 @@ class TestPopulateKeysFromKeychain:
             result = _populate_keys_from_keychain(settings)
 
         assert result.anthropic_api_key == "kc-key"
+
+
+class TestFileCredentialStore:
+    """Tests for the persisting file fallback (no keyring available)."""
+
+    @pytest.fixture
+    def store(self, tmp_path):
+        from bristlenose.credentials import FileCredentialStore
+
+        return FileCredentialStore(path=tmp_path / ".env")
+
+    def test_set_get_roundtrip(self, store) -> None:
+        store.set("anthropic", "sk-ant-abc")
+        assert store.get("anthropic") == "sk-ant-abc"
+
+    def test_writes_prefixed_var(self, store) -> None:
+        store.set("openai", "sk-oa-1")
+        assert store.path.read_text() == "BRISTLENOSE_OPENAI_API_KEY=sk-oa-1\n"
+
+    def test_file_is_owner_only(self, store) -> None:
+        import stat
+
+        store.set("anthropic", "secret")
+        mode = stat.S_IMODE(store.path.stat().st_mode)
+        assert mode == 0o600
+
+    def test_upsert_replaces_not_duplicates(self, store) -> None:
+        store.set("anthropic", "one")
+        store.set("anthropic", "two")
+        store.set("openai", "oa")
+        text = store.path.read_text()
+        assert text.count("BRISTLENOSE_ANTHROPIC_API_KEY=") == 1
+        assert "BRISTLENOSE_ANTHROPIC_API_KEY=two" in text
+        assert "BRISTLENOSE_OPENAI_API_KEY=oa" in text
+
+    def test_delete_removes_line(self, store) -> None:
+        store.set("anthropic", "one")
+        store.set("openai", "oa")
+        store.delete("anthropic")
+        assert store.get("anthropic") is None
+        assert store.get("openai") == "oa"
+
+    def test_delete_missing_is_noop(self, store) -> None:
+        store.delete("anthropic")  # file doesn't exist yet
+        assert store.get("anthropic") is None
+
+    def test_env_var_wins_over_file(self, store, monkeypatch: pytest.MonkeyPatch) -> None:
+        store.set("anthropic", "from-file")
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "from-env")
+        assert store.get("anthropic") == "from-env"
+
+    def test_unmapped_key_roundtrips(self, store) -> None:
+        # miro_refresh has no ENV_VAR_MAP entry — must still round-trip.
+        store.set("miro_refresh", "refresh-token")
+        assert store.get("miro_refresh") == "refresh-token"
+        assert "BRISTLENOSE_MIRO_REFRESH=refresh-token" in store.path.read_text()
+
+    def test_preserves_comments_and_other_lines(self, store) -> None:
+        store.path.write_text("# my keys\nUNRELATED=keep-me\n")
+        store.set("anthropic", "sk-ant")
+        text = store.path.read_text()
+        assert "# my keys" in text
+        assert "UNRELATED=keep-me" in text
+        assert "BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant" in text
+
+
+class TestUserConfigDir:
+    """The fallback file location must land somewhere writable per platform."""
+
+    def test_snap_common_wins(self, monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+        # On the snap, $SNAP_USER_COMMON is writable under strict confinement too
+        # (no interface needed) — the file fallback must use it.
+        from bristlenose.credentials import user_config_dir, user_config_env_path
+
+        monkeypatch.setenv("SNAP_USER_COMMON", str(tmp_path))
+        assert user_config_dir() == tmp_path
+        assert user_config_env_path() == tmp_path / ".env"
+
+    def test_xdg_config_home(self, monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+        from bristlenose.credentials import user_config_dir
+
+        monkeypatch.delenv("SNAP_USER_COMMON", raising=False)
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+        assert user_config_dir() == tmp_path / "bristlenose"
+
+    def test_default_home(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from pathlib import Path
+
+        from bristlenose.credentials import user_config_dir
+
+        monkeypatch.delenv("SNAP_USER_COMMON", raising=False)
+        monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+        assert user_config_dir() == Path.home() / ".config" / "bristlenose"
+
+
+class TestUnprefixedEnvAliases:
+    """The plain, industry-standard key names (ANTHROPIC_API_KEY, …) must work."""
+
+    def _reload(self):
+        # BristlenoseSettings reads env at construction; no reload needed, but
+        # clear any BRISTLENOSE_-prefixed collisions the test env might carry.
+        from bristlenose.config import BristlenoseSettings
+
+        return BristlenoseSettings
+
+    def test_bare_anthropic(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("BRISTLENOSE_ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "bare-anthropic")
+        assert self._reload()().anthropic_api_key == "bare-anthropic"
+
+    def test_bare_openai(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("BRISTLENOSE_OPENAI_API_KEY", raising=False)
+        monkeypatch.setenv("OPENAI_API_KEY", "bare-openai")
+        assert self._reload()().openai_api_key == "bare-openai"
+
+    def test_prefix_wins_over_bare(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "bare")
+        monkeypatch.setenv("BRISTLENOSE_ANTHROPIC_API_KEY", "prefixed")
+        assert self._reload()().anthropic_api_key == "prefixed"
+
+    def test_field_name_still_populates(self) -> None:
+        # populate_by_name=True keeps direct construction working despite aliases.
+        assert self._reload()(anthropic_api_key="direct").anthropic_api_key == "direct"

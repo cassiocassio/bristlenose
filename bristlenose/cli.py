@@ -1941,10 +1941,16 @@ def configure(
 ) -> None:
     """Set up API credentials for an LLM provider.
 
-    Validates the key with a test API call and stores it securely in
-    your system credential store (macOS Keychain or Linux Secret Service).
+    Validates the key with a test API call, then stores it securely in your
+    system credential store (macOS Keychain or Linux Secret Service). When no
+    keyring is available (e.g. a headless server), it persists the key to a
+    protected config file instead — so the command always leaves you configured.
     """
-    from bristlenose.credentials import EnvCredentialStore, get_credential_store
+    from bristlenose.credentials import (
+        EnvCredentialStore,
+        FileCredentialStore,
+        get_credential_store,
+    )
     from bristlenose.doctor import (
         _validate_anthropic_key,
         _validate_openai_key,
@@ -2022,28 +2028,16 @@ def configure(
     else:
         _say(MessageKind.SUCCESS, "Valid")
 
-    # Store in keychain
+    # Store it — keyring if available, else the persisting config file.
     store = get_credential_store()
     try:
         store.set(canonical, key)
-        # Show where it was stored
-        if isinstance(store, EnvCredentialStore):
-            # Shouldn't happen on set() — it raises NotImplementedError
-            pass
-        else:
-            from bristlenose.credentials import get_credential_store_label
-
-            store_label = get_credential_store_label()
-            service_name = (
-                f"Bristlenose {display_name} Access Token"
-                if canonical == "miro"
-                else f"Bristlenose {display_name} API Key"
-            )
-            _say(MessageKind.SUCCESS, f'Stored in {store_label} as "{service_name}"')
     except NotImplementedError:
-        # EnvCredentialStore — can't persist
+        # No writable store at all (a bare read-only EnvCredentialStore). This
+        # should not happen now the fallback persists to a file, but keep a
+        # last-resort manual path rather than losing the validated key silently.
         console.print()
-        _say(MessageKind.WARNING, "No system credential store available.")
+        _say(MessageKind.WARNING, "No writable credential store available.")
         console.print("Add this to your .env file or shell profile:")
         console.print()
         env_vars = {
@@ -2054,10 +2048,30 @@ def configure(
             "miro": "MIRO_ACCESS_TOKEN",
         }
         env_var = env_vars.get(canonical, f"{canonical.upper()}_API_KEY")
-        console.print(f"  export BRISTLENOSE_{env_var}={key}")
+        console.print(f"  export BRISTLENOSE_{env_var}={key}", markup=False)
         console.print()
         console.print("[dim](The key is not stored anywhere — save it yourself)[/dim]")
         raise typer.Exit(0)
+
+    service_name = (
+        f"Bristlenose {display_name} Access Token"
+        if canonical == "miro"
+        else f"Bristlenose {display_name} API Key"
+    )
+    if isinstance(store, FileCredentialStore):
+        # Persisted to the config .env — name the file so it's not a black box.
+        from rich.markup import escape
+
+        try:
+            loc = "~/" + str(store.path.relative_to(Path.home()))
+        except ValueError:
+            loc = str(store.path)
+        _say(MessageKind.SUCCESS, f"Saved to {escape(loc)}")
+    elif not isinstance(store, EnvCredentialStore):
+        from bristlenose.credentials import get_credential_store_label
+
+        store_label = get_credential_store_label()
+        _say(MessageKind.SUCCESS, f'Stored in {store_label} as "{service_name}"')
 
     # Azure needs additional config beyond the API key
     if canonical == "azure":

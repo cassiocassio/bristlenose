@@ -10,7 +10,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 
-from bristlenose.credentials import CredentialStore, EnvCredentialStore
+from bristlenose.credentials import CredentialStore, FileCredentialStore
 
 
 class LinuxCredentialStore(CredentialStore):
@@ -109,10 +109,11 @@ def get_linux_store() -> CredentialStore:
     """Get the appropriate Linux credential store.
 
     Returns LinuxCredentialStore if Secret Service is available,
-    otherwise falls back to EnvCredentialStore.
+    otherwise falls back to the persisting FileCredentialStore.
     """
     if _is_secret_service_available():
         return LinuxCredentialStore()
 
-    # Fall back to environment variables
-    return EnvCredentialStore()
+    # No Secret Service (headless server, minimal install) — persist to a file
+    # so `configure` still leaves the user configured.
+    return FileCredentialStore()

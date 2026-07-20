@@ -50,12 +50,20 @@ jobs:
         with:
           name: snap-amd64
 
+      # action-publish passes `snap:` straight to `snapcraft upload` without
+      # shell-globbing, so a literal "*.snap" fails ("not a valid file").
+      # Resolve the concrete filename from the downloaded artifact instead.
+      - name: Resolve snap path
+        id: snap
+        if: env.HAS_CREDS == 'true'
+        run: echo "path=$(ls *.snap | head -1)" >> "$GITHUB_OUTPUT"
+
       - uses: snapcore/action-publish@214b86e5ca036ead1668c79afb81e550e6c54d40  # v1.2.0 (SHA-pinned)
         if: env.HAS_CREDS == 'true'
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         with:
-          snap: "*.snap"
+          snap: ${{ steps.snap.outputs.path }}
           release: edge
 
       - name: Skip publish (no credentials)
@@ -74,12 +82,19 @@ jobs:
         with:
           name: snap-amd64
 
+      # See publish-edge: resolve the concrete filename; action-publish does not
+      # shell-glob the `snap:` input.
+      - name: Resolve snap path
+        id: snap
+        if: env.HAS_CREDS == 'true'
+        run: echo "path=$(ls *.snap | head -1)" >> "$GITHUB_OUTPUT"
+
       - uses: snapcore/action-publish@214b86e5ca036ead1668c79afb81e550e6c54d40  # v1.2.0 (SHA-pinned)
         if: env.HAS_CREDS == 'true'
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         with:
-          snap: "*.snap"
+          snap: ${{ steps.snap.outputs.path }}
           release: stable
 
       - name: Skip publish (no credentials)

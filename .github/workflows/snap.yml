@@ -34,7 +34,12 @@ jobs:
           path: ${{ steps.snapcraft.outputs.snap }}
 
   publish-edge:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Publishes on push-to-main (when the auto-triggers are restored) OR on a
+    # manual workflow_dispatch run — the latter is how we publish to edge while
+    # the push/pull_request triggers stay parked (see the on: block above).
+    if: >-
+      (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+      github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
     env:

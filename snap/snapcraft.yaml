@@ -57,9 +57,12 @@ parts:
       # Download spaCy model into the snap's Python environment so
       # --redact-pii works out of the box without user action.
       $CRAFT_PART_INSTALL/bin/python3 -m spacy download en_core_web_sm
-      # Install man page (canonical location: bristlenose/data/).
+      # Install man page (canonical location: bristlenose/data/). Reference the
+      # pristine part source, not a relative path: the core24 python plugin
+      # reorganises the build dir during `craftctl default` above, so a relative
+      # `bristlenose/data/...` no longer resolves here (it does before craftctl).
       mkdir -p $CRAFT_PART_INSTALL/share/man/man1
-      cp bristlenose/data/bristlenose.1 $CRAFT_PART_INSTALL/share/man/man1/
+      cp $CRAFT_PART_SRC/bristlenose/data/bristlenose.1 $CRAFT_PART_INSTALL/share/man/man1/
 
 platforms:
   amd64:

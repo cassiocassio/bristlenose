@@ -1,6 +1,6 @@
 name: bristlenose
 base: core24
-confinement: classic
+confinement: strict
 grade: stable
 license: AGPL-3.0-only
 adopt-info: bristlenose
@@ -20,6 +20,12 @@ description: |
 apps:
   bristlenose:
     command: bin/bristlenose
+    plugs:
+      # All auto-connect except removable-media (needs `snap connect`).
+      - home             # recordings + output under $HOME (non-hidden; hidden-in-subdir OK)
+      - network          # LLM APIs, model downloads, and localhost Ollama
+      - network-bind     # `bristlenose serve` binds 127.0.0.1:8150
+      - removable-media  # recordings on USB / external drives (/media, /run/media, /mnt)
     environment:
       LANG: C.UTF-8
       LC_ALL: C.UTF-8
@@ -27,6 +33,11 @@ apps:
       LD_LIBRARY_PATH: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET/pulseaudio:$SNAP/usr/lib:$LD_LIBRARY_PATH
       PYTHONPATH: $SNAP/lib/python3.12/site-packages
       PYTHONHOME: $SNAP/usr
+      # Under strict, $HOME is remapped to $SNAP_USER_DATA. Point re-downloadable
+      # model/whisper caches at $SNAP_USER_COMMON (survives revision refresh, not
+      # snapshotted). spaCy model is bundled in site-packages, so unaffected.
+      HF_HOME: $SNAP_USER_COMMON/huggingface
+      XDG_CACHE_HOME: $SNAP_USER_COMMON/cache
 
 parts:
   bristlenose:

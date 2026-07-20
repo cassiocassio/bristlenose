@@ -56,11 +56,24 @@ parts:
     build-packages:
       - python3-dev
       - build-essential
-      - npm
+      - curl
+      - ca-certificates
     override-build: |
+      # core24's apt `npm` ships Node.js 18, which is too old for Vite 8
+      # (needs 20.19+/22.12+): `vite build` crashes with "ReferenceError:
+      # CustomEvent is not defined" and the React bundle silently never lands
+      # in the wheel, leaving serve mode dead. Install Node.js 22 first.
+      curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+      apt-get install -y nodejs
       # Build the React frontend before pip install so hatch includes
       # the static assets in the wheel (bristlenose/server/static/).
       cd frontend && npm ci && npm run build && cd ..
+      # Fail loud if the SPA bundle didn't materialise — serve mode refuses to
+      # start without it, so a bundle-less snap must NOT pack successfully.
+      if [ -z "$(ls -A bristlenose/server/static 2>/dev/null)" ]; then
+        echo "ERROR: frontend build produced no bristlenose/server/static — aborting." >&2
+        exit 1
+      fi
       craftctl default
       # Read version from the package and set snap metadata.
       VERSION=$($CRAFT_PART_INSTALL/bin/python3 -c "import bristlenose; print(bristlenose.__version__)")

@@ -13,6 +13,21 @@ from bristlenose.utils.bundled_binary import bundled_binary_path
 logger = logging.getLogger(__name__)
 
 
+class AudioToolError(RuntimeError):
+    """The ffprobe/ffmpeg toolchain failed to *run*.
+
+    Raised on a non-zero exit, a missing binary, a shared-library load failure
+    (e.g. ``error while loading shared libraries: libblas.so.3``), a timeout, or
+    an unreadable/corrupt input file.
+
+    This is deliberately distinct from a video that *genuinely contains no audio
+    stream* (a valid, non-fatal condition — a silent screen recording). Callers
+    must fail loud on this rather than treating it as "no audio" and silently
+    skipping transcription: a broken tool must never be mislabelled as "your
+    interview has no audio" and reported as a successful, empty report.
+    """
+
+
 def probe_duration(file_path: Path) -> float | None:
     """Probe the duration of an audio or video file using ffprobe.
 
@@ -60,7 +75,7 @@ def extract_audio_from_video(
         Path to the extracted WAV file.
 
     Raises:
-        RuntimeError: If ffmpeg fails.
+        AudioToolError: If ffmpeg fails to run or exits non-zero.
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -87,8 +102,9 @@ def extract_audio_from_video(
     )
 
     if result.returncode != 0:
-        raise RuntimeError(
-            f"ffmpeg failed to extract audio from {video_path}: {result.stderr}"
+        raise AudioToolError(
+            f"ffmpeg failed to extract audio from {video_path.name} "
+            f"(exit {result.returncode}): {result.stderr.strip()}"
         )
 
     logger.info("Extracted audio: %s -> %s", video_path.name, output_path.name)
@@ -96,13 +112,25 @@ def extract_audio_from_video(
 
 
 def has_audio_stream(file_path: Path) -> bool:
-    """Check if a video file contains an audio stream."""
+    """Return True if *file_path* contains at least one audio stream.
+
+    A clean ffprobe run that finds no audio streams returns ``False`` — a valid,
+    non-fatal condition (e.g. a silent screen recording).
+
+    Raises:
+        AudioToolError: if ffprobe fails to *run* — non-zero exit (broken
+            toolchain, corrupt/unreadable file), missing binary, or timeout.
+            The caller MUST NOT interpret this as "no audio stream": a broken
+            tool must fail loud, not silently skip transcription. Uses
+            ``-v error`` (not ``-v quiet``) so the failure reason survives in
+            stderr for the exception message.
+    """
     ffprobe = bundled_binary_path("ffprobe") or "ffprobe"
     try:
         result = subprocess.run(
             [
                 ffprobe,
-                "-v", "quiet",
+                "-v", "error",
                 "-select_streams", "a",
                 "-show_entries", "stream=codec_type",
                 "-of", "csv=p=0",
@@ -112,6 +140,19 @@ def has_audio_stream(file_path: Path) -> bool:
             text=True,
             timeout=30,
         )
-        return "audio" in result.stdout
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        return False
+    except FileNotFoundError as exc:
+        raise AudioToolError(
+            f"ffprobe binary not found ({ffprobe!r}); cannot probe {file_path.name}"
+        ) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise AudioToolError(
+            f"ffprobe timed out after 30s probing {file_path.name}"
+        ) from exc
+
+    if result.returncode != 0:
+        raise AudioToolError(
+            f"ffprobe failed to probe {file_path.name} "
+            f"(exit {result.returncode}): {result.stderr.strip()}"
+        )
+
+    return "audio" in result.stdout

@@ -96,10 +96,10 @@ return list(await asyncio.gather(*(_process(t) for t in transcripts)))
 - **Default 4**: fixed constant, not hardware-adaptive. The bottleneck is the macOS media engine (shared hardware decode), not CPU cores. 4 works well from M1 to M4 Ultra
 - **`_extract_one()` helper**: runs `has_audio_stream()` + `extract_audio_from_video()` inside the semaphore. Both are blocking subprocess calls wrapped in `asyncio.to_thread()`
 - **Platform transcript skip**: when `session.has_existing_transcript=True`, FFmpeg extraction is skipped entirely — the pipeline will use the parsed transcript and never call Whisper, so audio decode is unnecessary
-- **Error isolation**: same pattern as LLM stages — a failed extraction doesn't cancel siblings
+- **Tool failure is fail-loud, not isolated**: `has_audio_stream()` and `extract_audio_from_video()` raise `AudioToolError` (in `utils/audio.py`) when ffprobe/ffmpeg fails to *run* — non-zero exit, missing binary, shared-library load failure (the libblas-on-amd64 repro), timeout, or corrupt input. `_extract_one` does NOT catch it: the error propagates through `asyncio.gather` → `extract_audio_for_sessions` → the pipeline → `run_lifecycle`'s top-level catch, which records a `RunFailedEvent`. This is deliberate — a broken media toolchain must never be mislabelled as "no audio stream" and degrade to an empty, confidently-"successful" report (the "no fake success" class the acceptance tests guard). A video that *genuinely* has no audio stream (ffprobe exits 0, finds no audio) is the separate non-fatal case: logged "has no audio stream, skipping" and the run continues. `has_audio_stream()` uses `-v error` (not `-v quiet`) so the failure reason survives in stderr for the exception message
 - **VideoToolbox**: `utils/audio.py` passes `-hwaccel videotoolbox` on macOS, so concurrent extractions share the hardware media engine for H.264/HEVC decode
 - **`concurrency` kwarg**: exposed but not yet wired to config (unlike `llm_concurrency`). Default of 4 is sufficient; config wiring deferred until there's a real need
-- **Tests**: `tests/test_extract_audio.py` — 2 tests for extraction skip behaviour
+- **Tests**: `tests/test_extract_audio.py` — extraction-skip behaviour + the tool-error-vs-genuine-no-audio distinction (`has_audio_stream` raises `AudioToolError` on non-zero exit / missing binary / timeout; the stage propagates it to abort the run; a genuinely silent video is skipped without aborting)
 
 ## Quote exclusivity across report sections (Stages 9–11)
 

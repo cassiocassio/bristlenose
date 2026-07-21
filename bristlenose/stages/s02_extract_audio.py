@@ -97,10 +97,21 @@ async def _extract_one(
     output_path: Path,
     semaphore: asyncio.Semaphore,
 ) -> None:
-    """Extract audio for a single session, bounded by *semaphore*."""
+    """Extract audio for a single session, bounded by *semaphore*.
+
+    Raises:
+        AudioToolError: if ffprobe/ffmpeg fails to run (broken toolchain,
+            missing binary, corrupt file). The error propagates through
+            ``asyncio.gather`` and aborts the run — a broken media toolchain
+            must never be mislabelled as "no audio stream" and degrade to an
+            empty, confidently-"successful" report. A video that *genuinely*
+            has no audio stream is a separate, non-fatal case (skipped below).
+    """
     async with semaphore:
         # has_audio_stream and extract_audio_from_video are blocking
-        # (subprocess.run) — run in the default thread-pool executor.
+        # (subprocess.run) — run in the default thread-pool executor. An
+        # AudioToolError from either is intentionally NOT caught: it must
+        # fail the run loud rather than silently skip transcription.
         has_audio = await asyncio.to_thread(has_audio_stream, video_path)
         if not has_audio:
             logger.warning(
@@ -110,20 +121,12 @@ async def _extract_one(
             )
             return
 
-        try:
-            extracted = await asyncio.to_thread(
-                extract_audio_from_video, video_path, output_path
-            )
-            session.audio_path = extracted
-            logger.info(
-                "%s: Extracted audio from %s",
-                session.session_id,
-                video_path.name,
-            )
-        except RuntimeError as exc:
-            logger.error(
-                "%s: Failed to extract audio from %s: %s",
-                session.session_id,
-                video_path.name,
-                exc,
-            )
+        extracted = await asyncio.to_thread(
+            extract_audio_from_video, video_path, output_path
+        )
+        session.audio_path = extracted
+        logger.info(
+            "%s: Extracted audio from %s",
+            session.session_id,
+            video_path.name,
+        )

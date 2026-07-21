@@ -436,8 +436,7 @@ def _print_provider_guidance() -> None:
         console.print(f"  {name.ljust(9)}[link={url}]{url}[/link]")
     console.print()
     console.print(
-        "Prefer to run locally?  [bold]bristlenose configure local[/bold]  "
-        "[dim](installs Ollama — no key)[/dim]",
+        "For local models via Ollama:  [bold]bristlenose configure local[/bold]",
         highlight=False,
     )
     console.print()

@@ -100,7 +100,7 @@ class TestNewUserNoConfig:
           Gemini   https://aistudio.google.com/apikey
           Azure    https://portal.azure.com
 
-        Prefer to run locally?  bristlenose configure local  (installs Ollama — no key)
+        For local models via Ollama:  bristlenose configure local
 
         (No numbered menu — the run exits so they can configure. The store label
         in parentheses is resolved live: Keychain / Secret Service / config file.)

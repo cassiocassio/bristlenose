@@ -1,6 +1,6 @@
 name: bristlenose
 base: core24
-confinement: classic
+confinement: strict
 grade: stable
 license: AGPL-3.0-only
 adopt-info: bristlenose
@@ -20,13 +20,27 @@ description: |
 apps:
   bristlenose:
     command: bin/bristlenose
+    plugs:
+      # All auto-connect except removable-media (needs `snap connect`).
+      - home             # recordings + output under $HOME (non-hidden; hidden-in-subdir OK)
+      - network          # LLM APIs, model downloads, and localhost Ollama
+      - network-bind     # `bristlenose serve` binds 127.0.0.1:8150
+      - removable-media  # recordings on USB / external drives (/media, /run/media, /mnt)
     environment:
       LANG: C.UTF-8
       LC_ALL: C.UTF-8
       PATH: $SNAP/usr/bin:$SNAP/bin:$PATH
-      LD_LIBRARY_PATH: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET/pulseaudio:$SNAP/usr/lib:$LD_LIBRARY_PATH
+      # blas/lapack dirs are on the path because libblas3/liblapack3 install their
+      # .so under $CRAFT_ARCH_TRIPLET/{blas,lapack}/ (dpkg-alternatives target) and
+      # the snap has no update-alternatives symlink at the top level.
+      LD_LIBRARY_PATH: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET/blas:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET/lapack:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET/pulseaudio:$SNAP/usr/lib:$LD_LIBRARY_PATH
       PYTHONPATH: $SNAP/lib/python3.12/site-packages
       PYTHONHOME: $SNAP/usr
+      # Under strict, $HOME is remapped to $SNAP_USER_DATA. Point re-downloadable
+      # model/whisper caches at $SNAP_USER_COMMON (survives revision refresh, not
+      # snapshotted). spaCy model is bundled in site-packages, so unaffected.
+      HF_HOME: $SNAP_USER_COMMON/huggingface
+      XDG_CACHE_HOME: $SNAP_USER_COMMON/cache
 
 parts:
   bristlenose:
@@ -37,6 +51,11 @@ parts:
     stage-packages:
       - ffmpeg
       - libsndfile1
+      # ffprobe/ffmpeg dynamically load libblas.so.3 (a Recommends of the ffmpeg
+      # chain, so not auto-staged) — without it ffprobe fails with
+      # "error while loading shared libraries: libblas.so.3". Stage BLAS + LAPACK.
+      - libblas3
+      - liblapack3
       - python3-minimal
       - python3.12-minimal
       - libpython3.12-stdlib
@@ -45,11 +64,24 @@ parts:
     build-packages:
       - python3-dev
       - build-essential
-      - npm
+      - curl
+      - ca-certificates
     override-build: |
+      # core24's apt `npm` ships Node.js 18, which is too old for Vite 8
+      # (needs 20.19+/22.12+): `vite build` crashes with "ReferenceError:
+      # CustomEvent is not defined" and the React bundle silently never lands
+      # in the wheel, leaving serve mode dead. Install Node.js 22 first.
+      curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+      apt-get install -y nodejs
       # Build the React frontend before pip install so hatch includes
       # the static assets in the wheel (bristlenose/server/static/).
       cd frontend && npm ci && npm run build && cd ..
+      # Fail loud if the SPA bundle didn't materialise — serve mode refuses to
+      # start without it, so a bundle-less snap must NOT pack successfully.
+      if [ -z "$(ls -A bristlenose/server/static 2>/dev/null)" ]; then
+        echo "ERROR: frontend build produced no bristlenose/server/static — aborting." >&2
+        exit 1
+      fi
       craftctl default
       # Read version from the package and set snap metadata.
       VERSION=$($CRAFT_PART_INSTALL/bin/python3 -c "import bristlenose; print(bristlenose.__version__)")

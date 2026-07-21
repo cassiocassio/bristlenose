@@ -403,71 +403,44 @@ def _needs_provider_prompt(settings: object) -> bool:
     return False
 
 
-def _prompt_for_provider() -> str | None:
-    """Interactive prompt when no provider is configured.
+def _print_provider_guidance() -> None:
+    """Show how to set up an LLM provider — teach ``configure``, no numbered menu.
 
-    Returns the chosen provider name, or None if the user needs to
-    set up an API key first.
+    First-run guidance: where to get a key for each cloud provider, and the one
+    command that validates and persists it. The store name is resolved live
+    (``get_credential_store_label``) so it's correct per platform — Keychain /
+    Secret Service / config file — never hardcoded to "Keychain".
     """
-    from rich.prompt import Prompt
+    from bristlenose.credentials import get_credential_store_label
 
+    store = get_credential_store_label()
 
     console.print()
-    console.print("[bold]No LLM provider configured.[/bold] Choose one:")
+    console.print("[bold]No LLM provider configured.[/bold]")
     console.print()
-    console.print("  [1] Claude API (recommended, ~$1.50/study)")
-    console.print("      [dim]Get a key from console.anthropic.com[/dim]")
+    console.print(
+        "Set one up once — [bold]bristlenose configure <provider>[/bold] validates your",
+        highlight=False,
+    )
+    console.print(
+        f"key and stores it securely ({store}), so you never paste it again:",
+        highlight=False,
+    )
     console.print()
-    console.print("  [2] ChatGPT API (good quality, ~$1.00/study)")
-    console.print("      [dim]Get a key from platform.openai.com[/dim]")
+    for name, url in (
+        ("Claude", "https://console.anthropic.com/settings/keys"),
+        ("ChatGPT", "https://platform.openai.com/api-keys"),
+        ("Gemini", "https://aistudio.google.com/apikey"),
+        ("Azure", "https://portal.azure.com"),
+    ):
+        console.print(f"  {name.ljust(9)}[link={url}]{url}[/link]")
     console.print()
-    console.print("  [3] Azure OpenAI (enterprise)")
-    console.print("      [dim]Requires Azure subscription[/dim]")
+    console.print(
+        "Prefer to run locally?  [bold]bristlenose configure local[/bold]  "
+        "[dim](installs Ollama — no key)[/dim]",
+        highlight=False,
+    )
     console.print()
-    console.print("  [4] Gemini API (budget, ~$0.20/study)")
-    console.print("      [dim]Get a key from aistudio.google.com[/dim]")
-    console.print()
-    console.print("  [5] Local AI (free, private, slower)")
-    console.print("      [dim]Requires Ollama — https://ollama.ai[/dim]")
-    console.print()
-
-    choice = Prompt.ask("Choice", choices=["1", "2", "3", "4", "5"], default="1")
-
-    if choice == "1":
-        console.print()
-        console.print("Get your API key from: [link]https://console.anthropic.com/settings/keys[/link]")
-        console.print("Then run:")
-        console.print()
-        console.print("  [bold]bristlenose configure claude[/bold]")
-        console.print()
-        return None
-    elif choice == "2":
-        console.print()
-        console.print("Get your API key from: [link]https://platform.openai.com/api-keys[/link]")
-        console.print("Then run:")
-        console.print()
-        console.print("  [bold]bristlenose configure chatgpt[/bold]")
-        console.print()
-        return None
-    elif choice == "3":
-        console.print()
-        console.print("Set your Azure OpenAI credentials:")
-        console.print()
-        console.print("  [bold]export BRISTLENOSE_AZURE_ENDPOINT=https://your-resource.openai.azure.com/[/bold]")
-        console.print("  [bold]export BRISTLENOSE_AZURE_DEPLOYMENT=your-deployment-name[/bold]")
-        console.print("  [bold]bristlenose configure azure[/bold]")
-        console.print()
-        return None
-    elif choice == "4":
-        console.print()
-        console.print("Get your API key from: [link]https://aistudio.google.com/apikey[/link]")
-        console.print("Then run:")
-        console.print()
-        console.print("  [bold]bristlenose configure gemini[/bold]")
-        console.print()
-        return None
-    else:  # choice == "5"
-        return _setup_local_provider()
 
 
 def _setup_local_provider() -> str | None:
@@ -599,34 +572,23 @@ def _setup_local_provider() -> str | None:
     return "local"
 
 
-def _maybe_prompt_for_provider(settings: object) -> object:
-    """Check if provider prompt is needed and return updated settings if so.
+def _maybe_guide_provider_setup(settings: object) -> None:
+    """If the default provider has no key, print setup guidance and exit.
 
-    Returns the original settings if no prompt needed, or new settings with
-    the chosen provider if the user selected local.
+    First-run, no-config case: instead of a numbered menu, show how to run
+    ``bristlenose configure <provider>`` and where to get a key, then exit so the
+    user can set one up. Explicit ``--llm`` / env choices are trusted — preflight
+    catches a missing key for those with its own specific error.
     """
-    from bristlenose.config import BristlenoseSettings, load_settings
+    from bristlenose.config import BristlenoseSettings
 
     assert isinstance(settings, BristlenoseSettings)
 
     if not _needs_provider_prompt(settings):
-        return settings
+        return
 
-    provider = _prompt_for_provider()
-    if provider is None:
-        raise typer.Exit(0)
-
-    # Reload settings with the chosen provider
-    return load_settings(
-        llm_provider=provider,
-        input_dir=settings.input_dir,
-        output_dir=settings.output_dir,
-        project_name=settings.project_name,
-        whisper_backend=settings.whisper_backend,
-        whisper_model=settings.whisper_model,
-        skip_transcription=settings.skip_transcription,
-        pii_enabled=settings.pii_enabled,
-    )
+    _print_provider_guidance()
+    raise typer.Exit(0)
 
 
 # ---------------------------------------------------------------------------
@@ -1118,8 +1080,8 @@ def run(
     setup_logging(output_dir=output_dir, verbose=verbose)
     log_resolution_trace()
 
-    # Offer provider selection if no API key / local provider is not ready
-    settings = _maybe_prompt_for_provider(settings)
+    # First-run: no provider configured → print setup guidance and exit
+    _maybe_guide_provider_setup(settings)
 
     # Header is the first visible output
     _print_header(settings)
@@ -1127,7 +1089,7 @@ def run(
     if not _maybe_auto_doctor(settings, "run"):
         _run_preflight(settings, "run", skip_transcription=skip_transcription)
 
-    # API-key validation against billing. Runs after _maybe_prompt_for_provider
+    # API-key validation against billing. Runs after _maybe_guide_provider_setup
     # so a freshly-pasted key gets validated immediately. Aborts cleanly with
     # provider-specific recovery copy on invalid-key / billing-empty / etc.
     from bristlenose.preflight.api_key import (
@@ -1398,8 +1360,8 @@ def analyze(
     )
     settings = load_settings(**settings_kwargs)
 
-    # Offer provider selection if no API key / local provider is not ready
-    settings = _maybe_prompt_for_provider(settings)
+    # First-run: no provider configured → print setup guidance and exit
+    _maybe_guide_provider_setup(settings)
 
     _print_header(settings)
 
@@ -1932,7 +1894,9 @@ def _print_project_status(
 def configure(
     provider: Annotated[
         str,
-        typer.Argument(help="Provider to configure: claude, chatgpt, gemini, azure, or miro."),
+        typer.Argument(
+            help="Provider to configure: claude, chatgpt, gemini, azure, local, or miro."
+        ),
     ],
     key: Annotated[
         str | None,
@@ -1968,13 +1932,23 @@ def configure(
         "azure-openai": "azure",
         "google": "google",
         "gemini": "google",
+        "local": "local",
+        "ollama": "local",
         "miro": "miro",
     }
     canonical = provider_map.get(provider)
     if canonical is None:
         _say(MessageKind.ERROR, f"Unknown provider: {provider}")
-        console.print("Available: claude, chatgpt, gemini, azure, miro")
+        console.print("Available: claude, chatgpt, gemini, azure, local, miro")
         raise typer.Exit(1)
+
+    # Local (Ollama) has no key to store — set up the runtime instead, so the
+    # `configure <provider>` verb is uniform across every provider.
+    if canonical == "local":
+        if _setup_local_provider() is None:
+            raise typer.Exit(1)
+        console.print("Run it with:  [bold]bristlenose run <folder> --llm local[/bold]")
+        return
 
     display_names = {
         "anthropic": "Claude",

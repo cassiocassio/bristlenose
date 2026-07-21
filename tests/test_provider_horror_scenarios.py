@@ -90,26 +90,90 @@ class TestNewUserNoConfig:
         """
         What the user sees when they run `bristlenose run ./interviews` with no config:
 
-        No LLM provider configured. Choose one:
+        No LLM provider configured.
 
-          [1] Local AI (free, private, slower)
-              Requires Ollama — https://ollama.ai
+        Set one up once — bristlenose configure <provider> validates your
+        key and stores it securely (Keychain), so you never paste it again:
 
-          [2] Claude API (best quality, ~$1.50/study)
-              Get a key from console.anthropic.com
+          Claude   https://console.anthropic.com/settings/keys
+          ChatGPT  https://platform.openai.com/api-keys
+          Gemini   https://aistudio.google.com/apikey
+          Azure    https://portal.azure.com
 
-          [3] ChatGPT API (good quality, ~$1.00/study)
-              Get a key from platform.openai.com
+        Prefer to run locally?  bristlenose configure local  (installs Ollama — no key)
 
-        Choice [1]:
-
-        (If they choose [2] without setting a key, they'll see the pre-flight error)
+        (No numbered menu — the run exits so they can configure. The store label
+        in parentheses is resolved live: Keychain / Secret Service / config file.)
         """
-        # This test documents expected behavior — the prompt triggers
+        # This test documents expected behavior — the guidance triggers
         from bristlenose.cli import _needs_provider_prompt
 
         settings = _settings(llm_provider="anthropic", anthropic_api_key="")
         assert _needs_provider_prompt(settings) is True
+
+
+class TestProviderGuidance:
+    """The first-run guidance teaches `configure` — no menu, no costs/opinions."""
+
+    def test_guidance_teaches_configure_and_lists_keys(self, capsys) -> None:
+        from bristlenose.cli import _print_provider_guidance
+
+        _print_provider_guidance()
+        out = capsys.readouterr().out
+
+        # Teaches the one command, including the local verb
+        assert "bristlenose configure <provider>" in out
+        assert "configure local" in out
+        # Where-to-get-a-key links for the cloud providers
+        assert "console.anthropic.com/settings/keys" in out
+        assert "platform.openai.com/api-keys" in out
+        assert "aistudio.google.com/apikey" in out
+        # Store label is resolved live (one of the three), never hardcoded
+        assert any(lbl in out for lbl in ("Keychain", "Secret Service", "config file"))
+
+    def test_guidance_has_no_menu_costs_or_opinions(self, capsys) -> None:
+        from bristlenose.cli import _print_provider_guidance
+
+        _print_provider_guidance()
+        out = capsys.readouterr().out
+
+        assert "[1]" not in out and "Choice" not in out  # no numbered menu
+        assert "/study" not in out and "$" not in out  # no cost figures
+        for opinion in ("recommended", "best quality", "good quality", "budget", "enterprise"):
+            assert opinion not in out.lower()
+
+    def test_guidance_label_matches_store(self, capsys, monkeypatch) -> None:
+        # The parenthetical must be whatever the real store reports, per platform.
+        monkeypatch.setattr(
+            "bristlenose.credentials.get_credential_store_label",
+            lambda: "Secret Service",
+        )
+        from bristlenose.cli import _print_provider_guidance
+
+        _print_provider_guidance()
+        out = capsys.readouterr().out
+        assert "(Secret Service)" in out
+        assert "Keychain" not in out
+
+    def test_configure_local_routes_to_ollama_setup(self) -> None:
+        from typer.testing import CliRunner
+
+        from bristlenose.cli import app
+
+        with patch("bristlenose.cli._setup_local_provider", return_value="local") as m:
+            res = CliRunner().invoke(app, ["configure", "local"])
+        assert m.called
+        assert res.exit_code == 0
+        assert "--llm local" in res.output
+
+    def test_configure_local_setup_failure_exits_nonzero(self) -> None:
+        from typer.testing import CliRunner
+
+        from bristlenose.cli import app
+
+        with patch("bristlenose.cli._setup_local_provider", return_value=None):
+            res = CliRunner().invoke(app, ["configure", "local"])
+        assert res.exit_code == 1
 
 
 # ---------------------------------------------------------------------------

@@ -130,24 +130,25 @@ def _fix_backend_import_fail(method: str) -> str:
 
 
 def _credential_store_hint() -> str:
-    """Return a platform-specific description of where keys are stored."""
-    if sys.platform == "darwin":
+    """Describe where ``configure`` will actually store the key.
+
+    Availability-aware, not just platform-aware: on a Linux box with no Secret
+    Service the key lands in the config-file fallback, so we must not promise
+    "Secret Service" there. Keyed off the same label the store itself reports.
+    """
+    label = _credential_store_label()
+    if label == "Keychain":
         return "This stores your key securely in your macOS Keychain."
-    if sys.platform.startswith("linux"):
-        return (
-            "This stores your key securely via Secret Service"
-            " (GNOME Keyring / KDE Wallet)."
-        )
-    return "This stores your key securely."
+    if label == "Secret Service":
+        return "This stores your key securely via Secret Service (GNOME Keyring / KDE Wallet)."
+    return "This stores your key in a protected config file (~/.config/bristlenose/.env)."
 
 
 def _credential_store_label() -> str:
-    """Short label for the credential store (for inline references)."""
-    if sys.platform == "darwin":
-        return "Keychain"
-    if sys.platform.startswith("linux"):
-        return "Secret Service"
-    return "credential store"
+    """Short label for the credential store — the real one, availability-aware."""
+    from bristlenose.credentials import get_credential_store_label
+
+    return get_credential_store_label()
 
 
 def _fix_api_key_missing_anthropic(_method: str) -> str:

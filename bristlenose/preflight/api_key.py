@@ -29,11 +29,11 @@ commands (``run``, ``analyze``, ``transcribe-only``). Read-only commands
 trigger it.
 
 Scope: this preflight covers the **has-a-key, validate-it-now** path. The
-**no-account-yet** branch (numbered URL flow per the handoff) and the
-Keychain-storage integration both live on the existing
-``_maybe_prompt_for_provider`` path in ``cli.py`` and are not duplicated
+**no-account-yet** branch (first-run provider guidance) and the
+credential-storage integration both live on the existing
+``_maybe_guide_provider_setup`` path in ``cli.py`` and are not duplicated
 here — this module assumes a key is already in settings (env var,
-Keychain, or fresh paste).
+keychain/store, or fresh paste).
 """
 
 from __future__ import annotations
@@ -544,7 +544,7 @@ def preflight_api_key(
       let downstream LLM calls surface failure naturally with the generic
       "Provider says: ..." copy on the call-site.
     - **Recently validated** (24h TTL): skip the network call.
-    - **No key at all**: skip — the existing ``_maybe_prompt_for_provider``
+    - **No key at all**: skip — the existing ``_maybe_guide_provider_setup``
       handles missing-key UX; the preflight only validates *present* keys.
     - **Non-TTY**: skip the first-run *banner* but still validate. A CI run
       with an expired key should abort here, not burn LLM cost at stage 8.

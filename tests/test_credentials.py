@@ -528,3 +528,29 @@ class TestUnprefixedEnvAliases:
     def test_field_name_still_populates(self) -> None:
         # populate_by_name=True keeps direct construction working despite aliases.
         assert self._reload()(anthropic_api_key="direct").anthropic_api_key == "direct"
+
+    def test_bare_openai_key(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("BRISTLENOSE_OPENAI_API_KEY", raising=False)
+        monkeypatch.setenv("OPENAI_API_KEY", "bare-oa")
+        assert self._reload()().openai_api_key == "bare-oa"
+
+    def test_gemini_api_key_alias(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # google-genai reads GEMINI_API_KEY as well as GOOGLE_API_KEY.
+        monkeypatch.delenv("BRISTLENOSE_GOOGLE_API_KEY", raising=False)
+        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+        monkeypatch.setenv("GEMINI_API_KEY", "gem")
+        assert self._reload()().google_api_key == "gem"
+
+    def test_azure_openai_sdk_names(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # The openai SDK's AzureOpenAI client reads these natively — an Azure user
+        # reaches for them before the BRISTLENOSE_ names.
+        for name in ("BRISTLENOSE_AZURE_API_KEY", "AZURE_API_KEY",
+                     "BRISTLENOSE_AZURE_ENDPOINT", "BRISTLENOSE_AZURE_DEPLOYMENT"):
+            monkeypatch.delenv(name, raising=False)
+        monkeypatch.setenv("AZURE_OPENAI_API_KEY", "az-key")
+        monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://x.openai.azure.com/")
+        monkeypatch.setenv("AZURE_OPENAI_DEPLOYMENT", "dep")
+        s = self._reload()()
+        assert s.azure_api_key == "az-key"
+        assert s.azure_endpoint == "https://x.openai.azure.com/"
+        assert s.azure_deployment == "dep"

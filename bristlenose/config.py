@@ -133,19 +133,31 @@ class BristlenoseSettings(BaseSettings):
     llm_max_tokens: int = 64000
     llm_temperature: float = 0.1
 
-    # Azure OpenAI
+    # Azure OpenAI. Also accept the names the openai SDK's AzureOpenAI client
+    # reads natively (AZURE_OPENAI_API_KEY / AZURE_OPENAI_ENDPOINT) — an Azure
+    # user reaches for those before the BRISTLENOSE_ ones.
     azure_api_key: str = Field(
         default="",
-        validation_alias=AliasChoices("BRISTLENOSE_AZURE_API_KEY", "AZURE_API_KEY"),
+        validation_alias=AliasChoices(
+            "BRISTLENOSE_AZURE_API_KEY", "AZURE_API_KEY", "AZURE_OPENAI_API_KEY"
+        ),
     )
-    azure_endpoint: str = ""  # e.g. https://my-resource.openai.azure.com/
-    azure_deployment: str = ""  # Deployment name from Azure portal
+    azure_endpoint: str = Field(  # e.g. https://my-resource.openai.azure.com/
+        default="",
+        validation_alias=AliasChoices("BRISTLENOSE_AZURE_ENDPOINT", "AZURE_OPENAI_ENDPOINT"),
+    )
+    azure_deployment: str = Field(  # Deployment name from Azure portal
+        default="",
+        validation_alias=AliasChoices("BRISTLENOSE_AZURE_DEPLOYMENT", "AZURE_OPENAI_DEPLOYMENT"),
+    )
     azure_api_version: str = "2024-10-21"
 
-    # Google (Gemini)
+    # Google (Gemini). google-genai reads both GOOGLE_API_KEY and GEMINI_API_KEY.
     google_api_key: str = Field(
         default="",
-        validation_alias=AliasChoices("BRISTLENOSE_GOOGLE_API_KEY", "GOOGLE_API_KEY"),
+        validation_alias=AliasChoices(
+            "BRISTLENOSE_GOOGLE_API_KEY", "GOOGLE_API_KEY", "GEMINI_API_KEY"
+        ),
     )
 
     # Local LLM (Ollama)

@@ -93,7 +93,7 @@ class TestNewUserNoConfig:
         No LLM provider configured.
 
         Set one up once — bristlenose configure <provider> validates your
-        key and stores it securely (Keychain), so you never paste it again:
+        key and stores it securely (Keychain):
 
           Claude   https://console.anthropic.com/settings/keys
           ChatGPT  https://platform.openai.com/api-keys

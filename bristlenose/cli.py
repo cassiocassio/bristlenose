@@ -423,7 +423,7 @@ def _print_provider_guidance() -> None:
         highlight=False,
     )
     console.print(
-        f"key and stores it securely ({store}), so you never paste it again:",
+        f"key and stores it securely ({store}):",
         highlight=False,
     )
     console.print()

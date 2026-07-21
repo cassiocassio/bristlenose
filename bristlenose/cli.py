@@ -419,7 +419,7 @@ def _print_provider_guidance() -> None:
     console.print("[bold]No LLM provider configured.[/bold]")
     console.print()
     console.print(
-        "Set one up once — [bold]bristlenose configure <provider>[/bold] validates your",
+        "Set one up once — [bold cyan]bristlenose configure <provider>[/bold cyan] validates your",
         highlight=False,
     )
     console.print(
@@ -436,7 +436,7 @@ def _print_provider_guidance() -> None:
         console.print(f"  {name.ljust(9)}[link={url}]{url}[/link]")
     console.print()
     console.print(
-        "For local models via Ollama:  [bold]bristlenose configure local[/bold]",
+        "For local models via Ollama:  [bold cyan]bristlenose configure local[/bold cyan]",
         highlight=False,
     )
     console.print()

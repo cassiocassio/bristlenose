@@ -220,6 +220,14 @@ shrinks to match in the same pass.)
 - **Alignment spec** (`e2e/`): per route assert content-left == token,
   first-ink == datum, radius tier per component class. Same philosophy as the
   bundle-size and perf gates.
+- **The Specimen debug lens** (`/report/specimen`, shipped 23 Jul 2026 —
+  `frontend/src/islands/GridSpecimen.tsx`): test content on a visible grid —
+  overlays for the content edges / gutters / datum / reading width, a live
+  measurement HUD, and specimen type, quote cards, signal cards, and radius
+  tiers rendered with production classes. Dev-gated NavBar tab in the
+  browser; Diagnostics ▸ Grid Specimen (DEBUG harness) on desktop. The
+  human-eye twin of the Playwright gate: every change in this plan is
+  visually checkable there before and after.
 
 ## Sequencing
 

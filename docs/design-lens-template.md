@@ -86,49 +86,57 @@ extends up behind the unified toolbar, bridge pushes the titlebar+toolbar
 delta (52px) as `--bn-toolbar-inset`, body pads `inset + space-xl` so first
 content clears the frost.
 
-**The extension does not actually happen.** `document.documentElement.style
-.background = 'red'` in the live webview shows a hard edge at the toolbar's
-bottom on every lens — the webview top is the toolbar bottom, not the window
-top. `.ignoresSafeArea(.container, edges: .top)` is applied
-(`ContentView.swift`) but has no effect in the standard titled window (no
-full-size-content-view config exists anywhere in the Swift sources). The
-"frost" visible at the window's left is the *sidebar's* vibrancy material
-sampling the webview — not toolbar-over-content.
+**Both halves of the idiom already exist — natively — and the CSS pad
+double-counts one of them.** Established by two observations on the live
+webview (`document.documentElement.style.background = 'red'` + scrolling):
+
+- The webview's **paint region extends under the toolbar**: scrolled content
+  is visible ghosted up in the toolbar band, dimmed by the system's
+  scroll-edge scrim (whose hard-edge style reads as a sharp clip line — it
+  is the scrim's boundary, not the webview's).
+- The webview's **layout viewport is inset below the toolbar**: the red
+  background, scroll-position-0 content, and every
+  `getBoundingClientRect()` number all start at the toolbar's bottom —
+  macOS's automatic content-inset behaviour for obscured chrome.
+
+That combination IS the Notes/Mail idiom, provided by the platform: at rest,
+content sits clear of the toolbar; scrolling slides it underneath. (The
+"solid band until you scroll" at rest matches the spike's own recorded
+accepted limitation — Xcode behaves identically.)
 
 Consequences:
 
-- **The 52px inset is dead space** on every lens. The visible gap below the
-  toolbar on Sessions/Codebook/Project is 84px where 32px was designed.
+- **The bridge's 52px push double-counts the native inset.** The layout
+  viewport is already past the toolbar; the CSS pads again on top. Every
+  lens carries 52px of dead space — the visible gap below the toolbar on
+  Sessions/Codebook/Project is 84px where 32px was designed.
 - **Quotes' pleasing position is two bugs cancelling**: the −76px datum lift
-  (tuned for a window-top webview) × a webview that starts at the toolbar
-  bottom = "Sections" lands 8px below the toolbar by accident.
+  (tuned for a window-top coordinate space) × a layout viewport that starts
+  at the toolbar bottom = "Sections" lands 8px below the toolbar by
+  accident.
 - The cross-seam datum concept (align web baselines to the native sidebar's
-  "Project" row) is unrealisable in the current geometry — that native
-  baseline is physically above the webview.
+  "Project" row) is unrealisable — that native baseline sits above the
+  layout viewport's origin. The datum re-scopes to web-internal.
+- The separate "frost quest" largely **dissolves**: scroll-underlap already
+  works. What doesn't exist is frost sampling at scroll-0 (nothing is behind
+  the toolbar at rest) — the Xcode-style accepted limitation, unchanged.
 
-### Fix: the bridge reports measured truth, not intent
+### Fix: stop pushing the phantom inset
 
-`BridgeHandler.syncToolbarInset` currently pushes
+`BridgeHandler.syncToolbarInset` pushes
 `window.frame.height − contentLayoutRect.height` — the chrome's height,
-assuming the webview reaches the window top. Change it to push the **actual
-overlap** between the chrome region and the webview's real frame
-(`webView.convert(webView.bounds, to: nil)` vs `contentLayoutRect`): 0 in
-today's geometry, 52 again if the underlap ever lands, correct across
-full-screen transitions. This makes the frost question a pure design choice —
-the CSS always pads for reality.
+assuming the webview's layout origin is the window top. It isn't; the system
+insets it already. The bridge should push the **residual** the CSS actually
+needs: the chrome overlap not already absorbed by the native content inset —
+measurable by comparing the layout viewport's window position against
+`contentLayoutRect`, and in today's geometry **0**. Keep the plumbing (a
+future window configuration could legitimately produce a residual); change
+what flows through it.
 
-**Coupling:** with inset 0, the current Quotes lift computes −44px and clips
-the heading above the viewport. The Swift truth-fix and the CSS datum re-scope
-must land in the same change — which is this template work.
-
-### Parked: the frost quest (restore the underlap)
-
-The Notes/Mail idiom the spike intended — content sliding under a frosted
-toolbar — remains desirable but requires native work (why `.ignoresSafeArea`
-doesn't bite inside the NavigationSplitView detail; likely window-level
-full-size-content configuration) plus datum re-tuning against the recovered
-geometry. Separate quest, own branch of work; the truth-measuring inset above
-means nothing here blocks on it or breaks when it lands.
+**Coupling:** with inset 0, the current Quotes lift computes −44px and pulls
+the heading into the underlap region — behind the toolbar at rest. The Swift
+fix and the CSS datum re-scope must land in the same change — which is this
+template work.
 
 ## The template
 
@@ -194,8 +202,9 @@ The tag sidebar has the full embedded treatment (toolbar bleed, re-inset
 header, datum rule); the TOC sidebar has none — `sticky; top: 0; 100vh`
 inside the body's padded flow, so its panel starts a full pad below the
 toolbar and overflows the bottom by the same amount. Mirror the tag sidebar's
-treatment onto `.toc-sidebar`. (With the truth-measured inset this simplifies
-— the bleed calc collapses toward zero until the frost quest lands.)
+treatment onto `.toc-sidebar`. (With the inset at 0 the bleed calc collapses
+to just `--bn-space-xl` — simpler than the tag sidebar's current form, which
+shrinks to match in the same pass.)
 
 ## Enforcement — drift is CI-red
 
@@ -223,9 +232,11 @@ treatment onto `.toc-sidebar`. (With the truth-measured inset this simplifies
 3. **TOC sidebar treatment.**
 4. **Keyline token + playground toggle.**
 5. **`__bnLayoutAudit` + Playwright alignment gate** — locks it all in.
-6. *(Parked)* the frost quest.
 
-Trunk throughout; each step an independently-green commit.
+Trunk throughout; each step an independently-green commit. (The former
+"frost quest" step is gone — scroll-underlap turned out to already work
+natively; see Native geometry. The only frost residue is the scroll-0
+solid band, an accepted platform limitation shared with Xcode.)
 
 ## Open questions
 

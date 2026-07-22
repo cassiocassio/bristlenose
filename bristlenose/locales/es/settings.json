@@ -1,6 +1,8 @@
 {
   "heading": "Ajustes",
   "appearance": {
+    "diagnosticsLegend": "Mostrar el men\u00fa Diagn\u00f3stico",
+    "diagnosticsHelp": "A\u00f1ade un men\u00fa Diagn\u00f3stico con herramientas para inspeccionar los an\u00e1lisis. Tambi\u00e9n activa el inspector web en la vista del informe.",
     "animationLegend": "Show animation while analysing",
     "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "Asignar un icono aleatorio a los proyectos nuevos",

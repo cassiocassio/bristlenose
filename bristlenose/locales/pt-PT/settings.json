@@ -1,6 +1,8 @@
 {
   "heading": "Definições",
   "appearance": {
+    "diagnosticsLegend": "Mostrar o menu Diagn\u00f3stico",
+    "diagnosticsHelp": "Adiciona um menu Diagn\u00f3stico com ferramentas para examinar as an\u00e1lises. Tamb\u00e9m ativa o inspetor web na vista do relat\u00f3rio.",
     "legend": "Aspeto da aplicação",
     "auto": "Usar aspeto do sistema",
     "light": "Clara",

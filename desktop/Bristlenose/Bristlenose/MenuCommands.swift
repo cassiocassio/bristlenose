@@ -24,8 +24,15 @@ struct MenuCommands: Commands {
     @ObservedObject var projectIndex: ProjectIndex
     @ObservedObject var removalStore: UndoableRemovalStore
     @ObservedObject var i18n: I18n
-    /// Used only by the DEBUG "Debug" menu (Ollama setup-pill state harness).
+    /// Used only by the Diagnostics menu's DEBUG harness section (Ollama
+    /// setup-pill state forcing).
     @ObservedObject var ollamaDownload: OllamaDownloadModel
+    /// Gates the Diagnostics menu's presence. `@AppStorage` is a
+    /// DynamicProperty, so flipping the toggle in Appearance settings should
+    /// re-evaluate menu presence live; if a macOS release regresses that, the
+    /// documented fallback is applies-on-next-launch (Safari-acceptable).
+    @AppStorage(DiagnosticsPreference.key)
+    private var showDiagnosticsMenu: Bool = DiagnosticsPreference.defaultValue
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
@@ -70,38 +77,61 @@ struct MenuCommands: Commands {
             HelpMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
         }
 
-        // Debug menu — channel-gated to local dev + the direct-notarised
-        // Developer-ID .dmg beta only, so that channel gets the SQLAdmin DB
-        // browser. Never shown in an App Store OR TestFlight build (both are
-        // the fail-closed `.appStoreOrTestFlight` case). The DEBUG-only harness
-        // (inspectors, fixtures, Ollama pill — each opens a #if DEBUG window
-        // scene) stays compiled out of Release via an inner #if DEBUG inside
-        // BetaDebugMenuContent. See docs/design-desktop-debug-admin-panel.md.
-        if DistributionChannel.current.exposesDebugTools {
-            CommandMenu("Debug") {
-                BetaDebugMenuContent(ollamaDownload: ollamaDownload, serveManager: serveManager)
+        // Diagnostics menu — gated by the `showDiagnosticsMenu` preference
+        // (Appearance settings; off by default, on in local DEBUG builds), so
+        // a keen tester on ANY channel can opt into the poke-around tools.
+        // Contents compound by build inside the one menu: Section 1 (user
+        // diagnostics) ships everywhere; Section 2 (devtools — the SQLAdmin
+        // browser) only where `exposesDebugTools` (local DEBUG + Developer-ID
+        // .dmg beta, never App Store/TestFlight); Section 3 (fake-state
+        // harness) is `#if DEBUG` only. See docs/design-diagnostics-menu.md.
+        if showDiagnosticsMenu {
+            CommandMenu("Diagnostics") {
+                DiagnosticsMenuContent(ollamaDownload: ollamaDownload, serveManager: serveManager)
             }
         }
     }
 }
 
-/// Debug-menu content that compiles in **Release** (unlike `DebugMenuContent`,
-/// which is entirely `#if DEBUG`). The runtime channel gate above shows this in
-/// beta builds; the only always-present item is "Open Admin Panel…" (opens the
-/// read-only SQLAdmin browser). The full DEBUG-only harness is embedded behind
-/// an inner `#if DEBUG` so it stays out of the Release binary.
-private struct BetaDebugMenuContent: View {
+/// The single Diagnostics menu — three sections, gates compounding inside it
+/// (the pref gates the menu; the channel + build-config gates pick sections).
+/// Labels are commands only, no ellipsis on open-window items (HIG — opening a
+/// window that IS the thing takes no further input). English-only for now,
+/// matching the menu's tester-facing register.
+private struct DiagnosticsMenuContent: View {
     @ObservedObject var ollamaDownload: OllamaDownloadModel
     @ObservedObject var serveManager: ServeManager
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        // No ellipsis — opens the panel directly in the browser, no further input.
-        Button("Open Admin Panel") {
-            AdminPanelAction.open(serveManager: serveManager)
+        // Section 1 — user diagnostics, every channel. Reveal-existing-data
+        // actions for the served project + the Shoal animation at defaults.
+        // (Web Inspector is a side-effect of the preference toggle, not a menu
+        // item — there's no public API to open a hosted WKWebView's inspector.)
+        Button("Reveal .bristlenose/ in Finder") {
+            DiagnosticsActions.revealInternalDir(serveManager: serveManager)
         }
-        .disabled(serveManager.runningPort == nil)
+        Button("Open Log in Console") {
+            DiagnosticsActions.openLog(serveManager: serveManager)
+        }
+        Button("Copy Build Provenance") {
+            DiagnosticsActions.copyBuildProvenance(serveManager: serveManager)
+        }
+        Button("Shoal Screensaver") { openWindow(id: "shoal-view") }
+
+        if DistributionChannel.current.exposesDebugTools {
+            Divider()
+            // Section 2 — developer tools (.dmg beta + local DEBUG only).
+            // No ellipsis — opens the panel directly in the browser.
+            Button("Open Admin Panel") {
+                AdminPanelAction.open(serveManager: serveManager)
+            }
+            .disabled(serveManager.runningPort == nil)
+        }
+
         #if DEBUG
         Divider()
+        // Section 3 — full-fat harness, dev machines only.
         DebugMenuContent(ollamaDownload: ollamaDownload, serveManager: serveManager)
         #endif
     }
@@ -129,25 +159,16 @@ private struct DebugMenuContent: View {
         Button("Run Inspector") { openWindow(id: "run-inspector") }
             .keyboardShortcut("r", modifiers: [.command, .control])
 
-        Button("Shoal Screensaver") { openWindow(id: "shoal") }
+        // The tuning harness (sliders/presets/FPS probe) — distinct from the
+        // Section-1 "Shoal Screensaver" (the animation at defaults).
+        Button("Shoal Tuner") { openWindow(id: "shoal") }
 
         Button("Shimmer Tuner") { openWindow(id: "shimmer-tuner") }
 
         Button("Keycap Gallery") { openWindow(id: "keycap-gallery") }
 
-        Divider()
-
-        // Reveal-existing-data actions for the served project (the one whose
-        // report is on screen). See DebugMenuActions.
-        Button("Reveal .bristlenose/ in Finder") {
-            DebugMenuActions.revealInternalDir(serveManager: serveManager)
-        }
-        Button("Open Log in Console") {
-            DebugMenuActions.openLog(serveManager: serveManager)
-        }
-        Button("Copy Build Provenance") {
-            DebugMenuActions.copyBuildProvenance(serveManager: serveManager)
-        }
+        // (Reveal / Open Log / Copy Provenance moved to Section 1 — they ship
+        // to every channel now. See DiagnosticsActions.)
 
         // Inject a synthesized diagnostic state into the SELECTED project's
         // sidebar row — flip popover/indicator scenes live, no relaunch. Posts

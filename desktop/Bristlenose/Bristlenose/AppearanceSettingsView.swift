@@ -14,6 +14,8 @@ struct AppearanceSettingsView: View {
     @AppStorage("language") private var language: String = "en"
     @AppStorage(RandomProjectIcon.defaultsKey) private var randomProjectIcons: Bool = true
     @AppStorage("showAnalysisAnimation") private var showAnalysisAnimation: Bool = true
+    @AppStorage(DiagnosticsPreference.key)
+    private var showDiagnosticsMenu: Bool = DiagnosticsPreference.defaultValue
 
     var body: some View {
         Form {
@@ -60,6 +62,18 @@ struct AppearanceSettingsView: View {
             Section {
                 Toggle(i18n.t("settings.appearance.animationLegend"), isOn: $showAnalysisAnimation)
                 Text(i18n.t("settings.appearance.animationHelp"))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                // Tier-U diagnostics gate (docs/design-diagnostics-menu.md).
+                // The helper text is where the Web Inspector side-effect is
+                // disclosed — it's not a menu item (no public API to open a
+                // hosted WKWebView's inspector; users right-click ▸ Inspect
+                // Element once enabled).
+                Toggle(i18n.t("settings.appearance.diagnosticsLegend"), isOn: $showDiagnosticsMenu)
+                Text(i18n.t("settings.appearance.diagnosticsHelp"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }

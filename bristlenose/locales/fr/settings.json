@@ -1,6 +1,8 @@
 {
   "heading": "Réglages",
   "appearance": {
+    "diagnosticsLegend": "Afficher le menu Diagnostics",
+    "diagnosticsHelp": "Ajoute un menu Diagnostics avec des outils pour inspecter les analyses. Active \u00e9galement l'inspecteur web dans l'affichage du rapport.",
     "animationLegend": "Show animation while analysing",
     "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "Attribuer une ic\u00f4ne al\u00e9atoire aux nouveaux projets",

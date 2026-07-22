@@ -4,12 +4,11 @@ import Foundation
 /// Opens the running sidecar's SQLAdmin database browser (`/admin`) in the
 /// user's default browser.
 ///
-/// Unlike `DebugMenuActions` (which is entirely `#if DEBUG`), this helper is
-/// compiled in Release too — the "Open Admin Panel…" Debug-menu item is gated
-/// by `DistributionChannel.exposesDebugTools`, which is `true` in the Release
-/// Developer-ID `.dmg` beta (`DEVELOPER_ID_BETA` flag), so its action must
-/// exist in that Release binary. It's a compile-time `false` (dead branch) in
-/// App Store / TestFlight builds.
+/// Compiled in Release — the "Open Admin Panel" item sits in Section 2 of the
+/// Diagnostics menu, gated by `DistributionChannel.exposesDebugTools`, which
+/// is `true` in the Release Developer-ID `.dmg` beta (`DEVELOPER_ID_BETA`
+/// flag), so its action must exist in that Release binary. It's a runtime
+/// `false` (hidden section) in App Store / TestFlight builds.
 ///
 /// `/admin` is not under `/api/`, so it isn't behind `BearerTokenMiddleware`
 /// (middleware.py guards only the `/api/` prefix). Localhost binding is its

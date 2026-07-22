@@ -1,6 +1,8 @@
 {
   "heading": "Indstillinger",
   "appearance": {
+    "diagnosticsLegend": "Vis menuen Diagnostik",
+    "diagnosticsHelp": "Tilf\u00f8jer menuen Diagnostik med v\u00e6rkt\u00f8jer til at unders\u00f8ge analyser. Sl\u00e5r ogs\u00e5 webinspekt\u00f8ren til i rapportvisningen.",
     "animationLegend": "Show animation while analysing",
     "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "Tildel et tilfældigt ikon til nye projekter",

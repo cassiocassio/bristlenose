@@ -135,9 +135,23 @@ struct BristlenoseApp: App {
                 .tint(paletteAccent)
         }
 
+        // Shipping Shoal animation window (Diagnostics ▸ Shoal Screensaver —
+        // Tier U, every channel, beta-era). Animation at defaults only; the
+        // tuning harness stays DEBUG ("Shoal Tuner" below). `.commandsRemoved()`
+        // is a hard acceptance criterion, not polish: this scene ships, and
+        // without it SwiftUI adds a stray Window-menu row to every App Store /
+        // TestFlight user even with the Diagnostics toggle off.
+        Window("Shoal Screensaver", id: "shoal-view") {
+            ShoalWindowView()
+                .tint(paletteAccent)
+        }
+        .defaultSize(width: 800, height: 600)
+        .commandsRemoved()
+
         #if DEBUG
-        // DEBUG-only calibration tool — launched from the Debug menu. Not a
-        // shipping surface; the whole TypeParity* file set is #if DEBUG.
+        // DEBUG-only calibration tool — launched from the Diagnostics menu's
+        // harness section. Not a shipping surface; the whole TypeParity* file
+        // set is #if DEBUG.
         Window("Type Parity Inspector", id: "type-parity") {
             TypeParityView()
                 .tint(paletteAccent)
@@ -160,9 +174,10 @@ struct BristlenoseApp: App {
         .defaultSize(width: 1000, height: 720)
         .commandsRemoved()   // no auto Window-menu entry — see Type Parity above
 
-        // DEBUG-only viewing harness for the resurrected typographic shoal
-        // (v0.1 canned WordPool, no live data). Debug ▸ Shoal Screensaver.
-        Window("Shoal Screensaver", id: "shoal") {
+        // DEBUG-only tuning harness for the typographic shoal (sliders, FPS
+        // probe, presets). Diagnostics ▸ Shoal Tuner. Distinct from the
+        // shipping "Shoal Screensaver" viewer scene above.
+        Window("Shoal Tuner", id: "shoal") {
             ShoalDebugView()
                 .tint(paletteAccent)
         }

@@ -1,6 +1,8 @@
 {
   "heading": "Einstellungen",
   "appearance": {
+    "diagnosticsLegend": "Diagnosemen\u00fc anzeigen",
+    "diagnosticsHelp": "F\u00fcgt ein Diagnosemen\u00fc mit Werkzeugen zur Untersuchung von Analysen hinzu. Aktiviert au\u00dferdem den Web-Inspektor in der Berichtsansicht.",
     "animationLegend": "Show animation while analysing",
     "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "Neuen Projekten ein zuf\u00e4lliges Symbol zuweisen",

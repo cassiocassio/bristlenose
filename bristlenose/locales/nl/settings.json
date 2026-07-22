@@ -1,6 +1,8 @@
 {
   "heading": "Instellingen",
   "appearance": {
+    "diagnosticsLegend": "Toon het menu Diagnose",
+    "diagnosticsHelp": "Voegt een menu Diagnose toe met hulpmiddelen om analyses te onderzoeken. Schakelt ook de webinspector in de rapportweergave in.",
     "animationLegend": "Toon animatie tijdens het analyseren",
     "animationHelp": "Speelt een animatie van zwermende woorden af in het hoofdvenster terwijl een project wordt geanalyseerd. Schakel dit uit om in plaats daarvan de gewone voortgang te zien.",
     "randomIconsLegend": "Ken nieuwe projecten een willekeurig symbool toe",

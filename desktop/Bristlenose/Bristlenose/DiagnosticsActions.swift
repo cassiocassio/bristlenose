@@ -1,16 +1,40 @@
-#if DEBUG
 import AppKit
 import Foundation
 
-// MARK: - Debug menu actions (DEBUG only)
+// MARK: - Diagnostics menu actions (ship in every channel)
 //
-// "Reveal existing data" helpers behind the Debug menu — Finder reveal, open
-// log, copy build provenance. They read artifacts the pipeline already writes;
-// no new logging. The served project (ServeManager.currentProjectPath) is the
-// one whose report is on screen, so these act on it.
+// "Reveal existing data" helpers behind the pref-gated Diagnostics menu —
+// Finder reveal, open log, copy build provenance. They read artifacts the
+// pipeline already writes; no new logging. The served project
+// (ServeManager.currentProjectPath) is the one whose report is on screen, so
+// these act on it. Tier U per docs/design-diagnostics-menu.md — compiled into
+// Release (the menu that exposes them is gated by the showDiagnosticsMenu
+// preference, not by build config).
+
+/// The `showDiagnosticsMenu` preference — one switch (Safari's pattern) that
+/// reveals the Diagnostics menu and, as a disclosed side-effect, enables the
+/// Web Inspector on the report WebView. Default off in Release; on in local
+/// DEBUG builds as a dev convenience.
+enum DiagnosticsPreference {
+    static let key = "showDiagnosticsMenu"
+
+    static let defaultValue: Bool = {
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+    }()
+
+    /// Current effective value — the stored preference, or the build-config
+    /// default when the user has never touched the toggle.
+    static func isEnabled(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: key) as? Bool ?? defaultValue
+    }
+}
 
 @MainActor
-enum DebugMenuActions {
+enum DiagnosticsActions {
     /// `<project>/bristlenose-output/.bristlenose` — where logs / events /
     /// llm-calls / db / last-failure live. Mirrors the Python `OutputPaths`
     /// layout and `run_inspector.resolve_internal_dir`.
@@ -84,4 +108,3 @@ enum DebugMenuActions {
         return nil
     }
 }
-#endif

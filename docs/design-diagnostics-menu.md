@@ -5,10 +5,29 @@ their own run), the developer (dig into SQL/internals when something's broken),
 or nobody outside the building (fake-state harnesses). Three shipping tiers plus
 dev-only, each with its own gate.*
 
-Status: **planned** (14 Jul 2026). Extends
+Status: **Phase 1 implemented** (22 Jul 2026); Phases 2–3 planned. Extends
 [`design-desktop-debug-admin-panel.md`](design-desktop-debug-admin-panel.md) —
 the `DistributionChannel` gating committed there is **kept**, as the gate for the
 developer tier (below). This doc adds the separate user-facing tier.
+
+Phase-1 implementation notes (deltas from the plan below):
+- `BetaDebugMenuContent` → `DiagnosticsMenuContent` in `MenuCommands.swift`;
+  the old channel-gated `CommandMenu("Debug")` is gone. `DebugMenuActions` →
+  `DiagnosticsActions` (`DiagnosticsActions.swift`, no longer `#if DEBUG`),
+  which also hosts `DiagnosticsPreference` (key + build-config default +
+  `isEnabled()` reader).
+- The Reveal / Open Log / Copy Provenance trio moved OUT of the Section-3
+  harness (not duplicated) — they live only in Section 1 now.
+- The DEBUG Shoal *tuning* window ("shoal" scene) was retitled **Shoal Tuner**
+  so it can't be confused with the shipping Section-1 **Shoal Screensaver**
+  (`shoal-view` scene, `ShoalWindowView.swift` — animation at defaults,
+  `.late` phase, `.commandsRemoved()`).
+- Web Inspector reads the preference at WebView creation
+  (`DiagnosticsPreference.isEnabled()`), so a toggle flip applies to webviews
+  created afterwards — project switch or relaunch, disclosed as acceptable
+  next-launch semantics.
+- Settings toggle: Appearance tab, `settings.appearance.diagnosticsLegend` /
+  `diagnosticsHelp` keys in all 20 full locales.
 
 ## Why — the axis is audience, not just "ships or not"
 
@@ -263,3 +282,22 @@ Three-way split of `routes/dev.py`:
 - Net-new here: the Tier-U `showDiagnosticsMenu` preference + Diagnostics menu
   (Phase 1), and the `/api/dev/*` split + Run Inspector promotion (Phase 2).
 - Rename only: `_BRISTLENOSE_ADMIN_PANEL` → `_BRISTLENOSE_DEVTOOLS` (Phase 2).
+
+## GA sunset — this menu is beta-era furniture
+
+The Diagnostics menu exists so a keen tester on any channel (TestFlight or the
+self-expiring `.dmg` alpha) has a sanctioned place to poke around. Most of it is
+**not** a permanent user feature. Review at the Beta → GA lifecycle gate
+(`project_lifecycle_stages`):
+
+| Item | At GA |
+|---|---|
+| Shoal Screensaver (Section 1) | **Remove** — its purpose is tester hardware feedback ("is this smooth on your machine?"); that question closes with the beta |
+| Section 2 entirely (SQL browser, Shoal tuning, `/dev/info`) | **Remove with the `.dmg` channel** — the beta channel that justifies it stops existing |
+| Reveal `.bristlenose/` · Open Log · Copy Provenance | **Keep** — permanent support-call tooling, cheap and benign |
+| Run Inspector | **Keep if** the Phase-2 promotion + presentation polish happened; otherwise it sank with Section 3 |
+| The `showDiagnosticsMenu` preference | **Keep** — it also gates Web Inspector, and a slim two-item menu is still worth a toggle |
+
+The risk shape that makes the permissive tier acceptable meanwhile: the `.dmg`
+is outside App Review AND self-expires in 30 days, so no long-lived permissive
+binary exists in the wild.

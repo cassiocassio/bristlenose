@@ -1,6 +1,8 @@
 {
   "heading": "Settings",
   "appearance": {
+    "diagnosticsLegend": "Show Diagnostics menu",
+    "diagnosticsHelp": "Adds a Diagnostics menu with tools for inspecting analysis runs. Also enables the Web Inspector in the report view.",
     "animationLegend": "Show animation while analysing",
     "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "Assign a random icon to new projects",

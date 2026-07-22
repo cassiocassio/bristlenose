@@ -100,10 +100,11 @@ struct WebView: NSViewRepresentable {
         // `drawsBackground` isn't exposed on the WKWebView Swift API.
         webView.setValue(false, forKey: "drawsBackground")
 
-        // Enable Web Inspector (right-click → Inspect Element) for debugging.
-        #if DEBUG
-        webView.isInspectable = true
-        #endif
+        // Web Inspector (right-click → Inspect Element) rides the Diagnostics
+        // preference — disclosed in the toggle's helper text, available on any
+        // channel. Read at creation time: flipping the toggle applies to
+        // webviews created afterwards (project switch or relaunch).
+        webView.isInspectable = DiagnosticsPreference.isEnabled()
 
         // Give BridgeHandler a reference for outbound calls (goBack, switchToTab).
         bridgeHandler.webView = webView
@@ -572,9 +573,8 @@ struct WebView: NSViewRepresentable {
             let popoutWebView = WKWebView(frame: .zero, configuration: configuration)
             popoutWebView.navigationDelegate = self
 
-            #if DEBUG
-            popoutWebView.isInspectable = true
-            #endif
+            // Same Diagnostics-preference gate as the report webview above.
+            popoutWebView.isInspectable = DiagnosticsPreference.isEnabled()
 
             let width = windowFeatures.width?.doubleValue ?? 720
             let height = windowFeatures.height?.doubleValue ?? 480

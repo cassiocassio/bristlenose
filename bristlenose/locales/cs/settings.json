@@ -1,6 +1,8 @@
 {
   "heading": "Nastavení",
   "appearance": {
+    "diagnosticsLegend": "Zobrazit nab\u00eddku Diagnostika",
+    "diagnosticsHelp": "P\u0159id\u00e1 nab\u00eddku Diagnostika s n\u00e1stroji pro zkoum\u00e1n\u00ed pr\u016fb\u011bhu anal\u00fdz. Zapne tak\u00e9 webov\u00fd inspektor v zobrazen\u00ed reportu.",
     "animationLegend": "Show animation while analysing",
     "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
     "randomIconsLegend": "P\u0159i\u0159adit nov\u00fdm projekt\u016fm n\u00e1hodnou ikonu",

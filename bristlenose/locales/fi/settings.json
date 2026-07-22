@@ -1,6 +1,8 @@
 {
   "heading": "Asetukset",
   "appearance": {
+    "diagnosticsLegend": "N\u00e4yt\u00e4 Diagnostiikka-valikko",
+    "diagnosticsHelp": "Lis\u00e4\u00e4 Diagnostiikka-valikon, jonka ty\u00f6kaluilla voi tutkia analyyseja. Ottaa k\u00e4ytt\u00f6\u00f6n my\u00f6s raporttin\u00e4kym\u00e4n web-tarkastelun.",
     "animationLegend": "Näytä animaatio analyysin aikana",
     "animationHelp": "Toista pääikkunassa parveilevien sanojen animaatio, kun projektia analysoidaan. Poista tämä käytöstä nähdäksesi tavallisen edistymisen sen sijaan.",
     "randomIconsLegend": "Määritä uusille projekteille satunnainen kuvake",

@@ -106,8 +106,12 @@ import Testing
         #expect(a < b)
         #expect(b < c)
         #expect(c < RunProgressMath.asymptoteCap)
-        // Deep overrun asymptotes to the cap without touching it.
-        #expect(RunProgressMath.displayFraction(timeRatio: 100) < RunProgressMath.asymptoteCap)
+        // Deep overrun asymptotes to the cap. `<=`, not `<`: at ratio 100 the
+        // reserve term is ~1e-72, far below double epsilon at 0.92, so the
+        // subtraction rounds to exactly the cap — mathematically it never
+        // arrives, in Double it does. The user-facing invariant is "never
+        // reads full" and the cap itself (0.92) already guarantees that.
+        #expect(RunProgressMath.displayFraction(timeRatio: 100) <= RunProgressMath.asymptoteCap)
         #expect(RunProgressMath.displayFraction(timeRatio: 100) > 0.91)
     }
 

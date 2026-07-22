@@ -530,11 +530,16 @@ function AppShell() {
           // Needs focused group/code context from native sidebar (not yet built).
           console.warn(`[bn:menu-action] "${action}" requires native focus context — not yet wired`);
           break;
+        case "openSpecimen":
+          // Debug lens (Diagnostics menu, DEBUG harness) — the specimen page
+          // has no native sidebar row, so the menu navigates the SPA directly.
+          navigate("/report/specimen");
+          break;
       }
     };
     window.addEventListener("bn:menu-action", handler);
     return () => window.removeEventListener("bn:menu-action", handler);
-  }, [embedded]);
+  }, [embedded, navigate]);
 
   const chipJobs: ActivityJob[] = useMemo(
     () =>

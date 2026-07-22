@@ -87,7 +87,11 @@ struct MenuCommands: Commands {
         // harness) is `#if DEBUG` only. See docs/design-diagnostics-menu.md.
         if showDiagnosticsMenu {
             CommandMenu("Diagnostics") {
-                DiagnosticsMenuContent(ollamaDownload: ollamaDownload, serveManager: serveManager)
+                DiagnosticsMenuContent(
+                    ollamaDownload: ollamaDownload,
+                    serveManager: serveManager,
+                    bridgeHandler: bridgeHandler
+                )
             }
         }
     }
@@ -101,6 +105,8 @@ struct MenuCommands: Commands {
 private struct DiagnosticsMenuContent: View {
     @ObservedObject var ollamaDownload: OllamaDownloadModel
     @ObservedObject var serveManager: ServeManager
+    /// Used by the DEBUG harness section's "Grid Specimen" (navigates the SPA).
+    @ObservedObject var bridgeHandler: BridgeHandler
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -132,7 +138,11 @@ private struct DiagnosticsMenuContent: View {
         #if DEBUG
         Divider()
         // Section 3 — full-fat harness, dev machines only.
-        DebugMenuContent(ollamaDownload: ollamaDownload, serveManager: serveManager)
+        DebugMenuContent(
+            ollamaDownload: ollamaDownload,
+            serveManager: serveManager,
+            bridgeHandler: bridgeHandler
+        )
         #endif
     }
 }
@@ -145,6 +155,8 @@ private struct DiagnosticsMenuContent: View {
 private struct DebugMenuContent: View {
     @ObservedObject var ollamaDownload: OllamaDownloadModel
     @ObservedObject var serveManager: ServeManager
+    /// "Grid Specimen" navigates the report SPA (no native window scene).
+    @ObservedObject var bridgeHandler: BridgeHandler
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -166,6 +178,12 @@ private struct DebugMenuContent: View {
         Button("Shimmer Tuner") { openWindow(id: "shimmer-tuner") }
 
         Button("Keycap Gallery") { openWindow(id: "keycap-gallery") }
+
+        // Debug lens — test content on a visible grid, inside the report
+        // webview itself (measures the production CSS in situ). Routes the
+        // SPA to /report/specimen; needs a served project.
+        Button("Grid Specimen") { bridgeHandler.menuAction("openSpecimen") }
+            .disabled(serveManager.runningPort == nil)
 
         // (Reveal / Open Log / Copy Provenance moved to Section 1 — they ship
         // to every channel now. See DiagnosticsActions.)

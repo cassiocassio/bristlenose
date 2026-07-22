@@ -26,6 +26,11 @@ const TAB_ROUTES = [
   { to: "/report/analysis/", key: "nav.analysis" },
 ] as const;
 
+/** Dev mode — same signal AppLayout uses for the responsive playground. */
+const IS_DEV =
+  (window as unknown as Record<string, unknown>).__BRISTLENOSE_DEV__ === true ||
+  location.port === "5173";
+
 function tabClassName({ isActive }: { isActive: boolean }): string {
   return isActive ? "bn-tab active" : "bn-tab";
 }
@@ -45,6 +50,13 @@ export function NavBar({ onExportReport, onSendToMiro, onSettings, onHelp }: Nav
           {t(key)}
         </NavLink>
       ))}
+      {IS_DEV && (
+        // Debug lens — dev only, English only (dev tool; no locale keys, same
+        // precedent as the responsive playground).
+        <NavLink to="/report/specimen" className={tabClassName}>
+          Specimen
+        </NavLink>
+      )}
       <div className="bn-tab-spacer" />
       <RefreshButton iconOnly data-testid="bn-navbar-refresh" />
       {onExportReport && onSendToMiro && (

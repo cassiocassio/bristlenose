@@ -16,6 +16,7 @@ import { TranscriptTab } from "./pages/TranscriptTab";
 import { QuotesTab } from "./pages/QuotesTab";
 import { CodebookTab } from "./pages/CodebookTab";
 import { AnalysisTab } from "./pages/AnalysisTab";
+import { SpecimenTab } from "./pages/SpecimenTab";
 import { isExportMode } from "./utils/exportData";
 
 export const routes = [
@@ -37,6 +38,10 @@ export const routes = [
       { path: "quotes", element: <QuotesTab /> },
       { path: "codebook", element: <CodebookTab /> },
       { path: "analysis", element: <AnalysisTab /> },
+      // Debug lens — test content on a visible grid (dev-gated NavBar link;
+      // desktop entry via Diagnostics menu). Route always registered: the
+      // page is benign specimen content and lazy-loads only when visited.
+      { path: "specimen", element: <SpecimenTab /> },
       { path: "about", element: <Navigate to="/report/" replace /> },
       // Catch-all: unknown sub-paths redirect to project tab
       { path: "*", element: <Navigate to="/report/" replace /> },

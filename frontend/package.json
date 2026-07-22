@@ -20,6 +20,7 @@
         "../bristlenose/server/static/assets/*.js",
         "!../bristlenose/server/static/assets/visual-diff-*.js",
         "!../bristlenose/server/static/assets/ResponsivePlayground-*.js",
+        "!../bristlenose/server/static/assets/GridSpecimen-*.js",
         "!../bristlenose/server/static/assets/PlaygroundStore-*.js",
         "!../bristlenose/server/static/assets/PlaygroundHUD-*.js",
         "!../bristlenose/server/static/assets/devicePresets-*.js",

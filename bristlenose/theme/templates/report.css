@@ -74,12 +74,32 @@ h2 {
     border-bottom: 1px solid var(--bn-colour-keyline);
 }
 
-/* Redundant since the base h2 unification above — kept as a defensive alias
-   so a non-h2 .section-heading (should one ever appear) still gets the
-   full-pane 1px divider rather than the reading-width prose cap. */
+/* Zone-title treatment — self-contained so it works on ANY element (the lens
+   zone titles are now <h1>: "Sections"/"Themes", "Sentiment signals"/"Tag
+   signals"; a lens may carry two, one per top-level content zone — see
+   docs/design-lens-template.md § Headings). Provides the full-pane 1px keyline
+   + padding itself rather than leaning on the base h2 rule, so an h1.section-
+   heading (which has no border of its own) still gets the divider. Font
+   size/weight are deliberately NOT set here — they inherit from the element
+   (h1 → display/strong), keeping the *semantic* level (h1) and the *graphic*
+   size as separate knobs (tune size via the h1 rule / specimen lens). The
+   2.5rem top gives between-zone separation; the first zone-title on a lens is
+   flushed to the datum below. */
 .section-heading {
     max-width: none;
-    border-bottom-width: 1px;
+    margin: 2.5rem 0 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--bn-colour-keyline);
+}
+
+/* First zone-title on a lens sits flush at the content datum (no top gap).
+   Quotes: the first <section> in <main> ("Sections", before "Themes").
+   Analysis: the first heading in the scroll pane ("Sentiment", before "Tag").
+   Browser: flush at the body top-pad. The app's absolute datum is re-scoped
+   with the toolbar-inset fix (Phase B); this rule is surface-agnostic. */
+.center > main > section:first-of-type > .section-heading,
+.analysis-center > .section-heading:first-of-type {
+    margin-top: 0;
 }
 
 h3 {

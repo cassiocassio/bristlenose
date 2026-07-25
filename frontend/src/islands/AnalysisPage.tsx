@@ -1177,7 +1177,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   if (!hasSentiment && !hasTags && !tagLoaded) {
     return (
       <div>
-        <h2 className="section-heading">{t("analysis.heading")}</h2>
+        <h1 className="section-heading">{t("analysis.heading")}</h1>
         <p className="description" style={{ opacity: 0.5 }}>
           {t("analysis.loadingData")}
         </p>
@@ -1188,7 +1188,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   if (!hasSentiment && !hasTags) {
     return (
       <div>
-        <h2 className="section-heading">{t("analysis.heading")}</h2>
+        <h1 className="section-heading">{t("analysis.heading")}</h1>
         <p className="description">
           {t("analysis.noData")}
         </p>
@@ -1208,7 +1208,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
         {/* ── Sentiment signal cards ─────────────────────────── */}
         {hasSentiment && sentimentSignals.length > 0 && (
           <>
-            <h2 className="section-heading">{t("analysis.sentimentSignals")}</h2>
+            <h1 className="section-heading">{t("analysis.sentimentSignals")}</h1>
             <p className="section-desc">
               {t("analysis.sentimentDesc")}
             </p>
@@ -1235,7 +1235,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
         {hasTags && tagSignals.length > 0 && (
           <>
             {sourceBreakdown && <SourceBanner breakdown={sourceBreakdown} />}
-            <h2 className="section-heading">{t("analysis.tagSignals")}</h2>
+            <h1 className="section-heading">{t("analysis.tagSignals")}</h1>
             <p className="section-desc">
               {t("analysis.tagDesc")}
             </p>

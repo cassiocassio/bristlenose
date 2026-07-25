@@ -319,7 +319,7 @@ export function GridSpecimen() {
         HUD (bottom right) shows the live frame numbers — the same values the layout audit reports.
       </p>
 
-      <h2 className="section-heading">Type</h2>
+      <h1 className="section-heading">Type</h1>
       <h1>Heading one — lens title size</h1>
       <h2>Heading two — section title with its keyline</h2>
       <h3>Heading three — card / group title</h3>
@@ -329,13 +329,13 @@ export function GridSpecimen() {
         lens is that you can see which.
       </p>
 
-      <h2 className="section-heading">Quote cards</h2>
+      <h1 className="section-heading">Quote cards</h1>
       <QuoteSpecimens />
 
-      <h2 className="section-heading">Signal cards</h2>
+      <h1 className="section-heading">Signal cards</h1>
       <SignalSpecimens />
 
-      <h2 className="section-heading">Radius tiers</h2>
+      <h1 className="section-heading">Radius tiers</h1>
       <RadiusTiers />
     </div>
   );

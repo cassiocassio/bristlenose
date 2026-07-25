@@ -38,8 +38,13 @@
        the parent .analysis-layout is `overflow: hidden`, which clips it. So the
        signal-card shadow clips ~8px at the scroll-box edge — accepted until the
        structural fix (scroll pane owns the single gutter) in
-       docs/design-lens-template.md § Analysis. Vertical padding unchanged. */
-    padding: var(--bn-space-lg) 0;
+       docs/design-lens-template.md § Analysis.
+
+       Top padding is 0 so the first zone-title ("Sentiment signals") flushes to
+       the same datum as every other lens's first content (Codebook/Sessions
+       sit flush; Analysis was 24px low). Bottom keeps space-lg so the last card
+       clears the scroll edge. */
+    padding: 0 0 var(--bn-space-lg);
 }
 
 /* When the analysis layout is active, the footer (a sibling in AppLayout)

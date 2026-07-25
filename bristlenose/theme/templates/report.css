@@ -62,18 +62,21 @@ h2 {
     font-weight: var(--bn-weight-emphasis);
     margin: 2.5rem 0 1rem;
     padding-bottom: 0.4rem;
-    border-bottom: 2px solid var(--bn-colour-border);
+    /* A section divider is a *structural* concern, not a *reading-width* one:
+       un-cap so the rule spans the full pane (overriding the reading-width
+       cap the h1/h2/h3/.description group sets above). 1px is the canonical
+       divider weight, matching .framework-section-header (codebook). This
+       retires the old 2px reading-width-capped treatment (D7 in
+       docs/design-improvement-opportunities.md) — every h2 is now one
+       consistent 1px full-pane divider. See docs/design-lens-template.md
+       § Keylines. */
+    max-width: none;
+    border-bottom: 1px solid var(--bn-colour-border);
 }
 
-/* Lens section headings (Quotes · Analysis). The base h2 above welds its
-   divider onto a prose element that's capped at --bn-max-width (52rem), so
-   the rule truncates mid-pane. Section dividers are a *structural* concern,
-   not a *reading-width* one — un-cap the heading so the rule spans the full
-   pane, matching the codebook lens's .framework-section-header. 1px is the
-   canonical section-divider weight (the base h2's 2px is the older, heavier
-   treatment). The two are deliberately left inconsistent for now: retiring
-   border-on-capped-h2 system-wide is the deferred big refactor — see D7 in
-   docs/design-improvement-opportunities.md. */
+/* Redundant since the base h2 unification above — kept as a defensive alias
+   so a non-h2 .section-heading (should one ever appear) still gets the
+   full-pane 1px divider rather than the reading-width prose cap. */
 .section-heading {
     max-width: none;
     border-bottom-width: 1px;

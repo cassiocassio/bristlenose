@@ -290,30 +290,107 @@ needs a two-wave fixture + serve QA.
   accept-all's 0.5 default) — decide: mirror 0.5 or stay conservative.
 - Mid-confidence review band is silently denied for new quotes (no modal) — maybe
   surface a count later.
-- Re-apply covers **all previously-applied** frameworks, not just *enabled* ones —
-  gate on enabled once the toggle is persisted (below).
+- Re-apply covers **all previously-applied** frameworks. *Superseded by Decision A
+  (below): keep it that way — do NOT gate on enabled; add a "currently linked"
+  check instead so Remove stops maintenance.*
 - No dedicated progress toast for the re-apply's tagging phase (watcher-initiated,
   so the existing autocode-status poll doesn't cover it) — outcome shows on refresh.
 - LLM emitting two tags for one quote → `(job_id, quote_id)` violation rolls the
   whole re-apply back to a silent no-op (edge case, logged).
 
+## Session update — two re-apply decisions settled (25 Jul 2026)
+
+Two questions that the Q6 build left open — *does disable gate re-apply?* and *do
+we ever revisit old sessions?* — are now decided. Both reduce to one primitive and
+make Phase 1 (persistence) simpler than the "gate on enabled" framing above.
+
+### Decision A — the enable/disable toggle is **view-only**; it never gates re-apply
+
+"Functional off" was conflating two axes:
+- **View off** — fold the panel section + hide the framework's badges *report-wide*.
+  This is what "off · kept" means, and it's all the toggle does.
+- **Maintenance off** — stop coding new sessions. **The toggle does NOT own this.**
+
+Tying re-apply to *enabled* creates a coverage gap: disable X → add sessions 5–8 →
+re-run skips X → re-enable → X covers 1–4 but not 5–8, so "active" silently lies.
+The fix is to **not gate on enabled at all.** A disabled-but-installed codebook keeps
+quietly coding new sessions in the background (delta-cheap, results retained but
+hidden), so re-enable is *always* an instant, free reveal — "re-enabling never
+re-spends" (Principle 1) holds literally. The only cost is a few cents coding new
+quotes for a hidden codebook, which is just the appliance keeping evidence current.
+
+The intent "stop spending on this" belongs to **Remove** (Library uninstall — drops
+the `ProjectCodebookGroup` link, stops maintenance), not the view toggle. This keeps
+the three verbs clean:
+
+| Verb | Maintains new sessions? | Reactivation cost |
+|---|---|---|
+| **Disable** (toggle) | **Yes** — codes, hidden | Re-enable is **free** (already current) |
+| **Remove** (Library uninstall) | **No** — link dropped | **Re-add fires the delta** — deliberate spend |
+| **Forget** (red, deferred) | No — purges results | Re-add = full re-spend |
+
+The spend-bearing reactivation is tied to the *deliberate* act (Add in the Library),
+never the *casual* one (flip a view toggle). Remove's gap self-heals the same way —
+while unlinked the watermark doesn't move, so re-add's delta catches every session
+that arrived in the meantime. Same mechanism, no new code.
+
+**Consequence for the re-apply gate** (`reapply_active_frameworks`): gate on
+**"ever-applied AND currently linked"** (add the `ProjectCodebookGroup` check).
+Do **not** add an `enabled` check — the docstring note "once persisted this should
+also skip disabled" is now **wrong** and must be deleted. So `ProjectFrameworkState.
+enabled` drives **view state only**; no re-apply gate to wire, no backfill-on-enable
+machinery.
+
+### Decision B — delta-only on every path; **"already-seen"** is the do-not-touch line
+
+We never "reapply completely" to a session-set that has had new imports — we code
+**only the new sessions' quotes**. The earlier sessions already record the user's
+opinion: explicitly (accept/reject curation) *or* weakly (the tags they've already
+seen in the report). So "don't touch earlier sessions" holds **even if they curated
+nothing** — which means this path needs **no "did they curate?" test**.
+
+Verified correctness reason it must stay delta-only: the accept guard is
+non-clobbering on *additions* only (it skips an existing `QuoteTag`) but is **blind
+to the denied ledger**. A pass that revisited an old session would re-propose a
+human-*rejected* tag at high confidence, find no `QuoteTag`, and **resurrect it**.
+Delta safety comes entirely from never going back. Plus LLM nondeterminism means
+re-coding a seen session could silently move tags the user already looked at.
+
+The whole shipping path collapses to one rule:
+
+> **On any reactivation or re-run: code only quotes from sessions imported after the
+> last apply (`first_imported_at > completed_at`). Never revisit an earlier session.**
+
+Covers re-run, re-enable, and Remove→re-add alike. No complete-reapply, no curation
+test, no denial-ledger wiring needed to ship.
+
+**Deferred prerequisite (future only):** a **codebook-edit re-apply** — the *one*
+case that legitimately revisits old sessions, because editing the framework's tags
+or retuning the threshold makes the old coding stale by design. *There*, the "did the
+human touch anything?" test gates destructive-vs-preserve (uncurated → safe to blow
+away + re-code; curated → refuse or preserving-merge), and *that* is the point at
+which the guard must finally learn to respect denials/removals, not just existing
+tags. Not on the critical path.
+
 ## Next: persist the enable/disable toggle (highest-leverage)
 
 The slider is UI-local (resets on reload). Persisting it unblocks (a) survive
-reload, (b) functional disable, (c) gating re-apply to *enabled* codebooks.
+reload and (b) functional **view** off (fold + report-wide badge hide). Per Decision
+A it does **not** gate re-apply — so no re-apply wiring, which makes this smaller
+than the earlier "gate on enabled" framing.
 
 **The issue is a semantics decision, not plumbing** — persisted per-project group
 hiding already exists (`hidden_tag_groups` table + `setTagGroupsHidden`). Decide:
-1. **What "disabled" turns off** — view-fold only / report-wide badge hide /
-   functional off (+ skip re-apply). "Gate re-apply on enabled" implies the last.
+1. **What "disabled" turns off** — *settled (Decision A):* **view only** — fold the
+   section + hide the framework's badges report-wide. Not a re-apply gate.
 2. **Reconcile with the group eye-toggle** (`hidden_tag_groups`) — one axis
-   (framework off ⇔ all its groups hidden, fragile for the gate) or a *distinct*
-   per-framework flag with render treating a group hidden if eye-toggled **or**
-   framework-disabled. Recommend the distinct flag.
+   (framework off ⇔ all its groups hidden) or a *distinct* per-framework flag with
+   render treating a group hidden if eye-toggled **or** framework-disabled.
+   *Recommend the distinct flag* (mirrors `hidden`/`starred`).
 3. **Data model** — a new **`ProjectFrameworkState(project_id, framework_id,
    enabled)`** (project-scoped, per-framework; `ProjectCodebookGroup` is per-group,
    and instance-scoping forbids it on `CodebookGroup`). Then: additive migration +
-   endpoint + hydrate (mirror `hidden`/`starred`) + a one-line re-apply gate.
+   endpoint + hydrate (mirror `hidden`/`starred`). No re-apply gate.
 
 ## Remaining "Not built" — and parallelizability
 
@@ -321,9 +398,12 @@ The constraint is **file contention on `CodebookPanel.tsx`**, not logic. Buckets
 
 - **Parallel-safe now (separate files, no deps):** `✦` sparkle retirement
   (`badge.css`/toast — pure mechanical cleanup) · Red ⊖ "Forget" (new backend
-  purge, if wanted) · a *presence-based* sidebar dot.
-- **Blocked on the persistence flag above:** functional disable · enabled-gated
-  re-apply · blue-dot-means-enabled.
+  purge, if wanted) · a *presence-based* sidebar dot · the re-apply gate fix
+  (add the `ProjectCodebookGroup`-linked check + delete the stale "skip disabled"
+  docstring note in `reapply_active_frameworks` — backend-only, per Decision A).
+- **Blocked on the persistence flag above:** functional **view** off (fold +
+  report-wide badge hide) · blue-dot-means-enabled. *(No longer includes
+  "enabled-gated re-apply" — Decision A removed that.)*
 - **Must serialize (all touch `CodebookPanel.tsx` — one frontend session):** fold
   animation · collapsed summary meta · header reconciliation (drop Remove, morph
   AutoCode→switch) · Add↔Remove + dialog relocation · "Your codebooks" section ·
@@ -331,5 +411,6 @@ The constraint is **file contention on `CodebookPanel.tsx`**, not logic. Buckets
 - **i18n-careful (touch all 20 locale files — collide with concurrent i18n):**
   19-locale propagation · the summary-meta's new keys.
 
-Highest-leverage next: the persistence flag. Best parallel win meanwhile: the `✦`
-sweep (isolated, mechanical).
+Highest-leverage next: the persistence flag (now view-only, so smaller). Best
+parallel win meanwhile: the `✦` sweep (isolated, mechanical) or the re-apply gate
+fix (backend-only, isolated).

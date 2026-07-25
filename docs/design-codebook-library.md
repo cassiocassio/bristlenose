@@ -452,7 +452,9 @@ dropped. What's left are **product/design decisions**, not bugs:
    reappear in the file you share.** Consistent between the two toggles, but
    "disable = report-wide hide" reads like deliverable sanitation in a way the eye
    toggle never claimed. *Call: should either toggle sanitise the export?* If yes,
-   embed both in the export payload + `resolveFromExport`.
+   embed both in the export payload + `resolveFromExport`. **Detailed capture for a
+   future export session: [design-export-hidden-badges.md](design-export-hidden-badges.md)**
+   (root cause, the is_hidden precedent, parity-vs-sanitation fork, touchpoints).
 2. **Manual-add to a disabled framework's group is an invisible success.** You add a
    tag, it persists, but the badge stays hidden (filtered by `effectiveHiddenGroups`)
    with no feedback. *Call: auto-enable the framework on add (mirroring the eye-

@@ -712,6 +712,52 @@ class TestAcceptAllProposals:
         assert resp.status_code == 404
 
 
+class TestApplyParamsPersisted:
+    """The chosen cutoff is recorded on the job so a later re-apply to
+    newly-added quotes can reuse the same parameters (no re-prompting)."""
+
+    def _job(self, client: TestClient) -> AutoCodeJob:
+        db = client.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            return (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=1, framework_id="garrett")
+                .one()
+            )
+        finally:
+            db.close()
+
+    def test_accept_all_records_upper_threshold(
+        self, client_with_completed_job: TestClient
+    ) -> None:
+        resp = client_with_completed_job.post(
+            "/api/projects/1/autocode/garrett/accept-all",
+            json={"min_confidence": 0.72},
+        )
+        assert resp.status_code == 200
+        assert self._job(client_with_completed_job).applied_upper_threshold == 0.72
+
+    def test_deny_all_records_lower_threshold(
+        self, client_with_completed_job: TestClient
+    ) -> None:
+        resp = client_with_completed_job.post(
+            "/api/projects/1/autocode/garrett/deny-all",
+            json={"max_confidence": 0.28},
+        )
+        assert resp.status_code == 200
+        assert self._job(client_with_completed_job).applied_lower_threshold == 0.28
+
+    def test_accept_all_default_does_not_record(
+        self, client_with_completed_job: TestClient
+    ) -> None:
+        """No explicit body → the default 0.5 is not recorded as a chosen cutoff."""
+        resp = client_with_completed_job.post(
+            "/api/projects/1/autocode/garrett/accept-all",
+        )
+        assert resp.status_code == 200
+        assert self._job(client_with_completed_job).applied_upper_threshold is None
+
+
 # ---------------------------------------------------------------------------
 # POST /autocode/{framework_id}/deny-all — bulk deny
 # ---------------------------------------------------------------------------

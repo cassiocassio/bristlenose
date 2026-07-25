@@ -298,6 +298,8 @@ async def run_autocode_job(
 
         # Load prompt template
         prompt_tmpl = get_prompt_template("autocode")
+        # Record the prompt version so a later re-apply can reproduce this run.
+        job.prompt_version = prompt_tmpl.version
 
         # Chunk into batches
         batches: list[list[QuoteBatchItem]] = []

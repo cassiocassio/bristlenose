@@ -665,6 +665,13 @@ class AutoCodeJob(Base):
     error_message: Mapped[str] = mapped_column(Text, default="")
     llm_provider: Mapped[str] = mapped_column(String(50), default="")
     llm_model: Mapped[str] = mapped_column(String(100), default="")
+    # Apply parameters — captured so a later re-apply to newly-added quotes can
+    # reuse the same cutoff + prompt. Thresholds are set when the researcher
+    # applies (accept-all/deny-all from the threshold review); prompt_version is
+    # stamped when the job runs. See the codebook re-apply plan.
+    applied_lower_threshold: Mapped[float | None] = mapped_column(default=None)
+    applied_upper_threshold: Mapped[float | None] = mapped_column(default=None)
+    prompt_version: Mapped[str] = mapped_column(String(20), default="")
     input_tokens: Mapped[int] = mapped_column(default=0)
     output_tokens: Mapped[int] = mapped_column(default=0)
     started_at: Mapped[datetime] = mapped_column(default=func.now())

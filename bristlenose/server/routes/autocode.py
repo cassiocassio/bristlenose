@@ -500,6 +500,11 @@ def accept_all_proposals(
         min_conf = body.min_confidence if body else 0.5
         group_filter_id = body.group_id if body else None
 
+        # Record the accept cutoff so a later re-apply reuses the same upper
+        # threshold (only when an explicit cutoff was supplied — not the default).
+        if body is not None:
+            job.applied_upper_threshold = min_conf
+
         query = (
             db.query(ProposedTag)
             .filter(
@@ -575,6 +580,11 @@ def deny_all_proposals(
         min_conf = body.min_confidence if body else 0.0
         max_conf = body.max_confidence if body else None
         group_filter_id = body.group_id if body else None
+
+        # Record the exclude cutoff ("deny below X") so a later re-apply reuses
+        # the same lower threshold. Only the review dialog sends max_confidence.
+        if max_conf is not None:
+            job.applied_lower_threshold = max_conf
 
         query = db.query(ProposedTag).filter(
             ProposedTag.job_id == job.id,

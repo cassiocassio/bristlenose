@@ -89,12 +89,13 @@ extension ScienceIllustration {
     var welcomeTurn: Double {
         switch self {
         case .none:         return 0
-        case .sentimentFan: return 6
+        case .sentimentFan: return 11   // half-speed deal → a full cycle needs a longer turn
         case .books:        return 9
         case .shoal:        return 9
         case .quote:        return 10
         case .signal:       return 11
         case .autocode:     return 12
+        case .manualTags:   return 13
         }
     }
 }

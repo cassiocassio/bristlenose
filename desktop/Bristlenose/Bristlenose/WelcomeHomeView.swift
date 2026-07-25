@@ -36,7 +36,7 @@ private enum WelcomeContent {
     // image = nil → text-only slot (Ingest + Redact PII art pending). CTA labels are per-tool (doc §Cell 1 pool).
     static let studyTools: [SlotItem] = [
         .init(title: "AutoCode", text: "Let AutoCode propose tags across every quote — you Accept or Deny.", linkLabel: "AI helps tag →", href: docs + "use-codebooks.html", illustration: .autocode),
-        .init(title: "Codebooks", text: "Build a codebook, or start from a ready-made framework.", linkLabel: "Code by hand →", href: docs + "tag-for-meaning.html", linkLabel2: "Research frameworks →", href2: docs + "codebook-frameworks.html", image: "welcome-codes"),
+        .init(title: "Codebooks", text: "Build a codebook, or start from a ready-made framework.", linkLabel: "Code by hand →", href: docs + "tag-for-meaning.html", linkLabel2: "Research frameworks →", href2: docs + "codebook-frameworks.html", illustration: .manualTags),
         .init(title: "Tag", text: "Select one or more quotes, and press `t` to tag them with a code from your codebook.", linkLabel: "Manual tagging →", href: docs + "tag-for-meaning.html", image: "welcome-tag"),
         .init(title: "Star & hide", text: "Press `s` to keep the quotes that matter, `h` to hide the rest.", linkLabel: "Keyboard shortcuts →", href: docs + "keyboard-shortcuts.html", image: "welcome-star"),
         .init(title: "Video clips", text: "Turn selected quotes into video clips.", linkLabel: "Export options →", href: docs + "export-clips.html", image: "welcome-clips"),
@@ -581,6 +581,7 @@ private struct SlotRotator: View {
         case .quote:        QuoteIllustrationView().frame(height: 112)
         case .signal:       SignalIllustrationView().frame(height: 152)
         case .autocode:     AutoCodeIllustrationView().frame(height: 160)
+        case .manualTags:   ManualTagsIllustrationView().frame(height: 176)
         }
     }
 

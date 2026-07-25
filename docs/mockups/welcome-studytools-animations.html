@@ -221,6 +221,38 @@
   .quote-card.card-hidden{ opacity:0; transition:opacity .45s ease; }
   .quote-card.card-shown{ opacity:1; transition:opacity .45s ease; }
 
+  /* ============================================================= *
+   *  MANUAL TAGS — a codebook group authored by hand               *
+   * ============================================================= */
+  .cb-group{ border-radius:8px; padding:10px 12px; background:var(--grp-bg);
+             border:1px solid color-mix(in oklch, var(--grp-bg), var(--bn-colour-border) 55%);
+             opacity:0; transform:translateX(16px); transition:opacity .4s ease, transform .4s ease; }
+  .cb-group.slide-in{ opacity:1; transform:none; }
+  .cb-group.slide-out{ opacity:0; transform:translateX(-22px); }
+  .anim.cellframe .cb-group{ padding:8px 10px; }
+  .group-title{ font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); line-height:1.45; min-height:1.2em; }
+  .anim.cellframe .group-title{ font-size:12px; }
+  .group-subtitle{ font-size:11px; color:var(--bn-colour-muted); line-height:1.35; margin-top:1px; min-height:1em; }
+  .anim.cellframe .group-subtitle{ font-size:9.5px; }
+  .tag-list{ display:flex; flex-direction:column; gap:3px; margin-top:7px; }
+  .tag-row{ display:flex; align-items:center; min-height:1.4em; }
+  .cb-tag{ background:var(--tag-bg); }
+  .cb-input{ font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-text); }
+  .anim.cellframe .cb-input{ font-size:9px; }
+  /* group tint + per-slot tag colours — real codebook OKLCH hues (ux 250, opp 75) */
+  .grp-ux  { --grp-bg:oklch(97% 0.015 250); }
+  .grp-opp { --grp-bg:oklch(97% 0.015 75); }
+  :root[data-appearance="dark"] .grp-ux  { --grp-bg:oklch(24% 0.03 250); }
+  :root[data-appearance="dark"] .grp-opp { --grp-bg:oklch(24% 0.028 75); }
+  .grp-ux  .s0{ --tag-bg:oklch(93% 0.045 250); } .grp-ux  .s1{ --tag-bg:oklch(89% 0.06 250); } .grp-ux  .s2{ --tag-bg:oklch(85% 0.075 250); }
+  .grp-opp .s0{ --tag-bg:oklch(93% 0.05 75); }   .grp-opp .s1{ --tag-bg:oklch(89% 0.065 75); }  .grp-opp .s2{ --tag-bg:oklch(85% 0.08 75); }
+  :root[data-appearance="dark"] .grp-ux  .s0{ --tag-bg:oklch(40% 0.07 250); } :root[data-appearance="dark"] .grp-ux  .s1{ --tag-bg:oklch(44% 0.08 250); } :root[data-appearance="dark"] .grp-ux  .s2{ --tag-bg:oklch(48% 0.09 250); }
+  :root[data-appearance="dark"] .grp-opp .s0{ --tag-bg:oklch(40% 0.07 75); }  :root[data-appearance="dark"] .grp-opp .s1{ --tag-bg:oklch(44% 0.08 75); }  :root[data-appearance="dark"] .grp-opp .s2{ --tag-bg:oklch(48% 0.09 75); }
+  .grp-ux  .s3{ --tag-bg:oklch(82% 0.09 250); }  .grp-ux  .s4{ --tag-bg:oklch(78% 0.10 250); }
+  .grp-opp .s3{ --tag-bg:oklch(82% 0.095 75); }  .grp-opp .s4{ --tag-bg:oklch(78% 0.105 75); }
+  :root[data-appearance="dark"] .grp-ux  .s3{ --tag-bg:oklch(52% 0.10 250); } :root[data-appearance="dark"] .grp-ux  .s4{ --tag-bg:oklch(56% 0.11 250); }
+  :root[data-appearance="dark"] .grp-opp .s3{ --tag-bg:oklch(52% 0.10 75); }  :root[data-appearance="dark"] .grp-opp .s4{ --tag-bg:oklch(56% 0.11 75); }
+
   @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
 </style>
 </head>
@@ -263,6 +295,34 @@
           <li><b>Real quotes, de-branded.</b> 11:30 → <b>visible options</b>; 13:08 → <b>platform convention</b>.</li>
           <li><b>Copy edit needed:</b> quote 2 was 37 words → trimmed to <b>~19</b> here (≈50%) so it streams + fits. Your final wording goes in <code>QUOTES</code>.</li>
           <li><b>Open Qs:</b> should the <code>+</code> pulse when the code lands? Show the deny path occasionally, or always accept? Stream <em>both</em> cards stacked in the big cell vs cycle one?</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================== Manual tags -->
+  <h2 class="sec"><span class="n">2</span> · Manual tags — <span class="q">the researcher hand-builds groups AI could never originate</span></h2>
+  <p class="map">The human counterpart to AutoCode. Two groups build <b>by hand</b> — title + description + codes typed via the real <code>+ → type → commit</code> flow — one at a time, then slide away. <b>A/B homepage trial</b> = a <em>designed experiment</em>; <b>Switching costs</b> = a <em>commercial dive from the brief</em> (the participant uses a rival). Auto-coding can’t originate either: it wasn’t in the room when the research purpose was set. Group colours are the real codebook OKLCH sets (ux 250 / opp 75).</p>
+  <div class="demo">
+    <div class="stage-cell">
+      <div class="tool-cell">
+        <span class="tag">Study tools</span>
+        <div class="t">Tag &amp; group by hand</div>
+        <div class="summary">Create your own tags and groups — the intent only you brought to the research.</div>
+        <div class="anim cellframe acframe" data-manual="cell"></div>
+        <a class="lnk" href="#">Manual tagging &amp; codebooks&nbsp;→</a>
+        <div class="dropcard"><div class="dt">Drop a folder</div><div class="dd">Drag recordings or transcripts here to add a project.</div></div>
+      </div>
+      <div class="caption">at cell scale</div>
+    </div>
+    <div class="stage-detail">
+      <div class="anim detailframe acframe" data-manual="detail"></div>
+      <div class="notes">
+        <ul>
+          <li><b>Why two groups.</b> One is a <em>designed A/B experiment</em>, one a <em>commercial investigation</em> from the brief — the two kinds of a-priori intent auto-coding structurally can’t have (it never attended the research-purpose meeting).</li>
+          <li><b>Real flow, by hand.</b> Title + subtitle + each code typed via <code>+ → type → commit → chip</code> (real tag-input + <code>.badge-user</code>), in the group’s real codebook colour.</li>
+          <li><b>Fit:</b> groups really <em>accumulate</em> into a codebook — shown one at a time here (slides away) for space. Per-group descriptions included as requested.</li>
+          <li><b>Open:</b> final tag wording is placeholder; and whether to also show a code being <em>applied to a quote</em> after creation.</li>
         </ul>
       </div>
     </div>
@@ -436,6 +496,61 @@ async function buildAC(host){
 }
 
 document.querySelectorAll("[data-ac]").forEach(buildAC);
+
+/* ================= Manual tags ================= */
+var GROUPS=[
+  { cls:"grp-ux",  title:"A/B homepage trial",
+    subtitle:"Reactions to the two homepage variants we tested.",
+    tags:["A +ve","A -ve","B +ve","B -ve","AB choice"] },
+  { cls:"grp-opp", title:"Switching costs",
+    subtitle:"Barriers for a participant already using a rival tool.",
+    tags:["data migration","learning curve","institutional inertia","better-but-not-better-enough"] },
+];
+async function typeInto(el, text, msPerChar){
+  for(var i=0;i<text.length;i++){ el.textContent += text[i]; await sleep(msPerChar); }
+}
+async function buildGroup(host, g){
+  host.innerHTML='<div class="cb-group '+g.cls+'"><div class="group-title"></div><div class="group-subtitle"></div><div class="tag-list"></div></div>';
+  var grp=host.querySelector(".cb-group"), titleEl=host.querySelector(".group-title"),
+      subEl=host.querySelector(".group-subtitle"), list=host.querySelector(".tag-list");
+  void grp.offsetWidth; grp.classList.add("slide-in");
+  if(REDUCED){
+    titleEl.textContent=g.title; subEl.textContent=g.subtitle;
+    for(var k=0;k<g.tags.length;k++){ var r=document.createElement("div"); r.className="tag-row";
+      var c=document.createElement("span"); c.className="badge badge-user cb-tag s"+k; c.textContent=g.tags[k]; r.appendChild(c); list.appendChild(r); }
+    return;
+  }
+  await nap(140);
+  await typeInto(titleEl, g.title, 46);      // title, by hand
+  await nap(240);
+  await typeInto(subEl, g.subtitle, 26);     // description
+  await nap(340);
+  for(var i=0;i<g.tags.length;i++){          // each code via + → type → commit → chip
+    var ed=document.createElement("div"); ed.className="tag-row editor";
+    var inp=document.createElement("span"); inp.className="cb-input";
+    var caret=document.createElement("span"); caret.className="caret blink";
+    ed.appendChild(inp); ed.appendChild(caret); list.appendChild(ed);
+    await typeInto(inp, g.tags[i], 44);
+    caret.classList.remove("blink"); await nap(230);
+    ed.remove();
+    var row=document.createElement("div"); row.className="tag-row";
+    var chip=document.createElement("span"); chip.className="badge badge-user cb-tag badge-appearing s"+i;
+    chip.textContent=g.tags[i]; row.appendChild(chip); list.appendChild(row);
+    await nap(380);
+  }
+  await nap(1700);                           // hold on the finished group
+}
+async function runManual(host){
+  var i=0;
+  if(REDUCED){ await buildGroup(host, GROUPS[0]); return; }
+  while(true){
+    await buildGroup(host, GROUPS[i%GROUPS.length]);
+    var grp=host.querySelector(".cb-group"); if(grp){ grp.classList.remove("slide-in"); grp.classList.add("slide-out"); }
+    await nap(540);
+    i++;
+  }
+}
+document.querySelectorAll("[data-manual]").forEach(runManual);
 </script>
 </body>
 </html>

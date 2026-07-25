@@ -20,7 +20,7 @@ enum ScienceIllustration: Equatable {
     // NB: now welcome-wide, not science-only — `autocode` is the first study-tools
     // illustration. Worth renaming to `WelcomeIllustration` before the other study
     // tools land (see docs/design-welcome-studytools-illustrations.md).
-    case none, sentimentFan, books, shoal, quote, signal, autocode
+    case none, sentimentFan, books, shoal, quote, signal, autocode, manualTags
 }
 
 /// sRGB colour from a 0xRRGGBB literal (file-private helper).
@@ -69,8 +69,8 @@ struct SentimentFanView: View {
                         .offset(dealt ? homeOffset(i, in: geo.size) : .zero)   // deck = centre
                         .zIndex(Double(i))
                         .animation(reduceMotion ? nil
-                                   : .easeInOut(duration: 0.5).delay(Double(i) * 0.06),
-                                   value: dealt)                                // per-chip deal stagger
+                                   : .easeInOut(duration: 1.0).delay(Double(i) * 0.12),
+                                   value: dealt)                                // per-chip deal stagger (half speed)
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
@@ -81,9 +81,9 @@ struct SentimentFanView: View {
         .task(id: active && !reduceMotion) {
             guard active && !reduceMotion else { await MainActor.run { dealt = true }; return }
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(1.2))    // gathered (deck) hold
+                try? await Task.sleep(for: .seconds(2.4))    // gathered (deck) hold — half speed
                 await MainActor.run { dealt = true }
-                try? await Task.sleep(for: .seconds(2.8))    // dealt (readable) hold
+                try? await Task.sleep(for: .seconds(5.6))    // dealt (readable) hold — half speed
                 await MainActor.run { dealt = false }
             }
         }
@@ -331,6 +331,24 @@ struct AutoCodeIllustrationView: View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
         return IllustrationWebView(html: WelcomeIllustrationHTML.autocode(dark: scheme == .dark, palette: palette, reduce: still))
             .id("autocode-\(scheme)-\(palette)-\(still)")   // reload on appearance / palette / reduce-motion / baton
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Manual tags (Codebooks) — the researcher hand-builds codebook groups by hand
+/// (title + description + codes typed, in real codebook colours). Human counterpart
+/// to AutoCode; ported from docs/mockups/welcome-studytools-animations.html.
+struct ManualTagsIllustrationView: View {
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.welcomeAnimationActive) private var active
+    @AppStorage("palette") private var palette: String = "default"
+
+    var body: some View {
+        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        return IllustrationWebView(html: WelcomeIllustrationHTML.manualTags(dark: scheme == .dark, palette: palette, reduce: still))
+            .id("manualtags-\(scheme)-\(palette)-\(still)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -746,6 +764,121 @@ enum WelcomeIllustrationHTML {
           async function run(){   // the native baton owns the rhythm: play once per turn, then hold
             var d = REDUCED ? QUOTES[0] : QUOTES[Math.floor(Math.random()*QUOTES.length)];
             await runCard(d, false);
+          }
+          run();
+        </script>
+        </body></html>
+        """
+    }
+
+    /// Manual tags (Codebooks) — the researcher hand-builds a codebook group:
+    /// title + description + codes typed via the real + → type → commit flow, in the
+    /// real codebook OKLCH colours (ux 250 / opp 75). The human counterpart to
+    /// AutoCode; one group per turn (the baton owns the rhythm).
+    static func manualTags(dark: Bool, palette: String, reduce: Bool) -> String {
+        """
+        <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-palette="\(palette)" data-reduce="\(reduce ? "1" : "0")">
+        <head><meta charset="utf-8"><style>
+          :root{
+            --bn-colour-quote-bg:#f9fafb; --bn-colour-border:#e5e7eb; --bn-colour-muted:#6b7280; --bn-colour-accent:#007aff;
+            --bn-colour-text:#1a1a1a; --bn-colour-bg:#ffffff; --bn-colour-badge-bg:#f3f4f6; --bn-colour-badge-text:#374151;
+            --bn-colour-user-tag-bg:#f3f4f6;
+            --bn-font-mono:"SF Mono",ui-monospace,Menlo,monospace;
+            --bn-font-body:-apple-system,"SF Pro Text",system-ui,sans-serif;
+            --bn-radius-sm:3px; --bn-space-xs:0.15rem;
+            --bn-text-label:0.8125rem; --bn-text-badge:0.72rem;
+            --bn-weight-normal:420; --bn-weight-emphasis:490;
+          }
+          html[data-appearance="dark"]{
+            --bn-colour-border:#2d2d2d; --bn-colour-muted:#9ca3af; --bn-colour-accent:#0a84ff;
+            --bn-colour-text:#e5e7eb; --bn-colour-badge-bg:#252525; --bn-colour-badge-text:#d1d5db; --bn-colour-user-tag-bg:#252525;
+          }
+          html[data-palette="edo"]{
+            --bn-colour-border:#d4c9a8; --bn-colour-muted:#4a698a; --bn-colour-accent:#0f5c9e; --bn-colour-text:#1b2230;
+          }
+          html[data-palette="edo"][data-appearance="dark"]{
+            --bn-colour-border:#2d2820; --bn-colour-muted:#7ba8a0; --bn-colour-accent:#4d9fe0; --bn-colour-text:#e8e3d6;
+          }
+          *{ box-sizing:border-box; }
+          html,body{ margin:0; height:100%; overflow:hidden; background:transparent; }
+          body{ display:flex; align-items:center; padding:2px 12px; font-family:var(--bn-font-body); color:var(--bn-colour-text); }
+          #mt{ width:100%; }
+          .badge{ display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) 0.45rem; border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); }
+          .badge-user{ background:var(--bn-colour-user-tag-bg); color:var(--bn-colour-text); font-weight:var(--bn-weight-normal); }
+          html[data-appearance="dark"] .badge-user{ color:#ffffff; font-weight:var(--bn-weight-emphasis); }
+          @keyframes badge-fade-in{ from{opacity:0; transform:scale(.8)} to{opacity:1; transform:scale(1)} }
+          .badge-appearing{ animation:badge-fade-in .2s ease-out; }
+          .caret{ display:inline-block; width:2px; height:1em; background:var(--bn-colour-accent); margin-left:1px; vertical-align:text-bottom; }
+          .caret.blink{ animation:caret-blink 1s step-end infinite; }
+          @keyframes caret-blink{ 50%{opacity:0} }
+          .cb-group{ width:100%; border-radius:8px; padding:10px 12px; background:var(--grp-bg);
+                     border:1px solid color-mix(in oklch, var(--grp-bg), var(--bn-colour-border) 55%);
+                     opacity:0; transform:translateX(16px); transition:opacity .4s ease, transform .4s ease; }
+          .cb-group.slide-in{ opacity:1; transform:none; }
+          .group-title{ font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); line-height:1.45; min-height:1.2em; }
+          .group-subtitle{ font-size:11px; color:var(--bn-colour-muted); line-height:1.35; margin-top:1px; min-height:1em; }
+          .tag-list{ display:flex; flex-direction:column; gap:3px; margin-top:7px; }
+          .tag-row{ display:flex; align-items:center; min-height:1.4em; }
+          .cb-tag{ background:var(--tag-bg); }
+          .cb-input{ font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-text); }
+          .grp-ux{ --grp-bg:oklch(97% 0.015 250); } .grp-opp{ --grp-bg:oklch(97% 0.015 75); }
+          html[data-appearance="dark"] .grp-ux{ --grp-bg:oklch(24% 0.03 250); } html[data-appearance="dark"] .grp-opp{ --grp-bg:oklch(24% 0.028 75); }
+          .grp-ux .s0{ --tag-bg:oklch(93% 0.045 250); } .grp-ux .s1{ --tag-bg:oklch(89% 0.06 250); } .grp-ux .s2{ --tag-bg:oklch(85% 0.075 250); } .grp-ux .s3{ --tag-bg:oklch(82% 0.09 250); } .grp-ux .s4{ --tag-bg:oklch(78% 0.10 250); }
+          .grp-opp .s0{ --tag-bg:oklch(93% 0.05 75); } .grp-opp .s1{ --tag-bg:oklch(89% 0.065 75); } .grp-opp .s2{ --tag-bg:oklch(85% 0.08 75); } .grp-opp .s3{ --tag-bg:oklch(82% 0.095 75); } .grp-opp .s4{ --tag-bg:oklch(78% 0.105 75); }
+          html[data-appearance="dark"] .grp-ux .s0{ --tag-bg:oklch(40% 0.07 250); } html[data-appearance="dark"] .grp-ux .s1{ --tag-bg:oklch(44% 0.08 250); } html[data-appearance="dark"] .grp-ux .s2{ --tag-bg:oklch(48% 0.09 250); } html[data-appearance="dark"] .grp-ux .s3{ --tag-bg:oklch(52% 0.10 250); } html[data-appearance="dark"] .grp-ux .s4{ --tag-bg:oklch(56% 0.11 250); }
+          html[data-appearance="dark"] .grp-opp .s0{ --tag-bg:oklch(40% 0.07 75); } html[data-appearance="dark"] .grp-opp .s1{ --tag-bg:oklch(44% 0.08 75); } html[data-appearance="dark"] .grp-opp .s2{ --tag-bg:oklch(48% 0.09 75); } html[data-appearance="dark"] .grp-opp .s3{ --tag-bg:oklch(52% 0.10 75); } html[data-appearance="dark"] .grp-opp .s4{ --tag-bg:oklch(56% 0.11 75); }
+          @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
+        </style></head>
+        <body><div id="mt"></div>
+        <script>
+          var host=document.getElementById("mt");
+          var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
+          var PACE=1.3;
+          function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+          function nap(ms){ return sleep(Math.round(ms*PACE)); }
+          var GROUPS=[
+            { cls:"grp-ux",  title:"A/B homepage trial",
+              subtitle:"Reactions to the two homepage variants we tested.",
+              tags:["A +ve","A -ve","B +ve","B -ve","AB choice"] },
+            { cls:"grp-opp", title:"Switching costs",
+              subtitle:"Barriers for a participant already using a rival tool.",
+              tags:["data migration","learning curve","institutional inertia","better-but-not-better-enough"] }
+          ];
+          async function typeInto(el, text, msPerChar){ for(var i=0;i<text.length;i++){ el.textContent += text[i]; await sleep(msPerChar); } }
+          async function buildGroup(g){
+            host.innerHTML='<div class="cb-group '+g.cls+'"><div class="group-title"></div><div class="group-subtitle"></div><div class="tag-list"></div></div>';
+            var grp=host.querySelector(".cb-group"), titleEl=host.querySelector(".group-title"),
+                subEl=host.querySelector(".group-subtitle"), list=host.querySelector(".tag-list");
+            void grp.offsetWidth; grp.classList.add("slide-in");
+            if(REDUCED){
+              titleEl.textContent=g.title; subEl.textContent=g.subtitle;
+              for(var k=0;k<g.tags.length;k++){ var r=document.createElement("div"); r.className="tag-row";
+                var c=document.createElement("span"); c.className="badge badge-user cb-tag s"+k; c.textContent=g.tags[k]; r.appendChild(c); list.appendChild(r); }
+              return;
+            }
+            await nap(140);
+            await typeInto(titleEl, g.title, 46);      // title, by hand
+            await nap(240);
+            await typeInto(subEl, g.subtitle, 26);     // description
+            await nap(340);
+            for(var i=0;i<g.tags.length;i++){          // each code via + -> type -> commit -> chip
+              var ed=document.createElement("div"); ed.className="tag-row editor";
+              var inp=document.createElement("span"); inp.className="cb-input";
+              var caret=document.createElement("span"); caret.className="caret blink";
+              ed.appendChild(inp); ed.appendChild(caret); list.appendChild(ed);
+              await typeInto(inp, g.tags[i], 44);
+              caret.classList.remove("blink"); await nap(230);
+              ed.remove();
+              var row=document.createElement("div"); row.className="tag-row";
+              var chip=document.createElement("span"); chip.className="badge badge-user cb-tag badge-appearing s"+i;
+              chip.textContent=g.tags[i]; row.appendChild(chip); list.appendChild(row);
+              await nap(380);
+            }
+            await nap(1700);                           // hold on the finished group
+          }
+          async function run(){   // one group per turn (random); the baton alternates across turns
+            var g = REDUCED ? GROUPS[0] : GROUPS[Math.floor(Math.random()*GROUPS.length)];
+            await buildGroup(g);
           }
           run();
         </script>

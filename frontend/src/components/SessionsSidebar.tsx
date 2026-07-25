@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMatch, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { apiGet } from "../utils/api";
+import { reportHref } from "../utils/reportHref";
 import { formatCompactDuration, formatCompactDate } from "../utils/format";
 import { useProjectId } from "../hooks/useProjectId";
 import type { SessionsListResponse, SessionResponse, SpeakerResponse } from "../utils/types";
@@ -215,7 +216,7 @@ export function SessionsSidebar() {
           return (
             <a
               key={session.session_id}
-              href={path}
+              href={reportHref(path)}
               className={`session-entry${isActive ? " active" : ""}`}
               ref={isActive ? activeRef : undefined}
               onClick={(e) => handleClick(e, session.session_id)}
@@ -237,7 +238,7 @@ export function SessionsSidebar() {
         return (
           <a
             key={session.session_id}
-            href={path}
+            href={reportHref(path)}
             className={`session-entry${isActive ? " active" : ""}`}
             ref={isActive ? activeRef : undefined}
             onClick={(e) => handleClick(e, session.session_id)}

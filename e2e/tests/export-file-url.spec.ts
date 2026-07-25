@@ -39,6 +39,7 @@ async function fetchExportHtml(baseURL: string): Promise<string> {
 
 const EXPORT_ROUTES: Array<{ label: string; hash: string }> = [
   { label: "dashboard", hash: "" },
+  { label: "sessions", hash: "#/report/sessions" },
   { label: "quotes", hash: "#/report/quotes" },
   { label: "codebook", hash: "#/report/codebook" },
   { label: "analysis", hash: "#/report/analysis" },
@@ -108,6 +109,20 @@ test.describe("export renders offline from file://", () => {
       expect(
         errors,
         `console errors / unhandled rejections at ${route.label}:\n${errors.join("\n")}`,
+      ).toEqual([]);
+
+      // Intra-app links must be hash-routed (#/...), never browser-router paths
+      // (/report/... or /api/...) — those navigate the browser off the file://
+      // document to a non-existent path. Broken links throw no console error, so
+      // this is the only guard for the Sessions-lens link class.
+      const browserPathLinks = await page.evaluate(() =>
+        Array.from(document.querySelectorAll("a[href]"))
+          .map((a) => a.getAttribute("href") || "")
+          .filter((h) => /^\/(report|api)\//.test(h)),
+      );
+      expect(
+        browserPathLinks,
+        `browser-router links break under hash routing at ${route.label}:\n${browserPathLinks.join("\n")}`,
       ).toEqual([]);
     });
   }

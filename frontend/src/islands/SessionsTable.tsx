@@ -315,12 +315,18 @@ function SessionRow({
   // into this session's transcript at that screen's first moment, reusing the
   // transcript page's existing #t-<seconds> hash-scroll + highlight.
   const hasJourney = journey_labels.length > 0;
-  const journeyHref = (index: number): string => {
+  // In export mode the app uses hash routing, so intra-app links must be
+  // #-prefixed (a plain "/report/..." href navigates the browser off the
+  // file:// document). The timecode rides as a nested #t-<seconds> the
+  // transcript page resolves; clicks navigate via a router-agnostic location
+  // object so both the browser and hash routers land correctly.
+  const sessionPath = `/report/sessions/${session_id}`;
+  const journeyAnchor = (index: number): string => {
     const step = journey[index];
-    return step
-      ? `/report/sessions/${session_id}#t-${Math.floor(step.start_seconds)}`
-      : `/report/sessions/${session_id}`;
+    return step ? `#t-${Math.floor(step.start_seconds)}` : "";
   };
+  const journeyHref = (index: number): string =>
+    (isExportMode() ? `#${sessionPath}` : sessionPath) + journeyAnchor(index);
 
   // Source file display — media files open the popout player via PlayerContext;
   // non-media files are plain text.
@@ -336,7 +342,9 @@ function SessionRow({
     const displayName = formatFinderFilename(sf.filename);
     const titleAttr =
       displayName !== sf.filename ? sf.filename : undefined;
-    if (has_media) {
+    if (has_media && !isExportMode()) {
+      // Offline (export) has no media server / popout player — render the
+      // filename as plain text rather than a dead #t=0 link.
       sourceEl = (
         <a
           href={`#t=0`}
@@ -365,7 +373,7 @@ function SessionRow({
   return (
     <tr data-session={session_id}>
       <td className="bn-session-id">
-        <a href={`/report/sessions/${session_id}`}>
+        <a href={isExportMode() ? `#${sessionPath}` : sessionPath}>
           #{session_number}
         </a>
       </td>
@@ -422,7 +430,7 @@ function SessionRow({
           <JourneyChain
             labels={journey_labels}
             hrefForIndex={journeyHref}
-            onIndexClick={(i) => navigate(journeyHref(i))}
+            onIndexClick={(i) => navigate({ pathname: sessionPath, hash: journeyAnchor(i) })}
           />
         )}
       </td>

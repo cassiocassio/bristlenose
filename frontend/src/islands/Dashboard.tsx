@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { Badge, PersonBadge, TimecodeLink } from "../components";
 import { PlayerContext } from "../contexts/PlayerContext";
 import { apiGet } from "../utils/api";
+import { reportHref } from "../utils/reportHref";
 import { refetchOverlayProps } from "../hooks/useRefetching";
 import { formatDuration, formatFinderDate, formatFinderFilename, formatTimecode } from "../utils/format";
 import type {
@@ -71,7 +72,7 @@ const TAB_ROUTES: Record<string, string> = {
 function statTargetToHref(target: string): string {
   const [tab, anchor] = target.split(":");
   const route = TAB_ROUTES[tab] ?? "/report/";
-  return anchor ? `${route}#${anchor}` : route;
+  return reportHref(anchor ? `${route}#${anchor}` : route);
 }
 
 function handleStatLink(target: string) {
@@ -299,7 +300,7 @@ function CompactSessionRow({
   return (
     <tr data-session={session_id}>
       <td className="bn-session-id">
-        <a href={`/report/sessions/${session_id}`}>
+        <a href={reportHref(`/report/sessions/${session_id}`)}>
           #{session_number}
         </a>
       </td>
@@ -426,7 +427,9 @@ function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
         )}
 
         <a
-          href={`/report/sessions/${quote.session_id}#t-${quote.session_id}-${Math.floor(quote.start_timecode)}`}
+          href={reportHref(
+            `/report/sessions/${quote.session_id}#t-${quote.session_id}-${Math.floor(quote.start_timecode)}`,
+          )}
           className="speaker-link"
         >
           <PersonBadge

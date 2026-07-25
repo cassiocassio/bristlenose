@@ -10,6 +10,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProposedTagResponse } from "../utils/types";
 import { getTagBg } from "../utils/colours";
+import { reportHref } from "../utils/reportHref";
 
 type Zone = "accepted" | "tentative" | "excluded";
 
@@ -128,7 +129,7 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
         >
           <td className="report-timecode">
             <a
-              href={`/report/sessions/${p.session_id}#t-${Math.floor(p.start_timecode)}`}
+              href={reportHref(`/report/sessions/${p.session_id}#t-${Math.floor(p.start_timecode)}`)}
               target="_blank"
               rel="noreferrer"
             >

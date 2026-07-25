@@ -27,6 +27,7 @@ import {
   setFocusedSignalKey,
 } from "../contexts/AnalysisSignalStore";
 import { apiGet, getCodebookAnalysis } from "../utils/api";
+import { reportHref } from "../utils/reportHref";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { formatTimecode } from "../utils/format";
 import { detectSequences, type SequenceMeta } from "../utils/sequences";
@@ -596,7 +597,7 @@ function QuoteBlock({
 }) {
   const { t } = useTranslation();
   const tc = formatTimecode(quote.startSeconds);
-  const tcHref = `/report/sessions/${quote.sessionId}#t-${Math.floor(quote.startSeconds)}`;
+  const tcHref = reportHref(`/report/sessions/${quote.sessionId}#t-${Math.floor(quote.startSeconds)}`);
 
   const seqPos = sequenceMeta?.position ?? "solo";
   const isContinuation = seqPos === "middle" || seqPos === "last";

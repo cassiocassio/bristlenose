@@ -426,9 +426,11 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
       let el = document.getElementById(targetId);
       // Tolerant fallback for #t-<seconds> deep-links (e.g. from the Sessions
       // lens journey): the target may not land exactly on a segment id, so
-      // resolve to the containing/nearest segment.
+      // resolve to the containing/nearest segment. Match the timecode at the
+      // END of the hash so it works under hash routing too, where the full
+      // hash is "#/report/sessions/s1#t-589" (export mode), not just "#t-589".
       if (!el) {
-        const m = /^t-(\d+)$/.exec(targetId);
+        const m = /t-(\d+)$/.exec(hash);
         if (m) {
           const seg = resolveSegmentForSeconds(data.segments, Number(m[1]));
           if (seg) el = document.getElementById(`t-${Math.floor(seg.start_time)}`);

@@ -95,6 +95,11 @@
   },
   "sessions": {
     "moderatedBy": "Moderacja: {{names}}",
+    "speakerPlaceholder": {
+      "moderator": "Moderator",
+      "participant": "Uczestnik",
+      "observer": "Obserwator"
+    },
     "observer_one": "Obserwator: {{names}}",
     "observer_few": "Obserwatorzy: {{names}}",
     "observer_many": "Obserwatorzy: {{names}}",

@@ -77,6 +77,11 @@
   },
   "sessions": {
     "moderatedBy": "主持人：{{names}}",
+    "speakerPlaceholder": {
+      "moderator": "\u4e3b\u6301\u4eba",
+      "participant": "\u53c3\u8207\u8005",
+      "observer": "\u89c0\u5bdf\u54e1"
+    },
     "observer_other": "觀察員：{{names}}",
     "colId": "ID",
     "colSpeakers": "發言者",

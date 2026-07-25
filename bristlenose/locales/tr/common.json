@@ -83,6 +83,11 @@
   },
   "sessions": {
     "moderatedBy": "Moderatör: {{names}}",
+    "speakerPlaceholder": {
+      "moderator": "Moderat\u00f6r",
+      "participant": "Kat\u0131l\u0131mc\u0131",
+      "observer": "G\u00f6zlemci"
+    },
     "observer_one": "Gözlemci: {{names}}",
     "observer_other": "Gözlemciler: {{names}}",
     "colId": "Kimlik",

@@ -136,6 +136,7 @@ Cluster,クラスタ,ja,Apple JA (no long mark)
 Section,セクション,ja,Apple HIG
 Interview,インタビュー,ja,HCD-Net / UX register
 Participant,参加者,ja,HCD-Net standard
+Moderator,モデレーター,ja,Sessions-grid role placeholder; distinct from Researcher (研究者) enum
 Researcher,研究者,ja,HCD-Net / formal register
 Observer,観察者,ja,Native reads natural here
 Transcript,トランスクリプト,ja,QDA-product register; 文字起こし for descriptive text

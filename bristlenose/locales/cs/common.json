@@ -91,6 +91,11 @@
   },
   "sessions": {
     "moderatedBy": "Moderoval(a) {{names}}",
+    "speakerPlaceholder": {
+      "moderator": "Moder\u00e1tor",
+      "participant": "\u00da\u010dastn\u00edk",
+      "observer": "Pozorovatel"
+    },
     "observer_one": "Pozorovatel: {{names}}",
     "observer_few": "Pozorovatelé: {{names}}",
     "observer_many": "Pozorovatele: {{names}}",

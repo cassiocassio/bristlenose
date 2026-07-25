@@ -83,6 +83,11 @@
   },
   "sessions": {
     "moderatedBy": "Moderaattori: {{names}}",
+    "speakerPlaceholder": {
+      "moderator": "Moderaattori",
+      "participant": "Osallistuja",
+      "observer": "Tarkkailija"
+    },
     "observer_one": "Tarkkailija: {{names}}",
     "observer_other": "Tarkkailijat: {{names}}",
     "colId": "ID",

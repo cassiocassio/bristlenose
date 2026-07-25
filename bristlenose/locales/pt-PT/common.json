@@ -83,6 +83,11 @@
   },
   "sessions": {
     "moderatedBy": "Moderado por {{names}}",
+    "speakerPlaceholder": {
+      "moderator": "Moderador",
+      "participant": "Participante",
+      "observer": "Observador"
+    },
     "observer_one": "Observador: {{names}}",
     "observer_other": "Observadores: {{names}}",
     "colId": "ID",

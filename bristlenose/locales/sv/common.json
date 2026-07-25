@@ -83,6 +83,11 @@
   },
   "sessions": {
     "moderatedBy": "Modererad av {{names}}",
+    "speakerPlaceholder": {
+      "moderator": "Moderator",
+      "participant": "Deltagare",
+      "observer": "Observat\u00f6r"
+    },
     "observer_one": "Observatör: {{names}}",
     "observer_other": "Observatörer: {{names}}",
     "colId": "ID",

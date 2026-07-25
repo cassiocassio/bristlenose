@@ -79,6 +79,11 @@
   },
   "sessions": {
     "moderatedBy": "モデレーター: {{names}}",
+    "speakerPlaceholder": {
+      "moderator": "\u30e2\u30c7\u30ec\u30fc\u30bf\u30fc",
+      "participant": "\u53c2\u52a0\u8005",
+      "observer": "\u89b3\u5bdf\u8005"
+    },
     "observer_one": "オブザーバー: {{names}}",
     "observer_other": "オブザーバー: {{names}}",
     "colId": "ID",

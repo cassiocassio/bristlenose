@@ -71,6 +71,11 @@
   },
   "sessions": {
     "moderatedBy": "진행: {{names}}",
+    "speakerPlaceholder": {
+      "moderator": "\uc9c4\ud589\uc790",
+      "participant": "\ucc38\uc5ec\uc790",
+      "observer": "\uad00\ucc30\uc790"
+    },
     "observer_other": "관찰자: {{names}}",
     "colId": "ID",
     "colSpeakers": "발화자",

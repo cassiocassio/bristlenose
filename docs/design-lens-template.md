@@ -157,24 +157,37 @@ needing a fixed bottom panel gets the variant for free. Shadow/focus-ring
 clipping at the scroller edge is handled with the negative-margin + matching
 padding idiom the tag sidebar already uses.
 
-### PageHeader and the h1 scheme
+### The h1 scheme (built 25 Jul, `5c611310`)
 
-A shared `PageHeader` component (h1 + optional subtitle) opens every lens
-except Project:
+**The rule: one h1 per top-level *content zone*, named for the zone, never the
+lens.** The academic one-h1-per-document convention assumes a page with no
+navigation chrome; we have a lit-up nav item (and the titlebar) already telling
+the user which lens they're on, so an h1 that repeats the lens name tells them
+nothing — the h1 has to earn its place by naming the *zone*. They clicked
+"Quotes"; the page answers *what kind?* → "Sections" and "Themes".
 
-| Lens | h1 | Notes |
+| Lens | h1(s) | Why |
 |---|---|---|
-| Project | **none** | project title lives in the titlebar on both surfaces (native toolbar / browser Header). Tile-box top sits on the shared start line |
-| Sessions | "Sessions" | key exists (`nav.sessions`) |
-| Quotes | "Sections" + "Themes" | the two content zones promote in place; two h1s is an honest description of the page (screen readers mildly prefer one — accepted) |
-| Codebook | "Codes" | text change from "Codebook"; QDA register |
-| Analysis | "Signals" | key exists (`analysis.signals`); existing h2s stay below it |
+| Quotes | "Sections" · "Themes" | two peer organising schemes → two h1s |
+| Analysis | "Sentiment signals" · "Tag signals" | two peer analyses → two h1s |
+| Codebook | "Codes" *(rename pending)* | one zone; h1 + description, the description carries the new info |
+| Sessions | **none** | single zone; "Sessions" would just echo the nav — the "Moderated by …" line is its intro |
+| Project | **none** | dashboard/overview, name's in the titlebar; no titled content zone |
 
-One embedded datum rule on the shared h1 class replaces the Quotes-only
-selector; the datum is **web-internal** (a token measured from the webview
-top) rather than cross-seam, per the native ground truth above. The value is
-tuned by eye in the real app — the current accidental Quotes position (8px
-below the toolbar) is the reference the eye already approved.
+Multiple h1s per page is legal HTML and screen-reader-survivable (the two are
+far apart). **Semantics and graphic size are separate knobs:** `.section-
+heading` is self-contained (owns the full-pane keyline + padding so it works on
+an `<h1>`, which has no border of its own) but deliberately does *not* set
+font-size/weight — those inherit from the element, so the h1's *size* stays
+tunable independently of its *level*. Currently 28/700 (display/strong,
+inherited); tune on the specimen lens if two-per-page reads too heavy.
+
+First zone-title on a lens flushes to the datum (`margin-top: 0` via
+`section:first-of-type` / `.analysis-center > :first-of-type`); subsequent ones
+keep 2.5rem separation. **App caveat:** the old `[data-embedded]` datum lift in
+`sidebar.css` still targets `> h2` and is now dead (h2→h1) — Phase B (the
+toolbar-inset re-scope) owns rewriting it; the absolute top position in the app
+rides that fix.
 
 ### Keylines — reversible invisibility
 

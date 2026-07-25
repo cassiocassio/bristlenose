@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en" data-palette="default" data-appearance="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome — study-tools cell animations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@420;490;520;700&display=swap">
+<!--
+  MOCKUP — Tier 2 (system-true). The family of tiny looping illustrations that
+  replace the STATIC SCREENSHOTS inside the Welcome screen's "Study tools" cell
+  (the large φ-major square; WelcomeHomeView.swift studyTools).
+
+  WHY replace the screenshots (Martin, 25 Jul): (i) themeable — light/dark +
+  palette for free; (ii) responsive — resizes with the cell; (iii) no baked-in
+  macOS chrome — the idea is drawn, not photographed.
+
+  Doing the 8 tools ONE BY ONE. This file = tool 1, AutoCode.
+
+  AUTOCODE sequence (Martin's steer, 25 Jul):
+    1. the quote streams in, as if output by an LLM / typed by a fast human;
+    2. the AI tags arrive with a flash (sentiment + a PROPOSED code);
+    3. the accept/deny action pill is offered on the proposed code;
+    4. accept is "clicked" — the code goes solid (accept-flash brightness burst);
+    5. the finished frame looks like a REAL quote card in type + spacing.
+
+  Uses versions of two REAL study quotes (11:30 & 13:08) with brand references
+  removed. The tag + quote-card CSS is COPIED VERBATIM from the shipped system
+  (atoms/badge.css, molecules/badge-row.css, organisms/blockquote.css,
+  atoms/timecode.css). The ONLY adaptation: dark-mode selectors are rewritten
+  from [data-theme="dark"] / prefers-color-scheme to this mock's
+  [data-appearance="dark"] toggle, so the palette/appearance switcher drives them.
+-->
+<style>
+  /* ============================================================= *
+   *  DESIGN TOKENS — real values from tokens.css (default + edo)    *
+   * ============================================================= */
+  :root{
+    --ink:#1a1a1a; --faint:#6b7280; --line:#e5e7eb; --bg:#f4f4f5; --paper:#fff; --card:#f9f9fa; --tag:#9a9a9a;
+    --bn-colour-quote-bg:#f9fafb; --bn-colour-border:#e5e7eb; --bn-colour-muted:#6b7280; --bn-colour-accent:#007aff;
+    --bn-colour-text:#1a1a1a; --bn-colour-bg:#ffffff; --bn-colour-badge-bg:#f3f4f6; --bn-colour-badge-text:#374151;
+    --bn-colour-user-tag-bg:#f3f4f6; --bn-colour-success:#16a34a; --bn-colour-danger:#dc2626;
+    --bn-sentiment-satisfaction:#16a34a; --bn-sentiment-satisfaction-bg:#f0fdf4;
+    /* codebook code colours (blue / violet) — theme-aware bg */
+    --code-blue-bg:#dbeafe; --code-violet-bg:#ede9fe;
+  }
+  :root[data-appearance="dark"]{
+    --ink:#e5e7eb; --faint:#9ca3af; --line:#2d2d2d; --bg:#161618; --paper:#1c1c1e; --card:#232326; --tag:#888;
+    --bn-colour-quote-bg:#1a1a1a; --bn-colour-border:#2d2d2d; --bn-colour-muted:#9ca3af; --bn-colour-accent:#0a84ff;
+    --bn-colour-text:#e5e7eb; --bn-colour-bg:#111111; --bn-colour-badge-bg:#252525; --bn-colour-badge-text:#d1d5db;
+    --bn-colour-user-tag-bg:#252525; --bn-colour-success:#4ade80; --bn-colour-danger:#f87171;
+    --bn-sentiment-satisfaction:#4ade80; --bn-sentiment-satisfaction-bg:#0f2918;
+    --code-blue-bg:#1e3a5f; --code-violet-bg:#3b2f5c;
+  }
+  :root[data-palette="edo"]{
+    --ink:#1b2230; --faint:#4a698a; --line:#d4c9a8; --bg:#efe9db; --paper:#fdfbf7; --card:#f7f2e6; --tag:#9c8f70;
+    --bn-colour-quote-bg:#f0e9d8; --bn-colour-border:#d4c9a8; --bn-colour-muted:#4a698a; --bn-colour-accent:#0f5c9e;
+    --bn-colour-text:#1b2230; --bn-colour-bg:#fdfbf7; --bn-colour-badge-bg:#e8dfc9; --bn-colour-badge-text:#2d3654;
+    --bn-colour-user-tag-bg:#e8dfc9;
+  }
+  :root[data-palette="edo"][data-appearance="dark"]{
+    --ink:#e8e3d6; --faint:#7ba8a0; --line:#2d2820; --bg:#141210; --paper:#1a1816; --card:#211e18; --tag:#7a7060;
+    --bn-colour-quote-bg:#211e18; --bn-colour-border:#2d2820; --bn-colour-muted:#7ba8a0; --bn-colour-accent:#4d9fe0;
+    --bn-colour-text:#e8e3d6; --bn-colour-bg:#1a1816; --bn-colour-badge-bg:#2d2820; --bn-colour-badge-text:#c4b898;
+    --bn-colour-user-tag-bg:#2d2820;
+  }
+
+  :root{
+    --bn-font-mono:"SF Mono",ui-monospace,"Fira Code",Consolas,monospace;
+    --bn-font-body:"Inter","Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif;
+    --bn-radius-sm:3px; --bn-radius-md:6px;
+    --bn-space-xs:0.15rem; --bn-space-sm:0.35rem; --bn-space-md:0.75rem;
+    --bn-text-body:0.9375rem; --bn-text-body-lh:1.5;
+    --bn-text-label:0.8125rem; --bn-text-badge:0.72rem; --bn-text-micro:0.6rem;
+    --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+    --bn-transition-fast:0.15s ease;
+    --bn-selection-border:color-mix(in srgb, var(--bn-colour-accent) 30%, transparent);
+  }
+
+  *{ box-sizing:border-box; }
+  body{ margin:0; padding:24px; font:13px/1.45 -apple-system,"SF Pro Text",system-ui,sans-serif; color:var(--ink); background:var(--bg); }
+  .page{ max-width:1120px; margin:0 auto; }
+  .page h1{ font-size:18px; margin:0 0 4px; font-weight:600; }
+  .page .lede{ margin:0 0 14px; color:var(--faint); max-width:90ch; font-size:12px; line-height:1.5; }
+  .page h2.sec{ font-size:13px; font-weight:600; margin:30px 0 4px; letter-spacing:.01em; }
+  .page h2.sec .n{ color:var(--bn-colour-accent); font-variant-numeric:tabular-nums; }
+  .page h2.sec span.q{ color:var(--faint); font-weight:400; }
+  .page p.map{ font-size:12px; color:var(--faint); margin:2px 0 12px; max-width:86ch; line-height:1.5; }
+  .page p.map b{ color:var(--ink); font-weight:600; }
+  .page p.map code{ font:11px var(--bn-font-mono); background:var(--card); padding:1px 4px; border-radius:4px; }
+
+  .controls{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 0 8px; font-size:12px; position:sticky; top:0; background:var(--bg); padding:8px 0; z-index:20; }
+  .controls label{ color:var(--faint); display:flex; gap:5px; align-items:center; cursor:pointer; }
+  .controls select{ font:inherit; }
+  .controls .rm{ color:var(--faint); font-size:11px; margin-left:auto; }
+
+  /* ============================================================= *
+   *  DEMO LAYOUT                                                    *
+   * ============================================================= */
+  .demo{ display:grid; grid-template-columns: 320px 1fr; gap:18px; align-items:start; }
+  @media (max-width:820px){ .demo{ grid-template-columns:1fr; } }
+
+  .tool-cell{ border:0.5px solid var(--line); border-radius:10px; padding:14px; background:color-mix(in srgb, var(--bn-colour-accent) 3%, var(--card)); display:flex; flex-direction:column; gap:8px; min-height:340px; overflow:hidden; }
+  .tool-cell .tag{ font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--tag); font-weight:600; }
+  .tool-cell .t{ font-size:15px; color:var(--ink); font-weight:600; line-height:1.25; }
+  .tool-cell .summary{ font-size:12px; color:var(--faint); line-height:1.4; }
+  .tool-cell .lnk{ color:var(--bn-colour-accent); text-decoration:none; font-weight:500; font-size:12px; }
+  .tool-cell .lnk:hover{ text-decoration:underline; }
+  .dropcard{ margin-top:auto; border:1.5px dashed var(--line); border-radius:10px; padding:10px 11px; color:var(--faint); }
+  .dropcard .dt{ color:var(--ink); font-weight:600; font-size:12.5px; }
+  .dropcard .dd{ font-size:11px; line-height:1.4; }
+  .caption{ font-size:10.5px; color:var(--faint); text-align:center; margin-top:6px; text-transform:uppercase; letter-spacing:.05em; }
+
+  .stage-detail{ display:flex; flex-direction:column; gap:10px; }
+  .notes{ font-size:12px; color:var(--faint); line-height:1.55; }
+  .notes b{ color:var(--ink); font-weight:600; }
+  .notes ul{ margin:4px 0 0; padding-left:18px; }
+  .notes li{ margin:3px 0; }
+
+  .anim{ border:0.5px solid var(--line); border-radius:8px; background:var(--paper); position:relative; overflow:hidden; }
+  .anim.acframe{ display:flex; align-items:center; padding:2px 8px; }
+  .anim.cellframe{ min-height:172px; }
+  .anim.detailframe{ min-height:230px; }
+
+  /* ============================================================= *
+   *  REAL QUOTE-CARD CSS — verbatim from blockquote.css/timecode.css *
+   * ============================================================= */
+  blockquote.quote-card{
+    font-family:var(--bn-font-body); color:var(--bn-colour-text);
+    background:var(--bn-colour-quote-bg); border-left:1px solid var(--bn-colour-border);
+    margin:0.4rem 0; padding:var(--bn-space-md) 1rem; border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0;
+    width:100%;
+  }
+  blockquote .quote-row{ display:flex; gap:0.5rem; align-items:baseline; }
+  blockquote .quote-row .timecode{ flex-shrink:0; }
+  blockquote .quote-body{ flex:1; min-width:0; font-size:var(--bn-text-body); line-height:var(--bn-text-body-lh); }
+  blockquote .timecode{ color:var(--bn-colour-accent); font-family:var(--bn-font-mono); font-size:var(--bn-text-label); }
+  .timecode-bracket{ color:var(--bn-colour-muted); }
+  blockquote .speaker{ color:var(--bn-colour-muted); font-size:var(--bn-text-label); white-space:nowrap; }
+  .smart-quote{ color:var(--bn-colour-muted); }
+
+  /* speaker pills (p1 · Participant) — approximated with the .badge atom */
+  .speaker .badge{ margin-left:4px; }
+
+  /* --- badge-row.css --- */
+  .quote-card .badges{ display:flex; gap:var(--bn-space-sm); margin-top:0.45rem; flex-wrap:wrap; align-items:center; opacity:0.95; }
+
+  /* --- badge.css (verbatim) --- */
+  .badge{
+    display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+    padding:var(--bn-space-xs) 0.45rem; border-radius:var(--bn-radius-sm);
+    background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text);
+  }
+  .badge-satisfaction{ background:var(--bn-sentiment-satisfaction-bg); color:var(--bn-sentiment-satisfaction); }
+  .badge-ai{ cursor:default; position:relative; transition:opacity var(--bn-transition-fast); }
+  .badge-user{ background:var(--bn-colour-user-tag-bg); color:var(--bn-colour-text); font-weight:var(--bn-weight-normal); cursor:default; position:relative; }
+  :root[data-appearance="dark"] .badge-user{ color:#ffffff; font-weight:var(--bn-weight-emphasis); }
+  /* codebook code bg */
+  .badge.code-blue  { background:var(--code-blue-bg); }
+  .badge.code-violet{ background:var(--code-violet-bg); }
+
+  .badge-add{
+    border:1px dashed var(--bn-colour-border); background:transparent; color:var(--bn-colour-muted);
+    cursor:pointer; user-select:none; transition:border-color var(--bn-transition-fast), color var(--bn-transition-fast);
+  }
+  .badge-add:hover{ border-color:var(--bn-colour-accent); color:var(--bn-colour-accent); }
+
+  /* proposed — pulsating dashed border (AutoCode) */
+  @keyframes bn-proposed-pulse{ 0%{opacity:.50} 50%{opacity:.78} 100%{opacity:.50} }
+  .badge-proposed{ animation:bn-proposed-pulse 3.9s ease-in-out infinite; border:1px dashed currentColor; cursor:pointer; position:relative; }
+
+  /* action pill [✗ | ✓] — normally hover/focus; forced visible via .show-pill here */
+  .badge-action-pill{
+    position:absolute; top:calc(-0.3rem - 1px); right:calc(-0.3rem - 1px - 1rem);
+    display:flex; gap:0; background:var(--bn-colour-bg); border-radius:8px;
+    box-shadow:0 1px 4px rgba(0,0,0,.16), 0 0 1px rgba(0,0,0,.06);
+    opacity:0; transition:opacity var(--bn-transition-fast); pointer-events:none; overflow:hidden; z-index:1;
+  }
+  .badge-proposed.show-pill .badge-action-pill{ opacity:1; pointer-events:auto; }
+  .badge-action-deny, .badge-action-accept{
+    display:flex; align-items:center; justify-content:center; width:1rem; height:1rem;
+    font-size:var(--bn-text-micro); font-weight:var(--bn-weight-strong); cursor:pointer;
+    border:none; background:transparent; padding:0; transition:background var(--bn-transition-fast);
+  }
+  .badge-action-deny{ color:var(--bn-colour-danger); }
+  .badge-action-accept{ color:var(--bn-colour-success); border-left:1px solid var(--bn-colour-border); }
+  .badge-action-accept.pressing{ background:#dcfce7; }
+  :root[data-appearance="dark"] .badge-action-accept.pressing{ background:rgba(22,163,74,.25); color:#4ade80; }
+
+  /* accept flash — brightness burst (real) */
+  @keyframes badge-accept-flash{ 0%{filter:brightness(1.35)} 100%{filter:brightness(1)} }
+  .badge-accept-flash{ animation:badge-accept-flash .52s ease-out; }
+  /* appear / remove (real) */
+  @keyframes badge-fade-in{ from{opacity:0; transform:scale(.8)} to{opacity:1; transform:scale(1)} }
+  .badge-appearing{ animation:badge-fade-in .2s ease-out; }
+  @keyframes badge-fade-out{ to{opacity:0; transform:scale(.8)} }
+  .badge-removing{ animation:badge-fade-out .15s ease-out forwards; pointer-events:none; }
+
+  /* proposed code ARRIVAL — brighter flash + gratuitous grow→settle, in place */
+  @keyframes chip-arrive{
+    0%   { opacity:0; transform:scale(.55); filter:brightness(1.7); }
+    55%  { opacity:1; transform:scale(1.18); filter:brightness(1.5); }
+    78%  { transform:scale(.95); filter:brightness(1.15); }
+    100% { transform:scale(1);   filter:brightness(1); }
+  }
+  .chip-arrive{ transform-origin:center; animation:chip-arrive .8s cubic-bezier(.34,1.56,.64,1); }
+  /* the tick/cross options BLINK in */
+  @keyframes pill-blink{ 0%{opacity:0} 22%{opacity:1} 42%{opacity:.12} 66%{opacity:1} 100%{opacity:1} }
+  .badge-proposed.show-pill .badge-action-pill{ animation:pill-blink .72s ease-out; }
+  /* the tick/cross VANISH on accept */
+  @keyframes pill-vanish{ from{opacity:1; transform:scale(1)} to{opacity:0; transform:scale(.5)} }
+  .badge-action-pill.vanishing{ animation:pill-vanish .31s ease forwards; }
+
+  /* streaming caret (mock-only) */
+  .caret{ display:inline-block; width:2px; height:1em; background:var(--bn-colour-accent); margin-left:1px; vertical-align:text-bottom; }
+  .caret.blink{ animation:caret-blink 1s step-end infinite; }
+  @keyframes caret-blink{ 50%{ opacity:0; } }
+
+  /* card fade between the two quotes */
+  .quote-card.card-hidden{ opacity:0; transition:opacity .45s ease; }
+  .quote-card.card-shown{ opacity:1; transition:opacity .45s ease; }
+
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Welcome — animations for the “Study tools” cell <span style="font-weight:400;color:var(--faint);font-size:13px">· tool 1 of 8 · AutoCode</span></h1>
+  <p class="lede">Replacing the 8 static screenshots in the large “Study tools” cell with tiny looping illustrations — themeable, responsive, no baked-in macOS chrome. Same playbook as the science cell: prototype <b>idea + motion + copy</b> here, then decide native-SwiftUI vs webview and build for real. Doing the tools <b>one by one</b> — this is AutoCode.</p>
+
+  <div class="controls">
+    <label>Palette
+      <select id="pal"><option value="default">Default</option><option value="edo">Edo</option></select>
+    </label>
+    <label>Appearance
+      <select id="app"><option value="light">Light</option><option value="dark">Dark</option></select>
+    </label>
+    <span class="rm" id="rmNote"></span>
+  </div>
+
+  <!-- =========================================================== AutoCode -->
+  <h2 class="sec"><span class="n">1</span> · AutoCode — <span class="q">quote streams in → AI tags flash in → accept → solid, real card</span></h2>
+  <p class="map">Copy: <b>“Let AutoCode propose tags across every quote — you Accept or Deny.”</b> · link <b>AI helps tag →</b>. Sequence: the quote types out (LLM/fast-human) → the <em>Satisfaction</em> sentiment + a <b>proposed</b> code flash in → the <code>[✗ ✓]</code> action pill is offered → <b>accept</b> is clicked, the code goes solid (accept-flash). Tag + card CSS are the shipped classes; the final frame is a real <code>blockquote.quote-card</code>.</p>
+
+  <div class="demo">
+    <div class="stage-cell">
+      <div class="tool-cell">
+        <span class="tag">Study tools</span>
+        <div class="t">AutoCode</div>
+        <div class="summary">Let AutoCode propose tags across every quote — you Accept or Deny.</div>
+        <div class="anim cellframe acframe" data-ac="cell"></div>
+        <a class="lnk" href="#">AI helps tag&nbsp;→</a>
+        <div class="dropcard"><div class="dt">Drop a folder</div><div class="dd">Drag recordings or transcripts here to add a project.</div></div>
+      </div>
+      <div class="caption">at cell scale · real quote-card type</div>
+    </div>
+    <div class="stage-detail">
+      <div class="anim detailframe acframe" data-ac="detail"></div>
+      <div class="notes">
+        <ul>
+          <li><b>The code arrives; the rest is context.</b> Quote, timecode, <code>p1 · Participant</code> and the <em>Satisfaction</em> sentiment settle first — AutoCode’s contribution is the <b>code</b>, so it flashes in <b>proposed</b> (dashed, pulsing, real <code>.badge-proposed</code>), offers the real <code>[✗ ✓]</code> pill, and on accept solidifies with the real <code>badge-accept-flash</code>.</li>
+          <li><b>Real quotes, de-branded.</b> 11:30 → <b>visible options</b>; 13:08 → <b>platform convention</b>.</li>
+          <li><b>Copy edit needed:</b> quote 2 was 37 words → trimmed to <b>~19</b> here (≈50%) so it streams + fits. Your final wording goes in <code>QUOTES</code>.</li>
+          <li><b>Open Qs:</b> should the <code>+</code> pulse when the code lands? Show the deny path occasionally, or always accept? Stream <em>both</em> cards stacked in the big cell vs cycle one?</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================== roadmap -->
+  <h2 class="sec"><span class="n">□</span> · The eight tools <span class="q">— one by one; AutoCode first</span></h2>
+  <p class="map">Each replaces one screenshot. Concept seeds (react as we go); we lock a shared visual grammar on AutoCode and hold the rest to it.</p>
+  <div class="notes"><ul id="roadmap"></ul></div>
+
+  <p class="notes" style="margin-top:24px;border-top:1px solid var(--line);padding-top:12px">
+    <b>How it plugs in.</b> Each animation replaces the <code>image:</code> screenshot inside a <code>studyTools</code> slot (<code>WelcomeHomeView.swift</code>), rendered by the <code>SlotRotator</code> one item at a time. Freezes to a legible still under <code>prefers-reduced-motion</code>. Build target per tool is a later call: native SwiftUI for pure design-system chrome, webview for bespoke motion — the split the science cell landed on.
+  </p>
+</div>
+
+<script>
+/* ================= palette / appearance wiring ================= */
+const root = document.documentElement;
+document.getElementById("pal").onchange = e => root.setAttribute("data-palette", e.target.value);
+document.getElementById("app").onchange = e => root.setAttribute("data-appearance", e.target.value);
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+document.getElementById("rmNote").textContent = REDUCED ? "reduced-motion ON — loops frozen to still frames" : "";
+
+/* ================= roadmap strip ================= */
+const TOOLS = [
+  ["AutoCode",    "quote streams → AI code flashes in → accept → solid", "◀ in progress"],
+  ["Codebooks",   "a codebook builds up, or a ready-made framework drops in", ""],
+  ["Tag",         "select quotes, press ⌜t⌟, a code chip attaches", ""],
+  ["Star & hide", "⌜s⌟ stars a quote (fills gold), ⌜h⌟ collapses one away", ""],
+  ["Video clips", "a quote turns into a film frame with a play triangle", ""],
+  ["Send to Miro","quotes fly onto a board as sticky notes", ""],
+  ["Ingest",      "a folder drops, files fan out → transcript → report", ""],
+  ["Redact PII",  "a name in a quote → a redaction bar sweeps over it", ""],
+];
+const rm = document.getElementById("roadmap");
+TOOLS.forEach(([n,d,s],i)=>{ const li=document.createElement("li");
+  li.innerHTML = `<b>${i+1}. ${n}</b> — ${d}` + (s?` <span style="color:var(--bn-colour-accent)">${s}</span>`:``); rm.appendChild(li); });
+
+/* ================= AutoCode ================= */
+const _tok = new WeakMap();
+function _reset(host){ const t=(_tok.get(host)||0)+1; _tok.set(host,t); host.innerHTML=""; return t; }
+function _alive(host,t){ return _tok.get(host)===t; }
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+// Everything AFTER the initial typing is paced 30% slower — it's a lot to take in.
+const PACE = 1.3;
+const nap = ms => sleep(Math.round(ms * PACE));
+
+// versions of two REAL study quotes (11:30 & 13:08), brand references removed.
+// EDIT these to taste — keep quote 2 to ~18–20 words so it streams + fits.
+const QUOTES = [
+  { time:"11:30", speaker:"p1", role:"Participant", sentiment:"Satisfaction",
+    q:"In the end, browsing rather than searching works. Yeah, it did.",
+    code:"visible options", codeClass:"code-blue" },
+  { time:"13:08", speaker:"p1", role:"Participant", sentiment:"Satisfaction",
+    q:"Is it normal it’s called a shopping bag? On another site it’d feel weird — you’re used to a cart.",
+    code:"platform convention", codeClass:"code-violet" },
+];
+
+function cardHTML(d){
+  return `<blockquote class="quote-card card-hidden">
+    <div class="quote-row">
+      <span class="timecode"><span class="timecode-bracket">[</span>${d.time}<span class="timecode-bracket">]</span></span>
+      <div class="quote-body">
+        <span class="quote-text-wrapper"><span class="smart-quote">“</span><span class="quote-text"></span><span class="smart-quote closing" style="visibility:hidden">”</span></span>
+        <span class="speaker" style="visibility:hidden"><span class="badge">${d.speaker}</span><span class="badge">${d.role}</span></span>
+        <div class="badges"></div>
+      </div>
+    </div>
+  </blockquote>`;
+}
+
+async function runCard(host, tok, d, fadeOut=true){
+  host.innerHTML = cardHTML(d);
+  const card   = host.querySelector(".quote-card");
+  const qtext  = host.querySelector(".quote-text");
+  const qclose = host.querySelector(".smart-quote.closing");
+  const speaker= host.querySelector(".speaker");
+  const badges = host.querySelector(".badges");
+
+  // REDUCED: paint the finished card at once
+  if(REDUCED){
+    qtext.textContent = d.q; qclose.style.visibility=""; speaker.style.visibility="";
+    badges.innerHTML =
+      `<span class="badge badge-ai badge-satisfaction">${d.sentiment}</span>`+
+      `<span class="badge badge-user ${d.codeClass}">${d.code}</span>`+
+      `<span class="badge badge-add">+</span>`;
+    card.classList.remove("card-hidden"); card.classList.add("card-shown");
+    return;
+  }
+
+  await sleep(60); if(!_alive(host,tok)) return;
+  card.classList.remove("card-hidden"); card.classList.add("card-shown");
+
+  // 1 · STREAM the quote (LLM / fast human), caret trailing
+  const caret = document.createElement("span"); caret.className="caret blink";
+  qtext.after(caret);
+  const words = d.q.split(" ");
+  for(let i=0;i<words.length;i++){
+    qtext.textContent += (i?" ":"") + words[i];
+    await sleep(46); if(!_alive(host,tok)) return;
+  }
+  caret.classList.remove("blink");
+  await nap(260); if(!_alive(host,tok)) return;
+  caret.remove();
+  qclose.style.visibility="";
+
+  // 2 · speaker settles (context), then a pause
+  speaker.style.visibility=""; speaker.classList.add("badge-appearing");
+  await nap(720); if(!_alive(host,tok)) return;
+
+  // 3 · the sentiment tag appears (plain AI badge — matches current UX)
+  const sent = document.createElement("span");
+  sent.className = "badge badge-ai badge-satisfaction badge-appearing";
+  sent.textContent = d.sentiment; badges.appendChild(sent);
+  const add = document.createElement("span"); add.className="badge badge-add"; add.textContent="+";
+  badges.appendChild(add);                      // the + add affordance sits ready at the end
+
+  // 4 · LONGER pause, then the AUTOTAG arrives — brighter flash + grow→settle pop
+  await nap(1200); if(!_alive(host,tok)) return;
+  const chip = document.createElement("span");
+  chip.className = `badge badge-proposed ${d.codeClass} chip-arrive`;
+  chip.innerHTML = `${d.code}<span class="badge-action-pill"><span class="badge-action-deny">✕</span><span class="badge-action-accept">✓</span></span>`;
+  badges.insertBefore(chip, add);               // code sits between sentiment and the +
+  await nap(760); if(!_alive(host,tok)) return;
+
+  // 5 · the tick / cross options BLINK in
+  chip.classList.add("show-pill");
+  await nap(1300); if(!_alive(host,tok)) return;
+
+  // 6 · user selects YES → final flash to solidity, tick/cross vanish
+  const acc = chip.querySelector(".badge-action-accept");
+  acc.classList.add("pressing");
+  await nap(260); if(!_alive(host,tok)) return;
+  const pill = chip.querySelector(".badge-action-pill");
+  if(pill) pill.classList.add("vanishing");
+  chip.classList.remove("badge-proposed","show-pill","chip-arrive");
+  chip.classList.add("badge-user");
+  void chip.offsetWidth;                        // restart the flash animation
+  chip.classList.add("badge-accept-flash");
+  await nap(300); if(!_alive(host,tok)) return;
+  if(pill) pill.remove();
+
+  // 7 · hold on the finished real card
+  await nap(2600); if(!_alive(host,tok)) return;
+  if(fadeOut){                                   // last play of a burst rests on-screen instead
+    card.classList.remove("card-shown"); card.classList.add("card-hidden");
+    await nap(560);
+  }
+}
+
+async function buildAC(host){
+  const tok = _reset(host);
+  const BURST = 3;              // play a few times, then rest (WCAG 2.2.2 spirit — no perpetual loop)
+  let i = 0;
+  while(_alive(host,tok)){
+    const t0 = performance.now();
+    for(let n=0; n<BURST && _alive(host,tok); n++){
+      await runCard(host, tok, QUOTES[i % QUOTES.length], n < BURST-1);  // last play rests on-screen
+      if(REDUCED) return;                      // still frame — no loop
+      i++;
+    }
+    if(!_alive(host,tok)) return;
+    // REST on the finished card, at least as long as the burst just played
+    const restMs = performance.now() - t0;
+    await sleep(restMs);
+    if(!_alive(host,tok)) return;
+    const card = host.querySelector(".quote-card");   // fade the resting card, then re-type
+    if(card){ card.classList.remove("card-shown"); card.classList.add("card-hidden"); }
+    await nap(560);
+  }
+}
+
+document.querySelectorAll("[data-ac]").forEach(buildAC);
+</script>
+</body>
+</html>

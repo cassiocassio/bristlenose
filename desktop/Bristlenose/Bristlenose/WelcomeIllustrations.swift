@@ -17,7 +17,10 @@ import Combine
 
 /// Which illustration a science slot carries (nil case = plain text slot).
 enum ScienceIllustration: Equatable {
-    case none, sentimentFan, books, shoal, quote, signal
+    // NB: now welcome-wide, not science-only — `autocode` is the first study-tools
+    // illustration. Worth renaming to `WelcomeIllustration` before the other study
+    // tools land (see docs/design-welcome-studytools-illustrations.md).
+    case none, sentimentFan, books, shoal, quote, signal, autocode
 }
 
 /// sRGB colour from a 0xRRGGBB literal (file-private helper).
@@ -38,6 +41,7 @@ private func rgb(_ v: UInt) -> Color {
 struct SentimentFanView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.welcomeAnimationActive) private var active
     @State private var sizes: [Int: CGSize] = [:]
     @State private var dealt = false
 
@@ -73,9 +77,9 @@ struct SentimentFanView: View {
         }
         .onPreferenceChange(SentimentChipSizeKey.self) { sizes = $0 }
         .accessibilityHidden(true)
-        .onAppear { if reduceMotion { dealt = true } }
-        .task {
-            guard !reduceMotion else { return }
+        // Baton: deal only while this cell holds it; otherwise rest on the open fan.
+        .task(id: active && !reduceMotion) {
+            guard active && !reduceMotion else { await MainActor.run { dealt = true }; return }
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1.2))    // gathered (deck) hold
                 await MainActor.run { dealt = true }
@@ -162,6 +166,7 @@ struct BookShelfView: View {
     private let cardW: CGFloat = 106     // 80×114 grown ~33% to use more of the cell
     private let cardH: CGFloat = 152
     private let off: CGFloat = 34        // horizontal peek between covers — more separation, less overlap
+    @Environment(\.welcomeAnimationActive) private var active
     private let timer = Timer.publish(every: 3.8, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -202,7 +207,7 @@ struct BookShelfView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .onReceive(timer) { _ in
-            guard !reduceMotion else { return }
+            guard active && !reduceMotion else { return }   // baton: advance only while holding it
             withAnimation(.easeInOut(duration: 0.6)) { front = (front + 1) % n }
         }
     }
@@ -251,10 +256,12 @@ struct BookShelfView: View {
 struct EmergentThemesView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.welcomeAnimationActive) private var active
 
     var body: some View {
-        IllustrationWebView(html: WelcomeIllustrationHTML.emergentThemes(dark: scheme == .dark, reduce: reduceMotion))
-            .id("themes-\(scheme)-\(reduceMotion)")
+        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        return IllustrationWebView(html: WelcomeIllustrationHTML.emergentThemes(dark: scheme == .dark, reduce: still))
+            .id("themes-\(scheme)-\(still)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -281,10 +288,12 @@ private struct IllustrationWebView: NSViewRepresentable {
 struct QuoteIllustrationView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.welcomeAnimationActive) private var active
 
     var body: some View {
-        IllustrationWebView(html: WelcomeIllustrationHTML.quote(dark: scheme == .dark, reduce: reduceMotion))
-            .id("quote-\(scheme)-\(reduceMotion)")   // reload on appearance / reduce-motion change
+        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        return IllustrationWebView(html: WelcomeIllustrationHTML.quote(dark: scheme == .dark, reduce: still))
+            .id("quote-\(scheme)-\(still)")   // reload on appearance / reduce-motion / baton change
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -294,11 +303,34 @@ struct QuoteIllustrationView: View {
 struct SignalIllustrationView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.welcomeAnimationActive) private var active
     @AppStorage("palette") private var palette: String = "default"
 
     var body: some View {
-        IllustrationWebView(html: WelcomeIllustrationHTML.signal(dark: scheme == .dark, palette: palette, reduce: reduceMotion))
-            .id("signal-\(scheme)-\(palette)-\(reduceMotion)")
+        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        return IllustrationWebView(html: WelcomeIllustrationHTML.signal(dark: scheme == .dark, palette: palette, reduce: still))
+            .id("signal-\(scheme)-\(palette)-\(still)")
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Study-tools #1 — AutoCode: a real quote card types in, the AI code arrives
+/// proposed, is accepted, goes solid, and rests. Ported from
+/// docs/mockups/welcome-studytools-animations.html. Reuses the shipped badge +
+/// quote CSS (badge.css, blockquote.css) so it re-syncs when the report styling
+/// changes — the reason study-tool illustrations that reproduce report chrome are
+/// webviews, not native rebuilds (matches the Signals / Dignity science cells).
+struct AutoCodeIllustrationView: View {
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.welcomeAnimationActive) private var active
+    @AppStorage("palette") private var palette: String = "default"
+
+    var body: some View {
+        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        return IllustrationWebView(html: WelcomeIllustrationHTML.autocode(dark: scheme == .dark, palette: palette, reduce: still))
+            .id("autocode-\(scheme)-\(palette)-\(still)")   // reload on appearance / palette / reduce-motion / baton
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -572,6 +604,150 @@ enum WelcomeIllustrationHTML {
             }
             requestAnimationFrame(tick);
           }
+        </script>
+        </body></html>
+        """
+    }
+
+    /// AutoCode (study tools #1) — quote streams in, the AI code arrives proposed,
+    /// is accepted, goes solid, then a 3-play burst rests. Tag + quote CSS copied
+    /// from badge.css / blockquote.css (dark-mode selector adapted to data-appearance).
+    static func autocode(dark: Bool, palette: String, reduce: Bool) -> String {
+        """
+        <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-palette="\(palette)" data-reduce="\(reduce ? "1" : "0")">
+        <head><meta charset="utf-8"><style>
+          :root{
+            --bn-colour-quote-bg:#f9fafb; --bn-colour-border:#e5e7eb; --bn-colour-muted:#6b7280; --bn-colour-accent:#007aff;
+            --bn-colour-text:#1a1a1a; --bn-colour-bg:#ffffff; --bn-colour-badge-bg:#f3f4f6; --bn-colour-badge-text:#374151;
+            --bn-colour-user-tag-bg:#f3f4f6; --bn-colour-success:#16a34a; --bn-colour-danger:#dc2626;
+            --bn-sentiment-satisfaction:#16a34a; --bn-sentiment-satisfaction-bg:#f0fdf4;
+            --code-blue-bg:#dbeafe; --code-violet-bg:#ede9fe;
+            --bn-font-mono:"SF Mono",ui-monospace,Menlo,monospace;
+            --bn-font-body:-apple-system,"SF Pro Text",system-ui,sans-serif;
+            --bn-radius-sm:3px; --bn-radius-md:6px;
+            --bn-space-xs:0.15rem; --bn-space-sm:0.35rem; --bn-space-md:0.75rem;
+            --bn-text-body:0.9375rem; --bn-text-body-lh:1.5; --bn-text-label:0.8125rem; --bn-text-badge:0.72rem; --bn-text-micro:0.6rem;
+            --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+          }
+          html[data-appearance="dark"]{
+            --bn-colour-quote-bg:#1a1a1a; --bn-colour-border:#2d2d2d; --bn-colour-muted:#9ca3af; --bn-colour-accent:#0a84ff;
+            --bn-colour-text:#e5e7eb; --bn-colour-bg:#111111; --bn-colour-badge-bg:#252525; --bn-colour-badge-text:#d1d5db;
+            --bn-colour-user-tag-bg:#252525; --bn-colour-success:#4ade80; --bn-colour-danger:#f87171;
+            --bn-sentiment-satisfaction:#4ade80; --bn-sentiment-satisfaction-bg:#0f2918;
+            --code-blue-bg:#1e3a5f; --code-violet-bg:#3b2f5c;
+          }
+          html[data-palette="edo"]{
+            --bn-colour-quote-bg:#f0e9d8; --bn-colour-border:#d4c9a8; --bn-colour-muted:#4a698a; --bn-colour-accent:#0f5c9e;
+            --bn-colour-text:#1b2230; --bn-colour-bg:#fdfbf7; --bn-colour-badge-bg:#e8dfc9; --bn-colour-badge-text:#2d3654;
+            --bn-colour-user-tag-bg:#e8dfc9;
+          }
+          html[data-palette="edo"][data-appearance="dark"]{
+            --bn-colour-quote-bg:#211e18; --bn-colour-border:#2d2820; --bn-colour-muted:#7ba8a0; --bn-colour-accent:#4d9fe0;
+            --bn-colour-text:#e8e3d6; --bn-colour-bg:#1a1816; --bn-colour-badge-bg:#2d2820; --bn-colour-badge-text:#c4b898;
+            --bn-colour-user-tag-bg:#2d2820;
+          }
+          *{ box-sizing:border-box; }
+          html,body{ margin:0; height:100%; overflow:hidden; background:transparent; }
+          body{ display:flex; align-items:center; padding:2px 12px; font-family:var(--bn-font-body); color:var(--bn-colour-text); }
+          #ac{ width:100%; }
+          blockquote.quote-card{ font-family:var(--bn-font-body); color:var(--bn-colour-text); background:var(--bn-colour-quote-bg); border-left:1px solid var(--bn-colour-border); margin:0; padding:var(--bn-space-md) 1rem; border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; width:100%; }
+          blockquote .quote-row{ display:flex; gap:0.5rem; align-items:baseline; }
+          blockquote .quote-row .timecode{ flex-shrink:0; }
+          blockquote .quote-body{ flex:1; min-width:0; font-size:var(--bn-text-body); line-height:var(--bn-text-body-lh); }
+          blockquote .timecode{ color:var(--bn-colour-accent); font-family:var(--bn-font-mono); font-size:var(--bn-text-label); }
+          .timecode-bracket{ color:var(--bn-colour-muted); }
+          blockquote .speaker{ color:var(--bn-colour-muted); font-size:var(--bn-text-label); white-space:nowrap; }
+          .smart-quote{ color:var(--bn-colour-muted); }
+          .speaker .badge{ margin-left:4px; }
+          .quote-card .badges{ display:flex; gap:var(--bn-space-sm); margin-top:0.45rem; flex-wrap:wrap; align-items:center; }
+          .badge{ display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) 0.45rem; border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); }
+          .badge-satisfaction{ background:var(--bn-sentiment-satisfaction-bg); color:var(--bn-sentiment-satisfaction); }
+          .badge-ai{ position:relative; }
+          .badge-user{ background:var(--bn-colour-user-tag-bg); color:var(--bn-colour-text); font-weight:var(--bn-weight-normal); position:relative; }
+          html[data-appearance="dark"] .badge-user{ color:#ffffff; font-weight:var(--bn-weight-emphasis); }
+          .badge.code-blue{ background:var(--code-blue-bg); }
+          .badge.code-violet{ background:var(--code-violet-bg); }
+          .badge-add{ border:1px dashed var(--bn-colour-border); background:transparent; color:var(--bn-colour-muted); }
+          @keyframes bn-proposed-pulse{ 0%{opacity:.5} 50%{opacity:.78} 100%{opacity:.5} }
+          .badge-proposed{ animation:bn-proposed-pulse 3.9s ease-in-out infinite; border:1px dashed currentColor; position:relative; }
+          .badge-action-pill{ position:absolute; top:calc(-0.3rem - 1px); right:calc(-0.3rem - 1px - 1rem); display:flex; gap:0; background:var(--bn-colour-bg); border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.16),0 0 1px rgba(0,0,0,.06); opacity:0; pointer-events:none; overflow:hidden; z-index:1; }
+          .badge-proposed.show-pill .badge-action-pill{ animation:pill-blink .72s ease-out; opacity:1; }
+          .badge-action-deny,.badge-action-accept{ display:flex; align-items:center; justify-content:center; width:1rem; height:1rem; font-size:var(--bn-text-micro); font-weight:var(--bn-weight-strong); }
+          .badge-action-deny{ color:var(--bn-colour-danger); }
+          .badge-action-accept{ color:var(--bn-colour-success); border-left:1px solid var(--bn-colour-border); }
+          .badge-action-accept.pressing{ background:#dcfce7; }
+          html[data-appearance="dark"] .badge-action-accept.pressing{ background:rgba(22,163,74,.25); color:#4ade80; }
+          @keyframes badge-accept-flash{ 0%{filter:brightness(1.35)} 100%{filter:brightness(1)} }
+          .badge-accept-flash{ animation:badge-accept-flash .52s ease-out; }
+          @keyframes badge-fade-in{ from{opacity:0; transform:scale(.8)} to{opacity:1; transform:scale(1)} }
+          .badge-appearing{ animation:badge-fade-in .2s ease-out; }
+          @keyframes chip-arrive{ 0%{opacity:0; transform:scale(.55); filter:brightness(1.7)} 55%{opacity:1; transform:scale(1.18); filter:brightness(1.5)} 78%{transform:scale(.95); filter:brightness(1.15)} 100%{transform:scale(1); filter:brightness(1)} }
+          .chip-arrive{ transform-origin:center; animation:chip-arrive .8s cubic-bezier(.34,1.56,.64,1); }
+          @keyframes pill-blink{ 0%{opacity:0} 22%{opacity:1} 42%{opacity:.12} 66%{opacity:1} 100%{opacity:1} }
+          @keyframes pill-vanish{ from{opacity:1; transform:scale(1)} to{opacity:0; transform:scale(.5)} }
+          .badge-action-pill.vanishing{ animation:pill-vanish .31s ease forwards; }
+          .caret{ display:inline-block; width:2px; height:1em; background:var(--bn-colour-accent); margin-left:1px; vertical-align:text-bottom; }
+          .caret.blink{ animation:caret-blink 1s step-end infinite; }
+          @keyframes caret-blink{ 50%{opacity:0} }
+          .quote-card.card-hidden{ opacity:0; transition:opacity .45s ease; }
+          .quote-card.card-shown{ opacity:1; transition:opacity .45s ease; }
+          @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
+        </style></head>
+        <body><div id="ac"></div>
+        <script>
+          var host=document.getElementById("ac");
+          var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
+          var PACE=1.3;
+          function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+          function nap(ms){ return sleep(Math.round(ms*PACE)); }
+          var QUOTES=[
+            { time:"11:30", speaker:"p1", role:"Participant", sentiment:"Satisfaction", q:"In the end, browsing rather than searching works. Yeah, it did.", code:"visible options", codeClass:"code-blue" },
+            { time:"13:08", speaker:"p1", role:"Participant", sentiment:"Satisfaction", q:"Is it normal it’s called a shopping bag? On another site it’d feel weird — you’re used to a cart.", code:"platform convention", codeClass:"code-violet" }
+          ];
+          function cardHTML(d){
+            return '<blockquote class="quote-card card-hidden"><div class="quote-row">'
+              +'<span class="timecode"><span class="timecode-bracket">[</span>'+d.time+'<span class="timecode-bracket">]</span></span>'
+              +'<div class="quote-body"><span class="quote-text-wrapper"><span class="smart-quote">“</span><span class="quote-text"></span><span class="smart-quote closing" style="visibility:hidden">”</span></span>'
+              +'<span class="speaker" style="visibility:hidden"><span class="badge">'+d.speaker+'</span><span class="badge">'+d.role+'</span></span>'
+              +'<div class="badges"></div></div></div></blockquote>';
+          }
+          async function runCard(d, fadeOut){
+            host.innerHTML=cardHTML(d);
+            var card=host.querySelector(".quote-card"), qtext=host.querySelector(".quote-text"),
+                qclose=host.querySelector(".smart-quote.closing"), speaker=host.querySelector(".speaker"), badges=host.querySelector(".badges");
+            if(REDUCED){
+              qtext.textContent=d.q; qclose.style.visibility=""; speaker.style.visibility="";
+              badges.innerHTML='<span class="badge badge-ai badge-satisfaction">'+d.sentiment+'</span><span class="badge badge-user '+d.codeClass+'">'+d.code+'</span><span class="badge badge-add">+</span>';
+              card.classList.remove("card-hidden"); card.classList.add("card-shown"); return;
+            }
+            await sleep(60);
+            card.classList.remove("card-hidden"); card.classList.add("card-shown");
+            var caret=document.createElement("span"); caret.className="caret blink"; qtext.after(caret);
+            var words=d.q.split(" ");
+            for(var i=0;i<words.length;i++){ qtext.textContent+=(i?" ":"")+words[i]; await sleep(46); }
+            caret.classList.remove("blink"); await nap(260); caret.remove(); qclose.style.visibility="";
+            speaker.style.visibility=""; speaker.classList.add("badge-appearing"); await nap(720);
+            var sent=document.createElement("span"); sent.className="badge badge-ai badge-satisfaction badge-appearing"; sent.textContent=d.sentiment; badges.appendChild(sent);
+            var add=document.createElement("span"); add.className="badge badge-add"; add.textContent="+"; badges.appendChild(add);
+            await nap(1200);
+            var chip=document.createElement("span"); chip.className="badge badge-proposed "+d.codeClass+" chip-arrive";
+            chip.innerHTML=d.code+'<span class="badge-action-pill"><span class="badge-action-deny">✕</span><span class="badge-action-accept">✓</span></span>';
+            badges.insertBefore(chip, add);
+            await nap(760);
+            chip.classList.add("show-pill"); await nap(1300);
+            var acc=chip.querySelector(".badge-action-accept"); acc.classList.add("pressing"); await nap(260);
+            var pill=chip.querySelector(".badge-action-pill"); if(pill) pill.classList.add("vanishing");
+            chip.classList.remove("badge-proposed","show-pill","chip-arrive"); chip.classList.add("badge-user");
+            void chip.offsetWidth; chip.classList.add("badge-accept-flash");
+            await nap(300); if(pill) pill.remove();
+            await nap(2600);
+            if(fadeOut){ card.classList.remove("card-shown"); card.classList.add("card-hidden"); await nap(560); }
+          }
+          async function run(){   // the native baton owns the rhythm: play once per turn, then hold
+            var d = REDUCED ? QUOTES[0] : QUOTES[Math.floor(Math.random()*QUOTES.length)];
+            await runCard(d, false);
+          }
+          run();
         </script>
         </body></html>
         """

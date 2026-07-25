@@ -33,7 +33,7 @@ private enum WelcomeContent {
     // Draft PNG screenshots (light-mode captures) while the set is tuned — see design-welcome-screen.md §Cell 1.
     // image = nil → text-only slot (Ingest + Redact PII art pending). CTA labels are per-tool (doc §Cell 1 pool).
     static let studyTools: [SlotItem] = [
-        .init(title: "AutoCode", text: "Let AutoCode propose tags across every quote — you Accept or Deny.", linkLabel: "AI helps tag →", href: docs + "use-codebooks.html", image: "welcome-autocoding"),
+        .init(title: "AutoCode", text: "Let AutoCode propose tags across every quote — you Accept or Deny.", linkLabel: "AI helps tag →", href: docs + "use-codebooks.html", illustration: .autocode),
         .init(title: "Codebooks", text: "Build a codebook, or start from a ready-made framework.", linkLabel: "Research frameworks →", href: docs + "use-codebooks.html", image: "welcome-codes"),
         .init(title: "Tag", text: "Select one or more quotes, and press `t` to tag them with a code from your codebook.", linkLabel: "Manual tagging →", href: docs + "tag-for-meaning.html", image: "welcome-tag"),
         .init(title: "Star & hide", text: "Press `s` to keep the quotes that matter, `h` to hide the rest.", linkLabel: "Keyboard shortcuts →", href: docs + "keyboard-shortcuts.html", image: "welcome-star"),
@@ -160,6 +160,9 @@ struct WelcomeHomeView: View {
     @State private var aiItem = WelcomeContent.pick(WelcomeContent.aiConfigured)
     @State private var dropTargeted = false
 
+    // Only one cell animates at a time; the baton travels the golden spiral.
+    @StateObject private var baton = WelcomeBaton()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -169,6 +172,9 @@ struct WelcomeHomeView: View {
                 .frame(width: w, height: w / 1.618)         // full width, φ proportions
                 .padding(20)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)  // pin top; space below
+                .task { baton.setReduceMotion(reduceMotion) }               // start the baton (off under reduce-motion)
+                .onChange(of: reduceMotion) { _, new in baton.setReduceMotion(new) }
+                .onDisappear { baton.stop() }
         }
     }
 
@@ -189,20 +195,28 @@ struct WelcomeHomeView: View {
     private var studyToolsCell: some View {
         VStack(alignment: .leading, spacing: 8) {
             tag("Study tools")
-            SlotRotator(items: WelcomeContent.studyTools, storageKey: "welcome.rotator.tools")
+            SlotRotator(items: WelcomeContent.studyTools, storageKey: "welcome.rotator.tools",
+                        onCurrent: { item in
+                            baton.report(.studyTools, wants: item.illustration != .none, turn: item.illustration.welcomeTurn)
+                        })
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             dropCard
         }
         .welcomeCell(tint: 0.03, large: true)
+        .environment(\.welcomeAnimationActive, baton.isActive(.studyTools))
     }
 
     private var scienceCell: some View {
         VStack(alignment: .leading, spacing: 8) {
             tag("Scientific background")
-            SlotRotator(items: WelcomeContent.science, storageKey: "welcome.rotator.science")
+            SlotRotator(items: WelcomeContent.science, storageKey: "welcome.rotator.science",
+                        onCurrent: { item in
+                            baton.report(.science, wants: item.illustration != .none, turn: item.illustration.welcomeTurn)
+                        })
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .welcomeCell(tint: 0.07, large: true)
+        .environment(\.welcomeAnimationActive, baton.isActive(.science))
     }
 
     private var tipCell: some View {
@@ -234,6 +248,8 @@ struct WelcomeHomeView: View {
                 })
             }
             .welcomeCell(tint: 0.18)
+            .environment(\.welcomeAnimationActive, baton.isActive(.ai))
+            .onAppear { baton.report(.ai, wants: true, turn: 8) }
         }
     }
 
@@ -357,10 +373,11 @@ private struct CardButton<Content: View>: View {
 
 private struct MorphingAIIcon: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.welcomeAnimationActive) private var active
     private let symbols = ["sparkles", "brain", "cpu", "bolt", "cloud"]
     var body: some View {
         Group {
-            if reduceMotion {
+            if reduceMotion || !active {
                 Image(systemName: symbols[0])
                     .font(.system(size: 22, weight: .light)).foregroundStyle(.secondary)
             } else {
@@ -403,6 +420,7 @@ private func welcomeKeyMarkdown(_ s: String) -> AttributedString {
 private struct SlotRotator: View {
     let items: [SlotItem]
     let curriculum: Bool
+    let onCurrent: ((SlotItem) -> Void)?   // baton: report the current slot so the cell can want/skip
     @AppStorage private var lastIndex: Int
     @AppStorage private var visits: Int
     @State private var index = 0
@@ -410,14 +428,16 @@ private struct SlotRotator: View {
     @State private var hovering = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(items: [SlotItem], storageKey: String, curriculum: Bool = false) {
+    init(items: [SlotItem], storageKey: String, curriculum: Bool = false, onCurrent: ((SlotItem) -> Void)? = nil) {
         self.items = items
         self.curriculum = curriculum
+        self.onCurrent = onCurrent
         self._lastIndex = AppStorage(wrappedValue: -1, storageKey)
         self._visits = AppStorage(wrappedValue: 0, storageKey + ".visits")
     }
 
     private var count: Int { items.count }
+    private var currentItem: SlotItem { items[min(index, max(0, count - 1))] }
     private var revealed: Bool { hovering }   // mouse affordance only; keyboard uses arrow keys
 
     // Chevron disk size AND dots-row height. Equal by construction — that's what puts the
@@ -456,6 +476,7 @@ private struct SlotRotator: View {
             index = startIndex()
             visits += 1
             lastIndex = index
+            onCurrent?(currentItem)
         }
     }
 
@@ -481,6 +502,7 @@ private struct SlotRotator: View {
         guard wrapped != index else { return }
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.22)) { index = wrapped }
         lastIndex = wrapped
+        onCurrent?(items[wrapped])
     }
 
     @ViewBuilder private func slotView(_ item: SlotItem) -> some View {
@@ -548,6 +570,7 @@ private struct SlotRotator: View {
         case .shoal:        EmergentThemesView().frame(height: 140)
         case .quote:        QuoteIllustrationView().frame(height: 112)
         case .signal:       SignalIllustrationView().frame(height: 152)
+        case .autocode:     AutoCodeIllustrationView().frame(height: 160)
         }
     }
 

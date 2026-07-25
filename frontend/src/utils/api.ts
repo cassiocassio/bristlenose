@@ -26,6 +26,8 @@ import type {
   MiroAuthUrlResponse,
 } from "./types";
 import { isExportMode, resolveFromExport } from "./exportData";
+import { toast } from "./toast";
+import i18n from "../i18n";
 
 function apiBase(): string {
   return (
@@ -126,6 +128,17 @@ function firePut(path: string, body: unknown): void {
     })
     .catch((err) => {
       console.error(`PUT ${path} failed:`, err);
+      // A failed background sync is otherwise invisible until reload silently
+      // reverts the change. One generic toast covers every view-toggle consumer
+      // (star/hide/tags/hidden-groups/framework-states/…); toast() is
+      // one-at-a-time, so a burst during an outage collapses to a single message.
+      // i18n key is deferred to the propagation pass — defaultValue renders now.
+      toast(
+        i18n.t("sync.saveFailed", {
+          defaultValue: "Couldn't save your change — check your connection.",
+        }),
+        4000,
+      );
     });
 }
 

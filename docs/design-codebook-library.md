@@ -372,25 +372,33 @@ away + re-code; curated → refuse or preserving-merge), and *that* is the point
 which the guard must finally learn to respect denials/removals, not just existing
 tags. Not on the critical path.
 
-## Next: persist the enable/disable toggle (highest-leverage)
+## Persist the enable/disable toggle — Phase 1 (persistence + fold BUILT)
 
-The slider is UI-local (resets on reload). Persisting it unblocks (a) survive
-reload and (b) functional **view** off (fold + report-wide badge hide). Per Decision
-A it does **not** gate re-apply — so no re-apply wiring, which makes this smaller
-than the earlier "gate on enabled" framing.
+**Built (25 Jul 2026):** the switch is no longer UI-local. `ProjectFrameworkState
+(project_id, framework_id, enabled)` (migration 007) + `GET/PUT /framework-states`
+(dict map, **absence = enabled**) + `getFrameworkStates`/`putFrameworkStates` in
+`api.ts`; `CodebookPanel` hydrates the folded set on mount and PUTs on toggle. Per
+Decision A it does **not** gate re-apply. Decisions settled during the build:
+1. **What "disabled" turns off** — view only (fold now; report-wide badge hide is
+   the remaining sub-step below). Not a re-apply gate.
+2. **Reconcile with the group eye-toggle** — a **distinct** per-framework flag
+   (chosen), not "framework off ⇔ all its groups hidden". Render will treat a group
+   hidden if eye-toggled **or** its framework disabled.
+3. **Data model** — `ProjectFrameworkState` (project-scoped, per-framework; not on
+   the instance-scoped `CodebookGroup`). Shipped as above.
 
-**The issue is a semantics decision, not plumbing** — persisted per-project group
-hiding already exists (`hidden_tag_groups` table + `setTagGroupsHidden`). Decide:
-1. **What "disabled" turns off** — *settled (Decision A):* **view only** — fold the
-   section + hide the framework's badges report-wide. Not a re-apply gate.
-2. **Reconcile with the group eye-toggle** (`hidden_tag_groups`) — one axis
-   (framework off ⇔ all its groups hidden) or a *distinct* per-framework flag with
-   render treating a group hidden if eye-toggled **or** framework-disabled.
-   *Recommend the distinct flag* (mirrors `hidden`/`starred`).
-3. **Data model** — a new **`ProjectFrameworkState(project_id, framework_id,
-   enabled)`** (project-scoped, per-framework; `ProjectCodebookGroup` is per-group,
-   and instance-scoping forbids it on `CodebookGroup`). Then: additive migration +
-   endpoint + hydrate (mirror `hidden`/`starred`). No re-apply gate.
+**Remaining sub-step — report-wide badge hide** (the other half of "view off"): a
+disabled framework should also suppress its badges on quote cards across the report,
+not just fold the codebook section. This needs the disabled-framework set where the
+quote render can read it — **not** `CodebookPanel`'s local React state. Open fork:
+- **(a)** Lift the disabled set into **`SidebarStore`** (module-level, beside
+   `hiddenTagGroups`), hydrate it there once, have both the fold and the badge render
+   read it, and union framework-disabled groups into the existing hidden-group render
+   path. Cleanest single source of truth; means moving the just-built local `useState`
+   into the store (mechanical, not a redesign).
+- **(b)** Keep fold on local state and give the badge render its **own** hydrated
+   read of `/framework-states`. Two reads of one truth — simpler diff now, drift risk
+   later. *(a) is recommended.*
 
 ## Remaining "Not built" — and parallelizability
 

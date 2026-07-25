@@ -387,18 +387,32 @@ Decision A it does **not** gate re-apply. Decisions settled during the build:
 3. **Data model** — `ProjectFrameworkState` (project-scoped, per-framework; not on
    the instance-scoped `CodebookGroup`). Shipped as above.
 
-**Remaining sub-step — report-wide badge hide** (the other half of "view off"): a
-disabled framework should also suppress its badges on quote cards across the report,
-not just fold the codebook section. This needs the disabled-framework set where the
-quote render can read it — **not** `CodebookPanel`'s local React state. Open fork:
-- **(a)** Lift the disabled set into **`SidebarStore`** (module-level, beside
-   `hiddenTagGroups`), hydrate it there once, have both the fold and the badge render
-   read it, and union framework-disabled groups into the existing hidden-group render
-   path. Cleanest single source of truth; means moving the just-built local `useState`
-   into the store (mechanical, not a redesign).
-- **(b)** Keep fold on local state and give the badge render its **own** hydrated
-   read of `/framework-states`. Two reads of one truth — simpler diff now, drift risk
-   later. *(a) is recommended.*
+**Report-wide badge hide — BUILT (25 Jul 2026, option (a)).** The disabled-framework
+set now lives in **`SidebarStore.disabledFrameworks`** (module-level, beside
+`hiddenTagGroups`), so the codebook fold and the quote-card badge hide read one source
+of truth. Shipped:
+- `SidebarStore`: `disabledFrameworks` state + `setFrameworkDisabled(fid, disabled)`
+  (updates the set + PUTs `{fid: false}`) + `hydrateFrameworkStates()` (fetch-once,
+  **guarded** so a Codebook↔Quotes remount can't refetch stale state and clobber an
+  in-flight local toggle).
+- `CodebookPanel`: local `useState` replaced by the store — the fold reads
+  `disabledFrameworks`, the toggle calls `setFrameworkDisabled`, mount calls
+  `hydrateFrameworkStates`.
+- `TagSidebar`: also calls `hydrateFrameworkStates` on mount, so badges hydrate on the
+  Quotes tab even if the Codebook tab was never opened this session (guard makes the
+  second call a no-op).
+- `QuoteGroup`: `effectiveHiddenGroups = hiddenTagGroups ∪ {groups whose framework is
+  disabled}` — `TagGroupInfo` gained `frameworkId` (populated in `QuoteSections` /
+  `QuoteThemes` from `g.framework_id`); the badge filter + autocomplete closed-eye
+  hint both read the union. The manual-add auto-unhide (`handleTagAdd`) still keys off
+  `hiddenTagGroups` only — disabling a framework is a view state, not something a
+  single tag-add should silently re-enable.
+
+So a disabled framework now folds its codebook section **and** suppresses its badges
+across the report, surviving reload. Tests: `SidebarStore.test` (framework API +
+guard), `CodebookPanel.test` (persist + hydrate via the store). One edge left as-is:
+adding a tag from a *disabled* framework's group leaves that badge hidden (rare;
+noted, not fixed).
 
 ## Remaining "Not built" — and parallelizability
 

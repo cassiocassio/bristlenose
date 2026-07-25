@@ -12,6 +12,31 @@ You hide a codebook group (eye toggle) or disable a whole framework (the codeboo
 switch) to keep its badges out of the report — then **Export HTML**, and every one
 of those badges is back in the file you share.
 
+## Product principle — the export is the researcher's deliverable (settled 25 Jul 2026)
+
+The framing that decides this fix: **an exported report is not "all of Bristlenose
+baked into a page." It is what the researcher decided the recipient should
+receive — their curated deliverable.** The visible + starred quotes are the
+researcher's *final judgement calls*; the things they hid, they hid for a reason
+(evidence they judged not relevant). The export should present that judgement, not
+the raw working state.
+
+Corollaries:
+- **The default view must honour the researcher's curation.** Hidden quotes stay
+  hidden, hidden/disabled badges stay hidden. The current bug (badges reappear)
+  violates this — the recipient sees material the researcher deliberately removed.
+- **Recoverable-if-you-dig is fine, and even nice.** A recipient would be *happy* to
+  be able to un-hide a quote to see what was set aside — but *unsurprised* if it were
+  simply gone. So the underlying data being present-but-hidden (like `is_hidden`
+  already is) is acceptable; we don't need aggressive stripping.
+- **Re-curation is an app activity, not an export activity.** "If you want to carry
+  on editing, you install the app." The exported HTML is a read deliverable; it is
+  not meant to be a surface for re-doing the researcher's decisions.
+
+This is why the fix is **parity, not stripping** (Option A below): match how hidden
+*quotes* already behave — curated by default, recoverable by a curious reader — and
+don't build a heavier sanitation pass the researcher didn't ask for.
+
 ## Symptom / repro
 
 1. `bristlenose serve --dev <project>`; open the report.
@@ -116,10 +141,14 @@ they're absent from the file's JSON entirely — `view-source` can't recover the
   that should also cover hidden quotes, and probably belongs under the `anonymise`
   opt-in umbrella rather than being silently always-on.
 
-**Recommendation:** ship **A** now (small, consistent, fixes the visible bug). If a
-cohort researcher asks for true redaction of hidden content in shared files, do **B**
-as a deliberate, opt-in "sanitise on export" pass spanning *both* hidden quotes and
-hidden badges — don't split the two.
+**Recommendation:** ship **A** — it *is* the settled direction, per the Product
+principle above. Parity honours the researcher's curation by default while keeping
+hidden content recoverable, exactly like `is_hidden` quotes. Option B (stripping) is
+**not** wanted now: the researcher hasn't asked to redact hidden evidence from the
+file, and doing it for badges but not quotes would be inconsistent. If a cohort
+researcher ever explicitly wants hidden content *gone* from shared files, that's a
+deliberate, opt-in "sanitise on export" feature spanning **both** hidden quotes and
+hidden badges (probably under the `anonymise` umbrella) — not this fix.
 
 ## Touchpoints (for whoever picks this up)
 

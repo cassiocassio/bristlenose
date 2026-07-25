@@ -278,6 +278,46 @@ class TestStartAutoCodeJob:
         finally:
             db.close()
 
+    @pytest.mark.parametrize("dead_status", ["cancelled", "failed"])
+    def test_dead_job_can_be_rerun(
+        self, client_with_garrett: TestClient, dead_status: str
+    ) -> None:
+        """A cancelled/failed job must NOT permanently block a retry — otherwise
+        the Apply button stays enabled but every click 409s and is swallowed, so
+        it 'does nothing'. Starting again replaces the dead job with a fresh one."""
+        db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            db.add(AutoCodeJob(
+                project_id=1, framework_id="garrett", status=dead_status
+            ))
+            db.commit()
+        finally:
+            db.close()
+
+        with (
+            patch("bristlenose.server.routes.autocode.load_settings") as mock_ls,
+            patch(
+                "bristlenose.server.routes.autocode.run_autocode_job",
+                new_callable=AsyncMock,
+            ),
+            patch("bristlenose.server.routes.autocode.asyncio.create_task"),
+        ):
+            mock_ls.return_value = _mock_cloud_settings()
+            resp = client_with_garrett.post("/api/projects/1/autocode/garrett")
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "pending"
+
+        db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            jobs = db.query(AutoCodeJob).filter_by(
+                project_id=1, framework_id="garrett"
+            ).all()
+            assert len(jobs) == 1  # dead job replaced, not duplicated
+            assert jobs[0].status == "pending"
+        finally:
+            db.close()
+
 
 # ---------------------------------------------------------------------------
 # GET /autocode/{framework_id}/status — poll progress

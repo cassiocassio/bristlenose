@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
+import { toast } from "../utils/toast";
 import {
   Badge,
   ConfirmDialog,
@@ -869,7 +870,18 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
           setAutoCodeStatus((prev) => ({ ...prev, [frameworkId]: status }));
           addJob(`autocode:${frameworkId}`, { type: "autocode", frameworkId, frameworkTitle });
         })
-        .catch((err) => console.error("Start AutoCode failed:", err));
+        .catch((err: Error & { detail?: string }) => {
+          // Don't swallow — a failed start (409 already-running, 503 no API key,
+          // 400 no quotes) otherwise leaves the button looking like it did nothing.
+          console.error("Start AutoCode failed:", err);
+          toast(
+            err.detail ||
+              i18n.t("codebook.autoCodeStartFailed", {
+                defaultValue: "Couldn't start AutoCode.",
+              }),
+            4000,
+          );
+        });
     },
     [],
   );

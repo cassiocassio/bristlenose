@@ -171,13 +171,24 @@ async def start_autocode_job(
                 detail=f"Framework template '{framework_id}' not found",
             )
 
-        # Check for existing job (no re-runs)
+        # Check for an existing job. A *cancelled* or *failed* job produced no
+        # usable result, so it must not permanently block a retry — otherwise the
+        # Apply button stays enabled (acDisabled only covers running/completed) yet
+        # every click 409s and the frontend swallows it, so the button "does
+        # nothing". Clear the dead job below and let a fresh run proceed. A
+        # pending/running job is genuinely in flight, and a completed job has
+        # results (the UI morphs to "View Report") — both keep the 409.
         existing = (
             db.query(AutoCodeJob)
             .filter_by(project_id=project_id, framework_id=framework_id)
             .first()
         )
-        if existing:
+        if existing and existing.status in ("pending", "running"):
+            raise HTTPException(
+                status_code=409,
+                detail=f"AutoCode is already running for framework '{framework_id}'",
+            )
+        if existing and existing.status == "completed":
             raise HTTPException(
                 status_code=409,
                 detail=f"AutoCode already run for framework '{framework_id}'",
@@ -212,6 +223,16 @@ async def start_autocode_job(
                     "in your .env file."
                 ),
             )
+
+        # A cancelled/failed job (the only survivors of the guards above) is
+        # discarded now — along with any partial proposals — so the
+        # (project_id, framework_id) unique constraint doesn't block the retry.
+        if existing:
+            db.query(ProposedTag).filter_by(job_id=existing.id).delete(
+                synchronize_session=False
+            )
+            db.delete(existing)
+            db.flush()
 
         # Create job row
         job = AutoCodeJob(

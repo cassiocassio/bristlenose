@@ -192,9 +192,17 @@ scope unless decided otherwise. This walks toward the already-deferred D7
 
 Pane = `lg` · card-within-pane = `md` · chip/badge = `sm` · half-height pill
 = `pill` · quote-card asymmetry documented as the deliberate exception.
-Fixes: `.signal-card` `sm` → `lg` (un-inverts the nesting for free);
-`framework-toggle` and `badge-action-pill` → `--bn-radius-pill`. Open taste
-call: Project stat tiles at `md` beside `lg` panes.
+Done: `.signal-card` `sm` → `lg` (un-inverts the nesting for free, `be1835b7`).
+Remaining nits: `framework-toggle` (11px) and `badge-action-pill` (8px) →
+`--bn-radius-pill` (both coincidentally-correct pills today — hand-rolled
+numbers that would break on a height change). Decided (25 Jul): **Project stat
+tiles stay `md`** — `lg` reads too big at tile scale; they're mini-panes, not
+full panes.
+
+Note: radii are **not** native-calibrated — only typography is
+(`tokens-desktop.css`, via the Type Parity Inspector). Tahoe's system corners
+run rounder (~10–12px on cards), so a desktop radius override parallel to the
+type work is a real open question, tracked separately from these web fixes.
 
 ### TOC sidebar (contents menu)
 
@@ -250,7 +258,8 @@ solid band, an accepted platform limitation shared with Xcode.)
 
 - **Project tile row**: box-top on the shared start line (recommended,
   calmer for a card row) vs tile-number baselines on the datum.
-- **Stat tile radius**: stay `md` (tiles-as-mini-panes) or join `lg`.
+- ~~**Stat tile radius**: stay `md` or join `lg`.~~ **Decided 25 Jul: stays
+  `md`** — `lg` too big at tile scale.
 - **The datum value itself**: the eye-approved reference is today's
   accidental Quotes position (~8px below the toolbar); confirm or re-tune
   during step 1's acceptance pass in the real app.

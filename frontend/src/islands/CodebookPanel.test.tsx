@@ -56,6 +56,10 @@ function mockFetchOk(data: unknown, opts?: { templates?: unknown }): void {
     if (typeof url === "string" && url.includes("/autocode/")) {
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
     }
+    // Framework enable/disable state: empty map = all enabled (the default).
+    if (typeof url === "string" && url.includes("/framework-states")) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    }
     // Templates endpoint returns dedicated response when provided.
     if (typeof url === "string" && url.includes("/codebook/templates") && opts?.templates) {
       return Promise.resolve({
@@ -76,6 +80,11 @@ function mockFetchSequence(...responses: unknown[]): void {
     // AutoCode status calls return 404 (no job) by default.
     if (typeof url === "string" && url.includes("/autocode/")) {
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+    }
+    // Framework enable/disable state: empty map = all enabled (the default).
+    // Special-cased so hydrate doesn't consume a sequence slot.
+    if (typeof url === "string" && url.includes("/framework-states")) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     }
     // Templates endpoint always returns MOCK_TEMPLATES when available —
     // avoids sequence-order sensitivity from the eager templates fetch.
@@ -214,13 +223,17 @@ describe("CodebookPanel", () => {
     });
     await userEvent.click(screen.getByLabelText("Delete confusion"));
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    // Filter by URL+method rather than a positional index — the mount also fires
+    // a /framework-states hydrate GET, so exact call counts/positions are brittle.
     await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+      const del = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.find(
+        (c) =>
+          typeof c[0] === "string" &&
+          c[0].includes("/codebook/tags/10") &&
+          c[1]?.method === "DELETE",
+      );
+      expect(del).toBeTruthy();
     });
-    // Second call should be DELETE to the tag endpoint
-    const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
-    expect(calls[1][0]).toContain("/codebook/tags/10");
-    expect(calls[1][1]?.method).toBe("DELETE");
   });
 
   it("deleting zero-count tag skips confirmation", async () => {
@@ -247,11 +260,14 @@ describe("CodebookPanel", () => {
     // No confirmation dialog — should immediately call DELETE API
     expect(screen.queryByText(/Delete "empty-tag"/)).not.toBeInTheDocument();
     await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+      const del = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.find(
+        (c) =>
+          typeof c[0] === "string" &&
+          c[0].includes("/codebook/tags/12") &&
+          c[1]?.method === "DELETE",
+      );
+      expect(del).toBeTruthy();
     });
-    const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
-    expect(calls[1][0]).toContain("/codebook/tags/12");
-    expect(calls[1][1]?.method).toBe("DELETE");
   });
 
   it("clicking delete group shows confirmation dialog", async () => {
@@ -309,13 +325,17 @@ describe("CodebookPanel", () => {
     const editEl = document.querySelector(".tag-edit-inline") as HTMLElement;
     editEl.textContent = "bewilderment";
     editEl.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    let patch: [string, RequestInit] | undefined;
     await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+      patch = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.find(
+        (c) =>
+          typeof c[0] === "string" &&
+          c[0].includes("/codebook/tags/10") &&
+          c[1]?.method === "PATCH",
+      ) as [string, RequestInit] | undefined;
+      expect(patch).toBeTruthy();
     });
-    const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
-    expect(calls[1][0]).toContain("/codebook/tags/10");
-    expect(calls[1][1]?.method).toBe("PATCH");
-    const body = JSON.parse(calls[1][1]?.body as string);
+    const body = JSON.parse(patch![1].body as string);
     expect(body.name).toBe("bewilderment");
   });
 
@@ -327,11 +347,14 @@ describe("CodebookPanel", () => {
     });
     await userEvent.click(screen.getByText("New group"));
     await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+      const post = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.find(
+        (c) =>
+          typeof c[0] === "string" &&
+          c[0].includes("/codebook/groups") &&
+          c[1]?.method === "POST",
+      );
+      expect(post).toBeTruthy();
     });
-    const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
-    expect(calls[1][0]).toContain("/codebook/groups");
-    expect(calls[1][1]?.method).toBe("POST");
   });
 });
 
@@ -453,6 +476,53 @@ describe("CodebookPanel — per-framework sections", () => {
     // Toggle back on → groups return
     await userEvent.click(screen.getByTestId("bn-framework-toggle-garrett"));
     expect(screen.getByText("Strategy")).toBeInTheDocument();
+  });
+
+  it("persists framework disable via PUT /framework-states", async () => {
+    mockFetchOk(MOCK_WITH_FRAMEWORKS);
+    render(<CodebookPanel projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText("Strategy")).toBeInTheDocument();
+    });
+    // Disable garrett → PUT the disabled set as {garrett: false}.
+    await userEvent.click(screen.getByTestId("bn-framework-toggle-garrett"));
+    const findPuts = () =>
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.filter(
+        (c) =>
+          typeof c[0] === "string" &&
+          c[0].includes("/framework-states") &&
+          c[1]?.method === "PUT",
+      ) as [string, RequestInit][];
+    await waitFor(() => expect(findPuts().length).toBe(1));
+    expect(JSON.parse(findPuts()[0][1].body as string)).toEqual({ garrett: false });
+    // Re-enable → absence = enabled, so the PUT shrinks the map back to {}.
+    await userEvent.click(screen.getByTestId("bn-framework-toggle-garrett"));
+    await waitFor(() => expect(findPuts().length).toBe(2));
+    expect(JSON.parse(findPuts()[1][1].body as string)).toEqual({});
+  });
+
+  it("hydrates a persisted disabled framework as folded on mount", async () => {
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (typeof url === "string" && url.includes("/autocode/")) {
+        return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+      }
+      if (typeof url === "string" && url.includes("/framework-states")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ garrett: false }) });
+      }
+      if (typeof url === "string" && url.includes("/codebook/templates")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_TEMPLATES) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_WITH_FRAMEWORKS) });
+    });
+    render(<CodebookPanel projectId="1" />);
+    // uxr (Usability) renders; garrett's groups (Strategy, Scope) hydrate folded.
+    await waitFor(() => {
+      expect(screen.getByText("Usability")).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.queryByText("Strategy")).not.toBeInTheDocument();
+    });
+    expect(screen.queryByText("Scope")).not.toBeInTheDocument();
   });
 
   it("renders Remove from Codebook button per framework section", async () => {

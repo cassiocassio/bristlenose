@@ -153,6 +153,20 @@ export function putHiddenTagGroups(groupNames: string[]): void {
   firePut("/hidden-tag-groups", groupNames);
 }
 
+/**
+ * Per-framework enable/disable state (the codebook switch). Only frameworks with
+ * an explicit stored opinion are returned; absence means enabled (the default).
+ * View-only per design-codebook-library.md Decision A — drives fold + report-wide
+ * badge hide, never re-apply.
+ */
+export function getFrameworkStates(): Promise<Record<string, boolean>> {
+  return apiGet<Record<string, boolean>>("/framework-states");
+}
+
+export function putFrameworkStates(states: Record<string, boolean>): void {
+  firePut("/framework-states", states);
+}
+
 // ---------------------------------------------------------------------------
 // People (names) helpers
 // ---------------------------------------------------------------------------

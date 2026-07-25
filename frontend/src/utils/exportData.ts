@@ -1,19 +1,20 @@
 /**
  * Export mode detection and embedded data resolution.
  *
- * When a report is exported as a self-contained HTML file, all API data is
- * embedded as `window.BRISTLENOSE_EXPORT`.  This module detects export mode
- * and resolves API paths to embedded data without network requests.
+ * When a report is exported as a self-contained HTML file, every read endpoint's
+ * JSON is embedded as `window.BRISTLENOSE_EXPORT.endpoints`, keyed by the same
+ * relative API path the SPA calls (e.g. "/dashboard", "/transcripts/s1").  The
+ * server builds this map from its own OpenAPI read surface (see
+ * `bristlenose/server/routes/export.py`), so the offline data contract is
+ * derived, not hand-mirrored — a new embedded endpoint appears here for free.
+ *
+ * This module detects export mode and resolves an API path to its embedded blob
+ * without any network request.  A MISS returns `undefined` (path not embedded),
+ * distinct from a present-but-null value (e.g. "/video-map"): `apiGet` uses that
+ * distinction to fail loud on an uncovered read in export mode rather than fall
+ * through to a doomed fetch.
  */
 
-import type {
-  CodebookAnalysisListResponse,
-  CodebookResponse,
-  DashboardResponse,
-  SentimentAnalysisData,
-  TranscriptPageResponse,
-} from "./types";
-import type { PersonData } from "./api";
 import type { HealthResponse } from "./health";
 
 // ---------------------------------------------------------------------------
@@ -23,20 +24,10 @@ import type { HealthResponse } from "./health";
 export interface ExportData {
   version: number;
   exported_at: string;
-  project: { project_name: string; session_count: number; participant_count: number };
   health: HealthResponse;
-  dashboard: DashboardResponse;
-  sessions: unknown; // SessionsListResponse (not typed here to avoid circular dep)
-  quotes: unknown; // QuotesListResponse
-  codebook: CodebookResponse;
-  analysis: {
-    sentiment: SentimentAnalysisData | null;
-    codebooks: CodebookAnalysisListResponse | null;
-  };
-  transcripts: Record<string, TranscriptPageResponse>;
-  people: Record<string, PersonData>;
-  videoMap: unknown | null;
   logos?: { light?: string; dark?: string };
+  /** Path-keyed embed: relative API path → the endpoint's JSON response. */
+  endpoints: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -64,37 +55,21 @@ export function isExportMode(): boolean {
 
 /**
  * Map an API path (relative to project base, e.g. "/dashboard") to the
- * corresponding embedded data blob.  Returns `null` when not in export mode
- * or if the path is unrecognised.
+ * corresponding embedded blob.  Returns `undefined` when not in export mode or
+ * when the path is not embedded; returns the value (which may be `null`) when
+ * the path IS embedded.  The query string is ignored — embedded keys are
+ * query-less (e.g. "/analysis/codebooks?elaborate=true" → "/analysis/codebooks").
  */
-export function resolveFromExport<T>(path: string): T | null {
+export function resolveFromExport<T>(path: string): T | undefined {
   const data = getExportData();
-  if (!data) return null;
-
-  // Exact matches
-  if (path === "/info") return data.project as T;
-  if (path === "/dashboard") return data.dashboard as T;
-  if (path === "/sessions") return data.sessions as T;
-  if (path === "/quotes") return data.quotes as T;
-  if (path === "/codebook") return data.codebook as T;
-  if (path === "/people") return data.people as T;
-  if (path === "/video-map") return data.videoMap as T;
-  if (path === "/analysis/sentiment") return data.analysis.sentiment as T;
-
-  // Prefix: /analysis/codebooks[?...]
-  if (path === "/analysis/codebooks" || path.startsWith("/analysis/codebooks?")) {
-    return data.analysis.codebooks as T;
+  if (!data) return undefined;
+  const endpoints = data.endpoints ?? {};
+  const q = path.indexOf("?");
+  const base = q >= 0 ? path.slice(0, q) : path;
+  if (Object.prototype.hasOwnProperty.call(endpoints, base)) {
+    return endpoints[base] as T;
   }
-
-  // Pattern: /transcripts/{sessionId}
-  const txMatch = path.match(/^\/transcripts\/(.+)$/);
-  if (txMatch) {
-    const sid = txMatch[1];
-    const tx = data.transcripts[sid];
-    return (tx ?? null) as T;
-  }
-
-  return null;
+  return undefined;
 }
 
 // ---------------------------------------------------------------------------

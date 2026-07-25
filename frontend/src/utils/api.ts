@@ -70,7 +70,13 @@ async function httpError(method: string, path: string, resp: Response): Promise<
 
 export async function apiGet<T>(path: string): Promise<T> {
   const embedded = resolveFromExport<T>(path);
-  if (embedded !== null) return embedded;
+  if (embedded !== undefined) return embedded;
+  if (isExportMode()) {
+    // Exported (offline) report: there is no server. A resolver miss means this
+    // read endpoint was not embedded — fail loud so the file:// e2e catches it,
+    // instead of a doomed fetch that degrades silently.
+    throw new Error(`Export mode: no embedded data for ${path}`);
+  }
   const resp = await fetch(`${apiBase()}${path}`, { headers: authHeaders() });
   if (!resp.ok) throw await httpError("GET", path, resp);
   return resp.json() as Promise<T>;
@@ -214,8 +220,14 @@ export function putPeople(data: Record<string, PersonData>): void {
 export async function getModeratorQuestion(
   domId: string,
 ): Promise<ModeratorQuestionResponse | null> {
+  const path = `/quotes/${encodeURIComponent(domId)}/moderator-question`;
+  if (isExportMode()) {
+    // Embedded per-quote map; a miss means no preceding moderator utterance
+    // (a legitimate 404, not a coverage gap) — resolve to null, no fetch.
+    return resolveFromExport<ModeratorQuestionResponse>(path) ?? null;
+  }
   const resp = await globalThis.fetch(
-    `${apiBase()}/quotes/${encodeURIComponent(domId)}/moderator-question`,
+    `${apiBase()}${path}`,
     { headers: authHeaders() },
   );
   if (resp.status === 404) return null;
@@ -288,6 +300,10 @@ export function mergeCodebookTags(
 // ---------------------------------------------------------------------------
 
 export function getCodebookTemplates(): Promise<TemplateListResponse> {
+  // Browsing/importing templates is a server-backed authoring action (SERVER_ONLY,
+  // not embedded) — an exported report has none, so resolve to an empty list
+  // rather than fail-loud on the codebook tab's mount fetch.
+  if (isExportMode()) return Promise.resolve({ templates: [] });
   return apiGet<TemplateListResponse>("/codebook/templates");
 }
 

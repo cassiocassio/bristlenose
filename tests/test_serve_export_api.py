@@ -87,16 +87,25 @@ class TestExportData:
 
     def test_has_version(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
-        assert data["version"] == 1
+        assert data["version"] == 2
 
     def test_has_exported_at(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
         assert "exported_at" in data
 
+    def test_endpoints_is_path_keyed(self, client: TestClient) -> None:
+        """The embed is a path-keyed map, mirroring the SPA's relative API paths."""
+        data = self._extract_export_data(client.get("/api/projects/1/export").text)
+        assert isinstance(data["endpoints"], dict)
+        # Keys are relative API paths, not semantic names.
+        assert "/dashboard" in data["endpoints"]
+        assert "dashboard" not in data  # no legacy top-level semantic keys
+
     def test_has_project_info(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
-        assert "project_name" in data["project"]
-        assert "session_count" in data["project"]
+        info = data["endpoints"]["/info"]
+        assert "project_name" in info
+        assert "session_count" in info
 
     def test_has_health(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
@@ -116,35 +125,70 @@ class TestExportData:
 
     def test_has_dashboard(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
-        assert "stats" in data["dashboard"]
-        assert "sessions" in data["dashboard"]
+        dashboard = data["endpoints"]["/dashboard"]
+        assert "stats" in dashboard
+        assert "sessions" in dashboard
 
     def test_has_sessions(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
-        assert "sessions" in data["sessions"]
+        assert "sessions" in data["endpoints"]["/sessions"]
 
     def test_has_quotes(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
-        assert "sections" in data["quotes"]
-        assert "themes" in data["quotes"]
+        quotes = data["endpoints"]["/quotes"]
+        assert "sections" in quotes
+        assert "themes" in quotes
 
     def test_has_codebook(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
-        assert "groups" in data["codebook"]
+        assert "groups" in data["endpoints"]["/codebook"]
 
     def test_has_analysis(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
-        assert "sentiment" in data["analysis"]
-        assert "codebooks" in data["analysis"]
+        assert "/analysis/sentiment" in data["endpoints"]
+        assert "/analysis/codebooks" in data["endpoints"]
+
+    def test_has_view_state_endpoints(self, client: TestClient) -> None:
+        """The two previously-drifted view-state reads are now embedded."""
+        data = self._extract_export_data(client.get("/api/projects/1/export").text)
+        assert "/framework-states" in data["endpoints"]
+        assert "/hidden-tag-groups" in data["endpoints"]
+        assert isinstance(data["endpoints"]["/framework-states"], dict)
+        assert isinstance(data["endpoints"]["/hidden-tag-groups"], list)
+
+    def test_every_static_embed_template_is_actually_embedded(
+        self, client: TestClient
+    ) -> None:
+        """Close the 'classified but not embedded' hole.
+
+        The coverage gate (test_serve_export_coverage.py) proves every read path
+        is *classified*; this proves every non-parameterised EMBED template is
+        actually *produced* by export_report — so listing a template to pass the
+        gate but forgetting to wire its builder can't slip through.  (Parameterised
+        templates — transcripts/{id}, moderator-question — may legitimately have
+        zero keys for a given project, so they're covered by the gate + the
+        file:// render walk, not here.)
+        """
+        from bristlenose.server.routes.export import EMBED_PATH_TEMPLATES
+
+        data = self._extract_export_data(client.get("/api/projects/1/export").text)
+        keys = set(data["endpoints"].keys())
+        missing = sorted(
+            rel
+            for tmpl in EMBED_PATH_TEMPLATES
+            if "{" not in (rel := tmpl.replace("/projects/{project_id}", "", 1))
+            and rel not in keys
+        )
+        assert not missing, f"EMBED templates classified but not embedded: {missing}"
 
     def test_analysis_uses_camel_case_keys(self, client: TestClient) -> None:
         """Sentiment analysis models use alias_generator (camelCase).
 
-        model_dump(by_alias=True) must be used so the embedded JSON matches
-        what FastAPI returns over HTTP — the React frontend expects camelCase.
+        jsonable_encoder must produce the same by-alias shape FastAPI returns
+        over HTTP — the React frontend expects camelCase.
         """
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
-        sentiment = data["analysis"]["sentiment"]
+        sentiment = data["endpoints"]["/analysis/sentiment"]
         if sentiment is not None:
             # Top-level keys should be camelCase
             assert "sectionMatrix" in sentiment
@@ -159,17 +203,19 @@ class TestExportData:
 
     def test_has_transcripts(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
-        assert isinstance(data["transcripts"], dict)
+        tx_keys = [k for k in data["endpoints"] if k.startswith("/transcripts/")]
         # Smoke-test fixture has 1 session
-        assert len(data["transcripts"]) >= 1
+        assert len(tx_keys) >= 1
 
     def test_has_people(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
-        assert isinstance(data["people"], dict)
+        assert isinstance(data["endpoints"]["/people"], dict)
 
     def test_video_map_is_null(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
-        assert data["videoMap"] is None
+        # Present-but-null (distinct from absent) so apiGet resolves it, not fetches.
+        assert "/video-map" in data["endpoints"]
+        assert data["endpoints"]["/video-map"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -220,7 +266,7 @@ class TestExportAnonymise:
         data = self._extract_export_data(
             client.get("/api/projects/1/export?anonymise=true").text,
         )
-        for code, person in data["people"].items():
+        for code, person in data["endpoints"]["/people"].items():
             if code.startswith("p"):
                 assert person["full_name"] == ""
                 assert person["short_name"] == ""
@@ -230,7 +276,7 @@ class TestExportAnonymise:
             client.get("/api/projects/1/export?anonymise=true").text,
         )
         # Check if moderator names are preserved (m1 should keep its name)
-        for code, person in data["people"].items():
+        for code, person in data["endpoints"]["/people"].items():
             if code.startswith("m"):
                 # Moderator names should NOT be empty (if they had a name)
                 pass  # Just verify they weren't blanked
@@ -240,6 +286,7 @@ class TestExportAnonymise:
             client.get("/api/projects/1/export?anonymise=false").text,
         )
         # People data should be present (not stripped)
-        assert isinstance(data["people"], dict)
+        people = data["endpoints"]["/people"]
+        assert isinstance(people, dict)
         # Smoke-test fixture has at least m1 and p1
-        assert len(data["people"]) >= 1
+        assert len(people) >= 1

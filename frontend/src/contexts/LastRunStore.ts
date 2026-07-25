@@ -28,6 +28,7 @@
 import { useSyncExternalStore } from "react";
 import { authHeaders } from "../utils/api";
 import { announce } from "../utils/announce";
+import { isExportMode } from "../utils/exportData";
 import i18n from "../i18n";
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -172,6 +173,9 @@ function installVisibilityListener(): void {
  * restarts polling.
  */
 export function startLastRunPolling(projectId: string): void {
+  // An exported report is a static snapshot with no server to poll — polling
+  // would raise a file:// fetch error on every tick.
+  if (isExportMode()) return;
   if (activeProjectId === projectId) return;
 
   activeProjectId = projectId;

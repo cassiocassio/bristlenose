@@ -19,9 +19,8 @@ function clearExportGlobal(): void {
 }
 
 const MOCK_EXPORT = {
-  version: 1,
+  version: 2,
   exported_at: "2026-03-01T12:00:00Z",
-  project: { project_name: "Test", session_count: 2, participant_count: 3 },
   health: {
     status: "ok",
     version: "0.11.1",
@@ -33,20 +32,29 @@ const MOCK_EXPORT = {
       url: "https://bristlenose.app/feedback.php",
     },
   },
-  dashboard: { stats: { session_count: 2 } },
-  sessions: { sessions: [{ session_id: "s1" }] },
-  quotes: { sections: [], themes: [], total_quotes: 5 },
-  codebook: { groups: [], ungrouped: [], all_tag_names: [] },
-  analysis: {
-    sentiment: { signals: [], totalParticipants: 3 },
-    codebooks: { codebooks: [], total_participants: 3, trade_off_note: "" },
+  logos: { light: "data:image/png;base64,AAAA", dark: "data:image/png;base64,BBBB" },
+  endpoints: {
+    "/info": { project_name: "Test", session_count: 2, participant_count: 3 },
+    "/dashboard": { stats: { session_count: 2 } },
+    "/sessions": { sessions: [{ session_id: "s1" }] },
+    "/quotes": { sections: [], themes: [], total_quotes: 5 },
+    "/codebook": { groups: [], ungrouped: [], all_tag_names: [] },
+    "/people": { p1: { full_name: "Alice", short_name: "A", role: "Manager" } },
+    "/video-map": null,
+    "/analysis/sentiment": { signals: [], totalParticipants: 3 },
+    "/analysis/codebooks": { codebooks: [], total_participants: 3, trade_off_note: "" },
+    "/framework-states": { garrett: false },
+    "/hidden-tag-groups": ["Ungrouped"],
+    "/transcripts/s1": { session_id: "s1", segments: [] },
+    "/transcripts/s2": { session_id: "s2", segments: [] },
+    "/quotes/q-p1-10/moderator-question": {
+      text: "What did you expect?",
+      speaker_code: "m1",
+      start_time: 5,
+      end_time: 8,
+      segment_index: 3,
+    },
   },
-  transcripts: {
-    s1: { session_id: "s1", segments: [] },
-    s2: { session_id: "s2", segments: [] },
-  },
-  people: { p1: { full_name: "Alice", short_name: "A", role: "Manager" } },
-  videoMap: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -92,16 +100,16 @@ describe("exportData", () => {
       _resetExportCache();
       const data = getExportData();
       expect(data).not.toBeNull();
-      expect(data!.version).toBe(1);
-      expect(data!.project.project_name).toBe("Test");
+      expect(data!.version).toBe(2);
+      expect(data!.endpoints["/info"]).toEqual(MOCK_EXPORT.endpoints["/info"]);
     });
   });
 
   // ── Resolver ───────────────────────────────────────────────────────────
 
   describe("resolveFromExport", () => {
-    it("returns null when not in export mode", () => {
-      expect(resolveFromExport("/dashboard")).toBeNull();
+    it("returns undefined when not in export mode", () => {
+      expect(resolveFromExport("/dashboard")).toBeUndefined();
     });
 
     describe("with export data", () => {
@@ -117,35 +125,58 @@ describe("exportData", () => {
 
       it("resolves /info", () => {
         setup();
-        expect(resolveFromExport("/info")).toEqual(MOCK_EXPORT.project);
+        expect(resolveFromExport("/info")).toEqual(MOCK_EXPORT.endpoints["/info"]);
       });
 
       it("resolves /dashboard", () => {
         setup();
-        expect(resolveFromExport("/dashboard")).toEqual(MOCK_EXPORT.dashboard);
+        expect(resolveFromExport("/dashboard")).toEqual(
+          MOCK_EXPORT.endpoints["/dashboard"],
+        );
       });
 
       it("resolves /sessions", () => {
         setup();
-        expect(resolveFromExport("/sessions")).toEqual(MOCK_EXPORT.sessions);
+        expect(resolveFromExport("/sessions")).toEqual(
+          MOCK_EXPORT.endpoints["/sessions"],
+        );
       });
 
       it("resolves /quotes", () => {
         setup();
-        expect(resolveFromExport("/quotes")).toEqual(MOCK_EXPORT.quotes);
+        expect(resolveFromExport("/quotes")).toEqual(MOCK_EXPORT.endpoints["/quotes"]);
       });
 
       it("resolves /codebook", () => {
         setup();
-        expect(resolveFromExport("/codebook")).toEqual(MOCK_EXPORT.codebook);
+        expect(resolveFromExport("/codebook")).toEqual(
+          MOCK_EXPORT.endpoints["/codebook"],
+        );
       });
 
       it("resolves /people", () => {
         setup();
-        expect(resolveFromExport("/people")).toEqual(MOCK_EXPORT.people);
+        expect(resolveFromExport("/people")).toEqual(MOCK_EXPORT.endpoints["/people"]);
       });
 
-      it("resolves /video-map", () => {
+      it("resolves the newly-embedded view-state endpoints", () => {
+        setup();
+        expect(resolveFromExport("/framework-states")).toEqual(
+          MOCK_EXPORT.endpoints["/framework-states"],
+        );
+        expect(resolveFromExport("/hidden-tag-groups")).toEqual(
+          MOCK_EXPORT.endpoints["/hidden-tag-groups"],
+        );
+      });
+
+      it("resolves an embedded moderator-question", () => {
+        setup();
+        expect(resolveFromExport("/quotes/q-p1-10/moderator-question")).toEqual(
+          MOCK_EXPORT.endpoints["/quotes/q-p1-10/moderator-question"],
+        );
+      });
+
+      it("resolves /video-map as present-null (not a miss)", () => {
         setup();
         expect(resolveFromExport("/video-map")).toBeNull();
       });
@@ -153,48 +184,48 @@ describe("exportData", () => {
       it("resolves /analysis/sentiment", () => {
         setup();
         expect(resolveFromExport("/analysis/sentiment")).toEqual(
-          MOCK_EXPORT.analysis.sentiment,
+          MOCK_EXPORT.endpoints["/analysis/sentiment"],
         );
       });
 
       it("resolves /analysis/codebooks", () => {
         setup();
         expect(resolveFromExport("/analysis/codebooks")).toEqual(
-          MOCK_EXPORT.analysis.codebooks,
+          MOCK_EXPORT.endpoints["/analysis/codebooks"],
         );
       });
 
       it("resolves /analysis/codebooks with query string", () => {
         setup();
         expect(resolveFromExport("/analysis/codebooks?elaborate=true")).toEqual(
-          MOCK_EXPORT.analysis.codebooks,
+          MOCK_EXPORT.endpoints["/analysis/codebooks"],
         );
       });
 
       it("resolves /transcripts/s1", () => {
         setup();
         expect(resolveFromExport("/transcripts/s1")).toEqual(
-          MOCK_EXPORT.transcripts.s1,
+          MOCK_EXPORT.endpoints["/transcripts/s1"],
         );
       });
 
       it("resolves /transcripts/s2", () => {
         setup();
         expect(resolveFromExport("/transcripts/s2")).toEqual(
-          MOCK_EXPORT.transcripts.s2,
+          MOCK_EXPORT.endpoints["/transcripts/s2"],
         );
       });
 
-      it("returns null for unknown transcript", () => {
+      it("returns undefined for unknown transcript", () => {
         setup();
-        expect(resolveFromExport("/transcripts/s99")).toBeNull();
+        expect(resolveFromExport("/transcripts/s99")).toBeUndefined();
       });
 
-      it("returns null for unrecognised paths", () => {
+      it("returns undefined for unrecognised paths", () => {
         setup();
-        expect(resolveFromExport("/unknown")).toBeNull();
-        expect(resolveFromExport("/codebook/templates")).toBeNull();
-        expect(resolveFromExport("/autocode/abc/status")).toBeNull();
+        expect(resolveFromExport("/unknown")).toBeUndefined();
+        expect(resolveFromExport("/codebook/templates")).toBeUndefined();
+        expect(resolveFromExport("/autocode/abc/status")).toBeUndefined();
       });
     });
   });

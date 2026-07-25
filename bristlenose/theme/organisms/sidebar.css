@@ -103,12 +103,17 @@
 .layout.embedded .toc-rail,
 .layout.embedded .tag-rail { display: none; }
 
-/* The right gutter (--bn-gutter-right: 0.5rem) was sized assuming a
-   36px rail sat beyond it. On tabs without a minimap the webview now
-   butts the window edge, so restore a comfortable inset matching the
-   left. (Quotes keeps 0.5rem — its minimap supplies the separation.) */
-.layout.embedded.layout-no-right > .center,
-.layout.embedded.layout-inert > .center {
+/* The base right gutter (--bn-gutter-right: 0.5rem) was sized assuming a
+   36px rail sat beyond it — but on tabs without a minimap that leaves
+   content 24px closer to the right edge than the left (browser: 92px
+   left vs 68px right; embedded: 8px vs 32px). Restore a right inset
+   matching the left so the margins are actually balanced. Applies in
+   BOTH surfaces: the app (rail width 0, webview butts the window edge)
+   and the browser (empty right spacer rail — the balanced-margins intent
+   it was added for). Quotes keeps 0.5rem — its minimap column supplies
+   the right-side separation, so it's the full layout, not -no-right. */
+.layout.layout-no-right > .center,
+.layout.layout-inert > .center {
     padding-right: var(--bn-gutter-left);
 }
 

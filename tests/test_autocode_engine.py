@@ -880,6 +880,39 @@ class TestReapplyToNewQuotes:
         )
         assert results == {}
 
+    def test_reapply_active_frameworks_skips_removed(
+        self, project_with_garrett
+    ) -> None:
+        """Applied but since REMOVED (group links dropped) → not re-applied.
+        Remove stops maintenance; the gate is ever-applied AND currently linked.
+        Per design-codebook-library.md Decision A."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        # Uninstall: drop every ProjectCodebookGroup link for this project.
+        db = db_factory()
+        try:
+            db.query(ProjectCodebookGroup).filter_by(
+                project_id=project_id
+            ).delete()
+            db.commit()
+        finally:
+            db.close()
+
+        mock_analyze = AsyncMock()
+        with _patch_llm(mock_analyze):
+            results = asyncio.run(
+                reapply_active_frameworks(db_factory, project_id, _mock_settings())
+            )
+
+        assert results == {}  # removed framework skipped, not coded
+        mock_analyze.assert_not_called()
+        db = db_factory()
+        try:
+            assert db.query(QuoteTag).count() == 0
+        finally:
+            db.close()
+
     def test_never_applied_is_noop(self, project_with_garrett) -> None:
         """No completed job (fixture job is 'pending') → returns 0, no LLM call."""
         project_id, framework_id, db_factory = project_with_garrett

@@ -687,25 +687,51 @@ async def reapply_active_frameworks(
     project_id: int,
     settings: BristlenoseSettings,
 ) -> dict[str, int]:
-    """Re-apply every already-applied framework in a project to its new quotes.
+    """Re-apply every already-applied, still-installed framework to its new quotes.
 
-    Called after a re-run that added sessions: for each framework with a
-    completed AutoCode job, code the delta at that job's stored cutoff. Each is a
-    safe no-op if there are no new quotes. Returns ``{framework_id: n_accepted}``.
+    Called after a re-run that added sessions: for each framework that has a
+    completed AutoCode job **and** is still linked into this project (at least one
+    of its groups in ``project_codebook_groups``), code the delta at that job's
+    stored cutoff. Each is a safe no-op if there are no new quotes. Returns
+    ``{framework_id: n_accepted}``.
 
-    Runs the frameworks sequentially so spend stays legible in the logs. Note:
-    "previously applied" is the gate today; once the enable/disable toggle is
-    persisted this should also skip disabled frameworks.
+    The gate is **ever-applied AND currently linked** — deliberately NOT "enabled".
+    Per design-codebook-library.md Decision A, the enable/disable toggle is a
+    view-only control (fold + report-wide badge hide); a disabled-but-installed
+    codebook keeps maintaining new sessions so re-enable is always free. The intent
+    "stop spending on this" belongs to **Remove** (drops the link), which this
+    linked-check honours. Runs the frameworks sequentially so spend stays legible
+    in the logs.
     """
-    from bristlenose.server.models import AutoCodeJob
+    from bristlenose.server.models import (
+        AutoCodeJob,
+        CodebookGroup,
+        ProjectCodebookGroup,
+    )
 
     db = db_factory()
     try:
+        # Frameworks still installed in this project (≥1 linked group).
+        linked_framework_ids = {
+            row[0]
+            for row in db.query(CodebookGroup.framework_id)
+            .join(
+                ProjectCodebookGroup,
+                ProjectCodebookGroup.codebook_group_id == CodebookGroup.id,
+            )
+            .filter(
+                ProjectCodebookGroup.project_id == project_id,
+                CodebookGroup.framework_id.isnot(None),
+            )
+            .distinct()
+        }
+        # Gate = ever-applied ∩ currently linked (Remove uninstalls → stops here).
         framework_ids = [
             row[0]
             for row in db.query(AutoCodeJob.framework_id)
             .filter_by(project_id=project_id, status="completed")
             .distinct()
+            if row[0] in linked_framework_ids
         ]
     finally:
         db.close()

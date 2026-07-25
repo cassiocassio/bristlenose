@@ -33,17 +33,17 @@ struct IconPickerPopover: View {
         ("heart.fill", "Heart"),
         ("star.fill", "Star"),
 
-        // Row 2 — Stars / Sparkle / Energy
+        // Row 2 — Abstract / Energy
         ("staroflife.fill", "Star of Life"),
-        ("sparkle", "Sparkle"),
-        ("sparkles", "Sparkles"),
+        ("cube.fill", "Cube"),
+        ("circle.hexagongrid.fill", "Hexagon Grid"),
         ("asterisk", "Asterisk"),
         ("bolt.fill", "Bolt"),
         ("bolt.circle", "Bolt Circle"),
         ("flame.fill", "Flame"),
-        ("light.max", "Light"),
+        ("flashlight.on.fill", "Flashlight"),
         ("rays", "Rays"),
-        ("wand.and.rays", "Wand and Rays"),
+        ("pentagon.fill", "Pentagon"),
 
         // Row 3 — Water / Weather / Sky
         ("drop.fill", "Drop"),
@@ -95,14 +95,14 @@ struct IconPickerPopover: View {
 
         // Row 7 — Objects / Tools
         ("key.fill", "Key"),
-        ("lock.fill", "Lock"),
+        ("backpack.fill", "Backpack"),
         ("gift.fill", "Gift"),
         ("hourglass", "Hourglass"),
         ("dice.fill", "Dice"),
         ("puzzlepiece.fill", "Puzzle Piece"),
         ("crown.fill", "Crown"),
         ("flag.fill", "Flag"),
-        ("bell.fill", "Bell"),
+        ("party.popper.fill", "Party Popper"),
         ("megaphone.fill", "Megaphone"),
 
         // Row 8 — Creative / Music / Art
@@ -139,7 +139,7 @@ struct IconPickerPopover: View {
         ("book.fill", "Book"),
         ("scroll.fill", "Scroll"),
         ("stethoscope", "Stethoscope"),
-        ("wand.and.stars", "Wand and Stars"),
+        ("book.closed.fill", "Book Closed"),
     ]
 
     private let columns = Array(repeating: GridItem(.fixed(32), spacing: 4), count: 10)

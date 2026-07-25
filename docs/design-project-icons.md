@@ -25,6 +25,17 @@ Pure, deterministic, unit-tested (`RandomProjectIconTests`):
   curated SF Symbols), **minus `circle`** — `circle` is the reserved "no icon /
   un-iconed default" mark, so a randomised project is always visually distinct
   from an opted-out one. 99 drawable symbols.
+  - **Curation rule — identity marks only, never state or functionality glyphs.**
+    Because the pool is *randomly assigned*, any glyph that reads as a UI state or
+    action is actively harmful: a project handed `lock.fill` looks *locked*, one
+    handed `sparkles`/`wand.*` looks like an AI action, `bell.fill` like
+    notifications, `magnifyingglass`/`paperclip` like search/attach. Exclude
+    anything that reads as chrome; keep only figurative/abstract *identity* marks.
+    Topic glyphs that merely *depict* a subject are fine (`shield.fill` = "a
+    security project", `key.fill` = "a project about access") — the test is
+    "state/action on the project" vs "a thing the project is about". (26 Jul 2026:
+    pulled `lock.fill`, `sparkle(s)`, `wand.and.rays`, `wand.and.stars`,
+    `light.max`, `bell.fill`.)
 - **Seeded** off the project name via a stable **FNV-1a** hash (NOT Swift's
   `Hashable`, which is per-process randomised) → a **SplitMix64**-seeded
   Fisher–Yates shuffle of the pool. Same name → same icon across machines /

@@ -9,6 +9,8 @@ import {
   toggleTagGroupHidden,
   setTagGroupsHidden,
   initHiddenTagGroups,
+  hydrateFrameworkStates,
+  setFrameworkDisabled,
   toggleToc,
   toggleTags,
   toggleBoth,
@@ -22,14 +24,20 @@ import {
   enterSoloMode,
   exitSoloMode,
 } from "./SidebarStore";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 
 // Mock the API module so fire-and-forget PUTs don't hit the network.
 vi.mock("../utils/api", () => ({
   putHiddenTagGroups: vi.fn(),
+  putFrameworkStates: vi.fn(),
+  getFrameworkStates: vi.fn(() => Promise.resolve({})),
 }));
 
-import { putHiddenTagGroups } from "../utils/api";
+import {
+  getFrameworkStates,
+  putFrameworkStates,
+  putHiddenTagGroups,
+} from "../utils/api";
 
 // Standalone mock for the setTagFilter callback passed to solo functions.
 const mockSetTagFilter = vi.fn();
@@ -119,6 +127,57 @@ describe("initHiddenTagGroups", () => {
   it("does not call putHiddenTagGroups (hydration is read-only)", () => {
     act(() => initHiddenTagGroups(["A"]));
     expect(putHiddenTagGroups).not.toHaveBeenCalled();
+  });
+});
+
+describe("disabledFrameworks (codebook switch)", () => {
+  it("starts empty", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    expect(result.current.disabledFrameworks.size).toBe(0);
+  });
+
+  it("setFrameworkDisabled(true) adds a framework and PUTs {fid: false}", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => setFrameworkDisabled("garrett", true));
+    expect(result.current.disabledFrameworks.has("garrett")).toBe(true);
+    expect(putFrameworkStates).toHaveBeenCalledWith({ garrett: false });
+  });
+
+  it("setFrameworkDisabled(false) removes it and PUTs the shrunk map", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => setFrameworkDisabled("garrett", true));
+    act(() => setFrameworkDisabled("garrett", false));
+    expect(result.current.disabledFrameworks.has("garrett")).toBe(false);
+    expect(putFrameworkStates).toHaveBeenLastCalledWith({});
+  });
+
+  it("resetSidebarStore clears disabledFrameworks", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => setFrameworkDisabled("garrett", true));
+    act(() => resetSidebarStore());
+    expect(result.current.disabledFrameworks.size).toBe(0);
+  });
+
+  it("hydrateFrameworkStates applies only disabled (enabled=false) frameworks", async () => {
+    (getFrameworkStates as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      garrett: false,
+      norman: true,
+    });
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => hydrateFrameworkStates());
+    await waitFor(() => expect(result.current.disabledFrameworks.has("garrett")).toBe(true));
+    expect(result.current.disabledFrameworks.has("norman")).toBe(false);
+  });
+
+  it("hydrateFrameworkStates is guarded — a second call does not refetch", async () => {
+    act(() => hydrateFrameworkStates());
+    await waitFor(() => expect(getFrameworkStates).toHaveBeenCalledTimes(1));
+    act(() => hydrateFrameworkStates());
+    expect(getFrameworkStates).toHaveBeenCalledTimes(1);
+    // The guard resets so a fresh session (or test) can hydrate again.
+    act(() => resetSidebarStore());
+    act(() => hydrateFrameworkStates());
+    expect(getFrameworkStates).toHaveBeenCalledTimes(2);
   });
 });
 

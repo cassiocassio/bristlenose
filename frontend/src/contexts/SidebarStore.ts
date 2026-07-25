@@ -17,7 +17,7 @@
  */
 
 import { useSyncExternalStore } from "react";
-import { putHiddenTagGroups } from "../utils/api";
+import { getFrameworkStates, putFrameworkStates, putHiddenTagGroups } from "../utils/api";
 import type { TagFilterState } from "../utils/filter";
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -47,6 +47,13 @@ export interface SidebarState {
    * Persisted to SQLite via /hidden-tag-groups API.
    */
   hiddenTagGroups: Set<string>;
+  /**
+   * Framework ids the researcher has disabled (the codebook enable/disable
+   * switch). Absence = enabled. View-only per design-codebook-library.md
+   * Decision A: drives the codebook fold AND report-wide badge hide, never
+   * re-apply. Persisted to SQLite via /framework-states API.
+   */
+  disabledFrameworks: Set<string>;
   /** Lowercase tag name when in solo/focus mode, null otherwise. Ephemeral. */
   soloTag: string | null;
   /** Snapshot of tagFilter from before entering solo mode. */
@@ -104,6 +111,7 @@ function loadState(): SidebarState {
     tocWidth: readWidth(LS_TOC_WIDTH),
     tagsWidth: readWidth(LS_TAGS_WIDTH),
     hiddenTagGroups: new Set(),
+    disabledFrameworks: new Set(),
     soloTag: null,
     savedTagFilter: null,
   };
@@ -111,6 +119,14 @@ function loadState(): SidebarState {
 
 let state: SidebarState = loadState();
 const listeners = new Set<() => void>();
+
+/**
+ * Framework-state hydration is fetched once per session and guarded — so a
+ * later remount (e.g. switching to the Quotes tab after toggling on the Codebook
+ * tab) can't refetch stale state and clobber an in-flight local disable. Reset
+ * by resetSidebarStore for test isolation.
+ */
+let frameworkStatesHydrated = false;
 
 function getSnapshot(): SidebarState {
   return state;
@@ -256,6 +272,51 @@ export function setTagGroupsHidden(groupNames: string[], hidden: boolean): void 
   });
 }
 
+// ── Framework enable/disable (codebook switch) ────────────────────────────
+
+/**
+ * Fetch the persisted per-framework disable state once per session and apply it.
+ * Guarded so a remount (Codebook tab ↔ Quotes tab) doesn't refetch and clobber
+ * a just-made local toggle whose fire-and-forget PUT hasn't landed yet. Safe to
+ * call from any consumer mount (CodebookPanel for the fold, TagSidebar for the
+ * report-wide badge hide) — the first caller wins.
+ */
+export function hydrateFrameworkStates(): void {
+  if (frameworkStatesHydrated) return;
+  frameworkStatesHydrated = true;
+  getFrameworkStates()
+    .then((states) => {
+      if (!states) return;
+      const disabled = new Set(
+        Object.entries(states)
+          .filter(([, enabled]) => !enabled)
+          .map(([fid]) => fid),
+      );
+      setState((prev) => ({ ...prev, disabledFrameworks: disabled }));
+    })
+    .catch(() => {
+      // Allow a later mount to retry if the first fetch failed.
+      frameworkStatesHydrated = false;
+    });
+}
+
+/**
+ * Toggle a framework's disabled state (the codebook switch). Disabled folds its
+ * codebook section and hides its badges report-wide; it never gates re-apply.
+ * Persists the full disabled set as {fid: false} (absence = enabled).
+ */
+export function setFrameworkDisabled(frameworkId: string, disabled: boolean): void {
+  setState((prev) => {
+    const next = new Set(prev.disabledFrameworks);
+    if (disabled) next.add(frameworkId);
+    else next.delete(frameworkId);
+    const map: Record<string, boolean> = {};
+    for (const fid of next) map[fid] = false;
+    putFrameworkStates(map);
+    return { ...prev, disabledFrameworks: next };
+  });
+}
+
 // ── Solo / focus mode ────────────────────────────────────────────────────
 
 /**
@@ -298,9 +359,11 @@ export function resetSidebarStore(): void {
     tocWidth: DEFAULT_WIDTH,
     tagsWidth: DEFAULT_WIDTH,
     hiddenTagGroups: new Set(),
+    disabledFrameworks: new Set(),
     soloTag: null,
     savedTagFilter: null,
   };
+  frameworkStatesHydrated = false;
   listeners.forEach((l) => l());
 }
 

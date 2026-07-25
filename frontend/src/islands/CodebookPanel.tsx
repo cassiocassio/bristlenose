@@ -12,6 +12,11 @@ import {
 } from "../components";
 import { addJob } from "../contexts/ActivityStore";
 import {
+  hydrateFrameworkStates,
+  setFrameworkDisabled,
+  useSidebarStore,
+} from "../contexts/SidebarStore";
+import {
   createCodebookGroup,
   createCodebookTag,
   deleteCodebookGroup,
@@ -19,11 +24,9 @@ import {
   getAutoCodeStatus,
   getCodebook,
   getCodebookTemplates,
-  getFrameworkStates,
   getRemoveFrameworkImpact,
   importCodebookTemplate,
   mergeCodebookTags,
-  putFrameworkStates,
   removeCodebookFramework,
   startAutoCode,
   updateCodebookGroup,
@@ -553,42 +556,22 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
   // --- Framework enable/disable (persisted, view-only) ---
   // The trailing switch on each framework header collapses that framework's tag
   // groups. Off = folded ("kept"); the applied tags on quotes are untouched. Per
-  // design-codebook-library.md Decision A this is a VIEW-only flag (fold + — soon —
-  // report-wide badge hide); it never gates re-apply. Persisted to
-  // ProjectFrameworkState via /framework-states (absence = enabled, the default).
-  const [collapsedFrameworks, setCollapsedFrameworks] = useState<Set<string>>(new Set());
+  // design-codebook-library.md Decision A this is a VIEW-only flag (fold + report-
+  // wide badge hide); it never gates re-apply. State lives in SidebarStore
+  // (`disabledFrameworks`) so the fold here and the badge hide on quote cards read
+  // one source of truth; persisted to ProjectFrameworkState via /framework-states.
+  const { disabledFrameworks } = useSidebarStore();
+  const collapsedFrameworks = disabledFrameworks;
   const toggleFrameworkFold = useCallback(
     (fid: string) => {
-      const next = new Set(collapsedFrameworks);
-      if (next.has(fid)) next.delete(fid);
-      else next.add(fid);
-      setCollapsedFrameworks(next);
-      // Persist the full disabled set as {fid: false}; enabled frameworks are
-      // simply omitted (absence = enabled), so re-enabling shrinks the map.
-      const states: Record<string, boolean> = {};
-      for (const id of next) states[id] = false;
-      putFrameworkStates(states);
+      setFrameworkDisabled(fid, !disabledFrameworks.has(fid));
     },
-    [collapsedFrameworks],
+    [disabledFrameworks],
   );
 
-  // Hydrate the persisted disable state on mount / project change.
+  // Hydrate the persisted disable state once per session (guarded in the store).
   useEffect(() => {
-    let cancelled = false;
-    getFrameworkStates()
-      .then((states) => {
-        if (cancelled || !states) return;
-        const disabled = new Set(
-          Object.entries(states)
-            .filter(([, enabled]) => !enabled)
-            .map(([fid]) => fid),
-        );
-        setCollapsedFrameworks(disabled);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
+    hydrateFrameworkStates();
   }, [projectId]);
 
   // Fetch codebook data

@@ -67,6 +67,7 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
               group: g.name,
               colour_set: g.colour_set,
               colour_index: g.tags[i].colour_index,
+              frameworkId: g.framework_id,
             };
             tags.push({ name: g.tags[i].name, colourIndex: g.tags[i].colour_index });
           }

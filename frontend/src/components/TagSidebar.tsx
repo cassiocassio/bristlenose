@@ -29,6 +29,7 @@ import { useFocus } from "../contexts/FocusContext";
 import {
   enterSoloMode,
   exitSoloMode,
+  hydrateFrameworkStates,
   initHiddenTagGroups,
   setTagGroupsHidden,
   toggleTagGroupHidden,
@@ -188,6 +189,13 @@ export function TagSidebar() {
     getHiddenTagGroups()
       .then((groups) => initHiddenTagGroups(groups))
       .catch(() => {});
+  }, []);
+
+  // Hydrate framework enable/disable state so disabled frameworks' badges are
+  // hidden on quote cards even if the Codebook tab was never opened this session.
+  // Guarded in the store — a no-op if CodebookPanel already hydrated it.
+  useEffect(() => {
+    hydrateFrameworkStates();
   }, []);
 
   // Re-fetch on autocode tag changes

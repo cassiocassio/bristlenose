@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CodebookPanel } from "./CodebookPanel";
+import { resetSidebarStore } from "../contexts/SidebarStore";
 import type { CodebookResponse } from "../utils/types";
 
 const MOCK_CODEBOOK: CodebookResponse = {
@@ -103,6 +104,9 @@ function mockFetchSequence(...responses: unknown[]): void {
 }
 
 beforeEach(() => {
+  // Framework disable/fold state lives in the module-level SidebarStore now —
+  // reset it (and its once-per-session hydration guard) between tests.
+  resetSidebarStore();
   // Default: return mock codebook
   mockFetchOk(MOCK_CODEBOOK);
 });

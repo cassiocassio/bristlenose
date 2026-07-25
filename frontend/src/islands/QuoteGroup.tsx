@@ -44,6 +44,9 @@ export interface TagGroupInfo {
   group: string;
   colour_set: string;
   colour_index: number;
+  /** Framework id this group belongs to, or null for researcher-created groups.
+   *  Used to hide a group's badges report-wide when its framework is disabled. */
+  frameworkId?: string | null;
 }
 
 // ── Context expansion types ─────────────────────────────────────────────
@@ -162,7 +165,21 @@ export function QuoteGroup({
   // ── Shared quote state ─────────────────────────────────────────────────
 
   const store = useQuotesStore();
-  const { hiddenTagGroups } = useSidebarStore();
+  const { hiddenTagGroups, disabledFrameworks } = useSidebarStore();
+
+  // Effective hidden groups = eye-toggled groups ∪ every group whose framework is
+  // disabled (the codebook switch → report-wide badge hide, Decision A). One set
+  // drives both the autocomplete closed-eye hint and the quote-card badge filter.
+  const effectiveHiddenGroups = useMemo(() => {
+    if (disabledFrameworks.size === 0) return hiddenTagGroups;
+    const set = new Set(hiddenTagGroups);
+    for (const info of Object.values(tagGroupMap)) {
+      if (info.frameworkId && disabledFrameworks.has(info.frameworkId)) {
+        set.add(info.group);
+      }
+    }
+    return set;
+  }, [hiddenTagGroups, disabledFrameworks, tagGroupMap]);
   const {
     selectedIds, clearSelection,
     registerHideHandler, unregisterHideHandler, registerFlashTag, unregisterFlashTag,
@@ -302,15 +319,15 @@ export function QuoteGroup({
   // Lowercased tag names whose codebook groups are currently hidden via eye-toggle.
   // Passed to TagInput so hidden suggestions show a closed-eye icon.
   const hiddenTagNames = useMemo(() => {
-    if (hiddenTagGroups.size === 0) return new Set<string>();
+    if (effectiveHiddenGroups.size === 0) return new Set<string>();
     const names = new Set<string>();
     for (const [tagNameLower, info] of Object.entries(tagGroupMap)) {
-      if (hiddenTagGroups.has(info.group)) {
+      if (effectiveHiddenGroups.has(info.group)) {
         names.add(tagNameLower);
       }
     }
     return names;
-  }, [hiddenTagGroups, tagGroupMap]);
+  }, [effectiveHiddenGroups, tagGroupMap]);
 
   // ── Mutation handlers ──────────────────────────────────────────────────
 
@@ -872,13 +889,13 @@ export function QuoteGroup({
           const editedText = store.edits[q.dom_id] ?? null;
           const allUserTags = store.tags[q.dom_id] ?? [];
           const allTagNames = allUserTags.map((t) => t.name);
-          const userTags = hiddenTagGroups.size > 0
-            ? allUserTags.filter((t) => !hiddenTagGroups.has(t.codebook_group))
+          const userTags = effectiveHiddenGroups.size > 0
+            ? allUserTags.filter((t) => !effectiveHiddenGroups.has(t.codebook_group))
             : allUserTags;
           const deletedBadgesList = store.deletedBadges[q.dom_id] ?? [];
           const allProposedTags = store.proposedTags[q.dom_id] ?? [];
-          const proposedTagsList = hiddenTagGroups.size > 0
-            ? allProposedTags.filter((pt) => !hiddenTagGroups.has(pt.group_name))
+          const proposedTagsList = effectiveHiddenGroups.size > 0
+            ? allProposedTags.filter((pt) => !effectiveHiddenGroups.has(pt.group_name))
             : allProposedTags;
 
           // Quote in hide animation — render with .bn-hiding class.

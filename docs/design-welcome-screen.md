@@ -1,13 +1,14 @@
 ---
 status: partial
-last-trued: 2026-07-15
-trued-against: HEAD@main 27647fbf on 2026-07-15
+last-trued: 2026-07-25
+trued-against: working tree @main on 2026-07-25
 ---
 
 # Welcome screen — content & design source
 
 ## Changelog
 
+- _2026-07-25_ — **Re-open entry SHIPPED — as Help ▸ Welcome, not Window ⌘⇧1.** The explicit way home moved out of §0 "Not yet built": it's a **Help menu** item ("Welcome to Bristlenose"), **no keyboard shortcut** (rare, unmemorable destination; discoverability comes from living in Help). Clears the project selection (`selection = []`), same effect as the empty-space deselect that already existed (`SidebarDeselectMonitor`). Corrects the prior spec on two counts: (1) it's under **Help**, not Window/⌘⇧1 (the ⌘⇧1/Window "Xcode precedent" was weighed and rejected — Welcome isn't a window or a file, it's semantically help; superseded rationale preserved in §1); (2) the claim "not click-empty-space (unreliable on macOS)" was already false — empty-space deselection ships and the Help item reuses it. §0 row 2 (launch-surface checkbox) and all other §0 rows remain accurate. Also relevant: the View-menu sidebar toggle became dynamic **Hide/Show Projects** — catalogued in `design-desktop-menu-actions.md`, not here.
 - _2026-07-19_ — **Study-tools cell gained per-tool illustrations.** Cell 1 is now an 8-tool pool (AutoCode · Codebooks · Tag · Star & hide · Video clips · Send to Miro · Ingest · Redact PII — Export split into clips + Miro), each slot showing a **draft PNG screenshot** between the line and the CTA (85% native, own aspect, faint keyline, 8pt padding, `@2x` imagesets; text-only fallback via `NSImage(named:)` nil-guard). Redact PII art still pending. Per-tool CTA labels replace "Learn". Key references adopt the **text-only path** of `design-keycaps.md` (lowercase bare `t`/`s`/`h` in a mono run). Body line `.callout`→`.body` (13pt). Fixed a pre-existing bug where the chevron hit-strip shadowed the CTA links. i18n still held; draft-art + i18n tracked as an in-flight debt.
 - _2026-07-15 (second pass)_ — `§7` supersession line trued: `WelcomeView.swift` is **deleted** (`a310bca6`), not "kept on disk pending a delete decision". Recorded the locale-key retention decision under §Copy & i18n — the retired view's keys are deliberately kept, and three are verbatim-live in `WelcomeHomeView`. Anchors: `WelcomeHomeView.swift:157,189,190`; `ContentView.swift:2340` (mount). Rest of the doc spot-checked fresh (Archetype B).
 
@@ -29,7 +30,6 @@ Spec'd here, absent from `WelcomeHomeView.swift` — do not read the sections be
 
 | Item | Where spec'd | Note |
 |---|---|---|
-| `Window ▸ Welcome to Bristlenose` (⌘⇧1) | §1 | No `CommandMenu` item, no shortcut. The view is reachable only by *having no project selected*. |
 | "Show Welcome when Bristlenose opens" checkbox | §1 | Not in `AppearanceSettingsView`. Restore-last is unconditional today. |
 | Delight cell — swimming fish | §3 Cell 5 | Placeholder link only. |
 | AI cell — configured-state **rotator** | §3 Cell 4 | Configured pool exists but picks **once at construction**, at random. Not a `SlotRotator`. |
@@ -49,10 +49,14 @@ The macOS first-run / empty-state pane. **Not a sales pitch** — the user has a
 1. **First run**, no projects → Welcome.
 2. **No project selected** (closed/deleted the selected one) → Welcome.
 3. **Launch with projects → restore the last project + lens** (macOS state restoration, the Mac-library convention). Welcome is *not* the launch surface. If the last project was deleted between sessions, restore falls back to Welcome.
+4. **Help ▸ Welcome to Bristlenose** — the explicit, re-openable way home once projects exist (no keyboard shortcut). Clears the project selection (`selection = []`), landing on state 2.
+5. **Click the sidebar's empty space** — `SidebarDeselectMonitor` clears the selection, same as (4). The Help item is its discoverable, labelled twin (a click can't advertise itself).
 
 **One view serves all of these.** `WelcomeHomeView` takes no mode parameter — there is no `.firstRun` / `.noSelection` variant split. (An earlier draft proposed one; the content is identical in both states, so it never earned the branch. If a returning-user variant is ever wanted, that's open decision #6.)
 
-**Planned, not built** — see §0: ⌘⇧1 (`Window ▸ Welcome to Bristlenose`, the Xcode precedent for an explicit way home) and the Appearance checkbox that would make Welcome the launch surface instead of restore-last. Deliberately *not* a sidebar "Home" target, and not click-empty-space (unreliable on macOS).
+**Menu placement — Help, not Window (decided 2026-07-25).** The re-open entry lives under **Help** with no shortcut. It is deliberately *not* a sidebar "Home" target (that reads as primary nav for a surface belonging to no project). _Superseded baseline:_ an earlier spec proposed `Window ▸ Welcome to Bristlenose` (⌘⇧1), citing the Xcode precedent. That was weighed and rejected — Welcome is neither a window nor a file; it's semantically *help*, so Help is the honest home. The keyboard shortcut was dropped as unmemorable (discoverability comes from living in Help). This matches the prior-art consensus — an empty-state affordance for the primary action plus a re-openable menu item as the optional layered supplement, never a blocking onboarding wizard (NN/g, Apple HIG, IBM Carbon; the Xcode/VS Code/Omniverse re-open pattern). The prior "not click-empty-space (unreliable on macOS)" note is retired: empty-space deselection ships (entry point 5) and the Help item reuses it.
+
+**Still planned, not built** — see §0: the Appearance checkbox that would make Welcome the launch surface instead of restore-last.
 
 So the rotating content is seen **when you visit home** (first run / after closing the last project / new study), not literally every launch.
 
@@ -138,24 +142,30 @@ Each science slot carries a tiny looping illustration in the example area (betwe
 
 ### Cell 3 — Tip (3rd)
 - **Tag:** `Tip` (top-left). **No icon** — a lightbulb was built and cut (cheesy).
-- **Content:** one rotating practical tip. `More →`
+- **Content:** one rotating tip. Three ideas, all landed 25 Jul 2026 (`WelcomeHomeView.swift`):
+  1. **An ambient map of the docs, not loose trivia.** The tip set is ~one tip per docs
+     page, and the array order **mirrors the website's sidebar curriculum** (`bristlenose-website`
+     `build.py` `NAV` → `ORDER`: Get started → How-to → Understand → Reference,
+     i.e. getting-started → obscure). Over a month of launches the rotating blue links build
+     a mental map of the whole help surface — ambiently, without anyone reading a tour. Keep
+     the array in `NAV` order; it's the source of truth. Curation: the five provider-setup
+     pages collapse to **two** tips (Set up Claude + Ollama); CLI-only (`cli`, `redact-pii`)
+     and pure-chrome (`welcome`, `install`, `changelog`, `academic-sources`) pages are skipped.
+  2. **Descriptive link, not "More →".** Each blue link is a **1–3 word label naming the
+     destination page** (label ← page `title`), so the link itself teaches the topic.
+  3. **Responsive copy inside the fixed cell (never a trim).** Each tip carries a **core**
+     sentence sized to fit the small cell, plus an optional **follow-up** (`SlotItem.more`,
+     ← page `lead`) shown **only when a larger cell can display the whole thing un-truncated**.
+     Implemented with `ViewThatFits(in: .vertical)` (stock primitive; core+more first, core
+     fallback second) — geometry stays fixed, content bends.
+- **Rotation:** curriculum-then-random. `SlotRotator(curriculum: true)` walks the list in
+  order for the first `count` launches (one per launch, persisted `…tip.visits`), then goes
+  random (no back-to-back repeat). Science / Study-tools rotators keep plain next-per-visit.
 
-**Pool** — *shipped subset: 5 of 12*:
-
-| Tip | Link | Shipped |
-|---|---|---|
-| Already have transcripts? Drop `.vtt`, `.srt` or `.docx` — transcription is skipped. | `/docs/supported-files.html` | ✅ |
-| No API key? Run Ollama locally — free, no account, nothing uploaded. | `/docs/set-up-ollama.html` | ✅ |
-| Name `p1.srt` next to `p1.mp4` and they merge into one session. | `/docs/supported-files.html` | ✅ |
-| Click any transcript timecode to jump the video to that moment. | `/docs/run-an-analysis.html` | ✅ |
-| Export a self-contained HTML report anyone can open — optionally anonymised. | `/docs/share-report.html` | ✅ |
-| Press `s` to star, `h` to hide — then filter to what matters. | `/docs/keyboard-shortcuts.html` | — |
-| Turn selected quotes into video clips. | `/docs/export-clips.html` | — |
-| Send quotes to a Miro board. | `/docs/send-to-miro.html` | — |
-| Export quotes to a spreadsheet. | `/docs/export-quotes.html` | — |
-| Bristlenose covers 16 formats — Zoom, Teams and Meet transcripts included. | `/docs/supported-files.html` | — |
-| Switch AI provider or model anytime in Settings. | `/docs/configuration.html` | — |
-| The Analysis tab shows where sentiment concentrates. | `/docs/signals.html` | — |
+**Set** — ~24 tips in `NAV` order (label ← title, follow-up ← lead). `supported-files` earns
+two tips (skip-transcription + filename-merge, distinct labels). All slugs verified live in
+`bristlenose-website/build.py`. The old free-standing 12-item pool is superseded by this
+curriculum-derived set; add a new tip only when the docs gain a page.
 
 ### Cell 4 — AI (4th, stateful)
 - **Tag:** `AI`

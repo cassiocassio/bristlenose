@@ -19,7 +19,8 @@ import AppKit
 private struct SlotItem: Identifiable {
     let id = UUID()
     let title: String?     // nil for tips
-    let text: String       // may contain markdown (**bold**)
+    let text: String       // may contain markdown (**bold**); the core sentence, sized to fit even the small cell
+    var more: String? = nil    // optional follow-up sentence, shown ONLY when the whole tip fits un-truncated (larger cells)
     let linkLabel: String
     let href: String
     var image: String? = nil   // imageset name; nil = text-only slot (Science/Tips, art-pending tools)
@@ -44,19 +45,97 @@ private enum WelcomeContent {
 
     static let science: [SlotItem] = [
         .init(title: "Emergent themes", text: "Themes emerge from participants’ own words, not a fixed taxonomy (Braun & Clarke, 2006).", linkLabel: "Learn more →", href: docs + "research-foundations.html", illustration: .shoal),
-        .init(title: "Don Norman", text: "The codebook frameworks draw on Don Norman’s principles of human-centred design.", linkLabel: "Learn more →", href: docs + "codebook-frameworks.html", illustration: .bookFan),
-        .init(title: "Jakob Nielsen", text: "The UX codebooks build on Nielsen’s usability heuristics.", linkLabel: "Learn more →", href: docs + "codebook-frameworks.html", illustration: .bookFan),
+        // One "tip the hat" shelf for all the source books — BookShelfView owns its own author + line + link, synced to the front cover (title/text/href left empty here).
+        .init(title: nil, text: "", linkLabel: "", href: "", illustration: .books),
         .init(title: "Seven sentiments", text: "Seven sentiments, grounded in appraisal theory (Scherer) and core affect (Russell).", linkLabel: "Learn more →", href: docs + "signals.html", illustration: .sentimentFan),
         .init(title: "Signals", text: "A signal marks where sentiment or tags concentrate more than you’d expect — a measure we coined.", linkLabel: "Learn more →", href: docs + "signals.html", illustration: .signal),
         .init(title: "Dignity without distortion", text: "Quotes are tidied but never twisted; the participant’s voice is honoured.", linkLabel: "Learn more →", href: docs + "research-foundations.html", illustration: .quote),
     ]
 
+    // An ambient map of the docs. ORDER mirrors the website's sidebar curriculum
+    // (bristlenose-website `build.py` NAV → getting-started → obscure), so a first-run
+    // user walks the whole help surface one topic per launch, then it goes random
+    // (SlotRotator `curriculum`). Each tip: a core sentence that fits the small cell, an
+    // optional `more` follow-up shown only when a larger cell fits it whole, and a 1–3
+    // word link naming the destination page (label ← page title, follow-up ← page lead).
+    // Keep this list in NAV order and update it when the docs nav changes.
     static let tips: [SlotItem] = [
-        .init(title: nil, text: "Already have transcripts? Drop **.vtt**, **.srt** or **.docx** — transcription is skipped.", linkLabel: "More →", href: docs + "supported-files.html"),
-        .init(title: nil, text: "No API key? Run **Ollama** locally — free, no account, nothing uploaded.", linkLabel: "More →", href: docs + "set-up-ollama.html"),
-        .init(title: nil, text: "Name **p1.srt** next to **p1.mp4** and they merge into one session.", linkLabel: "More →", href: docs + "supported-files.html"),
-        .init(title: nil, text: "Press `s` to star, `h` to hide — then filter to what matters.", linkLabel: "More →", href: docs + "keyboard-shortcuts.html"),
-        .init(title: nil, text: "Click any transcript timecode to jump the video to that moment.", linkLabel: "More →", href: docs + "run-an-analysis.html"),
+        // Get started
+        .init(title: nil, text: "From a folder of recordings to a readable report in minutes.",
+              more: "It walks a single run end to end, so you see what each step does.",
+              linkLabel: "First analysis →", href: docs + "first-analysis.html"),
+        // How-to guides
+        .init(title: nil, text: "Connect an AI provider to run the analysis.",
+              more: "Claude is the recommended default; ChatGPT, Gemini and Azure work too.",
+              linkLabel: "Set up Claude →", href: docs + "set-up-claude.html"),
+        .init(title: nil, text: "No API key? Run **Ollama** locally — free, no account, nothing uploaded.",
+              more: "The whole analysis runs on your own machine, with no cloud and no key.",
+              linkLabel: "Set up Ollama →", href: docs + "set-up-ollama.html"),
+        .init(title: nil, text: "Click any transcript timecode to play from that moment.",
+              more: "The transcript scrolls in step with the video, so you never lose your place.",
+              linkLabel: "Run an analysis →", href: docs + "run-an-analysis.html"),
+        .init(title: nil, text: "Send your quotes to a spreadsheet in one step.",
+              more: "Copy them to the clipboard, or download as CSV or Excel.",
+              linkLabel: "Export quotes →", href: docs + "export-quotes.html"),
+        .init(title: nil, text: "Turn your best quotes into shareable video clips.",
+              more: "Bristlenose cuts a short clip for each starred or featured quote.",
+              linkLabel: "Video clips →", href: docs + "export-clips.html"),
+        .init(title: nil, text: "Share one self-contained HTML file — no install needed.",
+              more: "Anyone can open it in a browser; anonymise names and places first if you like.",
+              linkLabel: "Share a report →", href: docs + "share-report.html"),
+        .init(title: nil, text: "Send quotes straight to a **Miro** board.",
+              more: "They land as sticky notes, ready to cluster and affinity-map (experimental).",
+              linkLabel: "Send to Miro →", href: docs + "send-to-miro.html"),
+        .init(title: nil, text: "Let **AutoCode** propose tags across every quote.",
+              more: "Tag by hand, or start from a codebook and accept the model's suggestions.",
+              linkLabel: "Codebooks →", href: docs + "use-codebooks.html"),
+        .init(title: nil, text: "Tagging is analysis — turn quotes into themes.",
+              more: "Group a set of quotes under a code and the findings start to surface.",
+              linkLabel: "Tag for meaning →", href: docs + "tag-for-meaning.html"),
+        // Understand
+        .init(title: nil, text: "Bristlenose reads interviews as sessions and quotes.",
+              more: "Sessions, participants, quotes, sections and themes — that's the whole model.",
+              linkLabel: "How it works →", href: docs + "how-it-works.html"),
+        .init(title: nil, text: "The **Analysis** tab shows where sentiment concentrates.",
+              more: "A signal marks a theme running hotter or cooler than you'd expect.",
+              linkLabel: "Signals →", href: docs + "signals.html"),
+        .init(title: nil, text: "Tag with a ready-made UX research framework.",
+              more: "Each framework — Norman, Nielsen and more — brings its own lens.",
+              linkLabel: "Frameworks →", href: docs + "codebook-frameworks.html"),
+        .init(title: nil, text: "The method rests on published, peer-reviewed research.",
+              more: "The sentiment taxonomy, the analysis and the codebooks all cite their sources.",
+              linkLabel: "Research foundations →", href: docs + "research-foundations.html"),
+        .init(title: nil, text: "Every analysis runs the same twelve stages.",
+              more: "Caching means a re-run only redoes what actually changed, keeping the cost down.",
+              linkLabel: "The pipeline →", href: docs + "the-pipeline.html"),
+        .init(title: nil, text: "Choose what the AI sees: cloud or local.",
+              more: "Cloud models are faster and sharper; local ones never leave your Mac.",
+              linkLabel: "Cloud or local →", href: docs + "cloud-or-local.html"),
+        .init(title: nil, text: "See exactly what the AI sees, and what never leaves your Mac.",
+              more: "Recordings and files stay local; only transcript text goes to your provider.",
+              linkLabel: "Privacy →", href: docs + "privacy.html"),
+        // Reference
+        .init(title: nil, text: "Every setting has a sensible default you can change.",
+              more: "One reference page lists them all, with what each one does.",
+              linkLabel: "Configuration →", href: docs + "configuration.html"),
+        .init(title: nil, text: "Press `s` to star, `h` to hide — then filter to what matters.",
+              more: "There's a key for nearly everything, in the app and the browser report.",
+              linkLabel: "Keyboard shortcuts →", href: docs + "keyboard-shortcuts.html"),
+        .init(title: nil, text: "Drop **.srt**, **.vtt** or **.docx** and skip transcription.",
+              more: "Bristlenose reads the text you already have and goes straight to analysis.",
+              linkLabel: "Supported files →", href: docs + "supported-files.html"),
+        .init(title: nil, text: "Name **p1.srt** next to **p1.mp4** to merge them.",
+              more: "Matching names pair each transcript with its audio or video automatically.",
+              linkLabel: "Matching files →", href: docs + "supported-files.html"),
+        .init(title: nil, text: "Everything Bristlenose makes lands in one folder.",
+              more: "The report, transcripts and data sit beside your recordings — yours to keep.",
+              linkLabel: "Output files →", href: docs + "output-files.html"),
+        .init(title: nil, text: "Make it yours: light, dark, palette and type.",
+              more: "Switch the colour palette and typography to taste in Settings.",
+              linkLabel: "Appearance →", href: docs + "appearance.html"),
+        .init(title: nil, text: "Not in English? Switch the interface language.",
+              more: "Bristlenose ships in more than twenty languages — set yours in Settings.",
+              linkLabel: "Languages →", href: docs + "languages.html"),
     ]
 
     static let aiConfigured: [SlotItem] = [
@@ -129,7 +208,7 @@ struct WelcomeHomeView: View {
     private var tipCell: some View {
         VStack(alignment: .leading, spacing: 6) {
             tag("Tip")
-            SlotRotator(items: WelcomeContent.tips, storageKey: "welcome.rotator.tip")
+            SlotRotator(items: WelcomeContent.tips, storageKey: "welcome.rotator.tip", curriculum: true)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .welcomeCell(tint: 0.12)
@@ -317,18 +396,25 @@ private func welcomeKeyMarkdown(_ s: String) -> AttributedString {
 // Driven four ways: two-finger swipe, hover-revealed edge chevrons, muted
 // page dots (indicator first, hit-slopped fallback target), and arrow keys.
 // Next-per-visit: opens one step past where you last left off (persisted).
-// No auto-advance. VoiceOver via an adjustable action; reduce-motion → instant.
+// Curriculum mode (Tip cell): the first `count` launches walk the list in order
+// (getting-started → obscure), then it goes random — an ambient tour that turns into
+// reinforcement once you've seen the whole map. No auto-advance. VoiceOver via an
+// adjustable action; reduce-motion → instant.
 private struct SlotRotator: View {
     let items: [SlotItem]
+    let curriculum: Bool
     @AppStorage private var lastIndex: Int
+    @AppStorage private var visits: Int
     @State private var index = 0
     @State private var started = false
     @State private var hovering = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(items: [SlotItem], storageKey: String) {
+    init(items: [SlotItem], storageKey: String, curriculum: Bool = false) {
         self.items = items
+        self.curriculum = curriculum
         self._lastIndex = AppStorage(wrappedValue: -1, storageKey)
+        self._visits = AppStorage(wrappedValue: 0, storageKey + ".visits")
     }
 
     private var count: Int { items.count }
@@ -367,9 +453,26 @@ private struct SlotRotator: View {
         .onAppear {
             guard !started else { return }
             started = true
-            index = count > 0 ? (lastIndex + 1) % count : 0   // next-per-visit
+            index = startIndex()
+            visits += 1
             lastIndex = index
         }
+    }
+
+    // Which slot to open on this visit.
+    // • Curriculum, still touring (visits < count): walk the list in order, one per launch.
+    // • Curriculum, tour done: random, avoiding an immediate repeat of the last shown.
+    // • Non-curriculum (Science/Study cells): unchanged next-per-visit.
+    private func startIndex() -> Int {
+        guard count > 0 else { return 0 }
+        if curriculum {
+            if visits < count { return visits }
+            if count == 1 { return 0 }
+            var pick = Int.random(in: 0..<count)
+            if pick == lastIndex { pick = (pick + 1) % count }   // no back-to-back repeat
+            return pick
+        }
+        return (lastIndex + 1) % count   // next-per-visit
     }
 
     private func go(_ n: Int) {
@@ -385,8 +488,19 @@ private struct SlotRotator: View {
             if let title = item.title {
                 Text(title).font(.title3).fontWeight(.semibold)
             }
-            Text(welcomeKeyMarkdown(item.text))
-                .font(.body).foregroundStyle(.secondary)
+            if let more = item.more {
+                // Progressive disclosure inside the fixed cell (never a trim): show
+                // the core sentence alone in a small cell, and the whole follow-up
+                // sentence ONLY when a larger cell can display all of it un-truncated.
+                // ViewThatFits picks the first (richest) candidate that fits vertically.
+                ViewThatFits(in: .vertical) {
+                    tipBody("\(item.text) \(more)")
+                    tipBody(item.text)
+                }
+            } else if !item.text.isEmpty {
+                Text(welcomeKeyMarkdown(item.text))
+                    .font(.body).foregroundStyle(.secondary)
+            }
             if let name = item.image, let ns = NSImage(named: name) {   // nil-guard = graceful before the PNG lands
                 Image(nsImage: ns)
                     .resizable().scaledToFit()
@@ -403,12 +517,24 @@ private struct SlotRotator: View {
                 illustrationView(item.illustration)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 8)
-                    .accessibilityHidden(true)   // decorative — the tag/title/text carry the meaning
+                    // The books shelf renders real author + line + link → keep it accessible;
+                    // the other illustrations are decorative (the title/text carry the meaning).
+                    .accessibilityHidden(item.illustration != .books)
             }
             if !item.href.isEmpty, let url = URL(string: item.href) {
                 Link(item.linkLabel, destination: url).font(.callout).padding(.vertical, 2)
             }
         }
+    }
+
+    // One tip-body candidate for `ViewThatFits`. NO `.fixedSize` — that would force the
+    // text to demand its full height and ignore the cell bounds, breaking the grid AND
+    // ViewThatFits's fit test. Plain Text lets ViewThatFits measure the true wrapped
+    // height against the cell's real height and pick the candidate that fits.
+    private func tipBody(_ s: String) -> some View {
+        Text(welcomeKeyMarkdown(s))
+            .font(.body).foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     // Science-cell looping illustration (WelcomeIllustrations.swift). Fixed height
@@ -418,7 +544,7 @@ private struct SlotRotator: View {
         switch kind {
         case .none:         EmptyView()
         case .sentimentFan: SentimentFanView().frame(height: 128)
-        case .bookFan:      BookFanView().frame(height: 124)
+        case .books:        BookShelfView()   // renders its own author + line + link (synced), sizes to content
         case .shoal:        EmergentThemesView().frame(height: 140)
         case .quote:        QuoteIllustrationView().frame(height: 112)
         case .signal:       SignalIllustrationView().frame(height: 152)
@@ -452,21 +578,45 @@ private struct SlotRotator: View {
         .allowsHitTesting(revealed)                                          // inert unless revealed → never shadows the link
     }
 
-    // Visible dot 5pt; active ~2× width, muted accent; 17pt hit-slop; indicator-first.
-    // Row is `controlRow` tall (not 17) so the dots share a centre line with the chevron disks.
+    // Windowed page indicator. Prior art: iOS "scrolling dots" / UIPageControl with many
+    // pages, and the Instagram-style ScrollingPageControl — show at most a window of dots,
+    // keep the active one central, slide the window as you move, and SHRINK the outermost
+    // dot on any side that still has hidden tips (the shrink is the "there's more that way"
+    // cue). The window size is what fits the row, capped for legibility (Apple HIG: more
+    // than ~10 dots are hard to count at a glance). The whole list stays reachable via the
+    // arrows / swipe / chevrons, and the a11y value announces "n of total".
+    // Active ~2× width, muted accent; row is `controlRow` tall so dots share a centre line
+    // with the chevron disks.
+    private static let dotPitch: CGFloat = 16
+    private static let maxDotsCap = 9
+
     private var dots: some View {
-        HStack(spacing: 0) {
-            ForEach(items.indices, id: \.self) { n in
-                Capsule()
-                    .fill(n == index ? Color.accentColor.opacity(0.6) : Color(nsColor: .separatorColor))
-                    .frame(width: n == index ? 10 : 5, height: 5)
-                    .frame(width: 17, height: 17)
-                    .contentShape(Rectangle())
-                    .onTapGesture { go(n) }
+        GeometryReader { geo in
+            let fits = max(5, Int((geo.size.width / Self.dotPitch).rounded(.down)))
+            let n = min(count, fits, Self.maxDotsCap)
+            let windowed = count > n
+            // Slide the window so the active dot stays central; clamp at the two ends.
+            let start = windowed ? min(max(index - n / 2, 0), count - n) : 0
+            HStack(spacing: 0) {
+                ForEach(Array(0..<n), id: \.self) { slot in
+                    let idx = start + slot
+                    let isActive = idx == index
+                    let moreBefore = slot == 0 && start > 0
+                    let moreAfter = slot == n - 1 && start + n < count
+                    let scale: CGFloat = (moreBefore || moreAfter) ? 0.55 : 1
+                    Capsule()
+                        .fill(isActive ? Color.accentColor.opacity(0.6) : Color(nsColor: .separatorColor))
+                        .frame(width: isActive ? 10 : 5, height: 5)
+                        .scaleEffect(isActive ? 1 : scale)
+                        .frame(width: Self.dotPitch, height: Self.controlRow)
+                        .contentShape(Rectangle())
+                        .onTapGesture { go(idx) }
+                }
             }
+            .frame(width: geo.size.width, height: Self.controlRow)   // centre the strip in the row
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: index)
         }
         .frame(height: Self.controlRow)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: index)
     }
 }
 

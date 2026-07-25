@@ -8,6 +8,7 @@ calls are made.
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -32,6 +33,7 @@ from bristlenose.server.models import (
     ProposedTag,
     Quote,
     QuoteTag,
+    Session,
     TagDefinition,
 )
 
@@ -704,13 +706,29 @@ class TestReapplyToNewQuotes:
                 .one()
             )
             job.applied_upper_threshold = threshold
+            # Pin the apply time to a fixed past date so the "new session"
+            # comparison is deterministic (the new session below imports "after").
+            job.completed_at = datetime(2020, 1, 1)
             db.commit()
         finally:
             db.close()
 
     def _add_quotes(self, db_factory, project_id, n) -> None:
+        """Add a genuinely-new session (imported after the apply) with n quotes.
+
+        first_imported_at = 2021, later than the apply's pinned 2020 completed_at,
+        so the session-recency delta treats these quotes as new.
+        """
         db = db_factory()
         try:
+            db.add(
+                Session(
+                    project_id=project_id,
+                    session_id="s2",
+                    session_number=2,
+                    first_imported_at=datetime(2021, 1, 1),
+                )
+            )
             for i in range(n):
                 db.add(
                     Quote(
@@ -759,6 +777,47 @@ class TestReapplyToNewQuotes:
             assert job.total_quotes == 13  # 10 original + 3 new
         finally:
             db.close()
+
+    def test_untagged_existing_quotes_not_recoded(
+        self, project_with_garrett
+    ) -> None:
+        """Regression: existing quotes the LLM never tagged (no proposal row) must
+        NOT be re-coded — the delta is session-recency, not 'has-no-proposal'.
+        With the old heuristic these 6 quotes would be re-sent and re-tagged."""
+        project_id, framework_id, db_factory = project_with_garrett
+        # Original apply tags only 4 of the 10 quotes → 6 existing quotes have no
+        # proposal row at all.
+        with _patch_llm(
+            AsyncMock(return_value=_make_batch_result(4, "user need", 0.85))
+        ):
+            asyncio.run(
+                run_autocode_job(db_factory, project_id, framework_id, _mock_settings())
+            )
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            job.applied_upper_threshold = 0.7
+            job.completed_at = datetime(2020, 1, 1)
+            db.commit()
+        finally:
+            db.close()
+        self._add_quotes(db_factory, project_id, 2)  # a new session, 2 quotes
+
+        with _patch_llm(
+            AsyncMock(return_value=_make_batch_result(2, "user need", 0.85))
+        ):
+            accepted = asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings()
+                )
+            )
+
+        # Only the 2 new-session quotes — never the 6 untagged existing ones.
+        assert accepted == 2
 
     def test_below_cutoff_new_quotes_not_accepted(
         self, project_with_garrett

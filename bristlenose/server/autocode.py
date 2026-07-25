@@ -498,6 +498,9 @@ async def reapply_to_new_quotes(
         QuoteTag,
         TagDefinition,
     )
+    from bristlenose.server.models import (
+        Session as SessionModel,
+    )
 
     db = db_factory()
     try:
@@ -519,20 +522,33 @@ async def reapply_to_new_quotes(
         if threshold is None:
             threshold = DEFAULT_ACCEPT_THRESHOLD
 
-        # Delta = project quotes with no ProposedTag from this job. A quote that
-        # was part of the original run has a proposal row (accepted or denied);
-        # a newly-added quote has none.
-        seen_quote_ids = {
+        # Delta = quotes from sessions imported AFTER this framework was applied.
+        # ``Session.first_imported_at`` is set once per session and never updated,
+        # so (a) a clean/full re-run of existing sessions doesn't falsely mark
+        # them new, and (b) an existing quote the LLM simply didn't tag is never
+        # re-sent — both would happen with a "quote has no proposal" heuristic.
+        # ``completed_at`` advances to each re-apply's time (below), so each new
+        # session is coded exactly once.
+        if job.completed_at is None:
+            return 0
+        new_session_ids = [
             row[0]
-            for row in db.query(ProposedTag.quote_id)
-            .filter_by(job_id=job.id)
-            .distinct()
-        }
-        new_quotes = [
-            q
-            for q in db.query(Quote).filter_by(project_id=project_id).all()
-            if q.id not in seen_quote_ids
+            for row in db.query(SessionModel.session_id).filter(
+                SessionModel.project_id == project_id,
+                SessionModel.first_imported_at.isnot(None),
+                SessionModel.first_imported_at > job.completed_at,
+            )
         ]
+        if not new_session_ids:
+            return 0
+        new_quotes = (
+            db.query(Quote)
+            .filter(
+                Quote.project_id == project_id,
+                Quote.session_id.in_(new_session_ids),
+            )
+            .all()
+        )
         if not new_quotes:
             return 0
 

@@ -475,7 +475,7 @@
     justify-content: space-between;
     align-items: flex-start;
     padding-bottom: var(--bn-space-md);
-    border-bottom: 1px solid var(--bn-colour-border);
+    border-bottom: 1px solid var(--bn-colour-keyline);
     margin: var(--bn-space-md) 0 var(--bn-space-sm);
 }
 .framework-section-title {

@@ -31,7 +31,15 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding: var(--bn-space-lg);
+    /* Horizontal padding removed so signal cards align to the shared content
+       edge like every other lens — was `padding: var(--bn-space-lg)`, a 24px
+       gutter DOUBLED inside .center's own 32px (cards at x=80 not x=56). The
+       bleed idiom (neg-margin to give the drop shadow room) can't be used here:
+       the parent .analysis-layout is `overflow: hidden`, which clips it. So the
+       signal-card shadow clips ~8px at the scroll-box edge — accepted until the
+       structural fix (scroll pane owns the single gutter) in
+       docs/design-lens-template.md § Analysis. Vertical padding unchanged. */
+    padding: var(--bn-space-lg) 0;
 }
 
 /* When the analysis layout is active, the footer (a sibling in AppLayout)

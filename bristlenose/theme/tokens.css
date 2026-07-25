@@ -196,6 +196,16 @@
     --bn-radius-lg: 8px;
     --bn-radius-pill: 999px;
 
+    /* Section-divider keyline — the colour of the h2 / .section-heading /
+       .framework-section-header bottom rules and the header <hr>. Aliases
+       --bn-colour-border by default (visible); set to `transparent`
+       (globally here, or per-surface) to hide every section divider WITHOUT
+       moving anything — the 1px box still lays out, it just stops painting.
+       The reversible borders-off experiment. Table-header (th) rules keep
+       --bn-colour-border (data-grid chrome, not a section divider).
+       See docs/design-lens-template.md § Keylines. */
+    --bn-colour-keyline: var(--bn-colour-border);
+
     /* Span bar — vertical extent indicator for ranges (e.g. quote coverage) */
     --bn-span-bar-width: 2px;
     --bn-span-bar-gap: 6px;

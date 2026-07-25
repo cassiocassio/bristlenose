@@ -71,7 +71,7 @@ h2 {
        consistent 1px full-pane divider. See docs/design-lens-template.md
        § Keylines. */
     max-width: none;
-    border-bottom: 1px solid var(--bn-colour-border);
+    border-bottom: 1px solid var(--bn-colour-keyline);
 }
 
 /* Redundant since the base h2 unification above — kept as a defensive alias
@@ -175,7 +175,7 @@ h3 {
 
 hr {
     border: none;
-    border-top: 1px solid var(--bn-colour-border);
+    border-top: 1px solid var(--bn-colour-keyline);
     margin: var(--bn-space-xl) 0;
 }
 

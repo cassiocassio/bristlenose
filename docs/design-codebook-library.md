@@ -198,8 +198,12 @@ sparkle) · the **blue dot** status · the **blue/grey switch** language. Nothin
 - **Apply-progress relocation** — the "Auto-coding N quotes…" **floating indicator
   already exists and is good enough**; where it ultimately lives (project-status
   line / titlebar pill) is its **own session**. Do not re-engineer it here.
-- **System-wide `✦` retirement** (Open Q5) — a separate pass across every AutoCode
-  surface, not smuggled into this one.
+- **Retire `✦` system-wide** (Q5 — *decided*) — remove from the proposed-badge
+  action pill + the AutoCode toast (the Apply button is already done). One
+  coordinated pass so nothing's left half-sparkled.
+- **Personal / cross-project codebook library** (Q2) — reuse your own *created*
+  codebooks across projects. Created codebooks are **per-project** for now; a shared
+  personal shelf is a separate future feature.
 - **Red ⊖ "Forget"** — the lone destructive action (purge retained results → would
   re-spend). Only place red belongs.
 - **19-locale propagation** of the new/changed strings.
@@ -211,25 +215,25 @@ sparkle) · the **blue dot** status · the **blue/grey switch** language. Nothin
 
 ## Open questions for review
 
-1. **macOS switch fidelity** — acceptance is in-app; is the metric/colour match
-   enough, or do we want the desktop to host a real `NSSwitch` overlay (much bigger
-   ask, probably no)?
-2. **"Your codebooks" placement** — a codebook you *create* lands in your project,
-   not the Library shelf; should that section sit apart from the frameworks shelf
-   rather than inside the Library modal?
-3. **Sidebar dot** — *resolved:* **blue on / grey off**, echoing the switch (not
-   green — that's macOS's multi-state network semantic, which we don't have).
-   Remaining sub-choice: compact lone-dot row (variant A) vs dot-plus-word-plus-
-   count subtitle (variant B). A suits a dense TOC; B carries more info but is taller.
-4. **Apply progress verb** — "Auto-coding quotes…" (describes the work) vs
-   "Applying…" (mirrors the button verb).
-5. **The `✦` AI-sparkle — retire it?** *Apply button: decided — dropped* ("Apply to
-   N quotes"). The open part is **system-wide**: the sparkle is the *systematic*
-   AutoCode / AI-proposed marker elsewhere (proposed-badge action pill, AutoCode
-   toast). Direction **leans yes — retire it everywhere** (it's a dated AI cliché),
-   letting words/context carry "this is AutoCode"; but that's a separate pass across
-   every AutoCode surface, done together so badges/toast/button stay consistent —
-   not smuggled into this session.
+1. **macOS switch fidelity** — *resolved: yes, the metric/colour match is enough.*
+   Accept the custom CSS switch (`.framework-toggle` — ~38×22 track, accent-on /
+   grey-off, white knob + soft shadow) already shipped in `c62e611f`; **no** native
+   `NSSwitch` overlay. The spring curve is the accepted ~5% gap.
+2. **"Your codebooks" placement** — *resolved:* a created codebook is **per-project**
+   (lands in *this* project, not a shared shelf), shown as its own "Your codebooks"
+   section below the frameworks shelf in the Library modal. **Deferred:** a personal
+   / cross-project shared codebook library — reusing your own codebooks across
+   projects — is a separate future feature (see Deferred).
+3. **Sidebar dot** — *resolved & confirmed:* **blue on / grey off** (echoing the
+   switch, not green), **variant A** — the compact lone dot, first-line/bullet
+   aligned. Variant B (dot + word + count) set aside. Not yet built.
+4. **Apply progress verb** — *resolved:* **"Auto-coding quotes…"** (describes the
+   work), not "Applying…".
+5. **The `✦` AI-sparkle** — *resolved: retire it everywhere.* Apply button already
+   dropped (shipped). The remaining pass removes `✦` from the **proposed-badge action
+   pill** and the **AutoCode toast** too — words/context carry "this is AutoCode".
+   One coordinated pass across every AutoCode surface (so nothing's left half-
+   sparkled); tracked in Deferred, not this feature.
 6. **Incremental sessions × active codebooks — does adding sessions re-apply?**
    (Parked — cross-feature with incremental analysis; needs the incremental path to
    be additive first.) **Intuition: yes** — an *enabled + applied* codebook should
@@ -257,3 +261,75 @@ sparkle) · the **blue dot** status · the **blue/grey switch** language. Nothin
 | Sidebar dots | `frontend/src/components/CodebookSidebar.tsx` |
 | Tile/section/fold CSS | `bristlenose/theme/organisms/codebook-panel.css` |
 | Sidebar dot CSS | `bristlenose/theme/organisms/sidebar.css` |
+
+---
+
+## Session update — Q6 (incremental re-apply) is BUILT
+
+Q6 shipped as a backend feature (3 commits: `0605ad7f` persist apply params +
+migration 006; `20284c4f` the re-apply engine + auto-trigger; `d88fffd6` the
+review fix). Behaviour: add sessions → re-run → on `run_completed`, every
+previously-applied framework auto-tags **only the new sessions' quotes**, at the
+job's stored cutoff, non-clobbering, no modal; safe no-op otherwise.
+
+Key functions: `reapply_to_new_quotes` / `reapply_active_frameworks`
+(`bristlenose/server/autocode.py`), wired into `_make_run_completed_handler`
+(`app.py`). **Delta is session-recency based** — quotes from sessions whose
+`Session.first_imported_at` postdates the apply (a code review caught that
+"quotes with no proposal" wrongly re-coded untagged existing quotes + treated a
+clean re-run's re-extracted quotes as all-new; the session-recency delta fixes
+both — regression-tested). Unit-tested; true end-to-end (apply → add → re-run)
+needs a two-wave fixture + serve QA.
+
+**Judgment calls / follow-ups from the review (not yet done):**
+- Re-apply uses the *current* provider, not the job's stored `llm_provider`/
+  `llm_model` — reuse the stored one (silent-fail if the default changed).
+- The re-apply is `await`-ed in the watcher (blocks back-to-back runs) — make it a
+  tracked background task (ties to the progress-surfacing follow-up).
+- Threshold fallback is `0.70` when no explicit cutoff was recorded (stricter than
+  accept-all's 0.5 default) — decide: mirror 0.5 or stay conservative.
+- Mid-confidence review band is silently denied for new quotes (no modal) — maybe
+  surface a count later.
+- Re-apply covers **all previously-applied** frameworks, not just *enabled* ones —
+  gate on enabled once the toggle is persisted (below).
+- No dedicated progress toast for the re-apply's tagging phase (watcher-initiated,
+  so the existing autocode-status poll doesn't cover it) — outcome shows on refresh.
+- LLM emitting two tags for one quote → `(job_id, quote_id)` violation rolls the
+  whole re-apply back to a silent no-op (edge case, logged).
+
+## Next: persist the enable/disable toggle (highest-leverage)
+
+The slider is UI-local (resets on reload). Persisting it unblocks (a) survive
+reload, (b) functional disable, (c) gating re-apply to *enabled* codebooks.
+
+**The issue is a semantics decision, not plumbing** — persisted per-project group
+hiding already exists (`hidden_tag_groups` table + `setTagGroupsHidden`). Decide:
+1. **What "disabled" turns off** — view-fold only / report-wide badge hide /
+   functional off (+ skip re-apply). "Gate re-apply on enabled" implies the last.
+2. **Reconcile with the group eye-toggle** (`hidden_tag_groups`) — one axis
+   (framework off ⇔ all its groups hidden, fragile for the gate) or a *distinct*
+   per-framework flag with render treating a group hidden if eye-toggled **or**
+   framework-disabled. Recommend the distinct flag.
+3. **Data model** — a new **`ProjectFrameworkState(project_id, framework_id,
+   enabled)`** (project-scoped, per-framework; `ProjectCodebookGroup` is per-group,
+   and instance-scoping forbids it on `CodebookGroup`). Then: additive migration +
+   endpoint + hydrate (mirror `hidden`/`starred`) + a one-line re-apply gate.
+
+## Remaining "Not built" — and parallelizability
+
+The constraint is **file contention on `CodebookPanel.tsx`**, not logic. Buckets:
+
+- **Parallel-safe now (separate files, no deps):** `✦` sparkle retirement
+  (`badge.css`/toast — pure mechanical cleanup) · Red ⊖ "Forget" (new backend
+  purge, if wanted) · a *presence-based* sidebar dot.
+- **Blocked on the persistence flag above:** functional disable · enabled-gated
+  re-apply · blue-dot-means-enabled.
+- **Must serialize (all touch `CodebookPanel.tsx` — one frontend session):** fold
+  animation · collapsed summary meta · header reconciliation (drop Remove, morph
+  AutoCode→switch) · Add↔Remove + dialog relocation · "Your codebooks" section ·
+  80%-dim tiles.
+- **i18n-careful (touch all 20 locale files — collide with concurrent i18n):**
+  19-locale propagation · the summary-meta's new keys.
+
+Highest-leverage next: the persistence flag. Best parallel win meanwhile: the `✦`
+sweep (isolated, mechanical).

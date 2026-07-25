@@ -830,6 +830,20 @@ def _make_run_completed_handler(
             "outcome": ev.outcome.value,
             "completed_at": ev.ended_at,
         }
+        # After the new sessions import + publish, re-apply already-applied
+        # codebooks to the newly-added quotes — delta only, at each job's stored
+        # cutoff, no review. A safe no-op when nothing was applied or nothing is
+        # new, so it's fine to fire on every run_completed. Publish above happens
+        # first (the SPA polls it); tags land on a later poll. Guarded — a
+        # re-apply failure never breaks the import/publish contract.
+        try:
+            from bristlenose.config import load_settings
+            from bristlenose.server.autocode import reapply_active_frameworks
+
+            settings = getattr(app.state, "settings", None) or load_settings()
+            await reapply_active_frameworks(session_factory, 1, settings)
+        except Exception:
+            logger.exception("Auto re-apply after run_completed failed")
 
     return _on_run_completed
 

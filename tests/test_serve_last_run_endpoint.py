@@ -212,6 +212,35 @@ async def test_handler_imports_before_publishing_last_run(
 
     assert app.state.last_run[1]["run_id"] == rid
     assert app.state.last_run[1]["outcome"] == "completed"
+
+
+@pytest.mark.asyncio
+async def test_handler_reapplies_active_codebooks(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    """After re-import + publish, the handler re-applies already-applied
+    codebooks to the newly-added quotes (delta). Spied via a fake re-apply."""
+    project_dir = _seed_project(tmp_path)
+    app = create_app(project_dir=project_dir, dev=True, db_url="sqlite://")
+    app.state.last_run = {}
+    app.state.settings = object()  # truthy → skips load_settings()
+
+    called: dict[str, Any] = {}
+
+    async def fake_reapply(_factory: Any, project_id: int, _settings: Any) -> dict:
+        called["project_id"] = project_id
+        return {}
+
+    monkeypatch.setattr(
+        "bristlenose.server.autocode.reapply_active_frameworks", fake_reapply,
+    )
+
+    handler = _make_run_completed_handler(app, app.state.db_factory, project_dir)
+    await handler(_completed(new_run_id()))
+
+    # last_run is published AND the re-apply was invoked for the project.
+    assert app.state.last_run[1]["outcome"] == "completed"
+    assert called.get("project_id") == 1
     assert app.state.last_run[1]["completed_at"] == _TS
 
 

@@ -16,7 +16,12 @@ from sqlalchemy.orm import Session as SASession
 from sqlalchemy.orm import sessionmaker
 
 from bristlenose.llm.structured import AutoCodeBatchResult, AutoCodeTagAssignment
-from bristlenose.server.autocode import BATCH_SIZE, run_autocode_job
+from bristlenose.server.autocode import (
+    BATCH_SIZE,
+    reapply_active_frameworks,
+    reapply_to_new_quotes,
+    run_autocode_job,
+)
 from bristlenose.server.codebook import get_template
 from bristlenose.server.db import Base
 from bristlenose.server.models import (
@@ -26,6 +31,7 @@ from bristlenose.server.models import (
     ProjectCodebookGroup,
     ProposedTag,
     Quote,
+    QuoteTag,
     TagDefinition,
 )
 
@@ -673,3 +679,158 @@ class TestBatching:
         assert job is not None
         assert job.proposed_count == 27
         db2.close()
+
+
+class TestReapplyToNewQuotes:
+    """Delta re-apply — new quotes coded at the stored cutoff; existing quotes
+    and human tags left alone."""
+
+    def _apply_original(
+        self, project_id, framework_id, db_factory, threshold=0.7
+    ) -> None:
+        """Run the original autocode over the 10 fixture quotes, then stamp the
+        stored accept cutoff (as accept-all would)."""
+        with _patch_llm(
+            AsyncMock(return_value=_make_batch_result(10, "user need", 0.85))
+        ):
+            asyncio.run(
+                run_autocode_job(db_factory, project_id, framework_id, _mock_settings())
+            )
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            job.applied_upper_threshold = threshold
+            db.commit()
+        finally:
+            db.close()
+
+    def _add_quotes(self, db_factory, project_id, n) -> None:
+        db = db_factory()
+        try:
+            for i in range(n):
+                db.add(
+                    Quote(
+                        project_id=project_id,
+                        session_id="s2",
+                        participant_id="p2",
+                        start_timecode=float(1000 + i * 10),
+                        end_timecode=float(1000 + i * 10 + 5),
+                        text=f"New wave quote {i}",
+                        quote_type="screen_specific",
+                        topic_label="Dashboard",
+                    )
+                )
+            db.commit()
+        finally:
+            db.close()
+
+    def test_codes_only_new_quotes_at_stored_cutoff(
+        self, project_with_garrett
+    ) -> None:
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+
+        with _patch_llm(
+            AsyncMock(return_value=_make_batch_result(3, "user need", 0.85))
+        ):
+            accepted = asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings()
+                )
+            )
+
+        assert accepted == 3
+        db = db_factory()
+        try:
+            # Exactly the 3 new quotes get QuoteTags — the original 10 were only
+            # proposed, never accepted in this test, so still 0.
+            assert db.query(QuoteTag).count() == 3
+            assert all(qt.source == "autocode" for qt in db.query(QuoteTag).all())
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            assert job.total_quotes == 13  # 10 original + 3 new
+        finally:
+            db.close()
+
+    def test_below_cutoff_new_quotes_not_accepted(
+        self, project_with_garrett
+    ) -> None:
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 2)
+
+        # LLM tags the new quotes at 0.5 — below the 0.7 cutoff → denied.
+        with _patch_llm(
+            AsyncMock(return_value=_make_batch_result(2, "user need", 0.5))
+        ):
+            accepted = asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings()
+                )
+            )
+
+        assert accepted == 0
+        db = db_factory()
+        try:
+            assert db.query(QuoteTag).count() == 0
+        finally:
+            db.close()
+
+    def test_no_new_quotes_is_noop(self, project_with_garrett) -> None:
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory)
+        mock_analyze = AsyncMock()
+        with _patch_llm(mock_analyze):
+            accepted = asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings()
+                )
+            )
+        assert accepted == 0
+        mock_analyze.assert_not_called()
+
+    def test_reapply_active_frameworks_covers_applied(
+        self, project_with_garrett
+    ) -> None:
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        with _patch_llm(
+            AsyncMock(return_value=_make_batch_result(3, "user need", 0.85))
+        ):
+            results = asyncio.run(
+                reapply_active_frameworks(db_factory, project_id, _mock_settings())
+            )
+        assert results == {"garrett": 3}
+
+    def test_reapply_active_frameworks_none_applied(
+        self, project_with_garrett
+    ) -> None:
+        # Fixture job is 'pending' — no completed jobs → nothing to re-apply.
+        project_id, framework_id, db_factory = project_with_garrett
+        results = asyncio.run(
+            reapply_active_frameworks(db_factory, project_id, _mock_settings())
+        )
+        assert results == {}
+
+    def test_never_applied_is_noop(self, project_with_garrett) -> None:
+        """No completed job (fixture job is 'pending') → returns 0, no LLM call."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._add_quotes(db_factory, project_id, 2)
+        mock_analyze = AsyncMock()
+        with _patch_llm(mock_analyze):
+            accepted = asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings()
+                )
+            )
+        assert accepted == 0
+        mock_analyze.assert_not_called()

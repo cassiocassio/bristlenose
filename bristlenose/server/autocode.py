@@ -460,3 +460,243 @@ async def run_autocode_job(
             except Exception:
                 logger.debug("telemetry trim failed", exc_info=True)
             telemetry.reset_run_context(telemetry_tokens)
+
+
+# Default accept cutoff when a framework was applied without an explicit
+# threshold (mirrors the review dialog's DEFAULT_UPPER = 0.70).
+DEFAULT_ACCEPT_THRESHOLD = 0.70
+
+
+async def reapply_to_new_quotes(
+    db_factory: Callable[[], SASession],
+    project_id: int,
+    framework_id: str,
+    settings: BristlenoseSettings,
+) -> int:
+    """Re-apply an already-applied framework to the quotes it hasn't seen yet.
+
+    Codes ONLY the delta — quotes with no ``ProposedTag`` from the framework's
+    existing job (i.e. newly-added ones) — and auto-accepts at the researcher's
+    stored cutoff, with no review modal. Existing quotes and human tags are never
+    touched (the accept is non-clobbering). Returns the number of new QuoteTags
+    created (0 if there's nothing to do).
+
+    Safe no-op when the framework was never applied (no completed job) — so it
+    can be fired unconditionally per linked framework after a re-run.
+    """
+    from bristlenose.llm import telemetry
+    from bristlenose.llm.boundary import wrap_untrusted
+    from bristlenose.llm.client import LLMClient
+    from bristlenose.llm.prompts import get_prompt_template
+    from bristlenose.llm.structured import AutoCodeBatchResult
+    from bristlenose.server.codebook import get_template
+    from bristlenose.server.models import (
+        AutoCodeJob,
+        CodebookGroup,
+        ProposedTag,
+        Quote,
+        QuoteTag,
+        TagDefinition,
+    )
+
+    db = db_factory()
+    try:
+        job = (
+            db.query(AutoCodeJob)
+            .filter_by(
+                project_id=project_id, framework_id=framework_id, status="completed"
+            )
+            .first()
+        )
+        if job is None:
+            return 0  # framework never applied → nothing to reproduce
+
+        template = get_template(framework_id)
+        if not template:
+            return 0
+
+        threshold = job.applied_upper_threshold
+        if threshold is None:
+            threshold = DEFAULT_ACCEPT_THRESHOLD
+
+        # Delta = project quotes with no ProposedTag from this job. A quote that
+        # was part of the original run has a proposal row (accepted or denied);
+        # a newly-added quote has none.
+        seen_quote_ids = {
+            row[0]
+            for row in db.query(ProposedTag.quote_id)
+            .filter_by(job_id=job.id)
+            .distinct()
+        }
+        new_quotes = [
+            q
+            for q in db.query(Quote).filter_by(project_id=project_id).all()
+            if q.id not in seen_quote_ids
+        ]
+        if not new_quotes:
+            return 0
+
+        batch_items = [
+            QuoteBatchItem(
+                db_id=q.id,
+                text=q.text,
+                session_id=q.session_id,
+                participant_id=q.participant_id,
+                topic_label=q.topic_label or "",
+                sentiment=q.sentiment or "",
+            )
+            for q in new_quotes
+        ]
+
+        taxonomy_text = build_tag_taxonomy(template)
+        framework_groups = (
+            db.query(CodebookGroup).filter_by(framework_id=framework_id).all()
+        )
+        group_ids = [g.id for g in framework_groups]
+        tag_defs = (
+            db.query(TagDefinition)
+            .filter(TagDefinition.codebook_group_id.in_(group_ids))
+            .all()
+        )
+        tag_id_lookup = {td.name.lower().strip(): td.id for td in tag_defs}
+        tag_map = build_tag_name_map(template, tag_id_lookup)
+
+        llm_client = LLMClient(settings)
+        prompt_tmpl = get_prompt_template("autocode")
+
+        batches = [
+            batch_items[i : i + BATCH_SIZE]
+            for i in range(0, len(batch_items), BATCH_SIZE)
+        ]
+        semaphore = asyncio.Semaphore(settings.llm_concurrency)
+
+        async def _batch(
+            batch: list[QuoteBatchItem],
+        ) -> list[tuple[int, int, float, str]]:
+            async with semaphore:
+                user_prompt = prompt_tmpl.user.format(
+                    codebook_title=template.title,
+                    codebook_preamble=template.preamble,
+                    formatted_tag_taxonomy=taxonomy_text,
+                    formatted_quotes=wrap_untrusted("quotes", build_quote_batch(batch)),
+                )
+                with telemetry.stage("serve_autocode_reapply"):
+                    result = await llm_client.analyze(
+                        system_prompt=prompt_tmpl.system,
+                        user_prompt=user_prompt,
+                        response_model=AutoCodeBatchResult,
+                        prompt_template=prompt_tmpl,
+                    )
+                out: list[tuple[int, int, float, str]] = []
+                for a in result.assignments:
+                    if a.quote_index < 0 or a.quote_index >= len(batch):
+                        continue
+                    tag_def_id = resolve_tag_name_to_id(a.tag_name, tag_map)
+                    if tag_def_id is None:
+                        continue
+                    out.append(
+                        (batch[a.quote_index].db_id, tag_def_id, a.confidence, a.rationale)
+                    )
+                return out
+
+        results = await asyncio.gather(
+            *(_batch(b) for b in batches), return_exceptions=True
+        )
+
+        accepted = 0
+        new_proposed = 0
+        now = datetime.now(timezone.utc)
+        for res in results:
+            if isinstance(res, BaseException):
+                logger.error("Re-apply batch failed: %s", res)
+                continue
+            for quote_id, tag_def_id, confidence, rationale in res:
+                is_accept = confidence >= threshold
+                # Record the proposal on the existing job — audit trail, and it
+                # marks the quote as "seen" so a later re-apply won't re-code it.
+                db.add(
+                    ProposedTag(
+                        job_id=job.id,
+                        quote_id=quote_id,
+                        tag_definition_id=tag_def_id,
+                        confidence=confidence,
+                        rationale=rationale,
+                        status="accepted" if is_accept else "denied",
+                        reviewed_at=now,
+                    )
+                )
+                new_proposed += 1
+                if is_accept:
+                    # Non-clobbering: never overwrite an existing (human or
+                    # autocode) tag on this quote.
+                    existing = (
+                        db.query(QuoteTag)
+                        .filter_by(quote_id=quote_id, tag_definition_id=tag_def_id)
+                        .first()
+                    )
+                    if existing is None:
+                        db.add(
+                            QuoteTag(
+                                quote_id=quote_id,
+                                tag_definition_id=tag_def_id,
+                                source="autocode",
+                            )
+                        )
+                        accepted += 1
+
+        job.total_quotes += len(batch_items)
+        job.proposed_count += new_proposed
+        job.completed_at = now
+        db.commit()
+        logger.info(
+            "Re-apply %s: %d new quotes, %d proposals, %d auto-accepted at >=%.2f",
+            framework_id,
+            len(batch_items),
+            new_proposed,
+            accepted,
+            threshold,
+        )
+        return accepted
+
+    except Exception as exc:
+        logger.exception("Re-apply failed for %s: %s", framework_id, exc)
+        db.rollback()
+        return 0
+    finally:
+        db.close()
+
+
+async def reapply_active_frameworks(
+    db_factory: Callable[[], SASession],
+    project_id: int,
+    settings: BristlenoseSettings,
+) -> dict[str, int]:
+    """Re-apply every already-applied framework in a project to its new quotes.
+
+    Called after a re-run that added sessions: for each framework with a
+    completed AutoCode job, code the delta at that job's stored cutoff. Each is a
+    safe no-op if there are no new quotes. Returns ``{framework_id: n_accepted}``.
+
+    Runs the frameworks sequentially so spend stays legible in the logs. Note:
+    "previously applied" is the gate today; once the enable/disable toggle is
+    persisted this should also skip disabled frameworks.
+    """
+    from bristlenose.server.models import AutoCodeJob
+
+    db = db_factory()
+    try:
+        framework_ids = [
+            row[0]
+            for row in db.query(AutoCodeJob.framework_id)
+            .filter_by(project_id=project_id, status="completed")
+            .distinct()
+        ]
+    finally:
+        db.close()
+
+    results: dict[str, int] = {}
+    for framework_id in framework_ids:
+        results[framework_id] = await reapply_to_new_quotes(
+            db_factory, project_id, framework_id, settings
+        )
+    return results

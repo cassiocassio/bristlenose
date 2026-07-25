@@ -622,43 +622,57 @@ async def reapply_to_new_quotes(
         accepted = 0
         new_proposed = 0
         now = datetime.now(timezone.utc)
+
+        # Collapse to one proposal per quote (keep highest confidence). The
+        # ProposedTag unique constraint is (job_id, quote_id) — one tag per quote
+        # per job — so an LLM that returns two assignments for the same quote would
+        # otherwise raise IntegrityError at commit, rolling back the ENTIRE re-apply
+        # including the completed_at watermark advance below. That makes the same
+        # new sessions re-selected and re-fail on every subsequent run, forever,
+        # silently. Deduping here keeps the collision from ever forming.
+        best_by_quote: dict[int, tuple[int, int, float, str]] = {}
         for res in results:
             if isinstance(res, BaseException):
                 logger.error("Re-apply batch failed: %s", res)
                 continue
             for quote_id, tag_def_id, confidence, rationale in res:
-                is_accept = confidence >= threshold
-                # Record the proposal on the existing job — audit trail, and it
-                # marks the quote as "seen" so a later re-apply won't re-code it.
-                db.add(
-                    ProposedTag(
-                        job_id=job.id,
-                        quote_id=quote_id,
-                        tag_definition_id=tag_def_id,
-                        confidence=confidence,
-                        rationale=rationale,
-                        status="accepted" if is_accept else "denied",
-                        reviewed_at=now,
-                    )
+                prev = best_by_quote.get(quote_id)
+                if prev is None or confidence > prev[2]:
+                    best_by_quote[quote_id] = (quote_id, tag_def_id, confidence, rationale)
+
+        for quote_id, tag_def_id, confidence, rationale in best_by_quote.values():
+            is_accept = confidence >= threshold
+            # Record the proposal on the existing job — audit trail, and it
+            # marks the quote as "seen" so a later re-apply won't re-code it.
+            db.add(
+                ProposedTag(
+                    job_id=job.id,
+                    quote_id=quote_id,
+                    tag_definition_id=tag_def_id,
+                    confidence=confidence,
+                    rationale=rationale,
+                    status="accepted" if is_accept else "denied",
+                    reviewed_at=now,
                 )
-                new_proposed += 1
-                if is_accept:
-                    # Non-clobbering: never overwrite an existing (human or
-                    # autocode) tag on this quote.
-                    existing = (
-                        db.query(QuoteTag)
-                        .filter_by(quote_id=quote_id, tag_definition_id=tag_def_id)
-                        .first()
-                    )
-                    if existing is None:
-                        db.add(
-                            QuoteTag(
-                                quote_id=quote_id,
-                                tag_definition_id=tag_def_id,
-                                source="autocode",
-                            )
+            )
+            new_proposed += 1
+            if is_accept:
+                # Non-clobbering: never overwrite an existing (human or
+                # autocode) tag on this quote.
+                existing = (
+                    db.query(QuoteTag)
+                    .filter_by(quote_id=quote_id, tag_definition_id=tag_def_id)
+                    .first()
+                )
+                if existing is None:
+                    db.add(
+                        QuoteTag(
+                            quote_id=quote_id,
+                            tag_definition_id=tag_def_id,
+                            source="autocode",
                         )
-                        accepted += 1
+                    )
+                    accepted += 1
 
         job.total_quotes += len(batch_items)
         job.proposed_count += new_proposed

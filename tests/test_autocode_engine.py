@@ -819,6 +819,54 @@ class TestReapplyToNewQuotes:
         # Only the 2 new-session quotes — never the 6 untagged existing ones.
         assert accepted == 2
 
+    def test_duplicate_quote_assignments_deduped_not_perpetual_failure(
+        self, project_with_garrett
+    ) -> None:
+        """Regression: an LLM that returns two assignments for one quote must not
+        violate the (job_id, quote_id) constraint and roll the whole re-apply back
+        to a silent 0 — which would re-select and re-fail the same new sessions on
+        every subsequent run, forever. Dedup keeps one proposal per quote."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 2)  # new session, 2 quotes
+
+        # Three assignments for two quotes: quote_index 0 twice (double-tag) + 1.
+        dup = AutoCodeBatchResult(
+            assignments=[
+                AutoCodeTagAssignment(
+                    quote_index=0, tag_name="user need", confidence=0.9, rationale="a"
+                ),
+                AutoCodeTagAssignment(
+                    quote_index=0, tag_name="user need", confidence=0.8, rationale="b"
+                ),
+                AutoCodeTagAssignment(
+                    quote_index=1, tag_name="user need", confidence=0.85, rationale="c"
+                ),
+            ]
+        )
+        with _patch_llm(AsyncMock(return_value=dup)):
+            accepted = asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings()
+                )
+            )
+
+        # Both new quotes coded exactly once — no IntegrityError, no silent 0.
+        assert accepted == 2
+        db = db_factory()
+        try:
+            assert db.query(QuoteTag).count() == 2
+            # Watermark advanced off the pinned sentinel → a re-run is a clean
+            # no-op, not a perpetual re-fail.
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            assert job.completed_at != datetime(2020, 1, 1)
+        finally:
+            db.close()
+
     def test_below_cutoff_new_quotes_not_accepted(
         self, project_with_garrett
     ) -> None:

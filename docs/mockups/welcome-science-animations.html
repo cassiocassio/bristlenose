@@ -171,6 +171,12 @@
      (--vy) so the word BODIES land on their own rows and only just overlap. */
   .fan.open .badge{ transform:translateY(calc(-50% + var(--vy,0px))) rotate(var(--a)) translateX(var(--gap)); }
 
+  /* variant picker (section 1 only) — compare open/close motions */
+  .varseg{ display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:0 0 14px; font-size:12px; }
+  .varseg button{ font:inherit; font-weight:600; color:var(--faint); background:transparent; border:0; border-left:1px solid var(--line); padding:5px 11px; cursor:pointer; }
+  .varseg button:first-child{ border-left:0; }
+  .varseg button[aria-pressed="true"]{ color:#fff; background:var(--accent); }
+
   /* ============================================================= *
    *  2 · SIGNAL CARD — verbatim analysis.css classes               *
    * ============================================================= */
@@ -277,8 +283,15 @@
   </div>
 
   <!-- =========================================================== 1 -->
-  <h2 class="sec"><span class="n">1</span> · Sentiment fan — <span class="q">the seven states open from a left hinge, every word readable</span></h2>
-  <p class="map">Pool line: <b>“Seven sentiments, grounded in appraisal theory (Scherer) and core affect (Russell).”</b> The seven real <code>.badge</code> chips are hinged at the left and open like a hand-fan — rotation plus vertical spread so all seven words read, only just overlapping at full extent — then close back to a stack. The metaphor: a small, fixed hand of cards, one dealt to every quote.</p>
+  <h2 class="sec"><span class="n">1</span> · Seven sentiments — <span class="q">compare open/close motions that fill the box without crashing into the text</span></h2>
+  <p class="map">Pool line: <b>“Seven sentiments, grounded in appraisal theory (Scherer) and core affect (Russell).”</b> The seven real <code>.badge</code> chips animate between a gathered deck and a spread. The wide-short slot wants the spread on the <b>width</b>, words kept <b>upright</b> (position-animated, not rotated) and clamped inside the padded box. Pick a variant — it applies to both stages below.</p>
+  <div class="varseg" id="fanVariants">
+    <button data-v="fan" aria-pressed="true">Fan (current)</button>
+    <button data-v="bloom">Elliptical bloom</button>
+    <button data-v="orbit">Elliptical orbit</button>
+    <button data-v="cloud">Breathing cloud</button>
+    <button data-v="deal">2-row deal</button>
+  </div>
   <div class="demo">
     <div class="stage-cell">
       <div class="sci-cell">
@@ -448,34 +461,132 @@ function flapWord(host, word){
 }
 
 /* ============================================================= *
- *  1 · SENTIMENT FAN (left-hinged)                              *
- * ============================================================= */
+ *  1 · SEVEN SENTIMENTS — switchable open/close variants         *
+ * ============================================================= *
+ * Shared goals for every variant: words stay UPRIGHT (readable),
+ * spread across the WIDE-short box, positions clamped inside the
+ * padded frame so nothing crashes into the text above/below.     */
 const SENTS = ["frustration","confusion","doubt","surprise","satisfaction","delight","confidence"];
-function buildFan(host){
-  const cell = host.dataset.fan === "cell";
-  const Amax = (cell ? 25 : 40) * 0.85;   // trimmed 15% — still slightly uncomfortable to read
-  const vStep = cell ? 9 : 15;            // per-chip vertical separation (px) at full open — tuned to just overlap
-  const N = SENTS.length;
-  SENTS.forEach((s,i)=>{
-    const b = document.createElement("span");
-    b.className = "badge badge-"+s;
-    b.textContent = s;
-    b.style.zIndex = i+1;
-    if(cell) b.style.fontSize = "0.58rem";
-    const angle = -Amax + (i/(N-1))*2*Amax;      // spread symmetric about horizontal
-    const vy = (i - (N-1)/2) * vStep;            // vertical band, symmetric about centre
-    b.style.setProperty("--a", angle.toFixed(1)+"deg");
-    b.style.setProperty("--vy", vy.toFixed(1)+"px");
-    host.appendChild(b);
+const _fanTok = new WeakMap();          // per-host token → cancels stale loops on variant switch
+let _fanVariant = "fan";
+
+function _reset(host){ const t=(_fanTok.get(host)||0)+1; _fanTok.set(host,t); host.className="fan"; host.innerHTML=""; return t; }
+function _alive(host,tok){ return _fanTok.get(host)===tok; }
+function _chips(host, cell){
+  return SENTS.map((s,i)=>{
+    const b=document.createElement("span");
+    b.className="badge badge-"+s; b.textContent=s; b.style.zIndex=i+1;
+    if(cell) b.style.fontSize="0.58rem";
+    host.appendChild(b); return b;
+  });
+}
+/* upright variants: pin left/top to the container centre; encode ALL position
+   in a transform translate offset from centre, so transforms animate smoothly. */
+function _upright(b){ b.style.left="50%"; b.style.top="50%"; b.style.transformOrigin="center"; }
+function _pos(b,dx,dy){ b.style.transform="translate(calc(-50% + "+dx.toFixed(1)+"px), calc(-50% + "+dy.toFixed(1)+"px))"; }
+
+/* two-row 4/3 layout (upright, centred, fit to box) → {dx,dy} from centre */
+function _rowHomes(host, chips, cell){
+  const W=host.clientWidth, H=host.clientHeight, cx=W/2, cy=H/2;
+  const rows=[chips.slice(0,4), chips.slice(4)];
+  const rowY=[H*0.36, H*0.66], gap=cell?5:8;
+  const homes=new Array(chips.length);
+  rows.forEach((row,r)=>{
+    const ws=row.map(c=>c.offsetWidth);
+    const total=ws.reduce((a,b)=>a+b,0)+gap*(row.length-1);
+    let x=cx-total/2;
+    row.forEach((c,k)=>{ const w=ws[k], ci=chips.indexOf(c); homes[ci]={dx:(x+w/2)-cx, dy:rowY[r]-cy}; x+=w+gap; });
+  });
+  return homes;
+}
+function _ellipse(host, chips, cell){
+  const W=host.clientWidth, H=host.clientHeight, pad=cell?4:8;
+  const maxHalf=Math.max.apply(null, chips.map(c=>c.offsetWidth))/2;
+  const chH=chips[0].offsetHeight;
+  return { rx:Math.max(16, W/2-pad-maxHalf), ry:Math.max(10, H/2-pad-chH/2) };
+}
+
+/* ---- fan (current, for reference): left hinge, rotates ---- */
+function fanVariant(host, cell){
+  const Amax=(cell?25:40)*0.85, vStep=cell?9:15, N=SENTS.length, tok=_fanTok.get(host);
+  _chips(host,cell).forEach((b,i)=>{
+    b.style.setProperty("--a",(-Amax+(i/(N-1))*2*Amax).toFixed(1)+"deg");
+    b.style.setProperty("--vy",((i-(N-1)/2)*vStep).toFixed(1)+"px");
   });
   if(REDUCED){ host.classList.add("open"); return; }
-  let open = false;
-  (function loop(){
-    const wait = open ? 2600 : 1300;
-    setTimeout(()=>{ open = !open; host.classList.toggle("open", open); loop(); }, wait);
-  })();
+  let open=false;
+  (function loop(){ if(!_alive(host,tok)) return; const wait=open?2600:1300;
+    setTimeout(()=>{ if(!_alive(host,tok))return; open=!open; host.classList.toggle("open",open); loop(); }, wait); })();
 }
-document.querySelectorAll("[data-fan]").forEach(buildFan);
+
+/* ---- elliptical bloom: gather to a deck, bloom OUT on a flat ellipse ---- */
+function bloomVariant(host, chips, cell){
+  const tok=_fanTok.get(host), {rx,ry}=_ellipse(host,chips,cell), N=chips.length;
+  chips.forEach(b=> b.style.transition="transform 1.1s cubic-bezier(.5,0,.2,1)");
+  function state(on){ chips.forEach((b,i)=>{
+    if(!on){ _pos(b,0,0); return; }
+    const th=(-90+i*(360/N))*Math.PI/180; _pos(b, Math.cos(th)*rx, Math.sin(th)*ry);
+  }); }
+  state(false);
+  if(REDUCED){ state(true); return; }
+  let on=false;
+  (function loop(){ if(!_alive(host,tok))return;
+    setTimeout(()=>{ if(!_alive(host,tok))return; on=!on; state(on); loop(); }, on?2800:1200); })();
+}
+
+/* ---- elliptical orbit: continuous lazy-susan, depth = scale + opacity ---- */
+function orbitVariant(host, chips, cell){
+  const tok=_fanTok.get(host), {rx,ry}=_ellipse(host,chips,cell), N=chips.length;
+  chips.forEach(b=> b.style.transition="none");
+  const place=(b,th)=>{ const dx=Math.cos(th)*rx, dy=Math.sin(th)*ry, depth=(Math.sin(th)+1)/2;
+    b.style.transform="translate(calc(-50% + "+dx.toFixed(1)+"px), calc(-50% + "+dy.toFixed(1)+"px)) scale("+(0.82+depth*0.28).toFixed(3)+")";
+    b.style.opacity=(0.4+depth*0.6).toFixed(2); b.style.zIndex=Math.round(depth*100); };
+  chips.forEach((b,i)=> place(b,(-90+i*(360/N))*Math.PI/180));   // resting ring (also the backgrounded state)
+  if(REDUCED) return;
+  let t0=null; const speed=0.28;
+  (function frame(ts){ if(!_alive(host,tok))return; if(t0==null)t0=ts; const t=(ts-t0)/1000;
+    chips.forEach((b,i)=> place(b,(-90+i*(360/N))*Math.PI/180 + t*speed)); requestAnimationFrame(frame); })(performance.now());
+}
+
+/* ---- breathing cloud: 2-row home layout + low-amplitude drift ---- */
+function cloudVariant(host, chips, cell){
+  const tok=_fanTok.get(host), homes=_rowHomes(host,chips,cell), amp=cell?3:5;
+  chips.forEach(b=> b.style.transition="none");
+  chips.forEach((b,i)=> _pos(b, homes[i].dx, homes[i].dy));   // resting layout (also the backgrounded state)
+  if(REDUCED) return;
+  const ph=chips.map(()=>Math.random()*6.28), fx=chips.map(()=>0.4+Math.random()*0.5), fy=chips.map(()=>0.4+Math.random()*0.5);
+  let t0=null;
+  (function frame(ts){ if(!_alive(host,tok))return; if(t0==null)t0=ts; const t=(ts-t0)/1000;
+    chips.forEach((b,i)=> _pos(b, homes[i].dx+Math.cos(t*fx[i]+ph[i])*amp, homes[i].dy+Math.sin(t*fy[i]+ph[i])*amp*0.8));
+    requestAnimationFrame(frame); })(performance.now());
+}
+
+/* ---- 2-row deal: gather to a deck, deal OUT to the readable 2-row grid ---- */
+function dealVariant(host, chips, cell){
+  const tok=_fanTok.get(host), homes=_rowHomes(host,chips,cell);
+  chips.forEach((b,i)=>{ b.style.transition="transform .5s cubic-bezier(.4,0,.2,1)"; b.style.transitionDelay=(i*0.06)+"s"; });
+  function state(on){ chips.forEach((b,i)=> on ? _pos(b,homes[i].dx,homes[i].dy) : _pos(b,0,0)); }
+  state(false);
+  if(REDUCED){ chips.forEach(b=>b.style.transitionDelay="0s"); state(true); return; }
+  let on=false;
+  (function loop(){ if(!_alive(host,tok))return;
+    setTimeout(()=>{ if(!_alive(host,tok))return; on=!on; state(on); loop(); }, on?2800:1200); })();
+}
+
+function buildSentiment(host){
+  const cell = host.dataset.fan==="cell", tok=_reset(host), V=_fanVariant;
+  if(V==="fan"){ fanVariant(host,cell); return; }
+  const chips=_chips(host,cell); chips.forEach(_upright);
+  // offsetWidth (read inside each variant) forces sync layout, so variants
+  // initialise immediately — even backgrounded, where rAF is suspended.
+  ({bloom:bloomVariant, orbit:orbitVariant, cloud:cloudVariant, deal:dealVariant}[V])(host, chips, cell);
+}
+
+function rebuildFans(){ document.querySelectorAll("[data-fan]").forEach(buildSentiment); }
+const fanSeg=document.getElementById("fanVariants");
+if(fanSeg) fanSeg.addEventListener("click", e=>{ const btn=e.target.closest("button"); if(!btn) return;
+  _fanVariant=btn.dataset.v; [...fanSeg.children].forEach(x=>x.setAttribute("aria-pressed", x===btn)); rebuildFans(); });
+rebuildFans();
 
 /* ============================================================= *
  *  2 · SIGNAL CARD (real card, trainboard tickover)             *

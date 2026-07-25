@@ -48,7 +48,7 @@ private enum WelcomeContent {
         // One "tip the hat" shelf for all the source books — BookShelfView owns its own author + line + link, synced to the front cover (title/text/href left empty here).
         .init(title: nil, text: "", linkLabel: "", href: "", illustration: .books),
         .init(title: "Seven sentiments", text: "Seven sentiments, grounded in appraisal theory (Scherer) and core affect (Russell).", linkLabel: "Learn more →", href: docs + "signals.html", illustration: .sentimentFan),
-        .init(title: "Signals", text: "A signal marks where sentiment or tags concentrate more than you’d expect — a measure we coined.", linkLabel: "Learn more →", href: docs + "signals.html", illustration: .signal),
+        .init(title: "Signals", text: "A signal is a score that combines the strength of participants’ opinions or feelings, their level of focus on an area or theme, and a measure of their agreement.", linkLabel: "Learn more →", href: docs + "signals.html", illustration: .signal),
         .init(title: "Dignity without distortion", text: "Quotes are tidied but never twisted; the participant’s voice is honoured.", linkLabel: "Learn more →", href: docs + "research-foundations.html", illustration: .quote),
     ]
 

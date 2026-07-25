@@ -9,7 +9,7 @@ import Combine
 //   1 Seven sentiments      → native SwiftUI fan (SentimentFanView)
 //   2 Signals               → webview (the real signal card + trainboard flip)
 //   3 Dignity               → webview (the strike-and-collapse quote)
-//   4 Framework authors     → native SwiftUI book fan (BookFanView)
+//   4 Source books          → native SwiftUI hat-tip shelf, one cell, synced caption (BookShelfView)
 //   5 Emergent themes       → reuse the existing ShoalView murmuration
 // Native pieces use exact-ish fonts (SF Mono for the chips); the two webviews
 // reuse the mockup CSS/JS verbatim — slight font-rendering differences accepted.
@@ -17,7 +17,7 @@ import Combine
 
 /// Which illustration a science slot carries (nil case = plain text slot).
 enum ScienceIllustration: Equatable {
-    case none, sentimentFan, bookFan, shoal, quote, signal
+    case none, sentimentFan, books, shoal, quote, signal
 }
 
 /// sRGB colour from a 0xRRGGBB literal (file-private helper).
@@ -28,16 +28,18 @@ private func rgb(_ v: UInt) -> Color {
           blue: Double(v & 0xff) / 255)
 }
 
-// MARK: - 1 · Sentiment fan (native)
+// MARK: - 1 · Seven sentiments (native — 2-row deal)
 
-/// The seven sentiment chips, hinged at the left, opening like a hand-fan:
-/// rotation for the fan look + an explicit vertical offset so every word reads,
-/// only just overlapping at full open. Chip typography matches the report badge
-/// (SF Mono + the sentiment colour tokens).
+/// The seven sentiment chips rest as a readable two-row grid (the codebook-badge
+/// look) and animate by dealing out from a gathered deck and gathering back,
+/// staggered per chip. Words stay upright; widths are measured so the rows centre
+/// and fill the slot without crashing into the surrounding text. Chip typography
+/// matches the report badge (SF Mono + the sentiment colour tokens).
 struct SentimentFanView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var open = false
+    @State private var sizes: [Int: CGSize] = [:]
+    @State private var dealt = false
 
     private struct Chip { let name: String; let fgL, fgD, bgL, bgD: UInt }
     private let chips: [Chip] = [
@@ -49,97 +51,193 @@ struct SentimentFanView: View {
         .init(name: "delight",      fgL: 0x059669, fgD: 0x34d399, bgL: 0xecfdf5, bgD: 0x0d261c),
         .init(name: "confidence",   fgL: 0x2563eb, fgD: 0x60a5fa, bgL: 0xeff6ff, bgD: 0x111d2e),
     ]
-    private let aMax = 34.0     // max fan angle (mockup detail, trimmed 15%)
-    private let vStep = 15.0    // per-chip vertical separation at full open
-    private let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
+    // 4 / 3 two-row split in valence order; row bands + gap mirror the mockup.
+    private let topRow = [0, 1, 2, 3]
+    private let bottomRow = [4, 5, 6]
+    private let gap: CGFloat = 8
 
     var body: some View {
-        let n = chips.count
-        ZStack(alignment: .leading) {
-            ForEach(chips.indices, id: \.self) { i in
-                let chip = chips[i]
-                let angle = -aMax + (Double(i) / Double(n - 1)) * 2 * aMax
-                let vy = (Double(i) - Double(n - 1) / 2) * vStep
-                Text(chip.name)
-                    .font(.system(size: 11, weight: .regular, design: .monospaced))
-                    .foregroundStyle(scheme == .dark ? rgb(chip.fgD) : rgb(chip.fgL))
-                    .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(RoundedRectangle(cornerRadius: 3)
-                        .fill(scheme == .dark ? rgb(chip.bgD) : rgb(chip.bgL)))
-                    .shadow(color: .black.opacity(scheme == .dark ? 0.45 : 0.12), radius: 1, y: 0.5)
-                    .fixedSize()
-                    .zIndex(Double(i))
-                    .rotationEffect(.degrees(open ? angle : 0), anchor: .leading)
-                    .offset(x: open ? 16 : 4, y: open ? vy : 0)
+        GeometryReader { geo in
+            ZStack {
+                ForEach(chips.indices, id: \.self) { i in
+                    chipView(i)
+                        .background(sizeReader(i))
+                        .offset(dealt ? homeOffset(i, in: geo.size) : .zero)   // deck = centre
+                        .zIndex(Double(i))
+                        .animation(reduceMotion ? nil
+                                   : .easeInOut(duration: 0.5).delay(Double(i) * 0.06),
+                                   value: dealt)                                // per-chip deal stagger
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .onPreferenceChange(SentimentChipSizeKey.self) { sizes = $0 }
+        .accessibilityHidden(true)
+        .onAppear { if reduceMotion { dealt = true } }
+        .task {
+            guard !reduceMotion else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1.2))    // gathered (deck) hold
+                await MainActor.run { dealt = true }
+                try? await Task.sleep(for: .seconds(2.8))    // dealt (readable) hold
+                await MainActor.run { dealt = false }
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .padding(.leading, 12)
-        .accessibilityHidden(true)
-        .onAppear { if reduceMotion { open = true } }
-        .onReceive(timer) { _ in
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 1)) { open.toggle() }
+    }
+
+    private func chipView(_ i: Int) -> some View {
+        let chip = chips[i]
+        return Text(chip.name)
+            .font(.system(size: 11, weight: .regular, design: .monospaced))
+            .foregroundStyle(scheme == .dark ? rgb(chip.fgD) : rgb(chip.fgL))
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(RoundedRectangle(cornerRadius: 3)
+                .fill(scheme == .dark ? rgb(chip.bgD) : rgb(chip.bgL)))
+            .shadow(color: .black.opacity(scheme == .dark ? 0.45 : 0.12), radius: 1, y: 0.5)
+            .fixedSize()
+    }
+
+    private func sizeReader(_ i: Int) -> some View {
+        GeometryReader { p in
+            Color.clear.preference(key: SentimentChipSizeKey.self, value: [i: p.size])
         }
+    }
+
+    /// Centre-relative offset for the dealt 2-row layout (deck = .zero = ZStack centre).
+    private func homeOffset(_ i: Int, in size: CGSize) -> CGSize {
+        let row = topRow.contains(i) ? topRow : bottomRow
+        let widths = row.map { sizes[$0]?.width ?? 0 }
+        let total = widths.reduce(0, +) + gap * CGFloat(row.count - 1)
+        let pos = row.firstIndex(of: i) ?? 0
+        let before = widths.prefix(pos).reduce(0, +) + gap * CGFloat(pos)
+        let dx = -total / 2 + before + (widths[pos] / 2)
+        let dy = (topRow.contains(i) ? 0.34 : 0.66) * size.height - size.height / 2
+        return CGSize(width: dx, height: dy)
     }
 }
 
-// MARK: - 4 · Book fan (native)
+private struct SentimentChipSizeKey: PreferenceKey {
+    static let defaultValue: [Int: CGSize] = [:]
+    static func reduce(value: inout [Int: CGSize], nextValue: () -> [Int: CGSize]) {
+        value.merge(nextValue(), uniquingKeysWith: { $1 })
+    }
+}
 
-/// A single fan of the books behind the codebook frameworks: covers overlap and
-/// slide over each other (no rotation), one moving to the front at a time.
-/// Typographic placeholder covers pending real cover art.
-struct BookFanView: View {
+// MARK: - 4 · Book shelf (native — one synced cell for all the source books)
+
+/// A single "thinking you can leverage" shelf: the source books overlap and
+/// slide front-to-back, and the author + one-line contribution + Learn-more link
+/// update in sync with whichever cover is on top. Each line states how that work
+/// is in the product out of the box — a ready-made codebook, the themes method,
+/// the sentiments — so the framework-vs-method distinction stays an
+/// implementation detail. Extend by adding a `Book` + its `welcome-book-<slug>`
+/// imageset. Real cover when the asset lands; typographic placeholder until then.
+struct BookShelfView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var front = 0
 
-    private struct Book { let title, author: String; let spine: UInt }
+    private struct Book {
+        let author, title, line, href: String
+        let spine: UInt
+        var image: String? = nil
+    }
+    // Hat-tip, not feature pitch — the themes / signals / sentiment cells show the
+    // features; this shelf credits the thinking they stand on. Each line names the
+    // contribution. (Links point at our docs today; a future affiliate link to the
+    // book itself is the clickable-cover idea from the author outreach.)
     private let books: [Book] = [
-        .init(title: "The Design of Everyday Things", author: "Don Norman",     spine: 0x334155),
-        .init(title: "Usability Engineering",         author: "Jakob Nielsen",   spine: 0x0f5c9e),
-        .init(title: "Thematic Analysis",             author: "Braun & Clarke",  spine: 0x7c3aed),
-        .init(title: "Emotion & Adaptation",          author: "Richard Lazarus", spine: 0xb45309),
+        .init(author: "Don Norman", title: "The Design of Everyday Things",
+              line: "The book that made human-centred design a discipline — blame the design, not the user.",
+              href: "https://bristlenose.app/docs/codebook-frameworks.html", spine: 0x334155, image: "welcome-book-norman"),
+        .init(author: "Jakob Nielsen", title: "Usability Engineering",
+              line: "Ten usability heuristics that still anchor how the field spots friction.",
+              href: "https://bristlenose.app/docs/codebook-frameworks.html", spine: 0x0f5c9e, image: "welcome-book-nielsen"),
+        .init(author: "Braun & Clarke", title: "Thematic Analysis",
+              line: "The practical guide to reflexive thematic analysis — themes from participants’ own words.",
+              href: "https://bristlenose.app/docs/research-foundations.html", spine: 0x7c3aed, image: "welcome-book-braun-clarke"),
+        .init(author: "Richard Lazarus", title: "Emotion & Adaptation",
+              line: "Appraisal theory — emotion as how we weigh what happens to us.",
+              href: "https://bristlenose.app/docs/signals.html", spine: 0xb45309, image: "welcome-book-lazarus"),
     ]
-    private let off = 18.0
-    private let timer = Timer.publish(every: 2.4, on: .main, in: .common).autoconnect()
+    private let cardW: CGFloat = 106     // 80×114 grown ~33% to use more of the cell
+    private let cardH: CGFloat = 152
+    private let off: CGFloat = 34        // horizontal peek between covers — more separation, less overlap
+    private let timer = Timer.publish(every: 3.8, on: .main, in: .common).autoconnect()
 
     var body: some View {
         let n = books.count
-        ZStack {
-            ForEach(books.indices, id: \.self) { i in
-                let book = books[i]
-                let d = ((i - front) % n + n) % n
-                bookCard(book)
-                    .offset(x: Double(d) * off)
-                    .opacity(d > 2 ? 0 : 1 - Double(d) * 0.16)
-                    .zIndex(Double(100 - d))
+        let current = books[min(front, n - 1)]
+        VStack(alignment: .leading, spacing: 6) {
+            // Caption — synced to the front cover, cross-fades on change.
+            VStack(alignment: .leading, spacing: 2) {
+                Text(current.author).font(.title3).fontWeight(.semibold)
+                Text(current.line)
+                    .font(.body).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(height: 38, alignment: .topLeading)   // reserve 2 lines so the fan doesn't jump
+            }
+            .id("cap-\(front)")
+            .transition(.opacity)
+
+            // The fan of covers — front on top, LEFT-aligned so it opens rightward into the cell.
+            ZStack {
+                ForEach(books.indices, id: \.self) { i in
+                    let d = ((i - front) % n + n) % n
+                    bookCard(books[i])
+                        .offset(x: CGFloat(d) * off)
+                        .opacity(d > 3 ? 0 : 1 - Double(d) * 0.14)   // show up to 4; fade with depth
+                        .zIndex(Double(100 - d))
+                }
+            }
+            .frame(height: cardH + 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityHidden(true)   // covers are decorative; the caption conveys the book
+
+            if let url = URL(string: current.href) {
+                Link("Learn more →", destination: url)
+                    .font(.callout)
+                    .id("lnk-\(front)")
+                    .transition(.opacity)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        .accessibilityHidden(true)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .onReceive(timer) { _ in
             guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 0.8)) { front = (front + 1) % n }
+            withAnimation(.easeInOut(duration: 0.6)) { front = (front + 1) % n }
         }
     }
 
-    private func bookCard(_ b: Book) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(b.title).font(.system(size: 9.5, weight: .semibold)).foregroundStyle(.white)
-            Spacer(minLength: 0)
-            Text(b.author).font(.system(size: 8)).foregroundStyle(.white.opacity(0.82))
+    @ViewBuilder private func bookCard(_ b: Book) -> some View {
+        Group {
+            if let name = b.image, let ns = NSImage(named: name) {   // real cover when the asset lands
+                Image(nsImage: ns)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: cardW, height: cardH)
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+            } else {
+                placeholderCard(b)   // typographic fallback (no asset / copyright not cleared)
+            }
         }
-        .padding(EdgeInsets(top: 9, leading: 11, bottom: 8, trailing: 8))
-        .frame(width: 80, height: 114, alignment: .leading)
+        .shadow(color: .black.opacity(0.22), radius: 6, y: 4)
+    }
+
+    private func placeholderCard(_ b: Book) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(b.title).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(.white)
+            Spacer(minLength: 0)
+            Text(b.author).font(.system(size: 10.5)).foregroundStyle(.white.opacity(0.82))
+        }
+        .padding(EdgeInsets(top: 12, leading: 14, bottom: 11, trailing: 11))
+        .frame(width: cardW, height: cardH, alignment: .leading)
         .background(
             LinearGradient(colors: [rgb(b.spine), rgb(b.spine).opacity(0.72)],
                            startPoint: .topLeading, endPoint: .bottomTrailing),
-            in: RoundedRectangle(cornerRadius: 4)
+            in: RoundedRectangle(cornerRadius: 5)
         )
         .overlay(alignment: .leading) {
-            Rectangle().fill(.white.opacity(0.22)).frame(width: 1).padding(.leading, 4)
+            Rectangle().fill(.white.opacity(0.22)).frame(width: 1).padding(.leading, 5)
         }
-        .shadow(color: .black.opacity(0.22), radius: 6, y: 4)
     }
 }
 
@@ -433,8 +531,8 @@ enum WelcomeIllustrationHTML {
         <body>
         <script>
           var R = document.documentElement.getAttribute("data-reduce")==="1" || matchMedia("(prefers-reduced-motion:reduce)").matches;
-          var SH={ A:{ name:"Getting started is a struggle", words:["“where do I start?”","confusing","too many steps","I gave up"] },
-                   B:{ name:"Found it in seconds",           words:["“found it fast”","really clear","one tap","obvious"] } };
+          var SH={ A:{ name:"How to begin unclear", words:["“where do I start?”","confusing","too many steps","I gave up"] },
+                   B:{ name:"Intuitive",            words:["“found it fast”","really clear","one tap","obvious"] } };
           var host=document.body, fishes=[], labels={};
           ["A","B"].forEach(function(key){ SH[key].words.forEach(function(txt){
             var el=document.createElement("span"); el.className="fish"; el.textContent=txt; host.appendChild(el);

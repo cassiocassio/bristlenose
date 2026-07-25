@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dashboard widget gallery — intrinsic design bench · Bristlenose mockups</title>
+<title>Assembled dashboard — resize the window · Bristlenose mockups</title>
 <style>
+
 /* ============================================================================
    REAL Bristlenose tokens, inlined verbatim from the shipped design system so
    the theme matrix genuinely FALLS OUT of tokens (that's the whole test).
@@ -632,84 +633,50 @@ a.sg-rowlabel:hover { color:var(--bn-colour-accent); text-decoration:underline; 
 }
 
 .foot { margin-top:4rem; border-top:1px solid var(--bn-colour-border); padding-top:1rem; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+
+/* ========================================================================
+   STANDALONE full-window overrides. This page is the assembled dashboard at
+   real viewport width — DRAG THE BROWSER WINDOW to watch the RAM grid change
+   column count, the matrix fold, and the 3fr:2fr band stack. No tuner stage,
+   no zoom: the browser IS the screen. Generated from the widget gallery — do
+   not hand-edit; re-run scratchpad/build-assembled.js after gallery edits.
+   ======================================================================== */
+body { margin:0; background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); -webkit-font-smoothing:antialiased; }
+/* .report simulates the real report chrome: a stage container (so the
+   @container stage guardrails fire on the content width, not the viewport)
+   plus the shipped 48px report padding. */
+.report { container:stage / inline-size; padding:24px 48px 64px; }
+.report-bar { display:flex; align-items:center; gap:1rem; margin-bottom:1.25rem;
+  font-size:var(--bn-text-caption); color:var(--bn-colour-muted); flex-wrap:wrap; }
+.report-bar h1 { font-size:var(--bn-text-heading); font-weight:600; color:var(--bn-colour-text); margin:0; }
+.report-bar .seg { display:inline-flex; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); overflow:hidden; }
+.report-bar .seg button { font:inherit; font-size:var(--bn-text-caption); padding:.3rem .7rem; border:0;
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.report-bar .seg button + button { border-left:1px solid var(--bn-colour-border); }
+.report-bar .seg button.on { background:var(--bn-colour-accent); color:#fff; }
+.report-bar .live { margin-left:auto; font-family:var(--bn-font-mono); }
+/* The key-quotes row was tuner-driven in the gallery; here it reflows on its
+   own via auto-fill so the standalone needs no tuner JS. */
+.dash .bn-featured-row { grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); }
 </style>
 </head>
 <body>
-<div class="wrap">
-
-  <header class="masthead">
-    <div class="eyebrow">Bristlenose · dashboard widgets</div>
-    <h1>Widget gallery — the intrinsic design bench</h1>
-    <p>Each widget is designed here <strong>in isolation</strong>, in its own container-query sandbox,
-       decoupled from where it lands on a dashboard. Drag a sandbox's right edge — or hit a face preset —
-       to feel its compact / normal / expanded faces resolve. Colour comes from the <strong>real design-system
-       tokens</strong>; <strong>Scheme</strong> flips the shipped <code>data-color-theme="edo"</code> palette and
-       <strong>Mode</strong> flips <code>color-scheme</code> — so the theme matrix falls out of tokens, not hand-tuning.</p>
-    <span class="status">Phase 0 + first widget · parked exploration (post-TF)</span>
-  </header>
-
-  <div class="controls" role="group" aria-label="Gallery controls">
-    <div class="grp"><span class="lbl">Mode</span>
-      <button class="pbtn on" data-mode="light">Light</button>
-      <button class="pbtn" data-mode="dark">Dark</button>
-    </div>
-    <div class="grp"><span class="lbl">Scheme</span>
-      <button class="pbtn on" data-scheme="default">Default</button>
-      <button class="pbtn" data-scheme="edo">Edo</button>
-    </div>
-    <div class="grp" style="margin-left:auto"><span class="lbl mono" style="text-transform:none">design in default · light — the other three cells are a regression check</span></div>
+<div class="report">
+  <div class="report-bar">
+    <h1>Study dashboard</h1>
+    <span class="seg" role="group" aria-label="Colour scheme">
+      <button class="on" onclick="setScheme('default',this)">Default</button>
+      <button onclick="setScheme('edo',this)">Edo</button>
+    </span>
+    <span class="seg" role="group" aria-label="Appearance">
+      <button class="on" onclick="setMode('light',this)">Light</button>
+      <button onclick="setMode('dark',this)">Dark</button>
+      <button onclick="setMode('auto',this)">Auto</button>
+    </span>
+    <span class="live">drag the window edge → reflow · <b id="live-w">—</b> · <b id="live-cols">—</b></span>
   </div>
-
-  <!-- ══ TUNER ════════════════════════════════════════════════════════ -->
-  <div class="tuner" role="group" aria-label="Layout tuner">
-    <div class="grp"><span class="lbl">Viewport</span>
-      <button class="pbtn" data-vp="1440">13″ 1440</button>
-      <button class="pbtn" data-vp="1470">13.6″ 1470</button>
-      <button class="pbtn" data-vp="1512">14″ 1512</button>
-      <button class="pbtn" data-vp="1710">15″ 1710</button>
-      <button class="pbtn on" data-vp="1728">16″ 1728</button>
-      <button class="pbtn" data-vp="1920">HD 1920</button>
-      <button class="pbtn" data-vp="2240">iMac 2240</button>
-      <button class="pbtn" data-vp="2560">Studio 2560</button>
-    </div>
-    <div class="grp"><span class="lbl">Sidebar</span>
-      <button class="pbtn on" data-sb="0">Closed</button>
-      <button class="pbtn" data-sb="220">Open 220</button>
-    </div>
-    <div class="grp"><span class="lbl">Zoom</span>
-      <button class="pbtn on" data-zoom="1">100%</button>
-      <button class="pbtn" data-zoom="0.75">75%</button>
-      <button class="pbtn" data-zoom="0.5">50%</button>
-      <button class="pbtn" data-zoom="fit">Fit</button>
-    </div>
-  </div>
-
-  <div class="tuner" role="group" aria-label="Parameters">
-    <div class="grp"><span class="lbl">Quote min</span><input type="number" id="p-qmin" value="350" step="10"></div>
-    <div class="grp"><span class="lbl">Quote max</span><input type="number" id="p-qmax" value="544" step="8"></div>
-    <div class="grp"><span class="lbl">Signal min</span><input type="number" id="p-smin" value="480" step="10"></div>
-    <div class="grp"><span class="lbl">Clamp lines</span><input type="number" id="p-clamp" value="4" min="0" max="20" step="1"></div>
-    <div class="grp"><span class="lbl">Quote length</span>
-      <button class="pbtn" data-qlen="short">Short 15w</button>
-      <button class="pbtn on" data-qlen="median">Real median 79w</button>
-      <button class="pbtn" data-qlen="p90">p90 163w</button>
-    </div>
-  </div>
-
-  <div class="results" id="results">—</div>
-
-  <!-- ══ PHASE 3 · ASSEMBLED DASHBOARD ════════════════════════════════ -->
-  <section class="bench" id="bench-assembly">
-    <div class="bench-head">
-      <h2><span class="n">▦</span> Assembled dashboard <span style="font-size:var(--bn-text-caption);font-weight:400;color:var(--bn-sentiment-satisfaction);border:1px solid;border-radius:var(--bn-radius-pill);padding:.05rem .5rem">Phase 3 · foundation</span></h2>
-      <span class="readout" style="margin-left:auto">drive <b>Viewport / Sidebar / Zoom</b> ↑ — the whole grid reflows · <b class="w-val">—</b></span>
-    </div>
-    <p class="sub">The settled bricks in the RAM grid. <code>cfull</code> bricks (stats · verbatim · sessions) are full-width row-breaks;
-       the tiling bricks (Sections | Themes · Signals · Coverage) pack between them, so it never goes ragged-right. Each brick is its own container,
-       so widgets adapt their <em>faces</em> to brick width while the grid changes <em>column count</em> — both at once.</p>
-    <div class="sandbox-outer">
-      <div class="assembly-stage" data-bench="assembly" style="width:1644px">
-        <div class="dash">
+<div class="dash">
 
           <!-- RUNNING ORDER (settled): metrics · sessions · quotes · sections|themes · signals · coverage.
                Four full-width bands first (the Sections|Themes matrix earns full width),
@@ -802,760 +769,10 @@ a.sg-rowlabel:hover { color:var(--bn-colour-accent); text-decoration:underline; 
           </div>
 
         </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ══ BENCH · Study at a glance (numbers) ══════════════════════════ -->
-  <section class="bench" id="bench-stats">
-    <div class="bench-head">
-      <h2><span class="n">01</span> Study at a glance</h2>
-      <div class="faces" role="group" aria-label="Data density">
-        <button class="pbtn on" data-stats="full">Full · 8 units</button>
-        <button class="pbtn" data-stats="mid">No tags · 5</button>
-        <button class="pbtn" data-stats="sparse">Sparse · 3</button>
-      </div>
-    </div>
-    <p class="sub">Card internals MIRROR <code>.bn-project-stat</code> (28px display value, label, paired cards share one border).
-       <strong>Redesign:</strong> the container goes from <code>flex-wrap</code> (content-sized, ragged right) to a
-       <strong>justified grid</strong> — fixed <code>--bn-space-md</code> gutters, cards flex to fill, flush both edges.
-       Singles span 1 unit, pairs span 2. Every card is conditional, so units are <strong>data-driven (1–8)</strong>.
-       <span class="readout">width <b class="w-val">—</b> · <b id="stats-readout">—</b></span></p>
-    <div class="sandbox-outer">
-      <div class="sandbox" data-bench="stats" style="width:1644px">
-        <div class="bn-project-stats"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ══ BENCH · Verbatim / quotes ════════════════════════════════════ -->
-  <section class="bench" id="bench-vq">
-    <div class="bench-head">
-      <h2><span class="n">07</span> Verbatim / quotes</h2>
-      <span class="readout" style="margin-left:auto">driven by the tuner ↑</span>
-    </div>
-    <p class="sub">Card styling MIRRORS <code>.bn-featured-quote</code> (label-size text, bracketed context, real mono <code>.badge</code> footer).
-       <strong>Measure-bound at both ends</strong> — min 390px and max 544px — so a line stays between <strong>7.5 and ~11 words</strong> in every face
-       (calibrated at ~45.6px/word for 13px text). Responsive at <strong>1·2·3·4·5</strong>; text size constant throughout.
-       <span class="readout">width <b class="w-val">—</b></span></p>
-
-    <div class="sandbox-outer">
-      <div class="sandbox" data-bench="vq" style="width:720px">
-        <div class="bn-featured-row">
-          <div class="bn-featured-quote" role="button" tabindex="0">
-            <span class="context">[On finishing the purchase]</span>
-            <span class="quote-text">“Honestly the checkout was the smoothest part — I was done before I expected to be.”</span>
-            <div class="bn-featured-footer"><span class="timecode">[04:12]</span><a class="badge" href="#">P4</a><span class="badge badge-satisfaction">satisfaction</span></div>
-          </div>
-          <div class="bn-featured-quote" role="button" tabindex="0">
-            <span class="context">[Looking for a bed in stock]</span>
-            <span class="quote-text">“I couldn’t tell which one was actually available. I gave up and searched Google instead.”</span>
-            <div class="bn-featured-footer"><span class="timecode">[11:38]</span><a class="badge" href="#">P2</a><span class="badge badge-frustration">frustration</span></div>
-          </div>
-          <div class="bn-featured-quote" role="button" tabindex="0">
-            <span class="context">[Reading the delivery options]</span>
-            <span class="quote-text">“Wait — is ‘aftercare’ the delivery thing, or is that the returns thing?”</span>
-            <div class="bn-featured-footer"><span class="timecode">[07:05]</span><a class="badge" href="#">P7</a><span class="badge badge-confusion">confusion</span></div>
-          </div>
-          <div class="bn-featured-quote" role="button" tabindex="0">
-            <span class="context">[After filtering search results]</span>
-            <span class="quote-text">“Once I found the filter, I trusted the results completely — it just felt right.”</span>
-            <div class="bn-featured-footer"><span class="timecode">[09:21]</span><a class="badge" href="#">P3</a><span class="badge badge-confidence">confidence</span></div>
-          </div>
-          <div class="bn-featured-quote" role="button" tabindex="0">
-            <span class="context">[Switching from phone to laptop]</span>
-            <span class="quote-text">“I didn’t expect it to remember my basket across devices — that was a nice surprise.”</span>
-            <div class="bn-featured-footer"><span class="timecode">[14:47]</span><a class="badge" href="#">P8</a><span class="badge badge-surprise">surprise</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ══ BENCH · Pro & contra ═════════════════════════════════════════ -->
-  <section class="bench" id="bench-procon">
-    <div class="bench-head">
-      <h2><span class="n">04</span> Pro &amp; contra <span style="font-size:var(--bn-text-caption);font-weight:400;color:var(--bn-sentiment-doubt);border:1px solid;border-radius:var(--bn-radius-pill);padding:.05rem .5rem">candidate</span></h2>
-      <span class="readout" style="margin-left:auto">drive <b>Quote length</b> + <b>Clamp</b> in the tuner ↑</span>
-    </div>
-    <p class="sub">The kudos/kvetch order book, <strong>conformed</strong>: it’s the real <code>.bn-featured-quote</code> card in two polarity columns
-       — <strong>zero new elements</strong>. Dropped the order-book “spread” (false signal — the paired quotes aren’t counterparties).
-       <strong>Length is the challenge:</strong> two columns halve the width, so a real 79-word quote is worse here than in the single row —
-       same fix, the featured pull/clamp. Toggle <b>Clamp → 0</b> to see the wall. <span class="readout">width <b class="w-val">—</b></span></p>
-    <div class="sandbox-outer">
-      <div class="sandbox" data-bench="procon">
-        <div class="bn-procon">
-          <div class="bn-procon-col">
-            <h4>Pro <span class="n">11</span></h4>
-            <div class="bn-procon-list">
-              <div class="bn-featured-quote" role="button" tabindex="0" data-seed="1">
-                <span class="context">[On finishing the purchase]</span><span class="quote-text"></span>
-                <div class="bn-featured-footer"><span class="timecode">[04:12]</span><a class="badge" href="#">P4</a><span class="badge badge-satisfaction">satisfaction</span></div>
-              </div>
-              <div class="bn-featured-quote" role="button" tabindex="0" data-seed="4">
-                <span class="context">[After filtering results]</span><span class="quote-text"></span>
-                <div class="bn-featured-footer"><span class="timecode">[09:21]</span><a class="badge" href="#">P3</a><span class="badge badge-confidence">confidence</span></div>
-              </div>
-              <div class="bn-featured-quote" role="button" tabindex="0" data-seed="7">
-                <span class="context">[Switching devices]</span><span class="quote-text"></span>
-                <div class="bn-featured-footer"><span class="timecode">[14:47]</span><a class="badge" href="#">P8</a><span class="badge badge-delight">delight</span></div>
-              </div>
-            </div>
-          </div>
-          <div class="bn-procon-col">
-            <h4>Contra <span class="n">13</span></h4>
-            <div class="bn-procon-list">
-              <div class="bn-featured-quote" role="button" tabindex="0" data-seed="0">
-                <span class="context">[Looking for a bed]</span><span class="quote-text"></span>
-                <div class="bn-featured-footer"><span class="timecode">[11:38]</span><a class="badge" href="#">P2</a><span class="badge badge-frustration">frustration</span></div>
-              </div>
-              <div class="bn-featured-quote" role="button" tabindex="0" data-seed="5">
-                <span class="context">[Reading delivery options]</span><span class="quote-text"></span>
-                <div class="bn-featured-footer"><span class="timecode">[07:05]</span><a class="badge" href="#">P7</a><span class="badge badge-confusion">confusion</span></div>
-              </div>
-              <div class="bn-featured-quote" role="button" tabindex="0" data-seed="2">
-                <span class="context">[At checkout]</span><span class="quote-text"></span>
-                <div class="bn-featured-footer"><span class="timecode">[13:02]</span><a class="badge" href="#">P5</a><span class="badge badge-frustration">frustration</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ══ BENCH · Signals ══════════════════════════════════════════════ -->
-  <section class="bench" id="bench-sig">
-    <div class="bench-head">
-      <h2><span class="n">06</span> Signals</h2>
-      <span class="readout" style="margin-left:auto">driven by the tuner ↑</span>
-    </div>
-    <p class="sub">Card MIRRORS <code>.signal-card</code> (source eyebrow · 18px heading link · finding · pattern label), but
-       <strong>trimmed to the Signal metric only</strong> — right-aligned, tucked under the tag. <strong>No confidence badge — hidden in the real UI.</strong>
-       Cards are wider than quotes (~480 min), so you get <strong>3 quotes / 2 signals</strong>, or <strong>5 quotes / 3 signals</strong>.
-       <span class="readout">width <b class="w-val">—</b></span></p>
-    <div class="sandbox-outer">
-      <div class="sandbox" data-bench="sig" style="width:1000px">
-        <div class="signal-cards">
-
-          <div class="signal-card signal-card--dash">
-            <div class="signal-card-top">
-              <div class="signal-card-identity">
-                <span class="signal-card-source">Checkout &amp; delivery</span>
-                <div class="signal-card-location"><a class="signal-card-location-link" href="#">Confident to the finish</a></div>
-                <div class="signal-elaboration"><strong>Nobody hesitated at the final step</strong> — once they reached checkout, completion was immediate and untroubled.</div>
-              </div>
-              <div class="signal-card-right">
-                <div class="signal-card-badges"><span class="pattern-label pattern-success">SUCCESS</span></div>
-                <div class="signal-card-metrics">
-                  <span class="metric-label" title="Composite signal strength">Signal</span><span class="metric-value">0.82</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="signal-card signal-card--dash">
-            <div class="signal-card-top">
-              <div class="signal-card-identity">
-                <span class="signal-card-source">Beds category</span>
-                <div class="signal-card-location"><a class="signal-card-location-link" href="#">Stock status stays hidden</a></div>
-                <div class="signal-elaboration"><strong>Availability wasn’t visible on the category pages</strong> — so several abandoned the task and searched elsewhere.</div>
-              </div>
-              <div class="signal-card-right">
-                <div class="signal-card-badges"><span class="pattern-label pattern-gap">GAP</span></div>
-                <div class="signal-card-metrics">
-                  <span class="metric-label" title="Composite signal strength">Signal</span><span class="metric-value">0.68</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="signal-card signal-card--dash">
-            <div class="signal-card-top">
-              <div class="signal-card-identity">
-                <span class="signal-card-source">Post-surgery aftercare</span>
-                <div class="signal-card-location"><a class="signal-card-location-link" href="#">“Aftercare” cuts two ways</a></div>
-                <div class="signal-elaboration"><strong>“Aftercare” read as both delivery and returns</strong> — splitting expectations before the task even began.</div>
-              </div>
-              <div class="signal-card-right">
-                <div class="signal-card-badges"><span class="pattern-label pattern-tension">TENSION</span></div>
-                <div class="signal-card-metrics">
-                  <span class="metric-label" title="Composite signal strength">Signal</span><span class="metric-value">0.54</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ══ BENCH · Sections | Themes ═════════════════════════════════════ -->
-  <section class="bench" id="bench-st">
-    <div class="bench-head">
-      <h2><span class="n">03</span> Sections | Themes <span style="font-size:var(--bn-text-caption);font-weight:400;color:var(--bn-sentiment-doubt);border:1px solid;border-radius:var(--bn-radius-pill);padding:.05rem .5rem">= COMPACT face of the Signal grid</span></h2>
-      <div class="faces" role="group" aria-label="Stress test">
-        <button class="pbtn" data-st="5,4">5/4</button>
-        <button class="pbtn on" data-st="8,9">8/9</button>
-        <button class="pbtn" data-st="15,11">15/11</button>
-        <button class="pbtn" data-st="25,13">25/13</button>
-        <button class="pbtn" id="st-uncat">+ Uncategorised</button>
-      </div>
-    </div>
-    <p class="sub">Card styling MIRRORS <code>.bn-dashboard-pane--pair</code> + <code>.bn-dashboard-nav</code> (accent links, shared border, no divider,
-       no counts — the shipped dashboard has none). <strong>Redesign:</strong> columns are ~200px (≈30 chars, non-wrapping at 13px) and the total is split
-       between the groups <strong>in proportion to their counts</strong>, so columns come out ~equal length even when lopsided. Stress-test the counts above;
-       drag the sandbox to add columns. <span class="readout">width <b class="w-val">—</b> · <b id="st-readout">—</b></span></p>
-    <p class="sub" style="border-left:2px solid var(--bn-sentiment-doubt); padding-left:.6rem;">This nav-list pair is now the <strong>compact face</strong> of the <strong>Signal grid</strong>
-       (<code>dashboard-signal-grid.html</code>, designed in a parallel session, 17 Jul 2026): the rows are the same section/theme labels, and the expanded face reveals a
-       participant × cell matrix (hue = sentiment, depth = count, dot = residual). Same widget, richer with width — not a replacement. See <code>signal-grid.md</code>.</p>
-    <div class="sandbox-outer">
-      <div class="sandbox" data-bench="st" style="width:760px">
-        <div class="bn-dashboard-pane bn-dashboard-pane--pair"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ══ BENCH · Coverage ══════════════════════════════════════════════ -->
-  <section class="bench" id="bench-cov">
-    <div class="bench-head">
-      <h2><span class="n">08</span> Transcript coverage</h2>
-      <span class="readout" style="margin-left:auto">normal · faces pending chat · width <b class="w-val">—</b></span>
-    </div>
-    <p class="sub">MIRRORS the shipped <code>.bn-coverage-box</code> — 8px bar, round legend dots. Colours are <strong>palette-specific</strong>:
-       flip Scheme to Edo and the bar re-tones (blue→slate, ochre) while the sentiment widgets stay put.</p>
-    <div class="sandbox-outer">
-      <div class="sandbox" data-bench="cov" style="width:640px">
-        <div class="bn-coverage-box">
-          <h3>Transcript coverage</h3>
-          <div class="bn-coverage-bar">
-            <div class="bn-coverage-bar-segment bn-coverage-bar-segment--report" style="width:68%"></div>
-            <div class="bn-coverage-bar-segment bn-coverage-bar-segment--moderator" style="width:14%"></div>
-            <div class="bn-coverage-bar-segment bn-coverage-bar-segment--omitted" style="width:18%"></div>
-          </div>
-          <div class="bn-coverage-legend">
-            <span class="bn-coverage-legend-item"><span class="bn-coverage-legend-dot bn-coverage-legend-dot--report"></span><span class="bn-coverage-legend-value">68%</span>&nbsp;In report</span>
-            <span class="bn-coverage-legend-item"><span class="bn-coverage-legend-dot bn-coverage-legend-dot--moderator"></span><span class="bn-coverage-legend-value">14%</span>&nbsp;Moderator</span>
-            <span class="bn-coverage-legend-item"><span class="bn-coverage-legend-dot bn-coverage-legend-dot--omitted"></span><span class="bn-coverage-legend-value">18%</span>&nbsp;Omitted</span>
-          </div>
-
-          <!-- Omitted segments disclosure. Real logic: pct_omitted === 0 → the
-               italic "nothing omitted" line; else if there are sessions → <details>. -->
-          <details>
-            <summary><svg class="bn-disclosure-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>Show omitted</summary>
-            <div>
-              <p class="bn-coverage-session-title">Session 1</p>
-              <div class="bn-coverage-segment"><span class="timecode">[02:41]</span><span class="badge">P1</span>So I&rsquo;m just going to have a look at what&rsquo;s on this page first.</div>
-              <div class="bn-coverage-segment"><span class="timecode">[06:18]</span><span class="badge">P1</span>Sorry, could you say that again? I didn&rsquo;t catch it.</div>
-              <p class="bn-coverage-session-title">Session 3</p>
-              <div class="bn-coverage-segment"><span class="timecode">[11:02]</span><span class="badge">P3</span>Right. Okay. Yeah.</div>
-            </div>
-          </details>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ══ BENCH · Co-occurrence  (PARKED — hardest; return once principles settle) ══ -->
-  <section class="bench" id="bench-cooc">
-    <div class="bench-head">
-      <h2><span class="n">05</span> Co-occurrence <span style="font-size:var(--bn-text-caption);font-weight:400;color:var(--bn-sentiment-doubt);border:1px solid;border-radius:var(--bn-radius-pill);padding:.05rem .5rem">PARKED — hardest</span></h2>
-      <div class="faces" role="group" aria-label="Face presets">
-        <button class="pbtn" data-w="300">Compact</button>
-        <button class="pbtn on" data-w="520">Normal</button>
-        <button class="pbtn" data-w="860">Expanded</button>
-      </div>
-    </div>
-    <p class="sub">“Where do participants agree — and disagree?” Rows = participants, columns = sections,
-       cell hue = dominant sentiment, cell depth = quote count. Reads Scharp’s three continua at a glance.
-       <span class="readout">width <b class="w-val">—</b></span></p>
-
-    <div class="sandbox-outer">
-      <div class="sandbox" data-bench="cooc" style="width:520px">
-        <div class="cooc" style="--cols:8">
-          <div class="cooc-grid">
-            <div class="corner"></div>
-            <div class="chead">Pre-surgery info</div>
-            <div class="chead">Aftercare</div>
-            <div class="chead">Notifications</div>
-            <div class="chead">Top navigation</div>
-            <div class="chead">Beds category</div>
-            <div class="chead">Search results</div>
-            <div class="chead">Login &amp; app</div>
-            <div class="chead">Checkout</div>
-
-            <div class="rhead">p1</div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-satisfaction);--w:var(--bn-ramp-3)"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-frustration);--w:var(--bn-ramp-3)"><span class="emph">⁺</span></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-delight);--w:var(--bn-ramp-2)"></div>
-            <div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div>
-
-            <div class="rhead">p2</div>
-            <div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-frustration);--w:var(--bn-ramp-2)"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-confusion);--w:var(--bn-ramp-2)"></div>
-            <div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div>
-
-            <div class="rhead">p3</div>
-            <div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-surprise);--w:var(--bn-ramp-2)"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-satisfaction);--w:var(--bn-ramp-2)"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-delight);--w:var(--bn-ramp-3)"><span class="emph">⁺</span></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-satisfaction);--w:var(--bn-ramp-1)"></div>
-
-            <div class="rhead">p4</div>
-            <div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-satisfaction);--w:var(--bn-ramp-2)"></div>
-            <div class="cooc-cell"></div><div class="cooc-cell"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-frustration);--w:var(--bn-ramp-2)"></div>
-
-            <div class="rhead">p5</div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-confidence);--w:var(--bn-ramp-1)"></div>
-            <div class="cooc-cell"></div><div class="cooc-cell"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-confusion);--w:var(--bn-ramp-1)"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-frustration);--w:var(--bn-ramp-3)"><span class="emph">⁺</span></div>
-            <div class="cooc-cell"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-doubt);--w:var(--bn-ramp-2)"></div>
-            <div class="cooc-cell"></div>
-
-            <div class="rhead">p6</div>
-            <div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-satisfaction);--w:var(--bn-ramp-2)"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-satisfaction);--w:var(--bn-ramp-1)"></div>
-            <div class="cooc-cell"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-frustration);--w:var(--bn-ramp-1)"></div>
-
-            <div class="rhead">p7</div>
-            <div class="cooc-cell"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-doubt);--w:var(--bn-ramp-1)"></div>
-            <div class="cooc-cell"></div><div class="cooc-cell"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-confusion);--w:var(--bn-ramp-2)"></div>
-            <div class="cooc-cell"></div><div class="cooc-cell"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-satisfaction);--w:var(--bn-ramp-2)"></div>
-
-            <div class="rhead">p8</div>
-            <div class="cooc-cell"></div><div class="cooc-cell"></div><div class="cooc-cell"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-confusion);--w:var(--bn-ramp-1)"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-surprise);--w:var(--bn-ramp-1)"></div>
-            <div class="cooc-cell"></div>
-            <div class="cooc-cell on" style="--c:var(--bn-sentiment-delight);--w:var(--bn-ramp-2)"></div>
-            <div class="cooc-cell"></div>
-          </div>
-
-          <div class="cooc-read">
-            <div class="legend">
-              <span class="swatch">hue = sentiment</span>
-              <span class="swatch"><span class="chip" style="background:var(--bn-sentiment-satisfaction)"></span>satisfaction</span>
-              <span class="swatch"><span class="chip" style="background:var(--bn-sentiment-frustration)"></span>frustration</span>
-              <span class="swatch"><span class="chip" style="background:var(--bn-sentiment-confusion)"></span>confusion</span>
-              <span class="swatch">depth = quotes
-                <span class="ramp"><i style="--w:var(--bn-ramp-1)"></i><i style="--w:var(--bn-ramp-2)"></i><i style="--w:var(--bn-ramp-3)"></i></span>
-              </span>
-            </div>
-
-            <div class="continua">
-              <div class="c"><b>Sporadic ↔ Pervasive</b><div class="k">column · how many participants</div>
-                <p>Beds category is <b>pervasive</b> (6 of 8) — everyone went, nobody agrees. Aftercare is <b>sporadic</b> (1) but maximum-heat.</p></div>
-              <div class="c"><b>Unbalanced ↔ Balanced</b><div class="k">row · one theme or many</div>
-                <p>p1 is <b>unbalanced</b> (front-loaded, healthcare). p3 is <b>balanced with high variance</b>.</p></div>
-              <div class="c"><b>Consensus ↔ Conflict</b><div class="k">column hues · agree or split</div>
-                <p>Checkout is <b>split</b> (p3 satisfaction, p4/p6 frustration) — live disagreement worth a rewatch.</p></div>
-            </div>
-
-            <p class="method">⁺ marks an intensity-3 quote in the cell. Method after Scharp, K. (2021), <span class="mono">J. Communication</span> 71(4). Empty cells are information — who <em>didn’t</em> reach a section.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <p class="foot">More benches land here as Phase 1 proceeds (friction heatmap → saturation → fingerprint → …).
-     Gallery lives flat in <span class="mono">docs/mockups/</span> so it stays in the dev About→Design listing.</p>
 
 </div>
 
 <script>
-(function () {
-  var root = document.documentElement;
-  root.style.colorScheme = 'light';                 // match the Light button's initial .on state
-
-  document.querySelectorAll('[data-mode]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      document.querySelectorAll('[data-mode]').forEach(function (x) { x.classList.remove('on'); });
-      b.classList.add('on');
-      root.style.colorScheme = b.dataset.mode;       // 'light' | 'dark' → light-dark() resolves
-    });
-  });
-
-  document.querySelectorAll('[data-scheme]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      document.querySelectorAll('[data-scheme]').forEach(function (x) { x.classList.remove('on'); });
-      b.classList.add('on');
-      root.setAttribute('data-color-theme', b.dataset.scheme);   // the REAL app mechanism
-    });
-  });
-
-  document.querySelectorAll('.bench-head .faces .pbtn').forEach(function (b) {
-    b.addEventListener('click', function () {
-      if (!b.dataset.w) return;               // guard: not a width preset (e.g. the ST stress-test buttons)
-      var faces = b.closest('.faces');
-      faces.querySelectorAll('.pbtn').forEach(function (x) { if (x.dataset.w) x.classList.remove('on'); });
-      b.classList.add('on');
-      b.closest('.bench').querySelector('.sandbox').style.width = b.dataset.w + 'px';
-    });
-  });
-
-  document.querySelectorAll('.bench').forEach(function (bench) {
-    var sb = bench.querySelector('.sandbox'), out = bench.querySelector('.w-val');
-    if (!sb || !out) return;
-    new ResizeObserver(function (e) { out.textContent = Math.round(e[0].contentRect.width) + 'px'; }).observe(sb);
-  });
-
-  // ══ Sections | Themes — stress test + proportional column allocation ═══════
-  var ST_SECTIONS = [
-    'Beds category page', 'Checkout & delivery', 'Search results', 'Pre-surgery information',
-    'Login & app access', 'Shopping bag', 'Duvets browsing', 'Top navigation',
-    'Product detail page', 'Filters & sorting', 'Delivery options', 'Payment methods',
-    'Order confirmation', 'Returns & refunds', 'Stock availability', 'Customer reviews',
-    'Room planner tool', 'Assembly instructions', 'Click & collect', 'Store locator',
-    'Account settings', 'Wishlist', 'Post-surgery aftercare', 'Gift cards', 'Price comparison'
-  ];
-  var ST_THEMES = [
-    'Trust & credibility', 'Findability', 'Delivery clarity', 'Cross-device continuity',
-    'Price transparency', 'Assembly anxiety', 'Stock confidence', 'Decision paralysis',
-    'Brand expectations', 'Time pressure', 'Comparison behaviour', 'Accessibility needs',
-    'Post-purchase support'
-  ];
-  var ST_UNCAT = ['Ambient room noise', 'Off-topic aside', 'Unclear reference'];
-  var stState = { s: 8, t: 9, uncat: false };
-
-  function stPane(title, items) {
-    var d = document.createElement('div');
-    d.className = 'bn-dashboard-pane--pair-half bn-dashboard-nav';
-    d.dataset.count = items.length;
-    var h = document.createElement('h3');
-    h.textContent = title;
-    d.appendChild(h);
-    var ul = document.createElement('ul');
-    items.forEach(function (t) {
-      var li = document.createElement('li'), a = document.createElement('a');
-      a.href = '#'; a.textContent = t; li.appendChild(a); ul.appendChild(li);
-    });
-    d.appendChild(ul);
-    return d;
-  }
-
-  function renderST() {
-    var wrap = document.querySelector('[data-bench="st"] .bn-dashboard-pane--pair');
-    if (!wrap) return;
-    wrap.innerHTML = '';
-    wrap.appendChild(stPane('Sections', ST_SECTIONS.slice(0, stState.s)));
-    wrap.appendChild(stPane('Themes', ST_THEMES.slice(0, stState.t)));
-    if (stState.uncat) wrap.appendChild(stPane('Uncategorised', ST_UNCAT));
-    layoutST();
-  }
-
-  // Split the available columns between groups in proportion to item count
-  // (largest remainder, min 1 each) so items-per-column lands ~equal.
-  function layoutST() {
-    var wrap = document.querySelector('[data-bench="st"] .bn-dashboard-pane--pair');
-    if (!wrap) return;
-    var groups = Array.prototype.slice.call(wrap.querySelectorAll('.bn-dashboard-pane--pair-half'));
-    if (!groups.length) return;
-    var COLW = 200, GAP = 24, PAD = 48, MINPER = 5;     // col width · gutter · pane padding (space-lg ×2) · min items/col
-    var counts = groups.map(function (g) { return +g.dataset.count; });
-    var total = counts.reduce(function (a, b) { return a + b; }, 0);
-    var avail = wrap.clientWidth - groups.length * PAD;
-    var fits = Math.floor((avail + GAP) / (COLW + GAP));  // how many columns the WIDTH allows
-    var useful = Math.ceil(total / MINPER);               // how many the DATA can fill (no 1-item columns)
-    var N = Math.max(groups.length, Math.min(fits, useful));
-
-    var raw = counts.map(function (c) { return c / total * N; });
-    var cols = raw.map(function (r) { return Math.max(1, Math.floor(r)); });
-    var used = cols.reduce(function (a, b) { return a + b; }, 0);
-    var order = raw.map(function (r, i) { return { i: i, f: r - Math.floor(r) }; })
-                   .sort(function (a, b) { return b.f - a.f; });
-    var k = 0;
-    while (used < N && k < 50) {                          // largest-remainder; never more cols than items
-      var t = order[k % order.length].i;
-      if (cols[t] < counts[t]) { cols[t]++; used++; }
-      k++;
-    }
-    while (used > N) {                                    // min-1 can overshoot; trim the biggest
-      var mx = 0;
-      for (var j = 1; j < cols.length; j++) if (cols[j] > cols[mx]) mx = j;
-      if (cols[mx] <= 1) break;
-      cols[mx]--; used--;
-    }
-
-    groups.forEach(function (g, i) {
-      // Size the pane to EXACTLY its columns: cols×COLW + gutters + padding.
-      // Do NOT flex-grow — growing makes column-count divide a too-wide pane, so
-      // each column stretches far past COLW and the slack reads as a huge gutter.
-      var w = cols[i] * COLW + (cols[i] - 1) * GAP + PAD;
-      g.style.flex = '0 0 ' + w + 'px';
-      g.querySelector('ul').style.columnCount = cols[i];  // ul is now exactly cols×COLW + gutters ⇒ columns are COLW
-    });
-    var ro = document.getElementById('st-readout');
-    if (ro) {
-      ro.textContent = groups.map(function (g, i) {
-        return counts[i] + '→' + cols[i] + 'col (' + (counts[i] / cols[i]).toFixed(1) + '/col)';
-      }).join(' · ');
-    }
-  }
-
-  document.querySelectorAll('[data-st]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      document.querySelectorAll('[data-st]').forEach(function (x) { x.classList.remove('on'); });
-      b.classList.add('on');
-      var p = b.dataset.st.split(',');
-      stState.s = +p[0]; stState.t = +p[1];
-      renderST();
-    });
-  });
-  var uncatBtn = document.getElementById('st-uncat');
-  if (uncatBtn) uncatBtn.addEventListener('click', function () {
-    stState.uncat = !stState.uncat;
-    uncatBtn.classList.toggle('on', stState.uncat);
-    renderST();
-  });
-  var stSandbox = document.querySelector('[data-bench="st"]');
-  if (stSandbox) new ResizeObserver(function () { layoutST(); }).observe(stSandbox);
-
-  // ══ TUNER ENGINE ══════════════════════════════════════════════════════════
-  // Real chrome, measured from the code: report padding = --bn-space-lg ×2 = 48,
-  // collapsed rail = --bn-rail-width = 36, desktop project sidebar = 220 (ideal).
-  var RAIL = 36, PAD = 48, GAP = 12, PXW = 45.6, CHROME = 50;  // CHROME = card padding 48 + border 2
-  var QLEN = { short: 15, median: 79, p90: 163 };               // measured from 761 real quotes
-  var T = { vp: 1728, sb: 0, zoom: 1, qmin: 350, qmax: 544, smin: 480, clamp: 4, qlen: 'median' };
-
-  // Realistic think-aloud sentences, composed to hit an exact word target.
-  var SENTENCES = [
-    'I couldn’t tell which one was actually available.',
-    'So I’m just going to scroll down and see what else there is.',
-    'It says delivery in five to seven days but I’m not sure if that includes assembly.',
-    'Honestly the checkout was the smoothest part of the whole thing.',
-    'I’d expect the filter to be at the top, not hidden behind that little icon.',
-    'Wait — is aftercare the delivery thing, or is that the returns thing?',
-    'I’ve used this before on my phone and it remembered my basket, which was nice.',
-    'There’s a lot going on on this page and I don’t know where to look first.',
-    'I’m going to click continue as guest because I don’t want another account.',
-    'The price is clear but I can’t see whether that’s with or without VAT.',
-    'Home textiles and rugs, bedding, duvets — okay, that’s where I’d go.',
-    'If I’m honest I’d probably just give up here and search on Google instead.',
-    'That’s reassuring actually, it tells me exactly when it’s arriving.',
-    'I don’t trust that review score, it seems too high for something this cheap.',
-    'Add to shopping bag — done. That was easier than I thought it’d be.'
-  ];
-  function composeQuote(target, seed) {
-    var out = [], n = 0, i = seed;
-    while (n < target) {
-      var s = SENTENCES[i % SENTENCES.length];
-      out.push(s); n += s.split(' ').length; i++;
-    }
-    return out.join(' ');
-  }
-
-  function wrapSandboxes() {
-    document.querySelectorAll('.sandbox').forEach(function (sb) {
-      if (sb.parentElement.classList.contains('sandbox-scale')) return;
-      var w = document.createElement('div');
-      w.className = 'sandbox-scale';
-      sb.parentElement.insertBefore(w, sb);
-      w.appendChild(sb);
-    });
-  }
-
-  function contentWidth() { return T.vp - T.sb - RAIL - PAD; }
-  function colsFor(cw, min, cap) { return Math.max(1, Math.min(cap, Math.floor((cw + GAP) / (min + GAP)))); }
-
-  function applyZoom() {
-    document.querySelectorAll('.sandbox').forEach(function (sb) {
-      var scale = T.zoom;
-      if (scale === 'fit') {
-        var outer = sb.closest('.sandbox-outer');
-        scale = outer ? Math.min(1, outer.clientWidth / sb.offsetWidth) : 1;
-      }
-      sb.style.setProperty('--zoom', scale);
-      var wrap = sb.parentElement;
-      if (wrap && wrap.classList.contains('sandbox-scale')) {
-        wrap.style.width = (sb.offsetWidth * scale) + 'px';
-        wrap.style.height = (sb.offsetHeight * scale) + 'px';
-      }
-    });
-  }
-
-  // ── Study at a glance ────────────────────────────────────────────────────
-  // Mirrors the shipped conditionals: every card and every pair-half is
-  // optional, so the unit count is data-driven. React knows this at render —
-  // no measurement. singles = 1 unit, full pairs = 2.
-  var STATS_SETS = {
-    full:   [ {v:'8', l:'sessions'},
-              {pair:[{v:'2h 14m', l:'of sessions'}, {v:'104,832', l:'words'}]},
-              {pair:[{v:'353', l:'quotes'}, {v:'11', l:'themes'}]},
-              {v:'16', l:'sections'},
-              {pair:[{v:'240', l:'AI tags'}, {v:'37', l:'user tags'}]} ],
-    mid:    [ {v:'8', l:'sessions'},
-              {pair:[{v:'2h 14m', l:'of sessions'}, {v:'104,832', l:'words'}]},
-              {pair:[{v:'353', l:'quotes'}, {v:'11', l:'themes'}]} ],
-    sparse: [ {v:'3', l:'sessions'},
-              {pair:[{v:'41m', l:'of sessions'}, null]},      // half missing → 1 unit
-              {v:'27', l:'quotes'} ]
-  };
-  var statsSet = 'full';
-
-  function statHalf(d) {
-    var a = document.createElement('a');
-    a.className = 'bn-project-stat--pair-half'; a.href = '#';
-    a.innerHTML = '<span class="bn-project-stat-value">' + d.v + '</span>' +
-                  '<span class="bn-project-stat-label">' + d.l + '</span>';
-    return a;
-  }
-  function renderStats() {
-    var wrap = document.querySelector('[data-bench="stats"] .bn-project-stats');
-    if (!wrap) return 0;
-    wrap.innerHTML = '';
-    var units = 0;
-    STATS_SETS[statsSet].forEach(function (c) {
-      if (c.pair) {
-        var halves = c.pair.filter(Boolean);
-        var el = document.createElement('div');
-        el.className = 'bn-project-stat bn-project-stat--pair';
-        halves.forEach(function (h) { el.appendChild(statHalf(h)); });
-        if (halves.length === 1) el.style.gridColumn = 'span 1';   // a half-less pair is 1 unit
-        units += halves.length;
-        wrap.appendChild(el);
-      } else {
-        var s = document.createElement('a');
-        s.className = 'bn-project-stat'; s.href = '#';
-        s.innerHTML = '<span class="bn-project-stat-value">' + c.v + '</span>' +
-                      '<span class="bn-project-stat-label">' + c.l + '</span>';
-        units += 1;
-        wrap.appendChild(s);
-      }
-    });
-    wrap.style.setProperty('--units', units);
-    return units;
-  }
-
-  function applyAll() {
-    var cw = contentWidth();
-    document.querySelectorAll('.sandbox').forEach(function (sb) { sb.style.width = cw + 'px'; });
-
-    // — Assembled dashboard — the stage takes the full content width + zoom, and
-    //   the RAM grid + container queries do the rest (no per-brick JS).
-    var stage = document.querySelector('.assembly-stage');
-    if (stage) {
-      stage.style.width = cw + 'px';
-      var z = T.zoom;
-      if (z === 'fit') { var o = stage.closest('.sandbox-outer'); z = o ? Math.min(1, o.clientWidth / cw) : 1; }
-      stage.style.setProperty('--zoom', z);
-      var av = document.querySelector('#bench-assembly .w-val');
-      if (av) av.textContent = cw + 'px' + (z !== 1 ? ' @' + Math.round(z * 100) + '%' : '');
-    }
-
-    // — Study at a glance —
-    var units = renderStats();
-    var sro = document.getElementById('stats-readout');
-    if (sro && units) {
-      var unitW = (cw - (units - 1) * GAP) / units;
-      sro.textContent = units + ' units · ' + Math.round(unitW) + 'px each · gutter ' + GAP + 'px (fixed) · justified';
-    }
-
-    // — Quotes —
-    var qcols = colsFor(cw, T.qmin, 5);
-    var row = document.querySelector('.bn-featured-row');
-    if (row) {
-      row.style.gridTemplateColumns = 'repeat(' + qcols + ',1fr)';
-      row.querySelectorAll('.bn-featured-quote').forEach(function (c, i) {
-        c.style.display = (i < qcols) ? 'flex' : 'none';
-        c.style.maxWidth = T.qmax + 'px';
-        var t = c.querySelector('.quote-text');
-        if (!t) return;
-        t.textContent = '“' + composeQuote(QLEN[T.qlen], i * 3) + '”';
-        if (T.clamp > 0) { t.classList.add('clamped'); t.style.setProperty('--clamp', T.clamp); }
-        else { t.classList.remove('clamped'); }
-      });
-    }
-
-    // — Pro & contra — reuses the featured quote card, so it inherits the SAME
-    //   length treatment. Drives home that two columns make length worse.
-    document.querySelectorAll('.bn-procon .bn-featured-quote').forEach(function (c) {
-      var t = c.querySelector('.quote-text');
-      if (!t) return;
-      t.textContent = '“' + composeQuote(QLEN[T.qlen], +(c.dataset.seed || 0)) + '”';
-      if (T.clamp > 0) { t.classList.add('clamped'); t.style.setProperty('--clamp', T.clamp); }
-      else { t.classList.remove('clamped'); }
-    });
-
-    // — Signals —
-    var scols = colsFor(cw, T.smin, 3);
-    var sc = document.querySelector('.signal-cards');
-    if (sc) {
-      sc.style.gridTemplateColumns = 'repeat(' + scols + ',1fr)';
-      sc.querySelectorAll('.signal-card').forEach(function (c, i) {
-        c.style.display = (i < scols) ? 'block' : 'none';
-      });
-    }
-
-    layoutST();
-    applyZoom();
-    renderResults(cw, qcols, scols);
-  }
-
-  function renderResults(cw, qcols, scols) {
-    var qcard = Math.min((cw - (qcols - 1) * GAP) / qcols, T.qmax);
-    var qw = (qcard - CHROME) / PXW;                       // words per line
-    var need = QLEN[T.qlen];
-    var lines = Math.ceil(need / qw);
-    var shown = T.clamp > 0 ? Math.min(lines, T.clamp) : lines;
-    var cut = T.clamp > 0 && lines > T.clamp;
-    var scard = (cw - (scols - 1) * GAP) / scols;
-    var band = (qw >= 7 && qw <= 11);
-    var el = document.getElementById('results');
-    if (!el) return;
-    el.innerHTML =
-      'viewport <b>' + T.vp + '</b> − sidebar ' + T.sb + ' − rail ' + RAIL + ' − padding ' + PAD +
-        ' = content <b>' + cw + 'px</b>' +
-      '<br>quotes: <b>' + qcols + '-up</b> · card ' + Math.round(qcard) + 'px · ' +
-        '<span class="' + (band ? 'ok' : 'warn') + '">' + qw.toFixed(1) + ' words/line</span>' +
-        (band ? '' : ' ← outside 7–11') +
-      '<br>a ' + need + '-word quote = <b>' + lines + ' lines</b>' +
-        (T.clamp > 0
-          ? ' → clamped to <b>' + shown + '</b>' + (cut ? ' <span class="warn">(truncated — ' + Math.round(shown * qw) + ' of ' + need + ' words shown)</span>' : ' <span class="ok">(fits whole)</span>')
-          : ' <span class="warn">(no clamp — card height = quote length)</span>') +
-      '<br>signals: <b>' + scols + '-up</b> · card ' + Math.round(scard) + 'px' +
-      '<br>breakpoints — quotes: ' + [1,2,3,4,5].map(function(n){return n+'@'+(n*T.qmin+(n-1)*GAP);}).join(' · ') +
-      '<br>breakpoints — signals: ' + [1,2,3].map(function(n){return n+'@'+(n*T.smin+(n-1)*GAP);}).join(' · ');
-  }
-
-  function bindBtns(attr, fn) {
-    document.querySelectorAll('[' + attr + ']').forEach(function (b) {
-      b.addEventListener('click', function () {
-        document.querySelectorAll('[' + attr + ']').forEach(function (x) { x.classList.remove('on'); });
-        b.classList.add('on');
-        fn(b.getAttribute(attr));
-        applyAll();
-      });
-    });
-  }
-  bindBtns('data-vp',   function (v) { T.vp = +v; });
-  bindBtns('data-sb',   function (v) { T.sb = +v; });
-  bindBtns('data-zoom', function (v) { T.zoom = (v === 'fit') ? 'fit' : +v; });
-  bindBtns('data-qlen', function (v) { T.qlen = v; });
-  bindBtns('data-stats', function (v) { statsSet = v; });
-
-  [['p-qmin','qmin'],['p-qmax','qmax'],['p-smin','smin'],['p-clamp','clamp']].forEach(function (p) {
-    var el = document.getElementById(p[0]);
-    if (el) el.addEventListener('input', function () { T[p[1]] = +el.value || 0; applyAll(); });
-  });
-
-  wrapSandboxes();
-  renderST();
-  applyAll();
-})();
-
 // ══ Signal grid — the WIDE face of brick 3, in the assembled dashboard ═══════
 // Ported from dashboard-signal-grid.html (settled 17 Jul 2026). Same encoding,
 // transposed into the pane: rows = section/theme, cols = participants.
@@ -1706,6 +923,20 @@ a.sg-rowlabel:hover { color:var(--bn-colour-accent); text-decoration:underline; 
   var tMount = document.querySelector('.sg-pane[data-sg="themes"]');
   if (sMount) buildPane(sMount, "Sections", "sections");
   if (tMount) buildPane(tMount, "Themes", "themes");
+})();
+
+function setScheme(s, btn){ document.documentElement.setAttribute("data-color-theme", s);
+  [].slice.call(btn.parentNode.children).forEach(function(b){b.classList.remove("on");}); btn.classList.add("on"); }
+function setMode(mode, btn){ document.documentElement.style.colorScheme = (mode==="auto")?"light dark":mode;
+  [].slice.call(btn.parentNode.children).forEach(function(b){b.classList.remove("on");}); btn.classList.add("on"); }
+(function(){
+  var wEl = document.getElementById("live-w"), cEl = document.getElementById("live-cols");
+  var dash = document.querySelector(".dash");
+  function upd(){ wEl.textContent = Math.round(window.innerWidth) + "px wide";
+    var cols = getComputedStyle(dash).gridTemplateColumns.split(" ").length;
+    cEl.textContent = cols + " columns"; }
+  new ResizeObserver(upd).observe(document.querySelector(".report"));
+  upd();
 })();
 </script>
 </body>

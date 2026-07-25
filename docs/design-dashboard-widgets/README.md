@@ -46,6 +46,17 @@ by URL but silently drops out of that auto-listing. So:
 
 Don't "tidy" the gallery into this folder — it'll vanish from the About tab.
 
+**Two mockups now carry the assembled dashboard** (both flat in `docs/mockups/`):
+- **`dashboard-widget-gallery.html`** — the intrinsic bench + tuner + the Phase-3 assembly (tuner-sized
+  stage: zoom + snap-to-viewport).
+- **`dashboard-assembled.html`** — the assembly at real viewport width, no stage: **resize the browser
+  window** to watch the RAM grid reflow. Generated from the gallery by `scratchpad/build-assembled.js`
+  (extracts the shared CSS + widgets + matrix JS so there's no drift); regenerate after gallery edits.
+
+**Figma** (external, one shared design file): pixel-accurate 1321 + 1440 keyframes for visual alignment,
+plus a **Type specimens** page with the BN/* text-style library (Scale D, from `tokens-typography.css`).
+See [signal-grid.md](signal-grid.md) §Integrated for the settled layout decisions.
+
 ## Lineage at a glance
 
 `design-dashboard-stats.md` (Feb, content inventory) → `dashboard-theme-list-stress-test`

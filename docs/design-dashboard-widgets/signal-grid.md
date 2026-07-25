@@ -157,10 +157,51 @@ deferred** — captured in the planning backlog. Circles are area-encoded off th
 cell − 10`), so at 24px the residual read is deliberately faint — the trade taken is vertical density
 over dot legibility, to be revisited when two-digit support lands.
 
-## Open for the total-page mock
+## Integrated into the assembled dashboard (25 Jul 2026)
 
-- **Panes side by side when wide, stack when narrow** (flex-wrap) — matches brick-3. Confirm the
-  width threshold in the tessellation pass.
+The matrix is now floated into the total-page mock — both in the gallery's Phase-3 assembly
+([dashboard-widget-gallery.html](../mockups/dashboard-widget-gallery.html) §Assembled dashboard) and
+in a new standalone full-window page ([dashboard-assembled.html](../mockups/dashboard-assembled.html),
+generated from the gallery — resize the browser to see it reflow). Decisions settled during
+integration:
+
+- **Discrete fold, gated on brick width** (`@container widget`): wide → the matrix; narrow → the
+  existing NavList. **Threshold: `min-width: 760px`** — two 8-participant panes side by side need
+  ~744px (2×360 + 24 gap). Earlier 720 was 1px too tight and caught a real defect at exactly 1321px
+  viewport (matrix showed but panes wrapped and clipped). Fold threshold scales with participant count.
+- **Matrix ∥ Signals is one full-width band split `3fr : 2fr`** (a fixed ratio, not RAM-grid integer
+  spans) so the 60/40 proportion holds at every screen width — 13″/16″/HD/Studio just widen the
+  columns. Matrix = 3/5 (Sections+Themes), Signals stack = 2/5. Tune the ratio in one line
+  (`.ms-split grid-template-columns`); 2fr:1fr pulls signal cards back to their ~530px sweet spot.
+- **Sample bumped to 8 participants** (matches the study's 8 sessions) — the matrix width is a
+  function of participant count, so 4 was unrealistically narrow and left slack. The **row-label track
+  now flexes** (`minmax(110px,1fr)`) so the matrix fills its column with longer, un-truncated labels
+  instead of leftover whitespace; cells stay a constant 24px.
+- **Row labels are links** (`a.sg-rowlabel`) to that section/theme in the quotes lens — restrained
+  mouseover-blue (default text → accent + underline on hover), not always-blue, so the 24 labels don't
+  fight the sentiment cells. The always-blue NavList face teaches clickability.
+- **No brick head on the matrix** — each pane carries its own "Sections"/"Themes" h3, so a
+  `SECTIONS | THEMES` all-caps head above them was redundant.
+- **Bricks are scaffolding** — the assembly's `.w` bricks have no border/background/padding; only the
+  content cards (stats · quotes · signals) carry borders. The matrix panes and coverage bar sit
+  directly under their heading. (The featured row is renamed **Key quotes**.)
+
+**Figma keyframes** (external, same design file): the 1321 nav-list face + the 1440 matrix face are
+built pixel-accurate for visual alignment, plus a **Type specimens** page carrying the BN/* text-style
+library (Scale D). Round-trip contract: retuning a value in Figma comes back to me as a token/CSS
+change, not Figma-only drift.
+
+## Still open for the total-page mock
+
+- **Signal keyline colour**: blue (selected-card) is loud against the sentiment fills; the quieter
+  resting-grey card border is a one-token fallback — judge in situ once real density is on screen.
+- **Dark mode**: the sentiment `-bg` darks are deep/muted, so low-count cells lean on the dot — check
+  `count = 1` legibility in dark on the assembled page.
+- **No resting sentiment legend** now (it's taught via the tooltip). Fine for an orientation layer;
+  confirm it still reads on the full page.
+- **Quote in the tooltip**: removed for now, data retained — bring back if the tooltip has room.
+- **Two-digit participant safety** (10+ participants overflow the 24px cell) still deferred — see the
+  size-sandbox decision above.
 - **Signal keyline colour**: blue (selected-card) is loud against the sentiment fills; the quieter
   resting-grey card border is a one-token fallback — judge in situ once real density is on screen.
 - **Dark mode**: the sentiment `-bg` darks are deep/muted, so low-count cells lean on the dot — check

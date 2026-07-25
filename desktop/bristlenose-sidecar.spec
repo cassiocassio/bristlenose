@@ -117,6 +117,14 @@ a = Analysis(
             os.path.join(PROJECT_ROOT, "bristlenose", "server", "static"),
             os.path.join("bristlenose", "server", "static"),
         ),
+        # Single-file export build (frontend/vite.export.config.ts → app.js/app.css).
+        # Inlined by routes/export.py `_build_export_html` so an exported report
+        # renders from file://. Without this the export endpoint 500s ("Export
+        # build not found") in the packaged .app. Also gitignored at the source.
+        (
+            os.path.join(PROJECT_ROOT, "bristlenose", "server", "static-export"),
+            os.path.join("bristlenose", "server", "static-export"),
+        ),
         # YAML codebook templates (garrett, morville, norman, uxr, plato).
         # Loaded by routes/codebook.py and exposed via the Browse Codebooks
         # modal. Without this entry the CODEBOOK FRAMEWORKS list is empty

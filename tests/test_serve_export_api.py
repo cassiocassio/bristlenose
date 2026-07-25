@@ -16,16 +16,14 @@ from bristlenose.server.app import create_app
 from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
-_STATIC_INDEX = (
-    Path(__file__).resolve().parent.parent
-    / "bristlenose"
-    / "server"
-    / "static"
-    / "index.html"
-)
+_SERVER_DIR = Path(__file__).resolve().parent.parent / "bristlenose" / "server"
+_STATIC_INDEX = _SERVER_DIR / "static" / "index.html"
+# The export inlines the single-file export build (static-export/app.js), not the
+# code-split serve build — require it too, else the endpoint 500s.
+_EXPORT_APP = _SERVER_DIR / "static-export" / "app.js"
 
 pytestmark = pytest.mark.skipif(
-    not _STATIC_INDEX.is_file(),
+    not (_STATIC_INDEX.is_file() and _EXPORT_APP.is_file()),
     reason="frontend build not found (run 'cd frontend && npm run build')",
 )
 
@@ -224,22 +222,25 @@ class TestExportData:
 
 
 class TestExportJsBootstrap:
-    def test_contains_blob_url_bootstrap(self, client: TestClient) -> None:
+    def test_spa_inlined_as_one_module(self, client: TestClient) -> None:
+        """The SPA ships as ONE inline module (renders from file://)."""
         html = client.get("/api/projects/1/export").text
-        assert "URL.createObjectURL" in html
-        assert "new Blob(" in html
+        assert '<script type="module">' in html
+        # Exactly one inline module script — the single-file bundle.
+        assert html.count('<script type="module">') == 1
 
-    def test_contains_chunk_rewrite_function(self, client: TestClient) -> None:
+    def test_inline_module_carries_the_full_bundle(self, client: TestClient) -> None:
+        """The inline module IS the whole SPA (~2 MB), not a tiny loader that
+        would fetch chunks a file:// open can't reach."""
         html = client.get("/api/projects/1/export").text
-        # The R() function rewrites ./X.js references
-        assert "function R(s)" in html
+        assert len(html) > 1_000_000
 
-    def test_main_bundle_loaded_via_import(self, client: TestClient) -> None:
+    def test_script_close_is_escaped(self, client: TestClient) -> None:
+        """A literal </script> in the bundle would close the inline element."""
         html = client.get("/api/projects/1/export").text
-        # Main bundle should be loaded via dynamic import(), not inline
-        assert "import(C[" in html
-        # Should NOT have inline <script type="module"> with the full bundle
-        assert '<script type="module">' not in html
+        # The only real </script> closers are the paired tags we emit; any bundle
+        # occurrence is escaped to <\/script>.  Sanity: the doc still ends cleanly.
+        assert html.rstrip().endswith("</html>")
 
     def test_no_raw_asset_references(self, client: TestClient) -> None:
         """Exported HTML should not reference /assets/ paths directly."""

@@ -10,7 +10,6 @@ from __future__ import annotations
 import base64
 import json
 import logging
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -25,7 +24,10 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
 
-_STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+# Dedicated single-file export build (frontend/vite.export.config.ts) — one JS
+# chunk + one CSS, inlined by _build_export_html so the artifact renders from
+# file://.  Separate from the code-split serve build the SPA uses at runtime.
+_EXPORT_STATIC_DIR = Path(__file__).resolve().parent.parent / "static-export"
 
 # ---------------------------------------------------------------------------
 # Offline coverage contract
@@ -204,82 +206,38 @@ def _build_logo_data_uris() -> dict[str, str]:
 # HTML builder
 # ---------------------------------------------------------------------------
 
-def _toposort_chunks(
-    all_js: dict[str, str],
-    chunk_names: list[str],
-) -> list[str]:
-    """Return chunk names in dependency order (leaves first).
-
-    Parses static ``from"./X.js"`` imports to build a dependency graph,
-    then applies Kahn's algorithm.  Chunks with no dependencies come
-    first so their blob URLs are available when dependents are processed.
-    """
-    # Build adjacency: chunk → set of chunks it imports
-    deps: dict[str, set[str]] = {name: set() for name in chunk_names}
-    chunk_set = set(chunk_names)
-    for name in chunk_names:
-        src = all_js[name]
-        for other in chunk_set:
-            if other != name and f'from"./{other}"' in src:
-                deps[name].add(other)
-
-    # Kahn's algorithm — in_degree = number of unprocessed dependencies
-    in_degree = {name: len(d) for name, d in deps.items()}
-    queue = [name for name in chunk_names if in_degree[name] == 0]
-    result: list[str] = []
-    while queue:
-        node = queue.pop(0)
-        result.append(node)
-        for name, d in deps.items():
-            if node in d:
-                d.discard(node)
-                in_degree[name] = len(d)
-                if in_degree[name] == 0 and name not in result:
-                    queue.append(name)
-    # Append any remaining (circular deps — shouldn't happen with Vite)
-    for name in chunk_names:
-        if name not in result:
-            result.append(name)
-    return result
-
-
 def _build_export_html(
     export_data: dict,
     theme_css: str,
 ) -> str:
-    """Build a self-contained HTML file with embedded React app and data.
+    """Build a self-contained HTML file with the SPA + data inlined.
 
-    All JS modules are loaded via blob URLs created in a classic bootstrap
-    ``<script>``.  Chunks are processed in dependency order (leaves first)
-    so that when a module is blob-URL'd, all its ``from"./X.js"`` imports
-    have already been replaced with the actual blob URLs of their targets.
-    The main bundle is loaded last via ``import(mainBlobUrl)``.
+    The SPA is a dedicated single-file build (``static-export/app.js`` +
+    ``app.css`` — one module, no cross-chunk imports; see
+    ``frontend/vite.export.config.ts``).  Everything is inlined into ONE HTML so
+    the artifact renders when opened directly from disk (``file://``): the older
+    code-split bundle loaded chunks via ``blob:`` URLs, which browsers block as
+    module scripts from an opaque file:// origin, and data: URL modules can't
+    resolve their own sub-imports.  One inline ``<script type="module">``
+    sidesteps both — and also works when served.
     """
-    index_path = _STATIC_DIR / "index.html"
-    if not index_path.is_file():
+    app_js_path = _EXPORT_STATIC_DIR / "app.js"
+    app_css_path = _EXPORT_STATIC_DIR / "app.css"
+    if not app_js_path.is_file():
         raise HTTPException(
             status_code=500,
-            detail="Frontend build not found — run 'npm run build' first",
+            detail=(
+                "Export build not found — run the single-file export build "
+                "(frontend/vite.export.config.ts) first"
+            ),
         )
+    app_js = app_js_path.read_text(encoding="utf-8")
+    app_css = app_css_path.read_text(encoding="utf-8") if app_css_path.is_file() else ""
 
-    index_html = index_path.read_text(encoding="utf-8")
-
-    # Collect JS files referenced in the index.html
-    # Pattern: <script ... src="/assets/main-xxx.js">
-    script_pattern = re.compile(r'src="/assets/([^"]+\.js)"')
-
-    main_files: list[str] = []
-    for m in script_pattern.finditer(index_html):
-        main_files.append(m.group(1))
-
-    # Read ALL JS files from assets/
-    assets_dir = _STATIC_DIR / "assets"
-    all_js: dict[str, str] = {}
-    for fpath in sorted(assets_dir.glob("*.js")):
-        all_js[fpath.name] = fpath.read_text(encoding="utf-8")
-
-    chunk_names = [name for name in all_js if name not in main_files]
-    ordered_chunks = _toposort_chunks(all_js, chunk_names)
+    # Inline <script> safety: a literal </script> in the bundle would close the
+    # inline element early.  (The data JSON is already </script>-safe via
+    # ensure_ascii=True, which escapes '<' as \\u003c.)
+    app_js = app_js.replace("</script>", "<\\/script>")
 
     # Build the data injection script
     data_json = json.dumps(export_data, ensure_ascii=True, separators=(",", ":"))
@@ -298,9 +256,12 @@ def _build_export_html(
         '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700'
         '&display=swap" rel="stylesheet">\n',
         "<title>Bristlenose Report</title>\n",
-        # Theme CSS inlined
+        # Theme CSS (tokens/atoms) + the SPA's own bundled CSS, both inlined.
         "<style>\n",
         theme_css,
+        "\n</style>\n",
+        "<style>\n",
+        app_css,
         "\n</style>\n",
         "</head>\n",
         '<body class="bn-export-mode">\n',
@@ -312,77 +273,12 @@ def _build_export_html(
         ";\n</script>\n",
     ]
 
-    # Bootstrap: create blob URLs in dependency order, then load main bundle.
-    #
-    # Processing order: leaf chunks first (no local imports), then chunks
-    # that import them, then finally the main bundle.  At each step we
-    # use runtime string replacement to swap ``./X.js`` references with
-    # the already-known blob URL of X.  This handles both static
-    # ``from"./X.js"`` and dynamic ``import("./X.js")`` as well as
-    # Vite's ``__vite__mapDeps`` preload paths (``assets/X.js``).
-    #
-    # The bootstrap runs as a classic <script> (not module) so it
-    # executes synchronously before any modules load.  The final line
-    # ``import(mainBlobUrl)`` kicks off the ES module graph.
-    #
-    # NOTE (file:// limitation): blob: URLs work when the export is *served*
-    # (WKWebView / http origin — how it is consumed today) but are BLOCKED as
-    # module scripts when the file is opened directly from disk (file://, an
-    # opaque origin).  Making the artifact render from a raw file:// double-click
-    # needs a dedicated single-file inline build, not a bootstrap tweak — see
-    # e2e/tests/export-file-url.spec.ts and the tracker there.  Do not "fix" this
-    # by switching to data: URLs: a data: module cannot resolve its own bare/
-    # relative sub-imports, which regresses the served case too.
-    html_parts.append("<script>\n")
-    html_parts.append("(function(){\n")
-    html_parts.append("var C={};\n")  # chunk name → blob URL
-
-    # All chunk names that need URL rewriting
-    all_chunk_names = ordered_chunks  # in dependency order
-
-    # Emit a JS function that replaces ./X.js and assets/X.js references
-    # in a source string with the actual blob URLs from C.
-    html_parts.append("function R(s){\n")
-    for chunk in all_chunk_names:
-        # Replace from"./X.js" → from"<blobURL>" and "./X.js" → "<blobURL>"
-        # and "assets/X.js" → "<blobURL>"
-        # Use split+join for reliable string replacement in JS.
-        js_chunk = json.dumps(f"./{chunk}")  # e.g. '"./SessionsTable-xxx.js"'
-        js_assets = json.dumps(f"assets/{chunk}")  # e.g. '"assets/SessionsTable-xxx.js"'
-        html_parts.append(
-            f"s=s.split({js_chunk}).join(C[{json.dumps(chunk)}]);\n"
-        )
-        html_parts.append(
-            f"s=s.split({js_assets}).join(C[{json.dumps(chunk)}]);\n"
-        )
-    html_parts.append("return s}\n")
-
-    # Create blob URLs for chunks (dependency order — leaves first)
-    for fname in all_chunk_names:
-        escaped = json.dumps(all_js[fname], ensure_ascii=False)
-        html_parts.append(
-            f"C[{json.dumps(fname)}]=URL.createObjectURL("
-            f"new Blob([R({escaped})],"
-            '{type:"text/javascript"}));\n'
-        )
-
-    # Create blob URLs for main bundle(s)
-    for fname in main_files:
-        if fname in all_js:
-            escaped = json.dumps(all_js[fname], ensure_ascii=False)
-            html_parts.append(
-                f"C[{json.dumps(fname)}]=URL.createObjectURL("
-                f"new Blob([R({escaped})],"
-                '{type:"text/javascript"}));\n'
-            )
-
-    # Load main bundle(s) via dynamic import
-    for fname in main_files:
-        if fname in all_js:
-            html_parts.append(f"import(C[{json.dumps(fname)}]);\n")
-
-    html_parts.append("})();\n")
-    html_parts.append("</script>\n")
+    # The whole SPA as ONE inline module — no external or blob: module scripts,
+    # so it loads from a file:// (opaque) origin.  Vite's single-file build has
+    # already resolved every cross-chunk import into this one chunk.
+    html_parts.append('<script type="module">\n')
+    html_parts.append(app_js)
+    html_parts.append("\n</script>\n")
 
     html_parts.append("</body>\n</html>\n")
 

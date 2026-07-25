@@ -15,6 +15,18 @@
     overflow: hidden;
 }
 
+/* The <main> landmark wraps the routed content (sidebar.css: transparent flex
+   pass-through with no flex:1). On the analysis lens that breaks the height
+   chain: .center is capped to 100vh + overflow:hidden and .analysis-center is
+   meant to scroll internally, but a content-height .bn-main overflows the cap
+   and the bottom is clipped with NO scrollbar to reach it. Give the wrapper
+   flex:1 + min-height:0 so .analysis-layout resolves against "space left after
+   Header + NavBar", not its own content height — restoring internal scroll. */
+.bn-main:has(.analysis-layout) {
+    flex: 1;
+    min-height: 0;
+}
+
 /* Vertical flexbox wrapper for analysis page.
    .analysis-center scrolls signal cards.
    .inspector-panel sits below as a fixed-height pane.
@@ -47,10 +59,12 @@
     padding: 0 0 var(--bn-space-lg);
 }
 
-/* When the analysis layout is active, the footer (a sibling in AppLayout)
-   sits between .analysis-layout and .inspector-panel in the DOM.
-   Hide it here — the footer scrolls naturally on all other tabs. */
-.analysis-layout ~ .report-footer {
+/* When the analysis layout is active, hide the report footer — the inspector
+   panel owns the bottom of the viewport and the footer would eat scroll space
+   inside the 100vh-capped column. The footer is a sibling of <main.bn-main>
+   (not of .analysis-layout, which is *inside* main), so the combinator must
+   reach up to .center — `.analysis-layout ~ .report-footer` never matched. */
+.center:has(.analysis-layout) > .report-footer {
     display: none;
 }
 

@@ -436,3 +436,42 @@ The constraint is **file contention on `CodebookPanel.tsx`**, not logic. Buckets
 Highest-leverage next: the persistence flag (now view-only, so smaller). Best
 parallel win meanwhile: the `✦` sweep (isolated, mechanical) or the re-apply gate
 fix (backend-only, isolated).
+
+## Outstanding calls (post-review, 25 Jul 2026)
+
+The enable/disable feature was reviewed (code-review + silent-failure-hunter). The
+clearly-correct fixes shipped (`d94d8f44`, `cd70dd36`): re-apply per-quote dedup
+(stops a duplicate-tag IntegrityError rolling back the watermark → perpetual silent
+re-fail); `firePut` now checks `resp.ok` (a failed PUT was fully silent — the
+dropped-auth masquerade); hydrate-race generation guard; dead `[projectId]` dep
+dropped. What's left are **product/design decisions**, not bugs:
+
+1. **Export HTML doesn't sanitise hidden badges.** Disabling a framework (or
+   eye-toggling a group) hides badges in-app, but the exported HTML deliverable
+   embeds neither `framework-states` nor `hidden-tag-groups`, so **the badges
+   reappear in the file you share.** Consistent between the two toggles, but
+   "disable = report-wide hide" reads like deliverable sanitation in a way the eye
+   toggle never claimed. *Call: should either toggle sanitise the export?* If yes,
+   embed both in the export payload + `resolveFromExport`.
+2. **Manual-add to a disabled framework's group is an invisible success.** You add a
+   tag, it persists, but the badge stays hidden (filtered by `effectiveHiddenGroups`)
+   with no feedback. *Call: auto-enable the framework on add (mirroring the eye-
+   toggle auto-unhide), leave it hidden (disable is absolute), or toast "framework
+   is off"?*
+3. **Fire-and-forget PUT lost-update ordering.** Two rapid toggles fire two full-
+   replacement PUTs; out-of-order landing keeps the stale one until reload. Identical
+   for `hiddenTagGroups` (house style) — but the framework switch is lower-frequency
+   and spend-adjacent. *Call: accept eventual-consistency-on-reload for all view-
+   toggles, or add a sequence token / awaited write to this one?*
+4. **Toast on a failed background sync.** `firePut` now *logs* a failed PUT; the
+   vanilla `apiPut` path *toasts*. *Call: do view-toggle sync failures warrant a
+   user-visible toast, or is a console line enough for a best-effort sync?*
+
+Remaining unbuilt **Library polish** (unchanged from the parallelizability buckets
+above): the serialized `CodebookPanel.tsx` pass (fold animation · collapsed summary
+meta · header reconciliation · Add↔Remove + dialog relocation · "Your codebooks" ·
+80%-dim tiles); sidebar dots (`CodebookSidebar.tsx`, wireable to the now-persisted
+enabled state); Red ⊖ "Forget"; and the `✦` retirement — which lives in **20 locale
+`common.json` files** (AutoCode toast + `autoCodeQuotes`), so it belongs to the
+deferred i18n-propagation pass, not the "isolated CSS cleanup" the bucket above
+assumed (correction: the `✦` is data, not code).

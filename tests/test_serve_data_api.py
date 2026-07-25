@@ -628,6 +628,50 @@ class TestHiddenTagGroupsPut:
         assert resp.status_code == 404
 
 
+class TestFrameworkStatesGet:
+    def test_returns_empty_map(self, client: TestClient) -> None:
+        resp = client.get("/api/projects/1/framework-states")
+        assert resp.status_code == 200
+        assert resp.json() == {}
+
+    def test_404_nonexistent_project(self, client: TestClient) -> None:
+        resp = client.get("/api/projects/999/framework-states")
+        assert resp.status_code == 404
+
+
+class TestFrameworkStatesPut:
+    def test_put_and_get_round_trip(self, client: TestClient) -> None:
+        resp = client.put(
+            "/api/projects/1/framework-states",
+            json={"garrett": False, "norman": True},
+        )
+        assert resp.status_code == 200
+        data = client.get("/api/projects/1/framework-states").json()
+        assert data == {"garrett": False, "norman": True}
+
+    def test_put_replaces_state(self, client: TestClient) -> None:
+        client.put(
+            "/api/projects/1/framework-states",
+            json={"garrett": False, "norman": False},
+        )
+        client.put("/api/projects/1/framework-states", json={"garrett": False})
+        data = client.get("/api/projects/1/framework-states").json()
+        assert data == {"garrett": False}
+
+    def test_put_empty_clears_to_default(self, client: TestClient) -> None:
+        # Absence means enabled — clearing the map is how a framework re-enables.
+        client.put("/api/projects/1/framework-states", json={"garrett": False})
+        client.put("/api/projects/1/framework-states", json={})
+        data = client.get("/api/projects/1/framework-states").json()
+        assert data == {}
+
+    def test_404_nonexistent_project(self, client: TestClient) -> None:
+        resp = client.put(
+            "/api/projects/999/framework-states", json={"garrett": False}
+        )
+        assert resp.status_code == 404
+
+
 # ---------------------------------------------------------------------------
 # Manual re-assignment (Phase 0)
 # ---------------------------------------------------------------------------

@@ -21,6 +21,7 @@ from bristlenose.server.models import (
     Person,
     Project,
     ProjectCodebookGroup,
+    ProjectFrameworkState,
     Quote,
     QuoteEdit,
     QuoteState,
@@ -250,6 +251,16 @@ class HiddenTagGroupAdmin(ModelView, model=HiddenTagGroup):
     category = "Researcher"
 
 
+class ProjectFrameworkStateAdmin(ModelView, model=ProjectFrameworkState):
+    column_list = [ProjectFrameworkState.id, ProjectFrameworkState.project_id,
+                   ProjectFrameworkState.framework_id,
+                   ProjectFrameworkState.enabled]
+    name = "Framework State"
+    name_plural = "Framework States"
+    icon = "fa-solid fa-toggle-on"
+    category = "Researcher"
+
+
 class ImportConflictAdmin(ModelView, model=ImportConflict):
     column_list = [ImportConflict.id, ImportConflict.project_id,
                    ImportConflict.entity_type, ImportConflict.conflict_type,
@@ -294,6 +305,7 @@ _ADMIN_VIEWS: list[type[ModelView]] = [
     DeletedBadgeAdmin,
     DismissedSignalAdmin,
     HiddenTagGroupAdmin,
+    ProjectFrameworkStateAdmin,
     ImportConflictAdmin,
 ]
 

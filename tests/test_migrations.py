@@ -38,9 +38,9 @@ class TestFreshDatabase:
         with engine.connect() as conn:
             row = conn.execute(text("SELECT version_num FROM alembic_version")).fetchone()
         assert row is not None
-        # Head is currently 006 (AutoCode apply params). Update when new
+        # Head is currently 007 (project framework state). Update when new
         # migrations land.
-        assert row[0] == "006"
+        assert row[0] == "007"
 
     def test_all_user_tables_exist(self, engine):
         insp = inspect(engine)
@@ -84,7 +84,7 @@ class TestPreAlembicUpgrade:
         with pre_alembic_engine.connect() as conn:
             row = conn.execute(text("SELECT version_num FROM alembic_version")).fetchone()
         assert row is not None
-        assert row[0] == "006"
+        assert row[0] == "007"
 
     def test_data_preserved(self, pre_alembic_engine):
         """Existing rows survive the migration stamp."""
@@ -152,7 +152,7 @@ class TestPreAlembicUpgrade:
         assert "tag_prompt_decisions" in insp.get_table_names()
         with eng.connect() as conn:
             row = conn.execute(text("SELECT version_num FROM alembic_version")).fetchone()
-        assert row[0] == "006"
+        assert row[0] == "007"
 
 
 # ---------------------------------------------------------------------------

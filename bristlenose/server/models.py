@@ -594,6 +594,36 @@ class HiddenTagGroup(Base):
     )
 
 
+class ProjectFrameworkState(Base):
+    """Per-project enable/disable state for an applied codebook framework.
+
+    ``framework_id`` is the template id ("garrett", "norman", "uxr", …). A row
+    exists only when the researcher has an explicit opinion; **absence means
+    enabled** (the default for a freshly-added framework).
+
+    Per design-codebook-library.md Decision A this is a **view-only** flag —
+    disabling folds the framework's section and hides its badges report-wide, but
+    it does NOT gate re-apply (a disabled-but-installed codebook keeps maintaining
+    new sessions; "stop spending" is what Remove is for). Distinct from
+    ``hidden_tag_groups`` (per-group eye toggle): render treats a group's badges as
+    hidden if the group is eye-toggled **or** its framework is disabled.
+    """
+
+    __tablename__ = "project_framework_states"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    framework_id: Mapped[str] = mapped_column(String(50))
+    enabled: Mapped[bool] = mapped_column(default=True)
+    updated_at: Mapped[datetime] = mapped_column(default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id", "framework_id", name="uq_project_framework_state"
+        ),
+    )
+
+
 class ElaborationCache(Base):
     """Cached LLM-generated signal elaboration.
 

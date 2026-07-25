@@ -26,6 +26,7 @@ from bristlenose.server.models import (
     HiddenTagGroup,
     Person,
     Project,
+    ProjectFrameworkState,
     Quote,
     QuoteEdit,
     QuoteState,
@@ -901,6 +902,67 @@ def put_hidden_tag_groups(
                         hidden_at=_now(),
                     )
                 )
+        db.commit()
+        return {"status": "ok"}
+    finally:
+        db.close()
+
+
+@router.get("/projects/{project_id}/framework-states")
+def get_framework_states(
+    project_id: int,
+    request: Request,
+) -> dict[str, bool]:
+    """Read per-framework enable/disable state (the codebook switch).
+
+    Returns only frameworks with an explicit stored opinion; any framework not in
+    the map is enabled (the default). View-only per Decision A — this drives the
+    fold + report-wide badge hide, never re-apply.
+    """
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        rows = (
+            db.query(ProjectFrameworkState)
+            .filter_by(project_id=project_id)
+            .all()
+        )
+        return {r.framework_id: r.enabled for r in rows}
+    finally:
+        db.close()
+
+
+@router.put("/projects/{project_id}/framework-states")
+def put_framework_states(
+    project_id: int,
+    request: Request,
+    data: dict[str, bool],
+) -> dict[str, str]:
+    """Write per-framework enable/disable state (full replacement).
+
+    Mirrors the other data endpoints: PUT replaces the entire stored map. Absence
+    means enabled, so a re-enabled framework may be sent as ``true`` or simply
+    omitted — both restore the default.
+    """
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        db.query(ProjectFrameworkState).filter_by(project_id=project_id).delete(
+            synchronize_session=False
+        )
+        seen: set[str] = set()
+        for framework_id, enabled in data.items():
+            if framework_id in seen:
+                continue
+            seen.add(framework_id)
+            db.add(
+                ProjectFrameworkState(
+                    project_id=project_id,
+                    framework_id=framework_id,
+                    enabled=enabled,
+                    updated_at=_now(),
+                )
+            )
         db.commit()
         return {"status": "ok"}
     finally:

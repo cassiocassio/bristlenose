@@ -3,15 +3,16 @@ import SwiftUI
 /// Boot surface shown while the Python sidecar is starting (3–6 s on cold
 /// start) and while the React SPA is loading after the sidecar is ready.
 ///
-/// Replaces the bare `ProgressView("Starting server…")` that used to live in
-/// `ContentView.detail` — the prior surface looked like a frozen window to
-/// anyone unfamiliar with the architecture. This view gives the wait visible
-/// shape: app icon, name, tagline, indeterminate bar, status line that
-/// flips between "Starting" and "Loading" on the second phase.
+/// The two *progress* phases show only a centered indeterminate bar. This is
+/// the embedded Mac context: the app's identity is already established by the
+/// native chrome (Dock icon, menu bar, window), and this surface reappears on
+/// every project switch (the detail WebView is keyed on project id) — so an
+/// app-launch splash with icon + wordmark + tagline + "Starting…" text would
+/// be redundant and read as un-Mac-like on a mere navigation.
 ///
 /// Failure mode is kept inside the same surface (rather than a separate
-/// sheet) so the user's eye doesn't have to relocate when start fails — same
-/// position, same icon, status line + Retry replace the progress bar.
+/// sheet). Unlike the progress phases it *does* carry chrome — the icon,
+/// message, and Retry — because failure is the exception that warrants words.
 struct BootView: View {
     enum Phase {
         /// Sidecar is starting up (Python process spawn → Uvicorn ready).
@@ -45,29 +46,34 @@ struct BootView: View {
         VStack(spacing: 18) {
             Spacer()
 
-            // Brand block — combine icon + wordmark + tagline into a single
-            // VoiceOver element so the screen reader announces "Bristlenose,
-            // <tagline>" once. Status zone below stays in its own accessibility
-            // group so Retry / Show details / error message remain individually
-            // reachable in the failure phase.
-            VStack(spacing: 18) {
-                Image(nsImage: NSApp.applicationIconImage)
-                    .resizable()
-                    .interpolation(.high)
-                    .frame(width: 96, height: 96)
-                    .opacity(isFailed ? 0.7 : 1)
+            // Brand block — only in the failure phase. The progress phases show
+            // just the bar (see the type doc-comment): identity is already carried
+            // by the native chrome, and this surface reappears on every project
+            // switch. Failure is the exception that warrants the icon + wordmark.
+            // Combine icon + wordmark + tagline into a single VoiceOver element so
+            // the screen reader announces "Bristlenose, <tagline>" once; the status
+            // zone below stays in its own group so Retry / Show details / error
+            // message remain individually reachable.
+            if isFailed {
+                VStack(spacing: 18) {
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: 96, height: 96)
+                        .opacity(0.7)
 
-                VStack(spacing: 4) {
-                    Text("Bristlenose")
-                        .font(.title)
-                        .foregroundStyle(.primary)
-                    Text(i18n.t("desktop.boot.tagline"))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    VStack(spacing: 4) {
+                        Text("Bristlenose")
+                            .font(.title)
+                            .foregroundStyle(.primary)
+                        Text(i18n.t("desktop.boot.tagline"))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Bristlenose — \(i18n.t("desktop.boot.tagline"))")
             }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Bristlenose — \(i18n.t("desktop.boot.tagline"))")
 
             // Status zone — fixed height so the icon+title don't shift when
             // the progress/error block changes. Children stay individually
@@ -85,14 +91,10 @@ struct BootView: View {
     private var statusZone: some View {
         switch phase {
         case .startingSidecar, .loadingReport:
-            VStack(spacing: 10) {
-                ProgressView()
-                    .progressViewStyle(.linear)
-                    .frame(maxWidth: 240)
-                Text(statusText)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
+            // Just the bar — unchanged. The confusing text is what's removed here.
+            ProgressView()
+                .progressViewStyle(.linear)
+                .frame(maxWidth: 240)
 
         case .failed(let message, let retry):
             VStack(spacing: 10) {

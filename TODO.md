@@ -24,6 +24,8 @@ Immediate ladder: (1) **wait for Apple processing** → confirm build appears un
 
 ## Ideas (captured, not triaged)
 
+- **Boot progress bar is silent to VoiceOver.** 25 Jul 2026: `BootView` progress phases were stripped to just the indeterminate bar (removed the "Bristlenose" wordmark / tagline / "Starting…" text that redundantly re-branded on every project switch in the embedded Mac context). With the visible text gone and no replacement label, the bare `ProgressView` announces nothing to VoiceOver — the app-wide convention is an explicit `.accessibilityLabel` (cf. `OllamaDownloadPill`/`StatusPill`). Deferred per the "bar UX comes later" steer; add a label (reuse the existing `desktop.boot.startingSidecar`/`loadingReport` strings) when the bar gets its next pass.
+
 - **`configure azure` still punts endpoint+deployment to manual `.env`.** 21 Jul 2026: `configure <provider>` now file-persists the API *key* on a keyring-less box (`59e3770c`), and env-var reads accept the SDK-native names (`dd76725e`, incl. `AZURE_OPENAI_ENDPOINT`/`AZURE_OPENAI_DEPLOYMENT`). But `configure azure` only stores the key — it prints the endpoint/deployment as a "add these to .env yourself" hint (`cli.py` azure branch). To fully close the loop like the other providers, `configure azure` would prompt for endpoint+deployment and persist all three to the config `.env` (needs a generic "write arbitrary var" path on `FileCredentialStore`, or reuse the existing upsert). Low alpha priority (Azure is enterprise; `docs/design-cli-provider-selection.md`). The `ProviderSpec.config_fields` registry in `providers.py` already declares these fields — an interactive `configure` could iterate them generically instead of the current hardcoded per-provider branch.
 
 ---

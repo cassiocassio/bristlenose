@@ -73,6 +73,18 @@ function detectLocale(): Locale {
     // URL parsing unavailable
   }
 
+  // 0.5. Baked export locale — the researcher's UI language at export time.
+  // An offline report has no server to inject a locale and no prior
+  // localStorage, so without this it would fall to the *recipient's* browser
+  // language. Bake it so the report reads in the language it was written in.
+  try {
+    const exp = (window as unknown as { BRISTLENOSE_EXPORT?: { locale?: string } })
+      .BRISTLENOSE_EXPORT;
+    if (exp?.locale && isSupportedLocale(exp.locale)) return exp.locale;
+  } catch {
+    // export global unavailable
+  }
+
   // 1. Explicit user choice in localStorage
   try {
     const raw = localStorage.getItem(LS_KEY);

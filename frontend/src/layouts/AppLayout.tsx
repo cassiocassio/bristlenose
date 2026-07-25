@@ -188,9 +188,14 @@ function AppShell() {
   );
   const triggerReportDownload = useCallback(
     (anonymise: boolean) => {
-      const qs = anonymise ? "?anonymise=true" : "";
+      // Bake the researcher's current UI language into the export so the
+      // offline report reads in the language they wrote it in — not the
+      // recipient's browser language (there's no server on file:// to inject it).
+      const params = new URLSearchParams();
+      if (anonymise) params.set("anonymise", "true");
+      params.set("locale", i18n.language);
       const a = document.createElement("a");
-      a.href = `/api/projects/${projectId}/export${qs}`;
+      a.href = `/api/projects/${projectId}/export?${params.toString()}`;
       a.download = "";
       document.body.appendChild(a);
       a.click();

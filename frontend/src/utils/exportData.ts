@@ -24,6 +24,9 @@ import type { HealthResponse } from "./health";
 export interface ExportData {
   version: number;
   exported_at: string;
+  /** Researcher's UI language at export time (baked so the offline report
+   *  reads in the language it was written in, not the recipient's browser). */
+  locale?: string | null;
   health: HealthResponse;
   logos?: { light?: string; dark?: string };
   /** Path-keyed embed: relative API path → the endpoint's JSON response. */

@@ -22,7 +22,7 @@ interface ExportDialogProps {
 }
 
 export function ExportDialog({ open, onClose, initialAnonymise = false }: ExportDialogProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   useInert(open);
   const projectId = useProjectId();
   const [anonymise, setAnonymise] = useState(false);
@@ -69,8 +69,11 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
     // WKDownload routes the bytes through NSSavePanel.  In the browser the
     // native download UI takes over.
     setError(null);
-    const qs = anonymise ? "?anonymise=true" : "";
-    const url = `/api/projects/${projectId}/export${qs}`;
+    // Bake the researcher's current UI language (see AppLayout.triggerReportDownload).
+    const params = new URLSearchParams();
+    if (anonymise) params.set("anonymise", "true");
+    params.set("locale", i18n.language);
+    const url = `/api/projects/${projectId}/export?${params.toString()}`;
     const a = document.createElement("a");
     a.href = url;
     a.download = "";  // hint download intent; server's Content-Disposition wins

@@ -295,6 +295,7 @@ def export_report(
     project_id: int,
     request: Request,
     anonymise: bool = Query(default=False),
+    locale: str = Query(default=""),
 ) -> Response:
     """Export the project as a self-contained HTML report.
 
@@ -427,6 +428,10 @@ def export_report(
     export_data: dict[str, Any] = {
         "version": 2,
         "exported_at": datetime.now(timezone.utc).isoformat(),
+        # The researcher's UI language at export time — the SPA inits i18n from
+        # this offline so the report reads in the language it was written in,
+        # not the recipient's browser language.
+        "locale": locale or None,
         "health": build_health_payload(),
         "logos": _build_logo_data_uris(),
         "endpoints": endpoints,

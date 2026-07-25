@@ -12,7 +12,11 @@
 
 .signal-card {
     border: 1px solid var(--bn-colour-border);
-    border-radius: var(--bn-radius-sm);
+    /* Pane tier (lg) — these are the largest cards in the app; sm (3px) read
+       near-square on a 425px card and made the child .signal-card-quotes box
+       (md) rounder than its parent (inverted nesting). lg outer / md inner is
+       the correct decreasing nest. See docs/design-lens-template.md § Radii. */
+    border-radius: var(--bn-radius-lg);
     padding: var(--bn-space-lg);
     background: var(--bn-colour-bg);
     transition: box-shadow var(--bn-transition-fast);

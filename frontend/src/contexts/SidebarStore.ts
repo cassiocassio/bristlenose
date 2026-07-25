@@ -123,10 +123,17 @@ const listeners = new Set<() => void>();
 /**
  * Framework-state hydration is fetched once per session and guarded — so a
  * later remount (e.g. switching to the Quotes tab after toggling on the Codebook
- * tab) can't refetch stale state and clobber an in-flight local disable. Reset
- * by resetSidebarStore for test isolation.
+ * tab) can't refetch stale state. Reset by resetSidebarStore for test isolation.
  */
 let frameworkStatesHydrated = false;
+
+/**
+ * Bumped on every local framework toggle. The hydrate fetch captures this before
+ * awaiting and re-checks it after: if a toggle landed while the GET was in flight,
+ * the fetch's (now-stale) result is discarded rather than clobbering the user's
+ * just-made choice. Closes the initial-load-latency race the guard alone can't.
+ */
+let frameworkEditGeneration = 0;
 
 function getSnapshot(): SidebarState {
   return state;
@@ -284,9 +291,14 @@ export function setTagGroupsHidden(groupNames: string[], hidden: boolean): void 
 export function hydrateFrameworkStates(): void {
   if (frameworkStatesHydrated) return;
   frameworkStatesHydrated = true;
+  const genAtFetch = frameworkEditGeneration;
   getFrameworkStates()
     .then((states) => {
       if (!states) return;
+      // A local toggle landed while this GET was in flight → its result is stale;
+      // discard it rather than clobber the user's just-made (and PUT-persisted)
+      // choice.
+      if (frameworkEditGeneration !== genAtFetch) return;
       const disabled = new Set(
         Object.entries(states)
           .filter(([, enabled]) => !enabled)
@@ -306,6 +318,7 @@ export function hydrateFrameworkStates(): void {
  * Persists the full disabled set as {fid: false} (absence = enabled).
  */
 export function setFrameworkDisabled(frameworkId: string, disabled: boolean): void {
+  frameworkEditGeneration += 1; // mark a local edit so an in-flight hydrate defers
   setState((prev) => {
     const next = new Set(prev.disabledFrameworks);
     if (disabled) next.add(frameworkId);
@@ -364,6 +377,7 @@ export function resetSidebarStore(): void {
     savedTagFilter: null,
   };
   frameworkStatesHydrated = false;
+  frameworkEditGeneration = 0;
   listeners.forEach((l) => l());
 }
 

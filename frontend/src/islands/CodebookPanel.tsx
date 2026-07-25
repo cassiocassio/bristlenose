@@ -570,9 +570,13 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
   );
 
   // Hydrate the persisted disable state once per session (guarded in the store).
+  // Deps are [] deliberately: the store's guard makes this a one-shot, and the SPA
+  // is one-project-per-page-load (BRISTLENOSE_API_BASE is a fixed window global), so
+  // a projectId dep would imply a per-project re-hydrate the guard silently defeats.
+  // If in-place project switching is ever added, key the store guard on projectId.
   useEffect(() => {
     hydrateFrameworkStates();
-  }, [projectId]);
+  }, []);
 
   // Fetch codebook data
   const fetchData = useCallback(() => {

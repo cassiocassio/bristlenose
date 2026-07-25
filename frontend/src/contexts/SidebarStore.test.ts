@@ -169,6 +169,25 @@ describe("disabledFrameworks (codebook switch)", () => {
     expect(result.current.disabledFrameworks.has("norman")).toBe(false);
   });
 
+  it("hydrate discards a stale fetch if a local toggle landed while in flight", async () => {
+    let resolveFetch!: (v: Record<string, boolean>) => void;
+    (getFrameworkStates as ReturnType<typeof vi.fn>).mockReturnValueOnce(
+      new Promise((res) => {
+        resolveFetch = res;
+      }),
+    );
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => hydrateFrameworkStates()); // GET in flight
+    act(() => setFrameworkDisabled("garrett", true)); // user toggles before it resolves
+    // The in-flight GET now resolves with the pre-toggle (empty) server state:
+    await act(async () => {
+      resolveFetch({});
+      await Promise.resolve();
+    });
+    // The stale fetch must NOT clobber the user's just-made choice.
+    expect(result.current.disabledFrameworks.has("garrett")).toBe(true);
+  });
+
   it("hydrateFrameworkStates is guarded — a second call does not refetch", async () => {
     act(() => hydrateFrameworkStates());
     await waitFor(() => expect(getFrameworkStates).toHaveBeenCalledTimes(1));

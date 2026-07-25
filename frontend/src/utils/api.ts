@@ -116,9 +116,17 @@ function firePut(path: string, body: unknown): void {
     method: "PUT",
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
-  }).catch((err) => {
-    console.error(`PUT ${path} failed:`, err);
-  });
+  })
+    .then((resp) => {
+      // fetch only rejects on a network-layer failure — a 401/403/5xx *resolves*
+      // with ok=false. Without this check the catch never fires and a failed
+      // background sync is fully silent (DB never written, UI diverges on reload —
+      // the dropped-auth-token masquerade). Surface it so it's at least greppable.
+      if (!resp.ok) throw new Error(`PUT ${path} ${resp.status}`);
+    })
+    .catch((err) => {
+      console.error(`PUT ${path} failed:`, err);
+    });
 }
 
 // ---------------------------------------------------------------------------

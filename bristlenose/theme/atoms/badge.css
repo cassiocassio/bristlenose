@@ -176,7 +176,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     display: flex;
     gap: 0;
     background: var(--bn-colour-bg);
-    border-radius: 8px;
+    border-radius: var(--bn-radius-pill);   /* clamps to half-height; survives a height change */
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
     opacity: 0;
     transition: opacity var(--bn-transition-fast);

@@ -36,7 +36,8 @@
       "jumpToSelection": "跳至所選範圍"
     },
     "view": {
-      "toggleSidebar": "切換側邊欄",
+      "hideProjects": "隱藏專案",
+      "showProjects": "顯示專案",
       "moveFocusToProjects": "將焦點移至專案",
       "showContents": "顯示內容",
       "hideContents": "隱藏內容",

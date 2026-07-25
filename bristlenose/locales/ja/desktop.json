@@ -36,7 +36,8 @@
       "jumpToSelection": "選択部分へ移動"
     },
     "view": {
-      "toggleSidebar": "サイドバーを表示/非表示",
+      "hideProjects": "プロジェクトを非表示",
+      "showProjects": "プロジェクトを表示",
       "showContents": "目次を表示",
       "hideContents": "目次を非表示",
       "showCodes": "コードを表示",

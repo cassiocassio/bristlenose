@@ -346,7 +346,7 @@ struct ContentView: View {
     /// merged chain tripped "unable to type-check this expression in reasonable
     /// time". Pure refactor; no behaviour change.
     private var splitViewCore: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
         } detail: {
             detail
@@ -559,6 +559,25 @@ struct ContentView: View {
         // File > New Project (Cmd+N) and sidebar [+] button.
         .onReceive(NotificationCenter.default.publisher(for: .createNewProject)) { _ in
             createNewProject()
+        }
+        // Help > Welcome to Bristlenose — deselect to show the Welcome home pane
+        // (same effect as clicking the sidebar's empty space).
+        .onReceive(NotificationCenter.default.publisher(for: .showWelcome)) { _ in
+            selection = []
+        }
+        // View ▸ Hide/Show Projects (⌘⌥S) — toggle the projects sidebar through
+        // the same `columnVisibility` binding the auto toolbar button drives, so
+        // every source stays in sync. Animated to match the toolbar button.
+        .onReceive(NotificationCenter.default.publisher(for: .toggleProjectsSidebar)) { _ in
+            withAnimation {
+                columnVisibility = (columnVisibility == .detailOnly) ? .all : .detailOnly
+            }
+        }
+        // Mirror the column state into bridgeHandler so the View-menu label can
+        // flip Hide ↔ Show reactively (the menu is app-level and can't see this
+        // view's @State directly). `.detailOnly` = sidebar hidden.
+        .onChange(of: columnVisibility) { _, newValue in
+            bridgeHandler.sidebarVisible = (newValue != .detailOnly)
         }
         // File > Add Files… (⇧⌘A) — menu twin of drag-drop.
         .onReceive(NotificationCenter.default.publisher(for: .addFilesToSelectedProject)) { _ in

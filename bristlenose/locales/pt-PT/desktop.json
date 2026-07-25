@@ -36,7 +36,8 @@
       "jumpToSelection": "Ir para a Seleção"
     },
     "view": {
-      "toggleSidebar": "Alternar Barra Lateral",
+      "hideProjects": "Ocultar Projetos",
+      "showProjects": "Mostrar Projetos",
       "moveFocusToProjects": "Mover Foco para Projetos",
       "showContents": "Mostrar Conteúdo",
       "hideContents": "Ocultar Conteúdo",

@@ -36,7 +36,8 @@
       "jumpToSelection": "선택 부분으로 이동"
     },
     "view": {
-      "toggleSidebar": "사이드바 전환",
+      "hideProjects": "프로젝트 가리기",
+      "showProjects": "프로젝트 보기",
       "showContents": "목차 보기",
       "hideContents": "목차 숨기기",
       "showCodes": "코드 보기",

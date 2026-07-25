@@ -36,7 +36,8 @@
       "jumpToSelection": "Zur Auswahl springen"
     },
     "view": {
-      "toggleSidebar": "Seitenleiste ein-/ausblenden",
+      "hideProjects": "Projekte ausblenden",
+      "showProjects": "Projekte einblenden",
       "showContents": "Inhalt einblenden",
       "hideContents": "Inhalt ausblenden",
       "showCodes": "Kodes einblenden",

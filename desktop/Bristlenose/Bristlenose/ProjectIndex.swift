@@ -253,6 +253,18 @@ extension Notification.Name {
     /// from the web report to the project list (the §10.1 no-trap command).
     static let focusProjects = Notification.Name("bristlenoseFocusProjects")
 
+    /// Posted by Help > Welcome to Bristlenose — clears the project selection so
+    /// the app-level Welcome home pane (WelcomeHomeView) shows. Same effect as
+    /// clicking the sidebar's empty space (SidebarDeselectMonitor); the menu item
+    /// is the discoverable, re-openable way back that a click can't advertise.
+    static let showWelcome = Notification.Name("bristlenoseShowWelcome")
+
+    /// Posted by View ▸ Hide/Show Projects (⌘⌥S) — toggles the projects sidebar.
+    /// ContentView flips its `columnVisibility` binding; going through the binding
+    /// (not the AppKit `toggleSidebar:` selector) keeps the menu, the auto toolbar
+    /// button, and the label in one source of truth.
+    static let toggleProjectsSidebar = Notification.Name("bristlenoseToggleProjectsSidebar")
+
     /// Posted by Project > Rename to trigger inline rename in the sidebar.
     static let renameSelectedProject = Notification.Name("bristlenoseRenameSelectedProject")
 

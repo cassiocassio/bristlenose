@@ -36,7 +36,8 @@
       "jumpToSelection": "Aller à la sélection"
     },
     "view": {
-      "toggleSidebar": "Afficher/Masquer la barre latérale",
+      "hideProjects": "Masquer les projets",
+      "showProjects": "Afficher les projets",
       "showContents": "Afficher le sommaire",
       "hideContents": "Masquer le sommaire",
       "showCodes": "Afficher les codes",

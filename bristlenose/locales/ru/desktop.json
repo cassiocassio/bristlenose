@@ -36,7 +36,8 @@
       "jumpToSelection": "Перейти к выделению"
     },
     "view": {
-      "toggleSidebar": "Показать/скрыть боковое меню",
+      "hideProjects": "Скрыть проекты",
+      "showProjects": "Показать проекты",
       "moveFocusToProjects": "Переместить фокус на проекты",
       "showContents": "Показать содержание",
       "hideContents": "Скрыть содержание",

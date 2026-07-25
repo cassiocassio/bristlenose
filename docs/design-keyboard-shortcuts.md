@@ -136,7 +136,7 @@ The macOS desktop app (SwiftUI shell wrapping the React SPA in WKWebView) has ad
 
 | Action | Shortcut | Menu location | Handler |
 |--------|----------|---------------|---------|
-| Toggle project sidebar | `⌘⌥S` | View | `NSSplitViewController.toggleSidebar` (native) |
+| Hide/Show Projects (project sidebar) | `⌘⌥S` | View | Flips the NavigationSplitView `columnVisibility` binding via `.toggleProjectsSidebar` (dynamic **Hide/Show Projects** label; was `toggleSidebar`/responder-chain until 2026-07-25) |
 | Toggle navigation panel | `⌘⌥L` | View | `bridgeHandler.menuAction("toggleLeftPanel")` |
 | Toggle tag sidebar | `⌘⌥T` | View | `bridgeHandler.menuAction("toggleRightPanel")` |
 | Switch to tab 1–5 | `⌘1`–`⌘5` | View | `bridgeHandler.switchToTab()` |

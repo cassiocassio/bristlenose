@@ -36,7 +36,8 @@
       "jumpToSelection": "Przejdź do zaznaczenia"
     },
     "view": {
-      "toggleSidebar": "Przełącz pasek boczny",
+      "hideProjects": "Ukryj projekty",
+      "showProjects": "Pokaż projekty",
       "moveFocusToProjects": "Przenieś fokus na projekty",
       "showContents": "Pokaż zawartość",
       "hideContents": "Ukryj zawartość",

@@ -36,7 +36,8 @@
       "jumpToSelection": "Hoppa till markering"
     },
     "view": {
-      "toggleSidebar": "Visa/dölj sidofält",
+      "hideProjects": "Dölj projekt",
+      "showProjects": "Visa projekt",
       "moveFocusToProjects": "Flytta fokus till projekt",
       "showContents": "Visa innehåll",
       "hideContents": "Dölj innehåll",

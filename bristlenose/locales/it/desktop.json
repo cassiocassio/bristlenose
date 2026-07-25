@@ -36,7 +36,8 @@
       "jumpToSelection": "Vai alla selezione"
     },
     "view": {
-      "toggleSidebar": "Mostra/Nascondi la barra laterale",
+      "hideProjects": "Nascondi i progetti",
+      "showProjects": "Mostra i progetti",
       "moveFocusToProjects": "Sposta lo stato attivo sui progetti",
       "showContents": "Mostra il contenuto",
       "hideContents": "Nascondi il contenuto",

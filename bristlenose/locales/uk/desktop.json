@@ -36,7 +36,8 @@
       "jumpToSelection": "Перейти до вибраного"
     },
     "view": {
-      "toggleSidebar": "Показати або сховати бічну панель",
+      "hideProjects": "Сховати проєкти",
+      "showProjects": "Показати проєкти",
       "moveFocusToProjects": "Перевести фокус на проєкти",
       "showContents": "Показати вміст",
       "hideContents": "Сховати вміст",

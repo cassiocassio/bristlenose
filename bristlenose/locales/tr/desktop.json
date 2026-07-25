@@ -36,7 +36,8 @@
       "jumpToSelection": "Seçime Git"
     },
     "view": {
-      "toggleSidebar": "Kenar Çubuğunu Aç/Kapat",
+      "hideProjects": "Projeleri Gizle",
+      "showProjects": "Projeleri Göster",
       "moveFocusToProjects": "Odağı Projelere Taşı",
       "showContents": "İçindekileri Göster",
       "hideContents": "İçindekileri Gizle",

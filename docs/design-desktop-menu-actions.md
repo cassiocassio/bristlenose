@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-06-21
-trued-against: HEAD@main on 2026-06-21
+last-trued: 2026-07-25
+trued-against: working tree @main on 2026-07-25
 ---
 
 > **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`):** the Project menu + row context menu
@@ -13,6 +13,7 @@ trued-against: HEAD@main on 2026-06-21
 
 ## Changelog
 
+- _2026-07-25_ — trued against the working-tree Welcome/sidebar change. **View menu:** `toggleSidebar` (static "Toggle Sidebar", responder-chain `NSSplitViewController.toggleSidebar`) became **`toggleProjectsSidebar`** — a dynamic **Hide/Show Projects** label routed through the NavigationSplitView `columnVisibility` binding via the `.toggleProjectsSidebar` notification (⌥⌘S unchanged). **Help menu:** gained **Welcome to Bristlenose** (7th item, no shortcut; posts `.showWelcome` → ContentView `selection = []`). Also corrected pre-existing drift in the Help table: items open **browser docs** (retired in-app Help modal), not a modal, and re-anchored the section from stale line numbers to the `HelpMenuContent` struct. Anchors are struct-named where possible (line numbers rot).
 - _2026-06-21_ — re-confirmed fresh: the `project-status-line` + `warm-sidecar-pool` work (19–21 Jun) did **not** touch menu actions / `BridgeHandler.menuAction` — the catalogue still matches `MenuCommands.swift`. One new row-level affordance landed: a "Cancel copy" item on the project **row context menu** (`ProjectRow.swift`, `onCancelCopy`) — a context-menu action, not a `menuAction()` bridge dispatch, so it sits outside this catalogue's scope (noted for completeness).
 - _2026-04-24_ — Tier 1 truing follow-up (post `design-doc-review` audit): deleted the stale Future-only project-ops table that contradicted the rewritten one above it; added Shortcut column to the rewritten project-ops table (⇧⌘R, ⌘N, ⇧⌘N, ⌘⌫, ⇧⌘O); corrected `openInNewWindow` from Future to Shipped (bridge); added `chooseIcon` and `aiPrivacy` rows; added new sub-sections for View menu (Cmd+1–5, toggleSidebar, heatmap toggle), Help menu (6 actions), and Codes menu (6 wired actions, `mergeCode` moved out of project-ops); added inline alpha-gap callout for missing Analyse/Resume/Retry in the project context menu; noted `playPause` triple-dispatch (Video / Quotes / kbd). Section heading count corrected from "(8)" to "(17)".
 - _2026-04-23_ — trued up during port-v01-ingestion QA: rewrote §"Project operations — native-only or future" to reflect shipped NotificationCenter-based project ops (newProject, renameProject, deleteProject, locateProject, createNewFolder, renameFolder, deleteFolder, moveSelectedProject); kept `reAnalyse` (`.disabled(true)` per `MenuCommands.swift:397-400`) and `archive` (Phase 5) as Future; added missing entries (`openBlog`, `showAcknowledgements`, `mergeCode`); flagged `revealInFinder` label drift vs shipped `showInFinder`. Anchors: `MenuCommands.swift:355-360, 397-405, 433-466, 692-698`, `ContentView.swift:279-292, 1118-1176`. Commit: 3d9f43c.
@@ -128,22 +129,23 @@ These are either native-only (Finder, print) or depend on features not yet built
 
 | Action | Shortcut | Status | Notes |
 |---|---|---|---|
-| `toggleSidebar` | ⌥⌘S | **Shipped** (responder chain) | `NSSplitViewController.toggleSidebar` via `tryToPerform` (`MenuCommands.swift:247-253`) — distinct from `toggleLeftPanel` (web sidebar) |
+| `toggleProjectsSidebar` | ⌥⌘S | **Shipped** (columnVisibility binding) | Dynamic **Hide Projects / Show Projects** label (flips on `bridgeHandler.sidebarVisible`). Posts `.toggleProjectsSidebar` → `ContentView` flips the NavigationSplitView `columnVisibility` binding — the same source of truth the auto toolbar sidebar button drives. Renamed 2026-07-25 from `toggleSidebar`/"Toggle Sidebar"; retired the `NSSplitViewController.toggleSidebar` responder-chain call (it left no reliable SwiftUI state for the dynamic label). Distinct from `toggleLeftPanel` (web sidebar). |
 | Tab switch (Cmd+1…Cmd+5) | ⌘1–⌘5 | **Shipped** (bridge) | `bridgeHandler.switchToTab(tab)` — separate code path from `menuAction` (`MenuCommands.swift:235-243`) |
 | `toggleInspectorPanel` (heatmap) | — | **Shipped** (bridge, tab-gated) | Disabled outside Analysis tab (`MenuCommands.swift:267-270`) |
 
-### Help menu (6)
+### Help menu (7)
 
-All wired in `MenuCommands.swift:670-699`.
+All in `HelpMenuContent` (`MenuCommands.swift`). Order top→bottom: Bristlenose Help · **Welcome to Bristlenose** · Keyboard Shortcuts · ─ · Release Notes · Send Feedback… · ─ · Bristlenose on Substack · Acknowledgements. Most items open **browser docs** via `NSWorkspace` (the in-app Help modal is retired — "Help opens browser docs"), so they work whether or not the SPA is mounted.
 
 | Action | Status | Notes |
 |---|---|---|
-| `bristlenoseHelp` / `showHelp` | **Shipped** | Opens help modal to "help" section |
-| `showKeyboardShortcuts` | **Shipped** | Opens help modal to "shortcuts" section |
-| `releaseNotes` / `showReleaseNotes` | **Shipped** | Opens help modal to "about" section |
-| `sendFeedback` | **Shipped** | `setFeedbackOpen(true)` |
-| `openBlog` | **Shipped** (native) | NSWorkspace opens Substack URL (`MenuCommands.swift:692`) |
-| `showAcknowledgements` | **Shipped** (native) | Opens credits modal (`MenuCommands.swift:698`) |
+| `bristlenoseHelp` | **Shipped** (native) | ⌘? — opens `bristlenose.app/docs/` in the browser (not a modal) |
+| Welcome to Bristlenose | **Shipped** (native, 2026-07-25) | No shortcut (rare, unmemorable destination — discoverability comes from living in Help). Posts `.showWelcome` → ContentView `selection = []`, showing the app-level `WelcomeHomeView`. Same effect as clicking the sidebar's empty space. Reuses the vetted all-locale `chrome.welcomeTitle`. |
+| `keyboardShortcuts` | **Shipped** (native) | Opens `docs/keyboard-shortcuts.html` in the browser |
+| `releaseNotes` | **Shipped** (native) | Opens `docs/changelog.html` in the browser |
+| `sendFeedback` | **Shipped** | `bridgeHandler.openFeedback()` → native `FeedbackSheet` (live-serve or `.serverless`) |
+| `openBlog` | **Shipped** (bridge) | `bridgeHandler.menuAction("openBlog")` → Substack |
+| `showAcknowledgements` | **Shipped** (native) | Opens `ACKNOWLEDGEMENTS.md` on GitHub in the browser |
 
 ### Codes menu (9)
 

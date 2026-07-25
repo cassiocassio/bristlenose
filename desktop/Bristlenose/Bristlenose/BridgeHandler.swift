@@ -37,6 +37,12 @@ final class BridgeHandler: ObservableObject {
     /// Updated via KVO observation in WebView.Coordinator.
     @Published var canGoForward = false
 
+    /// Whether the native projects sidebar (NavigationSplitView first column)
+    /// is currently visible. Synced from ContentView's `columnVisibility`, so it
+    /// reflects toggles from every source — the View-menu item, the auto toolbar
+    /// button, and ⌘⌥S. Drives the dynamic View ▸ Hide/Show Projects label.
+    @Published var sidebarVisible = true
+
     // MARK: - Menu state (driven by bridge messages)
 
     /// ID of the currently focused quote, or nil. Enables quote-specific

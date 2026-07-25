@@ -36,7 +36,8 @@
       "jumpToSelection": "Ga naar selectie"
     },
     "view": {
-      "toggleSidebar": "Zijbalk in-/uitschakelen",
+      "hideProjects": "Verberg projecten",
+      "showProjects": "Toon projecten",
       "moveFocusToProjects": "Focus naar Projecten verplaatsen",
       "showContents": "Toon inhoud",
       "hideContents": "Verberg inhoud",

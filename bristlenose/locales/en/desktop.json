@@ -37,7 +37,8 @@
       "jumpToSelection": "Jump to Selection"
     },
     "view": {
-      "toggleSidebar": "Toggle Sidebar",
+      "hideProjects": "Hide Projects",
+      "showProjects": "Show Projects",
       "moveFocusToProjects": "Move Focus to Projects",
       "showContents": "Show Contents",
       "hideContents": "Hide Contents",

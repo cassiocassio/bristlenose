@@ -504,11 +504,15 @@ private struct ViewMenuContent: View {
 
         Divider()
 
-        Button(i18n.t("desktop.menu.view.toggleSidebar")) {
-            NSApp.keyWindow?.firstResponder?.tryToPerform(
-                #selector(NSSplitViewController.toggleSidebar(_:)),
-                with: nil
-            )
+        // Dynamic Hide/Show label (Finder convention), content-named "Projects"
+        // to match the reveal-family (Show Contents / Sessions / Codes / Signals
+        // / Tags) and disambiguate from the web left panel. Toggles through the
+        // `columnVisibility` binding via ContentView, not the AppKit selector, so
+        // the auto toolbar button and this item share one source of truth.
+        Button(i18n.t(bridgeHandler.sidebarVisible
+                      ? "desktop.menu.view.hideProjects"
+                      : "desktop.menu.view.showProjects")) {
+            NotificationCenter.default.post(name: .toggleProjectsSidebar, object: nil)
         }
         .keyboardShortcut("s", modifiers: [.command, .option])
 
@@ -999,6 +1003,17 @@ private struct HelpMenuContent: View {
             Self.open("https://bristlenose.app/docs/")
         }
         .keyboardShortcut("?", modifiers: .command)
+
+        // Re-openable way back to the app-level Welcome home pane. No shortcut —
+        // it's a rare, unmemorable destination (per the deliberate no-⌘⇧1 call);
+        // discoverability comes from living in Help, not a keybinding. Clears the
+        // project selection; ContentView shows WelcomeHomeView on no-selection.
+        // Reuses the vetted, all-locale `chrome.welcomeTitle` ("Welcome to
+        // Bristlenose") kept from the retired WelcomeView — see
+        // docs/design-welcome-screen.md §Copy & i18n; this is now a live reference.
+        Button(i18n.t("desktop.chrome.welcomeTitle")) {
+            NotificationCenter.default.post(name: .showWelcome, object: nil)
+        }
 
         Button(i18n.t("desktop.menu.help.keyboardShortcuts")) {
             Self.open("https://bristlenose.app/docs/keyboard-shortcuts.html")

@@ -36,7 +36,8 @@
       "jumpToSelection": "Přejít na výběr"
     },
     "view": {
-      "toggleSidebar": "Přepnout postranní panel",
+      "hideProjects": "Skrýt projekty",
+      "showProjects": "Zobrazit projekty",
       "showContents": "Zobrazit obsah",
       "hideContents": "Skrýt obsah",
       "showCodes": "Zobrazit kódy",

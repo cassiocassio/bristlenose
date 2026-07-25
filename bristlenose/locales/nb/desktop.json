@@ -36,7 +36,8 @@
       "jumpToSelection": "Gå til utvalg"
     },
     "view": {
-      "toggleSidebar": "Vis/skjul sidepanel",
+      "hideProjects": "Skjul prosjekter",
+      "showProjects": "Vis prosjekter",
       "moveFocusToProjects": "Flytt fokus til prosjekter",
       "showContents": "Vis innhold",
       "hideContents": "Skjul innhold",

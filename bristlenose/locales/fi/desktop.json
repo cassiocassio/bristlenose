@@ -36,7 +36,8 @@
       "jumpToSelection": "Siirry valintaan"
     },
     "view": {
-      "toggleSidebar": "Näytä tai kätke sivupalkki",
+      "hideProjects": "Kätke projektit",
+      "showProjects": "Näytä projektit",
       "moveFocusToProjects": "Siirrä kohdistus projekteihin",
       "showContents": "Näytä sisältö",
       "hideContents": "Kätke sisältö",

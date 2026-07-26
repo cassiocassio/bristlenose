@@ -1,9 +1,19 @@
+---
+status: current
+last-trued: 2026-07-26
+trued-against: HEAD on 2026-07-26
+---
+
 # Welcome screen — study-tools cell illustrations
+
+> **Trued 2026-07-26** — Codebooks (tool 2) shipped this session as the manual-tags
+> illustration, and the seven-sentiments fan was halved in speed. Updated from
+> "one shipped, seven remaining" to two shipped, six remaining.
 
 **Handoff for a new session.** Replacing the 8 static screenshots in the Welcome
 screen's large "Study tools" cell with tiny looping illustrations, **one tool at
-a time**. Tool 1 (AutoCode) is **built and shipped in-app**; this doc is the brief
-for tools 2–8 (seven remaining).
+a time**. Tools 1–2 (AutoCode, Codebooks) are **built and shipped in-app**; this
+doc is the brief for the six remaining.
 
 ## Why we're doing this (Martin, 25 Jul 2026)
 
@@ -87,13 +97,28 @@ streams and settles without clipping. Codes: `visible options` (blue),
 - **Restraint** — quiet, must not out-shout the science cells or the real Shoal.
 - Everything is **decorative**: `accessibilityHidden`, inert, reduce-motion still.
 
-## Tools 2–8 — concept seeds + likely build target
+## Tool 2 — Codebooks / manual tags (DONE, second reference)
+
+Shipped as the **manual-tags** illustration — the human counterpart to AutoCode. A
+researcher hand-builds a codebook group (title + description + codes typed via the
+real `+ → type → commit → chip` flow) in the real codebook OKLCH colours (ux 250 /
+opp 75). Two groups — a *designed A/B experiment* and a *brief-driven commercial
+dive* (participant on a rival tool) — make the point auto-coding can't originate:
+intent the human set before the data existed.
+
+- **In-app:** `WelcomeIllustrationHTML.manualTags(...)` + `ManualTagsIllustrationView`
+  (enum `.manualTags`), rendered at `.frame(height: 176)`, wired to the Codebooks
+  `studyTools` slot (its "Code by hand →" CTA). Baton turn 13 s; **one group per
+  turn** (the baton alternates the two across turns, like AutoCode alternates quotes).
+- **Mock:** the *Manual tags* section of `docs/mockups/welcome-studytools-animations.html`
+  keeps the standalone two-group slide sequence (accumulate-then-slide, for design).
+
+## Tools 3–8 — concept seeds + likely build target
 
 React to these as we go; lock nothing until it's mocked.
 
 | # | Tool | Concept seed | Likely target |
 |---|------|--------------|---------------|
-| 2 | **Codebooks** | a codebook builds up (code rows appear), or a ready-made framework template drops in | webview (report codebook rows) |
 | 3 | **Tag** | select quotes, press `t` (keycap), a code chip attaches — reuses the quote-card unit | webview + keycap |
 | 4 | **Star & hide** | `s` stars a quote (star fills gold), `h` collapses a row away | webview + keycap |
 | 5 | **Video clips** | a quote turns into a film frame with a play triangle / scrubber | native (bespoke drawing) likely |

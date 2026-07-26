@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CodebookPanel } from "./CodebookPanel";
 import { resetSidebarStore } from "../contexts/SidebarStore";
+import { getJobs, resetActivityStore } from "../contexts/ActivityStore";
 import type { CodebookResponse } from "../utils/types";
 
 const MOCK_CODEBOOK: CodebookResponse = {
@@ -503,6 +504,40 @@ describe("CodebookPanel — per-framework sections", () => {
     await userEvent.click(screen.getByTestId("bn-framework-toggle-garrett"));
     await waitFor(() => expect(findPuts().length).toBe(2));
     expect(JSON.parse(findPuts()[1][1].body as string)).toEqual({});
+  });
+
+  it("shows a catch-up activity chip when re-enabling a framework with new sessions", async () => {
+    resetActivityStore();
+    // PUT /framework-states reports a catch-up for garrett; GET returns the empty
+    // (all-enabled) map. Only the OFF → ON click should spawn the chip.
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/autocode/")) {
+        return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+      }
+      if (typeof url === "string" && url.includes("/framework-states")) {
+        const isPut = init?.method === "PUT";
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(isPut ? { status: "ok", catchUp: ["garrett"] } : {}),
+        });
+      }
+      if (typeof url === "string" && url.includes("/codebook/templates")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_TEMPLATES) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_WITH_FRAMEWORKS) });
+    });
+    render(<CodebookPanel projectId="1" />);
+    await waitFor(() => expect(screen.getByText("Strategy")).toBeInTheDocument());
+
+    // Disable garrett (no chip — it's a disable, not a catch-up)…
+    await userEvent.click(screen.getByTestId("bn-framework-toggle-garrett"));
+    expect(getJobs().has("catchup:garrett")).toBe(false);
+    // …then re-enable → the reported catch-up becomes an activity chip.
+    await userEvent.click(screen.getByTestId("bn-framework-toggle-garrett"));
+    await waitFor(() => expect(getJobs().has("catchup:garrett")).toBe(true));
+    const entry = getJobs().get("catchup:garrett");
+    expect(entry?.type).toBe("catchup");
+    expect(entry?.frameworkId).toBe("garrett");
   });
 
   it("hydrates a persisted disabled framework as folded on mount", async () => {

@@ -18,6 +18,7 @@
 
 import { useSyncExternalStore } from "react";
 import { getFrameworkStates, putFrameworkStates, putHiddenTagGroups } from "../utils/api";
+import type { FrameworkStatesPutResult } from "../utils/api";
 import type { TagFilterState } from "../utils/filter";
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -313,21 +314,24 @@ export function hydrateFrameworkStates(): void {
 }
 
 /**
- * Toggle a framework's disabled state (the codebook switch). Disabled folds its
- * codebook section and hides its badges report-wide; it never gates re-apply.
- * Persists the full disabled set as {fid: false} (absence = enabled).
+ * Toggle a framework's disabled state (the codebook switch). Disable is functional —
+ * "off means off" (design-codebook-state-model.md §8): it folds the section, hides
+ * badges report-wide, drops the codebook from the sidebar + autocomplete, and gates
+ * re-apply. Persists the full disabled set as {fid: false} (absence = enabled) and
+ * returns the PUT result so the caller can surface an on-enable catch-up chip.
  */
-export function setFrameworkDisabled(frameworkId: string, disabled: boolean): void {
+export function setFrameworkDisabled(
+  frameworkId: string,
+  disabled: boolean,
+): Promise<FrameworkStatesPutResult> {
   frameworkEditGeneration += 1; // mark a local edit so an in-flight hydrate defers
-  setState((prev) => {
-    const next = new Set(prev.disabledFrameworks);
-    if (disabled) next.add(frameworkId);
-    else next.delete(frameworkId);
-    const map: Record<string, boolean> = {};
-    for (const fid of next) map[fid] = false;
-    putFrameworkStates(map);
-    return { ...prev, disabledFrameworks: next };
-  });
+  const next = new Set(state.disabledFrameworks);
+  if (disabled) next.add(frameworkId);
+  else next.delete(frameworkId);
+  setState((prev) => ({ ...prev, disabledFrameworks: next }));
+  const map: Record<string, boolean> = {};
+  for (const fid of next) map[fid] = false;
+  return putFrameworkStates(map);
 }
 
 // ── Solo / focus mode ────────────────────────────────────────────────────

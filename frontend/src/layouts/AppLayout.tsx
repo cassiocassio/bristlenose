@@ -40,7 +40,7 @@ import {
   postExportCounts,
 } from "../shims/bridge";
 import { getPlayerOpen, getPlayerPlaying } from "../contexts/PlayerContext";
-import { cancelAutoCode, getClipExtractionStatus, revealClips } from "../utils/api";
+import { cancelAutoCode, getAutoCodeStatus, getClipExtractionStatus, revealClips } from "../utils/api";
 import {
   copyQuotesToClipboard,
   saveQuotesSpreadsheet,
@@ -576,6 +576,37 @@ function AppShell() {
                 progressLabel: status === "running" ? `${s.progress}/${s.total}` : null,
                 durationLabel: null,
                 errorMessage: status === "failed" ? i18n.t("export.clips.failed") : null,
+              };
+            },
+          };
+        }
+        if (j.type === "catchup") {
+          // On-enable catch-up delta. Numberless by design: the AutoCodeJob's
+          // counts are cumulative, not the delta being coded, so showing them would
+          // mislead (§4a). Spinner → ✓, then refresh so the new tags appear.
+          return {
+            id,
+            label: i18n.t("autocode.chip.recoding", {
+              title: j.frameworkTitle,
+              defaultValue: "Re-coding new sessions for {{title}}…",
+            }),
+            completedLabel: i18n.t("autocode.chip.recoded", {
+              title: j.frameworkTitle,
+              defaultValue: "Re-coded new sessions for {{title}}",
+            }),
+            frameworkId: j.frameworkId,
+            onComplete: () => {
+              window.dispatchEvent(new Event("codebook-changed"));
+              document.dispatchEvent(new CustomEvent("bn:tags-changed"));
+            },
+            pollFn: async (): Promise<NormalisedJobStatus> => {
+              const s = await getAutoCodeStatus(j.frameworkId);
+              const status = s.status === "pending" ? "running" : s.status;
+              return {
+                status: status as "running" | "completed" | "failed" | "cancelled",
+                progressLabel: null,
+                durationLabel: null,
+                errorMessage: status === "failed" ? s.error_message || null : null,
               };
             },
           };

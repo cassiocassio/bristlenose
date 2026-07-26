@@ -673,60 +673,71 @@ class TestFrameworkStatesPut:
 
 
 class TestFrameworkStatesCatchUpTrigger:
-    """The PUT fires a catch-up delta for exactly the frameworks that transition
-    OFF → ON (design-codebook-state-model.md §4a). We patch the scheduler and
-    assert *which* frameworks it's asked to catch up — the transition-detection
-    logic, not the (separately unit-tested) re-apply itself."""
+    """The PUT hands exactly the OFF → ON frameworks to the catch-up starter
+    (design-codebook-state-model.md §4a). We patch `_start_catch_ups` (the delta
+    gate — tested separately in test_autocode_engine) and assert the transition
+    detection: which frameworks are *offered* for catch-up."""
 
-    def _put_and_capture(self, client, *puts):
-        """Apply a sequence of PUT bodies; return the framework ids passed to the
-        catch-up scheduler on the LAST PUT."""
+    def _reenabled_on_last_put(self, client, *puts) -> list[str]:
+        """Apply a sequence of PUT bodies; return the framework ids offered to the
+        catch-up starter on the LAST PUT (its 3rd positional arg)."""
         from unittest.mock import patch
 
         for body in puts[:-1]:
             client.put("/api/projects/1/framework-states", json=body)
         with patch(
-            "bristlenose.server.routes.data._schedule_catch_up"
-        ) as sched:
+            "bristlenose.server.routes.data._start_catch_ups", return_value=[]
+        ) as starter:
             client.put("/api/projects/1/framework-states", json=puts[-1])
-        return [call.args[2] for call in sched.call_args_list]
+        assert starter.call_count == 1
+        return list(starter.call_args.args[2])
 
-    def test_disabled_then_enabled_fires_catch_up(self, client: TestClient) -> None:
-        assert self._put_and_capture(
+    def test_disabled_then_enabled_offers_catch_up(self, client: TestClient) -> None:
+        assert self._reenabled_on_last_put(
             client, {"garrett": False}, {"garrett": True}
         ) == ["garrett"]
 
-    def test_disabled_then_omitted_fires_catch_up(self, client: TestClient) -> None:
+    def test_disabled_then_omitted_offers_catch_up(self, client: TestClient) -> None:
         # Omitting a framework = re-enabling it (absence means enabled).
-        assert self._put_and_capture(
+        assert self._reenabled_on_last_put(
             client, {"garrett": False}, {}
         ) == ["garrett"]
 
-    def test_staying_disabled_does_not_fire(self, client: TestClient) -> None:
-        assert self._put_and_capture(
+    def test_staying_disabled_does_not_offer(self, client: TestClient) -> None:
+        assert self._reenabled_on_last_put(
             client, {"garrett": False}, {"garrett": False}
         ) == []
 
-    def test_newly_disabled_does_not_fire(self, client: TestClient) -> None:
+    def test_newly_disabled_does_not_offer(self, client: TestClient) -> None:
         # on (absent) → off is a disable, not a catch-up.
-        assert self._put_and_capture(client, {"garrett": False}) == []
+        assert self._reenabled_on_last_put(client, {"garrett": False}) == []
 
-    def test_enabled_staying_enabled_does_not_fire(
+    def test_enabled_staying_enabled_does_not_offer(
         self, client: TestClient
     ) -> None:
-        assert self._put_and_capture(
+        assert self._reenabled_on_last_put(
             client, {"garrett": True}, {"garrett": True}
         ) == []
 
-    def test_only_the_re_enabled_framework_fires(
+    def test_only_the_re_enabled_framework_offered(
         self, client: TestClient
     ) -> None:
-        # Two off; re-enable one, keep the other off → exactly one catch-up.
-        assert self._put_and_capture(
+        # Two off; re-enable one, keep the other off → exactly one offered.
+        assert self._reenabled_on_last_put(
             client,
             {"garrett": False, "norman": False},
             {"garrett": True, "norman": False},
         ) == ["garrett"]
+
+    def test_response_reports_catch_up_frameworks(self, client: TestClient) -> None:
+        # With no applied job in the fixture, the delta gate finds nothing → the
+        # response reports an empty catch-up list (and never 500s on the new shape).
+        client.put("/api/projects/1/framework-states", json={"garrett": False})
+        resp = client.put(
+            "/api/projects/1/framework-states", json={"garrett": True}
+        )
+        assert resp.status_code == 200
+        assert resp.json() == {"status": "ok", "catchUp": []}
 
 
 # ---------------------------------------------------------------------------

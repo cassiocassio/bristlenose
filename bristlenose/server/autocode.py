@@ -467,11 +467,45 @@ async def run_autocode_job(
 DEFAULT_ACCEPT_THRESHOLD = 0.70
 
 
+def _set_job_status(
+    db: SASession,
+    project_id: int,
+    framework_id: str,
+    status: str,
+    error: str | None = None,
+    when: str | None = None,
+) -> None:
+    """Best-effort update of an AutoCodeJob's status for the on-enable catch-up chip.
+
+    ``when`` guards the write to fire only if the job is currently in that status —
+    used by the finally-restore, which flips a *still-"running"* job to "completed"
+    but leaves an already-terminal (failed/completed) one alone. Never raises.
+    """
+    from bristlenose.server.models import AutoCodeJob
+
+    try:
+        j = (
+            db.query(AutoCodeJob)
+            .filter_by(project_id=project_id, framework_id=framework_id)
+            .first()
+        )
+        if j is None or (when is not None and j.status != when):
+            return
+        j.status = status
+        if error is not None:
+            j.error_message = error
+        db.commit()
+    except Exception:
+        logger.exception("Could not set catch-up job status for %s", framework_id)
+        db.rollback()
+
+
 async def reapply_to_new_quotes(
     db_factory: Callable[[], SASession],
     project_id: int,
     framework_id: str,
     settings: BristlenoseSettings,
+    track_status: bool = False,
 ) -> int:
     """Re-apply an already-applied framework to the quotes it hasn't seen yet.
 
@@ -483,6 +517,12 @@ async def reapply_to_new_quotes(
 
     Safe no-op when the framework was never applied (no completed job) — so it
     can be fired unconditionally per linked framework after a re-run.
+
+    ``track_status`` (the on-enable catch-up path) makes this own the job's terminal
+    status so a frontend activity chip can poll it: the caller sets ``running``
+    *synchronously* (to win the chip's first poll), and this restores ``completed``
+    on success — or on the no-delta early return — and sets ``failed`` on error.
+    The default (the silent ``run_completed`` path) never touches job status.
     """
     from bristlenose.llm import telemetry
     from bristlenose.llm.boundary import wrap_untrusted
@@ -504,11 +544,14 @@ async def reapply_to_new_quotes(
 
     db = db_factory()
     try:
+        # One job per (project, framework) — the unique constraint — so no status
+        # filter is needed to pick it out. We deliberately DON'T filter status here:
+        # the on-enable catch-up sets the job to "running" before this runs (to win
+        # the activity chip's first poll), and a status filter would then miss it.
+        # "Never applied" is caught by the completed_at guard below, not by status.
         job = (
             db.query(AutoCodeJob)
-            .filter_by(
-                project_id=project_id, framework_id=framework_id, status="completed"
-            )
+            .filter_by(project_id=project_id, framework_id=framework_id)
             .first()
         )
         if job is None:
@@ -677,6 +720,9 @@ async def reapply_to_new_quotes(
         job.total_quotes += len(batch_items)
         job.proposed_count += new_proposed
         job.completed_at = now
+        if track_status:
+            # Route set this to "running" for the chip; restore it now.
+            job.status = "completed"
         db.commit()
         logger.info(
             "Re-apply %s: %d new quotes, %d proposals, %d auto-accepted at >=%.2f",
@@ -691,8 +737,15 @@ async def reapply_to_new_quotes(
     except Exception as exc:
         logger.exception("Re-apply failed for %s: %s", framework_id, exc)
         db.rollback()
+        if track_status:
+            _set_job_status(db, project_id, framework_id, "failed", str(exc)[:500])
         return 0
     finally:
+        # Any early `return 0` left the job as the route set it ("running"); restore
+        # it so the chip's poll resolves and never spins forever. No-op on success
+        # (already "completed") or failure (already "failed").
+        if track_status:
+            _set_job_status(db, project_id, framework_id, "completed", when="running")
         db.close()
 
 

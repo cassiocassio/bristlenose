@@ -568,8 +568,22 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
   // to ProjectFrameworkState via /framework-states.
   const { disabledFrameworks } = useSidebarStore();
   const toggleFramework = useCallback(
-    (fid: string) => {
-      setFrameworkDisabled(fid, !disabledFrameworks.has(fid));
+    (fid: string, title: string) => {
+      const wasDisabled = disabledFrameworks.has(fid);
+      const result = setFrameworkDisabled(fid, !wasDisabled);
+      if (wasDisabled) {
+        // OFF → ON: if the backend kicked off a catch-up (new sessions to code),
+        // surface it as an activity chip (numberless; §4a).
+        result.then((res) => {
+          if (res.catchUp.includes(fid)) {
+            addJob(`catchup:${fid}`, {
+              type: "catchup",
+              frameworkId: fid,
+              frameworkTitle: title,
+            });
+          }
+        });
+      }
     },
     [disabledFrameworks],
   );
@@ -1148,7 +1162,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                     aria-checked={!isDisabled}
                     aria-label={label}
                     className={`framework-toggle${isDisabled ? " off" : ""}`}
-                    onClick={() => toggleFramework(fid)}
+                    onClick={() => toggleFramework(fid, title)}
                     data-testid={`bn-framework-toggle-${fid}`}
                   />
                 </div>

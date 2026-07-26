@@ -11,7 +11,8 @@
 import { useSyncExternalStore } from "react";
 
 export interface ActivityJobEntry {
-  type: "autocode" | "clips";
+  /** "catchup" = the on-enable delta re-apply (numberless chip; §4a). */
+  type: "autocode" | "clips" | "catchup";
   frameworkId: string;
   frameworkTitle: string;
   /** Total items (clips count) — used by clips jobs. */

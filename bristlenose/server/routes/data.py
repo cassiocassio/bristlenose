@@ -957,7 +957,7 @@ def _schedule_catch_up(
     async def _run() -> None:
         try:
             n = await reapply_to_new_quotes(
-                db_factory, project_id, framework_id, settings
+                db_factory, project_id, framework_id, settings, track_status=True
             )
             logger.info(
                 "catch-up re-apply on enable | framework=%s | new_tags=%d",
@@ -972,12 +972,57 @@ def _schedule_catch_up(
     asyncio.create_task(_run())
 
 
+def _start_catch_ups(
+    db: Session, project_id: int, framework_ids: list[str]
+) -> list[str]:
+    """Of the re-enabled frameworks, pick the ones with a real catch-up to run and
+    mark their job "running" now.
+
+    A framework catches up only if it has a completed job AND at least one session
+    was imported since that job finished (the frozen watermark; §4a). Setting the
+    job "running" here — synchronously, before the async delta starts — means the
+    frontend activity chip's first poll already sees "running", closing the race
+    where it would otherwise see the stale "completed" and resolve instantly. Cheap:
+    two indexed queries per framework, no LLM.
+    """
+    from bristlenose.server.models import AutoCodeJob
+    from bristlenose.server.models import Session as SessionModel
+
+    started: list[str] = []
+    for fid in framework_ids:
+        job = (
+            db.query(AutoCodeJob)
+            .filter_by(project_id=project_id, framework_id=fid)
+            .first()
+        )
+        if job is None or job.completed_at is None:
+            continue  # never applied → nothing to catch up
+        has_new = (
+            db.query(SessionModel.session_id)
+            .filter(
+                SessionModel.project_id == project_id,
+                SessionModel.first_imported_at.isnot(None),
+                SessionModel.first_imported_at > job.completed_at,
+            )
+            .first()
+            is not None
+        )
+        if not has_new:
+            continue  # no new sessions since last apply → silent no-op
+        job.status = "running"
+        job.started_at = _now()
+        started.append(fid)
+    if started:
+        db.commit()
+    return started
+
+
 @router.put("/projects/{project_id}/framework-states")
 async def put_framework_states(
     project_id: int,
     request: Request,
     data: dict[str, bool],
-) -> dict[str, str]:
+) -> dict[str, object]:
     """Write per-framework enable/disable state (full replacement).
 
     Mirrors the other data endpoints: PUT replaces the entire stored map. Absence
@@ -990,7 +1035,7 @@ async def put_framework_states(
     maintenance; work already done is always kept.
     """
     db = _get_db(request)
-    became_enabled: list[str] = []
+    catch_up: list[str] = []
     try:
         _check_project(db, project_id)
         # Frameworks explicitly OFF before this write (enabled=False rows).
@@ -1018,11 +1063,14 @@ async def put_framework_states(
             )
         db.commit()
         # OFF → ON transition: was explicitly disabled, now enabled (sent true or
-        # omitted → default enabled). Those frameworks get a catch-up delta.
-        became_enabled = [fw for fw in was_disabled if data.get(fw, True)]
+        # omitted → default enabled). Of those, only the ones with new sessions to
+        # code get a catch-up (job marked "running" synchronously so the chip catches
+        # it); the rest are silent no-ops.
+        reenabled = [fw for fw in was_disabled if data.get(fw, True)]
+        catch_up = _start_catch_ups(db, project_id, reenabled)
     finally:
         db.close()
 
-    for framework_id in became_enabled:
+    for framework_id in catch_up:
         _schedule_catch_up(request, project_id, framework_id)
-    return {"status": "ok"}
+    return {"status": "ok", "catchUp": catch_up}

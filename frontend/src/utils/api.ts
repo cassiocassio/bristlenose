@@ -183,15 +183,52 @@ export function putHiddenTagGroups(groupNames: string[]): void {
 /**
  * Per-framework enable/disable state (the codebook switch). Only frameworks with
  * an explicit stored opinion are returned; absence means enabled (the default).
- * View-only per design-codebook-library.md Decision A — drives fold + report-wide
- * badge hide, never re-apply.
+ * Functional — "off means off" (design-codebook-state-model.md §8): drives the fold,
+ * report-wide badge hide, the tags-sidebar/autocomplete drop, and the re-apply gate.
  */
 export function getFrameworkStates(): Promise<Record<string, boolean>> {
   return apiGet<Record<string, boolean>>("/framework-states");
 }
 
-export function putFrameworkStates(states: Record<string, boolean>): void {
-  firePut("/framework-states", states);
+export interface FrameworkStatesPutResult {
+  status: string;
+  /** Framework ids that started a catch-up delta (re-enabled with new sessions to
+   *  code). The caller surfaces these as activity chips. */
+  catchUp: string[];
+}
+
+/**
+ * Persist the enable/disable map and learn which frameworks started a catch-up.
+ *
+ * Unlike the other view-toggle syncs (fire-and-forget `firePut`), this reads the
+ * response body: re-enabling a codebook that has new sessions kicks off a catch-up
+ * delta, and the frontend shows an activity chip for it. Never rejects — a failed
+ * sync toasts (like firePut) and resolves to an empty catch-up.
+ */
+export function putFrameworkStates(
+  states: Record<string, boolean>,
+): Promise<FrameworkStatesPutResult> {
+  if (isExportMode()) return Promise.resolve({ status: "ok", catchUp: [] });
+  return fetch(`${apiBase()}/framework-states`, {
+    method: "PUT",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(states),
+  })
+    .then(async (resp) => {
+      if (!resp.ok) throw new Error(`PUT /framework-states ${resp.status}`);
+      const body = (await resp.json()) as Partial<FrameworkStatesPutResult>;
+      return { status: body.status ?? "ok", catchUp: body.catchUp ?? [] };
+    })
+    .catch((err) => {
+      console.error("PUT /framework-states failed:", err);
+      toast(
+        i18n.t("sync.saveFailed", {
+          defaultValue: "Couldn't save your change — check your connection.",
+        }),
+        4000,
+      );
+      return { status: "error", catchUp: [] };
+    });
 }
 
 // ---------------------------------------------------------------------------

@@ -905,6 +905,82 @@ class TestReapplyToNewQuotes:
         assert accepted == 0
         mock_analyze.assert_not_called()
 
+    def _mark_running(self, db_factory, project_id, framework_id) -> None:
+        """Simulate the route setting the job 'running' before the catch-up runs."""
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            job.status = "running"
+            db.commit()
+        finally:
+            db.close()
+
+    def test_track_status_restores_completed_after_coding(
+        self, project_with_garrett
+    ) -> None:
+        """track_status: a 'running' job (set by the route) is restored to
+        'completed' once the delta is coded — so the chip's poll resolves."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        self._mark_running(db_factory, project_id, framework_id)
+
+        with _patch_llm(
+            AsyncMock(return_value=_make_batch_result(3, "user need", 0.85))
+        ):
+            accepted = asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings(),
+                    track_status=True,
+                )
+            )
+        assert accepted == 3
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            assert job.status == "completed"
+        finally:
+            db.close()
+
+    def test_track_status_restores_completed_on_no_delta(
+        self, project_with_garrett
+    ) -> None:
+        """track_status: even when there's nothing to code, a 'running' job must not
+        be left spinning — the finally restores 'completed'."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        # No new sessions → the delta is empty.
+        self._mark_running(db_factory, project_id, framework_id)
+
+        mock_analyze = AsyncMock()
+        with _patch_llm(mock_analyze):
+            accepted = asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings(),
+                    track_status=True,
+                )
+            )
+        assert accepted == 0
+        mock_analyze.assert_not_called()
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            assert job.status == "completed"  # not left "running"
+        finally:
+            db.close()
+
     def test_reapply_active_frameworks_covers_applied(
         self, project_with_garrett
     ) -> None:
@@ -1039,3 +1115,75 @@ class TestReapplyToNewQuotes:
             )
         assert accepted == 0
         mock_analyze.assert_not_called()
+
+
+class TestStartCatchUps:
+    """`_start_catch_ups` is the delta gate the on-enable route runs synchronously:
+    it marks a job 'running' (for the chip) only when there's a real catch-up."""
+
+    _apply_original = TestReapplyToNewQuotes._apply_original
+    _add_quotes = TestReapplyToNewQuotes._add_quotes
+
+    def test_offers_and_marks_running_when_new_sessions(
+        self, project_with_garrett
+    ) -> None:
+        from bristlenose.server.routes.data import _start_catch_ups
+
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)  # new session after the apply
+
+        db = db_factory()
+        try:
+            started = _start_catch_ups(db, project_id, [framework_id])
+        finally:
+            db.close()
+        assert started == [framework_id]
+
+        # The job is flipped to "running" so the chip's first poll catches it.
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            assert job.status == "running"
+        finally:
+            db.close()
+
+    def test_no_catch_up_when_no_new_sessions(
+        self, project_with_garrett
+    ) -> None:
+        from bristlenose.server.routes.data import _start_catch_ups
+
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        # No _add_quotes → no session imported after the apply watermark.
+
+        db = db_factory()
+        try:
+            started = _start_catch_ups(db, project_id, [framework_id])
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            assert started == []
+            assert job.status == "completed"  # untouched
+        finally:
+            db.close()
+
+    def test_no_catch_up_when_never_applied(
+        self, project_with_garrett
+    ) -> None:
+        from bristlenose.server.routes.data import _start_catch_ups
+
+        # Fixture job is 'pending' (completed_at is None) → never applied.
+        project_id, framework_id, db_factory = project_with_garrett
+        self._add_quotes(db_factory, project_id, 3)
+        db = db_factory()
+        try:
+            assert _start_catch_ups(db, project_id, [framework_id]) == []
+        finally:
+            db.close()

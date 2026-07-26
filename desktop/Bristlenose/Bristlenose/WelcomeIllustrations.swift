@@ -166,13 +166,15 @@ struct BookShelfView: View {
     private let cardW: CGFloat = 106     // 80×114 grown ~33% to use more of the cell
     private let cardH: CGFloat = 152
     private let off: CGFloat = 34        // horizontal peek between covers — more separation, less overlap
+    // Natural (unscaled) height: caption (2-line reserve ~60) + covers (cardH + 8) + link.
+    private let naturalHeight: CGFloat = 252
     @Environment(\.welcomeAnimationActive) private var active
     private let timer = Timer.publish(every: 3.8, on: .main, in: .common).autoconnect()
 
     var body: some View {
         let n = books.count
         let current = books[min(front, n - 1)]
-        VStack(alignment: .leading, spacing: 6) {
+        let shelf = VStack(alignment: .leading, spacing: 6) {
             // Caption — synced to the front cover, cross-fades on change.
             VStack(alignment: .leading, spacing: 2) {
                 Text(current.author).font(.title3).fontWeight(.semibold)
@@ -209,6 +211,16 @@ struct BookShelfView: View {
         .onReceive(timer) { _ in
             guard active && !reduceMotion else { return }   // baton: advance only while holding it
             withAnimation(.easeInOut(duration: 0.6)) { front = (front + 1) % n }
+        }
+
+        // Self-scale to the height the fixed golden slot offers (never upscale), so the
+        // shelf bends to the geometry the way the webview illustrations do — the covers
+        // draw at fixed sizes and can't reflow, so a uniform scale is how it fits.
+        return GeometryReader { geo in
+            let s = min(1, geo.size.height / naturalHeight)
+            shelf
+                .frame(width: geo.size.width, height: naturalHeight, alignment: .topLeading)
+                .scaleEffect(s, anchor: .topLeading)
         }
     }
 

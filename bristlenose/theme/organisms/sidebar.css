@@ -751,6 +751,53 @@ body.dragging * {
     background: var(--bn-colour-hover);
 }
 
+/* ── Codebook status dot ──────────────────────────────────────────
+   Each codebook row in the Codebook-tab sidebar carries a leading dot
+   that echoes the enable/disable switch: blue = on, grey = disabled,
+   transparent = available / floor. The row becomes a flex line so the
+   dot sits first-line-aligned (like a list bullet) and every label's
+   left edge lines up regardless of dot colour. */
+.toc-link.codebook-toc-link {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--bn-space-xs);
+}
+
+/* not-imported rows keep muted text + full opacity dip via .not-imported;
+   the dot itself is transparent, so the reserved slot still aligns labels. */
+.toc-link.codebook-toc-link.not-imported {
+    opacity: 1;                        /* dim the label, not the whole row */
+    color: var(--bn-colour-muted);
+}
+.toc-link.codebook-toc-link.not-imported .codebook-toc-label {
+    opacity: 0.6;
+    transition: opacity var(--bn-transition-fast);
+}
+.toc-link.codebook-toc-link.not-imported:hover .codebook-toc-label {
+    opacity: 1;
+}
+
+/* Disabled (switched-off) codebook: muted label, grey dot — still a live
+   link (it scrolls to the folded section). */
+.toc-link.codebook-disabled .codebook-toc-label {
+    color: var(--bn-colour-muted);
+}
+
+.codebook-dot {
+    flex-shrink: 0;
+    width: 7px;
+    height: 7px;
+    margin-top: 0.45em;                /* optical alignment to the first text line */
+    border-radius: 50%;
+    background: transparent;           /* available / floor — reserved slot */
+}
+.codebook-dot-on {
+    background: var(--bn-colour-accent);        /* switch on  */
+}
+.codebook-dot-off {
+    background: var(--bn-colour-border-hover);  /* switch off-track */
+}
+
 /* Compact action button inside sidebar body — e.g. "Browse codebooks →".
    Smaller than .bn-btn, fits the sidebar's dense information layout. */
 .sidebar-mini-btn {

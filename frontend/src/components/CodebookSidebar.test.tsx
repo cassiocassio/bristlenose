@@ -12,13 +12,23 @@ vi.mock("../utils/api", () => ({
   apiGet: vi.fn(),
   getCodebook: vi.fn(),
   getCodebookTemplates: vi.fn(),
+  getFrameworkStates: vi.fn(),
+  putFrameworkStates: vi.fn(),
+  putHiddenTagGroups: vi.fn(),
 }));
 
-import { apiGet, getCodebook, getCodebookTemplates } from "../utils/api";
+import {
+  apiGet,
+  getCodebook,
+  getCodebookTemplates,
+  getFrameworkStates,
+} from "../utils/api";
+import { resetSidebarStore } from "../contexts/SidebarStore";
 
 const mockApiGet = vi.mocked(apiGet);
 const mockGetCodebook = vi.mocked(getCodebook);
 const mockGetCodebookTemplates = vi.mocked(getCodebookTemplates);
+const mockGetFrameworkStates = vi.mocked(getFrameworkStates);
 
 // ── Test data ──────────────────────────────────────────────────────
 
@@ -95,10 +105,20 @@ const TEMPLATES_RESPONSE = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetSidebarStore();
   mockApiGet.mockResolvedValue(PROJECT_INFO);
   mockGetCodebook.mockResolvedValue(CODEBOOK_RESPONSE);
   mockGetCodebookTemplates.mockResolvedValue(TEMPLATES_RESPONSE);
+  mockGetFrameworkStates.mockResolvedValue({});
 });
+
+/** The label text is wrapped in a `.codebook-toc-label` span; classes
+ * (active / not-imported / codebook-disabled) live on the parent anchor. */
+function rowByLabel(label: string): HTMLAnchorElement {
+  const el = screen.getByText(label).closest("a");
+  if (!el) throw new Error(`no anchor for row "${label}"`);
+  return el as HTMLAnchorElement;
+}
 
 // ── Tests ──────────────────────────────────────────────────────────
 
@@ -124,7 +144,7 @@ describe("CodebookSidebar", () => {
     await waitFor(() => {
       expect(screen.getByText("Emotional and cognitive signals")).toBeInTheDocument();
     });
-    const link = screen.getByText("Emotional and cognitive signals");
+    const link = rowByLabel("Emotional and cognitive signals");
     expect(link).toHaveClass("toc-link");
     expect(link).not.toHaveClass("not-imported");
   });
@@ -134,7 +154,7 @@ describe("CodebookSidebar", () => {
     await waitFor(() => {
       expect(screen.getByText("The Elements of User Experience")).toBeInTheDocument();
     });
-    const link = screen.getByText("The Elements of User Experience");
+    const link = rowByLabel("The Elements of User Experience");
     expect(link).toHaveClass("toc-link");
     expect(link).toHaveClass("not-imported");
   });
@@ -144,7 +164,7 @@ describe("CodebookSidebar", () => {
     await waitFor(() => {
       expect(screen.getByText("The User Experience Honeycomb")).toBeInTheDocument();
     });
-    const link = screen.getByText("The User Experience Honeycomb");
+    const link = rowByLabel("The User Experience Honeycomb");
     expect(link).toHaveClass("toc-link");
     expect(link).not.toHaveClass("not-imported");
   });
@@ -161,7 +181,7 @@ describe("CodebookSidebar", () => {
     await waitFor(() => {
       expect(screen.getByText("Project Ikea")).toBeInTheDocument();
     });
-    const projectLink = screen.getByText("Project Ikea");
+    const projectLink = rowByLabel("Project Ikea");
     expect(projectLink).toHaveClass("active");
   });
 
@@ -180,8 +200,8 @@ describe("CodebookSidebar", () => {
 
     fireEvent.click(screen.getByText("Emotional and cognitive signals"));
 
-    expect(screen.getByText("Emotional and cognitive signals")).toHaveClass("active");
-    expect(screen.getByText("Project Ikea")).not.toHaveClass("active");
+    expect(rowByLabel("Emotional and cognitive signals")).toHaveClass("active");
+    expect(rowByLabel("Project Ikea")).not.toHaveClass("active");
     expect(mockScrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
 
     document.body.removeChild(mockEl);
@@ -262,5 +282,35 @@ describe("CodebookSidebar", () => {
     expect(labels).toContain("Bristlenose UXR Codebook");
     expect(labels).toContain("The User Experience Honeycomb");
     expect(labels).toContain("The Elements of User Experience");
+  });
+
+  it("status dot: blue for enabled, grey for disabled, none for available/floor", async () => {
+    // Honeycomb (morville) is imported but switched OFF.
+    mockGetFrameworkStates.mockResolvedValue({ morville: false });
+    render(<CodebookSidebar />);
+    await waitFor(() => {
+      expect(screen.getByText("The User Experience Honeycomb")).toBeInTheDocument();
+    });
+    // Wait for the async hydrate to flip the disabled set.
+    await waitFor(() => {
+      expect(
+        rowByLabel("The User Experience Honeycomb").querySelector(".codebook-dot"),
+      ).toHaveClass("codebook-dot-off");
+    });
+
+    const dot = (label: string) =>
+      rowByLabel(label).querySelector(".codebook-dot") as HTMLElement;
+
+    // Enabled + imported → blue dot.
+    expect(dot("Emotional and cognitive signals")).toHaveClass("codebook-dot-on");
+    // Disabled + imported → grey dot; the row also gets the muted class.
+    expect(dot("The User Experience Honeycomb")).toHaveClass("codebook-dot-off");
+    expect(rowByLabel("The User Experience Honeycomb")).toHaveClass("codebook-disabled");
+    // Not imported → transparent slot (no colour modifier).
+    expect(dot("The Elements of User Experience")).not.toHaveClass("codebook-dot-on");
+    expect(dot("The Elements of User Experience")).not.toHaveClass("codebook-dot-off");
+    // Floor (project) → bare slot, no switch, no colour modifier.
+    expect(dot("Project Ikea")).not.toHaveClass("codebook-dot-on");
+    expect(dot("Project Ikea")).not.toHaveClass("codebook-dot-off");
   });
 });

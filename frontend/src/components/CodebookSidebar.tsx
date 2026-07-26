@@ -15,6 +15,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiGet, getCodebook, getCodebookTemplates } from "../utils/api";
+import {
+  hydrateFrameworkStates,
+  useSidebarStore,
+} from "../contexts/SidebarStore";
+import { codebookDotState } from "../utils/codebookDot";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -33,6 +38,16 @@ interface CodebookEntry {
   anchorId: string;
 }
 
+// ── Status dot ─────────────────────────────────────────────────────
+
+/** A single blue/grey/transparent status dot, first-line aligned. Blue = on,
+ * grey = disabled, transparent = available (slot reserved so text left-edges
+ * align) or floor (no switch). Purely decorative — the label carries meaning. */
+function CodebookDot({ state }: { state?: "on" | "off" | "available" }) {
+  const modifier = state === "on" || state === "off" ? ` codebook-dot-${state}` : "";
+  return <span className={`codebook-dot${modifier}`} aria-hidden="true" />;
+}
+
 // ── Component ──────────────────────────────────────────────────────
 
 export function CodebookSidebar() {
@@ -41,6 +56,15 @@ export function CodebookSidebar() {
   const [builtIn, setBuiltIn] = useState<CodebookEntry[]>([]);
   const [frameworks, setFrameworks] = useState<CodebookEntry[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Framework enable/disable state drives the status dot (blue on / grey off).
+  const { disabledFrameworks } = useSidebarStore();
+
+  // Hydrate the persisted disabled set once per session (guarded in the store,
+  // so this is a no-op if TagSidebar / CodebookPanel already hydrated it).
+  useEffect(() => {
+    hydrateFrameworkStates();
+  }, []);
 
   // ── Data fetching ──────────────────────────────────────────────
 
@@ -148,6 +172,42 @@ export function CodebookSidebar() {
     [],
   );
 
+  // ── Row renderer (shared by built-in + frameworks) ───────────────
+
+  const renderEntry = (entry: CodebookEntry) => {
+    const dotState = codebookDotState(entry.imported, entry.id, disabledFrameworks);
+    if (entry.imported) {
+      const isActive = activeId === entry.id;
+      return (
+        <a
+          key={entry.id}
+          href={`#${entry.anchorId}`}
+          className={`toc-link codebook-toc-link${dotState === "off" ? " codebook-disabled" : ""}${isActive ? " active" : ""}`}
+          aria-current={isActive ? "location" : undefined}
+          onClick={(e) => handleImportedClick(e, entry)}
+        >
+          <CodebookDot state={dotState} />
+          <span className="codebook-toc-label">{entry.label}</span>
+        </a>
+      );
+    }
+    return (
+      // <a href="#"> is a JS action, not navigation; native Enter
+      // activation on the anchor handles keyboard.
+      // eslint-disable-next-line jsx-a11y/anchor-is-valid
+      <a
+        key={entry.id}
+        href="#"
+        className="toc-link codebook-toc-link not-imported"
+        onClick={(e) => handleNotImportedClick(e, entry)}
+        title={`Browse ${entry.label}`}
+      >
+        <CodebookDot state={dotState} />
+        <span className="codebook-toc-label">{entry.label}</span>
+      </a>
+    );
+  };
+
   // ── Loading state ────────────────────────────────────────────────
 
   if (projectName === null) return null;
@@ -159,74 +219,27 @@ export function CodebookSidebar() {
       <div className="toc-heading">{t("codebook.yourTags")}</div>
       <a
         href="#codebook-project"
-        className={`toc-link${activeId === "project" ? " active" : ""}`}
+        className={`toc-link codebook-toc-link${activeId === "project" ? " active" : ""}`}
         aria-current={activeId === "project" ? "location" : undefined}
         onClick={handleProjectClick}
       >
-        {projectName}
+        {/* Floor codebook: no switch, so no dot — a bare slot keeps its label
+            left-edge aligned with the toggleable codebooks below. */}
+        <CodebookDot />
+        <span className="codebook-toc-label">{projectName}</span>
       </a>
 
       {builtIn.length > 0 && (
         <>
           <div className="toc-heading">{t("codebook.builtIn")}</div>
-          {builtIn.map((entry) =>
-            entry.imported ? (
-              <a
-                key={entry.id}
-                href={`#${entry.anchorId}`}
-                className={`toc-link${activeId === entry.id ? " active" : ""}`}
-                aria-current={activeId === entry.id ? "location" : undefined}
-                onClick={(e) => handleImportedClick(e, entry)}
-              >
-                {entry.label}
-              </a>
-            ) : (
-              // <a href="#"> is a JS action, not navigation; native Enter
-              // activation on the anchor handles keyboard.
-              // eslint-disable-next-line jsx-a11y/anchor-is-valid
-              <a
-                key={entry.id}
-                href="#"
-                className="toc-link not-imported"
-                onClick={(e) => handleNotImportedClick(e, entry)}
-                title={`Browse ${entry.label}`}
-              >
-                {entry.label}
-              </a>
-            ),
-          )}
+          {builtIn.map(renderEntry)}
         </>
       )}
 
       {frameworks.length > 0 && (
         <>
           <div className="toc-heading">{t("codebook.frameworks")}</div>
-          {frameworks.map((entry) =>
-            entry.imported ? (
-              <a
-                key={entry.id}
-                href={`#${entry.anchorId}`}
-                className={`toc-link${activeId === entry.id ? " active" : ""}`}
-                aria-current={activeId === entry.id ? "location" : undefined}
-                onClick={(e) => handleImportedClick(e, entry)}
-              >
-                {entry.label}
-              </a>
-            ) : (
-              // <a href="#"> is a JS action, not navigation; native Enter
-              // activation on the anchor handles keyboard.
-              // eslint-disable-next-line jsx-a11y/anchor-is-valid
-              <a
-                key={entry.id}
-                href="#"
-                className="toc-link not-imported"
-                onClick={(e) => handleNotImportedClick(e, entry)}
-                title={`Browse ${entry.label}`}
-              >
-                {entry.label}
-              </a>
-            ),
-          )}
+          {frameworks.map(renderEntry)}
           <button
             className="sidebar-mini-btn"
             type="button"

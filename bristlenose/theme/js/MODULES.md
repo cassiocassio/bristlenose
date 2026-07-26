@@ -45,9 +45,9 @@ Right-margin annotations on transcript pages: section/theme labels, tag badges, 
 - **Badge deletion** (event delegation on `document`, scoped to `.segment-margin`):
   - AI sentiment badges: click anywhere to delete, animates out, persists to `bristlenose-deleted-badges`
   - User tags: click × button to delete, animates out, persists to `bristlenose-tags`
-- **Span bars** (`_renderSpanBars`): reads `--bn-span-bar-gap` and `--bn-span-bar-offset` tokens from CSS. Greedy slot assignment avoids vertical overlap. Creates `.span-bar` elements (styled by `atoms/span-bar.css`); JS only sets position and height
+- **Span bars** (`_renderSpanBars`): DEAD — the `atoms/span-bar.css` atom and `--bn-span-bar-*` tokens were removed (Jul 2026). This frozen function still creates `.span-bar` divs, but with no CSS they render nothing. Not removed only because `js/` is frozen; goes with the static byproduct's retirement
 - **Dependencies**: `storage.js` (`createStore`), `badge-utils.js` (`createUserTagBadge`, `animateBadgeRemoval`, `getTagColour`)
-- **CSS**: `molecules/transcript-annotations.css` (margin layout, badge sizing, responsive breakpoints), `atoms/span-bar.css` (visual properties)
+- **CSS**: `molecules/transcript-annotations.css` (margin layout, badge sizing, responsive breakpoints)
 
 ## names.js
 

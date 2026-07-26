@@ -214,14 +214,15 @@ Analysis page signal cards and heatmap table. The analysis page presents statist
 - **`.heatmap-cell[data-count="0"]`** — zero cells: muted colour, no cursor, no hover outline
 - **`.heatmap-total`** — row/column total cells: transparent background, no interaction
 
-## Span Bar Atom
+## Span Bar Atom — REMOVED (Jul 2026)
 
-Reusable vertical extent indicator for showing how far a range (e.g. a quote) extends across a list of items. Positioned absolutely by JS; visual properties come from `--bn-span-bar-*` tokens.
-
-- **CSS**: `atoms/span-bar.css` — `.span-bar` uses `background`, `border-radius`, `opacity`, `width` from tokens, `pointer-events: none`
-- **Tokens** (in `tokens.css`): `--bn-span-bar-width` (2px), `--bn-span-bar-gap` (6px), `--bn-span-bar-offset` (8px), `--bn-span-bar-colour` (border colour), `--bn-span-bar-opacity` (0.5), `--bn-span-bar-radius` (1px)
-- **Usage**: JS creates `<div class="span-bar">`, sets `position: absolute`, `top`, `height`, `right` via inline styles, and appends to a `position: relative` container. Currently used by `transcript-annotations.js` for quote extent bars
-- **Responsive**: hidden on narrow viewports via `molecules/transcript-annotations.css` (`@media (max-width: 1099px) { .span-bar { display: none } }`)
+The vertical quote-extent bars never read well and were removed. The SPA
+(`TranscriptPage.tsx`) no longer renders them; `atoms/span-bar.css` and the
+`--bn-span-bar-*` tokens are deleted. Quote extent is now conveyed by
+first-occurrence-per-run suppression of section/theme/sentiment/tag repeats (see
+Transcript Annotations Molecule). The frozen static-render script
+`js/transcript-annotations.js` still emits `.span-bar` divs, but with no CSS they
+render nothing (retired with the static byproduct).
 
 ## Transcript Annotations Molecule
 

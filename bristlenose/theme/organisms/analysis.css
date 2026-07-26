@@ -418,8 +418,8 @@ button.signal-card-toggle {
     content: "";
     position: absolute;
     left: 0; top: 0; bottom: 0;
-    width: var(--bn-span-bar-width);
-    border-radius: var(--bn-span-bar-radius) 0 0 var(--bn-span-bar-radius);
+    width: 2px;
+    border-radius: 1px 0 0 1px;
     background: var(--tip-accent, var(--bn-colour-muted));
 }
 

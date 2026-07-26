@@ -175,6 +175,15 @@
     gap: 0 0.5rem;
 }
 
+/* At the annotation breakpoint (see molecules/transcript-annotations.css) the
+   body gains a 4th column for margin annotations. clamp() narrows it as the
+   window narrows, so section/theme labels wrap at medium widths and fit at wide. */
+@media (min-width: 800px) {
+    .transcript-body {
+        grid-template-columns: 4.5rem 2.2rem 1fr clamp(8.5rem, 13vw, 12.5rem);
+    }
+}
+
 .transcript-segment {
     display: grid;
     grid-template-columns: subgrid;

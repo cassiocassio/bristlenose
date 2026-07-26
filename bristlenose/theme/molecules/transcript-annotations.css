@@ -1,15 +1,14 @@
 /* Molecule: transcript-annotations — right-margin annotations on transcript pages.
-   Shows section/theme labels, tag badges, and vertical span bars alongside
-   quoted segments. */
+   Shows section/theme labels and tag badges alongside quoted segments.
 
-/* The transcript body needs room for the margin column on wide viewports */
-@media (min-width: 1100px) {
-    .transcript-body {
-        padding-right: 14rem;
-    }
-}
+   Layout: the annotation lives in a real grid column (the 4th track of
+   .transcript-body, added at the breakpoint in templates/transcript.css) — NOT
+   absolutely positioned. Being in flow means a tall annotation grows its grid
+   row, pushing the next segment down instead of overlapping it. Below the
+   breakpoint it drops inline under the segment text. Repetition is suppressed
+   in TranscriptPage (first-occurrence-per-run), which is what replaced the
+   earlier vertical extent bars. */
 
-/* Transcript segment positions the margin annotation */
 .transcript-segment {
     position: relative;
 }
@@ -23,22 +22,21 @@
     gap: var(--bn-space-xs);
 }
 
-/* Wide viewports: absolute-positioned in the right margin */
-@media (min-width: 1100px) {
+/* Wide + medium (≥800px): the annotation is the 4th grid column. Its height
+   grows the row → no overlap between adjacent annotations. */
+@media (min-width: 800px) {
     .segment-margin {
-        position: absolute;
-        right: -13.5rem;
-        top: 0;
-        width: 12.5rem;
+        grid-column: 4;
+        align-self: start;
     }
 }
 
-/* Narrow viewports: inline below the segment text, aligned with body column */
-@media (max-width: 1099px) {
+/* Narrow (<800px): inline below the segment text, aligned with the body column */
+@media (max-width: 799px) {
     .segment-margin {
-        grid-column: 3 / -1; /* align with text body column */
-        margin-top: var(--bn-space-xs);
-        margin-bottom: var(--bn-space-xs);
+        grid-column: 3 / -1;
+        align-self: start;
+        margin: var(--bn-space-xs) 0 var(--bn-space-sm);
     }
 }
 
@@ -49,14 +47,11 @@
     gap: 2px;
 }
 
-/* Section/theme label */
+/* Section/theme label — wraps in the narrow column (no ellipsis truncation) */
 .margin-label {
     color: var(--bn-colour-accent);
     font-weight: var(--bn-weight-emphasis);
     text-decoration: none;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     max-width: 100%;
     transition: color var(--bn-transition-fast);
 }
@@ -75,16 +70,9 @@
     padding-right: 2px; /* room for × circle to the right */
 }
 
-/* Smaller badges in the margin context */
+/* Margin tags match the quotes + codebook lenses (--bn-text-badge, 11px);
+   only the padding is tightened for the dense margin context. */
 .margin-tags .badge {
-    font-size: var(--bn-text-micro);
     padding: 1px 4px;
     line-height: 1.4;
-}
-
-/* Hide span bars on narrow viewports (annotations are inline) */
-@media (max-width: 1099px) {
-    .span-bar {
-        display: none;
-    }
 }

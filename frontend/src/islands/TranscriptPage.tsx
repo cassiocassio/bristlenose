@@ -28,6 +28,7 @@ import {
 } from "../utils/api";
 import type { SessionListItem } from "../utils/api";
 import { formatFinderDate, formatTimecode } from "../utils/format";
+import { getTagBg } from "../utils/colours";
 import type {
   TranscriptPageResponse,
   TranscriptSegmentResponse,
@@ -42,109 +43,6 @@ import type {
 interface TranscriptPageProps {
   projectId: string;
   sessionId: string;
-}
-
-// ---------------------------------------------------------------------------
-// Span bar layout
-// ---------------------------------------------------------------------------
-
-/** Compute absolute-positioned span bars for quoted segment ranges. */
-function useSpanBars(
-  containerRef: React.RefObject<HTMLElement | null>,
-  segments: TranscriptSegmentResponse[],
-  annotations: Record<string, QuoteAnnotationResponse>,
-) {
-  const [bars, setBars] = useState<
-    { top: number; height: number; left: number; quoteId: string; label: string }[]
-  >([]);
-
-  useLayoutEffect(() => {
-    if (!containerRef.current || segments.length === 0) return;
-
-    const container = containerRef.current;
-    const containerRect = container.getBoundingClientRect();
-
-    // Read layout tokens from CSS custom properties
-    const rootStyle = getComputedStyle(document.documentElement);
-    const barGap = parseFloat(rootStyle.getPropertyValue("--bn-span-bar-gap")) || 6;
-    const barInset =
-      parseFloat(rootStyle.getPropertyValue("--bn-span-bar-offset")) || 8;
-
-    // Find margin column left edge for bar placement
-    const firstMargin = container.querySelector<HTMLElement>(".segment-margin");
-    let marginLeft: number;
-    if (firstMargin) {
-      marginLeft = firstMargin.getBoundingClientRect().left - containerRect.left;
-    } else {
-      marginLeft =
-        containerRect.width -
-        parseFloat(getComputedStyle(container).paddingRight);
-    }
-
-    // Group segments by quote ID to find contiguous ranges
-    const quoteSegments = new Map<string, HTMLElement[]>();
-    for (const seg of segments) {
-      if (!seg.is_quoted) continue;
-      for (const qid of seg.quote_ids) {
-        const anchor = `t-${Math.floor(seg.start_time)}`;
-        const el = container.querySelector<HTMLElement>(`#${anchor}`);
-        if (el) {
-          if (!quoteSegments.has(qid)) quoteSegments.set(qid, []);
-          quoteSegments.get(qid)!.push(el);
-        }
-      }
-    }
-
-    // Build spans with vertical extents
-    const spans: { qid: string; top: number; bottom: number; slot: number }[] = [];
-    for (const [qid, els] of quoteSegments) {
-      if (els.length === 0) continue;
-      const firstRect = els[0].getBoundingClientRect();
-      const lastRect = els[els.length - 1].getBoundingClientRect();
-      const top = firstRect.top - containerRect.top;
-      const bottom = lastRect.bottom - containerRect.top;
-      spans.push({ qid, top, bottom, slot: 0 });
-    }
-
-    // Sort by top position for consistent slot assignment
-    spans.sort((a, b) => a.top - b.top);
-
-    // Greedy slot layout — each bar gets the leftmost slot that doesn't
-    // overlap vertically with another bar already in that slot.
-    const slots: { top: number; bottom: number }[][] = [];
-    for (const span of spans) {
-      let assigned = false;
-      for (let s = 0; s < slots.length; s++) {
-        const overlaps = slots[s].some(
-          (r) => span.top < r.bottom && span.bottom > r.top,
-        );
-        if (!overlaps) {
-          slots[s].push({ top: span.top, bottom: span.bottom });
-          span.slot = s;
-          assigned = true;
-          break;
-        }
-      }
-      if (!assigned) {
-        span.slot = slots.length;
-        slots.push([{ top: span.top, bottom: span.bottom }]);
-      }
-    }
-
-    // Build final bars with horizontal position
-    const newBars: typeof bars = [];
-    for (const span of spans) {
-      const height = Math.max(span.bottom - span.top, 8);
-      const left = marginLeft - barInset - span.slot * barGap;
-      const ann = annotations[span.qid];
-      const label = ann?.label ?? "";
-      newBars.push({ top: span.top, height, left, quoteId: span.qid, label });
-    }
-
-    setBars(newBars);
-  }, [containerRef, segments, annotations]);
-
-  return bars;
 }
 
 // ---------------------------------------------------------------------------
@@ -443,9 +341,6 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
     });
   }, [data, loading]);
 
-  // Span bars
-  const bars = useSpanBars(bodyRef, data?.segments ?? [], data?.annotations ?? {});
-
   // Journey scroll sync (derives full label sequence from waypoints)
   const { activeIndex, handleIndexClick, journeyLabels } = useJourneyScrollSync(
     data?.segments ?? [],
@@ -531,9 +426,13 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   const seenQuoteIds = new Set<string>();
   // Track which speakers have been introduced (first occurrence gets full name badge)
   const introducedSpeakers = new Set<string>();
-  // Track last-shown label+sentiment to suppress repetition — show only on change
+  // First-occurrence-per-run suppression: show a label / sentiment / tag once,
+  // stay quiet until it changes, then show again when it returns.
   let lastShownLabel = "";
-  let lastShownSentiment = "";
+  let lastSentiment = "";
+  // Tag names present on the previous annotated quote. A tag carried over from
+  // it is suppressed (the run continues); a newly-appearing tag shows.
+  let prevTagNames = new Set<string>();
 
   return (
     <>
@@ -596,6 +495,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
             ann: QuoteAnnotationResponse;
             showLabel: boolean;
             showSentiment: boolean;
+            shownTags: QuoteAnnotationResponse["tags"];
           }[] = [];
           if (seg.is_quoted) {
             for (const qid of seg.quote_ids) {
@@ -604,16 +504,39 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                 const ann = annotations[qid];
                 if (ann) {
                   const labelKey = `${ann.label_type}:${ann.label}`;
-                  const showLabel = labelKey !== lastShownLabel;
-                  const showSentiment =
-                    showLabel || ann.sentiment !== lastShownSentiment;
+                  const showLabel = !!ann.label && labelKey !== lastShownLabel;
                   if (ann.label) lastShownLabel = labelKey;
-                  if (ann.sentiment) lastShownSentiment = ann.sentiment;
+
+                  // Sentiment badge: run-based (decoupled from label changes),
+                  // and — matching QuoteCard — suppressed when a Sentiment-group
+                  // tag already carries the same sentiment on this quote.
+                  const hasSentimentTag = ann.tags.some(
+                    (t) =>
+                      t.codebook_group === "Sentiment" &&
+                      t.name === ann.sentiment,
+                  );
+                  const showSentiment =
+                    !!ann.sentiment &&
+                    ann.sentiment !== lastSentiment &&
+                    !hasSentimentTag &&
+                    !ann.deleted_badges.includes(ann.sentiment);
+                  if (ann.sentiment) lastSentiment = ann.sentiment;
+
+                  // Tags: drop any carried over from the previous annotated
+                  // quote; show only tags newly appearing in the run.
+                  const shownTags = ann.tags.filter(
+                    (t) => !prevTagNames.has(t.name.toLowerCase()),
+                  );
+                  prevTagNames = new Set(
+                    ann.tags.map((t) => t.name.toLowerCase()),
+                  );
+
                   segAnnotations.push({
                     quoteId: qid,
                     ann,
                     showLabel,
                     showSentiment,
+                    shownTags,
                   });
                 }
               }
@@ -687,21 +610,21 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
               {/* Margin annotations */}
               {segAnnotations.length > 0 && (
                 <div className="segment-margin">
-                  {segAnnotations.map(({ quoteId, ann, showLabel, showSentiment }) => {
-                    const sentimentBadge =
-                      showSentiment &&
-                      ann.sentiment &&
-                      !ann.deleted_badges.includes(ann.sentiment)
-                        ? {
-                            text: ann.sentiment,
-                            sentiment: ann.sentiment,
-                            onDelete: () =>
-                              handleDeleteBadge(quoteId, ann.sentiment),
-                          }
-                        : undefined;
+                  {segAnnotations.map(({ quoteId, ann, showLabel, showSentiment, shownTags }) => {
+                    const sentimentBadge = showSentiment
+                      ? {
+                          text: ann.sentiment,
+                          sentiment: ann.sentiment,
+                          onDelete: () =>
+                            handleDeleteBadge(quoteId, ann.sentiment),
+                        }
+                      : undefined;
 
-                    const tags: AnnotationTag[] = ann.tags.map((t) => ({
+                    const tags: AnnotationTag[] = shownTags.map((t) => ({
                       name: t.name,
+                      colour: t.colour_set
+                        ? getTagBg(t.colour_set, t.colour_index)
+                        : undefined,
                     }));
 
                     return (
@@ -721,21 +644,6 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
             </div>
           );
         })}
-
-        {/* Span bars */}
-        {bars.map((bar) => (
-          <div
-            key={bar.quoteId}
-            className="span-bar"
-            style={{
-              position: "absolute",
-              top: `${bar.top}px`,
-              height: `${bar.height}px`,
-              left: `${bar.left}px`,
-            }}
-            data-testid={`span-bar-${bar.quoteId}`}
-          />
-        ))}
       </section>
     </>
   );

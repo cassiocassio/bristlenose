@@ -1,6 +1,14 @@
+---
+status: current
+last-trued: 2026-07-26
+trued-against: HEAD@main on 2026-07-26
+---
+
 # HTML Report — Design and Implementation Notes
 
 Reference doc for the generated HTML report and per-participant transcript pages. Covers interactive features, JS modules, CSS architecture, and rendering pipeline.
+
+> **Trued 2026-07-26** — transcript margin annotations reworked: span bars removed (`atoms/span-bar.css` + tokens deleted), margin annotations moved to a grid-column layout with a lowered 800px breakpoint, and repetition suppressed per-run (labels + sentiment + tags). See the Transcript pages section below.
 
 ## People file (participant registry)
 
@@ -195,15 +203,15 @@ Each session gets a dedicated HTML page (`transcript_s1.html`, etc.) showing the
 - **Page heading**: `Session N: m1 Sarah Chen, p5 Maya, o1` — lists all speakers for the session with code prefix + resolved name. Each code in `<span class="heading-speaker" data-participant="...">` for JS name resolution
 - **Speaker label per segment**: shows raw speaker code (`p1:`, `m1:`) — not resolved display name. Consistent with anonymisation boundary
 - **Back button**: `← {project_name} Research Report` linking to `research_report.html`, styled muted with accent on hover, hidden in print
-- **JS**: `storage.js` + `badge-utils.js` + `player.js` + `transcript-names.js` + `transcript-annotations.js`. `transcript-names.js` reads localStorage name edits (written by `names.js` on the report page) and updates heading speaker names only (preserving code prefix: `"m1 Sarah Chen"`). Does NOT override segment speaker labels (they stay as raw codes). `transcript-annotations.js` renders margin annotations (section/theme labels, sentiment badges, user tags) and vertical span bars
-- **Margin annotations**: right-margin labels and badges alongside quoted segments. Section/theme labels shown only on first occurrence (dedup). AI sentiment badges are click-to-delete; user tags have × button. All deletions sync to the report via shared localStorage stores (`bristlenose-tags`, `bristlenose-deleted-badges`). Codebook colours applied via `bristlenose-codebook` store
-- **Span bars**: vertical grey bars showing the extent of each quote across transcript segments. Styled via `atoms/span-bar.css` and `--bn-span-bar-*` tokens. Greedy slot assignment avoids overlap. Hidden on narrow viewports (<1100px)
+- **JS**: `storage.js` + `badge-utils.js` + `player.js` + `transcript-names.js` + `transcript-annotations.js`. `transcript-names.js` reads localStorage name edits (written by `names.js` on the report page) and updates heading speaker names only (preserving code prefix: `"m1 Sarah Chen"`). Does NOT override segment speaker labels (they stay as raw codes). `transcript-annotations.js` renders margin annotations (section/theme labels, sentiment badges, user tags). (The product path is the React SPA `frontend/src/islands/TranscriptPage.tsx`; this vanilla JS is the frozen static byproduct.)
+- **Margin annotations**: right-margin labels and badges alongside quoted segments, laid out in a real grid column (not absolute-positioned), so a tall annotation grows its row instead of overlapping the next segment. Below the 800px breakpoint they drop inline under the segment text. **First-occurrence-per-run suppression**: section/theme labels, the AI sentiment badge, and each tag are shown once, stay quiet until they change, then show again when they return. The AI sentiment badge is additionally collapsed when a `Sentiment`-group tag mirrors it (matching the quotes lens); margin tags carry their codebook colour and render at `--bn-text-badge` (11px), same as the quotes + codebook lenses. AI sentiment badges are click-to-delete; user tags have × button. Deletions sync via shared localStorage stores (`bristlenose-tags`, `bristlenose-deleted-badges`)
+- **Span bars (removed 2026-07)**: the vertical quote-extent bars never read well and were deleted — `atoms/span-bar.css` and the `--bn-span-bar-*` tokens are gone. Quote extent is now conveyed by the first-occurrence-per-run suppression above. The frozen `transcript-annotations.js` still emits `.span-bar` divs, but with no CSS they render nothing
 - **Inline citation highlight**: quoted text within segments wrapped in `<mark class="bn-cited">`. Currently visually transparent (`background: transparent` in `transcript.css`) while treatment is being rethought — the knocked-back opacity on non-quoted segments (0.6) provides sufficient visual cues. Token `--bn-colour-cited-bg` preserved for re-enabling
 - **Quote map**: `BRISTLENOSE_QUOTE_MAP` JS global baked into the page by `render/transcript_pages.py` — maps quote IDs to `{ label, type, sentiment }` for annotation rendering
 - **Sessions table linking**: Session column (`s1`, `s2`) is a hyperlink to the transcript page
 - **Quote attribution linking**: `— p1` at end of each quote in the main report links to `transcript_s1.html#t-{seconds}` (session-based filename), deep-linking to the exact segment. `.speaker-link` CSS in `blockquote.css` (inherits muted colour, accent on hover)
 - **Segment anchors**: each transcript segment has `id="t-{int(seconds)}"` for deep linking from quotes
-- **CSS**: `transcript.css` in theme templates (back button, segment layout, meta styling, citation highlight); `molecules/transcript-annotations.css` (margin layout, responsive breakpoints); `atoms/span-bar.css` (bar visual properties); `.speaker-link` in `organisms/blockquote.css`
+- **CSS**: `transcript.css` in theme templates (back button, segment layout incl. the annotation margin column at ≥800px, meta styling, citation highlight); `molecules/transcript-annotations.css` (margin layout, label wrapping, 800px breakpoint); `.speaker-link` in `organisms/blockquote.css`
 - **Tests**: `tests/test_transcript_annotations.py` — 26 tests covering highlight marking, quote map data, segment classes, citation marks, JS bootstrap
 
 ## Transcript coverage section

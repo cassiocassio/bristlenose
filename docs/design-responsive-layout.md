@@ -188,7 +188,7 @@ Dashboard panes use the same `auto-fill` approach. Currently 2-column grid colla
 
 ### Phase 4: Transcript pages (verification only)
 
-Transcript pages already have a 1100px breakpoint for annotation margin placement. Verify this works correctly when the article width is no longer capped at 52rem. May need to adjust the annotation column to stay within a readable width.
+Transcript pages have an 800px breakpoint for annotation margin placement (lowered from 1100px on 2026-07-26). Above it the annotations occupy a real grid column whose width clamps (`clamp(8.5rem, 13vw, 12.5rem)`) so labels wrap in the narrow case; below it they drop inline. Verify this holds when the article width is no longer capped at 52rem.
 
 **File:** `molecules/transcript-annotations.css`
 

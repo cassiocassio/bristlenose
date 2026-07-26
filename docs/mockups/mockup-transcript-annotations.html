@@ -1,0 +1,366 @@
+<!--
+  Mockup: transcript margin annotations — redesign proto
+  =======================================================
+  Proves out four coupled changes before touching React/theme code:
+    1. Two modes, breakpoint lowered 1100 → 900px. Margin present far more
+       often; only the narrow floor goes inline.
+    2. Margin is a REAL 4th grid column (not absolute-positioned per segment),
+       so a tall annotation grows its row instead of overlapping the next one.
+       Collision-free with zero JS. Replaces the old absolute + span-bar approach.
+    3. Section/theme labels WRAP in the narrow column (was nowrap + ellipsis).
+    4. First-occurrence-in-a-run dedup: show a section / theme / sentiment / tag
+       once, stay quiet until it changes, show again when it comes back.
+       This replaces the vertical span bars (removed).
+
+  The CSS in the <style id="proposed"> block is written to lift 1:1 into
+  bristlenose/theme/molecules/transcript-annotations.css + a 4th column in
+  templates/transcript.css .transcript-body.
+
+  Real theme tokens/atoms/badges come from the sibling assembled stylesheet.
+  Toggle "Show suppressed repeats" to see the pre-dedup busyness the logic removes.
+  Drag the window across ~900px to watch the inline↔margin switch.
+-->
+<link rel="stylesheet" href="mockup-transcript-annotations.theme.css" />
+
+<style id="proposed">
+  /* ── Page frame (mockup chrome only — NOT lifted) ─────────────────────── */
+  body {
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    margin: 0;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+  .mock-controls {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    padding: 0.6rem 1.5rem;
+    background: var(--bn-colour-bg);
+    border-bottom: 1px solid var(--bn-colour-border);
+    font-size: var(--bn-text-label);
+  }
+  .mock-controls label { cursor: pointer; user-select: none; }
+  .mock-mode {
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+  }
+  .mock-mode b { color: var(--bn-colour-accent); }
+  .mock-wrap { max-width: 72rem; margin: 0 auto; padding: 1rem 1.5rem 6rem; }
+  .mock-journey {
+    display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: baseline;
+    margin: 0.5rem 0 1.5rem; font-size: var(--bn-text-label);
+  }
+  .mock-journey .sep { color: var(--bn-colour-muted); }
+  .mock-journey .cur { font-weight: var(--bn-weight-strong); }
+  .mock-journey a { color: var(--bn-colour-accent); text-decoration: none; }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     PROPOSED RULES — these lift into the theme package.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  /* templates/transcript.css — .transcript-body gains a 4th (margin) column
+     at the breakpoint. No more `padding-right: 14rem` negative-margin hack. */
+  .transcript-body {
+    position: relative;
+    display: grid;
+    grid-template-columns: 4.5rem 2.2rem 1fr;   /* timecode · badge · body */
+    gap: 0 0.5rem;
+    padding-right: 0;   /* rewrite DELETES the old `padding-right: 14rem` margin-reservation hack */
+  }
+  .transcript-segment {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    align-items: baseline;      /* annotation's 1st line baseline-aligns to the transcript line */
+    margin: 0.5rem 0;
+    line-height: 1.7;
+  }
+  .transcript-segment .timecode { white-space: nowrap; justify-self: start; }
+  .transcript-segment .segment-speaker { white-space: nowrap; justify-self: end; }
+  .transcript-segment .segment-body {
+    min-width: 0;
+    font-size: var(--bn-text-body);
+    line-height: var(--bn-text-body-lh);
+  }
+  .segment-moderator .segment-body { color: var(--bn-colour-muted); }
+  .segment-moderator .segment-speaker .badge { opacity: 0.55; }
+
+  /* molecules/transcript-annotations.css (rewritten).
+     Margin is IN FLOW now — the rewrite deletes the old
+     `position:absolute; right:-13.5rem; top:0; width:12.5rem`. Being a real
+     grid cell is what makes its height grow the row (→ no overlap). */
+  .segment-margin {
+    position: static;   /* was: absolute (that was the whole collision cause) */
+    inset: auto;
+    width: auto;
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    display: flex;
+    flex-direction: column;
+    gap: var(--bn-space-xs);
+  }
+  .margin-annotation { display: flex; flex-direction: column; gap: 2px; }
+
+  /* CHANGED: labels WRAP instead of nowrap + ellipsis. Long theme names
+     break to a second line in the narrow column; at wide widths they just fit. */
+  .margin-label {
+    color: var(--bn-colour-accent);
+    font-weight: var(--bn-weight-emphasis);
+    text-decoration: none;
+    white-space: normal;        /* was: nowrap */
+    overflow: visible;          /* was: hidden */
+    /* text-overflow removed */
+  }
+  .margin-label:hover { color: var(--bn-colour-text); }
+
+  .margin-tags {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    padding-top: 2px; padding-right: 2px;
+  }
+  .margin-tags .badge {
+    font-size: var(--bn-text-badge);   /* was: --bn-text-micro (10px). Now 11px — matches quotes + codebook lens */
+    padding: 1px 4px;                  /* keep the tighter padding: the margin is dense */
+    line-height: 1.4;
+  }
+
+  /* ── Wide + medium (≥900px, was 1100): margin is the 4th grid column ─────
+     A tall annotation grows the grid ROW → next segment is pushed down,
+     never overlapped. clamp() narrows the column as the window narrows,
+     which is what makes labels wrap at medium and fit at wide. */
+  @media (min-width: 800px) {
+    .transcript-body {
+      grid-template-columns: 4.5rem 2.2rem 1fr clamp(8.5rem, 13vw, 12.5rem);
+    }
+    .segment-margin {
+      grid-column: 4;
+      align-self: start;
+      margin-top: 0;
+    }
+  }
+
+  /* ── Narrow floor (<800px): inline below the segment text ──────────────── */
+  @media (max-width: 799px) {
+    .segment-margin {
+      grid-column: 3 / -1;      /* drops to the next row under the body */
+      align-self: start;
+      margin: var(--bn-space-xs) 0 var(--bn-space-sm);
+    }
+  }
+
+  /* ── Dedup demonstration (mockup-only harness) ─────────────────────────
+     Suppressed = what first-occurrence dedup removes. Hidden by default
+     (the calm target); revealed faded when the toggle is on. In the real
+     build these items simply aren't rendered. */
+  .dedup-suppressed { display: none; }
+  body.show-suppressed .dedup-suppressed {
+    display: revert;
+    opacity: 0.32;
+    outline: 1px dotted var(--bn-colour-border);
+    outline-offset: 1px;
+  }
+  body.show-suppressed .margin-annotation.dedup-suppressed { display: flex; }
+</style>
+
+<div class="mock-controls">
+  <span class="mock-mode">width <b id="w">–</b> · <b id="mode">–</b></span>
+  <label><input type="checkbox" id="toggle" /> Show suppressed repeats (pre-dedup)</label>
+  <span class="mock-mode">drag the window across 800px · span bars removed · tags 11px (matches lenses)</span>
+</div>
+
+<div class="mock-wrap">
+  <div class="mock-journey">
+    <b>Session 1</b>
+    <a class="cur">IKEA.com Homepage</a><span class="sep">→</span>
+    <a>IKEA.co.uk Homepage</a><span class="sep">→</span>
+    <a>Kitchenware Category</a><span class="sep">→</span>
+    <a>Product Detail Page</a><span class="sep">→</span>
+    <a>Add to Bag</a>
+  </div>
+
+  <section class="transcript-body" data-testid="transcript-body">
+
+    <!-- non-quoted -->
+    <div class="transcript-segment">
+      <span class="timecode"><span class="timecode-bracket">[</span>03:04<span class="timecode-bracket">]</span></span>
+      <span class="segment-speaker"><span class="badge">p1</span></span>
+      <div class="segment-body">an object in your house.</div>
+    </div>
+
+    <!-- moderator -->
+    <div class="transcript-segment segment-moderator">
+      <span class="timecode"><span class="timecode-bracket">[</span>03:47<span class="timecode-bracket">]</span></span>
+      <span class="segment-speaker"><span class="badge">m1</span></span>
+      <div class="segment-body">It could be a piece of furniture, something in your kitchen or bathroom or bedroom.</div>
+    </div>
+
+    <!-- Q-A: long theme label, first occurrence → SHOWN (wraps in narrow col) -->
+    <div class="transcript-segment segment-quoted">
+      <span class="timecode"><span class="timecode-bracket">[</span>04:07<span class="timecode-bracket">]</span></span>
+      <span class="segment-speaker"><span class="badge">p1</span></span>
+      <div class="segment-body">An object that you chose and bought.</div>
+      <div class="segment-margin">
+        <div class="margin-annotation">
+          <a class="margin-label" href="#">IKEA as a family milestone experience</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="transcript-segment">
+      <span class="timecode"><span class="timecode-bracket">[</span>04:35<span class="timecode-bracket">]</span></span>
+      <span class="segment-speaker"><span class="badge">p1</span></span>
+      <div class="segment-body">Maybe not something obscure and antique, but something kind of everyday,</div>
+    </div>
+
+    <!-- Q-B: section NEW, sentiment Satisfaction NEW, tag Start-with-template NEW.
+         grey "satisfaction" tag SUPPRESSED (== AI Satisfaction, same-quote collapse) -->
+    <div class="transcript-segment segment-quoted">
+      <span class="timecode"><span class="timecode-bracket">[</span>06:07<span class="timecode-bracket">]</span></span>
+      <span class="segment-speaker"><span class="badge">p1</span></span>
+      <div class="segment-body">but that you love.</div>
+      <div class="segment-margin">
+        <div class="margin-annotation">
+          <a class="margin-label" href="#">Uncategorised observations</a>
+          <div class="margin-tags">
+            <span class="badge badge-ai badge-satisfaction">satisfaction</span>
+            <span class="badge badge-user">Start-with-template</span>
+            <span class="badge badge-user dedup-suppressed">satisfaction</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q-C: section CHANGE → show. sentiment Confusion CHANGE → show.
+         testtest + metaphor fit NEW → show. "confusion" tag SUPPRESSED (== Confusion) -->
+    <div class="transcript-segment segment-quoted">
+      <span class="timecode"><span class="timecode-bracket">[</span>07:11<span class="timecode-bracket">]</span></span>
+      <span class="segment-speaker"><span class="badge">p1</span></span>
+      <div class="segment-body">It's a good one.</div>
+      <div class="segment-margin">
+        <div class="margin-annotation">
+          <a class="margin-label" href="#">IKEA.com Homepage</a>
+          <div class="margin-tags">
+            <span class="badge badge-ai badge-confusion">confusion</span>
+            <span class="badge badge-user">testtest</span>
+            <span class="badge badge-user">metaphor fit</span>
+            <span class="badge badge-user dedup-suppressed">confusion</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="transcript-segment">
+      <span class="timecode"><span class="timecode-bracket">[</span>08:14<span class="timecode-bracket">]</span></span>
+      <span class="segment-speaker"><span class="badge">p1</span></span>
+      <div class="segment-body">let's say I've got a, was it a Ninja Foodie?</div>
+    </div>
+
+    <!-- Q-D: section CHANGE → show. sentiment Confusion SAME RUN → SUPPRESSED.
+         carried "confusion" / "testtest" SUPPRESSED. Result: label only.
+         (This is the key win — a section change no longer re-fires the sentiment.) -->
+    <div class="transcript-segment segment-quoted">
+      <span class="timecode"><span class="timecode-bracket">[</span>08:27<span class="timecode-bracket">]</span></span>
+      <span class="segment-speaker"><span class="badge">p1</span></span>
+      <div class="segment-body">It's kind of one of these all-in-one kind of pressure cookers,</div>
+      <div class="segment-margin">
+        <div class="margin-annotation">
+          <a class="margin-label" href="#">IKEA.co.uk Homepage</a>
+          <div class="margin-tags dedup-suppressed">
+            <span class="badge badge-ai badge-confusion">confusion</span>
+            <span class="badge badge-user">confusion</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="transcript-segment">
+      <span class="timecode"><span class="timecode-bracket">[</span>08:32<span class="timecode-bracket">]</span></span>
+      <span class="segment-speaker"><span class="badge">p1</span></span>
+      <div class="segment-body">air fryers type thing.</div>
+    </div>
+
+    <!-- Q-E: section CHANGE → show. sentiment Satisfaction CHANGE → show.
+         Deliberately TALL block (three new tags) to stress collision against
+         the short segment below it. -->
+    <div class="transcript-segment segment-quoted">
+      <span class="timecode"><span class="timecode-bracket">[</span>09:49<span class="timecode-bracket">]</span></span>
+      <span class="segment-speaker"><span class="badge">p1</span></span>
+      <div class="segment-body">Is that the right thing?</div>
+      <div class="segment-margin">
+        <div class="margin-annotation">
+          <a class="margin-label" href="#">Kitchenware Category</a>
+          <div class="margin-tags">
+            <span class="badge badge-ai badge-satisfaction">satisfaction</span>
+            <span class="badge badge-user">visible options</span>
+            <span class="badge badge-user">natural language</span>
+            <span class="badge badge-user">platform convention</span>
+            <span class="badge badge-user dedup-suppressed">satisfaction</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q-F: SHORT segment directly under the tall block above.
+         In the grid model Q-E's row grows and pushes this down — no overlap.
+         sentiment Confusion CHANGE (back again!) → show. -->
+    <div class="transcript-segment segment-quoted">
+      <span class="timecode"><span class="timecode-bracket">[</span>10:37<span class="timecode-bracket">]</span></span>
+      <span class="segment-speaker"><span class="badge">p1</span></span>
+      <div class="segment-body">Maybe not so tech.</div>
+      <div class="segment-margin">
+        <div class="margin-annotation">
+          <div class="margin-tags">
+            <span class="badge badge-ai badge-confusion">confusion</span>
+            <span class="badge badge-user dedup-suppressed">confusion</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q-G: section CHANGE → show. sentiment Confusion SAME RUN → SUPPRESSED.
+         Result: label only. -->
+    <div class="transcript-segment segment-quoted">
+      <span class="timecode"><span class="timecode-bracket">[</span>11:00<span class="timecode-bracket">]</span></span>
+      <span class="segment-speaker"><span class="badge">p1</span></span>
+      <div class="segment-body">Okay, so an object I've bought that I really like that's in my house.</div>
+      <div class="segment-margin">
+        <div class="margin-annotation">
+          <a class="margin-label" href="#">Product Detail Page</a>
+          <div class="margin-tags dedup-suppressed">
+            <span class="badge badge-ai badge-confusion">confusion</span>
+            <span class="badge badge-user">confusion</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="transcript-segment">
+      <span class="timecode"><span class="timecode-bracket">[</span>12:45<span class="timecode-bracket">]</span></span>
+      <span class="segment-speaker"><span class="badge">p1</span></span>
+      <div class="segment-body">Could be a vase or a bed or a bookcase or a lemon squeezer.</div>
+    </div>
+
+  </section>
+</div>
+
+<script>
+  // Render in exact desktop (SF Pro / AppKit) scale, like the real .app.
+  document.documentElement.setAttribute("data-platform", "desktop");
+  const wEl = document.getElementById("w");
+  const modeEl = document.getElementById("mode");
+  const toggle = document.getElementById("toggle");
+  function refresh() {
+    const w = Math.round(document.documentElement.clientWidth);
+    wEl.textContent = w + "px";
+    modeEl.textContent = w >= 800 ? "MARGIN column" : "INLINE";
+  }
+  toggle.addEventListener("change", () =>
+    document.body.classList.toggle("show-suppressed", toggle.checked),
+  );
+  window.addEventListener("resize", refresh);
+  refresh();
+</script>

@@ -11,14 +11,17 @@ struct TranscriptionSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker(i18n.t("desktop.transcriptionSettings.backendLabel"), selection: $backend) {
+                // Help text as an in-cell subtitle (no row keyline) — the
+                // System Settings idiom, matching the Appearance toggles.
+                Picker(selection: $backend) {
                     Text(i18n.t("desktop.transcriptionSettings.backendAuto")).tag("auto")
                     Text("MLX").tag("mlx")
                     Text("faster-whisper").tag("faster-whisper")
+                } label: {
+                    Text(i18n.t("desktop.transcriptionSettings.backendLabel"))
+                    Text(i18n.t("desktop.transcriptionSettings.backendHint"))
+                        .foregroundStyle(.secondary)
                 }
-                Text(i18n.t("desktop.transcriptionSettings.backendHint"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
             Section {

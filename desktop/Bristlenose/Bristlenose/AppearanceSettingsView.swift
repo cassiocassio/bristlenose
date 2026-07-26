@@ -53,32 +53,10 @@ struct AppearanceSettingsView: View {
             }
 
             Section {
-                Toggle(i18n.t("settings.appearance.randomIconsLegend"), isOn: $randomProjectIcons)
-                Text(i18n.t("settings.appearance.randomIconsHelp"))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section {
-                Toggle(i18n.t("settings.appearance.animationLegend"), isOn: $showAnalysisAnimation)
-                Text(i18n.t("settings.appearance.animationHelp"))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section {
-                // Tier-U diagnostics gate (docs/design-diagnostics-menu.md).
-                // The helper text is where the Web Inspector side-effect is
-                // disclosed — it's not a menu item (no public API to open a
-                // hosted WKWebView's inspector; users right-click ▸ Inspect
-                // Element once enabled).
-                Toggle(i18n.t("settings.appearance.diagnosticsLegend"), isOn: $showDiagnosticsMenu)
-                Text(i18n.t("settings.appearance.diagnosticsHelp"))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section {
+                // Language sits directly under Typography — the three "how it
+                // reads" axes (colour, font, language) grouped together, above
+                // the behaviour toggles below.
+                //
                 // Language names are always in their own language (autonyms),
                 // not translated — a Spanish speaker needs to recognise "Español"
                 // even when the UI is currently in Japanese.
@@ -105,13 +83,45 @@ struct AppearanceSettingsView: View {
                     Text("繁體中文").tag("zh-Hant")
                     Text("繁體中文（香港）").tag("zh-Hant-HK")
                 }
-
+            } footer: {
+                // A group footnote (below the box, no in-cell keyline) — an
+                // invitation to contribute, not a description of the picker.
                 HStack(spacing: 4) {
                     Text(i18n.t("settings.language.helpTranslate"))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
                     Link("Weblate", destination: URL(string: "https://hosted.weblate.org/projects/bristlenose/")!)
-                        .font(.callout)
+                }
+            }
+
+            Section {
+                // Help text as an in-cell subtitle (title + secondary Text in
+                // the control's label) — the System Settings idiom (cf. Stage
+                // Manager's description), which drops the row keyline the old
+                // separate-Text-row layout drew.
+                Toggle(isOn: $randomProjectIcons) {
+                    Text(i18n.t("settings.appearance.randomIconsLegend"))
+                    Text(i18n.t("settings.appearance.randomIconsHelp"))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section {
+                Toggle(isOn: $showAnalysisAnimation) {
+                    Text(i18n.t("settings.appearance.animationLegend"))
+                    Text(i18n.t("settings.appearance.animationHelp"))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section {
+                // Tier-U diagnostics gate (docs/design-diagnostics-menu.md).
+                // The helper text is where the Web Inspector side-effect is
+                // disclosed — it's not a menu item (no public API to open a
+                // hosted WKWebView's inspector; users right-click ▸ Inspect
+                // Element once enabled).
+                Toggle(isOn: $showDiagnosticsMenu) {
+                    Text(i18n.t("settings.appearance.diagnosticsLegend"))
+                    Text(i18n.t("settings.appearance.diagnosticsHelp"))
+                        .foregroundStyle(.secondary)
                 }
             }
         }

@@ -55,7 +55,7 @@ struct LLMSettingsView: View {
             Divider()
             providerDetail
         }
-        .frame(width: 720)
+        .frame(width: 660)
         .frame(minHeight: 660)
         .onAppear {
             if let active = LLMProvider(rawValue: activeProvider) {

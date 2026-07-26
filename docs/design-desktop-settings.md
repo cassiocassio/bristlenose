@@ -1,11 +1,13 @@
 ---
 status: current
-last-trued: 2026-04-30
-trued-against: HEAD@first-run on 2026-04-30 (Beat 3 + 3b shipped)
+last-trued: 2026-07-26
+trued-against: HEAD@main on 2026-07-26 (settings sizing + Tab 1 pickers/toggles + canActivate/.outOfCredit)
 ---
 
 ## Changelog
 
+- _2026-07-26_ — Settings window sizing trued to shipped reality + polish. Width is now genuinely 660 across all tabs (LLM was 720 — the 60pt jump on visiting LLM is gone). Height animates per tab via the new `SettingsWindowHeightAnimator` (drives `NSWindow.setFrame(animate:)`, since SwiftUI's Settings+TabView only grows, never shrinks). Appearance help text moved to in-cell subtitles (no row keylines, Stage-Manager idiom); Language picker relocated under Typography with the Weblate line as a section footer. Anchors: `SettingsView.swift` (`targetContentHeight`/`SettingsWindowHeightAnimator`), `AppearanceSettingsView.swift`, `TranscriptionSettingsView.swift`, `LLMSettingsView.swift:58`.
+- _2026-07-26_ — Full truing pass (archetype C), same day as the sizing note above. **§Tab 1 (Appearance) rewritten** — the shipped tab is appearance/palette/typography/language pickers + three toggles with in-cell subtitles, not the old "theme radio + delegate-language-to-System-Settings"; the "No in-app language picker" claim was false (picker shipped, `AppearanceSettingsView.swift:63`). **Activation semantics corrected** — the guard is `canActivate` (key present + not known-bad: `.online`/`.outOfCredit`/`.unavailable` all activate), not a live `.online` (`LLMSettingsView.swift:677`, `LLMProvider.swift:279`). **`.outOfCredit` added to the status table** — a 402 is a sticky observed-negative, distinct from transient `.unavailable` (`LLMProvider.swift:238`). **§"Provider status lifecycle (planned)" banner re-annotated** — the eager board, activation-on-truth, and 402-split have since shipped; rung-3 probe reuse, offline three-bucket grey, and refocus-recheck remain design-forward. Tab 2 core mechanics + Tab 3 verified fresh, unchanged.
 - _2026-06-21_ — repointed the `degradedBody` reference from the deleted `PipelineActivityItem.swift` to `ProjectDiagnosticPopover.swift` (the failure popover was extracted there, commit `02ad258`).
 - _2026-06-06_ — Corrected the eager-board §"Online behaviour" verification gate after grounding it in Apple docs + prior art: the "3× Keychain prompt cascade" is a *legacy file-based keychain* symptom (Always-Allow grant bound to the binary's code-directory hash), **not** a "dev/DerivedData artifact." We already migrated to the data-protection keychain (`8b2ef51`), which validates by Team ID and has no ACLs, so own-access-group reads don't prompt on a team-signed build. Gate narrowed from "discover whether eager is viable" → "confirm the build isn't ad-hoc." Refs: Apple TN3137, steipete/CodexBar #585. Also recorded Martin's "no rung-3/billing call on open" decision and the open "green = valid vs runnable?" offline-rendering question (pending ponder). The stale `desktop/CLAUDE.md` Debug-signing note was reconciled to the data-protection model in the same pass.
 - _2026-06-06_ — Added §"Provider status lifecycle (planned)" — the truthful-effort-free-board design that supersedes the parked NWPathMonitor-toast coverage gap. Captures the four-rung cost ladder (in-memory / Keychain / network-auth / real-work-call), the online optimistic-from-cache + silent-background-reconfirm policy (kills the lazy-load "dashboard of lies"), the offline three-bucket model ("worked before" vs "never configured" vs "not set up"), the 402-masked-as-green fix (split `.unavailable` into observation-failed vs observed-a-negative), the refocus-recheck for credit top-ups, and the shared `probe(provider, model)` rung-3 unit (key-entry / refocus / `scripts/llm-weather.py`). Also records the activation-no-op root cause (lazy status → radio guard bails) and the `overlayPreferences` model-without-provider leak fix. Section is design-forward (not yet shipped) — clearly delineated from the shipped Beat 3/3b flow above. Anchors: `BristlenoseShared.swift` `overlayPreferences`, `LLMSettingsView.swift` `applyPresenceAndCache`/`refreshStatuses`/`kickOffValidation`, `LLMValidator.swift` `classify`/`buildRequest`.
@@ -16,13 +18,18 @@ trued-against: HEAD@first-run on 2026-04-30 (Beat 3 + 3b shipped)
 
 # Desktop Settings Window (Cmd+,)
 
-Apple canonical `Settings` scene with 3 icon tabs. Constant width (660pt) across all tabs, height animates to fit content. Working context lives in `desktop/CLAUDE.md`. Related: `design-settings-ui.md` (serve-mode web UI — complementary, not competing: web UI is the CLI/serve path; this is the embedded-alpha path), `design-keychain.md` §Desktop (sandboxed) credential path (canonical home for the Swift→env-var→Python architecture).
+Apple canonical `Settings` scene with 3 icon tabs. Constant width (660pt) across all tabs, height animates to fit each tab's content. **The height half is not free** — SwiftUI's `Settings` + `TabView` high-water-marks (grows the window to the tallest tab and never shrinks back, because a `.formStyle(.grouped)` Form is greedy vertically and gives the window no "I'm short" signal). `SettingsWindowHeightAnimator` (a background `NSViewRepresentable` in `SettingsView.swift`) drives `NSWindow.setFrame(animate:)` on tab change, anchoring the top edge, honouring Reduce Motion. Per-tab target content heights are **hand-tuned constants** in `targetContentHeight(for:)` (llm 660 / transcription 220 / appearance 590) — the tuning knobs. A grouped Form scrolls natively if content exceeds its resting height, so an under-tuned constant (or Larger Text / a long locale) degrades to a scrollbar, not clipping. Help text in Appearance + Transcription is an **in-cell subtitle** (title + secondary `Text` in the control's label — the System Settings idiom, no row keyline); the Language picker sits under Typography. Working context lives in `desktop/CLAUDE.md`. Related: `design-settings-ui.md` (serve-mode web UI — complementary, not competing: web UI is the CLI/serve path; this is the embedded-alpha path), `design-keychain.md` §Desktop (sandboxed) credential path (canonical home for the Swift→env-var→Python architecture).
 
 ## Tab 1: Appearance (paintbrush)
 
-Theme radio group (auto/light/dark) + a hint paragraph pointing users to System Settings → Apps → Bristlenose for language. `@AppStorage("appearance")` drives `.preferredColorScheme` on both the main window and Settings window. Appearance is also synced to the web layer via `BridgeHandler.syncAppearance()` on `ready` — native wins, web Settings modal hides its appearance picker in embedded mode.
+Grouped controls, top to bottom: **Application appearance** radio (auto/light/dark), **Colour palette** pop-up (default/edo), **Typography** pop-up (SF Pro/Inter), **Language** pop-up (21 locale autonyms) with a Weblate contribute link as the section footer, then three toggles — **random project icons**, **show-analysis-animation**, **show-diagnostics-menu** — each carrying its help text as an in-cell subtitle (title + secondary `Text` in the control's label, the System Settings idiom, no row keyline). Anchors: `AppearanceSettingsView.swift:38` (palette), `:49` (typography), `:63` (language), `:100`/`:108`/`:121` (toggles).
 
-**No in-app language picker.** macOS already provides per-app language switching at System Settings → General → Language & Region → Apps → Bristlenose, so we delegate. `INFOPLIST_KEY_UIPrefersShowingLanguageSettings = YES` (in `project.pbxproj`) forces that section to appear even for users with only one preferred language configured globally. `I18n.swift` reads `Bundle.preferredLocalizations(from:forPreferences:)` on every launch to honour the user's choice. Canonical design: `docs/design-locale-negotiation.md`. The web Settings modal in CLI serve mode keeps its language picker — browsers have no per-site override, so the in-app control is the only escape hatch there.
+- **Appearance** — `@AppStorage("appearance")` drives `.preferredColorScheme` on both the main window and the Settings window; synced to the web layer via `BridgeHandler.syncAppearance()` on `ready` (native wins; the web Settings modal hides its own appearance picker in embedded mode).
+- **Colour palette** — live swap, no restart: posts `.bristlenosePaletteChanged` → `bridgeHandler.setColorPalette()`; the `@AppStorage("palette")` value also seeds `BRISTLENOSE_PALETTE` for the next serve start. Options mirror the frontend `PALETTES` list.
+- **Typography** — SF Pro (native scale) vs Inter (matches the web report). Lands on the next serve start via `BRISTLENOSE_TYPOGRAPHY` (posts `.bristlenosePrefsChanged`). See `docs/design-native-typography-grid.md`.
+- **Language** — `@AppStorage("language")`, 21 autonyms (never translated). `.onChange` calls `i18n.setLocale` and posts `.bristlenosePrefsChanged` to restart serve (`BRISTLENOSE_WHISPER_LANGUAGE`).
+
+> **Superseded 2026 (in-app picker shipped).** The earlier design had **no in-app language picker** and delegated entirely to System Settings → General → Language & Region → Apps → Bristlenose (`INFOPLIST_KEY_UIPrefersShowingLanguageSettings = YES`; `I18n.swift` reads `Bundle.preferredLocalizations(from:forPreferences:)` on launch). That macOS path still exists, but the in-app Language picker above is now the primary control. Canonical locale-negotiation design: `docs/design-locale-negotiation.md`. The web Settings modal in CLI serve mode keeps its own language picker — browsers have no per-site override.
 
 ## Tab 2: LLM (brain) — Mail Accounts pattern
 
@@ -32,7 +39,7 @@ Left sidebar list of 5 pre-populated providers (Claude, ChatGPT, Gemini, Azure, 
 
 Right detail pane shows the selected provider's settings: API key (`SecureField` → Keychain via `KeychainHelper`), model picker (per-provider known models + "Custom…"), temperature slider, concurrency slider. Azure adds endpoint/deployment/version fields. Ollama shows a **read-only** static display of the URL (`localhost:11434`) — the field is hardwired in the desktop GUI as a trust-boundary closure (commit `dbd54ec`, 30 Apr 2026): a social-engineered user pasting an attacker URL would silently exfiltrate transcripts over plain HTTP, contradicting the "transcripts stay on your Mac" claim. Status derives from an HTTP probe to `<hardwired-url>/api/tags`, parsing the models list to distinguish "not running" from "running but no models pulled"; see `LLMValidator.probeOllama`. CLI users and CI keep the override path via the `BRISTLENOSE_LOCAL_URL` env var (parent-process only — see §Preferences below).
 
-**Activation guard**: a provider cannot be activated (radio or toggle) unless its status is `.online`. You can select a provider in the sidebar to set it up, but the radio stays greyed out until a valid key is entered. One provider must always be active.
+**Activation guard**: a provider can be activated (radio or toggle) when its status `canActivate` — a key is present and not known-bad (`.online`, `.outOfCredit`, or `.unavailable` all qualify), **not** a live `.online`. An out-of-credit or momentarily-unreachable provider is a legitimate choice; only `.notSetUp` (no key), `.invalid` (confirmed-bad credentials), and `.checking` block. Single home for the contract: `LLMSettingsView.swift:677` (`guard statusFor(provider).canActivate`), backed by `LLMProvider.canActivate` (`:279`). One provider must always be active.
 
 **Per-provider model storage**: `UserDefaults` key `llmModel_{provider}` stores each provider's selected model. When a provider becomes active, its model is written to the global `llmModel` key for ServeManager.
 
@@ -76,14 +83,17 @@ from HTTP response → status lives in `LLMValidator.classify(provider:status:)`
 | `.online` | Green | 2xx from test call; OR cached `.ok` verdict for current key; OR Anthropic 4xx ≠ 401/403/402/429 (auth-before-payload, robust against haiku-model deprecation); OR Ollama reachable with at least one model pulled |
 | `.notSetUp` | Grey | No key in Keychain (or empty Ollama URL) |
 | `.invalid` | Red | 401/403 from test call; OR Azure 404 (endpoint/deployment not found — message points at endpoint, not key); OR Azure URL missing https:// scheme |
-| `.unavailable` | Orange | 402/429/network error/timeout; OR Azure key entered but endpoint blank (started-but-incomplete) |
+| `.unavailable` | Orange | 429/network error/timeout; OR Azure key entered but endpoint blank (started-but-incomplete) — transient/unverified, survives offline via cache |
+| `.outOfCredit` | Orange | 402 from test call — an *observed* negative (not a transient miss). Sticky and shown; deliberately NOT cache-masked back to `.online`. `LLMProvider.swift:238` |
 | `.checking` | Spinner | Validation in progress — rendered as `ProgressView().controlSize(.small)` in both sidebar and detail pane (Mail "Status: Connecting…" pattern) |
 
-Only `.online` allows the radio to activate. `.invalid` is the lone "key
-present" state that blocks activation — confirmed-bad credentials must not
-be activatable. `.unavailable` (transient or unverified) blocks too;
-previously-validated keys survive offline because the cache fallback
-promotes them back to `.online` (see Validation flow below).
+Activation is gated on `canActivate`, **not** a live `.online`: `.online`,
+`.outOfCredit`, and `.unavailable` all activate (key present, not
+confirmed-bad). Only `.notSetUp` (no key), `.invalid` (confirmed-bad
+credentials), and `.checking` block. Previously-validated keys survive
+offline because the cache fallback promotes them back to `.online` (see
+Validation flow below); `.outOfCredit` is the deliberate exception — a 402
+is an observed negative, so it stays sticky rather than being cache-masked.
 
 ## Validation flow (Beat 3)
 
@@ -171,11 +181,21 @@ Status is orthogonal to active selection. Providers don't expose balance, free-t
 
 ## Provider status lifecycle (planned)
 
-> **Status: design-forward, not yet shipped.** Everything above this heading
-> describes the shipped Beat 3/3b behaviour. This section is the agreed target
-> the next implementation phases move toward. Where it contradicts shipped
-> behaviour (the lazy-load board, the activation guard, 402 handling), the
-> shipped behaviour is the *defect* and this section is the *intent*.
+> **Status: partly shipped (trued 2026-07-26).** This section was written
+> design-forward. Several of its targets have since shipped and are now the
+> *reality*, not the intent — do NOT read the old "shipped behaviour is the
+> defect" framing against them:
+> - ✅ **Shipped:** the eager, self-refreshing board (`refreshAllStatuses` /
+>   `revalidateAllStale`, `LLMSettingsView.swift:74`); activation-acts-on-truth
+>   via `canActivate` (`:677`, `LLMProvider.swift:279`); the 402-masking split
+>   into a sticky `.outOfCredit` (`LLMProvider.swift:238`).
+> - ⬜ **Still design-forward:** the shared rung-3 `probe(provider, model)` unit,
+>   the offline three-bucket grey ("worked before" vs "never configured" vs
+>   "not set up"), and the `NSApplication.didBecomeActive` refocus-recheck for
+>   credit top-ups.
+>
+> The product principle below (a truthful, effortless board) still holds as
+> intent for the unshipped items.
 
 ### Product principle: the board is truthful and effortless
 

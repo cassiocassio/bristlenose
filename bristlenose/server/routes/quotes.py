@@ -594,12 +594,12 @@ def get_moderator_question(
     try:
         _check_project(db, project_id)
 
-        # Find the quote by dom_id (format: "q-{participant_id}-{int(start_timecode)}")
-        all_quotes = db.query(Quote).filter_by(project_id=project_id).all()
-        quote = next(
-            (q for q in all_quotes if _quote_dom_id(q) == dom_id),
-            None,
-        )
+        # Resolve the quote via the indexed range query rather than a full-table
+        # scan — the export loops this over every quote, so a scan-per-call is
+        # O(N^2). (local import avoids a data.py <-> quotes.py import cycle.)
+        from bristlenose.server.routes.data import _resolve_quote
+
+        quote = _resolve_quote(db, project_id, dom_id)
         if not quote:
             raise HTTPException(status_code=404, detail="Quote not found")
 

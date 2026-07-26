@@ -143,6 +143,28 @@ def _anonymise_data(endpoints: dict[str, Any]) -> None:
             if spk.get("code", "").startswith("p"):
                 spk["name"] = ""
 
+    # Source filenames can carry participant names ("jane-doe.mov") — a recording
+    # name re-carries the identity we just stripped from the speaker fields, so an
+    # "anonymised" export would still name the participant in the Sessions view.
+    # Neutralise to "<session_id><ext>" (keeps the media-type signal, drops name).
+    def _neutralise_filename(sid: str, fn: str) -> str:
+        if not sid:
+            return ""
+        ext = "." + fn.rsplit(".", 1)[1] if fn and "." in fn else ""
+        return f"{sid}{ext}"
+
+    for group in (sessions, dashboard):
+        for sess in group.get("sessions", []):
+            sid = sess.get("session_id", "")
+            for sf in sess.get("source_files", []) or []:
+                sf["filename"] = _neutralise_filename(sid, sf.get("filename", ""))
+                if "path" in sf:
+                    sf["path"] = sf["filename"]
+            if "source_filename" in sess:
+                sess["source_filename"] = _neutralise_filename(
+                    sid, sess.get("source_filename", "")
+                )
+
     # Project info (/info): project_name, session_count, participant_count are
     # fine — no PII.
 
@@ -223,16 +245,19 @@ def _build_export_html(
     """
     app_js_path = _EXPORT_STATIC_DIR / "app.js"
     app_css_path = _EXPORT_STATIC_DIR / "app.css"
-    if not app_js_path.is_file():
+    # Both are single outputs of the same build — a missing app.css means the
+    # build is incomplete, and shipping a styleless-but-200 artifact is worse
+    # than failing loud (asymmetric with the app.js check would hide it).
+    if not app_js_path.is_file() or not app_css_path.is_file():
         raise HTTPException(
             status_code=500,
             detail=(
-                "Export build not found — run the single-file export build "
-                "(frontend/vite.export.config.ts) first"
+                "Export build not found or incomplete — run the single-file export "
+                "build (frontend/vite.export.config.ts) first"
             ),
         )
     app_js = app_js_path.read_text(encoding="utf-8")
-    app_css = app_css_path.read_text(encoding="utf-8") if app_css_path.is_file() else ""
+    app_css = app_css_path.read_text(encoding="utf-8")
 
     # Inline <script> safety: a literal </script> in the bundle would close the
     # inline element early.
@@ -390,7 +415,13 @@ def export_report(
             transcripts[sess.session_id] = _get_transcript_handler(
                 request, project_id, sess.session_id
             )
-        except HTTPException:
+        except HTTPException as exc:
+            # 404 = legitimately no transcript for this session (skip it). Any
+            # other status is a real failure — don't swallow it into a session
+            # that's silently absent from the embed and RouteErrors when the
+            # recipient clicks it offline.
+            if exc.status_code != 404:
+                raise
             logger.warning("Export: transcript not found for %s", sess.session_id)
 
     # Moderator questions — one embed key per quote that HAS a preceding

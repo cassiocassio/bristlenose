@@ -1,0 +1,443 @@
+<!--
+  Mockup: signal-card density studies
+  ===================================
+  Five alternative treatments for the Analysis-tab signal card, plus the
+  current production card as a control, all rendered in the SAME responsive
+  grid (.signal-cards) with ONE shared dataset so information density can be
+  judged like-for-like at 1-up and 2-up.
+
+  The critique this responds to: the current card renders the VERDICT (Signal,
+  the composite the cards are already sorted by) at the same typographic weight
+  as its three SUPPORTING metrics (Conc./Agree./Intensity), each with its own
+  chart. Four numbers, three encodings, a presence matrix, three badge types,
+  and a quote — all pitched at once. Brilliant, but the reader re-does the
+  ranking the composite already did.
+
+  The five approaches are five distinct bets on resolving that:
+    A1  Verdict-led    — promote the number, demote evidence to one sentence
+    A2  One meter      — keep a single high-contrast chart, kill the other two
+    A3  No viz         — remove all charts, lean on type + an accent stripe
+    A4  Face / detail  — triage face at rest, reveal the working on demand
+    A5  Spec strip     — keep all four numbers but align them in a shared rail
+
+  Real tokens/atoms/badges/analysis classes come from the sibling baked
+  stylesheet. Everything liftable lives in <style id="proposed"> and is
+  prefixed .sc-* so it never collides with the theme. The control uses ONLY
+  existing production classes.
+
+  Regenerate the theme sibling if the design system moves:
+    .venv/bin/python -c "from bristlenose.stages.s12_render.theme_assets import load_default_css; open('docs/mockups/mockup-signal-cards.theme.css','w').write(load_default_css())"
+-->
+<link rel="stylesheet" href="mockup-signal-cards.theme.css" />
+
+<style id="proposed">
+  /* ── Page frame (mockup chrome only — NOT lifted) ─────────────────────── */
+  :root[data-theme="dark"]  { color-scheme: dark; }
+  :root[data-theme="light"] { color-scheme: light; }
+  body {
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    margin: 0;
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  .mock-bar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
+    padding: 0.6rem 1.5rem;
+    background: color-mix(in srgb, var(--bn-colour-bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--bn-colour-border);
+    font-size: var(--bn-text-label);
+  }
+  .mock-bar strong { font-weight: var(--bn-weight-emphasis); }
+  .mock-seg { display: inline-flex; border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); overflow: hidden; }
+  .mock-seg button {
+    font: inherit; border: 0; background: var(--bn-colour-bg); color: var(--bn-colour-muted);
+    padding: 0.3rem 0.7rem; cursor: pointer; border-left: 1px solid var(--bn-colour-border);
+  }
+  .mock-seg button:first-child { border-left: 0; }
+  .mock-seg button.on { background: var(--bn-colour-accent); color: #fff; }
+  .mock-toggle { font: inherit; border: 1px solid var(--bn-colour-border); background: var(--bn-colour-bg); color: var(--bn-colour-text); padding: 0.3rem 0.7rem; border-radius: var(--bn-radius-md); cursor: pointer; }
+  .mock-width { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); color: var(--bn-colour-muted); margin-left: auto; }
+
+  .mock-wrap { max-width: 78rem; margin: 0 auto; padding: 1.5rem 1.5rem 8rem; }
+  .mock-approach { margin: 2.75rem 0 0; }
+  .mock-approach:first-of-type { margin-top: 1rem; }
+  .mock-approach > header { margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--bn-colour-border); }
+  .mock-approach h2 { font-size: var(--bn-text-title); line-height: var(--bn-text-title-lh); margin: 0 0 0.15rem; font-weight: var(--bn-weight-emphasis); }
+  .mock-approach h2 .tag { font-family: var(--bn-font-mono); font-size: var(--bn-text-label); color: var(--bn-colour-accent); margin-right: 0.5rem; }
+  .mock-approach .blurb { margin: 0; color: var(--bn-colour-muted); font-size: var(--bn-text-label); max-width: 60rem; }
+
+  /* Force the grid to 2-up inside the mock so density is always judged with a
+     neighbour, matching the analysis center column. Real class handles ≥1-up. */
+  .mock-approach .signal-cards { grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr)); }
+
+  /* ── A1  Verdict-led ──────────────────────────────────────────────────
+     Big composite number = the card's headline. Evidence collapses to one
+     muted sentence. No per-metric charts. LIFTABLE. */
+  .sc-verdict { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; line-height: 1; }
+  .sc-verdict .kick { font-size: var(--bn-text-badge); text-transform: uppercase; letter-spacing: 0.05em; color: var(--bn-colour-muted); margin-bottom: 0.25rem; }
+  .sc-verdict .num  { font-family: var(--bn-font-mono); font-size: var(--bn-text-display); font-weight: var(--bn-weight-strong); color: var(--card-accent, var(--bn-colour-text)); }
+  .sc-meta-line { font-size: var(--bn-text-label); color: var(--bn-colour-muted); margin: 0.1rem 0 var(--bn-space-sm); }
+  .sc-meta-line b { font-family: var(--bn-font-mono); font-weight: var(--bn-weight-normal); color: var(--bn-colour-text); }
+  .sc-meta-line .sep { opacity: 0.5; margin: 0 0.35rem; }
+
+  /* ── A2  One meter ────────────────────────────────────────────────────
+     Single high-contrast strength bar (this card vs the strongest). Evidence
+     as plain inline text. LIFTABLE. */
+  .sc-meter-row { display: flex; align-items: center; gap: 0.6rem; margin: 0.15rem 0 var(--bn-space-sm); }
+  .sc-meter-track { flex: 1; height: 10px; background: var(--bn-colour-border); border-radius: 999px; overflow: hidden; }
+  .sc-meter-fill  { height: 100%; border-radius: 999px; background: var(--card-accent, var(--bn-colour-accent)); }
+  .sc-meter-val   { font-family: var(--bn-font-mono); font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-text); }
+  .sc-meter-cap   { font-size: var(--bn-text-badge); text-transform: uppercase; letter-spacing: 0.05em; color: var(--bn-colour-muted); }
+
+  /* ── A3  No viz ───────────────────────────────────────────────────────
+     Zero charts. Accent stripe carries group identity; type carries hierarchy.
+     LIFTABLE. */
+  .sc-a3 { border-left: 3px solid var(--card-accent, var(--bn-colour-border)); }
+  .sc-a3 .sc-verdict .num { font-size: var(--bn-text-title); }
+  .sc-facts { display: flex; flex-wrap: wrap; gap: 0.15rem 0.9rem; margin: 0.2rem 0 var(--bn-space-sm); font-size: var(--bn-text-label); }
+  .sc-facts .f { color: var(--bn-colour-muted); }
+  .sc-facts .f b { font-family: var(--bn-font-mono); font-weight: var(--bn-weight-normal); color: var(--bn-colour-text); margin-right: 0.25rem; }
+
+  /* ── A4  Face / detail ────────────────────────────────────────────────
+     Verdict + finding + quote at rest; metrics behind a disclosure. Reuses the
+     production expansion animation idea. LIFTABLE. */
+  .sc-disclosure { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; color: var(--bn-colour-accent); font-size: var(--bn-text-label); }
+  .sc-detail { max-height: 0; opacity: 0; overflow: hidden; transition: max-height 0.35s ease, opacity 0.25s ease; }
+  .sc-a4.open .sc-detail { opacity: 1; }
+  .sc-detail-inner { padding-top: var(--bn-space-md); }
+
+  /* ── A5  Spec strip ───────────────────────────────────────────────────
+     Keep all four numbers, but as an aligned full-width footer rail instead of
+     a right-column stack that de-aligns across the grid. LIFTABLE. */
+  .sc-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: var(--bn-space-md); border-top: 1px solid var(--bn-colour-border); }
+  .sc-strip .cell { padding: var(--bn-space-sm) 0.6rem; border-left: 1px solid var(--bn-colour-border); }
+  .sc-strip .cell:first-child { border-left: 0; padding-left: 0; }
+  .sc-strip .v { font-family: var(--bn-font-mono); font-size: var(--bn-text-heading); font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-text); }
+  .sc-strip .cell.lead .v { color: var(--card-accent, var(--bn-colour-text)); }
+  .sc-strip .l { display: block; font-size: var(--bn-text-badge); text-transform: uppercase; letter-spacing: 0.04em; color: var(--bn-colour-muted); margin-top: 0.15rem; }
+
+  /* shared: the identity block wants to breathe in the viz-less variants */
+  .sc-quiet-quotes .signal-card-quotes { margin-top: var(--bn-space-sm); }
+</style>
+
+<div class="mock-bar">
+  <strong>Signal-card density studies</strong>
+  <span class="mock-seg" id="seg">
+    <button data-k="all" class="on">All</button>
+    <button data-k="control">Current</button>
+    <button data-k="a1">A1</button>
+    <button data-k="a2">A2</button>
+    <button data-k="a3">A3</button>
+    <button data-k="a4">A4</button>
+    <button data-k="a5">A5</button>
+  </span>
+  <button class="mock-toggle" id="theme">◐ Theme</button>
+  <span class="mock-width" id="w"></span>
+</div>
+
+<div class="mock-wrap" id="wrap"></div>
+
+<script>
+// ── Shared dataset (a plausible grocery-delivery study, N=8) ──────────────
+const PIDS = ["p1","p2","p3","p4","p5","p6","p7","p8"];
+const DATA = [
+  { loc:"Onboarding", name:"ID verification wall stops the first run",
+    elab:"Users stall at the passport-upload step||five of eight hit it in session one and three never returned.",
+    group:"Blockers", groupVar:"--bn-group-trust", pattern:"gap", accent:"#ea580c",
+    signal:0.86, conc:3.4, agree:5.2, intensity:2.6, present:["p1","p2","p4","p6","p7"],
+    quote:{ tc:"12:04", pid:"p4", text:"I got to the ID bit and just… gave up. I'll do it later — which means never.", intensity:3, tag:"onboarding" } },
+
+  { loc:"Checkout", name:"Saved cards vanish between visits",
+    elab:"Card details won't persist||so people re-type them every order and read it as a bug, not a choice.",
+    group:"Friction", groupVar:"--bn-group-emo", pattern:"tension", accent:"#dc2626",
+    signal:0.71, conc:2.8, agree:4.1, intensity:2.2, present:["p2","p3","p5","p8"],
+    quote:{ tc:"27:41", pid:"p2", text:"Why do I have to put my card in again? It never remembers me.", intensity:2, tag:"payment" } },
+
+  { loc:"Search", name:"Filters reset on back-navigation",
+    elab:"The back button wipes every applied filter||forcing a full re-selection to see the next result.",
+    group:"Friction", groupVar:"--bn-group-ux", pattern:"tension", accent:"#d97706",
+    signal:0.63, conc:2.3, agree:3.4, intensity:1.9, present:["p1","p3","p5","p6"],
+    quote:{ tc:"08:55", pid:"p5", text:"I set it all up, tapped back to check one thing, and it's all gone again.", intensity:2, tag:"search" } },
+
+  { loc:"Reorder", name:"One-tap reorder feels effortless",
+    elab:"Repeat baskets land in two taps||the one moment people volunteered praise without prompting.",
+    group:"Delight", groupVar:"--bn-group-task", pattern:"success", accent:"#16a34a",
+    signal:0.55, conc:2.0, agree:3.1, intensity:2.4, present:["p1","p4","p7"],
+    quote:{ tc:"33:18", pid:"p7", text:"Oh that's lovely — my usual shop, done, before I've even sat down.", intensity:3, tag:"reorder" } },
+
+  { loc:"Account", name:"Password reset loops back to sign-in",
+    elab:"The reset email links to the login screen||with no visible path to actually set a new password.",
+    group:"Blockers", groupVar:"--bn-group-trust", pattern:"gap", accent:"#b91c1c",
+    signal:0.44, conc:1.7, agree:2.1, intensity:1.4, present:["p3","p8"],
+    quote:{ tc:"41:02", pid:"p8", text:"It emails me, I click it, and I'm back where I started. Round and round.", intensity:1, tag:"auth" } },
+];
+const MAX_SIGNAL = Math.max(...DATA.map(d => d.signal));
+const COMPOSITES = DATA.map(d => d.signal);
+
+// ── Shared fragment helpers (reuse production classes) ────────────────────
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+function elabHTML(elab){
+  const i = elab.indexOf("||");
+  if (i === -1) return `<strong>${esc(elab)}</strong>`;
+  return `<strong>${esc(elab.slice(0,i))}</strong> ${esc(elab.slice(i+2))}`;
+}
+
+// intensity dots — matches Metric.tsx / analysis IntensityDots (r5, cx0 7, gap 16)
+function dotsSvg(value){
+  const r=5, cx0=7, gap=16, w=cx0+gap*2+r+2, h=r*2+2, col="var(--dot-colour, var(--bn-colour-muted))";
+  let d="";
+  for(let i=0;i<3;i++){ const x=cx0+i*gap, y=r+1;
+    d += (value>=i+1)
+      ? `<circle cx="${x}" cy="${y}" r="${r}" fill="${col}" opacity="0.7"/>`
+      : `<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${col}" stroke-width="1.2" opacity="0.35"/>`;
+  }
+  return `<svg class="intensity-dots-svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${d}</svg>`;
+}
+
+function sparkbarsHTML(idx){
+  const max = Math.max(...COMPOSITES), maxH = 28;
+  return `<div class="signal-sparkbars">` + COMPOSITES.map((v,i)=>{
+    const hh = Math.max(2, (v/max)*maxH);
+    const op = i===idx ? 1 : Math.max(0.09, (v/max)*0.45);
+    const bg = i===idx ? "var(--card-accent)" : "var(--bn-colour-text)";
+    return `<div class="signal-sparkbar" style="height:${hh}px;background:${bg};opacity:${op}"></div>`;
+  }).join("") + `</div>`;
+}
+
+function groupBadge(sig){
+  return `<span class="badge signal-group-badge" style="background:var(${sig.groupVar})">${esc(sig.group)}</span>`;
+}
+function patternBadge(sig){
+  return `<span class="pattern-label pattern-${sig.pattern}">${sig.pattern.toUpperCase()}</span>`;
+}
+
+function quoteBlock(sig, quiet){
+  return `<div class="signal-card-quotes${quiet?" ":""}">
+    <blockquote>
+      <div class="quote-row">
+        <a class="timecode"><span class="timecode-bracket">[</span>${sig.quote.tc}<span class="timecode-bracket">]</span></a>
+        <span class="quote-body">
+          <span class="quote-text">${esc(sig.quote.text)}</span>
+          <span class="speaker">&nbsp;— ${sig.quote.pid}</span>
+          <span class="badge signal-quote-tag" style="background:var(${sig.groupVar})">${esc(sig.quote.tag)}</span>
+        </span>
+        <span class="intensity-dots" style="--dot-colour:var(--bn-colour-muted);margin-right:8px;flex-shrink:0">${dotsSvg(sig.quote.intensity)}</span>
+      </div>
+    </blockquote>
+  </div>`;
+}
+
+function participantGrid(sig){
+  const set = new Set(sig.present);
+  return `<span class="participant-grid">
+    <span class="participant-count">${sig.present.length}/${PIDS.length}</span>
+    ${PIDS.map(p=>`<span class="p-box${set.has(p)?" p-present":""}">${p}</span>`).join("")}
+  </span>`;
+}
+
+const pct = (v,d)=> Math.min(100, Math.max(0, v/d*100));
+function metaSentence(sig){
+  return `<b>${sig.conc.toFixed(1)}×</b> concentration<span class="sep">·</span>` +
+         `<b>${sig.agree.toFixed(1)}</b> effective voices<span class="sep">·</span>` +
+         `intensity <b>${sig.intensity.toFixed(1)}</b>`;
+}
+
+// ── CONTROL — current production card (elaboration variant) ───────────────
+function control(sig, idx){
+  return `<div class="signal-card" style="--card-accent:${sig.accent}">
+    <div class="signal-card-top">
+      <div class="signal-card-identity">
+        <span class="signal-card-source">${esc(sig.loc)}</span>
+        <div class="signal-card-location">${esc(sig.name)}</div>
+        <div class="signal-elaboration">${elabHTML(sig.elab)}</div>
+      </div>
+      <div class="signal-card-right">
+        <div class="signal-card-badges">${groupBadge(sig)}${patternBadge(sig)}</div>
+        <div class="signal-card-metrics">
+          <span class="metric-label">Signal</span><span class="metric-value">${sig.signal.toFixed(2)}</span><span class="metric-viz">${sparkbarsHTML(idx)}</span>
+          <span class="metric-label">Conc.</span><span class="metric-value">${sig.conc.toFixed(1)}×</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:${pct(sig.conc,5)}%"></span></span></span>
+          <span class="metric-label">Agree.</span><span class="metric-value">${sig.agree.toFixed(1)}</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:${pct(sig.agree,PIDS.length)}%"></span></span></span>
+          <span class="metric-label">Intensity</span><span class="metric-value">${sig.intensity.toFixed(1)}</span><span class="metric-viz">${dotsSvg(sig.intensity)}</span>
+        </div>
+      </div>
+    </div>
+    ${quoteBlock(sig)}
+    <div class="signal-card-footer">
+      <span class="signal-card-link">Show all 6 quotes</span>
+      ${participantGrid(sig)}
+    </div>
+  </div>`;
+}
+
+// ── A1 — Verdict-led ──────────────────────────────────────────────────────
+function a1(sig, idx){
+  return `<div class="signal-card sc-quiet-quotes" style="--card-accent:${sig.accent}">
+    <div class="signal-card-top">
+      <div class="signal-card-identity">
+        <span class="signal-card-source">${esc(sig.loc)}</span>
+        <div class="signal-card-location">${esc(sig.name)}</div>
+      </div>
+      <div class="sc-verdict"><span class="kick">Signal</span><span class="num">${sig.signal.toFixed(2)}</span></div>
+    </div>
+    <div class="signal-elaboration">${elabHTML(sig.elab)}</div>
+    <p class="sc-meta-line">${metaSentence(sig)}</p>
+    <div class="signal-card-badges" style="margin-bottom:0">${groupBadge(sig)}${patternBadge(sig)}</div>
+    ${quoteBlock(sig)}
+    <div class="signal-card-footer"><span class="signal-card-link">Show all 6 quotes</span>${participantGrid(sig)}</div>
+  </div>`;
+}
+
+// ── A2 — One meter ────────────────────────────────────────────────────────
+function a2(sig){
+  return `<div class="signal-card sc-quiet-quotes" style="--card-accent:${sig.accent}">
+    <div class="signal-card-identity">
+      <span class="signal-card-source">${esc(sig.loc)}</span>
+      <div class="signal-card-location">${esc(sig.name)}</div>
+    </div>
+    <div class="signal-elaboration">${elabHTML(sig.elab)}</div>
+    <div class="sc-meter-row">
+      <span class="sc-meter-cap">Signal</span>
+      <span class="sc-meter-track"><span class="sc-meter-fill" style="width:${pct(sig.signal, MAX_SIGNAL)}%"></span></span>
+      <span class="sc-meter-val">${sig.signal.toFixed(2)}</span>
+    </div>
+    <p class="sc-meta-line">${metaSentence(sig)}</p>
+    <div class="signal-card-badges" style="margin-bottom:0">${groupBadge(sig)}${patternBadge(sig)}</div>
+    ${quoteBlock(sig)}
+    <div class="signal-card-footer"><span class="signal-card-link">Show all 6 quotes</span>${participantGrid(sig)}</div>
+  </div>`;
+}
+
+// ── A3 — No viz ───────────────────────────────────────────────────────────
+function a3(sig){
+  return `<div class="signal-card sc-a3 sc-quiet-quotes" style="--card-accent:${sig.accent}">
+    <div class="signal-card-top">
+      <div class="signal-card-identity">
+        <span class="signal-card-source">${esc(sig.loc)}</span>
+        <div class="signal-card-location">${esc(sig.name)}</div>
+      </div>
+      <div class="sc-verdict"><span class="kick">Signal</span><span class="num">${sig.signal.toFixed(2)}</span></div>
+    </div>
+    <div class="signal-elaboration">${elabHTML(sig.elab)}</div>
+    <div class="sc-facts">
+      <span class="f"><b>${sig.conc.toFixed(1)}×</b>concentration</span>
+      <span class="f"><b>${sig.agree.toFixed(1)}</b>voices</span>
+      <span class="f"><b>${sig.intensity.toFixed(1)}</b>intensity</span>
+    </div>
+    <div class="signal-card-badges" style="margin-bottom:0">${groupBadge(sig)}${patternBadge(sig)}</div>
+    ${quoteBlock(sig)}
+    <div class="signal-card-footer"><span class="signal-card-link">Show all 6 quotes</span>${participantGrid(sig)}</div>
+  </div>`;
+}
+
+// ── A4 — Face / detail ────────────────────────────────────────────────────
+function a4(sig, idx){
+  return `<div class="signal-card sc-a4 sc-quiet-quotes" style="--card-accent:${sig.accent}">
+    <div class="signal-card-top">
+      <div class="signal-card-identity">
+        <span class="signal-card-source">${esc(sig.loc)}</span>
+        <div class="signal-card-location">${esc(sig.name)}</div>
+        <div class="signal-elaboration">${elabHTML(sig.elab)}</div>
+      </div>
+      <div class="sc-verdict"><span class="kick">Signal</span><span class="num">${sig.signal.toFixed(2)}</span></div>
+    </div>
+    ${quoteBlock(sig)}
+    <div class="signal-card-footer">
+      <button class="sc-disclosure" onclick="toggleDetail(this)">Show metrics ▸</button>
+      ${participantGrid(sig)}
+    </div>
+    <div class="sc-detail">
+      <div class="sc-detail-inner">
+        <div class="signal-card-metrics">
+          <span class="metric-label">Conc.</span><span class="metric-value">${sig.conc.toFixed(1)}×</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:${pct(sig.conc,5)}%"></span></span></span>
+          <span class="metric-label">Agree.</span><span class="metric-value">${sig.agree.toFixed(1)}</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width:${pct(sig.agree,PIDS.length)}%"></span></span></span>
+          <span class="metric-label">Intensity</span><span class="metric-value">${sig.intensity.toFixed(1)}</span><span class="metric-viz">${dotsSvg(sig.intensity)}</span>
+          <span class="metric-label">Rank</span><span class="metric-value">#${idx+1}</span><span class="metric-viz">${sparkbarsHTML(idx)}</span>
+        </div>
+        <div class="signal-card-badges" style="margin-top:var(--bn-space-md)">${groupBadge(sig)}${patternBadge(sig)}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── A5 — Spec strip ───────────────────────────────────────────────────────
+function a5(sig){
+  return `<div class="signal-card sc-quiet-quotes" style="--card-accent:${sig.accent}">
+    <div class="signal-card-top" style="margin-bottom:0">
+      <div class="signal-card-identity">
+        <span class="signal-card-source">${esc(sig.loc)}</span>
+        <div class="signal-card-location">${esc(sig.name)}</div>
+        <div class="signal-elaboration">${elabHTML(sig.elab)}</div>
+      </div>
+      <div class="signal-card-badges" style="margin-bottom:0">${groupBadge(sig)}${patternBadge(sig)}</div>
+    </div>
+    ${quoteBlock(sig)}
+    <div class="sc-strip">
+      <div class="cell lead"><span class="v">${sig.signal.toFixed(2)}</span><span class="l">Signal</span></div>
+      <div class="cell"><span class="v">${sig.conc.toFixed(1)}×</span><span class="l">Conc.</span></div>
+      <div class="cell"><span class="v">${sig.agree.toFixed(1)}</span><span class="l">Voices</span></div>
+      <div class="cell"><span class="v">${sig.intensity.toFixed(1)}</span><span class="l">Intensity</span></div>
+    </div>
+    <div class="signal-card-footer" style="margin-top:var(--bn-space-md)">
+      <span class="signal-card-link">Show all 6 quotes</span>${participantGrid(sig)}
+    </div>
+  </div>`;
+}
+
+// ── Approach registry ─────────────────────────────────────────────────────
+const APPROACHES = [
+  { k:"control", title:"Current", tag:"control", fn:control,
+    blurb:"Production card, faithfully reproduced. Four headline numbers, three encodings (bar / dots / sparkbars), a presence matrix, three badge types and a quote — the density under review. Judge everything else against this." },
+  { k:"a1", title:"Verdict-led", tag:"A1", fn:a1,
+    blurb:"Promote the composite to a display-size number the eye lands on first; demote Conc./Agree./Intensity to one muted evidence sentence. The trusting reader never parses it; the suspicious reader reads one line. Charts removed." },
+  { k:"a2", title:"One meter", tag:"A2", fn:a2,
+    blurb:"Keep a single high-contrast chart — a strength meter of this card vs the strongest — and kill the other two. Solves the 'three visual languages, two mismatched bar denominators' problem by having exactly one." },
+  { k:"a3", title:"No viz", tag:"A3", fn:a3,
+    blurb:"Remove every chart. A coloured left stripe carries group identity; type weight carries hierarchy; the numbers sit in a plain fact row. The honest test of how much the charts actually earned their pixels." },
+  { k:"a4", title:"Face / detail", tag:"A4", fn:a4,
+    blurb:"Triage face at rest — finding, verdict, one quote, presence. The four sub-metrics live behind a disclosure. Bets that on first scan you want the answer, and the working only when a card earns a second look." },
+  { k:"a5", title:"Spec strip", tag:"A5", fn:a5,
+    blurb:"Keep all four numbers but move them from a right-column stack (which de-aligns across a 2-up grid) into an aligned full-width footer rail. Tests whether alignment alone fixes scannability without cutting data." },
+];
+
+// ── Render ────────────────────────────────────────────────────────────────
+let current = "all";
+function render(){
+  const wrap = document.getElementById("wrap");
+  const show = APPROACHES.filter(a => current === "all" || a.k === current);
+  wrap.innerHTML = show.map(a => `
+    <section class="mock-approach">
+      <header>
+        <h2><span class="tag">${a.tag}</span>${a.title}</h2>
+        <p class="blurb">${a.blurb}</p>
+      </header>
+      <div class="signal-cards">${DATA.map((d,i)=>a.fn(d,i)).join("")}</div>
+    </section>`).join("");
+}
+
+function toggleDetail(btn){
+  const card = btn.closest(".sc-a4");
+  const det = card.querySelector(".sc-detail");
+  const open = card.classList.toggle("open");
+  det.style.maxHeight = open ? det.scrollHeight + "px" : "0";
+  btn.textContent = open ? "Hide metrics ▾" : "Show metrics ▸";
+}
+
+document.getElementById("seg").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  current = b.dataset.k;
+  [...e.currentTarget.children].forEach(c => c.classList.toggle("on", c===b));
+  render();
+});
+document.getElementById("theme").addEventListener("click", () => {
+  const el = document.documentElement;
+  const now = el.getAttribute("data-theme");
+  el.setAttribute("data-theme", now === "dark" ? "light" : "dark");
+});
+const wEl = document.getElementById("w");
+const upW = () => { wEl.textContent = window.innerWidth + "px · " + (window.innerWidth >= 1120 ? "2-up" : "1-up"); };
+window.addEventListener("resize", upW); upW();
+render();
+</script>

@@ -271,33 +271,50 @@ final class BridgeHandler: ObservableObject {
 
     // MARK: - Toolbar inset sync (translucent chrome spike)
 
-    /// Push the unified titlebar+toolbar height (in CSS px) to the SPA so it
-    /// can top-pad its scroll containers, keeping first-of-content out from
-    /// under the frost. The WebView extends behind the toolbar via
-    /// `.ignoresSafeArea(.container, edges: .top)` (ContentView), so without
-    /// this pad the very top of the report is clipped by the frost band.
+    /// Push the *residual* toolbar overlap (in CSS px) the SPA still needs to
+    /// pad past — the chrome height NOT already absorbed by the WebView's native
+    /// top content inset. The WebView extends behind the unified toolbar via
+    /// `.ignoresSafeArea(.container, edges: .top)` (ContentView), but the OS
+    /// already insets the *layout viewport* below the toolbar: the red-background
+    /// test (23 Jul 2026) proved CSS content, scroll-0 origin, and every
+    /// getBoundingClientRect() start at the toolbar's bottom, not the window top.
+    /// The paint region extends under the toolbar (scroll-underlap works) while
+    /// layout does not — that combination IS the Notes/Mail idiom, provided by
+    /// the platform. So the old "push the full titlebar+toolbar height" double-
+    /// counted the native inset, leaving ~52px of dead space at the top of every
+    /// lens. See docs/design-lens-template.md § "Native geometry — ground truth".
     ///
-    /// Fired once on `ready`. NSWindow frame minus contentLayoutRect gives the
-    /// combined titlebar+toolbar height — the same delta an AppKit view would
-    /// see as its top safe-area inset. Static-at-ready is fine for alpha; live
-    /// re-post on window frame changes is a follow-up if the effect earns
-    /// polish (per the spike brief).
+    /// Residual = (toolbar region height) − (native inset the WebView already
+    /// applied to its layout viewport). In today's geometry the OS insets the
+    /// full toolbar, so the residual is 0 and report.css's
+    /// `calc(var(--bn-toolbar-inset,0px) + var(--bn-space-xl))` body pad
+    /// collapses to just --bn-space-xl. Keep the plumbing, not the value: a
+    /// future window configuration that makes the WebView underlap at rest
+    /// (safe-area top 0) revives a non-zero residual and the pad returns.
+    ///
+    /// Fired on `ready` and re-posted on full-screen enter/exit + resize
+    /// (ContentView). The toolbar-region height is the same combined
+    /// titlebar+toolbar delta an AppKit view sees as its top safe-area inset;
+    /// in full-screen the frame-minus-contentLayoutRect delta collapses (no
+    /// titlebar chrome to subtract), so fall back to the contentView's top
+    /// safeAreaInset (what AppKit hands SwiftUI's `.ignoresSafeArea` machinery)
+    /// and take the larger — but subtract the WebView's own applied inset either
+    /// way, so the residual stays correct across the transition.
     func syncToolbarInset() {
         guard let webView, let window = webView.window else { return }
         let frameDelta = window.frame.height - window.contentLayoutRect.height
-        // Full-screen fallback: in full-screen the frame-minus-contentLayoutRect
-        // delta can collapse (no titlebar chrome to subtract), so on its own it
-        // under-reports the toolbar height and the SPA's cached padding-top
-        // leaves the first row of content tucked under the visible toolbar
-        // band. The contentView's top safeAreaInset is the same value AppKit
-        // hands to SwiftUI's `.ignoresSafeArea` machinery — so whichever mode
-        // we're in, at least one of the two reflects reality. Pick the larger.
-        let safeAreaTop = window.contentView?.safeAreaInsets.top ?? 0
-        let inset = max(0, frameDelta, safeAreaTop)
+        let contentSafeAreaTop = window.contentView?.safeAreaInsets.top ?? 0
+        let toolbarRegion = max(frameDelta, contentSafeAreaTop)
+        // The WebView's own top safe-area inset is the portion of the toolbar
+        // overlap macOS has already told the web content to avoid (the layout
+        // viewport starts below it). Only the un-absorbed remainder needs a CSS
+        // pad. Today toolbarRegion == this inset → residual 0.
+        let nativeInset = webView.safeAreaInsets.top
+        let residual = max(0, toolbarRegion - nativeInset)
         Task {
             try? await webView.callAsyncJavaScript(
                 "window.__bristlenose?.setToolbarInset?.(inset)",
-                arguments: ["inset": inset],
+                arguments: ["inset": residual],
                 in: nil,
                 in: .page
             )

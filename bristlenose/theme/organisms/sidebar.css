@@ -199,6 +199,18 @@
     border-right: 1px solid var(--bn-colour-border);
     visibility: hidden;
     opacity: 0;
+    /* Toolbar bleed (mirrors .tag-sidebar). This column sits in the body's
+       top-inset flow (padding-top: inset + space-xl), but `top: 0` anchors the
+       sticky at the toolbar seam — the gap makes the panel start a full pad
+       below the toolbar and overflow the bottom by the same amount, and it
+       teleports up on first scroll. Cancel the inset with a negative margin
+       (flow origin → seam, so the panel fills 100vh exactly and sticky has
+       nothing to snap across), then re-inset the content as inner padding to
+       the shared space-xl datum. `, 0px` keeps browser/serve on plain space-xl.
+       With the toolbar-inset residual now 0 the bleed collapses to space-xl. */
+    margin-top: calc(-1 * (var(--bn-toolbar-inset, 0px) + var(--bn-space-xl)));
+    padding-top: calc(var(--bn-toolbar-inset, 0px) + var(--bn-space-xl));
+    padding-bottom: 2rem;
 }
 
 /* Push mode: sidebar in grid flow */
@@ -286,6 +298,11 @@
     visibility: visible;
     opacity: 1;
     z-index: 110;
+    /* Cancel the push-mode toolbar bleed: these are floating panels positioned
+       from `top`, so the negative margin would drag them up off their anchor.
+       (Embedded TOC is closed↔push only, so this only guards the browser.) */
+    margin-top: 0;
+    padding-top: 0;
 }
 
 /* ── Overlay open ─────────────────────────────────────────────── */
@@ -533,29 +550,24 @@
     opacity: 1;
 }
 
-/* ── Cross-seam first-baseline alignment (desktop/embedded only) ──────────
-   Lift the content + inspector first line so their text baselines meet the
-   native sidebar's "Project" lens-row baseline (--bn-first-baseline, tokens.css).
-   Scoped to [data-embedded] so browser/serve keeps its own top spacing. macOS
-   is untouched — this is pure webview CSS aligning TO it. The subtracted literals
-   are each header's ascent-to-baseline (plus its own header padding); nudge them
-   if a column reads a hair high or low. Web↔web stays exact (shared token);
-   web↔native is the tuned approximation. */
+/* ── First-baseline datum (desktop/embedded only) ─────────────────────────
+   Content and the flanking inspector share ONE web-internal datum: the base
+   `.tag-sidebar` bleed (margin-top -(inset+space-xl), padding-top inset+space-xl)
+   lands the "Tags" header at the same y as the body's first h1 (body padding-top
+   inset+space-xl, h1 margin-top 0). No override needed — the base rules already
+   agree on space-xl below the toolbar seam.
 
-/* Inspector "Tags": positioned independent of the bg-bleed margin above it.
-   baseline = padding-top + .sidebar-header pad (space-md) + label ascent (~11). */
-html[data-embedded="true"] .tag-sidebar {
-    padding-top: calc(var(--bn-toolbar-inset, 0px) + var(--bn-first-baseline) - 24px);
-}
+   The old cross-seam idea (align web baselines to the native sidebar's "Project"
+   lens-row baseline via --bn-first-baseline) is retired: the red-background test
+   (23 Jul 2026) showed the webview's layout viewport already starts at the
+   toolbar seam, so that native baseline sits ABOVE the webview origin and can't
+   be reached from CSS. With the toolbar-inset residual now 0 (BridgeHandler),
+   the datum is purely web-internal — tune via --bn-space-xl on the specimen lens.
+   See docs/design-lens-template.md § "Native geometry — ground truth".
 
-/* Content first heading ("Sections"/"Themes"): pull up out of the body top-inset
-   so its baseline meets the datum. box-top = body padding-top (inset + space-xl)
-   + h2 margin; we override the margin. `> main > section:first-of-type` targets
-   the routed content's first heading (header/nav sit outside <main>) and never
-   grabs a mid-page Themes heading. */
-html[data-embedded="true"] .center > main > section:first-of-type > h2 {
-    margin-top: calc(var(--bn-first-baseline) - var(--bn-space-xl) - 19px);
-}
+   (The former h2 lift rule is gone with the h1 promotion — 5c611310 turned the
+   first-of-type headings into <h1>, which flush to the datum via their own
+   `margin-top: 0` rule in report.css.) */
 
 /* Tag header override: no bottom padding (subtitle/actions follow) */
 .tag-sidebar-header {

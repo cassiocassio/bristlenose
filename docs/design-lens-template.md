@@ -1,3 +1,29 @@
+---
+status: partial
+last-trued: 2026-07-26
+trued-against: HEAD@main on 2026-07-26 (uncommitted Phase B change in-tree)
+---
+
+> **Truing status:** Partial — the h1 scheme, keyline token, radius tiers,
+> and the Phase B geometry (B1 truth-measuring `syncToolbarInset`, B2 datum
+> re-scope, B3 TOC treatment) have shipped as code (trued 2026-07-26); the
+> Analysis pane variant and the `__bnLayoutAudit`/Playwright gate remain
+> deferred. The **on-device acceptance pass** for the datum (Open question 3)
+> is still pending — the residual-vs-52 HUD read and pixel tune haven't run.
+> See the changelog and the annotated Sequencing list.
+
+## Changelog
+
+- _2026-07-26_ — trued up: recorded Phase B shipping — sequencing step 1
+  (residual `syncToolbarInset` + datum re-scope, `--bn-first-baseline`
+  retired) and step 3 (TOC toolbar bleed) landed as code; marked §"Fix: stop
+  pushing the phantom inset" shipped; flagged the datum acceptance pass as
+  still-pending in Open questions. Anchors:
+  `desktop/Bristlenose/Bristlenose/BridgeHandler.swift` `syncToolbarInset`,
+  `bristlenose/theme/organisms/sidebar.css` §"First-baseline datum" + `.toc-sidebar`,
+  `bristlenose/theme/tokens.css`.
+- _2026-07-23_ — initial draft (measured audit + native-geometry diagnosis).
+
 # Lens page template — one geometry, declared variation
 
 *Design doc for unifying the five lens pages (Project, Sessions, Quotes,
@@ -7,9 +33,12 @@ cannot silently drift apart. Grew out of the 22 Jul 2026 measurement audit
 (below), which found every lens on its own vertical rhythm and one lens
 (Analysis) off-grid on all four sides.*
 
-Status: **agreed direction, not yet implemented** (23 Jul 2026). The measured
-audit and native-geometry diagnosis are complete and verified against the real
-WKWebView (Debug build `c2f68e47`); implementation is sequenced at the foot.
+Status: **partially implemented** (26 Jul 2026). The measured audit and
+native-geometry diagnosis are complete and verified against the real WKWebView
+(Debug build `c2f68e47`). The h1 scheme, keyline token, radius tiers, and
+Phase B geometry (sequencing steps 1 + 3) have shipped as code; the Analysis
+pane variant (step 2) and the audit gate (step 5) are deferred; the datum
+acceptance pass is pending. Implementation state is annotated at the foot.
 
 ## The two invariants
 
@@ -122,6 +151,13 @@ Consequences:
   the toolbar at rest) — the Xcode-style accepted limitation, unchanged.
 
 ### Fix: stop pushing the phantom inset
+
+> **Shipped 2026-07-26** (code in-tree, on-device acceptance pending) —
+> `syncToolbarInset` now pushes `max(0, toolbarRegion − webView.safeAreaInsets.top)`
+> = 0 in today's geometry; the CSS datum re-scoped to web-internal and
+> `--bn-first-baseline` was retired. The residual-reads-0 HUD confirmation and
+> full-screen check are the outstanding acceptance step. Diagnosis below is
+> preserved as the rationale.
 
 `BridgeHandler.syncToolbarInset` pushes
 `window.frame.height − contentLayoutRect.height` — the chrome's height,
@@ -254,13 +290,20 @@ shrinks to match in the same pass.)
 
 1. **Truth-measuring `syncToolbarInset` + datum re-scope + PageHeader/h1
    scheme** — one coherent change; ships the 52px reclaim and the h1s
-   together (they're coupled through the datum).
+   together (they're coupled through the datum). **Shipped as code 2026-07-26**
+   (h1 scheme earlier, `5c611310`; residual `syncToolbarInset` + datum
+   re-scope + `--bn-first-baseline` retirement this pass). On-device datum
+   acceptance/tune still pending (Open question 3).
 2. **Analysis pane variant** — scroll container into SidebarLayout, gutter
    fix, `.signal-card` radius fix. (`git branch -f checkpoint` first — the
-   riskiest step.)
-3. **TOC sidebar treatment.**
-4. **Keyline token + playground toggle.**
+   riskiest step.) **Deferred** — `.signal-card` radius already landed
+   (`be1835b7`); the scroll-pane → SidebarLayout structural move is post-Phase-B.
+3. **TOC sidebar treatment.** **Shipped as code 2026-07-26** — `.toc-sidebar`
+   mirrors the tag sidebar's toolbar bleed (`sidebar.css`).
+4. **Keyline token + playground toggle.** Keyline token
+   (`--bn-colour-keyline`) shipped; playground A/B toggle not yet wired.
 5. **`__bnLayoutAudit` + Playwright alignment gate** — locks it all in.
+   **Deferred** — the audit probe + per-route CI assertion is future work.
 
 Trunk throughout; each step an independently-green commit. (The former
 "frost quest" step is gone — scroll-underlap turned out to already work
@@ -273,8 +316,11 @@ solid band, an accepted platform limitation shared with Xcode.)
   calmer for a card row) vs tile-number baselines on the datum.
 - ~~**Stat tile radius**: stay `md` or join `lg`.~~ **Decided 25 Jul: stays
   `md`** — `lg` too big at tile scale.
-- **The datum value itself**: the eye-approved reference is today's
-  accidental Quotes position (~8px below the toolbar); confirm or re-tune
-  during step 1's acceptance pass in the real app.
+- **The datum value itself** _(still open — this is the pending acceptance
+  pass)_: the eye-approved reference is today's accidental Quotes position
+  (~8px below the toolbar). Step 1 code shipped with the datum at
+  `--bn-space-xl` (32px below the seam); the residual-reads-0 HUD read and the
+  by-eye tune against the toolbar seam haven't run in the real app yet. Confirm
+  or re-tune `--bn-space-xl` there.
 - **Keyline scope**: lens-page section rules only (as specced) or also table
   chrome.

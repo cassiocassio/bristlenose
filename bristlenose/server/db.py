@@ -59,10 +59,23 @@ def get_engine(db_url: str | None = None) -> Engine:
 
 @event.listens_for(Engine, "connect")
 def _set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
-    """Enable WAL mode and foreign keys for SQLite connections."""
+    """Enable WAL mode, foreign keys, and a write-lock busy timeout.
+
+    ``busy_timeout`` is load-bearing, not tuning. WAL allows one writer at a time;
+    AutoCode runs its batches concurrently (``asyncio.gather``), each writing
+    ProposedTags + a ``processed_quotes`` progress update on its own connection.
+    With no busy timeout SQLite returns ``OperationalError: database is locked`` the
+    instant two writers collide — the batch raises, ``gather`` swallows it as an
+    exception, its proposals are discarded, and the job reports a serene
+    "0 proposals" while 38 real ones were lost (verified 26 Jul 2026 — every
+    JJG/Nielsen tag stuck at count 0). A 5 s timeout makes the loser wait for the
+    lock instead of erroring; the writes finish in milliseconds, so contention just
+    resolves. Applies to every connection (the event fires on each connect).
+    """
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.execute("PRAGMA busy_timeout=5000")
     cursor.close()
 
 

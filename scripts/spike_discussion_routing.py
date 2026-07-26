@@ -48,14 +48,22 @@ PROMPTS = Path(__file__).resolve().parent.parent / "bristlenose" / "llm" / "prom
 # ── Structured-output models (spike-local; graduate to models.py if this ships) ──
 
 
+# Length budgets are a CONTRACT, not a hope — the ≤2-screen sidebar depends on it.
+# max_length carries into the provider's structured-output schema (maxLength) and
+# validation catches violations; caps have headroom over the prompt's asks
+# (terse ≤28, scaffold.terse ≤34, intent ≤100) so normal output passes but a
+# runaway string is caught rather than silently blowing the sidebar.
+
+
 class ScaffoldItem(BaseModel):
-    terse: str
-    verbatim: str = ""
+    terse: str = Field(max_length=34)  # sidebar disclosure sub-label (prompt: ≤24)
+    verbatim: str = ""                 # hidden match material — uncapped
 
 
 class Territory(BaseModel):
-    terse: str
-    intent: str
+    nav_terse: str = Field(max_length=26)  # sidebar row — orientation (prompt: ≤18)
+    heading: str = Field(max_length=56)    # content heading — fuller (prompt: ≤40)
+    intent: str = Field(max_length=140)    # content one-liner (prompt: ≤100); match = intent + scaffold
     kind: Literal["questions", "task", "instruction"] = "questions"
     stance_axis: Literal["opinion", "pattern", "none"] = "pattern"
     scaffold: list[ScaffoldItem] = Field(default_factory=list)
@@ -68,8 +76,8 @@ class ParsedGuide(BaseModel):
 class QuoteRoute(BaseModel):
     id: str
     territory_id: str  # "t3" or "UNROUTED"
-    confidence: float = 0.0
-    margin: float = 0.0
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    margin: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
 class RouteBatch(BaseModel):
@@ -140,7 +148,7 @@ def territories_block(guide: ParsedGuide) -> str:
     for i, t in enumerate(guide.territories):
         scaf = " · ".join(s.terse for s in t.scaffold)
         lines.append(
-            f"t{i} [{t.kind}/{t.stance_axis}] {t.terse}\n"
+            f"t{i} [{t.kind}/{t.stance_axis}] {t.heading}\n"
             f"    intent: {t.intent}\n"
             f"    covers: {scaf or '(none)'}"
         )
@@ -194,7 +202,7 @@ async def run(args: argparse.Namespace) -> str:
          f"({len(routable)} routable) in {parse_s:.1f}s")
     for i, t in enumerate(guide.territories):
         tag = "  (instruction — quarantined)" if t.kind == "instruction" else ""
-        emit(f"  t{i}  {t.terse}  [{t.kind}/{t.stance_axis}]  ·{len(t.scaffold)} folded{tag}")
+        emit(f"  t{i}  {t.heading}  [{t.kind}/{t.stance_axis}]  ·{len(t.scaffold)} folded{tag}")
     emit()
 
     # 2. route quotes in batches ----------------------------------------------
@@ -251,7 +259,7 @@ async def run(args: argparse.Namespace) -> str:
         if t.kind == "instruction":
             continue
         c = counts[f"t{i}"]
-        emit(f"  {c:>4}  {bar(c, peak)}  {t.terse}")
+        emit(f"  {c:>4}  {bar(c, peak)}  {t.heading}")
     emit(f"  {unrouted:>4}  {'·'*0}  UNROUTED (stay in the Quotes lens)")
     emit()
     emit("## Sample routed quotes (eyeball precision — are these in-territory?)")
@@ -259,7 +267,7 @@ async def run(args: argparse.Namespace) -> str:
         s = routed_samples.get(f"t{i}")
         if not s:
             continue
-        emit(f"### t{i} {t.terse}")
+        emit(f"### t{i} {t.heading}")
         for line in s:
             emit(f"  - {line}")
     emit()

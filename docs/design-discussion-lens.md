@@ -177,15 +177,16 @@ DiscussionGuide                 # one per project
 
 Territory                       # the top-level intention / bucket — the nav unit
   id, order
-  terse                         # ≤4-word nav label (the spine word) — shown in the sidebar
-  intent                        # the whole territory it explores — the routing MATCH FIELD (internal; a short descriptor may show in the CONTENT area, never the sidebar)
+  nav_terse                     # ≤18 chars — SIDEBAR row (orientation); compress hard, never wraps
+  heading                       # ≤40 chars — CONTENT heading, the researcher's fuller phrasing
+  intent                        # ≤100 chars — CONTENT one-line descriptor; matching = intent + scaffold verbatim
   kind: questions | task | instruction   # instruction => opening/safeguarding, never routed
   stance_axis: opinion | pattern | none
   scaffold: list[ScaffoldItem]  # folded big-Qs + probes
 
 ScaffoldItem
-  terse                         # ≤5-word sub-label — the ONLY thing shown (on disclosure); keeps the sidebar terse
-  verbatim                      # the question/probe as written — hidden MATCH MATERIAL for routing, never displayed in nav
+  terse                         # ≤24 chars — SIDEBAR disclosure sub-label (orientation); never verbatim
+  verbatim                      # the question/probe as written — hidden MATCH MATERIAL, never displayed in nav
   # Researcher overrides (terse labels) are stored as an override layer,
   # never mutating the parsed source (fingerprint diff stays valid).
 
@@ -217,27 +218,33 @@ Reuses the Quotes page almost entirely — `QuoteCard`, `QuoteGroup`, badges,
 editing, and the `seq-*` run treatment. What changes is the **navigation** (the
 guide's territories) and the **grouping key** (territory, then response spread).
 
-**What "distill" means (hard constraint):** the distilled guide **is the sidebar
-navigation** — the *entire* thing must fit in **≤2 screens (ideally less) and
-narrow.** So it is **terse throughout**: territory labels and any disclosed
-sub-labels are short nav words, **never verbatim questions** (those are too long
-for a sidebar). Verbatim text is kept only as hidden *match material* for routing.
+**What "distill" means, and the two densities (settled — Option B, 26 Jul).** The
+distilled guide renders at two densities from one structure: the **sidebar is
+orientation** (can you get to the right place?) and the **content area is where
+the work happens**. The sidebar — the whole navigable guide — must fit **≤2
+screens, narrow**, so it is terse throughout: `nav_terse` territory labels
+(≤18 chars) and terse disclosed sub-labels (≤24 chars), **never verbatim
+questions**. The content carries the researcher's fuller phrasing: a `heading`
+(≤40 chars) + a one-line `intent` (≤100 chars) + the evidence. Verbatim scaffold
+text is hidden match material only. *(Option A — one shared label for both
+surfaces — was considered and rejected: the sidebar is pure orientation, so it
+should compress past the content heading. Rendered both ways in
+`docs/mockups/mockup-discussion-heading-options.html`.)*
 
 **IA (settled):**
-- **Nav = the ~5–12 territories** (the spine) — the primary, glanceable structure,
-  in a GuideSidebar mirroring `TocSidebar`, each row carrying a **signal-bar**
-  evidence-strength indicator (not a fraction). Terse labels only.
-- **The scaffold is progressive disclosure — terse.** Expanding a territory in the
-  sidebar reveals its **terse sub-labels** (not verbatim questions), behind a
-  collapsed `<details>` ("what I explored here ▸"), reusing the coverage-details
-  idiom — collapsed by default so the whole nav stays under two screens. On-demand
-  for the researcher who wants to see the prepared depth or what went unasked.
-- **Within a territory (content area, not the sidebar):** a one-line intent
-  descriptor, then the **response-groups** (the balanced spread — majority /
-  variants) with their quote runs. Response-groups are the emergent second level —
-  *not* the guide's sub-questions. (This absorbs the old per-question paraphrase
-  gallery; a "how it was actually asked" view can live inside the disclosure as a
-  v1.x add — not load-bearing.)
+- **Nav = the ~5–12 territories** (the spine), in a GuideSidebar mirroring
+  `TocSidebar` — each row a **`nav_terse`** label (≤18 chars, orientation) + a
+  **signal-bar** evidence indicator (not a fraction).
+- **The scaffold is progressive disclosure — terse.** Expanding a territory
+  reveals its **terse sub-labels** (≤24 chars, never verbatim), behind a collapsed
+  `<details>` ("what I explored here ▸"), reusing the coverage-details idiom —
+  collapsed by default so the nav stays under two screens.
+- **Within a territory (content area):** the **`heading`** (the researcher's fuller
+  phrasing) + a one-line **`intent`** descriptor, then the **response-groups** (the
+  balanced spread — majority / variants) with their quote runs. Response-groups are
+  the emergent second level — *not* the guide's sub-questions. (This absorbs the old
+  per-question paraphrase gallery; a "how it was actually asked" view can live inside
+  the disclosure as a v1.x add — not load-bearing.)
 
 **Depth stays legible** because interior levels use different visual channels:
 response-group = a horizontal typographic lead-in (muted, emphasis-weight, count

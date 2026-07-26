@@ -1,0 +1,177 @@
+<!--
+  Mockup: Discussion lens — heading options A vs B (two-density mapping test)
+  ===========================================================================
+  One distillation, rendered at TWO densities: a terse sidebar nav and a wider
+  content framework. The question: how does the sidebar label relate to the
+  content heading?
+
+    Option A — ONE `terse` string does double duty. Sidebar row === content
+               heading, character-identical. Content adds the `intent` line.
+               Mapping is trivial identity; fewest strings to keep consistent.
+
+    Option B — TWO strings: an ultra-terse `nav_terse` for the sidebar + a
+               fuller `heading` for the content. Tightest sidebar, richer
+               heading; a nav→heading mapping to maintain.
+
+  Each panel shows the SAME ~6 territories in the sidebar + the active territory
+  ("Try the prototype") rendered in the content area, so the nav↔content mapping
+  is visible within each option. Live char counts (the small muted numbers)
+  test the parse prompt's budgets: terse ≤28 · heading ≤40 · nav_terse ≤18 ·
+  intent ≤100 · scaffold.terse ≤34.
+
+  Invented CSS is .ho-* (comparison scaffold). Signal bars + tokens match the
+  lens mockup. Reuses the baked theme sibling.
+-->
+<link rel="stylesheet" href="mockup-discussion-lens.theme.css" />
+
+<style id="proposed">
+  :root[data-theme="dark"]  { color-scheme: dark; }
+  :root[data-theme="light"] { color-scheme: light; }
+  body { background: var(--bn-colour-bg); color: var(--bn-colour-text); margin: 0; font-family: "Inter","Segoe UI",system-ui,-apple-system,sans-serif; }
+  .mock-bar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 1rem; padding: 0.6rem 1.5rem; background: color-mix(in srgb, var(--bn-colour-bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--bn-colour-border); font-size: var(--bn-text-label); }
+  .mock-bar strong { font-weight: var(--bn-weight-emphasis); }
+  .mock-seg { display: inline-flex; border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); overflow: hidden; margin-left: auto; }
+  .mock-seg button { font: inherit; border: 0; background: var(--bn-colour-bg); color: var(--bn-colour-muted); padding: 0.3rem 0.7rem; cursor: pointer; border-left: 1px solid var(--bn-colour-border); }
+  .mock-seg button:first-child { border-left: 0; }
+  .mock-seg button.on { background: var(--bn-colour-accent); color: #fff; }
+  .ho-intro { max-width: 72rem; margin: 1rem auto 0; padding: 0 1.5rem; color: var(--bn-colour-muted); font-size: var(--bn-text-label); }
+  .ho-intro code { font-family: var(--bn-font-mono); }
+  .ho-intro b { color: var(--bn-colour-text); font-weight: var(--bn-weight-emphasis); }
+
+  .ho-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; max-width: 84rem; margin: 1.25rem auto 6rem; padding: 0 1.5rem; }
+  .ho-opt { border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-lg); overflow: hidden; }
+  .ho-opt > header { padding: 0.7rem 1rem; border-bottom: 1px solid var(--bn-colour-keyline); }
+  .ho-opt h2 { font-size: var(--bn-text-heading); font-weight: var(--bn-weight-emphasis); margin: 0; }
+  .ho-opt h2 .rec { font-family: var(--bn-font-mono); font-size: var(--bn-text-badge); color: var(--bn-colour-accent); margin-left: 0.4rem; }
+  .ho-opt .why { color: var(--bn-colour-muted); font-size: var(--bn-text-badge); margin: 0.15rem 0 0; }
+
+  /* the two-density pane: narrow sidebar | content */
+  .ho-pane { display: grid; grid-template-columns: 12rem 1fr; }
+  .ho-side { border-right: 1px solid var(--bn-colour-keyline); padding: 0.7rem 0.6rem; background: color-mix(in srgb, var(--bn-colour-text) 2%, transparent); }
+  .ho-side .cap, .ho-body .cap { font-family: var(--bn-font-mono); font-size: var(--bn-text-badge); text-transform: uppercase; letter-spacing: 0.05em; color: var(--bn-colour-muted); margin: 0 0 0.5rem; }
+  .ho-body { padding: 0.9rem 1rem; min-width: 0; }
+
+  /* sidebar rows (reuse toc-link look) */
+  .ho-row { display: flex; align-items: center; gap: var(--bn-space-sm); padding: 0.18rem var(--bn-space-sm); font-size: var(--bn-text-label); font-weight: var(--bn-weight-light); color: var(--bn-colour-text); border-radius: var(--bn-radius-md); }
+  .ho-row.active { font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-accent); background: var(--bn-nav-selection-bg, color-mix(in srgb, var(--bn-colour-accent) 12%, transparent)); }
+  .ho-row.instruction { color: var(--bn-colour-muted); }
+  .ho-row .lbl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ho-row .ch { font-family: var(--bn-font-mono); font-size: 0.62rem; color: var(--bn-colour-muted); opacity: 0.7; flex: 0 0 auto; }
+  /* scaffold disclosure sub-rows under the active territory */
+  .ho-sub { padding: 0.1rem var(--bn-space-sm) 0.1rem 1.5rem; font-size: var(--bn-text-badge); color: var(--bn-colour-muted); display: flex; gap: var(--bn-space-sm); }
+  .ho-sub .lbl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ho-sub .ch { font-family: var(--bn-font-mono); font-size: 0.62rem; opacity: 0.6; }
+  .ho-disc { font-size: var(--bn-text-badge); color: var(--bn-colour-muted); padding: 0.15rem var(--bn-space-sm) 0.1rem 1.5rem; font-style: italic; }
+
+  /* signal bars */
+  .ho-ev { flex: 0 0 auto; display: inline-flex; align-items: flex-end; gap: 2px; height: 11px; }
+  .ho-ev i { width: 3px; background: var(--bn-colour-text); opacity: 0.7; border-radius: 1px; }
+  .ho-ev i.b1 { height: 4px; } .ho-ev i.b2 { height: 7px; } .ho-ev i.b3 { height: 11px; }
+  .ho-ev i.off { background: var(--bn-colour-border); opacity: 1; }
+
+  /* content heading area */
+  .ho-heading { font-size: var(--bn-text-title); line-height: var(--bn-text-title-lh); font-weight: var(--bn-weight-emphasis); margin: 0; }
+  .ho-heading .ch { font-family: var(--bn-font-mono); font-size: 0.62rem; font-weight: var(--bn-weight-normal); color: var(--bn-colour-muted); margin-left: 0.4rem; vertical-align: super; }
+  .ho-intent { color: var(--bn-colour-muted); font-size: var(--bn-text-label); margin: 0.25rem 0 0; }
+  .ho-intent .ch { font-family: var(--bn-font-mono); font-size: 0.62rem; opacity: 0.7; margin-left: 0.3rem; }
+  .ho-grouplabel { display: flex; align-items: baseline; gap: var(--bn-space-sm); margin: var(--bn-space-md) 0 var(--bn-space-xs); font-size: var(--bn-text-label); color: var(--bn-colour-muted); }
+  .ho-grouplabel .lead { font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-text); }
+  .ho-grouplabel .count { font-family: var(--bn-font-mono); font-size: var(--bn-text-badge); }
+  .ho-quote { background: var(--bn-colour-quote-bg); border-left: 1px solid var(--bn-colour-border); border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0; padding: var(--bn-space-sm) 0.7rem; margin: 0.3rem 0; font-size: var(--bn-text-label); }
+  .ho-quote .tc { font-family: var(--bn-font-mono); font-size: var(--bn-text-label); color: var(--bn-colour-accent); }
+  .ho-contentdisc { margin-top: var(--bn-space-md); font-size: var(--bn-text-badge); color: var(--bn-colour-muted); font-style: italic; }
+  .ho-legend { max-width: 84rem; margin: 0 auto 6rem; padding: 0 1.5rem; color: var(--bn-colour-muted); font-size: var(--bn-text-badge); }
+  .ho-legend b { color: var(--bn-colour-text); font-weight: var(--bn-weight-normal); font-family: var(--bn-font-mono); }
+</style>
+
+<div class="mock-bar">
+  <strong>Discussion lens — heading options A vs B</strong>
+  <div class="mock-seg" role="group" aria-label="Theme">
+    <button class="on" onclick="document.documentElement.setAttribute('data-theme','light');this.classList.add('on');this.nextElementSibling.classList.remove('on')">Light</button>
+    <button onclick="document.documentElement.setAttribute('data-theme','dark');this.classList.add('on');this.previousElementSibling.classList.remove('on')">Dark</button>
+  </div>
+</div>
+
+<p class="ho-intro">
+  One distillation, two densities. Each panel shows the same ~6 territories in the <b>sidebar</b> and the active one
+  (<b>Try the prototype</b>) in the <b>content</b>. Small mono numbers are live character counts, testing the parse budgets
+  (<code>terse ≤28 · heading ≤40 · nav_terse ≤18 · intent ≤100 · scaffold.terse ≤34</code>).
+  The difference is only visible where a label has room to compress/expand — <b>Wrap-up</b> is already short, so A = B there.
+</p>
+
+<div class="ho-grid">
+
+  <!-- ═══ OPTION A ═══ -->
+  <div class="ho-opt">
+    <header>
+      <h2>Option A — one <code>terse</code>, shared <span class="rec">recommended</span></h2>
+      <p class="why">Sidebar row IS the content heading, character-identical. Content adds the intent line. Identity mapping; one string.</p>
+    </header>
+    <div class="ho-pane">
+      <div class="ho-side">
+        <p class="cap">Sidebar nav</p>
+        <div class="ho-row instruction"><span class="ho-ev"><i class="b1 off"></i><i class="b2 off"></i><i class="b3 off"></i></span><span class="lbl">Opening</span><span class="ch">7</span></div>
+        <div class="ho-row"><span class="ho-ev"><i class="b1"></i><i class="b2"></i><i class="b3"></i></span><span class="lbl">About your job</span><span class="ch">14</span></div>
+        <div class="ho-row"><span class="ho-ev"><i class="b1"></i><i class="b2"></i><i class="b3 off"></i></span><span class="lbl">Tools you use</span><span class="ch">13</span></div>
+        <div class="ho-row active"><span class="ho-ev"><i class="b1"></i><i class="b2"></i><i class="b3"></i></span><span class="lbl">Try the prototype</span><span class="ch">17</span></div>
+        <div class="ho-disc">what I explored ▾</div>
+        <div class="ho-sub"><span class="lbl">first impressions of export</span><span class="ch">27</span></div>
+        <div class="ho-sub"><span class="lbl">the export flow</span><span class="ch">15</span></div>
+        <div class="ho-sub"><span class="lbl">naming the themes</span><span class="ch">17</span></div>
+        <div class="ho-row"><span class="ho-ev"><i class="b1"></i><i class="b2 off"></i><i class="b3 off"></i></span><span class="lbl">Wrap-up</span><span class="ch">7</span></div>
+      </div>
+      <div class="ho-body">
+        <p class="cap">Content</p>
+        <h3 class="ho-heading">Try the prototype<span class="ch">terse · 17</span></h3>
+        <p class="ho-intent">How they reacted to the prototype — first impressions, the export flow, naming what they saw.<span class="ch">intent · 92</span></p>
+        <p class="ho-grouplabel"><span class="lead">Most found the export obvious</span><span class="count">5 of 7</span></p>
+        <div class="ho-quote"><span class="tc">[22:03]</span> “I just hit Export and it did the thing.” — p3 Rachel</div>
+        <p class="ho-grouplabel"><span class="lead">A few wanted a preview first</span><span class="count">2 of 7</span></p>
+        <div class="ho-quote"><span class="tc">[25:52]</span> “I clicked it and then panicked — did it just send to everyone?” — p5 Jon</div>
+        <p class="ho-contentdisc">what I explored here ▸ &nbsp;(the terse scaffold, on demand)</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ OPTION B ═══ -->
+  <div class="ho-opt">
+    <header>
+      <h2>Option B — <code>nav_terse</code> + <code>heading</code></h2>
+      <p class="why">Ultra-terse sidebar; fuller content heading. Tightest nav, richer heading; two strings, a nav→heading mapping.</p>
+    </header>
+    <div class="ho-pane">
+      <div class="ho-side">
+        <p class="cap">Sidebar nav</p>
+        <div class="ho-row instruction"><span class="ho-ev"><i class="b1 off"></i><i class="b2 off"></i><i class="b3 off"></i></span><span class="lbl">Opening</span><span class="ch">7</span></div>
+        <div class="ho-row"><span class="ho-ev"><i class="b1"></i><i class="b2"></i><i class="b3"></i></span><span class="lbl">Your job</span><span class="ch">8</span></div>
+        <div class="ho-row"><span class="ho-ev"><i class="b1"></i><i class="b2"></i><i class="b3 off"></i></span><span class="lbl">Tools</span><span class="ch">5</span></div>
+        <div class="ho-row active"><span class="ho-ev"><i class="b1"></i><i class="b2"></i><i class="b3"></i></span><span class="lbl">Prototype</span><span class="ch">9</span></div>
+        <div class="ho-disc">what I explored ▾</div>
+        <div class="ho-sub"><span class="lbl">first impressions</span><span class="ch">17</span></div>
+        <div class="ho-sub"><span class="lbl">export flow</span><span class="ch">11</span></div>
+        <div class="ho-sub"><span class="lbl">naming themes</span><span class="ch">13</span></div>
+        <div class="ho-row"><span class="ho-ev"><i class="b1"></i><i class="b2 off"></i><i class="b3 off"></i></span><span class="lbl">Wrap-up</span><span class="ch">7</span></div>
+      </div>
+      <div class="ho-body">
+        <p class="cap">Content</p>
+        <h3 class="ho-heading">Try the prototype — first reactions<span class="ch">heading · 35</span></h3>
+        <p class="ho-intent">How they reacted to the prototype — first impressions, the export flow, naming what they saw.<span class="ch">intent · 92</span></p>
+        <p class="ho-grouplabel"><span class="lead">Most found the export obvious</span><span class="count">5 of 7</span></p>
+        <div class="ho-quote"><span class="tc">[22:03]</span> “I just hit Export and it did the thing.” — p3 Rachel</div>
+        <p class="ho-grouplabel"><span class="lead">A few wanted a preview first</span><span class="count">2 of 7</span></p>
+        <div class="ho-quote"><span class="tc">[25:52]</span> “I clicked it and then panicked — did it just send to everyone?” — p5 Jon</div>
+        <p class="ho-contentdisc">what I explored here ▸ &nbsp;(the terse scaffold, on demand)</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="ho-legend">
+  <b>terse</b> = sidebar row + content heading (A). &nbsp; <b>nav_terse</b> / <b>heading</b> = split pair (B). &nbsp;
+  <b>intent</b> = content one-liner (both). &nbsp; <b>scaffold.terse</b> = disclosure sub-labels. &nbsp;
+  Signal bars = evidence density (territory level). &nbsp; All strings within budget → the ≤2-screen sidebar holds.
+  <br><br>
+  A's cost: the heading can only be as expressive as a 4-word nav label allows. B's cost: two strings the model must keep
+  coherent, and a nav word (“Prototype”, “Tools”) that's terser than the researcher's own phrasing — a small loss of their voice.
+</p>

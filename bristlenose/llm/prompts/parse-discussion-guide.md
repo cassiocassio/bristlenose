@@ -28,12 +28,13 @@ Distil the guide above.
 
 2. **Fold everything below a territory** — big questions, follow-up questions, bulleted probes, parenthetical watch-fors — into that territory's `scaffold`. Do NOT promote them to top-level and do NOT make them their own territories.
 
-3. For each **territory** emit:
-   - `terse`: a **≤4-word** navigation label (the spine word). Shown in a narrow sidebar — keep it short.
-   - `intent`: one to three sentences synthesising the WHOLE territory — every sub-question and watch-for rolled into one semantic field. Used later to match quotes; internal, never shown in the sidebar, so it can be rich.
+3. For each **territory** emit strings at the length budget for their surface. The distilled guide renders at TWO densities from ONE structure: the **sidebar is orientation** (can the reader get to the right place?) and the **content area is where the work happens**. So the sidebar strings compress hard; the content strings carry the researcher's fuller phrasing:
+   - `nav_terse`: the **sidebar** row label — pure orientation. **≤18 characters (~2–3 words)** (e.g. "Prototype", "Your job"). Compress hard; it must never wrap in a narrow column.
+   - `heading`: the **content-area** heading for the same territory — fuller, in the researcher's own phrasing. **≤40 characters (~6 words)** (e.g. "Try the prototype — first reactions").
+   - `intent`: a **content-area** one-line descriptor of what this territory explores. **≤100 characters (~15 words).** Never shown in the sidebar. Matching uses `intent` + the scaffold below, so it need not be exhaustive — the scaffold carries the rest.
    - `kind`: `questions` (a cluster of questions), `task` (the participant does something), or `instruction` (script/logistics/consent — see rule 5).
    - `stance_axis`: `opinion` (answers spread agree/disagree, like/dislike), `pattern` (experiential/behavioural — common vs outlier, no agree/disagree), or `none` (logistics/admin).
-   - `scaffold`: the folded questions/probes. For each: a `terse` sub-label (**≤5 words**, for on-demand navigation) AND the `verbatim` text (kept only for matching, never shown in the sidebar).
+   - `scaffold`: the folded questions/probes. For each: a `terse` sub-label — the **sidebar disclosure** label, kept very short for orientation, **≤24 characters (~3 words)** — AND the `verbatim` text (hidden match material, never displayed).
 
 4. **Preserve the guide's real order and irregular structure.** A non-spine preamble (Introduction / Overview / About this session) is fine — treat it as an Opening territory with `kind: instruction`.
 

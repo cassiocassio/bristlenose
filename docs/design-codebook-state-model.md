@@ -1,0 +1,237 @@
+# Codebook & tag state model — formal spec
+
+**Status:** design capture, 26 Jul 2026. The "measure" before we cut. Consolidates a
+long working session that untangled three controls that had been conflated. Companion
+to [design-codebook-library.md](design-codebook-library.md) (the Library UI redesign)
+and [design-autocode.md](design-autocode.md). **Nothing here is built yet beyond what
+§7 marks as "current";** this is the spec to validate, then implement.
+
+Sections: 1 language · 2 tiers · 3 state machines · 4 data model + lifecycles ·
+5 UX states & visibilities · 6 retention/cost gradient · 7 the three-way delta ·
+8 settled vs open.
+
+---
+
+## 1. Language definitions
+
+Precise words, because loose ones (mixing "hide" with "disable") caused the churn.
+
+| Term | Definition |
+|---|---|
+| **Project codebook** (the *floor*) | The researcher's own hand-made tags (`framework_id IS NULL`). Always present — the minimum. Named by the project ("project-ikea2 tags"). |
+| **Auto-generated codebook** | Sentiment + any framework (garrett, norman, …). Machine-provided, tag-producing, can drown you. *(A future codebook-lab is a disposable experiment for later — out of scope here.)* |
+| **Add / Remove** | *Install axis.* Add = put a codebook into this project (from the Library). Remove = uninstall it — "I'm **done**." |
+| **Enable / Disable** | *On/off axis*, auto-generated codebooks only. Disable = turn the whole codebook off but keep its results. "Set aside, might return." |
+| **Apply (AutoCode)** | Spend the LLM to tag quotes with a codebook. The one deliberate cost. |
+| **Hide / Show** (the *eye*) | *View axis*, per group, any codebook incl. the floor. Tactical, in-the-moment declutter. Reversible in a click; **auto-unhides** when you reach for a hidden tag. |
+| **Tag provenance** | How a tag was applied: `human` (you) vs `autocode` (accepted a suggestion). |
+| **Proposal disposition** | An autocode suggestion's state: `pending` / `accepted` / `denied`. Denied is retained (telemetry), just not shown. |
+
+**The organising sentence:** *disable every auto-generated codebook and you're back to
+your own private floor — the tags you can only hide/show. That floor is always there.*
+
+---
+
+## 2. The two tiers
+
+**The dividing line is *who made the work, and how deliberately*:**
+
+- **Hand-coding is expensive and deliberate** → protected. You can hide it, but you
+  can't disable or remove your own labour.
+- **Autocoding is cheap and profligate** → toggleable. Every machine-made codebook is
+  a relief valve away, because piling them on is the whole overload risk.
+
+*The asymmetry, concretely:* writing 20 good tags by hand might take an hour, and
+applying them across 5 sessions can take **two days** — that's not something you
+toggle off. Meanwhile, adding three codebooks and applying them to 20 sessions takes
+**~20 minutes** and lands you with **~2,000 tags** to think about. So disable has to
+exist — *and* it must keep the LLM's results, so turning the noise off never means
+re-paying to bring it back.
+
+1. **Floor — the project codebook (your hand-made tags).** Permanent. **Hide/show
+   only.** Never enable/disable, never remove — it's your deliberate work.
+2. **Toggleable — *every* auto-generated codebook.** The **Bristlenose UXR codebook**
+   (the "house wine" — the recommended default pour), **sentiment**, and every
+   framework (garrett/norman/… — "particular growers", yablonski — "a guest-edited
+   encyclopedia"). All the same lifecycle: **Add/Remove · Enable/Disable · Apply**,
+   plus hide/show on their groups.
+   - uxr being the *default* only means it's the recommended pick from the menu (the
+     **Add** axis) — not that it's permanent. It's toggleable like the rest, precisely
+     because it autocodes.
+   - *Sentiment* is pipeline-pre-tagged (no manual **Apply**) but is enable/disable-able
+     and hide-able.
+
+*(Resolved Q-A: uxr is toggleable, not floor.)*
+
+---
+
+## 3. State machines
+
+### 3a. Tag instance (the only true FSM) — per (quote, tag)
+
+```
+                    ┌─ you type / pick it ─────▶ QuoteTag(source="human")      ← manual
+(no tag on quote) ──┤
+                    └─ autocode proposes ──────▶ ProposedTag("pending")
+                                                     ├─ accept ─▶ QuoteTag(source="autocode")
+                                                     └─ deny ───▶ ProposedTag("denied")   ← kept, hidden, telemetry
+```
+
+Provenance (`source`) is independent of the tag's *origin* (its group's `framework_id`).
+"I hand-applied a Garrett tag" (`human`) ≠ "autocode applied a Garrett tag" (`autocode`).
+
+### 3b. Codebook lifecycle (toggleable tier) — per (project, codebook)
+
+```
+      Library                     ┌───────────────── hide/show groups (orthogonal, view only) ─────────────────┐
+        │ Add                     │                                                                             │
+        ▼                         ▼                                                                             ▼
+   ┌─────────┐   Apply    ┌──────────────┐   Disable    ┌───────────────┐   Enable (catch-up delta)   ┌──────────────┐
+   │ Added,  │──────────▶ │ Enabled       │ ───────────▶ │ Disabled       │ ──────────────────────────▶ │ Enabled       │
+   │ not     │            │ (live; new    │ ◀─────────── │ (off; not      │                             │ (live again)  │
+   │ applied │            │ sessions code)│              │ coding; kept)  │                             └──────────────┘
+   └─────────┘            └──────┬───────┘              └───────┬────────┘
+        ▲                        │ Remove                       │ Remove
+        │ Add (re-install)       ▼                              ▼
+        │                 ┌──────────────────────────────────────────┐
+        └──────────────── │ Removed — no promise on accept/deny work  │
+                          └──────────────────────────────────────────┘
+```
+
+The floor codebook has **no** version of this machine — only the hide/show overlay.
+
+---
+
+## 4. Data model & lifecycles
+
+| Concept | Table / field | Grain |
+|---|---|---|
+| Installed? | `ProjectCodebookGroup` link | per (project, group) |
+| Enabled? | `ProjectFrameworkState.enabled` | per (project, framework) |
+| Group hidden? | `hidden_tag_groups.group_name` | per (project, group) |
+| Applied tag | `QuoteTag(source)` | per (quote, tag) |
+| Proposal | `ProposedTag(status, confidence, rationale)` | per (job, quote) |
+| Apply job + stored cutoff/prompt | `AutoCodeJob(applied_*_threshold, prompt_version, completed_at)` | per (project, framework) |
+
+**Lifecycle event → data change:**
+
+| Event | What changes |
+|---|---|
+| Add codebook | insert `ProjectCodebookGroup` links (+ tag defs) |
+| Apply | `AutoCodeJob` runs → `ProposedTag`s → accepted become `QuoteTag(autocode)`; cutoff/prompt stamped |
+| Add sessions + re-run | *(described)* if codebook **enabled**: delta re-apply codes only new sessions' quotes (`first_imported_at > completed_at`), non-clobbering |
+| Disable | set `enabled=false` — *(described)* stops the delta re-apply; results retained |
+| Enable | set `enabled=true` — *(described)* one catch-up delta for sessions added while off (watermark froze) |
+| Hide group | insert `hidden_tag_groups` |
+| Remove | drop `ProjectCodebookGroup` links; **no promise** to keep `QuoteTag`/`ProposedTag` |
+
+### 4a. How re-enable knows what to code (no explicit "coded" flag)
+
+There is **no per-session "this session was coded by codebook X" marker.** Re-apply
+scope is inferred from two timestamps: a session's `first_imported_at` and the
+codebook's last `completed_at`. **These do two separate jobs — don't conflate them:**
+
+- **The timestamps are a *cost gate*, not a correctness rule.** "Session came in after
+  the codebook last finished → probably uncoded → go look." Their only job is to avoid
+  re-spending the LLM on sessions we're confident are done.
+- **Correctness lives in the per-quote guard that already ships.** Before applying a
+  tag the delta skips any `(quote, tag)` that already has a `QuoteTag`, and never
+  touches `source="human"`. So the timestamp erring **too broad** costs a little wasted
+  work (re-examine, skip) — it can **never** double-code or clobber a decision.
+
+The only way the timestamp could *miss* (skip genuinely-uncoded quotes) is a codebook
+that stamped `completed_at` while its run was actually incomplete. In the normal
+lifecycle that can't happen — `completed_at` only advances on a **completed** run;
+failed/cancelled runs leave the watermark where it was, so those sessions get picked up
+next time. Disable simply freezes the watermark (the codebook stops running), new
+sessions pile above the line, and re-enable fires one delta over everything above it.
+
+**Bulletproof fallback (deferred):** if a partial-run edge ever forces the issue, the
+robust answer is the explicit per-session (or per-quote) "coded by framework X" stamp.
+More bookkeeping; not worth it for v1, where watermark-scope + per-quote-guard is
+correct for the real lifecycle. Recorded here so the reasoning isn't re-derived.
+
+---
+
+## 5. UX states & visibilities (the consequences)
+
+What each control does at each surface. ✅ = built today, △ = described/to-build.
+
+| Surface | 👁 Hide/Show | ⊘ Disable | ✕ Remove |
+|---|---|---|---|
+| **Codebook lens** — section | (n/a) | △ folds (blue dot → grey) | gone (back to Library as **Add**) |
+| **Tags sidebar** | title + **closed-eye stub stays** (bring-back) ✅ | △ **gone entirely** (bring-back is the slider) | gone |
+| **Quote-card badges** | hidden ✅ | hidden ✅ | gone |
+| **Autocomplete** | **suggest + auto-unhide** ✅ *(keep!)* | △ **excluded** | excluded |
+| **Results kept** | yes | yes | **no promise** |
+
+The load-bearing distinction: **Hide leaves it reachable (suggest + auto-unhide);
+Disable takes it off the board (gone from sidebar + autocomplete).** Same badge-hide,
+opposite reachability.
+
+---
+
+## 6. Retention & cost gradient
+
+| | 👁 Hide/Show | ⊘ Enable/Disable | ✕ Add/Remove |
+|---|---|---|---|
+| Means | not thinking about it *now* | set aside, might return | **done** |
+| Bring-back cost | free, instant | free if unchanged; delta catch-up if new sessions (Q-B) | free if no new sessions; maybe full re-run if new |
+
+The UI must make the *promise* legible — a "remembers your stuff" slider must not read
+like a "no promises" Remove. (The Library redesign's job.)
+
+---
+
+## 7. The three-way delta
+
+**(A) Current code** ↔ **(B) the plan we were mid-implementing** ↔ **(C) what we've now
+described.**
+
+| Aspect | (A) Current (built this session) | (B) Previous plan | (C) Described (target) | Delta A→C |
+|---|---|---|---|---|
+| Enable/disable persistence | `ProjectFrameworkState` **view-only** | "prerequisite; persist then gate on enabled" | persisted, **functional** | make it functional |
+| Re-apply gate | **linked, NOT enabled** (Decision A, `601f4f94`) | *wanted* enabled; shipped linked as v1 stopgap | **linked AND enabled** | **flip the gate** (return to plan's intent) |
+| Disable = ? | view-only (fold + badge hide); still in sidebar; still autocompletes | (n/a) | **off means off**: drop from sidebar, exclude autocomplete | remove from sidebar + autocomplete |
+| Disabled + new sessions | keeps coding (Decision A) | "codebooks that are on" | **stops**; catch-up on enable | **reverse Decision A** (Q-B) |
+| Hide autocomplete | suggest + auto-unhide | (n/a) | **unchanged — keep** | none (revert my stray edit) |
+| Manual codebook | shown as "User tags"; no disable | (n/a) | **floor**, named by project; never disabled | rename; confirm no-disable |
+| Badges (hide ∪ disable) | `effectiveHiddenGroups` unifies | (n/a) | keep unified for badges; **split** for sidebar/autocomplete | split the non-badge paths |
+| Re-apply delta + dedup + cancelled-job re-run + firePut toast | ✅ built | in/around plan | keep | none |
+
+**Headline:** the one real reversal is **Decision A**. Mid-session I made disable a
+view-only flag that keeps maintaining disabled codebooks (gate on *linked*). The
+refined model — and the original plan — say disable is **functional and off means
+off** (gate on *enabled*, stop maintaining, catch up on re-enable). The stray
+uncommitted `TagInput` edit over-corrected in the *other* direction (killing hide's
+autocomplete) and should be reverted.
+
+---
+
+## 8. Settled vs open
+
+**Settled**
+- **The dividing principle:** hand-made = deliberate = protected (floor); machine-made
+  = profligate = toggleable.
+- Two tiers: manual **floor** (permanent, hide/show only, named by project) vs
+  auto-generated **toggleable** — **including uxr** (Q-A resolved: toggleable).
+- **Hide** keeps auto-unhide + autocomplete (do not dismantle).
+- **Disable** = off means off (drop from sidebar + autocomplete; badges hidden; section
+  folds). Gate re-apply on **enabled**.
+- **Remove** = done, no preservation promise.
+- **Where enable/disable lives (v1):** the **big toggle in the codebook lens** is the
+  control (`.framework-toggle`, already built). The **codebook-lens sidebar** is
+  **state + navigation only** — a blue/grey status dot echoing the switch, never a
+  control. The floor gets no toggle. (Moving the control elsewhere is a later version.)
+- Provenance/disposition already modelled.
+- **Disabled + new sessions (Q-B resolved): don't code while off; catch up on
+  re-enable.** Rationale: you might never re-enable, so never spend on a switched-off
+  lens; and when you do re-enable, the LLM cost/time of coding the newly-added sessions
+  is implicit and accepted (re-enable is an auto-tagged-codebook feature — the spend is
+  inherent to the gesture). Mechanically: the session-recency watermark froze while
+  disabled, so re-enable fires one delta over everything added since.
+
+**Open**
+- **Q-C:** denial-ledger — a future "re-apply after codebook edit" would resurrect
+  `denied` proposals unless the accept guard learns to respect them. Not on the
+  critical path, but a real prerequisite for any path that revisits old quotes.

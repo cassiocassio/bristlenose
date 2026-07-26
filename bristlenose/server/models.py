@@ -601,12 +601,16 @@ class ProjectFrameworkState(Base):
     exists only when the researcher has an explicit opinion; **absence means
     enabled** (the default for a freshly-added framework).
 
-    Per design-codebook-library.md Decision A this is a **view-only** flag —
-    disabling folds the framework's section and hides its badges report-wide, but
-    it does NOT gate re-apply (a disabled-but-installed codebook keeps maintaining
-    new sessions; "stop spending" is what Remove is for). Distinct from
-    ``hidden_tag_groups`` (per-group eye toggle): render treats a group's badges as
-    hidden if the group is eye-toggled **or** its framework is disabled.
+    Disable is **functional** — "off means off" (design-codebook-state-model.md §8).
+    A disabled framework folds its codebook-lens section, hides its badges
+    report-wide, drops out of the tags sidebar + autocomplete, AND stops
+    maintaining new sessions (the re-apply gate reads ``enabled``). Its results are
+    always kept; re-enabling fires a one-shot catch-up delta over the sessions added
+    while it was off. "Stop tracking entirely" is **Remove** (drops the link).
+    Distinct from ``hidden_tag_groups`` (per-group eye toggle): hide is a tactical,
+    still-reachable declutter (badges hidden, but tags keep autocompleting +
+    auto-unhide); disable takes the codebook off the board. Render treats a group's
+    badges as hidden if the group is eye-toggled **or** its framework is disabled.
     """
 
     __tablename__ = "project_framework_states"

@@ -672,6 +672,63 @@ class TestFrameworkStatesPut:
         assert resp.status_code == 404
 
 
+class TestFrameworkStatesCatchUpTrigger:
+    """The PUT fires a catch-up delta for exactly the frameworks that transition
+    OFF → ON (design-codebook-state-model.md §4a). We patch the scheduler and
+    assert *which* frameworks it's asked to catch up — the transition-detection
+    logic, not the (separately unit-tested) re-apply itself."""
+
+    def _put_and_capture(self, client, *puts):
+        """Apply a sequence of PUT bodies; return the framework ids passed to the
+        catch-up scheduler on the LAST PUT."""
+        from unittest.mock import patch
+
+        for body in puts[:-1]:
+            client.put("/api/projects/1/framework-states", json=body)
+        with patch(
+            "bristlenose.server.routes.data._schedule_catch_up"
+        ) as sched:
+            client.put("/api/projects/1/framework-states", json=puts[-1])
+        return [call.args[2] for call in sched.call_args_list]
+
+    def test_disabled_then_enabled_fires_catch_up(self, client: TestClient) -> None:
+        assert self._put_and_capture(
+            client, {"garrett": False}, {"garrett": True}
+        ) == ["garrett"]
+
+    def test_disabled_then_omitted_fires_catch_up(self, client: TestClient) -> None:
+        # Omitting a framework = re-enabling it (absence means enabled).
+        assert self._put_and_capture(
+            client, {"garrett": False}, {}
+        ) == ["garrett"]
+
+    def test_staying_disabled_does_not_fire(self, client: TestClient) -> None:
+        assert self._put_and_capture(
+            client, {"garrett": False}, {"garrett": False}
+        ) == []
+
+    def test_newly_disabled_does_not_fire(self, client: TestClient) -> None:
+        # on (absent) → off is a disable, not a catch-up.
+        assert self._put_and_capture(client, {"garrett": False}) == []
+
+    def test_enabled_staying_enabled_does_not_fire(
+        self, client: TestClient
+    ) -> None:
+        assert self._put_and_capture(
+            client, {"garrett": True}, {"garrett": True}
+        ) == []
+
+    def test_only_the_re_enabled_framework_fires(
+        self, client: TestClient
+    ) -> None:
+        # Two off; re-enable one, keep the other off → exactly one catch-up.
+        assert self._put_and_capture(
+            client,
+            {"garrett": False, "norman": False},
+            {"garrett": True, "norman": False},
+        ) == ["garrett"]
+
+
 # ---------------------------------------------------------------------------
 # Manual re-assignment (Phase 0)
 # ---------------------------------------------------------------------------

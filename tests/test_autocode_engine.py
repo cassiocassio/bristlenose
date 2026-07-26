@@ -30,6 +30,7 @@ from bristlenose.server.models import (
     CodebookGroup,
     Project,
     ProjectCodebookGroup,
+    ProjectFrameworkState,
     ProposedTag,
     Quote,
     QuoteTag,
@@ -932,8 +933,7 @@ class TestReapplyToNewQuotes:
         self, project_with_garrett
     ) -> None:
         """Applied but since REMOVED (group links dropped) → not re-applied.
-        Remove stops maintenance; the gate is ever-applied AND currently linked.
-        Per design-codebook-library.md Decision A."""
+        Remove stops maintenance; the gate is ever-applied ∩ linked ∩ enabled."""
         project_id, framework_id, db_factory = project_with_garrett
         self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
         self._add_quotes(db_factory, project_id, 3)
@@ -960,6 +960,71 @@ class TestReapplyToNewQuotes:
             assert db.query(QuoteTag).count() == 0
         finally:
             db.close()
+
+    def test_reapply_active_frameworks_skips_disabled(
+        self, project_with_garrett
+    ) -> None:
+        """Applied + still linked, but DISABLED (enabled=False) → not re-applied.
+        "Off means off" (design-codebook-state-model.md §8): a disabled codebook
+        stops maintaining new sessions, so the LLM is never called and the new
+        quotes stay uncoded until re-enable fires a catch-up."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        # Turn the codebook OFF for this project.
+        db = db_factory()
+        try:
+            db.add(
+                ProjectFrameworkState(
+                    project_id=project_id, framework_id=framework_id, enabled=False
+                )
+            )
+            db.commit()
+        finally:
+            db.close()
+
+        mock_analyze = AsyncMock()
+        with _patch_llm(mock_analyze):
+            results = asyncio.run(
+                reapply_active_frameworks(db_factory, project_id, _mock_settings())
+            )
+
+        assert results == {}  # disabled framework skipped, not coded
+        mock_analyze.assert_not_called()
+        db = db_factory()
+        try:
+            assert db.query(QuoteTag).count() == 0
+        finally:
+            db.close()
+
+    def test_reapply_active_frameworks_covers_explicitly_enabled(
+        self, project_with_garrett
+    ) -> None:
+        """An explicit enabled=True row behaves exactly like the default (no row):
+        the framework is maintained. Guards against the gate accidentally requiring
+        a row, or treating any row as 'off'."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        db = db_factory()
+        try:
+            db.add(
+                ProjectFrameworkState(
+                    project_id=project_id, framework_id=framework_id, enabled=True
+                )
+            )
+            db.commit()
+        finally:
+            db.close()
+
+        with _patch_llm(
+            AsyncMock(return_value=_make_batch_result(3, "user need", 0.85))
+        ):
+            results = asyncio.run(
+                reapply_active_frameworks(db_factory, project_id, _mock_settings())
+            )
+
+        assert results == {"garrett": 3}
 
     def test_never_applied_is_noop(self, project_with_garrett) -> None:
         """No completed job (fixture job is 'pending') → returns 0, no LLM call."""

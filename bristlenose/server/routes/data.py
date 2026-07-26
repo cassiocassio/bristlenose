@@ -916,8 +916,9 @@ def get_framework_states(
     """Read per-framework enable/disable state (the codebook switch).
 
     Returns only frameworks with an explicit stored opinion; any framework not in
-    the map is enabled (the default). View-only per Decision A — this drives the
-    fold + report-wide badge hide, never re-apply.
+    the map is enabled (the default). Drives the codebook-lens fold, the report-wide
+    badge hide, the tags-sidebar/autocomplete drop, AND the re-apply gate
+    (design-codebook-state-model.md §8 — "off means off").
     """
     db = _get_db(request)
     try:
@@ -932,8 +933,47 @@ def get_framework_states(
         db.close()
 
 
+def _schedule_catch_up(
+    request: Request, project_id: int, framework_id: str
+) -> None:
+    """Fire one delta re-apply for a just-re-enabled framework (best-effort).
+
+    A framework flipped disabled → enabled catches up on the sessions added while
+    it was off (design-codebook-state-model.md §4a). Reuses the same non-clobbering
+    delta the ``run_completed`` path uses, scoped to this one framework; a safe
+    no-op when it was never applied or has no new sessions. Fire-and-forget — never
+    blocks or fails the PUT.
+    """
+    import asyncio
+    import logging
+
+    from bristlenose.config import load_settings
+    from bristlenose.server.autocode import reapply_to_new_quotes
+
+    logger = logging.getLogger(__name__)
+    db_factory = request.app.state.db_factory
+    settings = getattr(request.app.state, "settings", None) or load_settings()
+
+    async def _run() -> None:
+        try:
+            n = await reapply_to_new_quotes(
+                db_factory, project_id, framework_id, settings
+            )
+            logger.info(
+                "catch-up re-apply on enable | framework=%s | new_tags=%d",
+                framework_id,
+                n,
+            )
+        except Exception:
+            logger.exception(
+                "catch-up re-apply on enable failed | framework=%s", framework_id
+            )
+
+    asyncio.create_task(_run())
+
+
 @router.put("/projects/{project_id}/framework-states")
-def put_framework_states(
+async def put_framework_states(
     project_id: int,
     request: Request,
     data: dict[str, bool],
@@ -943,10 +983,23 @@ def put_framework_states(
     Mirrors the other data endpoints: PUT replaces the entire stored map. Absence
     means enabled, so a re-enabled framework may be sent as ``true`` or simply
     omitted — both restore the default.
+
+    Enable is functional ("off means off", design-codebook-state-model.md §8): a
+    framework flipped disabled → enabled fires one **catch-up delta** — coding just
+    the sessions added while it was off, at its stored cutoff. Disabling stops that
+    maintenance; work already done is always kept.
     """
     db = _get_db(request)
+    became_enabled: list[str] = []
     try:
         _check_project(db, project_id)
+        # Frameworks explicitly OFF before this write (enabled=False rows).
+        was_disabled = {
+            r.framework_id
+            for r in db.query(ProjectFrameworkState)
+            .filter_by(project_id=project_id, enabled=False)
+            .all()
+        }
         db.query(ProjectFrameworkState).filter_by(project_id=project_id).delete(
             synchronize_session=False
         )
@@ -964,6 +1017,12 @@ def put_framework_states(
                 )
             )
         db.commit()
-        return {"status": "ok"}
+        # OFF → ON transition: was explicitly disabled, now enabled (sent true or
+        # omitted → default enabled). Those frameworks get a catch-up delta.
+        became_enabled = [fw for fw in was_disabled if data.get(fw, True)]
     finally:
         db.close()
+
+    for framework_id in became_enabled:
+        _schedule_catch_up(request, project_id, framework_id)
+    return {"status": "ok"}

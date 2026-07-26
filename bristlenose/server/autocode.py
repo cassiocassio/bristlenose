@@ -701,26 +701,27 @@ async def reapply_active_frameworks(
     project_id: int,
     settings: BristlenoseSettings,
 ) -> dict[str, int]:
-    """Re-apply every already-applied, still-installed framework to its new quotes.
+    """Re-apply every already-applied, still-installed, **enabled** framework.
 
     Called after a re-run that added sessions: for each framework that has a
-    completed AutoCode job **and** is still linked into this project (at least one
-    of its groups in ``project_codebook_groups``), code the delta at that job's
-    stored cutoff. Each is a safe no-op if there are no new quotes. Returns
-    ``{framework_id: n_accepted}``.
+    completed AutoCode job, is still linked into this project (at least one of its
+    groups in ``project_codebook_groups``), and is **not disabled**, code the delta
+    at that job's stored cutoff. Each is a safe no-op if there are no new quotes.
+    Returns ``{framework_id: n_accepted}``.
 
-    The gate is **ever-applied AND currently linked** — deliberately NOT "enabled".
-    Per design-codebook-library.md Decision A, the enable/disable toggle is a
-    view-only control (fold + report-wide badge hide); a disabled-but-installed
-    codebook keeps maintaining new sessions so re-enable is always free. The intent
-    "stop spending on this" belongs to **Remove** (drops the link), which this
-    linked-check honours. Runs the frameworks sequentially so spend stays legible
-    in the logs.
+    The gate is **ever-applied ∩ currently linked ∩ enabled**. Disable means
+    off ("off means off", design-codebook-state-model.md §8): a disabled codebook
+    stops maintaining new sessions, so a run while it's off leaves the new quotes
+    uncoded. Its watermark (`AutoCodeJob.completed_at`) freezes; re-enabling fires a
+    one-shot catch-up over everything added since (routes/data.py `put_framework_
+    states`). "Stop tracking entirely" is still **Remove** (drops the link). Runs
+    the frameworks sequentially so spend stays legible in the logs.
     """
     from bristlenose.server.models import (
         AutoCodeJob,
         CodebookGroup,
         ProjectCodebookGroup,
+        ProjectFrameworkState,
     )
 
     db = db_factory()
@@ -739,13 +740,22 @@ async def reapply_active_frameworks(
             )
             .distinct()
         }
-        # Gate = ever-applied ∩ currently linked (Remove uninstalls → stops here).
+        # Frameworks explicitly turned OFF (enabled=False). Absence of a row means
+        # enabled (the default) — so this only ever *excludes*, never requires a row.
+        disabled_framework_ids = {
+            row[0]
+            for row in db.query(ProjectFrameworkState.framework_id).filter_by(
+                project_id=project_id, enabled=False
+            )
+        }
+        # Gate = ever-applied ∩ currently linked ∩ enabled.
         framework_ids = [
             row[0]
             for row in db.query(AutoCodeJob.framework_id)
             .filter_by(project_id=project_id, status="completed")
             .distinct()
             if row[0] in linked_framework_ids
+            and row[0] not in disabled_framework_ids
         ]
     finally:
         db.close()

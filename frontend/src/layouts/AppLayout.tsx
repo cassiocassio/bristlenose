@@ -60,6 +60,7 @@ import { EMPTY_TAG_FILTER } from "../utils/filter";
 import { toast } from "../utils/toast";
 import { announce } from "../utils/announce";
 import i18n from "../i18n";
+import { resolveBrowserLang } from "../i18n/LocaleStore";
 import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
 import { getExportData } from "../utils/exportData";
@@ -191,9 +192,12 @@ function AppShell() {
       // Bake the researcher's current UI language into the export so the
       // offline report reads in the language they wrote it in — not the
       // recipient's browser language (there's no server on file:// to inject it).
+      // Normalise via resolveBrowserLang: i18n.language can be a raw region tag
+      // (en-US / en-GB) that isSupportedLocale rejects, which would silently drop
+      // the bake and fall back to the recipient's browser — the exact bug this fixes.
       const params = new URLSearchParams();
       if (anonymise) params.set("anonymise", "true");
-      params.set("locale", i18n.language);
+      params.set("locale", resolveBrowserLang(i18n.language) ?? "en");
       const a = document.createElement("a");
       a.href = `/api/projects/${projectId}/export?${params.toString()}`;
       a.download = "";

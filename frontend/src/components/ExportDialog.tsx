@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
 import { useProjectId } from "../hooks/useProjectId";
 import { isExportMode } from "../utils/exportData";
+import { resolveBrowserLang } from "../i18n/LocaleStore";
 
 interface ExportDialogProps {
   open: boolean;
@@ -69,10 +70,11 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
     // WKDownload routes the bytes through NSSavePanel.  In the browser the
     // native download UI takes over.
     setError(null);
-    // Bake the researcher's current UI language (see AppLayout.triggerReportDownload).
+    // Bake the researcher's current UI language, normalised to a supported token
+    // (see AppLayout.triggerReportDownload).
     const params = new URLSearchParams();
     if (anonymise) params.set("anonymise", "true");
-    params.set("locale", i18n.language);
+    params.set("locale", resolveBrowserLang(i18n.language) ?? "en");
     const url = `/api/projects/${projectId}/export?${params.toString()}`;
     const a = document.createElement("a");
     a.href = url;

@@ -1256,3 +1256,151 @@ class TestStartCatchUps:
             assert _start_catch_ups(db, project_id, [framework_id]) == []
         finally:
             db.close()
+
+
+class TestReconcileOrphanedJobs:
+    """Startup reconciliation of AutoCodeJob rows stranded by a crash.
+
+    No job survives a serve restart, so any 'running'/'pending' row at boot was
+    orphaned — its finally never ran, so the persisted status is a UI-visible lie.
+    """
+
+    def _make_job(
+        self, db, project_id, framework_id, status, completed_at
+    ):
+        from bristlenose.server.models import AutoCodeJob
+
+        job = AutoCodeJob(
+            project_id=project_id,
+            framework_id=framework_id,
+            status=status,
+            completed_at=completed_at,
+        )
+        db.add(job)
+        db.commit()
+        return job
+
+    def test_initial_apply_orphan_becomes_failed(self, db_session) -> None:
+        """A crashed initial apply (running, never completed) → failed + message."""
+        from bristlenose.server.autocode import reconcile_orphaned_jobs
+        from bristlenose.server.models import AutoCodeJob, Project
+
+        project = Project(
+            name="P", slug="p", input_dir="/tmp/in", output_dir="/tmp/out"
+        )
+        db_session.add(project)
+        db_session.flush()
+        job = self._make_job(
+            db_session, project.id, "garrett", "running", completed_at=None
+        )
+
+        changed = reconcile_orphaned_jobs(db_session)
+
+        assert changed == 1
+        db_session.refresh(job)
+        assert job.status == "failed"
+        assert job.error_message  # non-empty, chip/UI can show it
+        # Sanity: still one job, not deleted.
+        assert db_session.query(AutoCodeJob).count() == 1
+
+    def test_pending_orphan_becomes_failed(self, db_session) -> None:
+        """A pending job that never started (task GC'd before run) → failed."""
+        from bristlenose.server.autocode import reconcile_orphaned_jobs
+        from bristlenose.server.models import Project
+
+        project = Project(
+            name="P", slug="p", input_dir="/tmp/in", output_dir="/tmp/out"
+        )
+        db_session.add(project)
+        db_session.flush()
+        job = self._make_job(
+            db_session, project.id, "garrett", "pending", completed_at=None
+        )
+
+        assert reconcile_orphaned_jobs(db_session) == 1
+        db_session.refresh(job)
+        assert job.status == "failed"
+
+    def test_catch_up_orphan_restored_to_completed(self, db_session) -> None:
+        """A running job that HAD completed (catch-up flip crashed) → completed.
+
+        completed_at is set, so the initial apply finished — the data-loss half
+        is already safe (ca944a0a); here we restore the status so the UI stops
+        showing 'running' without misreporting real applied work as 'failed'.
+        """
+        from datetime import datetime, timezone
+
+        from bristlenose.server.autocode import reconcile_orphaned_jobs
+        from bristlenose.server.models import Project
+
+        project = Project(
+            name="P", slug="p", input_dir="/tmp/in", output_dir="/tmp/out"
+        )
+        db_session.add(project)
+        db_session.flush()
+        job = self._make_job(
+            db_session,
+            project.id,
+            "garrett",
+            "running",
+            completed_at=datetime.now(timezone.utc),
+        )
+
+        assert reconcile_orphaned_jobs(db_session) == 1
+        db_session.refresh(job)
+        assert job.status == "completed"
+        assert job.error_message == ""  # not misreported as a failure
+
+    def test_terminal_jobs_left_alone(self, db_session) -> None:
+        """completed / failed / cancelled jobs are never touched."""
+        from datetime import datetime, timezone
+
+        from bristlenose.server.autocode import reconcile_orphaned_jobs
+        from bristlenose.server.models import Project
+
+        project = Project(
+            name="P", slug="p", input_dir="/tmp/in", output_dir="/tmp/out"
+        )
+        db_session.add(project)
+        db_session.flush()
+        now = datetime.now(timezone.utc)
+        completed = self._make_job(
+            db_session, project.id, "garrett", "completed", completed_at=now
+        )
+        failed = self._make_job(
+            db_session, project.id, "norman", "failed", completed_at=now
+        )
+        cancelled = self._make_job(
+            db_session, project.id, "uxr", "cancelled", completed_at=now
+        )
+
+        assert reconcile_orphaned_jobs(db_session) == 0
+        for job, expected in (
+            (completed, "completed"),
+            (failed, "failed"),
+            (cancelled, "cancelled"),
+        ):
+            db_session.refresh(job)
+            assert job.status == expected
+
+    def test_project_scoping(self, db_session) -> None:
+        """An explicit project_id scopes the sweep to that project."""
+        from bristlenose.server.autocode import reconcile_orphaned_jobs
+        from bristlenose.server.models import Project
+
+        p1 = Project(name="A", slug="a", input_dir="/tmp/a", output_dir="/tmp/oa")
+        p2 = Project(name="B", slug="b", input_dir="/tmp/b", output_dir="/tmp/ob")
+        db_session.add_all([p1, p2])
+        db_session.flush()
+        j1 = self._make_job(
+            db_session, p1.id, "garrett", "running", completed_at=None
+        )
+        j2 = self._make_job(
+            db_session, p2.id, "garrett", "running", completed_at=None
+        )
+
+        assert reconcile_orphaned_jobs(db_session, project_id=p1.id) == 1
+        db_session.refresh(j1)
+        db_session.refresh(j2)
+        assert j1.status == "failed"
+        assert j2.status == "running"  # other project untouched

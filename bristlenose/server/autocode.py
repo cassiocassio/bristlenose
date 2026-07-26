@@ -500,6 +500,63 @@ def _set_job_status(
         db.rollback()
 
 
+def reconcile_orphaned_jobs(db: SASession, project_id: int | None = None) -> int:
+    """Reset AutoCodeJob rows stranded ``pending``/``running`` by a crash.
+
+    An AutoCode job lives only as an in-process ``asyncio`` task, so no job can
+    survive a serve restart. Any row still ``pending``/``running`` at startup was
+    orphaned by a crash (SIGKILL, parent-death mid-LLM, mid-catch-up): its
+    ``finally`` restore never ran, so its persisted status is a lie the UI keeps
+    showing forever — CodebookPanel renders that framework's AutoCode button
+    disabled/"running" until a successful catch-up or manual re-run resets it.
+
+    Two orphan classes, told apart by ``completed_at`` — the same watermark
+    ``reapply_active_frameworks`` already trusts over ``status`` (see ca944a0a):
+
+    - **Initial-apply orphan** (``completed_at IS NULL``): ``run_autocode_job``
+      crashed before finishing the first pass, so nothing usable was produced →
+      mark ``failed`` with a retryable ``error_message``. The start-job guard
+      treats ``failed`` as a dead job and clears it on the next run.
+    - **Catch-up orphan** (``completed_at IS NOT NULL``): the on-enable catch-up
+      transiently flipped an already-completed job to ``running`` and crashed
+      before its ``finally`` restored ``completed``. The initial apply DID finish
+      → restore ``completed`` (exactly what the finally would have done). Marking
+      it ``failed`` would misreport a framework that has real applied tags.
+
+    Runs synchronously at startup, before the event watcher and before any new
+    job can be created in this process, so an unconditional sweep is safe — there
+    is no genuinely in-flight job to misclassify, hence no time threshold. Returns
+    the number of rows changed.
+    """
+    from bristlenose.server.models import AutoCodeJob
+
+    query = db.query(AutoCodeJob).filter(
+        AutoCodeJob.status.in_(("pending", "running"))
+    )
+    if project_id is not None:
+        query = query.filter(AutoCodeJob.project_id == project_id)
+
+    changed = 0
+    for job in query.all():
+        if job.completed_at is not None:
+            # Catch-up orphan: the initial apply finished; only the transient
+            # chip-status flip was interrupted. Restore the true state.
+            job.status = "completed"
+        else:
+            # Initial-apply orphan: never completed. Fail it so the UI stops
+            # showing "running" and offers a retry.
+            job.status = "failed"
+            job.error_message = (
+                "AutoCode was interrupted before it finished (the app closed "
+                "or crashed mid-run). Run it again to retry."
+            )
+        changed += 1
+
+    if changed:
+        db.commit()
+    return changed
+
+
 async def reapply_to_new_quotes(
     db_factory: Callable[[], SASession],
     project_id: int,

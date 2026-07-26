@@ -293,6 +293,10 @@ Migration complete through M5 (Feb 2026): 14 primitives + 2 infrastructure, 8 is
 
 **Gotcha:** `LLMClient(settings)` takes only settings, not an LLMUsageTracker — creates its own internally.
 
+**Gotcha — a fire-and-forget `asyncio.create_task()` MUST hold a strong ref.** The event loop only *weakly* references a bare task, so a suspended one (parked on an LLM call) can be GC'd mid-flight — its `finally` never runs and the `AutoCodeJob` is stranded `running` forever, which the UI shows as a permanently-disabled AutoCode button. Both serve-mode task sites now stash the task in a module-level `set` + `task.add_done_callback(the_set.discard)`: `_AUTOCODE_TASKS` (`routes/autocode.py`) and `_CATCH_UP_TASKS` (`routes/data.py`). Any new `create_task` in serve must do the same.
+
+**Gotcha — no AutoCode job survives a serve restart, so orphans are reconciled at boot.** A job lives only as an in-process task; a crash (SIGKILL, parent-death) leaves its row `running`/`pending` with no task to finish it. `reconcile_orphaned_jobs` (`autocode.py`, called from `app.py` startup after import) sweeps them: `completed_at IS NULL` (initial apply never finished) → `failed` + retryable message; `completed_at` set (only the transient on-enable catch-up chip-flip was interrupted) → restored to `completed`. The `completed_at` split — not `status` — is the load-bearing distinction (same watermark `reapply_active_frameworks` trusts). Spec: `docs/design-codebook-state-model.md` §4a.
+
 See `docs/design-autocode.md` for the 7-step workflow, API endpoints, and testing notes.
 
 ## Dynamic codebook builder (cultivate a tag into a code)

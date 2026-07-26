@@ -247,6 +247,7 @@ def create_app(
     # Import project data into SQLite on startup
     if project_dir is not None:
         _import_on_startup(session_factory, project_dir)
+        _reconcile_orphaned_autocode_jobs(session_factory)
         _install_event_watcher(app, session_factory, project_dir)
 
     # Serve the React islands bundle (built by Vite).
@@ -792,6 +793,27 @@ def _import_on_startup(
         import_project(db, project_dir)
     except Exception:
         logger.exception("Failed to import project from %s", project_dir)
+    finally:
+        db.close()
+
+
+def _reconcile_orphaned_autocode_jobs(session_factory: object) -> None:
+    """Reset AutoCode jobs stranded 'running'/'pending' by a prior crash.
+
+    No AutoCode job survives a serve restart (each is an in-process asyncio
+    task), so a row still in-flight at startup is an orphan whose status the UI
+    would otherwise show forever. Best-effort — a reconcile failure never blocks
+    startup. See ``autocode.reconcile_orphaned_jobs``.
+    """
+    from bristlenose.server.autocode import reconcile_orphaned_jobs
+
+    db = session_factory()  # type: ignore[operator]
+    try:
+        n = reconcile_orphaned_jobs(db)
+        if n:
+            logger.info("Reconciled %d orphaned AutoCode job(s) on startup", n)
+    except Exception:
+        logger.exception("Failed to reconcile orphaned AutoCode jobs")
     finally:
         db.close()
 

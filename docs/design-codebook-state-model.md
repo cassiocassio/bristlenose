@@ -1,3 +1,26 @@
+---
+status: partial
+last-trued: 2026-07-26
+trued-against: HEAD@main on 2026-07-26
+---
+
+> **Truing status:** Partial — the state model (§1–6, §8) is current (trued
+> 2026-07-26). §7's "described (target)" deltas and §4a's deferred-fallback note
+> are retained as the design record but have partly shipped since capture; see
+> the dated notes inline and the changelog below.
+
+## Changelog
+
+- _2026-07-26_ — trued up: noted in §4a that the crash-orphaned-job edge (a job
+  stranded `running`/`pending` by a serve crash) is now caught by startup
+  reconciliation, distinct from the still-deferred per-session "coded" stamp;
+  flagged that §7's A→C "off means off" + catch-up deltas shipped same-day.
+  Anchors: `bristlenose/server/autocode.py` `reconcile_orphaned_jobs`,
+  commit subjects "codebook: harden catch-up against crash-orphaning +
+  false-success", "surface the on-enable catch-up as an activity chip",
+  "true the 'disable is view-only' framing out of code + docs".
+- _2026-07-26_ — initial draft (design capture).
+
 # Codebook & tag state model — formal spec
 
 **Status:** design capture, 26 Jul 2026. The "measure" before we cut. Consolidates a
@@ -146,10 +169,21 @@ failed/cancelled runs leave the watermark where it was, so those sessions get pi
 next time. Disable simply freezes the watermark (the codebook stops running), new
 sessions pile above the line, and re-enable fires one delta over everything above it.
 
-**Bulletproof fallback (deferred):** if a partial-run edge ever forces the issue, the
-robust answer is the explicit per-session (or per-quote) "coded by framework X" stamp.
-More bookkeeping; not worth it for v1, where watermark-scope + per-quote-guard is
-correct for the real lifecycle. Recorded here so the reasoning isn't re-derived.
+The one abnormal path where the watermark *could* lie — a **serve crash** mid-run
+that strands a job `running`/`pending` — is handled separately, not by the deferred
+stamp below. On startup `reconcile_orphaned_jobs` (`bristlenose/server/autocode.py`)
+sweeps in-flight jobs (none survive a serve restart): a job with `completed_at IS NULL`
+(initial apply never finished) → `failed`, so the watermark never advanced and the delta
+re-codes those sessions next time; a job with `completed_at` set (only the transient
+on-enable catch-up chip-flip was interrupted) → restored to `completed`. So the watermark
+stays honest across crashes without the per-session flag. _(Shipped 26 Jul 2026 — commit
+"codebook: harden catch-up against crash-orphaning + false-success".)_
+
+**Bulletproof fallback (deferred):** if a *normal-lifecycle* partial-run edge ever forces
+the issue, the robust answer is the explicit per-session (or per-quote) "coded by
+framework X" stamp. More bookkeeping; not worth it for v1, where watermark-scope +
+per-quote-guard + the crash reconciliation above is correct for the real lifecycle.
+Recorded here so the reasoning isn't re-derived.
 
 ---
 
@@ -184,6 +218,13 @@ like a "no promises" Remove. (The Library redesign's job.)
 ---
 
 ## 7. The three-way delta
+
+> _Note (26 Jul 2026):_ the A→C reversal below (the "off means off" flip, catch-up on
+> re-enable, drop-from-sidebar/autocomplete) **shipped the same day** — commit subjects
+> "true the 'disable is view-only' framing out of code + docs", "split hide … from
+> disable … in autocomplete", "drop disabled codebooks from tags sidebar", "surface the
+> on-enable catch-up as an activity chip". Table kept as the design-decision record —
+> read it for the _why_, not as an open to-do.
 
 **(A) Current code** ↔ **(B) the plan we were mid-implementing** ↔ **(C) what we've now
 described.**

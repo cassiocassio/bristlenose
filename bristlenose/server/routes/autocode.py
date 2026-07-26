@@ -27,6 +27,12 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
 
+# Strong references to in-flight AutoCode tasks. The event loop only weakly
+# references a bare ``create_task`` result, so a suspended one can be GC'd
+# mid-flight — stranding the job "running" (its finally never runs). Mirrors
+# ``_CATCH_UP_TASKS`` in routes/data.py. Discard on completion.
+_AUTOCODE_TASKS: set = set()
+
 
 # ---------------------------------------------------------------------------
 # Request / response models
@@ -243,15 +249,19 @@ async def start_autocode_job(
         db.add(job)
         db.commit()
 
-        # Spawn background task — fire and forget
+        # Spawn background task — fire and forget, but hold a strong reference
+        # so a suspended task isn't GC'd mid-run (which would strand the job
+        # "running"). Discard on completion.
         db_factory = request.app.state.db_factory
         project_dir = request.app.state.project_dir
-        asyncio.create_task(
+        task = asyncio.create_task(
             run_autocode_job(
                 db_factory, project_id, framework_id, settings,
                 project_dir=project_dir,
             )
         )
+        _AUTOCODE_TASKS.add(task)
+        task.add_done_callback(_AUTOCODE_TASKS.discard)
 
         return _job_to_out(job)
 

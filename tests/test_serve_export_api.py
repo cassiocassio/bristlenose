@@ -215,6 +215,29 @@ class TestExportData:
         assert "/video-map" in data["endpoints"]
         assert data["endpoints"]["/video-map"] is None
 
+    def test_embedded_data_cannot_break_out_of_script(self) -> None:
+        """CRITICAL XSS guard: the embedded data is dropped into a <script> block.
+
+        ``json.dumps(ensure_ascii=True)`` escapes only code points > 127 — '<' is
+        ASCII and passes through, so a literal ``</script>`` in untrusted content
+        (transcript text, participant/tag/project names) would close the data
+        script and inject markup into the shared leave-behind. The builder must
+        escape the HTML-significant ASCII to \\uXXXX forms.
+        """
+        from bristlenose.server.routes.export import _build_export_html
+
+        payload = {
+            "version": 2,
+            "exported_at": "x",
+            "locale": None,
+            "health": {},
+            "logos": {},
+            "endpoints": {"/quotes": {"x": "</script><script>alert(1)</script>"}},
+        }
+        html = _build_export_html(payload, "/* css */")
+        assert "</script><script>alert(1)</script>" not in html
+        assert "\\u003c/script\\u003e" in html
+
 
 # ---------------------------------------------------------------------------
 # JS bootstrap (blob URLs for code-split chunks)

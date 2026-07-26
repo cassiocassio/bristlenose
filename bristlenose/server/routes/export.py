@@ -235,12 +235,25 @@ def _build_export_html(
     app_css = app_css_path.read_text(encoding="utf-8") if app_css_path.is_file() else ""
 
     # Inline <script> safety: a literal </script> in the bundle would close the
-    # inline element early.  (The data JSON is already </script>-safe via
-    # ensure_ascii=True, which escapes '<' as \\u003c.)
+    # inline element early.
     app_js = app_js.replace("</script>", "<\\/script>")
 
-    # Build the data injection script
+    # Build the data injection script.
+    #
+    # SECURITY: the embedded data includes UNTRUSTED content (transcript text from
+    # third-party files, participant/tag/project names). ensure_ascii escapes only
+    # code points > 127 — '<' '>' '&' are ASCII and pass through UNCHANGED, so a
+    # '</script>' inside any embedded string would break out of the data <script>
+    # and inject arbitrary markup/JS into the shared leave-behind (stored XSS).
+    # Escape the HTML-significant ASCII to their \uXXXX JSON forms — valid inside a
+    # JSON string literal and inert inside <script>. (U+2028/U+2029, the JS line
+    # separators, are already \u-escaped by ensure_ascii since they are > 127.)
     data_json = json.dumps(export_data, ensure_ascii=True, separators=(",", ":"))
+    data_json = (
+        data_json.replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
 
     # Build the full HTML
     html_parts = [

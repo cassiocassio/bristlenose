@@ -374,22 +374,40 @@ async def run_autocode_job(
                     job.total_quotes,
                     len(proposals),
                 )
-                # Commit progress via a separate short-lived session so the
-                # status endpoint sees incremental updates (the main session
-                # holds the proposals transaction until all batches finish).
+                # Commit incremental progress via a separate short-lived session so
+                # the status endpoint sees the counter tick (the main session holds
+                # the proposals transaction until all batches finish). Two rules make
+                # this safe under concurrency:
+                #
+                #  1. A **write-only atomic UPDATE** (no SELECT-then-modify). A
+                #     read-then-write transaction takes a read snapshot and then
+                #     upgrades to a writer — and if another connection is writing,
+                #     SQLite returns "database is locked" *immediately* (it can't wait
+                #     without risking deadlock), which no busy_timeout can rescue. A
+                #     bare UPDATE is write-only, so busy_timeout serialises it cleanly.
+                #  2. **Never fatal.** The proposals are the payload; this counter is
+                #     cosmetic. A failed progress write must not propagate out of the
+                #     batch — doing so made `gather` treat the batch as failed and
+                #     discard its proposals, so a full LLM batch landed as
+                #     "0 proposals" (verified 26 Jul 2026 against Bristlenose UXR /
+                #     JJG on the IKEA data: 38 proposals returned, all lost).
                 async with progress_lock:
                     progress_db = db_factory()
                     try:
-                        progress_job = (
-                            progress_db.query(AutoCodeJob)
-                            .filter_by(
-                                project_id=project_id, framework_id=framework_id
-                            )
-                            .first()
+                        progress_db.query(AutoCodeJob).filter_by(
+                            project_id=project_id, framework_id=framework_id
+                        ).update(
+                            {AutoCodeJob.processed_quotes: processed_count},
+                            synchronize_session=False,
                         )
-                        if progress_job:
-                            progress_job.processed_quotes = processed_count
-                            progress_db.commit()
+                        progress_db.commit()
+                    except Exception:
+                        progress_db.rollback()
+                        logger.warning(
+                            "AutoCode progress update skipped (non-fatal): %d/%d",
+                            processed_count,
+                            job.total_quotes,
+                        )
                     finally:
                         progress_db.close()
                 return proposals

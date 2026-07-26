@@ -210,6 +210,52 @@ class TestRunAutoCodeJob:
         assert job.completed_at is not None
         db.close()
 
+    def test_progress_update_failure_does_not_discard_proposals(
+        self, project_with_garrett
+    ) -> None:
+        """A failed progress-counter write must never sink the batch's proposals.
+
+        Regression for the AutoCode "0 of 0 proposals" bug: the incremental
+        ``processed_quotes`` UPDATE hit SQLite's "database is locked" under
+        concurrent writers; the exception propagated out of the batch, ``gather``
+        treated the whole batch as failed, and a full LLM batch landed as zero
+        proposals (26 Jul 2026 — 38 proposals returned, all lost). The progress
+        write is now write-only + non-fatal, so the proposals survive it.
+        """
+        from sqlalchemy.orm import Query
+
+        project_id, framework_id, db_factory = project_with_garrett
+        mock_result = _make_batch_result(10, "user need", 0.85)
+
+        real_update = Query.update
+
+        def _boom_on_progress(self, values, *args, **kwargs):  # type: ignore[no-untyped-def]
+            # Only the progress-counter UPDATE sets processed_quotes; make it fail
+            # the way a locked DB would, and leave every other update untouched.
+            if any("processed_quotes" in str(k) for k in values):
+                raise Exception("database is locked")
+            return real_update(self, values, *args, **kwargs)
+
+        with _patch_llm(AsyncMock(return_value=mock_result), 4000, 750), patch.object(
+            Query, "update", _boom_on_progress
+        ):
+            asyncio.run(
+                run_autocode_job(db_factory, project_id, framework_id, _mock_settings())
+            )
+
+        db = db_factory()
+        proposals = db.query(ProposedTag).all()
+        job = db.query(AutoCodeJob).filter_by(
+            project_id=project_id, framework_id=framework_id
+        ).first()
+        # The proposals survived the (simulated) locked progress write…
+        assert len(proposals) == 10
+        # …and the job completed with the real count, not a fake "0".
+        assert job is not None
+        assert job.status == "completed"
+        assert job.proposed_count == 10
+        db.close()
+
     def test_creates_proposed_tag_rows(self, project_with_garrett) -> None:
         """ProposedTag rows are created for each assignment."""
         project_id, framework_id, db_factory = project_with_garrett

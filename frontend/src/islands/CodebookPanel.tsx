@@ -48,6 +48,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 import { getGroupBg, getBarColour, getTagBg } from "../utils/colours";
+import { summariseFramework } from "../utils/codebookSummary";
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -1118,12 +1119,23 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
           // (the fake-success-feedback class from the 7 May quality reset).
           const isSentimentFramework = fid === "sentiment";
           const isDisabled = disabledFrameworks.has(fid);
+          // When switched off, the groups fold away; a one-line summary takes
+          // their place so the researcher still sees what they've tucked away.
+          const summary = summariseFramework(fwGroups);
           return (
             <Fragment key={fid}>
               <div className="framework-section-header" id={`codebook-fw-${fid}`}>
                 <div>
                   <div className="framework-section-title">{title}</div>
                   {author && <div className="framework-section-author">{author}</div>}
+                  {isDisabled && (
+                    <div className="framework-section-summary">
+                      {t("codebook.foldedSummary", {
+                        count: summary.tagCount,
+                        coded: summary.codedQuotes,
+                      })}
+                    </div>
+                  )}
                 </div>
                 <div className="framework-section-actions">
                   {!isSentimentFramework && (acStatus?.status === "completed" && proposedCount > 0 ? (

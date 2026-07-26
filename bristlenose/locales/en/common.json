@@ -494,6 +494,8 @@
     "deleteTagTitle": "Delete \"{{name}}\"?",
     "tagOnQuotes_one": "This tag is on {{count}} quote.",
     "tagOnQuotes_other": "This tag is on {{count}} quotes.",
+    "foldedSummary_one": "{{count}} tag · {{coded}} coded",
+    "foldedSummary_other": "{{count}} tags · {{coded}} coded",
     "newGroup": "New group",
     "newCode": "New code",
     "browseCodebooks": "Codebook Library",

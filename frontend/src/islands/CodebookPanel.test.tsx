@@ -483,6 +483,23 @@ describe("CodebookPanel — per-framework sections", () => {
     expect(screen.getByText("Strategy")).toBeInTheDocument();
   });
 
+  it("shows a folded summary in place of the groups when a framework is off", async () => {
+    mockFetchOk(MOCK_WITH_FRAMEWORKS);
+    render(<CodebookPanel projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText("Strategy")).toBeInTheDocument();
+    });
+    // No summary while the framework is on.
+    expect(screen.queryByText(/coded/)).not.toBeInTheDocument();
+    // Switch garrett off → summary of its 3 tags / 5 coded quotes appears.
+    await userEvent.click(screen.getByTestId("bn-framework-toggle-garrett"));
+    expect(screen.getByText("3 tags · 5 coded")).toBeInTheDocument();
+    // Back on → summary gone, groups back.
+    await userEvent.click(screen.getByTestId("bn-framework-toggle-garrett"));
+    expect(screen.queryByText("3 tags · 5 coded")).not.toBeInTheDocument();
+    expect(screen.getByText("Strategy")).toBeInTheDocument();
+  });
+
   it("persists framework disable via PUT /framework-states", async () => {
     mockFetchOk(MOCK_WITH_FRAMEWORKS);
     render(<CodebookPanel projectId="1" />);

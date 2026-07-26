@@ -739,6 +739,34 @@ class TestRemoveFramework:
         garrett_groups = [g for g in data["groups"] if g["framework_id"] == "garrett"]
         assert len(garrett_groups) == 5
 
+    def test_remove_framework_forgets_disabled_state(self, client: TestClient) -> None:
+        """Uninstalling a switched-OFF framework must drop its enable/disable
+        opinion, so a reinstall comes back enabled — not resurrecting the folded,
+        greyed-out disabled state. Regression for the per-tile Install/Uninstall
+        toggle making disable → uninstall → reinstall a natural, discoverable flow.
+        """
+        client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        # Switch it OFF (persisted as {garrett: false}).
+        client.put(
+            "/api/projects/1/framework-states", json={"garrett": False},
+        )
+        assert client.get("/api/projects/1/framework-states").json() == {
+            "garrett": False
+        }
+        # Uninstall, then reinstall.
+        client.delete("/api/projects/1/codebook/remove-framework/garrett")
+        # The disabled opinion is gone the instant it's uninstalled…
+        assert client.get("/api/projects/1/framework-states").json() == {}
+        client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        # …and it stays gone after reinstall — absence means enabled.
+        assert client.get("/api/projects/1/framework-states").json() == {}
+
     def test_remove_framework_not_found(self, client: TestClient) -> None:
         resp = client.delete("/api/projects/1/codebook/remove-framework/nonexistent")
         assert resp.status_code == 404

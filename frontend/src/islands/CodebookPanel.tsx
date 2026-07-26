@@ -14,6 +14,7 @@ import {
 } from "../components";
 import { addJob } from "../contexts/ActivityStore";
 import {
+  dropFrameworkDisabled,
   hydrateFrameworkStates,
   setFrameworkDisabled,
   useSidebarStore,
@@ -965,10 +966,15 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
 
   const handleConfirmRemoveFramework = useCallback(() => {
     if (!removeConfirm) return;
-    removeCodebookFramework(removeConfirm.frameworkId)
+    const fid = removeConfirm.frameworkId;
+    removeCodebookFramework(fid)
       .then((codebook) => {
         setData(codebook);
         setRemoveConfirm(null);
+        // Uninstall forgets the enable/disable opinion (the server drops its
+        // ProjectFrameworkState row). Shed it locally too, so reinstalling a
+        // previously-disabled codebook comes back enabled, not folded/greyed.
+        dropFrameworkDisabled(fid);
         getCodebookTemplates()
           .then((resp) => setTemplates(resp.templates))
           .catch(() => {});
@@ -1385,7 +1391,10 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                                     <button
                                       type="button"
                                       className="bn-btn picker-card-toggle"
-                                      disabled={pendingTemplateId === tmpl.id}
+                                      // Serialise installs: disable every Install
+                                      // button while one is in flight, so an
+                                      // enabled-looking button can't eat a click.
+                                      disabled={pendingTemplateId !== null}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleInstallFromLibrary(tmpl);

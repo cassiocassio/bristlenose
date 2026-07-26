@@ -13,8 +13,6 @@
 import type { CodebookGroupResponse } from "./types";
 
 export interface FrameworkSummary {
-  /** Number of groups in the framework. */
-  groupCount: number;
   /** Total tags across all the framework's groups. */
   tagCount: number;
   /** Total coded quotes across the framework's groups (the per-group
@@ -32,5 +30,5 @@ export function summariseFramework(
     tagCount += g.tags.length;
     codedQuotes += g.total_quotes;
   }
-  return { groupCount: groups.length, tagCount, codedQuotes };
+  return { tagCount, codedQuotes };
 }

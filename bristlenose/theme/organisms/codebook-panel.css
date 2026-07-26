@@ -818,7 +818,8 @@
     text-align: center;
     font-size: var(--bn-text-caption);
 }
-.picker-card-toggle-uninstall:hover {
+.picker-card-toggle-uninstall:hover,
+.picker-card-toggle-uninstall:focus-visible {
     color: var(--bn-colour-negative);
     border-color: var(--bn-colour-negative);
 }

@@ -16,6 +16,7 @@ from bristlenose.server.models import (
     CodebookGroup,
     Project,
     ProjectCodebookGroup,
+    ProjectFrameworkState,
     ProposedTag,
     QuoteTag,
     TagDefinition,
@@ -870,6 +871,16 @@ def remove_framework(
         db.query(ProjectCodebookGroup).filter(
             ProjectCodebookGroup.project_id == project_id,
             ProjectCodebookGroup.codebook_group_id.in_(fw_group_ids),
+        ).delete(synchronize_session=False)
+
+        # Forget the enable/disable opinion. Absence means enabled, so a framework
+        # that was switched OFF, uninstalled, then reinstalled comes back fresh
+        # (enabled) rather than resurrecting its greyed-out/folded state. Without
+        # this the ProjectFrameworkState row survives the uninstall and the
+        # re-import silently reappears disabled. (design-codebook-state-model.md §8:
+        # "Stop tracking entirely is Remove (drops the link)".)
+        db.query(ProjectFrameworkState).filter_by(
+            project_id=project_id, framework_id=framework_id,
         ).delete(synchronize_session=False)
 
         # PRESERVED: CodebookGroup, TagDefinition, AutoCodeJob, ProposedTag

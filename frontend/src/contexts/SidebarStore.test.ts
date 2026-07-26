@@ -11,6 +11,7 @@ import {
   initHiddenTagGroups,
   hydrateFrameworkStates,
   setFrameworkDisabled,
+  dropFrameworkDisabled,
   toggleToc,
   toggleTags,
   toggleBoth,
@@ -149,6 +150,23 @@ describe("disabledFrameworks (codebook switch)", () => {
     act(() => setFrameworkDisabled("garrett", false));
     expect(result.current.disabledFrameworks.has("garrett")).toBe(false);
     expect(putFrameworkStates).toHaveBeenLastCalledWith({});
+  });
+
+  it("dropFrameworkDisabled forgets a framework locally without a PUT", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => setFrameworkDisabled("garrett", true));
+    (putFrameworkStates as ReturnType<typeof vi.fn>).mockClear();
+    // Uninstall path: forget the disabled opinion locally (server drops its row).
+    act(() => dropFrameworkDisabled("garrett"));
+    expect(result.current.disabledFrameworks.has("garrett")).toBe(false);
+    expect(putFrameworkStates).not.toHaveBeenCalled();
+  });
+
+  it("dropFrameworkDisabled is a no-op for a framework that wasn't disabled", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => dropFrameworkDisabled("norman"));
+    expect(result.current.disabledFrameworks.size).toBe(0);
+    expect(putFrameworkStates).not.toHaveBeenCalled();
   });
 
   it("resetSidebarStore clears disabledFrameworks", () => {

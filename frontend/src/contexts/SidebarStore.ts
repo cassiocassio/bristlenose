@@ -334,6 +334,22 @@ export function setFrameworkDisabled(
   return putFrameworkStates(map);
 }
 
+/**
+ * Forget a framework's disabled opinion locally — no network call. Used when a
+ * codebook is **uninstalled**: the server drops its ProjectFrameworkState row
+ * (absence = enabled), so the in-memory set must shed it too, or a same-session
+ * reinstall would resurrect the folded/greyed disabled state (once-per-session
+ * hydration won't re-fetch to correct it). Bumps the edit generation so a stale
+ * in-flight hydrate can't re-add it.
+ */
+export function dropFrameworkDisabled(frameworkId: string): void {
+  if (!state.disabledFrameworks.has(frameworkId)) return;
+  frameworkEditGeneration += 1;
+  const next = new Set(state.disabledFrameworks);
+  next.delete(frameworkId);
+  setState((prev) => ({ ...prev, disabledFrameworks: next }));
+}
+
 // ── Solo / focus mode ────────────────────────────────────────────────────
 
 /**

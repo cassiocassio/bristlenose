@@ -25,12 +25,11 @@ function group(tags: number, total: number): CodebookGroupResponse {
 describe("summariseFramework", () => {
   it("sums tags and coded quotes across groups", () => {
     const s = summariseFramework([group(3, 10), group(5, 22)]);
-    expect(s).toEqual({ groupCount: 2, tagCount: 8, codedQuotes: 32 });
+    expect(s).toEqual({ tagCount: 8, codedQuotes: 32 });
   });
 
   it("is zero across the board for an empty framework", () => {
     expect(summariseFramework([])).toEqual({
-      groupCount: 0,
       tagCount: 0,
       codedQuotes: 0,
     });
@@ -38,7 +37,6 @@ describe("summariseFramework", () => {
 
   it("counts a single-group framework with no coded quotes", () => {
     expect(summariseFramework([group(4, 0)])).toEqual({
-      groupCount: 1,
       tagCount: 4,
       codedQuotes: 0,
     });

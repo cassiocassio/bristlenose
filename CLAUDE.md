@@ -38,7 +38,7 @@ Desktop app: `desktop/` — SwiftUI macOS shell. Alpha ships a bundled, signed P
 
 Frontend: `frontend/` — Vite + React + TypeScript + React Router. See `frontend/CLAUDE.md` for gotchas and architecture.
 
-Export: DOM snapshot from serve mode (self-contained HTML). See Key conventions for the static-render deprecation rules.
+Export: self-contained HTML "leave-behind" (React SPA + inlined API data, opened offline from `file://`). Rendered by a **dedicated single-file Vite build** (`frontend/vite.export.config.ts`, `codeSplitting:false`) — a blob/data-URL module bootstrap does NOT work from an opaque `file://` origin. **Anti-drift is mechanical:** `tests/test_serve_export_coverage.py` reads `app.openapi()` and fails if any project GET read isn't classified `EMBED_PATH_TEMPLATES` or `SERVER_ONLY_PATH_TEMPLATES` in `routes/export.py` — so adding a route is offline-by-default and a new gap fails the build, not the user's download. Read-only via `isExportMode()` store-layer gate (controls hidden, not disabled). Embedded JSON is XSS-escaped (`ensure_ascii=True` alone is NOT enough — see the export-JSON gotcha below). v1 no video; the timecode/media apparatus stays in the embed for v2. Full spec: `docs/design-export-html.md`. See Key conventions for the static-render deprecation rules.
 
 LLM providers: Claude, ChatGPT, Azure OpenAI, Gemini, Local (Ollama). See `bristlenose/llm/CLAUDE.md`.
 

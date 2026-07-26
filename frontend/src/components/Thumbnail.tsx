@@ -11,6 +11,8 @@ interface ThumbnailProps {
   title?: string;
 }
 
+import { isExportMode } from "../utils/exportData";
+
 export function Thumbnail({
   hasMedia,
   thumbnailUrl,
@@ -20,6 +22,12 @@ export function Thumbnail({
   title,
 }: ThumbnailProps) {
   if (!hasMedia) return null;
+  // v1 leave-behind: no video. The thumbnail URL is a /report/... path that
+  // 404s from file://, and there's no player, so render nothing rather than a
+  // broken image or a play icon implying playback. The session's thumbnail /
+  // media identity stays in the embed so a future v2 (clips-in-report) can
+  // inline the keyframe still without re-plumbing.
+  if (isExportMode()) return null;
 
   const classes = ["bn-video-thumb", className].filter(Boolean).join(" ");
   const inner = thumbnailUrl ? (

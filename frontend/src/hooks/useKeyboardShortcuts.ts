@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useFocus } from "../contexts/FocusContext";
+import { isExportMode } from "../utils/exportData";
 import { usePlayer } from "../contexts/PlayerContext";
 import {
   useQuotesStore,
@@ -108,6 +109,8 @@ export function useKeyboardShortcuts({
   // ── Star action ─────────────────────────────────────────────────────
 
   const handleStar = useCallback(() => {
+    // Read-only in an exported report — no server to persist mutations.
+    if (isExportMode()) return;
     const focused = focusedIdRef.current;
     const selected = selectedIdsRef.current;
     const s = storeRef.current;
@@ -134,6 +137,8 @@ export function useKeyboardShortcuts({
   // ── Hide action ─────────────────────────────────────────────────────
 
   const handleHide = useCallback(() => {
+    // Read-only in an exported report — no server to persist mutations.
+    if (isExportMode()) return;
     const focused = focusedIdRef.current;
     const selected = selectedIdsRef.current;
 
@@ -151,6 +156,8 @@ export function useKeyboardShortcuts({
   // ── Tag actions ─────────────────────────────────────────────────────
 
   const handleTagOpen = useCallback(() => {
+    // Read-only in an exported report — no server to persist mutations.
+    if (isExportMode()) return;
     const focused = focusedIdRef.current;
     if (focused) {
       openTagInput(focused);
@@ -159,6 +166,7 @@ export function useKeyboardShortcuts({
 
   /** Quick-apply last-used tag to focused/selected quotes (double-t). */
   const handleQuickApply = useCallback(() => {
+    if (isExportMode()) return true;
     const tag = getLastUsedTag();
     if (!tag) return false; // No last tag — caller should fall back to open TagInput
 

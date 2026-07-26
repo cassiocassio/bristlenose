@@ -33,6 +33,7 @@ import {
 } from "../utils/api";
 import { announce } from "../utils/announce";
 import i18n from "../i18n";
+import { isExportMode } from "../utils/exportData";
 
 // ── State shape ──────────────────────────────────────────────────────────
 
@@ -242,6 +243,9 @@ function tagNamesMap(tags: Record<string, TagResponse[]>): Record<string, string
 // ── Action functions ─────────────────────────────────────────────────────
 
 export function toggleStar(domId: string, newState: boolean): void {
+  // Read-only in an exported report — mutations have no server to persist to,
+  // and a control that responds then silently discards on reload is a lie.
+  if (isExportMode()) return;
   setState((prev) => {
     const starred = { ...prev.starred };
     if (newState) starred[domId] = true;
@@ -253,6 +257,9 @@ export function toggleStar(domId: string, newState: boolean): void {
 }
 
 export function toggleHide(domId: string, newState: boolean): void {
+  // Read-only in an exported report — mutations have no server to persist to,
+  // and a control that responds then silently discards on reload is a lie.
+  if (isExportMode()) return;
   setState((prev) => {
     const hidden = { ...prev.hidden };
     if (newState) hidden[domId] = true;
@@ -264,6 +271,9 @@ export function toggleHide(domId: string, newState: boolean): void {
 }
 
 export function commitEdit(domId: string, newText: string): void {
+  // Read-only in an exported report — mutations have no server to persist to,
+  // and a control that responds then silently discards on reload is a lie.
+  if (isExportMode()) return;
   setState((prev) => {
     const edits = { ...prev.edits };
     edits[domId] = newText;
@@ -279,6 +289,9 @@ export function commitEdit(domId: string, newText: string): void {
  * durable-id key (`section-cluster-{id}:title`, `theme-group-{id}:desc`).
  */
 export function commitHeadingEdit(headingKey: string, newText: string): void {
+  // Read-only in an exported report — mutations have no server to persist to,
+  // and a control that responds then silently discards on reload is a lie.
+  if (isExportMode()) return;
   setState((prev) => {
     const edits = { ...prev.edits };
     edits[headingKey] = newText;
@@ -288,6 +301,9 @@ export function commitHeadingEdit(headingKey: string, newText: string): void {
 }
 
 export function addTag(domId: string, tag: TagResponse): void {
+  // Read-only in an exported report — mutations have no server to persist to,
+  // and a control that responds then silently discards on reload is a lie.
+  if (isExportMode()) return;
   setState((prev) => {
     const existing = prev.tags[domId] || [];
     // Prevent duplicate tags (case-insensitive).
@@ -304,6 +320,9 @@ export function addTag(domId: string, tag: TagResponse): void {
 }
 
 export function removeTag(domId: string, tagName: string): void {
+  // Read-only in an exported report — mutations have no server to persist to,
+  // and a control that responds then silently discards on reload is a lie.
+  if (isExportMode()) return;
   setState((prev) => {
     const tags = { ...prev.tags };
     tags[domId] = (tags[domId] || []).filter((t) => t.name !== tagName);
@@ -315,6 +334,9 @@ export function removeTag(domId: string, tagName: string): void {
 }
 
 export function deleteBadge(domId: string, sentiment: string): void {
+  // Read-only in an exported report — mutations have no server to persist to,
+  // and a control that responds then silently discards on reload is a lie.
+  if (isExportMode()) return;
   setState((prev) => {
     const deletedBadges = { ...prev.deletedBadges };
     deletedBadges[domId] = [...(deletedBadges[domId] || []), sentiment];
@@ -324,6 +346,9 @@ export function deleteBadge(domId: string, sentiment: string): void {
 }
 
 export function restoreBadges(domId: string): void {
+  // Read-only in an exported report — mutations have no server to persist to,
+  // and a control that responds then silently discards on reload is a lie.
+  if (isExportMode()) return;
   setState((prev) => {
     const deletedBadges = { ...prev.deletedBadges };
     delete deletedBadges[domId];
@@ -337,6 +362,9 @@ export function acceptProposedTag(
   proposalId: number,
   tag: TagResponse,
 ): void {
+  // Read-only in an exported report — mutations have no server to persist to,
+  // and a control that responds then silently discards on reload is a lie.
+  if (isExportMode()) return;
   setState((prev) => {
     const proposedTags = { ...prev.proposedTags };
     proposedTags[domId] = (proposedTags[domId] || []).filter((p) => p.id !== proposalId);

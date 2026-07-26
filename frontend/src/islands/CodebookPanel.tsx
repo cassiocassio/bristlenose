@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import { toast } from "../utils/toast";
+import { isExportMode } from "../utils/exportData";
 import {
   Badge,
   ConfirmDialog,
@@ -346,7 +347,10 @@ function CodebookGroupColumn({
 
   const isDefault = group.is_default;
   const isFramework = group.framework_id != null;
-  const isReadOnly = isDefault || isFramework;
+  // An exported report is a read-only reference ("the taxonomy we coded
+  // against") — no server to persist codebook edits, so gate every authoring
+  // affordance (rename/delete/add-tag/drag) the same way built-in groups are.
+  const isReadOnly = isDefault || isFramework || isExportMode();
 
   return (
     <div
@@ -1027,19 +1031,23 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
             </div>
           </div>
           <div className="framework-section-actions">
-            <button
-              className="bn-btn bn-btn-secondary"
-              onClick={() =>
-                window.open(
-                  "/codebook-lab",
-                  "_blank",
-                  "width=1200,height=920,resizable=yes",
-                )
-              }
-              data-testid="bn-codebook-lab-btn"
-            >
-              {t("codebook.codebookLab")}
-            </button>
+            {/* Codebook Lab needs a server (and would open a dead file:// window
+                offline) — hide it in an exported report. */}
+            {!isExportMode() && (
+              <button
+                className="bn-btn bn-btn-secondary"
+                onClick={() =>
+                  window.open(
+                    "/codebook-lab",
+                    "_blank",
+                    "width=1200,height=920,resizable=yes",
+                  )
+                }
+                data-testid="bn-codebook-lab-btn"
+              >
+                {t("codebook.codebookLab")}
+              </button>
+            )}
           </div>
         </div>
         {researcherGroups.map((group) => (
@@ -1059,7 +1067,8 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
           />
         ))}
 
-        {/* New group placeholder */}
+        {/* New group placeholder — creating a group needs a server (hidden offline). */}
+        {!isExportMode() && (
         <div
           className="codebook-group new-group-placeholder"
           role="button"
@@ -1077,6 +1086,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
           <span className="new-group-icon">+</span>
           <span className="new-group-label">{t("codebook.newGroup")}</span>
         </div>
+        )}
 
         {/* Per-framework sections — each imported framework gets its own header + remove button */}
         {Array.from(frameworkById.entries()).map(([fid, fwGroups]) => {

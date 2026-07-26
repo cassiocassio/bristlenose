@@ -29,6 +29,7 @@ import type { TagVocabularyGroup } from "../components";
 import type { ModeratorQuestionResponse, ProposedTagBrief, QuoteResponse, TranscriptSegmentResponse } from "../utils/types";
 import { formatTimecode } from "../utils/format";
 import { getTagBg } from "../utils/colours";
+import { isExportMode } from "../utils/exportData";
 import { highlightText } from "../utils/highlight";
 import { useCropEdit } from "../hooks/useCropEdit";
 import { useFocus, useQuoteFocusState } from "../contexts/FocusContext";
@@ -297,6 +298,9 @@ export function QuoteCard({
 
   const handleQuoteTextClick = useCallback(
     (e: React.MouseEvent) => {
+      // Read-only in an exported report: clicking the quote text must NOT enter
+      // crop/trim edit mode (the edit can't persist and vanishes on reload).
+      if (isExportMode()) return;
       // Don't enter edit mode when modifier keys are held (focus/selection)
       if (e.metaKey || e.ctrlKey || e.shiftKey) return;
       if (crop.mode === "idle") {

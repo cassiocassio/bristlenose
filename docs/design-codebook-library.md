@@ -1,12 +1,46 @@
+---
+status: partial
+last-trued: 2026-07-26
+trued-against: HEAD@main on 2026-07-26
+superseded-by: [design-codebook-state-model.md]
+---
+
 # Codebook Library — design & build plan
 
-**Status:** design settled; partially built. **Shipped** (commits `7530106e`,
-`c62e611f`): vertical full-width Library tiles + de-greened "Added" badge; the
-Library/Add/Apply string renames (de-sparkled); and the **framework enable/disable
-switch** (trailing macOS-matched switch, off collapses the framework's tag-group
-columns — UI-local fold, tags kept). **Not yet built:** fold *animation*, collapsed
-summary meta, Add↔Remove install toggle, sidebar dots, and the functional
-"hide-from-analysis" + persistence behind the switch (currently visual-only). Mock:
+> **Truing status (2026-07-26): the enable/disable SEMANTICS in this doc are
+> SUPERSEDED by [design-codebook-state-model.md](design-codebook-state-model.md)** —
+> the canonical spec for how disable behaves. This doc was written around a
+> **view-only** disable ("off is just a fold; results always retained; re-enabling is
+> free and instant; the switch does NOT gate re-apply"). The code **reversed** all of
+> that: disable is now **functional — "off means off"**. It drops the codebook from
+> the tags sidebar + autocomplete, hides its badges report-wide, folds the section,
+> AND stops coding new sessions; **re-enabling fires a catch-up delta that DOES spend**
+> on the sessions added while it was off. So treat every _"view-only / never re-spend /
+> free-and-retained / does not gate re-apply / disable = Hide"_ statement below as
+> **historical** (commits: "flip re-apply gate to enabled + catch-up delta on
+> re-enable", "split hide (decorate, still suggests) from disable (exclude)", "true the 'disable is
+> view-only' framing out of code + docs"). The **UI-redesign layout** — Library tiles,
+> Add↔Remove, fold, sidebar dots, Forget — remains the live plan; only the
+> disable-semantics thread rotted. **Decision B** and the **Q6 delta-only** shape below
+> are still correct under the new model.
+
+## Changelog
+
+- _2026-07-26_ — trued against the "off means off" work. The view-only disable thread
+  is reversed and now points to the state-model doc as canonical; the Status header,
+  Principles 1–2, the three-surfaces table, the Phase 1 "Decision A" items, and the
+  parallelizability buckets are corrected/annotated inline. Decision B and Q6's
+  delta-only shape preserved (still valid). The UI-redesign body stays as the live
+  plan. Anchors: state-model doc §7/§8; commit subjects above.
+
+**Status:** design settled; partially built. **Shipped**: vertical full-width Library
+tiles + de-greened "Added" badge; the Library/Add/Apply string renames (de-sparkled);
+the **framework enable/disable switch** (trailing macOS-matched switch); and — landed
+*since this doc's first draft* — the **functional disable + persistence** behind that
+switch (`ProjectFrameworkState`, migration 007): off now folds the section, hides
+badges report-wide, drops the codebook from the tags sidebar + autocomplete, and gates
+re-apply on `enabled` (see the state-model doc). **Not yet built:** fold *animation*,
+collapsed summary meta, Add↔Remove install toggle, sidebar dots, **Forget**. Mock:
 [`docs/mockups/codebook-library-states.html`](mockups/codebook-library-states.html).
 
 Supersedes the "Import / Remove from Codebook" framing. Related:
@@ -27,13 +61,18 @@ behaviour was *already* a reversible, retained toggle. Only the words lied.
 ## Principles
 
 1. **Cost-safe play.** Getting a codebook onto your workbench is free. **Apply**
-   (AutoCode) is the *one* deliberate spend. Disabling and re-enabling never
-   re-spend — results are retained. (No `✦` marker: the sparkle is **dropped from
+   (AutoCode) is the *one* deliberate spend. Disabling never re-spends and always
+   keeps its results. _(Trued 2026-07-26: re-enabling is **no longer** free-if-
+   unchanged in all cases — if sessions were imported while the codebook was off,
+   re-enable fires a **catch-up delta** that codes just those new sessions. The
+   existing results are still never re-billed; the spend is only on the genuinely-new
+   quotes. See state-model doc §6.)_ (No `✦` marker: the sparkle is **dropped from
    the Apply button** — decided. The wider system-wide `✦` retirement leans yes;
    deferred to its own pass — Q5.)
-2. **Retention is visible.** Disabling **folds** the tag groups to a single line;
-   it never deletes them. A folded disclosure self-evidently still contains its
-   contents — no reassurance copy required.
+2. **Retention is visible.** Disabling keeps every result — nothing is deleted.
+   _(Trued: disable is more than a fold — it also drops the codebook from the tags
+   sidebar + autocomplete and hides its badges report-wide, "off means off". The
+   section-fold is one of several consequences, not the whole of it. State-model §5.)_
 3. **No control does two jobs; no surface does two jobs.** The Library is a
    catalogue (browse + Add). Your codebook is the workbench (Apply, toggle, fold).
    The sidebar is status only. A control that looks operable *is* operable.
@@ -290,9 +329,11 @@ needs a two-wave fixture + serve QA.
   accept-all's 0.5 default) — decide: mirror 0.5 or stay conservative.
 - Mid-confidence review band is silently denied for new quotes (no modal) — maybe
   surface a count later.
-- Re-apply covers **all previously-applied** frameworks. *Superseded by Decision A
-  (below): keep it that way — do NOT gate on enabled; add a "currently linked"
-  check instead so Remove stops maintenance.*
+- Re-apply covers **all previously-applied** frameworks. _(Trued 2026-07-26 — the
+  earlier "Superseded by Decision A: do NOT gate on enabled" note here is itself now
+  reversed. The shipped gate is **ever-applied ∩ currently linked ∩ enabled**: Remove
+  stops maintenance (the linked check) AND disable stops it (the enabled check). See
+  the state-model doc §7/§8 and `reapply_active_frameworks`.)_
 - No dedicated progress toast for the re-apply's tagging phase (watcher-initiated,
   so the existing autocode-status poll doesn't cover it) — outcome shows on refresh.
 - LLM emitting two tags for one quote → `(job_id, quote_id)` violation rolls the
@@ -387,10 +428,16 @@ tags. Not on the critical path.
 **Built (25 Jul 2026):** the switch is no longer UI-local. `ProjectFrameworkState
 (project_id, framework_id, enabled)` (migration 007) + `GET/PUT /framework-states`
 (dict map, **absence = enabled**) + `getFrameworkStates`/`putFrameworkStates` in
-`api.ts`; `CodebookPanel` hydrates the folded set on mount and PUTs on toggle. Per
-Decision A it does **not** gate re-apply. Decisions settled during the build:
-1. **What "disabled" turns off** — view only (fold now; report-wide badge hide is
-   the remaining sub-step below). Not a re-apply gate.
+`api.ts`; `CodebookPanel` hydrates the folded set on mount and PUTs on toggle.
+_(Trued 2026-07-26: the "Per Decision A it does not gate re-apply" claim here is
+**reversed** — the 26 Jul "off means off" work made the switch **functional**. It now
+gates re-apply on `enabled`, drops the codebook from the tags sidebar + autocomplete,
+and re-enabling fires a catch-up delta. Read item 1 below as historical.)_ Decisions
+settled during the build:
+1. ~~**What "disabled" turns off** — view only (fold now; report-wide badge hide is
+   the remaining sub-step below). Not a re-apply gate.~~ **(Reversed 26 Jul — disable
+   is now functional: fold + report-wide badge hide + sidebar/autocomplete drop + the
+   re-apply gate. State-model §5/§8.)**
 2. **Reconcile with the group eye-toggle** — a **distinct** per-framework flag
    (chosen), not "framework off ⇔ all its groups hidden". Render will treat a group
    hidden if eye-toggled **or** its framework disabled.
@@ -430,12 +477,14 @@ The constraint is **file contention on `CodebookPanel.tsx`**, not logic. Buckets
 
 - **Parallel-safe now (separate files, no deps):** `✦` sparkle retirement
   (`badge.css`/toast — pure mechanical cleanup) · Red ⊖ "Forget" (new backend
-  purge, if wanted) · a *presence-based* sidebar dot · the re-apply gate fix
-  (add the `ProjectCodebookGroup`-linked check + delete the stale "skip disabled"
-  docstring note in `reapply_active_frameworks` — backend-only, per Decision A).
-- **Blocked on the persistence flag above:** functional **view** off (fold +
-  report-wide badge hide) · blue-dot-means-enabled. *(No longer includes
-  "enabled-gated re-apply" — Decision A removed that.)*
+  purge, if wanted) · a *presence-based* sidebar dot.
+- **Shipped 26 Jul:** the re-apply gate — now **enabled-gated** (`reapply_active_
+  frameworks` gates on ever-applied ∩ linked ∩ enabled) · functional **off means off**
+  (fold + report-wide badge hide + sidebar/autocomplete drop) · on-enable catch-up
+  delta + chip. _(Trued: the earlier "No longer includes enabled-gated re-apply —
+  Decision A removed that" note is reversed; enabled-gated re-apply is exactly what
+  shipped. State-model §7/§8.)_
+- **Still to build:** blue-dot-means-enabled (the sidebar status dot).
 - **Must serialize (all touch `CodebookPanel.tsx` — one frontend session):** fold
   animation · collapsed summary meta · header reconciliation (drop Remove, morph
   AutoCode→switch) · Add↔Remove + dialog relocation · "Your codebooks" section ·

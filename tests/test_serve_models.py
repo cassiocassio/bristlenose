@@ -98,6 +98,7 @@ class TestTableCreation:
         "proposed_tags",
         "tag_prompts",
         "tag_prompt_decisions",
+        "project_framework_states",
         "alembic_version",
     }
 

@@ -1,0 +1,233 @@
+<!--
+  Mockup: Discussion lens — evidence-strength indicator variations
+  ================================================================
+  Companion to mockup-discussion-lens.html. The GuideSidebar wants a per-question
+  cue for HOW MUCH evidence landed on each question — a non-numeric density hint
+  so you can see "where's the meat" while navigating, WITHOUT a column of "6/8,
+  3/8" fractions (which read as a leaderboard and shame gaps).
+
+  THE PROBLEM this mock resolves:
+  The first draft used a blue-accent dot at varying OPACITY. That collides head-on
+  with the codebook sidebar's state indicator (docs/design-codebook-state-model.md):
+  a lone dot, BLUE = on / GREY = off, in a left sidebar row. Same shape, same hue,
+  same place — but that dot means ENABLED/DISABLED (binary state), whereas ours
+  means EVIDENCE STRENGTH (magnitude). Two different meanings wearing the same
+  clothes, one app.
+
+  THE FIX PRINCIPLE:
+  Keep STATE = blue dot. Make MAGNITUDE read as a SCALE, in a NEUTRAL tone, using
+  a different SHAPE (count / height / length / size) — so the eye never confuses
+  "how much" with "on/off". Sentiment hues are also spoken-for, so magnitude stays
+  monochrome (foreground at controlled steps), not coloured.
+
+  Everything invented is prefixed .es-* in <style id="proposed">. Reuses the baked
+  theme sibling from the main mock. Light/Dark aware.
+-->
+<link rel="stylesheet" href="mockup-discussion-lens.theme.css" />
+
+<style id="proposed">
+  :root[data-theme="dark"]  { color-scheme: dark; }
+  :root[data-theme="light"] { color-scheme: light; }
+  body { background: var(--bn-colour-bg); color: var(--bn-colour-text); margin: 0; font-family: "Inter","Segoe UI",system-ui,-apple-system,sans-serif; }
+  .mock-bar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 1rem; padding: 0.6rem 1.5rem; background: color-mix(in srgb, var(--bn-colour-bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--bn-colour-border); font-size: var(--bn-text-label); }
+  .mock-bar strong { font-weight: var(--bn-weight-emphasis); }
+  .mock-seg { display: inline-flex; border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); overflow: hidden; margin-left: auto; }
+  .mock-seg button { font: inherit; border: 0; background: var(--bn-colour-bg); color: var(--bn-colour-muted); padding: 0.3rem 0.7rem; cursor: pointer; border-left: 1px solid var(--bn-colour-border); }
+  .mock-seg button:first-child { border-left: 0; }
+  .mock-seg button.on { background: var(--bn-colour-accent); color: #fff; }
+  .es-wrap { max-width: 68rem; margin: 0 auto; padding: 1.5rem 1.5rem 8rem; }
+  .es-wrap h1 { font-size: var(--bn-text-title); font-weight: var(--bn-weight-emphasis); margin: 1.5rem 0 0.25rem; }
+  .es-wrap h2 { font-size: var(--bn-text-heading); font-weight: var(--bn-weight-emphasis); margin: 2.5rem 0 0.5rem; padding-bottom: 0.35rem; border-bottom: 1px solid var(--bn-colour-keyline); }
+  .es-wrap p.lede { color: var(--bn-colour-muted); font-size: var(--bn-text-label); max-width: 52rem; margin: 0.25rem 0; }
+  .es-wrap code { font-family: var(--bn-font-mono); font-size: 0.92em; }
+  .es-rec { color: var(--bn-colour-text); background: color-mix(in srgb, var(--bn-colour-accent) 8%, transparent); border-left: 3px solid var(--bn-colour-accent); padding: 0.6rem 0.9rem; border-radius: var(--bn-radius-md); font-size: var(--bn-text-label); max-width: 52rem; }
+
+  /* ── Comparison table: same 6 questions × every encoding, side by side ───── */
+  .es-table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: var(--bn-text-label); }
+  .es-table th { text-align: left; font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); font-size: var(--bn-text-badge); text-transform: uppercase; letter-spacing: 0.04em; padding: 0 0.9rem 0.5rem; border-bottom: 1px solid var(--bn-colour-border); vertical-align: bottom; }
+  .es-table td { padding: 0.5rem 0.9rem; border-bottom: 1px solid var(--bn-colour-keyline); vertical-align: middle; }
+  .es-table td.q { color: var(--bn-colour-text); white-space: nowrap; }
+  .es-table th.col-flag { color: var(--bn-colour-error-text); }
+  .es-table td:not(.q) { text-align: center; }
+  .es-cap { color: var(--bn-colour-muted); font-size: var(--bn-text-badge); margin: 0.35rem 0 0; }
+
+  /* ── Reference: the codebook STATE dot (blue=on / grey=off) — DO NOT COLLIDE ─ */
+  .es-statedot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+  .es-statedot.on  { background: var(--bn-colour-accent); }
+  .es-statedot.off { background: var(--bn-colour-muted); opacity: 0.5; }
+
+  /* ── V0 — current: blue-accent OPACITY ramp (the collision) ──────────────── */
+  .es-ramp { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--bn-colour-accent); }
+  .es-ramp.s3 { opacity: 1; } .es-ramp.s2 { opacity: 0.55; } .es-ramp.s1 { opacity: 0.25; }
+  .es-ramp.s0 { background: none; border: 1px solid var(--bn-colour-border); }
+
+  /* ── V1 — PIPS: count encodes magnitude, neutral tone (LIFTABLE) ─────────── */
+  .es-pips { display: inline-flex; gap: 2px; }
+  .es-pip { width: 5px; height: 5px; border-radius: 50%; background: var(--bn-colour-text); opacity: 0.75; }
+  .es-pip.empty { background: none; box-shadow: inset 0 0 0 1px var(--bn-colour-border); opacity: 1; }
+
+  /* ── V2 — SIGNAL BARS: ascending height = strength, cellular metaphor (LIFTABLE) */
+  .es-sig { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
+  .es-sig i { width: 3px; background: var(--bn-colour-text); opacity: 0.75; border-radius: 1px; }
+  .es-sig i.b1 { height: 4px; } .es-sig i.b2 { height: 8px; } .es-sig i.b3 { height: 12px; }
+  .es-sig i.off { background: var(--bn-colour-border); opacity: 1; }
+
+  /* ── V3 — SPARKBAR: fill length = magnitude, neutral (LIFTABLE) ──────────── */
+  .es-spark { display: inline-block; width: 28px; height: 5px; border-radius: 999px; background: var(--bn-colour-border); overflow: hidden; vertical-align: middle; }
+  .es-spark > i { display: block; height: 100%; background: var(--bn-colour-text); opacity: 0.6; border-radius: 999px; }
+
+  /* ── V4 — DOT-SIZE ramp: diameter = magnitude, single neutral hue (LIFTABLE)
+     Closest to the current dot, but drops BOTH the blue hue and the opacity
+     language, so it reads as size-not-state. */
+  .es-size { display: inline-flex; width: 12px; justify-content: center; }
+  .es-size i { border-radius: 50%; background: var(--bn-colour-text); opacity: 0.7; }
+  .es-size i.z3 { width: 9px; height: 9px; } .es-size i.z2 { width: 6px; height: 6px; } .es-size i.z1 { width: 4px; height: 4px; }
+  .es-size i.z0 { width: 7px; height: 7px; background: none; box-shadow: inset 0 0 0 1px var(--bn-colour-border); opacity: 1; }
+
+  /* ── In-situ specimens: real nav rows, side by side ─────────────────────── */
+  .es-specimens { display: flex; gap: 1.25rem; flex-wrap: wrap; margin-top: 1rem; }
+  .es-spec { flex: 1 1 15rem; min-width: 14rem; border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-lg); padding: 0.9rem 1rem 1rem; }
+  .es-spec h3 { font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); margin: 0 0 0.1rem; }
+  .es-spec .why { color: var(--bn-colour-muted); font-size: var(--bn-text-badge); margin: 0 0 0.6rem; min-height: 2.4em; }
+  .es-spec.flag { border-color: color-mix(in srgb, var(--bn-colour-error-text) 45%, var(--bn-colour-border)); }
+  .es-row { display: flex; align-items: center; gap: 0.55rem; padding: 0.16rem 0; font-size: var(--bn-text-label); }
+  .es-row .ind { flex: 0 0 14px; display: inline-flex; justify-content: flex-start; }
+  .es-row a { color: var(--bn-colour-accent); text-decoration: none; }
+  .es-row.on a { color: var(--bn-colour-text); font-weight: var(--bn-weight-emphasis); }
+</style>
+
+<div class="mock-bar">
+  <strong>Discussion — evidence-strength indicator</strong>
+  <div class="mock-seg" role="group" aria-label="Theme">
+    <button class="on" onclick="document.documentElement.setAttribute('data-theme','light');this.classList.add('on');this.nextElementSibling.classList.remove('on')">Light</button>
+    <button onclick="document.documentElement.setAttribute('data-theme','dark');this.classList.add('on');this.previousElementSibling.classList.remove('on')">Dark</button>
+  </div>
+</div>
+
+<div class="es-wrap">
+  <h1>How to show “how much evidence landed on this question”</h1>
+  <p class="lede">A per-question cue in the GuideSidebar — a scent of where the meat is — <em>without</em> a column of “6/8” fractions (leaderboard / gap-shaming) and <em>without</em> colliding with the codebook’s state dot.</p>
+
+  <div class="es-rec" style="margin-top:1rem">
+    <b>The collision.</b> The codebook sidebar uses a lone dot, <b>blue = on / grey = off</b> (<code>design-codebook-state-model.md</code>) — a <b>binary state</b>. The first-draft evidence ramp was <em>also</em> a blue dot in a sidebar row, just at varying opacity — so “strong evidence” and “codebook enabled” look identical.
+    <b>The fix:</b> keep state = blue dot; make magnitude read as a <b>scale</b> — a different <b>shape</b> (count / height / length / size) in a <b>neutral</b> tone. Sentiment hues are spoken-for too, so magnitude stays monochrome.
+  </div>
+
+  <h2>All encodings, same data, side by side</h2>
+  <p class="lede">Six guide questions at descending evidence strength. Column 1 is the codebook state dot we must not look like; column 2 is the current (colliding) ramp; 3–6 are the candidates.</p>
+  <table class="es-table">
+    <thead>
+      <tr>
+        <th>Guide question</th>
+        <th class="col-flag">State dot<br>(codebook — avoid)</th>
+        <th class="col-flag">V0 · opacity ramp<br>(current — collides)</th>
+        <th>V1 · pips</th>
+        <th>V2 · signal bars</th>
+        <th>V3 · sparkbar</th>
+        <th>V4 · dot-size</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="q">Last analysis experience</td>
+        <td><span class="es-statedot on"></span></td>
+        <td><span class="es-ramp s3"></span></td>
+        <td><span class="es-pips"><i class="es-pip"></i><i class="es-pip"></i><i class="es-pip"></i></span></td>
+        <td><span class="es-sig"><i class="b1"></i><i class="b2"></i><i class="b3"></i></span></td>
+        <td><span class="es-spark"><i style="width:100%"></i></span></td>
+        <td><span class="es-size"><i class="z3"></i></span></td>
+      </tr>
+      <tr>
+        <td class="q">First impressions of export</td>
+        <td><span class="es-statedot on"></span></td>
+        <td><span class="es-ramp s3"></span></td>
+        <td><span class="es-pips"><i class="es-pip"></i><i class="es-pip"></i><i class="es-pip"></i></span></td>
+        <td><span class="es-sig"><i class="b1"></i><i class="b2"></i><i class="b3"></i></span></td>
+        <td><span class="es-spark"><i style="width:90%"></i></span></td>
+        <td><span class="es-size"><i class="z3"></i></span></td>
+      </tr>
+      <tr>
+        <td class="q">Biggest frustration</td>
+        <td><span class="es-statedot on"></span></td>
+        <td><span class="es-ramp s2"></span></td>
+        <td><span class="es-pips"><i class="es-pip"></i><i class="es-pip"></i><i class="es-pip empty"></i></span></td>
+        <td><span class="es-sig"><i class="b1"></i><i class="b2"></i><i class="b3 off"></i></span></td>
+        <td><span class="es-spark"><i style="width:60%"></i></span></td>
+        <td><span class="es-size"><i class="z2"></i></span></td>
+      </tr>
+      <tr>
+        <td class="q">What’s missing</td>
+        <td><span class="es-statedot on"></span></td>
+        <td><span class="es-ramp s2"></span></td>
+        <td><span class="es-pips"><i class="es-pip"></i><i class="es-pip"></i><i class="es-pip empty"></i></span></td>
+        <td><span class="es-sig"><i class="b1"></i><i class="b2"></i><i class="b3 off"></i></span></td>
+        <td><span class="es-spark"><i style="width:55%"></i></span></td>
+        <td><span class="es-size"><i class="z2"></i></span></td>
+      </tr>
+      <tr>
+        <td class="q">Naming the themes</td>
+        <td><span class="es-statedot on"></span></td>
+        <td><span class="es-ramp s1"></span></td>
+        <td><span class="es-pips"><i class="es-pip"></i><i class="es-pip empty"></i><i class="es-pip empty"></i></span></td>
+        <td><span class="es-sig"><i class="b1"></i><i class="b2 off"></i><i class="b3 off"></i></span></td>
+        <td><span class="es-spark"><i style="width:22%"></i></span></td>
+        <td><span class="es-size"><i class="z1"></i></span></td>
+      </tr>
+      <tr>
+        <td class="q">Anything else</td>
+        <td><span class="es-statedot off"></span></td>
+        <td><span class="es-ramp s0"></span></td>
+        <td><span class="es-pips"><i class="es-pip empty"></i><i class="es-pip empty"></i><i class="es-pip empty"></i></span></td>
+        <td><span class="es-sig"><i class="b1 off"></i><i class="b2 off"></i><i class="b3 off"></i></span></td>
+        <td><span class="es-spark"></span></td>
+        <td><span class="es-size"><i class="z0"></i></span></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="es-cap">V0 and the state dot are visually indistinguishable at a glance — that’s the bug. V1–V4 all read as a <em>quantity</em>, in neutral tone, so “on/off” (blue) stays free for the codebook’s meaning.</p>
+
+  <h2>In situ — the top candidates in a real nav row</h2>
+  <p class="lede">A dot in a table reads differently from one next to a wrapping label. Left is the codebook sidebar (the reference we must not clash with); the rest are candidates in the GuideSidebar.</p>
+  <div class="es-specimens">
+
+    <div class="es-spec flag">
+      <h3>Codebook sidebar — reference</h3>
+      <p class="why">Blue = on, grey = off. <b>State</b>, not magnitude. This is the language we must not reuse for evidence.</p>
+      <div class="es-row on"><span class="ind"><span class="es-statedot on"></span></span><a href="#">Emotional &amp; Cognitive Signals</a></div>
+      <div class="es-row"><span class="ind"><span class="es-statedot on"></span></span><a href="#">Command-Line UX</a></div>
+      <div class="es-row"><span class="ind"><span class="es-statedot off"></span></span><a href="#">Bristlenose UXR Codebook</a></div>
+    </div>
+
+    <div class="es-spec">
+      <h3>V2 · Signal bars <span style="color:var(--bn-colour-accent)">— recommended</span></h3>
+      <p class="why">Ascending height = strength; the cellular-signal metaphor says “level” instantly. Unmistakably a scale, never a switch.</p>
+      <div class="es-row on"><span class="ind"><span class="es-sig"><i class="b1"></i><i class="b2"></i><i class="b3"></i></span></span><a href="#">Last analysis experience</a></div>
+      <div class="es-row"><span class="ind"><span class="es-sig"><i class="b1"></i><i class="b2"></i><i class="b3 off"></i></span></span><a href="#">Biggest frustration</a></div>
+      <div class="es-row"><span class="ind"><span class="es-sig"><i class="b1"></i><i class="b2 off"></i><i class="b3 off"></i></span></span><a href="#">Naming the themes</a></div>
+      <div class="es-row"><span class="ind"><span class="es-sig"><i class="b1 off"></i><i class="b2 off"></i><i class="b3 off"></i></span></span><a href="#">Anything else</a></div>
+    </div>
+
+    <div class="es-spec">
+      <h3>V1 · Pips</h3>
+      <p class="why">Count = strength. Dead simple, scannable, and monochrome so it can’t be read as the blue state dot. Runner-up.</p>
+      <div class="es-row on"><span class="ind"><span class="es-pips"><i class="es-pip"></i><i class="es-pip"></i><i class="es-pip"></i></span></span><a href="#">Last analysis experience</a></div>
+      <div class="es-row"><span class="ind"><span class="es-pips"><i class="es-pip"></i><i class="es-pip"></i><i class="es-pip empty"></i></span></span><a href="#">Biggest frustration</a></div>
+      <div class="es-row"><span class="ind"><span class="es-pips"><i class="es-pip"></i><i class="es-pip empty"></i><i class="es-pip empty"></i></span></span><a href="#">Naming the themes</a></div>
+      <div class="es-row"><span class="ind"><span class="es-pips"><i class="es-pip empty"></i><i class="es-pip empty"></i><i class="es-pip empty"></i></span></span><a href="#">Anything else</a></div>
+    </div>
+
+    <div class="es-spec">
+      <h3>V4 · Dot-size</h3>
+      <p class="why">Keeps the single-dot shape you liked, but magnitude = <b>diameter</b> in a neutral hue — drops both the blue and the opacity trick that caused the clash. Minimal-change option.</p>
+      <div class="es-row on"><span class="ind"><span class="es-size"><i class="z3"></i></span></span><a href="#">Last analysis experience</a></div>
+      <div class="es-row"><span class="ind"><span class="es-size"><i class="z2"></i></span></span><a href="#">Biggest frustration</a></div>
+      <div class="es-row"><span class="ind"><span class="es-size"><i class="z1"></i></span></span><a href="#">Naming the themes</a></div>
+      <div class="es-row"><span class="ind"><span class="es-size"><i class="z0"></i></span></span><a href="#">Anything else</a></div>
+    </div>
+
+  </div>
+
+  <div class="es-rec" style="margin-top:1.5rem">
+    <b>Recommendation.</b> <b>V2 signal bars</b> — the height ramp reads as “level/strength” with zero training and can’t be mistaken for an on/off state, so it frees the blue dot to keep meaning “enabled” everywhere. <b>V1 pips</b> is the close runner-up (simplest, most compact). If you want the least change from today, <b>V4 dot-size</b> keeps the dot but re-encodes magnitude as size in a neutral tone. Any of the three resolves the collision; all stay monochrome so sentiment colour is untouched. Empty state (0 evidence) is a hollow outline in every option — absence stays quiet, not shamed.
+  </div>
+</div>

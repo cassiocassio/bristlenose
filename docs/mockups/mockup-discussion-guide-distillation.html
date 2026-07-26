@@ -1,0 +1,294 @@
+<!--
+  Mockup: Discussion-guide distillation — input | distillation | prompt
+  =====================================================================
+  Proof for the Discussion lens (docs/design-discussion-lens.md), step 1: that
+  the guide-parse prompt produces a distillation the guide's AUTHOR would
+  recognise. Three columns, side by side:
+    1. INPUT      — the researcher's real, human-written guide (verbatim)
+    2. DISTILLED  — the parsed DiscussionGuide (terse nav + intent + kind), the
+                    author-recognisable structure the lens navigates by
+    3. PROMPT     — the mechanism: the parse prompt + output schema that turns
+                    (1) into (2), and later routes quotes to each question's intent
+
+  Corpus: sampled from the openly-licensed real-world guide corpus (gov.uk OGL,
+  US-federal / 18F public domain, GitLab Handbook CC BY-SA). Two representative,
+  structurally-distinct guides are worked in full here — both 18F, US-federal
+  PUBLIC DOMAIN, reproduced verbatim with attribution (see footer). The
+  distillations are hand-authored to mirror exactly what the col-3 prompt
+  instructs the LLM to emit — this is the target, before the LLM is wired.
+
+  NB on the prompt format: Bristlenose LLM prompts are MARKDOWN files in
+  bristlenose/llm/prompts/ (not YAML) — the YAML in col 3 is only the OUTPUT
+  SCHEMA, shown in YAML because it reads cleanly; in code it's a Pydantic model.
+
+  Reuses the baked theme sibling. Invented CSS is .dg-* (proof scaffold, not a
+  shipped surface).
+-->
+<link rel="stylesheet" href="mockup-discussion-lens.theme.css" />
+
+<style id="proposed">
+  :root[data-theme="dark"]  { color-scheme: dark; }
+  :root[data-theme="light"] { color-scheme: light; }
+  body { background: var(--bn-colour-bg); color: var(--bn-colour-text); margin: 0; font-family: "Inter","Segoe UI",system-ui,-apple-system,sans-serif; }
+  .mock-bar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; padding: 0.6rem 1.5rem; background: color-mix(in srgb, var(--bn-colour-bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--bn-colour-border); font-size: var(--bn-text-label); }
+  .mock-bar strong { font-weight: var(--bn-weight-emphasis); }
+  .mock-seg { display: inline-flex; border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); overflow: hidden; }
+  .mock-seg.right { margin-left: auto; }
+  .mock-seg button { font: inherit; border: 0; background: var(--bn-colour-bg); color: var(--bn-colour-muted); padding: 0.3rem 0.7rem; cursor: pointer; border-left: 1px solid var(--bn-colour-border); }
+  .mock-seg button:first-child { border-left: 0; }
+  .mock-seg button.on { background: var(--bn-colour-accent); color: #fff; }
+  .mock-intro { max-width: 70rem; margin: 1rem auto 0; padding: 0 1.5rem; color: var(--bn-colour-muted); font-size: var(--bn-text-label); }
+  .mock-intro code { font-family: var(--bn-font-mono); }
+  .mock-intro b { color: var(--bn-colour-text); font-weight: var(--bn-weight-emphasis); }
+
+  /* three-column proof grid — scaffold, not a shipped surface */
+  .dg-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--bn-colour-border); max-width: 96rem; margin: 1rem auto 6rem; border: 1px solid var(--bn-colour-border); }
+  .dg-col { background: var(--bn-colour-bg); padding: var(--bn-space-lg); min-width: 0; }
+  .dg-colhead { position: sticky; top: 3.1rem; background: var(--bn-colour-bg); display: flex; align-items: baseline; gap: var(--bn-space-sm); margin: 0 0 var(--bn-space-md); padding-bottom: var(--bn-space-sm); border-bottom: 1px solid var(--bn-colour-keyline); z-index: 5; }
+  .dg-colhead .n { font-family: var(--bn-font-mono); font-size: var(--bn-text-badge); color: var(--bn-colour-accent); }
+  .dg-colhead h2 { font-size: var(--bn-text-heading); font-weight: var(--bn-weight-emphasis); margin: 0; }
+  .dg-colhead .sub { font-size: var(--bn-text-badge); color: var(--bn-colour-muted); margin-left: auto; }
+
+  /* col 1 — verbatim input guide */
+  .dg-src { font-size: var(--bn-text-label); line-height: var(--bn-text-body-lh); }
+  .dg-src h3 { font-family: var(--bn-font-mono); font-size: var(--bn-text-badge); text-transform: uppercase; letter-spacing: 0.04em; color: var(--bn-colour-muted); margin: var(--bn-space-lg) 0 var(--bn-space-xs); font-weight: var(--bn-weight-emphasis); }
+  .dg-src h3:first-child { margin-top: 0; }
+  .dg-src p { margin: 0 0 var(--bn-space-sm); color: var(--bn-colour-text); }
+  .dg-src .script { color: var(--bn-colour-muted); font-style: italic; }
+
+  /* col 2 — distilled DiscussionGuide (the author-recognisable structure) */
+  .dg-sec { margin: 0 0 var(--bn-space-lg); }
+  .dg-sec > .terse { font-size: var(--bn-text-heading); font-weight: var(--bn-weight-emphasis); margin: 0 0 var(--bn-space-xs); padding-bottom: var(--bn-space-xs); border-bottom: 1px solid var(--bn-colour-keyline); }
+  .dg-q { margin: var(--bn-space-md) 0 0; }
+  .dg-q .qterse { display: flex; align-items: baseline; gap: var(--bn-space-sm); font-weight: var(--bn-weight-emphasis); font-size: var(--bn-text-label); }
+  /* intent — indent + muted type carry the relationship; no arrow glyph (→ is
+     spoken-for by the session/user-flow). */
+  .dg-q .intent { color: var(--bn-colour-muted); font-size: var(--bn-text-label); margin: 0.1rem 0 0; padding-left: var(--bn-space-md); }
+  /* folded scaffold — the prepared depth (big-Qs + probes) under a bucket; match
+     material + reading context, not routing bins. */
+  .dg-q .scaf { color: var(--bn-colour-muted); font-size: var(--bn-text-badge); font-style: italic; margin: 0.2rem 0 0; padding-left: var(--bn-space-md); }
+  .dg-q .scaf b { font-style: normal; font-weight: var(--bn-weight-normal); color: var(--bn-colour-text); opacity: 0.7; }
+  .dg-chip { font-family: var(--bn-font-mono); font-size: var(--bn-text-badge); padding: 0 0.3rem; border-radius: var(--bn-radius-sm); background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+  .dg-chip.axis { background: none; box-shadow: inset 0 0 0 1px var(--bn-colour-border); color: var(--bn-colour-muted); }
+
+  /* col 3 — the prompt + schema (static across guides) */
+  .dg-prompt { position: sticky; top: 3.1rem; align-self: start; }
+  .dg-code { font-family: var(--bn-font-mono); font-size: var(--bn-text-badge); line-height: 1.5; white-space: pre-wrap; background: var(--bn-colour-quote-bg); border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); padding: var(--bn-space-md); overflow-x: auto; margin: 0 0 var(--bn-space-md); color: var(--bn-colour-text); }
+  .dg-code .k { color: var(--bn-colour-accent); }
+  .dg-code .c { color: var(--bn-colour-muted); }
+  .dg-lbl { font-size: var(--bn-text-badge); text-transform: uppercase; letter-spacing: 0.04em; color: var(--bn-colour-muted); font-weight: var(--bn-weight-emphasis); margin: 0 0 var(--bn-space-xs); }
+
+  .dg-foot { max-width: 70rem; margin: 0 auto 6rem; padding: 0 1.5rem; color: var(--bn-colour-muted); font-size: var(--bn-text-badge); line-height: 1.6; }
+  .dg-foot a { color: var(--bn-colour-accent); }
+  .dg-hide { display: none; }
+  @media (max-width: 60rem) { .dg-grid { grid-template-columns: 1fr; } .dg-colhead, .dg-prompt { position: static; } }
+</style>
+
+<div class="mock-bar">
+  <strong>Discussion-guide distillation</strong>
+  <div class="mock-seg" role="group" aria-label="Guide">
+    <button class="on" onclick="dgPick('u',this)">Usability test script</button>
+    <button onclick="dgPick('i',this)">In-depth interview guide</button>
+  </div>
+  <div class="mock-seg right" role="group" aria-label="Theme">
+    <button class="on" onclick="document.documentElement.setAttribute('data-theme','light');this.classList.add('on');this.nextElementSibling.classList.remove('on')">Light</button>
+    <button onclick="document.documentElement.setAttribute('data-theme','dark');this.classList.add('on');this.previousElementSibling.classList.remove('on')">Dark</button>
+  </div>
+</div>
+
+<p class="mock-intro">
+  Step-1 proof for <code>docs/design-discussion-lens.md</code>: the parse prompt (col 3) turns a researcher's real guide (col 1) into
+  the <b>author-recognisable structure</b> the lens navigates by (col 2) — terse nav labels + the one-line <b>intent</b> that later
+  routes quotes to each question. Two real, <b>US-federal public-domain</b> 18F guides, reproduced verbatim (attribution in footer).
+  The distillations here are the hand-authored target the col-3 prompt is written to reproduce, before the LLM is wired.
+</p>
+
+<div class="dg-grid">
+
+  <!-- ══ COLUMN 1 — INPUT (verbatim) ══ -->
+  <div class="dg-col">
+    <div class="dg-colhead"><span class="n">1</span><h2>Input</h2><span class="sub" id="dg-src-attr">18F · public domain</span></div>
+
+    <!-- Usability test guide (full verbatim) -->
+    <div class="dg-src" data-g="u">
+      <h3>Introduction</h3>
+      <p class="script">Hello, my name's [moderator], and I'm going to walk you through today's session… my office is currently working with [partner] to [broad purpose]. Joining us are [observers].</p>
+      <p class="script">I'd like to begin by thanking you for making time… we'd like to keep this session to [duration]. Does that still work for you?</p>
+      <p class="script">During this session, I'll start by asking you a few questions around your work. Later on, I'll ask you to share your screen and accomplish a few tasks using the website we're evaluating.</p>
+      <p class="script">Please be aware that there are no wrong answers… I'll ask you to think aloud as much as possible: to describe what you're looking at and what you're trying to do.</p>
+      <p class="script">With your permission, I'd like to record this call… Is that okay? Finally, I want to confirm that you've received a participant agreement — is that correct?</p>
+      <h3>Warm up</h3>
+      <p>Before we take a look at the site, I'd like to hear a little bit about you — what's your occupation? What do you do all day?</p>
+      <p>Does your work require a specific kind of training or experience?</p>
+      <p>What are your goals in doing your work? What motivates you?</p>
+      <h3>Setup screen sharing</h3>
+      <p class="script">The first thing I'd like you to do is share your screen… make sure to close anything you don't want recorded.</p>
+      <p>Please look at this page and tell me what you make of it: What are your first impressions? What is this site for? You can scroll, but don't click on anything just yet.</p>
+      <h3>Task completion (2–3 tasks)</h3>
+      <p class="script">Now I'm going to ask you to respond to the following scenarios. I'll read each scenario out loud and share the text via chat.</p>
+      <p><em>Example: Imagine you're working on a collaborative training application… Using this website, show me how you would identify whether or not your system will require completing a privacy impact assessment.</em></p>
+      <h3>Follow up</h3>
+      <p>You mentioned [something they said out loud] earlier and I didn't want to jump in at that time. Can you say more about that?</p>
+      <p>What are your thoughts about these concepts, generally?</p>
+      <h3>Wrap up</h3>
+      <p>Thank you so much for your time. Before we finish, what did we forget to ask about?</p>
+      <p>Would you be open to speaking with us again in the future?</p>
+      <p>Who else should we talk to?</p>
+    </div>
+
+    <!-- In-depth interview guide (verbatim) -->
+    <div class="dg-src dg-hide" data-g="i">
+      <h3>Introduction</h3>
+      <p class="script">Hello, my name's [moderator], and I'm going to walk you through today's session. [Explains partnership purpose, introduces observers, confirms duration.]</p>
+      <p class="script">There are no wrong answers. As you go about using the [prototype], I'll ask you to think aloud as much as possible… With your permission, I'd like to record this call.</p>
+      <h3>Warm up</h3>
+      <p>What's your occupation? What do you do all day?</p>
+      <p>What kind of person does your kind of work, generally?</p>
+      <p>What are your goals in doing your work? What motivates you?</p>
+      <h3>A specific topic</h3>
+      <p>If you had to explain this in the simplest terms possible, how would you do it?</p>
+      <p>How does [topic] tie back to your goals in doing your work?</p>
+      <p>What do you do when you have questions about [topic]?</p>
+      <p>What's one thing you wish were more straightforward about [topic]?</p>
+      <h3>Demo</h3>
+      <p>When was the last time you did [task]? Tell me more.</p>
+      <p class="script">Do you mind sharing your screen?</p>
+      <p>Can you show me how you do [task]?</p>
+      <h3>Wrap up</h3>
+      <p>Thank you so much for your time. Before we finish, what did we forget to ask about?</p>
+      <p>Would you be open to speaking with us again in the future?</p>
+      <p>Who else should we talk to?</p>
+    </div>
+  </div>
+
+  <!-- ══ COLUMN 2 — DISTILLED ══ -->
+  <div class="dg-col">
+    <div class="dg-colhead"><span class="n">2</span><h2>Distilled</h2><span class="sub"><code>DiscussionGuide</code></span></div>
+
+    <!-- Usability — bucket granularity -->
+    <div data-g="u">
+      <div class="dg-sec"><div class="terse">Opening <span class="dg-chip">instruction</span></div>
+        <div class="dg-q"><div class="intent">Consent, think-aloud, recording — no evidence to route.</div></div></div>
+      <div class="dg-sec"><div class="terse">Warm-up <span class="dg-chip axis">pattern</span></div>
+        <div class="dg-q"><div class="intent">The participant's role, expertise, and what drives their work.</div>
+          <div class="scaf"><b>folds:</b> occupation &amp; daily work · training / experience · goals &amp; motivation</div></div></div>
+      <div class="dg-sec"><div class="terse">First impressions <span class="dg-chip axis">opinion</span></div>
+        <div class="dg-q"><div class="intent">Unaided — can they tell what the site is for before touching it.</div>
+          <div class="scaf"><b>folds:</b> first impressions · what is this site for</div></div></div>
+      <div class="dg-sec"><div class="terse">Tasks <span class="dg-chip">task</span></div>
+        <div class="dg-q"><div class="intent">Whether they complete the scenarios, and where they struggle.</div>
+          <div class="scaf"><b>folds:</b> the privacy-impact-assessment scenario</div></div></div>
+      <div class="dg-sec"><div class="terse">Follow-up <span class="dg-chip axis">opinion</span></div>
+        <div class="dg-q"><div class="intent">Reopen earlier remarks; their general reaction to the concepts.</div>
+          <div class="scaf"><b>folds:</b> "say more about that" · overall thoughts</div></div></div>
+      <div class="dg-sec"><div class="terse">Wrap-up</div>
+        <div class="dg-q"><div class="intent">What we missed, recontact, and who else to talk to.</div>
+          <div class="scaf"><b>folds:</b> what we forgot · speak again? · who else?</div></div></div>
+    </div>
+
+    <!-- Interview — bucket granularity -->
+    <div data-g="i" class="dg-hide">
+      <div class="dg-sec"><div class="terse">Opening <span class="dg-chip">instruction</span></div>
+        <div class="dg-q"><div class="intent">Purpose, observers, think-aloud, recording consent — no evidence to route.</div></div></div>
+      <div class="dg-sec"><div class="terse">Warm-up <span class="dg-chip axis">pattern</span></div>
+        <div class="dg-q"><div class="intent">The participant's role, who does this kind of work, and what motivates them.</div>
+          <div class="scaf"><b>folds:</b> occupation &amp; daily work · who does this work · goals &amp; motivation</div></div></div>
+      <div class="dg-sec"><div class="terse">The topic <span class="dg-chip axis">pattern</span></div>
+        <div class="dg-q"><div class="intent">Their mental model of the topic and their friction with it.</div>
+          <div class="scaf"><b>folds:</b> explain it simply · topic ↔ goals · where they turn for help · biggest friction</div></div></div>
+      <div class="dg-sec"><div class="terse">Show me <span class="dg-chip">task</span></div>
+        <div class="dg-q"><div class="intent">The last real instance, then the observed workflow (not the described one).</div>
+          <div class="scaf"><b>folds:</b> last time you did X · show me how you do it</div></div></div>
+      <div class="dg-sec"><div class="terse">Wrap-up</div>
+        <div class="dg-q"><div class="intent">What we missed, recontact, and who else to talk to.</div>
+          <div class="scaf"><b>folds:</b> what we forgot · speak again? · who else?</div></div></div>
+    </div>
+  </div>
+
+  <!-- ══ COLUMN 3 — PROMPT + SCHEMA (static) ══ -->
+  <div class="dg-col">
+    <div class="dg-colhead"><span class="n">3</span><h2>Prompt</h2><span class="sub">markdown · schema in YAML</span></div>
+    <div class="dg-prompt">
+      <p class="dg-lbl">bristlenose/llm/prompts/parse-discussion-guide.md</p>
+      <div class="dg-code"><span class="c"># Parse a discussion guide</span>
+
+You are given the full text of a user-research
+discussion guide (topic guide, interview guide,
+or moderated-usability script) written by a
+researcher. Parse it — never invent or drop.
+
+A guide is a THINKING TOOL, deliberately over-
+prepared — most of its questions are never asked
+verbatim. It is NOT a script or a checklist.
+
+<span class="k">Rules</span>
+- FIND THE GUIDE'S OWN TOP-LEVEL INTENTIONS — its
+  thematic spine (e.g. CONTEXT, AWARENESS…).
+  Typically ~5–12 for a ~60-min session (≈5 min
+  each, less warm-up + thanks). Discover them from
+  THIS guide; never assume names or impose a
+  template. These are the BUCKETS.
+- Everything under a bucket — big questions,
+  follow-ups, bulleted probes, parenthetical
+  watch-fors — FOLDS into it as `scaffold`:
+  preparation depth + match material. Do NOT
+  promote it to top-level or make it its own bin.
+- BUCKET gives:
+  · `terse`     ≤4-word nav label (the spine word).
+  · `intent`    the whole TERRITORY this bucket
+    explores, synthesised from all its scaffold.
+    This is the rich field quotes match against —
+    a quote is "in the territory", rarely a direct
+    answer to any one question.
+  · `kind`      questions | task | instruction.
+  · `stance_axis` opinion | pattern | none.
+  · `scaffold`  the folded questions/probes, kept
+    verbatim (for matching + reading).
+- Consent, logistics, agenda, and any WELFARE /
+  SAFEGUARDING / DISTRESS block = instruction,
+  NEVER a routable bucket ("Do you feel safe?" is
+  welfare, not data).
+- Preserve the guide's real order + irregular
+  structure (a non-spine preamble is fine).
+
+Return JSON matching the schema.</div>
+
+      <p class="dg-lbl">Output schema (Pydantic; shown as YAML)</p>
+      <div class="dg-code"><span class="k">DiscussionGuide</span>:
+  buckets:                <span class="c"># 5–12 top-level intentions</span>
+    - terse:       <span class="c">str  # "Context"</span>
+      intent:      <span class="c">str  # the territory it explores</span>
+      kind:        <span class="c">questions|task|instruction</span>
+      stance_axis: <span class="c">opinion|pattern|none</span>
+      scaffold:            <span class="c"># folded depth — NOT bins</span>
+        - verbatim: <span class="c">str  # a big-Q or probe, kept</span></div>
+
+      <p class="dg-lbl">Then, per quote (routing)</p>
+      <div class="dg-code"><span class="c"># match the quote against each bucket's</span>
+<span class="c"># intent + scaffold (its whole territory);</span>
+<span class="c"># route to the best bucket, else UNROUTED.</span>
+<span class="c"># no 1:1 question-to-answer expected.</span></div>
+    </div>
+  </div>
+
+</div>
+
+<p class="dg-foot">
+  <b>Sources</b> — both guides are US-federal <b>public domain</b> (18F / GSA), reproduced verbatim:
+  <a href="https://github.com/18F/ux-guide/blob/main/_pages/resources/usability-test-guide.md">18F Usability Test Guide</a> ·
+  <a href="https://github.com/18F/ux-guide/blob/main/_pages/resources/interview-guide.md">18F In-Depth Interview Guide</a>.
+  Wider openly-licensed corpus consulted:
+  <a href="https://www.gov.uk/service-manual/user-research/using-moderated-usability-testing">gov.uk Service Manual — moderated usability testing</a> (OGL) ·
+  <a href="https://digital.gov/resources/how-conduct-usability-test">Digital.gov — how to conduct a usability test</a> (public domain) ·
+  <a href="https://handbook.gitlab.com/handbook/product/ux/experience-research/discussion-guide-user-interviews/">GitLab Handbook — writing a discussion guide</a> (CC BY-SA) ·
+  <a href="https://www.nngroup.com/articles/interview-guide/">NN/g — Writing an Effective Guide for a UX Interview</a>.
+  Distillations are hand-authored to the col-3 prompt's target output.
+</p>
+
+<script>
+  function dgPick(g, btn){
+    for (const el of document.querySelectorAll('[data-g]')) el.classList.toggle('dg-hide', el.getAttribute('data-g') !== g);
+    document.getElementById('dg-src-attr').textContent = '18F · public domain';
+    for (const b of btn.parentElement.children) b.classList.toggle('on', b===btn);
+  }
+</script>

@@ -1,0 +1,477 @@
+<!--
+  Mockup: Discussion lens
+  =======================
+  A sixth report lens that projects extracted quotes against the researcher's
+  own uploaded discussion guide. Spec: docs/design-discussion-lens.md.
+
+  This mockup renders the UX assumptions from that spec for ratification. Every
+  invented affordance is flagged inline (search "INVENT"). The layout deliberately
+  includes ONE DELIBERATELY DENSE question (Try the prototype → "First impressions
+  of export") with 3 response-groups and a multi-quote argument-run, because the
+  load-bearing UX risk (per the usual-suspects review) is whether 5 levels of
+  depth — Section > Question > response-group > argument-run > quote — stay legible.
+
+  The two interior levels use DIFFERENT visual channels on purpose:
+    - response-group = a HORIZONTAL typographic lead-in (muted label + count)
+    - argument-run   = a VERTICAL left-rule bracket (the reused seq-* treatment)
+  so the depth never collapses into nested filled boxes.
+
+  ACCURATE PRODUCTION MARKUP: quote cards use the real timecode (TimecodeLink:
+  muted [ ] brackets + accent digits), the real split PersonBadge
+  (.bn-person-badge > .bn-speaker-badge--split > code + name), and sentiment
+  Badge variants (.badge .badge-frustration etc.). Section h1 = .section-heading,
+  question h2, inline edit pencils = .edit-pencil, run treatment = seq-*.
+  Everything invented lives in <style id="proposed"> prefixed .dl-*; .mock-* is
+  mockup chrome only.
+
+  Evidence-strength indicator (the sidebar ramp) is explored separately in
+  mockup-discussion-evidence-strength.html — the blue-grey dot overlaps the
+  codebook enabled/disabled indicator, so alternatives live there.
+
+  Regenerate the theme sibling if the design system moves:
+    .venv/bin/python -c "from bristlenose.stages.s12_render.theme_assets import load_default_css; open('docs/mockups/mockup-discussion-lens.theme.css','w').write(load_default_css())"
+-->
+<link rel="stylesheet" href="mockup-discussion-lens.theme.css" />
+
+<style id="proposed">
+  /* ── Page frame (mockup chrome only — NOT lifted) ─────────────────────── */
+  :root[data-theme="dark"]  { color-scheme: dark; }
+  :root[data-theme="light"] { color-scheme: light; }
+  body {
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    margin: 0;
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  .mock-bar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    padding: 0.6rem 1.5rem;
+    background: color-mix(in srgb, var(--bn-colour-bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--bn-colour-border);
+    font-size: var(--bn-text-label);
+  }
+  .mock-bar strong { font-weight: var(--bn-weight-emphasis); }
+  .mock-bar .mock-tabs { display: inline-flex; gap: 0.1rem; }
+  .mock-bar .mock-tabs a { color: var(--bn-colour-muted); text-decoration: none; padding: 0.2rem 0.55rem; border-radius: var(--bn-radius-md); }
+  .mock-bar .mock-tabs a.on { color: var(--bn-colour-text); background: var(--bn-colour-hover); font-weight: var(--bn-weight-emphasis); }
+  .mock-seg { display: inline-flex; border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); overflow: hidden; margin-left: auto; }
+  .mock-seg button { font: inherit; border: 0; background: var(--bn-colour-bg); color: var(--bn-colour-muted); padding: 0.3rem 0.7rem; cursor: pointer; border-left: 1px solid var(--bn-colour-border); }
+  .mock-seg button:first-child { border-left: 0; }
+  .mock-seg button.on { background: var(--bn-colour-accent); color: #fff; }
+  .mock-note { max-width: 60rem; margin: 1rem auto 0; padding: 0 1.5rem; color: var(--bn-colour-muted); font-size: var(--bn-text-label); }
+  .mock-note code { font-family: var(--bn-font-mono); }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     GROUNDING LEDGER — shippable with NO new design surface beyond THREE small
+     token-only fragments (★). Everything else REUSES an existing atom/organism.
+       Sidebar        REUSE .toc-sidebar-body/.sidebar-title/.toc-heading/.toc-link  (organisms/sidebar.css)
+       Quote cards    REUSE blockquote.quote-card + seq-*                            (organisms/blockquote.css · analysis.css)
+       Speaker        REUSE .bn-person-badge split                                   (molecules/person-badge.css)
+       Timecode       REUSE a.timecode + .timecode-bracket                           (atoms/timecode.css)
+       Tag badges     REUSE .badge + sentiment variants                             (atoms/badge.css)
+       Coverage       REUSE .coverage-summary tone + mono-number idiom (.sc-meta-line b)  (organisms/coverage.css)
+       Gallery        REUSE the .coverage-details <details> idiom                    (organisms/coverage.css)
+       Inline edit    REUSE .editable-text + .edit-pencil                            (molecules/editable-text.css)
+       ★ Evidence bars   NEW ATOM     — micro-geometry per .bn-sparkline convention  (→ atoms/evidence-bars.css)
+       ★ Response group  NEW MOLECULE — type tokens only, no box
+       ★ Run bracket     seq-* generalised out of .signal-card-quotes + one accent keyline
+     Every value below is a --bn-* token. The ONLY raw px are micro-chart geometry
+     (evidence bars) matching the .bn-sparkline atom precedent (5px bars / 1px
+     radius), and the 2px run keyline (= the system's h2-underline keyline weight).
+     .mock-* and .dl-shell/.dl-nav positioning are standalone-mock scaffold (the
+     real lens is the SidebarLayout grid variant) — the only non-shippable CSS.
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* Scaffold — NOT shipped (real lens = SidebarLayout grid, design-lens-template.md) */
+  .dl-shell { display: flex; gap: var(--bn-gutter-left); max-width: 74rem; margin: 0 auto; padding: var(--bn-space-lg) var(--bn-space-lg) 8rem; align-items: flex-start; }
+  .dl-main  { flex: 1; min-width: 0; }
+  .dl-nav   { position: sticky; top: 4rem; flex: 0 0 var(--bn-sidebar-width); align-self: flex-start; max-height: calc(100vh - 5rem); overflow: auto; }
+
+  /* Sidebar — REUSE real toc classes (token parity); add only the evidence slot.
+     Terse labels only — NO coverage fractions (a column of "6/8, 3/8" reads as a
+     leaderboard and shames gaps). */
+  /* reproduces the production `.toc-sidebar-header .sidebar-title` weight+size —
+     that rule is scoped to the header wrapper the standalone mock omits, so
+     without this the title fell back to 400 (the weight drift). */
+  .dl-nav .sidebar-title { display: block; margin-bottom: var(--bn-space-sm); font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); }
+  .dl-guide-link { display: flex; align-items: center; gap: var(--bn-space-sm); }
+  .dl-guide-link .lbl { min-width: 0; }
+
+  /* ★ NEW ATOM — evidence bars. Ascending height = flow of data landed on this
+     question; neutral monochrome so it reads as a SCALE, never the codebook blue
+     on/off STATE dot. Raw-px micro-geometry per the .bn-sparkline atom; colours
+     are tokens. Candidate home: atoms/evidence-bars.css. */
+  .dl-ev { flex: 0 0 auto; display: inline-flex; align-items: flex-end; gap: 2px; height: 11px; }
+  .dl-ev i { width: 3px; background: var(--bn-colour-text); opacity: 0.7; border-radius: 1px; }
+  .dl-ev i.b1 { height: 4px; } .dl-ev i.b2 { height: 7px; } .dl-ev i.b3 { height: 11px; }
+  .dl-ev i.off { background: var(--bn-colour-border); opacity: 1; }
+
+  /* Question head — h2 at the theme-heading size (grounds to the h3 rule, the
+     current Theme heading); verbatim + coverage are muted body text. All tokens. */
+  .dl-q { margin: var(--bn-space-xl) 0 0; }
+  .dl-q > h2 { font-size: var(--bn-text-heading); font-weight: var(--bn-weight-emphasis); margin: 0; }
+  .dl-verbatim { color: var(--bn-colour-muted); font-size: var(--bn-text-label); font-style: italic; margin: var(--bn-space-xs) 0 0; }
+  /* Coverage — REUSE .coverage-summary tone; mono-number idiom from .sc-meta-line b.
+     SPLIT asked vs answered (the classifier knows both) so a low count reads as
+     "asked but unrouted", not "not asked". Muted phrase, never a chip/meter. */
+  .dl-coverage { color: var(--bn-colour-muted); font-size: var(--bn-text-label); margin: var(--bn-space-sm) 0 0; }
+  .dl-coverage .sep { margin: 0 var(--bn-space-sm); }
+  .dl-coverage b { font-family: var(--bn-font-mono); font-weight: var(--bn-weight-normal); color: var(--bn-colour-text); }
+
+  /* Paraphrase gallery — REUSE the .coverage-details <details> idiom verbatim
+     (marker glyph + font-size from organisms/coverage.css). Collapsed by
+     default; VERBATIM moderator wordings only, each led by the moderator's own
+     PersonBadge (m1) — no session marker, the speaker is simply the moderator. */
+  .dl-askings { margin: var(--bn-space-sm) 0 0; font-size: var(--bn-text-label); }
+  .dl-askings summary { cursor: pointer; color: var(--bn-colour-muted); list-style: none; }
+  .dl-askings summary::-webkit-details-marker { display: none; }
+  .dl-askings summary::before { content: "\25B6\00a0"; font-size: 0.65em; vertical-align: middle; }
+  .dl-askings[open] summary::before { content: "\25BC\00a0"; }
+  .dl-askings ul { list-style: none; margin: var(--bn-space-sm) 0 0; padding: 0 0 0 var(--bn-space-md); border-left: 1px solid var(--bn-colour-border); }
+  .dl-askings li { color: var(--bn-colour-muted); margin: var(--bn-space-sm) 0; display: flex; align-items: baseline; gap: var(--bn-space-sm); }
+  .dl-askings li .said { flex: 1; }
+
+  /* ★ NEW MOLECULE — response-group label. Horizontal typographic lead-in (muted
+     + emphasis-weight lead + mono count), NOT a filled/bordered band and NOT the
+     codebook framework-section-header box — so five levels of depth never nest as
+     boxes. Type tokens only. */
+  .dl-group { margin: var(--bn-space-md) 0 0; }
+  .dl-group-label { display: flex; align-items: baseline; gap: var(--bn-space-sm); font-size: var(--bn-text-label); color: var(--bn-colour-muted); margin: 0 0 var(--bn-space-xs); }
+  .dl-group-label .lead { font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-text); }
+  .dl-group-label .count { font-family: var(--bn-font-mono); font-size: var(--bn-text-badge); }
+  .dl-group.variant .dl-group-label .lead { color: var(--bn-colour-muted); }
+
+  /* Run bracket — seq-* generalised out of .signal-card-quotes (analysis.css),
+     driven by router run-membership. The accent left-rule uses the system's
+     emphasis-keyline weight (2px = the h2 underline) + --bn-radius-md. Solo runs
+     get no bracket. seq spacing/opacity are VERBATIM from analysis.css. */
+  .dl-run { margin: var(--bn-space-sm) 0; }
+  .dl-run--seq { border-left: 2px solid var(--bn-colour-accent); border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0; }
+  .dl-run--seq blockquote.quote-card { border-left: none; margin: 0; }
+  .dl-run blockquote.seq-middle,
+  .dl-run blockquote.seq-last { padding-top: 0; margin-top: calc(-1 * var(--bn-space-xs)); }
+  .dl-run blockquote.seq-middle .timecode,
+  .dl-run blockquote.seq-last .timecode { opacity: 0.6; }
+
+  /* Section task/instruction note — muted body text, tokens only */
+  .dl-section-note { color: var(--bn-colour-muted); font-size: var(--bn-text-label); margin: var(--bn-space-sm) 0 0; font-style: italic; }
+
+  /* ★ Empty state — NO guide uploaded. Desktop-only feature, so the real
+     "Choose a guide…" triggers the native NSOpenPanel via the bridge, and
+     drag-drop onto the window reuses the existing import path (the same
+     file-add mechanism as interviews). Card = tokens only (dashed dropzone
+     mirrors an import affordance); the button reuses the .toolbar-btn atom. */
+  .dl-empty { max-width: 34rem; margin: var(--bn-space-xl) auto; text-align: center; }
+  .dl-empty .drop { border: 1px dashed var(--bn-colour-border); border-radius: var(--bn-radius-lg); padding: var(--bn-space-xl); background: var(--bn-colour-quote-bg); }
+  .dl-empty h2 { font-size: var(--bn-text-heading); font-weight: var(--bn-weight-emphasis); margin: 0 0 var(--bn-space-sm); }
+  .dl-empty p { color: var(--bn-colour-muted); font-size: var(--bn-text-label); margin: 0 auto var(--bn-space-md); max-width: 24rem; }
+  .dl-empty .formats { font-family: var(--bn-font-mono); font-size: var(--bn-text-badge); color: var(--bn-colour-muted); margin-top: var(--bn-space-md); }
+  .dl-empty .formats b { color: var(--bn-colour-text); font-weight: var(--bn-weight-normal); }
+
+  /* Make edit pencils visible in the mockup so the inline-edit affordance reads
+     (production reveals them on hover). Mockup chrome only. */
+  .dl-main .edit-pencil, .dl-main .edit-pencil-inline { opacity: 0.5; }
+</style>
+
+<div class="mock-bar">
+  <strong>Discussion</strong>
+  <span class="mock-tabs">
+    <a href="#">Project</a><a href="#">Sessions</a><a href="#">Quotes</a>
+    <a href="#" class="on">Discussion</a><a href="#">Codebook</a><a href="#">Analysis</a>
+  </span>
+  <div class="mock-seg" role="group" aria-label="State">
+    <button class="on" onclick="dlState(true,this)">Guide loaded</button>
+    <button onclick="dlState(false,this)">No guide</button>
+  </div>
+  <div class="mock-seg" role="group" aria-label="Theme">
+    <button class="on" onclick="document.documentElement.setAttribute('data-theme','light');this.classList.add('on');this.nextElementSibling.classList.remove('on')">Light</button>
+    <button onclick="document.documentElement.setAttribute('data-theme','dark');this.classList.add('on');this.previousElementSibling.classList.remove('on')">Dark</button>
+  </div>
+</div>
+<script>
+  function dlState(loaded, btn){
+    document.getElementById('dl-loaded').style.display = loaded ? '' : 'none';
+    document.getElementById('dl-empty').style.display  = loaded ? 'none' : '';
+    document.getElementById('dl-note').style.display   = loaded ? '' : 'none';
+    for (const b of btn.parentElement.children) b.classList.toggle('on', b===btn);
+  }
+</script>
+
+<p class="mock-note" id="dl-note">
+  Mockup for <code>docs/design-discussion-lens.md</code>. The lens projects extracted quotes onto the researcher's
+  uploaded discussion guide. Order is guide order (the interview rarely follows it); a question shows the balanced
+  spread of responses, and an honest split count of who was <em>asked</em> vs where <em>evidence</em> landed.
+  Cards use production timecode, PersonBadge and sentiment-Badge markup; everything <code>.dl-*</code> is invented and flagged in source.
+  <br><br>Toggle <b>No guide</b> in the bar to see the empty state.
+</p>
+
+<!-- ── Empty state — no guide loaded. IN THE APP THIS IS A NATIVE SwiftUI PAGE,
+     not this webview: it reuses the Welcome page's pattern (WelcomeHomeView +
+     WelcomeIllustrations) and drop target (.dropDestination(for: URL.self)) plus
+     File ▸ Add Files… (NSOpenPanel) — the same import path interviews use. The
+     webview SPA only mounts once a guide is parsed. This HTML is INDICATIVE of
+     the copy/formats/affordance, not the real surface. ───────────────────────── -->
+<div class="dl-empty" id="dl-empty" style="display:none">
+  <div class="drop">
+    <h2>Add your discussion guide</h2>
+    <p>Drop your topic guide here, or choose a file — Bristlenose reads its questions and answers each one with the evidence from your interviews.</p>
+    <button class="toolbar-btn">Choose a guide…</button>
+    <p class="formats">Reads <b>.docx</b> · <b>.md</b> · <b>.txt</b></p>
+  </div>
+  <p class="formats" style="margin-top:var(--bn-space-md)">Native SwiftUI page in the app (reuses the Welcome-page drop target + Add Files…). This HTML is indicative only.</p>
+</div>
+
+<div class="dl-shell" id="dl-loaded">
+
+  <!-- ── GuideSidebar — terse labels, density dots, NO fractions ──────────── -->
+  <nav class="dl-nav" aria-label="Discussion guide">
+    <div class="toc-sidebar-body">
+      <span class="sidebar-title">Guide</span>
+      <div class="toc-heading">Opening</div>
+      <a class="toc-link dl-guide-link" href="#"><span class="dl-ev"><i class="b1"></i><i class="b2"></i><i class="b3"></i></span><span class="lbl">Warm-up &amp; role</span></a>
+      <div class="toc-heading">About your job</div>
+      <a class="toc-link dl-guide-link" href="#q-last"><span class="dl-ev"><i class="b1"></i><i class="b2"></i><i class="b3"></i></span><span class="lbl">Last analysis experience</span></a>
+      <a class="toc-link dl-guide-link" href="#q-frustration"><span class="dl-ev"><i class="b1"></i><i class="b2"></i><i class="b3 off"></i></span><span class="lbl">Biggest frustration</span></a>
+      <div class="toc-heading">Tools you use</div>
+      <a class="toc-link dl-guide-link" href="#"><span class="dl-ev"><i class="b1"></i><i class="b2"></i><i class="b3"></i></span><span class="lbl">Current toolkit</span></a>
+      <a class="toc-link dl-guide-link" href="#"><span class="dl-ev"><i class="b1"></i><i class="b2"></i><i class="b3 off"></i></span><span class="lbl">What's missing</span></a>
+      <div class="toc-heading">Try the prototype</div>
+      <a class="toc-link dl-guide-link active" href="#q-export"><span class="dl-ev"><i class="b1"></i><i class="b2"></i><i class="b3"></i></span><span class="lbl">First impressions of export</span></a>
+      <a class="toc-link dl-guide-link" href="#q-naming"><span class="dl-ev"><i class="b1"></i><i class="b2 off"></i><i class="b3 off"></i></span><span class="lbl">Naming the themes</span></a>
+      <div class="toc-heading">Wrap-up</div>
+      <a class="toc-link dl-guide-link" href="#"><span class="dl-ev"><i class="b1 off"></i><i class="b2 off"></i><i class="b3 off"></i></span><span class="lbl">Anything else</span></a>
+    </div>
+  </nav>
+
+  <main class="dl-main">
+
+    <!-- ══ SECTION 1 (h1 zone) — an experiential question (no stance clustering) ══ -->
+    <section>
+      <h1 class="section-heading" id="s-job">About your job
+        <button class="edit-pencil edit-pencil-inline" aria-label="Edit section title">&#9998;</button>
+      </h1>
+
+      <!-- Q: experiential → stance_axis = none → plain ordered evidence list -->
+      <div class="dl-q" id="q-last">
+        <h2>Last analysis experience
+          <button class="edit-pencil edit-pencil-inline" aria-label="Edit question label">&#9998;</button>
+        </h2>
+        <p class="dl-verbatim">“Walk me through the last time you had to make sense of a batch of interviews.”</p>
+        <p class="dl-coverage">Asked in <b>8</b> sessions <span class="sep">·</span> evidence in <b>8</b></p>
+        <details class="dl-askings">
+          <summary>asked 8 ways</summary>
+          <ul>
+            <li><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="said">“Tell me about your last project where you had a pile of interviews.”</span></li>
+            <li><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="said">“When did you last sit down with a set of transcripts — walk me through it.”</span></li>
+            <li><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="said">“Last time you did analysis — what did that actually look like?”</span></li>
+            <li><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="said">“Take me back to the last study you analysed.”</span></li>
+          </ul>
+        </details>
+
+        <!-- a multi-quote argument-run (p3 builds a narrative — kept intact) -->
+        <div class="dl-run dl-run--seq">
+          <blockquote class="quote-card seq-first" id="q1a">
+            <div class="quote-row"><a class="timecode" href="#t=252"><span class="timecode-bracket">[</span>04:12<span class="timecode-bracket">]</span></a>
+              <div class="quote-body"><span class="quote-text">“Honestly it was a spreadsheet and a lot of swearing.”</span>
+                <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span><span class="bn-speaker-badge-name">Rachel</span></span></span></span>
+                <div class="badges"><span class="badge badge-frustration">frustration</span></div>
+              </div></div>
+            <button class="edit-pencil" aria-label="Edit this quote">&#9998;</button>
+          </blockquote>
+          <blockquote class="quote-card seq-last" id="q1b">
+            <div class="quote-row"><a class="timecode" href="#t=271"><span class="timecode-bracket">[</span>04:31<span class="timecode-bracket">]</span></a>
+              <div class="quote-body"><span class="quote-text">“I'd tag everything by hand, then re-tag half of it a week later when the story changed.”</span>
+                <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span><span class="bn-speaker-badge-name">Rachel</span></span></span></span>
+                <div class="badges"></div>
+              </div></div>
+            <button class="edit-pencil" aria-label="Edit this quote">&#9998;</button>
+          </blockquote>
+        </div>
+
+        <!-- a solo run — no bracket -->
+        <div class="dl-run">
+          <blockquote class="quote-card" id="q1c">
+            <div class="quote-row"><a class="timecode" href="#t=718"><span class="timecode-bracket">[</span>11:58<span class="timecode-bracket">]</span></a>
+              <div class="quote-body"><span class="quote-text">“I mostly live in Miro. Sticky notes, cluster, photograph the wall.”</span>
+                <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p6</span><span class="bn-speaker-badge-name">Tomas</span></span></span></span>
+                <div class="badges"></div>
+              </div></div>
+            <button class="edit-pencil" aria-label="Edit this quote">&#9998;</button>
+          </blockquote>
+        </div>
+      </div>
+
+      <!-- Q: opinion → majority + one variant -->
+      <div class="dl-q" id="q-frustration">
+        <h2>Biggest frustration
+          <button class="edit-pencil edit-pencil-inline" aria-label="Edit question label">&#9998;</button>
+        </h2>
+        <p class="dl-verbatim">“What's the most frustrating part of that whole process for you?”</p>
+        <p class="dl-coverage">Asked in <b>8</b> sessions <span class="sep">·</span> evidence in <b>6</b></p>
+
+        <div class="dl-group">
+          <p class="dl-group-label"><span class="lead">Most named the re-tagging churn</span><span class="count">4 of 6</span></p>
+          <div class="dl-run">
+            <blockquote class="quote-card">
+              <div class="quote-row"><a class="timecode" href="#t=400"><span class="timecode-bracket">[</span>06:40<span class="timecode-bracket">]</span></a>
+                <div class="quote-body"><span class="quote-text">“By the time I've coded it all, my framework's moved on and I have to redo it.”</span>
+                  <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span><span class="bn-speaker-badge-name">Marcus</span></span></span></span>
+                  <div class="badges"><span class="badge badge-frustration">frustration</span></div></div></div>
+            </blockquote>
+          </div>
+          <div class="dl-run">
+            <blockquote class="quote-card">
+              <div class="quote-row"><a class="timecode" href="#t=542"><span class="timecode-bracket">[</span>09:02<span class="timecode-bracket">]</span></a>
+                <div class="quote-body"><span class="quote-text">“The manual bit. It's just hours I don't have.”</span>
+                  <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p7</span><span class="bn-speaker-badge-name">Devi</span></span></span></span>
+                  <div class="badges"></div></div></div>
+            </blockquote>
+          </div>
+        </div>
+
+        <div class="dl-group variant">
+          <p class="dl-group-label"><span class="lead">A couple pointed at sharing, not analysis</span><span class="count">2 of 6</span></p>
+          <div class="dl-run">
+            <blockquote class="quote-card">
+              <div class="quote-row"><a class="timecode" href="#t=860"><span class="timecode-bracket">[</span>14:20<span class="timecode-bracket">]</span></a>
+                <div class="quote-body"><span class="quote-text">“Analysis is fine. Getting it into a deck the client trusts — that's the pain.”</span>
+                  <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p5</span><span class="bn-speaker-badge-name">Jon</span></span></span></span>
+                  <div class="badges"></div></div></div>
+            </blockquote>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ SECTION 2 (h1 zone) — a task section + the DENSE question ══ -->
+    <section>
+      <h1 class="section-heading" id="s-proto">Try the prototype
+        <button class="edit-pencil edit-pencil-inline" aria-label="Edit section title">&#9998;</button>
+      </h1>
+      <p class="dl-section-note">Task — participant drives; moderator observes. “Have a go at exporting a report to share with a colleague.”</p>
+
+      <!-- ★ DELIBERATELY DENSE — 3 response groups, incl. a multi-quote run. -->
+      <div class="dl-q" id="q-export">
+        <h2>First impressions of export
+          <button class="edit-pencil edit-pencil-inline" aria-label="Edit question label">&#9998;</button>
+        </h2>
+        <p class="dl-verbatim">“So — how did you find that? Was the export what you expected?”</p>
+        <p class="dl-coverage">Asked in <b>8</b> sessions <span class="sep">·</span> evidence in <b>7</b></p>
+        <details class="dl-askings">
+          <summary>asked 7 ways</summary>
+          <ul>
+            <li><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="said">“What did you make of the export there?”</span></li>
+            <li><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="said">“Did that do what you thought it would?”</span></li>
+            <li><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="said">“Talk me through what just happened when you hit export.”</span></li>
+            <li><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="said">“Any surprises with the export?”</span></li>
+          </ul>
+        </details>
+
+        <!-- GROUP 1 — majority (consensus first) -->
+        <div class="dl-group">
+          <p class="dl-group-label"><span class="lead">Most found it obvious</span><span class="count">5 of 7</span></p>
+
+          <!-- multi-quote run: p3 builds an argument; the peak line is the 2nd,
+               but the run leads whole and in order — never fractured. -->
+          <div class="dl-run dl-run--seq">
+            <blockquote class="quote-card seq-first">
+              <div class="quote-row"><a class="timecode" href="#t=1323"><span class="timecode-bracket">[</span>22:03<span class="timecode-bracket">]</span></a>
+                <div class="quote-body"><span class="quote-text">“I just hit Export and it did the thing.”</span>
+                  <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span><span class="bn-speaker-badge-name">Rachel</span></span></span></span>
+                  <div class="badges"><span class="badge badge-satisfaction">satisfaction</span></div></div></div>
+              <button class="edit-pencil" aria-label="Edit this quote">&#9998;</button>
+            </blockquote>
+            <blockquote class="quote-card seq-last">
+              <div class="quote-row"><a class="timecode" href="#t=1331"><span class="timecode-bracket">[</span>22:11<span class="timecode-bracket">]</span></a>
+                <div class="quote-body"><span class="quote-text">“And that's exactly what I'd expect — no menu-diving, no ‘are you sure’ dance. It just went.”</span>
+                  <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span><span class="bn-speaker-badge-name">Rachel</span></span></span></span>
+                  <div class="badges"></div></div></div>
+              <button class="edit-pencil" aria-label="Edit this quote">&#9998;</button>
+            </blockquote>
+          </div>
+
+          <div class="dl-run">
+            <blockquote class="quote-card">
+              <div class="quote-row"><a class="timecode" href="#t=1127"><span class="timecode-bracket">[</span>18:47<span class="timecode-bracket">]</span></a>
+                <div class="quote-body"><span class="quote-text">“Button was right where I looked. Done.”</span>
+                  <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span><span class="bn-speaker-badge-name">Marcus</span></span></span></span>
+                  <div class="badges"></div></div></div>
+            </blockquote>
+          </div>
+          <div class="dl-run">
+            <blockquote class="quote-card">
+              <div class="quote-row"><a class="timecode" href="#t=1875"><span class="timecode-bracket">[</span>31:15<span class="timecode-bracket">]</span></a>
+                <div class="quote-body"><span class="quote-text">“Obvious. Next.”</span>
+                  <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p7</span><span class="bn-speaker-badge-name">Devi</span></span></span></span>
+                  <div class="badges"></div></div></div>
+            </blockquote>
+          </div>
+        </div>
+
+        <!-- GROUP 2 — variant -->
+        <div class="dl-group variant">
+          <p class="dl-group-label"><span class="lead">A few wanted a preview before it went</span><span class="count">2 of 7</span></p>
+
+          <div class="dl-run dl-run--seq">
+            <blockquote class="quote-card seq-first">
+              <div class="quote-row"><a class="timecode" href="#t=1552"><span class="timecode-bracket">[</span>25:52<span class="timecode-bracket">]</span></a>
+                <div class="quote-body"><span class="quote-text">“I clicked it and then panicked — did it just send to everyone?”</span>
+                  <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p5</span><span class="bn-speaker-badge-name">Jon</span></span></span></span>
+                  <div class="badges"><span class="badge badge-doubt">doubt</span></div></div></div>
+              <button class="edit-pencil" aria-label="Edit this quote">&#9998;</button>
+            </blockquote>
+            <blockquote class="quote-card seq-last">
+              <div class="quote-row"><a class="timecode" href="#t=1564"><span class="timecode-bracket">[</span>26:04<span class="timecode-bracket">]</span></a>
+                <div class="quote-body"><span class="quote-text">“I'd want to see what's going out before it goes. Just a glance.”</span>
+                  <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p5</span><span class="bn-speaker-badge-name">Jon</span></span></span></span>
+                  <div class="badges"></div></div></div>
+              <button class="edit-pencil" aria-label="Edit this quote">&#9998;</button>
+            </blockquote>
+          </div>
+          <div class="dl-run">
+            <blockquote class="quote-card">
+              <div class="quote-row"><a class="timecode" href="#t=1778"><span class="timecode-bracket">[</span>29:38<span class="timecode-bracket">]</span></a>
+                <div class="quote-body"><span class="quote-text">“A little confirmation step, just so I know what I'm handing over.”</span>
+                  <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p2</span><span class="bn-speaker-badge-name">Aisha</span></span></span></span>
+                  <div class="badges"></div></div></div>
+            </blockquote>
+          </div>
+        </div>
+
+        <!-- GROUP 3 — variant (a single outlier still gets its place, honestly) -->
+        <div class="dl-group variant">
+          <p class="dl-group-label"><span class="lead">One hit a blocker</span><span class="count">1 of 7</span></p>
+          <div class="dl-run">
+            <blockquote class="quote-card">
+              <div class="quote-row"><a class="timecode" href="#t=1639"><span class="timecode-bracket">[</span>27:19<span class="timecode-bracket">]</span></a>
+                <div class="quote-body"><span class="quote-text">“It was greyed out and I couldn't tell why. I just sat there.”</span>
+                  <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p6</span><span class="bn-speaker-badge-name">Tomas</span></span></span></span>
+                  <div class="badges"><span class="badge badge-confusion">confusion</span></div></div></div>
+            </blockquote>
+          </div>
+        </div>
+      </div>
+
+      <!-- Q: honest THIN coverage — asked of everyone, little evidence landed. -->
+      <div class="dl-q" id="q-naming">
+        <h2>Naming the themes
+          <button class="edit-pencil edit-pencil-inline" aria-label="Edit question label">&#9998;</button>
+        </h2>
+        <p class="dl-verbatim">“If you had to name what you just saw, what would you call it?”</p>
+        <p class="dl-coverage">Asked in <b>8</b> sessions <span class="sep">·</span> evidence in <b>2</b> <span class="sep">·</span> ran short on time in most sessions</p>
+
+        <div class="dl-run">
+          <blockquote class="quote-card">
+            <div class="quote-row"><a class="timecode" href="#t=2642"><span class="timecode-bracket">[</span>44:02<span class="timecode-bracket">]</span></a>
+              <div class="quote-body"><span class="quote-text">“I'd call it ‘the export panic’, honestly.”</span>
+                <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p5</span><span class="bn-speaker-badge-name">Jon</span></span></span></span>
+                <div class="badges"></div></div></div>
+          </blockquote>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>

@@ -1,0 +1,331 @@
+<!--
+  PII wiring spec — data flow · states · failure modes · borrow ledger · every user-facing string.
+  Companion to mockup-privacy-settings.html. Evidence-based: every claim carries a file:line.
+  The thesis: almost everything is BORROWED. New code = Privacy tab + 1 UserDefaults key + 2 classifier lines.
+-->
+<title>PII wiring — data flow, failure modes &amp; every string</title>
+<style>
+  :root{
+    --sys-blue:#007AFF; --sys-green:#34C759; --sys-red:#FF3B30; --sys-amber:#FF9500;
+    --page:#d8d8dc; --card:#fff; --ink:#1d1d1f; --ink-2:#6e6e73; --ink-3:#8e8e93;
+    --hair:#00000018; --line:#0000000f; --sel:#00000010;
+    --borrow:#34c75918; --borrow-b:#34c75955; --new:#ff950018; --new-b:#ff950055;
+    --gap:#ff3b3014; --gap-b:#ff3b3055; --code:#00000010;
+  }
+  @media (prefers-color-scheme: dark){:root{
+    --page:#161618; --card:#242426; --ink:#f5f5f7; --ink-2:#a1a1a6; --ink-3:#8e8e93;
+    --hair:#ffffff1f; --line:#ffffff12; --sel:#ffffff14; --code:#ffffff14;
+  }}
+  :root[data-theme="dark"]{
+    --page:#161618; --card:#242426; --ink:#f5f5f7; --ink-2:#a1a1a6; --ink-3:#8e8e93;
+    --hair:#ffffff1f; --line:#ffffff12; --sel:#ffffff14; --code:#ffffff14;}
+  :root[data-theme="light"]{
+    --page:#d8d8dc; --card:#fff; --ink:#1d1d1f; --ink-2:#6e6e73; --ink-3:#8e8e93;
+    --hair:#00000018; --line:#0000000f; --sel:#00000010; --code:#00000010;}
+  *{box-sizing:border-box;}
+  body{margin:0;padding:38px 22px 80px;background:var(--page);color:var(--ink);
+    font:13px/1.5 -apple-system,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1000px;margin:0 auto;}
+  h1{font-size:21px;margin:0 0 4px;letter-spacing:-.01em;}
+  .sub{color:var(--ink-2);font-size:13.5px;margin:0 0 8px;}
+  h2{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);
+    margin:40px 0 14px;padding-bottom:7px;border-bottom:1px solid var(--line);}
+  h3{font-size:14px;margin:22px 0 10px;}
+  code{font:11.5px ui-monospace,"SF Mono",monospace;background:var(--code);padding:1px 5px;border-radius:4px;}
+  .card{background:var(--card);border:.5px solid var(--hair);border-radius:11px;padding:4px;box-shadow:0 1px 3px #0000000a;overflow:hidden;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th,td{text-align:left;padding:9px 11px;vertical-align:top;border-bottom:.5px solid var(--line);}
+  th{font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-3);font-weight:600;}
+  tr:last-child td{border-bottom:none;}
+  td.mono,th.mono{font:11px ui-monospace,monospace;}
+  .pill{display:inline-block;font-size:10px;font-weight:700;padding:1.5px 7px;border-radius:20px;white-space:nowrap;letter-spacing:.02em;}
+  .b-borrow{background:var(--borrow);border:.5px solid var(--borrow-b);color:#2a9d4e;}
+  .b-new{background:var(--new);border:.5px solid var(--new-b);color:#c9760b;}
+  .b-gap{background:var(--gap);border:.5px solid var(--gap-b);color:var(--sys-red);}
+  @media (prefers-color-scheme: dark){.b-borrow{color:#5ad07a;}.b-new{color:#ffb44d;}}
+  .ok{color:var(--sys-green);font-weight:700;} .no{color:var(--sys-red);font-weight:700;}
+  .lede{background:var(--card);border:.5px solid var(--hair);border-left:3px solid var(--sys-blue);
+    border-radius:9px;padding:14px 16px;margin:0 0 6px;line-height:1.55;}
+  .lede b{color:var(--ink);}
+  .toolbar{display:flex;gap:7px;margin:0 0 22px;color:var(--ink-2);font-size:12px;align-items:center;}
+  .toolbar button{font:inherit;padding:4px 11px;border-radius:7px;border:.5px solid var(--hair);background:var(--card);color:var(--ink);cursor:pointer;}
+
+  /* data-flow diagram */
+  .flow{display:flex;flex-direction:column;gap:0;font-size:12px;}
+  .frow{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;}
+  .node{border:1px solid var(--hair);border-radius:9px;padding:9px 12px;background:var(--card);min-width:120px;}
+  .node .n-t{font-weight:600;} .node .n-s{color:var(--ink-2);font-size:11px;margin-top:2px;}
+  .node.data{border-style:dashed;} .node.gate{background:#007aff12;border-color:#007aff55;}
+  .node.ok{border-color:var(--borrow-b);} .node.fail{border-color:var(--gap-b);background:var(--gap);}
+  .arrow{align-self:center;color:var(--ink-3);font-size:16px;padding:0 2px;}
+  .lane{margin:4px 0;padding:10px 12px;border-radius:9px;background:var(--sel);}
+  .lane .lane-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-3);margin-bottom:8px;}
+
+  /* string chips */
+  .surface{margin:14px 0;}
+  .surf-h{font-weight:700;font-size:13px;margin:0 0 3px;display:flex;align-items:center;gap:8px;}
+  .surf-h .ic{font-size:15px;}
+  .str{display:grid;grid-template-columns:92px 1fr;gap:0;border:.5px solid var(--hair);border-radius:9px;overflow:hidden;margin-top:8px;}
+  .str > div{padding:8px 11px;border-bottom:.5px solid var(--line);}
+  .str > div:nth-child(2n){border-left:.5px solid var(--line);}
+  .str > div:nth-last-child(-n+2){border-bottom:none;}
+  .str .k{color:var(--ink-3);font-size:11px;}
+  .str .v{font-size:12.5px;}
+  .str .v .meta{color:var(--ink-3);font-size:11px;margin-top:3px;}
+  .quoted{font-style:normal;}
+  .term{background:#1e1e1e;border-radius:9px;overflow:hidden;font:12px/1.65 ui-monospace,Menlo,monospace;margin-top:8px;}
+  .term .bar{height:26px;background:#333;display:flex;align-items:center;padding:0 11px;gap:6px;}
+  .term .bar i{width:10px;height:10px;border-radius:50%;display:block;}
+  .term pre{margin:0;padding:12px 15px;color:#e6e6e6;white-space:pre-wrap;}
+  .term .g{color:#4ec96a;}.term .d{color:#8a8a8a;}.term .r{color:#ff6b60;}.term .c{color:#5ac8fa;}.term .y{color:#ffcf6b;}
+  .rowmock{width:290px;background:var(--card);border:.5px solid var(--hair);border-radius:10px;padding:7px;box-shadow:0 1px 4px #0000000f;}
+  .rowmock .sel{background:var(--sys-blue);border-radius:6px;padding:7px 9px;}
+  .rowmock .nm{font-weight:600;font-size:13px;color:#fff;}
+  .rowmock .st{font-size:11.5px;color:#fff;opacity:.95;margin-top:2px;}
+</style>
+<div class="wrap">
+
+<div class="toolbar">
+  <span>Theme:</span>
+  <button onclick="document.documentElement.setAttribute('data-theme','light')">Light</button>
+  <button onclick="document.documentElement.setAttribute('data-theme','dark')">Dark</button>
+  <button onclick="document.documentElement.removeAttribute('data-theme')">System</button>
+</div>
+
+<h1>Redact PII — wiring spec</h1>
+<p class="sub">Data flow · states · failure modes · what’s borrowed vs invented · every user-facing string across CLI, mac app, and SPA.</p>
+
+<div class="lede">
+  <b>The thesis, up front:</b> almost the entire failure/reporting/journalling apparatus already
+  works for PII through the existing central machinery. The <b>only genuinely new code</b> is the
+  Privacy tab (UI), one <code>piiEnabled</code> UserDefaults key + one env line, and
+  <b>two <code>isinstance</code> lines</b> in the shared exception classifier. No new stage, event,
+  manifest field, orchestration primitive, progress signal, colour, or glyph.
+  <i>(Delivering the detection stack itself — the on-demand Background Assets fetch + <code>[pii]</code>
+  extra + <code>find_pii_stack()</code> — is a separate workstream; see docs/design-redact-pii.md.)</i>
+</div>
+
+<!-- ══════════ 1 · DATA FLOW & STATES ══════════ -->
+<h2>1 · Data flow &amp; the states the data can be in</h2>
+<div class="card" style="padding:16px;">
+  <div class="flow">
+    <div class="frow" style="margin-bottom:6px;">
+      <div class="node data"><div class="n-t">FullTranscript[]</div><div class="n-s">merged, still contains PII</div></div>
+      <span class="arrow">→</span>
+      <div class="node gate"><div class="n-t">pii_enabled?</div><div class="n-s">settings, default <b>false</b></div></div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-h">OFF — the default path (pipeline.py:1282)</div>
+      <div class="frow">
+        <div class="node">shallow copy → <b>PiiCleanTranscript</b><div class="n-s">segments passed through · pii_entities_found = 0</div></div>
+        <span class="arrow">→</span>
+        <div class="node ok"><div class="n-t">downstream (topics…)</div><div class="n-s">no files written · stage not marked in manifest</div></div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-h">ON — success (pipeline.py:1264)</div>
+      <div class="frow">
+        <div class="node"><div class="n-t">mark_stage_running</div><div class="n-s">STAGE_PII_REMOVAL</div></div>
+        <span class="arrow">→</span>
+        <div class="node"><div class="n-t">remove_pii()</div><div class="n-s">Presidio analyse + anonymise, <code>language="en"</code></div></div>
+        <span class="arrow">→</span>
+        <div class="node data"><div class="n-t">PiiCleanTranscript[] + PiiRedaction[]</div></div>
+        <span class="arrow">→</span>
+        <div class="node ok"><div class="n-t">write + mark_complete</div><div class="n-s">transcripts-cooked/*.txt·md · <b>pii_summary.txt</b> (hidden, re-id key)</div></div>
+      </div>
+    </div>
+
+    <div class="lane" style="background:var(--gap);">
+      <div class="lane-h" style="color:var(--sys-red)">ON — failure (F1–F5, see §2)</div>
+      <div class="frow">
+        <div class="node"><div class="n-t">remove_pii() raises</div></div>
+        <span class="arrow">→</span>
+        <div class="node"><div class="n-t">no stage try/except</div><div class="n-s">propagates unchanged</div></div>
+        <span class="arrow">→</span>
+        <div class="node ok"><div class="n-t">run_lifecycle catch-all</div><div class="n-s">BaseException → categorise_exception → <b>RunFailedEvent</b> (run_lifecycle.py:799)</div></div>
+        <span class="arrow">→</span>
+        <div class="node fail"><div class="n-t">row · popover · CLI banner · status page</div><div class="n-s">manifest stage stays “running” — same as every other stage on abandon</div></div>
+      </div>
+    </div>
+  </div>
+  <p style="margin:14px 2px 0;color:var(--ink-2);font-size:12px;">
+    <b>Manifest stage states for PII:</b> <i>absent</i> (off) · <i>running</i> · <i>complete</i> ·
+    <i>running-then-abandoned</i> (failure — re-runs next time, never poisons cache).
+    <b>Cache-bust contract:</b> the topic stage hashes <code>pii_enabled</code>
+    (pipeline.py:1309), so toggling correctly invalidates everything downstream. Nothing to add.
+  </p>
+</div>
+
+<!-- ══════════ 2 · FAILURE MODES ══════════ -->
+<h2>2 · Failure modes — nailed to the source</h2>
+<div class="card">
+  <table>
+    <tr><th>ID</th><th>Trigger</th><th>Raise site</th><th class="mono">Exception (base)</th><th>Classified TODAY</th><th>Target</th><th>Retry?</th></tr>
+    <tr>
+      <td>F1</td><td>Presidio not installed</td><td class="mono">_init_presidio import</td>
+      <td class="mono">ImportError</td>
+      <td><span class="ok">✓ MISSING_DEP</span><div style="color:var(--ink-3);font-size:11px">isinstance(ImportError)</div></td>
+      <td class="mono">MISSING_DEP</td><td>no</td>
+    </tr>
+    <tr>
+      <td>F2</td><td>Model missing from bundle <b>(desktop)</b></td><td class="mono">_ensure_spacy_model</td>
+      <td class="mono">FrozenSidecarError<br>(RuntimeError)</td>
+      <td><span class="no">✗ UNKNOWN</span><div style="color:var(--ink-3);font-size:11px">+ engineer text (“PyInstaller datas”)</div></td>
+      <td class="mono">MISSING_DEP</td><td>no</td>
+    </tr>
+    <tr>
+      <td>F3</td><td>Model download failed <b>(CLI)</b></td><td class="mono">ensure_spacy_model</td>
+      <td class="mono">PackageInstallError<br>(RuntimeError)</td>
+      <td><span class="no">✗ UNKNOWN</span><div style="color:var(--ink-3);font-size:11px">“failed (exit 1)” ∉ _NETWORK_RE</div></td>
+      <td class="mono">MISSING_DEP</td><td>yes</td>
+    </tr>
+    <tr>
+      <td>F4</td><td>Disk full writing cooked / summary</td><td class="mono">write_cooked_*</td>
+      <td class="mono">OSError errno 28</td>
+      <td><span class="ok">✓ DISK</span></td>
+      <td class="mono">DISK</td><td>yes</td>
+    </tr>
+    <tr>
+      <td>F5</td><td>Presidio analyse/anonymise error</td><td class="mono">_redact_text</td>
+      <td class="mono">(various)</td>
+      <td><span style="color:var(--ink-2)">~ UNKNOWN</span><div style="color:var(--ink-3);font-size:11px">acceptable — genuinely rare/opaque</div></td>
+      <td class="mono">UNKNOWN</td><td>—</td>
+    </tr>
+  </table>
+</div>
+<p style="color:var(--ink-2);font-size:12px;margin:12px 2px;">
+  <b>The whole gap is two rows.</b> F1 and F4 already classify correctly through the existing
+  catch-all. Only <b>F2 and F3</b> — the two <i>most likely</i> real-world cases — fall to
+  <code>UNKNOWN</code> and leak engineer-worded text, because <code>categorise_exception</code>’s
+  <code>isinstance</code> ladder doesn’t know these two custom exception types. Fix = extend that
+  one central function; see §3.
+</p>
+
+<!-- ══════════ 3 · BORROW LEDGER ══════════ -->
+<h2>3 · Borrow ledger — invent as little as possible</h2>
+<div class="card">
+  <table>
+    <tr><th>Mechanism</th><th>Template / source (file:line)</th><th>PII today</th><th>Verdict</th></tr>
+    <tr><td>Terminus <code>RunFailedEvent</code></td><td class="mono">run_lifecycle.py:799 (BaseException)</td><td>already covers PII</td><td><span class="pill b-borrow">BORROW · 0 change</span></td></tr>
+    <tr><td>Exception → Cause classify</td><td class="mono">categorise_exception:351</td><td>F2/F3 → UNKNOWN</td><td><span class="pill b-new">EXTEND · +2 isinstance</span></td></tr>
+    <tr><td>Cause → CLI failure banner</td><td class="mono">cli.py:822 MISSING_DEP branch</td><td>renders on category</td><td><span class="pill b-borrow">BORROW · 0 change</span></td></tr>
+    <tr><td>Cause → desktop row <code>.failed</code></td><td class="mono">ProjectRow.swift:245</td><td>renders on category</td><td><span class="pill b-borrow">BORROW · 0 change</span></td></tr>
+    <tr><td>Cause → desktop popover + fixHint</td><td class="mono">ProjectDiagnosticPopover.swift · PipelineRunner.swift:1709</td><td><code>.missingDep</code> hint exists</td><td><span class="pill b-borrow">BORROW · 0 change</span></td></tr>
+    <tr><td>Cause → SPA status page</td><td class="mono">server/status_page.py:152</td><td>renders terminus</td><td><span class="pill b-borrow">BORROW · 0 change</span></td></tr>
+    <tr><td>Manifest running/complete</td><td class="mono">mark_stage_* — pipeline.py:1265,1279</td><td>already called</td><td><span class="pill b-borrow">BORROW · 0 change</span></td></tr>
+    <tr><td>Cache-bust provenance</td><td class="mono">pipeline.py:1309 (pii_enabled hash)</td><td>already hashed</td><td><span class="pill b-borrow">BORROW · 0 change</span></td></tr>
+    <tr><td>Doctor health check</td><td class="mono">doctor.py:616 check_pii</td><td>exists</td><td><span class="pill b-borrow">BORROW · 0 change</span></td></tr>
+    <tr><td>CLI capability matrix row</td><td class="mono">pipeline_view/cli.py:48–50</td><td>PII row + reasons exist</td><td><span class="pill b-borrow">BORROW · reword lg→sm*</span></td></tr>
+    <tr><td>CLI success + download line</td><td class="mono">_print_step · preflight.pii.downloading</td><td>exist</td><td><span class="pill b-borrow">BORROW · 0 change</span></td></tr>
+    <tr><td>Per-stage progress event</td><td class="mono">_emit_stage_entry / RunProgressSubtitle.swift:22</td><td>deliberately folded into neighbours</td><td><span class="pill b-borrow">BORROW · leave as-is</span></td></tr>
+    <tr><td>Settings → env → sidecar</td><td class="mono">BristlenoseShared.swift:226–274</td><td>no PII key</td><td><span class="pill b-new">NEW · 1 key + 1 line</span></td></tr>
+    <tr><td>Native Settings tab</td><td class="mono">SettingsView.swift:41 TabView</td><td>no Privacy tab</td><td><span class="pill b-new">NEW · tab instance</span></td></tr>
+  </table>
+</div>
+
+<h3>Everything genuinely NEW — and why it earns its place</h3>
+<div class="card" style="padding:2px 4px;">
+  <table>
+    <tr><th>New thing</th><th>Kind</th><th>Justification / what it borrows</th></tr>
+    <tr><td>Privacy Settings tab</td><td><span class="pill b-new">UI</span></td><td>PII has no control anywhere. Exact <code>TabView</code> + in-cell-subtitle idiom of the three existing tabs — a new <i>instance</i>, not a new pattern.</td></tr>
+    <tr><td><code>piiEnabled</code> UserDefaults + env line</td><td><span class="pill b-new">state</span></td><td>Same persist-then-inject pattern as <code>whisperBackend</code>, <code>palette</code> et al. 1 read + 1 <code>env[…]</code> line.</td></tr>
+    <tr><td>+2 <code>isinstance</code> in categorise_exception</td><td><span class="pill b-new">logic</span></td><td>Without it F2/F3 → UNKNOWN + engineer text. Extends the existing isinstance ladder in the one central classifier; benefits every caller.</td></tr>
+    <tr><td>3 Cause messages + tab strings</td><td><span class="pill b-new">copy</span></td><td>Shown for approval in §4. Re-id-safe constant strings (no <code>str(exc)</code>).</td></tr>
+    <tr><td>Orchestration / events / journalling</td><td><span class="pill b-borrow">NONE</span></td><td>No new stage, event type, manifest field, or progress signal. <code>pii_summary.txt</code> already written; s07 already logs.</td></tr>
+    <tr><td>UX tokens (colour / glyph / spacing)</td><td><span class="pill b-borrow">NONE</span></td><td>Reuses <code>MessageKind.error</code> glyph, system red, existing categories. Zero new tokens.</td></tr>
+  </table>
+</div>
+<p style="color:var(--ink-2);font-size:12px;margin:12px 2px;">
+  <b>* Phase 0 — model choice:</b> the name is split across 5 sites —
+  <code>sm</code>: s07 constant + the “~12 MB, one-off” download copy;
+  <code>lg</code>: the spec-excludes entry, Presidio’s default engine, the matrix reason string.
+  In the <b>on-demand</b> world (Apple-Hosted Background Assets, not bundled) this is a
+  <b>download-time</b> choice, not a bundle one: <code>sm</code>-stack ≈150 MB vs
+  <code>lg</code>-stack ≈550 MB, both Apple-hosted. Recommend <code>sm</code> (faster first-enable,
+  ~1 F1-point lower NER) and align the three <code>lg</code> sites. Full spec:
+  <code>docs/design-redact-pii.md</code>.
+</p>
+
+<!-- ══════════ 4 · EVERY STRING ══════════ -->
+<h2>4 · Every user-facing string, all three surfaces</h2>
+<p style="color:var(--ink-2);font-size:12.5px;margin:0 0 6px;">
+  <span class="pill b-borrow">EXISTS</span> ships today, unchanged &nbsp;
+  <span class="pill b-new">NEW / REWORD</span> proposed — approve or adjust the text.
+</p>
+
+<!-- CLI -->
+<div class="surface">
+  <div class="surf-h"><span class="ic">⌨️</span> CLI</div>
+  <div class="term">
+    <div class="bar"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i></div>
+    <pre><span class="d">$</span> bristlenose run interviews/ <span class="c">--redact-pii</span>
+    <span class="d">Downloading PII detector (~12 MB, one-off)…</span> <span class="g">✓</span>   <span class="d">← EXISTS · preflight.pii.downloading</span>
+  <span class="g">✓</span> Redacted PII (47 entities)  <span class="d">[3.4s]     ← EXISTS · _print_step</span>
+
+<span class="d"># failure (F2/F3) — after the fix, classified MISSING_DEP:</span>
+  <span class="r">✗</span> <span class="y">The language model for redaction isn’t installed.</span>   <span class="d">← NEW copy (F2/F3 Cause.message)</span>
+    <span class="d">Run</span> bristlenose doctor <span class="d">to check your setup.       ← reuses MISSING_DEP banner shape</span></pre>
+  </div>
+  <div class="str">
+    <div class="k">EXISTS</div><div class="v"><span class="pill b-borrow">✓</span> <span class="quoted">“Downloading PII detector (~12 MB, one-off)…”</span><div class="meta">preflight.json:40 · will need lg/sm reconcile if Phase 0 picks lg</div></div>
+    <div class="k">EXISTS</div><div class="v"><span class="pill b-borrow">✓</span> <span class="quoted">“Redacted PII (47 entities)”</span><div class="meta">pipeline.py:1276 · count via count_noun</div></div>
+    <div class="k">EXISTS</div><div class="v"><span class="pill b-borrow">✓</span> matrix reasons: <span class="quoted">“presidio_analyzer not installed”</span> · <span class="quoted">“spaCy en_core_web_lg not installed”</span> · <span class="quoted">“PII redaction is off”</span><div class="meta">pipeline_view/cli.py:47–50 · reword lg→sm* if Phase 0</div></div>
+    <div class="k">NEW</div><div class="v"><span class="pill b-new">✎</span> F2/F3 Cause.message: <span class="quoted">“The language model for redaction isn’t installed.”</span> / F3 <span class="quoted">“Couldn’t download the redaction model.”</span><div class="meta">rendered by the existing MISSING_DEP branch, cli.py:822</div></div>
+  </div>
+</div>
+
+<!-- MAC APP -->
+<div class="surface">
+  <div class="surf-h"><span class="ic">🖥️</span> Mac app</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start;margin-top:8px;">
+    <div>
+      <div style="font-size:11px;color:var(--ink-3);margin-bottom:6px;">Failed run — normal <code>.failed</code> row</div>
+      <div class="rowmock">
+        <div class="sel">
+          <div class="nm">Ikea Kitchen Study</div>
+          <div class="st"><b>✕</b> The language model for redaction isn’t installed.</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--ink-3);margin-top:6px;max-width:290px;">Red <code>MessageKind.error</code> glyph + Cause.message. Right-click → Retry. No new UI.</div>
+    </div>
+    <div style="flex:1;min-width:260px;">
+      <div class="str" style="margin-top:0;">
+        <div class="k">NEW</div><div class="v"><span class="pill b-new">✎</span> Tab label <span class="quoted">“Privacy”</span><div class="meta">reuses the SPA token settings.json:48 · SF Symbol hand.raised</div></div>
+        <div class="k">NEW</div><div class="v"><span class="pill b-new">✎</span> Toggle <span class="quoted">“Redact personal information”</span> <span style="color:var(--ink-3)">(approved)</span></div>
+        <div class="k">NEW</div><div class="v"><span class="pill b-new">✎</span> Subtitle <span class="quoted">“Automatically remove names, emails, phone numbers, and other personal details from transcripts before they are analysed. Redaction imperfect – do check your transcripts. Applies to the next analysis, onward.”</span> <span style="color:var(--ink-3)">(approved)</span></div>
+        <div class="k">NEW</div><div class="v"><span class="pill b-new">✎</span> Caveat (non-English UI only) <span class="quoted">“Detection is best for English. Redaction in other languages less thorough.”</span> <span style="color:var(--ink-3)">(approved)</span></div>
+        <div class="k">EXISTS</div><div class="v"><span class="pill b-borrow">✓</span> Link <span class="quoted">“How redaction works →”</span> → redact-pii.html<div class="meta">href already shipped · WelcomeHomeView.swift:45</div></div>
+        <div class="k">EXISTS</div><div class="v"><span class="pill b-borrow">✓</span> Popover header <span class="quoted">“Run failed”</span> + fixHint <span class="quoted">“Setup needed — a required tool isn’t installed.”</span><div class="meta">desktop.json:284 · PipelineRunner.swift:1709 (.missingDep)</div></div>
+        <div class="k">EXISTS</div><div class="v"><span class="pill b-borrow">✓</span> Long-form intro <span class="quoted">“PII redaction is opt-in. It’s off by default because false positives… uses Microsoft Presidio…”</span><div class="meta">desktop.json:360 · available if the tab wants a footer/help</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SPA -->
+<div class="surface">
+  <div class="surf-h"><span class="ic">🌐</span> SPA (web report / serve)</div>
+  <div class="str">
+    <div class="k">EXISTS</div><div class="v"><span class="pill b-borrow">✓</span> Config-reference (read-only): category <span class="quoted">“Privacy”</span> · <span class="quoted">“PII redaction”</span> · <span class="quoted">“PII LLM pass”</span> · <span class="quoted">“Custom names to redact”</span><div class="meta">settings.json:84–87 — documents the env vars; not an interactive control</div></div>
+    <div class="k">EXISTS</div><div class="v"><span class="pill b-borrow">✓</span> Failure → server-rendered status page <span class="quoted">“Run failed”</span> + Cause.message<div class="meta">status_page.py:152 — same terminus, no new code</div></div>
+    <div class="k">FLAG</div><div class="v"><span class="pill b-gap">?</span> The config-reference still lists <b>inert</b> <code>PII LLM pass</code> / <code>Custom names</code>. Recommend dropping or marking them — they warn and do nothing. <span style="color:var(--ink-3)">Your call; SPA-only.</span></div>
+  </div>
+  <p style="color:var(--ink-2);font-size:12px;margin:10px 2px 0;">
+    The interactive toggle is <b>native-only</b> (like Whisper backend, palette, etc.) — the web SPA
+    keeps its read-only config-reference. No new SPA control in this plan.
+  </p>
+</div>
+
+<h2>5 · Build order</h2>
+<div class="card" style="padding:14px 16px;">
+  <ol style="margin:0;padding-left:18px;line-height:1.7;">
+    <li><b>Phase 0 —</b> pick the model (recommend <code>sm</code>); align s07 constant · Presidio <code>NlpEngine</code> config · spec · matrix reason string · download copy. Prove redaction in a <i>real unpacked layout</i>, not just the dev venv. <i>(Delivery of that stack — the on-demand Background Assets fetch — is Phase 2; see docs/design-redact-pii.md.)</i></li>
+    <li><b>Classifier —</b> +2 <code>isinstance</code> in <code>categorise_exception</code> (FrozenSidecarError, PackageInstallError → MISSING_DEP) with clean re-id-safe messages. Unit test: F1–F5 each map to the target category.</li>
+    <li><b>Privacy tab —</b> new <code>PrivacySettingsView</code> + <code>piiEnabled</code> UserDefaults key + one <code>env["BRISTLENOSE_PII_ENABLED"]</code> line in <code>BristlenoseShared.swift</code>. Register the tab in <code>SettingsView</code>.</li>
+    <li><b>Copy / i18n —</b> the ~5 new strings across the 20 full locales (deferrable per the hand-tune-first convention). SPA inert-var cleanup if approved.</li>
+  </ol>
+</div>
+
+</div>

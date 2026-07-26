@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getCodebook, getHiddenTagGroups } from "../utils/api";
+import { apiGet, getCodebook, getHiddenTagGroups } from "../utils/api";
 import { getGroupBg } from "../utils/colours";
 import type {
   CodebookResponse,
@@ -69,8 +69,17 @@ interface FrameworkGroup {
   groups: CodebookGroupResponse[];
 }
 
-/** Group codebook groups by framework_id. Ungrouped → "User Tags". */
-function groupByFramework(codebook: CodebookResponse, t: (k: string) => string): FrameworkGroup[] {
+/** Group codebook groups by framework_id. Ungrouped → the floor (project) codebook.
+ *
+ * ``floorTitle`` names the hand-made project codebook (the floor) — "<project> tags"
+ * once the project name has loaded, falling back to the generic label. The floor is
+ * the researcher's own deliberate work: permanent, never disabled or removed
+ * (design-codebook-state-model.md §2). */
+function groupByFramework(
+  codebook: CodebookResponse,
+  t: (k: string) => string,
+  floorTitle: string,
+): FrameworkGroup[] {
   const map = new Map<string, FrameworkGroup>();
 
   for (const g of codebook.groups) {
@@ -78,7 +87,7 @@ function groupByFramework(codebook: CodebookResponse, t: (k: string) => string):
     if (!map.has(fwId)) {
       map.set(fwId, {
         id: fwId,
-        title: fwId === "_user" ? t("tags.userTags") : frameworkTitle(fwId, t),
+        title: fwId === "_user" ? floorTitle : frameworkTitle(fwId, t),
         author: fwId === "_user" ? "" : frameworkAuthor(fwId),
         groups: [],
       });
@@ -104,7 +113,7 @@ function groupByFramework(codebook: CodebookResponse, t: (k: string) => string):
     } else {
       map.set("_ungrouped", {
         id: "_ungrouped",
-        title: t("tags.userTags"),
+        title: floorTitle,
         author: "",
         groups: [syntheticGroup],
       });
@@ -112,6 +121,28 @@ function groupByFramework(codebook: CodebookResponse, t: (k: string) => string):
   }
 
   return Array.from(map.values());
+}
+
+/** Synthetic ids for the floor (hand-made project codebook). It carries no
+ * framework id, so grouping assigns it one of these — never a real framework id. */
+const FLOOR_IDS = new Set(["_user", "_ungrouped"]);
+
+/** Codebooks to actually render in the sidebar: grouped by framework, floor named,
+ * with **disabled** codebooks dropped entirely (item 1 / §5 — "off means off";
+ * bring-back is the lens switch, not a muted stub here). The floor is **never**
+ * dropped — it's the researcher's own deliberate work (permanent, §2), so it's
+ * protected here regardless of what's in ``disabledFrameworks`` (defence-in-depth:
+ * losing the floor would lose hand-made tags). The floor can only ever be
+ * eye-hidden, never disabled away. */
+export function buildVisibleFrameworks(
+  codebook: CodebookResponse,
+  t: (k: string) => string,
+  floorTitle: string,
+  disabledFrameworks: Set<string>,
+): FrameworkGroup[] {
+  return groupByFramework(codebook, t, floorTitle).filter(
+    (fw) => FLOOR_IDS.has(fw.id) || !disabledFrameworks.has(fw.id),
+  );
 }
 
 // ── Chevron icon ──────────────────────────────────────────────────────────
@@ -165,13 +196,14 @@ function findTagInCodebook(
 export function TagSidebar() {
   const { t } = useTranslation();
   const [codebook, setCodebook] = useState<CodebookResponse | null>(null);
+  const [projectName, setProjectName] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showUsedOnly, setShowUsedOnly] = useState(false);
 
   const store = useQuotesStore();
   const tagFilter = store.tagFilter;
 
-  const { hiddenTagGroups, soloTag } = useSidebarStore();
+  const { hiddenTagGroups, soloTag, disabledFrameworks } = useSidebarStore();
   const { selectedIds, flashTag } = useFocus();
 
   const assignActive = selectedIds.size > 0;
@@ -182,6 +214,15 @@ export function TagSidebar() {
   // Fetch codebook
   useEffect(() => {
     getCodebook().then(setCodebook).catch(() => {});
+  }, []);
+
+  // Fetch project name to title the floor codebook "<project> tags" (same /info
+  // pattern as CodebookSidebar / Header). Falls back to the generic label until it
+  // loads or in the static (non-serve) render.
+  useEffect(() => {
+    apiGet<{ project_name: string }>("/info")
+      .then((info) => setProjectName(info.project_name))
+      .catch(() => {});
   }, []);
 
   // Hydrate hidden tag groups from API on mount
@@ -209,9 +250,17 @@ export function TagSidebar() {
 
   // ── Derived data ────────────────────────────────────────────────────
 
+  // The floor (hand-made project codebook) is titled "<project> tags" once known.
+  const floorTitle = projectName
+    ? t("codebook.projectTagsHeading", { project: projectName })
+    : t("tags.userTags");
+
   const frameworks = useMemo(
-    () => (codebook ? groupByFramework(codebook, t) : []),
-    [codebook, t],
+    () =>
+      codebook
+        ? buildVisibleFrameworks(codebook, t, floorTitle, disabledFrameworks)
+        : [],
+    [codebook, t, floorTitle, disabledFrameworks],
   );
 
   // Derive framework-level hidden from group-level hidden:

@@ -549,6 +549,9 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
   const [templates, setTemplates] = useState<TemplateOut[] | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateOut | null>(null);
   const [importing, setImporting] = useState(false);
+  // Per-tile Install/Uninstall busy id, so only the acting tile's button
+  // disables while its request is in flight.
+  const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
   const [removeConfirm, setRemoveConfirm] = useState<{
     frameworkId: string;
     label: string;
@@ -928,6 +931,37 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
       .then((info) => setRemoveConfirm((prev) => prev ? { ...prev, impact: info } : null))
       .catch(() => {});
   }, []);
+
+  // Install a codebook straight from its Library tile (the "Install" side of the
+  // per-tile toggle). Reuses the import endpoint; the picker stays open so the
+  // tile flips to its "Installed / Uninstall" state in place.
+  const handleInstallFromLibrary = useCallback(
+    (tmpl: TemplateOut) => {
+      if (pendingTemplateId) return;
+      setPendingTemplateId(tmpl.id);
+      importCodebookTemplate(tmpl.id)
+        .then((codebook) => {
+          setData(codebook);
+          return getCodebookTemplates();
+        })
+        .then((resp) => setTemplates(resp.templates))
+        .catch((err) => console.error("Install template failed:", err))
+        .finally(() => setPendingTemplateId(null));
+    },
+    [pendingTemplateId],
+  );
+
+  // Uninstall a codebook from its Library tile (the "Uninstall" side of the
+  // toggle). Closes the picker and routes into the existing remove-with-impact
+  // confirmation — the same guard the per-framework Uninstall button uses.
+  const handleUninstallFromLibrary = useCallback(
+    (tmpl: TemplateOut) => {
+      const label = tmpl.author ? `${tmpl.author} — ${tmpl.title}` : tmpl.title;
+      setModalView("closed");
+      handleAskRemoveFramework(tmpl.id, label);
+    },
+    [handleAskRemoveFramework],
+  );
 
   const handleConfirmRemoveFramework = useCallback(() => {
     if (!removeConfirm) return;
@@ -1329,6 +1363,41 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                               )}
                               {tmpl.restorable && !tmpl.imported && (
                                 <div className="picker-card-restore">{t("codebook.previouslyImported")}</div>
+                              )}
+                              {/* Per-tile Install ↔ Uninstall toggle. Coming-soon
+                                  (disabled) codebooks get no action. stopPropagation
+                                  keeps the card-body preview click from also firing. */}
+                              {tmpl.enabled && (
+                                <div className="picker-card-actions">
+                                  {tmpl.imported ? (
+                                    <button
+                                      type="button"
+                                      className="bn-btn picker-card-toggle picker-card-toggle-uninstall"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleUninstallFromLibrary(tmpl);
+                                      }}
+                                      data-testid={`bn-library-uninstall-${tmpl.id}`}
+                                    >
+                                      {t("codebook.removeFromCodebook")}
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className="bn-btn picker-card-toggle"
+                                      disabled={pendingTemplateId === tmpl.id}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleInstallFromLibrary(tmpl);
+                                      }}
+                                      data-testid={`bn-library-install-${tmpl.id}`}
+                                    >
+                                      {pendingTemplateId === tmpl.id
+                                        ? t("codebook.importingCodebook")
+                                        : t("codebook.importCodebook")}
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
                           );

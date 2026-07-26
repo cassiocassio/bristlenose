@@ -739,7 +739,7 @@
     pointer-events: none;
 }
 .picker-card.imported::after {
-    content: "Added";
+    content: "Installed";
     position: absolute;
     top: 8px;
     right: 8px;
@@ -802,6 +802,25 @@
 .picker-card-create:hover {
     border-color: var(--bn-colour-muted);
     background: var(--bn-hover-bg-subtle);
+}
+
+/* Per-tile Install ↔ Uninstall toggle. Fixed min-width + centred text so the
+   button footprint doesn't shift when the label swaps state. Both neutral —
+   Uninstall is reversible; it only warms to danger on hover. */
+.picker-card-actions {
+    margin-top: var(--bn-space-md);
+    display: flex;
+    justify-content: flex-end;
+}
+.picker-card-toggle {
+    min-width: 96px;
+    justify-content: center;
+    text-align: center;
+    font-size: var(--bn-text-caption);
+}
+.picker-card-toggle-uninstall:hover {
+    color: var(--bn-colour-negative);
+    border-color: var(--bn-colour-negative);
 }
 
 /* ── Codebook preview ────────────────────────────────────────────────── */

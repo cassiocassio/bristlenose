@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CodebookPanel } from "./CodebookPanel";
 import { resetSidebarStore } from "../contexts/SidebarStore";
@@ -581,14 +581,14 @@ describe("CodebookPanel — per-framework sections", () => {
     expect(screen.queryByText("Scope")).not.toBeInTheDocument();
   });
 
-  it("renders Remove from Codebook button per framework section", async () => {
+  it("renders Uninstall button per framework section", async () => {
     mockFetchOk(MOCK_WITH_FRAMEWORKS);
     render(<CodebookPanel projectId="1" />);
     await waitFor(() => {
       expect(screen.getByText("Strategy")).toBeInTheDocument();
     });
     // There should be 2 Remove buttons — one for garrett, one for uxr
-    const removeButtons = screen.getAllByText("Remove from Codebook");
+    const removeButtons = screen.getAllByText("Uninstall");
     expect(removeButtons).toHaveLength(2);
   });
 
@@ -664,7 +664,7 @@ describe("CodebookPanel — per-framework sections", () => {
     await waitFor(() => {
       expect(screen.getByText("Strategy")).toBeInTheDocument();
     });
-    const removeButtons = screen.getAllByText("Remove from Codebook");
+    const removeButtons = screen.getAllByText("Uninstall");
     await userEvent.click(removeButtons[0]);
     await waitFor(() => {
       expect(screen.getByText(/Tags will be removed from 4 quotes/)).toBeInTheDocument();
@@ -689,12 +689,15 @@ describe("CodebookPanel — per-framework sections", () => {
     await waitFor(() => {
       expect(screen.getByText("Strategy")).toBeInTheDocument();
     });
-    const removeButtons = screen.getAllByText("Remove from Codebook");
+    const removeButtons = screen.getAllByText("Uninstall");
     await userEvent.click(removeButtons[0]);
     await waitFor(() => {
       expect(screen.getByText(/Tags will be removed from 2 quotes/)).toBeInTheDocument();
     });
-    await userEvent.click(screen.getByRole("button", { name: "Hide" }));
+    // "Uninstall" now labels both the framework buttons and the confirm button —
+    // scope to the dialog so we click the confirm, not a background button.
+    const dialog = document.querySelector(".confirm-dialog") as HTMLElement;
+    await userEvent.click(within(dialog).getByRole("button", { name: "Uninstall" }));
     await waitFor(() => {
       // The DELETE call should have been made
       const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
@@ -715,11 +718,54 @@ describe("CodebookPanel — per-framework sections", () => {
     await waitFor(() => {
       expect(screen.getByText("Strategy")).toBeInTheDocument();
     });
-    const removeButtons = screen.getAllByText("Remove from Codebook");
+    const removeButtons = screen.getAllByText("Uninstall");
     await userEvent.click(removeButtons[0]);
     await waitFor(() => {
       expect(screen.getByText(/AutoCode results are preserved/)).toBeInTheDocument();
     });
+  });
+
+  it("Library tiles carry an Install / Uninstall toggle by import state", async () => {
+    // garrett is installed; norman is available. The tiles should show the
+    // opposite toggle: Uninstall on the installed one, Install on the available.
+    const MIXED_TEMPLATES = {
+      templates: [
+        { id: "garrett", title: "The Elements of User Experience", author: "Jesse James Garrett", description: "d", author_bio: "", author_links: [], groups: [], enabled: true, imported: true, restorable: false },
+        { id: "norman", title: "The Design of Everyday Things", author: "Don Norman", description: "d", author_bio: "", author_links: [], groups: [], enabled: true, imported: false, restorable: false },
+      ],
+    };
+    let importPosted = false;
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/autocode/")) {
+        return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+      }
+      if (typeof url === "string" && url.includes("/framework-states")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      }
+      if (typeof url === "string" && url.includes("/codebook/templates")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(MIXED_TEMPLATES) });
+      }
+      if (typeof url === "string" && url.includes("/codebook/import-template") && init?.method === "POST") {
+        importPosted = true;
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_WITH_FRAMEWORKS) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_WITH_FRAMEWORKS) });
+    });
+    render(<CodebookPanel projectId="1" />);
+    await waitFor(() => expect(screen.getByText("Strategy")).toBeInTheDocument());
+    // Open the Library.
+    await userEvent.click(screen.getByRole("button", { name: "Codebook Library" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("bn-library-uninstall-garrett")).toBeInTheDocument(),
+    );
+    // Installed tile → Uninstall; available tile → Install (no cross-wiring).
+    expect(screen.getByTestId("bn-library-uninstall-garrett")).toHaveTextContent("Uninstall");
+    expect(screen.getByTestId("bn-library-install-norman")).toHaveTextContent("Install");
+    expect(screen.queryByTestId("bn-library-install-garrett")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("bn-library-uninstall-norman")).not.toBeInTheDocument();
+    // Clicking Install imports via the existing endpoint (POST /import-template).
+    await userEvent.click(screen.getByTestId("bn-library-install-norman"));
+    await waitFor(() => expect(importPosted).toBe(true));
   });
 
   it("hide dialog says 'Restore any time' when has_autocode is false", async () => {
@@ -729,10 +775,10 @@ describe("CodebookPanel — per-framework sections", () => {
     await waitFor(() => {
       expect(screen.getByText("Strategy")).toBeInTheDocument();
     });
-    const removeButtons = screen.getAllByText("Remove from Codebook");
+    const removeButtons = screen.getAllByText("Uninstall");
     await userEvent.click(removeButtons[0]);
     await waitFor(() => {
-      expect(screen.getByText(/Restore any time from Browse Codebooks/)).toBeInTheDocument();
+      expect(screen.getByText(/Reinstall any time from the Codebook Library/)).toBeInTheDocument();
     });
   });
 });

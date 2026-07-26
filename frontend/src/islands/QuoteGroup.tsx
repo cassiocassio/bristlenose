@@ -19,6 +19,7 @@ import type {
 } from "../utils/types";
 import { getModeratorQuestion } from "../utils/api";
 import { formatTimecode, stripSmartQuotes } from "../utils/format";
+import { deriveTagVisibility } from "../utils/tagVisibility";
 import { NewBadge } from "../components/NewBadge";
 import { QuoteCard } from "./QuoteCard";
 import { useFocus } from "../contexts/FocusContext";
@@ -167,19 +168,15 @@ export function QuoteGroup({
   const store = useQuotesStore();
   const { hiddenTagGroups, disabledFrameworks } = useSidebarStore();
 
-  // Effective hidden groups = eye-toggled groups ∪ every group whose framework is
-  // disabled (the codebook switch → report-wide badge hide, Decision A). One set
-  // drives both the autocomplete closed-eye hint and the quote-card badge filter.
-  const effectiveHiddenGroups = useMemo(() => {
-    if (disabledFrameworks.size === 0) return hiddenTagGroups;
-    const set = new Set(hiddenTagGroups);
-    for (const info of Object.values(tagGroupMap)) {
-      if (info.frameworkId && disabledFrameworks.has(info.frameworkId)) {
-        set.add(info.group);
-      }
-    }
-    return set;
-  }, [hiddenTagGroups, disabledFrameworks, tagGroupMap]);
+  // The hide/disable split (design-codebook-state-model.md §5), computed once:
+  //  • hiddenGroups       → quote-card badge filter (hide ∪ disabled groups)
+  //  • decoratedTagNames  → autocomplete closed-eye hint (eye-hidden, still suggests)
+  //  • suppressedTagNames → dropped from autocomplete (disabled — off means off)
+  const tagVisibility = useMemo(
+    () => deriveTagVisibility(tagGroupMap, hiddenTagGroups, disabledFrameworks),
+    [tagGroupMap, hiddenTagGroups, disabledFrameworks],
+  );
+  const effectiveHiddenGroups = tagVisibility.hiddenGroups;
   const {
     selectedIds, clearSelection,
     registerHideHandler, unregisterHideHandler, registerFlashTag, unregisterFlashTag,
@@ -316,18 +313,12 @@ export function QuoteGroup({
     return map;
   }, [quotes]);
 
-  // Lowercased tag names whose codebook groups are currently hidden via eye-toggle.
-  // Passed to TagInput so hidden suggestions show a closed-eye icon.
-  const hiddenTagNames = useMemo(() => {
-    if (effectiveHiddenGroups.size === 0) return new Set<string>();
-    const names = new Set<string>();
-    for (const [tagNameLower, info] of Object.entries(tagGroupMap)) {
-      if (effectiveHiddenGroups.has(info.group)) {
-        names.add(tagNameLower);
-      }
-    }
-    return names;
-  }, [effectiveHiddenGroups, tagGroupMap]);
+  // Eye-hidden tags: still suggested, shown with a closed-eye hint, auto-unhide on
+  // accept. Disabled-codebook tags are NOT here — they're suppressed below.
+  const hiddenTagNames = tagVisibility.decoratedTagNames;
+  // Disabled-codebook tags: dropped from autocomplete entirely (merged into the
+  // TagInput exclude set on each card), so an "invisible add" can't happen.
+  const disabledTagNames = tagVisibility.suppressedTagNames;
 
   // ── Mutation handlers ──────────────────────────────────────────────────
 
@@ -925,6 +916,7 @@ export function QuoteGroup({
               userTags={userTags}
               allTagNames={allTagNames}
               hiddenTagNames={hiddenTagNames}
+              disabledTagNames={disabledTagNames}
               deletedBadges={deletedBadgesList}
               isEdited={editedText != null && editedText !== q.text}
               tagVocabulary={tagVocabulary}

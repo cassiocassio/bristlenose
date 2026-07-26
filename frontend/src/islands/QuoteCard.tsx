@@ -77,6 +77,9 @@ interface QuoteCardProps {
   allTagNames: string[];
   /** Lowercased tag names whose codebook groups are currently hidden (eye-toggled off). */
   hiddenTagNames?: Set<string>;
+  /** Lowercased tag names from DISABLED codebooks — suppressed from autocomplete
+   *  entirely (merged into the exclude set), never merely decorated. §5. */
+  disabledTagNames?: Set<string>;
   /** AI sentiment badges that have been deleted. */
   deletedBadges: string[];
   /** Whether the quote text has been edited. */
@@ -139,6 +142,7 @@ export function QuoteCard({
   userTags,
   allTagNames,
   hiddenTagNames,
+  disabledTagNames,
   deletedBadges,
   isEdited,
   tagVocabulary,
@@ -446,7 +450,13 @@ export function QuoteCard({
       ? quote.sentiment
       : null;
   const hasDeletedBadges = deletedBadges.length > 0;
-  const existingTagNames = allTagNames;
+  // TagInput exclude = tags already on this quote ∪ tags from DISABLED codebooks
+  // ("off means off" — you can't add what's switched off; §5). Eye-hidden tags are
+  // NOT excluded — hide keeps them suggestable (they flow via hiddenTagNames).
+  const existingTagNames =
+    disabledTagNames && disabledTagNames.size > 0
+      ? [...allTagNames, ...disabledTagNames]
+      : allTagNames;
   const timecodeStr = formatTimecode(quote.start_timecode);
   const isActive = crop.mode !== "idle";
   const bracketCls = bracketsVisible ? "crop-handle bracket-visible" : "crop-handle bracket-delayed";

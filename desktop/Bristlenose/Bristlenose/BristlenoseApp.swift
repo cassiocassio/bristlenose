@@ -21,6 +21,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // AlphaBuild guard, so nothing runs behind them. No-op off the alpha
         // channel.
     }
+
+    /// Responder-chain entry point for opening Settings. The web bridge
+    /// (`BridgeHandler` "open-settings") and the out-of-credit pill call
+    /// `NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, ...)`,
+    /// which the SwiftUI `Settings {}` scene used to answer. Now that Settings
+    /// is an AppKit `SettingsWindowController`, the app delegate answers it —
+    /// so those call sites need no change.
+    @MainActor
+    @objc func showSettingsWindow(_ sender: Any?) {
+        SettingsWindow.shared.show()
+    }
 }
 
 @main
@@ -83,6 +94,9 @@ struct BristlenoseApp: App {
                 .overlay { ToastOverlay().environmentObject(toast) }
                 .overlay { RemoveToast().environmentObject(removalStore).environmentObject(i18n) }
                 .onAppear {
+                    // The AppKit Settings window is built lazily on first open;
+                    // hand it the app's i18n so its SwiftUI panes can translate.
+                    SettingsWindow.shared.i18n = i18n
                     volumeWatcher.projectIndex = projectIndex
                     projectIndex.refreshAvailability()
                     pipelineRunner.setProjectIndex(projectIndex)
@@ -124,15 +138,17 @@ struct BristlenoseApp: App {
         .commands {
             MenuCommands(bridgeHandler: bridgeHandler, serveManager: serveManager, projectIndex: projectIndex, removalStore: removalStore, i18n: i18n, ollamaDownload: ollamaDownload)
         }
-
-        Settings {
-            SettingsView()
-                .environmentObject(i18n)
-                // Every SwiftUI Scene needs its own `.tint` — the modifier
-                // applied to WindowGroup(id: "main") doesn't propagate across
-                // scene boundaries. Without this, the Settings toggles and tab
-                // icons stay `AccentColor.colorset` system blue even under Edo.
-                .tint(paletteAccent)
+        .commands {
+            // The Settings window is an AppKit `SettingsWindowController`
+            // (`SettingsWindow` in SettingsView.swift), not a SwiftUI
+            // `Settings {}` scene — so we own the App-menu item + Cmd+, that
+            // the scene would otherwise provide for free. `showSettingsWindow(_:)`
+            // on AppDelegate handles the responder-chain callers (web bridge,
+            // out-of-credit pill).
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") { SettingsWindow.shared.show() }
+                    .keyboardShortcut(",", modifiers: .command)
+            }
         }
 
         // Shipping Shoal animation window (Diagnostics ▸ Shoal Screensaver —

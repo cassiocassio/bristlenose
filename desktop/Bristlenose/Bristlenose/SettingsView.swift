@@ -1,19 +1,122 @@
-import SwiftUI
 import AppKit
+import Settings
+import SwiftUI
 
-/// Top-level Settings window with icon tabs (Apple canonical pattern).
+// `PkgSettings` — a collision-free alias for the package's `Settings` namespace
+// — is defined in SettingsPackageAlias.swift (a file without `import SwiftUI`,
+// so `Settings` there resolves to the package, not SwiftUI's `Settings` scene).
+// A bare `Settings.Pane` here would resolve to SwiftUI's `Settings` and fail.
+
+// Stable identifiers for the three Settings panes (also used for deep-linking —
+// e.g. the welcome "Setup →" opens `.llm`).
+extension PkgSettings.PaneIdentifier {
+    static let appearance = Self("appearance")
+    static let llm = Self("llm")
+    static let transcription = Self("transcription")
+}
+
+/// Owns the macOS Settings window.
 ///
-/// Three tabs: Appearance, LLM, Transcription.
-/// Mac convention: width fixed per tab, height animates to fit each tab's
-/// content. SwiftUI's `Settings` + `TabView` won't do the height half on its
-/// own — see `SettingsWindowHeightAnimator` below.
-struct SettingsView: View {
+/// Built on Sindre Sorhus's `Settings` package (an AppKit `SettingsWindowController`
+/// that swaps `NSViewController` panes), NOT a SwiftUI `Settings {}` + `TabView`.
+/// Rationale: SwiftUI's `Settings` + `TabView` high-water-marks — it grows the
+/// window to the tallest tab and never shrinks back (a greedy `.formStyle(.grouped)`
+/// Form gives the window no natural content-height signal). The package sizes each
+/// pane to its `view.fittingSize` fresh on every switch and animates the window in
+/// both directions, so shorter tabs genuinely shrink and the high-water-mark is
+/// architecturally absent. Do NOT reintroduce a TabView here.
+/// See `docs/design-desktop-settings.md` for the research trail.
+@MainActor
+final class SettingsWindow {
+    static let shared = SettingsWindow()
+    private init() {}
 
-    @EnvironmentObject var i18n: I18n
-    @AppStorage("appearance") private var appearance: String = "auto"
-    // Selected tab, bound so callers can deep-link (e.g. the welcome "Setup →" opens .llm).
-    @AppStorage("settingsSelectedTab") private var selectedTab: String = "appearance"
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Set once at launch by `BristlenoseApp` — the SwiftUI panes need it via
+    /// `.environmentObject`. Read when the controller is first built (lazily,
+    /// on first open), by which point launch has set it.
+    var i18n: I18n?
+
+    private lazy var controller: SettingsWindowController = {
+        let i18n = self.i18n ?? I18n()
+        return SettingsWindowController(
+            panes: [
+                PkgSettings.Pane(
+                    identifier: .appearance,
+                    title: i18n.t("desktop.settingsTabs.appearance"),
+                    toolbarIcon: symbol("paintbrush")
+                ) {
+                    AppearanceSettingsView()
+                        .environmentObject(i18n)
+                        .modifier(SettingsPaneChrome())
+                },
+                PkgSettings.Pane(
+                    identifier: .llm,
+                    title: i18n.t("desktop.settingsTabs.llm"),
+                    toolbarIcon: symbol("brain")
+                ) {
+                    LLMSettingsView()
+                        .environmentObject(i18n)
+                        .modifier(SettingsPaneChrome())
+                },
+                PkgSettings.Pane(
+                    identifier: .transcription,
+                    title: i18n.t("desktop.settingsTabs.transcription"),
+                    toolbarIcon: symbol("waveform")
+                ) {
+                    TranscriptionSettingsView()
+                        .environmentObject(i18n)
+                        .modifier(SettingsPaneChrome())
+                },
+            ],
+            style: .toolbarItems,
+            animated: true
+        )
+    }()
+
+    /// Open the Settings window on the last-used pane (Cmd+, / menu).
+    func show() {
+        applyAppearance()
+        controller.show()
+    }
+
+    /// Open the Settings window on a specific pane (deep-link).
+    func show(pane: PkgSettings.PaneIdentifier) {
+        applyAppearance()
+        controller.show(pane: pane)
+    }
+
+    /// Match the window chrome to the app appearance preference. Set at open
+    /// time (changing appearance while Settings is open is an accepted edge).
+    private func applyAppearance() {
+        let pref = UserDefaults.standard.string(forKey: "appearance") ?? "auto"
+        controller.window?.appearance = switch pref {
+        case "light": NSAppearance(named: .aqua)
+        case "dark": NSAppearance(named: .darkAqua)
+        default: nil  // follow system
+        }
+    }
+
+    private func symbol(_ name: String) -> NSImage {
+        NSImage(systemSymbolName: name, accessibilityDescription: nil)
+            ?? NSImage(size: NSSize(width: 1, height: 1))
+    }
+}
+
+/// Per-pane chrome: palette-aware tint + appearance, tracking `@AppStorage`
+/// live (the panes are real SwiftUI views hosted by the package, so this
+/// updates without rebuilding the window).
+private struct SettingsPaneChrome: ViewModifier {
+    @AppStorage("appearance") private var appearance = "auto"
+    @AppStorage("palette") private var palette = "default"
+
+    func body(content: Content) -> some View {
+        content
+            // Palette-aware SwiftUI accent (matches the main window). AppKit
+            // chrome — the pane toolbar icons — still reads the system accent,
+            // deliberate per the seam-alignment discipline.
+            .tint(Color("Palette\(palette.capitalized)Accent"))
+            .preferredColorScheme(colorScheme)
+    }
 
     private var colorScheme: ColorScheme? {
         switch appearance {
@@ -21,90 +124,5 @@ struct SettingsView: View {
         case "dark": .dark
         default: nil
         }
-    }
-
-    // Per-tab target CONTENT height — the region below the tab-pill toolbar.
-    // A `.formStyle(.grouped)` Form is greedy vertically (it fills whatever
-    // height it's handed), so it never tells the window "I'm short"; SwiftUI
-    // sizes the window to the tallest tab once and never shrinks back. We drive
-    // the height ourselves. THESE THREE NUMBERS ARE THE TUNING KNOBS — eyeball
-    // each tab against its real render and nudge (geometry fixed, content bends).
-    private func targetContentHeight(for tab: String) -> CGFloat {
-        switch tab {
-        case "llm": return 660            // matches LLMSettingsView's minHeight
-        case "transcription": return 220  // Backend cell + Model cell
-        default: return 590               // appearance
-        }
-    }
-
-    var body: some View {
-        TabView(selection: $selectedTab) {
-            AppearanceSettingsView()
-                .environmentObject(i18n)
-                .tabItem { Label(i18n.t("desktop.settingsTabs.appearance"), systemImage: "paintbrush") }
-                .tag("appearance")
-
-            LLMSettingsView()
-                .tabItem { Label(i18n.t("desktop.settingsTabs.llm"), systemImage: "brain") }
-                .tag("llm")
-
-            TranscriptionSettingsView()
-                .tabItem { Label(i18n.t("desktop.settingsTabs.transcription"), systemImage: "waveform") }
-                .tag("transcription")
-        }
-        .preferredColorScheme(colorScheme)
-        .background(
-            SettingsWindowHeightAnimator(
-                contentHeight: targetContentHeight(for: selectedTab),
-                animate: !reduceMotion
-            )
-        )
-    }
-}
-
-/// Animates the hosting Settings window to a per-tab content height.
-///
-/// SwiftUI's `Settings` + `TabView` high-water-marks: it grows the window to
-/// the tallest tab and never shrinks back (a greedy grouped Form gives the
-/// window no "I'm short" signal). We resize the `NSWindow` ourselves on each
-/// tab change, anchoring the top edge so the title bar stays put (windows
-/// anchor bottom-left). Honours Reduce Motion (the first sizing never
-/// animates — there's no "from" state to animate).
-private struct SettingsWindowHeightAnimator: NSViewRepresentable {
-    let contentHeight: CGFloat
-    let animate: Bool
-
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView(frame: .zero)
-        // Defer until the view has joined a window.
-        DispatchQueue.main.async { apply(to: view.window, animated: false) }
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async { apply(to: nsView.window, animated: animate) }
-    }
-
-    private func apply(to window: NSWindow?, animated: Bool) {
-        guard let window else { return }
-
-        // Frame rect for the desired content height, preserving the current
-        // width (the tab content owns its 660 width; we never touch it here).
-        let currentContent = window.contentRect(forFrameRect: window.frame)
-        let targetContent = NSRect(
-            x: currentContent.minX, y: currentContent.minY,
-            width: currentContent.width, height: contentHeight
-        )
-        var targetFrame = window.frameRect(forContentRect: targetContent)
-
-        // Anchor the top-left: keep origin.x, move origin.y so the top edge
-        // (maxY) is unchanged as the height changes.
-        targetFrame.origin.x = window.frame.origin.x
-        targetFrame.origin.y = window.frame.maxY - targetFrame.height
-
-        // No-op if we're already there (updateNSView fires on any state change).
-        guard abs(targetFrame.height - window.frame.height) > 0.5 else { return }
-
-        window.setFrame(targetFrame, display: true, animate: animated)
     }
 }

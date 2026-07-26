@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		DFEDF1F7301654C6008039BA /* Settings in Frameworks */ = {isa = PBXBuildFile; productRef = DFEDF1F6301654C6008039BA /* Settings */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		DFA8ED0F2F9E7745004CF8AA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -66,6 +70,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DFEDF1F7301654C6008039BA /* Settings in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -136,6 +141,7 @@
 			);
 			name = Bristlenose;
 			packageProductDependencies = (
+				DFEDF1F6301654C6008039BA /* Settings */,
 			);
 			productName = Bristlenose;
 			productReference = DFF545042F466A4A00A539C4 /* Bristlenose.app */;
@@ -169,6 +175,9 @@
 			);
 			mainGroup = DFF544FB2F466A4A00A539C4;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				DFEDF1F5301654C6008039BA /* XCRemoteSwiftPackageReference "Settings" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DFF545052F466A4A00A539C4 /* Products */;
 			projectDirPath = "";
@@ -568,6 +577,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		DFEDF1F5301654C6008039BA /* XCRemoteSwiftPackageReference "Settings" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sindresorhus/Settings";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.1.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		DFEDF1F6301654C6008039BA /* Settings */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFEDF1F5301654C6008039BA /* XCRemoteSwiftPackageReference "Settings" */;
+			productName = Settings;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = DFF544FC2F466A4A00A539C4 /* Project object */;
 }

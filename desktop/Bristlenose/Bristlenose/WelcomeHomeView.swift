@@ -8,7 +8,8 @@ import AppKit
 // (height = width / 1.618), pinned to the TOP; the space below is left for
 // later. Fonts stay at fixed semantic sizes (no scaling); cell content aligns
 // top-leading. It never reflows and cells never resize to their content —
-// copy is cut to fit editorially (overflow handling comes later).
+// copy is cut to fit editorially, the looping illustrations self-scale to the
+// slot they're handed, and the cell clips as the final backstop.
 //
 // Provisional layers (iterate): cell pigments (Edo), copy pools, the delight
 // fish, the AI-icon morph, Drop-a-folder .onDrop wiring, aiConfigured binding.
@@ -239,15 +240,16 @@ struct WelcomeHomeView: View {
             VStack(alignment: .leading, spacing: 6) {
                 tag("AI")
                 MorphingAIIcon()
-                SettingsLink {
+                // Deep-link straight to the LLM pane. The AppKit Settings
+                // window (`SettingsWindow`) opens on the requested pane; no
+                // SettingsLink (that's tied to the removed SwiftUI Settings
+                // scene) and no shared-tab-key hack.
+                Button {
+                    SettingsWindow.shared.show(pane: .llm)
+                } label: {
                     Text("Setup →").font(.callout).foregroundStyle(Color.accentColor)
                 }
                 .buttonStyle(.plain)
-                // Deep-link to the LLM tab: set the shared tab key on tap (reactive @AppStorage
-                // binding in SettingsView switches even if the window opened on another tab first).
-                .simultaneousGesture(TapGesture().onEnded {
-                    UserDefaults.standard.set("llm", forKey: "settingsSelectedTab")
-                })
             }
             .welcomeCell(tint: 0.18)
             .environment(\.welcomeAnimationActive, baton.isActive(.ai))
@@ -543,7 +545,12 @@ private struct SlotRotator: View {
             }
             if item.illustration != .none {
                 illustrationView(item.illustration)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // Flexible, capped at its natural height: the illustration absorbs the
+                    // leftover space in the fixed golden slot and shrinks (self-scaling) when
+                    // the cell is short, so the CONTENT bends to the geometry instead of
+                    // overflowing it (design-welcome-screen.md — geometry is fixed).
+                    .frame(maxWidth: .infinity, maxHeight: illustrationNaturalHeight(item.illustration),
+                           alignment: .leading)
                     .padding(.vertical, 8)
                     // The books shelf renders real author + line + link → keep it accessible;
                     // the other illustrations are decorative (the title/text carry the meaning).
@@ -569,19 +576,39 @@ private struct SlotRotator: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
-    // Science-cell looping illustration (WelcomeIllustrations.swift). Fixed height
-    // so the φ-cell geometry never reflows; only the current slot is alive (the
-    // rotator renders one item), so a webview / shoal exists only while shown.
+    // Natural (maximum) height of a science-cell looping illustration. The illustration
+    // renders AT this height when the golden slot has room and SHRINKS BELOW it when the
+    // slot is short — every illustration self-scales to the frame it's handed (the four
+    // webviews fit() themselves, the fan is a GeometryReader, the book shelf scales via
+    // its own GeometryReader), so a smaller frame simply makes them smaller. The height
+    // is thus a cap, not a pin — the cell geometry stays fixed and the content bends.
+    private func illustrationNaturalHeight(_ kind: ScienceIllustration) -> CGFloat {
+        switch kind {
+        case .none:         return 0
+        case .quote:        return 112
+        case .sentimentFan: return 128
+        case .shoal:        return 140
+        case .signal:       return 152
+        case .autocode:     return 160
+        case .manualTags:   return 176
+        case .books:        return 252   // caption + covers + link (see BookShelfView.naturalHeight)
+        }
+    }
+
+    // Science-cell looping illustration (WelcomeIllustrations.swift). NO hard height here
+    // — the caller frames it flexibly (maxHeight: illustrationNaturalHeight) so it bends
+    // to the fixed slot. Only the current slot is alive (the rotator renders one item),
+    // so a webview / shoal exists only while shown.
     @ViewBuilder private func illustrationView(_ kind: ScienceIllustration) -> some View {
         switch kind {
         case .none:         EmptyView()
-        case .sentimentFan: SentimentFanView().frame(height: 128)
-        case .books:        BookShelfView()   // renders its own author + line + link (synced), sizes to content
-        case .shoal:        EmergentThemesView().frame(height: 140)
-        case .quote:        QuoteIllustrationView().frame(height: 112)
-        case .signal:       SignalIllustrationView().frame(height: 152)
-        case .autocode:     AutoCodeIllustrationView().frame(height: 160)
-        case .manualTags:   ManualTagsIllustrationView().frame(height: 176)
+        case .sentimentFan: SentimentFanView()
+        case .books:        BookShelfView()   // renders its own author + line + link (synced); self-scales to fit
+        case .shoal:        EmergentThemesView()
+        case .quote:        QuoteIllustrationView()
+        case .signal:       SignalIllustrationView()
+        case .autocode:     AutoCodeIllustrationView()
+        case .manualTags:   ManualTagsIllustrationView()
         }
     }
 
@@ -710,6 +737,9 @@ private struct WelcomeCellStyle: ViewModifier {
                     .fill(surface)
                     .overlay(RoundedRectangle(cornerRadius: r).fill(accent.opacity(tint)))
             )
+            // Backstop for the fixed geometry: content is meant to bend to the slot, but if
+            // any ever exceeds it, clip to the cell rather than letting it break the spiral.
+            .clipShape(RoundedRectangle(cornerRadius: r))
             .overlay(RoundedRectangle(cornerRadius: r).strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5))
     }
 }

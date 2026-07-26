@@ -127,3 +127,84 @@ test.describe("export renders offline from file://", () => {
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Internal link integrity — the exported artifact must not contain a single
+// dead-end. Crawl every tab, collect every <a href>, and FOLLOW each internal
+// link asserting it lands on a real, mounted route (not the "Erreur"
+// RouteError). Bare in-page anchors (#t=…, #section-…) must be onClick-
+// intercepted so a click doesn't blow away the route hash. Broken links throw
+// no console error, so this dynamic crawl is the only real guarantee.
+// ---------------------------------------------------------------------------
+
+test.describe("export link integrity", () => {
+  let fileUrl: string;
+
+  test.beforeAll(async ({ baseURL }) => {
+    const html = await fetchExportHtml(baseURL!);
+    const dir = mkdtempSync(join(tmpdir(), "bn-export-"));
+    const p = join(dir, "report.html");
+    writeFileSync(p, html, "utf-8");
+    fileUrl = pathToFileURL(p).href;
+  });
+
+  test("every internal link resolves; no bare anchor breaks the route", async ({ page }) => {
+    const collectHrefs = async (hash: string): Promise<string[]> => {
+      await page.goto(fileUrl + hash);
+      await waitForMount(page).catch(() => {});
+      return page.evaluate(() =>
+        Array.from(document.querySelectorAll("a[href]")).map((a) => a.getAttribute("href") || ""),
+      );
+    };
+
+    // 1. Crawl every tab, plus any transcript route it links to.
+    const hrefs = new Set<string>();
+    for (const r of EXPORT_ROUTES) (await collectHrefs(r.hash)).forEach((h) => hrefs.add(h));
+    const transcriptRoutes = [...hrefs].filter((h) => /^#\/report\/sessions\/[^/]+$/.test(h));
+    for (const r of transcriptRoutes) (await collectHrefs(r)).forEach((h) => hrefs.add(h));
+
+    // 2. No browser-router paths anywhere in the artifact.
+    const browserPaths = [...hrefs].filter((h) => /^\/(report|api)\//.test(h));
+    expect(browserPaths, `browser-router links:\n${browserPaths.join("\n")}`).toEqual([]);
+
+    // 3. Follow every internal-route link — none may dead-end.
+    const internal = [...hrefs].filter((h) => h.startsWith("#/report"));
+    expect(internal.length, "expected at least one internal link to crawl").toBeGreaterThan(0);
+    const deadEnds: string[] = [];
+    for (const href of internal) {
+      const errs: string[] = [];
+      const onConsole = (m: import("@playwright/test").ConsoleMessage) => {
+        if (m.type() === "error" && !isBenign(m.text())) errs.push(m.text());
+      };
+      page.on("console", onConsole);
+      await page.goto(fileUrl + href);
+      await waitForMount(page).catch(() => {});
+      const broken = await page.evaluate(() => {
+        const root = document.querySelector("#bn-app-root");
+        const routeError = !!document.querySelector(".bn-route-error");
+        return routeError || !root || root.children.length === 0;
+      });
+      page.off("console", onConsole);
+      if (broken || errs.length) deadEnds.push(`${href} → ${errs[0] ?? "RouteError / empty"}`);
+    }
+    expect(deadEnds, `dead-end internal links:\n${deadEnds.join("\n")}`).toEqual([]);
+
+    // 4. Bare in-page anchors (#t=…, #section-…) must be onClick-intercepted:
+    // clicking one must NOT change the route hash (which would break the tab).
+    for (const r of ["#/report/quotes", "#/report/sessions"]) {
+      await page.goto(fileUrl + r);
+      await waitForMount(page).catch(() => {});
+      const anchor = page.locator('a[href^="#t="], a[href^="#section-"]').first();
+      if ((await anchor.count()) === 0) continue;
+      const before = await page.evaluate(() => location.hash);
+      await anchor.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(400);
+      const after = await page.evaluate(() => location.hash);
+      const routeError = await page.evaluate(() => !!document.querySelector(".bn-route-error"));
+      expect(
+        { route: r, before, after, routeError },
+        `bare anchor click broke the route at ${r}`,
+      ).toMatchObject({ before, after: before, routeError: false });
+    }
+  });
+});

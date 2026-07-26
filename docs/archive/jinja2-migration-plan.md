@@ -1,4 +1,27 @@
+---
+status: archived-reference
+last-trued: 2026-07-26
+trued-against: HEAD@main on 2026-07-26
+---
+
 # Jinja2 Migration — Implementation Plan
+
+> **Archived — do not treat body as current.** The Jinja2 static
+> renderer is now a sealed, deprecated byproduct: `bristlenose render`
+> was removed (a tombstone in `cli.py`), and `render_html.py` was split
+> into the `bristlenose/stages/s12_render/` package, so every file path
+> and line number below is stale. Phases 1–2 shipped Feb 2026; Phase 3+
+> was abandoned. Retained for its template inventory and the Jinja2
+> `dict.items` key-collision gotcha, which still have reference value.
+
+## Changelog
+
+- _2026-07-26_ — moved to `docs/archive/` as `archived-reference`:
+  static renderer deprecated (`bristlenose render` removed;
+  `render_html.py` → `stages/s12_render/`). Phase 3+ will not happen.
+  Body retained for template-inventory + dict-key gotcha reference.
+  Anchors: `bristlenose/cli.py` render tombstone,
+  `bristlenose/stages/s12_render/`.
 
 > **Status:** Phases 1–2 complete, merged to main (Feb 2026). Phase 3+ candidates listed at bottom.
 

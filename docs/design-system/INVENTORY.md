@@ -111,9 +111,6 @@ Token files at theme root. Structural + analytical tokens in `tokens.css`; typog
 - `--bn-transition-normal` — 0.2s ease
 - `--bn-transition-slow` — 0.3s ease
 
-### Span bar — `theme/tokens.css`
-- `--bn-span-bar-width`, `--bn-span-bar-gap`, `--bn-span-bar-offset`, `--bn-span-bar-colour`, `--bn-span-bar-opacity`, `--bn-span-bar-radius`
-
 ### Minimap — `theme/tokens.css`
 - `--bn-minimap-heading`, `--bn-minimap-quote`, `--bn-minimap-viewport-bg`, `--bn-minimap-viewport-border`
 
@@ -171,9 +168,6 @@ All atom files live in `bristlenose/theme/atoms/`. Twenty files.
 ### Timecode — `atoms/timecode.css` and `atoms/context-expansion.css`
 - `.bn-timecode-glow`, `.timecode-bracket` — timecode rendering
 - `.timecode-expandable`, `.expand-arrow`, `.context-segment` — context-expansion chevrons
-
-### Span bar — `atoms/span-bar.css`
-- `.span-bar` — vertical extent indicator for quote ranges
 
 ### Thumbnail / video — `atoms/thumbnail.css`
 - `.bn-video-thumb`, `.bn-play-icon` — 96×54 video thumbnail + play glyph
@@ -281,7 +275,7 @@ All molecule files live in `bristlenose/theme/molecules/`. Sixteen files.
 All organism files live in `bristlenose/theme/organisms/`. Sixteen files.
 
 ### Blockquote / quote card — `organisms/blockquote.css`
-- `.quote-card`, `.quote-group`, `.quote-body` (extended from atoms) — full quote-card composition with speaker, timecode, badges, span bar
+- `.quote-card`, `.quote-group`, `.quote-body` (extended from atoms) — full quote-card composition with speaker, timecode, badges
 - (See `CSS-REFERENCE.md` for full class list; key extensions of the `quote-card` atom)
 
 ### Sentiment chart — `organisms/sentiment-chart.css`

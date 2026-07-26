@@ -71,7 +71,7 @@ All 12 stages of the pipeline, from ingest to render.
 |------|------|
 | `tokens.css` | Design tokens (`--bn-*` custom properties) |
 | `images/` | Static assets (light + dark logos) |
-| `atoms/` | Smallest CSS components (badge, button, input, span-bar, etc.) |
+| `atoms/` | Smallest CSS components (badge, button, input, timecode, etc.) |
 | `molecules/` | Small groups of atoms (badge-row, bar-group, name-edit, transcript-annotations, etc.) |
 | `organisms/` | Self-contained UI sections (blockquote, toolbar, etc.) |
 | `templates/` | Page-level layout (report.css, transcript.css, print.css) |

@@ -701,7 +701,7 @@ Global tab bar navigation for the HTML report. 7 tabs (Project, Sessions, Quotes
 
 ### `jinja2-migration` — merged 9 Feb 2026
 
-Phase 1 Jinja2 template extraction: footer, document shell, report header, quote card. Adds `jinja2>=3.1` dependency, comparison script (`scripts/compare-render.sh`), 12 parity tests. `render_html.py` reduced by ~170 lines. Output byte-identical. Phase 2+ (toolbar, sentiment chart, coverage, player) tracked in `docs/jinja2-migration-plan.md`.
+Phase 1 Jinja2 template extraction: footer, document shell, report header, quote card. Adds `jinja2>=3.1` dependency, comparison script (`scripts/compare-render.sh`), 12 parity tests. `render_html.py` reduced by ~170 lines. Output byte-identical. Phase 2+ (toolbar, sentiment chart, coverage, player) tracked in `docs/archive/jinja2-migration-plan.md` (archived 26 Jul 2026 — static renderer deprecated).
 
 ### `transcript-annotations` — merged 9 Feb 2026
 

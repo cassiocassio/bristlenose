@@ -1,4 +1,23 @@
+---
+status: archived-historical
+last-trued: 2026-07-26
+trued-against: HEAD@main on 2026-07-26
+---
+
 # Merge Plan: export-sharing → main
+
+> **Archived — historical record only.** One-off merge mechanics for an
+> early `export-sharing` branch (Feb 2026). Export ultimately shipped
+> via a different architecture — a React DOM-snapshot, see
+> [design-export-html.md](design-export-html.md) and
+> `bristlenose/server/routes/export.py` — not the `bristlenose package`
+> CLI command this doc plans. No enduring reference value.
+
+## Changelog
+
+- _2026-07-26_ — moved to `docs/archive/` as `archived-historical`:
+  export shipped via React DOM-snapshot, not the planned CLI command;
+  branch mechanics obsolete. Anchor: self-declared "Merged".
 
 > **Status:** Merged. This plan is kept for historical reference.
 

@@ -1,3 +1,24 @@
+---
+status: current
+last-trued: 2026-07-26
+trued-against: HEAD@main on 2026-07-26
+---
+
+> **Complete — all 10 steps shipped (Feb–May 2026).** Retained as the
+> record of the SPA architecture, not an active plan. Completion
+> confirmed by `CLAUDE.md` ("React migration complete (Steps 1–10)")
+> and `TODO.md`. Step 10 (Export) shipped via the DOM-snapshot design
+> in [design-export-html.md](design-export-html.md) / `routes/export.py`.
+
+## Changelog
+
+- _2026-07-26_ — trued up: relabelled from "active plan" to completed
+  record; marked Step 10 (Export) ✓ DONE; removed the Step 9
+  "you are here" marker from the dependency graph. Body otherwise
+  verbatim-accurate as the shipped SPA architecture reference.
+  Anchors: `CLAUDE.md` "React migration complete", `TODO.md`,
+  `bristlenose/server/routes/export.py`.
+
 # React Migration Plan — Vanilla JS Shell → Full SPA
 
 ## Context
@@ -121,9 +142,9 @@ The serve path stopped reading the static HTML file. Instead, it serves the Vite
 - **What stays:** `render/report.py` continues producing static HTML as a sealed byproduct of stage 12 (post-A3, 12 May 2026 — `bristlenose render` CLI command removed; the file still gets written but its path is never surfaced). CSS in `bristlenose/theme/` is shared. The regex surgery in `app.py` is deleted — no more link escape bugs, ever
 - **Test (historical):** `bristlenose serve` serves a complete React SPA. Stage 12 still produces a working static byproduct on disk. All tabs, navigation, interactions work
 
-### Step 10: Export — DOM snapshot _(large — new feature)_
+### Step 10: Export — DOM snapshot _(large — new feature)_ ✓ DONE
 
-Enabled by the complete React app. Not a migration step, but the payoff.
+Enabled by the complete React app. Not a migration step, but the payoff. Shipped via a dedicated single-file Vite build — see [design-export-html.md](design-export-html.md) and `bristlenose/server/routes/export.py`.
 
 - **What to build:** Export button → dialog (report-only vs full archive, anonymise toggle). React app detects `BRISTLENOSE_EMBEDDED_DATA` (export mode) vs `BRISTLENOSE_API_BASE` (serve mode). Export produces a self-contained HTML file with embedded JSON state, inlined CSS, React bundle
 - **Dependencies:** Step 9 (full React app shell)
@@ -148,9 +169,9 @@ Step 1 (Settings) ✓   Step 2 (About) ✓   Step 3 (QuotesStore) ✓
                           |
                     Step 8 (Retire vanilla JS) ✓
                           |
-                    Step 9 (App shell) ✓  <-- you are here
+                    Step 9 (App shell) ✓
                           |
-                    Step 10 (Export)
+                    Step 10 (Export) ✓
 ```
 
 **Steps 1, 2, 3 can run in parallel** — no dependencies between them.

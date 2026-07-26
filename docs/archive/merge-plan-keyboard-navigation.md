@@ -1,4 +1,24 @@
+---
+status: archived-historical
+last-trued: 2026-07-26
+trued-against: HEAD@main on 2026-07-26
+---
+
 # Merge Plan: keyboard-navigation → main
+
+> **Archived — historical record only.** One-off merge mechanics for
+> the `keyboard-navigation` branch (merged Feb 2026). The vanilla-JS
+> files it cites (`focus.js`, `starred.js`, `main.js`) were later
+> deleted in the React migration. The design spec still lives at
+> [design-keyboard-navigation.md](design-keyboard-navigation.md) — this
+> merge-plan is dead, that spec is not.
+
+## Changelog
+
+- _2026-07-26_ — moved to `docs/archive/` as `archived-historical`:
+  branch merged Feb 2026; referenced files since deleted. Design spec
+  `docs/design-keyboard-navigation.md` remains live. Anchor:
+  self-declared "Merged".
 
 > **Status:** Merged. This plan is kept for historical reference.
 

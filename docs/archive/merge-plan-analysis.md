@@ -1,4 +1,21 @@
+---
+status: archived-historical
+last-trued: 2026-07-26
+trued-against: HEAD@main on 2026-07-26
+---
+
 # Merge Plan: `analysis` → `main`
+
+> **Archived — historical record only.** One-off merge mechanics for
+> the `analysis` branch, merged 11 Feb 2026. The vanilla-JS files it
+> discusses (`render_html.py`, `main.js`, `toolbar.html`) were later
+> deleted in the React migration (Step 8). No enduring reference value.
+
+## Changelog
+
+- _2026-07-26_ — moved to `docs/archive/` as `archived-historical`:
+  branch merged 11 Feb 2026; referenced files since deleted (React
+  migration Step 8). Anchor: self-declared "Merged 11 Feb 2026".
 
 > **Status:** Merged 11 Feb 2026. This plan is kept for historical reference.
 

@@ -1,8 +1,8 @@
 # Transcript Editing — Design Document
 
-**Status:** Future / Research phase — not scheduled for implementation.
+**Status:** Research phase. Now GA-gating (not beta) — target the GA cycle, ~2027. See [Bidirectional editing — the converged spec (26 Jul 2026)](#bidirectional-editing--the-converged-spec-26-jul-2026), which supersedes the two-operation framing below where they conflict.
 
-**Created:** 1 Mar 2026
+**Created:** 1 Mar 2026 · **Spec section added:** 26 Jul 2026
 
 ---
 
@@ -327,8 +327,91 @@ This implicit provenance is sufficient. No need to track per-word edit history.
 
 ---
 
+## Bidirectional editing — the converged spec (26 Jul 2026)
+
+The 2026-03 draft above frames transcript editing as two operations (junk-strike + word-correction), with timing drift accepted à la Dovetail. A later design conversation — grounded in a full read of the quote↔transcript data model — widened this into a coherent spec for treating the transcript as a **live-editable document**: the "this is *my* document, I fix it" model users arrive with, and are right to. This section supersedes the two-operation framing where they conflict; the prior-art table and playback notes still stand.
+
+### Why this is GA-gating, not optional
+
+Transcription is *not* a solved problem in high-stakes domains. In technical medical conversations, ASR is wrong constantly — drug names, dosages, anatomy, and worst of all **negation**, where a single dropped "no" inverts a life-threatening clinical fact. A transcript in that state **cannot be shared with colleagues**, so the ability to correct it is a *duty of the product*, not a nicety. Two hard requirements follow:
+
+1. **Correction must be frictionless** — it is high-volume (many per transcript), not an occasional touch-up.
+2. **The original must stay recoverable underneath** — medico-legally, "what was captured vs what the researcher corrected" is a producible record.
+
+Target: the **GA cycle (~2027)**. External-beta users tolerate its absence; a GA "this is my document" product cannot. This is Beta-must / GA-gating, not a "Could." Tracked in the maintainer's private planning notes — it subsumes the narrow "Edit writeback to transcript files" (#21) Could-item there, which is one sub-concern of it (persisting edits beyond the DB to source files).
+
+### This overlaps machinery that already shipped — fold-in, don't rebuild
+
+The provenance model this needs is **already the grain of the codebase** (v0.20.0 curation persistence, shipped 11 Jul 2026):
+
+- **Immutable base + editable overlay + durable identity already exist.** Editing a quote today never mutates it — it writes a separate `QuoteEdit.edited_text` override and mints a `durable_id` + `frozen_form` (a stable, human-owned identity flagged as a re-identification key, excluded from export). See `docs/design-curation-persistence.md`, `docs/design-curation-persistence-plan.md`. The transcript side simply hasn't been given the same treatment yet — the 2026-03 `TranscriptSegmentEdit` sketch above is the mirror of `QuoteEdit`.
+- **Redaction is already one-way upstream.** `PiiCleanTranscript` is a separate object; quotes are extracted *after* redaction (`s07_pii_removal.py`), so "original recoverable underneath" is an existing pattern, not a new imposition.
+- **The keystone anchor is already a Beta-gate — for a different reason.** The shipped incremental-analysis work (v0.20.0, 11 Jul 2026) leaves the *unpinned-quote tail* (~4/43 quotes the model omits on re-extraction) needing **"a sturdier anchor (segment_index / char-span)"**, marked **BLOCKING-before-Beta**. That char-span anchor **is** the word-range anchor this spec needs (see below). One primitive, two payoffs: quote-survival-across-re-extraction *and* edit-survives-highlighting. Build it once. Canonical: `docs/design-incremental-analysis.md`.
+- **Merge / split / reassign of segments** overlaps the speaker-editing surface — `docs/design-speaker-editing.md`, `docs/design-transcript-speaker-editing-roadmap.md`. The vocabulary below should share those interactions, not fork them.
+
+### The coupling reality (why it's hard) — from the data model
+
+There is **no shared string** to bind. A quote is a *detached copy* with weak back-pointers (`bristlenose/models.py:266`, `bristlenose/server/models.py:310`):
+
+- `text` — the quote's own copy, *with editorial cleanup applied* (so often **not even a substring** of the segment).
+- `verbatim_excerpt` — the raw substring, but it **defaults to `""`** and is backward-compat-fragile.
+- `start_timecode`/`end_timecode` — floats; the **only hard link to media**.
+- `segment_index` — a **single loose ordinal** (`-1` common), **not an FK**, and it cannot represent a multi-segment quote.
+- **No character offset, no word-index range.**
+
+Runtime matching is recomputed every request in `bristlenose/server/routes/transcript.py`: segment↔quote by **timecode-range + `speaker_code`** (`:341-348`), in-segment offset by **case-insensitive `str.find()` of `verbatim_excerpt`** (`:116-166`), with a **whole-segment `<mark>` fallback** when the substring doesn't match. Consequences that already ship today:
+
+- **Editing a quote already desyncs the highlight** — the `QuoteEdit` override no longer substring-matches its segment, so highlighting silently falls back to marking the whole segment.
+- **The common Whisper (word-level) path skips citation highlighting entirely** — `TranscriptPage.tsx` renders per-word spans and drops the `<mark>` reconciliation ("a future enhancement").
+- **Redaction clears word timings** (`clean_seg.words = []`, `s07_pii_removal.py:193`), so a redacted session has no word-level anchor at all.
+
+### The keystone: a persisted word-range anchor
+
+Replace the recomputed substring match with a **persisted (session, word-start-index, word-end-index) anchor** binding each quote to its transcript span. This is the char-span anchor already Beta-gated in incremental analysis. It pays rent immediately (independent of the full edit feature):
+
+- Lights up citation highlighting on the Whisper path (currently skipped).
+- Stops the edit-desyncs-highlight fallback.
+- Gives corrections a precise place to land, and the incremental-analysis unpinned tail a sturdy identity.
+
+Every row of the edit vocabulary below rides on this anchor. Without it, you are back to the fragile substring match that breaks the moment anyone edits.
+
+### The edit vocabulary
+
+Two independent axes decide safety: **time** (does it break text↔media bijection / click-to-seek / clip export?) and **analysis graph** (what happens to derived quotes, tags, sentiment, theme placement?).
+
+| Edit | Time axis | Analysis graph |
+|---|---|---|
+| **Word correction** (same span) — the 99% case | Stable | Patch the quote's copy in place; no re-extraction |
+| **Merge segments / drop line breaks** | Union of timecodes — safe | One node, unchanged |
+| **Split into logical paragraphs** | Partition at word timing — safe | **Forks one node → two quotes** (see rule below) |
+| **Editorial interpolation** `[editor: they mean X]` | Zero-width marker | **Excluded** from extraction/sentiment; attributed to who/when |
+| **Deletion** → *exclude-from-share* (strike) | Struck, timecodes intact → clip stays honest | Trim/hide the derived quote |
+| **Unmarked speech-looking insertion** | — | **The only thing to prevent** (see below) |
+
+### Split forks a quote — the inheritance rule
+
+In this domain a paragraph break *is* a quote boundary, so "break this big paragraph into its logical paragraphs" means "the extractor lumped two distinct points into one; make it two." The split point's timecode comes from the word timing at the boundary (bijection preserved). The wrinkle is the derived graph: if the passage already backed a curated quote, splitting **forks the node**, and the honest default falls out of *why* people split — the two halves say different things:
+
+- **Sentiment: re-evaluate per half, do not copy.**
+- **Tags:** copy to both, then researcher prunes.
+- **`durable_id`:** stays with one half; the other mints fresh.
+- **Theme/cluster membership:** copy, then researcher re-sorts.
+
+### Editorial interpolation — generative-when-marked is safe
+
+`[editor: X]` is a long-standing transcription convention (family of `[inaudible]`, `[crosstalk]`, `[sic]`). It is generative but *marked as non-speech*, and that marking is exactly what preserves the truth claim: it says "a human added this, the participant didn't say it." The system already half-speaks this (PII emits bracketed `[NAME]`; `speaker_role` distinguishes moderator). Requirements: **excluded from quote extraction and sentiment**, visually distinct, **attributed** (who + when — doubly important in a medical/legal record), with a **soft, invisible word-cap backstop** (tuned from real data, not a visible setting) so a transcript can't quietly become mostly editorial.
+
+### The one thing to prevent
+
+Not insertion — *unmarked* insertion of speech-looking text that a reader or the extractor would take as the participant's words. **Fabrication is a formatting failure, not an editing capability to withhold:** inserted non-speech must always wear the editorial bracket/styling, and then it is fine. That single rule is what lets the whole vocabulary stay honest while giving the user the document they're right to expect.
+
+---
+
 ## References
 
+- `docs/design-curation-persistence.md`, `docs/design-curation-persistence-plan.md` — the durable-id + frozen_form overlay this spec extends (shipped v0.20.0)
+- `docs/design-incremental-analysis.md` — re-analysis machinery; names the char-span anchor (= the keystone here) as BLOCKING-before-Beta
+- `docs/design-speaker-editing.md`, `docs/design-transcript-speaker-editing-roadmap.md` — segment merge/split/reassign interactions to share, not fork
 - `docs/design-quote-editing.md` — existing quote editing design (useCropEdit, crop handles, three rendering modes)
 - `docs/design-pipeline-resilience.md` — manifest, event sourcing, crash recovery
 - `bristlenose/stages/CLAUDE.md` — pipeline stage details, output structure

@@ -26,6 +26,13 @@ superseded-by: [design-codebook-state-model.md]
 
 ## Changelog
 
+- _2026-07-26_ — **decided: the install-axis label is Install / Uninstall**, replacing
+  Add / Remove. Rationale: it's the more precise word and locks the whole codebook
+  surface onto the browser-extension model the doc already leans on (Install button ·
+  Enable toggle · optional purge-on-uninstall). One toggling button per Library tile
+  (Install when out / Uninstall when in), wired to the existing import/remove endpoints.
+  20-locale re-translation is a follow-up (English settles first). The "Added" badge
+  becomes "Installed"; "Remove from Codebook" becomes "Uninstall".
 - _2026-07-26_ — trued against the "off means off" work. The view-only disable thread
   is reversed and now points to the state-model doc as canonical; the Status header,
   Principles 1–2, the three-surfaces table, the Phase 1 "Decision A" items, and the
@@ -84,7 +91,7 @@ behaviour was *already* a reversible, retained toggle. Only the words lied.
 
 | Surface | Job | Verbs |
 |---|---|---|
-| **Codebook Library** (modal) | catalogue — the *install axis* | **Add ↔ Remove** (one toggling button) |
+| **Codebook Library** (modal) | catalogue — the *install axis* | **Install ↔ Uninstall** (one toggling button) |
 | **Your project codebook** (page) | workbench — the *enable axis* + run | **Apply**, enable/disable (slider), fold |
 | **Sidebar** (contents) | status — what's on | none (blue dot = on) |
 
@@ -102,7 +109,7 @@ and a *workbench* you work at. Neither borrows the other's controls.
 
 ### Library tile
 ```
-Not added ──[Add]──▶ Added ──[Remove]──▶ Not added   (one toggling button, both states)
+Not installed ──[Install]──▶ Installed ──[Uninstall]──▶ Not installed   (one toggling button, both states)
 Coming soon (greyed, non-interactive)
 Create new (dashed + tile)
 ```

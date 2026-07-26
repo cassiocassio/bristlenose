@@ -306,6 +306,16 @@ make Phase 1 (persistence) simpler than the "gate on enabled" framing above.
 
 ### Decision A — the enable/disable toggle is **view-only**; it never gates re-apply
 
+> **⚠️ SUPERSEDED (26 Jul 2026).** Decision A was **reversed**. Disable is now
+> **functional — "off means off"**: it gates re-apply on `enabled` (a disabled
+> codebook stops maintaining new sessions), drops the codebook from the tags sidebar
+> + autocomplete, and re-enabling fires a one-shot **catch-up delta** over the
+> sessions added while off. The "keep coding while off" model below is no longer the
+> design. Canonical spec: **[design-codebook-state-model.md](design-codebook-state-model.md)**
+> (§7 the delta, §8 settled). Reversed in commit `9744b4e9`; the reasoning that
+> replaced this section is §2 (hand-made vs machine-made) and §4a (the watermark).
+> The section is kept below for provenance — read it as history, not current design.
+
 "Functional off" was conflating two axes:
 - **View off** — fold the panel section + hide the framework's badges *report-wide*.
   This is what "off · kept" means, and it's all the toggle does.

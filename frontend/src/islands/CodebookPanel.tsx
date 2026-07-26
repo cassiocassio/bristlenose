@@ -558,16 +558,16 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
   const [autoCodeStatus, setAutoCodeStatus] = useState<Record<string, AutoCodeJobStatus | null>>({});
   const [reportModal, setReportModal] = useState<{ frameworkId: string; frameworkTitle: string } | null>(null);
 
-  // --- Framework enable/disable (persisted, view-only) ---
-  // The trailing switch on each framework header collapses that framework's tag
-  // groups. Off = folded ("kept"); the applied tags on quotes are untouched. Per
-  // design-codebook-library.md Decision A this is a VIEW-only flag (fold + report-
-  // wide badge hide); it never gates re-apply. State lives in SidebarStore
-  // (`disabledFrameworks`) so the fold here and the badge hide on quote cards read
-  // one source of truth; persisted to ProjectFrameworkState via /framework-states.
+  // --- Framework enable/disable (the codebook-lens switch — THE disable control) ---
+  // The trailing switch on each framework header turns that codebook off. Disable is
+  // FUNCTIONAL — "off means off" (design-codebook-state-model.md §8): the section
+  // folds, badges hide report-wide, the codebook drops from the tags sidebar +
+  // autocomplete, AND new sessions stop being coded (the re-apply gate reads
+  // `enabled`). Applied tags are kept; re-enabling fires a catch-up delta. State
+  // lives in SidebarStore (`disabledFrameworks`) as one source of truth, persisted
+  // to ProjectFrameworkState via /framework-states.
   const { disabledFrameworks } = useSidebarStore();
-  const collapsedFrameworks = disabledFrameworks;
-  const toggleFrameworkFold = useCallback(
+  const toggleFramework = useCallback(
     (fid: string) => {
       setFrameworkDisabled(fid, !disabledFrameworks.has(fid));
     },
@@ -1103,7 +1103,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
           // rather than show one that always returns "0 of 0 proposals"
           // (the fake-success-feedback class from the 7 May quality reset).
           const isSentimentFramework = fid === "sentiment";
-          const isCollapsed = collapsedFrameworks.has(fid);
+          const isDisabled = disabledFrameworks.has(fid);
           return (
             <Fragment key={fid}>
               <div className="framework-section-header" id={`codebook-fw-${fid}`}>
@@ -1145,15 +1145,15 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                   <button
                     type="button"
                     role="switch"
-                    aria-checked={!isCollapsed}
+                    aria-checked={!isDisabled}
                     aria-label={label}
-                    className={`framework-toggle${isCollapsed ? " off" : ""}`}
-                    onClick={() => toggleFrameworkFold(fid)}
+                    className={`framework-toggle${isDisabled ? " off" : ""}`}
+                    onClick={() => toggleFramework(fid)}
                     data-testid={`bn-framework-toggle-${fid}`}
                   />
                 </div>
               </div>
-              {!isCollapsed && fwGroups.map((group) => (
+              {!isDisabled && fwGroups.map((group) => (
                 <CodebookGroupColumn
                   key={group.id}
                   group={group}

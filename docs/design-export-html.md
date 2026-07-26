@@ -1,8 +1,26 @@
+---
+status: partial
+last-trued: 2026-07-26
+trued-against: HEAD@main on 2026-07-26
+---
+
 # HTML Export — Design Document
+
+> **Trued 2026-07-26** against the export-hardening work (commits `8895c794`
+> single-file build, `4f0b9855` hash-router links, `30c5c2f7`/`22980677` locale
+> bake, `427cfc6a` anti-drift coverage gate, `bac75661` XSS fix, `a2880e7e`
+> read-only). Several "future pass" / "open question" items below shipped this
+> session and are marked Done inline. Transcript-zip bundling (Stage 1+) remains
+> aspirational.
 
 Read-only HTML report export with transcript bundling, anonymisation, and polish.
 
-**Status:** Shipped (v0.11.2 single HTML). Transcript zip and polish are next.
+**Status:** Shipped and hardened. The self-contained export renders from `file://`
+via a **single inline module** (not blob-URL'd chunks — those are blocked from an
+opaque origin), is **read-only** (mutating controls stripped), **XSS-safe**, baked
+to the **researcher's locale**, and guarded by a **link-integrity crawl** + an
+**anti-drift coverage gate**. Transcript-zip bundling (Stage 1+) is still
+aspirational.
 
 ---
 
@@ -19,14 +37,24 @@ The HTML export is the "accountability copy" — a stakeholder or client can ope
 
 ---
 
-## What exists today (v0.11.2)
+## What exists today
 
-- Self-contained HTML download (single file, all data embedded as JSON)
-- Hash router for `file://` compatibility
-- Blob-URL'd JS chunks
-- Optional anonymisation (report data only)
-- Basic ExportDialog with anonymise checkbox
-- Works offline in any modern browser
+- Self-contained HTML download (single file, all data embedded as path-keyed JSON
+  under `window.BRISTLENOSE_EXPORT.endpoints`)
+- Hash router for `file://` compatibility; every intra-app `<a href>` goes through
+  `reportHref()` (`#`-prefixed offline) — plain pathname URLs broke Cmd+click/new-tab
+- **Single inline `<script type="module">` bundle** from a dedicated build
+  (`frontend/vite.export.config.ts`, `codeSplitting:false`) — replaced the blob-URL'd
+  chunk bootstrap, which browsers block as module scripts from an opaque `file://`
+  origin (the reason the export never rendered from disk before `8895c794`)
+- **Anti-drift coverage gate** (`tests/test_serve_export_coverage.py`) — every GET
+  read endpoint is EMBED or explicitly SERVER_ONLY, so a new endpoint is
+  offline-by-default and can't silently drift
+- **Read-only**: mutating affordances (star/hide/tag/edit, codebook authoring) gated
+  at the store-action layer; `apiGet` fails loud on an uncovered read offline
+- **Locale baked** to the researcher's current UI language (not the recipient's browser)
+- Optional anonymisation (report data + source filenames)
+- Works offline in any modern browser (Chromium + WebKit e2e, incl. a link-integrity crawl)
 
 ---
 
@@ -38,7 +66,7 @@ The HTML export is the "accountability copy" — a stakeholder or client can ope
 |------|--------|--------|
 | Inline logo | Done | Light + dark logos base64-embedded in export payload, Footer + Header read from `BRISTLENOSE_EXPORT.logos` in export mode |
 | Footer spacing | Done (already fixed) | React Footer.tsx `{" "}` provides correct spacing; the Jinja2 bug doesn't affect exports (React path used) |
-| Nav links | Partial | Hash router handles React Router navigation. Plain `<a href="/report/sessions/...">` in Dashboard + SessionsTable still use pathname URLs — works for normal clicks (React intercepts) but Cmd+click / Open in New Tab breaks on `file://`. Convert to `<Link>` in a future pass |
+| Nav links | Done (`4f0b9855`) | The pathname-URL problem was broader than Dashboard/SessionsTable (also Analysis, Sessions sidebar, AutoCode proposals). Fixed with a shared `reportHref()` helper (`#`-prefix offline) routed through every intra-app `<a href>`; journey clicks use a router-agnostic `navigate({pathname,hash})`. Guarded by an e2e link-integrity crawl that follows every internal link + asserts no browser-router path |
 | Purpose line | Done | `export.subtitle` updated in all 6 locales (en, es, fr, de, ko, ja) |
 
 ### Stage 1: Zip with transcripts
@@ -149,8 +177,9 @@ Note: "Anonymise participants" renamed to "Remove participant names from labels"
 
 | Fix | Detail | Status |
 |-----|--------|--------|
-| `ensure_ascii=True` | Prevents `</script>` XSS breakout in `export.py:167` | Done |
+| Escape `<` `>` `&` in the data script | **`ensure_ascii=True` does NOT prevent `</script>` breakout** — it escapes only code points > 127; `<` is ASCII and passes through. The earlier belief was false (`bac75661`). After `json.dumps(ensure_ascii=True)`, chain `.replace("<","\\u003c").replace(">","\\u003e").replace("&","\\u0026")`. Regression test `test_embedded_data_cannot_break_out_of_script`. **Audit sibling embed sites** (serve `/report`, quote CSV/HTML) for the same false belief | Done (`bac75661`) |
 | Path stripping | Strip absolute paths from exported `source_files[].path` — use `filename` only | Done |
+| Anonymise source filenames | Neutralise `source_files[].filename` to `<session_id><ext>` under anonymise — `jane-doe.mov` otherwise re-carries the name (`5379e3df`) | Done |
 | Anonymise label clarity | "Remove participant names from labels" + scope explanation | Done |
 
 ### Tasks
@@ -282,8 +311,17 @@ These abstractions serve multiple export features. Build them during item 0 (sec
 
 ## Open questions
 
-1. **Locked read-only mode.** Exported reports currently allow recipient editing (localStorage). Future: option to disable editing for stakeholder-facing packages.
+1. ~~**Locked read-only mode.**~~ **Shipped 2026-07-26 (`a2880e7e`).** The export is
+   fully read-only — mutating store actions (star/hide/tag/edit) early-return offline,
+   the two bypass paths (quote-text click, keyboard) are gated, and the Codebook tab is
+   read-only. Decided (user): a baked handover shouldn't offer the pretence of editing.
 2. **VTT transcript format.** Useful for re-import and subtitle tooling. Add as an option alongside `.txt` if researchers ask. Not needed for any current scenario.
+3. **Video in the export (v1/v2).** v1 ships no video/thumbnails. v2 middle-ground =
+   "report + starred clips have working video" (inline `<video src="clips/…">` packaged
+   alongside — the deferred "Stage 3", `design-export-clips.md`). Reuses the quote
+   identity/timecode data already embedded — no re-plumbing. Distinct from the deprecated
+   static-render `_build_video_map`→`file://`-to-local-originals (same-machine only, leaks
+   absolute paths).
 
 ---
 

@@ -981,6 +981,42 @@ class TestReapplyToNewQuotes:
         finally:
             db.close()
 
+    def test_track_status_sets_failed_on_error(
+        self, project_with_garrett, monkeypatch
+    ) -> None:
+        """track_status: an error mid-catch-up marks the job "failed" — and the
+        finally must NOT then upgrade it back to "completed" (a false success on
+        lost work)."""
+        import bristlenose.server.autocode as ac
+
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        self._mark_running(db_factory, project_id, framework_id)
+
+        def _boom(*_a, **_k):
+            raise RuntimeError("taxonomy build blew up")
+
+        monkeypatch.setattr(ac, "build_tag_taxonomy", _boom)
+        with _patch_llm(AsyncMock()):
+            accepted = asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings(),
+                    track_status=True,
+                )
+            )
+        assert accepted == 0
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            assert job.status == "failed"  # NOT falsely "completed"
+        finally:
+            db.close()
+
     def test_reapply_active_frameworks_covers_applied(
         self, project_with_garrett
     ) -> None:
@@ -1100,6 +1136,39 @@ class TestReapplyToNewQuotes:
                 reapply_active_frameworks(db_factory, project_id, _mock_settings())
             )
 
+        assert results == {"garrett": 3}
+
+    def test_reapply_active_frameworks_maintains_stuck_running_job(
+        self, project_with_garrett
+    ) -> None:
+        """Crash-recovery regression: a job left "running" (e.g. a crash during an
+        on-enable catch-up, before its finally restored "completed") must STILL be
+        maintained — the gate is completed_at, not status="completed". Otherwise the
+        framework would be silently dropped from all future coding forever."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        # Simulate the crashed catch-up: healthy job, completed_at set, but stuck
+        # at "running" because the finally never ran.
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            job.status = "running"
+            db.commit()
+        finally:
+            db.close()
+
+        with _patch_llm(
+            AsyncMock(return_value=_make_batch_result(3, "user need", 0.85))
+        ):
+            results = asyncio.run(
+                reapply_active_frameworks(db_factory, project_id, _mock_settings())
+            )
+        # Maintained despite the stuck status — the new sessions get coded.
         assert results == {"garrett": 3}
 
     def test_never_applied_is_noop(self, project_with_garrett) -> None:

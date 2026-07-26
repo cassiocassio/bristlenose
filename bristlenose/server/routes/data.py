@@ -933,6 +933,10 @@ def get_framework_states(
         db.close()
 
 
+# Strong references to in-flight catch-up tasks (see _schedule_catch_up).
+_CATCH_UP_TASKS: set = set()
+
+
 def _schedule_catch_up(
     request: Request, project_id: int, framework_id: str
 ) -> None:
@@ -969,7 +973,12 @@ def _schedule_catch_up(
                 "catch-up re-apply on enable failed | framework=%s", framework_id
             )
 
-    asyncio.create_task(_run())
+    # Hold a strong reference: the event loop only weakly references a bare task, so
+    # a suspended one can be GC'd mid-flight — which here would skip its finally and
+    # strand the job "running". Discard on completion.
+    task = asyncio.create_task(_run())
+    _CATCH_UP_TASKS.add(task)
+    task.add_done_callback(_CATCH_UP_TASKS.discard)
 
 
 def _start_catch_ups(

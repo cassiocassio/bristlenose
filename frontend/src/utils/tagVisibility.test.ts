@@ -60,6 +60,21 @@ describe("deriveTagVisibility", () => {
     expect(v.suppressedTagNames.has("signal-strength")).toBe(false); // uxr enabled
   });
 
+  it("a null-framework tag is treated as floor even if its group name collides", () => {
+    // Defensive: suppression keys on frameworkId, not group name. A tag with
+    // frameworkId=null is the floor and can never be suppressed — even if some other
+    // (disabled) framework happens to share the group name. Documents the invariant
+    // the §5 "invisible add" prevention rests on.
+    const collide: Record<string, TagGroupMeta> = {
+      "floor-tag": { group: "Shared Name", frameworkId: null },
+      "fw-tag": { group: "Shared Name", frameworkId: "garrett" },
+    };
+    const v = deriveTagVisibility(collide, new Set(), new Set(["garrett"]));
+    expect(v.suppressedTagNames.has("fw-tag")).toBe(true); // disabled fw → gone
+    expect(v.suppressedTagNames.has("floor-tag")).toBe(false); // floor → stays
+    expect(v.decoratedTagNames.has("floor-tag")).toBe(false); // not hidden either
+  });
+
   it("no hide, no disable → everything empty (all reachable, all shown)", () => {
     const v = deriveTagVisibility(map, new Set(), new Set());
     expect(v.hiddenGroups.size).toBe(0);

@@ -543,6 +543,7 @@ async def reapply_to_new_quotes(
     )
 
     db = db_factory()
+    failed = False
     try:
         # One job per (project, framework) — the unique constraint — so no status
         # filter is needed to pick it out. We deliberately DON'T filter status here:
@@ -737,14 +738,17 @@ async def reapply_to_new_quotes(
     except Exception as exc:
         logger.exception("Re-apply failed for %s: %s", framework_id, exc)
         db.rollback()
+        failed = True
         if track_status:
             _set_job_status(db, project_id, framework_id, "failed", str(exc)[:500])
         return 0
     finally:
         # Any early `return 0` left the job as the route set it ("running"); restore
         # it so the chip's poll resolves and never spins forever. No-op on success
-        # (already "completed") or failure (already "failed").
-        if track_status:
+        # (already "completed"). Guarded by `failed` so a genuinely-failed run whose
+        # "failed" write had to retry (DB lock) is never silently upgraded to
+        # "completed" here — a false success signal on lost work.
+        if track_status and not failed:
             _set_job_status(db, project_id, framework_id, "completed", when="running")
         db.close()
 
@@ -801,11 +805,21 @@ async def reapply_active_frameworks(
                 project_id=project_id, enabled=False
             )
         }
-        # Gate = ever-applied ∩ currently linked ∩ enabled.
+        # Gate = ever-applied ∩ currently linked ∩ enabled. "Ever-applied" is
+        # ``completed_at IS NOT NULL``, NOT ``status == "completed"``: the on-enable
+        # catch-up transiently sets a healthy job to "running", and a crash in that
+        # window (SIGKILL, parent-death mid-LLM) would leave it stuck "running"
+        # forever. Gating on status would then SILENTLY drop that framework from all
+        # future maintenance — new sessions never coded, no error. completed_at is
+        # the real "has been applied at least once" predicate and survives the
+        # transient status, so a crashed catch-up self-heals on the next run.
         framework_ids = [
             row[0]
             for row in db.query(AutoCodeJob.framework_id)
-            .filter_by(project_id=project_id, status="completed")
+            .filter(
+                AutoCodeJob.project_id == project_id,
+                AutoCodeJob.completed_at.isnot(None),
+            )
             .distinct()
             if row[0] in linked_framework_ids
             and row[0] not in disabled_framework_ids

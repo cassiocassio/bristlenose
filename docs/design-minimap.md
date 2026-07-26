@@ -10,13 +10,13 @@ Researchers scanning a long quotes report need two things: (1) a sense of where 
 
 ### Grid position
 
-The minimap occupies **column 6** of the SidebarLayout 6-column grid:
+The minimap occupies **column 4** of the SidebarLayout 6-column grid (between the centre content and the tag sidebar, so it stays put whether the tag sidebar is open or closed):
 
 ```
-[toc-rail | toc-sidebar | center | tag-sidebar | tag-rail | minimap]
+[toc-rail | toc-sidebar | center | minimap | tag-sidebar | tag-rail]
 ```
 
-Width: `--bn-minimap-width: 3rem` (48px at default font size). After the 8px scrollbar-clearance margin, the effective content width is 40px.
+Width: `--bn-minimap-width: 5rem` (80px at default font size). The `.minimap-slot` has `padding: 0 var(--bn-space-md)`, leaving ~56px of content box. This width is **fixed** — it never changes with the column count (see Multi-column mode).
 
 ### Data flow
 
@@ -56,6 +56,22 @@ The minimap must work for the longest reasonable study:
 - Viewport indicator size: `(800 / 40,000) × 6,200 = 124px` — visible and proportional
 
 The mockup's Large dataset (2,550 quotes) exceeds the realistic maximum. A Vitest smoke test renders 2,000 quote lines and verifies they all appear without error.
+
+## Multi-column mode
+
+The quotes page reflows into N columns via the responsive grid's `auto-fill` (`organisms/responsive-grid.css`), so at 3–4 columns the real document is only ~1/N as tall. A single-strip minimap then mis-depicts a short page as a long one: the viewport indicator shrinks ~N× too small and parallax kicks in on a page that doesn't need it. The minimap therefore **mirrors the grid's column count**.
+
+**Follow the page, don't lead it.** The minimap does not compute its own breakpoints. It reads the live grid's result — `getComputedStyle(document.querySelector('.quote-group')).gridTemplateColumns`, counting the tracks — and lays its own ticks into that many columns. Whatever `auto-fill` decides (from window width, sidebar open/closed, or density), the minimap echoes.
+
+**Layout.** Each section becomes an N-column CSS grid (`.bn-minimap-content.multi .bn-minimap-section`), driven by the `--bn-minimap-cols` custom property that `Minimap.tsx` sets from the detected count. The section/theme heading spans all columns (`grid-column: 1 / -1`); quote ticks flow row-major into the tracks. Because both the minimap and the page are N-column row-major, a given minimap Y maps to the same fractional document height — so the `scrollRatio = pointerY / viewportHeight` identity below stays valid, and the minimap compresses to ~1/N height, restoring proportional indicator sizing.
+
+**Same slot width at any N.** The 80px slot never widens; ticks simply narrow as N grows (~12px each at 4 columns, ~7px at 7). No horizontal scroll, no special-casing.
+
+**Re-detection.** A `ResizeObserver` on the live `.quote-group` (plus a `window` resize listener) re-reads the track count when the grid box changes (window / sidebar toggle / density). `setCols` only fires on an actual threshold change, so re-renders happen at column boundaries, not on every resize frame.
+
+**N = 1 is unchanged.** Below 2 columns the `multi` class and CSS var are absent and the flex layout renders byte-for-byte as before — this is also the fallback while the grid island is still mounting.
+
+**Known approximation.** Under native masonry (`display: grid-lanes`, Safari 26.4+) the page packs column-major by height, so the minimap's uniform row-major ticks diverge slightly from real card positions. Acceptable for an abstract map; pixel-faithful masonry mirroring (reading card rects) is a possible future pass, not built.
 
 ## Two scrolling modes
 
@@ -165,6 +181,7 @@ Layout token: `--bn-minimap-width: 3rem` (48px).
 | `bristlenose/theme/organisms/sidebar.css` | `.minimap-slot` grid position and sticky behaviour |
 | `bristlenose/theme/tokens.css` | 4 colour tokens + width token |
 | `docs/mockups/mockup-minimap.html` | Interactive prototype with Small (120), Typical (540), Large (2,550) datasets |
+| `docs/mockups/mockup-minimap-columns.html` | Multi-column prototype — detection + N-column redraw + single/multi A/B |
 
 ## Design decisions
 

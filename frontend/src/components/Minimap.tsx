@@ -1,10 +1,11 @@
 /**
  * Minimap — VS Code-style abstract overview of the Quotes tab.
  *
- * Renders a narrow vertical strip (grid column 6) with pale grey lines
+ * Renders a narrow vertical strip (grid column 4) with pale grey lines
  * for quotes, darker grey lines for headings, and a blue translucent
  * viewport indicator. Scroll tracking, click-to-scroll, drag-to-scroll,
- * and parallax scrolling for long pages.
+ * and parallax scrolling for long pages. At 2+ columns it mirrors the
+ * live quote grid's column count (see design-minimap.md § Multi-column).
  *
  * Data comes from the same /api/projects/{id}/quotes endpoint — fetched
  * independently so the minimap renders without waiting for main content.
@@ -13,6 +14,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import type { QuotesListResponse } from "../utils/types";
 import { useProjectId } from "../hooks/useProjectId";
 import { apiGet } from "../utils/api";
@@ -20,6 +22,8 @@ import { apiGet } from "../utils/api";
 export function Minimap() {
   const projectId = useProjectId();
   const [data, setData] = useState<QuotesListResponse | null>(null);
+  // Column count mirrored from the live quote grid (1 = today's single strip).
+  const [cols, setCols] = useState(1);
   const slotRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -42,6 +46,48 @@ export function Minimap() {
     document.addEventListener("bn:tags-changed", handler);
     return () => document.removeEventListener("bn:tags-changed", handler);
   }, [projectId]);
+
+  // Column detection — mirror the live quote grid's responsive column count.
+  // Reads getComputedStyle(.quote-group).gridTemplateColumns track count from
+  // the real grid; no independent breakpoint logic (follow the page, don't
+  // lead it). Re-detects when the grid box resizes (window / sidebar / density)
+  // via ResizeObserver. Falls back to 1 column — identical to today.
+  useEffect(() => {
+    if (!data) return;
+    let ro: ResizeObserver | null = null;
+    let raf = 0;
+    let tries = 0;
+
+    const detect = () => {
+      const grid = document.querySelector<HTMLElement>(".quote-group");
+      if (!grid) return;
+      const tpl = getComputedStyle(grid).gridTemplateColumns;
+      const n = tpl && tpl !== "none" ? Math.max(1, tpl.trim().split(/\s+/).length) : 1;
+      setCols((prev) => (prev === n ? prev : n));
+    };
+
+    // The grid island mounts independently of the minimap, so it may not be in
+    // the DOM yet — retry on rAF (bounded) until it appears, then observe it.
+    const attach = () => {
+      const grid = document.querySelector<HTMLElement>(".quote-group");
+      if (grid && typeof ResizeObserver !== "undefined") {
+        ro = new ResizeObserver(detect);
+        ro.observe(grid);
+        detect();
+      } else if (tries++ < 200) {
+        raf = requestAnimationFrame(attach);
+      }
+    };
+
+    attach();
+    window.addEventListener("resize", detect, { passive: true });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      ro?.disconnect();
+      window.removeEventListener("resize", detect);
+    };
+  }, [data]);
 
   // Scroll tracking — update viewport indicator position and parallax.
   useEffect(() => {
@@ -92,7 +138,9 @@ export function Minimap() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
-  }, [data]);
+    // cols is a dep so the indicator/parallax recompute when the minimap
+    // reflows to a new column count (content height changes).
+  }, [data, cols]);
 
   // Click-to-scroll — click on minimap background jumps the page.
   const handleClick = useCallback((e: React.MouseEvent) => {
@@ -161,17 +209,28 @@ export function Minimap() {
   // Empty placeholder while loading — keeps grid column from collapsing.
   if (!data) return <div className="minimap-slot" />;
 
+  // At 2+ columns, mirror the grid: each section becomes an N-column block.
+  // At 1 column, render exactly as before (no `multi` class, no CSS var).
+  const multi = cols >= 2;
+  const contentStyle = multi
+    ? ({ "--bn-minimap-cols": cols } as CSSProperties)
+    : undefined;
+
   return (
     // Minimap track; click maps to scroll position. Supplementary nav, content keyboard-scrollable elsewhere.
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div className="minimap-slot" ref={slotRef} onClick={handleClick}>
-      <div className="bn-minimap-content" ref={contentRef}>
+      <div
+        className={multi ? "bn-minimap-content multi" : "bn-minimap-content"}
+        ref={contentRef}
+        style={contentStyle}
+      >
         {/* Sections group */}
         {data.sections.length > 0 && (
           <>
             <div className="bn-minimap-group-heading" />
             {data.sections.map((s) => (
-              <div key={s.cluster_id}>
+              <div key={s.cluster_id} className="bn-minimap-section">
                 <div className="bn-minimap-heading" />
                 {s.quotes.map((_, i) => (
                   <div key={i} className="bn-minimap-quote" />
@@ -189,7 +248,7 @@ export function Minimap() {
           <>
             <div className="bn-minimap-group-heading" />
             {data.themes.map((t) => (
-              <div key={t.theme_id}>
+              <div key={t.theme_id} className="bn-minimap-section">
                 <div className="bn-minimap-heading" />
                 {t.quotes.map((_, i) => (
                   <div key={i} className="bn-minimap-quote" />

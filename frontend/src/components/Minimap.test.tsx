@@ -247,4 +247,54 @@ describe("Minimap", () => {
     const quoteLines = container.querySelectorAll(".bn-minimap-quote");
     expect(quoteLines.length).toBe(2000);
   });
+
+  it("stays single-column (no `multi` class) when no quote grid is present", async () => {
+    const { container } = render(<Minimap />);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    const content = container.querySelector(".bn-minimap-content") as HTMLElement;
+    expect(content.classList.contains("multi")).toBe(false);
+    expect(content.style.getPropertyValue("--bn-minimap-cols")).toBe("");
+    // Sections are still wrapped (2 sections + 1 theme) — the wrapper is inert at N=1.
+    expect(container.querySelectorAll(".bn-minimap-section").length).toBe(3);
+  });
+
+  it("mirrors the live quote grid's column count (multi-column)", async () => {
+    // Fake a 3-column quote grid in the DOM for the minimap to read.
+    const grid = document.createElement("div");
+    grid.className = "quote-group";
+    document.body.appendChild(grid);
+
+    const origRO = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
+
+    const orig = window.getComputedStyle.bind(window);
+    const gcs = vi
+      .spyOn(window, "getComputedStyle")
+      .mockImplementation(((el: Element, pseudo?: string | null) =>
+        el === grid
+          ? ({ gridTemplateColumns: "120px 120px 120px" } as CSSStyleDeclaration)
+          : orig(el, pseudo)) as typeof window.getComputedStyle);
+
+    try {
+      const { container } = render(<Minimap />);
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      const content = container.querySelector(".bn-minimap-content") as HTMLElement;
+      expect(content.classList.contains("multi")).toBe(true);
+      expect(content.style.getPropertyValue("--bn-minimap-cols")).toBe("3");
+      expect(container.querySelectorAll(".bn-minimap-section").length).toBe(3);
+    } finally {
+      gcs.mockRestore();
+      globalThis.ResizeObserver = origRO;
+      grid.remove();
+    }
+  });
 });

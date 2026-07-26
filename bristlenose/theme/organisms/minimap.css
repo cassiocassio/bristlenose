@@ -46,6 +46,32 @@
     flex-shrink: 0;
 }
 
+/* ── Multi-column mode ────────────────────────────────────────────────────
+   Mirror the quote grid's responsive column count. Each section becomes an
+   N-column grid (N = --bn-minimap-cols, set by Minimap.tsx from the live
+   .quote-group); the heading spans all columns and quotes flow row-major, so
+   the minimap compresses to ~1/N height — matching the real (shortened)
+   document. The slot width never changes; ticks just narrow as N grows.
+   At N=1 the `multi` class is absent and the flex layout above is used
+   unchanged (byte-for-byte today's single strip). */
+.bn-minimap-content.multi .bn-minimap-section {
+    display: grid;
+    grid-template-columns: repeat(var(--bn-minimap-cols, 1), 1fr);
+    gap: 1px 2px;
+    align-content: start;
+}
+.bn-minimap-content.multi .bn-minimap-heading {
+    grid-column: 1 / -1;
+    margin: 3px 0 1px;
+}
+.bn-minimap-content.multi .bn-minimap-quote {
+    margin: 0;
+}
+/* Full-width elements sit flush with the section grids' edges in multi mode */
+.bn-minimap-content.multi .bn-minimap-group-heading {
+    margin: 2px 0;
+}
+
 /* Viewport indicator — translucent blue overlay */
 .bn-minimap-viewport {
     position: absolute;

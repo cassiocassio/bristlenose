@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minimap — responsive multi-column prototype</title>
+<style>
+/* ─────────────────────────────────────────────────────────────────────────
+   Minimap responsive multi-column PROTOTYPE
+   Demonstrates: the minimap detecting the live quote-grid column count and
+   redrawing itself as an N-column shape (headings full-span, quotes row-major),
+   so its height/parallax track the real (shortened) document.
+
+   Faithful to the shipped pieces:
+   • .quote-group uses the real responsive-grid rule (auto-fill / minmax / 23rem)
+   • minimap line dimensions match organisms/minimap.css (2px lines, 3px pitch)
+   • detection reads getComputedStyle(...).gridTemplateColumns track count
+   • scroll-sync / parallax / click-to-scroll mirror Minimap.tsx
+   Loose tokens (not the full bn design system) — this is a behaviour prototype.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  color-scheme: light dark;
+  --bg:            light-dark(#ffffff, #111113);
+  --panel:        light-dark(#f7f7f8, #191a1c);
+  --ink:          light-dark(#1a1a1e, #e9e9ec);
+  --muted:        light-dark(#6b7280, #9aa0aa);
+  --border:       light-dark(#e5e7eb, #2c2e33);
+  --accent:       light-dark(#2563eb, #60a5fa);
+  --card:         light-dark(#ffffff, #202226);
+  --card-border:  light-dark(#e5e7eb, #313439);
+
+  /* real responsive-grid tokens */
+  --bn-quote-max-width: 23rem;   /* card measure — driven by the slider */
+  --bn-grid-gap: 1.25rem;
+
+  /* minimap tokens (match organisms/minimap.css + tokens.css) */
+  --bn-minimap-width: 80px;
+  --bn-minimap-quote:  light-dark(#e5e7eb, #333333);
+  --bn-minimap-heading: light-dark(#b0b5bd, #555555);
+  --bn-minimap-viewport-bg:     light-dark(rgba(37,99,235,.15), rgba(96,165,250,.2));
+  --bn-minimap-viewport-border: light-dark(rgba(37,99,235,.3),  rgba(96,165,250,.4));
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.5 "Inter", system-ui, -apple-system, sans-serif;
+  padding: 20px 24px 40px;
+}
+h1 { font-size: 20px; margin: 0 0 2px; }
+.sub { color: var(--muted); margin: 0 0 18px; max-width: 60ch; }
+
+/* ── Controls ─────────────────────────────────────────────────────────── */
+.controls {
+  display: flex; flex-wrap: wrap; gap: 18px 26px; align-items: center;
+  padding: 14px 16px; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 10px; margin-bottom: 14px;
+}
+.ctl { display: flex; flex-direction: column; gap: 5px; }
+.ctl > label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button {
+  border: 0; background: transparent; color: var(--ink); padding: 6px 12px;
+  font: inherit; font-size: 13px; cursor: pointer; border-right: 1px solid var(--border);
+}
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+input[type=range] { width: 240px; accent-color: var(--accent); }
+.rangewrap { display: flex; align-items: center; gap: 10px; }
+.rangewrap output { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 8ch; font-size: 12px; }
+
+/* ── HUD ──────────────────────────────────────────────────────────────── */
+.hud {
+  display: flex; flex-wrap: wrap; gap: 8px 10px; margin-bottom: 16px;
+}
+.chip {
+  font: 12px/1 ui-monospace, "SF Mono", Menlo, monospace;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 999px;
+  padding: 7px 12px; color: var(--ink); display: inline-flex; gap: 7px; align-items: center;
+}
+.chip b { color: var(--accent); font-weight: 700; }
+.chip.big b { font-size: 15px; }
+
+/* ── Stage: fake report + minimap side by side ────────────────────────── */
+.stage {
+  display: flex; gap: 0;
+  border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  background: var(--bg);
+  height: 620px;                 /* simulated viewport height */
+}
+
+/* The scrollable "document" — a real responsive grid inside a viewport box */
+.doc {
+  flex: 1 1 auto; min-width: 0;
+  overflow-y: auto; overflow-x: hidden;
+  padding: 22px 26px 60px;
+  scroll-behavior: smooth;
+}
+.doc h1.rep { font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+.doc h2.sec { font-size: 19px; margin: 26px 0 12px; font-weight: 650; }
+.doc .division { height: 1px; background: var(--border); margin: 34px 0 8px; }
+
+/* REAL responsive-grid rule (organisms/responsive-grid.css) */
+.quote-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--bn-quote-max-width), 100%), 1fr));
+  gap: var(--bn-grid-gap);
+  align-items: start;
+}
+.quote-card {
+  background: var(--card); border: 1px solid var(--card-border);
+  border-radius: 8px; padding: 12px 14px; margin: 0;
+  font-size: 13px; line-height: 1.5;
+}
+.quote-card .tc { color: var(--accent); font: 11px ui-monospace, monospace; display: block; margin-bottom: 5px; }
+.quote-card.star { border-left: 3px solid var(--accent); font-weight: 500; }
+
+/* ── Minimap slot (mirror of .minimap-slot + organisms/minimap.css) ───── */
+.minimap-slot {
+  flex: 0 0 var(--bn-minimap-width);
+  width: var(--bn-minimap-width);
+  border-left: 1px solid var(--border);
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+  padding: 0 12px;
+  cursor: pointer;
+}
+.bn-minimap-content { padding: 8px 0; /* transform set by JS for parallax */ }
+
+/* SINGLE-COLUMN section block (current shipped look) */
+.bn-minimap-content.single .mm-section { display: flex; flex-direction: column; }
+.bn-minimap-content.single .bn-minimap-quote { margin: 0 6px 1px; }
+.bn-minimap-content.single .bn-minimap-heading { margin: 3px 4px 1px; }
+
+/* MULTI-COLUMN section block (the new behaviour) — one grid per section,
+   heading spans all columns, quotes flow row-major into N tracks. */
+.bn-minimap-content.multi .mm-section {
+  display: grid;
+  grid-template-columns: repeat(var(--mm-cols, 1), 1fr);
+  gap: 1px 2px;
+  align-content: start;
+  margin-bottom: 1px;
+}
+.bn-minimap-content.multi .bn-minimap-heading { grid-column: 1 / -1; margin: 3px 0 1px; }
+.bn-minimap-content.multi .bn-minimap-quote  { margin: 0; }
+
+.bn-minimap-group-heading {
+  height: 3px; margin: 2px 3px 2px; background: var(--bn-minimap-heading);
+  border-radius: 1px;
+}
+.bn-minimap-content.multi .bn-minimap-group-heading { margin: 2px 0; }
+.bn-minimap-heading { height: 2px; background: var(--bn-minimap-heading); border-radius: 1px; }
+.bn-minimap-quote   { height: 2px; background: var(--bn-minimap-quote);   border-radius: .5px; }
+.bn-minimap-division { height: 0; margin: 8px 0; }
+
+.bn-minimap-viewport {
+  position: absolute; left: 0; right: 0;
+  background: var(--bn-minimap-viewport-bg);
+  border: 1.5px solid var(--bn-minimap-viewport-border);
+  border-radius: 4px; z-index: 1; min-height: 8px; cursor: grab;
+}
+.bn-minimap-viewport:active { cursor: grabbing; }
+
+.legend { margin-top: 14px; color: var(--muted); font-size: 12.5px; max-width: 70ch; }
+.legend code { background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+kbd { background: var(--panel); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 1px 6px; font: 12px ui-monospace, monospace; }
+</style>
+</head>
+<body>
+
+<h1>Minimap — responsive multi-column prototype</h1>
+<p class="sub">The quote grid reflows into N columns via <code style="font-size:12px">auto-fill</code>, so the real page gets ~1/N as tall. This prototype makes the minimap <b>detect</b> the live column count and redraw itself as the same N-column shape — restoring correct proportions and parallax. Drag the width slider (or resize your window) and watch the minimap follow.</p>
+
+<div class="controls">
+  <div class="ctl">
+    <label>Minimap mode</label>
+    <div class="seg" id="mode">
+      <button data-mode="single">Single-column (current)</button>
+      <button data-mode="multi" aria-pressed="true">Multi-column (new)</button>
+    </div>
+  </div>
+  <div class="ctl">
+    <label>Column measure — <code style="font-size:11px">--bn-quote-max-width</code></label>
+    <div class="rangewrap">
+      <input type="range" id="cardw" min="7" max="40" step="0.5" value="23">
+      <output id="cardwOut">23.0rem</output>
+    </div>
+  </div>
+  <div class="ctl">
+    <label>Dataset</label>
+    <div class="seg" id="data">
+      <button data-set="small">Small · 42</button>
+      <button data-set="typical" aria-pressed="true">Typical · 186</button>
+      <button data-set="large">Large · 612</button>
+    </div>
+  </div>
+  <div class="ctl">
+    <label>Theme</label>
+    <div class="seg" id="theme">
+      <button data-theme="light" aria-pressed="true">Light</button>
+      <button data-theme="dark">Dark</button>
+    </div>
+  </div>
+</div>
+
+<div class="hud" id="hud">
+  <span class="chip big">detected columns <b id="hCols">–</b></span>
+  <span class="chip">doc height <b id="hDoc">–</b></span>
+  <span class="chip">minimap height <b id="hMap">–</b></span>
+  <span class="chip">compression <b id="hRatio">–</b></span>
+  <span class="chip">scroll mode <b id="hScroll">–</b></span>
+</div>
+
+<div class="stage" id="stage">
+  <div class="doc" id="doc"><!-- report built by JS --></div>
+  <div class="minimap-slot" id="slot">
+    <div class="bn-minimap-content multi" id="mmContent"></div>
+    <div class="bn-minimap-viewport" id="mmViewport"></div>
+  </div>
+</div>
+
+<p class="legend">
+  <b>What to try:</b> drag the width slider from right (1 column → tall document, minimap is a single strip) to left (5+ columns → the document shortens and the minimap redraws into that many mini-columns). Toggle <b>Single-column (current)</b> to see today's behaviour for the same layout — note how the viewport box shrinks and parallax over-scrolls once the page goes multi-column, because the map still thinks the doc is tall. Click anywhere on the minimap to jump; drag the blue box to scrub. The detected count comes from reading <code>getComputedStyle(quoteGroup).gridTemplateColumns</code> — exactly what the shipping code will do.
+</p>
+
+<script>
+(function () {
+  "use strict";
+
+  // ── Fake research data ────────────────────────────────────────────────
+  const FRAGMENTS = [
+    "I just clicked around until something worked, honestly.",
+    "The bit where it asks for the code again — that threw me completely.",
+    "I loved that it remembered my last folder. Small thing, big deal.",
+    "I wasn't sure if it had frozen or was still thinking.",
+    "Why does it need my location for this? That gave me pause.",
+    "Once I found the export button everything else made sense.",
+    "It felt fast. Faster than the old tool we used at work.",
+    "I expected a confirmation and there wasn't one, so I did it twice.",
+    "The wording here is doing a lot of work and I missed it first time.",
+    "Honestly I'd pay for this if it saved me the Friday afternoon.",
+    "I got lost between the two tabs — which one was I on?",
+    "That little animation told me it was working. Reassuring.",
+    "I didn't trust it at first because it was too quick.",
+    "The colours help. I could tell the negative ones apart at a glance.",
+    "I'd want to share this with my PM but not the raw transcript.",
+  ];
+  const SECTIONS = ["Onboarding friction","Trust & confidence","Navigation","Speed & responsiveness","Export & sharing","Wording & labels"];
+  const THEMES   = ["Mental models","Emotional arc","Feature requests","Comparisons to prior tools"];
+
+  // deterministic pseudo-random so layouts are stable across toggles
+  let _seed = 1234567;
+  function rnd() { _seed = (_seed * 1103515245 + 12345) & 0x7fffffff; return _seed / 0x7fffffff; }
+  function reseed() { _seed = 1234567; }
+
+  const DATASETS = {
+    small:   { secCounts: [8,6,5,4], themeCounts: [7,6,6] },
+    typical: { secCounts: [22,18,16,14,12,10], themeCounts: [20,17,14,13] },
+    large:   { secCounts: [70,58,52,46,40,36], themeCounts: [64,54,50,44] },
+  };
+
+  function buildModel(setName) {
+    reseed();
+    const cfg = DATASETS[setName];
+    const sections = cfg.secCounts.map((n, i) => ({
+      label: SECTIONS[i % SECTIONS.length],
+      quotes: Array.from({ length: n }, () => ({
+        text: FRAGMENTS[Math.floor(rnd() * FRAGMENTS.length)],
+        star: rnd() < 0.14,
+        extra: rnd() < 0.4 ? FRAGMENTS[Math.floor(rnd() * FRAGMENTS.length)] : "",
+      })),
+    }));
+    const themes = cfg.themeCounts.map((n, i) => ({
+      label: THEMES[i % THEMES.length],
+      quotes: Array.from({ length: n }, () => ({
+        text: FRAGMENTS[Math.floor(rnd() * FRAGMENTS.length)],
+        star: rnd() < 0.1,
+        extra: rnd() < 0.35 ? FRAGMENTS[Math.floor(rnd() * FRAGMENTS.length)] : "",
+      })),
+    }));
+    return { sections, themes };
+  }
+
+  // ── Render the fake report (real .quote-group grids) ──────────────────
+  const doc = document.getElementById("doc");
+  function renderReport(model) {
+    const parts = ['<h1 class="rep">Sections</h1>'];
+    let tc = 0;
+    const card = (q) => {
+      const t = "0:" + String(10 + (tc++ % 50)).padStart(2, "0");
+      return '<div class="quote-card' + (q.star ? " star" : "") + '">' +
+             '<span class="tc">' + t + '</span>' + q.text +
+             (q.extra ? " " + q.extra : "") + "</div>";
+    };
+    model.sections.forEach((s) => {
+      parts.push('<h2 class="sec">' + s.label + "</h2>");
+      parts.push('<div class="quote-group">' + s.quotes.map(card).join("") + "</div>");
+    });
+    parts.push('<div class="division"></div><h1 class="rep">Themes</h1>');
+    model.themes.forEach((t) => {
+      parts.push('<h2 class="sec">' + t.label + "</h2>");
+      parts.push('<div class="quote-group">' + t.quotes.map(card).join("") + "</div>");
+    });
+    doc.innerHTML = parts.join("");
+  }
+
+  // ── Render the minimap ────────────────────────────────────────────────
+  const mmContent = document.getElementById("mmContent");
+  function renderMinimap(model, cols) {
+    mmContent.style.setProperty("--mm-cols", cols);
+    const sectionBlock = (label, quotes) =>
+      '<div class="mm-section">' +
+      '<div class="bn-minimap-heading"></div>' +
+      quotes.map(() => '<div class="bn-minimap-quote"></div>').join("") +
+      "</div>";
+    const html = [];
+    if (model.sections.length) {
+      html.push('<div class="bn-minimap-group-heading"></div>');
+      model.sections.forEach((s) => html.push(sectionBlock(s.label, s.quotes)));
+    }
+    if (model.sections.length && model.themes.length) html.push('<div class="bn-minimap-division"></div>');
+    if (model.themes.length) {
+      html.push('<div class="bn-minimap-group-heading"></div>');
+      model.themes.forEach((t) => html.push(sectionBlock(t.label, t.quotes)));
+    }
+    mmContent.innerHTML = html.join("");
+  }
+
+  // ── Detection: read the live grid's column count ──────────────────────
+  function detectColumns() {
+    const grid = doc.querySelector(".quote-group");
+    if (!grid) return 1;
+    const tpl = getComputedStyle(grid).gridTemplateColumns;
+    if (!tpl || tpl === "none") return 1;
+    return Math.max(1, tpl.trim().split(/\s+/).length);
+  }
+
+  // ── Scroll sync + parallax (mirrors Minimap.tsx) ──────────────────────
+  const slot = document.getElementById("slot");
+  const viewport = document.getElementById("mmViewport");
+  let rafId = 0;
+
+  function updateScroll() {
+    const scrollY = doc.scrollTop;
+    const scrollHeight = doc.scrollHeight;
+    const viewportHeight = doc.clientHeight;
+    const contentHeight = mmContent.scrollHeight;
+    const maxScroll = Math.max(1, scrollHeight - viewportHeight);
+    const scrollRatio = Math.min(1, Math.max(0, scrollY / maxScroll));
+    const indicatorHeight = Math.max(8, (viewportHeight / scrollHeight) * contentHeight);
+
+    let mode;
+    if (contentHeight > viewportHeight) {
+      mode = "parallax";
+      const parallaxOffset = scrollRatio * (contentHeight - viewportHeight);
+      mmContent.style.transform = "translateY(" + (-parallaxOffset) + "px)";
+      const indicatorTop = scrollRatio * (contentHeight - indicatorHeight);
+      viewport.style.top = (indicatorTop - parallaxOffset) + "px";
+    } else {
+      mode = "simple";
+      mmContent.style.transform = "none";
+      const indicatorTop = scrollRatio * (contentHeight - indicatorHeight);
+      viewport.style.top = indicatorTop + "px";
+    }
+    viewport.style.height = indicatorHeight + "px";
+
+    // HUD
+    setChip("hDoc", Math.round(scrollHeight) + "px");
+    setChip("hMap", Math.round(contentHeight) + "px");
+    setChip("hScroll", mode);
+  }
+  function scheduleScroll() { cancelAnimationFrame(rafId); rafId = requestAnimationFrame(updateScroll); }
+
+  // click-to-scroll (skips when a drag just happened)
+  let dragging = false;
+  slot.addEventListener("click", function (e) {
+    if (dragging) return;
+    if (e.target === viewport) return;
+    const rect = slot.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const contentHeight = mmContent.scrollHeight;
+    const viewportHeight = doc.clientHeight;
+    const maxScroll = Math.max(1, doc.scrollHeight - viewportHeight);
+    const ratio = contentHeight > viewportHeight
+      ? Math.min(1, Math.max(0, y / viewportHeight))
+      : Math.min(1, Math.max(0, y / contentHeight));
+    doc.scrollTo({ top: Math.max(0, ratio * maxScroll), behavior: "smooth" });
+  });
+
+  // drag-to-scroll
+  viewport.addEventListener("pointerdown", function (e) {
+    e.preventDefault(); e.stopPropagation(); dragging = true;
+    const contentHeight = mmContent.scrollHeight;
+    const viewportHeight = doc.clientHeight;
+    const maxScroll = Math.max(1, doc.scrollHeight - viewportHeight);
+    function onMove(ev) {
+      const rect = slot.getBoundingClientRect();
+      const y = ev.clientY - rect.top;
+      const ratio = contentHeight > viewportHeight
+        ? Math.min(1, Math.max(0, y / viewportHeight))
+        : Math.min(1, Math.max(0, y / contentHeight));
+      doc.scrollTo({ top: Math.max(0, ratio * maxScroll) });
+    }
+    function onUp() {
+      setTimeout(() => { dragging = false; }, 0);
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  });
+
+  doc.addEventListener("scroll", scheduleScroll, { passive: true });
+
+  // ── State + wiring ────────────────────────────────────────────────────
+  let currentModel = buildModel("typical");
+  let currentMode = "multi";
+  let lastCols = -1;
+
+  function setChip(id, v) { document.getElementById(id).textContent = v; }
+
+  function redrawMinimap() {
+    const cols = currentMode === "single" ? 1 : detectColumns();
+    mmContent.className = "bn-minimap-content " + (currentMode === "single" ? "single" : "multi");
+    renderMinimap(currentModel, cols);
+    lastCols = cols;
+    // HUD
+    setChip("hCols", currentMode === "single" ? "1 (forced)" : cols);
+    updateScroll();
+    const ratio = (doc.scrollHeight / Math.max(1, mmContent.scrollHeight));
+    setChip("hRatio", "doc ≈ " + ratio.toFixed(1) + "× map");
+  }
+
+  function fullRender() {
+    ro.disconnect();
+    renderReport(currentModel);
+    observeGrid();
+    // let layout settle, then detect + draw. rAF is the fast path; the
+    // setTimeout is a belt-and-braces fallback for environments that suspend
+    // rAF on an unsized/offscreen page (e.g. some embedded preview panes).
+    requestAnimationFrame(() => { requestAnimationFrame(redrawMinimap); });
+    setTimeout(redrawMinimap, 80);
+  }
+
+  // Re-detect columns whenever the quote grid's box changes — the production
+  // signal is the grid container resizing (window / sidebar open-close), which
+  // is what changes the auto-fill column count. Observe the first .quote-group.
+  const ro = new ResizeObserver(() => {
+    if (currentMode === "single") { updateScroll(); return; }
+    const cols = detectColumns();
+    if (cols !== lastCols) redrawMinimap(); else updateScroll();
+  });
+  function observeGrid() {
+    const grid = doc.querySelector(".quote-group");
+    if (grid) ro.observe(grid);
+  }
+  window.addEventListener("resize", () => scheduleScroll());
+
+  // width slider → drives --bn-quote-max-width (⇒ auto-fill column count)
+  const cardw = document.getElementById("cardw");
+  const cardwOut = document.getElementById("cardwOut");
+  cardw.addEventListener("input", function () {
+    const rem = parseFloat(cardw.value);
+    cardwOut.textContent = rem.toFixed(1) + "rem";
+    document.documentElement.style.setProperty("--bn-quote-max-width", rem + "rem");
+    // ResizeObserver fires on reflow and re-detects; nudge in case size is unchanged
+    requestAnimationFrame(redrawMinimap);
+  });
+
+  // mode toggle
+  document.getElementById("mode").addEventListener("click", function (e) {
+    const b = e.target.closest("button"); if (!b) return;
+    currentMode = b.dataset.mode;
+    [...this.children].forEach((c) => c.setAttribute("aria-pressed", c === b));
+    redrawMinimap();
+  });
+
+  // dataset toggle
+  document.getElementById("data").addEventListener("click", function (e) {
+    const b = e.target.closest("button"); if (!b) return;
+    [...this.children].forEach((c) => c.setAttribute("aria-pressed", c === b));
+    currentModel = buildModel(b.dataset.set);
+    doc.scrollTop = 0;
+    fullRender();
+  });
+
+  // theme toggle
+  document.getElementById("theme").addEventListener("click", function (e) {
+    const b = e.target.closest("button"); if (!b) return;
+    [...this.children].forEach((c) => c.setAttribute("aria-pressed", c === b));
+    document.documentElement.style.colorScheme = b.dataset.theme;
+  });
+
+  // ── Go ────────────────────────────────────────────────────────────────
+  fullRender();
+})();
+</script>
+</body>
+</html>

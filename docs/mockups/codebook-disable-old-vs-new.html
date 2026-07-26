@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Disable — old vs new · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css) — same block the other
+   codebook mockups use, so the framed artefacts below are true pixels.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:940px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; font-family:var(--bn-font-mono); }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:66ch; margin:.4rem 0; }
+
+/* how-to-read key: the two zones */
+.key { display:flex; gap:1.5rem; flex-wrap:wrap; margin:1.1rem 0 0; font-size:var(--bn-text-label); }
+.key-item { display:flex; align-items:center; gap:.5rem; color:var(--bn-colour-muted); }
+.swatch { width:26px; height:16px; border-radius:var(--bn-radius-sm); flex-shrink:0; }
+.swatch.art { background:var(--bn-colour-bg); border:1.5px solid var(--bn-colour-border-hover); }
+.swatch.com { background:repeating-linear-gradient(135deg, var(--bn-colour-hover) 0 6px, transparent 6px 8px); border:1px dashed var(--bn-colour-border-hover); }
+
+/* ── comparison scaffold ─────────────────────────────────────────────── */
+.cmp { margin:2.5rem 0; }
+.cmp > h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .15rem; }
+.cmp > .where { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-family:var(--bn-font-mono); text-transform:uppercase; letter-spacing:.05em; margin:0 0 1rem; }
+
+/* ARTEFACT zone — the real pixels. Framed like a screenshot, NO prose inside. */
+.artefacts { display:grid; grid-template-columns:1fr 1fr; gap:1.1rem; }
+@media (max-width:720px){ .artefacts{ grid-template-columns:1fr; } }
+.frame { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); overflow:hidden; background:var(--bn-colour-bg); }
+.frame-bar { display:flex; align-items:center; gap:.5rem; padding:.45rem .75rem; border-bottom:1px solid var(--bn-colour-border); background:var(--bn-colour-quote-bg); }
+.frame-bar .tl { display:flex; gap:5px; } .frame-bar .tl i { width:9px; height:9px; border-radius:50%; background:var(--bn-colour-border-hover); display:block; }
+.frame-bar .ver { font-size:var(--bn-text-micro); font-family:var(--bn-font-mono); text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-muted); margin-left:auto; }
+.frame-bar .ver.new { color:var(--bn-colour-accent); }
+.frame-body { padding:1rem; }
+
+/* COMMENTARY zone — clearly not-the-product. Hatched rule + mono label. */
+.commentary { margin-top:1.1rem; border-left:3px solid var(--bn-colour-border-hover);
+  background:repeating-linear-gradient(135deg, color-mix(in srgb, var(--bn-colour-hover) 55%, transparent) 0 7px, transparent 7px 9px);
+  border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; padding:.85rem 1.1rem; }
+.commentary .clabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); letter-spacing:.1em; text-transform:uppercase; color:var(--bn-colour-muted); margin-bottom:.4rem; }
+.commentary p { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); line-height:1.6; margin:.35rem 0; max-width:78ch; }
+.commentary b { color:var(--bn-colour-text); font-weight:490; }
+.commentary .old-w { color:var(--bn-colour-muted); } .commentary .old-w b { color:var(--bn-colour-text); }
+
+/* ── REAL components (verbatim from codebook-library-states.html) ─────── */
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; }
+.apply-btn { flex-shrink:0; font:inherit; font-size:var(--bn-text-label); font-weight:490; color:#fff;
+  background:var(--bn-colour-accent); border:none; border-radius:var(--bn-radius-md); padding:.45rem .95rem; cursor:default; white-space:nowrap; }
+.sw { flex-shrink:0; position:relative; width:38px; height:22px; border-radius:11px;
+  background:var(--bn-colour-accent); }
+.sw.off { background:var(--bn-off-track); }
+.sw::after { content:""; position:absolute; top:2px; left:18px; width:18px; height:18px; border-radius:50%;
+  background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.28); }
+.sw.off::after { left:2px; }
+
+/* ── Tags sidebar (Quotes) — REAL components, lifted verbatim from
+   bristlenose/theme/organisms/sidebar-tags.css. Structure: collapsible
+   codebook-framework (chevron + title/author + eye-on-right) → tinted group
+   cards (name + subtitle + eye) → tag rows (checkbox + badge + micro-bar +
+   count) → TOTAL row. Eye toggles are shown at their hover appearance
+   (opacity:1) so the affordance reads in a static frame — in the app they
+   fade in on hover. ─────────────────────────────────────────────────── */
+.tag-sidebar { background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); overflow:hidden; }
+.tag-sidebar-title { font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-muted); font-weight:490; padding:.7rem .85rem .4rem; }
+
+.codebook-framework { border-bottom:1px solid var(--bn-colour-border); }
+.codebook-framework:last-child { border-bottom:none; }
+.codebook-summary { display:flex; align-items:flex-start; gap:.5rem; padding:.6rem .85rem; cursor:pointer; }
+.codebook-disclosure { flex-shrink:0; width:.85rem; height:.85rem; margin-top:.15rem; color:var(--bn-colour-accent); transition:transform var(--bn-transition-fast); }
+.codebook-disclosure.open { transform:rotate(90deg); }
+.codebook-info { flex:1; min-width:0; }
+.codebook-title { font-size:var(--bn-text-label); font-weight:490; line-height:1.45; }
+.codebook-author { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); line-height:1.35; }
+.codebook-eye { flex-shrink:0; background:none; border:none; padding:2px; color:var(--bn-colour-border-hover); cursor:pointer; margin-top:.1rem; display:flex; }
+.codebook-eye:hover { color:var(--bn-colour-muted); }
+.codebook-body { padding:0 0 .25rem; }
+.codebook-framework.eye-hidden .codebook-title,
+.codebook-framework.eye-hidden .codebook-author { color:var(--bn-colour-muted); }
+
+.tag-filter-group-header-row { display:flex; align-items:flex-start; gap:.35rem; padding:.35rem .5rem .1rem 2.2rem; }
+.tag-filter-group-info { flex:1; min-width:0; }
+.tag-filter-group-name { font-size:var(--bn-text-label); font-weight:490; }
+.tag-filter-group-subtitle { font-size:var(--bn-text-micro); color:var(--bn-colour-muted); line-height:1.3; }
+.group-eye { flex-shrink:0; background:none; border:none; padding:2px; color:var(--bn-colour-border-hover); cursor:pointer; margin-top:.05rem; display:flex; }
+.group-eye:hover { color:var(--bn-colour-muted); }
+.tag-filter-group.eye-hidden .tag-filter-group-name { color:var(--bn-colour-muted); }
+.tag-filter-group.eye-hidden .tag-filter-group-subtitle,
+.tag-filter-group.eye-hidden .tag-filter-group-tags { display:none; }
+.tag-filter-group-tags { padding:0; }
+
+.tag-row { display:grid; grid-template-columns:1fr auto; align-items:center; gap:.35rem; padding:3px .5rem; }
+.tag-checkbox-label { display:inline-flex; align-items:center; flex-shrink:0; cursor:pointer; }
+.bn-checkbox { accent-color:var(--bn-colour-accent); margin:0; }
+.tag-name-area { display:flex; align-items:center; gap:.5rem; min-width:0; }
+.tag-sidebar .badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; max-width:14rem; overflow:hidden; text-overflow:ellipsis; }
+.tag-bar-area { display:flex; align-items:center; gap:var(--bn-space-xs); min-width:50px; justify-content:flex-end; }
+.tag-micro-bar { height:.6rem; border-radius:var(--bn-radius-sm); min-width:2px; background:var(--bn-colour-border-hover); }
+.tag-count { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); min-width:16px; text-align:right; font-variant-numeric:tabular-nums; }
+
+.group-total-row { display:grid; grid-template-columns:1fr auto; align-items:center; gap:.35rem; padding:var(--bn-space-xs) .5rem .25rem; border-top:1px solid var(--bn-colour-border); margin-top:var(--bn-space-xs); }
+.group-total-label { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.04em; }
+.group-total-count { font-size:var(--bn-text-caption); font-weight:490; color:var(--bn-colour-muted); font-variant-numeric:tabular-nums; }
+
+/* Autocomplete (TagInput dropdown) — real tokens */
+.ac-in { display:inline-flex; align-items:center; border:1.5px solid var(--bn-colour-accent); border-radius:var(--bn-radius-md);
+  padding:.35rem .6rem; font-size:var(--bn-text-label); background:var(--bn-colour-bg); }
+.ac-in .car { width:1px; height:1em; background:var(--bn-colour-accent); margin-left:1px; }
+.ac-drop { margin-top:.4rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); background:var(--bn-colour-bg); overflow:hidden; max-width:260px; box-shadow:0 8px 24px var(--bn-colour-shadow); }
+.ac-h { font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted); padding:.4rem .6rem .1rem; }
+.ac-tags { padding:.15rem .6rem .45rem; display:flex; flex-wrap:wrap; gap:4px; }
+.ac-tags.dim { opacity:.55; }
+.ac-empty { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-style:italic; padding:.4rem .6rem; border-top:1px solid var(--bn-colour-border); }
+
+/* codebook-page section (real) — for the lifecycle */
+.page { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.4rem 1rem; background:var(--bn-colour-bg); }
+.sec { border-top:1px solid var(--bn-colour-border); padding:.85rem 0; }
+.sec:first-child { border-top:none; }
+.sec-hdr { display:flex; align-items:center; gap:1rem; }
+.sec-title { font-size:var(--bn-text-body); font-weight:490; }
+.sec-meta { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.1rem; }
+.flow { display:flex; align-items:stretch; gap:0; }
+.flow .step { flex:1; padding:.7rem .8rem; border:1px solid var(--bn-colour-border); border-right:none; font-size:var(--bn-text-caption); }
+.flow .step:last-child { border-right:1px solid var(--bn-colour-border); border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; }
+.flow .step:first-child { border-radius:var(--bn-radius-md) 0 0 var(--bn-radius-md); }
+.flow .step b { font-size:var(--bn-text-label); display:block; margin-bottom:.2rem; }
+.flow .step .sub { color:var(--bn-colour-muted); }
+
+/* changelog */
+.changelog { margin-top:3rem; border-top:1px solid var(--bn-colour-border); padding-top:1.4rem; }
+.changelog h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 1rem; }
+.changelog ol { margin:0; padding:0; list-style:none; }
+.changelog li { display:grid; grid-template-columns:1.6rem 1fr; gap:.8rem; padding:.75rem 0; border-bottom:1px solid var(--bn-colour-border); }
+.changelog li:last-child { border-bottom:none; }
+.changelog .n { font-family:var(--bn-font-mono); font-size:var(--bn-text-label); color:var(--bn-colour-accent); }
+.changelog .c { font-size:var(--bn-text-label); } .changelog .c b { font-weight:490; }
+.changelog .w { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.2rem; }
+.changelog .f { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); margin-top:.25rem; }
+.changelog .kept { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:1rem; }
+.changelog .kept b { color:var(--bn-colour-text); font-weight:490; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="masthead">
+    <div class="eyebrow">Codebook state model · disable, old → new</div>
+    <h1>Disable: “view-only” (old) vs “off means off” (new)</h1>
+    <p>Framed panels below are <b>real pixels</b> — the shipped design system, the actual switch, badges, sidebar and dropdown. Only the three surfaces that change are shown; the codebook-page fold, quote badges, Add/Remove and the hand-made floor are unchanged.</p>
+    <div class="key">
+      <span class="key-item"><span class="swatch art"></span> Artefact — what the researcher sees</span>
+      <span class="key-item"><span class="swatch com"></span> Commentary — how &amp; why (never in the product)</span>
+    </div>
+  </div>
+
+  <!-- ── TAGS SIDEBAR ─────────────────────────────────────────────────── -->
+  <section class="cmp">
+    <h2>Tags sidebar</h2>
+    <p class="where">Quotes page</p>
+    <div class="artefacts">
+      <div class="frame">
+        <div class="frame-bar"><span class="tl"><i></i><i></i><i></i></span><span class="ver">before</span></div>
+        <div class="frame-body">
+          <div class="tag-sidebar mock">
+            <div class="tag-sidebar-title">Tags</div>
+
+            <!-- floor: hand-made project codebook (always present) -->
+            <div class="codebook-framework">
+              <div class="codebook-summary">
+                <svg class="codebook-disclosure open" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 4l4 4-4 4"/></svg>
+                <div class="codebook-info">
+                  <div class="codebook-title">project-ikea2 tags</div>
+                  <div class="codebook-author">Your codebook</div>
+                </div>
+                <button class="codebook-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg></button>
+              </div>
+              <div class="codebook-body">
+                <div class="tag-filter-group">
+                  <div class="tag-filter-group-header-row">
+                    <div class="tag-filter-group-info">
+                      <div class="tag-filter-group-name">Behaviour</div>
+                      <div class="tag-filter-group-subtitle">What people actually do</div>
+                    </div>
+                    <button class="group-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg></button>
+                  </div>
+                  <div class="tag-filter-group-tags">
+                    <div class="tag-row">
+                      <div class="tag-name-area"><label class="tag-checkbox-label"><input type="checkbox" class="bn-checkbox"></label><span class="badge" style="background:var(--bn-ux-1-bg)">onboarding-friction</span></div>
+                      <div class="tag-bar-area"><span class="tag-micro-bar" style="width:30px"></span><span class="tag-count">18</span></div>
+                    </div>
+                    <div class="tag-row">
+                      <div class="tag-name-area"><label class="tag-checkbox-label"><input type="checkbox" class="bn-checkbox"></label><span class="badge" style="background:var(--bn-ux-1-bg)">repeat-visits</span></div>
+                      <div class="tag-bar-area"><span class="tag-micro-bar" style="width:12px"></span><span class="tag-count">7</span></div>
+                    </div>
+                  </div>
+                  <div class="group-total-row"><span class="group-total-label">Total</span><span class="group-total-count">25</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- toggleable auto codebook — DISABLED, but still listed (old behaviour) -->
+            <div class="codebook-framework">
+              <div class="codebook-summary">
+                <svg class="codebook-disclosure open" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 4l4 4-4 4"/></svg>
+                <div class="codebook-info">
+                  <div class="codebook-title">Laws of UX</div>
+                  <div class="codebook-author">Jon Yablonski</div>
+                </div>
+                <button class="codebook-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg></button>
+              </div>
+              <div class="codebook-body">
+                <div class="tag-filter-group">
+                  <div class="tag-filter-group-header-row">
+                    <div class="tag-filter-group-info">
+                      <div class="tag-filter-group-name">Laws of UX</div>
+                      <div class="tag-filter-group-subtitle">Heuristics from psychology</div>
+                    </div>
+                    <button class="group-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg></button>
+                  </div>
+                  <div class="tag-filter-group-tags">
+                    <div class="tag-row">
+                      <div class="tag-name-area"><label class="tag-checkbox-label"><input type="checkbox" class="bn-checkbox"></label><span class="badge" style="background:var(--bn-trust-1-bg)">law-of-proximity</span></div>
+                      <div class="tag-bar-area"><span class="tag-micro-bar" style="width:16px"></span><span class="tag-count">9</span></div>
+                    </div>
+                    <div class="tag-row">
+                      <div class="tag-name-area"><label class="tag-checkbox-label"><input type="checkbox" class="bn-checkbox"></label><span class="badge" style="background:var(--bn-trust-1-bg)">aesthetic-usability</span></div>
+                      <div class="tag-bar-area"><span class="tag-micro-bar" style="width:9px"></span><span class="tag-count">5</span></div>
+                    </div>
+                  </div>
+                  <div class="group-total-row"><span class="group-total-label">Total</span><span class="group-total-count">14</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame">
+        <div class="frame-bar"><span class="tl"><i></i><i></i><i></i></span><span class="ver new">after</span></div>
+        <div class="frame-body">
+          <div class="tag-sidebar mock">
+            <div class="tag-sidebar-title">Tags</div>
+
+            <!-- floor: hand-made project codebook (always present) -->
+            <div class="codebook-framework">
+              <div class="codebook-summary">
+                <svg class="codebook-disclosure open" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 4l4 4-4 4"/></svg>
+                <div class="codebook-info">
+                  <div class="codebook-title">project-ikea2 tags</div>
+                  <div class="codebook-author">Your codebook</div>
+                </div>
+                <button class="codebook-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg></button>
+              </div>
+              <div class="codebook-body">
+                <div class="tag-filter-group">
+                  <div class="tag-filter-group-header-row">
+                    <div class="tag-filter-group-info">
+                      <div class="tag-filter-group-name">Behaviour</div>
+                      <div class="tag-filter-group-subtitle">What people actually do</div>
+                    </div>
+                    <button class="group-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg></button>
+                  </div>
+                  <div class="tag-filter-group-tags">
+                    <div class="tag-row">
+                      <div class="tag-name-area"><label class="tag-checkbox-label"><input type="checkbox" class="bn-checkbox"></label><span class="badge" style="background:var(--bn-ux-1-bg)">onboarding-friction</span></div>
+                      <div class="tag-bar-area"><span class="tag-micro-bar" style="width:30px"></span><span class="tag-count">18</span></div>
+                    </div>
+                    <div class="tag-row">
+                      <div class="tag-name-area"><label class="tag-checkbox-label"><input type="checkbox" class="bn-checkbox"></label><span class="badge" style="background:var(--bn-ux-1-bg)">repeat-visits</span></div>
+                      <div class="tag-bar-area"><span class="tag-micro-bar" style="width:12px"></span><span class="tag-count">7</span></div>
+                    </div>
+                  </div>
+                  <div class="group-total-row"><span class="group-total-label">Total</span><span class="group-total-count">25</span></div>
+                </div>
+
+                <!-- eye-hidden group: closed-eye STUB stays as the one-click way back -->
+                <div class="tag-filter-group eye-hidden">
+                  <div class="tag-filter-group-header-row">
+                    <div class="tag-filter-group-info">
+                      <div class="tag-filter-group-name">Pain points</div>
+                      <div class="tag-filter-group-subtitle">Where it hurts</div>
+                    </div>
+                    <button class="group-eye"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/><line x1="2" y1="2" x2="14" y2="14"/></svg></button>
+                  </div>
+                  <div class="tag-filter-group-tags">
+                    <div class="tag-row">
+                      <div class="tag-name-area"><label class="tag-checkbox-label"><input type="checkbox" class="bn-checkbox"></label><span class="badge" style="background:var(--bn-emo-1-bg)">checkout-confusion</span></div>
+                      <div class="tag-bar-area"><span class="tag-micro-bar" style="width:14px"></span><span class="tag-count">8</span></div>
+                    </div>
+                  </div>
+                  <div class="group-total-row"><span class="group-total-label">Total</span><span class="group-total-count">8</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <div class="clabel">Commentary — why this changes</div>
+      <p class="old-w"><b>Before:</b> a disabled codebook (“Laws of UX”) stayed fully listed — its groups, tags and counts occupying the sidebar exactly like an enabled one, with no marker that it was off. Its badges were already hidden report-wide, so the sidebar and the report disagreed. That mismatch is where the “invisible success” bug lived.</p>
+      <p><b>After:</b> a disabled codebook is <b>gone from the sidebar entirely</b> — you bring it back with the lens switch. Contrast the <b>eye-hidden</b> group (“Pain points”): hide collapses the card to a muted, closed-eye <em>stub</em> — the one-click way back — and its tags keep autocompleting. Hide leaves a stub and stays reachable; disable removes the codebook and takes it off the board.</p>
+      <p style="opacity:.75">The eye toggles are drawn here at their hover appearance so they read in a still frame; in the app they fade in when you hover a codebook or group.</p>
+    </div>
+  </section>
+
+  <!-- ── AUTOCOMPLETE ─────────────────────────────────────────────────── -->
+  <section class="cmp">
+    <h2>Autocomplete</h2>
+    <p class="where">typing a tag on a quote</p>
+    <div class="artefacts">
+      <div class="frame">
+        <div class="frame-bar"><span class="tl"><i></i><i></i><i></i></span><span class="ver">before</span></div>
+        <div class="frame-body">
+          <span class="ac-in">la<span class="car"></span></span>
+          <div class="ac-drop">
+            <div class="ac-h">project-ikea2 tags</div>
+            <div class="ac-tags"><span class="badge" style="background:var(--bn-emo-1-bg)">launch-anxiety</span></div>
+            <div class="ac-h">Laws of UX</div>
+            <div class="ac-tags dim"><span class="badge" style="background:var(--bn-ux-1-bg)">law-of-proximity</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="frame">
+        <div class="frame-bar"><span class="tl"><i></i><i></i><i></i></span><span class="ver new">after</span></div>
+        <div class="frame-body">
+          <span class="ac-in">la<span class="car"></span></span>
+          <div class="ac-drop">
+            <div class="ac-h">project-ikea2 tags</div>
+            <div class="ac-tags"><span class="badge" style="background:var(--bn-emo-1-bg)">launch-anxiety</span></div>
+            <div class="ac-empty">Laws of UX is off — no suggestions</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <div class="clabel">Commentary — why this changes</div>
+      <p class="old-w"><b>Before:</b> tags from a disabled codebook were still offered (dimmed). Accepting one applied a badge the filter then hid — an invisible add.</p>
+      <p><b>After:</b> a disabled codebook’s tags <b>aren’t offered</b> — you can’t add what’s off, so the invisible add can’t happen. Note this is <b>disable</b> only; an <b>eye-hidden</b> group’s tags <em>stay</em> suggestable and auto-unhide when picked — that tactical flow is untouched.</p>
+    </div>
+  </section>
+
+  <!-- ── LIFECYCLE ────────────────────────────────────────────────────── -->
+  <section class="cmp">
+    <h2>New sessions added while disabled</h2>
+    <p class="where">re-apply behaviour</p>
+    <div class="artefacts">
+      <div class="frame">
+        <div class="frame-bar"><span class="tl"><i></i><i></i><i></i></span><span class="ver">before</span></div>
+        <div class="frame-body">
+          <div class="flow">
+            <div class="step"><b>Disabled</b><span class="sub">off, still linked</span></div>
+            <div class="step"><b>+20 sessions</b><span class="sub">coded silently</span></div>
+            <div class="step"><b>Re-enable</b><span class="sub">already there</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="frame">
+        <div class="frame-bar"><span class="tl"><i></i><i></i><i></i></span><span class="ver new">after</span></div>
+        <div class="frame-body">
+          <div class="flow">
+            <div class="step"><b>Disabled</b><span class="sub">off, not maintained</span></div>
+            <div class="step"><b>+20 sessions</b><span class="sub">not coded</span></div>
+            <div class="step"><b>Re-enable</b><span class="sub">catch-up on the 20</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <div class="clabel">Commentary — why this changes</div>
+      <p class="old-w"><b>Before:</b> a disabled codebook kept auto-coding new sessions (gate = <em>linked</em>). Re-enable was instant, but you spent the LLM on a lens you’d switched off.</p>
+      <p><b>After:</b> off never spends (gate = <em>enabled</em>). New sessions wait; re-enable runs one catch-up over just the 20 — and since you might never re-enable, you may never pay at all. Existing results are always kept, never re-billed.</p>
+    </div>
+  </section>
+
+  <!-- ── CHANGELOG ────────────────────────────────────────────────────── -->
+  <section class="changelog">
+    <h2>Changes as a consequence of the new spec</h2>
+    <ol>
+      <li><span class="n">1</span><div><div class="c"><b>Tags sidebar drops disabled codebooks.</b></div><div class="w">was — still listed (view-only); eye-hidden groups keep their stub.</div><div class="f">TagSidebar.tsx — read disabledFrameworks, filter them out</div></div></li>
+      <li><span class="n">2</span><div><div class="c"><b>Autocomplete excludes disabled-codebook tags.</b></div><div class="w">was — suggested (dimmed) → invisible-success bug; hide stays suggested + auto-unhide.</div><div class="f">QuoteGroup.tsx — split hide (decorate) vs disable (existing exclude prop)</div></div></li>
+      <li><span class="n">3</span><div><div class="c"><b>Re-apply gate flips to <code>enabled</code>; disabled stops maintaining; re-enable runs a catch-up delta.</b></div><div class="w">was — gate on linked, kept coding while off (reverses commit 601f4f94).</div><div class="f">autocode.py reapply_active_frameworks + on-enable trigger</div></div></li>
+      <li><span class="n">4</span><div><div class="c"><b>Disable and Hide are separate mechanisms in copy + model.</b></div><div class="w">was — conflated (“the slider is disable (Hide/fold)”).</div><div class="f">design-codebook-library.md note + old mockup §2 caption</div></div></li>
+      <li><span class="n">5</span><div><div class="c"><b>Bring-back promise: existing free; new sessions catch up on re-enable.</b></div><div class="w">was — “free, no re-spend”, unqualified.</div><div class="f">codebook page “off · kept” copy</div></div></li>
+      <li><span class="n">6</span><div><div class="c"><b>Floor named by project (“project-ikea2 tags”), no switch, no Remove.</b></div><div class="w">was — generic “User tags” in the tags sidebar.</div><div class="f">TagSidebar.tsx header — use the project title</div></div></li>
+    </ol>
+    <p class="kept"><b>No new UX element.</b> Every change reuses an existing component — the switch, eye toggle, badge, TagInput, sidebar. This is functional rewiring, not new pixels. (The one designed-but-unbuilt piece, the blue/grey status dot in the codebook-lens sidebar, is unaffected by this comparison.)</p>
+  </section>
+</div>
+</body>
+</html>

@@ -243,8 +243,17 @@ sparkle) · the **blue dot** status · the **blue/grey switch** language. Nothin
 - **Personal / cross-project codebook library** (Q2) — reuse your own *created*
   codebooks across projects. Created codebooks are **per-project** for now; a shared
   personal shelf is a separate future feature.
-- **Red ⊖ "Forget"** — the lone destructive action (purge retained results → would
-  re-spend). Only place red belongs.
+- **Purge retained results ("Forget")** — the lone destructive action (drop a
+  codebook's stored proposals/tags → re-adding would re-spend). _(Decided 26 Jul
+  2026: this is **not** a fourth standalone red button. It folds into **Uninstall**
+  as an optional "**also purge results?**" — the app-store idiom, uninstall → "remove
+  data too?".)_ Rationale: hide · disable · uninstall already form a reversible,
+  nothing-lost gradient; purge is the one irreversible act, and it only makes sense
+  *at uninstall time*, so it belongs in that flow, not as always-visible chrome.
+  Bonus: it resolves the current "Remove — no promise on accept/deny work" hedge into
+  a clean contract — **uninstall keeps results by default; opt-in to purge**. Build
+  later — not needed until retained-but-uninstalled data starts leaking somewhere it
+  shouldn't (exports at scale). Until then, uninstall is retained + reversible.
 - **19-locale propagation** of the new/changed strings.
 - **"Add & Apply" fast path** — ship the safe default (separate Apply); add the
   shortcut only if the cohort asks (a mis-click on a combined button is the exact

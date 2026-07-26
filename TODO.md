@@ -119,6 +119,7 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 | `docs/design-export-html.md` | Self-contained HTML export + cross-cutting export concerns |
 | `docs/design-miro-bridge.md` | Miro API integration (OAuth, board creation, layout — post-beta) |
 | `docs/design-html-report.md` | HTML report, people file, transcript pages |
+| `docs/design-discussion-lens.md` | Discussion lens — project quotes onto the researcher's guide by territory; macOS-only. Design + routing spike; feature unbuilt |
 | `docs/design-responsive-layout.md` | Responsive layout, density setting, breakpoints |
 | `docs/design-doctor-and-snap.md` | Doctor command, snap packaging |
 | `docs/design-serve-doctor.md` | Serve-mode doctor checks, Vite auto-discovery |

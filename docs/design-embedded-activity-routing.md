@@ -70,10 +70,30 @@ copied", "Export failed", "Feedback sent", "Couldn't save to server") — is a
 separate surface with a separate routing question (transient confirmations →
 native how? a fading capsule? an `NSToast`-style banner? suppressed entirely per
 Apple's "confirm only failure" HIG guidance the sibling doc cites?). It is **out of
-scope here** and unaddressed. The broader "every web toast lands on the
-Swift-appropriate native surface when embedded" effort is the union of *this* doc
-(progress) and a yet-unwritten sibling for the informational toasts; whoever owns
-the wider work should treat this doc as the progress-half spec, not the whole.
+scope here**; the full treatment is a yet-unwritten sibling. The broader "every web
+toast lands on the Swift-appropriate native surface when embedded" effort is the
+union of *this* doc (progress) and that sibling (informational); whoever owns the
+wider work should treat this doc as the progress-half spec, not the whole.
+
+**Agreed lean (2026-07-27, maintainer) — the informational sibling is a per-message
+_triage_, not a "port toasts to Swift" job.** The embedded native frame is what
+turns confirmation-of-the-obvious from *twee* to *wrong*, so the triage is not
+optional polish for embedded — but the verdict is **case-by-case**, a default plus
+named exceptions, not a blanket ban:
+
+- **Default verdict = delete, or relocate the feedback to the site of action** (an
+  in-place button state beats a floating banner — GitHub's morph-to-✓ is more
+  native-correct than a toast, because the ack is *at* the control).
+- **Keep-list (route to native primitives, not a web toast):** failures + unseen
+  states (`"Couldn't save"`, `"No internet"` → native alert / inline-at-point-of-use);
+  count-bearing feedback where the *count* is information (`"47 quotes copied"` → show
+  the count at the action, drop the "copied"); no-op explanations (`"reserved
+  sentiment tag"` → prefer inline validation over a banner).
+- **Named exception — toast-as-transient-*control*, not narrator:** the 5 s
+  **RemoveToast** (undo window) stays; it carries an action, not a pat on the head.
+  Distinguish this from toast-as-narrator, which is what the triage targets.
+- **Filter question per call site:** *does the message tell the user something they
+  don't already know from having done the action?* No → cut. Yes → keep, native.
 
 ## The core obstacle: native has no free slot during a run
 
@@ -250,27 +270,30 @@ string and no glyph.
 
 The first cut of this doc treated cancel as an AutoCode affordance (the data-flow
 examples routed through `cancelAutoCode`). That's wrong going forward: **clip
-export is becoming cancelable too, and catch-up already is.** Current state
-(scanned 2026-07-27):
+export is now cancelable too, and catch-up already is.** State (scanned
+2026-07-27; clip-cancel wired later the same day):
 
-- **Server** already honours cancel for clips — the extraction loop breaks on
-  `_jobs[pid].status == "cancelled"` (`clips_export.py:208`) — but exposes **no
-  endpoint to set it** (only `POST /export/clips`, `/status`, `/reveal`).
-- **`ClipJobStatus`** (`types.ts`) does **not** model `"cancelled"` yet, and the
-  clips `pollFn` casts status to `"running" | "completed" | "failed"`
-  (`AppLayout.tsx`), dropping cancelled on the floor.
-- **No `cancelClipExtraction`** in `api.ts`; the clips branch of `chipJobs` has no
-  `onCancel` (only autocode/catchup do).
+- **Server** honours cancel for clips — the extraction loop breaks on
+  `_jobs[pid].status == "cancelled"` (`clips_export.py:208`) — and **now exposes an
+  endpoint to set it**: `POST /export/clips/cancel` (no id — per-project singleton),
+  alongside `POST /export/clips`, `/status`, `/reveal`.
+- **`ClipJobStatus`** (`types.ts`) **now models `"cancelled"`**, and the clips
+  `pollFn` (`AppLayout.tsx`) carries it through instead of casting it away.
+- **`cancelClipExtraction`** exists in `api.ts`; the clips branch of `chipJobs` now
+  supplies `onCancel` (as autocode/catchup already did).
 - **`ActivityChip` is already generic** — it renders a Cancel button whenever
-  `onCancel` is supplied. So the *web widget* needs no change; only the wiring.
+  `onCancel` is supplied. So the *web widget* needed no change; only the wiring,
+  which is now in place.
 
 Consequences for this design:
 
 1. **The DTO carries `cancelable` + a `"cancel"` action** (added above) — cancel is
    a property of the *job kind*, decided web-side, not a special case for AutoCode.
-2. **Strategy 1 gets cheaper for cancel.** Because the chip already renders its own
-   Cancel button, docking it means clip-cancel needs only the **web** wiring
-   (`cancelClipExtraction` + `onCancel` in the clips branch) — **no native work**.
+2. **Strategy 1 gets cheaper for cancel — and the web half is now done.** Because
+   the chip already renders its own Cancel button, docking it means clip-cancel
+   needs only the **web** wiring (`cancelClipExtraction` + `onCancel` in the clips
+   branch) — **no native work**. That wiring landed 2026-07-27, so a docked chip
+   cancels clip export in the WKWebView with zero Swift.
 3. **Strategy 2 has a cancel/ring tension — decision needed.** The native
    hover-cancel `×` lives on the **ring** (`ProjectRowActivityIndicator`), but this
    doc routes web activity to the **status line** (no ring). A cancelable clip
@@ -281,9 +304,9 @@ Consequences for this design:
    run-cancel is already backstopped for keyboard/VoiceOver. This is a sub-case of
    the subtitle-collision decision and needs the same sign-off.
 
-**Latent bug to fix when clip-cancel is wired (independent of this doc):** add
-`"cancelled"` to `ClipJobStatus.status` and stop the clips `pollFn` casting it away,
-or a server-reported cancel will be silently mishandled.
+**~~Latent bug~~ (fixed 2026-07-27):** `"cancelled"` was added to
+`ClipJobStatus.status` and the clips `pollFn` now carries it through instead of
+casting it away — a server-reported cancel is no longer silently mishandled.
 
 ## Recommendation
 
@@ -380,6 +403,13 @@ or a server-reported cancel will be silently mishandled.
 
 ## Review changelog
 
+- **2026-07-27 (later)** — clip-cancel wired: `POST /export/clips/cancel`,
+  `ClipJobStatus.cancelled` + `pollFn` carry-through, `cancelClipExtraction` +
+  `onCancel` in the clips chip branch. §Cancel consequence-2 web half is **done**;
+  the "latent bug" it flagged (`ClipJobStatus` missing `"cancelled"`) is fixed. The
+  Strategy-2 native cancel/ring-vs-status-line tension (:274–282) is **unchanged** and
+  still needs the subtitle-collision sign-off. Landed alongside the export scope
+  picker (All/Selected/Starred) — a separate feature that made clips scope-aware.
 - **2026-07-27** — added §"Cancel is generic, not autocode-only" after re-scanning
   clip-export cancel state: server honours cancel but no endpoint/type/button is
   wired; `ClipJobStatus` lacks `"cancelled"`. DTO gained `cancelable` + a `"cancel"`

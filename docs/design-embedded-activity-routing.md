@@ -1,7 +1,7 @@
 ---
 status: pending
-last-trued: 2026-07-26
-trued-against: HEAD@main on 2026-07-26
+last-trued: 2026-07-27
+trued-against: HEAD@main on 2026-07-27
 ---
 
 # Embedded activity routing — web-origin jobs onto native surfaces
@@ -60,6 +60,20 @@ There is **no web-origin *global* activity.** The global bucket is filled entire
 by native-origin app tasks that are already toolbar pills. So the original "route
 to a toolbar pill for global activity" branch has no web producer to feed it — it
 is a forward-looking `scope: "global"` seam only.
+
+### Scope boundary — this doc is the *progress-toast* half only
+
+This doc covers the **progress/activity** toast (the `ActivityChip` stack: AutoCode,
+catch-up, clip export). Bristlenose's *other* toast category — the imperative
+**informational** toast (`components/Toast.tsx` + `utils/toast.ts`: "47 quotes
+copied", "Export failed", "Feedback sent", "Couldn't save to server") — is a
+separate surface with a separate routing question (transient confirmations →
+native how? a fading capsule? an `NSToast`-style banner? suppressed entirely per
+Apple's "confirm only failure" HIG guidance the sibling doc cites?). It is **out of
+scope here** and unaddressed. The broader "every web toast lands on the
+Swift-appropriate native surface when embedded" effort is the union of *this* doc
+(progress) and a yet-unwritten sibling for the informational toasts; whoever owns
+the wider work should treat this doc as the progress-half spec, not the whole.
 
 ## The core obstacle: native has no free slot during a run
 
@@ -224,12 +238,52 @@ unified "Background" model).
     status: "running" | "completed" | "failed" | "cancelled",
     processed?: number, total?: number, fraction?: number,
     messageKind?: "error" | "warning",   // failure → native glyph via MessageKind
-    action?: "view-report" | "reveal-clips"
+    cancelable?: boolean,                 // running-state affordance; web owns the truth
+    action?: "view-report" | "reveal-clips" | "cancel"
   }] }
 ```
 
 Native composes all display text/glyphs from these fields; web sends no rendered
 string and no glyph.
+
+## Cancel is generic, not autocode-only
+
+The first cut of this doc treated cancel as an AutoCode affordance (the data-flow
+examples routed through `cancelAutoCode`). That's wrong going forward: **clip
+export is becoming cancelable too, and catch-up already is.** Current state
+(scanned 2026-07-27):
+
+- **Server** already honours cancel for clips — the extraction loop breaks on
+  `_jobs[pid].status == "cancelled"` (`clips_export.py:208`) — but exposes **no
+  endpoint to set it** (only `POST /export/clips`, `/status`, `/reveal`).
+- **`ClipJobStatus`** (`types.ts`) does **not** model `"cancelled"` yet, and the
+  clips `pollFn` casts status to `"running" | "completed" | "failed"`
+  (`AppLayout.tsx`), dropping cancelled on the floor.
+- **No `cancelClipExtraction`** in `api.ts`; the clips branch of `chipJobs` has no
+  `onCancel` (only autocode/catchup do).
+- **`ActivityChip` is already generic** — it renders a Cancel button whenever
+  `onCancel` is supplied. So the *web widget* needs no change; only the wiring.
+
+Consequences for this design:
+
+1. **The DTO carries `cancelable` + a `"cancel"` action** (added above) — cancel is
+   a property of the *job kind*, decided web-side, not a special case for AutoCode.
+2. **Strategy 1 gets cheaper for cancel.** Because the chip already renders its own
+   Cancel button, docking it means clip-cancel needs only the **web** wiring
+   (`cancelClipExtraction` + `onCancel` in the clips branch) — **no native work**.
+3. **Strategy 2 has a cancel/ring tension — decision needed.** The native
+   hover-cancel `×` lives on the **ring** (`ProjectRowActivityIndicator`), but this
+   doc routes web activity to the **status line** (no ring). A cancelable clip
+   export on the status line therefore has **no native cancel affordance**. Options:
+   (a) cancelable web activity *does* claim the ring (reopens the single-occupancy
+   fight in §"core obstacle"); (b) the status line grows its own inline cancel; or
+   (c) cancel routes only through the Project menu (⌘.) + row context menu, the way
+   run-cancel is already backstopped for keyboard/VoiceOver. This is a sub-case of
+   the subtitle-collision decision and needs the same sign-off.
+
+**Latent bug to fix when clip-cancel is wired (independent of this doc):** add
+`"cancelled"` to `ClipJobStatus.status` and stop the clips `pollFn` casting it away,
+or a server-reported cancel will be silently mishandled.
 
 ## Recommendation
 
@@ -326,6 +380,11 @@ string and no glyph.
 
 ## Review changelog
 
+- **2026-07-27** — added §"Cancel is generic, not autocode-only" after re-scanning
+  clip-export cancel state: server honours cancel but no endpoint/type/button is
+  wired; `ClipJobStatus` lacks `"cancelled"`. DTO gained `cancelable` + a `"cancel"`
+  action. Surfaced the native cancel/ring-vs-status-line tension as a sub-case of
+  the subtitle-collision decision.
 - **2026-07-26** — first draft claimed "status line, not ring" resolved the
   collision (wrong — subtitle is also single-winner, run owns it), proposed sending
   `projectId` (cross-namespace), and forgot `catchup` (a third web activity).

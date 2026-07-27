@@ -500,13 +500,29 @@ The constraint is **file contention on `CodebookPanel.tsx`**, not logic. Buckets
   delta + chip. _(Trued: the earlier "No longer includes enabled-gated re-apply —
   Decision A removed that" note is reversed; enabled-gated re-apply is exactly what
   shipped. State-model §7/§8.)_
-- **Still to build:** blue-dot-means-enabled (the sidebar status dot).
-- **Must serialize (all touch `CodebookPanel.tsx` — one frontend session):** fold
-  animation · collapsed summary meta · header reconciliation (drop Remove, morph
-  AutoCode→switch) · Add↔Remove + dialog relocation · "Your codebooks" section ·
-  80%-dim tiles.
-- **i18n-careful (touch all 20 locale files — collide with concurrent i18n):**
-  19-locale propagation · the summary-meta's new keys.
+- **Shipped 26 Jul (0.22.0):** the sidebar **status dot** (blue on / grey off /
+  none for the floor) · the **collapsed summary meta** ("N tags · M coded" when a
+  codebook is switched off) · the per-tile **Install / Uninstall** toggle + the
+  Add→Install / Remove→Uninstall rename (the "Added" badge → "Installed").
+  Uninstall now also drops the `ProjectFrameworkState` row, so reinstalling a
+  previously-disabled codebook returns it **enabled**, not folded/greyed (server
+  `remove_framework` + client `dropFrameworkDisabled`, both regression-tested).
+- **Deferred — the fold animation.** The group columns are `auto-fill` grid items
+  with auto height, and `.codebook-group` is shared with researcher groups + the
+  preview modal, so a clean both-directions height-fold needs a delayed-unmount
+  state machine or wrapping the shared component; a blanket mount-fade would add
+  page-load motion (against the motion-restraint bar). Not worth the polish it
+  buys — the summary-meta crossfade already covers the fold boundary. Revisit only
+  if a proper accordion primitive lands.
+- **Deferred — Uninstall-from-Library in place.** A tile's Uninstall closes the
+  Library then opens the remove-with-impact confirm, rather than confirming over the
+  still-open Library (the "one footprint" ideal). Cause: the confirm overlay is
+  z-index 150, the picker 200, so in-place stacking needs a z-index change to the
+  shared merge-confirm — a taste refinement, not a bug.
+- **i18n follow-up (deferred):** add `codebook.foldedSummary` to 19 locales (ko +
+  zh-Hant `_other`-only; cs/pl/ru/uk 4 plural forms; the rest `_one`/`_other`) and
+  re-translate the 10 drifted `codebook.*` rename keys × 19 = 190 strings. English
+  was settled first per the hand-tune-copy-before-i18n rule; exclude zh-Hant-HK.
 
 Highest-leverage next: the persistence flag (now view-only, so smaller). Best
 parallel win meanwhile: the `✦` sweep (isolated, mechanical) or the re-apply gate

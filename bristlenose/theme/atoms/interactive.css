@@ -28,6 +28,23 @@
     outline: none;
 }
 
+/* .center is a focus *sink*, not a control: in embedded (desktop) mode it
+   carries tabIndex=-1 and SidebarLayout redirects focus to it when a sidebar
+   closes (the rails that'd otherwise catch returning focus are removed there).
+   Keyboard-initiated focus then matches :focus-visible, and since the content
+   column has no custom ring of its own it falls through to WebKit's default
+   outline:auto — a fat accent rectangle around the whole report that reads as a
+   rendering seam, not "you are here". The focus MOVE is correct a11y and stays;
+   only the stray visual is dropped. Per the focus convention this is the one
+   allowed form (a :focus-visible suppressor, never :focus:not(:focus-visible) —
+   the global rule above already owns the mouse case). Affordances that matter to
+   users — quote focus/selection, search inputs, interactive controls — keep
+   their own :focus-visible rings. No embedded gate needed: .center isn't
+   focusable in the browser/CLI SPA, so the ring can't appear there anyway. */
+.center:focus-visible {
+    outline: none;
+}
+
 /* ---------------------------------------------------------------------
    Focused state — keyboard cursor, shadow lift
    --------------------------------------------------------------------- */

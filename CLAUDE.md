@@ -2,7 +2,11 @@
 
 ## What this is
 
-Bristlenose is a local-first user-research analysis tool. It takes a folder of interview recordings (audio, video, or existing transcripts) and produces a browsable HTML report with extracted quotes, themes, sentiment, friction points, and user journeys. Everything runs on your laptop — nothing is uploaded to the cloud. LLM calls go to Claude (Anthropic), ChatGPT (OpenAI), Azure OpenAI (enterprise), Gemini (Google), or local models via Ollama (free, no account required).
+Bristlenose takes a folder of interview recordings (audio, video, or existing transcripts) and produces a browsable HTML report — extracted quotes, themes, sentiment, friction points, user journeys — that the researcher edits, shares, and keeps as a file they own. The user is a working researcher under deadline, not an engineer.
+
+The pipeline runs on the user's own machine; the analysis itself is a **cloud LLM call** to Claude (Anthropic), ChatGPT (OpenAI), Azure OpenAI (enterprise), or Gemini (Google), and that is the normal, recommended, everyday path. Local models via Ollama are a supported minority option (slower, wants a capable machine, technical setup) — never the proud default.
+
+**Don't pitch or reason about Bristlenose as "local-first" or "privacy-first".** It isn't the stance, and "nothing leaves your laptop" is plainly false: the analysis *is* an outbound LLM call, and researchers' recordings and deliverables typically already live on a client's Teams/SharePoint/Drive. Lead with the outcome and the owned artefact. This does **not** relax participant-data governance — PII redaction, re-identification keys and retention remain real craft obligations (`docs/methodology/consent-gradient.md`).
 
 ## Commands
 

@@ -4,7 +4,7 @@ A rough map of where the project is, what's coming, and what's further out. For 
 
 ## What Bristlenose is
 
-A local-first analysis tool for user-research interviews. Point it at a folder of recordings, get an interactive HTML report with extracted quotes, themes, sentiment, and user journeys. Everything runs on your laptop — the only network traffic is to your chosen LLM provider for the analysis prompts.
+An analysis tool for user-research interviews. Point it at a folder of recordings, get an interactive HTML report with extracted quotes, themes, sentiment, and user journeys — a file you own, edit, and share. The pipeline runs on your machine; the analysis pass calls your chosen LLM provider.
 
 Licensed AGPL-3.0. Distributed via PyPI, Homebrew, and Snap.
 

@@ -259,11 +259,12 @@ extension Notification.Name {
     /// is the discoverable, re-openable way back that a click can't advertise.
     static let showWelcome = Notification.Name("bristlenoseShowWelcome")
 
-    /// Posted by View ▸ Hide/Show Projects (⌘⌥S) — toggles the projects sidebar.
-    /// ContentView flips its `columnVisibility` binding; going through the binding
-    /// (not the AppKit `toggleSidebar:` selector) keeps the menu, the auto toolbar
-    /// button, and the label in one source of truth.
-    static let toggleProjectsSidebar = Notification.Name("bristlenoseToggleProjectsSidebar")
+    // NOTE: `toggleProjectsSidebar` was removed (28 Jul 2026). A broadcast
+    // reached every open window, so one ⌘⌥S toggled them all. View ▸ Hide/Show
+    // Projects now drives the FRONT window's `columnVisibility` binding directly
+    // via `focusedSceneValue` — see `SidebarVisibilityFocus.swift`. The same
+    // broadcast-hits-every-window fault applies to the notifications below;
+    // converting them is staged in `docs/design-workspace.md`.
 
     /// Posted by Project > Rename to trigger inline rename in the sidebar.
     static let renameSelectedProject = Notification.Name("bristlenoseRenameSelectedProject")
@@ -314,6 +315,13 @@ final class ProjectIndex: ObservableObject {
     /// project that was auto-assigned a random icon and should play the reveal
     /// animation once. The sidebar row consumes it via `consumeIconReveal`.
     @Published var pendingIconReveal: UUID?
+
+    /// Transient (not persisted) one-shot signal: the id of a project OR folder
+    /// that should begin inline rename the next time the sidebar renders. Set by
+    /// New Folder (rename-on-create), the menu-bar "Rename …" items, and the
+    /// row context menu. The AppKit outline consumes it via `consumeRename` and
+    /// opens the row's editable name field. Mirrors `pendingIconReveal`.
+    @Published var pendingRename: UUID?
 
     /// Bookmark leases held while a project is `.ready`. Released on
     /// transition to `.cantFind` / `.inCloud` or when the project is removed.
@@ -414,6 +422,11 @@ final class ProjectIndex: ObservableObject {
     /// Clear the one-shot icon-reveal trigger after the row has played it.
     func consumeIconReveal(_ id: UUID) {
         if pendingIconReveal == id { pendingIconReveal = nil }
+    }
+
+    /// Clear the one-shot rename trigger after the row has entered inline edit.
+    func consumeRename(_ id: UUID) {
+        if pendingRename == id { pendingRename = nil }
     }
 
     /// Remove a project by ID.

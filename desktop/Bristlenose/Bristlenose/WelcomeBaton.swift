@@ -96,6 +96,8 @@ extension ScienceIllustration {
         case .signal:       return 11
         case .autocode:     return 12
         case .manualTags:   return 13
+        case .tag:          return 12   // one play (arc → click → t → type) then hold
+        case .starHide:     return 14   // two beats (star A, hide B) then hold
         }
     }
 }

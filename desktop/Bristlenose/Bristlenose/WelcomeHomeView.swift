@@ -38,8 +38,8 @@ private enum WelcomeContent {
     static let studyTools: [SlotItem] = [
         .init(title: "AutoCode", text: "Let AutoCode propose tags across every quote — you Accept or Deny.", linkLabel: "AI helps tag →", href: docs + "use-codebooks.html", illustration: .autocode),
         .init(title: "Codebooks", text: "Build a codebook, or start from a ready-made framework.", linkLabel: "Code by hand →", href: docs + "tag-for-meaning.html", linkLabel2: "Research frameworks →", href2: docs + "codebook-frameworks.html", illustration: .manualTags),
-        .init(title: "Tag", text: "Select one or more quotes, and press `t` to tag them with a code from your codebook.", linkLabel: "Manual tagging →", href: docs + "tag-for-meaning.html", image: "welcome-tag"),
-        .init(title: "Star & hide", text: "Press `s` to keep the quotes that matter, `h` to hide the rest.", linkLabel: "Keyboard shortcuts →", href: docs + "keyboard-shortcuts.html", image: "welcome-star"),
+        .init(title: "Tag", text: "Select one or more quotes, and press `t` to tag them with a code from your codebook.", linkLabel: "Manual tagging →", href: docs + "tag-for-meaning.html", illustration: .tag),
+        .init(title: "Star & hide", text: "Press `s` to keep the quotes that matter, `h` to hide the rest.", linkLabel: "Keyboard shortcuts →", href: docs + "keyboard-shortcuts.html", illustration: .starHide),
         .init(title: "Video clips", text: "Turn selected quotes into video clips.", linkLabel: "Export options →", href: docs + "export-clips.html", image: "welcome-clips"),
         .init(title: "Send to Miro", text: "Send quotes to a Miro board.", linkLabel: "Connect to Miro →", href: docs + "send-to-miro.html", image: "welcome-miro"),
         .init(title: "Ingest", text: "Drop a folder of recordings or transcripts — Bristlenose transcribes, analyses and reports back.", linkLabel: "Import options →", href: docs + "first-analysis.html", image: "welcome-ingest"),
@@ -591,6 +591,8 @@ private struct SlotRotator: View {
         case .signal:       return 152
         case .autocode:     return 160
         case .manualTags:   return 176
+        case .tag:          return 160
+        case .starHide:     return 190   // toolbar + two compact cards
         case .books:        return 252   // caption + covers + link (see BookShelfView.naturalHeight)
         }
     }
@@ -609,6 +611,8 @@ private struct SlotRotator: View {
         case .signal:       SignalIllustrationView()
         case .autocode:     AutoCodeIllustrationView()
         case .manualTags:   ManualTagsIllustrationView()
+        case .tag:          TagIllustrationView()
+        case .starHide:     StarHideIllustrationView()
         }
     }
 

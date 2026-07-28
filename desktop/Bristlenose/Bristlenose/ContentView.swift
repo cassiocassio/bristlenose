@@ -565,20 +565,15 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .showWelcome)) { _ in
             selection = []
         }
-        // View ▸ Hide/Show Projects (⌘⌥S) — toggle the projects sidebar through
-        // the same `columnVisibility` binding the auto toolbar button drives, so
-        // every source stays in sync. Animated to match the toolbar button.
-        .onReceive(NotificationCenter.default.publisher(for: .toggleProjectsSidebar)) { _ in
-            withAnimation {
-                columnVisibility = (columnVisibility == .detailOnly) ? .all : .detailOnly
-            }
-        }
-        // Mirror the column state into bridgeHandler so the View-menu label can
-        // flip Hide ↔ Show reactively (the menu is app-level and can't see this
-        // view's @State directly). `.detailOnly` = sidebar hidden.
-        .onChange(of: columnVisibility) { _, newValue in
-            bridgeHandler.sidebarVisible = (newValue != .detailOnly)
-        }
+        // View ▸ Hide/Show Projects (⌘⌥S) acts on THIS window: publish our
+        // `columnVisibility` binding as a scene focused value and let the menu
+        // drive it directly. Replaces a `.toggleProjectsSidebar` broadcast that
+        // every open window received (so two windows toggled in lockstep) plus a
+        // mirror into the app-global `bridgeHandler.sidebarVisible` that the menu
+        // label read (so the label could describe a different window). The
+        // binding is the single source of truth the auto toolbar button already
+        // drives. See `SidebarVisibilityFocus.swift`.
+        .focusedSceneValue(\.sidebarVisibility, $columnVisibility)
         // File > Add Files… (⇧⌘A) — menu twin of drag-drop.
         .onReceive(NotificationCenter.default.publisher(for: .addFilesToSelectedProject)) { _ in
             addFilesToSelectedProject()
@@ -799,7 +794,8 @@ struct ContentView: View {
     private func createNewFolder() {
         let folder = projectIndex.addFolder(name: i18n.t("desktop.chrome.newFolder"))
         selection = [.folder(folder.id)]
-        renamingFolderID = folder.id
+        renamingFolderID = folder.id            // SwiftUI sidebar path (flag-off)
+        projectIndex.pendingRename = folder.id  // AppKit sidebar path (shipping)
     }
 
     /// Folder-context-menu delete. Project removals go through

@@ -18,8 +18,12 @@ import AppKit
 /// the hover-× run/copy cancel, the failure-glyph → diagnostic popover, the
 /// right-click context menu (project + folder, ports `ProjectRow`/`FolderRow`
 /// `.contextMenu`), and the Choose-Icon popover. The cell port (Phases 0–4) is
-/// complete; **inline rename** (cell-edit + reload-guard) is the one remaining
-/// controller-track item — the context-menu "Rename" lands with it. See QA / TODO.
+/// complete. **Inline rename SHIPPED (28 Jul 2026)** — cell-edit + the
+/// `editingNodeID` reload guard, reachable four ways (context menu · menu bar ·
+/// Return · slow-second-click) plus rename-on-create; the context-menu "Rename"
+/// landed with it. Mechanism + the four guard-rails + invariants:
+/// `docs/design-desktop-sidebar-appkit.md` §2.6. What remains on the
+/// controller track: the flag cutover to default-on + SwiftUI-path deletion.
 /// Where a Finder folder-of-videos drop landed in the outline. Routes to the
 /// existing substrate-independent `ContentView` handlers (drop = analyse-unless-
 /// done): `.root` → new project at root, `.folder` → new project inside it,
@@ -129,10 +133,38 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     }
 }
 
+/// `NSOutlineView` subclass that forwards Return / Enter to a closure so the
+/// controller can begin inline rename on the selected row (the Finder idiom).
+/// Falls through to `super` when unhandled, preserving default key behaviour
+/// (type-select, arrow nav, ←/→ expand-collapse).
+@MainActor
+final class SidebarOutlineView: NSOutlineView {
+    /// Returns true if the key was handled (rename began); false to fall through.
+    var onCommandReturn: (() -> Bool)?
+
+    override func keyDown(with event: NSEvent) {
+        // 36 = Return, 76 = keypad Enter.
+        if (event.keyCode == 36 || event.keyCode == 76), onCommandReturn?() == true {
+            return
+        }
+        super.keyDown(with: event)
+    }
+
+    /// Let an editable name field (during inline rename) take first responder for
+    /// keyboard editing. The default table implementation can refuse the field —
+    /// leaving it visibly focused but with keystrokes falling through to type-select
+    /// — so we approve editable text fields explicitly and defer everything else.
+    /// Only rename makes a field editable, so this never affects normal selection.
+    override func validateProposedFirstResponder(_ responder: NSResponder, for event: NSEvent?) -> Bool {
+        if let field = responder as? NSTextField, field.isEditable { return true }
+        return super.validateProposedFirstResponder(responder, for: event)
+    }
+}
+
 /// Owns the `NSScrollView` + `NSOutlineView` and acts as data source + delegate.
 @MainActor
-final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource, NSOutlineViewDelegate, NSPopoverDelegate, NSMenuDelegate {
-    let outlineView = NSOutlineView()
+final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource, NSOutlineViewDelegate, NSPopoverDelegate, NSMenuDelegate, NSTextFieldDelegate {
+    let outlineView = SidebarOutlineView()
     private let scrollView = NSScrollView()
     private var roots: [OutlineNode] = []
 
@@ -173,6 +205,33 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// and read by the menu actions (stable while the menu is open — you can't
     /// right-click a new row while a menu is up).
     private var menuClickedNodeID: UUID?
+
+    /// The project/folder id whose name field is currently in inline edit, or nil.
+    /// Load-bearing for the reload guard: `update()` calls a full `reloadData()` on
+    /// every model tick (`liveData` fires at run frequency), which would tear down
+    /// the active `NSText` field editor mid-type and eat keystrokes. While this is
+    /// non-nil, `update()` / `paletteDidChange()` skip the reload; the commit path
+    /// re-runs `update()` once editing ends (the rename mutation republishes).
+    private var editingNodeID: UUID?
+
+    /// Set true for the duration of an Escape-driven end so `controlTextDidEndEditing`
+    /// reverts instead of committing (the field editor ends editing either way).
+    private var cancellingEdit = false
+
+    /// True when the click currently being delivered CHANGED the selection. Set in
+    /// `outlineViewSelectionDidChange`, consumed by the click action. The slow-second-
+    /// click gesture only arms on a click landing on an ALREADY-selected row, so a
+    /// click that moved the selection is a plain select and must never arm rename
+    /// (this is the "block rename right after a selection change" guard, expressed as
+    /// state rather than a timing threshold — exact, not heuristic).
+    private var selectionChangedByCurrentClick = false
+
+    /// Pending slow-second-click rename. Armed by a click on an already-sole-selected
+    /// project/folder row, fires after `NSEvent.doubleClickInterval` elapses with no
+    /// second click. A double-click cancels it (that gesture means open, not rename).
+    /// The interval is READ FROM THE SYSTEM, never hard-coded — it's a user-tunable
+    /// Accessibility setting (Settings ▸ Accessibility ▸ Pointer Control).
+    private var renameArmTimer: Timer?
 
     /// The current mode/lens. Drives which lens row is genuinely selected (so the
     /// table draws its capsule) — stored on each `update`. Mode, not selection (§3.1).
@@ -291,17 +350,43 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             object: nil
         )
 
+        // Menu-bar "Rename …" (Project menu). The AppKit outline is the live
+        // sidebar, so it consumes these directly — the SwiftUI `renamingFolderID`
+        // path they also drive is inert when this controller is rendered.
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(renameSelectedNotification(_:)),
+            name: .renameSelectedFolder, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(renameSelectedNotification(_:)),
+            name: .renameSelectedProject, object: nil)
+
+        // Return / Enter on a selected row begins rename (the Finder idiom — in
+        // this sidebar selection already "opens", so Return is free to mean rename).
+        outlineView.onCommandReturn = { [weak self] in self?.beginRenameSelected() ?? false }
+
+        // Slow-second-click rename (Photos' sidebar idiom: click an already-selected
+        // album, pause, click again → rename). Note the action fires for EVERY click
+        // including the first of a double-click, which is why arming is deferred by
+        // `doubleClickInterval` and cancelled by `doubleAction`.
+        outlineView.target = self
+        outlineView.action = #selector(outlineViewClicked(_:))
+        outlineView.doubleAction = #selector(outlineViewDoubleClicked(_:))
+
         view = container
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+        // `renameArmTimer` is deliberately NOT invalidated here — it's a non-Sendable
+        // stored property and this deinit is nonisolated. Harmless: the timer captures
+        // `weak self`, so a late fire after teardown no-ops.
     }
 
     /// Live palette-change hook. Called on `.bristlenosePaletteChanged` (fired
     /// by `AppearanceSettingsView`'s `@AppStorage("palette")` `.onChange`).
     @objc private func paletteDidChange() {
         updatePaletteTint()
+        guard editingNodeID == nil else { return }   // don't tear down an active edit
         outlineView.reloadData()
     }
 
@@ -337,6 +422,13 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         self.roots = roots
         self.activeTab = activeTab
         self.lensesEnabled = lensesEnabled
+
+        // Reload guard: a `reloadData` while a name field is being edited destroys
+        // its field editor and drops the in-flight keystrokes. Freeze the table
+        // (model is already stored above) until the edit commits — the commit path
+        // republishes and re-enters `update()` with `editingNodeID == nil`.
+        guard editingNodeID == nil else { return }
+
         outlineView.reloadData()
 
         // Expand groups (always) + non-collapsed folders.
@@ -351,6 +443,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
         // Kick off the one-shot icon reveal for a freshly-created project, if any.
         maybeStartIconReveal()
+
+        // Begin inline rename for a just-created folder / a menu-triggered rename.
+        maybeStartRename()
     }
 
     // MARK: - Icon reveal
@@ -410,7 +505,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             await SidebarIconFlip.play(on: overlay, settlingOn: symbol, tint: overlay.contentTintColor)
             guard let self else { overlay.removeFromSuperview(); return }
             self.animatingRevealID = nil
-            self.outlineView.reloadData()   // rebuild the cell with its icon visible (alpha 1)
+            // Reload guard: don't tear down an in-flight inline rename on a different
+            // row (a 2s icon flip can outlast the start of a rename). The stale-hidden
+            // icon self-heals on the rename commit's reload.
+            if self.editingNodeID == nil {
+                self.outlineView.reloadData()   // rebuild the cell with its icon visible (alpha 1)
+            }
             overlay.removeFromSuperview()    // reveal the identical static icon underneath
             if self.revealOverlay === overlay { self.revealOverlay = nil }
             index.consumeIconReveal(id)
@@ -432,6 +532,228 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     private func hideIconIfRevealing(_ cell: NSTableCellView, id: UUID) -> NSTableCellView {
         if animatingRevealID == id { cell.imageView?.alphaValue = 0 }
         return cell
+    }
+
+    // MARK: - Inline rename (editable name field — the view-based-table idiom)
+
+    /// Consume a pending rename trigger (`projectIndex.pendingRename`) after a
+    /// reload, opening the row's editable name field. Mirrors `maybeStartIconReveal`
+    /// — the single seam all four rename entry points feed (create · menu bar ·
+    /// context menu · Return).
+    private func maybeStartRename() {
+        guard editingNodeID == nil,
+              let index = projectIndex,
+              let id = index.pendingRename else { return }
+        index.consumeRename(id)          // one-shot: clear even if the row is offscreen
+        beginRename(nodeID: id)
+    }
+
+    /// Begin inline editing of a project/folder row's name field. The stock
+    /// view-based-table recipe (mattrajca / Apple SourceView): flip the display
+    /// `NSTextField` label into an edit box, become first responder, `selectText`
+    /// to select the whole name (type-to-replace). No-op if already editing or the
+    /// row is offscreen.
+    private func beginRename(nodeID id: UUID) {
+        guard editingNodeID == nil, let row = row(forNodeID: id), row >= 0 else { return }
+        outlineView.scrollRowToVisible(row)
+        guard let cell = outlineView.view(atColumn: 0, row: row, makeIfNecessary: true) as? NSTableCellView,
+              let field = cell.textField else { return }
+        editingNodeID = id
+        field.isEditable = true
+        field.isSelectable = true
+        field.isBordered = true
+        field.isBezeled = true
+        field.bezelStyle = .squareBezel
+        field.drawsBackground = true
+        field.delegate = self
+        // Canonical view-based begin: `editColumn` engages the table's editing
+        // session, installs the window field editor as first responder, and selects
+        // all. (`makeFirstResponder(field)` + `selectText` alone leaves the OUTLINE
+        // as first responder — the field draws its selection but keystrokes fall
+        // through to NSOutlineView type-select, so typing "does nothing".)
+        outlineView.editColumn(0, row: row, with: nil, select: true)
+        guard field.currentEditor() != nil else {
+            // Editing didn't engage (e.g. no key window) — roll back rather than
+            // freeze the table on a stuck `editingNodeID` (reload guard never lifts).
+            editingNodeID = nil
+            restoreLabelChrome(field)
+            return
+        }
+    }
+
+    /// Return-key / menu-triggered rename of the sole selected renamable row.
+    @discardableResult
+    private func beginRenameSelected() -> Bool {
+        let ids = selectedRenamableNodeIDs()
+        guard ids.count == 1, let id = ids.first else { return false }
+        beginRename(nodeID: id)
+        return true
+    }
+
+    /// Menu-bar Project ▸ Rename … — begins rename on the sole selected row. The
+    /// menu items are already selection-gated in `MenuCommands`; this is the safety net.
+    @objc private func renameSelectedNotification(_ note: Notification) {
+        beginRenameSelected()
+    }
+
+    // MARK: - Slow-second-click rename (Photos' sidebar idiom)
+
+    /// Every click in the outline. Arms rename only for the Finder/Photos gesture:
+    /// a click landing on an **already sole-selected** project/folder row, with no
+    /// second click inside the system double-click interval.
+    ///
+    /// Three guards, each closing a real misfire:
+    ///  1. `selectionChangedByCurrentClick` — the click that *made* the selection
+    ///     must not also arm rename (that's a plain select).
+    ///  2. sole-selection — never rename out of a multi-row selection.
+    ///  3. the deferred timer — the action fires for the first click of a
+    ///     double-click too, so arming waits out `doubleClickInterval` and
+    ///     `outlineViewDoubleClicked` cancels it.
+    @objc private func outlineViewClicked(_ sender: Any?) {
+        let changedSelection = selectionChangedByCurrentClick
+        selectionChangedByCurrentClick = false
+        renameArmTimer?.invalidate()
+        renameArmTimer = nil
+
+        guard !changedSelection, editingNodeID == nil else { return }
+        let row = outlineView.clickedRow
+        guard row >= 0 else { return }   // empty space
+
+        // Sole-selection among the renamable rows. `selectedRowIndexes` can also
+        // carry the active lens (composed capsule), so filter to selectable rows
+        // rather than testing `.count == 1` on the raw set.
+        let selectable = selectableRows(in: outlineView.selectedRowIndexes)
+        guard selectable.count == 1, selectable.contains(row) else { return }
+
+        guard let node = outlineView.item(atRow: row) as? OutlineNode else { return }
+        let id: UUID
+        switch node.kind {
+        case .project(let pid): id = pid
+        case .folder(let fid): id = fid
+        case .lens, .group: return
+        }
+
+        // Clicking the disclosure triangle expands/collapses — never renames.
+        if case .folder = node.kind {
+            let triangle = outlineView.frameOfOutlineCell(atRow: row)
+            let point = outlineView.convert(NSApp.currentEvent?.locationInWindow ?? .zero, from: nil)
+            if triangle.contains(point) { return }
+        }
+
+        renameArmTimer = Timer.scheduledTimer(
+            withTimeInterval: NSEvent.doubleClickInterval, repeats: false
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.renameArmTimer = nil
+                self.beginRename(nodeID: id)
+            }
+        }
+    }
+
+    /// A double-click means open, not rename — cancel any armed rename. (The
+    /// open-in-its-own-window action lands here when multi-window ships.)
+    @objc private func outlineViewDoubleClicked(_ sender: Any?) {
+        renameArmTimer?.invalidate()
+        renameArmTimer = nil
+    }
+
+    /// The project/folder ids in the current selection (excludes lens/group rows).
+    private func selectedRenamableNodeIDs() -> [UUID] {
+        outlineView.selectedRowIndexes.compactMap { r -> UUID? in
+            guard let node = outlineView.item(atRow: r) as? OutlineNode else { return nil }
+            switch node.kind {
+            case .project(let id), .folder(let id): return id
+            default: return nil
+            }
+        }
+    }
+
+    /// The outline row displaying project/folder `id`, or nil if absent/offscreen.
+    private func row(forNodeID id: UUID) -> Int? {
+        for r in 0..<outlineView.numberOfRows {
+            guard let node = outlineView.item(atRow: r) as? OutlineNode else { continue }
+            switch node.kind {
+            case .project(let pid) where pid == id: return r
+            case .folder(let fid) where fid == id: return r
+            default: continue
+            }
+        }
+        return nil
+    }
+
+    /// The model name of a project/folder node, for revert-on-cancel/empty.
+    private func currentName(forNodeID id: UUID) -> String? {
+        if let f = projectIndex?.folders.first(where: { $0.id == id }) { return f.name }
+        if let p = projectIndex?.projects.first(where: { $0.id == id }) { return p.name }
+        return nil
+    }
+
+    /// Route a committed name to the right model mutator (folder or project). Both
+    /// de-duplicate and persist; the republish re-enters `update()` → `reloadData`.
+    private func applyRename(id: UUID, newName: String) {
+        guard let index = projectIndex else { return }
+        if index.folders.contains(where: { $0.id == id }) {
+            index.renameFolder(id: id, newName: newName)
+        } else if index.projects.contains(where: { $0.id == id }) {
+            index.renameProject(id: id, newName: newName)
+        }
+    }
+
+    /// Restore a cell's name field from edit box back to a display label.
+    private func restoreLabelChrome(_ field: NSTextField) {
+        field.isEditable = false
+        field.isSelectable = false
+        field.isBordered = false
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.delegate = nil
+    }
+
+    // MARK: NSTextFieldDelegate (rename commit / cancel)
+
+    func controlTextDidBeginEditing(_ obj: Notification) {
+        // Defensive: if editing began without `beginRename` (future slow-second-
+        // click path), stamp the edited node so the reload guard + commit resolve it.
+        guard editingNodeID == nil, let field = obj.object as? NSTextField else { return }
+        let row = outlineView.row(for: field)
+        guard row >= 0, let node = outlineView.item(atRow: row) as? OutlineNode else { return }
+        switch node.kind {
+        case .project(let id), .folder(let id): editingNodeID = id
+        default: break
+        }
+    }
+
+    func controlTextDidEndEditing(_ obj: Notification) {
+        guard let field = obj.object as? NSTextField else { return }
+        let id = editingNodeID
+        let typed = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cancelled = cancellingEdit
+        // Clear edit state BEFORE mutating the model — the rename republishes and
+        // re-enters `update()`, which must see `editingNodeID == nil` to reload.
+        editingNodeID = nil
+        cancellingEdit = false
+        restoreLabelChrome(field)
+
+        guard let id else { return }
+        let model = currentName(forNodeID: id)
+        if !cancelled, !typed.isEmpty, typed != model {
+            applyRename(id: id, newName: typed)   // commit → publish → update() → reload
+        } else {
+            // Cancel / empty / unchanged: revert the visible label to the model
+            // (Finder keeps the folder + its prior name; never writes a blank label).
+            field.stringValue = model ?? field.stringValue
+        }
+    }
+
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+        if selector == #selector(NSResponder.cancelOperation(_:)) {   // Escape
+            cancellingEdit = true
+            // Resigning first responder ends editing → controlTextDidEndEditing reverts.
+            textView.window?.makeFirstResponder(outlineView)
+            return true
+        }
+        return false
     }
 
     private func isFolderExpanded(_ node: OutlineNode) -> Bool {
@@ -634,6 +956,16 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
     func outlineViewSelectionDidChange(_ notification: Notification) {
         if isApplyingProgrammatic { return }
+        // A user-driven selection change. If a click caused it, that click is a plain
+        // select and must not also arm the slow-second-click rename (consumed, and
+        // reset, by `outlineViewClicked`). Programmatic selection returns above, so
+        // `update()`'s re-selection churn can't spuriously suppress the gesture.
+        selectionChangedByCurrentClick = true
+        // Keyboard nav (arrow keys) moves selection without a click action, so a
+        // rename armed on the previous row would fire against a row the user has
+        // since left. Drop it — the gesture is click-initiated only.
+        renameArmTimer?.invalidate()
+        renameArmTimer = nil
         var selection = Set<SidebarSelection>()
         for row in outlineView.selectedRowIndexes {
             if let node = outlineView.item(atRow: row) as? OutlineNode,
@@ -1030,6 +1362,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
         menu.addItem(menuItem("desktop.menu.project.showInFinder", #selector(menuShowInFinder(_:)),
                               enabled: canShowInFinder(id)))
+        menu.addItem(menuItem("desktop.menu.project.rename", #selector(menuRename(_:))))
         menu.addItem(menuItem("desktop.menu.project.chooseIcon", #selector(menuChooseIcon(_:))))
 
         // "Move to" → submenu (No Folder + each folder), mirroring ProjectRow.
@@ -1059,6 +1392,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     }
 
     private func buildFolderMenu(_ menu: NSMenu, folderID id: UUID) {
+        menu.addItem(menuItem("desktop.menu.folder.rename", #selector(menuRename(_:))))
         menu.addItem(menuItem("desktop.menu.folder.archive", #selector(menuNoop(_:)), enabled: false))  // Phase 5
         menu.addItem(.separator())
         menu.addItem(menuItem("desktop.menu.folder.delete", #selector(menuRemoveFolder(_:))))
@@ -1152,6 +1486,10 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
     @objc private func menuRemoveFolder(_ sender: NSMenuItem) {
         if let id = menuClickedNodeID { onRemoveFolder(id) }
+    }
+
+    @objc private func menuRename(_ sender: NSMenuItem) {
+        if let id = menuClickedNodeID { beginRename(nodeID: id) }
     }
 
     @objc private func menuNoop(_ sender: NSMenuItem) {}   // disabled Archive (Phase 5)

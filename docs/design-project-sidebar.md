@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-06-21
-trued-against: HEAD@main on 2026-06-21
+last-trued: 2026-07-28
+trued-against: working tree @main on 2026-07-28 (rename slice uncommitted)
 ---
 
 > **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`):** the per-project run glance **moved onto the
@@ -31,6 +31,7 @@ trued-against: HEAD@main on 2026-06-21
 
 ## Changelog
 
+- _2026-07-28_ — **rename slice trued against the shipped AppKit path** (`/true-the-docs --topic sidebar-rename`). Three reversals: §"Rename interaction" L224 *"Enter key does NOT trigger rename"* — **reversed**, Return now begins rename, because selection already opens in this sidebar so Return has no "open" job to collide with (the 14-app survey that produced the original conclusion is preserved, with the reasoning for why it doesn't govern here); §Phase 2 "not shipped" slow-double-click bullet and its 2026-04-23 override banner — **both flipped**, the "needs NSEvent monitor or AppKit subclass" remedy they prescribed is exactly what shipped (`SidebarOutlineView` + `doubleClickInterval`-deferred arm). Mechanism deliberately **not** mirrored here — `design-desktop-sidebar-appkit.md` §2.6 is canonical; this doc keeps design intent + survey. Re-anchored rename from `ProjectRow.swift`/`FolderRow.swift` (being-deleted SwiftUI path) to `ProjectSidebarOutline.swift`. Anchors are `file:line`, not SHAs — the work was uncommitted at truing time.
 - _2026-06-22_ — added a **"Substrate + ownership"** banner after §Context delineating this doc (sidebar behaviour/content) from the two newer docs that now own slices of the surface: `design-desktop-nav-toolbar-rearrangement.md` (the relocated lens rail) and `design-desktop-sidebar-appkit.md` (the SwiftUI `List` → AppKit `NSOutlineView` migration, alpha default at cutover). Cross-ref'd §"Row anatomy" to the appkit §2.4 cell port. **No behaviour claims changed** — the SwiftUI content here is accurate for the flag-OFF default build; the banner closes the cross-doc drift risk (those mechanics are deleted at cutover). Anchors: `ProjectSidebarOutline.swift`, `OutlineNode.swift`, `LensRail.swift`, `BristlenoseFlags.swift`.
 - _2026-06-21_ — re-trued against `main` after the `project-status-line` + `warm-sidecar-pool` merges, which landed the day *after* the 18 Jun truing (its front-matter SHA `bcb4187` is an ancestor of the rewrite — false-fresh). Added copy-on-row to §"Row anatomy" (`"Copying · N%"` ring + hover-cancel + context-menu; standalone `CopyProgressPill` deleted); flipped §"Click behaviour" — switch-back now re-points to a parked warm sidecar (Phase A2). Anchors: `ProjectSubtitle.swift`, `ProjectRow.swift`, `ParkedSidecar.swift`, `ServeManager.swift`; commits `0842081`, `4313bff`, `beaac38`.
 - _2026-06-18_ — Trued against `main` @ `bcb4187` after the `progress-text-surfacing` merge. Running-row subtitle now shows the live progress ladder via `RunProgressSubtitle` (states table L81 updated); drag-create adopts the folder/first-item name with no inline rename (drop matrix + Phase 2 list updated, commit `09f8625`); added a "Row anatomy (two-line)" section documenting the title-line session count + its refresh-on-completion (commit `1e1d608`) and the subtitle progress ladder, cross-referencing `desktop/CLAUDE.md` + `bristlenose/server/CLAUDE.md` for the WAL-checkpoint mechanics rather than duplicating them.
@@ -212,16 +213,28 @@ When files/folders are dragged from Finder:
 
 ## Rename interaction
 
+> **SHIPPED 28 Jul 2026 on the AppKit path** — mechanism, guard-rails and invariants live in
+> [design-desktop-sidebar-appkit.md](design-desktop-sidebar-appkit.md) **§2.6**, which is canonical.
+> This section keeps the *design intent* + the 14-app survey that produced it; don't mirror the
+> mechanics here. Implementation is `ProjectSidebarOutline.swift:537-757`, **not**
+> `ProjectRow.swift` / `FolderRow.swift` (the being-deleted SwiftUI path).
+
 Based on survey of 14 macOS apps:
 
-- **Slow double-click** on name in sidebar → inline text field (universal across all Mac apps)
-- **Right-click > Rename** (common, include in context menu)
-- **Menu bar > Project > Rename** (no keyboard shortcut — rename is infrequent)
-- **New project from drop/create** → item appears with name selected inline for editing (Finder pattern, used by 9 of 14 apps)
-- **Commit**: Return. **Cancel**: Escape
-- **No dialog, no sheet** — inline only, always
+- **Slow second click** on name in sidebar → inline text field (universal across all Mac apps). ✅ Shipped. Named "slow double-click" below and in older notes; the shipped gesture is deliberately **not** a double-click — a double-click *cancels* it (§2.6).
+- **Right-click > Rename** (common, include in context menu) ✅ shipped, project **and** folder
+- **Menu bar > Project > Rename** (no keyboard shortcut — rename is infrequent) ✅ shipped, still no accelerator
+- **New project from drop/create** → item appears with name selected inline for editing (Finder pattern, used by 9 of 14 apps). ✅ shipped for **New Folder**; drag-created *projects* deliberately adopt the folder/first-item stem with no rename prompt (see Phase 2).
+- **Commit**: Return. **Cancel**: Escape. ✅ Plus **commit-on-blur** (click-away saves — Finder/Notes/Xcode all do this; cancel-on-blur is a web habit).
+- **No dialog, no sheet** — inline only, always ✅
 
-Enter key does NOT trigger rename (only Finder/Xcode do this — most apps use Enter to open/activate).
+> **REVERSED 28 Jul 2026.** This section previously concluded: *"Enter key does NOT trigger rename
+> (only Finder/Xcode do this — most apps use Enter to open/activate)."* That was a sound reading of
+> the 14-app survey, and it is preserved here because the reasoning still explains the general case.
+> **It does not hold for this sidebar:** selection *already opens* — clicking a project serves its
+> report — so Return has no "open" job left to collide with, and is free to mean rename. Return now
+> begins rename (`ProjectSidebarOutline.swift:145-151`, `:365`). Don't re-derive the old conclusion
+> from the survey and "correct" the code back.
 
 ## Menus
 
@@ -321,12 +334,12 @@ All items disabled when nothing is selected.
 > | Target state | Shipped behaviour |
 > |---|---|
 > | `.idle` / `.scanning` | `addFiles` + auto-run, toast "Added N interviews to …" (no Undo button) |
-> | `.ready` | Blocker toast "Adding extra interviews to an analysed project isn't supported yet" — incremental re-analyse not yet implemented |
+> | `.ready` | ~~Blocker toast~~ **Reversed — files are copied in and folded via `addFiles`.** `.ready` is deliberately *not* an early return (`ContentView.swift:1380`). The `dropOntoAnalysedProject` locale string is now orphaned (21 locale dirs, zero Swift callers). |
 > | `.failed` | Toast redirects user to pill-popover Retry |
 > | `.running` / `.queued` | Toast "Finish or stop the current run before adding more" |
 > | `.unreachable` | Blocked with explanation toast |
 >
-> Empty-sidebar-area drop (row 1 below) matches the shipped path. The row 2 vision (Add interviews + Undo on any state) is the aspirational target once incremental re-analyse lands.
+> Empty-sidebar-area drop (row 1 below) matches the shipped path. ~~The row 2 vision … is the aspirational target once incremental re-analyse lands.~~ **Incremental analysis landed v0.20.0 (11 Jul 2026)**; `File ▸ Add Files… ⇧⌘A` shipped as the menu twin of drag-drop. Undo-on-any-state remains aspirational — see [`design-undo-catalog.md`](design-undo-catalog.md).
 
 | Drag source | Drop target | Result |
 |-------------|-------------|--------|
@@ -356,7 +369,7 @@ All items disabled when nothing is selected.
 
 - **Single click**: select project, load in detail pane (starts serve)
 - **Double click**: open in new window (Notes pattern — future, multi-window)
-- **Slow double-click on name**: inline rename
+- **Slow second click on name**: inline rename ✅ *(shipped 28 Jul 2026, AppKit path — `ProjectSidebarOutline.swift:612-659`)*
 
 Note: switching to a *new* project starts a serve process (the target row shows a loading indicator during startup). Switching **back** to the immediately-previous project is now fast — it re-points to a parked, still-running sidecar instead of teardown+restart (warm-sidecar pool, Phase A2, shipped 19 Jun 2026 — `ServeManager.swift`, `ParkedSidecar.swift`). The "cache recently-served projects" idea below is what shipped, for a single warm slot; broader caching (warm *WebView*, N-pool) is future work. See `design-desktop-switch-performance.md`.
 
@@ -437,7 +450,7 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 - Async URL loading from drop providers via `withTaskGroup` + `withCheckedContinuation`
 
 **Not shipped (parked in 100days.md):**
-- Slow-double-click rename — `simultaneousGesture(TapGesture())` and `onTapGesture` on List rows break selection on macOS 26. Rename works via right-click and Project menu. Needs NSEvent monitor or AppKit subclass
+- ~~Slow-double-click rename~~ — **SHIPPED 28 Jul 2026 on the AppKit path.** The diagnosis below was correct *for the SwiftUI `List`* and is preserved as the reason the remedy took the shape it did: `simultaneousGesture(TapGesture())` and `onTapGesture` on List rows break selection on macOS 26, so rename worked only via right-click and Project menu, and the bullet prescribed "needs NSEvent monitor or **AppKit subclass**". The AppKit subclass is exactly what shipped — `SidebarOutlineView` + `outlineView.action`/`doubleAction` with an `NSEvent.doubleClickInterval`-deferred arm (`ProjectSidebarOutline.swift:612-659`). Gesture-vs-selection interference doesn't arise because AppKit's table owns both.
 - ~~Multi-select (Shift/Cmd click)~~ — **shipped** (`List(selection: Set<SidebarSelection>)`); known multi-select Delete bug is the alpha-blocker
 - ~~Drop-on-existing-project-row~~ — **shipped** via `SidebarDropDelegate` frame hit-test
 - Drag-to-reorder — needs multi-select first. Phase 3 in design doc
@@ -455,9 +468,11 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 > - **File-type validation** shipped as extension allow-list (`acceptedExtensions` Set in `ContentView.swift:410-419`) — not UTType-based as originally specced, but equivalent outcome for accepted formats.
 > - **Subset-project state** (drag of single file(s)) shipped via `UnsupportedSubsetView` — displays "Bristlenose analyses folders" detail view for projects created from individual files.
 >
-> Still accurately parked: slow-double-click rename, drag-to-reorder, spring-loaded folders, empty-state ContentUnavailableView.
+> Still accurately parked: drag-to-reorder, spring-loaded folders, empty-state ContentUnavailableView.
+> (**Slow-double-click rename left this list on 28 Jul 2026** — shipped on the AppKit path; see the
+> struck bullet above and `design-desktop-sidebar-appkit.md` §2.6.)
 
-**Files**: `ProjectIndex.swift` (model, CRUD, inputFiles), `ProjectRow.swift` (context menu callbacks, rename), `ContentView.swift` (drop handling, context menu, async URL loading), `MenuCommands.swift` (⌘⌫ shortcut)
+**Files**: `ProjectIndex.swift` (model, CRUD, inputFiles, `pendingRename` trigger), `ContentView.swift` (drop handling, async URL loading), `MenuCommands.swift` (⌘⌫ shortcut, menu-bar Rename), and — for the shipped AppKit path — `ProjectSidebarOutline.swift` (context menus, inline rename, slow-second-click). `ProjectRow.swift` / `FolderRow.swift` are the flag-off SwiftUI path being deleted; their rename code is inert whenever `BristlenoseAppKitSidebar` is on.
 
 ### Phase 3 — Folders
 
@@ -548,19 +563,24 @@ Added during 23 Apr 2026 QA pass — shipped reality for "how can a user start/r
 | `.queued` | n/a | disabled | rejected with toast | as above |
 | `.running` (includes attached orphan) | shows Stop, not Retry | disabled | rejected with toast | as above |
 | `.failed` | ✅ Retry | disabled | redirects user to toolbar Retry (toast text: "Use Retry on the toolbar to try this run again") | as above |
-| `.ready` | n/a | disabled | blocker toast (no incremental re-analyse) | as above |
+| `.ready` | n/a | disabled | ~~blocker toast~~ **accepts the drop — files copied + folded via `addFiles`** (`ContentView.swift:1380`) | as above |
 | `.unreachable` (moved / offline volume) | n/a | disabled | blocked with explanation toast | as above |
 
 **Empty-area drop note:** "Drop on empty area" creates a new project on first drop. For single-folder drops matching an existing project path, `duplicateDropAlert` (`ContentView.swift:301-323`) intercepts before creation — the user picks Open Existing / Create Anyway / Cancel. Multi-item drops bypass the dedup check.
 
 **Gaps this table surfaces:**
 
-- `.idle`, `.stopped` (would-be post-cancel), and `.ready` have **no first-class run trigger** — users must drop the folder again on the empty area, which creates a duplicate project, OR rely on pill Retry for `.failed` only.
-- `Project > Re-analyse…` menu item exists (`MenuCommands.swift:397-400`) but is `.disabled(true)` with Phase 2+ comment.
+- ~~`.idle`, `.stopped` … and `.ready` have **no first-class run trigger**~~ **Partly reversed:** the AppKit context menu ships an **Analyse** verb for `.idle` / `.stopped` / `.failed` / `.failedWithDiagnostic` (`ProjectSidebarOutline.swift:1404` `canAnalyse`, `:1444` `menuAnalyse`). `.ready` remains excluded by design — dropping files onto it is the additive path.
+- `Project ▸ Re-analyse…` menu item exists (`MenuCommands.swift:696`) but is `.disabled(true)` with a Phase 2+ comment. Still accurate; only the line anchor had rotted. **It has no safe implementation today** — the additive path is a no-op with no new files (every stage is content-hash cached), and `--clean` is destructive; see the three-way split below.
 - Context menu on project rows has no `Analyse` / `Resume` / `Retry` items.
 - Three user-facing verbs have been scoped for alpha (see also `docs/design-subprocess-lifecycle.md` and plan-note):
   - **Resume** — pipeline was interrupted, manifest has partial state, safe to continue (no human data exists yet).
   - **Retry** — pipeline errored, same mechanism as Resume, different entry.
-  - **Re-analyse…** — destructive do-over, nukes human edits/tags/stars/hidden quotes, confirmation modal. Copy: "Discards all your edits, tags, stars, and hidden quotes. Runs a fresh analysis."
+  - **Re-analyse…** — _**revised 28 Jul 2026.** The blanket "nukes everything" framing below was written pre-0.20.0 and misled a session into believing curation is always destroyed. Three paths now behave differently:_
+    - **Additive re-run** (add files → `PipelineRunner.start(project:)`, the shipped path): curation **survives**. Quotes that are starred ∨ edited ∨ human-tagged ∨ researcher-placed are pinned (`durable_id` + `frozen_form`) and exempted from stale cleanup — `importer.py:1409` `_pinned_quote_ids`, `:1507` `_cleanup_stale_data`. Sections keep identity by membership. Shipped v0.20.0, 11 Jul 2026.
+    - **`--clean`** (CLI only — `clean: true` has **zero Swift callers**): genuinely destructive, but by a mechanism this doc never named — `shutil.rmtree(output_dir)` (`cli.py:1106`), and the SQLite DB holding every pin lives *inside* that tree. It deletes the persistence layer itself.
+    - **`hidden`** is the one term that stays accurate either way: hide is **not** in the pin set, best-effort by design (~5% reappearance accepted).
+    - No confirmation modal exists — the CTA described here was never wired.
+    - Canonical: [`design-curation-persistence.md`](design-curation-persistence.md).
 
-**Alpha scope:** splitting `.idle` into `.idle` (never-run) and `.stopped` (post-cancel); context-menu verbs above; incremental re-analyse (to unblock drop-on-`.ready`). Logged in plan-note `docs/private/truing-ingestion-lifecycle-2026-04-23.md` and in active QA plan.
+**Alpha scope:** splitting `.idle` into `.idle` (never-run) and `.stopped` (post-cancel); context-menu verbs above; ~~incremental re-analyse (to unblock drop-on-`.ready`)~~ — **shipped v0.20.0**. Logged in plan-note `docs/private/truing-ingestion-lifecycle-2026-04-23.md` and in active QA plan.

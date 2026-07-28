@@ -20,7 +20,7 @@ enum ScienceIllustration: Equatable {
     // NB: now welcome-wide, not science-only — `autocode` is the first study-tools
     // illustration. Worth renaming to `WelcomeIllustration` before the other study
     // tools land (see docs/design-welcome-studytools-illustrations.md).
-    case none, sentimentFan, books, shoal, quote, signal, autocode, manualTags
+    case none, sentimentFan, books, shoal, quote, signal, autocode, manualTags, tag, starHide
 }
 
 /// sRGB colour from a 0xRRGGBB literal (file-private helper).
@@ -361,6 +361,43 @@ struct ManualTagsIllustrationView: View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
         return IllustrationWebView(html: WelcomeIllustrationHTML.manualTags(dark: scheme == .dark, palette: palette, reduce: still))
             .id("manualtags-\(scheme)-\(palette)-\(still)")
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Study-tools #3 — Tag: the pointer arcs onto a quote's chrome (not the words, which
+/// would open trim/edit), a plain click focuses + single-selects it, a raised `t` keycap
+/// presses under the cursor, and a code types itself in as a real `.badge-user` chip.
+/// Ported from docs/mockups/welcome-studytools-animations.html.
+struct TagIllustrationView: View {
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.welcomeAnimationActive) private var active
+    @AppStorage("palette") private var palette: String = "default"
+
+    var body: some View {
+        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        return IllustrationWebView(html: WelcomeIllustrationHTML.tag(dark: scheme == .dark, palette: palette, reduce: still))
+            .id("tag-\(scheme)-\(palette)-\(still)")
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Study-tools #4 — Star & hide: press `s` to keep (star + left rule pick up the starred
+/// tint, body weight bumps), press `h` to hide (real `.bn-hiding` collapse) and the hidden
+/// count ticks up by one. Ported from docs/mockups/welcome-studytools-animations.html.
+struct StarHideIllustrationView: View {
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.welcomeAnimationActive) private var active
+    @AppStorage("palette") private var palette: String = "default"
+
+    var body: some View {
+        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        return IllustrationWebView(html: WelcomeIllustrationHTML.starHide(dark: scheme == .dark, palette: palette, reduce: still))
+            .id("starhide-\(scheme)-\(palette)-\(still)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -893,6 +930,326 @@ enum WelcomeIllustrationHTML {
             await buildGroup(g);
           }
           run();
+        </script>
+        </body></html>
+        """
+    }
+
+    /// Tag (study-tools #3) — pointer arcs onto the card's left rule (chrome, NOT the
+    /// words — clicking the text opens trim/edit), a plain click focuses + single-selects
+    /// (real .bn-focused.bn-selected), the `t` keycap presses under the cursor, and a code
+    /// types itself in as a real .badge-user chip. Real selection colours; plays once/turn.
+    static func tag(dark: Bool, palette: String, reduce: Bool) -> String {
+        """
+        <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-palette="\(palette)" data-reduce="\(reduce ? "1" : "0")">
+        <head><meta charset="utf-8"><style>
+          :root{
+            --bn-colour-quote-bg:#f9fafb; --bn-colour-border:#e5e7eb; --bn-colour-muted:#6b7280; --bn-colour-accent:#007aff;
+            --bn-colour-text:#1a1a1a; --bn-colour-bg:#ffffff; --bn-colour-badge-bg:#f3f4f6; --bn-colour-badge-text:#374151;
+            --bn-colour-user-tag-bg:#f3f4f6;
+            --bn-sentiment-satisfaction:#16a34a; --bn-sentiment-satisfaction-bg:#f0fdf4; --code-blue-bg:#dbeafe;
+            --bn-selection-bg:#eef4fc; --bn-selection-border:var(--bn-colour-accent);
+            --bn-focus-shadow:0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+            --bn-colour-border-hover:#d1d5db;
+            --bn-cap-face:#fbfbfc; --bn-cap-face-lo:#f0f1f3; --bn-cap-highlight:rgba(255,255,255,.9); --bn-cap-edge:#cfd2d7;
+            --bn-font-mono:"SF Mono",ui-monospace,Menlo,monospace;
+            --bn-font-body:-apple-system,"SF Pro Text",system-ui,sans-serif;
+            --bn-radius-sm:3px; --bn-radius-md:6px;
+            --bn-space-xs:0.15rem; --bn-space-sm:0.35rem;
+            --bn-text-body:0.9375rem; --bn-text-body-lh:1.5; --bn-text-label:0.8125rem; --bn-text-badge:0.72rem;
+            --bn-weight-normal:420; --bn-weight-emphasis:490;
+          }
+          html[data-appearance="dark"]{
+            --bn-colour-quote-bg:#1a1a1a; --bn-colour-border:#2d2d2d; --bn-colour-muted:#9ca3af; --bn-colour-accent:#0a84ff;
+            --bn-colour-text:#e5e7eb; --bn-colour-bg:#111111; --bn-colour-badge-bg:#252525; --bn-colour-badge-text:#d1d5db;
+            --bn-colour-user-tag-bg:#252525;
+            --bn-sentiment-satisfaction:#4ade80; --bn-sentiment-satisfaction-bg:#0f2918; --code-blue-bg:#1e3a5f;
+            --bn-selection-bg:#1a2838; --bn-colour-border-hover:#3a3a3a;
+            --bn-cap-face:#2c2c2e; --bn-cap-face-lo:#232325; --bn-cap-highlight:rgba(255,255,255,.06); --bn-cap-edge:#000;
+          }
+          html[data-palette="edo"]{
+            --bn-colour-quote-bg:#f0e9d8; --bn-colour-border:#d4c9a8; --bn-colour-muted:#4a698a; --bn-colour-accent:#0f5c9e;
+            --bn-colour-text:#1b2230; --bn-colour-bg:#fdfbf7; --bn-colour-badge-bg:#e8dfc9; --bn-colour-badge-text:#2d3654;
+            --bn-colour-user-tag-bg:#e8dfc9;
+            --bn-selection-bg:#e0e8f0; --bn-colour-border-hover:#c4b896;
+            --bn-focus-shadow:0 3px 12px rgba(30,20,10,0.12), 0 0 0 1px rgba(30,20,10,0.06);
+            --bn-cap-face:#fdfbf7; --bn-cap-face-lo:#f3ecdb; --bn-cap-highlight:rgba(255,255,255,.85); --bn-cap-edge:#d4c9a8;
+          }
+          html[data-palette="edo"][data-appearance="dark"]{
+            --bn-colour-quote-bg:#211e18; --bn-colour-border:#2d2820; --bn-colour-muted:#7ba8a0; --bn-colour-accent:#4d9fe0;
+            --bn-colour-text:#e8e3d6; --bn-colour-bg:#1a1816; --bn-colour-badge-bg:#2d2820; --bn-colour-badge-text:#c4b898;
+            --bn-colour-user-tag-bg:#2d2820;
+            --bn-selection-bg:#1e2830; --bn-colour-border-hover:#3a3428;
+            --bn-cap-face:#211e18; --bn-cap-face-lo:#1a1816; --bn-cap-highlight:rgba(255,255,255,.05); --bn-cap-edge:#000;
+          }
+          *{ box-sizing:border-box; }
+          html,body{ margin:0; height:100%; overflow:hidden; background:transparent; }
+          body{ display:flex; align-items:center; padding:10px 14px; font-family:var(--bn-font-body); color:var(--bn-colour-text); }
+          #stage{ position:relative; width:100%; }
+          .sh-stage{ display:flex; flex-direction:column; gap:7px; }
+          blockquote.quote-card{ position:relative; font-family:var(--bn-font-body); color:var(--bn-colour-text); background:var(--bn-colour-quote-bg); border-left:1px solid var(--bn-colour-border); margin:0; padding:0.55rem 0.85rem; border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; width:100%; }
+          blockquote .quote-row{ display:flex; gap:0.5rem; align-items:baseline; }
+          blockquote .timecode{ color:var(--bn-colour-accent); font-family:var(--bn-font-mono); font-size:var(--bn-text-label); flex-shrink:0; }
+          .timecode-bracket{ color:var(--bn-colour-muted); }
+          blockquote .quote-body{ flex:1; min-width:0; font-size:var(--bn-text-body); line-height:var(--bn-text-body-lh); }
+          blockquote .speaker{ color:var(--bn-colour-muted); font-size:var(--bn-text-label); white-space:nowrap; }
+          .speaker .badge{ margin-left:4px; }
+          .smart-quote{ color:var(--bn-colour-muted); }
+          .quote-card .badges{ display:flex; gap:var(--bn-space-sm); margin-top:0.45rem; flex-wrap:wrap; align-items:center; }
+          .badge{ display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) 0.45rem; border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); }
+          .badge-satisfaction{ background:var(--bn-sentiment-satisfaction-bg); color:var(--bn-sentiment-satisfaction); }
+          .badge-user{ background:var(--bn-colour-user-tag-bg); color:var(--bn-colour-text); font-weight:var(--bn-weight-normal); }
+          html[data-appearance="dark"] .badge-user{ color:#ffffff; font-weight:var(--bn-weight-emphasis); }
+          .badge.code-blue{ background:var(--code-blue-bg); }
+          .badge-add{ border:1px dashed var(--bn-colour-border); background:transparent; color:var(--bn-colour-muted); }
+          .cb-input{ font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-text); }
+          .caret{ display:inline-block; width:2px; height:1em; background:var(--bn-colour-accent); margin-left:1px; vertical-align:text-bottom; }
+          .caret.blink{ animation:caret-blink 1s step-end infinite; }
+          @keyframes caret-blink{ 50%{opacity:0} }
+          @keyframes badge-fade-in{ from{opacity:0; transform:scale(.8)} to{opacity:1; transform:scale(1)} }
+          .badge-appearing{ animation:badge-fade-in .2s ease-out; }
+          blockquote.quote-card.bn-focused{ background:var(--bn-colour-bg); box-shadow:var(--bn-focus-shadow); z-index:2; }
+          blockquote.quote-card.bn-selected{ background:var(--bn-selection-bg); border-left-color:var(--bn-selection-border); }
+          .cap{ position:absolute; z-index:8; display:inline-flex; align-items:center; justify-content:center; min-width:1.7em; height:1.7em; padding:0 .42em; font-family:var(--bn-font-mono); font-size:var(--bn-text-label); font-weight:500; line-height:1; color:var(--bn-colour-text); border-radius:5px; pointer-events:none; }
+          .cap--raised{ background:linear-gradient(var(--bn-cap-face),var(--bn-cap-face-lo)); border:1px solid var(--bn-colour-border-hover); box-shadow:0 1.5px 0 0 var(--bn-cap-edge), inset 0 1px 0 0 var(--bn-cap-highlight); }
+          @keyframes cap-enter{ from{opacity:0; transform:translateY(7px) scale(.9)} to{opacity:1; transform:translateY(0) scale(1)} }
+          .cap-enter{ animation:cap-enter .2s ease-out; }
+          @keyframes cap-leave{ to{opacity:0; transform:translateY(-5px) scale(.92)} }
+          .cap-leave{ animation:cap-leave .22s ease forwards; }
+          .cap.cap-press{ transform:translateY(1.5px); box-shadow:inset 0 1px 2px rgba(0,0,0,.2), 0 0 0 3px var(--bn-selection-border); filter:brightness(.97); }
+          .ptr{ position:absolute; left:0; top:0; z-index:9; pointer-events:none; filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.35)); }
+          .ptr-ico{ display:block; transform-origin:4px 3px; }
+          @keyframes ptr-click{ 0%{transform:scale(1)} 45%{transform:scale(.8)} 100%{transform:scale(1)} }
+          .ptr.ptr-click .ptr-ico{ animation:ptr-click .24s ease; }
+          @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
+        </style></head>
+        <body><div id="stage"></div>
+        <script>
+          var host=document.getElementById("stage");
+          var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
+          var PACE=1.3;
+          function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+          function nap(ms){ return sleep(Math.round(ms*PACE)); }
+          function settle(){ return new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); }); }
+          var PTR_SVG='<svg width="21" height="21" viewBox="0 0 12 19"><path d="M1.2 1.2 L1.2 14.6 L4.8 11.3 L7.1 16.8 L9.3 15.8 L7.0 10.4 L11.4 10.4 Z" fill="#ffffff" stroke="#111111" stroke-width="1.1" stroke-linejoin="round"/></svg>';
+          function mkPointer(){ var p=document.createElement("div"); p.className="ptr"; p.innerHTML='<span class="ptr-ico">'+PTR_SVG+'</span>'; host.appendChild(p); return p; }
+          function relXY(el, dx, dy){ var hr=host.getBoundingClientRect(), r=el.getBoundingClientRect(); return [r.left-hr.left+(dx||0), r.top-hr.top+(dy||0)]; }
+          function setPtr(p,x,y){ p.style.transition="none"; p.style.transform="translate("+x+"px,"+y+"px)"; p._x=x; p._y=y; }
+          function bez(a,c,b,t){ var u=1-t; return u*u*a+2*u*t*c+t*t*b; }
+          function glideCurve(p, el, dx, dy){
+            var e=relXY(el,dx,dy), ex=e[0], ey=e[1];
+            var sx=(p._x!=null?p._x:ex), sy=(p._y!=null?p._y:ey);
+            var vx=ex-sx, vy=ey-sy, dist=Math.hypot(vx,vy)||1, bow=Math.min(48,dist*0.22);
+            var cx=(sx+ex)/2+(-vy/dist)*bow, cy=(sy+ey)/2+(vx/dist)*bow, N=18, frames=[];
+            for(var i=0;i<=N;i++){ var t=i/N; frames.push({transform:"translate("+bez(sx,cx,ex,t)+"px,"+bez(sy,cy,ey,t)+"px)"}); }
+            p.style.transition="none"; p.animate(frames,{duration:Math.round(640*PACE), easing:"ease-in-out", fill:"forwards"});
+            p._x=ex; p._y=ey; return nap(640);
+          }
+          async function clickPulse(p){ p.classList.remove("ptr-click"); void p.offsetWidth; p.classList.add("ptr-click"); await nap(260); }
+          function fadePtr(p){ p.style.transition="opacity .35s ease"; p.style.opacity="0"; }
+          function mkCap(x,y,letter){ var c=document.createElement("span"); c.className="cap cap--raised cap-enter"; c.textContent=letter; c.style.left=x+"px"; c.style.top=y+"px"; host.appendChild(c); return c; }
+          async function pressCap(c){ await nap(140); c.classList.add("cap-press"); await nap(150); c.classList.remove("cap-press"); await nap(150); }
+          async function leaveCap(c){ c.classList.remove("cap-enter"); void c.offsetWidth; c.classList.add("cap-leave"); await nap(240); c.remove(); }
+          async function typeInto(el, text, ms){ for(var i=0;i<text.length;i++){ el.textContent+=text[i]; await sleep(ms); } }
+          var TAGQ={ time:"09:14", speaker:"p3", role:"Participant", sentiment:"Satisfaction", q:"I knew straight away where to click — it matched what I expected.", tag:"mental model", tagClass:"code-blue" };
+          function tagCard(d){
+            return '<blockquote class="quote-card sh-card"><div class="quote-row">'
+              +'<span class="timecode"><span class="timecode-bracket">[</span>'+d.time+'<span class="timecode-bracket">]</span></span>'
+              +'<div class="quote-body"><span class="smart-quote">“</span>'+d.q+'<span class="smart-quote">”</span> '
+              +'<span class="speaker"><span class="badge">'+d.speaker+'</span><span class="badge">'+d.role+'</span></span>'
+              +'<div class="badges"><span class="badge badge-ai badge-satisfaction">'+d.sentiment+'</span><span class="badge badge-add">+</span></div>'
+              +'</div></div></blockquote>';
+          }
+          async function runTag(){
+            host.innerHTML='<div class="sh-stage">'+tagCard(TAGQ)+'</div>';
+            var card=host.querySelector(".quote-card"), badges=host.querySelector(".badges"), add=host.querySelector(".badge-add");
+            if(REDUCED){ var rc=document.createElement("span"); rc.className="badge badge-user "+TAGQ.tagClass; rc.textContent=TAGQ.tag; badges.insertBefore(rc, add); return; }
+            await settle();
+            var p=mkPointer();
+            var s=relXY(card, card.offsetWidth-6, card.offsetHeight+20); setPtr(p,s[0],s[1]);
+            await nap(360);
+            await glideCurve(p, card, 12, card.offsetHeight*0.5);      // arc onto the LEFT RULE (chrome, not the words)
+            await clickPulse(p); card.classList.add("bn-focused","bn-selected");
+            await nap(360);
+            var cap=mkCap(p._x-2, p._y+14, "t");                       // key under the cursor, over empty gutter
+            await pressCap(cap);
+            var ed=document.createElement("span"); ed.className="cb-input";
+            var caret=document.createElement("span"); caret.className="caret blink";
+            badges.insertBefore(ed, add); badges.insertBefore(caret, add);
+            await typeInto(ed, TAGQ.tag, 60);
+            caret.classList.remove("blink"); await nap(220);
+            ed.remove(); caret.remove();
+            var chip=document.createElement("span"); chip.className="badge badge-user "+TAGQ.tagClass+" badge-appearing"; chip.textContent=TAGQ.tag;
+            badges.insertBefore(chip, add);
+            await leaveCap(cap);
+            card.classList.remove("bn-focused","bn-selected"); fadePtr(p);
+          }
+          runTag();
+        </script>
+        </body></html>
+        """
+    }
+
+    /// Star & hide (study-tools #4) — pointer arcs onto card A's rule, clicks (focus+select),
+    /// `s` stars it (real #999/#ccc tint differential + weight bump + star-pop); then card B,
+    /// `h` collapses it away (real .bn-hiding) and the "N hidden" count ticks up. Plays once/turn.
+    static func starHide(dark: Bool, palette: String, reduce: Bool) -> String {
+        """
+        <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-palette="\(palette)" data-reduce="\(reduce ? "1" : "0")">
+        <head><meta charset="utf-8"><style>
+          :root{
+            --bn-colour-quote-bg:#f9fafb; --bn-colour-border:#e5e7eb; --bn-colour-muted:#6b7280; --bn-colour-accent:#007aff;
+            --bn-colour-text:#1a1a1a; --bn-colour-bg:#ffffff; --bn-colour-badge-bg:#f3f4f6; --bn-colour-badge-text:#374151;
+            --bn-sentiment-satisfaction:#16a34a; --bn-sentiment-satisfaction-bg:#f0fdf4;
+            --bn-selection-bg:#eef4fc; --bn-selection-border:var(--bn-colour-accent);
+            --bn-focus-shadow:0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+            --bn-colour-starred:#999; --bn-colour-icon-idle:#c9ccd1; --bn-colour-border-hover:#d1d5db;
+            --bn-cap-face:#fbfbfc; --bn-cap-face-lo:#f0f1f3; --bn-cap-highlight:rgba(255,255,255,.9); --bn-cap-edge:#cfd2d7;
+            --bn-font-mono:"SF Mono",ui-monospace,Menlo,monospace;
+            --bn-font-body:-apple-system,"SF Pro Text",system-ui,sans-serif;
+            --bn-radius-sm:3px; --bn-radius-md:6px;
+            --bn-space-xs:0.15rem; --bn-space-sm:0.35rem;
+            --bn-text-body:0.9375rem; --bn-text-body-lh:1.5; --bn-text-label:0.8125rem; --bn-text-badge:0.72rem;
+            --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-starred:520;
+          }
+          html[data-appearance="dark"]{
+            --bn-colour-quote-bg:#1a1a1a; --bn-colour-border:#2d2d2d; --bn-colour-muted:#9ca3af; --bn-colour-accent:#0a84ff;
+            --bn-colour-text:#e5e7eb; --bn-colour-bg:#111111; --bn-colour-badge-bg:#252525; --bn-colour-badge-text:#d1d5db;
+            --bn-sentiment-satisfaction:#4ade80; --bn-sentiment-satisfaction-bg:#0f2918;
+            --bn-selection-bg:#1a2838; --bn-colour-starred:#ccc; --bn-colour-icon-idle:#595959; --bn-colour-border-hover:#3a3a3a;
+            --bn-cap-face:#2c2c2e; --bn-cap-face-lo:#232325; --bn-cap-highlight:rgba(255,255,255,.06); --bn-cap-edge:#000;
+          }
+          html[data-palette="edo"]{
+            --bn-colour-quote-bg:#f0e9d8; --bn-colour-border:#d4c9a8; --bn-colour-muted:#4a698a; --bn-colour-accent:#0f5c9e;
+            --bn-colour-text:#1b2230; --bn-colour-bg:#fdfbf7; --bn-colour-badge-bg:#e8dfc9; --bn-colour-badge-text:#2d3654;
+            --bn-selection-bg:#e0e8f0; --bn-colour-starred:#9e8b6e; --bn-colour-icon-idle:#b8ad91; --bn-colour-border-hover:#c4b896;
+            --bn-focus-shadow:0 3px 12px rgba(30,20,10,0.12), 0 0 0 1px rgba(30,20,10,0.06);
+            --bn-cap-face:#fdfbf7; --bn-cap-face-lo:#f3ecdb; --bn-cap-highlight:rgba(255,255,255,.85); --bn-cap-edge:#d4c9a8;
+          }
+          html[data-palette="edo"][data-appearance="dark"]{
+            --bn-colour-quote-bg:#211e18; --bn-colour-border:#2d2820; --bn-colour-muted:#7ba8a0; --bn-colour-accent:#4d9fe0;
+            --bn-colour-text:#e8e3d6; --bn-colour-bg:#1a1816; --bn-colour-badge-bg:#2d2820; --bn-colour-badge-text:#c4b898;
+            --bn-selection-bg:#1e2830; --bn-colour-starred:#b8a880; --bn-colour-icon-idle:#4a4030; --bn-colour-border-hover:#3a3428;
+            --bn-cap-face:#211e18; --bn-cap-face-lo:#1a1816; --bn-cap-highlight:rgba(255,255,255,.05); --bn-cap-edge:#000;
+          }
+          *{ box-sizing:border-box; }
+          html,body{ margin:0; height:100%; overflow:hidden; background:transparent; }
+          body{ display:flex; align-items:center; padding:9px 14px; font-family:var(--bn-font-body); color:var(--bn-colour-text); }
+          #stage{ position:relative; width:100%; }
+          .sh-toolbar{ display:flex; justify-content:flex-end; align-items:center; min-height:18px; margin-bottom:3px; }
+          .bn-hidden-toggle{ background:none; border:none; font-size:var(--bn-text-label); color:var(--bn-colour-accent); font-family:var(--bn-font-body); padding:2px 4px; display:inline-block; }
+          .bn-hidden-chevron{ font-size:.7em; margin-left:.15em; }
+          @keyframes hidden-bump{ 0%{transform:scale(1)} 38%{transform:scale(1.18); filter:brightness(1.35)} 100%{transform:scale(1)} }
+          .bn-hidden-toggle.bump{ animation:hidden-bump .5s ease; }
+          .sh-stage{ display:flex; flex-direction:column; gap:7px; }
+          blockquote.quote-card{ position:relative; font-family:var(--bn-font-body); color:var(--bn-colour-text); background:var(--bn-colour-quote-bg); border-left:1px solid var(--bn-colour-border); margin:0; padding:0.55rem 0.85rem; border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; width:100%; }
+          blockquote .quote-row{ display:flex; gap:0.5rem; align-items:baseline; }
+          blockquote .timecode{ color:var(--bn-colour-accent); font-family:var(--bn-font-mono); font-size:var(--bn-text-label); flex-shrink:0; }
+          .timecode-bracket{ color:var(--bn-colour-muted); }
+          blockquote .quote-body{ flex:1; min-width:0; font-size:var(--bn-text-body); line-height:var(--bn-text-body-lh); }
+          blockquote .speaker{ color:var(--bn-colour-muted); font-size:var(--bn-text-label); white-space:nowrap; }
+          .speaker .badge{ margin-left:4px; }
+          .smart-quote{ color:var(--bn-colour-muted); }
+          .quote-card .badges{ display:flex; gap:var(--bn-space-sm); margin-top:0.45rem; flex-wrap:wrap; align-items:center; }
+          .badge{ display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) 0.45rem; border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); }
+          .badge-satisfaction{ background:var(--bn-sentiment-satisfaction-bg); color:var(--bn-sentiment-satisfaction); }
+          .badge-add{ border:1px dashed var(--bn-colour-border); background:transparent; color:var(--bn-colour-muted); }
+          .star-btn,.hide-btn{ position:absolute; top:.5rem; background:none; border:none; font-size:var(--bn-text-label); color:var(--bn-colour-icon-idle); padding:2px; line-height:1; display:inline-block; }
+          .star-btn{ right:.55rem; }
+          .hide-btn{ right:1.9rem; opacity:0; }
+          blockquote.quote-card.bn-focused .hide-btn{ opacity:1; }
+          .hide-btn svg{ display:block; }
+          blockquote.quote-card.starred{ font-weight:var(--bn-weight-starred); border-left-color:var(--bn-colour-starred); }
+          blockquote.quote-card.starred .star-btn{ color:var(--bn-colour-starred); }
+          @keyframes star-pop{ 0%{transform:scale(1)} 40%{transform:scale(1.55)} 100%{transform:scale(1)} }
+          .star-btn.pop{ animation:star-pop .42s cubic-bezier(.34,1.56,.64,1); }
+          blockquote.quote-card.bn-hiding{ max-height:0 !important; opacity:0; overflow:hidden; margin:0 !important; padding-top:0 !important; padding-bottom:0 !important; border-width:0 !important; transition:all 300ms ease; }
+          blockquote.quote-card.bn-hidden{ display:none !important; }
+          blockquote.quote-card.bn-focused{ background:var(--bn-colour-bg); box-shadow:var(--bn-focus-shadow); z-index:2; }
+          blockquote.quote-card.bn-selected{ background:var(--bn-selection-bg); border-left-color:var(--bn-selection-border); }
+          .cap{ position:absolute; z-index:8; display:inline-flex; align-items:center; justify-content:center; min-width:1.7em; height:1.7em; padding:0 .42em; font-family:var(--bn-font-mono); font-size:var(--bn-text-label); font-weight:500; line-height:1; color:var(--bn-colour-text); border-radius:5px; pointer-events:none; }
+          .cap--raised{ background:linear-gradient(var(--bn-cap-face),var(--bn-cap-face-lo)); border:1px solid var(--bn-colour-border-hover); box-shadow:0 1.5px 0 0 var(--bn-cap-edge), inset 0 1px 0 0 var(--bn-cap-highlight); }
+          @keyframes cap-enter{ from{opacity:0; transform:translateY(7px) scale(.9)} to{opacity:1; transform:translateY(0) scale(1)} }
+          .cap-enter{ animation:cap-enter .2s ease-out; }
+          @keyframes cap-leave{ to{opacity:0; transform:translateY(-5px) scale(.92)} }
+          .cap-leave{ animation:cap-leave .22s ease forwards; }
+          .cap.cap-press{ transform:translateY(1.5px); box-shadow:inset 0 1px 2px rgba(0,0,0,.2), 0 0 0 3px var(--bn-selection-border); filter:brightness(.97); }
+          .ptr{ position:absolute; left:0; top:0; z-index:9; pointer-events:none; filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.35)); }
+          .ptr-ico{ display:block; transform-origin:4px 3px; }
+          @keyframes ptr-click{ 0%{transform:scale(1)} 45%{transform:scale(.8)} 100%{transform:scale(1)} }
+          .ptr.ptr-click .ptr-ico{ animation:ptr-click .24s ease; }
+          @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
+        </style></head>
+        <body><div id="stage"></div>
+        <script>
+          var host=document.getElementById("stage");
+          var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
+          var PACE=1.3;
+          function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+          function nap(ms){ return sleep(Math.round(ms*PACE)); }
+          function settle(){ return new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); }); }
+          var PTR_SVG='<svg width="21" height="21" viewBox="0 0 12 19"><path d="M1.2 1.2 L1.2 14.6 L4.8 11.3 L7.1 16.8 L9.3 15.8 L7.0 10.4 L11.4 10.4 Z" fill="#ffffff" stroke="#111111" stroke-width="1.1" stroke-linejoin="round"/></svg>';
+          var HIDE_SVG='<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"><path d="M2 8s2.3-4 6-4 6 4 6 4-2.3 4-6 4-6-4-6-4Z"/><circle cx="8" cy="8" r="1.7"/><line x1="3.2" y1="12.8" x2="12.8" y2="3.2"/></svg>';
+          function mkPointer(){ var p=document.createElement("div"); p.className="ptr"; p.innerHTML='<span class="ptr-ico">'+PTR_SVG+'</span>'; host.appendChild(p); return p; }
+          function relXY(el, dx, dy){ var hr=host.getBoundingClientRect(), r=el.getBoundingClientRect(); return [r.left-hr.left+(dx||0), r.top-hr.top+(dy||0)]; }
+          function setPtr(p,x,y){ p.style.transition="none"; p.style.transform="translate("+x+"px,"+y+"px)"; p._x=x; p._y=y; }
+          function bez(a,c,b,t){ var u=1-t; return u*u*a+2*u*t*c+t*t*b; }
+          function glideCurve(p, el, dx, dy){
+            var e=relXY(el,dx,dy), ex=e[0], ey=e[1];
+            var sx=(p._x!=null?p._x:ex), sy=(p._y!=null?p._y:ey);
+            var vx=ex-sx, vy=ey-sy, dist=Math.hypot(vx,vy)||1, bow=Math.min(48,dist*0.22);
+            var cx=(sx+ex)/2+(-vy/dist)*bow, cy=(sy+ey)/2+(vx/dist)*bow, N=18, frames=[];
+            for(var i=0;i<=N;i++){ var t=i/N; frames.push({transform:"translate("+bez(sx,cx,ex,t)+"px,"+bez(sy,cy,ey,t)+"px)"}); }
+            p.style.transition="none"; p.animate(frames,{duration:Math.round(640*PACE), easing:"ease-in-out", fill:"forwards"});
+            p._x=ex; p._y=ey; return nap(640);
+          }
+          async function clickPulse(p){ p.classList.remove("ptr-click"); void p.offsetWidth; p.classList.add("ptr-click"); await nap(260); }
+          function fadePtr(p){ p.style.transition="opacity .35s ease"; p.style.opacity="0"; }
+          function mkCap(x,y,letter){ var c=document.createElement("span"); c.className="cap cap--raised cap-enter"; c.textContent=letter; c.style.left=x+"px"; c.style.top=y+"px"; host.appendChild(c); return c; }
+          async function pressCap(c){ await nap(140); c.classList.add("cap-press"); await nap(150); c.classList.remove("cap-press"); await nap(150); }
+          async function leaveCap(c){ c.classList.remove("cap-enter"); void c.offsetWidth; c.classList.add("cap-leave"); await nap(240); c.remove(); }
+          var SHQ=[
+            { time:"11:30", speaker:"p1", role:"Participant", sentiment:"Satisfaction", q:"Browsing beat searching — it just worked." },
+            { time:"04:52", speaker:"p2", role:"Participant", sentiment:"Satisfaction", q:"Honestly, I skimmed straight past this bit." }
+          ];
+          function fullCard(d){
+            return '<blockquote class="quote-card sh-card"><button class="hide-btn" tabindex="-1">'+HIDE_SVG+'</button><button class="star-btn" tabindex="-1">★</button><div class="quote-row">'
+              +'<span class="timecode"><span class="timecode-bracket">[</span>'+d.time+'<span class="timecode-bracket">]</span></span>'
+              +'<div class="quote-body"><span class="smart-quote">“</span>'+d.q+'<span class="smart-quote">”</span> '
+              +'<span class="speaker"><span class="badge">'+d.speaker+'</span><span class="badge">'+d.role+'</span></span>'
+              +'<div class="badges"><span class="badge badge-ai badge-satisfaction">'+d.sentiment+'</span><span class="badge badge-add">+</span></div>'
+              +'</div></div></blockquote>';
+          }
+          function shToolbar(n){ return '<div class="sh-toolbar"><button class="bn-hidden-toggle" tabindex="-1">'+n+' hidden <span class="bn-hidden-chevron">⌄</span></button></div>'; }
+          async function runStarHide(){
+            host.innerHTML=shToolbar(2)+'<div class="sh-stage">'+fullCard(SHQ[0])+fullCard(SHQ[1])+'</div>';
+            var cards=host.querySelectorAll(".quote-card"), A=cards[0], B=cards[1], toggle=host.querySelector(".bn-hidden-toggle");
+            if(REDUCED){ A.classList.add("starred"); B.classList.add("bn-hidden"); toggle.firstChild.textContent="3 hidden "; return; }
+            await settle();
+            var p=mkPointer(); setPtr(p, host.clientWidth-24, host.clientHeight-14);
+            await nap(340);
+            // s : star card A (arc onto the rule → focus+select, key under pointer)
+            await glideCurve(p, A, 12, A.offsetHeight*0.5);
+            await clickPulse(p); A.classList.add("bn-focused","bn-selected");
+            await nap(320);
+            var capS=mkCap(p._x-2, p._y+14, "s");
+            await pressCap(capS);
+            A.classList.remove("bn-focused","bn-selected"); A.classList.add("starred"); A.querySelector(".star-btn").classList.add("pop");
+            await leaveCap(capS);
+            await nap(1100);
+            // h : hide card B, the hidden count ticks up
+            await glideCurve(p, B, 12, B.offsetHeight*0.5);
+            await clickPulse(p); B.classList.add("bn-focused","bn-selected");
+            await nap(320);
+            var capH=mkCap(p._x-2, p._y+14, "h");
+            await pressCap(capH);
+            B.classList.add("bn-hiding"); toggle.firstChild.textContent="3 hidden "; toggle.classList.add("bump");
+            await nap(300); B.classList.add("bn-hidden");
+            toggle.classList.remove("bump");
+            await leaveCap(capH);
+            fadePtr(p);
+          }
+          runStarHide();
         </script>
         </body></html>
         """

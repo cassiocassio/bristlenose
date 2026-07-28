@@ -1,15 +1,27 @@
+---
+status: partial
+last-trued: 2026-07-28
+trued-against: working tree @main on 2026-07-28 (rename slice uncommitted)
+---
+
 # Desktop sidebar — native AppKit source list (`NSOutlineView`)
 
-**Status:** Active · **Alpha / TestFlight** — AppKit ships behind the opt-in `BristlenoseAppKitSidebar` flag, **default-off** through soak (the SwiftUI `List` is still the live default). The cutover — AppKit → default, SwiftUI path deleted — is the **confirmed direction** (22 Jun, supersedes the original Post-TestFlight scoping) but **not yet done**. · updated 23 Jun 2026
+## Changelog
+
+- _2026-07-28_ — **rename slice trued** (`/true-the-docs --topic sidebar-rename`). Flipped the header's *"Inline rename DEFERRED — explicitly not built this pass"* to shipped, and retired the "one remaining controller-track item" framing it cited (the `ProjectSidebarOutline.swift` header comment carrying that claim was corrected in the same pass — three artefacts, one sweep). Folder context menu **2 → 3** items; project menu gained **Rename** (and **Analyse**, shipped earlier, previously unrecorded). Closed §6's "Context-menu demux (when menus land)". Added **§2.6** — rename + the reload contract: the four guard-rails share one framing (a per-tick `reloadData` table hosting a live field editor), so they earn a section, not table rows; three invariants promoted from code comments. Added a **"What remains"** statement to replace the retired single-item claim. Line refs in §2.5/§3.4 outside the rename slice still trail (~1,425 → ~1,765 lines) — flagged in the header, not swept this pass. Anchors are `file:line`, not SHAs — the work was uncommitted at truing time.
+
+**Status:** Active · **Alpha / TestFlight** — AppKit ships behind the opt-in `BristlenoseAppKitSidebar` flag, **default-off** through soak (`BristlenoseFlags.swift:11` — a plain `UserDefaults.bool`, no registered default). The cutover — AppKit → default, SwiftUI path deleted — is the **confirmed direction** (22 Jun, supersedes the original Post-TestFlight scoping) but **not yet done**. Note the flag default is *not* a statement of direction: the maintainer runs flag-on, all new sidebar work lands on the AppKit path, and `desktop/CLAUDE.md` already calls AppKit "the shipped source-list sidebar". Build new sidebar features on AppKit; the SwiftUI `List` is the being-deleted path. · updated 28 Jul 2026
 **Extends / closes:** `design-desktop-nav-toolbar-rearrangement.md` §2.2 (the parked "AppKit `NSOutlineView` rewrite") · the drag-drop "sidebar apocalypse" forensic (commit `7bf0e96`; gitignored handoff notes)
 **Scope:** the macOS desktop **sidebar** — the project list **and** the lens rail (folded into the same `NSOutlineView` as group rows, §3.1). The toolbar (nav/toolbar spec) is untouched. **This is a framework switch, not a redesign:** every existing affordance is rescued verbatim — no UX is rethought.
 
-**Shipped since (23 Jun 2026, `mac-app-layout-reorg`).** The body below predates these commits — its `*.swift:NN` line refs trail (the file grew ~40–130 lines), but the architecture in §2.5 / §3.1 / §6 is still accurate verbatim. What landed:
+**Shipped since (23 Jun 2026, `mac-app-layout-reorg`; rename slice 28 Jul 2026).** The body below predates these commits — its `*.swift:NN` line refs trail badly now (`ProjectSidebarOutline.swift` has grown ~1,425 → ~1,765 lines), but the architecture in §2.5 / §3.1 / §6 is still accurate verbatim. What landed:
 
 - **Cell port (Phase 4) complete** — `ProjectRow` ported to an AppKit cell verbatim (`28dae0d`, `52768b1`).
-- **Context menus** (project + folder) shipped via `NSMenuDelegate.menuNeedsUpdate` per `clickedRow` — **not** the speculative `menu(for:)` §2.2/§6 anticipated. Project menu is conditional (Stop Analysis · Cancel Copy · Show Diagnostics · Locate, all state-gated · Show in Finder · Choose Icon · Move to → · Remove from Sidebar); folder menu is **2** items (Archive disabled · Delete). §6's "when menus land" is now closed (`96c31eb`).
-- **Inline rename DEFERRED** — listed below as Phase-A parity, but explicitly not built this pass (`ProjectSidebarOutline.swift` header records the deferral).
+- **Context menus** (project + folder) shipped via `NSMenuDelegate.menuNeedsUpdate` per `clickedRow` — **not** the speculative `menu(for:)` §2.2/§6 anticipated. Project menu is conditional (Stop Analysis · Cancel Copy · Show Diagnostics · Analyse · Locate, all state-gated · Show in Finder · **Rename** · Choose Icon · Move to → · Remove from Sidebar); folder menu is **3** items (**Rename** · Archive disabled · Delete). §6's "when menus land" is now closed (`96c31eb`).
+- **Inline rename SHIPPED** (28 Jul 2026) — supersedes the "DEFERRED" note that stood here, and with it the `ProjectSidebarOutline.swift` header's "one remaining controller-track item" framing. Reachable **four ways**, all funnelling into one seam (`beginRename(nodeID:)`, `ProjectSidebarOutline.swift:556`): context menu (project **and** folder), menu-bar Project ▸ Rename, **Return** on the selected row, and **slow-second-click** (the Photos-sidebar idiom). Plus rename-on-create for New Folder. Mechanism and its four guard-rails: **§2.6**.
 - Failure/partial glyph → clickable `DiagnosticGlyphButton` (opens the diagnostic popover); default project icon `circle.fill` → open `circle` (`4e0c584`); Finder folder-of-videos drops wired via `SidebarExternalDrop` (3 cases — root/folder/project; empty-area folds to root, not a 4th case).
+
+**What remains** (replaces the retired "inline rename is the one remaining controller-track item"): the flag cutover to default-on + SwiftUI-path deletion (`BristlenoseFlags.swift:11`, `ContentView.swift:1736`) · folder **Archive** still inert (`ProjectSidebarOutline.swift:1396`, `// Phase 5`) · the lens double-selection VoiceOver gap (§6) · Phase-B within-scope reorder `toIndex` (§3.3) · `reloadData`-on-every-`update` churn (§6) — now *more* load-bearing, since a live rename survives it only via the §2.6 freeze.
 
 ---
 
@@ -27,7 +39,9 @@ Apple's own flagship apps keep their sidebars in **AppKit `NSOutlineView`** for 
 
 ## 1. The benchmark — the macOS source list (what we're matching)
 
-> The whole look is produced by one switch: `NSOutlineView.selectionHighlightStyle = .sourceList`, inside an `NSScrollView`, in the `NavigationSplitView` sidebar column. Everything below falls out of that + `NSTableCellView` cells + `rowSizeStyle = .default`. **The spec rule throughout: these are system-drawn — we do not set colours, metrics, or selection fills.**
+> The whole look is produced by one switch: `NSOutlineView.selectionHighlightStyle = .sourceList`, inside an `NSScrollView`, in the `NavigationSplitView` sidebar column. Everything below falls out of that + `NSTableCellView` cells + ~~`rowSizeStyle = .default`~~ → **`.custom`** (see the banner below). **The spec rule throughout: these are system-drawn — we do not set colours, metrics, or selection fills.**
+
+> **Superseded on `rowSizeStyle` (28 Jul 2026).** This doc says `.default` in four places (§1, §2 recipe, §2.2, §2.3). **Shipped is `rowSizeStyle = .custom`** (`ProjectSidebarOutline.swift:276`), and it is *required*: `.default`/`.small`/`.medium`/`.large` all pin a fixed style height and **never call** `heightOfRowByItem` (`:1196`) — no error, no warning, the variable-height work is simply inert. The two-line project cell needs it. Cost: a row-pitch fix was committed and did nothing until `.custom` was set. Consequence you now own — `.custom` also drops the style's automatic icon sizing, so icon `pointSize` is explicit (`ProjectCellSpec`). Same hard rule is in `desktop/CLAUDE.md`. The `.default` mentions below are preserved as the pre-contact design intent (icon-size tracking), which `.custom` trades away deliberately.
 
 ### 1.1 Selection
 - **Ground:** neutral grey / translucent rounded-rect behind the selected row — *not* an accent fill. Drawn by `NSTableRowView`.
@@ -71,7 +85,7 @@ NSScrollView(hasVerticalScroller: true)
      selectionHighlightStyle = .sourceList   // ← buys the whole look
      style = .automatic                        // resolves to source-list in a sidebar; `.sourceList` enum case is soft-deprecated — verify vs live SDK
      floatsGroupRows = true                     // pinned headers
-     rowSizeStyle = .default                     // tracks the icon-size setting
+     rowSizeStyle = .custom                      // REQUIRED for heightOfRowByItem (was .default)
      headerView = nil                            // sidebars have no column header
      allowsMultipleSelection = true              // preserve today's Cmd/Shift multi-select
 ```
@@ -83,7 +97,7 @@ NSScrollView(hasVerticalScroller: true)
 |---|---|
 | Grey selection ground + focus-stability | `selectionHighlightStyle = .sourceList` |
 | Accent tint of selected **icon** (label takes system selected-content colour, not accent) | `NSTableRowView` sets `backgroundStyle` → `NSTableCellView` forwards to its `imageView`/`textField` (automatic) |
-| Row height / glyph / text tracking the icon-size setting | `rowSizeStyle = .default` |
+| Row height / glyph / text tracking the icon-size setting | ~~`rowSizeStyle = .default`~~ → **`.custom`** + explicit `heightOfRowByItem` — we own row height AND icon `pointSize` (see the §1 banner) |
 | Disclosure triangles | native `NSOutlineView` |
 | Group-row styling ("Projects" header) | delegate `isGroupItem` + a plain `NSTextField` cell (system applies group attributes) |
 | Floating/pinned headers | `floatsGroupRows = true` |
@@ -98,7 +112,7 @@ NSScrollView(hasVerticalScroller: true)
 
 ### 2.3 Over-bespoke traps — the scope fence
 1. **The one rule: use `NSTableCellView`, never a bare `NSView` cell.** The moment you abandon it you lose automatic `backgroundStyle` forwarding and must hand-write accent-tinting + selected-text colour — *exactly the system behaviour we switched to AppKit to get.* Extra content (trailing status glyph) → **subclass** `NSTableCellView`, add outlets; never replace it.
-2. **Don't hardcode `rowHeight`** — breaks icon-size tracking. Use `rowSizeStyle = .default`.
+2. ~~**Don't hardcode `rowHeight`** — breaks icon-size tracking. Use `rowSizeStyle = .default`.~~ **Reversed 28 Jul 2026** — the two-line cell needs variable heights, so shipped is `.custom` + `heightOfRowByItem`. Icon-size tracking is the deliberate trade; metrics are pixel-tuned in `ProjectCellSpec`. Trap: any style *other* than `.custom` makes `heightOfRowByItem` silently inert.
 3. **Don't add an `NSVisualEffectView`** — the column supplies the material.
 4. **Don't draw a custom selection fill or disclosure triangle** — both native.
 5. **Don't build a custom group-header view** — a plain string cell gets group styling automatically.
@@ -137,6 +151,47 @@ NSScrollView(hasVerticalScroller: true)
 | live `unanalysed` / `pipelineRunner.state` / copy fraction | sink → `reloadItem(node(forProjectID:))` — else the activity ring freezes + count goes stale (the WAL count-blank class) |
 | folder collapse | `autosaveExpandedItems` + `autosaveName`, else manual `folder.collapsed` |
 
+### 2.6 Inline rename + the reload contract (SHIPPED 28 Jul 2026)
+
+Rename is the one feature that collides head-on with §2.5's reload contract, which is why it gets a
+section rather than a table row: **an `NSText` field editor is a subview of the edited cell, and
+`update()` calls a full `reloadData()` on every model tick** (`liveData` is `@ObservedObject`, so
+that's ~1 Hz+ during a run). An unguarded reload tears the field editor down mid-type and eats the
+keystrokes. Four guard-rails, one framing — all four are AppKit responder/field-editor lifecycle,
+so **no unit test can catch any of them**; they're on-device acceptance only.
+
+| Guard-rail | Where | What it closes |
+|---|---|---|
+| `editingNodeID` reload freeze | `:215`, `:389`, `:430` | While non-nil, `update()` **and** `paletteDidChange()` skip `reloadData()`. During an active edit the correct number of reloads of that row is **zero** — even a targeted `reloadItem` kills the editor. |
+| `validateProposedFirstResponder` override | `:158-161` | The default table implementation *refuses* the editable field — it looks focused but keystrokes fall through to type-select. Approve editable `NSTextField`s explicitly. |
+| `selectionChangedByCurrentClick` | `:227-233`, `:614`, `:963` | The click that *made* the selection must never also arm slow-second-click rename. State, not a timing threshold — exact rather than heuristic. |
+| `renameArmTimer` + `doubleAction` cancel | `:234-239`, `:644-659` | The action method fires for the first click of a double-click too, so arming defers by `NSEvent.doubleClickInterval` and a double-click cancels it. |
+
+**Invariants — promoted from code comments because they are precisely the class that gets re-broken:**
+
+- **Begin with `editColumn(0, row:with:select:)`, not `makeFirstResponder` + `selectText`** (`:569-573`). The latter leaves the *outline* as first responder: the field draws its selection, but typing does nothing (it goes to type-select). This is the canonical view-based-table begin.
+- **Read `NSEvent.doubleClickInterval` from the system; never hard-code it** (`:237-238`). It is a user-tunable Accessibility setting (Settings ▸ Accessibility ▸ Pointer Control).
+- **Clear `editingNodeID` *before* mutating the model** (`:732-736`), or the republished `update()` sees the guard still set and never reloads.
+
+**Commit semantics** (Finder/Notes/Xcode, verified against the HIG + shipping apps): Return commits ·
+Escape reverts · **click-away commits** (`controlTextDidEndEditing`, `:727`) · empty string reverts to
+the prior name, never writes a blank label.
+
+**Trigger plumbing.** `ProjectIndex.pendingRename: UUID?` (`ProjectIndex.swift:324`) mirrors
+`pendingIconReveal` — a one-shot, non-persisted signal consumed by the controller off the tail of
+`update()` (`:543-549`). All four entry points plus rename-on-create feed it or `beginRename` directly.
+
+> **Dual-write during soak.** New Folder currently sets **both** `ContentView.renamingFolderID`
+> (SwiftUI row) and `projectIndex.pendingRename` (AppKit controller), and both notification observers
+> are live simultaneously (`ProjectSidebarOutline.swift:356-361` and `ContentView.swift:2433-2440`).
+> The AppKit side is authoritative whenever the flag is on; the SwiftUI side is inert. **Both die at
+> the flag cutover** — delete them together, not one at a time.
+
+Why Return is free to mean rename here (the survey in `design-project-sidebar.md` originally argued
+the opposite): in this sidebar **selection already opens** — clicking a project serves its report — so
+Return has no "open" job left to collide with. Same reasoning admits slow-second-click without
+ambiguity against a future double-click-to-open-in-new-window.
+
 ---
 
 ## 3. Scope, phasing, what stays
@@ -166,9 +221,9 @@ The whole migration in one effort:
 | `@AppStorage("selectedProjectID")` restore | `:159,398-402` | **reused unchanged** — existing `.onAppear` restore writes the binding; the outline renders it (§2.5). No AppKit `hasRestored` dance |
 | `selectedProject`/`soleSelection` derivations | `:228-238` | **unchanged** (pure computed) |
 | `ProjectRow` content (icon/name/count/subtitle/activity/copy/availability) | `ProjectRow.swift:82-244` | `NSTableCellView` subclass (§2.4); `ProjectSubtitle.resolve` stays pure |
-| `FolderRow` (collapsible, rename) | `FolderRow.swift:9-78` | outline item + native disclosure; editable `textField` |
-| Inline rename (project/folder) | `:171`, `FolderRow:22-44` | editable `textField`, Return commits / Esc cancels / blur commits |
-| Context menu (8 project / 3 folder items, conditional visibility) | `ContentView.swift:1570-1851` | `NSMenu` built per clicked row; same conditional items |
+| `FolderRow` (collapsible, rename) | `FolderRow.swift:9-78` | ✅ outline item + native disclosure; editable `textField` (§2.6) |
+| Inline rename (project/folder) | `:171`, `FolderRow:22-44` | ✅ **SHIPPED** — see **§2.6**. Note the semantics differ from the SwiftUI row: **Return *begins* rename** from the outline (`SidebarOutlineView.keyDown`, `:145-151` → `beginRenameSelected`, `:586`); it only *commits* once the field editor is already up. Esc reverts / blur commits / empty reverts, as before. |
+| Context menu (up to 10 project / 3 folder items, conditional visibility) | `ContentView.swift:1931` (folder), `:2163` (project) | ✅ `NSMenu` built per clicked row via `menuNeedsUpdate`; same conditional items. Both menus now carry **Rename** (`ProjectSidebarOutline.swift:1365`, `:1395`). |
 | 11 menu/undo notifications (`.createNewProject`…`.focusProjects`) | `:446-485,1959+` | drive the controller; **undo-restore writes the `selection` binding** → the outline renders it (§2.5) |
 | Finder-file drops on rows / empty | `:1485,1549,1767` | `NSOutlineViewDataSource` pasteboard (validateDrop/acceptDrop) |
 | Internal project drag → folder; root + per-folder reorder | `:1457,1522,SidebarDrop.swift` | unified insertion model (Phase B fixes the gaps) |
@@ -226,8 +281,8 @@ Genuine-selection (active lens forced into `selectedRowIndexes` for the pixel-ex
 **Deferred — decisions for the user / before TestFlight:**
 - **Capsule-follows-async-route lag — RESOLVED 22 Jun: honest.** The active-lens capsule pins to `activeTab`, which updates only after `switchToTab`'s JS round-trip, so on a lens click it lags one cycle. Shipped the **honest** path (single source = `activeTab`); the **optimistic** alternative (pre-select the clicked lens row) was rejected because `update()` re-runs `applySelection` many times/sec and would snap an optimistic capsule back to the *stale* `activeTab`'s lens before the route lands — a flicker. Coupled to "`reloadData` on every `update`" below: if that churn is gated, optimistic pinning becomes viable again. Reconsider only if the one-cycle lag reads as sluggish in TF feedback.
 - **A11y gap (flag before TF).** Because the lens is *genuinely* selected, VoiceOver announces TWO selected rows ("Codebook, selected" + the project) — incoherent (a row announced selected that can't be selected). Needs an AX-role override (lens row as `.radioButton` / "current view", not selected) OR the escape hatch below. **Don't ship to TestFlight unflagged.**
-- **`reloadData` on every `update`.** Every model touch (count tick, rename) does a full `reloadData` + collapse/re-expand + re-select — visible churn + reopens the stale-lens window during runs. Consider gating reload to structural changes.
-- **Context-menu demux (when menus land).** Right-click sets `clickedRow` to a possibly-non-selectable lens row; the menu builder must route on `node.kind` (show nothing / a mode menu for `.lens` / `.group`).
+- **`reloadData` on every `update`.** Every model touch (count tick, rename *commit*) does a full `reloadData` + collapse/re-expand + re-select — visible churn + reopens the stale-lens window during runs. Consider gating reload to structural changes. **Now load-bearing, not just costly:** a rename *in progress* must NOT reload (it would destroy the field editor), so §2.6's `editingNodeID` freeze is the standing exception. Any future gating work must preserve that freeze.
+- ~~**Context-menu demux (when menus land).**~~ **CLOSED** — shipped via `NSMenuDelegate.menuNeedsUpdate`, which switches on `node.kind` and sets `menuClickedNodeID = nil` for `.group` / `.lens` (no items). `ProjectSidebarOutline.swift:1317-1321`.
 
 **The escape hatch (gruber) — still in reserve.** The 22 Jun bugs (2 & 3 above) hit the "more bugs in the overloaded set" threshold, but the **consolidation** (proposed-set as the single source of truth, activation in one delegate) resolved them by *reducing* interception points rather than adding one — so the hatch stayed shut and the user signed off. It remains the fallback: if the overload bites *again* after consolidation, stop overloading `selectedRowIndexes` and move the lenses to their own mode control (segmented / separate single-row table, as the SwiftUI `LensRail` already does) so the project outline means one thing — which also yields correct VoiceOver semantics (the A11y gap above) for free. **The A11y gap is the most likely forcing function before TF.**
 

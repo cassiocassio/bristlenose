@@ -15,11 +15,45 @@ private let log = Logger(subsystem: "app.bristlenose", category: "webview")
 /// the standard macOS "⌘, opens Settings from anywhere" behaviour. Every other
 /// key equivalent (the web layer's own shortcuts, copy/paste, …) is untouched.
 final class BristlenoseWebView: WKWebView {
+    /// Set in `WebView.makeNSView` so the ⌘A interception below can read the
+    /// active tab / editing state and dispatch a menu action. Weak — the
+    /// handler is owned at the App level and outlives the web view.
+    weak var bridgeHandler: BridgeHandler?
+
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         if flags == .command, event.charactersIgnoringModifiers == "," {
             return false  // not handled here → AppKit routes ⌘, to the main menu
         }
+
+        // ⌘A on the Quotes lens → select all quotes as objects (ready to
+        // star/hide/tag), not "select all text" across the report DOM. A
+        // WKWebView's performKeyEquivalent runs *before* the main menu (the
+        // same ordering the ⌘, case above relies on), so claiming ⌘A here
+        // preempts the standard Edit ▸ Select All. Only when the Quotes tab
+        // is showing and the user isn't editing text inline — an inline
+        // quote/heading edit still gets native text select-all, and other
+        // tabs (transcripts, etc.) keep native select-all for copying.
+        if flags == .command, event.charactersIgnoringModifiers == "a",
+           let handler = bridgeHandler,
+           handler.activeTab == .quotes, !handler.isEditing {
+            handler.menuAction("selectAllQuotes")
+            return true
+        }
+
+        // ⌘C on the Quotes lens with quotes selected → copy the selected
+        // quotes' text (same as Copy Quotes ▸ Selected). Object selection isn't
+        // a text selection, so the standard Edit ▸ Copy would grab nothing
+        // after ⌘A. With no quotes selected we fall through to native copy so
+        // ordinary text selection still copies; editing / other tabs likewise.
+        if flags == .command, event.charactersIgnoringModifiers == "c",
+           let handler = bridgeHandler,
+           handler.activeTab == .quotes, !handler.isEditing,
+           handler.selectedQuoteCount > 0 {
+            handler.menuAction("copyQuotes", payload: ["scope": "selected"])
+            return true
+        }
+
         return super.performKeyEquivalent(with: event)
     }
 }
@@ -89,6 +123,7 @@ struct WebView: NSViewRepresentable {
         let webView = BristlenoseWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
+        webView.bridgeHandler = bridgeHandler  // ⌘A → select-all-quotes interception
         context.coordinator.webView = webView
 
         // Translucent chrome (spike): let the window's vibrancy show through the

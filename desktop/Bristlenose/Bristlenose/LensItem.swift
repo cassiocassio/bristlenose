@@ -31,4 +31,13 @@ struct LensItem: Identifiable {
         LensItem(tab: .codebook, systemImage: "tag"),
         LensItem(tab: .analysis, systemImage: "square.grid.3x3"),
     ]
+
+    /// Icon for `tab`, resolved from `all` so every surface that shows a lens
+    /// glyph reads the *same* settled set — the sidebar rail and the View menu's
+    /// ⌘1–⌘5 items can't drift apart. `all` covers every `Tab` case (pinned by
+    /// `LensItemTests`), so the fallback is unreachable; it exists only to keep
+    /// the return non-optional at call sites.
+    static func systemImage(for tab: Tab) -> String {
+        all.first { $0.tab == tab }?.systemImage ?? "circle"
+    }
 }

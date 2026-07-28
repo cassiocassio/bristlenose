@@ -37,11 +37,11 @@ final class BridgeHandler: ObservableObject {
     /// Updated via KVO observation in WebView.Coordinator.
     @Published var canGoForward = false
 
-    /// Whether the native projects sidebar (NavigationSplitView first column)
-    /// is currently visible. Synced from ContentView's `columnVisibility`, so it
-    /// reflects toggles from every source — the View-menu item, the auto toolbar
-    /// button, and ⌘⌥S. Drives the dynamic View ▸ Hide/Show Projects label.
-    @Published var sidebarVisible = true
+    // Sidebar visibility deliberately does NOT live here. It is per-window
+    // state, and this object is a single app-level `@StateObject` shared by
+    // every window — so mirroring it here made the View-menu label describe
+    // whichever window moved last. It now reaches the menu as a scene focused
+    // value; see `SidebarVisibilityFocus.swift`.
 
     // MARK: - Menu state (driven by bridge messages)
 
@@ -59,6 +59,18 @@ final class BridgeHandler: ObservableObject {
 
     /// Number of starred quotes. Labels the "N Starred quotes" scope choice.
     @Published var starredQuoteCount: Int = 0
+
+    /// Whether the Star command would *unstar* — i.e. the target set (the
+    /// selection, or the focused quote) is already all-starred. Mirrors the
+    /// click/`s`-key intent so the Quotes menu can flip its label Star⇄Unstar.
+    /// Owned by the SPA's `quote-action-state` message (Swift has no per-quote
+    /// starred map to derive it locally).
+    @Published var starActionIsUnstar = false
+
+    /// Name of the last-applied tag this session, or nil if none. Drives the
+    /// "Apply <name>" menu label and its disabled state. Pushed via
+    /// `quote-action-state`.
+    @Published var lastTagName: String?
 
     /// Whether a video/audio player is open. Enables the Video menu.
     @Published var hasPlayer = false
@@ -397,10 +409,11 @@ final class BridgeHandler: ObservableObject {
             isEditing = false
 
         case "focus-change":
+            // Sole writer of `focusedQuoteId`, posted by the SPA whenever the
+            // report's keyboard focus moves. Carries the focused quote id only
+            // (JS null → nil): `selectedQuoteCount` stays owned by
+            // `export-counts` so the focus and selection signals can't drift.
             focusedQuoteId = body["quoteId"] as? String
-            // `selectedQuoteCount` is owned solely by `export-counts` (below) —
-            // do not also write it here, or the two sources can drift if the
-            // web ever starts posting focus-change.
 
         case "undo-state":
             canUndo = body["canUndo"] as? Bool ?? false
@@ -411,6 +424,11 @@ final class BridgeHandler: ObservableObject {
             if let n = body["total"] as? Int { totalQuoteCount = n }
             if let n = body["selected"] as? Int { selectedQuoteCount = n }
             if let n = body["starred"] as? Int { starredQuoteCount = n }
+
+        case "quote-action-state":
+            // Derived Star⇄Unstar intent + last-tag name for the Quotes menu.
+            starActionIsUnstar = body["starIsUnstar"] as? Bool ?? false
+            lastTagName = body["lastTagName"] as? String  // JS null → nil
 
         case "player-state":
             hasPlayer = body["hasPlayer"] as? Bool ?? false
@@ -467,6 +485,8 @@ final class BridgeHandler: ObservableObject {
         selectedQuoteCount = 0
         totalQuoteCount = 0
         starredQuoteCount = 0
+        starActionIsUnstar = false
+        lastTagName = nil
         hasPlayer = false
         playerPlaying = false
         canUndo = false

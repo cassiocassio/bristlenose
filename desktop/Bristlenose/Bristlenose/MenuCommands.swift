@@ -36,7 +36,7 @@ struct MenuCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
-            AppMenuContent(bridgeHandler: bridgeHandler, serveManager: serveManager, i18n: i18n)
+            AppMenuContent(serveManager: serveManager, i18n: i18n)
         }
 
         CommandGroup(replacing: .newItem) {
@@ -114,6 +114,18 @@ private struct DiagnosticsMenuContent: View {
         // actions for the served project + the Shoal animation at defaults.
         // (Web Inspector is a side-effect of the preference toggle, not a menu
         // item — there's no public API to open a hosted WKWebView's inspector.)
+
+        // Check Health — opens the native Health window (`DoctorReportView`),
+        // which runs the doctor-style local system checks via `GET /api/doctor`
+        // and renders them as a native list. No ellipsis: opening a window that
+        // IS the thing takes no further input (HIG). Replaced the dead
+        // `menuAction("checkSystemHealth")` bridge dispatch (28 Jul 2026).
+        Button("Check Health") {
+            openWindow(id: "health")
+        }
+
+        Divider()
+
         Button("Reveal .bristlenose/ in Finder") {
             DiagnosticsActions.revealInternalDir(serveManager: serveManager)
         }
@@ -277,7 +289,6 @@ private struct ShowMainWindowMenuContent: View {
 // MARK: - App menu (Bristlenose)
 
 private struct AppMenuContent: View {
-    @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var serveManager: ServeManager
     @ObservedObject var i18n: I18n
 
@@ -314,15 +325,9 @@ private struct AppMenuContent: View {
 
         Divider()
 
-        Button(i18n.t("desktop.menu.app.aiPrivacy")) {
+        Button(i18n.t("desktop.menu.app.aiPrivacy"), systemImage: "hand.raised") {
             NotificationCenter.default.post(
                 name: .showAIConsentSheet, object: nil)
-        }
-
-        Divider()
-
-        Button(i18n.t("desktop.menu.app.checkHealth")) {
-            bridgeHandler.menuAction("checkSystemHealth")
         }
     }
 }
@@ -334,12 +339,12 @@ private struct FileMenuContent: View {
     @ObservedObject var i18n: I18n
 
     var body: some View {
-        Button(i18n.t("desktop.menu.file.newProject")) {
+        Button(i18n.t("desktop.menu.file.newProject"), systemImage: "plus") {
             NotificationCenter.default.post(name: .createNewProject, object: nil)
         }
         .keyboardShortcut("n", modifiers: .command)
 
-        Button(i18n.t("desktop.menu.file.newFolder")) {
+        Button(i18n.t("desktop.menu.file.newFolder"), systemImage: "folder.badge.plus") {
             NotificationCenter.default.post(name: .createNewFolder, object: nil)
         }
         .keyboardShortcut("n", modifiers: [.command, .shift])
@@ -347,37 +352,48 @@ private struct FileMenuContent: View {
         // Add Files… — the menu twin of drag-drop. ⇧⌘A mirrors Apple Mail's
         // File ▸ Attach Files. Posts unconditionally (like New Project/Folder);
         // ContentView resolves the current selection and toasts if none.
-        Button(i18n.t("desktop.menu.file.addFiles")) {
+        Button(i18n.t("desktop.menu.file.addFiles"), systemImage: "plus.rectangle.on.folder") {
             NotificationCenter.default.post(name: .addFilesToSelectedProject, object: nil)
         }
         .keyboardShortcut("a", modifiers: [.command, .shift])
 
-        Button(i18n.t("desktop.menu.file.openInNewWindow")) {
+        Button(i18n.t("desktop.menu.file.openInNewWindow"), systemImage: "macwindow.badge.plus") {
             bridgeHandler.menuAction("openInNewWindow")
         }
         .keyboardShortcut("o", modifiers: [.command, .shift])
 
         Divider()
 
-        Button(i18n.t("desktop.menu.file.exportReport")) {
+        Button(i18n.t("desktop.menu.file.exportReport"), systemImage: "square.and.arrow.up") {
             bridgeHandler.menuAction("exportReport")
         }
         .keyboardShortcut("e", modifiers: [.command, .shift])
 
-        Button(i18n.t("desktop.menu.file.exportAnonymised")) {
+        Button(i18n.t("desktop.menu.file.exportAnonymised"), systemImage: "square.and.arrow.up") {
             bridgeHandler.menuAction("exportAnonymised")
         }
 
         Divider()
 
+        // Page Setup / Print are NATIVE (`NSPrintOperation`), not bridge calls.
+        // They used to dispatch `menuAction("pageSetup"/"print")`, which no SPA
+        // handler consumed — silent no-ops. `window.print()` inside a WKWebView
+        // can't raise the macOS print panel, so the bridge was never the right
+        // target. Prints whatever lens is on screen; see `PrintActions`.
         Button(i18n.t("desktop.menu.file.pageSetup")) {
-            bridgeHandler.menuAction("pageSetup")
+            PrintActions.pageSetup()
         }
 
-        Button(i18n.t("desktop.menu.file.print")) {
-            bridgeHandler.menuAction("print")
+        Button(i18n.t("desktop.menu.file.print"), systemImage: "printer") {
+            PrintActions.print(webView: bridgeHandler.webView, window: NSApp.keyWindow)
         }
         .keyboardShortcut("p", modifiers: .command)
+        // `isReady` is the only published signal that a web view has loaded
+        // (`webView` itself is a plain weak var, so it can't drive SwiftUI).
+        // It's an imperfect proxy — see the "isReady is NOT 'the report is
+        // showing'" gotcha in desktop/CLAUDE.md — but it correctly separates
+        // "nothing to print yet" from "something is on screen".
+        .disabled(!bridgeHandler.isReady)
     }
 }
 
@@ -404,7 +420,7 @@ private struct UndoRedoMenuContent: View {
 
     var body: some View {
         if !bridgeHandler.isEditing {
-            Button(undoLabel) {
+            Button(undoLabel, systemImage: "arrow.uturn.backward") {
                 if removalStore.hasPending {
                     removalStore.undoLastRemoval()
                 } else {
@@ -414,7 +430,7 @@ private struct UndoRedoMenuContent: View {
             .keyboardShortcut("z", modifiers: .command)
             .disabled(!canUndo)
 
-            Button(i18n.t("desktop.menu.edit.redo")) {
+            Button(i18n.t("desktop.menu.edit.redo"), systemImage: "arrow.uturn.forward") {
                 bridgeHandler.menuAction("redo")
             }
             .keyboardShortcut("z", modifiers: [.command, .shift])
@@ -432,7 +448,7 @@ private struct FindMenuContent: View {
     var body: some View {
         Divider()
 
-        Button(i18n.t("desktop.menu.edit.find")) {
+        Button(i18n.t("desktop.menu.edit.find"), systemImage: "magnifyingglass") {
             bridgeHandler.menuAction("find")
         }
         .keyboardShortcut("f", modifiers: .command)
@@ -467,6 +483,12 @@ private struct ViewMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
 
+    /// The FRONT window's projects-sidebar binding, published by its
+    /// `ContentView` via `focusedSceneValue`. Window-scoped on purpose: Hide/Show
+    /// Projects must move one window, not all of them. `nil` when no project
+    /// window is key, which dims the item.
+    @FocusedValue(\.sidebarVisibility) private var sidebarVisibility
+
     /// Locale key suffix for the left-panel label, per tab.
     private var leftPanelKey: String? {
         switch bridgeHandler.activeTab {
@@ -485,7 +507,7 @@ private struct ViewMenuContent: View {
     var body: some View {
         // Tab shortcuts Cmd+1 through Cmd+5
         ForEach(Array(Tab.allCases.enumerated()), id: \.element.id) { index, tab in
-            Button(tab.localizedLabel(i18n)) {
+            Button(tab.localizedLabel(i18n), systemImage: LensItem.systemImage(for: tab)) {
                 bridgeHandler.switchToTab(tab)
             }
             .keyboardShortcut(
@@ -509,26 +531,31 @@ private struct ViewMenuContent: View {
         // / Tags) and disambiguate from the web left panel. Toggles through the
         // `columnVisibility` binding via ContentView, not the AppKit selector, so
         // the auto toolbar button and this item share one source of truth.
-        Button(i18n.t(bridgeHandler.sidebarVisible
+        Button(i18n.t(SidebarToggle.isVisible(sidebarVisibility?.wrappedValue ?? .all)
                       ? "desktop.menu.view.hideProjects"
-                      : "desktop.menu.view.showProjects")) {
-            NotificationCenter.default.post(name: .toggleProjectsSidebar, object: nil)
+                      : "desktop.menu.view.showProjects"),
+               systemImage: "sidebar.left") {
+            guard let sidebarVisibility else { return }
+            withAnimation {
+                sidebarVisibility.wrappedValue = SidebarToggle.next(sidebarVisibility.wrappedValue)
+            }
         }
         .keyboardShortcut("s", modifiers: [.command, .option])
+        .disabled(sidebarVisibility == nil)
 
-        Button(i18n.t("desktop.menu.view.show\(leftPanelKey ?? "Contents")")) {
+        Button(i18n.t("desktop.menu.view.show\(leftPanelKey ?? "Contents")"), systemImage: "list.bullet") {
             bridgeHandler.menuAction("toggleLeftPanel")
         }
         .keyboardShortcut("l", modifiers: [.command, .option])
         .disabled(!hasLeftPanel)
 
-        Button(i18n.t("desktop.menu.view.showTags")) {
+        Button(i18n.t("desktop.menu.view.showTags"), systemImage: "sidebar.right") {
             bridgeHandler.menuAction("toggleRightPanel")
         }
         .keyboardShortcut("t", modifiers: [.command, .option])
         .disabled(bridgeHandler.activeTab != .quotes)
 
-        Button(i18n.t("desktop.menu.view.showHeatmap")) {
+        Button(i18n.t("desktop.menu.view.showHeatmap"), systemImage: "square.grid.2x2") {
             bridgeHandler.menuAction("toggleInspectorPanel")
         }
         .disabled(bridgeHandler.activeTab != .analysis)
@@ -546,34 +573,28 @@ private struct ViewMenuContent: View {
         ))
         .disabled(bridgeHandler.activeTab != .quotes)
 
-        Toggle(i18n.t("desktop.menu.view.starredQuotesOnly"), isOn: Binding(
+        Toggle(isOn: Binding(
             get: { bridgeHandler.quotesViewMode == "starred" },
             set: { _ in bridgeHandler.menuAction("starredQuotesOnly") }
-        ))
+        )) {
+            Label(i18n.t("desktop.menu.view.starredQuotesOnly"), systemImage: "star")
+        }
         .disabled(bridgeHandler.activeTab != .quotes)
 
         Divider()
 
-        Button(i18n.t("desktop.menu.view.zoomIn")) {
+        Button(i18n.t("desktop.menu.view.zoomIn"), systemImage: "plus.magnifyingglass") {
             bridgeHandler.menuAction("zoomIn")
         }
         .keyboardShortcut("=", modifiers: .command)
 
-        Button(i18n.t("desktop.menu.view.zoomOut")) {
+        Button(i18n.t("desktop.menu.view.zoomOut"), systemImage: "minus.magnifyingglass") {
             bridgeHandler.menuAction("zoomOut")
         }
         .keyboardShortcut("-", modifiers: .command)
 
         Button(i18n.t("desktop.menu.view.actualSize")) {
             bridgeHandler.menuAction("actualSize")
-        }
-
-        Divider()
-
-        Button(bridgeHandler.isDarkMode
-               ? i18n.t("desktop.menu.view.switchToLightMode")
-               : i18n.t("desktop.menu.view.switchToDarkMode")) {
-            bridgeHandler.menuAction("toggleDarkMode")
         }
     }
 }
@@ -593,24 +614,24 @@ private struct ProjectMenuContent: View {
     var body: some View {
         if hasFolder {
             // Folder-specific items
-            Button(i18n.t("desktop.menu.folder.rename")) {
+            Button(i18n.t("desktop.menu.folder.rename"), systemImage: "pencil") {
                 NotificationCenter.default.post(name: .renameSelectedFolder, object: nil)
             }
 
-            Button(i18n.t("desktop.menu.folder.archive")) {
+            Button(i18n.t("desktop.menu.folder.archive"), systemImage: "archivebox") {
                 // Phase 5
             }
             .disabled(true)
 
             Divider()
 
-            Button(i18n.t("desktop.menu.folder.delete"), role: .destructive) {
+            Button(i18n.t("desktop.menu.folder.delete"), systemImage: "trash", role: .destructive) {
                 NotificationCenter.default.post(name: .deleteSelectedFolder, object: nil)
             }
             .keyboardShortcut(.delete, modifiers: .command)
         } else {
             // Project-specific items (or nothing selected)
-            Button(i18n.t("desktop.menu.project.showInFinder")) {
+            Button(i18n.t("desktop.menu.project.showInFinder"), systemImage: "folder") {
                 let path = bridgeHandler.selectedProjectRevealablePath
                 if !path.isEmpty {
                     NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
@@ -619,12 +640,12 @@ private struct ProjectMenuContent: View {
             .keyboardShortcut("r", modifiers: [.command, .shift])
             .disabled(bridgeHandler.selectedProjectRevealablePath.isEmpty)
 
-            Button(i18n.t("desktop.chrome.locate")) {
+            Button(i18n.t("desktop.chrome.locate"), systemImage: "location.magnifyingglass") {
                 NotificationCenter.default.post(name: .locateSelectedProject, object: nil)
             }
             .disabled(bridgeHandler.selectedProjectAvailable)
 
-            Button(i18n.t("desktop.menu.project.rename")) {
+            Button(i18n.t("desktop.menu.project.rename"), systemImage: "pencil") {
                 NotificationCenter.default.post(name: .renameSelectedProject, object: nil)
             }
             // Single-selection-only operation; receiver guards on `sole`.
@@ -641,7 +662,7 @@ private struct ProjectMenuContent: View {
             // a submenu, where the user has invested two clicks before
             // discovering the dead end).
             if !projectIndex.folders.isEmpty {
-                Menu(i18n.t("desktop.menu.project.moveTo")) {
+                Menu(i18n.t("desktop.menu.project.moveTo"), systemImage: "folder") {
                     Button(i18n.t("desktop.menu.project.noFolder")) {
                         NotificationCenter.default.post(
                             name: .moveSelectedProject, object: nil
@@ -666,25 +687,25 @@ private struct ProjectMenuContent: View {
             // accelerator for the row's hover-× and context-menu Stop. Acts on
             // the sole-selected project; dimmed (not hidden) when it isn't
             // running, per menu-bar HIG (context menus hide instead).
-            Button(i18n.t("desktop.menu.project.stopAnalysis")) {
+            Button(i18n.t("desktop.menu.project.stopAnalysis"), systemImage: "stop.circle") {
                 NotificationCenter.default.post(name: .stopSelectedProject, object: nil)
             }
             .keyboardShortcut(".", modifiers: .command)
             .disabled(!bridgeHandler.selectedProjectIsRunning)
 
-            Button(i18n.t("desktop.menu.project.reAnalyse")) {
+            Button(i18n.t("desktop.menu.project.reAnalyse"), systemImage: "arrow.clockwise") {
                 bridgeHandler.menuAction("reAnalyse")
             }
             .disabled(true)  // Future — Phase 2+
 
-            Button(i18n.t("desktop.menu.project.archive")) {
+            Button(i18n.t("desktop.menu.project.archive"), systemImage: "archivebox") {
                 bridgeHandler.menuAction("archive")
             }
             .disabled(true)  // Future — Phase 5
 
             Divider()
 
-            Button(i18n.t("desktop.menu.project.removeFromSidebar")) {
+            Button(i18n.t("desktop.menu.project.removeFromSidebar"), systemImage: "minus.circle") {
                 NotificationCenter.default.post(
                     name: .removeSelectedProjectsFromSidebar, object: nil
                 )
@@ -705,57 +726,72 @@ private struct CodesMenuContent: View {
     }
 
     var body: some View {
-        Button(i18n.t("desktop.menu.codes.createCodeGroup")) {
+        Button(i18n.t("desktop.menu.codes.createCodeGroup"), systemImage: "folder.badge.plus") {
             bridgeHandler.menuAction("createCodeGroup")
         }
 
-        Button(i18n.t("desktop.menu.codes.renameCodeGroup")) {
+        Button(i18n.t("desktop.menu.codes.renameCodeGroup"), systemImage: "pencil") {
             bridgeHandler.menuAction("renameCodeGroup")
         }
         .disabled(!isCodeTab)
 
-        Button(i18n.t("desktop.menu.codes.deleteCodeGroup")) {
+        Button(i18n.t("desktop.menu.codes.deleteCodeGroup"), systemImage: "trash") {
             bridgeHandler.menuAction("deleteCodeGroup")
         }
         .disabled(!isCodeTab)
 
-        Button(i18n.t("desktop.menu.codes.showHideCodeGroup")) {
+        Button(i18n.t("desktop.menu.codes.showHideCodeGroup"), systemImage: "eye") {
             bridgeHandler.menuAction("toggleCodeGroup")
         }
         .disabled(!isCodeTab)
 
         Divider()
 
-        Button(i18n.t("desktop.menu.codes.createCode")) {
+        Button(i18n.t("desktop.menu.codes.createCode"), systemImage: "tag") {
             bridgeHandler.menuAction("createCode")
         }
 
-        Button(i18n.t("desktop.menu.codes.renameCode")) {
+        Button(i18n.t("desktop.menu.codes.renameCode"), systemImage: "pencil") {
             bridgeHandler.menuAction("renameCode")
         }
         .disabled(!isCodeTab)
 
-        Button(i18n.t("desktop.menu.codes.deleteCode")) {
+        Button(i18n.t("desktop.menu.codes.deleteCode"), systemImage: "trash") {
             bridgeHandler.menuAction("deleteCode")
         }
         .disabled(!isCodeTab)
 
-        Button(i18n.t("desktop.menu.codes.mergeCodes")) {
-            bridgeHandler.menuAction("mergeCode")
-        }
-        .disabled(!isCodeTab)
+        // Merge Codes — withdrawn from the menu 28 Jul 2026, deliberately left
+        // in place rather than deleted.
+        //
+        // Merging needs a *source* and a *target*. The codebook lens has no
+        // multi-select, so the only way to express "merge A into B" is the
+        // existing drag-one-code-onto-another in `CodebookPanel` — a menu item
+        // simply cannot say which two codes it means. That's why `mergeCode` had
+        // no handler on either side of the bridge and clicked through to nothing.
+        //
+        // Restore this when codebook selection lands (tracked in the sprint
+        // planning notes). The web half already exists and works —
+        // `mergeCodebookTags` in `frontend/src/utils/api.ts`, driven by the
+        // panel's drag merge — so this becomes a one-line re-enable plus a
+        // `case "mergeCode"` that reads the selection.
+        //
+        // Button(i18n.t("desktop.menu.codes.mergeCodes"), systemImage: "arrow.triangle.merge") {
+        //     bridgeHandler.menuAction("mergeCode")
+        // }
+        // .disabled(!isCodeTab)
 
         Divider()
 
-        Button(i18n.t("desktop.menu.codes.browseCodebooks")) {
+        Button(i18n.t("desktop.menu.codes.browseCodebooks"), systemImage: "books.vertical") {
             bridgeHandler.menuAction("browseCodebooks")
         }
 
-        Button(i18n.t("desktop.menu.codes.importFramework")) {
+        Button(i18n.t("desktop.menu.codes.importFramework"), systemImage: "square.and.arrow.down") {
             bridgeHandler.menuAction("importFramework")
         }
 
-        Button(i18n.t("desktop.menu.codes.removeFramework")) {
+        Button(i18n.t("desktop.menu.codes.removeFramework"), systemImage: "minus.circle") {
             bridgeHandler.menuAction("removeFramework")
         }
         .disabled(!isCodeTab)
@@ -780,33 +816,75 @@ private struct QuotesMenuContent: View {
         onQuotesTab && bridgeHandler.selectedQuoteCount > 0
     }
 
+    /// Star / Hide / Apply-Last-Tag act on the selection *or* the focused quote
+    /// (the same `selection || focused` target the click and `s`/`h`/`r` keys
+    /// use). ⌘A produces a selection with no focused quote, so gating these on
+    /// `hasFocus` alone would wrongly disable them right after Select All.
+    private var hasTarget: Bool {
+        hasFocus || hasSelection
+    }
+
+    /// Star command label — flips Star⇄Unstar to match the click/`s`-key intent
+    /// (unstar when the target set is all-starred), and carries the selection
+    /// count when acting on a multi-selection ("Star 3 Quotes"), mirroring the
+    /// Copy Quotes scope labels. Falls back to the plain verb for a single
+    /// focused quote.
+    private var starLabel: String {
+        let base = bridgeHandler.starActionIsUnstar ? "unstar" : "star"
+        let count = bridgeHandler.selectedQuoteCount
+        if count > 0 {
+            return i18n.plural("desktop.menu.quotes.\(base)Count", count: count)
+        }
+        return i18n.t("desktop.menu.quotes.\(base)")
+    }
+
+    /// Star glyph, flipped in step with `starLabel`. The icon previews the
+    /// *result*, not the negation of it: "Star" shows the filled star the
+    /// quote is about to get; "Unstar" shows the open star it reverts to.
+    /// (`star.slash` would read as "starring is disabled" — wrong meaning.)
+    private var starSymbol: String {
+        bridgeHandler.starActionIsUnstar ? "star" : "star.fill"
+    }
+
+    /// Apply-last-tag label — names the tag when one has been applied this
+    /// session ("Apply “usability”"); otherwise the generic verb (and the item
+    /// is disabled, since there's nothing to repeat).
+    private var applyLastTagLabel: String {
+        if let name = bridgeHandler.lastTagName {
+            return i18n.t("desktop.menu.quotes.applyTagNamed", ["name": name])
+        }
+        return i18n.t("desktop.menu.quotes.applyLastTag")
+    }
+
     var body: some View {
-        Button(i18n.t("desktop.menu.quotes.star")) {
+        Button(starLabel, systemImage: starSymbol) {
             bridgeHandler.menuAction("star")
         }
-        .disabled(!hasFocus)
+        .disabled(!hasTarget)
 
-        Button(i18n.t("desktop.menu.quotes.hide")) {
+        Button(i18n.t("desktop.menu.quotes.hide"), systemImage: "eye.slash") {
             bridgeHandler.menuAction("hide")
         }
-        .disabled(!hasFocus)
+        .disabled(!hasTarget)
 
-        Button(i18n.t("desktop.menu.quotes.addTag")) {
+        // Add Tag opens the tag input on the focused quote specifically, so it
+        // stays focus-gated (unlike the bulk-capable Star/Hide/Apply above).
+        Button(i18n.t("desktop.menu.quotes.addTag"), systemImage: "tag") {
             bridgeHandler.menuAction("addTag")
         }
         .disabled(!hasFocus)
 
-        Button(i18n.t("desktop.menu.quotes.applyLastTag")) {
+        Button(applyLastTagLabel, systemImage: "tag.fill") {
             bridgeHandler.menuAction("applyLastTag")
         }
-        .disabled(!hasFocus)
+        .disabled(!hasTarget || bridgeHandler.lastTagName == nil)
 
-        Button(i18n.t("desktop.menu.quotes.revealInTranscript")) {
+        Button(i18n.t("desktop.menu.quotes.revealInTranscript"), systemImage: "doc.text.magnifyingglass") {
             bridgeHandler.menuAction("revealInTranscript")
         }
         .disabled(!hasFocus)
 
-        Button(i18n.t("desktop.menu.quotes.playPause")) {
+        Button(i18n.t("desktop.menu.quotes.playPause"), systemImage: "play") {
             bridgeHandler.menuAction("playPause")
         }
         .disabled(!onQuotesTab)
@@ -853,7 +931,7 @@ private struct QuotesMenuContent: View {
         // give scope/format pickers proper keyboard nav + VoiceOver for free.
         // TODO: surface the global Anonymise toggle here too (needs a shared
         // persisted-flag decision) and retire the legacy copyAsCSV item below.
-        Menu(i18n.t("desktop.menu.quotes.copyQuotes")) {
+        Menu(i18n.t("desktop.menu.quotes.copyQuotes"), systemImage: "doc.on.doc") {
             Button(i18n.t("desktop.menu.quotes.copyScopeAll",
                           ["count": String(bridgeHandler.totalQuoteCount)])) {
                 bridgeHandler.menuAction("copyQuotes", payload: ["scope": "all"])
@@ -871,7 +949,7 @@ private struct QuotesMenuContent: View {
         }
         .disabled(!onQuotesTab)
 
-        Menu(i18n.t("desktop.menu.quotes.saveSpreadsheet")) {
+        Menu(i18n.t("desktop.menu.quotes.saveSpreadsheet"), systemImage: "tablecells") {
             Button(i18n.t("desktop.menu.quotes.formatCSV")) {
                 bridgeHandler.menuAction("saveSpreadsheet", payload: ["format": "csv"])
             }
@@ -881,7 +959,7 @@ private struct QuotesMenuContent: View {
         }
         .disabled(!onQuotesTab)
 
-        Button(i18n.t("desktop.menu.quotes.extractClips")) {
+        Button(i18n.t("desktop.menu.quotes.extractClips"), systemImage: "scissors") {
             bridgeHandler.menuAction("extractClips")
         }
         .disabled(!onQuotesTab)
@@ -895,7 +973,7 @@ private struct QuotesMenuContent: View {
 
         Divider()
 
-        Button(i18n.t("desktop.menu.quotes.copyAsCSV")) {
+        Button(i18n.t("desktop.menu.quotes.copyAsCSV"), systemImage: "doc.on.doc") {
             bridgeHandler.menuAction("copyAsCSV")
         }
         .disabled(!hasSelection)
@@ -913,75 +991,76 @@ private struct VideoMenuContent: View {
     var body: some View {
         Button(bridgeHandler.playerPlaying
                ? i18n.t("desktop.menu.video.pause")
-               : i18n.t("desktop.menu.video.play")) {
+               : i18n.t("desktop.menu.video.play"),
+               systemImage: bridgeHandler.playerPlaying ? "pause" : "play") {
             bridgeHandler.menuAction("playPause")
         }
         .disabled(!active)
 
         Divider()
 
-        Button(i18n.t("desktop.menu.video.skipForward5")) {
+        Button(i18n.t("desktop.menu.video.skipForward5"), systemImage: "goforward.5") {
             bridgeHandler.menuAction("skipForward5")
         }
         .disabled(!active)
 
-        Button(i18n.t("desktop.menu.video.skipBack5")) {
+        Button(i18n.t("desktop.menu.video.skipBack5"), systemImage: "gobackward.5") {
             bridgeHandler.menuAction("skipBack5")
         }
         .disabled(!active)
 
-        Button(i18n.t("desktop.menu.video.skipForward30")) {
+        Button(i18n.t("desktop.menu.video.skipForward30"), systemImage: "goforward.30") {
             bridgeHandler.menuAction("skipForward30")
         }
         .disabled(!active)
 
-        Button(i18n.t("desktop.menu.video.skipBack30")) {
+        Button(i18n.t("desktop.menu.video.skipBack30"), systemImage: "gobackward.30") {
             bridgeHandler.menuAction("skipBack30")
         }
         .disabled(!active)
 
         Divider()
 
-        Button(i18n.t("desktop.menu.video.speedUp")) {
+        Button(i18n.t("desktop.menu.video.speedUp"), systemImage: "forward") {
             bridgeHandler.menuAction("speedUp")
         }
         .disabled(!active)
 
-        Button(i18n.t("desktop.menu.video.slowDown")) {
+        Button(i18n.t("desktop.menu.video.slowDown"), systemImage: "backward") {
             bridgeHandler.menuAction("slowDown")
         }
         .disabled(!active)
 
-        Button(i18n.t("desktop.menu.video.normalSpeed")) {
+        Button(i18n.t("desktop.menu.video.normalSpeed"), systemImage: "gauge.medium") {
             bridgeHandler.menuAction("normalSpeed")
         }
         .disabled(!active)
 
         Divider()
 
-        Button(i18n.t("desktop.menu.video.volumeUp")) {
+        Button(i18n.t("desktop.menu.video.volumeUp"), systemImage: "speaker.wave.3") {
             bridgeHandler.menuAction("volumeUp")
         }
         .disabled(!active)
 
-        Button(i18n.t("desktop.menu.video.volumeDown")) {
+        Button(i18n.t("desktop.menu.video.volumeDown"), systemImage: "speaker.wave.1") {
             bridgeHandler.menuAction("volumeDown")
         }
         .disabled(!active)
 
-        Button(i18n.t("desktop.menu.video.mute")) {
+        Button(i18n.t("desktop.menu.video.mute"), systemImage: "speaker.slash") {
             bridgeHandler.menuAction("mute")
         }
         .disabled(!active)
 
         Divider()
 
-        Button(i18n.t("desktop.menu.video.pictureInPicture")) {
+        Button(i18n.t("desktop.menu.video.pictureInPicture"), systemImage: "pip.enter") {
             bridgeHandler.menuAction("pictureInPicture")
         }
         .disabled(!active)
 
-        Button(i18n.t("desktop.menu.video.fullscreen")) {
+        Button(i18n.t("desktop.menu.video.fullscreen"), systemImage: "arrow.up.left.and.arrow.down.right") {
             bridgeHandler.menuAction("fullscreen")
         }
         .disabled(!active)
@@ -999,7 +1078,7 @@ private struct HelpMenuContent: View {
         // the browser — the in-app Help modal is retired ("Help opens browser
         // docs"). They don't route through the web bridge, so they work whether
         // or not the SPA is mounted (e.g. on the status page after a failed run).
-        Button(i18n.t("desktop.menu.help.bristlenoseHelp")) {
+        Button(i18n.t("desktop.menu.help.bristlenoseHelp"), systemImage: "questionmark.circle") {
             Self.open("https://bristlenose.app/docs/")
         }
         .keyboardShortcut("?", modifiers: .command)

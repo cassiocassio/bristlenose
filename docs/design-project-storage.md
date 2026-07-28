@@ -1,10 +1,12 @@
-# Project storage & cloud — policy
+# Project storage — policy
 
-**Status: decided (28 Jul 2026). This is the standing answer to "should Bristlenose do something about cloud storage?"**
+**Status: decided (28 Jul 2026). This is the standing answer to "should Bristlenose do something about where the media lives?"**
 
 Short version: **no, except read files correctly.** Bristlenose does not manage, tier, sync, compress, or evict the researcher's media. It reads whatever folder it is pointed at — including one whose files are cloud-backed placeholders — and stays useful when those files are absent. Everything beyond that is either rejected or gated behind a named condition.
 
 This doc exists because the question recurs in several disguises (iCloud sync, archives, proxies, storage budgets, File Provider extensions) and each time it takes a long session to re-derive the same answer.
+
+**Scope note.** This doc is about media Bristlenose *already has* — on disk, on a volume, in a cloud-synced folder. Fetching originals down from Teams / Zoom / Drive in the first place is a separate feature with separate gates: **`docs/design-cloud-import.md`**. The two meet at one point: import produces *captured originals*, and the retention clock in §5 runs against those.
 
 ---
 
@@ -30,7 +32,7 @@ This doc exists because the question recurs in several disguises (iCloud sync, a
 | **MAYBE** | iPad + iCloud sync | Existing hard gate: paying Mac customers asking by name |
 | **AVOID** | Framing any of this as privacy or local-first | Not the product's stance |
 | **AVOID** | Making BN the storage layer | Workbench, not vault |
-| **AVOID** | Archiving to the researcher's *personal* cloud | The team's governed store is usually the canonical home |
+| **AVOID** | Archiving to the researcher's *personal* cloud | The team's governed store is usually the canonical home — §5 |
 | **AVOID** | Assuming "macOS materialises on read" | It does not reliably — §3 |
 | **AVOID** | Assuming clips can replace originals | Re-analysis for new angles is routine — §4 |
 
@@ -40,12 +42,14 @@ This doc exists because the question recurs in several disguises (iCloud sync, a
 
 Correcting a figure that has misled planning: a study is **not** 500 GB.
 
-| Source | Resolution | Bitrate | Per hour | 20-session study |
+| Source | Resolution | Bitrate | Per hour | Study |
 |---|---|---|---|---|
-| Platform recordings (Teams / Zoom / Meet) — **~99% of real corpora** | 720p | 2.5–3 Mbps | ~1.3 GB | **~26 GB** |
+| Platform recordings (Teams / Zoom / Meet) — **~99% of real corpora** | 720p | 2.5–3 Mbps | ~1.3 GB | **6–20 GB** |
 | Local macOS Screen Recording — rare, mostly dev artefacts | 3456×2234 | 17–33 Mbps | ~9 GB | ~180 GB |
 
-At ~250 GB/year for a busy researcher, a 512 GB laptop fills in under a year and a 2 TB cloud tier lasts most of a career. **The problem is placement, not size** — and placement is a human decision, not a heuristic.
+A study is **5 sessions normal, 10 common, 15+ a big one** — so 6–20 GB, and a heavy year is perhaps 100 GB. A laptop holds two or three years of work.
+
+**The problem is placement, not size** — and placement is a human decision, not a heuristic.
 
 The lab era (Morae, Silverback, disk arrays, capture settings) is over. The video comes from remote calls, already compressed by the platform. Do not inherit lab-era media management.
 
@@ -83,17 +87,18 @@ Usefully, most of that work is a **text** operation: re-coding runs against tran
 
 ---
 
-## 5. Where the source actually lives
+## 5. Where the source lives, and who owns the clock
 
-The common professional workflow: the researcher runs the meeting, downloads the recording and transcript, drops them into a **team raw-data folder on SharePoint** (or equivalent) that the research team can see, and leaves the platform recording to expire.
+**Bristlenose holds captured originals — it never references cloud files as its source.** A link to a Teams or Zoom recording can vanish at any moment, so the bytes must be pulled down and owned. Once captured, Bristlenose owns the retention clock for that copy, and the researcher's own GDPR lifecycle runs against it rather than against someone else's expiry policy. (How they get pulled down: `docs/design-cloud-import.md`.)
 
-Two consequences:
+Two storage locations get conflated and must not be:
 
-**The canonical archive already exists and is not Bristlenose's.** It is governed, team-visible, and paid for by the employer or client. An archive feature that defaults to the researcher's personal cloud would move raw research *out* of that governance boundary — backwards, and for a client engagement probably a contract breach.
+- **The platform recording** (Teams `/Recordings`, Zoom cloud) — auto-expiring, on a schedule the researcher does not control and may not know. **Never reference this; capture from it.**
+- **The team raw-data folder on SharePoint** — durable, governed, team-visible, paid for by the employer or client. A legitimate place a copy also lives, and the reason an archive feature must never default to the researcher's *personal* cloud: that would move raw research out of the team's governance boundary, which for a client engagement is probably a contract breach.
 
-**That folder is already a File Provider with on-demand materialisation.** The "effectively limitless storage, files come down when touched" infrastructure this policy keeps being asked to build is already installed on the researcher's Mac and already paid for. Bristlenose does not need to build it. It needs to not break when pointed at it — which is §1's YES column and nothing else.
+**Both are already File Providers with on-demand materialisation.** So a folder Bristlenose is pointed at may hold dataless placeholders whichever of these it is — which is why §1's YES column is unconditional, not iCloud-specific.
 
-**Platform retention is finite and not the researcher's to set.** Teams applies a default expiration to meeting recordings (60 days by tenant default, 120 in Microsoft's documentation, admin-configurable); Zoom retention is org-set, commonly 365 days to 3 years. So "they can always re-fetch from Teams" holds for roughly two months and then quietly stops. This is why raw data has a lifecycle at all — and why the mature version of this problem is **expiry**, not archiving. Note that retention caps growth but does not solve it: a 2-year policy against 250 GB/year still leaves ~500 GB live.
+**Platform retention is finite and not the researcher's to set.** Teams applies a default expiration to meeting recordings (120 days in Microsoft's documentation, commonly configured to 60, admin-settable); Zoom retention is org-set, commonly 365 days to 3 years. So "they can always re-fetch from Teams" holds for roughly two months and then quietly stops. This is why raw data has a lifecycle at all — and why the mature version of this problem is **expiry**, not archiving. Note that retention caps growth but does not solve it: a 2-year policy still leaves a couple of years of studies live.
 
 Anonymised analysis outliving raw data is normal practice, and Bristlenose already has the boundary in the pipeline (PII removal at s07, anonymised exports). The identifiable residue in `.bristlenose/` — `pii_summary.txt`, `llm-calls.jsonl` — currently has **no expiry at all** and should be the first thing to go, not the last.
 
@@ -117,6 +122,7 @@ Kept so they are not re-proposed. Each was worked through in full on 28 Jul 2026
 
 ## 7. Related
 
+- **`docs/design-cloud-import.md`** — fetching the originals down in the first place; the other half of this pair
 - `docs/methodology/consent-gradient.md` — the governance model retention and placement sit inside; authoritative over code
 - `docs/design-icloud-sync.md` — the parked iPad + iCloud-sync speculation, with its own hard gate
 - `docs/design-multi-project.md` — `location.type = "cloud"`, placeholder directories, volume-relative resolution

@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-07-25
-trued-against: working tree @main on 2026-07-25
+last-trued: 2026-07-28
+trued-against: working tree @main on 2026-07-28
 ---
 
 > **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`):** the Project menu + row context menu
@@ -13,6 +13,7 @@ trued-against: working tree @main on 2026-07-25
 
 ## Changelog
 
+- _2026-07-28_ — `checkSystemHealth` row corrected: it is no longer a bridge dispatch (that action was dead — no frontend consumer). Wired to open the native Health window (`DoctorReportView`) via `openWindow(id: "health")` from Diagnostics ▸ Check Health; the window fetches the new `GET /api/doctor` endpoint (`bristlenose/server/routes/doctor.py`, `doctor.run_local_checks`). See `docs/fix-the-menus.md` and `docs/design-diagnostics-menu.md`.
 - _2026-07-25_ — trued against the working-tree Welcome/sidebar change. **View menu:** `toggleSidebar` (static "Toggle Sidebar", responder-chain `NSSplitViewController.toggleSidebar`) became **`toggleProjectsSidebar`** — a dynamic **Hide/Show Projects** label routed through the NavigationSplitView `columnVisibility` binding via the `.toggleProjectsSidebar` notification (⌥⌘S unchanged). **Help menu:** gained **Welcome to Bristlenose** (7th item, no shortcut; posts `.showWelcome` → ContentView `selection = []`). Also corrected pre-existing drift in the Help table: items open **browser docs** (retired in-app Help modal), not a modal, and re-anchored the section from stale line numbers to the `HelpMenuContent` struct. Anchors are struct-named where possible (line numbers rot).
 - _2026-06-21_ — re-confirmed fresh: the `project-status-line` + `warm-sidecar-pool` work (19–21 Jun) did **not** touch menu actions / `BridgeHandler.menuAction` — the catalogue still matches `MenuCommands.swift`. One new row-level affordance landed: a "Cancel copy" item on the project **row context menu** (`ProjectRow.swift`, `onCancelCopy`) — a context-menu action, not a `menuAction()` bridge dispatch, so it sits outside this catalogue's scope (noted for completeness).
 - _2026-04-24_ — Tier 1 truing follow-up (post `design-doc-review` audit): deleted the stale Future-only project-ops table that contradicted the rewritten one above it; added Shortcut column to the rewritten project-ops table (⇧⌘R, ⌘N, ⇧⌘N, ⌘⌫, ⇧⌘O); corrected `openInNewWindow` from Future to Shipped (bridge); added `chooseIcon` and `aiPrivacy` rows; added new sub-sections for View menu (Cmd+1–5, toggleSidebar, heatmap toggle), Help menu (6 actions), and Codes menu (6 wired actions, `mergeCode` moved out of project-ops); added inline alpha-gap callout for missing Analyse/Resume/Retry in the project context menu; noted `playPause` triple-dispatch (Video / Quotes / kbd). Section heading count corrected from "(8)" to "(17)".
@@ -113,7 +114,7 @@ These are either native-only (Finder, print) or depend on features not yet built
 > | `reAnalyse` | — | **Future (shipped as `.disabled(true)`)** | `MenuCommands.swift:397-400` with "Future — Phase 2+" comment. Will dispatch via bridge once incremental re-analyse pipeline lands |
 > | `archive` (project) | — | Future | `MenuCommands.swift:402-405`, `.disabled(true)`, Phase 5 |
 > | `archiveFolder` | — | Future | Phase 5 |
-> | `checkSystemHealth` | — | Bridge dispatch | `bridgeHandler.menuAction("checkSystemHealth")` — handler in frontend |
+> | `checkSystemHealth` | — | **Shipped** (native window — no bridge) | No longer a `menuAction()` dispatch. Diagnostics ▸ **Check Health** → `openWindow(id: "health")` (`MenuCommands.swift` `DiagnosticsMenuContent`), opening the native Health window `DoctorReportView`, which fetches `GET /api/doctor` (local doctor checks, bearer-authed). The old bridge action was dead (no frontend consumer); wired 28 Jul 2026. See `docs/fix-the-menus.md`. |
 > | `pageSetup` / `print` | ⌘P (print) | Bridge / future | NSPrintOperation on WKWebView snapshot |
 >
 > **Alpha gap (24 Apr 2026; partially closed 15 Jun 2026):** the Project menu and row context menu now

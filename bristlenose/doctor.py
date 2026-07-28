@@ -1145,6 +1145,28 @@ def run_all(settings: BristlenoseSettings) -> DoctorReport:
     ])
 
 
+def run_local_checks(settings: BristlenoseSettings) -> DoctorReport:
+    """Run only the checks that stay on the local machine.
+
+    Used by the serve-mode ``GET /api/doctor`` endpoint (the desktop app's
+    native Health window). Excludes the network-bearing checks that ``run_all``
+    performs — API-key validation (``check_api_key``), endpoint reachability
+    (``check_network``), and the Ollama HTTP probe (reached via
+    ``check_api_key`` for the local provider) — so the request returns promptly
+    without blocking on a remote round-trip. Those belong in a future async
+    pass; see ``bristlenose/server/routes/doctor.py``.
+    """
+    return DoctorReport(results=[
+        check_ffmpeg(),
+        check_backend(),
+        check_whisper_model(settings),
+        check_pii(settings),
+        check_disk_space(settings),
+        check_serve_deps(),
+        check_auth_token_env(),
+    ])
+
+
 def run_preflight(
     settings: BristlenoseSettings,
     command: str,

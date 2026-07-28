@@ -164,6 +164,23 @@ struct BristlenoseApp: App {
         .defaultSize(width: 800, height: 600)
         .commandsRemoved()
 
+        // Shipping Health window (Diagnostics ▸ Check Health — every channel,
+        // gated by the Diagnostics preference). Runs the doctor-style local
+        // system checks via `GET /api/doctor` and renders them natively. Needs
+        // the serve URL + token, so inject the shared ServeManager.
+        // `.commandsRemoved()` is a hard requirement (not polish): this is a
+        // non-DEBUG titled `Window` scene, so without it SwiftUI leaks a stray
+        // Window-menu row to every App Store / TestFlight user even with the
+        // Diagnostics toggle off. See desktop/CLAUDE.md "titled Window scenes
+        // auto-populate the Window menu".
+        Window("System Health", id: "health") {
+            DoctorReportView()
+                .environmentObject(serveManager)
+                .tint(paletteAccent)
+        }
+        .defaultSize(width: 480, height: 420)
+        .commandsRemoved()
+
         #if DEBUG
         // DEBUG-only calibration tool — launched from the Diagnostics menu's
         // harness section. Not a shipping surface; the whole TypeParity* file

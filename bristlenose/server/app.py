@@ -31,6 +31,7 @@ from bristlenose.server.routes.codebook_builder import (
 )
 from bristlenose.server.routes.dashboard import router as dashboard_router
 from bristlenose.server.routes.data import router as data_router
+from bristlenose.server.routes.doctor import router as doctor_router
 from bristlenose.server.routes.export import router as export_router
 from bristlenose.server.routes.health import router as health_router
 from bristlenose.server.routes.miro import router as miro_router
@@ -180,6 +181,7 @@ def create_app(
     app.state.dev = dev
 
     app.include_router(health_router)
+    app.include_router(doctor_router)
     app.include_router(analysis_router)
     app.include_router(autocode_router)
     app.include_router(clips_export_router)

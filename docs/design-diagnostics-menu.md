@@ -1,3 +1,9 @@
+---
+status: partial
+last-trued: 2026-07-28
+trued-against: working tree @main on 2026-07-28
+---
+
 # Diagnostics vs developer tools — sorting debug affordances by audience
 
 *Plan for sorting every debug/dev affordance by **who it's for**: users (understand
@@ -18,6 +24,13 @@ Phase-1 implementation notes (deltas from the plan below):
   `isEnabled()` reader).
 - The Reveal / Open Log / Copy Provenance trio moved OUT of the Section-3
   harness (not duplicated) — they live only in Section 1 now.
+- **Check Health** is the top item of Section 1 (moved here from the app menu,
+  28 Jul 2026). It opens the native Health window (`openWindow(id: "health")` →
+  `DoctorReportView`), which fetches `GET /api/doctor` — the local, non-network
+  subset of `doctor.py` (`run_local_checks`) — and renders the checks as a
+  native list using the shared `MessageKind` glyph/tint vocabulary. Ships on
+  every channel (behind the Diagnostics preference), so its `health` `Window`
+  scene carries `.commandsRemoved()`. See `docs/fix-the-menus.md`.
 - The DEBUG Shoal *tuning* window ("shoal" scene) was retitled **Shoal Tuner**
   so it can't be confused with the shipping Section-1 **Shoal Screensaver**
   (`shoal-view` scene, `ShoalWindowView.swift` — animation at defaults,
@@ -111,7 +124,7 @@ gates *compound inside the single menu*, they don't spawn a second menu:
 if showDiagnosticsMenu {
     CommandMenu("Diagnostics") {
         // Section 1 — benign, every channel ("cute things")
-        DiagnosticsUserItems(...)              // Run Inspector, Reveal, Open Log,
+        DiagnosticsUserItems(...)              // Check Health, Reveal, Open Log,
                                                // Copy Provenance, Shoal animation
                                                // (Web Inspector = toggle side-effect,
                                                //  not a menu item — see below)
@@ -136,7 +149,7 @@ What you see, by build (toggle on):
 
 | Build | Section 1 (cute) | Section 2 (devtools) | Section 3 (harness) |
 |---|---|---|---|
-| App Store / TestFlight | ✓ Run Inspector, Reveal, Log, Provenance, Shoal animation (+ Web Inspector enabled ambiently) | — | — |
+| App Store / TestFlight | ✓ Check Health, Reveal, Log, Provenance, Shoal animation (+ Web Inspector enabled ambiently) | — | — |
 | Developer-ID `.dmg` beta | ✓ | ✓ SQL browser, Shoal tuning, `/dev/info` | — |
 | Local `#if DEBUG` | ✓ | ✓ | ✓ fake-state injectors, Type Parity, Ollama pill |
 

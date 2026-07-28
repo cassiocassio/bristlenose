@@ -32,7 +32,7 @@ This doc exists because the question recurs in several disguises (iCloud sync, a
 | **MAYBE** | iPad + iCloud sync | Existing hard gate: paying Mac customers asking by name |
 | **AVOID** | Framing any of this as privacy or local-first | Not the product's stance |
 | **AVOID** | Making BN the storage layer | Workbench, not vault |
-| **AVOID** | Archiving to the researcher's *personal* cloud | The team's governed store is usually the canonical home — §5 |
+| **AVOID** | Archiving to the researcher's *personal* cloud | If a team store exists it is the governed one; and the store is a role, not a product — §5 |
 | **AVOID** | Assuming "macOS materialises on read" | It does not reliably — §3 |
 | **AVOID** | Assuming clips can replace originals | Re-analysis for new angles is routine — §4 |
 
@@ -89,14 +89,21 @@ Usefully, most of that work is a **text** operation: re-coding runs against tran
 
 ## 5. Where the source lives, and who owns the clock
 
-**Bristlenose holds captured originals — it never references cloud files as its source.** A link to a Teams or Zoom recording can vanish at any moment, so the bytes must be pulled down and owned. Once captured, Bristlenose owns the retention clock for that copy, and the researcher's own GDPR lifecycle runs against it rather than against someone else's expiry policy. (How they get pulled down: `docs/design-cloud-import.md`.)
+There are **three places**, and they are roles rather than products. Naming them by brand is what caused an earlier draft of this doc to reason badly.
 
-Two storage locations get conflated and must not be:
+| Role | What it is | Examples | Durability |
+|---|---|---|---|
+| **Origin** | Where the recording is made and first lives | Teams, Google Meet, Zoom | **Expiring**, on a schedule the researcher does not set and may not know |
+| **Captured original** | Bristlenose's own copy, on the researcher's machine | — | Bristlenose owns the retention clock from capture onward |
+| **Store** | Wherever the researcher keeps their raw data | Team SharePoint, Google Drive, Dropbox, a NAS on the desk, a Samsung T7 — **or nowhere; it just sits on the Mac** | Theirs. May be governed, may be a drive, may not exist |
 
-- **The platform recording** (Teams `/Recordings`, Zoom cloud) — auto-expiring, on a schedule the researcher does not control and may not know. **Never reference this; capture from it.**
-- **The team raw-data folder on SharePoint** — durable, governed, team-visible, paid for by the employer or client. A legitimate place a copy also lives, and the reason an archive feature must never default to the researcher's *personal* cloud: that would move raw research out of the team's governance boundary, which for a client engagement is probably a contract breach.
+**Bristlenose holds captured originals — it never references the origin as its source.** A link to a Teams or Zoom recording can vanish at any moment, so the bytes are pulled down and owned. Originals arrive either by integration (`docs/design-cloud-import.md`) or by the researcher downloading and dragging them in; both produce the same thing.
 
-**Both are already File Providers with on-demand materialisation.** So a folder Bristlenose is pointed at may hold dataless placeholders whichever of these it is — which is why §1's YES column is unconditional, not iCloud-specific.
+Three consequences:
+
+- **The store is optional, and often absent.** Plenty of researchers — freelancers especially — have no team raw-data location at all. In that case Bristlenose's captured original is genuinely the only copy once the origin expires, which is the strongest argument for never deleting source media and for the archive MAYBE in §1.
+- **Bristlenose has no opinion about which store.** SharePoint, Drive, Dropbox, NAS, external SSD — all the same to it. That is why any archive feature must be a **user-nominated folder**, not a cloud integration. The one rule: if a *team* store exists, never default to the researcher's *personal* cloud — that moves raw research out of the team's governance boundary, which for a client engagement is probably a contract breach.
+- **Any of them may be a File Provider.** SharePoint, OneDrive, Drive, Dropbox and iCloud all present dataless placeholders; a NAS or T7 presents an unmounted volume instead. Either way a folder Bristlenose is pointed at may not have readable bytes behind it — which is why §1's YES column is unconditional rather than iCloud-specific.
 
 **Platform retention is finite and not the researcher's to set.** Teams applies a default expiration to meeting recordings (120 days in Microsoft's documentation, commonly configured to 60, admin-settable); Zoom retention is org-set, commonly 365 days to 3 years. So "they can always re-fetch from Teams" holds for roughly two months and then quietly stops. This is why raw data has a lifecycle at all — and why the mature version of this problem is **expiry**, not archiving. Note that retention caps growth but does not solve it: a 2-year policy still leaves a couple of years of studies live.
 

@@ -138,9 +138,9 @@ Styles for the transcript coverage section at the end of the report. This sectio
 
 Codebook page grid layout and interactive components. The codebook gives researchers a visual way to organise their tags into meaningful groups (similar to a coding scheme in qualitative research). The masonry layout lets researchers see all their tag groups at a glance.
 
-Uses CSS columns masonry (`columns: 240px`) for space-efficient tiling with `break-inside: avoid` on group cards. All values via design tokens — no hard-coded colours/spacing. Dark mode handled automatically via `light-dark()` tokens.
+Uses a `repeat(auto-fill, minmax(240px, 1fr))` grid, progressively enhanced to native CSS masonry (`display: grid-lanes`) where the engine supports it. All values via design tokens — no hard-coded colours/spacing. Dark mode handled automatically via `light-dark()` tokens.
 
-- **`.codebook-grid`** — masonry container, `max-width: 1200px`
+- **`.codebook-grid`** — grid container; under grid-lanes the full-span `.framework-section-header` rows reset all lanes, so packing stays within each codebook section
 - **`.codebook-group`** — group card with rounded corners, transparent border (accent on `.drag-over`), coloured background via `--bn-group-*` tokens
 - **`.group-header`** — flex row: title area + close button (close fades in on group hover)
 - **`.group-title-text`** / **`.group-subtitle`** — click-to-edit text with hover highlight

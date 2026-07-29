@@ -11,6 +11,26 @@
     align-items: start;
 }
 
+/* Native CSS masonry — same progressive enhancement as .quote-group (see
+   organisms/responsive-grid.css for the engine-support notes). Group cards vary
+   wildly in height (a 3-tag group beside a 20-tag one), so top-aligned rows
+   leave dead space under every short card. Lanes reuse the auto-fill track
+   count above — the responsive column count is unchanged.
+
+   The .framework-section-header rows span every lane (grid-column: 1 / -1), so
+   they reset all lanes to a common baseline: packing is confined *within* each
+   codebook section rather than running the length of the page.
+
+   Must stay in this file, after the base rule — responsive-grid.css loads
+   earlier in _THEME_FILES and would lose the display declaration on source
+   order. Delete this block to revert to the rectangular grid. */
+@supports (display: grid-lanes) {
+    .codebook-grid {
+        display: grid-lanes;
+        flow-tolerance: var(--bn-flow-tolerance);
+    }
+}
+
 /* ── Group column ──────────────────────────────────────────────────────── */
 
 .codebook-group {

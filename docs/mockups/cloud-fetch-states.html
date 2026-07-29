@@ -136,10 +136,11 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
 <div class="step"><div class="num">5</div>
   <div class="sidebar"><div class="row sel">
     <span class="ico"><i class="ti ti-users-group"></i></span>
-    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs warn">Still fetching from Dropbox — is Dropbox running?</div></span>
+    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs warn">Still fetching from Dropbox</div></span>
     <span class="trail"><span class="spin"></span></span>
   </div></div>
-  <div class="note"><b>Slow or stalled — after ~3 min.</b> <span class="kind w">warning</span> A human should look, but nothing has failed and the run continues. Needed because BN <b>cannot tell a healthy fetch from a dead one</b> — only <code>isDownloading true/false</code>, never a rate. This is the one legitimate wall-clock number, and it's a hint, not a failure.</div>
+  <div class="note"><b>Slow or stalled — after ~3 min.</b> <span class="kind w">warning</span> A human should look, but nothing has failed and the run continues. Needed because BN <b>cannot tell a healthy fetch from a dead one</b> — only <code>isDownloading true/false</code>, never a rate. This is the one legitimate wall-clock number, and it's a hint, not a failure.
+  <br><br><b>No cause is offered, deliberately.</b> BN doesn't know why it's slow — paused sync, quota, network, selective-sync config, disk space are all live possibilities. “Is Dropbox running?” is one guess dressed as a diagnosis, and it sends the researcher to check the thing that's probably fine. Naming the provider already points them at the right app; a professional will investigate from there.</div>
 </div>
 
 <div class="step"><div class="num">6</div>
@@ -154,7 +155,7 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
 <div class="pane">
   <div class="glyph"><i class="ti ti-cloud-off" style="color:var(--color-text-danger)"></i></div>
   <div class="hl">Couldn’t fetch “Screen Recording 2026-01-27” from Dropbox</div>
-  <div class="bd">The file is stored online only and didn’t download in 30 minutes. Check Dropbox is running and has finished syncing, or right-click the file in Finder and choose <b>Make available offline</b>.</div>
+  <div class="bd">The file is stored online only and didn’t download in 30 minutes. Check Dropbox, or make the file available offline in Finder and try again.</div>
   <div class="act"><button class="btn pri">Try again</button><button class="btn">Show in Finder</button></div>
 </div>
 <p class="note" style="padding-left:340px">Names the provider because <b>each has a different fix path</b> — Dropbox's menu-bar item, iCloud's Settings pane, the OneDrive client. “The cloud” leaves the researcher nowhere to go. Naming isn't special-casing behaviour; it's attribution, and the sibling state already names the volume.</p>
@@ -195,8 +196,8 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
 <tbody>
 <tr><td class="k">At rest, evicted</td><td>3 in Dropbox</td><td><span class="kind i">info</span></td><td>Appended to the normal subtitle. Cloud glyph trailing. Counts files → partial vs whole legible.</td></tr>
 <tr><td class="k">Fetching</td><td>Fetching from Dropbox · 1 of 3</td><td><span class="kind i">info</span></td><td>Indeterminate spinner. No ETA — none is derivable.</td></tr>
-<tr><td class="k">Fetch slow (~3 min)</td><td>Still fetching from Dropbox — is Dropbox running?</td><td><span class="kind w">warning</span></td><td>Run continues. Only legitimate wall-clock number.</td></tr>
-<tr><td class="k">Fetch failed (30 min)</td><td>Couldn’t fetch from Dropbox</td><td><span class="kind e">error</span></td><td>“…is stored online only and didn’t download in 30 minutes. Check Dropbox is running…, or right-click in Finder and choose <b>Make available offline</b>.” Try again · Show in Finder</td></tr>
+<tr><td class="k">Fetch slow (~3 min)</td><td>Still fetching from Dropbox</td><td><span class="kind w">warning</span></td><td>Run continues. Only legitimate wall-clock number.</td></tr>
+<tr><td class="k">Fetch failed (30 min)</td><td>Couldn’t fetch from Dropbox</td><td><span class="kind e">error</span></td><td>“…is stored online only and didn’t download in 30 minutes. Check Dropbox, or make the file available offline in Finder and try again.” Try again · Show in Finder</td></tr>
 <tr><td class="k">File damaged</td><td>Couldn’t read one interview</td><td><span class="kind e">error</span></td><td>“…couldn’t be read. It may be damaged or in an unsupported format.” Only reachable once bytes are resident.</td></tr>
 <tr><td class="k">Volume ejected</td><td>Can’t find this project — connect “T7”</td><td><span class="kind w">warning</span></td><td>Existing. Outranks all activity states.</td></tr>
 <tr><td class="k">Files missing</td><td>2 interviews missing from the folder</td><td><span class="kind w">warning</span></td><td>Existing. Deleted, not evicted.</td></tr>
@@ -214,8 +215,13 @@ can’t-find → failed → <b>fetch-failed</b> → running → stopped/partial 
   <li><b>Show “3 in Dropbox” at rest at all?</b> It's honest, but the appliance is supposed to cope. Argument for: it makes the next run's wait predictable. Argument against: it's a storage report nobody asked for. <i>Could ship the fetching states without it.</i></li>
   <li><b>Threshold for “still fetching”.</b> 3 min is a guess. Wants a real corpus on a real domestic uplink.</li>
   <li><b>Per-file or per-project?</b> Mocked at project level. The Sessions list could mark individual evicted interviews — probably later, and only if researchers ask.</li>
-  <li><b>“Make available offline” in the copy</b> is Dropbox's wording. iCloud says “Download Now”, OneDrive “Always keep on this device”. Either fork the string per provider, or drop the specific gesture and say “make it available offline in Finder”.</li>
+  <li><s><b>“Make available offline” in the copy</b> is Dropbox's wording; iCloud says “Download Now”, OneDrive “Always keep on this device”.</s> <b>Resolved</b> — the generic “make the file available offline in Finder” reads correctly for all three, so the only per-provider fork left is the provider's <i>name</i>, which <code>cloud_provider_for()</code> already returns.</li>
 </ul>
+
+<h2>G · The copy rule this settled</h2>
+<p class="lede"><b>State what was observed. Name what you're waiting on. Don't guess the cause.</b></p>
+<p class="note" style="padding:0; line-height:1.6">BN knows two things about a slow fetch: <code>isDownloading</code> is true, and how long it's been. It does <i>not</i> know whether the cause is paused sync, quota, network, selective-sync config, or free disk. “Is Dropbox running?” presents one of those as a finding, and sends the researcher to check the thing that's most likely fine.<br><br>
+That's the same defect as <span style="color:var(--color-text-danger)">“ffprobe timed out”</span> implying corruption, one notch quieter — a message asserting more than the system actually established. Naming the provider is the whole job: it points at the right app without pretending to know what's wrong inside it, and a working professional takes it from there.</p>
 
 </div>
 </body>

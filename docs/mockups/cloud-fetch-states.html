@@ -155,10 +155,26 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
 <div class="pane">
   <div class="glyph"><i class="ti ti-cloud-off" style="color:var(--color-text-danger)"></i></div>
   <div class="hl">Couldn’t fetch “Screen Recording 2026-01-27” from Dropbox</div>
-  <div class="bd">The file is stored online only and didn’t download in 30 minutes. Check Dropbox, or make the file available offline in Finder and try again.</div>
+  <div class="bd">The file is stored online only and didn’t download in 30 minutes.<br>
+  <a href="https://help.dropbox.com/sync/files-not-syncing" style="color:#0a6cf0">help.dropbox.com/sync/files-not-syncing</a></div>
   <div class="act"><button class="btn pri">Try again</button><button class="btn">Show in Finder</button></div>
 </div>
-<p class="note" style="padding-left:340px">Names the provider because <b>each has a different fix path</b> — Dropbox's menu-bar item, iCloud's Settings pane, the OneDrive client. “The cloud” leaves the researcher nowhere to go. Naming isn't special-casing behaviour; it's attribution, and the sibling state already names the volume.</p>
+<p class="note" style="padding-left:340px">Names the provider because <b>each has a different fix path</b> — Dropbox's menu-bar item, iCloud's Settings pane, the OneDrive client. “The cloud” leaves the researcher nowhere to go. Naming isn't special-casing behaviour; it's attribution, and the sibling state already names the volume.
+<br><br><b>Hands off to the provider's own docs rather than writing remedy prose.</b> Dropbox documents its sync failures better than we can and keeps them current; every cause we agreed not to guess between — paused sync, quota, selective sync, network, permissions — is on that page. It also collapses 5 providers × 20 locales of maintained instructions into one URL per provider, resolved from the same lookup that gives the name.</p>
+
+<table style="margin-top:14px">
+<thead><tr><th style="width:16%">Provider</th><th style="width:46%">Help URL</th><th>Page</th></tr></thead>
+<tbody>
+<tr><td class="k">Dropbox</td><td><code>help.dropbox.com/sync/files-not-syncing</code></td><td>“Dropbox stopped syncing: how to fix…”</td></tr>
+<tr><td class="k">Google Drive</td><td><code>support.google.com/drive/answer/2565956</code></td><td>“Fix problems in Drive for desktop”</td></tr>
+<tr><td class="k">OneDrive</td><td><code>support.microsoft.com/en-us/onedrive/fix-onedrive-sync-problems-on-mac</code></td><td>Mac-specific — the desktop is Mac-only, so prefer it over the generic page</td></tr>
+<tr><td class="k">iCloud Drive</td><td><code>support.apple.com/guide/mac-help/mchl1a02d711/mac</code></td><td>“Work with folders and files in iCloud Drive” — gives the <b>Control-click ▸ Download Now</b> gesture directly</td></tr>
+<tr><td class="k">Box</td><td colspan="2"><i>not verified — omit until checked</i></td></tr>
+<tr><td class="k">unknown / other</td><td colspan="2">Omit the line entirely. Never invent a URL.</td></tr>
+</tbody>
+</table>
+<p class="note" style="padding:8px 0 0">All four verified live 29 Jul 2026. <b>Apple's is instructional where the others are diagnostic</b> — it tells the researcher how to force the download rather than why sync broke, which suits iCloud's actual failure mode (usually “not fetched yet” rather than “sync is wedged”). Link to the most useful page per provider; don't force one category on all of them.
+<br><br><b>Maintenance:</b> third-party URLs rot and we don't control them. They want a liveness check at release alongside the other gates — a dead link in a shipped error message is worse than no link.</p>
 
 <div class="step" style="margin-top:22px"><div class="num">7</div>
   <div class="sidebar"><div class="row sel">

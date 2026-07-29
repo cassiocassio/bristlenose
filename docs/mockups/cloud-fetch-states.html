@@ -163,11 +163,23 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
 <div class="step" style="margin-top:22px"><div class="num">7</div>
   <div class="sidebar"><div class="row sel">
     <span class="ico"><i class="ti ti-users-group"></i></span>
-    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs err">Couldn’t read one interview</div></span>
+    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs err">Couldn’t read 1 interview</div></span>
     <span class="trail"><i class="ti ti-alert-circle-filled" style="color:var(--color-text-danger)"></i></span>
   </div></div>
-  <div class="note"><b>Genuinely damaged file</b> — resident, ffprobe fails or times out. <span class="kind e">error</span> <b>This is the message that used to fire for downloads.</b> Now that the fetch is handled separately, a probe failure means what it says, and “the file may be damaged” is safe advice rather than a lie.</div>
+  <div class="note"><b>Genuinely damaged file</b> — resident, ffprobe fails or times out. <span class="kind e">error</span> <b>This is the message that used to fire for downloads.</b> Now that the fetch is handled separately, a probe failure means what it says, and “the file may be damaged” is safe advice rather than a lie.
+  <br><br><b>The row counts; the pane names.</b> A filename doesn't fit — the sidebar's ideal width is ~220px, so <i>“Couldn’t read Screen Recording 2026-01-27 at…”</i> truncates to noise. Counting also scales: naming works for one bad file and breaks at three. Full list in the tooltip, per the existing row convention.</div>
 </div>
+
+<div class="pane">
+  <div class="glyph"><i class="ti ti-file-alert" style="color:var(--color-text-danger)"></i></div>
+  <div class="hl">Couldn’t read one interview</div>
+  <div class="bd" style="text-align:left">
+    <div style="font-family:ui-monospace,SFMono-Regular,monospace; font-size:11px; margin-bottom:8px">Screen Recording 2026-01-27 at 23.37.37.mov</div>
+    This file downloaded, but couldn’t be read. It may be damaged or in a format Bristlenose doesn’t support. The other two interviews analysed normally.
+  </div>
+  <div class="act"><button class="btn pri">Try again</button><button class="btn">Show in Finder</button></div>
+</div>
+<p class="note" style="padding-left:340px">Says <b>“downloaded, but couldn’t be read”</b> — ruling out the cloud explicitly, because that's the confusion this whole change exists to prevent. And it says what <i>didn't</i> fail: a researcher who knows the other two are fine won't re-run the whole study.</p>
 
 <h2>C · Must never collapse with these</h2>
 <p class="lede">Same glyph family, opposite severity. One says <i>wait</i>; one says <i>cannot proceed</i>.</p>
@@ -198,7 +210,7 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
 <tr><td class="k">Fetching</td><td>Fetching from Dropbox · 1 of 3</td><td><span class="kind i">info</span></td><td>Indeterminate spinner. No ETA — none is derivable.</td></tr>
 <tr><td class="k">Fetch slow (~3 min)</td><td>Still fetching from Dropbox</td><td><span class="kind w">warning</span></td><td>Run continues. Only legitimate wall-clock number.</td></tr>
 <tr><td class="k">Fetch failed (30 min)</td><td>Couldn’t fetch from Dropbox</td><td><span class="kind e">error</span></td><td>“…is stored online only and didn’t download in 30 minutes. Check Dropbox, or make the file available offline in Finder and try again.” Try again · Show in Finder</td></tr>
-<tr><td class="k">File damaged</td><td>Couldn’t read one interview</td><td><span class="kind e">error</span></td><td>“…couldn’t be read. It may be damaged or in an unsupported format.” Only reachable once bytes are resident.</td></tr>
+<tr><td class="k">File damaged</td><td>Couldn’t read 1 interview</td><td><span class="kind e">error</span></td><td>Pane names the file: “This file <b>downloaded, but couldn’t be read</b>. It may be damaged or in a format Bristlenose doesn’t support. The other two interviews analysed normally.” Only reachable once bytes are resident.</td></tr>
 <tr><td class="k">Volume ejected</td><td>Can’t find this project — connect “T7”</td><td><span class="kind w">warning</span></td><td>Existing. Outranks all activity states.</td></tr>
 <tr><td class="k">Files missing</td><td>2 interviews missing from the folder</td><td><span class="kind w">warning</span></td><td>Existing. Deleted, not evicted.</td></tr>
 </tbody>
@@ -218,7 +230,10 @@ can’t-find → failed → <b>fetch-failed</b> → running → stopped/partial 
   <li><s><b>“Make available offline” in the copy</b> is Dropbox's wording; iCloud says “Download Now”, OneDrive “Always keep on this device”.</s> <b>Resolved</b> — the generic “make the file available offline in Finder” reads correctly for all three, so the only per-provider fork left is the provider's <i>name</i>, which <code>cloud_provider_for()</code> already returns.</li>
 </ul>
 
-<h2>G · The copy rule this settled</h2>
+<h2>G · Two copy rules this settled</h2>
+<p class="lede"><b>The row counts; the pane names.</b></p>
+<p class="note" style="padding:0 0 14px; line-height:1.6">A ~220px sidebar row can't hold <code>Screen Recording 2026-01-27 at 23.37.37.mov</code>, and naming one file doesn't scale to three. So the row carries a count, the tooltip carries the list, and the detail pane names each file with the remedy. Applies to both failure panes above, and matches the existing convention that status truncates to the row tooltip.</p>
+
 <p class="lede"><b>State what was observed. Name what you're waiting on. Don't guess the cause.</b></p>
 <p class="note" style="padding:0; line-height:1.6">BN knows two things about a slow fetch: <code>isDownloading</code> is true, and how long it's been. It does <i>not</i> know whether the cause is paused sync, quota, network, selective-sync config, or free disk. “Is Dropbox running?” presents one of those as a finding, and sends the researcher to check the thing that's most likely fine.<br><br>
 That's the same defect as <span style="color:var(--color-text-danger)">“ffprobe timed out”</span> implying corruption, one notch quieter — a message asserting more than the system actually established. Naming the provider is the whole job: it points at the right app without pretending to know what's wrong inside it, and a working professional takes it from there.</p>

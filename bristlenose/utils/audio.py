@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 
 from bristlenose.utils.bundled_binary import bundled_binary_path
+from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,13 @@ def probe_duration(file_path: Path) -> float | None:
     Returns duration in seconds, or None if probing fails.
     """
     ffprobe = bundled_binary_path("ffprobe") or "ffprobe"
+    try:
+        # Fetch first if this is a cloud placeholder. The 30s budget below is
+        # for a corrupt file, not a download — see ensure_materialised.
+        ensure_materialised(file_path)
+    except CloudFetchTimeoutError as exc:
+        logger.warning("Could not probe %s: %s", file_path, exc)
+        return None
     try:
         result = subprocess.run(
             [
@@ -126,6 +134,14 @@ def has_audio_stream(file_path: Path) -> bool:
             stderr for the exception message.
     """
     ffprobe = bundled_binary_path("ffprobe") or "ffprobe"
+    try:
+        # Fetch first if this is a cloud placeholder. Without this the download
+        # happens *inside* the 30s timeout below and surfaces as "ffprobe timed
+        # out", which reads as "your video is broken" — the opposite of what
+        # happened. Reproduced 29 Jul 2026; see docs/design-project-storage.md.
+        ensure_materialised(file_path)
+    except CloudFetchTimeoutError as exc:
+        raise AudioToolError(str(exc)) from exc
     try:
         result = subprocess.run(
             [

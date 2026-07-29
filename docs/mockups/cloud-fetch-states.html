@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cloud fetch — states &amp; messaging</title>
+<!--
+  Throwaway design mockup for docs/design-project-storage.md §3 "Reproduced end-to-end".
+  Every sidebar-row + detail-pane state a researcher sees when a project's media are
+  cloud placeholders, in sequence, plus each failure mode and the states this must NOT
+  be confused with. Encodes the verified constraints:
+    - progress within a file is NOT observable (providers swap in atomically), so the
+      ring is indeterminate; but the FILE COUNT is knowable, so "1 of 3" is honest
+    - naming the provider is deliberate (different fix paths; attribution)
+    - "still downloading" and "corrupt file" must never share a message
+    - `inCloud` (wait) and `unmountedVolume` (cannot proceed) must never collapse
+  Self-contained: defines its own --color-* tokens (light/dark), like its siblings.
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.17.0/dist/tabler-icons.min.css" />
+<style>
+:root {
+  --color-background-primary:#ffffff; --color-background-secondary:#f5f4ef; --color-background-tertiary:#eceae3;
+  --color-background-info:#e6f1fb;
+  --color-text-primary:#1a1a18; --color-text-secondary:#5f5e5a; --color-text-tertiary:#8a8980;
+  --color-text-info:#0c447c; --color-text-warning:#b46a00; --color-text-danger:#a32d2d;
+  --color-border-tertiary:rgba(0,0,0,0.12); --color-border-secondary:rgba(0,0,0,0.22); --color-border-info:#378add;
+  --border-radius-md:8px; --border-radius-lg:12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background-primary:#1e1e1c; --color-background-secondary:#262624; --color-background-tertiary:#2f2f2c;
+    --color-background-info:#0c2a47;
+    --color-text-primary:#ededea; --color-text-secondary:#a8a79f; --color-text-tertiary:#77766f;
+    --color-text-info:#85b7eb; --color-text-warning:#f0b057; --color-text-danger:#f09595;
+    --color-border-tertiary:rgba(255,255,255,0.12); --color-border-secondary:rgba(255,255,255,0.22); --color-border-info:#378add;
+  }
+}
+* { box-sizing:border-box; }
+body { margin:0; padding:24px; background:var(--color-background-tertiary); color:var(--color-text-primary);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif; font-size:13px; }
+.wrap { max-width:860px; margin:0 auto; }
+h1 { font-size:19px; margin:0 0 4px; }
+h2 { font-size:14px; margin:30px 0 10px; padding-bottom:5px; border-bottom:1px solid var(--color-border-tertiary); }
+.lede { color:var(--color-text-secondary); margin:0 0 6px; line-height:1.5; }
+.step { display:grid; grid-template-columns:26px 300px 1fr; gap:14px; align-items:start; margin:9px 0; }
+.num { font-size:11px; color:var(--color-text-tertiary); text-align:right; padding-top:8px; font-variant-numeric:tabular-nums; }
+.sidebar { background:var(--color-background-secondary); border:0.5px solid var(--color-border-tertiary);
+  border-radius:var(--border-radius-md); padding:5px; }
+.row { display:flex; align-items:center; gap:9px; padding:5px 7px; border-radius:6px; }
+.row.sel { background:var(--color-background-tertiary); }
+.ico { font-size:15px; color:var(--color-text-secondary); flex:none; width:17px; text-align:center; }
+.txt { flex:1; min-width:0; }
+.rt { font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rs { font-size:11px; color:var(--color-text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+.rs.info { color:var(--color-text-info); } .rs.warn { color:var(--color-text-warning); } .rs.err { color:var(--color-text-danger); }
+.trail { flex:none; display:inline-flex; align-items:center; gap:5px; font-size:14px; color:var(--color-text-tertiary); }
+.cnt { font-size:11px; color:var(--color-text-tertiary); }
+.note { color:var(--color-text-secondary); line-height:1.5; padding-top:5px; }
+.note b { color:var(--color-text-primary); font-weight:600; }
+.note code { font-size:11px; background:var(--color-background-secondary); padding:1px 4px; border-radius:3px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.spin { display:inline-block; width:12px; height:12px; border:2px solid var(--color-border-tertiary);
+  border-top-color:var(--color-text-info); border-radius:50%; animation:spin .8s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .spin { animation:none; } }
+.pane { background:var(--color-background-primary); border:0.5px solid var(--color-border-tertiary);
+  border-radius:var(--border-radius-lg); padding:22px; text-align:center; margin:8px 0 0; }
+.pane .glyph { font-size:26px; line-height:1; margin-bottom:9px; }
+.pane .hl { font-size:15px; font-weight:600; margin-bottom:5px; }
+.pane .bd { font-size:12px; color:var(--color-text-secondary); line-height:1.5; max-width:400px; margin:0 auto; }
+.pane .act { margin-top:13px; display:flex; gap:8px; justify-content:center; }
+.btn { font-size:12px; padding:4px 13px; border-radius:6px; border:0.5px solid var(--color-border-secondary);
+  background:transparent; color:var(--color-text-primary); cursor:pointer; }
+.btn.pri { background:#0a6cf0; border-color:#0a6cf0; color:#fff; }
+table { border-collapse:collapse; width:100%; font-size:12px; margin-top:8px; }
+th,td { text-align:left; padding:6px 9px; border-bottom:0.5px solid var(--color-border-tertiary); vertical-align:top; }
+th { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--color-text-tertiary); font-weight:600; }
+td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
+.kind { font-size:10px; padding:1px 6px; border-radius:9px; white-space:nowrap; }
+.kind.i { background:var(--color-background-info); color:var(--color-text-info); }
+.kind.w { background:rgba(180,106,0,.15); color:var(--color-text-warning); }
+.kind.e { background:rgba(163,45,45,.15); color:var(--color-text-danger); }
+.warnbox { border-left:3px solid var(--color-text-warning); background:var(--color-background-secondary);
+  padding:10px 13px; border-radius:0 6px 6px 0; margin:12px 0; line-height:1.55; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Cloud fetch — states &amp; messaging</h1>
+<p class="lede">Every state a researcher sees when a project's media are cloud placeholders. Grounded in the 29 Jul 2026 reproduction (Dropbox, three 307–649 MB recordings) — see <code>docs/design-project-storage.md</code> §3.</p>
+
+<div class="warnbox">
+  <b>The defect this replaces.</b> Today the fetch happens <i>inside</i> a 30-second ffprobe budget, so the researcher is told <span style="color:var(--color-text-danger)">“ffprobe timed out after 30s probing …”</span> — which reads as <b>“my video is broken”</b> when it means <b>“my file was still downloading.”</b> Opposite remedies. Every message below exists to keep those two apart.
+</div>
+
+<h2>A · The sequence — cloud project, media evicted</h2>
+
+<div class="step"><div class="num">1</div>
+  <div class="sidebar"><div class="row sel">
+    <span class="ico"><i class="ti ti-users-group"></i></span>
+    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs">3 interviews · 3 in Dropbox</div></span>
+    <span class="trail"><i class="ti ti-cloud"></i></span>
+  </div></div>
+  <div class="note"><b>At rest, evicted.</b> Outline <code>icloud</code> glyph, status-only, no click — the shipped F49 decision. The subtitle counts files, so partial vs whole is legible: <i>“1 in Dropbox”</i> reads differently from <i>“3 in Dropbox”</i>. <b>Today this state cannot appear at all</b> — availability short-circuits on folder existence.</div>
+</div>
+
+<div class="step"><div class="num">2</div>
+  <div class="sidebar"><div class="row sel">
+    <span class="ico"><i class="ti ti-users-group"></i></span>
+    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs info">Fetching from Dropbox · 1 of 3</div></span>
+    <span class="trail"><span class="spin"></span></span>
+  </div></div>
+  <div class="note"><b>Fetch begins.</b> <span class="kind i">info</span> — weather, self-resolving. <b>Indeterminate spinner, never a ring:</b> providers stage the download and swap the file in atomically, so <code>st_blocks</code> reads 0 until it reads 100%. But the <i>file count</i> is knowable, so “1 of 3” is honest and matches the existing “Transcribing · 2 of 3” ladder.</div>
+</div>
+
+<div class="step"><div class="num">3</div>
+  <div class="sidebar"><div class="row sel">
+    <span class="ico"><i class="ti ti-users-group"></i></span>
+    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs">Transcribing · 2 of 3 · ~4 min left</div></span>
+    <span class="trail"><span class="spin"></span></span>
+  </div></div>
+  <div class="note"><b>Bytes resident → normal ladder resumes.</b> Nothing about the pipeline changes; the fetch was a prologue. The ETA only becomes meaningful here, which is why step 2 has none.</div>
+</div>
+
+<div class="step"><div class="num">4</div>
+  <div class="sidebar"><div class="row sel">
+    <span class="ico"><i class="ti ti-users-group"></i></span>
+    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs">3 interviews · 47 quotes</div></span>
+    <span class="trail"><span class="cnt">3</span></span>
+  </div></div>
+  <div class="note"><b>Done.</b> No cloud glyph — the files are local now. It returns if the provider evicts them again, which is normal and needs no announcement.</div>
+</div>
+
+<h2>B · Failure modes</h2>
+
+<div class="step"><div class="num">5</div>
+  <div class="sidebar"><div class="row sel">
+    <span class="ico"><i class="ti ti-users-group"></i></span>
+    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs warn">Still fetching from Dropbox — is Dropbox running?</div></span>
+    <span class="trail"><span class="spin"></span></span>
+  </div></div>
+  <div class="note"><b>Slow or stalled — after ~3 min.</b> <span class="kind w">warning</span> A human should look, but nothing has failed and the run continues. Needed because BN <b>cannot tell a healthy fetch from a dead one</b> — only <code>isDownloading true/false</code>, never a rate. This is the one legitimate wall-clock number, and it's a hint, not a failure.</div>
+</div>
+
+<div class="step"><div class="num">6</div>
+  <div class="sidebar"><div class="row sel">
+    <span class="ico"><i class="ti ti-users-group"></i></span>
+    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs err">Couldn’t fetch from Dropbox</div></span>
+    <span class="trail"><i class="ti ti-alert-circle-filled" style="color:var(--color-text-danger)"></i></span>
+  </div></div>
+  <div class="note"><b>Never arrived — after 30 min.</b> <span class="kind e">error</span> The run stops. Generous on purpose: measured, a fetch sat at <i>zero bytes for 90+ seconds</i> before moving, so anything tighter fails healthy transfers.</div>
+</div>
+
+<div class="pane">
+  <div class="glyph"><i class="ti ti-cloud-off" style="color:var(--color-text-danger)"></i></div>
+  <div class="hl">Couldn’t fetch “Screen Recording 2026-01-27” from Dropbox</div>
+  <div class="bd">The file is stored online only and didn’t download in 30 minutes. Check Dropbox is running and has finished syncing, or right-click the file in Finder and choose <b>Make available offline</b>.</div>
+  <div class="act"><button class="btn pri">Try again</button><button class="btn">Show in Finder</button></div>
+</div>
+<p class="note" style="padding-left:340px">Names the provider because <b>each has a different fix path</b> — Dropbox's menu-bar item, iCloud's Settings pane, the OneDrive client. “The cloud” leaves the researcher nowhere to go. Naming isn't special-casing behaviour; it's attribution, and the sibling state already names the volume.</p>
+
+<div class="step" style="margin-top:22px"><div class="num">7</div>
+  <div class="sidebar"><div class="row sel">
+    <span class="ico"><i class="ti ti-users-group"></i></span>
+    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs err">Couldn’t read one interview</div></span>
+    <span class="trail"><i class="ti ti-alert-circle-filled" style="color:var(--color-text-danger)"></i></span>
+  </div></div>
+  <div class="note"><b>Genuinely damaged file</b> — resident, ffprobe fails or times out. <span class="kind e">error</span> <b>This is the message that used to fire for downloads.</b> Now that the fetch is handled separately, a probe failure means what it says, and “the file may be damaged” is safe advice rather than a lie.</div>
+</div>
+
+<h2>C · Must never collapse with these</h2>
+<p class="lede">Same glyph family, opposite severity. One says <i>wait</i>; one says <i>cannot proceed</i>.</p>
+
+<div class="step"><div class="num">8</div>
+  <div class="sidebar"><div class="row sel">
+    <span class="ico" style="opacity:.5"><i class="ti ti-users-group"></i></span>
+    <span class="txt" style="opacity:.5"><div class="rt">Onboarding pilot</div><div class="rs warn">Can’t find this project — connect “T7”</div></span>
+    <span class="trail"><i class="ti ti-device-sd-card"></i></span>
+  </div></div>
+  <div class="note"><b>Volume ejected.</b> <span class="kind w">warning</span> Path genuinely gone, hard <code>FileNotFoundError</code>, row dims. Outranks everything. Resolves only when the human plugs something in — unlike a fetch, which resolves itself.</div>
+</div>
+
+<div class="step"><div class="num">9</div>
+  <div class="sidebar"><div class="row sel">
+    <span class="ico"><i class="ti ti-users-group"></i></span>
+    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs warn">2 interviews missing from the folder</div></span>
+    <span class="trail"><i class="ti ti-file-x"></i></span>
+  </div></div>
+  <div class="note"><b>Analysed files deleted.</b> <span class="kind w">warning</span> Not evicted — gone. Distinguished today by <code>isCloudEvicted</code>, which already runs per file and currently discards its answer.</div>
+</div>
+
+<h2>D · Every string, in one place</h2>
+<table>
+<thead><tr><th style="width:22%">State</th><th style="width:34%">Row subtitle</th><th style="width:8%">Kind</th><th>Detail pane / notes</th></tr></thead>
+<tbody>
+<tr><td class="k">At rest, evicted</td><td>3 in Dropbox</td><td><span class="kind i">info</span></td><td>Appended to the normal subtitle. Cloud glyph trailing. Counts files → partial vs whole legible.</td></tr>
+<tr><td class="k">Fetching</td><td>Fetching from Dropbox · 1 of 3</td><td><span class="kind i">info</span></td><td>Indeterminate spinner. No ETA — none is derivable.</td></tr>
+<tr><td class="k">Fetch slow (~3 min)</td><td>Still fetching from Dropbox — is Dropbox running?</td><td><span class="kind w">warning</span></td><td>Run continues. Only legitimate wall-clock number.</td></tr>
+<tr><td class="k">Fetch failed (30 min)</td><td>Couldn’t fetch from Dropbox</td><td><span class="kind e">error</span></td><td>“…is stored online only and didn’t download in 30 minutes. Check Dropbox is running…, or right-click in Finder and choose <b>Make available offline</b>.” Try again · Show in Finder</td></tr>
+<tr><td class="k">File damaged</td><td>Couldn’t read one interview</td><td><span class="kind e">error</span></td><td>“…couldn’t be read. It may be damaged or in an unsupported format.” Only reachable once bytes are resident.</td></tr>
+<tr><td class="k">Volume ejected</td><td>Can’t find this project — connect “T7”</td><td><span class="kind w">warning</span></td><td>Existing. Outranks all activity states.</td></tr>
+<tr><td class="k">Files missing</td><td>2 interviews missing from the folder</td><td><span class="kind w">warning</span></td><td>Existing. Deleted, not evicted.</td></tr>
+</tbody>
+</table>
+
+<h2>E · Precedence</h2>
+<p class="lede" style="font-family:ui-monospace,SFMono-Regular,monospace; font-size:11.5px; line-height:1.7">
+can’t-find → failed → <b>fetch-failed</b> → running → stopped/partial → copying → <b>fetching</b> → <b>fetch-slow</b> → files-missing → unanalysed → ready
+</p>
+<p class="note" style="padding:0">Fetch-failed sits with the terminal failures; fetching and fetch-slow sit with the self-resolving states, below activity — they're weather, not a dead end. Unchanged from the shipped chain apart from the three new entries.</p>
+
+<h2>F · Open questions</h2>
+<ul class="lede" style="line-height:1.7">
+  <li><b>Show “3 in Dropbox” at rest at all?</b> It's honest, but the appliance is supposed to cope. Argument for: it makes the next run's wait predictable. Argument against: it's a storage report nobody asked for. <i>Could ship the fetching states without it.</i></li>
+  <li><b>Threshold for “still fetching”.</b> 3 min is a guess. Wants a real corpus on a real domestic uplink.</li>
+  <li><b>Per-file or per-project?</b> Mocked at project level. The Sessions list could mark individual evicted interviews — probably later, and only if researchers ask.</li>
+  <li><b>“Make available offline” in the copy</b> is Dropbox's wording. iCloud says “Download Now”, OneDrive “Always keep on this device”. Either fork the string per provider, or drop the specific gesture and say “make it available offline in Finder”.</li>
+</ul>
+
+</div>
+</body>
+</html>

@@ -270,6 +270,33 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
   <br><br><b>Plurals are CLDR, not string concatenation</b> — desktop goes through <code>t(key, count: n)</code>, so “1 interview / 2 interviews” is the framework's job in all 20 locales. Don't hand-roll the <code>s</code>.
 </div>
 
+<h2>C3 · Plural audit</h2>
+<p class="lede">Scanned the spec and the shipped code. Keys follow the live convention — <code>key_one</code> / <code>key_other</code> with <code>{{count}}</code>, as <code>interviewCount_*</code> and <code>missingSubtitle_*</code> already do.</p>
+
+<table>
+<thead><tr><th style="width:26%">Key</th><th style="width:38%">String</th><th>Plural?</th></tr></thead>
+<tbody>
+<tr><td class="k">cloudAtRest</td><td>{{count}} in {{provider}}</td><td>No noun — safe. Omit entirely at 0 rather than rendering “0 in Dropbox”.</td></tr>
+<tr><td class="k">cloudFetching</td><td>Fetching from {{provider}} · {{done}} of {{total}}</td><td>No noun — safe</td></tr>
+<tr><td class="k">cloudFetchSlow</td><td>Still fetching from {{provider}}</td><td>No count — safe</td></tr>
+<tr><td class="k">cloudFetchFailed</td><td>Couldn’t fetch from {{provider}}</td><td>No count — safe</td></tr>
+<tr><td class="k">cloudFetchFailedBody_<b>one</b>/<b>other</b></td><td>The file is stored… / <b>These files are</b> stored…</td><td><b>Yes</b> — verb agreement, not just the noun</td></tr>
+<tr><td class="k">unreadableCount_<b>one</b>/<b>other</b></td><td>Couldn’t read 1 interview / {{count}} interviews</td><td><b>Yes</b></td></tr>
+<tr><td class="k">unreadableBody_<b>one</b>/<b>other</b></td><td>This file downloaded… / <b>These files</b> downloaded…</td><td><b>Yes</b></td></tr>
+<tr><td class="k">unreadableOthersOk_<b>one</b>/<b>other</b></td><td>The other interview analysed normally. / The other {{count}} interviews…</td><td><b>Yes</b></td></tr>
+<tr><td class="k">unreadableAll_<b>other</b> only</td><td>Couldn’t read any of the {{count}} interviews</td><td><b>No <code>_one</code>.</b> See trap 1</td></tr>
+<tr><td class="k">…listOverflow</td><td>and {{count}} more</td><td>“more” is invariant — safe</td></tr>
+<tr><td class="k">…duration</td><td>didn’t download in {{duration}}</td><td><b>Pre-formatted string, never a raw number.</b> See trap 2</td></tr>
+</tbody>
+</table>
+
+<div class="note" style="padding:10px 0 0">
+<b>Trap 1 — all-failed has no singular.</b> “Couldn’t read any of the 1 interviews” is nonsense, and “any of the 2 interviews” is clumsy English. When the count is 1, route to the <i>single-file</i> variant instead; <code>unreadableAll</code> only ever needs <code>_other</code>. A missing <code>_one</code> here is correct, not an oversight — worth a comment in the locale file so a future sweep doesn't “fix” it.
+<br><br><b>Trap 2 — the duration is a formatted string.</b> Interpolating a raw number gives “didn’t download in 1 minutes”. <b>This bug shipped in today's code</b> and was caught by this scan: <code>fs.py</code> rendered <code>after {int(timeout // 60)} minutes</code>, which produced “after 1 minutes” at 60 s and “after 0 minutes” at anything under a minute. Now <code>count_noun()</code>, with a seconds fallback below a minute — the convention the CLAUDE.md already mandated and I'd read that morning.
+<br><br><b>Trap 3 — Slavic locales need more than two forms.</b> The locale set includes <b>pl, ru, uk, cs</b>, which have <code>_few</code> and <code>_many</code> categories on top of <code>_one</code>/<code>_other</code>. i18next selects correctly on its own, but the <i>translator</i> has to supply those forms — an en-only <code>_one</code>/<code>_other</code> pair will silently fall back and read wrong for “2 interviews” vs “5 interviews” in Polish. Flag it on the translation ticket rather than discovering it in review.
+<br><br><b>Trap 4 — two surfaces, two mechanisms.</b> These strings surface in the desktop <i>and</i> in CLI/pipeline errors. Desktop uses CLDR via <code>t(key, count:)</code>; the Python side uses <code>count_noun()</code> from <code>utils/text.py</code>. <code>AudioToolError</code> messages cross that boundary — they're raised in Python and rendered on the row — so they follow the Python convention. Don't hand-roll <code>s</code> on either side.
+</div>
+
 <h2>D · Every string, in one place</h2>
 <table>
 <thead><tr><th style="width:22%">State</th><th style="width:34%">Row subtitle</th><th style="width:8%">Kind</th><th>Detail pane / notes</th></tr></thead>

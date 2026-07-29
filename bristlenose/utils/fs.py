@@ -8,6 +8,8 @@ import threading
 from collections.abc import Callable
 from pathlib import Path
 
+from bristlenose.utils.text import count_noun
+
 logger = logging.getLogger(__name__)
 
 # BSD/macOS `st_flags` bit meaning "this file has no data extents — the bytes
@@ -139,9 +141,13 @@ def ensure_materialised(
     if worker.is_alive():
         # Daemon thread is abandoned deliberately — it's parked in a kernel
         # read we can't interrupt, and the process will exit around it.
+        minutes = int(timeout // 60)
+        waited = (
+            count_noun(minutes, "minute") if minutes else count_noun(int(timeout), "second")
+        )
         raise CloudFetchTimeoutError(
             f"{path.name} was still being fetched from "
-            f"{provider or 'the cloud'} after {int(timeout // 60)} minutes"
+            f"{provider or 'the cloud'} after {waited}"
         )
 
     logger.info("cloud_fetch_done | file=%s | provider=%s", path.name, provider or "unknown")

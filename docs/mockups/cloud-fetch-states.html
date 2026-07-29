@@ -223,6 +223,53 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
   <div class="note"><b>Analysed files deleted.</b> <span class="kind w">warning</span> Not evicted — gone. Distinguished today by <code>isCloudEvicted</code>, which already runs per file and currently discards its answer.</div>
 </div>
 
+<h2>C2 · Count variants — both failure panes</h2>
+<p class="lede">“The other two interviews analysed normally” only works when there are exactly three and one failed. Four shapes, and the last one changes the <i>claim</i>, not just the numbers.</p>
+
+<div class="pane" style="text-align:left">
+  <div class="hl" style="text-align:center">One of several</div>
+  <div class="bd" style="margin-top:8px">
+    <div style="font-family:ui-monospace,SFMono-Regular,monospace; font-size:11px; margin-bottom:6px">Screen Recording 2026-01-27 at 23.37.37.mov</div>
+    This file downloaded, but couldn’t be read. It may be damaged or in a format Bristlenose doesn’t support.<br>
+    <span style="color:var(--color-text-tertiary)">The other 2 interviews analysed normally.</span>
+  </div>
+</div>
+
+<div class="pane" style="text-align:left">
+  <div class="hl" style="text-align:center">Several of several</div>
+  <div class="bd" style="margin-top:8px">
+    <div style="font-family:ui-monospace,SFMono-Regular,monospace; font-size:11px; margin-bottom:6px">Screen Recording 2026-01-27 at 23.37.37.mov<br>Screen Recording 2026-01-28 at 00.13.56.mov</div>
+    These files downloaded, but couldn’t be read. They may be damaged or in a format Bristlenose doesn’t support.<br>
+    <span style="color:var(--color-text-tertiary)">The other 3 interviews analysed normally.</span>
+  </div>
+</div>
+
+<div class="pane" style="text-align:left">
+  <div class="hl" style="text-align:center">The only one</div>
+  <div class="bd" style="margin-top:8px">
+    <div style="font-family:ui-monospace,SFMono-Regular,monospace; font-size:11px; margin-bottom:6px">Screen Recording 2026-01-27 at 23.37.37.mov</div>
+    This file downloaded, but couldn’t be read. It may be damaged or in a format Bristlenose doesn’t support.
+    <span style="color:var(--color-text-tertiary)">— no reassurance clause; there is nothing else to reassure about.</span>
+  </div>
+</div>
+
+<div class="pane" style="text-align:left; border-color:var(--color-text-warning)">
+  <div class="hl" style="text-align:center">All of them — <i>different message</i></div>
+  <div class="bd" style="margin-top:8px">
+    <b>Couldn’t read any of the 5 interviews</b><br>
+    <span style="color:var(--color-text-tertiary)">None of these files could be read. That’s unusual for a whole study — it more often means a problem with Bristlenose’s media tools than with the files themselves.</span>
+    <div style="margin-top:10px"><button class="btn">Check Health…</button></div>
+  </div>
+</div>
+
+<div class="note" style="padding:10px 0 0">
+  <b>Why the last one forks.</b> When <i>every</i> file fails, “they may be damaged” is almost certainly wrong — five simultaneously-damaged recordings is far less likely than one broken toolchain. Telling a researcher their whole study is corrupt would be the same misdiagnosis this work exists to remove, at maximum stakes. <code>AudioToolError</code>'s own docstring already makes this call: <i>“a broken tool must never be mislabelled as ‘your interview has no audio’.”</i>
+  <br><br>This is an inference BN can legitimately make — all-failed versus some-failed is something it observes, not a guess about someone else's system — but the wording still hedges (“more often means”) and routes to <b>Check Health</b> rather than asserting a cause.
+  <br><br><b>Also applies to the fetch pane.</b> Three files failing to fetch is the common case, not the exception — the reproduction had exactly that. Same four shapes; the all-failed variant there points at the provider rather than the toolchain.
+  <br><br><b>Cap the list.</b> Show ~5 filenames then “and 3 more”. Fifteen monospace lines is a wall, and the researcher only needs enough to recognise the pattern.
+  <br><br><b>Plurals are CLDR, not string concatenation</b> — desktop goes through <code>t(key, count: n)</code>, so “1 interview / 2 interviews” is the framework's job in all 20 locales. Don't hand-roll the <code>s</code>.
+</div>
+
 <h2>D · Every string, in one place</h2>
 <table>
 <thead><tr><th style="width:22%">State</th><th style="width:34%">Row subtitle</th><th style="width:8%">Kind</th><th>Detail pane / notes</th></tr></thead>

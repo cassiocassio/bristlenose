@@ -75,6 +75,46 @@ This contradicts the previous assumption (recorded in `design-desktop-project-st
 
 **macOS 27 ("Golden Gate", ships ~Sept 2026)** is a refinement release. No FileProvider or iCloud storage API changes were found in the beta release notes or the published change list. Absence of evidence rather than proof — but do not plan around a macOS 27 unlock.
 
+### Reproduced end-to-end, 29 Jul 2026
+
+Not theory — run against a real project on Dropbox with three 307–649 MB screen recordings.
+
+**Recipe.** Put a project in `~/Library/CloudStorage/Dropbox/`. Finder → right-click the media → **Make online-only** (BN must not be holding the files — see below). Confirm with `stat -f '%Sf'` → `dataless`. Run Analyse.
+
+**Result — the run fails, with a message that means the opposite of what happened:**
+
+```
+13:46:55  Could not probe Screen Recording 2026-01-27 at 23.37.37.mov … timed out after 30 seconds
+13:47:25  Could not probe Screen Recording 2026-01-28 at 00.13.56.mov … timed out after 30 seconds
+13:47:55  Could not probe Screen Recording 2026-01-28 at 00.18.49.mov … timed out after 30 seconds
+```
+
+Row shows a red ✗ and `ffprobe timed out after 30s probing <file>` — which a researcher reads as **"my video is broken"** when it means **"my file was still downloading."** Opposite remedies. Two sites: [`audio.py:48`](../bristlenose/utils/audio.py:48) catches and warns; [`audio.py:141`](../bristlenose/utils/audio.py:141) raises `AudioToolError` and kills the run.
+
+**Control case:** same project, same path, files made available offline → runs clean. The only variable is residency. Nothing is wrong with cloud paths, the sandbox, or the pipeline.
+
+**Raising the timeout is not the fix.** Measured: 90+ seconds after requesting the fetch, *zero bytes* had landed. Any wall-clock number fails on a 1.3 GB interview.
+
+**What is and isn't detectable** (verified on a Dropbox file — the `ubiquitousItem*` keys are not iCloud-only):
+
+| Question | API | Available |
+|---|---|---|
+| Is this file evicted? | `st_flags & SF_DATALESS` (0x40000000) · `ubiquitousItemDownloadingStatus` | **Yes**, both layers, cross-provider |
+| Is it downloading right now? | `ubiquitousItemIsDownloading` | **Yes** |
+| How far along? | — | **No.** See below |
+
+**Progress is not observable, and that is permanent.** Dropbox stages the download and swaps the file in atomically: measured at ~50% on Finder's pie, `st_blocks` was still **0** and the file still flagged `dataless`. A POSIX-derived ring would sit at zero then snap to 100. iCloud's `percentDownloaded` is deprecated; `NSFileProviderManager.globalProgress` is per-provider aggregate (and would attribute the researcher's unrelated syncing to BN's fetch). So the wait must be **indeterminate** — that is the honest shape, not a compromise. Corollary: BN also cannot distinguish a healthy fetch from a stalled one, so the only legitimate wall-clock number is a soft *hint* after several minutes ("still fetching — is Dropbox running?"), never a failure.
+
+**`.inCloud` is unreachable in the normal case.** [`ProjectAvailability.swift:141`](../desktop/Bristlenose/Bristlenose/ProjectAvailability.swift:141) short-circuits on `fileExists(atPath: path)` — the project *folder*. With every file in the folder evicted, `os.path.exists()` is still true and `listdir` still returns entries, so availability resolves to `.ready` and step 5 never runs. The cloud glyph therefore cannot appear for evicted media in an existing folder, at any free-space level. Meanwhile [`ProjectFolderWatcher.swift:228`](../desktop/Bristlenose/Bristlenose/ProjectFolderWatcher.swift:228) *already* calls `isCloudEvicted` on every non-resident file and discards the result with `continue` — the count is computed and thrown away. Turning that into `evictedFiles` gives whole-vs-partial for free.
+
+**The provider classifier is an allowlist of three.** [`ProjectIndex.swift:650`](../desktop/Bristlenose/Bristlenose/ProjectIndex.swift:650) matches OneDrive, Dropbox and iCloud Drive only, so **Google Drive (`GoogleDrive-<email>`) and Box (`Box-Box`) fall through to `.local`** and get no cloud classification at all. Everything under `~/Library/CloudStorage/` is File Provider storage by definition, so the rule should be structural — match the directory, take the first component as the label, split on `-` for the provider family — rather than an allowlist that needs editing per provider.
+
+**Name the provider, and say so — attribution is the point.** "Dropbox / Google Drive are not special-cased" (`design-sidebar-activity-indicators.md`) rejected provider-specific *behaviour* — download buttons, progress affordances, integrations. It does not forbid *naming what is already happening*, and the sibling state already sets the precedent: `cantFind(.unmountedVolume(name:))` names the volume rather than saying "a drive is missing". Two reasons it earns its place: each provider has a **different fix path** (Dropbox's menu-bar item, iCloud's Settings pane, the OneDrive client), so a generic "the cloud" leaves the researcher nowhere to go — which matters given BN can't tell a healthy fetch from a stalled one. And **it is right for BN to say when the slowness is not its own**: an unexplained three-minute stall reads as "Bristlenose is slow"; "Fetching from Dropbox…" reads as "the network is slow". Explaining a wait you don't control is not offloading work onto the user (`feedback_appliance_copes_dont_offload_to_user`) — it is the opposite of pretending.
+
+**Eviction is blocked while BN holds the file** — Finder reports "Unable to Remove Download" with no explanation. Fine once BN releases it.
+
+**What already works and should not be disturbed:** a run against a cloud folder with resident files is completely normal; the failure surfaced on the row *and* in the detail pane; the context-menu retry recovered cleanly with no corrupted state. The defect is a missing pre-check and a wrong label, not architecture.
+
 ---
 
 ## 4. Two things that look true and are not

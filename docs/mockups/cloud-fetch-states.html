@@ -169,10 +169,13 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
 <tr><td class="k">Google Drive</td><td><b>support.google.com</b></td><td><code>/drive/answer/2565956</code></td><td>“Fix problems in Drive for desktop”</td></tr>
 <tr><td class="k">OneDrive</td><td><b>support.microsoft.com</b></td><td><code>/en-us/onedrive/fix-onedrive-sync-problems-on-mac</code></td><td>Mac-specific — prefer it over the generic page, the desktop is Mac-only</td></tr>
 <tr><td class="k">iCloud Drive</td><td><b>support.apple.com</b></td><td><code>/guide/mac-help/mchl1a02d711/mac</code></td><td>“Work with folders and files in iCloud Drive” — gives <b>Control-click ▸ Download Now</b> directly</td></tr>
-<tr><td class="k">Box</td><td colspan="3"><i>not verified — omit until checked</i></td></tr>
+<tr><td class="k">Box · Proton Drive</td><td><b>—</b></td><td colspan="2">Both ship File Providers, so both resolve via the stem fallback. No URL — not worth the research time. (Box's top search hit is for the EOL <i>Box Sync</i> client, so it would be the wrong link anyway.)</td></tr>
 <tr><td class="k">unknown / other</td><td colspan="3">Omit the line entirely. Never invent a URL.</td></tr>
 </tbody>
 </table>
+
+<p class="note" style="padding:8px 0 0"><b>The four above are the list.</b> Research (29 Jul) didn't add a fifth worth the effort — it confirmed the criterion is <i>ships a macOS File Provider</i> rather than market share, since that's what produces the placeholder at all. Apple has made File Provider the only approved mechanism, so the set only grows, which is the argument for keeping the lookup structural rather than an allowlist.
+<br><br><b>The cost of an unlisted provider is one missing link, not a broken experience.</b> The stem fallback already gives an Egnyte user “Fetching from Egnyte…”, correctly, with no code change. That's what makes “omit the line” a safe default rather than a gap — and why deciding which providers “matter” isn't a decision we have to get right.</p>
 <p class="note" style="padding:8px 0 0"><b>Show the domain, link the deep path.</b> The domain is the whole flavour — it tells the researcher they're going to the provider's own help, not some blog — while the path is noise nobody reads. Shorter than a bare “Learn more…”, and more honest, since it says where they're being sent.
 <br><br><b>The CLI prints the full URL</b> — no click target to hide it behind, and a truncated URL you can't paste is worse than a long one.</p>
 <p class="note" style="padding:8px 0 0">All four verified live 29 Jul 2026. <b>Apple's is instructional where the others are diagnostic</b> — it tells the researcher how to force the download rather than why sync broke, which suits iCloud's actual failure mode (usually “not fetched yet” rather than “sync is wedged”). Link to the most useful page per provider; don't force one category on all of them.

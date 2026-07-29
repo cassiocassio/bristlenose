@@ -348,7 +348,9 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
     headerRef,
   );
 
-  // Measure sticky header height for scroll-margin-top
+  // Measure sticky header height for scroll-margin-top. Depends on the speaker
+  // list too — the header carries participant badges, so two journey-less
+  // sessions with different participant counts have different header heights.
   useLayoutEffect(() => {
     if (headerRef.current) {
       const height = headerRef.current.offsetHeight;
@@ -357,7 +359,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         `${height}px`,
       );
     }
-  }, [journeyLabels]);
+  }, [journeyLabels, data?.speakers]);
 
   // Deleted badge / tag callbacks
   const handleDeleteBadge = useCallback(
@@ -420,12 +422,12 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
     : sessionId;
 
   const hasJourney = journeyLabels.length > 0;
-  const speakerMap = new Map(speakers.map((sp) => [sp.code, sp]));
+  // Participants are named in the sticky header, so "who is p2" stays on screen.
+  // Segment badges below are code-only — see the header block in the return.
+  const participants = speakers.filter((sp) => sp.role === "participant");
 
   // Track which quote IDs have been rendered (first segment per quote only)
   const seenQuoteIds = new Set<string>();
-  // Track which speakers have been introduced (first occurrence gets full name badge)
-  const introducedSpeakers = new Set<string>();
   // First-occurrence-per-run suppression: show a label / sentiment / tag once,
   // stay quiet until it changes, then show again when it returns.
   let lastShownLabel = "";
@@ -456,6 +458,21 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         ) : (
           <span className="bn-session-selector__label" data-testid="session-label">
             Session {sessionNum}
+          </span>
+        )}
+        {participants.length > 0 && (
+          <span
+            className="bn-transcript-journey-header__people"
+            data-testid="transcript-header-people"
+          >
+            {participants.map((sp) => (
+              <PersonBadge
+                key={sp.code}
+                code={sp.code}
+                role="participant"
+                name={sp.name !== sp.code ? sp.name : undefined}
+              />
+            ))}
           </span>
         )}
         {hasJourney && (
@@ -569,21 +586,12 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                   <span className="timecode-bracket">]</span>
                 </span>
               )}
-              {(() => {
-                const isFirst = !introducedSpeakers.has(seg.speaker_code);
-                if (isFirst) introducedSpeakers.add(seg.speaker_code);
-                const sp = speakerMap.get(seg.speaker_code);
-                const showName = isFirst && sp != null && sp.name !== sp.code;
-                return (
-                  <span className="segment-speaker" data-participant={seg.speaker_code}>
-                    <PersonBadge
-                      code={seg.speaker_code}
-                      role={seg.is_moderator ? "moderator" : "participant"}
-                      name={showName ? sp!.name : undefined}
-                    />
-                  </span>
-                );
-              })()}
+              <span className="segment-speaker" data-participant={seg.speaker_code}>
+                <PersonBadge
+                  code={seg.speaker_code}
+                  role={seg.is_moderator ? "moderator" : "participant"}
+                />
+              </span>
               <div className="segment-body">
                 {seg.words && seg.words.length > 0 ? (
                   // Word-level spans for karaoke highlighting during playback.

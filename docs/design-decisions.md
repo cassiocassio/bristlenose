@@ -260,6 +260,12 @@ _See also: `docs/design-codebook-autocomplete.md`_
 
 **A folder dropped onto the sidebar becomes a project with the folder's own name and no inline-rename field; only "+ New Project" opens inline rename.** A researcher organises interviews into a deliberately-named folder (hours of conducting, fishing files out of Downloads) — that name is already the one they want, so popping a rename field over a freshly-queued run is a papercut. "+ New Project"'s placeholder ("New Project") is never the intended name, so that path keeps the rename. Loose-file drops adopt the first file's name (defensible — the first interview has a meaningful, unique name; revisit on user feedback). Mirrors the pre-existing analysed-folder adoption path, which already skipped rename for the same reason. (`09f8625`, 18 Jun 2026; `ContentView.createProjectFromURLs`.)
 
+### Speaker identity lives in the transcript's sticky header
+
+**Participant badges carry the name in the sticky header; every segment badge in the body is code-only.** The body used to name a speaker on their first turn only — the one placement guaranteed to scroll away, leaving "who is p2?" unanswerable for the rest of the session. It also cost regularity: the segment badge column is a fixed `2.2rem` track with `justify-self: end` (`templates/transcript.css`), so a named badge overflows leftward into the timecode gutter. That's one ragged row per speaker, and it's the top row — the one that sets the reader's expectation for the whole column.
+
+Moderators and observers stay in the roles line below the header. Their turns are already visually receded, so "who is m1?" is a weaker question, and the header's width is contested by the journey chain, which scrolls horizontally and absorbs whatever the badges don't take. (29 Jul 2026; `TranscriptPage.tsx`.)
+
 ---
 
 ## Data and privacy

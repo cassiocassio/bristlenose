@@ -289,6 +289,29 @@ describe("TranscriptPage", () => {
     expect(screen.queryByTestId("transcript-journey-chain")).toBeNull();
   });
 
+  // ── Participant identity in the sticky header ───────────────────────
+
+  it("names participants in the sticky header, not the transcript body", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-header-people")).toBeTruthy();
+    });
+
+    // The header is sticky, so "who is p1" survives scrolling.
+    const people = screen.getByTestId("transcript-header-people");
+    expect(people.textContent).toContain("p1");
+    expect(people.textContent).toContain("Maya");
+    // Moderators stay in the roles line below — the header is participants only.
+    expect(people.textContent).not.toContain("m1");
+
+    // Every segment badge is code-only, including the speaker's first turn:
+    // a name there would overflow the fixed 2.2rem badge column.
+    const body = screen.getByTestId("transcript-body");
+    expect(body.querySelector(".bn-speaker-badge-name")).toBeNull();
+    expect(body.textContent).not.toContain("Maya");
+  });
+
   // ── Session roles line ──────────────────────────────────────────────
 
   it("renders moderator in roles line", async () => {

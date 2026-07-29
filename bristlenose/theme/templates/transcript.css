@@ -20,6 +20,15 @@
     gap: var(--bn-space-md);
 }
 
+/* Participant badges — the persistent "who is p2" answer. Never shrink; the
+   journey chain absorbs the squeeze (it already scrolls with edge fades). */
+.bn-transcript-journey-header__people {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    flex-shrink: 0;
+}
+
 /* Journey chain: horizontal scroll mode on transcript pages */
 .bn-session-journey--overflow {
     overflow-x: auto;

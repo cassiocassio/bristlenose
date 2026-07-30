@@ -13,6 +13,7 @@ _Design note. Nothing built. July 2026._
 
 ## Changelog
 
+- _30 Jul 2026_ — added §3a and dropped phase 4. Cross-study person identity is not a deferred capability but a misread of research practice: recurrence is rare, usually undesirable, already handled socially, and rarely rewards reading across. `person_links` is no longer a dependency of this doc, and the server gains an explicit anti-instruction against correlating same-named participants.
 - _30 Jul 2026_ — added §5a: user-authored frameworks as first-class objects (read / discover / author), refining §5's write rule to "corpus mutations go through the proposal queue, artifact authoring writes a reviewable file". Records the user-codebook directory, three loader traps, and the trust surface.
 - _30 Jul 2026_ — added §Positioning (glue not chatbot; the Figma-/design-system analogy, what the position must defend, framework YAML as the ecosystem artifact) and its consequences in §5, §9, §10.
 - _30 Jul 2026_ — initial draft.
@@ -281,9 +282,54 @@ Without these the assistant will get the arithmetic wrong:
   in each group column, inflating `grand_total`. Signal strengths are comparable
   *within* one analysis only. Already stated as `_TRADE_OFF_NOTE` in
   `bristlenose/server/routes/analysis.py`; restate it to the model.
-- **Person rows are not deduped across projects** — two "Sarah" rows in two
-  studies is correct, not a bug. Cross-study *people* questions are unreliable
-  until `person_links` exists (§9).
+- **Person rows are not deduped across projects, and must not be correlated** —
+  two "Jim Smith" rows in two studies is correct, and joining them is not a
+  deferred feature but a *methodological error*. See §3a. This one has to be an
+  explicit anti-instruction, because a model will attempt the join unprompted.
+
+### 3a. Cross-study person identity is not wanted — this is not a gap
+
+An earlier draft listed cross-project *people* questions as a later phase blocked
+on `person_links`. **That was wrong, and it was wrong in a specific way worth
+recording so it isn't re-derived.** It imported a computer-science instinct — same
+name, same entity, therefore join — into a field where the person is not the unit
+of analysis across studies.
+
+What is actually true of research practice:
+
+- **Recurrence is rare.** Participants are overwhelmingly unique across studies.
+  The join has almost no rows to operate on.
+- **Recurrence is usually undesirable when it happens.** Serial volunteers know
+  the product and the process too well. They skew strongly-minded, over-focused,
+  and prone to advocating on behalf of "all users" rather than reporting their
+  own experience.
+- **Researchers already handle it socially.** They recognise the usual suspects
+  and decline to re-recruit them. This is not a problem waiting for software.
+- **Even a genuine recurrence rarely rewards reading across.** Two studies
+  typically interrogate different facets of the product, so correspondence
+  between the same person's quotes in each is not a finding — it is a
+  coincidence of sampling.
+
+**Cross-study value lives in codes, themes and findings — not in people.** That is
+already where folder scope delivers it, because `TagDefinition` and `TagPrompt` are
+instance-scoped. No additional phase is required, and nothing about the folder
+story needs hedging.
+
+Two consequences for the build:
+
+1. **`person_links` is not a dependency of anything here.** It stays a roadmap
+   item in `design-multi-project.md` §2 on its own merits; this doc does not want
+   it, and not in 2027 either.
+2. **The server must actively discourage the inference.** Dropping the feature is
+   not sufficient — an assistant handed two projects will match "Jim Smith" to
+   "Jim Smith" by itself. The `instructions` field has to say plainly that person
+   identity does not cross project boundaries and correspondence between
+   same-named participants must not be treated as signal. This is the one place
+   the server needs an anti-instruction rather than a capability.
+
+Within a single study, people remain first-class and important — who said what,
+role, journey, whose experience diverges. It is only the cross-study join that has
+no value.
 
 ---
 
@@ -483,7 +529,6 @@ aspirational — the same reason it works for export.
 | **1** | Single project, read-only, `/mcp` on serve | nothing new |
 | **2** | Folder scope — cross-project themes, codes, signals | project index / instance DB (`design-multi-project.md` §1) |
 | **3** | Writes as proposals | `ProposedTag` review UI already shipped; batch review hardened (§5) |
-| **4** | Cross-project *people* questions | `person_links` (`design-multi-project.md` §2) |
 
 **Bring-your-own-framework YAML is a phase-1 sibling, not a later phase.** It is
 independent of everything above, it is small, and without it the ecosystem
@@ -507,11 +552,12 @@ breaking change — the same discipline as the `apiBase()` rule in
 `bristlenose/server/CLAUDE.md`. Phase 1 passes a single id; nothing about the
 signature changes at phase 2.
 
-Note the asymmetry across phases 2 and 4: folder-level questions about *themes and
-codes* work as soon as folder scope exists, because `TagDefinition` and `TagPrompt`
-are instance-scoped. Folder-level questions about *people* stay weak until
-`person_links` lands, because person rows are deliberately not deduped. Do not let
-a demo imply otherwise.
+**Three phases, not four.** An earlier draft carried a fourth phase for
+cross-project people questions; §3a explains why that was a misread of research
+practice rather than a deferred capability. Folder scope delivers the cross-study
+value in full at phase 2, because the objects that carry it — `TagDefinition`,
+`TagPrompt` — are already instance-scoped. Nothing about the folder story needs a
+caveat.
 
 ---
 
@@ -537,7 +583,8 @@ a demo imply otherwise.
 ## Related docs
 
 - [`design-multi-project.md`](design-multi-project.md) — project index, folders,
-  person identity. Phase 2 and 4 depend on it.
+  person identity. Phase 2 depends on the project index; the person-identity
+  work there is explicitly *not* a dependency of this doc (§3a).
 - [`../bristlenose/server/CLAUDE.md`](../bristlenose/server/CLAUDE.md) — data API,
   auth middleware, multi-project scope rules, WAL gotchas.
 - [`design-autocode.md`](design-autocode.md) — the proposal queue phase 3 writes into.

@@ -61,8 +61,11 @@ themes, signals. The same context budget that bought three raw transcripts buys 
 folder of studies through Bristlenose's objects, and the tokens it does spend go
 on quotes a human already judged worth keeping rather than on filler.
 
-**Measure the actual ratio against the fossda corpus before this claim goes
-anywhere near marketing copy.** It is currently an argument, not a number.
+**Measured on the fossda corpus, 30 Jul 2026 (§9a-results Q3): a realistic
+working session — overview, starred quotes, one signals lens — costs ~10k
+tokens of curated objects against ~182k tokens of raw transcript. 18×.** It
+is now a number, not an argument, and safe for marketing copy with the
+method stated.
 
 ### The privacy position, stated correctly
 

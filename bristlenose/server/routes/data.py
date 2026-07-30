@@ -1083,3 +1083,41 @@ async def put_framework_states(
     for framework_id in catch_up:
         _schedule_catch_up(request, project_id, framework_id)
     return {"status": "ok", "catchUp": catch_up}
+
+
+# ---------------------------------------------------------------------------
+# Agent settings (the MCP surface's Anonymise switch — per-surface sticky,
+# same concept as the export/clips/Miro toggles; read by the native Connect
+# Agent sheet over the localhost API and by grounding at tool-call time)
+# ---------------------------------------------------------------------------
+
+
+class AgentSettings(BaseModel):
+    anonymise: bool
+
+
+@router.get("/projects/{project_id}/agent-settings")
+def get_agent_settings(project_id: int, request: Request) -> dict[str, bool]:
+    """The project's Anonymise state for connected agents."""
+    db = _get_db(request)
+    try:
+        project = _check_project(db, project_id)
+        return {"anonymise": bool(project.mcp_anonymise)}
+    finally:
+        db.close()
+
+
+@router.put("/projects/{project_id}/agent-settings")
+def put_agent_settings(
+    project_id: int, data: AgentSettings, request: Request
+) -> dict[str, str]:
+    """Set the Anonymise state. Takes effect on the agent's next tool call —
+    grounding reads it live, no serve restart."""
+    db = _get_db(request)
+    try:
+        project = _check_project(db, project_id)
+        project.mcp_anonymise = data.anonymise
+        db.commit()
+        return {"status": "ok"}
+    finally:
+        db.close()

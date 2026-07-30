@@ -523,7 +523,12 @@ struct ContentView: View {
                 token: AgentActivity.samePath(serveManager.currentProjectPath, project.path)
                     ? (serveManager.mcpToken ?? serveManager.authToken) : nil,
                 mcpAvailable: serveManager.mcpMounted,
-                onCopied: { Task { await serveManager.refreshAgentActivity() } }
+                onCopied: { Task { await serveManager.refreshAgentActivity() } },
+                apiBase: AgentActivity.samePath(serveManager.currentProjectPath, project.path)
+                    ? serveManager.runningPort.flatMap { URL(string: "http://127.0.0.1:\($0)/") }
+                    : nil,
+                apiToken: AgentActivity.samePath(serveManager.currentProjectPath, project.path)
+                    ? serveManager.authToken : nil
             )
             .environmentObject(i18n)
         }

@@ -830,12 +830,16 @@ above:
   Tuesday-401 only across restarts of the same address. The `.mcpb`
   handshake-file proxy (route 3 above) is what dissolves this properly; the
   caveat line is the bridge, not the destination.
-- **The Anonymise toggle became a statement.** The server anonymises
-  unconditionally (grounding never reads persons) and no per-connection
-  names opt-in exists on the server side, so a live switch would promise a
-  choice the system cannot make. The row now states the truth ("Participant
-  names are never sent"); when the opt-in exists server-side, the control
-  returns here.
+- **The Anonymise toggle is real (31 Jul 2026).** Decision: the choice
+  belongs to the researcher everywhere — no in-principle difference
+  between MCP, Miro, and spreadsheets (the person driving the agent is
+  the person who interviewed the participants). Per-surface sticky,
+  per-project, off by default like the export surfaces; a global-defaults
+  UI comes later. Mechanics: `projects.mcp_anonymise` (migration 008),
+  `agent-settings` GET/PUT, `grounding.resolve_speaker_names` as the one
+  gated path to persons, read at tool-call time so a flip takes effect on
+  the agent's next call. Names appear in the overview speaker map only;
+  quotes always cite codes. The CLI does not yet expose the switch.
 - **Open model question (parked):** the sheet and badge only know the
   *fronted* serve. The warm-sidecar pool keeps the previous project's
   sidecar (and its live `/mcp`) parked — an agent can be querying project A

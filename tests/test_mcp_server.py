@@ -439,7 +439,12 @@ class TestFramework:
 
 
 class TestAnonymisationSweep:
-    """No name-shaped string reaches any tool payload — the §7 boundary."""
+    """With Anonymise ON, no name-shaped string reaches any tool payload.
+
+    The §7 boundary is now the researcher's per-project switch (per-surface
+    sticky, like the export toggles). This sweep pins the ON position;
+    TestNamesFollowTheSwitch pins the default (off = names in the overview,
+    codes everywhere else)."""
 
     SENTINEL_FULL = "Zebediah Quackenbush"
     SENTINEL_SHORT = "Zebediah"
@@ -467,6 +472,7 @@ class TestAnonymisationSweep:
             s.thumbnail_path = self.SENTINEL_PATH + "/thumbs/zeb.jpg"
         for f in db.query(SourceFile).all():
             f.path = self.SENTINEL_PATH + "/interviews/zeb.mov"
+        project.mcp_anonymise = True  # the position this sweep pins
         db.commit()
         # Precondition — without this the sweep passes vacuously.
         assert any(p.full_name for p in db.query(Person).all())
@@ -491,6 +497,74 @@ class TestAnonymisationSweep:
         assert ".jpg" not in blob
 
 
+class TestNamesFollowTheSwitch:
+    """Anonymise off (the default): names ride the overview speaker map only
+    — quotes keep codes as the citation currency."""
+
+    def _name_people(self, db) -> None:
+        for i, p in enumerate(db.query(Person).all()):
+            p.full_name = f"Jane Example{i}"
+            p.short_name = f"Jane{i}"
+        db.commit()
+
+    def test_default_puts_names_in_overview_speakers_only(self, db) -> None:
+        self._name_people(db)
+        overview = _tool_get_project_overview(db, 1, None)
+        by_code = {s["code"]: s for s in overview["participants"]["speakers"]}
+        assert any("name" in s for s in by_code.values())
+        assert by_code["p1"]["name"].startswith("Jane")
+        # Quotes still cite codes — names never enter search payloads.
+        blob = json.dumps(_search(db), default=str)
+        assert "Jane" not in blob
+
+    def test_flipping_the_switch_takes_effect_next_call(self, db) -> None:
+        from bristlenose.server.models import Project
+
+        self._name_people(db)
+        project = db.query(Project).one()
+        project.mcp_anonymise = True
+        db.commit()
+        overview = _tool_get_project_overview(db, 1, None)
+        assert all("name" not in s for s in overview["participants"]["speakers"])
+        # ...and back, no restart — read at call time.
+        project.mcp_anonymise = False
+        db.commit()
+        overview = _tool_get_project_overview(db, 1, None)
+        assert any("name" in s for s in overview["participants"]["speakers"])
+
+
+class TestAgentSettingsAPI:
+    """The sheet's read/write path for the per-project Anonymise switch."""
+
+    def test_round_trip_reaches_the_tools(self, app_fx) -> None:
+        client = AuthTestClient(app_fx)
+        assert client.get("/api/projects/1/agent-settings").json() == {
+            "anonymise": False,  # the export-precedent default
+        }
+        assert client.put(
+            "/api/projects/1/agent-settings", json={"anonymise": True}
+        ).status_code == 200
+        assert client.get("/api/projects/1/agent-settings").json() == {
+            "anonymise": True,
+        }
+        # The switch the API set is the one the tools read.
+        db = app_fx.state.db_factory()
+        try:
+            for p in db.query(Person).all():
+                p.full_name = "Jane Example"
+            db.commit()
+            overview = _tool_get_project_overview(db, 1, None)
+            assert all(
+                "name" not in sp for sp in overview["participants"]["speakers"]
+            )
+        finally:
+            db.close()
+
+    def test_unknown_project_404s(self, app_fx) -> None:
+        client = AuthTestClient(app_fx)
+        assert client.get("/api/projects/9/agent-settings").status_code == 404
+
+
 class TestMechanicalPins:
     """Cheap source-level guards for the stated hard exclusions."""
 
@@ -511,7 +585,10 @@ class TestMechanicalPins:
     def test_mcp_module_never_reads_reidentifying_tables(self) -> None:
         source = (_SERVER_DIR / "mcp_server.py").read_text(encoding="utf-8")
         assert "TagPromptDecision" not in source  # reasons are local-only
-        assert "Person" not in source  # names never load, by construction
+        # Names load only through grounding.resolve_speaker_names (the one
+        # gated path, honouring the project's Anonymise switch) — never
+        # directly from this module.
+        assert "Person" not in source
 
     def test_instructions_contain_every_invariant(self) -> None:
         instructions = build_instructions()

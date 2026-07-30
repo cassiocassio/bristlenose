@@ -179,6 +179,12 @@ class Project(Base):
     output_dir: Mapped[str] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(default=func.now())
     imported_at: Mapped[datetime | None] = mapped_column(default=None)
+    # The Anonymise switch for the MCP agent surface — per-surface sticky,
+    # same concept as the export/clips/Miro toggles. False (default) = the
+    # researcher's names accompany speaker codes in get_project_overview;
+    # True = codes only. Read at tool-call time, so flipping it takes
+    # effect on the agent's next call without a serve restart.
+    mcp_anonymise: Mapped[bool] = mapped_column(default=False)
 
     sessions: Mapped[list[Session]] = relationship(back_populates="project")
     quotes: Mapped[list[Quote]] = relationship(back_populates="project")

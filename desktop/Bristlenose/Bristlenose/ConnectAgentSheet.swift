@@ -43,6 +43,11 @@ struct ConnectAgentSheet: View {
     /// activity immediately, so the badge can light while the researcher
     /// is still watching for it instead of on the next 20s tick.
     var onCopied: (() -> Void)? = nil
+    /// The localhost API base + SERVER token for the Anonymise switch —
+    /// deliberately not the MCP-scoped token, which cannot open /api.
+    /// Nil when the project isn't the one being served; the row hides.
+    var apiBase: URL? = nil
+    var apiToken: String? = nil
 
     @EnvironmentObject private var i18n: I18n
     @Environment(\.dismiss) private var dismiss
@@ -51,6 +56,12 @@ struct ConnectAgentSheet: View {
     /// Cancellable so a re-copy restarts the "Copied" interval instead of
     /// the first timer cutting the second confirmation short.
     @State private var copiedResetTask: Task<Void, Never>?
+    /// The per-project Anonymise switch (same concept as the export
+    /// toggles, per-surface sticky, off by default). Loaded from the serve
+    /// on appear; nil `savedAnonymise` means not loaded yet — the Toggle
+    /// stays disabled so a blind flip can't race the read.
+    @State private var anonymise = false
+    @State private var savedAnonymise: Bool?
 
     enum Client: String, CaseIterable, Identifiable {
         case claudeDesktop, claudeCode, chatgptCodex
@@ -136,20 +147,28 @@ struct ConnectAgentSheet: View {
                     .padding(.top, 2)
             }
 
-            // A statement, not a switch: the server anonymises always (it
-            // never reads the persons table) and there is no opt-in path,
-            // so a live toggle here would promise a choice the system
-            // cannot make — in the unsafe direction. When a real
-            // per-connection names opt-in exists server-side, this row is
-            // where its control returns.
-            VStack(alignment: .leading, spacing: 1) {
-                Text(i18n.t("desktop.connectAgent.namesNote"))
-                    .font(.body.weight(.medium))
-                Text(i18n.t("desktop.connectAgent.namesNoteHint"))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+            // The shipped Export-popover control, genuinely verbatim this
+            // time (label inside the Toggle: clicking the words toggles,
+            // VO reads both lines as the control) — one word for one
+            // concept across Export, clips, Miro, and here. Per-project
+            // sticky, off by default like the other export surfaces; the
+            // value lives server-side so grounding reads it on the agent's
+            // next tool call — flipping it needs no restart.
+            if apiBase != nil, apiToken != nil {
+                Toggle(isOn: $anonymise) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(i18n.t("desktop.menu.quotes.anonymise"))
+                        Text(i18n.t("desktop.menu.quotes.anonymiseHint"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .toggleStyle(.switch)
+                .disabled(savedAnonymise == nil)
+                .padding(.top, 14)
+                .task { await loadAnonymise() }
+                .onChange(of: anonymise) { Task { await saveAnonymise() } }
             }
-            .padding(.top, 14)
 
             Picker("", selection: $client) {
                 ForEach(Client.allCases) { Text($0.label(i18n)).tag($0) }
@@ -257,6 +276,42 @@ struct ConnectAgentSheet: View {
             Spacer(minLength: 0)
         }
         .frame(height: 170, alignment: .topLeading)
+    }
+
+    private func settingsURL() -> URL? {
+        guard let apiBase else { return nil }
+        return apiBase.appendingPathComponent("api/projects/1/agent-settings")
+    }
+
+    private func loadAnonymise() async {
+        guard let url = settingsURL(), let apiToken else { return }
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
+        guard let (data, _) = try? await URLSession.shared.data(for: req),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let value = json["anonymise"] as? Bool
+        else { return }  // row stays disabled — never guess a compliance state
+        anonymise = value
+        savedAnonymise = value
+    }
+
+    private func saveAnonymise() async {
+        // Guard against the programmatic set from loadAnonymise and against
+        // writes before the read landed.
+        guard let saved = savedAnonymise, saved != anonymise,
+              let url = settingsURL(), let apiToken else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "PUT"
+        req.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: ["anonymise": anonymise])
+        if (try? await URLSession.shared.data(for: req)) != nil {
+            savedAnonymise = anonymise
+        } else {
+            // Optimistic-no-rollback is for fire-and-forget decoration; a
+            // compliance switch reverts visibly when the write fails.
+            anonymise = saved
+        }
     }
 
     private func copy() {

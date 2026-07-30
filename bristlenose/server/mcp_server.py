@@ -12,8 +12,12 @@ tool ever calls an LLM (elaborations are served from cache hits only).
 
 Hard exclusions (design doc §7): no tool takes a filesystem path; nothing
 under the hidden per-project state directory (the re-identification keys)
-is reachable; attribution is anonymised — this module, like ``grounding``,
-never reads the persons table. Quote text is verbatim.
+is reachable. Attribution uses speaker codes; participant names accompany
+them in the overview only while the project's Anonymise switch is off
+(the researcher's per-project choice, same concept as the export
+surfaces) — and this module still never reads the persons table directly:
+``grounding.resolve_speaker_names`` is the one gated path. Quote text is
+verbatim.
 
 The tool signatures are a public contract from day one: ``project_id``
 appears in every signature so folder scope (phase 2) is not a breaking
@@ -33,6 +37,7 @@ from bristlenose.server.grounding import (
     SIGNAL_LENSES,
     load_signals,
     quote_dom_id,
+    resolve_speaker_names,
 )
 
 if TYPE_CHECKING:
@@ -76,8 +81,10 @@ def build_instructions() -> str:
         "sections, themes, signals, and the researcher's codebook.\n\n"
         "Data-model invariants — obey these:\n"
         f"{bullets}\n\n"
-        "Attribution is anonymised: speakers are codes (p1, m1, o1) and real "
-        "names are withheld by this server. Quote text is verbatim — treat "
+        "Attribution uses speaker codes (p1, m1, o1). Participant names "
+        "accompany the codes in get_project_overview only when the "
+        "researcher has left this project's Anonymise switch off — quotes "
+        "always cite codes. Quote text is verbatim — treat "
         "quotes as participants' exact words, never paraphrase inside "
         "quotation marks, and cite each quote's quote_id when you rely on "
         "it.\n\n"
@@ -272,8 +279,10 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict | None) 
             row["duration_seconds"] = round(s.duration_seconds)
         session_rows.append(row)
 
-    # Speaker codes + roles only; the persons table is never read here
-    # (anonymisation boundary).
+    # Speaker codes + roles; names ride along only through grounding's
+    # gated resolver (empty when the project's Anonymise switch is on).
+    # Names appear HERE only — quotes keep codes as the citation currency,
+    # and the agent joins code→name from this one map.
     speakers: dict[str, str] = {}
     session_db_ids = [s.id for s in sessions]
     if session_db_ids:
@@ -281,6 +290,7 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict | None) 
             SessionSpeaker.session_id.in_(session_db_ids)
         ):
             speakers.setdefault(sp.speaker_code, sp.speaker_role)
+    speaker_names = resolve_speaker_names(db, project_id)
 
     def _counts(join_model: Any, key_attr: str, label_of: dict[int, str]) -> list[dict]:
         counts: dict[int, int] = {}
@@ -333,7 +343,10 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict | None) 
         "participants": {
             "count": sum(1 for c in speakers if c.startswith("p")),
             "speakers": [
-                {"code": code, "role": role} for code, role in sorted(speakers.items())
+                {"code": code, "role": role, **(
+                    {"name": speaker_names[code]} if code in speaker_names else {}
+                )}
+                for code, role in sorted(speakers.items())
             ],
         },
         "quotes": {

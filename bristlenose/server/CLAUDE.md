@@ -107,9 +107,13 @@ Connect Agent sheet + sidebar antenna badge are the desktop surface).
   sanitised sentence to the model. `ToolInputError` is the one exception —
   its messages are written to *teach* (bad value + the valid vocabulary).
 - **Hard exclusions, pinned by tests:** no tool takes a filesystem path
-  (input-schema allowlist), nothing reads the persons table, no writes,
-  no LLM calls (elaborations are cache-only via
-  `elaboration.load_cached_elaborations`).
+  (input-schema allowlist), no writes, no LLM calls (elaborations are
+  cache-only via `elaboration.load_cached_elaborations`). Names go through
+  ONE gate: `grounding.resolve_speaker_names`, which returns `{}` when the
+  project's `mcp_anonymise` switch is on (per-surface sticky, off by
+  default like the export toggles; `PUT /api/projects/{id}/agent-settings`
+  flips it, grounding reads it at tool-call time — no restart).
+  `mcp_server.py` itself still never imports `Person` (mechanical pin).
 - **Adding a tool?** Put `project_id` in the signature (folder scope is
   phase 2), return JSON primitives only, cap the result size, and add a
   through-protocol test — direct-call tests miss serialization failures.

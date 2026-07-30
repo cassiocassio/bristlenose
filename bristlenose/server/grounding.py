@@ -398,6 +398,39 @@ def resolve_quote_ids(
 # Curated signal detection (the report view)
 # ---------------------------------------------------------------------------
 
+def resolve_speaker_names(db: SASession, project_id: int) -> dict[str, str]:
+    """Speaker code → display name, honouring the project's Anonymise switch.
+
+    Returns {} when ``projects.mcp_anonymise`` is on — the ONLY gate through
+    which assistant surfaces may reach the persons table. Display-name
+    policy mirrors the quotes/sessions routes (short name, else full name).
+    Read at call time so flipping the switch takes effect on the agent's
+    next call, no restart.
+    """
+    from bristlenose.server.models import Person, Project, SessionSpeaker
+    from bristlenose.server.models import Session as SessionModel
+
+    project = db.get(Project, project_id)
+    if project is None or project.mcp_anonymise:
+        return {}
+    session_ids = [
+        s.id for s in db.query(SessionModel).filter_by(project_id=project_id)
+    ]
+    if not session_ids:
+        return {}
+    names: dict[str, str] = {}
+    rows = (
+        db.query(SessionSpeaker, Person)
+        .join(Person, SessionSpeaker.person_id == Person.id)
+        .filter(SessionSpeaker.session_id.in_(session_ids))
+    )
+    for sp, person in rows:
+        display = person.short_name or person.full_name or ""
+        if display:
+            names.setdefault(sp.speaker_code, display)
+    return names
+
+
 #: Lenses ``load_signals`` accepts.
 SIGNAL_LENSES: tuple[str, ...] = ("sentiment", "tags")
 

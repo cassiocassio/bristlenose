@@ -264,6 +264,13 @@ Design + as-built record: `docs/design-mcp-server.md` §6a.
   speaks before any build-capability claim (a cold-launched app must never
   say "not available in this build"), and a running no-mcp build must
   never show a payload.
+- **The sheet's Anonymise toggle is the real per-project switch** (same
+  `menu.quotes.anonymise` strings as Export). It reads/writes
+  `/api/projects/1/agent-settings` — which needs the **server** token
+  (`serveManager.authToken`), NOT the MCP-scoped token (that one cannot
+  open /api by design). Disabled until the read lands (never guess a
+  compliance state); write failure reverts the switch visibly. Off by
+  default = names accompany codes in the agent's overview.
 - **Sheet i18n keys are `desktop.connectAgent.*`** — the first dotted
   segment is the namespace FILE. Bare `connectAgent.*` resolves to nothing
   and renders raw keys (bit once, caught in review).

@@ -25,8 +25,11 @@ _AUTH_EXEMPT_PREFIXES: tuple[str, ...] = (
 # NOTE: /media/ is NOT included — <video> and <audio> elements cannot send
 # Authorization headers.  Media files are protected by the path-traversal
 # guard, extension allowlist, and localhost binding instead.
+# /mcp is included UNCONDITIONALLY (fail closed even when the mount was
+# skipped because the mcp extra isn't installed).
 _AUTH_REQUIRED_PREFIXES: tuple[str, ...] = (
     "/api/",
+    "/mcp",
 )
 
 _UNAUTHORIZED_BODY = json.dumps({"detail": "Unauthorized"}).encode()
@@ -62,6 +65,16 @@ class BearerTokenMiddleware(BaseHTTPMiddleware):
         if any(path.startswith(p) for p in _AUTH_EXEMPT_PREFIXES):
             return await call_next(request)
 
+        is_mcp = path.startswith("/mcp")
+        if is_mcp and request.method == "GET":
+            # A naive browser click on the terminal's MCP link: the mounted
+            # explainer page is deliberately unauthenticated (no project
+            # data, no token — same exemption class as /api/health). MCP
+            # protocol GETs ask for text/event-stream, never text/html.
+            accept = request.headers.get("accept", "")
+            if "text/html" in accept and "text/event-stream" not in accept:
+                return await call_next(request)
+
         expected = getattr(request.app.state, "auth_token", None)
         if expected is None:
             # No token configured (e.g. tests that opt out) — allow through.
@@ -72,8 +85,10 @@ class BearerTokenMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Cookie fallback for plain browser navigations (e.g. export anchor
-        # clicks) that don't carry the Authorization header.
-        if request.cookies.get(AUTH_COOKIE_NAME) == expected:
+        # clicks) that don't carry the Authorization header. /mcp is
+        # bearer-only: MCP clients always send the header, and keeping the
+        # cookie out closes the same-host-different-port ride-along.
+        if not is_mcp and request.cookies.get(AUTH_COOKIE_NAME) == expected:
             return await call_next(request)
 
         return Response(

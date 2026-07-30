@@ -10,6 +10,7 @@ Public API::
 
     assemble_corpus_context(db, project_id, max_chars=…)  → CorpusContext
     resolve_quote_ids(quote_ids, corpus)                  → (resolved, rejected)
+    load_signals(db, project_id, lens, top_n=…)           → SignalsResult
     INVARIANTS                                            — statements for the model
 
 Anonymisation boundary: the corpus identifies humans by speaker code only
@@ -53,6 +54,12 @@ INVARIANTS: tuple[str, ...] = (
     "Speakers are identified by code only (p1 = participant, m1 = moderator, "
     "o1 = observer). Never guess who a speaker is, and never join a speaker "
     "with any person outside this study's data.",
+    "Never compare raw counts across studies of different sizes; any "
+    "cross-study comparison needs each study's denominators (participant "
+    "and quote counts) stated alongside it.",
+    "If the corpus does not answer a question, say so plainly instead of "
+    "filling the gap from general knowledge — an uncited research claim "
+    "presented next to real findings is worse than no claim.",
 )
 
 
@@ -367,7 +374,9 @@ def resolve_quote_ids(
     ``rejected`` — without this check the citations are theatre.
 
     Order is preserved; duplicate ids are dropped after their first
-    appearance.
+    appearance. Any surface that presents citations must surface the
+    ``rejected`` count too — silently dropping refused citations makes the
+    validation invisible exactly when it fired.
     """
     resolved: list[CorpusQuote] = []
     rejected: list[str] = []
@@ -383,3 +392,300 @@ def resolve_quote_ids(
         else:
             rejected.append(cited)
     return resolved, rejected
+
+
+# ---------------------------------------------------------------------------
+# Curated signal detection (the report view)
+# ---------------------------------------------------------------------------
+
+#: Lenses ``load_signals`` accepts.
+SIGNAL_LENSES: tuple[str, ...] = ("sentiment", "tags")
+
+
+@dataclass
+class SignalsResult:
+    """Signals computed over the curated corpus, plus their context."""
+
+    signals: list  # list[bristlenose.analysis.models.Signal]
+    total_participants: int
+    group_colour_sets: dict[str, str]  # tags lens only; empty for sentiment
+
+
+def load_signals(
+    db: SASession,
+    project_id: int,
+    lens: str = "sentiment",
+    top_n: int = 12,
+) -> SignalsResult:
+    """Signal detection over the CURATED corpus — the researcher's report view.
+
+    Deliberately diverges from the analysis routes (which compute over the
+    raw engine view): hidden quotes are excluded, researcher-edited text
+    replaces pipeline text, and unreviewed AutoCode proposals contribute
+    nothing (accepted tags — ``QuoteTag`` rows — are the only tag truth).
+    The computation itself is the shipped ``bristlenose/analysis`` maths,
+    not a parallel implementation.
+    """
+    from dataclasses import dataclass as _dc
+    from dataclasses import field as _field
+
+    from bristlenose.analysis.generic_matrix import (
+        QuoteContribution,
+        build_matrix_from_contributions,
+    )
+    from bristlenose.analysis.generic_signals import QuoteRecord, detect_signals_generic
+    from bristlenose.analysis.matrix import build_section_matrix, build_theme_matrix
+    from bristlenose.analysis.signals import detect_signals
+    from bristlenose.models import Sentiment
+    from bristlenose.server.models import (
+        ClusterQuote,
+        CodebookGroup,
+        ProjectCodebookGroup,
+        Quote,
+        QuoteEdit,
+        QuoteState,
+        QuoteTag,
+        ScreenCluster,
+        TagDefinition,
+        ThemeGroup,
+        ThemeQuote,
+    )
+
+    if lens not in SIGNAL_LENSES:
+        msg = f"unknown lens {lens!r} — valid lenses: {list(SIGNAL_LENSES)}"
+        raise ValueError(msg)
+
+    all_quotes = db.query(Quote).filter_by(project_id=project_id).all()
+    if not all_quotes:
+        return SignalsResult(signals=[], total_participants=0, group_colour_sets={})
+    quote_pks = [q.id for q in all_quotes]
+
+    hidden_pks: set[int] = {
+        state.quote_id
+        for state in db.query(QuoteState).filter(QuoteState.quote_id.in_(quote_pks))
+        if state.is_hidden
+    }
+    edited_text: dict[int, str] = {}
+    edits = (
+        db.query(QuoteEdit)
+        .filter(QuoteEdit.quote_id.in_(quote_pks))
+        .order_by(QuoteEdit.edited_at.asc(), QuoteEdit.id.asc())
+        .all()
+    )
+    for edit in edits:  # ascending order: the latest edit wins
+        edited_text[edit.quote_id] = edit.edited_text
+
+    visible = [q for q in all_quotes if q.id not in hidden_pks]
+    if not visible:
+        return SignalsResult(signals=[], total_participants=0, group_colour_sets={})
+    visible_pks = {q.id for q in visible}
+    total_participants = len({
+        q.participant_id for q in visible if q.participant_id.startswith("p")
+    })
+
+    clusters = (
+        db.query(ScreenCluster)
+        .filter_by(project_id=project_id)
+        .order_by(ScreenCluster.display_order)
+        .all()
+    )
+    themes = (
+        db.query(ThemeGroup)
+        .filter_by(project_id=project_id)
+        .order_by(ThemeGroup.id)
+        .all()
+    )
+    cluster_members: dict[int, list[int]] = {}
+    for cq in db.query(ClusterQuote).filter(ClusterQuote.quote_id.in_(visible_pks)):
+        cluster_members.setdefault(cq.cluster_id, []).append(cq.quote_id)
+    theme_members: dict[int, list[int]] = {}
+    for tq in db.query(ThemeQuote).filter(ThemeQuote.quote_id.in_(visible_pks)):
+        theme_members.setdefault(tq.theme_id, []).append(tq.quote_id)
+    quote_by_pk = {q.id: q for q in visible}
+
+    if lens == "sentiment":
+
+        @_dc
+        class _QuoteAdapter:
+            text: str
+            participant_id: str
+            session_id: str
+            start_timecode: float
+            sentiment: Sentiment | None
+            intensity: int
+            segment_index: int
+
+        @_dc
+        class _ClusterAdapter:
+            screen_label: str
+            display_order: int
+            quotes: list = _field(default_factory=list)
+
+        @_dc
+        class _ThemeAdapter:
+            theme_label: str
+            quotes: list = _field(default_factory=list)
+
+        adapters: dict[int, object] = {}
+        for q in visible:
+            sent: Sentiment | None = None
+            if q.sentiment:
+                try:
+                    sent = Sentiment(q.sentiment)
+                except ValueError:
+                    pass
+            adapters[q.id] = _QuoteAdapter(
+                text=edited_text.get(q.id, q.text),
+                participant_id=q.participant_id,
+                session_id=q.session_id,
+                start_timecode=q.start_timecode,
+                sentiment=sent,
+                intensity=q.intensity,
+                segment_index=q.segment_index,
+            )
+
+        cluster_adapters = []
+        for c in clusters:
+            ca = _ClusterAdapter(screen_label=c.screen_label, display_order=c.display_order)
+            ca.quotes = [adapters[pk] for pk in cluster_members.get(c.id, [])]
+            cluster_adapters.append(ca)
+        theme_adapters = []
+        for t in themes:
+            ta = _ThemeAdapter(theme_label=t.theme_label)
+            ta.quotes = [adapters[pk] for pk in theme_members.get(t.id, [])]
+            theme_adapters.append(ta)
+
+        section_matrix = build_section_matrix(cluster_adapters)  # type: ignore[arg-type]
+        theme_matrix = build_theme_matrix(theme_adapters)  # type: ignore[arg-type]
+        result = detect_signals(
+            section_matrix,
+            theme_matrix,
+            cluster_adapters,  # type: ignore[arg-type]
+            theme_adapters,  # type: ignore[arg-type]
+            total_participants,
+            top_n=top_n,
+        )
+        return SignalsResult(
+            signals=list(result.signals),
+            total_participants=total_participants,
+            group_colour_sets={},
+        )
+
+    # lens == "tags" — accepted tags only, over active codebook groups.
+    pcg_rows = (
+        db.query(ProjectCodebookGroup)
+        .filter_by(project_id=project_id)
+        .order_by(ProjectCodebookGroup.sort_order)
+        .all()
+    )
+    groups = [g for g in (db.get(CodebookGroup, r.codebook_group_id) for r in pcg_rows) if g]
+    if not groups:
+        return SignalsResult(
+            signals=[], total_participants=total_participants, group_colour_sets={},
+        )
+    group_id_to_name = {g.id: g.name for g in groups}
+    colour_sets = {g.name: g.colour_set for g in groups}
+    col_labels = [g.name for g in groups]
+
+    tag_defs = (
+        db.query(TagDefinition)
+        .filter(TagDefinition.codebook_group_id.in_(group_id_to_name.keys()))
+        .all()
+    )
+    tag_def_to_group = {td.id: group_id_to_name[td.codebook_group_id] for td in tag_defs}
+    tag_def_to_name = {td.id: td.name for td in tag_defs}
+    if not tag_def_to_group:
+        return SignalsResult(
+            signals=[], total_participants=total_participants, group_colour_sets={},
+        )
+
+    quote_section: dict[int, str] = {}
+    for c in clusters:
+        for pk in cluster_members.get(c.id, []):
+            quote_section[pk] = c.screen_label
+    quote_theme: dict[int, str] = {}
+    for t in themes:
+        for pk in theme_members.get(t.id, []):
+            quote_theme[pk] = t.theme_label
+
+    accepted = (
+        db.query(QuoteTag)
+        .filter(
+            QuoteTag.tag_definition_id.in_(tag_def_to_group.keys()),
+            QuoteTag.quote_id.in_(visible_pks),
+        )
+        .all()
+    )
+    quote_groups: dict[int, dict[str, list[str]]] = {}
+    for qt in accepted:
+        gname = tag_def_to_group.get(qt.tag_definition_id)
+        tname = tag_def_to_name.get(qt.tag_definition_id, "")
+        if gname is None:
+            continue
+        names = quote_groups.setdefault(qt.quote_id, {}).setdefault(gname, [])
+        if tname and tname not in names:
+            names.append(tname)
+    if not quote_groups:
+        return SignalsResult(
+            signals=[], total_participants=total_participants, group_colour_sets={},
+        )
+
+    section_contributions: list[QuoteContribution] = []
+    theme_contributions: list[QuoteContribution] = []
+    section_lookup: dict[str, list[QuoteRecord]] = {}
+    theme_lookup: dict[str, list[QuoteRecord]] = {}
+    for pk, per_group in quote_groups.items():
+        q = quote_by_pk.get(pk)
+        if q is None:
+            continue
+        section_label = quote_section.get(pk)
+        theme_label = quote_theme.get(pk)
+        for gname, tag_names in per_group.items():
+            record = QuoteRecord(
+                text=edited_text.get(pk, q.text),
+                participant_id=q.participant_id,
+                session_id=q.session_id,
+                start_seconds=q.start_timecode,
+                intensity=q.intensity,
+                tag_names=tag_names,
+                segment_index=q.segment_index,
+            )
+            if section_label:
+                section_contributions.append(QuoteContribution(
+                    row_label=section_label,
+                    col_label=gname,
+                    participant_id=q.participant_id,
+                    intensity=q.intensity,
+                    weight=1.0,
+                ))
+                section_lookup.setdefault(f"{section_label}|{gname}", []).append(record)
+            if theme_label:
+                theme_contributions.append(QuoteContribution(
+                    row_label=theme_label,
+                    col_label=gname,
+                    participant_id=q.participant_id,
+                    intensity=q.intensity,
+                    weight=1.0,
+                ))
+                theme_lookup.setdefault(f"{theme_label}|{gname}", []).append(record)
+
+    section_matrix = build_matrix_from_contributions(
+        section_contributions, [c.screen_label for c in clusters], col_labels,
+    )
+    theme_matrix = build_matrix_from_contributions(
+        theme_contributions, [t.theme_label for t in themes], col_labels,
+    )
+    signals, _, _ = detect_signals_generic(
+        section_matrix,
+        theme_matrix,
+        col_labels,
+        total_participants,
+        section_lookup,
+        theme_lookup,
+        top_n=top_n,
+    )
+    return SignalsResult(
+        signals=signals,
+        total_participants=total_participants,
+        group_colour_sets=colour_sets,
+    )

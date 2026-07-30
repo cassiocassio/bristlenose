@@ -298,10 +298,43 @@ def create_app(
         else:
             logger.warning("report mount skipped — %s does not exist", output_dir)
 
+    # MCP endpoint (§9a spike) — mounted whenever the mcp extra is installed
+    # (installation is the opt-in; the endpoint is inert without the token).
+    from bristlenose.server.mcp_server import mount_mcp_server
+
+    _mcp_server = mount_mcp_server(app, session_factory)
+    app.state.mcp_mounted = _mcp_server is not None
+    if _mcp_server is not None:
+        _compose_mcp_lifespan(app, _mcp_server)
+
     if hmr:
         _print_dev_urls()
 
     return app
+
+
+def _compose_mcp_lifespan(app: FastAPI, mcp_server: object) -> None:
+    """Wrap the router lifespan with the MCP session manager.
+
+    MUST be the LAST lifespan touch in ``create_app``: ``_install_event_watcher``
+    ASSIGNS ``app.router.lifespan_context`` (it does not compose), so anything
+    wrapped earlier gets silently overwritten — every ``/mcp`` request then
+    500s ("Task group is not initialized") in production while a test app
+    built without ``project_dir`` (no watcher) stays green. Starlette does
+    not run mounted sub-app lifespans, so the session manager must ride the
+    parent's.
+    """
+    from contextlib import asynccontextmanager
+
+    previous = app.router.lifespan_context
+
+    @asynccontextmanager
+    async def _with_mcp(app_: FastAPI):
+        async with previous(app_):
+            async with mcp_server.session_manager.run():  # type: ignore[attr-defined]
+                yield
+
+    app.router.lifespan_context = _with_mcp
 
 
 def _register_static_routes(app: FastAPI, static_dir: Path) -> None:

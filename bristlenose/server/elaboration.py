@@ -176,6 +176,36 @@ def _load_cached(
     return results
 
 
+def load_cached_elaborations(
+    db: SASession,
+    project_id: int,
+    signals: list[object],
+) -> dict[str, ElaborationResult]:
+    """Read-only cache lookup for computed signals — no LLM call, no writes.
+
+    Accepts ``analysis.models.Signal`` objects (``Signal.sentiment`` carries
+    the column label — group name or sentiment). Returns
+    ``{signal_key: ElaborationResult}`` for cache hits whose content hash
+    still matches. A derivation mismatch against the generate path degrades
+    to a cache miss, never a wrong hit. Consumers that must never spend
+    tokens (the MCP server's ``get_signals``) call this instead of
+    ``generate_elaborations``.
+    """
+    pairs: list[tuple[str, str]] = []
+    for s in signals:
+        quote_texts = [q.text for q in s.quotes]  # type: ignore[attr-defined]
+        tag_names = sorted({
+            t
+            for q in s.quotes  # type: ignore[attr-defined]
+            for t in (q.tag_names or [])
+        })
+        pairs.append((
+            compute_signal_key(s.source_type, s.location, s.sentiment),  # type: ignore[attr-defined]
+            compute_content_hash(quote_texts, tag_names),
+        ))
+    return _load_cached(db, project_id, pairs)
+
+
 def _save_cached(
     db: SASession,
     project_id: int,

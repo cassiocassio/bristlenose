@@ -66,6 +66,7 @@ dev = [
     "ruff>=0.8",
     "mypy>=1.13",
     "httpx>=0.27",
+    "mcp>=2.0",
     "mlx>=0.16; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "mlx-whisper>=0.4; sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]
@@ -83,6 +84,17 @@ serve = [
     "sqladmin>=0.20",
     "openpyxl>=3.1",
     "alembic>=1.13",
+]
+
+# MCP server (§9a spike) — mounts /mcp/ on `bristlenose serve` so local
+# agents (Claude Code, Claude Desktop, ChatGPT desktop, Codex) can read a
+# project. Deliberately NOT part of the serve extra: the desktop sidecar
+# ships serve, and mcp's closure carries a native wheel (rpds-py) that
+# would enter the signed bundle before the desktop has any MCP surface.
+# Floor 2.0 (MCPServer API; spec-2026-07-28 sessionless direction) —
+# fallback to 1.29 + rename if 2.0.0 shows a transport showstopper.
+mcp = [
+    "mcp>=2.0",
 ]
 
 # Release-time tooling. Run on the release machine when cutting a

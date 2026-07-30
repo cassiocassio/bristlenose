@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP spike — the whole UX surface</title>
+<style>
+  :root {
+    --page-bg: #fafafa; --ink: #1d1d1f; --muted: #6e6e73; --rule: #e3e3e6;
+    --frame-bg: #fff; --frame-chrome: #f0f0f2; --frame-border: #d9d9de;
+    --commentary-bg: #f3f1ea; --commentary-rule: #c9c2ae;
+    --term-bg: #1e1e20; --term-ink: #d6d6d9; --term-dim: #8b8b91;
+    --term-cyan: #56c8d8; --term-green: #7ec699; --term-yellow: #e5c07b; --term-red: #e06c75;
+    --apple-blue: #007AFF; --mac-bg: #f5f5f7; --mac-sheet: #ececf0;
+    --badge-live: #34c759;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page-bg); color: var(--ink);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 24px 120px; }
+  h1 { font-size: 26px; font-weight: 700; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  h2 { font-size: 20px; margin: 56px 0 4px; padding-top: 24px; border-top: 2px solid var(--ink); }
+  h2 .tag { font: 600 11px/1 ui-monospace, Menlo, monospace; letter-spacing: .08em;
+    vertical-align: 3px; padding: 3px 7px; border-radius: 4px; margin-left: 10px; }
+  .ships { background: #dcefe2; color: #1e6b3a; }
+  .proposal { background: #fdeccc; color: #8a5a00; }
+  h3 { font-size: 16px; margin: 36px 0 10px; }
+  .key { display: flex; gap: 18px; font-size: 13px; color: var(--muted);
+    border: 1px solid var(--rule); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; }
+  .key b { color: var(--ink); font-weight: 600; }
+
+  /* Artefact frames */
+  .frame { border: 1px solid var(--frame-border); border-radius: 10px; overflow: hidden;
+    background: var(--frame-bg); box-shadow: 0 1px 3px rgba(0,0,0,.06); margin: 14px 0 0; }
+  .chrome { display: flex; align-items: center; gap: 6px; padding: 8px 12px;
+    background: var(--frame-chrome); border-bottom: 1px solid var(--frame-border);
+    font: 500 11.5px/1 ui-monospace, Menlo, monospace; color: var(--muted); }
+  .dot3 { display: inline-flex; gap: 5px; margin-right: 6px; }
+  .dot3 i { width: 10px; height: 10px; border-radius: 50%; background: #d4d4d8; }
+
+  /* Terminal */
+  .term { background: var(--term-bg); color: var(--term-ink);
+    font: 12.5px/1.6 ui-monospace, Menlo, "SF Mono", monospace;
+    padding: 14px 16px; overflow-x: auto; white-space: pre; }
+  .term .dim { color: var(--term-dim); } .term .cyan { color: var(--term-cyan); font-weight: 600; }
+  .term .green { color: var(--term-green); } .term .yellow { color: var(--term-yellow); }
+  .term .red { color: var(--term-red); }
+  .term .user { color: #fff; font-weight: 600; }
+  .term .tool { color: var(--term-yellow); }
+
+  /* Commentary */
+  .commentary { background: var(--commentary-bg); border-left: 4px solid var(--commentary-rule);
+    border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 10px 0 0; font-size: 13.5px; }
+  .commentary::before { content: "COMMENTARY"; display: block;
+    font: 600 10px/1 ui-monospace, Menlo, monospace; letter-spacing: .12em;
+    color: #8a7f5c; margin-bottom: 6px; }
+  .commentary ul { margin: 4px 0 0 18px; padding: 0; } .commentary li { margin: 3px 0; }
+
+  /* Exceptions grid */
+  .exgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(370px, 1fr));
+    gap: 16px; margin-top: 14px; }
+  .ex { border: 1px solid var(--frame-border); border-radius: 10px; overflow: hidden; background: var(--frame-bg); }
+  .ex header { padding: 8px 12px; font-size: 13px; font-weight: 600;
+    background: var(--frame-chrome); border-bottom: 1px solid var(--frame-border); }
+  .ex .term { font-size: 11.5px; padding: 10px 12px; }
+  .ex p { font-size: 12.5px; color: var(--muted); margin: 0; padding: 9px 12px 11px; }
+
+  /* macOS mocks */
+  .macwrap { background: linear-gradient(160deg, #dfe3ea, #cfd4dd); padding: 34px;
+    display: flex; justify-content: center; }
+  .ctxmenu { background: rgba(246,246,248,.96); border-radius: 8px; padding: 5px;
+    width: 240px; box-shadow: 0 10px 34px rgba(0,0,0,.28), 0 0 0 .5px rgba(0,0,0,.12);
+    font-size: 13px; }
+  .ctxmenu .mi { padding: 4px 10px; border-radius: 5px; }
+  .ctxmenu .mi.hi { background: var(--apple-blue); color: #fff; }
+  .ctxmenu .sep { height: 1px; background: rgba(0,0,0,.1); margin: 5px 10px; }
+  .sheet { width: 560px; background: var(--mac-sheet); border-radius: 12px;
+    box-shadow: 0 18px 50px rgba(0,0,0,.32), 0 0 0 .5px rgba(0,0,0,.14);
+    font-size: 13px; padding: 20px 20px 16px; }
+  .sheet h4 { margin: 0 0 2px; font-size: 15px; }
+  .sheet .scope { color: var(--muted); margin: 0 0 12px; font-size: 13px; }
+  .sheet .plain { color: var(--muted); font-size: 11px; line-height: 1.45;
+    margin: 0 2px 12px; }
+  .chkrow { display: flex; gap: 8px; align-items: flex-start; padding: 0 2px 12px; }
+  .chk { width: 14px; height: 14px; border-radius: 3.5px; background: var(--apple-blue);
+    flex: none; margin-top: 1px; color: #fff; font-size: 11px; line-height: 14px;
+    text-align: center; font-weight: 700; }
+  .chkrow .cl b { font-weight: 600; font-size: 13px; display: block; }
+  .chkrow .cl span { color: var(--muted); font-size: 11px; }
+  .copybtn { font-size: 11px; padding: 2px 8px; border-radius: 6px;
+    border: 1px solid #c9c9cf; background: #fff; color: #3a3a3d; }
+  .blockfoot { display: flex; justify-content: flex-end; margin-top: 6px; }
+  .rowline { display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 2px; border-bottom: 1px solid #dcdce1; }
+  .rowline:last-of-type { border-bottom: 0; }
+  .rowline .l b { display: block; font-weight: 600; }
+  .rowline .l span { color: var(--muted); font-size: 11.5px; }
+  .macbtn { font-size: 12.5px; padding: 4px 12px; border-radius: 6px;
+    border: 1px solid #c9c9cf; background: #fff; }
+  .macbtn.primary { background: var(--apple-blue); border-color: var(--apple-blue);
+    color: #fff; font-weight: 600; }
+  .mactoggle { width: 40px; height: 24px; border-radius: 12px; background: #d1d1d6; position: relative; flex: none; }
+  .mactoggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
+    border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  .mactoggle.on { background: var(--apple-blue); }
+  .mactoggle.on::after { left: 18px; }
+  .tabs { display: flex; gap: 2px; background: #dcdce2; border-radius: 8px; padding: 2px; margin: 12px 0 10px; }
+  .tab { flex: 1; text-align: center; padding: 5px 4px; border-radius: 6px; font-size: 12px;
+    color: #3a3a3d; position: relative; white-space: nowrap; }
+  .tab.sel { background: #fff; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+  .tab.grey { color: #a8a8ae; }
+  .tab .det { display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--badge-live); margin-right: 5px; vertical-align: 1px; }
+  .tabpanel { background: #fff; border: 1px solid #d7d7dc; border-radius: 8px; padding: 10px 12px; }
+  .tabpanel .plabel { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .payload { font: 11px/1.5 ui-monospace, Menlo, monospace; background: #f6f6f8;
+    border: 1px solid #e3e3e8; border-radius: 6px; padding: 8px 10px; white-space: pre;
+    overflow-x: auto; color: #2d2d30; user-select: text; }
+  .panelfoot { display: flex; justify-content: flex-end; margin-top: 8px; }
+  .otherline { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted);
+    padding: 8px 2px 0; }
+  .otherline .copybtn { margin-left: auto; }
+  .starterblock { background: #fff; border: 1px solid #d7d7dc; border-radius: 7px;
+    padding: 9px 11px; font-size: 13px; color: #3a3a3d; line-height: 1.7; user-select: text; }
+  .sheetfoot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  .sbpanel { width: 300px; background: rgba(246,246,248,.97); border-radius: 10px;
+    padding: 8px 6px; box-shadow: 0 8px 28px rgba(0,0,0,.22), 0 0 0 .5px rgba(0,0,0,.1); }
+  .sbhead { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; color: #8e8e93;
+    padding: 0 10px 4px; }
+  .sbitem { display: flex; align-items: center; gap: 7px; font-size: 13px;
+    padding: 5px 10px; border-radius: 6px; color: #1d1d1f; }
+  .sbitem .picon { color: #8e8e93; font-size: 12px; width: 16px; text-align: center; flex: none; }
+  .sbitem svg { margin-left: auto; flex: none; }
+  .tipdemo { font-size: 11px; color: var(--muted); background: #f6f6f2;
+    border: 1px solid #ddd; border-radius: 5px; padding: 3px 10px; }
+  .notlist { border: 1px dashed #c9c2ae; border-radius: 8px; padding: 12px 16px;
+    font-size: 13.5px; margin-top: 14px; background: #fbfaf6; }
+  .notlist b { font-weight: 650; }
+  .qs { margin: 6px 0 0 18px; padding: 0; } .qs li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>MCP spike — the whole UX surface</h1>
+  <p class="sub"><b>The frame:</b> researchers get two offerings — <b>1.</b> the report, one link in a
+  browser, two modes: <i>read it</i> (shipped) and <i>ask it</i> (the Chat lens, folding into the report
+  UX — sibling workstream); <b>2.</b> stay in your favourite agent, all local (Claude Desktop, Claude
+  Code, Codex). <b>This page is offering 2</b> — Part 1 as the §9a spike ships it (CLI only, by the
+  dedicated-extra decision), Part 2 the proposed bn.app exposure (later cycle, gated on the stable
+  per-project token).</p>
+
+  <div class="key"><span><b>Framed panes</b> = the artefact (what the researcher sees).</span>
+  <span><b>Tinted blocks</b> = commentary (why, and what's load-bearing).</span></div>
+
+  <h2>Part 1 — the CLI spike <span class="tag ships">SHIPS IN SPIKE</span></h2>
+
+  <h3>Scene 1 · Start serve — the connect moment</h3>
+  <div class="frame"><div class="chrome"><span class="dot3"><i></i><i></i><i></i></span>Terminal — bristlenose serve</div>
+  <div class="term"><span class="dim">$</span> bristlenose serve ~/Research/acme-onboarding
+
+  Report: <span class="cyan">http://127.0.0.1:8150/report/</span>
+  MCP:    <span class="cyan">http://127.0.0.1:8150/mcp/</span>
+
+  <span class="dim">Connect an agent — sends the quotes in your report, with speaker codes
+  in place of names. Quote text is verbatim.</span>
+
+    claude mcp add --transport http bristlenose http://127.0.0.1:8150/mcp/ \
+      --header "Authorization: Bearer kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM6xA3nQ"
+
+<span class="dim">[bristlenose] auth-token: kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM6xA3nQ
+INFO:     Uvicorn running on http://127.0.0.1:8150 (Press CTRL+C to quit)</span></div></div>
+  <div class="commentary"><ul>
+    <li>Option B as decided: both halves of the hand-paste on one screen; triple-click the command, done.</li>
+    <li>Trailing slash on <code>/mcp/</code> is load-bearing — the bare path 307s and the paste fails.</li>
+    <li>The dim disclosure line is §6a's "one plain line" — the whole consent surface, no ceremony.</li>
+    <li>Printed only when the mount actually happened; plain <code>print()</code> (Rich eats <code>[bristlenose]</code>).</li>
+    <li><b>Every-start posture is spike-only.</b> The mount is gated by installing <code>bristlenose[mcp]</code> (installation = the opt-in; no <code>--mcp</code> run flag — an unmounted-vs-mounted endpoint with no token handed out behaves identically). At beta the block likely quiets to the single <code>MCP:</code> line, with the full snippet behind the future <code>bristlenose mcp</code> command (§6) — where a <code>--client claude|desktop</code> dialect picker belongs.</li>
+  </ul></div>
+
+  <h3>Scene 2 · Connected</h3>
+  <div class="frame"><div class="chrome"><span class="dot3"><i></i><i></i><i></i></span>Terminal — claude</div>
+  <div class="term"><span class="dim">$</span> claude mcp add --transport http bristlenose http://127.0.0.1:8150/mcp/ \
+    --header "Authorization: Bearer kJ8f…3nQ"
+<span class="green">Added HTTP MCP server bristlenose</span>
+
+<span class="dim">$</span> claude
+<span class="dim">&gt;</span> <span class="user">/mcp</span>
+  bristlenose  <span class="green">✔ connected</span>  <span class="dim">· 4 tools · instructions loaded</span></div></div>
+  <div class="commentary"><ul>
+    <li>Only two primitives exist — the URL and the Authorization header; every client is a dialect of writing them down. The spike prints one dialect (Claude Code) because both primitives are already on screen for everything else.</li>
+    <li>Claude Desktop is JSON by hand, and the destination pane is confirmed (30 Jul screenshot): <b>Settings → Developer → Local MCP servers → Edit Config</b>, with <b>View Logs</b> right there for diagnosing a failed connect. The narrowed acceptance-verify item: does that config take a <code>url</code>+<code>headers</code> entry directly, or does our snippet become the <code>mcp-remote</code> shim spelled as command+args? Record which in the §9a results.</li>
+    <li>The token rotates on every serve restart — accepted papercut, see exception E1.</li>
+  </ul></div>
+
+  <h3>Scene 3 · Orientation — the cheap first call</h3>
+  <div class="frame"><div class="chrome"><span class="dot3"><i></i><i></i><i></i></span>Claude Code — conversation</div>
+  <div class="term"><span class="dim">&gt;</span> <span class="user">give me an overview of this study</span>
+
+<span class="tool">⏺ bristlenose · get_project_overview(project_id=1)</span>
+  <span class="dim">⎿ 2.1 KB · 240ms</span>
+
+⏺ <b>Acme Onboarding</b> — 6 sessions, 5 participants (p1–p5), analysed 2 days ago
+  (last run completed). 214 quotes across <b>7 sections</b> (Dashboard, Search,
+  Onboarding…) and <b>3 themes</b>; 18 starred, 9 hidden. Codebook: 2 frameworks
+  applied (norman, uxr — both enabled) plus 11 of your own codes. Strongest
+  signal: <b>frustration concentrated in Onboarding</b> (4 of 5 participants,
+  n_eff 3.8). Want the signals, or a look at your codebook?</div></div>
+  <div class="commentary"><ul>
+    <li>Counts and structure only — no quote bodies. The overview is the "cheap orienting call" (§4) and the discovery surface for framework ids.</li>
+    <li>The last-run line is the honesty block (review finding 26): a failed run would be flagged right here.</li>
+  </ul></div>
+
+  <h3>Scene 4 · Reasoning in the researcher's taxonomy</h3>
+  <div class="frame"><div class="chrome"><span class="dot3"><i></i><i></i><i></i></span>Claude Code — conversation</div>
+  <div class="term"><span class="dim">&gt;</span> <span class="user">which of my codes are doing no work?</span>
+
+<span class="tool">⏺ bristlenose · get_framework(project_id=1, framework_id="codebook")</span>
+  <span class="dim">⎿ 6.4 KB · 310ms</span>
+<span class="tool">⏺ bristlenose · get_signals(project_id=1, lens="tags")</span>
+  <span class="dim">⎿ 8.9 KB · 380ms</span>
+
+⏺ Three of your eleven codes are pulling no weight:
+  · <b>trust-wobble</b> — 1 quote, and its boundary ("apply when confidence in
+    the system dips mid-task, not general scepticism") overlaps your busier
+    <b>hesitation</b> code (14 quotes)
+  · <b>pricing-mention</b> — 0 quotes since you defined it
+  · <b>workaround</b> — 2 quotes, both also tagged <b>coping-strategy</b>
+  Worth asking whether trust-wobble and hesitation are one concept — that's
+  your call, not mine; the boundaries you wrote distinguish intent, and only
+  you know if the distinction is earning its keep.</div></div>
+  <div class="commentary"><ul>
+    <li><code>"codebook"</code> reserved id at work: live codes, <em>TagPrompt</em> boundaries, usage counts — the assistant reasons inside the researcher's taxonomy instead of inventing one.</li>
+    <li>Report-view semantics everywhere: hidden quotes and unreviewed AutoCode proposals don't exist here; edited text wins.</li>
+    <li>Note the posture: merge is <em>suggested as a question</em> — merge-tags stays a human action (§3b).</li>
+  </ul></div>
+
+  <h3>Scene 5 · The baits — do the invariants land?</h3>
+  <div class="frame"><div class="chrome"><span class="dot3"><i></i><i></i><i></i></span>Claude Code — conversation (acceptance round 1: instructions only)</div>
+  <div class="term"><span class="dim">&gt;</span> <span class="user">how many quotes are there in total across all the sections?</span>
+
+⏺ 214 — that's the corpus total from the overview. I'm not summing the
+  per-section counts to get it: every quote lives in exactly one section, but
+  themes cross-cut them, so adding section and theme counts together would
+  double-count. The honest number is the corpus total.
+
+<span class="dim">&gt;</span> <span class="user">is p1 here the same person as p1 in my other study?</span>
+
+⏺ I can't tell you, and I shouldn't try. Speaker codes are per-study —
+  p1 here has no relationship to p1 anywhere else, and this server holds one
+  project. If they genuinely are the same panel across waves, that's a fact
+  you hold and declare, not something to infer from a matching code.</div></div>
+  <div class="commentary"><ul>
+    <li>This is spike question 2 <em>being measured</em>: round 1 runs with the invariants in <code>instructions</code> only (no inline notes in payloads), so compliance is attributable.</li>
+    <li>If the model ignores them, the doc's predicted fallback kicks in: invariants move into tool responses, noted in §9a results.</li>
+  </ul></div>
+
+  <h3>Scene 6 · Worst case — the context budget (Q3)</h3>
+  <div class="frame"><div class="chrome"><span class="dot3"><i></i><i></i><i></i></span>Claude Code — conversation</div>
+  <div class="term"><span class="dim">&gt;</span> <span class="user">list every quote that mentions onboarding, verbatim</span>
+
+<span class="tool">⏺ bristlenose · search_quotes(project_id=1, query="onboarding", limit=50)</span>
+  <span class="dim">⎿ 78.4 KB · 410ms · 50 of 63 matched, has_more=true</span>
+
+⏺ 63 quotes mention onboarding; here are the first 50, verbatim, with ids —
+  [q-p2-841] "I genuinely could not find where to start…" (p2, Onboarding,
+  frustration) … <span class="dim">[49 more]</span> Shall I fetch the remaining 13?</div></div>
+  <div class="commentary"><ul>
+    <li>Perf measured this ceiling on the real 484-quote corpus: 45–86 KB ≈ 12–22k tokens at limit=50. Text is never truncated; the <em>count</em> is capped and pagination is explicit.</li>
+    <li>Every call emits <code>mcp_tool | tool=… | elapsed_ms=… | result_bytes=…</code> — Q3 gets answered from the log, not vibes.</li>
+  </ul></div>
+
+  <h3>Exceptions — every way it goes wrong, and what the researcher sees</h3>
+  <div class="exgrid">
+    <div class="ex"><header>E1 · Serve restarted → token rotated</header>
+      <div class="term"><span class="dim">&gt;</span> <span class="user">/mcp</span>
+  bristlenose  <span class="red">✘ 401 unauthorized</span></div>
+      <p>By design (per-instance token). Fix is the printed command again: re-run
+      <code>claude mcp add</code> from the fresh serve output. Documented, not engineered around.</p></div>
+    <div class="ex"><header>E2 · mcp extra not installed</header>
+      <div class="term">  Report: <span class="cyan">http://127.0.0.1:8150/report/</span>
+  <span class="dim">MCP:    unavailable — pip install 'bristlenose[mcp]'</span></div>
+      <p>The guarded import catches ImportError only; the stdout line tells the truth instead of
+      advertising a dead endpoint. Auth prefix stays on regardless (fail closed).</p></div>
+    <div class="ex"><header>E3 · Last run failed → stale data flagged</header>
+      <div class="term">⏺ Heads up: the 28 Jul run <span class="red">failed</span>; what I can see is the
+  last completed analysis (12 Jul, 5 sessions). The 6th
+  session isn't in these numbers.</div>
+      <p>The overview carries <code>last_run</code> outcome + timestamp — the same honesty the SPA's
+      status page enforces, threaded into the tool payload.</p></div>
+    <div class="ex"><header>E4 · Brand-new project, nothing analysed</header>
+      <div class="term">⏺ This project has no analysed data yet — run the
+  pipeline first, then ask me again.</div>
+      <p>Zero Project rows → the honest message, not zeros pretending to be an analysis.
+      Unknown project id (rows exist) is a different error that lists valid ids.</p></div>
+    <div class="ex"><header>E5 · Typo'd filter → self-heal</header>
+      <div class="term"><span class="tool">⏺ search_quotes(sentiment="frustrated")</span>
+  <span class="red">⎿ error: unknown sentiment "frustrated" — valid:
+     frustration, confusion, doubt, satisfaction,
+     confidence, delight, surprise</span>
+<span class="tool">⏺ search_quotes(sentiment="frustration")</span>
+  <span class="dim">⎿ 41 matched</span></div>
+      <p>Closed vocabularies error loudly and list the valid values — the error message teaches
+      the model, which retries correctly. An empty result never masquerades as "no data".</p></div>
+    <div class="ex"><header>E7 · Clicked the MCP link in a browser</header>
+      <div style="background:#fff; padding:14px 16px; font-size:12.5px; border-bottom:1px solid var(--frame-border); line-height:1.55">
+        <b>This is Bristlenose's MCP endpoint.</b><br>
+        It speaks to AI agents (Claude Code, Claude Desktop), not to browsers.<br>
+        Your report is at <span style="color:var(--apple-blue)">127.0.0.1:8150/report/</span> ·
+        To connect an agent, copy the command from the terminal running
+        <code>bristlenose serve</code>.</div>
+      <p>Terminals auto-linkify the MCP URL and people click without reading. A browser-shaped GET
+      (Accept: text/html) gets this unauthenticated, zero-secret page instead of raw
+      <code>{"detail":"Unauthorized"}</code> — the status page's honesty, applied to /mcp/.
+      Protocol traffic (POST + bearer) is untouched.</p></div>
+    <div class="ex"><header>E6 · The token in your repo</header>
+      <div class="term"><span class="dim">$</span> claude mcp add <span class="yellow">--scope project</span> …
+<span class="yellow">⚠ writes .mcp.json (including the bearer token)
+  into the project directory — don't commit it</span></div>
+      <p>Documented in the acceptance notes: project-scoped client config puts the token in a
+      committable file. Default scope keeps it in the user's own config.</p></div>
+  </div>
+
+  <div class="notlist"><b>Deliberately absent from the spike:</b> any connect UI, stable tokens,
+  desktop/SPA exposure, folder scope, writes, transcripts (<code>get_transcript</code> is omitted —
+  the single biggest PII-volume reduction, as a decision not an oversight).</div>
+
+  <h2>Part 2 — proposed bn.app surfaces <span class="tag proposal">PROPOSAL · LATER CYCLE</span></h2>
+  <p class="sub" style="margin-top:8px">Per design-mcp-server.md §6a. <b>Hard prerequisite: the stable
+  per-project token</b> — with the spike's rotating token, any UI here would break weekly by design.
+  Everything below is sandbox-legal (clipboard + save panel; we never write another app's config).</p>
+
+  <h3>Mock A · The way in — right-click, not chrome</h3>
+  <div class="frame"><div class="macwrap"><div class="ctxmenu">
+    <div class="mi">Show in Finder</div>
+    <div class="mi hi">Connect Agent…</div>
+    <div class="sep"></div>
+    <div class="mi">Choose Icon</div>
+    <div class="mi">Move to <span style="float:right">▸</span></div>
+    <div class="sep"></div>
+    <div class="mi">Rename…</div>
+    <div class="mi">Remove from Sidebar</div>
+  </div></div></div>
+  <div class="commentary"><ul>
+    <li>§6a's approved shape: a context-menu action on the project row. No toolbar icon in v1 — the action isn't "here", it's making Bristlenose connectable.</li>
+    <li><b>Redrawn against the shipped menu</b> (Gruber): the real project menu has no "Open", does have Choose Icon / Move to ▸ / Rename…, plus up to five conditional groups above. Connect Agent… joins <b>Show in Finder's group</b> — both are "send this project somewhere outside Bristlenose" — costing zero new separator groups (HIG: ~three groups max).</li>
+    <li><b>Menu-bar twin required</b> (HIG: every context item lives in the menu bar too): <b>Project ▸ Connect Agent…</b> alongside the existing rename/archive/delete mirrors in MenuCommands.swift.</li>
+  </ul></div>
+
+  <h3>Mock B · The connect sheet — four things, nothing else</h3>
+  <div class="frame"><div class="macwrap"><div class="sheet">
+    <h4>Connect an agent to “Acme Onboarding”</h4>
+    <p class="scope">6 sessions · 214 quotes</p>
+    <div class="plain">Sends the quotes in your report to the agent you connect, with speaker
+    codes in place of names. Quote text is verbatim.</div>
+    <div class="rowline"><div class="l"><b>Anonymise</b>
+      <span>Remove participant names</span></div><div class="mactoggle on"></div></div>
+    <div class="tabs">
+      <div class="tab sel">Claude Desktop</div>
+      <div class="tab">Claude Code</div>
+      <div class="tab">ChatGPT &amp; Codex</div>
+      <div class="tab grey">Cursor</div>
+    </div>
+    <div class="tabpanel">
+      <div class="plabel">In Claude Desktop: <b>Settings → Developer → Edit Config</b> or edit
+      <span style="color:var(--apple-blue)" title="Click reveals in Finder">~/Library/Application Support/Claude/claude_desktop_config.json</span>
+      adding under <b>mcpServers</b>:</div>
+      <div class="payload">"bristlenose": {
+  "url": "http://127.0.0.1:8150/mcp/",
+  "headers": {
+    "Authorization": "Bearer kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM6xA3nQ"
+  }
+}</div>
+      <div class="panelfoot"><button class="macbtn primary">Copy</button></div>
+    </div>
+    <div class="otherline">Any other agent: the URL + Authorization header above
+      <button class="copybtn">⧉ Copy</button></div>
+    <div style="margin:12px 0 6px; font-weight:600">Try asking</div>
+    <div class="starterblock">Which codes are doing no work in this study?<br>
+      Draft a top-line from the starred quotes only.<br>
+      Where do participants disagree?</div>
+    <div class="blockfoot"><button class="copybtn">⧉ Copy</button></div>
+    <div class="sheetfoot"><button class="macbtn">Close</button></div>
+  </div></div></div>
+  <div class="commentary"><ul>
+    <li>Still §6a's four things, in their post-review shape: counts line · one <b>live</b> disclosure sentence (the switch flips it — off reads "…with participant names included") · the shipped Anonymise row · starter prompts. Footer is a single <b>Close</b>; the panel's <b>Copy is the sheet's one prominent button</b> (HIG: one primary; Return fires Copy — Cancel/Done was theatre-or-data-bug and is gone).</li>
+    <li><b>Noun swept to "agent"</b> everywhere (menu, title, body, CLI, fallback line) — decided; "Connect to Claude…" stays rejected as vendor-locked.</li>
+    <li>Tabs build as a real <b>NSTabView</b> (the tabs decision survives; the right class brings native metrics, Ctrl-Tab, accessibility). First detected pre-selected; three honesty states — detected / unknown (Claude Code: CLI presence unknowable from the sandbox) / not-found (<b>greyed but never disabled</b>). Detection renders as <b>words</b>, not a dot — the green dot died for meaning "installed" here and "connected" in Mock C with one colour.</li>
+    <li><b>Anonymise = the shipped Export-popover row, verbatim</b> ("Anonymise" / "Remove participant names" / switch — Martin's screenshot): one control, one word family across Export, clips, Miro, and MCP. <b>On by default here</b> (exports default off — different egress class). Quietly stricter than export: moderator names aren't sent either — the grounding layer never reads Person rows.</li>
+    <li><b>Copy = the shipped <code>.bordered .small doc.on.doc</code> icon-button pattern</b> (documented at LLMSettingsView.swift:897; ⧉ stands in here). One treatment, all labelled Copy, only the panel's prominent. <b>Full token, shown and selectable</b> — decided; never "looks copyable, isn't". The config path click-reveals in Finder (<code>NSWorkspace.activateFileViewerSelecting</code>, sandbox-legal).</li>
+    <li><b>Sheet stays a sheet</b> — decided: nothing in the parent app is blocked behind it that this flow needs. 560pt so the payload never scrolls sideways; type on the macOS ladder (15/13/11); headroom check at <code>de</code>/<code>ja</code> before first build.</li>
+    <li><b>The ChatGPT &amp; Codex tab is one tab, not three</b> (verified 30 Jul): desktop app, Codex CLI, and IDE extension share <code>~/.codex/config.toml</code>, so one TOML stanza covers all — <code>url</code> + <code>http_headers = { "Authorization" = "Bearer …" }</code> (the static-header form; <code>codex mcp add</code> has no header flag and env vars don't reach a Finder-launched app). Detection: ChatGPT.app bundle via LaunchServices, same honesty tiering.</li>
+    <li>Starter prompts are one selectable, copyable block — cut and paste a line, or just absorb the object model by reading. Copy-to-clipboard remains the sandbox floor; the primitives are never hidden behind a selection (the "Any other agent" line lives outside the tabs).</li>
+    <li><b>Desktop's end-state is the Extensions pane, not JSON</b> (Martin's steer, 30 Jul, screenshots): ship <code>Bristlenose.mcpb</code> — icon + thin stdio→HTTP proxy that reads a serve-written <b>handshake file</b> (fresh token + port each start), dissolving token rotation for Desktop entirely. The sandbox-legal big button: bn.app writes its bundled .mcpb to a user location and <code>NSWorkspace.open</code>s it — Desktop runs its own install flow. This tab's Edit-Config copy is the spike-era truth and the forever-fallback; when .mcpb ships, the Desktop tab's primary becomes <b>Install Extension</b>.</li>
+  </ul></div>
+
+  <h3>Mock C · Live state, not configuration state</h3>
+  <div class="frame"><div class="macwrap"><div style="display:flex;flex-direction:column;gap:10px;align-items:center">
+    <div class="sbpanel">
+      <div class="sbhead">PROJECTS</div>
+      <div class="sbitem"><span class="picon">▤</span>Acme Onboarding
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2.2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></div>
+      <div class="sbitem"><span class="picon">▦</span>Pharmacy Diary Study</div>
+      <div class="sbitem"><span class="picon">▧</span>Q2 Checkout Benchmarks</div>
+    </div>
+    <div class="tipdemo">tooltip / VoiceOver: “Agent connected — Claude Code, active 2 minutes ago”</div>
+  </div></div></div>
+  <div class="commentary"><ul>
+    <li><b>Where this lives:</b> the project row in the app sidebar (<code>ProjectSidebarOutline</code>) — the leading slot stays the user-chosen project icon (identity), the badge rides the <b>trailing edge</b> (state): Finder's eject, Mail's activity. Nowhere else in v1 — not the SPA, not the report (that's the web-exposure later cycle). Plumbing precedent exists: the sidebar already polls serve per-project, and serve is what sees the <code>initialize</code> handshake.</li>
+    <li><b>A tinted symbol, not a dot, and not green</b> (post-Gruber): green is <code>MessageKind.success</code>, the taxonomy forbids minting glyphs/colours, and colour-alone state fails accessibility — the <code>link</code> symbol in accent blue carries the state by shape. Appears/disappears instantly (reduce-motion safe), debounced.</li>
+    <li>The badge means <em>connected now</em> — defined honestly as “handshook within the last ~60s”, shown as “active N min ago” in the tooltip — never “configured”, which is stale the moment the token rotates. Absence is information; clean rows stay clean (Schema E).</li>
+    <li>The row never names the client; the tooltip, <code>accessibilityLabel</code>, and the reopened sheet do. The trailing affordance's context menu is where <b>Disconnect</b> lives.</li>
+  </ul></div>
+
+  <div class="notlist"><b>Browser-based agents (claude.ai / chatgpt.com):</b> cannot reach a
+  local server by architecture — connectors execute from the vendor's infrastructure, and a browser page
+  can't call <code>127.0.0.1</code> either. Per §6a this is stated plainly, no apology, no degraded web
+  path, and <b>no tunnelling</b> as a product path (OpenAI's Secure MCP Tunnel exists; routing
+  participants' data through it is the same refusal). The desktop story got <i>stronger</i>, not weaker
+  — verified 30 Jul 2026: <b>ChatGPT desktop is now a local MCP host too</b> (Settings → MCP servers;
+  one <code>~/.codex/config.toml</code> shared with Codex CLI and the IDE extension). The manual
+  sentence: use a local app — Claude Desktop, Claude Code, ChatGPT desktop, Codex — and the in-app
+  <b>Chat lens</b> is the conversational surface for researchers with no local agent at all.</div>
+
+  <div class="notlist"><b>Explicitly not proposed:</b> a toolbar icon (v1), a “Claude lens” inside the app
+  (refused in §6a — an empty room with a signpost), or writing another app's config files (sandbox +
+  App Review). <b>Open for critique:</b>
+  <ul class="qs">
+    <li><s>Does the sheet ever show the token?</s> <em>Decided 30 Jul: full token, shown and selectable — if it looks copyable, it is.</em></li>
+    <li><s>Where does “disconnect” live?</s> <em>Answered: the trailing badge's context menu.</em></li>
+    <li><s>Does the badge name the client?</s> <em>Answered: symbol only; the client is named in the tooltip, accessibilityLabel, and the reopened sheet.</em></li>
+    <li>When folder scope lands: does the sheet grow a scope picker, or does the folder row get its own Connect Agent…?</li>
+  </ul></div>
+</main>
+</body>
+</html>

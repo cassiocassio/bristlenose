@@ -13,6 +13,9 @@ _Design note. Nothing built. July 2026._
 
 ## Changelog
 
+- _30 Jul 2026_ — §1: OpenAI surfaces verified (web research, primary sources): ChatGPT desktop + Codex CLI + IDE extension are local MCP hosts on one `~/.codex/config.toml`; static-header TOML is the one-snippet form; no `.mcpb` equivalent (Plugins need public HTTPS); ChatGPT web remote-only. MCP spec 2026-07-28 sessionless direction validates the stateless/JSON transport choice.
+- _30 Jul 2026_ — §6a route 3 verified against current Claude Desktop (Extensions pane, drag-`.mcpb`-to-install; Developer pane entries "managed by an extension"): `Bristlenose.mcpb` with a handshake-file-reading proxy recorded as the Desktop end-state; §10 Q2 tilted toward the handshake file. Spike unchanged (hand-paste).
+- _30 Jul 2026_ — §Positioning: recorded the two-offerings frame — (1) the report as a single link with two modes, read it and ask it (the chat lens folds into the report UX rather than being a destination); (2) stay in your favourite local agent (Claude Desktop, Claude Code, Codex), which is this doc.
 - _30 Jul 2026_ — split the Chat lens out to `design-chat-lens.md` so the two workstreams can run as separate sessions. §6b reduced to a pointer + relationship statement; §6c moved wholesale; §9a and §10 Q7 references updated. Q7 closed: the lens is happening as its own workstream; sequencing stays open in the new doc.
 - _30 Jul 2026_ — §6a: local-app-to-local-app promoted from fallback consequence to stated v1 baseline requirement. No degraded web path — the local-client requirement is the product's own local-first premise applied to the assistant.
 - _30 Jul 2026_ — added §9a (the first spike). Records that nothing in §6a blocks the original idea — the sandbox blocks writing another app's config, not the server itself, and Claude Desktop/Code connect to local servers as the ordinary case. Defines a small unblocked spike (mount /mcp, 3–4 read tools, paste the config by hand, build no connect UI), the three things it proves that a doc cannot, and the subscription-vs-API-key difference between MCP and the Chat lens.
@@ -107,6 +110,25 @@ versioned, refined by reject-with-reasons, instance-scoped so a boundary travels
 between studies. That is the thing that is worth connecting to, and the thing an
 assistant cannot invent for you.
 
+### The two offerings (recorded 30 Jul 2026)
+
+Researchers get exactly two things:
+
+1. **The report — one link in a browser, two modes.** (a) *Read it* — the
+   SPA as shipped. (b) *Ask it* — the Chat lens, folded into the report UX
+   as another way of using the same report ("a report that's smart"), never
+   a separate destination. Direction for that workstream:
+   [`design-chat-lens.md`](design-chat-lens.md).
+2. **Stay in your favourite agent — all local.** Claude Desktop, Claude
+   Code, Codex, or any MCP client on the machine, reaching the same objects
+   over this doc's server. Deliberately different in kind: the researcher's
+   own assistant and subscription, our objects, local app to local app
+   (§6a).
+
+The fold in 1(b) is what stops the chat lens drifting back into the
+chat-product shape this section rejects; naming non-Claude agents in 2 is
+§1's vendor-neutral commitment made concrete.
+
 ### Where the AI actually lives
 
 The position is **not** "no AI in the product" — AutoCode, the dynamic codebook
@@ -189,6 +211,24 @@ nothing at build time provided nothing in the server assumes one client's
 behaviour: no client-specific tool naming, no reliance on a particular sampling
 or elicitation extension, no assumption that the host renders Markdown a
 particular way.
+
+**OpenAI surfaces, verified 30 Jul 2026** (learn.chatgpt.com/docs/extend/mcp;
+github.com/openai/codex): the ChatGPT desktop app, Codex CLI, and Codex IDE
+extension are all **local MCP hosts sharing one `~/.codex/config.toml`** (the
+standalone Codex app merged into ChatGPT desktop 9 Jul 2026; the desktop app
+has Settings → MCP servers → Add server, stdio or streamable HTTP). The
+one-stanza-everywhere dialect: `[mcp_servers.bristlenose]` + `url` +
+`http_headers = { "Authorization" = "Bearer …" }` (the `codex mcp add` CLI
+has no static-header flag, and its env-var route doesn't reach a
+Finder-launched app — prefer the static form). ChatGPT **web** remains
+remote-only (its Secure MCP Tunnel is not our path — same refusal as §6a's
+tunnelling). No `.mcpb` equivalent exists on that side: OpenAI Plugins
+require a **public HTTPS** endpoint, explicitly not local, so the extension
+bundle remains a Claude-Desktop-specific affordance and the TOML stanza is
+the OpenAI path. Protocol note for §6: MCP spec **2026-07-28** makes
+sessionless streamable HTTP the direction (HTTP+SSE deprecated) — the
+stateless/JSON posture is forward-aligned, and Codex 0.147+ will default
+sessionless.
 
 ---
 
@@ -663,7 +703,23 @@ Three implementations that *are* sandbox-legal, in increasing order of polish:
    only route that earns the phrase "big button". **Verify current client support
    before designing to it** — this area moves fast and the format may have changed.
 
-Ship (1) first. It is unglamorous, universal, and unblocked.
+   **Verified 30 Jul 2026 (screenshots):** current Claude Desktop ships a
+   first-class Extensions pane — "Allow Claude to directly interact with apps,
+   data, and tools on your computer", drag `.MCPB`/`.DXT` to install — and a
+   Developer → Local MCP servers pane whose entries can read "managed by an
+   extension". Route 3 is therefore real and is **the Desktop end-state**:
+   ship `Bristlenose.mcpb` — our icon + a thin stdio→HTTP proxy to the local
+   serve. The proxy can read a **handshake file** serve writes on every start
+   (fresh token + port), which dissolves the token-rotation papercut for
+   Desktop users entirely (drag once; connected whenever serve runs). The
+   sandbox-legal "big button": bn.app writes the bundled `.mcpb` to a user
+   location and `NSWorkspace.open`s it — Desktop runs its own install flow;
+   we never touch another app's config. Martin's steer, same day: Bristlenose
+   belongs in that Extensions pane, not in hand-edited JSON.
+
+Ship (1) first. It is unglamorous, universal, and unblocked — the spike's
+path, and the fallback forever. (2) stays the middle rung; (3) is where
+Desktop lands after the spike.
 
 ### The auth dance settles an open question
 
@@ -695,7 +751,14 @@ ask. So the sheet carries four things and nothing else:
 1. **The scope, restated** — *this project* or *this folder, N studies* — so what
    was right-clicked is unambiguous at the moment of granting.
 2. **One plain line** on what is shared. Not a gradient, not a wizard (§Context).
-3. **The anonymisation toggle**, defaulting to on.
+3. **The anonymisation control — the shipped Export-popover row, verbatim:**
+   "Anonymise" / "Remove participant names" / a switch — the same control
+   and words the Export, clips, and Miro surfaces already use, **on by
+   default** for MCP (exports default off; different egress class). Behind
+   the scenes MCP is stricter than export: moderator names are not sent
+   either (the grounding layer never reads Person rows). (Amended 30 Jul
+   2026, twice; final per the shipped export popover — "we already have
+   this UX".)
 4. **Two or three copyable starter prompts.** Cheap, and they teach the object
    model — *"which codes are doing no work in this study?"*, *"trace perception of
    cost across these five studies"*, *"draft a top-line from the starred quotes
@@ -824,7 +887,10 @@ caveat.
 
 1. **Folder = filesystem directory or index label?** §2. Leaning filesystem for the
    server, with the desktop resolving its label to a path list at connect time.
-2. **Stable token or handshake file?** §6. Blocks phase 1 shipping.
+2. **Stable token or handshake file?** §6. Blocks phase 1 shipping. _30 Jul
+   2026:_ the `.mcpb` proxy (§6a route 3) is now a concrete consumer of the
+   handshake file — it can read it fresh on every connect, which dissolves
+   token rotation for Desktop and tilts this question toward the handshake.
 3. **One serve per project, or an aggregating reader, for folder scope?** §6.
 4. **What is the actual compression ratio** on a real corpus? §Context. Needed
    before the leverage claim is made publicly.

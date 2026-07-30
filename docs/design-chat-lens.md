@@ -15,6 +15,7 @@ _Design note; the §6 prototype is built to the §5a corrections (flag-gated lab
 
 ## Changelog
 
+- _30 Jul 2026_ — §4: recorded where the lens lives — inside the report UX as mode 1(b) of the two-offerings frame (read it / ask it behind one link; the agent path is the MCP doc's offering 2). The lab page is scaffolding, not the surface. (Written from the MCP session during the two-offerings positioning conversation.)
 - _30 Jul 2026_ — **§6 prototype built, to the §5a corrections.**
   `bristlenose/server/grounding.py` (the §7 seam): corpus assembly in report
   order — hidden excluded, starred marked, researcher edits win, visible
@@ -115,6 +116,13 @@ citation *is* the review affordance).
    §Positioning "what this position has to defend").
 
 ## 4. The resolution: scope
+
+**Where it lives (decided 30 Jul 2026): inside the report.** The product
+frame is two offerings — (1) the report as a single link in a browser with
+two modes, *read it* and *ask it*; (2) stay in your favourite local agent
+(the MCP doc). This lens is mode 1(b): another way of using the same report
+("a report that's smart"), never a separate window, page, or destination.
+The §6 lab page is prototype scaffolding, not the product surface.
 
 **The version that survives objection 2 is not a chat.** It is a **question box
 with cited answers** — ask, get an answer footnoted to clickable quotes, no

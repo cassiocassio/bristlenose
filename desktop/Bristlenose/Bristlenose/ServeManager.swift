@@ -42,11 +42,28 @@ final class ServeManager: ObservableObject {
     /// Whether this sidecar mounted the MCP endpoint (the optional `mcp`
     /// extra). Drives the Connect Agent sheet's unavailable state.
     @Published var mcpMounted: Bool = false
+    /// True while an MCP agent has called a tool on the fronted sidecar
+    /// within `Self.agentActivityWindow`. Stateless HTTP has no connection
+    /// to observe, so "connected" is defined as recent tool activity —
+    /// drives the sidebar's antenna badge.
+    @Published var agentActiveNow: Bool = false
+
+    /// Tool-call freshness (seconds) that still counts as "connected".
+    /// Wider than the poll so a conversation with thinking gaps between
+    /// tool calls doesn't flicker the badge.
+    static let agentActivityWindow = 120
+    private var agentPollTask: Task<Void, Never>?
 
     /// Bearer token for localhost API access control.
     /// Parsed from stdout line: `[bristlenose] auth-token: <token>`
     /// Injected into WKWebView via WKUserScript.
     @Published var authToken: String?
+
+    /// The durable, MCP-scoped token injected for the fronted serve — what
+    /// the Connect Agent sheet hands out. Nil when the Keychain refused
+    /// (the sheet then falls back to the rotating `authToken`, which /mcp
+    /// accepts in that case).
+    private(set) var mcpToken: String?
 
     /// Resolved sidecar mode for this process. Decided once at init from env
     /// + bundle layout. If resolution fails, `mode` is nil and `state` is
@@ -88,6 +105,16 @@ final class ServeManager: ObservableObject {
             self.mode = nil
             log.error("sidecar mode resolution failed: \(error.description, privacy: .public)")
             self.state = .failed(error: error.localizedDescription)
+        }
+
+        // One long-lived poll, not per-start tasks: it re-reads `state` each
+        // cycle, so serve lifecycle churn can't leak or race it (the same
+        // reasoning as the single `generation` token — one owner, no epochs).
+        agentPollTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(20))
+                await self?.pollAgentActivity()
+            }
         }
 
         prefsObserver = NotificationCenter.default.addObserver(
@@ -134,6 +161,12 @@ final class ServeManager: ObservableObject {
     /// Observer for preference changes that require a serve restart.
     private var prefsObserver: Any?
 
+    deinit {
+        // ServeManager is app-lifetime today, but the poll loop shouldn't
+        // outlive its owner if that ever changes.
+        agentPollTask?.cancel()
+    }
+
     /// Start serving a project. Callers must call `stop()` or
     /// `shutdown(timeout:)` first if a sidecar is already running — `start()`
     /// only forwards to `stop()` defensively when a `process` reference
@@ -161,6 +194,9 @@ final class ServeManager: ObservableObject {
         }
 
         currentProjectPath = projectPath
+        // Old project's agent activity must not light the new project's
+        // badge for a poll tick (same class as the authToken reset below).
+        agentActiveNow = false
         generation += 1
         state = .starting
         outputLines = []
@@ -204,19 +240,19 @@ final class ServeManager: ObservableObject {
         // so the two spawn sites can't drift. See BristlenoseShared.childEnvironment.
         var env = BristlenoseShared.childEnvironment(for: mode)
 
-        // Stable per-project MCP bearer token. `create_app` honours an
-        // inherited `_BRISTLENOSE_AUTH_TOKEN` (the same path uvicorn --reload
-        // uses) and mints a random one only when it is absent — so injecting
-        // here makes the token durable across restarts WITHOUT any Python-side
-        // change. Without this, an agent config pasted today 401s tomorrow.
-        // Keychain refusal degrades to the sidecar's rotating token: MCP still
-        // works, only the durability of a pasted config is lost.
-        // NB this is a *desktop-only* use of that env var, and it rides
-        // alongside `_BRISTLENOSE_HOSTED_BY_DESKTOP=1` — the SECURITY.md
-        // hardening that will gate the override behind a dev-mode flag must
-        // allowlist this host, not just the shell case it was written for.
-        if let mcpToken = MCPTokenStore.token(forProjectPath: projectPath) {
-            env["_BRISTLENOSE_AUTH_TOKEN"] = mcpToken
+        // Stable per-project MCP bearer token, SCOPED: the server validates
+        // /mcp against _BRISTLENOSE_MCP_TOKEN alone, so the one credential
+        // that leaves the trust boundary (pasted into another vendor's
+        // config file) opens the four read-only tools and nothing else —
+        // not /api/* writes, not participant names. The server's own
+        // rotating auth token keeps gating /api as before. Durable across
+        // restarts because the value comes from the Keychain, so an agent
+        // config pasted today doesn't 401 tomorrow. Keychain refusal
+        // degrades to no injection: /mcp then falls back to the rotating
+        // server token — MCP still works, only durability is lost.
+        mcpToken = MCPTokenStore.token(forProjectPath: projectPath)
+        if let mcpToken {
+            env["_BRISTLENOSE_MCP_TOKEN"] = mcpToken
         }
         proc.environment = env
 
@@ -571,6 +607,11 @@ final class ServeManager: ObservableObject {
     /// version atomically before the WebView re-mounts. `generation` is bumped
     /// by the caller before the liveness probe.
     private func adoptFronted(_ entry: ParkedSidecar, path: String) {
+        agentActiveNow = false
+        // The warm re-point fronts a different project — re-read its durable
+        // token (idempotent Keychain read; the parked sidecar was spawned
+        // with this same value).
+        mcpToken = MCPTokenStore.token(forProjectPath: path)
         process = entry.process
         readTask = entry.readTask
         authToken = entry.authToken
@@ -676,6 +717,34 @@ final class ServeManager: ObservableObject {
 
     // MARK: - Private
 
+    /// One immediate badge poll — called when the researcher copies a
+    /// config, the moment they are most likely to be watching the sidebar.
+    func refreshAgentActivity() async {
+        await pollAgentActivity()
+    }
+
+    /// One poll cycle for the sidebar's antenna badge. Quiet at runtime —
+    /// a failed health read just clears the badge (absence is information;
+    /// the serve dying has its own, louder signals). Deliberately NOT gated
+    /// on `mcpMounted`: this poll re-reads `mcp.mounted` every cycle, so a
+    /// raced or failed startup fetch self-corrects within one tick instead
+    /// of leaving the Connect sheet claiming "not available in this build"
+    /// for the whole session.
+    private func pollAgentActivity() async {
+        guard case .running(let port) = state,
+              let url = URL(string: "http://127.0.0.1:\(port)/api/health") else {
+            if agentActiveNow { agentActiveNow = false }
+            return
+        }
+        var parsed: (mounted: Bool, active: Bool) = (mcpMounted, false)
+        if let (data, _) = try? await URLSession.shared.data(from: url),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            parsed = AgentActivity.parse(json)
+        }
+        if parsed.mounted != mcpMounted { mcpMounted = parsed.mounted }
+        if parsed.active != agentActiveNow { agentActiveNow = parsed.active }
+    }
+
     /// Fetch the Bristlenose version (and MCP availability) from the serve
     /// health endpoint. Non-critical — if it fails, both stay at their
     /// defaults. `/api/health` is auth-exempt, so this needs no token.
@@ -687,13 +756,14 @@ final class ServeManager: ObservableObject {
                 if let version = json["version"] as? String {
                     self.serverVersion = version
                 }
-                // Absent on an older sidecar → false, which is the honest
-                // reading: a build that doesn't report it doesn't have it.
-                let mcp = json["mcp"] as? [String: Any]
-                self.mcpMounted = (mcp?["mounted"] as? Bool) ?? false
+                self.mcpMounted = AgentActivity.parse(json).mounted
             }
         } catch {
-            // Non-critical — About panel shows build number only
+            // Degraded, not broken: version stays nil (About shows build
+            // number only) and mcpMounted stays put until the 20s badge
+            // poll re-reads it. Logged because a silent miss here used to
+            // pin the Connect sheet on "unavailable" for a whole session.
+            log.info("health fetch failed (poll will retry): \(error.localizedDescription, privacy: .public)")
         }
     }
 

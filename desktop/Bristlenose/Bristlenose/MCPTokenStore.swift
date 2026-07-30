@@ -96,7 +96,9 @@ enum MCPTokenStore {
         var bytes = [UInt8](repeating: 0, count: 32)
         if SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) != errSecSuccess {
             // SecRandom does not fail in practice; if it ever does, fall back
-            // rather than ship a predictable token.
+            // (UUIDs are CSPRNG-backed on Apple platforms) — loudly, so the
+            // "does not fail" claim stays checkable.
+            log.fault("SecRandomCopyBytes failed — minting from UUID fallback")
             return UUID().uuidString + UUID().uuidString
         }
         return Data(bytes).base64EncodedString()
@@ -149,7 +151,11 @@ enum MCPTokenStore {
         let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
         if addStatus == errSecSuccess { return true }
         if addStatus == errSecDuplicateItem {
-            return SecItemUpdate(query as CFDictionary, attrs as CFDictionary) == errSecSuccess
+            let updateStatus = SecItemUpdate(query as CFDictionary, attrs as CFDictionary)
+            if updateStatus != errSecSuccess {
+                log.error("MCP token update failed: \(updateStatus, privacy: .public)")
+            }
+            return updateStatus == errSecSuccess
         }
         log.error("MCP token write failed: \(addStatus, privacy: .public)")
         return false

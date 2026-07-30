@@ -93,6 +93,9 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     let pipelineRunner: PipelineRunner
     @ObservedObject var liveData: PipelineLiveData
     let copyMachinery: CopyMachinery
+    /// Path of the project whose serve has recent MCP tool activity, or nil.
+    /// Value-typed so a change re-runs `updateNSViewController` → reload.
+    let agentActiveProjectPath: String?
 
     func makeNSViewController(context: Context) -> SidebarOutlineController {
         let controller = SidebarOutlineController()
@@ -108,6 +111,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.pipelineRunner = pipelineRunner
         controller.liveData = liveData
         controller.copyMachinery = copyMachinery
+        controller.agentActiveProjectPath = agentActiveProjectPath
         // Refresh the callbacks each update so they capture the live binding —
         // the AppKit delegate does not fire for programmatic selection, so the
         // funnel is the SwiftUI binding itself (§2.5).
@@ -189,6 +193,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     var onLocate: (UUID) -> Void = { _ in }
     var onShowInFinder: (UUID) -> Void = { _ in }
     var onConnectAgent: (UUID) -> Void = { _ in }
+    /// See the representable's `agentActiveProjectPath`.
+    var agentActiveProjectPath: String?
     var canShowInFinder: (UUID) -> Bool = { _ in false }
     var onRemoveProject: (UUID) -> Void = { _ in }
     var onRemoveFolder: (UUID) -> Void = { _ in }
@@ -1523,7 +1529,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
         menu.addItem(menuItem("desktop.menu.project.showInFinder", #selector(menuShowInFinder(_:)),
                               enabled: canShowInFinder(id)))
-        menu.addItem(menuItem("desktop.menu.project.connectAgent", #selector(menuConnectAgent(_:))))
+        menu.addItem(menuItem("desktop.menu.project.connectAgent", #selector(menuConnectAgent(_:)),
+                              enabled: canShowInFinder(id)))
         menu.addItem(menuItem("desktop.menu.project.rename", #selector(menuRename(_:))))
         menu.addItem(menuItem("desktop.menu.project.chooseIcon", #selector(menuChooseIcon(_:))))
 
@@ -1661,11 +1668,13 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     @objc private func menuNoop(_ sender: NSMenuItem) {}   // disabled Archive (Phase 5)
 
     /// What the subtitle-right slot shows, by `ProjectRow.subtitleRightSlot`'s
-    /// precedence (`:327-360`): run activity > in-flight copy > iCloud glyph > empty.
+    /// precedence (`:327-360`) plus the agent badge: run activity > in-flight
+    /// copy > agent-connected antenna > iCloud glyph > empty.
     /// `onStop` (Phase 4) is the hover-× cancel — run cancel / copy cancel; nil
     /// during the cancel-rollback spinner (you can't cancel a cancel).
     private enum RightSlot {
         case ring(fraction: Double?, onStop: (() -> Void)?)  // arc/spinner + hover-× cancel
+        case agent   // an MCP agent has recent tool activity on this serve
         case cloud
         case none
     }
@@ -1697,6 +1706,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 return .ring(fraction: nil, onStop: nil)   // spinner during rollback, no ×
             }
         }
+        if let active = agentActiveProjectPath, active == project.path { return .agent }
         if case .inCloud = project.availability { return .cloud }
         return .none
     }
@@ -1834,6 +1844,31 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 ring.widthAnchor.constraint(equalToConstant: SidebarActivityRing.side),
                 ring.heightAnchor.constraint(equalToConstant: SidebarActivityRing.side),
                 subtitleField.trailingAnchor.constraint(lessThanOrEqualTo: ring.leadingAnchor,
+                                                        constant: -ProjectCellSpec.subtitleInternal),
+            ]
+        case .agent:
+            // Antenna in the accent colour: STATE via semantic colour, the
+            // same weight/slot as the cloud glyph. Not a control — status
+            // lives where its subject lives (the served project's row).
+            let antenna = NSImageView()
+            antenna.image = NSImage(systemSymbolName: "antenna.radiowaves.left.and.right",
+                                    accessibilityDescription: i18n?.t("desktop.connectAgent.badge"))
+            antenna.symbolConfiguration = ProjectCellSpec.subtitleGlyphConfig
+            // Secondary, like the sibling iCloud glyph: ambient status joins
+            // the existing quiet family. Accent here would be invisible on
+            // the selected row's accent fill — and this row IS usually the
+            // selected one (the badge tracks the fronted serve).
+            antenna.contentTintColor = .secondaryLabelColor
+            antenna.toolTip = i18n?.t("desktop.connectAgent.badge")
+            antenna.translatesAutoresizingMaskIntoConstraints = false
+            antenna.setContentHuggingPriority(.required, for: .horizontal)
+            antenna.setContentCompressionResistancePriority(.required, for: .horizontal)
+            cell.addSubview(antenna)
+            constraints += [
+                antenna.trailingAnchor.constraint(equalTo: cell.trailingAnchor,
+                                                  constant: -ProjectCellSpec.trailingInset),
+                antenna.centerYAnchor.constraint(equalTo: subtitleField.centerYAnchor),
+                subtitleField.trailingAnchor.constraint(lessThanOrEqualTo: antenna.leadingAnchor,
                                                         constant: -ProjectCellSpec.subtitleInternal),
             ]
         case .cloud:

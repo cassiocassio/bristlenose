@@ -509,7 +509,7 @@ struct ContentView: View {
         .sheet(item: $connectAgentProject) { project in
             ConnectAgentSheet(
                 projectName: project.name,
-                sessionCount: projectIndex.unanalysed[project.id]?.sessionCount ?? 0,
+                sessionCount: projectIndex.unanalysed[project.id]?.sessionCount,
                 quoteCount: nil,
                 // Only offer an address the sidecar is actually serving, and
                 // only for the project that is running — a stale port would
@@ -517,8 +517,10 @@ struct ContentView: View {
                 // different project.
                 endpoint: (serveManager.runningPort.map { "http://127.0.0.1:\($0)/mcp/" })
                     .flatMap { serveManager.currentProjectPath == project.path ? $0 : nil },
-                token: serveManager.currentProjectPath == project.path ? serveManager.authToken : nil,
-                mcpAvailable: serveManager.mcpMounted
+                token: serveManager.currentProjectPath == project.path
+                    ? (serveManager.mcpToken ?? serveManager.authToken) : nil,
+                mcpAvailable: serveManager.mcpMounted,
+                onCopied: { Task { await serveManager.refreshAgentActivity() } }
             )
             .environmentObject(i18n)
         }
@@ -1768,7 +1770,9 @@ struct ContentView: View {
                 onRemoveFolder: { id in deleteFromContextMenu(targetingFolder: id) },
                 pipelineRunner: pipelineRunner,
                 liveData: pipelineRunner.liveData,
-                copyMachinery: copyMachinery
+                copyMachinery: copyMachinery,
+                agentActiveProjectPath: serveManager.agentActiveNow
+                    ? serveManager.currentProjectPath : nil
             )
             .navigationTitle(i18n.t("desktop.chrome.projects"))
         } else {

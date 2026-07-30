@@ -13,6 +13,7 @@ _Design note. Nothing built. July 2026._
 
 ## Changelog
 
+- _30 Jul 2026_ — added §6c (guard rails for the Chat lens). The citation requirement is the guard rail: an uncitable request cannot be expressed in the response schema, so it falls out as an empty result rather than needing a refusal layer. The real risk is not off-topic use but a confident uncited research claim, and the load-bearing check is server-side validation of returned quote ids — a model can invent one, and without resolution the citations are theatre. Argues against a topic classifier; notes cost as the genuinely separate guard rail.
 - _30 Jul 2026_ — §3b substantially rewritten after a domain correction. Two errors fixed: (1) framing this as *longitudinal* — designed longitudinal qual is rare (common for NPS/SUS, not qual), and reading a concept across an accumulated back-catalogue is a different, more common thing; (2) treating differently-named codes in two studies as a split concept needing reconciliation — between studies discontinuity is the norm (new boss, new agenda, feature replaced), so merging may manufacture a finding rather than repair one. The continuity carrier is the **framework the researcher re-uses across unrelated projects**, so codes are shared by construction rather than reconciled after the fact. `find_duplicate_codes` and `merge-tags` demoted to manual consolidation aids. Denominators promoted as the load-bearing trap; the time axis demoted.
 - _30 Jul 2026_ — added §6a (connect UX) and §6b (the Chat-lens question). §6a records two blockers on the obvious design: MCP servers are configured client-side so Bristlenose cannot open a session (and claude.ai in a browser cannot reach a local server at all), and the App Sandbox forbids writing another app's config — clipboard snippet is the unblocked floor. Refuses a "Claude lens", accepts a live-state sidebar badge, defers a toolbar icon. §6b treats the provider-backed Chat lens as a genuinely different proposal, states both objections at full strength, and recommends a scoped cited-question-box sequenced *after* MCP as a forcing function.
 - _30 Jul 2026_ — added §3b: longitudinal querying by code is the real cross-study capability. Records the silent-under-reporting failure mode, `merge-tags` as the reconciliation primitive (and its undocumented instance-wide reach), the nullable `session_date` fallback chain, and the denominator trap. Sharpens the phase-2 dependency from "project index" to "shared codebook store". §3a softened: deliberate recurrence (panel, diary, follow-up wave) is real and meaningful — the rule is inference versus declaration, not identity versus no identity.
@@ -746,6 +747,60 @@ then the chat lens is a thin client over a proven surface rather than a reason
 never to build one.
 
 This is a real open decision, not a settled one — recorded as §10 Q7.
+
+### 6c. Guard rails — the citation requirement *is* the guard rail
+
+The obvious worry is off-topic use: a researcher asks the interview chat for a
+spaghetti recipe. That is the **least** of it, and it does not need a filter.
+
+**The dangerous case is a confident, plausible, uncited research claim.** Ask a
+raw model "what do participants think about pricing?" against a corpus containing
+nothing about pricing, and it will produce fluent UXR-shaped findings from its
+training data. In a research tool, presented next to real findings, that is the
+actual harm — not a recipe.
+
+Both are handled by the same mechanism, which is why it should not be a separate
+subsystem:
+
+1. **The response schema requires citations.** Every claim carries `quote_ids`;
+   the prompt says answer only from the supplied quotes. A recipe has no
+   supporting quotes, so it cannot be expressed in the response format at all. It
+   falls out as an empty result, not a refusal.
+2. **Cited ids are validated server-side against the corpus.** This is
+   load-bearing and easy to skip: **a model can invent `q-p1-999`.** Resolve every
+   returned id against the project's actual quotes, and drop or flag any claim
+   whose citations do not resolve — and check scope, not just syntax, so a claim
+   cannot cite a quote from a project the question did not cover. **Without this
+   check the citations are theatre**, and the feature is worse than no feature
+   because it looks verified.
+3. **Render the cited quote inline, under its claim.** A wrong citation becomes
+   obvious without a click. This is simultaneously the guard rail, the review
+   affordance, and the reason the feature is worth having in-app at all (§6b).
+
+### What not to build
+
+**Do not build a topic classifier or a refusal layer.** It is a subsystem, it will
+false-positive on legitimate adjacent questions — *"how should I phrase this
+finding for execs?"* is off-corpus and entirely reasonable in a research tool —
+and it guards the wrong risk.
+
+A short scoping line in the system prompt is worth having as *framing*, not
+enforcement, and it should be plain rather than a lecture. The empty-result case
+is **not a refusal**: "nothing in this study's quotes answers that" is a finding
+about the corpus, not a rejection of the researcher. That message needs to fit the
+existing `MessageKind` vocabulary — see `docs/design-pipeline-diagnostic-popover.md`
+before inventing a new tone for it.
+
+### The separate one: cost
+
+Stuffing the corpus (§6b prototype route) means every question costs roughly
+20k input tokens on the researcher's own key. That is a real guard rail with
+nothing to do with topic: cap tokens per question and questions per session, and
+look at prompt caching early — the corpus prefix is identical across every
+question in a session, which is close to the ideal caching shape.
+
+Out of scope for the prototype: answering questions *about Bristlenose itself*
+("how do I export?"). Legitimate, but a different corpus and a different feature.
 
 ---
 

@@ -13,15 +13,13 @@
   "menu": {
     "app": {
       "about": "關於 Bristlenose",
-      "aiPrivacy": "AI 與隱私…",
-      "checkHealth": "檢查系統健康狀態…"
+      "aiPrivacy": "AI 與隱私…"
     },
     "file": {
       "newProject": "新增專案…",
       "newFolder": "新增檔案夾…",
       "openInNewWindow": "在新視窗中打開",
       "exportReport": "輸出報告…",
-      "exportAnonymised": "輸出匿名版本…",
       "pageSetup": "頁面設定…",
       "print": "列印…"
     },
@@ -38,7 +36,6 @@
     "view": {
       "hideProjects": "隱藏專案",
       "showProjects": "顯示專案",
-      "moveFocusToProjects": "將焦點移至專案",
       "showContents": "顯示內容",
       "hideContents": "隱藏內容",
       "showCodes": "顯示編碼",
@@ -54,13 +51,12 @@
       "starredQuotesOnly": "僅限標星引述",
       "zoomIn": "放大",
       "zoomOut": "縮小",
-      "actualSize": "實際大小",
-      "switchToLightMode": "切換至淺色模式",
-      "switchToDarkMode": "切換至深色模式"
+      "actualSize": "實際大小"
     },
     "project": {
       "removeFromSidebar": "從側邊欄移除",
       "showInFinder": "在 Finder 中顯示",
+      "connectAgent": "\u9023\u63a5\u4ee3\u7406\u2026",
       "rename": "重新命名…",
       "moveTo": "移動到",
       "noFolder": "無檔案夾",
@@ -470,6 +466,32 @@
     "failTimedOut": "下載逾時。請檢查你的連線後再試一次。",
     "failCantReach": "與 Ollama 的連線中斷。請確認它正在執行，然後再試一次。",
     "failGeneric": "下載無法完成。%@"
+  },
+  "connectAgent": {
+    "title": "\u5c07\u4ee3\u7406\u9023\u63a5\u5230\u300c{{project}}\u300d",
+    "sessions_other": "{{count}} \u5834\u6b21",
+    "quotes_other": "{{count}} \u5247\u5f15\u8ff0",
+    "badge": "\u4ee3\u7406\u5df2\u9023\u63a5",
+    "namesNote": "\u7d55\u4e0d\u50b3\u9001\u53c3\u8207\u8005\u59d3\u540d",
+    "namesNoteHint": "\u4ee3\u7406\u6703\u770b\u5230\u767c\u8a00\u8005\u4ee3\u865f\uff08p1\u3001m1\uff09\u8207\u9010\u5b57\u5f15\u8ff0\u3002",
+    "clientPicker": "\u4ee3\u7406",
+    "clients": {
+      "claudeDesktop": "Claude Desktop",
+      "claudeCode": "Claude Code",
+      "chatgptCodex": "ChatGPT & Codex",
+      "other": "\u9069\u7528\u65bc\u4efb\u4f55\u76f8\u5bb9 MCP \u7684\u4ee3\u7406\u3002"
+    },
+    "claudeDesktopHow": "\u5728 Claude Desktop \u4e2d\uff1a\u8a2d\u5b9a \u2192 Developer \u2192 Edit Config\uff0c\u6216\u7de8\u8f2f ~/Library/Application Support/Claude/claude_desktop_config.json\uff0c\u5728 mcpServers \u4e0b\u52a0\u5165\uff1a",
+    "claudeCodeHow": "\u8cbc\u5230\u4efb\u4f55\u7d42\u7aef\u6a5f\uff1a",
+    "chatgptCodexHow": "\u5728 ChatGPT \u4e2d\uff1a\u8a2d\u5b9a \u2192 MCP \u4f3a\u670d\u5668 \u2192 \u52a0\u5165\u4f3a\u670d\u5668 \u2014 \u6216\u52a0\u5165 ~/.codex/config.toml\uff08\u55ae\u4e00\u9805\u76ee\u6db5\u84cb ChatGPT \u684c\u9762\u7248\u3001Codex CLI \u8207 IDE \u5ef6\u4f38\u529f\u80fd\uff09\uff1a",
+    "copyConfig": "\u62f7\u8c9d\u8a2d\u5b9a",
+    "copyCommand": "\u62f7\u8c9d\u6307\u4ee4",
+    "copied": "\u5df2\u62f7\u8c9d",
+    "cancel": "\u53d6\u6d88",
+    "ok": "\u597d",
+    "addressNote": "\u6b64\u4f4d\u5740\u6703\u5728 Bristlenose \u91cd\u65b0\u555f\u52d5\u5f8c\u6539\u8b8a \u2014 \u91cd\u65b0\u555f\u52d5\u5f8c\u8acb\u91cd\u65b0\u62f7\u8c9d\u8a2d\u5b9a\u3002",
+    "unavailable": "\u6b64\u7248\u672c\u4e0d\u63d0\u4f9b\u4ee3\u7406\u9023\u63a5\u3002",
+    "notRunning": "\u9023\u63a5\u4ee3\u7406\u524d\uff0c\u8acb\u5148\u555f\u52d5\u5c08\u6848\u3002"
   },
   "toast": {
     "removedBatchAnnouncement": "已移除 %d 個專案。按 Command-Z 還原。",

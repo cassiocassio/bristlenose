@@ -13,15 +13,13 @@
   "menu": {
     "app": {
       "about": "À propos de Bristlenose",
-      "aiPrivacy": "IA et confidentialité…",
-      "checkHealth": "Vérifier l'état du système…"
+      "aiPrivacy": "IA et confidentialité…"
     },
     "file": {
       "newProject": "Nouveau projet…",
       "newFolder": "Nouveau dossier…",
       "openInNewWindow": "Ouvrir dans une nouvelle fenêtre",
       "exportReport": "Exporter le rapport…",
-      "exportAnonymised": "Exporter anonymisé…",
       "pageSetup": "Format d'impression…",
       "print": "Imprimer…"
     },
@@ -53,13 +51,12 @@
       "starredQuotesOnly": "Verbatim favoris uniquement",
       "zoomIn": "Zoom avant",
       "zoomOut": "Zoom arrière",
-      "actualSize": "Taille réelle",
-      "switchToLightMode": "Passer en mode clair",
-      "switchToDarkMode": "Passer en mode sombre"
+      "actualSize": "Taille réelle"
     },
     "project": {
       "removeFromSidebar": "Retirer de la barre lat\u00e9rale",
       "showInFinder": "Afficher dans le Finder",
+      "connectAgent": "Connecter un agent\u2026",
       "rename": "Renommer…",
       "moveTo": "Déplacer vers",
       "noFolder": "Aucun dossier",
@@ -474,6 +471,34 @@
     "failTimedOut": "Le téléchargement a expiré. Vérifiez votre connexion et réessayez.",
     "failCantReach": "Connexion à Ollama perdue. Assurez-vous qu’il est en cours d’exécution, puis réessayez.",
     "failGeneric": "Le téléchargement n’a pas pu se terminer. %@"
+  },
+  "connectAgent": {
+    "title": "Connecter un agent \u00e0 \u00ab {{project}} \u00bb",
+    "sessions_one": "{{count}} entretien",
+    "sessions_other": "{{count}} entretiens",
+    "quotes_one": "{{count}} verbatim",
+    "quotes_other": "{{count}} verbatim",
+    "badge": "Agent connect\u00e9",
+    "namesNote": "Les noms des participants ne sont jamais envoy\u00e9s",
+    "namesNoteHint": "L\u2019agent voit les codes des locuteurs (p1, m1) et les verbatim exacts.",
+    "clientPicker": "Agent",
+    "clients": {
+      "claudeDesktop": "Claude Desktop",
+      "claudeCode": "Claude Code",
+      "chatgptCodex": "ChatGPT & Codex",
+      "other": "Fonctionne avec tout agent compatible MCP."
+    },
+    "claudeDesktopHow": "Dans Claude Desktop : R\u00e9glages \u2192 Developer \u2192 Edit Config, ou modifiez ~/Library/Application Support/Claude/claude_desktop_config.json en ajoutant sous mcpServers :",
+    "claudeCodeHow": "Collez dans n\u2019importe quel terminal :",
+    "chatgptCodexHow": "Dans ChatGPT : R\u00e9glages \u2192 Serveurs MCP \u2192 Ajouter un serveur \u2014 ou ajoutez \u00e0 ~/.codex/config.toml (une seule entr\u00e9e couvre ChatGPT pour ordinateur, la CLI Codex et l\u2019extension IDE) :",
+    "copyConfig": "Copier la configuration",
+    "copyCommand": "Copier la commande",
+    "copied": "Copi\u00e9",
+    "cancel": "Annuler",
+    "ok": "OK",
+    "addressNote": "Cette adresse change au red\u00e9marrage de Bristlenose \u2014 recopiez la configuration apr\u00e8s un red\u00e9marrage.",
+    "unavailable": "La connexion d\u2019agents n\u2019est pas disponible dans cette version.",
+    "notRunning": "D\u00e9marrez le projet avant de connecter un agent."
   },
   "toast": {
     "removedBatchAnnouncement": "%d projets retir\u00e9s. Appuyez sur Commande-Z pour annuler.",

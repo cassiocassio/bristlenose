@@ -13,15 +13,13 @@
   "menu": {
     "app": {
       "about": "Over Bristlenose",
-      "aiPrivacy": "AI en privacy…",
-      "checkHealth": "Systeemstatus controleren…"
+      "aiPrivacy": "AI en privacy…"
     },
     "file": {
       "newProject": "Nieuw project…",
       "newFolder": "Nieuwe map…",
       "openInNewWindow": "Open in nieuw venster",
       "exportReport": "Rapport exporteren…",
-      "exportAnonymised": "Geanonimiseerd exporteren…",
       "pageSetup": "Paginaformaat…",
       "print": "Druk af…"
     },
@@ -38,7 +36,6 @@
     "view": {
       "hideProjects": "Verberg projecten",
       "showProjects": "Toon projecten",
-      "moveFocusToProjects": "Focus naar Projecten verplaatsen",
       "showContents": "Toon inhoud",
       "hideContents": "Verberg inhoud",
       "showCodes": "Toon codes",
@@ -54,13 +51,12 @@
       "starredQuotesOnly": "Alleen citaten met ster",
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom uit",
-      "actualSize": "Werkelijke grootte",
-      "switchToLightMode": "Schakel naar lichte weergave",
-      "switchToDarkMode": "Schakel naar donkere weergave"
+      "actualSize": "Werkelijke grootte"
     },
     "project": {
       "removeFromSidebar": "Verwijder uit zijbalk",
       "showInFinder": "Toon in Finder",
+      "connectAgent": "Verbind agent\u2026",
       "rename": "Wijzig naam…",
       "moveTo": "Verplaats naar",
       "noFolder": "Geen map",
@@ -475,6 +471,34 @@
     "failTimedOut": "De download is verlopen. Controleer je verbinding en probeer opnieuw.",
     "failCantReach": "Verbinding met Ollama verloren. Zorg dat het draait en probeer opnieuw.",
     "failGeneric": "De download kon niet worden voltooid. %@"
+  },
+  "connectAgent": {
+    "title": "Verbind een agent met \u201c{{project}}\u201d",
+    "sessions_one": "{{count}} sessie",
+    "sessions_other": "{{count}} sessies",
+    "quotes_one": "{{count}} citaat",
+    "quotes_other": "{{count}} citaten",
+    "badge": "Agent verbonden",
+    "namesNote": "Namen van deelnemers worden nooit verzonden",
+    "namesNoteHint": "De agent ziet sprekercodes (p1, m1) en letterlijke citaten.",
+    "clientPicker": "Agent",
+    "clients": {
+      "claudeDesktop": "Claude Desktop",
+      "claudeCode": "Claude Code",
+      "chatgptCodex": "ChatGPT & Codex",
+      "other": "Werkt met elke MCP-compatibele agent."
+    },
+    "claudeDesktopHow": "In Claude Desktop: Instellingen \u2192 Developer \u2192 Edit Config, of bewerk ~/Library/Application Support/Claude/claude_desktop_config.json en voeg toe onder mcpServers:",
+    "claudeCodeHow": "Plak in een willekeurige terminal:",
+    "chatgptCodexHow": "In ChatGPT: Instellingen \u2192 MCP-servers \u2192 Voeg server toe \u2014 of voeg toe aan ~/.codex/config.toml (\u00e9\u00e9n vermelding dekt ChatGPT desktop, de Codex-CLI en de IDE-extensie):",
+    "copyConfig": "Kopieer configuratie",
+    "copyCommand": "Kopieer opdracht",
+    "copied": "Gekopieerd",
+    "cancel": "Annuleer",
+    "ok": "OK",
+    "addressNote": "Dit adres verandert wanneer Bristlenose opnieuw start \u2014 kopieer de configuratie opnieuw na een herstart.",
+    "unavailable": "Agentverbinding is niet beschikbaar in deze build.",
+    "notRunning": "Start het project voordat je een agent verbindt."
   },
   "toast": {
     "removedBatchAnnouncement": "%d projecten verwijderd. Druk op Command-Z om te herstellen.",

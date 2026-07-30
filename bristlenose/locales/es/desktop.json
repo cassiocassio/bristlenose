@@ -13,15 +13,13 @@
   "menu": {
     "app": {
       "about": "Acerca de Bristlenose",
-      "aiPrivacy": "IA y privacidad…",
-      "checkHealth": "Verificar estado del sistema…"
+      "aiPrivacy": "IA y privacidad…"
     },
     "file": {
       "newProject": "Nuevo proyecto…",
       "newFolder": "Nueva carpeta…",
       "openInNewWindow": "Abrir en nueva ventana",
       "exportReport": "Exportar informe…",
-      "exportAnonymised": "Exportar anonimizado…",
       "pageSetup": "Configurar página…",
       "print": "Imprimir…"
     },
@@ -53,13 +51,12 @@
       "starredQuotesOnly": "Solo citas destacadas",
       "zoomIn": "Ampliar",
       "zoomOut": "Reducir",
-      "actualSize": "Tamaño real",
-      "switchToLightMode": "Cambiar a modo claro",
-      "switchToDarkMode": "Cambiar a modo oscuro"
+      "actualSize": "Tamaño real"
     },
     "project": {
       "removeFromSidebar": "Quitar de la barra lateral",
       "showInFinder": "Mostrar en Finder",
+      "connectAgent": "Conectar agente\u2026",
       "rename": "Renombrar…",
       "moveTo": "Mover a",
       "noFolder": "Sin carpeta",
@@ -474,6 +471,34 @@
     "failTimedOut": "La descarga ha caducado. Comprueba tu conexión e inténtalo de nuevo.",
     "failCantReach": "Se perdió la conexión con Ollama. Asegúrate de que esté en marcha e inténtalo de nuevo.",
     "failGeneric": "No se pudo completar la descarga. %@"
+  },
+  "connectAgent": {
+    "title": "Conectar un agente a \u201c{{project}}\u201d",
+    "sessions_one": "{{count}} sesi\u00f3n",
+    "sessions_other": "{{count}} sesiones",
+    "quotes_one": "{{count}} cita",
+    "quotes_other": "{{count}} citas",
+    "badge": "Agente conectado",
+    "namesNote": "Los nombres de participantes nunca se env\u00edan",
+    "namesNoteHint": "El agente ve c\u00f3digos de hablante (p1, m1) y citas literales.",
+    "clientPicker": "Agente",
+    "clients": {
+      "claudeDesktop": "Claude Desktop",
+      "claudeCode": "Claude Code",
+      "chatgptCodex": "ChatGPT & Codex",
+      "other": "Funciona con cualquier agente compatible con MCP."
+    },
+    "claudeDesktopHow": "En Claude Desktop: Ajustes \u2192 Developer \u2192 Edit Config, o edita ~/Library/Application Support/Claude/claude_desktop_config.json y a\u00f1ade bajo mcpServers:",
+    "claudeCodeHow": "Pega en cualquier terminal:",
+    "chatgptCodexHow": "En ChatGPT: Ajustes \u2192 Servidores MCP \u2192 A\u00f1adir servidor \u2014 o a\u00f1ade a ~/.codex/config.toml (una sola entrada cubre ChatGPT para escritorio, la CLI de Codex y la extensi\u00f3n del IDE):",
+    "copyConfig": "Copiar configuraci\u00f3n",
+    "copyCommand": "Copiar comando",
+    "copied": "Copiado",
+    "cancel": "Cancelar",
+    "ok": "OK",
+    "addressNote": "Esta direcci\u00f3n cambia cuando Bristlenose se reinicia \u2014 vuelve a copiar la configuraci\u00f3n tras reiniciar.",
+    "unavailable": "La conexi\u00f3n de agentes no est\u00e1 disponible en esta compilaci\u00f3n.",
+    "notRunning": "Inicia el proyecto antes de conectar un agente."
   },
   "toast": {
     "removedBatchAnnouncement": "Se eliminaron %d proyectos. Pulse Comando-Z para deshacer.",

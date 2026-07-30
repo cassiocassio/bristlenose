@@ -201,7 +201,7 @@
     "missingSubtitle_other": "{{count}} missing",
     "tooltipWaiting": "{{count}} waiting",
     "dateRelativeJustNow": "Just now",
-    "unanalysedSheetTitle": "Unanalysed files in {{{project}}}",
+    "unanalysedSheetTitle": "Unanalysed files in {{project}}",
     "unanalysedSheetFooter": "These files were added after the last analysis.",
     "multipleSelected": "%d items selected",
     "multipleSelectedHint": "Select a single project to view its report.",
@@ -267,9 +267,9 @@
         "failed": "Failed"
       },
       "help": {
-        "running": "Show pipeline progress for {{{project}}}",
-        "queued": "Pipeline run queued for {{{project}}}",
-        "failed": "Pipeline run failed for {{{project}}}"
+        "running": "Show pipeline progress for {{project}}",
+        "queued": "Pipeline run queued for {{project}}",
+        "failed": "Pipeline run failed for {{project}}"
       }
     },
     "diagnostic": {
@@ -291,7 +291,7 @@
         "showLogTooltip": "Show the analysis log file"
       },
       "tooltip": {
-        "completed_partial": "Analysis finished with failures for {{{project}}}"
+        "completed_partial": "Analysis finished with failures for {{project}}"
       },
       "noStructuredCause": "Detailed cause not captured.",
       "overflow_one": "… and {{count}} more failure truncated",
@@ -499,9 +499,14 @@
   },
   "connectAgent": {
     "title": "Connect an agent to \u201c{{project}}\u201d",
-    "scope": "{sessions} \u00b7 {quotes}",
-    "anonymise": "Anonymise",
-    "anonymiseHint": "Remove participant names",
+    "sessions_one": "{{count}} session",
+    "sessions_other": "{{count}} sessions",
+    "quotes_one": "{{count}} quote",
+    "quotes_other": "{{count}} quotes",
+    "badge": "Agent connected",
+    "namesNote": "Participant names are never sent",
+    "namesNoteHint": "The agent sees speaker codes (p1, m1) and verbatim quote text.",
+    "clientPicker": "Agent",
     "clients": {
       "claudeDesktop": "Claude Desktop",
       "claudeCode": "Claude Code",
@@ -515,6 +520,8 @@
     "copyCommand": "Copy Command",
     "copied": "Copied",
     "cancel": "Cancel",
+    "ok": "OK",
+    "addressNote": "This address changes when Bristlenose restarts \u2014 re-copy the config after relaunching.",
     "unavailable": "The agent connection isn\u2019t available in this build.",
     "notRunning": "Start the project before connecting an agent."
   },

@@ -13,15 +13,13 @@
   "menu": {
     "app": {
       "about": "Informazioni su Bristlenose",
-      "aiPrivacy": "IA e privacy…",
-      "checkHealth": "Verifica lo stato del sistema…"
+      "aiPrivacy": "IA e privacy…"
     },
     "file": {
       "newProject": "Nuovo progetto…",
       "newFolder": "Nuova cartella…",
       "openInNewWindow": "Apri in una nuova finestra",
       "exportReport": "Esporta report…",
-      "exportAnonymised": "Esporta in forma anonima…",
       "pageSetup": "Formato di stampa…",
       "print": "Stampa…"
     },
@@ -38,7 +36,6 @@
     "view": {
       "hideProjects": "Nascondi i progetti",
       "showProjects": "Mostra i progetti",
-      "moveFocusToProjects": "Sposta lo stato attivo sui progetti",
       "showContents": "Mostra il contenuto",
       "hideContents": "Nascondi il contenuto",
       "showCodes": "Mostra i codici",
@@ -54,13 +51,12 @@
       "starredQuotesOnly": "Solo citazioni con stella",
       "zoomIn": "Aumenta lo zoom",
       "zoomOut": "Riduci lo zoom",
-      "actualSize": "Dimensioni reali",
-      "switchToLightMode": "Passa all'aspetto chiaro",
-      "switchToDarkMode": "Passa all'aspetto scuro"
+      "actualSize": "Dimensioni reali"
     },
     "project": {
       "removeFromSidebar": "Rimuovi dalla barra laterale",
       "showInFinder": "Mostra nel Finder",
+      "connectAgent": "Collega agente\u2026",
       "rename": "Rinomina…",
       "moveTo": "Sposta in",
       "noFolder": "Nessuna cartella",
@@ -475,6 +471,34 @@
     "failTimedOut": "Il download è scaduto. Controlla la connessione e riprova.",
     "failCantReach": "Connessione a Ollama persa. Assicurati che sia in esecuzione, poi riprova.",
     "failGeneric": "Non è stato possibile completare il download. %@"
+  },
+  "connectAgent": {
+    "title": "Collega un agente a \u201c{{project}}\u201d",
+    "sessions_one": "{{count}} sessione",
+    "sessions_other": "{{count}} sessioni",
+    "quotes_one": "{{count}} citazione",
+    "quotes_other": "{{count}} citazioni",
+    "badge": "Agente collegato",
+    "namesNote": "I nomi dei partecipanti non vengono mai inviati",
+    "namesNoteHint": "L\u2019agente vede i codici dei parlanti (p1, m1) e le citazioni testuali.",
+    "clientPicker": "Agente",
+    "clients": {
+      "claudeDesktop": "Claude Desktop",
+      "claudeCode": "Claude Code",
+      "chatgptCodex": "ChatGPT & Codex",
+      "other": "Funziona con qualsiasi agente compatibile MCP."
+    },
+    "claudeDesktopHow": "In Claude Desktop: Impostazioni \u2192 Developer \u2192 Edit Config, oppure modifica ~/Library/Application Support/Claude/claude_desktop_config.json aggiungendo sotto mcpServers:",
+    "claudeCodeHow": "Incolla in un terminale qualsiasi:",
+    "chatgptCodexHow": "In ChatGPT: Impostazioni \u2192 Server MCP \u2192 Aggiungi server \u2014 oppure aggiungi a ~/.codex/config.toml (una sola voce copre ChatGPT desktop, la CLI Codex e l\u2019estensione IDE):",
+    "copyConfig": "Copia configurazione",
+    "copyCommand": "Copia comando",
+    "copied": "Copiato",
+    "cancel": "Annulla",
+    "ok": "OK",
+    "addressNote": "Questo indirizzo cambia al riavvio di Bristlenose \u2014 copia di nuovo la configurazione dopo un riavvio.",
+    "unavailable": "La connessione degli agenti non \u00e8 disponibile in questa build.",
+    "notRunning": "Avvia il progetto prima di collegare un agente."
   },
   "toast": {
     "removedBatchAnnouncement": "Rimossi %d progetti. Premi Comando-Z per annullare.",

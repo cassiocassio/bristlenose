@@ -13,15 +13,13 @@
   "menu": {
     "app": {
       "about": "Bristlenose 정보",
-      "aiPrivacy": "AI 및 개인정보…",
-      "checkHealth": "시스템 상태 확인…"
+      "aiPrivacy": "AI 및 개인정보…"
     },
     "file": {
       "newProject": "새 프로젝트…",
       "newFolder": "새 폴더…",
       "openInNewWindow": "새 윈도우에서 열기",
       "exportReport": "보고서 내보내기…",
-      "exportAnonymised": "익명화하여 내보내기…",
       "pageSetup": "페이지 설정…",
       "print": "프린트…"
     },
@@ -53,13 +51,12 @@
       "starredQuotesOnly": "별표 인용문만",
       "zoomIn": "확대",
       "zoomOut": "축소",
-      "actualSize": "실제 크기",
-      "switchToLightMode": "라이트 모드로 전환",
-      "switchToDarkMode": "다크 모드로 전환"
+      "actualSize": "실제 크기"
     },
     "project": {
       "removeFromSidebar": "\uc0ac\uc774\ub4dc\ubc14\uc5d0\uc11c \uc81c\uac70",
       "showInFinder": "Finder에서 보기",
+      "connectAgent": "\uc5d0\uc774\uc804\ud2b8 \uc5f0\uacb0\u2026",
       "rename": "이름 변경…",
       "moveTo": "이동",
       "noFolder": "폴더 없음",
@@ -469,6 +466,32 @@
     "failTimedOut": "다운로드 시간이 초과되었습니다. 연결을 확인하고 다시 시도하세요.",
     "failCantReach": "Ollama와의 연결이 끊겼습니다. 실행 중인지 확인한 후 다시 시도하세요.",
     "failGeneric": "다운로드를 완료할 수 없습니다. %@"
+  },
+  "connectAgent": {
+    "title": "\u201c{{project}}\u201d\uc5d0 \uc5d0\uc774\uc804\ud2b8 \uc5f0\uacb0",
+    "sessions_other": "\uc138\uc158 {{count}}\uac1c",
+    "quotes_other": "\uc778\uc6a9\ubb38 {{count}}\uac1c",
+    "badge": "\uc5d0\uc774\uc804\ud2b8 \uc5f0\uacb0\ub428",
+    "namesNote": "\ucc38\uac00\uc790 \uc774\ub984\uc740 \uc804\uc1a1\ub418\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4",
+    "namesNoteHint": "\uc5d0\uc774\uc804\ud2b8\uc5d0\ub294 \ud654\uc790 \ucf54\ub4dc(p1, m1)\uc640 \uc778\uc6a9\ubb38 \uc6d0\ubb38\uc774 \ud45c\uc2dc\ub429\ub2c8\ub2e4.",
+    "clientPicker": "\uc5d0\uc774\uc804\ud2b8",
+    "clients": {
+      "claudeDesktop": "Claude Desktop",
+      "claudeCode": "Claude Code",
+      "chatgptCodex": "ChatGPT & Codex",
+      "other": "\ubaa8\ub4e0 MCP \ud638\ud658 \uc5d0\uc774\uc804\ud2b8\uc5d0\uc11c \uc0ac\uc6a9\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4."
+    },
+    "claudeDesktopHow": "Claude Desktop\uc5d0\uc11c: \uc124\uc815 \u2192 Developer \u2192 Edit Config, \ub610\ub294 ~/Library/Application Support/Claude/claude_desktop_config.json\uc744 \ud3b8\uc9d1\ud574 mcpServers \uc544\ub798\uc5d0 \ucd94\uac00:",
+    "claudeCodeHow": "\uc544\ubb34 \ud130\ubbf8\ub110\uc5d0\ub098 \ubd99\uc5ec\ub123\uae30:",
+    "chatgptCodexHow": "ChatGPT\uc5d0\uc11c: \uc124\uc815 \u2192 MCP \uc11c\ubc84 \u2192 \uc11c\ubc84 \ucd94\uac00 \u2014 \ub610\ub294 ~/.codex/config.toml\uc5d0 \ucd94\uac00(\ud56d\ubaa9 \ud558\ub098\ub85c ChatGPT \ub370\uc2a4\ud06c\ud0d1, Codex CLI, IDE \ud655\uc7a5 \ud504\ub85c\uadf8\ub7a8 \ubaa8\ub450 \uc801\uc6a9):",
+    "copyConfig": "\uc124\uc815 \ubcf5\uc0ac",
+    "copyCommand": "\uba85\ub839\uc5b4 \ubcf5\uc0ac",
+    "copied": "\ubcf5\uc0ac\ub428",
+    "cancel": "\ucde8\uc18c",
+    "ok": "\ud655\uc778",
+    "addressNote": "\uc774 \uc8fc\uc18c\ub294 Bristlenose\ub97c \uc7ac\uc2dc\ub3d9\ud558\uba74 \ubc14\ub01d\ub2c8\ub2e4 \u2014 \uc7ac\uc2dc\ub3d9 \ud6c4 \uc124\uc815\uc744 \ub2e4\uc2dc \ubcf5\uc0ac\ud558\uc2ed\uc2dc\uc624.",
+    "unavailable": "\uc774 \ube4c\ub4dc\uc5d0\uc11c\ub294 \uc5d0\uc774\uc804\ud2b8 \uc5f0\uacb0\uc744 \uc0ac\uc6a9\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.",
+    "notRunning": "\uc5d0\uc774\uc804\ud2b8\ub97c \uc5f0\uacb0\ud558\uae30 \uc804\uc5d0 \ud504\ub85c\uc81d\ud2b8\ub97c \uc2dc\uc791\ud558\uc2ed\uc2dc\uc624."
   },
   "toast": {
     "removedBatchAnnouncement": "\ud504\ub85c\uc81d\ud2b8 %d\uac1c\ub97c \uc81c\uac70\ud588\uc2b5\ub2c8\ub2e4. \uc2e4\ud589 \ucde8\uc18c\ud558\ub824\uba74 Command-Z\ub97c \ub204\ub974\uc138\uc694.",

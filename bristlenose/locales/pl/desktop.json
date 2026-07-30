@@ -13,15 +13,13 @@
   "menu": {
     "app": {
       "about": "Bristlenose — informacje",
-      "aiPrivacy": "AI i prywatność…",
-      "checkHealth": "Sprawdź stan systemu…"
+      "aiPrivacy": "AI i prywatność…"
     },
     "file": {
       "newProject": "Nowy projekt…",
       "newFolder": "Nowy folder…",
       "openInNewWindow": "Otwórz w nowym oknie",
       "exportReport": "Eksportuj raport…",
-      "exportAnonymised": "Eksportuj zanonimizowany…",
       "pageSetup": "Ustawienia strony…",
       "print": "Drukuj…"
     },
@@ -38,7 +36,6 @@
     "view": {
       "hideProjects": "Ukryj projekty",
       "showProjects": "Pokaż projekty",
-      "moveFocusToProjects": "Przenieś fokus na projekty",
       "showContents": "Pokaż zawartość",
       "hideContents": "Ukryj zawartość",
       "showCodes": "Pokaż kody",
@@ -54,13 +51,12 @@
       "starredQuotesOnly": "Tylko cytaty z gwiazdką",
       "zoomIn": "Powiększ",
       "zoomOut": "Pomniejsz",
-      "actualSize": "Rzeczywisty rozmiar",
-      "switchToLightMode": "Przełącz na tryb jasny",
-      "switchToDarkMode": "Przełącz na tryb ciemny"
+      "actualSize": "Rzeczywisty rozmiar"
     },
     "project": {
       "removeFromSidebar": "Usuń z paska bocznego",
       "showInFinder": "Pokaż w Finderze",
+      "connectAgent": "Po\u0142\u0105cz agenta\u2026",
       "rename": "Zmień nazwę…",
       "moveTo": "Przenieś do",
       "noFolder": "Bez folderu",
@@ -485,6 +481,38 @@
     "failTimedOut": "Upłynął limit czasu pobierania. Sprawdź połączenie i spróbuj ponownie.",
     "failCantReach": "Utracono połączenie z Ollama. Upewnij się, że działa, a następnie spróbuj ponownie.",
     "failGeneric": "Nie udało się dokończyć pobierania. %@"
+  },
+  "connectAgent": {
+    "title": "Po\u0142\u0105cz agenta z projektem \u201e{{project}}\u201d",
+    "sessions_one": "{{count}} sesja",
+    "sessions_few": "{{count}} sesje",
+    "sessions_many": "{{count}} sesji",
+    "sessions_other": "{{count}} sesji",
+    "quotes_one": "{{count}} cytat",
+    "quotes_few": "{{count}} cytaty",
+    "quotes_many": "{{count}} cytat\u00f3w",
+    "quotes_other": "{{count}} cytat\u00f3w",
+    "badge": "Agent po\u0142\u0105czony",
+    "namesNote": "Imiona i nazwiska uczestnik\u00f3w nigdy nie s\u0105 wysy\u0142ane",
+    "namesNoteHint": "Agent widzi kody m\u00f3wc\u00f3w (p1, m1) i dos\u0142owne cytaty.",
+    "clientPicker": "Agent",
+    "clients": {
+      "claudeDesktop": "Claude Desktop",
+      "claudeCode": "Claude Code",
+      "chatgptCodex": "ChatGPT & Codex",
+      "other": "Dzia\u0142a z ka\u017cdym agentem zgodnym z MCP."
+    },
+    "claudeDesktopHow": "W Claude Desktop: Ustawienia \u2192 Developer \u2192 Edit Config, albo edytuj ~/Library/Application Support/Claude/claude_desktop_config.json i dodaj w sekcji mcpServers:",
+    "claudeCodeHow": "Wklej w dowolnym terminalu:",
+    "chatgptCodexHow": "W ChatGPT: Ustawienia \u2192 Serwery MCP \u2192 Dodaj serwer \u2014 albo dodaj do ~/.codex/config.toml (jeden wpis obejmuje ChatGPT na komputer, Codex CLI i rozszerzenie IDE):",
+    "copyConfig": "Skopiuj konfiguracj\u0119",
+    "copyCommand": "Skopiuj polecenie",
+    "copied": "Skopiowano",
+    "cancel": "Anuluj",
+    "ok": "OK",
+    "addressNote": "Ten adres zmienia si\u0119 po ponownym uruchomieniu Bristlenose \u2014 po restarcie skopiuj konfiguracj\u0119 ponownie.",
+    "unavailable": "Po\u0142\u0105czenie agenta nie jest dost\u0119pne w tej kompilacji.",
+    "notRunning": "Uruchom projekt przed po\u0142\u0105czeniem agenta."
   },
   "toast": {
     "removedBatchAnnouncement": "Usunięto %d projektów. Naciśnij Command-Z, aby cofnąć.",

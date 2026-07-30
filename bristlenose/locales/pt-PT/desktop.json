@@ -13,15 +13,13 @@
   "menu": {
     "app": {
       "about": "Acerca do Bristlenose",
-      "aiPrivacy": "IA e Privacidade…",
-      "checkHealth": "Verificar Estado do Sistema…"
+      "aiPrivacy": "IA e Privacidade…"
     },
     "file": {
       "newProject": "Novo Projeto…",
       "newFolder": "Nova Pasta…",
       "openInNewWindow": "Abrir em Nova Janela",
       "exportReport": "Exportar Relatório…",
-      "exportAnonymised": "Exportar Anonimizado…",
       "pageSetup": "Configurar Página…",
       "print": "Imprimir…"
     },
@@ -38,7 +36,6 @@
     "view": {
       "hideProjects": "Ocultar Projetos",
       "showProjects": "Mostrar Projetos",
-      "moveFocusToProjects": "Mover Foco para Projetos",
       "showContents": "Mostrar Conteúdo",
       "hideContents": "Ocultar Conteúdo",
       "showCodes": "Mostrar Códigos",
@@ -54,13 +51,12 @@
       "starredQuotesOnly": "Apenas Citações com Estrela",
       "zoomIn": "Aumentar Zoom",
       "zoomOut": "Diminuir Zoom",
-      "actualSize": "Tamanho Real",
-      "switchToLightMode": "Mudar para Modo Claro",
-      "switchToDarkMode": "Mudar para Modo Escuro"
+      "actualSize": "Tamanho Real"
     },
     "project": {
       "removeFromSidebar": "Remover da Barra Lateral",
       "showInFinder": "Mostrar no Finder",
+      "connectAgent": "Ligar agente\u2026",
       "rename": "Mudar o Nome…",
       "moveTo": "Mover para",
       "noFolder": "Sem Pasta",
@@ -475,6 +471,34 @@
     "failTimedOut": "A transferência expirou. Verifique a sua ligação e tente novamente.",
     "failCantReach": "Ligação ao Ollama perdida. Verifique se está em execução e tente novamente.",
     "failGeneric": "Não foi possível concluir a transferência. %@"
+  },
+  "connectAgent": {
+    "title": "Ligar um agente a \u201c{{project}}\u201d",
+    "sessions_one": "{{count}} sess\u00e3o",
+    "sessions_other": "{{count}} sess\u00f5es",
+    "quotes_one": "{{count}} cita\u00e7\u00e3o",
+    "quotes_other": "{{count}} cita\u00e7\u00f5es",
+    "badge": "Agente ligado",
+    "namesNote": "Os nomes dos participantes nunca s\u00e3o enviados",
+    "namesNoteHint": "O agente v\u00ea c\u00f3digos de orador (p1, m1) e cita\u00e7\u00f5es literais.",
+    "clientPicker": "Agente",
+    "clients": {
+      "claudeDesktop": "Claude Desktop",
+      "claudeCode": "Claude Code",
+      "chatgptCodex": "ChatGPT & Codex",
+      "other": "Funciona com qualquer agente compat\u00edvel com MCP."
+    },
+    "claudeDesktopHow": "No Claude Desktop: Defini\u00e7\u00f5es \u2192 Developer \u2192 Edit Config, ou edite ~/Library/Application Support/Claude/claude_desktop_config.json adicionando em mcpServers:",
+    "claudeCodeHow": "Cole em qualquer terminal:",
+    "chatgptCodexHow": "No ChatGPT: Defini\u00e7\u00f5es \u2192 Servidores MCP \u2192 Adicionar servidor \u2014 ou adicione em ~/.codex/config.toml (uma \u00fanica entrada cobre o ChatGPT para computador, a CLI do Codex e a extens\u00e3o de IDE):",
+    "copyConfig": "Copiar configura\u00e7\u00e3o",
+    "copyCommand": "Copiar comando",
+    "copied": "Copiado",
+    "cancel": "Cancelar",
+    "ok": "OK",
+    "addressNote": "Este endere\u00e7o muda quando o Bristlenose reinicia \u2014 copie novamente a configura\u00e7\u00e3o ap\u00f3s reiniciar.",
+    "unavailable": "A liga\u00e7\u00e3o de agentes n\u00e3o est\u00e1 dispon\u00edvel nesta compila\u00e7\u00e3o.",
+    "notRunning": "Inicie o projeto antes de ligar um agente."
   },
   "toast": {
     "removedBatchAnnouncement": "%d projetos removidos. Prima Command-Z para desfazer.",

@@ -13,15 +13,13 @@
   "menu": {
     "app": {
       "about": "Bristlenose について",
-      "aiPrivacy": "AI とプライバシー…",
-      "checkHealth": "システム状況を確認…"
+      "aiPrivacy": "AI とプライバシー…"
     },
     "file": {
       "newProject": "新規プロジェクト…",
       "newFolder": "新規フォルダ…",
       "openInNewWindow": "新しいウインドウで開く",
       "exportReport": "レポートを書き出す…",
-      "exportAnonymised": "匿名化して書き出す…",
       "pageSetup": "ページ設定…",
       "print": "プリント…"
     },
@@ -53,13 +51,12 @@
       "starredQuotesOnly": "スター付きの発言のみ",
       "zoomIn": "拡大",
       "zoomOut": "縮小",
-      "actualSize": "実際のサイズ",
-      "switchToLightMode": "ライトモードに切り替え",
-      "switchToDarkMode": "ダークモードに切り替え"
+      "actualSize": "実際のサイズ"
     },
     "project": {
       "removeFromSidebar": "\u30b5\u30a4\u30c9\u30d0\u30fc\u304b\u3089\u53d6\u308a\u9664\u304f",
       "showInFinder": "Finder に表示",
+      "connectAgent": "\u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u3092\u63a5\u7d9a\u2026",
       "rename": "名前を変更…",
       "moveTo": "移動先",
       "noFolder": "フォルダなし",
@@ -469,6 +466,32 @@
     "failTimedOut": "ダウンロードがタイムアウトしました。接続を確認して再試行してください。",
     "failCantReach": "Ollamaとの接続が切れました。起動していることを確認してから再試行してください。",
     "failGeneric": "ダウンロードを完了できませんでした。%@"
+  },
+  "connectAgent": {
+    "title": "\u300c{{project}}\u300d\u306b\u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u3092\u63a5\u7d9a",
+    "sessions_other": "\u30bb\u30c3\u30b7\u30e7\u30f3 {{count}} \u4ef6",
+    "quotes_other": "\u767a\u8a00 {{count}} \u4ef6",
+    "badge": "\u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u63a5\u7d9a\u4e2d",
+    "namesNote": "\u53c2\u52a0\u8005\u540d\u306f\u9001\u4fe1\u3055\u308c\u307e\u305b\u3093",
+    "namesNoteHint": "\u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u306b\u306f\u8a71\u8005\u30b3\u30fc\u30c9(p1\u3001m1)\u3068\u767a\u8a00\u306e\u539f\u6587\u304c\u8868\u793a\u3055\u308c\u307e\u3059\u3002",
+    "clientPicker": "\u30a8\u30fc\u30b8\u30a7\u30f3\u30c8",
+    "clients": {
+      "claudeDesktop": "Claude Desktop",
+      "claudeCode": "Claude Code",
+      "chatgptCodex": "ChatGPT & Codex",
+      "other": "MCP\u5bfe\u5fdc\u306e\u4efb\u610f\u306e\u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u3067\u5229\u7528\u3067\u304d\u307e\u3059\u3002"
+    },
+    "claudeDesktopHow": "Claude Desktop\u3067:\u8a2d\u5b9a \u2192 Developer \u2192 Edit Config\u3001\u307e\u305f\u306f ~/Library/Application Support/Claude/claude_desktop_config.json \u3092\u7de8\u96c6\u3057\u3066 mcpServers \u306e\u4e0b\u306b\u8ffd\u52a0:",
+    "claudeCodeHow": "\u4efb\u610f\u306e\u30bf\u30fc\u30df\u30ca\u30eb\u306b\u8cbc\u308a\u4ed8\u3051:",
+    "chatgptCodexHow": "ChatGPT\u3067:\u8a2d\u5b9a \u2192 MCP\u30b5\u30fc\u30d0\u30fc \u2192 \u30b5\u30fc\u30d0\u30fc\u3092\u8ffd\u52a0 \u2014 \u307e\u305f\u306f ~/.codex/config.toml \u306b\u8ffd\u52a0(1\u3064\u306e\u30a8\u30f3\u30c8\u30ea\u3067 ChatGPT \u30c7\u30b9\u30af\u30c8\u30c3\u30d7\u3001Codex CLI\u3001IDE\u62e1\u5f35\u3092\u30ab\u30d0\u30fc):",
+    "copyConfig": "\u8a2d\u5b9a\u3092\u30b3\u30d4\u30fc",
+    "copyCommand": "\u30b3\u30de\u30f3\u30c9\u3092\u30b3\u30d4\u30fc",
+    "copied": "\u30b3\u30d4\u30fc\u6e08\u307f",
+    "cancel": "\u30ad\u30e3\u30f3\u30bb\u30eb",
+    "ok": "OK",
+    "addressNote": "\u3053\u306e\u30a2\u30c9\u30ec\u30b9\u306f Bristlenose \u306e\u518d\u8d77\u52d5\u6642\u306b\u5909\u308f\u308a\u307e\u3059 \u2014 \u518d\u8d77\u52d5\u5f8c\u306f\u8a2d\u5b9a\u3092\u30b3\u30d4\u30fc\u3057\u76f4\u3057\u3066\u304f\u3060\u3055\u3044\u3002",
+    "unavailable": "\u3053\u306e\u30d3\u30eb\u30c9\u3067\u306f\u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u63a5\u7d9a\u306f\u5229\u7528\u3067\u304d\u307e\u305b\u3093\u3002",
+    "notRunning": "\u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u3092\u63a5\u7d9a\u3059\u308b\u524d\u306b\u30d7\u30ed\u30b8\u30a7\u30af\u30c8\u3092\u958b\u59cb\u3057\u3066\u304f\u3060\u3055\u3044\u3002"
   },
   "toast": {
     "removedBatchAnnouncement": "%d \u3064\u306e\u30d7\u30ed\u30b8\u30a7\u30af\u30c8\u3092\u53d6\u308a\u9664\u304d\u307e\u3057\u305f\u3002\u30b3\u30de\u30f3\u30c9-Z \u3067\u53d6\u308a\u6d88\u305b\u307e\u3059\u3002",

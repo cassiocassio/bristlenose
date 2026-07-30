@@ -476,3 +476,22 @@ Quotes,Sitaatit,fi,QDA term (FSD KvaliMOTV) — countable: sitaatti
 Sessions,Istunnot,fi,QDA term; session = istunto
 Signals,Signaalit,fi,product term
 Codes,Koodit,fi,QDA term (FSD): koodi/koodaus
+Agent,Agente,es,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,エージェント,ja,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Agent,fr,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Agent,de,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,에이전트,ko,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Agent,cs,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Agente,it,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Agent,pl,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Агент,ru,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Агент,uk,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Agent,da,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Agent,sv,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Agent,nb,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Ajan,tr,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Agent,nl,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Agentti,fi,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Agente,pt-BR,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Agente,pt-PT,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,代理,zh-Hant,AI agent (MCP client); tr/zh-Hant choice pending native review

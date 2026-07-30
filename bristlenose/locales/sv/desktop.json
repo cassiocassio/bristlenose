@@ -13,15 +13,13 @@
   "menu": {
     "app": {
       "about": "Om Bristlenose",
-      "aiPrivacy": "AI och integritet…",
-      "checkHealth": "Kontrollera systemhälsa…"
+      "aiPrivacy": "AI och integritet…"
     },
     "file": {
       "newProject": "Nytt projekt…",
       "newFolder": "Ny mapp…",
       "openInNewWindow": "Öppna i nytt fönster",
       "exportReport": "Exportera rapport…",
-      "exportAnonymised": "Exportera anonymiserad…",
       "pageSetup": "Utskriftsformat…",
       "print": "Skriv ut…"
     },
@@ -38,7 +36,6 @@
     "view": {
       "hideProjects": "Dölj projekt",
       "showProjects": "Visa projekt",
-      "moveFocusToProjects": "Flytta fokus till projekt",
       "showContents": "Visa innehåll",
       "hideContents": "Dölj innehåll",
       "showCodes": "Visa koder",
@@ -54,13 +51,12 @@
       "starredQuotesOnly": "Endast stjärnmärkta citat",
       "zoomIn": "Zooma in",
       "zoomOut": "Zooma ut",
-      "actualSize": "Verklig storlek",
-      "switchToLightMode": "Byt till ljust läge",
-      "switchToDarkMode": "Byt till mörkt läge"
+      "actualSize": "Verklig storlek"
     },
     "project": {
       "removeFromSidebar": "Ta bort från sidofält",
       "showInFinder": "Visa i Finder",
+      "connectAgent": "Anslut agent\u2026",
       "rename": "Byt namn…",
       "moveTo": "Flytta till",
       "noFolder": "Ingen mapp",
@@ -475,6 +471,34 @@
     "failTimedOut": "Hämtningen tog för lång tid. Kontrollera din anslutning och försök igen.",
     "failCantReach": "Tappade anslutningen till Ollama. Se till att det körs och försök igen.",
     "failGeneric": "Hämtningen kunde inte slutföras. %@"
+  },
+  "connectAgent": {
+    "title": "Anslut en agent till \u201d{{project}}\u201d",
+    "sessions_one": "{{count}} session",
+    "sessions_other": "{{count}} sessioner",
+    "quotes_one": "{{count}} citat",
+    "quotes_other": "{{count}} citat",
+    "badge": "Agent ansluten",
+    "namesNote": "Deltagarnamn skickas aldrig",
+    "namesNoteHint": "Agenten ser talarkoder (p1, m1) och ordagranna citat.",
+    "clientPicker": "Agent",
+    "clients": {
+      "claudeDesktop": "Claude Desktop",
+      "claudeCode": "Claude Code",
+      "chatgptCodex": "ChatGPT & Codex",
+      "other": "Fungerar med alla MCP-kompatibla agenter."
+    },
+    "claudeDesktopHow": "I Claude Desktop: Inst\u00e4llningar \u2192 Developer \u2192 Edit Config, eller redigera ~/Library/Application Support/Claude/claude_desktop_config.json och l\u00e4gg till under mcpServers:",
+    "claudeCodeHow": "Klistra in i valfri terminal:",
+    "chatgptCodexHow": "I ChatGPT: Inst\u00e4llningar \u2192 MCP-servrar \u2192 L\u00e4gg till server \u2014 eller l\u00e4gg till i ~/.codex/config.toml (en post t\u00e4cker ChatGPT f\u00f6r skrivbordet, Codex CLI och IDE-till\u00e4gget):",
+    "copyConfig": "Kopiera konfiguration",
+    "copyCommand": "Kopiera kommando",
+    "copied": "Kopierat",
+    "cancel": "Avbryt",
+    "ok": "OK",
+    "addressNote": "Den h\u00e4r adressen \u00e4ndras n\u00e4r Bristlenose startas om \u2014 kopiera konfigurationen igen efter omstart.",
+    "unavailable": "Agentanslutning \u00e4r inte tillg\u00e4nglig i det h\u00e4r bygget.",
+    "notRunning": "Starta projektet innan du ansluter en agent."
   },
   "toast": {
     "removedBatchAnnouncement": "Tog bort %d projekt. Tryck på Kommando-Z för att ångra.",

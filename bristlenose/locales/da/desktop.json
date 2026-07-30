@@ -13,15 +13,13 @@
   "menu": {
     "app": {
       "about": "Om Bristlenose",
-      "aiPrivacy": "AI og anonymitet…",
-      "checkHealth": "Tjek systemtilstand…"
+      "aiPrivacy": "AI og anonymitet…"
     },
     "file": {
       "newProject": "Nyt projekt…",
       "newFolder": "Ny mappe…",
       "openInNewWindow": "Åbn i nyt vindue",
       "exportReport": "Eksportér rapport…",
-      "exportAnonymised": "Eksportér anonymiseret…",
       "pageSetup": "Sideopsætning…",
       "print": "Udskriv…"
     },
@@ -38,7 +36,6 @@
     "view": {
       "hideProjects": "Skjul projekter",
       "showProjects": "Vis projekter",
-      "moveFocusToProjects": "Flyt fokus til projekter",
       "showContents": "Vis indhold",
       "hideContents": "Skjul indhold",
       "showCodes": "Vis koder",
@@ -54,13 +51,12 @@
       "starredQuotesOnly": "Kun stjernemarkerede citater",
       "zoomIn": "Zoom ind",
       "zoomOut": "Zoom ud",
-      "actualSize": "Faktisk størrelse",
-      "switchToLightMode": "Skift til lyst tema",
-      "switchToDarkMode": "Skift til mørkt tema"
+      "actualSize": "Faktisk størrelse"
     },
     "project": {
       "removeFromSidebar": "Fjern fra sidepanel",
       "showInFinder": "Vis i Finder",
+      "connectAgent": "Forbind agent\u2026",
       "rename": "Omdøb…",
       "moveTo": "Flyt til",
       "noFolder": "Ingen mappe",
@@ -475,6 +471,34 @@
     "failTimedOut": "Downloaden fik timeout. Tjek din forbindelse, og prøv igen.",
     "failCantReach": "Mistede forbindelsen til Ollama. Sørg for, at det kører, og prøv igen.",
     "failGeneric": "Downloaden kunne ikke gennemføres. %@"
+  },
+  "connectAgent": {
+    "title": "Forbind en agent til \u201c{{project}}\u201d",
+    "sessions_one": "{{count}} session",
+    "sessions_other": "{{count}} sessioner",
+    "quotes_one": "{{count}} citat",
+    "quotes_other": "{{count}} citater",
+    "badge": "Agent forbundet",
+    "namesNote": "Deltagernavne sendes aldrig",
+    "namesNoteHint": "Agenten ser talerkoder (p1, m1) og ordrette citater.",
+    "clientPicker": "Agent",
+    "clients": {
+      "claudeDesktop": "Claude Desktop",
+      "claudeCode": "Claude Code",
+      "chatgptCodex": "ChatGPT & Codex",
+      "other": "Virker med enhver MCP-kompatibel agent."
+    },
+    "claudeDesktopHow": "I Claude Desktop: Indstillinger \u2192 Developer \u2192 Edit Config, eller rediger ~/Library/Application Support/Claude/claude_desktop_config.json og tilf\u00f8j under mcpServers:",
+    "claudeCodeHow": "Inds\u00e6t i en vilk\u00e5rlig terminal:",
+    "chatgptCodexHow": "I ChatGPT: Indstillinger \u2192 MCP-servere \u2192 Tilf\u00f8j server \u2014 eller tilf\u00f8j til ~/.codex/config.toml (\u00e9n post d\u00e6kker ChatGPT desktop, Codex CLI og IDE-udvidelsen):",
+    "copyConfig": "Kopi\u00e9r konfiguration",
+    "copyCommand": "Kopi\u00e9r kommando",
+    "copied": "Kopieret",
+    "cancel": "Annuller",
+    "ok": "OK",
+    "addressNote": "Denne adresse \u00e6ndres, n\u00e5r Bristlenose genstarter \u2014 kopi\u00e9r konfigurationen igen efter genstart.",
+    "unavailable": "Agentforbindelse er ikke tilg\u00e6ngelig i dette build.",
+    "notRunning": "Start projektet, f\u00f8r du forbinder en agent."
   },
   "toast": {
     "removedBatchAnnouncement": "Fjernede %d projekter. Tryk på Kommando-Z for at fortryde.",

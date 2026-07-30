@@ -13,15 +13,13 @@
   "menu": {
     "app": {
       "about": "Om Bristlenose",
-      "aiPrivacy": "KI og personvern…",
-      "checkHealth": "Sjekk systemtilstand…"
+      "aiPrivacy": "KI og personvern…"
     },
     "file": {
       "newProject": "Nytt prosjekt…",
       "newFolder": "Ny mappe…",
       "openInNewWindow": "Åpne i nytt vindu",
       "exportReport": "Eksporter rapport…",
-      "exportAnonymised": "Eksporter anonymisert…",
       "pageSetup": "Utskriftsformat…",
       "print": "Skriv ut…"
     },
@@ -38,7 +36,6 @@
     "view": {
       "hideProjects": "Skjul prosjekter",
       "showProjects": "Vis prosjekter",
-      "moveFocusToProjects": "Flytt fokus til prosjekter",
       "showContents": "Vis innhold",
       "hideContents": "Skjul innhold",
       "showCodes": "Vis koder",
@@ -54,13 +51,12 @@
       "starredQuotesOnly": "Bare stjernemerkede sitater",
       "zoomIn": "Zoom inn",
       "zoomOut": "Zoom ut",
-      "actualSize": "Faktisk størrelse",
-      "switchToLightMode": "Bytt til lyst utseende",
-      "switchToDarkMode": "Bytt til mørkt utseende"
+      "actualSize": "Faktisk størrelse"
     },
     "project": {
       "removeFromSidebar": "Fjern fra sidepanel",
       "showInFinder": "Vis i Finder",
+      "connectAgent": "Koble til agent\u2026",
       "rename": "Endre navn…",
       "moveTo": "Flytt til",
       "noFolder": "Ingen mappe",
@@ -475,6 +471,34 @@
     "failTimedOut": "Nedlastingen fikk tidsavbrudd. Sjekk forbindelsen og prøv igjen.",
     "failCantReach": "Mistet forbindelsen til Ollama. Kontroller at det kjører, og prøv igjen.",
     "failGeneric": "Nedlastingen kunne ikke fullføres. %@"
+  },
+  "connectAgent": {
+    "title": "Koble en agent til \u00ab{{project}}\u00bb",
+    "sessions_one": "{{count}} \u00f8kt",
+    "sessions_other": "{{count}} \u00f8kter",
+    "quotes_one": "{{count}} sitat",
+    "quotes_other": "{{count}} sitater",
+    "badge": "Agent tilkoblet",
+    "namesNote": "Deltakernavn sendes aldri",
+    "namesNoteHint": "Agenten ser talerkoder (p1, m1) og ordrette sitater.",
+    "clientPicker": "Agent",
+    "clients": {
+      "claudeDesktop": "Claude Desktop",
+      "claudeCode": "Claude Code",
+      "chatgptCodex": "ChatGPT & Codex",
+      "other": "Fungerer med alle MCP-kompatible agenter."
+    },
+    "claudeDesktopHow": "I Claude Desktop: Innstillinger \u2192 Developer \u2192 Edit Config, eller rediger ~/Library/Application Support/Claude/claude_desktop_config.json og legg til under mcpServers:",
+    "claudeCodeHow": "Lim inn i en hvilken som helst terminal:",
+    "chatgptCodexHow": "I ChatGPT: Innstillinger \u2192 MCP-servere \u2192 Legg til server \u2014 eller legg til i ~/.codex/config.toml (\u00e9n oppf\u00f8ring dekker ChatGPT for skrivebord, Codex CLI og IDE-utvidelsen):",
+    "copyConfig": "Kopier konfigurasjon",
+    "copyCommand": "Kopier kommando",
+    "copied": "Kopiert",
+    "cancel": "Avbryt",
+    "ok": "OK",
+    "addressNote": "Denne adressen endres n\u00e5r Bristlenose starter p\u00e5 nytt \u2014 kopier konfigurasjonen p\u00e5 nytt etter omstart.",
+    "unavailable": "Agenttilkobling er ikke tilgjengelig i denne versjonen.",
+    "notRunning": "Start prosjektet f\u00f8r du kobler til en agent."
   },
   "toast": {
     "removedBatchAnnouncement": "Fjernet %d prosjekter. Trykk Kommando-Z for å angre.",

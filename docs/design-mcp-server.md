@@ -13,6 +13,7 @@ _Design note. Nothing built. July 2026._
 
 ## Changelog
 
+- _30 Jul 2026_ — §3b substantially rewritten after a domain correction. Two errors fixed: (1) framing this as *longitudinal* — designed longitudinal qual is rare (common for NPS/SUS, not qual), and reading a concept across an accumulated back-catalogue is a different, more common thing; (2) treating differently-named codes in two studies as a split concept needing reconciliation — between studies discontinuity is the norm (new boss, new agenda, feature replaced), so merging may manufacture a finding rather than repair one. The continuity carrier is the **framework the researcher re-uses across unrelated projects**, so codes are shared by construction rather than reconciled after the fact. `find_duplicate_codes` and `merge-tags` demoted to manual consolidation aids. Denominators promoted as the load-bearing trap; the time axis demoted.
 - _30 Jul 2026_ — added §6a (connect UX) and §6b (the Chat-lens question). §6a records two blockers on the obvious design: MCP servers are configured client-side so Bristlenose cannot open a session (and claude.ai in a browser cannot reach a local server at all), and the App Sandbox forbids writing another app's config — clipboard snippet is the unblocked floor. Refuses a "Claude lens", accepts a live-state sidebar badge, defers a toolbar icon. §6b treats the provider-backed Chat lens as a genuinely different proposal, states both objections at full strength, and recommends a scoped cited-question-box sequenced *after* MCP as a forcing function.
 - _30 Jul 2026_ — added §3b: longitudinal querying by code is the real cross-study capability. Records the silent-under-reporting failure mode, `merge-tags` as the reconciliation primitive (and its undocumented instance-wide reach), the nullable `session_date` fallback chain, and the denominator trap. Sharpens the phase-2 dependency from "project index" to "shared codebook store". §3a softened: deliberate recurrence (panel, diary, follow-up wave) is real and meaningful — the rule is inference versus declaration, not identity versus no identity.
 - _30 Jul 2026_ — added §3a and dropped phase 4. Cross-study person identity is not a deferred capability but a misread of research practice: recurrence is rare, and where unintended it is a liability the researcher already handles socially. `person_links` is no longer a dependency of this doc. (Superseded in part the same day — see the §3a softening above.)
@@ -347,39 +348,65 @@ Within a single study, people remain first-class and important — who said what
 role, journey, whose experience diverges. It is only the cross-study join that has
 no value.
 
-### 3b. Longitudinal querying by code is the real cross-study capability
+### 3b. Cross-study querying by code — and what actually carries the continuity
 
-What a researcher actually wants across a folder is a **durable concept traced
-over time**: *perception of cost*, *frustrations with getting started*, *brand
-loyalty*. Concepts that recur study after study, where the interesting question is
-how the answer moved — not who gave it.
+What a researcher wants across a folder is a **durable concept read across the
+back-catalogue**: *perception of cost*, *frustrations with getting started*,
+*brand loyalty*. This sits a long way ahead of person reconciliation in value
+(§3a).
 
-This is a long way ahead of person reconciliation in value, and it is worth being
-explicit that the reconciliation problem is **real but at the wrong object**.
-Matching `p3` in one study to `p7` in another buys nothing (§3a). Matching *"cost
-concerns"* to *"price sensitivity"* is the entire capability.
+Two corrections to the obvious framing, both of which change the mechanism.
 
-### The failure mode is silent under-reporting
+**This is usually cross-sectional, not longitudinal.** Designed longitudinal
+*qual* is much rarer than a data model would suggest — longitudinal is common for
+cheap repeated instruments (NPS, SUS) and uncommon for qualitative work.
+Accumulating five studies over three years is a **back-catalogue, not a
+longitudinal study**, and reading a concept across it is a legitimate and
+different thing. Build for "read across my accumulated corpus"; treat true
+time-series as a rare special case, and do not let chronology language imply a
+study design that mostly does not exist.
 
-Nothing forces two studies to use the *same* code. A researcher coding study A
-creates "cost concerns"; six months later, study B gets "price sensitivity". Both
-are ordinary `TagDefinition` rows. A longitudinal query for either one returns a
-confident, partial answer with no indication that half the corpus used the other
-label.
+**Between studies, discontinuity is the norm.** New boss, new SLT directives, a
+feature replaced outright, an entirely new research agenda. There is no guarantee
+of continuity and no basis for assuming two studies are commensurable. An earlier
+draft treated "cost concerns" in study A and "price sensitivity" in study B as a
+split concept needing reconciliation. **That was wrong, and dangerously so:** they
+may be genuinely different concerns from different agendas, and merging them would
+manufacture a finding rather than repair one.
 
-That is worse than a gap, because it looks like a finding. Two consequences:
+### The framework is the continuity carrier
 
-- **The surface must expose near-duplicate codes**, so the assistant can say "you
-  have two labels that look like the same concept" rather than quietly answering
-  from one of them.
-- **`merge-tags` is the reconciliation primitive and already exists**
-  (`POST /projects/{id}/codebook/merge-tags`). Worth recording a non-obvious
-  property: despite the project-scoped route path, it reassigns **every**
-  `QuoteTag` row for the source tag with no project filter and then deletes the
-  instance-scoped `TagDefinition`. For longitudinal work that is exactly right —
-  healing a split concept should heal every study at once — but it is surprising
-  enough that it needs a test pinning the behaviour before folder scope makes it
-  observable.
+What actually recurs across unrelated projects is **the tag group the researcher
+keeps re-using**, because it matches their theoretical leaning. That — not any
+similarity between the studies — is what makes a cross-study query sound.
+
+The mechanism follows: **codes are shared by construction, not reconciled after
+the fact.** Import the same framework into both studies and *perception of cost*
+is literally the same `TagDefinition`, with the same `apply_when` / `not_this`
+boundary. Nothing needs matching, because nothing diverged.
+
+This is the same insight as §5a and §Positioning arriving from a third direction:
+the framework is the durable, portable artifact — the researcher's analytical
+stance made reusable. The studies are disposable; the lens is not.
+
+Three consequences:
+
+- **Cross-study queries are sound within a shared framework and unsound across
+  ad-hoc tags.** The surface should say which it is. A result assembled from
+  hand-rolled tags in two unrelated studies deserves a caveat the assistant can
+  actually see; one assembled from a shared framework does not.
+- **`find_duplicate_codes` is a demoted fallback, not the primary mechanism.** It
+  helps a researcher who tagged by hand and later wants to consolidate. It must
+  not present near-duplicate labels as evidence they *should* be merged — that is
+  the researcher's judgement about whether two agendas were asking the same
+  question.
+- **`merge-tags` stays a manual, researcher-initiated action** and never an
+  assistant-proposed one. Worth recording its non-obvious reach: despite the
+  project-scoped route path, it reassigns **every** `QuoteTag` row for the source
+  tag with no project filter, then deletes the instance-scoped `TagDefinition`.
+  Correct when a human genuinely means "these were always the same code"; badly
+  wrong if reached for automatically. Needs a test pinning the behaviour before
+  folder scope makes it observable.
 
 ### The actual blocker is the per-project database, not the project index
 
@@ -389,26 +416,31 @@ own SQLite file at `<output_dir>/.bristlenose/bristlenose.db`, so a code does no
 in fact travel between studies — it is a different row in a different database
 with a coincidentally identical name.
 
-So the phase-2 dependency is sharper than "the project index": longitudinal
+So the phase-2 dependency is sharper than "the project index": cross-study code
 querying needs a **shared codebook store** — the instance DB at
 `~/.config/bristlenose/bristlenose.db` that `design-multi-project.md` anticipates,
-or an equivalent. Without it, cross-study code queries cannot be right, only
-lucky. This should be stated as the dependency rather than the index, because a
-project index alone would ship a folder mode that under-reports.
+or an equivalent. This is what lets a re-used framework be literally the same rows
+in both studies, which §3b establishes as the only sound basis for the query.
+Without it, cross-study results cannot be right, only lucky, and a project index
+alone would ship a folder mode that under-reports.
 
-### Two traps in the time axis itself
+### Denominators, and a much smaller time axis
 
-- **`Session.session_date` is nullable** (`datetime | None`, default `None`).
-  "Over time" needs a documented fallback chain — `session_date` →
-  `first_imported_at` → `Project.created_at` — and the tool must **return which
-  one it used**. Otherwise a folder of undated studies silently sorts by import
-  order and presents it as chronology.
-- **Denominators.** Five participants in one study and twenty in the next makes
-  raw counts across time actively misleading — *"mentions of cost tripled"* when
-  the sample tripled. Every longitudinal result carries its per-study denominator,
-  and the `instructions` say plainly not to compare raw counts across studies of
-  different sizes. Same family as the existing `_TRADE_OFF_NOTE`, and an assistant
-  will fall into it unprompted.
+**Denominators are the load-bearing one.** Five participants in one study and
+twenty in the next makes raw counts across studies actively misleading — *"mentions
+of cost tripled"* when the sample tripled. Every cross-study result carries its
+per-study denominator, and the `instructions` say plainly not to compare raw counts
+across studies of different sizes. Same family as the existing `_TRADE_OFF_NOTE`,
+and an assistant will fall into it unprompted. This applies to *any* cross-study
+comparison, chronological or not.
+
+**Ordering matters less than an earlier draft assumed**, since the common case is
+reading across a back-catalogue rather than tracking a series. Still worth getting
+right when a date is shown: `Session.session_date` is nullable (`datetime | None`,
+default `None`), so any ordered view needs a documented fallback — `session_date` →
+`first_imported_at` → `Project.created_at` — and must **report which basis it
+used**. Otherwise a folder of undated studies sorts by import order and presents
+that as chronology. Label it *order added*, not *timeline*, unless real dates exist.
 
 ---
 
@@ -437,8 +469,8 @@ limits):
 | `get_themes` | theme groups with representative quotes |
 | `get_session_journey` | per-participant journey with timecode anchors |
 | `get_transcript` | one session, range-bounded — never whole-corpus |
-| `trace_code` | folder scope: one code across studies over time, with per-study denominators and the date basis used (§3b) |
-| `find_duplicate_codes` | near-duplicate labels across the folder — the silent under-reporting guard (§3b) |
+| `read_code_across_studies` | folder scope: one code across the back-catalogue, with per-study denominators and whether the code came from a shared framework (§3b) |
+| `find_duplicate_codes` | near-duplicate labels across the folder — a consolidation aid for hand-rolled tags, never a merge recommendation (§3b) |
 | `get_framework` | one framework in full — the stance, not just the tag list (§5a) |
 | `draft_framework` | write a YAML to the user codebook dir; authoring, not applying (§5a) |
 
@@ -746,7 +778,7 @@ aspirational — the same reason it works for export.
 | Phase | Scope | Depends on |
 |---|---|---|
 | **1** | Single project, read-only, `/mcp` on serve | nothing new |
-| **2** | Folder scope — longitudinal code queries across studies | **a shared codebook store**, not just the project index (§3b) |
+| **2** | Folder scope — cross-study code queries over the back-catalogue | **a shared codebook store**, not just the project index (§3b) |
 | **3** | Writes as proposals | `ProposedTag` review UI already shipped; batch review hardened (§5) |
 
 **Bring-your-own-framework YAML is a phase-1 sibling, not a later phase.** It is

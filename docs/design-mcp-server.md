@@ -13,6 +13,7 @@ _Design note. Nothing built. July 2026._
 
 ## Changelog
 
+- _30 Jul 2026_ — added §5a: user-authored frameworks as first-class objects (read / discover / author), refining §5's write rule to "corpus mutations go through the proposal queue, artifact authoring writes a reviewable file". Records the user-codebook directory, three loader traps, and the trust surface.
 - _30 Jul 2026_ — added §Positioning (glue not chatbot; the Figma-/design-system analogy, what the position must defend, framework YAML as the ecosystem artifact) and its consequences in §5, §9, §10.
 - _30 Jul 2026_ — initial draft.
 
@@ -294,7 +295,8 @@ model's ability to choose. Strava ships eight. Budget accordingly.
 **Resources** (stable, enumerable, cheap to hold in context):
 
 - `bristlenose://codebook` — groups, tags, and each code's `apply_when`/`not_this`
-- `bristlenose://frameworks` — active frameworks and their definitions
+- `bristlenose://frameworks` — every framework available, built-in *and*
+  user-authored, with `preamble` and full per-tag boundaries (§5a)
 - `bristlenose://people` — participants and roles, per project
 - `bristlenose://projects` — the inventory in scope, with session counts
 
@@ -311,6 +313,8 @@ limits):
 | `get_session_journey` | per-participant journey with timecode anchors |
 | `get_transcript` | one session, range-bounded — never whole-corpus |
 | `compare_projects` | folder scope: shared codes, recurring findings, divergence |
+| `get_framework` | one framework in full — the stance, not just the tag list (§5a) |
+| `draft_framework` | write a YAML to the user codebook dir; authoring, not applying (§5a) |
 
 **The three-transcript ceiling is the design constraint.** If `search_quotes` can
 return 400 rows unbounded, the ceiling has been rebuilt inside our own server.
@@ -344,6 +348,80 @@ already exist (`routes/autocode.py:515,595`) but were built as a convenience;
 under this positioning they become load-bearing infrastructure and need the
 review affordances to match — group by code, preview the diff, accept a subset.
 Worth designing before the first third-party skill exists rather than after.
+
+---
+
+## 5a. Frameworks as first-class objects
+
+A researcher's own framework is not just something to *import* — it is an object
+the assistant should be able to read, reason in, and help author. Three
+capabilities, in increasing order of ambition:
+
+1. **Read** — the full framework, not just tag names: `preamble`, per-tag
+   `definition` / `apply_when` / `not_this`, group structure, and any register
+   instruction. This is what makes the assistant reason in the researcher's
+   taxonomy instead of a parallel invented one.
+2. **Discover** — which frameworks exist (built-in *and* user-authored), which are
+   applied to which project, and for a given tag in this project, whether it came
+   from a framework or was hand-rolled.
+3. **Author** — draft a framework from how the researcher already codes. This is
+   the dynamic-codebook-builder loop (`synthesize` from exemplars → boundary
+   fields) raised from single-tag to whole-framework granularity. The engine and
+   the `codebook-synthesize.md` prompt already exist.
+
+### This refines the write rule in §5
+
+"All writes are proposals" was too blunt. The right split:
+
+> **Corpus mutations go through the proposal queue. Artifact authoring writes a
+> file the researcher reviews as a file.**
+
+A framework YAML is a *document*, not a change to anyone's coded data — git diffs
+it, the researcher reads it, nothing has been recoded. **Applying** that framework
+to a corpus is a separate action and still goes through `ProposedTag`. That
+separation is what makes authoring safe to hand to an assistant, and it matches
+how design-system work with Figma actually goes: you edit the tokens file, you
+don't silently restyle the app.
+
+### Where user frameworks live
+
+**`user_config_dir()/codebooks/*.yaml`** — the XDG-aware helper already exists
+(`bristlenose/credentials.py:22`, honouring `$XDG_CONFIG_HOME`, else
+`~/.config/bristlenose`). Instance-level rather than project-local, for the same
+reason `TagDefinition` and `TagPrompt` are instance-scoped: a framework is a
+property of how you work, not of one study. Plus an explicit-path import for
+one-offs and for a framework checked into a client's repo.
+
+### Three traps in the current loader
+
+Discovery is already `_TEMPLATES_DIR.glob("*.yaml")`, so adding a second directory
+is small — but:
+
+- **`load_all_templates` is `@cache`d.** A YAML dropped into the user directory
+  will not appear until the process restarts. Either invalidate on directory mtime
+  or scope the cache to the built-in dir only. This will otherwise present as
+  "my framework didn't show up," which is exactly the first-run experience an
+  ecosystem cannot afford.
+- **`_VALID_COLOUR_SETS` is a closed frozenset** (`ux`, `emo`, `task`, `trust`,
+  `opp`, `sentiment`). A user YAML naming anything else must degrade to a default
+  with a warning, never crash the picker — a third-party file is untrusted input
+  in a way the bundled nine never were.
+- **`id` collisions.** A user framework with `id: garrett` needs a precedence rule
+  and a visible indication of which one won. Namespacing user ids is the cheap
+  answer.
+
+Validation belongs in `bristlenose doctor`, mirroring the existing
+`Bundle: locales` check — malformed YAML in the user codebook directory should be
+reported by name at the point the researcher goes looking, not swallowed.
+
+### Trust surface
+
+A framework's `preamble` steers both the analysis and the report's register —
+`cli-ux.yaml` uses it to instruct voice for a DX audience. That is the feature, and
+it is also the risk: a framework is executable methodology, not inert
+configuration. A framework the researcher drafted with their assistant is in a
+different trust position from one fetched off a registry, and §10 Q5 (distribution
+model) has to be answered before authors are invited.
 
 ---
 
@@ -411,6 +489,12 @@ aspirational — the same reason it works for export.
 independent of everything above, it is small, and without it the ecosystem
 argument in §Positioning has no artifact to trade. Ship it alongside the read-only
 server.
+
+Note that this makes phase 1 not-quite-read-only, and deliberately so: `read` and
+`discover` from §5a are phase 1, and `author` (`draft_framework`) can be too,
+because writing a YAML file mutates no coded data. The proposal queue still gates
+everything that touches the corpus. The §5a split is what lets the useful half of
+authoring land early without waiting on phase 3.
 
 **The tool signatures are a public contract from day one.** If people write skills
 against this, the tool surface is no longer an internal API that can be reshaped

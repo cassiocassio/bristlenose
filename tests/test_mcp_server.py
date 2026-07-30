@@ -77,6 +77,46 @@ def _search(db, **kwargs):
     return _tool_search_quotes(db, **defaults)
 
 
+def _seed_second_frustration(db) -> None:
+    """Give Dashboard|frustration two quotes so a signal cell forms."""
+    dashboard = db.query(ScreenCluster).filter_by(screen_label="Dashboard").one()
+    extra = Quote(
+        project_id=1,
+        session_id="s1",
+        participant_id="p1",
+        start_timecode=80.0,
+        end_timecode=88.0,
+        text="Honestly the dashboard buttons made no sense to me at all.",
+        quote_type="screen_specific",
+        sentiment="frustration",
+        intensity=2,
+    )
+    db.add(extra)
+    db.flush()
+    db.add(ClusterQuote(cluster_id=dashboard.id, quote_id=extra.id))
+    db.commit()
+
+
+def _seed_tagged_group(db) -> None:
+    """A hand-rolled group with one tag applied to BOTH Dashboard quotes,
+    so the tags lens has a Dashboard|group cell of two."""
+    group = CodebookGroup(name="Trust wobbles", subtitle="", colour_set="trust")
+    db.add(group)
+    db.flush()
+    db.add(ProjectCodebookGroup(project_id=1, codebook_group_id=group.id))
+    tag = TagDefinition(codebook_group_id=group.id, name="hesitation")
+    db.add(tag)
+    db.flush()
+    for start in (10, 26):
+        q = (
+            db.query(Quote)
+            .filter(Quote.start_timecode >= start, Quote.start_timecode < start + 1)
+            .one()
+        )
+        db.add(QuoteTag(quote_id=q.id, tag_definition_id=tag.id))
+    db.commit()
+
+
 def _hide(db, dom_start: float, participant: str = "p1") -> None:
     q = (
         db.query(Quote)
@@ -170,6 +210,17 @@ class TestSearchQuotes:
         assert result["total_matched"] == 1
         assert result["quotes"][0]["quote_id"] == "q-p1-10"
 
+    def test_deleted_badge_suppresses_sentiment_in_rows_and_filter(self, db) -> None:
+        from bristlenose.server.models import DeletedBadge
+
+        q = db.query(Quote).filter(Quote.start_timecode >= 26, Quote.start_timecode < 27).one()
+        db.add(DeletedBadge(quote_id=q.id, sentiment="frustration"))
+        db.commit()
+        row = next(r for r in _search(db)["quotes"] if r["quote_id"] == "q-p1-26")
+        assert row["sentiment"] is None
+        # The filter agrees with the display: only q-p1-66 still matches.
+        assert _search(db, sentiment="frustration")["total_matched"] == 1
+
     def test_starred_only(self, db) -> None:
         q = db.query(Quote).filter(Quote.start_timecode >= 46, Quote.start_timecode < 47).one()
         db.add(QuoteState(quote_id=q.id, is_starred=True))
@@ -193,31 +244,12 @@ class TestSearchQuotes:
 
 
 class TestSignals:
-    def _seed_second_frustration(self, db) -> None:
-        """Give Dashboard|frustration two quotes so a signal cell forms."""
-        dashboard = db.query(ScreenCluster).filter_by(screen_label="Dashboard").one()
-        extra = Quote(
-            project_id=1,
-            session_id="s1",
-            participant_id="p1",
-            start_timecode=80.0,
-            end_timecode=88.0,
-            text="Honestly the dashboard buttons made no sense to me at all.",
-            quote_type="screen_specific",
-            sentiment="frustration",
-            intensity=2,
-        )
-        db.add(extra)
-        db.flush()
-        db.add(ClusterQuote(cluster_id=dashboard.id, quote_id=extra.id))
-        db.commit()
-
     def test_unknown_lens_errors_with_vocabulary(self, db) -> None:
         with pytest.raises(ToolInputError, match="sentiment"):
             _tool_get_signals(db, 1, "vibes", 10)
 
     def test_sentiment_signal_over_curated_corpus(self, db) -> None:
-        self._seed_second_frustration(db)
+        _seed_second_frustration(db)
         result = _tool_get_signals(db, 1, "sentiment", 10)
         cell = next(
             (s for s in result["signals"]
@@ -229,11 +261,25 @@ class TestSignals:
         assert len(cell["supporting_quotes"]) <= 3
         assert cell["supporting_quotes"][0]["quote_id"].startswith("q-p1-")
 
+    def test_deleted_badge_drops_out_of_sentiment_signals(self, db) -> None:
+        from bristlenose.server.models import DeletedBadge
+
+        _seed_second_frustration(db)
+        q = db.query(Quote).filter(Quote.start_timecode >= 80, Quote.start_timecode < 81).one()
+        db.add(DeletedBadge(quote_id=q.id, sentiment="frustration"))
+        db.commit()
+        result = _tool_get_signals(db, 1, "sentiment", 10)
+        assert not any(
+            s["location"] == "Dashboard" and s["sentiment"] == "frustration"
+            and s["quote_count"] == 2
+            for s in result["signals"]
+        ), "a de-badged quote must not drive a sentiment cell"
+
     def test_tool_and_route_diverge_on_hidden_quotes_by_design(self, app_fx, db) -> None:
         """Report view vs engine view — the divergence is intentional (review
         contradiction ruling A): hiding a quote changes the tool's signals
         and deliberately does NOT change the analysis route's."""
-        self._seed_second_frustration(db)
+        _seed_second_frustration(db)
         before = _tool_get_signals(db, 1, "sentiment", 10)
         assert any(
             s["location"] == "Dashboard" and s["sentiment"] == "frustration"
@@ -255,7 +301,7 @@ class TestSignals:
         ), "engine view should still count the hidden quote"
 
     def test_numbers_match_direct_analysis_call(self, db) -> None:
-        self._seed_second_frustration(db)
+        _seed_second_frustration(db)
         tool = _tool_get_signals(db, 1, "sentiment", 10)
         direct = load_signals(db, 1, "sentiment", top_n=10)
         by_key = {
@@ -266,6 +312,88 @@ class TestSignals:
             assert card["quote_count"] == s.count
             assert card["composite_signal"] == round(s.composite_signal, 4)
             assert card["n_eff"] == round(s.n_eff, 2)
+
+
+class TestTagsLensSignals:
+    """The tags-lens branch of load_signals with real data — a matrix-assembly
+    bug there returns an empty list, not an exception (Bach, impl-review)."""
+
+    def test_accepted_tags_form_a_signal_cell(self, db) -> None:
+        _seed_tagged_group(db)
+        result = _tool_get_signals(db, 1, "tags", 10)
+        cell = next(
+            (s for s in result["signals"]
+             if s["location"] == "Dashboard" and s["group"] == "Trust wobbles"),
+            None,
+        )
+        assert cell is not None
+        assert cell["quote_count"] == 2
+        assert cell["colour_set"] == "trust"
+        assert "hesitation" in cell["supporting_quotes"][0]["tags"]
+
+    def test_hidden_quote_drops_out_of_tags_lens(self, db) -> None:
+        _seed_tagged_group(db)
+        _hide(db, 26)
+        result = _tool_get_signals(db, 1, "tags", 10)
+        assert not any(
+            s["location"] == "Dashboard" and s["group"] == "Trust wobbles"
+            and s["quote_count"] == 2
+            for s in result["signals"]
+        )
+
+
+class TestElaborationCache:
+    """The cache is the ONLY elaboration source under 'no LLM spend' — an
+    always-miss would pass every other test while silently dropping the
+    feature (silent-failure-hunter, impl-review)."""
+
+    def _seed_cache_row(self, db) -> None:
+        from bristlenose.server.elaboration import (
+            compute_content_hash,
+            compute_signal_key,
+        )
+        from bristlenose.server.models import ElaborationCache
+
+        sig = next(
+            s for s in load_signals(db, 1, "sentiment", top_n=10).signals
+            if s.location == "Dashboard" and s.sentiment == "frustration"
+        )
+        # Write-path derivation: duplicates preserved (elaboration.py:300) —
+        # this is what pins the reader's derivation against the generate path.
+        texts = [q.text for q in sig.quotes]
+        tags = [t for q in sig.quotes for t in (q.tag_names or [])]
+        db.add(ElaborationCache(
+            project_id=1,
+            signal_key=compute_signal_key(sig.source_type, sig.location, sig.sentiment),
+            content_hash=compute_content_hash(texts, tags),
+            signal_name="Dashboard doubt",
+            pattern="gap",
+            elaboration="Both participants stall on the dashboard.",
+        ))
+        db.commit()
+
+    def test_cache_hit_attaches_elaboration(self, db) -> None:
+        _seed_second_frustration(db)
+        self._seed_cache_row(db)
+        card = next(
+            s for s in _tool_get_signals(db, 1, "sentiment", 10)["signals"]
+            if s["location"] == "Dashboard" and s["sentiment"] == "frustration"
+        )
+        assert card["elaboration"]["signal_name"] == "Dashboard doubt"
+        assert card["elaboration"]["pattern"] == "gap"
+
+    def test_content_drift_degrades_to_a_miss_never_a_wrong_hit(self, db) -> None:
+        _seed_second_frustration(db)
+        self._seed_cache_row(db)
+        # A researcher edit changes the curated text → hash diverges.
+        q = db.query(Quote).filter(Quote.start_timecode >= 26, Quote.start_timecode < 27).one()
+        db.add(QuoteEdit(quote_id=q.id, edited_text="Edited after elaboration."))
+        db.commit()
+        card = next(
+            s for s in _tool_get_signals(db, 1, "sentiment", 10)["signals"]
+            if s["location"] == "Dashboard" and s["sentiment"] == "frustration"
+        )
+        assert "elaboration" not in card
 
 
 class TestFramework:
@@ -316,8 +444,12 @@ class TestAnonymisationSweep:
     SENTINEL_FULL = "Zebediah Quackenbush"
     SENTINEL_SHORT = "Zebediah"
     SENTINEL_FILE = "zebediah-quackenbush.mov"
+    SENTINEL_PATH = "/Users/zebtest/Clients/AcmeCorp"
 
     def _seed_names(self, db) -> None:
+        from bristlenose.server.models import Project, SourceFile
+        from bristlenose.server.models import Session as SessionModel
+
         persons = db.query(Person).all()
         assert persons, "fixture import should create Person rows"
         for p in persons:
@@ -326,13 +458,22 @@ class TestAnonymisationSweep:
             p.role_title = "Chief Quacking Officer"
         for sp in db.query(SessionSpeaker).all():
             sp.source_file = self.SENTINEL_FILE
+        # Path-shaped sentinels too: with the §8 route gate out of scope,
+        # this sweep IS the coverage for filesystem-path leakage.
+        project = db.query(Project).one()
+        project.input_dir = self.SENTINEL_PATH
+        project.output_dir = self.SENTINEL_PATH + "/bristlenose-output"
+        for s in db.query(SessionModel).all():
+            s.thumbnail_path = self.SENTINEL_PATH + "/thumbs/zeb.jpg"
+        for f in db.query(SourceFile).all():
+            f.path = self.SENTINEL_PATH + "/interviews/zeb.mov"
         db.commit()
         # Precondition — without this the sweep passes vacuously.
         assert any(p.full_name for p in db.query(Person).all())
 
     def test_no_names_in_any_tool_payload(self, db) -> None:
         self._seed_names(db)
-        TestSignals()._seed_second_frustration(db)
+        _seed_second_frustration(db)
         payloads = [
             _tool_get_project_overview(db, 1, None),
             _search(db),
@@ -344,6 +485,10 @@ class TestAnonymisationSweep:
         assert "zebediah" not in blob
         assert "quackenbush" not in blob
         assert "quacking" not in blob  # Person.role_title free text stays out too
+        assert "zebtest" not in blob  # no filesystem paths either
+        assert "/users/" not in blob
+        assert ".mov" not in blob
+        assert ".jpg" not in blob
 
 
 class TestMechanicalPins:
@@ -415,6 +560,15 @@ class TestProtocol:
             "/mcp/", cookies={"bristlenose_auth": "test-mcp-token"}, json={},
         )
         assert cookie_only.status_code == 401, "/mcp must ignore the auth cookie"
+        # A tokenless GET that is NOT browser-shaped must 401 too — the
+        # explainer exemption is text/html-only, not a GET-wide hole.
+        assert client.get("/mcp/", headers={"Accept": "*/*"}).status_code == 401
+        assert client.get(
+            "/mcp/", headers={"Accept": "text/event-stream"},
+        ).status_code == 401
+        assert client.get(
+            "/mcp/", headers={"Accept": "text/html, text/event-stream"},
+        ).status_code == 401
 
     def test_browser_click_gets_explainer_without_token(self, live) -> None:
         app, client = live
@@ -433,17 +587,35 @@ class TestProtocol:
         })
         assert resp.status_code == 200
         assert resp.json()["result"]["serverInfo"]["name"] == "bristlenose"
-        # The event watcher's lifespan half ran too (composition order — the
-        # watcher ASSIGNS the lifespan; MCP must wrap it, not lose it).
+        # The 200 above IS the composition proof: a lost session-manager
+        # lifespan makes every protocol call 500 ("Task group is not
+        # initialized"). last_run only proves the watcher INSTALL path ran
+        # (it's set synchronously in create_app) — the watcher's own runtime
+        # behaviour is covered by tests/test_serve_event_watcher.py.
         assert app.state.last_run is not None
         assert app.state.mcp_mounted is True
 
     def test_every_tool_serializes_through_the_protocol(self, live) -> None:
         app, client = live
+        # Seed a session date so the overview's isoformat branch serializes
+        # through the protocol (the fixture ships undated sessions).
+        from datetime import datetime
+
+        from bristlenose.server.models import Session as SessionModel
+
+        session = app.state.db_factory()
+        try:
+            row = session.query(SessionModel).first()
+            row.session_date = datetime(2026, 3, 1, 10, 30)
+            session.commit()
+        finally:
+            session.close()
+
         calls = [
             ("get_project_overview", {"project_id": 1}),
             ("search_quotes", {"project_id": 1, "limit": 3}),
             ("get_signals", {"project_id": 1, "lens": "sentiment"}),
+            ("get_signals", {"project_id": 1, "lens": "tags"}),
             ("get_framework", {"project_id": 1, "framework_id": "uxr"}),
             ("get_framework", {"project_id": 1, "framework_id": LIVE_CODEBOOK_ID}),
         ]
@@ -453,6 +625,33 @@ class TestProtocol:
             assert resp.status_code == 200, name
             result = resp.json()["result"]
             assert not result.get("isError"), f"{name}: {result}"
+
+    def test_unexpected_exception_is_sanitised_and_logged(
+        self, live, monkeypatch, caplog,
+    ) -> None:
+        """The one mechanical guard on the wrapper's security purpose:
+        str(exc) — which carries SQL and filesystem paths — never reaches
+        the model; the traceback lands in the log instead."""
+        import logging as _logging
+
+        import bristlenose.server.mcp_server as m
+
+        def _boom(db, project_id, last_run):
+            raise RuntimeError("/Users/secret/Clients/acme/state/bristlenose.db exploded")
+
+        monkeypatch.setattr(m, "_tool_get_project_overview", _boom)
+        app, client = live
+        with caplog.at_level(_logging.ERROR, logger="bristlenose.server.mcp_server"):
+            resp = _rpc(client, "test-mcp-token", "tools/call",
+                        {"name": "get_project_overview", "arguments": {"project_id": 1}},
+                        id_=50)
+        result = resp.json()["result"]
+        assert result.get("isError") is True
+        blob = json.dumps(result)
+        assert "/Users/secret" not in blob
+        assert "exploded" not in blob
+        assert "bristlenose.log" in blob
+        assert any("mcp_tool_failed" in r.message for r in caplog.records)
 
     def test_tool_schemas_take_no_filesystem_paths(self, live) -> None:
         app, client = live
@@ -473,3 +672,51 @@ class TestProtocol:
         app, client = live
         paths = app.openapi()["paths"]
         assert not any(p.startswith("/mcp") for p in paths)
+
+
+class TestCliConnectBlock:
+    """The printed connect block stays vendor-neutral (review Finding 18 —
+    a reversed decision; nothing else would catch a vendor command creeping
+    back into product output)."""
+
+    def test_prints_primitives_and_docs_url_never_a_vendor_command(
+        self, capsys, monkeypatch,
+    ) -> None:
+        monkeypatch.setenv("_BRISTLENOSE_AUTH_TOKEN", "tok-abc123")
+        from bristlenose.cli import _print_mcp_connect
+
+        _print_mcp_connect(8150)
+        out = capsys.readouterr().out
+        assert "http://127.0.0.1:8150/mcp/" in out
+        assert "Authorization: Bearer tok-abc123" in out
+        assert "bristlenose.app/docs/connect-an-agent" in out
+        assert "claude mcp add" not in out
+        assert "codex mcp add" not in out
+
+    def test_pre_mints_token_when_none_exists(self, capsys, monkeypatch) -> None:
+        """The run path prints before create_app — the helper must mint so
+        the header is never silently absent (impl-review finding 31)."""
+        import os
+
+        from bristlenose.cli import _print_mcp_connect
+
+        monkeypatch.delenv("_BRISTLENOSE_AUTH_TOKEN", raising=False)
+        _print_mcp_connect(8150)
+        out = capsys.readouterr().out
+        assert "Authorization: Bearer " in out
+        minted = os.environ.get("_BRISTLENOSE_AUTH_TOKEN", "")
+        assert len(minted) >= 40  # token_urlsafe(32)
+        assert minted in out  # printed header IS the one create_app will serve
+
+    def test_unavailable_variant_names_the_fix(self, capsys, monkeypatch) -> None:
+        import sys
+
+        from bristlenose.cli import _print_mcp_connect
+
+        # A None entry makes `import mcp` raise ImportError — the same
+        # probe the mount gate uses, so this exercises the real branch.
+        monkeypatch.setitem(sys.modules, "mcp", None)
+        _print_mcp_connect(8150)
+        out = capsys.readouterr().out
+        assert "unavailable" in out
+        assert "bristlenose[mcp]" in out

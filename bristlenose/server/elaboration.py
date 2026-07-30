@@ -187,18 +187,27 @@ def load_cached_elaborations(
     the column label — group name or sentiment). Returns
     ``{signal_key: ElaborationResult}`` for cache hits whose content hash
     still matches. A derivation mismatch against the generate path degrades
-    to a cache miss, never a wrong hit. Consumers that must never spend
+    to a cache miss, never a wrong hit. NB the signal key carries no lens
+    component, so a sentiment-lens lookup shares a namespace with tags-lens
+    rows for a group named like a sentiment — cross-lens wrong-hits are
+    excluded by the CONTENT HASH (sentiment-lens hashes have an empty tag
+    section; tags-lens rows never do). The hash check is load-bearing:
+    never serve a key match without it. Consumers that must never spend
     tokens (the MCP server's ``get_signals``) call this instead of
     ``generate_elaborations``.
     """
     pairs: list[tuple[str, str]] = []
     for s in signals:
         quote_texts = [q.text for q in s.quotes]  # type: ignore[attr-defined]
-        tag_names = sorted({
+        # Duplicates preserved — the generate path extends per-quote tag
+        # lists without deduping, and compute_content_hash sorts but keeps
+        # repeats. A set here would fork the hash for any repeated tag
+        # (the normal shape of a tag signal) and kill every cache hit.
+        tag_names = [
             t
             for q in s.quotes  # type: ignore[attr-defined]
             for t in (q.tag_names or [])
-        })
+        ]
         pairs.append((
             compute_signal_key(s.source_type, s.location, s.sentiment),  # type: ignore[attr-defined]
             compute_content_hash(quote_texts, tag_names),

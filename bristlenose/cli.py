@@ -1511,14 +1511,26 @@ def _print_mcp_connect(port: int) -> None:
     Prints the two primitives (URL + assembled Authorization header) and the
     permanent docs URL — never a vendor's command: dialects rot, so they
     live in the manual (and the Mac sheet) where they can update. Gated on
-    the ``mcp`` extra being importable, which mirrors the mount gate in
-    ``mount_mcp_server`` exactly (the mount only skips on ImportError).
+    ``import mcp`` succeeding — the same probe ``mount_mcp_server`` uses, so
+    a present-but-broken install prints the unavailable line rather than a
+    working-looking block over a dead endpoint.
     """
-    from importlib.util import find_spec
-
-    if find_spec("mcp") is None:
+    if os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":
+        # The desktop-hosted sidecar's stdout is a machine channel
+        # (ServeManager parses it; "Copy error details" pastes it) and Mac
+        # exposure is a later cycle — keep the block out of that buffer.
+        return
+    try:
+        import mcp  # noqa: F401
+    except ImportError:
         console.print("  [dim]MCP:    unavailable — pip install 'bristlenose\\[mcp]'[/dim]")
         return
+    # Pre-mint the auth token if no serve has minted one yet (the run path
+    # prints this block BEFORE create_app runs). create_app recovers this
+    # env var, so the printed header is always the served one.
+    import secrets as _secrets
+
+    os.environ.setdefault("_BRISTLENOSE_AUTH_TOKEN", _secrets.token_urlsafe(32))
     docs_url = "https://bristlenose.app/docs/connect-an-agent.html"
     console.print(f"  MCP:    [bold cyan]http://127.0.0.1:{port}/mcp/[/bold cyan]")
     console.print()
@@ -1530,7 +1542,10 @@ def _print_mcp_connect(port: int) -> None:
     console.print(f"  [link={docs_url}]{docs_url}[/link]")
     token = os.environ.get("_BRISTLENOSE_AUTH_TOKEN", "")
     if token:
-        console.print(f"\n    Authorization: Bearer {token}")
+        # markup=False: this line must be byte-exact. A minted token is
+        # bracket-free, but an inherited env token might not be, and Rich
+        # would silently eat [\w]+ sequences as style tags.
+        console.print(f"\n    Authorization: Bearer {token}", markup=False)
     console.print()
 
 
@@ -1710,11 +1725,6 @@ def serve(
         )
         raise typer.Exit(1)
     if port != 0:
-        # Pre-mint the auth token so the printed connect header is the one
-        # create_app() will actually use (it recovers this env var).
-        import secrets as _secrets
-
-        os.environ.setdefault("_BRISTLENOSE_AUTH_TOKEN", _secrets.token_urlsafe(32))
         report_url = f"http://127.0.0.1:{port}/report/"
         console.print(f"\n  Report: [bold cyan]{report_url}[/bold cyan]")
         _print_mcp_connect(port)

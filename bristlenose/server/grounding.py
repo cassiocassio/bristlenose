@@ -440,6 +440,7 @@ def load_signals(
     from bristlenose.server.models import (
         ClusterQuote,
         CodebookGroup,
+        DeletedBadge,
         ProjectCodebookGroup,
         Quote,
         QuoteEdit,
@@ -474,6 +475,13 @@ def load_signals(
     )
     for edit in edits:  # ascending order: the latest edit wins
         edited_text[edit.quote_id] = edit.edited_text
+
+    # The researcher's removed sentiment badges are curation too — a
+    # de-badged quote must not drive a sentiment cell (report view).
+    deleted_badges: set[tuple[int, str]] = {
+        (row.quote_id, row.sentiment)
+        for row in db.query(DeletedBadge).filter(DeletedBadge.quote_id.in_(quote_pks))
+    }
 
     visible = [q for q in all_quotes if q.id not in hidden_pks]
     if not visible:
@@ -529,7 +537,7 @@ def load_signals(
         adapters: dict[int, object] = {}
         for q in visible:
             sent: Sentiment | None = None
-            if q.sentiment:
+            if q.sentiment and (q.id, q.sentiment) not in deleted_badges:
                 try:
                     sent = Sentiment(q.sentiment)
                 except ValueError:
@@ -578,7 +586,15 @@ def load_signals(
         .order_by(ProjectCodebookGroup.sort_order)
         .all()
     )
-    groups = [g for g in (db.get(CodebookGroup, r.codebook_group_id) for r in pcg_rows) if g]
+    from bristlenose.server.models import UNCATEGORISED_GROUP_NAME
+
+    # Mirror the analysis route's group scope: the Uncategorised holding pen
+    # (where ad-hoc tags land by default) is not an analytical column.
+    groups = [
+        g
+        for g in (db.get(CodebookGroup, r.codebook_group_id) for r in pcg_rows)
+        if g and g.name != UNCATEGORISED_GROUP_NAME
+    ]
     if not groups:
         return SignalsResult(
             signals=[], total_participants=total_participants, group_colour_sets={},

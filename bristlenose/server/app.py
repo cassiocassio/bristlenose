@@ -298,8 +298,10 @@ def create_app(
         else:
             logger.warning("report mount skipped — %s does not exist", output_dir)
 
-    # MCP endpoint (§9a spike) — mounted whenever the mcp extra is installed
-    # (installation is the opt-in; the endpoint is inert without the token).
+    # MCP endpoint (§9a spike) — mounted whenever the mcp package is
+    # importable: the dedicated `mcp` extra, or the `dev` extra (which
+    # carries it so contributors and CI run the tests). Installation is the
+    # opt-in; the endpoint is inert without the token.
     from bristlenose.server.mcp_server import mount_mcp_server
 
     _mcp_server = mount_mcp_server(app, session_factory)

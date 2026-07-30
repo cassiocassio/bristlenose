@@ -461,7 +461,17 @@ core**. Both features need:
   double-counting, no cross-study person joins — MCP doc §3/§3a);
 - **the same anonymisation boundary** on the way out.
 
-**Contract: whichever session lands first establishes the shared core as
+**Settled 30 Jul 2026: both landed, the contract held.** The chat lens
+created `grounding.py` (corpus assembly, `resolve_quote_indices`,
+`INVARIANTS`); the MCP spike consumed it and extended it in place — adding
+`resolve_quote_ids` (the stable-id sibling, for surfaces that cite report
+DOM ids), `load_signals` (curated report-view signal detection), and two
+`INVARIANTS` statements (denominators, the honesty rule) that both surfaces
+now speak. No parallel sibling was created. The rule going forward: **what a
+surface ADDS to grounding gets grounding-level tests; what it CONSUMES is
+already covered.**
+
+**Original contract: whichever session lands first establishes the shared core as
 ordinary importable server code (not route-handler-private logic); the other
 consumes it.** Neither session should duplicate it. If the MCP session lands
 first, the chat lens is a thin client over the same functions the MCP tools

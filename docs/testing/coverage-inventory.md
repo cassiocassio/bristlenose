@@ -48,9 +48,39 @@ Registry: `bristlenose/llm/providers.py`; client seams: `bristlenose/llm/client.
 Wired: **Export Report (HTML)** · **Copy Quotes** (clipboard markdown) · **Save as Spreadsheet** (XLS) · **Extract Clips** (MP4) · **Send to Miro**. Trigger: `frontend/src/components/ExportDropdown.tsx` (Quotes lens).
 
 - **Slides (`.pptx`)** — parked, unimplemented. Do not test.
-- **`.docx` Word export** — claimed README:288 but not in the toolbar scan. ⚠️ **verify wired or strike the claim.**
+- **`.docx` Word export** — **dropped** (27 Jul 2026). Never wired; the README claim is struck and it's marked dropped in [ROADMAP.md](../ROADMAP.md). Nothing to test. (Note: `.docx` as an *input* format is still tested — see §1 Ingest formats above.)
 - **Export invariants:** open the artifact, don't trust the toast — and **prove the artifact is non-empty first** (a grep-for-absence over an empty/errored export passes vacuously). HTML self-contained (inlines its JS/CSS — a bare `localhost` grep is necessary-not-sufficient; a root-relative `/assets` src passes it yet breaks offline); XLS a valid 11-column workbook **with rows > 0**; clips ffprobe-valid **with duration > 0**; `pii_summary.txt`/`llm-calls.jsonl` absent from every export; sandbox routing via `NSSavePanel`/`WKDownload`.
 - **Anonymisation invariant — named honestly:** *"no seeded display name crosses the speaker-code boundary into the export."* This is a **boundary-leak regression check** (positive control: the name IS in the original report, and is ABSENT from the export, over the *decoded* payload since `ensure_ascii=True` `\u`-escapes non-ASCII names). It is **not** a "zero PII" scanner — it only catches names you seeded, misses employer/place/health/paraphrased PII. Don't quote "zero PII" into a DPIA; the falsifiable boundary claim is the stronger one (verifiable-claim track).
+
+### 3a. Egress that isn't an export: the MCP endpoint
+
+**CLI-only** (`pip install 'bristlenose[mcp]'`; deliberately absent from the
+desktop sidecar), read-only, bearer-gated at `/mcp/`. Four tools —
+`get_project_overview`, `search_quotes`, `get_signals`, `get_framework`.
+Design + acceptance results: [design-mcp-server.md](../design-mcp-server.md).
+
+It belongs in this inventory because it is a **data-egress surface with the
+same anonymisation boundary as the exports**, reached by a different
+mechanism (an agent, not a file). Mechanically covered by
+`tests/test_mcp_server.py` (45 tests). The invariants that matter here:
+
+- **Same boundary-leak check as §3, one notch stricter:** seeded display
+  names must not cross the speaker-code boundary — and the MCP path never
+  reads the persons table at all, so moderator/observer names don't cross
+  either (exports keep them). Sweep covers **path-shaped** sentinels too
+  (`input_dir`, `thumbnail_path`, `SourceFile.path`), because the §8
+  route-classification gate is deliberately out of scope — this sweep *is*
+  the coverage.
+- **Verbatim contract:** shipped quote text is byte-identical to the curated
+  record (the researcher's edit where one exists, the trimmed excerpt
+  otherwise). Verified across 86 quotes at acceptance. Same "prove it's
+  non-empty first" discipline as the exports — an empty payload passes a
+  grep-for-absence vacuously.
+- **Read-only in cost as well as data:** no writes, no LLM calls
+  (elaborations are cache-only). A tool that spends tokens is a regression.
+- **Human-tier only:** whether an agent's *answers* are useful, and whether
+  the invariants land in an agent's reasoning, cannot be asserted
+  mechanically — see §6.
 
 ---
 
@@ -92,3 +122,16 @@ Spanish + Japanese synthetic demo projects exist (local-only). Risk: AutoCode si
 ## 6. Surfaces that are irreducibly human (no mechanical tier)
 
 Bundled `.app` first-run feel · native sidebar + project management · physical volume eject/remount · WKWebView bridge acceptance · "report you'd send without apologising" · "nothing surprised you." These belong to the human walk only; see the private walks-fix-walks QA doc.
+
+**Connected-agent session quality** (§3a) joins this list: whether an agent's
+answers are actually useful, whether it reaches for the right tool, and
+whether the `INVARIANTS` land in its reasoning are all judgement calls no
+assertion covers. The §9a acceptance run is the method worth repeating — a
+blind agent (no repo knowledge) given only the server instructions and tool
+payloads, asked real researcher questions plus **baited** ones: a cross-lens
+comparison the invariants forbid, a cross-study person join, a topic the
+corpus doesn't contain, and a set of improper asks (rewrite quotes for
+marketing, trim a quote under its own id, fabricate a stat, de-anonymise a
+participant, invent quotes). Grade the refusals *and* the non-refusals — an
+off-topic question should be answered, not policed. Results and the
+scoring: [design-mcp-server.md](../design-mcp-server.md) §9a-results.

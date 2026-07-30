@@ -24,8 +24,78 @@ bristlenose/server/
     codebook_builder.py — 5 dynamic-codebook-builder endpoints (per-tag prompt cultivation)
     dev.py        — Dev-only endpoints (visual diff, system info)
   codebook/       — YAML codebook templates (garrett, norman, uxr, plato)
+  grounding.py    — SHARED CORE for assistant surfaces (chat lens + MCP)
+  chat_lens.py    — in-app cited question box (see docs/design-chat-lens.md)
+  mcp_server.py   — read-only MCP endpoint at /mcp/ (see below)
   static/         — Vite build output (React Router SPA bundle)
 ```
+
+## Assistant surfaces: `grounding.py` is the shared core
+
+Two features let a model reason over a project: the **in-app chat lens**
+(`chat_lens.py` + `routes/chat_lens.py`) and the **MCP endpoint**
+(`mcp_server.py`, for external agents). Both ground themselves in
+`grounding.py` — corpus assembly, citation validation, the model-facing
+`INVARIANTS`, and curated signal detection. **Do not grow a parallel
+sibling**: whichever surface needs more generality extends *this* module.
+Contract recorded in `docs/design-chat-lens.md` §7.
+
+`INVARIANTS` is one tuple consumed by both surfaces (quote exclusivity, tag
+double-counting, no cross-study speaker joins, denominators, the honesty
+rule). Editing it changes both prompts — that's the point.
+
+**Two citation spaces, deliberately.** `resolve_quote_indices` (integers
+`[1]`…`[n]`, server-constructed) is the chat lens's — a fabricated citation
+is an out-of-range int, caught by arithmetic. `resolve_quote_ids` (report
+DOM ids) is the MCP workstream's, because agents cite ids the researcher can
+look up. Both validate by **corpus membership**, which is deliberately
+stricter than DB presence: a hidden or truncated-out quote is not citable.
+
+**`load_signals(db, project_id, lens, curated=True)` is the REPORT VIEW and
+diverges from `routes/analysis.py` on purpose** — hidden quotes excluded,
+researcher edits applied, removed sentiment badges honoured, unreviewed
+`ProposedTag` rows excluded (accepted `QuoteTag` rows are the only tag
+truth), `Uncategorised` filtered like the route does. The analysis routes
+keep the engine view. The divergence is pinned by a test; don't "fix" it.
+
+## MCP endpoint (`/mcp/`) — the §9a spike
+
+Read-only Model Context Protocol server so a local agent (Claude Code,
+Claude Desktop, ChatGPT desktop, Codex) can read ONE project. Design +
+acceptance results: `docs/design-mcp-server.md`. CLI-only — the desktop
+sidecar deliberately does not carry the dependency.
+
+- **Optional dependency.** `pip install 'bristlenose[mcp]'` (also in `dev`
+  so CI runs the tests). `mount_mcp_server` catches `ImportError` /
+  `ModuleNotFoundError` **only** — a present-but-broken install must fail
+  loudly, not masquerade as "not installed".
+- **Lifespan composition must be the LAST lifespan touch in `create_app`.**
+  `_install_event_watcher` *assigns* `app.router.lifespan_context`; anything
+  composed earlier is silently overwritten, and then every `/mcp` request
+  500s ("Task group is not initialized") in production while a test app
+  built without `project_dir` stays green.
+- **Auth is bearer-only.** `/mcp` is in `_AUTH_REQUIRED_PREFIXES`
+  unconditionally (fail closed when the extra is absent) and is explicitly
+  **exempt from the auth-cookie fallback** — MCP clients always send the
+  header, and excluding the cookie closes a same-host-different-port
+  ride-along. The one exemption is a browser-shaped `GET` (Accept prefers
+  `text/html`), which gets a static explainer page carrying no project data
+  and no token.
+- **Stateless streamable HTTP + JSON responses** — no SSE through
+  `BaseHTTPMiddleware`, and aligned with the spec's sessionless direction.
+  Don't pass a `host` override: that silently disables the SDK's
+  DNS-rebinding protection.
+- **Tool errors never leak `str(exc)`** — SQLAlchemy messages carry SQL and
+  DB paths. Every tool body is wrapped: `logger.exception` server-side, a
+  sanitised sentence to the model. `ToolInputError` is the one exception —
+  its messages are written to *teach* (bad value + the valid vocabulary).
+- **Hard exclusions, pinned by tests:** no tool takes a filesystem path
+  (input-schema allowlist), nothing reads the persons table, no writes,
+  no LLM calls (elaborations are cache-only via
+  `elaboration.load_cached_elaborations`).
+- **Adding a tool?** Put `project_id` in the signature (folder scope is
+  phase 2), return JSON primitives only, cap the result size, and add a
+  through-protocol test — direct-call tests miss serialization failures.
 
 ## Data API (Phase 1)
 

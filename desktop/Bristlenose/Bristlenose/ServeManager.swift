@@ -199,7 +199,23 @@ final class ServeManager: ObservableObject {
         // certs, bundled FFmpeg/ffprobe, parent-death handshake, and the active
         // provider's API key. Single source of truth shared with PipelineRunner
         // so the two spawn sites can't drift. See BristlenoseShared.childEnvironment.
-        proc.environment = BristlenoseShared.childEnvironment(for: mode)
+        var env = BristlenoseShared.childEnvironment(for: mode)
+
+        // Stable per-project MCP bearer token. `create_app` honours an
+        // inherited `_BRISTLENOSE_AUTH_TOKEN` (the same path uvicorn --reload
+        // uses) and mints a random one only when it is absent — so injecting
+        // here makes the token durable across restarts WITHOUT any Python-side
+        // change. Without this, an agent config pasted today 401s tomorrow.
+        // Keychain refusal degrades to the sidecar's rotating token: MCP still
+        // works, only the durability of a pasted config is lost.
+        // NB this is a *desktop-only* use of that env var, and it rides
+        // alongside `_BRISTLENOSE_HOSTED_BY_DESKTOP=1` — the SECURITY.md
+        // hardening that will gate the override behind a dev-mode flag must
+        // allowlist this host, not just the shell case it was written for.
+        if let mcpToken = MCPTokenStore.token(forProjectPath: projectPath) {
+            env["_BRISTLENOSE_AUTH_TOKEN"] = mcpToken
+        }
+        proc.environment = env
 
         let pipe = Pipe()
         proc.standardOutput = pipe

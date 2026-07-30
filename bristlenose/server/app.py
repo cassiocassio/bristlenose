@@ -222,6 +222,21 @@ def create_app(
         def _codebook_lab() -> HTMLResponse:
             return HTMLResponse(build_codebook_lab_html(app.state.auth_token))
 
+    # Chat lens lab — the cited-question-box experiment (docs/design-chat-lens.md
+    # §6). Same shipping shape and page/token pattern as the codebook lab above;
+    # disable with BRISTLENOSE_EXPERIMENTAL_CHAT_LENS=0.
+    if _settings.experimental_chat_lens:
+        from bristlenose.server.routes.chat_lens import (
+            build_chat_lens_html,
+            chat_lens_router,
+        )
+
+        app.include_router(chat_lens_router)
+
+        @app.get("/chat-lens", include_in_schema=False)
+        def _chat_lens() -> HTMLResponse:
+            return HTMLResponse(build_chat_lens_html(app.state.auth_token))
+
     # Dev API router (/api/dev/*, incl. the Run Inspector). Mounted under
     # `serve --dev` OR when `_BRISTLENOSE_DEV_ENDPOINTS=1` — the latter is set
     # by the DEBUG desktop build's sidecar so its native Run Inspector window

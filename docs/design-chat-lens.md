@@ -4,7 +4,7 @@ status: draft
 
 # Chat lens — a cited question box inside Bristlenose
 
-_Design note. Nothing built. July 2026._
+_Design note; the §6 prototype is built (flag-gated lab page at `/chat-lens`). July 2026._
 
 > **Status: Draft.** Split out of [`design-mcp-server.md`](design-mcp-server.md)
 > (§6b/§6c there, 30 Jul 2026) so the two workstreams can run as separate
@@ -15,6 +15,20 @@ _Design note. Nothing built. July 2026._
 
 ## Changelog
 
+- _30 Jul 2026_ — **§6 prototype built.** `bristlenose/server/grounding.py`
+  (the §7 seam: `assemble_corpus_context` — sections/themes in report order,
+  hidden excluded, starred marked, researcher edits win, visible truncation;
+  `resolve_quote_ids` — resolved + rejected split, checked against the
+  assembled corpus so hidden/cross-project/invented ids all reject;
+  `INVARIANTS`), `bristlenose/server/chat_lens.py` (service, `elaboration.py`
+  template), `llm/prompts/chat-lens.md` (registered, telemetry-inherited,
+  untrusted-envelope corpus), `ChatLensAnswer` in `llm/structured.py` (the §7
+  vocabulary), `routes/chat_lens.py` (POST `/api/dev/chat-lens/ask` + lab page
+  at `/chat-lens` rendering cited quotes inline, invalid ids flagged), gated on
+  `experimental_chat_lens` (default on, `BRISTLENOSE_EXPERIMENTAL_CHAT_LENS=0`
+  to disable). Tests in `tests/test_chat_lens.py` centre on citation honesty:
+  invented, malformed, cross-project, and hidden-quote citations are all
+  flagged, never rendered. No history, no streaming, no cache, no model picker.
 - _30 Jul 2026_ — §7: named the shared seam (`bristlenose/server/grounding.py`) and the shared response vocabulary, so parallel sessions collide at one file path instead of silently duplicating.
 - _30 Jul 2026_ — split from `design-mcp-server.md`. Added §2 (the in-app
   benefits, incl. citations that resolve to the report's own quote → transcript

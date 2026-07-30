@@ -395,3 +395,65 @@ class CandidateMatchResult(BaseModel):
         if isinstance(v, str):
             return json.loads(v)
         return v
+
+
+# ---------------------------------------------------------------------------
+# Chat lens (serve mode — cited question box)
+# ---------------------------------------------------------------------------
+
+
+class ChatLensClaim(BaseModel):
+    """One claim in a chat-lens answer, with its supporting citations.
+
+    Shared response vocabulary with the MCP workstream (design-chat-lens.md
+    §7): ``claims[].text``, ``claims[].quote_ids``, ``unsupported`` — do not
+    rename per surface.
+    """
+
+    text: str = Field(
+        description="One finding, stated plainly, standing on its own"
+    )
+    quote_ids: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Ids of the quotes that directly support this claim, copied "
+            "exactly from the corpus [q-...] markers (e.g. 'q-p1-123'). "
+            "Never invent or alter an id."
+        ),
+    )
+
+    @field_validator("quote_ids", mode="before")
+    @classmethod
+    def _parse_stringified_json(cls, v: object) -> object:
+        """Some LLM providers double-serialize nested arrays as JSON strings."""
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
+
+
+class ChatLensAnswer(BaseModel):
+    """LLM output: a cited answer to a researcher's question about their study."""
+
+    claims: list[ChatLensClaim] = Field(
+        default_factory=list,
+        description=(
+            "The findings that answer the question, each cited to corpus "
+            "quote ids. Empty if the corpus does not answer the question."
+        ),
+    )
+    unsupported: str = Field(
+        default="",
+        description=(
+            "What the question asked that the corpus does not answer, stated "
+            "plainly as a fact about the study's coverage. Empty string if "
+            "the question is fully answered."
+        ),
+    )
+
+    @field_validator("claims", mode="before")
+    @classmethod
+    def _parse_stringified_json(cls, v: object) -> object:
+        """Some LLM providers double-serialize nested arrays as JSON strings."""
+        if isinstance(v, str):
+            return json.loads(v)
+        return v

@@ -195,6 +195,12 @@ class BristlenoseSettings(BaseSettings):
     # "experiment" until validated with real data by real researchers.
     experimental_codebook_lab: bool = True
 
+    # Chat lens lab — the cited-question-box experiment (docs/design-chat-lens.md
+    # §6). Same shipping shape as the codebook lab: on by default, escape hatch
+    # BRISTLENOSE_EXPERIMENTAL_CHAT_LENS=0. What it is testing is whether the
+    # citations are honest, not whether the model can answer.
+    experimental_chat_lens: bool = True
+
     # Miro
     miro_access_token: str = ""
     miro_client_id: str = ""  # OAuth app client id (PKCE, no secret); empty = paste-token only

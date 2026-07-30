@@ -15,6 +15,7 @@ _Design note. Nothing built. July 2026._
 
 ## Changelog
 
+- _30 Jul 2026_ — §7: named the shared seam (`bristlenose/server/grounding.py`) and the shared response vocabulary, so parallel sessions collide at one file path instead of silently duplicating.
 - _30 Jul 2026_ — split from `design-mcp-server.md`. Added §2 (the in-app
   benefits, incl. citations that resolve to the report's own quote → transcript
   → video apparatus), §6 (prototype route via the `elaboration.py` template),
@@ -218,6 +219,18 @@ consumes it.** Neither session should duplicate it. If the MCP session lands
 first, the chat lens is a thin client over the same functions the MCP tools
 call; if the chat lens lands first, the MCP tools wrap its core. Either order
 works; two cores do not.
+
+**Named seam — so parallel work collides mechanically instead of diverging
+silently:** the shared core lives at **`bristlenose/server/grounding.py`**. Both
+sessions create *that path* if it does not exist yet; if both do, git surfaces a
+merge conflict at one file — visible and resolvable — rather than two
+similar modules under different names that nobody reconciles. Design-level
+contents: `assemble_corpus_context(…)` (which objects, in what order, with what
+caps), `resolve_quote_ids(…)` (resolved + rejected split, scope-checked against
+the project), the model-facing `INVARIANTS` statements (from
+`design-mcp-server.md` §3/§3a), and the anonymisation application. Shared
+response vocabulary across both surfaces: `claims[].text`, `claims[].quote_ids`,
+`unsupported` — do not invent synonyms per surface.
 
 ## Related docs
 

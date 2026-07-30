@@ -716,7 +716,9 @@ requirement as the guard rail, server-side id validation, no topic classifier)
 and its in-app advantages (citations that resolve to quote → transcript → video)
 live in that doc. The coordination contract for building both in parallel —
 one shared core for context assembly, id validation, invariants, and
-anonymisation; whichever lands first owns it — is recorded there as its §7.
+anonymisation; whichever lands first owns it — is recorded there as its §7,
+including the canonical path both sessions must use for that core:
+`bristlenose/server/grounding.py`.
 
 ---
 

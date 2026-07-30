@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ask inside the Quotes lens — chat-lens placement A · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css). Palette swap via
+   data-color-theme; dark via light-dark() + color-scheme.
+   Mockup for docs/design-chat-lens.md — placement option A ("ask it" as a
+   mode of the Quotes lens, per §4: inside the report, never a destination).
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased; }
+.wrap { max-width:980px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:72ch; margin:.4rem 0; }
+.controls { display:flex; gap:.4rem; align-items:center; margin:1rem 0 2rem; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+/* key naming the two zones */
+.zonekey { display:flex; gap:1.2rem; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-bottom:1.6rem; }
+.zonekey .k { display:flex; align-items:center; gap:.4rem; }
+.zonekey .swatch { width:14px; height:14px; border-radius:3px; border:1px solid var(--bn-colour-border); }
+.zonekey .swatch.art { background:var(--bn-colour-bg); }
+.zonekey .swatch.comm { background:repeating-linear-gradient(45deg, transparent, transparent 3px, var(--bn-colour-badge-bg) 3px, var(--bn-colour-badge-bg) 6px); }
+
+/* ── artefact frame ("screenshot" chrome) ─────────────────────────────── */
+.frame { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); overflow:hidden; margin:1.1rem 0 2.4rem; box-shadow:0 8px 30px var(--bn-colour-shadow); }
+.frame-chrome { display:flex; align-items:center; gap:.6rem; padding:.45rem .8rem; border-bottom:1px solid var(--bn-colour-border); background:var(--bn-colour-quote-bg); }
+.frame-chrome .dots { display:flex; gap:5px; }
+.frame-chrome .dots i { width:10px; height:10px; border-radius:50%; background:var(--bn-off-track); }
+.frame-chrome .flabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.viewport { position:relative; background:var(--bn-colour-bg); overflow:hidden; }
+.page { padding:1.2rem 2rem 2rem; }
+
+/* ── real report chrome: nav tabs, toolbar row ────────────────────────── */
+.bn-global-nav { display:flex; align-items:stretch; gap:0; border-bottom:1px solid var(--bn-colour-border); margin-bottom:var(--bn-space-lg); }
+.bn-tab { display:inline-flex; align-items:center; justify-content:center; gap:var(--bn-space-sm);
+  padding:.6rem 1rem; background:none; border:none; border-bottom:3px solid transparent;
+  font-family:var(--bn-font-body); font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis);
+  color:var(--bn-colour-muted); cursor:pointer; white-space:nowrap; }
+.bn-tab.active { color:var(--bn-colour-accent); border-bottom-color:var(--bn-colour-accent); }
+.toolbar-row { display:flex; align-items:center; gap:.7rem; margin-bottom:1.1rem; }
+.searchbox { display:flex; align-items:center; gap:.45rem; color:var(--bn-colour-muted); font-size:var(--bn-text-label);
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.35rem .6rem; min-width:220px; }
+.filter-chip { display:inline-flex; align-items:center; gap:.4rem; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  background:var(--bn-colour-hover); color:var(--bn-colour-accent); border:1px solid var(--bn-colour-accent);
+  border-radius:var(--bn-radius-pill); padding:.15rem .6rem; }
+.filter-chip .x { cursor:pointer; opacity:.7; }
+.spacer { flex:1; }
+
+/* section headings as shipped */
+.sec-h2 { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); margin:1.4rem 0 .15rem; }
+.sec-desc { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 .5rem; }
+
+/* quote card — organisms/blockquote.css recipe */
+blockquote.quote-card { background:var(--bn-colour-quote-bg); border-left:1px solid var(--bn-colour-border);
+  margin:.8rem 0; padding:var(--bn-space-md) 1rem; border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; position:relative; }
+.quote-row { display:flex; gap:.5rem; align-items:baseline; }
+.timecode { flex-shrink:0; color:var(--bn-colour-accent); font-family:var(--bn-font-mono); font-size:var(--bn-text-label); }
+.quote-body { flex:1; min-width:0; }
+.speaker { color:var(--bn-colour-muted); font-size:var(--bn-text-label); white-space:nowrap; margin-left:.35rem; }
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; }
+.tagrow { margin-top:.45rem; display:flex; gap:.35rem; align-items:center; }
+.addtag { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); border:1px dashed var(--bn-colour-border); border-radius:var(--bn-radius-sm); padding:var(--bn-space-xs) .45rem; cursor:pointer; }
+.star { position:absolute; top:.55rem; right:.7rem; color:var(--bn-off-track); font-size:.95rem; cursor:pointer; }
+.star.on { color:var(--bn-colour-accent); }
+
+/* ── NEW ELEMENTS (proposed, not shipped) ─────────────────────────────── */
+/* 1 · floating ask affordance, bottom-right of the lens viewport */
+.ask-fab { position:absolute; right:1.1rem; bottom:1.1rem; display:inline-flex; align-items:center; gap:.5rem;
+  background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill);
+  box-shadow:0 4px 16px var(--bn-colour-shadow); padding:.45rem .8rem; cursor:pointer;
+  font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); }
+.ask-fab:hover { border-color:var(--bn-colour-accent); color:var(--bn-colour-accent); }
+.ask-fab svg { display:block; }
+.ask-fab kbd { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-muted);
+  border:1px solid var(--bn-colour-border); border-bottom-width:2px; border-radius:var(--bn-radius-sm); padding:0 .3rem; }
+
+/* 2 · bottom-docked query bar (non-modal; page stays live behind it) */
+.ask-bar { position:absolute; left:50%; transform:translateX(-50%); bottom:1rem; width:min(680px, calc(100% - 3rem));
+  background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border-hover); border-radius:12px;
+  box-shadow:0 12px 40px var(--bn-colour-shadow); padding:.7rem .8rem; }
+.ask-input { display:flex; align-items:center; gap:.6rem; }
+.ask-input .q { flex:1; font-size:var(--bn-text-body); color:var(--bn-colour-text); }
+.ask-input .q .caret { display:inline-block; width:1px; height:1.05em; background:var(--bn-colour-accent); vertical-align:text-bottom; animation:blink 1.1s steps(1) infinite; }
+@keyframes blink { 50% { opacity:0; } }
+.ask-go { font:inherit; font-size:var(--bn-text-label); font-weight:490; color:#fff; background:var(--bn-colour-accent);
+  border:none; border-radius:var(--bn-radius-md); padding:.4rem .9rem; cursor:pointer; }
+.ask-meta { display:flex; align-items:center; gap:.9rem; margin-top:.55rem; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.ask-meta .ex { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); padding:.1rem .55rem; cursor:pointer; white-space:nowrap; }
+.ask-meta .ex:hover { background:var(--bn-colour-hover); }
+
+/* 3 · answer: claim band + result toolbar (AI content visually segregated) */
+.answer-head { display:flex; align-items:center; gap:.7rem; margin:1.2rem 0 .4rem; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.answer-head .ai-label { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-accent);
+  border:1px solid var(--bn-colour-accent); border-radius:var(--bn-radius-sm); padding:0 .35rem; }
+.claim-band { border-left:3px solid var(--bn-colour-accent); background:var(--bn-colour-hover);
+  border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; padding:.6rem .9rem; margin:1.1rem 0 .3rem; }
+.claim-band .c-text { font-weight:var(--bn-weight-emphasis); }
+.claim-band .c-meta { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.15rem; }
+.support { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); border-radius:var(--bn-radius-sm); padding:0 .35rem; margin-left:.45rem; }
+.support.ok { color:var(--bn-positive); border:1px solid var(--bn-positive); }
+.support.warn { color:light-dark(#b45309,#fbbf24); border:1px solid light-dark(#b45309,#fbbf24); }
+.in-sec { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.04em; font-weight:490; margin:.8rem 0 0; }
+.qc-select { position:absolute; top:.6rem; left:-1.55rem; width:15px; height:15px; border:1.5px solid var(--bn-colour-border-hover); border-radius:4px; background:var(--bn-colour-bg); cursor:pointer; }
+.qc-select.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); }
+.qc-select.on::after { content:"✓"; color:#fff; font-size:10px; display:block; text-align:center; line-height:13px; }
+.result-toolbar { position:sticky; bottom:0; display:flex; align-items:center; gap:.7rem; margin-top:1.2rem;
+  background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-lg);
+  box-shadow:0 8px 24px var(--bn-colour-shadow); padding:.55rem .8rem; font-size:var(--bn-text-label); }
+.result-toolbar .count { color:var(--bn-colour-muted); }
+.rt-btn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.32rem .7rem;
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.rt-btn.primary { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.rt-btn:hover:not(.primary) { background:var(--bn-colour-hover); }
+.dim { opacity:.45; }
+
+/* ── commentary zone ──────────────────────────────────────────────────── */
+.commentary { border-left:3px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-md);
+  background:repeating-linear-gradient(45deg, transparent, transparent 6px, var(--bn-colour-badge-bg) 6px, var(--bn-colour-badge-bg) 7px);
+  padding:1rem 1.2rem; margin:0 0 2.6rem; }
+.commentary .clabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); letter-spacing:.06em; text-transform:uppercase; color:var(--bn-colour-muted); margin-bottom:.5rem; }
+.commentary p, .commentary li { font-size:var(--bn-text-label); line-height:1.55; }
+.commentary ul { margin:.4rem 0; padding-left:1.2rem; }
+.commentary strong { font-weight:var(--bn-weight-emphasis); }
+@media (prefers-reduced-motion: reduce) { .caret { animation:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="masthead">
+    <div class="eyebrow">Bristlenose mockup · chat lens placement A</div>
+    <h1>Ask inside the Quotes lens</h1>
+    <p>The "ask it" mode of the report (design-chat-lens.md §4) lives <em>in</em> the Quotes lens: a floating micro-affordance opens a bottom query bar; the answer lands as claims over the researcher's <strong>real quote cards</strong> — stars, tags, section headings, filter chips all reused. Query → select the best → tag it into the analysis.</p>
+  </div>
+
+  <div class="zonekey">
+    <span class="k"><span class="swatch art"></span> artefact — what ships</span>
+    <span class="k"><span class="swatch comm"></span> commentary — why, and what it costs</span>
+  </div>
+
+  <div class="controls">
+    <span class="lbl">Palette</span>
+    <button class="pbtn on" onclick="setTheme('default',this)">Default</button>
+    <button class="pbtn" onclick="setTheme('edo',this)">Edo</button>
+  </div>
+
+  <!-- ══════════ STATE 1 — closed ══════════ -->
+  <div class="frame">
+    <div class="frame-chrome"><span class="dots"><i></i><i></i><i></i></span><span class="flabel">state 1 · Quotes lens, ask affordance closed</span></div>
+    <div class="viewport" style="height:430px;">
+      <div class="page">
+        <nav class="bn-global-nav">
+          <span class="bn-tab">Project</span><span class="bn-tab">Sessions</span>
+          <span class="bn-tab active">Quotes</span><span class="bn-tab">Codebook</span><span class="bn-tab">Analysis</span>
+        </nav>
+        <div class="toolbar-row">
+          <span class="searchbox">⌕ Search quotes…</span>
+          <span class="spacer"></span>
+          <span style="font-size:var(--bn-text-label); color:var(--bn-colour-muted);">All quotes ▾</span>
+        </div>
+        <h2 class="sec-h2">Homepage</h2>
+        <p class="sec-desc">The IKEA homepage where users land and orient themselves before navigating to a product category.</p>
+        <blockquote class="quote-card">
+          <span class="star">☆</span>
+          <div class="quote-row"><span class="timecode">[00:13]</span>
+            <div class="quote-body">“This page gives me a choice of go shopping and is that ikea.co.uk or what else… a whole lot of non-shopping things — storage ideas, editorial videos. But we just want to go shopping.”<span class="speaker">p2 · Fred</span>
+              <div class="tagrow"><span class="badge" style="background:var(--bn-emo-1-bg)">confusion</span><span class="addtag">+</span></div>
+            </div>
+          </div>
+        </blockquote>
+        <blockquote class="quote-card">
+          <span class="star on">★</span>
+          <div class="quote-row"><span class="timecode">[02:41]</span>
+            <div class="quote-body">“I scrolled past the ideas bit twice before I spotted the yellow go-shopping button.”<span class="speaker">p4</span>
+              <div class="tagrow"><span class="badge" style="background:var(--bn-emo-1-bg)">frustration</span><span class="addtag">+</span></div>
+            </div>
+          </div>
+        </blockquote>
+      </div>
+      <!-- NEW: the floating ask affordance -->
+      <div class="ask-fab">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+        Ask <kbd>⌘K</kbd>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ STATE 2 — open, typing ══════════ -->
+  <div class="frame">
+    <div class="frame-chrome"><span class="dots"><i></i><i></i><i></i></span><span class="flabel">state 2 · ⌘K or click — bottom query bar, page stays live behind it</span></div>
+    <div class="viewport" style="height:430px;">
+      <div class="page dim">
+        <nav class="bn-global-nav">
+          <span class="bn-tab">Project</span><span class="bn-tab">Sessions</span>
+          <span class="bn-tab active">Quotes</span><span class="bn-tab">Codebook</span><span class="bn-tab">Analysis</span>
+        </nav>
+        <h2 class="sec-h2">Homepage</h2>
+        <p class="sec-desc">The IKEA homepage where users land and orient themselves before navigating to a product category.</p>
+        <blockquote class="quote-card">
+          <span class="star">☆</span>
+          <div class="quote-row"><span class="timecode">[00:13]</span>
+            <div class="quote-body">“This page gives me a choice of go shopping and is that ikea.co.uk or what else… a whole lot of non-shopping things.”<span class="speaker">p2 · Fred</span></div>
+          </div>
+        </blockquote>
+      </div>
+      <!-- NEW: the bottom query bar -->
+      <div class="ask-bar">
+        <div class="ask-input">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--bn-colour-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg>
+          <span class="q">where did people get lost in the navigation<span class="caret"></span></span>
+          <button class="ask-go">Ask →</button>
+        </div>
+        <div class="ask-meta">
+          <span>answers from this project's quotes only · ~31k tokens to Claude on your key</span>
+          <span class="spacer"></span>
+          <span class="ex">what frustrated people?</span>
+          <span class="ex">what delighted?</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ STATE 3 — answered ══════════ -->
+  <div class="frame">
+    <div class="frame-chrome"><span class="dots"><i></i><i></i><i></i></span><span class="flabel">state 3 · answer = a filtered view of the researcher's own cards; select → tag</span></div>
+    <div class="viewport" style="height:770px;">
+      <div class="page" style="padding-left:3.4rem;">
+        <nav class="bn-global-nav" style="margin-left:-1.4rem;">
+          <span class="bn-tab">Project</span><span class="bn-tab">Sessions</span>
+          <span class="bn-tab active">Quotes</span><span class="bn-tab">Codebook</span><span class="bn-tab">Analysis</span>
+        </nav>
+        <div class="toolbar-row" style="margin-left:-1.4rem;">
+          <span class="searchbox">⌕ Search quotes…</span>
+          <span class="filter-chip">ask: “where did people get lost…” <span class="x">✕</span></span>
+          <span class="spacer"></span>
+          <span style="font-size:var(--bn-text-label); color:var(--bn-colour-muted);">All quotes ▾</span>
+        </div>
+
+        <div class="answer-head" style="margin-left:-1.4rem;">
+          <span class="ai-label">AI ANSWER</span>
+          <span>2 claims · 4 cited quotes · Claude · 6.2s · answer is not saved with the project</span>
+        </div>
+
+        <div class="claim-band" style="margin-left:-1.4rem;">
+          <div class="c-text">Participants recovered by falling back to the top navigation once the homepage failed them <span class="support ok">supported</span></div>
+          <div class="c-meta">3 quotes · 2 participants</div>
+        </div>
+
+        <div class="in-sec">in · Homepage</div>
+        <blockquote class="quote-card">
+          <span class="qc-select on"></span><span class="star">☆</span>
+          <div class="quote-row"><span class="timecode">[00:13]</span>
+            <div class="quote-body">“…a whole lot of non-shopping things — storage ideas, editorial videos. But we just want to go shopping, which at least is… it's a big yellow sign.”<span class="speaker">p2 · Fred</span>
+              <div class="tagrow"><span class="badge" style="background:var(--bn-emo-1-bg)">confusion</span><span class="addtag">+</span></div>
+            </div>
+          </div>
+        </blockquote>
+
+        <div class="in-sec">in · Top Navigation</div>
+        <blockquote class="quote-card">
+          <span class="qc-select on"></span><span class="star on">★</span>
+          <div class="quote-row"><span class="timecode">[00:12]</span>
+            <div class="quote-body">“…oops, I don't need that. Beds and mattresses. That's easy. That's in the top navigation.”<span class="speaker">p1</span>
+              <div class="tagrow"><span class="badge" style="background:var(--bn-trust-1-bg)">confidence</span><span class="addtag">+</span></div>
+            </div>
+          </div>
+        </blockquote>
+        <blockquote class="quote-card">
+          <span class="qc-select"></span><span class="star">☆</span>
+          <div class="quote-row"><span class="timecode">[00:12]</span>
+            <div class="quote-body">“…that's easy. That's in the top navigation.”<span class="speaker">p4</span>
+              <div class="tagrow"><span class="badge" style="background:var(--bn-trust-1-bg)">confidence</span><span class="addtag">+</span></div>
+            </div>
+          </div>
+        </blockquote>
+
+        <div class="claim-band" style="margin-left:-1.4rem;">
+          <div class="c-text">Editorial content competed with the shopping entry point for first-time visitors <span class="support warn">check citations</span></div>
+          <div class="c-meta">1 quote · 1 participant · the support check couldn't confirm this citation carries the claim — read it yourself</div>
+        </div>
+
+        <div class="in-sec">in · Homepage</div>
+        <blockquote class="quote-card">
+          <span class="qc-select"></span><span class="star">☆</span>
+          <div class="quote-row"><span class="timecode">[02:41]</span>
+            <div class="quote-body">“I scrolled past the ideas bit twice before I spotted the yellow go-shopping button.”<span class="speaker">p4</span>
+              <div class="tagrow"><span class="badge" style="background:var(--bn-emo-1-bg)">frustration</span><span class="addtag">+</span></div>
+            </div>
+          </div>
+        </blockquote>
+
+        <!-- NEW: select→tag toolbar -->
+        <div class="result-toolbar" style="margin-left:-1.4rem;">
+          <span class="count">2 selected</span>
+          <button class="rt-btn primary">Tag as… <span style="font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);">nav-recovery</span></button>
+          <button class="rt-btn">★ Star</button>
+          <span class="spacer"></span>
+          <button class="rt-btn">Done — back to all quotes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="commentary">
+    <div class="clabel">Commentary — placement A</div>
+    <p><strong>What the answer is:</strong> a transient filtered view of the lens itself. The cited quotes are the researcher's <em>actual cards</em> — same star, same tag chips, same inline edit — grouped under their real section names, with the query shown as a removable filter chip in the existing filter row. Claim text is the only new content on the page and is visually segregated (accent band + mono <em>AI ANSWER</em> label) so model prose can never be mistaken for the researcher's own findings — the §5 harm. Dismissing the chip (or ✕, or Esc) restores the full lens; the answer is deliberately not persisted in v1.</p>
+    <ul>
+      <li><strong>New elements</strong> (flagging per the no-invention rule): ask pill, bottom query bar, claim band, per-card select checkbox, result toolbar. Everything else on the page is the shipped design system.</li>
+      <li><strong>The workflow the layout buys:</strong> query → scan claims → select the cards that genuinely carry the finding → <em>Tag as…</em> mints/applies a tag → the finding is now part of the codebook, filterable, exportable, clippable. The AI's claim text evaporates; the researcher's curation persists. That is analysis, not chat.</li>
+      <li><strong>Two text inputs, one page:</strong> search (lexical, free, instant) vs ask (LLM, costs tokens, seconds). Kept far apart: search top-left as shipped, ask bottom-right + ⌘K, with the cost line in the bar. Do <em>not</em> merge them into one field — an accidental 31k-token search is the wrong surprise.</li>
+      <li><strong>Non-modal:</strong> the bar floats over a live page (no scrim); Esc closes. Matches the native-everywhere/non-modal house rule.</li>
+      <li><strong>Implementation:</strong> SPA-only — no Swift, no lens registration; identical in browser and WKWebView. The ask endpoint exists (<code>/api/dev/chat-lens/ask</code> → promote out of <code>/dev</code>); cited ids are the same DOM ids the lens already renders, so "answer as filter" is a store-level filter set + claim bands, reusing QuoteGroup/QuoteCard. Bulk tag/star = existing PUT endpoints; needs an undo toast (see design-undo-debt.md). i18n: ~12 new strings × 20 locales; desktop ⌘K via existing key routing, menu item optional later.</li>
+      <li><strong>Open questions:</strong> does the answer survive switching lenses (proposal: no — chip dies on navigation, cheap and honest)? does ⌘K clash with anything shipped (audit needed)? where does the three-way abstention message render (proposal: in place of the first claim band, coaching copy per reason)?</li>
+    </ul>
+  </div>
+
+</div>
+<script>
+function setTheme(t, btn){
+  document.documentElement.setAttribute('data-color-theme', t);
+  document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+</script>
+</body>
+</html>

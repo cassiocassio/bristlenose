@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ask as a separate lens — chat-lens placement B · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css). Palette swap via
+   data-color-theme; dark via light-dark() + color-scheme.
+   Mockup for docs/design-chat-lens.md — placement option B (a dedicated
+   "Ask" lens in the mac.app left sidebar / report nav). Counter-proposal
+   to placement A; §4 currently rules this shape out ("never a separate
+   destination") — mocked to test that line honestly.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased; }
+.wrap { max-width:1080px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:72ch; margin:.4rem 0; }
+.controls { display:flex; gap:.4rem; align-items:center; margin:1rem 0 2rem; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.zonekey { display:flex; gap:1.2rem; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-bottom:1.6rem; }
+.zonekey .k { display:flex; align-items:center; gap:.4rem; }
+.zonekey .swatch { width:14px; height:14px; border-radius:3px; border:1px solid var(--bn-colour-border); }
+.zonekey .swatch.art { background:var(--bn-colour-bg); }
+.zonekey .swatch.comm { background:repeating-linear-gradient(45deg, transparent, transparent 3px, var(--bn-colour-badge-bg) 3px, var(--bn-colour-badge-bg) 6px); }
+
+/* ── mac window frame ─────────────────────────────────────────────────── */
+.frame { border:1px solid var(--bn-colour-border); border-radius:10px; overflow:hidden; margin:1.1rem 0 2.4rem; box-shadow:0 12px 40px var(--bn-colour-shadow); }
+.frame-chrome { display:flex; align-items:center; gap:.6rem; padding:.5rem .8rem; border-bottom:1px solid var(--bn-colour-border); background:var(--bn-colour-quote-bg); }
+.tl { display:flex; gap:6px; }
+.tl i { width:11px; height:11px; border-radius:50%; }
+.tl i:nth-child(1){ background:#ff5f57; } .tl i:nth-child(2){ background:#febc2e; } .tl i:nth-child(3){ background:#28c840; }
+.flabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.appbody { display:flex; min-height:520px; background:var(--bn-colour-bg); }
+
+/* native left sidebar */
+.sidebar { width:212px; flex-shrink:0; border-right:1px solid var(--bn-colour-border);
+  background:var(--bn-colour-quote-bg); padding:.9rem .55rem; }
+.sb-proj { font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); padding:.3rem .6rem .1rem; }
+.sb-sub { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); padding:0 .6rem .6rem; }
+.sb-row { display:flex; align-items:center; gap:.55rem; font-size:var(--bn-text-label); color:var(--bn-colour-text);
+  padding:.34rem .6rem; border-radius:var(--bn-radius-md); cursor:pointer; }
+.sb-row:hover { background:var(--bn-colour-hover); }
+.sb-row.sel { background:var(--bn-colour-accent); color:#fff; }
+.sb-row svg { flex-shrink:0; opacity:.75; }
+.sb-row.sel svg { opacity:1; }
+
+/* content pane */
+.pane { flex:1; min-width:0; padding:1.4rem 2rem 2rem; position:relative; }
+.pane-title { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.pane-sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 1.2rem; }
+
+/* ask surface */
+.ask-field { display:flex; align-items:center; gap:.6rem; border:1px solid var(--bn-colour-border-hover);
+  border-radius:12px; padding:.7rem .9rem; box-shadow:0 4px 18px var(--bn-colour-shadow); }
+.ask-field .q { flex:1; font-size:var(--bn-text-body); color:var(--bn-colour-muted); }
+.ask-field .q.typed { color:var(--bn-colour-text); }
+.ask-go { font:inherit; font-size:var(--bn-text-label); font-weight:490; color:#fff; background:var(--bn-colour-accent);
+  border:none; border-radius:var(--bn-radius-md); padding:.4rem .9rem; cursor:pointer; }
+.scope-line { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin:.5rem .2rem 0; }
+.ex-row { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:1.1rem; }
+.ex { font-size:var(--bn-text-label); color:var(--bn-colour-muted); border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-pill); padding:.25rem .75rem; cursor:pointer; }
+.ex:hover { background:var(--bn-colour-hover); color:var(--bn-colour-text); }
+.empty-hint { margin-top:4.2rem; text-align:center; color:var(--bn-colour-muted); font-size:var(--bn-text-label); }
+
+/* answered: aligned two-column (claims | evidence) — the §5a sidebar layout */
+.asked-q { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); margin:.2rem 0 .2rem; }
+.answer-meta { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-bottom:1.1rem; }
+.answer-meta .ai-label { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-accent);
+  border:1px solid var(--bn-colour-accent); border-radius:var(--bn-radius-sm); padding:0 .35rem; margin-right:.5rem; }
+.claim-grid { display:grid; grid-template-columns:minmax(0,5fr) minmax(0,6fr); gap:.2rem 1.6rem; }
+.claim-cell { padding:.9rem 0 1.1rem; border-top:1px solid var(--bn-colour-border); }
+.evidence-cell { padding:.55rem 0 1.1rem .0rem; border-top:1px solid var(--bn-colour-border); }
+.c-text { font-weight:var(--bn-weight-emphasis); }
+.c-meta { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.3rem; }
+.c-act { margin-top:.7rem; display:flex; gap:.5rem; }
+.rt-btn { font:inherit; font-size:var(--bn-text-caption); font-weight:490; padding:.25rem .6rem;
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.rt-btn:hover { background:var(--bn-colour-hover); }
+.support { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); border-radius:var(--bn-radius-sm); padding:0 .35rem; margin-left:.45rem; }
+.support.ok { color:var(--bn-positive); border:1px solid var(--bn-positive); }
+.support.warn { color:light-dark(#b45309,#fbbf24); border:1px solid light-dark(#b45309,#fbbf24); }
+
+/* quote card — organisms/blockquote.css recipe (compact) */
+blockquote.quote-card { background:var(--bn-colour-quote-bg); border-left:1px solid var(--bn-colour-border);
+  margin:0 0 .6rem; padding:var(--bn-space-md) 1rem; border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; position:relative; }
+.quote-row { display:flex; gap:.5rem; align-items:baseline; }
+.timecode { flex-shrink:0; color:var(--bn-colour-accent); font-family:var(--bn-font-mono); font-size:var(--bn-text-label); }
+.quote-body { flex:1; min-width:0; font-size:var(--bn-text-label); }
+.speaker { color:var(--bn-colour-muted); font-size:var(--bn-text-caption); white-space:nowrap; margin-left:.35rem; }
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; }
+.tagrow { margin-top:.4rem; display:flex; gap:.35rem; align-items:center; }
+.from-sec { font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.05em; color:var(--bn-colour-muted); }
+.star { position:absolute; top:.5rem; right:.6rem; color:var(--bn-off-track); font-size:.9rem; cursor:pointer; }
+.star.on { color:var(--bn-colour-accent); }
+
+/* commentary zone */
+.commentary { border-left:3px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-md);
+  background:repeating-linear-gradient(45deg, transparent, transparent 6px, var(--bn-colour-badge-bg) 6px, var(--bn-colour-badge-bg) 7px);
+  padding:1rem 1.2rem; margin:0 0 2.6rem; }
+.commentary .clabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); letter-spacing:.06em; text-transform:uppercase; color:var(--bn-colour-muted); margin-bottom:.5rem; }
+.commentary p, .commentary li { font-size:var(--bn-text-label); line-height:1.55; }
+.commentary ul { margin:.4rem 0; padding-left:1.2rem; }
+.commentary strong { font-weight:var(--bn-weight-emphasis); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="masthead">
+    <div class="eyebrow">Bristlenose mockup · chat lens placement B</div>
+    <h1>Ask as a separate lens</h1>
+    <p>The counter-proposal: a dedicated <strong>Ask</strong> entry in the mac.app's left sidebar (and a matching tab in the browser report). A destination page with room to breathe — the §5a aligned claims-and-evidence layout — at the cost of leaving the curation surface. §4 currently rules this out ("never a separate window, page, or destination"); this mock exists to test that line with pixels rather than by assertion.</p>
+  </div>
+
+  <div class="zonekey">
+    <span class="k"><span class="swatch art"></span> artefact — what would ship</span>
+    <span class="k"><span class="swatch comm"></span> commentary — why, and what it costs</span>
+  </div>
+
+  <div class="controls">
+    <span class="lbl">Palette</span>
+    <button class="pbtn on" onclick="setTheme('default',this)">Default</button>
+    <button class="pbtn" onclick="setTheme('edo',this)">Edo</button>
+  </div>
+
+  <!-- ══════════ STATE 1 — arriving: the empty room ══════════ -->
+  <div class="frame">
+    <div class="frame-chrome"><span class="tl"><i></i><i></i><i></i></span><span class="flabel">state 1 · arriving in the Ask lens with no question — the empty room</span></div>
+    <div class="appbody">
+      <aside class="sidebar">
+        <div class="sb-proj">project-ikea</div>
+        <div class="sb-sub">5 sessions · 5 participants</div>
+        <div class="sb-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>Project</div>
+        <div class="sb-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Sessions</div>
+        <div class="sb-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.76-2.02-2-2H4c-1.25 0-2 .75-2 1.97V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.75-2.02-2-2h-4c-1.25 0-2 .75-2 1.97V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>Quotes</div>
+        <div class="sb-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Codebook</div>
+        <div class="sb-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 13l4-4 4 4 5-6"/></svg>Analysis</div>
+        <div class="sb-row sel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>Ask</div>
+      </aside>
+      <main class="pane">
+        <h2 class="pane-title">Ask this report</h2>
+        <p class="pane-sub">Answers come only from this project's quotes, cited card by card.</p>
+        <div class="ask-field">
+          <span class="q">What did participants struggle with?</span>
+          <button class="ask-go">Ask →</button>
+        </div>
+        <div class="scope-line">one question, one answer — no history · ~31k tokens to Claude on your key per ask</div>
+        <div class="ex-row">
+          <span class="ex">Where did the navigation confuse people?</span>
+          <span class="ex">Which moments delighted?</span>
+          <span class="ex">What made people trust the estimates?</span>
+        </div>
+        <div class="empty-hint">Nothing here yet — everything this page can show you<br>is already in Quotes, one lens up.</div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ══════════ STATE 2 — answered ══════════ -->
+  <div class="frame">
+    <div class="frame-chrome"><span class="tl"><i></i><i></i><i></i></span><span class="flabel">state 2 · answered — §5a aligned layout: claims left, evidence right</span></div>
+    <div class="appbody">
+      <aside class="sidebar">
+        <div class="sb-proj">project-ikea</div>
+        <div class="sb-sub">5 sessions · 5 participants</div>
+        <div class="sb-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>Project</div>
+        <div class="sb-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Sessions</div>
+        <div class="sb-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.76-2.02-2-2H4c-1.25 0-2 .75-2 1.97V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.75-2.02-2-2h-4c-1.25 0-2 .75-2 1.97V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>Quotes</div>
+        <div class="sb-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Codebook</div>
+        <div class="sb-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 13l4-4 4 4 5-6"/></svg>Analysis</div>
+        <div class="sb-row sel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>Ask</div>
+      </aside>
+      <main class="pane">
+        <div class="asked-q">Where did people get lost in the navigation?</div>
+        <div class="answer-meta"><span class="ai-label">AI ANSWER</span>2 claims · 4 cited quotes · Claude · 6.2s · not saved — leaves with the page</div>
+
+        <div class="claim-grid">
+          <div class="claim-cell">
+            <div class="c-text">Participants recovered by falling back to the top navigation once the homepage failed them <span class="support ok">supported</span></div>
+            <div class="c-meta">3 quotes · 2 participants · Homepage, Top Navigation</div>
+            <div class="c-act"><button class="rt-btn">Open these in Quotes →</button><button class="rt-btn">★ Star all</button><button class="rt-btn">Tag all…</button></div>
+          </div>
+          <div class="evidence-cell">
+            <blockquote class="quote-card">
+              <span class="star">☆</span>
+              <div class="quote-row"><span class="timecode">[00:13]</span>
+                <div class="quote-body">“…a whole lot of non-shopping things — storage ideas, editorial videos. But we just want to go shopping.”<span class="speaker">p2 · Fred</span>
+                  <div class="tagrow"><span class="from-sec">Homepage</span><span class="badge" style="background:var(--bn-emo-1-bg)">confusion</span></div>
+                </div>
+              </div>
+            </blockquote>
+            <blockquote class="quote-card">
+              <span class="star on">★</span>
+              <div class="quote-row"><span class="timecode">[00:12]</span>
+                <div class="quote-body">“…oops, I don't need that. Beds and mattresses. That's easy. That's in the top navigation.”<span class="speaker">p1</span>
+                  <div class="tagrow"><span class="from-sec">Top Navigation</span><span class="badge" style="background:var(--bn-trust-1-bg)">confidence</span></div>
+                </div>
+              </div>
+            </blockquote>
+            <blockquote class="quote-card">
+              <span class="star">☆</span>
+              <div class="quote-row"><span class="timecode">[00:12]</span>
+                <div class="quote-body">“…that's easy. That's in the top navigation.”<span class="speaker">p4</span>
+                  <div class="tagrow"><span class="from-sec">Top Navigation</span><span class="badge" style="background:var(--bn-trust-1-bg)">confidence</span></div>
+                </div>
+              </div>
+            </blockquote>
+          </div>
+
+          <div class="claim-cell">
+            <div class="c-text">Editorial content competed with the shopping entry point for first-time visitors <span class="support warn">check citations</span></div>
+            <div class="c-meta">1 quote · 1 participant · the support check couldn't confirm this citation carries the claim</div>
+            <div class="c-act"><button class="rt-btn">Open these in Quotes →</button></div>
+          </div>
+          <div class="evidence-cell">
+            <blockquote class="quote-card">
+              <span class="star">☆</span>
+              <div class="quote-row"><span class="timecode">[02:41]</span>
+                <div class="quote-body">“I scrolled past the ideas bit twice before I spotted the yellow go-shopping button.”<span class="speaker">p4</span>
+                  <div class="tagrow"><span class="from-sec">Homepage</span><span class="badge" style="background:var(--bn-emo-1-bg)">frustration</span></div>
+                </div>
+              </div>
+            </blockquote>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="commentary">
+    <div class="clabel">Commentary — placement B</div>
+    <p><strong>What this buys:</strong> a real page. The §5a aligned layout (claims left, evidence right — the only presentation that preserved critical engagement in the N=372 study) fits naturally; long answers, the three-way abstention coaching, and any future history all have room. Framing is unambiguous — you are in ask mode, so model prose never sits adjacent to the researcher's own report text.</p>
+    <ul>
+      <li><strong>The empty room:</strong> state 1 is the argument against the whole placement. A lens that is blank until queried is the "empty room with a signpost" the MCP doc's §Positioning refused — and every quote this page can ever show already lives one lens up, with more affordances.</li>
+      <li><strong>The severed loop:</strong> the cards here are <em>copies</em>. Star/tag work (same store, same PUT endpoints — cheap to wire), but selection-into-analysis means either duplicating the Quotes toolbar here piece by piece, or bouncing through <em>Open these in Quotes →</em> — a context switch per claim. The query → select → tag loop that placement A does in place becomes navigate-read-navigate.</li>
+      <li><strong>Implementation is heavier and triple-surface:</strong> new SPA route + page; the mac.app sidebar is native, so the lens list changes in Swift; lens name + strings ship in every locale for both surfaces; export mode must hide it (no live LLM from a <code>file://</code> leave-behind). Placement A touches none of the native chrome.</li>
+      <li><strong>Positioning cost:</strong> a sidebar entry is a standing advertisement that Bristlenose contains a chat — the Dovetail/Marvin shape §Positioning refused and §4 re-refused ("never a separate destination"). Adopting B means reversing a decision made twice, knowingly.</li>
+      <li><strong>Where B's ideas survive anyway:</strong> the aligned claims/evidence layout and the per-claim <em>Open in Quotes</em> bridge are portable — A can adopt the two-column presentation inside the Quotes lens on wide viewports without B's navigation cost.</li>
+    </ul>
+  </div>
+
+</div>
+<script>
+function setTheme(t, btn){
+  document.documentElement.setAttribute('data-color-theme', t);
+  document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+</script>
+</body>
+</html>

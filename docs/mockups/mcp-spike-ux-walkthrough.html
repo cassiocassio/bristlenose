@@ -92,8 +92,7 @@
     border: 1px solid #c9c9cf; background: #fff; color: #3a3a3d; }
   .blockfoot { display: flex; justify-content: flex-end; margin-top: 6px; }
   .rowline { display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 2px; border-bottom: 1px solid #dcdce1; }
-  .rowline:last-of-type { border-bottom: 0; }
+    padding: 8px 2px; }
   .rowline .l b { display: block; font-weight: 600; }
   .rowline .l span { color: var(--muted); font-size: 11.5px; }
   .macbtn { font-size: 12.5px; padding: 4px 12px; border-radius: 6px;
@@ -112,7 +111,8 @@
   .tab.grey { color: #a8a8ae; }
   .tab .det { display: inline-block; width: 6px; height: 6px; border-radius: 50%;
     background: var(--badge-live); margin-right: 5px; vertical-align: 1px; }
-  .tabpanel { background: #fff; border: 1px solid #d7d7dc; border-radius: 8px; padding: 10px 12px; }
+  .tabpanel { background: #fff; border: 1px solid #d7d7dc; border-radius: 8px; padding: 10px 12px;
+    min-height: 160px; }
   .tabpanel .plabel { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
   .payload { font: 11px/1.5 ui-monospace, Menlo, monospace; background: #f6f6f8;
     border: 1px solid #e3e3e8; border-radius: 6px; padding: 8px 10px; white-space: pre;
@@ -351,8 +351,6 @@ INFO:     Uvicorn running on http://127.0.0.1:8150 (Press CTRL+C to quit)</span>
   <div class="frame"><div class="macwrap"><div class="sheet">
     <h4>Connect an agent to “Acme Onboarding”</h4>
     <p class="scope">6 sessions · 214 quotes</p>
-    <div class="plain">Sends the quotes in your report to the agent you connect, with speaker
-    codes in place of names. Quote text is verbatim.</div>
     <div class="rowline"><div class="l"><b>Anonymise</b>
       <span>Remove participant names</span></div><div class="mactoggle on"></div></div>
     <div class="tabs">
@@ -371,27 +369,57 @@ INFO:     Uvicorn running on http://127.0.0.1:8150 (Press CTRL+C to quit)</span>
     "Authorization": "Bearer kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM6xA3nQ"
   }
 }</div>
-      <div class="panelfoot"><button class="macbtn primary">Copy</button></div>
     </div>
-    <div class="otherline">Any other agent: the URL + Authorization header above
-      <button class="copybtn">⧉ Copy</button></div>
-    <div style="margin:12px 0 6px; font-weight:600">Try asking</div>
-    <div class="starterblock">Which codes are doing no work in this study?<br>
-      Draft a top-line from the starred quotes only.<br>
-      Where do participants disagree?</div>
-    <div class="blockfoot"><button class="copybtn">⧉ Copy</button></div>
-    <div class="sheetfoot"><button class="macbtn">Close</button></div>
+    <div class="otherline">Works with any MCP-compatible agent.</div>
+    <div class="sheetfoot"><button class="macbtn">Cancel</button><button class="macbtn primary">Copy Config</button></div>
   </div></div></div>
   <div class="commentary"><ul>
-    <li>Still §6a's four things, in their post-review shape: counts line · one <b>live</b> disclosure sentence (the switch flips it — off reads "…with participant names included") · the shipped Anonymise row · starter prompts. Footer is a single <b>Close</b>; the panel's <b>Copy is the sheet's one prominent button</b> (HIG: one primary; Return fires Copy — Cancel/Done was theatre-or-data-bug and is gone).</li>
+    <li>Post-critique shape: counts line · the shipped Anonymise row · client tabs — <b>connect-only</b>. The disclosure sentence and the starter prompts are both removed for clarity (decided 30 Jul): the Anonymise caption carries the disclosure's meaning, the prompts move to the manual + acceptance script, and either returns only if the cohort shows confusion or lands in empty chats with nothing to ask. The CLI connect moment keeps its dim one-liner — no control is visible there to speak for itself. Footer is the standard Mac modal pair, bottom-right, <b>outside the config field</b>: Cancel + a primary named by its verb — <b>Copy Config</b> here, <b>Copy Command</b> on the Claude Code tab. Return fires the primary.</li>
     <li><b>Noun swept to "agent"</b> everywhere (menu, title, body, CLI, fallback line) — decided; "Connect to Claude…" stays rejected as vendor-locked.</li>
+    <li><b>Fixed geometry across tabs</b> (decided 30 Jul): the header block — title, counts, Anonymise — is identical for every agent, the window is one size, and the config area is sized to the <b>largest</b> dialect (Claude Desktop's six-line JSON) so switching tabs never reflows or jumps. Only the panel content and the primary's verb change. The Parthenon rule: geometry is fixed, content bends.</li>
     <li>Tabs build as a real <b>NSTabView</b> (the tabs decision survives; the right class brings native metrics, Ctrl-Tab, accessibility). First detected pre-selected; three honesty states — detected / unknown (Claude Code: CLI presence unknowable from the sandbox) / not-found (<b>greyed but never disabled</b>). Detection renders as <b>words</b>, not a dot — the green dot died for meaning "installed" here and "connected" in Mock C with one colour.</li>
     <li><b>Anonymise = the shipped Export-popover row, verbatim</b> ("Anonymise" / "Remove participant names" / switch — Martin's screenshot): one control, one word family across Export, clips, Miro, and MCP. <b>On by default here</b> (exports default off — different egress class). Quietly stricter than export: moderator names aren't sent either — the grounding layer never reads Person rows.</li>
     <li><b>Copy = the shipped <code>.bordered .small doc.on.doc</code> icon-button pattern</b> (documented at LLMSettingsView.swift:897; ⧉ stands in here). One treatment, all labelled Copy, only the panel's prominent. <b>Full token, shown and selectable</b> — decided; never "looks copyable, isn't". The config path click-reveals in Finder (<code>NSWorkspace.activateFileViewerSelecting</code>, sandbox-legal).</li>
     <li><b>Sheet stays a sheet</b> — decided: nothing in the parent app is blocked behind it that this flow needs. 560pt so the payload never scrolls sideways; type on the macOS ladder (15/13/11); headroom check at <code>de</code>/<code>ja</code> before first build.</li>
     <li><b>The ChatGPT &amp; Codex tab is one tab, not three</b> (verified 30 Jul): desktop app, Codex CLI, and IDE extension share <code>~/.codex/config.toml</code>, so one TOML stanza covers all — <code>url</code> + <code>http_headers = { "Authorization" = "Bearer …" }</code> (the static-header form; <code>codex mcp add</code> has no header flag and env vars don't reach a Finder-launched app). Detection: ChatGPT.app bundle via LaunchServices, same honesty tiering.</li>
-    <li>Starter prompts are one selectable, copyable block — cut and paste a line, or just absorb the object model by reading. Copy-to-clipboard remains the sandbox floor; the primitives are never hidden behind a selection (the "Any other agent" line lives outside the tabs).</li>
     <li><b>Desktop's end-state is the Extensions pane, not JSON</b> (Martin's steer, 30 Jul, screenshots): ship <code>Bristlenose.mcpb</code> — icon + thin stdio→HTTP proxy that reads a serve-written <b>handshake file</b> (fresh token + port each start), dissolving token rotation for Desktop entirely. The sandbox-legal big button: bn.app writes its bundled .mcpb to a user location and <code>NSWorkspace.open</code>s it — Desktop runs its own install flow. This tab's Edit-Config copy is the spike-era truth and the forever-fallback; when .mcpb ships, the Desktop tab's primary becomes <b>Install Extension</b>.</li>
+  </ul></div>
+
+  <h3>Mock B2 · The other tabs — same two primitives, each client's dialect</h3>
+  <div class="frame"><div class="macwrap"><div class="sheet" style="padding:14px 20px 12px">
+    <div class="tabs">
+      <div class="tab">Claude Desktop</div>
+      <div class="tab sel">Claude Code</div>
+      <div class="tab">ChatGPT &amp; Codex</div>
+      <div class="tab grey">Cursor</div>
+    </div>
+    <div class="tabpanel">
+      <div class="plabel">Paste in any terminal:</div>
+      <div class="payload">claude mcp add --transport http bristlenose http://127.0.0.1:8150/mcp/ \
+  --header "Authorization: Bearer kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM6xA3nQ"</div>
+    </div>
+    <div class="sheetfoot"><button class="macbtn">Cancel</button><button class="macbtn primary">Copy Command</button></div>
+  </div></div></div>
+  <div class="frame"><div class="macwrap"><div class="sheet" style="padding:14px 20px 12px">
+    <div class="tabs">
+      <div class="tab">Claude Desktop</div>
+      <div class="tab">Claude Code</div>
+      <div class="tab sel">ChatGPT &amp; Codex</div>
+      <div class="tab grey">Cursor</div>
+    </div>
+    <div class="tabpanel">
+      <div class="plabel">In ChatGPT: <b>Settings → MCP servers → Add server</b> — or add to
+      <span style="color:var(--apple-blue)" title="Click reveals in Finder">~/.codex/config.toml</span>
+      (one stanza covers ChatGPT desktop, Codex CLI, and the IDE extension):</div>
+      <div class="payload">[mcp_servers.bristlenose]
+url = "http://127.0.0.1:8150/mcp/"
+http_headers = { "Authorization" = "Bearer kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM6xA3nQ" }</div>
+    </div>
+    <div class="sheetfoot"><button class="macbtn">Cancel</button><button class="macbtn primary">Copy Config</button></div>
+  </div></div></div>
+  <div class="commentary"><ul>
+    <li><b>Dialects verified, not remembered:</b> Claude Code against the installed CLI itself (<code>claude mcp add --help</code>, 30 Jul — HTTP transport + <code>--header</code> exactly as shown). ChatGPT &amp; Codex against learn.chatgpt.com (30 Jul research): one <code>config.toml</code> covers ChatGPT desktop, Codex CLI, and the IDE extension; <code>codex mcp add</code> exists but has no static-header flag, and its env-var route doesn't reach a Finder-launched app, so the stanza is the reliable form; ChatGPT desktop wants Restart after Save.</li>
+    <li>The footer primary's verb follows the tab — <b>Copy Command</b> / <b>Copy Config</b> — the classic Mac primary-names-the-action pattern. Cursor's greyed tab still opens; its panel would carry its own <code>mcp.json</code> dialect.</li>
   </ul></div>
 
   <h3>Mock C · Live state, not configuration state</h3>

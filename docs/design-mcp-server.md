@@ -750,7 +750,12 @@ ask. So the sheet carries four things and nothing else:
 
 1. **The scope, restated** — *this project* or *this folder, N studies* — so what
    was right-clicked is unambiguous at the moment of granting.
-2. **One plain line** on what is shared. Not a gradient, not a wizard (§Context).
+2. **One plain line** on what is shared. Not a gradient, not a wizard
+   (§Context). _Amended 30 Jul 2026 at mockup critique: removed from the
+   **sheet** entirely — the Anonymise row's caption carries the meaning, and
+   the line returns as text only if the cohort shows confusion. It survives
+   at the **CLI connect moment**, where no control is visible to speak for
+   itself._
 3. **The anonymisation control — the shipped Export-popover row, verbatim:**
    "Anonymise" / "Remove participant names" / a switch — the same control
    and words the Export, clips, and Miro surfaces already use, **on by
@@ -762,7 +767,10 @@ ask. So the sheet carries four things and nothing else:
 4. **Two or three copyable starter prompts.** Cheap, and they teach the object
    model — *"which codes are doing no work in this study?"*, *"trace perception of
    cost across these five studies"*, *"draft a top-line from the starred quotes
-   only"*.
+   only"*. _Amended 30 Jul 2026 at mockup critique: removed from the sheet —
+   it is connect-only. The prompts live in the manual and the §9a acceptance
+   script; they return to the sheet only if the cohort lands in empty chats
+   with nothing to ask._
 
 ### 6b. The in-app Chat lens — split to its own doc
 

@@ -13,6 +13,7 @@ _Design note. Nothing built. July 2026._
 
 ## Changelog
 
+- _30 Jul 2026_ — split the Chat lens out to `design-chat-lens.md` so the two workstreams can run as separate sessions. §6b reduced to a pointer + relationship statement; §6c moved wholesale; §9a and §10 Q7 references updated. Q7 closed: the lens is happening as its own workstream; sequencing stays open in the new doc.
 - _30 Jul 2026_ — §6a: local-app-to-local-app promoted from fallback consequence to stated v1 baseline requirement. No degraded web path — the local-client requirement is the product's own local-first premise applied to the assistant.
 - _30 Jul 2026_ — added §9a (the first spike). Records that nothing in §6a blocks the original idea — the sandbox blocks writing another app's config, not the server itself, and Claude Desktop/Code connect to local servers as the ordinary case. Defines a small unblocked spike (mount /mcp, 3–4 read tools, paste the config by hand, build no connect UI), the three things it proves that a doc cannot, and the subscription-vs-API-key difference between MCP and the Chat lens.
 - _30 Jul 2026_ — added §6c (guard rails for the Chat lens). The citation requirement is the guard rail: an uncitable request cannot be expressed in the response schema, so it falls out as an empty result rather than needing a refusal layer. The real risk is not off-topic use but a confident uncited research claim, and the load-bearing check is server-side validation of returned quote ids — a model can invent one, and without resolution the citations are theatre. Argues against a topic classifier; notes cost as the genuinely separate guard rail.
@@ -700,114 +701,22 @@ ask. So the sheet carries four things and nothing else:
    cost across these five studies"*, *"draft a top-line from the starred quotes
    only"*.
 
-### 6b. A "Chat" lens over the existing provider — a different proposal
+### 6b. The in-app Chat lens — split to its own doc
 
-Distinct from the "Claude lens" refused above, and the refusal does **not** carry
-over. That one was a window onto an MCP connection happening elsewhere — an empty
-room. This is a real chat, in-app, powered by the provider Bristlenose is *already*
-configured with (Claude, ChatGPT, Azure, Gemini, or Ollama via `bristlenose/llm/`).
+A second, genuinely different proposal — a **cited question box inside
+Bristlenose**, powered by the provider already configured in `bristlenose/llm/` —
+was designed here as §6b/§6c and has moved to its own doc so the two workstreams
+can run as separate sessions: **[`design-chat-lens.md`](design-chat-lens.md)**.
 
-It has genuine advantages, and they are not small:
-
-- **No connect problem at all.** No config file, no sandbox fight, no token
-  rotation, no client detection, no "install the app" fallback. Everything in §6a
-  evaporates.
-- **It answers the honest cost admitted in §Positioning** — narrow funnel, needs
-  setup, a researcher who never wires up MCP gets nothing. This reaches them.
-- **Ollama makes it genuinely local-first.** A conversational analysis surface
-  where nothing leaves the machine is something *no* MCP path can offer, and it is
-  on-brand in a way the MCP story is not.
-- **Context assembly is ours.** The server picks the right objects — codebook,
-  signals, starred quotes — rather than hoping a remote model calls the right
-  tools in the right order.
-
-And one advantage that is arguably the only *strategic* reason to build it:
-**citations that link back into the report.** An assistant in someone else's chat
-window cannot deep-link `q-p1-123`. A Bristlenose-native answer can footnote every
-claim to a clickable quote. That is a reason to exist in-app rather than being a
-worse copy of a chat app.
-
-### The two objections, stated at full strength
-
-1. **This is literally the alternative §Positioning rejected** — "a chat lens
-   inside Bristlenose". Reversing that is allowed, but it should be done knowingly
-   and the doc should not pretend the tension away.
-2. **You will build a worse chat UI.** Streaming, markdown, history, retry, edit,
-   branch, attachments, model switching — that is a product, and every hour of it
-   is an hour not spent on the object model that is actually defensible
-   (§Positioning "what this position has to defend").
-
-### The resolution: scope, and sequence
-
-**Scope.** The version that survives objection 2 is not a chat. It is a
-**question box with cited answers** — ask, get an answer footnoted to clickable
-quotes, no conversation history, no branching, no attachments, no model picker.
-That is perhaps a tenth of the build, keeps the §Positioning line intact ("a
-specific job", and the citation *is* the review affordance), and delivers the one
-thing an external assistant structurally cannot.
-
-**Sequence: after the MCP server, not instead of it.** Not a priority judgement —
-a forcing-function one. **MCP requires the object model to be good; a chat lens
-lets you get away with a mediocre one**, because prose can paper over a weak
-surface in a way tool calls cannot. Build the thing that keeps you honest first,
-then the chat lens is a thin client over a proven surface rather than a reason
-never to build one.
-
-This is a real open decision, not a settled one — recorded as §10 Q7.
-
-### 6c. Guard rails — the citation requirement *is* the guard rail
-
-The obvious worry is off-topic use: a researcher asks the interview chat for a
-spaghetti recipe. That is the **least** of it, and it does not need a filter.
-
-**The dangerous case is a confident, plausible, uncited research claim.** Ask a
-raw model "what do participants think about pricing?" against a corpus containing
-nothing about pricing, and it will produce fluent UXR-shaped findings from its
-training data. In a research tool, presented next to real findings, that is the
-actual harm — not a recipe.
-
-Both are handled by the same mechanism, which is why it should not be a separate
-subsystem:
-
-1. **The response schema requires citations.** Every claim carries `quote_ids`;
-   the prompt says answer only from the supplied quotes. A recipe has no
-   supporting quotes, so it cannot be expressed in the response format at all. It
-   falls out as an empty result, not a refusal.
-2. **Cited ids are validated server-side against the corpus.** This is
-   load-bearing and easy to skip: **a model can invent `q-p1-999`.** Resolve every
-   returned id against the project's actual quotes, and drop or flag any claim
-   whose citations do not resolve — and check scope, not just syntax, so a claim
-   cannot cite a quote from a project the question did not cover. **Without this
-   check the citations are theatre**, and the feature is worse than no feature
-   because it looks verified.
-3. **Render the cited quote inline, under its claim.** A wrong citation becomes
-   obvious without a click. This is simultaneously the guard rail, the review
-   affordance, and the reason the feature is worth having in-app at all (§6b).
-
-### What not to build
-
-**Do not build a topic classifier or a refusal layer.** It is a subsystem, it will
-false-positive on legitimate adjacent questions — *"how should I phrase this
-finding for execs?"* is off-corpus and entirely reasonable in a research tool —
-and it guards the wrong risk.
-
-A short scoping line in the system prompt is worth having as *framing*, not
-enforcement, and it should be plain rather than a lecture. The empty-result case
-is **not a refusal**: "nothing in this study's quotes answers that" is a finding
-about the corpus, not a rejection of the researcher. That message needs to fit the
-existing `MessageKind` vocabulary — see `docs/design-pipeline-diagnostic-popover.md`
-before inventing a new tone for it.
-
-### The separate one: cost
-
-Stuffing the corpus (§6b prototype route) means every question costs roughly
-20k input tokens on the researcher's own key. That is a real guard rail with
-nothing to do with topic: cap tokens per question and questions per session, and
-look at prompt caching early — the corpus prefix is identical across every
-question in a session, which is close to the ideal caching shape.
-
-Out of scope for the prototype: answering questions *about Bristlenose itself*
-("how do I export?"). Legitimate, but a different corpus and a different feature.
+The one-line relationship: **this doc's server is how external assistants reach
+the corpus; the chat lens is the in-app surface over the same objects.** The
+refusal of the "Claude lens" above does *not* apply to it (it is a real surface,
+not a window onto a conversation elsewhere). Its guard-rail design (the citation
+requirement as the guard rail, server-side id validation, no topic classifier)
+and its in-app advantages (citations that resolve to quote → transcript → video)
+live in that doc. The coordination contract for building both in parallel —
+one shared core for context assembly, id validation, invariants, and
+anonymisation; whichever lands first owns it — is recorded there as its §7.
 
 ---
 
@@ -879,15 +788,15 @@ What it proves, none of which is knowable from a design doc:
    may simply ignore them. If it does, they need to move into tool responses.
 3. Is the context budget real in practice, or does a genuine project blow it?
 
-The spike also de-risks §6b, because the Chat lens needs the *same* object model
-and the same prompt discipline. Doing this first means the lens is built on a
-proven surface rather than being the thing that discovers the surface is weak.
+The spike also de-risks the Chat lens ([`design-chat-lens.md`](design-chat-lens.md)),
+because it needs the *same* object model and the same prompt discipline. If the
+workstreams run in parallel, the shared-core contract in that doc's §7 applies.
 
-**The two are complementary, not competing** — see §6b, and note the practical
-difference nobody states up front: MCP spends the researcher's *assistant
-subscription*, while the Chat lens meters their own API key at roughly 20k input
-tokens per question (§6c). For anyone on a flat-rate assistant plan those are very
-different propositions.
+**The two are complementary, not competing** — and note the practical difference
+nobody states up front: MCP spends the researcher's *assistant subscription*,
+while the Chat lens meters their own API key at roughly 20k input tokens per
+question. For anyone on a flat-rate assistant plan those are very different
+propositions.
 
 **The tool signatures are a public contract from day one.** If people write skills
 against this, the tool surface is no longer an internal API that can be reshaped
@@ -925,12 +834,13 @@ caveat.
    authors.
 6. **Is the tool surface versioned per release or independently?** §9. Affects
    whether a Bristlenose upgrade can break a published skill.
-7. **Does a "Chat" lens get built, and if so when?** §6b. It reaches the researchers the glue position structurally misses, and Ollama makes it genuinely local-first — but it is the alternative §Positioning rejected, and unscoped it eats the roadmap. The recommendation is a cited question box, sequenced after the MCP server as a forcing function on the object model.
+7. ~~Does a "Chat" lens get built?~~ **Decided 30 Jul 2026: yes, as its own workstream** — split to [`design-chat-lens.md`](design-chat-lens.md) (scope: a cited question box, not a chat). What remains open there is sequencing vs this doc; the shared-core contract for parallel work is its §7.
 
 ---
 
 ## Related docs
 
+- [`design-chat-lens.md`](design-chat-lens.md) — the in-app sibling workstream (split from this doc's §6b/§6c); carries the shared-core contract for parallel sessions.
 - [`design-multi-project.md`](design-multi-project.md) — project index, folders,
   person identity. Phase 2 depends on the project index; the person-identity
   work there is explicitly *not* a dependency of this doc (§3a).

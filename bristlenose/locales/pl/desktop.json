@@ -18,6 +18,7 @@
     "file": {
       "newProject": "Nowy projekt…",
       "newFolder": "Nowy folder…",
+      "addFiles": "Dodaj pliki\u2026",
       "openInNewWindow": "Otwórz w nowym oknie",
       "exportReport": "Eksportuj raport…",
       "pageSetup": "Ustawienia strony…",
@@ -54,6 +55,7 @@
       "actualSize": "Rzeczywisty rozmiar"
     },
     "project": {
+      "analyse": "Analizuj",
       "removeFromSidebar": "Usuń z paska bocznego",
       "showInFinder": "Pokaż w Finderze",
       "connectAgent": "Po\u0142\u0105cz agenta\u2026",
@@ -88,9 +90,19 @@
     },
     "quotes": {
       "star": "Dodaj gwiazdkę",
+      "unstar": "Usu\u0144 gwiazdk\u0119",
+      "starCount_one": "Dodaj gwiazdk\u0119 do {{count}} cytatu",
+      "starCount_few": "Dodaj gwiazdk\u0119 do {{count}} cytat\u00f3w",
+      "starCount_many": "Dodaj gwiazdk\u0119 do {{count}} cytat\u00f3w",
+      "starCount_other": "Dodaj gwiazdk\u0119 do {{count}} cytat\u00f3w",
+      "unstarCount_one": "Usu\u0144 gwiazdk\u0119 z {{count}} cytatu",
+      "unstarCount_few": "Usu\u0144 gwiazdk\u0119 z {{count}} cytat\u00f3w",
+      "unstarCount_many": "Usu\u0144 gwiazdk\u0119 z {{count}} cytat\u00f3w",
+      "unstarCount_other": "Usu\u0144 gwiazdk\u0119 z {{count}} cytat\u00f3w",
       "hide": "Ukryj",
       "addTag": "Dodaj etykietę…",
       "applyLastTag": "Zastosuj ostatnią etykietę",
+      "applyTagNamed": "Zastosuj \u201e{{name}}\u201d",
       "revealInTranscript": "Pokaż w transkrypcji",
       "playPause": "Odtwórz/wstrzymaj",
       "nextQuote": "Następny cytat",
@@ -179,6 +191,12 @@
     "createAnyway": "Utwórz mimo to",
     "emptyStateHint": "Przeciągnij folder tutaj lub naciśnij ⌘N",
     "addedInterviews": "Dodano %d wywiadów do %@",
+    "newProjectSaveTitle": "Utw\u00f3rz folder projektu",
+    "newProjectSavePrompt": "Utw\u00f3rz",
+    "newProjectSaveMessage_one": "Tw\u00f3j wywiad zostanie skopiowany do tego folderu.",
+    "newProjectSaveMessage_few": "Twoje wywiady zostan\u0105 skopiowane do tego folderu.",
+    "newProjectSaveMessage_many": "Twoje wywiady zostan\u0105 skopiowane do tego folderu.",
+    "newProjectSaveMessage_other": "Twoje wywiady zostan\u0105 skopiowane do tego folderu.",
     "interviewCount_one": "1 wywiad",
     "interviewCount_few": "{{count}} wywiady",
     "interviewCount_many": "{{count}} wywiadów",
@@ -206,6 +224,13 @@
     "dropProjectOntoProjectToast": "„%@” jest już projektem Bristlenose — przeciągnij zamiast tego jego pliki źródłowe.",
     "dropOntoRunningProject": "Zakończ lub zatrzymaj bieżącą analizę, zanim dodasz więcej.",
     "dropOntoAnalysedProject": "Dodawanie kolejnych wywiadów do przeanalizowanego projektu nie jest jeszcze obsługiwane.",
+    "addFilesPrompt": "Dodaj",
+    "addFilesMessage": "Dodaj sesje do \u201e%@\u201d",
+    "addFilesNoProject": "Najpierw wybierz projekt, a nast\u0119pnie dodaj do niego pliki.",
+    "addingInterviews_one": "Dodawanie {{count}} wywiadu\u2026",
+    "addingInterviews_few": "Dodawanie {{count}} wywiad\u00f3w\u2026",
+    "addingInterviews_many": "Dodawanie {{count}} wywiad\u00f3w\u2026",
+    "addingInterviews_other": "Dodawanie {{count}} wywiad\u00f3w\u2026",
     "dropOntoFailedProject": "Użyj przycisku Spróbuj ponownie na pasku narzędzi, aby powtórzyć tę analizę.",
     "dropOntoUnreachableProject": "Folder tego projektu jest obecnie nieosiągalny.",
     "dropFolderContainsProject": "Ten folder zawiera projekt Bristlenose „%@”. Przeciągnij sam projekt lub jego pliki źródłowe osobno.",
@@ -266,6 +291,7 @@
     "diagnostic": {
       "pill": {
         "auth": "Problem z kluczem dostawcy",
+        "out_of_credit": "Brak \u015brodk\u00f3w",
         "missing_binary": "Brakujące narzędzie",
         "quota": "Ograniczenie liczby żądań",
         "network": "Błąd sieci",
@@ -481,6 +507,13 @@
     "failTimedOut": "Upłynął limit czasu pobierania. Sprawdź połączenie i spróbuj ponownie.",
     "failCantReach": "Utracono połączenie z Ollama. Upewnij się, że działa, a następnie spróbuj ponownie.",
     "failGeneric": "Nie udało się dokończyć pobierania. %@"
+  },
+  "outOfCredit": {
+    "pill": "%@ \u00b7 brak \u015brodk\u00f3w",
+    "title": "%@ nie ma ju\u017c \u015brodk\u00f3w",
+    "body": "Dodaj \u015brodki, aby uruchomi\u0107 now\u0105 analiz\u0119 lub kodowanie.",
+    "addFunds": "Dodaj \u015brodki\u2026",
+    "switchProvider": "Zmie\u0144 dostawc\u0119\u2026"
   },
   "connectAgent": {
     "title": "Po\u0142\u0105cz agenta z projektem \u201e{{project}}\u201d",

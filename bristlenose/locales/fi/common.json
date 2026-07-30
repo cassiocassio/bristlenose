@@ -214,6 +214,11 @@
     "colSession": "Istunto",
     "colSourceFile": "Lähdetiedosto",
     "extractClips": "Erota videoleikkeet…",
+    "scope": {
+      "all": "Kaikki ({{n}})",
+      "selected": "Valitut ({{n}})",
+      "starred": "T\u00e4hdell\u00e4 merkityt ({{n}})"
+    },
     "clips": {
       "noMedia": "Projektissa ei ole mediatiedostoja",
       "inProgress": "Erotus käynnissä",

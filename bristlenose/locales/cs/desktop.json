@@ -18,6 +18,7 @@
     "file": {
       "newProject": "Nový projekt…",
       "newFolder": "Nová složka…",
+      "addFiles": "P\u0159idat soubory\u2026",
       "openInNewWindow": "Otevřít v novém okně",
       "exportReport": "Exportovat zprávu…",
       "pageSetup": "Vzhled stránky…",
@@ -54,6 +55,7 @@
       "actualSize": "Skutečná velikost"
     },
     "project": {
+      "analyse": "Analyzovat",
       "removeFromSidebar": "Odebrat z postranního panelu",
       "showInFinder": "Zobrazit ve Finderu",
       "connectAgent": "P\u0159ipojit agenta\u2026",
@@ -88,9 +90,19 @@
     },
     "quotes": {
       "star": "Označit hvězdičkou",
+      "unstar": "Odebrat hv\u011bzdi\u010dku",
+      "starCount_one": "Ozna\u010dit hv\u011bzdi\u010dkou {{count}} cit\u00e1t",
+      "starCount_few": "Ozna\u010dit hv\u011bzdi\u010dkou {{count}} cit\u00e1ty",
+      "starCount_many": "Ozna\u010dit hv\u011bzdi\u010dkou {{count}} cit\u00e1tu",
+      "starCount_other": "Ozna\u010dit hv\u011bzdi\u010dkou {{count}} cit\u00e1t\u016f",
+      "unstarCount_one": "Odebrat hv\u011bzdi\u010dku {{count}} cit\u00e1tu",
+      "unstarCount_few": "Odebrat hv\u011bzdi\u010dku {{count}} cit\u00e1t\u016fm",
+      "unstarCount_many": "Odebrat hv\u011bzdi\u010dku {{count}} cit\u00e1tu",
+      "unstarCount_other": "Odebrat hv\u011bzdi\u010dku {{count}} cit\u00e1t\u016fm",
       "hide": "Skrýt",
       "addTag": "Přidat štítek…",
       "applyLastTag": "Použít poslední štítek",
+      "applyTagNamed": "Pou\u017e\u00edt \u201e{{name}}\u201c",
       "revealInTranscript": "Zobrazit v přepisu",
       "playPause": "Přehrát/pozastavit",
       "nextQuote": "Další citát",
@@ -179,6 +191,12 @@
     "createAnyway": "Přesto vytvořit",
     "emptyStateHint": "Přetáhněte složku sem nebo stiskněte ⌘N",
     "addedInterviews": "Přidáno %d rozhovorů do %@",
+    "newProjectSaveTitle": "Vytvo\u0159it slo\u017eku projektu",
+    "newProjectSavePrompt": "Vytvo\u0159it",
+    "newProjectSaveMessage_one": "V\u00e1\u0161 rozhovor se zkop\u00edruje do t\u00e9to slo\u017eky.",
+    "newProjectSaveMessage_few": "Va\u0161e rozhovory se zkop\u00edruj\u00ed do t\u00e9to slo\u017eky.",
+    "newProjectSaveMessage_many": "Va\u0161e rozhovory se zkop\u00edruj\u00ed do t\u00e9to slo\u017eky.",
+    "newProjectSaveMessage_other": "Va\u0161e rozhovory se zkop\u00edruj\u00ed do t\u00e9to slo\u017eky.",
     "interviewCount_one": "1 rozhovor",
     "interviewCount_few": "{{count}} rozhovory",
     "interviewCount_many": "{{count}} rozhovoru",
@@ -205,6 +223,13 @@
     "dropProjectOntoProjectToast": "„%@“ už je projekt Bristlenose — přetáhněte místo toho jeho zdrojové soubory.",
     "dropOntoRunningProject": "Před přidáním dalších dokončete nebo zastavte aktuální běh.",
     "dropOntoAnalysedProject": "Přidávání dalších rozhovorů do analyzovaného projektu zatím není podporováno.",
+    "addFilesPrompt": "P\u0159idat",
+    "addFilesMessage": "P\u0159idat sezen\u00ed do \u201e%@\u201c",
+    "addFilesNoProject": "Nejprve vyberte projekt a pot\u00e9 do n\u011bj p\u0159idejte soubory.",
+    "addingInterviews_one": "P\u0159id\u00e1v\u00e1n\u00ed 1 rozhovoru\u2026",
+    "addingInterviews_few": "P\u0159id\u00e1v\u00e1n\u00ed {{count}} rozhovor\u016f\u2026",
+    "addingInterviews_many": "P\u0159id\u00e1v\u00e1n\u00ed {{count}} rozhovoru\u2026",
+    "addingInterviews_other": "P\u0159id\u00e1v\u00e1n\u00ed {{count}} rozhovor\u016f\u2026",
     "dropOntoFailedProject": "Tento běh zkuste znovu pomocí tlačítka Zkusit znovu na nástrojové liště.",
     "dropOntoUnreachableProject": "Složka tohoto projektu je nyní nedostupná.",
     "dropFolderContainsProject": "Tato složka obsahuje projekt Bristlenose „%@“. Přetáhněte samotný projekt nebo jeho zdrojové soubory zvlášť.",
@@ -265,6 +290,7 @@
     "diagnostic": {
       "pill": {
         "auth": "Problém s klíčem poskytovatele",
+        "out_of_credit": "Bez kreditu",
         "missing_binary": "Chybějící nástroj",
         "quota": "Omezení četnosti",
         "network": "Chyba sítě",
@@ -480,6 +506,13 @@
     "failTimedOut": "Stahování vypršelo. Zkontrolujte připojení a zkuste to znovu.",
     "failCantReach": "Ztraceno spojení s Ollama. Ujistěte se, že běží, a zkuste to znovu.",
     "failGeneric": "Stahování se nepodařilo dokončit. %@"
+  },
+  "outOfCredit": {
+    "pill": "%@ \u00b7 bez kreditu",
+    "title": "%@ nem\u00e1 kredit",
+    "body": "P\u0159idejte kredit, abyste mohli spustit novou anal\u00fdzu nebo k\u00f3dov\u00e1n\u00ed.",
+    "addFunds": "P\u0159idat prost\u0159edky\u2026",
+    "switchProvider": "Zm\u011bnit poskytovatele\u2026"
   },
   "connectAgent": {
     "title": "P\u0159ipojit agenta k projektu \u201e{{project}}\u201c",

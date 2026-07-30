@@ -242,6 +242,11 @@
     "colSession": "Sezení",
     "colSourceFile": "Zdrojový soubor",
     "extractClips": "Extrahovat videoklipy…",
+    "scope": {
+      "all": "V\u0161e ({{n}})",
+      "selected": "Vybran\u00e9 ({{n}})",
+      "starred": "Ozna\u010den\u00e9 ({{n}})"
+    },
     "clips": {
       "noMedia": "V projektu nejsou žádné mediální soubory",
       "inProgress": "Probíhá extrakce",

@@ -18,6 +18,7 @@
     "file": {
       "newProject": "Neues Projekt…",
       "newFolder": "Neuer Ordner…",
+      "addFiles": "Dateien hinzuf\u00fcgen\u2026",
       "openInNewWindow": "In neuem Fenster öffnen",
       "exportReport": "Bericht exportieren…",
       "pageSetup": "Seite einrichten…",
@@ -54,6 +55,7 @@
       "actualSize": "Tatsächliche Größe"
     },
     "project": {
+      "analyse": "Analysieren",
       "removeFromSidebar": "Aus Seitenleiste entfernen",
       "showInFinder": "Im Finder zeigen",
       "connectAgent": "Agent verbinden\u2026",
@@ -88,9 +90,15 @@
     },
     "quotes": {
       "star": "Markieren",
+      "unstar": "Markierung entfernen",
+      "starCount_one": "{{count}} Zitat markieren",
+      "starCount_other": "{{count}} Zitate markieren",
+      "unstarCount_one": "Markierung von {{count}} Zitat entfernen",
+      "unstarCount_other": "Markierung von {{count}} Zitaten entfernen",
       "hide": "Ausblenden",
       "addTag": "Tag hinzufügen…",
       "applyLastTag": "Letzten Tag anwenden",
+      "applyTagNamed": "\u201e{{name}}\u201c anwenden",
       "revealInTranscript": "Im Transkript zeigen",
       "playPause": "Wiedergabe/Pause",
       "nextQuote": "Nächstes Zitat",
@@ -179,6 +187,10 @@
     "createAnyway": "Trotzdem erstellen",
     "emptyStateHint": "Ordner hierher ziehen oder ⌘N drücken",
     "addedInterviews": "%d Interviews zu %@ hinzugefügt",
+    "newProjectSaveTitle": "Projektordner erstellen",
+    "newProjectSavePrompt": "Erstellen",
+    "newProjectSaveMessage_one": "Ihr Interview wird in diesen Ordner kopiert.",
+    "newProjectSaveMessage_other": "Ihre Interviews werden in diesen Ordner kopiert.",
     "interviewCount_one": "1 Interview",
     "interviewCount_other": "{{count}} Interviews",
     "unanalysedSubtitle_one": "+1 unanalysiert",
@@ -198,6 +210,11 @@
     "dropProjectOntoProjectToast": "„%@“ ist bereits ein Bristlenose-Projekt — ziehen Sie stattdessen die Quelldateien.",
     "dropOntoRunningProject": "Beenden oder stoppen Sie den laufenden Vorgang, bevor Sie weitere hinzuf\u00fcgen.",
     "dropOntoAnalysedProject": "Das Hinzuf\u00fcgen weiterer Interviews zu einem analysierten Projekt wird noch nicht unterst\u00fctzt.",
+    "addFilesPrompt": "Hinzuf\u00fcgen",
+    "addFilesMessage": "Interviews zu \u201e%@\u201c hinzuf\u00fcgen",
+    "addFilesNoProject": "W\u00e4hlen Sie zuerst ein Projekt aus und f\u00fcgen Sie dann Dateien hinzu.",
+    "addingInterviews_one": "1 Interview wird hinzugef\u00fcgt\u2026",
+    "addingInterviews_other": "{{count}} Interviews werden hinzugef\u00fcgt\u2026",
     "dropOntoFailedProject": "Verwenden Sie \u201eErneut versuchen\u201c in der Symbolleiste, um diesen Vorgang erneut zu starten.",
     "dropOntoUnreachableProject": "Der Ordner dieses Projekts ist derzeit nicht erreichbar.",
     "dropFolderContainsProject": "Dieser Ordner enth\u00e4lt das Bristlenose-Projekt \u201e%@\u201c. Ziehen Sie das Projekt selbst oder seine Quelldateien einzeln.",
@@ -258,6 +275,7 @@
     "diagnostic": {
       "pill": {
         "auth": "Schlüsselproblem",
+        "out_of_credit": "Kein Guthaben",
         "missing_binary": "Werkzeug fehlt",
         "quota": "Limit erreicht",
         "network": "Netzwerkfehler",
@@ -471,6 +489,13 @@
     "failTimedOut": "Zeitüberschreitung beim Download. Überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     "failCantReach": "Verbindung zu Ollama verloren. Stellen Sie sicher, dass es läuft, und versuchen Sie es erneut.",
     "failGeneric": "Der Download konnte nicht abgeschlossen werden. %@"
+  },
+  "outOfCredit": {
+    "pill": "%@ \u00b7 kein Guthaben",
+    "title": "%@ hat kein Guthaben mehr",
+    "body": "Laden Sie Guthaben auf, um neue Analysen oder Kodierungen auszuf\u00fchren.",
+    "addFunds": "Guthaben aufladen\u2026",
+    "switchProvider": "Anbieter wechseln\u2026"
   },
   "connectAgent": {
     "title": "Agent mit \u201e{{project}}\u201c verbinden",

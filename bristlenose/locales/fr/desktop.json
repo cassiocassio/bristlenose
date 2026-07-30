@@ -18,6 +18,7 @@
     "file": {
       "newProject": "Nouveau projet…",
       "newFolder": "Nouveau dossier…",
+      "addFiles": "Ajouter des fichiers\u2026",
       "openInNewWindow": "Ouvrir dans une nouvelle fenêtre",
       "exportReport": "Exporter le rapport…",
       "pageSetup": "Format d'impression…",
@@ -54,6 +55,7 @@
       "actualSize": "Taille réelle"
     },
     "project": {
+      "analyse": "Analyser",
       "removeFromSidebar": "Retirer de la barre lat\u00e9rale",
       "showInFinder": "Afficher dans le Finder",
       "connectAgent": "Connecter un agent\u2026",
@@ -88,9 +90,15 @@
     },
     "quotes": {
       "star": "Favori",
+      "unstar": "Retirer des favoris",
+      "starCount_one": "Ajouter {{count}} verbatim aux favoris",
+      "starCount_other": "Ajouter {{count}} verbatim aux favoris",
+      "unstarCount_one": "Retirer {{count}} verbatim des favoris",
+      "unstarCount_other": "Retirer {{count}} verbatim des favoris",
       "hide": "Masquer",
       "addTag": "Ajouter un tag…",
       "applyLastTag": "Appliquer le dernier tag",
+      "applyTagNamed": "Appliquer \u00ab\u00a0{{name}}\u00a0\u00bb",
       "revealInTranscript": "Afficher dans la transcription",
       "playPause": "Lecture/Pause",
       "nextQuote": "Verbatim suivant",
@@ -179,6 +187,10 @@
     "createAnyway": "Créer quand même",
     "emptyStateHint": "Glissez un dossier ici ou appuyez sur ⌘N",
     "addedInterviews": "%d entretiens ajoutés à %@",
+    "newProjectSaveTitle": "Cr\u00e9er le dossier du projet",
+    "newProjectSavePrompt": "Cr\u00e9er",
+    "newProjectSaveMessage_one": "Votre entretien est copi\u00e9 dans ce dossier.",
+    "newProjectSaveMessage_other": "Vos entretiens sont copi\u00e9s dans ce dossier.",
     "interviewCount_one": "1 entretien",
     "interviewCount_other": "{{count}} entretiens",
     "unanalysedSubtitle_one": "+1 non analys\u00e9",
@@ -198,6 +210,11 @@
     "dropProjectOntoProjectToast": "« %@ » est déjà un projet Bristlenose — glissez plutôt ses fichiers sources.",
     "dropOntoRunningProject": "Terminez ou arr\u00eatez l\u2019analyse en cours avant d\u2019en ajouter.",
     "dropOntoAnalysedProject": "L\u2019ajout d\u2019entretiens suppl\u00e9mentaires \u00e0 un projet analys\u00e9 n\u2019est pas encore pris en charge.",
+    "addFilesPrompt": "Ajouter",
+    "addFilesMessage": "Ajouter des entretiens \u00e0 \u00ab\u00a0%@\u00a0\u00bb",
+    "addFilesNoProject": "S\u00e9lectionnez d\u2019abord un projet, puis ajoutez-y des fichiers.",
+    "addingInterviews_one": "Ajout de {{count}} entretien\u2026",
+    "addingInterviews_other": "Ajout de {{count}} entretiens\u2026",
     "dropOntoFailedProject": "Utilisez R\u00e9essayer dans la barre d\u2019outils pour relancer cette analyse.",
     "dropOntoUnreachableProject": "Le dossier de ce projet n\u2019est pas accessible pour le moment.",
     "dropFolderContainsProject": "Ce dossier contient le projet Bristlenose \u00ab\u00a0%@\u00a0\u00bb. Glissez le projet lui-m\u00eame, ou ses fichiers sources s\u00e9par\u00e9ment.",
@@ -258,6 +275,7 @@
     "diagnostic": {
       "pill": {
         "auth": "Probl\u00e8me de cl\u00e9",
+        "out_of_credit": "Cr\u00e9dit \u00e9puis\u00e9",
         "missing_binary": "Outil manquant",
         "quota": "Quota atteint",
         "network": "Erreur r\u00e9seau",
@@ -471,6 +489,13 @@
     "failTimedOut": "Le téléchargement a expiré. Vérifiez votre connexion et réessayez.",
     "failCantReach": "Connexion à Ollama perdue. Assurez-vous qu’il est en cours d’exécution, puis réessayez.",
     "failGeneric": "Le téléchargement n’a pas pu se terminer. %@"
+  },
+  "outOfCredit": {
+    "pill": "%@ \u00b7 aucun cr\u00e9dit",
+    "title": "%@ n\u2019a plus de cr\u00e9dit",
+    "body": "Ajoutez du cr\u00e9dit pour lancer une nouvelle analyse ou un nouveau codage.",
+    "addFunds": "Ajouter des fonds\u2026",
+    "switchProvider": "Changer de fournisseur\u2026"
   },
   "connectAgent": {
     "title": "Connecter un agent \u00e0 \u00ab {{project}} \u00bb",

@@ -18,6 +18,7 @@
     "file": {
       "newProject": "Yeni Proje…",
       "newFolder": "Yeni Klasör…",
+      "addFiles": "Dosya Ekle\u2026",
       "openInNewWindow": "Yeni Pencerede Aç",
       "exportReport": "Raporu Dışa Aktar…",
       "pageSetup": "Sayfa Yapısı…",
@@ -54,6 +55,7 @@
       "actualSize": "Gerçek Boyut"
     },
     "project": {
+      "analyse": "Analiz Et",
       "removeFromSidebar": "Kenar Çubuğundan Kaldır",
       "showInFinder": "Finder’da Göster",
       "connectAgent": "Ajan Ba\u011fla\u2026",
@@ -88,9 +90,15 @@
     },
     "quotes": {
       "star": "Yıldızla",
+      "unstar": "Y\u0131ld\u0131z\u0131 Kald\u0131r",
+      "starCount_one": "{{count}} Al\u0131nt\u0131y\u0131 Y\u0131ld\u0131zla",
+      "starCount_other": "{{count}} Al\u0131nt\u0131y\u0131 Y\u0131ld\u0131zla",
+      "unstarCount_one": "{{count}} Al\u0131nt\u0131n\u0131n Y\u0131ld\u0131z\u0131n\u0131 Kald\u0131r",
+      "unstarCount_other": "{{count}} Al\u0131nt\u0131n\u0131n Y\u0131ld\u0131z\u0131n\u0131 Kald\u0131r",
       "hide": "Gizle",
       "addTag": "Etiket Ekle…",
       "applyLastTag": "Son Etiketi Uygula",
+      "applyTagNamed": "\u201c{{name}}\u201d Uygula",
       "revealInTranscript": "Dökümde Göster",
       "playPause": "Oynat/Duraklat",
       "nextQuote": "Sonraki Alıntı",
@@ -179,6 +187,10 @@
     "createAnyway": "Yine de Oluştur",
     "emptyStateHint": "Buraya bir klasör sürükleyin ya da ⌘N tuşuna basın",
     "addedInterviews": "%@ projesine %d görüşme eklendi",
+    "newProjectSaveTitle": "Proje Klas\u00f6r\u00fc Olu\u015ftur",
+    "newProjectSavePrompt": "Olu\u015ftur",
+    "newProjectSaveMessage_one": "G\u00f6r\u00fc\u015fmeniz bu klas\u00f6re kopyalan\u0131r.",
+    "newProjectSaveMessage_other": "G\u00f6r\u00fc\u015fmeleriniz bu klas\u00f6re kopyalan\u0131r.",
     "interviewCount_one": "1 görüşme",
     "interviewCount_other": "{{count}} görüşme",
     "unanalysedSubtitle_one": "+1 analiz edilmemiş",
@@ -198,6 +210,11 @@
     "dropProjectOntoProjectToast": "“%@” zaten bir Bristlenose projesi — bunun yerine kaynak dosyalarını sürükleyin.",
     "dropOntoRunningProject": "Daha fazla eklemeden önce geçerli çalıştırmayı bitirin ya da durdurun.",
     "dropOntoAnalysedProject": "Analiz edilmiş bir projeye fazladan görüşme eklemek henüz desteklenmiyor.",
+    "addFilesPrompt": "Ekle",
+    "addFilesMessage": "\u201c%@\u201d projesine oturum ekleyin",
+    "addFilesNoProject": "\u00d6nce bir proje se\u00e7in, sonra ona dosya ekleyin.",
+    "addingInterviews_one": "1 g\u00f6r\u00fc\u015fme ekleniyor\u2026",
+    "addingInterviews_other": "{{count}} g\u00f6r\u00fc\u015fme ekleniyor\u2026",
     "dropOntoFailedProject": "Bu çalıştırmayı yeniden denemek için araç çubuğundaki Yeniden Dene’yi kullanın.",
     "dropOntoUnreachableProject": "Bu projenin klasörüne şu anda erişilemiyor.",
     "dropFolderContainsProject": "Bu klasör “%@” adlı Bristlenose projesini içeriyor. Projenin kendisini ya da kaynak dosyalarını ayrı ayrı sürükleyin.",
@@ -258,6 +275,7 @@
     "diagnostic": {
       "pill": {
         "auth": "Sağlayıcı anahtarı sorunu",
+        "out_of_credit": "Kredi yok",
         "missing_binary": "Eksik araç",
         "quota": "Hız sınırı aşıldı",
         "network": "Ağ hatası",
@@ -471,6 +489,13 @@
     "failTimedOut": "İndirme zaman aşımına uğradı. Bağlantınızı denetleyip yeniden deneyin.",
     "failCantReach": "Ollama ile bağlantı kesildi. Çalıştığından emin olun, sonra yeniden deneyin.",
     "failGeneric": "İndirme tamamlanamadı. %@"
+  },
+  "outOfCredit": {
+    "pill": "%@ \u00b7 kredi yok",
+    "title": "%@ kredisi t\u00fckendi",
+    "body": "Yeni analiz veya kodlama \u00e7al\u0131\u015ft\u0131rmak i\u00e7in kredi ekleyin.",
+    "addFunds": "Bakiye ekle\u2026",
+    "switchProvider": "Sa\u011flay\u0131c\u0131 de\u011fi\u015ftir\u2026"
   },
   "connectAgent": {
     "title": "\u201c{{project}}\u201d projesine bir ajan ba\u011flay\u0131n",

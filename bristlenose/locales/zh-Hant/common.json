@@ -198,6 +198,11 @@
     "colSession": "場次",
     "colSourceFile": "來源檔案",
     "extractClips": "擷取影片片段…",
+    "scope": {
+      "all": "\u5168\u90e8\uff08{{n}}\uff09",
+      "selected": "\u5df2\u9078\u53d6\uff08{{n}}\uff09",
+      "starred": "\u5df2\u6a19\u661f\uff08{{n}}\uff09"
+    },
     "clips": {
       "noMedia": "專案中沒有媒體檔案",
       "inProgress": "正在擷取",

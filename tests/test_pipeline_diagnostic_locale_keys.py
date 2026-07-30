@@ -43,6 +43,7 @@ _FALLBACK_ONLY_LOCALES = ("zh-Hant-HK",)
 _REQUIRED_PILL_CATEGORIES = (
     "auth",
     "missing_binary",
+    "out_of_credit",
     "quota",
     "network",
     "unknown",
@@ -133,7 +134,13 @@ def test_four_form_locales_carry_all_forms(locale: str) -> None:
 # 2–4) to snake_case `_one`/`_few`/`_many`/`_other` forms (Finding 14). Same
 # per-locale form rules as overflow: en/es/fr/de carry one+other, ko/ja carry
 # only other, cs carries all four.
-_CHROME_COUNT_PREFIXES = ("interviewCount", "unanalysedSubtitle", "missingSubtitle")
+_CHROME_COUNT_PREFIXES = (
+    "interviewCount",
+    "unanalysedSubtitle",
+    "missingSubtitle",
+    "addingInterviews",
+    "newProjectSaveMessage",
+)
 
 
 def _chrome_count(locale: str) -> dict:

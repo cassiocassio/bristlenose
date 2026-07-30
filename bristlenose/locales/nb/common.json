@@ -214,6 +214,11 @@
     "colSession": "Økt",
     "colSourceFile": "Kildefil",
     "extractClips": "Trekk ut videoklipp …",
+    "scope": {
+      "all": "Alle ({{n}})",
+      "selected": "Valgte ({{n}})",
+      "starred": "Stjernemerkede ({{n}})"
+    },
     "clips": {
       "noMedia": "Ingen mediefiler i prosjektet",
       "inProgress": "Uttrekking pågår",

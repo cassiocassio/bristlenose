@@ -249,6 +249,11 @@
     "colSession": "Sesja",
     "colSourceFile": "Plik źródłowy",
     "extractClips": "Wyodrębnij klipy wideo…",
+    "scope": {
+      "all": "Wszystkie ({{n}})",
+      "selected": "Zaznaczone ({{n}})",
+      "starred": "Z gwiazdk\u0105 ({{n}})"
+    },
     "clips": {
       "noMedia": "Brak plików multimedialnych w projekcie",
       "inProgress": "Trwa wyodrębnianie",

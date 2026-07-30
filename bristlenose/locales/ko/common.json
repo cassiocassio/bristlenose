@@ -198,6 +198,11 @@
     "colSession": "세션",
     "colSourceFile": "원본 파일",
     "extractClips": "비디오 클립 추출…",
+    "scope": {
+      "all": "\uc804\uccb4 ({{n}})",
+      "selected": "\uc120\ud0dd ({{n}})",
+      "starred": "\ubcc4\ud45c ({{n}})"
+    },
     "clips": {
       "noMedia": "프로젝트에 미디어 파일이 없습니다",
       "inProgress": "추출 진행 중",

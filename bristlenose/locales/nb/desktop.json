@@ -18,6 +18,7 @@
     "file": {
       "newProject": "Nytt prosjekt…",
       "newFolder": "Ny mappe…",
+      "addFiles": "Legg til filer\u2026",
       "openInNewWindow": "Åpne i nytt vindu",
       "exportReport": "Eksporter rapport…",
       "pageSetup": "Utskriftsformat…",
@@ -54,6 +55,7 @@
       "actualSize": "Faktisk størrelse"
     },
     "project": {
+      "analyse": "Analyser",
       "removeFromSidebar": "Fjern fra sidepanel",
       "showInFinder": "Vis i Finder",
       "connectAgent": "Koble til agent\u2026",
@@ -88,9 +90,15 @@
     },
     "quotes": {
       "star": "Stjernemerk",
+      "unstar": "Fjern stjernemerke",
+      "starCount_one": "Stjernemerk {{count}} sitat",
+      "starCount_other": "Stjernemerk {{count}} sitater",
+      "unstarCount_one": "Fjern stjernemerke fra {{count}} sitat",
+      "unstarCount_other": "Fjern stjernemerke fra {{count}} sitater",
       "hide": "Skjul",
       "addTag": "Legg til tagg…",
       "applyLastTag": "Bruk forrige tagg",
+      "applyTagNamed": "Bruk \u00ab{{name}}\u00bb",
       "revealInTranscript": "Vis i transkripsjon",
       "playPause": "Spill av / pause",
       "nextQuote": "Neste sitat",
@@ -179,6 +187,10 @@
     "createAnyway": "Opprett likevel",
     "emptyStateHint": "Dra en mappe hit eller trykk ⌘N",
     "addedInterviews": "La til %d intervjuer i %@",
+    "newProjectSaveTitle": "Opprett prosjektmappe",
+    "newProjectSavePrompt": "Opprett",
+    "newProjectSaveMessage_one": "Intervjuet ditt kopieres inn i denne mappen.",
+    "newProjectSaveMessage_other": "Intervjuene dine kopieres inn i denne mappen.",
     "interviewCount_one": "1 intervju",
     "interviewCount_other": "{{count}} intervjuer",
     "unanalysedSubtitle_one": "+1 uanalysert",
@@ -198,6 +210,11 @@
     "dropProjectOntoProjectToast": "«%@» er allerede et Bristlenose-prosjekt – dra kildefilene i stedet.",
     "dropOntoRunningProject": "Fullfør eller stopp den pågående kjøringen før du legger til mer.",
     "dropOntoAnalysedProject": "Å legge til flere intervjuer i et analysert prosjekt støttes ikke ennå.",
+    "addFilesPrompt": "Legg til",
+    "addFilesMessage": "Legg til \u00f8kter i \u00ab%@\u00bb",
+    "addFilesNoProject": "Velg et prosjekt f\u00f8rst, og legg deretter til filer i det.",
+    "addingInterviews_one": "Legger til 1 intervju\u2026",
+    "addingInterviews_other": "Legger til {{count}} intervjuer\u2026",
     "dropOntoFailedProject": "Bruk Prøv igjen på verktøylinjen for å kjøre på nytt.",
     "dropOntoUnreachableProject": "Mappen til dette prosjektet er ikke tilgjengelig akkurat nå.",
     "dropFolderContainsProject": "Denne mappen inneholder Bristlenose-prosjektet «%@». Dra prosjektet selv, eller kildefilene separat.",
@@ -258,6 +275,7 @@
     "diagnostic": {
       "pill": {
         "auth": "Problem med leverandørnøkkel",
+        "out_of_credit": "Ingen kreditt",
         "missing_binary": "Manglende verktøy",
         "quota": "Hastighetsbegrenset",
         "network": "Nettverksfeil",
@@ -471,6 +489,13 @@
     "failTimedOut": "Nedlastingen fikk tidsavbrudd. Sjekk forbindelsen og prøv igjen.",
     "failCantReach": "Mistet forbindelsen til Ollama. Kontroller at det kjører, og prøv igjen.",
     "failGeneric": "Nedlastingen kunne ikke fullføres. %@"
+  },
+  "outOfCredit": {
+    "pill": "%@ \u00b7 ingen kreditt",
+    "title": "%@ er tom for kreditt",
+    "body": "Legg til kreditt for \u00e5 kj\u00f8re ny analyse eller koding.",
+    "addFunds": "Legg til midler\u2026",
+    "switchProvider": "Bytt leverand\u00f8r\u2026"
   },
   "connectAgent": {
     "title": "Koble en agent til \u00ab{{project}}\u00bb",

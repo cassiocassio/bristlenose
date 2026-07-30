@@ -210,6 +210,11 @@
     "colSession": "セッション",
     "colSourceFile": "ソースファイル",
     "extractClips": "ビデオクリップを抽出…",
+    "scope": {
+      "all": "\u3059\u3079\u3066 ({{n}})",
+      "selected": "\u9078\u629e ({{n}})",
+      "starred": "\u30b9\u30bf\u30fc\u4ed8\u304d ({{n}})"
+    },
     "clips": {
       "noMedia": "プロジェクトにメディアファイルがありません",
       "inProgress": "抽出中",

@@ -214,6 +214,11 @@
     "colSession": "Sessie",
     "colSourceFile": "Bronbestand",
     "extractClips": "Videoclips extraheren…",
+    "scope": {
+      "all": "Alle ({{n}})",
+      "selected": "Geselecteerd ({{n}})",
+      "starred": "Met ster ({{n}})"
+    },
     "clips": {
       "noMedia": "Geen mediabestanden in project",
       "inProgress": "Bezig met extraheren",

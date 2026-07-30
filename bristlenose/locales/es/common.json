@@ -215,6 +215,11 @@
     "colSession": "Sesión",
     "colSourceFile": "Archivo fuente",
     "extractClips": "Extraer clips de vídeo…",
+    "scope": {
+      "all": "Todas ({{n}})",
+      "selected": "Seleccionadas ({{n}})",
+      "starred": "Destacadas ({{n}})"
+    },
     "clips": {
       "noMedia": "No hay archivos multimedia en el proyecto",
       "inProgress": "Extracción en curso",

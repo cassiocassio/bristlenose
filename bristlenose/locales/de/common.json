@@ -214,6 +214,11 @@
     "colSession": "Interview",
     "colSourceFile": "Quelldatei",
     "extractClips": "Videoclips extrahieren…",
+    "scope": {
+      "all": "Alle ({{n}})",
+      "selected": "Ausgew\u00e4hlte ({{n}})",
+      "starred": "Markierte ({{n}})"
+    },
     "clips": {
       "noMedia": "Keine Mediendateien im Projekt",
       "inProgress": "Extraktion läuft",

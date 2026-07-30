@@ -18,6 +18,7 @@
     "file": {
       "newProject": "Uusi projekti…",
       "newFolder": "Uusi kansio…",
+      "addFiles": "Lis\u00e4\u00e4 tiedostoja\u2026",
       "openInNewWindow": "Avaa uudessa ikkunassa",
       "exportReport": "Vie raportti…",
       "pageSetup": "Arkin määrittely…",
@@ -54,6 +55,7 @@
       "actualSize": "Todellinen koko"
     },
     "project": {
+      "analyse": "Analysoi",
       "removeFromSidebar": "Poista sivupalkista",
       "showInFinder": "Näytä Finderissa",
       "connectAgent": "Yhdist\u00e4 agentti\u2026",
@@ -88,9 +90,15 @@
     },
     "quotes": {
       "star": "Merkitse tähdellä",
+      "unstar": "Poista t\u00e4htimerkint\u00e4",
+      "starCount_one": "Merkitse t\u00e4hdell\u00e4 {{count}} sitaatti",
+      "starCount_other": "Merkitse t\u00e4hdell\u00e4 {{count}} sitaattia",
+      "unstarCount_one": "Poista t\u00e4htimerkint\u00e4 {{count}} sitaatista",
+      "unstarCount_other": "Poista t\u00e4htimerkint\u00e4 {{count}} sitaatista",
       "hide": "Piilota",
       "addTag": "Lisää tunniste…",
       "applyLastTag": "Käytä viimeisintä tunnistetta",
+      "applyTagNamed": "K\u00e4yt\u00e4 tunnistetta \u201d{{name}}\u201d",
       "revealInTranscript": "Näytä litteroinnissa",
       "playPause": "Toista/tauko",
       "nextQuote": "Seuraava sitaatti",
@@ -179,6 +187,10 @@
     "createAnyway": "Luo silti",
     "emptyStateHint": "Vedä kansio tähän tai paina ⌘N",
     "addedInterviews": "Lisättiin %d haastattelua kohteeseen %@",
+    "newProjectSaveTitle": "Luo projektikansio",
+    "newProjectSavePrompt": "Luo",
+    "newProjectSaveMessage_one": "Haastattelusi kopioidaan t\u00e4h\u00e4n kansioon.",
+    "newProjectSaveMessage_other": "Haastattelusi kopioidaan t\u00e4h\u00e4n kansioon.",
     "interviewCount_one": "1 haastattelu",
     "interviewCount_other": "{{count}} haastattelua",
     "unanalysedSubtitle_one": "+1 analysoimaton",
@@ -198,6 +210,11 @@
     "dropProjectOntoProjectToast": "”%@” on jo Bristlenose-projekti — vedä sen sijaan sen lähdetiedostot.",
     "dropOntoRunningProject": "Viimeistele tai pysäytä nykyinen ajo ennen kuin lisäät lisää.",
     "dropOntoAnalysedProject": "Ylimääräisten haastattelujen lisääminen analysoituun projektiin ei ole vielä tuettua.",
+    "addFilesPrompt": "Lis\u00e4\u00e4",
+    "addFilesMessage": "Lis\u00e4\u00e4 istuntoja kohteeseen \u201d%@\u201d",
+    "addFilesNoProject": "Valitse ensin projekti ja lis\u00e4\u00e4 sitten tiedostoja siihen.",
+    "addingInterviews_one": "Lis\u00e4t\u00e4\u00e4n 1 haastattelu\u2026",
+    "addingInterviews_other": "Lis\u00e4t\u00e4\u00e4n {{count}} haastattelua\u2026",
     "dropOntoFailedProject": "Käytä työkalupalkin Yritä uudelleen -toimintoa yrittääksesi tätä ajoa uudelleen.",
     "dropOntoUnreachableProject": "Tämän projektin kansio ei ole juuri nyt tavoitettavissa.",
     "dropFolderContainsProject": "Tämä kansio sisältää Bristlenose-projektin ”%@”. Vedä projekti itse tai sen lähdetiedostot erikseen.",
@@ -258,6 +275,7 @@
     "diagnostic": {
       "pill": {
         "auth": "Avainongelma",
+        "out_of_credit": "Saldo lopussa",
         "missing_binary": "Työkalu puuttuu",
         "quota": "Nopeusrajoitettu",
         "network": "Verkkovirhe",
@@ -471,6 +489,13 @@
     "failTimedOut": "Lataus aikakatkaistiin. Tarkista yhteytesi ja yritä uudelleen.",
     "failCantReach": "Yhteys Ollamaan katkesi. Varmista, että se on käynnissä, ja yritä uudelleen.",
     "failGeneric": "Latausta ei voitu viimeistellä. %@"
+  },
+  "outOfCredit": {
+    "pill": "%@ \u00b7 ei saldoa",
+    "title": "Palvelun %@ saldo on lopussa",
+    "body": "Lis\u00e4\u00e4 saldoa, jotta voit tehd\u00e4 uusia analyyseja tai koodauksia.",
+    "addFunds": "Lis\u00e4\u00e4 varoja\u2026",
+    "switchProvider": "Vaihda palveluntarjoajaa\u2026"
   },
   "connectAgent": {
     "title": "Yhdist\u00e4 agentti projektiin \u201d{{project}}\u201d",

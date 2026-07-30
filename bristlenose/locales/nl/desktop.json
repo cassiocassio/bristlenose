@@ -18,6 +18,7 @@
     "file": {
       "newProject": "Nieuw project…",
       "newFolder": "Nieuwe map…",
+      "addFiles": "Voeg bestanden toe\u2026",
       "openInNewWindow": "Open in nieuw venster",
       "exportReport": "Rapport exporteren…",
       "pageSetup": "Paginaformaat…",
@@ -54,6 +55,7 @@
       "actualSize": "Werkelijke grootte"
     },
     "project": {
+      "analyse": "Analyseer",
       "removeFromSidebar": "Verwijder uit zijbalk",
       "showInFinder": "Toon in Finder",
       "connectAgent": "Verbind agent\u2026",
@@ -88,9 +90,15 @@
     },
     "quotes": {
       "star": "Ster",
+      "unstar": "Verwijder ster",
+      "starCount_one": "Geef {{count}} citaat een ster",
+      "starCount_other": "Geef {{count}} citaten een ster",
+      "unstarCount_one": "Verwijder ster van {{count}} citaat",
+      "unstarCount_other": "Verwijder ster van {{count}} citaten",
       "hide": "Verberg",
       "addTag": "Voeg tag toe…",
       "applyLastTag": "Pas laatste tag toe",
+      "applyTagNamed": "Pas \u201c{{name}}\u201d toe",
       "revealInTranscript": "Toon in transcript",
       "playPause": "Speel af/pauzeer",
       "nextQuote": "Volgend citaat",
@@ -179,6 +187,10 @@
     "createAnyway": "Toch maken",
     "emptyStateHint": "Sleep hier een map of druk op ⌘N",
     "addedInterviews": "%d interviews toegevoegd aan %@",
+    "newProjectSaveTitle": "Maak projectmap aan",
+    "newProjectSavePrompt": "Maak aan",
+    "newProjectSaveMessage_one": "Je interview wordt naar deze map gekopieerd.",
+    "newProjectSaveMessage_other": "Je interviews worden naar deze map gekopieerd.",
     "interviewCount_one": "1 interview",
     "interviewCount_other": "{{count}} interviews",
     "unanalysedSubtitle_one": "+1 niet-geanalyseerd",
@@ -198,6 +210,11 @@
     "dropProjectOntoProjectToast": "“%@” is al een Bristlenose-project — sleep in plaats daarvan de bronbestanden.",
     "dropOntoRunningProject": "Voltooi of stop de huidige run voordat je meer toevoegt.",
     "dropOntoAnalysedProject": "Extra interviews toevoegen aan een geanalyseerd project wordt nog niet ondersteund.",
+    "addFilesPrompt": "Voeg toe",
+    "addFilesMessage": "Voeg sessies toe aan \u201c%@\u201d",
+    "addFilesNoProject": "Selecteer eerst een project en voeg er daarna bestanden aan toe.",
+    "addingInterviews_one": "1 interview wordt toegevoegd\u2026",
+    "addingInterviews_other": "{{count}} interviews worden toegevoegd\u2026",
     "dropOntoFailedProject": "Gebruik Probeer opnieuw in de knoppenbalk om deze run opnieuw te proberen.",
     "dropOntoUnreachableProject": "De map van dit project is momenteel niet bereikbaar.",
     "dropFolderContainsProject": "Deze map bevat het Bristlenose-project “%@”. Sleep het project zelf, of de bronbestanden afzonderlijk.",
@@ -258,6 +275,7 @@
     "diagnostic": {
       "pill": {
         "auth": "Probleem met providersleutel",
+        "out_of_credit": "Geen tegoed",
         "missing_binary": "Ontbrekende tool",
         "quota": "Snelheidslimiet",
         "network": "Netwerkfout",
@@ -471,6 +489,13 @@
     "failTimedOut": "De download is verlopen. Controleer je verbinding en probeer opnieuw.",
     "failCantReach": "Verbinding met Ollama verloren. Zorg dat het draait en probeer opnieuw.",
     "failGeneric": "De download kon niet worden voltooid. %@"
+  },
+  "outOfCredit": {
+    "pill": "%@ \u00b7 geen tegoed",
+    "title": "%@ heeft geen tegoed meer",
+    "body": "Voeg tegoed toe om een nieuwe analyse of codering uit te voeren.",
+    "addFunds": "Voeg tegoed toe\u2026",
+    "switchProvider": "Wissel van provider\u2026"
   },
   "connectAgent": {
     "title": "Verbind een agent met \u201c{{project}}\u201d",

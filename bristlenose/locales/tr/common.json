@@ -214,6 +214,11 @@
     "colSession": "Oturum",
     "colSourceFile": "Kaynak dosya",
     "extractClips": "Video Kliplerini Çıkar…",
+    "scope": {
+      "all": "T\u00fcm\u00fc ({{n}})",
+      "selected": "Se\u00e7ili ({{n}})",
+      "starred": "Y\u0131ld\u0131zl\u0131 ({{n}})"
+    },
     "clips": {
       "noMedia": "Projede medya dosyası yok",
       "inProgress": "Çıkarma devam ediyor",

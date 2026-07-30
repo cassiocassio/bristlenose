@@ -18,6 +18,7 @@
     "file": {
       "newProject": "Nytt projekt…",
       "newFolder": "Ny mapp…",
+      "addFiles": "L\u00e4gg till filer\u2026",
       "openInNewWindow": "Öppna i nytt fönster",
       "exportReport": "Exportera rapport…",
       "pageSetup": "Utskriftsformat…",
@@ -54,6 +55,7 @@
       "actualSize": "Verklig storlek"
     },
     "project": {
+      "analyse": "Analysera",
       "removeFromSidebar": "Ta bort från sidofält",
       "showInFinder": "Visa i Finder",
       "connectAgent": "Anslut agent\u2026",
@@ -88,9 +90,15 @@
     },
     "quotes": {
       "star": "Stjärnmärk",
+      "unstar": "Ta bort stj\u00e4rnm\u00e4rkning",
+      "starCount_one": "Stj\u00e4rnm\u00e4rk {{count}} citat",
+      "starCount_other": "Stj\u00e4rnm\u00e4rk {{count}} citat",
+      "unstarCount_one": "Ta bort stj\u00e4rnm\u00e4rkning fr\u00e5n {{count}} citat",
+      "unstarCount_other": "Ta bort stj\u00e4rnm\u00e4rkning fr\u00e5n {{count}} citat",
       "hide": "Dölj",
       "addTag": "Lägg till tagg…",
       "applyLastTag": "Använd senaste tagg",
+      "applyTagNamed": "Anv\u00e4nd \u201d{{name}}\u201d",
       "revealInTranscript": "Visa i transkription",
       "playPause": "Spela/pausa",
       "nextQuote": "Nästa citat",
@@ -179,6 +187,10 @@
     "createAnyway": "Skapa ändå",
     "emptyStateHint": "Dra en mapp hit eller tryck på ⌘N",
     "addedInterviews": "Lade till %d intervjuer i %@",
+    "newProjectSaveTitle": "Skapa projektmapp",
+    "newProjectSavePrompt": "Skapa",
+    "newProjectSaveMessage_one": "Din intervju kopieras till den h\u00e4r mappen.",
+    "newProjectSaveMessage_other": "Dina intervjuer kopieras till den h\u00e4r mappen.",
     "interviewCount_one": "1 intervju",
     "interviewCount_other": "{{count}} intervjuer",
     "unanalysedSubtitle_one": "+1 oanalyserad",
@@ -198,6 +210,11 @@
     "dropProjectOntoProjectToast": "”%@” är redan ett Bristlenose-projekt – dra dess källfiler i stället.",
     "dropOntoRunningProject": "Slutför eller stoppa den pågående körningen innan du lägger till fler.",
     "dropOntoAnalysedProject": "Att lägga till fler intervjuer i ett analyserat projekt stöds inte än.",
+    "addFilesPrompt": "L\u00e4gg till",
+    "addFilesMessage": "L\u00e4gg till sessioner i \u201d%@\u201d",
+    "addFilesNoProject": "V\u00e4lj ett projekt f\u00f6rst och l\u00e4gg sedan till filer i det.",
+    "addingInterviews_one": "L\u00e4gger till 1 intervju\u2026",
+    "addingInterviews_other": "L\u00e4gger till {{count}} intervjuer\u2026",
     "dropOntoFailedProject": "Använd Försök igen i verktygsfältet för att köra igen.",
     "dropOntoUnreachableProject": "Projektets mapp går inte att nå just nu.",
     "dropFolderContainsProject": "Den här mappen innehåller Bristlenose-projektet ”%@”. Dra själva projektet, eller dess källfiler separat.",
@@ -258,6 +275,7 @@
     "diagnostic": {
       "pill": {
         "auth": "Problem med leverantörsnyckel",
+        "out_of_credit": "Inget saldo",
         "missing_binary": "Verktyg saknas",
         "quota": "Hastighetsbegränsad",
         "network": "Nätverksfel",
@@ -471,6 +489,13 @@
     "failTimedOut": "Hämtningen tog för lång tid. Kontrollera din anslutning och försök igen.",
     "failCantReach": "Tappade anslutningen till Ollama. Se till att det körs och försök igen.",
     "failGeneric": "Hämtningen kunde inte slutföras. %@"
+  },
+  "outOfCredit": {
+    "pill": "%@ \u00b7 inget saldo",
+    "title": "%@ har inget saldo kvar",
+    "body": "L\u00e4gg till saldo f\u00f6r att k\u00f6ra ny analys eller kodning.",
+    "addFunds": "Fyll p\u00e5 saldo\u2026",
+    "switchProvider": "Byt leverant\u00f6r\u2026"
   },
   "connectAgent": {
     "title": "Anslut en agent till \u201d{{project}}\u201d",

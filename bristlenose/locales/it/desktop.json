@@ -18,6 +18,7 @@
     "file": {
       "newProject": "Nuovo progetto…",
       "newFolder": "Nuova cartella…",
+      "addFiles": "Aggiungi file\u2026",
       "openInNewWindow": "Apri in una nuova finestra",
       "exportReport": "Esporta report…",
       "pageSetup": "Formato di stampa…",
@@ -54,6 +55,7 @@
       "actualSize": "Dimensioni reali"
     },
     "project": {
+      "analyse": "Analizza",
       "removeFromSidebar": "Rimuovi dalla barra laterale",
       "showInFinder": "Mostra nel Finder",
       "connectAgent": "Collega agente\u2026",
@@ -88,9 +90,15 @@
     },
     "quotes": {
       "star": "Stella",
+      "unstar": "Rimuovi stella",
+      "starCount_one": "Assegna la stella a {{count}} citazione",
+      "starCount_other": "Assegna la stella a {{count}} citazioni",
+      "unstarCount_one": "Rimuovi la stella da {{count}} citazione",
+      "unstarCount_other": "Rimuovi la stella da {{count}} citazioni",
       "hide": "Nascondi",
       "addTag": "Aggiungi un tag…",
       "applyLastTag": "Applica l'ultimo tag",
+      "applyTagNamed": "Applica \u201c{{name}}\u201d",
       "revealInTranscript": "Mostra nella trascrizione",
       "playPause": "Riproduci/Pausa",
       "nextQuote": "Citazione successiva",
@@ -179,6 +187,10 @@
     "createAnyway": "Crea comunque",
     "emptyStateHint": "Trascina qui una cartella o premi ⌘N",
     "addedInterviews": "Aggiunte %d interviste a %@",
+    "newProjectSaveTitle": "Crea cartella del progetto",
+    "newProjectSavePrompt": "Crea",
+    "newProjectSaveMessage_one": "La tua intervista viene copiata in questa cartella.",
+    "newProjectSaveMessage_other": "Le tue interviste vengono copiate in questa cartella.",
     "interviewCount_one": "1 intervista",
     "interviewCount_other": "{{count}} interviste",
     "unanalysedSubtitle_one": "+1 non analizzata",
@@ -198,6 +210,11 @@
     "dropProjectOntoProjectToast": "“%@” è già un progetto Bristlenose — trascina invece i suoi file di origine.",
     "dropOntoRunningProject": "Completa o interrompi l'esecuzione corrente prima di aggiungerne altri.",
     "dropOntoAnalysedProject": "L'aggiunta di altre interviste a un progetto analizzato non è ancora supportata.",
+    "addFilesPrompt": "Aggiungi",
+    "addFilesMessage": "Aggiungi sessioni a \u201c%@\u201d",
+    "addFilesNoProject": "Seleziona prima un progetto, poi aggiungi i file.",
+    "addingInterviews_one": "Aggiunta di 1 intervista\u2026",
+    "addingInterviews_other": "Aggiunta di {{count}} interviste\u2026",
     "dropOntoFailedProject": "Usa Riprova nella barra degli strumenti per eseguire di nuovo questa analisi.",
     "dropOntoUnreachableProject": "La cartella di questo progetto non è raggiungibile al momento.",
     "dropFolderContainsProject": "Questa cartella contiene il progetto Bristlenose “%@”. Trascina il progetto stesso, oppure i suoi file di origine separatamente.",
@@ -258,6 +275,7 @@
     "diagnostic": {
       "pill": {
         "auth": "Problema con la chiave del provider",
+        "out_of_credit": "Credito esaurito",
         "missing_binary": "Strumento mancante",
         "quota": "Limite di frequenza raggiunto",
         "network": "Errore di rete",
@@ -471,6 +489,13 @@
     "failTimedOut": "Il download è scaduto. Controlla la connessione e riprova.",
     "failCantReach": "Connessione a Ollama persa. Assicurati che sia in esecuzione, poi riprova.",
     "failGeneric": "Non è stato possibile completare il download. %@"
+  },
+  "outOfCredit": {
+    "pill": "%@ \u00b7 nessun credito",
+    "title": "%@ ha esaurito il credito",
+    "body": "Aggiungi credito per eseguire nuove analisi o codifiche.",
+    "addFunds": "Aggiungi fondi\u2026",
+    "switchProvider": "Cambia provider\u2026"
   },
   "connectAgent": {
     "title": "Collega un agente a \u201c{{project}}\u201d",

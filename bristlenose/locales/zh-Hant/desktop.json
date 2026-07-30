@@ -18,6 +18,7 @@
     "file": {
       "newProject": "新增專案…",
       "newFolder": "新增檔案夾…",
+      "addFiles": "\u52a0\u5165\u6a94\u6848\u2026",
       "openInNewWindow": "在新視窗中打開",
       "exportReport": "輸出報告…",
       "pageSetup": "頁面設定…",
@@ -54,6 +55,7 @@
       "actualSize": "實際大小"
     },
     "project": {
+      "analyse": "\u5206\u6790",
       "removeFromSidebar": "從側邊欄移除",
       "showInFinder": "在 Finder 中顯示",
       "connectAgent": "\u9023\u63a5\u4ee3\u7406\u2026",
@@ -88,9 +90,13 @@
     },
     "quotes": {
       "star": "標星",
+      "unstar": "\u53d6\u6d88\u6a19\u661f",
+      "starCount_other": "\u6a19\u661f {{count}} \u5247\u5f15\u8ff0",
+      "unstarCount_other": "\u53d6\u6d88\u6a19\u661f {{count}} \u5247\u5f15\u8ff0",
       "hide": "隱藏",
       "addTag": "加入標籤…",
       "applyLastTag": "套用上一個標籤",
+      "applyTagNamed": "\u5957\u7528\u300c{{name}}\u300d",
       "revealInTranscript": "在逐字稿中顯示",
       "playPause": "播放/暫停",
       "nextQuote": "下一則引述",
@@ -179,6 +185,9 @@
     "createAnyway": "仍要建立",
     "emptyStateHint": "將檔案夾拖移至此，或按 ⌘N",
     "addedInterviews": "已將 %d 則訪談加入 %@",
+    "newProjectSaveTitle": "\u5efa\u7acb\u5c08\u6848\u6a94\u6848\u593e",
+    "newProjectSavePrompt": "\u5efa\u7acb",
+    "newProjectSaveMessage_other": "\u4f60\u7684\u8a2a\u8ac7\u5c07\u62f7\u8c9d\u5230\u6b64\u6a94\u6848\u593e\u3002",
     "interviewCount_other": "{{count}} 則訪談",
     "unanalysedSubtitle_other": "+{{count}} 則未分析",
     "titleSessions_other": "{{count}} 個工作階段",
@@ -194,6 +203,10 @@
     "dropProjectOntoProjectToast": "「%@」已是 Bristlenose 專案 — 請改為拖移其來源檔案。",
     "dropOntoRunningProject": "在加入更多項目之前，請先完成或停止目前的執行。",
     "dropOntoAnalysedProject": "尚不支援將額外訪談加入已分析的專案。",
+    "addFilesPrompt": "\u52a0\u5165",
+    "addFilesMessage": "\u5c07\u5de5\u4f5c\u968e\u6bb5\u52a0\u5165\u300c%@\u300d",
+    "addFilesNoProject": "\u8acb\u5148\u9078\u53d6\u5c08\u6848\uff0c\u518d\u52a0\u5165\u6a94\u6848\u3002",
+    "addingInterviews_other": "\u6b63\u5728\u52a0\u5165 {{count}} \u5247\u8a2a\u8ac7\u2026",
     "dropOntoFailedProject": "請使用工具列上的「重試」再次執行。",
     "dropOntoUnreachableProject": "此專案的檔案夾目前無法存取。",
     "dropFolderContainsProject": "此檔案夾包含 Bristlenose 專案「%@」。請拖移專案本身，或分開拖移其來源檔案。",
@@ -254,6 +267,7 @@
     "diagnostic": {
       "pill": {
         "auth": "供應商金鑰問題",
+        "out_of_credit": "\u984d\u5ea6\u5df2\u7528\u76e1",
         "missing_binary": "缺少工具",
         "quota": "已達速率上限",
         "network": "網路錯誤",
@@ -466,6 +480,13 @@
     "failTimedOut": "下載逾時。請檢查你的連線後再試一次。",
     "failCantReach": "與 Ollama 的連線中斷。請確認它正在執行，然後再試一次。",
     "failGeneric": "下載無法完成。%@"
+  },
+  "outOfCredit": {
+    "pill": "%@ \u00b7 \u6c92\u6709\u984d\u5ea6",
+    "title": "%@ \u7684\u984d\u5ea6\u5df2\u7528\u76e1",
+    "body": "\u8acb\u52a0\u503c\u4ee5\u57f7\u884c\u65b0\u7684\u5206\u6790\u6216\u7de8\u78bc\u3002",
+    "addFunds": "\u52a0\u503c\u2026",
+    "switchProvider": "\u5207\u63db\u4f9b\u61c9\u5546\u2026"
   },
   "connectAgent": {
     "title": "\u5c07\u4ee3\u7406\u9023\u63a5\u5230\u300c{{project}}\u300d",

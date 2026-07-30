@@ -18,6 +18,7 @@
     "file": {
       "newProject": "새 프로젝트…",
       "newFolder": "새 폴더…",
+      "addFiles": "\ud30c\uc77c \ucd94\uac00\u2026",
       "openInNewWindow": "새 윈도우에서 열기",
       "exportReport": "보고서 내보내기…",
       "pageSetup": "페이지 설정…",
@@ -54,6 +55,7 @@
       "actualSize": "실제 크기"
     },
     "project": {
+      "analyse": "\ubd84\uc11d",
       "removeFromSidebar": "\uc0ac\uc774\ub4dc\ubc14\uc5d0\uc11c \uc81c\uac70",
       "showInFinder": "Finder에서 보기",
       "connectAgent": "\uc5d0\uc774\uc804\ud2b8 \uc5f0\uacb0\u2026",
@@ -88,9 +90,13 @@
     },
     "quotes": {
       "star": "별표",
+      "unstar": "\ubcc4\ud45c \ud574\uc81c",
+      "starCount_other": "\uc778\uc6a9 {{count}}\uac1c\uc5d0 \ubcc4\ud45c",
+      "unstarCount_other": "\uc778\uc6a9 {{count}}\uac1c \ubcc4\ud45c \ud574\uc81c",
       "hide": "숨기기",
       "addTag": "태그 추가…",
       "applyLastTag": "마지막 태그 적용",
+      "applyTagNamed": "\u201c{{name}}\u201d \uc801\uc6a9",
       "revealInTranscript": "전사본에서 보기",
       "playPause": "재생/일시 정지",
       "nextQuote": "다음 인용문",
@@ -179,6 +185,9 @@
     "createAnyway": "그래도 만들기",
     "emptyStateHint": "폴더를 여기로 드래그하거나 ⌘N을 누르세요",
     "addedInterviews": "%@에 %d개 인터뷰 추가됨",
+    "newProjectSaveTitle": "\ud504\ub85c\uc81d\ud2b8 \ud3f4\ub354 \uc0dd\uc131",
+    "newProjectSavePrompt": "\uc0dd\uc131",
+    "newProjectSaveMessage_other": "\uc778\ud130\ubdf0\uac00 \uc774 \ud3f4\ub354\uc5d0 \ubcf5\uc0ac\ub429\ub2c8\ub2e4.",
     "interviewCount_other": "\uc778\ud130\ubdf0 {{count}}\uac1c",
     "unanalysedSubtitle_other": "\ubbf8\ubd84\uc11d +{{count}}\uac1c",
     "titleSessions_other": "{{count}}\uac1c \uc138\uc158",
@@ -194,6 +203,10 @@
     "dropProjectOntoProjectToast": "\"%@\"은(는) 이미 Bristlenose 프로젝트입니다 — 원본 파일을 드래그하세요.",
     "dropOntoRunningProject": "\ub354 \ucd94\uac00\ud558\uae30 \uc804\uc5d0 \ud604\uc7ac \uc2e4\ud589\uc744 \uc644\ub8cc\ud558\uac70\ub098 \uc911\uc9c0\ud558\uc138\uc694.",
     "dropOntoAnalysedProject": "\ubd84\uc11d\ub41c \ud504\ub85c\uc81d\ud2b8\uc5d0 \uc778\ud130\ubdf0\ub97c \ucd94\uac00\ud558\ub294 \uac83\uc740 \uc544\uc9c1 \uc9c0\uc6d0\ub418\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
+    "addFilesPrompt": "\ucd94\uac00",
+    "addFilesMessage": "\u201c%@\u201d\uc5d0 \uc138\uc158 \ucd94\uac00",
+    "addFilesNoProject": "\uba3c\uc800 \ud504\ub85c\uc81d\ud2b8\ub97c \uc120\ud0dd\ud55c \ub2e4\uc74c \ud30c\uc77c\uc744 \ucd94\uac00\ud558\uc138\uc694.",
+    "addingInterviews_other": "\uc778\ud130\ubdf0 {{count}}\uac1c \ucd94\uac00 \uc911\u2026",
     "dropOntoFailedProject": "\ub3c4\uad6c \ub9c9\ub300\uc758 \ub2e4\uc2dc \uc2dc\ub3c4\ub97c \uc0ac\uc6a9\ud574 \uc774 \uc2e4\ud589\uc744 \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694.",
     "dropOntoUnreachableProject": "\uc774 \ud504\ub85c\uc81d\ud2b8\uc758 \ud3f4\ub354\uc5d0 \uc9c0\uae08\uc740 \uc811\uadfc\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.",
     "dropFolderContainsProject": "\uc774 \ud3f4\ub354\uc5d0\ub294 Bristlenose \ud504\ub85c\uc81d\ud2b8 \"%@\"\uc774(\uac00) \ud3ec\ud568\ub418\uc5b4 \uc788\uc2b5\ub2c8\ub2e4. \ud504\ub85c\uc81d\ud2b8 \uc790\uccb4\ub098 \uc18c\uc2a4 \ud30c\uc77c\uc744 \ub530\ub85c \ub4dc\ub798\uadf8\ud558\uc138\uc694.",
@@ -254,6 +267,7 @@
     "diagnostic": {
       "pill": {
         "auth": "\ud0a4 \ubb38\uc81c",
+        "out_of_credit": "\ud06c\ub808\ub527 \uc5c6\uc74c",
         "missing_binary": "\ub3c4\uad6c \uc5c6\uc74c",
         "quota": "\uc0ac\uc6a9\ub7c9 \ucd08\uacfc",
         "network": "\ub124\ud2b8\uc6cc\ud06c \uc624\ub958",
@@ -466,6 +480,13 @@
     "failTimedOut": "다운로드 시간이 초과되었습니다. 연결을 확인하고 다시 시도하세요.",
     "failCantReach": "Ollama와의 연결이 끊겼습니다. 실행 중인지 확인한 후 다시 시도하세요.",
     "failGeneric": "다운로드를 완료할 수 없습니다. %@"
+  },
+  "outOfCredit": {
+    "pill": "%@ \u00b7 \ud06c\ub808\ub527 \uc5c6\uc74c",
+    "title": "%@\uc758 \ud06c\ub808\ub527\uc774 \uc18c\uc9c4\ub418\uc5c8\uc2b5\ub2c8\ub2e4",
+    "body": "\uc0c8 \ubd84\uc11d\uc774\ub098 \ucf54\ub529\uc744 \uc2e4\ud589\ud558\ub824\uba74 \ud06c\ub808\ub527\uc744 \ucd94\uac00\ud558\uc138\uc694.",
+    "addFunds": "\ud06c\ub808\ub527 \ucd94\uac00\u2026",
+    "switchProvider": "\uc81c\uacf5\uc5c5\uccb4 \uc804\ud658\u2026"
   },
   "connectAgent": {
     "title": "\u201c{{project}}\u201d\uc5d0 \uc5d0\uc774\uc804\ud2b8 \uc5f0\uacb0",

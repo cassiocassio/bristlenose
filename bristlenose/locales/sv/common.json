@@ -214,6 +214,11 @@
     "colSession": "Session",
     "colSourceFile": "Källfil",
     "extractClips": "Extrahera videoklipp…",
+    "scope": {
+      "all": "Alla ({{n}})",
+      "selected": "Markerade ({{n}})",
+      "starred": "Stj\u00e4rnm\u00e4rkta ({{n}})"
+    },
     "clips": {
       "noMedia": "Inga mediefiler i projektet",
       "inProgress": "Extrahering pågår",

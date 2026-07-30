@@ -38,6 +38,7 @@ PROMPTS_WITH_BOUNDARY: list[str] = [
     "speaker-identification",
     "speaker-splitting",
     "chat-lens",
+    "chat-lens-support",
 ]
 
 
@@ -157,6 +158,7 @@ CALL_SITES: list[tuple[str, str]] = [
     ("bristlenose/server/codebook_builder.py", "example_block"),
     ("bristlenose/server/codebook_builder.py", "formatted_quotes"),
     ("bristlenose/server/chat_lens.py", "corpus_text"),
+    ("bristlenose/server/chat_lens.py", "claims_block"),
 ]
 
 

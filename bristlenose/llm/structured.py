@@ -405,24 +405,34 @@ class CandidateMatchResult(BaseModel):
 class ChatLensClaim(BaseModel):
     """One claim in a chat-lens answer, with its supporting citations.
 
-    Shared response vocabulary with the MCP workstream (design-chat-lens.md
-    §7): ``claims[].text``, ``claims[].quote_ids``, ``unsupported`` — do not
-    rename per surface.
+    The model cites server-constructed integer indices, never quote-id
+    strings (design-chat-lens.md §5a Correction 2) — the server maps
+    indices back to stable quote ids, so the surface vocabulary stays
+    ``claims[].text`` / ``claims[].quote_ids`` / ``unsupported`` (§7).
     """
 
     text: str = Field(
         description="One finding, stated plainly, standing on its own"
     )
-    quote_ids: list[str] = Field(
+    quote_indices: list[int] = Field(
         default_factory=list,
         description=(
-            "Ids of the quotes that directly support this claim, copied "
-            "exactly from the corpus [q-...] markers (e.g. 'q-p1-123'). "
-            "Never invent or alter an id."
+            "The bracketed citation numbers of the quotes that directly "
+            "support this claim, copied exactly from the corpus [n] "
+            "markers. Cite only numbers that appear in the corpus."
+        ),
+    )
+    citation_exempt: bool = Field(
+        default=False,
+        description=(
+            "True only for connective framing or transition sentences that "
+            "assert no finding of their own and so carry no citations. "
+            "Any sentence that states something about the participants or "
+            "the product is a finding and must cite."
         ),
     )
 
-    @field_validator("quote_ids", mode="before")
+    @field_validator("quote_indices", mode="before")
     @classmethod
     def _parse_stringified_json(cls, v: object) -> object:
         """Some LLM providers double-serialize nested arrays as JSON strings."""
@@ -438,7 +448,8 @@ class ChatLensAnswer(BaseModel):
         default_factory=list,
         description=(
             "The findings that answer the question, each cited to corpus "
-            "quote ids. Empty if the corpus does not answer the question."
+            "citation numbers. Empty if the corpus does not answer the "
+            "question."
         ),
     )
     unsupported: str = Field(
@@ -449,8 +460,50 @@ class ChatLensAnswer(BaseModel):
             "the question is fully answered."
         ),
     )
+    abstain_reason: str = Field(
+        default="",
+        description=(
+            "Why the answer is empty or partial, when it is: 'out_of_scope' "
+            "(the question is not about this study), 'no_evidence' (in "
+            "scope, but no quotes address it), or 'ungroundable' (quotes "
+            "seem related but do not actually support an answer). Empty "
+            "when the question is answered."
+        ),
+    )
 
     @field_validator("claims", mode="before")
+    @classmethod
+    def _parse_stringified_json(cls, v: object) -> object:
+        """Some LLM providers double-serialize nested arrays as JSON strings."""
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
+
+
+class ChatLensSupportVerdict(BaseModel):
+    """One support judgement: does the cited evidence entail the claim?"""
+
+    claim_index: int = Field(
+        description="0-based index matching the input claim order"
+    )
+    supported: bool = Field(
+        description=(
+            "True if the quoted evidence, on its own, supports the claim as "
+            "stated; false if it does not (irrelevant, partial, or "
+            "contradicting). Judge only from the quoted evidence."
+        )
+    )
+
+
+class ChatLensSupportResult(BaseModel):
+    """LLM output: per-claim support verdicts (sentence granularity)."""
+
+    verdicts: list[ChatLensSupportVerdict] = Field(
+        default_factory=list,
+        description="One verdict per claim, in input order",
+    )
+
+    @field_validator("verdicts", mode="before")
     @classmethod
     def _parse_stringified_json(cls, v: object) -> object:
         """Some LLM providers double-serialize nested arrays as JSON strings."""

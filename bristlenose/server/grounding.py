@@ -78,10 +78,20 @@ class CorpusQuote:
 
 @dataclass
 class CorpusContext:
-    """A project's corpus formatted for an LLM prompt, plus its id universe."""
+    """A project's corpus formatted for an LLM prompt, plus its id universe.
+
+    ``quotes_by_index`` is the generator-facing citation space (§5a
+    Correction 2): quotes carry server-constructed ``[1]``, ``[2]``…
+    markers in the prompt, so the model cites integers and a fabricated
+    citation degrades to an out-of-range int caught by arithmetic.
+    ``quotes_by_id`` keys the same quotes by their report DOM id — the
+    stable identifier every downstream surface (rendering, deep links,
+    the MCP workstream) speaks.
+    """
 
     text: str
     quotes_by_id: dict[str, CorpusQuote]
+    quotes_by_index: dict[int, CorpusQuote]
     quote_count: int
     total_quotes: int
     hidden_excluded: int
@@ -99,8 +109,14 @@ def quote_dom_id(participant_id: str, start_timecode: float) -> str:
     return f"q-{participant_id}-{int(start_timecode)}"
 
 
-def _quote_line(cq: CorpusQuote) -> str:
-    """One corpus line: id, speaker, metadata, then the quote text."""
+def _quote_line(index: int, cq: CorpusQuote) -> str:
+    """One corpus line: server-constructed citation index, speaker,
+    metadata, then the quote text.
+
+    The bracketed integer — not the DOM id — is the only citation token
+    the model is given (§5a Correction 2, the LlamaIndex numbered-marker
+    discipline). Ids stay server-side.
+    """
     meta: list[str] = [cq.participant_id]
     if cq.sentiment:
         meta.append(cq.sentiment)
@@ -108,7 +124,7 @@ def _quote_line(cq: CorpusQuote) -> str:
         meta.append("tags: " + ", ".join(cq.tags))
     if cq.starred:
         meta.append("starred")
-    return f'- [{cq.dom_id}] ({"; ".join(meta)}) "{cq.text}"'
+    return f'- [{index}] ({"; ".join(meta)}) "{cq.text}"'
 
 
 def assemble_corpus_context(
@@ -256,6 +272,7 @@ def assemble_corpus_context(
         lines.append("")
 
     quotes_by_id: dict[str, CorpusQuote] = {}
+    quotes_by_index: dict[int, CorpusQuote] = {}
     included = 0
     truncated = False
     char_count = sum(len(line) + 1 for line in lines)
@@ -266,7 +283,7 @@ def assemble_corpus_context(
         char_count += len(header_line) + 2
         lines.append(header_line)
         for cq in members:
-            line = _quote_line(cq)
+            line = _quote_line(included + 1, cq)
             if char_count + len(line) + 1 > max_chars:
                 truncated = True
                 break
@@ -274,6 +291,7 @@ def assemble_corpus_context(
             char_count += len(line) + 1
             quotes_by_id[cq.dom_id] = cq
             included += 1
+            quotes_by_index[included] = cq
         lines.append("")
 
     if truncated:
@@ -285,6 +303,7 @@ def assemble_corpus_context(
     return CorpusContext(
         text=text,
         quotes_by_id=quotes_by_id,
+        quotes_by_index=quotes_by_index,
         quote_count=included,
         total_quotes=total_visible,
         hidden_excluded=len(hidden_pks),
@@ -298,13 +317,50 @@ def assemble_corpus_context(
 # ---------------------------------------------------------------------------
 
 
+def resolve_quote_indices(
+    quote_indices: list[int],
+    corpus: CorpusContext,
+) -> tuple[list[CorpusQuote], list[int]]:
+    """Split cited indices into (resolved corpus quotes, rejected ints).
+
+    The generator-facing citation space is server-constructed (§5a
+    Correction 2): the model only ever saw ``[1]``…``[n]`` markers, so a
+    fabricated citation is an out-of-range integer and validation is
+    arithmetic, not string matching. Anything not in
+    ``corpus.quotes_by_index`` — zero, negative, past-the-end, or a
+    non-integer that pydantic let through — lands in ``rejected``.
+
+    Order is preserved; duplicate indices are dropped after their first
+    appearance.
+    """
+    resolved: list[CorpusQuote] = []
+    rejected: list[int] = []
+    seen: set[int] = set()
+    for raw in quote_indices:
+        try:
+            index = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if index in seen:
+            continue
+        seen.add(index)
+        quote = corpus.quotes_by_index.get(index)
+        if quote is not None:
+            resolved.append(quote)
+        else:
+            rejected.append(index)
+    return resolved, rejected
+
+
 def resolve_quote_ids(
     quote_ids: list[str],
     corpus: CorpusContext,
 ) -> tuple[list[CorpusQuote], list[str]]:
     """Split cited ids into (resolved corpus quotes, rejected id strings).
 
-    The check is corpus membership, which is deliberately stricter than
+    The stable-id sibling of ``resolve_quote_indices``, for surfaces that
+    speak report DOM ids (the MCP workstream's tool responses resolve ids
+    this way). The check is corpus membership, deliberately stricter than
     DB presence: a model can only honestly cite what was in the context
     it was shown. An invented id, a malformed id, an id from another
     project, or an id for a hidden/truncated-out quote all land in

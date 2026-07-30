@@ -56,4 +56,12 @@ def build_health_payload(*, dev: bool = False) -> dict[str, object]:
 def health(request: Request) -> dict[str, object]:
     """Return server status and version."""
     dev = bool(getattr(request.app.state, "dev", False))
-    return build_health_payload(dev=dev)
+    payload = build_health_payload(dev=dev)
+    # Whether the MCP endpoint is mounted. Read by the desktop host so its
+    # Connect Agent sheet can say "not available in this build" instead of
+    # handing out an address that 404s — the mount is optional (the `mcp`
+    # extra), and only the server knows whether the import succeeded.
+    # /api/health is auth-exempt and carries no project data, so this is the
+    # right channel: the host needs it before it has a token.
+    payload["mcp"] = {"mounted": bool(getattr(request.app.state, "mcp_mounted", False))}
+    return payload

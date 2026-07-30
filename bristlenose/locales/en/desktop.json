@@ -13,8 +13,7 @@
   "menu": {
     "app": {
       "about": "About Bristlenose",
-      "aiPrivacy": "AI & Privacy…",
-      "checkHealth": "Check System Health…"
+      "aiPrivacy": "AI & Privacy…"
     },
     "file": {
       "newProject": "New Project…",
@@ -22,7 +21,6 @@
       "addFiles": "Add Files…",
       "openInNewWindow": "Open in New Window",
       "exportReport": "Export Report…",
-      "exportAnonymised": "Export Anonymised…",
       "pageSetup": "Page Setup…",
       "print": "Print…"
     },
@@ -39,7 +37,6 @@
     "view": {
       "hideProjects": "Hide Projects",
       "showProjects": "Show Projects",
-      "moveFocusToProjects": "Move Focus to Projects",
       "showContents": "Show Contents",
       "hideContents": "Hide Contents",
       "showCodes": "Show Codes",
@@ -55,14 +52,13 @@
       "starredQuotesOnly": "Starred Quotes Only",
       "zoomIn": "Zoom In",
       "zoomOut": "Zoom Out",
-      "actualSize": "Actual Size",
-      "switchToLightMode": "Switch to Light Mode",
-      "switchToDarkMode": "Switch to Dark Mode"
+      "actualSize": "Actual Size"
     },
     "project": {
       "analyse": "Analyse",
       "removeFromSidebar": "Remove from Sidebar",
       "showInFinder": "Show in Finder",
+      "connectAgent": "Connect Agent\u2026",
       "rename": "Rename…",
       "moveTo": "Move to",
       "noFolder": "No Folder",
@@ -94,9 +90,15 @@
     },
     "quotes": {
       "star": "Star",
+      "unstar": "Unstar",
+      "starCount_one": "Star {{count}} Quote",
+      "starCount_other": "Star {{count}} Quotes",
+      "unstarCount_one": "Unstar {{count}} Quote",
+      "unstarCount_other": "Unstar {{count}} Quotes",
       "hide": "Hide",
       "addTag": "Add Tag…",
       "applyLastTag": "Apply Last Tag",
+      "applyTagNamed": "Apply “{{name}}”",
       "revealInTranscript": "Reveal in Transcript",
       "playPause": "Play/Pause",
       "nextQuote": "Next Quote",
@@ -199,7 +201,7 @@
     "missingSubtitle_other": "{{count}} missing",
     "tooltipWaiting": "{{count}} waiting",
     "dateRelativeJustNow": "Just now",
-    "unanalysedSheetTitle": "Unanalysed files in {{project}}",
+    "unanalysedSheetTitle": "Unanalysed files in {{{project}}}",
     "unanalysedSheetFooter": "These files were added after the last analysis.",
     "multipleSelected": "%d items selected",
     "multipleSelectedHint": "Select a single project to view its report.",
@@ -265,9 +267,9 @@
         "failed": "Failed"
       },
       "help": {
-        "running": "Show pipeline progress for {{project}}",
-        "queued": "Pipeline run queued for {{project}}",
-        "failed": "Pipeline run failed for {{project}}"
+        "running": "Show pipeline progress for {{{project}}}",
+        "queued": "Pipeline run queued for {{{project}}}",
+        "failed": "Pipeline run failed for {{{project}}}"
       }
     },
     "diagnostic": {
@@ -289,7 +291,7 @@
         "showLogTooltip": "Show the analysis log file"
       },
       "tooltip": {
-        "completed_partial": "Analysis finished with failures for {{project}}"
+        "completed_partial": "Analysis finished with failures for {{{project}}}"
       },
       "noStructuredCause": "Detailed cause not captured.",
       "overflow_one": "… and {{count}} more failure truncated",
@@ -494,6 +496,27 @@
     "body": "Add credit to run new analysis or coding.",
     "addFunds": "Add funds…",
     "switchProvider": "Switch provider…"
+  },
+  "connectAgent": {
+    "title": "Connect an agent to \u201c{{project}}\u201d",
+    "scope": "{sessions} \u00b7 {quotes}",
+    "anonymise": "Anonymise",
+    "anonymiseHint": "Remove participant names",
+    "clients": {
+      "claudeDesktop": "Claude Desktop",
+      "claudeCode": "Claude Code",
+      "chatgptCodex": "ChatGPT & Codex",
+      "other": "Works with any MCP-compatible agent."
+    },
+    "claudeDesktopHow": "In Claude Desktop: Settings \u2192 Developer \u2192 Edit Config or edit ~/Library/Application Support/Claude/claude_desktop_config.json adding under mcpServers:",
+    "claudeCodeHow": "Paste in any terminal:",
+    "chatgptCodexHow": "In ChatGPT: Settings \u2192 MCP servers \u2192 Add server \u2014 or add to ~/.codex/config.toml (one entry covers ChatGPT desktop, Codex CLI, and the IDE extension):",
+    "copyConfig": "Copy Config",
+    "copyCommand": "Copy Command",
+    "copied": "Copied",
+    "cancel": "Cancel",
+    "unavailable": "The agent connection isn\u2019t available in this build.",
+    "notRunning": "Start the project before connecting an agent."
   },
   "toast": {
     "removedBatchAnnouncement": "Removed %d projects. Press Command-Z to undo.",

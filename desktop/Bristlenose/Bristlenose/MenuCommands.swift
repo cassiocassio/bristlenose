@@ -369,9 +369,13 @@ private struct FileMenuContent: View {
         }
         .keyboardShortcut("e", modifiers: [.command, .shift])
 
-        Button(i18n.t("desktop.menu.file.exportAnonymised"), systemImage: "square.and.arrow.up") {
-            bridgeHandler.menuAction("exportAnonymised")
-        }
+        // "Export Anonymised…" was removed here on 28 Jul 2026: anonymise is a
+        // checkbox on the export save panel itself (`ExportAccessoryView`, attached
+        // as the NSSavePanel accessoryView in `WebView.swift`), so a second menu
+        // item offering the same choice was redundant — one command, one dialog,
+        // the option lives in the dialog. Export Report… now stands alone here:
+        // the File menu carries the whole-report export; per-quote destinations
+        // (Miro, clips, spreadsheets) live in the Quotes menu.
 
         Divider()
 
@@ -516,13 +520,16 @@ private struct ViewMenuContent: View {
             )
         }
 
-        // Move keyboard focus from the web report back to the project list
-        // (⌘0). The §10.1 no-trap guarantee: a ⌘-shortcut is intercepted natively
-        // before the web view, so the keyboard user is never trapped in WebKit.
-        Button(i18n.t("desktop.menu.view.moveFocusToProjects")) {
-            NotificationCenter.default.post(name: .focusProjects, object: nil)
-        }
-        .keyboardShortcut("0", modifiers: .command)
+        // View ▸ Move Focus to Projects was REMOVED 28 Jul 2026 — deliberately
+        // not replaced. It existed as a "§10.1 keyboard no-trap" escape, but a
+        // menu item is not an accessibility affordance: a keyboard user stuck in
+        // the web view will not discover the fourth row of the View menu. macOS
+        // already provides the real escapes — ⌃F6 / ⇧⌃F6 cycle split-view panes,
+        // ⌃F2 focuses the menu bar, and Tab should exit the WKWebView at document
+        // end. WCAG 2.1.2 asks for "unmodified arrow or tab keys, or other
+        // standard exit methods"; ⌃F6 is one, a bespoke menu item is not.
+        // If a trap is ever demonstrated, the fix is the window's key-view loop,
+        // not another unread menu row. Verification task filed in TODO.md.
 
         Divider()
 
@@ -593,9 +600,13 @@ private struct ViewMenuContent: View {
         }
         .keyboardShortcut("-", modifiers: .command)
 
+        // ⌘0 — the platform's reset-zoom binding, and semantically identical to
+        // WKWebView's own. Taking it here resolves the collision this file
+        // previously worked around rather than creating one.
         Button(i18n.t("desktop.menu.view.actualSize")) {
             bridgeHandler.menuAction("actualSize")
         }
+        .keyboardShortcut("0", modifiers: .command)
     }
 }
 
@@ -640,10 +651,29 @@ private struct ProjectMenuContent: View {
             .keyboardShortcut("r", modifiers: [.command, .shift])
             .disabled(bridgeHandler.selectedProjectRevealablePath.isEmpty)
 
+            // Show Transcripts in Finder — the menu twin of the export popover's
+            // row, which was the only surface carrying it (the menu bar is the
+            // canonical accessible one). Sits with Show in Finder because the
+            // object is the same — the selected project's files, one level down.
+            // `doc.text`, not a second `folder`, so two adjacent reveals don't
+            // share a glyph.
+            Button(i18n.t("desktop.menu.quotes.revealTranscripts"), systemImage: "doc.text") {
+                NotificationCenter.default.post(name: .revealTranscripts, object: nil)
+            }
+            .disabled(bridgeHandler.selectedProjectPath.isEmpty)
+
             Button(i18n.t("desktop.chrome.locate"), systemImage: "location.magnifyingglass") {
                 NotificationCenter.default.post(name: .locateSelectedProject, object: nil)
             }
             .disabled(bridgeHandler.selectedProjectAvailable)
+
+            // HIG: every context-menu item is also reachable from the menu
+            // bar. The sidebar's right-click Connect Agent… has its twin here.
+            Button(i18n.t("desktop.menu.project.connectAgent"),
+                   systemImage: "antenna.radiowaves.left.and.right") {
+                NotificationCenter.default.post(name: .connectAgentForSelectedProject, object: nil)
+            }
+            .disabled(bridgeHandler.selectedProjectPath.isEmpty)
 
             Button(i18n.t("desktop.menu.project.rename"), systemImage: "pencil") {
                 NotificationCenter.default.post(name: .renameSelectedProject, object: nil)
@@ -931,7 +961,7 @@ private struct QuotesMenuContent: View {
         // give scope/format pickers proper keyboard nav + VoiceOver for free.
         // TODO: surface the global Anonymise toggle here too (needs a shared
         // persisted-flag decision) and retire the legacy copyAsCSV item below.
-        Menu(i18n.t("desktop.menu.quotes.copyQuotes"), systemImage: "doc.on.doc") {
+        Menu(i18n.t("desktop.menu.quotes.copyQuotes"), systemImage: "doc.on.clipboard") {
             Button(i18n.t("desktop.menu.quotes.copyScopeAll",
                           ["count": String(bridgeHandler.totalQuoteCount)])) {
                 bridgeHandler.menuAction("copyQuotes", payload: ["scope": "all"])
@@ -959,7 +989,7 @@ private struct QuotesMenuContent: View {
         }
         .disabled(!onQuotesTab)
 
-        Button(i18n.t("desktop.menu.quotes.extractClips"), systemImage: "scissors") {
+        Button(i18n.t("desktop.menu.quotes.extractClips"), systemImage: "film") {
             bridgeHandler.menuAction("extractClips")
         }
         .disabled(!onQuotesTab)
@@ -967,13 +997,16 @@ private struct QuotesMenuContent: View {
         // Send to Miro — mirrors the toolbar popover's Miro row. Always enabled
         // (uploads the project's quotes regardless of the active tab), matching
         // the popover. Presents the native MiroSheet (ContentView owns the .sheet).
+        // Lives HERE, not in File: Miro exports quotes, and File carries the
+        // whole-report export. (Briefly moved to File on 28 Jul 2026 and moved
+        // straight back — recorded so it isn't "tidied" there again.)
         Button(i18n.t("common.miro.menuLabel")) {
             NotificationCenter.default.post(name: .showMiroSheet, object: nil)
         }
 
         Divider()
 
-        Button(i18n.t("desktop.menu.quotes.copyAsCSV"), systemImage: "doc.on.doc") {
+        Button(i18n.t("desktop.menu.quotes.copyAsCSV"), systemImage: "doc.on.clipboard") {
             bridgeHandler.menuAction("copyAsCSV")
         }
         .disabled(!hasSelection)

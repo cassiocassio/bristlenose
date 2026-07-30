@@ -147,6 +147,8 @@ struct ContentView: View {
     @State private var showingAIConsent = false
     @State private var aiConsentReviewMode = false
     @State private var showingMiroSheet = false
+    /// Non-nil while the Connect Agent sheet is up, carrying its project.
+    @State private var connectAgentProject: Project?
     @State private var showingFeedbackSheet = false
 
     /// The ID of the project currently in inline rename mode, or nil.
@@ -262,40 +264,6 @@ struct ContentView: View {
     /// for single-form locales like ja/ko).
     private func sessionCountPhrase(_ count: Int) -> String {
         i18n.plural("desktop.chrome.titleSessions", count: count)
-    }
-
-    private static let focusLog = Logger(subsystem: "app.bristlenose", category: "focus")
-
-    /// View ▸ Move Focus to Projects (⌘0) — the §10.1 keyboard no-trap return.
-    /// A keyboard user inside the web report is never trapped: this always moves
-    /// first responder back to native chrome. Logs via `os.Logger` and falls back
-    /// to the window content view when the sidebar table can't be found (e.g. the
-    /// sidebar is collapsed) so a no-op is observable, not silent (review F1).
-    private func focusProjectsList() {
-        guard let window = NSApp.keyWindow else {
-            Self.focusLog.warning("focusProjects: no key window")
-            return
-        }
-        guard let tableView = Self.firstSidebarTableView(in: window) else {
-            Self.focusLog.warning("focusProjects: no sidebar table view (collapsed?) — focusing content view")
-            window.makeFirstResponder(window.contentView)
-            return
-        }
-        let ok = window.makeFirstResponder(tableView)
-        Self.focusLog.info("focusProjects: makeFirstResponder=\(ok)")
-    }
-
-    /// Finds the first NSTableView in the window — the project list. (The detail
-    /// pane is a WKWebView with no NSTableViews.) Mirrors the locator in
-    /// `SidebarDeselectMonitor`; duplicated rather than shared to avoid touching
-    /// the fragile sidebar monitor (§2.2). Revisit when the project List becomes
-    /// an NSOutlineView (review F20).
-    private static func firstSidebarTableView(in window: NSWindow) -> NSTableView? {
-        func find(in view: NSView) -> NSTableView? {
-            if let tv = view as? NSTableView { return tv }
-            return view.subviews.lazy.compactMap { find(in: $0) }.first
-        }
-        return window.contentView.flatMap { find(in: $0) }
     }
 
     /// The currently selected folder (when exactly one folder is selected).
@@ -457,6 +425,13 @@ struct ContentView: View {
             for id in CompletionRescan.projectsLeavingAnalysis(old: old, new: new) {
                 scheduleCountRescan(projectID: id)
             }
+            // Stamp the analysis baseline. Narrower than the rescan above — a
+            // passive `.scanning` read must not open the F14 drift gate, since
+            // no analysis happened. Write-only field; see
+            // `ProjectIndex.recordPipelineRun`.
+            for id in CompletionRescan.projectsFinishingRun(old: old, new: new) {
+                projectIndex.recordPipelineRun(id: id)
+            }
         }
         .onAppear {
             // Restore last-selected project from persisted ID.
@@ -530,6 +505,23 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .showMiroSheet)) { _ in
             if serveManager.runningPort != nil { showingMiroSheet = true }
         }
+        // Connect Agent — right-click a project, or Project ▸ Connect Agent…
+        .sheet(item: $connectAgentProject) { project in
+            ConnectAgentSheet(
+                projectName: project.name,
+                sessionCount: projectIndex.unanalysed[project.id]?.sessionCount ?? 0,
+                quoteCount: nil,
+                // Only offer an address the sidecar is actually serving, and
+                // only for the project that is running — a stale port would
+                // hand the researcher a config that 401s or, worse, reaches a
+                // different project.
+                endpoint: (serveManager.runningPort.map { "http://127.0.0.1:\($0)/mcp/" })
+                    .flatMap { serveManager.currentProjectPath == project.path ? $0 : nil },
+                token: serveManager.currentProjectPath == project.path ? serveManager.authToken : nil,
+                mcpAvailable: serveManager.mcpMounted
+            )
+            .environmentObject(i18n)
+        }
         .sheet(isPresented: $showingMiroSheet) {
             if let port = serveManager.runningPort {
                 MiroSheet(
@@ -589,14 +581,13 @@ struct ContentView: View {
             createNewFolder()
         }
         // View > Move Focus to Projects (⌘0) — the §10.1 keyboard no-trap return.
-        .onReceive(NotificationCenter.default.publisher(for: .focusProjects)) { _ in
-            focusProjectsList()
-        }
         .modifier(ProjectNotificationReceivers(
             selection: $selection,
             renamingProjectID: $renamingProjectID,
             renamingFolderID: $renamingFolderID,
+            connectAgentProject: $connectAgentProject,
             projectIndex: projectIndex,
+            bridgeHandler: bridgeHandler,
             onLocate: { project in locateProject(project) },
             onRemoveFromSidebar: { removeSelectedProjectsFromSidebar() },
             onStop: { project in pipelineRunner.cancel(project: project) }
@@ -1643,6 +1634,10 @@ struct ContentView: View {
             && !Self.pipelineHasViewableData(pipelineRunner.state[project.id]) {
             return false
         }
+        // Never-run folder project — `detail` shows the drag-interviews pane, not
+        // the webview. (It used to show the serve's no-run status page *with* a
+        // Search field and Export button hanging over it.)
+        if case .idle = pipelineRunner.state[project.id] ?? .scanning { return false }
         return true
     }
 
@@ -1760,6 +1755,11 @@ struct ContentView: View {
                 },
                 onShowInFinder: { id in
                     if let p = projectIndex.projects.first(where: { $0.id == id }) { revealInFinder(p) }
+                },
+                onConnectAgent: { id in
+                    if let p = projectIndex.projects.first(where: { $0.id == id }) {
+                        connectAgentProject = p
+                    }
                 },
                 canShowInFinder: { id in
                     projectIndex.projects.first(where: { $0.id == id }).map(canRevealInFinder) ?? false
@@ -2270,28 +2270,8 @@ struct ContentView: View {
                     feedURL: ShoalFeed.feedURL(projectPath: project.path)
                 )
             } else if project.path.isEmpty {
-                // New project with no files yet — prompt user to add interviews,
-                // and accept a Finder drop right here. Routes through the same
-                // `handleDropOnProject` as the project's sidebar row (→
-                // `establishEmptyProject` for the empty case), so the "Drag
-                // interviews here" copy is a promise the pane can actually keep.
-                ContentUnavailableView(
-                    i18n.t("desktop.chrome.dragInterviews"),
-                    systemImage: "square.and.arrow.down",
-                    description: Text(i18n.t("desktop.chrome.dragInterviewsDescription"))
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .overlay {
-                    if emptyProjectDropTargeted {
-                        RoundedRectangle(cornerRadius: 10)
-                            .strokeBorder(Color.accentColor, lineWidth: 2)
-                            .padding(12)
-                    }
-                }
-                .dropDestination(for: URL.self) { urls, _ in
-                    handleDropOnProject(id: project.id, urls: urls)
-                    return true
-                } isTargeted: { emptyProjectDropTargeted = $0 }
+                // New project with no files yet — prompt user to add interviews.
+                dragInterviewsPane(project)
             } else if project.inputFiles != nil
                         && !Self.pipelineHasViewableData(pipelineRunner.state[project.id]) {
                 // File-subset project with no prior analysis — CLI can't
@@ -2305,6 +2285,23 @@ struct ContentView: View {
                 // failure trust-UX: the run state shouldn't block the
                 // user from seeing what's already there.
                 UnsupportedSubsetView(project: project)
+            } else if case .idle = pipelineRunner.state[project.id] ?? .scanning {
+                // Folder-shaped project that has never produced a report. The
+                // webview's own no-run status page (`status_page.detect_status`,
+                // `entry is None`) used to own this pane, which meant two
+                // different-looking empty states for the same user-perceived
+                // condition — and its "drop a folder of interviews here" copy was
+                // a promise the WebView couldn't keep (no drop target). Same pane
+                // as the empty-path case above: one look, and a drop that lands
+                // (folder-drop is the explicit signal to analyse — see
+                // `handleDropOnProject`).
+                //
+                // Deliberately `.idle` only. `.scanning` still falls through to
+                // the serve gate so an already-analysed project shows BootView
+                // rather than flashing an empty pane before the manifest read
+                // resolves; failed / cancelled / partial states keep the status
+                // page, which carries the cause and log tail.
+                dragInterviewsPane(project)
             } else {
                 ZStack {
                     switch serveManager.state {
@@ -2368,6 +2365,34 @@ struct ContentView: View {
         }
     }
 
+    /// Detail pane for a project with nothing to show yet — no folder at all, or
+    /// a folder that has never produced a report.
+    ///
+    /// Accepts a Finder drop right here, routed through the same
+    /// `handleDropOnProject` as the project's sidebar row (→
+    /// `establishEmptyProject` for the no-folder case, → auto-run for a folder
+    /// drop), so the "Drag interviews here" copy is a promise the pane can keep.
+    @ViewBuilder
+    private func dragInterviewsPane(_ project: Project) -> some View {
+        ContentUnavailableView(
+            i18n.t("desktop.chrome.dragInterviews"),
+            systemImage: "square.and.arrow.down",
+            description: Text(i18n.t("desktop.chrome.dragInterviewsDescription"))
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay {
+            if emptyProjectDropTargeted {
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(Color.accentColor, lineWidth: 2)
+                    .padding(12)
+            }
+        }
+        .dropDestination(for: URL.self) { urls, _ in
+            handleDropOnProject(id: project.id, urls: urls)
+            return true
+        } isTargeted: { emptyProjectDropTargeted = $0 }
+    }
+
     /// Detail pane for an unavailable project — shows why and offers Locate action.
     @ViewBuilder
     private func unavailableProjectView(_ project: Project) -> some View {
@@ -2418,7 +2443,9 @@ private struct ProjectNotificationReceivers: ViewModifier {
     @Binding var selection: Set<SidebarSelection>
     @Binding var renamingProjectID: UUID?
     @Binding var renamingFolderID: UUID?
+    @Binding var connectAgentProject: Project?
     let projectIndex: ProjectIndex
+    let bridgeHandler: BridgeHandler
     let onLocate: (Project) -> Void
     let onRemoveFromSidebar: () -> Void
     let onStop: (Project) -> Void
@@ -2433,6 +2460,13 @@ private struct ProjectNotificationReceivers: ViewModifier {
             .onReceive(NotificationCenter.default.publisher(for: .renameSelectedProject)) { _ in
                 if case .project(let id) = sole {
                     renamingProjectID = id
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(
+                for: .connectAgentForSelectedProject)) { _ in
+                if case .project(let id) = sole,
+                   let p = projectIndex.projects.first(where: { $0.id == id }) {
+                    connectAgentProject = p
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .renameSelectedFolder)) { _ in
@@ -2456,7 +2490,17 @@ private struct ProjectNotificationReceivers: ViewModifier {
                 let folderId = notification.userInfo?["folderId"] as? UUID
                 projectIndex.moveProject(projectId: projectId, toFolder: folderId)
             }
-            .onReceive(NotificationCenter.default.publisher(for: .locateSelectedProject)) { _ in
+            // Project ▸ Show Transcripts in Finder — the menu twin of the export
+        // popover's row. The popover is a convenience; the menu bar is the
+        // canonical, keyboard- and VoiceOver-reachable surface, so the command
+        // needs to exist here too. Same target ladder via `TranscriptsRevealTarget`.
+        .onReceive(NotificationCenter.default.publisher(for: .revealTranscripts)) { _ in
+            guard let target = TranscriptsRevealTarget.resolve(
+                projectPath: bridgeHandler.selectedProjectPath
+            ) else { return }
+            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: target)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .locateSelectedProject)) { _ in
                 guard case .project(let id) = sole else { return }
                 if let project = projectIndex.projects.first(where: { $0.id == id }) {
                     onLocate(project)
@@ -2660,17 +2704,9 @@ private struct ExportPopoverContent: View {
     /// deferred export). Output lives at `<project>/bristlenose-output/`.
     private func revealTranscripts() {
         dismiss()
-        let base = bridgeHandler.selectedProjectPath
-        guard !base.isEmpty else { return }
-        let output = (base as NSString).appendingPathComponent("bristlenose-output")
-        let candidates = [
-            (output as NSString).appendingPathComponent("transcripts-cooked"),
-            (output as NSString).appendingPathComponent("transcripts-raw"),
-            output,
-            base,
-        ]
-        let fm = FileManager.default
-        let target = candidates.first { fm.fileExists(atPath: $0) } ?? base
+        guard let target = TranscriptsRevealTarget.resolve(
+            projectPath: bridgeHandler.selectedProjectPath
+        ) else { return }
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: target)
     }
 }

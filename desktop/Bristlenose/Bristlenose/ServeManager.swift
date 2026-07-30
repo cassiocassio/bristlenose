@@ -39,6 +39,9 @@ final class ServeManager: ObservableObject {
     /// Bristlenose version from `/api/health` — fetched after server starts.
     /// Shown in the About panel alongside the Xcode build number.
     @Published var serverVersion: String?
+    /// Whether this sidecar mounted the MCP endpoint (the optional `mcp`
+    /// extra). Drives the Connect Agent sheet's unavailable state.
+    @Published var mcpMounted: Bool = false
 
     /// Bearer token for localhost API access control.
     /// Parsed from stdout line: `[bristlenose] auth-token: <token>`
@@ -673,15 +676,21 @@ final class ServeManager: ObservableObject {
 
     // MARK: - Private
 
-    /// Fetch the Bristlenose version from the serve health endpoint.
-    /// Non-critical — if it fails, `serverVersion` stays nil.
+    /// Fetch the Bristlenose version (and MCP availability) from the serve
+    /// health endpoint. Non-critical — if it fails, both stay at their
+    /// defaults. `/api/health` is auth-exempt, so this needs no token.
     private func fetchServerVersion(port: Int) async {
         guard let url = URL(string: "http://127.0.0.1:\(port)/api/health") else { return }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
-            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let version = json["version"] as? String {
-                self.serverVersion = version
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                if let version = json["version"] as? String {
+                    self.serverVersion = version
+                }
+                // Absent on an older sidecar → false, which is the honest
+                // reading: a build that doesn't report it doesn't have it.
+                let mcp = json["mcp"] as? [String: Any]
+                self.mcpMounted = (mcp?["mounted"] as? Bool) ?? false
             }
         } catch {
             // Non-critical — About panel shows build number only

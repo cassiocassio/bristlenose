@@ -251,7 +251,6 @@ extension Notification.Name {
 
     /// Posted by View > Move Focus to Projects (⌘0) — returns keyboard focus
     /// from the web report to the project list (the §10.1 no-trap command).
-    static let focusProjects = Notification.Name("bristlenoseFocusProjects")
 
     /// Posted by Help > Welcome to Bristlenose — clears the project selection so
     /// the app-level Welcome home pane (WelcomeHomeView) shows. Same effect as
@@ -266,8 +265,16 @@ extension Notification.Name {
     // broadcast-hits-every-window fault applies to the notifications below;
     // converting them is staged in `docs/design-workspace.md`.
 
+    /// Posted by Project ▸ Show Transcripts in Finder — reveals the project's
+    /// transcripts folder (see `TranscriptsRevealTarget` for the fallback ladder).
+    static let revealTranscripts = Notification.Name("bristlenoseRevealTranscripts")
+
     /// Posted by Project > Rename to trigger inline rename in the sidebar.
     static let renameSelectedProject = Notification.Name("bristlenoseRenameSelectedProject")
+    /// Project ▸ Connect Agent… — the menu-bar twin of the sidebar's
+    /// right-click item. Receiver opens the sheet for the sole selection.
+    static let connectAgentForSelectedProject =
+        Notification.Name("bristlenoseConnectAgentForSelectedProject")
 
     /// Posted by Project > Rename Folder to trigger inline rename on the selected folder.
     static let renameSelectedFolder = Notification.Name("bristlenoseRenameSelectedFolder")
@@ -489,6 +496,29 @@ final class ProjectIndex: ObservableObject {
         save()
     }
 
+    /// Stamp the moment a pipeline run finished, whatever its outcome.
+    ///
+    /// **This field is deliberately write-only today — do not delete it as
+    /// unused.** Its sole job is to open the F14 drift gate in
+    /// `handleWatcherUpdate`, which suppresses the `+N unanalysed` delta until a
+    /// project has an analysis baseline. It is *not* rendered anywhere: the
+    /// sidebar's bare-date subtitle was retired on 29 Jul 2026 (Schema E — a
+    /// clean row shows no status line at all; see
+    /// `docs/design-desktop-project-status.md` §"Schema E").
+    ///
+    /// Before this existed the field had **no write site in any build**, so both
+    /// the date *and* the drift delta were structurally unreachable — the delta
+    /// silently, because the gate below could never open.
+    ///
+    /// Two future homes are noted and neither is built: an Appearance pref
+    /// restoring the always-on status line, and a metadata block on the project
+    /// dashboard lens.
+    func recordPipelineRun(id: UUID, at date: Date = Date()) {
+        guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
+        projects[index].lastPipelineRunAt = date
+        save()
+    }
+
     /// Append files to an existing project's input list.
     /// De-duplicates against files already in the project.
     func addFiles(to id: UUID, files: [String]) {
@@ -551,11 +581,18 @@ final class ProjectIndex: ObservableObject {
         save()
     }
 
-    /// Move a project into a folder (or to root if folderId is nil).
+    /// Move a project into a folder (or to root if folderId is nil) — the **Move To**
+    /// context menu, which names a destination but no slot, so the project appends to
+    /// the end of it.
+    ///
+    /// Routed through `apply(_:)` so the menu path renumbers `position` exactly like a
+    /// drag does. It used to set `folderId` alone, which left the project carrying its
+    /// old scope's index into its new one — an arbitrary collision, and the reason rows
+    /// could swap places between renders.
     func moveProject(projectId: UUID, toFolder folderId: UUID?) {
-        guard let index = projects.firstIndex(where: { $0.id == projectId }) else { return }
-        projects[index].folderId = folderId
-        save()
+        guard projects.contains(where: { $0.id == projectId }) else { return }
+        apply(DropPlan(items: [.project(projectId)], toFolder: folderId,
+                       atIndex: DropRouting.append))
     }
 
     // MARK: - Sidebar ordering
@@ -570,6 +607,85 @@ final class ProjectIndex: ObservableObject {
     /// Projects belonging to a specific folder, sorted by position.
     func projectsInFolder(_ folderId: UUID) -> [Project] {
         projects.filter { $0.folderId == folderId }.sorted { $0.position < $1.position }
+    }
+
+    /// Apply a sidebar drag-and-drop — the single entry point for the AppKit outline's
+    /// unified insertion model (`DropRouting`). Moves `plan.items` into
+    /// `plan.toFolder` (`nil` = root) at `plan.atIndex`.
+    ///
+    /// **Root ordering is interleaved**: a folder is just another row in the root
+    /// sequence, so folders and root projects share one `position` space (what
+    /// `sidebarItems` already sorts). Folders themselves are root-only — one level.
+    ///
+    /// Every affected scope is renumbered contiguously from 0, both the destination and
+    /// any scope the items left. That's load-bearing, not tidiness: `moveProject` set
+    /// `folderId` and left `position` untouched, so a project dragged out of a folder
+    /// carried its in-folder index into the root scope, where it collided with an
+    /// unrelated row — and `sidebarItems`' sort has no tiebreak, so tied rows could
+    /// swap places between renders.
+    func apply(_ plan: DropPlan) {
+        guard !plan.items.isEmpty else { return }
+        let movedIDs = plan.items.map(\.id)
+        let movedSet = Set(movedIDs)
+
+        // Snapshot scopes BEFORE re-parenting — `plan.atIndex` is expressed in the
+        // destination's pre-move coordinates (the insertion line the user saw).
+        let destinationBefore: [UUID] = plan.toFolder
+            .map { projectsInFolder($0).map(\.id) } ?? sidebarItems.map(\.id)
+        let rootBefore: [UUID] = sidebarItems.map(\.id)
+
+        // Scopes losing an item, which therefore need renumbering too. Only projects
+        // can change scope (a folder always lives at root).
+        var sourceFolders = Set<UUID>()
+        var sourceIncludesRoot = false
+        for item in plan.items {
+            switch item {
+            case .folder:
+                sourceIncludesRoot = true
+            case .project(let id):
+                guard let project = projects.first(where: { $0.id == id }) else { continue }
+                if let parent = project.folderId {
+                    sourceFolders.insert(parent)
+                } else {
+                    sourceIncludesRoot = true
+                }
+            }
+        }
+        var sourcesBefore: [UUID: [UUID]] = [:]
+        for folder in sourceFolders { sourcesBefore[folder] = projectsInFolder(folder).map(\.id) }
+
+        let destinationAfter = DropRouting.reordered(
+            scope: destinationBefore, inserting: movedIDs, at: plan.atIndex)
+
+        // Re-parent the moved projects (folders are root-only, so nothing to do).
+        for item in plan.items {
+            guard case .project(let id) = item,
+                  let idx = projects.firstIndex(where: { $0.id == id }) else { continue }
+            projects[idx].folderId = plan.toFolder
+        }
+
+        renumber(destinationAfter)
+        for (folder, before) in sourcesBefore where folder != plan.toFolder {
+            renumber(before.filter { !movedSet.contains($0) })
+        }
+        // Root only needs a separate pass when it's a source but not the destination —
+        // otherwise `destinationAfter` already covered it.
+        if sourceIncludesRoot, plan.toFolder != nil {
+            renumber(rootBefore.filter { !movedSet.contains($0) })
+        }
+        save()
+    }
+
+    /// Assign `position = 0..<n` across one scope's ordered ids. Projects and folders
+    /// share the root scope's numbering (the interleaved order), so this looks in both.
+    private func renumber(_ order: [UUID]) {
+        for (position, id) in order.enumerated() {
+            if let idx = projects.firstIndex(where: { $0.id == id }) {
+                projects[idx].position = position
+            } else if let idx = folders.firstIndex(where: { $0.id == id }) {
+                folders[idx].position = position
+            }
+        }
     }
 
     /// Reorder root-level sidebar items. Called from `.onMove` in the sidebar List.

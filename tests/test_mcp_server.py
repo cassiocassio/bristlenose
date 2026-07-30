@@ -720,3 +720,22 @@ class TestCliConnectBlock:
         out = capsys.readouterr().out
         assert "unavailable" in out
         assert "bristlenose[mcp]" in out
+
+
+class TestHealthAdvertisesMount:
+    """The desktop host reads mcp.mounted from /api/health (auth-exempt) to
+    decide whether its Connect Agent sheet can offer an address at all."""
+
+    def test_health_reports_mounted(self, app_fx) -> None:
+        payload = AuthTestClient(app_fx).get("/api/health").json()
+        assert payload["mcp"]["mounted"] is True
+
+    def test_absent_mount_reports_false(self, monkeypatch) -> None:
+        # create_app imports the symbol at call time, so patch the source
+        # module — patching the app module's namespace would silently no-op.
+        import bristlenose.server.mcp_server as mcp_module
+
+        monkeypatch.setattr(mcp_module, "mount_mcp_server", lambda app, sf: None)
+        app = create_app(dev=True, db_url="sqlite://")
+        assert app.state.mcp_mounted is False
+        assert AuthTestClient(app).get("/api/health").json()["mcp"]["mounted"] is False

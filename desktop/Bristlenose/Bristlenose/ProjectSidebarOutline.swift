@@ -78,6 +78,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// Mirror the SwiftUI `ProjectRow`/`FolderRow` `.contextMenu` items.
     let onLocate: (UUID) -> Void
     let onShowInFinder: (UUID) -> Void
+    let onConnectAgent: (UUID) -> Void
     let canShowInFinder: (UUID) -> Bool
     let onRemoveProject: (UUID) -> Void
     let onRemoveFolder: (UUID) -> Void
@@ -117,6 +118,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.onExternalDrop = onExternalDrop
         controller.onLocate = onLocate
         controller.onShowInFinder = onShowInFinder
+        controller.onConnectAgent = onConnectAgent
         controller.canShowInFinder = canShowInFinder
         controller.onRemoveProject = onRemoveProject
         controller.onRemoveFolder = onRemoveFolder
@@ -168,11 +170,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     private let scrollView = NSScrollView()
     private var roots: [OutlineNode] = []
 
-    /// Native `NSPasteboard` type for internal project drags (decision 22 Jun:
-    /// native, not `Transferable` — this migration removes the other SwiftUI drag
-    /// sites). A distinct UTI so it never collides with `public.file-url` (the
-    /// Finder-file drop) — the typed-payload lesson from the SwiftUI sidebar.
-    static let projectDragType = NSPasteboard.PasteboardType("app.bristlenose.project-drag")
+    /// Native `NSPasteboard` type for internal sidebar drags — projects *and* folders,
+    /// kind-tagged by `SidebarDragItem` (decision 22 Jun: native, not `Transferable` —
+    /// this migration removes the other SwiftUI drag sites). A distinct UTI so it never
+    /// collides with `public.file-url` (the Finder-file drop) — the typed-payload lesson
+    /// from the SwiftUI sidebar.
+    static let sidebarDragType = NSPasteboard.PasteboardType("app.bristlenose.sidebar-drag")
 
     weak var projectIndex: ProjectIndex?
     weak var i18n: I18n?
@@ -185,6 +188,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     var onExternalDrop: (SidebarExternalDrop, [URL]) -> Void = { _, _ in }
     var onLocate: (UUID) -> Void = { _ in }
     var onShowInFinder: (UUID) -> Void = { _ in }
+    var onConnectAgent: (UUID) -> Void = { _ in }
     var canShowInFinder: (UUID) -> Bool = { _ in false }
     var onRemoveProject: (UUID) -> Void = { _ in }
     var onRemoveFolder: (UUID) -> Void = { _ in }
@@ -217,6 +221,21 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// Set true for the duration of an Escape-driven end so `controlTextDidEndEditing`
     /// reverts instead of committing (the field editor ends editing either way).
     private var cancellingEdit = false
+
+    /// True while a drop's row animation owns the view's order. Sibling of the
+    /// `editingNodeID` guard and for the same reason: `update()` reloads on every model
+    /// tick, and a `reloadData` mid-slide snaps the rows into place, killing the very
+    /// animation that makes a reorder feel native. `update()` still *stores* the fresh
+    /// tree while suppressed; `reloadReleaseWork` reloads against it once the slide ends.
+    private var reloadSuppressed = false
+
+    /// Lifts `reloadSuppressed` when the drop animation settles. Held so a second drop
+    /// mid-animation cancels the first release rather than lifting the guard early.
+    private var reloadReleaseWork: DispatchWorkItem?
+
+    /// The last selection pushed by `update()`. Held so the post-animation reload can
+    /// restore it without needing SwiftUI to push another update.
+    private var lastSelection: Set<SidebarSelection> = []
 
     /// True when the click currently being delivered CHANGED the selection. Set in
     /// `outlineViewSelectionDidChange`, consumed by the click action. The slow-second-
@@ -280,12 +299,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         outlineView.dataSource = self
         outlineView.delegate = self
         outlineView.autoresizingMask = [.width, .height]
-        // Two distinct destination types: `projectDragType` (internal reorder,
-        // `.move`) and `.fileURL` (Finder folder-of-videos import, `.copy`). The
-        // payload class disambiguates them at validate/accept time — a Finder drag
-        // can't read as `projectDragType` and a project drag can't read as a file
-        // URL — so the two never collide.
-        outlineView.registerForDraggedTypes([Self.projectDragType, .fileURL])
+        // Two distinct destination types: `sidebarDragType` (internal reorder /
+        // re-parent, `.move`) and `.fileURL` (Finder folder-of-videos import, `.copy`).
+        // The payload class disambiguates them at validate/accept time — a Finder drag
+        // can't read as `sidebarDragType` and a sidebar drag can't read as a file URL —
+        // so the two never collide.
+        outlineView.registerForDraggedTypes([Self.sidebarDragType, .fileURL])
         outlineView.setDraggingSourceOperationMask(.move, forLocal: true)
         // Right-click context menu — rebuilt per click for the `clickedRow`'s node
         // (`menuNeedsUpdate`). Ports the SwiftUI `ProjectRow`/`FolderRow` `.contextMenu`.
@@ -387,6 +406,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     @objc private func paletteDidChange() {
         updatePaletteTint()
         guard editingNodeID == nil else { return }   // don't tear down an active edit
+        guard !reloadSuppressed else { return }      // don't snap a mid-slide drop
         outlineView.reloadData()
     }
 
@@ -422,13 +442,25 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         self.roots = roots
         self.activeTab = activeTab
         self.lensesEnabled = lensesEnabled
+        self.lastSelection = selection
 
         // Reload guard: a `reloadData` while a name field is being edited destroys
         // its field editor and drops the in-flight keystrokes. Freeze the table
         // (model is already stored above) until the edit commits — the commit path
         // republishes and re-enters `update()` with `editingNodeID == nil`.
         guard editingNodeID == nil else { return }
+        // Same shape, different owner: a drop animation is mid-slide and the view's row
+        // order is ahead of the tree. The release work item reloads against whatever
+        // tree landed while suppressed.
+        guard !reloadSuppressed else { return }
 
+        reloadAndRestore()
+    }
+
+    /// Reload the table and put back everything a `reloadData` drops: expansion,
+    /// selection, and the two one-shot gestures. Extracted from `update()` so the
+    /// post-drop-animation release can re-run exactly the same tail.
+    private func reloadAndRestore() {
         outlineView.reloadData()
 
         // Expand groups (always) + non-collapsed folders.
@@ -439,7 +471,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             }
         }
 
-        applySelection(selection)
+        applySelection(lastSelection)
 
         // Kick off the one-shot icon reveal for a freshly-created project, if any.
         maybeStartIconReveal()
@@ -979,9 +1011,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     // MARK: - Drag and drop (the unified insertion model — apocalypse fix)
 
     func outlineView(_ outlineView: NSOutlineView, pasteboardWriterForItem item: Any) -> NSPasteboardWriting? {
-        guard let node = item as? OutlineNode, case .project(let id) = node.kind else { return nil }
+        // `dragItem` is nil for group headers and lens rows — chrome and modes have no
+        // place in the order, so they aren't draggable. Projects and folders both are.
+        guard let node = item as? OutlineNode, let dragItem = node.dragItem else { return nil }
         let pbItem = NSPasteboardItem()
-        pbItem.setString(id.uuidString, forType: Self.projectDragType)
+        pbItem.setString(dragItem.pasteboardString, forType: Self.sidebarDragType)
         return pbItem
     }
 
@@ -1003,6 +1037,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             }
             return .copy
         }
+        // A folder can't nest — retarget to a root insertion line rather than refuse.
+        if let retarget = folderNestingRetarget(info: info, item: item) {
+            outlineView.setDropItem(retarget.parent, dropChildIndex: retarget.index)
+            return .move
+        }
         return decideDrop(info: info, item: item, index: index) == nil ? [] : .move
     }
 
@@ -1019,15 +1058,122 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             return true
         }
 
-        guard let moves = decideDrop(info: info, item: item, index: index),
+        guard let plan = decideDrop(info: info, item: item, index: index),
               let projectIndex else { return false }
-        // Folder membership is the structural Phase-B fix (out-of-folder,
-        // between-folder, into-folder). Within-scope ordering by `toIndex` is a
-        // refinement — `moveProject` sets `folderId`; position reorder is TODO.
-        for move in moves {
-            projectIndex.moveProject(projectId: move.projectID, toFolder: move.toFolder)
-        }
+        performDrop(plan, in: projectIndex)
         return true
+    }
+
+    /// Commit a drop: mutate the model, then slide the rows into their new places.
+    ///
+    /// `NSOutlineView.moveItem` is what makes a reorder feel native — the insertion line
+    /// during the drag comes free, the settle on drop does not, and a `reloadData` snaps.
+    /// But `moveItem` is a *view* instruction that assumes the data source already
+    /// agrees, so the ordering here is load-bearing:
+    ///
+    /// 1. resolve the final order against the **pre-move** scope (`plan.atIndex` is in
+    ///    those coordinates);
+    /// 2. suppress the reload, so the republish this mutation triggers can't snap the
+    ///    rows mid-slide;
+    /// 3. mutate the model, and immediately re-derive `roots` from it — `update()` is
+    ///    suppressed and would otherwise leave the data source a step behind the row
+    ///    moves, which is how you earn an AppKit consistency exception;
+    /// 4. move the rows, and release the guard once the slide settles.
+    private func performDrop(_ plan: DropPlan, in index: ProjectIndex) {
+        let before: [UUID] = plan.toFolder
+            .map { index.projectsInFolder($0).map(\.id) } ?? index.sidebarItems.map(\.id)
+        let finalOrder = DropRouting.reordered(
+            scope: before, inserting: plan.items.map(\.id), at: plan.atIndex)
+
+        reloadSuppressed = true
+        index.apply(plan)
+        roots = OutlineTree.build(lenses: lensItems,
+                                  projects: index.projects,
+                                  folders: index.folders)
+
+        animateRowMoves(plan, finalOrder: finalOrder)
+
+        // Lift the guard once the slide has settled and reload against the tree stored
+        // meanwhile — model and view already agree, so it's visually a no-op. It still
+        // has to happen, or the next structural change diffs against a tree the table
+        // never loaded.
+        reloadReleaseWork?.cancel()
+        let release = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.reloadSuppressed = false
+            guard self.editingNodeID == nil else { return }
+            self.reloadAndRestore()
+        }
+        reloadReleaseWork = release
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.dropAnimationSettle, execute: release)
+    }
+
+    /// Animate the moved rows to their final slots. Walking them in final order and
+    /// moving each to its final index is the standard `moveItem` idiom: AppKit re-bases
+    /// its own child indices after each call, so reading `childIndex(forItem:)` inside
+    /// the loop is self-correcting and needs no index bookkeeping.
+    ///
+    /// The nodes come from the freshly-rebuilt tree while the outline still holds the
+    /// pre-move ones — `OutlineNode` compares by model id, so AppKit matches them and
+    /// `childIndex`/`parent` correctly report the row's *current* (source) place.
+    private func animateRowMoves(_ plan: DropPlan, finalOrder: [UUID]) {
+        let parentNode = plan.toFolder.flatMap { node(for: .folder($0)) } ?? projectsGroupNode
+        guard let destinationParent = parentNode else { return }
+
+        outlineView.beginUpdates()
+        for item in plan.items {
+            guard let node = node(for: item),
+                  let destination = finalOrder.firstIndex(of: item.id) else { continue }
+            // -1 for a row inside a collapsed folder, whose children the outline hasn't
+            // loaded. Nothing to animate; the release reload shows the new order.
+            let source = outlineView.childIndex(forItem: node)
+            guard source >= 0 else { continue }
+            outlineView.moveItem(at: source,
+                                 inParent: outlineView.parent(forItem: node),
+                                 to: destination,
+                                 inParent: destinationParent)
+        }
+        outlineView.endUpdates()
+    }
+
+    /// How long to hold the reload guard after a drop. Comfortably longer than
+    /// AppKit's own row-move animation, short enough that a suppressed progress tick
+    /// isn't noticeable (the ring/subtitle resume on the release reload).
+    private static let dropAnimationSettle: TimeInterval = 0.35
+
+    /// The "Projects" group node — the parent of the root-scope rows, and so the
+    /// `inParent:` for any root-level `moveItem`.
+    private var projectsGroupNode: OutlineNode? {
+        roots.first { $0.kind == .group(OutlineTree.projectsGroupKey) }
+    }
+
+    /// The live node for a dragged item. One level of nesting, so root children and
+    /// their folder children are the whole search space.
+    private func node(for item: SidebarDragItem) -> OutlineNode? {
+        guard let group = projectsGroupNode else { return nil }
+        for child in group.children {
+            if child.dragItem == item { return child }
+            for grandchild in child.children where grandchild.dragItem == item {
+                return grandchild
+            }
+        }
+        return nil
+    }
+
+    /// A folder dragged over a folder row, retargeted to an insertion line *above* that
+    /// row in the root sequence. `OutlineNode` models one level (folder → project), so
+    /// nesting is refused in `DropRouting.resolve` — but refusing at the highlight stage
+    /// too would give a refuse cursor over exactly the rows a user aims at when
+    /// rearranging folders. Retargeting keeps the gesture landing somewhere sensible.
+    private func folderNestingRetarget(info: NSDraggingInfo, item: Any?)
+        -> (parent: OutlineNode, index: Int)? {
+        guard draggedItems(from: info).contains(where: \.isFolder),
+              let node = item as? OutlineNode,
+              case .folder = node.kind,
+              let parent = node.parent,
+              let index = parent.children.firstIndex(where: { $0 === node })
+        else { return nil }
+        return (parent, index)
     }
 
     // MARK: - External (Finder) drop routing
@@ -1050,28 +1196,43 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         SidebarExternalDrop.resolve(droppedOn: (item as? OutlineNode)?.kind)
     }
 
-    private func decideDrop(info: NSDraggingInfo, item: Any?, index: Int) -> [ProjectMove]? {
-        let ids = draggedProjectIDs(from: info)
+    private func decideDrop(info: NSDraggingInfo, item: Any?, index: Int) -> DropPlan? {
+        let model = projectIndex
         let at = index == NSOutlineViewDropOnItemIndex ? DropRouting.append : index
         let decision = DropRouting.resolve(
-            draggedProjectIDs: ids, onto: dropParent(for: item), at: at,
-            isProjectID: { id in self.projectIndex?.projects.contains { $0.id == id } ?? false }
+            dragged: draggedItems(from: info), onto: dropParent(for: item), at: at,
+            isKnown: { dragged in
+                guard let model else { return false }
+                switch dragged {
+                case .project(let id): return model.projects.contains { $0.id == id }
+                case .folder(let id):  return model.folders.contains { $0.id == id }
+                }
+            }
         )
-        if case .move(let moves) = decision { return moves }
+        if case .move(let plan) = decision { return plan }
         return nil
     }
 
+    /// The model scope a proposed drop target represents. A **project** row resolves to
+    /// its container, not to root: AppKit proposes the leaf under the cursor, and the
+    /// meaningful destination is the scope that leaf sits in — otherwise a drop aimed
+    /// between two projects inside a folder would silently route to root.
     private func dropParent(for item: Any?) -> DropParent {
         guard let node = item as? OutlineNode else { return .root }
         switch node.kind {
-        case .folder(let id): return .folder(id)
-        case .group, .project, .lens: return .root
+        case .folder(let id):
+            return .folder(id)
+        case .project:
+            if let parent = node.parent, case .folder(let id) = parent.kind { return .folder(id) }
+            return .root
+        case .group, .lens:
+            return .root
         }
     }
 
-    private func draggedProjectIDs(from info: NSDraggingInfo) -> [UUID] {
+    private func draggedItems(from info: NSDraggingInfo) -> [SidebarDragItem] {
         (info.draggingPasteboard.pasteboardItems ?? []).compactMap { item in
-            item.string(forType: Self.projectDragType).flatMap { UUID(uuidString: $0) }
+            item.string(forType: Self.sidebarDragType).flatMap(SidebarDragItem.init(pasteboardString:))
         }
     }
 
@@ -1362,6 +1523,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
         menu.addItem(menuItem("desktop.menu.project.showInFinder", #selector(menuShowInFinder(_:)),
                               enabled: canShowInFinder(id)))
+        menu.addItem(menuItem("desktop.menu.project.connectAgent", #selector(menuConnectAgent(_:))))
         menu.addItem(menuItem("desktop.menu.project.rename", #selector(menuRename(_:))))
         menu.addItem(menuItem("desktop.menu.project.chooseIcon", #selector(menuChooseIcon(_:))))
 
@@ -1464,6 +1626,10 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
     @objc private func menuShowInFinder(_ sender: NSMenuItem) {
         if let id = menuClickedNodeID { onShowInFinder(id) }
+    }
+
+    @objc private func menuConnectAgent(_ sender: NSMenuItem) {
+        if let id = menuClickedNodeID { onConnectAgent(id) }
     }
 
     @objc private func menuChooseIcon(_ sender: NSMenuItem) {

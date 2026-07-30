@@ -62,8 +62,10 @@ keep the engine view. The divergence is pinned by a test; don't "fix" it.
 
 Read-only Model Context Protocol server so a local agent (Claude Code,
 Claude Desktop, ChatGPT desktop, Codex) can read ONE project. Design +
-acceptance results: `docs/design-mcp-server.md`. CLI-only — the desktop
-sidecar deliberately does not carry the dependency.
+acceptance results: `docs/design-mcp-server.md`. Ships on BOTH channels
+since 30 Jul 2026: CLI via the optional extra, macOS app via the bundled
+sidecar (`build-sidecar.sh` installs `[serve,apple,desktop,mcp]`; the
+Connect Agent sheet + sidebar antenna badge are the desktop surface).
 
 - **Optional dependency.** `pip install 'bristlenose[mcp]'` (also in `dev`
   so CI runs the tests). `mount_mcp_server` catches `ImportError` /
@@ -81,6 +83,21 @@ sidecar deliberately does not carry the dependency.
   ride-along. The one exemption is a browser-shaped `GET` (Accept prefers
   `text/html`), which gets a static explainer page carrying no project data
   and no token.
+- **The MCP token is scoped.** When `_BRISTLENOSE_MCP_TOKEN` is inherited
+  (the macOS host injects its durable per-project Keychain token), `/mcp`
+  validates against it ALONE and it opens nothing else — an agent holding
+  it cannot reach `/api/*` (participant names, curation writes). Absent
+  (the CLI), `/mcp` falls back to the server token. Pinned by
+  `TestScopedMcpToken`. Don't "simplify" the two tokens into one — the MCP
+  token is the only credential that deliberately leaves the trust boundary
+  (pasted into another vendor's config file).
+- **`/api/health` carries `mcp: {mounted, active}`** — read by the desktop
+  host (auth-exempt; the host needs it before it has a token). `active` is
+  a bare bool ("tool call within `MCP_ACTIVE_WINDOW_SECONDS`"), computed
+  server-side deliberately: elapsed seconds would hand any local process a
+  1s-resolution timeline of the researcher's agent usage. The clock is
+  monotonic and pauses across sleep — fine for a 2-minute freshness bool,
+  wrong for anything longer (comment in `health.py` is the contract).
 - **Stateless streamable HTTP + JSON responses** — no SSE through
   `BaseHTTPMiddleware`, and aligned with the spec's sessionless direction.
   Don't pass a `host` override: that silently disables the SDK's

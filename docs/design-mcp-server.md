@@ -17,6 +17,7 @@ _The §9a spike is built and accepted (30 Jul 2026) — see §9a-results. Phases
 - _30 Jul 2026_ — **§9a spike built, reviewed, and accepted.** Added §9a-results: all three questions answered (object model carried a blind agent's session; all four testable invariants landed via `instructions` alone, so nothing moves into tool responses; a realistic session is ~10k tokens = 18× compression on the fossda corpus, making §Context's leverage claim a number). Acceptance also caught a participant name inside verbatim quote text — the structural boundary held, and it validates the "attribution is anonymised; quote text is verbatim" wording. Quote-exclusivity recorded as untested (this corpus partitions cleanly). Header trued: no longer "nothing built".
 
 - _30 Jul 2026_ — §1: OpenAI surfaces verified (web research, primary sources): ChatGPT desktop + Codex CLI + IDE extension are local MCP hosts on one `~/.codex/config.toml`; static-header TOML is the one-snippet form; no `.mcpb` equivalent (Plugins need public HTTPS); ChatGPT web remote-only. MCP spec 2026-07-28 sessionless direction validates the stateless/JSON transport choice.
+- _30 Jul 2026_ — §6a **built on the Mac** (sheet, menu twin, scoped durable token, antenna badge) and reviewed by the usual suspects; as-built decisions + divergences recorded in §6a "as built". CLI + desktop both ship `/mcp`.
 - _30 Jul 2026_ — §6a route 3 verified against current Claude Desktop (Extensions pane, drag-`.mcpb`-to-install; Developer pane entries "managed by an extension"): `Bristlenose.mcpb` with a handshake-file-reading proxy recorded as the Desktop end-state; §10 Q2 tilted toward the handshake file. Spike unchanged (hand-paste).
 - _30 Jul 2026_ — §Positioning: recorded the two-offerings frame — (1) the report as a single link with two modes, read it and ask it (the chat lens folds into the report UX rather than being a destination); (2) stay in your favourite local agent (Claude Desktop, Claude Code, Codex), which is this doc.
 - _30 Jul 2026_ — split the Chat lens out to `design-chat-lens.md` so the two workstreams can run as separate sessions. §6b reduced to a pointer + relationship statement; §6c moved wholesale; §9a and §10 Q7 references updated. Q7 closed: the lens is happening as its own workstream; sequencing stays open in the new doc.
@@ -796,6 +797,51 @@ one shared core for context assembly, id validation, invariants, and
 anonymisation; whichever lands first owns it — is recorded there as its §7,
 including the canonical path both sessions must use for that core:
 `bristlenose/server/grounding.py`.
+
+### §6a as built (30 Jul 2026)
+
+The macOS surface shipped as the reviewed mockup: **Connect Agent…** on a
+project's right-click menu (AppKit `buildProjectMenu`, gated on availability
+like Show in Finder) with a **Project ▸ Connect Agent…** menu-bar twin;
+a sheet (`ConnectAgentSheet.swift`) with the scope restated, a segmented
+client picker (Claude Desktop / Claude Code / ChatGPT & Codex), the payload
+in each client's dialect, a "works with any MCP-compatible agent" footnote,
+and Cancel + Copy Config/Copy Command. A sidebar antenna
+(`antenna.radiowaves.left.and.right`, secondary tint, the quiet ambient
+family) shows on the served project's row while `/api/health` reports
+`mcp.active`.
+
+Decisions taken at build time, recorded here because they refine the section
+above:
+
+- **The credential is MCP-scoped.** The host injects a durable per-project
+  Keychain token via `_BRISTLENOSE_MCP_TOKEN`; the server validates `/mcp`
+  against it alone, so the one credential that leaves the trust boundary
+  opens the four read-only tools and nothing else — never `/api/*`
+  (participant names, curation writes). CLI unchanged (single token).
+- **"Connected" means recent tool activity, not the `initialize`
+  handshake.** The section above assumed the handshake was observable;
+  stateless streamable HTTP has no session to observe, so the badge lights
+  on tool calls (120s window, 20s poll, an immediate poll on Copy so the
+  badge can appear while the researcher is still watching). If a future SDK
+  exposes a handshake hook, revisit.
+- **The port still rotates per launch** (the A6 `bind(0)` decision stands),
+  so the sheet carries the honest caveat line — the durable token fixes the
+  Tuesday-401 only across restarts of the same address. The `.mcpb`
+  handshake-file proxy (route 3 above) is what dissolves this properly; the
+  caveat line is the bridge, not the destination.
+- **The Anonymise toggle became a statement.** The server anonymises
+  unconditionally (grounding never reads persons) and no per-connection
+  names opt-in exists on the server side, so a live switch would promise a
+  choice the system cannot make. The row now states the truth ("Participant
+  names are never sent"); when the opt-in exists server-side, the control
+  returns here.
+- **Open model question (parked):** the sheet and badge only know the
+  *fronted* serve. The warm-sidecar pool keeps the previous project's
+  sidecar (and its live `/mcp`) parked — an agent can be querying project A
+  while A's row shows nothing and A's sheet says "start the project".
+  Decide whether "running" for this feature means fronted-only or
+  fronted+parked before wiring the sheet to parked endpoints.
 
 ---
 

@@ -63,15 +63,41 @@ _MLX_WHISPER_DATAS, _MLX_WHISPER_BINARIES, _MLX_WHISPER_HIDDEN = collect_all(
 # when the Debug-menu admin panel SIGed the bundled sidecar with exit 1.
 _SQLADMIN_DATAS, _SQLADMIN_BINARIES, _SQLADMIN_HIDDEN = collect_all("sqladmin")
 
+# MCP endpoint (`/mcp/`, docs/design-mcp-server.md). The `mcp` package itself
+# is pure Python with no data files — but its argument-validation chain is the
+# FOURTH instance of the rule above: `jsonschema_specifications` ships the JSON
+# metaschemas (`schemas/**/*.json`) that `referencing` loads package-relative
+# at import time. Without `collect_all` the bundle imports fine and then fails
+# the first `tools/call` — i.e. only in the bundled app, and only once an agent
+# is actually connected. `jsonschema` itself carries one data file too.
+# Rule restated (mlx, mlx_whisper, sqladmin, now this): if a bundled package
+# reads its own templates/statics/assets/schemas via package-relative paths,
+# it needs `collect_all`, not a bare hiddenimport.
+_MCP_DATAS, _MCP_BINARIES, _MCP_HIDDEN = collect_all("mcp")
+_JSONSCHEMA_SPEC_DATAS, _JSONSCHEMA_SPEC_BINARIES, _JSONSCHEMA_SPEC_HIDDEN = collect_all(
+    "jsonschema_specifications"
+)
+_JSONSCHEMA_DATAS, _JSONSCHEMA_BINARIES, _JSONSCHEMA_HIDDEN = collect_all("jsonschema")
+
 a = Analysis(
     # Entry point: run `bristlenose serve` directly.
     [os.path.join(SPECPATH, "sidecar_entry.py")],
     pathex=[PROJECT_ROOT],
-    binaries=[*_MLX_BINARIES, *_MLX_WHISPER_BINARIES, *_SQLADMIN_BINARIES],
+    binaries=[
+        *_MLX_BINARIES,
+        *_MLX_WHISPER_BINARIES,
+        *_SQLADMIN_BINARIES,
+        *_MCP_BINARIES,
+        *_JSONSCHEMA_SPEC_BINARIES,
+        *_JSONSCHEMA_BINARIES,
+    ],
     datas=[
         *_MLX_DATAS,
         *_MLX_WHISPER_DATAS,
         *_SQLADMIN_DATAS,
+        *_MCP_DATAS,
+        *_JSONSCHEMA_SPEC_DATAS,
+        *_JSONSCHEMA_DATAS,
         (
             os.path.join(PROJECT_ROOT, "bristlenose", "theme"),
             os.path.join("bristlenose", "theme"),
@@ -152,6 +178,9 @@ a = Analysis(
         "bristlenose._build_info",
         *_MLX_HIDDEN,
         *_MLX_WHISPER_HIDDEN,
+        *_MCP_HIDDEN,
+        *_JSONSCHEMA_SPEC_HIDDEN,
+        *_JSONSCHEMA_HIDDEN,
         *_SQLADMIN_HIDDEN,
         *collect_submodules("rich"),
         # LLM providers (dynamically imported in llm/client.py)

@@ -24,8 +24,8 @@
 #   --dry-run  report what WOULD rebuild and why; do no work; exit 0
 #
 # Prerequisites: python3.12 + Node 24 on PATH; frontend deps installed.
-# The dedicated .venv-sidecar carries only .[serve,apple,desktop] so contributor
-# packages never reach PyInstaller's analysis.
+# The dedicated .venv-sidecar carries only .[serve,apple,desktop,mcp] so
+# contributor packages never reach PyInstaller's analysis.
 
 set -euo pipefail
 
@@ -160,7 +160,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Layer V — sidecar venv (.venv-sidecar, .[serve,apple,desktop])
+# Layer V — sidecar venv (.venv-sidecar, .[serve,apple,desktop,mcp])
 # ---------------------------------------------------------------------------
 venv_rebuilt=0
 need_v=0; v_reason=""
@@ -185,7 +185,7 @@ if [ "$need_v" = 1 ]; then
         cache_bypass=""
         [ "$FORCE" = 1 ] && cache_bypass="--no-cache-dir"
         "$SIDECAR_VENV/bin/pip" install $cache_bypass --quiet --upgrade pip
-        "$SIDECAR_VENV/bin/pip" install $cache_bypass -e "$ROOT[serve,apple,desktop]"
+        "$SIDECAR_VENV/bin/pip" install $cache_bypass -e "$ROOT[serve,apple,desktop,mcp]"
         if ! "$PYTHON" -m PyInstaller --version >/dev/null 2>&1; then
             echo "error: PyInstaller not installed in fresh sidecar venv (check the 'desktop' extra)." >&2
             exit 1

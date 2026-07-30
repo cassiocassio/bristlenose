@@ -132,6 +132,16 @@
     padding: 5px 10px; border-radius: 6px; color: #1d1d1f; }
   .sbitem .picon { color: #8e8e93; font-size: 12px; width: 16px; text-align: center; flex: none; }
   .sbitem svg { margin-left: auto; flex: none; }
+  .sbitem2 { display: flex; align-items: flex-start; gap: 7px; font-size: 13px;
+    padding: 4px 10px; border-radius: 6px; color: #1d1d1f; }
+  .sbitem2 .picon { color: #8e8e93; font-size: 12px; width: 16px; text-align: center;
+    flex: none; margin-top: 1px; }
+  .sb2body { flex: 1; min-width: 0; }
+  .sb2title { display: flex; align-items: baseline; gap: 6px; }
+  .sb2title .sbcount { margin-left: auto; color: #8e8e93; font-size: 11px; }
+  .sb2sub { display: flex; align-items: center; gap: 6px; font-size: 11px;
+    color: #8e8e93; min-height: 15px; }
+  .sb2sub svg { margin-left: auto; flex: none; }
   .tipdemo { font-size: 11px; color: var(--muted); background: #f6f6f2;
     border: 1px solid #ddd; border-radius: 5px; padding: 3px 10px; }
   .notlist { border: 1px dashed #c9c2ae; border-radius: 8px; padding: 12px 16px;
@@ -162,16 +172,17 @@
   Report: <span class="cyan">http://127.0.0.1:8150/report/</span>
   MCP:    <span class="cyan">http://127.0.0.1:8150/mcp/</span>
 
-  <span class="dim">Connect an agent — sends the quotes in your report, with speaker codes
-  in place of names. Quote text is verbatim.</span>
+  <span class="dim">Connect an agent — give it the MCP URL and this header. Works with any
+  MCP-compatible agent (Claude, ChatGPT, Codex). Sends the quotes in your
+  report, speaker codes in place of names; quote text is verbatim. How-to:</span>
+  <span class="cyan">https://bristlenose.app/docs/connect-an-agent.html</span>
 
-    claude mcp add --transport http bristlenose http://127.0.0.1:8150/mcp/ \
-      --header "Authorization: Bearer kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM6xA3nQ"
+    Authorization: Bearer kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM6xA3nQ
 
 <span class="dim">[bristlenose] auth-token: kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM6xA3nQ
 INFO:     Uvicorn running on http://127.0.0.1:8150 (Press CTRL+C to quit)</span></div></div>
   <div class="commentary"><ul>
-    <li>Option B as decided: both halves of the hand-paste on one screen; triple-click the command, done.</li>
+    <li><b>Option B revised 30 Jul — vendor-neutral:</b> the CLI prints the two primitives (MCP URL + assembled Authorization header, both paste-ready) and a <b>permanent manual link</b>, never a vendor's command. Dialects rot — FastMCP died in one SDK major, Codex reshaped in a month — so dialects live where they can update: the manual, the Mac sheet, and later <code>bristlenose mcp --client</code>. The <code>claude mcp add</code> command moves to the acceptance script. Consequence: the manual's connect-an-agent section is a build deliverable — the URL must resolve before anything ships.</li>
     <li>Trailing slash on <code>/mcp/</code> is load-bearing — the bare path 307s and the paste fails.</li>
     <li>The dim disclosure line is §6a's "one plain line" — the whole consent surface, no ceremony.</li>
     <li>Printed only when the mount actually happened; plain <code>print()</code> (Rich eats <code>[bristlenose]</code>).</li>
@@ -426,18 +437,27 @@ http_headers = { "Authorization" = "Bearer kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM
   <div class="frame"><div class="macwrap"><div style="display:flex;flex-direction:column;gap:10px;align-items:center">
     <div class="sbpanel">
       <div class="sbhead">PROJECTS</div>
-      <div class="sbitem"><span class="picon">▤</span>Acme Onboarding
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2.2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></div>
-      <div class="sbitem"><span class="picon">▦</span>Pharmacy Diary Study</div>
-      <div class="sbitem"><span class="picon">▧</span>Q2 Checkout Benchmarks</div>
+      <div class="sbitem2"><span class="picon">▤</span><div class="sb2body">
+        <div class="sb2title">Acme Onboarding <span class="sbcount">6</span></div>
+        <div class="sb2sub"><span></span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2.1" stroke-linecap="round"><circle cx="12" cy="10" r="1.7" fill="#007AFF" stroke="none"/><path d="M12 12v8"/><path d="M8.5 13.5a5 5 0 0 1 0-7"/><path d="M15.5 6.5a5 5 0 0 1 0 7"/><path d="M5.6 16.4a9 9 0 0 1 0-12.8"/><path d="M18.4 3.6a9 9 0 0 1 0 12.8"/></svg></div>
+      </div></div>
+      <div class="sbitem2"><span class="picon">▦</span><div class="sb2body">
+        <div class="sb2title" style="color:#8e8e93">Pharmacy Diary Study <span class="sbcount">12</span></div>
+        <div class="sb2sub"><span>In iCloud</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2"><path d="M17.5 18.5H7a4 4 0 1 1 .6-7.96A5.5 5.5 0 0 1 18.4 12a3.3 3.3 0 0 1-.9 6.5z"/></svg></div>
+      </div></div>
+      <div class="sbitem2"><span class="picon">▧</span><div class="sb2body">
+        <div class="sb2title">Q2 Checkout Benchmarks <span class="sbcount">9</span></div>
+      </div></div>
     </div>
-    <div class="tipdemo">tooltip / VoiceOver: “Agent connected — Claude Code, active 2 minutes ago”</div>
+    <div class="tipdemo">tooltip / VoiceOver on the antenna: “Agent connected — Claude Code, active 2 minutes ago”</div>
   </div></div></div>
   <div class="commentary"><ul>
-    <li><b>Where this lives:</b> the project row in the app sidebar (<code>ProjectSidebarOutline</code>) — the leading slot stays the user-chosen project icon (identity), the badge rides the <b>trailing edge</b> (state): Finder's eject, Mail's activity. Nowhere else in v1 — not the SPA, not the report (that's the web-exposure later cycle). Plumbing precedent exists: the sidebar already polls serve per-project, and serve is what sees the <code>initialize</code> handshake.</li>
-    <li><b>A tinted symbol, not a dot, and not green</b> (post-Gruber): green is <code>MessageKind.success</code>, the taxonomy forbids minting glyphs/colours, and colour-alone state fails accessibility — the <code>link</code> symbol in accent blue carries the state by shape. Appears/disappears instantly (reduce-motion safe), debounced.</li>
-    <li>The badge means <em>connected now</em> — defined honestly as “handshook within the last ~60s”, shown as “active N min ago” in the tooltip — never “configured”, which is stale the moment the token rotates. Absence is information; clean rows stay clean (Schema E).</li>
-    <li>The row never names the client; the tooltip, <code>accessibilityLabel</code>, and the reopened sheet do. The trailing affordance's context menu is where <b>Disconnect</b> lives.</li>
+    <li><b>Redrawn against the real cell</b> (<code>ProjectSidebarOutline.swift:1655-1693</code>): the shipped project row is a two-line cell — title line = user-chosen icon · name · session count trailing; subtitle line = optional MessageKind prefix glyph · status text · <b>the subtitle-right slot</b>, whose occupancy is a documented precedence chain: run ring &gt; in-flight-copy ring &gt; <code>icloud</code> glyph &gt; empty. <b>The agent badge is a new case in that chain, not a new column:</b> ring &gt; copy &gt; <b>agent</b> &gt; icloud.</li>
+    <li><b>Cloud + agent coexistence:</b> today they cannot co-occur — an iCloud-evicted (dataless) project cannot be the served project (dataless reads hang; the served corpus is materialised by definition), so slot precedence is honest, not lossy. During a run the ring rightly wins the slot (transient + actionable, hover-× cancel); the agent glyph returns when it clears. If folder scope ever serves evicted rows, the slot grows a two-glyph cluster, agent leading.</li>
+    <li><b>The glyph: <code>antenna.radiowaves.left.and.right</code></b> at <code>subtitleGlyphConfig</code> size, tinted <b>accent</b> (palette accent / Apple blue) — transmitting-now semantics for "an outside model is reading this project", shape-distinct from the outline <code>icloud</code> at 11pt, and the tint does real work: <b>accent = live egress</b> vs <b>secondaryLabel = passive storage state</b> (the shipped cloud tint). Rejected: <code>link</code> (hyperlink-overloaded), <code>sparkles</code> (AI-branding, not connection state), <code>app.connected.to.app.below.fill</code> (muddy at subtitle size), any bare dot (colour-alone; green = <code>MessageKind.success</code>).</li>
+    <li>The badge means <em>connected now</em> — handshook within the last ~60s, debounced, instant appear/disappear (reduce-motion safe) — never "configured". The row never names the client; the tooltip, <code>accessibilityLabel</code>, and the reopened sheet do. The glyph's context menu is where <b>Disconnect</b> lives. Clean rows stay clean (Schema E) — the subtitle line exists only while there is state to show. Nowhere else in v1 (not the SPA, not the report); the plumbing precedent is the sidebar's existing per-project serve reads.</li>
   </ul></div>
 
   <div class="notlist"><b>Browser-based agents (claude.ai / chatgpt.com):</b> cannot reach a

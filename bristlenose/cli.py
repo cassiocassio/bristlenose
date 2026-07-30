@@ -754,6 +754,9 @@ def _print_pipeline_summary(
     # don't surface its path. Failure paths print no Report: line at all.
     if serve_url:
         console.print(f"\n  Report:  [bold cyan]{serve_url}[/bold cyan]")
+        from urllib.parse import urlparse
+
+        _print_mcp_connect(urlparse(serve_url).port or 8150)
 
 
 def _print_pipeline_failure(cause: object, input_dir: Path, settings: object) -> None:
@@ -1502,6 +1505,35 @@ def _schedule_browser_open(report_url: str, *, delay_sec: float = 1.0) -> None:
     threading.Thread(target=_open, daemon=True).start()
 
 
+def _print_mcp_connect(port: int) -> None:
+    """Vendor-neutral MCP connect block (design-mcp-server.md §9a).
+
+    Prints the two primitives (URL + assembled Authorization header) and the
+    permanent docs URL — never a vendor's command: dialects rot, so they
+    live in the manual (and the Mac sheet) where they can update. Gated on
+    the ``mcp`` extra being importable, which mirrors the mount gate in
+    ``mount_mcp_server`` exactly (the mount only skips on ImportError).
+    """
+    from importlib.util import find_spec
+
+    if find_spec("mcp") is None:
+        console.print("  [dim]MCP:    unavailable — pip install 'bristlenose\\[mcp]'[/dim]")
+        return
+    docs_url = "https://bristlenose.app/docs/connect-an-agent.html"
+    console.print(f"  MCP:    [bold cyan]http://127.0.0.1:{port}/mcp/[/bold cyan]")
+    console.print()
+    console.print(
+        "  [dim]Connect an agent — give it the MCP URL and this header. Works with any\n"
+        "  MCP-compatible agent (Claude, ChatGPT, Codex). Sends the quotes in your\n"
+        "  report, speaker codes in place of names; quote text is verbatim. How-to:[/dim]"
+    )
+    console.print(f"  [link={docs_url}]{docs_url}[/link]")
+    token = os.environ.get("_BRISTLENOSE_AUTH_TOKEN", "")
+    if token:
+        console.print(f"\n    Authorization: Bearer {token}")
+    console.print()
+
+
 def _serve_dynamic_port(
     project_dir: Path,
     *,
@@ -1548,6 +1580,7 @@ def _serve_dynamic_port(
             console.print(
                 f"\n  Report: [bold cyan]http://127.0.0.1:{actual_port}/report/[/bold cyan]\n"
             )
+            _print_mcp_connect(actual_port)
         await serve_task
 
     asyncio.run(_run())
@@ -1677,8 +1710,14 @@ def serve(
         )
         raise typer.Exit(1)
     if port != 0:
+        # Pre-mint the auth token so the printed connect header is the one
+        # create_app() will actually use (it recovers this env var).
+        import secrets as _secrets
+
+        os.environ.setdefault("_BRISTLENOSE_AUTH_TOKEN", _secrets.token_urlsafe(32))
         report_url = f"http://127.0.0.1:{port}/report/"
         console.print(f"\n  Report: [bold cyan]{report_url}[/bold cyan]")
+        _print_mcp_connect(port)
         if dev:
             console.print("  [dim]Dev mode: responsive playground enabled[/dim]")
         console.print()

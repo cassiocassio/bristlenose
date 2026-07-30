@@ -13,6 +13,7 @@ _Design note. Nothing built. July 2026._
 
 ## Changelog
 
+- _30 Jul 2026_ — §6a: local-app-to-local-app promoted from fallback consequence to stated v1 baseline requirement. No degraded web path — the local-client requirement is the product's own local-first premise applied to the assistant.
 - _30 Jul 2026_ — added §9a (the first spike). Records that nothing in §6a blocks the original idea — the sandbox blocks writing another app's config, not the server itself, and Claude Desktop/Code connect to local servers as the ordinary case. Defines a small unblocked spike (mount /mcp, 3–4 read tools, paste the config by hand, build no connect UI), the three things it proves that a doc cannot, and the subscription-vs-API-key difference between MCP and the Chat lens.
 - _30 Jul 2026_ — added §6c (guard rails for the Chat lens). The citation requirement is the guard rail: an uncitable request cannot be expressed in the response schema, so it falls out as an empty result rather than needing a refusal layer. The real risk is not off-topic use but a confident uncited research claim, and the load-bearing check is server-side validation of returned quote ids — a model can invent one, and without resolution the citations are theatre. Argues against a topic classifier; notes cost as the genuinely separate guard rail.
 - _30 Jul 2026_ — §3b substantially rewritten after a domain correction. Two errors fixed: (1) framing this as *longitudinal* — designed longitudinal qual is rare (common for NPS/SUS, not qual), and reading a concept across an accumulated back-catalogue is a different, more common thing; (2) treating differently-named codes in two studies as a split concept needing reconciliation — between studies discontinuity is the norm (new boss, new agenda, feature replaced), so merging may manufacture a finding rather than repair one. The continuity carrier is the **framework the researcher re-uses across unrelated projects**, so codes are shared by construction rather than reconciled after the fact. `find_duplicate_codes` and `merge-tags` demoted to manual consolidation aids. Denominators promoted as the load-bearing trap; the time axis demoted.
@@ -626,9 +627,14 @@ starts a conversation. So there is no "big button that opens Claude with your
 project loaded" — the button's real job is to **make Bristlenose connectable**, and
 the human then goes to their assistant.
 
-That also kills the web fallback: **claude.ai in a browser cannot reach a
-localhost MCP server.** The fallback for "no app installed" is *install the app*
-(or use the CLI client), not "open the website".
+**Baseline requirement for v1, stated plainly: a local app talking to a local
+app.** claude.ai in a browser cannot reach a localhost MCP server, so the
+supported clients are the ones that run on the machine — Claude Desktop, Claude
+Code, and their peers. "No app installed" resolves to *install one*, not *open
+the website*. This needs no apology and no workaround engineering: Bristlenose's
+premise is that the data and the compute sit on the researcher's machine, and
+requiring the assistant's local client is the same premise applied to the
+assistant. Don't design a degraded web path; state the requirement.
 
 ### The sandbox blocks the obvious implementation
 

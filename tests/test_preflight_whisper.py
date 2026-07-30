@@ -92,16 +92,41 @@ class TestCacheState:
         kwargs = fake_hf.try_to_load_from_cache.call_args.kwargs
         assert kwargs["filename"] == "model.bin"
 
-    def test_mlx_repo_probes_weights_npz(self, monkeypatch, tmp_path):
+    def test_mlx_repo_cached_via_safetensors_only(self, monkeypatch, tmp_path):
+        """Real mlx-community repos ship ``weights.safetensors``, not ``weights.npz``.
+
+        Regression: probing only weights.npz reported "missing" on fully-cached
+        machines, so every run printed the download banner + a no-op 0s fetch.
+        """
         monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path))
         fake_hf = MagicMock()
-        fake_hf.try_to_load_from_cache.return_value = "/cache/weights.npz"
-        with patch.dict(sys.modules, {"huggingface_hub": fake_hf}):
-            cache_state("mlx-community/whisper-large-v3-turbo")
-        assert (
-            fake_hf.try_to_load_from_cache.call_args.kwargs["filename"]
-            == "weights.npz"
+        fake_hf.try_to_load_from_cache.side_effect = lambda repo_id, filename: (
+            "/cache/weights.safetensors" if filename == "weights.safetensors" else None
         )
+        with patch.dict(sys.modules, {"huggingface_hub": fake_hf}):
+            assert cache_state("mlx-community/whisper-large-v3-turbo") == "cached"
+
+    def test_mlx_repo_cached_via_legacy_npz(self, monkeypatch, tmp_path):
+        """Older mlx-community conversions ship ``weights.npz`` — still counts."""
+        monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path))
+        fake_hf = MagicMock()
+        fake_hf.try_to_load_from_cache.side_effect = lambda repo_id, filename: (
+            "/cache/weights.npz" if filename == "weights.npz" else None
+        )
+        with patch.dict(sys.modules, {"huggingface_hub": fake_hf}):
+            assert cache_state("mlx-community/whisper-large-v3-turbo") == "cached"
+
+    def test_mlx_repo_missing_when_no_weights_file(self, monkeypatch, tmp_path):
+        """Neither safetensors nor npz cached (e.g. config.json-only) → missing."""
+        monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path))
+        fake_hf = MagicMock()
+        fake_hf.try_to_load_from_cache.return_value = None
+        with patch.dict(sys.modules, {"huggingface_hub": fake_hf}):
+            assert cache_state("mlx-community/whisper-large-v3-turbo") == "missing"
+        probed = {
+            c.kwargs["filename"] for c in fake_hf.try_to_load_from_cache.call_args_list
+        }
+        assert probed == {"weights.safetensors", "weights.npz"}
 
     def test_partial_when_incomplete_blobs_exist(self, monkeypatch, tmp_path):
         monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path))

@@ -113,37 +113,42 @@ def _has_partial_blobs(repo_id: str) -> bool:
     return any(blobs.glob("*.incomplete"))
 
 
-def _heavy_blob_for(repo_id: str) -> str:
-    """Pick the "model is really here" probe filename for this backend's repo layout.
+def _heavy_blob_candidates(repo_id: str) -> tuple[str, ...]:
+    """Pick the "model is really here" probe filenames for this backend's repo layout.
 
     Both backends ship ``config.json`` as a tiny first-downloaded file (<1 KB),
     so probing config.json alone reports "cached" for interrupted downloads
     where only the metadata landed. Probe the heavy payload file instead:
     - ct2 (``Systran/faster-whisper-*``): ``model.bin`` (~1.5 GB)
-    - mlx (``mlx-community/whisper-*``): ``weights.npz``
+    - mlx (``mlx-community/whisper-*``): ``weights.safetensors`` (current
+      conversions) or ``weights.npz`` (older conversions) — either counts.
+      Probing ``weights.npz`` alone reported "missing" on fully-cached
+      machines (the turbo repo ships safetensors only), so every run printed
+      the download banner followed by a no-op 0s fetch.
     - Unknown layout: fall back to ``config.json`` (best we can do).
     """
     if repo_id.startswith("Systran/"):
-        return "model.bin"
+        return ("model.bin",)
     if repo_id.startswith("mlx-community/"):
-        return "weights.npz"
-    return "config.json"
+        return ("weights.safetensors", "weights.npz")
+    return ("config.json",)
 
 
 def _is_fully_cached(repo_id: str) -> bool:
-    """True if the backend's heavy payload file is in cache.
+    """True if any of the backend's heavy payload files is in cache.
 
-    Probes a payload file, not ``config.json``, so a download interrupted after
+    Probes payload files, not ``config.json``, so a download interrupted after
     config.json but before the model weights is correctly reported as not
     cached (otherwise stage 5 hangs re-fetching with no banner).
     """
     from huggingface_hub import try_to_load_from_cache
 
-    result = try_to_load_from_cache(
-        repo_id=repo_id, filename=_heavy_blob_for(repo_id),
-    )
-    # try_to_load_from_cache returns: None (not cached) | _CACHED_NO_EXIST | str path
-    return isinstance(result, str)
+    for filename in _heavy_blob_candidates(repo_id):
+        result = try_to_load_from_cache(repo_id=repo_id, filename=filename)
+        # try_to_load_from_cache returns: None (not cached) | _CACHED_NO_EXIST | str path
+        if isinstance(result, str):
+            return True
+    return False
 
 
 def cache_state(repo_id: str) -> str:

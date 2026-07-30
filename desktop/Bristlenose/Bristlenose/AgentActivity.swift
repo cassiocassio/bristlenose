@@ -13,4 +13,15 @@ enum AgentActivity {
         guard let mcp = json?["mcp"] as? [String: Any] else { return (false, false) }
         return (mcp["mounted"] as? Bool ?? false, mcp["active"] as? Bool ?? false)
     }
+
+    /// Project-path identity for the connect sheet + badge. Bookmark healing
+    /// (`refreshAvailability`) can respell `project.path` (`/private/…`,
+    /// symlink resolution) while `currentProjectPath` holds the spawn-time
+    /// string — raw equality then reads a running project as "not running"
+    /// with no signal. Same standardisation `MCPTokenStore.accountKey` uses.
+    static func samePath(_ a: String?, _ b: String) -> Bool {
+        guard let a else { return false }
+        return URL(fileURLWithPath: a).standardizedFileURL.path
+            == URL(fileURLWithPath: b).standardizedFileURL.path
+    }
 }

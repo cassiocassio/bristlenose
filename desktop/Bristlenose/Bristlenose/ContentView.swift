@@ -516,8 +516,11 @@ struct ContentView: View {
                 // hand the researcher a config that 401s or, worse, reaches a
                 // different project.
                 endpoint: (serveManager.runningPort.map { "http://127.0.0.1:\($0)/mcp/" })
-                    .flatMap { serveManager.currentProjectPath == project.path ? $0 : nil },
-                token: serveManager.currentProjectPath == project.path
+                    .flatMap {
+                        AgentActivity.samePath(serveManager.currentProjectPath, project.path)
+                            ? $0 : nil
+                    },
+                token: AgentActivity.samePath(serveManager.currentProjectPath, project.path)
                     ? (serveManager.mcpToken ?? serveManager.authToken) : nil,
                 mcpAvailable: serveManager.mcpMounted,
                 onCopied: { Task { await serveManager.refreshAgentActivity() } }

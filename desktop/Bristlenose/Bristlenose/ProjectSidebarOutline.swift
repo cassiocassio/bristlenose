@@ -1706,7 +1706,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 return .ring(fraction: nil, onStop: nil)   // spinner during rollback, no ×
             }
         }
-        if let active = agentActiveProjectPath, active == project.path { return .agent }
+        if AgentActivity.samePath(agentActiveProjectPath, project.path) { return .agent }
         if case .inCloud = project.availability { return .cloud }
         return .none
     }

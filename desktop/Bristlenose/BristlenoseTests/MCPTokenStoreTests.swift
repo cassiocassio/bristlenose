@@ -28,6 +28,14 @@ struct MCPTokenStoreTests {
         #expect(direct == dotted)
     }
 
+    @Test func samePathSurvivesRespelling() {
+        // Bookmark healing respells paths; identity must not break on it.
+        #expect(AgentActivity.samePath("/Users/x/Projects/../Projects/study/",
+                                       "/Users/x/Projects/study"))
+        #expect(!AgentActivity.samePath("/Users/x/a", "/Users/x/b"))
+        #expect(!AgentActivity.samePath(nil, "/Users/x/a"))
+    }
+
     @Test func accountKeyNeverEmbedsThePath() {
         // The key is Keychain item metadata, readable without unlocking the
         // item — a client's folder name must not leak into it.

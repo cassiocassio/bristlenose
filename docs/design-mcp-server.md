@@ -13,7 +13,8 @@ _Design note. Nothing built. July 2026._
 
 ## Changelog
 
-- _30 Jul 2026_ — added §3a and dropped phase 4. Cross-study person identity is not a deferred capability but a misread of research practice: recurrence is rare, usually undesirable, already handled socially, and rarely rewards reading across. `person_links` is no longer a dependency of this doc, and the server gains an explicit anti-instruction against correlating same-named participants.
+- _30 Jul 2026_ — added §3b: longitudinal querying by code is the real cross-study capability. Records the silent-under-reporting failure mode, `merge-tags` as the reconciliation primitive (and its undocumented instance-wide reach), the nullable `session_date` fallback chain, and the denominator trap. Sharpens the phase-2 dependency from "project index" to "shared codebook store". §3a softened: deliberate recurrence (panel, diary, follow-up wave) is real and meaningful — the rule is inference versus declaration, not identity versus no identity.
+- _30 Jul 2026_ — added §3a and dropped phase 4. Cross-study person identity is not a deferred capability but a misread of research practice: recurrence is rare, and where unintended it is a liability the researcher already handles socially. `person_links` is no longer a dependency of this doc. (Superseded in part the same day — see the §3a softening above.)
 - _30 Jul 2026_ — added §5a: user-authored frameworks as first-class objects (read / discover / author), refining §5's write rule to "corpus mutations go through the proposal queue, artifact authoring writes a reviewable file". Records the user-codebook directory, three loader traps, and the trust surface.
 - _30 Jul 2026_ — added §Positioning (glue not chatbot; the Figma-/design-system analogy, what the position must defend, framework YAML as the ecosystem artifact) and its consequences in §5, §9, §10.
 - _30 Jul 2026_ — initial draft.
@@ -299,16 +300,23 @@ What is actually true of research practice:
 
 - **Recurrence is rare.** Participants are overwhelmingly unique across studies.
   The join has almost no rows to operate on.
-- **Recurrence is usually undesirable when it happens.** Serial volunteers know
+- **Unintended recurrence is a liability, not an asset.** Serial volunteers know
   the product and the process too well. They skew strongly-minded, over-focused,
   and prone to advocating on behalf of "all users" rather than reporting their
-  own experience.
-- **Researchers already handle it socially.** They recognise the usual suspects
-  and decline to re-recruit them. This is not a problem waiting for software.
-- **Even a genuine recurrence rarely rewards reading across.** Two studies
-  typically interrogate different facets of the product, so correspondence
-  between the same person's quotes in each is not a finding — it is a
-  coincidence of sampling.
+  own experience. Researchers recognise the usual suspects and decline to
+  re-recruit them — handled socially, not a problem waiting for software.
+- **Deliberate recurrence is real and meaningful — and already known.** A panel,
+  a diary study, a follow-up wave with the same cohort: there the connection
+  matters and you would want to make it strongly. But the researcher *designed*
+  that. It is a fact they hold before the data exists, not something to be
+  discovered by matching name strings.
+- **Incidental recurrence rarely rewards reading across.** Two studies typically
+  interrogate different facets of the product, so correspondence between the same
+  person's quotes in each is not a finding — it is a coincidence of sampling.
+
+The honest summary is not "identity across studies is irrelevant" but **"it is
+much rarer and much less analytically significant than a data model would lead
+you to guess"** — and in the case where it *is* significant, it is already known.
 
 **Cross-study value lives in codes, themes and findings — not in people.** That is
 already where folder scope delivers it, because `TagDefinition` and `TagPrompt` are
@@ -320,16 +328,86 @@ Two consequences for the build:
 1. **`person_links` is not a dependency of anything here.** It stays a roadmap
    item in `design-multi-project.md` §2 on its own merits; this doc does not want
    it, and not in 2027 either.
-2. **The server must actively discourage the inference.** Dropping the feature is
+2. **The line is inference versus declaration.** A *declared* link — "this is
+   wave 2 of the same panel" — is cheap, honest, and the researcher already holds
+   the fact. An *inferred* link, fuzzy-matched from name strings, is the thing to
+   refuse. Worth carrying back to `design-multi-project.md` §2, which currently
+   anticipates a "suggestion algorithm": the domain argues for building the
+   declaration and skipping the suggester.
+3. **The server must actively discourage the inference.** Dropping the feature is
    not sufficient — an assistant handed two projects will match "Jim Smith" to
    "Jim Smith" by itself. The `instructions` field has to say plainly that person
-   identity does not cross project boundaries and correspondence between
-   same-named participants must not be treated as signal. This is the one place
-   the server needs an anti-instruction rather than a capability.
+   identity does not cross project boundaries *unless declared*, and that
+   correspondence between same-named participants is not, on its own, signal.
+   This is the one place the server needs an anti-instruction rather than a
+   capability.
 
 Within a single study, people remain first-class and important — who said what,
 role, journey, whose experience diverges. It is only the cross-study join that has
 no value.
+
+### 3b. Longitudinal querying by code is the real cross-study capability
+
+What a researcher actually wants across a folder is a **durable concept traced
+over time**: *perception of cost*, *frustrations with getting started*, *brand
+loyalty*. Concepts that recur study after study, where the interesting question is
+how the answer moved — not who gave it.
+
+This is a long way ahead of person reconciliation in value, and it is worth being
+explicit that the reconciliation problem is **real but at the wrong object**.
+Matching `p3` in one study to `p7` in another buys nothing (§3a). Matching *"cost
+concerns"* to *"price sensitivity"* is the entire capability.
+
+### The failure mode is silent under-reporting
+
+Nothing forces two studies to use the *same* code. A researcher coding study A
+creates "cost concerns"; six months later, study B gets "price sensitivity". Both
+are ordinary `TagDefinition` rows. A longitudinal query for either one returns a
+confident, partial answer with no indication that half the corpus used the other
+label.
+
+That is worse than a gap, because it looks like a finding. Two consequences:
+
+- **The surface must expose near-duplicate codes**, so the assistant can say "you
+  have two labels that look like the same concept" rather than quietly answering
+  from one of them.
+- **`merge-tags` is the reconciliation primitive and already exists**
+  (`POST /projects/{id}/codebook/merge-tags`). Worth recording a non-obvious
+  property: despite the project-scoped route path, it reassigns **every**
+  `QuoteTag` row for the source tag with no project filter and then deletes the
+  instance-scoped `TagDefinition`. For longitudinal work that is exactly right —
+  healing a split concept should heal every study at once — but it is surprising
+  enough that it needs a test pinning the behaviour before folder scope makes it
+  observable.
+
+### The actual blocker is the per-project database, not the project index
+
+`TagDefinition` and `TagPrompt` carry no `project_id`, which the server rules
+describe as instance-scoped. **Today that is aspirational.** Each project gets its
+own SQLite file at `<output_dir>/.bristlenose/bristlenose.db`, so a code does not
+in fact travel between studies — it is a different row in a different database
+with a coincidentally identical name.
+
+So the phase-2 dependency is sharper than "the project index": longitudinal
+querying needs a **shared codebook store** — the instance DB at
+`~/.config/bristlenose/bristlenose.db` that `design-multi-project.md` anticipates,
+or an equivalent. Without it, cross-study code queries cannot be right, only
+lucky. This should be stated as the dependency rather than the index, because a
+project index alone would ship a folder mode that under-reports.
+
+### Two traps in the time axis itself
+
+- **`Session.session_date` is nullable** (`datetime | None`, default `None`).
+  "Over time" needs a documented fallback chain — `session_date` →
+  `first_imported_at` → `Project.created_at` — and the tool must **return which
+  one it used**. Otherwise a folder of undated studies silently sorts by import
+  order and presents it as chronology.
+- **Denominators.** Five participants in one study and twenty in the next makes
+  raw counts across time actively misleading — *"mentions of cost tripled"* when
+  the sample tripled. Every longitudinal result carries its per-study denominator,
+  and the `instructions` say plainly not to compare raw counts across studies of
+  different sizes. Same family as the existing `_TRADE_OFF_NOTE`, and an assistant
+  will fall into it unprompted.
 
 ---
 
@@ -358,7 +436,8 @@ limits):
 | `get_themes` | theme groups with representative quotes |
 | `get_session_journey` | per-participant journey with timecode anchors |
 | `get_transcript` | one session, range-bounded — never whole-corpus |
-| `compare_projects` | folder scope: shared codes, recurring findings, divergence |
+| `trace_code` | folder scope: one code across studies over time, with per-study denominators and the date basis used (§3b) |
+| `find_duplicate_codes` | near-duplicate labels across the folder — the silent under-reporting guard (§3b) |
 | `get_framework` | one framework in full — the stance, not just the tag list (§5a) |
 | `draft_framework` | write a YAML to the user codebook dir; authoring, not applying (§5a) |
 
@@ -527,7 +606,7 @@ aspirational — the same reason it works for export.
 | Phase | Scope | Depends on |
 |---|---|---|
 | **1** | Single project, read-only, `/mcp` on serve | nothing new |
-| **2** | Folder scope — cross-project themes, codes, signals | project index / instance DB (`design-multi-project.md` §1) |
+| **2** | Folder scope — longitudinal code queries across studies | **a shared codebook store**, not just the project index (§3b) |
 | **3** | Writes as proposals | `ProposedTag` review UI already shipped; batch review hardened (§5) |
 
 **Bring-your-own-framework YAML is a phase-1 sibling, not a later phase.** It is

@@ -1,3 +1,22 @@
+---
+status: archived-reference
+last-trued: 2026-07-30
+trued-against: HEAD@main on 2026-07-30
+superseded-by: [website docs-src/ tree, README.md, man/bristlenose.1]
+---
+
+> **Archived 30 Jul 2026 — historical interest only; do not consult as a spec, and do not edit to keep it current.**
+>
+> This was the single-page user manual, rendered to `bristlenose.app/manual.html` at website deploy time. The website v2 docs cutover replaced it with a per-topic `docs-src/` tree, and `manual.html` was retired without a redirect — a decision recorded in [design-website-v2.md](../design-website-v2.md) §"manual.html retires". Nothing in the app ever linked to it. The URL now returns 404 by design.
+>
+> Its content was migrated topic-by-topic and is no longer maintained here; the body below is frozen at 29 Jun 2026 and has since drifted from the shipped CLI.
+>
+> Current authority:
+>
+> - **User-facing docs** — the website `docs-src/` tree (separate repo), published under `bristlenose.app/docs/`
+> - **CLI reference** — [`man/bristlenose.1`](../../man/bristlenose.1) and `bristlenose.app/docs/cli.html`
+> - **Install + quick start** — [README.md](../../README.md)
+
 # Manual {#getting-started}
 
 Bristlenose takes a folder of interview recordings and produces organised research findings — quotes grouped by screen and theme, sentiment flagged, friction surfaced. This page covers everything from installation to daily use.

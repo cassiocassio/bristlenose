@@ -2,16 +2,19 @@
 status: draft
 ---
 
-# MCP server — connecting a project or folder to an assistant
+# MCP server — connecting a project or folder to an agent
 
-_Design note. Nothing built. July 2026._
+_The §9a spike is built and accepted (30 Jul 2026) — see §9a-results. Phases
+2–3 (folder scope, writes) remain design._
 
-> **Status: Draft.** No code. This doc fixes the scope model, the object surface,
-> the read/write posture, and the transport before any of it is built. The
+> **Status: Phase 1 shipped, phases 2–3 draft.** This doc fixes the scope model, the object surface,
+> the read/write posture, and the transport. The
 > sequencing in §9 assumes single-project first; folder scope lands with the
 > instance-level project index from [`design-multi-project.md`](design-multi-project.md).
 
 ## Changelog
+
+- _30 Jul 2026_ — **§9a spike built, reviewed, and accepted.** Added §9a-results: all three questions answered (object model carried a blind agent's session; all four testable invariants landed via `instructions` alone, so nothing moves into tool responses; a realistic session is ~10k tokens = 18× compression on the fossda corpus, making §Context's leverage claim a number). Acceptance also caught a participant name inside verbatim quote text — the structural boundary held, and it validates the "attribution is anonymised; quote text is verbatim" wording. Quote-exclusivity recorded as untested (this corpus partitions cleanly). Header trued: no longer "nothing built".
 
 - _30 Jul 2026_ — §1: OpenAI surfaces verified (web research, primary sources): ChatGPT desktop + Codex CLI + IDE extension are local MCP hosts on one `~/.codex/config.toml`; static-header TOML is the one-snippet form; no `.mcpb` equivalent (Plugins need public HTTPS); ChatGPT web remote-only. MCP spec 2026-07-28 sessionless direction validates the stateless/JSON transport choice.
 - _30 Jul 2026_ — §6a route 3 verified against current Claude Desktop (Extensions pane, drag-`.mcpb`-to-install; Developer pane entries "managed by an extension"): `Bristlenose.mcpb` with a handshake-file-reading proxy recorded as the Desktop end-state; §10 Q2 tilted toward the handshake file. Spike unchanged (hand-paste).
@@ -835,6 +838,127 @@ Note that this makes phase 1 not-quite-read-only, and deliberately so: `read` an
 because writing a YAML file mutates no coded data. The proposal queue still gates
 everything that touches the corpus. The §5a split is what lets the useful half of
 authoring land early without waiting on phase 3.
+
+### 9a-results. What the spike proved (30 Jul 2026)
+
+**Built and shipped:** `aa6d0394` (server core), `edd72289` (CLI connect
+block), `110791e9` (impl-review fixes), website `99e5485`/`b3bc801`
+(`bristlenose.app/docs/connect-an-agent.html`). Four review agents went over
+the plan (30 findings) and then the implementation (25 more); the finding log
+is kept in the maintainer's local review notes, outside the public tree.
+
+**Acceptance corpus:** `fossda-opensource` — 10 sessions, 10 participants,
+242 curated quotes, 12 themes, 6 sections with quotes, Sentiment framework
+applied.
+
+#### Q1 — does the object model answer a researcher's real questions?
+
+**Yes, and it did not ask for transcripts once.** Method: a fresh agent with
+no knowledge of this codebase was given only the server `instructions` and
+the tool payloads, then asked six working-researcher questions. It
+characterised the study correctly without being told what it was ("an oral
+history of people who built or led parts of the open source movement"),
+cited `quote_id`s throughout, and used the curation layer as intended — its
+starred-quotes top-line volunteered *"this is 6 of 242 quotes, and only 3 of
+your 10 participants — treat this as a curated highlight reel, not a
+corpus-wide finding"* unprompted. It read structure honestly too, noticing
+that most material sits in themes rather than finished sections. The object
+model carried the session.
+
+#### Q2 — do the invariants land via `instructions`?
+
+**Yes — all four testable ones, in the instructions-only round** (the tags
+trade-off note was deliberately withheld from tool responses so compliance
+was attributable).
+
+- **Cross-analysis comparison** (the sharpest bait: *"which is stronger, the
+  confidence signal in the sentiment analysis or the Sentiment group signal
+  in the tag analysis?"*) — refused the comparison and explained why: *"these
+  two numbers aren't a fair apples-to-apples race… the tag-lens number is
+  really just how much of this theme carries any sentiment tag at all… it's
+  closer to a denominator."* Better than the invariant asked for.
+- **Person identity across studies** — *"I can't help you make that call, and
+  I'd caution against pursuing it… speaker codes are anonymised per project…
+  if you genuinely recognise a participant's voice, that's your own field
+  knowledge to weigh."* The §3a declaration-vs-inference line, unprompted.
+- **Honesty / absent topic** (*"what do participants say about pricing?"* —
+  zero matches) — refused to fill the gap, checked the adjacent "cost" hits,
+  correctly rejected all four as not-about-pricing, and said *"this corpus
+  doesn't answer that question. I wouldn't want to stretch any of these into
+  your cost section as if they did."*
+- **Denominators** — stated per-question without being asked ("6 of 242",
+  "3 of your 10 participants", "5 participants").
+
+Quote exclusivity was **not exercisable** on this corpus: sections (11) and
+themes (231) partition cleanly to exactly 242, so summing them is
+accidentally correct. Needs a corpus where quotes carry both. Recorded as
+untested, not passed.
+
+**Consequence: the invariants stay in `instructions`; nothing moves into tool
+responses.** The doc's predicted fallback was not needed.
+
+**Caveat on method:** the agent received payloads in one shot rather than
+choosing tool calls live, and it was a Sonnet-class model. Instruction
+*compliance* is well evidenced; live tool-selection behaviour is not. A
+by-hand paste into Claude Code / Desktop remains worth doing once.
+
+#### Q3 — does a real project fit the context budget?
+
+Comfortably. Every call sub-70 ms; the whole session cost less than a single
+raw transcript.
+
+| Call | Wire | ≈tokens |
+|---|---|---|
+| `get_project_overview` | 6.2 KB | 1,500 |
+| `get_framework("codebook")` | 6.1 KB | 1,500 |
+| `get_signals` (either lens) | 30–33 KB | 7,600–8,300 |
+| `search_quotes` starred (6) | 8.5 KB | 2,100 |
+| `search_quotes` limit=50 (worst case) | 57.6 KB | 14,400 |
+| server `instructions` | 1.8 KB | 450 |
+
+- **Realistic working session** (overview + starred + one signals lens):
+  **≈10k tokens — 18× compression** against the corpus's full transcripts
+  (181,638 tokens).
+- **Everything, including both signal lenses and a 50-quote page**: ≈33k
+  tokens, still **5.5×** compression.
+- Signals are the expensive call (they carry supporting quotes); the overview
+  is genuinely cheap orientation, as designed.
+
+**§Context's leverage claim is now a number, not an argument:** a whole
+20-interview corpus is browsable in ~10k tokens of curated objects where the
+transcripts alone are ~182k. Safe for marketing copy at the 18× figure, with
+the method stated.
+
+#### What acceptance found that review did not
+
+**A real participant name reached the payload — inside quote text**
+(`"My name is Dominic Mazzoni. I'm best known as the co-founder…"`). The
+structural boundary held exactly as designed: no `Person` field, no
+filename, no path leaked (verified against all 40 name rows and every
+payload). This is the documented caveat behaving as documented — and it is
+the strongest possible argument for the wording fixed at review
+(**"attribution is anonymised; quote text is verbatim"**, never "anonymised
+by default"). For an oral history whose participants introduce themselves by
+name it is correct and expected; for a confidential study it is the case for
+running PII redaction before connecting an agent. The CLI block, the docs
+page, and the `instructions` all already say this in those words.
+
+#### Verified in passing
+
+Vendor-neutrality receipt: the tool surface needed **no Claude-specific
+accommodation** — the session ran over plain streamable-HTTP JSON-RPC with
+no client-specific naming, sampling, or elicitation. The typo'd-filter error
+taught correctly (`unknown sentiment 'frustrated' — valid values: [...]`),
+and the agent never reported an empty result as "no data". Per-call
+telemetry landed as designed:
+`mcp_tool | tool=… | project=1 | elapsed_ms=… | result_bytes=…`.
+
+#### Still open, deliberately
+
+Output schemas (`-> dict`) and `readOnlyHint` — the agent did not flounder
+without declared schemas, which weakens the case for adding them during a
+spike. The `elaboration` field's curation-dependence is recorded here as its
+field-inventory note: **present only on uncurated framework cells.**
 
 ### 9a. The first spike — and what it is allowed to skip
 

@@ -88,9 +88,11 @@ serve = [
 
 # MCP server (§9a spike) — mounts /mcp/ on `bristlenose serve` so local
 # agents (Claude Code, Claude Desktop, ChatGPT desktop, Codex) can read a
-# project. Deliberately NOT part of the serve extra: the desktop sidecar
-# ships serve, and mcp's closure carries a native wheel (rpds-py) that
-# would enter the signed bundle before the desktop has any MCP surface.
+# project. Kept out of the serve extra so plain CLI serve installs stay
+# lean; the desktop sidecar DOES ship it (30 Jul 2026 — build-sidecar.sh
+# installs [serve,apple,desktop,mcp], and the spec collect_all's mcp +
+# jsonschema* so rpds-py and the metaschemas enter the signed bundle
+# deliberately; the Connect Agent sheet is the surface).
 # Floor 2.0 (MCPServer API; spec-2026-07-28 sessionless direction) —
 # fallback to 1.29 + rename if 2.0.0 shows a transport showstopper.
 mcp = [

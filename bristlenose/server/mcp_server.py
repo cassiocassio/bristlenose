@@ -679,8 +679,16 @@ def _tool_get_framework(db: Any, project_id: int, framework_id: str) -> dict:
 def create_mcp_server(
     session_factory: Callable[[], Any],
     last_run: Callable[[], dict | None],
+    on_tool_call: Callable[[], None] | None = None,
 ) -> Any:
-    """Build the MCPServer with the four §9a tools registered."""
+    """Build the MCPServer with the four §9a tools registered.
+
+    ``on_tool_call`` fires on every tool invocation that reaches a tool
+    body — including ones our own validation rejects (a mistyped filter is
+    still a connected agent), but not calls the MCP framework's JSON-schema
+    layer refuses first. The desktop host reads the resulting freshness off
+    ``/api/health`` for its sidebar badge.
+    """
     from mcp.server.mcpserver import MCPServer
 
     from bristlenose import __version__
@@ -694,6 +702,11 @@ def create_mcp_server(
 
     def _run(tool: str, project_id: int, fn: Callable[[Any], Any]) -> Any:
         start = time.perf_counter()
+        if on_tool_call is not None:
+            try:  # decoration — must never fail the tool call
+                on_tool_call()
+            except Exception:
+                logger.exception("mcp_activity_recorder_failed | tool=%s", tool)
         db = None
         try:
             # The factory call sits INSIDE the guard: a factory failure must
@@ -805,7 +818,16 @@ def mount_mcp_server(app: Any, session_factory: Callable[[], Any]) -> Any | None
     def _last_run() -> dict | None:
         return (getattr(app.state, "last_run", None) or {}).get(1)
 
-    server = create_mcp_server(session_factory, _last_run)
+    # Monotonic, not wall-clock: a wall clock could fake or erase activity
+    # on an NTP step. Trade-off, documented in health.py: mach_absolute_time
+    # pauses across sleep, so elapsed time under-counts by the sleep — fine
+    # for health's 2-minute freshness bool, wrong for anything longer.
+    app.state.mcp_last_tool_call = None
+
+    def _record_activity() -> None:
+        app.state.mcp_last_tool_call = time.monotonic()
+
+    server = create_mcp_server(session_factory, _last_run, _record_activity)
     http_app = server.streamable_http_app(
         streamable_http_path="/",
         json_response=True,

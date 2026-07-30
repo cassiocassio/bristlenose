@@ -1112,6 +1112,50 @@ def check_bundle_admin_panel() -> CheckResult:
     )
 
 
+def check_bundle_mcp() -> CheckResult:
+    """MCP server + its lazily-loaded schema data (third-party package data).
+
+    Fifth instance of the ``collect_all`` rule (mlx, mlx_whisper, sqladmin,
+    jsonschema_specifications): ``jsonschema_specifications`` ships its JSON
+    metaschemas as package data loaded lazily, package-relative — so a
+    bundle missing them imports cleanly, mounts /mcp, advertises
+    ``mcp.mounted: true``, and then fails the researcher's first agent
+    ``tools/call`` with a sanitised internal error. This gate reproduces the
+    lazy load at build time (build-all step 2a) so a spec regression fails
+    the build, not the first agent conversation. Skips (OK) when the mcp
+    extra is genuinely absent — that is a legal build, honestly advertised.
+    """
+    try:
+        import mcp  # noqa: F401
+    except ImportError:
+        return CheckResult(
+            status=CheckStatus.OK,
+            label="Bundle: mcp",
+            detail="mcp extra not installed (no /mcp endpoint — legal build)",
+        )
+    try:
+        import mcp.server.mcpserver  # noqa: F401
+        from jsonschema_specifications import REGISTRY
+
+        # Force the lazy package-data load the first tools/call would hit.
+        REGISTRY.contents("https://json-schema.org/draft/2020-12/schema")
+    except Exception as exc:
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="Bundle: mcp",
+            detail=(
+                "mcp present but broken — schema data or submodule missing "
+                f"(keep collect_all('mcp'/'jsonschema*') in the spec): {exc}"
+            ),
+            fix_key="bundle_dir_missing",
+        )
+    return CheckResult(
+        status=CheckStatus.OK,
+        label="Bundle: mcp",
+        detail="mcp server importable, schema registry loads",
+    )
+
+
 def run_bundle_integrity() -> DoctorReport:
     """Run only the bundle-integrity checks.
 
@@ -1127,6 +1171,7 @@ def run_bundle_integrity() -> DoctorReport:
         check_bundle_theme(),
         check_bundle_alembic(),
         check_bundle_admin_panel(),
+        check_bundle_mcp(),
     ])
 
 

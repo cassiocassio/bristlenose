@@ -722,6 +722,48 @@ class TestCliConnectBlock:
         assert "bristlenose[mcp]" in out
 
 
+class TestScopedMcpToken:
+    """The desktop injects _BRISTLENOSE_MCP_TOKEN — the one credential that
+    leaves the trust boundary. It must open /mcp and nothing else, and the
+    server token must stop opening /mcp when a scoped token exists."""
+
+    @pytest.fixture()
+    def scoped(self, monkeypatch):
+        monkeypatch.setenv("_BRISTLENOSE_MCP_TOKEN", "durable-mcp-token")
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "rotating-server-token"
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            yield client
+
+    def test_mcp_token_opens_mcp_only(self, scoped) -> None:
+        ok = _rpc(scoped, "durable-mcp-token", "tools/call",
+                  {"name": "get_project_overview", "arguments": {}})
+        assert ok.status_code == 200
+        # The same credential must NOT reach the persons endpoint or any
+        # other /api route — that is the proven leak this scoping closes.
+        api = scoped.get(
+            "/api/projects/1/people",
+            headers={"Authorization": "Bearer durable-mcp-token"},
+        )
+        assert api.status_code == 401
+
+    def test_server_token_no_longer_opens_mcp(self, scoped) -> None:
+        resp = _rpc(scoped, "rotating-server-token", "tools/call",
+                    {"name": "get_project_overview", "arguments": {}})
+        assert resp.status_code == 401
+
+    def test_cli_fallback_unchanged(self) -> None:
+        # No _BRISTLENOSE_MCP_TOKEN → the single printed token still works
+        # for /mcp, exactly as the CLI connect block promises.
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "single-cli-token"
+        app.state.mcp_token = None
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            resp = _rpc(client, "single-cli-token", "tools/call",
+                        {"name": "get_project_overview", "arguments": {}})
+            assert resp.status_code == 200
+
+
 class TestHealthAdvertisesMount:
     """The desktop host reads mcp.mounted from /api/health (auth-exempt) to
     decide whether its Connect Agent sheet can offer an address at all."""
@@ -729,6 +771,24 @@ class TestHealthAdvertisesMount:
     def test_health_reports_mounted(self, app_fx) -> None:
         payload = AuthTestClient(app_fx).get("/api/health").json()
         assert payload["mcp"]["mounted"] is True
+
+    def test_tool_call_marks_activity_in_health(self) -> None:
+        # Through the protocol, not a direct tool call — the recorder is
+        # wired at mount time, so only the mounted path can prove it.
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "test-mcp-token"
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            before = client.get("/api/health").json()["mcp"]
+            assert before["active"] is False
+            resp = _rpc(client, "test-mcp-token", "tools/call",
+                        {"name": "get_project_overview", "arguments": {}})
+            assert resp.status_code == 200
+            after = client.get("/api/health").json()["mcp"]
+            # A bare bool, deliberately: the auth-exempt health route must
+            # not publish an activity timeline (elapsed seconds) to every
+            # local process.
+            assert after["active"] is True
+            assert "active_seconds_ago" not in after
 
     def test_absent_mount_reports_false(self, monkeypatch) -> None:
         # create_app imports the symbol at call time, so patch the source
@@ -739,3 +799,25 @@ class TestHealthAdvertisesMount:
         app = create_app(dev=True, db_url="sqlite://")
         assert app.state.mcp_mounted is False
         assert AuthTestClient(app).get("/api/health").json()["mcp"]["mounted"] is False
+
+    def test_raising_activity_recorder_never_fails_the_tool(self, db) -> None:
+        # The recorder is decoration — same non-fatal rule the AutoCode
+        # progress write learned the hard way. A recorder that raises must
+        # not sink the payload.
+        from bristlenose.server.mcp_server import create_mcp_server
+
+        def _boom() -> None:
+            raise RuntimeError("recorder exploded")
+
+        server = create_mcp_server(
+            lambda: db, lambda: {"outcome": "completed"}, _boom
+        )
+        assert server is not None
+        # Reach the wrapper through a registered tool function.
+        import anyio
+
+        async def _call():
+            return await server.call_tool("get_project_overview", {"project_id": 1})
+
+        result = anyio.run(_call)
+        assert result is not None

@@ -75,7 +75,20 @@ class BearerTokenMiddleware(BaseHTTPMiddleware):
             if "text/html" in accept and "text/event-stream" not in accept:
                 return await call_next(request)
 
-        expected = getattr(request.app.state, "auth_token", None)
+        # /mcp validates against the MCP-scoped token, everything else
+        # against the server token. The two are the same value unless the
+        # host injected a separate _BRISTLENOSE_MCP_TOKEN (the macOS app
+        # does — its durable Keychain token). Scoping matters because the
+        # MCP token is the one credential that deliberately leaves the
+        # trust boundary (pasted into another vendor's config file): it
+        # must open the read-only /mcp tools and nothing else — never
+        # /api/* writes or the persons endpoints.
+        if is_mcp:
+            expected = getattr(request.app.state, "mcp_token", None) or getattr(
+                request.app.state, "auth_token", None
+            )
+        else:
+            expected = getattr(request.app.state, "auth_token", None)
         if expected is None:
             # No token configured (e.g. tests that opt out) — allow through.
             return await call_next(request)

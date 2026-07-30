@@ -126,6 +126,13 @@ def create_app(
     auth_token = os.environ.get("_BRISTLENOSE_AUTH_TOKEN") or secrets.token_urlsafe(32)
     os.environ["_BRISTLENOSE_AUTH_TOKEN"] = auth_token
     app.state.auth_token = auth_token
+    # MCP-scoped token: the one credential that deliberately leaves the
+    # trust boundary (the Connect Agent sheet puts it in another vendor's
+    # config file). When the host injects one, /mcp validates against it
+    # ONLY and it opens nothing else — an agent holding it cannot reach
+    # /api/* (participant names, curation writes). Absent (the CLI), /mcp
+    # falls back to the server token and behaviour is unchanged.
+    app.state.mcp_token = os.environ.get("_BRISTLENOSE_MCP_TOKEN") or None
     # Print BEFORE the "Report:" readiness line so ServeManager.swift
     # has the token before transitioning to .running.
     print(f"[bristlenose] auth-token: {auth_token}", flush=True)

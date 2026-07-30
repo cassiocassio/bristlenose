@@ -13,6 +13,7 @@ _Design note. Nothing built. July 2026._
 
 ## Changelog
 
+- _30 Jul 2026_ — added §6a (connect UX) and §6b (the Chat-lens question). §6a records two blockers on the obvious design: MCP servers are configured client-side so Bristlenose cannot open a session (and claude.ai in a browser cannot reach a local server at all), and the App Sandbox forbids writing another app's config — clipboard snippet is the unblocked floor. Refuses a "Claude lens", accepts a live-state sidebar badge, defers a toolbar icon. §6b treats the provider-backed Chat lens as a genuinely different proposal, states both objections at full strength, and recommends a scoped cited-question-box sequenced *after* MCP as a forcing function.
 - _30 Jul 2026_ — added §3b: longitudinal querying by code is the real cross-study capability. Records the silent-under-reporting failure mode, `merge-tags` as the reconciliation primitive (and its undocumented instance-wide reach), the nullable `session_date` fallback chain, and the denominator trap. Sharpens the phase-2 dependency from "project index" to "shared codebook store". §3a softened: deliberate recurrence (panel, diary, follow-up wave) is real and meaningful — the rule is inference versus declaration, not identity versus no identity.
 - _30 Jul 2026_ — added §3a and dropped phase 4. Cross-study person identity is not a deferred capability but a misread of research practice: recurrence is rare, and where unintended it is a liability the researcher already handles socially. `person_links` is no longer a dependency of this doc. (Superseded in part the same day — see the §3a softening above.)
 - _30 Jul 2026_ — added §5a: user-authored frameworks as first-class objects (read / discover / author), refining §5's write rule to "corpus mutations go through the proposal queue, artifact authoring writes a reviewable file". Records the user-codebook directory, three loader traps, and the trust surface.
@@ -577,6 +578,145 @@ choosing the second.
 
 ---
 
+## 6a. The connect experience
+
+Sketch: right-click a project or folder → **Connect agent** → pick a client →
+native sheet → connect. That shape is right. Two things in the middle of it do not
+work as drawn.
+
+### The direction of connection is backwards
+
+MCP servers are configured **in the client**. Bristlenose cannot open a chat
+session; the client reads its own config, connects to servers, and the human
+starts a conversation. So there is no "big button that opens Claude with your
+project loaded" — the button's real job is to **make Bristlenose connectable**, and
+the human then goes to their assistant.
+
+That also kills the web fallback: **claude.ai in a browser cannot reach a
+localhost MCP server.** The fallback for "no app installed" is *install the app*
+(or use the CLI client), not "open the website".
+
+### The sandbox blocks the obvious implementation
+
+The host app is sandboxed (App-Sandbox + Hardened-Runtime, accepted by App Store
+Connect since 0.20.0/2068). `desktop/Bristlenose/Bristlenose/Bristlenose.entitlements`
+carries **only** `keychain-access-groups` — no `files.user-selected.read-write`, no
+temporary file exceptions.
+
+**So the desktop app cannot write to another app's config file.** Anything under
+`~/Library/Application Support/<other app>/` is outside its container. Getting
+there would need a user-selected-file entitlement plus an open-panel where the
+researcher navigates to a foreign app's JSON — poor UX, and Apple Review
+scrutinises apps that poke at other apps' configuration.
+
+Three implementations that *are* sandbox-legal, in increasing order of polish:
+
+1. **Copy the config snippet to the clipboard.** Zero entitlements — pasteboard
+   writes are permitted. Works for every MCP client, today. This is the honest
+   floor and should exist regardless.
+2. **Write a config fragment via `NSSavePanel`.** The save panel itself grants
+   access to the chosen path, so this is sandbox-safe. Useful when a client can
+   consume a file.
+3. **Hand off via a client install format or URL scheme** — a double-clickable
+   extension bundle, or an install URL opened with `NSWorkspace.open`. This is the
+   only route that earns the phrase "big button". **Verify current client support
+   before designing to it** — this area moves fast and the format may have changed.
+
+Ship (1) first. It is unglamorous, universal, and unblocked.
+
+### The auth dance settles an open question
+
+§6 flags that `create_app()` mints a fresh `secrets.token_urlsafe(32)` per start.
+Put that behind a connect button and it becomes a defect the researcher meets
+weekly: the config written on Monday stops working on Tuesday. **The UI makes the
+case for a stable per-project token** — this is no longer an implementation
+preference, it is a prerequisite for the feature having a UI at all.
+
+### Where the state lives — and the one option to refuse
+
+| Surface | Verdict |
+|---|---|
+| Right-click → **Connect agent** → client list | **Yes.** Detect installed clients (app bundle present, CLI on `PATH`) so the list is honest; always include "Other…" for the snippet |
+| Sidebar badge | **Yes — if it means *connected now*.** The server sees the client's `initialize` handshake, so live state (and which client) is knowable. "Configured" is stale and meaningless; "connected" is useful. Fits the sidebar's existing availability vocabulary |
+| Toolbar icon | **Not in v1.** A toolbar icon implies an action taken *here*, and the action isn't here. At most a status affordance opening a small sheet — that's settings, not a primary control |
+| **A "Claude lens"** | **No — and this is a consistency check the positioning should catch.** A lens is a view of your data *inside* Bristlenose. There is no data to view; the conversation lives in the assistant. It would be an empty room with a signpost, and it quietly re-opens the chat-surface-in-the-report door that §Positioning closed |
+
+Branding inside the chat is not ours to control. What Bristlenose *can* name is the
+server, its tools, and its resources — a codebook or framework shows up under its
+own title in the client's UI. That is the whole of the available surface, and it is
+enough.
+
+### The sheet's real job is avoiding a dead end
+
+The failure mode after connecting is landing in an empty chat with no idea what to
+ask. So the sheet carries four things and nothing else:
+
+1. **The scope, restated** — *this project* or *this folder, N studies* — so what
+   was right-clicked is unambiguous at the moment of granting.
+2. **One plain line** on what is shared. Not a gradient, not a wizard (§Context).
+3. **The anonymisation toggle**, defaulting to on.
+4. **Two or three copyable starter prompts.** Cheap, and they teach the object
+   model — *"which codes are doing no work in this study?"*, *"trace perception of
+   cost across these five studies"*, *"draft a top-line from the starred quotes
+   only"*.
+
+### 6b. A "Chat" lens over the existing provider — a different proposal
+
+Distinct from the "Claude lens" refused above, and the refusal does **not** carry
+over. That one was a window onto an MCP connection happening elsewhere — an empty
+room. This is a real chat, in-app, powered by the provider Bristlenose is *already*
+configured with (Claude, ChatGPT, Azure, Gemini, or Ollama via `bristlenose/llm/`).
+
+It has genuine advantages, and they are not small:
+
+- **No connect problem at all.** No config file, no sandbox fight, no token
+  rotation, no client detection, no "install the app" fallback. Everything in §6a
+  evaporates.
+- **It answers the honest cost admitted in §Positioning** — narrow funnel, needs
+  setup, a researcher who never wires up MCP gets nothing. This reaches them.
+- **Ollama makes it genuinely local-first.** A conversational analysis surface
+  where nothing leaves the machine is something *no* MCP path can offer, and it is
+  on-brand in a way the MCP story is not.
+- **Context assembly is ours.** The server picks the right objects — codebook,
+  signals, starred quotes — rather than hoping a remote model calls the right
+  tools in the right order.
+
+And one advantage that is arguably the only *strategic* reason to build it:
+**citations that link back into the report.** An assistant in someone else's chat
+window cannot deep-link `q-p1-123`. A Bristlenose-native answer can footnote every
+claim to a clickable quote. That is a reason to exist in-app rather than being a
+worse copy of a chat app.
+
+### The two objections, stated at full strength
+
+1. **This is literally the alternative §Positioning rejected** — "a chat lens
+   inside Bristlenose". Reversing that is allowed, but it should be done knowingly
+   and the doc should not pretend the tension away.
+2. **You will build a worse chat UI.** Streaming, markdown, history, retry, edit,
+   branch, attachments, model switching — that is a product, and every hour of it
+   is an hour not spent on the object model that is actually defensible
+   (§Positioning "what this position has to defend").
+
+### The resolution: scope, and sequence
+
+**Scope.** The version that survives objection 2 is not a chat. It is a
+**question box with cited answers** — ask, get an answer footnoted to clickable
+quotes, no conversation history, no branching, no attachments, no model picker.
+That is perhaps a tenth of the build, keeps the §Positioning line intact ("a
+specific job", and the citation *is* the review affordance), and delivers the one
+thing an external assistant structurally cannot.
+
+**Sequence: after the MCP server, not instead of it.** Not a priority judgement —
+a forcing-function one. **MCP requires the object model to be good; a chat lens
+lets you get away with a mediocre one**, because prose can paper over a weak
+surface in a way tool calls cannot. Build the thing that keeps you honest first,
+then the chat lens is a thin client over a proven surface rather than a reason
+never to build one.
+
+This is a real open decision, not a settled one — recorded as §10 Q7.
+
+---
+
 ## 7. Hard exclusions
 
 `.bristlenose/` holds re-identification keys: `pii_summary.txt` (every original
@@ -656,6 +796,7 @@ caveat.
    authors.
 6. **Is the tool surface versioned per release or independently?** §9. Affects
    whether a Bristlenose upgrade can break a published skill.
+7. **Does a "Chat" lens get built, and if so when?** §6b. It reaches the researchers the glue position structurally misses, and Ollama makes it genuinely local-first — but it is the alternative §Positioning rejected, and unscoped it eats the roadmap. The recommendation is a cited question box, sequenced after the MCP server as a forcing function on the object model.
 
 ---
 

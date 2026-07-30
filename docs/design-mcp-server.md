@@ -13,6 +13,7 @@ _Design note. Nothing built. July 2026._
 
 ## Changelog
 
+- _30 Jul 2026_ — added §9a (the first spike). Records that nothing in §6a blocks the original idea — the sandbox blocks writing another app's config, not the server itself, and Claude Desktop/Code connect to local servers as the ordinary case. Defines a small unblocked spike (mount /mcp, 3–4 read tools, paste the config by hand, build no connect UI), the three things it proves that a doc cannot, and the subscription-vs-API-key difference between MCP and the Chat lens.
 - _30 Jul 2026_ — added §6c (guard rails for the Chat lens). The citation requirement is the guard rail: an uncitable request cannot be expressed in the response schema, so it falls out as an empty result rather than needing a refusal layer. The real risk is not off-topic use but a confident uncited research claim, and the load-bearing check is server-side validation of returned quote ids — a model can invent one, and without resolution the citations are theatre. Argues against a topic classifier; notes cost as the genuinely separate guard rail.
 - _30 Jul 2026_ — §3b substantially rewritten after a domain correction. Two errors fixed: (1) framing this as *longitudinal* — designed longitudinal qual is rare (common for NPS/SUS, not qual), and reading a concept across an accumulated back-catalogue is a different, more common thing; (2) treating differently-named codes in two studies as a split concept needing reconciliation — between studies discontinuity is the norm (new boss, new agenda, feature replaced), so merging may manufacture a finding rather than repair one. The continuity carrier is the **framework the researcher re-uses across unrelated projects**, so codes are shared by construction rather than reconciled after the fact. `find_duplicate_codes` and `merge-tags` demoted to manual consolidation aids. Denominators promoted as the load-bearing trap; the time axis demoted.
 - _30 Jul 2026_ — added §6a (connect UX) and §6b (the Chat-lens question). §6a records two blockers on the obvious design: MCP servers are configured client-side so Bristlenose cannot open a session (and claude.ai in a browser cannot reach a local server at all), and the App Sandbox forbids writing another app's config — clipboard snippet is the unblocked floor. Refuses a "Claude lens", accepts a live-state sidebar badge, defers a toolbar icon. §6b treats the provider-backed Chat lens as a genuinely different proposal, states both objections at full strength, and recommends a scoped cited-question-box sequenced *after* MCP as a forcing function.
@@ -846,6 +847,41 @@ Note that this makes phase 1 not-quite-read-only, and deliberately so: `read` an
 because writing a YAML file mutates no coded data. The proposal queue still gates
 everything that touches the corpus. The §5a split is what lets the useful half of
 authoring land early without waiting on phase 3.
+
+### 9a. The first spike — and what it is allowed to skip
+
+Nothing in §6a blocks the original idea. What the sandbox blocks is Bristlenose
+*writing another app's config file*; it does not touch whether a local MCP server
+works. Claude Desktop and Claude Code both connect to local servers — that is the
+ordinary case, not an exception. Only claude.ai in a browser cannot, and only
+because it is remote.
+
+So the spike is small and unblocked:
+
+- mount `/mcp` on the running serve, single project, read-only
+- three or four tools — `get_project_overview`, `search_quotes`, `get_signals`,
+  `get_framework`
+- the invariants from §3 in the server `instructions`
+- **paste the config by hand.** Build none of §6a's connect UI
+
+What it proves, none of which is knowable from a design doc:
+
+1. Does the object model actually answer a researcher's real questions, or does
+   the assistant flounder and fall back to asking for the transcripts?
+2. Do the invariants land? Quote exclusivity, tag double-counting, and the §3a
+   no-cross-study-person-join rule are all stated in `instructions` — an assistant
+   may simply ignore them. If it does, they need to move into tool responses.
+3. Is the context budget real in practice, or does a genuine project blow it?
+
+The spike also de-risks §6b, because the Chat lens needs the *same* object model
+and the same prompt discipline. Doing this first means the lens is built on a
+proven surface rather than being the thing that discovers the surface is weak.
+
+**The two are complementary, not competing** — see §6b, and note the practical
+difference nobody states up front: MCP spends the researcher's *assistant
+subscription*, while the Chat lens meters their own API key at roughly 20k input
+tokens per question (§6c). For anyone on a flat-rate assistant plan those are very
+different propositions.
 
 **The tool signatures are a public contract from day one.** If people write skills
 against this, the tool surface is no longer an internal API that can be reshaped

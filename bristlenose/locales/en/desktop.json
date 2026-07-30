@@ -513,7 +513,7 @@
       "chatgptCodex": "ChatGPT & Codex",
       "other": "Works with any MCP-compatible agent."
     },
-    "claudeDesktopHow": "In Claude Desktop: Settings \u2192 Developer \u2192 Edit Config or edit ~/Library/Application Support/Claude/claude_desktop_config.json adding under mcpServers:",
+    "claudeDesktopHow": "Quit Claude Desktop, then add to ~/Library/Application Support/Claude/claude_desktop_config.json (Settings \u2192 Developer \u2192 Edit Config opens it). If mcpServers already exists there, merge the bristlenose entry into it. Relaunch after saving:",
     "claudeCodeHow": "Paste in any terminal:",
     "chatgptCodexHow": "In ChatGPT: Settings \u2192 MCP servers \u2192 Add server \u2014 or add to ~/.codex/config.toml (one entry covers ChatGPT desktop, Codex CLI, and the IDE extension):",
     "copyConfig": "Copy Config",

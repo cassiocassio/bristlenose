@@ -19,9 +19,13 @@ struct ConnectAgentSheetTests {
         }
     }
 
-    @Test func claudeDesktopIsAJSONFragmentUnderMcpServers() {
+    @Test func claudeDesktopIsTheFullMcpServersWrapper() {
+        // A wrapper, not a fragment: the config file often has no
+        // mcpServers key, so the payload must stand alone as a new
+        // top-level key (QA walk, 31 Jul 2026).
         let payload = ConnectAgentSheet.Client.claudeDesktop
             .payload(endpoint: endpoint, token: token)
+        #expect(payload.hasPrefix("\"mcpServers\": {"))
         #expect(payload.contains("\"bristlenose\": {"))
         #expect(payload.contains("\"url\": \"\(endpoint)\""))
         #expect(payload.contains("\"Authorization\": \"Bearer \(token)\""))

@@ -98,11 +98,17 @@ struct ConnectAgentSheet: View {
         func payload(endpoint: String, token: String) -> String {
             switch self {
             case .claudeDesktop:
+                // The full mcpServers wrapper, not a bare fragment: the
+                // config file is machine-written and often has no
+                // mcpServers key at all (QA, 31 Jul 2026) — a fragment
+                // left the researcher synthesising JSON structure inside
+                // a 278-line state file. Paste-able as a new top-level
+                // key; the how-line covers the merge case.
                 return """
-                "bristlenose": {
-                  "url": "\(endpoint)",
-                  "headers": {
-                    "Authorization": "Bearer \(token)"
+                "mcpServers": {
+                  "bristlenose": {
+                    "url": "\(endpoint)",
+                    "headers": { "Authorization": "Bearer \(token)" }
                   }
                 }
                 """
@@ -220,8 +226,8 @@ struct ConnectAgentSheet: View {
     }
 
     /// Fixed-height so switching clients never reflows the sheet — sized to
-    /// the tallest dialect (Claude Desktop's six-line JSON) plus a wrapped
-    /// three-line how-to (translations run 25-35% longer than English).
+    /// the tallest dialect (Claude Desktop's seven-line wrapper) plus a
+    /// wrapped three-line how-to (translations run 25-35% longer).
     ///
     /// Branch order is load-bearing: `mcpAvailable` can only be trusted once
     /// a serve for THIS project has reported, so "start the project" must
@@ -275,7 +281,7 @@ struct ConnectAgentSheet: View {
             }
             Spacer(minLength: 0)
         }
-        .frame(height: 170, alignment: .topLeading)
+        .frame(height: 190, alignment: .topLeading)
     }
 
     private func settingsURL() -> URL? {

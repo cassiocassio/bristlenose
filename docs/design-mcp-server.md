@@ -13,6 +13,7 @@ _Design note. Nothing built. July 2026._
 
 ## Changelog
 
+- _30 Jul 2026_ — added §Positioning (glue not chatbot; the Figma-/design-system analogy, what the position must defend, framework YAML as the ecosystem artifact) and its consequences in §5, §9, §10.
 - _30 Jul 2026_ — initial draft.
 
 ---
@@ -68,6 +69,98 @@ real names. The gradient in
 [`methodology/consent-gradient.md`](methodology/consent-gradient.md) governs
 *telemetry to the vendor* and does not apply here — this is researcher-initiated
 egress to an assistant they chose.
+
+---
+
+## Positioning — glue, not a chatbot
+
+The rejected alternative was a **chat lens inside Bristlenose**: a conversational
+surface in the report, and beyond it a robot that interrogates participants
+directly — the Dovetail / Marvin shape, where the vendor owns the whole loop from
+interview to insight.
+
+The chosen position is the one Bristlenose already took with Miro: **be the glue
+between the best tools.** One well-modelled object graph, many consumers. The
+board integrations doc landed on an IR plus per-board renderers rather than
+building a whiteboard; the MCP server is the third instance of the same pattern,
+not a new one.
+
+### The Figma analogy is exact, and it is the argument
+
+Figma did not build a code generator. It exposed the **design system** — variables,
+components, tokens — as structured objects, and the ecosystem wrote the last mile
+as skills and project rules. Figma's value went *up* because its objects were
+legible, not because it shipped a chat box.
+
+Bristlenose's analogue of the design system is the **codebook**: `TagPrompt`
+carrying each code's `definition` / `apply_when` / `not_this`, content-hash
+versioned, refined by reject-with-reasons, instance-scoped so a boundary travels
+between studies. That is the thing that is worth connecting to, and the thing an
+assistant cannot invent for you.
+
+### Where the AI actually lives
+
+The position is **not** "no AI in the product" — AutoCode, the dynamic codebook
+builder, and signal elaboration all call LLMs from serve mode today. The line is
+sharper than that and worth stating in exactly these terms:
+
+> **Specific jobs with a review queue happen in-app. Open-ended conversation
+> happens in the assistant.**
+
+Tagging a corpus against a framework is a specific job; it gets a proposal queue,
+a diff, and an accept/deny trail. "What are we learning across these five studies"
+is not a specific job, and building a worse chat surface inside the report to host
+it is the mistake.
+
+### What this position has to defend
+
+A glue position only holds if you own an object nobody can regenerate. Ask what
+survives a competitor who has the raw transcripts and a good prompt:
+
+| Object | Regenerable from transcripts? |
+|---|---|
+| Quotes, sections, themes, sentiment | **Yes** — table stakes, not a moat |
+| Transcription, speaker ID, PII removal | Yes, but expensive and fiddly |
+| The curation layer (`QuoteState`, `QuoteEdit`, `DismissedSignal`) | **No** — accumulated human judgement |
+| The codebook with its rejection history (`TagPrompt` + `TagPromptDecision`) | **No** — a trained artifact |
+
+The two defensible rows are precisely the two the object surface calls
+highest-value in §3. That convergence is not luck, and it should drive emphasis:
+**lead with the codebook and the curation layer; treat extraction as table
+stakes.** It is also the answer to "what if the assistant's context window grows
+until it can just eat the transcripts" — that absorbs extraction, and touches
+neither defensible row.
+
+### The ecosystem artifact is the framework YAML, not the skill
+
+The format already exists and was already designed for publication. Nine templates
+ship in `bristlenose/server/codebook/` (garrett, norman, nielsen, morville,
+yablonski, plato, uxr, sentiment, cli-ux), and the schema carries `author`,
+`author_bio`, `author_links`, `preamble`, and `description` — third-party
+authorship fields, not internal config. `cli-ux.yaml` goes further and encodes an
+analytical *register*, instructing how the resulting report should read for a DX
+audience. That is a design system, in the Figma sense: a portable, authored,
+opinionated stance.
+
+So what an agency publishes is **their house framework as YAML, plus a skill that
+drives it** — their methodology, versionable in git, runnable by whoever they hand
+it to. That combination is the unit of exchange, and Bristlenose already ships
+half of it.
+
+**Concrete gap:** `import_template` resolves ids against the built-in registry only
+(`get_template` → `_TEMPLATES_DIR.glob("*.yaml")` in
+`bristlenose/server/codebook/__init__.py`). **There is no path today to import a
+YAML file the researcher wrote.** Bring-your-own-framework is a prerequisite for
+the ecosystem story, not a nice-to-have, and it is small.
+
+### The cost of this position, stated honestly
+
+An in-app chatbot is discoverable; a user who never connects an assistant gets
+nothing from any of this. The glue position needs the researcher to already have
+an assistant and to complete a setup step. That is a narrower funnel than
+Dovetail's, and it is a real trade — worth accepting because the cohort that wires
+up Figma MCP is the same cohort that will publish frameworks, but not worth
+pretending away.
 
 ---
 
@@ -244,6 +337,14 @@ provenance. That is the step the original workflow never had.
 
 Ship read-only. Add writes as a second phase, as proposals only.
 
+**The ecosystem position raises the stakes on batch review.** If a published skill
+proposes 200 tags and accepting them is 200 clicks, the skill is worse than
+useless and the ecosystem story dies at the first demo. `accept-all` / `deny-all`
+already exist (`routes/autocode.py:515,595`) but were built as a convenience;
+under this positioning they become load-bearing infrastructure and need the
+review affordances to match — group by code, preview the diff, accept a subset.
+Worth designing before the first third-party skill exists rather than after.
+
 ---
 
 ## 6. Transport and auth
@@ -303,8 +404,19 @@ aspirational — the same reason it works for export.
 |---|---|---|
 | **1** | Single project, read-only, `/mcp` on serve | nothing new |
 | **2** | Folder scope — cross-project themes, codes, signals | project index / instance DB (`design-multi-project.md` §1) |
-| **3** | Writes as proposals | `ProposedTag` review UI already shipped |
+| **3** | Writes as proposals | `ProposedTag` review UI already shipped; batch review hardened (§5) |
 | **4** | Cross-project *people* questions | `person_links` (`design-multi-project.md` §2) |
+
+**Bring-your-own-framework YAML is a phase-1 sibling, not a later phase.** It is
+independent of everything above, it is small, and without it the ecosystem
+argument in §Positioning has no artifact to trade. Ship it alongside the read-only
+server.
+
+**The tool signatures are a public contract from day one.** If people write skills
+against this, the tool surface is no longer an internal API that can be reshaped
+between releases — it needs versioning, a deprecation posture, and documentation
+outside the codebase. That is a cost of the glue position and should be accepted
+deliberately rather than discovered when the first published skill breaks.
 
 **Put `project_id` in every tool signature from day one** so folder scope is not a
 breaking change — the same discipline as the `apiBase()` rule in
@@ -327,6 +439,14 @@ a demo imply otherwise.
 3. **One serve per project, or an aggregating reader, for folder scope?** §6.
 4. **What is the actual compression ratio** on a real corpus? §Context. Needed
    before the leverage claim is made publicly.
+5. **Where do third-party frameworks come from?** §Positioning. A local file path
+   is the minimum. A published directory (git-installable, or a gallery in the
+   desktop app) is the version that creates the ecosystem — but it also creates a
+   trust surface, since a framework YAML carries `preamble` text that steers
+   analysis and report register. Decide the distribution model before inviting
+   authors.
+6. **Is the tool surface versioned per release or independently?** §9. Affects
+   whether a Bristlenose upgrade can break a published skill.
 
 ---
 

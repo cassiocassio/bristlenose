@@ -1246,6 +1246,18 @@ decision, and three others that must not be undone:
 | Claude opened *before* Bristlenose | **No sticky fallback** (§3.2) — one server deciding per call, self-healing; plus `notifications/tools/list_changed` when the server appears |
 | Switched to another shared project | Handshake rewritten; the next call picks it up and §3.2a marks it in the transcript |
 
+**The constraint itself is accepted, and that is a scoping decision.**
+"Bristlenose must be open, with the project open, to make queries" is
+comprehensible and native — this is a desktop app, not a cloud service, and
+every companion-app precedent we surveyed (Sketch, Figma, Beeper, Unity) says
+exactly "open the app". Researchers can hold that model.
+
+So the fallback text can be **plain rather than apologetic**, and a family of
+heroics is ruled out before anyone proposes it as an improvement: no
+auto-launching Bristlenose from the proxy (nothing in the survey does this), no
+background daemon keeping the server alive while the app is closed, and no
+always-on serve decoupled from the app's lifecycle.
+
 **The gap this criterion exposes: the cold-start window.** Click a shared
 project and ask Claude immediately — the serve is still booting (sidecar cold
 start, plus the documented ~15s first-launch code-signature stall). The
@@ -1264,7 +1276,10 @@ and infuriating, because they just did.
 
 State 2 is the one a naive implementation collapses into state 1, and the
 researcher's own action is what creates it — so it is the state most likely to
-be met and the most damaging to get wrong.
+be met and the most damaging to get wrong. Note that accepting the
+"Bristlenose must be open" constraint does **not** relax this: state 1's
+sentence is correct for a closed app and wrong three seconds after the
+researcher opened it and clicked the project.
 
 **Corollary for the handshake write.** Bristlenose should write the handshake
 **when the port is confirmed listening**, not when the serve is requested.

@@ -115,9 +115,32 @@ it for precisely the `--remote-debugging-port=0` case. Proxyman ships a
 per-session token at `…/mcp-handshake.json` (0600) — the same filename this plan
 picked independently.
 
-So the novel-and-unvalidated part of §3.1 is smaller than the first draft
-implied: the handshake pattern is well-trodden. What remains genuinely
-unattested is reading it **across an App Sandbox container boundary** (§6.1).
+**What Sketch is a reference for, and what it isn't.** Worth separating,
+because the axis it doesn't cover is the one that gates this plan.
+
+*It is good evidence for:* a **Mac-only** extension being a legitimate shipping
+shape — `platforms: ["darwin"]`, listed in Claude Desktop's directory, no
+Windows/Linux parity required, which matters because BN's desktop app is
+macOS-only and we'd otherwise wonder if that disqualifies us; a **companion
+desktop app** getting listed at all; a **non-engineer audience** (designers,
+much like researchers) being handed an extension rather than a config file; and
+the degradation model above.
+
+*It is not evidence for:* **the container read.** Sketch hardcodes
+`http://localhost:31126/mcp` — its proxy never reads a file from Sketch's
+container, so it crosses no sandbox boundary and tells us nothing about TCC.
+Same for Figma (3845) and Beeper (23373). Nor does it cover ephemeral ports,
+or a bearer token. So the single unattested step in §3.1 stays unattested
+however much prior art we accumulate, and §8.1 remains the gate.
+
+**And Sketch ships a cautionary tale that argues for our approach.** Their own
+[docs](https://www.sketch.com/docs/mcp-server/) say the port is user-changeable
+via `defaults write com.bohemiancoding.sketch3 mcpServerPortNumber` — but the
+bundle hardcodes 31126, so a user who changes it silently breaks the connector.
+That is the failure mode a hardcoded constant produces the moment the value can
+move. Ours moves *every launch*, and our `.mcpb` never auto-updates — so
+hardcoding anything the app can change would be that bug by construction. The
+handshake isn't gold-plating; it's the minimum for a port we don't control.
 
 **Two alternatives this surfaced, both worth a sentence before we commit:**
 

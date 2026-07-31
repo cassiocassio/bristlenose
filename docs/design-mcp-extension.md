@@ -1207,11 +1207,46 @@ shared*.
 **Only one row can carry it.** The handshake exists for the fronted shared
 project only, so at most one project is exposed at a time. Simple and honest.
 
-**Open: does shared-but-not-open deserve a quieter mark?** A second tier
-(filled = exposed now, outline = shared but not open) would let the researcher
-see the whole shared set without opening Settings. Against: it doubles the
-vocabulary for a fact Settings already answers, and the sidebar's job is
-*right now*. Worth trying on real pixels.
+**The state set — three, after cutting two.**
+
+| | State | Meaning | Treatment |
+|---|---|---|---|
+| 0 | Not shared | Cannot be reached, ever | **No badge** — absence is the information |
+| 1 | Shared, not open | Potential: open it and it is reachable | Pale / outline |
+| 2 | Shared, serving | Exposed now | Solid |
+
+Two candidate states were considered and cut:
+
+- **"Starting up" (a pulse).** Cut, and the reason generalises: during those
+  seconds the researcher is not looking at Bristlenose's sidebar — they are
+  looking at Claude's window waiting for an answer. **A badge cannot fix a
+  confusion the user is experiencing in another app.** The fix for cold start
+  is the proxy's own sentence (§5b state 2), and once that exists the badge
+  tier adds nothing. It would also last seconds and collide with the run ring,
+  which shares this slot and wins.
+- **Query activity** (the old `mcp.active` behaviour, as a flourish on state 2).
+  Cut: the researcher asked the question, so a glyph confirming it is noise.
+
+**Keep the pale tier**, despite being the marginal one, because under an
+allowlist the sidebar becomes the audit surface and *"what have I shared?"* is
+a question a researcher may be asked by someone else. Answering it at a glance
+rather than through Settings earns the extra tier.
+
+**Deliberately NOT on the badge: the Anonymise state.** "Exposed with names"
+and "exposed with codes only" is a materially different governance fact, but it
+is a second axis, and two axes on one glyph is unreadable. It belongs in the
+tooltip and the Settings list.
+
+**Known hole:** during a pipeline run the activity ring takes this slot
+(`RightSlot` precedence: ring > copy > agent > cloud), so an exposed project
+shows no antenna. Exposure remains true, just invisible. Probably acceptable —
+runs are transient — but it is a gap in the audit story rather than a rendering
+detail, and should be a deliberate acceptance rather than a discovery.
+
+**Also worth surfacing: a failed share.** If the handshake write fails
+(Keychain refusal, disk error) the toggle says shared and the project is not
+actually reachable. That is a UI-is-lying case and deserves a signal if it is
+detectable — but an error treatment, not a fourth badge tier.
 
 **Open: colour.** It is currently `.secondaryLabelColor`, matching the iCloud
 sibling, on the argument that ambient status joins the quiet family (and a Mac

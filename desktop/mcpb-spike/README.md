@@ -3,7 +3,8 @@
 **Spike artefact, not shipping code.** Validated the mechanism in
 [`docs/design-mcp-extension.md`](../../docs/design-mcp-extension.md) before
 committing to it. Kept because 90 working lines are worth more than a
-description of them.
+description of them. **The shipping extension grew from this and lives in
+[`desktop/mcpb/`](../mcpb/)** — develop there, not here.
 
 What it proved, end to end against a real `bristlenose serve`:
 

@@ -139,3 +139,60 @@ def test_parent_death_watcher_sigterms_self_when_ppid_changes(tmp_path: Path) ->
         f"expected SIGTERM (-15), got {result.returncode}; "
         f"stdout={result.stdout!r} stderr={result.stderr!r}"
     )
+
+
+class TestHandshakeCleanup:
+    """The sidecar deletes its own MCP handshake on exit — and ONLY its own.
+
+    The desktop host writes ``mcp-handshake.json`` for the fronted project;
+    a graceful sidecar exit must not leave a file naming a freed port. The
+    instance_id match is the safety property: a handshake rewritten by the
+    host for a successor serve must survive the predecessor's atexit.
+    """
+
+    def _handshake_dir(self, home: Path) -> Path:
+        d = home / "Library" / "Application Support" / "Bristlenose"
+        d.mkdir(parents=True)
+        return d
+
+    def test_deletes_own_handshake(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+        path = self._handshake_dir(tmp_path) / "mcp-handshake.json"
+        path.write_text('{"schema": 1, "port": 1234, "instance_id": "abc123"}')
+        cleanup = lifecycle.install_handshake_cleanup("abc123", register=False)
+        cleanup()
+        assert not path.exists()
+
+    def test_leaves_a_successors_handshake_alone(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+        path = self._handshake_dir(tmp_path) / "mcp-handshake.json"
+        path.write_text('{"schema": 1, "port": 5678, "instance_id": "successor"}')
+        cleanup = lifecycle.install_handshake_cleanup("abc123", register=False)
+        cleanup()
+        assert path.exists()
+
+    def test_missing_file_and_garbage_json_are_silent(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+        cleanup = lifecycle.install_handshake_cleanup("abc123", register=False)
+        cleanup()  # no directory at all — must not raise
+
+        path = self._handshake_dir(tmp_path) / "mcp-handshake.json"
+        path.write_text("not json {")
+        cleanup()  # unreadable — must not raise, must not delete
+        assert path.exists()
+
+    def test_none_instance_id_is_inert(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+        path = self._handshake_dir(tmp_path) / "mcp-handshake.json"
+        path.write_text('{"schema": 1, "instance_id": ""}')
+        cleanup = lifecycle.install_handshake_cleanup(None, register=False)
+        cleanup()
+        assert path.exists()

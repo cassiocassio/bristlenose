@@ -99,6 +99,13 @@ struct BristlenoseApp: App {
                     SettingsWindow.shared.i18n = i18n
                     volumeWatcher.projectIndex = projectIndex
                     projectIndex.refreshAvailability()
+                    // The handshake writer's policy input: which projects have
+                    // Agent Access on. A closure, not a stored ProjectIndex —
+                    // ServeManager stays ignorant of the sidebar model.
+                    // (Both objects are app-lifetime; the capture is benign.)
+                    serveManager.agentAccessResolver = { [weak projectIndex] path in
+                        projectIndex?.agentAccess(forPath: path) ?? false
+                    }
                     pipelineRunner.setProjectIndex(projectIndex)
                     pipelineRunner.scanAllProjects(projectIndex.projects)
                     removalStore.setProjectIndex(projectIndex)

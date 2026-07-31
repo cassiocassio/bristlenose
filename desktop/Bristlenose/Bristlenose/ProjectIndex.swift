@@ -69,6 +69,14 @@ struct Project: Identifiable, Hashable, Codable {
     /// manifest on every render. Reactive pipeline state lives in
     /// `PipelineRunner.state[project.id]`, not on this model.
     var lastPipelineRunAt: Date?
+    /// Whether agents may read this project (Turn On Agent Access). Host-side
+    /// — in `projects.json`, NOT the per-project DB: the DB is only readable
+    /// while *that* project's serve runs, so a DB flag makes "on, but not
+    /// open" unrenderable, and that is a badge state the design needs
+    /// (`docs/design-mcp-extension.md` §3.6a). A permission, not a
+    /// connection — turning it on with no agent installed succeeds.
+    /// `ServeManager.syncHandshake()` reads it via `agentAccessResolver`.
+    var agentAccess: Bool
 
     enum CodingKeys: String, CodingKey {
         case id, name, path, icon, position
@@ -82,6 +90,7 @@ struct Project: Identifiable, Hashable, Codable {
         case createdAt = "created_at"
         case lastOpened = "last_opened"
         case lastPipelineRunAt = "last_pipeline_run_at"
+        case agentAccess = "agent_access"
     }
 
     // Custom coding for bookmarkData (Base64 string in JSON instead of byte array).
@@ -110,6 +119,10 @@ struct Project: Identifiable, Hashable, Codable {
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         lastOpened = try container.decodeIfPresent(Date.self, forKey: .lastOpened)
         lastPipelineRunAt = try container.decodeIfPresent(Date.self, forKey: .lastPipelineRunAt)
+        // Decode-with-default like `position`/`collapsed` — older projects.json
+        // files have no agent_access key and must keep parsing. Default OFF:
+        // exposure is an explicit act (Option B, design §3.3).
+        agentAccess = try container.decodeIfPresent(Bool.self, forKey: .agentAccess) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -129,6 +142,7 @@ struct Project: Identifiable, Hashable, Codable {
         try container.encode(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(lastOpened, forKey: .lastOpened)
         try container.encodeIfPresent(lastPipelineRunAt, forKey: .lastPipelineRunAt)
+        try container.encode(agentAccess, forKey: .agentAccess)
     }
 
     init(id: UUID, name: String, path: String, inputFiles: [String]? = nil,
@@ -136,7 +150,8 @@ struct Project: Identifiable, Hashable, Codable {
          folderId: UUID? = nil, position: Int = 0, createdAt: Date = Date(),
          lastOpened: Date? = nil, lastPipelineRunAt: Date? = nil,
          lastSeenPath: String? = nil, resourceIdentifier: String? = nil,
-         schemaVersion: Int = Project.currentSchemaVersion) {
+         schemaVersion: Int = Project.currentSchemaVersion,
+         agentAccess: Bool = false) {
         self.id = id
         self.name = name
         self.path = path
@@ -152,6 +167,7 @@ struct Project: Identifiable, Hashable, Codable {
         self.createdAt = createdAt
         self.lastOpened = lastOpened
         self.lastPipelineRunAt = lastPipelineRunAt
+        self.agentAccess = agentAccess
     }
 
     /// Whether the project directory is currently accessible on disk.
@@ -487,6 +503,27 @@ final class ProjectIndex: ObservableObject {
         guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
         projects[index].icon = icon
         save()
+    }
+
+    /// Turn Agent Access on or off for a project (the §3.6a verb-swap menu
+    /// item's model half). A permission, not a connection — succeeds with no
+    /// agent installed. Posts `.bristlenoseAgentAccessChanged` so
+    /// `ServeManager` can write or delete the MCP handshake for the fronted
+    /// project without this store knowing about serve lifecycles.
+    func setAgentAccess(id: UUID, enabled: Bool) {
+        guard let index = projects.firstIndex(where: { $0.id == id }),
+              projects[index].agentAccess != enabled else { return }
+        projects[index].agentAccess = enabled
+        save()
+        NotificationCenter.default.post(name: .bristlenoseAgentAccessChanged, object: nil)
+    }
+
+    /// Whether the project at `path` has agent access on. Path-standardised
+    /// (same rule as `MCPTokenStore.accountKey` / `AgentActivity.samePath`)
+    /// because `ServeManager.currentProjectPath` holds the spawn-time spelling
+    /// while bookmark healing can respell `project.path`.
+    func agentAccess(forPath path: String) -> Bool {
+        projects.first { AgentActivity.samePath($0.path, path) }?.agentAccess ?? false
     }
 
     /// Stamp the current date as last-opened.
@@ -1183,4 +1220,11 @@ private extension JSONEncoder {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return encoder
     }()
+}
+
+extension Notification.Name {
+    /// A project's Agent Access flag flipped. `ServeManager` listens and
+    /// re-syncs the MCP handshake file for the fronted project — turning
+    /// access off deletes it (revocation is a file write, design §3.1).
+    static let bristlenoseAgentAccessChanged = Notification.Name("bristlenoseAgentAccessChanged")
 }

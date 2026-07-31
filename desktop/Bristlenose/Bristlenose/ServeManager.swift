@@ -59,11 +59,32 @@ final class ServeManager: ObservableObject {
     /// Injected into WKWebView via WKUserScript.
     @Published var authToken: String?
 
-    /// The durable, MCP-scoped token injected for the fronted serve — what
-    /// the Connect Agent sheet hands out. Nil when the Keychain refused
-    /// (the sheet then falls back to the rotating `authToken`, which /mcp
-    /// accepts in that case).
+    /// The MCP-scoped token injected for the fronted serve — what the Connect
+    /// Agent sheet hands out and what the handshake file carries. Durable
+    /// (Keychain, per project) in the normal case; when the Keychain refuses
+    /// (always on ad-hoc builds, -34018) this is an *ephemeral
+    /// process-lifetime scoped* token instead — never nil while a sidecar is
+    /// spawned, and NEVER the unscoped `authToken` (which opens /api/*:
+    /// participant names, curation writes). Design §3.1: write a scoped
+    /// token or write nothing.
     private(set) var mcpToken: String?
+
+    /// This serve's `mcp.instance_id` from `/api/health` — minted fresh by
+    /// the server each start. The handshake carries it so the proxy can
+    /// verify it is talking to *this* serve before the bearer leaves the
+    /// machine's memory (a stale handshake surviving SIGKILL can name a
+    /// port something else now owns).
+    private(set) var mcpInstanceID: String?
+
+    /// Injected at app level: does the project at this path have Agent
+    /// Access on? Kept as a closure so ServeManager doesn't grow a
+    /// ProjectIndex dependency. Unset (nil) reads as access-off: no
+    /// handshake is ever written on a build that forgot the wiring.
+    var agentAccessResolver: ((String) -> Bool)?
+
+    /// Observer for Agent Access flips (Turn On/Off Agent Access) — re-syncs
+    /// the handshake so turning access off deletes the file immediately.
+    private var agentAccessObserver: Any?
 
     /// Resolved sidecar mode for this process. Decided once at init from env
     /// + bundle layout. If resolution fails, `mode` is nil and `state` is
@@ -126,6 +147,22 @@ final class ServeManager: ObservableObject {
                 self?.restartIfRunning()
             }
         }
+
+        agentAccessObserver = NotificationCenter.default.addObserver(
+            forName: .bristlenoseAgentAccessChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.syncHandshake()
+            }
+        }
+
+        // Sweep a SIGKILL leftover (force quit, OOM, the Xcode stop button —
+        // none of which run the delete-on-stop path). Unconditional at host
+        // launch: no sidecar is running yet, so any file here is stale, and a
+        // stale file names a port something else may now own.
+        MCPHandshake.remove()
     }
 
     /// The URL to load in WKWebView when serve is running.
@@ -211,9 +248,19 @@ final class ServeManager: ObservableObject {
         // sets authToken directly via adoptFronted and never reaches here.
         authToken = nil
         serverVersion = nil
+        // The old sidecar's handshake names an instance that is going away;
+        // remove it now so the proxy reports honestly during the boot gap.
+        // The new one is written when this serve reaches .running and its
+        // instance_id has been read from /api/health (syncHandshake).
+        mcpInstanceID = nil
+        MCPHandshake.remove()
 
         // External mode: no subprocess. Just point at the existing server.
+        // No handshake either — we didn't spawn it, so we don't know its
+        // scoped token; a stale `mcpToken` from a previous bundled serve
+        // must not be advertised against a server that would 401 it.
         if case .external(let port) = mode {
+            mcpToken = nil
             log.info("connecting to external server on port \(port, privacy: .public)")
             state = .running(port: port)
             return
@@ -242,18 +289,21 @@ final class ServeManager: ObservableObject {
 
         // Stable per-project MCP bearer token, SCOPED: the server validates
         // /mcp against _BRISTLENOSE_MCP_TOKEN alone, so the one credential
-        // that leaves the trust boundary (pasted into another vendor's
-        // config file) opens the four read-only tools and nothing else —
-        // not /api/* writes, not participant names. The server's own
-        // rotating auth token keeps gating /api as before. Durable across
-        // restarts because the value comes from the Keychain, so an agent
-        // config pasted today doesn't 401 tomorrow. Keychain refusal
-        // degrades to no injection: /mcp then falls back to the rotating
-        // server token — MCP still works, only durability is lost.
+        // that leaves the trust boundary (handshake file, agent configs)
+        // opens the four read-only tools and nothing else — not /api/*
+        // writes, not participant names. The server's own rotating auth
+        // token keeps gating /api as before. Durable across restarts
+        // because the value comes from the Keychain, so an agent config
+        // made today doesn't 401 tomorrow. Keychain refusal (always on
+        // ad-hoc builds, -34018) mints an EPHEMERAL scoped token instead —
+        // never fall back to `authToken`: the handshake writer publishes
+        // this value into a file another vendor's process reads, and the
+        // unscoped token would open /api/* on every local QA build
+        // (design §3.1, review Finding 3). Cost of the ephemeral path is
+        // durability only.
         mcpToken = MCPTokenStore.token(forProjectPath: projectPath)
-        if let mcpToken {
-            env["_BRISTLENOSE_MCP_TOKEN"] = mcpToken
-        }
+            ?? MCPTokenStore.mintEphemeral()
+        env["_BRISTLENOSE_MCP_TOKEN"] = mcpToken
         proc.environment = env
 
         let pipe = Pipe()
@@ -338,6 +388,11 @@ final class ServeManager: ObservableObject {
         timeoutTask = nil
         drainParked()  // tear down any warm sidecar (Cmd+Q, folder/empty selection)
 
+        // The serve is going away — an agent must not find a live-looking
+        // handshake naming a port about to be freed.
+        mcpInstanceID = nil
+        MCPHandshake.remove()
+
         // External mode: no subprocess was spawned — just reset state.
         if case .external = mode, process == nil {
             readTask?.cancel()
@@ -400,6 +455,12 @@ final class ServeManager: ObservableObject {
         // use. Only the post-await main path needs this — the early-return arms
         // run synchronously from entry, before any owner change can interleave.
         let myGeneration = generation
+
+        // Full teardown — the handshake must not outlive the serve it names.
+        // Safe before the supersession guard below: a superseding start()
+        // already removed + will rewrite its own on .running.
+        mcpInstanceID = nil
+        MCPHandshake.remove()
 
         if case .external = mode, process == nil {
             readTask?.cancel()
@@ -584,9 +645,17 @@ final class ServeManager: ObservableObject {
     private func detachFronted() -> ParkedSidecar? {
         timeoutTask?.cancel()
         timeoutTask = nil
+        // The outgoing project stops being fronted; its handshake goes with
+        // it ("delete on adoptFronted for the outgoing project"). v1 scope:
+        // the handshake follows the fronted serve only — a parked-but-alive
+        // sidecar is deliberately not advertised (design §3.6 records the
+        // parked-badge question as scope for the UI pass).
+        mcpInstanceID = nil
+        MCPHandshake.remove()
         if case .running(let port) = state, let proc = process, let path = currentProjectPath {
             let entry = ParkedSidecar(
                 projectPath: path, port: port, authToken: authToken,
+                mcpToken: mcpToken,
                 serverVersion: serverVersion, process: proc, readTask: readTask, buffer: outputLines
             )
             log.info("sidecar_parked project=\(path, privacy: .public) port=\(port, privacy: .public)")
@@ -608,10 +677,16 @@ final class ServeManager: ObservableObject {
     /// by the caller before the liveness probe.
     private func adoptFronted(_ entry: ParkedSidecar, path: String) {
         agentActiveNow = false
-        // The warm re-point fronts a different project — re-read its durable
-        // token (idempotent Keychain read; the parked sidecar was spawned
-        // with this same value).
-        mcpToken = MCPTokenStore.token(forProjectPath: path)
+        // Restore the token the parked sidecar was SPAWNED with — not a
+        // fresh Keychain read. On the Keychain-refusal path the spawn-time
+        // value is an ephemeral mint; re-minting here would produce a token
+        // the parked process's env doesn't hold, and every handshake this
+        // instance then advertises would 401.
+        mcpToken = entry.mcpToken
+        // instance_id is re-read from /api/health (fetchServerVersion below
+        // the re-point) — syncHandshake writes the adopted project's
+        // handshake once it lands.
+        mcpInstanceID = nil
         process = entry.process
         readTask = entry.readTask
         authToken = entry.authToken
@@ -699,6 +774,11 @@ final class ServeManager: ObservableObject {
     private func handleTermination(processID procID: ObjectIdentifier, status: Int32) {
         if let fronted = process, ObjectIdentifier(fronted) == procID {
             timeoutTask?.cancel()
+            // The serve died — its handshake must not keep naming the freed
+            // port. (The sidecar deletes its own on a graceful exit; this
+            // covers the crash where its atexit never ran.)
+            mcpInstanceID = nil
+            MCPHandshake.remove()
             let lastLines = outputLines.suffix(5).joined(separator: "\n")
             if case .running = state {
                 state = .failed(error: "Server exited with code \(status)\n\(lastLines)")
@@ -740,6 +820,13 @@ final class ServeManager: ObservableObject {
         if let (data, _) = try? await URLSession.shared.data(from: url),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             parsed = AgentActivity.parse(json)
+            // Self-heal for the handshake: if the post-.running health fetch
+            // failed (instance_id never captured), the next poll tick
+            // repairs it — same reasoning as re-reading `mounted` above.
+            if let iid = AgentActivity.instanceID(json), iid != mcpInstanceID {
+                mcpInstanceID = iid
+                syncHandshake()
+            }
         }
         if parsed.mounted != mcpMounted { mcpMounted = parsed.mounted }
         if parsed.active != agentActiveNow { agentActiveNow = parsed.active }
@@ -757,6 +844,13 @@ final class ServeManager: ObservableObject {
                     self.serverVersion = version
                 }
                 self.mcpMounted = AgentActivity.parse(json).mounted
+                // This runs right after .running (cold start or warm
+                // re-point) — the moment the handshake becomes writable:
+                // port answering, instance_id known. Write-on-.running is
+                // the §5b corollary ("handshake exists" implies "port
+                // answers").
+                self.mcpInstanceID = AgentActivity.instanceID(json)
+                self.syncHandshake()
             }
         } catch {
             // Degraded, not broken: version stays nil (About shows build
@@ -765,6 +859,29 @@ final class ServeManager: ObservableObject {
             // pin the Connect sheet on "unavailable" for a whole session.
             log.info("health fetch failed (poll will retry): \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    /// Reconcile the MCP handshake file with the current serve state: write
+    /// it when the fronted project is `.running` with Agent Access on and
+    /// the serve's `instance_id` is known; delete it otherwise. Idempotent —
+    /// safe to call from every lifecycle edge and the 20s poll.
+    ///
+    /// The gate order is deliberate: `mcpToken` here is always the SCOPED
+    /// token (`start()` never leaves it nil while a sidecar is spawned, and
+    /// never falls back to `authToken`), so nothing this writes can open
+    /// `/api/*`. No `mcpMounted` gate: on a build without the mcp extra the
+    /// proxy's health probe / 404 path produces the honest "built without
+    /// agent support" sentence, which beats a missing-file "isn't open".
+    private func syncHandshake() {
+        guard case .running(let port) = state,
+              let path = currentProjectPath,
+              let instanceID = mcpInstanceID,
+              let token = mcpToken,
+              agentAccessResolver?(path) == true else {
+            MCPHandshake.remove()
+            return
+        }
+        MCPHandshake.write(port: port, token: token, instanceID: instanceID)
     }
 
     /// Strip ANSI escape sequences and OSC 8 hyperlinks for clean display.

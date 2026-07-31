@@ -61,6 +61,14 @@ enum MCPTokenStore {
         return minted
     }
 
+    /// A process-lifetime scoped token for when the Keychain refuses to
+    /// store (always on ad-hoc builds, -34018). Same shape and entropy as
+    /// the durable one; nothing downstream can tell them apart. Exists so
+    /// `ServeManager` NEVER falls back to the unscoped server token — the
+    /// handshake file and the Connect sheet must only ever carry a
+    /// credential that opens `/mcp` and nothing else (design §3.1).
+    static func mintEphemeral() -> String { mint() }
+
     /// Discard this project's token. The next serve start mints a fresh one,
     /// which is exactly what "Revoke" means to the researcher: previously
     /// pasted agent configs stop working.

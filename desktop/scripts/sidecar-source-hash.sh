@@ -27,6 +27,12 @@
 #                               rebuild and re-ship the stale bundle. (Added
 #                               14 Jul 2026 after a `collect_all("sqladmin")`
 #                               fix silently didn't rebuild on Cmd+R.)
+#   5. desktop/mcpb/           — the agent extension (manifest + proxy JS).
+#                               The .mcpb will ship inside Resources; an
+#                               edited proxy must trip the freshness gate or
+#                               a stale extension re-ships silently (design
+#                               docs/design-mcp-extension.md §4, review
+#                               Finding 26). Added 31 Jul 2026.
 # Test files are excluded — they don't change the shipped bundle, so editing one
 # must not force a sidecar rebuild. OS metadata (.DS_Store, AppleDouble ._*) is
 # ALSO excluded — Finder touching a hashed dir must not drift the fingerprint
@@ -45,6 +51,8 @@ sidecar_source_hash() {
             -not -name '.DS_Store' -not -name '._*' -print0
         _frontend_inputs_print0
         find desktop/bristlenose-sidecar.spec -type f -print0
+        find desktop/mcpb -type f \
+            -not -name '.DS_Store' -not -name '._*' -print0
       } | LC_ALL=C sort -z | xargs -0 shasum -a 256 ) | shasum -a 256 | cut -d ' ' -f1
 }
 

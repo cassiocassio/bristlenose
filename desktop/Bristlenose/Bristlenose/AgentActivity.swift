@@ -14,6 +14,17 @@ enum AgentActivity {
         return (mcp["mounted"] as? Bool ?? false, mcp["active"] as? Bool ?? false)
     }
 
+    /// The per-serve `mcp.instance_id` nonce (fresh every start, stable
+    /// within a serve). The handshake file carries it so the proxy can
+    /// verify it is talking to this serve before transmitting the bearer.
+    /// Nil on builds that predate it — the handshake is then unwritable,
+    /// which fails safe (no file beats a file the proxy can't verify).
+    static func instanceID(_ json: [String: Any]?) -> String? {
+        guard let mcp = json?["mcp"] as? [String: Any] else { return nil }
+        let iid = mcp["instance_id"] as? String
+        return (iid?.isEmpty == false) ? iid : nil
+    }
+
     /// Project-path identity for the connect sheet + badge. Bookmark healing
     /// (`refreshAvailability`) can respell `project.path` (`/private/…`,
     /// symlink resolution) while `currentProjectPath` holds the spawn-time

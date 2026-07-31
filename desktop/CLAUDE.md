@@ -249,10 +249,35 @@ Design + as-built record: `docs/design-mcp-server.md` §6a.
   host-side, data-protection Keychain (account = SHA-256 of the
   standardized project path, non-synchronizable). Injected as
   `_BRISTLENOSE_MCP_TOKEN`; the server validates `/mcp` against it ALONE
-  (scoped — it opens nothing else; `middleware.py`). Keychain refusal →
-  no injection → `/mcp` falls back to the rotating server token. NB
-  ad-hoc-signed builds (`SIGN_IDENTITY="-"`) hit `-34018` on every write,
-  so local QA builds always run the fallback — that's expected, not a bug.
+  (scoped — it opens nothing else; `middleware.py`). **Keychain refusal
+  mints an ephemeral process-lifetime scoped token instead**
+  (`MCPTokenStore.mintEphemeral`, injected the same way) — since 31 Jul
+  2026 there is NO fallback to the rotating server token: the handshake
+  writer publishes `mcpToken` into a file another vendor's process reads,
+  and the unscoped token opens `/api/*` (design-mcp-extension §3.1,
+  Finding 3). NB ad-hoc-signed builds (`SIGN_IDENTITY="-"`) hit `-34018`
+  on every write, so local QA builds always run the ephemeral path —
+  expected; the only loss is token durability across restarts. The
+  parked-sidecar re-point restores `entry.mcpToken` (spawn-time capture),
+  never a fresh Keychain read — a re-mint would 401 against the parked
+  process's baked env.
+- **Handshake file: `MCPHandshake.swift`** — `mcp-handshake.json` in
+  Application Support/Bristlenose (`{schema, port, token, instance_id,
+  updated_at}`; NO project field — accountKey hashes paths for a reason).
+  `ServeManager.syncHandshake()` writes it when the fronted project is
+  `.running` with `Project.agentAccess` on (flag lives in `projects.json`,
+  policy injected via `serveManager.agentAccessResolver` in
+  `BristlenoseApp.onAppear`) and the serve's `mcp.instance_id` has been
+  read off `/api/health`; deletes it on stop/shutdown/park/unshare/
+  fronted-death + an unconditional sweep at host launch. Write path is
+  credential-class: `O_EXCL|O_NOFOLLOW` 0600 temp + `rename(2)`,
+  backup-excluded — never `Data.write(.atomic)` (umask 0644, follows
+  symlinks). The sidecar deletes its own on graceful exit
+  (`lifecycle.install_handshake_cleanup`, instance_id-matched, desktop-
+  hosted only). Consumer: the `.mcpb` proxy in `desktop/mcpb/`
+  (built by `build-mcpb.sh`, gated by `check-mcpb.sh`, build-all step 2d;
+  `desktop/mcpb/**` is in `sidecar-source-hash.sh`, so proxy edits trip
+  the freshness gate — expect one sidecar rebuild after pulling this).
 - **`serveManager.mcpMounted` + `agentActiveNow`** come from `/api/health`
   (`mcp: {mounted, active}`, parsed by `AgentActivity.swift` — the Swift
   end of the contract `TestHealthAdvertisesMount` pins in Python). One

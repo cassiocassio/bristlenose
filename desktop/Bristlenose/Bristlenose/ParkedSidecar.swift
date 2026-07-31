@@ -29,6 +29,12 @@ struct ParkedSidecar {
     /// immutable for the process's lifetime — restoring it on re-point is what
     /// keeps the re-mounted WebView talking to the right sidecar.
     let authToken: String?
+    /// The MCP-scoped token this sidecar was SPAWNED with
+    /// (`_BRISTLENOSE_MCP_TOKEN`). Carried — not re-read from the Keychain on
+    /// re-point — because the Keychain-refusal path mints an ephemeral value
+    /// that only this capture knows; a fresh mint would 401 against the
+    /// process's baked env.
+    let mcpToken: String?
     /// Server version reported by this sidecar's `/api/health`, if fetched.
     let serverVersion: String?
     /// The live process. `isRunning` is the first (necessary, not sufficient)

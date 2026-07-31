@@ -25,12 +25,15 @@ sandboxed view cannot enumerate processes; the orphan must self-clean).
 from __future__ import annotations
 
 import atexit
+import json
 import logging
 import os
 import signal
 import sys
 import threading
 import time
+from collections.abc import Callable
+from pathlib import Path
 from types import FrameType, TracebackType
 
 logger = logging.getLogger(__name__)
@@ -117,6 +120,51 @@ def install_exit_logger() -> None:
     signal.signal(signal.SIGTERM, _on_sigterm)
     signal.signal(signal.SIGINT, _on_sigint)
     sys.excepthook = _on_exception
+
+
+def install_handshake_cleanup(
+    instance_id: str | None, *, register: bool = True
+) -> Callable[[], None]:
+    """Delete the desktop host's MCP handshake file on exit — if it's ours.
+
+    The host writes ``mcp-handshake.json`` (Application Support/Bristlenose)
+    when a project with agent access reaches ``.running``, and deletes it on
+    its own stop paths. This is the sidecar's symmetric half (same pattern as
+    the parent-death watcher: the orphan cleans itself): a graceful exit —
+    SIGTERM/SIGINT via uvicorn, parent-death self-SIGTERM — runs atexit, and
+    the stale file never outlives the port it names. SIGKILL can't be
+    covered here; the host sweeps unconditionally at launch for that.
+
+    ``instance_id`` match is the guard: we only ever delete a handshake that
+    names THIS serve. A file written for a newer instance (host already
+    restarted us and rewrote it) is left alone. Under App Sandbox
+    ``Path.home()`` resolves inside the container, which is exactly where
+    the host wrote the file; on a non-Mac or CLI process the path simply
+    never exists and the cleanup is a no-op.
+
+    Returns the cleanup callable (for tests); ``register=False`` skips the
+    ``atexit`` hookup.
+    """
+
+    def _cleanup() -> None:
+        if not instance_id:
+            return
+        path = (
+            Path.home() / "Library" / "Application Support" / "Bristlenose"
+            / "mcp-handshake.json"
+        )
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if data.get("instance_id") == instance_id:
+                path.unlink()
+        except (OSError, ValueError):
+            # Missing file, unreadable JSON, permissions — all mean there is
+            # nothing of ours to clean. Never let cleanup fail an exit.
+            pass
+
+    if register:
+        atexit.register(_cleanup)
+    return _cleanup
 
 
 def install_parent_death_watcher(*, poll_interval_sec: float = 2.0) -> None:

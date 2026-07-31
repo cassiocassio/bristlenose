@@ -143,6 +143,15 @@ def create_app(
     # handshake that names project A while B is served detectable rather
     # than silent. A nonce, not a secret — safe on the auth-exempt route.
     app.state.mcp_instance_id = secrets.token_hex(8)
+    # Desktop-hosted sidecars delete their own handshake file on graceful
+    # exit (the instance_id match means we can never delete a successor's).
+    # Gated on the host env var: only a desktop host ever writes one, and
+    # the gate keeps test-suite create_app churn from stacking atexit
+    # handlers. Symmetric with install_parent_death_watcher's gate in cli.
+    if os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":
+        from bristlenose.server.lifecycle import install_handshake_cleanup
+
+        install_handshake_cleanup(app.state.mcp_instance_id)
     # Print BEFORE the "Report:" readiness line so ServeManager.swift
     # has the token before transitioning to .running.
     print(f"[bristlenose] auth-token: {auth_token}", flush=True)

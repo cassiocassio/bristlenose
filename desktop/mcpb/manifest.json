@@ -1,0 +1,22 @@
+{
+  "manifest_version": "0.3",
+  "name": "bristlenose",
+  "display_name": "Bristlenose",
+  "version": "0.1.0",
+  "description": "Ask your Bristlenose study — quotes, themes, signals, frameworks — from your agent. Read-only.",
+  "author": { "name": "Bristlenose" },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"]
+    }
+  },
+  "tools_generated": true,
+  "compatibility": {
+    "claude_desktop": ">=1.13576.0",
+    "platforms": ["darwin"],
+    "runtimes": { "node": ">=18" }
+  }
+}

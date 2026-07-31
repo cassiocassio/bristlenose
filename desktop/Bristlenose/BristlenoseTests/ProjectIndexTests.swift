@@ -764,4 +764,44 @@ struct ProjectIndexTests {
         defer { try? FileManager.default.removeItem(at: tempDir) }
         #expect(LocateFlow.folderLooksAnalysed(url: tempDir) == false)
     }
+
+    // MARK: - Agent access (MCP handshake policy input)
+
+    @MainActor @Test func project_withoutAgentAccessKey_decodesToOff() throws {
+        // Older projects.json files have no agent_access key and MUST keep
+        // parsing (decode-with-default, like position/collapsed) — and the
+        // default is OFF: exposure is an explicit act.
+        let json = """
+        {"id": "\(UUID().uuidString)", "name": "Old", "path": "/tmp/old",
+         "created_at": "2026-01-01T00:00:00Z"}
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let project = try decoder.decode(Project.self, from: Data(json.utf8))
+        #expect(project.agentAccess == false)
+    }
+
+    @MainActor @Test func agentAccess_roundTripsThroughPersistence() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let project = index.addProject(name: "Shared", path: "/tmp/shared")
+        index.setAgentAccess(id: project.id, enabled: true)
+
+        // Fresh index over the same file — the flag must survive the disk trip.
+        let reloaded = ProjectIndex(fileURL: tempDir.appendingPathComponent("projects.json"))
+        #expect(reloaded.projects.first?.agentAccess == true)
+    }
+
+    @MainActor @Test func agentAccessForPath_standardisesThePath() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let project = index.addProject(name: "Spelled", path: "/tmp/spelled")
+        index.setAgentAccess(id: project.id, enabled: true)
+        // Trailing slash / respelling must still resolve (ServeManager holds
+        // the spawn-time spelling; bookmark healing can respell project.path).
+        #expect(index.agentAccess(forPath: "/tmp/spelled/") == true)
+        #expect(index.agentAccess(forPath: "/tmp/other") == false)
+    }
 }

@@ -220,6 +220,22 @@ _bn_t2c=$SECONDS
 bn_step_ok 2c elapsed=$((SECONDS-_bn_t2c)) detail="no itms-services literal in PYZ or on disk"
 
 # ------------------------------------------------------------
+# 2d. Agent extension (.mcpb)
+# ------------------------------------------------------------
+# Packs desktop/mcpb/ into desktop/build/Bristlenose.mcpb — a plain zip,
+# release-stripped of the dev handshake override — then check-mcpb.sh
+# gates it (allowlisted members, settled manifest values, no Mach-O, no
+# .env, no dev-override string). See docs/design-mcp-extension.md §4.
+# Cheap (<1s); fails the build rather than shipping a broken or leaky
+# extension. Embedding into Contents/Resources + the install button are
+# the surface pass (handoff 2).
+bn_step_start 2d Build "Agent extension (.mcpb)" \
+    narrative="Packs the Claude Desktop extension and gates its contents."
+_bn_t2d=$SECONDS
+"$SCRIPT_DIR/build-mcpb.sh" >/dev/null
+bn_step_ok 2d elapsed=$((SECONDS-_bn_t2d)) detail="Bristlenose.mcpb packed + gated"
+
+# ------------------------------------------------------------
 # 3-4. Signing — now performed inside ensure-sidecar (step 2)
 # ------------------------------------------------------------
 # Both sign-ffmpeg.sh and sign-sidecar.sh are invoked by ensure-sidecar.sh under

@@ -1,0 +1,4 @@
+# `mcpb pack` does NOT honour .gitignore — this file is the only guard if
+# anyone ever packs this directory with the CLI instead of build-mcpb.sh
+# (which zips an explicit allowlist and needs no ignore semantics).
+.env*

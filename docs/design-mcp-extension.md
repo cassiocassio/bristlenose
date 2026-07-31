@@ -1392,11 +1392,22 @@ audit, SBOM or Dependabot.
 
 ### Two things the spike revealed that were not on the list
 
-1. **404 and 401 need different messages.** A build without the `mcp` extra
-   returns `404` on `/mcp/`; a wrong or revoked token returns `401`. These are
-   *"this build has no agent support"* and *"the connection was revoked"* — a
-   proxy that lumps both into "upstream error" hides the difference at exactly
-   the moment the researcher needs it. Not badge states; message states.
+1. **404 and 401 need different messages, and each must name its own remedy.**
+   A build without the `mcp` extra returns `404` on `/mcp/`; a stale or rotated
+   credential returns `401`. A proxy that lumps both into "upstream error"
+   hides the difference at exactly the moment the researcher needs it.
+   - **404** — *"This copy of Bristlenose was built without agent support. No
+     setting will enable it."* Say the last part: pointing at a Settings pane
+     that cannot fix it is worse than admitting the limitation.
+   - **401** — *"Tell the person to open **Bristlenose ▸ Settings ▸ MCP
+     Agents** (⌘,) and check this project is still shared."* Two precisions
+     that are easy to get wrong: **name the app**, because this text is read
+     inside Claude Desktop where "Settings" means Claude's; and note that
+     unsharing *deletes* the handshake, so that path yields the "not shared"
+     message rather than a 401 — a 401 is a stale/rotated credential, and
+     sending the researcher to reinstall would be a rabbit-hole.
+   This makes the Settings pane's name a **dependency of the proxy's copy**,
+   not merely a label.
 2. **The stale-sidecar trap bites this feature hard.** The running bundled
    sidecar reported `mcp: None` because it predated today's build — so the
    proxy correctly reported an upstream 404, and anyone testing the extension

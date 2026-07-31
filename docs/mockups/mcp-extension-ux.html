@@ -445,8 +445,8 @@ In <span class="yellow">IKEA discovery</span> (6 sessions, 214 quotes) the check
   <tr><td>Ready</td><td class="yes">200</td><td>The real answer, from real quotes.</td></tr>
   <tr><td>Not shared / BN closed</td><td>no handshake</td><td>“Bristlenose isn't open, so there is no study data available… <b>Do not answer from memory.</b>”</td></tr>
   <tr><td>BN starting</td><td>port silent</td><td>“Bristlenose is starting — ask again in a moment.”</td></tr>
-  <tr><td><b>No agent support in this build</b></td><td class="no">404</td><td>“This copy of Bristlenose was built without agent support.”</td></tr>
-  <tr><td><b>Connection revoked</b></td><td class="no">401</td><td>“This connection is no longer valid — reconnect in Bristlenose → Settings → MCP Agents.”</td></tr>
+  <tr><td><b>No agent support in this build</b></td><td class="no">404</td><td>“This copy of Bristlenose was built without agent support. No setting will enable it.”</td></tr>
+  <tr><td><b>Credential rejected</b></td><td class="no">401</td><td>“Bristlenose rejected this connection. Tell the person to open <b>Bristlenose ▸ Settings ▸ MCP&nbsp;Agents</b> (⌘,) and check this project is still shared.”</td></tr>
 </table>
 </div></div>
 <div class="commentary">
@@ -458,9 +458,15 @@ In <span class="yellow">IKEA discovery</span> (6 sessions, 214 quotes) the check
     <li><b>404 and 401 mean opposite things.</b> One is “your installation can't do this”, the
       other is “your access was withdrawn”. Same HTTP-shaped failure, completely different
       next action.</li>
-    <li><b>401 is the revocation experience</b>, which we'd never mocked. It's what the researcher
-      sees after unsharing a project or rotating a token — so it's the sentence that makes
-      revocation <i>legible</i> rather than just effective.</li>
+    <li><b>Name the app, not just “Settings”.</b> This text is read <i>inside Claude Desktop</i>,
+      where “Settings” means Claude's. It has to say <b>Bristlenose ▸ Settings ▸ MCP Agents</b> —
+      app, then pane. (Which makes the pane's name a dependency of this copy, not just a label.)</li>
+    <li><b>Correction from tracing it:</b> unsharing <i>deletes</i> the handshake, so that path
+      gives the “not shared” message, not a 401. A 401 means the credential is stale or was
+      rotated — so the remedy is checking the share state, not reinstalling anything. Getting that
+      wrong would send the researcher down a reinstall rabbit-hole.</li>
+    <li><b>404 has no remedy</b>, and should say so. Pointing at a Settings pane that cannot fix it
+      is worse than admitting the build lacks the feature.</li>
     <li>Every message ends with the same anti-fabrication clause. A model handed “no data” will
       otherwise apologise and answer from memory — the worst possible failure for a tool whose
       output lands in a research deliverable.</li>

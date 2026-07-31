@@ -285,9 +285,9 @@ and the second one cost unrelated settings.</p>
   <div style="background:var(--mac-sheet);border-radius:10px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.16);max-width:520px;margin:0 auto">
     <div style="display:flex;gap:2px;padding:8px 10px;border-bottom:1px solid var(--frame-border);font-size:11px;text-align:center">
       <div style="flex:1;padding:5px 2px"><div style="font-size:17px">🖌</div>Appearance</div>
-      <div style="flex:1;padding:5px 2px"><div style="font-size:17px">🧠</div>LLM</div>
+      <div style="flex:1;padding:5px 2px"><div style="font-size:17px">🧠</div>LLM Provider</div>
       <div style="flex:1;padding:5px 2px"><div style="font-size:17px">〰️</div>Transcription</div>
-      <div style="flex:1;padding:5px 2px;background:rgba(120,120,128,.18);border-radius:6px"><div style="font-size:17px">📡</div><b>MCP</b></div>
+      <div style="flex:1;padding:5px 2px;background:rgba(120,120,128,.18);border-radius:6px"><div style="font-size:17px">📡</div><b>MCP Agents</b></div>
     </div>
     <div style="padding:16px">
       <div style="font:600 14px/1.35 -apple-system">Agents read whichever project is selected in Bristlenose</div>
@@ -301,13 +301,20 @@ and the second one cost unrelated settings.</p>
   </div>
 </div></div>
 <div class="commentary">
-  <b style="color:var(--ink)">The tab label writes itself: <code>LLM</code> is already an acronym
-  tab.</b> So <b>MCP</b> sits beside Appearance · LLM · Transcription without looking foreign, and
-  it's the word the researcher has already met in Claude Desktop's own “Local MCP servers” pane.
+  <b style="color:var(--ink)">Appearance · LLM Provider · Transcription · MCP Agents.</b>
+  Renaming the shipped <code>LLM</code> tab is part of the proposal, and it earns its churn.
   <ul>
-    <li><b>“Agents”</b> is the discoverable alternative — better for someone hunting “how do I
-      connect Claude”, worse because it reads as a sibling of <b>LLM</b> (which is also about
-      models). Worth seeing both on real pixels; the mock shows <b>MCP</b>.</li>
+    <li><b>It makes the two axes obvious.</b> Bare “LLM” next to “Agents” reads as two flavours of
+      the same thing. <b>LLM Provider</b> vs <b>MCP Agents</b> says it plainly: which model does
+      the analysis (in), versus which agents can read the results (out).</li>
+    <li><b>“LLM” names a domain, not a setting</b> — it tells you the topic but not what you do
+      there. The pane is a provider list with a detail pane (the Mail Accounts shape), so
+      <i>Provider</i> is what it actually configures, and it's already Bristlenose's own word.</li>
+    <li><b>The singular/plural asymmetry is deliberate.</b> One <i>Provider</i> — only one is
+      active at a time, by design. Several <i>Agents</i> — Claude Desktop and Codex can both be
+      connected at once. The labels encode a real difference rather than just matching shape.</li>
+    <li><b>Cost, stated:</b> one string × 20 locales, right after the seeding pass. Small, and
+      better now than once the cohort has muscle memory.</li>
     <li><b>Icon: the antenna</b> — the same glyph as the sidebar badge. One concept, one symbol,
       two surfaces.</li>
     <li><b>Last in the list.</b> Appearance is chrome, LLM and Transcription are the engines; who

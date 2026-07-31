@@ -983,11 +983,29 @@ showing an empty state or telling them to go and select something first. So:
    a researcher who never learns the feature exists is not helped by a
    one-click install. Welcome is where that gap closes.
 
-**Naming.** "MCP Agents" over "Connections" (too vague). The jargon is
-correctly targeted — the researcher meets "MCP" in Claude Desktop's own
-"Local MCP servers" pane, so the word is already theirs by the time they get
-here. Worth a look at plain "Agents" on real pixels, though it risks reading as
-the LLM providers in the neighbouring pane.
+**Naming — and a rename of a shipped tab.** The Settings tabs become
+**Appearance · LLM Provider · Transcription · MCP Agents**.
+
+"MCP Agents" over "Connections" (too vague); the jargon is correctly targeted,
+since the researcher meets "MCP" in Claude Desktop's own "Local MCP servers"
+pane. And renaming the existing `LLM` tab to **LLM Provider** earns its churn:
+
+- **It separates the axes.** Bare "LLM" beside "Agents" reads as two flavours
+  of one thing. "LLM Provider" vs "MCP Agents" says which model does the
+  analysis (in) versus which agents can read the results (out).
+- **"LLM" names a domain, not a setting.** The pane is a provider list plus
+  detail (the Mail Accounts shape), so *Provider* is what it configures — and
+  it is already the codebase's own word (`bristlenose/llm/CLAUDE.md`).
+- **The singular/plural asymmetry is deliberate:** one *Provider* (only one is
+  active, by design), several *Agents* (Claude Desktop and Codex can both be
+  connected). The labels encode a real difference.
+- **Widths are fine** — "Transcription" (13) remains the longest.
+- **Cost:** one string × 20 locales (`settingsTabs.llm`), immediately after the
+  seeding pass. Small, and cheaper now than once the cohort has muscle memory.
+
+Icon: the antenna, matching the sidebar badge — one concept, one symbol, two
+surfaces. Position: last, since Appearance is chrome and the other two are the
+engines, while who can read your work is a fourth concern.
 
 ---
 

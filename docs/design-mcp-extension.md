@@ -837,6 +837,73 @@ not exist — the extension and `mcp-proxy` both re-resolve. The caveat is the
 price of the generic path, and the right long-term measure of success is that
 most researchers never open tab four.
 
+### 3.7 Where does this live? — the entry point, reopened by Option B
+
+Option B changed what the sheet can actually *do*, so the per-project
+right-click needs re-deciding. Two facts first, because they constrain
+everything:
+
+- **Bristlenose cannot perform the Claude Desktop grant.** Under B the project
+  is chosen in Claude Desktop's own directory picker (`user_config`), and the
+  premise of this whole plan is that we cannot write their config. For that tab
+  we can only *instruct*: install this, then point it at this folder. A
+  right-click on project X that says "Connect Agent" promises something that
+  path cannot deliver from our side.
+- **`user_config` is per-extension**, and extension identity is the manifest
+  `name` (which must be globally unique). So one install grants one project,
+  changed by editing the extension's settings inside Claude Desktop. That is
+  Option B's real friction cost, and it should be stated rather than discovered.
+
+The six jobs, and their true lifetimes:
+
+| | Job | Lifetime |
+|---|---|---|
+| J1 | Install the extension | once, machine-wide |
+| J2 | Point the extension at a project | per project — **happens in Claude Desktop**, we can only name the path |
+| J3 | Claude Code / Codex command | per project |
+| J4 | Raw URL + token (Generic MCP) | per project |
+| J5 | Anonymise | per project — ours |
+| J6 | See which project is exposed | per project — the badge |
+
+Only J1 is machine-wide. That is the whole of the mismatch.
+
+**The sane options:**
+
+1. **App-level only** — Settings ▸ Connections, or a `Bristlenose ▸ Connect
+   Agent…` menu item, owning J1–J4 with a project picker inside.
+   *Against:* four of the six jobs are per-project, so the pane must re-ask
+   "which project?" — reintroducing a selection the sidebar already expresses,
+   and losing the "what I right-clicked is what I'm granting" clarity.
+2. **Split by lifetime (recommended).** J1 (+ install status) moves to
+   Settings ▸ Connections; the per-project sheet keeps J2–J5 and links to
+   Settings for install. The Claude Desktop tab becomes instructional and
+   genuinely useful: *"Install the extension in Settings, then point it at this
+   folder"* with the path and a **Reveal in Finder** — which is exactly what
+   the researcher needs in Claude's picker.
+   *Against:* two places. But they are two genuinely different lifetimes, which
+   is the honest reason for two places rather than an accident.
+3. **Menu bar only** — one `Connect Agent…` window with a project selector at
+   the top. Self-contained, but it duplicates the sidebar's job of expressing
+   which project you mean.
+4. **Make the antenna badge the entry point** — click the exposed-project glyph
+   to open the sheet. Attractive as direct manipulation, but it collides with
+   the settled sidebar rule that status is *attention, not affordance* (the
+   Mail model). Flagging, not proposing.
+5. **Leave it as-is** — keep the per-project right-click and accept that its
+   Claude Desktop tab is instructional. Cheapest, and defensible *if* the copy
+   is honest about what the researcher must do in Claude Desktop. It is the
+   right answer if we want zero structural change before the TCC spike settles.
+
+**Recommendation: 2**, with 5 as the acceptable interim. The split matches the
+two real lifetimes, it is what the Mac review independently argued for, and it
+removes the "machine-wide act inside a per-project consent sheet" mismatch
+without inventing a new surface. Reveal-in-Finder is the small piece that makes
+the instructional tab actually work.
+
+**One thing to settle either way:** the sheet's header. Under B the grant *is*
+per project, so "Connect an agent to 'IKEA discovery'" is honest again — but
+only for J2–J5. If J1 stays in the sheet, the header over-promises.
+
 ## 4. Packaging
 
 ```

@@ -1491,6 +1491,32 @@ audit, SBOM or Dependabot.
    the wrong thing entirely. The freshness gate exists for this; do not bypass
    it while testing MCP.
 
+## 5d. Docs that become false when this ships — the truing list
+
+Recorded now because none of it is built, and every item below currently
+describes the **hand-paste sheet** accurately. The day the extension lands they
+become wrong, and wrong docs are worse than absent ones.
+
+| Doc | What must change |
+|---|---|
+| `SECURITY.md` item 7 | Describes connecting via a pasted config and a durable per-project Keychain token. Becomes: install an extension, share per project, credential lives in a runtime handshake. The "how do I revoke" answer changes too. |
+| `desktop/CLAUDE.md` § MCP / Connect Agent | Documents the right-click sheet, the three copy dialects, `MCPTokenStore` injection and the activity badge. All four change: Settings pane, four tabs, handshake, exposure badge. |
+| `bristlenose/server/CLAUDE.md` § MCP endpoint | The scoped-token rule survives; add the handshake contract, `instance_id`, and that the CLI must mint its own scoped token before writing one. |
+| `docs/design-mcp-server.md` §6a "as built" | Currently records the sheet as shipped. Needs a pointer that §6a route 3 superseded it, not a rewrite — the as-built record has value as history. |
+| **Website `docs-src/connect-an-agent.md`** | The whole Mac flow. Currently: right-click → Connect Agent → paste. Becomes: Settings ▸ MCP Agents → Install, then Share per project. Use `::: fork` — this is **Mac-app-only**; the CLI half stays as-is. |
+| `THIRD-PARTY-BINARIES.md` | Only if the proxy ever gains dependencies. The spike's is dependency-free, so **currently nothing to add** — worth re-checking at build time rather than assuming. |
+| Locales | `settingsTabs.llm` rename + `settingsTabs.mcpAgents` + the pane's strings + the proxy's five messages, × 20 full locales. |
+
+**Not affected, verified (§3.7a):** README, man page, `docs-src/cli.md`, the SPA
+settings nav, and the SPA config reference — the CLI's connect story does not
+change, and nothing outside the desktop renders `settingsTabs`.
+
+**Sequencing note:** the website page is the one with a *deploy* dependency —
+it is a separate repo and an rsync the maintainer runs. Landing app changes
+before the page is trued leaves the published instructions describing a UI that
+no longer exists, which is the worse direction of drift. True the page in the
+same pass, deploy when the build ships.
+
 ## 6. Risks and what could bite
 
 From the research pass (issue numbers are `modelcontextprotocol/mcpb`) and from

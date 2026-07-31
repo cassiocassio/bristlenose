@@ -828,8 +828,33 @@ readers and in both appearances.
 fact; it should name the moment and the remedy, per HIG `foundations/writing.md`
 (*"guide people on actions they can take"*):
 
-> ℹ This address changes each time Bristlenose starts. Copy it again after a
-> restart.
+> ℹ The port number changes each time Bristlenose starts — copy the address
+> again after a restart. Your token stays the same.
+
+**Be exact about which half moves, because the two channels invert.** In the
+desktop app the address is kernel-assigned (`--port 0`) so the port changes
+every launch, while the token is durable per project from the Keychain. On the
+CLI it is the other way round: `serve` defaults to port 8150 (stable, for
+bookmark-and-reload) and the token is a fresh `secrets.token_urlsafe(32)` per
+start. So:
+
+| | Address | Token |
+|---|---|---|
+| Desktop app | changes every launch | stable (Keychain, per project) |
+| CLI `serve` | stable (8150) | changes every restart |
+
+The Generic MCP tab lives in the desktop sheet, so desktop semantics apply and
+"the port changes, the token doesn't" is the accurate line. The website's
+connect page already forks this correctly per channel — keep them in step if
+either changes. (Caveat for QA builds: on ad-hoc signing the Keychain write
+fails with -34018 and the token falls back to the rotating one, so a *local*
+build behaves like the CLI. That is a build artefact, not the shipped
+behaviour.)
+
+Saying the token is stable is also honest disclosure rather than mere
+convenience: it tells the researcher that what they handed over persists until
+revoked, which is the fact the Revoke affordance (review-log Finding 72) is
+owed against.
 
 One observation worth keeping in view: that this line needs saying at all is a
 property of the *path*, not the copy. On the three named tabs the problem does

@@ -820,13 +820,15 @@ final class ServeManager: ObservableObject {
         if let (data, _) = try? await URLSession.shared.data(from: url),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             parsed = AgentActivity.parse(json)
-            // Self-heal for the handshake: if the post-.running health fetch
-            // failed (instance_id never captured), the next poll tick
-            // repairs it — same reasoning as re-reading `mounted` above.
-            if let iid = AgentActivity.instanceID(json), iid != mcpInstanceID {
+            if let iid = AgentActivity.instanceID(json) {
                 mcpInstanceID = iid
-                syncHandshake()
             }
+            // Self-heal UNCONDITIONALLY, not only on an instance_id change:
+            // a one-off write failure at the .running transition (dir
+            // momentarily unwritable) would otherwise be terminal for the
+            // whole serve, because the id never changes again. The sync is
+            // idempotent and the file is sub-1KB — a 20s rewrite is free.
+            syncHandshake()
         }
         if parsed.mounted != mcpMounted { mcpMounted = parsed.mounted }
         if parsed.active != agentActiveNow { agentActiveNow = parsed.active }
@@ -840,6 +842,13 @@ final class ServeManager: ObservableObject {
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                // A completion that arrives after a project switch must not
+                // write the OLD serve's identity over the new one — with the
+                // handshake in play that would advertise the new port under
+                // the old instance_id (proxy reads it as stale → "isn't
+                // open" until the 20s poll heals it). Port equality is the
+                // ownership check: only the still-fronted serve may land.
+                guard case .running(let current) = self.state, current == port else { return }
                 if let version = json["version"] as? String {
                     self.serverVersion = version
                 }

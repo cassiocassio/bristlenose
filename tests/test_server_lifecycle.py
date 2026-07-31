@@ -187,12 +187,20 @@ class TestHandshakeCleanup:
         cleanup()  # unreadable — must not raise, must not delete
         assert path.exists()
 
+        path.write_text("[]")  # valid JSON, wrong shape — .get would raise
+        cleanup()  # an atexit traceback would land in the failure popover
+        assert path.exists()
+
     def test_none_instance_id_is_inert(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
         path = self._handshake_dir(tmp_path) / "mcp-handshake.json"
-        path.write_text('{"schema": 1, "instance_id": ""}')
+        # JSON null: without the `if not instance_id` guard,
+        # None == None would delete a file that isn't ours — the null
+        # fixture is what makes this test pin the guard (an "" fixture
+        # passes with or without it).
+        path.write_text('{"schema": 1, "instance_id": null}')
         cleanup = lifecycle.install_handshake_cleanup(None, register=False)
         cleanup()
         assert path.exists()

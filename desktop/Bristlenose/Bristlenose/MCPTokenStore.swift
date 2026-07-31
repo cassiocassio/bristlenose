@@ -46,9 +46,11 @@ enum MCPTokenStore {
     /// behaviour — the alternative is a token that follows a folder the
     /// researcher may have moved deliberately.
     ///
-    /// Returns `nil` only if the Keychain refuses to store — in which case the
-    /// caller falls back to the sidecar's own rotating token, so MCP still
-    /// works and only the durability of a pasted config is lost.
+    /// Returns `nil` only if the Keychain refuses to store — in which case
+    /// the caller mints an ephemeral scoped token via `mintEphemeral()`
+    /// (NEVER the sidecar's unscoped rotating token — that one opens
+    /// `/api/*` and the handshake file publishes whatever the caller
+    /// holds). MCP still works; only durability across restarts is lost.
     static func token(forProjectPath path: String) -> String? {
         let account = accountKey(for: path)
         if let existing = read(account: account) { return existing }

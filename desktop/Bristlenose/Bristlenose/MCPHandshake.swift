@@ -22,6 +22,14 @@ import OSLog
 /// the planted symlink is the temp's name; `O_NOFOLLOW` covers the rest —
 /// keep both. Spike-verified 31 Jul 2026, design §5c.)
 ///
+/// Scope caveat: both flags guard the FINAL path component only — a
+/// symlinked *parent* (`…/Application Support/Bristlenose → synced dir`)
+/// is not detected. Unreachable in the sandboxed shipping build (the
+/// container chain is 0700, minted by secinitd); on an unsandboxed dev
+/// build the same-user attacker this would stop can already read the
+/// study (design §3.1's leading argument). Revisit with O_NOFOLLOW_ANY
+/// if a CLI handshake writer ever ships.
+///
 /// **No `project` field, ever.** `MCPTokenStore.accountKey` hashes the project
 /// path precisely so client folder names never become readable metadata;
 /// a cleartext path here would undo that for no gain — the proxy doesn't
@@ -87,16 +95,23 @@ enum MCPHandshake {
             log.error("handshake temp open refused: errno=\(errno, privacy: .public)")
             return false
         }
+        var writeErrno: Int32 = 0
         var ok = data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> Bool in
             var written = 0
             while written < raw.count {
                 let n = Darwin.write(fd, raw.baseAddress!.advanced(by: written), raw.count - written)
-                if n <= 0 { return false }
+                if n <= 0 {
+                    writeErrno = errno
+                    return false
+                }
                 written += n
             }
             return true
         }
-        if close(fd) != 0 { ok = false }
+        if close(fd) != 0 {
+            if ok { writeErrno = errno }
+            ok = false
+        }
 
         // Runtime artefact with no restore value — keep it out of Time
         // Machine. Set on the temp; the xattr travels through the rename.
@@ -106,12 +121,15 @@ enum MCPHandshake {
 
         guard ok else {
             unlink(tempURL.path)
-            log.error("handshake write failed")
+            log.error("handshake write failed: errno=\(writeErrno, privacy: .public)")
             return false
         }
         guard rename(tempURL.path, finalURL.path) == 0 else {
+            // Capture BEFORE the unlink — its errno would clobber rename's
+            // and the log would diagnose the wrong failure.
+            let renameErrno = errno
             unlink(tempURL.path)
-            log.error("handshake rename failed: errno=\(errno, privacy: .public)")
+            log.error("handshake rename failed: errno=\(renameErrno, privacy: .public)")
             return false
         }
         log.info("handshake written port=\(port, privacy: .public)")

@@ -155,7 +155,10 @@ def install_handshake_cleanup(
         )
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
-            if data.get("instance_id") == instance_id:
+            # isinstance, not duck-typing: valid JSON that isn't an object
+            # (``[]``, ``null``) must not raise — an atexit traceback would
+            # land in the host's captured stdout and the failure popover.
+            if isinstance(data, dict) and data.get("instance_id") == instance_id:
                 path.unlink()
         except (OSError, ValueError):
             # Missing file, unreadable JSON, permissions — all mean there is

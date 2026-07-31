@@ -46,6 +46,18 @@ def _proxy_tools() -> list[dict]:
     return json.loads(match.group(1))
 
 
+def _flat_types(spec: dict) -> set[str]:
+    """Every JSON-Schema type a property spec admits, flattening anyOf."""
+    types: set[str] = set()
+    for variant in spec.get("anyOf", [spec]):
+        t = variant.get("type")
+        if isinstance(t, str):
+            types.add(t)
+        elif isinstance(t, list):
+            types.update(t)
+    return types
+
+
 def _server_tools() -> list[dict]:
     app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
     app.state.auth_token = "test-mcp-token"
@@ -77,6 +89,17 @@ class TestProxyToolParity:
             assert set(proxy_schema.get("required", [])) == set(
                 server_schema.get("required", [])
             ), f"{name}: required params drifted"
+            # Types too — a limit that went integer→string would otherwise
+            # pass on names alone. The server wraps optional params in
+            # anyOf/[type, "null"]; accept the proxy naming the non-null arm.
+            for prop, proxy_spec in proxy_schema.get("properties", {}).items():
+                server_spec = server_schema["properties"][prop]
+                server_types = _flat_types(server_spec)
+                proxy_type = proxy_spec.get("type")
+                assert proxy_type in server_types, (
+                    f"{name}.{prop}: proxy type {proxy_type!r} not among "
+                    f"server types {sorted(server_types)}"
+                )
 
     def test_proxy_descriptions_are_present(self) -> None:
         # The static list is what the model sees when Bristlenose is closed —

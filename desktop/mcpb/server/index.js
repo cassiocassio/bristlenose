@@ -140,7 +140,12 @@ async function probe(hs) {
     if (!r.ok) return { ok: false, why: "unhealthy" };
     const j = await r.json();
     if (!j.version) return { ok: false, why: "not-bristlenose" };
-    if (hs.instance_id && j.mcp?.instance_id && j.mcp.instance_id !== hs.instance_id)
+    // FAIL CLOSED on a missing mcp.instance_id: any host that writes a
+    // handshake ships a serve that emits one, so an answer without it is a
+    // squatter mimicking the health shape, not an old Bristlenose. A
+    // `j.mcp?.instance_id &&` conjunct here would skip the comparison and
+    // transmit the bearer — the exact hole the check exists to close.
+    if (hs.instance_id && j.mcp?.instance_id !== hs.instance_id)
       return { ok: false, why: "stale-instance" };
     // Health says the build has no /mcp mount: report it before the bearer
     // is ever transmitted. Absent mcp block = older build; let the call's
@@ -221,12 +226,17 @@ async function handle(msg) {
   // reported to break the entire host client, not just one connector
   // (design §3.2b). Everything slow lives inside tool calls.
   if (msg.method === "initialize") {
-    clientInitialized = true;
     return {
       protocolVersion: "2025-06-18",
       capabilities: { tools: { listChanged: true } },
       serverInfo: { name: "bristlenose", version: VERSION },
     };
+  }
+  // Server→client notifications are only legal after the client confirms —
+  // gate list_changed on this, not on our initialize answer.
+  if (msg.method === "notifications/initialized") {
+    clientInitialized = true;
+    return {};
   }
   if (msg.method === "tools/list") return { tools: TOOLS };
   if (msg.method === "tools/call") {
@@ -240,6 +250,11 @@ async function handle(msg) {
 }
 
 let buf = "";
+// Without an encoding, each chunk is a Buffer decoded independently — a
+// multi-byte UTF-8 character split across a 64KB pipe boundary would decode
+// to U+FFFD and silently corrupt the frame. setEncoding runs a StringDecoder
+// that holds partial sequences across chunks.
+process.stdin.setEncoding("utf8");
 process.stdin.on("data", async (d) => {
   buf += d;
   let i;

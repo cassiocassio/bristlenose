@@ -414,9 +414,14 @@ The fallback is most of what makes this *non-error-prone*: the tools are always
 listed, and the ordinary failure is a sentence telling the researcher what to
 do. (Not *all* — see §5a for the one state that is genuinely broken.)
 
-### 3.2a The subject-change announcement — the highest-leverage part
+### 3.2a The subject-change announcement — SUPERSEDED by the Option B decision
 
-Under Option A (§3.3) the agent's subject follows Bristlenose. The failure that
+_Kept because it is the argument that produced the decision, not because it
+ships. Under Option B the agent is pinned to one project, so there is no
+subject change to announce. If Option A is ever revisited, this section is why
+it needs more than labelling — and why labelling isn't enough._
+
+Under Option A (§3.3) the agent's subject would follow Bristlenose. The failure that
 matters is not technical:
 
 > Researcher asks Claude about IKEA. Alt-tabs to Bristlenose to check a quote,
@@ -494,8 +499,66 @@ switches what the agent can read.
 **Option B — pin to one project.** `user_config` could hold a project path.
 Keeps the narrow grant, reintroduces per-project setup.
 
-Recommendation: **A**, with the labelling above, plus §3.2a. B remains
-available later as an optional `user_config` field if a cohort researcher asks.
+**DECIDED 31 Jul 2026: Option B.** Not on UX grounds — A is friendlier — but
+because A has a failure mode no labelling can reach.
+
+**The case that settles it.** A researcher may keep a study on local models
+(Ollama) *precisely because* they are contractually barred from putting that
+data on a network. Under Option A, merely clicking that project in the sidebar
+while an agent is connected sends its quotes to a cloud model vendor. And
+§3.2a's announcement cannot save it: the notice is prepended to the tool result
+that *already carries the quotes*, so the warning and the disclosure arrive in
+the same message. A project that was never meant to be exposed gets exposed by
+a gesture that means "let me look at this", with the contractual breach already
+committed by the time anything is said.
+
+"The researcher can already see both projects on the same trackpad" is true and
+irrelevant — what changes is not who can *see* the data but whether it crosses
+the network. That is the line the researcher signed something about.
+
+So: **exposure must be an explicit act.** `user_config` with
+`type: "directory"` is the mechanism, exactly as Anthropic's own filesystem
+extension uses it — the researcher picks a folder once, in Claude Desktop's own
+UI, and it interpolates via `${user_config.…}`.
+
+**v1 scope: one project.** The researcher picks that project's folder.
+
+### 3.3a Folder grant — the phase-2 shape, and why it's the better end state
+
+Recorded now because it changes nothing in v1 but must not be foreclosed by it.
+
+A per-folder grant is not merely a bigger unit of scope. **It makes the sidebar
+folder the exposure control**: grant a folder once, then move projects
+deliberately into and out of it. Exposure becomes direct manipulation — a drag
+— which is both the most Mac-native way to express consent and the most
+legible. The secret Ollama-only study simply never gets dragged in, and pulling
+a project out is a revocation gesture that needs no dialog.
+
+It also unlocks the capability we actually want: **asking questions across a
+whole folder** — the cross-study querying that `design-mcp-server.md` §3b
+describes, where a code re-used across unrelated projects is the continuity
+carrier.
+
+**What v1 must not foreclose**, so this drops in rather than being rewritten:
+
+- **The `user_config` field is already right.** `type: "directory"` points at a
+  folder path — a *project* folder in v1, a *folder of projects* in phase 2.
+  Same field, same picker, no manifest change.
+- **The tools are already right.** Every one takes `project_id`
+  (`design-mcp-server.md` §9); folder scope adds a project *set* rather than a
+  new signature.
+- **The handshake must be keyed, not singular.** v1 can write one file for one
+  project, but the schema should assume a *set* is coming — don't bake
+  "the project" into the shape.
+- **The badge generalises upward.** Under folder grant the antenna belongs on
+  the folder row, with every project inside inheriting it.
+
+**And one hazard to design against when it lands.** Dragging a project into a
+granted folder is a one-second act with contractual consequences — the same
+class of quiet exposure that killed Option A, only now the gesture is
+deliberate. So the folder must *look* exposed: antenna on the folder row and on
+every project inside it, not just on the folder. Cheap, and it keeps the drag
+honest.
 
 **But A behind a per-project right-click is a lie, and that must be fixed in
 the same pass.** Right-click *IKEA discovery* → a sheet headed "Connect an
@@ -695,6 +758,56 @@ machinery does not cover it:
 - One honest sentence in SECURITY.md: the proxy runs under the *client's* Node
   runtime, which is outside Bristlenose's signing boundary. A drawn boundary is
   defensible; a silently-crossed one is not.
+
+### 3.6 What Option B changes elsewhere
+
+Five open items resolve, one grows, one new question appears.
+
+**Resolved by the decision:**
+
+- **The sheet header is honest again.** "Connect an agent to 'IKEA discovery'"
+  describes a real per-project grant, so the review finding that it implied a
+  grant it wasn't making (log #22) dissolves. No model-stating line needed.
+- **The Anonymise hole closes** (log #11). The project is pinned, so its
+  Anonymise setting is the only one in play — no fronting a different project
+  and having names flow with no interaction.
+- **The subject-change announcement is unnecessary** (§3.2a).
+- **The parked-sidecar correctness bug softens** (log #21). The agent is bound
+  to a project, not to whatever is fronted, so parking no longer silently
+  redirects it.
+- **`user_config` gets a job** — and it's the one field type that is safe
+  (`type: "directory"`, no secret, so the `$`-corruption bug in §6.7 can't
+  bite it).
+
+**What grows: the sidebar badge.** Keep it — under B it is the *only* place the
+researcher can see which project is exposed to an agent, which makes it more
+load-bearing than it was under A. But note the change it needs: as shipped, the
+badge follows the **fronted** serve (`agentActiveProjectPath` is
+`currentProjectPath` when `mcp.active`). Under B an agent can be connected to
+project X while the researcher is looking at Y, and X's sidecar is *parked but
+alive* — so the badge must be able to light on a **non-fronted** row. That
+means per-project activity, not fronted-serve activity: either the handshake
+mechanism reports per project, or the parked sidecar's health is polled too.
+Scope note rather than a blocker, but it must land with B.
+
+**The new question: where does the handshake live now?** Option B opens a door
+that may delete the TCC gate entirely (§6.1) — if the handshake sits in the
+**project folder the researcher explicitly picked**, the proxy reads a path
+the user granted through Claude Desktop's own directory picker, and no app
+container is read at all. Bristlenose already writes `bristlenose-output/` into
+that folder and holds a lifetime security-scoped bookmark for it.
+
+But it trades one risk for another, and this machine is the worked example:
+the live test project is
+`~/Library/CloudStorage/Dropbox/project-ikea3-on-dropbox-remote` — **a token
+written into that folder syncs to Dropbox.** That is the same off-machine
+replication the security review flagged as the worst variant (its symlink
+finding), arrived at by design rather than by attack. Three ways out, to weigh
+in the morning: keep the handshake in the container and accept the TCC
+question; put only the *port* in the project folder and keep the token in the
+container; or make the token `sensitive: true` in `user_config` so Claude
+Desktop holds it in the OS keychain (at the cost of pasting a secret once, and
+of bug #244 displaying it in plaintext in their settings pane).
 
 ## 5. What this does *not* change
 

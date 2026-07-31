@@ -510,8 +510,21 @@ wrapping the proxy that has to exist anyway.</div>
 works today; the curated listing is discoverability, not capability.</div>
 
 <div class="q"><b>5 · What happens to the parked project?</b> The warm-sidecar pool keeps the
-<i>previous</i> project's server alive on its own port. The handshake names only the fronted one.
-Leave it invisible (simple, honest) or expose both (accurate, more moving parts)?</div>
+<i>previous</i> project's server alive on its own port, with its own token. The handshake names
+only the fronted one — so under Option A the agent can still be reading the project you just
+switched away from. Review calls this a correctness bug, not a UI gap. Fronted-only + naming?
+Handshake carries both? Or drain the parked one while an agent is active?</div>
+
+<div class="q"><b>6 · Where does Install live?</b> Installing is a once-ever, machine-wide act —
+and it's currently sitting inside a per-project consent sheet whose header says “Connect an agent
+to <i>this study</i>”. Minimum fix is the header above. Fuller fix is splitting setup
+(Settings ▸ Connections) from grant-and-status (the sheet). Bigger change, cleaner model.</div>
+
+<div class="q"><b>7 · One thing to do before any code.</b> macOS gates reads of an app's container
+behind a TCC prompt (“<i>would like to access data from other apps</i>”). If that prompt fires,
+it fires <b>attributed to Claude</b>, at the exact moment we promise “done” — and a “Don't Allow”
+is sticky. An afternoon's spike answers it. If it prompts, we pre-announce it and the concern
+inverts into a selling point; if it doesn't, we move on. Unknown is the only unacceptable state.</div>
 
 </main>
 </body>

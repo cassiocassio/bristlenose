@@ -948,6 +948,23 @@ the project as a *parameter* of a connection rather than the frame around it.
 That also mirrors how Claude Desktop itself models it — a connector in Settings
 with its own project config inside.
 
+**The pane does not change shape with project state.** Installing is a
+higher-order concern than which project is open — a researcher who opens
+Settings from the Welcome screen is doing setup, and the pane has no business
+showing an empty state or telling them to go and select something first. So:
+
+- **Header, always:** *"Agents read whichever project is selected in
+  Bristlenose."* That switching projects changes what the agent can see is
+  **not obvious and not intuitive**, and saying it plainly is the v1 answer to
+  a genuinely surprising behaviour.
+- **Sub-line, when there is one:** *"Now showing: IKEA discovery · 6 sessions ·
+  214 quotes."* A for-example line that makes the header's rule legible by
+  demonstrating it. With no project selected it simply **disappears** — no
+  placeholder, no dash, no "no project selected". Absence is the information.
+- **Cut with it:** the old "Bristlenose isn't running a project" state, which
+  was a hangover from the per-project sheet. Under a global home it answered a
+  question nobody asked.
+
 **Three consequences to settle with it:**
 
 1. **What happens to the per-project sheet?** Its Claude Code / Codex / Generic

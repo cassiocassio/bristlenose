@@ -195,8 +195,10 @@ and the second one cost unrelated settings.</p>
 
 <ol class="steps">
 <li>
-  <h3 style="margin-top:0">Right-click the project → Connect Agent…</h3>
-  <p class="sub" style="margin:0 0 8px">Unchanged. Same sheet, same place.</p>
+  <h3 style="margin-top:0">Bristlenose ▸ Settings ▸ MCP Agents</h3>
+  <p class="sub" style="margin:0 0 8px">Or <b>Bristlenose ▸ Connect MCP agent…</b> in the menu bar,
+  which goes to the same place. Setup is a once-ever, app-level act — it does not depend on which
+  project is open, or on any project being open at all.</p>
 </li>
 
 <li>
@@ -206,11 +208,6 @@ and the second one cost unrelated settings.</p>
     <div class="sheet">
       <h4>Agents read whichever project is selected in Bristlenose</h4>
       <p class="scope">Now showing: <b>IKEA discovery</b> · 6 sessions · 214 quotes</p>
-
-      <div class="row">
-        <div class="lbl"><b>Anonymise</b><span>Remove participant names</span></div>
-        <div class="sw"></div>
-      </div>
 
       <div class="seg">
         <span class="sel">Claude Desktop</span><span>Claude Code</span><span>ChatGPT &amp; Codex</span><span>Generic MCP</span>
@@ -376,31 +373,46 @@ Authorization: Bearer 0riCOVDy8ncTbq59t0QIA69m4PWKbbZjbRZc2WnyHDc</div>
   </ul>
 </div>
 
-<h3>Bristlenose isn't running a project</h3>
-<div class="frame"><div class="chrome">Connect Agent — nothing served</div><div class="pad" style="background:var(--frame-chrome);display:grid;place-items:center">
-  <div class="sheet">
-    <h4>Connect an agent to “IKEA discovery”</h4>
-    <p class="scope">6 sessions</p>
-    <div class="row"><div class="lbl"><b>Anonymise</b><span>Remove participant names</span></div><div class="sw"></div></div>
-    <div class="seg"><span class="sel">Claude Desktop</span><span>Claude Code</span><span>ChatGPT &amp; Codex</span><span>Generic MCP</span></div>
-    <div class="pane">
-      <p class="hint">Adds Bristlenose to Claude Desktop as an extension. Claude Desktop
-        will ask you to confirm.</p>
-      <div class="install">
-        <div class="ico">B</div>
-        <div class="txt"><b>Bristlenose</b><span>Extension · 4 KB</span></div>
-        <span class="btn pri">Install</span>
-      </div>
+<h3>Settings ▸ MCP Agents — with and without a project selected</h3>
+
+<div class="two">
+  <div class="frame"><div class="chrome">a project is selected</div><div class="pad">
+    <div style="font:600 15px/1.35 -apple-system">Agents read whichever project is selected in Bristlenose</div>
+    <div style="color:var(--muted);font-size:13px;margin-top:3px">Now showing: <b>IKEA discovery</b> · 6 sessions · 214 quotes</div>
+    <div class="install" style="margin-top:14px">
+      <div class="ico">B</div>
+      <div class="txt"><b>Bristlenose</b><span>Extension · 4 KB</span></div>
+      <span class="btn pri">Install Extension…</span>
     </div>
-    <p class="foot">Works with any MCP-compatible agent.</p>
-    <div class="btns"><span class="btn">Done</span></div>
-  </div>
-</div></div>
+    <div class="seg" style="margin-top:14px"><span class="sel">Claude Desktop</span><span>Claude Code</span><span>ChatGPT &amp; Codex</span><span>Generic MCP</span></div>
+  </div></div>
+
+  <div class="frame"><div class="chrome">no project selected (Welcome screen)</div><div class="pad">
+    <div style="font:600 15px/1.35 -apple-system">Agents read whichever project is selected in Bristlenose</div>
+    <div class="install" style="margin-top:14px">
+      <div class="ico">B</div>
+      <div class="txt"><b>Bristlenose</b><span>Extension · 4 KB</span></div>
+      <span class="btn pri">Install Extension…</span>
+    </div>
+    <div class="seg" style="margin-top:14px"><span class="sel">Claude Desktop</span><span>Claude Code</span><span>ChatGPT &amp; Codex</span><span>Generic MCP</span></div>
+  </div></div>
+</div>
+
 <div class="commentary">
-  <b style="color:var(--ink)">Unchanged — and that's the point.</b> Today this state has to say
-  “Start the project before connecting an agent”, because the sheet is handing out a live address.
-  The extension has no address in it, so installing while nothing is served is <i>fine</i>: the
-  connector simply waits. One less dead end, one less piece of copy.
+  <b style="color:var(--ink)">Same screen. The only difference is one line that isn't there.</b>
+  <ul>
+    <li><b>Installing is a higher-order concern</b> than which project is open. A researcher who
+      opens Settings from the Welcome screen is doing setup — the pane has no business changing
+      shape, showing an empty state, or telling them to go and pick something first.</li>
+    <li><b>“Agents read whichever project is selected in Bristlenose”</b> stays as the header.
+      That switching projects changes what Claude can see is <i>not</i> obvious and not
+      intuitive — saying it plainly is the v1 answer.</li>
+    <li><b>“Now showing: …”</b> is a for-example line: concrete, and it makes the header's rule
+      legible by demonstrating it. With nothing selected it simply <b>disappears</b> — no
+      placeholder, no dash, no “no project selected”. Absence is the information.</li>
+    <li>Cut with it: the old “Bristlenose isn't running a project” sheet state. That was a hangover
+      from the per-project sheet, and under a global home it was answering a question nobody asked.</li>
+  </ul>
 </div>
 
 <!-- ─────────────────────────────────────────── -->

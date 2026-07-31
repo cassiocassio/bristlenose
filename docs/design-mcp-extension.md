@@ -76,6 +76,65 @@ One difference that drives our design: Figma pins port **3845**. Bristlenose
 uses `--port 0` (kernel-assigned, per the A6 decision), so the proxy cannot
 hardcode an address.
 
+## 2a. Better prior art than Figma — Sketch, and a reference handshake
+
+Found after the first draft, and it changes what we cite as validation.
+
+**Sketch ships an official `.mcpb` that is our exact shape**
+([`sketch-hq/sketch-mcp-bundle`](https://github.com/sketch-hq/sketch-mcp-bundle)):
+macOS app, Node stdio proxy, localhost Streamable HTTP, manifest v0.3,
+`platforms: ["darwin"]`, **136 lines** of `server/index.js`. Unlike Figma's, it
+is a real extension in Claude Desktop's directory rather than a hand-configured
+CLI entry — so it is prior art for the *distribution* question too, not just
+the transport.
+
+Its degradation model is better than Figma's and matches what §3.2 arrived at
+independently, which is reassuring: it **never fails `initialize`** (placeholder
+`serverInfo`/capabilities when the app is closed), returns placeholder tool
+stubs from `tools/list`, and answers `tools/call` with **tool-result text
+addressed to the model** — *"Either Sketch is not running or its MCP Server is
+not yet enabled. Explain the situation to the user and direct them to…"* — never
+a JSON-RPC error. It opens a **fresh HTTP transport per request**, so it
+self-heals the moment the app launches. Take all of it.
+
+One addition from JetBrains' bridge: fire **`notifications/tools/list_changed`**
+when the server appears, so a researcher who launches Bristlenose mid-session
+recovers without restarting Claude Desktop. That closes the last restart in the
+flow.
+
+**And the handshake file has a complete reference implementation.**
+[`Automattic/shippable-code-review`](https://github.com/Automattic/shippable-code-review)
+states our exact problem in a source comment — *"picks an ephemeral port at
+boot… the MCP server is a separate process with no IPC channel, so it can't
+find us without a stable on-disk pointer"* — and solves it the way §3.1 does:
+`{schemaVersion, port, pid, startedAt}`, atomic temp+rename, `0o600`, removed on
+graceful exit, and **health-checked before the file is trusted**, because *"the
+health check is what makes a stale file safe to leave on disk"*. Chrome's
+`DevToolsActivePort` is the same design at Google scale, and Microsoft documents
+it for precisely the `--remote-debugging-port=0` case. Proxyman ships a
+per-session token at `…/mcp-handshake.json` (0600) — the same filename this plan
+picked independently.
+
+So the novel-and-unvalidated part of §3.1 is smaller than the first draft
+implied: the handshake pattern is well-trodden. What remains genuinely
+unattested is reading it **across an App Sandbox container boundary** (§6.1).
+
+**Two alternatives this surfaced, both worth a sentence before we commit:**
+
+- **Drop TCP entirely — a UNIX socket.** Both vendor-official macOS precedents
+  avoid ports: Apple's `xcrun mcpbridge` (XPC) and Unity's official relay (UNIX
+  socket), as do 1Password and Anthropic's own Claude-in-Chrome. Uvicorn
+  supports `--uds`. A socket at a deterministic path inside the container
+  removes port discovery, ephemeral ports, collisions **and** DNS-rebinding
+  exposure in one move — but it does not remove the container-read question,
+  and it costs the browser-reachable `/mcp` URL the CLI path uses.
+- **Ship the proxy inside the app bundle instead of the `.mcpb`.** Proxyman does
+  exactly this: `"command": "/Applications/Proxyman.app/Contents/MacOS/mcp-server"`.
+  The proxy then always matches the app version, which **dissolves the
+  never-auto-updates problem** (§6.3) — at the cost of the one-click install the
+  whole plan is for, and of a hardcoded `/Applications` path. Probably not, but
+  the version-skew trade should be recorded rather than rediscovered.
+
 ## 3. The design
 
 ### 3.1 The handshake file (how the proxy finds the server)
@@ -337,7 +396,11 @@ Claude Desktop times out the `initialize` handshake at **60 seconds**, and
 starts every configured server *in parallel* at app launch — so a slow start
 can be pushed over the line by someone else's extension. Everything slow
 belongs *after* the handshake, never before it: read the handshake file, answer
-`initialize`, and only then attempt the HTTP connection. In particular the
+`initialize`, and only then attempt the HTTP connection. The worst observed
+version of getting this wrong is not a broken connector but a broken *client* —
+a blocking connect-retry during startup pushed one bridge past the deadline and
+*"completely breaks the entire host client and prevents all my other MCP servers
+from loading"*. In particular the
 fallback decision must not be made by waiting on a connection attempt with
 retries — decide from the file's presence and liveness, and let the first real
 tool call discover a dead server.

@@ -439,7 +439,11 @@ In <span class="yellow">IKEA discovery</span> (6 sessions, 214 quotes) the check
 </div>
 
 <h3>The full message vocabulary — five states, found by running it</h3>
-<div class="frame"><div class="chrome">what the agent says, per state</div><div class="pad">
+<div class="frame"><div class="chrome">tool results — relayed by the model, in Claude's chat</div><div class="pad">
+<p style="margin:0 0 10px;font-size:13px;color:var(--muted)">Not a dialog and not a Bristlenose
+window: our proxy returns these as ordinary <b>tool results</b>, Claude reads them, and the
+<i>model</i> relays them in the conversation. So they're written addressed to the model, and the
+researcher sees Claude say it.</p>
 <table style="font-size:13px;margin-top:0">
   <tr><th style="width:26%">State</th><th style="width:16%">Signal</th><th>What the agent tells the researcher</th></tr>
   <tr><td>Ready</td><td class="yes">200</td><td>The real answer, from real quotes.</td></tr>
@@ -467,6 +471,12 @@ In <span class="yellow">IKEA discovery</span> (6 sessions, 214 quotes) the check
       wrong would send the researcher down a reinstall rabbit-hole.</li>
     <li><b>404 has no remedy</b>, and should say so. Pointing at a Settings pane that cannot fix it
       is worse than admitting the build lacks the feature.</li>
+    <li><b>We don't control the final wording — the model paraphrases.</b> So the <i>facts</i> have
+      to survive rewording (app name, pane name), and we can't lean on exact phrasing, formatting
+      or markdown. It also can't be a button: we can name where to go, never take them there.
+      That's the price of the only channel we have into another app.</li>
+    <li>Bristlenose's server <i>does</i> see the 401, so it could raise something too — but a
+      failed-auth notice on a single-user machine is noise. Left to the agent's reply on purpose.</li>
     <li>Every message ends with the same anti-fabrication clause. A model handed “no data” will
       otherwise apologise and answer from memory — the worst possible failure for a tool whose
       output lands in a research deliverable.</li>

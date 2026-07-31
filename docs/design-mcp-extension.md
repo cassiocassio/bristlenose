@@ -1408,6 +1408,16 @@ audit, SBOM or Dependabot.
      sending the researcher to reinstall would be a rabbit-hole.
    This makes the Settings pane's name a **dependency of the proxy's copy**,
    not merely a label.
+
+   **Where these appear, since it constrains how they are written:** they are
+   **tool results**, returned as ordinary text rather than JSON-RPC errors —
+   Claude reads them and the *model* relays them into the conversation. Not a
+   dialog, not a Bristlenose window. Three consequences: the model paraphrases,
+   so the *facts* must survive rewording and we cannot lean on exact phrasing
+   or markdown; it can never be a button, so we can name a destination but not
+   navigate to it; and this is the **only channel we have into the other app**,
+   which is the same asymmetry that made the badge the wrong tool for cold
+   start (§5a-bis).
 2. **The stale-sidecar trap bites this feature hard.** The running bundled
    sidecar reported `mcp: None` because it predated today's build — so the
    proxy correctly reported an upstream 404, and anyone testing the extension

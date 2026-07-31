@@ -1131,6 +1131,41 @@ caveat.
 
 ---
 
+## The governing constraint: know the protocol, never the client
+
+Recorded 31 Jul 2026, after it explained four separate decisions that had each
+been reached independently.
+
+**Bristlenose may not depend on knowing anything about an MCP client.** Not its
+config format, not its location, not whether it is installed, not whether it
+connected. The boundary is one-way: **we can offer, we cannot observe.**
+
+Why it is a rule and not a caveat: the client set is unbounded and moving.
+Claude Desktop keeps JSON in a sandboxed container, Codex a TOML at
+`~/.codex/config.toml`, Claude Code `~/.claude.json`, Antigravity
+`~/.gemini/config/mcp_config.json` — each changeable by its vendor at any time,
+plus clients that do not exist yet. Any artefact of ours encoding that
+knowledge is stale by construction.
+
+And the decisive form: **client-awareness and vendor-neutrality are
+incompatible.** A design that must know about clients supports only those we
+coded for — the negation of this doc's second offering. Neutrality is bought by
+knowing nothing.
+
+What follows, and what it already explains:
+
+- `/mcp` is a **protocol endpoint** and the handshake is a **file** — the most
+  client-agnostic contract available. A client that does not exist yet already
+  works.
+- The sidebar badge reads **our own server**, never the client.
+- Agent-facing failures are **tool results**, not dialogs — the only channel
+  into the other app.
+- Turning on agent access is a **permission, not a connection**: it succeeds
+  with nothing installed, because "is an agent installed?" is unknowable.
+- Per-client dialects (the connect sheet's tabs) are **display strings only**.
+  A rotted dialect mis-copies; it cannot break the mechanism. Nothing
+  structural may depend on one.
+
 ## Related docs
 
 - [`design-mcp-extension.md`](design-mcp-extension.md) — route 3 as a plan: the

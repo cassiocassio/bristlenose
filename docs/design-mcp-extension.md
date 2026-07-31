@@ -1071,6 +1071,34 @@ client anywhere — macOS neither hides nor greys it, it turns on and shows the
 address. Discovery of "you need an agent" belongs in Settings ▸ MCP Agents,
 where install lives, not in the toggle.
 
+**And it does not stop at Claude Desktop — that is what makes it a rule rather
+than a caveat.** A client-aware design would need to know Codex's TOML at
+`~/.codex/config.toml`, Claude Code's `~/.claude.json`, Antigravity's
+`~/.gemini/config/mcp_config.json`, *and* whatever ships next — each with its
+own format, location and lifecycle, each changeable by its vendor at any time,
+against an extension of ours that never auto-updates. The knowledge would be
+stale by construction and the set is unbounded.
+
+Sharpest form: **client-awareness and vendor-neutrality are incompatible.** A
+design that must know about clients supports only the ones we have coded for,
+which is the negation of the second offering. Neutrality is purchased by
+knowing nothing.
+
+So the governing rule is: **Bristlenose knows the protocol, never the client.**
+`/mcp` is a protocol endpoint; the handshake is a file. Both are
+client-agnostic, so a client that does not exist yet already works. This is
+also the retroactive justification for the handshake being a *file*: it is the
+most client-agnostic contract available — anything that can read a file and
+speak HTTP can use it — where "write into each client's config" would have
+meant N writers, N formats, N locations, forever.
+
+Checked against what is built and planned, nothing violates it: the three
+dialect tabs encode client knowledge as **display strings only** (a rotted
+dialect mis-copies, it does not break), the `.mcpb` is a client-side artefact
+that reads our client-agnostic handshake, and `bristlenose mcp-proxy` is
+invocable by anything. The Generic MCP tab is the proof — two primitives,
+no assumptions.
+
 **The general rule this is the third instance of: the boundary is one-way.** We
 could not read their config to validate it (§1), we cannot tell whether the
 install took (§3.4), and we cannot tell whether an agent exists. **We can offer;

@@ -388,7 +388,7 @@ Authorization: Bearer 0riCOVDy8ncTbq59t0QIA69m4PWKbbZjbRZc2WnyHDc</div>
         will ask you to confirm.</p>
       <div class="install">
         <div class="ico">B</div>
-        <div class="txt"><b>Bristlenose</b><span>Extension · 1.2 MB</span></div>
+        <div class="txt"><b>Bristlenose</b><span>Extension · 4 KB</span></div>
         <span class="btn pri">Install</span>
       </div>
     </div>
@@ -406,7 +406,7 @@ Authorization: Bearer 0riCOVDy8ncTbq59t0QIA69m4PWKbbZjbRZc2WnyHDc</div>
 <!-- ─────────────────────────────────────────── -->
 <h2>3 · What the agent sees <span class="tag proposal">PROPOSED</span></h2>
 
-<h3>Bristlenose isn't serving anything yet</h3>
+<h3>Bristlenose isn't serving anything yet <span class="tag ships">VERIFIED IN SPIKE</span></h3>
 <div class="frame"><div class="chrome">Claude Desktop</div>
 <div class="term"><span class="user">you</span>  What are people saying about the checkout flow?
 
@@ -436,6 +436,35 @@ In <span class="yellow">IKEA discovery</span> (6 sessions, 214 quotes) the check
   <b style="color:var(--ink)">The project name in every answer is load-bearing</b>, not decoration —
   it's the mitigation for the scope model below. If the subject can change, the answer must always
   say what the subject <i>is</i>.
+</div>
+
+<h3>The full message vocabulary — five states, found by running it</h3>
+<div class="frame"><div class="chrome">what the agent says, per state</div><div class="pad">
+<table style="font-size:13px;margin-top:0">
+  <tr><th style="width:26%">State</th><th style="width:16%">Signal</th><th>What the agent tells the researcher</th></tr>
+  <tr><td>Ready</td><td class="yes">200</td><td>The real answer, from real quotes.</td></tr>
+  <tr><td>Not shared / BN closed</td><td>no handshake</td><td>“Bristlenose isn't open, so there is no study data available… <b>Do not answer from memory.</b>”</td></tr>
+  <tr><td>BN starting</td><td>port silent</td><td>“Bristlenose is starting — ask again in a moment.”</td></tr>
+  <tr><td><b>No agent support in this build</b></td><td class="no">404</td><td>“This copy of Bristlenose was built without agent support.”</td></tr>
+  <tr><td><b>Connection revoked</b></td><td class="no">401</td><td>“This connection is no longer valid — reconnect in Bristlenose → Settings → MCP Agents.”</td></tr>
+</table>
+</div></div>
+<div class="commentary">
+  <b style="color:var(--ink)">The last two are new — the spike surfaced them by hitting them.</b>
+  A stale sidecar returned <code>404</code> on <code>/mcp/</code> and a corrupted token returned
+  <code>401</code>, and a proxy that lumps both into “upstream error” hides the difference at
+  exactly the moment it matters.
+  <ul>
+    <li><b>404 and 401 mean opposite things.</b> One is “your installation can't do this”, the
+      other is “your access was withdrawn”. Same HTTP-shaped failure, completely different
+      next action.</li>
+    <li><b>401 is the revocation experience</b>, which we'd never mocked. It's what the researcher
+      sees after unsharing a project or rotating a token — so it's the sentence that makes
+      revocation <i>legible</i> rather than just effective.</li>
+    <li>Every message ends with the same anti-fabrication clause. A model handed “no data” will
+      otherwise apologise and answer from memory — the worst possible failure for a tool whose
+      output lands in a research deliverable.</li>
+  </ul>
 </div>
 
 <h3>The researcher switches project mid-conversation</h3>
@@ -701,11 +730,17 @@ mismatch is the whole problem.
 </table>
 </div>
 
-<div class="q"><b>7 · One thing to do before any code.</b> macOS gates reads of an app's container
-behind a TCC prompt (“<i>would like to access data from other apps</i>”). If that prompt fires,
-it fires <b>attributed to Claude</b>, at the exact moment we promise “done” — and a “Don't Allow”
-is sticky. An afternoon's spike answers it. If it prompts, we pre-announce it and the concern
-inverts into a selling point; if it doesn't, we move on. Unknown is the only unacceptable state.</div>
+<div class="q" style="border-left-color:var(--good)"><b>7 · ANSWERED — the spike ran</b>
+The TCC gate that blocked everything is <b>not a gate</b>: <code>SystemPolicyAppData</code>
+protects Apple's own app containers (Notes, Safari, Mail all denied) but not third-party ones
+(Bristlenose, Adobe and others readable, from a shell with no Full Disk Access). Same-UID is the
+actual gate, and the proxy runs as the researcher.
+<ul style="margin:6px 0 0 18px">
+  <li><b>No prompt, no sticky denial</b> — and the handshake stays in the container, so no token
+    is ever written into a project folder. The Dropbox-sync problem never arises.</li>
+  <li>The mechanism was proved end to end too: real data through a <b>90-line, zero-dependency</b>
+    proxy, three states, self-heal, and a wrong token correctly rejected.</li>
+</ul></div>
 
 </main>
 </body>

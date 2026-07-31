@@ -919,7 +919,63 @@ Only J1 is machine-wide. That is the whole of the mismatch.
    is honest about what the researcher must do in Claude Desktop. It is the
    right answer if we want zero structural change before the TCC spike settles.
 
-**Recommendation: 2**, with 5 as the acceptable interim. The split matches the
+**DECIDED (31 Jul, after the options above): a global home — Settings ▸ MCP
+Agents**, with `Bristlenose ▸ Connect MCP agent…` as a route to it and a
+Welcome-screen entry for discovery. This supersedes the "split by lifetime"
+recommendation below; the reasoning that produced it is kept because it is how
+the constraint was found.
+
+**First, a technical correction that strengthens Option B rather than
+undermining it.** Per-project connection *is* possible: each serve process
+serves one project on its own port with its own token, so a URL+token pair
+names one project's sidecar. What is not under the researcher's control is
+**availability** — only the fronted project has a live serve, plus at most one
+parked in the warm pool's single slot. So a pinned agent will often find its
+project not running.
+
+The consequence is the important bit: **the pin buys refusal, not access.**
+Pinned to IKEA while the researcher is looking at Nurses, the agent answers
+*"open Bristlenose and select IKEA"* rather than silently answering about
+Nurses. The Ollama-only study is protected not because the agent cannot reach
+it, but because the agent will not answer about anything it was not pinned to.
+That is precisely the property Option B was chosen for, and it survives the
+availability constraint intact.
+
+**Why the home is global.** Bristlenose cannot perform the grant — Claude
+Desktop's directory picker does. BN's controllable share is installing the
+extension, showing status, and handing over values: overwhelmingly global, with
+the project as a *parameter* of a connection rather than the frame around it.
+That also mirrors how Claude Desktop itself models it — a connector in Settings
+with its own project config inside.
+
+**Three consequences to settle with it:**
+
+1. **What happens to the per-project sheet?** Its Claude Code / Codex / Generic
+   MCP payloads are genuinely per-project, so Settings needs a project
+   selector to produce them — which is the objection raised against option 1
+   above, now answered: the selector is a parameter, not a re-asking of what
+   the sidebar already said. The right-click item can then retire, or become a
+   shortcut that opens Settings pre-selected to that project.
+2. **Where does Anonymise live?** It is per-project data governance, and it sat
+   in the connect sheet only because that was the MCP surface. If MCP config
+   becomes global-with-a-project-parameter, it sits naturally beside the
+   project row there. The alternative reading — that it belongs *with the
+   project*, like its name and icon — is also defensible and worth a moment.
+3. **The Welcome-screen entry is the discovery answer**, and it is the right
+   one: §5a records that the extension solves *installation*, not *discovery* —
+   a researcher who never learns the feature exists is not helped by a
+   one-click install. Welcome is where that gap closes.
+
+**Naming.** "MCP Agents" over "Connections" (too vague). The jargon is
+correctly targeted — the researcher meets "MCP" in Claude Desktop's own
+"Local MCP servers" pane, so the word is already theirs by the time they get
+here. Worth a look at plain "Agents" on real pixels, though it risks reading as
+the LLM providers in the neighbouring pane.
+
+---
+
+_Superseded recommendation, kept for the reasoning:_ **2**, with 5 as the
+acceptable interim. The split matches the
 two real lifetimes, it is what the Mac review independently argued for, and it
 removes the "machine-wide act inside a per-project consent sheet" mismatch
 without inventing a new surface. Reveal-in-Finder is the small piece that makes

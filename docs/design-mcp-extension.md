@@ -1521,6 +1521,23 @@ measured reads from a shell, not from a Claude-Desktop-spawned process. Since
 the path is not in the protected set at all, responsible-process attribution
 should not matter — but it is reasoning, not measurement.
 
+**Caveat resolved the bad way — 1 Aug 2026, first live install.** When the
+reader is Claude Desktop's Node process, macOS DOES attribute the container
+read to "Claude" and fires the SystemPolicyAppData prompt (*"Claude" would
+like to access data from other apps*). The shell evidence did not transfer:
+responsible-process attribution is exactly what changes the answer. One
+prompt is the §6.1 "concern inverts into a selling point" case — sticky
+after Allow, silent forever after. The real hazard was emergent: the
+proxy's 5-second self-heal watcher turned the unanswered prompt into a
+**dialog storm** (~a hundred in two minutes), because every fresh read
+attempt spawns another dialog. Fixed in the proxy the same hour: a
+permission failure (EPERM/EACCES) parks the watcher entirely, tool calls
+remain the only retry path (researcher-initiated, one prompt at most, with
+a dedicated "click Allow" tool-result sentence), and the first successful
+read un-parks. Follow-up owed: the pane's Claude Desktop hint should
+pre-announce the prompt (§6.1's advice) — copy + 20 locales, batched with
+the next string pass.
+
 **Risk §6.1 dissolves**, and with it the §3.6 dilemma: the handshake stays in
 the container, so **no token is ever written into a project folder** and the
 Dropbox-sync problem never arises. The safe option turned out to be free.

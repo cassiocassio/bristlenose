@@ -53,6 +53,12 @@ const MSG = {
     "this project's agent access is turned on, then ask again. " + GROUNDING,
   upstream: (status) => "Bristlenose answered with an unexpected error (HTTP " + status +
     "), so there is no study data for this question. " + GROUNDING,
+  // TCC denied/unanswered: name the macOS prompt in ITS words, and the
+  // recovery. Deliberately not "reinstall" — the extension is fine.
+  permission: "macOS is asking whether Claude may access data from other apps — " +
+    "that permission is how this extension finds Bristlenose. Tell the person to " +
+    "click Allow on the macOS dialog (or grant it in System Settings ▸ Privacy & " +
+    "Security), then ask again. " + GROUNDING,
 };
 
 // Static tool list — served even when Bristlenose is closed (the fallback is
@@ -119,12 +125,39 @@ const TOOLS = [
 ];
 /* BN-TOOLS-JSON-END */
 
+// TCC: the handshake lives in Bristlenose's app container, and when the
+// reader is Claude Desktop's Node process macOS attributes the read to
+// "Claude" and fires the SystemPolicyAppData prompt ("would like to access
+// data from other apps"). Measured 1 Aug 2026 — the spike's shell-read
+// evidence did NOT transfer to Claude-spawned processes (design §5c's
+// recorded caveat, resolved the bad way). One prompt is fine and sticky;
+// an unthrottled reader is a DIALOG STORM: every unanswered attempt spawns
+// another dialog. So: a permission failure (EPERM/EACCES) parks the
+// background watcher entirely, and only explicit tool calls — researcher-
+// initiated, one prompt at most — retry. A successful read un-parks it.
+let tccBlocked = false;
+
 // Re-read on EVERY call — see the header. A stat+read of a sub-1KB file per
 // call is free; nothing is cached across calls.
 function readHandshake() {
+  let denied = false;
   for (const p of HANDSHAKES) {
-    try { return { ...JSON.parse(fs.readFileSync(p, "utf8")), _path: p }; }
-    catch (e) { if (e.code !== "ENOENT") log("handshake unreadable", p, e.code); }
+    try {
+      const hs = { ...JSON.parse(fs.readFileSync(p, "utf8")), _path: p };
+      tccBlocked = false;
+      return hs;
+    } catch (e) {
+      if (e.code === "EPERM" || e.code === "EACCES") {
+        denied = true;
+        if (!tccBlocked) log("handshake read permission-blocked (TCC)", p, e.code);
+      } else if (e.code !== "ENOENT") {
+        log("handshake unreadable", p, e.code);
+      }
+    }
+  }
+  if (denied) {
+    tccBlocked = true;
+    return { _tccBlocked: true };
   }
   return null;
 }
@@ -162,6 +195,7 @@ async function probe(hs) {
 // opened Bristlenose to open Bristlenose.
 async function state() {
   const hs = readHandshake();
+  if (hs && hs._tccBlocked) return { kind: "no-permission" };
   if (!hs) return { kind: "closed" };
   const p = await probe(hs);
   if (!p.ok) {
@@ -207,6 +241,12 @@ async function callUpstream(hs, msg) {
 let clientInitialized = false;
 let lastReady = null;
 async function watchServer() {
+  // While TCC is denied or unanswered, every read spawns ANOTHER macOS
+  // dialog — a 5s watcher becomes a dialog storm (the 1 Aug 2026 QA
+  // walk saw ~a hundred in two minutes). Park the watcher; explicit tool
+  // calls remain the retry path (researcher-initiated, one prompt at
+  // most), and their first success un-parks us via readHandshake.
+  if (tccBlocked) { lastReady = false; return; }
   const s = await state();
   const ready = s.kind === "ready";
   if (clientInitialized && lastReady === false && ready) {
@@ -241,6 +281,7 @@ async function handle(msg) {
   if (msg.method === "tools/list") return { tools: TOOLS };
   if (msg.method === "tools/call") {
     const s = await state();
+    if (s.kind === "no-permission") return text(MSG.permission);
     if (s.kind === "starting") return text(MSG.starting);
     if (s.kind === "no-mcp") return text(MSG.noAgentSupport);
     if (s.kind !== "ready") return text(MSG.closed);

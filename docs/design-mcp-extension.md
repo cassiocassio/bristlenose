@@ -1323,6 +1323,87 @@ only after `waitForPort` succeeds. Writing on `.running` means "handshake
 exists" implies "port answers", and state 2 collapses to the narrow window
 between the click and that transition, which is honest and short.
 
+## 5c. Spike results — 31 Jul 2026
+
+Run before writing any shipping code. Artefact: `desktop/mcpb-spike/`.
+
+### The gate is open: the container read is not TCC-protected
+
+`kTCCServiceSystemPolicyAppData` protects **Apple's own** app containers, not
+third-party sandboxed ones. Measured from a shell **without** Full Disk Access
+(verified — reading the TCC store itself was denied), so the test is valid:
+
+| Container | Result |
+|---|---|
+| `com.apple.Notes`, `com.apple.Safari`, `com.apple.mail` | **DENIED** |
+| `com.apple.Maps` | readable |
+| `app.bristlenose`, `barbican.test`, `com.adobe.*` | **readable** |
+
+The permission chain is `drwx------` all the way to
+`~/Library/Containers/app.bristlenose/Data` — so **same-UID is the gate, not
+TCC**, and the proxy runs as the researcher. Caveat stated honestly: this
+measured reads from a shell, not from a Claude-Desktop-spawned process. Since
+the path is not in the protected set at all, responsible-process attribution
+should not matter — but it is reasoning, not measurement.
+
+**Risk §6.1 dissolves**, and with it the §3.6 dilemma: the handshake stays in
+the container, so **no token is ever written into a project folder** and the
+Dropbox-sync problem never arises. The safe option turned out to be free.
+
+### The mechanism works end to end
+
+Against a real `bristlenose serve` (smoke fixture), through a **90-line,
+zero-dependency** Node proxy:
+
+- client → stdio → HTTP → real tools → **real data** (1 session, 4 quotes)
+- **three states**, each with its own message: no handshake (*"Bristlenose
+  isn't open…"*), handshake present but port silent (*"Bristlenose is
+  starting…"*), ready (proxied)
+- **self-heals** — handshake removed then restored mid-run, recovered on the
+  next call with no restart of anything
+- **the bearer is genuinely enforced** on this path: a corrupted token in the
+  handshake returns `401`, not a silent pass
+- `initialize` answers immediately; nothing slow precedes it
+
+### The write path's security claims hold
+
+`O_CREAT|O_EXCL|O_NOFOLLOW, 0600` + atomic rename: verified the file lands at
+`0600`, and a pre-planted symlink pointing into Dropbox **blocked the write**
+with nothing created at the target. (`O_EXCL` fires first because the symlink
+is an existing directory entry; `O_NOFOLLOW` covers the non-exclusive case.
+Keep both.)
+
+### Packaging is simpler than feared
+
+A `.mcpb` is a zip. Built one with plain `zip` — **4 KB, three files, no
+`node_modules`** — so the 8-month-stale `@anthropic-ai/mcpb` CLI is not a
+dependency. And a dependency-free proxy sidesteps native-module library
+validation (§6.6), the missing CPU-arch field, the ABI trap, the size ceiling,
+**and most of §4a's supply-chain obligations** — there is no npm tree to
+audit, SBOM or Dependabot.
+
+### What the spike did not answer
+
+- **Installing into Claude Desktop.** Needs a click, and the relaunch would end
+  the session that built the bundle. `Bristlenose-spike.mcpb` is ready.
+- **Whether install requires a relaunch** (§6.8) — same reason.
+- **`instance_id` matching** — the proxy implements the check, but
+  `/api/health` does not emit one yet. Inert until it does.
+
+### Two things the spike revealed that were not on the list
+
+1. **404 and 401 need different messages.** A build without the `mcp` extra
+   returns `404` on `/mcp/`; a wrong or revoked token returns `401`. These are
+   *"this build has no agent support"* and *"the connection was revoked"* — a
+   proxy that lumps both into "upstream error" hides the difference at exactly
+   the moment the researcher needs it. Not badge states; message states.
+2. **The stale-sidecar trap bites this feature hard.** The running bundled
+   sidecar reported `mcp: None` because it predated today's build — so the
+   proxy correctly reported an upstream 404, and anyone testing the extension
+   against a stale bundle will see *"not available in this build"* and chase
+   the wrong thing entirely. The freshness gate exists for this; do not bypass
+   it while testing MCP.
+
 ## 6. Risks and what could bite
 
 From the research pass (issue numbers are `modelcontextprotocol/mcpb`) and from

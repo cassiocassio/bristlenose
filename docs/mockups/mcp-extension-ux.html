@@ -750,6 +750,64 @@ handshake file</i>, not Claude Desktop's config. That means BN owns it completel
   </ul>
 </div>
 
+<h3>The real project context menu — faithful to <code>buildProjectMenu</code></h3>
+
+<p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">Read from
+<code>ProjectSidebarOutline.swift</code>. Conditional items appear only in their state, each
+followed by its own separator; the stable tail is the last six rows.</p>
+
+<div class="two">
+  <div class="frame"><div class="chrome">A · checkmark, label never changes</div><div class="pad" style="background:var(--frame-chrome)">
+    <div style="background:var(--mac-sheet);border-radius:8px;padding:5px 0;font-size:12.5px;max-width:250px;box-shadow:0 6px 20px rgba(0,0,0,.2)">
+      <div style="padding:3px 14px 3px 26px;color:var(--muted)">Analyse</div>
+      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
+      <div style="padding:3px 14px 3px 26px">Show in Finder</div>
+      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
+      <div style="padding:3px 14px 3px 8px;background:var(--apple-blue);color:#fff"><b>✓</b>&nbsp;&nbsp;Share with Agents</div>
+      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
+      <div style="padding:3px 14px 3px 26px">Rename…</div>
+      <div style="padding:3px 14px 3px 26px">Choose Icon</div>
+      <div style="padding:3px 14px 3px 26px;display:flex;justify-content:space-between"><span>Move to</span><span style="opacity:.5">▸</span></div>
+      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
+      <div style="padding:3px 14px 3px 26px">Remove from Sidebar</div>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-top:10px">State is visible without reading a
+    verb. Scannable down a list of projects.</p>
+  </div></div>
+
+  <div class="frame"><div class="chrome">B · verb swap — the app's own precedent</div><div class="pad" style="background:var(--frame-chrome)">
+    <div style="background:var(--mac-sheet);border-radius:8px;padding:5px 0;font-size:12.5px;max-width:250px;box-shadow:0 6px 20px rgba(0,0,0,.2)">
+      <div style="padding:3px 14px 3px 26px;color:var(--muted)">Analyse</div>
+      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
+      <div style="padding:3px 14px 3px 26px">Show in Finder</div>
+      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
+      <div style="padding:3px 14px 3px 26px;background:var(--apple-blue);color:#fff">Stop Sharing with Agents</div>
+      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
+      <div style="padding:3px 14px 3px 26px">Rename…</div>
+      <div style="padding:3px 14px 3px 26px">Choose Icon</div>
+      <div style="padding:3px 14px 3px 26px;display:flex;justify-content:space-between"><span>Move to</span><span style="opacity:.5">▸</span></div>
+      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
+      <div style="padding:3px 14px 3px 26px">Remove from Sidebar</div>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-top:10px">States the consequence of clicking.
+    Matches <b>Star / Unstar</b> and <b>Show / Hide Projects</b> already in this app.</p>
+  </div></div>
+</div>
+
+<div class="commentary">
+  <b style="color:var(--ink)">Both drawn in the real menu, not a sketch.</b> Under debate with the
+  Mac reviewer; the mock shows the separated group either way, because a persistent
+  <i>state</i> sits oddly among one-shot actions (Show in Finder, Rename…, Choose Icon).
+  <ul>
+    <li><b>“Share with Claude” is out on facts, not branding.</b> Several agents can be connected
+      at once — Claude Desktop, Claude Code and Codex simultaneously — so naming one would be
+      wrong, not merely narrow.</li>
+    <li><b>No ellipsis.</b> It acts immediately; nothing further is asked.</li>
+    <li>Open with the reviewer: whether <b>Share</b> misappropriates macOS's Share-sheet meaning,
+      and whether a governance boolean should follow the app's verb-swap precedent or break it.</li>
+  </ul>
+</div>
+
 <h3>Where does the Share control live? — three possibilities</h3>
 
 <div class="two">

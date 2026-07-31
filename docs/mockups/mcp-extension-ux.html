@@ -750,61 +750,84 @@ handshake file</i>, not Claude Desktop's config. That means BN owns it completel
   </ul>
 </div>
 
-<h3>The real project context menu — faithful to <code>buildProjectMenu</code></h3>
+<h3>The project context menu — decided <span class="tag ships">MAC REVIEW</span></h3>
 
-<p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">Read from
-<code>ProjectSidebarOutline.swift</code>. Conditional items appear only in their state, each
-followed by its own separator; the stable tail is the last six rows.</p>
+<p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">Drawn from
+<code>buildProjectMenu</code>. Conditional items appear only in their state, each with its own
+separator; the stable tail is below.</p>
 
-<div class="two">
-  <div class="frame"><div class="chrome">A · checkmark, label never changes</div><div class="pad" style="background:var(--frame-chrome)">
-    <div style="background:var(--mac-sheet);border-radius:8px;padding:5px 0;font-size:12.5px;max-width:250px;box-shadow:0 6px 20px rgba(0,0,0,.2)">
-      <div style="padding:3px 14px 3px 26px;color:var(--muted)">Analyse</div>
-      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
-      <div style="padding:3px 14px 3px 26px">Show in Finder</div>
-      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
-      <div style="padding:3px 14px 3px 8px;background:var(--apple-blue);color:#fff"><b>✓</b>&nbsp;&nbsp;Share with Agents</div>
-      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
-      <div style="padding:3px 14px 3px 26px">Rename…</div>
-      <div style="padding:3px 14px 3px 26px">Choose Icon</div>
-      <div style="padding:3px 14px 3px 26px;display:flex;justify-content:space-between"><span>Move to</span><span style="opacity:.5">▸</span></div>
-      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
-      <div style="padding:3px 14px 3px 26px">Remove from Sidebar</div>
-    </div>
-    <p style="font-size:12.5px;color:var(--muted);margin-top:10px">State is visible without reading a
-    verb. Scannable down a list of projects.</p>
-  </div></div>
+<div class="frame"><div class="chrome">right-click a project · exposed state</div>
+<div class="pad" style="background:var(--frame-chrome);display:grid;place-items:center">
+  <div style="background:var(--mac-sheet);border-radius:8px;padding:5px 0;font-size:12.5px;width:250px;box-shadow:0 6px 20px rgba(0,0,0,.2)">
+    <div style="padding:3px 14px;color:var(--muted)">Analyse</div>
+    <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
+    <div style="padding:3px 14px">Show in Finder</div>
+    <div style="padding:3px 14px">Rename…</div>
+    <div style="padding:3px 14px">Choose Icon</div>
+    <div style="padding:3px 14px;display:flex;justify-content:space-between"><span>Move to</span><span style="opacity:.5">▸</span></div>
+    <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
+    <div style="padding:3px 14px;background:var(--apple-blue);color:#fff">Turn Off Agent Access</div>
+    <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
+    <div style="padding:3px 14px">Remove from Sidebar</div>
+  </div>
+</div></div>
 
-  <div class="frame"><div class="chrome">B · verb swap — the app's own precedent</div><div class="pad" style="background:var(--frame-chrome)">
-    <div style="background:var(--mac-sheet);border-radius:8px;padding:5px 0;font-size:12.5px;max-width:250px;box-shadow:0 6px 20px rgba(0,0,0,.2)">
-      <div style="padding:3px 14px 3px 26px;color:var(--muted)">Analyse</div>
-      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
-      <div style="padding:3px 14px 3px 26px">Show in Finder</div>
-      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
-      <div style="padding:3px 14px 3px 26px;background:var(--apple-blue);color:#fff">Stop Sharing with Agents</div>
-      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
-      <div style="padding:3px 14px 3px 26px">Rename…</div>
-      <div style="padding:3px 14px 3px 26px">Choose Icon</div>
-      <div style="padding:3px 14px 3px 26px;display:flex;justify-content:space-between"><span>Move to</span><span style="opacity:.5">▸</span></div>
-      <div style="height:1px;background:var(--rule);margin:4px 8px"></div>
-      <div style="padding:3px 14px 3px 26px">Remove from Sidebar</div>
-    </div>
-    <p style="font-size:12.5px;color:var(--muted);margin-top:10px">States the consequence of clicking.
-    Matches <b>Star / Unstar</b> and <b>Show / Hide Projects</b> already in this app.</p>
-  </div></div>
+<div class="commentary">
+  <b style="color:var(--ink)">Verb swap, not a checkmark — and Apple ships the proof.</b> Strings
+  pulled off shipping binaries on this Mac, not recalled:
+  <ul>
+    <li><b>Music.app ships both</b> <code>Turn On Home Sharing</code> and
+      <code>Turn Off Home Sharing</code> — a <i>network-exposure boolean as a symmetric verb
+      swap</i>. That is exactly our class. Notes does the same for governance
+      (<code>Lock Note</code> / <code>Remove Lock</code>).</li>
+    <li>Finder uses a checkmark for <code>Use Stacks</code> — but that's a <i>view mode</i>, and
+      the same file verb-swaps <code>Show Sidebar</code> / <code>Hide Sidebar</code>. Within one
+      Apple app: checkmark for modes, verb swap for exposure.</li>
+    <li><b>The argument that decides it:</b> an <i>unchecked</i> checkmark item looks identical to
+      an ordinary action. In the OFF state “Agent Access” would sit among Rename and Choose Icon
+      looking like one of them. The misread — clicking a checked item believing you're enabling,
+      and silently revoking — is the one we can't afford.</li>
+    <li><b>State display isn't lost</b>, because it was never this menu's job: the antenna is
+      permanent while exposed, and Settings ▸ MCP Agents is the audit list. The menu is the
+      <i>act</i>.</li>
+  </ul>
 </div>
 
 <div class="commentary">
-  <b style="color:var(--ink)">Both drawn in the real menu, not a sketch.</b> Under debate with the
-  Mac reviewer; the mock shows the separated group either way, because a persistent
-  <i>state</i> sits oddly among one-shot actions (Show in Finder, Rename…, Choose Icon).
+  <b style="color:var(--ink)">And “Share” is the wrong word — an idiom collision, not a taste call.</b>
   <ul>
-    <li><b>“Share with Claude” is out on facts, not branding.</b> Several agents can be connected
-      at once — Claude Desktop, Claude Code and Codex simultaneously — so naming one would be
-      wrong, not merely narrow.</li>
-    <li><b>No ellipsis.</b> It acts immediately; nothing further is asked.</li>
-    <li>Open with the reviewer: whether <b>Share</b> misappropriates macOS's Share-sheet meaning,
-      and whether a governance boolean should follow the app's verb-swap precedent or break it.</li>
+    <li>Apple lists <b>Share</b> beside Copy and Delete as an action with <i>one</i> meaning and
+      <i>one</i> glyph everywhere. Borrowing it obliges <code>square.and.arrow.up</code>; using
+      the antenna instead breaks that contract, and using the share glyph would lie about what
+      happens.</li>
+    <li><b>Wrong tense.</b> Share is punctual — I sent a thing, it went. This is a standing
+      permission to read, pulled repeatedly by whoever is connected. Exactly the misreading a
+      contractually-barred study cannot afford.</li>
+    <li>Rejected alongside: <i>Expose to Agents</i> (security-incident register),
+      <i>Readable by Agents</i> (engineer-speak, negates badly), <i>Allow Agents</i>
+      (allow them to <i>what?</i>). <b>Agent Access</b> is already the app's own noun — Settings ▸
+      MCP <b>Agents</b>.</li>
+    <li>Title case, no ellipsis (it acts immediately), no vendor — several agents can be connected
+      at once.</li>
+  </ul>
+</div>
+
+<div class="commentary">
+  <b style="color:var(--ink)">Placement: its own group, below the housekeeping block.</b>
+  Not where <code>Connect Agent…</code> sat — adjacent to Show in Finder it inherited that item's
+  reading, two neighbours about this project's files, one revealing them in Finder and one letting
+  a cloud vendor read them. That adjacency asserts an equivalence that isn't true.
+  <ul>
+    <li>Everyday items keep the top (HIG: most-frequent first). Flipping exposure is once per
+      study.</li>
+    <li>It lands at exactly <b>three groups</b> in the common case — HIG's guidance for context
+      menus is “no more than about three”.</li>
+    <li><b>Hide it, don't dim it</b>, when the project can't be shared — the context-menu rule
+      (“displays only the actions that are relevant”), which the file's own lifecycle block already
+      follows and the trailing block breaks.</li>
+    <li>Gate on the right predicate: <code>canShowInFinder</code> is file-presence, so a
+      never-analysed folder passes it with no quotes to read. Needs
+      <code>canShareWithAgents</code> — locatable <i>and</i> analysed.</li>
   </ul>
 </div>
 

@@ -85,6 +85,8 @@ Doctor command: `bristlenose doctor` — runtime environment checks. See `docs/d
 
 Snap + man page: see `docs/design-doctor-and-snap.md` and `docs/release.md`. **`man/bristlenose.1` is a symlink to `bristlenose/data/bristlenose.1`** — single source of truth. Edit either; both update. Validate with `mandoc -Tlint bristlenose/data/bristlenose.1` (macOS-default; `groff` / `nroff` aren't installed). `bump-version.py` refreshes both the version and the `.TH` ISO date on every bump (don't write "March 2026"-style human dates in `.TH` — they bitrot and produce mandoc WARNINGs).
 
+**Auditing the man page mechanically? Unescape roff hyphens first.** Roff escapes `-` as `\-`, and it does so *inside* option names too — `--whisper-model` is written `\-\-whisper\-model`. So the obvious `grep -o '\-\-[a-z-]*'` (or a `--([a-z0-9-]+)` regex) captures only `whisper` and reports `--whisper-model`, `--self-test`, `--no-fetch`, `--skip-transcription` as **missing when they're present** — a whole audit pass of false positives (cost a cycle on 31 Jul 2026). Normalise before comparing: `man.replace("\\-", "-")` then strip font escapes `re.sub(r'\\f[BIRP]', '', man)`, and diff that against `bristlenose <cmd> --help` output. Same trap applies to the `.TH` line and any `grep` for a specific flag.
+
 CLI output: Cargo/uv-style checkmark lines with per-stage timing. Time estimation via Welford's algorithm in `bristlenose/timing.py`. See `bristlenose/stages/CLAUDE.md` for pipeline runtime details.
 
 ## Gotchas

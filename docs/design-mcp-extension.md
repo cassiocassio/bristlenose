@@ -745,6 +745,44 @@ surfaces and is worth keeping deliberate:
 So the desktop isn't inconsistent with the CLI — it adds dialects *because it
 can update them with the app*, and keeps the same neutral fallback underneath.
 
+### 3.5b Gemini — checked, and deliberately not a v1 tab
+
+Researched 31 Jul 2026 rather than assumed. Two Gemini surfaces speak MCP:
+
+- **Antigravity** (2.0 IDE + the `agy` CLI + the SDK) shares one central config
+  at `~/.gemini/config/mcp_config.json`, keyed `mcpServers` — configure once,
+  every surface picks it up. It accepts **remote servers via `serverUrl` +
+  `headers`**, and community guidance is that headers mode is *preferred*
+  because Antigravity's MCP OAuth is unreliable. That is precisely our shape:
+  a URL and an `Authorization` header, no proxy required. Structurally it is
+  the Claude Code / Codex analogue — developer-facing, one file covering three
+  surfaces.
+- **Gemini Spark** on the macOS Gemini desktop app gained MCP support on
+  1 Jul 2026 — the Claude Desktop analogue, a consumer chat app. But it is in
+  **beta and gated to AI Ultra at $99/month**, so its population right now is
+  negligible for our cohort.
+
+**Decision: no named Gemini tab in v1.** Not because the gap isn't real, but
+because the Generic MCP tab (§3.5a) makes skipping it cost *capability*
+nothing. An Antigravity user takes the two primitives from tab four and it
+works today — `serverUrl` plus `headers` is exactly what that tab hands over.
+What a named tab would add is convenience, and convenience for a population we
+can't yet size.
+
+Two notes for when it's revisited:
+
+- **It would be cheap.** Antigravity is arguably easier than Codex was — same
+  URL+headers shape, one config for three surfaces. A named tab is a dialect
+  string, not structure.
+- **Don't conflate provider with agent.** Gemini is one of Bristlenose's four
+  analysis providers, so it is tempting to read "we support Gemini" as implying
+  a Gemini agent path. They are separate choices: the model that ran the
+  analysis and the agent the researcher chats in have nothing to do with each
+  other, and a researcher analysing with Gemini may well be asking questions in
+  Claude Code.
+
+Revisit when either Spark leaves beta/Ultra, or a cohort researcher asks.
+
 One geometry note: four segments in a 560pt sheet is about 130pt each, and
 "ChatGPT & Codex" is the longest label. Check it on real pixels; if it crowds,
 the fix is shorter labels, not a narrower sheet.

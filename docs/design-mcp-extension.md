@@ -1015,6 +1015,59 @@ have one. A researcher who has never heard of "MCP" still understands
 fallback. This is the argument that makes the pair worth the rename even
 setting parallelism aside.
 
+### 3.6a The per-project control — decided strings and placement
+
+**`Turn On Agent Access` ⇄ `Turn Off Agent Access`.** Title case, no ellipsis,
+no vendor name, in both the project context menu and its Project-menu twin.
+Locale keys `menu.project.turnOnAgentAccess` / `turnOffAgentAccess` × 20 full
+locales; `menu.project.connectAgent` retires with the sheet.
+
+**Verb swap, not a checkmark** — decided on strings extracted from shipping
+binaries, not recollection. Music.app ships *both* `Turn On Home Sharing` and
+`Turn Off Home Sharing` (a network-exposure boolean as a symmetric verb swap);
+Notes ships `Lock Note` / `Remove Lock` for a governance boolean. Finder uses a
+checkmark for `Use Stacks` — a *view mode* — while the same file verb-swaps
+`Show Sidebar` / `Hide Sidebar`. Within one Apple app: checkmark for modes,
+verb swap for exposure. The clinching argument is that an **unchecked**
+checkmark item is visually identical to an ordinary action, so in the OFF state
+it would sit among Rename and Choose Icon looking like one of them — and the
+misread (clicking a checked item believing you are enabling, thereby revoking)
+is the one this control cannot afford. No state display is lost: the antenna is
+permanent while exposed (§5a-bis) and Settings ▸ MCP Agents is the audit list.
+The menu is the *act*.
+
+**Not "Share"** — an idiom collision rather than a taste call. Apple lists
+Share beside Copy and Delete as an action with one meaning and one glyph
+everywhere, so the word obliges `square.and.arrow.up`; and its punctual tense
+("I sent a thing") misdescribes a standing permission pulled repeatedly by
+whoever is connected — precisely the misreading a contractually-barred study
+cannot afford. Also rejected: *Expose to* (incident register), *Readable by*
+(engineer-speak, negates badly), *Allow Agents* (allow them to what?).
+"Agent Access" is the app's own noun already.
+
+**Placement: its own group, below the housekeeping block, above Remove from
+Sidebar.** Not where `Connect Agent…` sat — adjacent to Show in Finder it
+inherited that item's reading, asserting an equivalence between revealing files
+locally and letting a vendor read them. This lands at exactly three groups in
+the common case, matching the HIG's context-menu guidance.
+
+**Two corrections to shipped code it forces:**
+
+- **Hide, don't dim.** `Connect Agent…` was gated `enabled:` — the menu-*bar*
+  rule applied to a context menu, where the HIG says show only relevant
+  actions. The file's own lifecycle block already comments *"Hidden, not
+  dimmed, when N/A"*; the trailing block breaks its own rule. `Show in Finder`
+  carries the same pre-existing bug.
+- **The predicate is wrong.** `canShowInFinder` is file-presence, so a
+  never-analysed folder passes it with no quotes to read. Needs
+  `canShareWithAgents` — locatable **and** analysed — with the policy in
+  `ContentView`, matching how `canShowInFinder` is already injected.
+
+The menu-bar twin takes the same two strings, but **dims** rather than hides
+(opposite rule), reuses Rename's single-selection guard, keeps the antenna icon
+for both label states, and takes **no keyboard shortcut** — exposure must be a
+deliberate act, and accelerators are for things fired without looking.
+
 ### 3.7a Blast radius of the rename + new tab — measured
 
 | Surface | Affected? | Detail |

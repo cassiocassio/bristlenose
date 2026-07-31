@@ -569,10 +569,28 @@ only the fronted one — so under Option A the agent can still be reading the pr
 switched away from. Review calls this a correctness bug, not a UI gap. Fronted-only + naming?
 Handshake carries both? Or drain the parked one while an agent is active?</div>
 
-<div class="q"><b>6 · Where does Install live?</b> Installing is a once-ever, machine-wide act —
-and it's currently sitting inside a per-project consent sheet whose header says “Connect an agent
-to <i>this study</i>”. Minimum fix is the header above. Fuller fix is splitting setup
-(Settings ▸ Connections) from grant-and-status (the sheet). Bigger change, cleaner model.</div>
+<div class="q"><b>6 · Where does this live? — five options</b>
+Option B changed what the sheet can <i>do</i>. Two facts constrain it:
+<b>Bristlenose cannot perform the Claude Desktop grant</b> (the project is picked in Claude
+Desktop's own directory picker — we can only name the folder), and <b>one install grants one
+project</b> (<code>user_config</code> is per-extension, identity keyed on a unique manifest name).
+Of the six jobs the sheet does — install, point-at-a-project, the Claude Code / Codex command, the
+raw primitives, Anonymise, and the badge — <b>only install is machine-wide.</b> That single
+mismatch is the whole problem.
+<table style="font-size:12.5px;margin-top:10px">
+  <tr><th style="width:26%">Option</th><th>Verdict</th></tr>
+  <tr><td><b>1 · App-level only</b><br>Settings ▸ Connections, project picker inside</td>
+      <td class="no">Four of six jobs are per-project, so it re-asks “which project?” — a selection the sidebar already makes.</td></tr>
+  <tr><td><b>2 · Split by lifetime</b><br>Install → Settings; sheet keeps the rest</td>
+      <td class="yes"><b>Recommended.</b> Two places, but two genuinely different lifetimes. The Claude Desktop tab becomes instructional — the folder path plus <b>Reveal in Finder</b>, which is exactly what's needed in Claude's picker.</td></tr>
+  <tr><td><b>3 · Menu bar only</b><br>One window, project selector on top</td>
+      <td>Self-contained, but duplicates the sidebar's job of expressing which project you mean.</td></tr>
+  <tr><td><b>4 · The antenna badge is the entry point</b></td>
+      <td class="no">Flagged, not proposed — collides with the settled sidebar rule that status is <i>attention, not affordance</i> (the Mail model).</td></tr>
+  <tr><td><b>5 · Leave as-is</b><br>Keep the right-click</td>
+      <td>Cheapest, and honest <i>if</i> the copy says what to do in Claude Desktop. The right answer if we want zero structural change before the TCC spike settles.</td></tr>
+</table>
+</div>
 
 <div class="q"><b>7 · One thing to do before any code.</b> macOS gates reads of an app's container
 behind a TCC prompt (“<i>would like to access data from other apps</i>”). If that prompt fires,

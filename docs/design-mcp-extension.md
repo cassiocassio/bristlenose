@@ -294,6 +294,42 @@ file write instead of a hunt through a foreign config — which retires
 Findings 66 (rotating port), 72's UI half (revoke), and the sheet's address
 caveat in one move.
 
+### 3.1a Why not just pin the port, like everyone else?
+
+The obvious question, because a fixed port deletes discovery, the handshake
+file, the container read, and the TCC gate in one move. Considered and
+rejected — recorded here so it isn't re-proposed as a bright idea.
+
+**First, why the port moves at all.** Not to avoid clashes. The A6 redesign
+(Apr 2026) dropped deterministic per-project ports because they existed *only*
+to support orphan cleanup, which the sidecar now does itself via its
+parent-death watcher; removing them deleted ~150 lines of djb2-port-walker and
+libproc scaffolding. The desktop host never needed port stability — the
+WKWebView is injected with whatever URL the sidecar reports.
+
+**Why pinning doesn't save us: the token still has to travel.** Every
+fixed-port precedent we surveyed has *no authentication* — Figma's is "managed
+automatically by Figma", Sketch's has none. Bristlenose has a bearer token, and
+per the security review it is the one genuinely load-bearing control on a
+multi-user Mac (the handshake file is unreachable across users, but
+`127.0.0.1:<port>` is machine-wide). So a pinned port would still leave us
+writing a file for the proxy to read — one field shorter, with the container
+read and the TCC question entirely intact. Putting the token in `user_config`
+instead is hand-pasting a secret again, and lands on the `$`-corruption bug
+(§6.7).
+
+**Two further costs.** `/mcp` is mounted on the *same* FastAPI app as the
+report, so "pin the MCP port" means "pin the serve port" — and the warm-sidecar
+pool keeps a parked project alive on its own port, so two live sidecars cannot
+share one pinned number. And a fixed port buys a collision support burden that
+Figma demonstrably carries.
+
+**Conclusion:** keep `bind(0)`, and treat the handshake as carrying the
+*credential* first and the address second. That framing also explains why the
+`instance_id` probe (§3.1) is worth its six lines: with a moving port we must
+prove we are talking to Bristlenose before the bearer leaves the machine's
+memory.
+
 ### 3.2 The proxy
 
 `server/index.js`, ~150 lines, using the official MCP SDK's own transports:

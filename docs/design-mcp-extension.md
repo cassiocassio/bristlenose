@@ -1184,6 +1184,50 @@ reader knows it was considered and why it was dropped.
   solve discovery, only installation.
 - A researcher who uses Claude Desktop on a second Mac installs it twice.
 
+## 5a-bis. The badge means exposure, not activity
+
+**Decided 31 Jul.** The antenna is **permanent while the project is exposed** —
+it says *any connected agent can read this project's quotes if the researcher
+asks it to*. That is a capability, and capabilities are persistent state.
+
+This supersedes what is built. The shipped badge is driven by `mcp.active` on
+`/api/health` — a 120-second *activity* window meaning "an agent called a tool
+recently". Under the share model the badge's input becomes
+**shared && handshake live**, which is exposure. Activity is the weaker fact:
+the researcher knows they just asked a question; what they cannot otherwise see
+is that a project is reachable at all.
+
+**Why permanent is right rather than noisy.** Exposure is precisely the state
+"absence is information" is for: no antenna means not reachable, and that is
+worth being able to trust at a glance. It also makes the sidebar an **audit
+surface** — which pairs with the Settings list rather than duplicating it: the
+sidebar answers *what is exposed right now*, Settings answers *what have I
+shared*.
+
+**Only one row can carry it.** The handshake exists for the fronted shared
+project only, so at most one project is exposed at a time. Simple and honest.
+
+**Open: does shared-but-not-open deserve a quieter mark?** A second tier
+(filled = exposed now, outline = shared but not open) would let the researcher
+see the whole shared set without opening Settings. Against: it doubles the
+vocabulary for a fact Settings already answers, and the sidebar's job is
+*right now*. Worth trying on real pixels.
+
+**Open: colour.** It is currently `.secondaryLabelColor`, matching the iCloud
+sibling, on the argument that ambient status joins the quiet family (and a Mac
+review agreed). The counter-argument is now stronger: this is a data-egress
+indicator, not a sync glyph. My lean is still secondary — it is a state the
+researcher opted into deliberately, it is permanently on, and a coloured glyph
+that never turns off becomes wallpaper (the same argument that keeps the
+stale-address caveat out of yellow). A distinctive glyph in a quiet colour
+stays legible without crying wolf. But this one should be looked at rather than
+argued.
+
+**Tooltip copy should carry the disclosure**, in the user's own framing, which
+is more accurate than mine was: name the actor, the action and the condition —
+*"Shared with agents. Any connected agent can read this project's quotes when
+you ask it to."*
+
 ## 5b. The acceptance criterion: zero setup on return
 
 Stated by the user, and the right test to hold the whole design to:

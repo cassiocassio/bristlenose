@@ -619,8 +619,13 @@ handshake file</i>, not Claude Desktop's config. That means BN owns it completel
   <ul>
     <li>Precedent: macOS does exactly this for Sharing, Login Items and Screen Time — act in
       context, audit in Settings.</li>
-    <li>The badge gets a second job too: <b>shared</b> (persistent) is a different state from
-      <b>an agent asked just now</b> (transient). Worth two treatments, or one that distinguishes.</li>
+    <li><b style="color:var(--ink)">The badge stops meaning “an agent asked just now” and starts
+      meaning “this is exposed”</b> — permanent while shared and open. That's the fact worth
+      showing: the researcher already knows they just asked a question; what they can't otherwise
+      see is that a project is <i>reachable at all</i>. It makes the sidebar an audit surface —
+      what's exposed right now — pairing with Settings, which answers what have I shared.</li>
+    <li>Supersedes what's built: the shipped badge reads <code>mcp.active</code>, a 120-second
+      activity window. Exposure is a different input.</li>
   </ul>
 </div>
 

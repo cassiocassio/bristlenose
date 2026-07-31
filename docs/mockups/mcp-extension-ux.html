@@ -278,6 +278,86 @@ and the second one cost unrelated settings.</p>
 </li>
 </ol>
 
+<h3>The two entry points — wording and placement</h3>
+
+<div class="frame"><div class="chrome"><span class="dot3"><i></i><i></i><i></i></span>Settings — the fourth tab</div>
+<div class="pad" style="background:var(--frame-chrome)">
+  <div style="background:var(--mac-sheet);border-radius:10px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.16);max-width:520px;margin:0 auto">
+    <div style="display:flex;gap:2px;padding:8px 10px;border-bottom:1px solid var(--frame-border);font-size:11px;text-align:center">
+      <div style="flex:1;padding:5px 2px"><div style="font-size:17px">🖌</div>Appearance</div>
+      <div style="flex:1;padding:5px 2px"><div style="font-size:17px">🧠</div>LLM</div>
+      <div style="flex:1;padding:5px 2px"><div style="font-size:17px">〰️</div>Transcription</div>
+      <div style="flex:1;padding:5px 2px;background:rgba(120,120,128,.18);border-radius:6px"><div style="font-size:17px">📡</div><b>MCP</b></div>
+    </div>
+    <div style="padding:16px">
+      <div style="font:600 14px/1.35 -apple-system">Agents read whichever project is selected in Bristlenose</div>
+      <div style="color:var(--muted);font-size:12.5px;margin-top:3px">Now showing: <b>IKEA discovery</b> · 6 sessions · 214 quotes</div>
+      <div class="install" style="margin-top:12px">
+        <div class="ico">B</div>
+        <div class="txt"><b>Bristlenose</b><span>Extension · 4 KB</span></div>
+        <span class="btn pri">Install Extension…</span>
+      </div>
+    </div>
+  </div>
+</div></div>
+<div class="commentary">
+  <b style="color:var(--ink)">The tab label writes itself: <code>LLM</code> is already an acronym
+  tab.</b> So <b>MCP</b> sits beside Appearance · LLM · Transcription without looking foreign, and
+  it's the word the researcher has already met in Claude Desktop's own “Local MCP servers” pane.
+  <ul>
+    <li><b>“Agents”</b> is the discoverable alternative — better for someone hunting “how do I
+      connect Claude”, worse because it reads as a sibling of <b>LLM</b> (which is also about
+      models). Worth seeing both on real pixels; the mock shows <b>MCP</b>.</li>
+    <li><b>Icon: the antenna</b> — the same glyph as the sidebar badge. One concept, one symbol,
+      two surfaces.</li>
+    <li><b>Last in the list.</b> Appearance is chrome, LLM and Transcription are the engines; who
+      can read your work is a fourth concern, and last is least disruptive to muscle memory.</li>
+  </ul>
+</div>
+
+<div class="two">
+  <div class="frame"><div class="chrome">Bristlenose menu — setup</div><div class="pad" style="background:var(--frame-chrome)">
+    <div style="background:var(--mac-sheet);border-radius:8px;padding:6px 0;font-size:12.5px;max-width:230px;box-shadow:0 6px 20px rgba(0,0,0,.18)">
+      <div style="padding:4px 14px">About Bristlenose</div>
+      <div style="padding:4px 14px">AI &amp; Privacy…</div>
+      <div style="height:1px;background:var(--rule);margin:4px 0"></div>
+      <div style="padding:4px 14px;background:var(--apple-blue);color:#fff">Connect an Agent…</div>
+      <div style="height:1px;background:var(--rule);margin:4px 0"></div>
+      <div style="padding:4px 14px;display:flex;justify-content:space-between"><span>Settings…</span><span style="opacity:.6">⌘,</span></div>
+    </div>
+  </div></div>
+
+  <div class="frame"><div class="chrome">Project menu / right-click — enablement</div><div class="pad" style="background:var(--frame-chrome)">
+    <div style="background:var(--mac-sheet);border-radius:8px;padding:6px 0;font-size:12.5px;max-width:230px;box-shadow:0 6px 20px rgba(0,0,0,.18)">
+      <div style="padding:4px 14px">Show in Finder</div>
+      <div style="padding:4px 14px;background:var(--apple-blue);color:#fff">✓&nbsp; Share with Agents</div>
+      <div style="padding:4px 14px">Rename…</div>
+      <div style="padding:4px 14px">Move to&nbsp;&nbsp;▸</div>
+    </div>
+  </div></div>
+</div>
+
+<div class="commentary">
+  <b style="color:var(--ink)">Two menus, two verbs, because they're two jobs.</b>
+  <table style="font-size:12.5px;margin-top:8px">
+    <tr><th style="width:30%"></th><th>Setup — once</th><th>Enablement — per project</th></tr>
+    <tr><td>Where</td><td>Bristlenose menu</td><td>Project menu / right-click</td></tr>
+    <tr><td>Wording</td><td><b>Connect an Agent…</b></td><td><b>Share with Agents</b></td></tr>
+    <tr><td>Ellipsis?</td><td class="yes">Yes — opens a window</td><td class="no">No — it toggles immediately</td></tr>
+  </table>
+  <ul>
+    <li><b>“Connect an Agent…”</b> over “Connect MCP Agent…”: the menu is where a researcher looks
+      when they don't yet know the jargon, and the pane they land on says MCP everywhere. Put the
+      plain word where discovery happens and the precise word where the work happens.</li>
+    <li>It's honest that the item only <i>opens Settings</i> — that's the same shape as
+      <b>Add Account…</b>, which also opens a pane rather than adding anything.</li>
+    <li><b>The Project menu's old “Connect Agent…” retires.</b> Under the share model that item's
+      job is now enablement, and “Share with Agents” names it truthfully — a checkmark, not a
+      window.</li>
+    <li>Vendor-neutral on purpose: never “Connect Claude”. The whole premise is any MCP agent.</li>
+  </ul>
+</div>
+
 <h3>Before / after</h3>
 <table>
   <tr><th style="width:34%"></th><th>Hand-paste (today)</th><th>Extension (proposed)</th></tr>

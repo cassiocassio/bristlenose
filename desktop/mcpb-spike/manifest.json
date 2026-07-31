@@ -1,0 +1,7 @@
+{"manifest_version":"0.3","name":"bristlenose-spike","display_name":"Bristlenose (spike)",
+ "version":"0.0.1","description":"TCC + transport spike",
+ "author":{"name":"Bristlenose"},
+ "server":{"type":"node","entry_point":"server/index.js",
+   "mcp_config":{"command":"node","args":["${__dirname}/server/index.js"]}},
+ "tools_generated":true,
+ "compatibility":{"claude_desktop":">=1.13576.0","platforms":["darwin"],"runtimes":{"node":">=18"}}}

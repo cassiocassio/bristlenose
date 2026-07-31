@@ -565,6 +565,61 @@ Claude Code and ChatGPT/Codex tabs are unchanged (`claude mcp add` edits their
 config correctly *as a command*; the Codex TOML append is forgiving). Their
 fragility is not the same.
 
+### 3.5 The other two tabs, and where "any other agent" goes
+
+**Claude Code is unambiguous.** `claude mcp add` writes Claude Code's own
+config (`~/.claude.json`), which is separate from
+`claude_desktop_config.json` — verified. So the command is correct whether the
+researcher runs Claude Code in a terminal or inside the Claude Desktop app, and
+the tab label needs no disambiguation.
+
+**ChatGPT & Codex get the same improvement, and it isn't a big thing.** One
+`~/.codex/config.toml` covers ChatGPT desktop, the Codex CLI and the IDE
+extension, and TOML append is far more forgiving than JSON (a new `[section]`
+at the end just works — no comma arithmetic, no destructive rewrite). So the
+fragility that killed the Claude Desktop path is not present here. But they
+still carry a port and a token that both rot, and `bristlenose mcp-proxy`
+(§7 Q3) fixes that for them exactly as it does for Claude Code:
+
+```toml
+[mcp_servers.bristlenose]
+command = "bristlenose"
+args = ["mcp-proxy"]
+```
+
+Worth noting ChatGPT desktop also has **Settings → MCP servers → Add server**,
+its own form — so many researchers never edit the file at all. There is no
+`.mcpb` equivalent for ChatGPT (their Plugins need public HTTPS), so the form
+plus the TOML is the ceiling; one-click install is a Claude Desktop-only
+affordance.
+
+**The wrinkle: `bristlenose` is not on PATH for a desktop-only researcher.**
+The CLI binary comes from pip/brew/snap; the desktop app carries its sidecar
+inside the bundle at
+`/Applications/Bristlenose.app/Contents/Resources/bristlenose-sidecar/bristlenose-sidecar`
+(which already accepts subcommands). Two options, decide before writing the
+tab copy:
+
+- **Absolute path into the bundle**, which is what Proxyman ships
+  (`/Applications/Proxyman.app/Contents/MacOS/mcp-server`). Survives app
+  updates in place; breaks if the researcher moves or renames the app.
+- **A small stable launcher** written into the container dir we are already
+  writing the handshake into, kept current by the app, pointing at whichever
+  sidecar is live. Survives moves — but it is a generated executable another
+  app then runs, which wants an `app-store-police` read before it ships.
+
+**And the footnote must become per-tab.** "Works with any MCP-compatible agent"
+is true of the *server* and false beside an Install button — a `.mcpb` is
+Claude Desktop-only. It stays on the Claude Code and Codex tabs; the Claude
+Desktop tab gets something true ("Installs into Claude Desktop. Other agents
+connect their own way.").
+
+There is a second-order consequence to watch: **if all three tabs stop showing
+the raw URL and token, the "any other agent" researcher has nowhere to get
+them.** That is fine — but the primitives then need a home, and the right one
+is the manual page (`bristlenose.app/docs/connect-an-agent.html`), which
+already documents them. Not a fourth tab.
+
 ## 4. Packaging
 
 ```

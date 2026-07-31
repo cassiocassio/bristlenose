@@ -677,11 +677,39 @@ Claude Desktop-only. It stays on the Claude Code and Codex tabs; the Claude
 Desktop tab gets something true ("Installs into Claude Desktop. Other agents
 connect their own way.").
 
-There is a second-order consequence to watch: **if all three tabs stop showing
-the raw URL and token, the "any other agent" researcher has nowhere to get
-them.** That is fine — but the primitives then need a home, and the right one
-is the manual page (`bristlenose.app/docs/connect-an-agent.html`), which
-already documents them. Not a fourth tab.
+### 3.5a The generic MCP path must keep a home
+
+**The endpoint is unchanged.** `/mcp/` remains a plain streamable-HTTP MCP
+server with a bearer token; any compliant client can connect to it. The
+extension is a delivery mechanism for *one* client, not a replacement for the
+endpoint, and "works with any MCP-compatible agent" stays true of the server.
+
+**But the plan as drafted starves that path.** With Claude Desktop becoming an
+Install button and the other two tabs moving to `bristlenose mcp-proxy`, no tab
+shows the raw URL and token any more. An earlier draft of this doc said the
+manual page was the home for them; that is wrong. The manual can document the
+*shape*, but the researcher needs the *live* values — a port that changes every
+launch and a per-project token — and a static page cannot carry those.
+
+**Proposal: a disclosure, not a fourth tab.** A low-profile *"Connecting a
+different agent? Show connection details"* in the sheet, revealing the URL and
+token with a copy affordance. This respects the earlier decision to delete the
+separate "Other agent" affordance in favour of a statement — the statement
+stays, and now it has somewhere to point.
+
+Two things worth knowing about that path:
+
+- **Its scope semantics are already Option B**, with no extra work. Each
+  project's serve has its own port *and* its own token
+  (`MCPTokenStore` is keyed per project), so a URL+token pair names one
+  project's sidecar. A generic client cannot wander between projects the way
+  Option A would have allowed.
+- **It keeps the rotating-port problem**, because there is no proxy in front of
+  it to re-resolve. That is honest and fine — it just means the tiers differ:
+  one click for the client we can ship an extension for, one command for the
+  clients with a CLI, and copy-two-values-and-re-copy-after-restart for
+  everything else. Say so at the disclosure rather than letting it be
+  discovered.
 
 ## 4. Packaging
 

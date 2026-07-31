@@ -336,6 +336,33 @@ args = ["mcp-proxy"]</div>
   </ul>
 </div>
 
+<h3>The generic path — any other MCP agent</h3>
+<div class="frame"><div class="chrome">Connect Agent — connection details revealed</div>
+<div class="pad" style="background:var(--frame-chrome);display:grid;place-items:center">
+  <div class="sheet" style="max-width:none">
+    <div class="pane" style="min-height:auto">
+      <p class="hint">Connecting a different agent? <span style="color:var(--apple-blue)">Show connection details</span></p>
+      <div class="code">http://127.0.0.1:58735/mcp/
+Authorization: Bearer 0riCOVDy8ncTbq59t0QIA69m4PWKbbZjbRZc2WnyHDc</div>
+      <p class="foot">This address changes when Bristlenose restarts.</p>
+    </div>
+    <div class="btns"><span class="btn">Done</span><span class="btn pri">Copy</span></div>
+  </div>
+</div></div>
+<div class="commentary">
+  <b style="color:var(--ink)">The plan nearly starved this path.</b> Once Claude Desktop is an
+  Install button and the other two tabs are commands, <i>no tab shows the raw URL and token</i> —
+  and “works with any MCP-compatible agent” would point at nothing.
+  <ul>
+    <li>A disclosure, not a fourth tab — the separate “Other agent” affordance was deliberately
+      deleted in favour of the statement. The statement stays; now it has somewhere to point.</li>
+    <li>Scope is already correct under Option B: each project's serve has its own port
+      <i>and</i> its own token, so a URL+token pair names one project.</li>
+    <li>It keeps the rotating-port problem — no proxy in front to re-resolve — so this is the
+      re-copy-after-restart tier. Honest, and worth saying at the disclosure.</li>
+  </ul>
+</div>
+
 <h3>Bristlenose isn't running a project</h3>
 <div class="frame"><div class="chrome">Connect Agent — nothing served</div><div class="pad" style="background:var(--frame-chrome);display:grid;place-items:center">
   <div class="sheet">

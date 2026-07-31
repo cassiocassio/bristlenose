@@ -1051,6 +1051,34 @@ inherited that item's reading, asserting an equivalence between revealing files
 locally and letting a vendor read them. This lands at exactly three groups in
 the common case, matching the HIG's context-menu guidance.
 
+**Turning it on with no agent installed is not an error — it is a permission,
+not a connection.** The question "should the item hide, grey, or route to
+Settings when there's no agent?" has a prior: **we cannot know.** The extension
+lives in Claude Desktop's container, and reading a foreign app's install state
+is the fragility class this plan exists to avoid; hiding on a fact we don't
+have would make the feature invisible to someone who *does* have an agent. And
+"has an agent ever connected" — which *is* knowable — is a backwards gate,
+because the first-time order is turn access on, then ask. So:
+
+| Condition | Knowable? | Behaviour |
+|---|---|---|
+| Not analysed / not locatable | yes | **hide** — nothing to read |
+| Build lacks MCP (`mcp.mounted`) | yes | **hide** — permanently impossible for this build |
+| No agent installed | **no** | **show; turning it on succeeds** |
+
+Precedent: System Settings ▸ Sharing lets you enable Screen Sharing with no
+client anywhere — macOS neither hides nor greys it, it turns on and shows the
+address. Discovery of "you need an agent" belongs in Settings ▸ MCP Agents,
+where install lives, not in the toggle.
+
+**The general rule this is the third instance of: the boundary is one-way.** We
+could not read their config to validate it (§1), we cannot tell whether the
+install took (§3.4), and we cannot tell whether an agent exists. **We can offer;
+we cannot observe.** Any design that needs to *know* something about the other
+app is the wrong design — which is why the badge reads our own server, the
+failure messages are tool results rather than dialogs (§6.9), and this control
+is a permission rather than a connection.
+
 **Two corrections to shipped code it forces:**
 
 - **Hide, don't dim.** `Connect Agent…` was gated `enabled:` — the menu-*bar*

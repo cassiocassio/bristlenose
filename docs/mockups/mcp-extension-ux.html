@@ -840,6 +840,46 @@ separator; the stable tail is below.</p>
   </ul>
 </div>
 
+<h3>“Turn on access when I have no agent?” — a permission, not a connection</h3>
+
+<div class="frame"><div class="chrome">what we know, and what follows</div><div class="pad">
+<table style="font-size:13px;margin-top:0">
+  <tr><th style="width:30%">Condition</th><th style="width:18%">Can we know?</th><th>What the menu does</th></tr>
+  <tr><td>Project not analysed / not locatable</td><td class="yes">Yes</td><td><b>Hide the item.</b> Nothing to read; a context menu shows only relevant actions.</td></tr>
+  <tr><td>This build has no MCP support</td><td class="yes">Yes — <code>mcp.mounted</code></td><td><b>Hide the item.</b> Genuinely impossible, permanently, for this build.</td></tr>
+  <tr><td><b>No agent installed</b></td><td class="no"><b>No</b></td><td><b>Show it. Turning it on is not an error.</b></td></tr>
+</table>
+</div></div>
+
+<div class="commentary">
+  <b style="color:var(--ink)">Hiding is the right Mac answer — for things we know are unavailable.
+  “No agent” isn't one of them, on two counts.</b>
+  <ul>
+    <li><b>We can't know.</b> The extension lives in Claude Desktop's container, and reading a
+      foreign app's install state is the fragility class this whole plan exists to avoid. Hiding on
+      a fact we don't have would make the feature invisible to someone who <i>does</i> have an
+      agent.</li>
+    <li><b>And the gate would be backwards.</b> “Has an agent ever connected?” is knowable — but
+      the first-time order is <i>turn access on, then ask a question</i>. Gating on it blocks the
+      exact flow it's meant to enable.</li>
+    <li><b>It's a permission, not a connection.</b> Turning it on with nothing installed is an
+      unused permission, which is coherent. System Settings ▸ Sharing is the precedent: enable
+      Screen Sharing with no client anywhere and macOS doesn't hide, grey or nag — it turns on and
+      shows you the address.</li>
+    <li><b>Where “you need an agent” lives instead:</b> Settings ▸ MCP Agents, which is where
+      install already lives. That's discovery's job, not the toggle's.</li>
+  </ul>
+</div>
+
+<div class="commentary">
+  <b style="color:var(--ink)">The pattern, third time tonight: the boundary is one-way.</b>
+  We couldn't read their config to validate it, we can't tell whether the install took, and we
+  can't tell whether an agent exists. <b>We can offer; we can't observe.</b> Every design that
+  needs to <i>know</i> something about the other app is the wrong design — which is why the badge
+  reads our own server, the messages are tool results rather than dialogs, and this toggle is a
+  permission rather than a connection.
+</div>
+
 <h3>Where the control lives — decided: both</h3>
 
 <div class="two">

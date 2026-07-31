@@ -42,14 +42,13 @@ When asked to audit docs (with or without a specific scope):
    - `SECURITY.md` — PII redaction section
    - `README.md` — quick-start, feature list
    - `INSTALL.md` — setup instructions
-   - `docs/manual.md` — user manual (rendered to bristlenose.app/manual.html at deploy time)
-   - `bristlenose/data/bristlenose.1` — man page
+   - `bristlenose/data/bristlenose.1` — man page (symlinked as `man/bristlenose.1`)
    - `bristlenose/cli.py` — `--help` flag descriptions
-   - **Website docs** — the Diátaxis-lite set (`content/*.md` in the website
-     repo; `bristlenose-website-v2/` while staging). Out-of-tree, so audit only
-     when that tree is in scope; the standard is `docs/design-docs-system.md`
-     Part B. With the in-app Help modal removed, these are now the sole home
-     for help text.
+   - **Website docs** — the Diátaxis-lite set, `docs-src/*.md` in the website
+     repo (shipped; `docs-src/cli.md` is the published CLI reference). Out-of-tree,
+     so audit only when that tree is in scope; the standard is
+     `docs/design-docs-system.md` Part B. With the in-app Help modal removed and
+     `manual.md` archived, these are now the sole home for user-facing help text.
 
 3. **Run the 7 checks below** in order.
 

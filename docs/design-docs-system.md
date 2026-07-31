@@ -176,8 +176,9 @@ Bristlenose documents itself across many surfaces in two genres, each with its o
 | `man/bristlenose.1` (`.TH` date auto-bumped by `bump-version.py`) | User-facing (CLI) | Code | `user-documentation-review` |
 | `bristlenose/cli.py` `--help` | User-facing (CLI) | Code (is code) | `user-documentation-review` |
 | `bristlenose/locales/*/*.json` (×7) | User-facing (in-app chrome) | glossary + platform-text-map | `user-documentation-review` + `i18n-review` |
-| `docs/manual.md` → `manual.html` | User-facing | Code; rendered at website deploy | `user-documentation-review` |
-| **Website docs** (`bn.app/docs/` + sidecar `/docs/`) — this system | User-facing | Code; this guide, Part B | `user-documentation-review` *(out-of-tree — see gap)* |
+| **Website docs** (`docs-src/*.md` in the website repo → `bn.app/docs/`) — this system | User-facing | Code; this guide, Part B | `user-documentation-review` *(out-of-tree — see gap)* |
+
+`docs/manual.md` → `manual.html` was the single-page manual; retired at the website v2 cutover and archived to [archive/manual.md](archive/manual.md). `manual.html` 404s by design (no redirect — see [design-website-v2.md](design-website-v2.md)). The published CLI reference is now the website's `docs-src/cli.md`; a CLI change trues three surfaces — `README.md`, `man/bristlenose.1`, `docs-src/cli.md`.
 
 Truth is always the **code** — `docs/methodology/` is the one inversion (spec over code). Derived docs are leads, not authority: true every fact against the code before drawing from it.
 

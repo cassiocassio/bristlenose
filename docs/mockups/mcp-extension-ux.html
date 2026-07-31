@@ -547,6 +547,84 @@ In Nurses onboarding, cost comes up in 4 quotes…</div></div>
 </div>
 
 <!-- ─────────────────────────────────────────── -->
+<h2>5a · Two surfaces, two jobs <span class="tag proposal">PROPOSED 31 JUL</span></h2>
+
+<p><b>Setup once, then share per project.</b> The unlock: enablement is <i>Bristlenose writing the
+handshake file</i>, not Claude Desktop's config. That means BN owns it completely — no
+<code>user_config</code>, no directory picker, no “one install = one project”.</p>
+
+<div class="diagram">
+  <div class="box"><b>Settings ▸ MCP Agents</b><small>Do-once. Install the extension, see whether
+    an agent has connected, get the command or the raw primitives for other clients.</small></div>
+  <div class="arrow">→</div>
+  <div class="box"><b>Share, per project</b><small>A toggle. BN writes the handshake only for a
+    project that is <i>both shared and currently serving</i> — so one file, one meaning.</small></div>
+  <div class="arrow">→</div>
+  <div class="box"><b>The agent</b><small>Sees whichever shared project is open. Never sees an
+    unshared one. Unshare = delete the file = revoked.</small></div>
+</div>
+
+<div class="commentary">
+  <b style="color:var(--ink)">This is Option A restricted to an explicit allowlist</b> — which
+  answers the objection that killed A (a project you never meant to expose gets exposed by a
+  sidebar click) while keeping A's zero-friction feel for projects you <i>did</i> share.
+  <ul>
+    <li>The secret Ollama-only study is safe <b>by construction</b>: never shared, no handshake,
+      invisible.</li>
+    <li>Residual risk shrinks to switching between projects you deliberately shared — which is
+      exactly what the in-band announcement above is for.</li>
+    <li><b>Naming:</b> “Share with Claude” names a vendor in a feature whose premise is
+      vendor-neutral local agents. <b>“Share with Agents…”</b> keeps it honest.</li>
+    <li>Doesn't fix the TCC question — the proxy still reads a file BN wrote. That spike still
+      goes first.</li>
+  </ul>
+</div>
+
+<h3>Where does the Share control live? — three possibilities</h3>
+
+<div class="two">
+  <div class="frame"><div class="chrome">A · Right-click the project</div><div class="pad">
+    <div style="background:var(--mac-sheet);border-radius:8px;padding:6px 0;font-size:12.5px;max-width:250px;box-shadow:0 6px 20px rgba(0,0,0,.18)">
+      <div style="padding:4px 14px">Show in Finder</div>
+      <div style="padding:4px 14px;background:var(--apple-blue);color:#fff">✓&nbsp; Share with Agents</div>
+      <div style="padding:4px 14px">Rename…</div>
+      <div style="padding:4px 14px">Move to&nbsp;&nbsp;▸</div>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-top:10px">A checkmark item, exactly where
+    Show in Finder lives. One gesture, no window.</p>
+  </div></div>
+
+  <div class="frame"><div class="chrome">B · A list in Settings</div><div class="pad">
+    <div style="font:600 13px/1.3 -apple-system;margin-bottom:8px">Shared with agents</div>
+    <div style="font-size:12.5px">
+      <div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--rule)"><span>☑︎</span><span>IKEA discovery</span></div>
+      <div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--rule)"><span>☐</span><span>Nurses onboarding</span></div>
+      <div style="display:flex;gap:8px;padding:5px 0;color:var(--muted)"><span>☐</span><span>Medical device study <i>(local models only)</i></span></div>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-top:10px">The whole posture on one screen —
+    the answer to “what have I exposed?”</p>
+  </div></div>
+</div>
+
+<div class="frame"><div class="chrome">C · Both — the menu for speed, Settings for the overview</div><div class="pad">
+  <p style="margin:0;font-size:13.5px">Right-click toggles one project. Settings ▸ MCP Agents lists
+  every project with its state, alongside the install button and connection status.</p>
+</div></div>
+
+<div class="commentary">
+  <b style="color:var(--ink)">C, and not reluctantly.</b> These aren't duplicates of one control —
+  they answer two different questions. The menu answers <i>“expose this one”</i> at the moment you
+  think it. The list answers <i>“what have I exposed?”</i>, which is a governance question a
+  researcher will be asked by someone else, and which no per-project menu can ever answer.
+  <ul>
+    <li>Precedent: macOS does exactly this for Sharing, Login Items and Screen Time — act in
+      context, audit in Settings.</li>
+    <li>The badge gets a second job too: <b>shared</b> (persistent) is a different state from
+      <b>an agent asked just now</b> (transient). Worth two treatments, or one that distinguishes.</li>
+  </ul>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
 <h2>6 · For the morning</h2>
 
 <div class="q"><b>1 · Scope model</b>A (follow the fronted project) or B (pin one)? Everything else

@@ -85,9 +85,11 @@ final class SettingsWindow {
         controller.show(pane: pane)
     }
 
-    /// Match the window chrome to the app appearance preference. Set at open
-    /// time (changing appearance while Settings is open is an accepted edge).
-    private func applyAppearance() {
+    /// Match the window chrome to the app appearance preference. Called at
+    /// open time and again by `SettingsPaneChrome` whenever the preference
+    /// changes while the window is open — the panes' `.preferredColorScheme`
+    /// can't reach this AppKit window's chrome, only `window.appearance` can.
+    fileprivate func applyAppearance() {
         let pref = UserDefaults.standard.string(forKey: "appearance") ?? "auto"
         controller.window?.appearance = switch pref {
         case "light": NSAppearance(named: .aqua)
@@ -116,6 +118,12 @@ private struct SettingsPaneChrome: ViewModifier {
             // deliberate per the seam-alignment discipline.
             .tint(Color("Palette\(palette.capitalized)Accent"))
             .preferredColorScheme(colorScheme)
+            // Re-apply the AppKit window appearance live — the pref is edited
+            // from the Appearance pane, so this modifier is on-screen whenever
+            // it changes.
+            .onChange(of: appearance) { _, _ in
+                SettingsWindow.shared.applyAppearance()
+            }
     }
 
     private var colorScheme: ColorScheme? {

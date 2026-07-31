@@ -344,7 +344,10 @@ args = ["mcp-proxy"]</div>
       <p class="hint">Give these two values to any MCP-compatible agent:</p>
       <div class="code">http://127.0.0.1:58735/mcp/
 Authorization: Bearer 0riCOVDy8ncTbq59t0QIA69m4PWKbbZjbRZc2WnyHDc</div>
-      <p class="foot">This address changes when Bristlenose restarts.</p>
+      <p class="foot" style="display:flex;gap:6px;align-items:flex-start">
+        <span aria-hidden="true">&#9432;</span>
+        <span>This address changes each time Bristlenose starts. Copy it again after a restart.</span>
+      </p>
     </div>
     <div class="btns"><span class="btn">Done</span><span class="btn pri">Copy</span></div>
   </div>
@@ -361,7 +364,14 @@ Authorization: Bearer 0riCOVDy8ncTbq59t0QIA69m4PWKbbZjbRZc2WnyHDc</div>
     <li>Scope is already correct under Option B: each project's serve has its own port
       <i>and</i> its own token, so a URL+token pair names one project.</li>
     <li>It keeps the rotating-port problem — no proxy in front to re-resolve — so this is the
-      re-copy-after-restart tier. Honest, and worth saying at the disclosure.</li>
+      re-copy-after-restart tier.</li>
+    <li><b style="color:var(--ink)">That caveat is <code>info.circle</code> / secondary, not a
+      yellow caution triangle.</b> The HIG reserves warnings for negative consequences and data
+      loss (“don't warn when data loss is the expected result”), and our own
+      <code>MessageKind.WARNING</code> means <i>something soft-degraded in this run</i> — which
+      hasn't happened. It would also show on every single view of this tab, and permanent warnings
+      stop being read. The words carry the load, not the colour: name the moment
+      <i>and</i> the remedy.</li>
   </ul>
 </div>
 

@@ -798,8 +798,44 @@ Two things worth knowing about that path:
   it to re-resolve. That is honest and fine — it just means the tiers differ:
   one click for the client we can ship an extension for, one command for the
   clients with a CLI, and copy-two-values-and-re-copy-after-restart for
-  everything else. Say so at the disclosure rather than letting it be
-  discovered.
+  everything else. Say so on the tab rather than letting it be discovered.
+
+**How to say it — `INFO`, not `WARNING`.** Checked against the HIG and against
+our own taxonomy, which agree:
+
+- HIG `patterns/feedback.md`: *"match the significance of the information to
+  the way it's delivered"*, and warn *"when they initiate a task that can cause
+  data loss that's unexpected and irreversible… don't warn when data loss is
+  the expected result"*. Nothing here is lost or irreversible — a config goes
+  stale and is re-copied.
+- `MessageKind.WARNING` in `bristlenose/ui_kinds.py` means *"recoverable /
+  partial / soft-degrade"* — something that **has** gone wrong in a run. This
+  hasn't. `INFO` is *"neutral note"*, which is the closest existing kind, and
+  `design-pipeline-diagnostic-popover.md` requires fitting new messages into
+  the five-kind vocabulary rather than inventing a glyph.
+- Two more reasons not to reach for ⚠: it would appear on **every** view of the
+  tab, permanently, and warnings that never go away stop being read; and BN has
+  real warnings (partial runs, missing models) that need the glyph to keep its
+  meaning.
+
+So: **`info.circle`, `.secondary`** — not `exclamationmark.triangle`, not
+yellow or orange. Per HIG `foundations/color.md` (*"avoid relying solely on
+color… use text labels or glyph shapes"*), the glyph and the words carry it and
+colour is not load-bearing, which also keeps it legible for colour-blind
+readers and in both appearances.
+
+**And the text does the work the glyph shouldn't.** The current line states a
+fact; it should name the moment and the remedy, per HIG `foundations/writing.md`
+(*"guide people on actions they can take"*):
+
+> ℹ This address changes each time Bristlenose starts. Copy it again after a
+> restart.
+
+One observation worth keeping in view: that this line needs saying at all is a
+property of the *path*, not the copy. On the three named tabs the problem does
+not exist — the extension and `mcp-proxy` both re-resolve. The caveat is the
+price of the generic path, and the right long-term measure of success is that
+most researchers never open tab four.
 
 ## 4. Packaging
 

@@ -691,11 +691,63 @@ manual page was the home for them; that is wrong. The manual can document the
 *shape*, but the researcher needs the *live* values — a port that changes every
 launch and a per-project token — and a static page cannot carry those.
 
-**Proposal: a disclosure, not a fourth tab.** A low-profile *"Connecting a
-different agent? Show connection details"* in the sheet, revealing the URL and
-token with a copy affordance. This respects the earlier decision to delete the
-separate "Other agent" affordance in favour of a statement — the statement
-stays, and now it has somewhere to point.
+**DECIDED: a fourth tab, "Generic MCP".**
+
+An earlier draft argued for a disclosure instead, on the grounds that the
+separate "Other agent" affordance had already been deleted in favour of a
+statement. That objection was stale. The affordance was cut when all three tabs
+showed the *same* URL+token payload and a fourth was a literal duplicate. Each
+tab now shows something genuinely different — an install button, a shell
+command, a TOML block — so the fourth is no longer redundant; it is the only
+home for a whole class of client.
+
+It resolves two problems at once:
+
+- **The footnote disappears.** "Works with any MCP-compatible agent" was doing
+  the work of a missing tab, and next to an Install button it was actively
+  wrong (§3.5). With a Generic MCP tab, the picker *is* the statement, and it
+  is actionable rather than reassuring.
+- **The name is correctly self-selecting.** "Generic MCP" is jargon, and that
+  is the point: anyone who needs this tab is running an MCP client and knows
+  the word. A researcher who doesn't will never reach for it, because the three
+  named tabs cover them. ("Other" is the softer, more Mac-ish word but loses
+  the signal — worth a look on real pixels before it's fixed.)
+
+**It is also the fallback that makes "replace the hand-paste path" safe** — but
+be precise about what it does and doesn't cover. Review log #27 argued for
+keeping hand-paste as a labelled fallback, because the extension route carries
+more machinery (Node resolution, TCC, install UI, version skew) whose failures
+are *less* diagnosable than a JSON syntax error. The Generic MCP tab answers
+most of that: a researcher whose extension silently fails is not stranded, and
+the escape hatch is a *safe* one — hand over two values to a client that
+accepts them directly, rather than hand-edit another app's settings file.
+
+The honest limit: it is a fallback across *clients*, not within Claude Desktop.
+A Claude Desktop user whose extension won't install can reach for Claude Code
+or Codex, but Claude Desktop itself still has only the destructive JSON path —
+which is precisely why we are not documenting that path any more.
+
+**Order the picker by frequency, not alphabet.** The three named clients are
+the ~90% case; Generic MCP goes last. It is the tab most people never open, and
+the one its audience will find immediately.
+
+**It is the desktop counterpart to the CLI connect block**, which already does
+exactly this job. `_print_mcp_connect` prints the two primitives and the
+permanent docs URL and — per its own comment — *"never a vendor's command:
+dialects rot, so they"* live in the manual. That division holds across both
+surfaces and is worth keeping deliberate:
+
+| | Vendor dialects | Raw primitives |
+|---|---|---|
+| **CLI** | in the manual (they rot) | printed on `serve` |
+| **Desktop** | the three named tabs (a UI can carry them and keep them current) | the Generic MCP tab |
+
+So the desktop isn't inconsistent with the CLI — it adds dialects *because it
+can update them with the app*, and keeps the same neutral fallback underneath.
+
+One geometry note: four segments in a 560pt sheet is about 130pt each, and
+"ChatGPT & Codex" is the longest label. Check it on real pixels; if it crowds,
+the fix is shorter labels, not a narrower sheet.
 
 Two things worth knowing about that path:
 

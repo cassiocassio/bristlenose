@@ -213,7 +213,7 @@ and the second one cost unrelated settings.</p>
       </div>
 
       <div class="seg">
-        <span class="sel">Claude Desktop</span><span>Claude Code</span><span>ChatGPT &amp; Codex</span>
+        <span class="sel">Claude Desktop</span><span>Claude Code</span><span>ChatGPT &amp; Codex</span><span>Generic MCP</span>
       </div>
 
       <div class="pane">
@@ -226,15 +226,15 @@ and the second one cost unrelated settings.</p>
         </div>
       </div>
 
-      <p class="foot">Installs into Claude Desktop. Other agents connect their own way.</p>
       <div class="btns"><span class="btn">Done</span></div>
     </div>
   </div></div>
   <div class="commentary">
     <ul>
-      <li><b style="color:var(--ink)">The footnote moves inside the pane and becomes per-tab.</b>
-        “Works with any MCP-compatible agent” is true of the <i>server</i> but false next to an
-        Install button — a <code>.mcpb</code> is Claude Desktop-only. It stays on the other two tabs.</li>
+      <li><b style="color:var(--ink)">The footnote is gone entirely — a fourth tab replaced it.</b>
+        “Works with any MCP-compatible agent” was doing the work of a missing tab, and beside an
+        Install button it was actively wrong (a <code>.mcpb</code> is Claude Desktop-only). The
+        picker is now the statement, and it's actionable.</li>
       <li>No address, no token, no JSON — nothing to mistype, so nothing to get wrong.</li>
       <li>The Anonymise switch stays exactly where it is: it's the researcher's per-project
         compliance choice and has nothing to do with transport.</li>
@@ -336,12 +336,12 @@ args = ["mcp-proxy"]</div>
   </ul>
 </div>
 
-<h3>The generic path — any other MCP agent</h3>
+<h3>The fourth tab — Generic MCP</h3>
 <div class="frame"><div class="chrome">Connect Agent — connection details revealed</div>
 <div class="pad" style="background:var(--frame-chrome);display:grid;place-items:center">
   <div class="sheet" style="max-width:none">
     <div class="pane" style="min-height:auto">
-      <p class="hint">Connecting a different agent? <span style="color:var(--apple-blue)">Show connection details</span></p>
+      <p class="hint">Give these two values to any MCP-compatible agent:</p>
       <div class="code">http://127.0.0.1:58735/mcp/
 Authorization: Bearer 0riCOVDy8ncTbq59t0QIA69m4PWKbbZjbRZc2WnyHDc</div>
       <p class="foot">This address changes when Bristlenose restarts.</p>
@@ -354,8 +354,10 @@ Authorization: Bearer 0riCOVDy8ncTbq59t0QIA69m4PWKbbZjbRZc2WnyHDc</div>
   Install button and the other two tabs are commands, <i>no tab shows the raw URL and token</i> —
   and “works with any MCP-compatible agent” would point at nothing.
   <ul>
-    <li>A disclosure, not a fourth tab — the separate “Other agent” affordance was deliberately
-      deleted in favour of the statement. The statement stays; now it has somewhere to point.</li>
+    <li><b style="color:var(--ink)">It's also the fallback that makes “replace hand-paste” safe.</b>
+      A researcher whose extension silently fails isn't stranded — and the escape hatch hands two
+      values to a client that accepts them, rather than sending anyone back into another app's
+      JSON. Honest limit: it's a fallback across <i>clients</i>, not within Claude Desktop.</li>
     <li>Scope is already correct under Option B: each project's serve has its own port
       <i>and</i> its own token, so a URL+token pair names one project.</li>
     <li>It keeps the rotating-port problem — no proxy in front to re-resolve — so this is the
@@ -369,7 +371,7 @@ Authorization: Bearer 0riCOVDy8ncTbq59t0QIA69m4PWKbbZjbRZc2WnyHDc</div>
     <h4>Connect an agent to “IKEA discovery”</h4>
     <p class="scope">6 sessions</p>
     <div class="row"><div class="lbl"><b>Anonymise</b><span>Remove participant names</span></div><div class="sw"></div></div>
-    <div class="seg"><span class="sel">Claude Desktop</span><span>Claude Code</span><span>ChatGPT &amp; Codex</span></div>
+    <div class="seg"><span class="sel">Claude Desktop</span><span>Claude Code</span><span>ChatGPT &amp; Codex</span><span>Generic MCP</span></div>
     <div class="pane">
       <p class="hint">Adds Bristlenose to Claude Desktop as an extension. Claude Desktop
         will ask you to confirm.</p>

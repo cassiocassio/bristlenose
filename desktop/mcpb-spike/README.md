@@ -16,8 +16,12 @@ What it proved, end to end against a real `bristlenose serve`:
 - `initialize` answers immediately; nothing slow happens before it
 
 What it did NOT test: installing into Claude Desktop (needs a click, and the
-relaunch would end the session that built this), and `instance_id` matching
-(Bristlenose does not emit one yet).
+relaunch would end the session that built this).
+
+**Update, same day:** Bristlenose now emits `mcp.instance_id` on
+`/api/health`, so the proxy's staleness check is live rather than inert — a
+handshake naming a recycled ephemeral port is now detected *before* the bearer
+is transmitted.
 
 To re-run: write a handshake to
 `~/Library/Containers/app.bristlenose/Data/Library/Application Support/Bristlenose/mcp-handshake.json`

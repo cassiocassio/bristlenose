@@ -91,8 +91,14 @@ Connect Agent sheet + sidebar antenna badge are the desktop surface).
   `TestScopedMcpToken`. Don't "simplify" the two tokens into one — the MCP
   token is the only credential that deliberately leaves the trust boundary
   (pasted into another vendor's config file).
-- **`/api/health` carries `mcp: {mounted, active}`** — read by the desktop
-  host (auth-exempt; the host needs it before it has a token). `active` is
+- **`/api/health` carries `mcp: {mounted, instance_id, active}`** — read by
+  the desktop host (auth-exempt; the host needs it before it has a token).
+  `instance_id` is a nonce minted fresh per serve start (`create_app`): a
+  proxy holding a handshake file compares it here **before transmitting the
+  bearer**, because the port is kernel-assigned and a handshake surviving a
+  SIGKILL can name a port something else now owns. It also catches PID reuse
+  and makes "handshake names A while B is served" detectable. Safe on an
+  auth-exempt route — a nonce, not a secret. `active` is
   a bare bool ("tool call within `MCP_ACTIVE_WINDOW_SECONDS`"), computed
   server-side deliberately: elapsed seconds would hand any local process a
   1s-resolution timeline of the researcher's agent usage. The clock is

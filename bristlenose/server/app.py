@@ -133,6 +133,16 @@ def create_app(
     # /api/* (participant names, curation writes). Absent (the CLI), /mcp
     # falls back to the server token and behaviour is unchanged.
     app.state.mcp_token = os.environ.get("_BRISTLENOSE_MCP_TOKEN") or None
+    # Identifies THIS serve process, fresh every start. A proxy that reads a
+    # handshake file off disk compares it against /api/health before sending
+    # the bearer anywhere: the port is kernel-assigned and ephemeral, so a
+    # handshake surviving a SIGKILL can name a port something else now owns,
+    # and transmitting a durable credential to that squatter is the failure
+    # this closes. It also catches PID reuse (stronger than a pid, and
+    # readable from a JS proxy with no libproc binding) and makes a
+    # handshake that names project A while B is served detectable rather
+    # than silent. A nonce, not a secret — safe on the auth-exempt route.
+    app.state.mcp_instance_id = secrets.token_hex(8)
     # Print BEFORE the "Report:" readiness line so ServeManager.swift
     # has the token before transitioning to .running.
     print(f"[bristlenose] auth-token: {auth_token}", flush=True)

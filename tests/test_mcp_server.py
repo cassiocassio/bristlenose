@@ -877,6 +877,18 @@ class TestHealthAdvertisesMount:
         assert app.state.mcp_mounted is False
         assert AuthTestClient(app).get("/api/health").json()["mcp"]["mounted"] is False
 
+    def test_instance_id_is_per_serve_and_stable_within_one(self) -> None:
+        # The proxy compares this with its handshake BEFORE transmitting the
+        # bearer — so a stale handshake naming a recycled ephemeral port
+        # cannot hand a durable credential to whatever now owns it.
+        a = create_app(dev=True, db_url="sqlite://")
+        b = create_app(dev=True, db_url="sqlite://")
+        ca, cb = AuthTestClient(a), AuthTestClient(b)
+        first = ca.get("/api/health").json()["mcp"]["instance_id"]
+        assert first and len(first) == 16
+        assert ca.get("/api/health").json()["mcp"]["instance_id"] == first
+        assert cb.get("/api/health").json()["mcp"]["instance_id"] != first
+
     def test_raising_activity_recorder_never_fails_the_tool(self, db) -> None:
         # The recorder is decoration — same non-fatal rule the AutoCode
         # progress write learned the hard way. A recorder that raises must

@@ -78,6 +78,10 @@ def health(request: Request) -> dict[str, object]:
     last_call = getattr(request.app.state, "mcp_last_tool_call", None)
     payload["mcp"] = {
         "mounted": bool(getattr(request.app.state, "mcp_mounted", False)),
+        # Fresh per serve start — a proxy compares it with its handshake
+        # before transmitting the bearer, so a stale file cannot hand a
+        # durable credential to whatever now owns that ephemeral port.
+        "instance_id": getattr(request.app.state, "mcp_instance_id", None),
         "active": (
             last_call is not None
             and (time.monotonic() - last_call) <= MCP_ACTIVE_WINDOW_SECONDS

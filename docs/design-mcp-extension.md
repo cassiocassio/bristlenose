@@ -1007,6 +1007,37 @@ Icon: the antenna, matching the sidebar badge — one concept, one symbol, two
 surfaces. Position: last, since Appearance is chrome and the other two are the
 engines, while who can read your work is a fourth concern.
 
+**Why the two-word form actually helps comprehension, not just symmetry:** the
+acronym is the *qualifier*; the **noun carries the meaning**. A researcher who
+does not know what "LLM" stands for still understands *Provider* — you must
+have one. A researcher who has never heard of "MCP" still understands
+*Agents* — an agent is a thing you talk to. Bare acronyms gave them no such
+fallback. This is the argument that makes the pair worth the rename even
+setting parallelism aside.
+
+### 3.7a Blast radius of the rename + new tab — measured
+
+| Surface | Affected? | Detail |
+|---|---|---|
+| **Desktop Settings tabs** | **Yes** | `desktop.settingsTabs.llm` → `LLM Provider`, plus a new `settingsTabs.mcpAgents`. Consumed by `SettingsView.swift`. |
+| **Locale files** | **Yes** | Both keys × **20 full locales** (not `zh-Hant-HK` — thin override fork). Plus the new pane's own strings. |
+| **SPA settings nav** | **No** | Entirely separate taxonomy: General · Project · Profile · API Keys · Config · Pipeline (`settingsNav` in `settings.json`). There is no "LLM" tab there to rename, and **MCP config is desktop-only** (install, sharing), so the SPA gains nothing. |
+| **SPA config reference** | **No — and it already agrees** | `configReference.categories.llm` is already **"LLM Provider & Model"**. So the desktop rename *increases* cross-surface consistency rather than creating a divergence. No MCP category needed: the MCP settings are a DB flag and an optional extra, not env vars a researcher sets. |
+| **CLI** | **No** | No settings UI. The man page already says "LLM provider" in prose (`.SS LLM settings`, §OPTIONS) — descriptive text, not a label, and already consistent. |
+| **README / man page** | **No** for the rename | Neither documents the desktop Settings tabs. |
+| **Website docs** | **Yes, later** | `docs-src/connect-an-agent.md` currently describes the right-click sheet; it must move to Settings ▸ MCP Agents when that ships. Use the `::: fork` channel mechanism — this is a **Mac-app-only** flow. |
+
+**Two gaps this surfaced, both worth stating rather than discovering:**
+
+1. **The CLI has no share toggle, and now no MCP settings surface either.** It
+   already lacks the Anonymise switch (§SECURITY). So a CLI user can serve
+   `/mcp` but cannot express *which* projects may be read — because on the CLI
+   the answer is "the one you served", which is arguably the honest equivalent.
+   Worth confirming rather than assuming that is acceptable.
+2. **Nothing renders `settingsTabs` outside the desktop**, so the rename cannot
+   break the SPA or CLI. That is a genuinely small blast radius — the cost is
+   translation volume, not integration risk.
+
 ---
 
 _Superseded recommendation, kept for the reasoning:_ **2**, with 5 as the

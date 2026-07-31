@@ -13,7 +13,8 @@
   "menu": {
     "app": {
       "about": "About Bristlenose",
-      "aiPrivacy": "AI & Privacy…"
+      "aiPrivacy": "AI & Privacy…",
+      "connectAgent": "Connect an Agent\u2026"
     },
     "file": {
       "newProject": "New Project…",
@@ -58,7 +59,8 @@
       "analyse": "Analyse",
       "removeFromSidebar": "Remove from Sidebar",
       "showInFinder": "Show in Finder",
-      "connectAgent": "Connect Agent\u2026",
+      "turnOnAgentAccess": "Turn On Agent Access",
+      "turnOffAgentAccess": "Turn Off Agent Access",
       "rename": "Rename…",
       "moveTo": "Move to",
       "noFolder": "No Folder",
@@ -354,7 +356,8 @@
   },
   "settingsTabs": {
     "appearance": "Appearance",
-    "llm": "LLM",
+    "llm": "LLM Provider",
+    "mcpAgents": "MCP Agents",
     "transcription": "Transcription"
   },
   "help": {
@@ -498,29 +501,23 @@
     "switchProvider": "Switch provider…"
   },
   "connectAgent": {
-    "title": "Connect an agent to \u201c{{project}}\u201d",
     "sessions_one": "{{count}} session",
     "sessions_other": "{{count}} sessions",
     "quotes_one": "{{count}} quote",
     "quotes_other": "{{count}} quotes",
-    "badge": "Agent connected",
     "namesNote": "Participant names are never sent",
     "namesNoteHint": "The agent sees speaker codes (p1, m1) and verbatim quote text.",
     "clientPicker": "Agent",
     "clients": {
       "claudeDesktop": "Claude Desktop",
       "claudeCode": "Claude Code",
-      "chatgptCodex": "ChatGPT & Codex",
-      "other": "Works with any MCP-compatible agent."
+      "chatgptCodex": "ChatGPT & Codex"
     },
-    "claudeDesktopHow": "Quit Claude Desktop, then add to ~/Library/Application Support/Claude/claude_desktop_config.json (Settings \u2192 Developer \u2192 Edit Config opens it). If mcpServers already exists there, merge the bristlenose entry into it. Relaunch after saving:",
     "claudeCodeHow": "Paste in any terminal:",
     "chatgptCodexHow": "In ChatGPT: Settings \u2192 MCP servers \u2192 Add server \u2014 or add to ~/.codex/config.toml (one entry covers ChatGPT desktop, Codex CLI, and the IDE extension):",
     "copyConfig": "Copy Config",
     "copyCommand": "Copy Command",
     "copied": "Copied",
-    "cancel": "Cancel",
-    "ok": "OK",
     "addressNote": "This address changes when Bristlenose restarts \u2014 re-copy the config after relaunching.",
     "unavailable": "The agent connection isn\u2019t available in this build.",
     "notRunning": "Start the project before connecting an agent."
@@ -532,5 +529,21 @@
     "removedBatch": "%d projects removed.",
     "undo": "Undo",
     "removed": "Project removed."
+  },
+  "mcpAgents": {
+    "header": "Agents read whichever project is selected in Bristlenose",
+    "nowShowing": "Now showing: {{project}}",
+    "install": "Install Extension\u2026",
+    "extensionSubtitle": "Extension \u00b7 {{size}}",
+    "recentActivity": "An agent has asked about this project recently",
+    "downloadClaudeDesktop": "Claude Desktop isn't installed \u2014 download it from claude.ai",
+    "claudeDesktopHint": "Adds Bristlenose to Claude Desktop as an extension. Claude Desktop will ask you to confirm.",
+    "genericHow": "Give these two values to any MCP-compatible agent:",
+    "clients": {
+      "generic": "Generic MCP"
+    },
+    "accessHeader": "Agent Access",
+    "noProjects": "No projects in the sidebar yet.",
+    "badgeTooltip": "Shared with agents. Any connected agent can read this project's quotes when you ask it to."
   }
 }

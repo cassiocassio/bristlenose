@@ -13,7 +13,8 @@
   "menu": {
     "app": {
       "about": "Bristlenose 정보",
-      "aiPrivacy": "AI 및 개인정보…"
+      "aiPrivacy": "AI 및 개인정보…",
+      "connectAgent": "\uc5d0\uc774\uc804\ud2b8 \uc5f0\uacb0\u2026"
     },
     "file": {
       "newProject": "새 프로젝트…",
@@ -58,7 +59,8 @@
       "analyse": "\ubd84\uc11d",
       "removeFromSidebar": "\uc0ac\uc774\ub4dc\ubc14\uc5d0\uc11c \uc81c\uac70",
       "showInFinder": "Finder에서 보기",
-      "connectAgent": "\uc5d0\uc774\uc804\ud2b8 \uc5f0\uacb0\u2026",
+      "turnOnAgentAccess": "\uc5d0\uc774\uc804\ud2b8 \uc811\uadfc \ucf1c\uae30",
+      "turnOffAgentAccess": "\uc5d0\uc774\uc804\ud2b8 \uc811\uadfc \ub044\uae30",
       "rename": "이름 변경…",
       "moveTo": "이동",
       "noFolder": "폴더 없음",
@@ -345,7 +347,8 @@
   },
   "settingsTabs": {
     "appearance": "외관",
-    "llm": "LLM",
+    "llm": "LLM \uc81c\uacf5\uc5c5\uccb4",
+    "mcpAgents": "MCP \uc5d0\uc774\uc804\ud2b8",
     "transcription": "전사"
   },
   "help": {
@@ -489,27 +492,21 @@
     "switchProvider": "\uc81c\uacf5\uc5c5\uccb4 \uc804\ud658\u2026"
   },
   "connectAgent": {
-    "title": "\u201c{{project}}\u201d\uc5d0 \uc5d0\uc774\uc804\ud2b8 \uc5f0\uacb0",
     "sessions_other": "\uc138\uc158 {{count}}\uac1c",
     "quotes_other": "\uc778\uc6a9\ubb38 {{count}}\uac1c",
-    "badge": "\uc5d0\uc774\uc804\ud2b8 \uc5f0\uacb0\ub428",
     "namesNote": "\ucc38\uac00\uc790 \uc774\ub984\uc740 \uc804\uc1a1\ub418\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4",
     "namesNoteHint": "\uc5d0\uc774\uc804\ud2b8\uc5d0\ub294 \ud654\uc790 \ucf54\ub4dc(p1, m1)\uc640 \uc778\uc6a9\ubb38 \uc6d0\ubb38\uc774 \ud45c\uc2dc\ub429\ub2c8\ub2e4.",
     "clientPicker": "\uc5d0\uc774\uc804\ud2b8",
     "clients": {
       "claudeDesktop": "Claude Desktop",
       "claudeCode": "Claude Code",
-      "chatgptCodex": "ChatGPT & Codex",
-      "other": "\ubaa8\ub4e0 MCP \ud638\ud658 \uc5d0\uc774\uc804\ud2b8\uc5d0\uc11c \uc0ac\uc6a9\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4."
+      "chatgptCodex": "ChatGPT & Codex"
     },
-    "claudeDesktopHow": "Claude Desktop\uc5d0\uc11c: \uc124\uc815 \u2192 Developer \u2192 Edit Config, \ub610\ub294 ~/Library/Application Support/Claude/claude_desktop_config.json\uc744 \ud3b8\uc9d1\ud574 mcpServers \uc544\ub798\uc5d0 \ucd94\uac00:",
     "claudeCodeHow": "\uc544\ubb34 \ud130\ubbf8\ub110\uc5d0\ub098 \ubd99\uc5ec\ub123\uae30:",
     "chatgptCodexHow": "ChatGPT\uc5d0\uc11c: \uc124\uc815 \u2192 MCP \uc11c\ubc84 \u2192 \uc11c\ubc84 \ucd94\uac00 \u2014 \ub610\ub294 ~/.codex/config.toml\uc5d0 \ucd94\uac00(\ud56d\ubaa9 \ud558\ub098\ub85c ChatGPT \ub370\uc2a4\ud06c\ud0d1, Codex CLI, IDE \ud655\uc7a5 \ud504\ub85c\uadf8\ub7a8 \ubaa8\ub450 \uc801\uc6a9):",
     "copyConfig": "\uc124\uc815 \ubcf5\uc0ac",
     "copyCommand": "\uba85\ub839\uc5b4 \ubcf5\uc0ac",
     "copied": "\ubcf5\uc0ac\ub428",
-    "cancel": "\ucde8\uc18c",
-    "ok": "\ud655\uc778",
     "addressNote": "\uc774 \uc8fc\uc18c\ub294 Bristlenose\ub97c \uc7ac\uc2dc\ub3d9\ud558\uba74 \ubc14\ub01d\ub2c8\ub2e4 \u2014 \uc7ac\uc2dc\ub3d9 \ud6c4 \uc124\uc815\uc744 \ub2e4\uc2dc \ubcf5\uc0ac\ud558\uc2ed\uc2dc\uc624.",
     "unavailable": "\uc774 \ube4c\ub4dc\uc5d0\uc11c\ub294 \uc5d0\uc774\uc804\ud2b8 \uc5f0\uacb0\uc744 \uc0ac\uc6a9\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.",
     "notRunning": "\uc5d0\uc774\uc804\ud2b8\ub97c \uc5f0\uacb0\ud558\uae30 \uc804\uc5d0 \ud504\ub85c\uc81d\ud2b8\ub97c \uc2dc\uc791\ud558\uc2ed\uc2dc\uc624."
@@ -521,5 +518,21 @@
     "removedBatch": "\ud504\ub85c\uc81d\ud2b8 %d\uac1c\ub97c \uc81c\uac70\ud588\uc2b5\ub2c8\ub2e4.",
     "undo": "\uc2e4\ud589 \ucde8\uc18c",
     "removed": "\ud504\ub85c\uc81d\ud2b8\uac00 \uc81c\uac70\ub418\uc5c8\uc2b5\ub2c8\ub2e4."
+  },
+  "mcpAgents": {
+    "header": "\uc5d0\uc774\uc804\ud2b8\ub294 Bristlenose\uc5d0\uc11c \uc120\ud0dd\ub41c \ud504\ub85c\uc81d\ud2b8\ub97c \uc77d\uc2b5\ub2c8\ub2e4",
+    "nowShowing": "\ud604\uc7ac \ud45c\uc2dc \uc911: {{project}}",
+    "install": "\ud655\uc7a5 \ud504\ub85c\uadf8\ub7a8 \uc124\uce58\u2026",
+    "extensionSubtitle": "\ud655\uc7a5 \ud504\ub85c\uadf8\ub7a8 \u00b7 {{size}}",
+    "recentActivity": "\ucd5c\uadfc \uc5d0\uc774\uc804\ud2b8\uac00 \uc774 \ud504\ub85c\uc81d\ud2b8\uc5d0 \ub300\ud574 \uc9c8\ubb38\ud588\uc2b5\ub2c8\ub2e4",
+    "downloadClaudeDesktop": "Claude Desktop\uc774 \uc124\uce58\ub418\uc5b4 \uc788\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4. claude.ai\uc5d0\uc11c \ub2e4\uc6b4\ub85c\ub4dc\ud558\uc138\uc694",
+    "claudeDesktopHint": "Bristlenose\ub97c Claude Desktop\uc5d0 \ud655\uc7a5 \ud504\ub85c\uadf8\ub7a8\uc73c\ub85c \ucd94\uac00\ud569\ub2c8\ub2e4. Claude Desktop\uc774 \ud655\uc778\uc744 \uc694\uccad\ud569\ub2c8\ub2e4.",
+    "genericHow": "\uc774 \ub450 \uac12\uc744 MCP \ud638\ud658 \uc5d0\uc774\uc804\ud2b8\uc5d0 \uc785\ub825\ud558\uc138\uc694:",
+    "clients": {
+      "generic": "\uc77c\ubc18 MCP"
+    },
+    "accessHeader": "\uc5d0\uc774\uc804\ud2b8 \uc811\uadfc",
+    "noProjects": "\uc0ac\uc774\ub4dc\ubc14\uc5d0 \uc544\uc9c1 \ud504\ub85c\uc81d\ud2b8\uac00 \uc5c6\uc2b5\ub2c8\ub2e4.",
+    "badgeTooltip": "\uc5d0\uc774\uc804\ud2b8\uc640 \uacf5\uc720 \uc911. \uc5f0\uacb0\ub41c \uc5d0\uc774\uc804\ud2b8\ub294 \uc694\uccad \uc2dc \uc774 \ud504\ub85c\uc81d\ud2b8\uc758 \uc778\uc6a9\ubb38\uc744 \uc77d\uc744 \uc218 \uc788\uc2b5\ub2c8\ub2e4."
   }
 }

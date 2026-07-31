@@ -13,7 +13,8 @@
   "menu": {
     "app": {
       "about": "À propos de Bristlenose",
-      "aiPrivacy": "IA et confidentialité…"
+      "aiPrivacy": "IA et confidentialité…",
+      "connectAgent": "Connecter un agent\u2026"
     },
     "file": {
       "newProject": "Nouveau projet…",
@@ -58,7 +59,8 @@
       "analyse": "Analyser",
       "removeFromSidebar": "Retirer de la barre lat\u00e9rale",
       "showInFinder": "Afficher dans le Finder",
-      "connectAgent": "Connecter un agent\u2026",
+      "turnOnAgentAccess": "Activer l'acc\u00e8s des agents",
+      "turnOffAgentAccess": "D\u00e9sactiver l'acc\u00e8s des agents",
       "rename": "Renommer…",
       "moveTo": "Déplacer vers",
       "noFolder": "Aucun dossier",
@@ -354,7 +356,8 @@
   },
   "settingsTabs": {
     "appearance": "Apparence",
-    "llm": "LLM",
+    "llm": "Fournisseur LLM",
+    "mcpAgents": "Agents MCP",
     "transcription": "Transcription"
   },
   "help": {
@@ -498,29 +501,23 @@
     "switchProvider": "Changer de fournisseur\u2026"
   },
   "connectAgent": {
-    "title": "Connecter un agent \u00e0 \u00ab {{project}} \u00bb",
     "sessions_one": "{{count}} entretien",
     "sessions_other": "{{count}} entretiens",
     "quotes_one": "{{count}} verbatim",
     "quotes_other": "{{count}} verbatim",
-    "badge": "Agent connect\u00e9",
     "namesNote": "Les noms des participants ne sont jamais envoy\u00e9s",
     "namesNoteHint": "L\u2019agent voit les codes des locuteurs (p1, m1) et les verbatim exacts.",
     "clientPicker": "Agent",
     "clients": {
       "claudeDesktop": "Claude Desktop",
       "claudeCode": "Claude Code",
-      "chatgptCodex": "ChatGPT & Codex",
-      "other": "Fonctionne avec tout agent compatible MCP."
+      "chatgptCodex": "ChatGPT & Codex"
     },
-    "claudeDesktopHow": "Dans Claude Desktop : R\u00e9glages \u2192 Developer \u2192 Edit Config, ou modifiez ~/Library/Application Support/Claude/claude_desktop_config.json en ajoutant sous mcpServers :",
     "claudeCodeHow": "Collez dans n\u2019importe quel terminal :",
     "chatgptCodexHow": "Dans ChatGPT : R\u00e9glages \u2192 Serveurs MCP \u2192 Ajouter un serveur \u2014 ou ajoutez \u00e0 ~/.codex/config.toml (une seule entr\u00e9e couvre ChatGPT pour ordinateur, la CLI Codex et l\u2019extension IDE) :",
     "copyConfig": "Copier la configuration",
     "copyCommand": "Copier la commande",
     "copied": "Copi\u00e9",
-    "cancel": "Annuler",
-    "ok": "OK",
     "addressNote": "Cette adresse change au red\u00e9marrage de Bristlenose \u2014 recopiez la configuration apr\u00e8s un red\u00e9marrage.",
     "unavailable": "La connexion d\u2019agents n\u2019est pas disponible dans cette version.",
     "notRunning": "D\u00e9marrez le projet avant de connecter un agent."
@@ -532,5 +529,21 @@
     "removedBatch": "%d projets retir\u00e9s.",
     "undo": "Annuler",
     "removed": "Projet retir\u00e9."
+  },
+  "mcpAgents": {
+    "header": "Les agents lisent le projet s\u00e9lectionn\u00e9 dans Bristlenose",
+    "nowShowing": "Affich\u00e9 actuellement : {{project}}",
+    "install": "Installer l'extension\u2026",
+    "extensionSubtitle": "Extension \u00b7 {{size}}",
+    "recentActivity": "Un agent a interrog\u00e9 ce projet r\u00e9cemment",
+    "downloadClaudeDesktop": "Claude Desktop n'est pas install\u00e9 \u2014 t\u00e9l\u00e9chargez-le sur claude.ai",
+    "claudeDesktopHint": "Ajoute Bristlenose \u00e0 Claude Desktop comme extension. Claude Desktop vous demandera de confirmer.",
+    "genericHow": "Fournissez ces deux valeurs \u00e0 tout agent compatible MCP :",
+    "clients": {
+      "generic": "MCP g\u00e9n\u00e9rique"
+    },
+    "accessHeader": "Acc\u00e8s des agents",
+    "noProjects": "Aucun projet dans la barre lat\u00e9rale pour le moment.",
+    "badgeTooltip": "Partag\u00e9 avec les agents. Tout agent connect\u00e9 peut lire les citations de ce projet \u00e0 votre demande."
   }
 }

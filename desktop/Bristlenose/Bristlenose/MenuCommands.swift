@@ -329,6 +329,19 @@ private struct AppMenuContent: View {
             NotificationCenter.default.post(
                 name: .showAIConsentSheet, object: nil)
         }
+
+        Divider()
+
+        // Connect an Agent… — the plain word where discovery happens; the
+        // pane it opens says MCP everywhere (the precise word where the
+        // work happens). Honest that it only opens Settings — the same
+        // shape as Mail's Add Account…, which also opens a pane. Setup is
+        // a once-ever, app-level act, so it lives in the app menu, not the
+        // project menu (that one gets the per-project verb swap).
+        Button(i18n.t("desktop.menu.app.connectAgent"),
+               systemImage: "antenna.radiowaves.left.and.right") {
+            SettingsWindow.shared.show(pane: .mcpAgents)
+        }
     }
 }
 
@@ -622,6 +635,24 @@ private struct ProjectMenuContent: View {
         !bridgeHandler.selectedFolderName.isEmpty
     }
 
+    /// The single selected project, resolved by path — empty
+    /// `selectedProjectPath` covers both no-selection and multi-selection
+    /// (Rename's guard). Same path standardisation the badge identity uses.
+    private var selectedProject: Project? {
+        let path = bridgeHandler.selectedProjectPath
+        guard !path.isEmpty else { return nil }
+        return projectIndex.projects.first { AgentActivity.samePath($0.path, path) }
+    }
+
+    private var selectedProjectAccessOn: Bool { selectedProject?.agentAccess ?? false }
+
+    private var selectedProjectCanShare: Bool {
+        selectedProject.map {
+            AgentAccessPolicy.canShare(
+                $0, sessionCount: projectIndex.unanalysed[$0.id]?.sessionCount)
+        } ?? false
+    }
+
     var body: some View {
         if hasFolder {
             // Folder-specific items
@@ -668,12 +699,21 @@ private struct ProjectMenuContent: View {
             .disabled(bridgeHandler.selectedProjectAvailable)
 
             // HIG: every context-menu item is also reachable from the menu
-            // bar. The sidebar's right-click Connect Agent… has its twin here.
-            Button(i18n.t("desktop.menu.project.connectAgent"),
+            // bar. Turn On/Off Agent Access — the context menu's verb swap
+            // (§3.6a). Opposite visibility rule to the context menu: menus
+            // dim, context menus hide. Rename's single-selection guard, the
+            // antenna on both label states, and deliberately NO keyboard
+            // shortcut — exposure is a deliberate act, and accelerators are
+            // for things fired without looking.
+            Button(selectedProjectAccessOn
+                       ? i18n.t("desktop.menu.project.turnOffAgentAccess")
+                       : i18n.t("desktop.menu.project.turnOnAgentAccess"),
                    systemImage: "antenna.radiowaves.left.and.right") {
-                NotificationCenter.default.post(name: .connectAgentForSelectedProject, object: nil)
+                if let project = selectedProject {
+                    projectIndex.setAgentAccess(id: project.id, enabled: !project.agentAccess)
+                }
             }
-            .disabled(bridgeHandler.selectedProjectPath.isEmpty)
+            .disabled(!selectedProjectCanShare)
 
             Button(i18n.t("desktop.menu.project.rename"), systemImage: "pencil") {
                 NotificationCenter.default.post(name: .renameSelectedProject, object: nil)

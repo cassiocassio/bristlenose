@@ -13,7 +13,8 @@
   "menu": {
     "app": {
       "about": "Über Bristlenose",
-      "aiPrivacy": "KI & Datenschutz…"
+      "aiPrivacy": "KI & Datenschutz…",
+      "connectAgent": "Agent verbinden \u2026"
     },
     "file": {
       "newProject": "Neues Projekt…",
@@ -58,7 +59,8 @@
       "analyse": "Analysieren",
       "removeFromSidebar": "Aus Seitenleiste entfernen",
       "showInFinder": "Im Finder zeigen",
-      "connectAgent": "Agent verbinden\u2026",
+      "turnOnAgentAccess": "Agentenzugriff aktivieren",
+      "turnOffAgentAccess": "Agentenzugriff deaktivieren",
       "rename": "Umbenennen…",
       "moveTo": "Bewegen in",
       "noFolder": "Kein Ordner",
@@ -354,7 +356,8 @@
   },
   "settingsTabs": {
     "appearance": "Erscheinungsbild",
-    "llm": "LLM",
+    "llm": "LLM-Anbieter",
+    "mcpAgents": "MCP-Agenten",
     "transcription": "Transkription"
   },
   "help": {
@@ -498,29 +501,23 @@
     "switchProvider": "Anbieter wechseln\u2026"
   },
   "connectAgent": {
-    "title": "Agent mit \u201e{{project}}\u201c verbinden",
     "sessions_one": "{{count}} Interview",
     "sessions_other": "{{count}} Interviews",
     "quotes_one": "{{count}} Zitat",
     "quotes_other": "{{count}} Zitate",
-    "badge": "Agent verbunden",
     "namesNote": "Teilnehmernamen werden nie gesendet",
     "namesNoteHint": "Der Agent sieht Sprecherk\u00fcrzel (p1, m1) und w\u00f6rtliche Zitate.",
     "clientPicker": "Agent",
     "clients": {
       "claudeDesktop": "Claude Desktop",
       "claudeCode": "Claude Code",
-      "chatgptCodex": "ChatGPT & Codex",
-      "other": "Funktioniert mit jedem MCP-kompatiblen Agenten."
+      "chatgptCodex": "ChatGPT & Codex"
     },
-    "claudeDesktopHow": "In Claude Desktop: Einstellungen \u2192 Developer \u2192 Edit Config, oder ~/Library/Application Support/Claude/claude_desktop_config.json bearbeiten und unter mcpServers erg\u00e4nzen:",
     "claudeCodeHow": "In ein beliebiges Terminal einsetzen:",
     "chatgptCodexHow": "In ChatGPT: Einstellungen \u2192 MCP-Server \u2192 Server hinzuf\u00fcgen \u2014 oder in ~/.codex/config.toml eintragen (ein Eintrag deckt ChatGPT Desktop, Codex CLI und die IDE-Erweiterung ab):",
     "copyConfig": "Konfiguration kopieren",
     "copyCommand": "Befehl kopieren",
     "copied": "Kopiert",
-    "cancel": "Abbrechen",
-    "ok": "OK",
     "addressNote": "Diese Adresse \u00e4ndert sich bei jedem Neustart von Bristlenose \u2014 kopieren Sie die Konfiguration nach dem Neustart erneut.",
     "unavailable": "Die Agent-Verbindung ist in diesem Build nicht verf\u00fcgbar.",
     "notRunning": "Starten Sie das Projekt, bevor Sie einen Agenten verbinden."
@@ -532,5 +529,21 @@
     "removedBatch": "%d Projekte entfernt.",
     "undo": "Widerrufen",
     "removed": "Projekt entfernt."
+  },
+  "mcpAgents": {
+    "header": "Agenten lesen das in Bristlenose ausgew\u00e4hlte Projekt",
+    "nowShowing": "Aktuell angezeigt: {{project}}",
+    "install": "Erweiterung installieren \u2026",
+    "extensionSubtitle": "Erweiterung \u00b7 {{size}}",
+    "recentActivity": "Ein Agent hat k\u00fcrzlich zu diesem Projekt angefragt",
+    "downloadClaudeDesktop": "Claude Desktop ist nicht installiert \u2014 Download auf claude.ai",
+    "claudeDesktopHint": "F\u00fcgt Bristlenose als Erweiterung zu Claude Desktop hinzu. Claude Desktop bittet um Best\u00e4tigung.",
+    "genericHow": "Geben Sie diese beiden Werte an einen beliebigen MCP-kompatiblen Agenten weiter:",
+    "clients": {
+      "generic": "Generisches MCP"
+    },
+    "accessHeader": "Agentenzugriff",
+    "noProjects": "Noch keine Projekte in der Seitenleiste.",
+    "badgeTooltip": "F\u00fcr Agenten freigegeben. Jeder verbundene Agent kann die Zitate dieses Projekts auf Ihre Anfrage lesen."
   }
 }

@@ -235,15 +235,40 @@ Two layers in total:
 
 **Sandbox implication for alpha:** `/usr/sbin/lsof` exec is blocked by App Sandbox. In the shipped build this cleanup path will silently fail. The user-visible consequence is a "port in use" error on the next launch after a crash, which should be handled with a clear restart prompt. Alternatively replace with a Swift-native TCP connect sweep across the port range. Decision deferred to C1.
 
-## MCP / Connect Agent (30 Jul 2026)
+## MCP / Agent Access (31 Jul 2026 — supersedes the Connect Agent sheet)
 
 The sidecar ships the `mcp` extra, so every desktop serve mounts the
-read-only `/mcp/` endpoint. Native surface: **Connect Agent…** (project
-right-click, in `buildProjectMenu`, availability-gated + a Project-menu
-twin) opens `ConnectAgentSheet.swift`; a sidebar antenna
-(`ProjectSidebarOutline.cellRightSlot` `.agent`, secondary tint, precedence
-ring > copy > agent > cloud) shows while an agent has recent tool activity.
-Design + as-built record: `docs/design-mcp-server.md` §6a.
+read-only `/mcp/` endpoint. Native surface since the extension shipped
+(design: `docs/design-mcp-extension.md`; the sheet-era as-built record in
+`docs/design-mcp-server.md` §6a is history, not current):
+
+- **Settings ▸ MCP Agents** (`MCPAgentsSettingsView.swift`, 4th pane,
+  antenna icon; the `LLM` tab renamed to **LLM Provider** in the same
+  pass). Header always ("Agents read whichever project is selected"),
+  Now-showing sub-line only while a serve is up (absence is the
+  information), machine-wide install row (`MCPExtensionInstaller` — copies
+  the bundled `.mcpb` into the container and `NSWorkspace.open`s THAT,
+  never a bundle path; no handler → claude.ai download link), four client
+  tabs (Claude Desktop = install hint; Claude Code / ChatGPT & Codex /
+  Generic MCP = copyable dialects, pinned by
+  `MCPAgentsSettingsViewTests`), and the agent-access audit list — every
+  project, live checkboxes (the flag is host-side), Anonymise switch on
+  the open project's row only (its state lives in that project's DB).
+- **Turn On/Off Agent Access** — verb swap, not a checkmark (§3.6a).
+  Context menu (`buildProjectMenu`): its own group below housekeeping,
+  HIDDEN unless `AgentAccessPolicy.canShare` (locatable AND analysed —
+  session count or `lastPipelineRunAt`) and `mcpMounted`. Menu-bar twin
+  (`ProjectMenuContent`): same strings, DIMS instead (opposite rule),
+  antenna icon, no shortcut. `Bristlenose ▸ Connect an Agent…` opens the
+  pane. "No agent installed" is never a gate — unknowable, and access is
+  a permission, not a connection.
+- **The antenna badge means exposure, not activity** (§5a-bis).
+  `cellRightSlot` `.agent(exposedNow:)`: no badge when access is off;
+  tertiary (pale) when on-but-not-open; secondary (solid) when the serve
+  is up — driven by `Project.agentAccess` + `servingProjectPath`, NOT
+  `mcp.active` (that poll still feeds `agentActiveNow` for the install
+  row's status line). Precedence unchanged: ring > copy > agent > cloud —
+  during a run the ring hides the antenna, accepted deliberately.
 
 - **Token: `MCPTokenStore.swift`** — durable per-project bearer, minted
   host-side, data-protection Keychain (account = SHA-256 of the
@@ -285,25 +310,28 @@ Design + as-built record: `docs/design-mcp-server.md` §6a.
   `generation`); the poll re-reads `mounted` every cycle, so do NOT gate
   it on `mcpMounted` — that was the bug where one raced startup fetch
   pinned the sheet on "unavailable" for a whole session.
-- **Sheet branch order is load-bearing** (`payloadPane`): not-running
-  speaks before any build-capability claim (a cold-launched app must never
-  say "not available in this build"), and a running no-mcp build must
-  never show a payload.
-- **The sheet's Anonymise toggle is the real per-project switch** (same
-  `menu.quotes.anonymise` strings as Export). It reads/writes
+- **Pane branch order is load-bearing** (`payloadPane`, inherited from the
+  retired sheet): not-running speaks before any build-capability claim (a
+  cold-launched app must never say "not available in this build"), and a
+  running no-mcp build must never show a payload.
+- **The Anonymise toggle is the real per-project switch** (same
+  `menu.quotes.anonymise` strings as Export; now on the open project's row
+  in the pane's access list). It reads/writes
   `/api/projects/1/agent-settings` — which needs the **server** token
   (`serveManager.authToken`), NOT the MCP-scoped token (that one cannot
   open /api by design). Disabled until the read lands (never guess a
   compliance state); write failure reverts the switch visibly. Off by
   default = names accompany codes in the agent's overview.
-- **Sheet i18n keys are `desktop.connectAgent.*`** — the first dotted
-  segment is the namespace FILE. Bare `connectAgent.*` resolves to nothing
+- **Pane i18n keys are `desktop.mcpAgents.*` / `desktop.connectAgent.*`**
+  (the surviving dialect strings kept their keys) — the first dotted
+  segment is the namespace FILE. Bare `mcpAgents.*` resolves to nothing
   and renders raw keys (bit once, caught in review).
-- **Known gaps, deliberate:** sheet + badge know only the *fronted* serve
-  (parked warm sidecar's live `/mcp` invisible — model question parked in
-  the design doc); `MCPTokenStore.revoke()` unwired pending a Revoke
-  affordance; no consent-version bump yet for the agent recipient class
-  (surface before next TestFlight).
+- **Known gaps, deliberate:** the handshake follows the *fronted* serve
+  only (a parked warm sidecar's live `/mcp` is not advertised — v1 scope);
+  `MCPTokenStore.revoke()` unwired (Turn Off Agent Access deletes the
+  handshake, which is the operative revocation; the Keychain token's
+  deletion is a later affordance); no consent-version bump yet for the
+  agent recipient class (surface before next TestFlight).
 
 ## Settings window (Cmd+,)
 

@@ -7,12 +7,14 @@ import SwiftUI
 // so `Settings` there resolves to the package, not SwiftUI's `Settings` scene).
 // A bare `Settings.Pane` here would resolve to SwiftUI's `Settings` and fail.
 
-// Stable identifiers for the three Settings panes (also used for deep-linking —
-// e.g. the welcome "Setup →" opens `.llm`).
+// Stable identifiers for the four Settings panes (also used for deep-linking —
+// e.g. the welcome "Setup →" opens `.llm`; Bristlenose ▸ Connect an Agent…
+// opens `.mcpAgents`).
 extension PkgSettings.PaneIdentifier {
     static let appearance = Self("appearance")
     static let llm = Self("llm")
     static let transcription = Self("transcription")
+    static let mcpAgents = Self("mcpAgents")
 }
 
 /// Owns the macOS Settings window.
@@ -35,6 +37,11 @@ final class SettingsWindow {
     /// `.environmentObject`. Read when the controller is first built (lazily,
     /// on first open), by which point launch has set it.
     var i18n: I18n?
+    /// The MCP Agents pane's live inputs, set at launch like `i18n`: the
+    /// serve state (Now-showing line, payload values) and the project index
+    /// (the agent-access list). App-lifetime objects; plain strong refs.
+    var serveManager: ServeManager?
+    var projectIndex: ProjectIndex?
 
     private lazy var controller: SettingsWindowController = {
         let i18n = self.i18n ?? I18n()
@@ -66,6 +73,26 @@ final class SettingsWindow {
                     TranscriptionSettingsView()
                         .environmentObject(i18n)
                         .modifier(SettingsPaneChrome())
+                },
+                // Last, deliberately: Appearance is chrome, LLM Provider and
+                // Transcription are the engines; who can read your work is a
+                // fourth concern (design-mcp-extension §3.7). The antenna
+                // matches the sidebar badge — one concept, one symbol.
+                PkgSettings.Pane(
+                    identifier: .mcpAgents,
+                    title: i18n.t("desktop.settingsTabs.mcpAgents"),
+                    toolbarIcon: symbol("antenna.radiowaves.left.and.right")
+                ) {
+                    // Both are wired at launch (BristlenoseApp), before the
+                    // window can open; the guard is defensive shape, not a
+                    // real state.
+                    Group {
+                        if let serve = self.serveManager, let index = self.projectIndex {
+                            MCPAgentsSettingsView(serveManager: serve, projectIndex: index)
+                        }
+                    }
+                    .environmentObject(i18n)
+                    .modifier(SettingsPaneChrome())
                 },
             ],
             style: .toolbarItems,

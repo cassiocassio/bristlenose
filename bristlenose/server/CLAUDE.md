@@ -91,6 +91,19 @@ Connect Agent sheet + sidebar antenna badge are the desktop surface).
   `TestScopedMcpToken`. Don't "simplify" the two tokens into one — the MCP
   token is the only credential that deliberately leaves the trust boundary
   (pasted into another vendor's config file).
+- **The handshake contract (desktop):** the Swift host writes
+  `mcp-handshake.json` (`{schema, port, token, instance_id, updated_at}`,
+  0600, Application Support/Bristlenose) when the fronted project has
+  Agent Access on and the serve is `.running`; the `.mcpb` proxy re-reads
+  it per tool call, probes `/api/health` unauthenticated, and only
+  transmits the bearer on an `instance_id` match. The sidecar deletes its
+  own on graceful exit (`lifecycle.install_handshake_cleanup`,
+  instance-matched, `_BRISTLENOSE_HOSTED_BY_DESKTOP` only). **If the CLI
+  ever writes a handshake, it must mint its own scoped token first** — on
+  the CLI `/mcp` falls back to `auth_token`, which opens all of `/api/*`;
+  writing THAT to a well-known path would falsify SECURITY.md item 7 for
+  every CLI user (design-mcp-extension §3.1: writing a handshake implies
+  scoping).
 - **`/api/health` carries `mcp: {mounted, instance_id, active}`** — read by
   the desktop host (auth-exempt; the host needs it before it has a token).
   `instance_id` is a nonce minted fresh per serve start (`create_app`): a

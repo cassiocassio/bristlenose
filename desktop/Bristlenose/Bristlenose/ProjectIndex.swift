@@ -287,10 +287,6 @@ extension Notification.Name {
 
     /// Posted by Project > Rename to trigger inline rename in the sidebar.
     static let renameSelectedProject = Notification.Name("bristlenoseRenameSelectedProject")
-    /// Project ▸ Connect Agent… — the menu-bar twin of the sidebar's
-    /// right-click item. Receiver opens the sheet for the sole selection.
-    static let connectAgentForSelectedProject =
-        Notification.Name("bristlenoseConnectAgentForSelectedProject")
 
     /// Posted by Project > Rename Folder to trigger inline rename on the selected folder.
     static let renameSelectedFolder = Notification.Name("bristlenoseRenameSelectedFolder")

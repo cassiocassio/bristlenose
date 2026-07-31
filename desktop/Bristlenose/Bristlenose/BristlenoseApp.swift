@@ -97,6 +97,10 @@ struct BristlenoseApp: App {
                     // The AppKit Settings window is built lazily on first open;
                     // hand it the app's i18n so its SwiftUI panes can translate.
                     SettingsWindow.shared.i18n = i18n
+                    // The MCP Agents pane's live inputs (Now-showing line,
+                    // payloads, the agent-access list).
+                    SettingsWindow.shared.serveManager = serveManager
+                    SettingsWindow.shared.projectIndex = projectIndex
                     volumeWatcher.projectIndex = projectIndex
                     projectIndex.refreshAvailability()
                     // The handshake writer's policy input: which projects have

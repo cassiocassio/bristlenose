@@ -13,7 +13,8 @@
   "menu": {
     "app": {
       "about": "O aplikaci Bristlenose",
-      "aiPrivacy": "AI a soukromí…"
+      "aiPrivacy": "AI a soukromí…",
+      "connectAgent": "P\u0159ipojit agenta\u2026"
     },
     "file": {
       "newProject": "Nový projekt…",
@@ -58,7 +59,8 @@
       "analyse": "Analyzovat",
       "removeFromSidebar": "Odebrat z postranního panelu",
       "showInFinder": "Zobrazit ve Finderu",
-      "connectAgent": "P\u0159ipojit agenta\u2026",
+      "turnOnAgentAccess": "Zapnout p\u0159\u00edstup agent\u016f",
+      "turnOffAgentAccess": "Vypnout p\u0159\u00edstup agent\u016f",
       "rename": "Přejmenovat…",
       "moveTo": "Přesunout do",
       "noFolder": "Žádná složka",
@@ -371,7 +373,8 @@
   },
   "settingsTabs": {
     "appearance": "Vzhled",
-    "llm": "LLM",
+    "llm": "Poskytovatel LLM",
+    "mcpAgents": "Agenti MCP",
     "transcription": "Přepis"
   },
   "help": {
@@ -515,7 +518,6 @@
     "switchProvider": "Zm\u011bnit poskytovatele\u2026"
   },
   "connectAgent": {
-    "title": "P\u0159ipojit agenta k projektu \u201e{{project}}\u201c",
     "sessions_one": "{{count}} sezen\u00ed",
     "sessions_few": "{{count}} sezen\u00ed",
     "sessions_many": "{{count}} sezen\u00ed",
@@ -524,24 +526,19 @@
     "quotes_few": "{{count}} cit\u00e1ty",
     "quotes_many": "{{count}} cit\u00e1tu",
     "quotes_other": "{{count}} cit\u00e1t\u016f",
-    "badge": "Agent p\u0159ipojen",
     "namesNote": "Jm\u00e9na \u00fa\u010dastn\u00edk\u016f se nikdy neodes\u00edlaj\u00ed",
     "namesNoteHint": "Agent vid\u00ed k\u00f3dy mluv\u010d\u00edch (p1, m1) a doslovn\u00e9 cit\u00e1ty.",
     "clientPicker": "Agent",
     "clients": {
       "claudeDesktop": "Claude Desktop",
       "claudeCode": "Claude Code",
-      "chatgptCodex": "ChatGPT & Codex",
-      "other": "Funguje s libovoln\u00fdm agentem kompatibiln\u00edm s MCP."
+      "chatgptCodex": "ChatGPT & Codex"
     },
-    "claudeDesktopHow": "V aplikaci Claude Desktop: Nastaven\u00ed \u2192 Developer \u2192 Edit Config, nebo upravte ~/Library/Application Support/Claude/claude_desktop_config.json a p\u0159idejte pod mcpServers:",
     "claudeCodeHow": "Vlo\u017ete do libovoln\u00e9ho termin\u00e1lu:",
     "chatgptCodexHow": "V ChatGPT: Nastaven\u00ed \u2192 MCP servery \u2192 P\u0159idat server \u2014 nebo p\u0159idejte do ~/.codex/config.toml (jedna polo\u017eka pokryje ChatGPT desktop, Codex CLI i roz\u0161\u00ed\u0159en\u00ed pro IDE):",
     "copyConfig": "Zkop\u00edrovat konfiguraci",
     "copyCommand": "Zkop\u00edrovat p\u0159\u00edkaz",
     "copied": "Zkop\u00edrov\u00e1no",
-    "cancel": "Zru\u0161it",
-    "ok": "OK",
     "addressNote": "Tato adresa se p\u0159i restartu Bristlenose m\u011bn\u00ed \u2014 po nov\u00e9m spu\u0161t\u011bn\u00ed konfiguraci zkop\u00edrujte znovu.",
     "unavailable": "P\u0159ipojen\u00ed agenta nen\u00ed v tomto sestaven\u00ed k dispozici.",
     "notRunning": "P\u0159ed p\u0159ipojen\u00edm agenta projekt nejprve spus\u0165te."
@@ -553,5 +550,21 @@
     "removedBatch": "Odebráno %d projektů.",
     "undo": "Zpět",
     "removed": "Projekt odebrán."
+  },
+  "mcpAgents": {
+    "header": "Agenti \u010dtou projekt vybran\u00fd v Bristlenose",
+    "nowShowing": "Pr\u00e1v\u011b zobrazeno: {{project}}",
+    "install": "Nainstalovat roz\u0161\u00ed\u0159en\u00ed\u2026",
+    "extensionSubtitle": "Roz\u0161\u00ed\u0159en\u00ed \u00b7 {{size}}",
+    "recentActivity": "Agent se na tento projekt ned\u00e1vno dotazoval",
+    "downloadClaudeDesktop": "Claude Desktop nen\u00ed nainstalov\u00e1n \u2014 st\u00e1hn\u011bte jej z claude.ai",
+    "claudeDesktopHint": "P\u0159id\u00e1 Bristlenose do Claude Desktop jako roz\u0161\u00ed\u0159en\u00ed. Claude Desktop po\u017e\u00e1d\u00e1 o potvrzen\u00ed.",
+    "genericHow": "Zadejte tyto dv\u011b hodnoty libovoln\u00e9mu agentovi kompatibiln\u00edmu s MCP:",
+    "clients": {
+      "generic": "Obecn\u00e9 MCP"
+    },
+    "accessHeader": "P\u0159\u00edstup agent\u016f",
+    "noProjects": "V bo\u010dn\u00edm panelu zat\u00edm nejsou \u017e\u00e1dn\u00e9 projekty.",
+    "badgeTooltip": "Sd\u00edleno s agenty. P\u0159ipojen\u00fd agent m\u016f\u017ee na va\u0161i \u017e\u00e1dost \u010d\u00edst citace z tohoto projektu."
   }
 }

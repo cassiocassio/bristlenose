@@ -13,7 +13,8 @@
   "menu": {
     "app": {
       "about": "Bristlenose Hakkında",
-      "aiPrivacy": "Yapay Zekâ ve Gizlilik…"
+      "aiPrivacy": "Yapay Zekâ ve Gizlilik…",
+      "connectAgent": "Ajan Ba\u011fla\u2026"
     },
     "file": {
       "newProject": "Yeni Proje…",
@@ -58,7 +59,8 @@
       "analyse": "Analiz Et",
       "removeFromSidebar": "Kenar Çubuğundan Kaldır",
       "showInFinder": "Finder’da Göster",
-      "connectAgent": "Ajan Ba\u011fla\u2026",
+      "turnOnAgentAccess": "Ajan Eri\u015fimini A\u00e7",
+      "turnOffAgentAccess": "Ajan Eri\u015fimini Kapat",
       "rename": "Yeniden Adlandır…",
       "moveTo": "Şuraya Taşı",
       "noFolder": "Klasör Yok",
@@ -354,7 +356,8 @@
   },
   "settingsTabs": {
     "appearance": "Görünüm",
-    "llm": "LLM",
+    "llm": "LLM Sa\u011flay\u0131c\u0131s\u0131",
+    "mcpAgents": "MCP Ajanlar\u0131",
     "transcription": "Döküm"
   },
   "help": {
@@ -498,29 +501,23 @@
     "switchProvider": "Sa\u011flay\u0131c\u0131 de\u011fi\u015ftir\u2026"
   },
   "connectAgent": {
-    "title": "\u201c{{project}}\u201d projesine bir ajan ba\u011flay\u0131n",
     "sessions_one": "{{count}} oturum",
     "sessions_other": "{{count}} oturum",
     "quotes_one": "{{count}} al\u0131nt\u0131",
     "quotes_other": "{{count}} al\u0131nt\u0131",
-    "badge": "Ajan ba\u011fl\u0131",
     "namesNote": "Kat\u0131l\u0131mc\u0131 adlar\u0131 asla g\u00f6nderilmez",
     "namesNoteHint": "Ajan, konu\u015fmac\u0131 kodlar\u0131n\u0131 (p1, m1) ve al\u0131nt\u0131lar\u0131n birebir metnini g\u00f6r\u00fcr.",
     "clientPicker": "Ajan",
     "clients": {
       "claudeDesktop": "Claude Desktop",
       "claudeCode": "Claude Code",
-      "chatgptCodex": "ChatGPT & Codex",
-      "other": "MCP uyumlu her ajanla \u00e7al\u0131\u015f\u0131r."
+      "chatgptCodex": "ChatGPT & Codex"
     },
-    "claudeDesktopHow": "Claude Desktop'ta: Ayarlar \u2192 Developer \u2192 Edit Config, ya da ~/Library/Application Support/Claude/claude_desktop_config.json dosyas\u0131n\u0131 d\u00fczenleyip mcpServers alt\u0131na ekleyin:",
     "claudeCodeHow": "Herhangi bir terminale yap\u0131\u015ft\u0131r\u0131n:",
     "chatgptCodexHow": "ChatGPT'de: Ayarlar \u2192 MCP sunucular\u0131 \u2192 Sunucu ekle \u2014 ya da ~/.codex/config.toml dosyas\u0131na ekleyin (tek bir kay\u0131t ChatGPT masa\u00fcst\u00fc, Codex CLI ve IDE uzant\u0131s\u0131n\u0131 kapsar):",
     "copyConfig": "Yap\u0131land\u0131rmay\u0131 Kopyala",
     "copyCommand": "Komutu Kopyala",
     "copied": "Kopyaland\u0131",
-    "cancel": "Vazge\u00e7",
-    "ok": "Tamam",
     "addressNote": "Bu adres Bristlenose yeniden ba\u015flat\u0131ld\u0131\u011f\u0131nda de\u011fi\u015fir \u2014 yeniden ba\u015flatt\u0131ktan sonra yap\u0131land\u0131rmay\u0131 yeniden kopyalay\u0131n.",
     "unavailable": "Bu yap\u0131da ajan ba\u011flant\u0131s\u0131 kullan\u0131lam\u0131yor.",
     "notRunning": "Ajan ba\u011flamadan \u00f6nce projeyi ba\u015flat\u0131n."
@@ -532,5 +529,21 @@
     "removedBatch": "%d proje kaldırıldı.",
     "undo": "Geri Al",
     "removed": "Proje kaldırıldı."
+  },
+  "mcpAgents": {
+    "header": "Ajanlar, Bristlenose'ta se\u00e7ili olan projeyi okur",
+    "nowShowing": "\u015eu an g\u00f6sterilen: {{project}}",
+    "install": "Uzant\u0131y\u0131 Y\u00fckle\u2026",
+    "extensionSubtitle": "Uzant\u0131 \u00b7 {{size}}",
+    "recentActivity": "Bir ajan yak\u0131n zamanda bu projeyi sordu",
+    "downloadClaudeDesktop": "Claude Desktop y\u00fckl\u00fc de\u011fil \u2014 claude.ai adresinden indirin",
+    "claudeDesktopHint": "Bristlenose'u Claude Desktop'a uzant\u0131 olarak ekler. Claude Desktop onay ister.",
+    "genericHow": "Bu iki de\u011feri MCP uyumlu herhangi bir ajana verin:",
+    "clients": {
+      "generic": "Genel MCP"
+    },
+    "accessHeader": "Ajan Eri\u015fimi",
+    "noProjects": "Kenar \u00e7ubu\u011funda hen\u00fcz proje yok.",
+    "badgeTooltip": "Ajanlarla payla\u015f\u0131l\u0131yor. Ba\u011fl\u0131 herhangi bir ajan, istedi\u011finizde bu projenin al\u0131nt\u0131lar\u0131n\u0131 okuyabilir."
   }
 }

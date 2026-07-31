@@ -13,7 +13,8 @@
   "menu": {
     "app": {
       "about": "Om Bristlenose",
-      "aiPrivacy": "AI og anonymitet…"
+      "aiPrivacy": "AI og anonymitet…",
+      "connectAgent": "Forbind en agent\u2026"
     },
     "file": {
       "newProject": "Nyt projekt…",
@@ -58,7 +59,8 @@
       "analyse": "Analys\u00e9r",
       "removeFromSidebar": "Fjern fra sidepanel",
       "showInFinder": "Vis i Finder",
-      "connectAgent": "Forbind agent\u2026",
+      "turnOnAgentAccess": "Sl\u00e5 agentadgang til",
+      "turnOffAgentAccess": "Sl\u00e5 agentadgang fra",
       "rename": "Omdøb…",
       "moveTo": "Flyt til",
       "noFolder": "Ingen mappe",
@@ -354,7 +356,8 @@
   },
   "settingsTabs": {
     "appearance": "Udseende",
-    "llm": "LLM",
+    "llm": "LLM-udbyder",
+    "mcpAgents": "MCP-agenter",
     "transcription": "Transskription"
   },
   "help": {
@@ -498,29 +501,23 @@
     "switchProvider": "Skift udbyder\u2026"
   },
   "connectAgent": {
-    "title": "Forbind en agent til \u201c{{project}}\u201d",
     "sessions_one": "{{count}} session",
     "sessions_other": "{{count}} sessioner",
     "quotes_one": "{{count}} citat",
     "quotes_other": "{{count}} citater",
-    "badge": "Agent forbundet",
     "namesNote": "Deltagernavne sendes aldrig",
     "namesNoteHint": "Agenten ser talerkoder (p1, m1) og ordrette citater.",
     "clientPicker": "Agent",
     "clients": {
       "claudeDesktop": "Claude Desktop",
       "claudeCode": "Claude Code",
-      "chatgptCodex": "ChatGPT & Codex",
-      "other": "Virker med enhver MCP-kompatibel agent."
+      "chatgptCodex": "ChatGPT & Codex"
     },
-    "claudeDesktopHow": "I Claude Desktop: Indstillinger \u2192 Developer \u2192 Edit Config, eller rediger ~/Library/Application Support/Claude/claude_desktop_config.json og tilf\u00f8j under mcpServers:",
     "claudeCodeHow": "Inds\u00e6t i en vilk\u00e5rlig terminal:",
     "chatgptCodexHow": "I ChatGPT: Indstillinger \u2192 MCP-servere \u2192 Tilf\u00f8j server \u2014 eller tilf\u00f8j til ~/.codex/config.toml (\u00e9n post d\u00e6kker ChatGPT desktop, Codex CLI og IDE-udvidelsen):",
     "copyConfig": "Kopi\u00e9r konfiguration",
     "copyCommand": "Kopi\u00e9r kommando",
     "copied": "Kopieret",
-    "cancel": "Annuller",
-    "ok": "OK",
     "addressNote": "Denne adresse \u00e6ndres, n\u00e5r Bristlenose genstarter \u2014 kopi\u00e9r konfigurationen igen efter genstart.",
     "unavailable": "Agentforbindelse er ikke tilg\u00e6ngelig i dette build.",
     "notRunning": "Start projektet, f\u00f8r du forbinder en agent."
@@ -532,5 +529,21 @@
     "removedBatch": "%d projekter fjernet.",
     "undo": "Fortryd",
     "removed": "Projekt fjernet."
+  },
+  "mcpAgents": {
+    "header": "Agenter l\u00e6ser det projekt, der er valgt i Bristlenose",
+    "nowShowing": "Viser nu: {{project}}",
+    "install": "Installer udvidelse\u2026",
+    "extensionSubtitle": "Udvidelse \u00b7 {{size}}",
+    "recentActivity": "En agent har for nylig spurgt til dette projekt",
+    "downloadClaudeDesktop": "Claude Desktop er ikke installeret \u2014 hent det p\u00e5 claude.ai",
+    "claudeDesktopHint": "Tilf\u00f8jer Bristlenose til Claude Desktop som en udvidelse. Claude Desktop beder om bekr\u00e6ftelse.",
+    "genericHow": "Giv disse to v\u00e6rdier til enhver MCP-kompatibel agent:",
+    "clients": {
+      "generic": "Generisk MCP"
+    },
+    "accessHeader": "Agentadgang",
+    "noProjects": "Der er endnu ingen projekter i sidepanelet.",
+    "badgeTooltip": "Delt med agenter. Enhver forbundet agent kan l\u00e6se projektets citater, n\u00e5r du beder om det."
   }
 }

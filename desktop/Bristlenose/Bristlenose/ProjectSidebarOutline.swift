@@ -78,8 +78,14 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// Mirror the SwiftUI `ProjectRow`/`FolderRow` `.contextMenu` items.
     let onLocate: (UUID) -> Void
     let onShowInFinder: (UUID) -> Void
-    let onConnectAgent: (UUID) -> Void
     let canShowInFinder: (UUID) -> Bool
+    /// Turn On/Off Agent Access gating: locatable AND analysed (policy in
+    /// ContentView, like `canShowInFinder`). The item also needs the build
+    /// to have MCP at all — `mcpMounted` below.
+    let canShareWithAgents: (UUID) -> Bool
+    /// False when the serving build lacks the `mcp` extra — the Agent
+    /// Access item hides (genuinely impossible, permanently, §3.6a).
+    let mcpMounted: Bool
     let onRemoveProject: (UUID) -> Void
     let onRemoveFolder: (UUID) -> Void
     /// Live per-project run/copy data for the rich cell. `liveData` is
@@ -93,9 +99,13 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     let pipelineRunner: PipelineRunner
     @ObservedObject var liveData: PipelineLiveData
     let copyMachinery: CopyMachinery
-    /// Path of the project whose serve has recent MCP tool activity, or nil.
-    /// Value-typed so a change re-runs `updateNSViewController` → reload.
-    let agentActiveProjectPath: String?
+    /// Path of the project currently being served (fronted + running), or
+    /// nil. The antenna badge's solid tier: a project with Agent Access on
+    /// whose serve is up is exposed NOW — the handshake follows the fronted
+    /// serve, so this is "handshake live" without reading the file
+    /// (§5a-bis: exposure, not activity). Value-typed so a change re-runs
+    /// `updateNSViewController` → reload.
+    let servingProjectPath: String?
 
     func makeNSViewController(context: Context) -> SidebarOutlineController {
         let controller = SidebarOutlineController()
@@ -111,7 +121,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.pipelineRunner = pipelineRunner
         controller.liveData = liveData
         controller.copyMachinery = copyMachinery
-        controller.agentActiveProjectPath = agentActiveProjectPath
+        controller.servingProjectPath = servingProjectPath
         // Refresh the callbacks each update so they capture the live binding —
         // the AppKit delegate does not fire for programmatic selection, so the
         // funnel is the SwiftUI binding itself (§2.5).
@@ -122,8 +132,9 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.onExternalDrop = onExternalDrop
         controller.onLocate = onLocate
         controller.onShowInFinder = onShowInFinder
-        controller.onConnectAgent = onConnectAgent
         controller.canShowInFinder = canShowInFinder
+        controller.canShareWithAgents = canShareWithAgents
+        controller.mcpMounted = mcpMounted
         controller.onRemoveProject = onRemoveProject
         controller.onRemoveFolder = onRemoveFolder
         controller.update(
@@ -192,10 +203,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     var onExternalDrop: (SidebarExternalDrop, [URL]) -> Void = { _, _ in }
     var onLocate: (UUID) -> Void = { _ in }
     var onShowInFinder: (UUID) -> Void = { _ in }
-    var onConnectAgent: (UUID) -> Void = { _ in }
-    /// See the representable's `agentActiveProjectPath`.
-    var agentActiveProjectPath: String?
+    /// See the representable's `servingProjectPath`.
+    var servingProjectPath: String?
     var canShowInFinder: (UUID) -> Bool = { _ in false }
+    /// See the representable's `canShareWithAgents` / `mcpMounted`.
+    var canShareWithAgents: (UUID) -> Bool = { _ in false }
+    var mcpMounted: Bool = false
     var onRemoveProject: (UUID) -> Void = { _ in }
     var onRemoveFolder: (UUID) -> Void = { _ in }
 
@@ -1527,10 +1540,13 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             menu.addItem(menuItem("desktop.chrome.locate", #selector(menuLocate(_:))))
             menu.addItem(.separator())
         }
-        menu.addItem(menuItem("desktop.menu.project.showInFinder", #selector(menuShowInFinder(_:)),
-                              enabled: canShowInFinder(id)))
-        menu.addItem(menuItem("desktop.menu.project.connectAgent", #selector(menuConnectAgent(_:)),
-                              enabled: canShowInFinder(id)))
+        // Hidden, not dimmed, when N/A — the context-menu rule the file's
+        // lifecycle block above already follows (a menu-*bar* item would
+        // dim instead). Fixes the pre-existing `enabled:` gating here
+        // (design-mcp-extension §3.6a's "two corrections to shipped code").
+        if canShowInFinder(id) {
+            menu.addItem(menuItem("desktop.menu.project.showInFinder", #selector(menuShowInFinder(_:))))
+        }
         menu.addItem(menuItem("desktop.menu.project.rename", #selector(menuRename(_:))))
         menu.addItem(menuItem("desktop.menu.project.chooseIcon", #selector(menuChooseIcon(_:))))
 
@@ -1554,6 +1570,24 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             }
             moveItem.submenu = sub
             menu.addItem(moveItem)
+        }
+
+        // Turn On/Off Agent Access — its own group, below the housekeeping
+        // block, above Remove from Sidebar (§3.6a: adjacent to Show in
+        // Finder it would assert an equivalence between revealing files
+        // locally and letting a vendor read them). Verb swap, not a
+        // checkmark — an unchecked checkmark item is indistinguishable from
+        // an ordinary action. Hidden (never dimmed) when we genuinely know
+        // it is impossible: not analysed/locatable, or a build without MCP.
+        // "No agent installed" is NOT knowable and NOT a reason to hide —
+        // this is a permission, not a connection.
+        if mcpMounted, canShareWithAgents(id) {
+            menu.addItem(.separator())
+            let accessOn = projectIndex?.projects.first { $0.id == id }?.agentAccess ?? false
+            menu.addItem(menuItem(
+                accessOn ? "desktop.menu.project.turnOffAgentAccess"
+                         : "desktop.menu.project.turnOnAgentAccess",
+                #selector(menuToggleAgentAccess(_:))))
         }
 
         menu.addItem(.separator())
@@ -1635,8 +1669,14 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         if let id = menuClickedNodeID { onShowInFinder(id) }
     }
 
-    @objc private func menuConnectAgent(_ sender: NSMenuItem) {
-        if let id = menuClickedNodeID { onConnectAgent(id) }
+    @objc private func menuToggleAgentAccess(_ sender: NSMenuItem) {
+        // Direct model write — the flag is host-side (projects.json) and
+        // ProjectIndex posts the notification ServeManager syncs the
+        // handshake from. Succeeds with no agent installed: a permission,
+        // not a connection.
+        guard let id = menuClickedNodeID,
+              let project = projectIndex?.projects.first(where: { $0.id == id }) else { return }
+        projectIndex?.setAgentAccess(id: id, enabled: !project.agentAccess)
     }
 
     @objc private func menuChooseIcon(_ sender: NSMenuItem) {
@@ -1669,12 +1709,20 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
     /// What the subtitle-right slot shows, by `ProjectRow.subtitleRightSlot`'s
     /// precedence (`:327-360`) plus the agent badge: run activity > in-flight
-    /// copy > agent-connected antenna > iCloud glyph > empty.
+    /// copy > agent-access antenna > iCloud glyph > empty.
     /// `onStop` (Phase 4) is the hover-× cancel — run cancel / copy cancel; nil
     /// during the cancel-rollback spinner (you can't cancel a cancel).
+    ///
+    /// Known hole, accepted deliberately (§5a-bis): during a run the ring
+    /// takes this slot and wins, so an exposed project shows no antenna —
+    /// exposure stays true, just invisible while the run lasts.
     private enum RightSlot {
         case ring(fraction: Double?, onStop: (() -> Void)?)  // arc/spinner + hover-× cancel
-        case agent   // an MCP agent has recent tool activity on this serve
+        /// Agent Access is ON — exposure, not activity (§5a-bis). Solid
+        /// while the project's serve is up (reachable NOW), pale while it
+        /// is not open (reachable the moment it is). Off = no badge at
+        /// all: absence is the information.
+        case agent(exposedNow: Bool)
         case cloud
         case none
     }
@@ -1706,7 +1754,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 return .ring(fraction: nil, onStop: nil)   // spinner during rollback, no ×
             }
         }
-        if AgentActivity.samePath(agentActiveProjectPath, project.path) { return .agent }
+        if project.agentAccess {
+            return .agent(exposedNow: AgentActivity.samePath(servingProjectPath, project.path))
+        }
         if case .inCloud = project.availability { return .cloud }
         return .none
     }
@@ -1846,20 +1896,22 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 subtitleField.trailingAnchor.constraint(lessThanOrEqualTo: ring.leadingAnchor,
                                                         constant: -ProjectCellSpec.subtitleInternal),
             ]
-        case .agent:
-            // Antenna in the accent colour: STATE via semantic colour, the
-            // same weight/slot as the cloud glyph. Not a control — status
-            // lives where its subject lives (the served project's row).
+        case .agent(let exposedNow):
+            // Exposure, not activity (§5a-bis): permanent while Agent
+            // Access is on. Not a control — status is attention, not
+            // affordance (the Mail model).
+            let tooltip = i18n?.t("desktop.mcpAgents.badgeTooltip")
             let antenna = NSImageView()
             antenna.image = NSImage(systemSymbolName: "antenna.radiowaves.left.and.right",
-                                    accessibilityDescription: i18n?.t("desktop.connectAgent.badge"))
+                                    accessibilityDescription: tooltip)
             antenna.symbolConfiguration = ProjectCellSpec.subtitleGlyphConfig
-            // Secondary, like the sibling iCloud glyph: ambient status joins
-            // the existing quiet family. Accent here would be invisible on
-            // the selected row's accent fill — and this row IS usually the
-            // selected one (the badge tracks the fronted serve).
-            antenna.contentTintColor = .secondaryLabelColor
-            antenna.toolTip = i18n?.t("desktop.connectAgent.badge")
+            // Solid (secondary, like the sibling iCloud glyph — ambient
+            // status joins the quiet family; a coloured glyph that never
+            // turns off becomes wallpaper) while the serve is up = exposed
+            // NOW. Pale (tertiary) while shared-but-not-open = reachable
+            // the moment it is opened. Off = no badge at all.
+            antenna.contentTintColor = exposedNow ? .secondaryLabelColor : .tertiaryLabelColor
+            antenna.toolTip = tooltip
             antenna.translatesAutoresizingMaskIntoConstraints = false
             antenna.setContentHuggingPriority(.required, for: .horizontal)
             antenna.setContentCompressionResistancePriority(.required, for: .horizontal)

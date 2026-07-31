@@ -13,7 +13,8 @@
   "menu": {
     "app": {
       "about": "Tietoja Bristlenosesta",
-      "aiPrivacy": "Tekoäly ja yksityisyys…"
+      "aiPrivacy": "Tekoäly ja yksityisyys…",
+      "connectAgent": "Yhdist\u00e4 agentti\u2026"
     },
     "file": {
       "newProject": "Uusi projekti…",
@@ -58,7 +59,8 @@
       "analyse": "Analysoi",
       "removeFromSidebar": "Poista sivupalkista",
       "showInFinder": "Näytä Finderissa",
-      "connectAgent": "Yhdist\u00e4 agentti\u2026",
+      "turnOnAgentAccess": "Ota agenttien k\u00e4ytt\u00f6oikeus k\u00e4ytt\u00f6\u00f6n",
+      "turnOffAgentAccess": "Poista agenttien k\u00e4ytt\u00f6oikeus k\u00e4yt\u00f6st\u00e4",
       "rename": "Nimeä uudelleen…",
       "moveTo": "Siirrä kohteeseen",
       "noFolder": "Ei kansiota",
@@ -354,7 +356,8 @@
   },
   "settingsTabs": {
     "appearance": "Ulkoasu",
-    "llm": "LLM",
+    "llm": "LLM-palveluntarjoaja",
+    "mcpAgents": "MCP-agentit",
     "transcription": "Litterointi"
   },
   "help": {
@@ -498,29 +501,23 @@
     "switchProvider": "Vaihda palveluntarjoajaa\u2026"
   },
   "connectAgent": {
-    "title": "Yhdist\u00e4 agentti projektiin \u201d{{project}}\u201d",
     "sessions_one": "{{count}} istunto",
     "sessions_other": "{{count}} istuntoa",
     "quotes_one": "{{count}} sitaatti",
     "quotes_other": "{{count}} sitaattia",
-    "badge": "Agentti yhdistetty",
     "namesNote": "Osallistujien nimi\u00e4 ei koskaan l\u00e4hetet\u00e4",
     "namesNoteHint": "Agentti n\u00e4kee puhujakoodit (p1, m1) ja sitaatit sanatarkasti.",
     "clientPicker": "Agentti",
     "clients": {
       "claudeDesktop": "Claude Desktop",
       "claudeCode": "Claude Code",
-      "chatgptCodex": "ChatGPT & Codex",
-      "other": "Toimii mink\u00e4 tahansa MCP-yhteensopivan agentin kanssa."
+      "chatgptCodex": "ChatGPT & Codex"
     },
-    "claudeDesktopHow": "Claude Desktopissa: Asetukset \u2192 Developer \u2192 Edit Config, tai muokkaa tiedostoa ~/Library/Application Support/Claude/claude_desktop_config.json ja lis\u00e4\u00e4 mcpServers-kohtaan:",
     "claudeCodeHow": "Liit\u00e4 mihin tahansa terminaaliin:",
     "chatgptCodexHow": "ChatGPT:ss\u00e4: Asetukset \u2192 MCP-palvelimet \u2192 Lis\u00e4\u00e4 palvelin \u2014 tai lis\u00e4\u00e4 tiedostoon ~/.codex/config.toml (yksi merkint\u00e4 kattaa ChatGPT-ty\u00f6p\u00f6yt\u00e4sovelluksen, Codex CLI:n ja IDE-laajennuksen):",
     "copyConfig": "Kopioi m\u00e4\u00e4ritys",
     "copyCommand": "Kopioi komento",
     "copied": "Kopioitu",
-    "cancel": "Peruuta",
-    "ok": "OK",
     "addressNote": "T\u00e4m\u00e4 osoite vaihtuu, kun Bristlenose k\u00e4ynnistyy uudelleen \u2014 kopioi m\u00e4\u00e4ritys uudelleen k\u00e4ynnistyksen j\u00e4lkeen.",
     "unavailable": "Agenttiyhteys ei ole k\u00e4ytett\u00e4viss\u00e4 t\u00e4ss\u00e4 koontiversiossa.",
     "notRunning": "K\u00e4ynnist\u00e4 projekti ennen agentin yhdist\u00e4mist\u00e4."
@@ -532,5 +529,21 @@
     "removedBatch": "%d projektia poistettu.",
     "undo": "Kumoa",
     "removed": "Projekti poistettu."
+  },
+  "mcpAgents": {
+    "header": "Agentit lukevat Bristlenosessa valittuna olevaa projektia",
+    "nowShowing": "Nyt n\u00e4kyviss\u00e4: {{project}}",
+    "install": "Asenna laajennus\u2026",
+    "extensionSubtitle": "Laajennus \u00b7 {{size}}",
+    "recentActivity": "Agentti kysyi \u00e4skett\u00e4in t\u00e4st\u00e4 projektista",
+    "downloadClaudeDesktop": "Claude Desktopia ei ole asennettu \u2014 lataa se osoitteesta claude.ai",
+    "claudeDesktopHint": "Lis\u00e4\u00e4 Bristlenosen Claude Desktopiin laajennuksena. Claude Desktop pyyt\u00e4\u00e4 vahvistuksen.",
+    "genericHow": "Anna n\u00e4m\u00e4 kaksi arvoa mille tahansa MCP-yhteensopivalle agentille:",
+    "clients": {
+      "generic": "Yleinen MCP"
+    },
+    "accessHeader": "Agenttien k\u00e4ytt\u00f6oikeus",
+    "noProjects": "Sivupalkissa ei ole viel\u00e4 projekteja.",
+    "badgeTooltip": "Jaettu agenteille. Yhdistetty agentti voi lukea t\u00e4m\u00e4n projektin lainauksia pyynn\u00f6st\u00e4si."
   }
 }

@@ -801,6 +801,14 @@ including the canonical path both sessions must use for that core:
 
 ### §6a as built (30 Jul 2026)
 
+_**Superseded 31 Jul 2026** by §6a route 3 shipping as its own plan
+([`design-mcp-extension.md`](design-mcp-extension.md)): the sheet and its
+menu items were retired for **Settings ▸ MCP Agents** + the per-project
+**Turn On/Off Agent Access** verb swap + the `.mcpb` extension, and the
+badge's meaning changed from activity to exposure (§5a-bis there). Kept
+as the record of what the one-day sheet era shipped — the scoped-token,
+Anonymise, and health-contract decisions below carried forward._
+
 The macOS surface shipped as the reviewed mockup: **Connect Agent…** on a
 project's right-click menu (AppKit `buildProjectMenu`, gated on availability
 like Show in Finder) with a **Project ▸ Connect Agent…** menu-bar twin;

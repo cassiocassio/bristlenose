@@ -57,4 +57,10 @@ rm -f "$OUT"
 (cd "$STAGE" && zip -q -X -r "$OUT" manifest.json server)
 
 "$SCRIPT_DIR/check-mcpb.sh" "$OUT"
-echo "built $OUT"
+
+# Install a copy into the Xcode staging dir so the existing Copy Sidecar
+# Resources phase embeds it in Contents/Resources — the app copies it into
+# the container and NSWorkspace.opens it from there (never from inside the
+# bundle; §3.4). Gitignored, like ffmpeg/ffprobe beside it.
+cp -p "$OUT" "$DESKTOP_DIR/Bristlenose/Resources/Bristlenose.mcpb"
+echo "built $OUT (+ staged into Bristlenose/Resources)"

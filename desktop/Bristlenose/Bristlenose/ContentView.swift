@@ -147,8 +147,6 @@ struct ContentView: View {
     @State private var showingAIConsent = false
     @State private var aiConsentReviewMode = false
     @State private var showingMiroSheet = false
-    /// Non-nil while the Connect Agent sheet is up, carrying its project.
-    @State private var connectAgentProject: Project?
     @State private var showingFeedbackSheet = false
 
     /// The ID of the project currently in inline rename mode, or nil.
@@ -505,33 +503,6 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .showMiroSheet)) { _ in
             if serveManager.runningPort != nil { showingMiroSheet = true }
         }
-        // Connect Agent — right-click a project, or Project ▸ Connect Agent…
-        .sheet(item: $connectAgentProject) { project in
-            ConnectAgentSheet(
-                projectName: project.name,
-                sessionCount: projectIndex.unanalysed[project.id]?.sessionCount,
-                quoteCount: nil,
-                // Only offer an address the sidecar is actually serving, and
-                // only for the project that is running — a stale port would
-                // hand the researcher a config that 401s or, worse, reaches a
-                // different project.
-                endpoint: (serveManager.runningPort.map { "http://127.0.0.1:\($0)/mcp/" })
-                    .flatMap {
-                        AgentActivity.samePath(serveManager.currentProjectPath, project.path)
-                            ? $0 : nil
-                    },
-                token: AgentActivity.samePath(serveManager.currentProjectPath, project.path)
-                    ? (serveManager.mcpToken ?? serveManager.authToken) : nil,
-                mcpAvailable: serveManager.mcpMounted,
-                onCopied: { Task { await serveManager.refreshAgentActivity() } },
-                apiBase: AgentActivity.samePath(serveManager.currentProjectPath, project.path)
-                    ? serveManager.runningPort.flatMap { URL(string: "http://127.0.0.1:\($0)/") }
-                    : nil,
-                apiToken: AgentActivity.samePath(serveManager.currentProjectPath, project.path)
-                    ? serveManager.authToken : nil
-            )
-            .environmentObject(i18n)
-        }
         .sheet(isPresented: $showingMiroSheet) {
             if let port = serveManager.runningPort {
                 MiroSheet(
@@ -595,7 +566,6 @@ struct ContentView: View {
             selection: $selection,
             renamingProjectID: $renamingProjectID,
             renamingFolderID: $renamingFolderID,
-            connectAgentProject: $connectAgentProject,
             projectIndex: projectIndex,
             bridgeHandler: bridgeHandler,
             onLocate: { project in locateProject(project) },
@@ -1766,20 +1736,25 @@ struct ContentView: View {
                 onShowInFinder: { id in
                     if let p = projectIndex.projects.first(where: { $0.id == id }) { revealInFinder(p) }
                 },
-                onConnectAgent: { id in
-                    if let p = projectIndex.projects.first(where: { $0.id == id }) {
-                        connectAgentProject = p
-                    }
-                },
                 canShowInFinder: { id in
                     projectIndex.projects.first(where: { $0.id == id }).map(canRevealInFinder) ?? false
                 },
+                canShareWithAgents: { id in
+                    projectIndex.projects.first(where: { $0.id == id }).map {
+                        AgentAccessPolicy.canShare(
+                            $0, sessionCount: projectIndex.unanalysed[id]?.sessionCount)
+                    } ?? false
+                },
+                mcpMounted: serveManager.mcpMounted,
                 onRemoveProject: { id in removeFromSidebarContextMenu(targetingProject: id) },
                 onRemoveFolder: { id in deleteFromContextMenu(targetingFolder: id) },
                 pipelineRunner: pipelineRunner,
                 liveData: pipelineRunner.liveData,
                 copyMachinery: copyMachinery,
-                agentActiveProjectPath: serveManager.agentActiveNow
+                // Exposure, not activity (§5a-bis): the badge's solid tier
+                // is "this project's serve is up" — the handshake follows
+                // the fronted running serve, so this path IS handshake-live.
+                servingProjectPath: serveManager.runningPort != nil
                     ? serveManager.currentProjectPath : nil
             )
             .navigationTitle(i18n.t("desktop.chrome.projects"))
@@ -2455,7 +2430,6 @@ private struct ProjectNotificationReceivers: ViewModifier {
     @Binding var selection: Set<SidebarSelection>
     @Binding var renamingProjectID: UUID?
     @Binding var renamingFolderID: UUID?
-    @Binding var connectAgentProject: Project?
     let projectIndex: ProjectIndex
     let bridgeHandler: BridgeHandler
     let onLocate: (Project) -> Void
@@ -2472,13 +2446,6 @@ private struct ProjectNotificationReceivers: ViewModifier {
             .onReceive(NotificationCenter.default.publisher(for: .renameSelectedProject)) { _ in
                 if case .project(let id) = sole {
                     renamingProjectID = id
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(
-                for: .connectAgentForSelectedProject)) { _ in
-                if case .project(let id) = sole,
-                   let p = projectIndex.projects.first(where: { $0.id == id }) {
-                    connectAgentProject = p
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .renameSelectedFolder)) { _ in

@@ -13,7 +13,8 @@
   "menu": {
     "app": {
       "about": "Om Bristlenose",
-      "aiPrivacy": "AI och integritet…"
+      "aiPrivacy": "AI och integritet…",
+      "connectAgent": "Anslut en agent\u2026"
     },
     "file": {
       "newProject": "Nytt projekt…",
@@ -58,7 +59,8 @@
       "analyse": "Analysera",
       "removeFromSidebar": "Ta bort från sidofält",
       "showInFinder": "Visa i Finder",
-      "connectAgent": "Anslut agent\u2026",
+      "turnOnAgentAccess": "Sl\u00e5 p\u00e5 agent\u00e5tkomst",
+      "turnOffAgentAccess": "Sl\u00e5 av agent\u00e5tkomst",
       "rename": "Byt namn…",
       "moveTo": "Flytta till",
       "noFolder": "Ingen mapp",
@@ -354,7 +356,8 @@
   },
   "settingsTabs": {
     "appearance": "Utseende",
-    "llm": "LLM",
+    "llm": "LLM-leverant\u00f6r",
+    "mcpAgents": "MCP-agenter",
     "transcription": "Transkription"
   },
   "help": {
@@ -498,29 +501,23 @@
     "switchProvider": "Byt leverant\u00f6r\u2026"
   },
   "connectAgent": {
-    "title": "Anslut en agent till \u201d{{project}}\u201d",
     "sessions_one": "{{count}} session",
     "sessions_other": "{{count}} sessioner",
     "quotes_one": "{{count}} citat",
     "quotes_other": "{{count}} citat",
-    "badge": "Agent ansluten",
     "namesNote": "Deltagarnamn skickas aldrig",
     "namesNoteHint": "Agenten ser talarkoder (p1, m1) och ordagranna citat.",
     "clientPicker": "Agent",
     "clients": {
       "claudeDesktop": "Claude Desktop",
       "claudeCode": "Claude Code",
-      "chatgptCodex": "ChatGPT & Codex",
-      "other": "Fungerar med alla MCP-kompatibla agenter."
+      "chatgptCodex": "ChatGPT & Codex"
     },
-    "claudeDesktopHow": "I Claude Desktop: Inst\u00e4llningar \u2192 Developer \u2192 Edit Config, eller redigera ~/Library/Application Support/Claude/claude_desktop_config.json och l\u00e4gg till under mcpServers:",
     "claudeCodeHow": "Klistra in i valfri terminal:",
     "chatgptCodexHow": "I ChatGPT: Inst\u00e4llningar \u2192 MCP-servrar \u2192 L\u00e4gg till server \u2014 eller l\u00e4gg till i ~/.codex/config.toml (en post t\u00e4cker ChatGPT f\u00f6r skrivbordet, Codex CLI och IDE-till\u00e4gget):",
     "copyConfig": "Kopiera konfiguration",
     "copyCommand": "Kopiera kommando",
     "copied": "Kopierat",
-    "cancel": "Avbryt",
-    "ok": "OK",
     "addressNote": "Den h\u00e4r adressen \u00e4ndras n\u00e4r Bristlenose startas om \u2014 kopiera konfigurationen igen efter omstart.",
     "unavailable": "Agentanslutning \u00e4r inte tillg\u00e4nglig i det h\u00e4r bygget.",
     "notRunning": "Starta projektet innan du ansluter en agent."
@@ -532,5 +529,21 @@
     "removedBatch": "%d projekt borttagna.",
     "undo": "Ångra",
     "removed": "Projektet borttaget."
+  },
+  "mcpAgents": {
+    "header": "Agenter l\u00e4ser det projekt som \u00e4r valt i Bristlenose",
+    "nowShowing": "Visas nu: {{project}}",
+    "install": "Installera till\u00e4gg\u2026",
+    "extensionSubtitle": "Till\u00e4gg \u00b7 {{size}}",
+    "recentActivity": "En agent har nyligen fr\u00e5gat om det h\u00e4r projektet",
+    "downloadClaudeDesktop": "Claude Desktop \u00e4r inte installerat \u2014 h\u00e4mta det p\u00e5 claude.ai",
+    "claudeDesktopHint": "L\u00e4gger till Bristlenose i Claude Desktop som ett till\u00e4gg. Claude Desktop ber om bekr\u00e4ftelse.",
+    "genericHow": "Ge dessa tv\u00e5 v\u00e4rden till valfri MCP-kompatibel agent:",
+    "clients": {
+      "generic": "Generisk MCP"
+    },
+    "accessHeader": "Agent\u00e5tkomst",
+    "noProjects": "Inga projekt i sidof\u00e4ltet \u00e4nnu.",
+    "badgeTooltip": "Delas med agenter. Alla anslutna agenter kan l\u00e4sa projektets citat n\u00e4r du ber om det."
   }
 }

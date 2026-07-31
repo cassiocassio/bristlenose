@@ -1184,6 +1184,51 @@ reader knows it was considered and why it was dropped.
   solve discovery, only installation.
 - A researcher who uses Claude Desktop on a second Mac installs it twice.
 
+## 5b. The acceptance criterion: zero setup on return
+
+Stated by the user, and the right test to hold the whole design to:
+
+> When the researcher comes back the next day or the next hour to a project
+> they were sharing, and clicks to make that project visible, they expect
+> **zero setup in Claude** — to keep chatting, or to start a new session.
+
+Traced against the design, it holds — but it is carried almost entirely by one
+decision, and three others that must not be undone:
+
+| Return scenario | What makes it work |
+|---|---|
+| Next day, new Claude session | Handshake rewritten with the new port; the token is durable (Keychain, per project) so it is unchanged |
+| Same hour, Claude still open, Bristlenose restarted | **The proxy re-reads the handshake per tool call.** A proxy that resolved once at startup is dead here — this is the scenario that makes §3.2's requirement non-negotiable |
+| Claude opened *before* Bristlenose | **No sticky fallback** (§3.2) — one server deciding per call, self-healing; plus `notifications/tools/list_changed` when the server appears |
+| Switched to another shared project | Handshake rewritten; the next call picks it up and §3.2a marks it in the transcript |
+
+**The gap this criterion exposes: the cold-start window.** Click a shared
+project and ask Claude immediately — the serve is still booting (sidecar cold
+start, plus the documented ~15s first-launch code-signature stall). The
+handshake either does not exist yet or names a port that is not listening, and
+the proxy answers *"open Bristlenose and select a project"* — which is wrong,
+and infuriating, because they just did.
+
+**Fix: three states, not two.** The proxy must distinguish
+
+1. **no handshake** → not shared, or Bristlenose is not open → *"Open
+   Bristlenose and select the study you want to ask about."*
+2. **handshake present, port not answering** → starting up → *"Bristlenose is
+   starting — ask again in a moment."* Optionally a short bounded retry (a
+   second or two) **inside the tool call**, never during `initialize` (§3.2b).
+3. **answering** → proxy normally.
+
+State 2 is the one a naive implementation collapses into state 1, and the
+researcher's own action is what creates it — so it is the state most likely to
+be met and the most damaging to get wrong.
+
+**Corollary for the handshake write.** Bristlenose should write the handshake
+**when the port is confirmed listening**, not when the serve is requested.
+`ServeManager` already has exactly this moment — it transitions to `.running`
+only after `waitForPort` succeeds. Writing on `.running` means "handshake
+exists" implies "port answers", and state 2 collapses to the narrow window
+between the click and that transition, which is honest and short.
+
 ## 6. Risks and what could bite
 
 From the research pass (issue numbers are `modelcontextprotocol/mcpb`) and from

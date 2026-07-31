@@ -337,7 +337,7 @@ and the second one cost unrelated settings.</p>
   <div class="frame"><div class="chrome">Project menu / right-click — enablement</div><div class="pad" style="background:var(--frame-chrome)">
     <div style="background:var(--mac-sheet);border-radius:8px;padding:6px 0;font-size:12.5px;max-width:230px;box-shadow:0 6px 20px rgba(0,0,0,.18)">
       <div style="padding:4px 14px">Show in Finder</div>
-      <div style="padding:4px 14px;background:var(--apple-blue);color:#fff">✓&nbsp; Share with Agents</div>
+      <div style="padding:4px 14px;background:var(--apple-blue);color:#fff">Turn Off Agent Access</div>
       <div style="padding:4px 14px">Rename…</div>
       <div style="padding:4px 14px">Move to&nbsp;&nbsp;▸</div>
     </div>
@@ -349,7 +349,7 @@ and the second one cost unrelated settings.</p>
   <table style="font-size:12.5px;margin-top:8px">
     <tr><th style="width:30%"></th><th>Setup — once</th><th>Enablement — per project</th></tr>
     <tr><td>Where</td><td>Bristlenose menu</td><td>Project menu / right-click</td></tr>
-    <tr><td>Wording</td><td><b>Connect an Agent…</b></td><td><b>Share with Agents</b></td></tr>
+    <tr><td>Wording</td><td><b>Connect an Agent…</b></td><td><b>Turn On / Turn Off Agent Access</b></td></tr>
     <tr><td>Ellipsis?</td><td class="yes">Yes — opens a window</td><td class="no">No — it toggles immediately</td></tr>
   </table>
   <ul>
@@ -358,9 +358,10 @@ and the second one cost unrelated settings.</p>
       plain word where discovery happens and the precise word where the work happens.</li>
     <li>It's honest that the item only <i>opens Settings</i> — that's the same shape as
       <b>Add Account…</b>, which also opens a pane rather than adding anything.</li>
-    <li><b>The Project menu's old “Connect Agent…” retires.</b> Under the share model that item's
-      job is now enablement, and “Share with Agents” names it truthfully — a checkmark, not a
-      window.</li>
+    <li><b>The Project menu's old “Connect Agent…” retires.</b> Its job is now enablement, and
+      <b>Turn On / Turn Off Agent Access</b> names it truthfully — a verb swap, not a window.
+      (“Share” was rejected: on macOS it means the share sheet, and its punctual tense misreads a
+      standing permission. See the decided menu above.)</li>
     <li>Vendor-neutral on purpose: never “Connect Claude”. The whole premise is any MCP agent.</li>
   </ul>
 </div>
@@ -701,8 +702,9 @@ handshake file</i>, not Claude Desktop's config. That means BN owns it completel
   <div class="box"><b>Settings ▸ MCP Agents</b><small>Do-once. Install the extension, see whether
     an agent has connected, get the command or the raw primitives for other clients.</small></div>
   <div class="arrow">→</div>
-  <div class="box"><b>Share, per project</b><small>A toggle. BN writes the handshake only for a
-    project that is <i>both shared and currently serving</i> — so one file, one meaning.</small></div>
+  <div class="box"><b>Agent access, per project</b><small>A toggle. BN writes the handshake only
+    for a project that is <i>both turned on and currently serving</i> — so one file, one
+    meaning.</small></div>
   <div class="arrow">→</div>
   <div class="box"><b>The agent</b><small>Sees whichever shared project is open. Never sees an
     unshared one. Unshare = delete the file = revoked.</small></div>
@@ -717,8 +719,9 @@ handshake file</i>, not Claude Desktop's config. That means BN owns it completel
       invisible.</li>
     <li>Residual risk shrinks to switching between projects you deliberately shared — which is
       exactly what the in-band announcement above is for.</li>
-    <li><b>Naming:</b> “Share with Claude” names a vendor in a feature whose premise is
-      vendor-neutral local agents. <b>“Share with Agents…”</b> keeps it honest.</li>
+    <li><b>Naming, decided:</b> <b>Turn On / Turn Off Agent Access</b>. Never a vendor — several
+      agents can be connected at once, so “Share with Claude” would be factually wrong, not merely
+      narrow. And not “Share”, which macOS has already claimed for the share sheet.</li>
     <li>Doesn't fix the TCC question — the proxy still reads a file BN wrote. That spike still
       goes first.</li>
   </ul>
@@ -728,9 +731,9 @@ handshake file</i>, not Claude Desktop's config. That means BN owns it completel
 <div class="frame"><div class="chrome">Sidebar rows</div><div class="pad">
   <table style="font-size:13px;margin-top:0">
     <tr><th style="width:22%">State</th><th style="width:30%">Meaning</th><th>Treatment</th></tr>
-    <tr><td>Not shared</td><td>Cannot be reached, ever</td><td class="yes"><b>No badge</b> — absence is the information</td></tr>
-    <tr><td>Shared, not open</td><td>Open it and it's reachable</td><td>Pale / outline</td></tr>
-    <tr><td>Shared, serving</td><td><b>Exposed now</b></td><td>Solid</td></tr>
+    <tr><td>Off</td><td>Cannot be reached, ever</td><td class="yes"><b>No badge</b> — absence is the information</td></tr>
+    <tr><td>On, project not open</td><td>Open it and it's reachable</td><td>Pale / outline</td></tr>
+    <tr><td>On, project open</td><td><b>Exposed now</b></td><td>Solid</td></tr>
   </table>
 </div></div>
 <div class="commentary">
@@ -747,6 +750,12 @@ handshake file</i>, not Claude Desktop's config. That means BN owns it completel
     <li><b>Known hole:</b> during a run the activity ring takes this slot and wins, so an exposed
       project shows no antenna. Exposure is still true, just invisible — acceptable, but as a
       decision rather than a discovery.</li>
+    <li><b>The pale tier is only possible because the flag lives host-side.</b> The obvious move
+      was to put it in the project database beside the Anonymise switch — but that database is
+      only readable while <i>that</i> project's serve is running, so the app could never render
+      “on, but not open”. It belongs in <code>projects.json</code> with the other host-side facts
+      (path, icon, folder). Same reason the Settings list can show every project's state without
+      booting a serve for each one.</li>
   </ul>
 </div>
 
@@ -831,13 +840,13 @@ separator; the stable tail is below.</p>
   </ul>
 </div>
 
-<h3>Where does the Share control live? — three possibilities</h3>
+<h3>Where the control lives — decided: both</h3>
 
 <div class="two">
   <div class="frame"><div class="chrome">A · Right-click the project</div><div class="pad">
     <div style="background:var(--mac-sheet);border-radius:8px;padding:6px 0;font-size:12.5px;max-width:250px;box-shadow:0 6px 20px rgba(0,0,0,.18)">
       <div style="padding:4px 14px">Show in Finder</div>
-      <div style="padding:4px 14px;background:var(--apple-blue);color:#fff">✓&nbsp; Share with Agents</div>
+      <div style="padding:4px 14px;background:var(--apple-blue);color:#fff">Turn Off Agent Access</div>
       <div style="padding:4px 14px">Rename…</div>
       <div style="padding:4px 14px">Move to&nbsp;&nbsp;▸</div>
     </div>

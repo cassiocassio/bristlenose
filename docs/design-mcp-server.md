@@ -17,6 +17,7 @@ _The §9a spike is built and accepted (30 Jul 2026) — see §9a-results. Phases
 - _30 Jul 2026_ — **§9a spike built, reviewed, and accepted.** Added §9a-results: all three questions answered (object model carried a blind agent's session; all four testable invariants landed via `instructions` alone, so nothing moves into tool responses; a realistic session is ~10k tokens = 18× compression on the fossda corpus, making §Context's leverage claim a number). Acceptance also caught a participant name inside verbatim quote text — the structural boundary held, and it validates the "attribution is anonymised; quote text is verbatim" wording. Quote-exclusivity recorded as untested (this corpus partitions cleanly). Header trued: no longer "nothing built".
 
 - _30 Jul 2026_ — §1: OpenAI surfaces verified (web research, primary sources): ChatGPT desktop + Codex CLI + IDE extension are local MCP hosts on one `~/.codex/config.toml`; static-header TOML is the one-snippet form; no `.mcpb` equivalent (Plugins need public HTTPS); ChatGPT web remote-only. MCP spec 2026-07-28 sessionless direction validates the stateless/JSON transport choice.
+- _31 Jul 2026_ — §6a route 3 (the `.mcpb` extension) **scoped as its own plan**, after the hand-paste path failed three times in one QA walk (review-log Finding 86) and cost the user unrelated settings when Claude Desktop rewrote its config on a parse error: [`design-mcp-extension.md`](design-mcp-extension.md), UX mocked at `docs/mockups/mcp-extension-ux.html`. Hand-paste recorded there as unshippable — JSON has no append-safe form and BN cannot validate the result through the sandbox. Verified locally that Claude Desktop ships its own Node, so a `type: "node"` extension needs nothing installed.
 - _30 Jul 2026_ — §6a **built on the Mac** (sheet, menu twin, scoped durable token, antenna badge) and reviewed by the usual suspects; as-built decisions + divergences recorded in §6a "as built". CLI + desktop both ship `/mcp`.
 - _30 Jul 2026_ — §6a route 3 verified against current Claude Desktop (Extensions pane, drag-`.mcpb`-to-install; Developer pane entries "managed by an extension"): `Bristlenose.mcpb` with a handshake-file-reading proxy recorded as the Desktop end-state; §10 Q2 tilted toward the handshake file. Spike unchanged (hand-paste).
 - _30 Jul 2026_ — §Positioning: recorded the two-offerings frame — (1) the report as a single link with two modes, read it and ask it (the chat lens folds into the report UX rather than being a destination); (2) stay in your favourite local agent (Claude Desktop, Claude Code, Codex), which is this doc.
@@ -1131,6 +1132,9 @@ caveat.
 ---
 
 ## Related docs
+
+- [`design-mcp-extension.md`](design-mcp-extension.md) — route 3 as a plan: the
+  `.mcpb` extension, the handshake file, and why hand-paste cannot ship
 
 - [`design-chat-lens.md`](design-chat-lens.md) — the in-app sibling workstream (split from this doc's §6b/§6c); carries the shared-core contract for parallel sessions.
 - [`design-multi-project.md`](design-multi-project.md) — project index, folders,

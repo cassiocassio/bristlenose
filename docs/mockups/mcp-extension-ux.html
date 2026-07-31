@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Bristlenose extension — the whole connect UX</title>
+<style>
+  :root {
+    --page-bg: #fafafa; --ink: #1d1d1f; --muted: #6e6e73; --rule: #e3e3e6;
+    --frame-bg: #fff; --frame-chrome: #f0f0f2; --frame-border: #d9d9de;
+    --commentary-bg: #f3f1ea; --commentary-rule: #c9c2ae; --commentary-ink: #8a7f5c;
+    --term-bg: #1e1e20; --term-ink: #d6d6d9; --term-dim: #8b8b91;
+    --term-green: #7ec699; --term-yellow: #e5c07b; --term-red: #e06c75;
+    --apple-blue: #007AFF; --mac-sheet: #ececf0; --mac-field: #fff;
+    --bad: #c0392b; --bad-bg: #fdecea; --good: #1e6b3a; --good-bg: #dcefe2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page-bg: #161618; --ink: #f2f2f4; --muted: #9a9aa0; --rule: #303034;
+      --frame-bg: #1f1f22; --frame-chrome: #2a2a2e; --frame-border: #3a3a40;
+      --commentary-bg: #23221c; --commentary-rule: #6b6247; --commentary-ink: #b3a680;
+      --mac-sheet: #2c2c30; --mac-field: #1a1a1d;
+      --bad: #ff6b5e; --bad-bg: #3a1f1c; --good: #7ec699; --good-bg: #1c3326;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page-bg); color: var(--ink);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+  main { max-width: 900px; margin: 0 auto; padding: 40px 24px 120px; }
+  h1 { font-size: 26px; font-weight: 700; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  h2 { font-size: 20px; margin: 56px 0 4px; padding-top: 22px; border-top: 2px solid var(--ink); }
+  h2 .tag { font: 600 11px/1 ui-monospace, Menlo, monospace; letter-spacing: .08em;
+    vertical-align: 3px; padding: 3px 7px; border-radius: 4px; margin-left: 10px; }
+  .ships { background: var(--good-bg); color: var(--good); }
+  .proposal { background: #fdeccc; color: #8a5a00; }
+  .broken { background: var(--bad-bg); color: var(--bad); }
+  h3 { font-size: 16px; margin: 32px 0 8px; }
+  p { margin: 8px 0; }
+  .key { display: flex; flex-wrap: wrap; gap: 18px; font-size: 13px; color: var(--muted);
+    border: 1px solid var(--rule); border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; }
+  .key b { color: var(--ink); font-weight: 600; }
+
+  .frame { border: 1px solid var(--frame-border); border-radius: 10px; overflow: hidden;
+    background: var(--frame-bg); box-shadow: 0 1px 3px rgba(0,0,0,.08); margin: 14px 0 0; }
+  .chrome { display: flex; align-items: center; gap: 6px; padding: 8px 12px;
+    background: var(--frame-chrome); border-bottom: 1px solid var(--frame-border);
+    font: 500 11.5px/1 ui-monospace, Menlo, monospace; color: var(--muted); }
+  .dot3 { display: inline-flex; gap: 5px; margin-right: 6px; }
+  .dot3 i { width: 10px; height: 10px; border-radius: 50%; background: #d4d4d8; }
+  .pad { padding: 20px; }
+
+  .commentary { background: var(--commentary-bg); border-left: 4px solid var(--commentary-rule);
+    border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 10px 0 0; font-size: 13.5px; }
+  .commentary::before { content: "COMMENTARY"; display: block;
+    font: 600 10px/1 ui-monospace, Menlo, monospace; letter-spacing: .12em;
+    color: var(--commentary-ink); margin-bottom: 6px; }
+  .commentary ul { margin: 4px 0 0 18px; padding: 0; } .commentary li { margin: 3px 0; }
+
+  /* Mac sheet */
+  .sheet { background: var(--mac-sheet); border-radius: 10px; padding: 20px; max-width: 560px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.18); font-size: 13px; }
+  .sheet h4 { font: 600 15px/1.3 -apple-system, sans-serif; margin: 0; }
+  .scope { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+  .row { display: flex; align-items: flex-start; gap: 12px; margin-top: 14px; }
+  .row .lbl { flex: 1; } .row .lbl b { font-weight: 500; display: block; }
+  .row .lbl span { color: var(--muted); font-size: 11px; }
+  .sw { width: 38px; height: 22px; border-radius: 11px; background: #c7c7cc; position: relative; flex: none; }
+  .sw.on { background: var(--apple-blue); }
+  .sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+    border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  .sw.on::after { left: 18px; }
+  .seg { display: flex; background: rgba(120,120,128,.16); border-radius: 7px; padding: 2px; margin-top: 14px; }
+  .seg span { flex: 1; text-align: center; padding: 4px 8px; border-radius: 5px; font-size: 12px; }
+  .seg span.sel { background: var(--frame-bg); box-shadow: 0 1px 2px rgba(0,0,0,.16); font-weight: 500; }
+  .pane { min-height: 132px; margin-top: 10px; }
+  .hint { color: var(--muted); font-size: 11px; margin: 0 0 6px; }
+  .code { background: var(--mac-field); border: 1px solid var(--frame-border); border-radius: 6px;
+    padding: 8px 10px; font: 11px/1.5 ui-monospace, Menlo, monospace; white-space: pre; overflow-x: auto; }
+  .btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  .btn { padding: 4px 14px; border-radius: 6px; border: 1px solid var(--frame-border);
+    background: var(--frame-bg); font-size: 13px; }
+  .btn.pri { background: var(--apple-blue); border-color: var(--apple-blue); color: #fff; }
+  .foot { color: var(--muted); font-size: 11px; margin-top: 8px; }
+
+  /* Install row */
+  .install { display: flex; align-items: center; gap: 12px; background: var(--mac-field);
+    border: 1px solid var(--frame-border); border-radius: 8px; padding: 14px; margin-top: 4px; }
+  .install .ico { width: 38px; height: 38px; border-radius: 9px; flex: none;
+    background: linear-gradient(160deg,#5b7fd4,#3f5fb0); display: grid; place-items: center;
+    color: #fff; font: 700 15px/1 -apple-system, sans-serif; }
+  .install .txt { flex: 1; } .install .txt b { display: block; font-weight: 600; }
+  .install .txt span { color: var(--muted); font-size: 11.5px; }
+
+  /* Chat + terminal */
+  .term { background: var(--term-bg); color: var(--term-ink);
+    font: 12.5px/1.6 ui-monospace, Menlo, "SF Mono", monospace;
+    padding: 14px 16px; overflow-x: auto; white-space: pre-wrap; }
+  .term .dim { color: var(--term-dim); } .term .green { color: var(--term-green); }
+  .term .yellow { color: var(--term-yellow); } .term .red { color: var(--term-red); }
+  .term .user { color: #fff; font-weight: 600; }
+
+  /* Alert */
+  .alert { max-width: 300px; background: var(--mac-sheet); border-radius: 12px; padding: 18px;
+    text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.25); font-size: 12.5px; }
+  .alert .glyph { font-size: 30px; } .alert b { display: block; margin: 8px 0 4px; font-size: 13.5px; }
+  .alert .body { color: var(--muted); } .alert .ok { margin-top: 14px; }
+
+  /* Diagram */
+  .diagram { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; margin-top: 12px; }
+  .box { flex: 1; min-width: 150px; border: 1px solid var(--frame-border); border-radius: 8px;
+    padding: 12px; background: var(--frame-bg); font-size: 12.5px; }
+  .box b { display: block; margin-bottom: 4px; }
+  .box small { color: var(--muted); }
+  .arrow { display: grid; place-items: center; padding: 0 10px; color: var(--muted);
+    font: 600 18px/1 ui-monospace, monospace; }
+
+  table { border-collapse: collapse; width: 100%; margin-top: 12px; font-size: 13.5px; }
+  th, td { border: 1px solid var(--rule); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--frame-chrome); font-weight: 600; }
+  td.no { color: var(--bad); } td.yes { color: var(--good); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .two { grid-template-columns: 1fr; } }
+  .q { border: 1px solid var(--rule); border-left: 4px solid var(--apple-blue);
+    border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 12px 0; }
+  .q b { display: block; margin-bottom: 4px; }
+  ol.steps { counter-reset: s; list-style: none; padding: 0; }
+  ol.steps > li { counter-increment: s; position: relative; padding-left: 34px; margin: 22px 0; }
+  ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: 2px;
+    width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: var(--page-bg);
+    display: grid; place-items: center; font: 600 12px/1 -apple-system, sans-serif; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>The Bristlenose extension</h1>
+<p class="sub">The whole connect UX, after the hand-paste path failed three times in one sitting.
+Proposal for discussion — nothing here is built. 31 July 2026.</p>
+
+<div class="key">
+  <span><b>Artefact</b> — framed. What ships; no labels that wouldn't appear in the product.</span>
+  <span><b>Commentary</b> — tinted, ruled. Why it works. Deliberately not-the-product.</span>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>0 · What happened tonight <span class="tag broken">THE MOTIVATION</span></h2>
+
+<p>Three attempts to connect Claude Desktop by hand. All three failed, all from one cause,
+and the second one cost unrelated settings.</p>
+
+<div class="two">
+  <div>
+    <div class="frame"><div class="chrome"><span class="dot3"><i></i><i></i><i></i></span>attempt 2</div>
+      <div class="pad" style="display:grid;place-items:center;background:var(--frame-chrome)">
+        <div class="alert">
+          <div class="glyph">⚠️</div>
+          <b>Could not load app settings</b>
+          <div class="body">There was an error reading or parsing claude_desktop_config.json:
+          Unexpected non-whitespace character after JSON at position 16135 (line 279 column 1)</div>
+          <div class="ok"><span class="btn pri">OK</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="frame"><div class="chrome"><span class="dot3"><i></i><i></i><i></i></span>the cost</div>
+      <div class="pad">
+        <div class="term"><span class="dim">before</span>  298 lines
+<span class="dim">after </span>  107 lines   <span class="red">← rewritten by Claude Desktop</span>
+
+<span class="red">lost</span>  codeGroups
+<span class="red">lost</span>  simulatorDeviceConsent
+<span class="green">kept</span>  preferences</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="commentary">
+  <ul>
+    <li><b>JSON has no append-safe form.</b> Adding a key means a comma on the <i>previous</i> line
+      and none after. No wording of an instruction removes that.</li>
+    <li><b>The failure is destructive.</b> Claude Desktop doesn't skip the bad key — it rewrites the
+      whole settings file and drops what it can't parse.</li>
+    <li><b>We can't help.</b> The App Sandbox keeps Bristlenose out of another app's container:
+      reading that file is as blocked as writing it.</li>
+    <li><b>The restart costs more than we said.</b> That config is the host app's own state — quitting
+      to apply it can end the researcher's own working session.</li>
+  </ul>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>1 · The new flow <span class="tag proposal">PROPOSED</span></h2>
+
+<ol class="steps">
+<li>
+  <h3 style="margin-top:0">Right-click the project → Connect Agent…</h3>
+  <p class="sub" style="margin:0 0 8px">Unchanged. Same sheet, same place.</p>
+</li>
+
+<li>
+  <h3 style="margin-top:0">The Claude Desktop tab is one button</h3>
+  <div class="frame"><div class="chrome"><span class="dot3"><i></i><i></i><i></i></span>Connect Agent — Claude Desktop</div>
+  <div class="pad" style="background:var(--frame-chrome);display:grid;place-items:center">
+    <div class="sheet">
+      <h4>Agents read whichever project is selected in Bristlenose</h4>
+      <p class="scope">Now showing: <b>IKEA discovery</b> · 6 sessions · 214 quotes</p>
+
+      <div class="row">
+        <div class="lbl"><b>Anonymise</b><span>Remove participant names</span></div>
+        <div class="sw"></div>
+      </div>
+
+      <div class="seg">
+        <span class="sel">Claude Desktop</span><span>Claude Code</span><span>ChatGPT &amp; Codex</span>
+      </div>
+
+      <div class="pane">
+        <p class="hint">Adds Bristlenose to Claude Desktop as an extension. Claude Desktop
+          will ask you to confirm.</p>
+        <div class="install">
+          <div class="ico">B</div>
+          <div class="txt"><b>Bristlenose</b><span>An agent has asked about this project recently</span></div>
+          <span class="btn pri">Install Extension…</span>
+        </div>
+      </div>
+
+      <p class="foot">Works with any MCP-compatible agent.</p>
+      <div class="btns"><span class="btn">Done</span></div>
+    </div>
+  </div></div>
+  <div class="commentary">
+    <ul>
+      <li>No address, no token, no JSON — nothing to mistype, so nothing to get wrong.</li>
+      <li>The Anonymise switch stays exactly where it is: it's the researcher's per-project
+        compliance choice and has nothing to do with transport.</li>
+      <li><b>Cancel became Done.</b> Nothing here is cancellable any more — you either install
+        or you close the sheet.</li>
+    </ul>
+  </div>
+</li>
+
+<li>
+  <h3 style="margin-top:0">Claude Desktop runs its own install</h3>
+  <div class="frame"><div class="chrome"><span class="dot3"><i></i><i></i><i></i></span>Claude Desktop</div>
+  <div class="pad" style="background:var(--frame-chrome);display:grid;place-items:center">
+    <div class="alert" style="max-width:340px;text-align:left">
+      <b style="font-size:14px">Install “Bristlenose”?</b>
+      <div class="body">This extension will be able to run on your computer and access the
+        Bristlenose project you have open.</div>
+      <div class="btns" style="justify-content:flex-end">
+        <span class="btn">Cancel</span><span class="btn pri">Install</span>
+      </div>
+    </div>
+  </div></div>
+  <div class="commentary">
+    Approximation of Claude Desktop's own dialog — we don't draw this, it draws it. That's the point:
+    the consent moment belongs to the app being modified, not to us.
+  </div>
+</li>
+
+<li>
+  <h3 style="margin-top:0">Done — it appears where Figma appears</h3>
+  <div class="frame"><div class="chrome"><span class="dot3"><i></i><i></i><i></i></span>Claude Desktop → Settings → Developer</div>
+  <div class="pad">
+    <div style="font:600 15px/1.3 -apple-system;margin-bottom:2px">Local MCP servers</div>
+    <div style="color:var(--muted);font-size:12.5px;margin-bottom:14px">Add and manage MCP servers that you're working on.</div>
+    <div class="install" style="margin-bottom:8px">
+      <div class="txt"><b>Bristlenose <span style="background:var(--apple-blue);color:#fff;border-radius:20px;padding:1px 8px;font-size:10.5px;vertical-align:2px">running</span></b>
+      <span>This server is managed by an extension</span></div>
+    </div>
+    <div class="install">
+      <div class="txt"><b>Figma <span style="background:var(--apple-blue);color:#fff;border-radius:20px;padding:1px 8px;font-size:10.5px;vertical-align:2px">running</span></b>
+      <span>This server is managed by an extension</span></div>
+    </div>
+  </div></div>
+</li>
+</ol>
+
+<h3>Before / after</h3>
+<table>
+  <tr><th style="width:34%"></th><th>Hand-paste (today)</th><th>Extension (proposed)</th></tr>
+  <tr><td>Steps for the researcher</td><td class="no">Copy · find file · edit JSON · fix commas · save · quit · relaunch</td><td class="yes">Click Install · confirm</td></tr>
+  <tr><td>Ways to get it wrong</td><td class="no">Comma, brace, wrong nesting, wrong file, stale port</td><td class="yes">None available</td></tr>
+  <tr><td>Cost of a mistake</td><td class="no">Claude Desktop rewrites its settings file</td><td class="yes">—</td></tr>
+  <tr><td>Where the token lives</td><td class="no">Plaintext in another vendor's config, on the pasteboard, in Time Machine</td><td class="yes">0600 file in Bristlenose's own container, read at connect time</td></tr>
+  <tr><td>When the port changes</td><td class="no">Config is dead; re-paste</td><td class="yes">Nothing to do</td></tr>
+  <tr><td>Switching project</td><td class="no">Re-paste per project</td><td class="yes">Nothing to do</td></tr>
+  <tr><td>Revoking</td><td class="no">Hunt through a foreign config</td><td class="yes">Bristlenose deletes one file</td></tr>
+</table>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>2 · Every state the sheet can be in <span class="tag proposal">PROPOSED</span></h2>
+
+<div class="two">
+  <div>
+    <div class="frame"><div class="chrome">Claude Code — unchanged</div><div class="pad" style="background:var(--frame-chrome)">
+      <div class="sheet" style="max-width:none">
+        <div class="pane" style="min-height:auto">
+          <p class="hint">Paste in any terminal:</p>
+          <div class="code">claude mcp add bristlenose \
+  -- bristlenose mcp-proxy</div>
+        </div>
+        <div class="btns"><span class="btn">Done</span><span class="btn pri">Copy Command</span></div>
+      </div>
+    </div></div>
+  </div>
+  <div>
+    <div class="frame"><div class="chrome">ChatGPT &amp; Codex — unchanged</div><div class="pad" style="background:var(--frame-chrome)">
+      <div class="sheet" style="max-width:none">
+        <div class="pane" style="min-height:auto">
+          <p class="hint">Add to <code>~/.codex/config.toml</code>:</p>
+          <div class="code">[mcp_servers.bristlenose]
+command = "bristlenose"
+args = ["mcp-proxy"]</div>
+        </div>
+        <div class="btns"><span class="btn">Done</span><span class="btn pri">Copy Config</span></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<div class="commentary">
+  <b style="color:var(--ink)">This is the sleeper win.</b> If the proxy also ships as
+  <code>bristlenose mcp-proxy</code>, then <i>every</i> client's config becomes address-free and
+  token-free — a command, not a secret. Claude Code and Codex stop needing a re-paste when the port
+  rotates too, and the three tabs finally say the same thing in three dialects.
+  <ul>
+    <li>Cost: one CLI subcommand wrapping the same proxy logic. Open question 3 in the plan.</li>
+    <li>Without it, these two tabs keep tonight's URL + token payload — which works, but leaves the
+      token in two more config files.</li>
+  </ul>
+</div>
+
+<h3>Bristlenose isn't running a project</h3>
+<div class="frame"><div class="chrome">Connect Agent — nothing served</div><div class="pad" style="background:var(--frame-chrome);display:grid;place-items:center">
+  <div class="sheet">
+    <h4>Connect an agent to “IKEA discovery”</h4>
+    <p class="scope">6 sessions</p>
+    <div class="row"><div class="lbl"><b>Anonymise</b><span>Remove participant names</span></div><div class="sw"></div></div>
+    <div class="seg"><span class="sel">Claude Desktop</span><span>Claude Code</span><span>ChatGPT &amp; Codex</span></div>
+    <div class="pane">
+      <p class="hint">Adds Bristlenose to Claude Desktop as an extension. Claude Desktop
+        will ask you to confirm.</p>
+      <div class="install">
+        <div class="ico">B</div>
+        <div class="txt"><b>Bristlenose</b><span>Extension · 1.2 MB</span></div>
+        <span class="btn pri">Install</span>
+      </div>
+    </div>
+    <p class="foot">Works with any MCP-compatible agent.</p>
+    <div class="btns"><span class="btn">Done</span></div>
+  </div>
+</div></div>
+<div class="commentary">
+  <b style="color:var(--ink)">Unchanged — and that's the point.</b> Today this state has to say
+  “Start the project before connecting an agent”, because the sheet is handing out a live address.
+  The extension has no address in it, so installing while nothing is served is <i>fine</i>: the
+  connector simply waits. One less dead end, one less piece of copy.
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>3 · What the agent sees <span class="tag proposal">PROPOSED</span></h2>
+
+<h3>Bristlenose isn't serving anything yet</h3>
+<div class="frame"><div class="chrome">Claude Desktop</div>
+<div class="term"><span class="user">you</span>  What are people saying about the checkout flow?
+
+<span class="dim">→ bristlenose · search_quotes</span>
+
+Bristlenose isn't showing a project right now. Open Bristlenose and
+select the study you want to ask about, then ask me again.</div></div>
+<div class="commentary">
+  Stolen from Figma's extension, which does exactly this. The tools <b>always</b> appear in the
+  client; when the app isn't up, each one returns a sentence that names the fix. There is no state
+  where the researcher sees a broken connector — that's what makes it
+  <i>non-error-prone</i> rather than merely easy.
+</div>
+
+<h3>Serving — and the project is named in the answer</h3>
+<div class="frame"><div class="chrome">Claude Desktop</div>
+<div class="term"><span class="user">you</span>  What are people saying about the checkout flow?
+
+<span class="dim">→ bristlenose · get_project_overview</span>
+<span class="dim">→ bristlenose · search_quotes  section="Checkout"</span>
+
+In <span class="yellow">IKEA discovery</span> (6 sessions, 214 quotes) the checkout section carries
+14 quotes, 9 of them frustration…
+
+  “I got to the payment bit and just gave up.”  <span class="dim">— p3, 00:14:22</span></div></div>
+<div class="commentary">
+  <b style="color:var(--ink)">The project name in every answer is load-bearing</b>, not decoration —
+  it's the mitigation for the scope model below. If the subject can change, the answer must always
+  say what the subject <i>is</i>.
+</div>
+
+<h3>The researcher switches project mid-conversation</h3>
+<div class="frame"><div class="chrome">Claude Desktop</div>
+<div class="term"><span class="user">you</span>  and how did that compare on cost?
+
+<span class="dim">→ bristlenose · search_quotes</span>
+
+<span class="yellow">Note: Bristlenose is now showing a different study — “Nurses onboarding”
+(previously “IKEA discovery”). Everything below is from “Nurses
+onboarding”, which is not anonymised.</span>
+
+In Nurses onboarding, cost comes up in 4 quotes…</div></div>
+<div class="commentary">
+  <b style="color:var(--ink)">The review's sharpest catch, and it isn't in the plan I wrote first.</b>
+  Clicking a row in Bristlenose's sidebar is not a “change my agent's subject” gesture in
+  anyone's model — but under Option A it is exactly that. Without a marker the researcher gets a
+  confident answer about the wrong study, in a scrollback that is otherwise all IKEA, and pastes
+  it into a report.
+  <ul>
+    <li>“Every tool payload carries the project” is <i>passive metadata</i>. A model summarising
+      for a human drops it nine times in ten. An in-band note it will relay.</li>
+    <li>The anonymisation clause appears <b>only when it differs</b> from the previous project —
+      otherwise the governance boundary moves without a gesture, and real names start appearing in
+      a chat the researcher believes is anonymised.</li>
+    <li>~10 lines in the proxy. The sidebar antenna moving is the same message in Bristlenose;
+      no toast, no banner.</li>
+  </ul>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>4 · How it works <span class="tag proposal">PROPOSED</span></h2>
+
+<div class="diagram">
+  <div class="box"><b>Bristlenose</b><small>Serves a project on a kernel-assigned port. Writes
+    <code>mcp-handshake.json</code> (port · token · project) into its own container at 0600.
+    Deletes it on stop.</small></div>
+  <div class="arrow">→</div>
+  <div class="box"><b>The extension</b><small>~150 lines of Node inside the <code>.mcpb</code>.
+    Reads the handshake, speaks stdio to the client and HTTP to Bristlenose. If there's no
+    handshake, serves the four tools with "open Bristlenose" answers.</small></div>
+  <div class="arrow">→</div>
+  <div class="box"><b>Claude Desktop</b><small>Manages the extension itself. Never sees a port or a
+    token; has no config for the researcher to break.</small></div>
+</div>
+
+<div class="commentary">
+  <ul>
+    <li><b>The token stops travelling.</b> It never enters another vendor's config, never touches
+      the pasteboard, never lands in a Time Machine backup of Claude's settings.</li>
+    <li><b>The port stops mattering.</b> Kernel-assigned per launch is fine when nobody has to
+      write it down — which retires the “this address changes when Bristlenose restarts” caveat we
+      shipped yesterday.</li>
+    <li><b>Revocation becomes a file delete</b>, not a hunt through a foreign config.</li>
+    <li>Same shape as Figma's shipping extension, which proxies to <code>127.0.0.1:3845</code>.
+      They pin a port; we can't, so the handshake file is the one part we're inventing.</li>
+    <li><b style="color:var(--ink)">“Does the researcher need Node installed?” No —
+      checked on this machine.</b> Claude Desktop ships its own Node (24.18.0) and uses it for
+      MCP servers: <code>isUsingBuiltInNodeForMcp is true and built-in node is compatible</code>
+      in its log. This was the one risk that could have sunk the approach for a
+      non-engineer audience, and it's answered.</li>
+  </ul>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>5 · The decision to take <span class="tag broken">NEEDS A CALL</span></h2>
+
+<div class="two">
+  <div class="frame"><div class="chrome">Option A — follow the fronted project</div><div class="pad">
+    <p style="margin-top:0"><b>One connector. It reads whatever project Bristlenose is showing.</b></p>
+    <p style="font-size:13.5px;color:var(--muted)">Switch project in Bristlenose, and the agent's
+      subject switches with it.</p>
+    <table style="font-size:12.5px">
+      <tr><td class="yes">Matches “ask about what I'm looking at”</td></tr>
+      <tr><td class="yes">Nothing to reconfigure, ever</td></tr>
+      <tr><td class="yes">Per-project Anonymise still applies correctly</td></tr>
+      <tr><td class="no">Subject can change mid-conversation</td></tr>
+    </table>
+  </div></div>
+  <div class="frame"><div class="chrome">Option B — pin one project</div><div class="pad">
+    <p style="margin-top:0"><b>The extension is bound to one study at install time.</b></p>
+    <p style="font-size:13.5px;color:var(--muted)">Claude Desktop collects the choice through its
+      own settings UI (<code>user_config</code>).</p>
+    <table style="font-size:12.5px">
+      <tr><td class="yes">Narrow, explicit grant</td></tr>
+      <tr><td class="yes">Subject can never change under you</td></tr>
+      <tr><td class="no">Per-project setup returns — the thing we're removing</td></tr>
+      <tr><td class="no">Two studies = two installs?</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div class="commentary">
+  <b style="color:var(--ink)">Recommendation: A</b>, with three mitigations — the project named in
+  every tool payload, the server instructions telling the model the subject can change and the
+  overview is the authority, and the sidebar antenna showing <i>which</i> project is currently
+  exposed. B stays available later as an optional pin, if a cohort researcher asks.
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>6 · For the morning</h2>
+
+<div class="q"><b>1 · Scope model</b>A (follow the fronted project) or B (pin one)? Everything else
+in the plan is the same either way.</div>
+
+<div class="q"><b>2 · Does the extension replace the Claude Desktop tab, or sit beside “paste it
+yourself”?</b> Recommendation: replace. A second path we know is destructive isn't a fallback,
+it's a trap.</div>
+
+<div class="q"><b>3 · Ship <code>bristlenose mcp-proxy</code> in the same pass?</b> It makes Claude
+Code and Codex address-free and token-free too — the §2 sleeper win. Costs one CLI subcommand
+wrapping the proxy that has to exist anyway.</div>
+
+<div class="q"><b>4 · Local install now, or submit to the directory too?</b> Local drag/open install
+works today; the curated listing is discoverability, not capability.</div>
+
+<div class="q"><b>5 · What happens to the parked project?</b> The warm-sidecar pool keeps the
+<i>previous</i> project's server alive on its own port. The handshake names only the fronted one.
+Leave it invisible (simple, honest) or expose both (accurate, more moving parts)?</div>
+
+</main>
+</body>
+</html>

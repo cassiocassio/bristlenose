@@ -26,15 +26,31 @@ from bristlenose.utils.fs import (
 
 
 def _fake_stat(monkeypatch, flags: int, size: int = 1024) -> None:
+    """Fake `st_flags` on the stat result, on every platform.
+
+    NOT via ``os.stat_result(tuple(st), {...})``: that second dict only
+    carries fields the *platform* declares, so Linux — which has no
+    ``st_flags`` at all — silently drops it and the fake becomes a no-op.
+    Three tests then assert real macOS behaviour and fail on ubuntu while
+    passing locally, which is exactly the CI-parity trap CLAUDE.md warns
+    about; it held up the 0.23.0 release.
+
+    A proxy object carries the attribute everywhere (the same shape
+    `test_linux_without_st_flags_is_false` already uses to prove the
+    opposite case), and the code under test only ever reads it by name.
+    """
     real = os.stat
 
-    def fake(path, *a, **kw):  # type: ignore[no-untyped-def]
-        st = real(path, *a, **kw)
-        return os.stat_result(
-            tuple(st), {**getattr(st, "__dict__", {}), "st_flags": flags, "st_size": size}
-        )
+    class _Stat:
+        def __init__(self, st) -> None:  # type: ignore[no-untyped-def]
+            self._st = st
+            self.st_flags = flags
+            self.st_size = size
 
-    monkeypatch.setattr(os, "stat", fake)
+        def __getattr__(self, name: str):  # type: ignore[no-untyped-def]
+            return getattr(self._st, name)
+
+    monkeypatch.setattr(os, "stat", lambda p, *a, **k: _Stat(real(p, *a, **k)))
 
 
 class TestIsDataless:

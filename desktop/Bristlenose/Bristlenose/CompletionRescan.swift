@@ -39,4 +39,27 @@ enum CompletionRescan {
     ) -> [UUID] {
         new.keys.filter { isAnalysing(old[$0]) && !isAnalysing(new[$0]) }
     }
+
+    /// IDs whose **run** just finished — narrower than `projectsLeavingAnalysis`,
+    /// which also fires when a passive `.scanning` manifest read ends.
+    ///
+    /// Used to stamp `Project.lastPipelineRunAt`, which is the analysis
+    /// *baseline* marker: `ProjectIndex.handleWatcherUpdate` suppresses the
+    /// `+N unanalysed` drift until it's non-nil (the F14 policy — before a run,
+    /// every file is "to be analysed" and flagging it would be surprising). A
+    /// `.scanning` transition must not open that gate, because no analysis has
+    /// happened.
+    ///
+    /// Deliberately counts **any** run outcome, not just success: the gate asks
+    /// "has this project been analysed at all?", not "did it go well". A failed
+    /// or cancelled run still leaves ingested sessions behind, and its own
+    /// distress state outranks the drift in the precedence chain anyway.
+    static func projectsFinishingRun(
+        old: [UUID: PipelineState], new: [UUID: PipelineState]
+    ) -> [UUID] {
+        new.keys.filter { id in
+            if case .running = old[id] { return !isAnalysing(new[id]) }
+            return false
+        }
+    }
 }

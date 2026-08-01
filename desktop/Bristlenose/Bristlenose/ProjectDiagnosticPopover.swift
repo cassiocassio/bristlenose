@@ -366,13 +366,19 @@ struct ProjectDiagnosticPopover: View {
         lines.append("Dominant category: \(summary.dominantCategory().rawValue)")
         lines.append("")
         for (name, outcome) in summary.allBuckets where !outcome.failed.isEmpty {
-            let durationSec = max(0, outcome.durationMs / 1000)
-            let m = durationSec / 60
-            let s = durationSec % 60
+            // `durationMs` is nil when the stage didn't run (all cache hits, or
+            // skipped) — say nothing rather than claim "0m 0s", which would read
+            // as "ran instantly".
+            let timing: String
+            if let ms = outcome.durationMs {
+                let durationSec = max(0, ms / 1000)
+                timing = ", \(durationSec / 60)m \(durationSec % 60)s"
+            } else {
+                timing = ""
+            }
             lines.append(
                 "Stage: \(name.rawValue)  "
-                + "(\(outcome.succeeded)/\(outcome.attempted) succeeded, "
-                + "\(m)m \(s)s)"
+                + "(\(outcome.succeeded)/\(outcome.attempted) succeeded\(timing))"
             )
             for failure in outcome.failed {
                 if failure.isOverflowPlaceholder {

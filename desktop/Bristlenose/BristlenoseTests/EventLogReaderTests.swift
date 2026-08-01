@@ -90,6 +90,49 @@ struct EventLogReaderTests {
         #expect(event?.event == "run_started")
     }
 
+    @Test func tailEventRefusesToAnswerFromAnOlderEventWhenTheNewestDoesNotFit() {
+        // REGRESSION LOCK for the bug behind the bug.
+        //
+        // A terminus line that is well-formed JSON but doesn't fit `Event` means
+        // the Python↔Swift contract drifted. The old loop skipped it and
+        // answered from the line behind — so a run that COMPLETED was reported
+        // as `.failed("Analysis stopped unexpectedly.")`, because the fallback
+        // landed on that run's own `run_started` and the PID was gone. The
+        // report was fine the whole time; only the row lied, and
+        // `applyScanResult` then preserved the lie across relaunch.
+        //
+        // Refusing to answer is the honest outcome: nil sends `deriveState`
+        // back to manifest inference instead of asserting a crash.
+        let dir = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent(EventLogReader.filename)
+        // Valid JSON, wrong shape for Event (`kind` must be a String).
+        let drifted = #"{"event":"run_completed","kind":42,"run_id":"x","started_at":"t"}"#
+        writeEventLog(in: dir, lines: [runStartedLine(), drifted])
+
+        #expect(EventLogReader.tailEvent(at: url) == nil)
+        // And the derived state must not be a confident wrong verdict.
+        let state = EventLogReader.deriveState(
+            eventsURL: url,
+            pidURL: dir.appendingPathComponent(EventLogReader.pidFilename),
+            stagesComplete: []
+        )
+        #expect(state == nil, "must fall back to manifest inference, not claim a crash")
+    }
+
+    @Test func tailEventStillWalksPastAnUnparseableTornLine() {
+        // The counterpart to the test above: the guard must NOT break crash
+        // recovery. A line that isn't valid JSON at all is a torn write, and
+        // skipping it is correct — the distinction is JSON-validity, not
+        // decode success.
+        let dir = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent(EventLogReader.filename)
+        let body = runStartedLine() + "\n" + "{\"event\":\"run_comp"
+        try? body.data(using: .utf8)?.write(to: url, options: .atomic)
+        #expect(EventLogReader.tailEvent(at: url)?.event == "run_started")
+    }
+
     @Test func tailEventSurvivesPartialTrailingLine() {
         let dir = makeTempDir()
         defer { try? FileManager.default.removeItem(at: dir) }

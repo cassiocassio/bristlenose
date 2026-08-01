@@ -60,9 +60,15 @@ enum SubtitleVariant: Equatable {
     /// "Cancelling…" + an indeterminate spinner — the immediate ack for the
     /// row's hover-cancel, mirroring what the removed toolbar pill showed.
     case copyCancelling
-    /// `.ready` / `.inCloud` / idle with analysis history — the bare last-run
-    /// date, with an optional single delta segment. The cloud arrow (if any)
-    /// renders in the right slot independently of this.
+    /// The bare last-run date with an optional delta segment — **Schema A, not
+    /// emitted since 29 Jul 2026.** `resolveIdle` now returns `.deltaOnly` or
+    /// `.placeholder` instead (Schema E: a clean row shows no status line).
+    ///
+    /// Retained deliberately, not dead by accident: it is the exact output shape
+    /// the deferred Appearance preference would restore, so the pref becomes a
+    /// choice between two already-modelled variants rather than new render code.
+    /// The view still handles it. Don't delete without reading
+    /// `docs/design-desktop-project-status.md` §"Schema E".
     case ready(date: Date, delta: SubtitleDelta?)
     /// A delta with no date anchor (CLI-analysed / imported / pre-this-build
     /// project that never recorded `lastPipelineRunAt`). The delta is the whole
@@ -124,7 +130,10 @@ enum ProjectSubtitle {
     /// **Order (settled 18 Jun 2026 — `docs/design-desktop-project-status.md`
     /// §Precedence, §5):**
     /// `cantFind (availability) › failed › running › stopped / partial ›
-    /// (idle: copying › missing › unanalysed › ready)`.
+    /// (idle: copying › missing › unanalysed › silence)`.
+    ///
+    /// The idle tier's terminus is **silence, not a date** — Schema E, 29 Jul
+    /// 2026. See `resolveIdle`.
     ///
     /// `cantFind` outranks *all* activity: you can't open the report if the
     /// folder's gone, and a run against a vanished folder is already doomed, so
@@ -185,10 +194,16 @@ enum ProjectSubtitle {
         }
     }
 
-    /// The idle / ready tier: an active copy, then a data-drift delta, then the
-    /// bare last-run date. The date is sourced from `lastPipelineRunAt` (the
-    /// persisted project model), so a `.ready` PipelineState and the
-    /// `.idle`/`.none` fall-through agree on one truth-source.
+    /// The idle / ready tier: an active copy, then a data-drift delta, then
+    /// **nothing at all**.
+    ///
+    /// `lastRunAt` is accepted but **not read** (Schema E — the bare date it
+    /// used to produce is retired). It stays in the signature because the
+    /// deferred Appearance pref would restore the `.ready(date:delta:)` branch
+    /// verbatim, and because callers already thread it. The *baseline* job that
+    /// `lastPipelineRunAt` still does happens upstream, in
+    /// `ProjectIndex.handleWatcherUpdate` — it gates whether `unanalysedCount`
+    /// is non-zero at all.
     private static func resolveIdle(
         addingCount: Int?,
         copy: CopyDisplay?,
@@ -209,11 +224,16 @@ enum ProjectSubtitle {
             }
         }
         let delta = pickDelta(missingCount: missingCount, unanalysedCount: unanalysedCount)
-        if let lastRunAt {
-            return .ready(date: lastRunAt, delta: delta)
-        }
-        // No date anchor (CLI-analysed / imported). Render the delta alone
-        // rather than silently dropping data-drift signal for legacy projects.
+        // **Schema E (settled 29 Jul 2026) — a clean row is silent.** A delta is
+        // an exception and earns a line; a project that is simply analysed and
+        // fine says nothing, and `ProjectCellSpec` collapses `.placeholder` to a
+        // single-line row. The bare last-run date that used to render here is
+        // retired: a timestamp earns chrome when it records *someone else's*
+        // action (why Mail has dates), and on one researcher's own machine they
+        // already know what they did. Full rationale + the supersession note
+        // (this overrides the June "defer until async" decision on its merits;
+        // that trigger has NOT fired) in
+        // `docs/design-desktop-project-status.md` §"Schema E".
         if let delta {
             return .deltaOnly(delta)
         }

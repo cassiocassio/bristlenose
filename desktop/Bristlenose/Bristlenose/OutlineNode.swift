@@ -69,6 +69,18 @@ final class OutlineNode: NSObject {
 
     var isExpandable: Bool { !children.isEmpty || isGroup }
 
+    /// The drag payload for this node, or `nil` if the row isn't draggable.
+    /// Projects **and folders** are draggable — reorder within a scope, and (projects
+    /// only) re-parent between scopes. Group headers and lens rows never are: a group
+    /// is chrome, and a lens is a mode, not a thing with a place in a list.
+    var dragItem: SidebarDragItem? {
+        switch kind {
+        case .project(let id): .project(id)
+        case .folder(let id):  .folder(id)
+        case .group, .lens:    nil
+        }
+    }
+
     /// The `SidebarSelection` this node maps to, if it participates in selection.
     var selection: SidebarSelection? {
         switch kind {

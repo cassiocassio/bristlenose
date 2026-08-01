@@ -87,9 +87,6 @@ final class BridgeHandler: ObservableObject {
     /// Optional label for the undo action (e.g. "Undo Star").
     @Published var undoLabel: String?
 
-    /// Whether the web layer is in dark mode. Swaps View menu label.
-    @Published var isDarkMode = false
-
     /// The active lens's subtitle, pushed by the SPA (e.g. "163 Quotes",
     /// "3 Codebooks · 47 Tags"). The SPA owns the live count + formatting — only
     /// it can compute Signals, and the visible-quote / tag counts shift as the
@@ -234,14 +231,14 @@ final class BridgeHandler: ObservableObject {
         }
     }
 
-    // MARK: - Appearance sync
-
-    /// Push the native appearance preference to the web layer.
-    /// Called when: (1) `isReady` becomes true, (2) user changes appearance in Settings.
-    func syncAppearance() {
-        let appearance = UserDefaults.standard.string(forKey: "appearance") ?? "auto"
-        menuAction("set-appearance", payload: ["value": appearance])
-    }
+    // Appearance is NOT pushed over the bridge. `syncAppearance()` (removed
+    // 30 Jul 2026) sent `set-appearance` on every `ready` and **nothing ever
+    // consumed it** — it routed via `menuAction`, so it needed a `case` in
+    // AppLayout's switch and never had one. The feature works without it:
+    // `ContentView` applies `.preferredColorScheme(…)` to the window, the
+    // WKWebView inherits the effective appearance, and the report's CSS
+    // `prefers-color-scheme` follows. Don't re-add a second channel for a fact
+    // the platform already carries.
 
     /// Push the "Show animation while analysing" toggle to the web layer, so the
     /// web thinking-shimmer (activity chip label) obeys it — the twin of the
@@ -391,7 +388,6 @@ final class BridgeHandler: ObservableObject {
         switch type {
         case "ready":
             isReady = true
-            syncAppearance()
             syncAnalysisAnimation()
             syncLocale()
             syncToolbarInset()
@@ -492,7 +488,6 @@ final class BridgeHandler: ObservableObject {
         canUndo = false
         canRedo = false
         undoLabel = nil
-        isDarkMode = false
         quotesSearchQuery = ""
         quotesViewMode = "all"
         selectedProjectPath = ""

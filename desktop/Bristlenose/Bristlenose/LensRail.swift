@@ -4,11 +4,12 @@ import SwiftUI
 /// former toolbar tab Picker into the sidebar (spec §2, §3.1, §5).
 ///
 /// IMPORTANT — this is deliberately a `VStack` of `Button`s, NOT a `List`/`Form`.
-/// Two AppKit helpers locate the project list by "the first NSTableView in the
-/// window": `SidebarDeselectMonitor` (empty-click deselect) and
-/// `ContentView.focusProjectsList` (the ⌘0 keyboard no-trap). A `List`/`Form`
-/// here would inject a *second* `NSTableView` above the project one and silently
-/// break both. Keep this Button/VStack-based.
+/// `SidebarDeselectMonitor` (empty-click deselect) locates the project list by
+/// "the first NSTableView in the window". A `List`/`Form` here would inject a
+/// *second* `NSTableView` above the project one and silently break it. Keep this
+/// Button/VStack-based. (A second helper, `ContentView.focusProjectsList`, shared
+/// this constraint until it was removed on 28 Jul 2026 with the Move Focus to
+/// Projects menu item — the constraint still stands on the monitor alone.)
 struct LensRail: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n

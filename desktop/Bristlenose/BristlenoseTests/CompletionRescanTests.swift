@@ -107,4 +107,59 @@ import Testing
         // a finished; b still running; c never analysed.
         #expect(Set(result) == [a])
     }
+
+    // MARK: - projectsFinishingRun (the analysis-baseline stamp)
+
+    /// The narrower sibling of `projectsLeavingAnalysis`: only a real `.running`
+    /// → terminal transition stamps `lastPipelineRunAt`, because that field is
+    /// the *analysis baseline* the F14 drift gate reads
+    /// (`ProjectIndex.handleWatcherUpdate`). A passive `.scanning` read must not
+    /// open the gate — no analysis happened.
+    @Test func finishingRun_includesRunningToTerminal() {
+        #expect(Set(CompletionRescan.projectsFinishingRun(
+            old: [a: .running], new: [a: .ready(Date())]
+        )) == [a])
+    }
+
+    @Test func finishingRun_countsAnyOutcomeNotJustSuccess() {
+        // The gate asks "has this been analysed at all?", not "did it go well" —
+        // a failed or cancelled run still leaves ingested sessions behind.
+        for outcome: PipelineState in [
+            .failed("boom", category: .unknown),
+            .stopped(stagesComplete: []),
+            .partial(kind: "transcribe-only", stagesComplete: []),
+            .idle,
+        ] {
+            #expect(Set(CompletionRescan.projectsFinishingRun(
+                old: [a: .running], new: [a: outcome]
+            )) == [a])
+        }
+    }
+
+    @Test func finishingRun_excludesPassiveScan() {
+        // THE POINT OF THIS HELPER. `.scanning` → `.ready` is a manifest read,
+        // not a run; stamping there would open the drift gate for a project that
+        // has never been analysed, which is exactly what F14 suppresses.
+        #expect(CompletionRescan.projectsFinishingRun(
+            old: [a: .scanning], new: [a: .ready(Date())]
+        ).isEmpty)
+    }
+
+    @Test func finishingRun_excludesStillRunningAndRemoved() {
+        #expect(CompletionRescan.projectsFinishingRun(
+            old: [a: .running], new: [a: .running]
+        ).isEmpty)
+        // Removed mid-run: gone from `new`, nothing to stamp.
+        #expect(CompletionRescan.projectsFinishingRun(
+            old: [a: .running], new: [:]
+        ).isEmpty)
+    }
+
+    @Test func finishingRun_isNarrowerThanLeavingAnalysis() {
+        let old: [UUID: PipelineState] = [a: .running, b: .scanning]
+        let new: [UUID: PipelineState] = [a: .ready(Date()), b: .ready(Date())]
+        // Both left the analysing state; only `a` actually ran.
+        #expect(Set(CompletionRescan.projectsLeavingAnalysis(old: old, new: new)) == [a, b])
+        #expect(Set(CompletionRescan.projectsFinishingRun(old: old, new: new)) == [a])
+    }
 }

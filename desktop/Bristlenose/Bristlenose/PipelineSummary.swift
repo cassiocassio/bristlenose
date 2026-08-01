@@ -78,7 +78,20 @@ struct PipelineSummary: Codable, Equatable {
 struct StageOutcome: Codable, Equatable {
     var attempted: Int
     var succeeded: Int
-    var durationMs: Int
+    /// Wall-clock this stage spent on *this* run. **Optional, and it must stay
+    /// optional**: Python declares `duration_ms: int | None` and writes the
+    /// terminus with `exclude_none=False`, so a stage that was present but
+    /// didn't run (every entry a cache hit, or the stage was skipped) puts a
+    /// literal `null` on the wire — distinct from `0`, which would mean "ran,
+    /// instantaneously".
+    ///
+    /// This was declared non-optional until 29 Jul 2026, which made `null` fail
+    /// to decode and took the **entire** `PipelineSummary` with it — so a run
+    /// with any fully-cached stage silently produced no diagnostic at all. Every
+    /// contract-fixture scenario happened to carry a real duration, so the
+    /// round-trip tests flattered it; `run_completed_cached_stage` now locks the
+    /// null case.
+    var durationMs: Int?
     var failed: [SessionFailure]
 
     enum CodingKeys: String, CodingKey {
@@ -97,10 +110,21 @@ struct StageOutcome: Codable, Equatable {
 /// an N+1th session.
 struct SessionFailure: Codable, Equatable {
     var sessionId: String?
+    /// Basename of the input file this failure is about, when there is one.
+    /// Mirrors Python `StageFailure.source_file`.
+    ///
+    /// `sessionId` alone can't identify the file for failures that happen
+    /// *before* a session exists — an unreadable or never-materialised recording
+    /// fails at probe/ingest and never gets a session id. Load-bearing for the
+    /// sidebar: the row subtracts failed basenames from the `+N unanalysed`
+    /// drift (which is basename-keyed), so without this the same file is
+    /// reported twice, once as waiting and once as failed.
+    var sourceFile: String?
     var cause: Cause
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
+        case sourceFile = "source_file"
         case cause
     }
 
@@ -154,5 +178,11 @@ enum CauseCategory: String, Codable, Equatable, CaseIterable {
     /// `CauseCategoryEnum.OUTPUT_TRUNCATED` — was missing here, so an
     /// `output_truncated` cause failed to decode the whole summary.
     case outputTruncated = "output_truncated"
+    /// A cloud placeholder never materialised — the file was still downloading,
+    /// not damaged. Mirrors Python `CauseCategoryEnum.CLOUD_FETCH`. **Must not
+    /// collapse with a probe failure**: opposite remedies (wait / check the
+    /// provider vs re-export the recording), and mislabelling a slow download as
+    /// a corrupt file is the defect this category exists to end.
+    case cloudFetch = "cloud_fetch"
     case unknown
 }

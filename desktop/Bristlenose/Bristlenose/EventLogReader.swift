@@ -139,13 +139,49 @@ enum EventLogReader {
         for line in lines.reversed() {
             // Strip trailing NULs (power-loss padding).
             let cleaned = line.trimmingCharacters(in: CharacterSet(charactersIn: "\0\r"))
-            guard !cleaned.isEmpty,
-                  let lineData = cleaned.data(using: .utf8),
-                  let event = try? decoder.decode(Event.self, from: lineData),
-                  predicate(event) else {
+            guard !cleaned.isEmpty, let lineData = cleaned.data(using: .utf8) else {
                 continue
             }
-            return event
+            if let event = try? decoder.decode(Event.self, from: lineData) {
+                // Parseable. Either it's what we're looking for, or it's an
+                // event of another kind (`run_progress`, or a forward-compat
+                // type from a newer sidecar) and we keep walking back.
+                if predicate(event) { return event }
+                continue
+            }
+            // The decode failed, and the two reasons want opposite handling:
+            //
+            //   (a) **not valid JSON** — a torn final line from power loss or a
+            //       kill mid-write. Skipping it and answering from the line
+            //       behind is correct crash recovery, and is pinned by
+            //       `tailEventSurvivesPartialTrailingLine`.
+            //
+            //   (b) **valid JSON that doesn't fit `Event`** — the contract
+            //       drifted; this reader's model is out of date. Walking past it
+            //       is how a *successful* run got reported as a crash: a
+            //       `duration_ms: null` (emitted whenever a stage was fully
+            //       cached) made the whole `run_completed` line undecodable, the
+            //       loop fell back to that run's `run_started`, a dead PID
+            //       turned that into `.failed("Analysis stopped unexpectedly.")`,
+            //       and `applyScanResult` then protected the false verdict
+            //       across relaunch — all while the report sat there, complete
+            //       and correct. See `docs/design-desktop-project-status.md`.
+            //
+            // So (b) fails **closed**: return nil, which makes `deriveState`
+            // return nil, which makes the caller fall back to manifest
+            // inference. Refusing to answer is honest; answering about a
+            // different event is not.
+            if (try? JSONSerialization.jsonObject(with: lineData)) != nil {
+                logger.error(
+                    """
+                    events: a well-formed JSON line does not fit the Event model \
+                    — the Python↔Swift contract has drifted. Refusing to derive \
+                    state from an older event. line_bytes=\(lineData.count, privacy: .public)
+                    """
+                )
+                return nil
+            }
+            // (a) — torn line, keep walking.
         }
         return nil
     }

@@ -143,6 +143,48 @@ struct PipelineSummaryTests {
         #expect(summary.quotes == nil)
     }
 
+    @Test func fixtureCloudFetchCarriesSourceFileWithoutASession() throws {
+        // The case that motivated `source_file`: a recording that never
+        // materialised fails at ingest, BEFORE a session exists — so
+        // `session_id` is nil and nothing downstream could name the file.
+        // The sidebar needs the basename to keep this file out of the
+        // "+N unanalysed" drift (that count is basename-keyed), or the same
+        // interview is reported twice: once as waiting, once as failed.
+        let scenario = try requireScenario("run_completed_partial_cloud_fetch")
+        let summary = try decodeSummary(from: scenario)
+        let transcripts = try #require(summary.transcripts)
+        #expect(transcripts.failed.count == 2)
+
+        let fetch = try #require(transcripts.failed.first { $0.cause.category == .cloudFetch })
+        #expect(fetch.sessionId == nil)
+        #expect(fetch.sourceFile == "Screen Recording 2026-01-27 at 23.37.37.mov")
+        // Not an overflow marker — nil sessionId alone must not be mistaken for one.
+        #expect(fetch.isOverflowPlaceholder == false)
+
+        // ...and source_file also rides a failure that DOES have a session.
+        let damaged = try #require(transcripts.failed.first { $0.sessionId == "s4" })
+        #expect(damaged.sourceFile == "interview-04.m4a")
+        #expect(damaged.cause.category == .missingInput)
+    }
+
+    @Test func fixtureCachedStageDecodesNullDuration() throws {
+        // REGRESSION LOCK. `duration_ms` is `int | None` on the wire — null when
+        // a stage was present but never ran (every entry a cache hit). Swift
+        // declared it non-optional until 29 Jul 2026, so that null failed to
+        // decode and took the ENTIRE summary with it: a run with any fully
+        // cached stage silently produced no diagnostic at all. Every other
+        // scenario carries a real duration, which is why the round-trip test
+        // flattered it for months.
+        let scenario = try requireScenario("run_completed_cached_stage")
+        let summary = try decodeSummary(from: scenario)
+        let transcripts = try #require(summary.transcripts)
+        #expect(transcripts.durationMs == nil)
+        #expect(transcripts.attempted == 3)
+        // A stage that did run still reports its wall-clock — nil means
+        // "didn't run", NOT "ran instantly" (which would be 0).
+        #expect(summary.topics?.durationMs == 38_000)
+    }
+
     @Test func fixtureTruncatedOverflowPlaceholderDetected() throws {
         let scenario = try requireScenario("run_completed_partial_truncated")
         let summary = try decodeSummary(from: scenario)

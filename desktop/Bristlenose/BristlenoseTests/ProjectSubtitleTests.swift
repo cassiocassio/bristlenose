@@ -56,11 +56,16 @@ import Testing
             == .cantFind(reason: .moved))
     }
 
-    @Test func inCloudFallsThroughToDate() {
-        // iCloud-evicted is NOT cantFind (macOS materialises on open): it shows
-        // the bare date, with the cloud glyph riding the row's right slot.
+    @Test func inCloudFallsThroughToTheIdleChain() {
+        // iCloud-evicted is NOT cantFind (macOS materialises on open): it falls
+        // through to the idle chain, with the cloud glyph riding the row's right
+        // slot. Under Schema E a clean project says nothing at all.
         #expect(resolve(availability: .inCloud(downloading: nil), lastRunAt: aDate)
-            == .ready(date: aDate, delta: nil))
+            == .placeholder)
+        // ...but a drift delta is an exception and still earns its line.
+        #expect(resolve(availability: .inCloud(downloading: nil), lastRunAt: aDate,
+                        unanalysedCount: 2)
+            == .deltaOnly(.unanalysed(count: 2)))
     }
 
     // MARK: - Tier 2–4 — pipeline activity
@@ -90,7 +95,7 @@ import Testing
     @Test func isStoppingIgnoredWhenNotRunning() {
         // isStopping is meaningful only for a running run; elsewhere it's inert.
         #expect(resolve(pipelineState: .ready(Date()), isStopping: true, lastRunAt: aDate)
-            == .ready(date: aDate, delta: nil))
+            == .placeholder)
     }
 
     @Test func queuedCarriesPosition() {
@@ -116,21 +121,32 @@ import Testing
             == .unreachable(reason: "volume gone"))
     }
 
-    // MARK: - Tier 5+ — idle / ready (date + single delta)
+    // MARK: - Tier 5+ — idle (Schema E: exceptions only, else silence)
 
-    @Test func readyBareDateWhenNoDelta() {
-        #expect(resolve(pipelineState: .ready(Date()), lastRunAt: aDate)
-            == .ready(date: aDate, delta: nil))
+    /// **Schema E (29 Jul 2026).** A clean `.ready` row shows NO subtitle — the
+    /// bare last-run date is retired, and `ProjectCellSpec` collapses
+    /// `.placeholder` to a single-line row. Only a delta earns a line.
+    /// Rationale + the supersession note: `docs/design-desktop-project-status.md`
+    /// §"Schema E". These assertions are the guard against a well-meaning revert.
+    @Test func cleanReadyRowIsSilent() {
+        #expect(resolve(pipelineState: .ready(Date()), lastRunAt: aDate) == .placeholder)
+    }
+
+    @Test func dateAloneNeverEarnsALine() {
+        // A last-run date with no exception is not a reason to draw a subtitle,
+        // whether or not the project has ever been analysed.
+        #expect(resolve(lastRunAt: aDate) == .placeholder)
+        #expect(resolve(lastRunAt: nil) == .placeholder)
     }
 
     @Test func readyWithMissingDelta() {
         #expect(resolve(pipelineState: .ready(Date()), lastRunAt: aDate, missingCount: 3)
-            == .ready(date: aDate, delta: .missing(count: 3)))
+            == .deltaOnly(.missing(count: 3)))
     }
 
     @Test func readyWithUnanalysedDelta() {
         #expect(resolve(pipelineState: .ready(Date()), lastRunAt: aDate, unanalysedCount: 2)
-            == .ready(date: aDate, delta: .unanalysed(count: 2)))
+            == .deltaOnly(.unanalysed(count: 2)))
     }
 
     @Test func missingDeltaBeatsUnanalysed() {
@@ -140,13 +156,15 @@ import Testing
         // `nil` → the idle chain, same path).
         #expect(resolve(pipelineState: .ready(Date()),
                         lastRunAt: aDate, missingCount: 1, unanalysedCount: 5)
-            == .ready(date: aDate, delta: .missing(count: 1)))
+            == .deltaOnly(.missing(count: 1)))
     }
 
-    @Test func deltaOnlyWhenNoDateAnchor() {
-        // CLI-analysed / imported project: render the delta without a date anchor.
+    @Test func deltaRendersWithOrWithoutADateAnchor() {
+        // The delta is the whole subtitle either way — Schema E means the date
+        // never joins it. CLI-analysed / imported projects take the same path.
         #expect(resolve(missingCount: 2) == .deltaOnly(.missing(count: 2)))
         #expect(resolve(unanalysedCount: 4) == .deltaOnly(.unanalysed(count: 4)))
+        #expect(resolve(lastRunAt: aDate, missingCount: 2) == .deltaOnly(.missing(count: 2)))
     }
 
     @Test func placeholderWhenNothingToSay() {
@@ -157,8 +175,7 @@ import Testing
         // The scan spinner lives in the title-line right slot, not the subtitle,
         // so `.scanning` resolves the same as `.idle` / no state.
         for state: PipelineState? in [nil, .idle, .scanning] {
-            #expect(resolve(pipelineState: state, lastRunAt: aDate)
-                == .ready(date: aDate, delta: nil))
+            #expect(resolve(pipelineState: state, lastRunAt: aDate) == .placeholder)
         }
     }
 

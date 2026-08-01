@@ -1,6 +1,6 @@
 .\" Man page for bristlenose
 .\" Generated from cli.py help text
-.TH BRISTLENOSE 1 "2026-07-30" "bristlenose 0.22.0" "User Commands"
+.TH BRISTLENOSE 1 "2026-08-01" "bristlenose 0.23.0" "User Commands"
 .SH NAME
 bristlenose \- user-research transcription and quote extraction engine
 .SH SYNOPSIS
@@ -125,6 +125,16 @@ server and opens the React interface. Auto-renders intermediate data before
 serving so the report always matches the current code. The \fB[serve]\fR extras
 are installed by default with the standard distributions (brew, pip with
 extras, snap) and are checked by \fBbristlenose doctor\fR.
+.IP
+With the optional \fB[mcp]\fR extra installed
+(\fBpip install 'bristlenose[mcp]'\fR), serve also mounts a read-only Model
+Context Protocol endpoint at \fB/mcp/\fR, and prints the address and bearer
+token an agent needs. It offers four tools over the curated report \(em project
+overview, quote search, signals, and codebook \(em so an MCP client (Claude
+Code, Claude Desktop, ChatGPT, Codex) can answer questions about the study.
+Read-only: no writes, no filesystem paths, and no LLM calls from Bristlenose.
+Participant names accompany speaker codes unless the project's anonymise
+setting is on. Leave the server running while the agent is connected.
 .TP
 .B status \fIproject-dir\fR
 Show pipeline status for a project. Reads the manifest and prints which stages

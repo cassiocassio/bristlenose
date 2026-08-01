@@ -34,11 +34,11 @@ The pipeline runs on the user's own machine; the analysis itself is a **cloud LL
 
 12-stage pipeline: ingest → extract audio → parse subtitles → parse docx → transcribe → identify speakers → merge transcript → PII removal → topic segmentation → quote extraction → quote clustering → thematic grouping → render HTML + output files.
 
-CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcription), `render` (re-render from JSON, no LLM calls), `serve` (local dev server), `status` (read-only project state from manifest), `doctor` (dependency health checks). **Default command**: `bristlenose <folder>` is shorthand for `bristlenose run <folder>` — if the first argument is an existing directory (not a known command), `run` is injected automatically.
+CLI commands: `run` (full pipeline), `transcribe-only`, `analyze` (skip transcription), `render` (re-render from JSON, no LLM calls), `serve` (local dev server), `status` (read-only project state from manifest), `doctor` (dependency health checks), `configure` (store a provider key + make it current), `use` (switch the current provider). **There is no vendor-default provider**: the CLI resolves `--llm` → env → current provider (written by `configure`/`use`) → sole configured key → diagnose — see `docs/design-cli-provider-selection.md`; the `"anthropic"` field default in `config.py` is only the desktop-contract backstop. **Default command**: `bristlenose <folder>` is shorthand for `bristlenose run <folder>` — if the first argument is an existing directory (not a known command), `run` is injected automatically.
 
 Serve mode: FastAPI + SQLite + React SPA. See `bristlenose/server/CLAUDE.md` for architecture.
 
-Assistant surfaces (both ground in `bristlenose/server/grounding.py` — one shared core, never a parallel sibling): the **in-app chat lens** (a cited question box; `docs/design-chat-lens.md`) and the **MCP endpoint** at `/mcp/` for external agents — read-only, CLI-only, optional `bristlenose[mcp]` extra, deliberately not in the desktop sidecar (`docs/design-mcp-server.md`, spike built + accepted 30 Jul 2026). The product frame is **two offerings**: (1) the report as one link with two modes — read it / ask it; (2) stay in your own local agent. `INVARIANTS` in `grounding.py` is the single model-facing statement set for both.
+Assistant surfaces (both ground in `bristlenose/server/grounding.py` — one shared core, never a parallel sibling): the **in-app chat lens** (a cited question box; `docs/design-chat-lens.md`) and the **MCP endpoint** at `/mcp/` for external agents — read-only, four tools, scoped bearer. Ships on **both** channels: the CLI via the optional `bristlenose[mcp]` extra, and the macOS app in the bundled sidecar (`docs/design-mcp-server.md`, spike accepted 30 Jul 2026). On the Mac the transport is a **`.mcpb` extension** rather than a pasted config — `desktop/mcpb/` holds a zero-dependency Node proxy that reads a runtime handshake file the host writes, so there is no address or token to copy and nothing to redo when the port rotates; exposure is per project (**Turn On Agent Access**, sidebar antenna) and setup is **Settings ▸ MCP Agents** (`docs/design-mcp-extension.md`, shipped 1 Aug 2026). The product frame is **two offerings**: (1) the report as one link with two modes — read it / ask it; (2) stay in your own local agent. `INVARIANTS` in `grounding.py` is the single model-facing statement set for both. **Bristlenose knows the protocol, never the client** — we can offer, we cannot observe; any design that needs to read another app's state is the wrong design.
 
 Desktop app: `desktop/` — SwiftUI macOS shell. Alpha ships a bundled, signed PyInstaller sidecar running `bristlenose serve`, distributed via internal TestFlight. v0.2 currently uses launcher-style scaffolding (dev-only, not shippable). See `docs/archive/design-desktop-app.md` for the overall app design, `docs/design-modularity.md` for cross-channel component decisions (CLI ≡ macOS Python code; packaging differences only), and `docs/private/road-to-app-store.md` for the 14-checkpoint path to TestFlight.
 
@@ -249,6 +249,11 @@ See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check
 - `docs/design-project-sidebar.md`, `docs/design-wkwebview-messaging.md`
 - `docs/design-desktop-menu-actions.md`, `docs/design-desktop-settings.md`
 
+**Assistant surfaces (MCP + chat lens):**
+- `docs/design-mcp-server.md` — the endpoint, its four tools, §6a's sheet-era as-built record (superseded, kept as history)
+- `docs/design-mcp-extension.md` — **the shipped Mac path**: handshake file (§3.1), proxy contract (§3.2, §5b's three states), Settings ▸ MCP Agents (§3.7), the Turn On/Off Agent Access verb swap (§3.6a), the exposure badge (§5a-bis), packaging + build gates (§4), and §5c's spike + live-install measurements
+- `docs/design-chat-lens.md` — the in-app cited question box (same grounding core)
+
 **Analysis / research methodology:**
 - `docs/design-research-methodology.md` — read before changing prompts or analysis logic
 - `docs/academic-sources.html` — theoretical foundations
@@ -410,4 +415,8 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 ## Current status
 
-**Internal TestFlight since 14 Jul 2026** (v0.20.x line) — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution. React migration complete (Steps 1–10); bundled-sidecar desktop is the primary distribution path; CLI ships on PyPI + Homebrew + Snap. Static render is a sealed byproduct, not a user-facing product. See [CHANGELOG.md](CHANGELOG.md) for version history, [TODO.md](TODO.md) for active work, and `git log` for the unabridged story.
+**Internal TestFlight since 14 Jul 2026** (now the v0.23.x line) — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution. React migration complete (Steps 1–10); bundled-sidecar desktop is the primary distribution path; CLI ships on PyPI + Homebrew + Snap. Static render is a sealed byproduct, not a user-facing product.
+
+**0.23.0 (1 Aug 2026)** shipped the assistant surface end to end: the `/mcp` endpoint on both channels, a `.mcpb` extension for Claude Desktop (`desktop/mcpb/`, handshake-based — no pasted token), Settings ▸ MCP Agents, per-project **Turn On Agent Access** with the sidebar antenna, and a global Anonymise switch. Same release: `bristlenose use` (no vendor-default provider). Verified live — an agent answered questions over a real study through the installed extension.
+
+See [CHANGELOG.md](CHANGELOG.md) for version history, [TODO.md](TODO.md) for active work, and `git log` for the unabridged story.

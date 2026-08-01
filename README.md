@@ -56,6 +56,7 @@ The report includes:
 - **Self-contained HTML export** -- one-click bundle for stakeholders, optional anonymisation
 - **Send to Miro** -- push analysed quotes straight onto a Miro board (a native sheet on macOS; a panel in the browser report)
 - **Incremental analysis** -- add more interviews to a finished project and re-run; your starred, tagged, and edited quotes carry across, and new material is flagged
+- **Ask your study from your own agent** -- a read-only MCP endpoint hands Claude, Claude Code, ChatGPT or Codex four tools over your curated quotes, themes, signals and codebook; on macOS it installs as a one-click extension with no address or token to paste, and each project is exposed only when you turn agent access on
 - **21 UI languages** -- en, es, fr, de, ko, ja, cs, it, pt-BR, pt-PT, zh-Hant, zh-Hant-HK, nl, fi, pl, ru, uk, da, sv, nb, tr (`--lang` flag; the nine most recent are machine-seeded community previews awaiting native review on [Weblate](https://hosted.weblate.org/projects/bristlenose/))
 
 
@@ -370,6 +371,16 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 ---
 
 ## Changelog
+
+**0.23.0** — _1 Aug 2026_
+
+Ask your study questions from your own AI agent — and pick which provider runs the analysis.
+
+- **Ask your study from Claude, Claude Code, ChatGPT or Codex.** A read-only MCP endpoint gives a connected agent four tools — project overview, quote search, signals, and your codebook — over the *curated* corpus: hidden quotes excluded, your edits applied, every quote citing an id you can look up. No writes, no filesystem paths, and no LLM calls from Bristlenose's side. Optional extra on the CLI (`pip install 'bristlenose[mcp]'`); built into the macOS app.
+- **On the Mac, connecting Claude Desktop is one button.** Install the extension from **Settings ▸ MCP Agents** and confirm — no address, no token, no JSON, and nothing to re-copy when Bristlenose restarts on a new port. Claude Code, ChatGPT & Codex and a Generic MCP tab keep the copyable form for every other client.
+- **Exposure is per project and visible.** No agent can read a project until you choose **Turn On Agent Access**; while it's on, an antenna shows on the project's sidebar row — solid when that project is open and reachable now, pale when it isn't. Turning it off revokes on the spot. One **Anonymise** switch, off by default, decides whether agents see participant names or codes only.
+- **Choose which AI runs the analysis.** New `bristlenose use <provider>`; `configure` now makes the provider it stores current too. No vendor default — `--llm`, then your recorded choice, then your sole configured key, and if several keys exist with no choice made, Bristlenose asks once instead of guessing.
+- **Also:** a native Health window on macOS; inline project rename from four places; transcripts name the speaker in the sticky header; the welcome screen gains a Connect-an-agent cell; clip export fetches cloud-evicted sources before cutting and survives cancellation; failed files can name themselves; and diagnostics no longer vanish when a re-run's stages are all cache hits.
 
 **0.22.0** — _26 Jul 2026_
 

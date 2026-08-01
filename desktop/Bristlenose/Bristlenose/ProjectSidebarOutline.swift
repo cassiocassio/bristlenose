@@ -1286,11 +1286,19 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 SidebarSubtitleText.text(for: variant, availability: project.availability,
                                          progress: liveData?.progress[id], i18n: $0)
             }
-            // No subtitle (`.placeholder`, or a defensive nil) → single-line collapse,
-            // the deliberate divergence (ProjectCellSpec). Reuse the single-line iconCell.
+            // No subtitle (Schema E's clean row — the DEFAULT since 29 Jul —
+            // or a defensive nil) → single-line collapse (ProjectCellSpec).
+            // The agent badge must survive that collapse: exposure is
+            // permanent state on an otherwise-idle row, so a clean shared
+            // project is EXACTLY the case that must show it (§5a-bis). The
+            // ring/cloud slots can't reach here — both always carry
+            // subtitle text — so only `.agent` crosses over.
             guard let subtitle else {
+                var exposed: Bool?
+                if case .agent(let now) = cellRightSlot(for: project) { exposed = now }
                 return hideIconIfRevealing(
-                    iconCell(symbol: symbol, text: project.name, trailing: count), id: id)
+                    iconCell(symbol: symbol, text: project.name, trailing: count,
+                             agentExposedNow: exposed), id: id)
             }
             let prefix = subtitlePrefixGlyph(for: variant, availability: project.availability)
             let diagnosticsID = variant.isDiagnostic ? id : nil
@@ -1311,7 +1319,31 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         return tab.label
     }
 
-    private func iconCell(symbol: String, text: String, dimmed: Bool = false, trailing: String? = nil) -> NSTableCellView {
+    /// The agent-access antenna, built once for both cell layouts so the
+    /// two can't drift. Solid (secondary, the quiet ambient family the
+    /// iCloud glyph belongs to) = exposed now; pale (tertiary) = shared but
+    /// the project isn't open. Never a control — status is attention, not
+    /// affordance (§5a-bis, the Mail model).
+    private func agentBadgeView(exposedNow: Bool) -> NSImageView {
+        let tooltip = i18n?.t("desktop.mcpAgents.badgeTooltip")
+        let antenna = NSImageView()
+        antenna.image = NSImage(systemSymbolName: "antenna.radiowaves.left.and.right",
+                                accessibilityDescription: tooltip)
+        antenna.symbolConfiguration = ProjectCellSpec.subtitleGlyphConfig
+        antenna.contentTintColor = exposedNow ? .secondaryLabelColor : .tertiaryLabelColor
+        antenna.toolTip = tooltip
+        antenna.translatesAutoresizingMaskIntoConstraints = false
+        antenna.setContentHuggingPriority(.required, for: .horizontal)
+        antenna.setContentCompressionResistancePriority(.required, for: .horizontal)
+        return antenna
+    }
+
+    /// - Parameter agentExposedNow: nil = no agent access (no badge, the
+    ///   absence-is-information state); true/false = the solid/pale tiers.
+    ///   Only project rows pass it — lens and folder rows can't be shared.
+    private func iconCell(symbol: String, text: String, dimmed: Bool = false,
+                          trailing: String? = nil,
+                          agentExposedNow: Bool? = nil) -> NSTableCellView {
         let cell = NSTableCellView()
         let imageView = NSImageView()
         imageView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
@@ -1344,6 +1376,25 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
             textField.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
         ]
+        // Trailing edge, outermost: the agent badge when present. Status
+        // takes the row's right edge in both layouts — on a two-line row
+        // the ring/antenna sit at the trailing edge of the subtitle line,
+        // so keeping the glyph outermost here means the collapse doesn't
+        // move it. The count then sits inboard of it.
+        var trailingAnchorView: NSView = cell
+        var trailingInset: CGFloat = -4
+        if let agentExposedNow {
+            let antenna = agentBadgeView(exposedNow: agentExposedNow)
+            cell.addSubview(antenna)
+            constraints += [
+                antenna.trailingAnchor.constraint(equalTo: cell.trailingAnchor,
+                                                  constant: -ProjectCellSpec.trailingInset),
+                antenna.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+            ]
+            trailingAnchorView = antenna
+            trailingInset = -ProjectCellSpec.subtitleInternal
+        }
+
         if let trailing {
             // Trailing session count — Finder's right column (ProjectRow's title
             // right-slot: footnote / tertiary, system-sized). The name truncates
@@ -1357,11 +1408,17 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             cell.addSubview(countField)
             constraints += [
                 textField.trailingAnchor.constraint(lessThanOrEqualTo: countField.leadingAnchor, constant: -6),
-                countField.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -4),
+                countField.trailingAnchor.constraint(
+                    equalTo: trailingAnchorView === cell
+                        ? cell.trailingAnchor : trailingAnchorView.leadingAnchor,
+                    constant: trailingInset),
                 countField.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
             ]
         } else {
-            constraints.append(textField.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -4))
+            constraints.append(textField.trailingAnchor.constraint(
+                equalTo: trailingAnchorView === cell
+                    ? cell.trailingAnchor : trailingAnchorView.leadingAnchor,
+                constant: trailingInset))
         }
         NSLayoutConstraint.activate(constraints)
         return cell
@@ -1897,24 +1954,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                                                         constant: -ProjectCellSpec.subtitleInternal),
             ]
         case .agent(let exposedNow):
-            // Exposure, not activity (§5a-bis): permanent while Agent
-            // Access is on. Not a control — status is attention, not
-            // affordance (the Mail model).
-            let tooltip = i18n?.t("desktop.mcpAgents.badgeTooltip")
-            let antenna = NSImageView()
-            antenna.image = NSImage(systemSymbolName: "antenna.radiowaves.left.and.right",
-                                    accessibilityDescription: tooltip)
-            antenna.symbolConfiguration = ProjectCellSpec.subtitleGlyphConfig
-            // Solid (secondary, like the sibling iCloud glyph — ambient
-            // status joins the quiet family; a coloured glyph that never
-            // turns off becomes wallpaper) while the serve is up = exposed
-            // NOW. Pale (tertiary) while shared-but-not-open = reachable
-            // the moment it is opened. Off = no badge at all.
-            antenna.contentTintColor = exposedNow ? .secondaryLabelColor : .tertiaryLabelColor
-            antenna.toolTip = tooltip
-            antenna.translatesAutoresizingMaskIntoConstraints = false
-            antenna.setContentHuggingPriority(.required, for: .horizontal)
-            antenna.setContentCompressionResistancePriority(.required, for: .horizontal)
+            // Exposure, not activity (§5a-bis). Same builder as the
+            // single-line collapse, so the two layouts can't drift.
+            let antenna = agentBadgeView(exposedNow: exposedNow)
             cell.addSubview(antenna)
             constraints += [
                 antenna.trailingAnchor.constraint(equalTo: cell.trailingAnchor,
